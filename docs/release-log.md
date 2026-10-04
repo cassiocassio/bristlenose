@@ -78,9 +78,9 @@ model names, participant numbers issued twice, the dashboard Words card, and `tr
 every speaker under one code. Ten sessions' work, coordinated from one session; scope frozen at
 ~20:00 BST, docs trued per session, one fix let back in (below).
 
-**Verified 8 of 9** (`release.sh verify 0.33.0`) at ~23:20 BST: PyPI (200 at 23:10, about 15 min after
-the tag), GitHub Release, Homebrew, TestFlight 4372, `.dmg`, Snap edge, Copr. The website waits on
-the owner's deploy.
+**Verified 9 of 9** (`release.sh verify 0.33.0`, after the website deploy): PyPI (200 at 23:10, about 15 min after
+the tag), GitHub Release, Homebrew, TestFlight 4372, `.dmg`, Snap edge, Copr, and the website (`deploy.sh --yes`;
+the privacy, pipeline and CLI pages fetched live and checked for the new text).
 
 ### Two stops, neither in the product
 
@@ -94,7 +94,7 @@ report undo, with no time limit — first visible in this release because report
 owner chose to fix before tagging (`4f8f4242`: a new report act settles the removal). Quote-edit ⌘Z
 on the Mac remained unreliable in the owner's QA; released with a caveat in the notes.
 
-**Owed.** The website deploy. The DSA trader declaration and the Paid Apps Agreement wait for
+**Owed.** The DSA trader declaration and the Paid Apps Agreement wait for
 pricing (App Store Connect showed both on 4 Oct). The anonymise hint's "and observers" exists in
 `en` only since 27 Aug.
 

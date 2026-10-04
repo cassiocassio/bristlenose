@@ -356,6 +356,7 @@ def check_voice(settings: BristlenoseSettings) -> CheckResult:
     from bristlenose.stages.s05b_voice import (
         VOICE_MODEL_ENV,
         cached_voice_model,
+        load_voice_model,
         voice_runtime_available,
     )
 
@@ -379,15 +380,25 @@ def check_voice(settings: BristlenoseSettings) -> CheckResult:
                    "to tell speakers apart by voice",
         )
     override = os.environ.get(VOICE_MODEL_ENV)
+    found = cached_voice_model()
+    if found is not None:
+        # Present is not loadable: load it the way a run will (~0.1 s), so an
+        # onnxruntime that cannot open a session, or a model with metadata the
+        # front end refuses, is a WARN here rather than "cached" and then a
+        # text-only run.
+        reason = load_voice_model(found)
+        if reason:
+            return CheckResult(status=CheckStatus.WARN, label=label,
+                               detail=f"{reason}; speakers are told apart from the text alone")
     if override:
         # Runs never download when the override is set, so say what they will do.
-        if cached_voice_model() is not None:
+        if found is not None:
             return CheckResult(status=CheckStatus.OK, label=label,
                                detail=f"model from {VOICE_MODEL_ENV} (not hash-checked)")
         return CheckResult(status=CheckStatus.WARN, label=label,
                            detail=f"{VOICE_MODEL_ENV} names a file that does not exist; "
                                   "the voice pass will be skipped")
-    if cached_voice_model() is not None:
+    if found is not None:
         return CheckResult(status=CheckStatus.OK, label=label, detail="model cached (40 MB)")
     if in_app:
         return CheckResult(status=CheckStatus.SKIP, label=label,
@@ -1450,13 +1461,22 @@ def check_bundle_mcp() -> CheckResult:
     )
 
 
+#: A 67-byte ONNX graph (opset 13, IR 7): y = Identity(x), x float[1]. Lets the
+#: self-test open a real onnxruntime session without bundling the voice model.
+_ORT_IDENTITY_MODEL = (
+    "CAcSADo3ChAKAXgSAXkiCElkZW50aXR5EgFnWg8KAXgSCgoICAESBAoCCAFiDwoBeRIKCggIARIECgIIAUIECgAQDQ=="
+)
+
+
 def check_bundle_voice() -> CheckResult:
     """The voice pass's native runtime: onnxruntime and kaldi-native-fbank.
 
-    Both are native code, so presence is not enough: this loads each one and
-    computes one filterbank, so a spec that dropped a library (kaldi-native-
-    fbank's ``libkaldi-native-fbank-core.dylib``, found by @loader_path) fails
-    here, at build time, instead of every Mac session silently falling back to
+    Both are native code, so presence is not enough: this opens a real
+    onnxruntime session (on a 67-byte Identity graph, since the voice model is
+    not bundled) and computes one filterbank with the pass's own options
+    (``s05b_voice.fbank_options``), so a spec that dropped a library — the
+    sidecar drops onnxruntime's C library on purpose, and kaldi-native-fbank's
+    core dylib is reached by @rpath in the bundle — fails here, at build time, instead of every Mac session silently falling back to
     text-only speaker splitting ("voice pass failed"). The model is not bundled
     (it is fetched on first use), so none is loaded here.
 
@@ -1500,12 +1520,18 @@ def check_bundle_voice() -> CheckResult:
             fix_key="bundle_dir_missing",
         )
     try:
-        if "CPUExecutionProvider" not in onnxruntime.get_available_providers():
-            raise RuntimeError("onnxruntime has no CPU execution provider")
-        opts = knf.FbankOptions()
-        opts.frame_opts.dither = 0.0
-        opts.mel_opts.num_bins = 80
-        fbank = knf.OnlineFbank(opts)
+        import base64
+
+        import numpy as np
+
+        from bristlenose.stages.s05b_voice import fbank_options
+
+        session = onnxruntime.InferenceSession(
+            base64.b64decode(_ORT_IDENTITY_MODEL), providers=["CPUExecutionProvider"])
+        (out,) = session.run(["y"], {"x": np.array([2.5], dtype=np.float32)})
+        if float(out[0]) != 2.5:
+            raise RuntimeError(f"onnxruntime session returned {out!r} for an identity graph")
+        fbank = knf.OnlineFbank(fbank_options())
         fbank.accept_waveform(16000, [0.0] * 8000)
         fbank.input_finished()
         if fbank.num_frames_ready == 0:

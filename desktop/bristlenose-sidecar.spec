@@ -92,11 +92,29 @@ _JSONSCHEMA_DATAS, _JSONSCHEMA_BINARIES, _JSONSCHEMA_HIDDEN = collect_all("jsons
 # `kaldi_native_fbank`. NOT sherpa-onnx: its published wheels statically link
 # espeak-ng, GPL-3.0-or-later (docs/design-voice-diarization.md § Licence).
 # kaldi_native_fbank's extension (`_kaldi_native_fbank*.so`, top level) loads
-# `kaldi_native_fbank/lib/libkaldi-native-fbank-core.dylib` by @loader_path;
-# collecting the package's dynamic libs keeps that path. onnxruntime comes in
+# `kaldi_native_fbank/lib/libkaldi-native-fbank-core.dylib`; collecting the
+# package's dynamic libs ships it, and PyInstaller rewrites the reference to
+# @rpath with a top-level symlink in the bundle. `doctor --self-test` proves it
+# loads (a real filterbank), so this comment is not the guard. onnxruntime comes in
 # through pyinstaller-hooks-contrib's hook; the trims below the Analysis drop
 # what the voice pass never loads.
 _KNF_BINARIES = collect_dynamic_libs("kaldi_native_fbank")
+# Their licence texts travel with the binaries (MIT and Apache-2.0 both require
+# it). onnxruntime keeps its LICENSE and ThirdPartyNotices.txt — the Abseil,
+# Protobuf, Eigen… notices for what its binding links statically — in the
+# package directory, not the dist-info, so they are named by path; a missing
+# file fails the build here rather than shipping a bundle without them.
+import importlib.util as _ilu
+
+_ORT_PKG = _ilu.find_spec("onnxruntime").submodule_search_locations[0]
+_VOICE_NOTICES = [
+    (os.path.join(_ORT_PKG, name), "onnxruntime")
+    for name in ("LICENSE", "ThirdPartyNotices.txt")
+]
+for _src, _ in _VOICE_NOTICES:
+    if not os.path.isfile(_src):
+        raise SystemExit(f"onnxruntime licence file missing: {_src}")
+_VOICE_NOTICES += copy_metadata("kaldi-native-fbank")
 
 a = Analysis(
     # Entry point: run `bristlenose serve` directly.
@@ -118,6 +136,7 @@ a = Analysis(
         *_MCP_DATAS,
         *_JSONSCHEMA_SPEC_DATAS,
         *_JSONSCHEMA_DATAS,
+        *_VOICE_NOTICES,
         # starlette is pure Python, so PyInstaller bytecompiles it into the
         # archive and leaves no dist-info in _internal/ — which meant the
         # shipped 0.29.1 could not say which starlette it carried (ledger

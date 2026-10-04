@@ -112,11 +112,15 @@ parts:
       # outside a snap or a frozen bundle the self-test reads an absent extra
       # as a legal install, so assert presence here, then loadability.
       $CRAFT_PART_INSTALL/bin/python3 - <<'PY'
+      import sys
       from bristlenose.doctor import CheckStatus, check_bundle_voice
       from bristlenose.stages.s05b_voice import voice_runtime_available
-      assert voice_runtime_available(), "the voice runtime is missing from the snap"
+      # Explicit exits, not assert: -O / PYTHONOPTIMIZE strips asserts.
+      if not voice_runtime_available():
+          sys.exit("the voice runtime is missing from the snap")
       r = check_bundle_voice()
-      assert r.status == CheckStatus.OK, r.detail
+      if r.status != CheckStatus.OK:
+          sys.exit("voice runtime will not work: " + r.detail)
       print("voice runtime:", r.detail)
       PY
       # Download spaCy model into the snap's Python environment so

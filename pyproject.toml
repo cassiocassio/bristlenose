@@ -96,7 +96,9 @@ dev = [
     "mlx>=0.16; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "mlx-whisper>=0.4; sys_platform == 'darwin' and platform_machine == 'arm64'",
     # The voice pass's runtime, so its code path runs in the dev venv rather
-    # than being an undeclared install (the presidio lesson above).
+    # than being an undeclared install (the presidio lesson above). onnxruntime
+    # also arrives through faster-whisper; named because s05b imports it.
+    "onnxruntime>=1.14",
     "kaldi-native-fbank>=1.22",
 ]
 

@@ -17,7 +17,10 @@ trued-against: HEAD on 2026-08-28
   `onnxruntime` package faster-whisper already brings, so the RPM loses the sherpa
   wheels' second onnxruntime (1.28.2), their bundled `libasound`, and the statically
   linked espeak-ng. `License:` drops `GPL-3.0-or-later` and `LGPL-2.1-or-later`;
-  `%check` runs the same `check_bundle_voice` self-test as the Mac build;
+  `%check` asserts the runtime is present (the self-test alone reads an absent extra as
+  legal outside a bundle), opens faster-whisper's Silero VAD session as stage 5 does, then
+  runs the same `check_bundle_voice` self-test as the Mac build (a real onnxruntime session
+  and one filterbank with the pass's options);
   `make-srpm.sh` asserts the knf wheel instead of the sherpa pair. **Not yet re-proven
   in `mock` or by a real Fedora run** — the next local-dist build should be.
 - _2026-10-04_ — **the voice pass joins the RPM** (`voice` extra, sherpa-onnx), for

@@ -317,6 +317,48 @@ class TestTitaNetFrontEnd:
             voice._TitaNet("m.onnx", threads=1)
 
 
+class TestFeatureGolden:
+    """Pins the front end's settings without the model. The frame count and the
+    normalisation tests above survive a changed pre-emphasis, mel scale, window
+    or DC setting; these numbers do not. Recorded from the settings that matched
+    sherpa-onnx at cosine 1.000000 (tests/fixtures/voice-fbank-golden.json)."""
+
+    def test_features_for_a_seeded_signal_match_the_recording(self) -> None:
+        gold = json.loads(
+            (Path(__file__).parent / "fixtures" / "voice-fbank-golden.json").read_text())
+        m = voice._TitaNet.__new__(voice._TitaNet)
+        m._options = voice.fbank_options()
+        t = np.arange(16000) / 16000
+        x = (0.1 * np.random.default_rng(7).standard_normal(16000)
+             + 0.3 * np.sin(2 * np.pi * 440 * t)).astype(np.float32)
+        f = m.features(x)
+        assert f.shape == (gold["frames"], 80)
+        np.testing.assert_allclose(f[0], gold["first_frame"], atol=1e-3)
+        np.testing.assert_allclose(f.mean(axis=0), gold["bin_means"], atol=1e-3)
+
+
+class TestLoadAndValidate:
+    def test_load_voice_model_reports_why_instead_of_raising(self, tmp_path) -> None:
+        bad = tmp_path / "m.onnx"
+        bad.write_bytes(b"not a model")
+        voice._model.cache_clear()
+        reason = voice.load_voice_model(bad)
+        assert reason.startswith("voice model will not load: ")
+
+    @pytest.mark.parametrize("window", ["bogus", "", "HANN"])
+    def test_an_unknown_window_is_a_value_error_not_a_process_exit(self, window) -> None:
+        """kaldi-native-fbank exits the process (status 255) on a window it does
+        not know, past every except clause, so it must never be handed one."""
+        with pytest.raises(ValueError, match="unknown window"):
+            voice.fbank_options(window_type=window)
+
+    @pytest.mark.parametrize("kw", [{"frame_shift_ms": 0.0}, {"frame_shift_ms": 30.0},
+                                    {"frame_length_ms": 500.0}, {"feat_dim": 0}])
+    def test_an_implausible_front_end_is_refused(self, kw) -> None:
+        with pytest.raises(ValueError, match="implausible"):
+            voice.fbank_options(**kw)
+
+
 class TestModel:
     @pytest.fixture(autouse=True)
     def _cache(self, tmp_path, monkeypatch):
@@ -432,7 +474,7 @@ class TestAudio:
 class TestPipelineRecord:
     """What the real Pipeline.run writes to the speaker cache."""
 
-    def _run(self, tmp_path, monkeypatch, sessions, *, available=True):
+    def _run(self, tmp_path, monkeypatch, sessions, *, available=True, load_reason=""):
         from tests.test_pipeline_platform_transcripts import run_pipeline
 
         monkeypatch.setenv("BRISTLENOSE_VOICE_PASS", "true")
@@ -450,6 +492,7 @@ class TestPipelineRecord:
             patch.object(voice, "voice_runtime_available", return_value=available),
             patch.object(voice, "cached_voice_model", return_value=None),
             patch.object(voice, "resolve_voice_model", return_value=(Path("/m.onnx"), "")),
+            patch.object(voice, "load_voice_model", return_value=load_reason),
             patch.object(voice, "refine_speakers_by_voice", new=_fake_refine),
         ):
             h = run_pipeline(tmp_path, sessions)
@@ -470,6 +513,19 @@ class TestPipelineRecord:
         assert rec["voice_version"] == voice.VOICE_VERSION
         assert h.speaker_segments("s1")[-1].speaker_label == "Speaker A"
         assert "voice_pass | session=s1 | method=voice+text" in h.log()
+
+    def test_a_model_that_will_not_load_is_one_warning_not_a_quiet_fallback(
+        self, tmp_path, monkeypatch,
+    ) -> None:
+        """Loaded once before the sessions: a model or runtime that cannot load
+        declines the pass with its reason, rather than failing every session."""
+        from tests.test_pipeline_platform_transcripts import audio_session
+
+        h, calls = self._run(tmp_path, monkeypatch, lambda d, _i: [audio_session(d, 1, "bare")],
+                             load_reason="voice model will not load: bad graph")
+        assert calls == [(calls[0][0], None, "voice model will not load: bad graph")]
+        rec = self._record(h, "s1")
+        assert rec["method"] == "text" and rec["reason"] == "voice model will not load: bad graph"
 
     def test_without_the_extra_the_text_labels_stand_and_the_reason_is_kept(
         self, tmp_path, monkeypatch,
@@ -511,7 +567,8 @@ class TestPipelineRecord:
 
 
 class TestDoctor:
-    def _check(self, monkeypatch, *, on=True, installed=True, cached=None, snap=False):
+    def _check(self, monkeypatch, *, on=True, installed=True, cached=None, snap=False,
+               load_reason=""):
         from bristlenose.config import BristlenoseSettings
         from bristlenose.doctor import check_voice
 
@@ -521,8 +578,17 @@ class TestDoctor:
         with (
             patch.object(voice, "voice_runtime_available", return_value=installed),
             patch.object(voice, "cached_voice_model", return_value=cached),
+            patch.object(voice, "load_voice_model", return_value=load_reason),
         ):
             return check_voice(BristlenoseSettings())
+
+    def test_a_cached_model_that_will_not_load_is_a_warning_not_cached(self, monkeypatch) -> None:
+        from bristlenose.doctor import CheckStatus
+
+        r = self._check(monkeypatch, cached=Path("/m.onnx"),
+                        load_reason="voice model will not load: bad graph")
+        assert r.status == CheckStatus.WARN and "will not load: bad graph" in r.detail
+        assert "text alone" in r.detail
 
     def test_never_a_failure_whatever_the_state(self, monkeypatch) -> None:
         from bristlenose.doctor import CheckStatus
@@ -565,7 +631,10 @@ class TestDoctor:
 
         monkeypatch.setenv("BRISTLENOSE_VOICE_PASS", "true")
         monkeypatch.setenv(voice.VOICE_MODEL_ENV, str(tmp_path / "missing.onnx"))
-        with patch.object(voice, "voice_runtime_available", return_value=True):
+        with (
+            patch.object(voice, "voice_runtime_available", return_value=True),
+            patch.object(voice, "load_voice_model", return_value=""),
+        ):
             missing = check_voice(BristlenoseSettings())
             (tmp_path / "missing.onnx").write_bytes(b"x")
             present = check_voice(BristlenoseSettings())
@@ -608,6 +677,21 @@ class TestBundleSelfTest:
         monkeypatch.setenv("SNAP", "/snap/bristlenose/x1")
         result = check_bundle_voice()
         assert result.status == CheckStatus.FAIL and "snapcraft.yaml" in result.detail
+
+    def test_an_onnxruntime_that_cannot_open_a_session_fails(self, monkeypatch) -> None:
+        """Imports are not enough: the sidecar drops onnxruntime's C library on
+        purpose, so the self-test opens a real session."""
+        import onnxruntime
+
+        from bristlenose.doctor import CheckStatus, check_bundle_voice
+
+        def boom(*a, **kw):
+            raise RuntimeError("no session for you")
+
+        monkeypatch.setattr(voice, "voice_runtime_available", lambda: True)
+        monkeypatch.setattr(onnxruntime, "InferenceSession", boom)
+        result = check_bundle_voice()
+        assert result.status == CheckStatus.FAIL and "no session for you" in result.detail
 
     def test_installed_but_unloadable_fails_everywhere(self, monkeypatch) -> None:
         import builtins

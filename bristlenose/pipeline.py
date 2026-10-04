@@ -1169,6 +1169,7 @@ class Pipeline:
             split_single_speaker_llm,
         )
         from bristlenose.stages.s05b_voice import (
+            load_voice_model,
             refine_speakers_by_voice,
             resolve_voice_model,
             voice_runtime_available,
@@ -1818,6 +1819,16 @@ class Pipeline:
                             _voice_model, _voice_off = await asyncio.to_thread(
                                 resolve_voice_model, allow_fetch=not self.settings.no_fetch,
                             )
+                            _voice_fetchable = _voice_model is None
+                            if _voice_model is not None:
+                                # Load once, here: a model or runtime that will
+                                # not load must be one visible warning, not a
+                                # quiet text-only fallback in every session.
+                                _voice_off = await asyncio.to_thread(
+                                    load_voice_model, _voice_model,
+                                )
+                                if _voice_off:
+                                    _voice_model = None
                             status.update("[dim]Identifying speakers...[/dim]")
                             if _voice_model is None:
                                 # The researcher installed the extra to get this;
@@ -1826,6 +1837,8 @@ class Pipeline:
                                 _print_warn(
                                     "Speakers told apart from the text alone; "
                                     "`bristlenose doctor --fetch` fetches the model"
+                                    if _voice_fetchable else
+                                    "Speakers told apart from the text alone"
                                 )
                         _audio_for = {s.session_id: s.audio_path for s in sessions}
 

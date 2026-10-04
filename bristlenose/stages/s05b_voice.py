@@ -467,6 +467,45 @@ def merge_voice_and_text(
 # ---------------------------------------------------------------------------
 
 
+#: Window types kaldi-native-fbank accepts. Anything else makes it print an error
+#: and exit the PROCESS (status 255) — no Python exception, so nothing upstream
+#: could catch it — hence checked here first. Each was run on 1.22.3.
+_KNF_WINDOWS = frozenset({"hann", "hanning", "hamming", "povey", "rectangular", "blackman", "sine"})
+
+
+def fbank_options(
+    *, feat_dim: int = 80, frame_length_ms: float = 25.0, frame_shift_ms: float = 10.0,
+    window_type: str = "hann",
+) -> Any:
+    """kaldi-native-fbank options for a NeMo speaker model, as sherpa-onnx
+    configures them (``speaker-embedding-extractor-nemo-impl.h``, ``features.cc``
+    at v1.13.8). One builder, so ``doctor`` self-tests the options the pass uses.
+    """
+    import kaldi_native_fbank as knf
+
+    if window_type not in _KNF_WINDOWS:
+        raise ValueError(f"voice model asks for an unknown window: {window_type!r}")
+    if not (0 < frame_shift_ms <= frame_length_ms <= 100) or not (1 <= feat_dim <= 512):
+        raise ValueError(
+            f"voice model asks for an implausible front end: {feat_dim} bins, "
+            f"{frame_length_ms}/{frame_shift_ms} ms")
+    o = knf.FbankOptions()
+    o.frame_opts.dither = 0.0
+    o.frame_opts.snip_edges = True
+    o.frame_opts.samp_freq = SAMPLE_RATE
+    o.frame_opts.frame_shift_ms = frame_shift_ms
+    o.frame_opts.frame_length_ms = frame_length_ms
+    o.frame_opts.remove_dc_offset = False
+    o.frame_opts.preemph_coeff = 0.97
+    o.frame_opts.window_type = window_type
+    o.frame_opts.round_to_power_of_two = True
+    o.mel_opts.num_bins = feat_dim
+    o.mel_opts.low_freq = 0.0
+    o.mel_opts.high_freq = -400.0
+    o.mel_opts.is_librosa = True
+    return o
+
+
 class _TitaNet:
     """TitaNet-small through onnxruntime, with the NeMo front end sherpa-onnx
     uses (``speaker-embedding-extractor-nemo-impl.h`` at v1.13.8).
@@ -489,6 +528,9 @@ class _TitaNet:
         opts = ort.SessionOptions()
         opts.intra_op_num_threads = threads
         opts.inter_op_num_threads = 1
+        # sherpa ran its session at ERROR; a WARNING from a future onnxruntime
+        # would otherwise land on stderr in the middle of Rich's live display.
+        opts.log_severity_level = 3
         self.session = ort.InferenceSession(
             model_path, opts, providers=["CPUExecutionProvider"])
         meta = self.session.get_modelmeta().custom_metadata_map
@@ -500,6 +542,11 @@ class _TitaNet:
         self.frame_length_ms = float(meta.get("window_size_ms", 25))
         self.frame_shift_ms = float(meta.get("window_stride_ms", 10))
         self.window_type = meta.get("window_type", "hann")
+        # Validates the metadata now, at load, not inside the first session.
+        self._options = fbank_options(
+            feat_dim=self.feat_dim, frame_length_ms=self.frame_length_ms,
+            frame_shift_ms=self.frame_shift_ms, window_type=self.window_type,
+        )
 
     def features(self, samples: Any) -> Any:
         """Log-mel filterbank frames, ``(frames, feat_dim)``, or None when the
@@ -507,21 +554,7 @@ class _TitaNet:
         import kaldi_native_fbank as knf
         import numpy as np
 
-        o = knf.FbankOptions()
-        o.frame_opts.dither = 0.0
-        o.frame_opts.snip_edges = True
-        o.frame_opts.samp_freq = SAMPLE_RATE
-        o.frame_opts.frame_shift_ms = self.frame_shift_ms
-        o.frame_opts.frame_length_ms = self.frame_length_ms
-        o.frame_opts.remove_dc_offset = False
-        o.frame_opts.preemph_coeff = 0.97
-        o.frame_opts.window_type = self.window_type
-        o.frame_opts.round_to_power_of_two = True
-        o.mel_opts.num_bins = self.feat_dim
-        o.mel_opts.low_freq = 0.0
-        o.mel_opts.high_freq = -400.0
-        o.mel_opts.is_librosa = True
-        fbank = knf.OnlineFbank(o)
+        fbank = knf.OnlineFbank(self._options)
         fbank.accept_waveform(SAMPLE_RATE, np.asarray(samples, dtype=np.float32).tolist())
         fbank.input_finished()
         n = fbank.num_frames_ready
@@ -558,6 +591,21 @@ def _model(model_path: str, mtime_ns: int) -> _TitaNet:
     runs the pass one session at a time (a semaphore of one), so it is never
     used by two threads at once; raise that semaphore and this needs a lock."""
     return _TitaNet(model_path, threads=min(4, os.cpu_count() or 1))
+
+
+def load_voice_model(model_path: Path) -> str:
+    """Load the model once, before any session, and say why if it will not load.
+
+    The pipeline calls this right after ``resolve_voice_model``, so a model or
+    runtime that cannot load is one visible warning rather than a quiet
+    text-only fallback in every session. Returns "" when the model loaded.
+    """
+    try:
+        _model(str(model_path), model_path.stat().st_mtime_ns)
+    except Exception as exc:  # onnxruntime, metadata, kaldi-native-fbank options
+        logger.debug("voice model will not load: %s", exc)
+        return f"voice model will not load: {exc}"
+    return ""
 
 
 def _titanet_embedder(model_path: Path, audio: Any) -> Callable[[float, float], Any]:

@@ -191,13 +191,24 @@ for m in ('faster_whisper','ctranslate2','presidio_analyzer','presidio_anonymize
     importlib.import_module(m)
 print('imports OK')"
 # The voice pass's runtime: the same onnxruntime faster-whisper's Silero VAD
-# uses, plus kaldi-native-fbank, through the self-test the Mac build runs (it
-# loads both native libraries and computes one filterbank). A real inference
-# needs the voice model, which mock cannot fetch; that half is proven by a run.
+# uses (opened here for real, as stage 5 does), plus kaldi-native-fbank, through
+# the self-test the Mac build runs (a real session and one filterbank with the
+# pass's options). Presence first: outside a frozen bundle or a snap the
+# self-test reads an absent extra as a legal install and says OK, so a `voice`
+# dropped from %install would otherwise pass here. Explicit exits, not assert,
+# which -O strips. A real inference needs the voice model, which mock cannot
+# fetch; that half is proven by a run.
 %{buildroot}%{bn_prefix}/bin/python -c "
+import sys
+from faster_whisper.vad import get_vad_model
+get_vad_model()
 from bristlenose.doctor import CheckStatus, check_bundle_voice
+from bristlenose.stages.s05b_voice import voice_runtime_available
+if not voice_runtime_available():
+    sys.exit('voice runtime (onnxruntime, kaldi_native_fbank) missing from the RPM')
 r = check_bundle_voice()
-assert r.status == CheckStatus.OK, r.detail
+if r.status != CheckStatus.OK:
+    sys.exit('voice runtime will not work: ' + r.detail)
 print('voice runtime:', r.detail)"
 # Both halves of the SPA must be present. static/ is serve mode (a fail-loud
 # 500 page without it); static-export/ is the single-file export build, which

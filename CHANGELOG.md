@@ -2,6 +2,34 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.33.0** — _4 Oct 2026_
+
+A Discussion lens beside your interview guide, speakers told apart by voice, a person picker, search that suggests, and Undo.
+
+**New**
+
+- **The Discussion lens.** Put your interview guide in a folder named "Discussion guide" beside the recordings (on the Mac, **Add your guide…**) and the lens lays the quotes against the questions you planned and the ones you actually asked. The guide is a panel you can show and hide.
+- **Speakers are told apart by voice as well as by what they say.** When a recording has no transcript naming its speakers, Bristlenose also compares the two voices and corrects the lines the text alone got wrong — on a test interview, 12 lines wrong instead of 22. It runs on your machine and makes no extra AI call; the first time it is needed it downloads a 40 MB model. Built into the Mac app, the Snap and the Fedora package; with pip, install `bristlenose[serve,voice]`. Turn it off with `BRISTLENOSE_VOICE_PASS=false`.
+- **Who is this speaker?** Click a speaker on the Sessions page to confirm the name Bristlenose found, pick another, or type someone new. On the Mac it opens as a native popover; in the browser, as a menu. A name you haven't confirmed yet has a dotted ring and grey text, and screen readers announce it as a proposed name. Press Return to confirm it.
+- **Undo for your edits to the report.** Edit ▸ Undo and Redo (⌘Z, ⇧⌘Z; Ctrl+Z and Ctrl+Y off the Mac) take back naming, picking or confirming a speaker, starring, hiding and unhiding quotes, adding and removing tags (a whole selection is one step), and editing a quote, a section or theme title, or a description. On the Mac the menu names what it will undo ("Undo Rename Moderator"). Undo lasts as long as the report is open: reloading, switching project or running a new analysis starts afresh.
+- **Search suggests people and tags as you type.** In Quotes, a chosen suggestion becomes a token whose meaning you can change from its menu (said by, mentions, not; tagged, contains, not tagged). Words typed together are found together, in order, and accents and apostrophes don't need typing.
+
+**Improved**
+
+- **Speaker labels now hold for the whole recording.** For a recording without a platform transcript, speakers used to be worked out from the first few minutes and every later line took the last label, so a moderator could be credited with most of an interview. The whole transcript is read now. Projects analysed before this release keep their old labels until analysed afresh. With redaction on, this step sends the whole transcript, unredacted, to your AI provider, where it used to send the first few minutes (`SECURITY.md`).
+- **A meeting transcript that names nobody is now split into speakers,** instead of being kept as one voice.
+- **A resumed run's time estimate covers only the steps still to run.**
+- **On the Mac, the sidebar's + button offers New Project… and New Folder…,** and a new project opens with its name ready to edit.
+
+**Fixed**
+
+- **The dashboard's Words card never appeared.** It now counts the words in your transcripts.
+- **Choosing a smaller transcription model with `-w` crashed before transcribing.** On Linux and other non-Apple-Silicon machines, `-w tiny`, `base`, `small` or `medium` failed with "Repository Not Found". Every model name now fetches the model that is used, and the download notice gives that model's real size.
+- **A mistyped model name gets a plain answer.** `-w smal` stops before anything downloads and asks whether you meant `small`, listing the names this machine accepts.
+- **A session in which nobody was detected as a participant could take a real participant's number,** and its placeholder could overwrite their figures. Participant numbers are now never issued twice.
+- **A speaker the pipeline re-detected as an observer could hand their participant number, and the name typed for them, to the next new participant.**
+- **`bristlenose transcribe` put every speaker in a session under one participant.** It now numbers moderator and participants as a full run does.
+
 **0.32.0** — _30 Sep 2026_
 
 Exported clips carry subtitles, ChatGPT can read your studies, and the video player learns its keys.

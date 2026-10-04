@@ -80,7 +80,7 @@ runs a short block of preflight checks after the input scan but before any
 stage executes. Each check fires only when needed:
 .IP \(bu 4
 \fBWhisper model\fR \(em if the model isn't fully cached, prints a framed banner
-(model name, \(ti1.5 GB, Ctrl+C-resumable) and lets Hugging Face Hub print its
+(model name, its download size, Ctrl+C-resumable) and lets Hugging Face Hub print its
 own progress natively. Use \fB\-\-no\-fetch\fR to abort instead, or run
 \fBbristlenose doctor \-\-fetch\fR up front.
 .IP \(bu 4
@@ -219,6 +219,8 @@ Transcription backend: \fBauto\fR (detect hardware), \fBmlx\fR (Apple Silicon GP
 .BR \-w ", " \-\-whisper\-model " " \fIMODEL\fR
 Whisper model size: \fBtiny\fR, \fBbase\fR, \fBsmall\fR, \fBmedium\fR,
 \fBlarge-v3\fR, \fBlarge-v3-turbo\fR. Default: \fBlarge-v3-turbo\fR.
+A Hugging Face repo id (\fIorg/name\fR) or a local model directory is also
+accepted; any other name is refused before anything downloads.
 .TP
 .BR \-\-whisper\-language " " \fILANG\fR
 Spoken language of the recordings, as a Whisper language code
@@ -355,7 +357,7 @@ Show one stage only, by id \(em for example \fBquote_extraction\fR.
 .SS Options for \fBdoctor\fR
 .TP
 .BR \-\-fetch
-Pre-download the Whisper transcription model (\(ti1.5 GB), and the voice
+Pre-download the Whisper transcription model (\(ti1.6 GB for the default), and the voice
 model (40 MB) when the \fBvoice\fR extra is installed, so subsequent
 \fBrun\fR / \fBtranscribe\fR invocations work offline or with
 \fB\-\-no\-fetch\fR. Honours the \fI~/.cache/huggingface/hub/\fR cache root
@@ -661,7 +663,7 @@ Pre-warm the Whisper cache for an offline run:
 .PP
 .RS
 .nf
-bristlenose doctor \-\-fetch         # downloads \(ti1.5 GB once
+bristlenose doctor \-\-fetch         # downloads \(ti1.6 GB once
 bristlenose run interviews \-\-no\-fetch
 # Now safe on a flight / air-gapped network
 .fi
@@ -733,7 +735,8 @@ Error (missing input, configuration problem, pipeline failure).
 Preflight aborted: a required dependency is missing and could not be
 auto-installed (e.g. ffmpeg not found and Homebrew unavailable / declined),
 \fB\-\-no\-fetch\fR was set with an uncached Whisper model, or API-key
-validation rejected the key (invalid, billing-empty, model-unavailable).
+validation rejected the key (invalid, billing-empty, model-unavailable),
+or the Whisper model name is not one the transcription backend knows.
 The terminal message names the recovery action.
 .SH BUGS
 Report bugs at \fIhttps://github.com/cassiocassio/bristlenose/issues\fR.

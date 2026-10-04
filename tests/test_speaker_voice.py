@@ -439,11 +439,13 @@ class TestPipelineRecord:
 
 
 class TestDoctor:
-    def _check(self, monkeypatch, *, on=True, installed=True, cached=None):
+    def _check(self, monkeypatch, *, on=True, installed=True, cached=None, snap=False):
         from bristlenose.config import BristlenoseSettings
         from bristlenose.doctor import check_voice
 
         monkeypatch.setenv("BRISTLENOSE_VOICE_PASS", "true" if on else "false")
+        if not snap:
+            monkeypatch.delenv("SNAP", raising=False)
         with (
             patch.object(voice, "voice_runtime_available", return_value=installed),
             patch.object(voice, "cached_voice_model", return_value=cached),
@@ -470,6 +472,20 @@ class TestDoctor:
         result = self._check(monkeypatch)
         assert "first analysis" in result.detail
         assert "bristlenose" not in result.detail and "pip" not in result.detail
+
+    def test_the_snap_ships_the_extra_so_its_absence_is_a_broken_build(
+        self, monkeypatch
+    ) -> None:
+        # A snap cannot be pip-installed into, so the pip hint would be a lie.
+        from bristlenose.doctor import CheckStatus
+
+        monkeypatch.setenv("SNAP", "/snap/bristlenose/x1")
+        missing = self._check(monkeypatch, installed=False, snap=True)
+        assert missing.status == CheckStatus.WARN and "missing from this build" in missing.detail
+        assert "pip" not in missing.detail
+        # With the runtime there, the snap has a terminal: the fetch hint holds.
+        uncached = self._check(monkeypatch, snap=True)
+        assert uncached.status == CheckStatus.SKIP and "doctor --fetch" in uncached.detail
 
     def test_an_override_says_what_runs_will_do(self, monkeypatch, tmp_path) -> None:
         from bristlenose.config import BristlenoseSettings
@@ -509,6 +525,17 @@ class TestBundleSelfTest:
         loose = check_bundle_voice()
         assert frozen.status == CheckStatus.FAIL and "missing from the bundle" in frozen.detail
         assert loose.status == CheckStatus.OK
+
+    def test_missing_in_the_snap_fails(self, monkeypatch) -> None:
+        import sys
+
+        from bristlenose.doctor import CheckStatus, check_bundle_voice
+
+        monkeypatch.setattr(voice, "voice_runtime_available", lambda: False)
+        monkeypatch.setattr(sys, "frozen", False, raising=False)
+        monkeypatch.setenv("SNAP", "/snap/bristlenose/x1")
+        result = check_bundle_voice()
+        assert result.status == CheckStatus.FAIL and "snapcraft.yaml" in result.detail
 
     def test_installed_but_unloadable_fails_everywhere(self, monkeypatch) -> None:
         import builtins

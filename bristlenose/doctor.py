@@ -339,7 +339,8 @@ def check_voice(settings: BristlenoseSettings) -> CheckResult:
     """The optional voice pass in speaker identification (stages/s05b_voice.py).
 
     Informational: without it, speakers are told apart from the text alone, so
-    nothing here is a FAIL. A WARN only when an explicit override is broken.
+    nothing here is a FAIL. A WARN only when an explicit override is broken, or
+    when a build that ships the extra (the Mac app, the snap) is missing it.
     Also in ``run_local_checks`` (the Mac Health window) since the sidecar
     ships the extra; that window shows these strings raw, in English.
     """
@@ -361,8 +362,9 @@ def check_voice(settings: BristlenoseSettings) -> CheckResult:
         return CheckResult(status=CheckStatus.SKIP, label=label,
                            detail="switched off (BRISTLENOSE_VOICE_PASS)")
     if not voice_runtime_available():
-        if in_app:
-            # The app ships the extra, so its absence is a broken build.
+        # The app and the snap both ship the extra, so its absence there is a
+        # broken build — and a snap cannot be pip-installed into.
+        if in_app or os.environ.get("SNAP"):
             return CheckResult(status=CheckStatus.WARN, label=label,
                                detail="voice runtime missing from this build; speakers are "
                                       "told apart from the text alone")
@@ -1454,8 +1456,10 @@ def check_bundle_voice() -> CheckResult:
     fetched on first use), so none is loaded here.
 
     In a frozen bundle the package is expected, since build-sidecar.sh installs
-    the ``voice`` extra; elsewhere its absence is a legal install.
+    the ``voice`` extra, and so it is in the snap (snapcraft.yaml installs
+    ``.[serve,voice]``); elsewhere its absence is a legal install.
     """
+    import os
     import sys
 
     from bristlenose.stages.s05b_voice import voice_runtime_available
@@ -1470,6 +1474,13 @@ def check_bundle_voice() -> CheckResult:
                 status=CheckStatus.FAIL, label=label,
                 detail="sherpa_onnx missing from the bundle (keep collect_all('sherpa_onnx') "
                        "and the voice extra in build-sidecar.sh)",
+                fix_key="bundle_dir_missing",
+            )
+        if os.environ.get("SNAP"):
+            return CheckResult(
+                status=CheckStatus.FAIL, label=label,
+                detail="sherpa_onnx missing from the snap (keep the voice extra in "
+                       "snap/snapcraft.yaml's python-packages)",
                 fix_key="bundle_dir_missing",
             )
         return CheckResult(status=CheckStatus.OK, label=label,

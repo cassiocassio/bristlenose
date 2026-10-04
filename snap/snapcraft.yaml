@@ -47,7 +47,13 @@ parts:
     plugin: python
     source: .
     python-packages:
-      - ".[serve]"
+      # voice: the stage-5b voice pass (sherpa-onnx, which vendors its own
+      # libonnxruntime.so beside _sherpa_onnx*.so, found by rpath, and never
+      # imports the separate onnxruntime package). Manylinux cp312 wheels for
+      # amd64 and arm64, so nothing builds from source. The 40 MB model is NOT
+      # bundled: it is fetched on first use into $SNAP_USER_COMMON/models/
+      # (the network plug), hash-checked (docs/design-voice-diarization.md).
+      - ".[serve,voice]"
     stage-packages:
       - ffmpeg
       - libsndfile1
@@ -103,6 +109,17 @@ parts:
       # Absent file means a local build, which publishes nothing, so no suffix.
       SUFFIX=$(cat "$CRAFT_PART_SRC/.snap-version-suffix" 2>/dev/null || true)
       craftctl set version="${VERSION}${SUFFIX}"
+      # Fail loud if the voice runtime will not load from the staged tree:
+      # outside a snap or a frozen bundle the self-test reads an absent extra
+      # as a legal install, so assert presence here, then loadability.
+      $CRAFT_PART_INSTALL/bin/python3 - <<'PY'
+      from bristlenose.doctor import CheckStatus, check_bundle_voice
+      from bristlenose.stages.s05b_voice import voice_runtime_available
+      assert voice_runtime_available(), "sherpa_onnx is missing from the snap"
+      r = check_bundle_voice()
+      assert r.status == CheckStatus.OK, r.detail
+      print("voice runtime:", r.detail)
+      PY
       # Download spaCy model into the snap's Python environment so
       # --redact-pii works out of the box without user action.
       $CRAFT_PART_INSTALL/bin/python3 -m spacy download en_core_web_sm

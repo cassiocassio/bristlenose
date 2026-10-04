@@ -135,6 +135,13 @@
       "participant": "\u53c2\u52a0\u8005",
       "observer": "\u30aa\u30d6\u30b6\u30fc\u30d0\u30fc"
     },
+    "picker": {
+      "role": "役割",
+      "newModerator": "新しいモデレーター",
+      "newObserver": "新しいオブザーバー",
+      "newNameFor": "{{code}} の新しい名前",
+      "thatsMe": "自分（{{name}}）"
+    },
     "failedToLoad": "セッションの読み込みに失敗しました: {{error}}",
     "loading": "セッションを読み込み中…"
   },

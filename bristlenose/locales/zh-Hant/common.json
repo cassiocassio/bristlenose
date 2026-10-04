@@ -131,6 +131,13 @@
       "participant": "\u53c3\u8207\u8005",
       "observer": "\u89c0\u5bdf\u54e1"
     },
+    "picker": {
+      "role": "角色",
+      "newModerator": "新主持人",
+      "newObserver": "新觀察員",
+      "newNameFor": "{{code}} 的新名稱",
+      "thatsMe": "我本人（{{name}}）"
+    },
     "failedToLoad": "無法載入場次：{{error}}",
     "loading": "正在載入場次⋯"
   },

@@ -127,6 +127,13 @@
       "participant": "Deltager",
       "observer": "Observat\u00f8r"
     },
+    "picker": {
+      "role": "Rolle",
+      "newModerator": "Ny moderator",
+      "newObserver": "Ny observatør",
+      "newNameFor": "Nyt navn til {{code}}",
+      "thatsMe": "Det er mig ({{name}})"
+    },
     "moderatedBy": "Modereret af {{names}}",
     "observer_one": "Observatør: {{names}}",
     "observer_other": "Observatører: {{names}}",

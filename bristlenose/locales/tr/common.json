@@ -140,6 +140,13 @@
       "participant": "Kat\u0131l\u0131mc\u0131",
       "observer": "G\u00f6zlemci"
     },
+    "picker": {
+      "role": "Rol",
+      "newModerator": "Yeni moderatör",
+      "newObserver": "Yeni gözlemci",
+      "newNameFor": "{{code}} için yeni ad",
+      "thatsMe": "Bu benim ({{name}})"
+    },
     "failedToLoad": "Oturumlar yüklenemedi: {{error}}",
     "loading": "Oturumlar yükleniyor…"
   },

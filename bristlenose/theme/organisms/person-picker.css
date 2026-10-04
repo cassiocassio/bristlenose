@@ -1,0 +1,101 @@
+/* Person picker — "who is this speaker?", opened from a speaker in the
+   Sessions grid (design-people.md § UX iteration 3). The browser's picker; the
+   Mac app opens a native one in its place.
+
+   Composed from shipped pieces: the Export menu's box and rows
+   (organisms/global-nav.css), the role toggle (.dimension-toggle,
+   organisms/inspector.css), and the split person badge. Only the composition
+   lives here. */
+
+.bn-person-picker-anchor {
+    position: relative;
+}
+
+/* The speaker's badge is the picker's button. */
+.bn-person-picker-trigger {
+    all: unset;
+    display: inline-flex;
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+}
+
+.bn-person-picker-trigger:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+/* Opens under the badge it names, from the left edge (the Export menu hangs
+   from the right of the toolbar). */
+.bn-person-picker.export-dropdown-menu {
+    left: 0;
+    right: auto;
+}
+
+.bn-person-picker .bn-picker-head {
+    padding: 0.4rem 0.85rem;
+    list-style: none;
+}
+
+/* Three segments: the shipped toggle draws its divider for two. */
+.bn-person-picker .dimension-toggle {
+    display: flex;
+    width: 100%;
+}
+
+.bn-person-picker .dimension-btn {
+    flex: 1;
+}
+
+.bn-person-picker .dimension-btn:first-child {
+    border-right: none;
+}
+
+.bn-person-picker .dimension-btn + .dimension-btn {
+    border-left: 1px solid var(--bn-colour-border);
+}
+
+/* Changing a speaker's role is not built yet (design-people.md §J); the other
+   roles are shown, and dimmed. */
+.bn-person-picker .dimension-btn:disabled,
+.bn-person-picker .dimension-btn:disabled:hover {
+    background: none;
+    color: var(--bn-colour-muted);
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* Someone new is the next badge: the code and its name half as the field. The
+   name half sizes to its text — a hidden copy sets the width, the input lies
+   over it — so typing grows a badge like the ones above. */
+.bn-person-picker .bn-picker-new-name {
+    display: inline-grid;
+}
+
+.bn-person-picker .bn-picker-new-name > * {
+    grid-area: 1 / 1;
+    font: inherit;
+    white-space: pre;
+}
+
+.bn-person-picker .bn-picker-new-name > span {
+    visibility: hidden;
+    min-width: 2ch;
+}
+
+.bn-person-picker .bn-picker-new-name > input {
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    outline: none;
+}
+
+.bn-person-picker .bn-picker-new-name > input::placeholder {
+    color: var(--bn-colour-muted);
+}
+
+.bn-person-picker .bn-picker-new:focus-within {
+    background: var(--bn-colour-quote-bg);
+}

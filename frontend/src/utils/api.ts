@@ -305,7 +305,9 @@ export function isSessionScopedCode(code: string): boolean {
 export function putSessionSpeaker(
   sessionId: string,
   speakerCode: string,
-  edit: Partial<PersonData>,
+  /** `confirmed` alone says yes to the name as it stands (the picker's Enter
+   *  on a proposed name); a name that is sent is confirmed either way. */
+  edit: Partial<PersonData> & { confirmed?: boolean },
 ): void {
   firePut(
     `/sessions/${encodeURIComponent(sessionId)}/speakers/${encodeURIComponent(speakerCode)}`,

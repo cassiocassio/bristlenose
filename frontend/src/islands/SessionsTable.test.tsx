@@ -211,14 +211,18 @@ describe("SessionsTable name editing", () => {
     });
   });
 
-  it("enters edit mode on name text click", async () => {
+  it("a click on the name opens the picker; the pencil is what edits in place", async () => {
+    // Changed 4 Oct 2026 (design-people.md § UX iteration 3): the name and its
+    // badge ask "who is this?" — the picker — and spelling fixes stay with the
+    // pencil.
     mockFetchResponses();
     render(<SessionsTable projectId="1" />);
     await screen.findByText("#1");
-    // Click the wrapper span around EditableText
     const nameEl = screen.getByTestId("bn-name-p1");
     fireEvent.click(nameEl.parentElement!);
-    expect(nameEl.getAttribute("contenteditable")).toBe("true");
+    expect(nameEl.getAttribute("contenteditable")).not.toBe("true");
+    // The picker is loaded on first open, so it arrives a tick after the click.
+    await waitFor(() => expect(document.querySelector(".bn-person-picker")).not.toBeNull());
   });
 
   it("commits on Enter and updates display", async () => {
@@ -607,5 +611,176 @@ describe("SessionsTable moderators are named per session", () => {
     const [put] = putCalls();
     expect(put.url).toMatch(/\/people$/);
     expect((put.body as Record<string, { short_name: string }>).p1.short_name).toBe("Alicia");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Person picker — who is this speaker? (design-people.md § UX iteration 3)
+// ---------------------------------------------------------------------------
+
+describe("SessionsTable person picker", () => {
+  // s1's moderator is a pipeline guess; s2's was confirmed by a person.
+  const pickerSessions = {
+    ...sessionsResponse,
+    sessions: [
+      {
+        ...sessionsResponse.sessions[0],
+        speakers: [
+          { speaker_code: "m1", name: "Sarah", role: "researcher", name_confirmed: false },
+          { speaker_code: "p1", name: "Alice", role: "participant", name_confirmed: true },
+        ],
+      },
+      {
+        ...sessionsResponse.sessions[1],
+        speakers: [
+          { speaker_code: "m1", name: "Kerri", role: "researcher", name_confirmed: true },
+          { speaker_code: "p2", name: "Bob", role: "participant", name_confirmed: true },
+        ],
+      },
+    ],
+  };
+
+  function mockPicker() {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      (url: string) => {
+        if (url.includes("/sessions") && !url.includes("/speakers/")) {
+          return Promise.resolve({ ok: true, json: async () => pickerSessions });
+        }
+        if (url.includes("/people")) {
+          return Promise.resolve({ ok: true, json: async () => peopleResponse });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ status: "ok" }) });
+      },
+    );
+  }
+
+  // The picker is loaded on first open, so it arrives a tick after the click.
+  const pickerMenu = () =>
+    waitFor(() => {
+      const el = document.querySelector<HTMLElement>(".bn-person-picker");
+      if (!el) throw new Error("picker not open yet");
+      return el;
+    });
+
+  function puts(): { url: string; body: unknown }[] {
+    return (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
+      .filter(([, init]) => (init as RequestInit | undefined)?.method === "PUT")
+      .map(([url, init]) => ({ url: url as string, body: JSON.parse((init as RequestInit).body as string) }));
+  }
+
+  afterEach(() => {
+    delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__;
+    delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_NATIVE_PERSON_PICKER__;
+    delete (window as unknown as Record<string, unknown>).webkit;
+    _resetEmbeddedCache();
+  });
+
+  it("draws a proposed name with the dotted ring and the grey name", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    const [s1Mod, s2Mod] = screen.getAllByTestId("bn-picker-trigger-m1");
+    expect(s1Mod.classList.contains("badge-proposed")).toBe(true);
+    expect(s2Mod.classList.contains("badge-proposed")).toBe(false);
+    const [s1Name] = screen.getAllByTestId("bn-name-m1");
+    expect(s1Name.classList.contains("proposed")).toBe(true);
+  });
+
+  it("the badge opens the picker with every moderator name in the study", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[0]);
+    const picker = await pickerMenu();
+    const names = Array.from(picker.querySelectorAll(".bn-speaker-badge-name")).map((n) => n.textContent);
+    expect(names.slice(0, 2)).toEqual(["Sarah", "Kerri"]);
+  });
+
+  it("Enter on the proposed name confirms it, keeping the name", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[0]);
+    fireEvent.keyDown(await pickerMenu(), { key: "Enter" });
+    await waitFor(() => expect(puts()).toHaveLength(1));
+    expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
+    expect(puts()[0].body).toEqual({ confirmed: true });
+    expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("badge-proposed")).toBe(false);
+  });
+
+  it("picking another moderator's name renames only this session's", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[0]);
+    const kerri = Array.from((await pickerMenu()).querySelectorAll<HTMLElement>(".export-dropdown-item"))[1];
+    fireEvent.click(kerri);
+    await waitFor(() => expect(puts()).toHaveLength(1));
+    expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
+    expect(puts()[0].body).toEqual({ full_name: "Kerri", short_name: "Kerri" });
+    expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Kerri", "Kerri"]);
+  });
+
+  it("the pencil still edits the name in place", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[0]);
+    await pickerMenu();
+    fireEvent.mouseDown(screen.getAllByTestId("bn-name-pencil-m1")[0]);
+    fireEvent.click(screen.getAllByTestId("bn-name-pencil-m1")[0]);
+    expect(document.querySelector(".bn-person-picker")).toBeNull();
+  });
+
+  it("in the Mac app the badge asks native for its picker instead", async () => {
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_NATIVE_PERSON_PICKER__ = true;
+    _resetEmbeddedCache();
+    const postMessage = vi.fn();
+    (window as unknown as Record<string, unknown>).webkit = {
+      messageHandlers: { navigation: { postMessage } },
+    };
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[0]);
+    expect(document.querySelector(".bn-person-picker")).toBeNull();
+    // The bridge module loads on demand, so the message follows a tick later.
+    await waitFor(() =>
+      expect(postMessage.mock.calls.some(([m]) => m.type === "person-picker")).toBe(true),
+    );
+    const msg = postMessage.mock.calls.map(([m]) => m).find((m) => m.type === "person-picker");
+    expect(msg).toMatchObject({
+      sessionId: "s1",
+      slot: { code: "m1", role: "moderator", name: "Sarah", confirmed: false },
+      names: ["Sarah", "Kerri"],
+    });
+  });
+
+  it("an app without a native picker opens the web one: no message goes unanswered", async () => {
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    _resetEmbeddedCache();
+    const postMessage = vi.fn();
+    (window as unknown as Record<string, unknown>).webkit = {
+      messageHandlers: { navigation: { postMessage } },
+    };
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[0]);
+    await pickerMenu();
+    expect(postMessage.mock.calls.some(([m]) => m.type === "person-picker")).toBe(false);
+  });
+
+  it("native's choice comes back as a menu action and is applied", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    window.dispatchEvent(new CustomEvent("bn:menu-action", {
+      detail: { action: "personPickerChoose", payload: { sessionId: "s2", code: "m1", choice: { kind: "name", name: "Mike" } } },
+    }));
+    await waitFor(() => expect(puts()).toHaveLength(1));
+    expect(puts()[0].url).toContain("/sessions/s2/speakers/m1");
+    expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Sarah", "Mike"]);
   });
 });

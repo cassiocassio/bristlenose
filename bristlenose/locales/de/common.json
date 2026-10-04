@@ -117,6 +117,13 @@
       "participant": "Teilnehmer",
       "observer": "Beobachter"
     },
+    "picker": {
+      "role": "Rolle",
+      "newModerator": "Neuer Moderator",
+      "newObserver": "Neuer Beobachter",
+      "newNameFor": "Neuer Name für {{code}}",
+      "thatsMe": "Das bin ich ({{name}})"
+    },
     "moderatedBy": "Moderiert von {{names}}",
     "observer_one": "Beobachter: {{names}}",
     "observer_other": "Beobachter: {{names}}",

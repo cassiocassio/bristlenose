@@ -140,6 +140,13 @@
       "participant": "Participant",
       "observer": "Observer"
     },
+    "picker": {
+      "role": "Role",
+      "newModerator": "New moderator",
+      "newObserver": "New observer",
+      "newNameFor": "New name for {{code}}",
+      "thatsMe": "That’s Me ({{name}})"
+    },
     "failedToLoad": "Failed to load sessions: {{error}}",
     "loading": "Loading sessions…"
   },

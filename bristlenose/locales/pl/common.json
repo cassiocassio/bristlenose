@@ -158,6 +158,13 @@
       "participant": "Uczestnik",
       "observer": "Obserwator"
     },
+    "picker": {
+      "role": "Rola",
+      "newModerator": "Nowy moderator",
+      "newObserver": "Nowy obserwator",
+      "newNameFor": "Nowa nazwa dla {{code}}",
+      "thatsMe": "To ja ({{name}})"
+    },
     "failedToLoad": "Nie udało się wczytać sesji: {{error}}",
     "loading": "Wczytywanie sesji…"
   },

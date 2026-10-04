@@ -11,15 +11,32 @@
  * CSS classes match the existing theme so styles apply without changes.
  */
 
-import { useCallback, useContext, useEffect, useState } from "react";
+import { Suspense, lazy, useCallback, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { EditableText, JourneyChain, PersonBadge, SectionHeading, Sparkline, Thumbnail } from "../components";
+import type { PersonPickerChoice, PersonPickerSlot, PickerRole } from "../utils/personPicker";
+
+// The picker's code is loaded when someone first opens it: the grid is part of
+// first paint, and the picker is needed only on a click. The browser loads the
+// web picker; the Mac app loads only the bridge, to ask for its native one.
+const PersonPickerPopover = lazy(() =>
+  import("../components/PersonPicker").then((m) => ({ default: m.PersonPickerPopover })),
+);
+const loadPickerBridge = () => import("../utils/personPickerBridge");
+
+/** Whether the host draws its own picker. The Mac app says so by setting this
+ *  flag in the web view; without it — the browser, or an app build from
+ *  before the native picker — the web picker opens, so a click never sends a
+ *  message nothing answers. */
+function hasNativePersonPicker(): boolean {
+  return (window as unknown as Record<string, unknown>).__BRISTLENOSE_NATIVE_PERSON_PICKER__ === true;
+}
 import type { SparklineItem } from "../components/Sparkline";
 import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet, getPeople, isSessionScopedCode, putPeople, putSessionSpeaker } from "../utils/api";
 import type { PersonData } from "../utils/api";
-import { postProjectAction } from "../shims/bridge";
+import { postPersonPicker, postProjectAction } from "../shims/bridge";
 import { isEmbedded } from "../utils/embedded";
 import { isExportMode } from "../utils/exportData";
 import { formatDurationHuman, formatFinderDate, formatFinderFilename } from "../utils/format";
@@ -46,6 +63,14 @@ const SENTIMENT_ORDER = [
  * prefix (m/o/…) rather than the stored role string, which is more robust (the
  * m-code speaker's stored role is "researcher", never "moderator").
  */
+/** The picker's role for a speaker code (the code prefix is the role; the
+ *  stored moderator role is "researcher", never "moderator"). */
+function pickerRoleOf(code: string): PickerRole {
+  if (code.startsWith("m")) return "moderator";
+  if (code.startsWith("o")) return "observer";
+  return "participant";
+}
+
 function speakerRolePlaceholder(code: string, t: (key: string) => string): string {
   if (code.startsWith("m")) return t("sessions.speakerPlaceholder.moderator");
   if (code.startsWith("o")) return t("sessions.speakerPlaceholder.observer");
@@ -131,6 +156,8 @@ export function SessionsTable({
   // `${session_id}:${speaker_code}` — moderator codes repeat across sessions,
   // so a bare code opened the editor in every session that had an `m1`.
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  // `${session}:${code}` of the speaker whose web picker is open.
+  const [pickerKey, setPickerKey] = useState<string | null>(null);
 
   const [isRefetching, setIsRefetching] = useState(false);
 
@@ -183,7 +210,7 @@ export function SessionsTable({
                   ...sess,
                   speakers: sess.speakers.map((sp) =>
                     sp.speaker_code === speakerCode
-                      ? { ...sp, name: newName }
+                      ? { ...sp, name: newName, name_confirmed: true }
                       : sp,
                   ),
                 },
@@ -213,6 +240,65 @@ export function SessionsTable({
     [],
   );
 
+  // A pick or a confirm from either picker. A participant's rename goes the
+  // inline editor's way (/people, which confirms a changed name); a moderator's
+  // or observer's names only this session. The optimistic copy carries the yes.
+  const applyPickerChoice = useCallback(
+    (sessionId: string, speakerCode: string, choice: PersonPickerChoice) => {
+      if (isExportMode()) return;
+      const sessionScoped = isSessionScopedCode(speakerCode);
+      if (choice.kind === "name" && !sessionScoped) {
+        handleNameCommit(sessionId, speakerCode, choice.name);
+        return;
+      }
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          sessions: prev.sessions.map((sess) =>
+            sess.session_id !== sessionId
+              ? sess
+              : {
+                  ...sess,
+                  speakers: sess.speakers.map((sp) =>
+                    sp.speaker_code !== speakerCode
+                      ? sp
+                      : {
+                          ...sp,
+                          ...(choice.kind === "name" ? { name: choice.name } : {}),
+                          name_confirmed: true,
+                        },
+                  ),
+                },
+          ),
+        };
+      });
+      if (choice.kind === "confirm") {
+        putSessionSpeaker(sessionId, speakerCode, { confirmed: true });
+      } else {
+        putSessionSpeaker(sessionId, speakerCode, {
+          full_name: choice.name,
+          short_name: choice.name,
+        });
+      }
+    },
+    [handleNameCommit],
+  );
+
+  // The Mac app's native picker answers through the menu-action channel.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { action, payload } = (e as CustomEvent<{ action: string; payload?: unknown }>).detail;
+      if (action !== "personPickerChoose") return;
+      void loadPickerBridge().then(({ parsePersonPickerChoice }) => {
+        const pick = parsePersonPickerChoice(payload);
+        if (pick) applyPickerChoice(pick.sessionId, pick.code, pick.choice);
+      });
+    };
+    window.addEventListener("bn:menu-action", handler);
+    return () => window.removeEventListener("bn:menu-action", handler);
+  }, [applyPickerChoice]);
+
   if (error) {
     return (
       <section className="bn-session-table">
@@ -240,6 +326,35 @@ export function SessionsTable({
   // (native `reveal-in-finder` project action — sandbox-safe). In the browser
   // there's no native bridge, so fall back to copying the path to the clipboard.
   const embedded = isEmbedded();
+
+  // The names known for each role across the study, in first-seen order — what
+  // a moderator's or observer's picker offers (personPickerRows).
+  const knownNames: Record<PickerRole, string[]> = { moderator: [], participant: [], observer: [] };
+  for (const sess of sessions) {
+    for (const sp of sess.speakers) {
+      const list = knownNames[pickerRoleOf(sp.speaker_code)];
+      if (sp.name && !list.includes(sp.name)) list.push(sp.name);
+    }
+  }
+
+  // The Mac app opens its native picker over the badge; the browser (and an app
+  // without one) opens the web one in place.
+  const openPicker = (sessionId: string, slot: PersonPickerSlot, anchor: HTMLElement) => {
+    if (isExportMode()) return;
+    if (embedded && hasNativePersonPicker()) {
+      const rect = anchor.getBoundingClientRect();
+      const names = knownNames[slot.role];
+      void loadPickerBridge().then(({ buildPersonPickerMessage }) =>
+        postPersonPicker(buildPersonPickerMessage(sessionId, slot, names, rect, t)),
+      );
+    } else {
+      // A second click on the badge closes it, as a menu button does.
+      const key = `${sessionId}:${slot.code}`;
+      setEditingKey(null);
+      setPickerKey((open) => (open === key ? null : key));
+    }
+  };
+
   const activateFolder = () => {
     if (!source_folder_uri) return;
     if (embedded) {
@@ -324,9 +439,17 @@ export function SessionsTable({
             session={sess}
             peopleMap={peopleMap}
             editingKey={editingKey}
-            onEditStart={setEditingKey}
+            onEditStart={(key) => {
+              setPickerKey(null);
+              setEditingKey(key);
+            }}
             onCancelEdit={() => setEditingKey(null)}
             onNameCommit={handleNameCommit}
+            pickerKey={pickerKey}
+            knownNames={knownNames}
+            onPickerOpen={openPicker}
+            onPickerClose={() => setPickerKey(null)}
+            onPickerChoose={applyPickerChoice}
           />
         ))}
       </div>
@@ -349,6 +472,11 @@ function SessionRow({
   onEditStart,
   onCancelEdit,
   onNameCommit,
+  pickerKey,
+  knownNames,
+  onPickerOpen,
+  onPickerClose,
+  onPickerChoose,
 }: {
   session: SessionResponse;
   peopleMap: Record<string, PersonData> | null;
@@ -356,6 +484,11 @@ function SessionRow({
   onEditStart: (key: string) => void;
   onCancelEdit: () => void;
   onNameCommit: (sessionId: string, code: string, newName: string) => void;
+  pickerKey: string | null;
+  knownNames: Record<PickerRole, string[]>;
+  onPickerOpen: (sessionId: string, slot: PersonPickerSlot, anchor: HTMLElement) => void;
+  onPickerClose: () => void;
+  onPickerChoose: (sessionId: string, code: string, choice: PersonPickerChoice) => void;
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -460,16 +593,51 @@ function SessionRow({
           const nameTitle =
             fullName && fullName !== displayName ? fullName : undefined;
           const isEditing = editingKey === editKey;
+          // A name the pipeline found and no person has said yes to yet: one
+          // dotted ring round the badge, the name in grey (person-badge.css).
+          const proposed = !!displayName && sp.name_confirmed === false;
+          const slot: PersonPickerSlot = {
+            code: sp.speaker_code,
+            role: pickerRoleOf(sp.speaker_code),
+            name: displayName,
+            confirmed: !proposed,
+          };
+          const canPick = !isEditing && !isExportMode();
+          const badge = (
+            <PersonBadge
+              code={sp.speaker_code}
+              role={sp.role as "participant" | "moderator" | "observer"}
+            />
+          );
 
           return (
-            <span key={sp.speaker_code} className="bn-session-speaker-entry">
-              <PersonBadge
-                code={sp.speaker_code}
-                role={sp.role as "participant" | "moderator" | "observer"}
-              />
+            <span key={sp.speaker_code} className="bn-session-speaker-entry bn-person-picker-anchor">
+              {/* The badge is the picker's button: "who is this speaker?" */}
+              {canPick ? (
+                <button
+                  type="button"
+                  className={`bn-person-picker-trigger${proposed ? " badge-proposed" : ""}`}
+                  aria-haspopup="menu"
+                  aria-expanded={pickerKey === editKey}
+                  data-testid={`bn-picker-trigger-${sp.speaker_code}`}
+                  onClick={(e) => onPickerOpen(session_id, slot, e.currentTarget)}
+                >
+                  {badge}
+                </button>
+              ) : (
+                <span className={proposed ? "badge-proposed" : undefined}>{badge}</span>
+              )}
               {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
               <span
-                onClick={isEditing || isExportMode() ? undefined : () => onEditStart(editKey)}
+                onClick={
+                  canPick
+                    ? (e) => {
+                        const trigger = (e.currentTarget.parentElement as HTMLElement)
+                          .querySelector<HTMLElement>(".bn-person-picker-trigger");
+                        onPickerOpen(session_id, slot, trigger ?? e.currentTarget);
+                      }
+                    : undefined
+                }
                 title={nameTitle}
               >
                 <EditableText
@@ -479,7 +647,7 @@ function SessionRow({
                   isEditing={isEditing}
                   onCommit={(newName) => onNameCommit(session_id, sp.speaker_code, newName)}
                   onCancel={() => onCancelEdit()}
-                  className="bn-speaker-editable-name bn-speaker-name-full"
+                  className={`bn-speaker-editable-name bn-speaker-name-full${proposed ? " proposed" : ""}`}
                   placeholder={speakerRolePlaceholder(sp.speaker_code, t)}
                   placeholderClassName="unnamed"
                   data-testid={`bn-name-${sp.speaker_code}`}
@@ -521,6 +689,17 @@ function SessionRow({
                 >
                   &#x270E;
                 </button>
+              )}
+              {pickerKey === editKey && (
+                <Suspense fallback={null}>
+                  <PersonPickerPopover
+                    slot={slot}
+                    knownNames={knownNames[slot.role]}
+                    t={t}
+                    onChoose={(choice) => onPickerChoose(session_id, sp.speaker_code, choice)}
+                    onClose={onPickerClose}
+                  />
+                </Suspense>
               )}
             </span>
           );

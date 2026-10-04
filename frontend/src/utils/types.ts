@@ -535,6 +535,9 @@ export interface SpeakerResponse {
   speaker_code: string;
   name: string;
   role: string;
+  /** False while the name is the pipeline's proposal; a person's pick or typed
+   *  name confirms it (`session_speakers.name_confirmed`, migration 012). */
+  name_confirmed?: boolean;
 }
 
 export interface SourceFileResponse {

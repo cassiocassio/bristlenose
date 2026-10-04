@@ -140,6 +140,13 @@
       "participant": "Osallistuja",
       "observer": "Tarkkailija"
     },
+    "picker": {
+      "role": "Rooli",
+      "newModerator": "Uusi moderaattori",
+      "newObserver": "Uusi tarkkailija",
+      "newNameFor": "Uusi nimi: {{code}}",
+      "thatsMe": "Tämä olen minä ({{name}})"
+    },
     "failedToLoad": "Istuntojen lataus epäonnistui: {{error}}",
     "loading": "Ladataan istuntoja…"
   },

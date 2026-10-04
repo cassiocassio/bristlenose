@@ -123,6 +123,13 @@
       "participant": "\ucc38\uac00\uc790",
       "observer": "\uad00\ucc30\uc790"
     },
+    "picker": {
+      "role": "역할",
+      "newModerator": "새 진행자",
+      "newObserver": "새 관찰자",
+      "newNameFor": "{{code}}의 새 이름",
+      "thatsMe": "나 ({{name}})"
+    },
     "failedToLoad": "세션 로드 실패: {{error}}",
     "loading": "세션 로드 중…"
   },

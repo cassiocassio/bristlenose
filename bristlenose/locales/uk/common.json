@@ -158,6 +158,13 @@
       "participant": "\u0423\u0447\u0430\u0441\u043d\u0438\u043a",
       "observer": "\u0421\u043f\u043e\u0441\u0442\u0435\u0440\u0456\u0433\u0430\u0447"
     },
+    "picker": {
+      "role": "Роль",
+      "newModerator": "Новий модератор",
+      "newObserver": "Новий спостерігач",
+      "newNameFor": "Нове ім’я для {{code}}",
+      "thatsMe": "Це я ({{name}})"
+    },
     "failedToLoad": "Не вдалося завантажити сесії: {{error}}",
     "loading": "Завантаження сесій…"
   },

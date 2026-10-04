@@ -158,3 +158,29 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
 .bn-name-pencil:hover {
     opacity: 0.8 !important;
 }
+
+/* --- A proposed name (design-people.md § UX iteration 3) ---
+   A name the pipeline found, not yet a person's yes
+   (`session_speakers.name_confirmed`): one dotted ring round the whole split
+   badge, and the name in grey that darkens on hover. Saying yes in the picker
+   makes both solid. The halves lose their own borders so the ring is the only
+   line — the `--split` qualifier matches the specificity of the
+   `.bn-speaker-badge-code:last-child` rule above, and later in the file wins,
+   so a code-only badge keeps no solid edge inside the dashes. */
+.badge-proposed .bn-speaker-badge--split {
+    border: 1px dashed currentColor;
+}
+
+.badge-proposed .bn-speaker-badge--split .bn-speaker-badge-code,
+.badge-proposed .bn-speaker-badge--split .bn-speaker-badge-name {
+    border: none;
+}
+
+.bn-speaker-editable-name.proposed {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+.bn-session-speaker-entry:hover .bn-speaker-editable-name.proposed {
+    color: var(--bn-colour-text);
+}

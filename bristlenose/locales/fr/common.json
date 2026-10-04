@@ -130,6 +130,13 @@
       "participant": "Participant",
       "observer": "Observateur"
     },
+    "picker": {
+      "role": "Rôle",
+      "newModerator": "Nouvel animateur",
+      "newObserver": "Nouvel observateur",
+      "newNameFor": "Nouveau nom pour {{code}}",
+      "thatsMe": "C’est moi ({{name}})"
+    },
     "failedToLoad": "Échec du chargement des entretiens : {{error}}",
     "loading": "Chargement des entretiens…"
   },

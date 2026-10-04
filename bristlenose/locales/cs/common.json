@@ -154,6 +154,13 @@
       "participant": "\u00da\u010dastn\u00edk",
       "observer": "Pozorovatel"
     },
+    "picker": {
+      "role": "Role",
+      "newModerator": "Nový moderátor",
+      "newObserver": "Nový pozorovatel",
+      "newNameFor": "Nové jméno pro {{code}}",
+      "thatsMe": "To jsem já ({{name}})"
+    },
     "failedToLoad": "Nepodařilo se načíst sezení: {{error}}",
     "loading": "Načítání sezení…"
   },

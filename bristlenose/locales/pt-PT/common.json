@@ -140,6 +140,13 @@
       "participant": "Participante",
       "observer": "Observador"
     },
+    "picker": {
+      "role": "Função",
+      "newModerator": "Novo moderador",
+      "newObserver": "Novo observador",
+      "newNameFor": "Novo nome para {{code}}",
+      "thatsMe": "Sou eu ({{name}})"
+    },
     "failedToLoad": "Falha ao carregar sessões: {{error}}",
     "loading": "A carregar sessões…"
   },

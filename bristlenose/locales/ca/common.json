@@ -140,6 +140,13 @@
       "participant": "Participant",
       "observer": "Observador"
     },
+    "picker": {
+      "role": "Rol",
+      "newModerator": "Moderador nou",
+      "newObserver": "Observador nou",
+      "newNameFor": "Nom nou per a {{code}}",
+      "thatsMe": "Soc jo ({{name}})"
+    },
     "failedToLoad": "No s'han pogut carregar les sessions: {{error}}",
     "loading": "S'estan carregant les sessions…"
   },

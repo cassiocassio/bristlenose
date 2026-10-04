@@ -15,6 +15,7 @@ import { isPalette } from "../utils/bootPalette";
 import { isSupportedLocale } from "../i18n/index";
 import type { WireSuggestionRow, WireSuggestions, WireToken } from "../utils/searchBridge";
 import type { BadgeStyles } from "../utils/badgeStyle";
+import type { WirePersonPicker } from "../utils/personPickerBridge";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,6 +51,7 @@ export type BridgeMessage =
   | { type: "search-suggestions"; query: string; rows: WireSuggestionRow[] }
   | ({ type: "search-badge-styles" } & BadgeStyles)
   | { type: "focus-mode"; active: boolean }
+  | ({ type: "person-picker" } & WirePersonPicker)
   | { type: "subtitle-prefs"; player: boolean; burn: boolean }
   | {
       type: "panel-state";
@@ -285,6 +287,15 @@ export function postSearchSuggestions(suggestions: WireSuggestions): void {
  */
 export function postSearchBadgeStyles(styles: BadgeStyles): void {
   postNativeMessage({ type: "search-badge-styles", ...styles });
+}
+
+/**
+ * Ask the Mac app to open its native person picker for a speaker in the
+ * Sessions grid (docs/design-people.md § UX iteration 3). The choice comes back
+ * as the `personPickerChoose` menu action. No-ops outside WKWebView.
+ */
+export function postPersonPicker(message: WirePersonPicker): void {
+  postNativeMessage({ type: "person-picker", ...message });
 }
 
 /**

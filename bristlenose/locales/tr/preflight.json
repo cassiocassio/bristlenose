@@ -5,7 +5,10 @@
     "verb_resuming": "İndirmeye devam ediliyor",
     "fetching": "{repo_id} {verb}...",
     "ready": "Whisper modeli hazır",
-    "aborted_no_fetch": "Whisper modeli {repo_id} önbellekte yok ve --no-fetch ayarlanmış. Önceden getirmek için `bristlenose doctor --fetch` komutunu çalıştırın ya da --no-fetch olmadan yeniden çalıştırın."
+    "aborted_no_fetch": "Whisper modeli {repo_id} önbellekte yok ve --no-fetch ayarlanmış. Önceden getirmek için `bristlenose doctor --fetch` komutunu çalıştırın ya da --no-fetch olmadan yeniden çalıştırın.",
+    "unknown_model": "`{model}` ad\u0131nda bir Whisper modeli yok.",
+    "did_you_mean": "`{suggestion}` mi demek istediniz?",
+    "choose_model": "\u015eunlardan birini kullan\u0131n: {models} ya da `org/name` gibi bir Hugging Face depo kimli\u011fi."
   },
   "ffmpeg": {
     "banner_missing": "Video dosyalarını okumak için ffmpeg gerekiyor. PATH üzerinde bulunamadı.",

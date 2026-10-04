@@ -19,6 +19,7 @@ from bristlenose.preflight.whisper import (
     cache_state,
     download_size_human,
     preflight_whisper,
+    unknown_model_message,
 )
 from bristlenose.stages.s05_transcribe import MLX_REPO_FOR_MODEL
 
@@ -153,6 +154,99 @@ class TestEveryModelNameResolves:
 
     def test_unmeasured_repo_has_no_size(self):
         assert download_size_human("custom/repo-name") is None
+
+
+def _on_backend(backend: str):
+    return patch(
+        "bristlenose.stages.s05_transcribe._resolve_backend", return_value=backend
+    )
+
+
+class TestUnknownModelRefusal:
+    """``-w smal`` used to reach the Hub as the repo id ``smal`` and die there
+    with a 401 "Repository Not Found"; now the preflight refuses it by name."""
+
+    @pytest.mark.parametrize("backend", ["mlx", "faster-whisper"])
+    @pytest.mark.parametrize("model", _ADVERTISED)
+    def test_every_advertised_name_is_accepted(self, model: str, backend: str):
+        with patch("bristlenose.utils.hardware.detect_hardware"), _on_backend(backend):
+            assert unknown_model_message(_settings(whisper_model=model)) is None
+
+    def test_typo_is_refused_with_a_suggestion_before_any_fetch(self):
+        console = Console(record=True, width=200)
+        with (
+            patch("bristlenose.utils.hardware.detect_hardware"),
+            _on_backend("faster-whisper"),
+            patch("bristlenose.utils.package_install.ensure_hf_model") as fetch,
+        ):
+            with pytest.raises(WhisperPreflightAbortedError) as exc:
+                preflight_whisper(
+                    settings=_settings(whisper_model="smal"),
+                    console=console,
+                    status=None,
+                    allow_fetch=True,
+                )
+        fetch.assert_not_called()
+        msg = str(exc.value)
+        assert msg.startswith("There is no Whisper model called `smal`. Did you mean `small`?")
+        assert "large-v3-turbo" in msg and "org/name" in msg
+
+    def test_typo_wins_over_the_no_fetch_abort(self):
+        # Otherwise the answer is "smal is not in cache", which sends the
+        # researcher off to fetch a model that does not exist.
+        with patch("bristlenose.utils.hardware.detect_hardware"), _on_backend("mlx"):
+            with pytest.raises(WhisperPreflightAbortedError, match="no Whisper model"):
+                preflight_whisper(
+                    settings=_settings(whisper_model="smal"),
+                    console=Console(),
+                    status=None,
+                    allow_fetch=False,
+                )
+
+    def test_no_close_match_offers_only_the_list(self):
+        with patch("bristlenose.utils.hardware.detect_hardware"), _on_backend("mlx"):
+            msg = unknown_model_message(_settings(whisper_model="zzzz"))
+        assert msg is not None and "Did you mean" not in msg
+
+    def test_names_are_per_backend(self):
+        # distil-* is faster-whisper's; mlx-whisper has no conversion of it.
+        settings = _settings(whisper_model="distil-large-v3")
+        with patch("bristlenose.utils.hardware.detect_hardware"):
+            with _on_backend("faster-whisper"):
+                assert unknown_model_message(settings) is None
+            with _on_backend("mlx"):
+                assert unknown_model_message(settings) is not None
+
+    def test_repo_id_passes(self):
+        with patch("bristlenose.utils.hardware.detect_hardware"), _on_backend("mlx"):
+            assert unknown_model_message(_settings(whisper_model="org/my-whisper")) is None
+
+    def test_local_model_dir_passes(self, tmp_path, monkeypatch):
+        (tmp_path / "my-ct2-model").mkdir()
+        monkeypatch.chdir(tmp_path)
+        with patch("bristlenose.utils.hardware.detect_hardware"), _on_backend("faster-whisper"):
+            assert unknown_model_message(_settings(whisper_model="my-ct2-model")) is None
+
+    def test_doctor_fetch_refuses_cleanly(self, monkeypatch):
+        # Was an uncaught traceback: the --fetch path called the preflight
+        # without the PreflightAbortedError handler `run` has.
+        from typer.testing import CliRunner
+
+        from bristlenose.cli import app
+
+        monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL", "smal")
+        with patch("bristlenose.utils.package_install.ensure_hf_model") as fetch:
+            result = CliRunner().invoke(app, ["doctor", "--fetch"])
+        fetch.assert_not_called()
+        assert result.exit_code == 2, result.output
+        assert "no Whisper model called `smal`" in " ".join(result.output.split())
+        assert not isinstance(result.exception, WhisperPreflightAbortedError)
+
+    def test_bundled_model_dir_passes(self, tmp_path, monkeypatch):
+        (tmp_path / "house-model").mkdir()
+        monkeypatch.setenv("BRISTLENOSE_WHISPER_MODEL_DIR", str(tmp_path))
+        with patch("bristlenose.utils.hardware.detect_hardware"), _on_backend("faster-whisper"):
+            assert unknown_model_message(_settings(whisper_model="house-model")) is None
 
 
 # ---------------------------------------------------------------------------

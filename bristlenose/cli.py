@@ -2467,9 +2467,13 @@ def doctor(
     if fetch:
         from bristlenose.preflight.whisper import preflight_whisper
         settings = load_settings()
-        preflight_whisper(
-            settings=settings, console=console, status=None, allow_fetch=True,
-        )
+        try:
+            preflight_whisper(
+                settings=settings, console=console, status=None, allow_fetch=True,
+            )
+        except PreflightAbortedError as exc:
+            _say(MessageKind.ERROR, str(exc))
+            raise typer.Exit(2) from exc
         from rich.markup import escape
 
         from bristlenose.stages.s05b_voice import (

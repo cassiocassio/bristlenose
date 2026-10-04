@@ -5,7 +5,10 @@
     "verb_resuming": "Resuming download",
     "fetching": "{verb} {repo_id}...",
     "ready": "Whisper model ready",
-    "aborted_no_fetch": "Whisper model {repo_id} is not in cache and --no-fetch is set. Run `bristlenose doctor --fetch` to fetch it ahead of time, or re-run without --no-fetch."
+    "aborted_no_fetch": "Whisper model {repo_id} is not in cache and --no-fetch is set. Run `bristlenose doctor --fetch` to fetch it ahead of time, or re-run without --no-fetch.",
+    "unknown_model": "There is no Whisper model called `{model}`.",
+    "did_you_mean": "Did you mean `{suggestion}`?",
+    "choose_model": "Use one of {models}, or a Hugging Face repo id such as `org/name`."
   },
   "ffmpeg": {
     "banner_missing": "ffmpeg is required to read video files. Not found on PATH.",

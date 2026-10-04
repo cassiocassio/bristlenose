@@ -5,7 +5,10 @@
     "verb_resuming": "Wznawianie pobierania",
     "fetching": "{verb} {repo_id}...",
     "ready": "Model Whisper gotowy",
-    "aborted_no_fetch": "Modelu Whisper {repo_id} nie ma w pamięci podręcznej, a ustawiono --no-fetch. Uruchom `bristlenose doctor --fetch`, aby pobrać go z wyprzedzeniem, albo uruchom ponownie bez --no-fetch."
+    "aborted_no_fetch": "Modelu Whisper {repo_id} nie ma w pamięci podręcznej, a ustawiono --no-fetch. Uruchom `bristlenose doctor --fetch`, aby pobrać go z wyprzedzeniem, albo uruchom ponownie bez --no-fetch.",
+    "unknown_model": "Nie ma modelu Whisper o nazwie `{model}`.",
+    "did_you_mean": "Czy chodzi\u0142o o `{suggestion}`?",
+    "choose_model": "U\u017cyj jednego z tych: {models} albo identyfikatora repozytorium Hugging Face, np. `org/name`."
   },
   "ffmpeg": {
     "banner_missing": "Do odczytu plików wideo wymagany jest ffmpeg. Nie znaleziono go w PATH.",

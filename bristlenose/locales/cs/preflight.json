@@ -5,7 +5,10 @@
     "verb_resuming": "Pokračování ve stahování",
     "fetching": "{verb} {repo_id}...",
     "ready": "Model Whisper je připraven",
-    "aborted_no_fetch": "Model Whisper {repo_id} není v mezipaměti a je nastaveno --no-fetch. Spusťte `bristlenose doctor --fetch` pro jeho stažení předem, nebo spusťte znovu bez --no-fetch."
+    "aborted_no_fetch": "Model Whisper {repo_id} není v mezipaměti a je nastaveno --no-fetch. Spusťte `bristlenose doctor --fetch` pro jeho stažení předem, nebo spusťte znovu bez --no-fetch.",
+    "unknown_model": "Model Whisper s n\u00e1zvem `{model}` neexistuje.",
+    "did_you_mean": "M\u011bli jste na mysli `{suggestion}`?",
+    "choose_model": "Pou\u017eijte jeden z t\u011bchto: {models}, nebo ID repozit\u00e1\u0159e Hugging Face, nap\u0159\u00edklad `org/name`."
   },
   "ffmpeg": {
     "banner_missing": "Pro čtení video souborů je vyžadován ffmpeg. Nebyl nalezen v PATH.",

@@ -5,7 +5,10 @@
     "verb_resuming": "Jatketaan latausta",
     "fetching": "{verb} {repo_id}...",
     "ready": "Whisper-malli valmis",
-    "aborted_no_fetch": "Whisper-mallia {repo_id} ei ole välimuistissa, ja --no-fetch on asetettu. Nouda se etukäteen komennolla `bristlenose doctor --fetch`, tai aja uudelleen ilman --no-fetch-valitsinta."
+    "aborted_no_fetch": "Whisper-mallia {repo_id} ei ole välimuistissa, ja --no-fetch on asetettu. Nouda se etukäteen komennolla `bristlenose doctor --fetch`, tai aja uudelleen ilman --no-fetch-valitsinta.",
+    "unknown_model": "Whisper-mallia nimelt\u00e4 `{model}` ei ole.",
+    "did_you_mean": "Tarkoititko `{suggestion}`?",
+    "choose_model": "K\u00e4yt\u00e4 jotakin n\u00e4ist\u00e4: {models}, tai Hugging Face -repositorion tunnusta, kuten `org/name`."
   },
   "ffmpeg": {
     "banner_missing": "ffmpeg vaaditaan videotiedostojen lukemiseen. Ei löytynyt PATH-polusta.",

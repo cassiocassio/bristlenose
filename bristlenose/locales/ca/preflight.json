@@ -5,7 +5,10 @@
     "verb_resuming": "S'està reprenent la baixada de",
     "fetching": "{verb} {repo_id}...",
     "ready": "El model Whisper està a punt",
-    "aborted_no_fetch": "El model Whisper {repo_id} no és a la memòria cau i s'ha indicat --no-fetch. Executa `bristlenose doctor --fetch` per obtenir-lo per endavant, o torna a executar-ho sense --no-fetch."
+    "aborted_no_fetch": "El model Whisper {repo_id} no és a la memòria cau i s'ha indicat --no-fetch. Executa `bristlenose doctor --fetch` per obtenir-lo per endavant, o torna a executar-ho sense --no-fetch.",
+    "unknown_model": "No hi ha cap model Whisper anomenat `{model}`.",
+    "did_you_mean": "Volies dir `{suggestion}`?",
+    "choose_model": "Fes servir un d'aquests: {models}, o un identificador de repositori de Hugging Face com ara `org/name`."
   },
   "ffmpeg": {
     "banner_missing": "Cal l'ffmpeg per llegir fitxers de vídeo. No s'ha trobat al PATH.",

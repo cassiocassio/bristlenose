@@ -464,6 +464,19 @@ class TestCheckWhisperModel:
             result = check_whisper_model(settings)
         assert result.detail == f"{model} not cached ({size} download on first run)"
 
+    def test_typo_warns_instead_of_reading_as_not_cached(self) -> None:
+        settings = _settings(whisper_model="smal")
+        with (
+            patch("bristlenose.utils.hardware.detect_hardware"),
+            patch(
+                "bristlenose.stages.s05_transcribe._resolve_backend",
+                return_value="faster-whisper",
+            ),
+        ):
+            result = check_whisper_model(settings)
+        assert result.status == CheckStatus.WARN
+        assert "There is no Whisper model called `smal`. Did you mean `small`?" in result.detail
+
     @pytest.mark.parametrize("model", ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"])
     def test_model_names(self, model: str) -> None:
         """All supported model names produce valid results."""

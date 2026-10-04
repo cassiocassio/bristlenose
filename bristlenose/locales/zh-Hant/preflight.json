@@ -5,7 +5,10 @@
     "verb_resuming": "正在繼續下載",
     "fetching": "{verb} {repo_id}⋯",
     "ready": "Whisper 模型已就緒",
-    "aborted_no_fetch": "Whisper 模型 {repo_id} 不在快取中，且已設定 --no-fetch。請執行 `bristlenose doctor --fetch` 預先下載，或在不使用 --no-fetch 的情況下重新執行。"
+    "aborted_no_fetch": "Whisper 模型 {repo_id} 不在快取中，且已設定 --no-fetch。請執行 `bristlenose doctor --fetch` 預先下載，或在不使用 --no-fetch 的情況下重新執行。",
+    "unknown_model": "\u6c92\u6709\u540d\u70ba `{model}` \u7684 Whisper \u6a21\u578b\u3002",
+    "did_you_mean": "\u60a8\u662f\u6307 `{suggestion}` \u55ce\uff1f",
+    "choose_model": "\u8acb\u4f7f\u7528\u4ee5\u4e0b\u5176\u4e2d\u4e4b\u4e00\uff1a{models}\uff0c\u6216\u4f7f\u7528 Hugging Face \u5132\u5b58\u5eab ID\uff0c\u4f8b\u5982 `org/name`\u3002"
   },
   "ffmpeg": {
     "banner_missing": "讀取影片檔案需要 ffmpeg，但在 PATH 中找不到。",

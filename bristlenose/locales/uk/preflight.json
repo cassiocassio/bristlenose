@@ -5,7 +5,10 @@
     "verb_resuming": "Відновлення завантаження",
     "fetching": "{verb} {repo_id}...",
     "ready": "Модель Whisper готова",
-    "aborted_no_fetch": "Моделі Whisper {repo_id} немає в кеші, а встановлено параметр --no-fetch. Виконайте `bristlenose doctor --fetch`, щоб завантажити її заздалегідь, або запустіть повторно без --no-fetch."
+    "aborted_no_fetch": "Моделі Whisper {repo_id} немає в кеші, а встановлено параметр --no-fetch. Виконайте `bristlenose doctor --fetch`, щоб завантажити її заздалегідь, або запустіть повторно без --no-fetch.",
+    "unknown_model": "\u041c\u043e\u0434\u0435\u043b\u0456 Whisper \u0437 \u043d\u0430\u0437\u0432\u043e\u044e `{model}` \u043d\u0435 \u0456\u0441\u043d\u0443\u0454.",
+    "did_you_mean": "\u041c\u043e\u0436\u043b\u0438\u0432\u043e, \u0432\u0438 \u043c\u0430\u043b\u0438 \u043d\u0430 \u0443\u0432\u0430\u0437\u0456 `{suggestion}`?",
+    "choose_model": "\u0412\u0438\u043a\u043e\u0440\u0438\u0441\u0442\u0430\u0439\u0442\u0435 \u043e\u0434\u043d\u0443 \u0437 \u0446\u0438\u0445 \u043c\u043e\u0434\u0435\u043b\u0435\u0439: {models} \u2014 \u0430\u0431\u043e \u0456\u0434\u0435\u043d\u0442\u0438\u0444\u0456\u043a\u0430\u0442\u043e\u0440 \u0440\u0435\u043f\u043e\u0437\u0438\u0442\u043e\u0440\u0456\u044e Hugging Face, \u043d\u0430\u043f\u0440\u0438\u043a\u043b\u0430\u0434 `org/name`."
   },
   "ffmpeg": {
     "banner_missing": "Для читання відеофайлів потрібен ffmpeg. Не знайдено у PATH.",

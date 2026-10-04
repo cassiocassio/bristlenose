@@ -136,22 +136,57 @@ WHISPER_SIZE_HUMAN = _format_mb(
 WhisperPreflightAbortedError = PreflightAbortedError
 
 
+def _active_backend(settings: BristlenoseSettings) -> str:
+    """``"mlx"`` or ``"faster-whisper"`` — the backend stage 5 will pick."""
+    from bristlenose.stages.s05_transcribe import _resolve_backend
+    from bristlenose.utils.hardware import detect_hardware
+
+    return _resolve_backend(settings.whisper_backend, detect_hardware())
+
+
+def _model_table(backend: str) -> dict[str, str]:
+    from bristlenose.stages.s05_transcribe import MLX_REPO_FOR_MODEL
+
+    return MLX_REPO_FOR_MODEL if backend == "mlx" else _FASTER_WHISPER_REPO_FOR_MODEL
+
+
 def _resolve_repo_id(settings: BristlenoseSettings) -> str:
     """Pick the HF repo for the active backend + model.
 
     Resolves exactly as stage 5 will: the MLX path through
-    :func:`bristlenose.stages.s05_transcribe._mlx_model_name`, the CT2 path
-    through faster-whisper's own name table. A name in neither passes through
-    as a repo id (``--whisper-model org/repo``).
+    :func:`bristlenose.stages.s05_transcribe._mlx_model_name` (whose table this
+    reads), the CT2 path through faster-whisper's own name table. A name in
+    neither passes through as a repo id (``--whisper-model org/repo``).
     """
-    from bristlenose.stages.s05_transcribe import _mlx_model_name, _resolve_backend
-    from bristlenose.utils.hardware import detect_hardware
+    name = settings.whisper_model
+    return _model_table(_active_backend(settings)).get(name, name)
 
-    hw = detect_hardware()
-    backend = _resolve_backend(settings.whisper_backend, hw)
-    if backend == "mlx":
-        return _mlx_model_name(settings.whisper_model)
-    return _FASTER_WHISPER_REPO_FOR_MODEL.get(settings.whisper_model, settings.whisper_model)
+
+def unknown_model_message(settings: BristlenoseSettings) -> str | None:
+    """The refusal for a model name the active backend does not know, else ``None``.
+
+    A bare name outside the table is sent to the Hub as a repo id and comes
+    back as a 401 "Repository Not Found" from deep inside ``snapshot_download``
+    — the answer ``-w smal`` used to get. Still allowed through: anything with
+    a ``/`` (an ``org/repo`` id, or a path), an existing directory (both
+    backends load a local model dir), and a name the desktop app bundles under
+    ``BRISTLENOSE_WHISPER_MODEL_DIR``.
+    """
+    import difflib
+
+    name = settings.whisper_model
+    backend = _active_backend(settings)
+    table = _model_table(backend)
+    if name in table or "/" in name or os.sep in name or os.path.isdir(name):
+        return None
+    bundled = os.environ.get("BRISTLENOSE_WHISPER_MODEL_DIR")
+    if bundled and os.path.isdir(os.path.join(bundled, name)):
+        return None
+    parts = [t("preflight.whisper.unknown_model", model=name)]
+    if close := difflib.get_close_matches(name, list(table), n=1):
+        parts.append(t("preflight.whisper.did_you_mean", suggestion=close[0]))
+    parts.append(t("preflight.whisper.choose_model", models=", ".join(table)))
+    return " ".join(parts)
 
 
 def _hf_cache_root() -> Path:
@@ -275,8 +310,9 @@ def preflight_whisper(
     of all-platform-transcripts should never trigger this code path.
 
     Raises:
-        WhisperPreflightAbortedError: when ``--no-fetch`` is active and the model
-            is not fully cached.
+        WhisperPreflightAbortedError: when the model name is not one the active
+            backend knows (:func:`unknown_model_message`), or when
+            ``--no-fetch`` is active and the model is not fully cached.
         PackageInstallError: when the download itself fails (propagated from
             :func:`bristlenose.utils.package_install.ensure_hf_model`).
     """
@@ -296,6 +332,9 @@ def preflight_whisper(
         disable_progress_bars()
     except ImportError:
         pass
+
+    if (refusal := unknown_model_message(settings)) is not None:
+        raise WhisperPreflightAbortedError(refusal)
 
     repo_id = _resolve_repo_id(settings)
     state = cache_state(repo_id)

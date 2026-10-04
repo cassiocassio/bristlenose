@@ -5,7 +5,10 @@
     "verb_resuming": "Genoptager download",
     "fetching": "{verb} {repo_id}...",
     "ready": "Whisper-model klar",
-    "aborted_no_fetch": "Whisper-modellen {repo_id} er ikke i cachen, og --no-fetch er angivet. Kør `bristlenose doctor --fetch` for at hente den på forhånd, eller kør igen uden --no-fetch."
+    "aborted_no_fetch": "Whisper-modellen {repo_id} er ikke i cachen, og --no-fetch er angivet. Kør `bristlenose doctor --fetch` for at hente den på forhånd, eller kør igen uden --no-fetch.",
+    "unknown_model": "Der findes ingen Whisper-model med navnet `{model}`.",
+    "did_you_mean": "Mente du `{suggestion}`?",
+    "choose_model": "Brug en af disse: {models}, eller et Hugging Face-repo-id som `org/name`."
   },
   "ffmpeg": {
     "banner_missing": "ffmpeg kræves for at læse videofiler. Ikke fundet i PATH.",

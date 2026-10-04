@@ -5,7 +5,10 @@
     "verb_resuming": "Reprise du t\u00e9l\u00e9chargement",
     "fetching": "{verb} {repo_id}...",
     "ready": "Mod\u00e8le Whisper pr\u00eat",
-    "aborted_no_fetch": "Le mod\u00e8le Whisper {repo_id} n\u2019est pas en cache et --no-fetch est activ\u00e9. Lancez `bristlenose doctor --fetch` pour le r\u00e9cup\u00e9rer \u00e0 l\u2019avance, ou relancez sans --no-fetch."
+    "aborted_no_fetch": "Le mod\u00e8le Whisper {repo_id} n\u2019est pas en cache et --no-fetch est activ\u00e9. Lancez `bristlenose doctor --fetch` pour le r\u00e9cup\u00e9rer \u00e0 l\u2019avance, ou relancez sans --no-fetch.",
+    "unknown_model": "Aucun mod\u00e8le Whisper ne s\u2019appelle `{model}`.",
+    "did_you_mean": "Vouliez-vous dire `{suggestion}`\u00a0?",
+    "choose_model": "Utilisez l\u2019un de ceux-ci\u00a0: {models}, ou un identifiant de d\u00e9p\u00f4t Hugging Face comme `org/name`."
   },
   "ffmpeg": {
     "banner_missing": "ffmpeg est n\u00e9cessaire pour lire les fichiers vid\u00e9o. Introuvable dans le PATH.",

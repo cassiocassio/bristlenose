@@ -5,7 +5,10 @@
     "verb_resuming": "Download hervatten",
     "fetching": "{verb} {repo_id}...",
     "ready": "Whisper-model gereed",
-    "aborted_no_fetch": "Whisper-model {repo_id} staat niet in de cache en --no-fetch is ingesteld. Voer `bristlenose doctor --fetch` uit om het vooraf op te halen, of voer opnieuw uit zonder --no-fetch."
+    "aborted_no_fetch": "Whisper-model {repo_id} staat niet in de cache en --no-fetch is ingesteld. Voer `bristlenose doctor --fetch` uit om het vooraf op te halen, of voer opnieuw uit zonder --no-fetch.",
+    "unknown_model": "Er is geen Whisper-model met de naam `{model}`.",
+    "did_you_mean": "Bedoelde je `{suggestion}`?",
+    "choose_model": "Gebruik een van deze: {models}, of een Hugging Face-repository-ID zoals `org/name`."
   },
   "ffmpeg": {
     "banner_missing": "ffmpeg is vereist om videobestanden te lezen. Niet gevonden op PATH.",

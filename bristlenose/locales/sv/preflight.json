@@ -5,7 +5,10 @@
     "verb_resuming": "Återupptar nedladdning",
     "fetching": "{verb} {repo_id}...",
     "ready": "Whisper-modellen är klar",
-    "aborted_no_fetch": "Whisper-modellen {repo_id} finns inte i cachen och --no-fetch är angivet. Kör `bristlenose doctor --fetch` för att hämta den i förväg, eller kör igen utan --no-fetch."
+    "aborted_no_fetch": "Whisper-modellen {repo_id} finns inte i cachen och --no-fetch är angivet. Kör `bristlenose doctor --fetch` för att hämta den i förväg, eller kör igen utan --no-fetch.",
+    "unknown_model": "Det finns ingen Whisper-modell som heter `{model}`.",
+    "did_you_mean": "Menade du `{suggestion}`?",
+    "choose_model": "Anv\u00e4nd en av dessa: {models}, eller ett Hugging Face-repo-id som `org/name`."
   },
   "ffmpeg": {
     "banner_missing": "ffmpeg krävs för att läsa videofiler. Hittades inte i PATH.",

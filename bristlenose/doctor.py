@@ -274,7 +274,11 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
     """Check whether the configured Whisper model is already cached."""
     import os
 
-    from bristlenose.preflight.whisper import _resolve_repo_id, download_size_human
+    from bristlenose.preflight.whisper import (
+        _resolve_repo_id,
+        download_size_human,
+        unknown_model_message,
+    )
 
     model_name = settings.whisper_model
 
@@ -295,6 +299,10 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
                 label="Whisper model",
                 detail=f"{model_name} bundled ({size_gb:.1f} GB)",
             )
+
+    # A typo would otherwise read as "not cached", and fail later as a Hub 401.
+    if (refusal := unknown_model_message(settings)) is not None:
+        return CheckResult(status=CheckStatus.WARN, label="Whisper model", detail=refusal)
 
     # The one repo this machine's backend will open — the same resolution the
     # Whisper preflight and stage 5 use. Another backend's copy being cached

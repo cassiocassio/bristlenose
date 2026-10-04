@@ -2477,6 +2477,28 @@ keyed by the tag: `TranscriptSegment.speaker_code`, `Quote.participant_id`, the
 quote stable key, the bracket tokens in `transcripts-raw/` and the registry entry
 all keep `m1`. It writes one slot row.
 
+> **Corrected 4 Oct 2026, same day — the review found the model's precondition false.** A
+> `/usual-suspects` pass (six lanes, a compose check and a parsimony pass; findings in the
+> maintainer's private review log for this doc) measured what this section assumed:
+> **`(session, tag)` is not bound to one human across runs.** `assign_speaker_codes` gives a fresh
+> code whenever detection disagrees with a known code's prefix, and `m`/`o` numbers restart per
+> session, so a freed `m1` goes to the next label detected as a researcher — an override on slot
+> `m1` would then sit on someone else. And **the importer freezes slots at first import** (it
+> `continue`s when a session has any speaker row) while it replaces segments every time: a re-run
+> that moves a tag leaves a ghost slot, still named and still "Moderated by", and a tag with no
+> slot. Measured on the smoke fixture; live today, independent of this plan. So before R1:
+> tags are never reissued within a session (the `participants_issued` shape, for `m`/`o`), and the
+> importer reconciles slots against the tags present — creating, never deleting a named slot.
+> Also corrected by the review: the raw-tag list below misses `routes/quotes.py` (two
+> `like("m%")`, the moderator-question pill — an R1 defect), `routes/data.py`, `mcp_server.py`
+> (reads the DB, not emitted codes) and `clips_export`'s subtitle primary; the stored
+> `SessionSpeaker.speaker_role` column is a second kind the model ignores; writes are addressed by
+> the tag, so routes must emit it beside the displayed code; R3's pin *does* change the tag; R3
+> loses curation on every unpinned quote of the session and re-clusters the whole study; call 6
+> contradicts call 1 (with no pin, the guide never changes); and `UndoStore.ts` exists
+> (`74c71a06`) — the undo paragraph's "stubbed" is stale. The sequence and calls below stand
+> until the owner triages; read them with this block.
+
 #### What the brief assumed, and what the code says
 
 The brief for this plan said a recode must be written into the pipeline-side

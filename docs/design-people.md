@@ -1041,9 +1041,11 @@ Three consequences worth carrying:
   star, unstar, hide, unhide, add tag, remove tag — one entry per gesture,
   however many quotes it covered. The inverse is the same store call with
   `record` off, over only the quotes the gesture changed: a delta, never a
-  snapshot, so a tag an AutoCode accept added since survives the undo. Not on
-  the stack: quote and heading text edits, badge deletes, proposal
-  accept/deny, codebook changes.
+  snapshot, so a tag an AutoCode accept added since survives the undo. Text
+  edits followed: a quote's text (and the card's revert), a section or theme
+  title, a description — each records the edits-map entry's previous value, and
+  a first edit's undo removes the key. Not on the stack: badge deletes,
+  proposal accept/deny, codebook changes.
 - **Re-attribution breaks the quote stable key.** The importer's key is
   `(project_id, session_id, participant_id, start_timecode)` and re-attribution
   is not one of `_pinned_quote_ids`' arms — so a re-attributed quote does not

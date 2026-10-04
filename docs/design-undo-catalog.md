@@ -35,7 +35,8 @@ so the scope call can be made with the whole surface visible rather than half.
 > second fact below is no longer true) and takes ⌘Z in the browser; ⇧⌘Z redoes.
 > Its clients: speaker naming (`utils/speakerNames.ts`,
 > [`design-people.md`](design-people.md) §B10), and from the same day group 2's
-> star and hide and group 3's add/remove tag (`QuotesContext.tsx`) — deltas,
+> star and hide, group 3's add/remove tag and group 2/6's text edits
+> (`QuotesContext.tsx`) — deltas,
 > not the full-map snapshot this doc's "accidental substrate" proposes, because
 > a snapshot would also revert changes made since by paths not on the stack.
 > The table below is the 28 Jul survey, kept as written._

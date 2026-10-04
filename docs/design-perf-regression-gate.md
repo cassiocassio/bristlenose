@@ -423,16 +423,16 @@ touched.
    engine on first focus of the field is the obvious split, but the field is on
    every searching lens and its suggestions are synchronous today — needs a
    look from whoever owns search.
-4. **`PlaygroundStore`, 2.2 kB of a dev-only feature.** `SidebarLayout` and
-   `TocSidebar` read it in production for the defaults. Splitting the defaults
-   into a tiny module and keeping the store behind the existing dev-only
-   dynamic import would take it off.
-5. **`localeLoader`'s glob map, 3.7 kB.** The template-literal import expands
-   to every `locales/*/*.json` — 22 locales × 6 namespaces — although the SPA
-   only ever requests `common`, `settings`, `enums` and `desktop`. An
-   `import.meta.glob` restricted to those four would drop a third of the
-   entries (estimated ~1.2 kB). The export alias (`localeLoader.export.ts`)
-   is unaffected.
+4. ~~**`PlaygroundStore`, 2.2 kB of a dev-only feature.**~~ Done 4 Oct 2026:
+   the sidebar reads `contexts/sidebarTuning.ts` (defaults, or the store's live
+   values once the dev playground loads it), and the Ctrl+Shift+P/U chords in
+   `useKeyboardShortcuts` import the store on use — that hook was a second
+   static importer the proposal had missed. 195,190 → 192,856 B.
+5. ~~**`localeLoader`'s glob map, 3.7 kB.**~~ Done 4 Oct 2026: an
+   `import.meta.glob` over `common`, `settings`, `enums` and `desktop`, after
+   checking nothing in `frontend/src` reads `preflight` or `server`.
+   192,856 → 192,094 B — the map shed 1.2 kB, partly given back as
+   shared-chunk compression, so the estimate above was optimistic.
 6. **`react-router` is 31 kB**, the second-largest single source after
    `react-dom`. Its package exports map points every condition at
    `dist/development`, but that build is byte-identical in size to

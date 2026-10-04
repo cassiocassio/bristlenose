@@ -67,6 +67,37 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.33.0 — 4 Oct 2026 · Tier 1 (minor — the Discussion lens, the voice pass, the person picker, search, Undo)
+
+**What shipped.** The Discussion lens (the interview guide beside the quotes), a voice pass in speaker
+identification (TitaNet-small on onnxruntime + kaldi-native-fbank, every channel, no espeak-ng), the
+person picker on the Sessions grid (native popover on the Mac), search that suggests people and tags
+and turns them into tokens, and Undo for speaker naming, star/hide/tag and text edits. Speaker
+labels now come from the whole transcript. Fixed: the faster-whisper `-w small` crash and unknown
+model names, participant numbers issued twice, the dashboard Words card, and `transcribe` lumping
+every speaker under one code. Ten sessions' work, coordinated from one session; scope frozen at
+~20:00 BST, docs trued per session, one fix let back in (below).
+
+**Verified 8 of 9** (`release.sh verify 0.33.0`) at ~23:20 BST: PyPI (200 at 23:10, about 15 min after
+the tag), GitHub Release, Homebrew, TestFlight 4372, `.dmg`, Snap edge, Copr. The website waits on
+the owner's deploy.
+
+### Two stops, neither in the product
+
+| attempt | stopped at | cause | fix |
+|---|---|---|---|
+| 1 | credential probes, before any act | notary 403: Apple's Program License Agreement had lapsed | owner accepted it; propagation took ~2 min |
+| 2 | `build-dmg`, Swift suite | `SidebarFitHarnessTests` s05/s07/s08/s12/s20 — the display slept and the session locked during the run, so Core Animation stopped (`desktop/CLAUDE.md`) | resumed under `caffeinate -d -i` once unlocked; `release.sh` now holds `-d` itself (`e53d17e7`) |
+
+**One fix after the freeze.** On the Mac, a pending sidebar project removal took ⌘Z ahead of every
+report undo, with no time limit — first visible in this release because report undo is new. The
+owner chose to fix before tagging (`4f8f4242`: a new report act settles the removal). Quote-edit ⌘Z
+on the Mac remained unreliable in the owner's QA; released with a caveat in the notes.
+
+**Owed.** The website deploy. The DSA trader declaration and the Paid Apps Agreement wait for
+pricing (App Store Connect showed both on 4 Oct). The anonymise hint's "and observers" exists in
+`en` only since 27 Aug.
+
 ## 0.32.0 — 30 Sep 2026 · Tier 1 (minor — clip subtitles, the ChatGPT plugin, player keys, the native Claude extension)
 
 **What shipped.** Exported clips carry subtitles (a `.vtt` beside each clip and a

@@ -1,14 +1,12 @@
 ---
-status: built (main, unreleased)
+status: shipped
 updated: 4 Oct 2026
 last-trued: 2026-10-04
 trued-against: HEAD@main on 2026-10-04
 ---
 
-> **Trued 4 Oct 2026.** P1–P5 are built on `main` and ship in the next
-> release; the rules in §3 match `searchMatch.ts` and are pinned by
-> `tests/fixtures/search-match-contract.json`. Set `status: shipped` at that
-> release. Survey of best practice and the sequence after it:
+> **Trued 4 Oct 2026; shipped in 0.33.0 the same night.** P1–P5 are built; the rules in §3 match `searchMatch.ts` and are pinned by
+> `tests/fixtures/search-match-contract.json`. Survey of best practice and the sequence after it:
 > [`research/search-best-practice.md`](research/search-best-practice.md).
 
 # Search: suggestions, recognisers and tokens

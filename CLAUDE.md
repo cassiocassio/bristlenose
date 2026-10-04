@@ -1483,6 +1483,14 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 **Internal TestFlight since 14 Jul 2026** — shipping build **0.32.0 (4035)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
 
+**0.33.0 shipped 4 Oct 2026, evening — tag `v0.33.0` on `f1d396ff`, TestFlight
+build 4372, verified 8 of 9 (website deploy owed).** A minor: the Discussion lens, a voice
+pass in speaker identification (onnxruntime, every channel, no espeak-ng), the person picker,
+search with person and tag tokens, and Undo. Ten sessions coordinated from one; two stops,
+neither in the product — a lapsed Apple agreement (notary 403) and the `.dmg`'s Swift suite
+failing on a locked screen, now prevented by `caffeinate -d`. Full account:
+`docs/release-log.md` § 0.33.0.
+
 **0.32.0 shipped 30 Sep 2026, overnight — tag `v0.32.0` on `d49df5d4` at
 01:31 BST, TestFlight build 4035, verified 9 of 9.** A minor: clip subtitles (a `.vtt` and a
 language-tagged track per clip, an optional burned-in copy, CJK line breaking),

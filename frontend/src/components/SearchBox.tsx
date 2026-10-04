@@ -21,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "./Badge";
 import { PersonBadge } from "./PersonBadge";
 import { Tooltip } from "./Tooltip";
+import { announce } from "../utils/announce";
 import { getTagBg } from "../utils/colours";
 import { isActiveQuery } from "../utils/searchMatch";
 import { spokenRow, suggestionsToWire, tokensToWire, type WireToken } from "../utils/searchBridge";
@@ -193,10 +194,11 @@ export function SearchBox({
   function handleToggle() {
     if (expanded) {
       // Collapse and clear
+      const had = hasSearch();
       setExpanded(false);
       setLocalValue("");
       clearTimeout(timerRef.current);
-      clearAll();
+      clearAll(had);
     } else {
       setExpanded(true);
       // Focus the input after expansion
@@ -216,17 +218,32 @@ export function SearchBox({
     commitValue(v);
   }
 
-  function clearAll() {
+  const hasSearch = () => localRef.current !== "" || value !== "" || tokens.length > 0;
+
+  /** Empty the field. Said once, when there was something to empty: the
+   *  match count is not announced for an empty search, so without this a
+   *  screen-reader user hears nothing at all. */
+  function clearAll(had: boolean) {
     setSelectedToken(null);
     if (onClear) onClear();
     else onChange("");
+    if (had) announce(t("search.announce.cleared"));
   }
 
   function handleClear() {
+    const had = hasSearch();
     setLocalValue("");
     clearTimeout(timerRef.current);
-    clearAll();
+    clearAll(had);
     inputRef.current?.focus();
+  }
+
+  /** A token's name, as its chip shows it. */
+  const tokenName = (token: SearchToken) => wireTokens[tokens.indexOf(token)]?.label ?? "";
+
+  function removeToken(token: SearchToken) {
+    combo?.onTokenRemove(token);
+    announce(t("search.announce.removed", { label: tokenName(token) }));
   }
 
   /** Send what was typed now, without the debounce wait. */
@@ -288,10 +305,13 @@ export function SearchBox({
       if (action.kind === "select") {
         e.preventDefault();
         setSelectedToken(action.key);
+        // Selected is the warning: the next press removes it.
+        const token = tokens.find((tk) => tokenKey(tk) === action.key);
+        if (token) announce(t("search.announce.selected", { label: tokenName(token) }));
       } else if (action.kind === "remove") {
         e.preventDefault();
         setSelectedToken(null);
-        combo.onTokenRemove(action.token);
+        removeToken(action.token);
       }
       return;
     }
@@ -510,13 +530,13 @@ export function SearchBox({
                         role="menuitem"
                         tabIndex={-1}
                         onClick={() => {
-                          combo!.onTokenRemove(token);
+                          removeToken(token);
                           closeMenuAfterChoice(i, true);
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            combo!.onTokenRemove(token);
+                            removeToken(token);
                             closeMenuAfterChoice(i, true);
                           }
                         }}

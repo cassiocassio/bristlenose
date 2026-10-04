@@ -72,6 +72,11 @@
         "notWord": "sans \u00e9tiquette"
       },
       "remove": "Retirer"
+    },
+    "announce": {
+      "selected": "Vous avez s\u00e9lectionn\u00e9 {{label}}. Appuyez \u00e0 nouveau sur la touche de suppression pour retirer.",
+      "removed": "Vous avez retir\u00e9 {{label}}",
+      "cleared": "Recherche effac\u00e9e"
     }
   },
   "quotes": {

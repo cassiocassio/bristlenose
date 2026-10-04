@@ -72,6 +72,11 @@
         "notWord": "nicht getaggt"
       },
       "remove": "Entfernen"
+    },
+    "announce": {
+      "selected": "{{label}} ausgew\u00e4hlt. Zum Entfernen erneut die L\u00f6schtaste dr\u00fccken.",
+      "removed": "{{label}} entfernt",
+      "cleared": "Suche gel\u00f6scht"
     }
   },
   "quotes": {

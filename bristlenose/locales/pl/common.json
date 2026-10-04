@@ -94,6 +94,11 @@
         "notWord": "bez tagu"
       },
       "remove": "Usu\u0144"
+    },
+    "announce": {
+      "selected": "Zaznaczono: {{label}}. Naci\u015bnij ponownie klawisz Delete, aby usun\u0105\u0107.",
+      "removed": "Usuni\u0119to: {{label}}",
+      "cleared": "Wyczyszczono wyszukiwanie"
     }
   },
   "quotes": {

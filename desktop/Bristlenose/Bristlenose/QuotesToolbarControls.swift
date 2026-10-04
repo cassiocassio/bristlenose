@@ -300,7 +300,7 @@ struct QuotesSearchToolbarControl: View {
                             selected: chip.subject == selectedToken,
                             onOpen: { menuDismissed = true },
                             onMode: { bridgeHandler.setSearchTokenMode(chip.subject, mode: $0) },
-                            onRemove: { bridgeHandler.removeSearchToken(chip.subject) }
+                            onRemove: { removeToken(chip.subject) }
                         )
                         .id(chip.subject)
                     }
@@ -343,11 +343,27 @@ struct QuotesSearchToolbarControl: View {
     /// on the field and would hear nothing as ↓ moves through it. Say the row.
     private func announceHighlight() {
         guard let id = highlighted, let row = rows.first(where: { $0.id == id }) else { return }
+        announce(SuggestionLabel.spoken(row))
+    }
+
+    private func announce(_ text: String) {
         NSAccessibility.post(
             element: NSApp as Any, notification: .announcementRequested,
-            userInfo: [.announcement: SuggestionLabel.spoken(row),
+            userInfo: [.announcement: text,
                        .priority: NSAccessibilityPriorityLevel.high.rawValue]
         )
+    }
+
+    /// A token's name, as its chip shows it.
+    private func tokenName(_ subject: SearchSubject) -> String {
+        tokens.first(where: { $0.subject == subject })?.label ?? ""
+    }
+
+    /// Remove a token and say so: a chip that vanishes is otherwise silent.
+    private func removeToken(_ subject: SearchSubject) {
+        let name = tokenName(subject)
+        bridgeHandler.removeSearchToken(subject)
+        announce(i18n.t("common.search.announce.removed", ["label": name]))
     }
 
     /// A hover takes the highlight only once the pointer has moved since the
@@ -391,15 +407,22 @@ struct QuotesSearchToolbarControl: View {
             return .ignored
         case .select(let subject):
             selectedToken = subject
+            // Selected is the warning: the next press removes it.
+            announce(i18n.t("common.search.announce.selected", ["label": tokenName(subject)]))
             return .handled
         case .remove(let subject):
             selectedToken = nil
-            bridgeHandler.removeSearchToken(subject)
+            removeToken(subject)
             return .handled
         }
     }
 
     private func clear() {
+        // Said only when there was something to empty: an empty search has no
+        // match count to announce, so otherwise nothing is heard at all.
+        if !text.isEmpty || !tokens.isEmpty {
+            announce(i18n.t("common.search.announce.cleared"))
+        }
         seed("")
         selectedToken = nil
         debounce?.cancel()

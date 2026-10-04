@@ -82,6 +82,11 @@
         "notWord": "senza tag"
       },
       "remove": "Rimuovi"
+    },
+    "announce": {
+      "selected": "Hai selezionato {{label}}. Premi di nuovo il tasto Cancella per rimuovere.",
+      "removed": "Hai rimosso {{label}}",
+      "cleared": "Ricerca cancellata"
     }
   },
   "quotes": {

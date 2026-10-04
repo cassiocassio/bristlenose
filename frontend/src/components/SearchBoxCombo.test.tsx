@@ -10,6 +10,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SearchBox, type SearchCombo } from "./SearchBox";
 import { personToken, tagToken, type SearchToken } from "../utils/searchTokens";
 import type { Suggestion } from "../utils/searchSuggest";
+import { announce } from "../utils/announce";
+
+vi.mock("../utils/announce", () => ({ announce: vi.fn() }));
 
 const tag = { name: "Zoning", codebook_group: "g", colour_set: "ux", colour_index: 1 };
 const rows: Suggestion[] = [
@@ -61,7 +64,10 @@ function type(input: HTMLInputElement, text: string) {
   fireEvent.change(input, { target: { value: text } });
 }
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.mocked(announce).mockClear();
+});
 afterEach(() => vi.useRealTimers());
 
 describe("the suggestions list", () => {
@@ -284,6 +290,27 @@ describe("tokens", () => {
     act(() => (screen.getByTestId("s-input") as HTMLInputElement).focus());
     rerender(<SearchBox value="" onChange={vi.fn()} combo={combo([])} data-testid="s" />);
     expect(screen.getByTestId("s")).toHaveClass("expanded");
+  });
+
+  it("says when a chip is selected, removed, and when the search is cleared", () => {
+    const { input } = setup(tokens, "");
+    act(() => input.focus());
+    fireEvent.keyDown(input, { key: "Backspace" });
+    expect(announce).toHaveBeenLastCalledWith("Zoning selected — press Delete again to remove");
+    fireEvent.keyDown(input, { key: "Backspace" });
+    expect(announce).toHaveBeenLastCalledWith("Zoning removed");
+    fireEvent.click(screen.getAllByTestId("s-token")[0]);
+    fireEvent.click(within(screen.getByRole("menu")).getByRole("menuitem"));
+    expect(announce).toHaveBeenLastCalledWith("Zoë Ng removed");
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(announce).toHaveBeenLastCalledWith("Search cleared");
+  });
+
+  it("does not announce clearing a field that held nothing", () => {
+    const { input } = setup();
+    act(() => input.focus());
+    fireEvent.keyDown(input, { key: "Escape" }); // collapses an empty field
+    expect(announce).not.toHaveBeenCalled();
   });
 
   it("Esc with tokens and no text empties the field", () => {

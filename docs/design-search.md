@@ -214,8 +214,12 @@ included, so a Voice Control user can say it. The highlighted option and a
 focused menu item carry the 2px accent ring: the fill alone is about 1.05:1.
 There is one polite live-region announcement per settled query, *"23
 matching"* (`toolbar.matching`, already translated), not one per row — the
-suggestion count was dropped as noise. Not yet announced: a first ⌫ selecting
-a chip, a chip's removal, and the search being cleared (they need new strings).
+suggestion count was dropped as noise. Three more are said once each, on both
+surfaces (wording approved 4 Oct 2026): a first ⌫ selecting a chip (*"Zoning
+selected — press Delete again to remove"*), a chip's removal (*"Zoning
+removed"*), and the search being emptied (*"Search cleared"*, only when there
+was something to empty, since an empty search has no count to announce). The
+Delete key is named as VoiceOver names it in each language.
 
 ## 7. Mac
 
@@ -351,6 +355,9 @@ New keys in `common.json`, in all 21 full locales (not `zh-Hant-HK`). **Seeded 4
 | `search.token.tag.taggedWord` | tagged |
 | `search.token.tag.containsWord` | contains |
 | `search.token.tag.notWord` | not tagged |
+| `search.announce.selected` | {{label}} selected — press Delete again to remove |
+| `search.announce.removed` | {{label}} removed |
+| `search.announce.cleared` | Search cleared |
 
 Each locale uses its own quotation marks; don't copy the English `“ ”`.
 `search.placeholder` changed from *Filter quotes…* to *Search quotes, people,

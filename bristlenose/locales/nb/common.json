@@ -82,6 +82,11 @@
         "notWord": "ikke tagget"
       },
       "remove": "Fjern"
+    },
+    "announce": {
+      "selected": "{{label}} er markert. Trykk p\u00e5 slett-tasten igjen for \u00e5 fjerne.",
+      "removed": "{{label}} er fjernet",
+      "cleared": "S\u00f8ket er t\u00f8mt"
     }
   },
   "quotes": {

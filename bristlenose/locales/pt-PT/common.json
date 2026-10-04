@@ -82,6 +82,11 @@
         "notWord": "sem etiqueta"
       },
       "remove": "Remover"
+    },
+    "announce": {
+      "selected": "Selecionou {{label}}. Prima novamente a tecla Delete para remover.",
+      "removed": "Removeu {{label}}",
+      "cleared": "Pesquisa limpa"
     }
   },
   "quotes": {

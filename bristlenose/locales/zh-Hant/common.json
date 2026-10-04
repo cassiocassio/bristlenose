@@ -76,6 +76,11 @@
         "notWord": "\u6392\u9664\u6a19\u7c64"
       },
       "remove": "\u79fb\u9664"
+    },
+    "announce": {
+      "selected": "\u5df2\u9078\u53d6\u300c{{label}}\u300d\u3002\u518d\u6309\u4e00\u4e0b Delete \u9375\u5373\u53ef\u79fb\u9664\u3002",
+      "removed": "\u5df2\u79fb\u9664\u300c{{label}}\u300d",
+      "cleared": "\u5df2\u6e05\u9664\u641c\u5c0b"
     }
   },
   "quotes": {

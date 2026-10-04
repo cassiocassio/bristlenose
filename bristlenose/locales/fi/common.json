@@ -82,6 +82,11 @@
         "notWord": "ei tunnistetta"
       },
       "remove": "Poista"
+    },
+    "announce": {
+      "selected": "Valittu: {{label}}. Poista painamalla poiston\u00e4pp\u00e4int\u00e4 uudelleen.",
+      "removed": "Poistettu: {{label}}",
+      "cleared": "Haku tyhjennetty"
     }
   },
   "quotes": {

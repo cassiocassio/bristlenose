@@ -82,6 +82,11 @@
         "notWord": "sense etiqueta"
       },
       "remove": "Suprimeix"
+    },
+    "announce": {
+      "selected": "Has seleccionat {{label}}. Prem la tecla de supressi\u00f3 un altre cop per suprimir.",
+      "removed": "Has suprimit {{label}}",
+      "cleared": "S\u2019ha esborrat la cerca"
     }
   },
   "quotes": {

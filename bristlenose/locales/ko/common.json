@@ -68,6 +68,11 @@
         "notWord": "\ud0dc\uadf8 \uc81c\uc678"
       },
       "remove": "\uc81c\uac70"
+    },
+    "announce": {
+      "selected": "{{label}} \uc120\ud0dd\ub428. \uc81c\uac70\ud558\ub824\uba74 Delete \ud0a4\ub97c \ub2e4\uc2dc \ub204\ub974\uc138\uc694.",
+      "removed": "{{label}} \uc81c\uac70\ub428",
+      "cleared": "\uac80\uc0c9 \uc9c0\uc6cc\uc9d0"
     }
   },
   "quotes": {

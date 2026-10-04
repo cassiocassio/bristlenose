@@ -90,6 +90,11 @@
         "notWord": "bez \u0161t\u00edtku"
       },
       "remove": "Odebrat"
+    },
+    "announce": {
+      "selected": "Vybr\u00e1no: {{label}}. Odeberete op\u011btovn\u00fdm stisknut\u00edm kl\u00e1vesy smazat.",
+      "removed": "Odebr\u00e1no: {{label}}",
+      "cleared": "Hled\u00e1n\u00ed vymaz\u00e1no"
     }
   },
   "quotes": {

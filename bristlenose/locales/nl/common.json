@@ -82,6 +82,11 @@
         "notWord": "niet getagd"
       },
       "remove": "Verwijder"
+    },
+    "announce": {
+      "selected": "{{label}} geselecteerd. Druk nogmaals op de Delete-toets om te verwijderen.",
+      "removed": "{{label}} verwijderd",
+      "cleared": "Zoekopdracht gewist"
     }
   },
   "quotes": {

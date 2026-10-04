@@ -82,6 +82,11 @@
         "notWord": "not tagged"
       },
       "remove": "Remove"
+    },
+    "announce": {
+      "selected": "{{label}} selected \u2014 press Delete again to remove",
+      "removed": "{{label}} removed",
+      "cleared": "Search cleared"
     }
   },
   "quotes": {

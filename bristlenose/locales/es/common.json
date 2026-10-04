@@ -72,6 +72,11 @@
         "notWord": "sin etiqueta"
       },
       "remove": "Quitar"
+    },
+    "announce": {
+      "selected": "Has seleccionado {{label}}. Pulsa la tecla Suprimir otra vez para quitar.",
+      "removed": "Has quitado {{label}}",
+      "cleared": "B\u00fasqueda borrada"
     }
   },
   "quotes": {

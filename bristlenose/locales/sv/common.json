@@ -82,6 +82,11 @@
         "notWord": "inte taggat"
       },
       "remove": "Ta bort"
+    },
+    "announce": {
+      "selected": "{{label}} har markerats. Tryck p\u00e5 backstegstangenten igen f\u00f6r att ta bort.",
+      "removed": "{{label}} har tagits bort",
+      "cleared": "S\u00f6kningen har rensats"
     }
   },
   "quotes": {

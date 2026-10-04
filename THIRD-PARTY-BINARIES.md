@@ -100,7 +100,7 @@ procurement; under-listing would be a compliance risk.
 | `alembic` | 1.20.0 | MIT | <https://alembic.sqlalchemy.org> |
 | `annotated-doc` | 0.0.5 | MIT | <https://github.com/fastapi/annotated-doc> |
 | `annotated-types` | 0.8.0 | MIT | <https://github.com/annotated-types/annotated-types> |
-| `anthropic` | 1.9.0 | MIT License | <https://github.com/anthropics/anthropic-sdk-python> |
+| `anthropic` | 1.11.0 | MIT License | <https://github.com/anthropics/anthropic-sdk-python> |
 | `anyio` | 4.15.1 | MIT | <https://anyio.readthedocs.io/en/stable/versionhistory.html> |
 | `attrs` | 26.1.0 | MIT | <https://www.attrs.org/en/stable/changelog.html> |
 | `av` | 18.1.0 | BSD-3-Clause | <https://pyav.basswood.io> |
@@ -109,21 +109,21 @@ procurement; under-listing would be a compliance risk.
 | `certifi` | 2026.7.22 | Mozilla Public License 2.0 (MPL 2.0) | <https://github.com/certifi/python-certifi> |
 | `cffi` | 2.1.1 | MIT-0 | <https://cffi.readthedocs.io/en/latest/whatsnew.html> |
 | `chardet` | 7.6.0 | 0BSD | <https://github.com/chardet/chardet> |
-| `charset-normalizer` | 3.5.1 | MIT | <https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md> |
+| `charset-normalizer` | 3.5.2 | MIT | <https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md> |
 | `click` | 8.5.0 | BSD-3-Clause | <https://github.com/pallets/click/> |
-| `cloudpathlib` | 0.25.0 | MIT License | <https://github.com/drivendataorg/cloudpathlib> |
+| `cloudpathlib` | 0.26.0 | MIT License | <https://github.com/drivendataorg/cloudpathlib> |
 | `confection` | 1.3.3 | MIT License | <https://github.com/explosion/confection> |
 | `cryptography` | 48.0.1 | Apache-2.0 OR BSD-3-Clause | <https://github.com/pyca/cryptography> |
 | `cymem` | 2.0.13 | MIT License | <https://github.com/explosion/cymem> |
 | `distro` | 1.9.0 | Apache Software License | <https://github.com/python-distro/distro> |
 | `docstring_parser` | 0.18.0 | MIT License | <https://github.com/rr-/docstring_parser> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
-| `fastapi` | 0.142.1 | MIT | <https://github.com/fastapi/fastapi> |
-| `filelock` | 4.0.7 | MIT | <https://github.com/tox-dev/py-filelock> |
+| `fastapi` | 0.142.2 | MIT | <https://github.com/fastapi/fastapi> |
+| `filelock` | 4.0.10 | MIT | <https://github.com/tox-dev/py-filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
-| `google-auth` | 2.59.0 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
-| `google-genai` | 2.25.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
+| `google-auth` | 2.59.1 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
+| `google-genai` | 2.28.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
 | `greenlet` | 3.5.6 | MIT AND PSF-2.0 | <https://greenlet.readthedocs.io> |
 | `h11` | 0.16.0 | MIT License | <https://github.com/python-hyper/h11> |
 | `hf-xet` | 1.6.0 | Apache-2.0 | <https://github.com/huggingface/xet-core> |
@@ -139,13 +139,14 @@ procurement; under-listing would be a compliance risk.
 | `jiter` | 0.17.0 | MIT | <https://github.com/pydantic/jiter/> |
 | `jsonschema` | 4.26.0 | MIT | <https://github.com/python-jsonschema/jsonschema> |
 | `jsonschema-specifications` | 2025.9.1 | MIT | <https://github.com/python-jsonschema/jsonschema-specifications> |
-| `llvmlite` | 0.49.0 | BSD-2-Clause AND Apache-2.0 WITH LLVM-exception | <http://llvmlite.readthedocs.io> |
+| `kaldi-native-fbank` | 1.22.3 | Apache-2.0 | <https://github.com/csukuangfj/kaldi-native-fbank> |
+| `llvmlite` | 0.50.0 | BSD-2-Clause AND Apache-2.0 WITH LLVM-exception | <http://llvmlite.readthedocs.io> |
 | `lxml` | 6.1.3 | BSD-3-Clause | <https://lxml.de/> |
 | `Mako` | 1.4.3 | MIT | <https://www.makotemplates.org/> |
 | `markdown-it-py` | 4.2.0 | MIT License | <https://github.com/executablebooks/markdown-it-py> |
-| `MarkupSafe` | 3.0.3 | BSD-3-Clause | <https://github.com/pallets/markupsafe/> |
-| `mcp` | 2.2.0 | MIT License | <https://modelcontextprotocol.io> |
-| `mcp-types` | 2.2.0 | MIT License | <https://modelcontextprotocol.io> |
+| `MarkupSafe` | 3.0.4 | BSD-3-Clause | <https://github.com/pallets/markupsafe/> |
+| `mcp` | 2.3.0 | MIT License | <https://modelcontextprotocol.io> |
+| `mcp-types` | 2.3.0 | MIT License | <https://modelcontextprotocol.io> |
 | `mdurl` | 0.1.2 | MIT License | <https://github.com/executablebooks/mdurl> |
 | `mlx` | 0.32.3 | MIT | <https://github.com/ml-explore/mlx> |
 | `mlx-metal` | 0.32.3 | MIT | <https://github.com/ml-explore/mlx> |
@@ -154,9 +155,10 @@ procurement; under-listing would be a compliance risk.
 | `mpmath` | 1.3.0 | BSD License | <http://mpmath.org/> |
 | `murmurhash` | 1.0.15 | MIT License | <https://github.com/explosion/murmurhash> |
 | `networkx` | 3.7 | BSD-3-Clause | <https://networkx.org/> |
-| `numba` | 0.67.0 | BSD License | <https://numba.pydata.org> |
+| `numba` | 0.68.0 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
-| `openai` | 3.22.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| `onnxruntime` | 1.30.0 | MIT License | <https://onnxruntime.ai> |
+| `openai` | 3.24.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.45.0 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
@@ -173,7 +175,7 @@ procurement; under-listing would be a compliance risk.
 | `PyJWT` | 2.15.1 | MIT | <https://github.com/jpadilla/pyjwt> |
 | `pysrt` | 1.1.2 | GPL-3.0-or-later | <https://github.com/byroot/pysrt> |
 | `python-docx` | 1.2.0 | MIT License | <https://github.com/python-openxml/python-docx> |
-| `python-dotenv` | 1.2.3 | BSD-3-Clause | <https://github.com/theskumar/python-dotenv> |
+| `python-dotenv` | 1.2.4 | BSD-3-Clause | <https://github.com/theskumar/python-dotenv> |
 | `python-multipart` | 0.0.32 | Apache-2.0 | <https://github.com/Kludex/python-multipart> |
 | `PyYAML` | 6.0.3 | MIT License | <https://pyyaml.org/> |
 | `referencing` | 0.37.0 | MIT | <https://github.com/python-jsonschema/referencing> |
@@ -181,7 +183,7 @@ procurement; under-listing would be a compliance risk.
 | `requests` | 2.34.2 | Apache Software License | <https://github.com/psf/requests> |
 | `requests-file` | 3.0.1 | Apache Software License | <https://codeberg.org/dashea/requests-file> |
 | `rich` | 15.0.0 | MIT License | <https://github.com/Textualize/rich> |
-| `rpds-py` | 2026.6.3 | MIT | <https://github.com/crate-py/rpds> |
+| `rpds-py` | 2026.9.1 | MIT | <https://github.com/crate-py/rpds> |
 | `scipy` | 1.18.1 | BSD License | <https://scipy.org/> |
 | `shellingham` | 1.5.4 | ISC License (ISCL) | <https://github.com/sarugaku/shellingham> |
 | `smart_open` | 8.0.2 | MIT License | <https://github.com/piskvorky/smart_open> |
@@ -189,7 +191,7 @@ procurement; under-listing would be a compliance risk.
 | `spacy-legacy` | 3.0.12 | MIT License | <https://spacy.io> |
 | `spacy-loggers` | 1.0.5 | MIT | <https://github.com/explosion/spacy-loggers> |
 | `sqladmin` | 0.32.0 | BSD-3-Clause | <https://github.com/smithyhq/sqladmin> |
-| `SQLAlchemy` | 2.1.1 | MIT | <https://www.sqlalchemy.org> |
+| `SQLAlchemy` | 2.1.3 | MIT | <https://www.sqlalchemy.org> |
 | `srsly` | 2.5.4 | MIT License | <https://github.com/explosion/srsly> |
 | `sse-starlette` | 3.5.0 | BSD-3-Clause | <https://github.com/sysid/sse-starlette> |
 | `starlette` | 1.7.0 | BSD-3-Clause | <https://github.com/Kludex/starlette> |
@@ -197,7 +199,7 @@ procurement; under-listing would be a compliance risk.
 | `tenacity` | 9.1.4 | Apache Software License | <https://github.com/jd/tenacity> |
 | `thinc` | 8.3.13 | MIT License | <https://github.com/explosion/thinc> |
 | `tiktoken` | 0.14.0 | MIT | <https://github.com/openai/tiktoken> |
-| `tldextract` | 5.3.2 | BSD-3-Clause | <https://github.com/john-kurkowski/tldextract> |
+| `tldextract` | 5.4.0 | BSD-3-Clause | <https://github.com/john-kurkowski/tldextract> |
 | `tokenizers` | 0.23.2 | Apache Software License | <https://github.com/huggingface/tokenizers> |
 | `tqdm` | 4.70.1 | MPL-2.0 AND MIT | <https://tqdm.github.io> |
 | `truststore` | 0.10.4 | MIT | <https://github.com/sethmlarson/truststore> |
@@ -206,7 +208,7 @@ procurement; under-listing would be a compliance risk.
 | `typing_extensions` | 4.16.0 | PSF-2.0 | <https://github.com/python/typing_extensions> |
 | `urllib3` | 2.8.0 | MIT | <https://github.com/urllib3/urllib3/blob/main/CHANGES.rst> |
 | `uvicorn` | 0.54.0 | BSD-3-Clause | <https://uvicorn.dev/> |
-| `uvloop` | 0.22.1 | Apache Software License; MIT License | — |
+| `uvloop` | 0.23.0 | Apache Software License; MIT License | — |
 | `wasabi` | 1.1.3 | MIT | <https://github.com/explosion/wasabi> |
 | `watchfiles` | 1.3.0 | MIT License | <https://github.com/samuelcolvin/watchfiles> |
 | `weasel` | 1.0.0 | MIT License | <https://github.com/explosion/weasel/> |

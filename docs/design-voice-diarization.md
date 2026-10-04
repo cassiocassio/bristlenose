@@ -401,6 +401,208 @@ Scoring: `experiments/speaker_split_full/eval_voice.py`; truths as in
   Also one session, one Teams recording, one moderator; the research above
   found a Meet recording harder.
 
+## Licence: espeak-ng in the sherpa-onnx wheels — options for the owner (4 Oct 2026)
+
+**Not decided.** This is the measured ground for the owner's call. Scripts and
+logs were in the session scratchpad; the commands that matter are inline.
+
+**The finding, re-measured.** The published sherpa-onnx 1.13.8 wheels
+statically link espeak-ng (GPL-3.0-or-later) from sherpa's TTS code. On the
+darwin cp312 wheel in `.venv-sidecar`, case-sensitive
+`nm <lib> | grep -c '_espeak'` gives **50** in `_sherpa_onnx.cpython-312-darwin.so`
+and **8** in `libsherpa-onnx-c-api.dylib` (which also carries 19 `piper`
+symbols); 0 in `libonnxruntime.dylib` and `libsherpa-onnx-cxx-api.dylib`.
+Count case-sensitively: `grep -i espeak` also matches `OfflineSpeaker…` and
+`wespeaker`, and inflates every count. The built sidecar carries all four
+libraries (the `_internal/libsherpa-onnx-c-api.dylib` beside them is a symlink,
+not a second copy). The c-api dylib is never loaded by Python, so excluding it
+from the spec would not help: the extension the pass uses carries espeak-ng
+itself.
+
+**Nothing has shipped with it yet.** `git tag --contains 93eb8c30` (the sidecar
+commit) is empty; the last release is v0.32.0, which has no `voice` extra. The
+call is due before the next release on any channel that conveys the binary:
+the Mac app (.dmg and TestFlight/App Store), the Snap and the Copr RPM (all
+three ship the extra on `main`, unreleased). A pip install of the `voice` extra conveys
+nothing of ours: k2-fsa distributes that wheel.
+
+### 1. Build sherpa-onnx from source, TTS off, for the sidecar
+
+**Measured: it builds, it carries no espeak-ng, and it gives the same
+embeddings, bit for bit.** Tag `v1.13.8` (`11afbd0`), on this Mac (arm64,
+macOS 27, Apple clang 21), Python 3.12.13:
+
+```
+SHERPA_ONNX_CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release -DSHERPA_ONNX_ENABLE_TTS=OFF \
+  -DSHERPA_ONNX_ENABLE_SPEAKER_DIARIZATION=OFF -DSHERPA_ONNX_ENABLE_PORTAUDIO=OFF \
+  -DSHERPA_ONNX_ENABLE_WEBSOCKET=OFF -DSHERPA_ONNX_ENABLE_BINARY=OFF \
+  -DSHERPA_ONNX_ENABLE_C_API=OFF -DCMAKE_OSX_ARCHITECTURES=arm64 \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+  -DPython_EXECUTABLE=<venv>/bin/python -DPython3_EXECUTABLE=<venv>/bin/python -G Ninja" \
+python setup.py bdist_wheel
+```
+
+- **Time:** 82–85 s wall, ~450 s CPU, two clean runs.
+- **Result:** the installed package has two libraries: the extension (3.6 MB)
+  and the same prebuilt `libonnxruntime.dylib` 1.28.2 (29.0 MB). That is
+  **31 MB against 37 MB today (−6 MB)**. `_espeak` symbols: 0. `piper`: 0.
+  kaldifst/OpenFst (Apache-2.0) is still linked, because sherpa's decoder uses
+  it.
+- **Same output:** 17 spans of a synthetic two-voice file through the source
+  build and the published wheel gave a max absolute difference of 0.0.
+- **Build ownership it adds**, all hit in this measurement:
+  - **cmake and ninja.** Neither is on this Mac. They pip-install into a
+    throwaway build venv, so nothing goes on the system.
+  - **Configure-time downloads.** It fetches ten archives: pybind11,
+    kaldi-native-fbank, kissfft, kaldi-decoder, kaldifst, OpenFst, Eigen,
+    simple-sentencepiece, nlohmann/json, and a **prebuilt** onnxruntime from a
+    maintainer's personal releases (`csukuangfj/onnxruntime-libs` v1.28.2, the
+    same binary the published wheel vendors). Each carries a `URL_HASH`
+    (checked on the eight that matter), so a cached build is reproducible, but
+    the build needs the network or a pre-seeded download directory.
+  - **Interpreter selection.** Without `-DPython_EXECUTABLE`, CMake's
+    FindPython took Homebrew's 3.14 over the `PYTHON_EXECUTABLE` setup.py
+    passed. The result was a wheel *tagged* cp312 holding a `cpython-314`
+    extension, which fails at import with no build error.
+  - **Platform tag.** `bdist_wheel` tags from the interpreter's sysconfig,
+    which is `macosx-26.0-arm64` for this Homebrew 3.12. The binary's `minos`
+    is 11.0, but pip on the 15.0 floor would refuse a `macosx_26_0` wheel.
+    The build needs `--plat-name macosx_11_0_arm64`.
+  - **A two-line patch.** `import sherpa_onnx` fails on a TTS-off build:
+    `__init__.py` imports `GenerationConfig` and `OfflineTtsSupertonicModelConfig`
+    from the extension unconditionally. Upstream fixed this class of bug
+    ([k2-fsa/sherpa-onnx#2658](https://github.com/k2-fsa/sherpa-onnx/issues/2658),
+    closed 9 Oct 2025), but master still imports both names (fetched
+    4 Oct 2026). Remove the two lines and the import works,
+    `SpeakerEmbeddingExtractor` included. An upstream PR would retire the
+    patch.
+- **Where it would live:** a step in `build-sidecar.sh` ahead of Layer V. It
+  builds the wheel once per (sherpa version, cmake args, Python minor) into a
+  cache and installs it `--no-deps` over the resolved one. The step has to sit
+  inside the release preflight's resolve-once venv, or the drift gate sees a
+  different sherpa from the one that ships. PyPI has an sdist (1.06 MB), so
+  `pip install --no-binary sherpa-onnx` with `SHERPA_ONNX_CMAKE_ARGS` set may
+  collapse the build to one line; that is **not tried**, and the patch would
+  still be needed. CI needs nothing, because the Mac CI job builds against a
+  stub sidecar. Linux channels would keep the published wheels, so Snap and
+  Copr carry GPL-3.0, which is fine beside AGPL-3.0. Every sherpa bump becomes
+  a rebuild plus re-applying the patch. Dependabot sees only the version pin.
+  The SBOM would name a PyPI purl for a wheel PyPI never served.
+
+### 2. Drop sherpa-onnx and drive onnxruntime directly
+
+**Measured: the same voice verdicts, from about 50–80 lines.** The "~200
+lines" in Option A's dependency notes was for pyannote segmentation
+post-processing. The shipped pass embeds Whisper segments, so it needs none of
+that. What it needs is sherpa's NeMo front end
+(`speaker-embedding-extractor-nemo-impl.h` at v1.13.8): kaldi fbank (80 bins,
+25/10 ms, Hann window, pre-emphasis 0.97, librosa mel, `snip_edges`, no DC
+removal, no dither), per-feature mean/std normalisation, a `(1, 80, T)` tensor
+with a frame count, and output `embs`. The prototype's class is 73 non-blank
+lines with two interchangeable feature paths:
+
+- **`kaldi-native-fbank`** (Apache-2.0, 0.27 MB, same author as sherpa).
+  Cosine to sherpa's embedding: **1.000000** to six places, on 2.0, 0.7 and
+  5.0 s windows of a synthetic two-voice file.
+- **Pure numpy**, which needs no native code beyond onnxruntime. Cosine to
+  sherpa: **≥ 0.99995**.
+
+Through Bristlenose's own `cluster_voices`, on three public FOSSDA interviews
+(25, 15 and 17 spans) and on **794 fixed 3 s windows over the 40-minute s1**,
+both feature paths gave **the same verdict on every span**. Centroid cosine
+was identical to four places (knf) or within 0.0006 (numpy). Time: 17.3 s
+direct against 18.0 s for sherpa over the 794 windows.
+
+**One trap.** sherpa resizes its buffer to a multiple of 16 frames, but the
+tensor it hands the model keeps the unpadded frame count, so the padding never
+reaches the model. A port that pads the way the code *reads* scores 0.89 on
+0.7 s spans. Port the behaviour, not the reading.
+
+- **Size, Mac.** The onnxruntime 1.30.0 package is **80 MB installed**. The
+  spec's "58 MB" comment is dated. It holds:
+  - `onnxruntime_pybind11_state.so`, 40.8 MB, self-contained: `otool -L` shows
+    no libonnxruntime.
+  - `libonnxruntime.1.30.0.dylib`, 33.2 MB, which Python never loads. The
+    prototype ran with it moved aside.
+  - `transformers/` (5.2 MB), `quantization/` (1.8 MB) and `tools/` (1.5 MB).
+
+  Trimmed to the pybind module and its Python files, that is **about 42 MB,
+  against 37 MB for sherpa today (+5 MB)**. A `collect_all` would add about
+  43 MB. The spec excluded onnxruntime partly to cut torch's incoming edge
+  through `onnxruntime.transformers.machine_info`. A targeted exclude keeps
+  that edge cut.
+- **Size, Linux:** 0 MB. onnxruntime is already a core dependency through
+  faster-whisper. This option also takes sherpa's second onnxruntime (1.28.2)
+  and its bundled `libasound` off the Copr CVE watch (`design-fedora-packaging.md`
+  §7), and ends the two-runtimes-in-one-process arrangement.
+- **Licence:** 0 `_espeak` symbols in the pybind module. Its
+  `ThirdPartyNotices.txt` (5,093 lines) mentions GPL only in disjunctive terms:
+  MPL-2.0's secondary-licence definition, and Mbed TLS "Apache-2.0 OR GPL".
+  The notice obligation the TODO already lists stays, and is easier to meet:
+  this package ships the notices file, and sherpa's wheel does not.
+- **What we would own:** the feature front end, about 40 lines of maths with
+  no upstream to track. A model change would need the equivalence re-run
+  (keep it as a test against stored embeddings). The ITMS-91061 watch moves
+  from `libonnxruntime.dylib` to the pybind module, which statically links
+  Abseil and Protobuf too.
+
+### 3. Declare and accept
+
+- **The App Store question is about espeak-ng's licence, not ours.**
+  Bristlenose's AGPL code is the owner's (CLA), so the owner can distribute it
+  on Apple's terms. espeak-ng's copyright holders have not agreed to those
+  terms. GPL-3.0 §10 forbids "any further restrictions" on the rights it
+  grants, and the FSF treats Apple's Usage Rules as such restrictions.
+- **GNU Go, 25 May 2010.** The FSF, as copyright holder, notified Apple. Apple
+  removed the app rather than change its terms. The FSF's summary: Apple
+  "imposes numerous legal restrictions on use and distribution", which GPLv2 §6
+  forbids ([FSF](https://www.fsf.org/news/2010-05-app-store-compliance)).
+- **VLC for iOS.** Accepted in September 2010. Removed in January 2011, after
+  one of VLC's own copyright holders complained
+  ([Cult of Mac](https://www.cultofmac.com/news/vlc-app-pulled-from-the-app-store-in-response-to-nokia-employees-gpl-crusade)).
+  It came back in July 2013, and only after relicensing. libVLC went from
+  GPLv2+ to LGPLv2.1+, announced 21 Dec 2011: every contributor agreed but
+  one, whose code was rewritten
+  ([VideoLAN](https://www.videolan.org/press/lgpl-libvlc.html)). The app itself
+  moved to MPL-2.0
+  ([Wikipedia](https://en.wikipedia.org/wiki/VLC_media_player)).
+- **In both cases enforcement came from a copyright holder's complaint, not
+  from App Review.** "Declare and accept" means shipping and relying on no
+  espeak-ng copyright holder objecting. If one does, the listing is pulled,
+  and the remedy is option 1 or 2, done under deadline.
+- **Not established:** whether the Mac App Store differs. Mac apps are not
+  FairPlay-encrypted, which was the iOS complaint's DRM point. But the FSF's
+  objection was to the Usage Rules, and those apply to Mac apps too. I found
+  no Mac-specific case either way.
+- **Declaring is not free on any channel.** GPL-3.0 §4 and §6 require the
+  licence text and the Corresponding Source with every conveyed binary: the
+  .dmg, TestFlight, the Snap and the Copr RPM. The Corresponding Source here
+  is sherpa-onnx v1.13.8 plus espeak-ng from `csukuangfj/espeak-ng@ed530aa`, a
+  personal fork pinned in `cmake/espeak-ng-for-piper.cmake`. The bundle today
+  carries only sherpa's Apache `LICENSE`.
+
+### Owed under any option
+
+- **`THIRD-PARTY-BINARIES.md`:** yes, done with this brief. It is the licence
+  inventory `SECURITY.md` points to, and it named no GPL-3.0 component. Its
+  generator reads wheel metadata, which says "Apache", so a regeneration would
+  never surface this on its own. The row goes away if option 1 or 2 lands.
+- **`SECURITY.md`:** no change. It defers licences to the inventory.
+- **Website:** no change. `content/terms.html` says AGPL-3.0 governs "the
+  software itself" and lists no third-party licences. The bundle already ships
+  LGPL ffmpeg and the GPL-with-exception PyInstaller bootloader under the same
+  wording.
+- **Snap:** `snap/snapcraft.yaml` still declares `license: AGPL-3.0-only`,
+  while the snap now ships the `voice` extra (`09876530`). That field needs the
+  same compound expression the RPM's `License:` now carries.
+- **Aside, not licence:** TitaNet-small refuses a span over 12,288 frames
+  (~123 s): `RuntimeError … 12288 by 17998`. `refine_speakers_by_voice`
+  catches it and the whole session falls back to the text split. Whisper's
+  ≤ 30 s segments should never reach it. It was hit here only because the
+  `.txt` transcripts carry start times alone, so a span ran to the next
+  segment. Option 2 and the shipped path behave the same, because the limit is
+  the model's.
+
 ## The first experiment (free, local, proposed — not run)
 
 Goal: score all three methods (opening sample, whole-transcript LLM, voice)

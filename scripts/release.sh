@@ -1726,8 +1726,12 @@ cmd_run() {
     # overnight run's quietest failure mode, and no env var converts machine
     # sleep into a loud failure. -i holds IDLE sleep only (a closed lid still
     # sleeps — warned at the probes); -w $$ ties the assertion to this driver,
-    # so it dies with us and a killed run holds nothing open.
-    command -v caffeinate >/dev/null 2>&1 && { caffeinate -i -w $$ & }
+    # so it dies with us and a killed run holds nothing open. -d holds the
+    # DISPLAY awake too: build-dmg runs the Swift suite, whose AppKit-animation
+    # scenarios (SidebarFitHarnessTests s05/s07/s08/s12/s20) fail deterministically
+    # once the display sleeps and the session locks (0.33.0, 4 Oct 2026). A lock
+    # you press yourself still breaks them; -d only stops the idle one.
+    command -v caffeinate >/dev/null 2>&1 && { caffeinate -d -i -w $$ & }
     while IFS='|' read -r id label kind est steptier cons cmd; do
         [ -z "$id" ] && continue
         # run is Tier 1; a Tier 2 promotion is a different act, not a longer run.

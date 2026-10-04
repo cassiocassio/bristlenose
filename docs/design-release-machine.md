@@ -430,7 +430,7 @@ warning. Every probe is timeout-wrapped with exit 124 reported as
 dialog *hangs* a probe rather than failing it). After the confirmation the
 run is armed: identities exported **by fingerprint**, `GIT_TERMINAL_PROMPT=0`
 + askpass/ssh-askpass forced off so anything missed fails loud instead of
-prompting, and the step loop held awake by `caffeinate -i -w $$` — idle sleep
+prompting, and the step loop held awake by `caffeinate -d -i -w $$` (`-d` since 0.33.0: the `.dmg`'s Swift suite fails once the display sleeps) — idle sleep
 was the overnight run's quietest failure mode, and no env var converts
 machine sleep into an error.
 

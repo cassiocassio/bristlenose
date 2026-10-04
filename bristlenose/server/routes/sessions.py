@@ -36,6 +36,10 @@ class SpeakerResponse(BaseModel):
     role: str
     #: False while the name is the pipeline's proposal (see SessionSpeaker).
     name_confirmed: bool = False
+    #: The two stored names behind ``name``. An undo restores a slot to exactly
+    #: what it held, and ``name`` alone cannot say which of the two it was.
+    full_name: str = ""
+    short_name: str = ""
 
 
 class SourceFileResponse(BaseModel):
@@ -149,6 +153,8 @@ def get_sessions(
                         name=name,
                         role=sp.speaker_role,
                         name_confirmed=sp.name_confirmed,
+                        full_name=(person.full_name or "") if person else "",
+                        short_name=(person.short_name or "") if person else "",
                     )
                 )
 

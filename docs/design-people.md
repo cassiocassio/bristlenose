@@ -2026,7 +2026,8 @@ real tokens (the pill overhang below was the first proof).
 > (speakers and segments), `/dashboard`, `/people`, the moderator-question route, the MCP overview
 > and the dev sessions table — and `/sessions` adds `slot_code`; `GET /people` is keyed by identity,
 > which ends the cross-session lookup by construction. (2) One resolver,
-> `bristlenose/server/speaker_slots.py`, outer-joins; the four inner joins are gone. (3) The pipeline
+> `bristlenose/server/speaker_slots.py`, outer-joins; the five inner joins are gone (the 3 Oct
+> block counted four: `grounding.py` had two, `resolve_speaker_names` and `resolve_session_speaker_names`). (3) The pipeline
 > writes per-session stats into `session-speakers.json` (now version 2, which also records each
 > name's evidence class), and the importer copies them onto each slot — so the dashboard's
 > `total_words`, always 0 in serve, is real. (4) **A heard name proposes** (see call 1 below), so

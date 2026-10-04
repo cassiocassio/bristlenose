@@ -36,6 +36,7 @@ import re
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from bristlenose.models import InputSession
 
@@ -201,7 +202,7 @@ _SID = re.compile(r"s[1-9]\d*")
 _CODE = re.compile(r"[pmo][1-9]\d*")
 
 
-def _problem(data: dict) -> str:
+def _problem(data: dict[str, Any]) -> str:
     """What is wrong with a registry file's contents, or ``""``.
 
     Checked because every value here is used as an identity: a code that does

@@ -21,7 +21,7 @@ import {
   useQuotesStore,
   clearSearch as clearStoreSearch,
   setTagFilter,
-  addTag,
+  addTagToQuotes,
   getLastUsedTag,
   hideQuotes,
   setStarred,
@@ -214,10 +214,9 @@ export function useKeyboardShortcuts({
     const targets = selected.size > 0 ? Array.from(selected) : focused ? [focused] : [];
     if (targets.length === 0) return false;
 
-    for (const domId of targets) {
-      addTag(domId, { ...tag, source: "human" });
-      flashTag(domId, tag.name);
-    }
+    // One write and one undo entry for the whole selection.
+    addTagToQuotes(targets, { ...tag, source: "human" });
+    for (const domId of targets) flashTag(domId, tag.name);
     return true;
   }, [flashTag]);
 

@@ -30,7 +30,7 @@ import type {
 } from "../utils/types";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { matchesAll, parseQuery } from "../utils/searchMatch";
-import { useQuotesStore, setTagFilter, addTag } from "../contexts/QuotesContext";
+import { useQuotesStore, setTagFilter, addTagToQuotes } from "../contexts/QuotesContext";
 import { useFocus } from "../contexts/FocusContext";
 import {
   enterSoloMode,
@@ -516,10 +516,9 @@ export function TagSidebar() {
         source: "human",
       };
 
-      for (const domId of targets) {
-        addTag(domId, payload);
-        flashTag(domId, found.name);
-      }
+      // One write and one undo entry for the whole selection.
+      addTagToQuotes(targets, payload);
+      for (const domId of targets) flashTag(domId, found.name);
 
       // Flash sidebar badge
       setFlashingSidebarTags((prev) => {

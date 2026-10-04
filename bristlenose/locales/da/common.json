@@ -636,13 +636,25 @@
       "renameModerator": "Fortryd Omdøb moderator",
       "renameParticipant": "Fortryd Omdøb deltager",
       "renameObserver": "Fortryd Omdøb observatør",
-      "confirmName": "Fortryd Bekræft navn"
+      "confirmName": "Fortryd Bekræft navn",
+      "star": "Fortryd Stjernemarkér",
+      "unstar": "Fortryd Fjern stjernemarkering",
+      "hide": "Fortryd Skjul",
+      "unhide": "Fortryd Vis igen",
+      "addTag": "Fortryd Tilføj tag",
+      "removeTag": "Fortryd Fjern tag"
     },
     "redo": {
       "renameModerator": "Gentag Omdøb moderator",
       "renameParticipant": "Gentag Omdøb deltager",
       "renameObserver": "Gentag Omdøb observatør",
-      "confirmName": "Gentag Bekræft navn"
+      "confirmName": "Gentag Bekræft navn",
+      "star": "Gentag Stjernemarkér",
+      "unstar": "Gentag Fjern stjernemarkering",
+      "hide": "Gentag Skjul",
+      "unhide": "Gentag Vis igen",
+      "addTag": "Gentag Tilføj tag",
+      "removeTag": "Gentag Fjern tag"
     }
   }
 }

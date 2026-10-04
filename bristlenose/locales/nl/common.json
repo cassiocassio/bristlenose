@@ -636,13 +636,25 @@
       "renameModerator": "Herstel naam moderator wijzigen",
       "renameParticipant": "Herstel naam deelnemer wijzigen",
       "renameObserver": "Herstel naam waarnemer wijzigen",
-      "confirmName": "Herstel naam bevestigen"
+      "confirmName": "Herstel naam bevestigen",
+      "star": "Herstel markeren met ster",
+      "unstar": "Herstel ster verwijderen",
+      "hide": "Herstel verbergen",
+      "unhide": "Herstel tonen",
+      "addTag": "Herstel tag toevoegen",
+      "removeTag": "Herstel tag verwijderen"
     },
     "redo": {
       "renameModerator": "Opnieuw naam moderator wijzigen",
       "renameParticipant": "Opnieuw naam deelnemer wijzigen",
       "renameObserver": "Opnieuw naam waarnemer wijzigen",
-      "confirmName": "Opnieuw naam bevestigen"
+      "confirmName": "Opnieuw naam bevestigen",
+      "star": "Opnieuw markeren met ster",
+      "unstar": "Opnieuw ster verwijderen",
+      "hide": "Opnieuw verbergen",
+      "unhide": "Opnieuw tonen",
+      "addTag": "Opnieuw tag toevoegen",
+      "removeTag": "Opnieuw tag verwijderen"
     }
   }
 }

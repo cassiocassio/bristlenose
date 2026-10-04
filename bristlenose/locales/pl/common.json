@@ -710,13 +710,25 @@
       "renameModerator": "Cofnij zmianę imienia moderatora",
       "renameParticipant": "Cofnij zmianę imienia uczestnika",
       "renameObserver": "Cofnij zmianę imienia obserwatora",
-      "confirmName": "Cofnij potwierdzenie imienia"
+      "confirmName": "Cofnij potwierdzenie imienia",
+      "star": "Cofnij dodanie gwiazdki",
+      "unstar": "Cofnij usunięcie gwiazdki",
+      "hide": "Cofnij ukrycie",
+      "unhide": "Cofnij ponowne pokazanie",
+      "addTag": "Cofnij dodanie etykiety",
+      "removeTag": "Cofnij usunięcie etykiety"
     },
     "redo": {
       "renameModerator": "Przywróć zmianę imienia moderatora",
       "renameParticipant": "Przywróć zmianę imienia uczestnika",
       "renameObserver": "Przywróć zmianę imienia obserwatora",
-      "confirmName": "Przywróć potwierdzenie imienia"
+      "confirmName": "Przywróć potwierdzenie imienia",
+      "star": "Przywróć dodanie gwiazdki",
+      "unstar": "Przywróć usunięcie gwiazdki",
+      "hide": "Przywróć ukrycie",
+      "unhide": "Przywróć ponowne pokazanie",
+      "addTag": "Przywróć dodanie etykiety",
+      "removeTag": "Przywróć usunięcie etykiety"
     }
   }
 }

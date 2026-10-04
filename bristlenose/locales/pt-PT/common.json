@@ -636,13 +636,25 @@
       "renameModerator": "Desfazer Alterar nome do moderador",
       "renameParticipant": "Desfazer Alterar nome do participante",
       "renameObserver": "Desfazer Alterar nome do observador",
-      "confirmName": "Desfazer Confirmar nome"
+      "confirmName": "Desfazer Confirmar nome",
+      "star": "Desfazer Marcar com Estrela",
+      "unstar": "Desfazer Desmarcar Estrela",
+      "hide": "Desfazer Ocultar",
+      "unhide": "Desfazer Mostrar",
+      "addTag": "Desfazer Adicionar Etiqueta",
+      "removeTag": "Desfazer Remover Etiqueta"
     },
     "redo": {
       "renameModerator": "Refazer Alterar nome do moderador",
       "renameParticipant": "Refazer Alterar nome do participante",
       "renameObserver": "Refazer Alterar nome do observador",
-      "confirmName": "Refazer Confirmar nome"
+      "confirmName": "Refazer Confirmar nome",
+      "star": "Refazer Marcar com Estrela",
+      "unstar": "Refazer Desmarcar Estrela",
+      "hide": "Refazer Ocultar",
+      "unhide": "Refazer Mostrar",
+      "addTag": "Refazer Adicionar Etiqueta",
+      "removeTag": "Refazer Remover Etiqueta"
     }
   }
 }

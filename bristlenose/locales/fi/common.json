@@ -636,13 +636,25 @@
       "renameModerator": "Peru moderaattorin uudelleennimeäminen",
       "renameParticipant": "Peru osallistujan uudelleennimeäminen",
       "renameObserver": "Peru tarkkailijan uudelleennimeäminen",
-      "confirmName": "Peru nimen vahvistaminen"
+      "confirmName": "Peru nimen vahvistaminen",
+      "star": "Peru tähtimerkintä",
+      "unstar": "Peru tähtimerkinnän poisto",
+      "hide": "Peru piilotus",
+      "unhide": "Peru näkyviin tuonti",
+      "addTag": "Peru tunnisteen lisäys",
+      "removeTag": "Peru tunnisteen poisto"
     },
     "redo": {
       "renameModerator": "Nimeä moderaattori sittenkin uudelleen",
       "renameParticipant": "Nimeä osallistuja sittenkin uudelleen",
       "renameObserver": "Nimeä tarkkailija sittenkin uudelleen",
-      "confirmName": "Vahvista nimi sittenkin"
+      "confirmName": "Vahvista nimi sittenkin",
+      "star": "Merkitse sittenkin tähdellä",
+      "unstar": "Poista tähtimerkintä sittenkin",
+      "hide": "Piilota sittenkin",
+      "unhide": "Tuo sittenkin näkyviin",
+      "addTag": "Lisää tunniste sittenkin",
+      "removeTag": "Poista tunniste sittenkin"
     }
   }
 }

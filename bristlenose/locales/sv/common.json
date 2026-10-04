@@ -636,13 +636,25 @@
       "renameModerator": "Ångra Byt namn på moderator",
       "renameParticipant": "Ångra Byt namn på deltagare",
       "renameObserver": "Ångra Byt namn på observatör",
-      "confirmName": "Ångra Bekräfta namn"
+      "confirmName": "Ångra Bekräfta namn",
+      "star": "Ångra Stjärnmärk",
+      "unstar": "Ångra Ta bort stjärnmärkning",
+      "hide": "Ångra Dölj",
+      "unhide": "Ångra Visa igen",
+      "addTag": "Ångra Lägg till tagg",
+      "removeTag": "Ångra Ta bort tagg"
     },
     "redo": {
       "renameModerator": "Gör om Byt namn på moderator",
       "renameParticipant": "Gör om Byt namn på deltagare",
       "renameObserver": "Gör om Byt namn på observatör",
-      "confirmName": "Gör om Bekräfta namn"
+      "confirmName": "Gör om Bekräfta namn",
+      "star": "Gör om Stjärnmärk",
+      "unstar": "Gör om Ta bort stjärnmärkning",
+      "hide": "Gör om Dölj",
+      "unhide": "Gör om Visa igen",
+      "addTag": "Gör om Lägg till tagg",
+      "removeTag": "Gör om Ta bort tagg"
     }
   }
 }

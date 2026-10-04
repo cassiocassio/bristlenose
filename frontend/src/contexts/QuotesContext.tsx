@@ -47,6 +47,7 @@ import {
 import { announce } from "../utils/announce";
 import i18n from "../i18n";
 import { isExportMode } from "../utils/exportData";
+import { pushUndo } from "./UndoStore";
 
 // ── State shape ──────────────────────────────────────────────────────────
 
@@ -315,18 +316,16 @@ function tagNamesMap(tags: Record<string, TagResponse[]>): Record<string, string
 
 // ── Action functions ─────────────────────────────────────────────────────
 
+// ── Undo (docs/design-people.md §B10, contexts/UndoStore.ts) ──────────────
+//
+// Each gesture below records ONE entry whose undo and redo are the same store
+// calls with `record` off, so an undo does not record itself. The inverse is
+// a delta over the quotes the gesture actually changed — never a snapshot of
+// the whole map, which would also revert whatever was changed since by a path
+// that is not on the stack (an AutoCode accept, a refetch).
+
 export function toggleStar(domId: string, newState: boolean): void {
-  // Read-only in an exported report — mutations have no server to persist to,
-  // and a control that responds then silently discards on reload is a lie.
-  if (isExportMode()) return;
-  setState((prev) => {
-    const starred = { ...prev.starred };
-    if (newState) starred[domId] = true;
-    else delete starred[domId];
-    putStarred(starred);
-    return { ...prev, starred };
-  });
-  announce(i18n.t(newState ? "announce.starred" : "announce.unstarred"));
+  setStarred([domId], newState);
 }
 
 /**
@@ -339,7 +338,7 @@ export function toggleStar(domId: string, newState: boolean): void {
  * Direction is the caller's, but every caller should take it from
  * `starActionIsUnstar` — see the note there.
  */
-export function setStarred(domIds: string[], newState: boolean): void {
+export function setStarred(domIds: string[], newState: boolean, record = true): void {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
   if (isExportMode()) return;
@@ -357,6 +356,13 @@ export function setStarred(domIds: string[], newState: boolean): void {
     return { ...prev, starred };
   });
   announce(i18n.t(newState ? "announce.starred" : "announce.unstarred"));
+  if (record) {
+    pushUndo({
+      action: newState ? "star" : "unstar",
+      undo: () => setStarred(targets, !newState, false),
+      redo: () => setStarred(targets, newState, false),
+    });
+  }
 }
 
 /**
@@ -369,7 +375,7 @@ export function setStarred(domIds: string[], newState: boolean): void {
  * Unhide has no collapse window — the card comes back immediately and the
  * fly-down cascade is applied by the group to the elements once they render.
  */
-export function unhideQuotes(domIds: string[]): void {
+export function unhideQuotes(domIds: string[], record = true): void {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
   if (isExportMode()) return;
@@ -390,6 +396,13 @@ export function unhideQuotes(domIds: string[]): void {
     return { ...prev, hidden, hiding };
   });
   announce(i18n.t("announce.restored"));
+  if (record) {
+    pushUndo({
+      action: "unhide",
+      undo: () => hideQuotes(targets, false),
+      redo: () => unhideQuotes(targets, false),
+    });
+  }
 }
 
 /**
@@ -416,7 +429,7 @@ export const HIDE_DURATION = 300;
  * Callers pass every quote the gesture applies to. Hiding is one-way, so
  * there is no direction argument; `unhideQuotes` restores.
  */
-export function hideQuotes(domIds: string[]): void {
+export function hideQuotes(domIds: string[], record = true): void {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
   if (isExportMode()) return;
@@ -436,10 +449,15 @@ export function hideQuotes(domIds: string[]): void {
   // ONE timer for the gesture, not one per quote. The commit is a single
   // state write and a single PUT however many quotes are in it.
   setTimeout(() => {
+    // A quote restored during the collapse (⌘Z straight after a hide) has
+    // already left `hiding`; committing it would hide it again behind the
+    // undo's back.
+    const landing = targets.filter((id) => state.hiding.has(id));
+    if (landing.length === 0) return;
     setState((prev) => {
       const hidden = { ...prev.hidden };
       const hiding = new Set(prev.hiding);
-      for (const id of targets) {
+      for (const id of landing) {
         hidden[id] = true;
         hiding.delete(id);
       }
@@ -448,6 +466,14 @@ export function hideQuotes(domIds: string[]): void {
     });
     announce(i18n.t("announce.hidden"));
   }, HIDE_DURATION);
+
+  if (record) {
+    pushUndo({
+      action: "hide",
+      undo: () => unhideQuotes(targets, false),
+      redo: () => hideQuotes(targets, false),
+    });
+  }
 }
 
 export function commitEdit(domId: string, newText: string): void {
@@ -481,36 +507,101 @@ export function commitHeadingEdit(headingKey: string, newText: string): void {
 }
 
 export function addTag(domId: string, tag: TagResponse): void {
-  // Read-only in an exported report — mutations have no server to persist to,
-  // and a control that responds then silently discards on reload is a lie.
-  if (isExportMode()) return;
-  setState((prev) => {
-    const existing = prev.tags[domId] || [];
-    // Prevent duplicate tags (case-insensitive).
-    if (existing.some((t) => t.name.toLowerCase() === tag.name.toLowerCase())) {
-      return prev;
-    }
-    const tags = { ...prev.tags };
-    tags[domId] = [...existing, tag];
-    putTags(tagNamesMap(tags));
-    lastUsedTag = tag;
-    announce(i18n.t("announce.tagAdded", { name: tag.name }));
-    return { ...prev, tags };
-  });
+  addTagToQuotes([domId], tag);
 }
 
-export function removeTag(domId: string, tagName: string): void {
+/**
+ * Add one tag to one or more quotes as a single gesture: one state write, one
+ * PUT, one undo entry. A selection used to loop `addTag`, one full-map
+ * `/tags` replacement per quote, fire-and-forget and racing the others — and
+ * an undo of that loop would have raced the same way.
+ *
+ * Case-insensitive duplicates are skipped (the single source of truth for
+ * that rule — manual adds, quick-apply and the sidebar all come through here).
+ */
+export function addTagToQuotes(domIds: string[], tag: TagResponse, record = true): void {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
   if (isExportMode()) return;
+  const lower = tag.name.toLowerCase();
+  const targets = [...new Set(domIds)].filter(
+    (id) => !(state.tags[id] || []).some((t) => t.name.toLowerCase() === lower),
+  );
+  if (targets.length === 0) return;
+  setState((prev) => {
+    const tags = { ...prev.tags };
+    for (const id of targets) tags[id] = [...(tags[id] || []), tag];
+    putTags(tagNamesMap(tags));
+    return { ...prev, tags };
+  });
+  lastUsedTag = tag;
+  announce(i18n.t("announce.tagAdded", { name: tag.name }));
+  if (record) {
+    pushUndo({
+      action: "addTag",
+      undo: () => removeTagFromQuotes(targets, tag.name),
+      redo: () => addTagToQuotes(targets, tag, false),
+    });
+  }
+}
+
+/** Remove a tag by name from several quotes in one write. Undo's inverse of
+ *  `addTagToQuotes`; not a gesture of its own, so it records nothing. */
+function removeTagFromQuotes(domIds: string[], tagName: string): void {
+  if (isExportMode()) return;
+  const targets = domIds.filter((id) => (state.tags[id] || []).some((t) => t.name === tagName));
+  if (targets.length === 0) return;
+  setState((prev) => {
+    const tags = { ...prev.tags };
+    for (const id of targets) {
+      tags[id] = (tags[id] || []).filter((t) => t.name !== tagName);
+      if (tags[id].length === 0) delete tags[id];
+    }
+    putTags(tagNamesMap(tags));
+    return { ...prev, tags };
+  });
+  announce(i18n.t("announce.tagRemoved", { name: tagName }));
+}
+
+export function removeTag(domId: string, tagName: string, record = true): void {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return;
+  const existing = state.tags[domId] || [];
+  const index = existing.findIndex((t) => t.name === tagName);
+  if (index < 0) return;
+  const removed = existing[index];
   setState((prev) => {
     const tags = { ...prev.tags };
     tags[domId] = (tags[domId] || []).filter((t) => t.name !== tagName);
     if (tags[domId].length === 0) delete tags[domId];
     putTags(tagNamesMap(tags));
-    announce(i18n.t("announce.tagRemoved", { name: tagName }));
     return { ...prev, tags };
   });
+  announce(i18n.t("announce.tagRemoved", { name: tagName }));
+  if (record) {
+    pushUndo({
+      action: "removeTag",
+      undo: () => restoreTag(domId, removed, index),
+      redo: () => removeTag(domId, tagName, false),
+    });
+  }
+}
+
+/** Put a removed tag back where it was. */
+function restoreTag(domId: string, tag: TagResponse, index: number): void {
+  if (isExportMode()) return;
+  const existing = state.tags[domId] || [];
+  if (existing.some((t) => t.name.toLowerCase() === tag.name.toLowerCase())) return;
+  setState((prev) => {
+    const tags = { ...prev.tags };
+    const list = [...(tags[domId] || [])];
+    list.splice(Math.min(index, list.length), 0, tag);
+    tags[domId] = list;
+    putTags(tagNamesMap(tags));
+    return { ...prev, tags };
+  });
+  announce(i18n.t("announce.tagAdded", { name: tag.name }));
 }
 
 export function deleteBadge(domId: string, sentiment: string): void {

@@ -606,13 +606,25 @@
       "renameModerator": "還原重新命名主持人",
       "renameParticipant": "還原重新命名參與者",
       "renameObserver": "還原重新命名觀察員",
-      "confirmName": "還原確認名稱"
+      "confirmName": "還原確認名稱",
+      "star": "還原標星",
+      "unstar": "還原取消標星",
+      "hide": "還原隱藏",
+      "unhide": "還原取消隱藏",
+      "addTag": "還原加入標籤",
+      "removeTag": "還原移除標籤"
     },
     "redo": {
       "renameModerator": "重做重新命名主持人",
       "renameParticipant": "重做重新命名參與者",
       "renameObserver": "重做重新命名觀察員",
-      "confirmName": "重做確認名稱"
+      "confirmName": "重做確認名稱",
+      "star": "重做標星",
+      "unstar": "重做取消標星",
+      "hide": "重做隱藏",
+      "unhide": "重做取消隱藏",
+      "addTag": "重做加入標籤",
+      "removeTag": "重做移除標籤"
     }
   }
 }

@@ -32,7 +32,7 @@ import {
   unhideQuotes,
   commitEdit,
   commitHeadingEdit,
-  addTag,
+  addTagToQuotes,
   removeTag,
   deleteBadge,
   restoreBadges,
@@ -594,8 +594,9 @@ export function QuoteGroup({
         ? Array.from(selectedIds)
         : [domId];
 
+      // One write and one undo entry for the whole selection.
+      addTagToQuotes(targets, tagPayload);
       for (const id of targets) {
-        addTag(id, tagPayload);
         // Flash animation — visual confirmation on all tag adds (Decision 7).
         const flashKey = `${id}:${tagName}`;
         setFlashingTags((prev) => new Set(prev).add(flashKey));

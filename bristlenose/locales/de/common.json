@@ -636,13 +636,25 @@
       "renameModerator": "Moderator umbenennen widerrufen",
       "renameParticipant": "Teilnehmer umbenennen widerrufen",
       "renameObserver": "Beobachter umbenennen widerrufen",
-      "confirmName": "Namen bestätigen widerrufen"
+      "confirmName": "Namen bestätigen widerrufen",
+      "star": "Markieren widerrufen",
+      "unstar": "Markierung entfernen widerrufen",
+      "hide": "Ausblenden widerrufen",
+      "unhide": "Einblenden widerrufen",
+      "addTag": "Tag hinzufügen widerrufen",
+      "removeTag": "Tag entfernen widerrufen"
     },
     "redo": {
       "renameModerator": "Moderator umbenennen wiederholen",
       "renameParticipant": "Teilnehmer umbenennen wiederholen",
       "renameObserver": "Beobachter umbenennen wiederholen",
-      "confirmName": "Namen bestätigen wiederholen"
+      "confirmName": "Namen bestätigen wiederholen",
+      "star": "Markieren wiederholen",
+      "unstar": "Markierung entfernen wiederholen",
+      "hide": "Ausblenden wiederholen",
+      "unhide": "Einblenden wiederholen",
+      "addTag": "Tag hinzufügen wiederholen",
+      "removeTag": "Tag entfernen wiederholen"
     }
   }
 }

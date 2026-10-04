@@ -636,13 +636,25 @@
       "renameModerator": "Desfés el canvi de nom del moderador",
       "renameParticipant": "Desfés el canvi de nom del participant",
       "renameObserver": "Desfés el canvi de nom de l’observador",
-      "confirmName": "Desfés la confirmació del nom"
+      "confirmName": "Desfés la confirmació del nom",
+      "star": "Desfés destacar",
+      "unstar": "Desfés deixar de destacar",
+      "hide": "Desfés ocultar",
+      "unhide": "Desfés tornar a mostrar",
+      "addTag": "Desfés afegir l’etiqueta",
+      "removeTag": "Desfés eliminar l’etiqueta"
     },
     "redo": {
       "renameModerator": "Refés el canvi de nom del moderador",
       "renameParticipant": "Refés el canvi de nom del participant",
       "renameObserver": "Refés el canvi de nom de l’observador",
-      "confirmName": "Refés la confirmació del nom"
+      "confirmName": "Refés la confirmació del nom",
+      "star": "Refés destacar",
+      "unstar": "Refés deixar de destacar",
+      "hide": "Refés ocultar",
+      "unhide": "Refés tornar a mostrar",
+      "addTag": "Refés afegir l’etiqueta",
+      "removeTag": "Refés eliminar l’etiqueta"
     }
   }
 }

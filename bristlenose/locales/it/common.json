@@ -636,13 +636,25 @@
       "renameModerator": "Annulla Rinomina moderatore",
       "renameParticipant": "Annulla Rinomina partecipante",
       "renameObserver": "Annulla Rinomina osservatore",
-      "confirmName": "Annulla Conferma nome"
+      "confirmName": "Annulla Conferma nome",
+      "star": "Annulla Stella",
+      "unstar": "Annulla Rimuovi stella",
+      "hide": "Annulla Nascondi",
+      "unhide": "Annulla Mostra",
+      "addTag": "Annulla Aggiungi tag",
+      "removeTag": "Annulla Rimuovi tag"
     },
     "redo": {
       "renameModerator": "Ripristina Rinomina moderatore",
       "renameParticipant": "Ripristina Rinomina partecipante",
       "renameObserver": "Ripristina Rinomina osservatore",
-      "confirmName": "Ripristina Conferma nome"
+      "confirmName": "Ripristina Conferma nome",
+      "star": "Ripristina Stella",
+      "unstar": "Ripristina Rimuovi stella",
+      "hide": "Ripristina Nascondi",
+      "unhide": "Ripristina Mostra",
+      "addTag": "Ripristina Aggiungi tag",
+      "removeTag": "Ripristina Rimuovi tag"
     }
   }
 }

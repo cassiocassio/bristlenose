@@ -638,13 +638,25 @@
       "renameModerator": "Undo Rename Moderator",
       "renameParticipant": "Undo Rename Participant",
       "renameObserver": "Undo Rename Observer",
-      "confirmName": "Undo Confirm Name"
+      "confirmName": "Undo Confirm Name",
+      "star": "Undo Star",
+      "unstar": "Undo Unstar",
+      "hide": "Undo Hide",
+      "unhide": "Undo Unhide",
+      "addTag": "Undo Add Tag",
+      "removeTag": "Undo Remove Tag"
     },
     "redo": {
       "renameModerator": "Redo Rename Moderator",
       "renameParticipant": "Redo Rename Participant",
       "renameObserver": "Redo Rename Observer",
-      "confirmName": "Redo Confirm Name"
+      "confirmName": "Redo Confirm Name",
+      "star": "Redo Star",
+      "unstar": "Redo Unstar",
+      "hide": "Redo Hide",
+      "unhide": "Redo Unhide",
+      "addTag": "Redo Add Tag",
+      "removeTag": "Redo Remove Tag"
     }
   }
 }

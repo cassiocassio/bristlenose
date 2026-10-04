@@ -626,13 +626,25 @@
       "renameModerator": "取り消す - モデレーターの名称変更",
       "renameParticipant": "取り消す - 参加者の名称変更",
       "renameObserver": "取り消す - オブザーバーの名称変更",
-      "confirmName": "取り消す - 名前の確認"
+      "confirmName": "取り消す - 名前の確認",
+      "star": "取り消す - スターを付ける",
+      "unstar": "取り消す - スターを外す",
+      "hide": "取り消す - 非表示",
+      "unhide": "取り消す - 再表示",
+      "addTag": "取り消す - タグを追加",
+      "removeTag": "取り消す - タグを削除"
     },
     "redo": {
       "renameModerator": "やり直す - モデレーターの名称変更",
       "renameParticipant": "やり直す - 参加者の名称変更",
       "renameObserver": "やり直す - オブザーバーの名称変更",
-      "confirmName": "やり直す - 名前の確認"
+      "confirmName": "やり直す - 名前の確認",
+      "star": "やり直す - スターを付ける",
+      "unstar": "やり直す - スターを外す",
+      "hide": "やり直す - 非表示",
+      "unhide": "やり直す - 再表示",
+      "addTag": "やり直す - タグを追加",
+      "removeTag": "やり直す - タグを削除"
     }
   }
 }

@@ -606,13 +606,25 @@
       "renameModerator": "진행자 이름 변경 실행 취소",
       "renameParticipant": "참가자 이름 변경 실행 취소",
       "renameObserver": "관찰자 이름 변경 실행 취소",
-      "confirmName": "이름 확인 실행 취소"
+      "confirmName": "이름 확인 실행 취소",
+      "star": "별표 실행 취소",
+      "unstar": "별표 해제 실행 취소",
+      "hide": "숨기기 실행 취소",
+      "unhide": "표시 실행 취소",
+      "addTag": "태그 추가 실행 취소",
+      "removeTag": "태그 제거 실행 취소"
     },
     "redo": {
       "renameModerator": "진행자 이름 변경 복귀",
       "renameParticipant": "참가자 이름 변경 복귀",
       "renameObserver": "관찰자 이름 변경 복귀",
-      "confirmName": "이름 확인 복귀"
+      "confirmName": "이름 확인 복귀",
+      "star": "별표 복귀",
+      "unstar": "별표 해제 복귀",
+      "hide": "숨기기 복귀",
+      "unhide": "표시 복귀",
+      "addTag": "태그 추가 복귀",
+      "removeTag": "태그 제거 복귀"
     }
   }
 }

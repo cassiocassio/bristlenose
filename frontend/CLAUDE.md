@@ -97,8 +97,13 @@ of the same thing.
 The fix shape is a store function that takes a LIST: `hideQuotes`,
 `unhideQuotes`, `setStarred`. One state write, one PUT, one `announce`. **When
 you add a gesture that acts on a selection, add the bulk store function with
-it** — looping an existing per-item one is the defect. Still live at the time
-of writing: `handleQuickApply` (the `r` key) loops `addTag`.
+it** — looping an existing per-item one is the defect. The last one,
+`addTag` looped by quick-apply, the tag sidebar and a selection's tag input,
+became `addTagToQuotes` on 4 Oct 2026. **And the bulk function is also where
+undo lives:** each gesture records one entry on the report's stack
+(`contexts/UndoStore.ts`), and its inverse is the same function with
+`record = false` — so a gesture that loops a per-item call is also n undo
+entries and an undo that races itself.
 
 **Two things that made the hide case hard, and generalise.** (1) The
 duplication was **load-bearing**: a selection spans `QuoteGroup`s but the

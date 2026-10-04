@@ -699,13 +699,25 @@
       "renameModerator": "Odvolat akci Přejmenovat moderátora",
       "renameParticipant": "Odvolat akci Přejmenovat účastníka",
       "renameObserver": "Odvolat akci Přejmenovat pozorovatele",
-      "confirmName": "Odvolat akci Potvrdit jméno"
+      "confirmName": "Odvolat akci Potvrdit jméno",
+      "star": "Odvolat akci Označit hvězdičkou",
+      "unstar": "Odvolat akci Odebrat hvězdičku",
+      "hide": "Odvolat akci Skrýt",
+      "unhide": "Odvolat akci Zobrazit",
+      "addTag": "Odvolat akci Přidat štítek",
+      "removeTag": "Odvolat akci Odebrat štítek"
     },
     "redo": {
       "renameModerator": "Opakovat akci Přejmenovat moderátora",
       "renameParticipant": "Opakovat akci Přejmenovat účastníka",
       "renameObserver": "Opakovat akci Přejmenovat pozorovatele",
-      "confirmName": "Opakovat akci Potvrdit jméno"
+      "confirmName": "Opakovat akci Potvrdit jméno",
+      "star": "Opakovat akci Označit hvězdičkou",
+      "unstar": "Opakovat akci Odebrat hvězdičku",
+      "hide": "Opakovat akci Skrýt",
+      "unhide": "Opakovat akci Zobrazit",
+      "addTag": "Opakovat akci Přidat štítek",
+      "removeTag": "Opakovat akci Odebrat štítek"
     }
   }
 }

@@ -636,13 +636,25 @@
       "renameModerator": "Angre navneendring for moderator",
       "renameParticipant": "Angre navneendring for deltaker",
       "renameObserver": "Angre navneendring for observatør",
-      "confirmName": "Angre bekreftelse av navn"
+      "confirmName": "Angre bekreftelse av navn",
+      "star": "Angre stjernemerking",
+      "unstar": "Angre fjerning av stjernemerke",
+      "hide": "Angre skjuling",
+      "unhide": "Angre visning",
+      "addTag": "Angre tillegging av tagg",
+      "removeTag": "Angre fjerning av tagg"
     },
     "redo": {
       "renameModerator": "Utfør navneendring for moderator likevel",
       "renameParticipant": "Utfør navneendring for deltaker likevel",
       "renameObserver": "Utfør navneendring for observatør likevel",
-      "confirmName": "Utfør bekreftelse av navn likevel"
+      "confirmName": "Utfør bekreftelse av navn likevel",
+      "star": "Utfør stjernemerking likevel",
+      "unstar": "Utfør fjerning av stjernemerke likevel",
+      "hide": "Utfør skjuling likevel",
+      "unhide": "Utfør visning likevel",
+      "addTag": "Utfør tillegging av tagg likevel",
+      "removeTag": "Utfør fjerning av tagg likevel"
     }
   }
 }

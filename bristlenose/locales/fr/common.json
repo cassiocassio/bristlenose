@@ -636,13 +636,25 @@
       "renameModerator": "Annuler le changement de nom de l’animateur",
       "renameParticipant": "Annuler le changement de nom du participant",
       "renameObserver": "Annuler le changement de nom de l’observateur",
-      "confirmName": "Annuler la confirmation du nom"
+      "confirmName": "Annuler la confirmation du nom",
+      "star": "Annuler l’ajout aux favoris",
+      "unstar": "Annuler le retrait des favoris",
+      "hide": "Annuler le masquage",
+      "unhide": "Annuler le réaffichage",
+      "addTag": "Annuler l’ajout du tag",
+      "removeTag": "Annuler la suppression du tag"
     },
     "redo": {
       "renameModerator": "Rétablir le changement de nom de l’animateur",
       "renameParticipant": "Rétablir le changement de nom du participant",
       "renameObserver": "Rétablir le changement de nom de l’observateur",
-      "confirmName": "Rétablir la confirmation du nom"
+      "confirmName": "Rétablir la confirmation du nom",
+      "star": "Rétablir l’ajout aux favoris",
+      "unstar": "Rétablir le retrait des favoris",
+      "hide": "Rétablir le masquage",
+      "unhide": "Rétablir le réaffichage",
+      "addTag": "Rétablir l’ajout du tag",
+      "removeTag": "Rétablir la suppression du tag"
     }
   }
 }

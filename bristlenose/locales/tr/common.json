@@ -636,13 +636,25 @@
       "renameModerator": "Moderatörün Adını Değiştirmeyi Geri Al",
       "renameParticipant": "Katılımcının Adını Değiştirmeyi Geri Al",
       "renameObserver": "Gözlemcinin Adını Değiştirmeyi Geri Al",
-      "confirmName": "Adı Onaylamayı Geri Al"
+      "confirmName": "Adı Onaylamayı Geri Al",
+      "star": "Yıldızlamayı Geri Al",
+      "unstar": "Yıldızı Kaldırmayı Geri Al",
+      "hide": "Gizlemeyi Geri Al",
+      "unhide": "Göstermeyi Geri Al",
+      "addTag": "Etiket Eklemeyi Geri Al",
+      "removeTag": "Etiket Kaldırmayı Geri Al"
     },
     "redo": {
       "renameModerator": "Moderatörün Adını Değiştirmeyi Yinele",
       "renameParticipant": "Katılımcının Adını Değiştirmeyi Yinele",
       "renameObserver": "Gözlemcinin Adını Değiştirmeyi Yinele",
-      "confirmName": "Adı Onaylamayı Yinele"
+      "confirmName": "Adı Onaylamayı Yinele",
+      "star": "Yıldızlamayı Yinele",
+      "unstar": "Yıldızı Kaldırmayı Yinele",
+      "hide": "Gizlemeyi Yinele",
+      "unhide": "Göstermeyi Yinele",
+      "addTag": "Etiket Eklemeyi Yinele",
+      "removeTag": "Etiket Kaldırmayı Yinele"
     }
   }
 }

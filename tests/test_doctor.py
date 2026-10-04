@@ -417,6 +417,18 @@ class TestCheckBackend:
 
 
 class TestCheckWhisperModel:
+    @pytest.fixture(autouse=True)
+    def _no_real_hardware_probe(self):
+        """``check_whisper_model`` resolves the backend through ``detect_hardware``,
+        which imports ``mlx_whisper`` on Apple Silicon. Several tests here swap
+        ``sys.modules`` with ``patch.dict``; a native module first imported inside
+        that swap is dropped when it is undone, and re-importing it later in the
+        same process aborts the interpreter (mlx's extension initialises twice).
+        Stub the probe for every test in the class, as the newer tests already do.
+        """
+        with patch("bristlenose.utils.hardware.detect_hardware"):
+            yield
+
     def test_model_cached(self) -> None:
         settings = _settings(whisper_model="large-v3-turbo")
 

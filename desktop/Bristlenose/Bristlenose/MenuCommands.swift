@@ -730,7 +730,8 @@ private struct UndoRedoMenuContent: View {
             .keyboardShortcut("z", modifiers: .command)
             .disabled(!canUndo)
 
-            Button(i18n.t("desktop.menu.edit.redo"), systemImage: "arrow.uturn.forward") {
+            Button(bridgeHandler.redoLabel ?? i18n.t("desktop.menu.edit.redo"),
+                   systemImage: "arrow.uturn.forward") {
                 bridgeHandler.menuAction("redo")
             }
             .keyboardShortcut("z", modifiers: [.command, .shift])

@@ -190,6 +190,10 @@ final class BridgeHandler: ObservableObject {
     /// Optional label for the undo action (e.g. "Undo Star").
     @Published var undoLabel: String?
 
+    /// The full Redo label for the act the next redo would repeat (e.g.
+    /// "Redo Rename Moderator"), or nil for the generic "Redo".
+    @Published var redoLabel: String?
+
     /// The active lens's subtitle, pushed by the SPA (e.g. "163 Quotes",
     /// "3 Codebooks · 47 Tags"). The SPA owns the live count + formatting — only
     /// it can compute Signals, and the visible-quote / tag counts shift as the
@@ -863,6 +867,7 @@ final class BridgeHandler: ObservableObject {
             canUndo = body["canUndo"] as? Bool ?? false
             canRedo = body["canRedo"] as? Bool ?? false
             undoLabel = body["undoLabel"] as? String
+            redoLabel = body["redoLabel"] as? String
 
         case "export-counts":
             if let n = body["total"] as? Int { totalQuoteCount = n }
@@ -1077,6 +1082,7 @@ final class BridgeHandler: ObservableObject {
         canUndo = false
         canRedo = false
         undoLabel = nil
+        redoLabel = nil
         quotesSearchQuery = ""
         quotesViewMode = "all"
         searchSuggestions = .empty

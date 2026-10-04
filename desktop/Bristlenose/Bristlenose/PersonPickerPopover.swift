@@ -636,14 +636,25 @@ final class PersonPickerPresenter: NSObject, NSPopoverDelegate {
         popover.show(relativeTo: rect, of: webView, preferredEdge: webView.isFlipped ? .maxY : .minY)
     }
 
-    /// The badge's CSS-pixel rect in the web view's own coordinates: scaled by
-    /// the page zoom, and turned over when the view is not flipped.
+    /// The badge's CSS-pixel rect in the web view's own coordinates.
     static func viewRect(for anchor: CGRect, in webView: WKWebView) -> NSRect {
-        let z = webView.pageZoom * webView.magnification
-        let rect = NSRect(x: anchor.minX * z, y: anchor.minY * z,
+        viewRect(for: anchor, zoom: webView.pageZoom * webView.magnification,
+                 viewportTop: webView.safeAreaInsets.top,
+                 boundsHeight: webView.bounds.height, flipped: webView.isFlipped)
+    }
+
+    /// The web view runs up under the toolbar, but its layout viewport starts
+    /// below it, at its top safe-area inset (measured, docs/design-lens-template.md
+    /// § Native geometry) — and `getBoundingClientRect` counts from the viewport.
+    /// So the rect moves down by that inset, is scaled by the page zoom, and is
+    /// turned over when the view is not flipped. Without the inset the popover
+    /// pointed a toolbar's height above the badge.
+    static func viewRect(for anchor: CGRect, zoom z: CGFloat, viewportTop: CGFloat,
+                         boundsHeight: CGFloat, flipped: Bool) -> NSRect {
+        let rect = NSRect(x: anchor.minX * z, y: viewportTop + anchor.minY * z,
                           width: max(anchor.width * z, 1), height: max(anchor.height * z, 1))
-        guard !webView.isFlipped else { return rect }
-        return NSRect(x: rect.minX, y: webView.bounds.height - rect.maxY,
+        guard !flipped else { return rect }
+        return NSRect(x: rect.minX, y: boundsHeight - rect.maxY,
                       width: rect.width, height: rect.height)
     }
 

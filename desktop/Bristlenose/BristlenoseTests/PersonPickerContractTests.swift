@@ -126,6 +126,21 @@ struct PersonPickerContractTests {
         #expect(confirmed.accessibilityLabel(for: "Mary Adeyemi") == "p3 Mary Adeyemi")
     }
 
+    /// The badge's rect counts from the web viewport, which starts below the
+    /// toolbar; the popover must point at the badge, not a toolbar's height above.
+    @Test func thePopoverPointsAtTheBadgeBelowTheToolbar() {
+        let badge = CGRect(x: 100, y: 200, width: 30, height: 18)
+        let flipped = PersonPickerPresenter.viewRect(for: badge, zoom: 1, viewportTop: 52,
+                                                     boundsHeight: 800, flipped: true)
+        #expect(flipped == NSRect(x: 100, y: 252, width: 30, height: 18))
+        let unflipped = PersonPickerPresenter.viewRect(for: badge, zoom: 1, viewportTop: 52,
+                                                       boundsHeight: 800, flipped: false)
+        #expect(unflipped == NSRect(x: 100, y: 800 - 52 - 218, width: 30, height: 18))
+        let zoomed = PersonPickerPresenter.viewRect(for: badge, zoom: 2, viewportTop: 52,
+                                                    boundsHeight: 800, flipped: true)
+        #expect(zoomed == NSRect(x: 200, y: 452, width: 60, height: 36))
+    }
+
     @Test func theSelectionOpensOnTheAnswerAndAnUnknownSlotPreselectsNothing() throws {
         let request = try #require(try wires().compactMap { PersonPickerRequest(message: $0) }.first)
         let model = PersonPickerModel(request: request, onChoose: { _ in }, onClose: {})

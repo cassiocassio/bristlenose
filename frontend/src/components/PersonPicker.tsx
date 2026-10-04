@@ -158,6 +158,9 @@ export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: Pe
       {names.map((name) => {
         const isAnswer = name === slot.name;
         return (
+          // Keys are the list's (onListKey: arrows, Enter, Space, type-to-jump).
+          // A key handler here as well chose twice on one Space press.
+          // eslint-disable-next-line jsx-a11y/click-events-have-key-events
           <li
             key={name}
             ref={(el) => { itemRefs.current[name] = el; }}

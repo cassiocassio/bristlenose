@@ -2958,6 +2958,10 @@ class Pipeline:
             t0 = time.perf_counter()
             for pid, segments in session_segments.items():
                 identify_speaker_roles_heuristic(segments)
+            # Code them as a full run does, and record the codes: an unrecorded
+            # number would be issued again to someone else by the next run.
+            _assign_session_codes(sessions, session_segments, session_registry)
+            session_registry.save()
             _print_step("Identified speakers (heuristic)", time.perf_counter() - t0)
 
             # ── Merge and write transcripts ──

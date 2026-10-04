@@ -329,6 +329,10 @@ the per-chunk table is now the default output.
 **Still open:** whether 220 kB is the right ceiling for the new definition. It was
 chosen for an allow-list that was measuring something else, and it is 91–93% used.
 
+_4 Oct 2026: raised to 222 kB for report undo (~1.2 kB at first paint). The
+headroom above (15–21 kB in early September) had fallen to 126 B before that
+change, with nothing having raised the alarm — where it went is unmeasured._
+
 
 ## Resolved
 

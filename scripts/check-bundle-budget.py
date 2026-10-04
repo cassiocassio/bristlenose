@@ -51,7 +51,11 @@ STATIC = ROOT / "bristlenose/server/static"
 # number MEANS moved, not where the ceiling sits, so the two are reviewable
 # apart. Headroom on 5 Sep 2026 is ~20 kB. Raising this is a deliberate edit in
 # a commit that says why -- the same discipline as docs/testing/ratchet.json.
-BUDGET_BYTES = 220 * 1000
+# Raised 220 -> 222 kB on 4 Oct 2026 for report undo (Edit > Undo / cmd-Z on
+# speaker naming): ~1.2 kB at first paint -- the stack and its menu sync, the
+# write helper inside SessionsTable, eight English labels. HEAD stood 126 B
+# under the old ceiling, so the ~20 kB of 5 Sep headroom had already gone.
+BUDGET_BYTES = 222 * 1000
 
 # Both forms the entry document uses to make the browser fetch a chunk before
 # first paint. A `<link rel="prefetch">` would NOT belong here; nothing emits

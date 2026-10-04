@@ -410,7 +410,7 @@ Each phase ends green and committed.
    SPA computes the order once and both the browser and the native menu draw
    it, so the two surfaces agree. Pass the UI locale explicitly if the order
    must not depend on the machine.
-7. **Short names that are ordinary words** (*Will*, *Grace*, *Mark*, *May*). Typed text is now a run (D4), so `will smith` finds the name and `will` still finds *William* from the start of the word. The open part is the *mentions* token:
+7. **Short names that are ordinary words** (*Will*, *Grace*, *Mark*, *May*). **Accepted for v1, 4 Oct 2026** — there are humans called Will. Typed text is now a run (D4), so `will smith` finds the name and `will` still finds *William* from the start of the word. The open part is the *mentions* token:
    *mentions* matches them as whole words, so "I will" counts as mentioning
    Will. The highlight shows why each quote matched. The alternative, using
    only the full name when the short name is a dictionary word, would miss

@@ -42,7 +42,20 @@ Version:        @VERSION@
 Release:        1%{?dist}
 Summary:        User-research transcription and quote extraction engine
 
-License:        AGPL-3.0-only
+# AGPL-3.0-only is Bristlenose. The rest is the voice pass's native set (the
+# `voice` extra), read from the binaries on 4 Oct 2026 rather than from package
+# metadata, which names none of it:
+#   sherpa-onnx (Apache-2.0), whose extension statically links espeak-ng
+#     (GPL-3.0-or-later, its TTS code — compatible with AGPL-3.0 by section 13
+#     of each), piper-phonemize (MIT), kaldifst/OpenFst (Apache-2.0) and
+#     Eigen (MPL-2.0);
+#   the onnxruntime it vendors (MIT), statically linking Abseil, Protobuf,
+#     flatbuffers, cpuinfo, Eigen and more — the full list is the
+#     ThirdPartyNotices.txt that the `onnxruntime` package installs alongside;
+#   ALSA's libasound (LGPL-2.1-or-later), bundled into the wheel by auditwheel.
+# The other vendored wheels have NOT been audited into this field
+# (docs/design-fedora-packaging.md section 7).
+License:        AGPL-3.0-only AND GPL-3.0-or-later AND Apache-2.0 AND MIT AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MPL-2.0 AND LGPL-2.1-or-later
 URL:            https://github.com/cassiocassio/bristlenose
 
 # Source0 is the PyPI sdist, NOT a git archive — deliberately. The React SPA
@@ -100,9 +113,13 @@ python3 -m venv %{buildroot}%{bn_prefix}
 
 # --no-index is the whole point: if this ever reaches for the network, the
 # build must fail rather than quietly produce a differently-resolved package.
+# The extras match BN_EXTRAS in rpm/make-srpm.sh; `voice` is the speaker voice
+# pass (sherpa-onnx). Its 40 MB model is NOT packaged: it is fetched on first
+# use into ~/.cache/bristlenose/models/, hash-pinned, exactly as on the CLI and
+# the Mac app (docs/design-voice-diarization.md).
 %{buildroot}%{bn_prefix}/bin/pip install \
     --no-index --find-links=vendor --no-cache-dir --no-compile \
-    "%{name}[serve]==%{version}"
+    "%{name}[serve,voice]==%{version}"
 
 # spaCy's model is not on PyPI (it ships from the spacy-models GitHub
 # releases), so it is fetched into vendor/ by name at SRPM time. Installing it
@@ -174,6 +191,19 @@ for m in ('faster_whisper','ctranslate2','presidio_analyzer','presidio_anonymize
           'spacy','anthropic','openai','google.genai','fastapi','av','webvtt','pysrt','docx'):
     importlib.import_module(m)
 print('imports OK')"
+# The voice pass, in the order the pipeline loads things: faster-whisper's
+# Silero VAD opens an onnxruntime session (the `onnxruntime` package) in stage
+# 5, and stage 5b then loads sherpa-onnx, which carries a SECOND, different
+# onnxruntime (sherpa_onnx/lib/libonnxruntime.so). The Mac sidecar excludes the
+# first, so only a Linux channel puts both in one process. A real inference
+# needs the voice model, which mock cannot fetch; that half is proven by a run,
+# and must be re-proven by one whenever sherpa-onnx is bumped.
+%{buildroot}%{bn_prefix}/bin/python -c "
+import onnxruntime
+from faster_whisper.vad import get_vad_model
+get_vad_model()
+import sherpa_onnx
+print('voice runtime loads, beside onnxruntime', onnxruntime.__version__)"
 # Both halves of the SPA must be present. static/ is serve mode (a fail-loud
 # 500 page without it); static-export/ is the single-file export build, which
 # was missing from every published wheel until 27 Aug 2026 and made the Export

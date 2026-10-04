@@ -11,6 +11,21 @@ trued-against: HEAD on 2026-08-28
 
 ## Changelog
 
+- _2026-10-04_ — **the voice pass joins the RPM** (`voice` extra, sherpa-onnx), for
+  parity with the CLI and the Mac app. Proven on a clean Fedora 43 x86_64 box from a
+  local dist (PyPI's 0.32.0 has no `voice` extra, so the Copr channel carries it from
+  the next release, and a 0.32.0 rebuild now refuses at the SRPM step): SRPM 271 MB,
+  110 wheels / 243 MB; `mock` offline exit 0, 8 min; binary RPM 212 MB; installed
+  926 MB, of which the voice pass is 43 MB — the rest of the growth since §4's 823 MB is
+  ordinary dependency drift. Requires/provides unchanged (three real requires, two
+  provides); the five vendored `.so` files are byte-identical to the wheel's, because
+  `brp-strip` was already off. A real `bristlenose run` recorded `method=voice+text`
+  and finished end to end in 14m 48s (`docs/design-voice-diarization.md`). The PyPI
+  path was proven to refuse: against 0.32.0, pip only *warned* that the `voice` extra
+  does not exist, and the new wheelhouse assertion stopped the build. §7 records the
+  new CVE surface (a second, older onnxruntime and an ALSA library inside the sherpa
+  wheels) and the licences, including a statically linked espeak-ng
+  (GPL-3.0-or-later) that no package metadata names.
 - _2026-08-28_ — **the channel shipped**, and this doc's status block said the
   opposite for a day. `cassiocassio/bristlenose` exists, build 10915225 succeeded
   (`0.28.0-1`, `fedora-43-x86_64`) from the `v0.28.0` tag, `dnf copr enable` +
@@ -651,6 +666,31 @@ are the ones to hold onto:
   wheelhouse, so a CVE in `ctranslate2`, `numpy` or `onnxruntime` is invisible to the
   distro's own machinery. The existing dependency process (`cassandra`,
   `docs/dependency-premortem-log.md`) is the only thing standing there.
+  - **Since 4 Oct 2026 that includes native code `pip` cannot see either.**
+    The voice pass (`voice` extra) vendors `sherpa-onnx` 1.13.8 + `sherpa-onnx-core`
+    (Apache-2.0), and inside those two wheels sit binaries no package metadata names:
+    **onnxruntime 1.28.2** (`sherpa_onnx/lib/libonnxruntime.so`, MIT), separate from
+    and older than the `onnxruntime` package (1.30.0) in the same wheelhouse; and
+    **ALSA's `libasound`** (`sherpa_onnx.libs/libasound-fb5348bf.so.2.0.0`,
+    LGPL-2.1-or-later), bundled by auditwheel. An onnxruntime advisory therefore has
+    to be checked against **both** versions, and an ALSA one against a library
+    Fedora's own `alsa-lib` updates will never touch. The vendored version is read from
+    the binary (`strings … | grep 'libonnxruntime.so.1\.'`) and changes only when
+    sherpa-onnx is bumped — which also needs a re-run of the voice pass, since `%check`
+    proves only that it loads.
+  - **Licences, read from the binaries, not the metadata.** sherpa-onnx's extension
+    statically links **espeak-ng (GPL-3.0-or-later)**: 50 exported `espeak_*` symbols
+    in `_sherpa_onnx.cpython-314-x86_64-linux-gnu.so`, from its TTS code, which the
+    published wheels build in. It also links piper-phonemize (MIT), kaldifst/OpenFst
+    (Apache-2.0) and Eigen (MPL-2.0); its onnxruntime links Abseil, Protobuf,
+    flatbuffers, cpuinfo, Eigen and more, all listed in the `ThirdPartyNotices.txt`
+    the `onnxruntime` package already installs. GPL-3.0 and AGPL-3.0 may be combined
+    (section 13 of each), so this is no obstacle for the RPM, and the spec's
+    `License:` now names the set. **The same wheel is in the Mac sidecar** (50
+    `espeak_*` symbols in `.venv-sidecar`'s darwin build), where third-party GPL-3.0
+    code is a different question — recorded in `TODO.md`, not decided here. The other
+    vendored wheels are still covered by `AGPL-3.0-only` alone, which is an unaudited
+    gap, not a claim.
 - **The wheelhouse tracks Fedora's Python, on Fedora's schedule.** Copr dropped `fedora-42`
   during the writing of this doc. Each Fedora release needs a regenerated wheelhouse and a
   re-proof, triggered by Fedora's calendar rather than ours. `.copr/Makefile` names

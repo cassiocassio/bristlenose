@@ -62,6 +62,10 @@ echo "    ONLY enable chroots whose python matches $PYTAG — fedora-43 is 3.14.
 # (gitignored in the tree, declared as a hatch artifact and built by
 # release.yml before `python -m build`), so mock needs no Node.js.
 if [ -n "${BN_LOCAL_DIST:-}" ]; then
+    # Absolute, because pass B names the local wheel by file:// URL, and a
+    # relative one (`file://dist/…`) reads `dist` as a HOSTNAME — pip refuses,
+    # inside the retry loop, with a message about x86_64 wheels.
+    BN_LOCAL_DIST="$(cd "$BN_LOCAL_DIST" && pwd)"
     echo "==> using local dist: $BN_LOCAL_DIST (NOT PyPI)"
     cp "$BN_LOCAL_DIST/bristlenose-$VERSION.tar.gz" "$WORK/"
 else
@@ -170,6 +174,23 @@ done
 # --find-links so pip does not try to fetch pysrt from an index that has no
 # wheel for it.
 echo "    pass B: the rest, as x86_64 wheels"
+# The extras the RPM ships. `voice` is the speaker voice pass (stage 5b,
+# sherpa-onnx — a native extension with its OWN vendored onnxruntime); it is
+# here for parity with the CLI and the Mac app. The spec's %install names the
+# same list; change both together.
+BN_EXTRAS="serve,voice"
+# Resolve against the metadata of the wheel that will actually ship. Against
+# PyPI's, a release candidate that adds an extra the published version lacks
+# resolves WITHOUT it — pip says only "does not provide the extra" and goes on
+# — and the wheelhouse is missing that extra's dependencies with exit 0. So a
+# local build resolves from its own wheel.
+if [ -n "${BN_LOCAL_DIST:-}" ]; then
+    _local_whl="$(ls "$BN_LOCAL_DIST/bristlenose-$VERSION-"*.whl | head -1)"
+    BN_REQ="bristlenose[$BN_EXTRAS] @ file://$_local_whl"
+else
+    BN_REQ="bristlenose[$BN_EXTRAS]==$VERSION"
+fi
+
 # Bounded retry, same shape as the Source0 fetch above and for the same
 # reason: `pip download` resolves the FULL dependency tree against PyPI's
 # live index, and a transitive package can hit a momentary index/CDN hiccup
@@ -195,7 +216,7 @@ for _try in 1 2 3; do
         --platform manylinux_2_28_x86_64 \
         --platform manylinux_2_17_x86_64 \
         --platform manylinux2014_x86_64 \
-        "bristlenose[serve]==$VERSION"; then
+        "$BN_REQ"; then
         _wheelhouse_ok=1
         break
     fi
@@ -210,8 +231,21 @@ done
         exit 1
     }
 
-# A local wheel must overwrite the PyPI one pip just resolved for the
-# dependency graph, or %install silently packages the published build.
+# An extra that the resolved bristlenose does not declare is a WARNING to pip,
+# not an error, so a dropped extra produces a complete-looking wheelhouse. Ask
+# the wheelhouse for each extra's own native wheels rather than trusting exit 0.
+for _w in "sherpa_onnx-*-cp${BN_TARGET_PY//./}-*.whl" "sherpa_onnx_core-*.whl"; do
+    ls "$WORK/vendor/"$_w >/dev/null 2>&1 || {
+        echo "error: no $_w in the wheelhouse — the voice extra did not resolve." >&2
+        echo "       Does bristlenose $VERSION declare it? (PyPI releases before" >&2
+        echo "       the voice pass do not; build those without it.)" >&2
+        exit 1
+    }
+done
+
+# Belt and braces: pass B already resolved from the local wheel by URL and
+# copied it into vendor/, but if a PyPI build of the same version ever lands
+# there instead, %install would silently package the published one.
 if [ -n "${BN_LOCAL_DIST:-}" ]; then
     rm -f "$WORK/vendor/bristlenose-$VERSION-"*.whl
     cp "$BN_LOCAL_DIST/bristlenose-$VERSION-"*.whl "$WORK/vendor/"

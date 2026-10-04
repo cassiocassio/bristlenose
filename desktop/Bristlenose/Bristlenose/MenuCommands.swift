@@ -869,6 +869,7 @@ private struct ViewMenuContent: View {
         case .quotes:   return "Contents"
         case .codebook: return "Codes"
         case .signals: return "Signals"
+        case .discussion: return "DiscussionGuide"
         default:        return nil
         }
     }

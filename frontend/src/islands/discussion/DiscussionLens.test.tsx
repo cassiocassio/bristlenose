@@ -8,6 +8,7 @@ import enDesktop from "@locales/en/desktop.json";
 import { _resetPlatformCache } from "../../utils/platform";
 import { _resetEmbeddedCache } from "../../utils/embedded";
 import { resetLensState } from "./lensState";
+import { discussionGuideState, resetDiscussionGuide, setDiscussionGuideOpen, toggleDiscussionGuide } from "./guidePanel";
 import type { DiscussionData } from "./types";
 
 const data = fixture as unknown as DiscussionData;
@@ -22,6 +23,7 @@ function heading() {
 
 beforeEach(() => {
   resetLensState();
+  resetDiscussionGuide();
   document.getElementById("bn-app-root")?.remove();
 });
 
@@ -522,5 +524,63 @@ describe("degraded records", () => {
     render(<DiscussionView data={{ ...data, sessions }} />);
     expect(screen.getByText(/questions could not be classified/)).toBeInTheDocument();
     expect(screen.queryByText("No questions found in this session")).toBeNull();
+  });
+});
+
+
+describe("the guide as a left panel (4 Oct 2026)", () => {
+  /** The lens measures itself on the next animation frame. */
+  async function settle() {
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+  }
+  function lensWidth(px: number) {
+    return vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains("dl-lens") ? px : 0;
+    });
+  }
+  afterEach(() => vi.restoreAllMocks());
+
+  it("starts open, with the tabs in the guide's own head", async () => {
+    const { container } = render(<DiscussionView data={data} />);
+    await settle();
+    expect(container.querySelector(".dl-lens")).not.toHaveClass("guide-hidden");
+    expect(container.querySelector(".dl-bar-nav .dimension-toggle")).not.toBeNull();
+    expect(discussionGuideState().shown).toBe(true);
+  });
+
+  it("hidden by the researcher, it stays hidden and the conversation takes the width", async () => {
+    setDiscussionGuideOpen(false);
+    const { container } = render(<DiscussionView data={data} />);
+    await settle();
+    expect(container.querySelector(".dl-lens")).toHaveClass("guide-hidden");
+    expect(discussionGuideState().shown).toBe(false);
+    expect(localStorage.getItem("bn-discussion-guide-open")).toBe("false");
+  });
+
+  it("folds when the conversation would fall under its floor, and says so to the app", async () => {
+    lensWidth(500); // under 200 guide + 40 wires + 368 floor
+    const { container } = render(<DiscussionView data={data} />);
+    await settle();
+    expect(container.querySelector(".dl-lens")).toHaveClass("guide-hidden");
+    expect(discussionGuideState()).toMatchObject({ wish: true, shown: false });
+  });
+
+  it("opened by hand where it does not fit, it stays open: never folded for you", async () => {
+    lensWidth(500);
+    const { container } = render(<DiscussionView data={data} />);
+    await settle();
+    act(() => toggleDiscussionGuide()); // what the toolbar button, ⌥⌘L and [ do
+    await settle();
+    expect(container.querySelector(".dl-lens")).not.toHaveClass("guide-hidden");
+    expect(discussionGuideState().shown).toBe(true);
+  });
+
+  it("asks the app for the width the pair needs, so the projects column folds first", async () => {
+    lensWidth(900);
+    render(<DiscussionView data={data} />);
+    await settle();
+    // the opening width (30% of the window, 280–480) + the wires + the conversation's 368 floor
+    const opening = Math.round(Math.min(480, Math.max(280, 0.3 * window.innerWidth)));
+    expect(discussionGuideState().wanted).toBe(opening + 40 + 368);
   });
 });

@@ -645,6 +645,17 @@ describe("useKeyboardShortcuts", () => {
       unmount();
     });
 
+    it("[ on the Discussion lens toggles its own guide, not the shared contents", async () => {
+      const guide = await import("../islands/discussion/guidePanel");
+      guide.resetDiscussionGuide();
+      guide.reportDiscussionGuide(true, 0); // the lens is showing it
+      const { unmount } = renderWithProviders(undefined, "/report/discussion/");
+      expect(dispatchKey("[")).toBe(true);
+      expect(guide.discussionGuideState().wish).toBe(false);
+      guide.resetDiscussionGuide();
+      unmount();
+    });
+
     it("] is handled on quotes page (toggles tags)", () => {
       const { unmount } = renderWithProviders();
       const handled = dispatchKey("]");

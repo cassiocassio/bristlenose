@@ -44,19 +44,29 @@
     z-index: 3;
     display: grid;
     grid-template-columns: subgrid;
-    align-items: center;
-    padding: var(--bn-space-sm) 0;
+    align-items: stretch;
     background: var(--bn-colour-bg);
+}
+/* The guide's own head: its grey and keyline carried up through the sticky
+   bar, so the column reads as running to the top (4 Oct 2026). It holds the
+   As asked / As planned tabs, which reorder the guide and so come and go with it. */
+.dl-bar-nav {
+    grid-column: 1;
+    display: flex; align-items: center;
+    padding: var(--bn-space-sm) 0;
+    background: var(--bn-colour-inspector-bg);
+    border-right: 1px solid var(--bn-colour-border);
+}
+.dl-bar .dimension-toggle { margin-left: var(--bn-space-sm); justify-self: start; }
+/* The rule under the bar runs under the conversation only, never across the guide. */
+.dl-sessions {
+    grid-column: 2 / -1;
+    display: flex; flex-wrap: wrap; gap: var(--bn-space-sm); align-items: center;
+    padding: var(--bn-space-sm) var(--bn-center-pad-right, var(--bn-gutter-left)) var(--bn-space-sm) var(--dl-gut);
     border-bottom: 1px solid var(--bn-colour-border);
 }
 /* No second rule under the native toolbar's own edge. */
-.layout.embedded .dl-bar { border-bottom-color: transparent; }
-.dl-bar .dimension-toggle { margin-left: var(--bn-space-sm); justify-self: start; }
-.dl-sessions {
-    grid-column: 3;
-    display: flex; flex-wrap: wrap; gap: var(--bn-space-sm); align-items: center;
-    padding-right: var(--bn-center-pad-right, var(--bn-gutter-left));
-}
+.layout.embedded .dl-sessions { border-bottom-color: transparent; }
 .dl-sess {
     display: inline-flex; align-items: center; padding: var(--bn-space-xs);
     background: none; border: 0; border-radius: var(--bn-radius-md);
@@ -216,13 +226,14 @@
 .dl-before { padding: var(--bn-space-xs) var(--bn-space-sm); }
 .dl-group blockquote.dl-ask.hot { background: var(--bn-nav-selection-bg); }
 
-/* Narrow: keep the transcript, drop the navigator. The session's questions, in
-   the order they were asked, with their answers, are the useful half. */
-@media (max-width: 900px) {
-    .dl-lens { grid-template-columns: minmax(0, 1fr); margin-left: 0; margin-right: 0; }
-    .dl-lens .dl-nav, .dl-gut, .dl-bar .dimension-toggle { display: none; }
-    .dl-sessions, .dl-content { grid-column: 1; }
-    .dl-content, .dl-sessions { padding-right: 0; }   /* the lens no longer bleeds here */
+/* The guide folded, by the researcher or by the fit (guidePanel.ts): the
+   conversation takes the width. The lens keeps its bleed so it measures the
+   same either way; the content takes the page's own left pad instead. */
+.dl-lens.guide-hidden { grid-template-columns: minmax(0, 1fr); }
+.dl-lens.guide-hidden .dl-nav, .dl-lens.guide-hidden .dl-gut, .dl-lens.guide-hidden .dl-bar-nav { display: none; }
+.dl-lens.guide-hidden .dl-sessions, .dl-lens.guide-hidden .dl-content {
+    grid-column: 1;
+    padding-left: var(--bn-center-pad-left, var(--bn-gutter-left));
 }
 @media (prefers-reduced-motion: reduce) {
     .dl-wire { transition: none; }

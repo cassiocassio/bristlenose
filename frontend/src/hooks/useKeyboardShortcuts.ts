@@ -44,6 +44,7 @@ import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
 import { postEditingStarted, postEditingEnded } from "../shims/bridge";
 import { type Direction } from "../utils/spatialNav";
+import { toggleDiscussionGuide } from "../islands/discussion/guidePanel";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -480,6 +481,12 @@ export function useKeyboardShortcuts({
       // would flip the store flag with no pixels to show for it)
       if (key === "[" && bare) {
         const loc = locationRef.current.pathname;
+        // The Discussion lens's guide keeps its own setting (guidePanel.ts).
+        if (pathMatches(loc, "/report/discussion")) {
+          e.preventDefault();
+          toggleDiscussionGuide();
+          return;
+        }
         const onSessions = loc.startsWith("/report/sessions");
         if (
           pathMatches(loc, "/report/quotes") ||

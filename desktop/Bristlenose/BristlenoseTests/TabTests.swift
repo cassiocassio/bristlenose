@@ -119,10 +119,14 @@ struct TabTests {
 /// removes the SPA's own rails, so a missing gate means an unreachable panel.
 @Suite struct TabLeftPanelTests {
 
-    @Test func theThreeLensesWithANavigatorHaveOne() {
+    @Test func theFourLensesWithANavigatorHaveOne() {
         #expect(Tab.quotes.hasLeftPanel)
         #expect(Tab.codebook.hasLeftPanel)
         #expect(Tab.signals.hasLeftPanel)
+        // Its guide is a column inside the page, toggled like the others
+        // (4 Oct 2026): before, the button was missing and a folded guide
+        // could not be brought back.
+        #expect(Tab.discussion.hasLeftPanel)
     }
 
     @Test func theTwoWithoutOneDoNot() {
@@ -131,8 +135,6 @@ struct TabTests {
         // mounted by AppLayout rather than gated here.
         #expect(!Tab.project.hasLeftPanel)
         #expect(!Tab.sessions.hasLeftPanel)
-        // Its navigator is a column inside the page, not the shared panel.
-        #expect(!Tab.discussion.hasLeftPanel)
     }
 
     @Test func everyCaseIsDecided() {

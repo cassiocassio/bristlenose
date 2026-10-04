@@ -66,11 +66,11 @@ enum Tab: String, CaseIterable, Identifiable {
     /// three-way disagreement waiting to happen.
     var hasLeftPanel: Bool {
         switch self {
-        case .quotes, .codebook, .signals: true
-        // The Discussion lens carries its own navigator column inside the page
-        // (it widens to 60% of the lens; the shared panel stops at 480px), so
-        // there is no shared panel to toggle. Plan §9 records it as unsettled.
-        case .project, .sessions, .discussion: false
+        // Discussion's guide is its own column inside the page (it widens to
+        // 60% of the lens) with its own remembered setting, but it is toggled
+        // like the others: toolbar button, View menu, ⌘⌥L (4 Oct 2026).
+        case .quotes, .codebook, .signals, .discussion: true
+        case .project, .sessions: false
         }
     }
 

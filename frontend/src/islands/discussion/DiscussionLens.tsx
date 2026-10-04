@@ -27,7 +27,9 @@ import { isExportMode } from "../../utils/exportData";
 import { dt } from "../../utils/platformTranslation";
 import { isEmbedded } from "../../utils/embedded";
 import { postProjectAction } from "../../shims/bridge";
+import { CONTENT_FLOOR_PX, fitPanels } from "../../contexts/SidebarStore";
 import { MIN_WIDTH, RESIZE_STEP } from "./split";
+import { reportDiscussionGuide, useDiscussionGuide } from "./guidePanel";
 import {
   capNames,
   litTurns,
@@ -132,6 +134,8 @@ const ListFormat = (Intl as unknown as { ListFormat?: ListFormatCtor }).ListForm
 
 const CHIP_SHARE = 0.3;      // a row's badges collapse past 30% of the navigator's width
 const NAV_MAX_SHARE = 0.6;   // the navigator may widen to 60% of the lens
+// Its opening width: the CSS default it replaced, clamp(--bn-sidebar-width, 30vw, --bn-sidebar-max).
+const NAV_OPEN_MIN = 280, NAV_OPEN_MAX = 480, NAV_OPEN_SHARE = 0.3;
 
 interface Wire {
   d: string;
@@ -233,7 +237,9 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const [navW, setNavW] = useState<number | null>(saved.navWidth);
   const [compact, setCompact] = useState<Set<string>>(new Set());
   // Measured in the same frame as the wires — never read from the DOM during render.
-  const [sizes, setSizes] = useState<{ lens: number; nav: number }>({ lens: 1000, nav: MIN_WIDTH });
+  const [sizes, setSizes] = useState<{ lens: number; nav: number; gut: number; view: number }>(
+    { lens: 1000, nav: MIN_WIDTH, gut: 40, view: 1000 });
+  const guide = useDiscussionGuide();
   const [wires, setWires] = useState<Wire[]>([]);
   const [dragging, setDragging] = useState(false);
   const [splitHover, setSplitHover] = useState(false);
@@ -410,7 +416,12 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const lens = lensRef.current?.clientWidth ?? 0, nav = navRef.current?.getBoundingClientRect().width ?? 0;
-        if (lens) setSizes((p) => (p.lens === lens && p.nav === nav ? p : { lens, nav }));
+        // The gutter measures 0 while the guide is folded: keep the last real width.
+        const gutNow = gutRef.current?.getBoundingClientRect().width ?? 0, view = window.innerWidth;
+        if (lens) setSizes((p) => {
+          const gut = gutNow > 0 ? gutNow : p.gut;
+          return p.lens === lens && p.nav === nav && p.gut === gut && p.view === view ? p : { lens, nav, gut, view };
+        });
         fitChips();
         drawWires();
       });
@@ -433,6 +444,20 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const clamp = (w: number) => Math.round(Math.min(navMax, Math.max(MIN_WIDTH, w)));
   // A width saved on a wider window is pulled back to this one's ceiling.
   const effectiveW = navW === null ? null : clamp(navW);
+
+  // ── the guide as a left panel (guidePanel.ts) ──
+  // The shared rule decides whether it shows: the conversation keeps its floor
+  // beside the guide at its narrowest, and a guide opened by hand is never
+  // folded for you. It narrows to its minimum before it folds.
+  const preferredW = effectiveW ?? clamp(Math.min(NAV_OPEN_MAX, Math.max(NAV_OPEN_MIN, NAV_OPEN_SHARE * sizes.view)));
+  const guideShown = fitPanels({
+    tocWanted: guide.wish, tagsWanted: false, tocWidth: MIN_WIDTH + sizes.gut, tagsWidth: 0,
+    rightColumn: false, available: sizes.lens, exempt: guide.justOpened ? "toc" : null,
+  }).tocOpen;
+  const navWidth = Math.max(MIN_WIDTH, Math.min(preferredW, sizes.lens - sizes.gut - CONTENT_FLOOR_PX));
+  // What the Mac reads to fold the projects column before the guide narrows.
+  const wantedWidth = Math.round((guide.wish ? preferredW + sizes.gut : 0) + CONTENT_FLOOR_PX);
+  useEffect(() => reportDiscussionGuide(guideShown, wantedWidth), [guideShown, wantedWidth]);
   const onSplitDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -589,13 +614,15 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const hotWire = (a: string, b: string) =>
     !!focus && (focus.turn ? focus.turn === b : focus.item === a && lit.has(b));
 
-  const style = effectiveW ? ({ "--dl-nav-w": `${effectiveW}px` } as React.CSSProperties) : undefined;
+  const style = { "--dl-nav-w": `${Math.round(navWidth)}px` } as React.CSSProperties;
   // Normalised questions first: it is the view the lens opens on.
   const modes: Mode[] = ["merged", "planned"];
 
   return (
-    <div ref={lensRef} className={`dl-lens${focus ? " has-focus" : ""}`} style={style} data-testid="discussion-lens">
+    <div ref={lensRef} className={`dl-lens${focus ? " has-focus" : ""}${guideShown ? "" : " guide-hidden"}`}
+      style={style} data-testid="discussion-lens">
       <div ref={barRef} className="dl-bar">
+        <div className="dl-bar-nav">
         {data.guide ? (
           <span className="dimension-toggle" role="radiogroup" aria-label={S.show}>
             {modes.map((m) => (
@@ -610,6 +637,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
         ) : (
           <span />
         )}
+        </div>
         <div className="dl-sessions" role="radiogroup" aria-label={S.sessions}>
           {data.sessions.map((s) => (
             <button key={s.id} type="button" role="radio" aria-checked={s.id === session} data-value={s.id}

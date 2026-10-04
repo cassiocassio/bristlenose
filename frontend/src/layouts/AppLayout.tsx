@@ -62,6 +62,11 @@ import type { NormalisedJobStatus } from "../components/ActivityChipStack";
 import { toggleInspector, useInspectorStore } from "../contexts/InspectorStore";
 import { panelFit, useSidebarStore, wantedWidth } from "../contexts/SidebarStore";
 import {
+  setDiscussionGuideOpen,
+  toggleDiscussionGuide,
+  useDiscussionGuide,
+} from "../islands/discussion/guidePanel";
+import {
   setSearchQuery,
   clearSearchTokens,
   setViewMode,
@@ -230,6 +235,13 @@ function AppShell() {
   const isSessions = _isSessions || _isSessionsSlash;
   const isCodebook = _isCodebook || _isCodebookSlash;
   const isSignals = _isSignals || _isSignalsSlash;
+  const _isDiscussion = useMatch("/report/discussion");
+  const _isDiscussionSlash = useMatch("/report/discussion/");
+  // The Discussion lens's guide is its own left panel with its own remembered
+  // setting (islands/discussion/guidePanel.ts); the toggle, Hide/Show All and
+  // the Mac's panel state reach it here instead of the shared store.
+  const isDiscussion = !!(_isDiscussion || _isDiscussionSlash);
+  const discussionGuide = useDiscussionGuide();
   const isSessionsRoute = !!(isSessions || isTranscript);
   // Embedded (macOS) removes the Sessions lens's left panel — the native
   // session-switcher popover replaces it (design-sessions-popover-navigation.md).
@@ -329,7 +341,7 @@ function AppShell() {
   // detail column so the projects sidebar collapses before the panels do.
   const fit = panelFit(sidebar);
   const tagsOpen = fit.tagsOpen;
-  const minWidth = wantedWidth(sidebar);
+  const minWidth = isDiscussion ? discussionGuide.wanted : wantedWidth(sidebar);
   const { open: inspectorOpen } = useInspectorStore();
   // "overlay" is the transient hover-peek, and it can't occur embedded (the
   // rails that trigger it are hidden) — but it is open when it does, so treat
@@ -337,7 +349,9 @@ function AppShell() {
   // On the embedded Sessions lens there IS no left panel (native popover
   // instead), so the store flag must not reach `panel-state` — otherwise the
   // View menu confidently offers "Hide Sessions" for a panel not on screen.
-  const leftPanelOpen = (tocMode === "overlay" || fit.tocOpen) && !embeddedSessionsPanelRemoved;
+  const leftPanelOpen = isDiscussion
+    ? discussionGuide.shown
+    : (tocMode === "overlay" || fit.tocOpen) && !embeddedSessionsPanelRemoved;
   useEffect(() => {
     if (!embedded) return;
     postPanelState(leftPanelOpen, tagsOpen, inspectorOpen, minWidth);
@@ -441,13 +455,15 @@ function AppShell() {
       }
     };
 
+    const onDiscussion = () => locationBridgeRef.current.pathname.startsWith("/report/discussion");
     const handler = (e: Event) => {
       const { action, payload } = (e as CustomEvent).detail;
       // The native search field's menu and tokens (docs/design-search.md §7).
       if (applyNativeSearchAction(action, payload)) return;
       switch (action) {
         case "toggleLeftPanel":
-          sidebarAnimations.toggleToc();
+          if (onDiscussion()) toggleDiscussionGuide();
+          else sidebarAnimations.toggleToc();
           break;
         case "toggleRightPanel":
           sidebarAnimations.toggleTags();
@@ -456,10 +472,12 @@ function AppShell() {
         // owns the projects column. A toggle here would disagree with it
         // whenever the column and the web panels were in different states.
         case "hideAllSidebars":
-          sidebarAnimations.hideAll();
+          if (onDiscussion()) setDiscussionGuideOpen(false);
+          else sidebarAnimations.hideAll();
           break;
         case "showAllSidebars":
-          sidebarAnimations.showAll();
+          if (onDiscussion()) setDiscussionGuideOpen(true);
+          else sidebarAnimations.showAll();
           break;
         case "toggleInspectorPanel":
           toggleInspector();

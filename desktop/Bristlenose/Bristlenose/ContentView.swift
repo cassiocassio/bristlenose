@@ -2393,6 +2393,7 @@ struct ContentView: View {
         // labels once already.
         case .codebook: return i18n.t("desktop.toolbar.codes")
         case .signals: return i18n.t("desktop.toolbar.signals")
+        case .discussion: return i18n.t("desktop.toolbar.discussionGuide")
         default:        return i18n.t("desktop.toolbar.contents")
         }
     }
@@ -2403,6 +2404,7 @@ struct ContentView: View {
         case .quotes:   return i18n.t("desktop.toolbar.showContents")
         case .codebook: return i18n.t("desktop.toolbar.showCodes")
         case .signals: return i18n.t("desktop.toolbar.showSignals")
+        case .discussion: return i18n.t("desktop.toolbar.showDiscussionGuide")
         default:        return i18n.t("desktop.toolbar.showContents")
         }
     }

@@ -627,7 +627,10 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const guideButton = (label: string) => (
     <button type="button" className="bn-btn bn-btn-secondary bn-btn-sm" onClick={chooseGuide}>{label}</button>
   );
-  const keyMarks = new Set(sections.flatMap(({ rows }) => rows.map((r) => r.mark)));
+  // With no guide, the second tab is only where one is added: no key, no rows.
+  const adding = mode === "planned" && !data.guide;
+  const shownSections = adding ? [] : sections;
+  const keyMarks = new Set(shownSections.flatMap(({ rows }) => rows.map((r) => r.mark)));
   // Normalised questions first: it is the view the lens opens on.
   const modes: Mode[] = ["merged", "planned"];
 
@@ -700,6 +703,18 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             )}
           </div>
         )}
+        {adding && !isExportMode() && (
+          // No guide: the second tab is where one is added. The Mac opens its
+          // native panel, copies the guide in and re-runs (plan §4); a browser
+          // cannot write into the project folder, so it says where the guide goes.
+          // The heading is the navigator's own section heading (4 Oct 2026 copy).
+          <div role="group" aria-labelledby="dl-h-add-guide">
+            <h2 id="dl-h-add-guide" className="toc-heading">{S.addGuideHeading}</h2>
+            <p className="dl-before">{S.addGuideIntro}</p>
+            <p className="dl-before">{S.addGuideFormats}</p>
+            {guideButton(data.guide_problem ? S.replaceGuide : S.addGuide)}
+          </div>
+        )}
         {keyMarks.size > 0 && (
           // The key first, so it scrolls away (4 Oct 2026). Only the marks this
           // view uses: with no guide that is "+" alone. The classes are the
@@ -727,7 +742,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             </div>
           </div>
         )}
-        {sections.map(({ head, rows }) => (
+        {shownSections.map(({ head, rows }) => (
           <div key={head.id} role="group" aria-labelledby={`dl-h-${head.id}`}>
             <h2 id={`dl-h-${head.id}`} className="toc-heading">
               {head.id === "standalone" ? S.standalone : head.title}
@@ -739,18 +754,6 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
         {data.guide_problem && !isExportMode() && (
           // A guide that is there but went unread says so — never "no guide".
           <p className="dl-before" role="status">{S.guideProblem(data.guide_problem)}</p>
-        )}
-        {mode === "planned" && !data.guide && !isExportMode() && (
-          // No guide: the second tab is where one is added. The Mac opens its
-          // native panel, copies the guide in and re-runs (plan §4); a browser
-          // cannot write into the project folder, so it says where the guide goes.
-          // The heading is the navigator's own section heading (4 Oct 2026 copy).
-          <div role="group" aria-labelledby="dl-h-add-guide">
-            <h2 id="dl-h-add-guide" className="toc-heading">{S.addGuideHeading}</h2>
-            <p className="dl-before">{S.addGuideIntro}</p>
-            <p className="dl-before">{S.addGuideFormats}</p>
-            {guideButton(data.guide_problem ? S.replaceGuide : S.addGuide)}
-          </div>
         )}
         {mode === "planned" && data.guide && !data.guide_file && !isExportMode() &&
           // A record from before the file name was kept: no link to click.

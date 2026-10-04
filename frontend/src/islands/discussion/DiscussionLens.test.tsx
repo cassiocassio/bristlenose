@@ -244,6 +244,9 @@ describe("review fixes, 3 Oct 2026", () => {
     expect(screen.getByRole("heading", { name: "Upload your discussion guide" })).toBeInTheDocument();
     expect(screen.getByText(/See the study as you planned it/)).toBeInTheDocument();
     expect(screen.getByText("Docx, Markdown or text files.")).toBeInTheDocument();
+    // the tab is only that: the questions and the key stay on the first tab
+    expect(document.querySelectorAll(".dl-nav .dl-row")).toHaveLength(0);
+    expect(screen.queryByRole("note", { name: "Key" })).toBeNull();
     const add = screen.getByRole("button", { name: "Add your guide…" });
     expect(add).toHaveClass("bn-btn", "bn-btn-secondary", "bn-btn-sm");
     fireEvent.click(add);

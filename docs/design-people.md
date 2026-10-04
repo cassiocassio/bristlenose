@@ -2209,7 +2209,7 @@ means), so they cannot disagree.
   picker's row and on the native popover's row — key
   `sessions.picker.proposedName`, all 21 locales. The native popover uses the
   wording the SPA sends as `labels.proposed`, so the bridge contract fixture is
-  version 2. "Proposed name" rather than "…, proposed" is an owner call: the
+  version 2. "Proposed name" rather than "…, proposed" was confirmed by the owner, 4 Oct 2026: the
   bare adjective has to agree with a noun in most locales.
 - **"Moderated by"** (`c30a4b33`): the Sessions grid's moderator and observer
   lines come from the grid's own speakers — the same names the picker offers —

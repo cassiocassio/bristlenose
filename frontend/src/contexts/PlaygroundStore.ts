@@ -13,6 +13,7 @@
  */
 
 import { useSyncExternalStore } from "react";
+import { connectSidebarTuning } from "./sidebarTuning";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -571,3 +572,7 @@ export function resetPlaygroundStore(): void {
 export function usePlaygroundStore(): PlaygroundState {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
+
+// The sidebar reads four of these fields without importing this module (it is
+// dev-only); hand it the live values now that the playground has loaded us.
+connectSidebarTuning(getSnapshot, subscribe);

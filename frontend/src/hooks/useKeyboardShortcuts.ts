@@ -33,10 +33,6 @@ import {
   exitSoloMode,
 } from "../contexts/SidebarStore";
 import { sidebarAnimations } from "../components/SidebarLayout";
-import {
-  togglePlayground,
-  toggleHUD,
-} from "../contexts/PlaygroundStore";
 import { toggleInspector } from "../contexts/InspectorStore";
 import { toggleFocusMode } from "../contexts/FocusModeStore";
 import { toggleSubtitlePref } from "../utils/subtitlePrefs";
@@ -360,17 +356,18 @@ export function useKeyboardShortcuts({
       // Shift is deliberately absent: Shift+j/k is a real binding.
       const bare = !e.metaKey && !e.ctrlKey && !e.altKey;
 
-      // Ctrl+Shift+P — toggle responsive playground (dev-only)
+      // Ctrl+Shift+P — toggle responsive playground (dev-only). The store is
+      // imported on use so the dev playground stays off first paint.
       if (key === "P" && e.ctrlKey && e.shiftKey) {
         e.preventDefault();
-        togglePlayground();
+        void import("../contexts/PlaygroundStore").then((m) => m.togglePlayground());
         return;
       }
 
       // Ctrl+Shift+U — toggle playground HUD (dev-only)
       if (key === "U" && e.ctrlKey && e.shiftKey) {
         e.preventDefault();
-        toggleHUD();
+        void import("../contexts/PlaygroundStore").then((m) => m.toggleHUD());
         return;
       }
 

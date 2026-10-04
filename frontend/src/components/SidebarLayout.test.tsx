@@ -48,10 +48,10 @@ vi.mock("../hooks/useTocOverlay", () => ({
   }),
 }));
 
-// Mock PlaygroundStore to avoid sessionStorage complexity.
+// Mock the playground's sidebar tuning to drive overlay variants directly.
 let mockPlayground = { hoverDelay: null, leaveGrace: null, overlayStyle: null as string | null };
-vi.mock("../contexts/PlaygroundStore", () => ({
-  usePlaygroundStore: () => mockPlayground,
+vi.mock("../contexts/sidebarTuning", () => ({
+  useSidebarTuning: () => mockPlayground,
 }));
 
 // Mock embedded detection — default false (browser); flip per-test.

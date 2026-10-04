@@ -36,7 +36,7 @@ import {
   fitPanels,
   setLayoutContext,
 } from "../contexts/SidebarStore";
-import { usePlaygroundStore } from "../contexts/PlaygroundStore";
+import { useSidebarTuning } from "../contexts/sidebarTuning";
 import { TocSidebar } from "./TocSidebar";
 import { TagSidebar } from "./TagSidebar";
 import { Minimap } from "./Minimap";
@@ -153,7 +153,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
   });
   const tocPush = fit.tocOpen;
   const tagsOpen = fit.tagsOpen;
-  const pg = usePlaygroundStore();
+  const pg = useSidebarTuning();
   // Desktop embedded mode (macOS WKWebView): the sidebars are toggled from
   // the native toolbar + keyboard, so the web icon rails and close-× are
   // redundant chrome. Hidden via the `embedded` class + CSS; close-× gated

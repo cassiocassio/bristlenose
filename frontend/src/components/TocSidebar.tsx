@@ -18,7 +18,7 @@ import type { QuotesListResponse } from "../utils/types";
 import { apiGet } from "../utils/api";
 import { useScrollSpy } from "../hooks/useScrollSpy";
 import { useSidebarStore, closeToc } from "../contexts/SidebarStore";
-import { usePlaygroundStore } from "../contexts/PlaygroundStore";
+import { useSidebarTuning } from "../contexts/sidebarTuning";
 
 // ── Slug helper (mirrors QuoteSections/QuoteThemes) ───────────────────────
 
@@ -45,7 +45,7 @@ interface TocSidebarProps {
 export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
   const { t } = useTranslation();
   const { tocMode } = useSidebarStore();
-  const pg = usePlaygroundStore();
+  const pg = useSidebarTuning();
   const [data, setData] = useState<QuotesListResponse | null>(null);
   const activeRef = useRef<HTMLAnchorElement | null>(null);
   // Click intent: when the user clicks a TOC link, this ref overrides

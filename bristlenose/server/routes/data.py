@@ -59,6 +59,9 @@ class SpeakerNameEdit(BaseModel):
     full_name: str | None = None
     short_name: str | None = None
     role: str | None = None
+    #: Saying yes to the name as it stands (the picker's Enter on a proposed
+    #: name). A name that is sent is confirmed whether or not this is.
+    confirmed: bool | None = None
 
 
 def _is_session_scoped(speaker_code: str) -> bool:
@@ -383,9 +386,16 @@ def put_people(
             person = db.get(Person, sp.person_id)
             if not person:
                 continue
+            # The whole map is sent on every write, so only a name that changed
+            # is a person's yes — confirming every entry would confirm them all.
+            renamed = (person.full_name, person.short_name) != (
+                person_data.full_name, person_data.short_name,
+            )
             person.full_name = person_data.full_name
             person.short_name = person_data.short_name
             person.role_title = person_data.role
+            if renamed:
+                sp.name_confirmed = True
         db.commit()
 
         # Write-through: update people.yaml so pipeline re-runs see edits.
@@ -436,6 +446,11 @@ def put_session_speaker(
             person.short_name = data.short_name
         if data.role is not None:
             person.role_title = data.role
+        # A typed or picked name is a person's yes; so is an explicit confirm.
+        if data.confirmed is not None:
+            sp.name_confirmed = data.confirmed
+        elif data.full_name is not None or data.short_name is not None:
+            sp.name_confirmed = True
         db.commit()
         return {"status": "ok"}
     finally:

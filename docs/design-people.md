@@ -2034,6 +2034,24 @@ mockup's "web first, everywhere" recommendation. The mockup was right that
 `NSMenu` is the wrong primitive for a field plus a segmented control, which is
 why the native one is a popover that behaves as a menu rather than an `NSMenu`.
 
+**What goes wrong most, by frequency (owner, 4 Oct 2026).** A *single quote*
+attributed to the wrong speaker when people talk over each other — moderator
+speech filed as the participant's, or the reverse — is really common; that is
+per-quote reattribution, on the quote card and in the transcript, not the
+speaker picker (the moderator-quote speaker-detection work owns it). Moderator
+versus observer is a genuinely tricky whole-speaker call — where the role
+segments, and the §J recode behind them, earn their place. "This was Sarah, not
+Mike" between two participants is rare in a mostly 1:1 study, so the picker's
+participant list matters less than its moderator list. Sequence the remaining
+work by this, not by the order the picker draws its rows.
+
+**Built, 4 Oct 2026 — the confirmed flag.** `session_speakers.name_confirmed`
+(migration 012): a pipeline name is a proposal; a typed or picked name, or the
+picker's confirm (`PUT …/sessions/{sid}/speakers/{code}` with
+`{"confirmed": true}`), says yes. `PUT /people` confirms only a participant
+whose name actually changed, because it receives the whole map on every write.
+Every name that predates 012 reads as proposed, accepted by the owner.
+
 Still open, listed in the mockup's Part 3: where a spelling fix lives now
 that a click opens the picker; whether opening on an unknown slot pre-selects
 the first moderator; whether a "don't know who" row is needed; whether the Participant segment (a real recode,

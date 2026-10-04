@@ -177,7 +177,7 @@ class TestSessionsResponseShape:
     def test_speaker_has_all_fields(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/sessions").json()
         speaker = data["sessions"][0]["speakers"][0]
-        expected_keys = {"speaker_code", "name", "role"}
+        expected_keys = {"speaker_code", "name", "role", "name_confirmed"}
         assert set(speaker.keys()) == expected_keys
 
     def test_source_file_has_all_fields(self, client: TestClient) -> None:

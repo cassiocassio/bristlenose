@@ -34,6 +34,8 @@ class SpeakerResponse(BaseModel):
     speaker_code: str
     name: str
     role: str
+    #: False while the name is the pipeline's proposal (see SessionSpeaker).
+    name_confirmed: bool = False
 
 
 class SourceFileResponse(BaseModel):
@@ -146,6 +148,7 @@ def get_sessions(
                         speaker_code=sp.speaker_code,
                         name=name,
                         role=sp.speaker_role,
+                        name_confirmed=sp.name_confirmed,
                     )
                 )
 

@@ -10,7 +10,18 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    false,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from bristlenose.server.db import Base
@@ -302,6 +313,10 @@ class SessionSpeaker(Base):
     pct_words: Mapped[float] = mapped_column(Float, default=0.0)
     pct_time_speaking: Mapped[float] = mapped_column(Float, default=0.0)
     source_file: Mapped[str] = mapped_column(String(500), default="")
+    #: Whether a person has said yes to this speaker's name. A name the pipeline
+    #: found is a proposal (dotted ring, grey name); a typed or picked one is
+    #: confirmed. Route C's slot state (``design-people.md`` §H H9, migration 012).
+    name_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
     session: Mapped[Session] = relationship(back_populates="session_speakers")
     person: Mapped[Person] = relationship(back_populates="session_speakers")

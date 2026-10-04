@@ -523,6 +523,49 @@ def _segments_fingerprint(segments: list[TranscriptSegment]) -> str:
     return hash_bytes(payload.encode("utf-8"))
 
 
+def _assign_session_codes(
+    sessions: list[InputSession],
+    session_segments: dict[str, list[TranscriptSegment]],
+    registry: SessionRegistry,
+) -> dict[str, dict[str, str]]:
+    """Give every speaker its code, and every session its primary participant.
+
+    The registry keeps numbering stable across runs: a known speaker keeps
+    their code, and a new participant is numbered after every code ever
+    handed out. Returns each session's label → code map.
+    """
+    from bristlenose.stages.s05b_identify_speakers import assign_speaker_codes
+
+    maps: dict[str, dict[str, str]] = {}
+    next_pnum = registry.next_participant_number()
+    for session in sessions:
+        sid = session.session_id
+        segments = session_segments.get(sid, [])
+        if not segments:
+            continue
+        label_map, next_pnum = assign_speaker_codes(
+            next_pnum, segments, known=registry.speakers_for(sid),
+        )
+        registry.record_speakers(sid, label_map)
+        maps[sid] = label_map
+        # Update session's participant_id from assigned codes
+        p_codes = [c for c in label_map.values() if c.startswith("p")]
+        if p_codes:
+            session.participant_id = p_codes[0]
+            session.participant_number = int(p_codes[0][1:])
+    # A session that heard no participant still needs one — but not ingest's
+    # provisional p<session number>, which can be anyone's real code. Taken
+    # after the loop so a number reserved here cannot be issued above.
+    for session in sessions:
+        sid = session.session_id
+        if any(c.startswith("p") for c in maps.get(sid, {}).values()):
+            continue
+        code = registry.placeholder_participant(sid)
+        session.participant_id = code
+        session.participant_number = int(code[1:])
+    return maps
+
+
 def _transcript_fingerprint(transcript: FullTranscript, *extra: str) -> str:
     """What topics (and, with the topic map, quotes) of a session depend on:
     the transcript as the stage sees it — text, roles and codes — plus any
@@ -1117,7 +1160,6 @@ class Pipeline:
         from bristlenose.stages.s05b_identify_speakers import (
             SpeakerInfo,
             SplitGate,
-            assign_speaker_codes,
             identify_speaker_roles_heuristic,
             identify_speaker_roles_llm,
             real_speaker_names,
@@ -1947,25 +1989,9 @@ class Pipeline:
             # assign_speaker_codes() always re-runs — global numbering, kept
             # stable by the registry: a known speaker keeps their code, and a
             # new participant is numbered after every code ever handed out.
-            all_label_code_maps: dict[str, dict[str, str]] = {}
-            next_pnum = session_registry.next_participant_number()
-            for session in sessions:
-                sid = session.session_id
-                segments = session_segments.get(sid, [])
-                if not segments:
-                    continue
-                label_map, next_pnum = assign_speaker_codes(
-                    next_pnum, segments, known=session_registry.speakers_for(sid),
-                )
-                session_registry.record_speakers(sid, label_map)
-                all_label_code_maps[sid] = label_map
-                # Update session's participant_id from assigned codes
-                p_codes = [
-                    c for c in label_map.values() if c.startswith("p")
-                ]
-                if p_codes:
-                    session.participant_id = p_codes[0]
-                    session.participant_number = int(p_codes[0][1:])
+            all_label_code_maps = _assign_session_codes(
+                sessions, session_segments, session_registry,
+            )
             session_registry.save()
 
             mark_stage_complete(

@@ -186,3 +186,63 @@ class TestSpeakerSlots:
         reg.record_speakers("s2", {"C": "o1", "D": "m1"})
         reg.save()
         assert SessionRegistry.load(tmp_path).next_participant_number() == 3
+
+
+class TestPrimaryParticipant:
+    """A session that hears no participant still gets a participant code — one
+    nobody else holds, or its stats placeholder overwrites a real person's."""
+
+    def _session(self, sid: str, n: int) -> InputSession:
+        return InputSession(
+            session_id=sid, session_number=n, participant_id=f"p{n}",
+            participant_number=n, files=[], session_date=_T0,
+        )
+
+    def test_a_session_with_no_transcript_does_not_take_a_real_participants_code(
+        self, tmp_path: Path,
+    ) -> None:
+        from bristlenose.pipeline import _assign_session_codes
+
+        reg = SessionRegistry.load(tmp_path)
+        s1, s2 = self._session("s1", 1), self._session("s2", 2)
+        # s1 failed to transcribe; s2 has one participant.
+        _assign_session_codes([s1, s2], {"s2": _segs(("Ann", P), ("Mod", R))}, reg)
+        assert s2.participant_id == "p1"
+        assert s1.participant_id != "p1"
+
+    def test_its_code_is_never_issued_to_anyone_else(self, tmp_path: Path) -> None:
+        from bristlenose.pipeline import _assign_session_codes
+
+        # Run 1: s1 alone, and it failed to transcribe.
+        reg = SessionRegistry.load(tmp_path)
+        s1 = self._session("s1", 1)
+        _assign_session_codes([s1], {}, reg)
+        reg.save()
+        # Run 2: a new session's participant must not be handed s1's code.
+        reg = SessionRegistry.load(tmp_path)
+        s1, s2 = self._session("s1", 1), self._session("s2", 2)
+        _assign_session_codes([s1, s2], {"s2": _segs(("Ann", P))}, reg)
+        assert s2.participant_id != s1.participant_id
+
+    def test_the_placeholder_is_stable_across_runs(self, tmp_path: Path) -> None:
+        from bristlenose.pipeline import _assign_session_codes
+
+        reg = SessionRegistry.load(tmp_path)
+        s1 = self._session("s1", 1)
+        _assign_session_codes([s1], {}, reg)
+        first = s1.participant_id
+        reg.save()
+        again = self._session("s1", 1)
+        _assign_session_codes([again], {}, SessionRegistry.load(tmp_path))
+        assert again.participant_id == first
+
+    def test_a_session_keeps_its_earlier_participant_when_this_run_hears_none(
+        self, tmp_path: Path,
+    ) -> None:
+        from bristlenose.pipeline import _assign_session_codes
+
+        reg = SessionRegistry.load(tmp_path)
+        reg.record_speakers("s1", {"Ann": "p4", "Mod": "m1"})
+        s1 = self._session("s1", 1)
+        _assign_session_codes([s1], {}, reg)
+        assert s1.participant_id == "p4"

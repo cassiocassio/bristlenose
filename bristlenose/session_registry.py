@@ -42,6 +42,9 @@ logger = logging.getLogger(__name__)
 
 REGISTRY_VERSION = 1
 REGISTRY_FILENAME = "sessions.json"
+#: The label a session's placeholder participant is recorded under. Never a
+#: real speaker: segments are keyed ``speaker_label or "Unknown"``.
+NO_PARTICIPANT_LABEL = ""
 
 
 def registry_path(output_dir: Path) -> Path:
@@ -159,6 +162,20 @@ class SessionRegistry:
         before = self._highest_participant()  # counts a code this update replaces
         self.speakers.setdefault(sid, {}).update(label_codes)
         self.participants_issued = max(before, self._highest_participant())
+
+    def placeholder_participant(self, sid: str) -> str:
+        """A participant code for a session that heard no participant this run.
+
+        The session's earlier participant if it ever had one; otherwise a new
+        number, recorded under ``NO_PARTICIPANT_LABEL`` so it stays this
+        session's on later runs and is never issued to anyone else.
+        """
+        for code in self.speakers.get(sid, {}).values():
+            if code.startswith("p"):
+                return code
+        code = f"p{self.next_participant_number()}"
+        self.record_speakers(sid, {NO_PARTICIPANT_LABEL: code})
+        return code
 
     def next_participant_number(self) -> int:
         """One past every participant number ever handed out, in any session."""

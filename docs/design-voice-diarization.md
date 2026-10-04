@@ -45,6 +45,8 @@ ran. **INFERRED** is reasoning, not measurement.
    pass runs on onnxruntime + kaldi-native-fbank instead, since 4 Oct 2026
    (§ Licence)._
 
+**Done 4 Oct 2026:** Option A was built and ships on the CLI, in the Mac app, the Snap and the Copr RPM (§ A); the first experiment was overtaken by § Measured against platform ground truth. The recommendation as it was written:
+
 **Recommendation:** run the first experiment below (free, local, ~1 hour of
 labelling). If it confirms the agreement figures against hand labels, build
 **Option A**: an ONNX voice pass in Python, on every channel, feeding the
@@ -138,7 +140,7 @@ itself. The first experiment below covers the ones that matter most.
 
 ## Options, ranked
 
-### A. ONNX voice pass in Python, every channel (recommended first build)
+### A. ONNX voice pass in Python, every channel (recommended first build — built 4 Oct 2026)
 
 **Runtime since 4 Oct 2026 (later the same day): onnxruntime + kaldi-native-fbank,
 not sherpa-onnx** — the owner's call from § Licence, because sherpa's published
@@ -212,7 +214,7 @@ changelog), and the amd64 snap end to end the same day: a real strict-confined `
   has that library for another reason gets the voice pass without asking. Before, the
   trigger was sherpa-onnx, the same shape. Paragraphs below that name sherpa describe the build as it was.
 
-**Built on the CLI, 4 Oct 2026** — the per-segment variant measured above, in `bristlenose/stages/s05b_voice.py`, behind the optional `voice` extra; through the shipped stage 5b code it scores 12–13 wrong of 286 against 22 for the text split alone. A real `bristlenose run` on the same 38-minute Teams recording (4 Oct 2026, `bd37eba1`) printed `Identified speakers (voice-checked: 1 session)` in 47.9 s for the stage: the text split as three sequential parts (12,665 input / 2,956 output tokens, about $0.08), the voice pass 12.7 s with no tokens (401 of 429 segments judged, 43 relabelled, centroid cosine 0.24), the role pass about $0.01. The report credits the moderator with 25% of the words; the Teams transcript says 30%. The session's speaker cache carries the `speaker_split` record and the log a `voice_pass |` line, so start, finish, time, cost and outcome are all on disk. **In the Mac app since 4 Oct 2026:** `build-sidecar.sh` installs the `voice` extra and the spec `collect_all`s `sherpa_onnx` (its vendored `libonnxruntime.dylib` signs with every other dylib; `doctor --self-test` gains `Bundle: voice`, which fails the build if the native runtime does not load). The model is **not** bundled: it downloads on first use into the app container, hash-verified, exactly as on the CLI — the same runtime-fetch shape as the Whisper model, keeping the pinned-hash path (a bundled copy would come in through the unverified override) and needing no Swift change. The Health window shows a Voice pass row. **In the Fedora Copr package since 4 Oct 2026 (on `main`, unreleased):** `rpm/make-srpm.sh` vendors the extra (`BN_EXTRAS="serve,voice"`) and the spec installs `bristlenose[serve,voice]`; the model is fetched on first use into `~/.cache/bristlenose/models/`, as on the CLI. Proven on a clean Fedora 43 x86_64 box (2 vCPU) with an SRPM built from a local dist, then `mock` offline (exit 0), then `dnf install`: a real `bristlenose run` on a public 21.7-minute two-speaker oral history (FOSSDA) printed `Identified speakers (voice-checked: 1 session)` and recorded `method=voice+text` — 145 of 152 segments judged, 6 relabelled, centroid cosine 0.21, **14.4 s on CPU** — and the run went on to finish end to end (`Done in 14m 48s`, 15 quotes, about $0.26 of LLM). Linux is the one channel that loads **two** onnxruntimes into one process — faster-whisper's Silero VAD uses the `onnxruntime` package (1.30.0) in stage 5, and sherpa-onnx carries its own 1.28.2 — which the Mac never does, since the sidecar excludes the package. They cannot collide: the package links its runtime statically into its pybind module and needs no `libonnxruntime.so` soname, while sherpa's extension resolves its own copy through an `$ORIGIN` rpath (`readelf`/`ldd` on the installed RPM). `%check` now loads them in that order. Packaging detail and the CVE obligation: `design-fedora-packaging.md` §4 and §7. It reaches Copr users with the **next release**: PyPI's 0.32.0 does not declare the `voice` extra, so a Copr build of 0.32.0 refuses at the SRPM step by design. **In the Snap since 4 Oct 2026 (on `main`, unreleased; edge picks it up at the next dispatch):** `snap/snapcraft.yaml` installs `.[serve,voice]` (cp312 manylinux wheels, amd64 and arm64, nothing built from source), and `override-build` fails the pack if the runtime is absent or will not load. No new interface: the model comes over the existing `network` plug into `$SNAP_USER_COMMON/models/` (writable, survives refreshes). **amd64, on the onnxruntime runtime**, measured on a strict-confined install (Ubuntu 24.04, 2 vCPU) built from `74dc2255` with `snapcraft pack --destructive-mode`: the build hook printed `onnxruntime 1.30.0 and kaldi-native-fbank 1.22.3 load`; no `sherpa_onnx` in the snap; `ldd` resolves every shared object of both packages; `doctor --self-test` passes `Bundle: voice`; and a real `bristlenose run` on a synthetic 2.3-minute two-voice interview (macOS `say`, two voices) printed `Identified speakers (voice-checked: 1 session)`, fetched the model (40,257,283 bytes, mode 0600) and recorded `method=voice+text`: 22 of 23 segments judged, 7 relabelled, centroid cosine 0.6197, **2.1 s**, run done in 3 m 19 s for about $0.11. CI's `snap.yml` build of `45fc42dc` (which carries the swap) passed the same hook. That run proves the channel, not the quality: on TTS audio Whisper's segments straddle turns, so most of them hold both voices (the re-cut below). Cost: **+0.3 MB installed**, kaldi-native-fbank alone, since faster-whisper already brings onnxruntime. The voice extra adds no AppArmor denial: the one onnxruntime raises (a read of `/sys/bus/pci/devices/`, the yellow warning) came at startup from faster-whisper's copy, and none fell in the pass's window. _Superseded the same day:_ the first amd64 proof (`09876530`) ran the sherpa-onnx runtime on the same recording (21 of 23 judged, 7 relabelled, the same centroid cosine, 3.9 s) at +12.3 MB to the download, before the espeak-ng finding moved every channel off it. arm64: re-proven as a package, above. **Not yet built:** the word-level re-cut of segments that hold both voices.
+**Built on the CLI, 4 Oct 2026** — the per-segment variant measured above, in `bristlenose/stages/s05b_voice.py`, behind the optional `voice` extra; through the shipped stage 5b code it scores 12–13 wrong of 286 against 22 for the text split alone. A real `bristlenose run` on the same 38-minute Teams recording (4 Oct 2026, `bd37eba1`) printed `Identified speakers (voice-checked: 1 session)` in 47.9 s for the stage: the text split as three sequential parts (12,665 input / 2,956 output tokens, about $0.08), the voice pass 12.7 s with no tokens (401 of 429 segments judged, 43 relabelled, centroid cosine 0.24), the role pass about $0.01. The report credits the moderator with 25% of the words; the Teams transcript says 30%. The session's speaker cache carries the `speaker_split` record and the log a `voice_pass |` line, so start, finish, time, cost and outcome are all on disk. **In the Mac app since 4 Oct 2026:** `build-sidecar.sh` installs the `voice` extra and the spec bundles the voice runtime — since `cfa412f4` onnxruntime's binding plus kaldi-native-fbank; as first built, `collect_all('sherpa_onnx')` and its vendored `libonnxruntime.dylib` — signed with every other dylib; `doctor --self-test` gains `Bundle: voice`, which fails the build if the native runtime does not load). The model is **not** bundled: it downloads on first use into the app container, hash-verified, exactly as on the CLI — the same runtime-fetch shape as the Whisper model, keeping the pinned-hash path (a bundled copy would come in through the unverified override) and needing no Swift change. The Health window shows a Voice pass row. **In the Fedora Copr package since 4 Oct 2026 (on `main`, unreleased):** `rpm/make-srpm.sh` vendors the extra (`BN_EXTRAS="serve,voice"`) and the spec installs `bristlenose[serve,voice]`; the model is fetched on first use into `~/.cache/bristlenose/models/`, as on the CLI. Proven on a clean Fedora 43 x86_64 box (2 vCPU) with an SRPM built from a local dist, then `mock` offline (exit 0), then `dnf install`: a real `bristlenose run` on a public 21.7-minute two-speaker oral history (FOSSDA) printed `Identified speakers (voice-checked: 1 session)` and recorded `method=voice+text` — 145 of 152 segments judged, 6 relabelled, centroid cosine 0.21, **14.4 s on CPU** — and the run went on to finish end to end (`Done in 14m 48s`, 15 quotes, about $0.26 of LLM). _As first built, on sherpa-onnx (before `cfa412f4`):_ Linux was the one channel that loaded **two** onnxruntimes into one process — faster-whisper's Silero VAD uses the `onnxruntime` package (1.30.0) in stage 5, and sherpa-onnx carries its own 1.28.2 — which the Mac never does, since the sidecar excludes the package. They cannot collide: the package links its runtime statically into its pybind module and needs no `libonnxruntime.so` soname, while sherpa's extension resolves its own copy through an `$ORIGIN` rpath (`readelf`/`ldd` on the installed RPM). `%check` loaded them in that order. Since the switch the RPM carries one onnxruntime, the package's. Packaging detail and the CVE obligation: `design-fedora-packaging.md` §4 and §7. It reaches Copr users with the **next release**: PyPI's 0.32.0 does not declare the `voice` extra, so a Copr build of 0.32.0 refuses at the SRPM step by design. **In the Snap since 4 Oct 2026 (on `main`, unreleased; edge picks it up at the next dispatch):** `snap/snapcraft.yaml` installs `.[serve,voice]` (cp312 manylinux wheels, amd64 and arm64, nothing built from source), and `override-build` fails the pack if the runtime is absent or will not load. No new interface: the model comes over the existing `network` plug into `$SNAP_USER_COMMON/models/` (writable, survives refreshes). **amd64, on the onnxruntime runtime**, measured on a strict-confined install (Ubuntu 24.04, 2 vCPU) built from `74dc2255` with `snapcraft pack --destructive-mode`: the build hook printed `onnxruntime 1.30.0 and kaldi-native-fbank 1.22.3 load`; no `sherpa_onnx` in the snap; `ldd` resolves every shared object of both packages; `doctor --self-test` passes `Bundle: voice`; and a real `bristlenose run` on a synthetic 2.3-minute two-voice interview (macOS `say`, two voices) printed `Identified speakers (voice-checked: 1 session)`, fetched the model (40,257,283 bytes, mode 0600) and recorded `method=voice+text`: 22 of 23 segments judged, 7 relabelled, centroid cosine 0.6197, **2.1 s**, run done in 3 m 19 s for about $0.11. CI's `snap.yml` build of `45fc42dc` (which carries the swap) passed the same hook. That run proves the channel, not the quality: on TTS audio Whisper's segments straddle turns, so most of them hold both voices (the re-cut below). Cost: **+0.3 MB installed**, kaldi-native-fbank alone, since faster-whisper already brings onnxruntime. The voice extra adds no AppArmor denial: the one onnxruntime raises (a read of `/sys/bus/pci/devices/`, the yellow warning) came at startup from faster-whisper's copy, and none fell in the pass's window. _Superseded the same day:_ the first amd64 proof (`09876530`) ran the sherpa-onnx runtime on the same recording (21 of 23 judged, 7 relabelled, the same centroid cosine, 3.9 s) at +12.3 MB to the download, before the espeak-ng finding moved every channel off it. arm64: re-proven as a package, above. **Not yet built:** the word-level re-cut of segments that hold both voices.
 
 
 pyannote segmentation-3.0 (ONNX) + a speaker-embedding ONNX model, run through
@@ -231,7 +233,9 @@ Whisper segments.
 
   | Component | Licence |
   |---|---|
-  | sherpa-onnx code | Apache-2.0 |
+  | onnxruntime (the runtime that ships, since `cfa412f4`) | MIT |
+  | kaldi-native-fbank (the NeMo front end, since `cfa412f4`) | Apache-2.0 |
+  | sherpa-onnx code | Apache-2.0 — **but its published wheels statically link espeak-ng (GPL-3.0-or-later)**, so it is not shipped on any channel (§ Licence) |
   | segmentation-3.0 weights | MIT, redistributed ungated by sherpa-onnx |
   | TitaNet-large | CC-BY-4.0, ungated on HF |
   | TitaNet-small | Apache-2.0 — NVIDIA's NGC model card says it is "covered by the license of the NeMo Toolkit", which is Apache-2.0 (both read 4 Oct 2026; this row said "not verified" until then) |
@@ -259,7 +263,7 @@ Whisper segments.
     ~200 lines of segmentation post-processing that sherpa-onnx already
     provides. _(The per-segment pass needs no segmentation, and this is what
     shipped: about 100 lines, § Licence.)_
-- **Mac sidecar cost (INFERRED, to verify in a build):**
+- **Mac sidecar cost (INFERRED before the build; measured since — the sidecar ships onnxruntime's binding, 39 MB, with kaldi-native-fbank, and the model is fetched on first use into the container's `Library/Caches`, not delivered by Background Assets; § A):**
   - About 37 MB of code into a 425 MB bundle. The sidecar currently
     **excludes** `onnxruntime` (58 MB, S3 trim, 4 May 2026). sherpa-onnx
     vendors a smaller copy as a dylib. Dylibs carry no entitlements, so the
@@ -273,7 +277,7 @@ Whisper segments.
     §"Delivery architecture"). They are small enough to bundle outright if
     that is simpler; that is a size call, not a policy one.
 - **CLI channels:**
-  - PyPI: an optional `[diarize]` extra, or core, since it is small.
+  - PyPI: shipped as the optional `[voice]` extra (onnxruntime + kaldi-native-fbank).
   - Homebrew: a pip dependency in `post_install`, like the rest.
   - Snap (strict): no shellouts, and the model cache goes to
     `$SNAP_USER_COMMON` like Whisper's. **Done 4 Oct 2026**: +0.3 MB
@@ -281,9 +285,11 @@ Whisper segments.
     has the run).
   - Copr: a manylinux x86_64 wheel joins the vendored wheelhouse. That adds
     one more native library to the CVE-tracking obligation
-    (`design-fedora-packaging.md` §7). **Done 4 Oct 2026** — measured: 2
-    wheels / 15 MB in the wheelhouse, +43 MB installed (38 MB `sherpa_onnx` + 5 MB
-    the bundled `libasound`); the obligation is in §7.
+    (`design-fedora-packaging.md` §7). **Done 4 Oct 2026** — measured on
+    sherpa-onnx: 2 wheels / 15 MB in the wheelhouse, +43 MB installed (38 MB
+    `sherpa_onnx` + 5 MB the bundled `libasound`). Since `cfa412f4` the extra is
+    onnxruntime + kaldi-native-fbank: one small wheel, no `libasound`
+    (`design-fedora-packaging.md`). The obligation is in §7.
 - **Risk:** low. It is the same packaging class as presidio/spaCy (native
   bundles, no executables).
 
@@ -397,6 +403,8 @@ OpenAI `gpt-4o-transcribe-diarize`, Gemini 3.5 Transcribe.
 | Apple Speech / SpeechAnalyzer / SoundAnalysis | **No speaker or diarization API** in the published macOS 26 docs (checked 3 Oct 2026; pre-release macOS 27 SDK not checked) |
 
 ## How voice joins the existing flow
+
+> **As built (4 Oct 2026) differs from this pre-build sketch, kept below as the design that was proposed.** The text split always runs first and voice refines it — it never replaces it. k is fixed at 2: the pass declines unless the text split found exactly two speakers (checked before any audio is decoded). Segments keep the text splitter's names (no "Voice 1/Voice 2"). Gates: centroid cosine ≤ 0.75 (NaN-safe), and voice may overrule text on at most 35% of the lines it judges, counted before anything changes. Spans are clamped to the audio, and an empty or non-finite embedding is no verdict — an embedder can return an empty vector for an empty slice instead of raising, and before that guard a trimmed recording relabelled a whole session to one speaker and recorded it as success. No per-word re-cut, no `Word.speaker` / `voice_confidence` / `speaker_source` fields, no `voice-turns` cache: the outcome is the `speaker_split` record in the speaker-info cache (`s05b_voice.VoiceRecord`). Constants and reasons: `bristlenose/stages/s05b_voice.py`.
 
 Voice answers "which stretches are the same person". The LLM keeps answering
 "who is the moderator, and what are their names". Sketch (Option A):
@@ -736,6 +744,8 @@ reaches the model. A port that pads the way the code *reads* scores 0.89 on
   the model's.
 
 ## The first experiment (free, local, proposed — not run)
+
+> **4 Oct 2026:** overtaken rather than run. A Teams recording with its `.docx` transcript gave ground truth without hand labels (§ Measured against platform ground truth), and Option A was built on that evidence. Steps 1's harness exists (`experiments/speaker_split_full/voice.py`, `eval_voice.py`); the hand labels for the Talismanic sessions were never collected. Kept as written.
 
 Goal: score all three methods (opening sample, whole-transcript LLM, voice)
 against the same hand labels, on the two Talismanic sessions already in the

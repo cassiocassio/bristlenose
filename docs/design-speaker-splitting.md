@@ -1,4 +1,12 @@
+---
+status: current
+last-trued: 2026-10-04
+trued-against: HEAD@main on 2026-10-04
+---
+
 # Design: LLM Speaker Splitting
+
+> **Trued 4 Oct 2026.** Since this doc was written (Apr 2026): the splitter reads the whole transcript in parts (3 Oct); a gate, `split_gate()`, decides which sessions reach it (1 Oct, widened 4 Oct); and a voice pass runs after it (4 Oct, [design-voice-diarization.md](design-voice-diarization.md)). Sections below are corrected in place; § Measured is the evidence.
 
 ## Problem
 
@@ -8,7 +16,7 @@ The FOSSDA oral history interviews are the primary example: raw video recordings
 
 ## Context
 
-Bristlenose has no audio diarization. The pipeline relies on source files already having speaker labels:
+Until 4 Oct 2026 Bristlenose had no audio diarization; since then a voice pass runs after this splitter (below, and [design-voice-diarization.md](design-voice-diarization.md)). The pipeline relies on source files already having speaker labels:
 
 - VTT/SRT with `<v Speaker>` tags or `Speaker: text` patterns (Stage 3)
 - DOCX with speaker prefixes (Stage 4)
@@ -20,7 +28,7 @@ For the mainstream use case (Teams/Zoom/Meet recordings), diarization is handled
 
 | Approach | Verdict |
 |----------|---------|
-| **pyannote.audio** (acoustic diarization) | Best accuracy. Gated HuggingFace model (account + agreement + token). Requires torch >=2.8 (~2GB). MPS buggy on Mac — CPU only. Overkill for the current scope; worth revisiting as an optional `--diarize` flag if raw recordings become a common input |
+| **pyannote.audio** (acoustic diarization) | Best accuracy. Gated HuggingFace model (account + agreement + token). Requires torch >=2.8 (~2GB). MPS buggy on Mac — CPU only. Overkill for the current scope; worth revisiting as an optional `--diarize` flag if raw recordings become a common input. *(4 Oct 2026: voice was added instead as TitaNet-small through onnxruntime, the `[voice]` extra — no torch, no gated model; [design-voice-diarization.md](design-voice-diarization.md).)* |
 | **whisperx** | Wraps pyannote under the hood — same dependency cost, no independent value |
 | **NeMo** (NVIDIA) | GPU-oriented, ~4-6GB deps, impractically slow on CPU. Not viable for local-first Mac tool |
 | **SpeechBrain** | ~36% DER vs pyannote's ~11%. Not competitive for diarization accuracy |
@@ -36,11 +44,11 @@ The LLM approach was chosen because:
 
 ### Two-tier model
 
-**Tier 1 — platform transcripts (Teams/Zoom/Meet):** Speaker labels already present. Current pipeline handles this. No change.
+**Tier 1 — platform transcripts (Teams/Zoom/Meet):** Speaker labels already present, and the splitter never runs on them. A platform transcript that names **one** account is kept whole and the run says so (`SplitGate.NOT_SEPARATED`) — splitting would overwrite a real name with "Speaker A/B". A transcript that names **nobody** (a cloud transcript whose writer said `speakers: none`) splits like any other since 4 Oct 2026.
 
 **Tier 2 — raw audio/video (no transcript):** New LLM pre-pass detects speaker changes from text. Runs before existing heuristic + role identification.
 
-The pipeline already knows which tier it's in — sessions with a single unique `speaker_label` (or none) need splitting; sessions with 2+ labels skip it.
+`split_gate()` (`s05b_identify_speakers.py`) decides: two or more labels → already separated; a platform transcript with one real name → not separated (kept, stated); otherwise — every Whisper transcript, a bare caption track, a nameless cloud transcript → split.
 
 ### New function: `split_single_speaker_llm()`
 
@@ -65,14 +73,14 @@ Location: `bristlenose/stages/s05b_identify_speakers.py`
 
 In `pipeline.py`, before the heuristic pass:
 
-1. Identify sessions with <=1 unique speaker label
-2. Run `split_single_speaker_llm()` concurrently for those sessions (same semaphore pattern as role identification)
+1. `split_gate()` per session; NOT_SEPARATED sessions are stated (log + CLI)
+2. For SPLIT sessions, run `split_single_speaker_llm()` concurrently (same semaphore pattern as role identification), then the **voice pass** (`s05b_voice.refine_speakers_by_voice`, one session at a time in a worker thread) where the extra is installed and the session has audio — it relabels by voice only when the text split found exactly two speakers
 3. Proceed to heuristic pass — now with multi-speaker labels, the heuristic can detect researcher vs participant
 4. LLM role refinement runs as before
 
 ### Caching
 
-No new cache files needed. The existing speaker-info cache (`speaker-info/{sid}.json`) stores segments-with-roles. Since splitting mutates `speaker_label` before the heuristic runs, the cached segments already reflect the split. On resume, loaded segments have the correct multi-speaker labels.
+No new cache files needed. The existing speaker-info cache (`speaker-info/{sid}.json`) stores segments-with-roles, and since 4 Oct 2026 a `speaker_split` record per fresh session (method, the reason voice did not apply, counts, time). The cache is keyed on the transcripts, not the splitter: a project analysed before a splitter change keeps its labels on resume. Since splitting mutates `speaker_label` before the heuristic runs, the cached segments already reflect the split. On resume, loaded segments have the correct multi-speaker labels.
 
 ### Structured output
 
@@ -80,7 +88,7 @@ New Pydantic models in `bristlenose/llm/structured.py`:
 
 ```python
 class SpeakerBoundary(BaseModel):
-    segment_index: int    # 0-based, first must be 0
+    segment_index: int    # 0-based; the first boundary is at the part's first line (0 for the first part)
     speaker_id: str       # "Speaker A", "Speaker B"
     person_name: str = "" # extracted name if mentioned
 
@@ -108,9 +116,14 @@ Default assumption: 2 speakers (interviewer + interviewee). Returns `speaker_cou
 | `bristlenose/llm/structured.py` | New `SpeakerBoundary`, `SpeakerSplitAssignment` models |
 | `bristlenose/llm/prompts/speaker-splitting.md` | New prompt |
 | `bristlenose/pipeline.py` | Wire splitting before heuristic pass, import new function |
-| `tests/test_speaker_splitting.py` | 10 tests: guards, success, fallback, integration |
+| `tests/test_speaker_splitting.py` | guards, success, fallback, chunking, the gate (`TestSplitGate`), integration |
+| `bristlenose/stages/s05b_voice.py`, `tests/test_speaker_voice.py` | the voice pass that runs after this splitter (4 Oct 2026) |
 
-## Status (Apr 2026)
+## Status (Oct 2026)
+
+**Whole-transcript splitting in parts (3 Oct), the gate (1 and 4 Oct), and a voice pass after it (4 Oct)** — see the banner at the top and § Measured. The April status below is kept as written.
+
+### Status (Apr 2026)
 
 **Implemented.** LLM splitting pre-pass is live in `s05b_identify_speakers.py`. Review findings addressed (ge=0 constraint, PII logging downgraded to debug, out-of-range boundary filtering).
 
@@ -156,9 +169,9 @@ not, because that truth is mostly swapped there.
 
 | | truth | moderator segments right | participant segments right | all segments right |
 |---|---|---|---|---|
-| sampled (shipped) | text | 36/95 (38%) | 235/243 (97%) | 80% |
+| sampled (replaced 3 Oct) | text | 36/95 (38%) | 235/243 (97%) | 80% |
 | whole, runs 1–3 | text | 84–92/95 (88–97%) | 214–217/243 (88–89%) | 89–91% |
-| sampled (shipped) | timing | 42/81 (52%) | 156/158 (99%) | 83% |
+| sampled (replaced 3 Oct) | timing | 42/81 (52%) | 156/158 (99%) | 83% |
 | whole, runs 1–3 | timing | 68–74/81 (84–91%) | 140–144/158 (89–91%) | 87–91% |
 | **shipped, chunked (200), 2 runs** | text | 81–84/95 (85–88%) | 225–232/243 (93–95%) | 91–94% |
 | **shipped, chunked (200), 2 runs** | timing | 63–65/81 (78–80%) | 141–146/158 (89–92%) | 85–88% |
@@ -180,8 +193,12 @@ not, because that truth is mostly swapped there.
 
 **Two bare recordings, no ground truth yet.** On the Talismanic project the
 methods agree on 66/71 and 60/61 segments inside the sample window, and on
-127/167 and 127/316 after it. In the 35-minute session the shipped split
-gives the moderator 69% of talk time. A hand-labelling page (`page.html`)
+127/167 and 127/316 after it. In the 35-minute session the replaced split
+gives the moderator 69% of talk time (`people.yaml` `pct_time_speaking`; the
+voice doc's 86% for the same session is a share of segment time, a different
+measure). The 435 segments above come from re-reading `transcripts-raw/`
+(whole-second starts); the voice measurement re-transcribed with word
+timings and got 385, which is why the two docs' totals differ. A hand-labelling page (`page.html`)
 exists for these; the labels are not in yet.
 
 **Costs not yet measured:**
@@ -189,15 +206,15 @@ exists for these; the labels are not in yet.
   boundaries for 377 segments, which is close to one label per segment. A
   2-hour recording would need ~1,000+ boundaries in one structured response.
   That would exceed some providers' output caps (gpt-4o: 16,384 tokens) and
-  take minutes to stream. Long sessions therefore need the chunked passes
-  named under *Future*, not one call.
-- Input cost scales with length: roughly 4–6× the sampled call for a
-  30–40 minute session.
+  take minutes to stream. **Shipped 3 Oct as parts of 200 segments** (§ Design).
+- Input cost scales with length — estimated "4–6× the sampled call" before
+  the build; **measured** on a real 38-minute run: three parts, 12,665 input /
+  2,956 output tokens, about $0.08 (`design-voice-diarization.md`).
 - n = 1 platform session, with one moderator. Treat the numbers as
   direction, not calibration.
 
 ## Future
 
-- **Acoustic diarization (pyannote)**: optional `pip install bristlenose[diarize]` extra for raw recordings where text-based splitting is insufficient. Would run as a true diarization step on the audio before transcription
+- ~~**Acoustic diarization (pyannote)**: optional `pip install bristlenose[diarize]` extra … before transcription~~ — **superseded 4 Oct 2026** by the voice pass: TitaNet-small through onnxruntime, the `[voice]` extra, run *after* transcription and the text split ([design-voice-diarization.md](design-voice-diarization.md) § A)
 - **Confidence scoring**: the LLM could return confidence per boundary, allowing the pipeline to flag uncertain splits for human review
 - ~~**Full-transcript splitting**~~ — **shipped 3 Oct 2026**, in parts that carry speaker identities across (§ Design, § Measured).

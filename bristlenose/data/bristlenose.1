@@ -355,7 +355,8 @@ Show one stage only, by id \(em for example \fBquote_extraction\fR.
 .SS Options for \fBdoctor\fR
 .TP
 .BR \-\-fetch
-Pre-download the Whisper transcription model (\(ti1.5 GB) so subsequent
+Pre-download the Whisper transcription model (\(ti1.5 GB), and the voice
+model (40 MB) when the \fBvoice\fR extra is installed, so subsequent
 \fBrun\fR / \fBtranscribe\fR invocations work offline or with
 \fB\-\-no\-fetch\fR. Honours the \fI~/.cache/huggingface/hub/\fR cache root
 (or \fBHF_HUB_CACHE\fR / \fBHF_HOME\fR if set). Idempotent and Ctrl+C-resumable.
@@ -488,6 +489,18 @@ Log file verbosity (\fI<output-dir>/.bristlenose/bristlenose.log\fR). Default:
 .B BRISTLENOSE_WHISPER_MODEL_DIR
 Directory containing pre-downloaded Whisper models, used by the desktop
 sidecar to bypass the runtime cache. Not needed for CLI use.
+.TP
+.B BRISTLENOSE_VOICE_PASS
+Set to \fBfalse\fR to switch off the voice pass in speaker identification.
+The pass runs only when the \fBvoice\fR extra is installed
+(\fIpip install 'bristlenose[voice]'\fR); it tells two speakers apart by
+how they sound when the transcript does not already say who is speaking, and
+falls back to the text-only split otherwise. Default: on.
+.TP
+.B BRISTLENOSE_VOICE_MODEL
+Path to the voice model file, used instead of the one cached in
+\fI~/.cache/bristlenose/models/\fR. Not hash-checked, unlike the fetched
+file. Not needed for normal use.
 .TP
 .B HF_HUB_CACHE \fR/ \fBHF_HOME
 Hugging Face Hub cache locations \(em respected by the Whisper preflight when

@@ -1118,12 +1118,13 @@ class TestRunAll:
             # Mocked rather than left live: unmocked it would shell out to a
             # real `brew` on CI's macOS runners.
             patch("bristlenose.doctor.check_brew_tap_trust") as m9,
+            patch("bristlenose.doctor.check_voice") as m10,
         ):
-            for m in (m1, m2, m3, m4, m5, m6, m7, m8, m9):
+            for m in (m1, m2, m3, m4, m5, m6, m7, m8, m9, m10):
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_all(settings)
 
-        assert len(report.results) == 10
+        assert len(report.results) == 11
         assert not report.has_failures
 
 

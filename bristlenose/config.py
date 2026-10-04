@@ -278,6 +278,10 @@ class BristlenoseSettings(BaseSettings):
     # Concurrency
     llm_concurrency: int = 3
 
+    # Voice pass in speaker identification (stages/s05b_voice.py). Runs only
+    # when the `voice` extra is installed; off switch BRISTLENOSE_VOICE_PASS=false.
+    voice_pass: bool = True
+
 
 # Provider/model resolution ledger. Each load_settings() call rebuilds this as
 # an ordered list of human-readable steps: the value of provider+model at every

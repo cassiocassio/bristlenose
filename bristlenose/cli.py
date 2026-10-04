@@ -2450,8 +2450,8 @@ def doctor(
             "--fetch",
             help=(
                 f"Pre-download the Whisper transcription model "
-                f"({WHISPER_SIZE_HUMAN}) so transcription works offline or "
-                "with --no-fetch."
+                f"({WHISPER_SIZE_HUMAN}), and the voice model (40 MB) when the "
+                "voice extra is installed, so a run works offline or with --no-fetch."
             ),
         ),
     ] = False,
@@ -2470,6 +2470,21 @@ def doctor(
         preflight_whisper(
             settings=settings, console=console, status=None, allow_fetch=True,
         )
+        from rich.markup import escape
+
+        from bristlenose.stages.s05b_voice import (
+            cached_voice_model,
+            resolve_voice_model,
+            voice_runtime_available,
+        )
+        if settings.voice_pass and voice_runtime_available():
+            if cached_voice_model() is None:
+                console.print("Fetching the voice model (40 MB)…")
+            model, why = resolve_voice_model(allow_fetch=True)
+            if model is None:
+                console.print(f"[yellow]Voice model: {escape(why)}[/yellow]")
+                raise typer.Exit(1)
+            console.print(f"Voice model ready: {escape(str(model))}")
         return
 
     if self_test:

@@ -21,6 +21,13 @@ from fastapi.testclient import TestClient
 # autouse `monkeypatch.delenv` fixture in those files.
 os.environ.setdefault("BRISTLENOSE_SKIP_PREFLIGHT", "1")
 
+# The voice pass (stages/s05b_voice.py) runs whenever sherpa-onnx is installed,
+# which it is in the dev venv and CI, and would fetch a 40 MB model on first
+# use. Forced off here (not setdefault: a shell that exports it =true would
+# otherwise turn every pipeline test into a real voice pass); tests of the pass
+# opt back in with monkeypatch.setenv, with the model and audio faked.
+os.environ["BRISTLENOSE_VOICE_PASS"] = "false"
+
 from bristlenose.models import (
     ExtractedQuote,
     FileType,

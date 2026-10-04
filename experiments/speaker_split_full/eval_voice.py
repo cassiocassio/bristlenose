@@ -36,6 +36,27 @@ from bristlenose.models import SpeakerRole, TranscriptSegment
 from bristlenose.stages.s05b_identify_speakers import identify_speaker_roles_llm
 
 
+async def pipeline_method(
+    base: list[dict], client: LLMClient, audio: Path, model: Path,
+) -> tuple[list[str], dict]:
+    """The shipped stage 5b order: text split, voice pass, heuristic, role pass."""
+    from bristlenose.stages.s05b_identify_speakers import (
+        identify_speaker_roles_heuristic,
+        split_single_speaker_llm,
+    )
+    from bristlenose.stages.s05b_voice import refine_speakers_by_voice
+
+    segs = [TranscriptSegment.model_validate(s) for s in base]
+    for s in segs:
+        s.speaker_label = None
+        s.speaker_role = SpeakerRole.UNKNOWN
+    await split_single_speaker_llm(segs, client)
+    rec = refine_speakers_by_voice(segs, audio, model)
+    identify_speaker_roles_heuristic(segs)
+    await identify_speaker_roles_llm(segs, client)
+    return [_role(s) for s in segs], rec.to_dict()
+
+
 async def voice_roles(base: list[dict], clusters: list[int | None], client: LLMClient) -> list[str]:
     segs = [TranscriptSegment.model_validate(s) for s in base]
     last = next((c for c in clusters if c is not None), 0)
@@ -68,6 +89,16 @@ async def main(args: argparse.Namespace) -> None:
 
     client = LLMClient(load_settings())
     runs: dict[str, list[str]] = {}
+    records: dict[str, dict] = {}
+    if args.audio:
+        from bristlenose.stages.s05b_voice import resolve_voice_model
+
+        model, why = resolve_voice_model(allow_fetch=True)
+        assert model is not None, why
+        for i in range(args.pipeline_runs):
+            runs[f"pipeline_{i + 1}"], records[f"pipeline_{i + 1}"] = await pipeline_method(
+                segs, client, Path(args.audio), model)
+            print(f"pipeline_{i + 1} record: {records[f'pipeline_{i + 1}']}")
     for i in range(args.text_runs):
         runs[f"text_{i + 1}"] = await run_method("production", segs, client)
     v = await voice_roles(segs, clusters, client)
@@ -85,7 +116,8 @@ async def main(args: argparse.Namespace) -> None:
     for k, val in results.items():
         wrong = val["segments_scored"] - round(val["accuracy"] * val["segments_scored"])
         print(f"{k:24} wrong {wrong:3}/{val['segments_scored']}  {val}")
-    Path(args.out).write_text(json.dumps({"runs": runs, "results": results, "truths": truths}, indent=1))
+    Path(args.out).write_text(json.dumps(
+        {"runs": runs, "records": records, "results": results, "truths": truths}, indent=1))
     print(f"wrote {args.out}")
 
 
@@ -94,4 +126,6 @@ if __name__ == "__main__":
     for a in ("segments", "sid", "voice", "docx", "docx_sid", "moderator", "out"):
         p.add_argument(a)
     p.add_argument("--text-runs", type=int, default=2)
+    p.add_argument("--audio", help="16 kHz WAV: also run the shipped stage 5b (text split + voice pass)")
+    p.add_argument("--pipeline-runs", type=int, default=2)
     asyncio.run(main(p.parse_args()))

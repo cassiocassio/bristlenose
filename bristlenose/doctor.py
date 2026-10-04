@@ -335,6 +335,53 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
     )
 
 
+def check_voice(settings: BristlenoseSettings) -> CheckResult:
+    """The optional voice pass in speaker identification (stages/s05b_voice.py).
+
+    Informational: without it, speakers are told apart from the text alone, so
+    nothing here is a FAIL. A WARN only when an explicit override is broken. CLI doctor only — the desktop
+    sidecar does not ship the extra yet, so a row in its Health window would
+    always read "not installed".
+    """
+    import os
+
+    from bristlenose.stages.s05b_voice import (
+        VOICE_MODEL_ENV,
+        cached_voice_model,
+        voice_runtime_available,
+    )
+
+    label = "Voice pass"
+    if not settings.voice_pass:
+        return CheckResult(status=CheckStatus.SKIP, label=label,
+                           detail="switched off (BRISTLENOSE_VOICE_PASS)")
+    if not voice_runtime_available():
+        return CheckResult(
+            status=CheckStatus.SKIP, label=label,
+            detail="optional, not installed: pip install 'bristlenose[voice]' "
+                   "to tell speakers apart by voice",
+        )
+    override = os.environ.get(VOICE_MODEL_ENV)
+    if override:
+        # Runs never download when the override is set, so say what they will do.
+        if cached_voice_model() is not None:
+            return CheckResult(status=CheckStatus.OK, label=label,
+                               detail=f"model from {VOICE_MODEL_ENV} (not hash-checked)")
+        return CheckResult(status=CheckStatus.WARN, label=label,
+                           detail=f"{VOICE_MODEL_ENV} names a file that does not exist; "
+                                  "the voice pass will be skipped")
+    if cached_voice_model() is not None:
+        return CheckResult(status=CheckStatus.OK, label=label, detail="model cached (40 MB)")
+    if settings.no_fetch:
+        return CheckResult(status=CheckStatus.SKIP, label=label,
+                           detail="model not cached, and no-fetch is set: the voice pass "
+                                  "will be skipped (`bristlenose doctor --fetch`)")
+    return CheckResult(
+        status=CheckStatus.SKIP, label=label,
+        detail="model not cached (40 MB download on first run, or `bristlenose doctor --fetch`)",
+    )
+
+
 def check_api_key(settings: BristlenoseSettings) -> CheckResult:
     """Check whether an API key is configured for the selected LLM provider."""
     from bristlenose.credentials import get_credential_source, get_credential_store_label
@@ -1426,6 +1473,7 @@ def run_all(settings: BristlenoseSettings) -> DoctorReport:
         check_api_key(settings),
         check_network(settings),
         check_pii(settings),
+        check_voice(settings),
         check_disk_space(settings),
         check_serve_deps(),
         check_auth_token_env(),

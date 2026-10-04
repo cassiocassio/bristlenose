@@ -95,6 +95,9 @@ dev = [
     "mcp>=2.0",
     "mlx>=0.16; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "mlx-whisper>=0.4; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    # The voice pass's runtime, so its code path runs in the dev venv rather
+    # than being an undeclared install (the presidio lesson above).
+    "sherpa-onnx>=1.12",
 ]
 
 # Serve mode runtime — `bristlenose serve`, the FastAPI + SQLite
@@ -140,6 +143,16 @@ serve = [
 # Held register: docs/dependency-premortem-log.md.
 mcp = [
     "mcp>=2.0",
+]
+
+# Voice pass for speaker identification (stage 5b): tells two speakers apart
+# by how they sound, on top of the text splitter's guess. CLI opt-in; the run
+# falls back to the text labels without it. Its model (TitaNet-small, 40 MB,
+# Apache-2.0 via NeMo) is fetched on first use and hash-verified. NOT in the
+# desktop sidecar yet — that needs the bundle gates, signing and a bundled
+# model (docs/design-voice-diarization.md § Option A).
+voice = [
+    "sherpa-onnx>=1.12",
 ]
 
 # Release-time tooling. Run on the release machine when cutting a

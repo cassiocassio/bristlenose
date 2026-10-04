@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
+from rich.markup import escape as rich_escape
 
 # tqdm / huggingface_hub progress-bar suppression lives in
 # `bristlenose/__init__.py` (must be set before any HF import, including
@@ -1029,6 +1030,11 @@ class Pipeline:
             split_gate,
             split_single_speaker_llm,
         )
+        from bristlenose.stages.s05b_voice import (
+            refine_speakers_by_voice,
+            resolve_voice_model,
+            voice_runtime_available,
+        )
         from bristlenose.stages.s06_merge_transcript import (
             merge_transcripts,
             write_raw_transcripts,
@@ -1611,6 +1617,7 @@ class Pipeline:
                 t0 = time.perf_counter()
                 llm_client = LLMClient(self.settings)
                 _speaker_errors: list[str] = []
+                _split_records: dict[str, dict[str, object]] = {}
 
                 if _remaining_si_sids:
                     # Split single-speaker transcripts (LLM pre-pass) — but
@@ -1638,8 +1645,40 @@ class Pipeline:
                         )
                         logger.warning(_msg)
                         _print_warn(_msg)
+                    # What produced each session's speaker labels, written to
+                    # the speaker cache so a later stage (or a person) can tell
+                    # a voice-checked split from a text-only one.
+                    for sid, gate in _gates.items():
+                        if gate is SplitGate.SEPARATED:
+                            _split_records[sid] = {"method": "transcript-labels"}
+                        elif gate is SplitGate.NOT_SEPARATED:
+                            _split_records[sid] = {"method": "not-separated"}
                     if _split_sids:
                         _sem_split = asyncio.Semaphore(concurrency)
+                        # The voice pass is CPU-bound and multithreaded inside
+                        # onnxruntime: one session at a time, off the event loop.
+                        _sem_voice = asyncio.Semaphore(1)
+                        _voice_model: Path | None = None
+                        _voice_off = ""
+                        if not self.settings.voice_pass:
+                            _voice_off = "voice pass switched off (BRISTLENOSE_VOICE_PASS)"
+                        elif not voice_runtime_available():
+                            _voice_off = "voice extra not installed (pip install 'bristlenose[voice]')"
+                        else:
+                            status.update("[dim]Preparing the voice pass...[/dim]")
+                            _voice_model, _voice_off = await asyncio.to_thread(
+                                resolve_voice_model, allow_fetch=not self.settings.no_fetch,
+                            )
+                            status.update("[dim]Identifying speakers...[/dim]")
+                            if _voice_model is None:
+                                # The researcher installed the extra to get this;
+                                # a decline they cannot see reads as "voice ran".
+                                _print_warn(rich_escape(f"Voice pass skipped: {_voice_off}"))
+                                _print_warn(
+                                    "Speakers told apart from the text alone; "
+                                    "`bristlenose doctor --fetch` fetches the model"
+                                )
+                        _audio_for = {s.session_id: s.audio_path for s in sessions}
 
                         async def _split(
                             sid: str,
@@ -1651,6 +1690,21 @@ class Pipeline:
                                         segments, llm_client,
                                         errors=_speaker_errors,
                                     )
+                            async with _sem_voice:
+                                rec = await asyncio.to_thread(
+                                    refine_speakers_by_voice,
+                                    segments, _audio_for.get(sid), _voice_model,
+                                    unavailable_reason=_voice_off,
+                                )
+                            _split_records[sid] = rec.to_dict()
+                            logger.info(
+                                "voice_pass | session=%s | method=%s | elapsed_ms=%d"
+                                " | segments=%d | verdicts=%d | relabelled=%d"
+                                " | centroid_cos=%s | reason=%s",
+                                sid, rec.method, rec.elapsed_ms, rec.segments,
+                                rec.voice_verdicts, rec.relabelled, rec.centroid_cos,
+                                rec.reason or "-",
+                            )
 
                         with _llm_telemetry.stage("s05b_identify_speakers"):
                             await asyncio.gather(*(
@@ -1726,6 +1780,7 @@ class Pipeline:
                                     seg.model_dump(mode="json")
                                     for seg in session_segments[sid]
                                 ],
+                                "speaker_split": _split_records.get(sid),
                             }
                             _si_bytes = _json.dumps(
                                 _si_data, indent=2,
@@ -1746,17 +1801,35 @@ class Pipeline:
 
                 _speakers_elapsed = time.perf_counter() - t0
                 _n_new_si = len(_remaining_si_sids)
-                if _cached_si_sids and _n_new_si:
-                    _print_step(
-                        f"Identified speakers ({_n_new_si} new sessions)",
-                        _speakers_elapsed,
-                    )
-                else:
-                    _print_step("Identified speakers", _speakers_elapsed)
+                _n_voice = sum(
+                    1 for r in _split_records.values() if r.get("method") == "voice+text"
+                )
+                # Counts this run's sessions only; cached ones keep their own
+                # record in the speaker cache.
+                _detail = [
+                    f"{_n_new_si} new sessions" if _cached_si_sids and _n_new_si else "",
+                    (f"voice-checked: {_n_voice} of the new" if _cached_si_sids
+                     else f"voice-checked: {count_noun(_n_voice, 'session')}") if _n_voice else "",
+                ]
+                _detail_s = ", ".join(d for d in _detail if d)
+                _print_step(
+                    f"Identified speakers ({_detail_s})" if _detail_s else "Identified speakers",
+                    _speakers_elapsed,
+                )
                 _stage_actuals[STAGE_SPEAKERS] = StageActual(
                     elapsed=_speakers_elapsed, input_size=_n_sessions,
                 )
                 self._emit_remaining(STAGE_SPEAKERS, _speakers_elapsed)
+                _voice_failed = [
+                    (sid, str(r.get("reason", ""))) for sid, r in sorted(_split_records.items())
+                    if str(r.get("reason", "")).startswith("voice pass failed")
+                ]
+                if _voice_failed:
+                    _print_warn(
+                        f"Voice pass failed for {count_noun(len(_voice_failed), 'session')}; "
+                        "they keep the text split"
+                    )
+                    _print_warn(rich_escape(f"{_voice_failed[0][0]}: {_voice_failed[0][1]}"))
                 if _speaker_errors:
                     _print_warn(
                         *_short_reason(

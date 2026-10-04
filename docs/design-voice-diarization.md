@@ -127,6 +127,9 @@ itself. The first experiment below covers the ones that matter most.
 
 ### A. ONNX voice pass in Python, every channel (recommended first build)
 
+**Built on the CLI, 4 Oct 2026** — the per-segment variant measured above, in `bristlenose/stages/s05b_voice.py`, behind the optional `voice` extra; through the shipped stage 5b code it scores 12–13 wrong of 286 against 22 for the text split alone. **Not yet built:** the desktop sidecar (sherpa-onnx's `libonnxruntime.dylib` through the bundle-integrity and signing gates, plus a bundled model via `BRISTLENOSE_VOICE_MODEL`), Snap and Copr (the extra is not installed there), and the word-level re-cut of segments that hold both voices.
+
+
 pyannote segmentation-3.0 (ONNX) + a speaker-embedding ONNX model, run through
 sherpa-onnx or directly through onnxruntime, with our own clustering of
 Whisper segments.
@@ -146,7 +149,7 @@ Whisper segments.
   | sherpa-onnx code | Apache-2.0 |
   | segmentation-3.0 weights | MIT, redistributed ungated by sherpa-onnx |
   | TitaNet-large | CC-BY-4.0, ungated on HF |
-  | TitaNet-small | on NGC; licence **not verified**, so swap to large (or WeSpeaker CAM++) if it can't be confirmed |
+  | TitaNet-small | Apache-2.0 — NVIDIA's NGC model card says it is "covered by the license of the NeMo Toolkit", which is Apache-2.0 (both read 4 Oct 2026; this row said "not verified" until then) |
   | WeSpeaker VoxCeleb models | CC-BY-4.0 |
 
   All are compatible with AGPL-3.0 + CLA, with attribution. Avoid

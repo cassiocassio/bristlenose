@@ -15,6 +15,12 @@ built. The people *file* and its endpoints predate it and do ship —
 
 ## Changelog
 
+- _2026-10-04_ — **H9 Phase 1, the data layer, is built on a branch (`route-c-phase1`) and waits for 0.33.0.**
+  One `Person` per identity; `session_speakers.person_id` nullable with `state` and `evidence`
+  (migration 013, which absorbs 012's `name_confirmed`); every route emits the identity's code,
+  so session 2's moderator reads `m2` and an unidentified one `m?`. All four measured findings
+  are folded in, and five departures from the row are recorded under H9's table with the calls
+  they leave for the owner.
 - _2026-10-04_ — **Undo on speaker naming is built — the step-1 gate is open.** A pick, a
   confirm or a typed name from the person picker, and the Sessions grid's inline rename, push one
   entry on the report's undo stack (`contexts/UndoStore.ts`); Edit ▸ Undo on the Mac and ⌘Z /
@@ -1947,7 +1953,7 @@ real tokens (the pill overhang below was the first proof).
 | Phase | Ships | Gate — how we know | Needs |
 |---|---|---|---|
 | **0 · Session identity** ✅ *(landed 3 Oct 2026)* | The transcripts plan's 0b, lifted out as its own package: a stable per-session identity that survives re-import, re-ordering and the arrival of an older recording; the existing `sessions` rows migrated onto it. Nothing else — this is a prerequisite, not a feature | A test adds an older recording to a fixture study and every `session_speakers` row keeps its session; the smoke fixture carries the identity; `bristlenose status` reads the same session count before and after | — |
-| **1 · The data layer, no UI** | One Alembic revision: `session_speakers.person_id` nullable, plus `state` (`null` · `proposed` · `confirmed`) and `evidence`; `persons` gain the per-project `code`, a `uuid`, `origin` and `me`. One `Person` per identity instead of one per (session, code). The importer runs at the end of every pipeline run, proposes from the intermediates (platform labels → one identity per distinct label, P2), and never overwrites a confirmed row. The pipeline stops writing `people.yaml` and writes the computed stats to an intermediate. A legacy `people.yaml` is read once on the first run after upgrade — inherited-proposed on every session that carried the code — then ignored, never deleted. `GET /people` keeps its shape (code → name, nulls omitted) so every surface renders unchanged; `PUT /people` narrows to the fields it may write; `resolve_speaker_names` reads identities. The WARNING in `compute_participant_stats` retires with the YAML write it describes | The pinned-limitation test (two sessions, two moderators) re-homed as the map's own: both names survive. The sidebar's impossible MULTI_MODERATOR fixture replaced by one the importer can now produce. `tests/test_serve_export_coverage.py` green — no new GET without a classification. `check-locales.py --strict` untouched (no strings yet). The one visible change — two moderators' names no longer overwrite — pinned by a test that fails on `main` today | 0 |
+| **1 · The data layer, no UI** *(built on a branch 4 Oct 2026, not yet landed — see the dated block below the table)* | One Alembic revision: `session_speakers.person_id` nullable, plus `state` (`null` · `proposed` · `confirmed`) and `evidence`; `persons` gain the per-project `code`, a `uuid`, `origin` and `me`. One `Person` per identity instead of one per (session, code). The importer runs at the end of every pipeline run, proposes from the intermediates (platform labels → one identity per distinct label, P2), and never overwrites a confirmed row. The pipeline stops writing `people.yaml` and writes the computed stats to an intermediate. A legacy `people.yaml` is read once on the first run after upgrade — inherited-proposed on every session that carried the code — then ignored, never deleted. `GET /people` keeps its shape (code → name, nulls omitted) so every surface renders unchanged; `PUT /people` narrows to the fields it may write; `resolve_speaker_names` reads identities. The WARNING in `compute_participant_stats` retires with the YAML write it describes | The pinned-limitation test (two sessions, two moderators) re-homed as the map's own: both names survive. The sidebar's impossible MULTI_MODERATOR fixture replaced by one the importer can now produce. `tests/test_serve_export_coverage.py` green — no new GET without a classification. `check-locales.py --strict` untouched (no strings yet). The one visible change — two moderators' names no longer overwrite — pinned by a test that fails on `main` today | 0 |
 | **UX iteration 2 + review** *(between 1 and 2; done 1 Oct 2026, review pending)* | [`mockups/moderator-identity-iteration-2.html`](mockups/moderator-identity-iteration-2.html): route C drawn with the shipped stylesheet inlined verbatim and only shipped strings and idioms — see below | A `/usual-suspects` pass on the mockup and this section, with `ux-critique`, `what-would-gruber-say` (the native twin), `i18n-review` (four keys, gender-marking in fr/ca/es) and `silent-failure-hunter` (Phase 1's "never overwrites a confirmed row" and "read once") the personas that matter most. Its findings are folded into Phase 2's scope before Phase 2 starts | 1 |
 | **2 · The web UX** | `m?` on the split badge; the proposed treatment — three lines of composition CSS in `molecules/person-badge.css` so `.badge-proposed` dashes the halves instead of ringing the pair; the pill wired: ✓ confirms, ✗ returns the slot to `null`; the picker as a popover from the badge, rows per §B9 (identities as split badges, *That's Me (Name)*, *New Moderator…*), opened by click or right-click; the inline name field on a null slot is the Someone-New path (commit mints and assigns); the four strings seeded into the 21 full locales; the sidebar's "multiple moderators" test counts identities with `null` as one of them; `export.css` and `isExportMode()` drop the class, the pill and the pencil in the leave-behind; the exported roles line reads the one sentence on a null slot; the MCP overview carries `"moderator": <code or null>` on each session item plus one `INVARIANTS` line | vitest on `SessionsTable`, `TranscriptPage` and `SessionsSidebar` asserting **the payload each pick sends** — the 0.29.1 lesson: a test that proves the switch renders is not a test of the wire. `tests/test_export_css_selectors.py` green on the new selectors. `check-locales.py --strict`. One E2E spec: pick on session 4 in the grid → the roles line on transcript 4 shows `m1`. The MCP contract test covers a null session | 1, review |
 | **3 · The native twin** | A `person-menu` bridge message (anchor, slot state, the identities, Me) → an `NSMenu` built from the same keys, raised by the host for a right-click on any person badge; selecting *New Moderator…* tells the webview to open the inline editor; Edit ▸ Undo carries the pick (the `undo-state` frontend half §B10 already specified); a Diagnostics fixture that renders the web popover and the native menu side by side over one payload, for the visual-parity pass that comes *after* the wiring | Swift tests build the menu from a fixture payload and assert items, order and the checked row; a `test_menu_title_keys.py`-style pin that the native menu reads the same four keys the popover does; the human check: on the Mac, open the picker from the grid and from the transcript header in one session — same items, same order | 2 |
@@ -1998,6 +2004,62 @@ real tokens (the pill overhang below was the first proof).
 > `tests/test_pipeline_platform_transcripts.py`, `TestModeratorsAreNamedPerSession` in
 > `tests/test_mcp_server.py`, and the payload tests in `SessionsTable.test.tsx` — each proved red
 > against the old behaviour.
+
+> **Built 4 Oct 2026 — Phase 1, as built, and where it departs from the row.** On a local branch
+> (`route-c-phase1`), landing
+> after 0.33.0 is cut. **Schema (013):** `session_speakers.person_id` nullable, `state` (`NULL` ·
+> `proposed` · `confirmed`, migrated from 012's `name_confirmed`, which is dropped; the API's
+> `name_confirmed` is now `state == "confirmed"`), `evidence`; `persons.code`, `uuid`, `origin`,
+> `me`. No `persons.project_id`: the database is per project, and an identity no slot uses is
+> released (deleted) rather than kept, until the bank gives it somewhere to live. **The four
+> findings, folded in.** (1) Every route emits the identity's code — `/sessions`, `/transcripts`
+> (speakers and segments), `/dashboard`, `/people`, the moderator-question route, the MCP overview
+> and the dev sessions table — and `/sessions` adds `slot_code`; `GET /people` is keyed by identity,
+> which ends the cross-session lookup by construction. (2) One resolver,
+> `bristlenose/server/speaker_slots.py`, outer-joins; the four inner joins are gone. (3) The pipeline
+> writes per-session stats into `session-speakers.json` (now version 2, which also records each
+> name's evidence class), and the importer copies them onto each slot — so the dashboard's
+> `total_words`, always 0 in serve, is real. (4) **A heard name proposes** (see call 1 below), so
+> Whisper-only sessions keep the name they show today. **Codes are derived**, recomputed after every
+> import and every pick: moderators number in order of first appearance, so the session registry
+> keeps them stable and a code moves only when the map does.
+>
+> **Departures, each the owner's to confirm.** *(a) A heard name proposes and mints* — one identity
+> per distinct name within the study, as P2 does for platform names — where §C5 says a hearing
+> never mints. Owner's 4 Oct build of 012 already treated the speaker-identification pass's name as
+> a proposal, and the alternative leaves every raw-audio study's moderators at `m?` until Phase 2
+> ships a picker that can name them: the phase would leave the product worse than it found it,
+> which the plan's first principle forbids. The rule is one branch in `_import_speakers`.
+> *(b) `people.yaml` is not retired in Phase 1.* The pipeline still writes it and serve still names
+> participants from it (moderators never), and the `compute_participant_stats` WARNING stays with
+> it. Retiring it here would leave README, the man page and the website promising an editable file
+> for a release; Phase 5 retires it with those docs. *(c) A name on the per-session route says who
+> this session's speaker is, never who someone else is*: another identity's name (the 0.33.0
+> picker picks by name) points the slot at that person; a new name renames an identity no other
+> session shares, and otherwise mints someone new for this slot. So a spelling fix to a moderator
+> who ran five sessions changes one — the open question "where does a spelling fix live" stays
+> Phase 2's. The route also takes `person` (an identity code) for Phase 2's picker. *(d) No
+> evidence file means unidentified.* Output from before 3 Oct 2026 has no `session-speakers.json`;
+> its existing serve rows keep what they hold, but a fresh import shows `m?`, and `people.yaml`'s
+> one `m1` names nobody — consistent with the owner's "re-run, not migrated". The smoke fixture is
+> exactly this case, so its moderator now reads `m?` in every test that pinned `m1`. *(e) The
+> per-session route takes the slot code only.* Identity and slot codes are both `mN` and a pick
+> renumbers identities, so a route accepting either let a stale grid's code land on a different
+> slot — an undo renaming the wrong person, silently. The web grid now addresses every write, and
+> its undo, by `slot_code` (`slotOf` in `SessionsTable.tsx`; the native picker's answer, which
+> carries the badge's code, is mapped back through the grid). The grid draws a pick optimistically
+> and does not refetch, so after a pick that joins two identities its badge codes are stale until
+> reload — cosmetic, since no write uses them; Phase 2's `person` pick is the place to refetch.
+>
+> Gates as built: `tests/test_serve_moderator_identities.py` (23 tests: identity codes, P2, the
+> unidentified slot through all four ex-inner-join sites, re-run, pick, stats, the 013 migration
+> including the fresh-DB path that 012 had made inconsistent) — 22 of them red on `main` before it
+> (measured at `a0b84fca`), the 23rd a guard that holds on both (`/people` has no entry an
+> unidentified slot's lookup could hit); the pinned limitation re-homed as `test_people_names_both_moderators_by_their_own_code`; the
+> sidebar's MULTI_MODERATOR fixture (`m1` in s1, `m2` in s2) is now what the importer produces,
+> unchanged but for its comment; the pipeline's evidence and stats in
+> `TestPerSessionModeratorNames`; `tests/test_serve_export_coverage.py` green (no new GET); no
+> strings. mypy: 146 → 143.
 
 **What this deliberately does not ship** (unchanged from the row above): the bank,
 cross-study links, folder scope, Settings ▸ General, Contacts, the markdown

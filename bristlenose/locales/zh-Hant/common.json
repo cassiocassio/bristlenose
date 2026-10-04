@@ -125,7 +125,7 @@
     "interviews": "訪談",
     "copyFolderPath": "拷貝檔案夾路徑",
     "showInFinder": "\u5728 Finder \u4e2d\u986f\u793a",
-    "editName": "編輯 {{code}} 的名稱",
+    "editName": "編輯 {{code}} 的名字",
     "speakerPlaceholder": {
       "moderator": "\u4e3b\u6301\u4eba",
       "participant": "\u53c3\u8207\u8005",
@@ -135,7 +135,7 @@
       "role": "角色",
       "newModerator": "新主持人",
       "newObserver": "新觀察員",
-      "newNameFor": "{{code}} 的新名稱",
+      "newNameFor": "{{code}} 的新名字",
       "thatsMe": "我本人（{{name}}）"
     },
     "failedToLoad": "無法載入場次：{{error}}",

@@ -144,7 +144,7 @@
       "role": "Rooli",
       "newModerator": "Uusi moderaattori",
       "newObserver": "Uusi tarkkailija",
-      "newNameFor": "Uusi nimi: {{code}}",
+      "newNameFor": "Uusi nimi osallistujalle {{code}}",
       "thatsMe": "Tämä olen minä ({{name}})"
     },
     "failedToLoad": "Istuntojen lataus epäonnistui: {{error}}",

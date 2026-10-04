@@ -134,7 +134,7 @@
       "role": "Rol",
       "newModerator": "Nuevo moderador",
       "newObserver": "Nuevo observador",
-      "newNameFor": "Nombre nuevo para {{code}}",
+      "newNameFor": "Nuevo nombre para {{code}}",
       "thatsMe": "Soy yo ({{name}})"
     },
     "failedToLoad": "Error al cargar las sesiones: {{error}}",

@@ -23,10 +23,16 @@ _The §9a spike is built and accepted (30 Jul 2026) — see §9a-results. Phase 
 > **Truing status:** Partial — §1–§5, §7 and §9a are current (trued
 > 2026-08-21). §4's tool table, §6a's parked warm-pool question and §8's
 > build gate carry inline banners: each describes something that either
-> shipped differently or was never built. See changelog.
+> shipped differently or was never built. See changelog. **§Positioning
+> offering 1(b), the in-app chat lens, is parked as of 4 Oct 2026: MCP is the
+> chat lens** — read §6b, §9a's comparison and §10 Q7 with that in mind.
 
 ## Changelog
 
+- _4 Oct 2026_ — §Positioning: offering 1(b) parked — for the foreseeable
+  future MCP is the chat lens; no in-app question box until Bristlenose adds
+  more value than "Claude, inside" (owner's call). Pointers added in §6b, §9a,
+  §10 Q7 and Related docs; `design-chat-lens.md` set to `status: parked`.
 - _29 Sep 2026_ — §1's OpenAI paragraph gets a correction banner: the
   public-HTTPS rule is for OpenAI's public directory, not local plugin
   marketplaces. Measured with the Codex-plugin spike. See
@@ -186,7 +192,7 @@ Researchers get exactly two things:
    own assistant and subscription, our objects, local app to local app
    (§6a).
 
-The fold in 1(b) is what stops the chat lens drifting back into the
+The fold in 1(b) was what stopped the chat lens drifting back into the
 chat-product shape this section rejects; naming non-Claude agents in 2 is
 §1's vendor-neutral commitment made concrete.
 
@@ -880,6 +886,9 @@ ask. So the sheet carries four things and nothing else:
 
 ### 6b. The in-app Chat lens — split to its own doc
 
+> **Parked 4 Oct 2026** — MCP is the chat lens (§Positioning). The paragraph
+> below is the relationship as planned; `grounding.py` stays shared.
+
 A second, genuinely different proposal — a **cited question box inside
 Bristlenose**, powered by the provider already configured in `bristlenose/llm/` —
 was designed here as §6b/§6c and has moved to its own doc so the two workstreams
@@ -1352,7 +1361,7 @@ The spike also de-risks the Chat lens ([`design-chat-lens.md`](design-chat-lens.
 because it needs the *same* object model and the same prompt discipline. If the
 workstreams run in parallel, the shared-core contract in that doc's §7 applies.
 
-**The two are complementary, not competing** — and note the practical difference
+**(Written while 1(b) was live; parked 4 Oct 2026.)** **The two are complementary, not competing** — and note the practical difference
 nobody states up front: MCP spends the researcher's *assistant subscription*,
 while the Chat lens meters their own API key at roughly 20k input tokens per
 question. For anyone on a flat-rate assistant plan those are very different
@@ -1397,7 +1406,7 @@ caveat.
    authors.
 6. **Is the tool surface versioned per release or independently?** §9. Affects
    whether a Bristlenose upgrade can break a published skill.
-7. ~~Does a "Chat" lens get built?~~ **Decided 30 Jul 2026: yes, as its own workstream** — split to [`design-chat-lens.md`](design-chat-lens.md) (scope: a cited question box, not a chat). What remains open there is sequencing vs this doc; the shared-core contract for parallel work is its §7.
+7. ~~Does a "Chat" lens get built?~~ **Decided 30 Jul 2026: yes, as its own workstream → parked 4 Oct 2026: MCP is the chat lens** — split to [`design-chat-lens.md`](design-chat-lens.md) (scope: a cited question box, not a chat). What remains open there is sequencing vs this doc; the shared-core contract for parallel work is its §7.
 
 ---
 
@@ -1441,7 +1450,7 @@ What follows, and what it already explains:
 - [`design-mcp-extension.md`](design-mcp-extension.md) — route 3 as a plan: the
   `.mcpb` extension, the handshake file, and why hand-paste cannot ship
 
-- [`design-chat-lens.md`](design-chat-lens.md) — the in-app sibling workstream (split from this doc's §6b/§6c); carries the shared-core contract for parallel sessions.
+- [`design-chat-lens.md`](design-chat-lens.md) — the in-app sibling workstream (split from this doc's §6b/§6c; parked 4 Oct 2026); carries the shared-core contract for parallel sessions.
 - [`design-multi-project.md`](design-multi-project.md) — project index, folders,
   person identity. Phase 2 depends on the project index; the person-identity
   work there is explicitly *not* a dependency of this doc (§3a).

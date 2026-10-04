@@ -1,5 +1,7 @@
 ---
-status: draft
+status: parked
+last-trued: 2026-10-04
+trued-against: HEAD@main on 2026-10-04
 ---
 
 # Chat lens — a cited question box inside Bristlenose
@@ -13,15 +15,23 @@ status: draft
 
 _Design note; the §6 prototype is built to the §5a corrections (flag-gated lab page at `/chat-lens`). July 2026._
 
-> **Status: Draft.** Split out of [`design-mcp-server.md`](design-mcp-server.md)
+> **Status: Parked** (was Draft until 4 Oct 2026). Split out of [`design-mcp-server.md`](design-mcp-server.md)
 > (§6b/§6c there, 30 Jul 2026) so the two workstreams can run as separate
 > sessions: that doc owns connecting **external** assistants (Claude Desktop,
 > Claude Code, peers) to a local Bristlenose server; this one owns the **in-app**
-> conversational surface. Read that doc's §Positioning first — this feature is
-> the deliberate, scoped exception to it.
+> conversational surface. Read that doc's §Positioning first — this feature was
+> the deliberate, scoped exception to it, and is parked behind it now. The lab
+> page is still mounted in every serve, the Mac sidecar included
+> (`experimental_chat_lens`, default on, `config.py`); whether to switch it off
+> while parked is an open call.
 
 ## Changelog
 
+- _4 Oct 2026_ — **parked**: MCP is the chat lens for the foreseeable future;
+  no in-app question box until Bristlenose adds more value than "Claude,
+  inside" (owner's call; recorded in `design-mcp-server.md` §Positioning). §4
+  and §6b below are the plan as it stood; `grounding.py` stays, shared with
+  the MCP tools.
 - _12 Sep 2026_ — §6b: recorded the real surface (the ask bar inside the
   quotes lens, filtering the lens to cited quotes so curation reuses
   stars/tags/headings; mockup pair `352ed55e` compared, sidebar-lens shape
@@ -134,7 +144,7 @@ citation *is* the review affordance).
 
 ## 4. The resolution: scope
 
-**Where it lives (decided 30 Jul 2026): inside the report.** The product
+**Where it lives (decided 30 Jul 2026; parked 4 Oct 2026 — see the banner): inside the report.** The product
 frame is two offerings — (1) the report as a single link in a browser with
 two modes, *read it* and *ask it*; (2) stay in your favourite local agent
 (the MCP doc). This lens is mode 1(b): another way of using the same report
@@ -463,6 +473,9 @@ behind a click, so a wrong citation is obvious instantly. The video deep-link
 needs are already in the response.
 
 ## 6b. The real surface — the ask bar inside the quotes lens
+
+> **Parked with this doc, 4 Oct 2026.** The plan below (the ask bar, ⌘K, the
+> Mac v1/v2 sequencing) is kept as the design if 1(b) reopens.
 
 _Recorded 12 Sep 2026; shape settled 30 Jul 2026 alongside §4's placement
 decision. Gated on the §6 lab proving the citations honest on real projects —

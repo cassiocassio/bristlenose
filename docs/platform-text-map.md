@@ -38,9 +38,14 @@ Text in `common.json`, `settings.json`, `enums.json`, and `server.json` that ren
 **Shared across a native seam: search.** The Mac app's toolbar search draws
 its suggestion rows, token chips and chip menus natively, but every word in
 them is a `common.search.*` key resolved by the SPA and sent over the bridge
-(`searchBridge.ts`, docs/design-search.md §7). The native side holds no search
-keys, so the browser field and the Mac field read the same in every locale,
-and a new search string is added once, in `common.json`.
+(`searchBridge.ts`, docs/design-search.md §7), so those read the same on both
+surfaces and a new one is added once, in `common.json`. Two exceptions, both
+native: the VoiceOver announcements (chip selected, removed, search cleared)
+are read in Swift from the same `common.search.announce.*` keys
+(`QuotesToolbarControls.swift`); and the field's own chrome — placeholder and
+clear button — is `desktop.toolbar.search` / `searchClear`, so the Mac field
+says *Search* where the browser's says *Search quotes, people, tags* (trued
+4 Oct 2026).
 
 ---
 

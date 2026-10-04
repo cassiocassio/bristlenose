@@ -1,7 +1,15 @@
 ---
-status: proposed
-updated: 28 Sep 2026
+status: built (main, unreleased)
+updated: 4 Oct 2026
+last-trued: 2026-10-04
+trued-against: HEAD@main on 2026-10-04
 ---
+
+> **Trued 4 Oct 2026.** P1–P5 are built on `main` and ship in the next
+> release; the rules in §3 match `searchMatch.ts` and are pinned by
+> `tests/fixtures/search-match-contract.json`. Set `status: shipped` at that
+> release. Survey of best practice and the sequence after it:
+> [`research/search-best-practice.md`](research/search-best-practice.md).
 
 # Search: suggestions, recognisers and tokens
 
@@ -36,7 +44,7 @@ Settled by the maintainer on 28 Sep 2026. Build on them, don't reopen them.
 - Suggestions menu under the field (idea 01): a free-text row, then people, then tags.
 - Recognisers for badge, name and tag (idea 02).
 - Person and tag tokens with meaning menus (idea 03).
-- Per-word and quoted-phrase matching (D4), with highlights to match.
+- Run and quoted-phrase matching (D4, revised 3 Oct 2026: words typed together are one run), with highlights to match.
 
 **Out, and where it goes:**
 
@@ -75,13 +83,14 @@ core asserts the same file when it lands).
      and `50%` found *500*. They do not block a word start, so `hashtag`
      finds *#hashtag*. Accepted cost: `R&D` does not find *R & D*.
    - **Punctuation after the last typed word finishes it**: `why?` is a
-     whole word and does not find *whyever*.
+     whole word and does not find *whyever*. Except a dash, which may be
+     joining (`co-` on the way to `co-op` keeps finding *coop*).
    - **Joined forms** (Lucene's `WordDelimiterGraphFilter`, catenate): a typed
      run is also tried with in-word marks dropped, against the text folded the
      same way, so `covid19` finds *COVID-19*, `coop` finds *co-op* and
-     `co-op` finds *coop*, `1000` finds *1,000*, *1.000*, and *1 000* written with a no-break or narrow space (an ordinary space does not join: *2019 200* is two numbers),
+     `co-op` finds *coop*, `1000` finds *1,000*, *1.000*, and *1 000* written with a no-break, narrow or thin space (an ordinary space does not join: *2019 200* is two numbers),
      `colleccio` finds *col·lecció*. In-word marks: a dash between letters or
-     digits; a middle dot or full stop between letters; a thousands separator
+     digits; a middle dot, hyphenation point or full stop between letters; a thousands separator
      followed by exactly three digits, so `35` never finds *3.5*. Quoted text
      stays exact.
    - **Plurals and possessives** (Harman's S-stemmer, 1991): each word of a
@@ -115,9 +124,10 @@ core asserts the same file when it lands).
    - tag names;
    - the sentiment.
 
-   So *tom delivery* finds Tom's quote about delivery.
+   So `tom "delivery"` finds Tom's quote about delivery; unquoted, *tom
+   delivery* is one run and must be said together.
 5. **Activation.** Free text filters from **2 characters**, or 1 Chinese or
-   Japanese character (today: 3; decided 3 Oct 2026). Characters are counted
+   Japanese character (was 3 until 3 Oct 2026). Characters are counted
    in the parsed terms, after folding: quote marks and edge apostrophes don't
    count (`''` and `'s` are not searches), and a letter written with a
    separate accent counts once.
@@ -143,8 +153,8 @@ searches, so free text must stay the default action).
 | Row | Candidates | Recognised when | Count shown | Cap |
 |---|---|---|---|---|
 | **Free text** | the query itself | query is active (§3.5) | quotes that would be visible | always first |
-| **Person** | every speaker code in the project's people list or on any quote; names from the people list (full and short) | every query word matches the start of the code or of a name word (*p3*, *pri*, *shah*) | quotes that person said, under the current tokens | 3 |
-| **Tag** | every tag name on any quote (store edits included) | every query word matches the start of a word in the tag name | quotes carrying that tag, under the current tokens | 3 |
+| **Person** | every speaker code in the project's people list or on any quote; names from the people list (full and short) | the typed run matches, in order, from the start of a word in the code or a name (*p3*, *pri*, *shah*; not *shah priya*) | quotes that person said, under the current tokens | 3 |
+| **Tag** | every tag name on any quote (store edits included) | the typed run matches, in order, from the start of a word in the tag name | quotes carrying that tag, under the current tokens | 3 |
 
 Ordering within a group: exact match first (*p3* typed, *p3* offered), then by
 count, then by name. **A row whose count is 0 is not offered**, except the
@@ -168,7 +178,7 @@ by code prefix, never by the stored role (`frontend/CLAUDE.md`).
   The free-text row above it already shows what was typed.
 
 In the browser the lens glyphs are our own SVGs drawn to match. SF Symbols
-may not be shipped in a web page, and the SPA has no lens icons today.
+may not be shipped in a web page. One so far: Quotes (`QuotesLensGlyph` in `SearchBox.tsx`).
 
 ## 5. Tokens
 
@@ -217,10 +227,10 @@ recognised text, a menu opens under it.
 
 | Input | Menu open | Menu closed |
 |---|---|---|
-| typing | recompute rows; keep the highlighted row while it is still offered (rows are addressed by id), else row 1 (free text) | open when there are rows. Only an edit opens it: text the store or a lens switch puts back does not |
+| typing | recompute rows; an edit returns the highlight to row 1 (free text). A re-post that only changes counts (AutoCode, a hide) keeps the highlighted row, addressed by id | open when there are rows. Only an edit opens it: text the store or a lens switch puts back does not |
 | ↓ / ↑ | move the highlight (wraps). Within the 150 ms debounce the rows are still the last query's, so the first press sends the text instead and the rows it brings are the ones moved through | open the menu |
 | ↩ | apply the highlighted row. A free-text row commits the query now (no debounce wait); a person or tag row becomes a token and **clears the typed text**. Within the debounce it only commits the text: a row computed for the previous query is never chosen | commit the query |
-| Esc | close the menu | empty the field, text **and** tokens, as ⓧ does and as Mail's field does (decided 3 Oct 2026, §12 Q2); on the Mac it also collapses the field |
+| Esc | close the menu | empty the field, text **and** tokens, as ⓧ does and as Mail's field does (decided 3 Oct 2026, §12 Q2); on the Mac it also collapses the field, and in the browser a second Esc on the empty field does |
 | ⌫ in an empty input | — | first press selects the last token, second removes it |
 | click a token, or ↩ / Space / ↓ on it | — | opens its meaning menu (radio items + Remove) with the focus on its first item; ↓ ↑ Home End move, Esc returns to the chip. A choice returns the focus to the chip; Remove gives it to the next chip or the input, never the page. No key pressed on a chip or in its menu reaches the report's quote shortcuts |
 | blur | close the menu | — |
@@ -403,7 +413,7 @@ vitest must be re-run for any test quoting it.
 | `filter.test.ts` | each of the six token meanings; AND with text; token independence from the tag sidebar |
 | `SearchBox.test.tsx` | the §6 table row by row, plus the ARIA attributes |
 | bridge contract fixture + Swift round-trip | `search-suggestions` and `quotes-filter.tokens` decode, including an unknown future `kind` (ignored, not fatal) |
-| human QA | the menu's feel in the browser; native chips and popover in the `.app` |
+| human QA | the menu's feel in the browser; native chips and the suggestions window in the `.app` |
 
 ## 11. Build plan
 
@@ -411,12 +421,12 @@ Each phase ends green and committed.
 
 | Phase | Work | Exit check |
 |---|---|---|
-| **P1 Matcher** | `searchMatch.ts`, contract fixture, `highlight.tsx` and `filter.ts` switched to it | vitest green; every shipped search behaviour still covered, the D4 change asserted. **Done 3 Oct 2026**: matcher and fixture (53 matching cases, 15 activation cases), then the Quotes filter, highlights, the "N matching" label, the search box and ⌘E (sends its selection as a quoted phrase) switched to it. A test pins that the search menu's count equals the list a researcher gets on ↩, with hidden, starred and store tag edits in play |
+| **P1 Matcher** | `searchMatch.ts`, contract fixture, `highlight.tsx` and `filter.ts` switched to it | vitest green; every shipped search behaviour still covered, the D4 change asserted. **Done 3 Oct 2026**: matcher and fixture (53 matching cases and 15 activation cases at P1; the fixture has grown since), then the Quotes filter, highlights, the "N matching" label, the search box and ⌘E (sends its selection as a quoted phrase) switched to it. A test pins that the search menu's count equals the list a researcher gets on ↩, with hidden, starred and store tag edits in play |
 | **P2 Tokens** | token types + predicates; `searchTokens` in QuotesStore with add/remove/set-mode actions; **one** `filterStateOf(store)` replacing the six hand-built `FilterState`s (Toolbar, QuoteSections, QuoteThemes, ExportDropdown, LensSubtitleSync, `getVisibleQuotes`); highlight of mentions/contains | exports and subtitle counts honour tokens (asserted). **Done 3 Oct 2026**, headless (no way to add a token from the screen until P4): `utils/searchTokens.ts`; `filterStateOf` is referentially stable, so it sits in dependency lists as itself and a new filter (a token, a filter-menu row) is added once; the quote cards take parsed `highlight` terms instead of the raw query. Asserted: the web Export menu's scope, the native counts (`getVisibleQuotes`), the window subtitle and the "N matching" label all narrow with tokens; said-by/not and tagged/not-tagged partition a synthetic project exactly; mentions and contains agree with an independently written whole-word check |
 | **P3 Recognisers** | `searchSuggest.ts`, pure; people from `getPeople()` (embedded in the export) | unit tests. **Done 3 Oct 2026**, headless: rule tests on a hand-built project, invariants and an independently written matcher over the seeded synthetic project (`searchSynthetic.ts`), and a 10,000-quote scale test (2–8 ms a keystroke warm, 17 ms cold, on an M-series Mac) |
 | **P4 Browser UI** | **Built 4 Oct 2026** (`SearchBox.tsx` with `combo`, `searchKeys.ts`, CSS in `molecules/search.css`): the same rows, chips, meaning menus and keys as the Mac, from the same `searchSuggestionsFor` and `searchBridge` labels; a WAI-ARIA combobox (`aria-activedescendant`, options never focused), people and tags as labelled groups. With tokens the field shrinks and wraps its chips rather than spilling out of the column (the toolbar right-aligns). The placeholder reword (§8) and one live announcement per settled search (§6, reusing the translated `toolbar.matching`) landed the same night. Code and WCAG reviews the same night; their fixes landed too: focus never drops to the page from a chip menu, chip keys never reach the quote shortcuts, the accent ring on the highlight, the debounce cannot choose a stale row, Safari IME (§6) | vitest; e2e `search.spec.ts`; `check-locales.py --strict`; browser QA |
-| **P5 Mac** | **Native menu and chips built 3 Oct 2026** (`SearchFieldViews.swift`, wired in `QuotesToolbarControls.swift`); wording approved and the §8 keys seeded in 21 locales on 4 Oct 2026. **Plumbing done 3 Oct 2026**, headless: the menu, tokens and badge styles cross the bridge in both directions, pinned on both sides by `tests/fixtures/search-bridge-contract.json`; the `BadgeStyle` probe and its per-appearance cache in the SPA; Swift decodes and holds all three on `BridgeHandler`. **Remaining:** the badge snapshot test against a web PNG (§7a); VoiceOver for the list (it is a non-key window, so the field would need to announce the highlighted row) | `desktop/scripts/test-swift.sh`; `.app` QA side by side with the card badge, both palettes and schemes |
-| **P6 Docs** | true `design-html-report.md`'s search section and `platform-text-map.md`; set this doc's status to shipped | — |
+| **P5 Mac** | **Native menu and chips built 3 Oct 2026** (`SearchFieldViews.swift`, wired in `QuotesToolbarControls.swift`); wording approved and the §8 keys seeded in 21 locales on 4 Oct 2026. **Plumbing done 3 Oct 2026**, headless: the menu, tokens and badge styles cross the bridge in both directions, pinned on both sides by `tests/fixtures/search-bridge-contract.json`; the `BadgeStyle` probe and its per-appearance cache in the SPA; Swift decodes and holds all three on `BridgeHandler`. VoiceOver for the list is built: the field announces the highlighted row on every ↑/↓ (`announceHighlight()`), since the list is a non-key window. **Remaining:** the badge snapshot test against a web PNG (§7a) | `desktop/scripts/test-swift.sh`; `.app` QA side by side with the card badge, both palettes and schemes |
+| **P6 Docs** | **Done 4 Oct 2026** (`design-html-report.md` search banner, `platform-text-map.md`). Set this doc's status to shipped at the release | — |
 
 ## 12. Open questions
 
@@ -438,7 +448,7 @@ Each phase ends green and committed.
    SPA computes the order once and both the browser and the native menu draw
    it, so the two surfaces agree. Pass the UI locale explicitly if the order
    must not depend on the machine.
-7. **Short names that are ordinary words** (*Will*, *Grace*, *Mark*, *May*). **Accepted for v1, 4 Oct 2026** — there are humans called Will. Typed text is now a run (D4), so `will smith` finds the name and `will` still finds *William* from the start of the word. The open part is the *mentions* token:
+7. ~~**Short names that are ordinary words**~~ (*Will*, *Grace*, *Mark*, *May*). **Accepted for v1, 4 Oct 2026** — there are humans called Will. Typed text is now a run (D4), so `will smith` finds the name and `will` still finds *William* from the start of the word. The open part is the *mentions* token:
    *mentions* matches them as whole words, so "I will" counts as mentioning
    Will. The highlight shows why each quote matched. The alternative, using
    only the full name when the short name is a dictionary word, would miss
@@ -448,7 +458,7 @@ Each phase ends green and committed.
    finishing in the background, or an AutoCode report being applied, so it
    keeps what they were looking at: the query, tokens, starred-only and the tag
    filter (`initFromQuotes(…, replace)`). It used to clear all four.
-9. **Speaker codes are tokens.** Decided 3 Oct 2026: a code typed as the
+9. ~~**Speaker codes are tokens.**~~ Decided 3 Oct 2026, refined 4 Oct: a code typed as the
    first word and followed by a space (`p3 `, `M1 `) becomes a *said by* token; the space
    is what tells `m1` from the start of `m11`. Codes in a quoted phrase stay
    text, and only codes of people with a quote that is not hidden count
@@ -468,11 +478,12 @@ Each phase ends green and committed.
    made a *said by m1* token whenever a moderator had quotes and spliced the
    neighbours into the run *the motorway*, which nobody typed and which
    usually matched nothing.
-10. **Who closes the native menu on the free-text row.** Choosing it leaves
-    the query as typed (the contract's `commit-text`), so no new
-    `search-suggestions` arrives to empty the menu. The native side should
-    close it on that choice; the SPA cannot tell it to.
-11. **Accepted 3 Oct 2026. Badge styles are keyed by folded tag name**, so two tags whose names
+10. ~~**Who closes the native menu on the free-text row.**~~ Done 3 Oct 2026:
+    the native side closes it on that choice (`menuDismissed = true` in
+    `QuotesToolbarControls.swift`). Choosing it leaves the query as typed (the
+    contract's `commit-text`), so no new `search-suggestions` arrives to empty
+    the menu, and the SPA cannot tell it to.
+11. ~~**Badge styles are keyed by folded tag name.**~~ Accepted 3 Oct 2026, so two tags whose names
     differ only by case or accents share one style, as they share one
     suggestion (Q5). If they sit in codebooks with different colours, the
     native chip takes whichever was measured last.

@@ -18,8 +18,8 @@ when gathered. Vendor claims are treated as claims.
 | Need | Example | Right mechanism |
 |---|---|---|
 | **Resolving which person a name means** | "William" finds the participant called Will | An alias list on each person, filled by the pipeline's LLM pass ("call me Will") and editable in the people view. No embeddings. |
-| **Concept match** | "price" finds "way too expensive" | Embeddings, shown as a separate, labelled *Related* tier below the exact matches |
-| **Question** | "Which participant was motivated by free drinks?" | A cited answer: today through Claude or ChatGPT on the MCP extension; in the app, the chat lens |
+| **Concept match** | "price" finds "way too expensive" | Meaning is an LLM problem (decided 4 Oct 2026): the agent over MCP. Embeddings shown as a labelled *Related* tier in the field would be the in-app route, reopened only if the field ever needs it |
+| **Question** | "Which participant was motivated by free drinks?" | A cited answer through Claude or ChatGPT on the MCP extension. The in-app chat lens is parked (4 Oct 2026) |
 
 The owner's point (4 Oct 2026): the obvious enhancements are AI ones, and the
 best way to ask a question of a report *today* is Claude through the MCP
@@ -30,7 +30,11 @@ matcher that misses.
 **The filter stays a filter.** Exact matches in report order are the
 researcher's triage scaffold: they need every quote, and a count they can trust.
 Anything fuzzy (word forms, typos, meaning) is a separate, labelled tier or an
-explicit choice, never a silent widening. NVivo and MAXQDA make word forms
+explicit choice, never a silent widening — with one deliberate exception: a
+typed plural or possessive also finds the singular (Harman, 4 Oct 2026), on by
+default, because it is the narrowest widening there is and nobody typing *dogs*
+means to exclude *dog*. Whether Snowball's broader stemming stays default or
+becomes opt-in is decided with step 8. NVivo and MAXQDA make word forms
 opt-in. Dovetail widens unquoted terms silently, which suits a repository being
 browsed and does not suit a quote count.
 
@@ -52,12 +56,12 @@ L (a week or more). **Value** is for a researcher using the report.
 | Split ↔ join on zero results ("co op" finds "coop") | Typesense `split_join_tokens: fallback` | ⬜ | Only when nothing matched, so it never widens a working filter | S | Medium |
 | Segmentation for unspaced scripts | ICU dictionary, Kuromoji + bigrams, `Intl.Segmenter` | ✅ match anywhere | Unigram substring: maximum recall, fine for a filter. Dictionary segmentation is a precision option only | — | — |
 | Korean particles | Lucene Nori `KoreanPartOfSpeechStopFilter` (strips by default) | 🟡 | Done for whole-word name matching; not for free text | S–M | Medium for ko |
-| Word forms (stemming or lemmas) | Snowball (16 of our languages), Simplemma (uk), NVivo and MAXQDA opt-in | ⬜ | Opt-in, keyed on the **spoken** language, not the UI language. Most valuable for fi, cs, pl, ru, uk, tr | M | Medium |
+| Word forms (stemming or lemmas) | Snowball (`@orama/stemmers`: 28 languages, 14 of ours), Simplemma (uk), NVivo and MAXQDA opt-in | 🟡 | English plurals and possessives (Harman) ship on by default, 4 Oct 2026; Snowball per spoken language ⬜ (step 8). Most valuable for fi, cs, pl, ru, uk, tr | M | Medium |
 | Typo tolerance | Algolia 4/8, Meilisearch 5/9, Typesense 4/7 (characters for 1 and 2 typos) | ⬜ | Never inside the filter: it adds silent false positives (cost ≈ cast). Safe in people and tag suggestions, and as "did you mean" on zero results | S–M | Medium |
 | Synonyms | NVivo thesaurus (7 languages); project-defined | ⬜ | Project-defined, proposed by the LLM, accepted by the researcher. Semantic search covers much of it | M | Low–Med |
 | Boolean OR in text | Apple Mail AND/OR/NOT | 🟡 | Chips already give NOT and implicit AND; only OR is missing | S | Low |
 | Ranking | BM25 (`fts5 bm25()`) | ⬜ by design | Not for the exact tier. Only for a Related tier, transcripts, cross-project | — | — |
-| Same rules on every surface | Shared golden fixture | 🟡 | `tests/fixtures/search-match-contract.json` pins the rules, but **only TypeScript asserts it**. The MCP `search_quotes` tool uses a plain lower-case substring (`mcp_server.py:635`): no accent folding, no phrases, no joined forms | M | **High** |
+| Same rules on every surface | Shared golden fixture | 🟡 | `tests/fixtures/search-match-contract.json` pins the rules, but **only TypeScript asserts it**. The MCP `search_quotes` tool uses a plain lower-case substring (`_tool_search_quotes._matches` in `mcp_server.py`): no accent folding, no phrases, no joined forms | M | **High** |
 
 ### Search UX
 
@@ -83,10 +87,10 @@ L (a week or more). **Value** is for a researcher using the report.
 | Ask the report from the search field | Dovetail (auto-detects questions), Marvin, MAXQDA AI Chat | ⬜ by decision | Parked 4 Oct 2026: MCP is the chat lens, so a question goes to the researcher's own agent. The chat lens prototype (whole corpus in context, server-checked citations, a support check) stays as grounding work | — | — |
 | Scope a question by the active chips | Marvin, Delve, ATLAS.ti | ⬜ | Parked with the in-app question box; on MCP, the agent scopes with `search_quotes` filters | — | — |
 | Quotes from participants only | Marvin "Respondents" | — check | Quotes are participant speech by construction; confirm before building anything | — | — |
-| Citations as IDs, verbatim text from the store | Claude citations on custom-content blocks | ✅ in the chat lens | Server-constructed indices; a fabricated citation is an out-of-range number | — | — |
-| Answer plus "show all N matching quotes" | NN/g: people fact-check AI with search | ⬜ | The research evidence is that omission is a bigger risk than invention; the handoff to the filter answers omission | S | Medium |
-| Semantic *Related* tier | Hybrid BM25 + vectors (BEIR); RRF | ⬜ | Embeddings at analysis time, brute-force cosine (no vector index at quote scale). Changes the export (≈6 MB of vectors against a 1.55 MB file) | M–L | Med–High, unproven here |
-| On-device embeddings | multilingual-e5, BGE-M3, EmbeddingGemma; Apple `NLEmbedding` (6 languages) | ⬜ | Apple's sentence embedding is unsuitable for 21 locales. Evaluate on our own transcribed speech; leaderboards do not transfer (BEIR) | L | — |
+| Citations as IDs, verbatim text from the store | Claude citations on custom-content blocks | ✅ in the parked chat-lens lab | Server-constructed indices; a fabricated citation is an out-of-range number. `grounding.py` also serves the MCP tools | — | — |
+| Answer plus "show all N matching quotes" | NN/g: people fact-check AI with search | ⬜ parked | Was an in-app handoff. On MCP, the agent can page `search_quotes` (it returns `next_offset`) to show it is not omitting quotes | — | — |
+| Semantic *Related* tier | Hybrid BM25 + vectors (BEIR); RRF | ⬜ by decision | Meaning is the agent's (4 Oct 2026). Notes kept for a reopening: embeddings at analysis time, brute-force cosine; changes the export (≈6 MB of vectors against a 1.55 MB file) | M–L | — |
+| On-device embeddings | multilingual-e5, BGE-M3, EmbeddingGemma; Apple `NLEmbedding` (6 languages) | ⬜ by decision | As above. Apple's sentence embedding is unsuitable for 21 locales; evaluate on our own transcribed speech if reopened (BEIR) | L | — |
 
 ### Evaluation
 
@@ -95,7 +99,7 @@ L (a week or more). **Value** is for a researcher using the report.
 | Golden lexical fixture | 🟡 | Exists for TypeScript; Python must assert it when it matches | S once Python matches |
 | Zero-result rate | ⬜ | Counts only, local: the queries themselves are participant data | S |
 | Known-item recall for semantic and QA | ⬜ | 50–100 paraphrase queries per main language, human-approved once | M |
-| Citation checks | 🟡 | Verbatim by construction; a support check exists in the chat lens | — |
+| Citation checks | 🟡 | Verbatim by construction; a support check exists in the parked chat-lens lab | — |
 
 ## Proposed sequence
 
@@ -143,10 +147,10 @@ withdrawn, and a question in the search field is the agent's job.
 8. **Word forms by Snowball, not by hand.** `@orama/stemmers` (Apache-2.0, 28
    languages, 1–2 kB gzipped each) replaces the English-only Harman rule shipped
    on 4 Oct 2026; none exists for ca, cs or pl. Stems the quotes as well as the
-   query, keyed on the spoken language (which the SPA does not receive yet),
+   query, keyed on the spoken language (stored per session, `server/models.py`, but not yet sent to the SPA),
    lazy per language, and only the report's language in the HTML export. Korean
    particles for free text; German ü/ue for German quotes. **M.**
-9. **Semantic Related tier**, after an evaluation on our own speech. **M–L.**
+9. ~~**Semantic Related tier.**~~ Withdrawn 4 Oct 2026: meaning is the agent's, over MCP.
 10. Later, on demand: OR in text, saved views, project synonyms, Nordic letter
     exemption.
 

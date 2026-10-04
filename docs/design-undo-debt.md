@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-09-12
-trued-against: HEAD@main (895fe8a6) on 2026-09-12
+last-trued: 2026-10-04
+trued-against: HEAD@main on 2026-10-04
 ---
 
 # Away with Undo Debt
@@ -44,6 +44,17 @@ that made the gap obvious.
 > contradictions, (2) was **closed 19 Aug 2026** in favour of the ban (see the note
 > under §Corollaries); (1) remains open, and §Mechanism's 2026-07-28 supersession
 > note is the thing to read before quoting `NSUndoManager` as the target.
+
+> **Update (4 Oct 2026).** The report's half is built: one page-scoped stack
+> carrying speaker names, star/hide, tags and text edits, over the `undo-state`
+> bridge — `canUndo` is no longer hard-coded false
+> ([`design-people.md`](design-people.md) §B10,
+> [`design-undo-catalog.md`](design-undo-catalog.md) "What exists today"). For the
+> report domain that settles contradiction (1) as the bridge, not `NSUndoManager`;
+> the register below — the sidebar's own mechanism — is unchanged. One new
+> interaction between the two halves, recorded in the catalog's divide point 2:
+> `UndoableRemovalStore`'s pending removal outranks the report stack in Edit ▸ Undo
+> and, with no expiry, shadows it until undone or superseded.
 
 ## Principle
 

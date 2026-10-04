@@ -163,6 +163,16 @@ def test_the_anonymised_export_keeps_only_the_guide_lines_that_were_asked():
     assert [i["id"] for i in record["sections"][0]["items"]] == ["s1.1"]
 
 
+def test_the_anonymised_export_drops_the_guide_file_name():
+    from bristlenose.server.routes.export import _anonymise_data
+
+    rec = _record([])
+    rec["guide_file"] = "Acme renewal guide.docx"
+    endpoints = {"/discussion": {"status": "ready", "record": rec}}
+    _anonymise_data(endpoints)
+    assert "Acme" not in str(endpoints["/discussion"])
+
+
 def test_the_anonymised_export_drops_a_guide_section_nobody_asked_about():
     from bristlenose.server.routes.export import _anonymise_data
 

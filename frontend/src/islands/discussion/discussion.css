@@ -108,15 +108,29 @@
 }
 .dl-guide-view label { display: inline-flex; align-items: center; gap: var(--bn-space-xs); cursor: pointer; }
 .dl-guide-view input { margin: 0; accent-color: var(--bn-colour-accent); }
+/* Summary | the guide's file: the file name is a link that chooses another.
+   A link, not a button: it reads as the file, which is what it names. */
+.dl-guide-opt { display: inline-flex; align-items: center; gap: var(--bn-space-xs); min-width: 0; }
+.dl-guide-file {
+    background: none; border: 0; padding: 0; font: inherit; color: var(--bn-colour-accent);
+    cursor: pointer; white-space: nowrap; text-decoration: none;
+}
+button.dl-guide-file:hover { text-decoration: underline; }
+button.dl-guide-file:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; border-radius: 2px; }
+span.dl-guide-file { color: var(--bn-colour-muted); cursor: default; }
 /* The key: the shipped .bn-pipeline-key (type, gaps, colour) in a thin keyline
    box the width of the navigator's measure. Nothing here sets type. */
 .dl-key {
-    margin: var(--bn-space-lg) 0 0;
+    margin: 0 0 var(--bn-space-md);   /* at the top of the guide, above the first section */
     padding: var(--bn-space-sm);
     border: 1px solid var(--bn-colour-keyline);
     border-radius: var(--bn-radius-md);
+    color: var(--bn-colour-text);   /* the shared key is muted; see .dl-key-grey */
 }
 .dl-key .dl-mk { display: inline-block; cursor: default; }
+/* The key in the normal ink, so its grey line shows the grey it explains — the
+   very token the rows use (.dl-row.ghost). Map and chart keys work this way. */
+.dl-key .dl-key-grey { color: var(--bn-colour-muted); }
 /* Each section is a labelled group, so every heading is its group's first child
    and the shipped `.toc-heading:first-child { margin-top: 0 }` matched them all.
    Give back the shipped 1rem between sections (sidebar.css .toc-heading). */

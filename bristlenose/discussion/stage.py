@@ -212,6 +212,7 @@ async def run_discussion(
     record.guide_sha = guide.sha if guide else NO_GUIDE_SHA
     if guide is not None:
         stats["guide_files_ignored"] = len(guide.ignored)
+        record.guide_file = guide.path.name
         # A guide that is there but unused is said so, never read as "no guide".
         record.guide_problem = guide.problem
         if guide.text:

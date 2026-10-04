@@ -51,7 +51,7 @@ describe("DiscussionView", () => {
     const rows = container.querySelectorAll(".dl-nav .dl-row");
     expect(rows).toHaveLength(data.spine.reduce((n, s) => n + s.items.length, 0));
     expect(container.querySelectorAll(".dl-nav .dl-dot.hollow")).toHaveLength(0);
-    expect(container.querySelectorAll(".dl-nav .dl-mk .dl-dot")).toHaveLength(rows.length);
+    expect(container.querySelectorAll(".dl-nav .dl-row .dl-mk .dl-dot")).toHaveLength(rows.length);
   });
 
   it("a header session switches the column and marks itself as here", () => {
@@ -239,26 +239,36 @@ describe("review fixes, 3 Oct 2026", () => {
 
   it("offers to add or replace the guide with the house small button, and says where the guide goes", () => {
     const { unmount } = render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
+    expect(screen.queryByRole("button", { name: "Add your guide…" })).toBeNull(); // not on the first tab
+    fireEvent.click(screen.getByRole("radio", { name: "Add your guide" }));
+    expect(screen.getByRole("heading", { name: "Upload your discussion guide" })).toBeInTheDocument();
+    expect(screen.getByText(/See the study as you planned it/)).toBeInTheDocument();
+    expect(screen.getByText("Docx, Markdown or text files.")).toBeInTheDocument();
     const add = screen.getByRole("button", { name: "Add your guide…" });
     expect(add).toHaveClass("bn-btn", "bn-btn-secondary", "bn-btn-sm");
     fireEvent.click(add);
     expect(screen.getByRole("status").textContent).toMatch(/folder named “Discussion guide”/);
     unmount();
+    resetLensState(); // the lens remembers its tab between visits
     render(<DiscussionView data={data} />);
     expect(screen.queryByRole("button", { name: /your guide…/ })).toBeNull(); // Normalised, with a guide
     fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
     expect(screen.getByRole("button", { name: "Replace your guide…" })).toBeInTheDocument();
   });
 
-  it("Normalised questions carries a small key of the marks; Your guide does not", () => {
+  it("each tab carries a key at the top, of the marks it shows", () => {
     render(<DiscussionView data={data} />);
     const key = screen.getByRole("note", { name: "Key" });
     expect(key).toHaveClass("bn-pipeline-key");
     for (const t of ["Asked as planned", "Planned, never asked", "Not in your guide", "Grey: not asked in this session"]) {
       expect(within(key).getByText(t, { exact: false })).toBeInTheDocument();
     }
+    // above the first section, so it scrolls away
+    expect(key.nextElementSibling?.getAttribute("role")).toBe("group");
     fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
-    expect(screen.queryByRole("note", { name: "Key" })).toBeNull();
+    const planned = screen.getByRole("note", { name: "Key" });
+    expect(within(planned).getByText("Asked as planned", { exact: false })).toBeInTheDocument();
+    expect(within(planned).queryByText("Not in your guide", { exact: false })).toBeNull(); // no + rows here
   });
 
   it("each mark explains itself on hover, the house ? cursor way", () => {
@@ -454,6 +464,7 @@ describe("the guide button in the Mac app", () => {
     (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
     _resetEmbeddedCache();
     render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Add your guide" }));
     fireEvent.click(screen.getByRole("button", { name: "Add your guide…" }));
     expect(bridge.postProjectAction).toHaveBeenCalledWith("choose-discussion-guide");
     expect(screen.queryByText(/folder named “Discussion guide”/)).toBeNull();
@@ -461,6 +472,7 @@ describe("the guide button in the Mac app", () => {
 
   it("in a browser it says where the guide goes, and asks nothing of a host", () => {
     render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Add your guide" }));
     fireEvent.click(screen.getByRole("button", { name: "Add your guide…" }));
     expect(bridge.postProjectAction).not.toHaveBeenCalled();
     expect(screen.getByText(/folder named “Discussion guide”/)).toBeInTheDocument();
@@ -582,5 +594,41 @@ describe("the guide as a left panel (4 Oct 2026)", () => {
     // the opening width (30% of the window, 280–480) + the wires + the conversation's 368 floor
     const opening = Math.round(Math.min(480, Math.max(280, 0.3 * window.innerWidth)));
     expect(discussionGuideState().wanted).toBe(opening + 40 + 368);
+  });
+});
+
+
+describe("the guide tabs (4 Oct 2026)", () => {
+  afterEach(() => {
+    delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__;
+    _resetEmbeddedCache();
+    bridge.postProjectAction.mockReset();
+  });
+
+  it("are always there: with no guide the second tab is where one is added", () => {
+    render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
+    expect(screen.getByRole("radio", { name: "Normalised questions" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Add your guide" })).toBeInTheDocument();
+  });
+
+  it("show the guide by its file name, which chooses a different one", () => {
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    _resetEmbeddedCache();
+    render(<DiscussionView data={{ ...data, guide_file: "Home coffee discussion guide v3 final.docx" }} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
+    expect(screen.getByRole("radio", { name: "Original: Home coffee discussion guide v3 final.docx" })).toBeInTheDocument();
+    const link = screen.getByRole("button", { name: "Choose a different guide" });
+    expect(link.textContent).toMatch(/…/); // shortened, the extension kept
+    expect(link.textContent).toMatch(/\.docx$/);
+    fireEvent.click(link);
+    expect(bridge.postProjectAction).toHaveBeenCalledWith("choose-discussion-guide");
+    expect(screen.queryByRole("button", { name: "Replace your guide…" })).toBeNull(); // the link replaces it
+  });
+
+  it("in an export with no guide there is nothing to add, so no tabs", () => {
+    exportState.on = true;
+    render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
+    expect(screen.queryByRole("radio", { name: "Add your guide" })).toBeNull();
+    exportState.on = false;
   });
 });

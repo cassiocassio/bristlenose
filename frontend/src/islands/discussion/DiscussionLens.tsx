@@ -25,6 +25,7 @@ import { SectionHeading } from "../../components/SectionHeading";
 import { announce } from "../../utils/announce";
 import { isExportMode } from "../../utils/exportData";
 import { dt } from "../../utils/platformTranslation";
+import { formatFinderFilename } from "../../utils/format";
 import { isEmbedded } from "../../utils/embedded";
 import { postProjectAction } from "../../shims/bridge";
 import { CONTENT_FLOOR_PX, fitPanels } from "../../contexts/SidebarStore";
@@ -98,6 +99,11 @@ const S = {
   // Hover meanings for the marks — the house "? cursor + title" pattern
   // (Signals' metric labels and intensity dots).
   get addGuide() { return d("addGuide"); },
+  get addGuideTab() { return d("addGuideTab"); },
+  get addGuideHeading() { return d("addGuideHeading"); },
+  get addGuideIntro() { return d("addGuideIntro"); },
+  get addGuideFormats() { return d("addGuideFormats"); },
+  get chooseOtherGuide() { return d("chooseOtherGuide"); },
   get replaceGuide() { return d("replaceGuide"); },
   get guideHowTo() { return p("guideHowTo"); },
   get key() { return d("key"); },
@@ -615,6 +621,13 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     !!focus && (focus.turn ? focus.turn === b : focus.item === a && lit.has(b));
 
   const style = { "--dl-nav-w": `${Math.round(navWidth)}px` } as React.CSSProperties;
+
+  const chooseGuide = () => (isEmbedded() ? postProjectAction("choose-discussion-guide") : setGuideNote(true));
+  // The house small secondary button, as at the foot of the Codebook navigator.
+  const guideButton = (label: string) => (
+    <button type="button" className="bn-btn bn-btn-secondary bn-btn-sm" onClick={chooseGuide}>{label}</button>
+  );
+  const keyMarks = new Set(sections.flatMap(({ rows }) => rows.map((r) => r.mark)));
   // Normalised questions first: it is the view the lens opens on.
   const modes: Mode[] = ["merged", "planned"];
 
@@ -623,14 +636,16 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       style={style} data-testid="discussion-lens">
       <div ref={barRef} className="dl-bar">
         <div className="dl-bar-nav">
-        {data.guide ? (
+        {/* Always both tabs: with no guide, the second is where one is added. An
+            export cannot add one, so there it is only shown when there is a guide. */}
+        {data.guide || !isExportMode() ? (
           <span className="dimension-toggle" role="radiogroup" aria-label={S.show}>
             {modes.map((m) => (
               <button key={m} type="button" role="radio" aria-checked={mode === m} data-value={m}
                 tabIndex={mode === m ? 0 : -1} onKeyDown={(e) => onRadioKeys(e, modes, mode, setMode)}
-                title={m === "planned" ? S.plannedTip : S.mergedTip}
+                title={m === "planned" ? (data.guide ? S.plannedTip : undefined) : S.mergedTip}
                 className={`dimension-btn${mode === m ? " active" : ""}`} onClick={() => setMode(m)}>
-                {m === "planned" ? S.planned : S.merged}
+                {m === "merged" ? S.merged : data.guide ? S.planned : S.addGuideTab}
               </button>
             ))}
           </span>
@@ -655,13 +670,61 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
         {mode === "planned" && data.guide && (
           // Native radios: arrow keys and announcement come with the element.
           <div className="dl-guide-view" role="radiogroup" aria-label={S.guideView}>
-            {(["summary", "original"] as const).map((v) => (
-              <label key={v}>
-                <input type="radio" name="dl-guide-view" value={v} checked={guideView === v}
-                  onChange={() => setGuideView(v)} />
-                {v === "summary" ? S.summary : S.original}
+            <label>
+              <input type="radio" name="dl-guide-view" value="summary" checked={guideView === "summary"}
+                onChange={() => setGuideView("summary")} />
+              {S.summary}
+            </label>
+            {data.guide_file ? (
+              // The original is shown by its file name, which is also how you
+              // choose a different guide (4 Oct 2026). The radio and the link are
+              // separate controls: nothing interactive nests inside a label.
+              <span className="dl-guide-opt">
+                <input type="radio" name="dl-guide-view" value="original" checked={guideView === "original"}
+                  aria-label={`${S.original}: ${data.guide_file}`} onChange={() => setGuideView("original")} />
+                {isExportMode() ? (
+                  <span className="dl-guide-file" title={data.guide_file}>{formatFinderFilename(data.guide_file, 28)}</span>
+                ) : (
+                  <button type="button" className="dl-guide-file" title={`${S.chooseOtherGuide}: ${data.guide_file}`}
+                    aria-label={S.chooseOtherGuide} onClick={chooseGuide}>
+                    {formatFinderFilename(data.guide_file, 28)}
+                  </button>
+                )}
+              </span>
+            ) : (
+              <label>
+                <input type="radio" name="dl-guide-view" value="original" checked={guideView === "original"}
+                  onChange={() => setGuideView("original")} />
+                {S.original}
               </label>
-            ))}
+            )}
+          </div>
+        )}
+        {keyMarks.size > 0 && (
+          // The key first, so it scrolls away (4 Oct 2026). Only the marks this
+          // view uses: with no guide that is "+" alone. The classes are the
+          // Settings ▸ Pipeline symbol key's; the marks are the rows' own.
+          <div className="bn-pipeline-key dl-key" role="note" aria-label={S.key}>
+            <div className="bn-pipeline-key-group">
+              {keyMarks.has("dot") && (
+                <span className="bn-pipeline-key-item">
+                  <span className="dl-mk" aria-hidden="true"><span className="dl-dot" /></span>{S.keyBoth}
+                </span>
+              )}
+              {keyMarks.has("hollow") && (
+                <span className="bn-pipeline-key-item">
+                  <span className="dl-mk" aria-hidden="true"><span className="dl-dot hollow" /></span>{S.keyHollow}
+                </span>
+              )}
+              {keyMarks.has("plus") && (
+                <span className="bn-pipeline-key-item">
+                  <span className="dl-mk" aria-hidden="true">+</span>{S.keyPlus}
+                </span>
+              )}
+            </div>
+            <div className="bn-pipeline-key-group">
+              <span className="bn-pipeline-key-item dl-key-grey">{S.keyGrey}</span>
+            </div>
           </div>
         )}
         {sections.map(({ head, rows }) => (
@@ -677,40 +740,22 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
           // A guide that is there but went unread says so — never "no guide".
           <p className="dl-before" role="status">{S.guideProblem(data.guide_problem)}</p>
         )}
-        {(mode === "planned" || !data.guide) && !isExportMode() && (
-          // The house small secondary button at the foot of a navigator — the
-          // Codebook navigator's Browse Library is the precedent. In the Mac app
-          // it opens the native panel, which copies the guide in and re-runs
-          // (plan §4); a browser has no way to write into the project folder,
-          // so there it says where the guide goes.
-          <>
-            <button type="button" className="bn-btn bn-btn-secondary bn-btn-sm"
-              onClick={() => (isEmbedded() ? postProjectAction("choose-discussion-guide") : setGuideNote(true))}>
-              {data.guide || data.guide_problem ? S.replaceGuide : S.addGuide}
-            </button>
-            {guideNote && <p className="dl-before" role="status">{S.guideHowTo}</p>}
-          </>
-        )}
-        {mode === "merged" && (
-          // The Settings ▸ Pipeline symbol key, reused as is (its classes set the
-          // type and spacing); the marks are the rows' own, so they match exactly.
-          <div className="bn-pipeline-key dl-key" role="note" aria-label={S.key}>
-            <div className="bn-pipeline-key-group">
-              <span className="bn-pipeline-key-item">
-                <span className="dl-mk" aria-hidden="true"><span className="dl-dot" /></span>{S.keyBoth}
-              </span>
-              <span className="bn-pipeline-key-item">
-                <span className="dl-mk" aria-hidden="true"><span className="dl-dot hollow" /></span>{S.keyHollow}
-              </span>
-              <span className="bn-pipeline-key-item">
-                <span className="dl-mk" aria-hidden="true">+</span>{S.keyPlus}
-              </span>
-            </div>
-            <div className="bn-pipeline-key-group">
-              <span className="bn-pipeline-key-item">{S.keyGrey}</span>
-            </div>
+        {mode === "planned" && !data.guide && !isExportMode() && (
+          // No guide: the second tab is where one is added. The Mac opens its
+          // native panel, copies the guide in and re-runs (plan §4); a browser
+          // cannot write into the project folder, so it says where the guide goes.
+          // The heading is the navigator's own section heading (4 Oct 2026 copy).
+          <div role="group" aria-labelledby="dl-h-add-guide">
+            <h2 id="dl-h-add-guide" className="toc-heading">{S.addGuideHeading}</h2>
+            <p className="dl-before">{S.addGuideIntro}</p>
+            <p className="dl-before">{S.addGuideFormats}</p>
+            {guideButton(data.guide_problem ? S.replaceGuide : S.addGuide)}
           </div>
         )}
+        {mode === "planned" && data.guide && !data.guide_file && !isExportMode() &&
+          // A record from before the file name was kept: no link to click.
+          guideButton(S.replaceGuide)}
+        {guideNote && <p className="dl-before" role="status">{S.guideHowTo}</p>}
       </nav>
 
       <div ref={gutRef} className="dl-gut">

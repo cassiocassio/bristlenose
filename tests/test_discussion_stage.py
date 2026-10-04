@@ -145,6 +145,7 @@ def test_with_a_guide_builds_the_record_and_keeps_it_to_codes(tmp_path):
     ts, qs = two_sessions()
     record, outcome = run(ts, qs, tmp_path, FakeClient())
     assert record.status == "complete" and record.guide and record.guide_sha != NO_GUIDE_SHA
+    assert record.guide_file and "/" not in record.guide_file  # the name, never the path
     assert outcome.attempted == 2 and outcome.succeeded == 2 and not outcome.failed
     household = next(i for s in record.sections for i in s.items if i.id == "s2.1")
     assert household.source == "both" and {a.session for a in household.asks} == {"s1", "s2"}
@@ -172,6 +173,7 @@ def test_without_a_guide_runs_merged_only(tmp_path):
     client = FakeClient()
     record, _ = run(ts, qs, tmp_path, client)
     assert not record.guide and record.guide_sha == NO_GUIDE_SHA and record.spine == []
+    assert record.guide_file == ""
     assert "SpineOut" not in client.calls
 
 

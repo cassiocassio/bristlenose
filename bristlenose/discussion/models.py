@@ -218,6 +218,10 @@ class DiscussionRecord(BaseModel):
     # A guide that was there and went unread, and why (guide.Guide.problem;
     # "empty_parse" when the model found no structure). "" = read, or none.
     guide_problem: str = ""
+    # The guide's file name (never its path), shown on the lens's guide tab and
+    # used to choose a different one. Blanked in an anonymised export: a file
+    # name can name the client. "" = no guide, or a record from before 4 Oct 2026.
+    guide_file: str = ""
     quotes_sha: str = ""         # the quotes it was built from: a stale record is refused
     sessions: list[RecordSession] = Field(default_factory=list)
     spine: list[RecordSpineSection] = Field(default_factory=list)

@@ -219,6 +219,8 @@ def _anonymise_data(endpoints: dict[str, Any]) -> None:
         disc["spine"] = [sec for sec in disc.get("spine", []) if sec.get("items")]
         disc["sections"] = [sec for sec in disc.get("sections", [])
                             if sec.get("items") or sec.get("origin") == "emergent"]
+        # The guide's file name can name the client ("Acme renewal guide.docx").
+        disc["guide_file"] = ""
 
     # Project info (/info): project_name, session_count, participant_count are
     # fine — no PII.

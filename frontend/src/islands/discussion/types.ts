@@ -91,6 +91,8 @@ export interface DiscussionData {
   guide: boolean;
   /** A guide that is there but went unread, and why ("" = read, or none). */
   guide_problem?: string;
+  /** The guide's file name (never a path); "" or absent on older records. */
+  guide_file?: string;
   sessions: DiscussionSession[];
   spine: SpineSection[];
   sections: DiscussionSection[];

@@ -1,11 +1,13 @@
 ---
 status: shipped (Node .mcpb); native helper built on main, unreleased
-last-trued: 2026-09-29
-previous-trued: 2026-09-04
-trued-against: HEAD@main on 2026-09-29 (after bb50067c)
+last-trued: 2026-10-04
+previous-trued: 2026-09-29
+trued-against: HEAD@main on 2026-10-04 (after 8cb6811b)
 ---
 
 # The Bristlenose extension — connecting Claude Desktop without a config file
+
+> **Trued 4 Oct 2026 (--doc, §3.1 only).** The two handshake copies are now byte-identical by construction: `writeBoth` builds the payload once, so both carry one `updated_at` (before, each copy built its own and two writes straddling a second disagreed). §3.1 says so, and its `payload` anchor is a symbol rather than a stale line number. Nothing else changed.
 
 > **Trued 4 Sep 2026 (--topic keychain), three token-store edits.** The Generic-MCP caveat said an ad-hoc build's token "falls back to the rotating one" — the unscoped `/api/*` token §3.1 exists to keep out of the handshake; it mints an ephemeral scoped token instead. §3.1 now says the token is the one credential in the app that does not sync, and why. The address/token table names the keychain. Nothing else changed.
 
@@ -457,6 +459,12 @@ on warm re-point, and removes it on stop:
 > The group copy fails **closed**: if it can't be rewritten it is removed rather
 > than left naming the previous set (`MCPHandshake.writeBoth`, §6.9 D4). Serve
 > refuses an out-of-scope project either way (`mcp_server._run`).
+>
+> "The same bytes" is literal: `writeBoth` builds the payload once and hands it
+> to both writes, so the copies carry one `updated_at`. Until 4 Oct 2026 each
+> copy built its own, and two writes straddling a second boundary disagreed on
+> when they were written. Pinned by `writeBoth_writesIdenticalCopies_andReadsBack`,
+> which forces a clock tick between the two writes.
 
 > **Schema 2 since 19 Aug 2026 — the payload below is the schema-1 shape and is
 > still written, but only as a fallback.** Scope went plural when it stopped
@@ -466,7 +474,7 @@ on warm re-point, and removes it on stop:
 > installed weeks ago has no upgrade path (§6 risk 3) and a v2-only file would
 > silently break every proxy in the field. An empty set writes no schema-1 keys
 > at all, which an old proxy reads as "not open" — the correct answer. Source of
-> truth: `MCPHandshake.payload` (`MCPHandshake.swift:74`).
+> truth: `MCPHandshake.payload(entries:now:)` in `MCPHandshake.swift`.
 
 ```json
 {

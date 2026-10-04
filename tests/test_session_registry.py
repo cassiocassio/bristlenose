@@ -246,3 +246,62 @@ class TestPrimaryParticipant:
         s1 = self._session("s1", 1)
         _assign_session_codes([s1], {}, reg)
         assert s1.participant_id == "p4"
+
+
+class TestRegistryFileIsChecked:
+    """A file that is wrong is refused by name, with the remedy — never a bare
+    crash mid-run, and never silently read as something else."""
+
+    def _write(self, tmp_path: Path, payload: object) -> Path:
+        out = tmp_path / "out"
+        path = registry_path(out)
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        return out
+
+    @pytest.mark.parametrize("payload", [
+        {"version": 1, "sessions": [], "speakers": {}},
+        {"version": 1, "sessions": {}, "speakers": {"s1": ["p1"]}},
+        {"version": 1, "sessions": {"k": "session-one"}, "speakers": {}},
+        {"version": 1, "sessions": {"a": "s1", "b": "s1"}, "speakers": {}},
+        {"version": 1, "sessions": {}, "speakers": {"s1": {"A": "p"}}},
+        {"version": 1, "sessions": {}, "speakers": {"s1": {"A": "px"}}},
+        {"version": 1, "sessions": {}, "speakers": {"s1": {"A": "p01"}}},
+        {"version": 1, "sessions": {}, "speakers": {"s1": {"A": "p-3"}}},
+        {"version": 1, "sessions": {}, "speakers": {"s1": {"A": "x1"}}},
+        {"version": 1, "sessions": {}, "speakers": {"s1": {"A": "p2"}, "s2": {"B": "p2"}}},
+        {"version": 1, "sessions": {}, "speakers": {}, "participants_issued": "abc"},
+        {"version": 1, "sessions": {}, "speakers": {}, "participants_issued": True},
+        {"version": 1, "sessions": {}, "speakers": {}, "participants_issued": 3.9},
+        {"version": 1, "sessions": {}, "speakers": {}, "participants_issued": -1},
+        ["not", "an", "object"],
+    ])
+    def test_a_malformed_file_is_refused_by_name(self, tmp_path: Path, payload: object) -> None:
+        out = self._write(tmp_path, payload)
+        with pytest.raises(ValueError, match="sessions.json"):
+            SessionRegistry.load(out)
+
+    def test_a_file_without_the_high_water_mark_still_loads(self, tmp_path: Path) -> None:
+        # Written before participants_issued existed: the speaker map stands in.
+        out = self._write(tmp_path, {
+            "version": 1, "sessions": {"k": "s1"}, "speakers": {"s1": {"A": "p3", "": "p5"}},
+        })
+        assert SessionRegistry.load(out).next_participant_number() == 6
+
+    def test_save_flushes_to_disk_before_it_replaces(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # A rename that lands before the data can leave an empty file after a
+        # power cut, and the remedy for an unreadable file renumbers the study.
+        import os
+
+        calls: list[str] = []
+        real_fsync, real_replace = os.fsync, os.replace
+        monkeypatch.setattr(os, "fsync", lambda fd: (calls.append("fsync"), real_fsync(fd))[1])
+        monkeypatch.setattr(
+            os, "replace", lambda a, b: (calls.append("replace"), real_replace(a, b))[1],
+        )
+        reg = SessionRegistry.load(tmp_path / "out")
+        reg.sessions = {"k": "s1"}
+        reg.save()
+        assert "fsync" in calls and calls.index("fsync") < calls.index("replace")

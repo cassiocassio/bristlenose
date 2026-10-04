@@ -32,6 +32,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -84,16 +85,17 @@ class SessionRegistry:
                 f"{path} has version {version!r}; this Bristlenose reads version "
                 f"{REGISTRY_VERSION}. It may have been written by a newer release."
             )
-        sessions = data.get("sessions") or {}
-        speakers = data.get("speakers") or {}
+        problem = _problem(data)
+        if problem:
+            raise ValueError(
+                f"Cannot read {path}: {problem}. It holds this project's session "
+                "numbering; move it aside to renumber the sessions from scratch."
+            )
         return cls(
             path=path,
-            sessions={str(k): str(v) for k, v in sessions.items()},
-            speakers={
-                str(sid): {str(lbl): str(code) for lbl, code in labels.items()}
-                for sid, labels in speakers.items()
-            },
-            participants_issued=int(data.get("participants_issued") or 0),
+            sessions=dict(data.get("sessions") or {}),
+            speakers={sid: dict(labels) for sid, labels in (data.get("speakers") or {}).items()},
+            participants_issued=data.get("participants_issued") or 0,
         )
 
     def save(self) -> None:
@@ -110,6 +112,10 @@ class SessionRegistry:
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
                 json.dump(payload, fh, indent=2, ensure_ascii=False)
                 fh.write("\n")
+                # On disk before the rename: otherwise a power cut can leave
+                # an empty file, whose remedy renumbers the study.
+                fh.flush()
+                os.fsync(fh.fileno())
             os.replace(tmp, self.path)
         except BaseException:
             Path(tmp).unlink(missing_ok=True)
@@ -189,6 +195,41 @@ class SessionRegistry:
             if code.startswith("p")
         ]
         return max(self.participants_issued, *numbers, 0)
+
+
+_SID = re.compile(r"s[1-9]\d*")
+_CODE = re.compile(r"[pmo][1-9]\d*")
+
+
+def _problem(data: dict) -> str:
+    """What is wrong with a registry file's contents, or ``""``.
+
+    Checked because every value here is used as an identity: a code that does
+    not parse stops the run, ``p01`` is a different participant from ``p1``,
+    and two keys on one sid merge two sessions.
+    """
+    sessions = data.get("sessions", {})
+    speakers = data.get("speakers", {})
+    if not isinstance(sessions, dict) or not isinstance(speakers, dict):
+        return "sessions and speakers must be objects"
+    sids = list(sessions.values())
+    if not all(isinstance(sid, str) and _SID.fullmatch(sid) for sid in sids):
+        return "a session id is not of the form s<n>"
+    if len(set(sids)) != len(sids):
+        return "two sessions share one session id"
+    owner: dict[str, str] = {}
+    for sid, labels in speakers.items():
+        if not isinstance(labels, dict):
+            return f"the speakers of {sid} are not an object"
+        for code in labels.values():
+            if not isinstance(code, str) or not _CODE.fullmatch(code):
+                return f"{sid} holds a speaker code {code!r} that is not of the form p<n>, m<n> or o<n>"
+            if code.startswith("p") and owner.setdefault(code, sid) != sid:
+                return f"participant {code} is in both {owner[code]} and {sid}"
+    issued = data.get("participants_issued", 0)
+    if isinstance(issued, bool) or not isinstance(issued, int) or issued < 0:
+        return f"participants_issued is {issued!r}, not a whole number"
+    return ""
 
 
 def _number(code: str) -> int:

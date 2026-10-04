@@ -54,6 +54,8 @@ const INVISIBLE = /[\p{Cf}\p{Variation_Selector}\p{Emoji_Modifier}]/u;
 const INVISIBLE_G = /[\p{Cf}\p{Variation_Selector}\p{Emoji_Modifier}]/gu;
 const SPACE = /[\s\u0085]/u;
 const APOSTROPHES = /[\u2018\u2019\u02BC\u0060\u00B4]/g;
+/** Letters, digits and marks. A kept symbol (# @ % &) is not one, so
+ *  "hashtag" still starts a word in "#hashtag" and "sarah" in "@sarah". */
 const WORD_CHAR = /[\p{L}\p{N}\p{M}]/u;
 /** Scripts whose combining marks are optional accents, safe to fold away. */
 const ACCENTED_SCRIPT = /[\p{Script=Latin}\p{Script=Greek}\p{Script=Cyrillic}\p{Script=Arabic}\p{Script=Hebrew}]/u;
@@ -76,7 +78,12 @@ const QUOTE_MARK = /["\u201C\u201D\u201E\u00AB\u00BB\u300C\u300D]/u;
  *  the single quote marks are apostrophes here. */
 const PUNCT = /\p{P}/u;
 const APOSTROPHE_LIKE = /['\u2018\u2019]/u;
-const isPunct = (c: string) => PUNCT.test(c) && !APOSTROPHE_LIKE.test(c);
+/** Punctuation that carries meaning inside a word rather than separating
+ *  words: C#, #1, @sarah, 50%, R&D. Kept, full-width forms included (they
+ *  fold to these), so "C#" is not the letter c and "#1" is not 1. Decided
+ *  4 Oct 2026; the cost is that "R&D" no longer finds "R & D". */
+const WORD_SYMBOL = /[#@%&\uFF03\uFF20\uFF05\uFF06\uFE5F\uFE6B\uFE6A\uFE60]/u;
+const isPunct = (c: string) => PUNCT.test(c) && !APOSTROPHE_LIKE.test(c) && !WORD_SYMBOL.test(c);
 
 /** Folded text plus, for every folded UTF-16 unit, its index in the original. */
 export interface Folded {
@@ -240,14 +247,20 @@ export function parseQuery(query: string): SearchTerm[] {
   let inPhrase = false;
   const flush = (kind: "word" | "phrase") => {
     const text = fold(buf).trim();
+    const raw = buf;
     buf = "";
     if (!text) return;
     if (kind === "word") {
       // Words typed together are a phrase: "want to go" finds those words in
       // that order, never want, to and go scattered through a quote. It starts
-      // at a word start, so the last word may still be being typed.
+      // at a word start, so the last word may still be being typed — unless
+      // punctuation follows it: "why?" is a finished word and does not find
+      // "whyever".
       const w = trimApostrophes(text);
-      if (w) terms.push(makeTerm("word", w));
+      if (!w) return;
+      const term = makeTerm("word", w);
+      if (endsInPunctuation(raw)) term.whole = true;
+      terms.push(term);
     } else {
       terms.push(makeTerm("phrase", text));
     }
@@ -265,7 +278,14 @@ export function parseQuery(query: string): SearchTerm[] {
   return terms;
 }
 
-/** Strip apostrophes from both ends, in linear time. */
+/** True when the last visible character typed is punctuation (not an
+ *  apostrophe, not a word symbol): the word before it is finished. */
+function endsInPunctuation(raw: string): boolean {
+  const chars = [...raw.replace(INVISIBLE_G, "").trimEnd()];
+  const last = chars[chars.length - 1];
+  return last !== undefined && isPunct(last);
+}
+
 /** Trim apostrophes from the edges of a run, and the spaces they leave
  *  behind ("` ¨" folds to an apostrophe, a space and a mark). */
 function trimApostrophes(w: string): string {

@@ -760,6 +760,97 @@
       "query": "ing 東京",
       "match": false,
       "marked": []
+    },
+    {
+      "why": "punctuation after the last word finishes it: not a prefix any more (4 Oct 2026)",
+      "text": "whyever not",
+      "query": "why?",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "…while the finished word itself still matches",
+      "text": "but why? nobody said",
+      "query": "why?",
+      "match": true,
+      "marked": [
+        "why"
+      ]
+    },
+    {
+      "why": "…and a word still being typed is a prefix",
+      "text": "whyever not",
+      "query": "why",
+      "match": true,
+      "marked": [
+        "why"
+      ]
+    },
+    {
+      "why": "# is part of a word: C# is not the letter c",
+      "text": "we use C and Rust",
+      "query": "C#",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "…and C# finds C#",
+      "text": "we use C# daily",
+      "query": "C#",
+      "match": true,
+      "marked": [
+        "C#"
+      ]
+    },
+    {
+      "why": "#1 is not the number 1",
+      "text": "the 1 thing",
+      "query": "#1",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "…and #1 finds #1",
+      "text": "the #1 problem",
+      "query": "#1",
+      "match": true,
+      "marked": [
+        "#1"
+      ]
+    },
+    {
+      "why": "% is part of a number: 50% does not find 500",
+      "text": "about 500 people",
+      "query": "50%",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "…and 50% finds 50%",
+      "text": "it was 50% off",
+      "query": "50%",
+      "match": true,
+      "marked": [
+        "50%"
+      ]
+    },
+    {
+      "why": "& is part of a word: R&D finds R&D",
+      "text": "the R&D team",
+      "query": "R&D",
+      "match": true,
+      "marked": [
+        "R&D"
+      ]
+    },
+    {
+      "why": "a word after # still starts a word",
+      "text": "see #hashtag here",
+      "query": "hashtag",
+      "match": true,
+      "marked": [
+        "hashtag"
+      ]
     }
   ],
   "known_limits": [
@@ -781,6 +872,13 @@
       "why": "no typo tolerance yet",
       "text": "Delivery was late",
       "query": "delivrey",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "accepted 4 Oct 2026: & is kept in a word, so R&D does not find R & D",
+      "text": "R & D budget",
+      "query": "R&D",
       "match": false,
       "marked": []
     }

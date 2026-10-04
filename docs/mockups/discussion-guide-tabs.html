@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discussion guide tabs — with and without a guide (mockup)</title>
+<!-- Synthetic study. Tabler icons stand in for SF Symbols. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+<style>
+  :root{--bg:#fff;--grey:#f7f7f8;--line:rgba(0,0,0,.09);--muted:#86868b;--text:#1d1d1f;--accent:#007aff;--sel:rgba(0,122,255,.1)}
+  body{margin:0;background:#e9e9ec;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui;color:var(--text);-webkit-font-smoothing:antialiased}
+  .page{max-width:1200px;margin:0 auto;padding:24px 16px 48px}
+  .cap{font-size:13px;color:#6e6e73;line-height:1.55;margin:0 4px 14px;max-width:900px}
+  .cap b{color:var(--text)}
+  .ctl{display:flex;flex-wrap:wrap;gap:18px;margin:0 4px 16px;font-size:13px;align-items:center}
+  .grp{display:flex;align-items:center;gap:6px}
+  .grp span.l{color:#6e6e73}
+  .grp button{font:inherit;border:.5px solid rgba(0,0,0,.2);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer}
+  .grp button.on{background:#1d1d1f;color:#fff}
+  .note{font-size:13px;background:#fff;border-radius:8px;padding:10px 13px;margin:0 4px 14px;max-width:900px;line-height:1.55}
+  .note b{font-weight:600}
+  .win{background:#fff;border:.5px solid rgba(0,0,0,.16);border-radius:10px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.18);display:flex;flex-direction:column;height:620px;max-width:1040px}
+  .tbar{height:46px;flex:0 0 46px;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:.5px solid var(--line)}
+  .tbar .lights{display:flex;gap:6px;margin-right:6px}.tbar .lights span{width:11px;height:11px;border-radius:50%}
+  .tb{display:flex;align-items:center;justify-content:center;width:30px;height:26px;border-radius:7px;color:#3a3a3c;font-size:17px;background:rgba(0,0,0,.06)}
+  .t1{font-size:14px;font-weight:600}.t2{font-size:11px;color:var(--muted)}
+  .browserbar{height:38px;flex:0 0 38px;display:flex;align-items:center;gap:14px;padding:0 16px;border-bottom:.5px solid var(--line);font-size:13px;color:#3a3a3c}
+  .browserbar .on{font-weight:600;color:var(--text)}
+  .body{flex:1;display:flex;min-height:0}
+  .rail{flex:0 0 36px;border-right:1px solid var(--line);display:flex;justify-content:center;padding-top:10px}
+  .rail i{font-size:17px;color:var(--accent);background:var(--sel);border-radius:5px;padding:4px;height:max-content}
+  .guide{flex:0 0 300px;background:var(--grey);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .ghead{padding:9px 10px;border-bottom:1px solid transparent}
+  .seg{display:flex;background:rgba(0,0,0,.06);border-radius:7px;padding:2px}
+  .seg span{flex:1;text-align:center;font-size:12px;padding:3px 0;border-radius:5px;color:#3a3a3c;cursor:pointer;white-space:nowrap}
+  .seg span.on{background:#fff;box-shadow:0 .5px 1.5px rgba(0,0,0,.18);font-weight:500}
+  .gbody{flex:1;overflow-y:auto;padding:4px 10px 16px}
+  .gv{display:flex;gap:14px;font-size:12px;color:#3a3a3c;margin:6px 4px 4px}
+  .gv label{display:inline-flex;gap:4px;align-items:center}
+  .sec{font-weight:600;font-size:13px;margin:14px 4px 6px;padding-bottom:5px;border-bottom:.5px solid rgba(0,0,0,.1);display:flex;gap:6px;align-items:baseline}
+  .sec .emer{font-weight:400;font-size:11px;color:var(--muted)}
+  .q{display:flex;align-items:baseline;gap:7px;padding:4px 4px;border-radius:5px;color:#3a3a3c;font-size:13px}
+  .q .mk{width:12px;flex:0 0 12px;text-align:center;color:var(--muted)}
+  .q .tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .q.never .tx{color:var(--muted)}
+  .q.hot{background:var(--sel);color:var(--accent)}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);vertical-align:1px}
+  .dot.hollow{background:none;border:1.2px solid var(--accent);width:5px;height:5px}
+  .b{font-family:ui-monospace,Menlo,monospace;font-size:11px;border:.5px solid rgba(0,0,0,.15);border-radius:4px;padding:0 4px;color:#6e6e73;background:#fff}
+  .b.a{color:var(--accent)}
+  .key{margin:18px 4px 0;font-size:11.5px;color:#6e6e73;display:flex;flex-direction:column;gap:4px}
+  .key span{display:flex;gap:7px;align-items:center}
+  .btn{display:inline-block;margin:16px 4px 0;font-size:12px;border:.5px solid rgba(0,0,0,.22);border-radius:6px;background:#fff;padding:3px 10px;cursor:pointer}
+  .btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .empty{margin:22px 6px 0;font-size:13px;line-height:1.55;color:#3a3a3c}
+  .empty h3{font-size:14px;margin:0 0 6px;font-weight:600;color:var(--text)}
+  .how{margin:12px 4px 0;font-size:12px;color:#6e6e73;background:#fff;border:.5px solid var(--line);border-radius:6px;padding:8px 10px}
+  .new{font-size:9px;color:#fff;background:#ff9f0a;border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:2px}
+  .gut{flex:0 0 40px}
+  .conv{flex:1;min-width:0;overflow-y:auto;padding:10px 24px 20px}
+  .chips{display:flex;gap:6px;margin-bottom:12px}
+  .h1{font-size:22px;font-weight:700;margin:4px 0 6px}
+  .meta{color:var(--muted);font-size:12px;border-bottom:.5px solid rgba(0,0,0,.1);padding-bottom:10px;margin-bottom:12px}
+  .ask{font-style:italic;color:#6e6e73;line-height:1.5;margin:12px 0 6px;display:flex;gap:10px}
+  .ask.hot{background:#f0f0f2;border-radius:8px;padding:6px 8px;margin-left:-8px}
+  .tc{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--accent);font-style:normal;flex:0 0 auto}
+  .quote{background:#fafafb;border-radius:8px;padding:8px 10px;margin:6px 0 14px;line-height:1.5;display:flex;gap:10px}
+  .qs{margin:18px 4px 0;max-width:900px;font-size:13px;line-height:1.55;color:#3a3a3c}
+  .qs li{margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="cap"><b>Discussion lens — the tabs and the guide column, with and without a guide.</b> The tabs are always there. Without a guide, the second tab shows how to add one; once it is added and the project re-analysed, that tab fills with the guide and the first tab marks what was planned, never asked, or asked off-guide. Pick the states below; the tabs inside the window are live too. Synthetic study.</p>
+
+  <div class="ctl">
+    <div class="grp"><span class="l">Guide</span><button data-g="yes">Has a guide</button><button data-g="no">No guide</button></div>
+    <div class="grp"><span class="l">Tab</span><button data-t="merged">first</button><button data-t="planned">second</button></div>
+    <div class="grp"><span class="l">Surface</span><button data-p="mac">Mac app</button><button data-p="web">Browser</button></div>
+    <div class="grp"><span class="l">Labels</span><button data-l="now">Today’s</button><button data-l="as">As asked · As planned</button></div>
+  </div>
+  <div class="note" id="note"></div>
+
+  <div class="win">
+    <div class="tbar" id="tbar">
+      <div class="lights"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div>
+      <span class="tb" title="Discussion Guide"><i class="ti ti-list"></i></span>
+      <div><div class="t1">Home Coffee</div><div class="t2">3 Sessions · 1h 12m</div></div>
+    </div>
+    <div class="browserbar" id="bbar"><span>Project</span><span>Sessions</span><span>Quotes</span><span>Codebooks</span><span>Signals</span><span class="on">Discussion</span></div>
+    <div class="body">
+      <div class="rail" id="rail"><i class="ti ti-list" title="Discussion guide ["></i></div>
+      <aside class="guide">
+        <div class="ghead"><div class="seg" id="seg"><span data-t="merged"></span><span data-t="planned"></span></div></div>
+        <div class="gbody" id="gbody"></div>
+      </aside>
+      <div class="gut"></div>
+      <main class="conv">
+        <div class="chips"><span class="b a">#1</span><span class="b">#2</span><span class="b">#3</span></div>
+        <div class="h1">Session 1</div>
+        <div class="meta"><span class="b">p1</span> 24:10 · 9 questions · 14 quotes</div>
+        <div class="ask"><span class="tc">[00:31]</span><span>Walk me through a normal weekday morning, from when you wake up.</span></div>
+        <div class="quote"><span class="tc">[00:44]</span><span>“Kettle on first, always. The machine takes a while to warm up, so I do that while I’m still half asleep.”</span></div>
+        <div class="ask hot"><span class="tc">[03:12]</span><span>Who else in the house drinks coffee?</span></div>
+        <div class="quote"><span class="tc">[03:18]</span><span>“My partner, but only at weekends. During the week it’s just me.”</span></div>
+        <div class="ask"><span class="tc">[05:02]</span><span>Do you ever use the pods, or only beans?</span></div>
+        <div class="quote"><span class="tc">[05:10]</span><span>“Pods when I’m in a rush. I feel a bit guilty about the waste.”</span></div>
+      </main>
+    </div>
+  </div>
+
+  <ol class="qs">
+    <li><b>Labels.</b> Today the tabs read “Normalised questions” and “Your guide”. “As asked · As planned” pairs them by what each shows; it needs two new strings in 21 languages. Your call.</li>
+    <li><b>No guide, first tab.</b> Today every row carries the + mark (“not in your guide”) and the key explains it — true, but noise when there is no guide at all. Shown here without marks or key; say if you want them back.</li>
+    <li><b>Between adding the guide and the new analysis.</b> On the Mac the second tab could say “Reading your guide…” while Analyse runs; today nothing in the lens changes until the run ends and the report reloads. Not built; say if you want it.</li>
+  </ol>
+</div>
+<script>
+let guide = "no", tab = "planned", surface = "mac", labels = "as";
+const L = { now: { merged: "Normalised questions", planned: "Your guide" }, as: { merged: "As asked", planned: "As planned" } };
+const $ = (id) => document.getElementById(id);
+
+const asked = [
+  ["Morning routine", false, [["Walk me through your mornings", "both", ["#1","#2","#3"]], ["Who else drinks coffee at home?", "both", ["#1","#3"], true], ["Weekday vs weekend", "both", ["#2"]], ["Do you ever use pods?", "plus", ["#1"]]]],
+  ["The machine", false, [["How did you choose it?", "both", ["#1","#2","#3"]], ["What annoys you about it?", "both", ["#2","#3"]], ["Cleaning and descaling", "hollow", []]]],
+  ["Buying beans", false, [["Where do beans come from?", "both", ["#1","#2"]], ["Subscriptions", "both", ["#2"]]]],
+  ["Waste and pods", true, [["Guilt about pod waste", "plus", ["#1","#3"]], ["Recycling the pods", "plus", ["#3"]]]],
+];
+const askedNoGuide = [
+  ["Mornings", [["Walk me through your mornings", ["#1","#2","#3"]], ["Who else drinks coffee at home?", ["#1","#3"], true], ["Weekday vs weekend", ["#2"]]]],
+  ["The machine", [["How did you choose it?", ["#1","#2","#3"]], ["What annoys you about it?", ["#2","#3"]]]],
+  ["Beans and pods", [["Where do beans come from?", ["#1","#2"]], ["Do you ever use pods?", ["#1"]], ["Guilt about pod waste", ["#1","#3"]]]],
+];
+const planned = [
+  ["Morning routine", [["Walk me through your mornings"], ["Who else drinks coffee at home?", true], ["Weekday vs weekend"]]],
+  ["The machine", [["How did you choose it?"], ["What annoys you about it?"], ["Cleaning and descaling", false, true]]],
+  ["Buying beans", [["Where do beans come from?"], ["Subscriptions"]]],
+];
+
+const badges = (bs) => bs.map((b, i) => `<span class="b${i === 0 && b === "#1" ? " a" : ""}">${b}</span>`).join("");
+const mark = (m) => m === "both" ? '<span class="dot"></span>' : m === "hollow" ? '<span class="dot hollow"></span>' : "+";
+
+function body() {
+  if (tab === "merged" && guide === "yes") {
+    return asked.map(([sec, emergent, rows]) => `<div class="sec">${sec}${emergent ? '<span class="emer">came up, not in your guide</span>' : ""}</div>` +
+      rows.map(([t, m, bs, hot]) => `<div class="q${m === "hollow" ? " never" : ""}${hot ? " hot" : ""}"><span class="mk">${mark(m)}</span><span class="tx">${t}</span>${badges(bs)}</div>`).join("")).join("") +
+      `<div class="key"><span><span class="dot"></span> Asked as planned</span><span><span class="dot hollow"></span> Planned, never asked</span><span><span style="width:7px;text-align:center">+</span> Not in your guide</span><span>Grey: not asked in this session</span></div>`;
+  }
+  if (tab === "merged") {
+    return askedNoGuide.map(([sec, rows]) => `<div class="sec">${sec}</div>` +
+      rows.map(([t, bs, hot]) => `<div class="q${hot ? " hot" : ""}"><span class="mk"></span><span class="tx">${t}</span>${badges(bs)}</div>`).join("")).join("");
+  }
+  if (guide === "yes") {
+    return `<div class="gv"><label><input type="radio" name="gv" checked> Summary</label><label><input type="radio" name="gv"> Original</label></div>` +
+      planned.map(([sec, rows]) => `<div class="sec">${sec}</div>` +
+        rows.map(([t, hot, never]) => `<div class="q${hot ? " hot" : ""}${never ? " never" : ""}"><span class="mk">${never ? '<span class="dot hollow"></span>' : '<span class="dot"></span>'}</span><span class="tx">${t}</span></div>`).join("")).join("") +
+      `<span class="btn">Replace your guide…</span>`;
+  }
+  const how = surface === "mac"
+    ? `<span class="btn pri" id="add">Add your guide…</span><div class="how" id="how" hidden>The Mac’s open panel appears (Word, Markdown or plain text). The guide is copied into the project and Analyse starts; only the discussion is rebuilt, and your edits are kept.</div>`
+    : `<span class="btn pri" id="add">Add your guide…</span><div class="how" id="how" hidden>Put your guide — Word, Markdown or plain text — in a folder named “Discussion guide” beside your recordings, then run bristlenose run on the project folder again.</div>`;
+  return `<div class="empty"><h3>No guide yet<span class="new">new</span></h3>Add your discussion guide to see the study as you planned it. The questions that were asked are then matched to it: what was planned and never asked, and what came up off-guide.</div>${how}`;
+}
+
+function note() {
+  const k = `${guide}-${tab}`;
+  return {
+    "yes-merged": "<b>Has a guide · first tab.</b> What was asked, grouped by the guide’s sections plus any that came up on their own. Dot: asked as planned. Hollow: planned, never asked. +: not in your guide. Unchanged from today.",
+    "yes-planned": "<b>Has a guide · second tab.</b> The guide as written (Summary or Original), each line marked asked or never asked. Replace sits at the foot. Unchanged from today.",
+    "no-merged": "<b>No guide · first tab.</b> What was asked, grouped by topic. No marks and no key: with no guide there is nothing to compare against (question 2 below).",
+    "no-planned": `<b>No guide · second tab — new.</b> The place to add a guide. ${surface === "mac" ? "On the Mac the button opens the native panel and starts Analyse." : "In a browser the button says where the guide goes and to run again."} Once it is processed, this tab becomes the guide and the first tab gains its marks.`,
+  }[k];
+}
+
+function render() {
+  document.querySelectorAll("[data-g]").forEach((b) => b.classList.toggle("on", b.dataset.g === guide));
+  document.querySelectorAll(".ctl [data-t]").forEach((b) => b.classList.toggle("on", b.dataset.t === tab));
+  document.querySelectorAll("[data-p]").forEach((b) => b.classList.toggle("on", b.dataset.p === surface));
+  document.querySelectorAll("[data-l]").forEach((b) => b.classList.toggle("on", b.dataset.l === labels));
+  document.querySelectorAll("#seg span").forEach((s) => { s.textContent = L[labels][s.dataset.t]; s.classList.toggle("on", s.dataset.t === tab); });
+  $("tbar").style.display = surface === "mac" ? "flex" : "none";
+  $("bbar").style.display = surface === "web" ? "flex" : "none";
+  $("rail").style.display = surface === "web" ? "flex" : "none";
+  $("gbody").innerHTML = body();
+  $("note").innerHTML = note();
+  const add = $("add"); if (add) add.addEventListener("click", () => { $("how").hidden = false; });
+}
+document.querySelectorAll("[data-g]").forEach((b) => b.addEventListener("click", () => { guide = b.dataset.g; render(); }));
+document.querySelectorAll("[data-t]").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.t; render(); }));
+document.querySelectorAll("[data-p]").forEach((b) => b.addEventListener("click", () => { surface = b.dataset.p; render(); }));
+document.querySelectorAll("[data-l]").forEach((b) => b.addEventListener("click", () => { labels = b.dataset.l; render(); }));
+render();
+</script>
+</body>
+</html>

@@ -1198,3 +1198,46 @@ describe("useKeyboardShortcuts", () => {
     });
   });
 });
+
+describe("the Mac app hears when an edit ends", () => {
+  type Posted = { type: string };
+  let posted: Posted[];
+
+  beforeEach(() => {
+    mockEmbedded = true;
+    posted = [];
+    (window as unknown as Record<string, unknown>).webkit = {
+      messageHandlers: { navigation: { postMessage: (m: Posted) => posted.push(m) } },
+    };
+  });
+
+  afterEach(() => {
+    mockEmbedded = false;
+    delete (window as unknown as Record<string, unknown>).webkit;
+    document.body.querySelectorAll("[data-test-editor]").forEach((el) => el.remove());
+  });
+
+  const types = () => posted.map((m) => m.type).filter((t) => t.startsWith("editing-"));
+
+  it("when the focused editor is removed, which fires no focusout in WebKit", async () => {
+    const { unmount } = renderWithProviders();
+    const field = document.createElement("textarea");
+    field.setAttribute("data-test-editor", "");
+    document.body.appendChild(field);
+    act(() => field.focus());
+    expect(types()).toEqual(["editing-started"]);
+
+    // What Enter on a quote edit does: the contenteditable unmounts while it
+    // has focus. Silence focusout so the test matches WebKit, not jsdom.
+    const silence = (e: Event) => e.stopImmediatePropagation();
+    document.addEventListener("focusout", silence, true);
+    await act(async () => {
+      field.remove();
+      await Promise.resolve();
+    });
+    document.removeEventListener("focusout", silence, true);
+
+    expect(types()).toEqual(["editing-started", "editing-ended"]);
+    unmount();
+  });
+});

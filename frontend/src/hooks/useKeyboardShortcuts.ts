@@ -817,15 +817,31 @@ export function useKeyboardShortcuts({
       }
     };
 
+    // Focus events alone miss the commonest way an edit ends. Enter on a
+    // quote edit unmounts the focused contenteditable, and a heading editor
+    // drops `contenteditable` from the element that keeps focus — WebKit
+    // fires no focusout for either. Native then believed the researcher was
+    // still typing, hid Edit ▸ Undo and left ⌘Z to WebKit's text undo, so a
+    // committed quote edit could not be undone from the menu or the key.
+    // Re-check on those two DOM changes; the check is two property reads.
+    const editingObserver = embedded ? new MutationObserver(handleFocusChange) : null;
+
     if (embedded) {
       document.addEventListener("focusin", handleFocusChange);
       document.addEventListener("focusout", handleFocusChange);
+      editingObserver?.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["contenteditable"],
+      });
     }
 
     return () => {
       document.removeEventListener("keydown", handleKeydown);
       document.removeEventListener("click", handleBackgroundClick);
       window.removeEventListener("bn:menu-action", handleMenuAction);
+      editingObserver?.disconnect();
       if (embedded) {
         document.removeEventListener("focusin", handleFocusChange);
         document.removeEventListener("focusout", handleFocusChange);

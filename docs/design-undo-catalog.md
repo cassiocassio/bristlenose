@@ -33,9 +33,12 @@ so the scope call can be made with the whole surface visible rather than half.
 > _4 Oct 2026: the report now has a stack. `contexts/UndoStore.ts` is one
 > page-scoped stack; `components/UndoSync.tsx` posts `undo-state` (so the
 > second fact below is no longer true) and takes ⌘Z in the browser; ⇧⌘Z redoes.
-> Its only client so far is speaker naming (`utils/speakerNames.ts`,
-> [`design-people.md`](design-people.md) §B10). The table below is the 28 Jul
-> survey, kept as written._
+> Its clients: speaker naming (`utils/speakerNames.ts`,
+> [`design-people.md`](design-people.md) §B10), and from the same day group 2's
+> star and hide and group 3's add/remove tag (`QuotesContext.tsx`) — deltas,
+> not the full-map snapshot this doc's "accidental substrate" proposes, because
+> a snapshot would also revert changes made since by paths not on the stack.
+> The table below is the 28 Jul survey, kept as written._
 
 | Context | ⌘Z owner | Depth | Durable? |
 |---|---|---|---|

@@ -1036,6 +1036,14 @@ Three consequences worth carrying:
   flag on the slot, sequenced through one write queue. The stack ends with the
   page — a reload, a Mac project switch (the web view remounts), or a new run.
   The inline sweep-line link is not built.
+
+  **Star, hide and tag joined the stack the same day** (`QuotesContext.tsx`):
+  star, unstar, hide, unhide, add tag, remove tag — one entry per gesture,
+  however many quotes it covered. The inverse is the same store call with
+  `record` off, over only the quotes the gesture changed: a delta, never a
+  snapshot, so a tag an AutoCode accept added since survives the undo. Not on
+  the stack: quote and heading text edits, badge deletes, proposal
+  accept/deny, codebook changes.
 - **Re-attribution breaks the quote stable key.** The importer's key is
   `(project_id, session_id, participant_id, start_timecode)` and re-attribution
   is not one of `_pinned_quote_ids`' arms — so a re-attributed quote does not

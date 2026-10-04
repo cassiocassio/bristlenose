@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discussion lens — layout as the window narrows (mockup)</title>
+<!-- Icons are Tabler stand-ins for SF Symbols (a web page can't render SF Symbols). Synthetic study data. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+<style>
+  body{margin:0;background:#e9e9ec;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui;color:#1d1d1f;-webkit-font-smoothing:antialiased}
+  .page{max-width:1320px;margin:0 auto;padding:24px 16px 48px}
+  .cap{font-size:13px;color:#6e6e73;line-height:1.5;margin:0 4px 14px;max-width:880px}
+  .cap b{color:#1d1d1f;font-weight:600}
+  .ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 4px 16px;font-size:13px}
+  .ctl button{font:inherit;border:.5px solid rgba(0,0,0,.2);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer}
+  .ctl button.on{background:#1d1d1f;color:#fff}
+  .ctl input{width:260px}
+  .ctl .w{font-variant-numeric:tabular-nums;color:#6e6e73;min-width:64px}
+  .why{font-size:13px;color:#3a3a3c;background:#fff;border-radius:8px;padding:9px 12px;margin:0 4px 14px;max-width:880px;line-height:1.5}
+  .why b{font-weight:600}
+  .stage{overflow-x:auto;padding-bottom:12px}
+  .mwin{font-size:13px;background:#fff;border:.5px solid rgba(0,0,0,.16);border-radius:10px;overflow:hidden;height:560px;display:flex;box-shadow:0 18px 50px rgba(0,0,0,.18);transition:width .15s}
+  .side{width:214px;flex:0 0 214px;background:#f3f3f4;border-right:.5px solid rgba(0,0,0,.09);display:flex;flex-direction:column}
+  .side.gone{display:none}
+  .stop{height:46px;flex:0 0 46px;display:flex;align-items:center;padding:0 11px}
+  .lights{display:flex;gap:6px}.lights span{width:11px;height:11px;border-radius:50%}
+  .satop{margin-left:auto;color:#5a5a5f;font-size:18px}
+  .row{display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:6px;color:#3a3a3c;white-space:nowrap;margin:0 8px}
+  .row i{font-size:16px;color:#6e6e73;width:18px;text-align:center}
+  .row .ct{margin-left:auto;color:#aeaeb2;font-size:12px}
+  .on-row{background:rgba(0,0,0,.08);color:#1d1d1f;font-weight:500}
+  .phdr{font-size:11px;color:#86868b;padding:13px 16px 4px}
+  .detail{flex:1;display:flex;flex-direction:column;min-width:0}
+  .ctop{height:46px;flex:0 0 46px;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:.5px solid rgba(0,0,0,.08)}
+  .ctop .lights{margin-right:4px}
+  .tb{display:flex;align-items:center;justify-content:center;width:30px;height:26px;border-radius:7px;color:#3a3a3c;font-size:17px;cursor:pointer;position:relative}
+  .tb:hover{background:rgba(0,0,0,.06)}
+  .tb.new::after{content:"new";position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:9px;color:#fff;background:#007aff;border-radius:4px;padding:0 3px;line-height:13px}
+  .navpair{display:flex;align-items:center;background:rgba(0,0,0,.05);border-radius:8px;padding:3px}
+  .navpair i{font-size:16px;color:#3a3a3c;padding:1px 7px}.navpair .fwd{color:#c0c0c5}
+  .navpair .dv{width:.5px;height:15px;background:rgba(0,0,0,.14)}
+  .ttl{display:flex;flex-direction:column;line-height:1.18;min-width:0}
+  .t1{font-size:14px;font-weight:600}.t2{font-size:11px;color:#86868b;white-space:nowrap}
+  .cact{margin-left:auto;color:#6e6e73;font-size:16px}
+  .body{flex:1;display:flex;min-height:0}
+  .nav{flex:0 0 auto;background:#f7f7f8;border-right:.5px solid rgba(0,0,0,.07);overflow-y:auto;padding:10px 10px 16px;box-sizing:border-box}
+  .nav.gone{display:none}
+  .seg{display:flex;background:rgba(0,0,0,.06);border-radius:7px;padding:2px;margin:2px 0 12px}
+  .seg span{flex:1;text-align:center;font-size:12px;padding:3px 0;border-radius:5px;color:#3a3a3c;cursor:pointer}
+  .seg span.on{background:#fff;box-shadow:0 .5px 1.5px rgba(0,0,0,.18);font-weight:500}
+  .sec{font-weight:600;font-size:13px;margin:12px 4px 6px;padding-bottom:5px;border-bottom:.5px solid rgba(0,0,0,.1)}
+  .q{display:flex;align-items:baseline;gap:6px;padding:4px 4px;border-radius:5px;color:#3a3a3c}
+  .q .tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .q.hot{background:rgba(0,0,0,.06);color:#007aff}
+  .b{font-family:ui-monospace,Menlo,monospace;font-size:11px;border:.5px solid rgba(0,0,0,.15);border-radius:4px;padding:0 4px;color:#6e6e73;background:#fff}
+  .b.a{color:#007aff}
+  .addg{margin:16px 4px 0;font-size:12px;border:.5px solid rgba(0,0,0,.2);border-radius:6px;background:#fff;padding:3px 9px;display:inline-block}
+  .gut{flex:0 0 40px;position:relative}
+  .gut.gone{display:none}
+  .gut svg{position:absolute;inset:0;width:100%;height:100%}
+  .content{flex:1;min-width:0;overflow-y:auto;padding:12px 22px 20px}
+  .content.squeezed{outline:2px dashed #ff9f0a;outline-offset:-2px}
+  .chips{display:flex;gap:6px;margin-bottom:12px}
+  .h1{font-size:22px;font-weight:700;margin:4px 0 6px}
+  .meta{color:#86868b;font-size:12px;border-bottom:.5px solid rgba(0,0,0,.1);padding-bottom:10px;margin-bottom:12px}
+  .ask{font-style:italic;color:#6e6e73;line-height:1.5;margin:12px 0 6px;display:flex;gap:10px}
+  .ask.hot{background:#f0f0f2;border-radius:8px;padding:6px 8px;margin-left:-8px}
+  .tc{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#007aff;font-style:normal;flex:0 0 auto}
+  .quote{background:#fafafb;border-radius:8px;padding:8px 10px;margin:6px 0 14px;line-height:1.5;display:flex;gap:10px}
+  .legend{font-size:12px;color:#6e6e73;margin:10px 4px 0;max-width:880px;line-height:1.6}
+  .legend span{display:inline-block;margin-right:14px}
+  kbd{font-family:inherit;font-size:11px;border:.5px solid rgba(0,0,0,.25);border-radius:4px;padding:0 4px;background:#fff}
+  @media (max-width:600px){.ctl input{width:160px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="cap"><b>Discussion lens: what gives way as the window narrows.</b> The lens is a pair, guide on the left and the conversation on the right, so the order is: <b>1</b> the projects column folds, <b>2</b> the navigator narrows to 200 px, <b>3</b> the conversation narrows to its 368 px floor, <b>4</b> only then does the navigator fold, and the toolbar's list button (new for this lens, labelled <b>Discussion guide</b>) brings it back. The As planned / As asked tabs sit on top of the navigator, so they come and go with what they reorder, and the navigator's grey and keyline run to the top of the page: the bar over the conversation no longer spans it. Drag the slider or pick a width. Click the list button, or press <kbd>⌥⌘L</kbd>, to toggle. Synthetic study.</p>
+
+  <div class="ctl">
+    <button data-w="1280">Wide · 1280</button>
+    <button data-w="910">Your screenshot · 910</button>
+    <button data-w="780">Narrow · 780</button>
+    <button data-w="580">Very narrow · 580</button>
+    <input type="range" id="w" min="560" max="1300" value="910"><span class="w" id="wl"></span>
+  </div>
+  <div class="why" id="why"></div>
+
+  <div class="stage">
+  <div class="mwin" id="win">
+    <aside class="side" id="side">
+      <div class="stop"><div class="lights"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div><i class="ti ti-layout-sidebar satop"></i></div>
+      <div class="row"><i class="ti ti-target"></i>Project</div>
+      <div class="row"><i class="ti ti-users"></i>Sessions</div>
+      <div class="row"><i class="ti ti-blockquote"></i>Quotes</div>
+      <div class="row"><i class="ti ti-tag"></i>Codebooks</div>
+      <div class="row"><i class="ti ti-grid-dots"></i>Signals</div>
+      <div class="row on-row"><i class="ti ti-help-hexagon"></i>Discussion</div>
+      <div class="phdr">Projects</div>
+      <div class="row on-row"><i class="ti ti-coffee"></i>Home Coffee<span class="ct">3</span></div>
+      <div class="row"><i class="ti ti-folder"></i>Archive</div>
+    </aside>
+    <div class="detail">
+      <div class="ctop">
+        <div class="lights" id="lights2" style="display:none"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div>
+        <span class="tb" id="sbtog" style="display:none" title="Show sidebar"><i class="ti ti-layout-sidebar"></i></span>
+        <span class="tb new" id="navtog" title="Show Discussion guide"><i class="ti ti-list"></i></span>
+        <span class="navpair"><i class="ti ti-chevron-left"></i><span class="dv"></span><i class="ti ti-chevron-right fwd"></i></span>
+        <div class="ttl"><span class="t1">Home Coffee</span><span class="t2">3 Sessions · 1h 12m</span></div>
+        <i class="ti ti-share cact"></i>
+      </div>
+      <div class="body">
+        <nav class="nav" id="nav">
+          <div class="seg"><span class="on">As planned</span><span>As asked</span></div>
+          <div class="sec">Morning routine</div>
+          <div class="q"><span>+</span><span class="tx">Walk me through your mornings</span><span class="b a">#1</span><span class="b">#2</span><span class="b">#3</span></div>
+          <div class="q hot"><span>+</span><span class="tx">Who else drinks coffee at home?</span><span class="b a">#1</span><span class="b">#3</span></div>
+          <div class="q"><span>+</span><span class="tx">Weekday vs weekend</span><span class="b">#2</span></div>
+          <div class="sec">The machine</div>
+          <div class="q"><span>+</span><span class="tx">How did you choose it?</span><span class="b a">#1</span><span class="b">#2</span><span class="b">#3</span></div>
+          <div class="q"><span>+</span><span class="tx">What annoys you about it?</span><span class="b">#2</span><span class="b">#3</span></div>
+          <div class="q"><span>+</span><span class="tx">Cleaning and descaling</span><span class="b">#3</span></div>
+          <div class="sec">Buying beans</div>
+          <div class="q"><span>+</span><span class="tx">Where do beans come from?</span><span class="b a">#1</span><span class="b">#2</span></div>
+          <div class="q"><span>+</span><span class="tx">Subscriptions</span><span class="b">#2</span></div>
+          <span class="addg">Replace guide…</span>
+        </nav>
+        <div class="gut" id="gut"><svg viewBox="0 0 40 400" preserveAspectRatio="none"><path d="M0 92 L20 92 L20 170 L40 170" fill="none" stroke="#007aff" stroke-width="1.2"/><path d="M0 40 L14 40 L14 120 L40 120" fill="none" stroke="#c7d7ef" stroke-width="1"/></svg></div>
+        <main class="content" id="content">
+          <div class="chips"><span class="b a">#1</span><span class="b">#2</span><span class="b">#3</span></div>
+          <div class="h1">Session 1</div>
+          <div class="meta"><span class="b">p1</span> 24:10 · 9 questions · 14 quotes</div>
+          <div class="ask"><span class="tc">[00:31]</span><span>Walk me through a normal weekday morning, from when you wake up.</span></div>
+          <div class="quote"><span class="tc">[00:44]</span><span>“Kettle on first, always. The machine takes a while to warm up, so I do that while I’m still half asleep.”</span></div>
+          <div class="ask hot"><span class="tc">[03:12]</span><span>Who else in the house drinks coffee?</span></div>
+          <div class="quote"><span class="tc">[03:18]</span><span>“My partner, but only at weekends. During the week it’s just me, so I make one cup and that’s it.”</span></div>
+          <div class="ask"><span class="tc">[06:40]</span><span>How did you end up choosing that machine?</span></div>
+          <div class="quote"><span class="tc">[06:52]</span><span>“Honestly, it was on offer. I read a couple of reviews but mostly it fitted under the cupboard.”</span></div>
+        </main>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <p class="legend"><span><b>Projects column</b> 214</span><span><b>Navigator</b> 280 default, 200 minimum, 60% ceiling (unchanged)</span><span><b>Wires</b> 40</span><span><b>Conversation floor</b> 368 (the shared <code>CONTENT_FLOOR_PX</code>)</span><span>Dashed outline: the conversation is under its floor because you opened the navigator yourself. A panel you just opened is never closed for you, as on the other lenses.</span></p>
+</div>
+<script>
+const SIDE = 214, NAV_PREF = 280, NAV_MIN = 200, GUT = 40, FLOOR = 368;
+const $ = (id) => document.getElementById(id);
+let width = 910, wish = true, justOpened = false;
+
+function layout() {
+  const pairNeeds = NAV_PREF + GUT + FLOOR;            // what the lens asks the window for
+  const sideShown = !wish || width - SIDE >= pairNeeds; // native folds the projects column first
+  const detail = width - (sideShown ? SIDE : 0);
+  const fits = detail >= NAV_MIN + GUT + FLOOR;
+  const navShown = wish && (fits || justOpened);
+  const navW = navShown ? Math.max(NAV_MIN, Math.min(NAV_PREF, detail - GUT - FLOOR)) : 0;
+  const content = detail - (navShown ? navW + GUT : 0);
+
+  $("win").style.width = width + "px";
+  $("side").classList.toggle("gone", !sideShown);
+  $("lights2").style.display = sideShown ? "none" : "flex";
+  $("sbtog").style.display = sideShown ? "none" : "flex";
+  $("nav").classList.toggle("gone", !navShown);
+  $("gut").classList.toggle("gone", !navShown);
+  $("nav").style.width = navW + "px";
+  $("content").classList.toggle("squeezed", navShown && content < FLOOR);
+  $("navtog").title = navShown ? "Hide Discussion guide" : "Show Discussion guide";
+  $("w").value = width; $("wl").textContent = width + " px";
+  document.querySelectorAll(".ctl button").forEach((b) => b.classList.toggle("on", +b.dataset.w === width));
+
+  let why;
+  if (!wish) why = "<b>Discussion guide hidden by you.</b> The projects column stays, and the conversation takes the width. The list button or ⌥⌘L brings the navigator back.";
+  else if (sideShown && navW === NAV_PREF) why = "<b>Everything fits.</b> Projects, navigator at its width and the conversation.";
+  else if (sideShown) why = `<b>Navigator narrowing</b> to ${navW} px so the conversation keeps its floor.`;
+  else if (navShown && content >= FLOOR) why = `<b>Step 1: the projects column has folded</b> (the pair asked for ${pairNeeds} px). Navigator at ${navW} px, conversation ${content} px. Both halves stay.`;
+  else if (navShown) why = `<b>You opened the navigator</b> at a width where it doesn't fit, so the conversation squeezes to ${content} px rather than refusing you.`;
+  else why = `<b>Step 4: the navigator has folded</b>: under ${NAV_MIN + GUT + FLOOR} px there is no room for both. The list button in the toolbar is how you know it's there.`;
+  $("why").innerHTML = why;
+}
+function setWidth(w) { width = w; justOpened = false; layout(); }
+function toggle() {
+  const shown = !$("nav").classList.contains("gone");
+  if (shown) { wish = false; justOpened = false; }
+  else { wish = true; justOpened = true; }
+  layout();
+}
+$("w").addEventListener("input", (e) => setWidth(+e.target.value));
+document.querySelectorAll(".ctl button").forEach((b) => b.addEventListener("click", () => setWidth(+b.dataset.w)));
+$("navtog").addEventListener("click", toggle);
+document.addEventListener("keydown", (e) => {
+  if ((e.metaKey && e.altKey && e.code === "KeyL") || e.key === "[") { e.preventDefault(); toggle(); }
+});
+document.querySelectorAll(".seg span").forEach((s) => s.addEventListener("click", () => {
+  document.querySelectorAll(".seg span").forEach((x) => x.classList.toggle("on", x === s));
+}));
+layout();
+</script>
+</body>
+</html>

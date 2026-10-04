@@ -53,8 +53,10 @@ that made the gap obvious.
 > report domain that settles contradiction (1) as the bridge, not `NSUndoManager`;
 > the register below — the sidebar's own mechanism — is unchanged. One new
 > interaction between the two halves, recorded in the catalog's divide point 2:
-> `UndoableRemovalStore`'s pending removal outranks the report stack in Edit ▸ Undo
-> and, with no expiry, shadows it until undone or superseded.
+> `UndoableRemovalStore`'s pending removal outranked the report stack in Edit ▸ Undo
+> and, with no expiry, shadowed it until undone or superseded. Fixed the same day:
+> a new act on the report now settles the pending removal, so the removal is only
+> ever first when it is the newer act.
 
 ## Principle
 

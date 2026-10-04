@@ -58,6 +58,7 @@ export type BridgeMessage =
       canRedo: boolean;
       undoLabel: string | null;
       redoLabel: string | null;
+      pushes: number;
     }
   | ({ type: "person-picker" } & WirePersonPicker)
   | { type: "subtitle-prefs"; player: boolean; burn: boolean }
@@ -309,15 +310,18 @@ export function postPersonPicker(message: WirePersonPicker): void {
 /**
  * Tell the native Edit menu what the report's undo stack holds: whether Undo
  * and Redo are available, and their full labels ("Undo Rename Moderator").
- * Posted by UndoSync on every change. No-ops outside WKWebView.
+ * Posted by UndoSync on every change. `pushes` counts new acts since the page
+ * loaded, so native can tell a new act from an undo or redo. No-ops outside
+ * WKWebView.
  */
 export function postUndoState(
   canUndo: boolean,
   canRedo: boolean,
   undoLabel: string | null,
   redoLabel: string | null,
+  pushes: number,
 ): void {
-  postNativeMessage({ type: "undo-state", canUndo, canRedo, undoLabel, redoLabel });
+  postNativeMessage({ type: "undo-state", canUndo, canRedo, undoLabel, redoLabel, pushes });
 }
 
 /**

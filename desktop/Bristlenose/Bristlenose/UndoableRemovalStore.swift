@@ -26,7 +26,7 @@ import SwiftUI
 /// **Batch semantics.** A single `Pending` may carry one or many entries. The
 /// multi-row case (Cmd+Backspace with N rows selected) creates ONE Pending
 /// containing all N — undo restores all of them as a single transaction, and
-/// the toast reads "N projects removed". If a second batch arrives while a
+/// the menu reads "Undo Remove N Projects". If a second batch arrives while a
 /// first is still pending, the first commits silently — only the most recent
 /// batch is undoable. Two views with cardinality is plenty; a multi-deep queue
 /// is a different feature.
@@ -148,11 +148,13 @@ final class UndoableRemovalStore: ObservableObject {
         }
     }
 
-    /// Commit the pending removal, because a newer one is superseding it.
-    /// After this the earlier batch is gone for good.
+    /// Commit the pending removal, because something newer supersedes it — a
+    /// newer removal, or a new act on the report (`BridgeHandler`'s
+    /// `undo-state`, 4 Oct 2026). After this the batch is gone for good.
     ///
-    /// Nothing else calls this — in particular no timer does. One level of
-    /// undo, superseded by the next removal, is the whole model.
+    /// No timer calls this. Without the report's half, a removal made an hour
+    /// ago answered ⌘Z ahead of every report edit since, in every window;
+    /// settling it when the researcher moves on is how Mail behaves.
     func commitIfPending() {
         guard pending != nil else { return }
         pending = nil
@@ -173,4 +175,17 @@ extension Notification.Name {
 
     static let undoableRemovalRestoredSelection =
         Notification.Name("bristlenoseUndoableRemovalRestoredSelection")
+}
+
+/// Which history Edit ▸ Undo and ⌘Z take from. Two stacks share the key: the
+/// sidebar's pending removal and the report's own (`undo-state`). A pending
+/// removal is always the newer of the two, because a new act on the report
+/// settles it (`UndoableRemovalStore.commitIfPending`), so it goes first.
+enum EditUndoRoute: Equatable {
+    case removal, report, none
+
+    static func resolve(removalPending: Bool, reportCanUndo: Bool) -> EditUndoRoute {
+        if removalPending { return .removal }
+        return reportCanUndo ? .report : .none
+    }
 }

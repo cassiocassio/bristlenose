@@ -194,6 +194,16 @@ final class BridgeHandler: ObservableObject {
     /// "Redo Rename Moderator"), or nil for the generic "Redo".
     @Published var redoLabel: String?
 
+    /// The sidebar's pending removal, which a new act on the report settles —
+    /// otherwise it would answer ⌘Z ahead of every report edit made since.
+    /// App-wide; set by ContentView.
+    weak var removalStore: UndoableRemovalStore?
+
+    /// The report's count of new acts at its last `undo-state` (UndoStore's
+    /// `pushes`). Rises only on a new act, never on undo or redo, and restarts
+    /// with each page.
+    private var reportUndoPushes = 0
+
     /// The active lens's subtitle, pushed by the SPA (e.g. "163 Quotes",
     /// "3 Codebooks · 47 Tags"). The SPA owns the live count + formatting — only
     /// it can compute Signals, and the visible-quote / tag counts shift as the
@@ -868,6 +878,11 @@ final class BridgeHandler: ObservableObject {
             canRedo = body["canRedo"] as? Bool ?? false
             undoLabel = body["undoLabel"] as? String
             redoLabel = body["redoLabel"] as? String
+            let pushes = body["pushes"] as? Int ?? 0
+            if pushes > reportUndoPushes {
+                removalStore?.commitIfPending()
+            }
+            reportUndoPushes = pushes
 
         case "export-counts":
             if let n = body["total"] as? Int { totalQuoteCount = n }
@@ -1084,6 +1099,7 @@ final class BridgeHandler: ObservableObject {
         canRedo = false
         undoLabel = nil
         redoLabel = nil
+        reportUndoPushes = 0
         quotesSearchQuery = ""
         quotesViewMode = "all"
         searchSuggestions = .empty

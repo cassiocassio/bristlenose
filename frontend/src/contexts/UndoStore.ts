@@ -41,6 +41,11 @@ export interface UndoState {
   /** The act the next undo would reverse, or null. */
   undoAction: string | null;
   redoAction: string | null;
+  /** How many acts have been recorded since the page loaded. Rises only on a
+   *  new act — never on undo, redo or clear — so the Mac can tell "the
+   *  researcher did something new" from "they moved through the history"
+   *  (it settles a pending sidebar removal on the first; see BridgeHandler). */
+  pushes: number;
 }
 
 /** Deep enough that nobody runs out in a session; bounded so a long one does
@@ -55,8 +60,10 @@ const EMPTY: UndoState = {
   canRedo: false,
   undoAction: null,
   redoAction: null,
+  pushes: 0,
 };
 let snapshot: UndoState = EMPTY;
+let pushes = 0;
 
 const listeners = new Set<() => void>();
 
@@ -68,6 +75,7 @@ function emit(): void {
     canRedo: !!redoTop,
     undoAction: top?.action ?? null,
     redoAction: redoTop?.action ?? null,
+    pushes,
   };
   for (const listener of listeners) listener();
 }
@@ -90,6 +98,7 @@ export function useUndoState(): UndoState {
 /** Record an act that has just been done. A new act ends the redo branch. */
 export function pushUndo(entry: UndoEntry): void {
   undoStack.push(entry);
+  pushes += 1;
   if (undoStack.length > UNDO_DEPTH) undoStack.shift();
   redoStack = [];
   emit();
@@ -127,6 +136,7 @@ export function clearUndo(): void {
 export function resetUndoStore(): void {
   undoStack = [];
   redoStack = [];
+  pushes = 0;
   snapshot = EMPTY;
   listeners.clear();
 }

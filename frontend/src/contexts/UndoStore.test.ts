@@ -20,9 +20,22 @@ function setter(box: { v: string }, from: string, to: string, key = "test") {
 afterEach(() => resetUndoStore());
 
 describe("UndoStore", () => {
+  it("counts new acts, and only new acts", async () => {
+    const box = { v: "a" };
+    setter(box, "a", "b");
+    setter(box, "b", "c");
+    expect(getUndoState().pushes).toBe(2);
+    await undo();
+    await redo();
+    clearUndo();
+    expect(getUndoState().pushes).toBe(2);
+    setter(box, "c", "d");
+    expect(getUndoState().pushes).toBe(3);
+  });
+
   it("starts with nothing to undo or redo", async () => {
     expect(getUndoState()).toEqual({
-      canUndo: false, canRedo: false, undoAction: null, redoAction: null,
+      canUndo: false, canRedo: false, undoAction: null, redoAction: null, pushes: 0,
     });
     expect(await undo()).toBe(false);
     expect(await redo()).toBe(false);

@@ -96,9 +96,9 @@ describe("UndoSync — the Mac app", () => {
 
   it("tells Edit ▸ Undo what it would undo, by name", () => {
     render(<UndoSync />);
-    expect(postMock).toHaveBeenLastCalledWith(false, false, null, null);
+    expect(postMock).toHaveBeenLastCalledWith(false, false, null, null, 0);
     act(() => entry({ v: "" }, "a", "b", "confirmName"));
-    expect(postMock).toHaveBeenLastCalledWith(true, false, "«undo.undo.confirmName»", null);
+    expect(postMock).toHaveBeenLastCalledWith(true, false, "«undo.undo.confirmName»", null, 1);
   });
 
   it("the menu's undo and redo actions drive the stack", async () => {
@@ -107,7 +107,8 @@ describe("UndoSync — the Mac app", () => {
     act(() => entry(box, "a", "b"));
     await menu("undo");
     expect(box.v).toBe("a");
-    expect(postMock).toHaveBeenLastCalledWith(false, true, null, "«undo.redo.renameModerator»");
+    // An undo is not a new act: the count holds.
+    expect(postMock).toHaveBeenLastCalledWith(false, true, null, "«undo.redo.renameModerator»", 1);
     await menu("redo");
     expect(box.v).toBe("b");
     expect(getUndoState().canUndo).toBe(true);

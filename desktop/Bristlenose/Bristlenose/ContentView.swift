@@ -891,6 +891,9 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            // A new act on this window's report settles a pending sidebar
+            // removal, so ⌘Z reaches the report again (BridgeHandler).
+            bridgeHandler.removalStore = removalStore
             // This window's own study first; the last-used one only as a
             // fallback. Under Stage 3b the scene value is per window, so five
             // restored windows come back on five studies rather than five

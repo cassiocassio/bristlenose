@@ -704,9 +704,9 @@ private struct UndoRedoMenuContent: View {
     @ObservedObject var removalStore: UndoableRemovalStore
     @ObservedObject var i18n: I18n
 
-    /// Removal-undo takes priority over web-side undo when pending: it's the
-    /// most recent action and has a strict 8s window. After commit it falls
-    /// back to the previous (web) behaviour.
+    /// A pending removal goes first: it is always the newer act, because a new
+    /// act on the report settles it (`BridgeHandler`, `undo-state`).
+    /// `EditUndoRoute` holds the rule.
     private var undoLabel: String {
         if let name = removalStore.pendingName {
             return String(format: i18n.t("desktop.menu.edit.undoRemove"), name)
@@ -714,21 +714,22 @@ private struct UndoRedoMenuContent: View {
         return bridgeHandler.undoLabel ?? i18n.t("desktop.menu.edit.undo")
     }
 
-    private var canUndo: Bool {
-        removalStore.hasPending || bridgeHandler.canUndo
+    private var route: EditUndoRoute {
+        EditUndoRoute.resolve(removalPending: removalStore.hasPending,
+                              reportCanUndo: bridgeHandler.canUndo)
     }
 
     var body: some View {
         if !bridgeHandler.isEditing {
             Button(undoLabel, systemImage: "arrow.uturn.backward") {
-                if removalStore.hasPending {
-                    removalStore.undoLastRemoval()
-                } else {
-                    bridgeHandler.menuAction("undo")
+                switch route {
+                case .removal: removalStore.undoLastRemoval()
+                case .report: bridgeHandler.menuAction("undo")
+                case .none: break
                 }
             }
             .keyboardShortcut("z", modifiers: .command)
-            .disabled(!canUndo)
+            .disabled(route == .none)
 
             Button(bridgeHandler.redoLabel ?? i18n.t("desktop.menu.edit.redo"),
                    systemImage: "arrow.uturn.forward") {

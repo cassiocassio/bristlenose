@@ -19,7 +19,7 @@ trued-against: HEAD@main on 2026-10-04
 
 ## Changelog
 
-- _2026-10-04_ — trued against the build: status `partial`; the 28 Jul "what exists" table kept beside a 4 Oct one; the substrate section records that deltas shipped instead of snapshots; the divide's points 1–4 and the open questions annotated with what was decided. New finding recorded under point 2: a pending sidebar removal shadows the whole report stack, indefinitely.
+- _2026-10-04_ — trued against the build: status `partial`; the 28 Jul "what exists" table kept beside a 4 Oct one; the substrate section records that deltas shipped instead of snapshots; the divide's points 1–4 and the open questions annotated with what was decided. New finding recorded under point 2: a pending sidebar removal shadowed the whole report stack, indefinitely — fixed the same day (a new report act settles it).
 - _2026-10-04_ — built: the report stack (`contexts/UndoStore.ts`, `components/UndoSync.tsx`, the `undo-state` channel live both ways with named Undo and Redo), first for speaker names, then star/hide/tag, then text edits.
 - _2026-07-28_ — created. Companion to `design-undo-debt.md`, which owns the *sidebar* register and the "nothing confirms, everything ⌘Z's" principle. This doc owns the **full** mutable-state inventory (five ownership domains, ~50 mutations), the candidate history stacks, and the Swift↔Python boundary problems that doc explicitly declines to cover ("the report's own undo domain… Don't conflate the two").
 
@@ -248,8 +248,17 @@ The hard part, and the reason this can't be one `NSUndoManager`.
    Edit ▸ Undo in every window undo that removal, and the report's stack is out
    of reach from the menu and the key until it is undone or superseded. This
    paragraph's own example (remove, then hide, then ⌘Z) undoes the removal
-   first. **Open, found while truing; not fixed in 0.33.0.** Labels are solved:
-   whole per-language strings (`UndoStore.ts`).
+   first. Labels are solved: whole per-language strings (`UndoStore.ts`).
+
+   _Fixed the same day, before 0.33.0 (owner's call):_ a new act on the report
+   settles the pending removal, as moving on in Mail does. `undo-state` carries
+   `pushes`, a count of new acts that rises only on a new act (never on undo,
+   redo or a page reload); when `BridgeHandler` sees it rise it calls
+   `UndoableRemovalStore.commitIfPending()`. A pending removal is therefore
+   always the newer of the two stacks, so going first is now the right order —
+   the rule is `EditUndoRoute.resolve`. A removal with nothing after it stays
+   undoable as before. Pinned by `RemovalUndoPrecedenceTests`. Still no
+   coordinator: two stacks, made to agree on order by settling, not merging.
 
 3. **Asymmetric durability.** The Swift stack is in-memory (a crash inside the 8 s
    window loses the project). _(4 Oct 2026: no 8 s window since 19 Aug, and the

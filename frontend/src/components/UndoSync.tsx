@@ -31,7 +31,7 @@ export function UndoSync() {
     if (!embedded) return;
     const undoLabel = state.undoAction ? t(`undo.undo.${state.undoAction}`) : null;
     const redoLabel = state.redoAction ? t(`undo.redo.${state.redoAction}`) : null;
-    postUndoState(state.canUndo, state.canRedo, undoLabel, redoLabel);
+    postUndoState(state.canUndo, state.canRedo, undoLabel, redoLabel, state.pushes);
   }, [embedded, state, t]);
 
   useEffect(() => {

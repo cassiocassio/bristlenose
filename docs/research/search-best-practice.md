@@ -102,6 +102,11 @@ L (a week or more). **Value** is for a researcher using the report.
 Ordered by the owner's emphasis (AI first, through the path that works today)
 and by dependency. Each step is useful on its own.
 
+**The bar, set 4 Oct 2026: Google is the minimum search experience** users
+expect in any app. *Mike* finds *Michael*, *Alsatian* is a kind of dog, a
+*hotdog* is food. Understanding names and meaning is a baseline for the search
+field itself, not a late tier behind lexical polish.
+
 **Decided 4 Oct 2026: for the foreseeable future, MCP is the chat lens.** No
 in-app question box until Bristlenose adds more value than Claude inside the
 app. So the AI steps below are about making the MCP tools better grounding for

@@ -153,17 +153,29 @@ enum MCPHandshake {
     /// Access has just been turned off — so it is removed, not left. (serve
     /// refuses an out-of-scope project anyway; this keeps the file honest
     /// too.) `writer` is the seam that lets a test make the group write fail.
+    ///
+    /// The payload is built ONCE and the same bytes go to both directories.
+    /// Built per copy, each carried its own `updated_at`, so two writes that
+    /// straddled a second boundary left a reader choosing between copies that
+    /// disagreed on when they were written (seen as a flake in
+    /// `writeBoth_writesIdenticalCopies_andReadsBack`, 4 Oct 2026).
     @discardableResult
     static func writeBoth(entries: [HandshakeExposure.Entry], data: URL?, group: URL?,
-                          writer: ([HandshakeExposure.Entry], URL?) -> Bool = { writeOne(entries: $0, directory: $1) }) -> Bool {
-        if let group, !writer(entries, group) {
+                          writer: (Data, URL?) -> Bool = { writeBytes($0, directory: $1) }) -> Bool {
+        let bytes = payload(entries: entries)
+        if let group, !writer(bytes, group) {
             log.error("handshake group copy not written; removing the previous copy")
             removeOne(directory: group)
         }
-        return writer(entries, data)
+        return writer(bytes, data)
     }
 
     static func writeOne(entries: [HandshakeExposure.Entry], directory: URL?) -> Bool {
+        writeBytes(payload(entries: entries), directory: directory)
+    }
+
+    /// The write itself: `data` lands at `directory/mcp-handshake.json`.
+    static func writeBytes(_ data: Data, directory: URL?) -> Bool {
         guard let dir = directory else { return false }
         do {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -172,7 +184,6 @@ enum MCPHandshake {
             return false
         }
 
-        let data = payload(entries: entries)
         let finalURL = dir.appendingPathComponent(filename)
         var tempURL = dir.appendingPathComponent(".\(filename).tmp-\(UUID().uuidString)")
 
@@ -218,7 +229,7 @@ enum MCPHandshake {
             log.error("handshake rename failed: errno=\(renameErrno, privacy: .public)")
             return false
         }
-        log.info("handshake written projects=\(entries.count, privacy: .public)")
+        log.info("handshake written bytes=\(data.count, privacy: .public)")
         return true
     }
 

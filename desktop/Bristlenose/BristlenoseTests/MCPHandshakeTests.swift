@@ -20,6 +20,12 @@ struct MCPHandshakeTests {
         try? FileManager.default.removeItem(at: dir)
     }
 
+    /// Block until the wall-clock second changes (at most ~1 s).
+    private static func waitForTheNextSecond() {
+        let start = Int(Date().timeIntervalSince1970)
+        while Int(Date().timeIntervalSince1970) == start { usleep(10_000) }
+    }
+
     @Test func write_landsAtMode0600_withTheExpectedContent() throws {
         let dir = Self.makeTempDir()
         defer { Self.cleanup(dir) }
@@ -157,8 +163,17 @@ struct MCPHandshakeTests {
     @Test func writeBoth_writesIdenticalCopies_andReadsBack() throws {
         let data = Self.makeTempDir(), group = Self.makeTempDir()
         defer { Self.cleanup(data); Self.cleanup(group) }
-        #expect(MCPHandshake.writeBoth(entries: [Self.entry("a"), Self.entry("b", port: 2)],
-                                       data: data, group: group))
+        // `updated_at` has one-second resolution, so wait for the clock to
+        // tick between the two writes. That is the case that flaked when each
+        // copy built its own payload (4 Oct 2026); forcing it every run makes
+        // the test deterministic rather than lucky.
+        let ok = MCPHandshake.writeBoth(entries: [Self.entry("a"), Self.entry("b", port: 2)],
+                                        data: data, group: group) { bytes, dir in
+            let written = MCPHandshake.writeBytes(bytes, directory: dir)
+            if dir == group { Self.waitForTheNextSecond() }
+            return written
+        }
+        #expect(ok)
         let one = try Data(contentsOf: data.appendingPathComponent(MCPHandshake.filename))
         let two = try Data(contentsOf: group.appendingPathComponent(MCPHandshake.filename))
         #expect(one == two)
@@ -175,8 +190,8 @@ struct MCPHandshakeTests {
         let stale = group.appendingPathComponent(MCPHandshake.filename)
         #expect(FileManager.default.fileExists(atPath: stale.path))
 
-        let ok = MCPHandshake.writeBoth(entries: [], data: data, group: group) { entries, dir in
-            dir == group ? false : MCPHandshake.writeOne(entries: entries, directory: dir)
+        let ok = MCPHandshake.writeBoth(entries: [], data: data, group: group) { bytes, dir in
+            dir == group ? false : MCPHandshake.writeBytes(bytes, directory: dir)
         }
         #expect(ok)
         #expect(!FileManager.default.fileExists(atPath: stale.path))

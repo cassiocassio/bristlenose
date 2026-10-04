@@ -15,6 +15,13 @@ built. The people *file* and its endpoints predate it and do ship —
 
 ## Changelog
 
+- _2026-10-04_ — **The cross-role recode is planned (§J7), and its premise corrected.** A
+  speaker's kind is held on the slot in the serve DB and never reaches the pipeline by itself:
+  the transcript fingerprint hashes roles and codes, so a recode stamped into the registry would
+  re-analyse the session for money, against §C5's "does not re-extract". Moderator ↔ observer
+  first (R1), changing no number and no quote; into or out of participant relabels and *offers*
+  re-analysis (R2, R3). Seven calls for the owner. Found on the way and fixed: the registry
+  reissued a participant number once its speaker was re-identified as another kind.
 - _2026-10-03_ — **Per-session moderator names shipped as the weekend fix — not Phase 1.** Measuring
   Phase 1 before building it found its row unsound (see the second dated block under H9's table), so
   the owner chose the smaller fix: each session's moderator and observer are named from that
@@ -2055,7 +2062,8 @@ Every name that predates 012 reads as proposed, accepted by the owner.
 Still open, listed in the mockup's Part 3: where a spelling fix lives now
 that a click opens the picker; whether opening on an unknown slot pre-selects
 the first moderator; whether a "don't know who" row is needed; whether the Participant segment (a real recode,
-§J) ships with the first picker or after it, with its undo; and the participant
+§J) ships with the first picker or after it, with its undo (planned in §J7:
+after it, as R2, with moderator ↔ observer first as R1); and the participant
 list's scope.
 
 **Judge web against native in the app, not in the mockup.** The mockup's Mac
@@ -2343,6 +2351,9 @@ same renumber machinery reached by a different verb. What *can* ship in step 1 i
 role as a **recorded override** that the pipeline honours on the next run, which
 needs no recode and no cascade.
 
+*4 Oct 2026: route C removes the cascade — the tag is provenance and the recode is
+one slot row. The plan, and why it does not reach the pipeline, is §J7.*
+
 ### J2 · Step 1 — name, that's me, the bank
 
 - **`persons.uuid`** — one new column, one Alembic revision plus the head-pin
@@ -2444,3 +2455,203 @@ citations were wrong by two to twenty lines. That is why this section cites file
 rather than lines, and why anyone building from it should re-derive the anchors
 first — the repo's own gotcha about a bug report describing the tree its author
 read applies to design docs too.
+
+### J7 · The cross-role recode — plan (4 Oct 2026; not built)
+
+*Written to unblock the picker's disabled segments (UX iteration 3: Moderator |
+Participant | Observer, only the current one enabled until this exists). Builds on
+route C Phase 1, which has not landed; nothing here starts before it and before
+0.33.0 ships. Cites files, not lines, for J's reason. Scope: one speaker, in one
+session, changes kind — `m1` was really an observer, `p3` was really the
+moderator. **Not** in scope: a single quote misattributed in crosstalk (per-quote
+reattribution, owned by the moderator-quote speaker-detection work), `p3` is
+really `p5` (an identity merge, §D step 4), and part of a turn belonging to
+someone else (§D step 5).*
+
+**J1 priced the recode as a cascade over seven things keyed by the code. Route C
+removes the cascade.** Once a slot is a `session_speakers` row with a person behind
+it, the speaker code in the transcript is a within-session tag — provenance, as
+§J4 settled for `m`/`o` on 1 Oct — and the code a researcher sees is emitted by
+the server from the slot's kind and its identity. So a recode rewrites nothing
+keyed by the tag: `TranscriptSegment.speaker_code`, `Quote.participant_id`, the
+quote stable key, the bracket tokens in `transcripts-raw/` and the registry entry
+all keep `m1`. It writes one slot row.
+
+#### What the brief assumed, and what the code says
+
+The brief for this plan said a recode must be written into the pipeline-side
+registry (`.bristlenose/sessions.json`), because the registry keeps a label's
+code "while its role matches" and a re-run would otherwise revert it. Measured,
+that is half right, and the wrong half is expensive.
+
+- **The registry cannot hold a recode as it stands.** It stores label → code, and
+  `assign_speaker_codes` keeps a known code only while its prefix matches the
+  role the pipeline *detected this run*; a mismatch gets a fresh code. That is the
+  intended contract, pinned by `test_a_role_change_gets_a_fresh_code` in
+  `tests/test_session_registry.py`. Writing `o1` into the map would be thrown away
+  on the next run. Holding a recode there needs a new field — a role pin that
+  overrides the detected role and re-stamps `seg.speaker_role`.
+- **A role pin that reaches the segments re-analyses the session, and is paid
+  for.** `_transcript_fingerprint` (`pipeline.py`) hashes the transcript "as the
+  stage sees it — text, roles and codes", and the per-session caches of both
+  topic segmentation and quote extraction key on it. A pinned recode changes the
+  fingerprint, so the next run sends that session to the LLM twice, and the quotes
+  that come back can land on different start timecodes than the ones the
+  researcher starred and tagged. §C5 states the opposite as a rule: changing a
+  speaker's kind "does **not** re-extract quotes".
+- **And for `m` ↔ `o` there is nothing to re-extract for.** Quotes are credited
+  to the session's primary participant (`transcript.participant_id` in s09), not
+  to the speaker of each segment, and the extraction prompt treats `[RESEARCHER]`
+  and `[OBSERVER]` identically: never a quote. Coverage puts `m` and `o` in one
+  bucket (`coverage.py`, `routes/dashboard.py`), and the `pct_words` denominator
+  in `people.py` counts `p` only. A moderator ↔ observer recode changes no number
+  and no quote.
+
+So the plan splits the store by what the recode changes. **Kind is held on the
+slot, in the serve DB, for every recode, and never reaches the pipeline on its own.**
+A recode into or out of participant — which does make the session's evidence
+wrong — reaches the pipeline only through an explicit, priced *Re-analyse this
+session*, and that is the one place a registry pin is written (R3 below).
+
+#### The model
+
+- **The slot gains a nullable `speaker_role_override`.** Null means the kind the
+  tag says (the importer's prefix rule, `importer.py`); a value means a person
+  said otherwise. The effective kind is `override ?? kind(tag)`. Internal name
+  only: per H1 call 3 the bare word "role" is never shown, and the transcript
+  surfaces say "speaker".
+- **The importer never writes it and never overwrites it.** That is the whole of
+  "a re-run does not revert it": the registry keeps the label's tag, so on
+  re-import `(session, tag)` names the same slot, and the slot keeps its kind and
+  its person. Same rule, same test shape, as Phase 1's "never overwrites a
+  confirmed row".
+- **A recode is two writes in one transaction:** the kind, and the slot's person —
+  an identity of the new kind, picked from that segment's list or minted by its
+  *New observer / New moderator / New participant* field. The name's confirmed
+  state follows the pick, as it does today (`put_session_speaker`).
+- **The code shown is the identity's code in that kind.** This needs Phase 1 to
+  answer a question its row does not ask: what code does an identity show in a
+  kind it has not held? Mike moderates s1 (`m2`) and observes s4. Owner's call 3
+  below.
+- **The rule that keeps the blast radius small: no consumer outside the server
+  ever reads a raw tag.** Every route emits the displayed code. Then every prefix
+  test downstream stays correct as written, because the prefix of an emitted code
+  *is* the effective kind — the frontend (`badgeStyle.ts`, `api.ts`,
+  `SessionsTable.tsx`, `SessionsSidebar.tsx`, `SearchBox.tsx`,
+  `TranscriptPage.tsx`), export anonymisation (`_anonymise_data` in
+  `routes/export.py`, which blanks by `p` prefix), the MCP overview's participant
+  count (`mcp_server.py`) and the Mac (`SessionsAPI.swift`). Phase 1 already owes
+  this emission for `m`/`o` (the second dated block under H9's table); the recode
+  extends it to every kind. What must change is the **server-side** set that reads
+  raw tags: `routes/transcript.py` (`is_moderator`, and the participant list),
+  `routes/sessions.py`, `routes/dashboard.py` (coverage and the participant
+  filter), `grounding.py` (participants counted from quotes),
+  `export_core._load_speakers`, `routes/clips_export._load_speaker_names` and
+  `resolve_speaker_names`. One resolver, `(session, tag) → (kind, code, person)`,
+  in one module, used by all of them.
+
+#### What a recode changes
+
+| | `m` ↔ `o` (R1) | out of `p` (R2) | into `p` (R2) |
+|---|---|---|---|
+| Badge, kind word, picker list | yes | yes | yes |
+| Sidebar "multiple moderators", MCP `moderator` field, export roles line | yes | yes | yes |
+| Name in an anonymised export (§E decision 2) | no change — both named | **now named** | **now blanked** — the privacy gate below |
+| `words_spoken`, `pct_time_speaking` (per slot) | no | no | no |
+| `pct_words` — share of *participant* words, study-wide | no | **every participant's** | **every participant's** |
+| Coverage buckets | no — one bucket | words move to moderator | words move to participant |
+| Quotes in the lens | no — credited to the session's participant | if this slot is the credited one, **every quote of the session leaves the lens** | none until the session is re-analysed |
+| Extraction prompt tags | irrelevant | wrong until re-analysed | wrong until re-analysed |
+| Discussion guide (moderator questions, `discussion/moderator.py`) | an observer's questions stay in the guide until re-analysed | — | — |
+| Tag, transcript files, quote stable key, registry | untouched | untouched | untouched |
+| Markdown report, sealed static HTML | keep the tag — not trued | same | same |
+
+Three consequences for the build:
+
+- **`pct_words` and coverage become read-time projections.** Both are stored or
+  computed from prefixes today; one `p` recode changes every participant's share
+  in the study, so a stored value is wrong the moment the recode commits.
+- **The Quotes-lens membership filter (§C4) is R2's spine, and it must be one
+  predicate**, keyed on the credited slot's effective kind, applied in the lens,
+  `search_quotes`, the dashboard's featured quotes, signals counts and every
+  export. A quote leaving is hidden, never deleted — the recode's undo brings it
+  back with its stars.
+- **The extraction is wrong after any `p` recode, and only re-analysis fixes it.**
+  `p3` was really the moderator: the quotes are the moderator's words, and the
+  real participant, tagged `[RESEARCHER]`, was never quoted. Relabelling hides the
+  wrong quotes; it cannot produce the right ones.
+
+#### Undo
+
+- **`m` ↔ `o` and the relabel half of a `p` recode: the inverse is the same act.**
+  The endpoint returns the slot's previous `(override, person, confirmed)`, so the
+  client can put it back exactly — including the identity a re-pick would not
+  restore by itself. ⌘Z carries it when the undo store lands (`canUndo` is still
+  stubbed false in `shims/bridge.ts`, §B10); until then, picking the old kind is
+  the undo. Not gated on the undo store: the act is cheap and fully reversible.
+- **Re-analysis is not undoable.** It spends, and curation on the session's quotes
+  that do not come back at the same start timecode is lost (pinned quotes excepted,
+  `_pinned_quote_ids` in `importer.py`). So it is its own act, behind a confirm
+  whose Cancel is the default, saying what it costs and what may be lost.
+
+#### Re-analysis, and the registry pin (R3)
+
+- *Re-analyse this session* writes the pin, and starts the run. The pin is not
+  written at recode time: serve and a running pipeline would both rewrite
+  `sessions.json`, and the registry is load–mutate–save.
+- **The pin is keyed by label and carries the evidence it was set on** — the start
+  times of that label's segments at pin time. On a bare recording the labels are
+  *Speaker A/B* from an LLM text split that a voice pass may re-label
+  (`s05b_identify_speakers.py`, `s05b_voice.py`), so a re-run of speaker
+  identification can hand *Speaker A* to the other human. A pin whose evidence no
+  longer matches is dropped and reported in the pipeline summary, never applied to
+  whoever now holds the label. (The same hazard already carries names and
+  `name_confirmed` on the tag today; this plan does not widen it for `m` ↔ `o`.)
+- `assign_speaker_codes` honours a pin over the detected kind and re-stamps
+  `seg.speaker_role`, so the prompt tags change and the fingerprint does too —
+  which is now the point.
+- **Participant numbers are never reissued.** Fixed 4 Oct 2026 (`git log -S'participants_issued'`):
+  a speaker re-identified as another kind on a re-run left the registry's map, and
+  its number was handed to the next new participant with the name typed for the
+  first. Measured before the fix: `s2`'s `p2` re-identified as an observer, then a
+  new session's participant got `p2`. A `p` recode retires a number the same way,
+  so this was a prerequisite.
+- **File format.** The pin is a new key. The registry is unreleased (3 Oct), so a
+  key added before 0.33.0 ships is additive and free; added after, an older
+  binary's `save()` would drop it silently (the J2 downgrade hazard), and it needs
+  `REGISTRY_VERSION = 2` — which older binaries refuse loudly, the right failure.
+
+#### Sequence
+
+| Step | Ships | Gate | Needs |
+|---|---|---|---|
+| **R1 · moderator ↔ observer** | `speaker_role_override` (one Alembic revision + the head pin in `tests/test_migrations.py`); `PUT …/sessions/{sid}/speakers/{tag}/kind` taking the kind and the person (an id, or a new name), returning the previous slot; the importer rule; the resolver and the server-side raw-tag sites; the web picker's Moderator and Observer segments enabled on `m`/`o` slots (Participant stays disabled); the native picker the same | vitest asserting **the payload each segment pick sends** (the 0.29.1 lesson); a re-import test — recode, re-run the importer on the same intermediates, the slot keeps its kind and person, red without the rule; a route walk over `app.openapi()` GETs, in the shape of `test_serve_export_coverage.py`, asserting no emitted speaker code's prefix disagrees with its slot's effective kind; Swift: the popover's segment pick sends the same payload | Phase 1, 0.33.0 |
+| **R2 · into and out of participant, relabel only** | The §C4 membership predicate in one place; `pct_words` and coverage at read time; the Participant segment enabled; the *Re-analyse this session* prompt offered after a `p` recode, not taken | **The privacy gate:** recode `m1` → participant in a fixture, export anonymised, assert the name appears nowhere — proved red against prefix-only anonymisation. Out of `p`: the session's quotes leave the lens, `search_quotes` and the export, and come back on undo with their stars | R1 |
+| **R3 · re-analyse this session** | The pin, its evidence check, the confirm | A pinned run re-stamps the kind and re-extracts that session only; a pin whose label moved is dropped and reported; numbers never reissued (shipped) | R2 |
+
+#### Calls for the owner
+
+1. **`m` ↔ `o` never touches the pipeline** — held on the slot, nothing re-extracted.
+   *Recommended*, against the brief's "write it to the registry": the fingerprint
+   evidence above, §C5's own rule, and that nothing about the evidence changes.
+2. **A recode into or out of participant relabels at once and *offers* re-analysis;
+   it never starts it.** *Recommended.* The alternative — re-analyse automatically —
+   spends on a click and loses curation without a confirm.
+3. **The code an identity shows in a kind it has not held** (Phase 1's code scheme).
+   *Recommended:* per identity *and* kind — Mike is `m2` where he moderates and
+   `o1` where he observes; the name joins them. A code that disagrees with the
+   badge's kind breaks every prefix reader at once, which is the property R1 relies on.
+4. **The swap.** The common participant error is an inversion in a two-speaker
+   session: the pipeline called the moderator `p3` and the participant `m1`. Two
+   separate recodes leave a moment with no participant and two undo steps.
+   *Recommended:* when the only participant is recoded to moderator in a session
+   whose only moderator would then be the only candidate, the picker offers
+   *Swap with m1* as the act. R2, not R1.
+5. **The pin's key before 0.33.0?** *Recommended: no.* R3 is distant and a field
+   with no reader is speculation; take the version bump when R3 lands.
+6. **An observer's questions stay in the Discussion guide until re-analysis** after
+   an `m` → `o` recode. *Recommended: accept* — the guide is a pipeline artefact,
+   and re-analysis is the honest way to change it.
+7. **Recoding `p` → moderator names that person in an anonymised export** (decision
+   2 names moderators). *Recommended: accept, without a warning* — decision 2 is the
+   rule, and the recode says they were never a participant.

@@ -612,7 +612,11 @@
       "hide": "숨기기 실행 취소",
       "unhide": "표시 실행 취소",
       "addTag": "태그 추가 실행 취소",
-      "removeTag": "태그 제거 실행 취소"
+      "removeTag": "태그 제거 실행 취소",
+      "editQuote": "인용문 편집 실행 취소",
+      "renameSection": "섹션 이름 변경 실행 취소",
+      "renameTheme": "테마 이름 변경 실행 취소",
+      "editDescription": "설명 편집 실행 취소"
     },
     "redo": {
       "renameModerator": "진행자 이름 변경 복귀",
@@ -624,7 +628,11 @@
       "hide": "숨기기 복귀",
       "unhide": "표시 복귀",
       "addTag": "태그 추가 복귀",
-      "removeTag": "태그 제거 복귀"
+      "removeTag": "태그 제거 복귀",
+      "editQuote": "인용문 편집 복귀",
+      "renameSection": "섹션 이름 변경 복귀",
+      "renameTheme": "테마 이름 변경 복귀",
+      "editDescription": "설명 편집 복귀"
     }
   }
 }

@@ -9,6 +9,8 @@ import type { QuoteResponse, TagResponse } from "../utils/types";
 import {
   HIDE_DURATION,
   addTag,
+  commitEdit,
+  commitHeadingEdit,
   addTagToQuotes,
   getQuotesSnapshot,
   hideQuotes,
@@ -32,11 +34,12 @@ vi.mock("../utils/api", () => ({
   denyProposal: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { putHidden, putStarred, putTags } from "../utils/api";
+import { putEdits, putHidden, putStarred, putTags } from "../utils/api";
 
 const putStarredMock = vi.mocked(putStarred);
 const putHiddenMock = vi.mocked(putHidden);
 const putTagsMock = vi.mocked(putTags);
+const putEditsMock = vi.mocked(putEdits);
 
 function quote(dom_id: string, tags: TagResponse[] = []): QuoteResponse {
   return {
@@ -189,6 +192,55 @@ describe("tags", () => {
     addTagToQuotes(["q1"], tag("Speed"), false);
     await undo();
     expect(tagNames("q1")).toEqual(["Speed"]);
+  });
+});
+
+describe("text edits", () => {
+  const edits = () => getQuotesSnapshot().edits;
+
+  it("undoing a first edit removes it, so the pipeline's text shows again", async () => {
+    commitEdit("q1", "Edited");
+    expect(getUndoState().undoAction).toBe("editQuote");
+    await undo();
+    expect("q1" in edits()).toBe(false);
+    expect(putEditsMock).toHaveBeenLastCalledWith({});
+    await redo();
+    expect(edits().q1).toBe("Edited");
+  });
+
+  it("undoing a second edit restores the first", async () => {
+    commitEdit("q1", "One");
+    commitEdit("q1", "Two");
+    await undo();
+    expect(edits().q1).toBe("One");
+  });
+
+  it("the card's revert to the original is undoable too", async () => {
+    commitEdit("q1", "Edited");
+    commitEdit("q1", "x"); // the quote's own text — what the card's revert sends
+    await undo();
+    expect(edits().q1).toBe("Edited");
+  });
+
+  it("committing the text already there records and writes nothing", () => {
+    commitEdit("q1", "Same");
+    vi.clearAllMocks();
+    commitEdit("q1", "Same");
+    expect(putEditsMock).not.toHaveBeenCalled();
+    expect(getUndoState().undoAction).toBe("editQuote");
+  });
+
+  it.each([
+    ["section-cluster-4:title", "renameSection"],
+    ["theme-group-2:title", "renameTheme"],
+    ["section-cluster-4:desc", "editDescription"],
+    ["theme-group-2:desc", "editDescription"],
+  ])("a heading edit to %s is %s, and its undo leaves quote edits alone", async (key, action) => {
+    commitEdit("q1", "Kept");
+    commitHeadingEdit(key, "Renamed");
+    expect(getUndoState().undoAction).toBe(action);
+    await undo();
+    expect(edits()).toEqual({ q1: "Kept" });
   });
 });
 

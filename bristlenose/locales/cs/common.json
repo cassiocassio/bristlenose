@@ -705,7 +705,11 @@
       "hide": "Odvolat akci Skrýt",
       "unhide": "Odvolat akci Zobrazit",
       "addTag": "Odvolat akci Přidat štítek",
-      "removeTag": "Odvolat akci Odebrat štítek"
+      "removeTag": "Odvolat akci Odebrat štítek",
+      "editQuote": "Odvolat akci Upravit citát",
+      "renameSection": "Odvolat akci Přejmenovat sekci",
+      "renameTheme": "Odvolat akci Přejmenovat téma",
+      "editDescription": "Odvolat akci Upravit popis"
     },
     "redo": {
       "renameModerator": "Opakovat akci Přejmenovat moderátora",
@@ -717,7 +721,11 @@
       "hide": "Opakovat akci Skrýt",
       "unhide": "Opakovat akci Zobrazit",
       "addTag": "Opakovat akci Přidat štítek",
-      "removeTag": "Opakovat akci Odebrat štítek"
+      "removeTag": "Opakovat akci Odebrat štítek",
+      "editQuote": "Opakovat akci Upravit citát",
+      "renameSection": "Opakovat akci Přejmenovat sekci",
+      "renameTheme": "Opakovat akci Přejmenovat téma",
+      "editDescription": "Opakovat akci Upravit popis"
     }
   }
 }

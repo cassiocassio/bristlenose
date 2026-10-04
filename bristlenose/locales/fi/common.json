@@ -642,7 +642,11 @@
       "hide": "Peru piilotus",
       "unhide": "Peru näkyviin tuonti",
       "addTag": "Peru tunnisteen lisäys",
-      "removeTag": "Peru tunnisteen poisto"
+      "removeTag": "Peru tunnisteen poisto",
+      "editQuote": "Peru sitaatin muokkaus",
+      "renameSection": "Peru osion uudelleennimeäminen",
+      "renameTheme": "Peru teeman uudelleennimeäminen",
+      "editDescription": "Peru kuvauksen muokkaus"
     },
     "redo": {
       "renameModerator": "Nimeä moderaattori sittenkin uudelleen",
@@ -654,7 +658,11 @@
       "hide": "Piilota sittenkin",
       "unhide": "Tuo sittenkin näkyviin",
       "addTag": "Lisää tunniste sittenkin",
-      "removeTag": "Poista tunniste sittenkin"
+      "removeTag": "Poista tunniste sittenkin",
+      "editQuote": "Muokkaa sitaattia sittenkin",
+      "renameSection": "Nimeä osio sittenkin uudelleen",
+      "renameTheme": "Nimeä teema sittenkin uudelleen",
+      "editDescription": "Muokkaa kuvausta sittenkin"
     }
   }
 }

@@ -716,7 +716,11 @@
       "hide": "Cofnij ukrycie",
       "unhide": "Cofnij ponowne pokazanie",
       "addTag": "Cofnij dodanie etykiety",
-      "removeTag": "Cofnij usunięcie etykiety"
+      "removeTag": "Cofnij usunięcie etykiety",
+      "editQuote": "Cofnij edycję cytatu",
+      "renameSection": "Cofnij zmianę nazwy sekcji",
+      "renameTheme": "Cofnij zmianę nazwy tematu",
+      "editDescription": "Cofnij edycję opisu"
     },
     "redo": {
       "renameModerator": "Przywróć zmianę imienia moderatora",
@@ -728,7 +732,11 @@
       "hide": "Przywróć ukrycie",
       "unhide": "Przywróć ponowne pokazanie",
       "addTag": "Przywróć dodanie etykiety",
-      "removeTag": "Przywróć usunięcie etykiety"
+      "removeTag": "Przywróć usunięcie etykiety",
+      "editQuote": "Przywróć edycję cytatu",
+      "renameSection": "Przywróć zmianę nazwy sekcji",
+      "renameTheme": "Przywróć zmianę nazwy tematu",
+      "editDescription": "Przywróć edycję opisu"
     }
   }
 }

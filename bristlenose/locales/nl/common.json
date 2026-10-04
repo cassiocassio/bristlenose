@@ -642,7 +642,11 @@
       "hide": "Herstel verbergen",
       "unhide": "Herstel tonen",
       "addTag": "Herstel tag toevoegen",
-      "removeTag": "Herstel tag verwijderen"
+      "removeTag": "Herstel tag verwijderen",
+      "editQuote": "Herstel citaat bewerken",
+      "renameSection": "Herstel naam sectie wijzigen",
+      "renameTheme": "Herstel naam thema wijzigen",
+      "editDescription": "Herstel beschrijving bewerken"
     },
     "redo": {
       "renameModerator": "Opnieuw naam moderator wijzigen",
@@ -654,7 +658,11 @@
       "hide": "Opnieuw verbergen",
       "unhide": "Opnieuw tonen",
       "addTag": "Opnieuw tag toevoegen",
-      "removeTag": "Opnieuw tag verwijderen"
+      "removeTag": "Opnieuw tag verwijderen",
+      "editQuote": "Opnieuw citaat bewerken",
+      "renameSection": "Opnieuw naam sectie wijzigen",
+      "renameTheme": "Opnieuw naam thema wijzigen",
+      "editDescription": "Opnieuw beschrijving bewerken"
     }
   }
 }

@@ -642,7 +642,11 @@
       "hide": "Desfés ocultar",
       "unhide": "Desfés tornar a mostrar",
       "addTag": "Desfés afegir l’etiqueta",
-      "removeTag": "Desfés eliminar l’etiqueta"
+      "removeTag": "Desfés eliminar l’etiqueta",
+      "editQuote": "Desfés l’edició de la cita",
+      "renameSection": "Desfés el canvi de nom de la secció",
+      "renameTheme": "Desfés el canvi de nom del tema",
+      "editDescription": "Desfés l’edició de la descripció"
     },
     "redo": {
       "renameModerator": "Refés el canvi de nom del moderador",
@@ -654,7 +658,11 @@
       "hide": "Refés ocultar",
       "unhide": "Refés tornar a mostrar",
       "addTag": "Refés afegir l’etiqueta",
-      "removeTag": "Refés eliminar l’etiqueta"
+      "removeTag": "Refés eliminar l’etiqueta",
+      "editQuote": "Refés l’edició de la cita",
+      "renameSection": "Refés el canvi de nom de la secció",
+      "renameTheme": "Refés el canvi de nom del tema",
+      "editDescription": "Refés l’edició de la descripció"
     }
   }
 }

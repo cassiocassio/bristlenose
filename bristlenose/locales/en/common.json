@@ -644,7 +644,11 @@
       "hide": "Undo Hide",
       "unhide": "Undo Unhide",
       "addTag": "Undo Add Tag",
-      "removeTag": "Undo Remove Tag"
+      "removeTag": "Undo Remove Tag",
+      "editQuote": "Undo Edit Quote",
+      "renameSection": "Undo Rename Section",
+      "renameTheme": "Undo Rename Theme",
+      "editDescription": "Undo Edit Description"
     },
     "redo": {
       "renameModerator": "Redo Rename Moderator",
@@ -656,7 +660,11 @@
       "hide": "Redo Hide",
       "unhide": "Redo Unhide",
       "addTag": "Redo Add Tag",
-      "removeTag": "Redo Remove Tag"
+      "removeTag": "Redo Remove Tag",
+      "editQuote": "Redo Edit Quote",
+      "renameSection": "Redo Rename Section",
+      "renameTheme": "Redo Rename Theme",
+      "editDescription": "Redo Edit Description"
     }
   }
 }

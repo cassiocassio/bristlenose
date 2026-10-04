@@ -642,7 +642,11 @@
       "hide": "Annulla Nascondi",
       "unhide": "Annulla Mostra",
       "addTag": "Annulla Aggiungi tag",
-      "removeTag": "Annulla Rimuovi tag"
+      "removeTag": "Annulla Rimuovi tag",
+      "editQuote": "Annulla Modifica citazione",
+      "renameSection": "Annulla Rinomina sezione",
+      "renameTheme": "Annulla Rinomina tema",
+      "editDescription": "Annulla Modifica descrizione"
     },
     "redo": {
       "renameModerator": "Ripristina Rinomina moderatore",
@@ -654,7 +658,11 @@
       "hide": "Ripristina Nascondi",
       "unhide": "Ripristina Mostra",
       "addTag": "Ripristina Aggiungi tag",
-      "removeTag": "Ripristina Rimuovi tag"
+      "removeTag": "Ripristina Rimuovi tag",
+      "editQuote": "Ripristina Modifica citazione",
+      "renameSection": "Ripristina Rinomina sezione",
+      "renameTheme": "Ripristina Rinomina tema",
+      "editDescription": "Ripristina Modifica descrizione"
     }
   }
 }

@@ -642,7 +642,11 @@
       "hide": "Desfazer Ocultar",
       "unhide": "Desfazer Mostrar",
       "addTag": "Desfazer Adicionar Etiqueta",
-      "removeTag": "Desfazer Remover Etiqueta"
+      "removeTag": "Desfazer Remover Etiqueta",
+      "editQuote": "Desfazer Editar citação",
+      "renameSection": "Desfazer Alterar nome da secção",
+      "renameTheme": "Desfazer Alterar nome do tema",
+      "editDescription": "Desfazer Editar descrição"
     },
     "redo": {
       "renameModerator": "Refazer Alterar nome do moderador",
@@ -654,7 +658,11 @@
       "hide": "Refazer Ocultar",
       "unhide": "Refazer Mostrar",
       "addTag": "Refazer Adicionar Etiqueta",
-      "removeTag": "Refazer Remover Etiqueta"
+      "removeTag": "Refazer Remover Etiqueta",
+      "editQuote": "Refazer Editar citação",
+      "renameSection": "Refazer Alterar nome da secção",
+      "renameTheme": "Refazer Alterar nome do tema",
+      "editDescription": "Refazer Editar descrição"
     }
   }
 }

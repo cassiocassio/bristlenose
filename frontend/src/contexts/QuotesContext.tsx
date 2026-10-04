@@ -476,16 +476,46 @@ export function hideQuotes(domIds: string[], record = true): void {
   }
 }
 
-export function commitEdit(domId: string, newText: string): void {
+/** The undo action naming an edit to this key of the shared edits map. */
+function editAction(key: string): string {
+  if (key.endsWith(":desc")) return "editDescription";
+  if (key.endsWith(":title")) {
+    return key.startsWith("theme-group-") ? "renameTheme" : "renameSection";
+  }
+  return "editQuote";
+}
+
+/**
+ * Set (or with `undefined`, clear) one entry of the shared edits map. One
+ * state write, one full-map PUT. The undo entry holds the entry's previous
+ * value — absent meaning "never edited", which the undo restores by removing
+ * the key, so the quote or heading falls back to the pipeline's text.
+ */
+function setEdit(key: string, text: string | undefined, record: boolean): void {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
   if (isExportMode()) return;
+  const before = state.edits[key];
+  if (before === text) return;
   setState((prev) => {
     const edits = { ...prev.edits };
-    edits[domId] = newText;
+    if (text === undefined) delete edits[key];
+    else edits[key] = text;
     putEdits(edits);
     return { ...prev, edits };
   });
+  if (record) {
+    pushUndo({
+      action: editAction(key),
+      undo: () => setEdit(key, before, false),
+      redo: () => setEdit(key, text, false),
+    });
+  }
+}
+
+/** Commit a quote's text — an edit, or the card's revert to the original. */
+export function commitEdit(domId: string, newText: string): void {
+  setEdit(domId, newText, true);
 }
 
 /**
@@ -495,15 +525,7 @@ export function commitEdit(domId: string, newText: string): void {
  * durable-id key (`section-cluster-{id}:title`, `theme-group-{id}:desc`).
  */
 export function commitHeadingEdit(headingKey: string, newText: string): void {
-  // Read-only in an exported report — mutations have no server to persist to,
-  // and a control that responds then silently discards on reload is a lie.
-  if (isExportMode()) return;
-  setState((prev) => {
-    const edits = { ...prev.edits };
-    edits[headingKey] = newText;
-    putEdits(edits);
-    return { ...prev, edits };
-  });
+  setEdit(headingKey, newText, true);
 }
 
 export function addTag(domId: string, tag: TagResponse): void {

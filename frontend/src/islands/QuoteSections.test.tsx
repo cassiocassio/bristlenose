@@ -1,10 +1,13 @@
 import { render, screen, waitFor, act } from "@testing-library/react";
 import { QuoteSections } from "./QuoteSections";
 import type { QuotesListResponse } from "../utils/types";
+import { commitHeadingEdit, resetStore } from "../contexts/QuotesContext";
+import { redo, resetUndoStore, undo } from "../contexts/UndoStore";
 
 vi.mock("../utils/api", () => ({
   apiGet: vi.fn(),
   getCodebook: vi.fn(),
+  putEdits: vi.fn(),
 }));
 
 import { apiGet, getCodebook } from "../utils/api";
@@ -101,6 +104,8 @@ const MOCK_CODEBOOK_WITH_GROUPS = {
 };
 
 beforeEach(() => {
+  resetStore();
+  resetUndoStore();
   mockGetCodebook.mockResolvedValue({ all_tag_names: [], groups: [], ungrouped: [] } as never);
 });
 
@@ -115,6 +120,23 @@ describe("QuoteSections", () => {
     await waitFor(() => {
       expect(screen.getByText("Login")).toBeInTheDocument();
     });
+  });
+
+  it("Edit ▸ Undo redraws a section rename, and redo brings it back", async () => {
+    mockQuotesApi(MOCK_QUOTES);
+    render(<QuoteSections projectId="1" />);
+    await waitFor(() => expect(screen.getByText("Login")).toBeInTheDocument());
+    act(() => commitHeadingEdit("section-cluster-1:title", "Sign-in"));
+    expect(screen.getByText("Sign-in")).toBeInTheDocument();
+    await act(async () => {
+      await undo();
+    });
+    expect(screen.getByText("Login")).toBeInTheDocument();
+    expect(screen.queryByText("Sign-in")).not.toBeInTheDocument();
+    await act(async () => {
+      await redo();
+    });
+    expect(screen.getByText("Sign-in")).toBeInTheDocument();
   });
 
   it("builds tag vocabulary from codebook groups", async () => {

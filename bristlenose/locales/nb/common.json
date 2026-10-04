@@ -642,7 +642,11 @@
       "hide": "Angre skjuling",
       "unhide": "Angre visning",
       "addTag": "Angre tillegging av tagg",
-      "removeTag": "Angre fjerning av tagg"
+      "removeTag": "Angre fjerning av tagg",
+      "editQuote": "Angre redigering av sitat",
+      "renameSection": "Angre navneendring for seksjon",
+      "renameTheme": "Angre navneendring for tema",
+      "editDescription": "Angre redigering av beskrivelse"
     },
     "redo": {
       "renameModerator": "Utfør navneendring for moderator likevel",
@@ -654,7 +658,11 @@
       "hide": "Utfør skjuling likevel",
       "unhide": "Utfør visning likevel",
       "addTag": "Utfør tillegging av tagg likevel",
-      "removeTag": "Utfør fjerning av tagg likevel"
+      "removeTag": "Utfør fjerning av tagg likevel",
+      "editQuote": "Utfør redigering av sitat likevel",
+      "renameSection": "Utfør navneendring for seksjon likevel",
+      "renameTheme": "Utfør navneendring for tema likevel",
+      "editDescription": "Utfør redigering av beskrivelse likevel"
     }
   }
 }

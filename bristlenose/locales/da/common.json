@@ -642,7 +642,11 @@
       "hide": "Fortryd Skjul",
       "unhide": "Fortryd Vis igen",
       "addTag": "Fortryd Tilføj tag",
-      "removeTag": "Fortryd Fjern tag"
+      "removeTag": "Fortryd Fjern tag",
+      "editQuote": "Fortryd Rediger citat",
+      "renameSection": "Fortryd Omdøb afsnit",
+      "renameTheme": "Fortryd Omdøb tema",
+      "editDescription": "Fortryd Rediger beskrivelse"
     },
     "redo": {
       "renameModerator": "Gentag Omdøb moderator",
@@ -654,7 +658,11 @@
       "hide": "Gentag Skjul",
       "unhide": "Gentag Vis igen",
       "addTag": "Gentag Tilføj tag",
-      "removeTag": "Gentag Fjern tag"
+      "removeTag": "Gentag Fjern tag",
+      "editQuote": "Gentag Rediger citat",
+      "renameSection": "Gentag Omdøb afsnit",
+      "renameTheme": "Gentag Omdøb tema",
+      "editDescription": "Gentag Rediger beskrivelse"
     }
   }
 }

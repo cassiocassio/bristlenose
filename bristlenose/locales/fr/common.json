@@ -642,7 +642,11 @@
       "hide": "Annuler le masquage",
       "unhide": "Annuler le réaffichage",
       "addTag": "Annuler l’ajout du tag",
-      "removeTag": "Annuler la suppression du tag"
+      "removeTag": "Annuler la suppression du tag",
+      "editQuote": "Annuler la modification du verbatim",
+      "renameSection": "Annuler le changement de nom de la section",
+      "renameTheme": "Annuler le changement de nom du thème",
+      "editDescription": "Annuler la modification de la description"
     },
     "redo": {
       "renameModerator": "Rétablir le changement de nom de l’animateur",
@@ -654,7 +658,11 @@
       "hide": "Rétablir le masquage",
       "unhide": "Rétablir le réaffichage",
       "addTag": "Rétablir l’ajout du tag",
-      "removeTag": "Rétablir la suppression du tag"
+      "removeTag": "Rétablir la suppression du tag",
+      "editQuote": "Rétablir la modification du verbatim",
+      "renameSection": "Rétablir le changement de nom de la section",
+      "renameTheme": "Rétablir le changement de nom du thème",
+      "editDescription": "Rétablir la modification de la description"
     }
   }
 }

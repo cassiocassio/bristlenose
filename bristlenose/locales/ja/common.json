@@ -632,7 +632,11 @@
       "hide": "取り消す - 非表示",
       "unhide": "取り消す - 再表示",
       "addTag": "取り消す - タグを追加",
-      "removeTag": "取り消す - タグを削除"
+      "removeTag": "取り消す - タグを削除",
+      "editQuote": "取り消す - 発言の編集",
+      "renameSection": "取り消す - セクションの名称変更",
+      "renameTheme": "取り消す - テーマの名称変更",
+      "editDescription": "取り消す - 説明の編集"
     },
     "redo": {
       "renameModerator": "やり直す - モデレーターの名称変更",
@@ -644,7 +648,11 @@
       "hide": "やり直す - 非表示",
       "unhide": "やり直す - 再表示",
       "addTag": "やり直す - タグを追加",
-      "removeTag": "やり直す - タグを削除"
+      "removeTag": "やり直す - タグを削除",
+      "editQuote": "やり直す - 発言の編集",
+      "renameSection": "やり直す - セクションの名称変更",
+      "renameTheme": "やり直す - テーマの名称変更",
+      "editDescription": "やり直す - 説明の編集"
     }
   }
 }

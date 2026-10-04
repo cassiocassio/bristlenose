@@ -642,7 +642,11 @@
       "hide": "Gizlemeyi Geri Al",
       "unhide": "Göstermeyi Geri Al",
       "addTag": "Etiket Eklemeyi Geri Al",
-      "removeTag": "Etiket Kaldırmayı Geri Al"
+      "removeTag": "Etiket Kaldırmayı Geri Al",
+      "editQuote": "Alıntıyı Düzenlemeyi Geri Al",
+      "renameSection": "Bölümün Adını Değiştirmeyi Geri Al",
+      "renameTheme": "Temanın Adını Değiştirmeyi Geri Al",
+      "editDescription": "Açıklamayı Düzenlemeyi Geri Al"
     },
     "redo": {
       "renameModerator": "Moderatörün Adını Değiştirmeyi Yinele",
@@ -654,7 +658,11 @@
       "hide": "Gizlemeyi Yinele",
       "unhide": "Göstermeyi Yinele",
       "addTag": "Etiket Eklemeyi Yinele",
-      "removeTag": "Etiket Kaldırmayı Yinele"
+      "removeTag": "Etiket Kaldırmayı Yinele",
+      "editQuote": "Alıntıyı Düzenlemeyi Yinele",
+      "renameSection": "Bölümün Adını Değiştirmeyi Yinele",
+      "renameTheme": "Temanın Adını Değiştirmeyi Yinele",
+      "editDescription": "Açıklamayı Düzenlemeyi Yinele"
     }
   }
 }

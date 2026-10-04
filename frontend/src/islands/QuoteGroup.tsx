@@ -225,14 +225,15 @@ export function QuoteGroup({
 
   // ── Local presentation state ───────────────────────────────────────────
 
-  // Heading/description edit state.  Seed from the researcher's rename
-  // (editedLabel) when present, else the pipeline label; `label`/`description`
-  // stay the raw reset-to-original baseline.
-  const [headingText, setHeadingText] = useState(editedLabel ?? label);
-  const [headingEdited, setHeadingEdited] = useState(editedLabel != null);
+  // Heading/description text, read from the store's edits map (seeded from
+  // the API by initHeadingEdits), so an undo or redo of a rename redraws it.
+  // The props are the fallback for a render before the seed; `label` and
+  // `description` stay the raw reset-to-original baseline.
+  const headingText = store.edits[`${editKeyBase}:title`] ?? editedLabel ?? label;
+  const headingEdited = headingText !== label;
   const [isEditingHeading, setIsEditingHeading] = useState(false);
-  const [descText, setDescText] = useState(editedDescription ?? description);
-  const [descEdited, setDescEdited] = useState(editedDescription != null);
+  const descText = store.edits[`${editKeyBase}:desc`] ?? editedDescription ?? description;
+  const descEdited = descText !== description;
   const [isEditingDesc, setIsEditingDesc] = useState(false);
 
   // Counter dropdown state.
@@ -768,24 +769,20 @@ export function QuoteGroup({
 
   const handleHeadingCommit = useCallback(
     (newText: string) => {
-      setHeadingText(newText);
-      setHeadingEdited(newText !== label);
       setIsEditingHeading(false);
       // Keyed on the durable id (not the label) so the rename survives label
       // drift; committed through the store so the full edits map is sent.
       commitHeadingEdit(`${editKeyBase}:title`, newText);
     },
-    [label, editKeyBase],
+    [editKeyBase],
   );
 
   const handleDescCommit = useCallback(
     (newText: string) => {
-      setDescText(newText);
-      setDescEdited(newText !== description);
       setIsEditingDesc(false);
       commitHeadingEdit(`${editKeyBase}:desc`, newText);
     },
-    [description, editKeyBase],
+    [editKeyBase],
   );
 
   // ── Context expansion handlers ───────────────────────────────────────

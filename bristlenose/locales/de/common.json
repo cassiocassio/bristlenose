@@ -642,7 +642,11 @@
       "hide": "Ausblenden widerrufen",
       "unhide": "Einblenden widerrufen",
       "addTag": "Tag hinzufügen widerrufen",
-      "removeTag": "Tag entfernen widerrufen"
+      "removeTag": "Tag entfernen widerrufen",
+      "editQuote": "Zitat bearbeiten widerrufen",
+      "renameSection": "Abschnitt umbenennen widerrufen",
+      "renameTheme": "Thema umbenennen widerrufen",
+      "editDescription": "Beschreibung bearbeiten widerrufen"
     },
     "redo": {
       "renameModerator": "Moderator umbenennen wiederholen",
@@ -654,7 +658,11 @@
       "hide": "Ausblenden wiederholen",
       "unhide": "Einblenden wiederholen",
       "addTag": "Tag hinzufügen wiederholen",
-      "removeTag": "Tag entfernen wiederholen"
+      "removeTag": "Tag entfernen wiederholen",
+      "editQuote": "Zitat bearbeiten wiederholen",
+      "renameSection": "Abschnitt umbenennen wiederholen",
+      "renameTheme": "Thema umbenennen wiederholen",
+      "editDescription": "Beschreibung bearbeiten wiederholen"
     }
   }
 }

@@ -642,7 +642,11 @@
       "hide": "Ångra Dölj",
       "unhide": "Ångra Visa igen",
       "addTag": "Ångra Lägg till tagg",
-      "removeTag": "Ångra Ta bort tagg"
+      "removeTag": "Ångra Ta bort tagg",
+      "editQuote": "Ångra Redigera citat",
+      "renameSection": "Ångra Byt namn på avsnitt",
+      "renameTheme": "Ångra Byt namn på tema",
+      "editDescription": "Ångra Redigera beskrivning"
     },
     "redo": {
       "renameModerator": "Gör om Byt namn på moderator",
@@ -654,7 +658,11 @@
       "hide": "Gör om Dölj",
       "unhide": "Gör om Visa igen",
       "addTag": "Gör om Lägg till tagg",
-      "removeTag": "Gör om Ta bort tagg"
+      "removeTag": "Gör om Ta bort tagg",
+      "editQuote": "Gör om Redigera citat",
+      "renameSection": "Gör om Byt namn på avsnitt",
+      "renameTheme": "Gör om Byt namn på tema",
+      "editDescription": "Gör om Redigera beskrivning"
     }
   }
 }

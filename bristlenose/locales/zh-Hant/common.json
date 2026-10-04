@@ -612,7 +612,11 @@
       "hide": "還原隱藏",
       "unhide": "還原取消隱藏",
       "addTag": "還原加入標籤",
-      "removeTag": "還原移除標籤"
+      "removeTag": "還原移除標籤",
+      "editQuote": "還原編輯引述",
+      "renameSection": "還原重新命名區段",
+      "renameTheme": "還原重新命名主題",
+      "editDescription": "還原編輯說明"
     },
     "redo": {
       "renameModerator": "重做重新命名主持人",
@@ -624,7 +628,11 @@
       "hide": "重做隱藏",
       "unhide": "重做取消隱藏",
       "addTag": "重做加入標籤",
-      "removeTag": "重做移除標籤"
+      "removeTag": "重做移除標籤",
+      "editQuote": "重做編輯引述",
+      "renameSection": "重做重新命名區段",
+      "renameTheme": "重做重新命名主題",
+      "editDescription": "重做編輯說明"
     }
   }
 }

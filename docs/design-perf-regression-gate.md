@@ -89,7 +89,7 @@ Thresholds use a **doubling rule**: fail if a metric exceeds 2x baseline. This c
 
 | Metric | Tool | Baseline | Warn | Fail | Rationale |
 |--------|------|----------|------|------|-----------|
-| Bundle size (JS gzip, first load) | `scripts/check-bundle-budget.py` | 204.6 KB | — | > 220 KB | Was `size-limit` at a claimed ~267 KB / 305 KB — neither number was ever enforced; the real one lived in `frontend/package.json`. See the section below |
+| Bundle size (JS gzip, first load) | `scripts/check-bundle-budget.py` | 195.2 KB (4 Oct 2026) | — | > 222 KB | Was `size-limit` at a claimed ~267 KB / 305 KB — neither number was ever enforced; the real one lived in `frontend/package.json`. See the section below |
 | DOM nodes (quotes page) | Playwright `evaluate` | 549 | > 800 | > 1,100 | 2x fail. Catches leaked modals, duplicated renders, wrapper bloat |
 | DOM nodes (transcript page) | Playwright `evaluate` | 374 | > 550 | > 750 | 2x fail. Catches per-segment wrapper regressions |
 | DOM nodes (dashboard) | Playwright `evaluate` | 334 | > 500 | > 670 | Fixed structure — any doubling is a bug |
@@ -326,12 +326,118 @@ offline, paired so the ratchet counts it proven.
 worked — `@size-limit/why` was never installed, so the flag was silently ignored;
 the per-chunk table is now the default output.
 
-**Still open:** whether 220 kB is the right ceiling for the new definition. It was
-chosen for an allow-list that was measuring something else, and it is 91–93% used.
+**Was open:** whether 220 kB is the right ceiling for the new definition. It was
+chosen for an allow-list that was measuring something else, and it was 91–93% used.
+Carried into § Still open, item 1.
 
 _4 Oct 2026: raised to 222 kB for report undo (~1.2 kB at first paint). The
 headroom above (15–21 kB in early September) had fallen to 126 B before that
-change, with nothing having raised the alarm — where it went is unmeasured._
+change, with nothing having raised the alarm._ Where it went is now measured;
+see the next section.
+
+### Where the September headroom went (measured 4 Oct 2026)
+
+**Method.** Throwaway `git worktree add --detach` checkouts at seven dates,
+`frontend/node_modules` symlinked from main (the only dependency change in the
+window was `lodash.deburr`, so this isolates source), `vite build --sourcemap
+hidden`, then the eager set measured by HEAD's `check-bundle-budget.py --list`.
+Chunk names reshuffle between builds (the 25 Sep and 4 Oct builds share almost
+no names with 5 Sep), so a per-chunk diff alone is misleading: bytes were
+attributed **per source file** from the sourcemaps, each chunk's gzipped size
+shared pro-rata by raw bytes. The scripts are not in the tree; the recipe is
+the paragraph.
+
+| Commit (date) | First paint | Δ |
+|---|---:|---:|
+| `679294de` (5 Sep) | 204,607 B | — |
+| `2419938c` (15 Sep) | 204,625 B | +18 |
+| `934f7d65` (20 Sep) | 205,736 B | +1.1 kB |
+| `59755757` (25 Sep) | 204,051 B | −1.7 kB |
+| `9fd6af62` (30 Sep) | 205,660 B | +1.6 kB |
+| `ebf482fc` (3 Oct) | 216,267 B | **+10.6 kB** |
+| `b089a73e` (4 Oct) | 221,043 B | +4.8 kB |
+
+Net +16.4 kB. The movers, gross (smaller offsets in both directions make up the rest):
+
+1. **The Mac app's own strings, about +6.7 kB.** `en/desktop.json` was a
+   static import in `i18n/index.ts`, so every browser visitor downloaded it —
+   though it is registered only in desktop mode, and the SPA reads it at two
+   `dt()` sites. The 21–22 Sep Swift i18n sweep moved the macOS chrome's prose
+   into it (11.6 → 17.6 kB gzipped across ~20 commits). It is invisible in the
+   totals because `common.json` lost ~5.8 kB the same week (the retired help
+   modal's keys, `1ff44e60`) — the two cancelled, which is exactly why nobody
+   saw it.
+2. **Search, about +6.5 kB, 3–4 Oct.** `searchMatch`, `searchSuggest`,
+   `searchTokens`, `searchBridge`, `NativeSearchSync`, `badgeStyle`,
+   `lodash.deburr`, `useSearchAnnouncement`, and growth in `QuotesContext`.
+3. **Report undo and the person picker, about +2.5 kB, 4 Oct**
+   (`SessionsTable` +1 kB, `speakerNames`, `UndoStore`, `UndoSync`), plus
+   ~1.6 kB of `common.json` copy.
+
+Nothing was wrong with any of these individually. The gate fails only at the
+ceiling, so 20 kB of headroom is spent silently by whoever arrives first, and
+the one change that finally tripped it (undo, ~1.2 kB) is not where the money
+went.
+
+### Moves made (4 Oct 2026): 221,101 → 195,187 B
+
+| Move | Before | After | Δ |
+|---|---:|---:|---:|
+| `UncategorisedFloor` and `SessionsTable` import primitives by path, not via `components/index.ts` | 221,101 B | 213,289 B | −7.8 kB |
+| English `desktop` namespace fetched on the Mac before mount, not bundled (`desktopEnReady`) | 213,289 B | 195,187 B | −18.1 kB |
+
+The barrel finding sharpens `frontend/CLAUDE.md`'s rule: it was not one island
+but **two statically routed modules** — `QuotesTab → UncategorisedFloor` and
+`SessionsTab → SessionsTable` — and *either one alone* keeps the whole barrel on
+first paint (measured: fixing only one saved 1.0 kB of the 7.8). Rolldown keeps
+barrel members it cannot prove side-effect-free, so the cost was
+`ThresholdReviewModal`, `ProposalZoneList`, `DualThresholdSlider`,
+`ConfidenceHistogram`, `TagInput`, `ConfirmDialog`, `Counter`, `Metric`,
+`Selector`, `Annotation` and others, none of which first paint renders. The
+HTML export is unaffected by either move beyond +0.3 kB gzipped (the dynamic
+import's wrapper, inlined).
+
+Headroom is now **26.8 kB under 222 kB**. `BUDGET_BYTES` was deliberately not
+touched.
+
+## Still open
+
+1. **Ratchet the ceiling, or the next 26 kB goes the same way.** The September
+   slide happened because the gate is a cliff, not a ratchet. Proposal: lower
+   `BUDGET_BYTES` to about 205 kB in its own commit that says why (≈10 kB of
+   headroom, enough for a feature, not enough for a month of unexamined
+   growth), and treat each later raise as the deliberate edit the script's
+   header already asks for. Not done here: it is a policy call, and this task
+   was asked not to move the number without one.
+2. **The always-mounted modals, ~12 kB.** `SettingsModal` (7.6 kB, plus
+   `ModalNav` 1.1 kB and `localeLabels`), `MiroExportPanel` (1.9 kB) and
+   `FeedbackModal` (1.1 kB) are statically imported by `AppLayout` and
+   rendered closed on every page. `React.lazy` plus mount-on-first-open would
+   take them off first paint, but each is a CSS-fade overlay (`.visible`
+   toggles opacity), so a component mounted already-open skips its fade on the
+   first opening, and the first open waits on a chunk fetch. Preloading the
+   chunk on idle and mounting it closed keeps both behaviours. Not made here
+   because it changes first-open feel, which is a design call.
+3. **Search, ~6.3 kB.** The matcher, suggester and tokenizer are needed only
+   once someone types; `NativeSearchSync` (~1 kB) only on the Mac. Loading the
+   engine on first focus of the field is the obvious split, but the field is on
+   every searching lens and its suggestions are synchronous today — needs a
+   look from whoever owns search.
+4. **`PlaygroundStore`, 2.2 kB of a dev-only feature.** `SidebarLayout` and
+   `TocSidebar` read it in production for the defaults. Splitting the defaults
+   into a tiny module and keeping the store behind the existing dev-only
+   dynamic import would take it off.
+5. **`localeLoader`'s glob map, 3.7 kB.** The template-literal import expands
+   to every `locales/*/*.json` — 22 locales × 6 namespaces — although the SPA
+   only ever requests `common`, `settings`, `enums` and `desktop`. An
+   `import.meta.glob` restricted to those four would drop a third of the
+   entries (estimated ~1.2 kB). The export alias (`localeLoader.export.ts`)
+   is unaffected.
+6. **`react-router` is 31 kB**, the second-largest single source after
+   `react-dom`. Its package exports map points every condition at
+   `dist/development`, but that build is byte-identical in size to
+   `dist/production` here (375,382 vs 375,383 B), so aliasing it buys nothing.
+   Recorded so nobody spends the cycle again.
 
 
 ## Resolved

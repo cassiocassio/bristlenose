@@ -365,7 +365,7 @@ export function SessionsTable({
     );
   }
 
-  const { sessions, moderator_names, observer_names, source_folder_uri } = data;
+  const { sessions, source_folder_uri } = data;
 
   // Pre-pipeline / no-sessions cases are server-failure-page territory,
   // not SPA territory — see docs/private/handoffs/generic-failure-surface.md.
@@ -448,8 +448,11 @@ export function SessionsTable({
           Reuses `nav.sessions` rather than minting `sessions.heading` — the
           word is identical and already reviewed in all 20 locales. */}
       <SectionHeading>{t("nav.sessions")}</SectionHeading>
-      <ModeratorHeader moderatorNames={moderator_names} />
-      <ObserverHeader observerNames={observer_names} />
+      {/* From the grid's own speakers, not the payload's moderator_names:
+          the payload is read once, so a rename left the line naming
+          moderators the grid no longer shows. */}
+      <ModeratorHeader moderatorNames={knownNames.moderator} />
+      <ObserverHeader observerNames={knownNames.observer} />
       {/* CSS grid, not a <table>. The responsive behaviour needs column
           reordering and a two-cells-into-one-column merge, neither of which
           CSS can do to a table. Roles keep the table semantics for assistive

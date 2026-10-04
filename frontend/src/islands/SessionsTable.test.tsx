@@ -786,6 +786,18 @@ describe("SessionsTable person picker", () => {
     expect(screen.getAllByTestId("bn-name-m1")[0].textContent).toBe("Sarah");
   });
 
+  it("'Moderated by' names the moderators the grid shows, and follows a rename", async () => {
+    mockPicker(); // the payload's moderator_names says only "Sarah"
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    const header = () => document.querySelector(".bn-session-moderators")?.textContent;
+    expect(header()).toBe("Moderated by Sarah and Kerri");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[0]);
+    const kerri = Array.from((await pickerMenu()).querySelectorAll<HTMLElement>(".export-dropdown-item"))[1];
+    fireEvent.click(kerri);
+    await waitFor(() => expect(header()).toBe("Moderated by Kerri"));
+  });
+
   it("picking another moderator's name renames only this session's", async () => {
     mockPicker();
     render(<SessionsTable projectId="1" />);

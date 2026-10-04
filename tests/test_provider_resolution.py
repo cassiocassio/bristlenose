@@ -35,9 +35,11 @@ KEYS_OFF: dict[str, str] = {
 
 
 @pytest.fixture
-def hermetic(no_local_llm_config: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
-    """No keychain, no .env files, no provider/model/key/hosting env vars."""
-    return no_local_llm_config
+def hermetic(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
+    """No keychain, no .env files, no provider/model/key/hosting env vars —
+    the autouse ``no_local_llm_config`` in conftest does the work; this name
+    stays so each ladder test says it depends on it."""
+    return monkeypatch
 
 
 def _load(**key_overrides: str) -> BristlenoseSettings:

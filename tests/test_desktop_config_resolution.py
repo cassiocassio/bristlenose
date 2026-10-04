@@ -154,10 +154,9 @@ class TestOrphanModelGuard:
     """Desktop defense: a model env var with no provider must not 404."""
 
     def test_orphan_model_snapped_to_provider_default(
-        self, no_local_llm_config: pytest.MonkeyPatch
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # The exact recurring bug: old Swift injects bare gpt-4o, no provider.
-        monkeypatch = no_local_llm_config
         monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
         monkeypatch.setenv("BRISTLENOSE_LLM_MODEL", "gpt-4o")
         monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)

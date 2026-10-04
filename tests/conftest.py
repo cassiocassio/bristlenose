@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,9 @@ os.environ.setdefault("BRISTLENOSE_SKIP_PREFLIGHT", "1")
 # opt back in with monkeypatch.setenv, with the model and audio faked.
 os.environ["BRISTLENOSE_VOICE_PASS"] = "false"
 
+from bristlenose.config import _find_env_files as _real_find_env_files
+from bristlenose.credentials import CredentialStore
+from bristlenose.credentials import get_credential_store as _real_get_credential_store
 from bristlenose.models import (
     ExtractedQuote,
     FileType,
@@ -180,30 +184,102 @@ def no_discussion_stage(monkeypatch):
     monkeypatch.setattr(Pipeline, "_run_discussion", AsyncMock(return_value=None))
 
 
-@pytest.fixture
-def no_local_llm_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
-    """Provider resolution sees nothing from the machine the suite runs on.
 
-    Four routes reach ``load_settings()`` from outside the test: env vars, a
-    ``.env`` walked up from cwd, the user-level config ``.env`` where
-    ``bristlenose configure``/``use`` store the current provider, and the
-    keychain. The second and third are read through
-    ``BristlenoseSettings.model_config["env_file"]``, which is computed ONCE,
-    at import — so patching ``_find_env_files`` cannot reach them. From the
-    repo root the gitignored ``.env`` happened to name the expected provider;
-    from a worktree the stored current provider leaked in instead
-    (``'google' == 'anthropic'``, 4 Oct 2026). CI has neither file.
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers",
+        "machine_config: let this test reach the real .env files, user config dir "
+        "and credential store (see no_local_llm_config)",
+    )
+
+
+class _InMemoryCredentialStore(CredentialStore):
+    """A keychain that starts empty for every test and forgets afterwards."""
+
+    def __init__(self) -> None:
+        self._items: dict[str, str] = {}
+
+    def get(self, key: str) -> str | None:
+        return self._items.get(key)
+
+    def set(self, key: str, value: str) -> None:
+        self._items[key] = value
+
+    def delete(self, key: str) -> None:
+        self._items.pop(key, None)
+
+
+def _rebind_everywhere(
+    monkeypatch: pytest.MonkeyPatch, real: Callable[..., Any], fake: Callable[..., Any]
+) -> None:
+    """Replace ``real`` in every loaded module that holds it under its own name.
+
+    ``from x import f`` binds a second reference at import time, and patching
+    ``x.f`` leaves it pointing at the original. ``miro.py`` holds
+    ``get_credential_store`` that way, and test modules hold ``_find_env_files``.
+    A fake an outer (module-scoped) isolation installed is replaced too, so a
+    module imported after it — still holding ``real`` — is not missed.
+
+    Reads each module's ``__dict__`` rather than ``getattr``: some modules
+    answer every name through ``__getattr__`` (``torch.classes`` returns a
+    proxy that raises on any attribute read), and only names a module actually
+    binds can hold the function.
     """
-    from bristlenose import config
+    import sys
+    import types
+
+    fake._bn_isolation_fake = True  # type: ignore[attr-defined]
+    name = real.__name__
+    for module in list(sys.modules.values()):
+        held = getattr(module, "__dict__", {}).get(name)
+        if held is real or (
+            isinstance(held, types.FunctionType) and getattr(held, "_bn_isolation_fake", False)
+        ):
+            monkeypatch.setattr(module, name, fake)
+
+
+def _isolate_machine_config(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """No test sees the configuration of the machine the suite runs on.
+
+    Four routes reach ``load_settings()`` from outside a test: env vars, the
+    repo's own ``.env`` (found both as the package directory's and by walking
+    up from cwd), the user-level config ``.env`` where ``bristlenose
+    configure``/``use`` store the current provider, and the keychain. Measured
+    4 Oct 2026: 1376 tests in 69 files read both ``.env`` files and most of them
+    queried the real Keychain. From the repo root the gitignored ``.env`` named
+    the provider three tests expected; from a worktree the stored current
+    provider leaked in instead (``'google' == 'anthropic'``). CI has neither.
+
+    The ``.env`` files reach pydantic-settings through
+    ``BristlenoseSettings.model_config["env_file"]``, computed ONCE at import,
+    so it is pinned off here; ``_find_env_files`` keeps only ``.env`` files a
+    test wrote under its own tmp dir, so discovery tests still discover. The
+    credential store is an empty in-memory one, so a test may still
+    ``configure`` a key and read it back. A test that patches either again
+    wins, as monkeypatch's later patch always does.
+
+    Applied per test by ``no_local_llm_config``; a module- or session-scoped
+    fixture that builds settings runs BEFORE any per-test fixture, so it calls
+    this itself through ``isolate_machine_config``.
+    """
     from bristlenose.config import BristlenoseSettings
 
     monkeypatch.setitem(BristlenoseSettings.model_config, "env_file", None)
-    monkeypatch.setattr(config, "_find_env_files", lambda: [])
-    monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
-    monkeypatch.delenv("SNAP_USER_COMMON", raising=False)
-    monkeypatch.chdir(tmp_path)
 
+    tmp_root = tmp_path_factory.getbasetemp().resolve()
+
+    def _tmp_env_files_only() -> list[Path]:
+        return [p for p in _real_find_env_files() if p.resolve().is_relative_to(tmp_root)]
+
+    _rebind_everywhere(monkeypatch, _real_find_env_files, _tmp_env_files_only)
+
+    store = _InMemoryCredentialStore()
+    _rebind_everywhere(monkeypatch, _real_get_credential_store, lambda: store)
+
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path_factory.mktemp("xdg-config")))
+    monkeypatch.delenv("SNAP_USER_COMMON", raising=False)
     monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
     for name, field in BristlenoseSettings.model_fields.items():
         if not (name.startswith(("llm_", "azure_")) or name.endswith("_api_key")):
@@ -211,4 +287,30 @@ def no_local_llm_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> pyte
         monkeypatch.delenv(f"BRISTLENOSE_{name.upper()}", raising=False)
         for alias in getattr(field.validation_alias, "choices", ()):
             monkeypatch.delenv(str(alias), raising=False)
+
+
+@pytest.fixture(scope="session")
+def isolate_machine_config(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Callable[[pytest.MonkeyPatch], None]:
+    """``_isolate_machine_config`` for fixtures wider than a test, e.g. a
+    module-scoped live serve: ``with pytest.MonkeyPatch.context() as mp:
+    isolate_machine_config(mp)``."""
+    return lambda mp: _isolate_machine_config(mp, tmp_path_factory)
+
+
+@pytest.fixture(autouse=True)
+def no_local_llm_config(
+    request: pytest.FixtureRequest,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> pytest.MonkeyPatch:
+    """Every test runs under ``_isolate_machine_config``.
+
+    Exempt: ``slow`` (the paid suite needs the real keys) and ``machine_config``.
+    """
+    if not (
+        request.node.get_closest_marker("slow") or request.node.get_closest_marker("machine_config")
+    ):
+        _isolate_machine_config(monkeypatch, tmp_path_factory)
     return monkeypatch

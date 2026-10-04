@@ -38,6 +38,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -111,21 +112,30 @@ class _Serve:
 
 
 @pytest.fixture(scope="module")
-def serve(tmp_path_factory: pytest.TempPathFactory) -> Any:
-    db = tmp_path_factory.mktemp("db") / "bn.db"
-    app = create_app(project_dir=_FIXTURE_DIR, dev=False, db_url=f"sqlite:///{db}")
-    app.state.auth_token = _TOKEN
-    port = _free_port()
-    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error"))
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    deadline = time.monotonic() + 30
-    while not server.started:
-        assert time.monotonic() < deadline, "serve did not start"
-        time.sleep(0.05)
-    yield _Serve(app, port)
-    server.should_exit = True
-    thread.join(timeout=10)
+def serve(
+    tmp_path_factory: pytest.TempPathFactory,
+    isolate_machine_config: Callable[[pytest.MonkeyPatch], None],
+) -> Any:
+    # Module scope builds the app before any per-test fixture runs, so it
+    # isolates itself from this machine's .env files and keychain.
+    with pytest.MonkeyPatch.context() as mp:
+        isolate_machine_config(mp)
+        db = tmp_path_factory.mktemp("db") / "bn.db"
+        app = create_app(project_dir=_FIXTURE_DIR, dev=False, db_url=f"sqlite:///{db}")
+        app.state.auth_token = _TOKEN
+        port = _free_port()
+        server = uvicorn.Server(
+            uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
+        )
+        thread = threading.Thread(target=server.run, daemon=True)
+        thread.start()
+        deadline = time.monotonic() + 30
+        while not server.started:
+            assert time.monotonic() < deadline, "serve did not start"
+            time.sleep(0.05)
+        yield _Serve(app, port)
+        server.should_exit = True
+        thread.join(timeout=10)
 
 
 @pytest.fixture(autouse=True)

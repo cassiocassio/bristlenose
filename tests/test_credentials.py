@@ -107,6 +107,7 @@ class TestEnvCredentialStore:
         assert store.exists("anthropic") is False
 
 
+@pytest.mark.machine_config  # the factory itself is the subject; it reads nothing
 class TestGetCredentialStore:
     """Tests for the credential store factory."""
 

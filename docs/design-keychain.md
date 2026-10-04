@@ -1,14 +1,26 @@
 ---
 status: partial
-last-trued: 2026-09-05
-previous-trued: 2026-09-04
-trued-against: HEAD@main on 2026-09-05 (5d478cdd)
+last-trued: 2026-10-04
+previous-trued: 2026-09-05
+trued-against: HEAD@main on 2026-10-04 (128264a8)
 ---
 
-> **Truing status:** Partial — the original design (§Design Decisions, §CLI Commands) shipped and remains the canonical CLI/serve-mode credential path, with provider-list expansion (2→5). The Track C sandboxed-desktop deployment ships a different credential path — Swift reads Keychain, injects env vars; the *sidecar* never touches Keychain — in §"Desktop (sandboxed) credential path". **Since 4 Sep 2026 the two paths share one keyspace:** the app keeps a login-keychain copy of every CLI-read key and reconciles it, so a key set up in the CLI or the app is seen by both — §"One keyspace, two keychains" is the section to read first, and it supersedes any sentence elsewhere in this doc that assumes a single keychain. One write direction is still unmeasured — whether the CLI's delete-then-add can replace an app-owned login item — and §"Reading the unmeasured direction" names the item that answers it and how the answer is read. Inline Python source (§Module Structure) is the pre-ship plan; see `bristlenose/credentials.py` + `credentials_macos.py` + `providers.py` (`CREDENTIALS`) for current.
+> **Truing status:** Partial — the original design (§Design Decisions, §CLI Commands) shipped and remains the canonical CLI/serve-mode credential path, with provider-list expansion (2→5). The Track C sandboxed-desktop deployment ships a different credential path — Swift reads Keychain, injects env vars; the *sidecar* never touches Keychain — in §"Desktop (sandboxed) credential path". **Since 4 Sep 2026 the two paths share one keyspace:** the app keeps a login-keychain copy of every CLI-read key and reconciles it, so a key set up in the CLI or the app is seen by both — §"One keyspace, two keychains" is the section to read first, and it supersedes any sentence elsewhere in this doc that assumes a single keychain. One write direction is still unmeasured — whether the CLI's delete-then-add can replace an app-owned login item — and §"Reading the unmeasured direction" names the item that answers it and how the answer is read. Inline Python source (§Module Structure, §Testing) is the pre-ship plan; see `bristlenose/credentials.py` + `credentials_macos.py` + `providers.py` (`CREDENTIALS`) for current.
 
 ## Changelog
 
+- _2026-10-04_ — **the Python suite reached the real keychain until today.** The
+  5 Sep entry below means the *Swift* test host. Measured with a probe on every
+  credential-store read: most of 1376 Python tests in 69 files queried the
+  Keychain through `security` — every serve test builds settings, and
+  `load_settings` fills empty keys from the store — and they read this
+  machine's `.env` files too. An autouse fixture in `tests/conftest.py` now
+  stops all of it; §Testability carries the Python post-script, the "Python
+  side" paragraph is scoped to the one class it describes, and §Testing is
+  marked as the pre-ship plan (its integration class was never written).
+  Anchors: "tests: no test reads this machine's .env files or keychain",
+  "tests: provider resolution no longer reads the machine's stored provider",
+  `tests/conftest.py` `_isolate_machine_config`.
 - _2026-09-05_ — trued up against the two commits since: the test host never
   reaches the real keychain (`KeychainHelper.isUnderTestHost`; §Testability
   carries a post-script, since its "tests use `InMemoryKeychain`" was the belief
@@ -283,6 +295,34 @@ See the comment block above `overlayAPIKeys` in `desktop/Bristlenose/Bristlenose
 > host; see §"One keyspace, two keychains", the prompt-budget bullet. The
 > injection convention still holds; it just never reached statics.
 
+> **Python post-script, 4 Oct 2026.** Nothing above covered the Python suite,
+> and until 4 Oct it reached the real keychain freely: `load_settings` →
+> `_populate_keys_from_keychain` → `get_credential_store()` →
+> `MacOSCredentialStore.get` → `security`, from most of 1376 tests in 69 files
+> (every serve test builds settings). The same tests read the repo's gitignored
+> `.env` and the user-level config `.env`, so a test could pass or fail on the
+> provider this machine had last been told to `use`. The autouse fixture
+> `no_local_llm_config` in `tests/conftest.py` now applies
+> `_isolate_machine_config` to every test:
+>
+> - `get_credential_store` returns an empty in-memory store, rebound in every
+>   module that holds the name (`routes/miro.py` imports it by name, so
+>   patching `credentials.get_credential_store` alone misses it);
+> - `BristlenoseSettings.model_config["env_file"]` is pinned to `None` — it is
+>   computed once, when `config` is imported, so patching `_find_env_files`
+>   changes the log line and nothing pydantic reads — and `_find_env_files`
+>   keeps only `.env` files a test wrote under its own tmp dir;
+> - `XDG_CONFIG_HOME` is a fresh tmp dir; the provider, model and key env
+>   vars are cleared.
+>
+> Exempt: `slow` (the paid suite needs the real keys) and tests marked
+> `machine_config`. A module- or session-scoped fixture that builds settings
+> runs before any per-test fixture, so it calls the session fixture
+> `isolate_machine_config` itself (`tests/test_mcp_helper_behaviour.py`'s live
+> serve). Not covered: a test that constructs `MacOSCredentialStore()`
+> directly still reaches `security` — the store's unit tests do so over a
+> faked `subprocess`, which is the only safe way to write one.
+
 ## One keyspace, two keychains
 
 _Added 2026-09-04, from live provider testing._
@@ -417,8 +457,10 @@ helper (the Miro route's `_store_token_verified` delegates to it), and
 `bristlenose configure` refuses to print *Stored in Keychain* for a key it
 could not read back: exit 1, and the provider is not made current. Pinned by
 `tests/test_credentials.py` (a stateful fake of `security`, so the round-trip
-runs through the store's real argv without touching a developer's keychain)
-and `tests/test_provider_resolution.py`.
+runs through the store's real argv without touching a developer's keychain —
+true of that class; the rest of the Python suite reached the keychain until
+4 Oct 2026, see §Testability's Python post-script) and
+`tests/test_provider_resolution.py`.
 
 **Swift side.** `SharedKeychainItemTests` drives the rule with two
 `InMemoryRawKeychain`s that count decrypts *and dialogs* — a planted foreign
@@ -997,6 +1039,14 @@ When prompting for Claude/ChatGPT, direct users to `bristlenose configure`:
 ---
 
 ## Testing
+
+> **Pre-ship plan, 4 Oct 2026.** The code below is what was proposed, kept as
+> the baseline. The shipped suite is `tests/test_credentials.py`, which is much
+> wider (registry, round-trip over a faked `security`, file store, config dir,
+> aliases, `set_verified`). `TestMacOSKeychainIntegration` was never written —
+> and as drafted it would not have been "skipped in CI": its `skipif` only
+> skips off macOS. Isolation from a real machine is §Testability's Python
+> post-script.
 
 ### Unit tests (`tests/test_credentials.py`)
 

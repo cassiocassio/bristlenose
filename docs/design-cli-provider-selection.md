@@ -6,7 +6,9 @@ model after review (the .app already works this way: the provider stays
 whatever you last set, and nothing asks mid-run). This doc describes what
 shipped and why. _Trued 4 Sep 2026: the §4 transcripts show the real Keychain
 item names, the read-back failure branch is recorded, and §6 gains the
-two-keychain sharing._
+two-keychain sharing. Trued 4 Oct 2026: §7 records how the suite is kept off
+this machine's stored provider, and Storage notes that the `.env` list is fixed
+at import._
 
 Desktop selection is unchanged (the Swift host injects provider+model
 explicitly); see §6 for the toes this deliberately does not tread on.
@@ -62,7 +64,9 @@ upserted into the same user-level `.env` that `configure` already uses as its
 no-keyring key fallback (`bristlenose/credentials.py`:
 `read_user_config_var` / `write_user_config_var`, mode `0o600`).
 pydantic-settings already loads that file lowest-priority via
-`config._find_env_files()`, so rungs 2–4 are one mechanism, not three code
+`config._find_env_files()` — evaluated once, when `config` is imported, into
+`BristlenoseSettings.model_config["env_file"]`; `load_settings` re-calls it only
+for the ledger line and the `.env`-explicitness check — so rungs 2–4 are one mechanism, not three code
 paths — and the desktop carve-out (hosted processes read no `.env` files at
 all) means the CLI preference can never leak into a desktop-hosted run.
 
@@ -238,3 +242,15 @@ second key names the previous). `tests/test_provider_horror_scenarios.py` —
 the user-visible gate flows (guidance TTY/non-TTY, ambiguous teach-`use`,
 precise missing-key error, hosted/derived pass-through, never-prompts).
 Ledger coverage in `tests/test_desktop_config_resolution.py` unchanged.
+
+**Every test runs off this machine's config.** The stored current provider is
+exactly the state these tests must not inherit, and until 4 Oct 2026 they did:
+from the repo root its gitignored `.env` happened to name the provider three
+tests expected, and from a worktree the provider last set with `use` leaked in
+instead (`'google' == 'anthropic'`). The autouse `no_local_llm_config` fixture
+in `tests/conftest.py` now pins the import-time `env_file` list off, keeps only
+`.env` files a test wrote under its tmp dir, points the config dir at tmp and
+clears the provider/model/key env vars — mechanism and exemptions in
+[design-keychain.md](design-keychain.md) §Testability, Python post-script.
+`hermetic` in `test_provider_resolution.py` is now a name only; copying it into
+another module adds nothing.

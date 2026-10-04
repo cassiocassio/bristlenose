@@ -442,6 +442,28 @@ class TestCheckWhisperModel:
         assert "tiny" in result.detail
         assert "not cached" in result.detail
 
+    @pytest.mark.parametrize(
+        ("backend", "model", "size"),
+        [
+            ("faster-whisper", "small", "~490 MB"),
+            ("faster-whisper", "large-v3", "~3.1 GB"),
+            ("mlx", "tiny", "~74 MB"),
+            ("mlx", "large-v3-turbo", "~1.6 GB"),
+        ],
+    )
+    def test_not_cached_names_the_models_own_size(
+        self, backend: str, model: str, size: str
+    ) -> None:
+        """Was ``~1.5 GB`` for every model (4 Oct 2026: ``small`` is ~490 MB)."""
+        settings = _settings(whisper_model=model)
+        with (
+            patch.dict(sys.modules, {"huggingface_hub": None}),
+            patch("bristlenose.utils.hardware.detect_hardware"),
+            patch("bristlenose.stages.s05_transcribe._resolve_backend", return_value=backend),
+        ):
+            result = check_whisper_model(settings)
+        assert result.detail == f"{model} not cached ({size} download on first run)"
+
     @pytest.mark.parametrize("model", ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"])
     def test_model_names(self, model: str) -> None:
         """All supported model names produce valid results."""

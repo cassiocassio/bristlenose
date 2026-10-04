@@ -518,29 +518,34 @@ def _init_mlx_backend(
     return transcribe_mlx
 
 
+# Short model names to the mlx-community conversions mlx-whisper loads. The
+# Whisper preflight (``bristlenose/preflight/whisper.py``) and ``doctor`` read
+# this same table, so the repo the preflight fetches is the repo stage 5 opens.
+MLX_REPO_FOR_MODEL: dict[str, str] = {
+    "tiny": "mlx-community/whisper-tiny-mlx",
+    "tiny.en": "mlx-community/whisper-tiny.en-mlx",
+    "base": "mlx-community/whisper-base-mlx",
+    "base.en": "mlx-community/whisper-base.en-mlx",
+    "small": "mlx-community/whisper-small-mlx",
+    "small.en": "mlx-community/whisper-small.en-mlx",
+    "medium": "mlx-community/whisper-medium-mlx",
+    "medium.en": "mlx-community/whisper-medium.en-mlx",
+    "large": "mlx-community/whisper-large-v3-mlx",
+    "large-v2": "mlx-community/whisper-large-v2-mlx",
+    "large-v3": "mlx-community/whisper-large-v3-mlx",
+    "large-v3-turbo": "mlx-community/whisper-large-v3-turbo",
+    "turbo": "mlx-community/whisper-large-v3-turbo",
+}
+
+
 def _mlx_model_name(whisper_model: str) -> str:
     """Map short model names to HuggingFace repo paths for mlx-whisper.
 
     mlx-whisper accepts HuggingFace model paths. The mlx-community has
-    pre-converted quantised models that are optimal.
+    pre-converted quantised models that are optimal. Anything not in
+    :data:`MLX_REPO_FOR_MODEL` passes through as a repo id.
     """
-    # Map common short names to mlx-community models
-    mapping = {
-        "tiny": "mlx-community/whisper-tiny-mlx",
-        "tiny.en": "mlx-community/whisper-tiny.en-mlx",
-        "base": "mlx-community/whisper-base-mlx",
-        "base.en": "mlx-community/whisper-base.en-mlx",
-        "small": "mlx-community/whisper-small-mlx",
-        "small.en": "mlx-community/whisper-small.en-mlx",
-        "medium": "mlx-community/whisper-medium-mlx",
-        "medium.en": "mlx-community/whisper-medium.en-mlx",
-        "large": "mlx-community/whisper-large-v3-mlx",
-        "large-v2": "mlx-community/whisper-large-v2-mlx",
-        "large-v3": "mlx-community/whisper-large-v3-mlx",
-        "large-v3-turbo": "mlx-community/whisper-large-v3-turbo",
-        "turbo": "mlx-community/whisper-large-v3-turbo",
-    }
-    return mapping.get(whisper_model, whisper_model)
+    return MLX_REPO_FOR_MODEL.get(whisper_model, whisper_model)
 
 
 # ---------------------------------------------------------------------------

@@ -10,12 +10,17 @@ from rich.console import Console
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.preflight.whisper import (
-    WHISPER_SIZE_HUMAN,
+    _DOWNLOAD_MB,
+    _FASTER_WHISPER_REPO_FOR_MODEL,
     WhisperPreflightAbortedError,
+    _format_mb,
+    _heavy_blob_candidates,
     _resolve_repo_id,
     cache_state,
+    download_size_human,
     preflight_whisper,
 )
+from bristlenose.stages.s05_transcribe import MLX_REPO_FOR_MODEL
 
 
 @pytest.fixture(autouse=True)
@@ -51,7 +56,9 @@ class TestResolveRepoId:
                     == "mlx-community/whisper-large-v3-turbo"
                 )
 
-    def test_faster_whisper_picks_systran(self):
+    def test_faster_whisper_turbo_picks_the_repo_faster_whisper_opens(self):
+        # Was Systran/faster-whisper-large-v3 — a different, 3 GB model that
+        # stage 5 never opens, so it downloaded turbo again with no banner.
         with patch("bristlenose.utils.hardware.detect_hardware"):
             with patch(
                 "bristlenose.stages.s05_transcribe._resolve_backend",
@@ -59,7 +66,7 @@ class TestResolveRepoId:
             ):
                 assert (
                     _resolve_repo_id(_settings(whisper_model="large-v3-turbo"))
-                    == "Systran/faster-whisper-large-v3"
+                    == "mobiuslabsgmbh/faster-whisper-large-v3-turbo"
                 )
 
     def test_unknown_model_passes_through(self):
@@ -71,6 +78,81 @@ class TestResolveRepoId:
                     _resolve_repo_id(_settings(whisper_model="custom/repo-name"))
                     == "custom/repo-name"
                 )
+
+
+def _advertised_model_names() -> set[str]:
+    """Every name ``--whisper-model`` advertises, plus every MLX short name.
+
+    Read from the CLI's own help strings so a name added there without a table
+    entry fails here rather than as a 401 from the Hub on a user's machine.
+    """
+    import re
+    from pathlib import Path
+
+    import bristlenose.cli as cli_module
+
+    src = Path(cli_module.__file__).read_text()
+    names: set[str] = set()
+    for listing in re.findall(r"Whisper model size: ([a-z0-9., -]+?)\.\s", src):
+        names.update(n.strip() for n in listing.split(","))
+    for listing in re.findall(r"--whisper-model\s+([a-z0-9.| -]+)\"", src):
+        names.update(n.strip() for n in listing.split("|"))
+    assert {"tiny", "small", "large-v3-turbo"} <= names, names  # the regexes still bite
+    return names | set(MLX_REPO_FOR_MODEL)
+
+
+_ADVERTISED = sorted(_advertised_model_names())
+
+
+class TestEveryModelNameResolves:
+    """The 4 Oct 2026 snap crash: ``-w small`` on faster-whisper fell through
+    the table as the bare repo id ``small`` and the Hub answered 401."""
+
+    @pytest.mark.parametrize("backend", ["mlx", "faster-whisper"])
+    @pytest.mark.parametrize("model", _ADVERTISED)
+    def test_resolves_to_a_measured_org_repo(self, model: str, backend: str):
+        with patch("bristlenose.utils.hardware.detect_hardware"):
+            with patch(
+                "bristlenose.stages.s05_transcribe._resolve_backend",
+                return_value=backend,
+            ):
+                repo = _resolve_repo_id(_settings(whisper_model=model))
+        assert "/" in repo, f"{model!r} on {backend} fell through as {repo!r}"
+        assert download_size_human(repo) is not None, f"no measured size for {repo}"
+
+    @pytest.mark.parametrize("model", _ADVERTISED)
+    def test_mlx_resolution_is_stage_5s(self, model: str):
+        from bristlenose.stages.s05_transcribe import _mlx_model_name
+
+        with patch("bristlenose.utils.hardware.detect_hardware"):
+            with patch(
+                "bristlenose.stages.s05_transcribe._resolve_backend", return_value="mlx"
+            ):
+                assert _resolve_repo_id(_settings(whisper_model=model)) == _mlx_model_name(
+                    model
+                )
+
+    def test_faster_whisper_table_is_faster_whispers_own(self):
+        utils = pytest.importorskip("faster_whisper.utils")
+        assert _FASTER_WHISPER_REPO_FOR_MODEL == utils._MODELS
+
+    def test_every_table_repo_has_a_size(self):
+        repos = set(_FASTER_WHISPER_REPO_FOR_MODEL.values()) | set(MLX_REPO_FOR_MODEL.values())
+        assert repos - set(_DOWNLOAD_MB) == set()
+
+    def test_ct2_repos_probe_model_bin(self):
+        for repo in _FASTER_WHISPER_REPO_FOR_MODEL.values():
+            assert _heavy_blob_candidates(repo) == ("model.bin",), repo
+
+    @pytest.mark.parametrize(
+        ("mb", "human"),
+        [(1614, "~1.6 GB"), (3091, "~3.1 GB"), (486, "~490 MB"), (78, "~78 MB")],
+    )
+    def test_size_formatting(self, mb: int, human: str):
+        assert _format_mb(mb) == human
+
+    def test_unmeasured_repo_has_no_size(self):
+        assert download_size_human("custom/repo-name") is None
 
 
 # ---------------------------------------------------------------------------
@@ -192,7 +274,7 @@ class TestPreflightWhisper:
         fetch.assert_called_once_with("mlx-community/whisper-large-v3-turbo")
         out = capsys.readouterr().out
         assert "Bristlenose needs the Whisper transcription model" in out
-        assert WHISPER_SIZE_HUMAN in out
+        assert "(~1.6 GB)" in out  # turbo on MLX: 1614 MB
         assert "Downloading" in out
         assert "Resuming" not in out
         assert "Whisper model ready" in out

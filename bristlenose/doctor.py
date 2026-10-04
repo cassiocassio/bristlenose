@@ -274,7 +274,7 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
     """Check whether the configured Whisper model is already cached."""
     import os
 
-    from bristlenose.stages.s05_transcribe import _mlx_model_name
+    from bristlenose.preflight.whisper import _resolve_repo_id, download_size_human
 
     model_name = settings.whisper_model
 
@@ -296,15 +296,10 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
                 detail=f"{model_name} bundled ({size_gb:.1f} GB)",
             )
 
-    # Build list of possible repo IDs to check — depends on which backend will be used
-    # MLX models: mlx-community/whisper-{model} (via _mlx_model_name mapping)
-    # faster-whisper models: mobiuslabsgmbh/faster-whisper-{model} (current default)
-    #                        Systran/faster-whisper-{model} (legacy)
-    possible_repos = [
-        _mlx_model_name(model_name),  # e.g. "mlx-community/whisper-large-v3-turbo"
-        f"mobiuslabsgmbh/faster-whisper-{model_name}",
-        f"Systran/faster-whisper-{model_name}",
-    ]
+    # The one repo this machine's backend will open — the same resolution the
+    # Whisper preflight and stage 5 use. Another backend's copy being cached
+    # does not spare the download, so it does not count.
+    repo_id = _resolve_repo_id(settings)
 
     # Try huggingface_hub cache scan
     try:
@@ -313,15 +308,13 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
         cache_info = scan_cache_dir()
         cached_repos = {r.repo_id: r for r in cache_info.repos}
 
-        for repo_id in possible_repos:
-            if repo_id in cached_repos:
-                repo = cached_repos[repo_id]
-                size_gb = repo.size_on_disk / (1024**3)
-                return CheckResult(
-                    status=CheckStatus.OK,
-                    label="Whisper model",
-                    detail=f"{model_name} cached ({size_gb:.1f} GB)",
-                )
+        if repo_id in cached_repos:
+            size_gb = cached_repos[repo_id].size_on_disk / (1024**3)
+            return CheckResult(
+                status=CheckStatus.OK,
+                label="Whisper model",
+                detail=f"{model_name} cached ({size_gb:.1f} GB)",
+            )
     except ImportError:
         pass
     except Exception:
@@ -331,7 +324,11 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
     return CheckResult(
         status=CheckStatus.SKIP,
         label="Whisper model",
-        detail=f"{model_name} not cached (~1.5 GB download on first run)",
+        detail=(
+            f"{model_name} not cached ({size} download on first run)"
+            if (size := download_size_human(repo_id))
+            else f"{model_name} not cached (downloads on first run)"
+        ),
     )
 
 

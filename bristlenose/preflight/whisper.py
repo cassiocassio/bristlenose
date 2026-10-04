@@ -42,25 +42,91 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-WHISPER_SIZE_HUMAN = "~1.5 GB"
-
-# Hardcoded per finding 3 — calling ``model_info()`` to fetch the real size adds
-# a network round-trip on a happy path that's already fast and removes Option B's
-# offline-friendly property.
-
-_MLX_REPO_FOR_MODEL: dict[str, str] = {
-    "large-v3-turbo": "mlx-community/whisper-large-v3-turbo",
-    "turbo": "mlx-community/whisper-large-v3-turbo",
-    "large-v3": "mlx-community/whisper-large-v3",
-}
-
+# Short model names to the CTranslate2 repos faster-whisper itself downloads —
+# a verbatim copy of ``faster_whisper.utils._MODELS`` (faster-whisper 1.2.1).
+# Stage 5 hands the bare name to ``WhisperModel``, which resolves it through
+# that table, so the preflight must resolve it the same way or it fetches a
+# repo stage 5 never opens. Copied rather than imported because importing
+# ``faster_whisper`` pulls in ctranslate2 and PyAV on every doctor run, and the
+# name is private. ``tests/test_preflight_whisper.py`` fails on any drift.
 _FASTER_WHISPER_REPO_FOR_MODEL: dict[str, str] = {
-    "large-v3-turbo": "Systran/faster-whisper-large-v3",
-    "turbo": "Systran/faster-whisper-large-v3",
-    "large-v3": "Systran/faster-whisper-large-v3",
+    "tiny.en": "Systran/faster-whisper-tiny.en",
+    "tiny": "Systran/faster-whisper-tiny",
+    "base.en": "Systran/faster-whisper-base.en",
+    "base": "Systran/faster-whisper-base",
+    "small.en": "Systran/faster-whisper-small.en",
+    "small": "Systran/faster-whisper-small",
+    "medium.en": "Systran/faster-whisper-medium.en",
+    "medium": "Systran/faster-whisper-medium",
+    "large-v1": "Systran/faster-whisper-large-v1",
     "large-v2": "Systran/faster-whisper-large-v2",
+    "large-v3": "Systran/faster-whisper-large-v3",
+    "large": "Systran/faster-whisper-large-v3",
+    "distil-large-v2": "Systran/faster-distil-whisper-large-v2",
+    "distil-medium.en": "Systran/faster-distil-whisper-medium.en",
+    "distil-small.en": "Systran/faster-distil-whisper-small.en",
+    "distil-large-v3": "Systran/faster-distil-whisper-large-v3",
+    "distil-large-v3.5": "distil-whisper/distil-large-v3.5-ct2",
+    "large-v3-turbo": "mobiuslabsgmbh/faster-whisper-large-v3-turbo",
+    "turbo": "mobiuslabsgmbh/faster-whisper-large-v3-turbo",
 }
 
+# Download size per repo, in MB: the sum of every file ``snapshot_download``
+# fetches, measured from the Hub API (``/api/models/<repo>?blobs=true``) on
+# 4 Oct 2026. Hardcoded per finding 3 — calling ``model_info()`` at run time
+# adds a network round-trip to a happy path that's already fast and removes
+# Option B's offline-friendly property. A repo missing here gets no size
+# rather than a wrong one.
+_DOWNLOAD_MB: dict[str, int] = {
+    "Systran/faster-distil-whisper-large-v2": 1516,
+    "Systran/faster-distil-whisper-large-v3": 1516,
+    "Systran/faster-distil-whisper-medium.en": 792,
+    "Systran/faster-distil-whisper-small.en": 336,
+    "Systran/faster-whisper-base": 148,
+    "Systran/faster-whisper-base.en": 148,
+    "Systran/faster-whisper-large-v1": 3090,
+    "Systran/faster-whisper-large-v2": 3090,
+    "Systran/faster-whisper-large-v3": 3091,
+    "Systran/faster-whisper-medium": 1531,
+    "Systran/faster-whisper-medium.en": 1530,
+    "Systran/faster-whisper-small": 486,
+    "Systran/faster-whisper-small.en": 486,
+    "Systran/faster-whisper-tiny": 78,
+    "Systran/faster-whisper-tiny.en": 78,
+    "distil-whisper/distil-large-v3.5-ct2": 1516,
+    "mobiuslabsgmbh/faster-whisper-large-v3-turbo": 1622,
+    "mlx-community/whisper-base-mlx": 144,
+    "mlx-community/whisper-base.en-mlx": 144,
+    "mlx-community/whisper-large-v2-mlx": 3083,
+    "mlx-community/whisper-large-v3-mlx": 3084,
+    "mlx-community/whisper-large-v3-turbo": 1614,
+    "mlx-community/whisper-medium-mlx": 1525,
+    "mlx-community/whisper-medium.en-mlx": 1525,
+    "mlx-community/whisper-small-mlx": 481,
+    "mlx-community/whisper-small.en-mlx": 481,
+    "mlx-community/whisper-tiny-mlx": 74,
+    "mlx-community/whisper-tiny.en-mlx": 74,
+}
+
+
+def _format_mb(mb: int) -> str:
+    """``1614`` → ``"~1.6 GB"``; ``486`` → ``"~490 MB"``; ``78`` → ``"~78 MB"``."""
+    if mb >= 1000:
+        return f"~{mb / 1000:.1f} GB"
+    return f"~{int(float(f'{mb:.2g}'))} MB"
+
+
+def download_size_human(repo_id: str) -> str | None:
+    """Human download size for ``repo_id``, or ``None`` when we never measured it."""
+    mb = _DOWNLOAD_MB.get(repo_id)
+    return _format_mb(mb) if mb is not None else None
+
+
+# The default model's size (``large-v3-turbo``: 1.61 GB on MLX, 1.62 GB on
+# faster-whisper), for help text written before any settings are known.
+WHISPER_SIZE_HUMAN = _format_mb(
+    _DOWNLOAD_MB[_FASTER_WHISPER_REPO_FOR_MODEL["large-v3-turbo"]]
+)
 
 
 # Back-compat alias — original three-classes-for-one-shape pattern was unified
@@ -73,18 +139,19 @@ WhisperPreflightAbortedError = PreflightAbortedError
 def _resolve_repo_id(settings: BristlenoseSettings) -> str:
     """Pick the HF repo for the active backend + model.
 
-    Mirrors :func:`bristlenose.stages.s05_transcribe._mlx_model_name` for the
-    MLX path; adds the Systran ``faster-whisper-*`` mapping for the CT2 path.
+    Resolves exactly as stage 5 will: the MLX path through
+    :func:`bristlenose.stages.s05_transcribe._mlx_model_name`, the CT2 path
+    through faster-whisper's own name table. A name in neither passes through
+    as a repo id (``--whisper-model org/repo``).
     """
-    from bristlenose.stages.s05_transcribe import _resolve_backend
+    from bristlenose.stages.s05_transcribe import _mlx_model_name, _resolve_backend
     from bristlenose.utils.hardware import detect_hardware
 
     hw = detect_hardware()
     backend = _resolve_backend(settings.whisper_backend, hw)
-    mapping = (
-        _MLX_REPO_FOR_MODEL if backend == "mlx" else _FASTER_WHISPER_REPO_FOR_MODEL
-    )
-    return mapping.get(settings.whisper_model, settings.whisper_model)
+    if backend == "mlx":
+        return _mlx_model_name(settings.whisper_model)
+    return _FASTER_WHISPER_REPO_FOR_MODEL.get(settings.whisper_model, settings.whisper_model)
 
 
 def _hf_cache_root() -> Path:
@@ -119,7 +186,8 @@ def _heavy_blob_candidates(repo_id: str) -> tuple[str, ...]:
     Both backends ship ``config.json`` as a tiny first-downloaded file (<1 KB),
     so probing config.json alone reports "cached" for interrupted downloads
     where only the metadata landed. Probe the heavy payload file instead:
-    - ct2 (``Systran/faster-whisper-*``): ``model.bin`` (~1.5 GB)
+    - ct2 (``Systran/faster-whisper-*`` and the other repos faster-whisper
+      names, e.g. ``mobiuslabsgmbh/faster-whisper-large-v3-turbo``): ``model.bin``
     - mlx (``mlx-community/whisper-*``): ``weights.safetensors`` (current
       conversions) or ``weights.npz`` (older conversions) — either counts.
       Probing ``weights.npz`` alone reported "missing" on fully-cached
@@ -127,7 +195,7 @@ def _heavy_blob_candidates(repo_id: str) -> tuple[str, ...]:
       the download banner followed by a no-op 0s fetch.
     - Unknown layout: fall back to ``config.json`` (best we can do).
     """
-    if repo_id.startswith("Systran/"):
+    if repo_id.startswith("Systran/") or repo_id in _FASTER_WHISPER_REPO_FOR_MODEL.values():
         return ("model.bin",)
     if repo_id.startswith("mlx-community/"):
         return ("weights.safetensors", "weights.npz")
@@ -170,9 +238,10 @@ def _print_banner(
         else t("preflight.whisper.verb_downloading")
     )
     console.print()
-    console.print(
-        "  " + t("preflight.whisper.banner_intro", size=WHISPER_SIZE_HUMAN)
-    )
+    # An unmeasured repo (a custom ``org/repo``) names itself instead of
+    # guessing a size.
+    size = download_size_human(repo_id) or repo_id
+    console.print("  " + t("preflight.whisper.banner_intro", size=size))
     console.print()
     console.print(
         "  " + t(

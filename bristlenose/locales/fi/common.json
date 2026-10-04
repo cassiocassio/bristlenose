@@ -145,7 +145,8 @@
       "newModerator": "Uusi moderaattori",
       "newObserver": "Uusi tarkkailija",
       "newNameFor": "Uusi nimi osallistujalle {{code}}",
-      "thatsMe": "Tämä olen minä ({{name}})"
+      "thatsMe": "Tämä olen minä ({{name}})",
+      "proposedName": "{{code}}, ehdotettu nimi {{name}}"
     },
     "failedToLoad": "Istuntojen lataus epäonnistui: {{error}}",
     "loading": "Ladataan istuntoja…"

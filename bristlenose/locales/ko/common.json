@@ -128,7 +128,8 @@
       "newModerator": "새 진행자",
       "newObserver": "새 관찰자",
       "newNameFor": "{{code}}의 새 이름",
-      "thatsMe": "나 ({{name}})"
+      "thatsMe": "나 ({{name}})",
+      "proposedName": "{{code}}, \uc81c\uc548\ub41c \uc774\ub984 {{name}}"
     },
     "failedToLoad": "세션 로드 실패: {{error}}",
     "loading": "세션 로드 중…"

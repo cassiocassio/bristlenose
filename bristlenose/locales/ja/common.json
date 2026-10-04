@@ -140,7 +140,8 @@
       "newModerator": "新しいモデレーター",
       "newObserver": "新しいオブザーバー",
       "newNameFor": "{{code}} の新しい名前",
-      "thatsMe": "自分（{{name}}）"
+      "thatsMe": "自分（{{name}}）",
+      "proposedName": "{{code}}\u3001\u63d0\u6848\u3055\u308c\u305f\u540d\u524d {{name}}"
     },
     "failedToLoad": "セッションの読み込みに失敗しました: {{error}}",
     "loading": "セッションを読み込み中…"

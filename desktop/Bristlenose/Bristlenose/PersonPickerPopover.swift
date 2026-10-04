@@ -37,6 +37,9 @@ struct PersonPickerRequest: Equatable {
         /// "That’s Me ({{name}})", or nil where the role has none (a participant).
         let thatsMe: String?
         let menu: String
+        /// "m1, proposed name Sarah" for a proposed slot's own row, or nil:
+        /// the ring and the grey name say it only to the eye.
+        var proposed: String? = nil
     }
 
     let sessionId: String
@@ -78,7 +81,8 @@ struct PersonPickerRequest: Equatable {
         var words: [Role: String] = [:]
         for (k, v) in roleWords { if let r = Role(rawValue: k) { words[r] = v } }
         self.labels = Labels(roles: words, roleGroup: l["roleGroup"] as? String ?? "",
-                             newPrompt: newPrompt, thatsMe: l["thatsMe"] as? String, menu: menu)
+                             newPrompt: newPrompt, thatsMe: l["thatsMe"] as? String, menu: menu,
+                             proposed: l["proposed"] as? String)
     }
 }
 
@@ -173,6 +177,15 @@ final class PersonPickerModel: ObservableObject {
             + metrics.gap + ceil(widest) + 10 + 20 + 20
         // The segments sit inside the 10 pt padding.
         return max(min(max(row, metrics.small ? 230 : 260), 380), ceil(segmentsWidth) + 20)
+    }
+
+    /// What VoiceOver hears for a name row: the SPA's proposed wording on the
+    /// slot's own unconfirmed name, code and name on every other.
+    func accessibilityLabel(for row: String) -> String {
+        if isAnswer(row), !request.slot.confirmed, let proposed = request.labels.proposed {
+            return proposed
+        }
+        return "\(request.slot.code) \(row)"
     }
 
     func isAnswer(_ row: String) -> Bool {
@@ -365,7 +378,7 @@ private struct PersonPickerList: NSViewRepresentable {
                 let proposed = model.isAnswer(id) && !slot.confirmed
                 lead = PickerBadge(code: slot.code, proposed: proposed)
                 name = NSTextField(labelWithString: id)
-                label = "\(slot.code) \(id)"
+                label = model.accessibilityLabel(for: id)
             }
             name.font = m.nameFont
             name.textColor = .labelColor

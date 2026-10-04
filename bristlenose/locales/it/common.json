@@ -145,7 +145,8 @@
       "newModerator": "Nuovo moderatore",
       "newObserver": "Nuovo osservatore",
       "newNameFor": "Nuovo nome per {{code}}",
-      "thatsMe": "Sono io ({{name}})"
+      "thatsMe": "Sono io ({{name}})",
+      "proposedName": "{{code}}, nome proposto {{name}}"
     },
     "failedToLoad": "Impossibile caricare le sessioni: {{error}}",
     "loading": "Caricamento delle sessioni…"

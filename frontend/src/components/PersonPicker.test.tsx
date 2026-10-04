@@ -62,6 +62,16 @@ describe("PersonPicker", () => {
     expect(document.activeElement).toBe(martin);
   });
 
+  it("a proposed answer says so to assistive tech, a confirmed one does not", () => {
+    const { unmount } = render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} knownNames={["Martin", "Kerri"]} onChoose={vi.fn()} onClose={vi.fn()} />);
+    const [martin, kerri] = items();
+    expect(martin.getAttribute("aria-label")).toBe("m1, proposed name Martin");
+    expect(kerri.getAttribute("aria-label")).toBeNull();
+    unmount();
+    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} knownNames={["Martin"]} onChoose={vi.fn()} onClose={vi.fn()} />);
+    expect(items()[0].getAttribute("aria-label")).toBeNull();
+  });
+
   it("Enter on the proposed answer says yes", () => {
     const onChoose = vi.fn();
     const onClose = vi.fn();

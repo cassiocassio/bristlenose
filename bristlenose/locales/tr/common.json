@@ -145,7 +145,8 @@
       "newModerator": "Yeni moderatör",
       "newObserver": "Yeni gözlemci",
       "newNameFor": "{{code}} için yeni ad",
-      "thatsMe": "Bu benim ({{name}})"
+      "thatsMe": "Bu benim ({{name}})",
+      "proposedName": "{{code}}, \u00f6nerilen ad {{name}}"
     },
     "failedToLoad": "Oturumlar yüklenemedi: {{error}}",
     "loading": "Oturumlar yükleniyor…"

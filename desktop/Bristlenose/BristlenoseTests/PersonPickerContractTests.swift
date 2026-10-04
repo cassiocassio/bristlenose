@@ -41,9 +41,12 @@ struct PersonPickerContractTests {
         #expect(moderator.labels.newPrompt == "New moderator")
         #expect(moderator.labels.thatsMe == "That’s Me ({{name}})")
 
+        #expect(moderator.labels.proposed == "m1, proposed name Martin B Storey")
+
         let participant = try #require(requests[1])
         #expect(participant.slot.role == .participant)
         #expect(participant.labels.thatsMe == nil)
+        #expect(participant.labels.proposed == nil)
         #expect(participant.labels.newPrompt == "New name for p3")
     }
 
@@ -110,6 +113,17 @@ struct PersonPickerContractTests {
         let model = PersonPickerModel(request: russian, meName: "Jo", onChoose: { _ in }, onClose: {})
         #expect(model.segmentsWidth > 210)   // more than the floor leaves inside the padding
         #expect(model.contentWidth >= ceil(model.segmentsWidth) + 20)
+    }
+
+    /// The dotted ring and the grey name are visual; VoiceOver hears the
+    /// proposed row as the SPA words it, and every other row as code and name.
+    @Test func aProposedRowSaysSoToVoiceOver() throws {
+        let requests = try wires().compactMap { PersonPickerRequest(message: $0) }
+        let model = PersonPickerModel(request: requests[0], meName: "Jo", onChoose: { _ in }, onClose: {})
+        #expect(model.accessibilityLabel(for: "Martin B Storey") == "m1, proposed name Martin B Storey")
+        #expect(model.accessibilityLabel(for: "Kerri Ng") == "m1 Kerri Ng")
+        let confirmed = PersonPickerModel(request: requests[1], onChoose: { _ in }, onClose: {})
+        #expect(confirmed.accessibilityLabel(for: "Mary Adeyemi") == "p3 Mary Adeyemi")
     }
 
     @Test func theSelectionOpensOnTheAnswerAndAnUnknownSlotPreselectsNothing() throws {

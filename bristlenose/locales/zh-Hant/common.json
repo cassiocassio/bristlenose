@@ -136,7 +136,8 @@
       "newModerator": "新主持人",
       "newObserver": "新觀察員",
       "newNameFor": "{{code}} 的新名字",
-      "thatsMe": "我本人（{{name}}）"
+      "thatsMe": "我本人（{{name}}）",
+      "proposedName": "{{code}}\uff0c\u5efa\u8b70\u7684\u540d\u5b57 {{name}}"
     },
     "failedToLoad": "無法載入場次：{{error}}",
     "loading": "正在載入場次⋯"

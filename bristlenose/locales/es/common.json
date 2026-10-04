@@ -135,7 +135,8 @@
       "newModerator": "Nuevo moderador",
       "newObserver": "Nuevo observador",
       "newNameFor": "Nuevo nombre para {{code}}",
-      "thatsMe": "Soy yo ({{name}})"
+      "thatsMe": "Soy yo ({{name}})",
+      "proposedName": "{{code}}, nombre propuesto {{name}}"
     },
     "failedToLoad": "Error al cargar las sesiones: {{error}}",
     "loading": "Cargando sesiones…"

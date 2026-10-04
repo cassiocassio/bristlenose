@@ -145,7 +145,8 @@
       "newModerator": "New moderator",
       "newObserver": "New observer",
       "newNameFor": "New name for {{code}}",
-      "thatsMe": "That’s Me ({{name}})"
+      "thatsMe": "That’s Me ({{name}})",
+      "proposedName": "{{code}}, proposed name {{name}}"
     },
     "failedToLoad": "Failed to load sessions: {{error}}",
     "loading": "Loading sessions…"

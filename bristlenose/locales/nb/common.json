@@ -132,7 +132,8 @@
       "newModerator": "Ny moderator",
       "newObserver": "Ny observatør",
       "newNameFor": "Nytt navn for {{code}}",
-      "thatsMe": "Det er meg ({{name}})"
+      "thatsMe": "Det er meg ({{name}})",
+      "proposedName": "{{code}}, foresl\u00e5tt navn {{name}}"
     },
     "moderatedBy": "Moderert av {{names}}",
     "observer_one": "Observatør: {{names}}",

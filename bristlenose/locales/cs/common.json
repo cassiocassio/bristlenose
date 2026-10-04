@@ -159,7 +159,8 @@
       "newModerator": "Nový moderátor",
       "newObserver": "Nový pozorovatel",
       "newNameFor": "Nové jméno pro {{code}}",
-      "thatsMe": "To jsem já ({{name}})"
+      "thatsMe": "To jsem já ({{name}})",
+      "proposedName": "{{code}}, navr\u017een\u00e9 jm\u00e9no {{name}}"
     },
     "failedToLoad": "Nepodařilo se načíst sezení: {{error}}",
     "loading": "Načítání sezení…"

@@ -164,6 +164,7 @@ export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: Pe
             className="export-dropdown-item export-dropdown-scope"
             role="menuitemradio"
             aria-checked={isAnswer}
+            aria-label={isAnswer && labels.proposed ? labels.proposed : undefined}
             tabIndex={-1}
             onClick={() => choose(name)}
           >

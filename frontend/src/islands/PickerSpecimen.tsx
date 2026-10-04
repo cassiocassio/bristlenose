@@ -55,6 +55,7 @@ function labels(slot: PersonPickerSlot): PersonPickerLabels {
       : `New name for ${slot.code}`,
     thatsMe: null,
     menu: `Edit name for ${slot.code}`,
+    proposed: slot.name && !slot.confirmed ? `${slot.code}, proposed name ${slot.name}` : null,
   };
 }
 

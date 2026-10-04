@@ -163,7 +163,8 @@
       "newModerator": "Nowy moderator",
       "newObserver": "Nowy obserwator",
       "newNameFor": "Nowa nazwa dla {{code}}",
-      "thatsMe": "To ja ({{name}})"
+      "thatsMe": "To ja ({{name}})",
+      "proposedName": "{{code}}, proponowane imi\u0119 {{name}}"
     },
     "failedToLoad": "Nie udało się wczytać sesji: {{error}}",
     "loading": "Wczytywanie sesji…"

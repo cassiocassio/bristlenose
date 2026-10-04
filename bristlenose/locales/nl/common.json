@@ -132,7 +132,8 @@
       "newModerator": "Nieuwe moderator",
       "newObserver": "Nieuwe waarnemer",
       "newNameFor": "Nieuwe naam voor {{code}}",
-      "thatsMe": "Dat ben ik ({{name}})"
+      "thatsMe": "Dat ben ik ({{name}})",
+      "proposedName": "{{code}}, voorgestelde naam {{name}}"
     },
     "moderatedBy": "Gemodereerd door {{names}}",
     "observer_one": "Waarnemer: {{names}}",

@@ -719,6 +719,9 @@ describe("SessionsTable person picker", () => {
     expect(s2Mod.classList.contains("bn-person-proposed")).toBe(false);
     const [s1Name] = screen.getAllByTestId("bn-name-m1");
     expect(s1Name.classList.contains("proposed")).toBe(true);
+    // The ring and the grey are visual; the badge says it in words too.
+    expect(s1Mod.getAttribute("aria-label")).toMatch(/^m1, proposed name \S/);
+    expect(s2Mod.getAttribute("aria-label")).toBeNull();
   });
 
   it("an exported report draws a proposed name plain, with no picker", async () => {

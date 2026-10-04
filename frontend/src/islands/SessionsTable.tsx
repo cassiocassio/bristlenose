@@ -668,6 +668,15 @@ function SessionRow({
                   className={`bn-person-picker-trigger${proposed ? " bn-person-proposed" : ""}`}
                   aria-haspopup="menu"
                   aria-expanded={pickerKey === editKey}
+                  aria-label={
+                    proposed
+                      ? t("sessions.picker.proposedName", {
+                          code: sp.speaker_code,
+                          name: displayName,
+                          interpolation: { escapeValue: false },
+                        })
+                      : undefined
+                  }
                   data-testid={`bn-picker-trigger-${sp.speaker_code}`}
                   onClick={(e) => onPickerOpen(session_id, slot, e.currentTarget)}
                 >

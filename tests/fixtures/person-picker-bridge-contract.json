@@ -1,6 +1,6 @@
 {
   "_comment": "The person picker across the Mac bridge (docs/design-people.md § UX iteration 3). Vitest (frontend/src/utils/personPickerBridge.test.ts) builds each web_to_native `wire` from `input` with the English strings, and resolves each native_to_web `payload` against its `slot` to `effect`. Swift (BristlenoseTests/PersonPickerContractTests.swift) decodes every `wire` exactly as BridgeHandler receives it and builds every `payload` from `native`. Change a shape here first, then both sides.",
-  "version": 1,
+  "version": 2,
   "web_to_native": [
     {
       "name": "a proposed moderator, every moderator name known, with That's Me",
@@ -20,7 +20,8 @@
           "roleGroup": "Role",
           "newPrompt": "New moderator",
           "thatsMe": "That’s Me ({{name}})",
-          "menu": "Edit name for m1"
+          "menu": "Edit name for m1",
+          "proposed": "m1, proposed name Martin B Storey"
         }
       }
     },
@@ -42,7 +43,8 @@
           "roleGroup": "Role",
           "newPrompt": "New name for p3",
           "thatsMe": null,
-          "menu": "Edit name for p3"
+          "menu": "Edit name for p3",
+          "proposed": null
         }
       }
     }

@@ -170,7 +170,9 @@ final class PickerLabModel: ObservableObject {
             labels: .init(roles: [.moderator: "Moderator", .participant: "Participant", .observer: "Observer"],
                           roleGroup: "Role", newPrompt: prompt,
                           thatsMe: slot.role == .participant ? nil : "That’s Me ({{name}})",
-                          menu: "Edit name for \(slot.code)"))
+                          menu: "Edit name for \(slot.code)",
+                          proposed: slot.name.isEmpty || slot.confirmed
+                              ? nil : "\(slot.code), proposed name \(slot.name)"))
     }
 
     func rebuild() {

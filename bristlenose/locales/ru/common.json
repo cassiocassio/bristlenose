@@ -163,7 +163,8 @@
       "newModerator": "Новый модератор",
       "newObserver": "Новый наблюдатель",
       "newNameFor": "Новое имя для {{code}}",
-      "thatsMe": "Это я ({{name}})"
+      "thatsMe": "Это я ({{name}})",
+      "proposedName": "{{code}}, \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u043d\u043e\u0435 \u0438\u043c\u044f {{name}}"
     },
     "failedToLoad": "Не удалось загрузить сессии: {{error}}",
     "loading": "Загрузка сессий…"

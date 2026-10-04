@@ -122,7 +122,8 @@
       "newModerator": "Neuer Moderator",
       "newObserver": "Neuer Beobachter",
       "newNameFor": "Neuer Name für {{code}}",
-      "thatsMe": "Das bin ich ({{name}})"
+      "thatsMe": "Das bin ich ({{name}})",
+      "proposedName": "{{code}}, vorgeschlagener Name {{name}}"
     },
     "moderatedBy": "Moderiert von {{names}}",
     "observer_one": "Beobachter: {{names}}",

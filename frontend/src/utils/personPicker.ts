@@ -57,6 +57,10 @@ export interface PersonPickerLabels {
   thatsMe: string | null;
   /** The menu's accessible name. */
   menu: string;
+  /** The accessible name of the slot's own name while it is proposed
+   *  ("m1, proposed name Sarah"): the dotted ring and the grey say it only
+   *  to the eye. Null when there is no proposed name. */
+  proposed: string | null;
 }
 
 /** The picker's strings for one slot. */
@@ -78,5 +82,17 @@ export function personPickerLabels(slot: PersonPickerSlot, t: TFunction): Person
         ? null
         : t("sessions.picker.thatsMe", { name: "{{name}}", interpolation: { escapeValue: false } }),
     menu: t("sessions.editName", { code: slot.code }),
+    proposed: personPickerProposedLabel(slot, t),
   };
+}
+
+/** "m1, proposed name Sarah" for a proposed slot, null otherwise. The grid's
+ *  badge and both pickers' rows use it, so all three read the same. */
+export function personPickerProposedLabel(slot: PersonPickerSlot, t: TFunction): string | null {
+  if (!slot.name || slot.confirmed) return null;
+  return t("sessions.picker.proposedName", {
+    code: slot.code,
+    name: slot.name,
+    interpolation: { escapeValue: false },
+  });
 }

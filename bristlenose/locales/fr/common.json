@@ -135,7 +135,8 @@
       "newModerator": "Nouvel animateur",
       "newObserver": "Nouvel observateur",
       "newNameFor": "Nouveau nom pour {{code}}",
-      "thatsMe": "C’est moi ({{name}})"
+      "thatsMe": "C’est moi ({{name}})",
+      "proposedName": "{{code}}, nom propos\u00e9 {{name}}"
     },
     "failedToLoad": "Échec du chargement des entretiens : {{error}}",
     "loading": "Chargement des entretiens…"

@@ -145,7 +145,8 @@
       "newModerator": "Moderador nou",
       "newObserver": "Observador nou",
       "newNameFor": "Nom nou per a {{code}}",
-      "thatsMe": "Soc jo ({{name}})"
+      "thatsMe": "Soc jo ({{name}})",
+      "proposedName": "{{code}}, nom proposat {{name}}"
     },
     "failedToLoad": "No s'han pogut carregar les sessions: {{error}}",
     "loading": "S'estan carregant les sessions…"

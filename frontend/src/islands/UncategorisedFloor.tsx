@@ -11,7 +11,8 @@
  */
 
 import { useTranslation } from "react-i18next";
-import { Badge, PersonBadge } from "../components";
+import { Badge } from "../components/Badge";
+import { PersonBadge } from "../components/PersonBadge";
 import { getTagBg } from "../utils/colours";
 import { useQuotesStore } from "../contexts/QuotesContext";
 

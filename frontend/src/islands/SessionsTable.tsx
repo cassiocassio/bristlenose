@@ -15,7 +15,12 @@
 import { Suspense, lazy, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { EditableText, JourneyChain, PersonBadge, SectionHeading, Sparkline, Thumbnail } from "../components";
+import { EditableText } from "../components/EditableText";
+import { JourneyChain } from "../components/JourneyChain";
+import { PersonBadge } from "../components/PersonBadge";
+import { SectionHeading } from "../components/SectionHeading";
+import { Sparkline } from "../components/Sparkline";
+import { Thumbnail } from "../components/Thumbnail";
 import type { PersonPickerChoice, PersonPickerSlot, PickerRole } from "../utils/personPicker";
 
 // The picker's code is loaded when someone first opens it: the grid is part of

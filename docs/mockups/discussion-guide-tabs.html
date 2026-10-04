@@ -77,7 +77,6 @@
     <div class="grp"><span class="l">Guide</span><button data-g="yes">Has a guide</button><button data-g="no">No guide</button></div>
     <div class="grp"><span class="l">Tab</span><button data-t="merged">first</button><button data-t="planned">second</button></div>
     <div class="grp"><span class="l">Surface</span><button data-p="mac">Mac app</button><button data-p="web">Browser</button></div>
-    <div class="grp"><span class="l">Labels</span><button data-l="now">Today’s</button><button data-l="as">As asked · As planned</button></div>
   </div>
   <div class="note" id="note"></div>
 
@@ -109,15 +108,10 @@
     </div>
   </div>
 
-  <ol class="qs">
-    <li><b>Labels.</b> Today the tabs read “Normalised questions” and “Your guide”. “As asked · As planned” pairs them by what each shows; it needs two new strings in 21 languages. Your call.</li>
-    <li><b>No guide, first tab.</b> Today every row carries the + mark (“not in your guide”) and the key explains it — true, but noise when there is no guide at all. Shown here without marks or key; say if you want them back.</li>
-    <li><b>Between adding the guide and the new analysis.</b> On the Mac the second tab could say “Reading your guide…” while Analyse runs; today nothing in the lens changes until the run ends and the report reloads. Not built; say if you want it.</li>
-  </ol>
+  <p class="qs"><b>Still open:</b> between adding a guide and the new analysis finishing, the lens shows nothing new on the Mac until the report reloads. A “Reading your guide…” line on this tab is not built.</p>
 </div>
 <script>
-let guide = "no", tab = "planned", surface = "mac", labels = "as";
-const L = { now: { merged: "Normalised questions", planned: "Your guide" }, as: { merged: "As asked", planned: "As planned" } };
+let guide = "no", tab = "planned", surface = "mac";
 const $ = (id) => document.getElementById(id);
 
 const asked = [
@@ -137,38 +131,38 @@ const planned = [
   ["Buying beans", [["Where do beans come from?"], ["Subscriptions"]]],
 ];
 
+const KEY = { both: '<span class="dot"></span> Asked as planned', hollow: '<span class="dot hollow"></span> Planned, never asked', plus: '<span style="width:7px;text-align:center">+</span> Not in your guide' };
+const key = (marks) => `<div class="key">${marks.map((m) => `<span>${KEY[m]}</span>`).join("")}<span>Grey: not asked in this session</span></div>`;
 const badges = (bs) => bs.map((b, i) => `<span class="b${i === 0 && b === "#1" ? " a" : ""}">${b}</span>`).join("");
 const mark = (m) => m === "both" ? '<span class="dot"></span>' : m === "hollow" ? '<span class="dot hollow"></span>' : "+";
 
 function body() {
   if (tab === "merged" && guide === "yes") {
-    return asked.map(([sec, emergent, rows]) => `<div class="sec">${sec}${emergent ? '<span class="emer">came up, not in your guide</span>' : ""}</div>` +
-      rows.map(([t, m, bs, hot]) => `<div class="q${m === "hollow" ? " never" : ""}${hot ? " hot" : ""}"><span class="mk">${mark(m)}</span><span class="tx">${t}</span>${badges(bs)}</div>`).join("")).join("") +
-      `<div class="key"><span><span class="dot"></span> Asked as planned</span><span><span class="dot hollow"></span> Planned, never asked</span><span><span style="width:7px;text-align:center">+</span> Not in your guide</span><span>Grey: not asked in this session</span></div>`;
+    return key(["both", "hollow", "plus"]) + asked.map(([sec, emergent, rows]) => `<div class="sec">${sec}${emergent ? '<span class="emer">came up, not in your guide</span>' : ""}</div>` +
+      rows.map(([t, m, bs, hot]) => `<div class="q${m === "hollow" ? " never" : ""}${hot ? " hot" : ""}"><span class="mk">${mark(m)}</span><span class="tx">${t}</span>${badges(bs)}</div>`).join("")).join("");
   }
   if (tab === "merged") {
-    return askedNoGuide.map(([sec, rows]) => `<div class="sec">${sec}</div>` +
-      rows.map(([t, bs, hot]) => `<div class="q${hot ? " hot" : ""}"><span class="mk"></span><span class="tx">${t}</span>${badges(bs)}</div>`).join("")).join("");
+    return key(["plus"]) + askedNoGuide.map(([sec, rows]) => `<div class="sec">${sec}</div>` +
+      rows.map(([t, bs, hot]) => `<div class="q${hot ? " hot" : ""}"><span class="mk">+</span><span class="tx">${t}</span>${badges(bs)}</div>`).join("")).join("");
   }
   if (guide === "yes") {
-    return `<div class="gv"><label><input type="radio" name="gv" checked> Summary</label><label><input type="radio" name="gv"> Original</label></div>` +
-      planned.map(([sec, rows]) => `<div class="sec">${sec}</div>` +
-        rows.map(([t, hot, never]) => `<div class="q${hot ? " hot" : ""}${never ? " never" : ""}"><span class="mk">${never ? '<span class="dot hollow"></span>' : '<span class="dot"></span>'}</span><span class="tx">${t}</span></div>`).join("")).join("") +
-      `<span class="btn">Replace your guide…</span>`;
+    return `<div class="gv"><label><input type="radio" name="gv" checked> Summary</label><span style="display:inline-flex;gap:4px;align-items:center"><input type="radio" name="gv"><a href="#" style="color:var(--accent);text-decoration:none" title="Choose a different guide: Home coffee discussion guide v3 final.docx">Home coffee discussi…v3 final.docx</a></span></div>` +
+      key(["both", "hollow"]) + planned.map(([sec, rows]) => `<div class="sec">${sec}</div>` +
+        rows.map(([t, hot, never]) => `<div class="q${hot ? " hot" : ""}${never ? " never" : ""}"><span class="mk">${never ? '<span class="dot hollow"></span>' : '<span class="dot"></span>'}</span><span class="tx">${t}</span></div>`).join("")).join("");
   }
   const how = surface === "mac"
     ? `<span class="btn pri" id="add">Add your guide…</span><div class="how" id="how" hidden>The Mac’s open panel appears (Word, Markdown or plain text). The guide is copied into the project and Analyse starts; only the discussion is rebuilt, and your edits are kept.</div>`
     : `<span class="btn pri" id="add">Add your guide…</span><div class="how" id="how" hidden>Put your guide — Word, Markdown or plain text — in a folder named “Discussion guide” beside your recordings, then run bristlenose run on the project folder again.</div>`;
-  return `<div class="empty"><h3>No guide yet<span class="new">new</span></h3>Add your discussion guide to see the study as you planned it. The questions that were asked are then matched to it: what was planned and never asked, and what came up off-guide.</div>${how}`;
+  return `<div class="sec" style="margin-top:12px">Upload your discussion guide</div><div class="empty" style="margin-top:6px">See the study as you planned it: questions asked, matched to all the participants’ answers.<br><br>Docx, Markdown or text files.</div>${how}`;
 }
 
 function note() {
   const k = `${guide}-${tab}`;
   return {
-    "yes-merged": "<b>Has a guide · first tab.</b> What was asked, grouped by the guide’s sections plus any that came up on their own. Dot: asked as planned. Hollow: planned, never asked. +: not in your guide. Unchanged from today.",
-    "yes-planned": "<b>Has a guide · second tab.</b> The guide as written (Summary or Original), each line marked asked or never asked. Replace sits at the foot. Unchanged from today.",
-    "no-merged": "<b>No guide · first tab.</b> What was asked, grouped by topic. No marks and no key: with no guide there is nothing to compare against (question 2 below).",
-    "no-planned": `<b>No guide · second tab — new.</b> The place to add a guide. ${surface === "mac" ? "On the Mac the button opens the native panel and starts Analyse." : "In a browser the button says where the guide goes and to run again."} Once it is processed, this tab becomes the guide and the first tab gains its marks.`,
+    "yes-merged": "<b>Has a guide · Normalised questions.</b> What was asked, grouped by the guide’s sections plus any that came up on their own. Dot: asked as planned. Hollow: planned, never asked. +: not in your guide. The key now sits at the top and scrolls away.",
+    "yes-planned": "<b>Has a guide · Your guide.</b> Summary, or the guide as written — shown by its file name, a link that chooses a different guide (it replaces the Replace button). The key at the top shows only the marks used here.",
+    "no-merged": "<b>No guide · Normalised questions.</b> What was asked, grouped by topic. Every row is “+”, so the key shows that mark alone.",
+    "no-planned": `<b>No guide · Add your guide.</b> The place to add a guide. ${surface === "mac" ? "On the Mac the button opens the native panel and starts Analyse." : "In a browser the button says where the guide goes and to run again."} Once it is processed, this tab becomes the guide and the first tab gains its marks.`,
   }[k];
 }
 
@@ -176,8 +170,10 @@ function render() {
   document.querySelectorAll("[data-g]").forEach((b) => b.classList.toggle("on", b.dataset.g === guide));
   document.querySelectorAll(".ctl [data-t]").forEach((b) => b.classList.toggle("on", b.dataset.t === tab));
   document.querySelectorAll("[data-p]").forEach((b) => b.classList.toggle("on", b.dataset.p === surface));
-  document.querySelectorAll("[data-l]").forEach((b) => b.classList.toggle("on", b.dataset.l === labels));
-  document.querySelectorAll("#seg span").forEach((s) => { s.textContent = L[labels][s.dataset.t]; s.classList.toggle("on", s.dataset.t === tab); });
+  document.querySelectorAll("#seg span").forEach((s) => {
+    s.textContent = s.dataset.t === "merged" ? "Normalised questions" : guide === "yes" ? "Your guide" : "Add your guide";
+    s.classList.toggle("on", s.dataset.t === tab);
+  });
   $("tbar").style.display = surface === "mac" ? "flex" : "none";
   $("bbar").style.display = surface === "web" ? "flex" : "none";
   $("rail").style.display = surface === "web" ? "flex" : "none";
@@ -188,7 +184,6 @@ function render() {
 document.querySelectorAll("[data-g]").forEach((b) => b.addEventListener("click", () => { guide = b.dataset.g; render(); }));
 document.querySelectorAll("[data-t]").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.t; render(); }));
 document.querySelectorAll("[data-p]").forEach((b) => b.addEventListener("click", () => { surface = b.dataset.p; render(); }));
-document.querySelectorAll("[data-l]").forEach((b) => b.addEventListener("click", () => { labels = b.dataset.l; render(); }));
 render();
 </script>
 </body>

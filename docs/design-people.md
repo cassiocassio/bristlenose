@@ -2061,9 +2061,10 @@ real tokens (the pill overhang below was the first proof).
 > `bristlenose/server/speaker_slots.py`, outer-joins; the five inner joins are gone (the 3 Oct
 > block counted four: `grounding.py` had two, `resolve_speaker_names` and `resolve_session_speaker_names`). (3) The pipeline
 > writes per-session stats into `session-speakers.json` (now version 2, which also records each
-> name's evidence class), and the importer copies them onto each slot — so the dashboard's
-> `total_words`, always 0 in serve, is real. *(Main fixed the card independently on 4 Oct by counting
-> transcript words at read time, `69c9c569`; the landing reconciles the two.)* (4) **A heard name proposes** (see call 1 below), so
+> name's evidence class), and the importer copies them onto each slot, so the per-session stats
+> reach the DB (the export reads `source_file`; `words_spoken` and the `pct_*` fields are stored
+> but unread for now). The dashboard's Words card is main's read-time count from transcript words
+> (`69c9c569`), which the branch keeps — it also works for output from before v2. (4) **A heard name proposes** (see call 1 below), so
 > Whisper-only sessions keep the name they show today. **Codes are derived**, recomputed after every
 > import and every pick: moderators number in order of first appearance, so the session registry
 > keeps them stable and a code moves only when the map does.

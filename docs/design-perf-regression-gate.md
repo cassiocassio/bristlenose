@@ -1,17 +1,24 @@
 ---
 status: current
-last-trued: 2026-09-20
-trued-against: perf.yml (post-merge on main, hard); e2e/tests/perf-gate.spec.ts; check-bundle-budget.py via ci.yml's `npm run size`
+last-trued: 2026-10-04
+trued-against: HEAD@main bd9a7f7d on 2026-10-04 — perf.yml (post-merge on main, hard); e2e/tests/perf-gate.spec.ts; check-bundle-budget.py (BUDGET_BYTES 222 kB) via ci.yml's `npm run size`
 ---
 
 # Design: CI Performance Regression Gate
 
-**Status (20 Sep 2026):** Shipped and live. The gate is
+**Status (4 Oct 2026):** Shipped and live. The gate is
 [`e2e/tests/perf-gate.spec.ts`](../e2e/tests/perf-gate.spec.ts), run by
 **`.github/workflows/perf.yml`** — **post-merge on `main` only, and hard**
 (no `continue-on-error`). All thresholds below are live. See
 [`design-performance-monitoring.md`](design-performance-monitoring.md) for the
 wider context.
+
+The **bundle budget** is a separate, pre-merge gate: `scripts/check-bundle-budget.py`
+in `ci.yml`'s *Check bundle size* step, ceiling **222 kB** gzipped first paint
+(raised from 220 on 4 Oct for report undo). First paint measured **192,704 B
+(19 chunks) at `bd9a7f7d`**, 29.3 kB under the ceiling, after the 4 Oct moves
+in § Moves made. What is still on first paint that need not be, and whether to
+ratchet the ceiling, is § Still open.
 
 > **It is deliberately NOT a pre-merge gate, and that is a reversal of this
 > doc's original design.** Until **20 May 2026** it was a `perf-gate` job inside
@@ -20,7 +27,7 @@ wider context.
 > a status line that read *"live and blocking"*. Runner noise and transient network failures were producing
 > false positives that *silently stalled release-pipeline workflows*, so
 > `628a3705` moved it post-merge: the regression signal is kept, and PRs and
-> releases are no longer gated on it. `ci.yml:512` carries the forwarding
+> releases are no longer gated on it. `ci.yml:523-524` carries the forwarding
 > comment; the rationale is at `perf.yml:3-8`.
 >
 > The consequence a cold reader needs: **your PR is not checked for perf
@@ -29,9 +36,14 @@ wider context.
 > `check-release-ready.sh`'s `advisory workflows` row (`WF_ADVISORY` in
 > `project.conf:91`), and why `docs/release-premortem.md` incident 12 exists.
 
+## Changelog
+
+- _2026-10-04_ — trued up: status block now covers the bundle budget (222 kB, 192,704 B at `bd9a7f7d`); Problem and metric-table numbers; headroom and the ratchet proposal recomputed; identity-guard snippet, export-fetch snippet and Auth handling matched to the spec; results-schema note matched to the CI artifact upload; dated note on the 3.38 MB export period; `ci.yml` line ref. Anchors: `scripts/check-bundle-budget.py:58`; `e2e/tests/perf-gate.spec.ts:113-120,196-212`; `.github/workflows/perf.yml:88-97`; `.github/workflows/ci.yml:523-524`; commits "bundle budget: 220 -> 222 kB for report undo", "first paint: the locale loader names only the namespaces the spa requests".
+- _2026-09-20_ — trued up: the gate is post-merge on `main`, not pre-merge (see the banner above).
+
 ## Problem
 
-We ship PRs without knowing whether they made the app slower or bigger. Bundle size has a gate (220 kB gzip, first-load — see below) but nothing catches DOM bloat, API latency regression, paint time regression, or export size growth. These are linear regressions — small datasets detect them fine.
+We ship PRs without knowing whether they made the app slower or bigger. Bundle size has a gate (222 kB gzip, first-load — see below) but nothing catches DOM bloat, API latency regression, paint time regression, or export size growth. These are linear regressions — small datasets detect them fine.
 
 ## Goal
 
@@ -81,6 +93,14 @@ All endpoints return in under 10ms for the 4-quote fixture. These are local-mach
 |--------|----------|
 | Export file size | **1.6 MB** (1,638,619 bytes) |
 
+> _4 Oct 2026:_ export size left this baseline once. From 21 Aug 2026 every
+> locale and namespace was inlined into the export and a real project's file
+> reached 3.38 MB, so the export gate here was red until 0.28.0 embedded one
+> language and the measured file fell to 1.55 MB
+> ([`design-export-locale.md`](design-export-locale.md)). The recalibration
+> trigger *Export format changes* below fired twice without a re-baseline; that
+> call is still open, not made here.
+
 The export inlines all JS chunks uncompressed + theme CSS + base64 logos + transcript HTML. 1.6 MB for 4 quotes and 1 session. Mostly JS bundle overhead — the data payload is tiny.
 
 ## What to measure (thresholds)
@@ -89,24 +109,24 @@ Thresholds use a **doubling rule**: fail if a metric exceeds 2x baseline. This c
 
 | Metric | Tool | Baseline | Warn | Fail | Rationale |
 |--------|------|----------|------|------|-----------|
-| Bundle size (JS gzip, first load) | `scripts/check-bundle-budget.py` | 195.2 KB (4 Oct 2026) | — | > 222 KB | Was `size-limit` at a claimed ~267 KB / 305 KB — neither number was ever enforced; the real one lived in `frontend/package.json`. See the section below |
+| Bundle size (JS gzip, first load) | `scripts/check-bundle-budget.py` | 192.7 kB (`bd9a7f7d`, 4 Oct 2026) | — | > 222 kB | Was `size-limit` at a claimed ~267 KB / 305 KB — neither number was ever enforced; the real one lived in `frontend/package.json`. See the section below |
 | DOM nodes (quotes page) | Playwright `evaluate` | 549 | > 800 | > 1,100 | 2x fail. Catches leaked modals, duplicated renders, wrapper bloat |
 | DOM nodes (transcript page) | Playwright `evaluate` | 374 | > 550 | > 750 | 2x fail. Catches per-segment wrapper regressions |
 | DOM nodes (dashboard) | Playwright `evaluate` | 334 | > 500 | > 670 | Fixed structure — any doubling is a bug |
 | DOM nodes (sessions) | Playwright `evaluate` | 304 | > 450 | > 600 | |
-| Export HTML file size | `curl` + `wc -c` | 1.6 MB | > 2.5 MB | > 3.2 MB | 2x fail. Safari/WKWebView stall above ~20 MB; tracks growth early |
+| Export HTML file size | in-spec `fetch` of `/api/projects/1/export` | 1.6 MB | > 2.5 MB | > 3.2 MB | 2x fail. Safari/WKWebView stall above ~20 MB; tracks growth early |
 | API latency (quotes) | Playwright `performance.now()` | 6ms | > 100ms | — | Warn-only. CI runners add variance; catches N+1 queries but not a hard gate |
 | API latency (dashboard) | Playwright `performance.now()` | 7ms | > 100ms | — | Warn-only |
 
 ### Dropped: Lighthouse in CI
 
-Lighthouse FCP/CLS scores are stochastic on shared CI runners (CPU allocation varies between runs). DOM node count and bundle size are deterministic proxies for the same regressions. **Decision: drop Lighthouse from the CI gate.** Run it locally against the smoke fixture for ad-hoc profiling; document baseline scores here for reference.
+Lighthouse FCP/CLS scores are stochastic on shared CI runners (CPU allocation varies between runs). DOM node count and bundle size are deterministic proxies for the same regressions. **Decision: drop Lighthouse from the CI gate.** Run it locally against the smoke fixture for ad-hoc profiling. (This line once asked for baseline scores to be recorded here; none ever were, as of 4 Oct 2026.)
 
 ### Recalibration triggers
 
 Re-measure and update thresholds when:
 - After first stress test scaling run — results may reveal the per-quote marginal DOM cost is higher than expected, requiring tighter thresholds. See [design-perf-stress-test.md](design-perf-stress-test.md)
-- `@tanstack/virtual` ships (S2) — quotes page DOM should drop dramatically
+- `@tanstack/virtual` ships — quotes page DOM should drop dramatically (still not a dependency as of 4 Oct 2026)
 - Export format changes (e.g. gzip-compressed JS chunks)
 - New pages or heavy components are added
 - Smoke-test fixture grows (more sessions/quotes)
@@ -187,24 +207,21 @@ Each run appends a JSON line to `e2e/.perf-history.jsonl`:
 }
 ```
 
-`git_sha` and `runner` are included now so that if CI ever uploads `.perf-history.jsonl` as an artifact for cross-machine trend analysis, the schema is already forward-compatible. `runner` is `local:<platform>-<arch>` on dev machines and `ci:<os>:<run_id>` in GitHub Actions. The JSONL is currently gitignored and local-only.
+`git_sha` and `runner` make the JSONL comparable across machines. `runner` is `local:<platform>-<arch>` on dev machines and `ci:<os>:<run_id>` in GitHub Actions. The file is gitignored in the tree; CI uploads it with `perf-results.json` as a 90-day artifact (`perf.yml:88-97`, and Resolved #2 below).
 
 ### Server identity guard
 
 The first thing the perf-gate spec does is verify it's talking to the smoke-test fixture, not a stale server from a previous manual session:
 
 ```typescript
-test('verify smoke-test fixture', async ({ page }) => {
-  await page.goto('/report/');
-  await page.waitForLoadState('networkidle');
-  const projectName = await page.evaluate(async () => {
-    const res = await fetch('/api/projects/1/dashboard', {
-      headers: { Authorization: `Bearer ${(window as any).__BRISTLENOSE_AUTH_TOKEN__}` },
-    });
-    const data = await res.json();
-    return data.project_name;
+// e2e/tests/perf-gate.spec.ts:113-120
+test('server identity guard — smoke-test fixture', async ({ page, baseURL }) => {
+  const res = await page.request.get(`${baseURL}/api/projects/1/info`, {
+    headers: { Authorization: `Bearer ${authToken()}` },
   });
-  expect(projectName).toBe('Smoke Test');
+  expect(res.ok()).toBe(true);
+  const data = await res.json();
+  expect(data.project_name).toBe('Smoke Test');
 });
 ```
 
@@ -212,17 +229,20 @@ This catches the exact failure we hit during baseline measurement — a stale `b
 
 ### How thresholds work
 
-The Playwright spec uses `expect(domCount).toBeLessThan(1_100)` for the quotes page. Failures break CI. Warnings are `console.log` output only — they signal "getting close" without blocking.
+The Playwright spec asserts `expect(domCount).toBeLessThan(t.fail)` per entry in `DOM_THRESHOLDS` (1,100 for the quotes page). Failures break CI. Warnings are `console.log` output only — they signal "getting close" without blocking.
 
 Thresholds use a doubling rule: fail at 2x baseline, warn at 1.5x. Calibrated from measured baselines (see table above). API latency is warn-only (CI runner variance makes it unsuitable as a hard gate).
 
 ### Export size measurement
 
-The spec fetches the export endpoint in-process and measures the body
+The spec fetches the export endpoint from inside the page and measures the body
 (`e2e/tests/perf-gate.spec.ts:190-226`):
 
 ```ts
-const res = await fetch(`${url}/api/projects/1/export`, { headers: authHeaders() });
+// inside page.evaluate — the token is read from the page
+const res = await fetch(`${url}/api/projects/1/export`, {
+  headers: token ? { Authorization: `Bearer ${token}` } : {},
+});
 expect(ok, `export returned ${status} — auth token missing?`).toBe(true);
 // …then: warn > EXPORT_SIZE_WARN (2.5 MB), fail > EXPORT_SIZE_FAIL (3.2 MB)
 ```
@@ -244,7 +264,7 @@ pass the gate by being empty.
 
 ### Auth handling
 
-Set `_BRISTLENOSE_AUTH_TOKEN=test-token` as an env var before starting the server. Pass that token in Playwright via `extraHTTPHeaders` in the config, and use it for Node-side `fetch()` calls in fixture helpers and the `curl` export call above.
+Set `_BRISTLENOSE_AUTH_TOKEN=test-token` as an env var before starting the server. Pass that token in Playwright via `extraHTTPHeaders` in the config, and send it explicitly on Node-side requests — the identity guard's `page.request.get` uses `authToken()`. The export measurement fetches from inside the page and reads `window.__BRISTLENOSE_AUTH_TOKEN__`; its `res.ok` assertion is what turns a missing token into a failure rather than a 50-byte pass.
 
 ### What this does NOT cover
 
@@ -381,6 +401,10 @@ went.
 
 ### Moves made (4 Oct 2026): 221,101 → 195,187 B
 
+Measured from `e1763ea7`, which is 58 B over the `b089a73e` row above (a person-picker
+commit landed between the two builds). Items 4 and 5 of § Still open later took it to
+192,094 B; undo for quote edits brought HEAD to 192,704 B (`bd9a7f7d`).
+
 | Move | Before | After | Δ |
 |---|---:|---:|---:|
 | `UncategorisedFloor` and `SessionsTable` import primitives by path, not via `components/index.ts` | 221,101 B | 213,289 B | −7.8 kB |
@@ -397,15 +421,15 @@ barrel members it cannot prove side-effect-free, so the cost was
 HTML export is unaffected by either move beyond +0.3 kB gzipped (the dynamic
 import's wrapper, inlined).
 
-Headroom is now **26.8 kB under 222 kB**. `BUDGET_BYTES` was deliberately not
-touched.
+Headroom after these two moves was **26.8 kB under 222 kB**; at `bd9a7f7d` it is
+**29.3 kB**. `BUDGET_BYTES` was deliberately not touched.
 
 ## Still open
 
-1. **Ratchet the ceiling, or the next 26 kB goes the same way.** The September
+1. **Ratchet the ceiling, or the next 29 kB goes the same way.** The September
    slide happened because the gate is a cliff, not a ratchet. Proposal: lower
-   `BUDGET_BYTES` to about 205 kB in its own commit that says why (≈10 kB of
-   headroom, enough for a feature, not enough for a month of unexamined
+   `BUDGET_BYTES` to about 205 kB in its own commit that says why (≈12 kB of
+   headroom over today's 192.7 kB, enough for a feature, not enough for a month of unexamined
    growth), and treat each later raise as the deliberate edit the script's
    header already asks for. Not done here: it is a policy call, and this task
    was asked not to move the number without one.

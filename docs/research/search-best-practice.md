@@ -68,7 +68,7 @@ L (a week or more). **Value** is for a researcher using the report.
 | Suggestions that never lead to zero results | NN/g site-search suggestions | ✅ | Every row shows its count | — | — |
 | Tokens with an editable meaning | Apple Mail, Apple HIG search tokens | ✅ | said by / mentions / not; tagged / text contains / not tagged | — | — |
 | Screen-reader feedback | APG; WCAG 4.1.3 | ✅ | Match count; chip selected / removed; search cleared, in 21 languages | — | — |
-| Zero-results state | NN/g: say so, offer ways forward, offer a wider scope | ⬜ | Name the scope; offer "remove *not tagged X* → 14 quotes" per chip; offer the transcripts; offer "Ask the report" | S–M | **High** |
+| Zero-results state | NN/g: say so, offer ways forward, offer a wider scope | ⬜ | Name the scope; offer "remove *not tagged X* → 14 quotes" per chip; offer the transcripts | S–M | **High** |
 | Scope label and one-click widening | NN/g scoped search | 🟡 | Search is the Quotes lens only; the field on other lenses does nothing yet | M | High |
 | Recent searches on an empty, focused field | Apple HIG | ⬜ | Per viewer, browser storage | S | Medium |
 | Saved searches | Mail smart mailboxes, Finder smart folders | ⬜ | Closer to a named, shareable view than to search | M | Low–Med |
@@ -80,8 +80,8 @@ L (a week or more). **Value** is for a researcher using the report.
 |---|---|---|---|---|---|
 | Let the user's own agent reason | MCP; OpenAI deep research `search` + `fetch` | 🟡 | Shipped: the `.mcpb` extension for Claude, the plugin for ChatGPT, four read-only tools. No `fetch` tool, so ChatGPT deep research and company knowledge cannot use it as a source | S | High |
 | Name resolution (William → Will) | Nickname datasets (English-only, biased); the LLM pass itself | ⬜ | Aliases on the person, from the transcript, editable; matched by search, suggestions and MCP. Ties into the people identity work | S–M | **High** |
-| Ask the report from the search field | Dovetail (auto-detects questions), Marvin, MAXQDA AI Chat | 🟡 | The chat lens exists as a flag-gated draft: whole corpus in context, server-checked citations, a support check. Proposed: an explicit **"Ask the report: …"** row in the suggestions, not auto-detection (no evidence it is better, and it is language-specific) | M | High |
-| Scope a question by the active chips | Marvin, Delve, ATLAS.ti | ⬜ | The chips already are a scope | S | Medium |
+| Ask the report from the search field | Dovetail (auto-detects questions), Marvin, MAXQDA AI Chat | ⬜ by decision | Parked 4 Oct 2026: MCP is the chat lens, so a question goes to the researcher's own agent. The chat lens prototype (whole corpus in context, server-checked citations, a support check) stays as grounding work | — | — |
+| Scope a question by the active chips | Marvin, Delve, ATLAS.ti | ⬜ | Parked with the in-app question box; on MCP, the agent scopes with `search_quotes` filters | — | — |
 | Quotes from participants only | Marvin "Respondents" | — check | Quotes are participant speech by construction; confirm before building anything | — | — |
 | Citations as IDs, verbatim text from the store | Claude citations on custom-content blocks | ✅ in the chat lens | Server-constructed indices; a fabricated citation is an out-of-range number | — | — |
 | Answer plus "show all N matching quotes" | NN/g: people fact-check AI with search | ⬜ | The research evidence is that omission is a bigger risk than invention; the handoff to the filter answers omission | S | Medium |
@@ -102,6 +102,12 @@ L (a week or more). **Value** is for a researcher using the report.
 Ordered by the owner's emphasis (AI first, through the path that works today)
 and by dependency. Each step is useful on its own.
 
+**Decided 4 Oct 2026: for the foreseeable future, MCP is the chat lens.** No
+in-app question box until Bristlenose adds more value than Claude inside the
+app. So the AI steps below are about making the MCP tools better grounding for
+the researcher's own agent; the in-app "Ask the report" row (step 4) is
+withdrawn, and a question in the search field is the agent's job.
+
 1. **MCP search on the contract.** A Python matcher that asserts
    `search-match-contract.json`, used by `search_quotes`. This is the path Claude
    and ChatGPT use today, and it currently misses "José" for "jose". It also
@@ -111,12 +117,13 @@ and by dependency. Each step is useful on its own.
    researcher edits them; search, suggestions and MCP match them. Typo-tolerant
    people and tag suggestions in the same step. This makes "William" work for the
    agent and the field alike. Sequence with the people identity work. **S–M.**
-3. **Zero-results state.** Name the scope, relax-a-chip counts, and an "Ask the
-   report" and "Search transcripts" way forward. Local zero-result counters
+3. **Zero-results state.** Name the scope, relax-a-chip counts, and a "Search
+   transcripts" way forward. Local zero-result counters
    (counts only). **S–M.**
-4. **"Ask the report" row → chat lens**, scoped by the active chips, citations as
-   quote IDs, with "show all N matching" handing back to the filter. Needs the
-   chat lens graduated from its lab flag. **M.**
+4. ~~**"Ask the report" row → chat lens.**~~ Withdrawn 4 Oct 2026: MCP is the
+   chat lens. Its MCP-side counterpart: **a transcript tool**, so the agent can
+   answer "what did the moderator say?", which mostly is not in the quotes.
+   **S–M.**
 5. **Recent searches** on an empty, focused field. **S.**
 6. **"Did you mean"** and split ↔ join, on zero results only. **S–M.**
 7. **Transcript search and find-in-transcript.** The case for the FTS5 index:

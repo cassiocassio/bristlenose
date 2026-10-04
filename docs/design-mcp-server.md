@@ -190,6 +190,13 @@ The fold in 1(b) is what stops the chat lens drifting back into the
 chat-product shape this section rejects; naming non-Claude agents in 2 is
 §1's vendor-neutral commitment made concrete.
 
+> **4 Oct 2026 — 1(b) parked: for the foreseeable future, MCP *is* the chat
+> lens.** The owner's call: rebuilding Claude inside the app is wrong until
+> Bristlenose adds more value than "Claude, inside". Asking the report happens
+> in the researcher's own agent, through offering 2. The work that follows is
+> making the MCP tools better grounding — matching, names, transcripts — not
+> an in-app question box. Reopen 1(b) when there is value only the app can add.
+
 ### Where the AI actually lives
 
 The position is **not** "no AI in the product" — AutoCode, the dynamic codebook

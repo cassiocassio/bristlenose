@@ -4,6 +4,13 @@ status: draft
 
 # Chat lens — a cited question box inside Bristlenose
 
+> **Parked 4 Oct 2026.** For the foreseeable future the MCP extension *is* the
+> chat lens: asking the report happens in the researcher's own agent (Claude,
+> ChatGPT), and rebuilding Claude in the app waits until Bristlenose adds more
+> value than "Claude, inside". The §6 prototype and its grounding work stay —
+> `grounding.py` serves the MCP tools too. See
+> [`design-mcp-server.md`](design-mcp-server.md) §Positioning.
+
 _Design note; the §6 prototype is built to the §5a corrections (flag-gated lab page at `/chat-lens`). July 2026._
 
 > **Status: Draft.** Split out of [`design-mcp-server.md`](design-mcp-server.md)

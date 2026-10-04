@@ -131,9 +131,12 @@ consumed in a designer's tool.
 
 What that asks of the MCP tools:
 
-- **Filters a researcher speaks in**: by role ("practice managers"), by session
-  date or day ("the Thursday sessions"), by topic. `search_quotes` takes
-  participant, section, theme, tag and sentiment today, not role or date.
+- **Filters a researcher speaks in**: by participant role ("practice managers")
+  and by topic ("interviews about diabetes"). Not by interview date (owner,
+  4 Oct 2026). `search_quotes` takes participant, section, theme, tag and
+  sentiment today. Role is a People schema enhancement: `Person.role_title`
+  exists as free text, extracted by the pipeline and never shown in the report;
+  see [`design-people.md`](../design-people.md) §H owner call 3.
 - **Meaning, still grounded**: "what they meant" is interpretation, so the answer
   should be quotes plus the themes and signals Bristlenose already computed, not
   a fresh summary.

@@ -84,6 +84,12 @@ core asserts the same file when it lands).
      digits; a middle dot or full stop between letters; a thousands separator
      followed by exactly three digits, so `35` never finds *3.5*. Quoted text
      stays exact.
+   - **Plurals and possessives** (Harman's S-stemmer, 1991): each word of a
+     typed run also tries its singular as a whole word, so `dogs` finds *dog*,
+     `stories` finds *story*, `Mike's` finds *Mike*, and `dogs` never finds
+     *dogma*. Latin script, four letters or more; an extra form only, so it
+     never removes a match. Harman's known misses are pinned as known limits
+     (`news` finds *new*; `boxes` does not find *box*).
    **Accents are folded only where they are optional:** Latin, Greek,
    Cyrillic, Arabic and Hebrew. In Japanese, Thai and Hindi a combining mark
    changes the word (`パン` is bread, `ハン` is not), so it is kept, and a match

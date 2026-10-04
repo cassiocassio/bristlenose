@@ -38,7 +38,9 @@
  *   - Decided 4 Oct 2026: # @ % & stay in the word (C#, #1, 50%, R&D);
  *     punctuation after the last typed word finishes it ("why?" is not a
  *     prefix); and a typed run also matches its joined form ("covid19" finds
- *     "COVID-19", "1000" finds "1,000") — see "Joined forms" below.
+ *     "COVID-19", "1000" finds "1,000") — see "Joined forms" below; and a
+ *     typed plural or possessive also finds the singular ("dogs" finds "dog",
+ *     "Mike's" finds "Mike") — see "Plurals and possessives".
  */
 
 import deburr from "lodash.deburr";
@@ -317,6 +319,32 @@ export interface SearchTerm {
   /** A typed run's joined form, when it differs ("co-op" → "coop"). Runs are
    *  also tried against the text's joined form (see "Joined forms"). */
   joined?: string;
+  /** A typed run's singular form, when it differs ("dogs" → "dog", "Mike's" →
+   *  "mike"), matched as whole words (see "Plurals"). */
+  singular?: string;
+}
+
+// ── Plurals and possessives ─────────────────────────────────────────────
+//
+// "dogs" also finds "dog", "Mike's" also finds "Mike". Harman's S-stemmer
+// (Harman 1991, "How effective is suffixing?", JASIS 42:7), the library-science
+// classic: -ies → -y (not -eies, -aies), -es → -e (not -aes, -ees, -oes), -s →
+// "" (not -us, -ss); and a possessive 's is dropped. Applied to each word of
+// a typed run in Latin script, four letters or more, and only as an EXTRA
+// form matched as whole words — so it can add matches and never removes one,
+// and a stem that is not a word ("thi" from "this") finds nothing. Decided
+// 4 Oct 2026.
+
+const LATIN_WORD = /^[\p{Script=Latin}]+$/u;
+
+/** One word's singular by Harman's rules, or the word itself. */
+export function singularOf(word: string): string {
+  if (word.endsWith("'s")) return word.slice(0, -2);
+  if (word.length < 4 || !LATIN_WORD.test(word)) return word;
+  if (word.endsWith("ies") && !word.endsWith("eies") && !word.endsWith("aies")) return `${word.slice(0, -3)}y`;
+  if (word.endsWith("es") && !/(?:aes|ees|oes)$/.test(word)) return word.slice(0, -1);
+  if (word.endsWith("s") && !word.endsWith("us") && !word.endsWith("ss")) return word.slice(0, -1);
+  return word;
 }
 
 const OPEN_QUOTES = new Set(['"', "“", "”", "„", "«", "»", "「", "」"]);
@@ -348,6 +376,8 @@ export function parseQuery(query: string): SearchTerm[] {
       if (endsInPunctuation(raw)) term.whole = true;
       const j = trimApostrophes(foldJoined(raw).trim());
       if (j && j !== w) term.joined = j;
+      const sg = w.split(" ").map(singularOf).join(" ");
+      if (sg !== w) term.singular = sg;
       terms.push(term);
     } else {
       terms.push(makeTerm("phrase", text));
@@ -504,9 +534,13 @@ function termPositions(folded: string, term: SearchTerm, firstOnly = false): num
   return out;
 }
 
-/** The term's forms: as typed, and joined when it differs. */
+/** The term's forms: as typed, joined when it differs, and singular (whole
+ *  words) when it differs. */
 function forms(term: SearchTerm): SearchTerm[] {
-  return term.joined ? [term, { ...term, text: term.joined }] : [term];
+  const out = [term];
+  if (term.joined) out.push({ ...term, text: term.joined });
+  if (term.singular) out.push({ ...term, text: term.singular, whole: true });
+  return out;
 }
 
 /** The ways `text` is folded for `term`: a typed run also tries the joined fold. */

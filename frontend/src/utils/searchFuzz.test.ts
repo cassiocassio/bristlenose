@@ -86,7 +86,7 @@ const ASCII_WORDS = [
   "co-op", "1,000", "3.5", "e.g", "C#", "50%",
 ];
 /** Typed only: the joined forms and a finished word (4 Oct 2026). */
-const ASCII_QUERY_ONLY = ["coop", "email", "1000", "35", "eg", "p3x", "?", "."];
+const ASCII_QUERY_ONLY = ["coop", "email", "1000", "35", "eg", "p3x", "?", ".", "prices", "shelves", "Storey's", "bests", "thes"];
 const ASCII_SEPS = [" ", "  ", "\t", "\n", ".", ",", "(", ")", "-", "_", "'", "`", "\u0000", "\u007f", ":", "/"];
 
 /** Double-quote marks the parser treats as phrase delimiters. Trigger for D2. */
@@ -467,6 +467,17 @@ interface TermA {
   text: string;
   joined?: string;
   whole?: boolean;
+  singular?: string;
+}
+/** Harman's S-stemmer as published (JASIS 1991), plus a dropped possessive,
+ *  for words of 4+ ASCII letters; written from the spec, not the code. */
+function singularA(w: string): string {
+  if (w.endsWith("'s")) return w.slice(0, -2);
+  if (w.length < 4 || !/^[a-z]+$/.test(w)) return w;
+  if (/ies$/.test(w) && !/[ea]ies$/.test(w)) return w.slice(0, -3) + "y";
+  if (/es$/.test(w) && !/[aeo]es$/.test(w)) return w.slice(0, -1);
+  if (/s$/.test(w) && !/(us|ss)$/.test(w)) return w.slice(0, -1);
+  return w;
 }
 function oracleParse(q: string): TermA[] {
   const terms: TermA[] = [];
@@ -485,6 +496,8 @@ function oracleParse(q: string): TermA[] {
       if (last !== undefined && isSepA(last) && !/\s/.test(last)) term.whole = true;
       const j = foldA(raw, true).text.trim();
       if (j !== t) term.joined = j;
+      const sg = t.split(" ").map(singularA).join(" ");
+      if (sg !== t) term.singular = sg;
     }
     terms.push(term);
   };
@@ -505,14 +518,16 @@ function oracleRanges(text: string, term: TermA, whole = false): Array<[number, 
   const out: Array<[number, number]> = [];
   const isWhole = whole || term.whole === true;
   const folds = term.kind === "word" ? [foldA(text), foldA(text, true)] : [foldA(text)];
-  const texts = term.joined ? [term.text, term.joined] : [term.text];
+  const texts: Array<[string, boolean]> = [[term.text, isWhole]];
+  if (term.joined) texts.push([term.joined, isWhole]);
+  if (term.singular) texts.push([term.singular, true]);
   for (const { text: f, map } of folds) {
-    for (const tt of texts) {
+    for (const [tt, mustEnd] of texts) {
       for (let i = 0; i + tt.length <= f.length; i++) {
         if (f.slice(i, i + tt.length) !== tt) continue;
         if ((term.kind === "word" || whole) && i > 0 && isWordA(f[i - 1])) continue;
         const j = i + tt.length;
-        if (isWhole && j < f.length && isWordA(f[j])) continue;
+        if (mustEnd && j < f.length && isWordA(f[j])) continue;
         // A mark runs to where the next folded character starts, so it takes in
         // what folding dropped after the match (a word-edge apostrophe), as it
         // takes in an accent dropped from a letter.
@@ -544,7 +559,9 @@ describe("ASCII oracle (independently written from docs/design-search.md §3)", 
 
   it("parseQuery splits, quotes, folds and strips edge apostrophes as specified", () => {
     sweep("ascii parse", 3000, SEED + 5, genA, ([, q]) => {
-      const shape = (t: TermA) => ({ kind: t.kind, text: t.text, joined: t.joined ?? null, whole: t.whole === true });
+      const shape = (t: TermA) => ({
+        kind: t.kind, text: t.text, joined: t.joined ?? null, whole: t.whole === true, singular: t.singular ?? null,
+      });
       const got = parseQuery(q).map(shape);
       const want = oracleParse(q).map(shape);
       if (JSON.stringify(got) !== JSON.stringify(want)) return `got ${JSON.stringify(got)} want ${JSON.stringify(want)}`;

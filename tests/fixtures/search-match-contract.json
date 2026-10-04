@@ -955,6 +955,74 @@
       "marked": [
         "COVID-19"
       ]
+    },
+    {
+      "why": "a plural also finds the singular (Harman's S-stemmer, 4 Oct 2026)",
+      "text": "my dog barks",
+      "query": "dogs",
+      "match": true,
+      "marked": [
+        "dog"
+      ]
+    },
+    {
+      "why": "…and the plural as typed",
+      "text": "two dogs barked",
+      "query": "dogs",
+      "match": true,
+      "marked": [
+        "dogs"
+      ]
+    },
+    {
+      "why": "-ies finds -y",
+      "text": "one story about it",
+      "query": "stories",
+      "match": true,
+      "marked": [
+        "story"
+      ]
+    },
+    {
+      "why": "-es finds -e",
+      "text": "the price went up",
+      "query": "prices",
+      "match": true,
+      "marked": [
+        "price"
+      ]
+    },
+    {
+      "why": "a possessive finds the name",
+      "text": "Mike said so",
+      "query": "Mike's",
+      "match": true,
+      "marked": [
+        "Mike"
+      ]
+    },
+    {
+      "why": "the singular is a whole word: dogs does not find dogma",
+      "text": "pure dogma",
+      "query": "dogs",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "-us is not a plural: bus does not lose its s",
+      "text": "the bu index",
+      "query": "bus",
+      "match": false,
+      "marked": []
+    },
+    {
+      "why": "each word of a run",
+      "text": "the dog barked",
+      "query": "the dogs",
+      "match": true,
+      "marked": [
+        "the dog"
+      ]
     }
   ],
   "known_limits": [
@@ -985,7 +1053,23 @@
       "query": "R&D",
       "match": false,
       "marked": []
+    },
+    {
+      "why": "accepted 4 Oct 2026: Harman over-stems news to new",
+      "text": "something new",
+      "query": "news",
+      "match": true,
+      "marked": [
+        "new"
+      ]
+    },
+    {
+      "why": "accepted 4 Oct 2026: Harman's -es rule leaves boxes as boxe, so it does not find box",
+      "text": "a box of things",
+      "query": "boxes",
+      "match": false,
+      "marked": []
     }
   ],
-  "_python_notes": "When the Python core asserts this file, three defaults differ from JavaScript and must not be used as-is: str.lower() is final-sigma-aware while this contract folds every sigma to σ; re's \\w includes the underscore while a word here is letters, digits and combining marks; and the stdlib re has no Unicode Script property, so the scripts named in searchMatch.ts (accented: Latin, Greek, Cyrillic, Arabic, Hebrew; unspaced: Han, Hiragana, Katakana, Thai) need the `regex` package or explicit ranges. Whitespace is JavaScript's \\s plus U+0085, with U+FEFF treated as invisible. Since 3 Oct 2026 also: decompose (NFKD) BEFORE case folding so compatibility capitals fold ('™' is 'tm'); fold double quote marks (\" “ ” „ « » 「 」) to a space; drop format characters AND variation selectors (U+FE0F); treat a letter of Han, Hiragana, Katakana or Thai before or after a word as a word boundary; and widen a highlight to whole extended grapheme clusters (the stdlib cannot: use `regex`'s \\X). Since 3 Oct 2026 the Latin letters Unicode gives no decomposition (Latin-1 Supplement and Latin Extended-A: ø ł đ æ œ þ ı …) fold by lodash's `deburr` table, applied to those letters only and before NFKD. Python should take the same table rather than `unidecode`, which also transliterates other scripts. Also since 3 Oct 2026: words typed between quotes are ONE run term (whitespace does not split them), trimmed of apostrophes and spaces at its edges; and emoji skin-tone modifiers (Emoji_Modifier) are invisible like variation selectors; punctuation (\\p{P}, except the apostrophe and the curly single quotes) folds to a space; an apostrophe at a word's edge is dropped from text and query alike (one inside a word stays); and whether a run may start mid-word is decided by its first letter's script. Since 4 Oct 2026 also: # @ % & (and their full-width forms) are kept in a word but do not block a word start; punctuation after the last typed word sets whole=true on that run; and a typed (unquoted) run is tried in its typed and joined forms against the text's plain and joined folds — the joined fold drops a dash between letters or digits, a middle dot or full stop between letters, and a . , NBSP NNBSP or thin space after a digit followed by exactly three digits."
+  "_python_notes": "When the Python core asserts this file, three defaults differ from JavaScript and must not be used as-is: str.lower() is final-sigma-aware while this contract folds every sigma to σ; re's \\w includes the underscore while a word here is letters, digits and combining marks; and the stdlib re has no Unicode Script property, so the scripts named in searchMatch.ts (accented: Latin, Greek, Cyrillic, Arabic, Hebrew; unspaced: Han, Hiragana, Katakana, Thai) need the `regex` package or explicit ranges. Whitespace is JavaScript's \\s plus U+0085, with U+FEFF treated as invisible. Since 3 Oct 2026 also: decompose (NFKD) BEFORE case folding so compatibility capitals fold ('™' is 'tm'); fold double quote marks (\" “ ” „ « » 「 」) to a space; drop format characters AND variation selectors (U+FE0F); treat a letter of Han, Hiragana, Katakana or Thai before or after a word as a word boundary; and widen a highlight to whole extended grapheme clusters (the stdlib cannot: use `regex`'s \\X). Since 3 Oct 2026 the Latin letters Unicode gives no decomposition (Latin-1 Supplement and Latin Extended-A: ø ł đ æ œ þ ı …) fold by lodash's `deburr` table, applied to those letters only and before NFKD. Python should take the same table rather than `unidecode`, which also transliterates other scripts. Also since 3 Oct 2026: words typed between quotes are ONE run term (whitespace does not split them), trimmed of apostrophes and spaces at its edges; and emoji skin-tone modifiers (Emoji_Modifier) are invisible like variation selectors; punctuation (\\p{P}, except the apostrophe and the curly single quotes) folds to a space; an apostrophe at a word's edge is dropped from text and query alike (one inside a word stays); and whether a run may start mid-word is decided by its first letter's script. Since 4 Oct 2026 also: # @ % & (and their full-width forms) are kept in a word but do not block a word start; punctuation after the last typed word sets whole=true on that run; and a typed (unquoted) run is tried in its typed and joined forms against the text's plain and joined folds — the joined fold drops a dash between letters or digits, a middle dot or full stop between letters, and a . , NBSP NNBSP or thin space after a digit followed by exactly three digits. Since 4 Oct 2026 (later): each word of a typed run in Latin script, 4+ letters, also gets Harman's S-stemmer singular (-ies→-y unless -eies/-aies; -es→-e unless -aes/-ees/-oes; -s→'' unless -us/-ss; any word's possessive 's dropped), tried as an extra form whose last word must end a word."
 }

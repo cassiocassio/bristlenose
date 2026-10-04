@@ -227,6 +227,10 @@ final class BridgeHandler: ObservableObject {
     /// the inbound message, which replaces the whole set.
     @Published var searchBadgeStyles: SearchBadgeStyles = .empty
 
+    /// The native person picker, opened over this window's report when the
+    /// SPA sends `person-picker` (docs/design-people.md § UX iteration 3).
+    private lazy var personPicker = PersonPickerPresenter()
+
     /// Whether the report is in Focus Mode. Mirrored from the SPA (`focus-mode`
     /// message) — the web side owns the state; this drives only the View-menu
     /// checkmark. Resets to false on `reset()` because a project switch remounts
@@ -894,6 +898,18 @@ final class BridgeHandler: ObservableObject {
             // changes, but a remount re-posts the same rows.
             let menu = SearchSuggestions(message: body)
             if menu != searchSuggestions { searchSuggestions = menu }
+
+        case "person-picker":
+            // A speaker in the Sessions grid was clicked: open the native
+            // picker at its badge. The pick goes back as a menu action; what it
+            // means (a yes, a rename, nothing) is the SPA's to decide.
+            guard let request = PersonPickerRequest(message: body), let webView else {
+                Self.log.error("person-picker dropped — unreadable request or no webView")
+                break
+            }
+            personPicker.present(request, over: webView) { [weak self] action, payload in
+                self?.menuAction(action, payload: payload)
+            }
 
         case "search-badge-styles":
             // Sole writer, equality-guarded. The SPA posts when the badges it

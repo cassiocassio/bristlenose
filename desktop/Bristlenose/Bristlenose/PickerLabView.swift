@@ -4,23 +4,24 @@ import SwiftUI
 import WebKit
 
 /// DEBUG-only Picker Lab — the moderator-identity picker (docs/design-people.md,
-/// "UX iteration 3") built twice and shown side by side, so web against native
-/// is judged on the real rendering rather than on a mockup of either.
+/// "UX iteration 3") as both channels ship it, side by side, so web against
+/// native is judged on the real rendering rather than on a mockup of either.
 ///
-/// - **Native half:** a hybrid the owner set (3 Oct 2026). The popover is a Mac
-///   pull-down menu in everything but its container — the system menu font in
-///   label colour, a 24 pt row (measured from `NSMenu` on macOS 27), the menu's
-///   own checkmark, the source-list selection capsule — while the person is
-///   the house native badge, `SpeakerBadgeView`, the same entity the Sessions
-///   switcher draws. Regular and Small follow the two pull-down sizes.
+/// - **Native half:** the production `PersonPickerView` (PersonPickerPopover.swift)
+///   in a real `NSPopover` — the owner's hybrid: a Mac pull-down menu in
+///   everything but its container (the menu font, a 24 pt row measured from
+///   `NSMenu`, the menu's own checkmark, the source-list capsule) with the
+///   person drawn as the house native badge, `SpeakerBadgeView`. Regular and
+///   Small follow the two pull-down sizes; the app ships Small.
 /// - **Web half:** `/report/picker-specimen` on the fronted project's sidecar —
-///   the shipped classes and the real `PersonBadge`, under the real tokens and
-///   `data-platform="desktop"`. Unchanged by the hybrid: the report's own look.
+///   the production `PersonPicker` under the real tokens and
+///   `data-platform="desktop"`.
 ///
 /// The scenario control drives both halves; inside each, the controls are live.
 /// The web half takes its scenario from the URL (`?scenario=`), so a reload or
 /// a project switch cannot leave the halves showing different things; Reset
-/// starts both again from the chosen scenario.
+/// starts both again from the chosen scenario. The lab's strings are English:
+/// in the app the native picker's come localised from the SPA.
 struct PickerLabView: View {
     @EnvironmentObject private var serveFleet: ServeFleet
     @EnvironmentObject private var i18n: I18n
@@ -63,6 +64,7 @@ struct PickerLabView: View {
             }
         }
         .onChange(of: scenario) { _, name in model.apply(scenario: name) }
+        .onChange(of: model.small) { _, _ in model.rebuild() }
     }
 
     private func specimenURL(_ base: URL) -> URL {
@@ -116,124 +118,107 @@ struct PickerLabView: View {
 
 // MARK: - Model
 
-enum PickerRole: String, CaseIterable, Identifiable {
-    case moderator, participant, observer
-    var id: String { rawValue }
-    var label: String { rawValue.capitalized }
-    var prefix: String { String(rawValue.prefix(1)) }
-    var newPrompt: String { "New \(rawValue)" }
-}
-
-struct PickerPerson: Hashable { let code: String; let name: String }
-
-/// The slot's answer: who it is, and whether a person has said yes.
-struct PickerAnswer: Equatable { let code: String; let name: String; let confirmed: Bool }
-
+/// The lab's fixture study and the slot being named. It plays the web side's
+/// part — building the request and deciding what a pick means, as
+/// `personPickerRows` and `personPickerChoice` do in the SPA.
 @MainActor
 final class PickerLabModel: ObservableObject {
-    static let me = "Martin Storey"
-    static let meRow = "me"
-    /// The row for someone new, after the people it would join.
-    static let newRow = "new"
+    typealias Role = PersonPickerRequest.Role
 
-    @Published var role: PickerRole = .moderator
-    @Published var people: [PickerRole: [PickerPerson]] = [
-        .moderator: [.init(code: "m1", name: "Martin B Storey"), .init(code: "m2", name: "Kerri Ng")],
-        .participant: [.init(code: "p1", name: "Sarah Chen"), .init(code: "p2", name: "Dr Amara Nwosu"),
-                       .init(code: "p3", name: "Mary Adeyemi"), .init(code: "p4", name: "Marrian Boateng"),
-                       .init(code: "p5", name: "Mary Okafor"), .init(code: "p6", name: "Mickael Hurley")],
-        .observer: [.init(code: "o1", name: "Jane Smith")],
+    @Published var slot = PersonPickerRequest.Slot(code: "m1", role: .moderator,
+                                                   name: "Martin B Storey", confirmed: false)
+    @Published var known: [Role: [String]] = [
+        .moderator: ["Martin B Storey", "Kerri Ng"],
+        .participant: ["Sarah Chen", "Dr Amara Nwosu", "Mary Adeyemi"],
+        .observer: ["Jane Smith"],
     ]
-    @Published var answer: PickerAnswer? = .init(code: "m1", name: "Martin B Storey", confirmed: false)
-    @Published var selection: String? = "m1"
-    @Published var draft = ""
     @Published var isOpen = true
-    /// The small pull-down size: 11 pt type and a small segmented control —
-    /// the owner's choice for the native picker (4 Oct 2026); Regular stays
-    /// a switch away for comparison.
+    /// The small pull-down size, as the app ships it (owner, 4 Oct 2026).
     @Published var small = true
-    /// Bumped when an arrow key leaves the new-person field, so the list takes
-    /// the keyboard back.
-    @Published var focusListRequest = 0
+    @Published private(set) var picker: PersonPickerModel?
 
-    var rows: [String] {
-        (people[role] ?? []).map(\.code) + [Self.newRow] + (role == .participant ? [] : [Self.meRow])
-    }
-
-    /// The code someone new would get: the next number in this role.
-    var nextCode: String { "\(role.prefix)\((people[role]?.count ?? 0) + 1)" }
-
-    /// An arrow key in the new-person field moves to the row above or below.
-    func leaveField(by delta: Int) {
-        guard let i = rows.firstIndex(of: Self.newRow), rows.indices.contains(i + delta) else { return }
-        selection = rows[i + delta]
-        focusListRequest += 1
-    }
+    init() { rebuild() }
 
     func apply(scenario: String) {
         switch scenario {
         case "confirmed":
-            role = .moderator; answer = .init(code: "m1", name: "Martin B Storey", confirmed: true)
+            slot = .init(code: "m1", role: .moderator, name: "Martin B Storey", confirmed: true)
         case "unknown":
-            role = .moderator; answer = nil
+            slot = .init(code: "m1", role: .moderator, name: "", confirmed: false)
         case "participant":
-            role = .participant; answer = .init(code: "p3", name: "Mary Adeyemi", confirmed: false)
+            slot = .init(code: "p3", role: .participant, name: "Mary Adeyemi", confirmed: false)
         default:
-            role = .moderator; answer = .init(code: "m1", name: "Martin B Storey", confirmed: false)
+            slot = .init(code: "m1", role: .moderator, name: "Martin B Storey", confirmed: false)
         }
-        selection = answer?.code ?? people[role]?.first?.code
-        draft = ""
         isOpen = true
+        rebuild()
     }
 
-    func setRole(_ r: PickerRole) {
-        role = r
-        selection = rows.first
-    }
-
-    func choose(_ id: String) {
-        guard id != Self.newRow else { return }   // the new row is typed into, not chosen
-        if id == Self.meRow {
-            // That's Me answers this slot, so it keeps the slot's role prefix.
-            let code = (answer?.code.hasPrefix(role.prefix) ?? false) ? answer!.code : nextCode
-            answer = .init(code: code, name: Self.me, confirmed: true)
-        } else if let p = people[role]?.first(where: { $0.code == id }) {
-            answer = .init(code: p.code, name: p.name, confirmed: true)
+    var request: PersonPickerRequest {
+        var names: [String]
+        if slot.role == .participant {
+            names = slot.name.isEmpty ? [] : [slot.name]
+        } else {
+            names = []
+            for n in known[slot.role] ?? [] where !n.isEmpty && !names.contains(n) { names.append(n) }
+            if !slot.name.isEmpty && !names.contains(slot.name) { names.insert(slot.name, at: 0) }
         }
-        isOpen = false
+        let prompt = slot.role == .moderator ? "New moderator"
+            : slot.role == .observer ? "New observer" : "New name for \(slot.code)"
+        return PersonPickerRequest(
+            sessionId: "s1", slot: slot, names: names, anchor: .zero,
+            labels: .init(roles: [.moderator: "Moderator", .participant: "Participant", .observer: "Observer"],
+                          roleGroup: "Role", newPrompt: prompt,
+                          thatsMe: slot.role == .participant ? nil : "That’s Me ({{name}})",
+                          menu: "Edit name for \(slot.code)"))
     }
 
-    func create() {
-        let name = draft.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty else { return }
-        let code = nextCode
-        people[role, default: []].append(.init(code: code, name: name))
-        answer = .init(code: code, name: name, confirmed: true)
-        draft = ""
-        isOpen = false
+    func rebuild() {
+        picker = PersonPickerModel(
+            request: request, small: small,
+            onChoose: { [weak self] name in self?.picked(name) },
+            onClose: { [weak self] in self?.isOpen = false })
+    }
+
+    /// What the SPA does with a picked name: the slot's own proposed name is a
+    /// yes; any other name renames it.
+    private func picked(_ name: String) {
+        slot = .init(code: slot.code, role: slot.role, name: name, confirmed: true)
+        if !(known[slot.role] ?? []).contains(name) { known[slot.role, default: []].append(name) }
+        rebuild()
     }
 }
 
 // MARK: - The anchor and its real NSPopover
 
 /// The badge in the grid that opens the picker. The popover is AppKit's own,
-/// `.applicationDefined` so it stays up while you look at the web half.
+/// `.applicationDefined` so it stays up while you look at the web half (the
+/// app's is `.transient`).
 private struct PopoverAnchor: View {
     @ObservedObject var model: PickerLabModel
 
     var body: some View {
         Button { model.isOpen.toggle() } label: {
-            if let a = model.answer {
-                PersonLabel(code: a.code, name: a.name, proposed: !a.confirmed)
-                    .fixedSize()
+            if model.slot.name.isEmpty {
+                Text(model.slot.role.rawValue.capitalized).italic().foregroundStyle(.secondary)
             } else {
-                Text(model.role.label).italic().foregroundStyle(.secondary)
+                PersonLabel(code: model.slot.code, name: model.slot.name, proposed: !model.slot.confirmed)
+                    .fixedSize()
             }
         }
         .buttonStyle(.plain)
         .background(PopoverHost(isOpen: model.isOpen, onClose: { model.isOpen = false }) {
-            NativePersonPicker(model: model)
+            LabPickerContent(lab: model)
         })
+    }
+}
+
+/// The production picker for the lab's current slot, rebuilt when it changes.
+private struct LabPickerContent: View {
+    @ObservedObject var lab: PickerLabModel
+
+    var body: some View {
+        if let picker = lab.picker { PersonPickerView(model: picker) }
     }
 }
 
@@ -299,399 +284,12 @@ private struct PopoverHost<Content: View>: NSViewRepresentable {
         coordinator.popover.close()
     }
 
-    /// `.applicationDefined` so the popover stays up while you look at the web
-    /// half; Escape closes it through the list, and every close reaches the
-    /// model here, so the next click on the badge opens it again.
+    /// Every close reaches the model here, so the next click on the badge
+    /// opens it again.
     final class Coordinator: NSObject, NSPopoverDelegate {
         let popover = NSPopover()
         var onClose: (() -> Void)?
         func popoverDidClose(_ notification: Notification) { onClose?() }
-    }
-}
-
-// MARK: - Pull-down menu metrics
-
-/// What a Mac pull-down menu uses at each size, measured on macOS 27 (`NSMenu`
-/// with `menuFont`): rows are 24 pt at both sizes, and only the type and the
-/// controls shrink — 13 → 11 pt, and the segmented control 24 → 20 pt tall.
-struct PickerMetrics {
-    let small: Bool
-    var nameFont: NSFont {
-        NSFont.menuFont(ofSize: small ? NSFont.systemFontSize(for: .small) : 0)
-    }
-    var rowHeight: CGFloat { 24 }
-    var controlSize: ControlSize { small ? .small : .regular }
-    /// The menu's check column, and the gap between the badge and the name.
-    var tickColumn: CGFloat { small ? 19 : 22 }
-    var gap: CGFloat { small ? 5 : 6 }
-}
-
-// MARK: - The picker
-
-/// The list is the Sessions switcher's table (`SessionsPopoverList.swift`),
-/// because that surface already settled how a list in a popover behaves on
-/// this Mac (docs/design-sessions-popover-navigation.md §Interaction): single
-/// click commits and dismisses, arrows move the highlight, Return or Space
-/// commits, Escape dismisses, hover is the popover family's 6% wash, and the
-/// selection is the grey source-list capsule.
-private struct NativePersonPicker: View {
-    @ObservedObject var model: PickerLabModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Picker("Role", selection: Binding(get: { model.role }, set: { model.setRole($0) })) {
-                ForEach(PickerRole.allCases) { Text($0.label).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .controlSize(PickerMetrics(small: model.small).controlSize)
-            .frame(maxWidth: .infinity)
-
-            // Someone new is the list's next row: the code they would get, and
-            // the name column as the field.
-            PickerPeopleList(model: model)
-        }
-        .padding(10)
-        .frame(width: model.small ? 250 : 280)
-    }
-}
-
-private struct PickerPeopleList: NSViewRepresentable {
-    @ObservedObject var model: PickerLabModel
-
-    /// The list is exactly as tall as its rows, read from the table itself,
-    /// so a source-list inset can never clip the last one.
-    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSScrollView, context: Context) -> CGSize? {
-        guard let table = context.coordinator.table, table.numberOfRows > 0 else { return nil }
-        let height = table.rect(ofRow: table.numberOfRows - 1).maxY + 2
-        return CGSize(width: proposal.width ?? 260, height: height)
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(model: model) }
-
-    func makeNSView(context: Context) -> NSScrollView {
-        let table = SessionsPopoverTableView()
-        configureSourceListTable(table)
-        table.dataSource = context.coordinator
-        table.delegate = context.coordinator
-        table.target = context.coordinator
-        table.action = #selector(Coordinator.rowClicked(_:))
-        table.commitHandler = { [weak coordinator = context.coordinator] in coordinator?.commitSelected() }
-        table.cancelHandler = { [weak model] in model?.isOpen = false }
-
-        let scroll = NSScrollView()
-        scroll.documentView = table
-        scroll.drawsBackground = false
-        scroll.hasVerticalScroller = false
-        scroll.automaticallyAdjustsContentInsets = false
-        scroll.contentInsets = NSEdgeInsetsZero
-        context.coordinator.table = table
-        context.coordinator.update()
-        return scroll
-    }
-
-    func updateNSView(_ scroll: NSScrollView, context: Context) {
-        context.coordinator.update()
-    }
-
-    @MainActor
-    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
-        let model: PickerLabModel
-        weak var table: NSTableView?
-        private weak var newField: NSTextField?
-        private var rows: [String] = []
-        private var signature = ""
-        private var focusListRequest = 0
-
-        init(model: PickerLabModel) { self.model = model }
-
-        private var metrics: PickerMetrics { PickerMetrics(small: model.small) }
-
-        /// One badge column for the whole list, as wide as its widest code —
-        /// the Sessions switcher's "pin the column, not the chip" — so names
-        /// line up and the new row's code never gives way to what is typed.
-        private var badgeColumn: CGFloat {
-            ((model.people[model.role] ?? []).map(\.code) + [model.nextCode])
-                .map(SpeakerBadgeView.width(for:)).max() ?? SpeakerBadgeView.width(for: "p1")
-        }
-
-        func update() {
-            // Reload only when what the rows draw has changed — a reload on every
-            // publish would drop the hover wash under the pointer, and a reload
-            // while typing would throw the field away.
-            let sig = "\(model.role)|\(model.rows)|\(String(describing: model.answer))|\(model.people)|\(model.small)"
-            if sig != signature {
-                signature = sig
-                rows = model.rows
-                table?.reloadData()
-            }
-            if model.focusListRequest != focusListRequest {
-                focusListRequest = model.focusListRequest
-                table?.window?.makeFirstResponder(table)
-            }
-            if let table, let id = model.selection, let i = rows.firstIndex(of: id), table.selectedRow != i {
-                table.selectRowIndexes(IndexSet(integer: i), byExtendingSelection: false)
-                table.scrollRowToVisible(i)
-            }
-        }
-
-        func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
-
-        func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
-            SessionsPopoverHoverRowView()
-        }
-
-        func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat { metrics.rowHeight }
-
-        func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-            let id = rows[row]
-            let m = metrics
-            let lead: NSView
-            let name: NSTextField
-            var ticked = false
-            var label = ""
-            switch id {
-            case PickerLabModel.newRow:
-                lead = PickerBadge(code: model.nextCode, proposed: false)
-                let field = PickerRowView.nameField(text: model.draft, prompt: model.role.newPrompt)
-                field.delegate = self
-                newField = field
-                name = field
-                label = "\(model.nextCode), \(model.role.newPrompt)"
-            case PickerLabModel.meRow:
-                let icon = NSImageView(image: NSImage(systemSymbolName: "person.crop.circle.badge.checkmark",
-                                                      accessibilityDescription: nil) ?? NSImage())
-                icon.contentTintColor = .controlAccentColor
-                icon.symbolConfiguration = .init(pointSize: m.nameFont.pointSize, weight: .regular)
-                lead = icon
-                name = NSTextField(labelWithString: "That’s Me (\(PickerLabModel.me))")
-                ticked = model.answer?.name == PickerLabModel.me
-                label = "That’s Me, \(PickerLabModel.me)"
-            default:
-                let person = model.people[model.role]?.first(where: { $0.code == id })
-                ticked = model.answer?.code == id && model.answer?.name == person?.name
-                lead = PickerBadge(code: id, proposed: ticked && !(model.answer?.confirmed ?? true))
-                name = NSTextField(labelWithString: person?.name ?? "")
-                label = "\(id) \(person?.name ?? "")"
-            }
-            name.font = m.nameFont
-            name.textColor = .labelColor
-            name.lineBreakMode = .byTruncatingTail
-            let rowView = PickerRowView(tick: ticked, lead: lead, name: name, column: badgeColumn, metrics: m)
-            rowView.translatesAutoresizingMaskIntoConstraints = false
-            let cell = NSTableCellView()
-            cell.addSubview(rowView)
-            NSLayoutConstraint.activate([
-                rowView.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 8),
-                rowView.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -10),
-                rowView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
-            ])
-            if ticked { label += (model.answer?.confirmed ?? true) ? ", current answer" : ", current answer, proposed" }
-            cell.setAccessibilityElement(true)
-            cell.setAccessibilityLabel(label)
-            return cell
-        }
-
-        func tableViewSelectionDidChange(_ notification: Notification) {
-            // Highlight only — choosing happens on click, Return or Space.
-            guard let table, table.selectedRow >= 0, table.selectedRow < rows.count else { return }
-            let id = rows[table.selectedRow]
-            if model.selection != id { model.selection = id }
-            // Arriving on the new row puts the cursor in its name.
-            if id == PickerLabModel.newRow { focusNewField() }
-        }
-
-        func focusNewField() {
-            DispatchQueue.main.async { [weak self] in
-                guard let field = self?.newField else { return }
-                field.window?.makeFirstResponder(field)
-            }
-        }
-
-        // MARK: The new-person field
-
-        func controlTextDidChange(_ notification: Notification) {
-            if let field = notification.object as? NSTextField { model.draft = field.stringValue }
-        }
-
-        /// Return creates, Escape closes, and the arrows leave the field — the
-        /// field editor's own commands, which arrive before it acts on them.
-        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
-            switch selector {
-            case #selector(NSResponder.insertNewline(_:)): model.create(); return true
-            case #selector(NSResponder.cancelOperation(_:)): model.isOpen = false; return true
-            case #selector(NSResponder.moveUp(_:)): model.leaveField(by: -1); return true
-            case #selector(NSResponder.moveDown(_:)): model.leaveField(by: 1); return true
-            default: return false
-            }
-        }
-
-        // MARK: Type-select and commit
-
-        func tableView(_ tableView: NSTableView, typeSelectStringFor tableColumn: NSTableColumn?, row: Int) -> String? {
-            typeSelectString(rows[row])
-        }
-
-        /// Matches the start of any word, so "m2", "kerri" and "ng" all land —
-        /// AppKit's default only matches the start of the whole string.
-        func tableView(_ tableView: NSTableView, nextTypeSelectMatchFromRow startRow: Int,
-                       toRow endRow: Int, for searchString: String) -> Int {
-            guard !rows.isEmpty, (0..<rows.count).contains(startRow),
-                  (0..<rows.count).contains(endRow) else { return -1 }
-            let search = searchString.lowercased()
-            var row = startRow
-            repeat {   // [startRow, endRow) with wrap; equal bounds = one full sweep
-                let words = typeSelectString(rows[row]).lowercased().split(separator: " ")
-                if words.contains(where: { $0.hasPrefix(search) }) { return row }
-                row = (row + 1) % rows.count
-            } while row != endRow
-            return -1
-        }
-
-        private func typeSelectString(_ id: String) -> String {
-            if id == PickerLabModel.meRow { return "That’s Me \(PickerLabModel.me)" }
-            if id == PickerLabModel.newRow { return "" }
-            let name = model.people[model.role]?.first(where: { $0.code == id })?.name ?? ""
-            return "\(id) \(name)"
-        }
-
-        @objc func rowClicked(_ sender: Any?) {
-            guard let table, table.clickedRow >= 0, table.clickedRow < rows.count else { return }
-            let id = rows[table.clickedRow]
-            if id == PickerLabModel.newRow { focusNewField() } else { model.choose(id) }
-        }
-
-        func commitSelected() {
-            guard let table, table.selectedRow >= 0, table.selectedRow < rows.count else { return }
-            let id = rows[table.selectedRow]
-            if id == PickerLabModel.newRow { focusNewField() } else { model.choose(id) }
-        }
-    }
-}
-
-// MARK: - The row
-
-/// One picker row in the hybrid: the menu's check column, then the person —
-/// the house badge in a column pinned to the widest code — then the name in
-/// the menu font, on its baseline. The new-person row puts a field in the name
-/// column; That's Me puts its symbol in the badge column.
-final class PickerRowView: NSView {
-    let tick: NSImageView?
-    let lead: NSView
-    let name: NSTextField
-
-    /// `tick: nil` leaves out the check column (the anchor in the grid).
-    init(tick: Bool?, lead: NSView, name: NSTextField, column: CGFloat, metrics: PickerMetrics) {
-        self.lead = lead
-        self.name = name
-        if let tick {
-            // AppKit's own menu checkmark, in label colour, as a Mac menu draws it.
-            let image = NSImageView(image: NSImage(named: NSImage.menuOnStateTemplateName) ?? NSImage())
-            image.contentTintColor = .labelColor
-            image.isHidden = !tick
-            self.tick = image
-        } else {
-            self.tick = nil
-        }
-        super.init(frame: .zero)
-        let checkWidth = tick == nil ? 0 : metrics.tickColumn
-        for v in [self.tick, lead, name].compactMap({ $0 }) {
-            v.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(v)
-        }
-        var c: [NSLayoutConstraint] = [
-            lead.leadingAnchor.constraint(equalTo: leadingAnchor, constant: checkWidth),
-            name.leadingAnchor.constraint(equalTo: leadingAnchor, constant: checkWidth + column + metrics.gap),
-            name.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
-            name.topAnchor.constraint(greaterThanOrEqualTo: topAnchor),
-            name.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor),
-            lead.topAnchor.constraint(greaterThanOrEqualTo: topAnchor),
-            lead.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor),
-            lead.centerYAnchor.constraint(equalTo: centerYAnchor),
-            // The badge's code and the name share a baseline, as in the switcher;
-            // a symbol has no text baseline, so That's Me centres instead.
-            lead is PickerBadge
-                ? name.firstBaselineAnchor.constraint(equalTo: lead.firstBaselineAnchor)
-                : name.centerYAnchor.constraint(equalTo: lead.centerYAnchor),
-        ]
-        if let t = self.tick {
-            c += [t.leadingAnchor.constraint(equalTo: leadingAnchor),
-                  t.centerYAnchor.constraint(equalTo: name.centerYAnchor)]
-        }
-        // The field stretches across the name column so it is easy to click.
-        if name.isEditable {
-            c.append(name.trailingAnchor.constraint(equalTo: trailingAnchor))
-        }
-        NSLayoutConstraint.activate(c)
-        name.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        lead.setContentCompressionResistancePriority(.required, for: .horizontal)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("unused") }
-
-    /// The new-person row's field: no bezel, no fill, no focus ring — text in
-    /// the name column, where a name would be.
-    static func nameField(text: String, prompt: String) -> NSTextField {
-        let field = NSTextField(string: text)
-        field.isBordered = false
-        field.isBezeled = false
-        field.drawsBackground = false
-        field.focusRingType = .none
-        field.usesSingleLineMode = true
-        field.cell?.isScrollable = true
-        field.placeholderString = prompt
-        field.setAccessibilityLabel(prompt)
-        return field
-    }
-}
-
-/// The house speaker badge, plus the one dotted ring a proposed name wears
-/// (design-people.md, iteration 3). `SpeakerBadgeView` is final, so the ring is
-/// a layer over it rather than a subclass.
-final class PickerBadge: NSView {
-    private let badge: SpeakerBadgeView
-    private let ring = CAShapeLayer()
-
-    init(code: String, proposed: Bool) {
-        badge = SpeakerBadgeView(code: code)
-        super.init(frame: .zero)
-        wantsLayer = true
-        badge.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(badge)
-        NSLayoutConstraint.activate([
-            badge.leadingAnchor.constraint(equalTo: leadingAnchor),
-            badge.trailingAnchor.constraint(equalTo: trailingAnchor),
-            badge.topAnchor.constraint(equalTo: topAnchor),
-            badge.bottomAnchor.constraint(equalTo: bottomAnchor),
-        ])
-        ring.fillColor = nil
-        ring.lineWidth = 1
-        ring.lineDashPattern = [3, 2]
-        ring.isHidden = !proposed
-        layer?.addSublayer(ring)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("unused") }
-
-    override var intrinsicContentSize: NSSize { badge.intrinsicContentSize }
-    override var firstBaselineOffsetFromTop: CGFloat { badge.firstBaselineOffsetFromTop }
-
-    override func layout() {
-        super.layout()
-        ring.frame = bounds
-        ring.path = CGPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5),
-                           cornerWidth: 3, cornerHeight: 3, transform: nil)
-        // A CGColor is a snapshot; layout re-runs on an appearance change.
-        effectiveAppearance.performAsCurrentDrawingAppearance {
-            ring.strokeColor = NSColor.labelColor.cgColor
-        }
-    }
-
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        needsLayout = true
     }
 }
 #endif

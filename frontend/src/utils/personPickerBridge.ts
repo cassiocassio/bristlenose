@@ -12,6 +12,7 @@
 import type { TFunction } from "i18next";
 
 import {
+  personPickerChoice,
   personPickerLabels,
   personPickerRows,
   type PersonPickerChoice,
@@ -68,4 +69,22 @@ export function parsePersonPickerChoice(payload: unknown): WirePersonPickerChoic
     return { sessionId: p.sessionId, code: p.code, choice: { kind: "name", name: choice.name.trim() } };
   }
   return null;
+}
+
+/**
+ * Native's pick as the grid applies it. The native picker sends the name that
+ * was picked; what it means — a yes to the slot's own proposed name, a rename,
+ * or nothing — is decided here with `personPickerChoice`, the rule the web
+ * picker uses, against the slot as the grid holds it now.
+ */
+export function resolvePersonPickerChoice(
+  payload: unknown,
+  slotFor: (sessionId: string, code: string) => PersonPickerSlot | null,
+): WirePersonPickerChoice | null {
+  const pick = parsePersonPickerChoice(payload);
+  if (!pick || pick.choice.kind === "confirm") return pick;
+  const slot = slotFor(pick.sessionId, pick.code);
+  if (!slot) return null;
+  const choice = personPickerChoice(slot, pick.choice.name);
+  return choice ? { sessionId: pick.sessionId, code: pick.code, choice } : null;
 }

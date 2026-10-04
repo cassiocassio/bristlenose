@@ -117,6 +117,16 @@ struct WebView: NSViewRepresentable {
         )
         userContentController.addUserScript(embeddedScript)
 
+        // This app draws the person picker natively, so the Sessions grid asks
+        // for it over the bridge instead of opening the web one. A flag rather
+        // than an assumption: an app without the native picker keeps the web
+        // one (docs/design-people.md § UX iteration 3).
+        userContentController.addUserScript(WKUserScript(
+            source: "window.__BRISTLENOSE_NATIVE_PERSON_PICKER__ = true;",
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        ))
+
         // Seed the saved subtitle preferences into this partition's (ephemeral)
         // localStorage before the SPA reads them. See BridgeHandler.
         userContentController.addUserScript(WKUserScript(

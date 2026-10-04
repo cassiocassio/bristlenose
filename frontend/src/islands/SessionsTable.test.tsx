@@ -825,6 +825,33 @@ describe("SessionsTable person picker", () => {
     expect(postMessage.mock.calls.some(([m]) => m.type === "person-picker")).toBe(false);
   });
 
+  it("native picking the slot's own proposed name is a yes, not a rename", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    window.dispatchEvent(new CustomEvent("bn:menu-action", {
+      detail: { action: "personPickerChoose", payload: { sessionId: "s1", code: "m1", choice: { kind: "name", name: "Sarah" } } },
+    }));
+    await waitFor(() => expect(puts()).toHaveLength(1));
+    expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
+    expect((puts()[0].body as { confirmed?: boolean }).confirmed).toBe(true);
+    await waitFor(() =>
+      expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("badge-proposed")).toBe(false),
+    );
+  });
+
+  it("native picking the slot's own confirmed name sends nothing", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    window.dispatchEvent(new CustomEvent("bn:menu-action", {
+      detail: { action: "personPickerChoose", payload: { sessionId: "s2", code: "m1", choice: { kind: "name", name: "Kerri" } } },
+    }));
+    // Give the on-demand bridge module time to load and answer.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(puts()).toHaveLength(0);
+  });
+
   it("native's choice comes back as a menu action and is applied", async () => {
     mockPicker();
     render(<SessionsTable projectId="1" />);

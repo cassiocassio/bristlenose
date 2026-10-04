@@ -317,13 +317,24 @@ export function SessionsTable({
     [renameSlot, handleNameCommit],
   );
 
-  // The Mac app's native picker answers through the menu-action channel.
+  // The Mac app's native picker answers through the menu-action channel with
+  // the name that was picked; resolvePersonPickerChoice turns it into a yes, a
+  // rename or nothing by the web picker's own rule, against the slot as the
+  // grid holds it now.
   useEffect(() => {
+    const slotFor = (sessionId: string, code: string): PersonPickerSlot | null => {
+      const sp = dataRef.current?.sessions
+        .find((s) => s.session_id === sessionId)
+        ?.speakers.find((x) => x.speaker_code === code);
+      if (!sp) return null;
+      const name = sp.name || "";
+      return { code, role: pickerRoleOf(code), name, confirmed: !(name && sp.name_confirmed === false) };
+    };
     const handler = (e: Event) => {
       const { action, payload } = (e as CustomEvent<{ action: string; payload?: unknown }>).detail;
       if (action !== "personPickerChoose") return;
-      void loadPickerBridge().then(({ parsePersonPickerChoice }) => {
-        const pick = parsePersonPickerChoice(payload);
+      void loadPickerBridge().then(({ resolvePersonPickerChoice }) => {
+        const pick = resolvePersonPickerChoice(payload, slotFor);
         if (pick) applyPickerChoice(pick.sessionId, pick.code, pick.choice);
       });
     };

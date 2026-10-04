@@ -1,5 +1,6 @@
 #if DEBUG
 import AppKit
+import SwiftUI
 import Testing
 @testable import Bristlenose
 
@@ -41,6 +42,37 @@ struct PickerRowViewTests {
         #expect(PickerMetrics(small: true).nameFont.pointSize == NSFont.systemFontSize(for: .small))
         #expect(PickerMetrics(small: false).nameFont.pointSize == NSFont.systemFontSize)
         #expect(PickerMetrics(small: true).rowHeight == PickerMetrics(small: false).rowHeight)
+    }
+
+    /// The whole production picker — segments, list, field, That's Me — at
+    /// the shipped Small size, light and dark, attached for a reviewer's eye.
+    @Test func renderWholePickerForReview() throws {
+        let request = PersonPickerRequest(
+            sessionId: "s1",
+            slot: .init(code: "m1", role: .moderator, name: "Martin B Storey", confirmed: false),
+            names: ["Martin B Storey", "Kerri Ng"], anchor: .zero,
+            labels: .init(roles: [.moderator: "Moderator", .participant: "Participant", .observer: "Observer"],
+                          roleGroup: "Role", newPrompt: "New moderator",
+                          thatsMe: "That’s Me ({{name}})", menu: "Edit name for m1"))
+        for dark in [false, true] {
+            let model = PersonPickerModel(request: request, meName: "Martin Storey",
+                                          onChoose: { _ in }, onClose: {})
+            let host = NSHostingView(rootView: PersonPickerView(model: model))
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 260, height: 220),
+                                  styleMask: [.borderless], backing: .buffered, defer: false)
+            window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+            window.contentView = host
+            host.layoutSubtreeIfNeeded()
+            let size = host.fittingSize
+            window.setContentSize(size)
+            host.frame = NSRect(origin: .zero, size: size)
+            host.layoutSubtreeIfNeeded()
+            let rep = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+            host.cacheDisplay(in: host.bounds, to: rep)
+            let png = try #require(rep.representation(using: .png, properties: [:]))
+            Attachment.record(png, named: "person-picker-small-\(dark ? "dark" : "light").png")
+            #expect(size.height > 100)
+        }
     }
 
     /// A picture of the rows at both sizes, light and dark, attached to the

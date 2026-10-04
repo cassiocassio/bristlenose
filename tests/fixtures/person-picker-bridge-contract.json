@@ -1,0 +1,73 @@
+{
+  "_comment": "The person picker across the Mac bridge (docs/design-people.md § UX iteration 3). Vitest (frontend/src/utils/personPickerBridge.test.ts) builds each web_to_native `wire` from `input` with the English strings, and resolves each native_to_web `payload` against its `slot` to `effect`. Swift (BristlenoseTests/PersonPickerContractTests.swift) decodes every `wire` exactly as BridgeHandler receives it and builds every `payload` from `native`. Change a shape here first, then both sides.",
+  "version": 1,
+  "web_to_native": [
+    {
+      "name": "a proposed moderator, every moderator name known, with That's Me",
+      "input": {
+        "sessionId": "s1",
+        "slot": { "code": "m1", "role": "moderator", "name": "Martin B Storey", "confirmed": false },
+        "knownNames": ["Kerri Ng", "Martin B Storey", "Kerri Ng", ""],
+        "anchor": { "x": 10.4, "y": 20.6, "width": 30, "height": 17.5 }
+      },
+      "wire": {
+        "sessionId": "s1",
+        "slot": { "code": "m1", "role": "moderator", "name": "Martin B Storey", "confirmed": false },
+        "names": ["Kerri Ng", "Martin B Storey"],
+        "anchor": { "x": 10, "y": 21, "width": 30, "height": 18 },
+        "labels": {
+          "roles": { "moderator": "Moderator", "participant": "Participant", "observer": "Observer" },
+          "roleGroup": "Role",
+          "newPrompt": "New moderator",
+          "thatsMe": "That’s Me ({{name}})",
+          "menu": "Edit name for m1"
+        }
+      }
+    },
+    {
+      "name": "a participant: only themself, a new name for that code, no That's Me",
+      "input": {
+        "sessionId": "s3",
+        "slot": { "code": "p3", "role": "participant", "name": "Mary Adeyemi", "confirmed": true },
+        "knownNames": ["Sarah Chen", "Mary Adeyemi"],
+        "anchor": { "x": 0, "y": 0, "width": 24, "height": 18 }
+      },
+      "wire": {
+        "sessionId": "s3",
+        "slot": { "code": "p3", "role": "participant", "name": "Mary Adeyemi", "confirmed": true },
+        "names": ["Mary Adeyemi"],
+        "anchor": { "x": 0, "y": 0, "width": 24, "height": 18 },
+        "labels": {
+          "roles": { "moderator": "Moderator", "participant": "Participant", "observer": "Observer" },
+          "roleGroup": "Role",
+          "newPrompt": "New name for p3",
+          "thatsMe": null,
+          "menu": "Edit name for p3"
+        }
+      }
+    }
+  ],
+  "native_to_web": [
+    {
+      "name": "picking another name renames the slot",
+      "native": { "sessionId": "s1", "code": "m1", "name": "Kerri Ng" },
+      "payload": { "sessionId": "s1", "code": "m1", "choice": { "kind": "name", "name": "Kerri Ng" } },
+      "slot": { "code": "m1", "role": "moderator", "name": "Martin B Storey", "confirmed": false },
+      "effect": { "kind": "name", "name": "Kerri Ng" }
+    },
+    {
+      "name": "picking the slot's own proposed name is a yes",
+      "native": { "sessionId": "s1", "code": "m1", "name": "Martin B Storey" },
+      "payload": { "sessionId": "s1", "code": "m1", "choice": { "kind": "name", "name": "Martin B Storey" } },
+      "slot": { "code": "m1", "role": "moderator", "name": "Martin B Storey", "confirmed": false },
+      "effect": { "kind": "confirm" }
+    },
+    {
+      "name": "picking the slot's own confirmed name changes nothing",
+      "native": { "sessionId": "s3", "code": "p3", "name": "Mary Adeyemi" },
+      "payload": { "sessionId": "s3", "code": "p3", "choice": { "kind": "name", "name": "Mary Adeyemi" } },
+      "slot": { "code": "p3", "role": "participant", "name": "Mary Adeyemi", "confirmed": true },
+      "effect": null
+    }
+  ]
+}

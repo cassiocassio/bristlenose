@@ -1,0 +1,63 @@
+/**
+ * The person picker bridge, SPA side, against the shared contract fixture
+ * (`tests/fixtures/person-picker-bridge-contract.json`). Swift's
+ * PersonPickerContractTests decode the same `wire` and build the same
+ * `payload`, so a field added on one side only fails one of the two suites.
+ */
+import contractJson from "../../../tests/fixtures/person-picker-bridge-contract.json";
+import i18n from "../i18n";
+import type { PersonPickerSlot } from "./personPicker";
+import { buildPersonPickerMessage, resolvePersonPickerChoice } from "./personPickerBridge";
+
+interface WebToNativeCase {
+  name: string;
+  input: {
+    sessionId: string;
+    slot: PersonPickerSlot;
+    knownNames: string[];
+    anchor: { x: number; y: number; width: number; height: number };
+  };
+  wire: unknown;
+}
+
+interface NativeToWebCase {
+  name: string;
+  payload: unknown;
+  slot: PersonPickerSlot;
+  effect: unknown;
+}
+
+const contract = contractJson as unknown as {
+  web_to_native: WebToNativeCase[];
+  native_to_web: NativeToWebCase[];
+};
+
+describe("person picker bridge contract", () => {
+  beforeAll(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  for (const c of contract.web_to_native) {
+    it(`builds: ${c.name}`, () => {
+      const { sessionId, slot, knownNames, anchor } = c.input;
+      expect(buildPersonPickerMessage(sessionId, slot, knownNames, anchor, i18n.t)).toEqual(c.wire);
+    });
+  }
+
+  for (const c of contract.native_to_web) {
+    it(`resolves: ${c.name}`, () => {
+      const pick = resolvePersonPickerChoice(c.payload, () => c.slot);
+      expect(pick?.choice ?? null).toEqual(c.effect);
+    });
+  }
+
+  it("a pick for a speaker the grid no longer has is dropped", () => {
+    const [c] = contract.native_to_web;
+    expect(resolvePersonPickerChoice(c.payload, () => null)).toBeNull();
+  });
+
+  it("a malformed payload is dropped", () => {
+    expect(resolvePersonPickerChoice({ sessionId: "s1", choice: { kind: "name", name: "x" } }, () => null)).toBeNull();
+    expect(resolvePersonPickerChoice({ sessionId: "s1", code: "m1", choice: { kind: "name", name: "  " } }, () => null)).toBeNull();
+  });
+});

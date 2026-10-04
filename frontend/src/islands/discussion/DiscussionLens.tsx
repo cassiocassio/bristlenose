@@ -701,8 +701,12 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
               // choose a different guide (4 Oct 2026). The radio and the link are
               // separate controls: nothing interactive nests inside a label.
               <span className="dl-guide-opt">
+                {/* Named from text, not a composed attribute: the radio reads
+                    "Original, <file>" in the reader's language. */}
+                <span id="dl-guide-original" className="bn-sr-only">{S.original}</span>
+                <span id="dl-guide-file-name" className="bn-sr-only">{data.guide_file}</span>
                 <input type="radio" name="dl-guide-view" value="original" checked={guideView === "original"}
-                  aria-label={`${S.original}: ${data.guide_file}`} onChange={() => setGuideView("original")} />
+                  aria-labelledby="dl-guide-original dl-guide-file-name" onChange={() => setGuideView("original")} />
                 {isExportMode() ? (
                   <span className="dl-guide-file" title={data.guide_file}>{formatFinderFilename(data.guide_file, 28)}</span>
                 ) : (

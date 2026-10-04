@@ -619,7 +619,7 @@ describe("the guide tabs (4 Oct 2026)", () => {
     _resetEmbeddedCache();
     render(<DiscussionView data={{ ...data, guide_file: "Home coffee discussion guide v3 final.docx" }} />);
     fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
-    expect(screen.getByRole("radio", { name: "Original: Home coffee discussion guide v3 final.docx" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Original Home coffee discussion guide v3 final.docx" })).toBeInTheDocument();
     const link = screen.getByRole("button", { name: "Choose a different guide" });
     expect(link.textContent).toMatch(/…/); // shortened, the extension kept
     expect(link.textContent).toMatch(/\.docx$/);

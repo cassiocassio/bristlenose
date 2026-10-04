@@ -1,6 +1,8 @@
 ---
-status: proposed
+status: current
 updated: 4 Oct 2026
+last-trued: 2026-10-04
+trued-against: HEAD@main on 2026-10-04
 ---
 
 # Voice diarization: telling speakers apart by how they sound
@@ -52,6 +54,15 @@ diarization) as an opt-in for researchers who already send audio to the
 cloud. Do not take torch back into the sidecar for this.
 
 ## Where we are
+
+> **Superseded by the shipped voice pass as of 2026-10-04.** Option A is built:
+> `bristlenose/stages/s05b_voice.py` runs after `split_single_speaker_llm()` on
+> every Whisper session with two text speakers, on every channel (Mac sidecar,
+> pip `[voice]` extra, Snap, Fedora Copr). It runs TitaNet-small through
+> onnxruntime + kaldi-native-fbank, fetching the model on first use rather than
+> bundling it, and is switched off with `BRISTLENOSE_VOICE_PASS=false`. The list
+> below is the 3 Oct starting point, kept as the baseline the measurements were
+> taken against.
 
 - Bare audio/video → Whisper (`s05_transcribe.py`), which yields text,
   segment timings and **word timings on both backends**

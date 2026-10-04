@@ -438,6 +438,20 @@ overrides keyed on durable ids, never on labels.
   rail row last (⌘6, `questionmark.bubble`). It was first behind a
   `BristlenoseFlags.discussionLens` flag with a Diagnostics toggle; both were
   deleted when it shipped for beta, so no leftover default can hide it.
+- **The guide as a left panel, 4 Oct 2026.** Its column stays its own (the
+  60% ceiling), but it is now shown and hidden like the other lenses' panels:
+  `Tab.hasLeftPanel` includes `.discussion`, so it has the toolbar button
+  ("Discussion Guide"), View ▸ Show/Hide Discussion Guide (⌥⌘L), Hide/Show All
+  Sidebars, and `[` in the browser. The fixed 900 px cut-off is gone: the
+  shared `fitPanels` rule decides (the guide narrows to 200 px, then folds when
+  the conversation would fall under its 368 px floor; opened by hand, it never
+  folds for you), and the lens reports the width the pair needs so the Mac's
+  projects column folds first. It is the first lens to remember its own
+  open/closed setting (`islands/discussion/guidePanel.ts`), starting open: the
+  guide and the quotes are a pair, and hiding Contents on Quotes should not hide
+  it. The As planned / As asked tabs sit in the guide's own head, which carries
+  its grey and keyline up through the sticky bar. Mockup:
+  `docs/mockups/discussion-lens-layout.html`.
 - **Parking while it is built**: `Tab` case always present; the rail row appended
   behind a flag. `design-feature-flags.md:290-295` recommends an
   `enum FeatureFlags { static var … }`, defaulting off in every configuration —
@@ -743,7 +757,8 @@ navigator, the sticky header with person-badge sessions and the "you are here"
 mark, the session column with questions folding forward, sticky click focus,
 wires, the 200px–60% split, the narrow layout, page scroll like every lens. It
 does **not** settle: the shared left panel (`SidebarLayout`, 480px cap — the
-lens uses its own column so it can reach 60%), quote cards with actions (they
+lens uses its own column so it can reach 60%; on 4 Oct it joined the shared
+toggle and fitting rule while keeping that column, §4), quote cards with actions (they
 arrive with `QuoteGroup` once quotes have store ids), the macOS `Tab`, locale
 keys (English until Phase 6), and the screen-reader announcement for this route
 (falls through to "Project", as Specimen does).

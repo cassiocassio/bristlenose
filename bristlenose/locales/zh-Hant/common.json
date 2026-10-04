@@ -524,6 +524,7 @@
     "original": "\u539f\u6587",
     "sessions": "\u5834\u6b21",
     "navigator": "\u8a2a\u8ac7\u5927\u7db1",
+    "toggleGuide": "\u5207\u63db\u8a2a\u8ac7\u5927\u7db1",
     "instruction": "\u8aaa\u660e",
     "standalone": "\u7368\u7acb",
     "session": "\u5834\u6b21 {{n}}",

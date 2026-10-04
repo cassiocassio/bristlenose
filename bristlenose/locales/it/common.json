@@ -554,6 +554,7 @@
     "original": "Originale",
     "sessions": "Sessioni",
     "navigator": "Traccia di intervista",
+    "toggleGuide": "Mostra/nascondi la traccia di intervista",
     "instruction": "istruzione",
     "standalone": "Singole",
     "session": "Sessione {{n}}",

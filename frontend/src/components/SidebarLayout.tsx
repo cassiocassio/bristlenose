@@ -47,8 +47,8 @@ import { isEmbedded } from "../utils/embedded";
 
 // ── SVG icons (inline, 18×18) ─────────────────────────────────────────────
 
-/** List icon — for TOC rail button */
-function ListIcon() {
+/** List icon — for TOC rail button (and the Discussion guide's, via AppLayout) */
+export function ListIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true" focusable="false">
       <line x1="5.5" y1="4.5" x2="14" y2="4.5" />
@@ -129,10 +129,13 @@ interface SidebarLayoutProps {
   leftPanelTitle?: string;
   /** Show minimap + tag sidebar + tag rail (default: true). */
   showRightSidebar?: boolean;
+  /** Content for the left rail when the shared panel is not in use — the
+   *  Discussion lens's guide button, whose column lives inside the page. */
+  inertRail?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSidebar = true, children }: SidebarLayoutProps) {
+export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSidebar = true, inertRail, children }: SidebarLayoutProps) {
   const { t } = useTranslation();
   const sidebar = useSidebarStore();
   const { tocMode, tocWidth, tagsWidth } = sidebar;
@@ -360,7 +363,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
   if (!active) {
     return (
       <div className={`layout layout-inert${embedded ? " embedded" : ""}`}>
-        <div className="toc-rail toc-rail-inert" />
+        <div className="toc-rail toc-rail-inert">{inertRail}</div>
         <div className="center">{children}</div>
       </div>
     );

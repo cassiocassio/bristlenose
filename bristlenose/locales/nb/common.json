@@ -554,6 +554,7 @@
     "original": "Original",
     "sessions": "\u00d8kter",
     "navigator": "Intervjuguide",
+    "toggleGuide": "Vis/skjul intervjuguiden",
     "instruction": "instruksjon",
     "standalone": "Frittst\u00e5ende",
     "session": "\u00d8kt {{n}}",

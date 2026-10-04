@@ -554,6 +554,7 @@
     "original": "Original",
     "sessions": "Sessioner",
     "navigator": "Interviewguide",
+    "toggleGuide": "Vis/skjul interviewguide",
     "instruction": "instruktion",
     "standalone": "Enkeltst\u00e5ende",
     "session": "Session {{n}}",

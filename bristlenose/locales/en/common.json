@@ -555,6 +555,7 @@
     "original": "Original",
     "sessions": "Sessions",
     "navigator": "Discussion guide",
+    "toggleGuide": "Toggle discussion guide",
     "instruction": "instruction",
     "standalone": "Standalone",
     "session": "Session {{n}}",

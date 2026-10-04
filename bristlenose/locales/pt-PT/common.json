@@ -554,6 +554,7 @@
     "original": "Original",
     "sessions": "Sess\u00f5es",
     "navigator": "Gui\u00e3o de entrevista",
+    "toggleGuide": "Alternar gui\u00e3o de entrevista",
     "instruction": "instru\u00e7\u00e3o",
     "standalone": "Avulsas",
     "session": "Sess\u00e3o {{n}}",

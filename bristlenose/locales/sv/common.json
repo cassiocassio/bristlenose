@@ -554,6 +554,7 @@
     "original": "Original",
     "sessions": "Sessioner",
     "navigator": "Intervjuguide",
+    "toggleGuide": "Växla intervjuguide",
     "instruction": "instruktion",
     "standalone": "Frist\u00e5ende",
     "session": "Session {{n}}",

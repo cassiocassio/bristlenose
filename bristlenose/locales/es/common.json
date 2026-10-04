@@ -554,6 +554,7 @@
     "original": "Original",
     "sessions": "Sesiones",
     "navigator": "Gu\u00eda de discusi\u00f3n",
+    "toggleGuide": "Mostrar/ocultar gu\u00eda de discusi\u00f3n",
     "instruction": "instrucci\u00f3n",
     "standalone": "Independientes",
     "session": "Sesi\u00f3n {{n}}",

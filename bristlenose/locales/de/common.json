@@ -554,6 +554,7 @@
     "original": "Original",
     "sessions": "Interviews",
     "navigator": "Gespr\u00e4chsleitfaden",
+    "toggleGuide": "Gespr\u00e4chsleitfaden ein-/ausblenden",
     "instruction": "Anweisung",
     "standalone": "Einzelne",
     "session": "Interview {{n}}",

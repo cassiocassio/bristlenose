@@ -133,6 +133,15 @@ describe("SidebarLayout", () => {
     expect(container.querySelector(".drag-handle")).toBeNull();
   });
 
+  it("puts a lens's own rail content in the inert rail (the Discussion guide button)", () => {
+    const { container } = render(
+      <SidebarLayout active={false} inertRail={<button className="rail-btn">guide</button>}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    expect(container.querySelector(".toc-rail.toc-rail-inert .rail-btn")?.textContent).toBe("guide");
+  });
+
   it("renders 6-column grid structure when active=true", () => {
     const { container } = render(
       <SidebarLayout active={true}>

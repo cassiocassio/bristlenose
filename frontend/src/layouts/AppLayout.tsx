@@ -15,7 +15,8 @@ import { Footer } from "../components/Footer";
 import { formatTimecode } from "../utils/format";
 import { FeedbackModal } from "../components/FeedbackModal";
 import { SettingsModal } from "../components/SettingsModal";
-import { SidebarLayout, sidebarAnimations } from "../components/SidebarLayout";
+import { ListIcon, SidebarLayout, sidebarAnimations } from "../components/SidebarLayout";
+import { Tooltip } from "../components/Tooltip";
 import { SessionsSidebar } from "../components/SessionsSidebar";
 // By path, not through the `components` barrel — the barrel rides in the
 // always-loaded chunk, and this is only reachable from one route.
@@ -780,6 +781,19 @@ function AppShell() {
         isSessionsRoute && !embeddedSessionsPanelRemoved ? i18n.t("nav.sessions") : isSignals ? i18n.t("signals.title") : undefined
       }
       showRightSidebar={!!isQuotes}
+      inertRail={
+        // The Discussion guide's rail button, in the browser only (the Mac uses
+        // the toolbar). The shared rail hides while its panel is open; this
+        // column stays, so the button is a toggle that shows its state.
+        isDiscussion && !embedded ? (
+          <Tooltip content={i18n.t("discussion.navigator")} shortcut={{ key: "[" }}>
+            <button className="rail-btn" onClick={toggleDiscussionGuide}
+              aria-label={i18n.t("discussion.toggleGuide")} aria-pressed={discussionGuide.shown}>
+              <ListIcon />
+            </button>
+          </Tooltip>
+        ) : undefined
+      }
     >
       {!embedded && <Header />}
       {!embedded && <NavBar onExportReport={toggleExport} onSendToMiro={toggleMiro} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />}

@@ -544,6 +544,7 @@
     "original": "\u539f\u6587",
     "sessions": "\u30bb\u30c3\u30b7\u30e7\u30f3",
     "navigator": "\u30a4\u30f3\u30bf\u30d3\u30e5\u30fc\u30ac\u30a4\u30c9",
+    "toggleGuide": "\u30a4\u30f3\u30bf\u30d3\u30e5\u30fc\u30ac\u30a4\u30c9\u3092\u8868\u793a/\u975e\u8868\u793a",
     "instruction": "\u6307\u793a",
     "standalone": "\u5358\u72ec",
     "session": "\u30bb\u30c3\u30b7\u30e7\u30f3 {{n}}",

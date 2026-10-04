@@ -554,6 +554,7 @@
     "original": "Original",
     "sessions": "Entretiens",
     "navigator": "Guide d\u2019entretien",
+    "toggleGuide": "Afficher/masquer le guide d\u2019entretien",
     "instruction": "consigne",
     "standalone": "Isol\u00e9es",
     "session": "Entretien {{n}}",

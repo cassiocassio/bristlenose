@@ -620,6 +620,7 @@
     "original": "Orygina\u0142",
     "sessions": "Sesje",
     "navigator": "Scenariusz wywiadu",
+    "toggleGuide": "Przełącz scenariusz wywiadu",
     "instruction": "instrukcja",
     "standalone": "Pojedyncze",
     "session": "Sesja {{n}}",

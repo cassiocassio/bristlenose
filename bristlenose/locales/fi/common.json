@@ -554,6 +554,7 @@
     "original": "Alkuper\u00e4inen",
     "sessions": "Istunnot",
     "navigator": "Haastattelurunko",
+    "toggleGuide": "Näytä tai piilota haastattelurunko",
     "instruction": "ohje",
     "standalone": "Erilliset",
     "session": "Istunto {{n}}",

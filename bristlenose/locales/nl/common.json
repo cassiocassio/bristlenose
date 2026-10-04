@@ -586,6 +586,7 @@
     "addGuideHeading": "Upload je gespreksgids",
     "addGuideIntro": "Zie het onderzoek zoals je het had gepland: de gestelde vragen, gekoppeld aan de antwoorden van alle deelnemers.",
     "addGuideFormats": "Docx-, Markdown- of tekstbestanden.",
+    "readingGuide": "Je gids wordt gelezen…",
     "chooseOtherGuide": "Een andere gids kiezen",
     "replaceGuide": "Je gids vervangen…",
     "guideHowTo": "Zet je gids (Word, Markdown of platte tekst) in een map met de naam ‘Discussion guide’ naast je opnamen en voer bristlenose run opnieuw uit op de projectmap.",

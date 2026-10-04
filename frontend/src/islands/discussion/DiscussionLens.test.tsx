@@ -8,7 +8,7 @@ import enDesktop from "@locales/en/desktop.json";
 import { _resetPlatformCache } from "../../utils/platform";
 import { _resetEmbeddedCache } from "../../utils/embedded";
 import { resetLensState } from "./lensState";
-import { discussionGuideState, resetDiscussionGuide, setDiscussionGuideOpen, toggleDiscussionGuide } from "./guidePanel";
+import { discussionGuideState, resetDiscussionGuide, setDiscussionGuideOpen, setPendingGuide, toggleDiscussionGuide } from "./guidePanel";
 import type { DiscussionData } from "./types";
 
 const data = fixture as unknown as DiscussionData;
@@ -626,6 +626,14 @@ describe("the guide tabs (4 Oct 2026)", () => {
     fireEvent.click(link);
     expect(bridge.postProjectAction).toHaveBeenCalledWith("choose-discussion-guide");
     expect(screen.queryByRole("button", { name: "Replace your guide…" })).toBeNull(); // the link replaces it
+  });
+
+  it("say they are reading a guide the Mac has just copied in, in place of the upload block", () => {
+    render(<DiscussionView data={{ ...data, guide: false, spine: [] }} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Add your guide" }));
+    act(() => setPendingGuide("Home coffee guide.docx"));
+    expect(screen.getByRole("status").textContent).toMatch(/^Reading your guide… Home coffee guide\.docx$/);
+    expect(screen.queryByRole("button", { name: "Add your guide…" })).toBeNull();
   });
 
   it("in an export with no guide there is nothing to add, so no tabs", () => {

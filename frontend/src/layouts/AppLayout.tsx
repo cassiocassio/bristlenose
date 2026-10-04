@@ -64,6 +64,7 @@ import { toggleInspector, useInspectorStore } from "../contexts/InspectorStore";
 import { panelFit, useSidebarStore, wantedWidth } from "../contexts/SidebarStore";
 import {
   setDiscussionGuideOpen,
+  setPendingGuide,
   toggleDiscussionGuide,
   useDiscussionGuide,
 } from "../islands/discussion/guidePanel";
@@ -479,6 +480,9 @@ function AppShell() {
         case "showAllSidebars":
           if (onDiscussion()) setDiscussionGuideOpen(true);
           else sidebarAnimations.showAll();
+          break;
+        case "discussionGuidePending":
+          setPendingGuide(typeof payload?.file === "string" ? payload.file : null);
           break;
         case "toggleInspectorPanel":
           toggleInspector();

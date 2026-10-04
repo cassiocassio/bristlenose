@@ -1231,8 +1231,9 @@ struct ContentView: View {
         panel.begin { response in
             Task { @MainActor in
                 guard response == .OK, let url = panel.url else { return }
+                let installed: URL
                 do {
-                    try DiscussionGuide.install(url, into: URL(fileURLWithPath: project.path))
+                    installed = try DiscussionGuide.install(url, into: URL(fileURLWithPath: project.path))
                 } catch {
                     let alert = NSAlert()
                     alert.messageText = i18n.t("desktop.discussion.copyFailed")
@@ -1246,6 +1247,11 @@ struct ContentView: View {
                 }
                 if SidebarOutlineController.pipelineIsFree(pipelineRunner.state[project.id]) {
                     pipelineRunner.start(project: project)
+                    // The guide tab says "Reading your guide…" until the run ends;
+                    // the report reloads then (finished, failed or stopped), which
+                    // clears it. Name only, never the path.
+                    bridgeHandler.menuAction("discussionGuidePending",
+                                             payload: ["file": installed.lastPathComponent])
                 }
             }
         }

@@ -586,6 +586,7 @@
     "addGuideHeading": "Laden Sie Ihren Gespr\u00e4chsleitfaden hoch",
     "addGuideIntro": "Sehen Sie die Studie so, wie Sie sie geplant haben: die gestellten Fragen, zugeordnet zu den Antworten aller Teilnehmenden.",
     "addGuideFormats": "Docx-, Markdown- oder Textdateien.",
+    "readingGuide": "Leitfaden wird gelesen …",
     "chooseOtherGuide": "Anderen Leitfaden w\u00e4hlen",
     "replaceGuide": "Leitfaden ersetzen \u2026",
     "guideHowTo": "Legen Sie Ihren Leitfaden (Word, Markdown oder reiner Text) in einen Ordner namens \u201eDiscussion guide\u201c neben Ihren Aufnahmen und f\u00fchren Sie bristlenose run erneut f\u00fcr den Projektordner aus.",

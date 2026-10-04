@@ -587,6 +587,7 @@
     "addGuideHeading": "Upload your discussion guide",
     "addGuideIntro": "See the study as you planned it: questions asked, matched to all the participants’ answers.",
     "addGuideFormats": "Docx, Markdown or text files.",
+    "readingGuide": "Reading your guide…",
     "chooseOtherGuide": "Choose a different guide",
     "replaceGuide": "Replace your guide…",
     "_comment_guideHowTo": "“Discussion guide” is the folder name the code looks for (bristlenose/discussion/guide.py). Keep it in English in every translation, or a researcher following the sentence makes a folder that is never read.",

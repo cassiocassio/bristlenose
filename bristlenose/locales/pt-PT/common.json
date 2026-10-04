@@ -586,6 +586,7 @@
     "addGuideHeading": "Carregue o seu gui\u00e3o de entrevista",
     "addGuideIntro": "Veja o estudo tal como o planeou: as perguntas feitas, associadas \u00e0s respostas de todos os participantes.",
     "addGuideFormats": "Ficheiros Docx, Markdown ou de texto.",
+    "readingGuide": "A ler o seu guião…",
     "chooseOtherGuide": "Escolher outro gui\u00e3o",
     "replaceGuide": "Substituir o seu gui\u00e3o\u2026",
     "guideHowTo": "Coloque o seu gui\u00e3o (Word, Markdown ou texto simples) numa pasta chamada \u201cDiscussion guide\u201d junto das grava\u00e7\u00f5es e execute novamente bristlenose run na pasta do projeto.",

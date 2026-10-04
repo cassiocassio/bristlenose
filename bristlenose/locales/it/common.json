@@ -586,6 +586,7 @@
     "addGuideHeading": "Carica la tua traccia di intervista",
     "addGuideIntro": "Vedi lo studio come l\u2019hai pianificato: le domande poste, collegate alle risposte di tutti i partecipanti.",
     "addGuideFormats": "File Docx, Markdown o di testo.",
+    "readingGuide": "Lettura della tua traccia…",
     "chooseOtherGuide": "Scegli un’altra traccia",
     "replaceGuide": "Sostituisci la tua traccia…",
     "guideHowTo": "Metti la tua traccia (Word, Markdown o testo semplice) in una cartella chiamata “Discussion guide” accanto alle registrazioni, poi esegui di nuovo bristlenose run sulla cartella del progetto.",

@@ -103,6 +103,7 @@ const S = {
   get addGuideHeading() { return d("addGuideHeading"); },
   get addGuideIntro() { return d("addGuideIntro"); },
   get addGuideFormats() { return d("addGuideFormats"); },
+  get readingGuide() { return d("readingGuide"); },
   get chooseOtherGuide() { return d("chooseOtherGuide"); },
   get replaceGuide() { return d("replaceGuide"); },
   get guideHowTo() { return p("guideHowTo"); },
@@ -670,6 +671,14 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       </div>
 
       <nav ref={navRef} id="dl-nav" className="dl-nav toc-sidebar-body" aria-label={S.navigator}>
+        {mode === "planned" && guide.pendingGuide && (
+          // The Mac has copied a guide in and a run is reading it. The report
+          // reloads when the run ends — finished, failed or stopped — which
+          // clears this (guidePanel.ts).
+          <p className="dl-before dl-reading" role="status">
+            {S.readingGuide} <span className="dl-reading-file">{formatFinderFilename(guide.pendingGuide, 32)}</span>
+          </p>
+        )}
         {mode === "planned" && data.guide && (
           // Native radios: arrow keys and announcement come with the element.
           <div className="dl-guide-view" role="radiogroup" aria-label={S.guideView}>
@@ -703,7 +712,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             )}
           </div>
         )}
-        {adding && !isExportMode() && (
+        {adding && !isExportMode() && !guide.pendingGuide && (
           // No guide: the second tab is where one is added. The Mac opens its
           // native panel, copies the guide in and re-runs (plan §4); a browser
           // cannot write into the project folder, so it says where the guide goes.

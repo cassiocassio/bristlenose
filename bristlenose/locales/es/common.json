@@ -586,6 +586,7 @@
     "addGuideHeading": "Sube tu gu\u00eda de discusi\u00f3n",
     "addGuideIntro": "Ve el estudio tal como lo planificaste: las preguntas que se hicieron, asociadas a las respuestas de todos los participantes.",
     "addGuideFormats": "Archivos Docx, Markdown o de texto.",
+    "readingGuide": "Leyendo tu guía…",
     "chooseOtherGuide": "Elegir otra gu\u00eda",
     "replaceGuide": "Sustituir tu gu\u00eda\u2026",
     "guideHowTo": "Pon tu gu\u00eda (Word, Markdown o texto sin formato) en una carpeta llamada \u201cDiscussion guide\u201d junto a tus grabaciones y vuelve a ejecutar bristlenose run en la carpeta del proyecto.",

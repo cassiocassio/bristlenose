@@ -28,6 +28,9 @@ interface GuidePanelState {
   shown: boolean;
   /** The width the wished arrangement needs (reported by the lens). */
   wanted: number;
+  /** A guide the Mac has just copied in, being read by a run: its file name.
+   *  Never persisted — the report reloads when the run ends, which clears it. */
+  pendingGuide: string | null;
 }
 
 function readWish(): boolean {
@@ -46,13 +49,13 @@ function writeWish(open: boolean): void {
   }
 }
 
-let state: GuidePanelState = { wish: readWish(), justOpened: false, shown: false, wanted: 0 };
+let state: GuidePanelState = { wish: readWish(), justOpened: false, shown: false, wanted: 0, pendingGuide: null };
 const listeners = new Set<() => void>();
 
 function setState(next: GuidePanelState): void {
   if (
     next.wish === state.wish && next.justOpened === state.justOpened &&
-    next.shown === state.shown && next.wanted === state.wanted
+    next.shown === state.shown && next.wanted === state.wanted && next.pendingGuide === state.pendingGuide
   ) return;
   state = next;
   listeners.forEach((l) => l());
@@ -88,6 +91,11 @@ export function reportDiscussionGuide(shown: boolean, wanted: number): void {
   setState({ ...state, shown, wanted });
 }
 
+/** The Mac's "a guide is being read" (AppLayout, menu action discussionGuidePending). */
+export function setPendingGuide(file: string | null): void {
+  setState({ ...state, pendingGuide: file || null });
+}
+
 /** For tests. */
 export function resetDiscussionGuide(): void {
   try {
@@ -95,6 +103,6 @@ export function resetDiscussionGuide(): void {
   } catch {
     // as above
   }
-  state = { wish: true, justOpened: false, shown: false, wanted: 0 };
+  state = { wish: true, justOpened: false, shown: false, wanted: 0, pendingGuide: null };
   listeners.forEach((l) => l());
 }

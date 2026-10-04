@@ -660,6 +660,7 @@
     "addGuideHeading": "Prze\u015blij scenariusz wywiadu",
     "addGuideIntro": "Zobacz badanie tak, jak je zaplanowano: zadane pytania przypisane do odpowiedzi wszystkich uczestnik\u00f3w.",
     "addGuideFormats": "Pliki Docx, Markdown lub tekstowe.",
+    "readingGuide": "Wczytywanie scenariusza…",
     "chooseOtherGuide": "Wybierz inny scenariusz",
     "replaceGuide": "Zast\u0105p sw\u00f3j scenariusz\u2026",
     "guideHowTo": "Umie\u015b\u0107 sw\u00f3j scenariusz (Word, Markdown lub zwyk\u0142y tekst) w folderze o nazwie \u201eDiscussion guide\u201d obok nagra\u0144, a potem uruchom ponownie bristlenose run na folderze projektu.",

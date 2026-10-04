@@ -586,6 +586,7 @@
     "addGuideHeading": "Upload din interviewguide",
     "addGuideIntro": "Se unders\u00f8gelsen, som du planlagde den: de stillede sp\u00f8rgsm\u00e5l koblet til alle deltageres svar.",
     "addGuideFormats": "Docx-, Markdown- eller tekstfiler.",
+    "readingGuide": "Læser din guide …",
     "chooseOtherGuide": "V\u00e6lg en anden guide",
     "replaceGuide": "Erstat din guide \u2026",
     "guideHowTo": "L\u00e6g din guide (Word, Markdown eller almindelig tekst) i en mappe med navnet \u201cDiscussion guide\u201d ved siden af dine optagelser, og k\u00f8r derefter bristlenose run igen p\u00e5 projektmappen.",

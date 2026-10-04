@@ -586,6 +586,7 @@
     "addGuideHeading": "Lataa haastattelurunko",
     "addGuideIntro": "N\u00e4e tutkimus sellaisena kuin suunnittelit sen: esitetyt kysymykset yhdistettyin\u00e4 kaikkien osallistujien vastauksiin.",
     "addGuideFormats": "Docx-, Markdown- tai tekstitiedostot.",
+    "readingGuide": "Luetaan runkoa…",
     "chooseOtherGuide": "Valitse toinen runko",
     "replaceGuide": "Korvaa runko\u2026",
     "guideHowTo": "Tallenna runko (Word, Markdown tai pelkk\u00e4 teksti) tallenteiden viereen kansioon nimelt\u00e4 \u201dDiscussion guide\u201d ja suorita sitten bristlenose run uudelleen projektikansiolle.",

@@ -79,7 +79,7 @@ core asserts the same file when it lands).
    - **Joined forms** (Lucene's `WordDelimiterGraphFilter`, catenate): a typed
      run is also tried with in-word marks dropped, against the text folded the
      same way, so `covid19` finds *COVID-19*, `coop` finds *co-op* and
-     `co-op` finds *coop*, `1000` finds *1,000*, *1 000* and *1.000*,
+     `co-op` finds *coop*, `1000` finds *1,000*, *1.000*, and *1 000* written with a no-break or narrow space (an ordinary space does not join: *2019 200* is two numbers),
      `colleccio` finds *col·lecció*. In-word marks: a dash between letters or
      digits; a middle dot or full stop between letters; a thousands separator
      followed by exactly three digits, so `35` never finds *3.5*. Quoted text

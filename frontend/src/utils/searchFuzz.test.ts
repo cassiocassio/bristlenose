@@ -472,7 +472,10 @@ interface TermA {
 /** Harman's S-stemmer as published (JASIS 1991), plus a dropped possessive,
  *  for words of 4+ ASCII letters; written from the spec, not the code. */
 function singularA(w: string): string {
-  if (w.endsWith("'s")) return w.slice(0, -2);
+  if (w.endsWith("'s")) {
+    const stem = w.slice(0, -2);
+    return stem.length >= 4 && /^[a-z]+$/.test(stem) ? stem : w;
+  }
   if (w.length < 4 || !/^[a-z]+$/.test(w)) return w;
   if (/ies$/.test(w) && !/[ea]ies$/.test(w)) return w.slice(0, -3) + "y";
   if (/es$/.test(w) && !/[aeo]es$/.test(w)) return w.slice(0, -1);
@@ -493,7 +496,7 @@ function oracleParse(q: string): TermA[] {
     if (kind === "word") {
       // Punctuation after the last word finishes it (4 Oct 2026).
       const last = raw[raw.length - 1];
-      if (last !== undefined && isSepA(last) && !/\s/.test(last)) term.whole = true;
+      if (last !== undefined && isSepA(last) && !/\s/.test(last) && last !== "-") term.whole = true;
       const j = foldA(raw, true).text.trim();
       if (j !== t) term.joined = j;
       const sg = t.split(" ").map(singularA).join(" ");
@@ -521,7 +524,7 @@ function oracleRanges(text: string, term: TermA, whole = false): Array<[number, 
   const texts: Array<[string, boolean]> = [[term.text, isWhole]];
   if (term.joined) texts.push([term.joined, isWhole]);
   if (term.singular) texts.push([term.singular, true]);
-  for (const { text: f, map } of folds) {
+  folds.forEach(({ text: f, map }, foldIndex) => {
     for (const [tt, mustEnd] of texts) {
       for (let i = 0; i + tt.length <= f.length; i++) {
         if (f.slice(i, i + tt.length) !== tt) continue;
@@ -530,11 +533,14 @@ function oracleRanges(text: string, term: TermA, whole = false): Array<[number, 
         if (mustEnd && j < f.length && isWordA(f[j])) continue;
         // A mark runs to where the next folded character starts, so it takes in
         // what folding dropped after the match (a word-edge apostrophe), as it
-        // takes in an accent dropped from a letter.
-        out.push([map[i], j < f.length ? map[j] : text.length]);
+        // takes in an accent dropped from a letter — except in the joined fold,
+        // where it ends at the last matched character and never takes in the
+        // in-word mark the fold dropped ("covid" marks "COVID", not "COVID-").
+        const next = j < f.length ? map[j] : text.length;
+        out.push([map[i], foldIndex > 0 ? Math.min(next, map[j - 1] + 1) : next]);
       }
     }
-  }
+  });
   return out;
 }
 

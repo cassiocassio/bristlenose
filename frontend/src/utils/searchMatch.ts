@@ -339,7 +339,12 @@ const LATIN_WORD = /^[\p{Script=Latin}]+$/u;
 
 /** One word's singular by Harman's rules, or the word itself. */
 export function singularOf(word: string): string {
-  if (word.endsWith("'s")) return word.slice(0, -2);
+  if (word.endsWith("'s")) {
+    // The same guard as a plural, on what is left: "Mike's" finds "Mike",
+    // "it's" does not find every "it".
+    const stem = word.slice(0, -2);
+    return stem.length >= 4 && LATIN_WORD.test(stem) ? stem : word;
+  }
   if (word.length < 4 || !LATIN_WORD.test(word)) return word;
   if (word.endsWith("ies") && !word.endsWith("eies") && !word.endsWith("aies")) return `${word.slice(0, -3)}y`;
   if (word.endsWith("es") && !/(?:aes|ees|oes)$/.test(word)) return word.slice(0, -1);
@@ -397,11 +402,13 @@ export function parseQuery(query: string): SearchTerm[] {
 }
 
 /** True when the last visible character typed is punctuation (not an
- *  apostrophe, not a word symbol): the word before it is finished. */
+ *  apostrophe, not a word symbol, not a dash): the word before it is
+ *  finished. A dash may be joining ("co-" on the way to "co-op"), so it
+ *  leaves the word open. */
 function endsInPunctuation(raw: string): boolean {
   const chars = [...raw.replace(INVISIBLE_G, "").trimEnd()];
   const last = chars[chars.length - 1];
-  return last !== undefined && isPunct(last);
+  return last !== undefined && isPunct(last) && !DASH.test(last);
 }
 
 /** Trim apostrophes from the edges of a run, and the spaces they leave
@@ -575,17 +582,22 @@ export function matchesAll(fields: string[], terms: SearchTerm[]): boolean {
 export function markRanges(text: string, terms: SearchTerm[]): Array<[number, number]> {
   const ranges: Array<[number, number]> = [];
   for (const term of terms) {
-    for (const { text: folded, map } of foldsFor(text, term, true)) {
+    foldsFor(text, term, true).forEach(({ text: folded, map }, foldIndex) => {
       for (const f of forms(term)) {
         for (const at of termPositions(folded, f)) {
           // A match can end inside one original character that folded to several
           // units ("ﬁ" → "fi"): extend to that character's end, never a zero width.
           let end = at + f.text.length;
           while (end < folded.length && map[end] === map[end - 1]) end++;
-          ranges.push([map[at], map[end]]);
+          let stop = map[end];
+          // In the joined fold the next unit may lie past a mark it dropped
+          // ("COVID-19"): end at the last matched character, so "covid" marks
+          // "COVID", not "COVID-". widenToGraphemes restores any accent.
+          if (foldIndex > 0) stop = Math.min(stop, map[end - 1] + codePointAt(text, map[end - 1]).length);
+          ranges.push([map[at], stop]);
         }
       }
-    }
+    });
   }
   widenToGraphemes(text, ranges);
   ranges.sort((a, b) => a[0] - b[0] || a[1] - b[1]);

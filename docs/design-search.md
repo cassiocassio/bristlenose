@@ -427,9 +427,12 @@ Each phase ends green and committed.
    (`takeCodeTokens`). Parked behind a flag for a day while nothing drew a
    token; **shipped 4 Oct 2026** once both fields drew chips, and the flag
    deleted.
-   **Still open:** moderator codes are per session, so a *said by m1* token
-   matches every session's first moderator. Participant codes are
-   project-wide and unaffected.
+   **Moderator codes stay tokens** (decided 4 Oct 2026). `m` codes restart
+   per session, so *said by m1* matches every session's first moderator —
+   which, with one moderator in about 95% of studies, is the person being
+   looked for (`design-people.md` §E decision 1). Where it is not, the
+   identity layer that work is building is the fix, not withholding the
+   token: searching for m1 has to be possible.
    **Also open (code review, 4 Oct 2026): a code in the middle of a phrase.**
    *Apple M1 chip* or *the M1 motorway* makes a *said by m1* token whenever a
    moderator has quotes, and the words either side are spliced into one run,

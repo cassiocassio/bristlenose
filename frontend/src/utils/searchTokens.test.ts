@@ -214,7 +214,7 @@ describe("token invariants on a synthetic project", () => {
   });
 });
 
-describe("takeCodeTokens: a typed speaker code becomes a token once a space follows", () => {
+describe("takeCodeTokens: a code typed at the start becomes a token once a space follows", () => {
   const codes = ["p3", "m1", "m11"];
   const codeOf = (w: string) => codes.find((c) => c === w.toLowerCase()) ?? null;
   const take = (q: string) => takeCodeTokens(q, codeOf);
@@ -223,7 +223,14 @@ describe("takeCodeTokens: a typed speaker code becomes a token once a space foll
     expect(take("p3 ")).toEqual({ query: "", codes: ["p3"] });
     expect(take("P3 ")).toEqual({ query: "", codes: ["p3"] });
     expect(take("p3 late")).toEqual({ query: "late", codes: ["p3"] });
-    expect(take("late p3 ")).toEqual({ query: "late ", codes: ["p3"] });
+    expect(take(" p3 late")).toEqual({ query: "late", codes: ["p3"] });
+  });
+
+  it("only at the start, as Mail's tokens-first field: later in the text a code is text", () => {
+    // Not an m1 token plus the run "the motorway", which nobody typed.
+    expect(take("the M1 motorway")).toEqual({ query: "the M1 motorway", codes: [] });
+    expect(take("late p3 ")).toEqual({ query: "late p3 ", codes: [] });
+    expect(take("p3 late m1 ")).toEqual({ query: "late m1 ", codes: ["p3"] });
   });
 
   it("waits for the space: m1 may be the start of m11", () => {
@@ -236,7 +243,7 @@ describe("takeCodeTokens: a typed speaker code becomes a token once a space foll
     expect(take("p33 ")).toEqual({ query: "p33 ", codes: [] });
     expect(take("pricing ")).toEqual({ query: "pricing ", codes: [] });
     expect(take('"p3 said" ')).toEqual({ query: '"p3 said" ', codes: [] });
-    expect(take("“p3 said” p3 ")).toEqual({ query: "“p3 said” ", codes: ["p3"] });
+    expect(take("“p3 said” p3 ")).toEqual({ query: "“p3 said” p3 ", codes: [] });
   });
 
   it("takes several, each once, and returns the query untouched when none", () => {

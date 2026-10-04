@@ -49,49 +49,36 @@ export function personToken(
 }
 
 /**
- * Take speaker codes typed as whole words out of the query, so they can become
- * person tokens. A code counts once a space (or more typing) follows it, since
- * "m1" on its own may be the start of "m11"; a code inside a quoted phrase is
- * text. Returns the query without those words, and the codes in typed order.
- * `codeOf` answers the project's code for a typed word ("P3" → "p3"), or null.
+ * Take speaker codes typed at the start of the text out of the query, so they
+ * can become person tokens. Only the start: the chips sit before the text, so
+ * the start is also "straight after another chip", as Mail's tokens-first
+ * field works. A code later in the text is text, so "the M1 motorway" stays a
+ * phrase rather than becoming an m1 token and the run "the motorway". A code
+ * counts once a space follows it, since "m1" on its own may be the start of
+ * "m11"; a quoted phrase is never a code. Returns the query without those
+ * words, and the codes in typed order. `codeOf` answers the project's code for
+ * a typed word ("P3" → "p3"), or null.
  */
 export function takeCodeTokens(
   query: string,
   codeOf: (word: string) => string | null,
 ): { query: string; codes: string[] } {
   const codes: string[] = [];
-  let out = "";
-  let inPhrase = false;
-  let i = 0;
   const chars = [...query];
-  while (i < chars.length) {
-    const ch = chars[i];
-    if (isPhraseQuote(ch)) {
-      inPhrase = !inPhrase;
-      out += ch;
-      i++;
-      continue;
-    }
-    if (inPhrase || /\s/u.test(ch)) {
-      out += ch;
-      i++;
-      continue;
-    }
-    // A word outside a phrase: up to the next space or quote mark.
+  let i = 0;
+  while (i < chars.length && /\s/u.test(chars[i])) i++;
+  let rest = 0; // where the text after the last code taken begins
+  while (i < chars.length && !isPhraseQuote(chars[i])) {
     let j = i;
     while (j < chars.length && !/\s/u.test(chars[j]) && !isPhraseQuote(chars[j])) j++;
-    const word = chars.slice(i, j).join("");
     const followedBySpace = j < chars.length && /\s/u.test(chars[j]);
-    const code = followedBySpace ? codeOf(word) : null;
-    if (code !== null) {
-      if (!codes.includes(code)) codes.push(code);
-      while (j < chars.length && /\s/u.test(chars[j])) j++; // and its space
-    } else {
-      out += word;
-    }
-    i = j;
+    const code = followedBySpace ? codeOf(chars.slice(i, j).join("")) : null;
+    if (code === null) break;
+    if (!codes.includes(code)) codes.push(code);
+    while (j < chars.length && /\s/u.test(chars[j])) j++; // and its space
+    i = rest = j;
   }
-  return codes.length === 0 ? { query, codes } : { query: out, codes };
+  return codes.length === 0 ? { query, codes } : { query: chars.slice(rest).join(""), codes };
 }
 
 /** A tag token, tagged by default. */

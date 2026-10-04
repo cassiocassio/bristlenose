@@ -420,8 +420,8 @@ Each phase ends green and committed.
    finishing in the background, or an AutoCode report being applied, so it
    keeps what they were looking at: the query, tokens, starred-only and the tag
    filter (`initFromQuotes(…, replace)`). It used to clear all four.
-9. **Speaker codes are tokens.** Decided 3 Oct 2026: a code typed as a word
-   and followed by a space (`p3 `, `M1 `) becomes a *said by* token; the space
+9. **Speaker codes are tokens.** Decided 3 Oct 2026: a code typed as the
+   first word and followed by a space (`p3 `, `M1 `) becomes a *said by* token; the space
    is what tells `m1` from the start of `m11`. Codes in a quoted phrase stay
    text, and only codes of people with a quote that is not hidden count
    (`takeCodeTokens`). Parked behind a flag for a day while nothing drew a
@@ -433,13 +433,13 @@ Each phase ends green and committed.
    looked for (`design-people.md` §E decision 1). Where it is not, the
    identity layer that work is building is the fix, not withholding the
    token: searching for m1 has to be possible.
-   **Also open (code review, 4 Oct 2026): a code in the middle of a phrase.**
-   *Apple M1 chip* or *the M1 motorway* makes a *said by m1* token whenever a
-   moderator has quotes, and the words either side are spliced into one run,
-   *the motorway*, which nobody typed and which usually matches nothing.
-   Options: take a code only at the start of the text (as Mail's
-   tokens-first field does); or keep the rule and leave the neighbours as two
-   runs. Quote marks escape it today, which nobody will think of.
+   **Only at the start of the text** (decided 4 Oct 2026, from the code
+   review). A code is taken only where the text begins, which is also
+   straight after another chip, as Mail's tokens-first field works; later in
+   the text it is text. So *the M1 motorway* stays a phrase. Taking it there
+   made a *said by m1* token whenever a moderator had quotes and spliced the
+   neighbours into the run *the motorway*, which nobody typed and which
+   usually matched nothing.
 10. **Who closes the native menu on the free-text row.** Choosing it leaves
     the query as typed (the contract's `commit-text`), so no new
     `search-suggestions` arrives to empty the menu. The native side should

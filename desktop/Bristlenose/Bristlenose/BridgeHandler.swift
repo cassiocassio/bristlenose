@@ -1060,6 +1060,7 @@ final class BridgeHandler: ObservableObject {
 
     func reset() {
         Self.log.notice("bridge reset (selection change)")
+        personPicker.close()
         isReady = false
         documentState = .loading
         pendingLensIntent = nil

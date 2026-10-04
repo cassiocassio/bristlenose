@@ -88,3 +88,34 @@ class TestMigration:
             version = conn.execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
         assert rows == [(0,)]
         assert version == "012"
+
+
+class TestReimportKeepsAConfirmedName:
+    def test_a_confirmed_shared_name_is_not_repaired_away(self) -> None:
+        """A legacy project gave every session's m1 the shared people.yaml name.
+        Once the researcher has said yes to it in one session, a re-import must
+        not treat it as a collision and swap in that session's own name."""
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import Session as DbSession
+
+        from bristlenose.server.importer import _update_persons_from_people
+        from bristlenose.server.models import Base, Person, SessionSpeaker
+
+        engine = create_engine("sqlite://")
+        Base.metadata.create_all(engine)
+        with DbSession(engine) as db:
+            shared = {"full_name": "Martin Storey", "short_name": "Martin"}
+            yes = Person(full_name="Martin Storey", short_name="Martin")
+            guess = Person(full_name="Martin Storey", short_name="Martin")
+            db.add_all([yes, guess])
+            db.flush()
+            confirmed = SessionSpeaker(session_id=1, person_id=yes.id, speaker_code="m1",
+                                       speaker_role="researcher", name_confirmed=True)
+            proposed = SessionSpeaker(session_id=2, person_id=guess.id, speaker_code="m1",
+                                      speaker_role="researcher", name_confirmed=False)
+            own = {"m1": {"full_name": "Kerri Ng", "short_name": "Kerri"}}
+            _update_persons_from_people(db, [confirmed], {"m1": shared}, own)
+            _update_persons_from_people(db, [proposed], {"m1": shared}, own)
+            assert (yes.full_name, yes.short_name) == ("Martin Storey", "Martin")
+            # The proposed collision is still repaired, as before.
+            assert (guess.full_name, guess.short_name) == ("Kerri Ng", "Kerri")

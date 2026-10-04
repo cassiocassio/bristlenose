@@ -167,12 +167,12 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
    line — the `--split` qualifier matches the specificity of the
    `.bn-speaker-badge-code:last-child` rule above, and later in the file wins,
    so a code-only badge keeps no solid edge inside the dashes. */
-.badge-proposed .bn-speaker-badge--split {
+.bn-person-proposed .bn-speaker-badge--split {
     border: 1px dashed currentColor;
 }
 
-.badge-proposed .bn-speaker-badge--split .bn-speaker-badge-code,
-.badge-proposed .bn-speaker-badge--split .bn-speaker-badge-name {
+.bn-person-proposed .bn-speaker-badge--split .bn-speaker-badge-code,
+.bn-person-proposed .bn-speaker-badge--split .bn-speaker-badge-name {
     border: none;
 }
 

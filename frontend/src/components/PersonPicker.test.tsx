@@ -57,7 +57,7 @@ describe("PersonPicker", () => {
     render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} knownNames={["Martin", "Kerri"]} onChoose={vi.fn()} onClose={vi.fn()} />);
     const [martin, kerri] = items();
     expect(martin.querySelector(".export-dropdown-check")?.textContent).toBe("✓");
-    expect(martin.querySelector(".badge-proposed")).not.toBeNull();
+    expect(martin.querySelector(".bn-person-proposed")).not.toBeNull();
     expect(kerri.querySelector(".export-dropdown-check")?.textContent).toBe("");
     expect(document.activeElement).toBe(martin);
   });
@@ -69,6 +69,49 @@ describe("PersonPicker", () => {
     fireEvent.keyDown(menu(), { key: "Enter" });
     expect(onChoose).toHaveBeenCalledWith({ kind: "confirm" });
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("Space on a row chooses it once", () => {
+    const onChoose = vi.fn();
+    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} knownNames={["Martin"]} onChoose={onChoose} onClose={vi.fn()} />);
+    fireEvent.keyDown(items()[0], { key: " " });
+    expect(onChoose).toHaveBeenCalledTimes(1);
+    expect(onChoose).toHaveBeenCalledWith({ kind: "confirm" });
+  });
+
+  it("a key the picker handles does not reach the page's shortcuts", () => {
+    const onDocKey = vi.fn();
+    document.addEventListener("keydown", onDocKey);
+    try {
+      render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} knownNames={["Martin"]} onChoose={vi.fn()} onClose={vi.fn()} />);
+      fireEvent.keyDown(items()[0], { key: "Escape" });
+      fireEvent.keyDown(screen.getByPlaceholderText("New moderator"), { key: "Escape" });
+      expect(onDocKey).not.toHaveBeenCalled();
+    } finally {
+      document.removeEventListener("keydown", onDocKey);
+    }
+  });
+
+  it("Escape and a choice hand focus back to the badge", () => {
+    const slot = moderator("Martin", true);
+    const { rerender } = render(
+      <span>
+        <button type="button" className="bn-person-picker-trigger">m1</button>
+        <PersonPicker slot={slot} labels={labels(slot)} knownNames={["Martin", "Kerri"]} onChoose={vi.fn()} onClose={vi.fn()} />
+      </span>,
+    );
+    const trigger = document.querySelector(".bn-person-picker-trigger");
+    fireEvent.keyDown(menu(), { key: "Escape" });
+    expect(document.activeElement).toBe(trigger);
+    rerender(
+      <span>
+        <button type="button" className="bn-person-picker-trigger">m1</button>
+        <PersonPicker key="again" slot={slot} labels={labels(slot)} knownNames={["Martin", "Kerri"]} onChoose={vi.fn()} onClose={vi.fn()} />
+      </span>,
+    );
+    expect(document.activeElement).not.toBe(trigger);
+    fireEvent.click(items()[1]);
+    expect(document.activeElement).toBe(trigger);
   });
 
   it("choosing another name renames the slot", () => {

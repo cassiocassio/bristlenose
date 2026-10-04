@@ -22,22 +22,6 @@ import { SectionHeading } from "../components/SectionHeading";
 import { Sparkline } from "../components/Sparkline";
 import { Thumbnail } from "../components/Thumbnail";
 import type { PersonPickerChoice, PersonPickerSlot, PickerRole } from "../utils/personPicker";
-
-// The picker's code is loaded when someone first opens it: the grid is part of
-// first paint, and the picker is needed only on a click. The browser loads the
-// web picker; the Mac app loads only the bridge, to ask for its native one.
-const PersonPickerPopover = lazy(() =>
-  import("../components/PersonPicker").then((m) => ({ default: m.PersonPickerPopover })),
-);
-const loadPickerBridge = () => import("../utils/personPickerBridge");
-
-/** Whether the host draws its own picker. The Mac app says so by setting this
- *  flag in the web view; without it — the browser, or an app build from
- *  before the native picker — the web picker opens, so a click never sends a
- *  message nothing answers. */
-function hasNativePersonPicker(): boolean {
-  return (window as unknown as Record<string, unknown>).__BRISTLENOSE_NATIVE_PERSON_PICKER__ === true;
-}
 import type { SparklineItem } from "../components/Sparkline";
 import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet, getPeople, isSessionScopedCode } from "../utils/api";
@@ -55,6 +39,22 @@ import { formatDurationHuman, formatFinderDate, formatFinderFilename } from "../
 import type { SessionResponse, SessionsListResponse } from "../utils/types";
 import { refetchOverlayProps } from "../hooks/useRefetching";
 
+// The picker's code is loaded when someone first opens it: the grid is part of
+// first paint, and the picker is needed only on a click. The browser loads the
+// web picker; the Mac app loads only the bridge, to ask for its native one.
+const PersonPickerPopover = lazy(() =>
+  import("../components/PersonPicker").then((m) => ({ default: m.PersonPickerPopover })),
+);
+const loadPickerBridge = () => import("../utils/personPickerBridge");
+
+/** Whether the host draws its own picker. The Mac app says so by setting this
+ *  flag in the web view; without it — the browser, or an app build from
+ *  before the native picker — the web picker opens, so a click never sends a
+ *  message nothing answers. */
+function hasNativePersonPicker(): boolean {
+  return (window as unknown as Record<string, unknown>).__BRISTLENOSE_NATIVE_PERSON_PICKER__ === true;
+}
+
 // ---------------------------------------------------------------------------
 // Sentiment → Sparkline mapping
 // ---------------------------------------------------------------------------
@@ -69,12 +69,6 @@ const SENTIMENT_ORDER = [
   "satisfaction",
 ];
 
-/**
- * Placeholder role word shown (muted/italic) when a speaker has no identified
- * name yet — "Moderator" / "Participant" / "Observer", keyed off the badge code
- * prefix (m/o/…) rather than the stored role string, which is more robust (the
- * m-code speaker's stored role is "researcher", never "moderator").
- */
 /** The picker's role for a speaker code (the code prefix is the role; the
  *  stored moderator role is "researcher", never "moderator"). */
 function pickerRoleOf(code: string): PickerRole {
@@ -83,6 +77,12 @@ function pickerRoleOf(code: string): PickerRole {
   return "participant";
 }
 
+/**
+ * Placeholder role word shown (muted/italic) when a speaker has no identified
+ * name yet — "Moderator" / "Participant" / "Observer", keyed off the badge code
+ * prefix (m/o/…) rather than the stored role string, which is more robust (the
+ * m-code speaker's stored role is "researcher", never "moderator").
+ */
 function speakerRolePlaceholder(code: string, t: (key: string) => string): string {
   if (code.startsWith("m")) return t("sessions.speakerPlaceholder.moderator");
   if (code.startsWith("o")) return t("sessions.speakerPlaceholder.observer");
@@ -643,7 +643,8 @@ function SessionRow({
           const isEditing = editingKey === editKey;
           // A name the pipeline found and no person has said yes to yet: one
           // dotted ring round the badge, the name in grey (person-badge.css).
-          const proposed = !!displayName && sp.name_confirmed === false;
+          // An exported report draws every name plain (design-people.md).
+          const proposed = !isExportMode() && !!displayName && sp.name_confirmed === false;
           const slot: PersonPickerSlot = {
             code: sp.speaker_code,
             role: pickerRoleOf(sp.speaker_code),
@@ -664,7 +665,7 @@ function SessionRow({
               {canPick ? (
                 <button
                   type="button"
-                  className={`bn-person-picker-trigger${proposed ? " badge-proposed" : ""}`}
+                  className={`bn-person-picker-trigger${proposed ? " bn-person-proposed" : ""}`}
                   aria-haspopup="menu"
                   aria-expanded={pickerKey === editKey}
                   data-testid={`bn-picker-trigger-${sp.speaker_code}`}
@@ -673,7 +674,7 @@ function SessionRow({
                   {badge}
                 </button>
               ) : (
-                <span className={proposed ? "badge-proposed" : undefined}>{badge}</span>
+                <span className={proposed ? "bn-person-proposed" : undefined}>{badge}</span>
               )}
               {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
               <span

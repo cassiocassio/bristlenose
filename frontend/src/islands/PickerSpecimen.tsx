@@ -70,7 +70,7 @@ export function PickerSpecimen() {
       <span className="bn-session-speaker-entry bn-person-picker-anchor">
         <button
           type="button"
-          className={`bn-person-picker-trigger${proposed ? " badge-proposed" : ""}`}
+          className={`bn-person-picker-trigger${proposed ? " bn-person-proposed" : ""}`}
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}

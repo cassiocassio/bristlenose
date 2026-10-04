@@ -77,9 +77,22 @@ export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: Pe
     return () => document.removeEventListener("mousedown", onDown);
   }, [onClose]);
 
+  // A choice or Escape hands focus back to the badge, as a menu button does;
+  // a click elsewhere leaves it where the click put it.
+  const returnFocus = () =>
+    menuRef.current?.parentElement
+      ?.querySelector<HTMLElement>(".bn-person-picker-trigger")
+      ?.focus();
+
   const choose = (name: string) => {
     const choice = personPickerChoice(slot, name);
     if (choice) onChoose(choice);
+    returnFocus();
+    onClose();
+  };
+
+  const dismiss = () => {
+    returnFocus();
     onClose();
   };
 
@@ -92,13 +105,16 @@ export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: Pe
   const onListKey = (e: KeyboardEvent<HTMLUListElement>) => {
     const tag = (e.target as HTMLElement).tagName;
     if (tag === "INPUT" || tag === "BUTTON") return;
-    if (e.key === "ArrowDown") { e.preventDefault(); move(1); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); move(-1); }
+    // A key the picker handles goes no further: the page's own shortcuts
+    // listen on document (Escape there also clears the search).
+    const handled = () => { e.preventDefault(); e.stopPropagation(); };
+    if (e.key === "ArrowDown") { handled(); move(1); }
+    else if (e.key === "ArrowUp") { handled(); move(-1); }
     else if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
+      handled();
       if (selected && selected !== NEW) choose(selected);
     }
-    else if (e.key === "Escape") { e.preventDefault(); onClose(); }
+    else if (e.key === "Escape") { handled(); dismiss(); }
     else if (e.key.length === 1 && /\S/.test(e.key) && !e.metaKey && !e.ctrlKey) {
       // Type-to-jump on any word of a name, the way a menu does.
       const now = e.timeStamp;
@@ -150,11 +166,10 @@ export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: Pe
             aria-checked={isAnswer}
             tabIndex={-1}
             onClick={() => choose(name)}
-            onKeyDown={(e) => { if (e.key === " ") { e.preventDefault(); choose(name); } }}
           >
             <span className="export-dropdown-check" aria-hidden="true">{isAnswer ? "✓" : ""}</span>
             {isAnswer && !slot.confirmed ? (
-              <span className="badge-proposed">
+              <span className="bn-person-proposed">
                 <PersonBadge code={slot.code} role={slot.role} name={name} />
               </span>
             ) : (
@@ -182,9 +197,10 @@ export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: Pe
                 onChange={(e) => setDraft(e.target.value)}
                 onFocus={() => setSelected(NEW)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") { e.preventDefault(); choose(draft); }
-                  else if (e.key === "Escape") { e.preventDefault(); onClose(); }
-                  else if (e.key === "ArrowUp") { e.preventDefault(); move(-1); }
+                  const handled = () => { e.preventDefault(); e.stopPropagation(); };
+                  if (e.key === "Enter") { handled(); choose(draft); }
+                  else if (e.key === "Escape") { handled(); dismiss(); }
+                  else if (e.key === "ArrowUp") { handled(); move(-1); }
                 }}
               />
             </span>

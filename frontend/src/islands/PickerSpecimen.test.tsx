@@ -10,14 +10,14 @@ describe("PickerSpecimen", () => {
   it("opens the production picker on the proposed moderator", () => {
     render(<PickerSpecimen />);
     expect(menu()).not.toBeNull();
-    expect(document.querySelector(".bn-person-picker-trigger.badge-proposed")).not.toBeNull();
+    expect(document.querySelector(".bn-person-picker-trigger.bn-person-proposed")).not.toBeNull();
   });
 
   it("Enter says yes: the badge loses its ring and the picker closes", () => {
     render(<PickerSpecimen />);
     fireEvent.keyDown(menu()!, { key: "Enter" });
     expect(menu()).toBeNull();
-    expect(document.querySelector(".bn-person-picker-trigger.badge-proposed")).toBeNull();
+    expect(document.querySelector(".bn-person-picker-trigger.bn-person-proposed")).toBeNull();
   });
 
   it("opens on the scenario the lab puts in the URL", () => {

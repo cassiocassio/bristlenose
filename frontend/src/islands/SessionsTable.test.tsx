@@ -715,10 +715,32 @@ describe("SessionsTable person picker", () => {
     render(<SessionsTable projectId="1" />);
     await screen.findByText("#1");
     const [s1Mod, s2Mod] = screen.getAllByTestId("bn-picker-trigger-m1");
-    expect(s1Mod.classList.contains("badge-proposed")).toBe(true);
-    expect(s2Mod.classList.contains("badge-proposed")).toBe(false);
+    expect(s1Mod.classList.contains("bn-person-proposed")).toBe(true);
+    expect(s2Mod.classList.contains("bn-person-proposed")).toBe(false);
     const [s1Name] = screen.getAllByTestId("bn-name-m1");
     expect(s1Name.classList.contains("proposed")).toBe(true);
+  });
+
+  it("an exported report draws a proposed name plain, with no picker", async () => {
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_EXPORT = {
+      version: 1,
+      exported_at: "2026-10-04T00:00:00Z",
+      health: {},
+      endpoints: { "/sessions": pickerSessions, "/people": peopleResponse },
+    };
+    _resetExportCache();
+    try {
+      render(<SessionsTable projectId="1" />);
+      await screen.findByText("#1");
+      // The proposed name is there, just not drawn as proposed.
+      expect(screen.getAllByTestId("bn-name-m1")[0].textContent).not.toBe("");
+      expect(screen.queryByTestId("bn-picker-trigger-m1")).toBeNull();
+      expect(document.querySelector(".bn-person-proposed")).toBeNull();
+      expect(document.querySelector(".bn-speaker-editable-name.proposed")).toBeNull();
+    } finally {
+      delete (window as unknown as Record<string, unknown>).BRISTLENOSE_EXPORT;
+      _resetExportCache();
+    }
   });
 
   it("the badge opens the picker with every moderator name in the study", async () => {
@@ -740,7 +762,7 @@ describe("SessionsTable person picker", () => {
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
     expect(puts()[0].body).toEqual({ short_name: "Sarah", confirmed: true });
-    expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("badge-proposed")).toBe(false);
+    expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("bn-person-proposed")).toBe(false);
   });
 
   it("undoing a confirm returns the name to proposed", async () => {
@@ -757,7 +779,7 @@ describe("SessionsTable person picker", () => {
     });
     expect(puts()[1].url).toContain("/sessions/s1/speakers/m1");
     expect(puts()[1].body).toEqual({ short_name: "Sarah", confirmed: false });
-    expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("badge-proposed")).toBe(true);
+    expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("bn-person-proposed")).toBe(true);
     expect(screen.getAllByTestId("bn-name-m1")[0].textContent).toBe("Sarah");
   });
 
@@ -836,7 +858,7 @@ describe("SessionsTable person picker", () => {
     expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
     expect((puts()[0].body as { confirmed?: boolean }).confirmed).toBe(true);
     await waitFor(() =>
-      expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("badge-proposed")).toBe(false),
+      expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("bn-person-proposed")).toBe(false),
     );
   });
 

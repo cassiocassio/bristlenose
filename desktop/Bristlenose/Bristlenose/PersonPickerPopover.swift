@@ -153,9 +153,16 @@ final class PersonPickerModel: ObservableObject {
         return template.replacingOccurrences(of: "{{name}}", with: meName)
     }
 
+    /// The role segments' own width, measured from the control as it is built:
+    /// their labels are localised, and in French or Russian they need more
+    /// than the floor below gives them.
+    private(set) lazy var segmentsWidth: CGFloat =
+        PersonPickerRoles.makeControl(request: request, controlSize: metrics.controlSize)
+            .fittingSize.width
+
     /// As wide as its widest row, the way a Mac menu sizes to its items —
-    /// within a floor that fits the role segments and a ceiling past which a
-    /// long name is truncated rather than stretching the popover.
+    /// within a floor and a ceiling past which a long name is truncated rather
+    /// than stretching the popover — and never narrower than the role segments.
     var contentWidth: CGFloat {
         let font = metrics.nameFont
         let texts = request.names + [request.labels.newPrompt] + (thatsMeLabel.map { [$0] } ?? [])
@@ -164,7 +171,8 @@ final class PersonPickerModel: ObservableObject {
         // inside the source-list capsule's 10 a side, inside the 10 pt padding.
         let row = 8 + metrics.tickColumn + SpeakerBadgeView.width(for: request.slot.code)
             + metrics.gap + ceil(widest) + 10 + 20 + 20
-        return min(max(row, metrics.small ? 230 : 260), 380)
+        // The segments sit inside the 10 pt padding.
+        return max(min(max(row, metrics.small ? 230 : 260), 380), ceil(segmentsWidth) + 20)
     }
 
     func isAnswer(_ row: String) -> Bool {
@@ -224,6 +232,13 @@ private struct PersonPickerRoles: NSViewRepresentable {
     let controlSize: NSControl.ControlSize
 
     func makeNSView(context: Context) -> NSSegmentedControl {
+        Self.makeControl(request: request, controlSize: controlSize)
+    }
+
+    /// Built here and nowhere else, so the width the picker reserves is
+    /// measured from the control it draws.
+    static func makeControl(request: PersonPickerRequest,
+                            controlSize: NSControl.ControlSize) -> NSSegmentedControl {
         let roles = PersonPickerRequest.Role.allCases
         let control = NSSegmentedControl(labels: roles.map { request.labels.roles[$0] ?? $0.rawValue },
                                          trackingMode: .selectOne, target: nil, action: nil)
@@ -618,6 +633,11 @@ final class PersonPickerPresenter: NSObject, NSPopoverDelegate {
         return NSRect(x: rect.minX, y: webView.bounds.height - rect.maxY,
                       width: rect.width, height: rect.height)
     }
+
+    /// Closes an open picker. A pick names a session and a code but no
+    /// project, and codes repeat across projects, so a picker must not outlive
+    /// the document it was opened over.
+    func close() { popover?.close() }
 
     func popoverDidClose(_ notification: Notification) {
         if (notification.object as? NSPopover) === popover { popover = nil }

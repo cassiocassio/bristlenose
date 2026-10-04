@@ -988,7 +988,12 @@ def _repair_collided_names(
     own value (empty if the session has none); an empty field is filled as
     usual. Anything else is a researcher's per-session rename — which is never
     written back to people.yaml — and is kept.
+
+    A confirmed slot is kept whatever it holds: equal to the shared value is
+    then a researcher's yes to it (the picker's Enter), not a collision.
     """
+    if sp.name_confirmed:
+        return
     person = db.get(Person, sp.person_id)
     if not person:
         return

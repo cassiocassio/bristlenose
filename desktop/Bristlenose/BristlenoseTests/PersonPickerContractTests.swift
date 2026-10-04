@@ -97,6 +97,21 @@ struct PersonPickerContractTests {
         #expect(long.contentWidth <= 380)
     }
 
+    /// The role labels are localised; a long set must widen the picker
+    /// rather than squeeze the segments (Russian needs ~281 pt at Small).
+    @Test func thePickerIsAtLeastAsWideAsItsRoleSegments() throws {
+        let request = try #require(try wires().compactMap { PersonPickerRequest(message: $0) }.first)
+        let l = request.labels
+        let labels = PersonPickerRequest.Labels(
+            roles: [.moderator: "Модератор", .participant: "Участник", .observer: "Наблюдатель"],
+            roleGroup: l.roleGroup, newPrompt: l.newPrompt, thatsMe: l.thatsMe, menu: l.menu)
+        let russian = PersonPickerRequest(sessionId: request.sessionId, slot: request.slot,
+                                          names: request.names, anchor: request.anchor, labels: labels)
+        let model = PersonPickerModel(request: russian, meName: "Jo", onChoose: { _ in }, onClose: {})
+        #expect(model.segmentsWidth > 210)   // more than the floor leaves inside the padding
+        #expect(model.contentWidth >= ceil(model.segmentsWidth) + 20)
+    }
+
     @Test func theSelectionOpensOnTheAnswerAndAnUnknownSlotPreselectsNothing() throws {
         let request = try #require(try wires().compactMap { PersonPickerRequest(message: $0) }.first)
         let model = PersonPickerModel(request: request, onChoose: { _ in }, onClose: {})

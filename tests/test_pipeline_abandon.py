@@ -842,6 +842,8 @@ def test_pii_stage_reports_progress_like_its_siblings(tmp_path: Path) -> None:
 
     estimator = MagicMock()
     estimator.stage_completed.return_value = None  # cold — the entry emit still fires
+    estimator.stage_runs.return_value = (False, None)  # the real ones return a pair
+    estimator.skip_to.return_value = (False, None)
     pipeline = Pipeline(settings, estimator=estimator)
     collected: list[dict[str, object]] = []
     pipeline.set_progress_sink(lambda **fields: collected.append(fields))

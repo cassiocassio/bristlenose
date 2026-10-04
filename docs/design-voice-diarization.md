@@ -1,6 +1,6 @@
 ---
 status: proposed
-updated: 3 Oct 2026
+updated: 4 Oct 2026
 ---
 
 # Voice diarization: telling speakers apart by how they sound
@@ -476,6 +476,36 @@ Scoring: `experiments/speaker_split_full/eval_voice.py`; truths as in
   per-segment pass, and there is no word-level truth to score it against.
   Also one session, one Teams recording, one moderator; the research above
   found a Meet recording harder.
+
+### The owner's review, in the shipped Mac app (4 Oct 2026)
+
+A fresh project analysed in the sandboxed Mac app (s1, an IKEA usability
+session, mlx `large-v3-turbo`, Claude Sonnet 4.6 for the text split). The voice
+pass ran as shipped: the model fetched into the app container on first use,
+`method=voice+text`, 296 segments, 260 voice verdicts, 26 relabelled, centroid
+cosine 0.63. That is under the 0.75 cut-off but far less distinct than
+Talismanic's 0.26, so this session was the harder case.
+
+The pass records only how many segments it moved, not which. The list was
+reconstructed by re-running the text split on the saved transcript and
+replaying the voice pass. The replay reproduced the saved labels on 296 of
+296 segments, but its text split differed from the run's on a few lines, so
+it moved 30 rather than 26.
+
+**The owner read the 30 and judged almost all of them moved the right way:
+"clearly immediately better".** This is a human judgement on one session, not a
+score. What the moves were:
+
+- A participant's whole answer (08:52–09:10, about going straight to search)
+  that the text split had given to the moderator.
+- Five segments holding both voices (05:32, 09:32, 09:41, 09:50, 11:06), where
+  no single label is right. This is the word-level re-cut case above.
+- Eleven fillers ("uh", "um", "yeah", "oops").
+
+**Gap this exposed:** nothing records which segments the voice pass changed.
+Keeping each moved segment's text label and voice label in
+`speaker-info/<sid>.json` would make the next review a read rather than a
+paid reconstruction.
 
 ## Licence: espeak-ng in the sherpa-onnx wheels — options for the owner (4 Oct 2026)
 

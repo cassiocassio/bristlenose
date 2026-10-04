@@ -1,20 +1,33 @@
 ---
-status: pending
-last-trued: 2026-08-24
-trued-against: HEAD@main on 2026-08-24
+status: partial
+last-trued: 2026-10-04
+trued-against: HEAD@main on 2026-10-04
 ---
 
 # People — who is in a study, and how the researcher fixes it
 
 *Problem-first spec for person identity across Bristlenose: the jobs researchers
 are trying to do, the UX that serves them, and — last, deliberately — the
-functionality and data that fall out. None of the UX in this document is
-built. The people *file* and its endpoints predate it and do ship —
-`GET`/`PUT /projects/{project_id}/people` (`server/routes/data.py:307`, `:335`),
+functionality and data that fall out. Most of the UX in this document is not
+built. **Built on `main` as of 4 Oct 2026:** per-session moderator and observer
+names, the name-confirmed state (migration 012), the person picker on the
+Sessions grid on both channels (speaker ID v1.1 — §H H9, UX iteration 3), and
+undo on speaker naming (§B10). Route C Phase 1, project-wide identities, is
+built on a branch and lands after 0.33.0. The people *file* and its endpoints
+predate all of it — `get_people` / `put_people` in `server/routes/data.py`,
 `PeopleFile` in `models.py`, and `/people` in the export embed.*
 
 ## Changelog
 
+- _2026-10-04, evening_ — **Trued for 0.33.0, and the summary caught up with the body.** The
+  intro said none of the UX was built; the picker (web and Mac), `name_confirmed` (012) and undo
+  on speaker naming all shipped today, so the intro, §0, §C1, §C5, §D step 1, the H9 phase rows,
+  the string plan and the measures now say so — each with a dated note, the original kept. §J5's
+  free wins were already done on 27 Aug (`deb62808`) and are struck, bar the hint in 20 locales.
+  The picker's accessible proposed state (`03efebb5`), the native anchor inset and the "moderated
+  by" line are recorded under UX iteration 3; the undo interaction with the sidebar removal store
+  under §B10. **Still open and not touched:** whether iteration 2's `/usual-suspects` pass ever
+  ran (its row says pending; no artefact shows it), and the MCP anonymise defect (H2–H4 #3).
 - _2026-10-04_ — **H9 Phase 1, the data layer, is built on a branch (`route-c-phase1`) and waits for 0.33.0.**
   One `Person` per identity; `session_speakers.person_id` nullable with `state` and `evidence`
   (migration 013, which absorbs 012's `name_confirmed`); every route emits the identity's code,
@@ -274,13 +287,13 @@ Worth stating first, because it bounds the work and prevents re-derivation:
 | Already right | Where |
 |---|---|
 | `Person` rows are **instance-scoped** — no `project_id`, deliberately, so a person can outlive a project | `server/models.py` `Person` |
-| `SessionSpeaker` joins person↔session **per session**, carrying code, role and per-session stats | `server/models.py:265` |
+| `SessionSpeaker` joins person↔session **per session**, carrying code, role and per-session stats | `server/models.py` `SessionSpeaker` |
 | Two name fields exist and mean different things — `full_name` (the record) and `short_name` (what appears beside a quote) | `models.py` `PersonEditable` |
 | Short-name derivation is genuinely careful — honorific stripping, family-name-first detection, 337 surnames, and collision handling that yields "Sarah J." / "Sarah K." | `people.py` `suggest_short_names` |
-| `people.yaml` is canonical, the DB is a materialised view, and browser edits write through to both | `design-html-report.md` § People file |
+| `people.yaml` is canonical, the DB is a materialised view, and browser edits write through to both. *4 Oct 2026: for participants only — since 3 Oct a moderator's or observer's name is per session, in the DB and `session-speakers.json`, and `PUT /people` no longer writes `m*`/`o*`* | `design-html-report.md` § People file |
 | Speaker codes are the public identity; display names are a working tool | `SECURITY.md`, `docs/glossary.md` |
 | **A name belongs to a code, and a code has one name — everywhere in the study.** `people.yaml` is keyed by code and holds one name per key. *Corrected 1 Oct 2026: a name belongs to a **person**; a code is the derived label of an identity, and a session's `m`/`o` slot may hold no identity at all (`m?`). The invariant survives one level up — a person has one name everywhere — and `people.yaml` is retired as the store (§C2)* | `people.py`, `models.py` `PeopleFile` |
-| `p` codes are globally numbered across a study, so they never collide — one human returning gets several, which is normal | `s05b_identify_speakers.py:460` |
+| `p` codes are globally numbered across a study, so they never collide — one human returning gets several, which is normal. *Since 3 Oct 2026 they also stay put across runs and are never reissued (`session_registry.py`)* | `s05b_identify_speakers.py` `assign_speaker_codes` |
 | `m`/`o` codes restart per session, which is the **right** answer whenever there is one moderator — about 95% of studies. *Corrected 1 Oct 2026: the per-session `[m1]` token stays and becomes a within-session tag; the identity shown on the badge is minted on evidence or a pick, and absent until then (§E decision 1, corrected)* | `s05b_identify_speakers.py`, §E decision 1 |
 | Role detection is format-agnostic since Apr 2026 — word-count asymmetry plus a generalised prompt | `design-speaker-role-detection.md` |
 
@@ -591,7 +604,8 @@ instance-scoped — it is a query over rows that exist, ordered by use, with
 **Me** seeded from `NSFullUserName()` at the top.
 
 *1 Oct 2026: in v1 there is no bank and no settings UI. **Me** is seeded from the
-account name (`NSFullUserName` on the Mac, the GECOS field on the CLI) and appears
+account name (`NSFullUserName` on the Mac, the GECOS field on the CLI — *not built: v1.1
+has no That's Me row in the browser*) and appears
 in the picker as `That's Me (Martin Storey)`; it is never applied by inference and
 never offered as a match. Settings ▸ General and Contacts are later.*
 
@@ -978,6 +992,11 @@ function stays in `frontend/src` and returns a **menu model** (ordered items
 carrying label, kind, enabled, action id + payload) — that model is what makes
 "a new verb lands everywhere at once" true. Three renderings consume it:
 
+> **Superseded for the picker, 4 Oct 2026** — the owner chose a native popover, not an
+> `NSMenu`, because the picker holds a field and a segmented control (§H H9, UX iteration 3).
+> What shipped is a `person-picker` message → a transient `NSPopover` → `personPickerChoose`.
+> The reasoning below still holds for a menu with no field.
+
 - **In the app**, `onContextMenu` → `preventDefault()` → one new `person-menu`
   bridge message carrying the click point and the model; Swift converts CSS px to
   view px and calls `NSMenu.popUp(positioning:at:in:)`. Picks return through the
@@ -1018,9 +1037,9 @@ Three consequences worth carrying:
 - **The mechanism is the `undo-state` bridge channel, not `NSUndoManager`.** The
   Swift half already ships — `MenuCommands.swift` ORs `removalStore.hasPending`
   with `bridgeHandler.canUndo` and already takes its Edit-menu label from the web
-  side. What is missing is entirely frontend: `bridge.ts` hard-codes
-  `canUndo: false` and nothing ever posts `undo-state`. This is why §D prices the
-  undo bridge as a **step-1 gate**.
+  side. What was missing was entirely frontend: `bridge.ts` hard-coded
+  `canUndo: false` and nothing posted `undo-state`. This is why §D priced the
+  undo bridge as a **step-1 gate**. *Built 4 Oct 2026 — the paragraph below.*
 
   **Built, 4 Oct 2026.** One stack, page-scoped: `contexts/UndoStore.ts` holds it,
   `components/UndoSync.tsx` posts `undo-state` with whole per-language labels
@@ -1073,11 +1092,11 @@ Implementation last, and smaller than it looks. Grouped by the job it serves.
 | **No role endpoint.** `SessionSpeaker.speaker_role` is mutable in the DB; nothing exposes it | `design-speaker-editing.md` § What exists today | J3 |
 | **No contextual-menu machinery at all.** Zero `onContextMenu` handlers in `frontend/src` | grep | all |
 | ~~**No undo.** `NSUndoManager` used nowhere; the `undo-state` bridge channel is dead on both ends; `bridge.ts` hard-codes `canUndo: false`~~ — the channel is live and speaker naming is on the stack (4 Oct 2026, §B10) | `design-undo-catalog.md` § What exists today | all |
-| **No recorded name origin**, so a confirmed guess and an unchecked guess are indistinguishable | `design-html-report.md` § Auto name/role extraction | J7 |
+| **No recorded name origin**, so a confirmed guess and an unchecked guess are indistinguishable. *4 Oct 2026: the second half is fixed — `session_speakers.name_confirmed` (012) tells them apart; per-field origin is still unrecorded* | `design-html-report.md` § Auto name/role extraction | J7 |
 | **No `cleared` state** — a deleted name is refilled by the next run | roadmap; `people.py` `auto_populate_names` | J7 |
 | **Anonymisation decides by code prefix**, not by person | `server/routes/export.py` `_anonymise_data` | J13 |
 | **No read-time membership filter on the Quotes lens** — extraction is the only gate; a re-credited quote would stay visible wearing an `m` code | `routes/quotes.py` (verified: filters are project + quote-ids only) | J9 |
-| **Observer speech is not excluded from quote extraction.** `s09` feeds `full_text()`, which tags every non-unknown role — so an observer's segments arrive marked `[OBSERVER]` — while the prompt's Rule 1 names only `[RESEARCHER]` and never mentions `[OBSERVER]`. Exclusion rests on the model generalising from "only extract participant speech" while being shown a tag it was never told about. `participant_text()` exists, filters to `PARTICIPANT`, and **is unused by `s09`** | `s09_quote_extraction.py:231`; `llm/prompts/quote-extraction.md:21`; `models.py:227-240` | J3 |
+| **Observer speech is not excluded from quote extraction.** `s09` feeds `full_text()`, which tags every non-unknown role — so an observer's segments arrive marked `[OBSERVER]` — while the prompt's Rule 1 names only `[RESEARCHER]` and never mentions `[OBSERVER]` *(fixed 27 Aug 2026, `deb62808`: Rule 1 names both)*. Exclusion rests on the model generalising from "only extract participant speech" while being shown a tag it was never told about. `participant_text()` exists, filters to `PARTICIPANT`, and **is unused by `s09`** | `s09_quote_extraction.py:231`; `llm/prompts/quote-extraction.md:21`; `models.py:227-240` | J3 |
 | **Segment provenance is flattened at import** — intermediates carry `srt`/`vtt`/`docx`/`mlx-whisper`; the importer writes the constant `transcript` on every DB row | `server/importer.py:548` | §D claim 2 |
 
 ### C2 · Data that would need to exist
@@ -1210,7 +1229,8 @@ Rules the transitions imply:
 - **`confirm` changes no value and is still a real transition** — which is
   precisely why the write payload has to narrow to one entry. A whole-map `PUT`
   cannot tell "I read this and it is right" from "nothing changed", and that is
-  why "I checked this" is unrepresentable today.
+  why "I checked this" was unrepresentable until 4 Oct 2026, when migration 012
+  gave each slot `name_confirmed`.
 - **`cleared` must be sticky**, or deleting a name gets it refilled on the next
   run and the researcher is told they typed the name they deleted.
 - Only **`guess`** invites action. The other five states are places to rest,
@@ -1271,7 +1291,7 @@ is independently useful and independently shippable.
 
 | Step | The sentence | How often | Cost |
 |---|---|---|---|
-| **1** | "m1 is me." · "That m1 is Steve." · "p4 is Jane Smith." · "Jane is an observer." | **Every session, every path** — 10–30 times a study | **Small — plus two real prerequisites, and one item that does not belong here (J1: role is a recode, so it belongs with step 4).** `PUT /people` exists; role needs one endpoint; "that's me" needs no typing. But **the bank has no store** — `Person` rows do not span projects today (§B4 spec), so it needs the instance DB of `design-multi-project.md` §2 first; and `NSFullUserName()` has zero uses in `desktop/`. But every step-1 act is drawn with an Undo, and the undo bridge is dead (`canUndo` hard-coded false, `NSUndoManager` used nowhere) — **the undo contract is a step-1 gate, not a parallel workstream** (§H, H4) |
+| **1** | "m1 is me." · "That m1 is Steve." · "p4 is Jane Smith." · "Jane is an observer." | **Every session, every path** — 10–30 times a study | **Small — plus two real prerequisites, and one item that does not belong here (J1: role is a recode, so it belongs with step 4).** `PUT /people` exists; role needs one endpoint; "that's me" needs no typing. But **the bank has no store** — `Person` rows do not span projects today (§B4 spec), so it needs the instance DB of `design-multi-project.md` §2 first; and `NSFullUserName()` has zero uses in `desktop/`. But every step-1 act is drawn with an Undo, and the undo bridge is dead (`canUndo` hard-coded false, `NSUndoManager` used nowhere) — **the undo contract is a step-1 gate, not a parallel workstream** (§H, H4). *4 Oct 2026: both done — the Mac picker's That's Me reads `NSFullUserName()`, and undo on speaker naming is built (§B10); the bank is still unbuilt* |
 | **2** | "Michel Hurlly is Mickael Hurley." · "Call him Mike." · "Yes, that guess is right." | Every study with raw audio | **Medium.** Name origin per field, a `cleared` state, a narrowed write payload, and a `full_name` editor |
 | **3** | "That quote was Sarah, not Jane." | A few times a study — **and it is what gets published** | **Small-to-medium.** The speech moves (§B9): a whole-turn quote is one segment update; a fragment inside a longer turn is a turn split whose split point the quote's own timecodes supply. ⌘Z spans card and speech. Plus the lens needs the membership filter it currently lacks (§C4) |
 | **4** | **What naming implies.** "p6 is the same Mary as p3." · "The moderator in s9 is Mike, not Martin" → Mike becomes `m2` | Follows from step 1 — **no separate UX, no blocking decision** | **Medium.** Speaker→person remap, moderator renumber, stats recompute. All bookkeeping behind an act the researcher has already performed. *1 Oct 2026: for `m`/`o` the renumber is gone — "the moderator in s9 is Mike" is one row (`session_speakers(s9).person_id`), and the v1 package in §H H9 ships it with step 1* |
@@ -1332,7 +1352,7 @@ Three claims this ordering makes, each falsifiable:
 ## §E — Decisions: one settled, one owed
 
 Neither was a coding problem; both are product calls. Decision 1 is **settled**
-(below, with the reasoning preserved); decision 2 is the one still owed.
+(below, with the reasoning preserved); decision 2 is the one still owed. *(Settled 25 Aug 2026 — below.)*
 
 ### Decision 1 — **settled 24 Aug 2026.** Identity lives above codes, and the two namespaces fail in opposite directions
 
@@ -1531,8 +1551,8 @@ What follows, and what the three consequences become:
   across the participant line, which is precisely what the correction *asserts*:
   she was never a subject. The disclosure change is the point, not a side
   effect. **J3's observer sweep is therefore unblocked** — it was gated on this
-  decision and is now free to ship. **But it does not yet do the other half of
-  its job:** correcting `p → o` retags her segments `[OBSERVER]`, and the
+  decision and is now free to ship. **But it did not yet do the other half of
+  its job** *(closed 27 Aug 2026, `deb62808` — the prompt now names `[OBSERVER]`)*: correcting `p → o` retags her segments `[OBSERVER]`, and the
   extraction prompt handles only `[RESEARCHER]` (§C1), so on the next analysis
   her collaborator-comments may be mined as findings again. The prompt does say
   "participant" twice, so this is a weakened guard rather than an absent one —
@@ -1732,7 +1752,7 @@ same day — see changelog) merged with an independent decomposition.*
 | **H5** ✅ | **The menu as the function** *(done 25 Aug 2026 — §I)* | Turn §B3's claim into the actual function: the full (surface × object-state) enumeration and the string plan | The state vocabulary the function takes (§C5's machines × me/not-me), unreachable cells struck; the bare-`Role ▸`-vs-scoped question (one drawn frame in six carries the scope label today); the me-item convention (three renderings live — settle on "That's Me (Name)" top-level, "Name (Me)" in lists); bench 3's propagation sheet redrawn to obey its own pattern **and** §B8 (offer in a sentence; sheet lists matches with checkboxes) | A decision-table appendix, each row citing its generating rule; the complete string inventory as ICU templates under the **label-plus-chooser** localisation contract (§B2) | H1 H3 H4 |
 | **H6** ◑ | **Bank + picker** *(spec landed 25 Aug 2026; two control conflicts open)* | Spec the two lists (§B4 people-across-studies, §B9 cast-in-session) to buildable fidelity | Presentation per H4's host; create-and-name inline flow; bank composition/order; the quote-card variant's follow-up line; the wrong-Steve failure path | §B4/§B9 expanded from argument to spec; mockup benches redrawn **against the pinned cast** (below) — the p4 double-booking, Sarah's two codes, Jane's o1/o2-vs-p4 timeline, and the three-Mikes collision all resolve to it | H1 H5 |
 | **H7** ◑ | **People lens + old-mockup** *(lens reframed 25 Aug 2026; mockup judged UPDATE, edits pending)* | Spec the lens at three scopes; bring [`people-lens-scopes.html`](mockups/people-lens-scopes.html) to the settled model or visibly supersede it | Whether the old mockup is updated or banner-superseded (it predates the stance: its Separate sheet is primary, its folder scope is a suggestion engine, its decision-1 framing is open — all now wrong); the roster-not-table default; the drives-come-and-go caveat; whether "Everyone" belongs in a report lens at all | §B5/§B6 expanded to full spec with the tells table; one coherent mockup story across both files | H1 H2 H3 H5 |
-| **H9** | **Route C, v1** *(decided 1 Oct 2026; not built — plan below)* | Ship the moderator slot engine, project-scoped, on both channels | **Six phases, each shippable and gated** — [H9 · the delivery plan](#h9--route-c--the-delivery-plan-decided-1-oct-2026-not-built) below: 0 session identity (the transcripts plan's 0b, lifted out), 1 the data layer with no UI, 2 the web UX, 3 the native twin, 4 platform evidence, 5 migration, docs and release. UX iteration 2 and a `/usual-suspects` pass sit between 1 and 2. **Not in v1:** the bank, cross-study links, folder scope, Settings ▸ General, Contacts, the markdown report, the sealed static HTML | [`mockups/moderator-identity-iteration-2.html`](mockups/moderator-identity-iteration-2.html) (R1–R14, real pixels) and the storyboard's E1–E8 (the argument); the pinned-limitation test re-homed as the map's own; the sidebar's impossible MULTI_MODERATOR fixture replaced | 0b first |
+| **H9** | **Route C, v1** *(decided 1 Oct 2026; partly built — plan below)* | Ship the moderator slot engine, project-scoped, on both channels | **Six phases, each shippable and gated** — [H9 · the delivery plan](#h9--route-c--the-delivery-plan-decided-1-oct-2026-partly-built) below: 0 session identity (the transcripts plan's 0b, lifted out), 1 the data layer with no UI, 2 the web UX, 3 the native twin, 4 platform evidence, 5 migration, docs and release. UX iteration 2 and a `/usual-suspects` pass sit between 1 and 2. **Not in v1:** the bank, cross-study links, folder scope, Settings ▸ General, Contacts, the markdown report, the sealed static HTML | [`mockups/moderator-identity-iteration-2.html`](mockups/moderator-identity-iteration-2.html) (R1–R14, real pixels) and the storyboard's E1–E8 (the argument); the pinned-limitation test re-homed as the map's own; the sidebar's impossible MULTI_MODERATOR fixture replaced | 0b first |
 | **H8** ✅ | **Schema + API deltas** *(done 25 Aug 2026 — §J)* | Make §C concrete — implementation-last, now reachable | Name-origin representation per field + the two sentinels; the narrowed write payload; the role endpoint; the renumber/remap operations; **the Quotes-lens membership filter that does not exist today** (§C4) keyed on `SessionSpeaker` role; the importer `source` fix; membership storage per H3 | A final appendix: one table per §D step mapping capability → schema delta → endpoint delta → migration note, citing settled decisions rather than re-arguing them | all of H2–H7 |
 
 ### The pinned cast
@@ -1846,13 +1866,16 @@ re-import** because the stable key carries `participant_id`.
 
 1. `SECURITY.md` states the HTML export "strips display names by default, making
    this the safe path for external distribution." **It does not** — the query
-   param and the dialog checkbox both default off.
+   param and the dialog checkbox both default off. *Corrected in SECURITY.md,
+   25 Aug 2026.*
 2. `design-export-html.md:264` says "Role titles removed when anonymised";
-   `routes/data.py:328` ships `role` untouched.
+   `routes/data.py:328` ships `role` untouched. *Fixed 27 Aug 2026, `deb62808`.*
 3. `grounding.py`'s `resolve_speaker_names` returns `{}` for *everyone* when
    anonymise is active, while `SECURITY.md:51` calls it "the same word and
    default as the export surfaces". Same word, different effect — and under
-   decision 2 the MCP surface is now the one that is wrong.
+   decision 2 the MCP surface is now the one that is wrong. *Still live on
+   4 Oct 2026: with the per-project Anonymise switch on, `resolve_speaker_names`
+   returns `{}`, so moderators lose their names too.*
 
 ### H1 · done, with four calls left for the owner
 
@@ -1941,6 +1964,8 @@ equally to the proposed replacement. ~~Reconcile the wiring doc first.~~
 4. **"Someone New…" → "New Person…"?** Unshipped, so free to change; the
    indefinite pronoun forces masculine agreement in fr/ca/es. But §B4's warmth is
    deliberate and "New Person" reads as a create command rather than an escape.
+   *4 Oct 2026: shipped as one hint per kind — `sessions.picker.newModerator`,
+   `newObserver`, `newNameFor` — so no indefinite pronoun has to agree.*
 
 Two more sit outside H1: whether an observer counts as research team for export
 naming is **H3** (decision 2); and confirming ja **ターン** and zh-Hant **發言**
@@ -1948,7 +1973,7 @@ with native reviewers before they harden — 發言 deliberately assigns the sam
 characters the opposite role to ja, which a future consistency sweep will try to
 undo. Both turn-nouns are marked *pending native review* in the CSV note.
 
-### H9 · Route C — the delivery plan (decided 1 Oct 2026; not built)
+### H9 · Route C — the delivery plan (decided 1 Oct 2026; partly built)
 
 *The twelve decisions are in the changelog entry of that date, in the storyboard's
 Part 5b, and in the sections they touched (§B3, §B4, §B6, §C2, §C5, §E decision 1,
@@ -1972,8 +1997,8 @@ real tokens (the pill overhang below was the first proof).
 | **0 · Session identity** ✅ *(landed 3 Oct 2026)* | The transcripts plan's 0b, lifted out as its own package: a stable per-session identity that survives re-import, re-ordering and the arrival of an older recording; the existing `sessions` rows migrated onto it. Nothing else — this is a prerequisite, not a feature | A test adds an older recording to a fixture study and every `session_speakers` row keeps its session; the smoke fixture carries the identity; `bristlenose status` reads the same session count before and after | — |
 | **1 · The data layer, no UI** *(built on a branch 4 Oct 2026, not yet landed — see the dated block below the table)* | One Alembic revision: `session_speakers.person_id` nullable, plus `state` (`null` · `proposed` · `confirmed`) and `evidence`; `persons` gain the per-project `code`, a `uuid`, `origin` and `me`. One `Person` per identity instead of one per (session, code). The importer runs at the end of every pipeline run, proposes from the intermediates (platform labels → one identity per distinct label, P2), and never overwrites a confirmed row. The pipeline stops writing `people.yaml` and writes the computed stats to an intermediate. A legacy `people.yaml` is read once on the first run after upgrade — inherited-proposed on every session that carried the code — then ignored, never deleted. `GET /people` keeps its shape (code → name, nulls omitted) so every surface renders unchanged; `PUT /people` narrows to the fields it may write; `resolve_speaker_names` reads identities. The WARNING in `compute_participant_stats` retires with the YAML write it describes | The pinned-limitation test (two sessions, two moderators) re-homed as the map's own: both names survive. The sidebar's impossible MULTI_MODERATOR fixture replaced by one the importer can now produce. `tests/test_serve_export_coverage.py` green — no new GET without a classification. `check-locales.py --strict` untouched (no strings yet). The one visible change — two moderators' names no longer overwrite — pinned by a test that fails on `main` today | 0 |
 | **UX iteration 2 + review** *(between 1 and 2; done 1 Oct 2026, review pending)* | [`mockups/moderator-identity-iteration-2.html`](mockups/moderator-identity-iteration-2.html): route C drawn with the shipped stylesheet inlined verbatim and only shipped strings and idioms — see below | A `/usual-suspects` pass on the mockup and this section, with `ux-critique`, `what-would-gruber-say` (the native twin), `i18n-review` (four keys, gender-marking in fr/ca/es) and `silent-failure-hunter` (Phase 1's "never overwrites a confirmed row" and "read once") the personas that matter most. Its findings are folded into Phase 2's scope before Phase 2 starts | 1 |
-| **2 · The web UX** | `m?` on the split badge; the proposed treatment — three lines of composition CSS in `molecules/person-badge.css` so `.badge-proposed` dashes the halves instead of ringing the pair; the pill wired: ✓ confirms, ✗ returns the slot to `null`; the picker as a popover from the badge, rows per §B9 (identities as split badges, *That's Me (Name)*, *New Moderator…*), opened by click or right-click; the inline name field on a null slot is the Someone-New path (commit mints and assigns); the four strings seeded into the 21 full locales; the sidebar's "multiple moderators" test counts identities with `null` as one of them; `export.css` and `isExportMode()` drop the class, the pill and the pencil in the leave-behind; the exported roles line reads the one sentence on a null slot; the MCP overview carries `"moderator": <code or null>` on each session item plus one `INVARIANTS` line | vitest on `SessionsTable`, `TranscriptPage` and `SessionsSidebar` asserting **the payload each pick sends** — the 0.29.1 lesson: a test that proves the switch renders is not a test of the wire. `tests/test_export_css_selectors.py` green on the new selectors. `check-locales.py --strict`. One E2E spec: pick on session 4 in the grid → the roles line on transcript 4 shows `m1`. The MCP contract test covers a null session | 1, review |
-| **3 · The native twin** | A `person-menu` bridge message (anchor, slot state, the identities, Me) → an `NSMenu` built from the same keys, raised by the host for a right-click on any person badge; selecting *New Moderator…* tells the webview to open the inline editor; Edit ▸ Undo carries the pick (the `undo-state` frontend half §B10 already specified); a Diagnostics fixture that renders the web popover and the native menu side by side over one payload, for the visual-parity pass that comes *after* the wiring | Swift tests build the menu from a fixture payload and assert items, order and the checked row; a `test_menu_title_keys.py`-style pin that the native menu reads the same four keys the popover does; the human check: on the Mac, open the picker from the grid and from the transcript header in one session — same items, same order | 2 |
+| **2 · The web UX** *(built in part 4 Oct 2026 as the v1.1 picker, reshaped by UX iteration 3: no ✓/✗ pill, `.bn-person-proposed` rather than `.badge-proposed`, a per-kind New row instead of *New Moderator…*, the Sessions grid only; `m?` and the MCP `moderator` field wait for Phase 1 — see the picker paragraph below)* | `m?` on the split badge; the proposed treatment — three lines of composition CSS in `molecules/person-badge.css` so `.badge-proposed` dashes the halves instead of ringing the pair; the pill wired: ✓ confirms, ✗ returns the slot to `null`; the picker as a popover from the badge, rows per §B9 (identities as split badges, *That's Me (Name)*, *New Moderator…*), opened by click or right-click; the inline name field on a null slot is the Someone-New path (commit mints and assigns); the four strings seeded into the 21 full locales; the sidebar's "multiple moderators" test counts identities with `null` as one of them; `export.css` and `isExportMode()` drop the class, the pill and the pencil in the leave-behind; the exported roles line reads the one sentence on a null slot; the MCP overview carries `"moderator": <code or null>` on each session item plus one `INVARIANTS` line | vitest on `SessionsTable`, `TranscriptPage` and `SessionsSidebar` asserting **the payload each pick sends** — the 0.29.1 lesson: a test that proves the switch renders is not a test of the wire. `tests/test_export_css_selectors.py` green on the new selectors. `check-locales.py --strict`. One E2E spec: pick on session 4 in the grid → the roles line on transcript 4 shows `m1`. The MCP contract test covers a null session | 1, review |
+| **3 · The native twin** *(built 4 Oct 2026 as a `person-picker` message → a transient `NSPopover`, not `person-menu` → `NSMenu`; Edit ▸ Undo carries the pick; both directions pinned by the bridge contract fixture — see the picker paragraph below)* | A `person-menu` bridge message (anchor, slot state, the identities, Me) → an `NSMenu` built from the same keys, raised by the host for a right-click on any person badge; selecting *New Moderator…* tells the webview to open the inline editor; Edit ▸ Undo carries the pick (the `undo-state` frontend half §B10 already specified); a Diagnostics fixture that renders the web popover and the native menu side by side over one payload, for the visual-parity pass that comes *after* the wiring | Swift tests build the menu from a fixture payload and assert items, order and the checked row; a `test_menu_title_keys.py`-style pin that the native menu reads the same four keys the popover does; the human check: on the Mac, open the picker from the grid and from the transcript header in one session — same items, same order | 2 |
 | **4 · Platform evidence** | Participant ids in the VTT `NOTE` (the transcripts plan §4's `participants:` display-name → id map); the importer prefers an id over a display name; identities join across sessions on the id; when an id arrives for an identity that was minted from a name, the id attaches to it (same name) or wins (different name — the name is then the researcher's to fix) | Fixture pairs with and without ids; the P2 carve-out pinned both ways: one display name across files → one identity, two ids with one display name → two; the attach-or-win rule pinned | 1 (independent of 2 and 3; may land before them) |
 | **5 · Migration, docs, release** | The upgrade path proved on a 0.31.x project folder: the legacy read, inherited-proposed everywhere, the file left in place. README, `man/bristlenose.1`, the website's `docs-src/cli.md` and `server/CLAUDE.md` stop promising an editable `people.yaml`; §C2 and §J here trued; `SECURITY.md`'s export line re-read against decision 2. CHANGELOG under **New** — a minor bump | `scripts/check-doc-surfaces.sh`; a release-notes sentence for studies in the field, written by the owner, saying that moderator names are now tentative until confirmed and that nothing was lost | all |
 
@@ -2037,7 +2062,8 @@ real tokens (the pill overhang below was the first proof).
 > block counted four: `grounding.py` had two, `resolve_speaker_names` and `resolve_session_speaker_names`). (3) The pipeline
 > writes per-session stats into `session-speakers.json` (now version 2, which also records each
 > name's evidence class), and the importer copies them onto each slot — so the dashboard's
-> `total_words`, always 0 in serve, is real. (4) **A heard name proposes** (see call 1 below), so
+> `total_words`, always 0 in serve, is real. *(Main fixed the card independently on 4 Oct by counting
+> transcript words at read time, `69c9c569`; the landing reconciles the two.)* (4) **A heard name proposes** (see call 1 below), so
 > Whisper-only sessions keep the name they show today. **Codes are derived**, recomputed after every
 > import and every pick: moderators number in order of first appearance, so the session registry
 > keeps them stable and a code moves only when the map does.
@@ -2296,6 +2322,12 @@ What drawing it with real pixels found, none of which the storyboard could:
 
 #### The string plan
 
+> **As built, 4 Oct 2026:** the picker shipped with `sessions.picker.{role, newModerator,
+> newObserver, newNameFor, thatsMe, proposedName}`; there is no `people` block, and
+> `people.me` and `export.moderatorNotIdentified` wait for Phase 1's `m?`. That's Me is the Mac
+> account's name only — the browser has no such row, so the GECOS half below is not built. The
+> plan is kept as written.
+
 Four keys, housed in the `people` block §I4 reserves, seeded into the 21 full
 locales (zh-Hant-HK gets none). The English is the owner's; the mockup carries
 placeholders and says so in its chrome bars.
@@ -2320,9 +2352,11 @@ are indistinguishable in one session.
 Three numbers, from the telemetry the product already keeps and the rows this
 adds: the share of sessions with a confirmed moderator thirty days after
 upgrade (the honest-data claim — a study that stays at zero is fine, a study
-stuck at *proposed* everywhere means the pill is not being found); identities
+stuck at *proposed* everywhere means the pill is not being found — *4 Oct 2026: the
+pill is gone; read it as the picker's confirm*); identities
 per study against distinct platform labels (never more — P2 says one per label);
-and the count of ✗ on platform proposals, because every one is a study where the
+and the count of ✗ on platform proposals (*since iteration 3, a re-pick away from a
+proposal*), because every one is a study where the
 carve-out guessed wrong, and that is the number that decides whether P2 holds.
 
 ---
@@ -2585,8 +2619,9 @@ asserted for a name no human reviewed.
 
 Each is independent of every step above:
 
-1. `_anonymise_data` blanking `role` (the job title) for `p*` — one line, and it
-   closes a documented commitment the code has been violating.
+1. ~~`_anonymise_data` blanking `role` (the job title) for `p*` — one line, and it
+   closes a documented commitment the code has been violating.~~ **Done 27 Aug
+   2026, `deb62808`.**
 2. ~~`/sessions`' top-level `moderator_names` / `observer_names`.~~ **Not a
    defect — struck 25 Aug 2026.** This was carried forward from a review written
    *before* decision 2 settled. Under decision 2 moderators and observers are
@@ -2595,13 +2630,19 @@ Each is independent of every step above:
    carries no top-level *participant* name list, and its per-session
    `speakers[].name` is already blanked for `p*`.
 3. The export hint string, which names moderators and omits observers (§E
-   decision 2 has the replacement copy).
-4. The extraction prompt naming `[OBSERVER]` alongside `[RESEARCHER]`.
-5. `test_anonymise_keeps_moderator_names`, whose body is a bare `pass`.
+   decision 2 has the replacement copy). *4 Oct 2026: done in `en`; the other 20
+   locales still name moderators only — the value pins postdate the reword, so no
+   gate sees it.*
+4. ~~The extraction prompt naming `[OBSERVER]` alongside `[RESEARCHER]`.~~ **Done 27 Aug 2026, `deb62808`.**
+5. ~~`test_anonymise_keeps_moderator_names`, whose body is a bare `pass`.~~ **Replaced by
+   `test_anonymise_keeps_moderator_and_observer_names`, 27 Aug 2026.**
 6. **A field-level allowlist test** asserting `/people`'s response key set
    *exactly equals* an allowlist. Ten lines, and it generically closes several of
    the above plus any future field added to the same dict — the export gate today
    is deny-by-default at route level and **allow-by-default at field level**.
+   *Done 27 Aug 2026 (`test_person_field_set_is_exactly_the_allowlist`). It guards
+   `/people` only: on 4 Oct a new field on `/sessions` speakers shipped names in an
+   anonymised export until `c11b986a`, whose test walks the whole embed.*
 
 ### J6 · What the verification changed
 
@@ -2655,7 +2696,10 @@ all keep `m1`. It writes one slot row.
 > the tag, so routes must emit it beside the displayed code; R3's pin *does* change the tag; R3
 > loses curation on every unpinned quote of the session and re-clusters the whole study; call 6
 > contradicts call 1 (with no pin, the guide never changes); and `UndoStore.ts` exists
-> (`74c71a06`) — the undo paragraph's "stubbed" is stale. The sequence and calls below stand
+> (`74c71a06`) and now carries speaker naming (§B10). Fixed since, 4 Oct: participant numbers
+> are never reissued, a participant-less session no longer takes a real participant's code,
+> the registry file is validated, and `bristlenose transcribe` codes its speakers; still live
+> are the importer's frozen slots and `m`/`o` reuse within a session. The sequence and calls below stand
 > until the owner triages; read them with this block.
 
 #### What the brief assumed, and what the code says
@@ -2729,7 +2773,10 @@ session*, and that is the one place a registry pin is written (R3 below).
   filter), `grounding.py` (participants counted from quotes),
   `export_core._load_speakers`, `routes/clips_export._load_speaker_names` and
   `resolve_speaker_names`. One resolver, `(session, tag) → (kind, code, person)`,
-  in one module, used by all of them.
+  in one module, used by all of them. *4 Oct 2026: Phase 1 builds that resolver on
+  its branch (`bristlenose/server/speaker_slots.py`), and its `PUT
+  …/sessions/{sid}/speakers/{code}` takes the slot code; a recode that changes a
+  slot's prefix goes through `speaker_slots.point` and `renumber`. Not on `main`.*
 
 #### What a recode changes
 

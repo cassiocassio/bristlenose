@@ -140,8 +140,12 @@ withdrawn, and a question in the search field is the agent's job.
    transcripts and cross-project, not the Quotes lens (a linear scan is fast at
    quote scale). Avoid FTS5's `trigram` tokenizer for Chinese and Japanese: it
    cannot match fewer than three characters, and most words are two. **M.**
-8. **Opt-in word forms**, by spoken language; Korean particles for free text;
-   German ü/ue for German quotes. Needs the quote's language stored. **M.**
+8. **Word forms by Snowball, not by hand.** `@orama/stemmers` (Apache-2.0, 28
+   languages, 1–2 kB gzipped each) replaces the English-only Harman rule shipped
+   on 4 Oct 2026; none exists for ca, cs or pl. Stems the quotes as well as the
+   query, keyed on the spoken language (which the SPA does not receive yet),
+   lazy per language, and only the report's language in the HTML export. Korean
+   particles for free text; German ü/ue for German quotes. **M.**
 9. **Semantic Related tier**, after an evaluation on our own speech. **M–L.**
 10. Later, on demand: OR in text, saved views, project synonyms, Nordic letter
     exemption.

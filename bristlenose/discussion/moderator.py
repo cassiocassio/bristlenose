@@ -10,14 +10,15 @@ later segment inherited the last label. So the role could be OVER-attributed (a
 UNDER-attributed (an 18-minute session with no moderator turn after 4:25).
 
 The splitter now reads the whole transcript, so new runs no longer have that
-window. The under-attribution check stays on purpose: speaker results are
-cached per session, a project analysed before the change keeps its propagated
-labels on resume, and the segments alone cannot say which splitter wrote them.
-On an old cache the check catches a real failure; on a new run it can misfire
-only when a moderator genuinely asks nothing after the opening minutes of a
-long session, and the cost is a session shown as "can't tell" with its turns
-still visible. Retire it when no cache from before 3 Oct 2026 can be resumed.
-The over-attribution check (over half the words) is a sanity check either way.
+window. Speaker results are cached per session, so a project analysed before
+the change keeps its propagated labels on resume. Since 4 Oct 2026 each
+session's speaker cache says which splitter wrote it: a fresh one carries a
+``speaker_split`` record, an old one has no such key. The under-attribution
+check runs only on a session WITHOUT that record — where it catches a real
+failure — and is skipped on a whole-transcript split, where it could only
+misfire on a moderator who genuinely asks nothing after the opening minutes.
+Retire it when no cache from before 3 Oct 2026 can be resumed. The
+over-attribution check (over half the words) is a sanity check either way.
 
 A session that fails either check is marked ``moderator_unreliable`` and left
 out of the structure, so it reads as "can't tell", never as "no questions
@@ -27,7 +28,10 @@ the splitter, so the checks do not apply to them.
 
 from __future__ import annotations
 
+import json
+from collections.abc import Iterable
 from dataclasses import dataclass
+from pathlib import Path
 
 from bristlenose.models import FullTranscript, SpeakerRole, TranscriptSegment
 
@@ -65,7 +69,25 @@ def splitter_window(duration: float) -> float:
     return min(max(_WINDOW_FLOOR_S, _WINDOW_SHARE * duration), _WINDOW_CEIL_S)
 
 
-def moderator_turns(transcript: FullTranscript) -> ModeratorTurns:
+def whole_transcript_split(speaker_info_dir: Path, session_ids: Iterable[str]) -> frozenset[str]:
+    """The sessions whose speaker cache records a whole-transcript split.
+
+    Absent key, a null record, or an unreadable file all mean "can't say", and
+    such a session keeps the under-attribution check.
+    """
+    found: set[str] = set()
+    for sid in session_ids:
+        try:
+            data = json.loads((speaker_info_dir / f"{sid}.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        split = data.get("speaker_split") if isinstance(data, dict) else None
+        if isinstance(split, dict) and split.get("method"):
+            found.add(sid)
+    return frozenset(found)
+
+
+def moderator_turns(transcript: FullTranscript, *, whole_split: bool = False) -> ModeratorTurns:
     segs = transcript.segments
     mod = [s for s in segs if is_moderator(s)]
     code = next((s.speaker_code for s in mod if s.speaker_code), "")
@@ -82,6 +104,6 @@ def moderator_turns(transcript: FullTranscript) -> ModeratorTurns:
         duration = transcript.duration_seconds or (segs[-1].end_time if segs else 0.0)
         window = splitter_window(duration)
         last = max(s.start_time for s in mod)
-        if last <= window and duration > window + _SILENT_MARGIN_S:
+        if not whole_split and last <= window and duration > window + _SILENT_MARGIN_S:
             return ModeratorTurns(askable, code, False, "moderator_under_attributed")
     return ModeratorTurns(askable, code, True)

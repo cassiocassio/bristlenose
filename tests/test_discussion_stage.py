@@ -6,6 +6,7 @@ failure is recorded and never read as "no questions asked"."""
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import re
 from datetime import datetime
@@ -308,6 +309,23 @@ def test_whisper_under_attribution_is_unreliable():
     segs += [seg(300 + i * 40, P, "p1", "long participant answer goes on and on", "whisper") for i in range(20)]
     t = transcript("s1", segs, duration=1090)
     assert moderator_turns(t).reason == "moderator_under_attributed"
+    # A whole-transcript split cannot have propagated labels: the check is skipped.
+    assert moderator_turns(t, whole_split=True).reliable
+
+
+def test_only_a_speaker_cache_with_a_split_record_counts_as_whole_split(tmp_path):
+    from bristlenose.discussion.moderator import whole_transcript_split
+
+    def write(sid, body):
+        (tmp_path / f"{sid}.json").write_text(body)
+
+    write("new", json.dumps({"speaker_infos": [], "speaker_split": {"method": "voice+text"}}))
+    write("labels", json.dumps({"speaker_split": {"method": "transcript-labels"}}))
+    write("old", json.dumps({"speaker_infos": []}))        # cached before 3 Oct 2026
+    write("null", json.dumps({"speaker_split": None}))
+    write("broken", "{not json")
+    ids = ["new", "labels", "old", "null", "broken", "missing"]
+    assert whole_transcript_split(tmp_path, ids) == {"new", "labels"}
 
 
 def test_no_moderator_is_its_own_state():

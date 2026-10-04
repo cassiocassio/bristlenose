@@ -550,7 +550,10 @@ until Phase 5.
      never caches, since it carries no manifest.
    - The under-attribution check outlives the old opening-window splitter on
      purpose: caches from before 3 Oct 2026 keep its labels on resume
-     (`discussion/moderator.py` docstring).
+     (`discussion/moderator.py` docstring). Since 4 Oct it runs only on those:
+     a fresh speaker cache carries a `speaker_split` record and its session
+     skips the check (`moderator.whole_transcript_split`), so a moderator who
+     really does go quiet after the opening is no longer marked "can't tell".
    - The four spike prompts in `llm/prompts/` (`parse-discussion-guide` etc.)
      are **not** archived: `scripts/spike_discussion_routing.py` still loads them.
    - The guide folder name, `Discussion guide`, lives in `discussion/guide.py`

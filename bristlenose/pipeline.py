@@ -922,11 +922,17 @@ class Pipeline:
 
         from bristlenose.discussion.guide import NO_GUIDE_SHA, find_guide
         from bristlenose.discussion.models import DiscussionRecord
+        from bristlenose.discussion.moderator import whole_transcript_split
         from bristlenose.discussion.stage import quotes_sha, run_discussion
         from bristlenose.timing import STAGE_DISCUSSION as _T_STAGE_DISCUSSION
 
         path = output_dir / ".bristlenose" / "intermediate" / "discussion.json"
         guide = find_guide(project_dir)  # never raises: a bad guide is a recorded problem
+        # Which sessions' speakers were split over the whole transcript: the
+        # under-attribution check is for older caches only (discussion/moderator.py).
+        whole_split = whole_transcript_split(
+            output_dir / ".bristlenose" / "intermediate" / "speaker-info",
+            (t.session_id for t in transcripts))
         input_hashes = {
             "quotes": quotes_sha(quotes),
             "guide": guide.sha if guide else NO_GUIDE_SHA,
@@ -935,6 +941,8 @@ class Pipeline:
             "transcripts": hash_bytes("|".join(
                 _transcript_fingerprint(t)
                 for t in sorted(transcripts, key=lambda t: t.session_id)).encode()),
+            # A re-split speaker cache can change which sessions are trusted.
+            "whole_split": hash_bytes("|".join(sorted(whole_split)).encode()),
         }
         if _is_stage_verified(
             prev_manifest, STAGE_DISCUSSION, [path], current_input_hashes=input_hashes,
@@ -961,7 +969,8 @@ class Pipeline:
             from bristlenose.llm.client import LLMClient
 
             client = llm_client or LLMClient(self.settings)
-            record, outcome = await run_discussion(transcripts, quotes, project_dir, client)
+            record, outcome = await run_discussion(
+                transcripts, quotes, project_dir, client, whole_split=whole_split)
         except Exception as exc:  # noqa: BLE001 — optional stage: never abandons the run
             logger.error("discussion stage failed: %s", type(exc).__name__, exc_info=True)
             # Leave a failed record, not none: no record reads as "never run".

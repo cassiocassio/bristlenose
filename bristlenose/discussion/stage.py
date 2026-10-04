@@ -25,7 +25,7 @@ import asyncio
 import hashlib
 import logging
 import re
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from pathlib import Path
 
 from bristlenose.discussion import structure as st
@@ -184,9 +184,14 @@ async def run_discussion(
     project_dir: Path,
     llm_client: LLMClient,
     concurrency: int = 3,
+    whole_split: Collection[str] = frozenset(),
 ) -> tuple[DiscussionRecord, StageOutcome]:
     """Build the discussion record. Never raises for an LLM failure: each one is
-    a ``StageFailure`` on the outcome and a degraded state on the record."""
+    a ``StageFailure`` on the outcome and a degraded state on the record.
+
+    ``whole_split``: sessions whose speakers were split over the whole
+    transcript (``moderator.whole_transcript_split``); the under-attribution
+    check is skipped for them."""
     outcome = StageOutcome(attempted=len(transcripts))
     record = DiscussionRecord()
     stats: dict[str, int] = {}
@@ -229,7 +234,7 @@ async def run_discussion(
     lengths: dict[str, float] = {}
     for t in transcripts:
         sid = t.session_id
-        mt = moderator_turns(t)
+        mt = moderator_turns(t, whole_split=sid in whole_split)
         lengths[sid] = max(t.duration_seconds, (t.segments[-1].end_time if t.segments else 0.0), 1.0)
         seen: set[str] = set()
         all_mod = [s for s in t.segments if s.speaker_role == SpeakerRole.RESEARCHER

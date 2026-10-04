@@ -43,6 +43,7 @@
   .q .mk{width:12px;flex:0 0 12px;text-align:center;color:var(--muted)}
   .q .tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .q.never .tx{color:var(--muted)}
+  .q .mk.mid{color:#b8b8bd;font-size:15px;line-height:0}
   .q.hot{background:var(--sel);color:var(--accent)}
   .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);vertical-align:1px}
   .dot.hollow{background:none;border:1.2px solid var(--accent);width:5px;height:5px}
@@ -76,6 +77,7 @@
   <div class="ctl">
     <div class="grp"><span class="l">Guide</span><button data-g="yes">Has a guide</button><button data-g="no">No guide</button></div>
     <div class="grp"><span class="l">Tab</span><button data-t="merged">first</button><button data-t="planned">second</button></div>
+    <div class="grp"><span class="l">No-guide rows</span><button data-m="dot">Mid dot</button><button data-m="none">No mark</button></div>
     <div class="grp"><span class="l">Surface</span><button data-p="mac">Mac app</button><button data-p="web">Browser</button></div>
   </div>
   <div class="note" id="note"></div>
@@ -108,10 +110,10 @@
     </div>
   </div>
 
-  <p class="qs"><b>Still open:</b> between adding a guide and the new analysis finishing, the lens shows nothing new on the Mac until the report reloads. A “Reading your guide…” line on this tab is not built.</p>
+  <p class="qs"><b>Built:</b> after a guide is added on the Mac, the second tab reads “Reading your guide… <i>file</i>” until the run ends and the report reloads.</p>
 </div>
 <script>
-let guide = "no", tab = "planned", surface = "mac";
+let guide = "no", tab = "merged", surface = "mac", nomark = "dot";
 const $ = (id) => document.getElementById(id);
 
 const asked = [
@@ -142,8 +144,11 @@ function body() {
       rows.map(([t, m, bs, hot]) => `<div class="q${m === "hollow" ? " never" : ""}${hot ? " hot" : ""}"><span class="mk">${mark(m)}</span><span class="tx">${t}</span>${badges(bs)}</div>`).join("")).join("");
   }
   if (tab === "merged") {
-    return key(["plus"]) + askedNoGuide.map(([sec, rows]) => `<div class="sec">${sec}</div>` +
-      rows.map(([t, bs, hot]) => `<div class="q${hot ? " hot" : ""}"><span class="mk">+</span><span class="tx">${t}</span>${badges(bs)}</div>`).join("")).join("");
+    // No guide uploaded: nothing to say about planned or off-guide, only that
+    // these are the questions asked, normalised. The key keeps its grey line.
+    const mk = nomark === "dot" ? '<span class="mk mid">·</span>' : '<span class="mk"></span>';
+    return key([]) + askedNoGuide.map(([sec, rows]) => `<div class="sec">${sec}</div>` +
+      rows.map(([t, bs, hot]) => `<div class="q${hot ? " hot" : ""}">${mk}<span class="tx">${t}</span>${badges(bs)}</div>`).join("")).join("");
   }
   if (guide === "yes") {
     return `<div class="gv"><label><input type="radio" name="gv" checked> Summary</label><span style="display:inline-flex;gap:4px;align-items:center"><input type="radio" name="gv"><a href="#" style="color:var(--accent);text-decoration:none" title="Choose a different guide: Home coffee discussion guide v3 final.docx">Home coffee discussi…v3 final.docx</a></span></div>` +
@@ -161,7 +166,7 @@ function note() {
   return {
     "yes-merged": "<b>Has a guide · Normalised questions.</b> What was asked, grouped by the guide’s sections plus any that came up on their own. Dot: asked as planned. Hollow: planned, never asked. +: not in your guide. The key now sits at the top and scrolls away.",
     "yes-planned": "<b>Has a guide · Your guide.</b> Summary, or the guide as written — shown by its file name, a link that chooses a different guide (it replaces the Replace button). The key at the top shows only the marks used here.",
-    "no-merged": "<b>No guide · Normalised questions.</b> What was asked, grouped by topic. Every row is “+”, so the key shows that mark alone.",
+    "no-merged": "<b>No guide · Normalised questions.</b> What was asked, normalised and grouped by topic — that is all the lens can assert without a guide (there almost certainly was one; it just hasn’t been uploaded). No planned / never-asked / off-guide marks: a faint mid dot or no mark at all. The key keeps only its grey line.",
     "no-planned": `<b>No guide · Add your guide.</b> The place to add a guide. ${surface === "mac" ? "On the Mac the button opens the native panel and starts Analyse." : "In a browser the button says where the guide goes and to run again."} Once it is processed, this tab becomes the guide and the first tab gains its marks.`,
   }[k];
 }
@@ -170,6 +175,7 @@ function render() {
   document.querySelectorAll("[data-g]").forEach((b) => b.classList.toggle("on", b.dataset.g === guide));
   document.querySelectorAll(".ctl [data-t]").forEach((b) => b.classList.toggle("on", b.dataset.t === tab));
   document.querySelectorAll("[data-p]").forEach((b) => b.classList.toggle("on", b.dataset.p === surface));
+  document.querySelectorAll("[data-m]").forEach((b) => b.classList.toggle("on", b.dataset.m === nomark));
   document.querySelectorAll("#seg span").forEach((s) => {
     s.textContent = s.dataset.t === "merged" ? "Normalised questions" : guide === "yes" ? "Your guide" : "Add your guide";
     s.classList.toggle("on", s.dataset.t === tab);
@@ -184,6 +190,7 @@ function render() {
 document.querySelectorAll("[data-g]").forEach((b) => b.addEventListener("click", () => { guide = b.dataset.g; render(); }));
 document.querySelectorAll("[data-t]").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.t; render(); }));
 document.querySelectorAll("[data-p]").forEach((b) => b.addEventListener("click", () => { surface = b.dataset.p; render(); }));
+document.querySelectorAll("[data-m]").forEach((b) => b.addEventListener("click", () => { nomark = b.dataset.m; render(); }));
 render();
 </script>
 </body>

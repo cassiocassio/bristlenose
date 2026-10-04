@@ -37,6 +37,10 @@ enum SidebarPalette {
         /// generated from `palette-edo.css`, not hand-authored; until they land
         /// the asset miss falls back to the same system semantics below.
         case badgeBackground, badgeText
+        /// The chip's 1 pt outline, the web badge's `--bn-colour-border`. The
+        /// system separator is that same hairline (10% label on either
+        /// appearance; the CSS token samples it as #e5e7eb / #2d2d2d).
+        case badgeBorder
     }
 
     /// The active palette, read from `UserDefaults` (same key as
@@ -63,6 +67,7 @@ enum SidebarPalette {
         case .lozenge:         return .selectedContentBackgroundColor
         case .badgeBackground: return .quaternaryLabelColor
         case .badgeText:       return .secondaryLabelColor
+        case .badgeBorder:     return .separatorColor
         }
     }
 

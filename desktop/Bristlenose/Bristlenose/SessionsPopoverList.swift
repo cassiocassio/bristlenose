@@ -466,7 +466,7 @@ final class SessionRowCellView: NSTableCellView {
 // MARK: - Badge
 
 /// The speaker-code chip — the SHAPE of the web `.badge` atom (mono, 11pt, 3pt
-/// radius, min-width for `pN`), with colours from the SYSTEM, not the CSS
+/// radius, 1pt outline, min-width for `pN`), with colours from the SYSTEM, not the CSS
 /// palette (`SidebarPalette.Concept.badgeBackground` doc explains why).
 /// `quaternaryLabelColor` is translucent, so on the selection capsule the chip
 /// composites slightly darker instead of reading as a lighter chip-in-a-chip
@@ -478,12 +478,15 @@ final class SpeakerBadgeView: NSView {
     private static let horizontalInset: CGFloat = 5
     private static let verticalInset: CGFloat = 2
     private static let minTextWidth: CGFloat = 12
+    /// The outline sits outside the insets, as CSS's border box does, so the
+    /// code keeps its room inside the line.
+    static let borderWidth: CGFloat = 1
 
     /// Rendered width for a code — used by the coordinator to pin the shared
     /// badge COLUMN to the widest code in the list.
     static func width(for code: String) -> CGFloat {
         let text = NSAttributedString(string: code, attributes: [.font: font]).size().width
-        return ceil(max(text, minTextWidth)) + horizontalInset * 2
+        return ceil(max(text, minTextWidth)) + (horizontalInset + borderWidth) * 2
     }
 
     private let label: NSTextField
@@ -509,16 +512,16 @@ final class SpeakerBadgeView: NSView {
 
     override var intrinsicContentSize: NSSize {
         NSSize(width: Self.width(for: label.stringValue),
-               height: ceil(label.intrinsicContentSize.height) + Self.verticalInset * 2)
+               height: ceil(label.intrinsicContentSize.height) + (Self.verticalInset + Self.borderWidth) * 2)
     }
 
     /// `NSGridView`'s `.firstBaseline` row alignment consults this, and a plain
     /// `NSView` reports no baseline — so the grid fell back to edge placement
     /// and the chip sat visibly below the text beside it (QA screenshot,
-    /// 14 Aug 2026). The label is centred inside `verticalInset`, so its
-    /// baseline offset from our top is exact.
+    /// 14 Aug 2026). The label is centred inside the outline and
+    /// `verticalInset`, so its baseline offset from our top is exact.
     override var firstBaselineOffsetFromTop: CGFloat {
-        Self.verticalInset + label.firstBaselineOffsetFromTop
+        Self.borderWidth + Self.verticalInset + label.firstBaselineOffsetFromTop
     }
 
     override var wantsUpdateLayer: Bool { true }
@@ -530,5 +533,7 @@ final class SpeakerBadgeView: NSView {
     /// else).
     override func updateLayer() {
         layer?.backgroundColor = SidebarPalette.nsColor(.badgeBackground).cgColor
+        layer?.borderColor = SidebarPalette.nsColor(.badgeBorder).cgColor
+        layer?.borderWidth = Self.borderWidth
     }
 }

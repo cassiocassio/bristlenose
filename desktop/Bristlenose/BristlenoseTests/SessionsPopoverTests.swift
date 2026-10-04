@@ -482,6 +482,19 @@ private final class PortFlipper {
         #expect(badge.firstBaselineOffsetFromTop < badge.intrinsicContentSize.height)
     }
 
+    @Test("The badge carries the web badge's 1 pt outline, outside its insets")
+    func badgeHasOutline() {
+        let badge = SpeakerBadgeView(code: "p1")
+        badge.updateLayer()
+        #expect(badge.layer?.borderWidth == 1)
+        #expect(badge.layer?.borderColor != nil)
+        // The line adds to the chip rather than eating the code's room: one
+        // point each side on top of the 5 pt / 2 pt insets.
+        let bare = NSTextField(labelWithString: "p1")
+        bare.font = SpeakerBadgeView.font
+        #expect(badge.intrinsicContentSize.height == ceil(bare.intrinsicContentSize.height) + 6)
+    }
+
     @Test("Token type-select finds codes on non-leading rows, wrapping the search")
     func nextTypeSelectMatch() {
         let (table, coordinator) = makeTable(rows: [

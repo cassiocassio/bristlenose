@@ -114,6 +114,35 @@ Not settled:
   kept the field lexical. This note says the medium-term box understands; it
   does not say when.
 
+## Three places the ask can happen
+
+Information workers like user researchers will expect one of three things
+(owner, 4 Oct 2026):
+
+1. **The app does it.** The box understands (above).
+2. **They skip the app** and ask their agent, which reaches Bristlenose over MCP.
+3. **Their agent turns up inside other apps**, carrying Bristlenose with it.
+
+Example of the third: in Figma Make, prompt *"make sample data for that table:
+ask Claude to synthesise it from a mix of NHS data and what Bristlenose thinks
+the practice managers meant when they talked about diabetes in the Thursday
+sessions."* The Bristlenose surface there is not a page at all, just MCP answers
+consumed in a designer's tool.
+
+What that asks of the MCP tools:
+
+- **Filters a researcher speaks in**: by role ("practice managers"), by session
+  date or day ("the Thursday sessions"), by topic. `search_quotes` takes
+  participant, section, theme, tag and sentiment today, not role or date.
+- **Meaning, still grounded**: "what they meant" is interpretation, so the answer
+  should be quotes plus the themes and signals Bristlenose already computed, not
+  a fresh summary.
+- **Governance travels too**: participant words synthesised into sample data in
+  another app leave the anonymisation boundary. Pseudonymised codes, redacted
+  text and the consent gradient
+  ([`consent-gradient.md`](../methodology/consent-gradient.md)) must hold in
+  whatever the agent hands on, because Bristlenose cannot observe the client.
+
 ## MCP has to reach every format of the meeting
 
 The agent helps choreograph across slides, Miro and video ("my strongest clip

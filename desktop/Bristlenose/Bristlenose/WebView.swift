@@ -26,6 +26,18 @@ final class BristlenoseWebView: WKWebView {
             return false  // not handled here → AppKit routes ⌘, to the main menu
         }
 
+        // ⌘Z / ⇧⌘Z outside a text field → the Edit menu, for the same reason
+        // as ⌘, above: the menu's Undo is the one that knows the report's
+        // stack (it asks the web side, via `undo-state`, and fires
+        // `menuAction("undo")`), and it must win from any focus in the report.
+        // While editing text the Edit menu hides its Undo/Redo (`isEditing`),
+        // so WebKit's own text undo keeps ⌘Z there.
+        if (flags == .command || flags == [.command, .shift]),
+           event.charactersIgnoringModifiers?.lowercased() == "z",
+           bridgeHandler?.isEditing == false {
+            return false
+        }
+
         // ⌘A on the Quotes lens → select all quotes as objects (ready to
         // star/hide/tag), not "select all text" across the report DOM. A
         // WKWebView's performKeyEquivalent runs *before* the main menu (the

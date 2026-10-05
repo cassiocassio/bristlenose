@@ -18,7 +18,7 @@ on **x64 Python** and runs on Windows. Proved three ways on 5 Oct 2026:
 
 **What it is not.** Not a release channel: there is no Windows artifact, no release
 step and no verify row. Windows users get the same `pipx`/`uv` install as any Python
-user. The 0.33.1 changelog says exactly that.
+user. The 0.34.0 changelog says exactly that (it was drafted as 0.33.1; the release became a minor when winget joined it).
 
 **Never exercised on Windows:** `run --clean` twice on a real project; `serve` alone
 then Ctrl-C; OneDrive or network-share project folders; long paths; the voice-model
@@ -28,7 +28,7 @@ download; Windows 11 on x64 hardware; the GUI clicks of python.org's install man
 
 Every item has a test that fails on any OS by recreating the Windows condition
 (most in `tests/test_windows_portability.py`). PyPI **0.33.0 is unusable on Windows**:
-item 1 crashes every `transcribe`. 0.33.1 is the first release that works there.
+item 1 crashes every `transcribe`. 0.34.0 is the first release that works there.
 
 1. **The first event write of every run** named `os.O_NOFOLLOW`, which Windows lacks
    (`b6553a8f`: `utils.fs.open_private`).
@@ -93,14 +93,14 @@ open); `docs/testing/ratchet.json` names each.
 
 ### Open, in order
 
-1. **uv is the primary Windows route** (INSTALL.md, published after the 0.33.1 tag; pipx kept as the
+1. **uv is the primary Windows route** (INSTALL.md, drafted to follow the release; it reached `main` a few hours before the 0.34.0 tag; pipx kept as the
    alternative): `winget install` uv and FFmpeg, a new terminal, then
    `uv tool install --python 3.13 bristlenose`. Verified first time on the Arm VM:
    uv fetched its own x64 Python 3.13 without being told (no x64 pin needed), doctor
    was all clear, and the voice extra installed. Still unverified on a never-touched
    machine: whether uv's tool folder is on PATH (the guide says what to do if not),
-   and a never-used winget's first-run prompt. Don't publish the guide before
-   0.33.1 is on PyPI.
+   and a never-used winget's first-run prompt. The guide went out before 0.34.0 was on
+   PyPI (owner's call, 5 Oct 2026), so for that window it pointed Windows readers at 0.33.0.
 2. **The two unrun checks**: `run --clean` twice, and `serve` then Ctrl-C.
 3. **Plain-ASCII symbols when output is not a UTF-8 console.** Redirected logs show
    `?` for ✓ and ✗, so a saved doctor log cannot tell a pass from a fail, and `–`

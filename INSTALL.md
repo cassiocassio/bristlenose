@@ -75,50 +75,66 @@ If you prefer not to use Homebrew:
 
 ### Step 1: Open a terminal
 
-Press **Win + X** and click **Terminal**. You'll type a few commands here; each one is a single line you can paste.
+Press **Win + X** and click **Terminal**.
 
-### Step 2: Install uv and FFmpeg
+### Step 2: Install
 
-[uv](https://docs.astral.sh/uv/) installs Bristlenose and the Python it needs, so you don't install Python yourself. FFmpeg converts audio and video. Run both:
-
-```
-winget install --id astral-sh.uv -e --source winget
-winget install --id Gyan.FFmpeg -e --source winget
-```
-
-If winget asks you to agree to source terms the first time you use it, type `Y` and press Enter. FFmpeg is about 250 MB.
-
-**Close the terminal and open a new one**, so it can find the commands you just installed.
-
-### Step 3: Install bristlenose
+Paste this line and press Enter:
 
 ```
-uv tool install --python 3.13 bristlenose
+irm https://raw.githubusercontent.com/cassiocassio/bristlenose/main/scripts/windows/install.ps1 | iex
 ```
 
-uv downloads Python 3.13 for Bristlenose alone and leaves any other Python on your machine untouched. This takes a few minutes the first time.
+It installs, for you alone and without administrator rights:
 
-If it says a folder "is not on your PATH", run `uv tool update-shell`, then close and reopen the terminal.
+- [uv](https://docs.astral.sh/uv/), which installs Bristlenose and the Python it needs, so you don't install Python yourself
+- FFmpeg, which reads audio and video (about 250 MB)
+- Bristlenose itself, with its own copy of Python 3.13; any other Python on your machine stays as it is
 
-> **Why 3.13?** The optional voice pass (below) doesn't install on Windows with Python 3.14 yet. Everything else works on either.
+Then it runs `bristlenose doctor`, which checks FFmpeg, transcription and your AI provider. The first install takes a few minutes. When it finishes, `bristlenose` works in the same window and in new ones. Run the same line again later to upgrade.
 
-> **Windows on Arm** (Snapdragon laptops, Surface Pro X / 11): the same command works. uv picks the x64 build of Python, which runs under emulation and is the one Bristlenose needs; the native Arm build can't install one of its transcription libraries yet.
+The "Whisper model" line in doctor says *not cached* until your first transcription, which downloads the speech-recognition model (about 1.6 GB) once.
 
-### Step 4: Verify
+If it stops, it says why in one red sentence. On a work computer, the usual cause is a proxy, a firewall or a company policy: the steps below do the same thing one at a time, and show which part is blocked.
 
-```
-bristlenose doctor
-```
-
-This checks FFmpeg, transcription and your AI provider. If anything is wrong, it tells you how to fix it.
-
-The "Whisper model" line says *not cached* until your first transcription, which downloads the speech-recognition model (about 1.6 GB) once.
+> **Windows on Arm** (Snapdragon laptops, Surface Pro X / 11): the same line works. Bristlenose runs on the x64 build of Python, under emulation; the native Arm build can't install one of its transcription libraries yet.
 
 **Optional: the voice pass**, which tells speakers apart by their voices as well as their words:
 
 ```
 uv tool install --force --python 3.13 "bristlenose[voice]"
 ```
+
+> **Why 3.13?** The voice pass doesn't install on Windows with Python 3.14 yet. Everything else works on either.
+
+### Alternative: step by step
+
+The same install as the line above, one command at a time.
+
+1. Install uv and FFmpeg:
+
+   ```
+   winget install --id astral-sh.uv -e --source winget
+   winget install --id Gyan.FFmpeg -e --source winget
+   ```
+
+   If winget asks you to agree to source terms the first time you use it, type `Y` and press Enter.
+
+2. **Close the terminal and open a new one**, so it can find the commands you just installed.
+
+3. Install bristlenose:
+
+   ```
+   uv tool install --python 3.13 bristlenose
+   ```
+
+   If it says a folder "is not on your PATH", run `uv tool update-shell`, then close and reopen the terminal.
+
+4. Check it:
+
+   ```
+   bristlenose doctor
+   ```
 
 ### Alternative: Python and pipx
 

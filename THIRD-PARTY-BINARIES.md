@@ -119,10 +119,10 @@ procurement; under-listing would be a compliance risk.
 | `docstring_parser` | 0.18.0 | MIT License | <https://github.com/rr-/docstring_parser> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
 | `fastapi` | 0.142.2 | MIT | <https://github.com/fastapi/fastapi> |
-| `filelock` | 4.0.10 | MIT | <https://github.com/tox-dev/py-filelock> |
+| `filelock` | 4.0.12 | MIT | <https://github.com/tox-dev/py-filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
-| `google-auth` | 2.59.1 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
+| `google-auth` | 2.60.0 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
 | `google-genai` | 2.28.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
 | `greenlet` | 3.5.6 | MIT AND PSF-2.0 | <https://greenlet.readthedocs.io> |
 | `h11` | 0.16.0 | MIT License | <https://github.com/python-hyper/h11> |

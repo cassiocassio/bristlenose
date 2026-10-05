@@ -93,33 +93,54 @@ open); `docs/testing/ratchet.json` names each.
 
 ### Open, in order
 
-1. **uv is the primary Windows route** (INSTALL.md, drafted to follow the release; it reached `main` a few hours before the 0.34.0 tag; pipx kept as the
-   alternative): `winget install` uv and FFmpeg, a new terminal, then
-   `uv tool install --python 3.13 bristlenose`. Verified first time on the Arm VM:
-   uv fetched its own x64 Python 3.13 without being told (no x64 pin needed), doctor
-   was all clear, and the voice extra installed. Still unverified on a never-touched
-   machine: whether uv's tool folder is on PATH (the guide says what to do if not),
-   and a never-used winget's first-run prompt. The guide went out before 0.34.0 was on
-   PyPI (owner's call, 5 Oct 2026), so for that window it pointed Windows readers at 0.33.0.
+1. **The one-line installer is the primary Windows route** (shipped in 0.34.0;
+   `scripts/windows/install.ps1`). It is advertised everywhere as
+   `irm https://bristlenose.app/install.ps1 | iex` (owner's decision, 5 Oct 2026): the
+   website's `content/.htaccess` answers that address with a 302 to the raw GitHub file on
+   `main`, so the site holds no second copy. The raw GitHub address works on its own too.
+   The four uv/winget commands stay in INSTALL.md as the step-by-step route. It installs uv
+   (Astral's installer), FFmpeg (winget's Gyan.FFmpeg, else a pinned GyanD build checked
+   by SHA-256) and `uv tool install --python 3.13 bristlenose`, with no admin, then
+   runs doctor in the same window; a re-run upgrades. Verified 5 Oct 2026: on the
+   Windows 11 Arm VM as the signed-in user under the default Restricted policy (fresh,
+   re-run, new window, forced zip, both failure messages), and on a fresh Windows
+   Server 2025 x64 box as a standard non-admin user and as Administrator, both forms,
+   against the live URL. CI runs it twice on windows-latest (`install-test.yml`,
+   `windows-install-ps1`). **Defender**: `powershell -ExecutionPolicy Bypass -c "irm
+   http://<IP>/… | iex"` is blocked at launch as Trojan:Win32/Commando.A!ml and
+   surfaces as "Access is denied"; https to a named host, raw GitHub included, was
+   not blocked, and the plain form never was. Still open:
+   - the message for a Group-Policy-set execution policy has never been seen;
+   - the Bypass form at the live URL is unrun on Windows 11 (proved on Server only);
+   - the short address is live only from the website deploy after 0.34.0; the redirect
+     was proved under macOS's Apache, not yet on DreamHost or through Windows `irm`;
+   - the installer can fetch a GTS-rooted host (astral.sh) before doctor's TLS check,
+     so on a fresh box its doctor run does not prove item 9's certifi fix; test that
+     with doctor before the installer.
 2. **The two unrun checks**: `run --clean` twice, and `serve` then Ctrl-C.
-3. **Plain-ASCII symbols when output is not a UTF-8 console.** Redirected logs show
-   `?` for ✓ and ✗, so a saved doctor log cannot tell a pass from a fail, and `–`
-   becomes `ù` in a PowerShell pipe.
-4. **Decisions for the maintainer**: whether `run` with no provider should exit
+3. **Decisions for the maintainer**: whether `run` with no provider should exit
    non-zero (it exits 0 in a terminal by design); `CONTRIBUTING.md` still calls this
-   port "parked"; `configure local` offers no Ollama install on Windows; the website's
-   Windows install steps predate all of this.
-5. **Every platform, seen first on Windows**: warning log lines interleave with the
+   port "parked" and points at Scoop; the website's Windows install steps predate all
+   of this.
+4. **Every platform, seen first on Windows**: warning log lines interleave with the
    run UI (including a developer note); Hugging Face warnings print twice and the
    1.6 GB Whisper download shows no progress; the player does not seek when an
    already-open window has ended; the MCP hint says `pip` to pipx users; session
    times render UTC as local (H9 in `docs/time-defects.md`); the transcript header
    floors a duration the CLI rounds.
-6. **A Windows channel**, only if Windows earns it: a winget package backed by a
-   PyInstaller build in a Windows release job (the Copr analogue, vendoring Python),
-   code-signed so SmartScreen does not warn. Scoop and an MSI were considered and set
-   aside: researchers will not have Scoop, and an installer is further from a
-   two-line install.
+5. **A Windows channel: winget.** On the `winget-wip` branch, not `main`: the plan
+   (`docs/design-winget.md`), a first PyInstaller build, a user-scope Inno Setup
+   installer and frozen-build fixes. Before a public submission: prove the build
+   transcribes on a clean machine, add a Windows job to `release.yml`, and decide
+   signing (the maintainer's call; Microsoft's signing service takes UK
+   organisations but not UK individuals). Scoop and an MSI were set aside: researchers
+   will not have Scoop, and the one-liner already covers the gap.
+
+Done since the 5 Oct status was written: plain-ASCII symbols when output is not a UTF-8
+console (`0cd67e49`: `+` pass, `x` fail, `!`, `-`), and `configure local` installing
+Ollama with winget on Windows (`c3608ec5`). And a failure after the install step no longer
+says "not installed" (`7513c4af`; found when a redirected 0.33.0 doctor crashed on the
+Server box after a good install).
 
 ---
 

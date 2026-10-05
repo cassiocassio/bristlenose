@@ -304,9 +304,10 @@ class TestOllamaHelpers:
             patch("bristlenose.ollama.get_ollama_install_method", return_value="app"),
             patch("subprocess.Popen") as mock_popen,
             patch("time.sleep"),
+            patch("platform.system", return_value="Darwin"),
             patch("bristlenose.ollama.check_ollama") as mock_check,
         ):
-            mock_check.return_value = MagicMock(is_running=True)
+            mock_check.side_effect = [MagicMock(is_running=False), MagicMock(is_running=True)]
             assert start_ollama_serve() is True
             mock_popen.assert_called_once()
             assert mock_popen.call_args[0][0] == ["open", "-a", "Ollama"]
@@ -319,10 +320,11 @@ class TestOllamaHelpers:
             patch("bristlenose.ollama.get_ollama_install_method", return_value="brew"),
             patch("subprocess.run") as mock_run,
             patch("time.sleep"),
+            patch("platform.system", return_value="Darwin"),
             patch("bristlenose.ollama.check_ollama") as mock_check,
         ):
             mock_run.return_value = MagicMock(returncode=0)
-            mock_check.return_value = MagicMock(is_running=True)
+            mock_check.side_effect = [MagicMock(is_running=False), MagicMock(is_running=True)]
             assert start_ollama_serve() is True
             mock_run.assert_called_once()
             assert mock_run.call_args[0][0] == ["brew", "services", "start", "ollama"]
@@ -335,9 +337,11 @@ class TestOllamaHelpers:
             patch("bristlenose.ollama.get_ollama_install_method", return_value=None),
             patch("subprocess.Popen") as mock_popen,
             patch("time.sleep"),
+            patch("bristlenose.ollama.ollama_executable", return_value=None),
+            patch("platform.system", return_value="Linux"),
             patch("bristlenose.ollama.check_ollama") as mock_check,
         ):
-            mock_check.return_value = MagicMock(is_running=True)
+            mock_check.side_effect = [MagicMock(is_running=False), MagicMock(is_running=True)]
             assert start_ollama_serve() is True
             mock_popen.assert_called_once()
             assert mock_popen.call_args[0][0] == ["ollama", "serve"]
@@ -350,10 +354,11 @@ class TestOllamaHelpers:
             patch("bristlenose.ollama.get_ollama_install_method", return_value="systemd"),
             patch("subprocess.run") as mock_run,
             patch("time.sleep"),
+            patch("platform.system", return_value="Linux"),
             patch("bristlenose.ollama.check_ollama") as mock_check,
         ):
             mock_run.return_value = MagicMock(returncode=0)
-            mock_check.return_value = MagicMock(is_running=True)
+            mock_check.side_effect = [MagicMock(is_running=False), MagicMock(is_running=True)]
             assert start_ollama_serve() is True
             mock_run.assert_called_once()
             assert mock_run.call_args[0][0] == ["systemctl", "start", "ollama"]

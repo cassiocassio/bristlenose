@@ -29,6 +29,52 @@ PREFERRED_MODELS = [
 DEFAULT_MODEL = "llama3.2:3b"
 OLLAMA_API_URL = "http://localhost:11434"
 
+# The exact package from the community source, as for FFmpeg in doctor_fixes:
+# a bare `winget install Ollama` also asks the msstore source. The agreement
+# flags are not a second consent — cli.py has already asked "Install Ollama
+# now?" — they stop winget asking the same question again, as HOMEBREW_NO_ASK
+# does for brew. The manifest (Ollama.Ollama) is a user-scope Inno installer
+# with x64 and arm64 entries, so no elevation and no Arm special case.
+WINGET_INSTALL_CMD = [
+    "winget", "install", "--id", "Ollama.Ollama", "-e", "--source", "winget",
+    "--accept-package-agreements", "--accept-source-agreements",
+]
+
+
+def _windows_install_dir() -> Path | None:
+    """Ollama's per-user install folder on Windows, if LOCALAPPDATA is set.
+
+    ``%LOCALAPPDATA%\\Programs\\Ollama`` — Ollama's Windows doc and the
+    installer's ``DefaultDirName={localappdata}\\Programs\\Ollama``. The
+    installer adds it to the *user* PATH, which this process does not see
+    until a new terminal, so a fresh install is found here instead.
+    """
+    local = os.environ.get("LOCALAPPDATA")
+    return Path(local) / "Programs" / "Ollama" if local else None
+
+
+def ollama_executable() -> str | None:
+    """Path to the ``ollama`` CLI: PATH first, then Windows' install folder."""
+    import platform
+    import shutil
+
+    found = shutil.which("ollama")
+    if found is not None:
+        return found
+    if platform.system() == "Windows":
+        folder = _windows_install_dir()
+        if folder is not None and (folder / "ollama.exe").is_file():
+            return str(folder / "ollama.exe")
+    return None
+
+
+def _windows_tray_app() -> Path | None:
+    """The Ollama tray app (``ollama app.exe``), which runs the server."""
+    folder = _windows_install_dir()
+    if folder is not None and (folder / "ollama app.exe").is_file():
+        return folder / "ollama app.exe"
+    return None
+
 
 @dataclass
 class OllamaStatus:
@@ -130,7 +176,7 @@ def list_models(timeout: float = 2.0) -> list[str]:
     a non-zero exit.
     """
     result = subprocess.run(
-        ["ollama", "list"],
+        [ollama_executable() or "ollama", "list"],
         capture_output=True,
         text=True, encoding="utf-8",
         errors="replace",  # a wedged binary's non-UTF-8 bytes must not raise
@@ -150,16 +196,14 @@ def list_models(timeout: float = 2.0) -> list[str]:
 
 
 def is_ollama_installed() -> bool:
-    """Check if the ollama command is available in PATH."""
-    import shutil
-
-    return shutil.which("ollama") is not None
+    """Check if the ollama command is on PATH (or in Windows' install folder)."""
+    return ollama_executable() is not None
 
 
 def get_ollama_install_method() -> str | None:
     """Detect how Ollama was installed on this system.
 
-    Returns one of: "brew", "app", "snap", "systemd", or None if unknown.
+    Returns one of: "brew", "app", "snap", "systemd", "windows-app", or None.
 
     Detection strategy:
     - macOS: Check if Ollama.app exists (app install) or if brew formula installed
@@ -220,18 +264,25 @@ def get_ollama_install_method() -> str | None:
 
         return None
 
+    if system == "Windows":
+        # The installer (winget or OllamaSetup.exe) ships the tray app
+        if _windows_tray_app() is not None:
+            return "windows-app"
+        return None
+
     return None
 
 
 def get_install_method() -> str | None:
     """Determine the best method to install Ollama on this system.
 
-    Returns one of: "brew", "snap", "curl", or None if no method available.
+    Returns one of: "brew", "snap", "curl", "winget", or None if no method
+    available.
 
     Priority:
     - macOS: brew if available, else curl
     - Linux: snap if available (cleaner updates), else curl
-    - Windows: None (manual install required)
+    - Windows: winget if available, else None (download page)
     """
     import platform
     import shutil
@@ -239,6 +290,10 @@ def get_install_method() -> str | None:
     system = platform.system()
 
     if system == "Windows":
+        # winget ships with Windows 11 and current Windows 10 (App Installer);
+        # Windows Server and LTSC may lack it, and they get the download page
+        if shutil.which("winget") is not None:
+            return "winget"
         return None
 
     if system == "Darwin":
@@ -264,7 +319,7 @@ def install_ollama(method: str | None = None) -> bool:
     """Install Ollama using the specified or auto-detected method.
 
     Args:
-        method: One of "brew", "snap", "curl", or None to auto-detect.
+        method: One of "brew", "snap", "curl", "winget", or None to auto-detect.
 
     Returns:
         True if installation succeeded, False otherwise.
@@ -306,6 +361,16 @@ def install_ollama(method: str | None = None) -> bool:
             )
             return result.returncode == 0
 
+        if method == "winget":
+            # Output goes straight to the terminal (winget draws its own
+            # progress), so there is no text-mode decode to name.
+            result = subprocess.run(
+                WINGET_INSTALL_CMD,
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+            )
+            return result.returncode == 0
+
     except Exception as e:
         logger.debug("Error installing Ollama via %s: %s", method, e)
 
@@ -329,9 +394,13 @@ def get_start_command() -> tuple[list[str], str]:
         return (["snap", "run", "ollama", "serve"], "snap run ollama serve")
     if install_method == "systemd":
         return (["systemctl", "start", "ollama"], "sudo systemctl start ollama")
+    tray = _windows_tray_app() if install_method == "windows-app" else None
+    if tray is not None:
+        return ([str(tray)], "open Ollama from the Start menu")
 
-    # Fallback: generic ollama serve
-    return (["ollama", "serve"], "ollama serve")
+    # Fallback: generic ollama serve (resolved, so a fresh Windows install
+    # works before the new user PATH reaches this process)
+    return ([ollama_executable() or "ollama", "serve"], "ollama serve")
 
 
 def start_ollama_serve() -> bool:
@@ -342,11 +411,28 @@ def start_ollama_serve() -> bool:
     - app (macOS): `open -a Ollama`
     - snap: `snap run ollama serve`
     - systemd: `systemctl start ollama`
+    - Windows: the tray app (`ollama app.exe`), which runs the server
     - other: `ollama serve`
+
+    Returns True without running anything when the server is already up. On
+    Windows the installer launches the tray app itself as it finishes, without
+    waiting, so after a winget install the server may be on its way up: it is
+    given a few seconds before a second copy is launched.
 
     Returns:
         True if started successfully, False otherwise.
     """
+    import platform
+    import time
+
+    if check_ollama().is_running:
+        return True
+    if platform.system() == "Windows":
+        for _ in range(5):
+            time.sleep(1)
+            if check_ollama().is_running:
+                return True
+
     cmd, _display = get_start_command()
 
     try:
@@ -394,13 +480,14 @@ def start_ollama_serve() -> bool:
                 start_new_session=True,
             )
 
-        # Give it a moment to start
-        import time
-        time.sleep(2)
-
-        # Verify it's running
-        status = check_ollama()
-        return status.is_running
+        # Give it a moment to start. The Windows tray app starts the server
+        # itself, a step further away, so it gets longer.
+        windows = platform.system() == "Windows"
+        for _ in range(10 if windows else 1):
+            time.sleep(1 if windows else 2)
+            if check_ollama().is_running:
+                return True
+        return False
     except subprocess.TimeoutExpired:
         logger.debug("Timeout starting Ollama")
         return False
@@ -419,7 +506,7 @@ def pull_model(model: str = DEFAULT_MODEL) -> bool:
     """
     try:
         result = subprocess.run(
-            ["ollama", "pull", model],
+            [ollama_executable() or "ollama", "pull", model],
             stdout=sys.stdout,  # Show Ollama's progress bar
             stderr=sys.stderr,
         )

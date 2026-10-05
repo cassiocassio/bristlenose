@@ -484,6 +484,16 @@ def _fix_ollama_not_running(_method: str) -> str:
 
 def _fix_ollama_not_installed(_method: str) -> str:
     hint = _get_cloud_fallback_hint()
+    if platform.system() == "Windows":
+        # Same exact-package form as FFmpeg above; the interactive setup
+        # (bristlenose configure local) runs this for you when winget exists
+        return (
+            "Install Ollama (free, no account needed):\n\n"
+            "  winget install --id Ollama.Ollama -e --source winget\n\n"
+            "Or run: bristlenose configure local, which installs it for you.\n"
+            "Without winget: https://ollama.com/download/windows\n\n"
+            f"{hint}"
+        )
     # Can't know the start command before install, so give generic advice
     return (
         "Install Ollama from https://ollama.ai (free, no account needed).\n\n"

@@ -511,6 +511,7 @@ def _setup_local_provider() -> str | None:
 
     from bristlenose.ollama import (
         DEFAULT_MODEL,
+        WINGET_INSTALL_CMD,
         check_ollama,
         get_install_method,
         install_ollama,
@@ -553,6 +554,8 @@ def _setup_local_provider() -> str | None:
                     install_cmd = "brew install ollama"
                 elif method == "snap":
                     install_cmd = "sudo snap install ollama"
+                elif method == "winget":
+                    install_cmd = " ".join(WINGET_INSTALL_CMD)
                 else:
                     install_cmd = "curl -fsSL https://ollama.ai/install.sh | sh"
 
@@ -586,7 +589,7 @@ def _setup_local_provider() -> str | None:
                 else:
                     return None
             else:
-                # No install method available (Windows or missing tools)
+                # No install method available (Windows without winget, or missing tools)
                 console.print()
                 console.print("Install Ollama from: [link]https://ollama.ai[/link]")
                 console.print("[dim](Single download, no account needed)[/dim]")

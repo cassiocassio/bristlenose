@@ -15,11 +15,8 @@
       "name": "docs-site",
       "runtimeExecutable": "python3",
       "runtimeArgs": [
-        "-m",
-        "http.server",
-        "8210",
-        "--directory",
-        "/Users/cassio/Code/bristlenose-website/build/site"
+        "/Users/cassio/Code/bristlenose-website/scripts/serve.py",
+        "8210"
       ],
       "port": 8210
     },

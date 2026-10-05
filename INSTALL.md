@@ -77,10 +77,11 @@ If you prefer not to use Homebrew:
 
 1. Go to [python.org/downloads](https://www.python.org/downloads/) and click the big yellow **"Download Python install manager"** button
 2. Open the downloaded file and click **"Install Python"**
-3. A black console window then asks a few questions. Each one waits for you to type `y` or `n` and press Enter — and each one defaults to **No** if you just press Enter:
+3. A black console window then asks a few questions. Each one waits for you to type `y` or `n` and press Enter. Read the brackets: `[y/N]` means pressing Enter answers No, `[Y/n]` means it answers Yes:
    - *"…allow paths longer than 260 characters… Update setting now?"* — type **`y`**. Without it some packages may fail to install. It takes effect after your next restart
    - *"…Add commands directory to your PATH now?"* — type **`y`**. This is the step older guides call "Add python.exe to PATH"
    - *"View online help?"* — type **`n`**
+   - *"Install CPython now? [Y/n]"*, if it asks — press **Enter** (Yes). This is the step that installs Python itself
 
 To verify it worked, open a terminal (press Win + X, then click "Terminal") and type:
 

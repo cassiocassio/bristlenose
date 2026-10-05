@@ -8,7 +8,7 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 6329
+        "tests": 6351
       },
       {
         "basis": "test files",
@@ -461,6 +461,13 @@
           },
           {
             "calls": null,
+            "id": "windows-install-ps1",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "windows-latest"
+          },
+          {
+            "calls": null,
             "id": "macos-pip",
             "job_colour": "hard",
             "notable_steps": [],
@@ -488,8 +495,8 @@
         "triggers": [
           "schedule (0 6 * * 1)",
           "workflow_dispatch",
-          "push [main] paths=INSTALL.md,README.md,.github/workflows/install-test.yml,tests/fixtures/smoke-test/**",
-          "pull_request [main] paths=INSTALL.md,README.md,.github/workflows/install-test.yml,tests/fixtures/smoke-test/**"
+          "push [main] paths=INSTALL.md,README.md,.github/workflows/install-test.yml,tests/fixtures/smoke-test/**,scripts/windows/**",
+          "pull_request [main] paths=INSTALL.md,README.md,.github/workflows/install-test.yml,tests/fixtures/smoke-test/**,scripts/windows/**"
         ]
       },
       {

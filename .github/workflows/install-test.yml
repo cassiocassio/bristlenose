@@ -23,6 +23,7 @@ on:
       - "README.md"
       - ".github/workflows/install-test.yml"
       - "tests/fixtures/smoke-test/**"
+      - "scripts/windows/**"
   pull_request:
     branches: [main]
     paths:
@@ -30,6 +31,7 @@ on:
       - "README.md"
       - ".github/workflows/install-test.yml"
       - "tests/fixtures/smoke-test/**"
+      - "scripts/windows/**"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -136,6 +138,71 @@ jobs:
           found=$(python -m pipx runpip bristlenose show fastapi uvicorn sqlalchemy sqladmin openpyxl alembic | grep -c '^Name:')
           echo "serve packages found: $found of 6"
           test "$found" -eq 6
+
+  windows-install-ps1:
+    # The one-line installer (scripts/windows/install.ps1), run as a file on a
+    # clean runner, twice: the first run installs, the second must upgrade.
+    # It installs the checkout rather than PyPI, so the installer is tested
+    # against the code it ships with. The runner's winget is unreliable, so the
+    # first run forces the pinned-zip FFmpeg path (the one with a checksum to
+    # keep honest) and the second takes whatever `auto` finds.
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: PSScriptAnalyzer
+        run: |
+          if (-not (Get-Module -ListAvailable PSScriptAnalyzer)) {
+            Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          }
+          # Write-Host is right for an installer: it talks to a person, and
+          # under `irm | iex` there is no pipeline to write to.
+          $found = Invoke-ScriptAnalyzer -Path scripts/windows/install.ps1 `
+            -Severity Warning, Error -ExcludeRule PSAvoidUsingWriteHost
+          $found | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+          if ($found) { throw "PSScriptAnalyzer: $(@($found).Count) finding(s)" }
+
+      - name: First run (installs)
+        env:
+          BRISTLENOSE_INSTALL_SPEC: ${{ github.workspace }}
+          BRISTLENOSE_INSTALL_FFMPEG: zip
+        # Windows PowerShell 5.1, which is what a user's Win+X terminal runs
+        # the one-liner in on a machine that never installed PowerShell 7.
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/install.ps1
+          if ($LASTEXITCODE -ne 0) { throw "installer exited $LASTEXITCODE" }
+
+      - name: Second run (upgrades)
+        env:
+          BRISTLENOSE_INSTALL_SPEC: ${{ github.workspace }}
+        run: |
+          $log = powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/install.ps1 | Out-String
+          Write-Host $log
+          if ($LASTEXITCODE -ne 0) { throw "installer exited $LASTEXITCODE" }
+          if ($log -notmatch 'upgrading') { throw 'second run did not take the upgrade path' }
+
+      - name: PATH persists for new windows
+        # A new terminal reads PATH from the registry; a CI step does not, so
+        # ask the registry what a new window would get.
+        run: |
+          $user = [Environment]::GetEnvironmentVariable('Path', 'User')
+          $env:Path = "$user;$([Environment]::GetEnvironmentVariable('Path', 'Machine'))"
+          $env:Path = [Environment]::ExpandEnvironmentVariables($env:Path)
+          foreach ($exe in 'uv', 'ffmpeg', 'ffprobe', 'bristlenose') {
+            $cmd = Get-Command $exe -CommandType Application -ErrorAction SilentlyContinue
+            if (-not $cmd) { throw "$exe is not on the PATH a new window would get" }
+            Write-Host "$exe -> $($cmd.Source)"
+          }
+          # The first run forced the zip, so that is the ffmpeg a new window
+          # must find: proof the pinned download and its PATH entry both work.
+          $ff = (Get-Command ffmpeg -CommandType Application).Source
+          if ($ff -notlike "$env:LOCALAPPDATA\Programs\bristlenose-ffmpeg\*") { throw "ffmpeg resolved to $ff, not the installer's copy" }
+          bristlenose --version
+          if ($LASTEXITCODE -ne 0) { throw 'bristlenose --version failed' }
 
   macos-pip:
     runs-on: macos-latest

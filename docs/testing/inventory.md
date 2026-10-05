@@ -9,7 +9,7 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 6329 | collected (expands parametrize — authoritative) | `tests/` |
+| `pytest` | python unit/integration | 6351 | collected (expands parametrize — authoritative) | `tests/` |
 | `vitest` | frontend unit | 139 files | test files | `frontend/src/**/*.test.*` |
 | `BristlenoseTests` | swift unit | 1697 in 140 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 9 files | spec files | `e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts)` |
@@ -57,12 +57,13 @@
 
 ### Install & Smoke Test (`install-test.yml`)
 
-- **Triggers:** schedule (0 6 * * 1); workflow_dispatch; push [main] paths=INSTALL.md,README.md,.github/workflows/install-test.yml,tests/fixtures/smoke-test/**; pull_request [main] paths=INSTALL.md,README.md,.github/workflows/install-test.yml,tests/fixtures/smoke-test/**
+- **Triggers:** schedule (0 6 * * 1); workflow_dispatch; push [main] paths=INSTALL.md,README.md,.github/workflows/install-test.yml,tests/fixtures/smoke-test/**,scripts/windows/**; pull_request [main] paths=INSTALL.md,README.md,.github/workflows/install-test.yml,tests/fixtures/smoke-test/**,scripts/windows/**
 - **Default shell:** GitHub default (`bash -e`, **no pipefail**). Piped steps below report the LAST stage's exit status, not the command's — check each is not load-bearing. (This is what hid 16 compile errors behind a green Mac Build, 20 May – 2 Sep 2026.)
   - piped: _Verify CLI and serve packages_
   - `linux-pip` · on `ubuntu-latest`
   - `linux-pipx` · on `ubuntu-latest`
   - `windows-pipx` · on `windows-latest`
+  - `windows-install-ps1` · on `windows-latest`
   - `macos-pip` · on `macos-latest`
   - `macos-brew` · on `macos-latest`
   - `full-run` · on `ubuntu-latest`

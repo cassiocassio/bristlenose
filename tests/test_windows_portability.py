@@ -288,20 +288,29 @@ def test_redirected_output_in_a_codepage_prints_rather_than_crashes(tmp_path: Pa
     """``bristlenose doctor > out.txt`` on Windows: stdout is cp1252, which has no ``✓``.
 
     Found on a Windows 11 VM (5 Oct 2026): every command that printed a tick
-    raised UnicodeEncodeError before any output when redirected or piped. The
+    raised UnicodeEncodeError before any output when redirected or piped; then,
+    replaced with ``?``, a saved log could not tell a pass from a fail. The
     child's stdout is forced to cp1252, which reproduces it on any OS, and
-    ``pipeline`` is a real command that prints ticks without a project.
+    ``pipeline`` is a real command that prints ticks, crosses and dots without a
+    project. Its own "untested" marker is a literal ``?``, so the count of ``?``
+    must match a UTF-8 run of the same command: no symbol may collapse into one.
     """
-    env = {**os.environ, "PYTHONIOENCODING": "cp1252", "HOME": str(tmp_path),
-           "USERPROFILE": str(tmp_path), "NO_COLOR": "1"}
-    env.pop("PYTHONUTF8", None)
-    result = subprocess.run(
-        [sys.executable, "-m", "bristlenose", "pipeline"],
-        capture_output=True, env=env, timeout=120,
-    )
-    assert result.returncode == 0, result.stderr.decode("cp1252", "replace")[-600:]
-    assert b"UnicodeEncodeError" not in result.stderr
-    assert result.stdout.strip(), "nothing printed"
+    def run(encoding: str) -> subprocess.CompletedProcess[bytes]:
+        env = {**os.environ, "PYTHONIOENCODING": encoding, "HOME": str(tmp_path),
+               "USERPROFILE": str(tmp_path), "NO_COLOR": "1"}
+        env.pop("PYTHONUTF8", None)
+        return subprocess.run(
+            [sys.executable, "-m", "bristlenose", "pipeline"],
+            capture_output=True, env=env, timeout=120,
+        )
+
+    narrow, wide = run("cp1252"), run("utf-8")
+    assert narrow.returncode == 0, narrow.stderr.decode("cp1252", "replace")[-600:]
+    assert b"UnicodeEncodeError" not in narrow.stderr
+    text = narrow.stdout.decode("cp1252")
+    assert "+" in text, "the pass glyph did not become +"
+    assert text.count("?") == wide.stdout.decode("utf-8").count("?"), text
+
 
 
 def test_a_config_file_key_store_is_not_called_secure(monkeypatch: pytest.MonkeyPatch) -> None:

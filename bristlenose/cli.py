@@ -56,22 +56,54 @@ def _maybe_inject_run() -> None:
 _maybe_inject_run()
 
 
+#: The CLI's own symbols, in plain ASCII, for output that is not UTF-8. One
+#: character each for the status glyphs so a table keeps its columns. The dashes,
+#: quotes and dots are here too: cp1252 can encode them, but PowerShell re-reads a
+#: pipe in the OEM codepage and prints the em dash as "ù".
+_ASCII_GLYPHS = str.maketrans({
+    "✓": "+", "✗": "x", "⚠": "!", "ℹ": "i",
+    "—": "-", "–": "-", "─": "-", "·": "-", "×": "x", "●": "*", "○": "o", "•": "*", "▸": ">",
+    "→": "->", "⇒": "=>", "…": "...", "≥": ">=", "±": "+/-",
+    "‘": "'", "’": "'", "“": '"', "”": '"',
+})
+
+
+class _AsciiGlyphStream:
+    """Writes through to *stream*, translating ``_ASCII_GLYPHS`` on the way."""
+
+    def __init__(self, stream: object) -> None:
+        self._stream = stream
+
+    def write(self, text: str) -> int:
+        return self._stream.write(text.translate(_ASCII_GLYPHS))  # type: ignore[attr-defined,no-any-return]
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self._stream, name)
+
+
 def _tolerate_narrow_output_encoding() -> None:
-    """Print ``?`` for a glyph the output cannot encode, rather than crash.
+    """Make a non-UTF-8 stdout/stderr readable rather than a crash or a ``?``.
 
     A Windows console is UTF-8 (PEP 528), but redirected — ``> out.txt``, a
     pipe, PowerShell's ``| Out-Host`` — stdout takes the ANSI codepage, cp1252
     in the West, which has no ``✓``. Every command that printed one raised
-    UnicodeEncodeError before any output. The codepage is kept, so whatever
-    reads the file reads it in the encoding it expects.
+    UnicodeEncodeError before any output; then, with ``errors="replace"``, a
+    saved doctor log showed ``?`` for a pass and a fail alike. The CLI's own
+    symbols now become ASCII (``+`` pass, ``x`` fail, ``!`` warning), and the
+    codepage is kept for everything else, so a participant's accented name
+    still reaches the file as it is.
     """
-    for stream in (sys.stdout, sys.stderr):
+    for name in ("stdout", "stderr"):
+        stream = getattr(sys, name)
         encoding = (getattr(stream, "encoding", None) or "").lower().replace("-", "")
-        if encoding != "utf8" and hasattr(stream, "reconfigure"):
+        if encoding == "utf8" or isinstance(stream, _AsciiGlyphStream):
+            continue
+        if hasattr(stream, "reconfigure"):
             try:
                 stream.reconfigure(errors="replace")
             except (ValueError, OSError):
                 pass
+        setattr(sys, name, _AsciiGlyphStream(stream))
 
 
 _tolerate_narrow_output_encoding()

@@ -93,12 +93,14 @@ open); `docs/testing/ratchet.json` names each.
 
 ### Open, in order
 
-1. **Make uv the primary Windows route** (pipx as the alternative):
-   `winget install --id astral-sh.uv -e`, `winget install --id Gyan.FFmpeg -e --source
-   winget`, then `uv tool install --python 3.13 bristlenose`. uv fetches Python
-   itself, which removes the install-manager step, and 3.13 is where voice works.
-   **Test on the VM first**: on Arm it probably needs the x64 build named
-   (`--python cpython-3.13-windows-x86_64-none`), unverified.
+1. **uv is the primary Windows route** (INSTALL.md, published after the 0.33.1 tag; pipx kept as the
+   alternative): `winget install` uv and FFmpeg, a new terminal, then
+   `uv tool install --python 3.13 bristlenose`. Verified first time on the Arm VM:
+   uv fetched its own x64 Python 3.13 without being told (no x64 pin needed), doctor
+   was all clear, and the voice extra installed. Still unverified on a never-touched
+   machine: whether uv's tool folder is on PATH (the guide says what to do if not),
+   and a never-used winget's first-run prompt. Don't publish the guide before
+   0.33.1 is on PyPI.
 2. **The two unrun checks**: `run --clean` twice, and `serve` then Ctrl-C.
 3. **Plain-ASCII symbols when output is not a UTF-8 console.** Redirected logs show
    `?` for ✓ and ✗, so a saved doctor log cannot tell a pass from a fail, and `–`

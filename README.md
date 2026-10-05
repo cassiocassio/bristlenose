@@ -390,7 +390,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 **0.33.1** — _5 Oct 2026_
 
-Bristlenose runs on Windows, and installing with pipx or uv no longer needs `[serve]`.
+The command-line tool now installs and runs on Windows, through pipx or uv with x64 Python — newly tested there, so expect rough edges. Installing with pipx or uv no longer needs `[serve]`.
 
 **Improved**
 

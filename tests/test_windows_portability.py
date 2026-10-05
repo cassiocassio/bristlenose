@@ -384,3 +384,16 @@ def test_every_urlopen_brings_its_own_trust() -> None:
             ):
                 offenders.append(f"{path.relative_to(_PKG)}:{node.lineno}")
     assert offenders == [], f"pass context=https_context() to: {offenders}"
+
+
+def test_a_saved_key_path_reads_whole_on_windows(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """`configure` printed "Saved to ~/.config\\bristlenose\\.env" on Windows:
+    a `~` cmd.exe cannot expand, glued to backslashes."""
+    import bristlenose.cli as cli
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    path = tmp_path / ".config" / "bristlenose" / ".env"
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert cli._display_config_path(path) == str(path)
+    monkeypatch.setattr(sys, "platform", "darwin")
+    assert cli._display_config_path(path) == "~/.config/bristlenose/.env"

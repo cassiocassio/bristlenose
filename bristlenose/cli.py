@@ -2205,6 +2205,20 @@ def _print_project_status(
 # ---------------------------------------------------------------------------
 
 
+def _display_config_path(path: Path) -> str:
+    """A path the reader can paste: ``~/...`` on macOS and Linux, in full on Windows.
+
+    cmd.exe has no ``~``, and gluing ``~/`` to a Windows relative path printed
+    ``~/.config\\bristlenose\\.env`` (Windows 11 VM, 5 Oct 2026).
+    """
+    if sys.platform == "win32":
+        return str(path)
+    try:
+        return "~/" + path.relative_to(Path.home()).as_posix()
+    except ValueError:
+        return str(path)
+
+
 def _set_current_provider(canonical: str) -> None:
     """Record ``canonical`` as the current analysis provider (user-level config).
 
@@ -2439,11 +2453,7 @@ def configure(
         # Persisted to the config .env — name the file so it's not a black box.
         from rich.markup import escape
 
-        try:
-            loc = "~/" + str(store.path.relative_to(Path.home()))
-        except ValueError:
-            loc = str(store.path)
-        _say(MessageKind.SUCCESS, f"Saved to {escape(loc)}")
+        _say(MessageKind.SUCCESS, f"Saved to {escape(_display_config_path(store.path))}")
     elif not isinstance(store, EnvCredentialStore):
         store_label = get_credential_store_label()
         _say(MessageKind.SUCCESS, f'Stored in {store_label} as "{service_name}"')

@@ -182,7 +182,7 @@ def probe_media(file_path: Path) -> tuple[float | None, MediaTimeMeta | None]:
         result = subprocess.run(
             [ffprobe, "-v", "error", "-print_format", "json",
              "-show_entries", "format:stream_tags", "--", str(file_path)],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
         logger.warning("Could not probe %s: %s", file_path, exc)
@@ -269,7 +269,7 @@ def extract_audio_from_video(
             str(output_path),
         ],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         timeout=600,  # 10 minutes max
     )
 
@@ -317,7 +317,7 @@ def has_audio_stream(file_path: Path) -> bool:
                 str(file_path),
             ],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=30,
         )
     except FileNotFoundError as exc:

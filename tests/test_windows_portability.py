@@ -167,3 +167,70 @@ class TestWindowsFixText:
         from bristlenose.doctor_fixes import _credential_store_hint
 
         assert str(user_config_env_path()) in _credential_store_hint()
+
+
+@pytest.fixture
+def cp1252_locale(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Text-mode subprocess output decoded the way Windows decodes it.
+
+    ``subprocess`` with ``text=True`` and no ``encoding`` decodes with the
+    locale encoding, which is cp1252 on a Western Windows install, while
+    ffmpeg and ffprobe write UTF-8 there.
+    """
+    import locale
+
+    # 3.11+ asks _text_encoding, which answers utf-8 whenever UTF-8 mode is
+    # on — and a C locale turns it on, so patching locale alone proves nothing
+    # on a CI shell. 3.10 asks locale directly.
+    monkeypatch.setattr(subprocess, "_text_encoding", lambda: "cp1252", raising=False)
+    monkeypatch.setattr(locale, "getpreferredencoding", lambda do_setlocale=True: "cp1252")
+
+
+def test_a_kanji_filename_probes_under_a_windows_codepage(
+    cp1252_locale: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ffprobe echoes the filename in its JSON; 会 and 録 do not decode as cp1252.
+
+    Decoded with the locale encoding, ``subprocess.run`` raised
+    ``UnicodeDecodeError`` out of ``probe_media`` — the ingest probe — for a
+    recording named in Japanese or Chinese. The real call runs, with ffprobe's
+    bytes supplied by a Python child, so the decoding under test is the one
+    ``probe_media`` asks for.
+    """
+    import json
+
+    import bristlenose.utils.audio as audio
+
+    name = "会議の録音.wav"
+    payload = json.dumps(
+        {"format": {"filename": name, "duration": "12.5"}, "streams": []}, ensure_ascii=False,
+    ).encode("utf-8")
+    real_run = subprocess.run
+
+    def ffprobe(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        child = [sys.executable, "-c", f"import sys; sys.stdout.buffer.write({payload!r})"]
+        return real_run(child, **kwargs)  # type: ignore[call-overload,no-any-return]
+
+    monkeypatch.setattr(audio.subprocess, "run", ffprobe)
+    (tmp_path / name).write_bytes(b"")
+    duration, _ = audio.probe_media(tmp_path / name)
+    assert duration == 12.5
+
+
+def test_every_text_subprocess_names_its_encoding() -> None:
+    """``text=True`` alone decodes with the locale codepage, cp1252 on Windows."""
+    import ast
+
+    offenders = []
+    for path in _PKG.rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(node, ast.Call):
+                continue
+            kwargs = {k.arg: k.value for k in node.keywords}
+            text = any(
+                isinstance(kwargs.get(k), ast.Constant) and kwargs[k].value is True  # type: ignore[union-attr]
+                for k in ("text", "universal_newlines")
+            )
+            if text and "encoding" not in kwargs:
+                offenders.append(f"{path.relative_to(_PKG)}:{node.lineno}")
+    assert offenders == [], f"add encoding='utf-8' to: {offenders}"

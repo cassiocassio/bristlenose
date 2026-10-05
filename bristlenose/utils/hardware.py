@@ -180,7 +180,7 @@ def _get_apple_chip_name() -> str | None:
         result = subprocess.run(
             ["sysctl", "-n", "machdep.cpu.brand_string"],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=5,
         )
         if result.returncode == 0 and result.stdout.strip():
@@ -193,7 +193,7 @@ def _get_apple_chip_name() -> str | None:
         result = subprocess.run(
             ["system_profiler", "SPHardwareDataType"],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=10,
         )
         if result.returncode == 0:
@@ -212,7 +212,7 @@ def _get_apple_gpu_cores() -> int | None:
         result = subprocess.run(
             ["system_profiler", "SPDisplaysDataType"],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=10,
         )
         if result.returncode == 0:
@@ -236,7 +236,7 @@ def _get_system_memory_gb() -> float | None:
             result = subprocess.run(
                 ["sysctl", "-n", "hw.memsize"],
                 capture_output=True,
-                text=True,
+                text=True, encoding="utf-8", errors="replace",
                 timeout=5,
             )
             if result.returncode == 0:
@@ -282,7 +282,7 @@ def _get_cuda_device_name() -> str | None:
         result = subprocess.run(
             ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=10,
         )
         if result.returncode == 0:

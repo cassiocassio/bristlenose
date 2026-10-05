@@ -37,7 +37,7 @@ def _from_git() -> tuple[str, str] | None:
         result = subprocess.run(
             ["git", "-C", str(repo), "rev-parse", "--short", "HEAD"],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=2,
         )
         if result.returncode != 0 or not result.stdout.strip():
@@ -50,7 +50,7 @@ def _from_git() -> tuple[str, str] | None:
         dirty = subprocess.run(
             ["git", "-C", str(repo), "status", "--porcelain"],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=2,
         )
         if dirty.returncode == 0 and dirty.stdout.strip():

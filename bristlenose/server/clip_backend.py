@@ -45,7 +45,7 @@ def _can_burn(ffmpeg: str) -> bool:
     read as "can't burn" until the server restarts.
     """
     runs = [
-        subprocess.run([ffmpeg, "-hide_banner", flag], capture_output=True, text=True, timeout=30)
+        subprocess.run([ffmpeg, "-hide_banner", flag], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
         for flag in ("-filters", "-encoders")
     ]
     for run in runs:
@@ -186,7 +186,7 @@ class FFmpegBackend:
             result = subprocess.run(
                 cmd,
                 capture_output=True,
-                text=True,
+                text=True, encoding="utf-8", errors="replace",
                 timeout=120,
             )
             if result.returncode != 0:
@@ -241,7 +241,7 @@ class FFmpegBackend:
                  "stream=width,height,sample_aspect_ratio:stream_tags=rotate"
                  ":stream_side_data=rotation",
                  "-of", "json", str(clip)],
-                capture_output=True, text=True, timeout=60,
+                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
             )
             width, height = display_size(json.loads(probe.stdout))
         except (OSError, subprocess.TimeoutExpired, ValueError, KeyError, IndexError):
@@ -276,7 +276,7 @@ class FFmpegBackend:
                     "-c:a", "copy", "-movflags", "+faststart",
                     "-y", str(output),
                 ],
-                capture_output=True, text=True, timeout=_BURN_TIMEOUT_SECONDS,
+                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=_BURN_TIMEOUT_SECONDS,
             )
             if result.returncode != 0:
                 logger.warning(

@@ -82,7 +82,7 @@ class MacOSCredentialStore(CredentialStore):
                     "-w",  # Output password only
                 ],
                 capture_output=True,
-                text=True,
+                text=True, encoding="utf-8",
                 check=True,
             )
             return result.stdout.strip()
@@ -131,7 +131,7 @@ class MacOSCredentialStore(CredentialStore):
                     "-s", service,
                 ],
                 capture_output=True,  # Suppress output
-                text=True,
+                text=True, encoding="utf-8",
                 check=False,  # Ignore "not found" errors
             )
         except (FileNotFoundError, PermissionError, OSError) as exc:

@@ -132,7 +132,7 @@ def list_models(timeout: float = 2.0) -> list[str]:
     result = subprocess.run(
         ["ollama", "list"],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8",
         errors="replace",  # a wedged binary's non-UTF-8 bytes must not raise
         timeout=timeout,
     )

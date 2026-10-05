@@ -34,7 +34,7 @@ class LinuxCredentialStore(CredentialStore):
                     "key", key,
                 ],
                 capture_output=True,
-                text=True,
+                text=True, encoding="utf-8",
                 check=True,
             )
             value = result.stdout.strip()
@@ -59,7 +59,7 @@ class LinuxCredentialStore(CredentialStore):
                 "key", key,
             ],
             input=value,
-            text=True,
+            text=True, encoding="utf-8",
             check=True,
         )
 

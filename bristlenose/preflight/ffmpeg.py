@@ -88,7 +88,7 @@ def _brew_writable_prefix() -> str | None:
             ["brew", "--prefix"],
             check=True,
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=5,
         )
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):

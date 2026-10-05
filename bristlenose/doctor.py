@@ -92,7 +92,7 @@ def check_ffmpeg() -> CheckResult:
         result = subprocess.run(
             [path, "-version"],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=5,
         )
         if result.returncode == 0:
@@ -1002,7 +1002,7 @@ def check_brew_tap_trust() -> CheckResult:
         proc = subprocess.run(
             [brew, "trust", "--json=v1"],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=15,
             check=False,
         )

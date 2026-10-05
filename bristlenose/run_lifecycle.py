@@ -216,7 +216,7 @@ def _ps_start_time(pid: int) -> str | None:
         out = subprocess.run(
             ["/bin/ps", "-o", "lstart=", "-p", str(pid)],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace",
             check=False,
             timeout=2,
         )

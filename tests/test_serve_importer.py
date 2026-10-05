@@ -238,6 +238,12 @@ class TestImportPathCanonicalisation:
     it.  The importer now matches on the resolved path.
     """
 
+    @pytest.fixture(autouse=True)
+    def _cwd_beside_the_project(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        # A relative spelling only exists on the same drive: on Windows CI the
+        # checkout is D: and the temp dir C:, and relpath across them raises.
+        monkeypatch.chdir(tmp_path.parent)
+
     @staticmethod
     def _clusters() -> list[dict]:
         return [
@@ -390,7 +396,7 @@ class TestImportMissing:
         out.mkdir()
         intermediate = out / ".bristlenose" / "intermediate"
         intermediate.mkdir(parents=True)
-        (intermediate / "metadata.json").write_text('{"project_name": "My Project"}')
+        (intermediate / "metadata.json").write_text('{"project_name": "My Project"}', encoding="utf-8")
 
         project = import_project(db, tmp_path)
         assert project.name == "My Project"
@@ -417,10 +423,10 @@ def _write_pipeline_output(
     intermediate = out / ".bristlenose" / "intermediate"
     intermediate.mkdir(parents=True, exist_ok=True)
     (intermediate / "metadata.json").write_text(
-        json.dumps({"project_name": project_name})
+        json.dumps({"project_name": project_name}), encoding="utf-8"
     )
-    (intermediate / "screen_clusters.json").write_text(json.dumps(clusters))
-    (intermediate / "theme_groups.json").write_text(json.dumps(themes))
+    (intermediate / "screen_clusters.json").write_text(json.dumps(clusters), encoding="utf-8")
+    (intermediate / "theme_groups.json").write_text(json.dumps(themes), encoding="utf-8")
     return tmp_path
 
 
@@ -982,7 +988,7 @@ def _write_transcript(output_dir: Path, sid: str, content: str) -> None:
     """Write a transcript file into the output directory."""
     raw = output_dir / "transcripts-raw"
     raw.mkdir(parents=True, exist_ok=True)
-    (raw / f"{sid}.txt").write_text(content)
+    (raw / f"{sid}.txt").write_text(content, encoding="utf-8")
 
 
 def _write_people_yaml(output_dir: Path, participants: dict) -> None:
@@ -995,7 +1001,7 @@ def _write_people_yaml(output_dir: Path, participants: dict) -> None:
         "participants": participants,
     }
     (output_dir / "people.yaml").write_text(
-        yaml.dump(data, default_flow_style=False, allow_unicode=True)
+        yaml.dump(data, default_flow_style=False, allow_unicode=True), encoding="utf-8"
     )
 
 
@@ -1008,9 +1014,9 @@ class TestImportPeopleYaml:
         out.mkdir()
         intermediate = out / ".bristlenose" / "intermediate"
         intermediate.mkdir(parents=True)
-        (intermediate / "metadata.json").write_text('{"project_name": "Name Test"}')
-        (intermediate / "screen_clusters.json").write_text("[]")
-        (intermediate / "theme_groups.json").write_text("[]")
+        (intermediate / "metadata.json").write_text('{"project_name": "Name Test"}', encoding="utf-8")
+        (intermediate / "screen_clusters.json").write_text("[]", encoding="utf-8")
+        (intermediate / "theme_groups.json").write_text("[]", encoding="utf-8")
 
         _write_transcript(
             out,
@@ -1250,10 +1256,10 @@ class TestFindTranscriptsDir:
         output.mkdir()
         cooked = output / "transcripts-cooked"
         cooked.mkdir()
-        (cooked / "s1.txt").write_text("# Transcript: s1\n")
+        (cooked / "s1.txt").write_text("# Transcript: s1\n", encoding="utf-8")
         raw = output / "transcripts-raw"
         raw.mkdir()
-        (raw / "s1.txt").write_text("# Transcript: s1\n")
+        (raw / "s1.txt").write_text("# Transcript: s1\n", encoding="utf-8")
 
         result = _find_transcripts_dir(tmp_path, output)
         assert result == cooked
@@ -1264,7 +1270,7 @@ class TestFindTranscriptsDir:
         output.mkdir()
         raw = output / "transcripts-raw"
         raw.mkdir()
-        (raw / "s1.txt").write_text("# Transcript: s1\n")
+        (raw / "s1.txt").write_text("# Transcript: s1\n", encoding="utf-8")
 
         result = _find_transcripts_dir(tmp_path, output)
         assert result == raw
@@ -1275,7 +1281,7 @@ class TestFindTranscriptsDir:
         output.mkdir()
         transcripts = tmp_path / "transcripts"
         transcripts.mkdir()
-        (transcripts / "s1.txt").write_text("# Transcript: s1\n")
+        (transcripts / "s1.txt").write_text("# Transcript: s1\n", encoding="utf-8")
 
         result = _find_transcripts_dir(tmp_path, output)
         assert result == transcripts
@@ -1286,7 +1292,7 @@ class TestFindTranscriptsDir:
         output.mkdir()
         raw = tmp_path / "transcripts-raw"
         raw.mkdir()
-        (raw / "s1.txt").write_text("# Transcript: s1\n")
+        (raw / "s1.txt").write_text("# Transcript: s1\n", encoding="utf-8")
 
         result = _find_transcripts_dir(tmp_path, output)
         assert result == raw
@@ -1308,7 +1314,7 @@ class TestFindTranscriptsDir:
 
         transcripts = tmp_path / "transcripts"
         transcripts.mkdir()
-        (transcripts / "s1.txt").write_text("# Transcript: s1\n")
+        (transcripts / "s1.txt").write_text("# Transcript: s1\n", encoding="utf-8")
 
         result = _find_transcripts_dir(tmp_path, output)
         assert result == transcripts
@@ -1333,9 +1339,9 @@ def _write_transcript_and_words(
     intermediate = out / ".bristlenose" / "intermediate"
     intermediate.mkdir(parents=True, exist_ok=True)
 
-    (intermediate / "metadata.json").write_text('{"project_name": "Word Test"}')
-    (intermediate / "screen_clusters.json").write_text("[]")
-    (intermediate / "theme_groups.json").write_text("[]")
+    (intermediate / "metadata.json").write_text('{"project_name": "Word Test"}', encoding="utf-8")
+    (intermediate / "screen_clusters.json").write_text("[]", encoding="utf-8")
+    (intermediate / "theme_groups.json").write_text("[]", encoding="utf-8")
 
     # Write transcript txt (the regex-based importer reads this)
     transcripts = out / "transcripts-raw"
@@ -1345,7 +1351,7 @@ def _write_transcript_and_words(
         "# Duration: 00:00:30\n"
         "\n"
         "[00:02] [m1] Hello, how are you today?\n"
-        "[00:10] [p1] I'm doing well, thanks for asking.\n"
+        "[00:10] [p1] I'm doing well, thanks for asking.\n", encoding="utf-8"
     )
 
     # Write session_segments.json (the word enrichment reads this)
@@ -1388,7 +1394,7 @@ def _write_transcript_and_words(
                     "segment_index": 1,
                 },
             ],
-        })
+        }), encoding="utf-8"
     )
 
     return tmp_path
@@ -1486,16 +1492,16 @@ class TestWordEnrichment:
         out = tmp_path / "bristlenose-output"
         intermediate = out / ".bristlenose" / "intermediate"
         intermediate.mkdir(parents=True)
-        (intermediate / "metadata.json").write_text('{"project_name": "Merge Test"}')
-        (intermediate / "screen_clusters.json").write_text("[]")
-        (intermediate / "theme_groups.json").write_text("[]")
+        (intermediate / "metadata.json").write_text('{"project_name": "Merge Test"}', encoding="utf-8")
+        (intermediate / "screen_clusters.json").write_text("[]", encoding="utf-8")
+        (intermediate / "theme_groups.json").write_text("[]", encoding="utf-8")
         (out / "transcripts-raw").mkdir()
         (out / "transcripts-raw" / "s1.txt").write_text(
             "# Transcript: s1\n"
             "# Duration: 00:00:30\n"
             "\n"
             "[00:00] [m1] (Speaker A) Tell me about it. What happened next?\n"
-            "[00:20] [p1] (Speaker B) We went to the shop.\n"
+            "[00:20] [p1] (Speaker B) We went to the shop.\n", encoding="utf-8"
         )
 
         def raw(start: float, text: str) -> dict:
@@ -1522,7 +1528,7 @@ class TestWordEnrichment:
                 raw(5.0, "What happened next?"),
                 raw(20.3, "We went to the shop."),
             ],
-        }))
+        }), encoding="utf-8")
         import_project(db, tmp_path)
 
         segs = (
@@ -1547,9 +1553,9 @@ class TestWordEnrichment:
         out = tmp_path / "bristlenose-output"
         intermediate = out / ".bristlenose" / "intermediate"
         intermediate.mkdir(parents=True)
-        (intermediate / "metadata.json").write_text('{"project_name": "CJK Test"}')
-        (intermediate / "screen_clusters.json").write_text("[]")
-        (intermediate / "theme_groups.json").write_text("[]")
+        (intermediate / "metadata.json").write_text('{"project_name": "CJK Test"}', encoding="utf-8")
+        (intermediate / "screen_clusters.json").write_text("[]", encoding="utf-8")
+        (intermediate / "theme_groups.json").write_text("[]", encoding="utf-8")
         (out / "transcripts-raw").mkdir()
         (out / "transcripts-raw" / "s1.txt").write_text(
             "# Transcript: s1\n# Duration: 00:00:30\n\n" + line + "\n",

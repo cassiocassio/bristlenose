@@ -17,10 +17,15 @@ merely if the wording does.
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
+
+# shutil.which follows PATH. A bare "bash" on Windows is resolved by
+# CreateProcess, which tries System32 first and so finds WSL's bash.exe.
+_BASH = shutil.which("bash") or "bash"
 
 _ROOT = Path(__file__).resolve().parent.parent
 _PREFLIGHT = _ROOT / "scripts" / "check-release-ready.sh"
@@ -32,7 +37,7 @@ _OTHER = "b" * 64
 
 
 def _extract_block() -> str:
-    lines = _PREFLIGHT.read_text().splitlines()
+    lines = _PREFLIGHT.read_text(encoding="utf-8").splitlines()
     starts = [i for i, ln in enumerate(lines) if ln.startswith(_BLOCK_OPENER)]
     assert len(starts) == 1, f"expected one PII-pack probe, found {len(starts)}"
     depth = 0
@@ -80,13 +85,13 @@ curl() {{
 }}
 {_extract_block()}
 """
-    out = subprocess.run(["bash", "-c", harness], capture_output=True, text=True, timeout=30)
+    out = subprocess.run([_BASH, "-c", harness], capture_output=True, text=True, timeout=30)
     return (out.stdout + out.stderr).strip()
 
 
 class TestTheConfigCarriesTheKnobs:
     def test_both_keys_exist_so_the_probe_can_arm(self) -> None:
-        conf = _CONF.read_text()
+        conf = _CONF.read_text(encoding="utf-8")
         for key in ("PII_PACK_URL", "PII_PACK_SHA256"):
             assert re.search(rf"^{key}=", conf, re.M), f"{key} missing from project.conf"
 

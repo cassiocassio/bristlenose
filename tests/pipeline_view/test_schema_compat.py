@@ -48,7 +48,7 @@ _OPTIONAL_ROW_FIELDS = {
 
 
 def _scenario(name: str) -> dict:
-    data = json.loads(_FIXTURE.read_text())
+    data = json.loads(_FIXTURE.read_text(encoding="utf-8"))
     return data["scenarios"][name]
 
 

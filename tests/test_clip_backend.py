@@ -62,7 +62,7 @@ class TestExtractClip:
             FFmpegBackend().extract_clip(source, output, 10.5, 25.3)
 
             args = mock_run.call_args[0][0]
-            assert args[0].endswith("ffmpeg")
+            assert Path(args[0]).stem.lower() == "ffmpeg"  # ffmpeg.EXE on Windows
             assert "-ss" in args
             assert "-to" in args
             assert "-c" in args
@@ -165,7 +165,7 @@ class TestSubtitleMux:
 
     def test_subtitles_are_a_second_input_muxed_as_mov_text(self, tmp_path: Path) -> None:
         srt = tmp_path / "clip.srt"
-        srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nhi\n")
+        srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nhi\n", encoding="utf-8")
         args = self._run(tmp_path, srt)
         joined = " ".join(args)
         assert f"-i {srt}" in joined
@@ -184,7 +184,7 @@ class TestSubtitleMux:
         output = tmp_path / "clip.mp4"
         output.write_bytes(b"clip")
         srt = tmp_path / "clip.srt"
-        srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nhi\n")
+        srt.write_text("1\n00:00:00,000 --> 00:00:01,000\nhi\n", encoding="utf-8")
         mock_result = MagicMock(returncode=0, stderr="")
         with patch(
             "bristlenose.server.clip_backend.subprocess.run", return_value=mock_result,
@@ -293,7 +293,7 @@ class TestBurnSubtitles:
             cwd = Path(kwargs["cwd"])
             ass_path = cwd / vf.split("subtitles=")[1].split(":fontsdir=")[0]
             fonts = cwd / vf.split(":fontsdir=")[1]
-            seen.update(vf=vf, ass=ass_path.read_text(), font=(fonts / "Inter-Medium.otf").exists(),
+            seen.update(vf=vf, ass=ass_path.read_text(encoding="utf-8"), font=(fonts / "Inter-Medium.otf").exists(),
                         tmp=fonts, cmd=cmd)
             Path(cmd[-1]).write_bytes(b"burned")
             return MagicMock(returncode=0, stdout="", stderr="")
@@ -356,4 +356,4 @@ class TestBurnSubtitles:
         from bristlenose.server.clip_backend import BURN_FONT
 
         assert BURN_FONT.is_file() and BURN_FONT.stat().st_size > 100_000
-        assert "SIL Open Font License" in (BURN_FONT.parent / "Inter-OFL.txt").read_text()
+        assert "SIL Open Font License" in (BURN_FONT.parent / "Inter-OFL.txt").read_text(encoding="utf-8")

@@ -53,7 +53,7 @@ class TestServeRunContext:
 
         log = out / ".bristlenose" / "llm-calls.jsonl"
         assert log.exists(), "the call was recorded nowhere — the original defect"
-        rows = [json.loads(ln) for ln in log.read_text().splitlines() if ln.strip()]
+        rows = [json.loads(ln) for ln in log.read_text(encoding="utf-8").splitlines() if ln.strip()]
         assert len(rows) == 1
         assert rows[0]["run_id"] == "elaboration-1-norman-x"
 
@@ -192,6 +192,6 @@ class TestElaborationIsWiredToIt:
 
         log = out / ".bristlenose" / "llm-calls.jsonl"
         assert log.exists(), "elaboration's spend went unrecorded — the defect"
-        row = json.loads(log.read_text().splitlines()[0])
+        row = json.loads(log.read_text(encoding="utf-8").splitlines()[0])
         assert row["stage"] == "serve_signal_elaboration"
         assert row["run_id"].startswith("elaboration-1-norman-")

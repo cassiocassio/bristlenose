@@ -229,7 +229,7 @@ class TestCookieFallback:
         (static_dir / "index.html").write_text(
             '<!doctype html><html><body>'
             '<div id="bn-app-root" data-project-id="1"></div>'
-            "</body></html>"
+            "</body></html>", encoding="utf-8"
         )
 
         with patch("bristlenose.server.app._STATIC_DIR", static_dir):

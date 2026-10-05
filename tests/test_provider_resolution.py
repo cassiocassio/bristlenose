@@ -15,6 +15,7 @@ never prompt.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -104,7 +105,7 @@ class TestDeriveLadder:
         preference in the user-level config .env — is an explicit choice, never
         overridden by derivation."""
         env = tmp_path / ".env"
-        env.write_text("BRISTLENOSE_LLM_PROVIDER=openai\n")
+        env.write_text("BRISTLENOSE_LLM_PROVIDER=openai\n", encoding="utf-8")
         settings = BristlenoseSettings(
             **{**KEYS_OFF, "anthropic_api_key": "sk-ant-x", "google_api_key": "g-key"}
         )
@@ -166,8 +167,14 @@ class TestCurrentProviderStore:
 
         assert read_user_config_var("BRISTLENOSE_LLM_PROVIDER") == "openai"
         assert read_user_config_var("BRISTLENOSE_GOOGLE_API_KEY") == "g-key"
-        content = config_home.read_text()
+        content = config_home.read_text(encoding="utf-8")
         assert content.count("BRISTLENOSE_LLM_PROVIDER") == 1
+
+    @pytest.mark.skipif(os.name != "posix", reason="no POSIX mode bits on Windows: chmod 0o600 there only clears read-only")
+    def test_the_file_is_owner_only(self, config_home: Path) -> None:
+        from bristlenose.credentials import write_user_config_var
+
+        write_user_config_var("BRISTLENOSE_GOOGLE_API_KEY", "g-key")
         # Secrets file discipline: mode 0600.
         assert (config_home.stat().st_mode & 0o777) == 0o600
 
@@ -198,7 +205,7 @@ class TestUseCommand:
         result = self._use("gemini")
         assert result.exit_code == 0
         assert "Gemini is now your provider for analysis" in result.output
-        assert "BRISTLENOSE_LLM_PROVIDER=google" in runner_env.read_text()
+        assert "BRISTLENOSE_LLM_PROVIDER=google" in runner_env.read_text(encoding="utf-8")
 
     def test_use_without_key_teaches_configure(
         self, runner_env: Path, monkeypatch
@@ -216,7 +223,7 @@ class TestUseCommand:
     def test_use_local_needs_no_key(self, runner_env: Path) -> None:
         result = self._use("local")
         assert result.exit_code == 0
-        assert "BRISTLENOSE_LLM_PROVIDER=local" in runner_env.read_text()
+        assert "BRISTLENOSE_LLM_PROVIDER=local" in runner_env.read_text(encoding="utf-8")
 
     def test_use_unknown_provider_lists_choices(self, runner_env: Path) -> None:
         result = self._use("copilot")
@@ -273,7 +280,7 @@ class TestConfigureSetsCurrent:
         result = CliRunner().invoke(app, ["configure", "gemini", "--key", "g-key"])
         assert result.exit_code == 0
         assert "Gemini is now your provider for analysis" in result.output
-        assert "BRISTLENOSE_LLM_PROVIDER=google" in configure_env.read_text()
+        assert "BRISTLENOSE_LLM_PROVIDER=google" in configure_env.read_text(encoding="utf-8")
 
     def test_configure_names_the_item_keychain_access_shows(
         self, configure_env: Path
@@ -313,7 +320,7 @@ class TestConfigureSetsCurrent:
         assert "now your provider" not in result.output
         assert (
             not configure_env.exists()
-            or "BRISTLENOSE_LLM_PROVIDER=google" not in configure_env.read_text()
+            or "BRISTLENOSE_LLM_PROVIDER=google" not in configure_env.read_text(encoding="utf-8")
         )
 
     def test_configure_second_provider_switches_and_names_the_previous(
@@ -327,4 +334,4 @@ class TestConfigureSetsCurrent:
         assert result.exit_code == 0
         assert "(was Claude)" in result.output
         assert "bristlenose use claude" in result.output  # the way back
-        assert "BRISTLENOSE_LLM_PROVIDER=google" in configure_env.read_text()
+        assert "BRISTLENOSE_LLM_PROVIDER=google" in configure_env.read_text(encoding="utf-8")

@@ -92,7 +92,7 @@ def _advertised_model_names() -> set[str]:
 
     import bristlenose.cli as cli_module
 
-    src = Path(cli_module.__file__).read_text()
+    src = Path(cli_module.__file__).read_text(encoding="utf-8")
     names: set[str] = set()
     for listing in re.findall(r"Whisper model size: ([a-z0-9., -]+?)\.\s", src):
         names.update(n.strip() for n in listing.split(","))
@@ -308,7 +308,7 @@ class TestCacheState:
         monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
         blobs = tmp_path / "models--openai--whisper-large-v3-turbo" / "blobs"
         blobs.mkdir(parents=True)
-        (blobs / "abc123.incomplete").write_text("partial")
+        (blobs / "abc123.incomplete").write_text("partial", encoding="utf-8")
         fake_hf = MagicMock()
         fake_hf.try_to_load_from_cache.return_value = None
         with patch.dict(sys.modules, {"huggingface_hub": fake_hf}):

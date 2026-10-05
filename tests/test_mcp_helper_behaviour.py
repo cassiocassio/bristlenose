@@ -72,9 +72,9 @@ def helper(tmp_path_factory: pytest.TempPathFactory) -> Path:
     m = re.search(r"BN-TOOLS-JSON-BEGIN \*/\s*const TOOLS = (\[.*?\]);\s*/\* BN-TOOLS-JSON-END", src, re.S)
     assert m, "BN-TOOLS-JSON block missing"
     tools = json.dumps(json.loads(m.group(1)), ensure_ascii=True)
-    (work / "ToolsEmbedded.swift").write_text('let TOOLS_JSON = #"""\n' + tools + '\n"""#\n')
+    (work / "ToolsEmbedded.swift").write_text('let TOOLS_JSON = #"""\n' + tools + '\n"""#\n', encoding="utf-8")
     (work / "BuildConfig.swift").write_text(
-        f'let GROUP_ID = "TEST.app.bristlenose"\nlet VERSION = "{_VERSION}"\n')
+        f'let GROUP_ID = "TEST.app.bristlenose"\nlet VERSION = "{_VERSION}"\n', encoding="utf-8")
     out = work / "bristlenose-mcp-test"
     r = subprocess.run(
         ["xcrun", "swiftc", "-O", "-D", "BN_TEST_HANDSHAKE", str(_HELPER_SRC),
@@ -209,7 +209,7 @@ def hs_path(tmp_path: Path) -> Path:
 
 
 def _write(path: Path, entries: list[dict[str, Any]] | None = None, raw: str | None = None) -> None:
-    path.write_text(raw if raw is not None else json.dumps({"schema": 2, "projects": entries or []}))
+    path.write_text(raw if raw is not None else json.dumps({"schema": 2, "projects": entries or []}), encoding="utf-8")
 
 
 @pytest.fixture()
@@ -288,7 +288,7 @@ def test_an_unreadable_handshake_says_permission_not_closed(serve: _Serve, hs_pa
 def test_the_schema_one_handshake_still_works(serve: _Serve, hs_path: Path, run) -> None:
     e = serve.entry()
     hs_path.write_text(json.dumps({"schema": 1, "port": e["port"], "token": e["token"],
-                                   "instance_id": e["instance_id"], "key": e["key"], "name": e["name"]}))
+                                   "instance_id": e["instance_id"], "key": e["key"], "name": e["name"]}), encoding="utf-8")
     assert CLOSED not in run().call("get_project_overview")
 
 

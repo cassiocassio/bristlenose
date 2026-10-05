@@ -37,7 +37,7 @@ def test_on_writes_the_record_and_completes_the_stage(tmp_path):
     write_guide(tmp_path)
     manifest = create_manifest("p", "0")
     path = _run(tmp_path, FakeClient(), manifest=manifest)
-    assert json.loads(path.read_text())["guide"] is True
+    assert json.loads(path.read_text(encoding="utf-8"))["guide"] is True
     record = manifest.stages[STAGE_DISCUSSION]
     assert record.status == StageStatus.COMPLETE
     assert set(record.sessions or {}) == {"s1", "s2"}
@@ -52,7 +52,7 @@ def test_unchanged_inputs_are_cached_and_a_new_guide_is_not(tmp_path):
     _run(tmp_path, again, manifest=create_manifest("p", "0"), prev=first)
     assert again.calls == []
 
-    (folder / "guide.md").write_text("# Guide\n## Money\n- Do you budget?\n")
+    (folder / "guide.md").write_text("# Guide\n## Money\n- Do you budget?\n", encoding="utf-8")
     edited = FakeClient()
     _run(tmp_path, edited, manifest=create_manifest("p", "0"), prev=first)
     assert edited.calls  # the guide is part of what the record was built from
@@ -89,7 +89,7 @@ def test_status_shows_the_stage_only_where_a_run_recorded_it(tmp_path):
 def test_ingest_never_reads_the_guide_as_a_session(tmp_path):
     folder = write_guide(tmp_path)
     (folder / "guide.docx").write_bytes(b"PK\x03\x04")
-    (tmp_path / "interview.vtt").write_text("WEBVTT\n\n00:00.000 --> 00:01.000\nhi\n")
+    (tmp_path / "interview.vtt").write_text("WEBVTT\n\n00:00.000 --> 00:01.000\nhi\n", encoding="utf-8")
     skipped: list = []
     found = discover_files(tmp_path, skipped)
     assert [f.path.name for f in found] == ["interview.vtt"]
@@ -194,7 +194,7 @@ def test_a_corrupt_guide_never_ends_the_run(tmp_path):
     folder.mkdir()
     (folder / "guide.docx").write_bytes(b"\xd0\xcf\x11\xe0 an encrypted Word file")
     path = _run(tmp_path, FakeClient(), manifest=create_manifest("p", "0"))
-    assert json.loads(path.read_text())["guide_problem"] == "unreadable"
+    assert json.loads(path.read_text(encoding="utf-8"))["guide_problem"] == "unreadable"
 
 
 def test_an_unmoderated_study_is_skipped_not_warned():
@@ -222,5 +222,5 @@ def test_a_crashed_stage_leaves_a_failed_record_not_none(tmp_path, monkeypatch):
     monkeypatch.setattr(stage_mod, "run_discussion", boom)
     manifest = create_manifest("p", "0")
     path = _run(tmp_path, FakeClient(), manifest=manifest)
-    assert json.loads(path.read_text())["status"] == "failed"
+    assert json.loads(path.read_text(encoding="utf-8"))["status"] == "failed"
     assert manifest.stages[STAGE_DISCUSSION].status != StageStatus.COMPLETE  # retried next run

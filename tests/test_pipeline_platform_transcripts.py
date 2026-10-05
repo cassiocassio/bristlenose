@@ -141,20 +141,20 @@ class Harness:
         return self.output_dir / ".bristlenose" / "intermediate"
 
     def session_segments(self) -> dict[str, list[TranscriptSegment]]:
-        raw = json.loads((self.intermediate / "session_segments.json").read_text("utf-8"))
+        raw = json.loads((self.intermediate / "session_segments.json").read_text(encoding="utf-8"))
         return {sid: [TranscriptSegment.model_validate(s) for s in segs] for sid, segs in raw.items()}
 
     def speaker_segments(self, sid: str) -> list[TranscriptSegment]:
-        data = json.loads((self.intermediate / "speaker-info" / f"{sid}.json").read_text("utf-8"))
+        data = json.loads((self.intermediate / "speaker-info" / f"{sid}.json").read_text(encoding="utf-8"))
         return [TranscriptSegment.model_validate(s) for s in data["segments_with_roles"]]
 
     def log(self) -> str:
-        return (self.output_dir / ".bristlenose" / "bristlenose.log").read_text("utf-8")
+        return (self.output_dir / ".bristlenose" / "bristlenose.log").read_text(encoding="utf-8")
 
     def people(self) -> dict:
         import yaml
 
-        return yaml.safe_load((self.output_dir / "people.yaml").read_text("utf-8"))
+        return yaml.safe_load((self.output_dir / "people.yaml").read_text(encoding="utf-8"))
 
 
 def _whisper_segments(sid: str) -> list[TranscriptSegment]:
@@ -545,9 +545,9 @@ class TestStickySessions:
     ) -> None:
         h = run_pipeline(tmp_path, self._sessions, runs=2)
         raw = h.output_dir / "transcripts-raw"
-        assert "Bea speaking" in (raw / "s1.txt").read_text("utf-8")
-        assert "Cal speaking" in (raw / "s2.txt").read_text("utf-8")
-        assert "Ann speaking" in (raw / "s3.txt").read_text("utf-8")
+        assert "Bea speaking" in (raw / "s1.txt").read_text(encoding="utf-8")
+        assert "Cal speaking" in (raw / "s2.txt").read_text(encoding="utf-8")
+        assert "Ann speaking" in (raw / "s3.txt").read_text(encoding="utf-8")
         # Only the newcomer was analysed on run 2; the others were served from
         # cache under the ids they already had.
         assert h.quoted == [["s1", "s2"], ["s3"]]
@@ -563,8 +563,8 @@ class TestStickySessions:
         def interviews(h: Harness) -> dict[tuple, str]:
             raw = h.output_dir / "transcripts-raw"
             who = {}
-            for q in json.loads((h.intermediate / "extracted_quotes.json").read_text("utf-8")):
-                text = (raw / f"{q['session_id']}.txt").read_text("utf-8")
+            for q in json.loads((h.intermediate / "extracted_quotes.json").read_text(encoding="utf-8")):
+                text = (raw / f"{q['session_id']}.txt").read_text(encoding="utf-8")
                 name = next(n for n in ("Ann", "Bea", "Cal") if f"{n} speaking" in text)
                 who[(q["session_id"], q["participant_id"], q["start_timecode"])] = name
             return who

@@ -21,11 +21,11 @@ def client(tmp_path: Path) -> TestClient:
     (tmp_path / "audio.wav").write_bytes(b"fake-wav")
     (tmp_path / "subs.vtt").write_bytes(b"WEBVTT")
     (tmp_path / "thumb.jpg").write_bytes(b"fake-jpg")
-    (tmp_path / "secret.env").write_text("API_KEY=hunter2")
+    (tmp_path / "secret.env").write_text("API_KEY=hunter2", encoding="utf-8")
     (tmp_path / "data.db").write_bytes(b"SQLite")
-    (tmp_path / "script.py").write_text("import os")
+    (tmp_path / "script.py").write_text("import os", encoding="utf-8")
     (tmp_path / ".git").mkdir()
-    (tmp_path / ".git" / "config").write_text("[core]")
+    (tmp_path / ".git" / "config").write_text("[core]", encoding="utf-8")
     (tmp_path / "subdir").mkdir()
     (tmp_path / "subdir" / "nested.mp4").write_bytes(b"fake-mp4")
     app = create_app(project_dir=tmp_path, db_url="sqlite://")
@@ -77,7 +77,7 @@ class TestOnlyRecordingsServed:
     def test_non_recording_refused(self, tmp_path: Path, rel: str) -> None:
         target = tmp_path / rel
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text("Sarah Jones, 07700 900123")
+        target.write_text("Sarah Jones, 07700 900123", encoding="utf-8")
         c = TestClient(
             create_app(project_dir=tmp_path, db_url="sqlite://"), base_url="http://127.0.0.1"
         )

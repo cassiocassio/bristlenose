@@ -20,6 +20,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -31,6 +32,8 @@ pytestmark = [
     pytest.mark.skipif(shutil.which("node") is None, reason="node not installed"),
     pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0,
                        reason="root reads a 000 file, so the denial can't be staged"),
+    pytest.mark.skipif(sys.platform == "win32",
+                       reason="chmod 0 denies nothing on Windows, and these are macOS TCC messages"),
 ]
 
 

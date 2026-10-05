@@ -54,7 +54,7 @@ TEMPLATE_RE = re.compile(
 
 
 def templates() -> dict[str, str]:
-    src = SWIFT.read_text()
+    src = SWIFT.read_text(encoding="utf-8")
     assert CURTAIN_RE.search(src), "the curtain helper is gone — the contract has no owner"
     found = {m.group("name"): m.group("body") for m in TEMPLATE_RE.finditer(src)}
     assert found, "no illustration templates matched — the extraction regex has drifted"
@@ -111,6 +111,6 @@ def test_the_retired_lead_in_is_gone_from_every_template() -> None:
     Left in one template it would stack on top of the curtain's own beat, and the
     cell would sit inert for four and a half seconds after taking the baton.
     """
-    src = SWIFT.read_text()
+    src = SWIFT.read_text(encoding="utf-8")
     assert "jsLeadMs" not in src, "a template still interpolates the retired lead-in"
     assert "leadInSeconds" not in src, "a native illustration still sleeps the retired lead-in"

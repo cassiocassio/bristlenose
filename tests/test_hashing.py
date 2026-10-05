@@ -64,7 +64,7 @@ def test_hash_file_metadata_missing_file(tmp_path: Path):
     assert len(h) == 64
 
 
-def test_hash_file_metadata_path_spelling_invariant(tmp_path: Path):
+def test_hash_file_metadata_path_spelling_invariant(tmp_path: Path, monkeypatch):
     """Same file via relative vs absolute spelling → same hash.
 
     Regression: the hash folded the raw path string, so re-running with a
@@ -73,6 +73,8 @@ def test_hash_file_metadata_path_spelling_invariant(tmp_path: Path):
     """
     import os
 
+    # Same drive as the file: relpath across Windows drives raises.
+    monkeypatch.chdir(tmp_path.parent)
     f = tmp_path / "interview.mov"
     f.write_bytes(b"video data")
     rel = Path(os.path.relpath(f, Path.cwd()))

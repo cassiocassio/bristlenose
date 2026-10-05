@@ -927,7 +927,7 @@ def test_input_mismatch_demotes_the_stage_but_keeps_its_sessions(tmp_path: Path)
     _manifest_with_fingerprinted_sessions(tmp_path, STAGE_TOPIC_SEGMENTATION)
     out = tmp_path / ".bristlenose" / "intermediate" / "topic_boundaries.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text("[]")
+    out.write_text("[]", encoding="utf-8")
     prev = load_manifest(tmp_path)
 
     verified = _is_stage_verified(
@@ -957,7 +957,7 @@ def test_content_corruption_still_pops_the_stage(tmp_path: Path):
     write_manifest(m, tmp_path)
     out = tmp_path / ".bristlenose" / "intermediate" / "topic_boundaries.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text("corrupt")
+    out.write_text("corrupt", encoding="utf-8")
     prev = load_manifest(tmp_path)
 
     assert _is_stage_verified(
@@ -986,7 +986,7 @@ def test_a_newly_watched_input_does_not_invalidate_a_legacy_record(tmp_path: Pat
     _manifest_with_fingerprinted_sessions(tmp_path, STAGE_QUOTE_EXTRACTION)
     out = tmp_path / ".bristlenose" / "intermediate" / "extracted_quotes.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text("[]")
+    out.write_text("[]", encoding="utf-8")
     prev = load_manifest(tmp_path)
     assert _is_stage_verified(
         prev, STAGE_QUOTE_EXTRACTION, [out],
@@ -1005,7 +1005,7 @@ def test_speaker_stage_checks_inputs_before_looking_for_files(tmp_path: Path):
     _manifest_with_fingerprinted_sessions(tmp_path, STAGE_IDENTIFY_SPEAKERS)
     si_dir = tmp_path / ".bristlenose" / "intermediate" / "speaker-info"
     si_dir.mkdir(parents=True)
-    (si_dir / "s1.json").write_text("{}")
+    (si_dir / "s1.json").write_text("{}", encoding="utf-8")
     # s2.json deliberately missing
     prev = load_manifest(tmp_path)
 

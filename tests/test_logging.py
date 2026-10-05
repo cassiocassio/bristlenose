@@ -125,7 +125,7 @@ class TestSetupLogging:
 
             log_path = tmp_path / ".bristlenose" / "bristlenose.log"
             assert log_path.exists()
-            content = log_path.read_text()
+            content = log_path.read_text(encoding="utf-8")
             assert "test info message for log file" in content
         finally:
             if env is not None:

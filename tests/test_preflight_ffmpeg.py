@@ -38,7 +38,7 @@ class TestDetectDistro:
 
     def test_ubuntu_id(self, tmp_path):
         release = tmp_path / "os-release"
-        release.write_text('ID=ubuntu\nID_LIKE=debian\n')
+        release.write_text('ID=ubuntu\nID_LIKE=debian\n', encoding="utf-8")
         with patch("bristlenose.preflight.ffmpeg.sys.platform", "linux"):
             with patch("bristlenose.preflight.ffmpeg.Path") as path_cls:
                 path_cls.return_value = release
@@ -46,7 +46,7 @@ class TestDetectDistro:
 
     def test_fedora_id(self, tmp_path):
         release = tmp_path / "os-release"
-        release.write_text('ID=fedora\n')
+        release.write_text('ID=fedora\n', encoding="utf-8")
         with patch("bristlenose.preflight.ffmpeg.sys.platform", "linux"):
             with patch("bristlenose.preflight.ffmpeg.Path") as path_cls:
                 path_cls.return_value = release
@@ -54,7 +54,7 @@ class TestDetectDistro:
 
     def test_arch_via_id_like(self, tmp_path):
         release = tmp_path / "os-release"
-        release.write_text('ID=manjaro\nID_LIKE="arch"\n')
+        release.write_text('ID=manjaro\nID_LIKE="arch"\n', encoding="utf-8")
         with patch("bristlenose.preflight.ffmpeg.sys.platform", "linux"):
             with patch("bristlenose.preflight.ffmpeg.Path") as path_cls:
                 path_cls.return_value = release

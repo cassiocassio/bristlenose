@@ -240,7 +240,7 @@ class TestPrintPipelineSummary:
         from rich.console import Console
 
         report = tmp_path / "report.html"
-        report.write_text("<html></html>")
+        report.write_text("<html></html>", encoding="utf-8")
         buf = StringIO()
         c = Console(file=buf, force_terminal=True, width=120)
         with patch("bristlenose.cli.console", c):

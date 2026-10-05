@@ -128,8 +128,8 @@ class TestSpacyModelPresenceAcrossDeliveryShapes:
     def _live_model_dir(tmp_path):
         d = tmp_path / "en_core_web_lg"
         d.mkdir()
-        (d / "meta.json").write_text("{}")
-        (d / "config.cfg").write_text("[nlp]")
+        (d / "meta.json").write_text("{}", encoding="utf-8")
+        (d / "config.cfg").write_text("[nlp]", encoding="utf-8")
         return d
 
     def test_path_delivered_model_reads_present_without_a_package(

@@ -71,7 +71,7 @@ class TestZeroConfigTwoRunSequence:
         input_dir = tmp_path / "interviews"
         state_dir = input_dir / "bristlenose-output" / ".bristlenose"
         state_dir.mkdir(parents=True)
-        (state_dir / "bristlenose.log").write_text("log line\n")
+        (state_dir / "bristlenose.log").write_text("log line\n", encoding="utf-8")
 
         result = hermetic_cli.invoke(app, ["run", str(input_dir)])
 
@@ -83,7 +83,7 @@ class TestZeroConfigTwoRunSequence:
         input_dir = tmp_path / "interviews"
         out_dir = input_dir / "bristlenose-output"
         out_dir.mkdir(parents=True)
-        (out_dir / "themes.json").write_text("{}")
+        (out_dir / "themes.json").write_text("{}", encoding="utf-8")
 
         result = hermetic_cli.invoke(app, ["run", str(input_dir)])
 
@@ -115,14 +115,14 @@ class TestHasNoDeliverable:
 
     def test_log_and_rotations_are_tolerated(self, tmp_path: Path) -> None:
         out = self._output_with_state_dir(tmp_path)
-        (out / ".bristlenose" / "bristlenose.log").write_text("x")
-        (out / ".bristlenose" / "bristlenose.log.1").write_text("x")
+        (out / ".bristlenose" / "bristlenose.log").write_text("x", encoding="utf-8")
+        (out / ".bristlenose" / "bristlenose.log.1").write_text("x", encoding="utf-8")
         assert _has_no_deliverable(out)
 
     def test_os_metadata_is_ignored(self, tmp_path: Path) -> None:
         out = self._output_with_state_dir(tmp_path)
         (out / ".DS_Store").write_bytes(b"\x00")
-        (out / ".bristlenose" / "bristlenose.log").write_text("x")
+        (out / ".bristlenose" / "bristlenose.log").write_text("x", encoding="utf-8")
         assert _has_no_deliverable(out)
 
     def test_the_husk_a_hung_run_leaves_is_reusable(self, tmp_path: Path) -> None:
@@ -140,7 +140,7 @@ class TestHasNoDeliverable:
         for name in ("bristlenose.log", "bristlenose.db", "bristlenose.db-wal",
                      "bristlenose.db-shm", "pipeline-events.jsonl",
                      "shoal-feed.jsonl", "last-run-failure.log"):
-            (out / ".bristlenose" / name).write_text("x")
+            (out / ".bristlenose" / name).write_text("x", encoding="utf-8")
         (out / ".bristlenose" / "intermediate").mkdir()
 
         assert _has_no_deliverable(out), (
@@ -150,12 +150,12 @@ class TestHasNoDeliverable:
     def test_a_real_deliverable_still_blocks(self, tmp_path: Path) -> None:
         """The protection that must survive: never silently overwrite output."""
         out = self._output_with_state_dir(tmp_path)
-        (out / "themes.json").write_text("{}")
+        (out / "themes.json").write_text("{}", encoding="utf-8")
         assert not _has_no_deliverable(out)
 
     def test_a_rendered_report_still_blocks(self, tmp_path: Path) -> None:
         out = self._output_with_state_dir(tmp_path)
-        (out / "bristlenose-study-report.html").write_text("<html></html>")
+        (out / "bristlenose-study-report.html").write_text("<html></html>", encoding="utf-8")
         assert not _has_no_deliverable(out)
 
     def test_transcripts_still_block(self, tmp_path: Path) -> None:

@@ -233,7 +233,7 @@ def test_call_site_routes_through_wrap_untrusted(rel_path: str, variable: str) -
     bypass-by-comment failure mode of the prior string-grep test
     (Finding 2 in the design doc's review log) is closed.
     """
-    source = (REPO_ROOT / rel_path).read_text()
+    source = (REPO_ROOT / rel_path).read_text(encoding="utf-8")
     tree = ast.parse(source, filename=rel_path)
 
     assert _imports_wrap_untrusted(tree), (

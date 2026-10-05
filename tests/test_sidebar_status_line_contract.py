@@ -67,7 +67,7 @@ TERMINAL_PUNCTUATION = (".", "。", "！", "!", "?", "？")
 
 
 def _locale(name: str) -> dict:
-    return json.loads((LOCALES / name / "desktop.json").read_text())
+    return json.loads((LOCALES / name / "desktop.json").read_text(encoding="utf-8"))
 
 
 def _pipeline(name: str) -> dict:
@@ -80,7 +80,7 @@ def _unreachable_cases() -> list[str]:
     A hand-maintained list here would drift silently the first time someone adds
     a case — which is the whole failure mode this file exists to prevent.
     """
-    source = (DESKTOP / "UnreachableReason.swift").read_text()
+    source = (DESKTOP / "UnreachableReason.swift").read_text(encoding="utf-8")
     body = source.split("enum UnreachableReason", 1)[1]
     cases = re.findall(r"^\s*case\s+([a-zA-Z][a-zA-Z0-9]*)\s*$", body, re.MULTILINE)
     assert cases, "no cases parsed — did UnreachableReason.swift change shape?"
@@ -121,7 +121,7 @@ class TestUnreachableIsLocalised:
         "Taking too long to respond.")`. It is cheap to reintroduce by copying a
         neighbouring line, and nothing else in the repo would notice.
         """
-        source = (DESKTOP / "PipelineRunner.swift").read_text()
+        source = (DESKTOP / "PipelineRunner.swift").read_text(encoding="utf-8")
         literals = re.findall(r'unreachable\(reason:\s*"', source)
         assert not literals, (
             f"{len(literals)} literal-string unreachable reason(s) in "

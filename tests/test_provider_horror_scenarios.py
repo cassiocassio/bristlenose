@@ -199,7 +199,7 @@ class TestProviderGuidance:
         # configure = choose: local becomes current, so the run hint needs no flag.
         assert "provider for analysis" in res.output
         assert "bristlenose run" in res.output
-        stored = (tmp_path / "bristlenose" / ".env").read_text()
+        stored = (tmp_path / "bristlenose" / ".env").read_text(encoding="utf-8")
         assert "BRISTLENOSE_LLM_PROVIDER=local" in stored
 
     def test_configure_local_setup_failure_exits_nonzero(

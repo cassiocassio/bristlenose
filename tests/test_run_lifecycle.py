@@ -567,7 +567,7 @@ def test_stale_pid_file_with_dead_pid_does_not_refuse(tmp_path: Path):
     pid_file_path(tmp_path).parent.mkdir(parents=True, exist_ok=True)
     pid_file_path(tmp_path).write_text(json.dumps({
         "pid": 999_999, "start_time": "Stale", "run_id": "OLD",
-    }))
+    }), encoding="utf-8")
     # Should run cleanly — no ConcurrentRunError.
     with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
         pass
@@ -580,7 +580,7 @@ def test_pid_file_with_reused_pid_but_mismatched_start_time_does_not_refuse(tmp_
         "pid": os.getpid(),  # real, alive
         "start_time": "Definitely Not Our Start Time",
         "run_id": "X",
-    }))
+    }), encoding="utf-8")
     with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
         pass
 
@@ -597,7 +597,7 @@ def test_concurrent_run_refused_when_pid_file_alive(tmp_path: Path):
     pid_file_path(tmp_path).parent.mkdir(parents=True, exist_ok=True)
     pid_file_path(tmp_path).write_text(json.dumps({
         "pid": os.getpid(), "start_time": real_start, "run_id": "OTHER",
-    }))
+    }), encoding="utf-8")
     with pytest.raises(ConcurrentRunError, match="already in progress"):
         with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
             pass
@@ -720,6 +720,7 @@ def _wait_for_ready(sentinel: Path, *, timeout: float = 30.0) -> None:
     )
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="os.kill cannot deliver SIGINT on Windows; Ctrl-C reaches Python as KeyboardInterrupt by a console event")
 def test_subprocess_sigint_writes_run_cancelled(tmp_path: Path):
     """SIGINT to a paused run writes run_cancelled with the right signal.
 
@@ -760,6 +761,7 @@ def test_subprocess_sigint_writes_run_cancelled(tmp_path: Path):
     )
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="os.kill cannot deliver SIGINT on Windows")
 def test_subprocess_sigint_during_startup_is_cancelled(tmp_path: Path):
     """A signal arriving during lifecycle STARTUP still writes run_cancelled.
 
@@ -819,6 +821,7 @@ def test_subprocess_sigint_during_startup_is_cancelled(tmp_path: Path):
     )
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="os.kill cannot deliver SIGINT on Windows")
 def test_subprocess_sigint_inside_append_event_is_cancelled(tmp_path: Path):
     """A signal arriving while `run_started` is still being written is cancelled.
 
@@ -885,6 +888,7 @@ def test_subprocess_clean_exit_writes_run_completed(tmp_path: Path):
     assert any(isinstance(e, RunCompletedEvent) for e in events)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="SIGTERM on Windows is TerminateProcess: no handler runs, so there is no cancel to record")
 def test_subprocess_sigterm_writes_run_cancelled(tmp_path: Path):
     sentinel = tmp_path / "ready"
     proc = _spawn_lifecycle_subprocess(tmp_path, _paused_body(sentinel))

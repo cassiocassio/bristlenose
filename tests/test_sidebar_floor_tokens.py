@@ -23,13 +23,13 @@ REM_PX = 16
 
 
 def _token_px(name: str) -> float:
-    m = re.search(rf"{re.escape(name)}:\s*([\d.]+)rem", TOKENS.read_text())
+    m = re.search(rf"{re.escape(name)}:\s*([\d.]+)rem", TOKENS.read_text(encoding="utf-8"))
     assert m, f"{name} not found in {TOKENS}"
     return float(m.group(1)) * REM_PX
 
 
 def _store_const(name: str) -> float:
-    m = re.search(rf"export const {name} = (\d+(?:\.\d+)?);", STORE.read_text())
+    m = re.search(rf"export const {name} = (\d+(?:\.\d+)?);", STORE.read_text(encoding="utf-8"))
     assert m, f"{name} not found in {STORE}"
     return float(m.group(1))
 

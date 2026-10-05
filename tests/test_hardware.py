@@ -114,7 +114,7 @@ class TestHardwareCache:
             "memory_gb": 16.0,
             "timestamp": time.time() - _CACHE_TTL_SECONDS - 1,
         }
-        cache_file.write_text(json.dumps(expired_data))
+        cache_file.write_text(json.dumps(expired_data), encoding="utf-8")
         with (
             patch("bristlenose.utils.hardware._CACHE_DIR", tmp_path),
             patch("bristlenose.utils.hardware._CACHE_FILE", cache_file),
@@ -129,7 +129,7 @@ class TestHardwareCache:
             "memory_gb": 16.0,
             "timestamp": time.time(),
         }
-        cache_file.write_text(json.dumps(fresh_data))
+        cache_file.write_text(json.dumps(fresh_data), encoding="utf-8")
         with (
             patch("bristlenose.utils.hardware._CACHE_DIR", tmp_path),
             patch("bristlenose.utils.hardware._CACHE_FILE", cache_file),
@@ -140,7 +140,7 @@ class TestHardwareCache:
 
     def test_load_returns_none_on_corrupt_json(self, tmp_path: Path):
         cache_file = tmp_path / ".hardware-cache.json"
-        cache_file.write_text("not json{{{")
+        cache_file.write_text("not json{{{", encoding="utf-8")
         with (
             patch("bristlenose.utils.hardware._CACHE_DIR", tmp_path),
             patch("bristlenose.utils.hardware._CACHE_FILE", cache_file),
@@ -184,7 +184,7 @@ class TestDetectHardware:
             "memory_gb": 36.0,
             "timestamp": time.time(),
         }
-        cache_file.write_text(json.dumps(cache_data))
+        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
 
         with (
             patch("bristlenose.utils.hardware._CACHE_DIR", tmp_path),
@@ -223,7 +223,7 @@ class TestDetectHardware:
 
         assert info.chip_name == "Apple M2"
         assert cache_file.exists()
-        saved = json.loads(cache_file.read_text())
+        saved = json.loads(cache_file.read_text(encoding="utf-8"))
         assert saved["chip_name"] == "Apple M2"
         assert saved["gpu_cores"] == 10
         assert saved["memory_gb"] == 16.0

@@ -90,8 +90,8 @@ class TestTheReportSurvivesAFailedRun:
 
         _run(cli_to_pipeline, input_dir)
 
-        assert (out_dir / _MARKER).read_text() == "good"
-        assert (out_dir / ".bristlenose" / "bristlenose.db").read_text() == "db:good"
+        assert (out_dir / _MARKER).read_text(encoding="utf-8") == "good"
+        assert (out_dir / ".bristlenose" / "bristlenose.db").read_text(encoding="utf-8") == "db:good"
 
     def test_the_failure_is_still_visible_after_the_restore(
         self, cli_to_pipeline, tmp_path: Path, monkeypatch
@@ -112,7 +112,7 @@ class TestTheReportSurvivesAFailedRun:
 
         _run(cli_to_pipeline, input_dir)
 
-        events = (out_dir / ".bristlenose" / "pipeline-events.jsonl").read_text()
+        events = (out_dir / ".bristlenose" / "pipeline-events.jsonl").read_text(encoding="utf-8")
         lines = [json.loads(ln) for ln in events.splitlines() if ln.strip()]
         assert lines[0]["run_id"] == "old", "the old history should survive"
         assert lines[-1]["event"] != "run_completed", (
@@ -134,7 +134,7 @@ class TestTheReportSurvivesAFailedRun:
 
         _run(cli_to_pipeline, input_dir)
 
-        assert (out_dir / _MARKER).read_text() == "good"
+        assert (out_dir / _MARKER).read_text(encoding="utf-8") == "good"
 
 
 class TestTheNewReportSurvivesASuccessfulRun:
@@ -159,7 +159,7 @@ class TestTheNewReportSurvivesASuccessfulRun:
 
         _run(cli_to_pipeline, input_dir)
 
-        assert (out_dir / _MARKER).read_text() == "new", (
+        assert (out_dir / _MARKER).read_text(encoding="utf-8") == "new", (
             "the successful run's report must be the one on disk"
         )
 
@@ -207,7 +207,7 @@ class TestCrashRecovery:
 
         _run(cli_to_pipeline, input_dir)
 
-        assert (out_dir / _MARKER).read_text() == "good"
+        assert (out_dir / _MARKER).read_text(encoding="utf-8") == "good"
 
     def test_recovery_happens_before_the_directory_is_inspected(
         self, cli_to_pipeline, tmp_path: Path, monkeypatch
@@ -240,7 +240,7 @@ class TestCrashRecovery:
             "the recovered report was not cleaned before the run — reclaim_stale "
             "must precede the output_exists probe"
         )
-        assert (out_dir / _MARKER).read_text() == "new"
+        assert (out_dir / _MARKER).read_text(encoding="utf-8") == "new"
 
 
 @pytest.fixture
@@ -287,7 +287,7 @@ class TestRenamesSurviveAnOpenLogFile:
 
         assert "Could not set" not in result.output, result.output
         assert seen == {"old_marker_present": False}
-        assert (out_dir / _MARKER).read_text() == "new"
+        assert (out_dir / _MARKER).read_text(encoding="utf-8") == "new"
 
     def test_a_failed_run_puts_the_previous_report_back(
         self, cli_to_pipeline, windows_rename, tmp_path: Path, monkeypatch
@@ -305,4 +305,4 @@ class TestRenamesSurviveAnOpenLogFile:
         monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _boom)
         _run(cli_to_pipeline, input_dir)
 
-        assert (out_dir / _MARKER).read_text() == "old"
+        assert (out_dir / _MARKER).read_text(encoding="utf-8") == "old"

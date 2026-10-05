@@ -16,7 +16,6 @@ there is no ffmpeg.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -122,7 +121,7 @@ class TestHiddenEntries:
     def test_hidden_directories_are_not_walked(self, tmp_path: Path) -> None:
         _touch(tmp_path / "interview.mp4")
         (tmp_path / ".claude").mkdir()
-        (tmp_path / ".claude" / "settings.local.json").write_text("{}")
+        (tmp_path / ".claude" / "settings.local.json").write_text("{}", encoding="utf-8")
 
         skipped: list[SkippedFile] = []
         found = discover_files(tmp_path, skipped)
@@ -148,7 +147,7 @@ class TestHiddenEntries:
         """The hidden skip must not widen: a file the researcher CAN see
         still gets its stated row."""
         _touch(tmp_path / "interview.mp4")
-        (tmp_path / "notes.json").write_text("{}")
+        (tmp_path / "notes.json").write_text("{}", encoding="utf-8")
 
         skipped: list[SkippedFile] = []
         found = discover_files(tmp_path, skipped)
@@ -159,18 +158,26 @@ class TestHiddenEntries:
 
 
 class TestResilience:
-    def test_one_unreadable_directory_does_not_end_the_walk(self, tmp_path: Path) -> None:
+    def test_one_unreadable_directory_does_not_end_the_walk(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """`~/.Trash` is the everyday case: it used to raise out of iterdir and
         destroy the whole scan."""
         _touch(tmp_path / "good.mp4")
         locked = tmp_path / "locked"
         _touch(locked / "hidden.mp4")
-        os.chmod(locked, 0o000)
-        try:
-            skipped: list[SkippedFile] = []
-            found = discover_files(tmp_path, skipped)
-        finally:
-            os.chmod(locked, 0o755)
+        # The refusal is staged at iterdir rather than with chmod 000, which
+        # denies nothing on Windows (it only sets read-only) or to root.
+        real_iterdir = Path.iterdir
+
+        def iterdir(self):  # type: ignore[no-untyped-def]
+            if self == locked:
+                raise PermissionError(13, "Permission denied", str(self))
+            return real_iterdir(self)
+
+        monkeypatch.setattr(Path, "iterdir", iterdir)
+        skipped: list[SkippedFile] = []
+        found = discover_files(tmp_path, skipped)
 
         assert [f.path.name for f in found] == ["good.mp4"]
         assert any(

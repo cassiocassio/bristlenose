@@ -65,7 +65,7 @@ class TestClassifyingWhyAFileFailed:
         self, tmp_path: Path
     ) -> None:
         f = tmp_path / "notes-not-video.mp4"
-        f.write_text("Met Priya at 10. She hated the onboarding.\n")
+        f.write_text("Met Priya at 10. She hated the onboarding.\n", encoding="utf-8")
         assert classify_unreadable(f) is UnusableReason.NOT_A_RECORDING
 
     @pytest.mark.parametrize("kind", sorted(_HEADERS))
@@ -172,8 +172,8 @@ class TestScannerParity:
 
         out = tmp_path / OUTPUT_DIR_NAME
         out.mkdir()
-        (out / "bristlenose-report.html").write_text("<html></html>")
-        (out / "manifest.csv").write_text("a,b\n")
+        (out / "bristlenose-report.html").write_text("<html></html>", encoding="utf-8")
+        (out / "manifest.csv").write_text("a,b\n", encoding="utf-8")
         (tmp_path / "tape.dv").write_bytes(b"\x00" * 16)
 
         skipped: list = []

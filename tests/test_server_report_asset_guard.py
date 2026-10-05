@@ -36,26 +36,26 @@ _OUTSIDE = "outside the output dir"
 
 def _seed_project(project_dir: Path) -> None:
     """A project with the private files a real run leaves behind."""
-    (project_dir / "outside.txt").write_text(_OUTSIDE)
+    (project_dir / "outside.txt").write_text(_OUTSIDE, encoding="utf-8")
 
     output_dir = project_dir / "bristlenose-output"
     internal = output_dir / ".bristlenose"
     internal.mkdir(parents=True)
-    (internal / "pii_summary.txt").write_text(_PII_KEY)
-    (internal / "llm-calls.jsonl").write_text('{"session_id": "s1"}\n')
-    (internal / "report.css").write_text("/* a dotdir file with an allowed suffix */")
+    (internal / "pii_summary.txt").write_text(_PII_KEY, encoding="utf-8")
+    (internal / "llm-calls.jsonl").write_text('{"session_id": "s1"}\n', encoding="utf-8")
+    (internal / "report.css").write_text("/* a dotdir file with an allowed suffix */", encoding="utf-8")
 
     assets = output_dir / "assets"
     (assets / "thumbnails").mkdir(parents=True)
-    (assets / "bristlenose-theme.css").write_text("body { color: red; }")
+    (assets / "bristlenose-theme.css").write_text("body { color: red; }", encoding="utf-8")
     (assets / "bristlenose-logo.png").write_bytes(b"\x89PNG fake")
-    (assets / "bristlenose-player.html").write_text("<!doctype html><title>player</title>")
+    (assets / "bristlenose-player.html").write_text("<!doctype html><title>player</title>", encoding="utf-8")
     (assets / "thumbnails" / "s1.jpg").write_bytes(b"fake-jpg")
     # A symlink inside the served root that points out of it, and one that
     # stays inside the output dir but lands in the dot-directory.
     (assets / "escape.css").symlink_to(project_dir / "outside.txt")
     (assets / "leak.css").symlink_to(Path("..") / ".bristlenose" / "report.css")
-    (output_dir / "report.css").write_text("/* output root, outside assets/ */")
+    (output_dir / "report.css").write_text("/* output root, outside assets/ */", encoding="utf-8")
     # Inside /media/'s root (the project dir), lands on the key — refused on
     # suffix since /media/ became recordings-only.
     (project_dir / "notes.txt").symlink_to(
@@ -67,11 +67,11 @@ def _seed_project(project_dir: Path) -> None:
     (project_dir / "clip.wav").symlink_to(
         Path("bristlenose-output") / ".bristlenose" / "cache.wav"
     )
-    (output_dir / "bristlenose-x-report.html").write_text("<p>static report: Sarah Jones</p>")
+    (output_dir / "bristlenose-x-report.html").write_text("<p>static report: Sarah Jones</p>", encoding="utf-8")
 
-    (output_dir / "people.yaml").write_text("participants:\n  p1: {full_name: Sarah Jones}\n")
+    (output_dir / "people.yaml").write_text("participants:\n  p1: {full_name: Sarah Jones}\n", encoding="utf-8")
     (output_dir / "sessions").mkdir()
-    (output_dir / "sessions" / "transcript_s1.html").write_text("<p>transcript</p>")
+    (output_dir / "sessions" / "transcript_s1.html").write_text("<p>transcript</p>", encoding="utf-8")
 
 
 @pytest.fixture(params=["prod", "dev"])
@@ -90,8 +90,8 @@ def client(
         monkeypatch.delenv("_BRISTLENOSE_DEV", raising=False)
         static_dir = tmp_path / "static"
         (static_dir / "assets").mkdir(parents=True)
-        (static_dir / "index.html").write_text(_VITE_INDEX_HTML)
-        (static_dir / "assets" / "main-abc123.js").write_text("// bundle")
+        (static_dir / "index.html").write_text(_VITE_INDEX_HTML, encoding="utf-8")
+        (static_dir / "assets" / "main-abc123.js").write_text("// bundle", encoding="utf-8")
         with patch("bristlenose.server.app._STATIC_DIR", static_dir):
             app = create_app(project_dir=project_dir, dev=False, db_url="sqlite://")
     yield TestClient(app, base_url="http://127.0.0.1")

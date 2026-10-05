@@ -52,7 +52,7 @@ _SMOKE = (
 
 def test_size_floor_fails_on_empty(tmp_path: Path) -> None:
     empty = tmp_path / "export.html"
-    empty.write_text("")
+    empty.write_text("", encoding="utf-8")
     with pytest.raises(InvariantError, match="size floor"):
         assert_nonempty_file(empty, floor_bytes=500)
 
@@ -64,7 +64,7 @@ def test_size_floor_fails_on_absent(tmp_path: Path) -> None:
 
 def test_size_floor_passes_on_real(tmp_path: Path) -> None:
     f = tmp_path / "export.html"
-    f.write_text("x" * 600)
+    f.write_text("x" * 600, encoding="utf-8")
     assert_nonempty_file(f, floor_bytes=500)  # no raise
 
 
@@ -115,7 +115,7 @@ def test_terminus_fails_closed_on_absent_events(tmp_path: Path) -> None:
 def test_terminus_fails_closed_on_empty_events(tmp_path: Path) -> None:
     d = tmp_path / ".bristlenose"
     d.mkdir()
-    (d / "pipeline-events.jsonl").write_text("\n")
+    (d / "pipeline-events.jsonl").write_text("\n", encoding="utf-8")
     with pytest.raises(InvariantError, match="empty"):
         assert_terminus_completed(tmp_path)
 
@@ -123,7 +123,7 @@ def test_terminus_fails_closed_on_empty_events(tmp_path: Path) -> None:
 def test_terminus_fails_on_run_failed(tmp_path: Path) -> None:
     d = tmp_path / ".bristlenose"
     d.mkdir()
-    (d / "pipeline-events.jsonl").write_text(json.dumps({"event": "run_failed", "outcome": "failed"}))
+    (d / "pipeline-events.jsonl").write_text(json.dumps({"event": "run_failed", "outcome": "failed"}), encoding="utf-8")
     with pytest.raises(InvariantError, match="run_failed"):
         assert_terminus_completed(tmp_path)
 
@@ -172,7 +172,7 @@ def test_report_non_empty_fails_closed_on_missing_clusters(tmp_path: Path) -> No
     # a clean InvariantError, NOT a raw FileNotFoundError that crashes the runner.
     inter = tmp_path / ".bristlenose" / "intermediate"
     inter.mkdir(parents=True)
-    (inter / "metadata.json").write_text("{}")
+    (inter / "metadata.json").write_text("{}", encoding="utf-8")
     with pytest.raises(InvariantError, match="empty/fake-success"):
         assert_report_non_empty(tmp_path, quote_floor=1)
 
@@ -187,7 +187,7 @@ def test_reid_keys_absent_from_smoke_root() -> None:
 
 
 def test_reid_key_in_root_is_caught(tmp_path: Path) -> None:
-    (tmp_path / "llm-calls.jsonl").write_text("{}")
+    (tmp_path / "llm-calls.jsonl").write_text("{}", encoding="utf-8")
     with pytest.raises(InvariantError, match="re-identification key"):
         assert_reid_keys_not_shareable(tmp_path)
 
@@ -317,7 +317,7 @@ def test_transcripts_present_but_empty_is_caught(tmp_path: Path) -> None:
     # The fake-success shape: the files exist, so a bare existence check would pass.
     raw = tmp_path / "transcripts-raw"
     raw.mkdir()
-    (raw / "s1.txt").write_text("")
+    (raw / "s1.txt").write_text("", encoding="utf-8")
     with pytest.raises(InvariantError, match="present but empty"):
         assert_transcripts_present(tmp_path)
 
@@ -325,7 +325,7 @@ def test_transcripts_present_but_empty_is_caught(tmp_path: Path) -> None:
 def test_transcripts_with_content_passes(tmp_path: Path) -> None:
     raw = tmp_path / "transcripts-raw"
     raw.mkdir()
-    (raw / "s1.txt").write_text("Moderator: talk me through the checkout page.")
+    (raw / "s1.txt").write_text("Moderator: talk me through the checkout page.", encoding="utf-8")
     assert_transcripts_present(tmp_path)
 
 
@@ -368,8 +368,8 @@ def test_prepare_cell_dir_wipes_a_previous_run(tmp_path: Path) -> None:
 
     stale = tmp_path / "run_openai"
     (stale / ".bristlenose").mkdir(parents=True)
-    (stale / ".bristlenose" / "manifest.json").write_text('{"stages": "all COMPLETE"}')
-    (stale / "report.html").write_text("last week's report")
+    (stale / ".bristlenose" / "manifest.json").write_text('{"stages": "all COMPLETE"}', encoding="utf-8")
+    (stale / "report.html").write_text("last week's report", encoding="utf-8")
 
     out = prepare_cell_dir(tmp_path, "run:openai")
 

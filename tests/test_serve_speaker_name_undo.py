@@ -77,5 +77,5 @@ class TestUndoAParticipantRename:
         client.put("/api/projects/1/sessions/s1/speakers/p1", json={"confirmed": False})
 
         assert _state(_slot(client, "s1", "p1")) == ("Ann Archer", "Ann", False)
-        written = yaml.safe_load((tmp_path / "bristlenose-output" / "people.yaml").read_text())
+        written = yaml.safe_load((tmp_path / "bristlenose-output" / "people.yaml").read_text(encoding="utf-8"))
         assert written["participants"]["p1"]["editable"]["short_name"] == "Ann"

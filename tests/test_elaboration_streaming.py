@@ -152,7 +152,7 @@ class TestThePremiseChunkingRestsOn:
         others in its batch, chunking silently makes names worse and every test
         above still passes. Pinned here so the change is loud.
         """
-        prompt = pathlib.Path("bristlenose/llm/prompts/signal-elaboration.md").read_text()
+        prompt = pathlib.Path("bristlenose/llm/prompts/signal-elaboration.md").read_text(encoding="utf-8")
         schema = "One elaboration per input signal, in order"
 
         from bristlenose.llm.structured import SignalElaborationResult

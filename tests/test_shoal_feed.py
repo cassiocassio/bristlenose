@@ -26,7 +26,7 @@ def _batches(output_dir):
     path = _feed(output_dir)
     if not path.exists():
         return []
-    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
 def test_not_hosted_writes_nothing(tmp_path, monkeypatch):
@@ -42,7 +42,7 @@ def test_start_truncates_prior_content(tmp_path, hosted):
     assert _batches(tmp_path)  # something was written
     shoal_feed.start(tmp_path)
     assert _feed(tmp_path).exists()
-    assert _feed(tmp_path).read_text() == ""  # truncated to empty
+    assert _feed(tmp_path).read_text(encoding="utf-8") == ""  # truncated to empty
 
 
 def test_emit_words_filters_and_batches(tmp_path, hosted):

@@ -325,7 +325,7 @@ class TestFeatureGolden:
 
     def test_features_for_a_seeded_signal_match_the_recording(self) -> None:
         gold = json.loads(
-            (Path(__file__).parent / "fixtures" / "voice-fbank-golden.json").read_text())
+            (Path(__file__).parent / "fixtures" / "voice-fbank-golden.json").read_text(encoding="utf-8"))
         m = voice._TitaNet.__new__(voice._TitaNet)
         m._options = voice.fbank_options()
         t = np.arange(16000) / 16000
@@ -372,6 +372,7 @@ class TestModel:
         monkeypatch.setattr(sys, "platform", "darwin")
         monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
         monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows
         assert voice.voice_model_cache_path() == (
             tmp_path / "Library" / "Caches" / "bristlenose" / "models" / voice.VOICE_MODEL_NAME)
 
@@ -499,7 +500,7 @@ class TestPipelineRecord:
         return h, calls
 
     def _record(self, h, sid: str) -> dict:
-        return json.loads((h.intermediate / "speaker-info" / f"{sid}.json").read_text())[
+        return json.loads((h.intermediate / "speaker-info" / f"{sid}.json").read_text(encoding="utf-8"))[
             "speaker_split"]
 
     def test_a_voice_checked_session_is_recorded_and_relabelled(self, tmp_path, monkeypatch) -> None:

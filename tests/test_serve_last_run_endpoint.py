@@ -10,6 +10,7 @@ must only become observable after ``import_project`` has returned.
 from __future__ import annotations
 
 import asyncio
+import sys
 import threading
 from pathlib import Path
 from types import SimpleNamespace
@@ -331,6 +332,7 @@ class TestSchemaHealAfterClean:
         finally:
             db.close()
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Windows will not delete a database file with open connections, so it cannot be replaced under serve")
     def test_recreates_schema_when_db_file_replaced(self, tmp_path: Path) -> None:
         engine, db_path = self._file_engine(tmp_path)
         held = engine.connect()  # the serve's pooled connection, pinning the inode
@@ -373,6 +375,7 @@ class TestSchemaHealAfterClean:
         finally:
             db.close()
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Windows will not delete a database file with open connections, so it cannot be replaced under serve")
     @pytest.mark.asyncio
     async def test_handler_heals_replaced_db_before_reimport(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,

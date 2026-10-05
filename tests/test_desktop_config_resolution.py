@@ -33,7 +33,7 @@ def dotenv_in_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     env = tmp_path / ".env"
     env.write_text(
         "BRISTLENOSE_LLM_PROVIDER=anthropic\n"
-        "BRISTLENOSE_LLM_MODEL=claude-sonnet-4-20250514\n"
+        "BRISTLENOSE_LLM_MODEL=claude-sonnet-4-20250514\n", encoding="utf-8"
     )
     monkeypatch.chdir(tmp_path)
     return env

@@ -301,14 +301,14 @@ class TestExtractionWritesSubtitles:
             asyncio.run(clips_export._run_clip_extraction(
                 1, [_spec(tmp_path / "src.mp4")], tmp_path, 1, False, False, cues,
             ))
-        manifest = json.loads((tmp_path / "clips_manifest.json").read_text())
+        manifest = json.loads((tmp_path / "clips_manifest.json").read_text(encoding="utf-8"))
         return {"calls": calls, "manifest": manifest}
 
     def test_vtt_beside_the_clip_and_in_the_manifest(self, tmp_path: Path) -> None:
         out = self._run(tmp_path, {0: self._cues()}, fail_with_subs=False)
         entry = out["manifest"]["clips"][0]
         assert entry["subtitles"] == entry["filename"].rsplit(".", 1)[0] + ".vtt"
-        assert (tmp_path / entry["subtitles"]).read_text().startswith("WEBVTT")
+        assert (tmp_path / entry["subtitles"]).read_text(encoding="utf-8").startswith("WEBVTT")
         assert len(out["calls"]) == 1 and out["calls"][0] is not None
         assert not list(tmp_path.glob(".*.srt.tmp"))  # temp SRT cleaned up
 
@@ -326,7 +326,7 @@ class TestExtractionWritesSubtitles:
 
     def test_stale_vtt_from_an_earlier_export_is_removed(self, tmp_path: Path) -> None:
         stale = tmp_path / "p1 00m10 i found the dashboard.vtt"
-        stale.write_text("WEBVTT\n")
+        stale.write_text("WEBVTT\n", encoding="utf-8")
         out = self._run(tmp_path, {}, fail_with_subs=False)
         assert out["manifest"]["clips"][0]["subtitles"] is None
         assert not stale.exists()
@@ -412,8 +412,8 @@ class TestExportComposesSubtitles:
                 status = client.get("/api/projects/1/export/clips/status").json()["status"]
                 time.sleep(0.05)
         assert status == "completed", f"job ended {status!r}"
-        manifest = json.loads((tmp_path / "clips" / "clips_manifest.json").read_text())
-        vtt = (tmp_path / "clips" / manifest["clips"][0]["subtitles"]).read_text()
+        manifest = json.loads((tmp_path / "clips" / "clips_manifest.json").read_text(encoding="utf-8"))
+        vtt = (tmp_path / "clips" / manifest["clips"][0]["subtitles"]).read_text(encoding="utf-8")
         assert "dashboard pretty confusing" in vtt.replace("\n", " ")
 
     def test_a_failing_subtitle_build_does_not_fail_the_export(
@@ -489,7 +489,7 @@ class TestBurnIn:
             asyncio.run(clips_export._run_clip_extraction(
                 1, [spec], tmp_path, 1, False, False, {0: [self._cue()]}, {"s1": "eng"}, burn,
             ))
-        manifest = json.loads((tmp_path / "clips_manifest.json").read_text())
+        manifest = json.loads((tmp_path / "clips_manifest.json").read_text(encoding="utf-8"))
         return {"calls": burn_calls, "manifest": manifest}
 
     def test_burned_copy_sits_beside_the_clean_clip(self, tmp_path: Path) -> None:
@@ -590,7 +590,7 @@ class TestLivePlayerPage:
         static_dir = tmp_path / "static"
         (static_dir / "assets").mkdir(parents=True)
         (static_dir / "index.html").write_text(
-            '<!doctype html><html><head></head><body><div id="bn-app-root"></div></body></html>')
+            '<!doctype html><html><head></head><body><div id="bn-app-root"></div></body></html>', encoding="utf-8")
         with patch("bristlenose.server.app._STATIC_DIR", static_dir):
             app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
         client = AuthTestClient(app)

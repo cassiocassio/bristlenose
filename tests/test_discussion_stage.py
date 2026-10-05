@@ -129,7 +129,7 @@ class FakeClient:
 def write_guide(tmp: Path, text: str = "# Guide\n## About you\n- Who do you live with?\n") -> Path:
     folder = tmp / GUIDE_FOLDER
     folder.mkdir()
-    (folder / "guide.md").write_text(text)
+    (folder / "guide.md").write_text(text, encoding="utf-8")
     return folder
 
 
@@ -319,7 +319,7 @@ def test_only_a_speaker_cache_with_a_split_record_counts_as_whole_split(tmp_path
     from bristlenose.discussion.moderator import whole_transcript_split
 
     def write(sid, body):
-        (tmp_path / f"{sid}.json").write_text(body)
+        (tmp_path / f"{sid}.json").write_text(body, encoding="utf-8")
 
     write("new", json.dumps({"speaker_infos": [], "speaker_split": {"method": "voice+text"}}))
     write("labels", json.dumps({"speaker_split": {"method": "transcript-labels"}}))
@@ -353,7 +353,7 @@ def test_no_folder_no_guide(tmp_path):
 def test_reads_the_newest_and_reports_the_rest(tmp_path):
     folder = write_guide(tmp_path, "old guide")
     newer = folder / "v2.txt"
-    newer.write_text("new guide")
+    newer.write_text("new guide", encoding="utf-8")
     os.utime(folder / "guide.md", (1, 1))
     g = find_guide(tmp_path)
     assert g and g.text == "new guide" and g.ignored == ["guide.md"]
@@ -363,14 +363,14 @@ def test_ignores_lock_files_and_dotfiles(tmp_path):
     folder = tmp_path / GUIDE_FOLDER
     folder.mkdir()
     for name in ("~$guide.docx", ".DS_Store"):
-        (folder / name).write_text("x")
+        (folder / name).write_text("x", encoding="utf-8")
     assert find_guide(tmp_path) is None  # tool state only: there is no guide
 
 
 def test_a_guide_in_another_format_is_there_but_unread(tmp_path):
     folder = tmp_path / GUIDE_FOLDER
     folder.mkdir()
-    (folder / "notes.pdf").write_text("x")
+    (folder / "notes.pdf").write_text("x", encoding="utf-8")
     g = find_guide(tmp_path)
     assert g is not None and g.problem == "unsupported_format" and g.text == ""
 
@@ -378,7 +378,7 @@ def test_a_guide_in_another_format_is_there_but_unread(tmp_path):
 def test_refuses_a_symlinked_folder_and_an_oversize_file(tmp_path):
     real = tmp_path / "elsewhere"
     real.mkdir()
-    (real / "guide.md").write_text("x")
+    (real / "guide.md").write_text("x", encoding="utf-8")
     (tmp_path / GUIDE_FOLDER).symlink_to(real, target_is_directory=True)
     g = find_guide(tmp_path)
     assert g is not None and g.problem == "symlink" and g.text == ""  # refused, not "no guide"
@@ -419,7 +419,7 @@ def test_the_folder_is_found_whatever_its_case_and_ingest_skips_it(tmp_path):
     from bristlenose.discussion.guide import is_guide_folder
     folder = tmp_path / GUIDE_FOLDER.upper()
     folder.mkdir()
-    (folder / "guide.md").write_text("# Guide\n- Who do you live with?\n")
+    (folder / "guide.md").write_text("# Guide\n- Who do you live with?\n", encoding="utf-8")
     assert is_guide_folder(folder)
     g = find_guide(tmp_path)
     assert g is not None and g.text.startswith("# Guide")

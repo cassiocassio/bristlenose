@@ -191,7 +191,7 @@ class TestTheDetectedLanguageReachesTheTranscriptHeader:
         assert transcripts[0].detected_language == "es"
 
         write_raw_transcripts(transcripts, tmp_path)
-        assert "Language: es (detected)" in (tmp_path / "s1.txt").read_text()
+        assert "Language: es (detected)" in (tmp_path / "s1.txt").read_text(encoding="utf-8")
 
     def test_header_records_a_pinned_language_as_set_not_detected(self, tmp_path) -> None:
         # A pinned run: not evidence of anything, but it IS the language, and
@@ -206,14 +206,14 @@ class TestTheDetectedLanguageReachesTheTranscriptHeader:
         assert transcripts[0].detected_language is None
 
         write_raw_transcripts(transcripts, tmp_path)
-        text = (tmp_path / "s1.txt").read_text()
+        text = (tmp_path / "s1.txt").read_text(encoding="utf-8")
         assert "Language: es (set)" in text
         assert "detected" not in text
 
     def test_importer_reads_a_set_language(self, tmp_path) -> None:
         from bristlenose.server.importer import _parse_transcript_headers
 
-        (tmp_path / "s1.txt").write_text("# Transcript: s1\n# Language: es (set)\n")
+        (tmp_path / "s1.txt").write_text("# Transcript: s1\n# Language: es (set)\n", encoding="utf-8")
         assert _parse_transcript_headers(tmp_path)["s1"]["language"] == "es"
 
     def test_header_stays_silent_when_nothing_was_detected(self, tmp_path) -> None:
@@ -229,7 +229,7 @@ class TestTheDetectedLanguageReachesTheTranscriptHeader:
         assert transcripts[0].detected_language is None
 
         write_raw_transcripts(transcripts, tmp_path)
-        assert "Language:" not in (tmp_path / "s1.txt").read_text()
+        assert "Language:" not in (tmp_path / "s1.txt").read_text(encoding="utf-8")
 
 
 class TestEveryReturnPathCarriesThreeValues:
@@ -471,9 +471,9 @@ class TestPipelineRecordsAPinnedLanguage:
 
         raw = tmp_path / "transcripts-raw"
         raw.mkdir()
-        (raw / "s1.txt").write_text("# Transcript: s1\n# Language: ja (detected)\n\n")
-        (raw / "s2.txt").write_text("# Transcript: s2\n# Language: es (set)\n\n")
-        (raw / "s3.txt").write_text("# Transcript: s3\n\n")
+        (raw / "s1.txt").write_text("# Transcript: s1\n# Language: ja (detected)\n\n", encoding="utf-8")
+        (raw / "s2.txt").write_text("# Transcript: s2\n# Language: es (set)\n\n", encoding="utf-8")
+        (raw / "s3.txt").write_text("# Transcript: s3\n\n", encoding="utf-8")
         pipeline = Pipeline(BristlenoseSettings())
         pipeline._detected_languages["s4"] = "fr"  # detected this run: kept
         pipeline._recover_languages(raw, ["s1", "s2", "s3", "s4", "s5"])

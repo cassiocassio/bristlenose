@@ -57,9 +57,9 @@ def write_intermediate(
 ) -> None:
     inter = project_dir / "bristlenose-output" / ".bristlenose" / "intermediate"
     inter.mkdir(parents=True, exist_ok=True)
-    (inter / "metadata.json").write_text(json.dumps({"project_name": project_name}))
-    (inter / "screen_clusters.json").write_text(json.dumps(clusters))
-    (inter / "theme_groups.json").write_text(json.dumps(themes or []))
+    (inter / "metadata.json").write_text(json.dumps({"project_name": project_name}), encoding="utf-8")
+    (inter / "screen_clusters.json").write_text(json.dumps(clusters), encoding="utf-8")
+    (inter / "theme_groups.json").write_text(json.dumps(themes or []), encoding="utf-8")
 
 
 def dom_id(pid: str, tc: float) -> str:

@@ -508,7 +508,7 @@ def test_legacy_manifest_without_input_hash_loads(tmp_path: Path):
         },
     }
     (tmp_path / ".bristlenose").mkdir()
-    (tmp_path / ".bristlenose" / "pipeline-manifest.json").write_text(json.dumps(data))
+    (tmp_path / ".bristlenose" / "pipeline-manifest.json").write_text(json.dumps(data), encoding="utf-8")
     loaded = load_manifest(tmp_path)
     assert loaded is not None
     assert loaded.stages["transcribe"].sessions["s1"].input_hash is None

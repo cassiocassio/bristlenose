@@ -62,7 +62,7 @@ class TestEscapeGraphql:
 
 def _write_doc(tmp_path, content):
     p = tmp_path / "100days.md"
-    p.write_text(textwrap.dedent(content))
+    p.write_text(textwrap.dedent(content), encoding="utf-8")
     return str(p)
 
 
@@ -325,7 +325,7 @@ class TestSyncDoneToDoc:
         board_items = [{"normalized": sync.normalize("Desktop app v0.1"), "status": "Done"}]
         changes = sync.sync_done_to_doc(board_items, path, apply=True)
         assert changes == 1
-        content = pathlib.Path(path).read_text()
+        content = pathlib.Path(path).read_text(encoding="utf-8")
         assert "**~~Desktop app v0.1~~**" in content
 
     def test_unstrikes_undone_item(self, tmp_path):
@@ -338,7 +338,7 @@ class TestSyncDoneToDoc:
         board_items = [{"normalized": sync.normalize("Desktop app v0.1"), "status": "In Progress"}]
         changes = sync.sync_done_to_doc(board_items, path, apply=True)
         assert changes == 1
-        content = pathlib.Path(path).read_text()
+        content = pathlib.Path(path).read_text(encoding="utf-8")
         assert "**Desktop app v0.1**" in content
         assert "~~" not in content
 
@@ -352,7 +352,7 @@ class TestSyncDoneToDoc:
         board_items = [{"normalized": sync.normalize("Multi-project support"), "status": "Done"}]
         changes = sync.sync_done_to_doc(board_items, path, apply=True)
         assert changes == 1
-        content = pathlib.Path(path).read_text()
+        content = pathlib.Path(path).read_text(encoding="utf-8")
         assert "[S3] **~~Multi-project support~~**" in content
 
     def test_preserves_sprint_tag_on_unstrike(self, tmp_path):
@@ -365,7 +365,7 @@ class TestSyncDoneToDoc:
         board_items = [{"normalized": sync.normalize("Multi-project support"), "status": "Todo"}]
         changes = sync.sync_done_to_doc(board_items, path, apply=True)
         assert changes == 1
-        content = pathlib.Path(path).read_text()
+        content = pathlib.Path(path).read_text(encoding="utf-8")
         assert "[S3] **Multi-project support**" in content
         assert "~~" not in content
 
@@ -391,11 +391,11 @@ class TestSyncDoneToDoc:
         ### Must
         - **Item** — description
         """)
-        original = pathlib.Path(path).read_text()
+        original = pathlib.Path(path).read_text(encoding="utf-8")
         board_items = [{"normalized": sync.normalize("Item"), "status": "Done"}]
         changes = sync.sync_done_to_doc(board_items, path, apply=False)
         assert changes == 1
-        assert pathlib.Path(path).read_text() == original
+        assert pathlib.Path(path).read_text(encoding="utf-8") == original
 
 
 # ---------------------------------------------------------------------------
@@ -436,10 +436,10 @@ class TestHandStruck:
     def test_hand_strike_is_never_unstruck(self, tmp_path):
         """The doc was right the one time this fired (Phase 2b, 27 Sep 2026)."""
         path = _write_doc(tmp_path, _HAND_DOC)
-        before = pathlib.Path(path).read_text()
+        before = pathlib.Path(path).read_text(encoding="utf-8")
         board = _open("Phase 2b", "Clickable bars", "Harness", "Drag-to-reorder")
         assert sync.sync_done_to_doc(board, path, apply=True) == 0
-        assert pathlib.Path(path).read_text() == before
+        assert pathlib.Path(path).read_text(encoding="utf-8") == before
 
 
 class TestNewCardsNearTitles:

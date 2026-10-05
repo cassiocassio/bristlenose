@@ -324,11 +324,11 @@ class TestProdServeReport:
         # Set up mock static directory with a built index.html
         static_dir = tmp_path / "static"
         static_dir.mkdir()
-        (static_dir / "index.html").write_text(_VITE_INDEX_HTML)
+        (static_dir / "index.html").write_text(_VITE_INDEX_HTML, encoding="utf-8")
         assets_dir = static_dir / "assets"
         assets_dir.mkdir()
-        (assets_dir / "main-abc123.js").write_text("// react bundle")
-        (assets_dir / "SessionsTable-def456.js").write_text("// chunk")
+        (assets_dir / "main-abc123.js").write_text("// react bundle", encoding="utf-8")
+        (assets_dir / "SessionsTable-def456.js").write_text("// chunk", encoding="utf-8")
 
         with patch("bristlenose.server.app._STATIC_DIR", static_dir):
             app = create_app(
@@ -393,11 +393,11 @@ class TestProdServeReport:
         output_dir.mkdir()
         assets_dir = output_dir / "assets"
         assets_dir.mkdir()
-        (assets_dir / "bristlenose-theme.css").write_text("body { color: red; }")
+        (assets_dir / "bristlenose-theme.css").write_text("body { color: red; }", encoding="utf-8")
 
         static_dir = tmp_path / "static"
         static_dir.mkdir()
-        (static_dir / "index.html").write_text(_VITE_INDEX_HTML)
+        (static_dir / "index.html").write_text(_VITE_INDEX_HTML, encoding="utf-8")
 
         with patch("bristlenose.server.app._STATIC_DIR", static_dir):
             app = create_app(
@@ -423,7 +423,7 @@ class TestProdServeReport:
         # Even if a static-rendered HTML exists on disk, serve mode must
         # NOT fall back to it.
         report = output_dir / "bristlenose-test-report.html"
-        report.write_text("<html><body>vanilla report</body></html>")
+        report.write_text("<html><body>vanilla report</body></html>", encoding="utf-8")
 
         empty_static = tmp_path / "empty-static"
         empty_static.mkdir()
@@ -453,7 +453,7 @@ class TestProdServeTranscript:
         # Create a transcript file in the output dir (legacy artifact)
         sessions_dir = output_dir / "sessions"
         sessions_dir.mkdir()
-        (sessions_dir / "transcript_s1.html").write_text("<html>transcript</html>")
+        (sessions_dir / "transcript_s1.html").write_text("<html>transcript</html>", encoding="utf-8")
 
         # Seed a completed run so the server-status-page intercept lets the
         # SPA render (otherwise /report/* returns "Nothing to see here, yet.").
@@ -477,10 +477,10 @@ class TestProdServeTranscript:
 
         static_dir = tmp_path / "static"
         static_dir.mkdir()
-        (static_dir / "index.html").write_text(_VITE_INDEX_HTML)
+        (static_dir / "index.html").write_text(_VITE_INDEX_HTML, encoding="utf-8")
         assets_dir = static_dir / "assets"
         assets_dir.mkdir()
-        (assets_dir / "main-abc123.js").write_text("// react bundle")
+        (assets_dir / "main-abc123.js").write_text("// react bundle", encoding="utf-8")
 
         with patch("bristlenose.server.app._STATIC_DIR", static_dir):
             app = create_app(

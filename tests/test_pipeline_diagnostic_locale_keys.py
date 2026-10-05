@@ -67,7 +67,7 @@ _REQUIRED_ACTIONS = ("copy",)
 
 def _load_desktop(locale: str) -> dict:
     path = _LOCALES_DIR / locale / "desktop.json"
-    with path.open() as f:
+    with path.open(encoding="utf-8") as f:
         return json.load(f)
 
 

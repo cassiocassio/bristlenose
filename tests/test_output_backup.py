@@ -8,7 +8,10 @@ seconds later, leaving neither the old report nor a new one. See
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+import pytest
 
 from bristlenose.utils import output_backup
 from bristlenose.utils.output_backup import RestoreOutcome
@@ -37,8 +40,8 @@ class TestStash:
 
         assert backup is not None
         assert not out.exists(), "the run needs a clean directory to write into"
-        assert (backup / "bristlenose-report.html").read_text() == "good"
-        assert (backup / ".bristlenose" / "bristlenose.db").read_text() == "db:good"
+        assert (backup / "bristlenose-report.html").read_text(encoding="utf-8") == "good"
+        assert (backup / ".bristlenose" / "bristlenose.db").read_text(encoding="utf-8") == "db:good"
 
     def test_backup_is_hidden_so_ingest_cannot_re_scan_it(self, tmp_path: Path) -> None:
         """Load-bearing: `s01_ingest` skips every dot-prefixed entry.
@@ -68,7 +71,7 @@ class TestStash:
         backup = output_backup.stash(out, previous_backup_is_spent=True)
 
         assert backup is not None
-        assert (backup / "bristlenose-report.html").read_text() == "new"
+        assert (backup / "bristlenose-report.html").read_text(encoding="utf-8") == "new"
 
 
 class TestDiscard:
@@ -93,8 +96,8 @@ class TestRestore:
         _make_report(out, marker="partial", events='{"event":"run_failed"}\n')
 
         assert output_backup.restore(backup, out) is RestoreOutcome.RESTORED
-        assert (out / "bristlenose-report.html").read_text() == "good"
-        assert (out / ".bristlenose" / "bristlenose.db").read_text() == "db:good"
+        assert (out / "bristlenose-report.html").read_text(encoding="utf-8") == "good"
+        assert (out / ".bristlenose" / "bristlenose.db").read_text(encoding="utf-8") == "db:good"
         assert (out / "assets" / "theme.css").is_file()
 
     def test_the_failure_stays_visible(self, tmp_path: Path) -> None:
@@ -113,7 +116,7 @@ class TestRestore:
 
         output_backup.restore(backup, out)
 
-        events = (out / ".bristlenose" / "pipeline-events.jsonl").read_text()
+        events = (out / ".bristlenose" / "pipeline-events.jsonl").read_text(encoding="utf-8")
         lines = [ln for ln in events.splitlines() if ln.strip()]
         assert "run_completed" in lines[0], "history should survive"
         assert "run_failed" in lines[-1], "the tail must still say the run failed"
@@ -125,7 +128,7 @@ class TestRestore:
         backup = output_backup.stash(out)
 
         assert output_backup.restore(backup, out) is RestoreOutcome.RESTORED
-        assert (out / "bristlenose-report.html").read_text() == "good"
+        assert (out / "bristlenose-report.html").read_text(encoding="utf-8") == "good"
 
     def test_none_is_a_no_op(self, tmp_path: Path) -> None:
         assert output_backup.restore(None, tmp_path / "out") is RestoreOutcome.NOTHING_TO_DO
@@ -148,13 +151,13 @@ class TestReclaimStale:
         _make_report(out, marker="half-written", events='{"event":"run_started"}\n')
 
         assert output_backup.reclaim_stale(out) is RestoreOutcome.RESTORED
-        assert (out / "bristlenose-report.html").read_text() == "good"
+        assert (out / "bristlenose-report.html").read_text(encoding="utf-8") == "good"
         assert not output_backup.backup_path_for(out).exists()
 
     def test_no_backup_is_a_no_op(self, tmp_path: Path) -> None:
         out = _make_report(tmp_path / "bristlenose-output", marker="x", events="e\n")
         assert output_backup.reclaim_stale(out) is RestoreOutcome.NOTHING_TO_DO
-        assert (out / "bristlenose-report.html").read_text() == "x"
+        assert (out / "bristlenose-report.html").read_text(encoding="utf-8") == "x"
 
 
 class TestFullCycle:
@@ -166,7 +169,7 @@ class TestFullCycle:
         _make_report(out, marker="v2", events="b\n")  # the new run succeeds
         output_backup.discard(backup)
 
-        assert (out / "bristlenose-report.html").read_text() == "v2"
+        assert (out / "bristlenose-report.html").read_text(encoding="utf-8") == "v2"
         assert not output_backup.backup_path_for(out).exists()
         assert sorted(p.name for p in tmp_path.iterdir()) == ["bristlenose-output"]
 
@@ -185,8 +188,8 @@ class TestFullCycle:
         _make_report(out, marker="partial", events="b\n")
         output_backup.restore(backup, out)
 
-        assert (out / _MARKER).read_text() == "v1", "the report is back"
-        assert (output_backup.failed_path_for(out) / _MARKER).read_text() == "partial"
+        assert (out / _MARKER).read_text(encoding="utf-8") == "v1", "the report is back"
+        assert (output_backup.failed_path_for(out) / _MARKER).read_text(encoding="utf-8") == "partial"
         assert not output_backup.backup_path_for(out).exists()
 
     def test_the_kept_tree_is_a_one_run_tenancy(self, tmp_path: Path) -> None:
@@ -217,7 +220,7 @@ class TestFullCycle:
         _make_report(out, marker="partial", events="b\n")
 
         assert output_backup.restore(backup, out) is RestoreOutcome.RESTORED
-        assert (out / _MARKER).read_text() == "v1"
+        assert (out / _MARKER).read_text(encoding="utf-8") == "v1"
 
 
 class TestTheErrorBranches:
@@ -269,7 +272,7 @@ class TestTheErrorBranches:
         monkeypatch.setattr(output_backup.shutil, "copyfileobj", _die_midway)
         output_backup.restore(backup, out)
 
-        events = (out / ".bristlenose" / "pipeline-events.jsonl").read_text()
+        events = (out / ".bristlenose" / "pipeline-events.jsonl").read_text(encoding="utf-8")
         assert events == '{"event":"run_completed"}\n', "truncated back to the boundary"
 
     def test_a_restore_that_fails_partway_says_so(
@@ -312,8 +315,9 @@ class TestTheErrorBranches:
         _make_report(stranded, marker="IRREPLACEABLE", events="e\n")
 
         assert output_backup.stash(out) is None, "refuses rather than destroys"
-        assert (stranded / _MARKER).read_text() == "IRREPLACEABLE"
+        assert (stranded / _MARKER).read_text(encoding="utf-8") == "IRREPLACEABLE"
 
+    @pytest.mark.skipif(os.name != "posix", reason="symlink refusal is O_NOFOLLOW, which Windows lacks")
     def test_the_history_append_does_not_follow_a_symlink(self, tmp_path: Path) -> None:
         """`open("ab")` follows symlinks — an append-to-arbitrary-file primitive.
 
@@ -334,7 +338,7 @@ class TestTheErrorBranches:
 
         output_backup.restore(backup, out)
 
-        assert victim.read_text() == "# untouched\n", "the symlink target is not appended to"
+        assert victim.read_text(encoding="utf-8") == "# untouched\n", "the symlink target is not appended to"
 
     def test_reclaim_declines_while_a_live_run_owns_the_directory(
         self, tmp_path: Path, monkeypatch
@@ -352,4 +356,4 @@ class TestTheErrorBranches:
         monkeypatch.setattr(output_backup, "project_is_locked", lambda _p: True)
 
         assert output_backup.reclaim_stale(out) is RestoreOutcome.NOTHING_TO_DO
-        assert (out / _MARKER).read_text() == "LIVE RUN IS WRITING HERE"
+        assert (out / _MARKER).read_text(encoding="utf-8") == "LIVE RUN IS WRITING HERE"

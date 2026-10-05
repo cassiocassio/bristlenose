@@ -155,7 +155,7 @@ class TestTranscriptRoundTrip:
 
         transcript = self._make_transcript_with_moderator()
         write_raw_transcripts([transcript], tmp_path)
-        content = (tmp_path / "s1.txt").read_text()
+        content = (tmp_path / "s1.txt").read_text(encoding="utf-8")
 
         assert "[00:00] [m1]" in content
         assert "[00:11] [p1]" in content
@@ -167,7 +167,7 @@ class TestTranscriptRoundTrip:
 
         transcript = self._make_transcript_with_moderator()
         write_raw_transcripts_md([transcript], tmp_path)
-        content = (tmp_path / "s1.md").read_text()
+        content = (tmp_path / "s1.md").read_text(encoding="utf-8")
 
         assert "**[00:00] m1**" in content
         assert "**[00:11] p1**" in content
@@ -186,7 +186,7 @@ class TestTranscriptRoundTrip:
             segments=segs,
         )
         write_cooked_transcripts([transcript], tmp_path)
-        content = (tmp_path / "s1.txt").read_text()
+        content = (tmp_path / "s1.txt").read_text(encoding="utf-8")
 
         assert "[00:00] [m1]" in content
         assert "[00:11] [p1]" in content
@@ -205,7 +205,7 @@ class TestTranscriptRoundTrip:
             segments=segs,
         )
         write_cooked_transcripts_md([transcript], tmp_path)
-        content = (tmp_path / "s1.md").read_text()
+        content = (tmp_path / "s1.md").read_text(encoding="utf-8")
 
         assert "**[00:00] m1**" in content
         assert "**[00:11] p1**" in content

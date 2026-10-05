@@ -291,7 +291,7 @@ class TestPiiSummaryLocation:
             )
         ]
         write_pii_summary(redactions, tmp_path)
-        content = (tmp_path / ".bristlenose" / "pii_summary.txt").read_text()
+        content = (tmp_path / ".bristlenose" / "pii_summary.txt").read_text(encoding="utf-8")
         assert "CONFIDENTIAL" in content
 
 

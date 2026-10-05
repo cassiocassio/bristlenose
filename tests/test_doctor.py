@@ -1705,7 +1705,7 @@ class TestSentinelLogic:
         from bristlenose.cli import _should_auto_doctor
 
         sentinel = tmp_path / ".doctor-ran"
-        sentinel.write_text(__version__)
+        sentinel.write_text(__version__, encoding="utf-8")
         with patch("bristlenose.cli._doctor_sentinel_file", return_value=sentinel):
             assert _should_auto_doctor() is False
 
@@ -1713,7 +1713,7 @@ class TestSentinelLogic:
         from bristlenose.cli import _should_auto_doctor
 
         sentinel = tmp_path / ".doctor-ran"
-        sentinel.write_text("0.0.0")
+        sentinel.write_text("0.0.0", encoding="utf-8")
         with patch("bristlenose.cli._doctor_sentinel_file", return_value=sentinel):
             assert _should_auto_doctor() is True
 
@@ -1723,7 +1723,7 @@ class TestSentinelLogic:
         sentinel = tmp_path / ".doctor-ran"
         with patch("bristlenose.cli._doctor_sentinel_file", return_value=sentinel):
             _write_doctor_sentinel()
-        assert sentinel.read_text() == __version__
+        assert sentinel.read_text(encoding="utf-8") == __version__
 
     def test_sentinel_dir_respects_snap_user_common(self) -> None:
         from bristlenose.cli import _doctor_sentinel_dir
@@ -1739,7 +1739,7 @@ class TestSentinelLogic:
         env.pop("SNAP_USER_COMMON", None)
         with patch.dict(os.environ, env, clear=True):
             result = _doctor_sentinel_dir()
-        assert ".config/bristlenose" in str(result)
+        assert Path(result).parts[-2:] == (".config", "bristlenose")
 
     def test_write_sentinel_creates_parent_dir(self, tmp_path: Path) -> None:
         """Sentinel write creates parent dirs if they don't exist."""
@@ -1749,7 +1749,7 @@ class TestSentinelLogic:
         with patch("bristlenose.cli._doctor_sentinel_file", return_value=sentinel):
             _write_doctor_sentinel()
         assert sentinel.exists()
-        assert sentinel.read_text() == __version__
+        assert sentinel.read_text(encoding="utf-8") == __version__
 
 
 # ---------------------------------------------------------------------------
@@ -1995,7 +1995,7 @@ class TestCheckPiiDiagnosesTheModelDirectory:
     def _half_unpacked(tmp_path):
         d = tmp_path / "en_core_web_lg-3.8.0"
         d.mkdir()
-        (d / "config.cfg").write_text("[nlp]")  # meta.json missing
+        (d / "config.cfg").write_text("[nlp]", encoding="utf-8")  # meta.json missing
         return d
 
     @staticmethod
@@ -2007,8 +2007,8 @@ class TestCheckPiiDiagnosesTheModelDirectory:
         """
         d = tmp_path / "en_core_web_lg-3.8.0"
         d.mkdir()
-        (d / "meta.json").write_text("{}")
-        (d / "config.cfg").write_text("[nlp]")
+        (d / "meta.json").write_text("{}", encoding="utf-8")
+        (d / "config.cfg").write_text("[nlp]", encoding="utf-8")
         return d
 
     # spaCy's real answer to `_corrupt_pack`, measured on this repo's 3.12 venv

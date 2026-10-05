@@ -70,11 +70,11 @@ def app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[object]:
     # A completed-run terminus, or /report/ serves the status page, not the SPA.
     internal = project_dir / "bristlenose-output" / ".bristlenose"
     internal.mkdir(parents=True)
-    (internal / "pipeline-events.jsonl").write_text(_SMOKE_EVENTS.read_text())
+    (internal / "pipeline-events.jsonl").write_text(_SMOKE_EVENTS.read_text(encoding="utf-8"), encoding="utf-8")
     static_dir = tmp_path / "static"
     (static_dir / "assets").mkdir(parents=True)
-    (static_dir / "index.html").write_text(_VITE_INDEX_HTML)
-    (static_dir / "assets" / "main-abc123.js").write_text("// bundle")
+    (static_dir / "index.html").write_text(_VITE_INDEX_HTML, encoding="utf-8")
+    (static_dir / "assets" / "main-abc123.js").write_text("// bundle", encoding="utf-8")
     with patch("bristlenose.server.app._STATIC_DIR", static_dir):
         yield create_app(project_dir=project_dir, dev=False, db_url="sqlite://")
 

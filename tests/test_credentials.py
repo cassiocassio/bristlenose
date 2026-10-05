@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -467,8 +468,9 @@ class TestFileCredentialStore:
 
     def test_writes_prefixed_var(self, store) -> None:
         store.set("openai", "sk-oa-1")
-        assert store.path.read_text() == "BRISTLENOSE_OPENAI_API_KEY=sk-oa-1\n"
+        assert store.path.read_text(encoding="utf-8") == "BRISTLENOSE_OPENAI_API_KEY=sk-oa-1\n"
 
+    @pytest.mark.skipif(os.name != "posix", reason="no POSIX mode bits on Windows: chmod 0o600 there only clears read-only")
     def test_file_is_owner_only(self, store) -> None:
         import stat
 
@@ -480,7 +482,7 @@ class TestFileCredentialStore:
         store.set("anthropic", "one")
         store.set("anthropic", "two")
         store.set("openai", "oa")
-        text = store.path.read_text()
+        text = store.path.read_text(encoding="utf-8")
         assert text.count("BRISTLENOSE_ANTHROPIC_API_KEY=") == 1
         assert "BRISTLENOSE_ANTHROPIC_API_KEY=two" in text
         assert "BRISTLENOSE_OPENAI_API_KEY=oa" in text
@@ -505,12 +507,12 @@ class TestFileCredentialStore:
         # miro_refresh has no ENV_VAR_MAP entry — must still round-trip.
         store.set("miro_refresh", "refresh-token")
         assert store.get("miro_refresh") == "refresh-token"
-        assert "BRISTLENOSE_MIRO_REFRESH=refresh-token" in store.path.read_text()
+        assert "BRISTLENOSE_MIRO_REFRESH=refresh-token" in store.path.read_text(encoding="utf-8")
 
     def test_preserves_comments_and_other_lines(self, store) -> None:
-        store.path.write_text("# my keys\nUNRELATED=keep-me\n")
+        store.path.write_text("# my keys\nUNRELATED=keep-me\n", encoding="utf-8")
         store.set("anthropic", "sk-ant")
-        text = store.path.read_text()
+        text = store.path.read_text(encoding="utf-8")
         assert "# my keys" in text
         assert "UNRELATED=keep-me" in text
         assert "BRISTLENOSE_ANTHROPIC_API_KEY=sk-ant" in text
@@ -731,7 +733,7 @@ class TestSetVerified:
         monkeypatch.setenv("BRISTLENOSE_ANTHROPIC_API_KEY", "shadow")
         store = FileCredentialStore(tmp_path / ".env")
         assert set_verified(store, "anthropic", "real") is False
-        assert "BRISTLENOSE_ANTHROPIC_API_KEY=real" in (tmp_path / ".env").read_text()
+        assert "BRISTLENOSE_ANTHROPIC_API_KEY=real" in (tmp_path / ".env").read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------

@@ -155,7 +155,7 @@ class TestPersistence:
         assert loaded["profiles"]["test-key"]["transcribe"]["n"] == 7
 
     def test_corrupt_file(self, tmp_path: Path) -> None:
-        (tmp_path / "timing.json").write_text("not json {{{")
+        (tmp_path / "timing.json").write_text("not json {{{", encoding="utf-8")
         data = load_timing_data(tmp_path)
         assert data == {"version": 1, "profiles": {}}
 

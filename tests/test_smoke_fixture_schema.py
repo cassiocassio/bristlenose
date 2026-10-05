@@ -40,7 +40,7 @@ _adapter: TypeAdapter[_EventUnion] = TypeAdapter(_EventUnion)
 
 def test_smoke_fixture_events_roundtrip() -> None:
     assert FIXTURE.exists(), f"smoke fixture missing: {FIXTURE}"
-    lines = [ln for ln in FIXTURE.read_text().splitlines() if ln.strip()]
+    lines = [ln for ln in FIXTURE.read_text(encoding="utf-8").splitlines() if ln.strip()]
     assert lines, "smoke fixture pipeline-events.jsonl is empty"
     for i, line in enumerate(lines):
         payload = json.loads(line)
@@ -55,7 +55,7 @@ def test_smoke_fixture_events_roundtrip() -> None:
 def test_smoke_fixture_has_terminus_event() -> None:
     """Without a terminus event, ``app.state.last_run`` doesn't populate and
     the SPA mount falls through to the status page — see CLAUDE.md gotcha."""
-    lines = [ln for ln in FIXTURE.read_text().splitlines() if ln.strip()]
+    lines = [ln for ln in FIXTURE.read_text(encoding="utf-8").splitlines() if ln.strip()]
     terminus_types = {"run_completed", "run_cancelled", "run_failed"}
     assert any(json.loads(ln).get("event") in terminus_types for ln in lines), (
         "smoke fixture has no terminus event; SPA mount will fall through "

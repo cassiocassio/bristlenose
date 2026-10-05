@@ -24,8 +24,10 @@ def static_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "static"
     (root / "assets").mkdir(parents=True)
     (root / "index.html").write_text("<html>ok</html>", encoding="utf-8")
-    (root / "assets" / "main-abc.js").write_text("export default 1;\n", encoding="utf-8")
-    (root / "assets" / "main-abc.css").write_text(":root{color:red}\n", encoding="utf-8")
+    # Bytes: write_text on Windows would store \r\n, and the server serves
+    # the file verbatim.
+    (root / "assets" / "main-abc.js").write_bytes(b"export default 1;\n")
+    (root / "assets" / "main-abc.css").write_bytes(b":root{color:red}\n")
     (root / "assets" / "font.woff2").write_bytes(b"\x00\x01\x02woff2-bytes")
     monkeypatch.setattr(app_module, "_STATIC_DIR", root)
     return root

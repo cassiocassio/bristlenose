@@ -75,9 +75,14 @@ def _fake_bristlenose(tmp_path: Path, mode: str) -> str:
         "out = Path(argv[argv.index('--output') + 1]) if '--output' in argv else None\n"
         f"if {writes_output!r} and out is not None:\n"
         f"    shutil.copytree({str(_SMOKE_OUTPUT)!r}, out, dirs_exist_ok=True)\n"
-        f"sys.exit({exit_code})\n"
+        f"sys.exit({exit_code})\n", encoding="utf-8"
     )
     script.chmod(script.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    if sys.platform == "win32":
+        # Windows does not read shebangs; CreateProcess runs a .cmd through cmd.exe.
+        shim = tmp_path / "fake-bristlenose.cmd"
+        shim.write_text(f'@"{sys.executable}" "{script}" %*\r\n', encoding="utf-8")
+        return str(shim)
     return str(script)
 
 
@@ -97,7 +102,7 @@ def _run(monkeypatch, tmp_path: Path, mode: str, cell: Cell):
 def _argv(tmp_path: Path) -> list[str]:
     marker = tmp_path / "invoked.json"
     assert marker.exists(), "the runner never shelled out — every assertion below is vacuous"
-    return json.loads(marker.read_text())
+    return json.loads(marker.read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------------------

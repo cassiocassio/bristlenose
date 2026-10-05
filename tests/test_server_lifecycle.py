@@ -127,16 +127,18 @@ def test_parent_death_watcher_sigterms_self_when_ppid_changes(tmp_path: Path) ->
     ).strip()
 
     script_path = tmp_path / "watcher_smoke.py"
-    script_path.write_text(script)
+    script_path.write_text(script, encoding="utf-8")
 
     result = subprocess.run(
         [sys.executable, str(script_path)],
         timeout=10,
         capture_output=True,
     )
-    # SIGTERM = signal 15 → exit code -15 on POSIX.
-    assert result.returncode == -15, (
-        f"expected SIGTERM (-15), got {result.returncode}; "
+    # SIGTERM = signal 15 → exit code -15 on POSIX. On Windows os.kill with
+    # SIGTERM is TerminateProcess(handle, 15), so the process exits with 15.
+    expected = 15 if sys.platform == "win32" else -15
+    assert result.returncode == expected, (
+        f"expected SIGTERM ({expected}), got {result.returncode}; "
         f"stdout={result.stdout!r} stderr={result.stderr!r}"
     )
 
@@ -160,7 +162,7 @@ class TestHandshakeCleanup:
     ) -> None:
         monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         path = self._handshake_dir(tmp_path) / "mcp-handshake.json"
-        path.write_text('{"schema": 1, "port": 1234, "instance_id": "abc123"}')
+        path.write_text('{"schema": 1, "port": 1234, "instance_id": "abc123"}', encoding="utf-8")
         cleanup = lifecycle.install_handshake_cleanup("abc123", register=False)
         cleanup()
         assert not path.exists()
@@ -170,7 +172,7 @@ class TestHandshakeCleanup:
     ) -> None:
         monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         path = self._handshake_dir(tmp_path) / "mcp-handshake.json"
-        path.write_text('{"schema": 1, "port": 5678, "instance_id": "successor"}')
+        path.write_text('{"schema": 1, "port": 5678, "instance_id": "successor"}', encoding="utf-8")
         cleanup = lifecycle.install_handshake_cleanup("abc123", register=False)
         cleanup()
         assert path.exists()
@@ -183,11 +185,11 @@ class TestHandshakeCleanup:
         cleanup()  # no directory at all — must not raise
 
         path = self._handshake_dir(tmp_path) / "mcp-handshake.json"
-        path.write_text("not json {")
+        path.write_text("not json {", encoding="utf-8")
         cleanup()  # unreadable — must not raise, must not delete
         assert path.exists()
 
-        path.write_text("[]")  # valid JSON, wrong shape — .get would raise
+        path.write_text("[]", encoding="utf-8")  # valid JSON, wrong shape — .get would raise
         cleanup()  # an atexit traceback would land in the failure popover
         assert path.exists()
 
@@ -200,7 +202,7 @@ class TestHandshakeCleanup:
         # None == None would delete a file that isn't ours — the null
         # fixture is what makes this test pin the guard (an "" fixture
         # passes with or without it).
-        path.write_text('{"schema": 1, "instance_id": null}')
+        path.write_text('{"schema": 1, "instance_id": null}', encoding="utf-8")
         cleanup = lifecycle.install_handshake_cleanup(None, register=False)
         cleanup()
         assert path.exists()

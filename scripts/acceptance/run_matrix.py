@@ -227,7 +227,7 @@ def prepare_artifact_dir() -> Path:
     _ARTIFACT_ROOT.mkdir(mode=0o700, exist_ok=True)
     # Belt-and-braces: a per-dir gitignore so nothing here is ever stageable, even if
     # the root .gitignore entry is removed. Real reports carry unredacted transcripts.
-    (_ARTIFACT_ROOT / ".gitignore").write_text("*\n")
+    (_ARTIFACT_ROOT / ".gitignore").write_text("*\n", encoding="utf-8")
     os.chmod(_ARTIFACT_ROOT, 0o700)
     return _ARTIFACT_ROOT
 
@@ -329,7 +329,7 @@ def _run_provider_cell(cell: Cell, input_dir: Path, artifact_dir: Path) -> CellR
         timeout=1800,
         env=os.environ.copy(),
     )
-    (artifact_dir / f"{cell.cell_id.replace(':', '_')}.log").write_text(redact(proc.stdout + proc.stderr))
+    (artifact_dir / f"{cell.cell_id.replace(':', '_')}.log").write_text(redact(proc.stdout + proc.stderr), encoding="utf-8")
     res = validate_output_dir(cell.cell_id, out, quote_floor=1)
     if res.outcome == CellOutcome.PASS and proc.returncode not in (0,):
         return CellResult(cell.cell_id, CellOutcome.FAIL_EXPECTED, f"exit {proc.returncode}")
@@ -410,7 +410,7 @@ def _run_transcribe_cell(artifact_dir: Path) -> CellResult:
         env=os.environ.copy(),
     )
     (artifact_dir / f"{cell_id.replace(':', '_')}.log").write_text(
-        redact(proc.stdout + proc.stderr)
+        redact(proc.stdout + proc.stderr), encoding="utf-8"
     )
 
     try:
@@ -443,7 +443,7 @@ def _write_summary(artifact_dir: Path, m: Matrix, ok: bool, msg: str) -> None:
         "cells": [{"cell": r.cell_id, "outcome": r.outcome.value, "detail": r.detail} for r in m.results],
         "expected": m.expected,
     }
-    (artifact_dir / "summary.json").write_text(json.dumps(payload, indent=2, ensure_ascii=True))
+    (artifact_dir / "summary.json").write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
 
 
 def _print_summary(m: Matrix, ok: bool, msg: str) -> None:

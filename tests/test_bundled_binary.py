@@ -6,6 +6,8 @@ import os
 import stat
 from unittest.mock import patch
 
+import pytest
+
 from bristlenose.utils.bundled_binary import (
     bundled_binaries_dir,
     bundled_binary_path,
@@ -44,11 +46,11 @@ class TestBundleRelativeBranch:
         sidecar_dir = resources / "bristlenose-sidecar"
         sidecar_dir.mkdir(parents=True)
         sidecar = sidecar_dir / "bristlenose-sidecar"
-        sidecar.write_text("#!/bin/sh\n")
+        sidecar.write_text("#!/bin/sh\n", encoding="utf-8")
         sidecar.chmod(sidecar.stat().st_mode | stat.S_IEXEC)
 
         ffmpeg = resources / "ffmpeg"
-        ffmpeg.write_text("#!/bin/sh\n")
+        ffmpeg.write_text("#!/bin/sh\n", encoding="utf-8")
         ffmpeg.chmod(ffmpeg.stat().st_mode | stat.S_IEXEC)
 
         with patch("bristlenose.utils.bundled_binary.sys.executable", str(sidecar)):
@@ -68,13 +70,14 @@ class TestBundleRelativeBranch:
         sidecar_dir = resources / "bristlenose-sidecar"
         sidecar_dir.mkdir(parents=True)
         sidecar = sidecar_dir / "bristlenose-sidecar"
-        sidecar.write_text("")
+        sidecar.write_text("", encoding="utf-8")
         # Note: no ffmpeg file written — bundle branch must fall through
 
         with patch("bristlenose.utils.bundled_binary.sys.executable", str(sidecar)), \
              patch("bristlenose.utils.bundled_binary.shutil.which", return_value="/which/ffmpeg"):
             assert bundled_binary_path("ffmpeg") == "/which/ffmpeg"
 
+    @pytest.mark.skipif(os.name != "posix", reason="Windows has no exec bit to withhold; the bundle-relative branch is the macOS app's")
     def test_bundle_relative_falls_through_when_not_executable(self, monkeypatch, tmp_path):
         monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
         monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
@@ -83,10 +86,10 @@ class TestBundleRelativeBranch:
         sidecar_dir = resources / "bristlenose-sidecar"
         sidecar_dir.mkdir(parents=True)
         sidecar = sidecar_dir / "bristlenose-sidecar"
-        sidecar.write_text("")
+        sidecar.write_text("", encoding="utf-8")
 
         ffmpeg = resources / "ffmpeg"
-        ffmpeg.write_text("")
+        ffmpeg.write_text("", encoding="utf-8")
         # Mode 0o644 — present but not executable
         ffmpeg.chmod(0o644)
 
@@ -122,9 +125,9 @@ class TestPriorityOrdering:
         sidecar_dir = resources / "bristlenose-sidecar"
         sidecar_dir.mkdir(parents=True)
         sidecar = sidecar_dir / "bristlenose-sidecar"
-        sidecar.write_text("")
+        sidecar.write_text("", encoding="utf-8")
         ffmpeg = resources / "ffmpeg"
-        ffmpeg.write_text("")
+        ffmpeg.write_text("", encoding="utf-8")
         ffmpeg.chmod(ffmpeg.stat().st_mode | stat.S_IEXEC)
 
         with patch("bristlenose.utils.bundled_binary.sys.executable", str(sidecar)):
@@ -144,7 +147,7 @@ class TestBundledBinariesDir:
     def test_resolves_from_env_var_parent(self, monkeypatch, tmp_path):
         monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
         ffmpeg = tmp_path / "ffmpeg"
-        ffmpeg.write_text("")
+        ffmpeg.write_text("", encoding="utf-8")
         monkeypatch.setenv("BRISTLENOSE_FFMPEG", str(ffmpeg))
         assert bundled_binaries_dir() == tmp_path
 
@@ -156,7 +159,7 @@ class TestBundledBinariesDir:
         sidecar_dir = resources / "bristlenose-sidecar"
         sidecar_dir.mkdir(parents=True)
         sidecar = sidecar_dir / "bristlenose-sidecar"
-        sidecar.write_text("")
+        sidecar.write_text("", encoding="utf-8")
         with patch("bristlenose.utils.bundled_binary.sys.executable", str(sidecar)):
             assert bundled_binaries_dir() == resources.resolve()
 
@@ -175,7 +178,7 @@ class TestPrependBundledToPath:
     def test_prepends_when_bundle_dir_resolved(self, monkeypatch, tmp_path):
         monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
         ffmpeg = tmp_path / "ffmpeg"
-        ffmpeg.write_text("")
+        ffmpeg.write_text("", encoding="utf-8")
         monkeypatch.setenv("BRISTLENOSE_FFMPEG", str(ffmpeg))
         monkeypatch.setenv("PATH", "/usr/bin")
         prepend_bundled_to_path()
@@ -184,7 +187,7 @@ class TestPrependBundledToPath:
     def test_idempotent(self, monkeypatch, tmp_path):
         monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
         ffmpeg = tmp_path / "ffmpeg"
-        ffmpeg.write_text("")
+        ffmpeg.write_text("", encoding="utf-8")
         monkeypatch.setenv("BRISTLENOSE_FFMPEG", str(ffmpeg))
         monkeypatch.setenv("PATH", "/usr/bin")
         prepend_bundled_to_path()
@@ -195,7 +198,7 @@ class TestPrependBundledToPath:
     def test_handles_empty_path(self, monkeypatch, tmp_path):
         monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
         ffmpeg = tmp_path / "ffmpeg"
-        ffmpeg.write_text("")
+        ffmpeg.write_text("", encoding="utf-8")
         monkeypatch.setenv("BRISTLENOSE_FFMPEG", str(ffmpeg))
         monkeypatch.setenv("PATH", "")
         prepend_bundled_to_path()

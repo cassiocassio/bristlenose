@@ -13,6 +13,7 @@ and the live event watcher (docs/design-project-condition.md §4 and appendix):
 from __future__ import annotations
 
 import functools
+import sys
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -68,7 +69,7 @@ def fast_watcher(monkeypatch: pytest.MonkeyPatch):
 def _app(project_dir: Path, tmp_path: Path):
     static = tmp_path / "static"
     static.mkdir(exist_ok=True)
-    (static / "index.html").write_text(_VITE_INDEX_HTML)
+    (static / "index.html").write_text(_VITE_INDEX_HTML, encoding="utf-8")
     (static / "assets").mkdir(exist_ok=True)
     # A file database, not "sqlite://": the in-memory one is a StaticPool — one
     # connection for every thread — so the watcher's re-import (a worker thread)
@@ -111,6 +112,7 @@ def test_failure_while_serve_is_up_reaches_the_page(tmp_path: Path, fast_watcher
         assert client.get("/api/projects/1/last-run").json()["run_id"] == "A"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows will not move a folder whose database serve holds open, so this rerun cannot happen there")
 def test_clean_rerun_replacing_the_log_is_seen(tmp_path: Path, fast_watcher) -> None:
     out = tmp_path / "bristlenose-output"
     for i in range(6):  # a long history for the old line-count baseline
@@ -147,7 +149,7 @@ def test_serve_started_before_first_run_follows_the_output(
 ) -> None:
     interviews = tmp_path / "interviews"
     interviews.mkdir()
-    (interviews / "s1.vtt").write_text("WEBVTT\n")
+    (interviews / "s1.vtt").write_text("WEBVTT\n", encoding="utf-8")
     with patch("bristlenose.server.importer.import_project", side_effect=real_import):
         app = _app(interviews, tmp_path)
         with AuthTestClient(app) as client:
@@ -207,7 +209,7 @@ def _pid_file(out: Path, run_id: str, *, alive: bool) -> None:
     assert not (alive and start is None), "process start time unavailable"
     path = pid_file_path(out)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_json.dumps({"pid": os.getpid(), "start_time": start, "run_id": run_id}))
+    path.write_text(_json.dumps({"pid": os.getpid(), "start_time": start, "run_id": run_id}), encoding="utf-8")
 
 
 def test_owner_dying_without_a_terminus_is_noticed(tmp_path: Path, fast_watcher) -> None:
@@ -237,6 +239,7 @@ def test_run_seen_before_its_pid_file_recovers(tmp_path: Path, fast_watcher) -> 
         assert _latest(client)["state"] == "in_progress"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows will not move a folder whose database serve holds open, so this restore cannot happen there")
 def test_restore_without_a_new_run_is_noticed(tmp_path: Path, fast_watcher) -> None:
     """A failed --clean run is restored onto the old tree: the file changes but
     no new run id appears. The report must come back (review finding)."""
@@ -255,10 +258,10 @@ def test_restore_without_a_new_run_is_noticed(tmp_path: Path, fast_watcher) -> N
         assert _wait(lambda: client.get("/api/projects/1/condition").json()
                      ["condition"]["report"] is None)
         # restore: old tree back, the failed run's history appended to it
-        failed_log = events_path(out).read_text()
+        failed_log = events_path(out).read_text(encoding="utf-8")
         shutil.rmtree(out)
         (stash / "bristlenose-output").rename(out)
-        with events_path(out).open("a") as fh:
+        with events_path(out).open("a", encoding="utf-8") as fh:
             fh.write(failed_log)
         assert _wait(lambda: (client.get("/api/projects/1/condition").json()
                               ["condition"]["report"] or {}).get("run_id") == "A")

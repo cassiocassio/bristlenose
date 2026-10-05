@@ -31,13 +31,13 @@ def _project(tmp_path: Path, *, session_names: dict | None) -> Path:
     out = tmp_path / "bristlenose-output"
     inter = out / ".bristlenose" / "intermediate"
     inter.mkdir(parents=True)
-    (inter / "metadata.json").write_text('{"project_name": "Two moderators"}')
-    (inter / "screen_clusters.json").write_text("[]")
-    (inter / "theme_groups.json").write_text("[]")
+    (inter / "metadata.json").write_text('{"project_name": "Two moderators"}', encoding="utf-8")
+    (inter / "screen_clusters.json").write_text("[]", encoding="utf-8")
+    (inter / "theme_groups.json").write_text("[]", encoding="utf-8")
     raw = out / "transcripts-raw"
     raw.mkdir()
     for sid, pid, day in (("s1", "p1", "20"), ("s2", "p2", "21")):
-        (raw / f"{sid}.txt").write_text(_TRANSCRIPT.format(sid=sid, pid=pid, day=day))
+        (raw / f"{sid}.txt").write_text(_TRANSCRIPT.format(sid=sid, pid=pid, day=day), encoding="utf-8")
 
     # What the pipeline writes today: one m1 entry, the last session's name.
     def entry(full: str, short: str) -> dict:
@@ -48,10 +48,10 @@ def _project(tmp_path: Path, *, session_names: dict | None) -> Path:
         "p1": entry("Ann Archer", "Ann"),
         "p2": entry("Bea Baker", "Bea"),
         "m1": entry("Jo Lee", "Jo"),
-    }}))
+    }}), encoding="utf-8")
     if session_names is not None:
         (inter / "session-speakers.json").write_text(
-            json.dumps({"version": 1, "sessions": session_names})
+            json.dumps({"version": 1, "sessions": session_names}), encoding="utf-8"
         )
     return tmp_path
 
@@ -134,7 +134,7 @@ class TestRename:
         assert names[("s1", "m1")] == "Martin"
         assert names[("s2", "m1")] == "Jo"
         # …and the shared people.yaml m1 entry is not rewritten either.
-        written = yaml.safe_load((tmp_path / "bristlenose-output" / "people.yaml").read_text())
+        written = yaml.safe_load((tmp_path / "bristlenose-output" / "people.yaml").read_text(encoding="utf-8"))
         assert written["participants"]["m1"]["editable"]["short_name"] == "Jo"
 
     def test_unknown_session_or_speaker_is_404(self, tmp_path: Path) -> None:
@@ -165,7 +165,7 @@ class TestReimportOfAProjectImportedBeforeTheFix:
 
         inter = tmp_path / "bristlenose-output" / ".bristlenose" / "intermediate"
         (inter / "session-speakers.json").write_text(
-            json.dumps({"version": 1, "sessions": _PER_SESSION})
+            json.dumps({"version": 1, "sessions": _PER_SESSION}), encoding="utf-8"
         )
         self._reimport(client, project_dir)
         names = _speaker_names(client)

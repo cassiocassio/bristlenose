@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import stat
 from pathlib import Path
 
@@ -96,6 +97,7 @@ def test_record_call_writes_jsonl_row(tmp_path: Path) -> None:
     assert rows[0]["stage"] == "s09_quote_extraction"
 
 
+@pytest.mark.skipif(os.name != "posix", reason="no POSIX mode bits on Windows: chmod 0o600 there only clears read-only")
 def test_record_call_file_mode_is_0o600(tmp_path: Path) -> None:
     _record_basic(tmp_path)
     path = tmp_path / JSONL_FILENAME
@@ -185,7 +187,7 @@ def test_trim_to_cap_truncates_oldest(tmp_path: Path) -> None:
             f.write(json.dumps({"i": i}) + "\n")
     kept = trim_to_cap(path, cap=1000)
     assert kept == 1000
-    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
     assert len(rows) == 1000
     assert rows[0]["i"] == 500
     assert rows[-1]["i"] == 1499

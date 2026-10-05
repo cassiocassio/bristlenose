@@ -39,7 +39,7 @@ from bristlenose.run_condition import (
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "run-condition-contract.json"
-CASES = json.loads(FIXTURE.read_text())["cases"]
+CASES = json.loads(FIXTURE.read_text(encoding="utf-8"))["cases"]
 
 
 def _pin_latest(ref) -> dict | None:
@@ -181,7 +181,7 @@ def test_appending_a_non_completion_never_removes_the_report() -> None:
 def _write_log(output_dir: Path, lines: list[str]) -> None:
     p = events_path(output_dir)
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text("".join(ln + "\n" for ln in lines))
+    p.write_text("".join(ln + "\n" for ln in lines), encoding="utf-8")
 
 
 def test_read_condition_missing_dir_is_no_runs(tmp_path: Path) -> None:

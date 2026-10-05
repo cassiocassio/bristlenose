@@ -974,10 +974,10 @@ def test_a_run_without_redaction_clears_the_previous_run_s_cooked_copy(
 
     cooked = output_dir / "transcripts-cooked"
     cooked.mkdir(parents=True)
-    (cooked / "s1.txt").write_text("[p1] redacted, from the earlier run\n")
+    (cooked / "s1.txt").write_text("[p1] redacted, from the earlier run\n", encoding="utf-8")
     (output_dir / ".bristlenose").mkdir(parents=True, exist_ok=True)
     summary = output_dir / ".bristlenose" / "pii_summary.txt"
-    summary.write_text("Jane Smith -> [NAME] at 00:02\n")
+    summary.write_text("Jane Smith -> [NAME] at 00:02\n", encoding="utf-8")
 
     pipeline = Pipeline(settings)
     with (

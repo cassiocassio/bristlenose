@@ -125,7 +125,7 @@ def test_gate_refuses_an_unsandboxed_unsigned_binary(tmp_path: Path) -> None:
     # here needs, so its absence is a broken machine, not a reason to skip.
     assert shutil.which("clang"), "clang not found — install the Xcode command-line tools"
     src = tmp_path / "x.c"
-    src.write_text("int main(void){return 0;}\n")
+    src.write_text("int main(void){return 0;}\n", encoding="utf-8")
     binary = tmp_path / "bristlenose-mcp"
     subprocess.run(["clang", "-o", str(binary), str(src)], check=True)
     subprocess.run(["codesign", "-f", "-s", "-", str(binary)], check=True, capture_output=True)

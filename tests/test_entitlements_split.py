@@ -20,8 +20,13 @@ cannot use, and nothing fails until an archive refuses to sign.
 from __future__ import annotations
 
 import plistlib
+import shutil
 import subprocess
 from pathlib import Path
+
+# shutil.which follows PATH. A bare "bash" on Windows is resolved by
+# CreateProcess, which tries System32 first and so finds WSL's bash.exe.
+_BASH = shutil.which("bash") or "bash"
 
 _DESKTOP = Path(__file__).resolve().parent.parent / "desktop"
 _MAS = _DESKTOP / "Bristlenose" / "Bristlenose" / "Bristlenose.entitlements"
@@ -125,7 +130,7 @@ class TestTheBuildActuallySelectsIt:
             + block
         )
         out = subprocess.run(
-            ["bash", "-c", script], capture_output=True, text=True, timeout=30
+            [_BASH, "-c", script], capture_output=True, text=True, timeout=30
         ).stdout.splitlines()
 
         assert "archive" in out, (
@@ -238,7 +243,7 @@ class TestTheArtefactGatesCheckTheSplitToo:
     """
 
     def test_pkg_gate_requires_the_app_group(self) -> None:
-        body = _PKG_GATE.read_text()
+        body = _PKG_GATE.read_text(encoding="utf-8")
         assert _APP_GROUP_KEY in body, (
             "the MAS .pkg gate does not check for the app group — Background "
             "Assets would fail at runtime on a build that signed cleanly"
@@ -249,7 +254,7 @@ class TestTheArtefactGatesCheckTheSplitToo:
         )
 
     def test_dmg_gate_refuses_the_app_group(self) -> None:
-        body = _DMG_GATE.read_text()
+        body = _DMG_GATE.read_text(encoding="utf-8")
         assert _APP_GROUP_KEY in body, (
             "the Developer-ID .dmg gate does not read entitlements — until "
             "12 Sep 2026 it read none at all, so a mistyped override had "
@@ -270,7 +275,7 @@ class TestTheArtefactGatesCheckTheSplitToo:
         file and fail every clean build.
         """
         for gate in (_PKG_GATE, _DMG_GATE):
-            for line in gate.read_text().splitlines():
+            for line in gate.read_text(encoding="utf-8").splitlines():
                 if "grep" not in line or _APP_GROUP not in line:
                     continue
                 assert _APP_GROUP_KEY in line, (

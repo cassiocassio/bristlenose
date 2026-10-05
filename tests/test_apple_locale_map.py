@@ -46,7 +46,7 @@ def amap() -> dict:
         f"{MAP_PATH.relative_to(REPO)} is missing. Regenerate it on a Mac with "
         "scripts/apple-locale-map.py --write"
     )
-    return json.loads(MAP_PATH.read_text())
+    return json.loads(MAP_PATH.read_text(encoding="utf-8"))
 
 
 def test_every_locale_we_ship_resolves_to_an_apple_code(amap: dict) -> None:

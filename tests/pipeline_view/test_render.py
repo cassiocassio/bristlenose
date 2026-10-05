@@ -112,7 +112,7 @@ def test_provider_display_covers_every_backend_option() -> None:
 
 def test_contract_fixture_round_trips_through_pydantic() -> None:
     """The shared JSON fixture must validate as a PipelineView in both directions."""
-    data = json.loads(_FIXTURE.read_text())
+    data = json.loads(_FIXTURE.read_text(encoding="utf-8"))
     scenario = data["scenarios"]["claude_apple_silicon_keys_present"]
     view = PipelineView.model_validate(
         {

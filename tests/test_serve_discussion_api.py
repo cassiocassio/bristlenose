@@ -62,7 +62,7 @@ def _record(quotes, status="complete"):
 
 def _write(intermediate: Path, record: dict) -> None:
     intermediate.mkdir(parents=True, exist_ok=True)
-    (intermediate / "discussion.json").write_text(json.dumps(record))
+    (intermediate / "discussion.json").write_text(json.dumps(record), encoding="utf-8")
 
 
 def test_no_record_is_not_run(project):
@@ -106,7 +106,7 @@ def test_a_record_built_from_other_quotes_is_stale(project):
                               text=x, topic_label="x", quote_type=QuoteType.GENERAL_CONTEXT)
                for s, p, t, x in quotes]
     (intermediate / "extracted_quotes.json").write_text(
-        json.dumps([q.model_dump(mode="json") for q in current]))
+        json.dumps([q.model_dump(mode="json") for q in current]), encoding="utf-8")
     record = _record(quotes)
     record["quotes_sha"] = quotes_sha(current)
     _write(intermediate, record)
@@ -119,7 +119,7 @@ def test_a_record_built_from_other_quotes_is_stale(project):
 def test_an_unreadable_record_is_not_run_not_an_error(project):
     intermediate, client, _ = project
     intermediate.mkdir(parents=True, exist_ok=True)
-    (intermediate / "discussion.json").write_text("{not json")
+    (intermediate / "discussion.json").write_text("{not json", encoding="utf-8")
     assert client.get("/api/projects/1/discussion").json()["status"] == "not_run"
 
 

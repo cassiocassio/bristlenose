@@ -108,7 +108,7 @@ def test_non_finite_eta_coerced_to_none_and_valid_json(tmp_path):
 
     f = events_path(tmp_path)
     append_event(f, ev)
-    line = f.read_text().strip().splitlines()[-1]
+    line = f.read_text(encoding="utf-8").strip().splitlines()[-1]
     # Strict parse raises on Infinity/NaN — proves the line is valid JSON.
     parsed = json.loads(
         line, parse_constant=lambda c: (_ for _ in ()).throw(ValueError(c)),

@@ -12,8 +12,13 @@ Environment-independent: points the log at a tmp file, tolerates missing git.
 
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
+
+# shutil.which follows PATH. A bare "bash" on Windows is resolved by
+# CreateProcess, which tries System32 first and so finds WSL's bash.exe.
+_BASH = shutil.which("bash") or "bash"
 
 SCRIPT = Path(__file__).resolve().parents[1] / ".claude" / "skills" / "_shared" / "wflog.sh"
 
@@ -24,7 +29,7 @@ def run(args, log_path, debug=False):
     if debug:
         env["BRISTLENOSE_WORKFLOW_DEBUG"] = "1"
     return subprocess.run(
-        ["bash", str(SCRIPT), *args],
+        [_BASH, str(SCRIPT), *args],
         capture_output=True,
         text=True,
         env=env,
@@ -39,7 +44,7 @@ def test_appends_valid_json_line(tmp_path):
     log = tmp_path / "wf.jsonl"
     result = run(["new-feature", "start", "hello world"], log)
     assert result.returncode == 0
-    lines = log.read_text().splitlines()
+    lines = log.read_text(encoding="utf-8").splitlines()
     assert len(lines) == 1
     rec = json.loads(lines[0])
     assert rec["skill"] == "new-feature"
@@ -53,7 +58,7 @@ def test_appends_not_overwrites(tmp_path):
     log = tmp_path / "wf.jsonl"
     run(["close-feature", "start"], log)
     run(["close-feature", "done"], log)
-    lines = log.read_text().splitlines()
+    lines = log.read_text(encoding="utf-8").splitlines()
     assert len(lines) == 2
     assert json.loads(lines[1])["step"] == "done"
 
@@ -62,7 +67,7 @@ def test_detail_with_special_chars_is_escaped(tmp_path):
     log = tmp_path / "wf.jsonl"
     nasty = 'has "quotes" and \\ backslash and 日本語'
     run(["new-release", "version", nasty], log)
-    rec = json.loads(log.read_text().splitlines()[0])  # must parse cleanly
+    rec = json.loads(log.read_text(encoding="utf-8").splitlines()[0])  # must parse cleanly
     assert rec["detail"] == nasty
 
 
@@ -84,7 +89,7 @@ def test_never_fails_with_missing_args(tmp_path):
     log = tmp_path / "wf.jsonl"
     result = run([], log)
     assert result.returncode == 0  # must never crash the calling skill
-    rec = json.loads(log.read_text().splitlines()[0])
+    rec = json.loads(log.read_text(encoding="utf-8").splitlines()[0])
     assert rec["skill"] == "?"
     assert rec["step"] == "?"
 

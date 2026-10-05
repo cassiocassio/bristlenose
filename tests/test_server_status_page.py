@@ -660,7 +660,7 @@ def prod_app_factory(tmp_path: Path):
         output_dir.mkdir(exist_ok=True)
         static_dir = tmp_path / "static"
         static_dir.mkdir()
-        (static_dir / "index.html").write_text(_VITE_INDEX_HTML)
+        (static_dir / "index.html").write_text(_VITE_INDEX_HTML, encoding="utf-8")
         (static_dir / "assets").mkdir()
         with patch("bristlenose.server.app._STATIC_DIR", static_dir):
             app = create_app(project_dir=tmp_path, dev=False, db_url="sqlite://")
@@ -792,7 +792,7 @@ class TestSmokeFixtureMountsSPA:
         )
         static_dir = tmp_path / "static"
         static_dir.mkdir()
-        (static_dir / "index.html").write_text(_VITE_INDEX_HTML)
+        (static_dir / "index.html").write_text(_VITE_INDEX_HTML, encoding="utf-8")
         (static_dir / "assets").mkdir()
         with patch("bristlenose.server.app._STATIC_DIR", static_dir):
             app = create_app(project_dir=fixture_dir, dev=False, db_url="sqlite://")

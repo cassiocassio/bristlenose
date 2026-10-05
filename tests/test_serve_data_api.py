@@ -124,15 +124,15 @@ class TestPeoplePutWriteThrough:
         out.mkdir()
         intermediate = out / ".bristlenose" / "intermediate"
         intermediate.mkdir(parents=True)
-        (intermediate / "metadata.json").write_text('{"project_name": "Writethrough"}')
-        (intermediate / "screen_clusters.json").write_text("[]")
-        (intermediate / "theme_groups.json").write_text("[]")
+        (intermediate / "metadata.json").write_text('{"project_name": "Writethrough"}', encoding="utf-8")
+        (intermediate / "screen_clusters.json").write_text("[]", encoding="utf-8")
+        (intermediate / "theme_groups.json").write_text("[]", encoding="utf-8")
 
         raw = out / "transcripts-raw"
         raw.mkdir()
         (raw / "s1.txt").write_text(
             "# Transcript: s1\n# Date: 2026-02-20\n# Duration: 00:01:00\n\n"
-            "[00:02] [m1] Welcome.\n[00:10] [p1] Thanks.\n"
+            "[00:02] [m1] Welcome.\n[00:10] [p1] Thanks.\n", encoding="utf-8"
         )
 
         people_data = {
@@ -178,7 +178,7 @@ class TestPeoplePutWriteThrough:
             },
         }
         people_path = out / "people.yaml"
-        people_path.write_text(yaml.dump(people_data, default_flow_style=False))
+        people_path.write_text(yaml.dump(people_data, default_flow_style=False), encoding="utf-8")
 
         app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
         client = AuthTestClient(app)

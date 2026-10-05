@@ -137,7 +137,7 @@ def test_the_pane_is_sticky_at_the_window_bottom(rules):
 
 
 def test_scroll_margin_reads_the_property_the_panel_publishes(rules):
-    tsx = (REPO / "frontend/src/components/InspectorPanel.tsx").read_text()
+    tsx = (REPO / "frontend/src/components/InspectorPanel.tsx").read_text(encoding="utf-8")
     m = re.search(r'PANE_HEIGHT_VAR\s*=\s*"(--[\w-]+)"', tsx)
     assert m, "InspectorPanel.tsx no longer exports PANE_HEIGHT_VAR as a string literal"
     var = m.group(1)

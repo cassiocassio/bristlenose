@@ -34,7 +34,11 @@ Step "build venv (Python $Python)"
 if (Test-Path $venv) { Remove-Item -Recurse -Force $venv }
 Run uv @("venv", "--python", $Python, $venv)
 $wheelUrl = "file:///" + ($Wheel -replace "\\", "/")
-Run uv @("pip", "install", "--python", $py, "bristlenose[voice] @ $wheelUrl", "pyinstaller")
+# Pinned to the set CI tested (packaging/windows/lock.py writes it); a build
+# that resolved its own dependencies would ship something nothing tested.
+$constraints = Join-Path $root "packaging\windows\constraints.txt"
+Run uv @("pip", "install", "--python", $py, "--constraint", $constraints,
+    "bristlenose[voice] @ $wheelUrl", "pyinstaller")
 
 Step "PyInstaller"
 $dist = Join-Path $Out "dist"

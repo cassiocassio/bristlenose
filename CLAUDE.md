@@ -1484,6 +1484,13 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 **Internal TestFlight since 14 Jul 2026** — shipping build **0.32.0 (4035)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
 
+**0.34.0 shipped 5 Oct 2026, evening — tag `v0.34.0` on `4c5855b5`, TestFlight
+build 4420, verified 9 of 9.** A minor: the CLI on Windows, the one-line installer
+(`bristlenose.app/install.ps1`), and winget Ollama in `configure local`. Drafted as 0.33.1;
+the winget feature made it a minor. Five stops, none in the product: two CI tests that read
+their machine, a stranded step, one transient Swift host exit, and a `.dmg` upload whose
+resume had never worked (`62a8c7dc`). Full account: `docs/release-log.md` § 0.34.0.
+
 **0.33.0 shipped 4 Oct 2026, evening — tag `v0.33.0` on `f1d396ff`, TestFlight
 build 4372, verified 9 of 9.** A minor: the Discussion lens, a voice
 pass in speaker identification (onnxruntime, every channel, no espeak-ng), the person picker,

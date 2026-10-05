@@ -67,6 +67,32 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.34.0 — 5 Oct 2026 · Tier 1 (minor — the CLI on Windows, the one-line installer, winget Ollama)
+
+**What shipped.** The command-line tool installs and runs on Windows (pipx or uv, x64 Python, Windows on
+Arm under emulation), a one-line installer (`irm https://bristlenose.app/install.ps1 | iex`), `configure
+local` installing Ollama with winget, `[serve]` folded into every install, and seven Windows fixes.
+Drafted as 0.33.1, a patch; it became a minor when the winget feature reached `main` first, by the
+owner's call, rather than parking or reverting it.
+
+**Verified 9 of 9** (`release.sh verify 0.34.0`, exit 0) at ~23:15 BST: PyPI (200 at 22:50), GitHub
+Release, Homebrew, TestFlight 4420, `.dmg`, Snap edge, Copr, and the website, deployed from a clean
+worktree of the website repo's committed HEAD because its working tree held another session's
+uncommitted typography edits.
+
+### Five stops, none in the shipped product
+
+| stopped at | cause | fix |
+|---|---|---|
+| strict-CI gate | three Ollama-on-Windows tests asked the runner whether winget exists, so they failed on the Windows runner | `1fab2650`: the tests stub it |
+| strict-CI gate | `SessionsTable.test.tsx`'s first native pick lazy-loaded the picker bridge and outlasted `waitFor`'s 1 s on a cold Linux runner; green locally every time | `4c5855b5`: the file loads the bridge in `beforeAll` |
+| `build-dmg` | stranded: the previous run was stopped mid-step to pick up the fix | `release.sh retry 0.34.0 build-dmg` |
+| `build-dmg`, Swift suite | the test host exited cleanly mid-`s22b` and Xcode restarted it; passed on the rebuild | none: transient |
+| `publish the dmg` | the shared host (load ~23) dropped rsync at 555 of 709 MB; the retry re-sent everything | `62a8c7dc`: the exit trap deleted the partial on any failure, defeating `--partial`; a failed transfer now keeps it |
+
+**Gate held.** The tag waited for strict CI on the exact commit (`4c5855b5`); the `.dmg` and TestFlight
+were rebuilt twice as HEAD moved, by the run's own moved-HEAD guard, not by hand.
+
 ## 0.33.0 — 4 Oct 2026 · Tier 1 (minor — the Discussion lens, the voice pass, the person picker, search, Undo)
 
 **What shipped.** The Discussion lens (the interview guide beside the quotes), a voice pass in speaker

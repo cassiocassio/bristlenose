@@ -302,3 +302,41 @@ def test_redirected_output_in_a_codepage_prints_rather_than_crashes(tmp_path: Pa
     assert result.returncode == 0, result.stderr.decode("cp1252", "replace")[-600:]
     assert b"UnicodeEncodeError" not in result.stderr
     assert result.stdout.strip(), "nothing printed"
+
+
+def test_a_config_file_key_store_is_not_called_secure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Windows has no Keychain or Secret Service; the key goes to a plain .env.
+
+    First-run guidance said "stores it securely (config file)" there, a claim
+    the store does not earn. The Keychain wording is unchanged.
+    """
+    import io
+
+    from rich.console import Console
+
+    import bristlenose.cli as cli
+
+    for label, secure in (("config file", False), ("Keychain", True)):
+        buf = io.StringIO()
+        monkeypatch.setattr(cli, "console", Console(file=buf, width=200, color_system=None))
+        monkeypatch.setattr("bristlenose.credentials.get_credential_store_label", lambda: label)
+        cli._print_provider_guidance()
+        assert (f"stores it securely ({label})" in buf.getvalue()) is secure, label
+        assert f"stores it ({label})" in buf.getvalue() or secure, label
+
+
+@pytest.mark.parametrize(("platform", "shown"), [("win32", False), ("darwin", True), ("linux", True)])
+def test_doctor_shows_the_homebrew_row_only_where_homebrew_exists(
+    monkeypatch: pytest.MonkeyPatch, platform: str, shown: bool,
+) -> None:
+    """A Windows doctor printed "Homebrew  not a Homebrew formula install"."""
+    import bristlenose.doctor as doctor
+
+    for name in [n for n in dir(doctor) if n.startswith("check_")]:
+        monkeypatch.setattr(
+            doctor, name,
+            lambda *a, _n=name, **k: doctor.CheckResult(status=doctor.CheckStatus.OK, label=_n),
+        )
+    monkeypatch.setattr(sys, "platform", platform)
+    labels = [r.label for r in doctor.run_all(settings=None).results]  # type: ignore[arg-type]
+    assert ("check_brew_tap_trust" in labels) is shown

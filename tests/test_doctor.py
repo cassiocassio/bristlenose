@@ -2201,3 +2201,18 @@ def test_doctor_table_prints_an_install_spec_whole(monkeypatch) -> None:
         detail='optional, not installed: pip install "bristlenose[voice]"',
     )]))
     assert '"bristlenose[voice]"' in buf.getvalue()
+
+
+@pytest.mark.parametrize(("prefix", "command"), [
+    (("home", "u", ".local", "pipx", "venvs", "bristlenose"), 'pipx install --force "bristlenose[voice]"'),
+    (("C:\\", "Users", "u", "pipx", "venvs", "bristlenose"), 'pipx install --force "bristlenose[voice]"'),
+    (("home", "u", ".venv"), 'pip install "bristlenose[voice]"'),
+])
+def test_voice_hint_names_the_command_for_this_install(monkeypatch, prefix, command) -> None:
+    """A pipx user told to `pip install` adds the extra to some other Python."""
+    import sys
+
+    from bristlenose import doctor
+
+    monkeypatch.setattr(sys, "prefix", str(Path(*prefix)))
+    assert doctor._voice_install_command() == command

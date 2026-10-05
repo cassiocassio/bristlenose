@@ -445,8 +445,11 @@ def _print_provider_guidance() -> None:
         "Set one up once — [bold cyan]bristlenose configure <provider>[/bold cyan] validates your",
         highlight=False,
     )
+    # "securely" only where it is earned: the config-file fallback (Windows,
+    # a Linux box with no Secret Service) is a plain owner-only .env.
+    how = "stores it" if store == "config file" else "stores it securely"
     console.print(
-        f"key and stores it securely ({store}):",
+        f"key and {how} ({store}):",
         highlight=False,
     )
     console.print()
@@ -2679,7 +2682,7 @@ def _help_commands() -> None:
     console.print("  -v, --verbose           Verbose logging")
     console.print()
     console.print("[bold]bristlenose configure[/bold] <provider>")
-    console.print("  Store an API key securely and make that provider current.")
+    console.print("  Store an API key and make that provider current.")
     console.print("  claude | chatgpt | gemini | azure | local | miro")
     console.print()
     console.print("[bold]bristlenose use[/bold] <provider>")

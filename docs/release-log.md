@@ -90,8 +90,9 @@ uncommitted typography edits.
 | `build-dmg`, Swift suite | the test host exited cleanly mid-`s22b` and Xcode restarted it; passed on the rebuild | none: transient |
 | `publish the dmg` | the shared host (load ~23) dropped rsync at 555 of 709 MB; the retry re-sent everything | `62a8c7dc`: the exit trap deleted the partial on any failure, defeating `--partial`; a failed transfer now keeps it |
 
-**Gate held.** The tag waited for strict CI on the exact commit (`4c5855b5`); the `.dmg` and TestFlight
-were rebuilt twice as HEAD moved, by the run's own moved-HEAD guard, not by hand.
+**Gate held.** The tag waited for strict CI on the exact commit (`4c5855b5`); the app and the `.dmg`
+were rebuilt twice as HEAD moved, by the run's own moved-HEAD guard, not by hand; TestFlight
+was uploaded once, after the gate.
 
 ## 0.33.0 — 4 Oct 2026 · Tier 1 (minor — the Discussion lens, the voice pass, the person picker, search, Undo)
 

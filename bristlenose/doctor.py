@@ -1467,6 +1467,52 @@ _ORT_IDENTITY_MODEL = (
 )
 
 
+def check_bundle_transcription() -> CheckResult:
+    """The Windows build's transcription engine: ctranslate2, faster-whisper, FFmpeg.
+
+    The Mac bundle transcribes with MLX and excludes all three, so the other
+    bundle checks never looked. In the Windows installer build
+    (packaging/windows/bristlenose-win.spec) no PyInstaller hook collects
+    ctranslate2's DLLs or faster-whisper's VAD model, so a spec slip would pass
+    every other check and fail at a researcher's first recording. This
+    reproduces the operations that would fail: import ctranslate2 (its
+    ``__init__`` loads every DLL in its folder), find the VAD model, and in the
+    frozen build insist FFmpeg resolves to the bundled ``tools\\`` copy.
+    """
+    import os
+    import sys
+
+    label = "Bundle: transcription"
+    if sys.platform != "win32":
+        return CheckResult(status=CheckStatus.SKIP, label=label,
+                           detail="the Windows build's engine (this build transcribes otherwise)")
+    try:
+        import ctranslate2
+        import faster_whisper
+    except Exception as exc:  # a DLL that will not load raises OSError, not ImportError
+        return CheckResult(status=CheckStatus.FAIL, label=label,
+                           detail=f"ctranslate2/faster-whisper will not load: {exc}",
+                           fix_key="bundle_dir_missing")
+    vad = os.path.join(os.path.dirname(faster_whisper.__file__), "assets", "silero_vad_v6.onnx")
+    if not os.path.isfile(vad):
+        return CheckResult(status=CheckStatus.FAIL, label=label,
+                           detail=f"faster-whisper's VAD model is missing ({vad})",
+                           fix_key="bundle_dir_missing")
+    if getattr(sys, "frozen", False):
+        from bristlenose.utils.bundled_binary import bundled_binary_path
+
+        tools = os.path.join(os.path.dirname(sys.executable), "tools")
+        for name in ("ffmpeg", "ffprobe"):
+            found = bundled_binary_path(name) or ""
+            if os.path.dirname(found).lower() != tools.lower():
+                return CheckResult(status=CheckStatus.FAIL, label=label,
+                                   detail=f"{name} resolves to {found or 'nothing'}, "
+                                          f"not the bundled copy in {tools}",
+                                   fix_key="bundle_dir_missing")
+    return CheckResult(status=CheckStatus.OK, label=label,
+                       detail=f"ctranslate2 {ctranslate2.__version__}, VAD model, FFmpeg")
+
+
 def check_bundle_voice() -> CheckResult:
     """The voice pass's native runtime: onnxruntime and kaldi-native-fbank.
 
@@ -1573,6 +1619,7 @@ def run_bundle_integrity() -> DoctorReport:
         check_bundle_admin_panel(),
         check_bundle_mcp(),
         check_bundle_voice(),
+        check_bundle_transcription(),
     ])
 
 

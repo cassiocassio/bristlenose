@@ -503,3 +503,65 @@ def test_doctor_voice_row_in_a_frozen_build(
     monkeypatch.setattr(voice, "cached_voice_model", lambda: None)
     result = check_voice(types.SimpleNamespace(voice_pass=True, no_fetch=False))  # type: ignore[arg-type]
     assert expect in result.detail
+
+
+class TestBundleTranscriptionSelfTest:
+    """doctor --self-test's check on the Windows build's own engine.
+
+    No PyInstaller hook collects ctranslate2's DLLs or faster-whisper's VAD
+    model, so a spec slip would pass every other bundle check and fail at a
+    researcher's first recording.
+    """
+
+    def _bundle(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, vad: bool = True) -> Path:
+        import types
+
+        fw_dir = tmp_path / "faster_whisper"
+        (fw_dir / "assets").mkdir(parents=True)
+        if vad:
+            (fw_dir / "assets" / "silero_vad_v6.onnx").write_bytes(b"onnx")
+        fw = types.ModuleType("faster_whisper")
+        fw.__file__ = str(fw_dir / "__init__.py")
+        ct2 = types.ModuleType("ctranslate2")
+        ct2.__version__ = "4.8.2"  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "faster_whisper", fw)
+        monkeypatch.setitem(sys.modules, "ctranslate2", ct2)
+        app = tmp_path / "Bristlenose"
+        (app / "tools").mkdir(parents=True)
+        for name in ("ffmpeg.exe", "ffprobe.exe"):
+            (app / "tools" / name).write_bytes(b"")
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "executable", str(app / "bristlenose.exe"))
+        monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_FFPROBE", raising=False)
+        return app
+
+    def test_a_whole_bundle_passes(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        from bristlenose.doctor import CheckStatus, check_bundle_transcription
+
+        self._bundle(tmp_path, monkeypatch)
+        assert check_bundle_transcription().status == CheckStatus.OK
+
+    def test_a_missing_vad_model_fails(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        from bristlenose.doctor import CheckStatus, check_bundle_transcription
+
+        self._bundle(tmp_path, monkeypatch, vad=False)
+        result = check_bundle_transcription()
+        assert result.status == CheckStatus.FAIL and "VAD" in result.detail
+
+    def test_ffmpeg_from_elsewhere_fails(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        from bristlenose.doctor import CheckStatus, check_bundle_transcription
+        from bristlenose.utils import bundled_binary
+
+        app = self._bundle(tmp_path, monkeypatch)
+        (app / "tools" / "ffmpeg.exe").unlink()
+        monkeypatch.setattr(bundled_binary.shutil, "which", lambda name: f"C:/elsewhere/{name}.exe")
+        result = check_bundle_transcription()
+        assert result.status == CheckStatus.FAIL and "ffmpeg" in result.detail
+
+    def test_skips_off_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from bristlenose.doctor import CheckStatus, check_bundle_transcription
+
+        monkeypatch.setattr(sys, "platform", "darwin")
+        assert check_bundle_transcription().status == CheckStatus.SKIP

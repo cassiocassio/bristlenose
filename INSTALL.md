@@ -80,8 +80,10 @@ If you prefer not to use Homebrew:
 3. A black console window then asks a few questions. Each one waits for you to type `y` or `n` and press Enter. Read the brackets: `[y/N]` means pressing Enter answers No, `[Y/n]` means it answers Yes:
    - *"…allow paths longer than 260 characters… Update setting now?"* — type **`y`**. Without it some packages may fail to install. It takes effect after your next restart
    - *"…Add commands directory to your PATH now?"* — type **`y`**. This is the step older guides call "Add python.exe to PATH"
-   - *"View online help?"* — type **`n`**
-   - *"Install CPython now? [Y/n]"*, if it asks — press **Enter** (Yes). This is the step that installs Python itself
+   - *"Install CPython now? [Y/n]"*, if it asks — press **Enter** (Yes). This is the step that installs Python itself. (Answered No by mistake? No harm done: the `python --version` check below installs it the first time you run it.)
+   - *"View online help?"*, if it asks — type **`n`**
+
+   Which questions appear, and in what order, depends on your machine. Some may not appear at all, so read each one rather than counting.
 
 To verify it worked, open a terminal (press Win + X, then click "Terminal") and type:
 

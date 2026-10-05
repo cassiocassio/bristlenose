@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.${MANIFEST_VERSION}.schema.json
+# Template: build.ps1 -Manifest fills ${...} (docs/design-winget.md, step 1.7).
+# ProductCode is bristlenose.iss's AppId plus Inno's _is1; never change either.
+PackageIdentifier: Bristlenose.Bristlenose
+PackageVersion: ${VERSION}
+InstallerType: inno
+Scope: user
+UpgradeBehavior: install
+InstallModes:
+- silent
+- silentWithProgress
+Commands:
+- bristlenose
+ReleaseDate: ${RELEASE_DATE}
+AppsAndFeaturesEntries:
+- DisplayName: Bristlenose
+  Publisher: Bristlenose
+  DisplayVersion: ${VERSION}
+  ProductCode: '{6C1F8E2A-5B3D-4E7A-9C41-B2E5D8A7F3C9}_is1'
+Installers:
+- Architecture: x64
+  InstallerUrl: ${INSTALLER_URL}
+  InstallerSha256: ${INSTALLER_SHA256}
+ManifestType: installer
+ManifestVersion: ${MANIFEST_VERSION}

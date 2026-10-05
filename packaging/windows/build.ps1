@@ -14,7 +14,13 @@ param(
     # Only for trying a wheel from another version against this checkout.
     [switch]$AllowVersionMismatch,
     # Fast rebuilds while iterating; never for a build that will be published.
-    [switch]$SkipSmoke
+    [switch]$SkipSmoke,
+    # Fill packaging\windows\winget\ for this installer (needs -Installer).
+    [switch]$Manifest,
+    # Where the installer will be downloaded from; a local URL for testing.
+    [string]$InstallerUrl = "",
+    # 1.12.0 is what winget-pkgs' tooling (Komac) emits as of Oct 2026.
+    [string]$ManifestVersion = "1.12.0"
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
@@ -33,6 +39,7 @@ $venv = Join-Path $Out "venv"
 $py = Join-Path $venv "Scripts\python.exe"
 
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { throw "uv is not on PATH" }
+if ($Manifest -and -not $Installer) { throw "-Manifest needs -Installer" }
 
 # The bundle ships exactly the released wheel (the one PyPI gets), so it must be
 # the version this checkout describes; a mismatch means the wrong file was passed.
@@ -120,9 +127,35 @@ if ($Installer) {
         Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
     if (-not $iscc) { throw "Inno Setup (ISCC.exe) not found" }
     $version = (& (Join-Path $app "bristlenose.exe") --version).Trim() -replace "^.*?(\d+\.\d+\.\d+).*$", '$1'
+    # AppVersion becomes the Apps & Features DisplayVersion, which winget matches
+    # against PackageVersion; both must be the wheel's version.
+    if ($version -ne $wheelVersion) { throw "the built exe says $version but the wheel is $wheelVersion" }
     Run $iscc @("/Qp", "/DAppVersion=$version", "/DSourceDir=$app", "/DOutDir=$Out",
         (Join-Path $root "packaging\windows\bristlenose.iss"))
-    Get-ChildItem $Out -Filter "bristlenose-*-setup-x64.exe" | ForEach-Object {
-        Step ("installer: {0}  ({1:N0} MB)  sha256 {2}" -f $_.FullName, ($_.Length / 1MB), (Get-FileHash $_.FullName).Hash)
+    $setup = Get-Item (Join-Path $Out "bristlenose-$version-setup-x64.exe")
+    $setupSha = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash
+    Step ("installer: {0}  ({1:N0} MB)  sha256 {2}" -f $setup.FullName, ($setup.Length / 1MB), $setupSha)
+
+    if ($Manifest) {
+        if (-not $InstallerUrl) {
+            $InstallerUrl = "https://github.com/cassiocassio/bristlenose/releases/download/v$version/$($setup.Name)"
+        }
+        $manifestDir = Join-Path $Out "winget\Bristlenose.Bristlenose\$version"
+        New-Item -ItemType Directory -Force $manifestDir | Out-Null
+        $values = @{
+            VERSION          = $version
+            MANIFEST_VERSION = $ManifestVersion
+            INSTALLER_URL    = $InstallerUrl
+            INSTALLER_SHA256 = $setupSha
+            RELEASE_DATE     = (Get-Date -Format "yyyy-MM-dd")
+        }
+        foreach ($template in Get-ChildItem (Join-Path $root "packaging\windows\winget") -Filter *.yaml) {
+            $text = [IO.File]::ReadAllText($template.FullName)
+            foreach ($key in $values.Keys) { $text = $text.Replace('${' + $key + '}', $values[$key]) }
+            if ($text -match '\$\{[A-Z_0-9]+\}') { throw "$($template.Name): unfilled $($Matches[0])" }
+            [IO.File]::WriteAllText((Join-Path $manifestDir $template.Name), $text, (New-Object Text.UTF8Encoding $false))
+        }
+        Step "manifest: $manifestDir"
+        if (Get-Command winget -ErrorAction SilentlyContinue) { Run winget @("validate", "--manifest", $manifestDir) }
     }
 }

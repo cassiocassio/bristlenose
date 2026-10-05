@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.version.${MANIFEST_VERSION}.schema.json
+# Template: build.ps1 -Manifest fills ${...} (docs/design-winget.md, step 1.7).
+PackageIdentifier: Bristlenose.Bristlenose
+PackageVersion: ${VERSION}
+DefaultLocale: en-US
+ManifestType: version
+ManifestVersion: ${MANIFEST_VERSION}

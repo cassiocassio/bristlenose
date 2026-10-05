@@ -57,3 +57,27 @@ def test_the_smoke_tests_fixture_is_where_they_look() -> None:
     assert 'tests\\fixtures\\smoke-test\\input' in smoke
     assert '"Session 1.vtt"' in smoke and (fixture / "Session 1.vtt").is_file()
     assert (fixture / "bristlenose-output" / ".bristlenose" / "pipeline-events.jsonl").is_file()
+
+
+def test_the_manifest_product_code_is_the_installers_app_id() -> None:
+    """winget finds an installed copy by this code; if it drifts from the Inno
+    AppId, `winget upgrade` installs a second copy beside the first."""
+    import re
+
+    iss = (WIN / "bristlenose.iss").read_text(encoding="utf-8")
+    app_id = re.search(r"^AppId=\{(\{[0-9A-F-]+\})$", iss, re.M)
+    assert app_id
+    installer = (WIN / "winget" / "Bristlenose.Bristlenose.installer.yaml").read_text(
+        encoding="utf-8"
+    )
+    assert f"ProductCode: '{app_id.group(1)}_is1'" in installer
+
+
+def test_the_manifest_templates_use_only_what_the_build_fills() -> None:
+    import re
+
+    build = (WIN / "build.ps1").read_text(encoding="utf-8")
+    filled = set(re.findall(r"^\s+([A-Z_0-9]+)\s+= ", build, re.M))
+    for template in (WIN / "winget").glob("*.yaml"):
+        used = set(re.findall(r"\$\{([A-Z_0-9]+)\}", template.read_text(encoding="utf-8")))
+        assert used and used <= filled, (template.name, used - filled)

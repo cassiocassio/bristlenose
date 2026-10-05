@@ -1200,7 +1200,9 @@ class TestRunAll:
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_all(settings)
 
-        assert len(report.results) == 11
+        # Eleven checks; Windows leaves out the Homebrew one, which has no
+        # meaning there.
+        assert len(report.results) == (10 if sys.platform == "win32" else 11)
         assert not report.has_failures
 
 

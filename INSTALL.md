@@ -75,18 +75,24 @@ If you prefer not to use Homebrew:
 
 ### Step 1: Install Python
 
-1. Go to [python.org/downloads](https://www.python.org/downloads/) and click the big yellow "Download Python" button
-2. Run the downloaded `.exe` file
-3. **Important:** on the first screen, tick the checkbox that says **"Add python.exe to PATH"** — this is easy to miss and everything breaks without it
-4. Click "Install Now"
+1. Go to [python.org/downloads](https://www.python.org/downloads/) and click the big yellow **"Download Python install manager"** button
+2. Open the downloaded file and click **"Install Python"**
+3. A black console window then asks a few questions. Each one waits for you to type `y` or `n` and press Enter — and each one defaults to **No** if you just press Enter:
+   - *"…allow paths longer than 260 characters… Update setting now?"* — type **`y`**. Without it some packages may fail to install. It takes effect after your next restart
+   - *"…Add commands directory to your PATH now?"* — type **`y`**. This is the step older guides call "Add python.exe to PATH"
+   - *"View online help?"* — type **`n`**
 
-To verify it worked, open a terminal (press Win + X, then click "Terminal" or "Windows PowerShell") and type:
+To verify it worked, open a terminal (press Win + X, then click "Terminal") and type:
 
 ```
 python --version
 ```
 
-You should see something like `Python 3.12.x`.
+You should see a version number, 3.10 or higher (for example `Python 3.14.8`).
+
+> **Prefer the classic installer?** Use the "standalone installer" link under the yellow button instead, and on its first screen tick **"Add python.exe to PATH"**.
+
+> **Windows on Arm** (Snapdragon laptops, Surface Pro X / 11): use the Python the install manager gives you by default. It's the x64 version, which runs under emulation and installs everything Bristlenose needs. The native Arm version of Python can't install Bristlenose yet, because one of its transcription libraries has no Arm build for Windows.
 
 ### Step 2: Install pipx
 
@@ -97,6 +103,8 @@ python -m pip install --user pipx
 python -m pipx ensurepath
 ```
 
+The first command may print yellow warnings that a folder "is not on PATH". That's expected — the second command fixes it. (It may also suggest running `source ~/.bashrc`; ignore that, it doesn't apply on Windows.)
+
 **Close the terminal and open a new one** (the PATH change only takes effect in new windows).
 
 ### Step 3: Install FFmpeg
@@ -106,8 +114,10 @@ FFmpeg converts audio and video files. Bristlenose needs it to process your inte
 **Option A — winget** (recommended, built into Windows 11 and most Windows 10):
 
 ```
-winget install FFmpeg
+winget install --id Gyan.FFmpeg -e --source winget
 ```
+
+If winget asks you to agree to source terms the first time you use it, type `Y` and press Enter. The download is about 250 MB.
 
 Close and reopen your terminal after this.
 
@@ -133,6 +143,8 @@ ffmpeg -version
 pipx install bristlenose
 ```
 
+This downloads about a hundred packages and takes a few minutes.
+
 ### Step 5: Verify
 
 ```
@@ -140,6 +152,8 @@ bristlenose doctor
 ```
 
 This checks that Python, FFmpeg, and your AI provider are set up correctly. If anything is wrong, it tells you how to fix it.
+
+The "Whisper model" line says *not cached* until your first transcription, which downloads the speech-recognition model (about 1.6 GB) once.
 
 ---
 

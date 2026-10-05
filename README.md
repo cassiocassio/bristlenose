@@ -99,7 +99,7 @@ The Snap and the Fedora package are both **amd64/x86_64 only** — on ARM Linux,
 
 The `[voice]` extra is optional: `pipx install 'bristlenose[voice]'` adds a voice pass to speaker identification, which tells two speakers apart by how they sound when the transcript doesn't already say who is speaking. It downloads a 40 MB model on first use (or with `bristlenose doctor --fetch`), runs on your machine, and is skipped without the extra. Set `BRISTLENOSE_VOICE_PASS=false` to turn it off. (Quote the spec — `zsh` reads bare brackets as a glob.)
 
-If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `sudo dnf install ffmpeg-free` on Fedora, `winget install FFmpeg` on Windows).
+If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `sudo dnf install ffmpeg-free` on Fedora, `winget install --id Gyan.FFmpeg -e --source winget` on Windows).
 
 If you have Anaconda installed, its bundled Python may shadow newer system Pythons. Either `conda deactivate` before running pip/pipx, or install via Homebrew (which uses its own bundled Python 3.12).
 

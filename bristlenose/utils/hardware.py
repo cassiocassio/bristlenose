@@ -70,6 +70,8 @@ class HardwareInfo:
             backend = "CUDA"
         else:
             backend = "CPU"
+        if name.lower() == backend.lower():  # no chip name: "cpu · CPU"
+            return backend
         return f"{name} · {backend}"
 
     def summary(self) -> str:

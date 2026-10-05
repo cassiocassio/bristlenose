@@ -1233,7 +1233,7 @@ class Pipeline:
 
         # ── Print found-sessions line, then ingest checkmark ──
         console.print(
-            f"  [dim]{count_noun(len(sessions), 'session')} in {input_dir.name}/[/dim]\n",
+            f"  [dim]{count_noun(len(sessions), 'session')} in {input_dir.resolve().name}/[/dim]\n",
         )
         type_counts = Counter(
             f.file_type.value for s in sessions for f in s.files
@@ -2859,7 +2859,7 @@ class Pipeline:
 
         # ── Print found-sessions line, then ingest checkmark ──
         console.print(
-            f"  [dim]{count_noun(len(sessions), 'session')} in {input_dir.name}/[/dim]\n",
+            f"  [dim]{count_noun(len(sessions), 'session')} in {input_dir.resolve().name}/[/dim]\n",
         )
         type_counts = Counter(
             f.file_type.value for s in sessions for f in s.files

@@ -122,14 +122,14 @@ class TestHardwareLabel:
 
     def test_cpu_fallback(self) -> None:
         hw = HardwareInfo(accelerator=AcceleratorType.CPU)
-        assert hw.label == "cpu · CPU"
+        assert hw.label == "CPU"
 
     def test_cuda_no_chip_name(self) -> None:
         hw = HardwareInfo(
             accelerator=AcceleratorType.CUDA,
             cuda_available=True,
         )
-        assert hw.label == "cuda · CUDA"
+        assert hw.label == "CUDA"
 
     def test_apple_silicon_no_chip_name(self) -> None:
         hw = HardwareInfo(

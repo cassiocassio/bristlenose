@@ -63,8 +63,13 @@ class TestHardwareInfo:
         assert info.label == "Apple M2 Max · MLX"
 
     def test_label_cpu(self):
+        # No chip name: the header said "cpu · CPU" (seen on Windows and Linux).
         info = HardwareInfo(accelerator=AcceleratorType.CPU)
-        assert info.label == "cpu · CPU"
+        assert info.label == "CPU"
+
+    def test_label_named_chip_on_cpu(self):
+        info = HardwareInfo(accelerator=AcceleratorType.CPU, chip_name="Intel Xeon 8488C")
+        assert info.label == "Intel Xeon 8488C · CPU"
 
     def test_summary(self):
         info = HardwareInfo(

@@ -13,7 +13,7 @@ Bristlenose runs on Windows, and installing with pipx or uv no longer needs `[se
 
 **Fixed**
 
-- **On Windows, every run stopped before it started.** The first record a run writes failed on Windows, so no run got past it.
+- **On Windows, every run stopped before it started.** The first record a run writes failed on Windows, so no run got past it, and past that, a run stopped again at its second step.
 - **On Windows, a run in progress read as stopped.** A second run on the same folder was not refused, and the report could call a running analysis stranded.
 
 **0.33.0** — _4 Oct 2026_

@@ -161,12 +161,18 @@ def load_manifest(output_dir: Path) -> PipelineManifest | None:
 
 
 def write_manifest(manifest: PipelineManifest, output_dir: Path) -> None:
-    """Write the manifest to disk (atomic: write tmp then rename)."""
+    """Write the manifest to disk (atomic: write tmp, then replace).
+
+    `replace`, not `rename`: rename onto an existing file raises
+    FileExistsError on Windows, and every stage after the first rewrites the
+    manifest, so a Windows run died at its second stage (found by the first
+    Windows CI run, 5 Oct 2026). `replace` overwrites atomically on both.
+    """
     path = _manifest_path(output_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     tmp.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
-    tmp.rename(path)
+    tmp.replace(path)
 
 
 def mark_stage_running(manifest: PipelineManifest, stage: str) -> None:

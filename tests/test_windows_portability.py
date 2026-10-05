@@ -88,6 +88,27 @@ def test_open_private_still_refuses_a_symlink(tmp_path: Path) -> None:
         open_private(link, os.O_WRONLY | os.O_APPEND)
 
 
+def test_manifest_rewrites_over_itself(tmp_path: Path) -> None:
+    """Every stage rewrites the manifest; the second write must not fail.
+
+    It was ``tmp.rename(path)``, which overwrites on POSIX and raises
+    FileExistsError on Windows, so a Windows run died at its second stage. The
+    first Windows CI run found it (5 Oct 2026); ``transcribe`` writes no
+    manifest, so the smoke run could not.
+    """
+    from bristlenose.manifest import PipelineManifest, load_manifest, write_manifest
+
+    def manifest(updated: str) -> PipelineManifest:
+        return PipelineManifest(
+            project_name="p", pipeline_version="0", created_at="t0", updated_at=updated,
+        )
+
+    write_manifest(manifest("t1"), tmp_path)
+    write_manifest(manifest("t2"), tmp_path)
+    loaded = load_manifest(tmp_path)
+    assert loaded is not None and loaded.updated_at == "t2"
+
+
 def test_start_time_tracks_a_live_process() -> None:
     """A live run reads as live, and a finished one as gone — on every platform.
 

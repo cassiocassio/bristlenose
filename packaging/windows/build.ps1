@@ -12,7 +12,9 @@ param(
     [string]$Out = "build\windows",
     [switch]$Installer,
     # Only for trying a wheel from another version against this checkout.
-    [switch]$AllowVersionMismatch
+    [switch]$AllowVersionMismatch,
+    # Fast rebuilds while iterating; never for a build that will be published.
+    [switch]$SkipSmoke
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
@@ -102,8 +104,14 @@ Set-Content -Path (Join-Path $app "_internal\.install-method") -Value "winget" -
 $size = (Get-ChildItem $app -Recurse | Measure-Object Length -Sum).Sum / 1MB
 Step ("folder: {0}  ({1:N0} MB)" -f $app, $size)
 
-Step "smoke: --version"
-Run (Join-Path $app "bristlenose.exe") @("--version")
+if ($SkipSmoke) {
+    Step "smoke: --version only (-SkipSmoke)"
+    Run (Join-Path $app "bristlenose.exe") @("--version")
+} else {
+    Step "smoke tests"
+    & (Join-Path $PSScriptRoot "smoke.ps1") -App $app
+    if ($LASTEXITCODE -ne 0) { throw "smoke tests failed" }
+}
 
 if ($Installer) {
     Step "Inno Setup"

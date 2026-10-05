@@ -42,3 +42,18 @@ def test_the_digest_moves_when_a_dependency_does() -> None:
 def test_the_build_installs_against_the_constraints() -> None:
     build = (WIN / "build.ps1").read_text(encoding="utf-8")
     assert '"--constraint", $constraints' in build
+
+
+def test_the_build_runs_the_smoke_tests() -> None:
+    build = (WIN / "build.ps1").read_text(encoding="utf-8")
+    assert '"smoke.ps1") -App $app' in build
+
+
+def test_the_smoke_tests_fixture_is_where_they_look() -> None:
+    """smoke.ps1 transcribes this VTT and serves this project; moving either
+    would fail only on a Windows build box, hours later."""
+    smoke = (WIN / "smoke.ps1").read_text(encoding="utf-8")
+    fixture = ROOT / "tests" / "fixtures" / "smoke-test" / "input"
+    assert 'tests\\fixtures\\smoke-test\\input' in smoke
+    assert '"Session 1.vtt"' in smoke and (fixture / "Session 1.vtt").is_file()
+    assert (fixture / "bristlenose-output" / ".bristlenose" / "pipeline-events.jsonl").is_file()

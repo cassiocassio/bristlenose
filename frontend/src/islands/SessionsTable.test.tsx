@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import {
   act,
   render as rtlRender,
@@ -654,6 +654,14 @@ describe("SessionsTable moderators are named per session", () => {
 // ---------------------------------------------------------------------------
 
 describe("SessionsTable person picker", () => {
+  // The native pick path lazy-loads the picker bridge on first use. On a cold CI
+  // runner that first load can outlast waitFor's 1 s, so the first native-pick
+  // test failed there while passing locally (5 Oct 2026). Load it once up front,
+  // so each test measures the handler, not the module transform.
+  beforeAll(async () => {
+    await import("../utils/personPickerBridge");
+  });
+
   // s1's moderator is a pipeline guess; s2's was confirmed by a person.
   const pickerSessions = {
     ...sessionsResponse,

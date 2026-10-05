@@ -238,6 +238,13 @@ jobs:
     #
     # One interpreter: platform bugs don't vary by minor version, and the
     # version matrix is covered on Linux. 3.12 = the Homebrew/Snap/sidecar one.
+    # Named like a cell of `test`'s matrix on purpose: the release board reads
+    # job names of the form `<job> (<py>, <os>-<ver>)` into its Python × OS
+    # grid, so this lands there as a windows row (scripts/release-board.py,
+    # pinned by test-release-board.py). Keep the name and the version below
+    # in step. Its cell is the HARD step's verdict; the soft suite does not
+    # move it.
+    name: test (3.12, windows-latest)
     runs-on: windows-latest
     timeout-minutes: 45  # a hung test would otherwise hold the runner for 6 h
     defaults:

@@ -472,6 +472,21 @@ class Ci(unittest.TestCase):
         finally:
             t.close()
 
+    def test_windows_job_lands_in_the_matrix(self):
+        # ci.yml's test-windows job is a separate job, named like a matrix cell
+        # so it joins the grid as its own OS row. A rename that breaks the
+        # pattern would drop Windows to the loose-jobs list without a sound.
+        t = Tree()
+        try:
+            sink = ("@bn ci ts=2026-10-05T12:00:00Z run=1.0.0 workflow=ci.yml sha=abc run_id=1 job=test\\ \\(3.12\\,\\ ubuntu-latest\\) result=success\n"
+                    "@bn ci ts=2026-10-05T12:00:00Z run=1.0.0 workflow=ci.yml sha=abc run_id=1 job=test\\ \\(3.12\\,\\ windows-latest\\) result=success\n")
+            t.run(events=ev("2026-10-05T10:00:00Z", "run", "started") + "\n", sink=sink, extra={"ci-sha": "a" * 40})
+            ci = t.model()["ci"]
+            self.assertIn({"job": "test", "python": "3.12", "os": "windows", "result": "success"}, ci["matrix"])
+            self.assertEqual([j["matrix"] for j in ci["jobs"]], [True, True])
+        finally:
+            t.close()
+
     def test_ci_pane_makes_no_sha_claim(self):
         # `status` writes sha= from the same ci-sha file the board reads, so a
         # "matches" tick would compare a file with a copy of itself.

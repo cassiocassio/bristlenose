@@ -249,7 +249,7 @@ def _print_doctor_fixes(
         for result in all_fixable:
             fix = get_fix(result.fix_key)
             if fix:
-                # markup=False so e.g. `'bristlenose[serve]'` isn't parsed as
+                # markup=False so e.g. `'bristlenose[voice]'` isn't parsed as
                 # a Rich style tag and silently stripped from the output.
                 console.print(fix, markup=False)
                 console.print()  # Blank line between fixes

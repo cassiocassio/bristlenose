@@ -1646,24 +1646,39 @@ class TestGetFixGrid:
         # for exactly the users reading this message.
         assert "brew upgrade cassiocassio/bristlenose/bristlenose" in fix
         assert "brew upgrade bristlenose" not in fix
-        assert "'bristlenose[serve]'" not in fix  # brew users don't pip
+        assert "pip install" not in fix  # brew users don't pip
 
     def test_serve_deps_missing_pip(self) -> None:
-        """Plain pip / venv path → `pip install 'bristlenose[serve]'` (quoted)."""
+        """Plain pip / venv path → `pip install --upgrade bristlenose`."""
         with patch("bristlenose.doctor_fixes.sys.prefix", "/usr/local"):
             fix = get_fix("serve_deps_missing", "pip")
-        assert "pip install 'bristlenose[serve]'" in fix
-        # Brackets must be quoted so zsh doesn't glob-expand them.
-        assert "pip install bristlenose[serve]" not in fix
+        assert "pip install --upgrade bristlenose" in fix
+        # The serve packages are core now: no `[serve]` spec to ask for.
+        assert "[serve]" not in fix
 
     def test_serve_deps_missing_pipx(self) -> None:
-        """pipx venv detected via sys.prefix → `pipx install --force ...` (quoted)."""
+        """pipx venv detected via sys.prefix → `pipx reinstall bristlenose`."""
         with patch(
             "bristlenose.doctor_fixes.sys.prefix",
             "/home/user/.local/share/pipx/venvs/bristlenose",
         ):
             fix = get_fix("serve_deps_missing", "pip")
-        assert "pipx install --force 'bristlenose[serve]'" in fix
+        assert "pipx reinstall bristlenose" in fix
+        assert "[serve]" not in fix
+
+    @pytest.mark.parametrize(
+        "prefix",
+        [
+            "/home/user/.local/share/uv/tools/bristlenose",
+            "C:\\Users\\user\\AppData\\Roaming\\uv\\tools\\bristlenose",
+        ],
+    )
+    def test_serve_deps_missing_uv_tool(self, prefix: str) -> None:
+        """uv tool venv detected via sys.prefix → `uv tool install --reinstall`."""
+        with patch("bristlenose.doctor_fixes.sys.prefix", prefix):
+            fix = get_fix("serve_deps_missing", "pip")
+        assert "uv tool install --reinstall bristlenose" in fix
+        assert "[serve]" not in fix
 
     # -- unknown key --
 

@@ -475,9 +475,11 @@ def _fix_ollama_model_missing(_method: str) -> str:
 
 
 def _fix_serve_deps_missing(method: str) -> str:
-    # Single quotes around the package spec so zsh doesn't interpret the
-    # brackets as a glob character class — without them, pip gets a mangled
-    # argument and the user sees "no matches found".
+    # Since 5 Oct 2026 the serve packages are core dependencies, not an extra,
+    # so on every channel a missing one means a damaged or half-finished
+    # install rather than a choice the user made. The fix is to reinstall
+    # through whatever put Bristlenose there — no package spec with brackets,
+    # so nothing for zsh to glob.
     if method == "rpm":
         # NOT the pip fallback below. On Fedora that either refuses with
         # EXTERNALLY-MANAGED or installs a second bristlenose into
@@ -485,7 +487,7 @@ def _fix_serve_deps_missing(method: str) -> str:
         # the user running a different copy than the one they packaged.
         return (
             "`bristlenose serve` deps missing — this is a bug in the RPM package,\n"
-            "which installs the serve extras.\n"
+            "which installs them.\n"
             "  sudo dnf reinstall bristlenose\n"
             "If it persists: github.com/cassiocassio/bristlenose/issues"
         )
@@ -502,19 +504,25 @@ def _fix_serve_deps_missing(method: str) -> str:
         # for precisely the users who need this message. The qualified form is
         # allowed by the ARGV rule whether or not the tap is trusted.
         return (
-            "`bristlenose serve` needs extras that weren't installed.\n\n"
+            "`bristlenose serve` needs packages missing from this install.\n\n"
             "  brew upgrade cassiocassio/bristlenose/bristlenose"
         )
-    # pip / pipx / uv. Pipx venvs have "pipx" in sys.prefix; suggest the
-    # right command for re-installing in place.
-    if "pipx" in sys.prefix:
+    # pip / pipx / uv. pipx and uv tool venvs are recognisable from
+    # sys.prefix; suggest the command that rebuilds that venv in place.
+    prefix = sys.prefix.replace("\\", "/")
+    if "pipx" in prefix:
         return (
-            "`bristlenose serve` needs extras that weren't installed.\n\n"
-            "  pipx install --force 'bristlenose[serve]'"
+            "`bristlenose serve` needs packages missing from this install.\n\n"
+            "  pipx reinstall bristlenose"
+        )
+    if "/uv/tools/" in prefix:
+        return (
+            "`bristlenose serve` needs packages missing from this install.\n\n"
+            "  uv tool install --reinstall bristlenose"
         )
     return (
-        "`bristlenose serve` needs extras that weren't installed.\n\n"
-        "  pip install 'bristlenose[serve]'"
+        "`bristlenose serve` needs packages missing from this install.\n\n"
+        "  pip install --upgrade bristlenose"
     )
 
 

@@ -53,6 +53,22 @@ dependencies = [
     "pyyaml>=6.0",
     "jinja2>=3.1",
     "inflect>=7.0",
+    # Serve mode runtime — the FastAPI + SQLite backend behind `bristlenose
+    # serve`, the HTML report's interactive features and the macOS app's
+    # WKWebView. Core, not an extra: `run` and `analyze` need it too (see
+    # the empty `serve` extra below).
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    # The [asyncio] extra is what pulls greenlet, and sqladmin needs it:
+    # importing sqladmin reaches sqlalchemy.ext.asyncio, which from
+    # SQLAlchemy 2.1 raises ImportError without greenlet rather than
+    # degrading. 2.0 installed it as an ordinary dependency, so this was
+    # invisible until 2.1.1 shipped and CI — which resolves fresh every
+    # run — went red on 25 Sep 2026 with nothing in the tree changed.
+    "sqlalchemy[asyncio]>=2.0",
+    "sqladmin>=0.20",
+    "openpyxl>=3.1",
+    "alembic>=1.13",
 ]
 
 [project.optional-dependencies]
@@ -102,30 +118,18 @@ dev = [
     "kaldi-native-fbank>=1.22",
 ]
 
-# Serve mode runtime — `bristlenose serve`, the FastAPI + SQLite
-# backend that powers both the HTML report's interactive features and
-# the macOS app's WKWebView. Pulled in by anyone running serve mode
-# from the CLI; bundled into the desktop sidecar (PyInstaller spec
-# lists these as hiddenimports too). Linux/Windows CLI users running
-# `bristlenose run` only (no serve) can skip this extra.
-serve = [
-    "fastapi>=0.115",
-    "uvicorn[standard]>=0.32",
-    # The [asyncio] extra is what pulls greenlet, and sqladmin needs it:
-    # importing sqladmin reaches sqlalchemy.ext.asyncio, which from
-    # SQLAlchemy 2.1 raises ImportError without greenlet rather than
-    # degrading. 2.0 installed it as an ordinary dependency, so this was
-    # invisible until 2.1.1 shipped and CI — which resolves fresh every
-    # run — went red on 25 Sep 2026 with nothing in the tree changed.
-    "sqlalchemy[asyncio]>=2.0",
-    "sqladmin>=0.20",
-    "openpyxl>=3.1",
-    "alembic>=1.13",
-]
+# Serve mode used to be an extra (fastapi, uvicorn, sqlalchemy, sqladmin,
+# openpyxl, alembic). `run`, `analyze` and `serve` all gate on those
+# packages in preflight, so a plain `pip install bristlenose` produced a
+# tool that could only transcribe. They moved into core `dependencies` on
+# 5 Oct 2026. The empty extra stays so `bristlenose[serve]` in old
+# instructions, scripts, the brew formula and build-sidecar.sh still
+# resolves.
+serve = []
 
 # MCP server (§9a spike) — mounts /mcp/ on `bristlenose serve` so local
 # agents (Claude Code, Claude Desktop, ChatGPT desktop, Codex) can read a
-# project. Kept out of the serve extra so plain CLI serve installs stay
+# project. An extra rather than core so plain CLI installs stay
 # lean; the desktop sidecar DOES ship it (30 Jul 2026 — build-sidecar.sh
 # installs [serve,apple,desktop,mcp], and the spec collect_all's mcp +
 # jsonschema* so rpds-py and the metaschemas enter the signed bundle

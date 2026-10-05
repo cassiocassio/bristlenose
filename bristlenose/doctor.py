@@ -882,14 +882,16 @@ _SERVE_DEP_PACKAGES = (
 
 
 def check_serve_deps() -> CheckResult:
-    """Check whether the `[serve]` extras are installed.
+    """Check whether the serve-mode packages are installed.
 
     `bristlenose serve` (and any embedded WKWebView in the desktop app) needs
-    FastAPI/Uvicorn/SQLAlchemy/SQLAdmin/Alembic/openpyxl. These are declared
-    as the `serve` extra in pyproject.toml. Some packaging channels (e.g. the
-    brew formula's pip step pre-A1) silently skip extras, leaving doctor
-    reporting "All clear" while serve is broken. Failing hard here surfaces
-    the gap before the user hits a confusing serve-time crash.
+    FastAPI/Uvicorn/SQLAlchemy/SQLAdmin/Alembic/openpyxl. These were the
+    `serve` extra until 5 Oct 2026 and are core dependencies now, so a gap
+    means a damaged install — or an older one made without the extra. Some
+    packaging channels (e.g. the brew formula's pip step pre-A1) silently
+    skipped extras, leaving doctor reporting "All clear" while serve was
+    broken. Failing hard here surfaces the gap before the user hits a
+    confusing serve-time crash.
     """
     import importlib.util
 

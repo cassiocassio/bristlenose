@@ -89,17 +89,15 @@ sudo dnf copr enable cassiocassio/bristlenose
 sudo dnf install bristlenose
 
 # Linux / macOS / Windows (pipx or uv)
-pipx install 'bristlenose[serve]'
-uv tool install 'bristlenose[serve]'    # alternative
+pipx install bristlenose
+uv tool install bristlenose    # alternative
 ```
 
 The `brew trust` line is a one-off. Homebrew 6.0 and later skip third-party taps during `brew upgrade` unless trusted, so without it Bristlenose installs fine but silently stops receiving updates.
 
 The Snap and the Fedora package are both **amd64/x86_64 only** — on ARM Linux, use pipx.
 
-The `[serve]` extra is not optional in practice: `run`, `analyze` and `serve` all require it, and without it they stop before doing any work. Homebrew, Snap and the Fedora package install it for you; with pipx or uv you ask for it. (Quote the spec — `zsh` reads bare brackets as a glob.)
-
-The `[voice]` extra is optional: `pipx install 'bristlenose[serve,voice]'` adds a voice pass to speaker identification, which tells two speakers apart by how they sound when the transcript doesn't already say who is speaking. It downloads a 40 MB model on first use (or with `bristlenose doctor --fetch`), runs on your machine, and is skipped without the extra. Set `BRISTLENOSE_VOICE_PASS=false` to turn it off.
+The `[voice]` extra is optional: `pipx install 'bristlenose[voice]'` adds a voice pass to speaker identification, which tells two speakers apart by how they sound when the transcript doesn't already say who is speaking. It downloads a 40 MB model on first use (or with `bristlenose doctor --fetch`), runs on your machine, and is skipped without the extra. Set `BRISTLENOSE_VOICE_PASS=false` to turn it off. (Quote the spec — `zsh` reads bare brackets as a glob.)
 
 If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `sudo dnf install ffmpeg-free` on Fedora, `winget install FFmpeg` on Windows).
 

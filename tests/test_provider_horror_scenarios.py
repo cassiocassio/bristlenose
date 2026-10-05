@@ -483,13 +483,28 @@ class TestOllamaNotAvailable:
         assert result.status == CheckStatus.FAIL
         assert result.fix_key == "ollama_not_installed"
 
-        with patch(
-            "bristlenose.doctor_fixes._get_cloud_fallback_hint",
-            return_value="Or use a cloud API: --llm claude",
+        with (
+            patch(
+                "bristlenose.doctor_fixes._get_cloud_fallback_hint",
+                return_value="Or use a cloud API: --llm claude",
+            ),
+            patch("platform.system", return_value="Linux"),
         ):
             fix = get_fix(result.fix_key)
         assert "ollama.ai" in fix
         assert "bristlenose will start it automatically" in fix
+        assert "--llm claude" in fix
+
+        # On Windows the same failure offers winget instead of the download page
+        with (
+            patch(
+                "bristlenose.doctor_fixes._get_cloud_fallback_hint",
+                return_value="Or use a cloud API: --llm claude",
+            ),
+            patch("platform.system", return_value="Windows"),
+        ):
+            fix = get_fix(result.fix_key)
+        assert "winget install --id Ollama.Ollama -e --source winget" in fix
         assert "--llm claude" in fix
 
     def test_ollama_running_but_no_model(self) -> None:

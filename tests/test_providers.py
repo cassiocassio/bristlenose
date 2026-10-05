@@ -255,10 +255,22 @@ class TestOllamaHelpers:
         ):
             assert get_install_method() == "curl"
 
-    def test_get_install_method_windows(self) -> None:
+    def test_get_install_method_windows_with_winget(self) -> None:
         from bristlenose.ollama import get_install_method
 
-        with patch("platform.system", return_value="Windows"):
+        with (
+            patch("platform.system", return_value="Windows"),
+            patch("shutil.which", side_effect=lambda cmd: "C:/winget.exe" if cmd == "winget" else None),
+        ):
+            assert get_install_method() == "winget"
+
+    def test_get_install_method_windows_without_winget(self) -> None:
+        from bristlenose.ollama import get_install_method
+
+        with (
+            patch("platform.system", return_value="Windows"),
+            patch("shutil.which", return_value=None),
+        ):
             assert get_install_method() is None
 
     def test_install_ollama_brew(self) -> None:
@@ -556,13 +568,24 @@ class TestDoctorFixesOllama:
     def test_fix_ollama_not_installed(self) -> None:
         from bristlenose.doctor_fixes import get_fix
 
-        fix = get_fix("ollama_not_installed", "pip")
+        # Off Windows: the download page (Windows gets winget — the next test)
+        with patch("platform.system", return_value="Linux"):
+            fix = get_fix("ollama_not_installed", "pip")
         assert "ollama.ai" in fix
         # Auto-start message instead of manual command (we can't know the start
         # command before Ollama is installed)
         assert "bristlenose will start it automatically" in fix
         # Cloud fallback hint should be present
         assert "cloud" in fix.lower() or "claude" in fix.lower() or "console.anthropic.com" in fix
+
+    def test_fix_ollama_not_installed_windows(self) -> None:
+        from bristlenose.doctor_fixes import get_fix
+
+        with patch("platform.system", return_value="Windows"):
+            fix = get_fix("ollama_not_installed", "pip")
+        assert "winget install --id Ollama.Ollama -e --source winget" in fix
+        assert "https://ollama.com/download/windows" in fix
+        assert "bristlenose configure local" in fix
 
     def test_fix_ollama_model_missing(self) -> None:
         from bristlenose.doctor_fixes import get_fix

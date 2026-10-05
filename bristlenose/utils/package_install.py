@@ -61,6 +61,14 @@ def ensure_spacy_model(model_name: str) -> None:
         pass
 
     if _is_frozen_sidecar():
+        if sys.platform == "win32":
+            # The Windows installer build cannot download a model into itself, and
+            # the build does not carry one (docs/design-winget.md, PII in v1).
+            raise FrozenSidecarError(
+                "PII redaction is not available in the Windows installer build yet. "
+                "To use --redact-pii, install Bristlenose with uv instead "
+                "(see INSTALL.md, Windows)."
+            )
         raise FrozenSidecarError(
             f"spaCy model {model_name!r} is missing from the desktop sidecar bundle; "
             "add it to the PyInstaller datas list at build time."

@@ -406,3 +406,100 @@ def test_a_saved_key_path_reads_whole_on_windows(monkeypatch: pytest.MonkeyPatch
     assert cli._display_config_path(path) == str(path)
     monkeypatch.setattr(sys, "platform", "darwin")
     assert cli._display_config_path(path) == "~/.config/bristlenose/.env"
+
+
+def test_the_frozen_windows_build_never_claims_cuda(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The bundle ships no cuBLAS/cuDNN, but ctranslate2 counts any NVIDIA GPU.
+
+    Choosing CUDA there fails on the first transcription with a missing DLL, on
+    exactly the laptops no test box has (review of docs/design-winget.md).
+    """
+    import types
+
+    from bristlenose.utils import hardware
+
+    fake = types.ModuleType("ctranslate2")
+    fake.get_cuda_device_count = lambda: 1  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "ctranslate2", fake)
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    assert hardware._check_cuda_available() is False
+    monkeypatch.setattr(sys, "frozen", False)
+    assert hardware._check_cuda_available() is True
+
+
+def test_the_frozen_windows_build_finds_its_own_ffmpeg_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FFmpeg ships in tools\\ beside bristlenose.exe, off the user's PATH, and
+    must win over an FFmpeg the user installed (which PATH would find)."""
+    from bristlenose.utils import bundled_binary
+
+    app = tmp_path / "Bristlenose"
+    (app / "tools").mkdir(parents=True)
+    (app / "tools" / "ffmpeg.exe").write_bytes(b"")
+    (app / "tools" / "ffprobe.exe").write_bytes(b"")
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(app / "bristlenose.exe"))
+    monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
+    monkeypatch.delenv("BRISTLENOSE_FFPROBE", raising=False)
+    monkeypatch.setattr(bundled_binary.shutil, "which", lambda name: f"C:/elsewhere/{name}.exe")
+
+    assert bundled_binary.bundled_binary_path("ffmpeg") == str(app / "tools" / "ffmpeg.exe")
+    assert bundled_binary.bundled_binaries_dir() == app / "tools"
+    monkeypatch.setattr(sys, "frozen", False)
+    assert bundled_binary.bundled_binary_path("ffmpeg") == "C:/elsewhere/ffmpeg.exe"
+
+
+def test_the_windows_installer_build_says_winget_not_pip(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """build.ps1 writes _internal\\.install-method = winget (sys.prefix in a
+    PyInstaller onedir build). Without it every fix told the user to pip install."""
+    from bristlenose import doctor_fixes
+
+    (tmp_path / doctor_fixes.INSTALL_MARKER).write_text("winget", encoding="utf-8")
+    monkeypatch.setattr(sys, "prefix", str(tmp_path))
+    assert doctor_fixes.detect_install_method() == "winget"
+    for key in ("ffmpeg_missing", "backend_import_fail", "serve_deps_missing"):
+        text = doctor_fixes.get_fix(key)
+        assert "winget install --force --id Bristlenose.Bristlenose" in text, key
+        assert "pip" not in text, key
+    for key in ("spacy_model_missing", "presidio_missing"):
+        assert "not available in the Windows installer build" in doctor_fixes.get_fix(key), key
+
+
+def test_the_frozen_windows_build_refuses_pii_in_its_own_words(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The Mac wording ("add it to the PyInstaller datas list") is a build note."""
+    from bristlenose.utils.package_install import FrozenSidecarError, ensure_spacy_model
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    with pytest.raises(FrozenSidecarError, match="Windows installer build"):
+        ensure_spacy_model("en_core_web_not_a_real_model")
+
+
+@pytest.mark.parametrize(("platform", "expect"), [
+    ("win32", "bristlenose doctor --fetch"),       # a terminal: give the command
+    ("darwin", "downloads on first analysis"),     # the Mac app's Health window
+])
+def test_doctor_voice_row_in_a_frozen_build(
+    monkeypatch: pytest.MonkeyPatch, platform: str, expect: str,
+) -> None:
+    """Doctor treated every frozen build as the Mac app, which has no terminal."""
+    import types
+
+    import bristlenose.stages.s05b_voice as voice
+    from bristlenose.doctor import check_voice
+
+    monkeypatch.setattr(sys, "platform", platform)
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
+    monkeypatch.delenv(voice.VOICE_MODEL_ENV, raising=False)
+    monkeypatch.setattr(voice, "voice_runtime_available", lambda: True)
+    monkeypatch.setattr(voice, "cached_voice_model", lambda: None)
+    result = check_voice(types.SimpleNamespace(voice_pass=True, no_fetch=False))  # type: ignore[arg-type]
+    assert expect in result.detail

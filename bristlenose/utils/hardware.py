@@ -270,7 +270,17 @@ def _check_mlx_available() -> bool:
 
 
 def _check_cuda_available() -> bool:
-    """Check if CUDA is available via ctranslate2."""
+    """Check if CUDA is available via ctranslate2.
+
+    Never on the frozen Windows build: it ships CPU-only, without the cuBLAS and
+    cuDNN DLLs ctranslate2 loads for CUDA, yet ctranslate2 still counts an NVIDIA
+    GPU when a driver is present — so the first transcription would fail on a
+    missing DLL (docs/design-winget.md).
+    """
+    import sys
+
+    if sys.platform == "win32" and getattr(sys, "frozen", False):
+        return False
     try:
         import ctranslate2
         return ctranslate2.get_cuda_device_count() > 0

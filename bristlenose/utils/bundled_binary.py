@@ -50,6 +50,12 @@ def bundled_binary_path(name: str) -> str | None:
     if env_value:
         return env_value
 
+    tools = _frozen_windows_tools_dir()
+    if tools is not None:
+        candidate = tools / f"{name}.exe"
+        if candidate.is_file():
+            return str(candidate)
+
     if os.environ.get(_HOST_SENTINEL) == "1":
         bundle_path = _bundle_relative_path(name)
         if bundle_path is not None:
@@ -77,6 +83,10 @@ def bundled_binaries_dir() -> Path | None:
         if parent.is_dir():
             return parent
 
+    tools = _frozen_windows_tools_dir()
+    if tools is not None:
+        return tools
+
     if os.environ.get(_HOST_SENTINEL) == "1":
         sidecar = Path(sys.executable).resolve()
         candidate = sidecar.parent.parent
@@ -84,6 +94,19 @@ def bundled_binaries_dir() -> Path | None:
             return candidate
 
     return None
+
+
+def _frozen_windows_tools_dir() -> Path | None:
+    """``tools\\`` beside ``bristlenose.exe`` in the frozen Windows build.
+
+    The installer puts the app folder on the user's PATH; FFmpeg lives one level
+    down so it neither shadows nor is shadowed by an FFmpeg the user installed
+    themselves, and our lookup still finds ours first (docs/design-winget.md).
+    """
+    if sys.platform != "win32" or not getattr(sys, "frozen", False):
+        return None
+    tools = Path(sys.executable).parent / "tools"
+    return tools if tools.is_dir() else None
 
 
 def prepend_bundled_to_path() -> None:

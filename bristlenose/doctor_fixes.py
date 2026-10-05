@@ -19,7 +19,7 @@ INSTALL_MARKER = ".install-method"
 #: Values a marker file is allowed to carry. An unrecognised one is ignored
 #: rather than trusted — a typo in a spec must not invent an install method
 #: that no fix message handles.
-_MARKER_METHODS = frozenset({"rpm"})
+_MARKER_METHODS = frozenset({"rpm", "winget"})
 
 
 def detect_install_method() -> str:
@@ -107,6 +107,14 @@ def get_fix(fix_key: str, install_method: str | None = None) -> str:
 # Fix functions
 # ---------------------------------------------------------------------------
 
+# The Windows installer build does not carry PII redaction in v1: its spaCy model
+# cannot be downloaded into a frozen build (docs/design-winget.md).
+_PII_NOT_IN_WINDOWS_INSTALLER = (
+    "PII redaction is not available in the Windows installer build yet.\n"
+    "To use --redact-pii, install Bristlenose with uv instead (see INSTALL.md, Windows).\n"
+    "Or drop --redact-pii if you don't need it."
+)
+
 
 def _fix_ffmpeg_missing(method: str) -> str:
     if method == "rpm":
@@ -114,6 +122,12 @@ def _fix_ffmpeg_missing(method: str) -> str:
             "FFmpeg not found — this is a bug in the RPM package, which\n"
             "requires /usr/bin/ffmpeg.\n"
             "  sudo dnf reinstall bristlenose\n"
+            "If it persists: github.com/cassiocassio/bristlenose/issues"
+        )
+    if method == "winget":
+        return (
+            "FFmpeg not found — this is a bug in the Windows installer.\n"
+            "  winget install --force --id Bristlenose.Bristlenose -e\n"
             "If it persists: github.com/cassiocassio/bristlenose/issues"
         )
     if method == "snap":
@@ -152,6 +166,12 @@ def _fix_backend_import_fail(method: str) -> str:
         return (
             "Transcription backend failed to load — this is a bug in the RPM package.\n"
             "  sudo dnf reinstall bristlenose\n"
+            "If it persists: github.com/cassiocassio/bristlenose/issues"
+        )
+    if method == "winget":
+        return (
+            "Transcription backend failed to load — this is a bug in the Windows installer.\n"
+            "  winget install --force --id Bristlenose.Bristlenose -e\n"
             "If it persists: github.com/cassiocassio/bristlenose/issues"
         )
     if method == "snap":
@@ -332,6 +352,8 @@ def _fix_spacy_model_missing(method: str) -> str:
             "  sudo dnf reinstall bristlenose\n"
             "If it persists: github.com/cassiocassio/bristlenose/issues"
         )
+    if method == "winget":
+        return _PII_NOT_IN_WINDOWS_INSTALLER
     if method == "snap":
         return (
             "spaCy model not found — this is a bug in the snap package.\n"
@@ -353,6 +375,8 @@ def _fix_spacy_model_missing(method: str) -> str:
 
 
 def _fix_presidio_missing(method: str) -> str:
+    if method == "winget":
+        return _PII_NOT_IN_WINDOWS_INSTALLER
     if method == "snap":
         # presidio-analyzer is a CORE dependency (pyproject.toml), so it ships
         # inside the snap — a missing one is a packaging defect, not something
@@ -528,6 +552,12 @@ def _fix_serve_deps_missing(method: str) -> str:
             "`bristlenose serve` deps missing — this is a bug in the RPM package,\n"
             "which installs them.\n"
             "  sudo dnf reinstall bristlenose\n"
+            "If it persists: github.com/cassiocassio/bristlenose/issues"
+        )
+    if method == "winget":
+        return (
+            "`bristlenose serve` deps missing — this is a bug in the Windows installer.\n"
+            "  winget install --force --id Bristlenose.Bristlenose -e\n"
             "If it persists: github.com/cassiocassio/bristlenose/issues"
         )
     if method == "snap":

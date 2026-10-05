@@ -364,15 +364,18 @@ def check_voice(settings: BristlenoseSettings) -> CheckResult:
 
     label = "Voice pass"
     # In the Mac app (the Health window) there is no terminal: say what will
-    # happen, never which command to type.
-    in_app = bool(getattr(sys, "frozen", False)) or hosted_by_desktop()
+    # happen, never which command to type. The frozen Windows build runs in a
+    # terminal, so it gets the commands.
+    frozen = bool(getattr(sys, "frozen", False))
+    no_terminal = (frozen and sys.platform == "darwin") or hosted_by_desktop()
+    # Every frozen build (Mac app, Windows installer) and the snap ship the
+    # extra, so its absence there is a broken build, not an optional install.
+    ships_extras = frozen or bool(os.environ.get("SNAP"))
     if not settings.voice_pass:
         return CheckResult(status=CheckStatus.SKIP, label=label,
                            detail="switched off (BRISTLENOSE_VOICE_PASS)")
     if not voice_runtime_available():
-        # The app and the snap both ship the extra, so its absence there is a
-        # broken build — and a snap cannot be pip-installed into.
-        if in_app or os.environ.get("SNAP"):
+        if ships_extras:
             return CheckResult(status=CheckStatus.WARN, label=label,
                                detail="voice runtime missing from this build; speakers are "
                                       "told apart from the text alone")
@@ -402,7 +405,7 @@ def check_voice(settings: BristlenoseSettings) -> CheckResult:
                                   "the voice pass will be skipped")
     if found is not None:
         return CheckResult(status=CheckStatus.OK, label=label, detail="model cached (40 MB)")
-    if in_app:
+    if no_terminal:
         return CheckResult(status=CheckStatus.SKIP, label=label,
                            detail="model downloads on first analysis (40 MB)")
     if settings.no_fetch:

@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from bristlenose.i18n import FALLBACK_ONLY_LOCALES
 from bristlenose.utils.bundled_binary import bundled_binary_path
 from bristlenose.utils.text import count_noun
+from bristlenose.utils.tls import https_context
 
 if TYPE_CHECKING:
     from bristlenose.config import BristlenoseSettings
@@ -666,7 +667,7 @@ def check_network(settings: BristlenoseSettings) -> CheckResult:
     for _attempt in range(2):
         start = time.monotonic()
         try:
-            with urllib.request.urlopen(req, timeout=5):
+            with urllib.request.urlopen(req, timeout=5, context=https_context()):
                 pass
         except urllib.error.HTTPError:
             pass  # Any HTTP response (even 404) means the host is reachable.
@@ -1690,7 +1691,7 @@ def _validate_anthropic_key(key: str) -> tuple[bool | None, str]:
                 "anthropic-version": "2023-06-01",
             },
         )
-        with urllib.request.urlopen(req, timeout=10):
+        with urllib.request.urlopen(req, timeout=10, context=https_context()):
             pass
         return (True, "")
     except urllib.error.HTTPError as exc:
@@ -1723,7 +1724,7 @@ def _validate_openai_key(key: str) -> tuple[bool | None, str]:
             method="GET",
             headers={"Authorization": f"Bearer {key}"},
         )
-        with urllib.request.urlopen(req, timeout=10):
+        with urllib.request.urlopen(req, timeout=10, context=https_context()):
             pass
         return (True, "")
     except urllib.error.HTTPError as exc:
@@ -1766,7 +1767,7 @@ def _validate_azure_key(
                 "max_tokens": 1,
             }).encode(),
         )
-        with urllib.request.urlopen(req, timeout=10):
+        with urllib.request.urlopen(req, timeout=10, context=https_context()):
             pass
         return (True, "")
     except urllib.error.HTTPError as exc:
@@ -1798,7 +1799,7 @@ def _validate_google_key(key: str) -> tuple[bool | None, str]:
         # List models endpoint — lightweight, no generation needed.
         url = f"https://generativelanguage.googleapis.com/v1beta/models?key={key}"
         req = urllib.request.Request(url, method="GET")
-        with urllib.request.urlopen(req, timeout=10):
+        with urllib.request.urlopen(req, timeout=10, context=https_context()):
             pass
         return (True, "")
     except urllib.error.HTTPError as exc:

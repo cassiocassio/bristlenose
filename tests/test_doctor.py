@@ -1937,7 +1937,7 @@ class TestValidateAnthropicKey:
 
         captured: dict[str, str] = {}
 
-        def fake_urlopen(req, timeout=10):  # noqa: ANN001, ARG001
+        def fake_urlopen(req, timeout=10, context=None):  # noqa: ANN001, ARG001
             captured["url"] = req.full_url
             captured["method"] = req.get_method()
             return MagicMock()  # context-manager-capable

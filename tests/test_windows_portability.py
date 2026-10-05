@@ -340,3 +340,47 @@ def test_doctor_shows_the_homebrew_row_only_where_homebrew_exists(
     monkeypatch.setattr(sys, "platform", platform)
     labels = [r.label for r in doctor.run_all(settings=None).results]  # type: ignore[arg-type]
     assert ("check_brew_tap_trust" in labels) is shown
+
+
+def test_urllib_trust_survives_an_empty_system_store(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A fresh Windows store lacks Google Trust Services until curl or a browser
+    fetches it; api.anthropic.com and api.openai.com chain to it.
+
+    Measured on a new Windows Server 2025 box (5 Oct 2026): doctor called the
+    network down and ``configure`` could not validate a key, because urllib read
+    the store as it stood. The store is emptied here, the way that box had it.
+    """
+    import ssl
+
+    from bristlenose.utils.tls import https_context
+
+    monkeypatch.setattr(ssl.SSLContext, "load_default_certs", lambda self, purpose=None: None)
+    monkeypatch.setattr(ssl.SSLContext, "set_default_verify_paths", lambda self: None)
+    assert ssl.create_default_context().get_ca_certs() == [], "the store was not emptied"
+    subjects = [
+        dict(part[0] for part in cert["subject"]).get("organizationName", "")
+        for cert in https_context().get_ca_certs()
+    ]
+    assert "Google Trust Services LLC" in subjects
+
+
+def test_every_urlopen_brings_its_own_trust() -> None:
+    """Every https ``urlopen`` passes ``context=https_context()``.
+
+    Ollama's two calls are plain http to localhost and need no trust.
+    """
+    import ast
+
+    offenders = []
+    for path in _PKG.rglob("*.py"):
+        if path.name == "ollama.py":
+            continue
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "urlopen"
+                and not any(k.arg == "context" for k in node.keywords)
+            ):
+                offenders.append(f"{path.relative_to(_PKG)}:{node.lineno}")
+    assert offenders == [], f"pass context=https_context() to: {offenders}"

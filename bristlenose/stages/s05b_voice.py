@@ -36,6 +36,7 @@ from pathlib import Path
 from typing import Any
 
 from bristlenose.models import TranscriptSegment
+from bristlenose.utils.tls import https_context
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +216,7 @@ def fetch_voice_model(timeout: float = 30.0, deadline: float = 600.0) -> Path:
         h = hashlib.sha256()
         size = 0
         started = time.monotonic()
-        with urllib.request.urlopen(VOICE_MODEL_URL, timeout=timeout) as resp, os.fdopen(fd, "wb") as out:
+        with urllib.request.urlopen(VOICE_MODEL_URL, timeout=timeout, context=https_context()) as resp, os.fdopen(fd, "wb") as out:
             if not resp.geturl().startswith("https://"):
                 raise ValueError(f"voice model download left https: {resp.geturl()}")
             while chunk := resp.read(1 << 20):

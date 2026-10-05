@@ -290,8 +290,9 @@ class TestBurnSubtitles:
             if "ffprobe" in cmd[0] or "-show_entries" in cmd:
                 return MagicMock(returncode=0, stdout=_PROBE_1280, stderr="")
             vf = cmd[cmd.index("-vf") + 1]
-            ass_path = Path(vf.split("subtitles=")[1].split(":fontsdir=")[0])
-            fonts = Path(vf.split(":fontsdir=")[1])
+            cwd = Path(kwargs["cwd"])
+            ass_path = cwd / vf.split("subtitles=")[1].split(":fontsdir=")[0]
+            fonts = cwd / vf.split(":fontsdir=")[1]
             seen.update(vf=vf, ass=ass_path.read_text(), font=(fonts / "Inter-Medium.otf").exists(),
                         tmp=fonts, cmd=cmd)
             Path(cmd[-1]).write_bytes(b"burned")
@@ -306,6 +307,38 @@ class TestBurnSubtitles:
         joined = " ".join(seen["cmd"])  # type: ignore[arg-type]
         assert "-c:v libx264" in joined and "-c:a copy" in joined
         assert not Path(str(seen["tmp"])).exists()  # temp folder removed
+
+    def test_burns_from_a_temp_folder_whose_path_needs_escaping(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Windows temp is ``C:\\Users\\…``: a colon and backslashes, which an
+        ffmpeg filter graph would read as syntax. The burn refused any such
+        path, so on Windows it never ran. ffmpeg now runs inside the temp
+        folder and the graph names its files relatively, so the folder's
+        path never reaches it. A space stands in for the drive colon here."""
+        clip = tmp_path / "clip.mp4"
+        clip.write_bytes(b"clip")
+        out = tmp_path / "clip (subtitled).mp4"
+        awkward = tmp_path / "Temp dir"
+        awkward.mkdir()
+        monkeypatch.setattr(
+            "bristlenose.server.clip_backend.tempfile.mkdtemp",
+            lambda prefix="": str(awkward / f"{prefix}x"),
+        )
+        (awkward / "bn-burn-x").mkdir()
+        seen: dict[str, object] = {}
+
+        def fake_run(cmd, **kwargs):  # type: ignore[no-untyped-def]
+            if "-show_entries" in cmd:
+                return MagicMock(returncode=0, stdout=_PROBE_1280, stderr="")
+            seen.update(vf=cmd[cmd.index("-vf") + 1], cwd=kwargs.get("cwd"))
+            Path(cmd[-1]).write_bytes(b"burned")
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        with patch("bristlenose.server.clip_backend.subprocess.run", side_effect=fake_run):
+            assert FFmpegBackend().burn_subtitles(clip, self._cues(), out) == out
+        assert seen["vf"].endswith("subtitles=subtitles.ass:fontsdir=.")  # type: ignore[union-attr]
+        assert Path(str(seen["cwd"])) == awkward / "bn-burn-x"
 
     def test_failed_burn_returns_none(self, tmp_path: Path) -> None:
         clip = tmp_path / "clip.mp4"

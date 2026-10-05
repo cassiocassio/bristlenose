@@ -30,8 +30,6 @@ logger = logging.getLogger(__name__)
 BURN_FONT = Path(__file__).resolve().parent.parent / "data" / "fonts" / "Inter-Medium.otf"
 #: A burn re-encodes the whole clip; a merged clip can run for minutes.
 _BURN_TIMEOUT_SECONDS = 600
-#: Paths passed inside an ffmpeg filter graph must not need escaping.
-_FILTER_SAFE_PATH = re.compile(r"^[\w/.\-]+$")
 
 
 @functools.lru_cache(maxsize=4)
@@ -227,8 +225,9 @@ class FFmpegBackend:
         PowerPoint, Keynote and a Teams screen share, where a subtitle track is
         ignored or needs a manual step. Re-encodes the video with x264 (CRF 18)
         and copies the audio. The ``.ass`` file and the bundled font go in a
-        private temp folder, so no path that needs escaping reaches the filter
-        graph and nothing is left in the researcher's clips folder.
+        private temp folder that ffmpeg runs in, so the filter graph names them
+        relatively — no path that needs escaping reaches it (a Windows ``C:\``
+        always would) — and nothing is left in the researcher's clips folder.
         """
         from bristlenose.server.clip_subtitles import to_ass
 
@@ -254,28 +253,26 @@ class FFmpegBackend:
             logger.warning("Could not make a temp folder to burn %s", clip.name, exc_info=True)
             return None
         try:
-            if not _FILTER_SAFE_PATH.match(str(tmp)):
-                logger.warning("Temp path %s is not filter-safe; not burning", tmp)
-                return None
             shutil.copy2(BURN_FONT, tmp / BURN_FONT.name)
             ass = tmp / "subtitles.ass"
             ass.write_text(to_ass(cues, width, height), encoding="utf-8")
             result = subprocess.run(
                 [
                     ffmpeg, "-hide_banner", "-loglevel", "error",
-                    "-i", str(clip),
+                    "-i", str(clip.absolute()),
                     # ffmpeg turns a rotated phone video upright before the
                     # filters; scaling to the display size then gives square
                     # pixels (an anamorphic source's text isn't stretched) and
                     # even sides, which yuv420p needs — an odd-sized screen
                     # capture otherwise fails to open the encoder.
                     "-vf",
-                    f"scale={width}:{height},setsar=1,subtitles={ass}:fontsdir={tmp}",
+                    f"scale={width}:{height},setsar=1,subtitles={ass.name}:fontsdir=.",
                     "-c:v", "libx264", "-crf", "18", "-preset", "veryfast",
                     "-pix_fmt", "yuv420p",
                     "-c:a", "copy", "-movflags", "+faststart",
-                    "-y", str(output),
+                    "-y", str(output.absolute()),
                 ],
+                cwd=tmp,
                 capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=_BURN_TIMEOUT_SECONDS,
             )
             if result.returncode != 0:

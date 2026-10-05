@@ -2,6 +2,20 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.33.1** — _5 Oct 2026_
+
+Bristlenose runs on Windows, and installing with pipx or uv no longer needs `[serve]`.
+
+**Improved**
+
+- **`pipx install bristlenose` and `uv tool install bristlenose` are the whole install.** The packages behind the report used to come with the `[serve]` extra, and without it Bristlenose could only transcribe. They now come with every install. `'bristlenose[serve]'` still works.
+- **`bristlenose doctor` gives Windows users commands they can type:** `winget` for FFmpeg, `setx` rather than `export`, and where the key file really is.
+
+**Fixed**
+
+- **On Windows, every run stopped before it started.** The first record a run writes failed on Windows, so no run got past it.
+- **On Windows, a run in progress read as stopped.** A second run on the same folder was not refused, and the report could call a running analysis stranded.
+
 **0.33.0** — _4 Oct 2026_
 
 A Discussion lens beside your interview guide, speakers told apart by voice, a person picker, search that suggests, and Undo.

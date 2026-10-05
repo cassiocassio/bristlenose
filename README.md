@@ -401,6 +401,7 @@ Bristlenose runs on Windows, and installing with pipx or uv no longer needs `[se
 
 - **On Windows, every run stopped before it started.** The first record a run writes failed on Windows, so no run got past it, and past that, a run stopped again at its second step.
 - **On Windows, a run in progress read as stopped.** A second run on the same folder was not refused, and the report could call a running analysis stranded.
+- **A run could crash as it finished.** The library behind the voice pass, added in 0.33.0, sends usage statistics to Microsoft by default, and its upload could crash Bristlenose on exit. Bristlenose now switches it off.
 
 **0.33.0** — _4 Oct 2026_
 

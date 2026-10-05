@@ -1,5 +1,5 @@
 ---
-status: plan v2 (5 Oct 2026) — first build tested end to end on a fresh Windows box; step 1 next
+status: plan v2 (5 Oct 2026) — step 1 written on main (1.1–1.8), not yet run on a box; its acceptance run is next
 ---
 
 # Bristlenose on winget
@@ -79,7 +79,7 @@ from a GitHub Release by hand, which is not a route we will advertise. For a res
 who does meet it, the blue "Windows protected your PC" screen reads as malware, which is
 why signing is the next step once Windows is a real channel, not polish.
 
-## What exists (branch `winget-wip`, restored onto main after 0.34.0)
+## What exists (on main since 5 Oct 2026; unreleased)
 
 - `packaging/windows/bristlenose-win.spec` — the PyInstaller spec (fork of the Mac
   sidecar spec, with ctranslate2's DLLs and faster-whisper's VAD model collected
@@ -87,7 +87,11 @@ why signing is the next step once Windows is a real channel, not polish.
 - `packaging/windows/entry.py` — the whole CLI as the entry point, with
   `multiprocessing.freeze_support()`.
 - `packaging/windows/build.ps1` — wheel → build venv (uv, Python 3.12) → PyInstaller →
-  pinned FFmpeg into `tools\` → install-method marker → `--version` smoke → Inno.
+  pinned FFmpeg into `tools\` → install-method marker → `smoke.ps1` → Inno →
+  `-Manifest` fills the templates. Installs against `constraints.txt` (written by
+  `lock.py`), refuses a wheel that is not this checkout's version, stamps the commit.
+- `packaging/windows/smoke.ps1` — the 1.5 smoke tests, Python and FFmpeg off PATH.
+- `packaging/windows/winget/` — the three manifest templates (schema 1.12.0).
 - `packaging/windows/bristlenose.iss` — the installer.
 - Product changes, each with a test that fails on any OS by recreating the Windows
   condition (`tests/test_windows_portability.py`):
@@ -97,8 +101,11 @@ why signing is the next step once Windows is a real channel, not polish.
   - doctor: "no terminal" is the Mac app only, "ships the extras" is any frozen build;
     the `winget` install method gives "reinstall with winget" fix text, never `pip`;
   - the PII refusal in a frozen Windows build speaks Windows.
-- The manifest (version, installer, default locale), with `AppsAndFeaturesEntries`
-  so winget can match what Apps & Features shows.
+- `doctor --self-test` checks the Windows transcription engine (ctranslate2,
+  faster-whisper, the VAD model, ffmpeg from `tools\`).
+- Contract tests in `tests/test_windows_packaging.py`: constraints match
+  pyproject, the manifest's ProductCode is the Inno AppId, templates use only
+  what the build fills, the smoke fixture is where `smoke.ps1` looks.
 
 ## What was measured (5 Oct 2026, fresh Windows Server 2025 x64 on aella)
 
@@ -161,6 +168,14 @@ Smart App Control.
 on any Windows x64 machine produces an installer that passes every smoke test below;
 the product changes are merged with their tests; the plan and the Windows record say
 what is true.
+
+**Where it stands (5 Oct 2026, late):** 1.1–1.8 are committed on main
+(`git log --grep='winget step'`). Nothing in 1.5–1.7 has run on Windows yet — no
+PowerShell on the Mac — so the acceptance run below is the first execution of
+`smoke.ps1` and `-Manifest`. Uninstall with `serve` running (1.6) is a question
+for that run, not code: add an `InitializeUninstall` check only if Inno's
+uninstaller does not close it. The box's winget may predate schema 1.12.0; pass
+`-ManifestVersion 1.9.0` there, or update winget.
 
 ### 1.1 Restore `winget-wip` onto main
 

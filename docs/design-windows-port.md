@@ -128,12 +128,12 @@ open); `docs/testing/ratchet.json` names each.
    already-open window has ended; the MCP hint says `pip` to pipx users; session
    times render UTC as local (H9 in `docs/time-defects.md`); the transcript header
    floors a duration the CLI rounds.
-5. **A Windows channel: winget.** On the `winget-wip` branch, not `main`: the plan
-   (`docs/design-winget.md`), a first PyInstaller build, a user-scope Inno Setup
-   installer and frozen-build fixes. Before a public submission: prove the build
-   transcribes on a clean machine, add a Windows job to `release.yml`, and decide
-   signing (the maintainer's call; Microsoft's signing service takes UK
-   organisations but not UK individuals). Scoop and an MSI were set aside: researchers
+5. **A Windows channel: winget.** On `main` since 5 Oct 2026, unreleased: the plan
+   (`docs/design-winget.md`), the PyInstaller build, a user-scope Inno Setup
+   installer, smoke tests, manifest templates and frozen-build fixes. Next: the
+   step-1 acceptance run on a box, then a Windows job in `release.yml`. Signing is
+   decided: the first submission goes unsigned, Certum's open-source certificate
+   later (Microsoft's signing service takes UK organisations, not UK individuals). Scoop and an MSI were set aside: researchers
    will not have Scoop, and the one-liner already covers the gap.
 
 Done since the 5 Oct status was written: plain-ASCII symbols when output is not a UTF-8

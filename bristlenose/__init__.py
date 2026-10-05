@@ -32,6 +32,18 @@ import os as _os
 
 _os.environ.setdefault("TQDM_DISABLE", "1")
 _os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+
+# onnxruntime (the voice pass; faster-whisper's VAD) ships Microsoft 1DS
+# telemetry on macOS and Linux as of 1.29: a persistent device id plus a
+# queue under ~/Library/Application Support/Microsoft/DeveloperTools/
+# .onnxruntime, uploaded to mobile.events.data.microsoft.com. Its uploader
+# thread also races exit-time teardown and aborts the process
+# (std::system_error from recursive_mutex::lock, seen 4–5 Oct 2026).
+# The env var is read once, when the first ORT environment is created, and
+# latches: no uploader, no events, no device id. onnxruntime's own
+# `disable_telemetry_events()` is NOT enough — measured, it still queued
+# ProcessInfo and RegisterEpLibrary events, and the uploader still starts.
+_os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
 del _os
 
 # Drop mimetypes.knownfiles before any submodule loads. CPython's mimetypes

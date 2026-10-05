@@ -98,6 +98,45 @@ jobs:
 
   # ── macOS: pip install from source ──────────────────────────────
 
+  windows-pipx:
+    # The route INSTALL.md gives Windows users, from a clean runner. Plain
+    # `pipx install` with no extra: since 5 Oct 2026 the serve packages are
+    # core dependencies, and `pipx runpip ... show` proves they arrived — the
+    # other jobs' `doctor || true` would not notice if they hadn't.
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version-file: '.tool-versions'
+
+      - name: Install pipx (following INSTALL.md)
+        run: |
+          python -m pip install --user pipx
+          python -m pipx ensurepath
+          # ensurepath edits the user PATH for new terminals; CI steps need it
+          # handed over explicitly.
+          python -m pipx environment --value PIPX_BIN_DIR >> "$GITHUB_PATH"
+
+      - name: Install bristlenose via pipx
+        run: python -m pipx install .
+
+      - name: Verify CLI and serve packages
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          bristlenose --version
+          # Count, don't trust the exit code: `pip show a missing` exits 0
+          # (measured 5 Oct 2026), so a bare `show` passes the broken install.
+          found=$(python -m pipx runpip bristlenose show fastapi uvicorn sqlalchemy sqladmin openpyxl alembic | grep -c '^Name:')
+          echo "serve packages found: $found of 6"
+          test "$found" -eq 6
+
   macos-pip:
     runs-on: macos-latest
     steps:

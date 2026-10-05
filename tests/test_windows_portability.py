@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import os
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -84,6 +86,32 @@ def test_open_private_still_refuses_a_symlink(tmp_path: Path) -> None:
     link.symlink_to(target)
     with pytest.raises(OSError):
         open_private(link, os.O_WRONLY | os.O_APPEND)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="GetProcessTimes is Windows-only")
+def test_win_start_time_tracks_a_live_process() -> None:
+    """A live run reads as live, and a finished one as gone — on real Windows.
+
+    Without a Windows start-time reader every live run read as dead, so a second
+    run on the same folder was not refused. Runs only on the windows-latest CI
+    job; the ctypes path cannot be faked from POSIX.
+    """
+    from bristlenose.run_lifecycle import _is_alive_owned, _ps_start_time
+
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    try:
+        first = _ps_start_time(child.pid)
+        assert first, "no start time for a running process"
+        assert _ps_start_time(child.pid) == first, "start time is not stable"
+        assert _is_alive_owned({"pid": child.pid, "start_time": first})
+        assert not _is_alive_owned({"pid": child.pid, "start_time": "0.0"})
+    finally:
+        child.kill()
+        child.wait()
+    # Popen still holds a handle, so OpenProcess succeeds; the exit-code check
+    # is what has to say "gone".
+    assert _ps_start_time(child.pid) is None
+    assert _ps_start_time(os.getpid()), "this process has no start time"
 
 
 class TestWindowsFixText:

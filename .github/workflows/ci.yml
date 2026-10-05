@@ -223,6 +223,81 @@ jobs:
           path: coverage.xml
           retention-days: 90
 
+  test-windows:
+    # Windows had no CI at all until 5 Oct 2026. pipx and uv are its only
+    # routes, and the first event write of every run raised AttributeError on
+    # os.O_NOFOLLOW for who knows how long, because nothing ran there.
+    #
+    # Two halves with different weights. "Windows checks" is HARD: the Windows-
+    # only tests (real GetProcessTimes on a real child process) and a real
+    # `bristlenose transcribe` — the claims the changelog makes about Windows.
+    # "Run tests" (the whole suite) is SOFT with an expiry in
+    # docs/testing/soft-gates.json: the suite was written on POSIX and has never
+    # met Windows, so its first red run is a findings list, not a broken release.
+    # Promote it once a green run has been read; don't let the date roll.
+    #
+    # One interpreter: platform bugs don't vary by minor version, and the
+    # version matrix is covered on Linux. 3.12 = the Homebrew/Snap/sidecar one.
+    runs-on: windows-latest
+    timeout-minutes: 45  # a hung test would otherwise hold the runner for 6 h
+    defaults:
+      run:
+        shell: bash  # Git Bash ships on the runner; keeps the steps POSIX-shaped
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Install FFmpeg
+        # transcribe's preflight refuses without FFmpeg even for a VTT-only
+        # folder (measured 5 Oct 2026). Chocolatey ships on the runner; winget,
+        # which INSTALL.md tells people to use, does not reliably.
+        run: choco install ffmpeg -y --no-progress
+
+      - name: Windows checks
+        timeout-minutes: 10
+        # A Windows console is UTF-8 (PEP 528); a CI pipe is cp1252, which
+        # cannot encode the ✓ Bristlenose prints. This stands in for the
+        # console users actually run in, not for a bug they would hit.
+        env:
+          PYTHONIOENCODING: utf-8
+        # Fixture is a VTT, so no Whisper download and no API key: transcribe
+        # still goes through run_lifecycle (pid file, start time) and writes
+        # pipeline-events.jsonl through open_private, which is the path that
+        # crashed. Bytes are read back to prove O_BINARY kept the JSONL \n.
+        run: |
+          pytest --tb=short -q tests/test_windows_portability.py
+          # Relative, inside the checkout: $RUNNER_TEMP is D:\a\_temp, and a
+          # Windows path glued to a POSIX one is a Git Bash conversion gamble.
+          d=smoke-run
+          mkdir -p "$d"
+          cp "tests/fixtures/smoke-test/input/Session 1.vtt" "$d/"
+          bristlenose transcribe "$d"
+          python - "$d" <<'PY'
+          import pathlib, sys
+          events = pathlib.Path(sys.argv[1], "bristlenose-output", ".bristlenose", "pipeline-events.jsonl")
+          data = events.read_bytes()
+          assert data, "transcribe wrote no events"
+          assert b"\r\n" not in data, "events JSONL has CRLF line endings"
+          print(events, data.count(b"\n"), "events, LF-terminated")
+          PY
+
+      - name: Run tests
+        continue-on-error: true
+        timeout-minutes: 25
+        env:
+          PYTHONIOENCODING: utf-8
+        run: pytest --tb=short -q -m "not slow" -n auto
+
   release-suites:
     # 385 assertions across eight suites had never run anywhere but one Mac —
     # one shell, one userland, one git config — while two of the scripts they

@@ -663,6 +663,35 @@ class TestCheckNetwork:
             result = check_network(settings)
         assert result.status == CheckStatus.FAIL
 
+    def test_network_one_slow_first_handshake_is_not_unreachable(self) -> None:
+        """A cold first TLS handshake outlasted the timeout; the rerun was fine."""
+        import urllib.error
+
+        settings = _settings(llm_provider="anthropic")
+        with patch(
+            "urllib.request.urlopen",
+            side_effect=[urllib.error.URLError("timed out"), MagicMock()],
+        ) as urlopen:
+            result = check_network(settings)
+        assert result.status == CheckStatus.OK
+        assert urlopen.call_count == 2
+
+    def test_install_specs_are_double_quoted(self) -> None:
+        """cmd.exe passes single quotes through literally; double quotes work in
+        cmd, PowerShell, bash and zsh (which would otherwise glob the brackets)."""
+        import re
+
+        import bristlenose
+
+        pkg = Path(bristlenose.__file__).parent
+        offenders = [
+            f"{p.relative_to(pkg)}:{n}"
+            for p in pkg.rglob("*.py")
+            for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
+            if re.search(r"install '[\w-]+\\?\[", line)
+        ]
+        assert offenders == []
+
     def test_network_unknown_provider_defaults_to_anthropic(self) -> None:
         """Unknown provider still checks something (defaults to anthropic)."""
         settings = _settings(llm_provider="gemini")
@@ -2150,3 +2179,25 @@ class TestCheckPiiDiagnosesTheModelDirectory:
             "the whole spaCy message was interpolated — only the code should be"
         )
 
+
+
+def test_doctor_table_prints_an_install_spec_whole(monkeypatch) -> None:
+    """Rich read ``[voice]`` as a style tag: the table printed ``bristlenose`` alone.
+
+    Found on a Windows 11 VM (5 Oct 2026); it was on every platform. A reader
+    who copied the line installed the package without the extra.
+    """
+    import io
+
+    from rich.console import Console
+
+    import bristlenose.cli as cli
+    from bristlenose.doctor import CheckResult, CheckStatus, DoctorReport
+
+    buf = io.StringIO()
+    monkeypatch.setattr(cli, "console", Console(file=buf, width=200, color_system=None))
+    cli._format_doctor_table(DoctorReport(results=[CheckResult(
+        status=CheckStatus.SKIP, label="Voice pass",
+        detail='optional, not installed: pip install "bristlenose[voice]"',
+    )]))
+    assert '"bristlenose[voice]"' in buf.getvalue()

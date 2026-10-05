@@ -1090,7 +1090,7 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
         # the CLI's "MCP: unavailable" line is the user-facing signal.
         logger.info(
             "mcp extra not installed — /mcp/ not mounted "
-            "(pip install 'bristlenose[mcp]')"
+            '(pip install "bristlenose[mcp]")'
         )
         return None
 

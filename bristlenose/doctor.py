@@ -376,7 +376,7 @@ def check_voice(settings: BristlenoseSettings) -> CheckResult:
                                       "told apart from the text alone")
         return CheckResult(
             status=CheckStatus.SKIP, label=label,
-            detail="optional, not installed: pip install 'bristlenose[voice]' "
+            detail='optional, not installed: pip install "bristlenose[voice]" '
                    "to tell speakers apart by voice",
         )
     override = os.environ.get(VOICE_MODEL_ENV)
@@ -657,41 +657,33 @@ def check_network(settings: BristlenoseSettings) -> CheckResult:
         url = "https://api.anthropic.com"
         host = "api.anthropic.com"
 
-    try:
-        import time
+    import time
 
+    req = urllib.request.Request(url, method="HEAD")
+    # Two attempts: a first-ever TLS handshake can outlast the timeout on a
+    # cold machine (measured on a fresh Windows 11 VM under x64 emulation,
+    # 5 Oct 2026: "Can't reach" then "reachable (167ms)" on the rerun).
+    for _attempt in range(2):
         start = time.monotonic()
-        req = urllib.request.Request(url, method="HEAD")
-        with urllib.request.urlopen(req, timeout=5):
-            pass
+        try:
+            with urllib.request.urlopen(req, timeout=5):
+                pass
+        except urllib.error.HTTPError:
+            pass  # Any HTTP response (even 404) means the host is reachable.
+        except Exception:  # URLError, a timeout, TLS: try once more
+            continue
         elapsed_ms = int((time.monotonic() - start) * 1000)
         return CheckResult(
             status=CheckStatus.OK,
             label="Network",
             detail=f"{host} reachable ({elapsed_ms}ms)",
         )
-    except urllib.error.HTTPError:
-        # Any HTTP response (even 404) means the host is reachable.
-        elapsed_ms = int((time.monotonic() - start) * 1000)
-        return CheckResult(
-            status=CheckStatus.OK,
-            label="Network",
-            detail=f"{host} reachable ({elapsed_ms}ms)",
-        )
-    except urllib.error.URLError:
-        return CheckResult(
-            status=CheckStatus.FAIL,
-            label="Network",
-            detail=f"Can't reach {host}",
-            fix_key="network_unreachable",
-        )
-    except Exception:
-        return CheckResult(
-            status=CheckStatus.FAIL,
-            label="Network",
-            detail=f"Can't reach {host}",
-            fix_key="network_unreachable",
-        )
+    return CheckResult(
+        status=CheckStatus.FAIL,
+        label="Network",
+        detail=f"Can't reach {host}",
+        fix_key="network_unreachable",
+    )
 
 
 def check_pii(settings: BristlenoseSettings) -> CheckResult:

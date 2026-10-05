@@ -1813,7 +1813,7 @@ class Pipeline:
                         if not self.settings.voice_pass:
                             _voice_off = "voice pass switched off (BRISTLENOSE_VOICE_PASS)"
                         elif not voice_runtime_available():
-                            _voice_off = "voice extra not installed (pip install 'bristlenose[voice]')"
+                            _voice_off = 'voice extra not installed (pip install "bristlenose[voice]")'
                         else:
                             status.update("[dim]Preparing the voice pass...[/dim]")
                             _voice_model, _voice_off = await asyncio.to_thread(

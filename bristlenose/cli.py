@@ -55,6 +55,27 @@ def _maybe_inject_run() -> None:
 # Inject 'run' before Typer parses arguments
 _maybe_inject_run()
 
+
+def _tolerate_narrow_output_encoding() -> None:
+    """Print ``?`` for a glyph the output cannot encode, rather than crash.
+
+    A Windows console is UTF-8 (PEP 528), but redirected — ``> out.txt``, a
+    pipe, PowerShell's ``| Out-Host`` — stdout takes the ANSI codepage, cp1252
+    in the West, which has no ``✓``. Every command that printed one raised
+    UnicodeEncodeError before any output. The codepage is kept, so whatever
+    reads the file reads it in the encoding it expects.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        encoding = (getattr(stream, "encoding", None) or "").lower().replace("-", "")
+        if encoding != "utf8" and hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(errors="replace")
+            except (ValueError, OSError):
+                pass
+
+
+_tolerate_narrow_output_encoding()
+
 app = typer.Typer(
     name="bristlenose",
     help="User-research transcription and quote extraction engine.",
@@ -219,8 +240,12 @@ def _format_doctor_table(report: object) -> None:
         else:
             icon = cli_prefix(MessageKind.SKIPPED)
 
-        label = f"{result.label:<16}"
-        detail = f"[dim]{result.detail}[/dim]" if result.detail else ""
+        from rich.markup import escape
+
+        # Escaped: details carry install specs, and Rich read `[voice]` in
+        # `"bristlenose[voice]"` as a style tag and printed `"bristlenose"`.
+        label = f"{escape(result.label):<16}"
+        detail = f"[dim]{escape(result.detail)}[/dim]" if result.detail else ""
         console.print(f" {icon} {label}{detail}")
 
 
@@ -1739,7 +1764,7 @@ def _print_mcp_connect(port: int) -> None:
     try:
         import mcp  # noqa: F401
     except ImportError:
-        console.print("  [dim]MCP:    unavailable — pip install 'bristlenose\\[mcp]'[/dim]")
+        console.print('  [dim]MCP:    unavailable — pip install "bristlenose\\[mcp]"[/dim]')
         return
     # Pre-mint the auth token if no serve has minted one yet (the run path
     # prints this block BEFORE create_app runs). create_app recovers this
@@ -2137,7 +2162,9 @@ def _print_project_status(
         else:
             icon = "[dim]✗[/dim]"
 
-        detail = f"  [dim]{info.detail}[/dim]" if info.detail else ""
+        from rich.markup import escape
+
+        detail = f"  [dim]{escape(info.detail)}[/dim]" if info.detail else ""
         name_padded = info.name.ljust(20)
         console.print(f"  {icon} {name_padded}{detail}")
 

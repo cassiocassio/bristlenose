@@ -282,3 +282,23 @@ def test_every_text_file_read_and_write_names_its_encoding() -> None:
                 if text and (node.args or isinstance(func, ast.Attribute)):
                     offenders.append(f"{path.relative_to(_PKG)}:{node.lineno}")
     assert offenders == [], f"add encoding='utf-8' to: {offenders}"
+
+
+def test_redirected_output_in_a_codepage_prints_rather_than_crashes(tmp_path: Path) -> None:
+    """``bristlenose doctor > out.txt`` on Windows: stdout is cp1252, which has no ``✓``.
+
+    Found on a Windows 11 VM (5 Oct 2026): every command that printed a tick
+    raised UnicodeEncodeError before any output when redirected or piped. The
+    child's stdout is forced to cp1252, which reproduces it on any OS, and
+    ``pipeline`` is a real command that prints ticks without a project.
+    """
+    env = {**os.environ, "PYTHONIOENCODING": "cp1252", "HOME": str(tmp_path),
+           "USERPROFILE": str(tmp_path), "NO_COLOR": "1"}
+    env.pop("PYTHONUTF8", None)
+    result = subprocess.run(
+        [sys.executable, "-m", "bristlenose", "pipeline"],
+        capture_output=True, env=env, timeout=120,
+    )
+    assert result.returncode == 0, result.stderr.decode("cp1252", "replace")[-600:]
+    assert b"UnicodeEncodeError" not in result.stderr
+    assert result.stdout.strip(), "nothing printed"

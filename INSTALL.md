@@ -73,7 +73,58 @@ If you prefer not to use Homebrew:
 
 ## Windows
 
-### Step 1: Install Python
+### Step 1: Open a terminal
+
+Press **Win + X** and click **Terminal**. You'll type a few commands here; each one is a single line you can paste.
+
+### Step 2: Install uv and FFmpeg
+
+[uv](https://docs.astral.sh/uv/) installs Bristlenose and the Python it needs, so you don't install Python yourself. FFmpeg converts audio and video. Run both:
+
+```
+winget install --id astral-sh.uv -e --source winget
+winget install --id Gyan.FFmpeg -e --source winget
+```
+
+If winget asks you to agree to source terms the first time you use it, type `Y` and press Enter. FFmpeg is about 250 MB.
+
+**Close the terminal and open a new one**, so it can find the commands you just installed.
+
+### Step 3: Install bristlenose
+
+```
+uv tool install --python 3.13 bristlenose
+```
+
+uv downloads Python 3.13 for Bristlenose alone and leaves any other Python on your machine untouched. This takes a few minutes the first time.
+
+If it says a folder "is not on your PATH", run `uv tool update-shell`, then close and reopen the terminal.
+
+> **Why 3.13?** The optional voice pass (below) doesn't install on Windows with Python 3.14 yet. Everything else works on either.
+
+> **Windows on Arm** (Snapdragon laptops, Surface Pro X / 11): the same command works. uv picks the x64 build of Python, which runs under emulation and is the one Bristlenose needs; the native Arm build can't install one of its transcription libraries yet.
+
+### Step 4: Verify
+
+```
+bristlenose doctor
+```
+
+This checks FFmpeg, transcription and your AI provider. If anything is wrong, it tells you how to fix it.
+
+The "Whisper model" line says *not cached* until your first transcription, which downloads the speech-recognition model (about 1.6 GB) once.
+
+**Optional: the voice pass**, which tells speakers apart by their voices as well as their words:
+
+```
+uv tool install --force --python 3.13 "bristlenose[voice]"
+```
+
+### Alternative: Python and pipx
+
+If you'd rather install Python yourself, or already have it:
+
+#### 1. Install Python
 
 1. Go to [python.org/downloads](https://www.python.org/downloads/) and click the big yellow **"Download Python install manager"** button
 2. Open the downloaded file and click **"Install Python"**
@@ -97,7 +148,7 @@ You should see a version number, 3.10 or higher (for example `Python 3.14.8`).
 
 > **Windows on Arm** (Snapdragon laptops, Surface Pro X / 11): use the Python the install manager gives you by default. It's the x64 version, which runs under emulation and installs everything Bristlenose needs. The native Arm version of Python can't install Bristlenose yet, because one of its transcription libraries has no Arm build for Windows.
 
-### Step 2: Install pipx
+#### 2. Install pipx
 
 pipx is a tool for installing Python applications. In the same terminal, run:
 
@@ -110,27 +161,15 @@ The first command may print yellow warnings that a folder "is not on PATH". That
 
 **Close the terminal and open a new one** (the PATH change only takes effect in new windows).
 
-### Step 3: Install FFmpeg
+#### 3. Install FFmpeg
 
-FFmpeg converts audio and video files. Bristlenose needs it to process your interview recordings.
-
-**Option A — winget** (recommended, built into Windows 11 and most Windows 10):
-
-```
-winget install --id Gyan.FFmpeg -e --source winget
-```
-
-If winget asks you to agree to source terms the first time you use it, type `Y` and press Enter. The download is about 250 MB.
-
-Close and reopen your terminal after this.
-
-**Option B — manual download** (if winget isn't available):
+As in step 2 above. Without winget, download it by hand:
 
 1. Go to [github.com/BtbN/FFmpeg-Builds/releases](https://github.com/BtbN/FFmpeg-Builds/releases)
 2. Download `ffmpeg-master-latest-win64-gpl.zip`
 3. Extract the zip file
 4. Find `ffmpeg.exe` and `ffprobe.exe` inside the `bin` folder. Bristlenose needs both
-5. Copy both to `C:\Windows\System32\`
+5. Copy both to `C:\Windows\System32\` (this needs administrator rights)
 
    Or, to keep things tidy, put the extracted folder somewhere permanent (e.g. `C:\ffmpeg\`) and add its `bin` subfolder to your PATH: Settings > System > About > Advanced system settings > Environment Variables > select `Path` > Edit > New > type `C:\ffmpeg\bin` > OK.
 
@@ -140,23 +179,13 @@ To verify, open a new terminal and type:
 ffmpeg -version
 ```
 
-### Step 4: Install bristlenose
+#### 4. Install bristlenose
 
 ```
 pipx install bristlenose
 ```
 
-This downloads about a hundred packages and takes a few minutes.
-
-### Step 5: Verify
-
-```
-bristlenose doctor
-```
-
-This checks that Python, FFmpeg, and your AI provider are set up correctly. If anything is wrong, it tells you how to fix it.
-
-The "Whisper model" line says *not cached* until your first transcription, which downloads the speech-recognition model (about 1.6 GB) once.
+Then verify with `bristlenose doctor`, as in step 4 above.
 
 ---
 
@@ -310,13 +339,7 @@ The report will appear inside that folder at `bristlenose-output/`. Open the `.h
 
 Close your terminal and open a new one. PATH changes only take effect in new windows.
 
-If it's still not found, run:
-
-```bash
-pipx ensurepath
-```
-
-Then close and reopen the terminal again.
+If it's still not found, run `uv tool update-shell` (if you installed with uv) or `pipx ensurepath` (if you installed with pipx), then close and reopen the terminal again.
 
 ### FFmpeg not found
 

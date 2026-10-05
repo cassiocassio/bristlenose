@@ -20,6 +20,13 @@ The command-line tool now installs and runs on Windows, through pipx or uv with 
 
 - **On Windows, every run stopped before it started.** The first record a run writes failed on Windows, so no run got past it, and past that, a run stopped again at its second step.
 - **On Windows, a run in progress read as stopped.** A second run on the same folder was not refused, and the report could call a running analysis stranded.
+- **On a fresh Windows machine, `bristlenose doctor` said the network was down and `configure` could not check a key.** Windows had not yet fetched the certificate the Claude and ChatGPT servers use; Bristlenose now carries its own copy alongside the system's.
+- **Saving `bristlenose doctor` to a file, or piping it, crashed on Windows.** Redirected output now prints `+` for a pass and `x` for a fail.
+- **`run --clean` on Windows wrote over the previous report, and a failed run could not put it back.**
+- **A recording named in Japanese or Chinese stopped the run on Windows.**
+- **On Windows, every run crashed at its very end once a project had made 1,000 AI calls.**
+- **Burned-in subtitles were never made on Windows.**
+- **`bristlenose configure` on Windows named the key file as `~/.config\bristlenose\.env`.** It now shows the full path.
 - **A run could crash as it finished.** The library behind the voice pass, added in 0.33.0, sends usage statistics to Microsoft by default, and its upload could crash Bristlenose on exit. Bristlenose now switches it off.
 
 **0.33.0** — _4 Oct 2026_

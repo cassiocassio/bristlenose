@@ -136,7 +136,10 @@ def _fix_ffmpeg_missing(method: str) -> str:
     elif platform.system() == "Darwin":
         lines.append("  brew install ffmpeg")
     elif platform.system() == "Windows":
-        lines.append("  winget install FFmpeg")
+        # The exact package from the community source. A bare `winget install
+        # FFmpeg` also asks the msstore source, which on Windows Server 2025
+        # failed outright (0x8a15005e) instead of falling back (5 Oct 2026).
+        lines.append("  winget install --id Gyan.FFmpeg -e --source winget")
         lines.append("\nThen open a new terminal, so the updated PATH is picked up.")
         lines.append("Without winget: https://ffmpeg.org/download.html")
     else:

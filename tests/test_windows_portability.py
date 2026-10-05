@@ -151,7 +151,7 @@ class TestWindowsFixText:
         from bristlenose.doctor_fixes import get_fix
 
         text = get_fix("ffmpeg_missing", "pip")
-        assert "winget install FFmpeg" in text
+        assert "winget install --id Gyan.FFmpeg -e --source winget" in text
         assert "new terminal" in text
 
     def test_azure_and_proxy_use_setx_not_export(self) -> None:

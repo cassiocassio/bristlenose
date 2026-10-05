@@ -49,6 +49,15 @@ B="$(printf 'b%.0s' {1..64})"
     || bad "matching hashes did not authorise the swap"
 
 # THE case. Both sides failed to measure; a naive equality test says "equal".
+# staging_on_exit: a dropped transfer keeps its partial; any other failure cleans
+[ "$(staging_on_exit 0 0)" = none ]   && ok "success → staging left alone (the swap moved it)" || bad "success did something to staging"
+[ "$(staging_on_exit 1 1)" = keep ]   && ok "failed transfer → partial kept, so a re-run resumes" || bad "failed transfer did not keep the partial — every retry restarts from zero"
+[ "$(staging_on_exit 1 0)" = remove ] && ok "other failure → staging removed" || bad "a non-transfer failure left ~700 MB on the host"
+
+# stale_stagings: other versions' partials are reaped, this run's is not
+_st="$(stale_stagings .upload-Bristlenose-0.35.0.dmg.part .upload-Bristlenose-0.34.0.dmg.part .upload-Bristlenose-0.35.0.dmg.part Bristlenose-0.34.0.dmg .htaccess | tr '\n' ' ')"
+[ "$_st" = ".upload-Bristlenose-0.34.0.dmg.part " ] && ok "stale partials: only other versions' .part files are reaped" || bad "stale_stagings picked '$_st'"
+
 case "$(swap_decision "" "")" in
     abort*) ok "empty == empty → abort (does not read as a match)" ;;
     *)      bad "empty vs empty authorised a swap — the exact 4 Aug failure shape" ;;

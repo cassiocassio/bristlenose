@@ -241,3 +241,68 @@ class TestCrashRecovery:
             "must precede the output_exists probe"
         )
         assert (out_dir / _MARKER).read_text() == "new"
+
+
+@pytest.fixture
+def windows_rename(monkeypatch):
+    """``Path.rename`` as Windows does it: refused while a file inside is open.
+
+    The only file ``run`` holds open across the renames is the log, so a root
+    ``FileHandler`` writing under the folder stands for "an open file inside".
+    """
+    import logging
+
+    real_rename = Path.rename
+
+    def rename(self, target):  # type: ignore[no-untyped-def]
+        here = Path(self).resolve()
+        for h in logging.getLogger().handlers:
+            if isinstance(h, logging.FileHandler) and here in Path(h.baseFilename).resolve().parents:
+                raise PermissionError(13, "The process cannot access the file", str(self))
+        return real_rename(self, target)
+
+    monkeypatch.setattr(Path, "rename", rename)
+
+
+class TestRenamesSurviveAnOpenLogFile:
+    """``run`` opens its log inside the output folder and then renames that
+    folder. On Windows the rename was refused: ``--clean`` wrote over the old
+    report every time, and a failed run could not put the old one back."""
+
+    def test_clean_sets_the_previous_report_aside(
+        self, cli_to_pipeline, windows_rename, tmp_path: Path, monkeypatch
+    ) -> None:
+        input_dir = tmp_path / "interviews"
+        out_dir = input_dir / "bristlenose-output"
+        _seed_report(out_dir, "old")
+        seen: dict[str, bool] = {}
+
+        async def _record(_self, _in, out, *a, **k):
+            seen["old_marker_present"] = (Path(out) / _MARKER).exists()
+            _seed_report(Path(out), "new")
+            return _Result()
+
+        monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _record)
+        result = _run(cli_to_pipeline, input_dir)
+
+        assert "Could not set" not in result.output, result.output
+        assert seen == {"old_marker_present": False}
+        assert (out_dir / _MARKER).read_text() == "new"
+
+    def test_a_failed_run_puts_the_previous_report_back(
+        self, cli_to_pipeline, windows_rename, tmp_path: Path, monkeypatch
+    ) -> None:
+        from bristlenose.logging import setup_logging
+
+        input_dir = tmp_path / "interviews"
+        out_dir = input_dir / "bristlenose-output"
+        _seed_report(out_dir, "old")
+
+        async def _boom(_self, _in, out, *a, **k):
+            setup_logging(output_dir=Path(out))  # what Pipeline.run does first
+            raise RuntimeError("died")
+
+        monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _boom)
+        _run(cli_to_pipeline, input_dir)
+
+        assert (out_dir / _MARKER).read_text() == "old"

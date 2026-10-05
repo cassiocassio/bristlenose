@@ -1249,9 +1249,15 @@ def run(
     # succeeds, and restored if it doesn't. See utils/output_backup.py.
     output_stash: Path | None = None
     if output_exists and clean:
+        # The log file is open inside output_dir, and Windows will not rename a
+        # folder with an open file in it — the stash failed there every time.
+        from bristlenose.logging import release_log_file
+
+        release_log_file()
         output_stash = output_backup.stash(
             output_dir, previous_backup_is_spent=_reclaim.report_is_back
         )
+        setup_logging(output_dir=output_dir, verbose=verbose)
         if output_stash is not None:
             console.print(f"\n[dim]Cleaned {output_dir}[/dim]")
         else:
@@ -1313,12 +1319,18 @@ def run(
             # Only now is the old report spent.
             output_backup.discard(output_stash)
         else:
+            if output_stash is not None:
+                # Windows will not rename a folder with an open file in it, and
+                # the pipeline's log file is open inside output_dir.
+                from bristlenose.logging import release_log_file
+
+                release_log_file()
             outcome = output_backup.restore(output_stash, output_dir)
-            if outcome is not output_backup.RestoreOutcome.NOTHING_TO_DO:
-                # The root file handler still points at the tree `restore` just
-                # renamed away, so every line logged from here — including the
-                # one a post-mortem would look for — would land in the wrong
-                # file. Re-attach before saying anything.
+            if output_stash is not None:
+                # Re-attach before saying anything: the released handler — or,
+                # where renaming an open file works, one still pointing at the
+                # tree `restore` just moved away — would put every line from
+                # here, including the one a post-mortem looks for, nowhere useful.
                 setup_logging(output_dir=output_dir, verbose=verbose)
             if outcome is output_backup.RestoreOutcome.RESTORED:
                 _say(

@@ -119,3 +119,19 @@ def setup_logging(
     # ── Suppress noisy third-party loggers ─────────────────────────
     for name in _NOISY_LOGGERS:
         logging.getLogger(name).setLevel(logging.WARNING)
+
+
+def release_log_file() -> None:
+    """Close the log file so the folder holding it can be renamed.
+
+    The root handler keeps ``<output>/.bristlenose/bristlenose.log`` open, and
+    Windows refuses to rename a directory with an open file inside it. ``run``
+    renames the output folder twice — aside before a ``--clean`` run, back if
+    the run fails — so it releases the file first and calls ``setup_logging``
+    again after. Terminal output is untouched.
+    """
+    root = logging.getLogger()
+    for handler in root.handlers[:]:
+        if isinstance(handler, logging.FileHandler):
+            root.removeHandler(handler)
+            handler.close()

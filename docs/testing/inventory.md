@@ -9,7 +9,7 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 6302 | collected (expands parametrize — authoritative) | `tests/` |
+| `pytest` | python unit/integration | 6329 | collected (expands parametrize — authoritative) | `tests/` |
 | `vitest` | frontend unit | 139 files | test files | `frontend/src/**/*.test.*` |
 | `BristlenoseTests` | swift unit | 1697 in 140 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 9 files | spec files | `e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts)` |
@@ -32,7 +32,7 @@
     - Run tests — runs tests, **hard**
   - `test-windows` · on `windows-latest`
     - Windows checks — runs tests, **hard**
-    - Run tests — runs tests, **soft**
+    - Run tests — runs tests, **hard**
   - `release-suites` · on `ubuntu-latest`
   - `frontend-lint-type-test` · on `ubuntu-latest`
     - Audit frontend dependencies for known vulnerabilities — step, **soft**

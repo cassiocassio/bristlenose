@@ -32,11 +32,6 @@
       "disposition": "conditional",
       "hard_when": "release.yml calls ci.yml with strict-macos: true",
       "why": "The best pattern in the tree and the model for the rest: the same suite is informational on a push and blocking on a tag, so cost is paid where it buys something. Needs no expiry \u2014 it is already hard where it counts."
-    },
-    "ci.yml::test-windows::Run tests": {
-      "disposition": "expires",
-      "expires": "2026-11-30",
-      "why": "The full suite had never run on Windows before 5 Oct 2026, and was written on POSIX, so its first runs are a findings list rather than a verdict. The claims Bristlenose makes about Windows are held by the hard 'Windows checks' step in the same job. By the date: fix or mark what fails, then drop continue-on-error so Windows blocks like Linux does."
     }
   }
 }

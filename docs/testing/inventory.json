@@ -8,7 +8,7 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 6302
+        "tests": 6329
       },
       {
         "basis": "test files",
@@ -307,7 +307,7 @@
                 "runs_tests": true
               },
               {
-                "colour": "soft",
+                "colour": "hard",
                 "is_gate": false,
                 "name": "Run tests",
                 "piped": false,

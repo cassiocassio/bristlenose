@@ -228,13 +228,11 @@ jobs:
     # routes, and the first event write of every run raised AttributeError on
     # os.O_NOFOLLOW for who knows how long, because nothing ran there.
     #
-    # Two halves with different weights. "Windows checks" is HARD: the Windows-
-    # only tests (real GetProcessTimes on a real child process) and a real
-    # `bristlenose transcribe` — the claims the changelog makes about Windows.
-    # "Run tests" (the whole suite) is SOFT with an expiry in
-    # docs/testing/soft-gates.json: the suite was written on POSIX and has never
-    # met Windows, so its first red run is a findings list, not a broken release.
-    # Promote it once a green run has been read; don't let the date roll.
+    # Two steps, both blocking. "Windows checks": the Windows-only tests (real
+    # GetProcessTimes on a real child process) and a real `bristlenose
+    # transcribe`. "Run tests": the whole suite. It was soft for its first day
+    # (5 Oct 2026) while 489 failures were worked down — encodings, file
+    # locking, signals, drives — and promoted once it read 0 failed, 6080 passed.
     #
     # One interpreter: platform bugs don't vary by minor version, and the
     # version matrix is covered on Linux. 3.12 = the Homebrew/Snap/sidecar one.
@@ -242,8 +240,7 @@ jobs:
     # job names of the form `<job> (<py>, <os>-<ver>)` into its Python × OS
     # grid, so this lands there as a windows row (scripts/release-board.py,
     # pinned by test-release-board.py). Keep the name and the version below
-    # in step. Its cell is the HARD step's verdict; the soft suite does not
-    # move it.
+    # in step.
     name: test (3.12, windows-latest)
     runs-on: windows-latest
     timeout-minutes: 45  # a hung test would otherwise hold the runner for 6 h
@@ -272,11 +269,9 @@ jobs:
 
       - name: Windows checks
         timeout-minutes: 10
-        # A Windows console is UTF-8 (PEP 528); a CI pipe is cp1252, which
-        # cannot encode the ✓ Bristlenose prints. This stands in for the
-        # console users actually run in, not for a bug they would hit.
-        env:
-          PYTHONIOENCODING: utf-8
+        # No PYTHONIOENCODING here, on purpose: a CI pipe is cp1252, which is
+        # what a user's `bristlenose ... > out.txt` gets too, and setting utf-8
+        # hid the crash that redirect caused (found on real machines instead).
         # Fixture is a VTT, so no Whisper download and no API key: transcribe
         # still goes through run_lifecycle (pid file, start time) and writes
         # pipeline-events.jsonl through open_private, which is the path that
@@ -299,8 +294,9 @@ jobs:
           PY
 
       - name: Run tests
-        continue-on-error: true
         timeout-minutes: 25
+        # For pytest's own report, which prints test ids; the CLI's redirect
+        # path is proved by the step above and test_windows_portability.
         env:
           PYTHONIOENCODING: utf-8
         run: pytest --tb=short -q -m "not slow" -n auto

@@ -241,7 +241,8 @@ def test_llm_log_trims_without_fchmod(tmp_path: Path, monkeypatch: pytest.Monkey
 
     The log grows across runs, so a project's first runs were fine and every
     run after it passed 1,000 calls raised at the terminus, after the report
-    was written. The temp file is still owner-only where modes exist.
+    was written. That the rewrite stays owner-only is
+    test_llm_telemetry's test_trim_to_cap_rewrite_is_owner_only.
     """
     from bristlenose.llm.telemetry import trim_to_cap
 
@@ -251,8 +252,6 @@ def test_llm_log_trims_without_fchmod(tmp_path: Path, monkeypatch: pytest.Monkey
     assert trim_to_cap(path, cap=2) == 2
     assert path.read_bytes() == b"3\n4\n"
     assert [p.name for p in tmp_path.iterdir()] == ["llm-calls.jsonl"]
-    if os.name == "posix":
-        assert path.stat().st_mode & 0o777 == 0o600
 
 
 def test_every_text_file_read_and_write_names_its_encoding() -> None:

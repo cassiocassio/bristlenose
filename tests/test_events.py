@@ -740,6 +740,11 @@ def test_session_record_old_json_loads_with_none_cost_fields():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows emulates O_APPEND as seek-then-write, so concurrent appends can interleave; "
+    "the pid-file lock is what keeps a second writer out (append_event's docstring)",
+)
 @pytest.mark.parametrize("n_writers,events_per", [(2, 100)])
 def test_concurrent_o_append_does_not_tear_lines(tmp_path: Path, n_writers: int, events_per: int):
     """Two subprocesses appending in parallel: all lines parse, none torn.

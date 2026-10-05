@@ -161,7 +161,7 @@ def parse_doc(filepath: str = FILE) -> list[dict]:
     Returns list of dicts with keys: kind, priority, title, description, sprint.
     Sprint is e.g. "Sprint 3" or None.
     """
-    with open(filepath) as f:
+    with open(filepath, encoding="utf-8") as f:
         lines = f.readlines()
 
     items: list[dict] = []
@@ -371,7 +371,7 @@ def sync_done_to_doc(board_items: list[dict], filepath: str = FILE, apply: bool 
     """Board → doc: strike through Done items, un-strike un-Done items."""
     done_normalized = {item["normalized"] for item in board_items if item["status"] == "Done"}
 
-    with open(filepath) as f:
+    with open(filepath, encoding="utf-8") as f:
         lines = f.readlines()
 
     changes = 0
@@ -405,7 +405,7 @@ def sync_done_to_doc(board_items: list[dict], filepath: str = FILE, apply: bool 
             new_lines.append(line)
 
     if apply and changes > 0:
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             f.writelines(new_lines)
 
     return changes
@@ -427,7 +427,7 @@ def report_hand_struck_open(board_items: list[dict], filepath: str = FILE) -> li
     """
     open_norm = {item["normalized"] for item in board_items if item["status"] != "Done"}
     found = []
-    with open(filepath) as f:
+    with open(filepath, encoding="utf-8") as f:
         for line in f:
             m = _HAND_STRUCK_RE.match(line)
             if m and normalize(m.group(1)) in open_norm:
@@ -608,7 +608,7 @@ def mark_done(terms: list[str], apply: bool = False) -> None:
     all_titles = {m["title"] for m in matches}
     normalized_titles = {normalize(t) for t in all_titles}
 
-    with open(FILE) as f:
+    with open(FILE, encoding="utf-8") as f:
         lines = f.readlines()
 
     doc_changes = 0
@@ -642,7 +642,7 @@ def mark_done(terms: list[str], apply: bool = False) -> None:
 
     # Write doc
     if doc_changes > 0:
-        with open(FILE, "w") as f:
+        with open(FILE, "w", encoding="utf-8") as f:
             f.writelines(new_lines)
         print(f"\n  Applied {doc_changes} strikethrough(s) to {FILE}")
 

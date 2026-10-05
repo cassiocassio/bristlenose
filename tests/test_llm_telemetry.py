@@ -191,6 +191,13 @@ def test_trim_to_cap_truncates_oldest(tmp_path: Path) -> None:
     assert len(rows) == 1000
     assert rows[0]["i"] == 500
     assert rows[-1]["i"] == 1499
+
+
+@pytest.mark.skipif(os.name != "posix", reason="no POSIX mode bits on Windows: chmod 0o600 there only clears read-only")
+def test_trim_to_cap_rewrite_is_owner_only(tmp_path: Path) -> None:
+    path = tmp_path / JSONL_FILENAME
+    path.write_text("".join(json.dumps({"i": i}) + "\n" for i in range(5)), encoding="utf-8")
+    assert trim_to_cap(path, cap=2) == 2
     # Mode preserved/reset to 0o600 on rewrite.
     mode = stat.S_IMODE(path.stat().st_mode)
     assert mode & 0o077 == 0

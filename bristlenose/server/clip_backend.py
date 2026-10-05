@@ -226,7 +226,7 @@ class FFmpegBackend:
         ignored or needs a manual step. Re-encodes the video with x264 (CRF 18)
         and copies the audio. The ``.ass`` file and the bundled font go in a
         private temp folder that ffmpeg runs in, so the filter graph names them
-        relatively — no path that needs escaping reaches it (a Windows ``C:\``
+        relatively — no path that needs escaping reaches it (a Windows drive path
         always would) — and nothing is left in the researcher's clips folder.
         """
         from bristlenose.server.clip_subtitles import to_ass

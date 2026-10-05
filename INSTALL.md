@@ -116,8 +116,8 @@ Close and reopen your terminal after this.
 1. Go to [github.com/BtbN/FFmpeg-Builds/releases](https://github.com/BtbN/FFmpeg-Builds/releases)
 2. Download `ffmpeg-master-latest-win64-gpl.zip`
 3. Extract the zip file
-4. Find `ffmpeg.exe` inside the `bin` folder
-5. Copy `ffmpeg.exe` to `C:\Windows\System32\`
+4. Find `ffmpeg.exe` and `ffprobe.exe` inside the `bin` folder. Bristlenose needs both
+5. Copy both to `C:\Windows\System32\`
 
    Or, to keep things tidy, put the extracted folder somewhere permanent (e.g. `C:\ffmpeg\`) and add its `bin` subfolder to your PATH: Settings > System > About > Advanced system settings > Environment Variables > select `Path` > Edit > New > type `C:\ffmpeg\bin` > OK.
 
@@ -253,13 +253,7 @@ Bristlenose uses AI to analyse your transcripts. Use whichever provider you alre
    This validates your key and saves it to your system's secure credential store:
    - **macOS** — saved to your **login keychain** (viewable in the Keychain Access app, search for "Bristlenose")
    - **Linux** — saved via **Secret Service** (GNOME Keyring / KDE Wallet)
-   - **Windows** — credential store not yet supported; use `setx` to save the key permanently instead:
-
-     ```
-     setx BRISTLENOSE_ANTHROPIC_API_KEY "sk-ant-..."
-     ```
-
-     Close and reopen your terminal after running `setx`.
+   - **Windows** — saved to a config file in your user folder, `C:\Users\<you>\.config\bristlenose\.env`. Windows Credential Manager isn't supported yet
 
 > **Important:** A ChatGPT Plus/Pro or Claude Pro/Max subscription does **not** include API access. The API is billed separately — you need to add a payment method in the API console.
 

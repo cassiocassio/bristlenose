@@ -26,6 +26,21 @@ SF_DATALESS = 0x40000000
 MATERIALISE_TIMEOUT_SECONDS = 30 * 60
 
 
+def open_private(path: Path, flags: int) -> int:
+    """``os.open`` for the ``.bristlenose/`` record files: mode 0o600, no symlinks.
+
+    ``O_NOFOLLOW`` refuses a symlink planted at the target. It is POSIX-only —
+    Windows has no such attribute, and naming it directly raised
+    ``AttributeError`` on the first event write of every run there. On Windows
+    the flag is dropped (a symlink there needs admin or Developer Mode to plant)
+    and ``O_BINARY`` is added, without which ``os.open`` writes in text mode and
+    turns each ``\\n`` into ``\\r\\n``. Callers write bytes, so the rest of the
+    contract is the same on every platform.
+    """
+    flags |= getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+    return os.open(path, flags, 0o600)
+
+
 class CloudFetchTimeoutError(RuntimeError):
     """A dataless file did not materialise within `MATERIALISE_TIMEOUT_SECONDS`.
 

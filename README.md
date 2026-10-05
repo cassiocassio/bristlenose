@@ -194,14 +194,15 @@ Use whichever provider you already have an API key for. The provider you configu
 
 ### Making your key permanent
 
-**macOS and Linux:** The recommended way is `bristlenose configure` (shown in Options A--D above). It validates your key and stores it in your operating system's secure credential store:
+The recommended way is `bristlenose configure` (shown in Options A--D above). It validates your key and stores it:
 
 - **macOS** — saved to your **login keychain**. You can view or delete it in the Keychain Access app (search for "Bristlenose")
-- **Linux** — saved via **Secret Service** (GNOME Keyring / KDE Wallet). Requires `secret-tool` to be installed (included by default on most desktop Linux distributions)
+- **Linux** — saved via **Secret Service** (GNOME Keyring / KDE Wallet). Requires `secret-tool` to be installed (included by default on most desktop Linux distributions); without it, saved to `~/.config/bristlenose/.env`, readable only by you
+- **Windows** — saved to a config file in your user folder, `C:\Users\<you>\.config\bristlenose\.env`. Windows Credential Manager isn't supported yet
 
 The key is loaded automatically on every run — no environment variables needed. Run `bristlenose doctor` to verify your key is detected (it will show "(Credential Store)" next to the API key check).
 
-**Windows:** Credential store storage is not yet supported. Set the key permanently with `setx` (built into Windows):
+**Windows, as an environment variable instead:** `setx` (built into Windows) sets the key permanently:
 
 ```
 setx BRISTLENOSE_ANTHROPIC_API_KEY "sk-ant-..."

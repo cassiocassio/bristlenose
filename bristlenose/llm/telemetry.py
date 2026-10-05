@@ -43,6 +43,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from bristlenose.utils.fs import open_private
+
 from .cohort_normalise import normalise_model
 
 logger = logging.getLogger(__name__)
@@ -386,8 +388,7 @@ def record_call(
     line = event.model_dump_json(by_alias=True, exclude_none=False) + "\n"
     data = line.encode("utf-8")
 
-    flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW
-    fd = os.open(path, flags, 0o600)
+    fd = open_private(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
     try:
         os.write(fd, data)
     finally:

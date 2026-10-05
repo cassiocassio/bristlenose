@@ -66,6 +66,7 @@ from bristlenose.events import (
 from bristlenose.i18n import t
 from bristlenose.llm import telemetry
 from bristlenose.llm.failure_classifier import LLMFailureKind as _LLMFailureKind
+from bristlenose.utils.fs import open_private
 
 PID_FILENAME = "run.pid"
 
@@ -204,6 +205,9 @@ def _ps_start_time(pid: int) -> str | None:
             return None
         return f"{info.pbi_start_tvsec}.{info.pbi_start_tvusec}"
 
+    if sys.platform == "win32":
+        return _win_start_time(pid)
+
     # Non-Darwin (Linux, etc.) — keep the legacy /bin/ps subprocess. No
     # sandbox blocker on these platforms, and parsing /proc/<pid>/stat
     # field 22 is a separate code path that's only worth its weight if
@@ -224,6 +228,45 @@ def _ps_start_time(pid: int) -> str | None:
     return val or None
 
 
+_WIN_PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+_WIN_STILL_ACTIVE = 259
+
+
+def _win_start_time(pid: int) -> str | None:
+    """Windows: the process creation FILETIME, via ``GetProcessTimes``.
+
+    There is no ``/bin/ps`` on Windows, and without this every live run read as
+    dead — a second run on the same folder was not refused, and serve reported
+    a run in progress as stranded. ``OpenProcess`` can still succeed for a
+    process that has exited while a handle to it is open, so the exit code is
+    checked too.
+    """
+    if sys.platform != "win32":  # also how mypy knows WinDLL exists below
+        return None
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    handle = kernel32.OpenProcess(_WIN_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if not handle:
+        return None
+    try:
+        code = wintypes.DWORD()
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
+            return None
+        if code.value != _WIN_STILL_ACTIVE:
+            return None
+        created, exited, kernel, user = (wintypes.FILETIME() for _ in range(4))
+        if not kernel32.GetProcessTimes(
+            handle, ctypes.byref(created), ctypes.byref(exited),
+            ctypes.byref(kernel), ctypes.byref(user),
+        ):
+            return None
+        return f"{created.dwHighDateTime}.{created.dwLowDateTime}"
+    finally:
+        kernel32.CloseHandle(handle)
+
+
 def _write_pid_file(output_dir: Path, run_id: str, start_time: str) -> Path:
     """Atomic-write ``run.pid`` with our (pid, start_time, run_id).
 
@@ -239,8 +282,7 @@ def _write_pid_file(output_dir: Path, run_id: str, start_time: str) -> Path:
         "run_id": run_id,
     }
     tmp = path.with_suffix(".tmp")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW
-    fd = os.open(tmp, flags, 0o600)
+    fd = open_private(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
     try:
         os.write(fd, json.dumps(payload).encode("utf-8"))
     finally:

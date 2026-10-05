@@ -75,6 +75,8 @@ import os
 import shutil
 from pathlib import Path
 
+from bristlenose.utils.fs import open_private
+
 logger = logging.getLogger(__name__)
 
 #: Files that are append-only across runs, so a restore concatenates rather
@@ -262,9 +264,7 @@ def _append_onto(src: Path, dest: Path) -> bool:
     fd = None
     try:
         dest.parent.mkdir(parents=True, exist_ok=True)
-        fd = os.open(
-            dest, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o600
-        )
+        fd = open_private(dest, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
         with open(fd, "wb", closefd=True) as fh_dest:
             fd = None  # now owned by the file object
             with src.open("rb") as fh_src:

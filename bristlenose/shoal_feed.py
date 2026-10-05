@@ -33,6 +33,7 @@ from typing import Any
 
 from bristlenose import shoal
 from bristlenose.config import hosted_by_desktop
+from bristlenose.utils.fs import open_private
 
 logger = logging.getLogger(__name__)
 
@@ -75,12 +76,12 @@ def _write(path: Path, *, line: str | None) -> None:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     if line is None:
-        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
         payload = b""
     else:
-        flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW
+        flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
         payload = (line + "\n").encode("utf-8")
-    fd = os.open(path, flags, 0o600)
+    fd = open_private(path, flags)
     try:
         if payload:
             os.write(fd, payload)

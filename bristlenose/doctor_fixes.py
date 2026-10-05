@@ -135,6 +135,10 @@ def _fix_ffmpeg_missing(method: str) -> str:
         lines.append("  Arch:           sudo pacman -S ffmpeg")
     elif platform.system() == "Darwin":
         lines.append("  brew install ffmpeg")
+    elif platform.system() == "Windows":
+        lines.append("  winget install FFmpeg")
+        lines.append("\nThen open a new terminal, so the updated PATH is picked up.")
+        lines.append("Without winget: https://ffmpeg.org/download.html")
     else:
         lines.append("  Install FFmpeg from https://ffmpeg.org/download.html")
     return "\n".join(lines)
@@ -180,7 +184,9 @@ def _credential_store_hint() -> str:
         return "This stores your key securely in your macOS Keychain."
     if label == "Secret Service":
         return "This stores your key securely via Secret Service (GNOME Keyring / KDE Wallet)."
-    return "This stores your key in a protected config file (~/.config/bristlenose/.env)."
+    from bristlenose.credentials import user_config_env_path
+
+    return f"This stores your key in a config file ({user_config_env_path()})."
 
 
 def _credential_store_label() -> str:
@@ -247,14 +253,34 @@ def _fix_api_key_invalid_google(_method: str) -> str:
     )
 
 
+def _set_env_line(var: str, value: str) -> str:
+    """One command that sets an environment variable, in the user's own shell.
+
+    ``export`` means nothing in PowerShell or cmd. ``setx`` persists the value
+    for terminals opened afterwards, not the current one, so the callers that
+    use it say so.
+    """
+    if sys.platform == "win32":
+        return f"  setx {var} {value}"
+    return f"  export {var}={value}"
+
+
+def _new_terminal_note() -> str:
+    return "Then open a new terminal.\n\n" if sys.platform == "win32" else ""
+
+
 def _fix_api_key_missing_azure(_method: str) -> str:
     return (
         "bristlenose needs Azure OpenAI credentials to analyse transcripts.\n"
         "From your Azure portal, set these environment variables:\n\n"
-        "  export BRISTLENOSE_AZURE_ENDPOINT=https://your-resource.openai.azure.com/\n"
-        "  export BRISTLENOSE_AZURE_API_KEY=your-key-here\n"
-        "  export BRISTLENOSE_AZURE_DEPLOYMENT=your-deployment-name\n\n"
-        f"Or add them to a .env file. To store the key in your {_credential_store_label()}:\n\n"
+        + _set_env_line("BRISTLENOSE_AZURE_ENDPOINT", "https://your-resource.openai.azure.com/")
+        + "\n"
+        + _set_env_line("BRISTLENOSE_AZURE_API_KEY", "your-key-here")
+        + "\n"
+        + _set_env_line("BRISTLENOSE_AZURE_DEPLOYMENT", "your-deployment-name")
+        + "\n\n"
+        + _new_terminal_note()
+        + f"Or add them to a .env file. To store the key in your {_credential_store_label()}:\n\n"
         "  bristlenose configure azure\n\n"
         "To use Claude instead:  bristlenose run <input> --llm claude\n"
         "To only transcribe:     bristlenose transcribe <input>"
@@ -274,7 +300,7 @@ def _fix_api_key_invalid_azure(_method: str) -> str:
 def _fix_network_unreachable(_method: str) -> str:
     return (
         "Check your internet connection. If you're behind a proxy:\n"
-        "  export HTTPS_PROXY=http://proxy:port"
+        + _set_env_line("HTTPS_PROXY", "http://proxy:port")
     )
 
 

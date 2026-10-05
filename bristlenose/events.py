@@ -29,6 +29,7 @@ from bristlenose.manifest import (
     StageStatus,
     load_manifest,
 )
+from bristlenose.utils.fs import open_private
 
 EVENTS_FILENAME = "pipeline-events.jsonl"
 SCHEMA_VERSION = 1
@@ -602,8 +603,7 @@ def append_event(events_file: Path, event: AnyEvent) -> None:
     line = event.model_dump_json(exclude_none=False) + "\n"
     data = line.encode("utf-8")
 
-    flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW
-    fd = os.open(events_file, flags, 0o600)
+    fd = open_private(events_file, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
     try:
         os.write(fd, data)
         os.fsync(fd)

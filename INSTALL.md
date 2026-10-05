@@ -305,9 +305,17 @@ Bristlenose uses AI to analyse your transcripts. Use whichever provider you alre
 
 ### Local AI (Ollama) — free, no signup
 
-Just run `bristlenose your-interviews/` — bristlenose will offer to set up Ollama automatically (installation, startup, and model download).
+Run `bristlenose configure local`. It offers to install Ollama, starts it, and downloads a model (about 2 GB). Then run `bristlenose your-interviews/` as usual.
 
-Or install [Ollama](https://ollama.ai) yourself and run with `--llm local`.
+How Ollama gets installed:
+
+- **macOS:** Homebrew if you have it, otherwise Ollama's install script
+- **Linux:** Snap if you have it, otherwise Ollama's install script
+- **Windows:** winget (`winget install --id Ollama.Ollama -e --source winget`), which comes with Windows 11 and current Windows 10. Ollama installs into your user folder with no administrator prompt, and its tray app runs the server. On Windows without winget, such as some Windows Server editions, bristlenose points you to the download page instead
+
+Or install [Ollama](https://ollama.com/download) yourself and run with `--llm local`.
+
+Local models run on your own processor. They are slower than the cloud providers, often much slower on a laptop without a capable GPU.
 
 ---
 

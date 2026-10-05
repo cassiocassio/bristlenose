@@ -1,6 +1,128 @@
-# Windows port — sketch (deferred / long grass)
+# Windows port
 
-**Status:** parked. Not on the road to TestFlight, not on the post-TF roadmap as a maintainer commitment. Written up so it's costed and ready if someone in the community wants to drive it. See [CONTRIBUTING.md](../CONTRIBUTING.md#windows-port).
+## Status — 5 Oct 2026: the CLI installs and runs; not a channel
+
+**What holds, and how we know.** The command-line tool installs through pipx or uv
+on **x64 Python** and runs on Windows. Proved three ways on 5 Oct 2026:
+
+- **CI**: `test (3.12, windows-latest)` in `ci.yml` runs the full suite (6080 passed,
+  0 failed on `0061f566`) and **blocks** since `87c09842`. Its hard step also runs a
+  real `bristlenose transcribe` into a cp1252 pipe, deliberately without
+  `PYTHONIOENCODING`.
+- **A Windows 11 VM** (UTM, Arm64 hardware, x64 Python 3.14.8): install, doctor,
+  `transcribe` of audio and of a kanji filename, redirected output, a keyed `run` on a
+  folder with a space in its name, the report in Edge (stars and renames persist,
+  audio plays at a timecode), and Export Report opening offline from `file://`.
+- **A fresh Windows Server 2025 x64 box** (`aella up --windows`): the same install
+  path, the redirect cases, and `configure` against a fresh root store.
+
+**What it is not.** Not a release channel: there is no Windows artifact, no release
+step and no verify row. Windows users get the same `pipx`/`uv` install as any Python
+user. The 0.33.1 changelog says exactly that.
+
+**Never exercised on Windows:** `run --clean` twice on a real project; `serve` alone
+then Ctrl-C; OneDrive or network-share project folders; long paths; the voice-model
+download; Windows 11 on x64 hardware; the GUI clicks of python.org's install manager.
+
+### What was broken, and is fixed
+
+Every item has a test that fails on any OS by recreating the Windows condition
+(most in `tests/test_windows_portability.py`). PyPI **0.33.0 is unusable on Windows**:
+item 1 crashes every `transcribe`. 0.33.1 is the first release that works there.
+
+1. **The first event write of every run** named `os.O_NOFOLLOW`, which Windows lacks
+   (`b6553a8f`: `utils.fs.open_private`).
+2. **A run died at its second stage**: the manifest `rename` refused an existing
+   target (`7ad88c78`: `replace`).
+3. **A live run read as dead**, so a second run on the same folder was not refused
+   (`b6553a8f`: `GetProcessTimes`).
+4. **A recording named in kanji crashed ingest**: text-mode subprocess output was
+   decoded as cp1252, while ffprobe writes UTF-8 (`7c3a2b74`).
+5. **`run --clean` always wrote over the old report, and a failed run could not
+   restore it**: Windows will not rename a folder holding an open file, and our log
+   was open inside the output folder (`10c39eb3`: `release_log_file`).
+6. **Every run crashed at its end** once a project's LLM log passed 1,000 calls: the
+   trim called `os.fchmod` (`b38b8fdc`).
+7. **Burned-in subtitles never ran**: a `C:\` temp path was refused as filter-unsafe
+   (`5e694a4c`: ffmpeg runs inside the temp folder).
+8. **Any redirected or piped output** (`> out.txt`, `| Out-Host`) crashed on ✓
+   before printing anything (`afa99a8a`).
+9. **On a fresh machine the Claude and ChatGPT APIs were unreachable from urllib**:
+   both chain to Google Trust Services, which Windows fetches only for CryptoAPI
+   clients (curl, Edge), and Python never asks. Doctor said the network was down and
+   `configure` could not validate a key (`0061f566`: `utils.tls.https_context`, which
+   adds certifi's roots to the system store).
+10. **Doctor and setup copy**: Unix-shaped fix text (`b6553a8f`); `[voice]` eaten as
+    Rich markup; single-quoted install specs that cmd.exe passes literally; a
+    Homebrew row; "stores it securely" for a plain `.env`; `~/` glued to backslashes;
+    the exact winget id for FFmpeg; a voice hint that cannot work on Windows +
+    Python 3.14 (`afa99a8a`, `2bc5e23e`, `ad6936bf`, `a2f8d774`, `fb360f4a`).
+
+**Gates that keep these closed** (all run on every OS): every text-mode subprocess
+call names an encoding; every text file read/write names one; every `https` `urlopen`
+passes `context=https_context()`; no module names `os.O_NOFOLLOW`; install specs are
+double-quoted. Thirteen tests skip on Windows where it has no equivalent (POSIX mode
+bits, signals by `os.kill`, `O_NOFOLLOW`, the exec bit, replacing a file serve holds
+open); `docs/testing/ratchet.json` names each.
+
+### Learnings
+
+- **The real bugs were few and each blocked a common step.** 489 first-run failures
+  were mostly the tests; about ten were product defects, listed above.
+- **They come in families**: encodings (cp1252 for pipes and files), file locking
+  (no rename or delete of an open file), signals, drive letters (`relpath` across
+  C: and D:), and process launch (`CreateProcess` tries System32 first, so a bare
+  `bash` is WSL's). A source gate per family beats a fix per site.
+- **CI's environment hid the two worst.** `PYTHONIOENCODING=utf-8` masked the redirect
+  crash; the runner image already holds every root certificate. Both only showed on
+  real machines. A Windows-native probe of an API host (curl, Invoke-WebRequest)
+  installs the root as a side effect, so test TLS before touching those hosts.
+- **Case sensitivity was a non-issue**: path identity uses `os.path.samefile`.
+- **Windows on Arm runs x64 Python only.** python.org's install manager installs x64
+  by default; native arm64 Python cannot resolve, because `ctranslate2` publishes no
+  win_arm64 wheel (pipx misreports it as "failed to build av"). Transcription under
+  emulation is slow: about 2 min for 11 s of audio.
+- **The voice extra cannot install on Windows + Python 3.14**: kaldi-native-fbank has
+  no cp314 Windows wheel. The dev extra fails there for the same reason.
+- **The install path has drifted from older guides**: python.org's button is now the
+  install manager (no PATH checkbox; y/N prompts, defaults vary); on Server 2025,
+  winget needs registering and a fresh source, and plain `winget install FFmpeg`
+  fails on the msstore source where the exact id works.
+- **The test VM is friendlier than a real machine**: UTM's unattended install turns
+  UAC off.
+
+### Open, in order
+
+1. **Make uv the primary Windows route** (pipx as the alternative):
+   `winget install --id astral-sh.uv -e`, `winget install --id Gyan.FFmpeg -e --source
+   winget`, then `uv tool install --python 3.13 bristlenose`. uv fetches Python
+   itself, which removes the install-manager step, and 3.13 is where voice works.
+   **Test on the VM first**: on Arm it probably needs the x64 build named
+   (`--python cpython-3.13-windows-x86_64-none`), unverified.
+2. **The two unrun checks**: `run --clean` twice, and `serve` then Ctrl-C.
+3. **Plain-ASCII symbols when output is not a UTF-8 console.** Redirected logs show
+   `?` for ✓ and ✗, so a saved doctor log cannot tell a pass from a fail, and `–`
+   becomes `ù` in a PowerShell pipe.
+4. **Decisions for the maintainer**: whether `run` with no provider should exit
+   non-zero (it exits 0 in a terminal by design); `CONTRIBUTING.md` still calls this
+   port "parked"; `configure local` offers no Ollama install on Windows; the website's
+   Windows install steps predate all of this.
+5. **Every platform, seen first on Windows**: warning log lines interleave with the
+   run UI (including a developer note); Hugging Face warnings print twice and the
+   1.6 GB Whisper download shows no progress; the player does not seek when an
+   already-open window has ended; the MCP hint says `pip` to pipx users; session
+   times render UTC as local (H9 in `docs/time-defects.md`); the transcript header
+   floors a duration the CLI rounds.
+6. **A Windows channel**, only if Windows earns it: a winget package backed by a
+   PyInstaller build in a Windows release job (the Copr analogue, vendoring Python),
+   code-signed so SmartScreen does not warn. Scoop and an MSI were considered and set
+   aside: researchers will not have Scoop, and an installer is further from a
+   two-line install.
+
+---
+
+*The sketch below is the June 2026 plan. Where it disagrees with the status above —
+Scoop as the channel, "no bundled Python", Arm out of scope — the status wins.*
 
 ## Why deferred
 

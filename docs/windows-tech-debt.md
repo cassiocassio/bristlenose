@@ -4,7 +4,7 @@ Oneday!
 
 Platform assumptions that work on macOS/Linux but will need attention for Windows support. Not blocking — bristlenose is macOS/Linux first — but tracked here so we don't lose sight of them.
 
-**Updated:** 15 Feb 2026
+**Updated:** 15 Feb 2026. **Superseded 5 Oct 2026** by the status section of [design-windows-port.md](design-windows-port.md): Windows now has blocking CI and the CLI runs there. Of the items below, the `index.html` symlink is moot (`_ensure_index_symlink` has no caller), FFmpeg guidance and the config directory are done, and the rest are kept as history.
 
 ---
 

@@ -8,11 +8,11 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 6097
+        "tests": 6302
       },
       {
         "basis": "test files",
-        "files": 130,
+        "files": 139,
         "kind": "frontend unit",
         "runner": "vitest",
         "source": "frontend/src/**/*.test.*",
@@ -21,12 +21,12 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 137,
+        "files": 140,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 1678
+        "tests": 1697
       },
       {
         "basis": "spec files",
@@ -296,6 +296,28 @@
           },
           {
             "calls": null,
+            "id": "test-windows",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": false,
+                "name": "Windows checks",
+                "piped": false,
+                "runs_tests": true
+              },
+              {
+                "colour": "soft",
+                "is_gate": false,
+                "name": "Run tests",
+                "piped": false,
+                "runs_tests": true
+              }
+            ],
+            "runs_on": "windows-latest"
+          },
+          {
+            "calls": null,
             "id": "release-suites",
             "job_colour": "hard",
             "notable_steps": [],
@@ -432,6 +454,13 @@
           },
           {
             "calls": null,
+            "id": "windows-pipx",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "windows-latest"
+          },
+          {
+            "calls": null,
             "id": "macos-pip",
             "job_colour": "hard",
             "notable_steps": [],
@@ -453,7 +482,9 @@
           }
         ],
         "name": "Install & Smoke Test",
-        "piped_steps": [],
+        "piped_steps": [
+          "Verify CLI and serve packages"
+        ],
         "triggers": [
           "schedule (0 6 * * 1)",
           "workflow_dispatch",

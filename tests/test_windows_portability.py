@@ -88,13 +88,14 @@ def test_open_private_still_refuses_a_symlink(tmp_path: Path) -> None:
         open_private(link, os.O_WRONLY | os.O_APPEND)
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="GetProcessTimes is Windows-only")
-def test_win_start_time_tracks_a_live_process() -> None:
-    """A live run reads as live, and a finished one as gone — on real Windows.
+def test_start_time_tracks_a_live_process() -> None:
+    """A live run reads as live, and a finished one as gone — on every platform.
 
-    Without a Windows start-time reader every live run read as dead, so a second
-    run on the same folder was not refused. Runs only on the windows-latest CI
-    job; the ctypes path cannot be faked from POSIX.
+    ``_ps_start_time`` reads libproc on macOS, ``ps`` on Linux and
+    ``GetProcessTimes`` on Windows, so the windows-latest CI job is where the
+    Windows reader meets a real process. Without one, every live run read as
+    dead there, and a second run on the same folder was not refused. No skip:
+    each platform proves its own reader.
     """
     from bristlenose.run_lifecycle import _is_alive_owned, _ps_start_time
 
@@ -108,8 +109,8 @@ def test_win_start_time_tracks_a_live_process() -> None:
     finally:
         child.kill()
         child.wait()
-    # Popen still holds a handle, so OpenProcess succeeds; the exit-code check
-    # is what has to say "gone".
+    # On Windows, Popen still holds a handle, so OpenProcess succeeds; the
+    # exit-code check is what has to say "gone".
     assert _ps_start_time(child.pid) is None
     assert _ps_start_time(os.getpid()), "this process has no start time"
 

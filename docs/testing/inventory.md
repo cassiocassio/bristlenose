@@ -9,9 +9,9 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 6097 | collected (expands parametrize — authoritative) | `tests/` |
-| `vitest` | frontend unit | 130 files | test files | `frontend/src/**/*.test.*` |
-| `BristlenoseTests` | swift unit | 1678 in 137 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
+| `pytest` | python unit/integration | 6302 | collected (expands parametrize — authoritative) | `tests/` |
+| `vitest` | frontend unit | 139 files | test files | `frontend/src/**/*.test.*` |
+| `BristlenoseTests` | swift unit | 1697 in 140 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 9 files | spec files | `e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts)` |
 
 **Ingest formats: 27** (audio 10, docx 1, subtitle_srt 1, subtitle_vtt 1, video 14) — from `models.ALL_EXTENSIONS`. Do not restate this number in prose; link here. It was simultaneously 16 and 27 in two docs on 2 Sep 2026, one of which named the other as its single source.
@@ -30,6 +30,9 @@
     - Generate Python SBOM — step, **soft**
   - `test` · on `${{ matrix.os }}` · **conditional: ${{ matrix.os == 'macos-latest' && inputs.strict-macos != true }}**
     - Run tests — runs tests, **hard**
+  - `test-windows` · on `windows-latest`
+    - Windows checks — runs tests, **hard**
+    - Run tests — runs tests, **soft**
   - `release-suites` · on `ubuntu-latest`
   - `frontend-lint-type-test` · on `ubuntu-latest`
     - Audit frontend dependencies for known vulnerabilities — step, **soft**
@@ -55,9 +58,11 @@
 ### Install & Smoke Test (`install-test.yml`)
 
 - **Triggers:** schedule (0 6 * * 1); workflow_dispatch; push [main] paths=INSTALL.md,README.md,.github/workflows/install-test.yml,tests/fixtures/smoke-test/**; pull_request [main] paths=INSTALL.md,README.md,.github/workflows/install-test.yml,tests/fixtures/smoke-test/**
-- **Default shell:** GitHub default (`bash -e`, no pipefail) — no piped steps
+- **Default shell:** GitHub default (`bash -e`, **no pipefail**). Piped steps below report the LAST stage's exit status, not the command's — check each is not load-bearing. (This is what hid 16 compile errors behind a green Mac Build, 20 May – 2 Sep 2026.)
+  - piped: _Verify CLI and serve packages_
   - `linux-pip` · on `ubuntu-latest`
   - `linux-pipx` · on `ubuntu-latest`
+  - `windows-pipx` · on `windows-latest`
   - `macos-pip` · on `macos-latest`
   - `macos-brew` · on `macos-latest`
   - `full-run` · on `ubuntu-latest`

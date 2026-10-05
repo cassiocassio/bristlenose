@@ -104,3 +104,20 @@ def test_python_version_matches_install_guide() -> None:
 def test_uv_comes_from_astrals_installer() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
     assert "$UvInstallerUrl = 'https://astral.sh/uv/install.ps1'" in text
+
+
+def test_a_failure_after_install_does_not_say_not_installed() -> None:
+    # Once uv has put Bristlenose in place, a later failure (PATH, doctor)
+    # reads "Bristlenose is installed, but <message>": the messages after that
+    # point are the second half of the sentence, and "not installed" is only
+    # said before it. A redirected 0.33.0 doctor crash once printed "not
+    # installed" over a working install (found on Server 2025, 5 Oct 2026).
+    text = SCRIPT.read_text(encoding="utf-8")
+    mark = text.index("$installed = $true")
+    assert text.index("& uv tool install --python") < mark < text.index("uv tool dir --bin")
+    after = text[mark : text.index("} catch {", mark)]
+    messages = re.findall(r"Exit-Install\s+\(?\s*[\"'](.)", after)
+    assert messages, "no Exit-Install after the install step"
+    assert all(first.islower() for first in messages), messages
+    catch = text[text.index("} catch {", mark) :]
+    assert catch.index("if ($installed)") < catch.index("Bristlenose was not installed.")

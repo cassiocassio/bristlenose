@@ -124,6 +124,9 @@
             'ask IT to allow it, or follow the manual steps at https://bristlenose.app/docs/install.html'
     }
 
+    # Set once uv has put Bristlenose in place. A later failure (PATH, doctor)
+    # must not tell the user it was never installed.
+    $installed = $false
     try {
         # ----- 0. Where are we? ------------------------------------------------
         if ($env:OS -ne 'Windows_NT') { Exit-Install 'This installer is for Windows. On macOS or Linux, see https://bristlenose.app/docs/install.html' }
@@ -254,10 +257,13 @@
             & uv tool install --python $PythonVersion $spec
             if ($LASTEXITCODE -ne 0) { Exit-Install 'uv could not install Bristlenose (its message is above).' }
         }
+        $installed = $true
+        # From here on, Exit-Install messages finish the sentence
+        # "Bristlenose is installed, but ...", so they start in lower case.
 
         # ----- 4. PATH, now and for new windows --------------------------------
         $toolBin = (& uv tool dir --bin 2>$null | Out-String).Trim()
-        if ($LASTEXITCODE -ne 0 -or -not $toolBin) { Exit-Install 'uv installed Bristlenose but would not say where. Run uv tool dir --bin to see why.' }
+        if ($LASTEXITCODE -ne 0 -or -not $toolBin) { Exit-Install 'uv would not say where it is. Run uv tool dir --bin to see why.' }
         # Quietly: its own advice ("Restart your shell") is wrong once we have
         # updated this window's PATH ourselves.
         $null = & uv tool update-shell 2>&1
@@ -267,7 +273,7 @@
         Sync-SessionPath
         Add-SessionPath $toolBin
         $found = Get-Command bristlenose -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-        if (-not $found) { Exit-Install "Bristlenose was installed to $toolBin, but this window cannot find it. Open a new terminal and run bristlenose doctor." }
+        if (-not $found) { Exit-Install "this window cannot find it in $toolBin. Open a new terminal and run bristlenose doctor." }
         if ((Split-Path -Parent $found.Source).TrimEnd('\') -ne $toolBin.TrimEnd('\')) {
             Write-Caution "Another bristlenose comes first on PATH: $($found.Source). The one just installed is in $toolBin."
         }
@@ -275,7 +281,7 @@
         # ----- 5. Check --------------------------------------------------------
         Write-Step 'Checking the installation (bristlenose doctor)'
         & $found.Source doctor
-        if ($LASTEXITCODE -ne 0) { Exit-Install "Bristlenose is installed, but bristlenose doctor did not run (exit code $LASTEXITCODE; its message is above)." }
+        if ($LASTEXITCODE -ne 0) { Exit-Install "bristlenose doctor did not run (exit code $LASTEXITCODE; its message is above). Open a new terminal and run bristlenose doctor to check it." }
 
         Write-Host ''
         Write-Host 'Bristlenose is installed.' -ForegroundColor Green
@@ -286,14 +292,18 @@
         Write-Host '(or chatgpt, gemini, azure, local). If a new terminal says bristlenose is not found, sign out and back in.'
     } catch {
         $message = $_.Exception.Message
-        if ($message.StartsWith('BRISTLENOSE-INSTALL: ')) {
-            $message = $message.Substring(21)
-        } else {
-            $message = "Something unexpected went wrong: $message (line $($_.InvocationInfo.ScriptLineNumber))"
-        }
+        $known = $message.StartsWith('BRISTLENOSE-INSTALL: ')
+        if ($known) { $message = $message.Substring(21) }
+        $where = "(line $($_.InvocationInfo.ScriptLineNumber))"
         Write-Host ''
-        Write-Host "Bristlenose was not installed. $message" -ForegroundColor Red
-        Write-Host 'The manual steps are at https://bristlenose.app/docs/install.html'
+        if ($installed) {
+            if (-not $known) { $message = "something unexpected went wrong after that: $message $where" }
+            Write-Host "Bristlenose is installed, but $message" -ForegroundColor Yellow
+        } else {
+            if (-not $known) { $message = "Something unexpected went wrong: $message $where" }
+            Write-Host "Bristlenose was not installed. $message" -ForegroundColor Red
+            Write-Host 'The manual steps are at https://bristlenose.app/docs/install.html'
+        }
         # Run as a file (CI, or powershell -File), report failure to the caller.
         # Run through `irm | iex`, `exit` would close the user's terminal, so don't.
         if ($PSCommandPath) { exit 1 }

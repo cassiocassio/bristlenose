@@ -111,7 +111,15 @@ open); `docs/testing/ratchet.json` names each.
    surfaces as "Access is denied"; https to a named host, raw GitHub included, was
    not blocked, and the plain form never was. Still open:
    - the message for a Group-Policy-set execution policy has never been seen;
-   - the Bypass form at the live URL is unrun on Windows 11 (proved on Server only);
+   - **the Bypass form needs `-NoProfile` when typed inside a PowerShell window.** On the
+     Windows 11 VM (5 Oct 2026, 0.34.0, short URL), `powershell -ExecutionPolicy Bypass -c
+     "irm … | iex"` fed `iex` the script line by line ("Cannot bind argument to parameter
+     'Command' because it is an empty string", then "Missing closing '}'") and exited 1,
+     twice; with `-NoProfile` added it upgraded and exited 0, twice. Also 0: the pipe
+     without `-ExecutionPolicy`, and `iex (irm …)` with it. `irm` returned one string every
+     time and no profile file exists, so the mechanism is unexplained. Launched from cmd,
+     SSH or a Run box it worked. No user doc gives this form; if one does, include
+     `-NoProfile`. The installer's own Astral call already does;
    - the short address is live only from the website deploy after 0.34.0; the redirect
      was proved under macOS's Apache, not yet on DreamHost or through Windows `irm`;
    - the installer can fetch a GTS-rooted host (astral.sh) before doctor's TLS check,

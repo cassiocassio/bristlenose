@@ -394,7 +394,7 @@ The command-line tool now installs and runs on Windows, through pipx or uv with 
 
 **New**
 
-- **One line installs Bristlenose on Windows.** In Terminal, `irm https://raw.githubusercontent.com/cassiocassio/bristlenose/main/scripts/windows/install.ps1 | iex` installs uv, FFmpeg and Bristlenose for your user, without administrator rights, then runs `bristlenose doctor`; run it again to upgrade. It works on x64 and on Windows on Arm, where Bristlenose runs through x64 Python and transcribes more slowly. If a company proxy or policy blocks a step, INSTALL.md has the same install one command at a time.
+- **One line installs Bristlenose on Windows.** In Terminal, `irm https://bristlenose.app/install.ps1 | iex` installs uv, FFmpeg and Bristlenose for your user, without administrator rights, then runs `bristlenose doctor`; run it again to upgrade. It works on x64 and on Windows on Arm, where Bristlenose runs through x64 Python and transcribes more slowly. If a company proxy or policy blocks a step, INSTALL.md has the same install one command at a time.
 - **Local AI installs on Windows.** `bristlenose configure local` now installs Ollama with winget, starts it and downloads a model, as it already did on macOS and Linux. Without winget, it points you to the download page.
 
 **Improved**

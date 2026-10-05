@@ -82,7 +82,7 @@ Press **Win + X** and click **Terminal**.
 Paste this line and press Enter:
 
 ```
-irm https://raw.githubusercontent.com/cassiocassio/bristlenose/main/scripts/windows/install.ps1 | iex
+irm https://bristlenose.app/install.ps1 | iex
 ```
 
 It installs, for you alone and without administrator rights:

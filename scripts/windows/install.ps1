@@ -1,6 +1,6 @@
 # Bristlenose installer for Windows.
 #
-#   irm https://raw.githubusercontent.com/cassiocassio/bristlenose/main/scripts/windows/install.ps1 | iex
+#   irm https://bristlenose.app/install.ps1 | iex
 #
 # Installs, for the current user and without administrator rights:
 #   1. uv, using Astral's own installer (skipped if uv is already on PATH)

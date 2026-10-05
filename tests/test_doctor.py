@@ -2211,6 +2211,10 @@ def test_doctor_table_prints_an_install_spec_whole(monkeypatch) -> None:
     ("win32", (3, 13), ("C:\\", "Users", "u", "pipx", "venvs", "bristlenose"),
      'pipx install --force "bristlenose[voice]"'),
     ("linux", (3, 14), ("home", "u", ".venv"), 'pip install "bristlenose[voice]"'),
+    ("win32", (3, 13), ("C:\\", "Users", "u", "AppData", "Roaming", "uv", "tools", "bristlenose"),
+     'uv tool install --force "bristlenose[voice]"'),
+    ("darwin", (3, 13), ("home", "u", ".local", "share", "uv", "tools", "bristlenose"),
+     'uv tool install --force "bristlenose[voice]"'),
     ("win32", (3, 14), ("C:\\", "Users", "u", "pipx", "venvs", "bristlenose"), "not available"),
 ])
 def test_voice_hint_names_a_command_that_can_work_here(monkeypatch, platform, version, prefix, hint) -> None:

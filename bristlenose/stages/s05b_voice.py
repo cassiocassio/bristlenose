@@ -127,6 +127,24 @@ class VoiceRecord:
 # ---------------------------------------------------------------------------
 
 
+def voice_install_hint() -> str:
+    """How to add the voice extra to this install, or why it cannot be added.
+
+    kaldi-native-fbank, which the voice front end needs, publishes no Windows
+    wheel for Python 3.14 (checked 5 Oct 2026), so on that pairing every
+    install command fails; the hint says so instead of offering one. Under
+    pipx, ``pip install`` would reach the wrong environment, and pipx's own
+    venvs live under a ``pipx`` directory on every platform.
+    """
+    import sys
+
+    if sys.platform == "win32" and sys.version_info >= (3, 14):
+        return "not available on Windows with Python 3.14 yet; Python 3.13 or earlier has it"
+    if "pipx" in Path(sys.prefix).parts:
+        return 'pipx install --force "bristlenose[voice]"'
+    return 'pip install "bristlenose[voice]"'
+
+
 def voice_runtime_available() -> bool:
     """True when the ``voice`` runtime is installed: onnxruntime (already a
     core dependency on the CLI, through faster-whisper) and kaldi-native-fbank,

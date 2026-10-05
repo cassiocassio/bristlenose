@@ -358,6 +358,7 @@ def check_voice(settings: BristlenoseSettings) -> CheckResult:
         VOICE_MODEL_ENV,
         cached_voice_model,
         load_voice_model,
+        voice_install_hint,
         voice_runtime_available,
     )
 
@@ -377,7 +378,7 @@ def check_voice(settings: BristlenoseSettings) -> CheckResult:
                                       "told apart from the text alone")
         return CheckResult(
             status=CheckStatus.SKIP, label=label,
-            detail=f"optional, not installed: {_voice_install_command()} "
+            detail=f"optional, not installed: {voice_install_hint()} "
                    "to tell speakers apart by voice",
         )
     override = os.environ.get(VOICE_MODEL_ENV)
@@ -953,17 +954,6 @@ def _is_brew_formula_install() -> bool:
     """
     parts = Path(sys.prefix).parts
     return "Cellar" in parts and "bristlenose" in parts
-
-
-def _voice_install_command() -> str:
-    """The command that adds the voice extra to *this* install.
-
-    Under pipx, ``pip install`` reaches the wrong environment; pipx's own
-    venvs live under a ``pipx`` directory on every platform.
-    """
-    if "pipx" in Path(sys.prefix).parts:
-        return 'pipx install --force "bristlenose[voice]"'
-    return 'pip install "bristlenose[voice]"'
 
 
 def check_brew_tap_trust() -> CheckResult:

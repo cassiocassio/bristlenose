@@ -1172,6 +1172,7 @@ class Pipeline:
             load_voice_model,
             refine_speakers_by_voice,
             resolve_voice_model,
+            voice_install_hint,
             voice_runtime_available,
         )
         from bristlenose.stages.s06_merge_transcript import (
@@ -1813,7 +1814,7 @@ class Pipeline:
                         if not self.settings.voice_pass:
                             _voice_off = "voice pass switched off (BRISTLENOSE_VOICE_PASS)"
                         elif not voice_runtime_available():
-                            _voice_off = 'voice extra not installed (pip install "bristlenose[voice]")'
+                            _voice_off = f"voice extra not installed ({voice_install_hint()})"
                         else:
                             status.update("[dim]Preparing the voice pass...[/dim]")
                             _voice_model, _voice_off = await asyncio.to_thread(

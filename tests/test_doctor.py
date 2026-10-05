@@ -2205,16 +2205,23 @@ def test_doctor_table_prints_an_install_spec_whole(monkeypatch) -> None:
     assert '"bristlenose[voice]"' in buf.getvalue()
 
 
-@pytest.mark.parametrize(("prefix", "command"), [
-    (("home", "u", ".local", "pipx", "venvs", "bristlenose"), 'pipx install --force "bristlenose[voice]"'),
-    (("C:\\", "Users", "u", "pipx", "venvs", "bristlenose"), 'pipx install --force "bristlenose[voice]"'),
-    (("home", "u", ".venv"), 'pip install "bristlenose[voice]"'),
+@pytest.mark.parametrize(("platform", "version", "prefix", "hint"), [
+    ("darwin", (3, 12), ("home", "u", ".local", "pipx", "venvs", "bristlenose"),
+     'pipx install --force "bristlenose[voice]"'),
+    ("win32", (3, 13), ("C:\\", "Users", "u", "pipx", "venvs", "bristlenose"),
+     'pipx install --force "bristlenose[voice]"'),
+    ("linux", (3, 14), ("home", "u", ".venv"), 'pip install "bristlenose[voice]"'),
+    ("win32", (3, 14), ("C:\\", "Users", "u", "pipx", "venvs", "bristlenose"), "not available"),
 ])
-def test_voice_hint_names_the_command_for_this_install(monkeypatch, prefix, command) -> None:
-    """A pipx user told to `pip install` adds the extra to some other Python."""
+def test_voice_hint_names_a_command_that_can_work_here(monkeypatch, platform, version, prefix, hint) -> None:
+    """A pipx user told to `pip install` adds the extra to some other Python;
+    and on Windows with Python 3.14 kaldi-native-fbank has no wheel, so every
+    command fails (seen on the Windows VM, 5 Oct 2026) — the hint says so."""
     import sys
 
-    from bristlenose import doctor
+    from bristlenose.stages.s05b_voice import voice_install_hint
 
+    monkeypatch.setattr(sys, "platform", platform)
+    monkeypatch.setattr(sys, "version_info", version)
     monkeypatch.setattr(sys, "prefix", str(Path(*prefix)))
-    assert doctor._voice_install_command() == command
+    assert voice_install_hint().startswith(hint)

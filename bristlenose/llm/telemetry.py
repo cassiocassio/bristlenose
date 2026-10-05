@@ -425,8 +425,10 @@ def trim_to_cap(path: Path, cap: int | None = None) -> int:
     parent = path.parent
     fd, tmp_name = tempfile.mkstemp(prefix=".llm-calls.", suffix=".tmp", dir=parent)
     tmp_path = Path(tmp_name)
+    # mkstemp already creates the file 0o600 (a umask can only narrow it).
+    # An explicit os.fchmod here raised AttributeError on Windows, which has
+    # none, at the terminus of every run once the log passed the cap.
     try:
-        os.fchmod(fd, 0o600)
         os.write(fd, b"".join(keep))
         os.fsync(fd)
     finally:

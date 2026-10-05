@@ -574,7 +574,7 @@ async def _run_clip_extraction(
             "clips": manifest_entries,
         }
         manifest_path = clips_dir / "clips_manifest.json"
-        manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=True))
+        manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=True), encoding="utf-8")
 
         # A cancelled job broke out of the loop early — record that, don't
         # overwrite it with "completed". Clips written before the break stay on

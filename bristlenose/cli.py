@@ -154,7 +154,7 @@ def _should_auto_doctor() -> bool:
     if not sentinel.exists():
         return True
     try:
-        content = sentinel.read_text().strip()
+        content = sentinel.read_text(encoding="utf-8").strip()
         return content != __version__
     except OSError:
         return True
@@ -197,7 +197,7 @@ def _write_doctor_sentinel() -> None:
     sentinel = _doctor_sentinel_file()
     try:
         sentinel.parent.mkdir(parents=True, exist_ok=True)
-        sentinel.write_text(__version__)
+        sentinel.write_text(__version__, encoding="utf-8")
     except OSError:
         pass  # non-critical
     _install_man_page()

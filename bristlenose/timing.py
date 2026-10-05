@@ -191,7 +191,7 @@ def load_timing_data(config_dir: Path) -> dict[str, Any]:
     if not path.exists():
         return {"version": 1, "profiles": {}}
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(data, dict) or "profiles" not in data:
             return {"version": 1, "profiles": {}}
         return data
@@ -205,7 +205,7 @@ def save_timing_data(data: dict[str, Any], config_dir: Path) -> None:
     path = _timing_path(config_dir)
     try:
         config_dir.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(data, indent=2) + "\n")
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     except OSError:
         logger.debug("Could not save timing data to %s", path)
 

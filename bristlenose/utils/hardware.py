@@ -94,7 +94,7 @@ def _load_hardware_cache() -> dict[str, Any] | None:
     try:
         if not _CACHE_FILE.exists():
             return None
-        data = json.loads(_CACHE_FILE.read_text())
+        data = json.loads(_CACHE_FILE.read_text(encoding="utf-8"))
         if time.time() - data.get("timestamp", 0) < _CACHE_TTL_SECONDS:
             logger.debug("Using cached hardware info (age: %.0fs)", time.time() - data["timestamp"])
             return data
@@ -116,7 +116,7 @@ def _save_hardware_cache(
             "memory_gb": memory_gb,
             "timestamp": time.time(),
         }
-        _CACHE_FILE.write_text(json.dumps(data))
+        _CACHE_FILE.write_text(json.dumps(data), encoding="utf-8")
     except Exception:
         logger.debug("Could not write hardware cache")
 
@@ -247,7 +247,7 @@ def _get_system_memory_gb() -> float | None:
             _ = shutil.disk_usage("/").total  # not memory, but a fallback
             # Better: read /proc/meminfo on Linux
             if platform.system() == "Linux":
-                with open("/proc/meminfo") as f:
+                with open("/proc/meminfo", encoding="utf-8") as f:
                     for line in f:
                         if line.startswith("MemTotal:"):
                             kb = int(line.split()[1])

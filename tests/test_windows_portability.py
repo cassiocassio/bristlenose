@@ -81,7 +81,7 @@ def test_open_private_still_refuses_a_symlink(tmp_path: Path) -> None:
     from bristlenose.utils.fs import open_private
 
     target = tmp_path / "elsewhere"
-    target.write_text("x")
+    target.write_text("x", encoding="utf-8")
     link = tmp_path / "link"
     link.symlink_to(target)
     with pytest.raises(OSError):
@@ -253,3 +253,33 @@ def test_llm_log_trims_without_fchmod(tmp_path: Path, monkeypatch: pytest.Monkey
     assert [p.name for p in tmp_path.iterdir()] == ["llm-calls.jsonl"]
     if os.name == "posix":
         assert path.stat().st_mode & 0o777 == 0o600
+
+
+def test_every_text_file_read_and_write_names_its_encoding() -> None:
+    """``open``/``read_text``/``write_text`` default to the locale codepage too.
+
+    On Windows that is cp1252: a transcript, a quote or a participant name
+    outside it raises on write and mis-reads on load. Binary modes are exempt.
+    """
+    import ast
+
+    offenders = []
+    for path in _PKG.rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(node, ast.Call) or any(k.arg == "encoding" for k in node.keywords):
+                continue
+            func = node.func
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+            if name in ("read_text", "write_text"):
+                offenders.append(f"{path.relative_to(_PKG)}:{node.lineno}")
+            elif name == "open" and not (
+                isinstance(func, ast.Attribute) and getattr(func.value, "id", "") in ("os", "webbrowser")
+            ):
+                mode_at = 0 if isinstance(func, ast.Attribute) else 1
+                mode = next((k.value for k in node.keywords if k.arg == "mode"), None)
+                if mode is None and len(node.args) > mode_at:
+                    mode = node.args[mode_at]
+                text = mode is None or (isinstance(mode, ast.Constant) and "b" not in str(mode.value))
+                if text and (node.args or isinstance(func, ast.Attribute)):
+                    offenders.append(f"{path.relative_to(_PKG)}:{node.lineno}")
+    assert offenders == [], f"add encoding='utf-8' to: {offenders}"

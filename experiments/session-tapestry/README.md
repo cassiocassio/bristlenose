@@ -50,6 +50,8 @@ Not wired yet:
 - Projects analysed before this change show neutral clips until their next `run`.
 
 
+**Tuning lives in `frontend/src/utils/tapestryTuning.ts`, and the playground stays (decided 6 Oct 2026).** The defaults there are the shipped type steps and container padding. Under `serve --dev`, a slider icon beside the zoom opens `TapestryPlayground`. It moves each kind of text along the existing `--bn-text-*` ladder, the popover padding along `--bn-space-*`, and the pixel paddings and bar width only through the snapped lists in `PAD_STEPS`. It then lists the changes to commit. It is dev-only and code-split, so it is not dead code: keep it.
+
 **Decided (6 Oct 2026): the zoom has no keyboard shortcut.** ⌘+ and ⌘− stay the browser's text zoom, because readers rely on text size more than they would on a timeline zoom. Don't add a shortcut.
 
 **Review calls (6 Oct 2026):**

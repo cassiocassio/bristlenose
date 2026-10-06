@@ -169,22 +169,46 @@ def renumber(db: DbSession, project_id: int) -> None:
 
 
 def release(db: DbSession, person_ids: set[int | None]) -> None:
-    """Delete the moderator and observer identities no slot points at any more.
+    """Let go of identities no slot points at any more — and keep them.
 
-    An identity with no session cannot be offered by the picker until the bank
-    exists, so it goes — except the researcher themselves (``me``). Participants
-    are never released here: their stale-session cleanup owns them.
+    A person with no session is hidden, not deleted: ``identities`` and the
+    routes derive everything from slots, so nothing lists them, while the
+    record survives for an undo to point back at and for a later type-ahead
+    to offer again (owner, 6 Oct 2026; ``design-people.md`` §J8.10). Deleting
+    a person is the People lens's act. All this does is flush, so the slots'
+    new pointers are visible to the renumber that follows.
     """
+    del person_ids
     db.flush()
-    for pid in {p for p in person_ids if p is not None}:
-        if db.query(SessionSpeaker).filter_by(person_id=pid).first() is not None:
+
+
+def label_taken(
+    db: DbSession, project_id: int, names: list[str | None], *, but: Person | None,
+) -> str | None:
+    """The name another moderator or observer already goes by, if any.
+
+    Two people may share a name in the world, but not in one study's picker:
+    a second "Martin" is either a real second Martin, who needs telling apart
+    ("Martin S"), or a researcher making someone new instead of picking the
+    Martin in the list. Either way the write is refused (owner, 6 Oct 2026;
+    ``design-people.md`` §J8.11). Case-insensitive; only the people a slot
+    points at, so a hidden person never blocks a name.
+    """
+    wanted = {n.strip().casefold() for n in names if n and n.strip()}
+    if not wanted:
+        return None
+    for code, person in identities(db, project_id).items():
+        if person is but or not is_team_code(code):
             continue
-        person = db.get(Person, pid)
-        if person is None or person.me:
-            continue
-        if person.code is not None and not is_team_code(person.code):
-            continue
-        db.delete(person)
+        for held in (person.full_name, person.short_name):
+            if held and held.strip().casefold() in wanted:
+                return held
+    return None
+
+
+def by_uuid(db: DbSession, uuid: str) -> Person | None:
+    """The person with this uuid, whether or not a slot points at them."""
+    return db.query(Person).filter_by(uuid=uuid).first()
 
 
 def point(
@@ -197,23 +221,3 @@ def point(
     sp.state = state if person is not None else None
     sp.evidence = evidence if person is not None else None
     return old if old != sp.person_id else None
-
-
-def shared(db: DbSession, sp: SessionSpeaker) -> bool:
-    """Whether another slot points at this slot's person."""
-    if sp.person_id is None:
-        return False
-    return (
-        db.query(SessionSpeaker)
-        .filter(SessionSpeaker.person_id == sp.person_id, SessionSpeaker.id != sp.id)
-        .first()
-    ) is not None
-
-
-def named(db: DbSession, project_id: int, prefix: str, name: str) -> Person | None:
-    """The identity of this role a person means by ``name``: its full name,
-    short name, or the display name the picker lists."""
-    for code, person in identities(db, project_id).items():
-        if code[:1] == prefix and name in {person.full_name, person.short_name}:
-            return person
-    return None

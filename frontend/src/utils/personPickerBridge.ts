@@ -14,40 +14,63 @@ import type { TFunction } from "i18next";
 import {
   personPickerChoice,
   personPickerLabels,
+  personPickerNameTaken,
+  personPickerNewCode,
   personPickerRows,
+  personPickerTyped,
   type PersonPickerChoice,
   type PersonPickerLabels,
+  type PersonPickerRow,
   type PersonPickerSlot,
 } from "./personPicker";
 
 export interface WirePersonPicker {
   sessionId: string;
   slot: PersonPickerSlot;
-  /** The rows, in order — the slot's own name among them when it has one. */
+  /** The rows' names, in order — the slot's own name among them when it has
+   *  one. Unique within a role (§J8.11), so a name names one person. */
   names: string[];
+  /** Each row's own code, parallel to `names` (§J8.8). */
+  codes: string[];
+  /** The code someone new would get. */
+  newCode: string;
   /** The badge, in CSS pixels from the web view's top-left. */
   anchor: { x: number; y: number; width: number; height: number };
   labels: PersonPickerLabels;
 }
 
+/** What native picked: a listed row, a typed name, or That's Me. */
+export type WireNativeChoice =
+  | { kind: "confirm" }
+  | { kind: "name" | "new" | "me"; name: string };
+
 /** What `personPickerChoose` carries back. */
-export interface WirePersonPickerChoice {
+export interface WirePersonPickerReply {
   sessionId: string;
   code: string;
-  choice: PersonPickerChoice;
+  choice: WireNativeChoice;
 }
+
+/** A reply as the grid applies it: a choice, or a typed name another person
+ *  already goes by, which the grid refuses aloud (§J8.11). */
+export type ResolvedPersonPick =
+  | { sessionId: string; code: string; choice: PersonPickerChoice }
+  | { sessionId: string; code: string; taken: string };
 
 export function buildPersonPickerMessage(
   sessionId: string,
   slot: PersonPickerSlot,
-  knownNames: string[],
+  known: PersonPickerRow[],
   anchor: { x: number; y: number; width: number; height: number },
   t: TFunction,
 ): WirePersonPicker {
+  const rows = personPickerRows(slot, known);
   return {
     sessionId,
     slot,
-    names: personPickerRows(slot, knownNames),
+    names: rows.map((r) => r.name),
+    codes: rows.map((r) => r.code),
+    newCode: personPickerNewCode(slot, rows),
     anchor: {
       x: Math.round(anchor.x),
       y: Math.round(anchor.y),
@@ -59,32 +82,51 @@ export function buildPersonPickerMessage(
 }
 
 /** Read a `personPickerChoose` payload; anything malformed is null. */
-export function parsePersonPickerChoice(payload: unknown): WirePersonPickerChoice | null {
+export function parsePersonPickerChoice(payload: unknown): WirePersonPickerReply | null {
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
   const choice = p.choice as Record<string, unknown> | undefined;
   if (typeof p.sessionId !== "string" || typeof p.code !== "string" || !choice) return null;
   if (choice.kind === "confirm") return { sessionId: p.sessionId, code: p.code, choice: { kind: "confirm" } };
-  if (choice.kind === "name" && typeof choice.name === "string" && choice.name.trim()) {
-    return { sessionId: p.sessionId, code: p.code, choice: { kind: "name", name: choice.name.trim() } };
+  const kind = choice.kind;
+  if (
+    (kind === "name" || kind === "new" || kind === "me") &&
+    typeof choice.name === "string" &&
+    choice.name.trim()
+  ) {
+    return { sessionId: p.sessionId, code: p.code, choice: { kind, name: choice.name.trim() } };
   }
   return null;
 }
 
 /**
- * Native's pick as the grid applies it. The native picker sends the name that
- * was picked; what it means — a yes to the slot's own proposed name, a rename,
- * or nothing — is decided here with `personPickerChoice`, the rule the web
- * picker uses, against the slot as the grid holds it now.
+ * Native's pick as the grid applies it. Native sends a name and which row it
+ * came from; what it means is decided here, by the web picker's own rules,
+ * against the slot and rows as the grid holds them now:
+ * - `name`: the listed person by that name (a yes, if it is the slot's own);
+ * - `new`: someone new — refused if another person already goes by it;
+ * - `me`: the listed person by the account's name, else someone new.
  */
 export function resolvePersonPickerChoice(
   payload: unknown,
-  slotFor: (sessionId: string, code: string) => PersonPickerSlot | null,
-): WirePersonPickerChoice | null {
+  slotFor: (sessionId: string, code: string) => { slot: PersonPickerSlot; known: PersonPickerRow[] } | null,
+): ResolvedPersonPick | null {
   const pick = parsePersonPickerChoice(payload);
-  if (!pick || pick.choice.kind === "confirm") return pick;
-  const slot = slotFor(pick.sessionId, pick.code);
-  if (!slot) return null;
-  const choice = personPickerChoice(slot, pick.choice.name);
-  return choice ? { sessionId: pick.sessionId, code: pick.code, choice } : null;
+  if (!pick) return null;
+  const { sessionId, code } = pick;
+  if (pick.choice.kind === "confirm") return { sessionId, code, choice: { kind: "confirm" } };
+  const found = slotFor(sessionId, code);
+  if (!found) return null;
+  const { slot } = found;
+  const rows = personPickerRows(slot, found.known);
+  const { kind, name } = pick.choice;
+  const listed = rows.find((r) => r.name === name);
+  if (kind === "name" || (kind === "me" && listed)) {
+    const choice = listed ? personPickerChoice(slot, listed) : null;
+    return choice ? { sessionId, code, choice } : null;
+  }
+  const clash = personPickerNameTaken(slot, rows, name);
+  if (clash) return { sessionId, code, taken: clash };
+  const choice = personPickerTyped(slot, name);
+  return choice ? { sessionId, code, choice } : null;
 }

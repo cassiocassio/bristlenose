@@ -136,7 +136,8 @@
       "newObserver": "Nuevo observador",
       "newNameFor": "Nuevo nombre para {{code}}",
       "thatsMe": "Soy yo ({{name}})",
-      "proposedName": "{{code}}, nombre propuesto {{name}}"
+      "proposedName": "{{code}}, nombre propuesto {{name}}",
+      "nameTaken": "{{name}} ya est\u00e1 en la lista. Elige a esa persona o a\u00f1ade algo para distinguir a las dos."
     },
     "failedToLoad": "Error al cargar las sesiones: {{error}}",
     "loading": "Cargando sesiones…"

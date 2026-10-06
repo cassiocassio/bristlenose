@@ -12,6 +12,12 @@ export interface SpeakerNameState {
   full_name?: string;
   short_name: string;
   confirmed: boolean;
+  /** Moderators and observers: the person the slot points at (their uuid);
+   *  absent means nobody (`m?`). Names written with it land on that person. */
+  person?: string;
+  /** With `person`: someone new by that client-made uuid, so a redo points at
+   *  the same person instead of making a second one. */
+  create?: boolean;
 }
 
 export const PEOPLE_CHANGED_EVENT = "bn:people-changed";

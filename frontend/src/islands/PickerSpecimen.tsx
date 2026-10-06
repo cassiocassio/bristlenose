@@ -16,20 +16,32 @@ import { useState } from "react";
 
 import { PersonBadge } from "../components/PersonBadge";
 import { PersonPicker } from "../components/PersonPicker";
-import type { PersonPickerLabels, PersonPickerSlot, PickerRole } from "../utils/personPicker";
+import type {
+  PersonPickerLabels,
+  PersonPickerRow,
+  PersonPickerSlot,
+  PickerRole,
+} from "../utils/personPicker";
 
-/** The names the study knows, per role. */
-const KNOWN: Record<PickerRole, string[]> = {
-  moderator: ["Martin B Storey", "Kerri Ng"],
-  participant: ["Sarah Chen", "Dr Amara Nwosu", "Mary Adeyemi"],
-  observer: ["Jane Smith"],
+/** The people the study knows, per role. */
+const KNOWN: Record<PickerRole, PersonPickerRow[]> = {
+  moderator: [
+    { name: "Martin B Storey", code: "m1", person: "lab-martin" },
+    { name: "Kerri Ng", code: "m2", person: "lab-kerri" },
+  ],
+  participant: [
+    { name: "Sarah Chen", code: "p1" },
+    { name: "Dr Amara Nwosu", code: "p2" },
+    { name: "Mary Adeyemi", code: "p3" },
+  ],
+  observer: [{ name: "Jane Smith", code: "o1", person: "lab-jane" }],
 };
 
 /** The same four the native half offers; chosen in the lab's toolbar, which
  *  reloads this page with `?scenario=<name>`. */
 const SCENARIOS: Record<string, PersonPickerSlot> = {
-  proposed: { code: "m1", role: "moderator", name: "Martin B Storey", confirmed: false },
-  confirmed: { code: "m1", role: "moderator", name: "Martin B Storey", confirmed: true },
+  proposed: { code: "m1", role: "moderator", name: "Martin B Storey", confirmed: false, person: "lab-martin" },
+  confirmed: { code: "m1", role: "moderator", name: "Martin B Storey", confirmed: true, person: "lab-martin" },
   unknown: { code: "m1", role: "moderator", name: "", confirmed: false },
   participant: { code: "p3", role: "participant", name: "Mary Adeyemi", confirmed: false },
 };
@@ -56,6 +68,7 @@ function labels(slot: PersonPickerSlot): PersonPickerLabels {
     thatsMe: null,
     menu: `Edit name for ${slot.code}`,
     proposed: slot.name && !slot.confirmed ? `${slot.code}, proposed name ${slot.name}` : null,
+    nameTaken: "There’s already a {{name}}. Pick them from the list, or add something to tell them apart.",
   };
 }
 
@@ -81,13 +94,19 @@ export function PickerSpecimen() {
         {open && (
           <PersonPicker
             slot={slot}
-            knownNames={known[slot.role]}
+            known={known[slot.role]}
             labels={labels(slot)}
             onChoose={(choice) => {
-              const name = choice.kind === "name" ? choice.name : slot.name;
-              setSlot({ ...slot, name, confirmed: true });
-              if (!known[slot.role].includes(name)) {
-                setKnown({ ...known, [slot.role]: [...known[slot.role], name] });
+              if (choice.kind === "person") {
+                const { row } = choice;
+                setSlot({ ...slot, code: row.code, name: row.name, person: row.person, confirmed: true });
+              } else if (choice.kind === "new" || choice.kind === "name") {
+                const person = choice.kind === "new" ? `lab-${known[slot.role].length + 1}` : slot.person;
+                const row = { name: choice.name, code: slot.code, person };
+                setSlot({ ...slot, name: choice.name, person, confirmed: true });
+                setKnown({ ...known, [slot.role]: [...known[slot.role], row] });
+              } else {
+                setSlot({ ...slot, confirmed: true });
               }
             }}
             onClose={() => setOpen(false)}

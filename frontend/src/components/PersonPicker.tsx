@@ -4,19 +4,20 @@
  * The Mac app opens a native popover instead, from the same model
  * (`personPickerRows`), so the two cannot disagree about what is offered.
  *
- * v1.1, as the owner set it (4 Oct 2026):
+ * As the owner set it (4 Oct 2026; revised 6 Oct, docs/design-people.md §J8):
  * - The current answer carries the menu's tick; a proposed answer also wears
  *   the dotted ring, and Enter on it says yes (`confirm`).
- * - Moderator and observer rows are the names known for that role across the
- *   study, every row carrying this slot's own code ("this session's m1 is…"),
- *   because project-wide person codes are route C Phase 1, not built.
+ * - Moderator and observer rows are the people known for that role across the
+ *   study, each by their own code; a pick says this slot *is* that person.
  * - A participant's picker holds only that participant: choosing another
- *   participant's name would mean "the same person", a merge not built.
+ *   participant would mean "the same person", a merge not built.
  * - The role segments show all three roles with only the current one enabled:
  *   changing a speaker's role is the §J recode, not built.
- * - Someone new is the next row: this slot's code, with its name half as the
- *   field. No That's Me in the browser — there is no account to ask.
- * - Undo is picking again.
+ * - Someone new is the next row: the next free code, with its name half as the
+ *   field. An unknown speaker opens with the cursor there. A name another
+ *   person in the list goes by is refused (§J8.11). No That's Me in the
+ *   browser — there is no account to ask.
+ * - Undo is ⌘Z, or picking again.
  */
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
@@ -29,9 +30,13 @@ import {
   PICKER_ROLES,
   personPickerChoice,
   personPickerLabels,
+  personPickerNameTaken,
+  personPickerNewCode,
   personPickerRows,
+  personPickerTyped,
   type PersonPickerChoice,
   type PersonPickerLabels,
+  type PersonPickerRow,
   type PersonPickerSlot,
 } from "../utils/personPicker";
 
@@ -39,9 +44,9 @@ const NEW = "\u0000new";
 
 interface PersonPickerProps {
   slot: PersonPickerSlot;
-  /** Names known for this slot's role across the study (`personPickerRows`
+  /** People known for this slot's role across the study (`personPickerRows`
    *  filters and orders them). */
-  knownNames: string[];
+  known: PersonPickerRow[];
   /** Its strings, localised by the caller (`personPickerLabels`): the same
    *  object the Mac app's native picker receives. */
   labels: PersonPickerLabels;
@@ -49,13 +54,18 @@ interface PersonPickerProps {
   onClose: () => void;
 }
 
-export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: PersonPickerProps) {
-  const names = personPickerRows(slot, knownNames);
-  const rows = [...names, NEW];
-  // The selection opens on the current answer; with no answer, nothing is
-  // pre-selected, so a single Return cannot confirm a guess.
-  const [selected, setSelected] = useState<string | null>(slot.name && names.includes(slot.name) ? slot.name : null);
+export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonPickerProps) {
+  const people = personPickerRows(slot, known);
+  const keyOf = (r: PersonPickerRow) => r.person ?? `name:${r.name}`;
+  const rows = [...people.map(keyOf), NEW];
+  const own = people.find((r) => (slot.person ? r.person === slot.person : r.name === slot.name));
+  // The selection opens on the current answer. With no answer there is nothing
+  // to confirm, so the cursor starts in the new-person field (§J8.10) — and a
+  // single Return there, empty, does nothing.
+  const [selected, setSelected] = useState<string | null>(own ? keyOf(own) : NEW);
   const [draft, setDraft] = useState("");
+  const [taken, setTaken] = useState<string | null>(null);
+  const newCode = personPickerNewCode(slot, people);
   const menuRef = useRef<HTMLUListElement>(null);
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
   const typed = useRef({ buffer: "", at: 0 });
@@ -85,11 +95,24 @@ export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: Pe
       ?.querySelector<HTMLElement>(".bn-person-picker-trigger")
       ?.focus();
 
-  const choose = (name: string) => {
-    const choice = personPickerChoice(slot, name);
+  const finish = (choice: PersonPickerChoice | null) => {
     if (choice) onChoose(choice);
     returnFocus();
     onClose();
+  };
+
+  const choose = (key: string) => {
+    const row = people.find((r) => keyOf(r) === key);
+    if (row) finish(personPickerChoice(slot, row));
+  };
+
+  const submitDraft = () => {
+    const clash = personPickerNameTaken(slot, people, draft);
+    if (clash) {
+      setTaken(clash);
+      return;
+    }
+    finish(personPickerTyped(slot, draft));
   };
 
   const dismiss = () => {
@@ -121,10 +144,10 @@ export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: Pe
       const now = e.timeStamp;
       typed.current.buffer = (now - typed.current.at < 800 ? typed.current.buffer : "") + e.key.toLowerCase();
       typed.current.at = now;
-      const hit = names.find((n) =>
-        n.toLowerCase().split(/\s+/).some((w) => w.startsWith(typed.current.buffer)),
+      const hit = people.find((r) =>
+        r.name.toLowerCase().split(/\s+/).some((w) => w.startsWith(typed.current.buffer)),
       );
-      if (hit) setSelected(hit);
+      if (hit) setSelected(keyOf(hit));
     }
   };
 
@@ -156,29 +179,30 @@ export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: Pe
           ))}
         </span>
       </li>
-      {names.map((name) => {
-        const isAnswer = name === slot.name;
+      {people.map((row) => {
+        const key = keyOf(row);
+        const isAnswer = row === own;
         return (
           // Keys are the list's (onListKey: arrows, Enter, Space, type-to-jump).
           // A key handler here as well chose twice on one Space press.
           // eslint-disable-next-line jsx-a11y/click-events-have-key-events
           <li
-            key={name}
-            ref={(el) => { itemRefs.current[name] = el; }}
+            key={key}
+            ref={(el) => { itemRefs.current[key] = el; }}
             className="export-dropdown-item export-dropdown-scope"
             role="menuitemradio"
             aria-checked={isAnswer}
             aria-label={isAnswer && labels.proposed ? labels.proposed : undefined}
             tabIndex={-1}
-            onClick={() => choose(name)}
+            onClick={() => choose(key)}
           >
             <span className="export-dropdown-check" aria-hidden="true">{isAnswer && <Icon name="check" size="menu" />}</span>
             {isAnswer && !slot.confirmed ? (
               <span className="bn-person-proposed">
-                <PersonBadge code={slot.code} role={slot.role} name={name} />
+                <PersonBadge code={row.code} role={slot.role} name={row.name} />
               </span>
             ) : (
-              <PersonBadge code={slot.code} role={slot.role} name={name} />
+              <PersonBadge code={row.code} role={slot.role} name={row.name} />
             )}
           </li>
         );
@@ -191,19 +215,21 @@ export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: Pe
         <span className="export-dropdown-check" aria-hidden="true" />
         <span className="bn-person-badge">
           <span className="bn-speaker-badge--split">
-            <span className="bn-speaker-badge-code">{slot.code}</span>
+            <span className="bn-speaker-badge-code">{newCode}</span>
             <span className="bn-speaker-badge-name bn-picker-new-name">
               <span aria-hidden="true">{draft || newPrompt}</span>
               <input
                 ref={(el) => { itemRefs.current[NEW] = el; }}
                 placeholder={newPrompt}
                 aria-label={newPrompt}
+                aria-invalid={taken !== null}
+                aria-describedby={taken !== null ? "bn-picker-taken" : undefined}
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={(e) => { setDraft(e.target.value); setTaken(null); }}
                 onFocus={() => setSelected(NEW)}
                 onKeyDown={(e) => {
                   const handled = () => { e.preventDefault(); e.stopPropagation(); };
-                  if (e.key === "Enter") { handled(); choose(draft); }
+                  if (e.key === "Enter") { handled(); submitDraft(); }
                   else if (e.key === "Escape") { handled(); dismiss(); }
                   else if (e.key === "ArrowUp") { handled(); move(-1); }
                 }}
@@ -212,6 +238,11 @@ export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: Pe
           </span>
         </span>
       </li>
+      {taken !== null && (
+        <li id="bn-picker-taken" className="export-dropdown-hint" role="alert">
+          {labels.nameTaken.replace("{{name}}", taken)}
+        </li>
+      )}
     </ul>
   );
 }

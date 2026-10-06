@@ -42,7 +42,10 @@ export function actionFor(code: string, before: SpeakerNameState, after: Speaker
 
 function sameState(a: SpeakerNameState, b: SpeakerNameState): boolean {
   return (
-    a.full_name === b.full_name && a.short_name === b.short_name && a.confirmed === b.confirmed
+    a.full_name === b.full_name &&
+    a.short_name === b.short_name &&
+    a.confirmed === b.confirmed &&
+    a.person === b.person
   );
 }
 
@@ -62,7 +65,20 @@ function slotPath(sessionId: string, code: string): string {
 
 async function writeSlot(sessionId: string, code: string, state: SpeakerNameState): Promise<void> {
   if (isSessionScopedCode(code)) {
-    await sendPut(slotPath(sessionId, code), state);
+    // One request carries the whole state: the person, their names (a
+    // spelling fix wherever they appear) and the flag; nobody is `clear`.
+    await sendPut(
+      slotPath(sessionId, code),
+      state.person
+        ? {
+            person: state.person,
+            ...(state.create ? { create: true } : {}),
+            full_name: state.full_name,
+            short_name: state.short_name,
+            confirmed: state.confirmed,
+          }
+        : { clear: true },
+    );
     return;
   }
   // Fresh, not the caller's copy: by the time an undo runs, other
@@ -113,6 +129,12 @@ export function nameSpeaker({ sessionId, code, before, after }: NameSpeakerArgs)
     },
   });
   return done;
+}
+
+/** Resolves when every queued write has landed (or failed), so a view can
+ *  re-read what the server renumbered. */
+export function speakerWritesSettled(): Promise<void> {
+  return queue;
 }
 
 /** Test seam: drop any queued writes' ordering. */

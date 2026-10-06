@@ -1,27 +1,82 @@
 {
-  "_comment": "The person picker across the Mac bridge (docs/design-people.md § UX iteration 3). Vitest (frontend/src/utils/personPickerBridge.test.ts) builds each web_to_native `wire` from `input` with the English strings, and resolves each native_to_web `payload` against its `slot` to `effect`. Swift (BristlenoseTests/PersonPickerContractTests.swift) decodes every `wire` exactly as BridgeHandler receives it and builds every `payload` from `native`. Change a shape here first, then both sides.",
-  "version": 2,
+  "_comment": "The person picker across the Mac bridge (docs/design-people.md § UX iteration 3). Vitest (frontend/src/utils/personPickerBridge.test.ts) builds each web_to_native `wire` from `input` with the English strings, and resolves each native_to_web `payload` against its `slot` to `effect`. Swift (BristlenoseTests/PersonPickerContractTests.swift) decodes every `wire` exactly as BridgeHandler receives it and builds every `payload` from `native`. Change a shape here first, then both sides. Version 3 (6 Oct 2026, design-people.md §J8): rows carry their own codes, the new row the next free one, and a reply says which row it came from — a listed name, a typed one (`new`) or That's Me (`me`) — so a typed name is never read as a pick. A reply the SPA refuses resolves to `{\"taken\": name}`.",
+  "version": 3,
   "web_to_native": [
     {
-      "name": "a proposed moderator, every moderator name known, with That's Me",
+      "name": "a proposed moderator, every moderator known once, each by their own code",
       "input": {
         "sessionId": "s1",
-        "slot": { "code": "m1", "role": "moderator", "name": "Martin B Storey", "confirmed": false },
-        "knownNames": ["Kerri Ng", "Martin B Storey", "Kerri Ng", ""],
-        "anchor": { "x": 10.4, "y": 20.6, "width": 30, "height": 17.5 }
+        "slot": {
+          "code": "m1",
+          "role": "moderator",
+          "name": "Martin B Storey",
+          "confirmed": false,
+          "person": "id-martin"
+        },
+        "known": [
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "Martin B Storey",
+            "code": "m1",
+            "person": "id-martin"
+          },
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "",
+            "code": "m?"
+          }
+        ],
+        "anchor": {
+          "x": 10.4,
+          "y": 20.6,
+          "width": 30,
+          "height": 17.5
+        }
       },
       "wire": {
         "sessionId": "s1",
-        "slot": { "code": "m1", "role": "moderator", "name": "Martin B Storey", "confirmed": false },
-        "names": ["Kerri Ng", "Martin B Storey"],
-        "anchor": { "x": 10, "y": 21, "width": 30, "height": 18 },
+        "slot": {
+          "code": "m1",
+          "role": "moderator",
+          "name": "Martin B Storey",
+          "confirmed": false,
+          "person": "id-martin"
+        },
+        "names": [
+          "Kerri Ng",
+          "Martin B Storey"
+        ],
+        "codes": [
+          "m2",
+          "m1"
+        ],
+        "newCode": "m3",
+        "anchor": {
+          "x": 10,
+          "y": 21,
+          "width": 30,
+          "height": 18
+        },
         "labels": {
-          "roles": { "moderator": "Moderator", "participant": "Participant", "observer": "Observer" },
+          "roles": {
+            "moderator": "Moderator",
+            "participant": "Participant",
+            "observer": "Observer"
+          },
           "roleGroup": "Role",
           "newPrompt": "New moderator",
           "thatsMe": "That’s Me ({{name}})",
           "menu": "Edit name for m1",
-          "proposed": "m1, proposed name Martin B Storey"
+          "proposed": "m1, proposed name Martin B Storey",
+          "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart."
         }
       }
     },
@@ -29,47 +84,392 @@
       "name": "a participant: only themself, a new name for that code, no That's Me",
       "input": {
         "sessionId": "s3",
-        "slot": { "code": "p3", "role": "participant", "name": "Mary Adeyemi", "confirmed": true },
-        "knownNames": ["Sarah Chen", "Mary Adeyemi"],
-        "anchor": { "x": 0, "y": 0, "width": 24, "height": 18 }
+        "slot": {
+          "code": "p3",
+          "role": "participant",
+          "name": "Mary Adeyemi",
+          "confirmed": true
+        },
+        "known": [
+          {
+            "name": "Sarah Chen",
+            "code": "p1"
+          },
+          {
+            "name": "Mary Adeyemi",
+            "code": "p3"
+          }
+        ],
+        "anchor": {
+          "x": 0,
+          "y": 0,
+          "width": 24,
+          "height": 18
+        }
       },
       "wire": {
         "sessionId": "s3",
-        "slot": { "code": "p3", "role": "participant", "name": "Mary Adeyemi", "confirmed": true },
-        "names": ["Mary Adeyemi"],
-        "anchor": { "x": 0, "y": 0, "width": 24, "height": 18 },
+        "slot": {
+          "code": "p3",
+          "role": "participant",
+          "name": "Mary Adeyemi",
+          "confirmed": true
+        },
+        "names": [
+          "Mary Adeyemi"
+        ],
+        "codes": [
+          "p3"
+        ],
+        "newCode": "p3",
+        "anchor": {
+          "x": 0,
+          "y": 0,
+          "width": 24,
+          "height": 18
+        },
         "labels": {
-          "roles": { "moderator": "Moderator", "participant": "Participant", "observer": "Observer" },
+          "roles": {
+            "moderator": "Moderator",
+            "participant": "Participant",
+            "observer": "Observer"
+          },
           "roleGroup": "Role",
           "newPrompt": "New name for p3",
           "thatsMe": null,
           "menu": "Edit name for p3",
-          "proposed": null
+          "proposed": null,
+          "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart."
         }
       }
     }
   ],
   "native_to_web": [
     {
-      "name": "picking another name renames the slot",
-      "native": { "sessionId": "s1", "code": "m1", "name": "Kerri Ng" },
-      "payload": { "sessionId": "s1", "code": "m1", "choice": { "kind": "name", "name": "Kerri Ng" } },
-      "slot": { "code": "m1", "role": "moderator", "name": "Martin B Storey", "confirmed": false },
-      "effect": { "kind": "name", "name": "Kerri Ng" }
+      "name": "picking another listed person points the slot at them",
+      "native": {
+        "sessionId": "s1",
+        "code": "m1",
+        "name": "Kerri Ng",
+        "kind": "name"
+      },
+      "payload": {
+        "sessionId": "s1",
+        "code": "m1",
+        "choice": {
+          "kind": "name",
+          "name": "Kerri Ng"
+        }
+      },
+      "slot": {
+        "code": "m1",
+        "role": "moderator",
+        "name": "Martin B Storey",
+        "confirmed": false,
+        "person": "id-martin"
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "effect": {
+        "kind": "person",
+        "row": {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        }
+      }
     },
     {
       "name": "picking the slot's own proposed name is a yes",
-      "native": { "sessionId": "s1", "code": "m1", "name": "Martin B Storey" },
-      "payload": { "sessionId": "s1", "code": "m1", "choice": { "kind": "name", "name": "Martin B Storey" } },
-      "slot": { "code": "m1", "role": "moderator", "name": "Martin B Storey", "confirmed": false },
-      "effect": { "kind": "confirm" }
+      "native": {
+        "sessionId": "s1",
+        "code": "m1",
+        "name": "Martin B Storey",
+        "kind": "name"
+      },
+      "payload": {
+        "sessionId": "s1",
+        "code": "m1",
+        "choice": {
+          "kind": "name",
+          "name": "Martin B Storey"
+        }
+      },
+      "slot": {
+        "code": "m1",
+        "role": "moderator",
+        "name": "Martin B Storey",
+        "confirmed": false,
+        "person": "id-martin"
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "effect": {
+        "kind": "confirm"
+      }
     },
     {
       "name": "picking the slot's own confirmed name changes nothing",
-      "native": { "sessionId": "s3", "code": "p3", "name": "Mary Adeyemi" },
-      "payload": { "sessionId": "s3", "code": "p3", "choice": { "kind": "name", "name": "Mary Adeyemi" } },
-      "slot": { "code": "p3", "role": "participant", "name": "Mary Adeyemi", "confirmed": true },
+      "native": {
+        "sessionId": "s3",
+        "code": "p3",
+        "name": "Mary Adeyemi",
+        "kind": "name"
+      },
+      "payload": {
+        "sessionId": "s3",
+        "code": "p3",
+        "choice": {
+          "kind": "name",
+          "name": "Mary Adeyemi"
+        }
+      },
+      "slot": {
+        "code": "p3",
+        "role": "participant",
+        "name": "Mary Adeyemi",
+        "confirmed": true
+      },
+      "known": [
+        {
+          "name": "Mary Adeyemi",
+          "code": "p3"
+        }
+      ],
       "effect": null
+    },
+    {
+      "name": "a typed name is someone new",
+      "native": {
+        "sessionId": "s2",
+        "code": "m?",
+        "name": "Mike Alvarez",
+        "kind": "new"
+      },
+      "payload": {
+        "sessionId": "s2",
+        "code": "m?",
+        "choice": {
+          "kind": "new",
+          "name": "Mike Alvarez"
+        }
+      },
+      "slot": {
+        "code": "m?",
+        "role": "moderator",
+        "name": "",
+        "confirmed": false
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "effect": {
+        "kind": "new",
+        "name": "Mike Alvarez"
+      }
+    },
+    {
+      "name": "a typed name another person goes by is refused",
+      "native": {
+        "sessionId": "s2",
+        "code": "m?",
+        "name": "kerri ng",
+        "kind": "new"
+      },
+      "payload": {
+        "sessionId": "s2",
+        "code": "m?",
+        "choice": {
+          "kind": "new",
+          "name": "kerri ng"
+        }
+      },
+      "slot": {
+        "code": "m?",
+        "role": "moderator",
+        "name": "",
+        "confirmed": false
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "effect": {
+        "taken": "Kerri Ng"
+      }
+    },
+    {
+      "name": "That's Me, already listed, picks that person",
+      "native": {
+        "sessionId": "s2",
+        "code": "m?",
+        "name": "Martin B Storey",
+        "kind": "me"
+      },
+      "payload": {
+        "sessionId": "s2",
+        "code": "m?",
+        "choice": {
+          "kind": "me",
+          "name": "Martin B Storey"
+        }
+      },
+      "slot": {
+        "code": "m?",
+        "role": "moderator",
+        "name": "",
+        "confirmed": false
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "effect": {
+        "kind": "person",
+        "row": {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        }
+      }
+    },
+    {
+      "name": "That's Me, not listed, is someone new",
+      "native": {
+        "sessionId": "s2",
+        "code": "m?",
+        "name": "Jo Bloggs",
+        "kind": "me"
+      },
+      "payload": {
+        "sessionId": "s2",
+        "code": "m?",
+        "choice": {
+          "kind": "me",
+          "name": "Jo Bloggs"
+        }
+      },
+      "slot": {
+        "code": "m?",
+        "role": "moderator",
+        "name": "",
+        "confirmed": false
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "effect": {
+        "kind": "new",
+        "name": "Jo Bloggs"
+      }
     }
   ]
 }

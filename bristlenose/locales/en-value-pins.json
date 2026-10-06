@@ -448,6 +448,7 @@
  "common.sessions.moderatedBy": "3aece7",
  "common.sessions.observer_one": "6c4069",
  "common.sessions.observer_other": "a5aa2d",
+ "common.sessions.picker.nameTaken": "b6f871",
  "common.sessions.picker.newModerator": "4d59c1",
  "common.sessions.picker.newNameFor": "cb7204",
  "common.sessions.picker.newObserver": "70c22e",

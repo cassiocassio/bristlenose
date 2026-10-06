@@ -146,7 +146,8 @@
       "newObserver": "New observer",
       "newNameFor": "New name for {{code}}",
       "thatsMe": "That’s Me ({{name}})",
-      "proposedName": "{{code}}, proposed name {{name}}"
+      "proposedName": "{{code}}, proposed name {{name}}",
+      "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart."
     },
     "failedToLoad": "Failed to load sessions: {{error}}",
     "loading": "Loading sessions…"

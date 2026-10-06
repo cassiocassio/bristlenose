@@ -42,16 +42,18 @@ class TestUndoAModeratorPick:
     ) -> None:
         client = _client(_project(tmp_path, session_names=_PER_SESSION))
         before = _slot(client, "s1", "m1")
-        # The pick: both names set to the chosen one, which confirms it. Jo is
-        # session 2's moderator, so s1 now points at that person (route C
-        # Phase 1), who keeps their own names.
-        client.put("/api/projects/1/sessions/s1/speakers/m1",
-                   json={"full_name": "Jo Lee", "short_name": "Jo Lee"})
+        # The pick names the person by uuid (design-people.md §J8, answer 2).
+        # Jo is session 2's moderator, so s1 now points at them, and they keep
+        # their own names.
+        jo = _slot(client, "s2", "m1")["person"]
+        client.put("/api/projects/1/sessions/s1/speakers/m1", json={"person": jo})
         assert _state(_slot(client, "s1", "m1")) == ("Jo Lee", "Jo", True)
         assert _slot(client, "s1", "m1")["speaker_code"] == _slot(client, "s2", "m1")[
             "speaker_code"]
-        # The undo: one request carrying the whole before-state.
+        # The undo: one request pointing back at the person the slot held, with
+        # their names and the flag. Martin had no other session; he was kept.
         resp = client.put("/api/projects/1/sessions/s1/speakers/m1", json={
+            "person": before["person"],
             "full_name": before["full_name"], "short_name": before["short_name"],
             "confirmed": before["name_confirmed"],
         })

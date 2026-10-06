@@ -44,18 +44,35 @@ struct PersonPickerRequest: Equatable {
 
     let sessionId: String
     let slot: Slot
+    /// The rows' names. Unique within a role (the SPA refuses a second one,
+    /// design-people.md §J8.11), so a name is enough to say which was picked.
     let names: [String]
+    /// Each row's own code, parallel to `names` (§J8.8).
+    let codes: [String]
+    /// The code someone new would get.
+    let newCode: String
     /// The badge, in CSS pixels from the web view's top-left.
     let anchor: CGRect
     let labels: Labels
 
-    init(sessionId: String, slot: Slot, names: [String], anchor: CGRect, labels: Labels) {
+    init(sessionId: String, slot: Slot, names: [String], codes: [String]? = nil,
+         newCode: String? = nil, anchor: CGRect, labels: Labels) {
         self.sessionId = sessionId
         self.slot = slot
         self.names = names
+        self.codes = codes?.count == names.count ? codes! : names.map { _ in slot.code }
+        self.newCode = newCode ?? slot.code
         self.anchor = anchor
         self.labels = labels
     }
+
+    /// The code a row's badge shows.
+    func code(for name: String) -> String {
+        names.firstIndex(of: name).map { codes[$0] } ?? slot.code
+    }
+
+    /// Every code the picker draws, for sizing the badge column.
+    var allCodes: [String] { [slot.code, newCode] + codes }
 
     /// The `person-picker` message body; nil when anything it needs is missing.
     init?(message body: [String: Any]) {
@@ -77,6 +94,9 @@ struct PersonPickerRequest: Equatable {
         self.slot = Slot(code: code, role: role, name: s["name"] as? String ?? "",
                          confirmed: s["confirmed"] as? Bool ?? true)
         self.names = names
+        let codes = body["codes"] as? [String]
+        self.codes = codes?.count == names.count ? codes! : names.map { _ in code }
+        self.newCode = (body["newCode"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? code
         self.anchor = CGRect(x: x, y: y, width: w, height: h)
         var words: [Role: String] = [:]
         for (k, v) in roleWords { if let r = Role(rawValue: k) { words[r] = v } }
@@ -86,13 +106,21 @@ struct PersonPickerRequest: Equatable {
     }
 }
 
-/// What this side sends back: the name that was picked, as
-/// `(action, payload)` for `BridgeHandler.menuAction`. Pure, so the contract
-/// test can compare it with the fixture without a web view.
+/// What was picked: a name, and which row it came from. The SPA decides what
+/// it means (a pick, someone new, That's Me) — never this side.
+struct PersonPickerPick: Equatable {
+    enum Kind: String { case name, new, me }
+    let name: String
+    let kind: Kind
+}
+
+/// What this side sends back, as `(action, payload)` for
+/// `BridgeHandler.menuAction`. Pure, so the contract test can compare it with
+/// the fixture without a web view.
 enum PersonPickerAction {
-    static func choose(sessionId: String, code: String, name: String) -> (String, [String: Any]) {
+    static func choose(sessionId: String, code: String, pick: PersonPickerPick) -> (String, [String: Any]) {
         ("personPickerChoose", ["sessionId": sessionId, "code": code,
-                                "choice": ["kind": "name", "name": name]])
+                                "choice": ["kind": pick.kind.rawValue, "name": pick.name]])
     }
 }
 
@@ -131,21 +159,22 @@ final class PersonPickerModel: ObservableObject {
     /// keyboard back.
     @Published var focusListRequest = 0
 
-    private let onChoose: (String) -> Void
+    private let onChoose: (PersonPickerPick) -> Void
     private let onClose: () -> Void
 
     init(request: PersonPickerRequest, small: Bool = true, meName: String? = NSFullUserName(),
-         onChoose: @escaping (String) -> Void, onClose: @escaping () -> Void) {
+         onChoose: @escaping (PersonPickerPick) -> Void, onClose: @escaping () -> Void) {
         self.request = request
         self.metrics = PickerMetrics(small: small)
         let me = meName?.trimmingCharacters(in: .whitespaces) ?? ""
         self.meName = request.labels.thatsMe != nil && !me.isEmpty ? me : nil
         self.onChoose = onChoose
         self.onClose = onClose
-        // The selection opens on the current answer; with no answer, nothing is
-        // pre-selected, so a single Return cannot confirm a guess.
+        // The selection opens on the current answer. With no answer there is
+        // nothing to confirm, so the cursor starts in the new-person field
+        // (design-people.md §J8.10), where an empty Return does nothing.
         let name = request.slot.name
-        self.selection = !name.isEmpty && request.names.contains(name) ? name : nil
+        self.selection = !name.isEmpty && request.names.contains(name) ? name : Self.newRow
     }
 
     var rows: [String] {
@@ -173,7 +202,8 @@ final class PersonPickerModel: ObservableObject {
         let widest = texts.map { ($0 as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
         // Cell inset 8 + check column + badge column + gap + text + trailing 10,
         // inside the source-list capsule's 10 a side, inside the 10 pt padding.
-        let row = 8 + metrics.tickColumn + SpeakerBadgeView.width(for: request.slot.code)
+        let badge = request.allCodes.map { SpeakerBadgeView.width(for: $0) }.max() ?? 0
+        let row = 8 + metrics.tickColumn + badge
             + metrics.gap + ceil(widest) + 10 + 20 + 20
         // The segments sit inside the 10 pt padding.
         return max(min(max(row, metrics.small ? 230 : 260), 380), ceil(segmentsWidth) + 20)
@@ -185,7 +215,7 @@ final class PersonPickerModel: ObservableObject {
         if isAnswer(row), !request.slot.confirmed, let proposed = request.labels.proposed {
             return proposed
         }
-        return "\(request.slot.code) \(row)"
+        return "\(request.code(for: row)) \(row)"
     }
 
     func isAnswer(_ row: String) -> Bool {
@@ -194,16 +224,22 @@ final class PersonPickerModel: ObservableObject {
         return row == Self.meRow ? meName == name : row == name
     }
 
-    /// A picked row or a typed name. The web side decides what it means.
+    /// A picked row. The web side decides what it means.
     func choose(_ row: String) {
         guard row != Self.newRow else { return }
-        let name = (row == Self.meRow ? meName ?? "" : row).trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty else { return }
-        onChoose(name)
-        onClose()
+        let me = row == Self.meRow
+        send((me ? meName ?? "" : row), kind: me ? .me : .name)
     }
 
-    func submitDraft() { choose(draft) }
+    /// The typed name: someone new, unless the web side finds the name taken.
+    func submitDraft() { send(draft, kind: .new) }
+
+    private func send(_ raw: String, kind: PersonPickerPick.Kind) {
+        let name = raw.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return }
+        onChoose(PersonPickerPick(name: name, kind: kind))
+        onClose()
+    }
 
     func close() { onClose() }
 
@@ -347,9 +383,11 @@ private struct PersonPickerList: NSViewRepresentable {
             model.metrics.rowHeight
         }
 
-        /// Every row carries this slot's code — project-wide person codes are
-        /// route C Phase 1, not built — so the column is that one badge wide.
-        private var badgeColumn: CGFloat { SpeakerBadgeView.width(for: model.request.slot.code) }
+        /// Each row shows its person's own code (§J8.8), so the column is as
+        /// wide as the widest badge and the names line up.
+        private var badgeColumn: CGFloat {
+            model.request.allCodes.map { SpeakerBadgeView.width(for: $0) }.max() ?? 0
+        }
 
         func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
             let id = rows[row]
@@ -360,12 +398,13 @@ private struct PersonPickerList: NSViewRepresentable {
             var label = ""
             switch id {
             case PersonPickerModel.newRow:
-                lead = PickerBadge(code: slot.code, proposed: false)
+                let newCode = model.request.newCode
+                lead = PickerBadge(code: newCode, proposed: false)
                 let field = PickerRowView.nameField(text: model.draft, prompt: model.request.labels.newPrompt)
                 field.delegate = self
                 newField = field
                 name = field
-                label = "\(slot.code), \(model.request.labels.newPrompt)"
+                label = "\(newCode), \(model.request.labels.newPrompt)"
             case PersonPickerModel.meRow:
                 let icon = NSImageView(image: NSImage(systemSymbolName: "person.crop.circle.badge.checkmark",
                                                       accessibilityDescription: nil) ?? NSImage())
@@ -376,7 +415,7 @@ private struct PersonPickerList: NSViewRepresentable {
                 label = model.thatsMeLabel ?? ""
             default:
                 let proposed = model.isAnswer(id) && !slot.confirmed
-                lead = PickerBadge(code: slot.code, proposed: proposed)
+                lead = PickerBadge(code: model.request.code(for: id), proposed: proposed)
                 name = NSTextField(labelWithString: id)
                 label = model.accessibilityLabel(for: id)
             }
@@ -627,9 +666,9 @@ final class PersonPickerPresenter: NSObject, NSPopoverDelegate {
         popover.delegate = self
         let model = PersonPickerModel(
             request: request,
-            onChoose: { name in
+            onChoose: { pick in
                 let (action, payload) = PersonPickerAction.choose(
-                    sessionId: request.sessionId, code: request.slot.code, name: name)
+                    sessionId: request.sessionId, code: request.slot.code, pick: pick)
                 choose(action, payload)
             },
             onClose: { [weak popover] in popover?.close() }

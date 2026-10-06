@@ -129,7 +129,8 @@
       "newObserver": "새 관찰자",
       "newNameFor": "{{code}}의 새 이름",
       "thatsMe": "나 ({{name}})",
-      "proposedName": "{{code}}, \uc81c\uc548\ub41c \uc774\ub984 {{name}}"
+      "proposedName": "{{code}}, \uc81c\uc548\ub41c \uc774\ub984 {{name}}",
+      "nameTaken": "{{name}}\uc740(\ub294) \uc774\ubbf8 \ubaa9\ub85d\uc5d0 \uc788\uc2b5\ub2c8\ub2e4. \uadf8 \uc0ac\ub78c\uc744 \uc120\ud0dd\ud558\uac70\ub098 \ub458\uc744 \uad6c\ubcc4\ud560 \uc218 \uc788\ub3c4\ub85d \ubb34\uc5b8\uac00\ub97c \ucd94\uac00\ud558\uc138\uc694."
     },
     "failedToLoad": "세션 로드 실패: {{error}}",
     "loading": "세션 로드 중…"

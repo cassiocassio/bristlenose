@@ -146,7 +146,8 @@
       "newObserver": "Yeni gözlemci",
       "newNameFor": "{{code}} için yeni ad",
       "thatsMe": "Bu benim ({{name}})",
-      "proposedName": "{{code}}, \u00f6nerilen ad {{name}}"
+      "proposedName": "{{code}}, \u00f6nerilen ad {{name}}",
+      "nameTaken": "{{name}} zaten listede. Bu ki\u015fiyi se\u00e7in ya da ikisini ay\u0131rt edecek bir \u015fey ekleyin."
     },
     "failedToLoad": "Oturumlar yüklenemedi: {{error}}",
     "loading": "Oturumlar yükleniyor…"

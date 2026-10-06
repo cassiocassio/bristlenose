@@ -62,9 +62,17 @@ class SpeakerNameEdit(BaseModel):
     #: Saying yes to the name as it stands (the picker's Enter on a proposed
     #: name). A name that is sent is confirmed whether or not this is.
     confirmed: bool | None = None
-    #: Picking a person: the identity code (``m1``) this slot is. Same role
-    #: only; the slot is confirmed.
+    #: Picking a person: their ``uuid`` (``/sessions`` reports it as
+    #: ``person``), or their identity code (``m1``). Same role only. A pick is
+    #: confirmed unless ``confirmed`` says otherwise (an undo).
     person: str | None = None
+    #: With ``person``: that uuid is someone new, made for this slot, named by
+    #: the names sent. A client-made uuid, so a redo points at the same person
+    #: instead of making a second one.
+    create: bool | None = None
+    #: This slot is nobody we know (``m?``): an undo back to unknown, and the
+    #: picker's "not this person".
+    clear: bool | None = None
 
 
 def _is_session_scoped(speaker_code: str) -> bool:
@@ -423,22 +431,20 @@ def put_session_speaker(
     session, ``slot_code`` in ``/sessions`` — never the identity's code the
     routes display. The two namespaces are both ``mN``, and a pick renumbers
     identities, so accepting either would let a stale display code land on a
-    different slot. Route C (``docs/design-people.md`` §H H9):
+    different slot. Three acts, each explicit (``docs/design-people.md`` §J8,
+    answer 2 — a name never decides which act it is, because names clash):
 
-    - ``person``: this slot is that identity (same role). Confirmed.
-    - a name, for a moderator or observer, says who this session's speaker is
-      — never who someone else is:
-        - the name of another identity of that role (the picker's rows):
-          the slot points at it, which keeps its own names;
-        - a new name, on a slot no other session shares: renames it;
-        - a new name otherwise (unidentified, or an identity other sessions
-          share): someone new, minted for this slot.
-      Confirmed, unless ``confirmed`` says otherwise (an undo).
-    - ``confirmed``: yes (or no) to the identity the slot holds; 409 on ``m?``.
+    - ``person``: this slot is that person (same role) — or, with ``create``,
+      someone new by that uuid. Confirmed unless ``confirmed`` says otherwise.
+    - a name, with no ``person``: a spelling fix for the person this slot
+      points at, everywhere they appear. On ``m?`` there is nobody to fix, so
+      it is someone new for this slot.
+    - ``clear``: this slot is nobody we know (``m?``).
 
-    A participant's name is its identity's. Changes only the fields sent. Not
-    written through to ``people.yaml``. Where a spelling fix for a moderator
-    in many sessions belongs is Phase 2's to decide (``design-people.md`` H9).
+    ``confirmed`` alone is yes (or no) to the person the slot holds; 409 on
+    ``m?``. A participant's name is its identity's. Changes only the fields
+    sent. Not written through to ``people.yaml``. A person no slot points at
+    any more is kept, hidden (``speaker_slots.release``).
     """
     from bristlenose.server import speaker_slots
 
@@ -463,47 +469,63 @@ def put_session_speaker(
         named = data.full_name is not None or data.short_name is not None
         team = speaker_slots.is_team_code(slot.slot_code)
         left: set[int | None] = set()
+        chose = False
 
-        if data.person is not None:
-            target = speaker_slots.identities(db, project_id).get(data.person)
+        if data.clear and team:
+            left.add(speaker_slots.point(sp, None, state=None, evidence=None))
+            person = None
+        elif data.person is not None:
+            if not team:
+                raise HTTPException(status_code=409, detail="A participant is not picked")
+            target = speaker_slots.by_uuid(db, data.person) or speaker_slots.identities(
+                db, project_id,
+            ).get(data.person)
+            if target is None and data.create:
+                target = Person(uuid=data.person, origin=speaker_slots.PICK)
+                db.add(target)
+                db.flush()
             if target is None:
                 raise HTTPException(status_code=404, detail="Person not found")
-            if data.person[:1] != slot.slot_code[:1]:
+            if target.code and target.code[:1] != slot.slot_code[:1]:
                 raise HTTPException(status_code=409, detail="A pick keeps the speaker's role")
             left.add(speaker_slots.point(
                 sp, target, state=speaker_slots.CONFIRMED, evidence=speaker_slots.PICK,
             ))
             person = target
-        elif named and team:
-            name = data.full_name if data.full_name is not None else data.short_name or ""
-            target = speaker_slots.named(db, project_id, slot.slot_code[:1], name)
-            if target is not None and target is not person:
-                left.add(speaker_slots.point(
-                    sp, target, state=speaker_slots.CONFIRMED, evidence=speaker_slots.PICK,
-                ))
-                person = target
-                data = data.model_copy(update={"full_name": None, "short_name": None})
-            elif person is None or (target is None and speaker_slots.shared(db, sp)):
-                person = Person(origin=speaker_slots.PICK)
-                db.add(person)
-                db.flush()
-                left.add(speaker_slots.point(
-                    sp, person, state=speaker_slots.CONFIRMED, evidence=speaker_slots.PICK,
-                ))
+            chose = True
+        elif named and team and person is None:
+            person = Person(origin=speaker_slots.PICK)
+            db.add(person)
+            db.flush()
+            left.add(speaker_slots.point(
+                sp, person, state=speaker_slots.CONFIRMED, evidence=speaker_slots.PICK,
+            ))
         elif person is None:
             raise HTTPException(status_code=409, detail="Nobody is identified here")
 
-        if data.full_name is not None:
-            person.full_name = data.full_name
-        if data.short_name is not None:
-            person.short_name = data.short_name
-        if data.role is not None:
-            person.role_title = data.role
-        # A typed or picked name is a person's yes; so is an explicit confirm.
-        if data.confirmed is not None and data.person is None:
-            sp.state = speaker_slots.CONFIRMED if data.confirmed else speaker_slots.PROPOSED
-        elif named:
-            sp.state = speaker_slots.CONFIRMED
+        if person is not None and named and team:
+            clash = speaker_slots.label_taken(
+                db, project_id, [data.full_name, data.short_name], but=person,
+            )
+            if clash is not None:
+                db.rollback()
+                raise HTTPException(
+                    status_code=409, detail={"reason": "name-taken", "name": clash},
+                )
+        if person is not None:
+            # Names always land on the person: a spelling fix everywhere.
+            if data.full_name is not None:
+                person.full_name = data.full_name
+            if data.short_name is not None:
+                person.short_name = data.short_name
+            if data.role is not None:
+                person.role_title = data.role
+            # A typed or picked name is a person's yes; an explicit confirmed
+            # wins, so an undo can put a proposal back.
+            if data.confirmed is not None:
+                sp.state = speaker_slots.CONFIRMED if data.confirmed else speaker_slots.PROPOSED
+            elif named or chose:
+                sp.state = speaker_slots.CONFIRMED
 
         speaker_slots.release(db, left)
         speaker_slots.renumber(db, project_id)

@@ -547,6 +547,9 @@ export interface SpeakerResponse {
   /** The two stored names behind `name` — what an undo puts back. */
   full_name?: string;
   short_name?: string;
+  /** The person a moderator or observer slot points at (their uuid): what a
+   *  pick and its undo name. Empty on `m?` and on participants. */
+  person?: string;
 }
 
 export interface SourceFileResponse {

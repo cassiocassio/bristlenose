@@ -197,7 +197,9 @@ class TestReRun:
         _write_names(tmp_path, {"s1": _TWO["s1"], "s2": {"m1": _entry("Martin Storey", "platform-name")}})
         _reimport(client, project)
         assert _slots(client)[("s2", "m1")]["speaker_code"] == "m1"
-        assert "m2" not in client.get("/api/projects/1/people").json(), "an identity no slot uses goes"
+        assert "m2" not in client.get("/api/projects/1/people").json(), (
+            "an identity no slot uses is hidden (kept, §J8.10)"
+        )
 
     def test_codes_stay_put_across_a_plain_re_run(self, tmp_path: Path) -> None:
         project = _project(tmp_path, _TWO)
@@ -322,9 +324,11 @@ class TestMigration:
         assert version == "013"
 
 
-class TestANameSaysWhoThisSessionsSpeakerIs:
-    """The 0.33.0 picker picks by name. A name on one session's slot must say
-    who *that* speaker is, never rename someone in other sessions."""
+class TestThreeActs:
+    """``design-people.md`` §J8, answer 2: a pick points the slot at a person,
+    someone new is made by an explicit ``create``, and a name is always a
+    spelling fix for the person the slot holds, everywhere. A name never
+    decides which act it is, because two people can share one."""
 
     _SHARED = {
         "s1": {"m1": _entry("Kerri Lee", "platform-name")},
@@ -333,27 +337,95 @@ class TestANameSaysWhoThisSessionsSpeakerIs:
     }
     _THREE = (("s1", "p1", "20"), ("s2", "p2", "21"), ("s3", "p3", "22"))
 
-    def test_a_listed_name_points_the_slot_at_that_person(self, tmp_path: Path) -> None:
-        client = _client(_project(tmp_path, self._SHARED, sessions=self._THREE))
-        client.put("/api/projects/1/sessions/s2/speakers/m1",
-                   json={"full_name": "Martin", "short_name": "Martin"})
+    def _client(self, tmp_path: Path) -> TestClient:
+        return _client(_project(tmp_path, self._SHARED, sessions=self._THREE))
+
+    def test_a_name_fixes_the_spelling_everywhere(self, tmp_path: Path) -> None:
+        client = self._client(tmp_path)
+        client.put("/api/projects/1/sessions/s2/speakers/m1", json={"short_name": "Kez"})
         slots = _slots(client)
-        assert slots[("s2", "m1")]["speaker_code"] == slots[("s3", "m1")]["speaker_code"]
-        assert slots[("s2", "m1")]["full_name"] == "Martin Storey", "the person keeps their names"
+        assert slots[("s1", "m1")]["name"] == "Kez", "the same person, so every session"
+        assert slots[("s1", "m1")]["person"] == slots[("s2", "m1")]["person"]
+
+    def test_a_name_never_joins_two_people(self, tmp_path: Path) -> None:
+        """Only a pick joins. A name that matches someone else is refused
+        (§J8.11), never read as "point at them"."""
+        client = self._client(tmp_path)
+        client.put("/api/projects/1/sessions/s2/speakers/m1",
+                   json={"full_name": "Martin Storey", "short_name": "Martin"})
+        slots = _slots(client)
+        assert slots[("s2", "m1")]["person"] != slots[("s3", "m1")]["person"]
+
+    def test_a_pick_by_uuid_points_the_slot_and_keeps_their_names(self, tmp_path: Path) -> None:
+        client = self._client(tmp_path)
+        martin = _slots(client)[("s3", "m1")]["person"]
+        client.put("/api/projects/1/sessions/s2/speakers/m1", json={"person": martin})
+        slots = _slots(client)
+        assert slots[("s2", "m1")]["person"] == martin
+        assert slots[("s2", "m1")]["full_name"] == "Martin Storey"
+        assert slots[("s2", "m1")]["name_confirmed"] is True
         assert slots[("s1", "m1")]["name"] == "Kerri", "s1 is untouched"
 
-    def test_a_new_name_on_a_shared_person_is_someone_new(self, tmp_path: Path) -> None:
-        client = _client(_project(tmp_path, self._SHARED, sessions=self._THREE))
-        client.put("/api/projects/1/sessions/s2/speakers/m1",
-                   json={"full_name": "Dana Whitfield", "short_name": "Dana"})
+    def test_create_makes_someone_new_once(self, tmp_path: Path) -> None:
+        client = self._client(tmp_path)
+        new = "11111111-2222-4333-8444-555555555555"
+        body = {"person": new, "create": True, "full_name": "Dana Whitfield", "short_name": "Dana"}
+        assert client.put("/api/projects/1/sessions/s2/speakers/m1", json=body).status_code == 200
+        assert client.put("/api/projects/1/sessions/s2/speakers/m1", json=body).status_code == 200
         slots = _slots(client)
+        assert (slots[("s2", "m1")]["person"], slots[("s2", "m1")]["name"]) == (new, "Dana")
         assert slots[("s1", "m1")]["name"] == "Kerri"
-        assert slots[("s2", "m1")]["name"] == "Dana"
         assert len({s["speaker_code"] for k, s in slots.items() if k[1] == "m1"}) == 3
 
-    def test_a_new_name_on_a_person_only_here_renames_them(self, tmp_path: Path) -> None:
-        client = _client(_project(tmp_path, self._SHARED, sessions=self._THREE))
-        before = _slots(client)[("s3", "m1")]["speaker_code"]
-        client.put("/api/projects/1/sessions/s3/speakers/m1", json={"short_name": "Marty"})
-        after = _slots(client)[("s3", "m1")]
-        assert (after["speaker_code"], after["name"]) == (before, "Marty")
+    def test_an_unknown_uuid_without_create_is_refused(self, tmp_path: Path) -> None:
+        client = self._client(tmp_path)
+        resp = client.put("/api/projects/1/sessions/s2/speakers/m1",
+                          json={"person": "00000000-0000-4000-8000-000000000000"})
+        assert resp.status_code == 404
+
+    def test_clear_returns_the_slot_to_unknown_and_keeps_the_person(self, tmp_path: Path) -> None:
+        client = self._client(tmp_path)
+        martin = _slots(client)[("s3", "m1")]["person"]
+        client.put("/api/projects/1/sessions/s3/speakers/m1", json={"clear": True})
+        slot = _slots(client)[("s3", "m1")]
+        assert (slot["speaker_code"], slot["person"]) == ("m?", "")
+        # The undo: Martin had no other session, and is still there to point at.
+        resp = client.put("/api/projects/1/sessions/s3/speakers/m1",
+                          json={"person": martin, "confirmed": False})
+        assert resp.status_code == 200
+        slot = _slots(client)[("s3", "m1")]
+        assert (slot["person"], slot["name"], slot["name_confirmed"]) == (martin, "Martin", False)
+
+    def test_a_participant_is_not_picked(self, tmp_path: Path) -> None:
+        client = self._client(tmp_path)
+        martin = _slots(client)[("s3", "m1")]["person"]
+        resp = client.put("/api/projects/1/sessions/s1/speakers/p1", json={"person": martin})
+        assert resp.status_code == 409
+
+    def test_participants_carry_no_uuid(self, tmp_path: Path) -> None:
+        """A participant's uuid would link them across studies in an
+        anonymised export."""
+        client = self._client(tmp_path)
+        assert all(s["person"] == "" for k, s in _slots(client).items() if k[1].startswith("p"))
+
+    def test_someone_new_cannot_take_a_name_already_in_the_study(self, tmp_path: Path) -> None:
+        """§J8.11: refuse a second "Martin"; the researcher tells them apart."""
+        client = self._client(tmp_path)
+        resp = client.put("/api/projects/1/sessions/s2/speakers/m1", json={
+            "person": "11111111-2222-4333-8444-555555555555", "create": True,
+            "full_name": "martin storey", "short_name": "Martin",
+        })
+        assert resp.status_code == 409
+        assert resp.json()["detail"] == {"reason": "name-taken", "name": "Martin Storey"}
+        assert _slots(client)[("s2", "m1")]["name"] == "Kerri", "nothing changed"
+
+    def test_a_rename_cannot_take_someone_elses_name(self, tmp_path: Path) -> None:
+        client = self._client(tmp_path)
+        resp = client.put("/api/projects/1/sessions/s2/speakers/m1", json={"short_name": "Martin"})
+        assert resp.status_code == 409
+
+    def test_a_person_may_keep_their_own_name(self, tmp_path: Path) -> None:
+        client = self._client(tmp_path)
+        resp = client.put("/api/projects/1/sessions/s3/speakers/m1",
+                          json={"full_name": "Martin Storey", "short_name": "Martin"})
+        assert resp.status_code == 200

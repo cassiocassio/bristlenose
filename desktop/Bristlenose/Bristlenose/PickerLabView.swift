@@ -178,7 +178,7 @@ final class PickerLabModel: ObservableObject {
     func rebuild() {
         picker = PersonPickerModel(
             request: request, small: small,
-            onChoose: { [weak self] name in self?.picked(name) },
+            onChoose: { [weak self] pick in self?.picked(pick.name) },
             onClose: { [weak self] in self?.isOpen = false })
     }
 

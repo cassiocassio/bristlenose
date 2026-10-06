@@ -19,8 +19,11 @@ vi.mock("./api", async (importOriginal) => {
 const putMock = vi.mocked(sendPut);
 const peopleMock = vi.mocked(getPeople);
 
-const proposed: SpeakerNameState = { full_name: "Martin Storey", short_name: "Martin", confirmed: false };
-const picked: SpeakerNameState = { full_name: "Jo Lee", short_name: "Jo Lee", confirmed: true };
+// A moderator slot names the person it points at (design-people.md §J8).
+const proposed: SpeakerNameState = {
+  full_name: "Martin Storey", short_name: "Martin", confirmed: false, person: "id-martin",
+};
+const picked: SpeakerNameState = { full_name: "Jo Lee", short_name: "Jo Lee", confirmed: true, person: "id-jo" };
 
 /** Every PUT the module made, in order, as [path, body]. */
 const puts = () => putMock.mock.calls.map(([path, body]) => [path, body]);
@@ -82,10 +85,39 @@ describe("nameSpeaker — a moderator", () => {
   });
 });
 
+describe("nameSpeaker — someone new, and back to nobody", () => {
+  const unknown: SpeakerNameState = { short_name: "", confirmed: false };
+  const mike: SpeakerNameState = {
+    full_name: "Mike", short_name: "Mike", confirmed: true, person: "id-new", create: true,
+  };
+
+  it("someone new is made once, by the uuid the client chose", async () => {
+    await nameSpeaker({ sessionId: "s1", code: "m1", before: unknown, after: mike });
+    expect(puts()).toEqual([["/sessions/s1/speakers/m1", {
+      person: "id-new", create: true, full_name: "Mike", short_name: "Mike", confirmed: true,
+    }]]);
+  });
+
+  it("undo returns the slot to nobody, and redo points at the same person", async () => {
+    await nameSpeaker({ sessionId: "s1", code: "m1", before: unknown, after: mike });
+    await undo();
+    await redo();
+    expect(puts().slice(1).map(([, body]) => body)).toEqual([
+      { clear: true },
+      { person: "id-new", create: true, full_name: "Mike", short_name: "Mike", confirmed: true },
+    ]);
+  });
+
+  it("a pick never sends a bare name the server could read as a rename", async () => {
+    await nameSpeaker({ sessionId: "s1", code: "m1", before: proposed, after: picked });
+    expect(puts()[0][1]).toHaveProperty("person", "id-jo");
+  });
+});
+
 describe("nameSpeaker — a full name the caller does not know", () => {
   it("is left as stored, not blanked", async () => {
-    const before = { short_name: "Jo", confirmed: false };
-    const after = { short_name: "Joanna", confirmed: true };
+    const before = { short_name: "Jo", confirmed: false, person: "id-jo" };
+    const after = { short_name: "Joanna", confirmed: true, person: "id-jo" };
     await nameSpeaker({ sessionId: "s1", code: "m1", before, after });
     await undo();
     // JSON drops the undefined field, so the server leaves full_name alone.

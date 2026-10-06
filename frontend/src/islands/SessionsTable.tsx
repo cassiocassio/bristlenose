@@ -21,7 +21,14 @@ import { PersonBadge } from "../components/PersonBadge";
 import { SectionHeading } from "../components/SectionHeading";
 import { Sparkline } from "../components/Sparkline";
 import { Thumbnail } from "../components/Thumbnail";
-import type { PersonPickerChoice, PersonPickerSlot, PickerRole } from "../utils/personPicker";
+import {
+  personPickerNameTaken,
+  personPickerRows,
+  type PersonPickerChoice,
+  type PersonPickerRow,
+  type PersonPickerSlot,
+  type PickerRole,
+} from "../utils/personPicker";
 import type { SparklineItem } from "../components/Sparkline";
 import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet, getPeople, isSessionScopedCode } from "../utils/api";
@@ -30,7 +37,8 @@ import {
   type PeopleChangedDetail,
   type SpeakerNameState,
 } from "../utils/peopleChanged";
-import { nameSpeaker } from "../utils/speakerNames";
+import { nameSpeaker, speakerWritesSettled } from "../utils/speakerNames";
+import { toast } from "../utils/toast";
 import type { PersonData } from "../utils/api";
 import { postPersonPicker, postProjectAction } from "../shims/bridge";
 import { isEmbedded } from "../utils/embedded";
@@ -83,6 +91,29 @@ function pickerRoleOf(code: string): PickerRole {
  *  (docs/design-people.md §H H9, Phase 1). */
 function slotOf(sp: SpeakerResponse): string {
   return sp.slot_code ?? sp.speaker_code;
+}
+
+/** The people known for each role across the study, in first-seen order —
+ *  what a picker offers (`personPickerRows`). A moderator or observer is one
+ *  row per person; a participant per name. */
+function knownPeopleOf(data: SessionsListResponse | null): Record<PickerRole, PersonPickerRow[]> {
+  const known: Record<PickerRole, PersonPickerRow[]> = { moderator: [], participant: [], observer: [] };
+  for (const sess of data?.sessions ?? []) {
+    for (const sp of sess.speakers) {
+      if (!sp.name) continue;
+      const list = known[pickerRoleOf(sp.speaker_code)];
+      const key = sp.person || `name:${sp.name}`;
+      if (list.some((r) => (r.person || `name:${r.name}`) === key)) continue;
+      list.push({
+        name: sp.name,
+        code: sp.speaker_code,
+        person: sp.person || undefined,
+        full_name: sp.full_name,
+        short_name: sp.short_name,
+      });
+    }
+  }
+  return known;
 }
 
 /**
@@ -180,6 +211,14 @@ export function SessionsTable({
   const [pickerKey, setPickerKey] = useState<string | null>(null);
 
   const [isRefetching, setIsRefetching] = useState(false);
+  // Bumped after a moderator or observer write lands: a pick or a new person
+  // can renumber identities (m2 → m1), which only the server knows.
+  const [reloadKey, setReloadKey] = useState(0);
+  const reloadAfterWrites = useCallback(() => {
+    void Promise.resolve()
+      .then(speakerWritesSettled)
+      .then(() => setReloadKey((k) => k + 1));
+  }, []);
 
   useEffect(() => {
     // refreshKey starts at 0; LastRunStore bumps it to 1 on the first
@@ -205,7 +244,7 @@ export function SessionsTable({
           err,
         ),
       );
-  }, [projectId, refreshKey]);
+  }, [projectId, refreshKey, reloadKey]);
 
   // The grid's own copy, read by the write paths below at call time, so an
   // undo entry records what the slot held at the moment of the act.
@@ -225,38 +264,50 @@ export function SessionsTable({
       full_name: sp.full_name,
       short_name: sp.short_name ?? sp.name,
       confirmed: sp.name_confirmed !== false,
+      ...(isSessionScopedCode(code) ? { person: sp.person || undefined } : {}),
     };
   }, []);
 
   /** Draw a slot's state. A participant code is study-wide, so every session
-   *  showing it changes; a moderator or observer code names a different person
-   *  in each session, so only this one does. */
+   *  showing it changes. A moderator or observer slot points at a person: this
+   *  slot takes the person and the flag, and every slot of that person takes
+   *  the names (a spelling fix lands everywhere). The codes, which a pick can
+   *  renumber, arrive with the reload once the write has landed. */
   const drawSlot = useCallback((sessionId: string, code: string, state: SpeakerNameState) => {
     const sessionScoped = isSessionScopedCode(code);
+    // Only a change of person can renumber codes; a rename or a confirm cannot.
+    const current = dataRef.current?.sessions
+      .find((sess) => sess.session_id === sessionId)
+      ?.speakers.find((sp) => slotOf(sp) === code);
+    const repointed = sessionScoped && (current?.person || undefined) !== (state.person || undefined);
+    const named = (sp: SpeakerResponse) => ({
+      ...sp,
+      name: state.short_name || state.full_name || "",
+      full_name: state.full_name ?? sp.full_name,
+      short_name: state.short_name,
+    });
     setData((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        sessions: prev.sessions.map((sess) =>
-          sessionScoped && sess.session_id !== sessionId
-            ? sess
-            : {
-                ...sess,
-                speakers: sess.speakers.map((sp) =>
-                  slotOf(sp) === code
-                    ? {
-                        ...sp,
-                        name: state.short_name || state.full_name || "",
-                        full_name: state.full_name ?? sp.full_name,
-                        short_name: state.short_name,
-                        name_confirmed: state.confirmed,
-                      }
-                    : sp,
-                ),
-              },
-        ),
+        sessions: prev.sessions.map((sess) => ({
+          ...sess,
+          speakers: sess.speakers.map((sp) => {
+            const here = sess.session_id === sessionId && slotOf(sp) === code;
+            if (!sessionScoped) {
+              return slotOf(sp) === code ? { ...named(sp), name_confirmed: state.confirmed } : sp;
+            }
+            if (here) {
+              return state.person
+                ? { ...named(sp), person: state.person, name_confirmed: state.confirmed }
+                : { ...sp, name: "", full_name: "", short_name: "", person: "", name_confirmed: false };
+            }
+            return state.person && sp.person === state.person ? named(sp) : sp;
+          }),
+        })),
       };
     });
+    if (repointed) reloadAfterWrites();
     if (!sessionScoped) {
       setPeopleMap((prev) =>
         prev && prev[code]
@@ -271,7 +322,7 @@ export function SessionsTable({
           : prev,
       );
     }
-  }, []);
+  }, [reloadAfterWrites]);
 
   /** Every way a name changes here — the inline editor, either picker — ends
    *  in one undoable write (docs/design-people.md §B10). */
@@ -299,29 +350,78 @@ export function SessionsTable({
     return () => window.removeEventListener(PEOPLE_CHANGED_EVENT, onChanged);
   }, [drawSlot]);
 
+  /** A name another person already goes by, refused aloud (§J8.11). */
+  const refuseTaken = useCallback(
+    (name: string) => toast(t("sessions.picker.nameTaken", { name }), 5000),
+    [t],
+  );
+
+  /** The rows a slot's picker offers, from the grid as it is now. */
+  const rowsFor = useCallback((sessionId: string, code: string) => {
+    const sess = dataRef.current?.sessions.find((s) => s.session_id === sessionId);
+    const sp = sess?.speakers.find((x) => slotOf(x) === code);
+    if (!sp) return null;
+    const slot: PersonPickerSlot = {
+      code: sp.speaker_code,
+      role: pickerRoleOf(sp.speaker_code),
+      name: sp.name || "",
+      confirmed: !(sp.name && sp.name_confirmed === false),
+      person: sp.person || undefined,
+    };
+    return { slot, known: knownPeopleOf(dataRef.current)[slot.role] };
+  }, []);
+
+  // The pencil: a spelling fix for whoever the slot is, everywhere they
+  // appear. On an unknown moderator or observer there is nobody to fix, so it
+  // is someone new (§J8, answer 2).
   const handleNameCommit = useCallback(
     (sessionId: string, speakerCode: string, newName: string) => {
       setEditingKey(null);
-      renameSlot(sessionId, speakerCode, (before) => ({
-        ...before,
-        short_name: newName,
-        confirmed: true,
-      }));
+      const found = rowsFor(sessionId, speakerCode);
+      if (found) {
+        const rows = personPickerRows(found.slot, found.known);
+        const clash = personPickerNameTaken(found.slot, rows, newName);
+        if (clash) {
+          refuseTaken(clash);
+          return;
+        }
+      }
+      renameSlot(sessionId, speakerCode, (before) =>
+        isSessionScopedCode(speakerCode) && !before.person
+          ? {
+              person: crypto.randomUUID(),
+              create: true,
+              full_name: newName,
+              short_name: newName,
+              confirmed: true,
+            }
+          : { ...before, short_name: newName, confirmed: true },
+      );
     },
-    [renameSlot],
+    [renameSlot, rowsFor, refuseTaken],
   );
 
-  // A pick or a confirm from either picker. A participant's rename goes the
-  // inline editor's way (its short name); a moderator's or observer's pick
-  // sets both names, for this session only.
+  // A pick, a new person or a confirm from either picker (§J8, answer 2).
+  // A pick writes the person's own names back unchanged; someone new gets a
+  // client-made uuid, so a redo finds the same person.
   const applyPickerChoice = useCallback(
     (sessionId: string, speakerCode: string, choice: PersonPickerChoice) => {
       if (choice.kind === "confirm") {
         renameSlot(sessionId, speakerCode, (before) => ({ ...before, confirmed: true }));
-      } else if (!isSessionScopedCode(speakerCode)) {
+      } else if (choice.kind === "name") {
         handleNameCommit(sessionId, speakerCode, choice.name);
+      } else if (choice.kind === "person") {
+        const { row } = choice;
+        renameSlot(sessionId, speakerCode, () => ({
+          person: row.person,
+          full_name: row.full_name,
+          short_name: row.short_name ?? row.name,
+          confirmed: true,
+        }));
       } else {
         renameSlot(sessionId, speakerCode, () => ({
+          person: crypto.randomUUID(),
+          create: true,
           full_name: choice.name,
           short_name: choice.name,
           confirmed: true,
@@ -332,9 +432,8 @@ export function SessionsTable({
   );
 
   // The Mac app's native picker answers through the menu-action channel with
-  // the name that was picked; resolvePersonPickerChoice turns it into a yes, a
-  // rename or nothing by the web picker's own rule, against the slot as the
-  // grid holds it now.
+  // a name and which row it came from; resolvePersonPickerChoice decides what
+  // it means by the web picker's own rules, against the grid as it is now.
   useEffect(() => {
     // The native picker carries the code its badge showed — the identity's —
     // so it is turned back into the slot's address against the grid as it is.
@@ -342,11 +441,9 @@ export function SessionsTable({
       dataRef.current?.sessions
         .find((s) => s.session_id === sessionId)
         ?.speakers.find((x) => x.speaker_code === code);
-    const slotFor = (sessionId: string, code: string): PersonPickerSlot | null => {
+    const slotFor = (sessionId: string, code: string) => {
       const sp = speakerFor(sessionId, code);
-      if (!sp) return null;
-      const name = sp.name || "";
-      return { code, role: pickerRoleOf(code), name, confirmed: !(name && sp.name_confirmed === false) };
+      return sp ? rowsFor(sessionId, slotOf(sp)) : null;
     };
     const handler = (e: Event) => {
       const { action, payload } = (e as CustomEvent<{ action: string; payload?: unknown }>).detail;
@@ -354,12 +451,14 @@ export function SessionsTable({
       void loadPickerBridge().then(({ resolvePersonPickerChoice }) => {
         const pick = resolvePersonPickerChoice(payload, slotFor);
         const sp = pick ? speakerFor(pick.sessionId, pick.code) : undefined;
-        if (pick && sp) applyPickerChoice(pick.sessionId, slotOf(sp), pick.choice);
+        if (!pick || !sp) return;
+        if ("taken" in pick) refuseTaken(pick.taken);
+        else applyPickerChoice(pick.sessionId, slotOf(sp), pick.choice);
       });
     };
     window.addEventListener("bn:menu-action", handler);
     return () => window.removeEventListener("bn:menu-action", handler);
-  }, [applyPickerChoice]);
+  }, [applyPickerChoice, rowsFor, refuseTaken]);
 
   if (error) {
     return (
@@ -389,15 +488,14 @@ export function SessionsTable({
   // there's no native bridge, so fall back to copying the path to the clipboard.
   const embedded = isEmbedded();
 
-  // The names known for each role across the study, in first-seen order — what
-  // a moderator's or observer's picker offers (personPickerRows).
-  const knownNames: Record<PickerRole, string[]> = { moderator: [], participant: [], observer: [] };
-  for (const sess of sessions) {
-    for (const sp of sess.speakers) {
-      const list = knownNames[pickerRoleOf(sp.speaker_code)];
-      if (sp.name && !list.includes(sp.name)) list.push(sp.name);
-    }
-  }
+  // The people known for each role across the study — what a moderator's or
+  // observer's picker offers (personPickerRows), and the header's names.
+  const knownPeople = knownPeopleOf(data);
+  const knownNames: Record<PickerRole, string[]> = {
+    moderator: knownPeople.moderator.map((r) => r.name),
+    participant: knownPeople.participant.map((r) => r.name),
+    observer: knownPeople.observer.map((r) => r.name),
+  };
 
   // The Mac app opens its native picker over the badge; the browser (and an app
   // without one) opens the web one in place.
@@ -405,9 +503,9 @@ export function SessionsTable({
     if (isExportMode()) return;
     if (embedded && hasNativePersonPicker()) {
       const rect = anchor.getBoundingClientRect();
-      const names = knownNames[slot.role];
+      const known = knownPeople[slot.role];
       void loadPickerBridge().then(({ buildPersonPickerMessage }) =>
-        postPersonPicker(buildPersonPickerMessage(sessionId, slot, names, rect, t)),
+        postPersonPicker(buildPersonPickerMessage(sessionId, slot, known, rect, t)),
       );
     } else {
       // A second click on the badge closes it, as a menu button does.
@@ -511,7 +609,7 @@ export function SessionsTable({
             onCancelEdit={() => setEditingKey(null)}
             onNameCommit={handleNameCommit}
             pickerKey={pickerKey}
-            knownNames={knownNames}
+            knownPeople={knownPeople}
             onPickerOpen={openPicker}
             onPickerClose={() => setPickerKey(null)}
             onPickerChoose={applyPickerChoice}
@@ -538,7 +636,7 @@ function SessionRow({
   onCancelEdit,
   onNameCommit,
   pickerKey,
-  knownNames,
+  knownPeople,
   onPickerOpen,
   onPickerClose,
   onPickerChoose,
@@ -550,7 +648,7 @@ function SessionRow({
   onCancelEdit: () => void;
   onNameCommit: (sessionId: string, code: string, newName: string) => void;
   pickerKey: string | null;
-  knownNames: Record<PickerRole, string[]>;
+  knownPeople: Record<PickerRole, PersonPickerRow[]>;
   onPickerOpen: (sessionId: string, slot: PersonPickerSlot, anchor: HTMLElement) => void;
   onPickerClose: () => void;
   onPickerChoose: (sessionId: string, code: string, choice: PersonPickerChoice) => void;
@@ -667,6 +765,7 @@ function SessionRow({
             role: pickerRoleOf(sp.speaker_code),
             name: displayName,
             confirmed: !proposed,
+            person: sp.person || undefined,
           };
           const canPick = !isEditing && !isExportMode();
           const badge = (
@@ -769,7 +868,7 @@ function SessionRow({
                 <Suspense fallback={null}>
                   <PersonPickerPopover
                     slot={slot}
-                    knownNames={knownNames[slot.role]}
+                    known={knownPeople[slot.role]}
                     t={t}
                     onChoose={(choice) => onPickerChoose(session_id, slotOf(sp), choice)}
                     onClose={onPickerClose}

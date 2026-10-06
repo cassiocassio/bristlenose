@@ -18,7 +18,7 @@ from bristlenose.server.models import (
 from bristlenose.server.models import (
     Session as SessionModel,
 )
-from bristlenose.server.speaker_slots import slot_map
+from bristlenose.server.speaker_slots import is_team_code, slot_map
 
 router = APIRouter(prefix="/api")
 
@@ -45,6 +45,11 @@ class SpeakerResponse(BaseModel):
     #: The transcript's own token for this speaker in this session (``m1``):
     #: the slot. Distinct within a session where ``speaker_code`` may not be.
     slot_code: str = ""
+    #: The person a moderator or observer slot points at (their ``uuid``), so
+    #: a pick, and the undo of one, can name the person rather than a name two
+    #: people may share. Empty on ``m?`` and always on participants: a
+    #: participant's uuid would link them across studies in an anonymised export.
+    person: str = ""
 
 
 class SourceFileResponse(BaseModel):
@@ -160,6 +165,12 @@ def get_sessions(
                         full_name=slot.full_name,
                         short_name=slot.person.short_name if slot.person else "",
                         slot_code=sp.speaker_code,
+                        person=(
+                            slot.person.uuid
+                            if slot.person is not None
+                            and is_team_code(sp.speaker_code)
+                            else ""
+                        ),
                     )
                 )
 

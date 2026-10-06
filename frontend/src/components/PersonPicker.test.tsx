@@ -5,56 +5,104 @@ import { PersonPicker } from "./PersonPicker";
 import {
   personPickerChoice,
   personPickerLabels,
+  personPickerNameTaken,
+  personPickerNewCode,
   personPickerRows,
+  personPickerTyped,
+  type PersonPickerRow,
   type PersonPickerSlot,
 } from "../utils/personPicker";
 
 const labels = (slot: PersonPickerSlot) => personPickerLabels(slot, i18n.t);
 
-const moderator = (name: string, confirmed: boolean): PersonPickerSlot => ({
-  code: "m1",
+/** Moderators known in the study, coded m1, m2… in the order given. */
+const people = (...names: string[]): PersonPickerRow[] =>
+  names.map((name, i) => ({ name, code: `m${i + 1}`, person: `id-${name}` }));
+
+const moderator = (name: string, confirmed: boolean, code = "m1"): PersonPickerSlot => ({
+  code,
   role: "moderator",
   name,
   confirmed,
+  ...(name ? { person: `id-${name}` } : {}),
 });
 
 const menu = () => document.querySelector(".bn-person-picker") as HTMLElement;
 const items = () => Array.from(menu().querySelectorAll<HTMLElement>(".export-dropdown-item"));
 
 describe("personPickerRows", () => {
-  it("offers a moderator every moderator name known, once, the slot's own first if unseen", () => {
-    expect(personPickerRows(moderator("Jo", false), ["Martin", "Kerri", "Martin", ""])).toEqual([
-      "Jo",
-      "Martin",
-      "Kerri",
+  it("offers a moderator every person known, once, the slot's own first if unseen", () => {
+    const rows = personPickerRows(moderator("Jo", false, "m3"), [
+      ...people("Martin", "Kerri"),
+      { name: "Martin", code: "m1", person: "id-Martin" },
+      { name: "", code: "m?" },
     ]);
+    expect(rows.map((r) => [r.code, r.name])).toEqual([["m3", "Jo"], ["m1", "Martin"], ["m2", "Kerri"]]);
   });
 
-  it("offers a participant only themself: another name would be a merge, not built", () => {
+  it("offers a participant only themself: another would be a merge, not built", () => {
     const slot: PersonPickerSlot = { code: "p3", role: "participant", name: "Mary", confirmed: true };
-    expect(personPickerRows(slot, ["Sarah", "Mary", "Bob"])).toEqual(["Mary"]);
-    expect(personPickerRows({ ...slot, name: "" }, ["Sarah"])).toEqual([]);
+    const known = [{ name: "Sarah", code: "p1" }, { name: "Mary", code: "p3" }];
+    expect(personPickerRows(slot, known).map((r) => r.name)).toEqual(["Mary"]);
+    expect(personPickerRows({ ...slot, name: "" }, known)).toEqual([]);
+  });
+});
+
+describe("personPickerNewCode", () => {
+  it("is the next free number for the role (§J8.8)", () => {
+    expect(personPickerNewCode(moderator("", false, "m?"), people("Martin", "Kerri"))).toBe("m3");
+    expect(personPickerNewCode(moderator("", false, "m?"), [])).toBe("m1");
+  });
+
+  it("is a participant's own code", () => {
+    const slot: PersonPickerSlot = { code: "p3", role: "participant", name: "", confirmed: true };
+    expect(personPickerNewCode(slot, [])).toBe("p3");
   });
 });
 
 describe("personPickerChoice", () => {
-  it("the slot's own proposed name is a yes", () => {
-    expect(personPickerChoice(moderator("Martin", false), "Martin")).toEqual({ kind: "confirm" });
+  it("the slot's own proposed answer is a yes", () => {
+    expect(personPickerChoice(moderator("Martin", false), people("Martin")[0])).toEqual({ kind: "confirm" });
   });
 
-  it("the slot's own confirmed name changes nothing", () => {
-    expect(personPickerChoice(moderator("Martin", true), "Martin")).toBeNull();
+  it("the slot's own confirmed answer changes nothing", () => {
+    expect(personPickerChoice(moderator("Martin", true), people("Martin")[0])).toBeNull();
   });
 
-  it("any other name renames, trimmed; an empty one is nothing", () => {
-    expect(personPickerChoice(moderator("Martin", true), "  Kerri ")).toEqual({ kind: "name", name: "Kerri" });
-    expect(personPickerChoice(moderator("Martin", true), "   ")).toBeNull();
+  it("any other row is that person, never a rename", () => {
+    const kerri = people("Martin", "Kerri")[1];
+    expect(personPickerChoice(moderator("Martin", true), kerri)).toEqual({ kind: "person", row: kerri });
+  });
+
+  it("another person with the same name is still another person", () => {
+    const other = { name: "Martin", code: "m2", person: "id-other" };
+    expect(personPickerChoice(moderator("Martin", true), other)).toEqual({ kind: "person", row: other });
+  });
+});
+
+describe("personPickerTyped and personPickerNameTaken", () => {
+  it("a typed name is someone new; empty or unchanged is nothing", () => {
+    expect(personPickerTyped(moderator("Martin", true), "  Mike ")).toEqual({ kind: "new", name: "Mike" });
+    expect(personPickerTyped(moderator("Martin", true), "   ")).toBeNull();
+    expect(personPickerTyped(moderator("Martin", true), "Martin")).toBeNull();
+  });
+
+  it("a participant's typed name names that participant", () => {
+    const slot: PersonPickerSlot = { code: "p3", role: "participant", name: "Mary", confirmed: true };
+    expect(personPickerTyped(slot, "Mary A")).toEqual({ kind: "name", name: "Mary A" });
+  });
+
+  it("a name another person goes by is taken, in any case (§J8.11)", () => {
+    const rows = people("Martin Storey", "Kerri");
+    expect(personPickerNameTaken(moderator("", false, "m?"), rows, "martin storey")).toBe("Martin Storey");
+    expect(personPickerNameTaken(moderator("Martin Storey", true), rows, "Martin Storey")).toBeNull();
+    expect(personPickerNameTaken(moderator("", false, "m?"), rows, "Martin S")).toBeNull();
   });
 });
 
 describe("PersonPicker", () => {
   it("opens on the proposed answer: ticked, ringed, selected", () => {
-    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} knownNames={["Martin", "Kerri"]} onChoose={vi.fn()} onClose={vi.fn()} />);
+    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin", "Kerri")} onChoose={vi.fn()} onClose={vi.fn()} />);
     const [martin, kerri] = items();
     expect(martin.querySelector(".export-dropdown-check .bn-icon-check")).not.toBeNull();
     expect(martin.querySelector(".bn-person-proposed")).not.toBeNull();
@@ -63,19 +111,19 @@ describe("PersonPicker", () => {
   });
 
   it("a proposed answer says so to assistive tech, a confirmed one does not", () => {
-    const { unmount } = render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} knownNames={["Martin", "Kerri"]} onChoose={vi.fn()} onClose={vi.fn()} />);
+    const { unmount } = render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin", "Kerri")} onChoose={vi.fn()} onClose={vi.fn()} />);
     const [martin, kerri] = items();
     expect(martin.getAttribute("aria-label")).toBe("m1, proposed name Martin");
     expect(kerri.getAttribute("aria-label")).toBeNull();
     unmount();
-    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} knownNames={["Martin"]} onChoose={vi.fn()} onClose={vi.fn()} />);
+    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={people("Martin")} onChoose={vi.fn()} onClose={vi.fn()} />);
     expect(items()[0].getAttribute("aria-label")).toBeNull();
   });
 
   it("Enter on the proposed answer says yes", () => {
     const onChoose = vi.fn();
     const onClose = vi.fn();
-    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} knownNames={["Martin"]} onChoose={onChoose} onClose={onClose} />);
+    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin")} onChoose={onChoose} onClose={onClose} />);
     fireEvent.keyDown(menu(), { key: "Enter" });
     expect(onChoose).toHaveBeenCalledWith({ kind: "confirm" });
     expect(onClose).toHaveBeenCalled();
@@ -83,7 +131,7 @@ describe("PersonPicker", () => {
 
   it("Space on a row chooses it once", () => {
     const onChoose = vi.fn();
-    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} knownNames={["Martin"]} onChoose={onChoose} onClose={vi.fn()} />);
+    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin")} onChoose={onChoose} onClose={vi.fn()} />);
     fireEvent.keyDown(items()[0], { key: " " });
     expect(onChoose).toHaveBeenCalledTimes(1);
     expect(onChoose).toHaveBeenCalledWith({ kind: "confirm" });
@@ -93,7 +141,7 @@ describe("PersonPicker", () => {
     const onDocKey = vi.fn();
     document.addEventListener("keydown", onDocKey);
     try {
-      render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} knownNames={["Martin"]} onChoose={vi.fn()} onClose={vi.fn()} />);
+      render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin")} onChoose={vi.fn()} onClose={vi.fn()} />);
       fireEvent.keyDown(items()[0], { key: "Escape" });
       fireEvent.keyDown(screen.getByPlaceholderText("New moderator"), { key: "Escape" });
       expect(onDocKey).not.toHaveBeenCalled();
@@ -107,7 +155,7 @@ describe("PersonPicker", () => {
     const { rerender } = render(
       <span>
         <button type="button" className="bn-person-picker-trigger">m1</button>
-        <PersonPicker slot={slot} labels={labels(slot)} knownNames={["Martin", "Kerri"]} onChoose={vi.fn()} onClose={vi.fn()} />
+        <PersonPicker slot={slot} labels={labels(slot)} known={people("Martin", "Kerri")} onChoose={vi.fn()} onClose={vi.fn()} />
       </span>,
     );
     const trigger = document.querySelector(".bn-person-picker-trigger");
@@ -116,7 +164,7 @@ describe("PersonPicker", () => {
     rerender(
       <span>
         <button type="button" className="bn-person-picker-trigger">m1</button>
-        <PersonPicker key="again" slot={slot} labels={labels(slot)} knownNames={["Martin", "Kerri"]} onChoose={vi.fn()} onClose={vi.fn()} />
+        <PersonPicker key="again" slot={slot} labels={labels(slot)} known={people("Martin", "Kerri")} onChoose={vi.fn()} onClose={vi.fn()} />
       </span>,
     );
     expect(document.activeElement).not.toBe(trigger);
@@ -124,31 +172,49 @@ describe("PersonPicker", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it("choosing another name renames the slot", () => {
+  it("choosing another row picks that person", () => {
     const onChoose = vi.fn();
-    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} knownNames={["Martin", "Kerri"]} onChoose={onChoose} onClose={vi.fn()} />);
+    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={people("Martin", "Kerri")} onChoose={onChoose} onClose={vi.fn()} />);
     fireEvent.click(items()[1]);
-    expect(onChoose).toHaveBeenCalledWith({ kind: "name", name: "Kerri" });
+    expect(onChoose).toHaveBeenCalledWith({ kind: "person", row: people("Martin", "Kerri")[1] });
   });
 
-  it("every row carries this slot's code — project-wide codes are not built", () => {
-    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} knownNames={["Martin", "Kerri"]} onChoose={vi.fn()} onClose={vi.fn()} />);
+  it("every row shows its person's own code, and the new row the next free one (§J8.8)", () => {
+    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={people("Martin", "Kerri")} onChoose={vi.fn()} onClose={vi.fn()} />);
     const codes = Array.from(menu().querySelectorAll(".bn-speaker-badge-code")).map((c) => c.textContent);
-    expect(codes).toEqual(["m1", "m1", "m1"]); // two names and the new row
+    expect(codes).toEqual(["m1", "m2", "m3"]);
   });
 
-  it("an unknown slot pre-selects nothing, so Return cannot confirm a guess", () => {
+  it("an unknown slot opens in the new-person field, and an empty Return does nothing (§J8.10)", () => {
     const onChoose = vi.fn();
-    render(<PersonPicker slot={moderator("", false)} labels={labels(moderator("", false))} knownNames={["Martin"]} onChoose={onChoose} onClose={vi.fn()} />);
-    expect(document.activeElement).toBe(menu());
-    fireEvent.keyDown(menu(), { key: "Enter" });
+    render(<PersonPicker slot={moderator("", false, "m?")} labels={labels(moderator("", false, "m?"))} known={people("Martin")} onChoose={onChoose} onClose={vi.fn()} />);
+    const field = screen.getByPlaceholderText("New moderator");
+    expect(document.activeElement).toBe(field);
+    fireEvent.keyDown(field, { key: "Enter" });
     expect(onChoose).not.toHaveBeenCalled();
-    fireEvent.keyDown(menu(), { key: "ArrowDown" });
+    fireEvent.keyDown(field, { key: "ArrowUp" });
     expect(document.activeElement).toBe(items()[0]);
   });
 
+  it("a name another person already goes by is refused, and the picker stays open (§J8.11)", () => {
+    const onChoose = vi.fn();
+    const onClose = vi.fn();
+    render(<PersonPicker slot={moderator("", false, "m?")} labels={labels(moderator("", false, "m?"))} known={people("Martin Storey")} onChoose={onChoose} onClose={onClose} />);
+    const field = screen.getByPlaceholderText("New moderator");
+    fireEvent.change(field, { target: { value: "martin storey" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(onChoose).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain("Martin Storey");
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    fireEvent.change(field, { target: { value: "Martin S" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(onChoose).toHaveBeenCalledWith({ kind: "new", name: "Martin S" });
+  });
+
   it("only the speaker's own role is enabled: changing role is not built", () => {
-    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} knownNames={[]} onChoose={vi.fn()} onClose={vi.fn()} />);
+    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={people()} onChoose={vi.fn()} onClose={vi.fn()} />);
     const [mod, part, obs] = screen.getAllByRole("radio") as HTMLButtonElement[];
     expect([mod.disabled, part.disabled, obs.disabled]).toEqual([false, true, true]);
     expect(mod.getAttribute("aria-checked")).toBe("true");
@@ -156,22 +222,22 @@ describe("PersonPicker", () => {
 
   it("someone new is typed into the next badge's name half", () => {
     const onChoose = vi.fn();
-    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} knownNames={["Martin"]} onChoose={onChoose} onClose={vi.fn()} />);
+    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={people("Martin")} onChoose={onChoose} onClose={vi.fn()} />);
     const field = screen.getByPlaceholderText("New moderator");
     fireEvent.change(field, { target: { value: "Mike Alvarez" } });
     fireEvent.keyDown(field, { key: "Enter" });
-    expect(onChoose).toHaveBeenCalledWith({ kind: "name", name: "Mike Alvarez" });
+    expect(onChoose).toHaveBeenCalledWith({ kind: "new", name: "Mike Alvarez" });
   });
 
   it("a participant's field is a new name for that participant", () => {
     const slot: PersonPickerSlot = { code: "p3", role: "participant", name: "Mary", confirmed: true };
-    render(<PersonPicker slot={slot} labels={labels(slot)} knownNames={["Sarah"]} onChoose={vi.fn()} onClose={vi.fn()} />);
+    render(<PersonPicker slot={slot} labels={labels(slot)} known={[{ name: "Sarah", code: "p1" }]} onChoose={vi.fn()} onClose={vi.fn()} />);
     expect(screen.getByPlaceholderText("New name for p3")).toBeInTheDocument();
     expect(items()).toHaveLength(2); // Mary and the field
   });
 
   it("type-to-jump lands on any word of a name", () => {
-    render(<PersonPicker slot={moderator("Martin Storey", true)} labels={labels(moderator("Martin Storey", true))} knownNames={["Martin Storey", "Kerri Ng"]} onChoose={vi.fn()} onClose={vi.fn()} />);
+    render(<PersonPicker slot={moderator("Martin Storey", true)} labels={labels(moderator("Martin Storey", true))} known={people("Martin Storey", "Kerri Ng")} onChoose={vi.fn()} onClose={vi.fn()} />);
     fireEvent.keyDown(menu(), { key: "n" });
     fireEvent.keyDown(menu(), { key: "g" });
     expect(document.activeElement).toBe(items()[1]);
@@ -180,7 +246,7 @@ describe("PersonPicker", () => {
   it("Escape closes without choosing", () => {
     const onChoose = vi.fn();
     const onClose = vi.fn();
-    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} knownNames={["Martin"]} onChoose={onChoose} onClose={onClose} />);
+    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin")} onChoose={onChoose} onClose={onClose} />);
     fireEvent.keyDown(menu(), { key: "Escape" });
     expect(onClose).toHaveBeenCalled();
     expect(onChoose).not.toHaveBeenCalled();

@@ -36,6 +36,8 @@ struct PersonPickerContractTests {
         #expect(moderator.sessionId == "s1")
         #expect(moderator.slot == .init(code: "m1", role: .moderator, name: "Martin B Storey", confirmed: false))
         #expect(moderator.names == ["Kerri Ng", "Martin B Storey"])
+        #expect(moderator.codes == ["m2", "m1"])
+        #expect(moderator.newCode == "m3")
         #expect(moderator.anchor == CGRect(x: 10, y: 21, width: 30, height: 18))
         #expect(moderator.labels.roles[.observer] == "Observer")
         #expect(moderator.labels.newPrompt == "New moderator")
@@ -48,6 +50,8 @@ struct PersonPickerContractTests {
         #expect(participant.labels.thatsMe == nil)
         #expect(participant.labels.proposed == nil)
         #expect(participant.labels.newPrompt == "New name for p3")
+        #expect(participant.codes == ["p3"])
+        #expect(participant.newCode == "p3")
     }
 
     @Test func aRequestMissingWhatItNeedsIsDropped() throws {
@@ -60,10 +64,11 @@ struct PersonPickerContractTests {
         let cases = try #require(try contract()["native_to_web"] as? [[String: Any]])
         for c in cases {
             let native = try #require(c["native"] as? [String: String])
+            let kind = try #require(native["kind"].flatMap(PersonPickerPick.Kind.init(rawValue:)))
             let (action, payload) = PersonPickerAction.choose(
                 sessionId: try #require(native["sessionId"]),
                 code: try #require(native["code"]),
-                name: try #require(native["name"]))
+                pick: PersonPickerPick(name: try #require(native["name"]), kind: kind))
             #expect(action == "personPickerChoose")
             let expected = try #require(c["payload"] as? NSDictionary)
             #expect(NSDictionary(dictionary: payload) == expected)
@@ -121,7 +126,7 @@ struct PersonPickerContractTests {
         let requests = try wires().compactMap { PersonPickerRequest(message: $0) }
         let model = PersonPickerModel(request: requests[0], meName: "Jo", onChoose: { _ in }, onClose: {})
         #expect(model.accessibilityLabel(for: "Martin B Storey") == "m1, proposed name Martin B Storey")
-        #expect(model.accessibilityLabel(for: "Kerri Ng") == "m1 Kerri Ng")
+        #expect(model.accessibilityLabel(for: "Kerri Ng") == "m2 Kerri Ng")
         let confirmed = PersonPickerModel(request: requests[1], onChoose: { _ in }, onClose: {})
         #expect(confirmed.accessibilityLabel(for: "Mary Adeyemi") == "p3 Mary Adeyemi")
     }
@@ -141,7 +146,9 @@ struct PersonPickerContractTests {
         #expect(zoomed == NSRect(x: 200, y: 452, width: 60, height: 36))
     }
 
-    @Test func theSelectionOpensOnTheAnswerAndAnUnknownSlotPreselectsNothing() throws {
+    /// An unknown speaker has nothing to confirm, so the cursor starts in the
+    /// new-person field (design-people.md §J8.10).
+    @Test func theSelectionOpensOnTheAnswerAndAnUnknownSlotOpensInTheField() throws {
         let request = try #require(try wires().compactMap { PersonPickerRequest(message: $0) }.first)
         let model = PersonPickerModel(request: request, onChoose: { _ in }, onClose: {})
         #expect(model.selection == "Martin B Storey")
@@ -149,12 +156,15 @@ struct PersonPickerContractTests {
         let unknown = PersonPickerRequest(
             sessionId: "s1", slot: .init(code: "m1", role: .moderator, name: "", confirmed: false),
             names: ["Kerri Ng"], anchor: .zero, labels: request.labels)
-        #expect(PersonPickerModel(request: unknown, onChoose: { _ in }, onClose: {}).selection == nil)
+        #expect(PersonPickerModel(request: unknown, onChoose: { _ in }, onClose: {}).selection
+            == PersonPickerModel.newRow)
     }
 
-    @Test func choosingSendsTheNameAndCloses() throws {
+    /// A picked row, That's Me and a typed name each say which they are, so
+    /// the SPA never reads a typed name as a pick.
+    @Test func choosingSendsTheNameAndItsKindAndCloses() throws {
         let request = try #require(try wires().compactMap { PersonPickerRequest(message: $0) }.first)
-        var sent: [String] = []
+        var sent: [PersonPickerPick] = []
         var closed = 0
         let model = PersonPickerModel(request: request, meName: "Martin Storey",
                                       onChoose: { sent.append($0) }, onClose: { closed += 1 })
@@ -163,7 +173,11 @@ struct PersonPickerContractTests {
         model.choose(PersonPickerModel.newRow)   // the field row is typed into, not chosen
         model.draft = "  Mike Alvarez "
         model.submitDraft()
-        #expect(sent == ["Kerri Ng", "Martin Storey", "Mike Alvarez"])
+        #expect(sent == [
+            PersonPickerPick(name: "Kerri Ng", kind: .name),
+            PersonPickerPick(name: "Martin Storey", kind: .me),
+            PersonPickerPick(name: "Mike Alvarez", kind: .new),
+        ])
         #expect(closed == 3)
     }
 }

@@ -137,7 +137,8 @@
       "newObserver": "新觀察員",
       "newNameFor": "{{code}} 的新名字",
       "thatsMe": "我本人（{{name}}）",
-      "proposedName": "{{code}}\uff0c\u5efa\u8b70\u7684\u540d\u5b57 {{name}}"
+      "proposedName": "{{code}}\uff0c\u5efa\u8b70\u7684\u540d\u5b57 {{name}}",
+      "nameTaken": "{{name}} \u5df2\u5728\u6e05\u55ae\u4e2d\u3002\u8acb\u9078\u64c7\u6b64\u4eba\uff0c\u6216\u52a0\u4e0a\u53ef\u5340\u5206\u5169\u4eba\u7684\u8cc7\u8a0a\u3002"
     },
     "failedToLoad": "無法載入場次：{{error}}",
     "loading": "正在載入場次⋯"

@@ -179,7 +179,7 @@ class TestSessionsResponseShape:
         speaker = data["sessions"][0]["speakers"][0]
         expected_keys = {
             "speaker_code", "name", "role", "name_confirmed", "full_name", "short_name",
-            "slot_code",
+            "slot_code", "person",
         }
         assert set(speaker.keys()) == expected_keys
 

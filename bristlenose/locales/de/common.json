@@ -123,7 +123,8 @@
       "newObserver": "Neuer Beobachter",
       "newNameFor": "Neuer Name für {{code}}",
       "thatsMe": "Das bin ich ({{name}})",
-      "proposedName": "{{code}}, vorgeschlagener Name {{name}}"
+      "proposedName": "{{code}}, vorgeschlagener Name {{name}}",
+      "nameTaken": "{{name}} ist bereits in der Liste. W\u00e4hlen Sie diese Person aus oder erg\u00e4nzen Sie etwas, um beide zu unterscheiden."
     },
     "moderatedBy": "Moderiert von {{names}}",
     "observer_one": "Beobachter: {{names}}",

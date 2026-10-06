@@ -160,7 +160,8 @@
       "newObserver": "Nový pozorovatel",
       "newNameFor": "Nové jméno pro {{code}}",
       "thatsMe": "To jsem já ({{name}})",
-      "proposedName": "{{code}}, navr\u017een\u00e9 jm\u00e9no {{name}}"
+      "proposedName": "{{code}}, navr\u017een\u00e9 jm\u00e9no {{name}}",
+      "nameTaken": "{{name}} u\u017e v seznamu je. Vyberte tuto osobu, nebo dopl\u0148te n\u011bco, \u010d\u00edm se ob\u011b rozli\u0161\u00ed."
     },
     "failedToLoad": "Nepodařilo se načíst sezení: {{error}}",
     "loading": "Načítání sezení…"

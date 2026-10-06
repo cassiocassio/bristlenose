@@ -141,7 +141,8 @@
       "newObserver": "新しいオブザーバー",
       "newNameFor": "{{code}} の新しい名前",
       "thatsMe": "自分（{{name}}）",
-      "proposedName": "{{code}}\u3001\u63d0\u6848\u3055\u308c\u305f\u540d\u524d {{name}}"
+      "proposedName": "{{code}}\u3001\u63d0\u6848\u3055\u308c\u305f\u540d\u524d {{name}}",
+      "nameTaken": "{{name}} \u306f\u3059\u3067\u306b\u30ea\u30b9\u30c8\u306b\u3042\u308a\u307e\u3059\u3002\u305d\u306e\u4eba\u3092\u9078\u3076\u304b\u3001\u533a\u5225\u3067\u304d\u308b\u3088\u3046\u306b\u4f55\u304b\u52a0\u3048\u3066\u304f\u3060\u3055\u3044\u3002"
     },
     "failedToLoad": "セッションの読み込みに失敗しました: {{error}}",
     "loading": "セッションを読み込み中…"

@@ -521,14 +521,14 @@ const twoModerators = {
     {
       ...sessionsResponse.sessions[0],
       speakers: [
-        { speaker_code: "m1", name: "Martin", role: "researcher" },
+        { speaker_code: "m1", name: "Martin", role: "researcher", person: "id-martin" },
         { speaker_code: "p1", name: "Alice", role: "participant" },
       ],
     },
     {
       ...sessionsResponse.sessions[1],
       speakers: [
-        { speaker_code: "m1", name: "Jo", role: "researcher" },
+        { speaker_code: "m1", name: "Jo", role: "researcher", person: "id-jo" },
         { speaker_code: "p2", name: "Bob", role: "participant" },
       ],
     },
@@ -571,14 +571,14 @@ const identityCodes = {
     {
       ...twoModerators.sessions[0],
       speakers: [
-        { speaker_code: "m1", slot_code: "m1", name: "Martin", role: "researcher" },
+        { speaker_code: "m1", slot_code: "m1", name: "Martin", role: "researcher", person: "id-martin" },
         { speaker_code: "p1", slot_code: "p1", name: "Alice", role: "participant" },
       ],
     },
     {
       ...twoModerators.sessions[1],
       speakers: [
-        { speaker_code: "m2", slot_code: "m1", name: "Jo", role: "researcher" },
+        { speaker_code: "m2", slot_code: "m1", name: "Jo", role: "researcher", person: "id-jo" },
         { speaker_code: "p2", slot_code: "p2", name: "Bob", role: "participant" },
       ],
     },
@@ -659,7 +659,7 @@ describe("SessionsTable moderators are named per session", () => {
     await waitFor(() => expect(putCalls()).toHaveLength(1));
     const puts = putCalls();
     expect(puts[0].url).toMatch(/\/sessions\/s2\/speakers\/m1$/);
-    expect(puts[0].body).toEqual({ short_name: "Joanna", confirmed: true });
+    expect(puts[0].body).toEqual({ person: "id-jo", short_name: "Joanna", confirmed: true });
   });
 
   it("Edit ▸ Undo puts the session's moderator back, name and flag", async () => {
@@ -679,7 +679,7 @@ describe("SessionsTable moderators are named per session", () => {
     expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Martin", "Jo"]);
     expect(putCalls()[1].url).toMatch(/\/sessions\/s2\/speakers\/m1$/);
     // The fixture's slot carries no flag, which the grid reads as confirmed.
-    expect(putCalls()[1].body).toEqual({ short_name: "Jo", confirmed: true });
+    expect(putCalls()[1].body).toEqual({ person: "id-jo", short_name: "Jo", confirmed: true });
 
     await act(async () => {
       await redo();
@@ -722,25 +722,43 @@ describe("SessionsTable person picker", () => {
       {
         ...sessionsResponse.sessions[0],
         speakers: [
-          { speaker_code: "m1", name: "Sarah", role: "researcher", name_confirmed: false },
+          { speaker_code: "m1", name: "Sarah", role: "researcher", name_confirmed: false, person: "id-sarah" },
           { speaker_code: "p1", name: "Alice", role: "participant", name_confirmed: true },
         ],
       },
       {
         ...sessionsResponse.sessions[1],
         speakers: [
-          { speaker_code: "m1", name: "Kerri", role: "researcher", name_confirmed: true },
+          { speaker_code: "m1", name: "Kerri", role: "researcher", name_confirmed: true, person: "id-kerri" },
           { speaker_code: "p2", name: "Bob", role: "participant", name_confirmed: true },
         ],
       },
     ],
   };
 
+  // A server that remembers what was written: a pick re-reads /sessions
+  // (codes may renumber), so a frozen fixture would undo every pick.
   function mockPicker() {
+    const server = structuredClone(pickerSessions) as typeof pickerSessions;
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(
-      (url: string) => {
+      (url: string, init?: RequestInit) => {
+        const slot = /\/sessions\/([^/]+)\/speakers\/([^/]+)$/.exec(url);
+        if (slot && init?.method === "PUT") {
+          const body = JSON.parse(init.body as string) as Record<string, unknown>;
+          const sp = server.sessions
+            .find((sess) => sess.session_id === slot[1])
+            ?.speakers.find((x) => x.speaker_code === slot[2]) as Record<string, unknown> | undefined;
+          if (sp && body.clear) Object.assign(sp, { person: "", name: "", name_confirmed: false });
+          else if (sp) {
+            const holder = server.sessions.flatMap((x) => x.speakers)
+              .find((x) => (x as Record<string, unknown>).person === body.person) as Record<string, unknown> | undefined;
+            const name = (body.short_name ?? body.full_name ?? holder?.name ?? sp.name) as string;
+            Object.assign(sp, { person: body.person ?? sp.person, name, name_confirmed: body.confirmed ?? true });
+          }
+          return Promise.resolve({ ok: true, json: async () => ({ status: "ok" }) });
+        }
         if (url.includes("/sessions") && !url.includes("/speakers/")) {
-          return Promise.resolve({ ok: true, json: async () => pickerSessions });
+          return Promise.resolve({ ok: true, json: async () => structuredClone(server) });
         }
         if (url.includes("/people")) {
           return Promise.resolve({ ok: true, json: async () => peopleResponse });
@@ -825,7 +843,7 @@ describe("SessionsTable person picker", () => {
     fireEvent.keyDown(await pickerMenu(), { key: "Enter" });
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
-    expect(puts()[0].body).toEqual({ short_name: "Sarah", confirmed: true });
+    expect(puts()[0].body).toEqual({ person: "id-sarah", short_name: "Sarah", confirmed: true });
     expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("bn-person-proposed")).toBe(false);
   });
 
@@ -842,7 +860,7 @@ describe("SessionsTable person picker", () => {
       await undo();
     });
     expect(puts()[1].url).toContain("/sessions/s1/speakers/m1");
-    expect(puts()[1].body).toEqual({ short_name: "Sarah", confirmed: false });
+    expect(puts()[1].body).toEqual({ person: "id-sarah", short_name: "Sarah", confirmed: false });
     expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("bn-person-proposed")).toBe(true);
     expect(screen.getAllByTestId("bn-name-m1")[0].textContent).toBe("Sarah");
   });
@@ -859,7 +877,7 @@ describe("SessionsTable person picker", () => {
     await waitFor(() => expect(header()).toBe("Moderated by Kerri"));
   });
 
-  it("picking another moderator's name renames only this session's", async () => {
+  it("picking another moderator points this session's at them, by person (§J8)", async () => {
     mockPicker();
     render(<SessionsTable projectId="1" />);
     await screen.findByText("#1");
@@ -868,7 +886,7 @@ describe("SessionsTable person picker", () => {
     fireEvent.click(kerri);
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
-    expect(puts()[0].body).toEqual({ full_name: "Kerri", short_name: "Kerri", confirmed: true });
+    expect(puts()[0].body).toEqual({ person: "id-kerri", short_name: "Kerri", confirmed: true });
     expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Kerri", "Kerri"]);
   });
 
@@ -955,10 +973,36 @@ describe("SessionsTable person picker", () => {
     render(<SessionsTable projectId="1" />);
     await screen.findByText("#1");
     window.dispatchEvent(new CustomEvent("bn:menu-action", {
-      detail: { action: "personPickerChoose", payload: { sessionId: "s2", code: "m1", choice: { kind: "name", name: "Mike" } } },
+      detail: { action: "personPickerChoose", payload: { sessionId: "s2", code: "m1", choice: { kind: "new", name: "Mike" } } },
     }));
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0].url).toContain("/sessions/s2/speakers/m1");
+    expect(puts()[0].body).toMatchObject({ create: true, full_name: "Mike", short_name: "Mike", confirmed: true });
+    expect(typeof (puts()[0].body as { person?: unknown }).person).toBe("string");
     expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Sarah", "Mike"]);
+  });
+
+  it("native's typed name another moderator goes by is refused, and nothing is written (§J8.11)", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    window.dispatchEvent(new CustomEvent("bn:menu-action", {
+      detail: { action: "personPickerChoose", payload: { sessionId: "s2", code: "m1", choice: { kind: "new", name: "sarah" } } },
+    }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(puts()).toHaveLength(0);
+    expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Sarah", "Kerri"]);
+  });
+
+  it("the pencil cannot give a moderator someone else's name (§J8.11)", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-name-pencil-m1")[1]);
+    const editing = screen.getAllByTestId("bn-name-m1")[1];
+    editing.textContent = "Sarah";
+    fireEvent.keyDown(editing, { key: "Enter" });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(puts()).toHaveLength(0);
   });
 });

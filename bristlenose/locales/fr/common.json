@@ -136,7 +136,8 @@
       "newObserver": "Nouvel observateur",
       "newNameFor": "Nouveau nom pour {{code}}",
       "thatsMe": "C’est moi ({{name}})",
-      "proposedName": "{{code}}, nom propos\u00e9 {{name}}"
+      "proposedName": "{{code}}, nom propos\u00e9 {{name}}",
+      "nameTaken": "{{name}} figure d\u00e9j\u00e0 dans la liste. Choisissez cette personne, ou ajoutez de quoi distinguer les deux."
     },
     "failedToLoad": "Échec du chargement des entretiens : {{error}}",
     "loading": "Chargement des entretiens…"

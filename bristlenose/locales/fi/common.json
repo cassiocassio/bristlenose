@@ -146,7 +146,8 @@
       "newObserver": "Uusi tarkkailija",
       "newNameFor": "Uusi nimi osallistujalle {{code}}",
       "thatsMe": "Tämä olen minä ({{name}})",
-      "proposedName": "{{code}}, ehdotettu nimi {{name}}"
+      "proposedName": "{{code}}, ehdotettu nimi {{name}}",
+      "nameTaken": "{{name}} on jo luettelossa. Valitse kyseinen henkil\u00f6 tai lis\u00e4\u00e4 jotain, joka erottaa heid\u00e4t."
     },
     "failedToLoad": "Istuntojen lataus epäonnistui: {{error}}",
     "loading": "Ladataan istuntoja…"

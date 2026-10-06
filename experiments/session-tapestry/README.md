@@ -48,7 +48,9 @@ The clip colour is computed by `bristlenose/utils/scene_colour.py`, which `Pipel
 Not wired yet:
 - `analyze` (no video) and render-only runs don't compute colours.
 - Projects analysed before this change show neutral clips until their next `run`.
-- The zoom has no keyboard shortcut. ⌘+ and ⌘− are the browser's.
+
+
+**Decided (6 Oct 2026): the zoom has no keyboard shortcut.** ⌘+ and ⌘− stay the browser's text zoom, because readers rely on text size more than they would on a timeline zoom. Don't add a shortcut.
 
 ## Measured
 

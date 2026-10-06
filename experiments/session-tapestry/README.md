@@ -52,6 +52,14 @@ Not wired yet:
 
 **Decided (6 Oct 2026): the zoom has no keyboard shortcut.** ⌘+ and ⌘− stay the browser's text zoom, because readers rely on text size more than they would on a timeline zoom. Don't add a shortcut.
 
+**Review calls (6 Oct 2026):**
+- **Observers share the Moderators track.** "Moderators" stands for everyone who is not a participant; they do not get a track of their own.
+- **Theme highlighting stays hover-only for now**, and section flags are mouse-only. The popover shows a quote's section or its theme, not both. Left as is for the moment.
+- **A screen-reader summary of each timeline needs thought.** Today the timeline reads as disconnected text. Tracked in the 100-days plan.
+- **Two sections renamed to the same name share one flag.** An accepted edge case.
+- **Dimmed bars at 0.4 opacity** are fine for v1.
+- **The export carries quote text twice** (in `/quotes`, and up to 400 characters each in `/tapestry`). Deferred to v1.1.
+
 ## Measured
 
 - **The video never flips with the speaker.** Across 25 distinct recordings in the maintainer's test corpus, all 12 with two speakers showed the same picture whoever spoke (scene distance 0.3–4.6). The speaker is shown by the track; the colour shows what was on screen.

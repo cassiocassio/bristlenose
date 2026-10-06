@@ -89,9 +89,14 @@
 .bn-tp-clip-label.on-ppt { fill: light-dark(#fff, #111); }
 
 .bn-tp-flag { cursor: pointer; }
-.bn-tp-flag line { stroke: var(--bn-colour-text); }
-.bn-tp-flag path { fill: var(--bn-tp-flag-rest); stroke: var(--bn-colour-border); }
-.bn-tp-flag.raised path { fill: var(--bn-colour-bg); stroke: var(--bn-colour-text); }
+/* The staff and the banner share one hairline: the border keyline at rest, the text
+   ink when raised — darker, never thicker. */
+.bn-tp-flag line,
+.bn-tp-flag path { stroke: var(--bn-colour-border); stroke-width: 1; }
+.bn-tp-flag path { fill: var(--bn-tp-flag-rest); }
+.bn-tp-flag.raised line,
+.bn-tp-flag.raised path { stroke: var(--bn-colour-text); }
+.bn-tp-flag.raised path { fill: var(--bn-colour-bg); }
 .bn-tp-flag text {
     font: var(--bn-weight-emphasis) var(--bn-text-badge) var(--bn-font-body);
     fill: var(--bn-colour-text);

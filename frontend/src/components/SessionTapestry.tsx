@@ -353,7 +353,9 @@ export default function SessionTapestry({
                 onClick={() => onJump(f.t0)}>
                 <title>{`${f.label} · ${formatTimecode(f.t0)}`}</title>
                 <line x1={fx + 0.5} x2={fx + 0.5} y1={2} y2={MT.y - 2} />
-                <path d={`M${fx + 1},2 h${pw} l-5,7 l5,7 h-${pw} z`}
+                {/* Half-pixel coordinates: a 1px stroke on whole pixels smears across two and
+                    reads as a heavier line than the hairline it is. */}
+                <path d={`M${fx + 1.5},2.5 h${pw} l-5,7 l5,7 h-${pw} z`}
                   filter={isRaised ? `url(#bn-tp-lift-${s.session_id})` : undefined} />
                 {text && <text x={fx + 4} y={13}>{text}</text>}
               </g>

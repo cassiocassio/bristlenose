@@ -19,6 +19,16 @@ predate all of it — `get_people` / `put_people` in `server/routes/data.py`,
 
 ## Changelog
 
+- _2026-10-06_ — **The owner answered the Phase 1 and §J7 calls (§J8).** Four answers, three
+  of which change the design. **(1)** A self-introduction proposes a name and creates a
+  person, overriding §C5's "a heard name is never a proposal". **(2)** A person is unique and
+  names can clash. Picking a name means "this speaker is that person". Editing a name, from
+  any surface, fixes that person's spelling everywhere they appear. This contradicts the
+  Phase 1 branch, where a typed name on a shared person creates a new person. **(3)**
+  Deleting a person waits for the People lens. The picker gains a way back to
+  *unknown*. **(4)** Codes per person and role are confirmed, under a stated principle: people
+  are unique, and roles are what they perform in a session. Also confirmed: the two
+  §J7 prerequisites, and `people.yaml` can go whenever the architecture allows.
 - _2026-10-04, evening_ — **Trued for 0.33.0, and the summary caught up with the body.** The
   intro said none of the UX was built; the picker (web and Mac), `name_confirmed` (012) and undo
   on speaker naming all shipped today, so the intro, §0, §C1, §C5, §D step 1, the H9 phase rows,
@@ -1256,6 +1266,11 @@ distinct display name within one study, mints the identity it proposes. Absent o
 purpose: null → anything by inference, proposed by a hearing, any transition from
 the signed-in account, a re-run touching a non-null slot. Observers share the
 machine (`o?`).
+
+*Superseded in part 6 Oct 2026 (§J8, answer 1): a speaker who plainly introduces
+themselves ("hello, I'm Mike Jones, an assistant manager at Foo") now proposes a
+name and creates a person, shown dotted until a human says yes. A name that is
+merely heard elsewhere in the conversation stays a hint.*
 
 **Identity — per code, relative to other codes.**
 
@@ -2884,3 +2899,70 @@ Three consequences for the build:
 7. **Recoding `p` → moderator names that person in an anonymised export** (decision
    2 names moderators). *Recommended: accept, without a warning* — decision 2 is the
    rule, and the recode says they were never a participant.
+
+### J8 · The owner's answers — 6 Oct 2026
+
+*Answers to the Phase 1 landing brief's calls and to §J7, given in conversation and
+recorded here as the owner put them. Where an answer contradicts something already
+written or built, it is named, and the earlier text is left standing with a pointer.*
+
+**The principle under all of them.** People are unique in the world, and their names
+can clash. Roles are a convenience for the researcher, and the way Bristlenose keeps
+moderator and observer speech out of the evidence. A role is something a person
+*performs in a session*, not something they *are*. One person can moderate one session,
+observe another, and be a participant in an internal study. That is fine, and treating
+people as unique and roles as per-session is the People lens's long-term goal.
+
+1. **A self-introduction creates a person.** "Hello, I'm Martin, a user researcher."
+   "I'm Steve, a designer at X." "I'm Mike Jones, an assistant manager at Foo, responsible
+   for donuts." These are normal openings. When there is only audio, the owner wants them
+   to populate the names, proposed, even if the spelling then needs fixing. The job title
+   in the same sentence fills the participant role field. This overrides §C5's 1 Oct rule
+   that a heard name is only a hint (dated note added there), and agrees with the Phase 1
+   brief's call 1.
+   - **Already half there.** `speaker-identification.md` asks for `person_name` and
+     `job_title` when a speaker introduces themselves.
+   - **Open:** the same prompt also takes a name a speaker is merely *addressed by*
+     ("thanks, Steve"), which is weaker than the plain self-introduction the owner
+     described. Whether that also proposes is undecided.
+   - Introductions happen at the start, so the five-minute sample is not a limit here.
+
+2. **A typed name is a person; editing a name fixes that person everywhere.**
+   - Naming the unknown `p3` in session 3 "Mike Smith" creates Mike Smith as a person, and
+     every `p3` quote in that session reads Mike Smith.
+   - Mike Smith may turn up again later, as `p7` or `o2` in session 5. That may be the same
+     person or a different Mike Smith. Never merge two people because their names match.
+   - **The picker's list is a convenience, scoped to the project.** In v1 it earns its place
+     for "this is the same moderator or the same observer". Whether v1 models every
+     person in the world is not decided.
+   - **An edit to a name is always a spelling fix, applied wherever that person is
+     assigned.** It is a correction to the label, never a fork. Fixing "Mat Smith" to "Matt
+     Smith" on the Sessions grid, or on a paragraph in a transcript, fixes it everywhere.
+   - **This contradicts the `route-c-phase1` branch.** On the branch, a typed name on a
+     slot whose person no other session shares renames that person; on a shared person it
+     creates a new person for this slot. Under this answer those are two different intents
+     and need two payloads:
+     - *rename this person*: the pencil, from any surface;
+     - *this slot is a new person*: the picker's new-person row.
+
+     The branch currently decides between them from whether the person is shared. Reconcile
+     this before or while landing Phase 1. The brief's call 3, "keep until Phase 2 decides
+     where a spelling fix lives", is answered by this.
+
+3. **Removing a person, and going back to unknown.**
+   - When the People lens exists, it will offer deleting a person.
+   - The picker may gain a way to return a slot to unknown: `p3` Matt Smith back to `p3`,
+     unknown participant. That answers the open "don't know who" row in UX iteration 3, and
+     needs Phase 1's null slot.
+   - **Open:** what the picker lists before the lens exists, when a person no longer
+     appears in any session. The brief's call 5 releases such a moderator; the owner did not
+     rule on that interim.
+
+4. **`people.yaml`** can be dropped whenever the architecture makes it sensible. It is no
+   longer tied to Phase 5.
+
+5. **§J7's two prerequisites are confirmed:** the importer reconciles speaker slots instead
+   of freezing them at first import, and `m`/`o` codes are never reissued within a session.
+
+6. **§J7 call 3 is confirmed.** Codes are per person and per role: Steve is `m2` where he
+   moderates and `o1` where he observes, and his name joins the two.

@@ -107,7 +107,8 @@
 .bn-tp-flag.hot line,
 .bn-tp-flag.hot path { stroke: var(--bn-selection-border); }
 .bn-tp-flag.hot path { fill: var(--bn-selection-bg); }
-.bn-tp-flag.hot text { fill: var(--bn-colour-accent); }
+/* The label keeps the text ink: blue text on the selection wash is 3.6:1. The blue staff,
+   hairline and wash carry the state. */
 .bn-tp-flag text {
     font: var(--bn-weight-emphasis) var(--bn-tp-text-flag, var(--bn-text-label)) var(--bn-font-body);
     fill: var(--bn-colour-text);
@@ -272,6 +273,7 @@
     cursor: pointer;
 }
 .bn-tp-zoom-btn:hover { color: var(--bn-colour-text); }
+.bn-tp-zoom-btn:disabled { opacity: 0.4; cursor: default; }
 .bn-tp-zoom-btn:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
 .bn-tp-zoom-btn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
 .bn-tp-zoom-slider {

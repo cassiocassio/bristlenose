@@ -145,8 +145,21 @@ export default function SessionTapestry({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The last quote opened: where the slice's Tab stop rests, and where focus returns on close.
+  const [lastIndex, setLastIndex] = useState(0);
+  /** Close the open quote; if focus was in this slice or its popover, hand it back to the bar. */
+  const closeQuote = () => {
+    const active = document.activeElement;
+    const inside = !!active && (!!svgRef.current?.contains(active) || !!document.getElementById(panelId)?.contains(active));
+    const back = selected;
+    setSelected(-1);
+    if (inside && back >= 0) {
+      requestAnimationFrame(() => svgRef.current?.querySelectorAll<SVGElement>(".bn-tp-bar")[back]?.focus({ preventScroll: true }));
+    }
+  };
   const choose = (i: number) => {
     setSelected(i);
+    if (i >= 0) setLastIndex(i);
     if (i >= 0) window.dispatchEvent(new CustomEvent(ACTIVE_EVENT, { detail: session.session_id }));
   };
   useEffect(() => {
@@ -157,7 +170,8 @@ export default function SessionTapestry({
     return () => window.removeEventListener(ACTIVE_EVENT, other);
   }, [session.session_id]);
   // A refetch (a hide, a rename) can reorder quotes; an index would then name a different one.
-  useEffect(() => {
+  // Layout effect: reset before paint, or the popover shows another quote for a frame.
+  useLayoutEffect(() => {
     setSelected(-1);
   }, [session.quotes]);
 
@@ -191,7 +205,7 @@ export default function SessionTapestry({
     // app root inert, and then the timeline stands aside.
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.metaKey || e.altKey || e.ctrlKey) return;
-      if ((document.getElementById("bn-app-root") as (HTMLElement & { inert?: boolean }) | null)?.inert) return;
+      if (document.getElementById("bn-app-root")?.hasAttribute("inert")) return;
       const tgt = e.target as HTMLElement | null;
       if (tgt?.closest?.("input, textarea, select, [contenteditable='true']")) return;
       if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
@@ -201,7 +215,7 @@ export default function SessionTapestry({
       } else if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
-        setSelected(-1);
+        closeQuote();
       }
     };
     document.addEventListener("keydown", onKey, true);
@@ -321,7 +335,10 @@ export default function SessionTapestry({
       "--bn-tp-text-pop-quote": `var(--bn-text-${tune.type.popQuote})`,
       "--bn-tp-pad-popover": `var(--bn-space-${P.popover})`,
     } as React.CSSProperties}>
-      <div className="bn-tapestry-scroll" ref={scrollRef} onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}>
+      <div className="bn-tapestry-scroll" ref={scrollRef} onScroll={(e) => {
+        // Only the open popover needs the scroll (to stay on its bar); otherwise don't re-render.
+        if (selected >= 0) setScrollLeft(e.currentTarget.scrollLeft);
+      }}>
         <svg
           ref={svgRef}
           className="bn-tapestry-svg"
@@ -441,7 +458,7 @@ export default function SessionTapestry({
             const common = {
               className: `bn-tp-bar${i === selected ? " sel" : ""}${dim ? " dim" : ""}`,
               // One Tab stop per slice (roving): the selected bar, else the first; arrows move.
-              tabIndex: (selected >= 0 ? i === selected : i === 0) ? 0 : -1,
+              tabIndex: (selected >= 0 ? i === selected : i === Math.min(lastIndex, s.quotes.length - 1)) ? 0 : -1,
               role: "button",
               "aria-expanded": i === selected,
               "aria-controls": panelId,
@@ -565,7 +582,7 @@ export default function SessionTapestry({
             <button type="button" className="bn-tp-close" aria-label={t("buttons.close")}
               onClick={(e) => {
                 e.stopPropagation();
-                setSelected(-1);
+                closeQuote();
               }}>
               <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6" /></svg>
             </button>

@@ -216,6 +216,13 @@ export function SessionsTable({
   );
   const [zoom, setZoom] = useState(() => loadTapestryView(projectId).zoom);
   const [tuning, setTuning] = useState(false);
+  const scrollSaveTimer = useRef<number | undefined>(undefined);
+  const pendingScrollSave = useRef<(() => void) | null>(null);
+  // A save still waiting when the lens unmounts (a click into a transcript) is written now.
+  useEffect(() => () => {
+    window.clearTimeout(scrollSaveTimer.current);
+    pendingScrollSave.current?.();
+  }, []);
   useEffect(() => {
     saveTapestryView(projectId, { open: [...openTapestries], zoom });
   }, [projectId, openTapestries, zoom]);
@@ -577,9 +584,9 @@ export function SessionsTable({
       return next;
     });
   const zoomControl = hasTapestry ? (
-    <div className="bn-tp-zoom" role="group" aria-label={t("sessions.tapestry.zoom")}>
+    <div className="bn-tp-zoom">
       <button type="button" className="bn-tp-zoom-btn" aria-label={t("sessions.tapestry.zoomOut")}
-        title={t("sessions.tapestry.zoomOut")} onClick={() => setZoom((z) => Math.max(0, z - 20))}>
+        title={t("sessions.tapestry.zoomOut")} disabled={zoom <= 0} onClick={() => setZoom((z) => Math.max(0, z - 20))}>
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" /><path d="M10 10l3.5 3.5M4.5 6.5h4" /></svg>
       </button>
       <input type="range" className="bn-tp-zoom-slider" min={0} max={100} value={zoom}
@@ -587,7 +594,7 @@ export function SessionsTable({
         aria-label={t("sessions.tapestry.zoom")} onChange={(e) => setZoom(Number(e.target.value))}
         onDoubleClick={() => setZoom(0)} />
       <button type="button" className="bn-tp-zoom-btn" aria-label={t("sessions.tapestry.zoomIn")}
-        title={t("sessions.tapestry.zoomIn")} onClick={() => setZoom((z) => Math.min(100, z + 20))}>
+        title={t("sessions.tapestry.zoomIn")} disabled={zoom >= 100} onClick={() => setZoom((z) => Math.min(100, z + 20))}>
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" /><path d="M10 10l3.5 3.5M4.5 6.5h4M6.5 4.5v4" /></svg>
       </button>
       {IS_DEV && (
@@ -603,13 +610,19 @@ export function SessionsTable({
       )}
     </div>
   ) : null;
-  // Each timeline scrolls on its own; remember where, so Back restores it.
+  // Each timeline scrolls on its own; remember where (once scrolling settles), so Back restores it.
   const rememberScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const src = e.target as HTMLElement;
     if (!src.classList?.contains("bn-tapestry-scroll")) return;
     const sid = src.closest(".bn-tapestry")?.id.replace(/^bn-tapestry-/, "");
     if (!sid) return;
-    saveTapestryView(projectId, { scroll: { ...loadTapestryView(projectId).scroll, [sid]: src.scrollLeft } });
+    window.clearTimeout(scrollSaveTimer.current);
+    pendingScrollSave.current = () =>
+      saveTapestryView(projectId, { scroll: { ...loadTapestryView(projectId).scroll, [sid]: src.scrollLeft } });
+    scrollSaveTimer.current = window.setTimeout(() => {
+      pendingScrollSave.current?.();
+      pendingScrollSave.current = null;
+    }, 150);
   };
 
   return (
@@ -853,7 +866,7 @@ function SessionRow({
             type="button"
             className="bn-tapestry-toggle"
             aria-expanded={tapestryOpen}
-            aria-controls={`bn-tapestry-${session_id}`}
+            aria-controls={tapestryOpen ? `bn-tapestry-${session_id}` : undefined}
             aria-label={t("sessions.tapestry.toggle", { number: session_number })}
             onClick={(e) => {
               e.stopPropagation();

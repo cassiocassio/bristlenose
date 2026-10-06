@@ -1179,6 +1179,7 @@ describe("SessionsTable — session tapestry", () => {
     expect(await screen.findByRole("group", { name: "Session timeline" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Timeline for session 1" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("slider", { name: "Timeline zoom" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Zoom Out" })).toBeDisabled(); // already at fit
     // The slice is a row of the grid, right after its session's row.
     const row = document.querySelector('[data-session="s1"]');
     expect(row?.nextElementSibling?.id).toBe("bn-tapestry-s1");

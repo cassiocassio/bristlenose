@@ -197,7 +197,7 @@ describe("SessionTapestry — the quote popover", () => {
     document.body.appendChild(root);
     const { bars } = setup();
     fireEvent.click(bars()[0]);
-    (root as HTMLElement & { inert: boolean }).inert = true;
+    root.setAttribute("inert", ""); // what useInert does
     fireEvent.keyDown(document.body, { key: "Escape" });
     expect(screen.getByText("That was easy to find")).toBeInTheDocument();
     root.remove();
@@ -208,6 +208,16 @@ describe("SessionTapestry — the quote popover", () => {
     fireEvent.click(bars()[0]);
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(screen.queryByText("That was easy to find")).not.toBeInTheDocument();
+  });
+
+  it("hands focus back to its bar when closed from the X", async () => {
+    const { bars } = setup();
+    fireEvent.click(bars()[1]);
+    const close = screen.getByRole("button", { name: "Close" });
+    close.focus();
+    fireEvent.click(close);
+    await waitFor(() => expect(document.activeElement).toBe(bars()[1]));
+    expect(bars()[1].getAttribute("tabindex")).toBe("0"); // the Tab stop stays on the quote just read
   });
 
   it("closes on a click anywhere that is not a bar or the popover", () => {

@@ -78,15 +78,17 @@ export function resetTapestryTuning(): void {
   state = DEFAULTS;
   emit();
 }
+// Module-level, so useSyncExternalStore keeps one subscription instead of re-subscribing per render.
+function subscribe(l: () => void): () => void {
+  listeners.add(l);
+  return () => {
+    listeners.delete(l);
+  };
+}
+const snapshot = () => state;
+
 export function useTapestryTuning(): TapestryTuning {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    },
-    () => state,
-    () => state,
-  );
+  return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
 
 /** Human-readable differences from the defaults, for handing back to be committed. */

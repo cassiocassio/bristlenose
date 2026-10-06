@@ -3696,7 +3696,12 @@ body { padding: 0; }
 .m-stage .m-question { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); padding: .3rem .8rem .1rem; }
 .m-h3 { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); margin: .8rem 0 .4rem; }
 /* Section 7: the scope switch sits above the role toggle, ruled off from it. */
-.m-stage .bn-picker-scope { padding-bottom: .35rem; margin-bottom: .2rem; border-bottom: 1px solid var(--bn-colour-border); }
+/* Plain text, not a segmented control: weight says which, so it reads as a heading
+   and the eye falls to the role toggle below. Tokens only, no new colour. */
+.m-stage .bn-picker-scope { display: flex; gap: var(--bn-space-md); padding: .15rem .8rem .45rem; }
+.m-stage .m-scope-btn { font: inherit; font-size: var(--bn-text-label); background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--bn-colour-muted); font-weight: var(--bn-weight-normal); }
+.m-stage .m-scope-btn[aria-checked="true"] { color: var(--bn-colour-text); font-weight: var(--bn-weight-strong); }
 .m-stage .m-plain-name { color: var(--bn-colour-text); }
 /* The split point: the caret sits in the paragraph's own text. */
 .m-stage .m-split-after { color: var(--bn-colour-muted); }
@@ -3768,11 +3773,11 @@ body { padding: 0; }
 <h3 class="m-h3">From the Sessions grid: no switch</h3><div class="m-grid wide" id="g-switch-grid"></div></section>
 <aside class="m-commentary"><span class="m-label">Commentary — speculative, not decided</span>
 <p><b>The idea</b> (owner, 6 Oct 2026): on the transcript only, a two-way switch above Moderator · Participant · Observer, <em>Speaker | Paragraph</em>, defaulting to Speaker. Below it the picker is exactly today's. With Speaker it acts on every one of p1's turns in the session; with Paragraph it is an atomic "who said this one?". The switch is <b>sticky</b>: leave it on Paragraph and a run of mis-credited paragraphs is click, pick, click, pick. It is section 5's option B with the default settled and the stickiness added, which answers B's main cost (asking every time): you are asked nothing, and the scope is visible before you act rather than offered afterwards.</p>
-<p><b>What it settles.</b> The scope is chosen first and is on screen while you choose. The common case (the whole speaker is wrong, or you are naming them) costs nothing extra. The Sessions grid never shows the switch (7e): a grid row is a speaker. And it gives each scope room to differ later without the two looking alike, which was option C's weakness.</p>
+<p><b>What it settles.</b> The scope is chosen first and is on screen while you choose. The common case (the whole speaker is wrong, or you are naming them) costs nothing extra. The Sessions grid never shows the switch (7e): a grid row is a speaker. <b>Offered on the transcript only, to start with</b> (owner, 6 Oct 2026); any other surface waits until this one has been used. And it gives each scope room to differ later without the two looking alike, which was option C's weakness.</p>
 <p><b>Questions it raises</b>, in rough order of weight:</p>
 <ul>
 <li><b>What Paragraph does to a name.</b> A name is always the speaker's, so with Paragraph on, the name is not a field (7b: plain row, no rename). Typing a new person under Paragraph makes that person and credits this paragraph to them. That is a new speaker in the session, which Speaker scope never creates.</li>
-<li><b>Two segmented controls stacked.</b> Both are <code>.dimension-toggle</code>. The rule between them is the only thing saying they are different axes. Worth trying the scope as a smaller control or a header line before deciding; this frame draws the plainest version.</li>
+<li><b>The switch is plain text, not a second segmented control</b> (owner, 6 Oct 2026). Two stacked <code>.dimension-toggle</code>s read as one control in two rows; drawn as words, with weight (<code>--bn-weight-strong</code>) for the chosen one and muted for the other, it reads as a heading. The eye starts at the role toggle, which is where the act is. No box, no blue, no rule. It stays a radio group for VoiceOver and the keyboard. Note it is new: the house has no text-weight toggle yet, so this is a small new primitive, not a reuse.</li>
 <li><b>Where the stickiness lives.</b> Per transcript page and reset on leaving it? Per session? Per window? A sticky Paragraph forgotten on is the risk: the next "rename Simon" would not be possible, which is at least a visible failure, not a silent one. Resetting when the page changes is the conservative answer.</li>
 <li><b>The labels.</b> <em>Speaker</em> vs <em>All of p1</em>; <em>Paragraph</em> vs <em>This paragraph</em>. A count (<em>All 43</em>) says what Speaker will touch. All are owner-unseen placeholders, not locale keys.</li>
 <li><b>What a paragraph move costs.</b> Speaker scope on a moderator ↔ participant change is today's recode, then <em>Re-analyse…</em>. A paragraph move needs storage the next run respects: the split/join table (<code>transcript_layout_edits</code>, keyed by position and first words) can hold a "speaker" edit the same way. The evidence follows only once quote membership is paragraph-aware (§K, job 11). Until then a paragraph moved off p1 still counts as p1's evidence. Moving a moderator's question off the participant is the useful case, and it is the one evidence-membership has to honour.</li>
@@ -3893,8 +3898,8 @@ document.getElementById("g-split2").innerHTML = [
 ].join("");
 
 // ── Section 7 (speculative): the scope switch ──
-const scopeSwitch = (para) => `<li class="bn-picker-head bn-picker-scope" role="none"><span class="dimension-toggle" role="radiogroup" aria-label="Scope">${
-  ["Speaker", "Paragraph"].map((r, i) => { const on = (i === 1) === para; return `<button type="button" class="dimension-btn${on ? " active" : ""}" role="radio" aria-checked="${on}">${r}</button>`; }).join("")}</span></li>`;
+const scopeSwitch = (para) => `<li class="bn-picker-scope" role="radiogroup" aria-label="Scope">${
+  ["Speaker", "Paragraph"].map((r, i) => { const on = (i === 1) === para; return `<button type="button" class="m-scope-btn" role="radio" aria-checked="${on}">${r}</button>`; }).join("")}</li>`;
 const plainOwn = (code, name) => row(code, "", { tick: true, focus: true, extra: `<span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">${code}</span><span class="bn-speaker-badge-name m-plain-name">${name}</span></span></span>` });
 const renameOwn = (code, name) => row(code, "", { tick: true, focus: true, x: true, extra: `<span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">${code}</span><span class="bn-speaker-badge-name"><span class="m-rename">${name}<span class="m-caret"></span></span></span></span></span>` });
 const Q1 = "And when you got to step nine, what did you do?";

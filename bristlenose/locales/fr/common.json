@@ -152,6 +152,18 @@
       "notThisPerson": "Ce n\u2019est pas {{name}}",
       "swapWith": "\u00c9changer avec {{code}}"
     },
+    "reanalyse": {
+      "button": "Réanalyser…",
+      "why": "Le rôle d’un intervenant a changé : les citations de cet entretien proviennent du mauvais intervenant tant qu’il n’est pas réanalysé.",
+      "title": "Réanalyser l’entretien {{session}} ?",
+      "what": "Bristlenose va rechercher à nouveau les citations de cet entretien d’après les intervenants tels que vous les avez définis, puis reconstruire les sections, les thèmes et le guide d’entretien de toute l’étude. Rien n’est retranscrit.",
+      "kept": "Les citations que vous avez mises en favori, modifiées ou étiquetées sont conservées. Les citations que vous avez seulement masquées dans cet entretien peuvent réapparaître, et les citations favorites du mauvais intervenant sont masquées.",
+      "cost": "Coût estimé : environ {{cost}}.",
+      "confirm": "Réanalyser",
+      "running": "Une analyse est déjà en cours. Réessayez quand elle sera terminée.",
+      "runIt": "Les intervenants sont enregistrés. Pour réanalyser, exécutez ceci dans un terminal :",
+      "failed": "Bristlenose n’a pas pu préparer la nouvelle analyse. Rien n’a changé."
+    },
     "failedToLoad": "Échec du chargement des entretiens : {{error}}",
     "loading": "Chargement des entretiens…"
   },

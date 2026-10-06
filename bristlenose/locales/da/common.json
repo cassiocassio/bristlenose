@@ -162,6 +162,18 @@
       "previousQuote": "Forrige citat",
       "nextQuote": "N\u00e6ste citat"
     },
+    "reanalyse": {
+      "button": "Analysér igen…",
+      "why": "En talers rolle er ændret, så citaterne fra denne session er fra den forkerte taler, indtil den analyseres igen.",
+      "title": "Analysér session {{session}} igen?",
+      "what": "Bristlenose finder citaterne fra denne session igen ud fra talerne, som du har angivet dem, og genopbygger derefter afsnit, temaer og interviewguiden for hele undersøgelsen. Intet transskriberes igen.",
+      "kept": "Citater, du har stjernemarkeret, redigeret eller tagget, bevares. Citater, du kun har skjult i denne session, kan komme tilbage, og stjernemarkerede citater fra den forkerte taler skjules.",
+      "cost": "Anslået pris: cirka {{cost}}.",
+      "confirm": "Analysér igen",
+      "running": "En analyse kører allerede. Prøv igen, når den er færdig.",
+      "runIt": "Talerne er gemt. Kør dette i en terminal for at analysere igen:",
+      "failed": "Bristlenose kunne ikke forberede den nye analyse. Intet er ændret."
+    },
     "failedToLoad": "Kunne ikke indlæse sessioner: {{error}}",
     "loading": "Indlæser sessioner…"
   },

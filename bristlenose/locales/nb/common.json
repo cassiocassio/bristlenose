@@ -162,6 +162,18 @@
       "previousQuote": "Forrige sitat",
       "nextQuote": "Neste sitat"
     },
+    "reanalyse": {
+      "button": "Analyser på nytt…",
+      "why": "Rollen til en taler er endret, så sitatene fra denne økten er fra feil taler til den analyseres på nytt.",
+      "title": "Analysere økt {{session}} på nytt?",
+      "what": "Bristlenose finner sitatene fra denne økten på nytt ut fra talerne slik du har angitt dem, og bygger deretter opp seksjoner, temaer og intervjuguiden for hele studien på nytt. Ingenting transkriberes på nytt.",
+      "kept": "Sitater du har stjernemerket, redigert eller tagget, beholdes. Sitater du bare har skjult i denne økten, kan komme tilbake, og stjernemerkede sitater fra feil taler skjules.",
+      "cost": "Anslått kostnad: omtrent {{cost}}.",
+      "confirm": "Analyser på nytt",
+      "running": "En analyse kjører allerede. Prøv igjen når den er ferdig.",
+      "runIt": "Talerne er lagret. Kjør dette i en terminal for å analysere på nytt:",
+      "failed": "Bristlenose kunne ikke forberede den nye analysen. Ingenting er endret."
+    },
     "failedToLoad": "Klarte ikke å laste inn økter: {{error}}",
     "loading": "Laster inn økter …"
   },

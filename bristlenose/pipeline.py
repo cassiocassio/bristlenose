@@ -527,6 +527,7 @@ def _assign_session_codes(
     sessions: list[InputSession],
     session_segments: dict[str, list[TranscriptSegment]],
     registry: SessionRegistry,
+    dropped_pins: list[str] | None = None,
 ) -> dict[str, dict[str, str]]:
     """Give every speaker its code, and every session its primary participant.
 
@@ -543,6 +544,9 @@ def _assign_session_codes(
         segments = session_segments.get(sid, [])
         if not segments:
             continue
+        dropped = apply_role_pins(sid, segments, registry)
+        if dropped_pins is not None:
+            dropped_pins.extend(f"{sid} {label}" for label in dropped)
         label_map, next_pnum = assign_speaker_codes(
             next_pnum, segments, known=registry.speakers_for(sid),
         )
@@ -564,6 +568,39 @@ def _assign_session_codes(
         session.participant_id = code
         session.participant_number = int(code[1:])
     return maps
+
+
+def apply_role_pins(
+    sid: str, segments: list[TranscriptSegment], registry: SessionRegistry,
+) -> list[str]:
+    """Give each pinned label the role a person said it has (§J7 R3).
+
+    Before codes are assigned, so a pinned label's code follows its role — a
+    participant recoded as the moderator takes a moderator code, and the session
+    is analysed with the right speaker as its participant. A pin is honoured only
+    while its label still covers the turns it was set on; one whose turns moved
+    (speaker identification re-ran and handed the label to another voice) is
+    dropped, logged and returned, never applied to whoever holds the label now.
+    """
+    from bristlenose.models import SpeakerRole
+    from bristlenose.session_registry import pin_starts
+
+    pins = registry.pins.get(sid) or {}
+    dropped: list[str] = []
+    for label, pin in list(pins.items()):
+        mine = [seg for seg in segments if (seg.speaker_label or "Unknown") == label]
+        if pin_starts([seg.start_time for seg in mine]) != pin.starts:
+            del pins[label]
+            dropped.append(label)
+            logger.warning(
+                "%s: the role set on %r no longer matches its turns; it was not applied",
+                sid, label,
+            )
+            continue
+        role = SpeakerRole(pin.role)
+        for seg in mine:
+            seg.speaker_role = role
+    return dropped
 
 
 def _transcript_fingerprint(transcript: FullTranscript, *extra: str) -> str:
@@ -2003,10 +2040,19 @@ class Pipeline:
             # assign_speaker_codes() always re-runs — global numbering, kept
             # stable by the registry: a known speaker keeps their code, and a
             # new participant is numbered after every code ever handed out.
+            _dropped_pins: list[str] = []
             all_label_code_maps = _assign_session_codes(
-                sessions, session_segments, session_registry,
+                sessions, session_segments, session_registry, _dropped_pins,
             )
             session_registry.save()
+            if _dropped_pins:
+                # A role a person set (§J7 R3) whose speaker no longer holds the
+                # same turns: said, not applied to someone else.
+                _print_warn(
+                    f"A speaker role you set no longer matches its speaker's turns, so it "
+                    f"was not applied: {', '.join(_dropped_pins)}. Check the speakers "
+                    "in those sessions."
+                )
 
             mark_stage_complete(
                 manifest, STAGE_IDENTIFY_SPEAKERS,

@@ -1226,3 +1226,25 @@ describe("SessionsTable — session tapestry", () => {
     warn.mockRestore();
   });
 });
+
+describe("SessionsTable — re-analyse after a recode (§J7 R3)", () => {
+  it("offers Re-analyse only on a session that needs it, and opens the sheet", async () => {
+    const needs = {
+      ...sessionsResponse,
+      sessions: [{ ...sessionsResponse.sessions[0], needs_reanalysis: true }, sessionsResponse.sessions[1]],
+    };
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes("/reanalyse")) {
+        return Promise.resolve({ ok: true, json: async () => ({ needed: true, cost_usd: null, running: false, command: "bristlenose run x" }) });
+      }
+      if (url.includes("/sessions")) return Promise.resolve({ ok: true, json: async () => needs });
+      if (url.includes("/people")) return Promise.resolve({ ok: true, json: async () => peopleResponse });
+      return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+    });
+    render(<SessionsTable projectId="1" />);
+    const button = await screen.findByTestId("bn-reanalyse-s1");
+    expect(screen.queryByTestId("bn-reanalyse-s2")).toBeNull();
+    fireEvent.click(button);
+    expect(await screen.findByTestId("bn-reanalyse-sheet")).toBeInTheDocument();
+  });
+});

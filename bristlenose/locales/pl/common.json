@@ -180,6 +180,18 @@
       "notThisPerson": "To nie {{name}}",
       "swapWith": "Zamie\u0144 z {{code}}"
     },
+    "reanalyse": {
+      "button": "Analizuj ponownie…",
+      "why": "Rola mówcy się zmieniła, więc cytaty z tej sesji pochodzą od niewłaściwego mówcy, dopóki nie zostanie ona ponownie przeanalizowana.",
+      "title": "Przeanalizować ponownie sesję {{session}}?",
+      "what": "Bristlenose ponownie wyszuka cytaty z tej sesji na podstawie mówców ustawionych przez Ciebie, a potem odbuduje sekcje, tematy i scenariusz wywiadu dla całego badania. Nic nie jest transkrybowane ponownie.",
+      "kept": "Cytaty z gwiazdką, edytowane i otagowane zostają zachowane. Cytaty, które w tej sesji tylko ukryto, mogą wrócić, a cytaty z gwiazdką od niewłaściwego mówcy zostaną ukryte.",
+      "cost": "Szacowany koszt: około {{cost}}.",
+      "confirm": "Analizuj ponownie",
+      "running": "Analiza już trwa. Spróbuj ponownie, gdy się zakończy.",
+      "runIt": "Mówcy zostali zapisani. Aby przeanalizować ponownie, uruchom w terminalu:",
+      "failed": "Bristlenose nie mógł przygotować ponownej analizy. Nic się nie zmieniło."
+    },
     "failedToLoad": "Nie udało się wczytać sesji: {{error}}",
     "loading": "Wczytywanie sesji…"
   },

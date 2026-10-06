@@ -966,9 +966,85 @@ def _import_speakers(
             left.add(sp.person_id)
             db.delete(sp)
 
+    _carry_pinned_picks(db, session_map, output_dir, left)
     speaker_slots.release(db, left)
     if project_id is not None:
         speaker_slots.renumber(db, project_id)
+
+
+def _carry_pinned_picks(
+    db: Session,
+    session_map: dict[str, SessionModel],
+    output_dir: Path,
+    left: set[int | None],
+) -> None:
+    """Move a researcher's pick to the code a pinned speaker now has (§J7 R3).
+
+    A re-analysis honours the role pins serve wrote, so a recoded speaker comes
+    back under a new code (``p3`` was really the moderator: now ``m2``) while the
+    researcher's pick — the person, confirmed — sits on the slot of the old one.
+    Point the new slot at that person, and let the old slot go once its code is
+    no longer heard. A pin the run dropped, or has not yet applied (its label
+    still holds a code of the other kind), moves nothing.
+    """
+    from bristlenose.server import speaker_slots
+    from bristlenose.session_registry import SessionRegistry
+
+    try:
+        registry = SessionRegistry.load(output_dir)
+    except ValueError:
+        return
+    prefix = {"researcher": "m", "observer": "o", "participant": "p"}
+    for sid, pins in registry.pins.items():
+        sess = session_map.get(sid)
+        if sess is None:
+            continue
+        slots = {sp.speaker_code: sp for sp in db.query(SessionSpeaker).filter_by(session_id=sess.id)}
+        heard = {
+            code for (code,) in db.query(TranscriptSegment.speaker_code)
+            .filter_by(session_id=sess.id).distinct()
+        }
+        for label, pin in pins.items():
+            code = registry.speakers.get(sid, {}).get(label)
+            if not code or code[:1] != prefix[pin.role] or code == pin.from_code:
+                continue
+            new = slots.get(code)
+            if new is None:
+                continue
+            person = speaker_slots.by_uuid(db, pin.person) if pin.person else None
+            if person is not None and new.person_id != person.id:
+                left.add(speaker_slots.point(
+                    new, person, state=speaker_slots.CONFIRMED, evidence=speaker_slots.PICK,
+                ))
+            new.speaker_role = pin.role
+            old = slots.get(pin.from_code)
+            if old is not None and pin.from_code not in heard:
+                left.add(old.person_id)
+                db.delete(old)
+                del slots[pin.from_code]
+                if pin.from_code.startswith("p") and pin.role != "participant":
+                    _hide_wrong_speakers_quotes(db, sess, pin.from_code)
+
+
+def _hide_wrong_speakers_quotes(db: Session, sess: SessionModel, code: str) -> None:
+    """The quotes still credited to a participant code that was really the
+    moderator are the moderator's words. While the slot stood, the recode kept
+    them out of the evidence (``speaker_slots.evidence_out``); with the slot gone,
+    a starred or tagged one the importer keeps would come back as evidence. Hide
+    them instead: out of the report, and the researcher's stars and tags kept,
+    one click from restoring."""
+    now = datetime.now(timezone.utc)
+    quotes = db.query(Quote).filter_by(
+        project_id=sess.project_id, session_id=sess.session_id, participant_id=code,
+    ).all()
+    for q in quotes:
+        state = db.query(QuoteState).filter_by(quote_id=q.id).first()
+        if state is None:
+            state = QuoteState(quote_id=q.id)
+            db.add(state)
+        if not state.is_hidden:
+            state.is_hidden = True
+            state.hidden_at = now
 
 
 def _role_for_code(code: str) -> str:

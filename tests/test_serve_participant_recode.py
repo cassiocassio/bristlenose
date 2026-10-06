@@ -381,3 +381,86 @@ class TestSwap:
                    json={"kind": "observer", "person": kerri})
         resp = client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
         assert resp.status_code == 409
+
+
+def _registry(project: Path, speakers: dict) -> Path:
+    path = project / "bristlenose-output" / ".bristlenose" / "sessions.json"
+    path.write_text(json.dumps({"version": 2, "sessions": {}, "speakers": speakers,
+                                "participants_issued": 2}))
+    return path
+
+
+class TestReanalyse:
+    """§J7 R3: after a recode into or out of participant, the researcher can
+    re-analyse the session. Serve pins the roles; the next run honours them;
+    the importer carries the researcher's picks to the new codes."""
+
+    def _swapped(self, tmp_path: Path) -> tuple[TestClient, Path, Path]:
+        project = _with_quotes(tmp_path)
+        reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}, "s2": {"Kerri": "m1", "Ann": "p2"}})
+        client = _client(project)
+        client.put("/api/projects/1/starred", json={"q-p1-10": True})
+        client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
+        return client, project, reg
+
+    def test_a_recoded_session_says_it_needs_it_and_others_do_not(self, tmp_path: Path) -> None:
+        client, _, _ = self._swapped(tmp_path)
+        sessions = {s["session_id"]: s for s in client.get("/api/projects/1/sessions").json()["sessions"]}
+        assert sessions["s1"]["needs_reanalysis"] is True
+        assert sessions["s2"]["needs_reanalysis"] is False
+        info = client.get("/api/projects/1/sessions/s1/reanalyse").json()
+        assert info["needed"] is True and info["running"] is False
+        assert info["command"].startswith("bristlenose run ")
+
+    def test_post_pins_both_speakers_with_their_turns_and_picks(self, tmp_path: Path) -> None:
+        client, _, reg = self._swapped(tmp_path)
+        martin = _slots(client)[("s1", "p1")]["person"]
+        resp = client.post("/api/projects/1/sessions/s1/reanalyse")
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["pinned"] == 2
+        pins = json.loads(reg.read_text())["pins"]["s1"]
+        assert pins["Wylie"] == {"role": "researcher", "starts": [10.0], "from_code": "p1",
+                                 "person": martin}
+        assert pins["Me"]["role"] == "participant"
+        assert pins["Me"]["starts"] == [2.0, 20.0]
+
+    def test_nothing_to_pin_is_refused(self, tmp_path: Path) -> None:
+        project = _with_quotes(tmp_path)
+        _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}})
+        resp = _client(project).post("/api/projects/1/sessions/s1/reanalyse")
+        assert resp.status_code == 409
+
+    def test_after_the_run_the_picks_move_to_the_new_codes(self, tmp_path: Path) -> None:
+        client, project, reg = self._swapped(tmp_path)
+        martin = _slots(client)[("s1", "p1")]["person"]
+        client.post("/api/projects/1/sessions/s1/reanalyse")
+        # What the run does: honours the pins, so Wylie is the participant (a
+        # new number, p3) and "Me" is the moderator (m1); the session's quotes
+        # are extracted again, from Wylie.
+        data = json.loads(reg.read_text())
+        data["speakers"]["s1"] = {"Wylie": "m1", "Me": "p3"}
+        reg.write_text(json.dumps(data))
+        out = project / "bristlenose-output"
+        (out / "transcripts-raw" / "s1.txt").write_text(
+            "# Transcript: s1\n# Date: 2026-09-20\n# Duration: 00:01:00\n\n"
+            "[00:02] [p3] Welcome, thanks for coming in today.\n"
+            "[00:10] [m1] Thanks for having me, it is good to be here.\n"
+            "[00:20] [p3] Shall we start?\n"
+        )
+        clusters = json.loads((out / ".bristlenose" / "intermediate" / "screen_clusters.json").read_text())
+        for q in clusters[0]["quotes"]:
+            if q["session_id"] == "s1":
+                q.update(participant_id="p3", start_timecode=2.0, text="Quote from p3")
+        (out / ".bristlenose" / "intermediate" / "screen_clusters.json").write_text(json.dumps(clusters))
+        _reimport(client, project)
+
+        slots = _slots(client)
+        assert set(k for k in slots if k[0] == "s1") == {("s1", "m1"), ("s1", "p3")}
+        assert (slots[("s1", "m1")]["name"], slots[("s1", "m1")]["person"]) == ("Martin", martin)
+        assert slots[("s1", "p3")]["name"] == "P1", "Wylie's own record, carried"
+        sessions = {s["session_id"]: s for s in client.get("/api/projects/1/sessions").json()["sessions"]}
+        assert sessions["s1"]["needs_reanalysis"] is False
+        assert _quote_ids(client) == {"q-p3-2", "q-p2-10"}
+        # The starred quote from the wrong speaker is kept — hidden, star intact.
+        assert client.get("/api/projects/1/hidden").json().get("q-p1-10") is True
+        assert client.get("/api/projects/1/starred").json().get("q-p1-10") is True

@@ -176,6 +176,18 @@
       "notThisPerson": "Nen\u00ed to {{name}}",
       "swapWith": "Prohodit s {{code}}"
     },
+    "reanalyse": {
+      "button": "Znovu analyzovat…",
+      "why": "Role mluvčího se změnila, takže citace z tohoto sezení jsou od nesprávného mluvčího, dokud ho znovu neanalyzujete.",
+      "title": "Znovu analyzovat sezení {{session}}?",
+      "what": "Bristlenose znovu vyhledá citace z tohoto sezení podle mluvčích, jak jste je nastavili, a pak znovu sestaví sekce, témata a scénář rozhovoru pro celou studii. Nic se znovu nepřepisuje.",
+      "kept": "Citace, které jste označili hvězdičkou, upravili nebo otagovali, zůstanou. Citace, které jste v tomto sezení jen skryli, se mohou vrátit, a citace s hvězdičkou od nesprávného mluvčího se skryjí.",
+      "cost": "Odhadovaná cena: asi {{cost}}.",
+      "confirm": "Znovu analyzovat",
+      "running": "Analýza už probíhá. Zkuste to znovu, až skončí.",
+      "runIt": "Mluvčí jsou uloženi. Pro novou analýzu spusťte v terminálu:",
+      "failed": "Bristlenose nemohl novou analýzu připravit. Nic se nezměnilo."
+    },
     "failedToLoad": "Nepodařilo se načíst sezení: {{error}}",
     "loading": "Načítání sezení…"
   },

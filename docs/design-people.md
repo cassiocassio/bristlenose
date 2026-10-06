@@ -2718,15 +2718,16 @@ rather than lines, and why anyone building from it should re-derive the anchors
 first — the repo's own gotcha about a bug report describing the tree its author
 read applies to design docs too.
 
-### J7 · The cross-role recode — plan (4 Oct 2026; R1 and R2 built 6 Oct 2026)
+### J7 · The cross-role recode — plan (4 Oct 2026; R1, R2 and R3 built 6 Oct 2026)
 
 > **Status, 6 Oct 2026: R1 (moderator ↔ observer) and R2 (into and out of participant,
 > relabel only) are built on all three surfaces — see
 > [§J8 points 19 and 20](#j8--the-owners-answers--6-oct-2026) for what shipped and where it
 > departs from the rows below** (no `/kind` route: the slot's existing `speaker_role` holds the
 > kind, and the speaker PUT takes `kind`). R2's *Swap with m1* row (call 4) is built too
-> ([§J8 point 21](#j8--the-owners-answers--6-oct-2026)). Not built: the *Re-analyse this
-> session* offer, which waits for R3's act; R3 itself.
+> ([§J8 point 21](#j8--the-owners-answers--6-oct-2026)), and so is R3, *Re-analyse this
+> session* ([§J8 point 22](#j8--the-owners-answers--6-oct-2026)) — whose pins live in the
+> registry, now version 2, as planned below.
 
 *Written to unblock the picker's disabled segments (UX iteration 3: Moderator |
 Participant | Observer, only the current one enabled until this exists). Builds on
@@ -3347,3 +3348,33 @@ people as unique and roles as per-session is the People lens's long-term goal.
     undo (a re-analyse, another window) is exchanged too — the server could refuse a stale
     undo if the write carried the roles it expects; (c) the server accepts any participant ↔
     moderator-or-observer pair in a session, looser than the picker's offer.
+
+22. **Built 6 Oct 2026 — §J7 R3, re-analyse this session.** The owner's calls, 6 Oct: pins in
+    the registry (no backward compatibility owed — the reference studies are re-run); the
+    study-wide regroup accepted and said in the confirm; the Mac runs it and a browser shows
+    the command; curation follows the existing importer rules, said in the confirm. **What a
+    re-analysis redoes**, in the owner's words: switching a moderator to participant asks for
+    new data to be read as evidence, so it asks for new topics and quotes for that session and
+    new sections, themes, Discussion guide, tagging and signal cards for the study — and
+    nothing else: no transcription, no speaker identification (the pin overrides the guess, no
+    LLM call), no PII pass, no other session's topics or quotes. **How:** a session whose
+    speaker moved into or out of participant reads `needs_reanalysis` on `/sessions`, and the
+    Sessions grid row offers **Re-analyse…**. The sheet says what changes, what is kept and,
+    from the pipeline's own estimator, about what it costs; Cancel leads and the act takes the
+    default (the house rule from the re-analyse and uninstall sheets, not the Cancel-default
+    this section once proposed). Confirming `POST`s `…/sessions/{sid}/reanalyse`, which writes a
+    **role pin** per recoded speaker into `sessions.json` (`REGISTRY_VERSION = 2`; version 1
+    still reads): the label, the role, the start times of its turns as evidence, the code it
+    had and the person the researcher picked. Refused (409) while a run owns the project — the
+    registry is load–mutate–save on both sides. The Mac then starts its ordinary resume run
+    (bridge `project-action` `reanalyse-session`); a browser shows `bristlenose run <folder>`.
+    **The run** applies the pins before codes are assigned (`apply_role_pins`), so codes follow
+    roles and the fingerprint changes for that session only; a pin whose label now covers other
+    turns is dropped, logged and said on the terminal, never applied to whoever holds the label.
+    **The importer** carries each pick to the new code (`_carry_pinned_picks`) and lets the old
+    slot go; the moderator's words still credited to the old participant code are **hidden**,
+    their stars and tags kept — found while building: with the slot gone, a kept quote would
+    otherwise come back as evidence. **Open:** the dropped-pin notice reaches the terminal and
+    the log, not the Mac's pipeline popover (a `PipelineSummary` field is a two-file change);
+    whether a transcript paragraph's badge should speak for the paragraph (job 10) rather than
+    the whole speaker — the owner's 6 Oct reading of the picker — is the next design question.

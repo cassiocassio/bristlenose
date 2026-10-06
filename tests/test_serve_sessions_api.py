@@ -171,6 +171,7 @@ class TestSessionsResponseShape:
             "journey",
             "sentiment_counts",
             "source_files",
+            "needs_reanalysis",
         }
         assert set(session.keys()) == expected_keys
 

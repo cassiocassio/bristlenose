@@ -162,6 +162,18 @@
       "notThisPerson": "No \u00e9s {{name}}",
       "swapWith": "Intercanvia amb {{code}}"
     },
+    "reanalyse": {
+      "button": "Torna a analitzar…",
+      "why": "El rol d’un parlant ha canviat, així que les cites d’aquesta sessió són del parlant equivocat fins que es torni a analitzar.",
+      "title": "Vols tornar a analitzar la sessió {{session}}?",
+      "what": "Bristlenose tornarà a cercar les cites d’aquesta sessió a partir dels parlants tal com els has definit, i després reconstruirà les seccions, els temes i la guia de discussió de tot l’estudi. No es torna a transcriure res.",
+      "kept": "Es conserven les cites que has destacat, editat o etiquetat. Les cites que només has amagat en aquesta sessió poden tornar a aparèixer, i les cites destacades del parlant equivocat s’amaguen.",
+      "cost": "Cost estimat: uns {{cost}}.",
+      "confirm": "Torna a analitzar",
+      "running": "Ja s’està fent una anàlisi. Torna-ho a provar quan acabi.",
+      "runIt": "S’han desat els parlants. Per tornar a analitzar, executa això en un terminal:",
+      "failed": "Bristlenose no ha pogut preparar la nova anàlisi. No ha canviat res."
+    },
     "failedToLoad": "No s'han pogut carregar les sessions: {{error}}",
     "loading": "S'estan carregant les sessions…"
   },

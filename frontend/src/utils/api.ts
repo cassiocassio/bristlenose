@@ -137,6 +137,24 @@ async function apiPost<T>(path: string, body: unknown): Promise<T> {
   return resp.json() as Promise<T>;
 }
 
+/** Whether a session needs a paid re-analysis after a speaker recode, and what
+ *  it would cost (design-people.md §J7 R3). */
+export interface ReanalyseInfo {
+  needed: boolean;
+  cost_usd: number | null;
+  running: boolean;
+  command: string;
+}
+
+export function getReanalyse(sessionId: string): Promise<ReanalyseInfo> {
+  return apiGet<ReanalyseInfo>(`/sessions/${encodeURIComponent(sessionId)}/reanalyse`);
+}
+
+/** Pin the session's speakers as the researcher has them, for the next run. */
+export function postReanalyse(sessionId: string): Promise<{ pinned: number; command: string }> {
+  return apiPost(`/sessions/${encodeURIComponent(sessionId)}/reanalyse`, {});
+}
+
 async function apiPatch(path: string, body: unknown): Promise<void> {
   const resp = await fetch(`${apiBase()}${path}`, {
     method: "PATCH",

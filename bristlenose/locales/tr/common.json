@@ -162,6 +162,18 @@
       "notThisPerson": "{{name}} de\u011fil",
       "swapWith": "{{code}} ile yer de\u011fi\u015ftir"
     },
+    "reanalyse": {
+      "button": "Yeniden Analiz Et…",
+      "why": "Bir konuşmacının rolü değişti; bu nedenle bu oturumun alıntıları, oturum yeniden analiz edilene kadar yanlış konuşmacıya ait.",
+      "title": "{{session}} oturumu yeniden analiz edilsin mi?",
+      "what": "Bristlenose bu oturumun alıntılarını, konuşmacıları sizin ayarladığınız gibi temel alarak yeniden bulacak, ardından tüm çalışmanın bölümlerini, temalarını ve görüşme rehberini yeniden oluşturacak. Hiçbir şey yeniden yazıya dökülmez.",
+      "kept": "Yıldızladığınız, düzenlediğiniz veya etiketlediğiniz alıntılar korunur. Bu oturumda yalnızca gizlediğiniz alıntılar geri gelebilir ve yanlış konuşmacının yıldızlı alıntıları gizlenir.",
+      "cost": "Tahmini maliyet: yaklaşık {{cost}}.",
+      "confirm": "Yeniden Analiz Et",
+      "running": "Zaten bir analiz çalışıyor. Bittiğinde yeniden deneyin.",
+      "runIt": "Konuşmacılar kaydedildi. Yeniden analiz etmek için bunu bir terminalde çalıştırın:",
+      "failed": "Bristlenose yeniden analizi hazırlayamadı. Hiçbir şey değişmedi."
+    },
     "failedToLoad": "Oturumlar yüklenemedi: {{error}}",
     "loading": "Oturumlar yükleniyor…"
   },

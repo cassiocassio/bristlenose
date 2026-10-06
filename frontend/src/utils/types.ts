@@ -577,6 +577,9 @@ export interface SessionResponse {
   journey: JourneyStepResponse[];
   sentiment_counts: Record<string, number>;
   source_files: SourceFileResponse[];
+  /** A speaker here moved into or out of participant, and the run that
+   *  extracts the right quotes has not happened (§J7 R3). */
+  needs_reanalysis?: boolean;
 }
 
 export interface SessionsListResponse {

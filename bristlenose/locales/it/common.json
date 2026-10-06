@@ -162,6 +162,18 @@
       "notThisPerson": "Non \u00e8 {{name}}",
       "swapWith": "Scambia con {{code}}"
     },
+    "reanalyse": {
+      "button": "Rianalizza…",
+      "why": "Il ruolo di un interlocutore è cambiato, quindi le citazioni di questa sessione provengono dall’interlocutore sbagliato finché non viene rianalizzata.",
+      "title": "Rianalizzare la sessione {{session}}?",
+      "what": "Bristlenose cercherà di nuovo le citazioni di questa sessione in base agli interlocutori come li hai impostati, poi ricostruirà sezioni, temi e traccia di intervista per l’intero studio. Non viene ritrascritto nulla.",
+      "kept": "Le citazioni che hai contrassegnato, modificato o etichettato vengono conservate. Le citazioni che hai solo nascosto in questa sessione potrebbero ricomparire, e quelle contrassegnate dell’interlocutore sbagliato vengono nascoste.",
+      "cost": "Costo stimato: circa {{cost}}.",
+      "confirm": "Rianalizza",
+      "running": "È già in corso un’analisi. Riprova quando è terminata.",
+      "runIt": "Gli interlocutori sono salvati. Per rianalizzare, esegui questo comando in un terminale:",
+      "failed": "Bristlenose non è riuscito a preparare la nuova analisi. Non è cambiato nulla."
+    },
     "failedToLoad": "Impossibile caricare le sessioni: {{error}}",
     "loading": "Caricamento delle sessioni…"
   },

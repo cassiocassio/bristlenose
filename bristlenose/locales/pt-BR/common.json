@@ -162,6 +162,18 @@
       "notThisPerson": "N\u00e3o \u00e9 {{name}}",
       "swapWith": "Trocar com {{code}}"
     },
+    "reanalyse": {
+      "button": "Reanalisar…",
+      "why": "O papel de um falante mudou, então as citações desta sessão são do falante errado até ela ser analisada de novo.",
+      "title": "Reanalisar a sessão {{session}}?",
+      "what": "O Bristlenose vai encontrar de novo as citações desta sessão a partir dos falantes como você os definiu e, depois, reconstruir as seções, os temas e o roteiro de entrevista do estudo inteiro. Nada é transcrito de novo.",
+      "kept": "As citações que você destacou, editou ou marcou com tags são mantidas. As citações que você apenas ocultou nesta sessão podem voltar, e as citações destacadas do falante errado são ocultadas.",
+      "cost": "Custo estimado: cerca de {{cost}}.",
+      "confirm": "Reanalisar",
+      "running": "Já há uma análise em andamento. Tente de novo quando ela terminar.",
+      "runIt": "Os falantes foram salvos. Para reanalisar, execute isto em um terminal:",
+      "failed": "O Bristlenose não conseguiu preparar a nova análise. Nada foi alterado."
+    },
     "failedToLoad": "Falha ao carregar sessões: {{error}}",
     "loading": "Carregando sessões…"
   },

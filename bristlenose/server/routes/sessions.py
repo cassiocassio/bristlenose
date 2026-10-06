@@ -18,6 +18,7 @@ from bristlenose.server.models import (
 from bristlenose.server.models import (
     Session as SessionModel,
 )
+from bristlenose.server.routes.reanalyse import needs_reanalysis
 from bristlenose.server.speaker_slots import is_recoded_out, is_team, slot_map
 
 router = APIRouter(prefix="/api")
@@ -86,6 +87,9 @@ class SessionResponse(BaseModel):
     journey: list[JourneyStepResponse]
     sentiment_counts: dict[str, int]
     source_files: list[SourceFileResponse]
+    #: A speaker here was recoded into or out of participant and the run that
+    #: extracts the right quotes has not happened (§J7 R3).
+    needs_reanalysis: bool = False
 
 
 class SessionsListResponse(BaseModel):
@@ -238,6 +242,11 @@ def get_sessions(
                     thumbnail_url=thumbnail_url,
                     speakers=speakers_data,
                     journey_labels=journey_labels,
+                    needs_reanalysis=any(
+                        needs_reanalysis(slots[(sess.session_id, sp.speaker_code)])
+                        for sp in sess.session_speakers
+                        if (sess.session_id, sp.speaker_code) in slots
+                    ),
                     journey=journey,
                     sentiment_counts=sentiment_counts,
                     source_files=source_files,

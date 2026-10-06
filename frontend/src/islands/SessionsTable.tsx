@@ -71,6 +71,9 @@ import { refetchOverlayProps } from "../hooks/useRefetching";
 // a slice is only drawn once a row is opened.
 const SessionTapestry = lazy(() => import("../components/SessionTapestry"));
 
+const ReanalyseSessionSheet = lazy(() =>
+  import("../components/ReanalyseSessionSheet").then((m) => ({ default: m.ReanalyseSessionSheet })),
+);
 const PersonPickerPopover = lazy(() =>
   import("../components/PersonPicker").then((m) => ({ default: m.PersonPickerPopover })),
 );
@@ -215,6 +218,8 @@ export function SessionsTable({
   // Bumped after a moderator or observer write lands: a pick or a new person
   // can renumber identities (m2 → m1), which only the server knows.
   const [reloadKey, setReloadKey] = useState(0);
+  // The session whose re-analyse sheet is open (§J7 R3).
+  const [reanalysing, setReanalysing] = useState<string | null>(null);
   const reloadAfterWrites = useCallback(() => {
     void Promise.resolve()
       .then(speakerWritesSettled)
@@ -663,6 +668,7 @@ export function SessionsTable({
             onPickerOpen={openPicker}
             onPickerClose={() => setPickerKey(null)}
             onPickerChoose={applyPickerChoice}
+            onReanalyse={() => setReanalysing(sess.session_id)}
           />,
           open && ts ? (
             <div key={`${sess.session_id}-tapestry`} className="bn-tapestry" role="row"
@@ -686,6 +692,16 @@ export function SessionsTable({
           ];
         })}
       </div>
+      {reanalysing && (
+        <Suspense fallback={null}>
+          <ReanalyseSessionSheet
+            sessionId={reanalysing}
+            sessionLabel={`#${data.sessions.find((x) => x.session_id === reanalysing)?.session_number ?? ""}`}
+            onClose={() => setReanalysing(null)}
+            onPinned={reloadAfterWrites}
+          />
+        </Suspense>
+      )}
     </section>
   );
 }
@@ -712,7 +728,10 @@ function SessionRow({
   onPickerChoose,
   tapestryOpen,
   onToggleTapestry,
+  onReanalyse,
 }: {
+  /** Open the re-analyse sheet for this session (§J7 R3). */
+  onReanalyse?: () => void;
   /** undefined = this session has no timeline; true/false = its disclosure state. */
   tapestryOpen?: boolean;
   /** `all` = Option-click: open or close every row, as in a Finder outline. */
@@ -977,6 +996,19 @@ function SessionRow({
             </span>
           );
         })}
+        {session.needs_reanalysis && onReanalyse && !isExportMode() && (
+          // A speaker here moved into or out of participant: the quotes are
+          // from the wrong speaker until the session is analysed again (§J7 R3).
+          <button
+            type="button"
+            className="toolbar-btn bn-reanalyse-session"
+            title={t("sessions.reanalyse.why")}
+            onClick={(e) => { e.stopPropagation(); onReanalyse(); }}
+            data-testid={`bn-reanalyse-${session_id}`}
+          >
+            {t("sessions.reanalyse.button")}
+          </button>
+        )}
       </div>
       {/* Deliberately NOT .bn-session-meta — that class is only the old
           `min-width: 12rem` stopgap, and it lives in the templates layer,

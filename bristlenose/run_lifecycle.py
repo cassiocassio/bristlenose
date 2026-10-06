@@ -320,6 +320,14 @@ def _is_alive_owned(pid_file: dict[str, Any]) -> bool:
     return actual_start == recorded_start
 
 
+def run_in_progress(output_dir: Path) -> bool:
+    """Whether a pipeline run owns this project right now — its PID file names
+    a live process. Serve asks before writing the session registry, which a
+    run loads at its start and saves over at the end."""
+    pid_file = _read_pid_file(output_dir)
+    return pid_file is not None and _is_alive_owned(pid_file)
+
+
 # ---------------------------------------------------------------------------
 # Exception → Cause categoriser
 # ---------------------------------------------------------------------------

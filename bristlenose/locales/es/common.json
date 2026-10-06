@@ -152,6 +152,18 @@
       "notThisPerson": "No es {{name}}",
       "swapWith": "Intercambiar con {{code}}"
     },
+    "reanalyse": {
+      "button": "Reanalizar…",
+      "why": "El rol de un hablante ha cambiado, así que las citas de esta sesión son del hablante equivocado hasta que se vuelva a analizar.",
+      "title": "¿Reanalizar la sesión {{session}}?",
+      "what": "Bristlenose volverá a buscar las citas de esta sesión según los hablantes tal como los has definido y, después, reconstruirá las secciones, los temas y la guía de discusión de todo el estudio. No se vuelve a transcribir nada.",
+      "kept": "Se conservan las citas que has destacado, editado o etiquetado. Las citas que solo has ocultado en esta sesión pueden volver, y las citas destacadas del hablante equivocado se ocultan.",
+      "cost": "Coste estimado: unos {{cost}}.",
+      "confirm": "Reanalizar",
+      "running": "Ya hay un análisis en curso. Vuelve a intentarlo cuando termine.",
+      "runIt": "Los hablantes se han guardado. Para reanalizar, ejecuta esto en un terminal:",
+      "failed": "Bristlenose no ha podido preparar el nuevo análisis. No ha cambiado nada."
+    },
     "failedToLoad": "Error al cargar las sesiones: {{error}}",
     "loading": "Cargando sesiones…"
   },

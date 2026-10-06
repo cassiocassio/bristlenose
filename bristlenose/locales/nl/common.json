@@ -162,6 +162,18 @@
       "previousQuote": "Vorig citaat",
       "nextQuote": "Volgend citaat"
     },
+    "reanalyse": {
+      "button": "Opnieuw analyseren…",
+      "why": "De rol van een spreker is veranderd, dus de citaten uit deze sessie zijn van de verkeerde spreker tot de sessie opnieuw wordt geanalyseerd.",
+      "title": "Sessie {{session}} opnieuw analyseren?",
+      "what": "Bristlenose zoekt de citaten uit deze sessie opnieuw op basis van de sprekers zoals je ze hebt ingesteld, en bouwt daarna secties, thema’s en de gespreksgids voor het hele onderzoek opnieuw op. Er wordt niets opnieuw getranscribeerd.",
+      "kept": "Citaten met een ster, bewerkte citaten en citaten met tags blijven behouden. Citaten die je in deze sessie alleen hebt verborgen, kunnen terugkomen, en citaten met een ster van de verkeerde spreker worden verborgen.",
+      "cost": "Geschatte kosten: ongeveer {{cost}}.",
+      "confirm": "Opnieuw analyseren",
+      "running": "Er loopt al een analyse. Probeer het opnieuw als die klaar is.",
+      "runIt": "De sprekers zijn bewaard. Voer dit uit in een terminal om opnieuw te analyseren:",
+      "failed": "Bristlenose kon de nieuwe analyse niet voorbereiden. Er is niets gewijzigd."
+    },
     "failedToLoad": "Kon sessies niet laden: {{error}}",
     "loading": "Sessies laden…"
   },

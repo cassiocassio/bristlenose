@@ -47,6 +47,7 @@ from bristlenose.server.routes.miro import router as miro_router
 from bristlenose.server.routes.pipeline import router as pipeline_router
 from bristlenose.server.routes.quotes import router as quotes_router
 from bristlenose.server.routes.quotes_export import router as quotes_export_router
+from bristlenose.server.routes.reanalyse import router as reanalyse_router
 from bristlenose.server.routes.runs import router as runs_router
 from bristlenose.server.routes.sessions import router as sessions_router
 from bristlenose.server.routes.signals import router as analysis_router
@@ -241,6 +242,7 @@ def create_app(
     app.include_router(runs_router)
     app.include_router(sessions_router)
     app.include_router(tapestry_router)
+    app.include_router(reanalyse_router)
     app.include_router(discussion_router)
     app.include_router(quotes_router)
     app.include_router(transcript_router)

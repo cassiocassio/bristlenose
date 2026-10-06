@@ -162,6 +162,18 @@
       "notThisPerson": "Ei {{name}}",
       "swapWith": "Vaihda kesken\u00e4\u00e4n: {{code}}"
     },
+    "reanalyse": {
+      "button": "Analysoi uudelleen…",
+      "why": "Puhujan rooli on muuttunut, joten tämän istunnon lainaukset ovat väärältä puhujalta, kunnes istunto analysoidaan uudelleen.",
+      "title": "Analysoidaanko istunto {{session}} uudelleen?",
+      "what": "Bristlenose etsii tämän istunnon lainaukset uudelleen asettamiesi puhujien mukaan ja rakentaa sitten osiot, teemat ja haastattelurungon koko tutkimukselle uudelleen. Mitään ei litteroida uudelleen.",
+      "kept": "Tähdellä merkitsemäsi, muokkaamasi ja tunnisteilla merkitsemäsi lainaukset säilyvät. Tässä istunnossa vain piilottamasi lainaukset voivat palata, ja väärän puhujan tähdellä merkityt lainaukset piilotetaan.",
+      "cost": "Arvioitu hinta: noin {{cost}}.",
+      "confirm": "Analysoi uudelleen",
+      "running": "Analyysi on jo käynnissä. Yritä uudelleen, kun se on valmis.",
+      "runIt": "Puhujat on tallennettu. Analysoi uudelleen suorittamalla tämä päätteessä:",
+      "failed": "Bristlenose ei pystynyt valmistelemaan uutta analyysia. Mitään ei muutettu."
+    },
     "failedToLoad": "Istuntojen lataus epäonnistui: {{error}}",
     "loading": "Ladataan istuntoja…"
   },

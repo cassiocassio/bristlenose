@@ -162,6 +162,18 @@
       "notThisPerson": "Not {{name}}",
       "swapWith": "Swap with {{code}}"
     },
+    "reanalyse": {
+      "button": "Re-analyse…",
+      "why": "A speaker’s role changed, so this session’s quotes are from the wrong speaker until it is analysed again.",
+      "title": "Re-analyse session {{session}}?",
+      "what": "Bristlenose will find this session’s quotes again, from the speakers as you’ve set them, then rebuild sections, themes and the Discussion guide for the whole study. Nothing is transcribed again.",
+      "kept": "Quotes you starred, edited or tagged are kept. Quotes you only hid in this session may come back, and starred quotes from the wrong speaker are hidden.",
+      "cost": "Estimated cost: about {{cost}}.",
+      "confirm": "Re-analyse",
+      "running": "An analysis is already running. Try again when it finishes.",
+      "runIt": "The speakers are saved. To re-analyse, run this in a terminal:",
+      "failed": "Bristlenose couldn’t prepare the re-analysis. Nothing has changed."
+    },
     "failedToLoad": "Failed to load sessions: {{error}}",
     "loading": "Loading sessions…"
   },

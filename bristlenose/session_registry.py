@@ -19,6 +19,14 @@ The registry remembers two things across runs:
   The speaker map alone cannot say it: a speaker re-identified as a moderator
   or observer leaves the map, and its number would be issued again, to someone
   else, wearing the name typed for the first.
+- **pins** (version 2): per sid, speaker label → the role a person said that
+  speaker is (design-people.md §J7 R3). Written by serve when a researcher
+  re-analyses a session after a recode into or out of participant, honoured by
+  every later run before codes are assigned. A pin carries the evidence it was
+  set on — the start times of that label's turns — and a run whose label now
+  covers other turns drops it and says so, rather than apply it to whoever
+  holds the label now (a re-run of speaker identification can hand
+  *Speaker A* to the other voice).
 
 A project with no file behaves exactly as before on its first run: sessions in
 date order, codes from 1. Entries for sessions that disappear are kept, so their
@@ -42,7 +50,12 @@ from bristlenose.models import InputSession
 
 logger = logging.getLogger(__name__)
 
-REGISTRY_VERSION = 1
+REGISTRY_VERSION = 2
+#: Versions this release reads. Version 1 has no pins; it is read as such and
+#: written back as 2.
+_READABLE_VERSIONS = (1, 2)
+#: The roles a pin may hold — ``SpeakerRole`` values.
+PIN_ROLES = ("researcher", "participant", "observer")
 REGISTRY_FILENAME = "sessions.json"
 #: The label a session's placeholder participant is recorded under. Never a
 #: real speaker: segments are keyed ``speaker_label or "Unknown"``.
@@ -63,11 +76,35 @@ def registry_path(output_dir: Path) -> Path:
 
 
 @dataclass
+class RolePin:
+    """A person's word on what one session's speaker is (§J7 R3)."""
+
+    role: str  # a ``PIN_ROLES`` value
+    #: The label's turn start times when the pin was set, seconds to 0.01.
+    starts: list[float]
+    #: The code the speaker had when pinned — the slot serve held the
+    #: researcher's pick on, which the importer moves to the new code.
+    from_code: str = ""
+    #: The person serve's slot pointed at (a uuid), carried to the new code.
+    person: str = ""
+
+    def to_json(self) -> dict[str, Any]:
+        return {"role": self.role, "starts": self.starts, "from_code": self.from_code,
+                "person": self.person}
+
+
+def pin_starts(starts: list[float]) -> list[float]:
+    """Start times as a pin records and compares them."""
+    return sorted(round(float(t), 2) for t in starts)
+
+
+@dataclass
 class SessionRegistry:
     path: Path
     sessions: dict[str, str] = field(default_factory=dict)
     speakers: dict[str, dict[str, str]] = field(default_factory=dict)
     participants_issued: int = 0
+    pins: dict[str, dict[str, RolePin]] = field(default_factory=dict)
 
     # ── persistence ──────────────────────────────────────────────────────
 
@@ -90,10 +127,11 @@ class SessionRegistry:
                 "numbering; move it aside to renumber the sessions from scratch."
             ) from exc
         version = data.get("version") if isinstance(data, dict) else None
-        if version != REGISTRY_VERSION:
+        if version not in _READABLE_VERSIONS:
             raise ValueError(
-                f"{path} has version {version!r}; this Bristlenose reads version "
-                f"{REGISTRY_VERSION}. It may have been written by a newer release."
+                f"{path} has version {version!r}; this Bristlenose reads versions "
+                f"{', '.join(map(str, _READABLE_VERSIONS))}. It may have been written by a "
+                "newer release."
             )
         problem = _problem(data)
         if problem:
@@ -106,6 +144,16 @@ class SessionRegistry:
             sessions=dict(data.get("sessions") or {}),
             speakers={sid: dict(labels) for sid, labels in (data.get("speakers") or {}).items()},
             participants_issued=data.get("participants_issued") or 0,
+            pins={
+                sid: {
+                    label: RolePin(
+                        role=pin["role"], starts=pin_starts(pin["starts"]),
+                        from_code=pin.get("from_code", ""), person=pin.get("person", ""),
+                    )
+                    for label, pin in labels.items()
+                }
+                for sid, labels in (data.get("pins") or {}).items()
+            },
         )
 
     def save(self) -> None:
@@ -116,6 +164,10 @@ class SessionRegistry:
             "sessions": dict(sorted(self.sessions.items())),
             "speakers": {sid: self.speakers[sid] for sid in sorted(self.speakers)},
             "participants_issued": self.participants_issued,
+            "pins": {
+                sid: {label: pin.to_json() for label, pin in sorted(self.pins[sid].items())}
+                for sid in sorted(self.pins) if self.pins[sid]
+            },
         }
         fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".sessions.", suffix=".tmp")
         try:
@@ -189,6 +241,18 @@ class SessionRegistry:
         current.update(label_codes)
         self.participants_issued = max(before, self._highest_participant())
 
+    # ── role pins (§J7 R3) ───────────────────────────────────────────────
+
+    def label_for(self, sid: str, code: str) -> str | None:
+        """The label holding ``code`` in a session now, or None."""
+        for label, held in self.speakers.get(sid, {}).items():
+            if held == code and not label.startswith("\u0000") and label != NO_PARTICIPANT_LABEL:
+                return label
+        return None
+
+    def pin(self, sid: str, label: str, pin: RolePin) -> None:
+        self.pins.setdefault(sid, {})[label] = pin
+
     def placeholder_participant(self, sid: str) -> str:
         """A participant code for a session that heard no participant this run.
 
@@ -249,6 +313,20 @@ def _problem(data: dict[str, Any]) -> str:
     issued = data.get("participants_issued", 0)
     if isinstance(issued, bool) or not isinstance(issued, int) or issued < 0:
         return f"participants_issued is {issued!r}, not a whole number"
+    pins = data.get("pins", {})
+    if not isinstance(pins, dict):
+        return "pins must be an object"
+    for sid, labels in pins.items():
+        if not isinstance(labels, dict):
+            return f"the pins of {sid} are not an object"
+        for label, pin in labels.items():
+            if not isinstance(pin, dict) or pin.get("role") not in PIN_ROLES:
+                return f"{sid}'s pin on {label!r} has no role this release knows"
+            starts = pin.get("starts")
+            if not isinstance(starts, list) or not starts or not all(
+                isinstance(t, (int, float)) and not isinstance(t, bool) for t in starts
+            ):
+                return f"{sid}'s pin on {label!r} carries no start times"
     return ""
 
 

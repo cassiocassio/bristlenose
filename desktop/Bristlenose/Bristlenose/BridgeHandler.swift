@@ -180,6 +180,11 @@ final class BridgeHandler: ObservableObject {
     /// observes, as `focusSearchRequests` is: this handler is per window, so the
     /// open panel belongs to the window whose lens asked.
     @Published private(set) var chooseGuideRequests = 0
+    /// Bumped when the report asks to re-analyse a session after a speaker
+    /// recode (design-people.md §J7 R3). The SPA has already written the role
+    /// pins through serve; ContentView starts the ordinary resume run, which
+    /// honours them and re-extracts only that session.
+    @Published private(set) var reanalyseSessionRequests = 0
 
     /// Whether the web layer has an undo action available.
     @Published var canUndo = false
@@ -1181,6 +1186,9 @@ final class BridgeHandler: ObservableObject {
 
         case "choose-discussion-guide":
             chooseGuideRequests += 1
+
+        case "reanalyse-session":
+            reanalyseSessionRequests += 1
 
         case "reveal-in-finder":
             // Reveal a folder (highlighted in its parent) in Finder. Sandbox-safe:

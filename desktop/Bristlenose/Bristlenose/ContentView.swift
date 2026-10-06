@@ -1021,6 +1021,7 @@ struct ContentView: View {
             restoreAnchor(project.lastAnchor, on: tab)
         }
         .onChange(of: bridgeHandler.chooseGuideRequests) { _, _ in chooseDiscussionGuide() }
+        .onChange(of: bridgeHandler.reanalyseSessionRequests) { _, _ in reanalyseSession() }
         // Remember where they leave it. Gated on having restored first — see
         // `lensRestoredFor`.
         .onChange(of: bridgeHandler.activeTab) { _, tab in
@@ -1222,6 +1223,17 @@ struct ContentView: View {
     /// **Analyse** — which resumes, so only the discussion stage runs and
     /// nothing the researcher edited is lost. Busy pipeline: the copy still
     /// lands, and the sidebar offers Analyse once the run is free.
+    /// The report re-analyses a session after a speaker recode (§J7 R3): the
+    /// role pins are written, so the ordinary resume run is the whole act — only
+    /// that session's quotes are extracted again. Refused while a run owns the
+    /// project; the SPA asked serve first, which says the same.
+    private func reanalyseSession() {
+        guard let project = selectedProject, !project.path.isEmpty,
+              SidebarOutlineController.pipelineIsFree(pipelineRunner.state[project.id])
+        else { return }
+        pipelineRunner.start(project: project)
+    }
+
     private func chooseDiscussionGuide() {
         guard let project = selectedProject, !project.path.isEmpty else { return }
         let panel = NSOpenPanel()

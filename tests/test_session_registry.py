@@ -107,8 +107,8 @@ class TestSessionIds:
         out = tmp_path / "out"
         path = registry_path(out)
         path.parent.mkdir(parents=True)
-        path.write_text(json.dumps({"version": 2, "sessions": {}}), encoding="utf-8")
-        with pytest.raises(ValueError, match="version 2"):
+        path.write_text(json.dumps({"version": 3, "sessions": {}}), encoding="utf-8")
+        with pytest.raises(ValueError, match="version 3"):
             SessionRegistry.load(out)
 
     def test_save_round_trips(self, tmp_path: Path) -> None:
@@ -334,3 +334,77 @@ class TestRegistryFileIsChecked:
         reg.sessions = {"k": "s1"}
         reg.save()
         assert "fsync" in calls and calls.index("fsync") < calls.index("replace")
+
+
+class TestRolePins:
+    """§J7 R3: a researcher's recode, pinned by label with the turns it was set
+    on, is honoured before codes are assigned — and dropped, not misapplied,
+    once the label covers other turns."""
+
+    def _session(self) -> InputSession:
+        return InputSession(
+            session_id="s1", session_number=1, participant_id="p1",
+            participant_number=1, files=[], session_date=_T0,
+        )
+
+    def test_a_pin_round_trips_and_version_1_still_reads(self, tmp_path: Path) -> None:
+        from bristlenose.session_registry import RolePin
+
+        path = registry_path(tmp_path)
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({"version": 1, "sessions": {"k": "s1"},
+                                    "speakers": {"s1": {"A": "p1"}}}), encoding="utf-8")
+        reg = SessionRegistry.load(tmp_path)
+        assert reg.pins == {}
+        reg.pin("s1", "A", RolePin(role="researcher", starts=[0.0, 2.0], from_code="p1",
+                                   person="id-a"))
+        reg.save()
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["version"] == 2
+        again = SessionRegistry.load(tmp_path)
+        assert again.pins["s1"]["A"].role == "researcher"
+        assert again.pins["s1"]["A"].person == "id-a"
+
+    def test_a_pin_with_no_known_role_is_refused(self, tmp_path: Path) -> None:
+        path = registry_path(tmp_path)
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({"version": 2, "pins": {"s1": {"A": {"role": "boss",
+                                    "starts": [0]}}}}), encoding="utf-8")
+        with pytest.raises(ValueError, match="no role"):
+            SessionRegistry.load(tmp_path)
+
+    def test_the_swap_is_honoured_and_codes_follow(self, tmp_path: Path) -> None:
+        """The pipeline called the moderator the participant; the pins put it right."""
+        from bristlenose.pipeline import _assign_session_codes
+        from bristlenose.session_registry import RolePin
+
+        reg = SessionRegistry.load(tmp_path)
+        s1 = self._session()
+        segs = _segs(("Me", P), ("Wylie", R), ("Me", P))
+        _assign_session_codes([s1], {"s1": segs}, reg)
+        assert reg.speakers["s1"] == {"Me": "p1", "Wylie": "m1"}
+        reg.pin("s1", "Me", RolePin(role="researcher", starts=[0.0, 2.0], from_code="p1"))
+        reg.pin("s1", "Wylie", RolePin(role="participant", starts=[1.0], from_code="m1"))
+        segs = _segs(("Me", P), ("Wylie", R), ("Me", P))
+        dropped: list[str] = []
+        _assign_session_codes([s1], {"s1": segs}, reg, dropped)
+        assert dropped == []
+        assert [s.speaker_role for s in segs] == [R, P, R]
+        assert reg.speakers["s1"]["Me"].startswith("m")
+        assert reg.speakers["s1"]["Wylie"] == "p2", "a new participant number, never p1 again"
+        assert s1.participant_id == "p2"
+
+    def test_a_pin_whose_turns_moved_is_dropped_not_applied(self, tmp_path: Path) -> None:
+        from bristlenose.pipeline import _assign_session_codes
+        from bristlenose.session_registry import RolePin
+
+        reg = SessionRegistry.load(tmp_path)
+        s1 = self._session()
+        reg.pin("s1", "Me", RolePin(role="researcher", starts=[0.0, 2.0]))
+        # A re-run of speaker identification gave "Me" different turns.
+        segs = _segs(("Wylie", R), ("Me", P), ("Wylie", R))
+        dropped: list[str] = []
+        _assign_session_codes([s1], {"s1": segs}, reg, dropped)
+        assert dropped == ["s1 Me"]
+        assert [s.speaker_role for s in segs] == [R, P, R]
+        assert "Me" not in reg.pins.get("s1", {})

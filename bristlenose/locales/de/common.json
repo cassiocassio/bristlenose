@@ -152,6 +152,18 @@
       "previousQuote": "Vorheriges Zitat",
       "nextQuote": "N\u00e4chstes Zitat"
     },
+    "reanalyse": {
+      "button": "Erneut analysieren…",
+      "why": "Die Rolle eines Sprechers hat sich geändert. Die Zitate dieses Interviews stammen daher vom falschen Sprecher, bis es erneut analysiert wird.",
+      "title": "Interview {{session}} erneut analysieren?",
+      "what": "Bristlenose sucht die Zitate dieses Interviews neu, ausgehend von den Sprechern, wie du sie festgelegt hast, und baut dann Abschnitte, Themen und den Gesprächsleitfaden für die ganze Studie neu auf. Es wird nichts erneut transkribiert.",
+      "kept": "Markierte, bearbeitete und getaggte Zitate bleiben erhalten. Zitate, die du in diesem Interview nur ausgeblendet hast, können wieder erscheinen, und markierte Zitate des falschen Sprechers werden ausgeblendet.",
+      "cost": "Geschätzte Kosten: etwa {{cost}}.",
+      "confirm": "Erneut analysieren",
+      "running": "Es läuft bereits eine Analyse. Versuche es erneut, wenn sie fertig ist.",
+      "runIt": "Die Sprecher sind gesichert. Führe zum erneuten Analysieren dies in einem Terminal aus:",
+      "failed": "Bristlenose konnte die erneute Analyse nicht vorbereiten. Es wurde nichts geändert."
+    },
     "failedToLoad": "Fehler beim Laden der Interviews: {{error}}",
     "loading": "Interviews werden geladen…"
   },

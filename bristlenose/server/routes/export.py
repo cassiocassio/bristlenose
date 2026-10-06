@@ -99,6 +99,9 @@ SERVER_ONLY_PATH_TEMPLATES: frozenset[str] = frozenset(
         "/projects/{project_id}/agent-settings",  # MCP-surface switch; no agents offline
         "/projects/{project_id}/last-run",  # live run status
         "/projects/{project_id}/condition",  # live project condition — an export is a snapshot
+        # Whether a session needs a paid re-analysis, and its cost: an act, and
+        # an exported report cannot start a run (§J7 R3).
+        "/projects/{project_id}/sessions/{session_id}/reanalyse",
         "/projects/{project_id}/miro/auth-url",
         "/projects/{project_id}/miro/status",
         "/projects/{project_id}/starred",  # write-mirror; baked into /quotes

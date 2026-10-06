@@ -45,7 +45,7 @@ before the register is consulted, so they never reach it:
 * **pseudo-keys.** `_comment_*` and `_divergent_*` are notes to maintainers, as
   `flatten()` in `check-locales.py` already has it.
 
-What is left is 72 keys, and they are not one thing either. `_KNOWN_ORPHANS`
+What is left is 71 keys, and they are not one thing either. `_KNOWN_ORPHANS`
 below carries them in 18 blocks, each with a tag and the commit that did it:
 
 * `DEAD` — the reader was deleted and the key stayed. `common.help.` was 129
@@ -360,12 +360,13 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
     ),
     "common.buttons.": _Block(
         tag=DEAD,
-        why="Generic v1-report button labels. Five of the block's fourteen have no "
+        why="Generic v1-report button labels. Four of the block's fourteen have no "
             "call site on any surface — each live control names its own key now — so "
-            "this is a block that must be pruned by leaf, never by namespace.",
+            "this is a block that must be pruned by leaf, never by namespace. "
+            "(`copy` found a reader again in the re-analyse sheet, 6 Oct 2026.)",
         leaves="""
-            apply copy reset save undo
-        """,  # 5
+            apply reset save undo
+        """,  # 4
     ),
     "common.signals.": _Block(
         tag=DEAD,

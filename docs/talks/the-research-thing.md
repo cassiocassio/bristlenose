@@ -56,40 +56,23 @@ The form wants four things. Drafts below — pick, cut, make them yours.
 
 ---
 
-## The build runway
+## The build runway — closed
 
-Six weeks to 4 Nov. One slide describes logic that is **designed and measured,
-not shipped**: slide 6, *How a card decides*. As of 20 Sep 2026 the card shows
-one quote, orders quotes by participant and clock, and labels the sentiment chip
-`Sentiment`.
+**Slide 6 is present tense.** Deliver *How a card decides* as behaviour, not as
+design, and drop the caveat the old status box asked for.
 
-`docs/design-signal-card.md` §0 names four generations of the card: **the app
-ships generation 3, and slide 6 describes generation 4.** §9 has the build plan,
-and **Tier 1 — the seven frontend changes carrying no open questions — is in
-flight now.** Tier 1 alone changes what the demo looks like: the fused stack,
-the heading owning the location, and four quotes open instead of one.
+Verified at HEAD on 6 Oct 2026 against the tree rather than the build plan's own
+ticks: `bristlenose/signals/sentiment_label.py` is read by
+`server/routes/signals.py`, so the adaptive chip label is on the wire (item J);
+`SignalsPage.tsx:498` destructures `{ shown, dissenting }` and renders the held
+quote with `data-dissenting` (item I); and `visibleQuotes` is a selector rather
+than `.slice(0, 1)` (Tier 1 D). `docs/design-signal-card.md` §9 marks Tier 1 A–G
+and Tier 2 H–K shipped; 0.30.0 (21 Sep) carried them.
 
-What slide 6 actually *argues* is Tier 2's **J** (the label rule — already
-written and validated in `label_rule.py`, needing a server-side port so the
-label is on the wire) and **I** (editorial quote selection, which depends on J
-for sentiment cards). So the runway question is not Tier 1, which is happening;
-it is whether J and I land.
-
-- **J and I land.** Slide 6 becomes present tense, the status box comes off, and
-  move 23 shows the real thing. Worth aiming at — J is a port of validated code,
-  not new logic.
-- **They don't.** Tier 1 still lands, so the card on screen looks right and
-  shows four quotes; only the *selection* and the *label* are the old ones.
-  Slide 6 stays as reasoning-in-progress, and you say so at move 23.
-
-**Take a view by mid-October**, not in the week of the talk, because the
-rehearsal depends on which card is on screen — and because the difference is one
-sentence in the script, not a restructure.
-
-> **⚠️ Status check before you present.** If J and I have not landed, slide 6 is
-> design, not behaviour. Check `docs/design-signal-card.md` §9 for
-> what has landed since, and say so at the signal-card beat. Every other slide
-> describes behaviour that ships today.
+So the card at move 23 is the card the slide describes: four quotes, the fourth
+held for a dissenting voice, and a chip reading `frustration` or
+`Mixed sentiments` rather than `Sentiment`. Every slide in this deck now
+describes shipped behaviour.
 
 ---
 
@@ -175,7 +158,7 @@ exception that must land *later*.
 
 | Workstream | Done by | Note |
 |---|---|---|
-| Signal-card build decision | **10 Oct** | Tier 1 + J + I, or not. The demo rehearsal depends on which card is on screen |
+| ~~Signal-card build decision~~ | **closed** | Tier 1 + Tier 2 shipped in 0.30.0; slide 6 is present tense |
 | Sample data — a purpose-built demo study | **17 Oct** | see below; this is the long pole |
 | Website spruce, three install paths visible | **24 Oct** | separate private repo; the rsync deploy is manual and needs agent access |
 | TestFlight build uploaded | **24 Oct** | 90-day clock from upload — comfortably covers 4 Nov |
@@ -485,9 +468,7 @@ rules firing. Grey the first three quotes so the fourth reads as different.
 
 **Backup**
 
-**Check the status box before delivering this.** If J and I have not shipped,
-this is the design — Tier 1 alone gives the right-looking card with the old
-label and old selection — and you say so at move 23.
+**This ships** — verified at HEAD 6 Oct 2026. Present tense, no caveat.
 
 **Why refuse.** "Mixed sentiments" means *inconsistent, worth investigating*,
 not *the numbers were close*. A named feeling is actionable, so the card names
@@ -563,7 +544,6 @@ written as "will not be offered".
 - **The visuals are specified, not made.** Eight descriptions, no assets. Slide
   3's before/after quote and slide 4's `file://` address bar carry the most
   weight; the rest degrade acceptably to text.
-- **Slide 6's tense**, which follows the build decision due 10 Oct.
 - **A clocked rehearsal on the real rig.** The scripts are written at 140 words
   a minute and the run sheet has 25 seconds of slack. Both are assumptions until
   you have run it twice with the projector attached.

@@ -563,6 +563,59 @@ function putCalls(): Array<{ url: string; body: unknown }> {
     }));
 }
 
+// Route C Phase 1: the server shows each moderator under the identity's code
+// (session 2's reads m2) and reports the transcript's own token as slot_code.
+const identityCodes = {
+  ...twoModerators,
+  sessions: [
+    {
+      ...twoModerators.sessions[0],
+      speakers: [
+        { speaker_code: "m1", slot_code: "m1", name: "Martin", role: "researcher" },
+        { speaker_code: "p1", slot_code: "p1", name: "Alice", role: "participant" },
+      ],
+    },
+    {
+      ...twoModerators.sessions[1],
+      speakers: [
+        { speaker_code: "m2", slot_code: "m1", name: "Jo", role: "researcher" },
+        { speaker_code: "p2", slot_code: "p2", name: "Bob", role: "participant" },
+      ],
+    },
+  ],
+};
+
+describe("SessionsTable addresses a slot by its slot code", () => {
+  it("writes to the slot, not to the identity code the badge shows, and undo follows", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) =>
+      Promise.resolve(
+        url.includes("/sessions")
+          ? { ok: true, json: async () => identityCodes }
+          : url.includes("/people")
+            ? { ok: true, json: async () => peopleResponse }
+            : { ok: false, status: 404, json: async () => ({}) },
+      ),
+    );
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getByTestId("bn-name-pencil-m2"));
+    const editing = screen.getByTestId("bn-name-m2");
+    editing.textContent = "Joanna";
+    fireEvent.keyDown(editing, { key: "Enter" });
+
+    // A pick can renumber identities, so m2 is never an address: the slot is.
+    await waitFor(() => expect(putCalls()).toHaveLength(1));
+    expect(putCalls()[0].url).toMatch(/\/sessions\/s2\/speakers\/m1$/);
+
+    await act(async () => {
+      await undo();
+    });
+    await waitFor(() => expect(putCalls()).toHaveLength(2));
+    expect(putCalls()[1].url).toMatch(/\/sessions\/s2\/speakers\/m1$/);
+    expect(screen.getByTestId("bn-name-m2").textContent).toBe("Jo");
+  });
+});
+
 describe("SessionsTable moderators are named per session", () => {
   it("shows each session's own moderator, not /people's single m1", async () => {
     mockTwoModerators();

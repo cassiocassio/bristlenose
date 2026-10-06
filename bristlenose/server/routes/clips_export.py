@@ -99,7 +99,11 @@ def _resolve_output_dir(project_dir: Path | None) -> Path | None:
 def _load_speaker_names(
     db, project_id: int,
 ) -> dict[tuple[str, str], str]:
-    """Map (session_id, speaker_code) → display_name."""
+    """Map (session_id, speaker_code) → display_name.
+
+    Keyed by the transcript's slot code. An outer join to Person: an
+    unidentified moderator (route C) maps to ``""`` rather than vanishing.
+    """
     rows = (
         db.query(
             SessionModel.session_id,
@@ -108,7 +112,7 @@ def _load_speaker_names(
             Person.full_name,
         )
         .join(SessionSpeaker, SessionSpeaker.session_id == SessionModel.id)
-        .join(Person, Person.id == SessionSpeaker.person_id)
+        .outerjoin(Person, Person.id == SessionSpeaker.person_id)
         .filter(SessionModel.project_id == project_id)
         .all()
     )

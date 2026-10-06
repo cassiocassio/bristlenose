@@ -43,8 +43,9 @@ class TestPeopleGet:
 
     def test_returns_speaker_codes(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/people").json()
-        assert "m1" in data
-        assert "p1" in data
+        # One entry per identity. The smoke fixture's moderator is unidentified
+        # (route C), so it reads ``m?`` and has none.
+        assert set(data) == {"p1"}
 
     def test_person_fields(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/people").json()

@@ -134,7 +134,9 @@ class TestImportProject:
     def test_creates_persons(self, db: Session) -> None:
         import_project(db, _FIXTURE_DIR)
         persons = db.query(Person).all()
-        assert len(persons) == 2  # one per speaker
+        # One per identity: the participant. Nothing names the moderator, so
+        # its slot points at nobody (route C) rather than at an empty person.
+        assert len(persons) == 1
 
     def test_creates_screen_clusters(self, db: Session) -> None:
         import_project(db, _FIXTURE_DIR)
@@ -1092,12 +1094,11 @@ class TestImportPeopleYaml:
         assert p1.persona == "early adopter"
         assert p1.notes == "Very engaged"
 
-        # Check m1
+        # m1: people.yaml names participants only. Its one ``m1`` entry stood
+        # for every session's moderator, so it is not evidence about any one
+        # of them (owner, 3 Oct 2026; route C) — the slot stays unidentified.
         m1_sp = [sp for sp in speakers if sp.speaker_code == "m1"][0]
-        m1 = db.get(Person, m1_sp.person_id)
-        assert m1.full_name == "Jane Researcher"
-        assert m1.short_name == "Jane"
-        assert m1.role_title == "UX Researcher"
+        assert m1_sp.person_id is None
 
     def test_missing_people_yaml_creates_empty_names(
         self, db: Session, tmp_path: Path,
@@ -1148,9 +1149,7 @@ class TestImportPeopleYaml:
         assert p1.short_name == "Fred"
 
         m1_sp = [sp for sp in speakers if sp.speaker_code == "m1"][0]
-        m1 = db.get(Person, m1_sp.person_id)
-        assert m1.full_name == ""
-        assert m1.short_name == ""
+        assert m1_sp.person_id is None  # nothing names it (route C)
 
 
     def test_reimport_fills_empty_names_from_yaml(

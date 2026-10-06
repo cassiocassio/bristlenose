@@ -57,12 +57,12 @@ class TestSessionsEndpoint:
         speakers = session["speakers"]
         assert len(speakers) == 2
         codes = {sp["speaker_code"] for sp in speakers}
-        assert codes == {"m1", "p1"}
+        assert codes == {"m?", "p1"}  # route C: nothing names the smoke fixture's moderator
 
     def test_speaker_roles(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/sessions").json()
         speakers = data["sessions"][0]["speakers"]
-        roles = {sp["speaker_code"]: sp["role"] for sp in speakers}
+        roles = {sp["slot_code"]: sp["role"] for sp in speakers}
         assert roles["m1"] == "researcher"
         assert roles["p1"] == "participant"
 
@@ -70,8 +70,8 @@ class TestSessionsEndpoint:
         """Moderators should come before participants."""
         data = client.get("/api/projects/1/sessions").json()
         speakers = data["sessions"][0]["speakers"]
-        assert speakers[0]["speaker_code"] == "m1"
-        assert speakers[1]["speaker_code"] == "p1"
+        assert speakers[0]["slot_code"] == "m1"
+        assert speakers[1]["slot_code"] == "p1"
 
     def test_journey_labels(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/sessions").json()
@@ -179,6 +179,7 @@ class TestSessionsResponseShape:
         speaker = data["sessions"][0]["speakers"][0]
         expected_keys = {
             "speaker_code", "name", "role", "name_confirmed", "full_name", "short_name",
+            "slot_code",
         }
         assert set(speaker.keys()) == expected_keys
 

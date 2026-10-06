@@ -140,7 +140,9 @@ const MULTI_PARTICIPANT: SessionsListResponse = {
 
 // Two distinct moderators across sessions → hasMultipleModerators, so the
 // multi-participant variant renders a moderator (m-code) badge on the first
-// participant row. Exercises isModerator() detection: if it were broken and
+// participant row. The shape the importer produces since route C Phase 1: each
+// session's moderator under its identity's code, so session 2's reads m2
+// (before it, both sessions' slots read m1 and this fixture could not occur). Exercises isModerator() detection: if it were broken and
 // returned no moderators, moderators.size would be 0, isOneToOne would flip
 // true, and neither the #N session badge nor the m-code badge would render.
 const MULTI_MODERATOR: SessionsListResponse = {

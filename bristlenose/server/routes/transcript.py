@@ -10,17 +10,16 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from bristlenose.server import speaker_slots
 from bristlenose.server.journey import derive_journeys
 from bristlenose.server.models import (
     ClusterQuote,
     CodebookGroup,
     DeletedBadge,
-    Person,
     Project,
     Quote,
     QuoteTag,
     ScreenCluster,
-    SessionSpeaker,
     TagDefinition,
     ThemeGroup,
     ThemeQuote,
@@ -192,30 +191,17 @@ def get_transcript(
         if not sess:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        # Speakers
-        sp_rows = (
-            db.query(SessionSpeaker, Person)
-            .join(Person, SessionSpeaker.person_id == Person.id)
-            .filter(SessionSpeaker.session_id == sess.id)
-            .all()
-        )
-        # Sort: m-codes first, p-codes next, o-codes last
-        def _code_sort_key(row: tuple[SessionSpeaker, Person]) -> tuple[int, int]:
-            c = row[0].speaker_code
-            prefix_order = {"m": 0, "p": 1, "o": 2}
-            order = prefix_order.get(c[0], 3) if c else 3
-            num = int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0
-            return (order, num)
-
-        sp_rows.sort(key=_code_sort_key)
-
+        # Speakers: every slot, identified or not (an unidentified moderator
+        # reads ``m?``), under the identity's code (route C, speaker_slots).
+        slots = speaker_slots.session_slots(db, project_id, session_id)
+        by_slot = {s.slot_code: s for s in slots}
         speakers = [
             TranscriptSpeakerResponse(
-                code=sp.speaker_code,
-                name=(p.short_name or p.full_name or sp.speaker_code),
-                role=sp.speaker_role,
+                code=slot.code,
+                name=(slot.name or slot.code),
+                role=slot.role,
             )
-            for sp, p in sp_rows
+            for slot in slots
         ]
 
         # Transcript segments ordered by start_time
@@ -365,8 +351,9 @@ def get_transcript(
                 except (json.JSONDecodeError, KeyError, TypeError):
                     words = None
 
+            slot = by_slot.get(seg.speaker_code)
             seg_responses.append(TranscriptSegmentResponse(
-                speaker_code=seg.speaker_code,
+                speaker_code=slot.code if slot else seg.speaker_code,
                 start_time=seg.start_time,
                 end_time=seg.end_time,
                 text=seg.text,
@@ -380,10 +367,7 @@ def get_transcript(
 
         # Journey labels for this session
         participant_screens = derive_journeys(db, project_id)
-        session_pids = [
-            sp.speaker_code for sp, _ in sp_rows
-            if sp.speaker_code.startswith("p")
-        ]
+        session_pids = [s.slot_code for s in slots if s.slot_code.startswith("p")]
         journey_labels: list[str] = []
         for pid in session_pids:
             for label in participant_screens.get(pid, []):

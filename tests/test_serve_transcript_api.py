@@ -87,7 +87,7 @@ class TestTranscriptSpeakers:
         """Moderators (m-codes) should come before participants (p-codes)."""
         data = client.get("/api/projects/1/transcripts/s1").json()
         codes = [s["code"] for s in data["speakers"]]
-        assert codes[0] == "m1"
+        assert codes[0] == "m?"  # route C: nothing names the smoke fixture's moderator
         assert codes[1] == "p1"
 
     def test_speaker_fields(self, client: TestClient) -> None:

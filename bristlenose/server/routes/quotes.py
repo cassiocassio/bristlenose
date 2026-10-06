@@ -12,7 +12,6 @@ from bristlenose.server.models import (
     CodebookGroup,
     DeletedBadge,
     HeadingEdit,
-    Person,
     Project,
     ProposedTag,
     Quote,
@@ -20,7 +19,6 @@ from bristlenose.server.models import (
     QuoteState,
     QuoteTag,
     ScreenCluster,
-    SessionSpeaker,
     TagDefinition,
     ThemeGroup,
     ThemeQuote,
@@ -204,19 +202,11 @@ def _resolve_speaker_names(
 
     Falls back to speaker_code if no name is set.
     """
-    sessions = db.query(SessionModel).filter_by(project_id=project_id).all()
-    result: dict[tuple[str, str], str] = {}
-    for sess in sessions:
-        speakers = (
-            db.query(SessionSpeaker).filter_by(session_id=sess.id).all()
-        )
-        for sp in speakers:
-            person = db.get(Person, sp.person_id)
-            name = ""
-            if person:
-                name = person.short_name or person.full_name or ""
-            result[(sess.session_id, sp.speaker_code)] = name or sp.speaker_code
-    return result
+    from bristlenose.server.speaker_slots import slot_map
+
+    return {
+        key: (slot.name or slot.code) for key, slot in slot_map(db, project_id).items()
+    }
 
 
 def _load_researcher_state(
@@ -635,9 +625,12 @@ def get_moderator_question(
                 detail="No preceding moderator segment found",
             )
 
+        from bristlenose.server.speaker_slots import code_for
+
         return ModeratorQuestionResponse(
             text=segment.text,
-            speaker_code=segment.speaker_code,
+            # The moderator's identity code (``m2``), not the session's slot.
+            speaker_code=code_for(db, session.id, segment.speaker_code),
             start_time=segment.start_time,
             end_time=segment.end_time,
             segment_index=segment.segment_index,

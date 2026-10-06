@@ -191,13 +191,13 @@ class TestDashboardSessions:
         data = client.get("/api/projects/1/dashboard").json()
         session = data["sessions"][0]
         codes = {sp["speaker_code"] for sp in session["speakers"]}
-        assert codes == {"m1", "p1"}
+        assert codes == {"m?", "p1"}  # route C: nothing names the smoke fixture's moderator
 
     def test_speaker_ordering(self, client: TestClient) -> None:
         """Moderators before participants."""
         data = client.get("/api/projects/1/dashboard").json()
         speakers = data["sessions"][0]["speakers"]
-        assert speakers[0]["speaker_code"] == "m1"
+        assert speakers[0]["speaker_code"] == "m?"  # route C: nothing names the smoke fixture's moderator
         assert speakers[1]["speaker_code"] == "p1"
 
     def test_session_has_all_fields(self, client: TestClient) -> None:

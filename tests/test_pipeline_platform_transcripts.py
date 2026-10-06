@@ -635,6 +635,7 @@ class TestPerSessionModeratorNames:
         # The platform's label beats the LLM's "Marty", as for participants.
         assert names["s1"]["m1"] == {
             "full_name": "Martin Storey", "short_name": "Martin", "role": "UX researcher",
+            "evidence": "platform-name",
         }
         assert names["s2"]["m1"]["full_name"] == "Jo Lee"
         # Participants are not in it: their codes are study-wide.
@@ -654,6 +655,36 @@ class TestPerSessionModeratorNames:
         names = load_session_speakers(h.output_dir)
         assert names["s2"]["m1"]["full_name"] == "Dana Whitfield"
         assert names["s1"]["m1"]["full_name"] == "Martin Storey"
+        # Route C weighs these differently: the platform's record against a
+        # model's hearing (``docs/design-people.md`` §C5).
+        assert names["s2"]["m1"]["evidence"] == "heard"
+        assert names["s1"]["m1"]["evidence"] == "platform-name"
+
+    def test_each_sessions_speakers_carry_their_own_stats(self, tmp_path: Path) -> None:
+        """``compute_participant_stats`` keys by code, so every session's ``m1``
+        lands on one entry; the serve DB's per-session rows took nothing from
+        it. The file now carries each session's own."""
+        from bristlenose.people import load_session_speaker_stats
+
+        h = run_pipeline(
+            tmp_path,
+            lambda d, _i: [
+                pair_session(d, 1, "P07 Interview", TEAMS_PAIR),
+                pair_session(d, 2, "P08 Interview", JO_PAIR),
+            ],
+            role_pass=_two_moderator_roles,
+        )
+        stats = load_session_speaker_stats(h.output_dir)
+        assert set(stats) == {"s1", "s2"}
+        for sid in ("s1", "s2"):
+            assert stats[sid]["m1"]["words_spoken"] > 0
+            assert stats[sid]["m1"]["source_file"]
+        assert stats["s1"]["m1"] != stats["s2"]["m1"]
+        participant_pct = sum(
+            entry["pct_words"] for per in stats.values()
+            for code, entry in per.items() if code.startswith("p")
+        )
+        assert abs(participant_pct - 100.0) < 0.5
 
 # These drive the whole pipeline to test other stages (conftest.no_discussion_stage).
 pytestmark = pytest.mark.usefixtures("no_discussion_stage")

@@ -55,9 +55,10 @@ INVARIANTS: tuple[str, ...] = (
     "Speakers are identified by code only (p1 = participant, m1 = moderator, "
     "o1 = observer). Never guess who a speaker is, and never join a speaker "
     "with any person outside this study's data.",
-    "Moderator and observer codes are numbered within each session, so m1 in "
-    "two sessions can be two different people; their names, where given, are "
-    "on each session, not on the code.",
+    "Moderator and observer codes are numbered across the study in the order "
+    "each person first appears, so m1 is the same person in every session it "
+    "appears in. m? (or o?) is a moderator (or observer) nobody has identified "
+    "yet; two of them are not known to be the same person.",
     "Never compare raw counts across studies of different sizes; any "
     "cross-study comparison needs each study's denominators (participant "
     "and quote counts) stated alongside it.",
@@ -428,69 +429,66 @@ def resolve_speaker_names(db: SASession, project_id: int) -> dict[str, str]:
     global switch rides the serve env (applied on the prefs-changed
     restart, like every other Settings preference); the CLI/DB flag is
     read at call time as before.
+
+    Keyed by identity code (route C, ``speaker_slots``): a moderator's code is
+    project-wide, so ``m2`` names one person. An unidentified ``m?`` has no
+    entry.
     """
-    from bristlenose.server.models import Person, Project, SessionSpeaker
-    from bristlenose.server.models import Session as SessionModel
+    from bristlenose.server.models import Project
+    from bristlenose.server.speaker_slots import identities
 
     project = db.get(Project, project_id)
     if project is None or _mcp_anonymise_active(project):
         return {}
-    session_ids = [
-        s.id for s in db.query(SessionModel).filter_by(project_id=project_id)
-    ]
-    if not session_ids:
-        return {}
     names: dict[str, str] = {}
-    rows = (
-        db.query(SessionSpeaker, Person)
-        .join(Person, SessionSpeaker.person_id == Person.id)
-        .filter(SessionSpeaker.session_id.in_(session_ids))
-    )
-    for sp, person in rows:
-        # A moderator or observer code names a different person in each
-        # session, so code → name would pick one session's at random (it was
-        # first-wins). Those are named per session by the function below.
-        if is_session_scoped_code(sp.speaker_code):
-            continue
+    for code, person in identities(db, project_id).items():
         display = person.short_name or person.full_name or ""
         if display:
-            names.setdefault(sp.speaker_code, display)
+            names[code] = display
     return names
 
 
 def is_session_scoped_code(code: str) -> bool:
-    """``m*``/``o*`` codes restart in every session; ``p*`` codes are study-wide."""
+    """A transcript's ``m*``/``o*`` token restarts in every session (it is the
+    slot); the identity codes the routes emit are study-wide."""
     return code[:1] in ("m", "o")
+
+
+def session_team(db: SASession, project_id: int) -> dict[str, list[tuple[str, str]]]:
+    """Session id → its moderators and observers as (identity code, role).
+
+    Codes only, no names — ungated like the rest of the code roster. An
+    unidentified slot is listed as ``m?`` / ``o?``.
+    """
+    from bristlenose.server.speaker_slots import is_team_code, project_slots
+
+    result: dict[str, list[tuple[str, str]]] = {}
+    for slot in project_slots(db, project_id):
+        if is_team_code(slot.slot_code):
+            result.setdefault(slot.session_id, []).append((slot.code, slot.role))
+    return result
 
 
 def resolve_session_speaker_names(
     db: SASession, project_id: int,
 ) -> dict[str, dict[str, str]]:
-    """Session id → moderator/observer code → display name.
+    """Session id → moderator/observer identity code → display name.
 
     The same gate as ``resolve_speaker_names`` (``{}`` under Anonymise), and
-    the same display policy. Participants are not here: their codes are
-    study-wide, so the flat map names them.
+    the same display policy. An unidentified slot has no entry. Participants
+    are not here: the flat map names them.
     """
-    from bristlenose.server.models import Person, Project, SessionSpeaker
-    from bristlenose.server.models import Session as SessionModel
+    from bristlenose.server.models import Project
+    from bristlenose.server.speaker_slots import is_team_code, project_slots
 
     project = db.get(Project, project_id)
     if project is None or _mcp_anonymise_active(project):
         return {}
     result: dict[str, dict[str, str]] = {}
-    rows = (
-        db.query(SessionModel.session_id, SessionSpeaker.speaker_code, Person)
-        .join(SessionSpeaker, SessionSpeaker.session_id == SessionModel.id)
-        .join(Person, SessionSpeaker.person_id == Person.id)
-        .filter(SessionModel.project_id == project_id)
-    )
-    for sid, code, person in rows:
-        if not is_session_scoped_code(code):
+    for slot in project_slots(db, project_id):
+        if not is_team_code(slot.slot_code) or not slot.name:
             continue
-        display = person.short_name or person.full_name or ""
-        if display:
-            result.setdefault(sid, {})[code] = display
+        result.setdefault(slot.session_id, {})[slot.code] = slot.name
     return result
 
 
@@ -505,6 +503,7 @@ class SignalsResult:
     signals: list[Any]  # list[bristlenose.signals.models.Signal]
     total_participants: int
     group_colour_sets: dict[str, str]  # tags lens only; empty for sentiment
+
 
 
 def load_signals(

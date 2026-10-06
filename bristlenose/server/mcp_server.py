@@ -43,6 +43,7 @@ from bristlenose.server.grounding import (
     quote_dom_id,
     resolve_session_speaker_names,
     resolve_speaker_names,
+    session_team,
 )
 from bristlenose.utils.timecodes import format_timecode
 
@@ -452,23 +453,24 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     # and the agent joins code→name from this one map.
     speakers: dict[str, str] = {}
     session_db_ids = [s.id for s in sessions]
-    # Moderators and observers per session: their codes restart in every
-    # session, so the flat map can carry their code and role but not a name.
-    sid_of = {s.id: s.session_id for s in sessions}
-    session_team: dict[str, list[tuple[str, str]]] = {}
+    # Moderators and observers per session, by identity code (route C): m2 is
+    # the study's second moderator in every session it appears in, and m? is
+    # one nobody has identified, which the flat map leaves out.
+    team_by_session = session_team(db, project_id)
     if session_db_ids:
         for sp in db.query(SessionSpeaker).filter(
             SessionSpeaker.session_id.in_(session_db_ids)
         ):
-            speakers.setdefault(sp.speaker_code, sp.speaker_role)
-            if is_session_scoped_code(sp.speaker_code):
-                session_team.setdefault(sid_of[sp.session_id], []).append(
-                    (sp.speaker_code, sp.speaker_role)
-                )
+            if not is_session_scoped_code(sp.speaker_code):
+                speakers.setdefault(sp.speaker_code, sp.speaker_role)
+    for team in team_by_session.values():
+        for code, role in team:
+            if not code.endswith("?"):
+                speakers.setdefault(code, role)
     speaker_names = resolve_speaker_names(db, project_id)
     session_names = resolve_session_speaker_names(db, project_id)
     for row in session_rows:
-        team = sorted(session_team.get(row["session_id"], []))
+        team = sorted(team_by_session.get(row["session_id"], []))
         if team:
             names = session_names.get(row["session_id"], {})
             row["speakers"] = [

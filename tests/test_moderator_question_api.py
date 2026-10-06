@@ -89,7 +89,7 @@ class TestModeratorQuestionEndpoint:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["speaker_code"] == "m1"
+        assert data["speaker_code"] == "m?"  # route C: nothing names the smoke fixture's moderator
         assert data["segment_index"] == 2
         assert "confusing" in data["text"].lower()
 
@@ -120,7 +120,7 @@ class TestModeratorQuestionEndpoint:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["speaker_code"] == "m1"
+        assert data["speaker_code"] == "m?"  # route C: nothing names the smoke fixture's moderator
         assert data["segment_index"] == 4
         assert "search" in data["text"].lower()
 
@@ -134,7 +134,7 @@ class TestModeratorQuestionEndpoint:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["speaker_code"] == "m1"
+        assert data["speaker_code"] == "m?"  # route C: nothing names the smoke fixture's moderator
         assert data["segment_index"] == 0
 
     def test_segment_index_zero_returns_404(self, client: TestClient) -> None:

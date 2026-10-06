@@ -9,6 +9,7 @@ See docs/design-serve-milestone-1.md for the domain model rationale.
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import uuid4
 
 from sqlalchemy import (
     Boolean,
@@ -45,11 +46,15 @@ _LEGACY_UNGROUPED_NAME = "Ungrouped"
 
 
 class Person(Base):
-    """A person in the world — not tied to a project.
+    """One identity: a participant, or a moderator or observer across sessions.
 
-    The pipeline creates a new person row on every import. Two separate
-    "Jim Smith" rows are fine — merging is a future human-driven action
-    that updates session_speaker.person_id foreign keys.
+    A participant's identity is its code (participant numbers are never
+    reused). A moderator or observer is one row however many sessions they
+    ran, and each session's slot points at it through
+    ``session_speakers.person_id`` — route C (``docs/design-people.md`` §H H9,
+    migration 013). ``code`` is that identity's label in the project (``m2``),
+    recomputed from the map by ``speaker_slots.renumber``; it is not the
+    ``m1`` token in a transcript, which is the slot.
     """
 
     __tablename__ = "persons"
@@ -61,6 +66,15 @@ class Person(Base):
     persona: Mapped[str] = mapped_column(String(200), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(default=func.now())
+    #: The identity's label in its project: ``p3``, ``m2``, ``o1``.
+    code: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
+    #: Stable across renumbering and, later, across studies (the bank).
+    uuid: Mapped[str] = mapped_column(String(36), default=lambda: str(uuid4()))
+    #: What minted it: ``participant``, ``platform-name``, ``heard``,
+    #: ``label``, ``inherited`` or ``pick``.
+    origin: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
+    #: The person running Bristlenose. Nothing sets it yet (Phase 2).
+    me: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
     session_speakers: Mapped[list[SessionSpeaker]] = relationship(back_populates="person")
 
@@ -306,20 +320,32 @@ class SessionSpeaker(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"))
-    person_id: Mapped[int] = mapped_column(ForeignKey("persons.id"))
+    #: The slot's identity; ``None`` is a moderator or observer nothing has
+    #: identified, rendered ``m?`` / ``o?``.
+    person_id: Mapped[int | None] = mapped_column(ForeignKey("persons.id"), nullable=True)
     speaker_code: Mapped[str] = mapped_column(String(20))  # "p1", "m1", "o1"
     speaker_role: Mapped[str] = mapped_column(String(50))  # researcher, participant, observer
     words_spoken: Mapped[int] = mapped_column(default=0)
     pct_words: Mapped[float] = mapped_column(Float, default=0.0)
     pct_time_speaking: Mapped[float] = mapped_column(Float, default=0.0)
     source_file: Mapped[str] = mapped_column(String(500), default="")
-    #: Whether a person has said yes to this speaker's name. A name the pipeline
-    #: found is a proposal (dotted ring, grey name); a typed or picked one is
-    #: confirmed. Route C's slot state (``design-people.md`` §H H9, migration 012).
-    name_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    #: The slot state (``design-people.md`` §C5): ``None`` with no person,
+    #: ``proposed`` when the pipeline's evidence named it, ``confirmed`` when a
+    #: person said so. A re-run never touches a confirmed slot. Replaced
+    #: migration 012's ``name_confirmed`` (013).
+    state: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
+    #: Why the slot points where it does: ``platform-name``, ``heard``,
+    #: ``label``, ``inherited``, ``participant`` or ``pick``.
+    evidence: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
 
     session: Mapped[Session] = relationship(back_populates="session_speakers")
-    person: Mapped[Person] = relationship(back_populates="session_speakers")
+    person: Mapped[Person | None] = relationship(back_populates="session_speakers")
+
+    @property
+    def name_confirmed(self) -> bool:
+        """The API's name for a confirmed slot, kept until the picker reads
+        ``state``."""
+        return self.state == "confirmed"
 
     __table_args__ = (
         UniqueConstraint("session_id", "speaker_code", name="uq_speaker_session_code"),

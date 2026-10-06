@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from bristlenose.server.export_core import pick_featured_quotes
 from bristlenose.server.models import (
-    Person,
     Project,
     Quote,
     QuoteState,
@@ -21,6 +20,7 @@ from bristlenose.server.models import (
     TranscriptSegment,
 )
 from bristlenose.server.models import Session as SessionModel
+from bristlenose.server.speaker_slots import slot_map
 from bristlenose.utils.timecodes import format_duration_human
 
 router = APIRouter(prefix="/api")
@@ -223,20 +223,7 @@ def _resolve_speaker_names(
     db: Session, project_id: int,
 ) -> dict[tuple[str, str], str]:
     """Build (session_id_str, speaker_code) -> display name map."""
-    sessions = (
-        db.query(SessionModel)
-        .filter_by(project_id=project_id)
-        .all()
-    )
-    result: dict[tuple[str, str], str] = {}
-    for sess in sessions:
-        for sp in sess.session_speakers:
-            person = db.get(Person, sp.person_id)
-            name = ""
-            if person:
-                name = person.short_name or person.full_name or ""
-            result[(sess.session_id, sp.speaker_code)] = name
-    return result
+    return {key: slot.name for key, slot in slot_map(db, project_id).items()}
 
 
 # ---------------------------------------------------------------------------
@@ -456,9 +443,11 @@ def get_dashboard(
 
         session_rows: list[DashboardSessionResponse] = []
         total_duration_s = 0.0
-        # Every word spoken, counted from the transcript as it is now. The
-        # per-speaker words_spoken column is never written, so summing it
-        # gave 0 and the Words card never showed.
+        # Every word spoken, counted from the transcript as it is now — not
+        # from session_speakers.words_spoken. That column was never written
+        # until route C Phase 1 (the importer copies it from
+        # session-speakers.json v2), and it is still absent for output from
+        # before that file, so the read-time count is the one that always works.
         total_words = sum(
             len(text.split())
             for (text,) in db.query(TranscriptSegment.text).filter(
@@ -466,19 +455,19 @@ def get_dashboard(
             )
         )
 
+        slots = slot_map(db, project_id)
         for sess in sessions:
             total_duration_s += sess.duration_seconds
 
             speakers_data: list[DashboardSpeakerResponse] = []
             for sp in sorted(sess.session_speakers, key=_speaker_sort_key):
-                person = db.get(Person, sp.person_id)
-                name = ""
-                if person:
-                    name = person.short_name or person.full_name or ""
+                slot = slots[(sess.session_id, sp.speaker_code)]
+                name = slot.name
 
                 speakers_data.append(
                     DashboardSpeakerResponse(
-                        speaker_code=sp.speaker_code,
+                        # The identity's code (``m2``), or ``m?`` (route C).
+                        speaker_code=slot.code,
                         name=name,
                         role=sp.speaker_role,
                     )

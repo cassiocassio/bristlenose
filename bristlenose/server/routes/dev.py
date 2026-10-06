@@ -20,7 +20,6 @@ from sqlalchemy.orm import Session
 
 from bristlenose.server.journey import derive_journeys
 from bristlenose.server.models import (
-    Person,
     Project,
     Quote,
     SessionSpeaker,
@@ -117,70 +116,43 @@ def sessions_table_html(
         participant_screens = derive_journeys(db, project_id)
         sentiment_by_session = _aggregate_sentiments(db, project_id)
 
-        # Collect all moderator/observer codes across all sessions.
-        all_moderator_codes: list[str] = []
-        all_observer_codes: list[str] = []
-        for sess in sessions:
-            for sp in sess.session_speakers:
-                if sp.speaker_code.startswith("m") and sp.speaker_code not in all_moderator_codes:
-                    all_moderator_codes.append(sp.speaker_code)
-                elif sp.speaker_code.startswith("o") and sp.speaker_code not in all_observer_codes:
-                    all_observer_codes.append(sp.speaker_code)
-        all_moderator_codes.sort(
-            key=lambda c: int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0
-        )
-        all_observer_codes.sort(
-            key=lambda c: int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 0
-        )
+        # Moderator/observer identities across all sessions, by identity code
+        # (route C, speaker_slots): m2 is one person wherever it appears.
+        from bristlenose.server.speaker_slots import slot_map
+
+        slots = slot_map(db, project_id)
+        team_names: dict[str, str] = {}
+        for slot in slots.values():
+            if slot.slot_code[:1] in ("m", "o"):
+                team_names.setdefault(slot.code, slot.name)
+
+        def _code_key(c: str) -> int:
+            return int(c[1:]) if len(c) > 1 and c[1:].isdigit() else 1_000_000
+
+        all_moderator_codes = sorted((c for c in team_names if c.startswith("m")), key=_code_key)
+        all_observer_codes = sorted((c for c in team_names if c.startswith("o")), key=_code_key)
 
         omit_moderators_from_rows = len(all_moderator_codes) == 1
 
-        # Moderator header HTML
-        def _resolve_name(sp: SessionSpeaker) -> str:
-            person = db.get(Person, sp.person_id)
-            if person:
-                return person.short_name or person.full_name or ""
-            return ""
+        def _header_parts(codes: list[str]) -> list[str]:
+            parts: list[str] = []
+            for code in codes:
+                name = team_names[code]
+                name_html = f" {_esc(name)}" if name else ""
+                parts.append(
+                    f'<span class="bn-person-badge">'
+                    f'<span class="badge">{_esc(code)}</span>{name_html}'
+                    f"</span>"
+                )
+            return parts
 
-        # Build moderator header
         moderator_header = ""
         if all_moderator_codes:
-            parts: list[str] = []
-            for code in all_moderator_codes:
-                # Find the speaker in any session
-                sp = (
-                    db.query(SessionSpeaker)
-                    .filter_by(speaker_code=code)
-                    .first()
-                )
-                if sp:
-                    name = _resolve_name(sp)
-                    name_html = f" {_esc(name)}" if name else ""
-                    parts.append(
-                        f'<span class="bn-person-badge">'
-                        f'<span class="badge">{_esc(code)}</span>{name_html}'
-                        f"</span>"
-                    )
-            moderator_header = "Moderated by " + _oxford_list(parts)
+            moderator_header = "Moderated by " + _oxford_list(_header_parts(all_moderator_codes))
 
-        # Build observer header
         observer_header = ""
         if all_observer_codes:
-            parts = []
-            for code in all_observer_codes:
-                sp = (
-                    db.query(SessionSpeaker)
-                    .filter_by(speaker_code=code)
-                    .first()
-                )
-                if sp:
-                    name = _resolve_name(sp)
-                    name_html = f" {_esc(name)}" if name else ""
-                    parts.append(
-                        f'<span class="bn-person-badge">'
-                        f'<span class="badge">{_esc(code)}</span>{name_html}'
-                        f"</span>"
-                    )
+            parts = _header_parts(all_observer_codes)
             noun = "Observer" if len(parts) == 1 else "Observers"
             observer_header = f"{noun}: " + _oxford_list(parts)
 
@@ -211,9 +183,9 @@ def sessions_table_html(
             for sp in sorted(sess.session_speakers, key=_speaker_sort_key):
                 if omit_moderators_from_rows and sp.speaker_code.startswith("m"):
                     continue
-                name = _resolve_name(sp)
-                display = _esc(name) if name else ""
-                speakers_list.append({"code": _esc(sp.speaker_code), "name": display})
+                slot = slots[(sid, sp.speaker_code)]
+                display = _esc(slot.name) if slot.name else ""
+                speakers_list.append({"code": _esc(slot.code), "name": display})
 
             # Journey
             session_pids = [

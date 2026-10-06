@@ -19,9 +19,11 @@ from tests.test_serve_per_session_moderators import _PER_SESSION, _client, _proj
 
 
 def _slot(client: TestClient, sid: str, code: str) -> dict:
+    """By the transcript's slot code: ``speaker_code`` is the identity's
+    (route C Phase 1), and a pick can change it."""
     sessions = client.get("/api/projects/1/sessions").json()["sessions"]
     sess = next(s for s in sessions if s["session_id"] == sid)
-    return next(sp for sp in sess["speakers"] if sp["speaker_code"] == code)
+    return next(sp for sp in sess["speakers"] if sp["slot_code"] == code)
 
 
 def _state(slot: dict) -> tuple[str, str, bool]:
@@ -40,10 +42,14 @@ class TestUndoAModeratorPick:
     ) -> None:
         client = _client(_project(tmp_path, session_names=_PER_SESSION))
         before = _slot(client, "s1", "m1")
-        # The pick: both names set to the chosen one, which confirms it.
+        # The pick: both names set to the chosen one, which confirms it. Jo is
+        # session 2's moderator, so s1 now points at that person (route C
+        # Phase 1), who keeps their own names.
         client.put("/api/projects/1/sessions/s1/speakers/m1",
                    json={"full_name": "Jo Lee", "short_name": "Jo Lee"})
-        assert _state(_slot(client, "s1", "m1")) == ("Jo Lee", "Jo Lee", True)
+        assert _state(_slot(client, "s1", "m1")) == ("Jo Lee", "Jo", True)
+        assert _slot(client, "s1", "m1")["speaker_code"] == _slot(client, "s2", "m1")[
+            "speaker_code"]
         # The undo: one request carrying the whole before-state.
         resp = client.put("/api/projects/1/sessions/s1/speakers/m1", json={
             "full_name": before["full_name"], "short_name": before["short_name"],

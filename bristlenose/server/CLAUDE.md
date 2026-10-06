@@ -302,26 +302,52 @@ See `docs/design-react-islands.md` for the 6-step "Adding a new island" checklis
 
 **Python changes** are handled by uvicorn's `--reload` (WatchFiles) — editing `data.py`, `app.py`, etc. triggers an automatic server restart.
 
-## Names architecture (YAML canonical, DB materialized)
+## Names architecture — slots and identities (route C Phase 1)
 
-> **Decided 1 Oct 2026, not yet built: this architecture is retired.** The
-> database becomes the only home for names, identities, the per-session
-> moderator map and origin; the pipeline carries evidence in its intermediates
-> and runs the importer at the end of every run; a legacy `people.yaml` is read
-> once on the first import after upgrade, then ignored and never deleted. The
-> per-session map is `session_speakers.person_id` made nullable (null renders as
-> `m?`) plus `state` and `evidence`; `persons` gain a per-project `code`, a
-> `uuid`, an `origin` and `me`, one row per identity instead of one per session.
-> Record: `docs/design-people.md` §C2 and §E decision 1 (corrected), §H H9;
-> drawn in `docs/mockups/moderator-identity-failure-states.html` Part 5b.
-> Everything below describes what ships at HEAD and stays true until H9 lands;
-> when it does, rewrite this section rather than annotate it further.
+A transcript's speaker token (`m1`) is a **slot**: one speaker in one session.
+Moderator and observer tokens restart in every session, so a slot is not a
+person. `session_speakers.person_id` is the per-session map: it points at one
+`Person` per **identity** — a participant, or a moderator or observer across
+however many sessions they ran — or is `NULL` when nothing has identified the
+slot. `session_speakers.state` is `NULL` · `proposed` · `confirmed`;
+`evidence` says why (`platform-name`, `heard`, `label`, `inherited`,
+`participant`, `pick`). Each identity carries a project-wide `persons.code`,
+**recomputed** from the map by `speaker_slots.renumber` (moderators numbered as
+they first appear); a participant's code is its slot code. Migration 013;
+`docs/design-people.md` §H H9.
 
-`people.yaml` is the single source of truth for participant names. The SQLite `Person` table is a materialized view, populated from YAML on import and kept in sync via write-through.
+**Every route emits the identity's code, never the slot's**: session 2's
+moderator reads `m2` in `/sessions`, `/transcripts/{sid}` (speakers *and*
+segments), `/dashboard`, `/people`, the moderator-question route and the MCP
+overview, and an unidentified slot reads `m?` / `o?`. `/sessions` also carries
+`slot_code`, which is how a client addresses a slot, because a pick can renumber
+identities. Read slots through `speaker_slots.project_slots` / `slot_map` /
+`session_slots` — an outer join. **Never inner-join `session_speakers` to
+`persons`**: it drops the unidentified slot (five sites did, before 013). Maps
+keyed by `(session_id, slot_code)` (export, clips) stay keyed by slot, as quotes
+are.
+
+Moderators and observers come from the pipeline's evidence,
+`.bristlenose/intermediate/session-speakers.json` (version 2: each name's
+`evidence` class, plus every speaker's per-session `stats`). One identity per
+distinct name within the study, whether a platform labelled it or the model
+heard it. A re-run never touches a confirmed slot. With no evidence file (output
+from before 3 Oct 2026) existing slots keep what they hold and new ones arrive
+unidentified — `people.yaml` never names a moderator. `PUT
+…/sessions/{sid}/speakers/{code}` takes the **slot** code only — never the
+identity code, because both are `mN` and a pick renumbers identities, so a
+stale grid's display code could name a different slot. `person` points the slot at an identity; a name says who *this*
+session's speaker is (an existing identity's name points at it, a new name
+renames an identity no other session shares, otherwise mints someone new). It
+never renames someone in another session.
+
+**Participants are still named from `people.yaml`**, as below — the file is
+not yet retired as a store (that is Phase 5's, with the docs that promise an
+editable file).
 
 ### Import path (YAML → DB)
 
-`_import_speakers()` in `importer.py` reads `people.yaml` via `_load_people_for_import()` and populates `Person.full_name`, `short_name`, `role_title`, `persona`, `notes` from matching entries. On re-import (server restart), `_update_persons_from_people()` fills empty Person fields from YAML without overwriting non-empty values — so browser edits (via `PUT /people`) always win over YAML.
+`_import_speakers()` in `importer.py` reads `people.yaml` via `_load_people_for_import()` and, for **participants**, fills `Person.full_name`, `short_name`, `role_title`, `persona`, `notes` from matching entries — empty fields only, on every import, so browser edits (via `PUT /people`) always win over YAML (`_import_participant`).
 
 ### Write-through path (DB → YAML)
 
@@ -356,7 +382,7 @@ The server currently loads one project (project ID 1). Multi-project is future w
 - **Instance-scoped tables** (no `project_id`): `Person`, `CodebookGroup`, `TagDefinition`. These are shared across projects by design. **Never add `project_id` to these tables** — cross-project identity and codebook reuse depend on them being global
 - **Project-scoped tables** (have `project_id` FK): `Quote`, `Session`, `ScreenCluster`, `ThemeGroup`, and all researcher-state tables. **Every new analysis/state table must include `project_id`**
 - **Frontend project ID**: read from `data-project-id` attribute via `useProjectId()` hook or `apiBase()` helper. **Never hardcode `/api/projects/1/...` in new code** — use `apiBase()` which reads the injected `BRISTLENOSE_API_BASE` global. Existing hardcoded locations are tracked in the design doc
-- **Person rows are created per-import, not deduped** — two "John Smith" rows from different projects is correct. Merging is a future human-driven action via `person_links` table, not an automatic process. **Within one project this changes under route C** (`docs/design-people.md` §E decision 1, corrected 1 Oct 2026): one `Person` per identity, minted when a platform label or a researcher's pick first establishes it, and `session_speakers.person_id` nullable so a session can have a moderator nobody has identified. Today the importer creates one `Person` per `(session, code)` and seeds every `m1` row from the one `people.yaml` entry — the mechanism behind the moderator collision the storyboard draws
+- **Person rows are created per-import, not deduped** — two "John Smith" rows from different projects is correct. Merging is a future human-driven action via `person_links` table, not an automatic process. **Within one project this changes under route C** (`docs/design-people.md` §E decision 1, corrected 1 Oct 2026): one `Person` per identity, minted when a platform label or a researcher's pick first establishes it, and `session_speakers.person_id` nullable so a session can have a moderator nobody has identified. Built in Phase 1 (migration 013, `speaker_slots`)
 - **`SessionSpeaker`** joins Person↔Session (with speaker code + role). It has no `project_id` because it inherits project scope through Session. This is correct — don't add `project_id` to it
 - **Per-project SQLite files** — each project gets its own DB at `<output_dir>/.bristlenose/bristlenose.db`. Cross-project data (person links, app settings) will live in the instance DB at `~/.config/bristlenose/bristlenose.db`. Don't store cross-project relationships in per-project DBs
 
@@ -411,9 +437,9 @@ Tests: `tests/test_server_lifecycle.py` (unit + 1 SIGTERM-delivery smoke test).
 - **IIFE wrapper around the script block** — `render/report.py` wraps data variables + concatenated JS in `(function() { ... })();`.  In serve mode, `_strip_vanilla_js()` removes the module code but preserves the IIFE structure (globals + closing `})();`).  In the static render path, the full IIFE is intact.  If you break the IIFE closing, every init function silently fails — no console error, just a dead page
 - **Baked HTML requires re-render to pick up new JS** — the static HTML report on disk contains a snapshot of the JS from the last `bristlenose render`.  In production (no `--dev`), editing `.js` source files has no effect until you re-render.  The live reload only works in `--dev` mode.  If something works in dev but not in the static file, the static file is stale
 - **`pip install -e .` and render are separate steps** — an editable install makes Python changes visible immediately, but the rendered HTML is a separate artifact.  Adding a new JS file to `_JS_FILES` requires both `pip install -e .` (so Python sees the new list) and `bristlenose render` (so the static HTML includes it).  In dev mode, only a server restart is needed (uvicorn picks up the Python change, live reload reads the new file)
-- **Moderators and observers are named per session, not from people.yaml (3 Oct 2026).** `m*`/`o*` codes restart in every session, so `people.yaml` holds one name for every session's `m1`. When `.bristlenose/intermediate/session-speakers.json` exists, `_import_speakers` names `m*`/`o*` from their own session's entry (`_name_source`) and never from `people.yaml`, even when the session has no name; on re-import `_repair_collided_names` replaces a field still equal to the shared YAML value and keeps anything else (a per-session rename). `PUT /people` drops `m*`/`o*` entries (the Sessions table sends the whole code-keyed map on every rename, which used to write the shared name onto whichever session's `m1` came first); `PUT /projects/{id}/sessions/{sid}/speakers/{code}` renames one session's speaker, changes only the fields sent, and is not written through. A project without the file falls back to `people.yaml` as before. `docs/design-people.md` changelog 2026-10-03
-- **Importer reads people.yaml** — `_import_speakers()` requires `output_dir` parameter to find `people.yaml`. On re-import, `_update_persons_from_people()` only fills empty Person fields — never overwrites non-empty values. This means browser edits survive server restarts
-- **Write-through is best-effort** — `_write_through_people_yaml()` in `routes/data.py` logs a warning on failure but doesn't fail the API request. The DB is always updated; YAML update is secondary. Both this and the importer's YAML read go when `people.yaml` is retired as a store (decided 1 Oct 2026, `docs/design-people.md` §C2); until then note that `put_people` writes `.first()` of the speaker rows for a code and `get_people` iterates with no ordering, so a code shared across sessions can read back a different name from the one just written (storyboard frame F4)
+- **Moderators and observers are identities, named from evidence (route C Phase 1).** See § Names architecture. `PUT /people` still drops `m*`/`o*` entries — the Sessions table sends the whole code-keyed map on every participant rename — and the per-session route names them. Before this the 3 Oct 2026 weekend fix named each session's slot from `session-speakers.json` (`_name_source`, `_repair_collided_names`, both gone)
+- **Importer reads people.yaml for participants** — `_import_speakers()` requires `output_dir` to find it; empty fields only, so browser edits survive server restarts
+- **Write-through is best-effort** — `_write_through_people_yaml()` in `routes/data.py` logs a warning on failure but doesn't fail the API request. The DB is always updated; YAML update is secondary. Both this and the importer's YAML read go when `people.yaml` is retired as a store (decided 1 Oct 2026, `docs/design-people.md` §C2). `get_people` is keyed by identity code since Phase 1, so no code is shared across sessions any more (storyboard frame F4 closed)
 - **Codebook tab stale counts on initial load** — the CodebookPanel re-fetches via MutationObserver when its parent `.bn-tab-panel` gains `.active`.  This covers the race where vanilla JS `PUT /tags` hasn't finished when the panel first mounts.  Will be unnecessary once tag writes move from localStorage PUT to React CRUD
 - **Source file paths lose subdirectory in transcript headers** — the pipeline writes `# Source: filename.mov` (just `.path.name`, no subdirectory) into transcript headers (`merge_transcript.py`, `render_output.py`). The importer reads this and resolves the file against `project_dir`. If the media file lives in a subdirectory (e.g. `interviews/`), the direct path doesn't exist. `_import_source_files()` handles this by scanning one level of subdirectories under `project_dir` — mirroring `ingest.discover_files()`. If video playback returns 404 in serve mode: (1) check `Session.source_file` in the DB — if it's missing the subdirectory, delete `bristlenose.db` and restart to force re-import; (2) check the server is running from the correct directory (worktree). The video-map API (`GET /api/projects/{id}/video-map`) converts DB paths to `/media/` URIs via `_file_to_media_uri()` in `sessions.py`. `PlayerContext.tsx` fetches this in SPA mode (no IIFE globals exist because the SPA HTML is generated directly, not from baked HTML)
 

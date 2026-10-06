@@ -4,16 +4,14 @@ The people file (``people.yaml``) lives in the output directory and tracks
 every participant across pipeline runs.  Computed stats are refreshed on
 each run; human-editable fields (name, role, persona, notes) are preserved.
 
-**Decided 1 Oct 2026, not yet built: the file is retired as a store.**
-Names, identities, the per-session moderator map and name origin move to the
-project database (``session_speakers.person_id`` nullable + ``state`` +
-``evidence``; ``persons`` with a per-project code, uuid, origin and ``me``);
-the pipeline carries evidence in its intermediates and runs the importer at
-the end of every run; a legacy ``people.yaml`` is read once on the first
-import after upgrade, then ignored and never deleted.  Record:
-``docs/design-people.md`` §C2 and §E decision 1 (corrected), work package
-§H H9; drawn in ``docs/mockups/moderator-identity-failure-states.html``
-Part 5b.  Everything in this module describes what ships until H9 lands.
+**Route C Phase 1 (``docs/design-people.md`` §H H9): the serve database no
+longer takes moderators or observers from this file.** Identities and the
+per-session moderator map live in the project database (migration 013,
+``server/speaker_slots.py``), built from ``session-speakers.json`` below, which
+this module writes. Participants are still named from ``people.yaml``; the file
+is retired as a store in Phase 5, with the docs that promise an editable file.
+The CLI's markdown report and the sealed static HTML still read it, ``m1``
+collision and all.
 """
 
 from __future__ import annotations
@@ -159,8 +157,10 @@ def compute_participant_stats(
     on ``session_speakers`` and is ``null`` until a platform label proposes an
     identity or a researcher picks one; the per-session ``m1`` token stays as a
     within-session tag, and this file is retired as a store.  See
-    ``docs/design-people.md`` §E decision 1 (corrected) and §H H9.  Until that
-    lands this function behaves as described above, and
+    ``docs/design-people.md`` §E decision 1 (corrected) and §H H9.  Phase 1
+    built the slot map in the serve database, fed by ``session_speaker_stats``
+    and ``session_speaker_names``; this file keeps the limitation until Phase
+    5 retires it, and
     ``tests/test_people.py::test_multi_session_moderator_codes_collide_and_are_warned``
     pins the limitation, not a desired end state.
     """
@@ -240,7 +240,8 @@ def compute_participant_stats(
             "per code, so the earlier sessions' stats are discarded and one name "
             "covers every session that carries the code. Moderator and observer "
             "codes restart at 1 each session; per-session moderator identity is "
-            "decided but not yet built — see docs/design-people.md, decision 1.",
+            "built in the serve database (route C Phase 1), not in this file — see "
+            "docs/design-people.md §H H9.",
             detail,
         )
 
@@ -580,7 +581,10 @@ def suggest_short_names(people: PeopleFile) -> None:
 # fix; the identity layer builds on the per-session rows this fills.
 
 SESSION_SPEAKERS_FILENAME = "session-speakers.json"
-SESSION_SPEAKERS_VERSION = 1
+SESSION_SPEAKERS_VERSION = 2
+#: Versions ``load_session_speakers`` reads. Version 1 recorded no evidence
+#: class, so its names arrive as ``inherited`` proposals.
+_SESSION_SPEAKERS_READABLE = (1, 2)
 
 
 def session_speakers_path(output_dir: Path) -> Path:
@@ -594,11 +598,16 @@ def session_speaker_names(
 ) -> dict[str, dict[str, dict[str, str]]]:
     """Name each session's moderators and observers from that session alone.
 
-    Returns ``{session_id: {code: {"full_name", "short_name", "role"}}}`` for
-    ``m*``/``o*`` codes. The precedence is the participants' one
-    (``auto_populate_names``): the label a platform transcript wrote, then the
-    LLM's ``person_name`` for that speaker in *this* session, then any label
-    that is not a placeholder. ``role`` is the LLM's job title.
+    Returns ``{session_id: {code: {"full_name", "short_name", "role",
+    "evidence"}}}`` for ``m*``/``o*`` codes. The precedence is the
+    participants' one (``auto_populate_names``): the label a platform
+    transcript wrote, then the LLM's ``person_name`` for that speaker in *this*
+    session, then any label that is not a placeholder. ``role`` is the LLM's
+    job title. ``evidence`` says which of the three named it —
+    ``platform-name``, ``heard`` or ``label`` — so the importer can weigh a
+    platform's record against a model's hearing (route C,
+    ``docs/design-people.md`` §C5); it is ``""`` when only a job title was
+    found.
     """
     result: dict[str, dict[str, dict[str, str]]] = {}
     for transcript in transcripts:
@@ -628,11 +637,11 @@ def session_speaker_names(
             real_label = "" if is_generic_label(label) else label.strip()
             info = llm.get(code)
             if real_label and real_label in platform.get(code, set()):
-                full_name = real_label
+                full_name, evidence = real_label, "platform-name"
             elif info and info.person_name:
-                full_name = info.person_name
+                full_name, evidence = info.person_name, "heard"
             else:
-                full_name = real_label
+                full_name, evidence = real_label, "label"
             role = info.job_title if info and info.job_title else ""
             if not full_name and not role:
                 continue
@@ -640,23 +649,76 @@ def session_speaker_names(
                 "full_name": full_name,
                 "short_name": _extract_given_name(full_name) if full_name else "",
                 "role": role,
+                "evidence": evidence if full_name else "",
             }
         if names:
             result[sid] = names
     return result
 
 
+def session_speaker_stats(
+    sessions: list[InputSession],
+    transcripts: list[FullTranscript],
+) -> dict[str, dict[str, dict[str, object]]]:
+    """Each session's speakers' stats, keyed by session then speaker code.
+
+    ``compute_participant_stats`` keys by code alone, so every session's ``m1``
+    lands on one entry; this keeps them apart, for the serve DB's
+    ``session_speakers`` rows. ``pct_words`` is a participant's share of every
+    participant's words in the study (moderators and observers get 0.0, as
+    there); ``pct_time_speaking`` is the share of that session's duration.
+    """
+    by_sid = {t.session_id: t for t in transcripts}
+    result: dict[str, dict[str, dict[str, object]]] = {}
+    participant_words = 0
+    participants: list[tuple[dict[str, object], int]] = []
+    for session in sessions:
+        transcript = by_sid.get(session.session_id)
+        if transcript is None:
+            continue
+        words: dict[str, int] = {}
+        seconds: dict[str, float] = {}
+        for seg in transcript.segments:
+            code = seg.speaker_code or session.participant_id
+            words[code] = words.get(code, 0) + len(seg.text.split())
+            seconds[code] = seconds.get(code, 0.0) + max(0.0, seg.end_time - seg.start_time)
+        per: dict[str, dict[str, object]] = {}
+        for code, count in words.items():
+            duration = transcript.duration_seconds
+            per[code] = {
+                "words_spoken": count,
+                "pct_words": 0.0,
+                "pct_time_speaking": (
+                    round(seconds[code] / duration * 100, 1) if duration > 0 else 0.0
+                ),
+                "source_file": transcript.source_file,
+            }
+            if code.startswith("p"):
+                participant_words += count
+                participants.append((per[code], count))
+        result[session.session_id] = per
+    if participant_words:
+        for entry, count in participants:
+            entry["pct_words"] = round(count / participant_words * 100, 1)
+    return result
+
+
 def write_session_speakers(
-    names: dict[str, dict[str, dict[str, str]]], output_dir: Path,
+    names: dict[str, dict[str, dict[str, str]]],
+    output_dir: Path,
+    stats: dict[str, dict[str, dict[str, object]]] | None = None,
 ) -> Path:
-    """Write the per-session names atomically (they are names: kept hidden)."""
+    """Write the per-session names and stats atomically (they are names: kept
+    hidden)."""
     import json
     import os
     import tempfile
 
     path = session_speakers_path(output_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"version": SESSION_SPEAKERS_VERSION, "sessions": names}
+    payload: dict[str, object] = {"version": SESSION_SPEAKERS_VERSION, "sessions": names}
+    if stats is not None:
+        payload["stats"] = stats
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".session-speakers.", suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -669,10 +731,7 @@ def write_session_speakers(
     return path
 
 
-def load_session_speakers(output_dir: Path) -> dict[str, dict[str, dict[str, str]]] | None:
-    """Read the per-session names, or ``None`` if the project has not been
-    re-run since they were introduced (the caller falls back to
-    ``people.yaml``)."""
+def _read_session_speakers(output_dir: Path) -> dict[str, object] | None:
     import json
 
     path = session_speakers_path(output_dir)
@@ -681,10 +740,39 @@ def load_session_speakers(output_dir: Path) -> dict[str, dict[str, dict[str, str
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        logger.warning("Could not read %s; moderator names fall back to people.yaml", path)
+        logger.warning("Could not read %s; moderators are left unidentified", path)
         return None
-    if not isinstance(data, dict) or data.get("version") != SESSION_SPEAKERS_VERSION:
-        logger.warning("Unexpected format in %s; moderator names fall back to people.yaml", path)
+    if not isinstance(data, dict) or data.get("version") not in _SESSION_SPEAKERS_READABLE:
+        logger.warning("Unexpected format in %s; moderators are left unidentified", path)
+        return None
+    return data
+
+
+def load_session_speakers(output_dir: Path) -> dict[str, dict[str, dict[str, str]]] | None:
+    """Read the per-session moderator and observer names, or ``None`` if the
+    project has not been re-run since they were introduced.
+
+    Every entry carries ``evidence``; a version-1 file, which recorded none,
+    reads as ``inherited``.
+    """
+    data = _read_session_speakers(output_dir)
+    if data is None:
         return None
     sessions = data.get("sessions")
-    return sessions if isinstance(sessions, dict) else None
+    if not isinstance(sessions, dict):
+        return None
+    if data.get("version") == 1:
+        for per in sessions.values():
+            for entry in per.values():
+                if entry.get("full_name"):
+                    entry.setdefault("evidence", "inherited")
+    return sessions
+
+
+def load_session_speaker_stats(
+    output_dir: Path,
+) -> dict[str, dict[str, dict[str, object]]]:
+    """Read the per-session speaker stats; ``{}`` when the file has none."""
+    data = _read_session_speakers(output_dir)
+    stats = data.get("stats") if data else None
+    return stats if isinstance(stats, dict) else {}

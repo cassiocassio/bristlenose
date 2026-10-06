@@ -2686,6 +2686,7 @@ class Pipeline:
                 load_people_file,
                 merge_people,
                 session_speaker_names,
+                session_speaker_stats,
                 suggest_short_names,
                 write_people_file,
                 write_session_speakers,
@@ -2718,11 +2719,12 @@ class Pipeline:
 
             write_people_file(people, output_dir)
             # Moderator and observer codes restart per session, so the people
-            # file can hold one name for all of them; serve names each
-            # session's from this instead.
+            # file can hold one name for all of them; serve identifies each
+            # session's from this instead, and takes its stats from it.
             write_session_speakers(
                 session_speaker_names(transcripts, all_speaker_infos, all_label_code_maps),
                 output_dir,
+                stats=session_speaker_stats(sessions, transcripts),
             )
             display_names = build_display_name_map(people)
 

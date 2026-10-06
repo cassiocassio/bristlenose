@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from bristlenose.server.journey import derive_journeys_with_anchors
 from bristlenose.server.models import (
-    Person,
     Project,
     Quote,
     SessionSpeaker,
@@ -19,6 +18,7 @@ from bristlenose.server.models import (
 from bristlenose.server.models import (
     Session as SessionModel,
 )
+from bristlenose.server.speaker_slots import slot_map
 
 router = APIRouter(prefix="/api")
 
@@ -31,6 +31,8 @@ router = APIRouter(prefix="/api")
 class SpeakerResponse(BaseModel):
     """A speaker in a session."""
 
+    #: The identity's code (``m2`` for the study's second moderator), or
+    #: ``m?`` when nothing has identified this slot — never another session's.
     speaker_code: str
     name: str
     role: str
@@ -40,6 +42,9 @@ class SpeakerResponse(BaseModel):
     #: what it held, and ``name`` alone cannot say which of the two it was.
     full_name: str = ""
     short_name: str = ""
+    #: The transcript's own token for this speaker in this session (``m1``):
+    #: the slot. Distinct within a session where ``speaker_code`` may not be.
+    slot_code: str = ""
 
 
 class SourceFileResponse(BaseModel):
@@ -137,24 +142,24 @@ def get_sessions(
         all_moderator_names: list[str] = []
         all_observer_names: list[str] = []
 
+        slots = slot_map(db, project_id)
         rows: list[SessionResponse] = []
         for sess in sessions:
             # Speakers
             speakers_data: list[SpeakerResponse] = []
             for sp in sorted(sess.session_speakers, key=_speaker_sort_key):
-                person = db.get(Person, sp.person_id)
-                name = ""
-                if person:
-                    name = person.short_name or person.full_name or ""
+                slot = slots[(sess.session_id, sp.speaker_code)]
+                name = slot.name
 
                 speakers_data.append(
                     SpeakerResponse(
-                        speaker_code=sp.speaker_code,
+                        speaker_code=slot.code,
                         name=name,
                         role=sp.speaker_role,
                         name_confirmed=sp.name_confirmed,
-                        full_name=(person.full_name or "") if person else "",
-                        short_name=(person.short_name or "") if person else "",
+                        full_name=slot.full_name,
+                        short_name=slot.person.short_name if slot.person else "",
+                        slot_code=sp.speaker_code,
                     )
                 )
 

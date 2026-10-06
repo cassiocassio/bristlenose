@@ -36,7 +36,7 @@ import { postPersonPicker, postProjectAction } from "../shims/bridge";
 import { isEmbedded } from "../utils/embedded";
 import { isExportMode } from "../utils/exportData";
 import { formatDurationHuman, formatFinderDate, formatFinderFilename } from "../utils/format";
-import type { SessionResponse, SessionsListResponse } from "../utils/types";
+import type { SessionResponse, SessionsListResponse, SpeakerResponse } from "../utils/types";
 import { refetchOverlayProps } from "../hooks/useRefetching";
 
 // The picker's code is loaded when someone first opens it: the grid is part of
@@ -75,6 +75,14 @@ function pickerRoleOf(code: string): PickerRole {
   if (code.startsWith("m")) return "moderator";
   if (code.startsWith("o")) return "observer";
   return "participant";
+}
+
+/** How a write addresses a speaker: the slot code (`m1`, this session's
+ *  first moderator), not the identity code the badge shows (`m2`). A pick
+ *  can renumber identities, so a display code is never an address
+ *  (docs/design-people.md §H H9, Phase 1). */
+function slotOf(sp: SpeakerResponse): string {
+  return sp.slot_code ?? sp.speaker_code;
 }
 
 /**
@@ -207,10 +215,11 @@ export function SessionsTable({
   }, [data]);
 
   /** What a slot holds, as the grid knows it. A missing flag reads as
-   *  confirmed, as the grid draws it. */
+   *  confirmed, as the grid draws it. `code` is the slot's address
+   *  (`slotOf`), which every write path below carries. */
   const slotState = useCallback((sessionId: string, code: string): SpeakerNameState | null => {
     const sess = dataRef.current?.sessions.find((s) => s.session_id === sessionId);
-    const sp = sess?.speakers.find((x) => x.speaker_code === code);
+    const sp = sess?.speakers.find((x) => slotOf(x) === code);
     if (!sp) return null;
     return {
       full_name: sp.full_name,
@@ -234,7 +243,7 @@ export function SessionsTable({
             : {
                 ...sess,
                 speakers: sess.speakers.map((sp) =>
-                  sp.speaker_code === code
+                  slotOf(sp) === code
                     ? {
                         ...sp,
                         name: state.short_name || state.full_name || "",
@@ -327,10 +336,14 @@ export function SessionsTable({
   // rename or nothing by the web picker's own rule, against the slot as the
   // grid holds it now.
   useEffect(() => {
-    const slotFor = (sessionId: string, code: string): PersonPickerSlot | null => {
-      const sp = dataRef.current?.sessions
+    // The native picker carries the code its badge showed — the identity's —
+    // so it is turned back into the slot's address against the grid as it is.
+    const speakerFor = (sessionId: string, code: string) =>
+      dataRef.current?.sessions
         .find((s) => s.session_id === sessionId)
         ?.speakers.find((x) => x.speaker_code === code);
+    const slotFor = (sessionId: string, code: string): PersonPickerSlot | null => {
+      const sp = speakerFor(sessionId, code);
       if (!sp) return null;
       const name = sp.name || "";
       return { code, role: pickerRoleOf(code), name, confirmed: !(name && sp.name_confirmed === false) };
@@ -340,7 +353,8 @@ export function SessionsTable({
       if (action !== "personPickerChoose") return;
       void loadPickerBridge().then(({ resolvePersonPickerChoice }) => {
         const pick = resolvePersonPickerChoice(payload, slotFor);
-        if (pick) applyPickerChoice(pick.sessionId, pick.code, pick.choice);
+        const sp = pick ? speakerFor(pick.sessionId, pick.code) : undefined;
+        if (pick && sp) applyPickerChoice(pick.sessionId, slotOf(sp), pick.choice);
       });
     };
     window.addEventListener("bn:menu-action", handler);
@@ -706,7 +720,7 @@ function SessionRow({
                   originalValue={sp.name}
                   trigger="external"
                   isEditing={isEditing}
-                  onCommit={(newName) => onNameCommit(session_id, sp.speaker_code, newName)}
+                  onCommit={(newName) => onNameCommit(session_id, slotOf(sp), newName)}
                   onCancel={() => onCancelEdit()}
                   className={`bn-speaker-editable-name bn-speaker-name-full${proposed ? " proposed" : ""}`}
                   placeholder={speakerRolePlaceholder(sp.speaker_code, t)}
@@ -757,7 +771,7 @@ function SessionRow({
                     slot={slot}
                     knownNames={knownNames[slot.role]}
                     t={t}
-                    onChoose={(choice) => onPickerChoose(session_id, sp.speaker_code, choice)}
+                    onChoose={(choice) => onPickerChoose(session_id, slotOf(sp), choice)}
                     onClose={onPickerClose}
                   />
                 </Suspense>

@@ -313,7 +313,10 @@ def _load_speakers(
 ) -> dict[tuple[str, str], tuple[str, str]]:
     """Map (session_id, speaker_code) → (full_name, source_file).
 
-    Joins Session → SessionSpeaker → Person.  Scoped to project.
+    Keyed by the transcript's slot code, as quotes are. Joins Session →
+    SessionSpeaker → Person, the last an outer join: a moderator nobody has
+    identified (``person_id`` null, route C) is a speaker with no name, not a
+    missing one.  Scoped to project.
     """
     rows = (
         db.query(
@@ -323,11 +326,11 @@ def _load_speakers(
             SessionSpeaker.source_file,
         )
         .join(SessionSpeaker, SessionSpeaker.session_id == SessionModel.id)
-        .join(Person, Person.id == SessionSpeaker.person_id)
+        .outerjoin(Person, Person.id == SessionSpeaker.person_id)
         .filter(SessionModel.project_id == project_id)
         .all()
     )
-    return {(sid, code): (name, sf) for sid, code, name, sf in rows}
+    return {(sid, code): (name or "", sf) for sid, code, name, sf in rows}
 
 
 def _load_section_order(db: DbSession, project_id: int) -> dict[str, int]:

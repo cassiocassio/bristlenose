@@ -532,12 +532,18 @@ export interface SentimentSignalsData {
 // ---------------------------------------------------------------------------
 
 export interface SpeakerResponse {
+  /** The identity's code (`m2` for the study's second moderator), or `m?` when
+   *  nothing has identified this speaker — what a badge shows (route C). */
   speaker_code: string;
   name: string;
   role: string;
   /** False while the name is the pipeline's proposal; a person's pick or typed
-   *  name confirms it (`session_speakers.name_confirmed`, migration 012). */
+   *  name confirms it (`session_speakers.state`, migration 013). */
   name_confirmed?: boolean;
+  /** The transcript's own token for this speaker in this session (`m1`) — how
+   *  a write addresses the slot. A pick can renumber identities, so the
+   *  display code is never an address. Absent from a pre-route-C server. */
+  slot_code?: string;
   /** The two stored names behind `name` — what an undo puts back. */
   full_name?: string;
   short_name?: string;

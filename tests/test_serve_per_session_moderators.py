@@ -67,9 +67,11 @@ def _client(project_dir: Path) -> TestClient:
 
 
 def _speaker_names(client: TestClient) -> dict[tuple[str, str], str]:
+    """(session, slot code) → name. The slot, not ``speaker_code``: since route
+    C Phase 1 that is the identity's code (s2's moderator reads ``m2``)."""
     sessions = client.get("/api/projects/1/sessions").json()["sessions"]
     return {
-        (s["session_id"], sp["speaker_code"]): sp["name"]
+        (s["session_id"], sp["slot_code"]): sp["name"]
         for s in sessions for sp in s["speakers"]
     }
 
@@ -95,9 +97,18 @@ class TestImport:
         assert names[("s1", "m1")] == "", "people.yaml's m1 belongs to whichever session ran last"
         assert names[("s2", "m1")] == "Jo"
 
-    def test_a_project_not_re_run_falls_back_to_people_yaml(self, tmp_path: Path) -> None:
-        names = _speaker_names(_client(_project(tmp_path, session_names=None)))
-        assert names[("s1", "m1")] == names[("s2", "m1")] == "Jo"  # as before the fix
+    def test_a_project_not_re_run_leaves_its_moderators_unidentified(
+        self, tmp_path: Path,
+    ) -> None:
+        """people.yaml's one ``m1`` stood for every session's moderator, so it
+        names none of them (owner, 3 Oct 2026: re-run, not migrated). Until
+        route C Phase 1 this fell back to it and every session read "Jo"."""
+        client = _client(_project(tmp_path, session_names=None))
+        names = _speaker_names(client)
+        assert names[("s1", "m1")] == names[("s2", "m1")] == ""
+        codes = {sp["speaker_code"] for s in client.get("/api/projects/1/sessions").json()[
+            "sessions"] for sp in s["speakers"] if sp["role"] == "researcher"}
+        assert codes == {"m?"}
 
 
 class TestRename:
@@ -128,6 +139,7 @@ class TestRename:
         people = client.get("/api/projects/1/people").json()
         people["p1"]["short_name"] = "Annie"
         people["m1"] = {"full_name": "Someone Else", "short_name": "Else", "role": ""}
+        people["m2"] = {"full_name": "Someone Else", "short_name": "Else", "role": ""}
         assert client.put("/api/projects/1/people", json=people).status_code == 200
         names = _speaker_names(client)
         assert names[("s1", "p1")] == "Annie"
@@ -144,9 +156,10 @@ class TestRename:
 
 
 class TestReimportOfAProjectImportedBeforeTheFix:
-    """A project imported before the per-session file existed has the shared
-    people.yaml m1 name on every session's moderator. Re-running it must fix
-    that, while a name the researcher has since given one session survives."""
+    """A project whose output predates the per-session file opens with its
+    moderators unidentified (route C Phase 1; before it, every session showed
+    people.yaml's one shared m1 name). Re-running it names each from its own
+    session, while a name the researcher has since given one survives."""
 
     def _reimport(self, client: TestClient, project_dir: Path) -> None:
         from bristlenose.server.importer import import_project
@@ -161,7 +174,7 @@ class TestReimportOfAProjectImportedBeforeTheFix:
     def test_re_run_replaces_the_collided_name(self, tmp_path: Path) -> None:
         project_dir = _project(tmp_path, session_names=None)
         client = _client(project_dir)
-        assert _speaker_names(client)[("s1", "m1")] == "Jo"  # collided, as before
+        assert _speaker_names(client)[("s1", "m1")] == ""  # unidentified, not collided
 
         inter = tmp_path / "bristlenose-output" / ".bristlenose" / "intermediate"
         (inter / "session-speakers.json").write_text(

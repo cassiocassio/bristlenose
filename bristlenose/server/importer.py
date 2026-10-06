@@ -372,6 +372,10 @@ def import_project(db: Session, project_dir: Path) -> Project:
 
     # --- Clean up stale data from previous pipeline runs -----------------
     _cleanup_stale_data(db, project, session_ids, now)
+    # A removed session can take a moderator's first appearance with it.
+    from bristlenose.server.speaker_slots import renumber
+
+    renumber(db, project.id)
 
     # --- Record whether this output was redacted -------------------------
     # Re-read every import, not written once: the researcher can turn
@@ -847,31 +851,43 @@ def _import_speakers(
     transcripts_dir: Path,
     output_dir: Path,
 ) -> None:
-    """Import speakers from transcript segments.
+    """Import each session's speaker slots and the identities they point at.
 
-    Creates Person rows and SessionSpeaker join rows.  When a
-    ``people.yaml`` exists in the output directory, populates
-    Person fields (full_name, short_name, role_title, persona, notes)
-    from the human-editable entries — so serve mode shows the same
-    names as the pipeline/HTML report.
+    Route C, Phase 1 (``docs/design-people.md`` §H H9; ``speaker_slots``). A
+    slot is one speaker code in one session's transcript. A participant slot
+    points at the participant (one ``Person`` per participant code, named from
+    ``people.yaml`` — empty fields only, so browser edits win). A moderator or
+    observer slot points at an identity the pipeline's evidence proposes
+    (``session-speakers.json``): one identity per distinct name within the
+    study, whether a platform labelled it or the model heard it — or at nobody,
+    rendered ``m?``, when nothing named it.
 
-    On re-import, existing speakers are not duplicated, but their
-    Person rows are updated from ``people.yaml`` if the YAML has data
-    and the Person row is still empty (pipeline names fill empty fields
-    only — never overwrite researcher edits made via the UI).
+    A re-run never touches a confirmed slot, and re-proposes a proposed one
+    from this run's evidence (the same evidence finds the same identity). A project
+    whose output predates the evidence file keeps whatever its slots hold, and
+    its new slots arrive unidentified (owner, 3 Oct 2026: existing projects are
+    re-run, not migrated). Each slot takes its session's stats from the same
+    file. Identity codes are recomputed at the end.
     """
     if not transcripts_dir.is_dir():
         return
 
-    # Load people.yaml once for all sessions.
-    people = _load_people_for_import(output_dir)
-    # Moderator and observer codes restart in every session, so people.yaml
-    # holds one name for every session's m1. When the pipeline wrote each
-    # session's own names, those name m*/o* speakers instead; a project not
-    # re-run since then falls back to people.yaml as before.
-    from bristlenose.people import load_session_speakers
+    from bristlenose.people import load_session_speaker_stats, load_session_speakers
+    from bristlenose.server import speaker_slots
 
-    session_names = load_session_speakers(output_dir)
+    people = _load_people_for_import(output_dir) or {}
+    evidence = load_session_speakers(output_dir)
+    stats = load_session_speaker_stats(output_dir)
+
+    project_id = next(iter(session_map.values())).project_id if session_map else None
+    # The identities this project already has, by (role prefix, full name):
+    # a proposal joins one of these before it mints.
+    known: dict[tuple[str, str], Person] = {}
+    if project_id is not None:
+        for slot in speaker_slots.project_slots(db, project_id):
+            if slot.person is not None and speaker_slots.is_team_code(slot.slot_code):
+                known.setdefault((slot.slot_code[:1], slot.person.full_name), slot.person)
+    left: set[int | None] = set()
 
     for txt_file in sorted(transcripts_dir.glob("*.txt")):
         if is_os_metadata(txt_file):
@@ -881,164 +897,97 @@ def _import_speakers(
         if not sess:
             continue
 
-        # Check if speakers already imported
-        existing_speakers = (
-            db.query(SessionSpeaker).filter_by(session_id=sess.id).all()
-        )
-        if existing_speakers:
-            # Speakers exist — update Person rows from people.yaml
-            # (fill empty fields only, never overwrite).
-            if people or session_names is not None:
-                _update_persons_from_people(
-                    db, existing_speakers, people or {},
-                    _session_entries(session_names, sid),
-                )
-            continue
-
+        existing = {
+            sp.speaker_code: sp
+            for sp in db.query(SessionSpeaker).filter_by(session_id=sess.id).all()
+        }
         content = txt_file.read_text(encoding="utf-8")
-        segments = _SEGMENT_RE.findall(content)
+        codes: list[str] = []
+        for _, code, _ in _SEGMENT_RE.findall(content):
+            if code not in codes:
+                codes.append(code)
 
-        # Collect unique speaker codes
-        speaker_codes: list[str] = []
-        for _, code, _ in segments:
-            if code not in speaker_codes:
-                speaker_codes.append(code)
+        for code in codes:
+            sp = existing.get(code)
+            if sp is None:
+                sp = SessionSpeaker(
+                    session_id=sess.id,
+                    person_id=None,
+                    speaker_code=code,
+                    speaker_role=_role_for_code(code),
+                )
+                db.add(sp)
+            _apply_stats(sp, stats.get(sid, {}).get(code))
 
-        for code in speaker_codes:
-            # Determine role from code prefix
-            if code.startswith("m"):
-                role = "researcher"
-            elif code.startswith("o"):
-                role = "observer"
-            else:
-                role = "participant"
+            if not speaker_slots.is_team_code(code):
+                _import_participant(db, sp, people.get(code))
+                continue
+            if sp.state == speaker_slots.CONFIRMED or evidence is None:
+                continue
+            entry = evidence.get(sid, {}).get(code) or {}
+            name = (entry.get("full_name") or "").strip()
+            kind = entry.get("evidence") or "label"
+            if not name:
+                left.add(speaker_slots.point(sp, None, state=None, evidence=None))
+                continue
+            key = (code[:1], name)
+            person = known.get(key)
+            if person is None:
+                person = Person(
+                    full_name=name,
+                    short_name=entry.get("short_name", ""),
+                    role_title=entry.get("role", ""),
+                    origin=kind,
+                )
+                db.add(person)
+                db.flush()
+                known[key] = person
+            elif not person.role_title and entry.get("role"):
+                person.role_title = entry["role"]
+            left.add(speaker_slots.point(sp, person, state=speaker_slots.PROPOSED, evidence=kind))
 
-            # Populate from people.yaml, or for a moderator/observer from
-            # this session's own names when the pipeline wrote them.
-            full_name = ""
-            short_name = ""
-            role_title = ""
-            persona = ""
-            notes = ""
-            source = _name_source(code, people, _session_entries(session_names, sid))
-            if source:
-                full_name = source.get("full_name", "")
-                short_name = source.get("short_name", "")
-                role_title = source.get("role", "")
-                persona = source.get("persona", "")
-                notes = source.get("notes", "")
-
-            person = Person(
-                full_name=full_name,
-                short_name=short_name,
-                role_title=role_title,
-                persona=persona,
-                notes=notes,
-            )
-            db.add(person)
-            db.flush()
-
-            sp = SessionSpeaker(
-                session_id=sess.id,
-                person_id=person.id,
-                speaker_code=code,
-                speaker_role=role,
-            )
-            db.add(sp)
+    speaker_slots.release(db, left)
+    if project_id is not None:
+        speaker_slots.renumber(db, project_id)
 
 
-def _session_entries(
-    session_names: dict[str, dict[str, dict[str, str]]] | None, sid: str,
-) -> dict[str, dict[str, str]] | None:
-    """This session's moderator/observer names, or ``None`` when the project
-    predates the per-session file (so people.yaml still names them)."""
-    if session_names is None:
-        return None
-    return session_names.get(sid, {})
+def _role_for_code(code: str) -> str:
+    if code.startswith("m"):
+        return "researcher"
+    if code.startswith("o"):
+        return "observer"
+    return "participant"
 
 
-def _name_source(
-    code: str,
-    people: dict[str, dict[str, str]] | None,
-    session_entries: dict[str, dict[str, str]] | None,
-) -> dict[str, str] | None:
-    """Where a speaker's names come from.
-
-    A moderator or observer code restarts in every session, so once the
-    pipeline has written per-session names it is named from those alone —
-    never from the people.yaml entry every session's ``m1`` shares, even when
-    its own session has no name to offer. Participants keep people.yaml.
-    """
-    if code[:1] in ("m", "o") and session_entries is not None:
-        return session_entries.get(code)
-    return people.get(code) if people else None
+def _apply_stats(sp: SessionSpeaker, entry: dict[str, object] | None) -> None:
+    """Copy one speaker's per-session stats onto its slot (absent: unchanged)."""
+    if not entry:
+        return
+    sp.words_spoken = int(entry.get("words_spoken") or 0)  # type: ignore[call-overload]
+    sp.pct_words = float(entry.get("pct_words") or 0.0)  # type: ignore[arg-type]
+    sp.pct_time_speaking = float(entry.get("pct_time_speaking") or 0.0)  # type: ignore[arg-type]
+    sp.source_file = str(entry.get("source_file") or "")
 
 
-def _repair_collided_names(
-    db: Session,
-    sp: SessionSpeaker,
-    shared: dict[str, str] | None,
-    session_entries: dict[str, dict[str, str]],
+def _import_participant(
+    db: Session, sp: SessionSpeaker, source: dict[str, str] | None,
 ) -> None:
-    """Name a moderator/observer from its own session on re-import.
-
-    A project imported before the per-session file existed gave every
-    session's ``m1`` the one people.yaml entry. A field that still equals that
-    shared value is the collision, not a choice, so it takes this session's
-    own value (empty if the session has none); an empty field is filled as
-    usual. Anything else is a researcher's per-session rename — which is never
-    written back to people.yaml — and is kept.
-
-    A confirmed slot is kept whatever it holds: equal to the shared value is
-    then a researcher's yes to it (the picker's Enter), not a collision.
-    """
-    if sp.name_confirmed:
-        return
-    person = db.get(Person, sp.person_id)
-    if not person:
-        return
-    own = session_entries.get(sp.speaker_code) or {}
-    shared = shared or {}
+    """A participant slot points at its participant, minted once and named from
+    ``people.yaml`` into empty fields only (browser edits win)."""
+    source = source or {}
+    person = sp.person
+    if person is None:
+        person = Person(origin="participant")
+        db.add(person)
+        db.flush()
+        sp.person = person
+        sp.person_id = person.id
+        sp.state = "proposed"
+        sp.evidence = "participant"
     for attr, key in (("full_name", "full_name"), ("short_name", "short_name"),
-                      ("role_title", "role")):
-        current = getattr(person, attr) or ""
-        is_collided = bool(current) and current == (shared.get(key) or "")
-        if not current or is_collided:
-            setattr(person, attr, own.get(key, ""))
-
-
-def _update_persons_from_people(
-    db: Session,
-    speakers: list[SessionSpeaker],
-    people: dict[str, dict[str, str]],
-    session_entries: dict[str, dict[str, str]] | None = None,
-) -> None:
-    """Update existing Person rows from ``people.yaml`` (fill empty only).
-
-    Moderators and observers come from ``session_entries`` when given (see
-    ``_name_source``). Never overwrites non-empty fields — researcher edits
-    made via the browser UI take priority over pipeline-generated names.
-    """
-    for sp in speakers:
-        if sp.speaker_code[:1] in ("m", "o") and session_entries is not None:
-            _repair_collided_names(db, sp, people.get(sp.speaker_code), session_entries)
-            continue
-        yaml_data = _name_source(sp.speaker_code, people, session_entries)
-        if not yaml_data:
-            continue
-        person = db.get(Person, sp.person_id)
-        if not person:
-            continue
-        if not person.full_name and yaml_data.get("full_name"):
-            person.full_name = yaml_data["full_name"]
-        if not person.short_name and yaml_data.get("short_name"):
-            person.short_name = yaml_data["short_name"]
-        if not person.role_title and yaml_data.get("role"):
-            person.role_title = yaml_data["role"]
-        if not person.persona and yaml_data.get("persona"):
-            person.persona = yaml_data["persona"]
-        if not person.notes and yaml_data.get("notes"):
-            person.notes = yaml_data["notes"]
+                      ("role_title", "role"), ("persona", "persona"), ("notes", "notes")):
+        if not getattr(person, attr) and source.get(key):
+            setattr(person, attr, source[key])
 
 
 def _get_or_create_quote(
@@ -1977,7 +1926,7 @@ def _cleanup_stale_data(
             .filter(SessionSpeaker.session_id.in_(stale_session_db_ids))
             .all()
         )
-        stale_person_ids = [sp.person_id for sp in stale_speakers]
+        stale_person_ids = [sp.person_id for sp in stale_speakers if sp.person_id is not None]
         db.query(SessionSpeaker).filter(
             SessionSpeaker.session_id.in_(stale_session_db_ids)
         ).delete(synchronize_session="fetch")
@@ -1993,7 +1942,7 @@ def _cleanup_stale_data(
             orphan_ids = [pid for pid in stale_person_ids if pid not in still_used_ids]
             if orphan_ids:
                 db.query(Person).filter(
-                    Person.id.in_(orphan_ids)
+                    Person.id.in_(orphan_ids), Person.me.is_(False)
                 ).delete(synchronize_session="fetch")
 
         # Delete the sessions

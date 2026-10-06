@@ -62,12 +62,15 @@ class SpeakerNameEdit(BaseModel):
     #: Saying yes to the name as it stands (the picker's Enter on a proposed
     #: name). A name that is sent is confirmed whether or not this is.
     confirmed: bool | None = None
+    #: Picking a person: the identity code (``m1``) this slot is. Same role
+    #: only; the slot is confirmed.
+    person: str | None = None
 
 
 def _is_session_scoped(speaker_code: str) -> bool:
-    """Moderator and observer codes restart in every session (``m1`` is "the
-    first moderator in this session"), so a bare code does not name one
-    person. Their names are written per session, never through ``/people``."""
+    """Moderators and observers are named through their session's slot
+    (``PUT …/sessions/{sid}/speakers/{code}``), never through ``/people``: the
+    Sessions table sends the whole code-keyed map on every participant rename."""
     return speaker_code[:1] in ("m", "o")
 
 
@@ -327,25 +330,25 @@ def get_people(
     project_id: int,
     request: Request,
 ) -> dict[str, dict[str, str]]:
-    """Read people data for the project (speaker_code -> name/role)."""
+    """Every identity in the project: identity code → name/role.
+
+    Keyed by the code the other routes emit (``m2`` for the study's second
+    moderator), so a lookup by code finds that person and no other. An
+    unidentified slot (``m?``) has no entry.
+    """
+    from bristlenose.server.speaker_slots import identities
+
     db = _get_db(request)
     try:
         _check_project(db, project_id)
-        session_ids = _session_ids_for_project(db, project_id)
-        speakers = (
-            db.query(SessionSpeaker)
-            .filter(SessionSpeaker.session_id.in_(session_ids))
-            .all()
-        )
-        result: dict[str, dict[str, str]] = {}
-        for sp in speakers:
-            person = db.get(Person, sp.person_id)
-            result[sp.speaker_code] = {
-                "full_name": person.full_name if person else "",
-                "short_name": person.short_name if person else "",
-                "role": person.role_title if person else "",
+        return {
+            code: {
+                "full_name": person.full_name,
+                "short_name": person.short_name,
+                "role": person.role_title,
             }
-        return result
+            for code, person in identities(db, project_id).items()
+        }
     finally:
         db.close()
 
@@ -383,7 +386,7 @@ def put_people(
             )
             if not sp:
                 continue
-            person = db.get(Person, sp.person_id)
+            person = db.get(Person, sp.person_id) if sp.person_id is not None else None
             if not person:
                 continue
             # The whole map is sent on every write, so only a name that changed
@@ -395,7 +398,7 @@ def put_people(
             person.short_name = person_data.short_name
             person.role_title = person_data.role
             if renamed:
-                sp.name_confirmed = True
+                sp.state = "confirmed"
         db.commit()
 
         # Write-through: update people.yaml so pipeline re-runs see edits.
@@ -414,32 +417,82 @@ def put_session_speaker(
     request: Request,
     data: SpeakerNameEdit,
 ) -> dict[str, str]:
-    """Rename one session's speaker — how a moderator or observer is named.
+    """Name, confirm or pick one session's speaker.
 
-    Changes only the fields sent. Not written through to ``people.yaml``:
-    that file has one entry for every session's ``m1``, which is the bug this
-    route exists to step around (``docs/design-people.md`` §H H9).
+    ``speaker_code`` is the **slot** code — the transcript's own token in this
+    session, ``slot_code`` in ``/sessions`` — never the identity's code the
+    routes display. The two namespaces are both ``mN``, and a pick renumbers
+    identities, so accepting either would let a stale display code land on a
+    different slot. Route C (``docs/design-people.md`` §H H9):
+
+    - ``person``: this slot is that identity (same role). Confirmed.
+    - a name, for a moderator or observer, says who this session's speaker is
+      — never who someone else is:
+        - the name of another identity of that role (the picker's rows):
+          the slot points at it, which keeps its own names;
+        - a new name, on a slot no other session shares: renames it;
+        - a new name otherwise (unidentified, or an identity other sessions
+          share): someone new, minted for this slot.
+      Confirmed, unless ``confirmed`` says otherwise (an undo).
+    - ``confirmed``: yes (or no) to the identity the slot holds; 409 on ``m?``.
+
+    A participant's name is its identity's. Changes only the fields sent. Not
+    written through to ``people.yaml``. Where a spelling fix for a moderator
+    in many sessions belongs is Phase 2's to decide (``design-people.md`` H9).
     """
+    from bristlenose.server import speaker_slots
+
     db = _get_db(request)
     try:
         _check_project(db, project_id)
-        sess = (
+        if (
             db.query(SessionModel)
             .filter_by(project_id=project_id, session_id=session_id)
             .first()
-        )
-        if not sess:
+        ) is None:
             raise HTTPException(status_code=404, detail="Session not found")
-        sp = (
-            db.query(SessionSpeaker)
-            .filter_by(session_id=sess.id, speaker_code=speaker_code)
-            .first()
+        slot = next(
+            (s for s in speaker_slots.session_slots(db, project_id, session_id)
+             if s.slot_code == speaker_code),
+            None,
         )
-        if not sp:
+        if slot is None:
             raise HTTPException(status_code=404, detail="Speaker not found")
-        person = db.get(Person, sp.person_id)
-        if not person:
-            raise HTTPException(status_code=404, detail="Speaker not found")
+        sp = slot.row
+        person = slot.person
+        named = data.full_name is not None or data.short_name is not None
+        team = speaker_slots.is_team_code(slot.slot_code)
+        left: set[int | None] = set()
+
+        if data.person is not None:
+            target = speaker_slots.identities(db, project_id).get(data.person)
+            if target is None:
+                raise HTTPException(status_code=404, detail="Person not found")
+            if data.person[:1] != slot.slot_code[:1]:
+                raise HTTPException(status_code=409, detail="A pick keeps the speaker's role")
+            left.add(speaker_slots.point(
+                sp, target, state=speaker_slots.CONFIRMED, evidence=speaker_slots.PICK,
+            ))
+            person = target
+        elif named and team:
+            name = data.full_name if data.full_name is not None else data.short_name or ""
+            target = speaker_slots.named(db, project_id, slot.slot_code[:1], name)
+            if target is not None and target is not person:
+                left.add(speaker_slots.point(
+                    sp, target, state=speaker_slots.CONFIRMED, evidence=speaker_slots.PICK,
+                ))
+                person = target
+                data = data.model_copy(update={"full_name": None, "short_name": None})
+            elif person is None or (target is None and speaker_slots.shared(db, sp)):
+                person = Person(origin=speaker_slots.PICK)
+                db.add(person)
+                db.flush()
+                left.add(speaker_slots.point(
+                    sp, person, state=speaker_slots.CONFIRMED, evidence=speaker_slots.PICK,
+                ))
+        elif person is None:
+            raise HTTPException(status_code=409, detail="Nobody is identified here")
+
         if data.full_name is not None:
             person.full_name = data.full_name
         if data.short_name is not None:
@@ -447,10 +500,13 @@ def put_session_speaker(
         if data.role is not None:
             person.role_title = data.role
         # A typed or picked name is a person's yes; so is an explicit confirm.
-        if data.confirmed is not None:
-            sp.name_confirmed = data.confirmed
-        elif data.full_name is not None or data.short_name is not None:
-            sp.name_confirmed = True
+        if data.confirmed is not None and data.person is None:
+            sp.state = speaker_slots.CONFIRMED if data.confirmed else speaker_slots.PROPOSED
+        elif named:
+            sp.state = speaker_slots.CONFIRMED
+
+        speaker_slots.release(db, left)
+        speaker_slots.renumber(db, project_id)
         db.commit()
         return {"status": "ok"}
     finally:

@@ -19,7 +19,7 @@ from tests.test_serve_per_session_moderators import _PER_SESSION, _client, _proj
 def _confirmed(client: TestClient) -> dict[tuple[str, str], bool]:
     sessions = client.get("/api/projects/1/sessions").json()["sessions"]
     return {
-        (s["session_id"], sp["speaker_code"]): sp["name_confirmed"]
+        (s["session_id"], sp["slot_code"]): sp["name_confirmed"]
         for s in sessions for sp in s["speakers"]
     }
 
@@ -44,7 +44,7 @@ class TestProposedUntilConfirmed:
         assert _confirmed(client)[("s1", "m1")] is True
         sessions = client.get("/api/projects/1/sessions").json()["sessions"]
         s1 = next(s for s in sessions if s["session_id"] == "s1")
-        assert next(sp for sp in s1["speakers"] if sp["speaker_code"] == "m1")["name"] == "Martin"
+        assert next(sp for sp in s1["speakers"] if sp["slot_code"] == "m1")["name"] == "Martin"
 
     def test_a_role_edit_alone_confirms_nothing(self, tmp_path: Path) -> None:
         client = _client(_project(tmp_path, session_names=_PER_SESSION))
@@ -64,8 +64,9 @@ class TestProposedUntilConfirmed:
 
 
 class TestMigration:
-    def test_012_adds_the_column_to_an_existing_db(self, tmp_path: Path) -> None:
-        """A database at 011 gains the column, every existing name a proposal."""
+    def test_a_011_db_reaches_head_with_every_name_a_proposal(self, tmp_path: Path) -> None:
+        """A database at 011 gains 012's flag and 013 turns it into the slot
+        state: every existing name a proposal."""
         from bristlenose.server.db import init_db, run_migrations
 
         engine = sa.create_engine(f"sqlite:///{tmp_path / 'old.db'}")
@@ -74,7 +75,10 @@ class TestMigration:
             # The row below names no real session or person; foreign keys are
             # switched off for the fixture only, as run_migrations itself does.
             conn.connection.dbapi_connection.execute("PRAGMA foreign_keys=OFF")
-            conn.execute(sa.text("ALTER TABLE session_speakers DROP COLUMN name_confirmed"))
+            for column in ("state", "evidence"):
+                conn.execute(sa.text(f"ALTER TABLE session_speakers DROP COLUMN {column}"))
+            for column in ("code", "uuid", "origin", "me"):
+                conn.execute(sa.text(f"ALTER TABLE persons DROP COLUMN {column}"))
             conn.execute(sa.text("UPDATE alembic_version SET version_num = '011'"))
             conn.execute(sa.text(
                 "INSERT INTO session_speakers (id, session_id, person_id, speaker_code,"
@@ -84,38 +88,42 @@ class TestMigration:
             conn.commit()
         run_migrations(engine)
         with engine.connect() as conn:
-            rows = conn.execute(sa.text("SELECT name_confirmed FROM session_speakers")).all()
+            rows = conn.execute(sa.text("SELECT state FROM session_speakers")).all()
             version = conn.execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
-        assert rows == [(0,)]
-        assert version == "012"
+        assert rows == [("proposed",)]
+        assert version == "013"
 
 
 class TestReimportKeepsAConfirmedName:
-    def test_a_confirmed_shared_name_is_not_repaired_away(self) -> None:
-        """A legacy project gave every session's m1 the shared people.yaml name.
-        Once the researcher has said yes to it in one session, a re-import must
-        not treat it as a collision and swap in that session's own name."""
-        from sqlalchemy import create_engine
-        from sqlalchemy.orm import Session as DbSession
+    def test_a_confirmed_name_is_kept_and_a_proposal_follows_the_evidence(
+        self, tmp_path: Path,
+    ) -> None:
+        """Once the researcher has said yes to a name in one session, a re-import
+        bringing other evidence for that session must keep it; a proposed slot
+        follows the evidence. (Pinned at 5afae01c against the importer's
+        collision repair; re-homed when route C Phase 1 replaced it — the
+        per-slot ``state``, not a name comparison, is what keeps it now.)"""
+        import json
 
-        from bristlenose.server.importer import _update_persons_from_people
-        from bristlenose.server.models import Base, Person, SessionSpeaker
+        from bristlenose.server.importer import import_project
 
-        engine = create_engine("sqlite://")
-        Base.metadata.create_all(engine)
-        with DbSession(engine) as db:
-            shared = {"full_name": "Martin Storey", "short_name": "Martin"}
-            yes = Person(full_name="Martin Storey", short_name="Martin")
-            guess = Person(full_name="Martin Storey", short_name="Martin")
-            db.add_all([yes, guess])
-            db.flush()
-            confirmed = SessionSpeaker(session_id=1, person_id=yes.id, speaker_code="m1",
-                                       speaker_role="researcher", name_confirmed=True)
-            proposed = SessionSpeaker(session_id=2, person_id=guess.id, speaker_code="m1",
-                                      speaker_role="researcher", name_confirmed=False)
-            own = {"m1": {"full_name": "Kerri Ng", "short_name": "Kerri"}}
-            _update_persons_from_people(db, [confirmed], {"m1": shared}, own)
-            _update_persons_from_people(db, [proposed], {"m1": shared}, own)
-            assert (yes.full_name, yes.short_name) == ("Martin Storey", "Martin")
-            # The proposed collision is still repaired, as before.
-            assert (guess.full_name, guess.short_name) == ("Kerri Ng", "Kerri")
+        project = _project(tmp_path, session_names=_PER_SESSION)
+        client = _client(project)
+        client.put("/api/projects/1/sessions/s1/speakers/m1", json={"confirmed": True})
+        inter = tmp_path / "bristlenose-output" / ".bristlenose" / "intermediate"
+        other = {sid: {"m1": {"full_name": "Kerri Ng", "short_name": "Kerri", "role": "",
+                              "evidence": "platform-name"}} for sid in ("s1", "s2")}
+        (inter / "session-speakers.json").write_text(
+            json.dumps({"version": 2, "sessions": other})
+        )
+        db = client.app.state.db_factory()
+        try:
+            import_project(db, project)
+            db.commit()
+        finally:
+            db.close()
+        sessions = client.get("/api/projects/1/sessions").json()["sessions"]
+        names = {(s["session_id"], sp["slot_code"]): (sp["name"], sp["name_confirmed"])
+                 for s in sessions for sp in s["speakers"]}
+        assert names[("s1", "m1")] == ("Martin", True)
+        assert names[("s2", "m1")] == ("Kerri", False)

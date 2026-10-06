@@ -2966,3 +2966,31 @@ people as unique and roles as per-session is the People lens's long-term goal.
 
 6. **§J7 call 3 is confirmed.** Codes are per person and per role: Steve is `m2` where he
    moderates and `o1` where he observes, and his name joins the two.
+
+7. **Where the picker goes first: the Sessions grid, the transcript, and probably the
+   dashboard.** The owner accepts the picker as live and editable on these three surfaces as
+   the first steps. Quote cards and signal cards wait. Their fix moves speech, which is
+   attribution work (§D step 3) behind the re-import wall.
+
+   **Which badges, measured 6 Oct 2026.** Each of these surfaces draws badges of two
+   different scopes:
+
+   | Surface | Badge | Scope | First step? |
+   |---|---|---|---|
+   | Sessions grid | the speakers cell | a speaker in a session | yes (built) |
+   | Transcript | the sticky header's participants (`TranscriptPage.tsx`, `transcript-header-people`) | a speaker in a session | yes |
+   | Transcript | the moderator and observer roles line (`bn-transcript-roles`) | a speaker in a session | yes |
+   | Transcript | each paragraph's badge (`segment-speaker`) | **a paragraph** | see below |
+   | Dashboard | the sessions table's speakers cell (`bn-session-speakers`) | a speaker in a session | probably |
+   | Dashboard | the featured quote's attribution | a quote | no: attribution |
+   | Dashboard | the coverage list's paragraph badges | a paragraph | no: attribution |
+
+   **Recommended, not yet ruled on:** the paragraph badge in the transcript is where U4
+   starts (`p1` is Wylie E. Coyote), so it should open the picker too. But only the *name*
+   half of a pick is unambiguous from a paragraph: naming `p1` names that speaker wherever
+   they speak. A *role* change from a paragraph badge reads as "this paragraph was the
+   participant", which is attribution (Layer 3), and would apply to the whole speaker. So
+   from a paragraph badge, the picker offers names and hides its role segments. Role
+   changes are made from the header and the roles line. When Layer 3 arrives, the paragraph
+   badge gains a "this paragraph only" scope, without the same click changing meaning under
+   the researcher.

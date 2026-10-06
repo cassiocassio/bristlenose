@@ -22,6 +22,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { PersonBadge } from "./PersonBadge";
+import { Icon } from "./Icon";
 import type { TFunction } from "i18next";
 
 import {
@@ -171,7 +172,7 @@ export function PersonPicker({ slot, knownNames, labels, onChoose, onClose }: Pe
             tabIndex={-1}
             onClick={() => choose(name)}
           >
-            <span className="export-dropdown-check" aria-hidden="true">{isAnswer ? "✓" : ""}</span>
+            <span className="export-dropdown-check" aria-hidden="true">{isAnswer && <Icon name="check" size="menu" />}</span>
             {isAnswer && !slot.confirmed ? (
               <span className="bn-person-proposed">
                 <PersonBadge code={slot.code} role={slot.role} name={name} />

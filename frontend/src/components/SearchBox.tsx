@@ -28,6 +28,7 @@ import { spokenRow, suggestionsToWire, tokensToWire, type WireToken } from "../u
 import { backspaceAction, highlightedRow, moveHighlight, tokenKey } from "../utils/searchKeys";
 import type { Suggestion } from "../utils/searchSuggest";
 import type { SearchToken } from "../utils/searchTokens";
+import { Icon } from "./Icon";
 
 /** What the field needs to be a combobox. */
 export interface SearchCombo {
@@ -520,7 +521,7 @@ export function SearchBox({
                           }}
                         >
                           <span className="menu-icon" aria-hidden="true">
-                            {m.id === wire.mode ? "✓" : " "}
+                            {m.id === wire.mode && <Icon name="check" size="menu" />}
                           </span>
                           {m.label}
                         </li>

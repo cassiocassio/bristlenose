@@ -1,0 +1,21 @@
+/* Atom: icon — the house glyphs drawn by `components/Icon.tsx`.
+   One em square by default, sitting on the text it accompanies. The stroke
+   weight is set on the SVG and does not scale, so only the box sizes here. */
+
+.bn-icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+    flex: none;
+}
+
+/* A menu's check gutter: the tick sized to the row's text, about 9 px of
+   visible check at a 13 px label. Used by the person picker, the Export
+   menu and the search token menu, so the web app has one tick (owner,
+   6 Oct 2026; design-people.md §J8.8). */
+.bn-icon--menu {
+    width: 0.9em;
+    height: 0.9em;
+    vertical-align: -0.1em;
+}

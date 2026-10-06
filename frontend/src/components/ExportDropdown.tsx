@@ -23,6 +23,7 @@ import {
   extractVideoClips,
 } from "../utils/exportActions";
 import { isExportMode } from "../utils/exportData";
+import { Icon } from "./Icon";
 import { toggleSubtitlePref, useSubtitlePrefs } from "../utils/subtitlePrefs";
 
 // ── Icon ──────────────────────────────────────────────────────────────────
@@ -254,7 +255,7 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
                   onKeyDown={suppressKeyScroll}
                 >
                   <span className="export-dropdown-check" aria-hidden="true">
-                    {burnSubtitles ? "\u2713" : ""}
+                    {burnSubtitles && <Icon name="check" size="menu" />}
                   </span>
                   {t("export.clips.burnSubtitles")}
                 </li>

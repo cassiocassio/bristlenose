@@ -3020,6 +3020,12 @@ people as unique and roles as per-session is the People lens's long-term goal.
      menu checkmark (`NSImage.menuOnStateTemplateName`) but leaves it at the image's own
      size, unconstrained, so it renders larger than a menu draws it. That is a sizing
      defect to fix against a real `NSMenu` in Picker Lab.
+     *Built 6 Oct 2026:* the Mac draws the SF Symbol `checkmark` at the menu font's point
+     size (regular weight, still to be checked against a real `NSMenu` in Picker Lab). The
+     web draws `components/Icon.tsx`'s `check`, the first glyph of a shared house-icon
+     component (16-unit grid, 1.4 non-scaling stroke, round caps, `currentColor`), sized
+     by `atoms/icon.css`'s `.bn-icon--menu`. The person picker, Export's *Burn subtitles*
+     and the search token menu all use it, so the web app has one tick.
    - **One tick, not two.** That's Me and the matching name were both ticked in the
      owner's screenshot (the 4 Oct code review's question). One tick: on That's Me when
      this person is the account holder, otherwise on the name.

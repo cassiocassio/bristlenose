@@ -10,6 +10,8 @@ export { Counter } from "./Counter";
 export { DualThresholdSlider } from "./DualThresholdSlider";
 export { EditableText } from "./EditableText";
 export { FeedbackModal } from "./FeedbackModal";
+export { Icon } from "./Icon";
+export type { IconName } from "./Icon";
 export { ExpandableTimecode } from "./ExpandableTimecode";
 export { JourneyChain } from "./JourneyChain";
 export { Metric } from "./Metric";

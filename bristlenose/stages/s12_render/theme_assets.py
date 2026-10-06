@@ -38,6 +38,7 @@ _THEME_FILES: list[str] = [
     "colors/palette-edo.css",
     # Layer 3: atoms
     "atoms/badge.css",
+    "atoms/icon.css",
     "atoms/button.css",
     "atoms/toggle.css",
     "atoms/input.css",

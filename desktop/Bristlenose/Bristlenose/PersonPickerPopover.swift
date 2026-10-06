@@ -493,8 +493,15 @@ final class PickerRowView: NSView {
         self.lead = lead
         self.name = name
         if let tick {
-            // AppKit's own menu checkmark, in label colour, as a Mac menu draws it.
-            let image = NSImageView(image: NSImage(named: NSImage.menuOnStateTemplateName) ?? NSImage())
+            // The SF Symbol checkmark at the menu font's size and weight, in label
+            // colour, as a Mac menu draws its tick. It was the menu's on-state
+            // template image, left at the image's own size, which drew larger
+            // and thinner than a menu does (owner, 6 Oct 2026; design-people.md
+            // §J8.8). Compare against a real NSMenu in Picker Lab.
+            let config = NSImage.SymbolConfiguration(pointSize: metrics.nameFont.pointSize, weight: .regular)
+            let check = NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)?
+                .withSymbolConfiguration(config) ?? NSImage()
+            let image = NSImageView(image: check)
             image.contentTintColor = .labelColor
             image.isHidden = !tick
             self.tick = image

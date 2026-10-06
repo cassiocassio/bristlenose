@@ -56,9 +56,9 @@ describe("PersonPicker", () => {
   it("opens on the proposed answer: ticked, ringed, selected", () => {
     render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} knownNames={["Martin", "Kerri"]} onChoose={vi.fn()} onClose={vi.fn()} />);
     const [martin, kerri] = items();
-    expect(martin.querySelector(".export-dropdown-check")?.textContent).toBe("✓");
+    expect(martin.querySelector(".export-dropdown-check .bn-icon-check")).not.toBeNull();
     expect(martin.querySelector(".bn-person-proposed")).not.toBeNull();
-    expect(kerri.querySelector(".export-dropdown-check")?.textContent).toBe("");
+    expect(kerri.querySelector(".export-dropdown-check .bn-icon-check")).toBeNull();
     expect(document.activeElement).toBe(martin);
   });
 

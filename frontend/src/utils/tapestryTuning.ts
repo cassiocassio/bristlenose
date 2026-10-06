@@ -41,8 +41,10 @@ export interface TapestryTuning {
 }
 
 export const DEFAULTS: TapestryTuning = {
-  type: { lane: "caption", flag: "badge", clip: "micro", theme: "badge", tick: "micro", popMeta: "caption", popQuote: "body" },
-  pad: { flagX: 3, flagH: 14, clipX: 4, clipH: 16, themeX: 4, themeH: 16, themeGap: 3, popover: "md" },
+  // Tuned by eye in the playground, 6 Oct 2026: section flags and theme tags up to label, clip
+  // names up to badge; taller flags (18) and theme chips (18), and a pixel more between theme rows.
+  type: { lane: "caption", flag: "label", clip: "badge", theme: "label", tick: "micro", popMeta: "caption", popQuote: "body" },
+  pad: { flagX: 3, flagH: 18, clipX: 4, clipH: 16, themeX: 4, themeH: 18, themeGap: 4, popover: "md" },
 };
 
 /** Snapped choices for the raw-pixel paddings — the only values the playground offers. */

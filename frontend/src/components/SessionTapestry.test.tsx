@@ -51,8 +51,11 @@ describe("SessionTapestry", () => {
   it("puts positive sentiment above the line and negative below", () => {
     const { bars } = setup();
     const [pos, neg] = bars();
-    expect(Number(pos.getAttribute("y")) + Number(pos.getAttribute("height"))).toBe(104);
-    expect(Number(neg.getAttribute("y"))).toBe(104);
+    // The sentiment line sits under the flags and both speaker tracks (108 at the shipped tuning).
+    const mid = Number(document.querySelector(".bn-tp-axis")!.getAttribute("y1"));
+    expect(mid).toBe(108);
+    expect(Number(pos.getAttribute("y")) + Number(pos.getAttribute("height"))).toBe(mid);
+    expect(Number(neg.getAttribute("y"))).toBe(mid);
   });
 
   it("opens the quote panel on a bar, and the arrows step quotes whatever has focus", () => {
@@ -232,9 +235,9 @@ describe("SessionTapestry — tuning", () => {
   it("draws the shipped geometry at the defaults", () => {
     setup();
     const chip = document.querySelector(".bn-tp-tag")!;
-    expect(chip.getAttribute("height")).toBe("16");
+    expect(chip.getAttribute("height")).toBe("18");
     const wrap = document.querySelector<HTMLElement>(".bn-tp-wrap")!;
-    expect(wrap.style.getPropertyValue("--bn-tp-text-theme")).toBe("var(--bn-text-badge)");
+    expect(wrap.style.getPropertyValue("--bn-tp-text-theme")).toBe("var(--bn-text-label)");
   });
 
   it("follows a tuned step and padding live", () => {

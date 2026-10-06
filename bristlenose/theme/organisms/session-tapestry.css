@@ -86,7 +86,7 @@
 .bn-tp-clip-ppt { fill: var(--bn-colour-muted); }
 .bn-tp-clip[data-video] { stroke: rgb(0 0 0 / 0.25); stroke-width: 0.75; }
 .bn-tp-clip-label {
-    font: var(--bn-weight-emphasis) var(--bn-tp-text-clip, var(--bn-text-micro)) var(--bn-font-body);
+    font: var(--bn-weight-emphasis) var(--bn-tp-text-clip, var(--bn-text-badge)) var(--bn-font-body);
     pointer-events: none;
 }
 /* Neutral clips only; a scene-coloured clip's ink is chosen in JS by WCAG contrast. */
@@ -109,7 +109,7 @@
 .bn-tp-flag.hot path { fill: var(--bn-selection-bg); }
 .bn-tp-flag.hot text { fill: var(--bn-colour-accent); }
 .bn-tp-flag text {
-    font: var(--bn-weight-emphasis) var(--bn-tp-text-flag, var(--bn-text-badge)) var(--bn-font-body);
+    font: var(--bn-weight-emphasis) var(--bn-tp-text-flag, var(--bn-text-label)) var(--bn-font-body);
     fill: var(--bn-colour-text);
 }
 .bn-tp-hit { cursor: pointer; }
@@ -129,7 +129,7 @@
 .bn-tp-tag { fill: var(--bn-colour-badge-bg); }
 /* Sans, not mono: monospace is reserved for tag text, and a theme is not a tag. */
 .bn-tp-tag-text {
-    font: var(--bn-weight-normal) var(--bn-tp-text-theme, var(--bn-text-badge)) var(--bn-font-body);
+    font: var(--bn-weight-normal) var(--bn-tp-text-theme, var(--bn-text-label)) var(--bn-font-body);
     fill: var(--bn-colour-badge-text);
 }
 

@@ -15,10 +15,10 @@ describe("tapestry tuning", () => {
 
   it("lists nothing to commit at the defaults, and each move it makes", () => {
     expect(tuningChanges(getTapestryTuning())).toEqual([]);
-    setTapestryTuning({ ...DEFAULTS, type: { ...DEFAULTS.type, theme: "caption" }, pad: { ...DEFAULTS.pad, themeH: 18 } });
+    setTapestryTuning({ ...DEFAULTS, type: { ...DEFAULTS.type, theme: "caption" }, pad: { ...DEFAULTS.pad, themeH: 20 } });
     expect(tuningChanges(getTapestryTuning())).toEqual([
-      "type.theme: --bn-text-badge → --bn-text-caption",
-      "pad.themeH: 16px → 18px",
+      "type.theme: --bn-text-label → --bn-text-caption",
+      "pad.themeH: 18px → 20px",
     ]);
   });
 });

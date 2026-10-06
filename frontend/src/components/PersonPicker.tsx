@@ -29,10 +29,12 @@ import type { TFunction } from "i18next";
 import {
   PICKER_ROLES,
   personPickerCanClear,
+  personPickerCanRename,
   personPickerChoice,
   personPickerLabels,
   personPickerNameTaken,
   personPickerNewCode,
+  personPickerRenamed,
   personPickerRows,
   personPickerTyped,
   withName,
@@ -67,6 +69,10 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
   const [selected, setSelected] = useState<string | null>(own ? keyOf(own) : NEW);
   const [draft, setDraft] = useState("");
   const [taken, setTaken] = useState<string | null>(null);
+  // Rename in place (§J8.8): the current, confirmed row's name as a field.
+  const [renaming, setRenaming] = useState(false);
+  const [renameDraft, setRenameDraft] = useState("");
+  const renameRef = useRef<HTMLInputElement>(null);
   const newCode = personPickerNewCode(slot, people);
   const menuRef = useRef<HTMLUListElement>(null);
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -103,9 +109,43 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
     onClose();
   };
 
+  useEffect(() => {
+    if (!renaming) return;
+    renameRef.current?.focus();
+    renameRef.current?.select();
+  }, [renaming]);
+
   const choose = (key: string) => {
     const row = people.find((r) => keyOf(r) === key);
-    if (row) finish(personPickerChoice(slot, row));
+    if (!row) return;
+    // The current, confirmed answer has nothing to choose, so a click or
+    // Return on it is the rename, the way Finder renames a selected name.
+    if (personPickerCanRename(slot, row)) {
+      if (!renaming) {
+        setRenameDraft(row.name);
+        setTaken(null);
+        setRenaming(true);
+      }
+      return;
+    }
+    finish(personPickerChoice(slot, row));
+  };
+
+  const submitRename = () => {
+    const clash = personPickerNameTaken(slot, people, renameDraft);
+    if (clash) {
+      setTaken(clash);
+      return;
+    }
+    const choice = personPickerRenamed(slot, renameDraft);
+    if (choice) finish(choice);
+    else cancelRename();
+  };
+
+  const cancelRename = () => {
+    setRenaming(false);
+    setTaken(null);
+    if (own) itemRefs.current[keyOf(own)]?.focus();
   };
 
   const submitDraft = () => {
@@ -202,14 +242,36 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
             onClick={() => choose(key)}
           >
             <span className="export-dropdown-check" aria-hidden="true">{isAnswer && <Icon name="check" size="menu" />}</span>
-            {isAnswer && !slot.confirmed ? (
+            {isAnswer && renaming ? (
+              <span className="bn-person-badge">
+                <span className="bn-speaker-badge--split">
+                  <span className="bn-speaker-badge-code">{row.code}</span>
+                  <span className="bn-speaker-badge-name bn-picker-new-name">
+                    <span aria-hidden="true">{renameDraft || row.name}</span>
+                    <input
+                      ref={renameRef}
+                      aria-label={labels.menu}
+                      aria-invalid={taken !== null}
+                      aria-describedby={taken !== null ? "bn-picker-taken" : undefined}
+                      value={renameDraft}
+                      onChange={(e) => { setRenameDraft(e.target.value); setTaken(null); }}
+                      onKeyDown={(e) => {
+                        const handled = () => { e.preventDefault(); e.stopPropagation(); };
+                        if (e.key === "Enter") { handled(); submitRename(); }
+                        else if (e.key === "Escape") { handled(); cancelRename(); }
+                      }}
+                    />
+                  </span>
+                </span>
+              </span>
+            ) : isAnswer && !slot.confirmed ? (
               <span className="bn-person-proposed">
                 <PersonBadge code={row.code} role={slot.role} name={row.name} />
               </span>
             ) : (
               <PersonBadge code={row.code} role={slot.role} name={row.name} />
             )}
-            {isAnswer && personPickerCanClear(slot) && (
+            {isAnswer && !renaming && personPickerCanClear(slot) && (
               // "Not this person": shown on hover and on the selected row, and
               // on Delete or Backspace there. Not a list stop of its own.
               <button

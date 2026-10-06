@@ -1055,6 +1055,22 @@ describe("SessionsTable person picker", () => {
     expect(screen.getByTestId("bn-name-mB?").textContent).toBe("Moderator B");
   });
 
+  it("renaming in the picker fixes that person's spelling everywhere (§J8.8)", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[1]);
+    const kerriRow = Array.from((await pickerMenu()).querySelectorAll<HTMLElement>(".export-dropdown-item"))
+      .find((li) => li.textContent?.includes("Kerri")) as HTMLElement;
+    fireEvent.click(kerriRow);
+    const field = kerriRow.querySelector("input") as HTMLInputElement;
+    fireEvent.change(field, { target: { value: "Keri" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    await waitFor(() => expect(puts()).toHaveLength(1));
+    expect(puts()[0].url).toContain("/sessions/s2/speakers/m1");
+    expect(puts()[0].body).toEqual({ person: "id-kerri", short_name: "Keri", confirmed: true });
+  });
+
   it("the pencil cannot give a moderator someone else's name (§J8.11)", async () => {
     mockPicker();
     render(<SessionsTable projectId="1" />);

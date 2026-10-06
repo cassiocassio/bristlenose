@@ -164,6 +164,40 @@ struct PersonPickerContractTests {
 
     /// A picked row, That's Me and a typed name each say which they are, so
     /// the SPA never reads a typed name as a pick.
+    /// Rename in place (design-people.md §J8.8): the current, confirmed row
+    /// becomes a field; a proposed one is still confirmed by choosing it.
+    @Test func theCurrentConfirmedRowRenamesInPlace() throws {
+        let wire = try #require(try wires().compactMap { PersonPickerRequest(message: $0) }.first)
+        let confirmed = PersonPickerRequest(
+            sessionId: "s1",
+            slot: .init(code: "m1", role: .moderator, name: "Martin B Storey", confirmed: true, person: "id-martin"),
+            names: wire.names, codes: wire.codes, newCode: wire.newCode, anchor: .zero, labels: wire.labels)
+        var sent: [PersonPickerPick] = []
+        var closed = 0
+        let model = PersonPickerModel(request: confirmed, onChoose: { sent.append($0) }, onClose: { closed += 1 })
+        #expect(model.canRename("Martin B Storey"))
+        #expect(!model.canRename("Kerri Ng"))
+
+        model.choose("Martin B Storey")
+        #expect(model.renaming)
+        #expect(model.renameDraft == "Martin B Storey")
+        #expect(sent.isEmpty && closed == 0)
+
+        model.submitRename()   // unchanged: back to the list, nothing sent
+        #expect(!model.renaming)
+        #expect(sent.isEmpty && closed == 0)
+
+        model.choose("Martin B Storey")
+        model.renameDraft = " Martyn B Storey "
+        model.submitRename()
+        #expect(sent == [PersonPickerPick(name: "Martyn B Storey", kind: .rename)])
+        #expect(closed == 1)
+
+        // A proposed answer is not renamed: choosing it is the yes.
+        let proposed = PersonPickerModel(request: wire, onChoose: { _ in }, onClose: {})
+        #expect(!proposed.canRename("Martin B Storey"))
+    }
+
     /// The ✕ refuses the current answer: only for a moderator or observer the
     /// slot points at, and its reply names nobody (design-people.md §J8.8).
     @Test func theCrossClearsOnlyAKnownModeratorOrObserver() throws {

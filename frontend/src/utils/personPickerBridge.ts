@@ -17,6 +17,7 @@ import {
   personPickerLabels,
   personPickerNameTaken,
   personPickerNewCode,
+  personPickerRenamed,
   personPickerRows,
   personPickerTyped,
   type PersonPickerChoice,
@@ -40,11 +41,12 @@ export interface WirePersonPicker {
   labels: PersonPickerLabels;
 }
 
-/** What native picked: a listed row, a typed name, That's Me, or the ✕. */
+/** What native picked: a listed row, a typed name, That's Me, the ✕, or the
+ *  current row renamed in place. */
 export type WireNativeChoice =
   | { kind: "confirm" }
   | { kind: "clear" }
-  | { kind: "name" | "new" | "me"; name: string };
+  | { kind: "name" | "new" | "me" | "rename"; name: string };
 
 /** What `personPickerChoose` carries back. */
 export interface WirePersonPickerReply {
@@ -93,7 +95,7 @@ export function parsePersonPickerChoice(payload: unknown): WirePersonPickerReply
   if (choice.kind === "clear") return { sessionId: p.sessionId, code: p.code, choice: { kind: "clear" } };
   const kind = choice.kind;
   if (
-    (kind === "name" || kind === "new" || kind === "me") &&
+    (kind === "name" || kind === "new" || kind === "me" || kind === "rename") &&
     typeof choice.name === "string" &&
     choice.name.trim()
   ) {
@@ -109,7 +111,8 @@ export function parsePersonPickerChoice(payload: unknown): WirePersonPickerReply
  * - `name`: the listed person by that name (a yes, if it is the slot's own);
  * - `new`: someone new — refused if another person already goes by it;
  * - `me`: the listed person by the account's name, else someone new;
- * - `clear`: not this person, where the slot has someone to refuse.
+ * - `clear`: not this person, where the slot has someone to refuse;
+ * - `rename`: a new spelling for the current person, refused if taken.
  */
 export function resolvePersonPickerChoice(
   payload: unknown,
@@ -127,6 +130,12 @@ export function resolvePersonPickerChoice(
   }
   const rows = personPickerRows(slot, found.known);
   const { kind, name } = pick.choice;
+  if (kind === "rename") {
+    const clash = personPickerNameTaken(slot, rows, name);
+    if (clash) return { sessionId, code, taken: clash };
+    const choice = personPickerRenamed(slot, name);
+    return choice ? { sessionId, code, choice } : null;
+  }
   const listed = rows.find((r) => r.name === name);
   if (kind === "name" || (kind === "me" && listed)) {
     const choice = listed ? personPickerChoice(slot, listed) : null;

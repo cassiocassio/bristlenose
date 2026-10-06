@@ -270,6 +270,56 @@ describe("PersonPicker", () => {
     expect(menu().querySelector(".bn-picker-clear")).toBeNull();
   });
 
+  it("a click on the current, confirmed row renames it in place (§J8.8)", () => {
+    const onChoose = vi.fn();
+    const onClose = vi.fn();
+    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={people("Martin", "Kerri")} onChoose={onChoose} onClose={onClose} />);
+    fireEvent.click(items()[0]);
+    const field = items()[0].querySelector("input") as HTMLInputElement;
+    expect(field.value).toBe("Martin");
+    expect(document.activeElement).toBe(field);
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.change(field, { target: { value: "Martyn" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(onChoose).toHaveBeenCalledWith({ kind: "name", name: "Martyn" });
+  });
+
+  it("Return on the current, confirmed row renames too; Escape goes back to the list, open", () => {
+    const onChoose = vi.fn();
+    const onClose = vi.fn();
+    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={people("Martin", "Kerri")} onChoose={onChoose} onClose={onClose} />);
+    fireEvent.keyDown(menu(), { key: "Enter" });
+    const field = items()[0].querySelector("input") as HTMLInputElement;
+    expect(field).not.toBeNull();
+    fireEvent.keyDown(field, { key: "Escape" });
+    expect(items()[0].querySelector("input")).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onChoose).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(items()[0]);
+  });
+
+  it("a proposed answer still confirms on click, it is not renamed", () => {
+    const onChoose = vi.fn();
+    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin")} onChoose={onChoose} onClose={vi.fn()} />);
+    fireEvent.click(items()[0]);
+    expect(onChoose).toHaveBeenCalledWith({ kind: "confirm" });
+  });
+
+  it("a rename to another person's name is refused in place; an unchanged one does nothing", () => {
+    const onChoose = vi.fn();
+    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={people("Martin", "Kerri")} onChoose={onChoose} onClose={vi.fn()} />);
+    fireEvent.click(items()[0]);
+    const field = items()[0].querySelector("input") as HTMLInputElement;
+    fireEvent.change(field, { target: { value: "kerri" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(onChoose).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain("Kerri");
+    fireEvent.change(field, { target: { value: "Martin" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(onChoose).not.toHaveBeenCalled();
+    expect(items()[0].querySelector("input")).toBeNull();
+  });
+
   it("Escape closes without choosing", () => {
     const onChoose = vi.fn();
     const onClose = vi.fn();

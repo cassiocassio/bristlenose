@@ -40,7 +40,8 @@ export interface PersonPickerRow {
  * - `confirm`: yes to the name the slot holds;
  * - `person`: this slot is that person;
  * - `new`: someone new for this slot, by this name;
- * - `name`: a participant's name (a participant is never picked);
+ * - `name`: a new spelling for the slot's own person, wherever they appear —
+ *   a participant's typed name, or a rename in place on the current row;
  * - `clear`: not this person — the slot returns to unknown (§J8.8).
  */
 export type PersonPickerChoice =
@@ -126,6 +127,21 @@ export function personPickerTyped(slot: PersonPickerSlot, name: string): PersonP
  *  because the Mac picker fills it too. */
 export function withName(template: string, name: string): string {
   return template.replace("{{name}}", name);
+}
+
+/** Whether a row can be renamed in place: the slot's own confirmed answer
+ *  (§J8.8). A proposed one is confirmed first, by its own click or Return. */
+export function personPickerCanRename(slot: PersonPickerSlot, row: PersonPickerRow): boolean {
+  return slot.confirmed && !!slot.name && isOwnRow(slot, row);
+}
+
+/** What a rename in place means: a new spelling for that person everywhere,
+ *  or nothing when empty or unchanged. A taken name is the caller's to refuse
+ *  first. */
+export function personPickerRenamed(slot: PersonPickerSlot, name: string): PersonPickerChoice | null {
+  const trimmed = name.trim();
+  if (!trimmed || trimmed === slot.name) return null;
+  return { kind: "name", name: trimmed };
 }
 
 /** Whether the slot's current answer can be refused with the ✕: a moderator

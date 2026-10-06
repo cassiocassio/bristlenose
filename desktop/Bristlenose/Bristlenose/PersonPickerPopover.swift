@@ -116,7 +116,7 @@ struct PersonPickerRequest: Equatable {
 /// What was picked: a name, and which row it came from. The SPA decides what
 /// it means (a pick, someone new, That's Me) — never this side.
 struct PersonPickerPick: Equatable {
-    enum Kind: String { case name, new, me, clear }
+    enum Kind: String { case name, new, me, clear, rename }
     let name: String
     let kind: Kind
 }
@@ -164,6 +164,10 @@ final class PersonPickerModel: ObservableObject {
     /// The account's full name, when the role has a That's Me row.
     let meName: String?
     @Published var draft = ""
+    /// Rename in place (design-people.md §J8.8): the current, confirmed row's
+    /// name as a field, and what has been typed into it.
+    @Published var renaming = false
+    @Published var renameDraft = ""
     @Published var selection: String?
     /// Bumped when an arrow leaves the new-person field, so the list takes the
     /// keyboard back.
@@ -234,9 +238,40 @@ final class PersonPickerModel: ObservableObject {
         return row == Self.meRow ? meName == name : row == name
     }
 
+    /// Whether a row is renamed in place rather than chosen: the slot's own
+    /// confirmed answer, which has nothing to choose. A proposed one is
+    /// confirmed first, by its own click or Return.
+    func canRename(_ row: String) -> Bool {
+        row != Self.newRow && row != Self.meRow && request.slot.confirmed
+            && !request.slot.name.isEmpty && row == request.slot.name
+    }
+
+    /// The new spelling: sent unless it is empty or unchanged, which ends the
+    /// rename and leaves the picker open.
+    func submitRename() {
+        let name = renameDraft.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty, name != request.slot.name else {
+            cancelRename()
+            return
+        }
+        send(name, kind: .rename)
+    }
+
+    func cancelRename() {
+        renaming = false
+        focusListRequest += 1
+    }
+
     /// A picked row. The web side decides what it means.
     func choose(_ row: String) {
         guard row != Self.newRow else { return }
+        if canRename(row) {
+            if !renaming {
+                renameDraft = row
+                renaming = true
+            }
+            return
+        }
         let me = row == Self.meRow
         send((me ? meName ?? "" : row), kind: me ? .me : .name)
     }
@@ -370,6 +405,7 @@ private struct PersonPickerList: NSViewRepresentable {
     }
 
     func updateNSView(_ scroll: NSScrollView, context: Context) {
+        context.coordinator.syncRenaming()
         context.coordinator.syncSelection()
     }
 
@@ -378,7 +414,24 @@ private struct PersonPickerList: NSViewRepresentable {
         let model: PersonPickerModel
         weak var table: NSTableView?
         private weak var newField: NSTextField?
+        private weak var renameField: NSTextField?
         private var focusListRequest = 0
+        private var wasRenaming = false
+
+        /// Entering or leaving a rename redraws the current row as a field, or
+        /// back as a name.
+        func syncRenaming() {
+            guard model.renaming != wasRenaming, let table else { return }
+            wasRenaming = model.renaming
+            table.reloadData()
+            if model.renaming {
+                DispatchQueue.main.async { [weak self] in
+                    guard let field = self?.renameField else { return }
+                    field.window?.makeFirstResponder(field)
+                    field.currentEditor()?.selectAll(nil)
+                }
+            }
+        }
 
         init(model: PersonPickerModel) { self.model = model }
 
@@ -443,7 +496,15 @@ private struct PersonPickerList: NSViewRepresentable {
             default:
                 let proposed = model.isAnswer(id) && !slot.confirmed
                 lead = PickerBadge(code: model.request.code(for: id), proposed: proposed)
-                name = NSTextField(labelWithString: id)
+                if model.renaming, model.canRename(id) {
+                    let field = PickerRowView.nameField(text: model.renameDraft, prompt: id)
+                    field.setAccessibilityLabel(model.request.labels.menu)
+                    field.delegate = self
+                    renameField = field
+                    name = field
+                } else {
+                    name = NSTextField(labelWithString: id)
+                }
                 label = model.accessibilityLabel(for: id)
             }
             name.font = m.nameFont
@@ -458,7 +519,7 @@ private struct PersonPickerList: NSViewRepresentable {
                 rowView.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 8),
                 rowView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
             ]
-            if ticked, id != PersonPickerModel.meRow, model.canClear {
+            if ticked, id != PersonPickerModel.meRow, model.canClear, !model.renaming {
                 // "Not this person", shown while the pointer is on the row.
                 let clear = NSButton(image: NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)
                     ?? NSImage(), target: self, action: #selector(clearClicked(_:)))
@@ -507,12 +568,23 @@ private struct PersonPickerList: NSViewRepresentable {
         // MARK: The new-person field
 
         func controlTextDidChange(_ notification: Notification) {
-            if let field = notification.object as? NSTextField { model.draft = field.stringValue }
+            guard let field = notification.object as? NSTextField else { return }
+            if field === renameField { model.renameDraft = field.stringValue } else { model.draft = field.stringValue }
         }
 
         /// Return names someone new, Escape closes, and the arrows leave the
         /// field — the field editor's own commands, which arrive before it acts.
         func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+            // The rename field: Return renames, Escape goes back to the list
+            // with the picker still open, and the arrows stay in the field.
+            if control === renameField {
+                switch selector {
+                case #selector(NSResponder.insertNewline(_:)): model.submitRename(); return true
+                case #selector(NSResponder.cancelOperation(_:)): model.cancelRename(); return true
+                case #selector(NSResponder.moveUp(_:)), #selector(NSResponder.moveDown(_:)): return true
+                default: return false
+                }
+            }
             switch selector {
             case #selector(NSResponder.insertNewline(_:)): model.submitDraft(); return true
             case #selector(NSResponder.cancelOperation(_:)): model.close(); return true

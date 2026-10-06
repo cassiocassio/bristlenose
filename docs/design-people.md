@@ -3170,7 +3170,7 @@ people as unique and roles as per-session is the People lens's long-term goal.
     - **Undo**: records the person, so undoing a pick points back, undoing a new person
       returns the slot to unknown, and redo points at the same new person.
     - **Not yet built:** ~~the hover ✕~~ and ~~the `mA?`/`mB?` letters~~ (both built the
-      same day, point 14), rename in place on the picker's row, ~~the picker on the
+      same day, point 14), ~~rename in place on the picker's row~~ (point 16), ~~the picker on the
       transcript and dashboard~~ (built the same day, point 15),
       and the list offering only people confirmed at least once (§J8.10): it still offers
       every moderator or observer any session points at.
@@ -3219,3 +3219,13 @@ people as unique and roles as per-session is the People lens's long-term goal.
       its opener; a reply nobody asked for is ignored. The grid uses it too.
     - **Still open:** whether opening the picker from a paragraph should say it changes
       the speaker, not the paragraph (point 10). Nothing in the picker says so yet.
+
+16. **Built 6 Oct 2026 — rename in place.** On the current, confirmed row, a click or
+    Return turns the name into a field (Finder's rename; the row had nothing to choose,
+    so no existing meaning is lost). Return sends a new spelling for that person,
+    wherever they appear; Escape goes back to the list with the picker still open; an
+    unchanged name does nothing; a name someone else goes by is refused in place. A
+    proposed (dotted) row is not renamed: its click or Return is the yes, and a rename
+    comes after. Web and Mac; the Mac replies `{"kind": "rename", "name": …}`, which the
+    SPA resolves by the same rules (bridge contract version 5). The grid's pencil is
+    unchanged and now does the same act; whether to keep both is still open (point 8).

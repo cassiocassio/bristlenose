@@ -160,6 +160,35 @@ class TestSpeakerSlots:
         codes, _ = assign_speaker_codes(1, _segs(("New", R), ("Old", R)), known={"Old": "m1"})
         assert codes == {"New": "m2", "Old": "m1"}
 
+    def test_a_moderator_not_heard_this_run_keeps_their_code_out_of_reach(self) -> None:
+        """§J7: m1 was Martin; this run hears only a new voice. It must not be
+        m1, or it wears Martin's name in this session."""
+        codes, _ = assign_speaker_codes(1, _segs(("Kerri", R)), known={"Martin": "m1"})
+        assert codes == {"Kerri": "m2"}
+
+    def test_a_flipped_code_is_never_issued_again_in_the_session(self, tmp_path: Path) -> None:
+        reg = SessionRegistry.load(tmp_path)
+        reg.record_speakers("s1", {"A": "m1"})
+        # Run 2: A is re-identified as a participant, so m1 leaves A.
+        codes, _ = assign_speaker_codes(
+            reg.next_participant_number(), _segs(("A", P)), known=reg.speakers_for("s1"),
+        )
+        reg.record_speakers("s1", codes)
+        reg.save()
+        # Run 3, read back from disk: a new moderator voice still does not get m1.
+        again = SessionRegistry.load(tmp_path)
+        codes, _ = assign_speaker_codes(
+            again.next_participant_number(), _segs(("A", P), ("New", R)), known=again.speakers_for("s1"),
+        )
+        assert codes["New"] == "m2"
+
+    def test_a_retired_code_is_per_session(self, tmp_path: Path) -> None:
+        reg = SessionRegistry.load(tmp_path)
+        reg.record_speakers("s1", {"A": "m1"})
+        reg.record_speakers("s1", {"A": "p1"})
+        codes, _ = assign_speaker_codes(2, _segs(("Mod", R)), known=reg.speakers_for("s2"))
+        assert codes == {"Mod": "m1"}, "another session's retired m1 is not this one's"
+
     def test_primary_participant_stays_first_in_appearance_order(self) -> None:
         codes, _ = assign_speaker_codes(9, _segs(("Ann", P), ("Bob", P)), known={"Bob": "p3"})
         assert list(codes) == ["Ann", "Bob"]

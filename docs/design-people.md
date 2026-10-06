@@ -3239,3 +3239,15 @@ people as unique and roles as per-session is the People lens's long-term goal.
     refusal does too — otherwise a second "Kerri" could be typed beside a hidden one and
     fail as a save error instead of the plain refusal. The "Moderated by" line still
     names every moderator, guesses included: it reports, it does not offer.
+
+18. **Fixed 6 Oct 2026 — §J7's two prerequisites.** (a) **A moderator or observer code is
+    never reissued within a session.** Code assignment reserves every `m`/`o` code the
+    session's registry map holds, including speakers not heard this run, and a code a
+    role flip takes from its label is kept under `session_registry.retired_label`, a label
+    no speaker can have (`NO_PARTICIPANT_LABEL`'s trick), so it survives later runs with
+    no change to the file's format. (b) **A re-run leaves no ghost slot.** The importer
+    removes a moderator or observer slot whose code the run no longer produces, unless a
+    person confirmed it; participants are left to their own stale-session cleanup. With
+    Phase 1's half (a moved tag gets its slot), the importer now reconciles slots in both
+    directions. The recode itself (R1) is next; the owner's "good — onward" on 6 Oct is
+    read as yes to §J7 calls 1, 2, 4 and 5.

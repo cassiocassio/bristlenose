@@ -546,7 +546,11 @@ def assign_speaker_codes(
             used.add(code)
 
     # Number the rest. Moderator and observer codes are per session and skip
-    # any kept above; participant codes are global and come from the caller.
+    # any kept above, and every one this session ever issued: a speaker not
+    # heard this run, or retired by a role flip, keeps its code out of reach,
+    # or the next new voice would take it and wear that speaker's name
+    # (design-people.md §J7). Participant codes are global, from the caller.
+    reserved = {c for c in (known or {}).values() if c[:1] in ("m", "o")}
     for label, role in label_role.items():
         if label in label_code:
             continue
@@ -556,7 +560,7 @@ def assign_speaker_codes(
             next_participant_number += 1
         else:
             n = 1
-            while f"{prefix}{n}" in used:
+            while f"{prefix}{n}" in used or f"{prefix}{n}" in reserved:
                 n += 1
             code = f"{prefix}{n}"
         label_code[label] = code

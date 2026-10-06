@@ -497,3 +497,31 @@ class TestLetteredUnknowns:
         client.put("/api/projects/1/sessions/s2/speakers/m1",
                    json={"full_name": "Dana Whitfield", "short_name": "Dana"})
         assert _slots(client)[("s2", "m2")]["speaker_code"] == "mB?"
+
+
+class TestReconcileSlots:
+    """§J7 prerequisite: a re-run that stops hearing a moderator or observer
+    leaves no ghost slot, unless a person confirmed it."""
+
+    def _move_tag(self, tmp_path: Path, sid: str, new: str) -> None:
+        path = tmp_path / "bristlenose-output" / "transcripts-raw" / f"{sid}.txt"
+        path.write_text(path.read_text().replace("[m1]", f"[{new}]"))
+
+    def test_a_tag_that_moves_takes_its_slot_with_no_ghost(self, tmp_path: Path) -> None:
+        project = _project(tmp_path, _TWO)
+        client = _client(project)
+        self._move_tag(tmp_path, "s2", "m2")
+        _write_names(tmp_path, {"s1": _TWO["s1"], "s2": {"m2": _entry("Kerri Lee", "platform-name")}})
+        _reimport(client, project)
+        s2 = {k[1] for k in _slots(client) if k[0] == "s2"}
+        assert "m1" not in s2, "the old tag's slot is gone"
+        assert "m2" in s2
+
+    def test_a_confirmed_slot_is_kept_when_its_tag_goes(self, tmp_path: Path) -> None:
+        project = _project(tmp_path, _TWO)
+        client = _client(project)
+        client.put("/api/projects/1/sessions/s2/speakers/m1", json={"confirmed": True})
+        self._move_tag(tmp_path, "s2", "m2")
+        _reimport(client, project)
+        s2 = {k[1]: v for k, v in _slots(client).items() if k[0] == "s2"}
+        assert s2["m1"]["name"] == "Kerri", "a person's yes outlives the run"

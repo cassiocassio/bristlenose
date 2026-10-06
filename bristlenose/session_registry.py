@@ -49,6 +49,15 @@ REGISTRY_FILENAME = "sessions.json"
 NO_PARTICIPANT_LABEL = ""
 
 
+def retired_label(code: str) -> str:
+    """Where a session keeps a moderator or observer code it has retired —
+    its speaker was not heard again, or was re-identified as another kind —
+    so the code is never issued to someone else in that session, who would
+    then wear the first speaker's name (design-people.md §J7). A label no
+    speaker can have, like ``NO_PARTICIPANT_LABEL``."""
+    return f"\u0000retired {code}"
+
+
 def registry_path(output_dir: Path) -> Path:
     return output_dir / ".bristlenose" / REGISTRY_FILENAME
 
@@ -165,9 +174,19 @@ class SessionRegistry:
         return dict(self.speakers.get(sid, {}))
 
     def record_speakers(self, sid: str, label_codes: dict[str, str]) -> None:
-        """Remember this run's codes; labels no longer heard keep their entry."""
+        """Remember this run's codes; labels no longer heard keep their entry.
+
+        A label whose moderator or observer code changes (a role flip) would
+        drop the old code from the map, and with it the only record that it
+        was issued; it is kept under ``retired_label`` instead.
+        """
         before = self._highest_participant()  # counts a code this update replaces
-        self.speakers.setdefault(sid, {}).update(label_codes)
+        current = self.speakers.setdefault(sid, {})
+        for label, code in label_codes.items():
+            old = current.get(label)
+            if old and old != code and old[:1] in ("m", "o"):
+                current[retired_label(old)] = old
+        current.update(label_codes)
         self.participants_issued = max(before, self._highest_participant())
 
     def placeholder_participant(self, sid: str) -> str:

@@ -947,6 +947,20 @@ def _import_speakers(
                 person.role_title = entry["role"]
             left.add(speaker_slots.point(sp, person, state=speaker_slots.PROPOSED, evidence=kind))
 
+        # A moderator or observer this run no longer hears keeps no slot: left
+        # in place it is a ghost, still named and still "Moderated by", beside
+        # whoever the run did hear (design-people.md §J7). A slot a person
+        # confirmed stays — their yes is not the pipeline's to take back.
+        # Participants are not reconciled here: their codes are global and
+        # their stale-session cleanup owns them.
+        for code, sp in existing.items():
+            if code in codes or not speaker_slots.is_team_code(code):
+                continue
+            if sp.state == speaker_slots.CONFIRMED:
+                continue
+            left.add(sp.person_id)
+            db.delete(sp)
+
     speaker_slots.release(db, left)
     if project_id is not None:
         speaker_slots.renumber(db, project_id)

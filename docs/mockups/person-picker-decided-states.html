@@ -3698,10 +3698,13 @@ body { padding: 0; }
 /* Section 7: the scope switch sits above the role toggle, ruled off from it. */
 /* Plain text, not a segmented control: weight says which, so it reads as a heading
    and the eye falls to the role toggle below. Tokens only, no new colour. */
-.m-stage .bn-picker-scope { display: flex; gap: var(--bn-space-md); padding: .15rem .8rem .45rem; }
+.m-stage .bn-picker-scope { display: flex; justify-content: center; gap: var(--bn-space-lg); padding: .35rem .8rem .5rem; }
 .m-stage .m-scope-btn { font: inherit; font-size: var(--bn-text-label); background: none; border: 0; padding: 0; cursor: pointer;
   color: var(--bn-colour-muted); font-weight: var(--bn-weight-normal); }
 .m-stage .m-scope-btn[aria-checked="true"] { color: var(--bn-colour-text); font-weight: var(--bn-weight-strong); }
+/* Reserve each word's bold width so the pair does not shift when the choice flips. */
+.m-stage .m-scope-btn { display: inline-grid; }
+.m-stage .m-scope-btn::after { content: attr(data-text); font-weight: var(--bn-weight-strong); height: 0; visibility: hidden; overflow: hidden; }
 .m-stage .m-plain-name { color: var(--bn-colour-text); }
 /* The split point: the caret sits in the paragraph's own text. */
 .m-stage .m-split-after { color: var(--bn-colour-muted); }
@@ -3899,7 +3902,7 @@ document.getElementById("g-split2").innerHTML = [
 
 // ── Section 7 (speculative): the scope switch ──
 const scopeSwitch = (para) => `<li class="bn-picker-scope" role="radiogroup" aria-label="Scope">${
-  ["Speaker", "Paragraph"].map((r, i) => { const on = (i === 1) === para; return `<button type="button" class="m-scope-btn" role="radio" aria-checked="${on}">${r}</button>`; }).join("")}</li>`;
+  ["Speaker", "Paragraph"].map((r, i) => { const on = (i === 1) === para; return `<button type="button" class="m-scope-btn" role="radio" aria-checked="${on}" data-text="${r}">${r}</button>`; }).join("")}</li>`;
 const plainOwn = (code, name) => row(code, "", { tick: true, focus: true, extra: `<span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">${code}</span><span class="bn-speaker-badge-name m-plain-name">${name}</span></span></span>` });
 const renameOwn = (code, name) => row(code, "", { tick: true, focus: true, x: true, extra: `<span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">${code}</span><span class="bn-speaker-badge-name"><span class="m-rename">${name}<span class="m-caret"></span></span></span></span></span>` });
 const Q1 = "And when you got to step nine, what did you do?";

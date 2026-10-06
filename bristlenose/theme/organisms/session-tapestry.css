@@ -124,6 +124,8 @@
 /* 0.4, not lower: a dimmed bar is still a control and must keep 3:1 (WCAG 1.4.11). */
 .bn-tp-bar.dim { opacity: 0.4; }
 .bn-tp-unrated { fill: var(--bn-colour-muted); }
+/* The invisible, wider click target over each sentiment mark (pointer only). */
+.bn-tp-bar-hit { fill: transparent; cursor: pointer; }
 
 .bn-tp-span { fill: var(--bn-colour-muted); opacity: 0.5; }
 .bn-tp-tag { fill: var(--bn-colour-badge-bg); }

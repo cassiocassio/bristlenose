@@ -249,6 +249,31 @@ describe("SessionTapestry — tuning", () => {
   });
 });
 
+describe("SessionTapestry — sentiment click targets", () => {
+  afterEach(() => resetTapestryTuning());
+
+  it("are wider than the bar and select its quote", () => {
+    setup();
+    const [hit] = Array.from(document.querySelectorAll(".bn-tp-bar-hit"));
+    expect(Number(hit.getAttribute("width"))).toBe(6.4 + 2); // max(bar 6, dot 6.4) + 2
+    fireEvent.click(hit);
+    expect(screen.getByText("That was easy to find")).toBeInTheDocument();
+  });
+
+  it("give way when marks are close at this zoom: never past halfway to a neighbour", () => {
+    const close = { ...session, quotes: [
+      { ...session.quotes[0], t0: 100 },
+      { ...session.quotes[1], t0: 103 },
+    ] };
+    // 1 s/px: the marks are 3px apart, so each side stops at 1.5px — and never below the bar (3px).
+    render(<SessionTapestry session={close} sPerPx={1} nameOf={(c) => c} onJump={() => {}} />);
+    const hits = Array.from(document.querySelectorAll(".bn-tp-bar-hit")).map((h) => [Number(h.getAttribute("x")), Number(h.getAttribute("width"))]);
+    const [a, b] = hits;
+    expect(a[0] + a[1]).toBeLessThanOrEqual(b[0] + 3); // no wider than the bar where they meet
+    expect(a[1]).toBeGreaterThanOrEqual(6); // never narrower than the mark
+  });
+});
+
 describe("tapestry scale", () => {
   it("fits the longest session, held between 1 and 4 s/px", () => {
     expect(fitScale(300, 1000)).toBe(1);        // short project: never blown up

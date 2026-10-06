@@ -215,7 +215,7 @@ export default function SessionTapestry({
     if (selected < 0) return;
     const onDown = (e: PointerEvent) => {
       const tgt = e.target as Element | null;
-      if (tgt?.closest?.(".bn-tp-bar, .bn-tp-popover")) return;
+      if (tgt?.closest?.(".bn-tp-bar, .bn-tp-bar-hit, .bn-tp-popover")) return;
       setSelected(-1);
     };
     document.addEventListener("pointerdown", onDown);
@@ -455,15 +455,36 @@ export default function SessionTapestry({
                 }
               },
             };
-            if (!q.sentiment) {
-              return <rect key={i} {...common} className={`${common.className} bn-tp-unrated`} x={cx - 0.75} y={SE.mid - 3} width={1.5} height={6} />;
-            }
-            const fill = `var(--bn-sentiment-${q.sentiment})`;
-            if (q.sentiment === "surprise") return <circle key={i} {...common} cx={cx} cy={SE.mid} r={3.2} style={{ fill }} />;
-            return (
-              <rect key={i} {...common} style={{ fill }} x={cx - P.barW / 2} width={P.barW} rx={1} height={h}
-                y={POSITIVE.has(q.sentiment) ? SE.mid - h : SE.mid} />
+            // An invisible hit area, wider than the mark and at least 12px tall, so a thin bar, a tick
+            // or a dot is easy to catch. Pointer only: focus and semantics stay on the visible mark.
+            const up = !!q.sentiment && POSITIVE.has(q.sentiment);
+            const flat = !q.sentiment || q.sentiment === "surprise";
+            const top = Math.min(flat ? SE.mid - 3 : up ? SE.mid - h : SE.mid, SE.mid - 6);
+            const bottom = Math.max(flat ? SE.mid + 3 : up ? SE.mid : SE.mid + h, SE.mid + 6);
+            // Each side stops halfway to the neighbouring mark, so close marks (at this zoom) never
+            // steal each other's clicks; it never shrinks below the visible mark itself.
+            const markHalf = flat && q.sentiment ? 3.2 : !q.sentiment ? 0.75 : P.barW / 2;
+            const want = Math.max(P.barW, 6.4) / 2 + P.hitExtra / 2;
+            const gapPrev = i > 0 ? cx - x(s.quotes[i - 1].t0) : Infinity;
+            const gapNext = i < s.quotes.length - 1 ? x(s.quotes[i + 1].t0) - cx : Infinity;
+            const left = Math.max(markHalf, Math.min(want, gapPrev / 2));
+            const right = Math.max(markHalf, Math.min(want, gapNext / 2));
+            const hit = (
+              <rect className="bn-tp-bar-hit" aria-hidden="true" x={cx - left} y={top} width={left + right}
+                height={bottom - top} onClick={() => choose(i)} />
             );
+            let mark: React.ReactNode;
+            if (!q.sentiment) {
+              mark = <rect {...common} className={`${common.className} bn-tp-unrated`} x={cx - 0.75} y={SE.mid - 3} width={1.5} height={6} />;
+            } else if (q.sentiment === "surprise") {
+              mark = <circle {...common} cx={cx} cy={SE.mid} r={3.2} style={{ fill: `var(--bn-sentiment-${q.sentiment})` }} />;
+            } else {
+              mark = (
+                <rect {...common} style={{ fill: `var(--bn-sentiment-${q.sentiment})` }} x={cx - P.barW / 2}
+                  width={P.barW} rx={1} height={h} y={up ? SE.mid - h : SE.mid} />
+              );
+            }
+            return <g key={i}>{mark}{hit}</g>;
           })}
 
           {/* Theme spans */}

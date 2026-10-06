@@ -37,6 +37,7 @@ export interface TapestryTuning {
     themeH: number; // theme chip height (px)
     themeGap: number; // gap between theme rows (px)
     barW: number; // sentiment bar width (px)
+    hitExtra: number; // how much wider than the mark its invisible click target is (px)
     popover: Space; // popover padding
   };
 }
@@ -46,7 +47,7 @@ export const DEFAULTS: TapestryTuning = {
   // names up to badge; taller flags (18) and theme chips (18), and a pixel more between theme rows.
   // Sentiment bars 4 → 6px wide, the same day.
   type: { lane: "caption", flag: "label", clip: "badge", theme: "label", tick: "micro", popMeta: "caption", popQuote: "body" },
-  pad: { flagX: 3, flagH: 18, clipX: 4, clipH: 16, themeX: 4, themeH: 18, themeGap: 4, barW: 6, popover: "md" },
+  pad: { flagX: 3, flagH: 18, clipX: 4, clipH: 16, themeX: 4, themeH: 18, themeGap: 4, barW: 6, hitExtra: 2, popover: "md" },
 };
 
 /** Snapped choices for the raw-pixel paddings — the only values the playground offers. */
@@ -59,6 +60,7 @@ export const PAD_STEPS: Record<Exclude<keyof TapestryTuning["pad"], "popover">, 
   themeH: [14, 16, 18, 20],
   themeGap: [1, 2, 3, 4, 6],
   barW: [4, 5, 6, 7, 8],
+  hitExtra: [0, 2, 4, 6],
 };
 
 let state: TapestryTuning = DEFAULTS;

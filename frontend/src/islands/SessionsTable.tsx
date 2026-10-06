@@ -70,6 +70,12 @@ import { refetchOverlayProps } from "../hooks/useRefetching";
 // The timeline slice: lazy, because this island is on the first-paint path and
 // a slice is only drawn once a row is opened.
 const SessionTapestry = lazy(() => import("../components/SessionTapestry"));
+// Dev-only (`serve --dev`): nudge the tapestry's type and padding along the existing ladders.
+const TapestryPlayground = lazy(() =>
+  import("../components/TapestryPlayground").then((m) => ({ default: m.TapestryPlayground })),
+);
+const IS_DEV =
+  (window as unknown as Record<string, unknown>).__BRISTLENOSE_DEV__ === true || location.port === "5173";
 
 const ReanalyseSessionSheet = lazy(() =>
   import("../components/ReanalyseSessionSheet").then((m) => ({ default: m.ReanalyseSessionSheet })),
@@ -209,6 +215,7 @@ export function SessionsTable({
     () => new Set(loadTapestryView(projectId).open),
   );
   const [zoom, setZoom] = useState(() => loadTapestryView(projectId).zoom);
+  const [tuning, setTuning] = useState(false);
   useEffect(() => {
     saveTapestryView(projectId, { open: [...openTapestries], zoom });
   }, [projectId, openTapestries, zoom]);
@@ -583,6 +590,17 @@ export function SessionsTable({
         title={t("sessions.tapestry.zoomIn")} onClick={() => setZoom((z) => Math.min(100, z + 20))}>
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" /><path d="M10 10l3.5 3.5M4.5 6.5h4M6.5 4.5v4" /></svg>
       </button>
+      {IS_DEV && (
+        <button type="button" className="bn-tp-zoom-btn" aria-label="Tapestry playground (dev)"
+          title="Tapestry playground (dev)" onClick={() => setTuning((v) => !v)}>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4h10M3 8h10M3 12h10" /><circle cx="6" cy="4" r="1.5" /><circle cx="10" cy="8" r="1.5" /><circle cx="5" cy="12" r="1.5" /></svg>
+        </button>
+      )}
+      {IS_DEV && tuning && (
+        <Suspense fallback={null}>
+          <TapestryPlayground onClose={() => setTuning(false)} />
+        </Suspense>
+      )}
     </div>
   ) : null;
   // Each timeline scrolls on its own; remember where, so Back restores it.

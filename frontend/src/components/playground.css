@@ -625,3 +625,47 @@ body.bn-show-layout-columns .layout > .tag-rail::after {
   color: #db2777;
   background: rgba(236, 72, 153, 0.15);
 }
+
+/* ── Tapestry playground: a floating panel (dev-only) ──────────── */
+
+.pg-float {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 300px;
+  max-height: calc(100vh - 32px);
+  background: #1a1a1a;
+  color: #e5e7eb;
+  font-family: var(--bn-font-body);
+  font-size: 0.78rem;
+  z-index: 9980;
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.pg-float-body {
+  overflow-y: auto;
+  padding: 0 0.75rem 0.75rem;
+}
+
+.pg-tp-value {
+  width: 6.5rem;
+  text-align: center;
+}
+
+.pg-tp-changes {
+  margin: 0 0 0.4rem;
+  white-space: pre-wrap;
+  font-family: var(--bn-font-mono);
+  font-size: 0.66rem;
+  color: #60a5fa;
+}
+
+.pg-tp-none {
+  margin-bottom: 0.4rem;
+  font-size: 0.7rem;
+  color: #6b7280;
+}

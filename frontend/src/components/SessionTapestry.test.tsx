@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import SessionTapestry from "./SessionTapestry";
 import { fitScale, zoomScale } from "../utils/tapestryScale";
+import { DEFAULTS, resetTapestryTuning, setTapestryTuning } from "../utils/tapestryTuning";
 import type { TapestrySession } from "../utils/types";
 
 const session: TapestrySession = {
@@ -222,6 +223,25 @@ describe("SessionTapestry — the quote popover", () => {
     const pop = document.querySelector<HTMLElement>(".bn-tp-popover")!;
     expect(pop.parentElement).toHaveClass("bn-tp-wrap");
     expect(pop.style.getPropertyValue("--bn-tp-arrow-x")).toMatch(/px$/);
+  });
+});
+
+describe("SessionTapestry — tuning", () => {
+  afterEach(() => resetTapestryTuning());
+
+  it("draws the shipped geometry at the defaults", () => {
+    setup();
+    const chip = document.querySelector(".bn-tp-tag")!;
+    expect(chip.getAttribute("height")).toBe("16");
+    const wrap = document.querySelector<HTMLElement>(".bn-tp-wrap")!;
+    expect(wrap.style.getPropertyValue("--bn-tp-text-theme")).toBe("var(--bn-text-badge)");
+  });
+
+  it("follows a tuned step and padding live", () => {
+    setup();
+    act(() => setTapestryTuning({ ...DEFAULTS, type: { ...DEFAULTS.type, theme: "caption" }, pad: { ...DEFAULTS.pad, themeH: 20 } }));
+    expect(document.querySelector(".bn-tp-tag")!.getAttribute("height")).toBe("20");
+    expect(document.querySelector<HTMLElement>(".bn-tp-wrap")!.style.getPropertyValue("--bn-tp-text-theme")).toBe("var(--bn-text-caption)");
   });
 });
 

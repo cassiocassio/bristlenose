@@ -23,6 +23,7 @@ import { Badge } from "./Badge";
 import type { TapestryQuote, TapestrySession } from "../utils/types";
 import { TAPESTRY_GUTTER, TAPESTRY_RIGHT as RIGHT } from "../utils/tapestryScale";
 import { formatTimecode } from "../utils/format";
+import { type Step, type TapestryTuning, useTapestryTuning } from "../utils/tapestryTuning";
 import { announce } from "../utils/announce";
 
 /** Clips are drawn as rounded clips at or below this many seconds per pixel, as slivers above it. */
@@ -59,18 +60,31 @@ function fit(text: string, avail: number, font: string): string {
   while (t.length > 1 && measure(t + "…", font) > avail) t = t.slice(0, -1);
   return t.length > 1 ? t + "…" : "";
 }
-function fonts(): { flag: string; tag: string; clip: string; lane: string } {
+const FALLBACK_PX: Record<Step, number> = { micro: 9.6, badge: 11.5, caption: 12, label: 13, body: 15, heading: 18 };
+
+/** Canvas font strings (for measuring) and pixel sizes (for baselines), from the tuned ladder steps. */
+function fonts(type: TapestryTuning["type"]) {
   const cs = getComputedStyle(document.documentElement);
   const v = (n: string, fallback: string) => cs.getPropertyValue(n).trim() || fallback;
-  const px = (val: string) => (val.endsWith("rem") ? `${parseFloat(val) * 16}px` : val);
+  const size = (step: Step) => {
+    const raw = v(`--bn-text-${step}`, "");
+    const n = raw.endsWith("rem") ? parseFloat(raw) * 16 : parseFloat(raw);
+    return Number.isFinite(n) ? n : FALLBACK_PX[step];
+  };
   const body = v("--bn-font-body", "system-ui, sans-serif");
+  const emphasis = v("--bn-weight-emphasis", "490");
+  const normal = v("--bn-weight-normal", "420");
+  const px = { flag: size(type.flag), tag: size(type.theme), clip: size(type.clip), lane: size(type.lane) };
   return {
-    flag: `${v("--bn-weight-emphasis", "490")} ${px(v("--bn-text-badge", "11.5px"))} ${body}`,
-    tag: `${v("--bn-weight-normal", "420")} ${px(v("--bn-text-badge", "11.5px"))} ${body}`,
-    clip: `${v("--bn-weight-emphasis", "490")} ${px(v("--bn-text-micro", "9.6px"))} ${body}`,
-    lane: `${v("--bn-weight-emphasis", "490")} ${px(v("--bn-text-caption", "12px"))} ${body}`,
+    px,
+    flag: `${emphasis} ${px.flag}px ${body}`,
+    tag: `${normal} ${px.tag}px ${body}`,
+    clip: `${emphasis} ${px.clip}px ${body}`,
+    lane: `${emphasis} ${px.lane}px ${body}`,
   };
 }
+/** Baseline offset that centres a line of text of this size on a box's middle. */
+const centre = (fontPx: number) => fontPx * 0.35;
 
 const isTeam = (code: string) => /^[mo]/.test(code);
 /** WCAG relative luminance of an `#rrggbb` colour. */
@@ -116,7 +130,9 @@ export default function SessionTapestry({
   const [playhead, setPlayhead] = useState<number | null>(null);
   const [selected, setSelected] = useState(-1);
   const [themeFocus, setThemeFocus] = useState<string | null>(null);
-  const F = useMemo(() => fonts(), []);
+  const tune = useTapestryTuning();
+  const P = tune.pad;
+  const F = useMemo(() => fonts(tune.type), [tune.type]);
   const panelId = `bn-tp-panel-${session.session_id}`;
   const wrapRef = useRef<HTMLDivElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
@@ -158,10 +174,11 @@ export default function SessionTapestry({
   const xEnd = x(s.duration_seconds);
   const W = Math.ceil(xEnd + RIGHT);
   const clips = sPerPx <= CLIP_THRESHOLD;
-  const MT = { y: 26, h: 16 };
-  const PT = { y: 45, h: 18 };
-  const SE = { mid: 104, amp: 30 };
-  const TG = { y: 144, row: 19, rows: 3 };
+  // Lane geometry follows the tuned flag and clip heights (defaults: the shipped layout).
+  const MT = { y: P.flagH + 12, h: P.clipH };
+  const PT = { y: P.flagH + 12 + P.clipH + 3, h: P.clipH + 2 };
+  const SE = { mid: PT.y + PT.h + 41, amp: 30 };
+  const TG = { y: SE.mid + 40, row: P.themeH + P.themeGap, rows: 3 };
   const H = TG.y + TG.row * TG.rows + 14;
 
   // While a quote is open, ← → step quotes and Esc closes, whatever has focus:
@@ -293,7 +310,17 @@ export default function SessionTapestry({
   const sel: TapestryQuote | undefined = selQ;
 
   return (
-    <div className="bn-tp-wrap" ref={wrapRef}>
+    <div className="bn-tp-wrap" ref={wrapRef} style={{
+      // The tuned ladder steps, read by session-tapestry.css; defaults are the shipped sizes.
+      "--bn-tp-text-lane": `var(--bn-text-${tune.type.lane})`,
+      "--bn-tp-text-flag": `var(--bn-text-${tune.type.flag})`,
+      "--bn-tp-text-clip": `var(--bn-text-${tune.type.clip})`,
+      "--bn-tp-text-theme": `var(--bn-text-${tune.type.theme})`,
+      "--bn-tp-text-tick": `var(--bn-text-${tune.type.tick})`,
+      "--bn-tp-text-pop-meta": `var(--bn-text-${tune.type.popMeta})`,
+      "--bn-tp-text-pop-quote": `var(--bn-text-${tune.type.popQuote})`,
+      "--bn-tp-pad-popover": `var(--bn-space-${P.popover})`,
+    } as React.CSSProperties}>
       <div className="bn-tapestry-scroll" ref={scrollRef} onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}>
         <svg
           ref={svgRef}
@@ -309,11 +336,11 @@ export default function SessionTapestry({
               <feDropShadow dx={0} dy={0.6} stdDeviation={0.9} floodColor="#000" floodOpacity={0.16} />
             </filter>
           </defs>
-          <text className="bn-tp-lane" x={12} y={14}>{lane(t("quotes.sections"))}</text>
-          <text className="bn-tp-lane" x={12} y={MT.y + 12}>{lane(t("sessions.speakerPlaceholder.moderator"))}</text>
-          <text className="bn-tp-lane" x={12} y={PT.y + 13}>{lane(t("sessions.speakerPlaceholder.participant"))}</text>
-          <text className="bn-tp-lane" x={12} y={SE.mid + 3}>{lane(t("sessions.colSentiment"))}</text>
-          <text className="bn-tp-lane" x={12} y={TG.y + 11}>{lane(t("quotes.themes"))}</text>
+          <text className="bn-tp-lane" x={12} y={2.5 + P.flagH / 2 + centre(F.px.lane)}>{lane(t("quotes.sections"))}</text>
+          <text className="bn-tp-lane" x={12} y={MT.y + MT.h / 2 + centre(F.px.lane)}>{lane(t("sessions.speakerPlaceholder.moderator"))}</text>
+          <text className="bn-tp-lane" x={12} y={PT.y + PT.h / 2 + centre(F.px.lane)}>{lane(t("sessions.speakerPlaceholder.participant"))}</text>
+          <text className="bn-tp-lane" x={12} y={SE.mid + centre(F.px.lane)}>{lane(t("sessions.colSentiment"))}</text>
+          <text className="bn-tp-lane" x={12} y={TG.y + P.themeH / 2 + centre(F.px.lane)}>{lane(t("quotes.themes"))}</text>
 
           {/* Speaker clips */}
           <rect className="bn-tp-track" x={TAPESTRY_GUTTER} y={MT.y - 1} width={Math.max(0, xEnd - TAPESTRY_GUTTER)}
@@ -328,7 +355,7 @@ export default function SessionTapestry({
               return <rect key={i} className={cls} style={style} x={x0} y={tr.y} width={Math.max(0.5, w)} height={tr.h} />;
             }
             if (w < 1) return null;
-            const label = fit(nameOf(tn.speaker), w - 8, F.clip) || (w > 22 ? tn.speaker : "");
+            const label = fit(nameOf(tn.speaker), w - 2 * P.clipX, F.clip) || (w > 22 ? tn.speaker : "");
             const ink = tn.colour ? inkOn(tn.colour) : undefined;
             return (
               <g key={i}>
@@ -336,7 +363,7 @@ export default function SessionTapestry({
                   rx={Math.min(3, w / 2)} data-video={tn.colour ? "" : undefined} />
                 {label && (
                   <text className={`bn-tp-clip-label ${teamTurn(tn) ? "on-team" : "on-ppt"}`}
-                    style={ink ? { fill: ink } : undefined} x={x0 + 4} y={tr.y + tr.h / 2 + 3.5}>
+                    style={ink ? { fill: ink } : undefined} x={x0 + P.clipX} y={tr.y + tr.h / 2 + centre(F.px.clip)}>
                     {label}
                   </text>
                 )}
@@ -352,7 +379,8 @@ export default function SessionTapestry({
             const fx = x(f.t0);
             const next = i + 1 < s.sections.length ? x(s.sections[i + 1].t0) : xEnd;
             const text = isRaised ? f.label : fit(f.label, next - fx - 20, F.flag);
-            const pw = (text ? measure(text, F.flag) : 0) + 12;
+            const pw = (text ? measure(text, F.flag) : 0) + 2 * P.flagX + 6;
+            const half = P.flagH / 2;
             return (
               <g key={`f${i}`} className={`bn-tp-flag${isRaised ? " raised" : ""}${isHot ? " hot" : ""}`}
                 onClick={() => onJump(f.t0)}
@@ -368,9 +396,9 @@ export default function SessionTapestry({
                 <line x1={fx + 0.5} x2={fx + 0.5} y1={2} y2={MT.y - 2} />
                 {/* Half-pixel coordinates: a 1px stroke on whole pixels smears across two and
                     reads as a heavier line than the hairline it is. */}
-                <path d={`M${fx + 1.5},2.5 h${pw} l-5,7 l5,7 h-${pw} z`}
+                <path d={`M${fx + 1.5},2.5 h${pw} l-5,${half} l5,${half} h-${pw} z`}
                   filter={isRaised ? `url(#bn-tp-lift-${s.session_id})` : undefined} />
-                {text && <text x={fx + 4} y={13}>{text}</text>}
+                {text && <text x={fx + 1 + P.flagX} y={2.5 + half + centre(F.px.flag)}>{text}</text>}
               </g>
             );
           })}
@@ -445,18 +473,18 @@ export default function SessionTapestry({
             const row = themeEnds.indexOf(Math.min(...themeEnds));
             const lx = Math.max(x0, themeEnds[row] + 4);
             const y = TG.y + row * TG.row;
-            const text = fit(theme, Math.min(Math.max(x1 - lx, 120), W - RIGHT - lx - 8), F.tag);
+            const text = fit(theme, Math.min(Math.max(x1 - lx, 120), W - RIGHT - lx - 2 * P.themeX), F.tag);
             const tw = text ? measure(text, F.tag) : 0;
-            themeEnds[row] = Math.max(x1, lx + tw + 8);
+            themeEnds[row] = Math.max(x1, lx + tw + 2 * P.themeX);
             return (
               <g key={theme} className="bn-tp-theme" onMouseEnter={() => setThemeFocus(theme)}
                 onMouseLeave={() => setThemeFocus(null)}>
                 <title>{theme}</title>
-                <rect className="bn-tp-span" x={x0} y={y + 6} width={x1 - x0} height={4} rx={2} />
+                <rect className="bn-tp-span" x={x0} y={y + P.themeH / 2 - 2} width={x1 - x0} height={4} rx={2} />
                 {text && (
                   <>
-                    <rect className="bn-tp-tag" x={lx} y={y} width={tw + 8} height={16} rx={3} />
-                    <text className="bn-tp-tag-text" x={lx + 4} y={y + 12}>{text}</text>
+                    <rect className="bn-tp-tag" x={lx} y={y} width={tw + 2 * P.themeX} height={P.themeH} rx={3} />
+                    <text className="bn-tp-tag-text" x={lx + P.themeX} y={y + P.themeH / 2 + centre(F.px.tag)}>{text}</text>
                   </>
                 )}
               </g>

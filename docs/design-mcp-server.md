@@ -105,7 +105,7 @@ The workflow this serves predates Bristlenose and is the reason it exists:
 
 Bristlenose industrialised all three. Step 2 is `bristlenose/llm/prompts/`
 (twelve of them: `thematic-grouping.md`, `quote-clustering.md`,
-`topic-segmentation.md`, `route-quotes-to-territories.md`, …). Step 3 is the
+`topic-segmentation.md`, `discussion-route-quotes.md`, …). Step 3 is the
 codebook — `TagPrompt` carries a code's `definition` / `apply_when` / `not_this`,
 is instance-scoped so a boundary travels between studies, is versioned by content
 hash, and is refined through accept/reject.

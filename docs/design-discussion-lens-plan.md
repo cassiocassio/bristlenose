@@ -614,8 +614,11 @@ until Phase 5.
      a fresh speaker cache carries a `speaker_split` record and its session
      skips the check (`moderator.whole_transcript_split`), so a moderator who
      really does go quiet after the opening is no longer marked "can't tell".
-   - The four spike prompts in `llm/prompts/` (`parse-discussion-guide` etc.)
-     are **not** archived: `scripts/spike_discussion_routing.py` still loads them.
+   - The July routing spike — `scripts/spike_discussion_routing.py` and its three
+     `llm/prompts/` precursors (`parse-discussion-guide`, `route-quotes-to-territories`,
+     `reconcile-discussion-guide`) — was **retired 6 Oct 2026**: the feature shipped
+     and was proven, and the live measurement harness is `experiments/discussion-lens/`.
+     Production loads only the `discussion-*` prompts.
    - The guide folder name, `Discussion guide`, lives in `discussion/guide.py`
      and, since the lens shipped, in the `guideHowTo` sentence of all 21 locales
      (kept in English there — the code matches it literally). Renaming it is now

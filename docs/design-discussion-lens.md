@@ -442,7 +442,8 @@ Corpus: the maintainer's own IKEA/"favourite object" guide (27 lines) and a
 three-session trial project, both kept outside the repo — s1 (18 min, English
 site), s2 (36 min, UK site, screen-share trouble), s3 (38 min, the German IKEA
 site). 148 moderator turns ≥ 3 words, 101
-quotes. Claude Sonnet 4.6, `scripts/spike_discussion_routing.py --transcripts`.
+quotes. Claude Sonnet 4.6 (July routing spike, retired 6 Oct 2026 — the shipped
+measurement harness is `experiments/discussion-lens/`).
 
 - **About 60% of the research questions actually asked are nowhere in the
   guide.** 31 of the 51 question-turns the model assigned are ad-libs; per
@@ -559,7 +560,9 @@ grouping.
 ### Innovations — what is genuinely new
 
 1. **Reconcile** — guide ⋈ moderator turns → merged items with provenance and
-   `turns`. Prompt written: `bristlenose/llm/prompts/reconcile-discussion-guide.md`.
+   `turns`. The spike expressed this as one `reconcile-discussion-guide.md` prompt
+   (retired 6 Oct 2026 with the spike); production realises it across the shipped
+   `discussion-parse-guide` / `discussion-classify-turns` / `discussion-consolidate`.
 2. **Structure by code** — time-slotting of ad-libs, the promotion rule,
    time-placement of promoted territories, persistence and incremental
    re-reconcile (rules 2–6 above). Deterministic; this is also the answer to

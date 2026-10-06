@@ -71,6 +71,20 @@ export interface FeatureFlags {
    * embed — only the hover reveal is withheld.
    */
   proposalRationaleTooltip: boolean;
+
+  /**
+   * The picker's swap row: this session's participant and its moderator were
+   * the other way round, exchanged in one act (web and Mac — the Mac picker
+   * shows the row only when the request carries a partner).
+   *
+   * Parked 6 Oct 2026 by the owner — it does two things at once. The need it
+   * was built for is narrower: one paragraph credited to m1 was really p1,
+   * which is a paragraph question (`docs/design-people.md` §K), not a
+   * whole-session exchange; swapping every turn of both speakers is rare. The
+   * server's `swap_with` and its undo stay live and tested. Design doc:
+   * `docs/design-people.md` §J8 point 23.
+   */
+  speakerSwap: boolean;
 }
 
 /** The shipped state. Change these to flip a feature back on. */
@@ -78,6 +92,7 @@ const DEFAULTS: FeatureFlags = {
   quoteContextExpansion: false,
   moderatorQuestionPill: false,
   proposalRationaleTooltip: false,
+  speakerSwap: false,
 };
 
 export const featureFlags: FeatureFlags = { ...DEFAULTS };

@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { featureFlags, resetFeatureFlags } from "./featureFlags";
 import { knownPeopleOf, nameStateOf, stateAfter, swapPartnerOf } from "./speakerPicking";
 import type { SessionsListResponse, SpeakerResponse } from "./types";
 
@@ -71,6 +72,16 @@ describe("a speaker's state, as a recode reads it (§J7 R2)", () => {
 describe("who a speaker would swap with (§J7 call 4)", () => {
   const sp = (speaker_code: string, slot_code = speaker_code) =>
     ({ speaker_code, slot_code, name: "", role: "" }) as SpeakerResponse;
+  // Parked (featureFlags.speakerSwap): the behaviour stays specified with it on.
+  beforeEach(() => {
+    featureFlags.speakerSwap = true;
+  });
+  afterEach(resetFeatureFlags);
+
+  it("is parked: the shipped picker offers no swap", () => {
+    resetFeatureFlags();
+    expect(swapPartnerOf([sp("m1"), sp("p3")], sp("p3"))).toBeUndefined();
+  });
 
   it("in a session of one participant and one moderator, each is the other's", () => {
     const [m, p, o] = [sp("m1"), sp("p3"), sp("o1")];

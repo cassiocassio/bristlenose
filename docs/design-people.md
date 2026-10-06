@@ -3378,6 +3378,18 @@ people as unique and roles as per-session is the People lens's long-term goal.
     the log, not the Mac's pipeline popover (a `PipelineSummary` field is a two-file change);
     whether a transcript paragraph's badge should speak for the paragraph (job 10) rather than
     the whole speaker — the owner's 6 Oct reading of the picker — is the next design question.
+    **Reviewed the same day; four fixes.** (1) The pin's evidence could never match a real
+    recording: serve took starts from the DB (whole seconds, stage 6's merged paragraphs, and
+    any split halves) while the run compared stage 5's raw fractional segments, so every pin was
+    dropped and a paid re-analysis changed nothing; the fixture's integer, unmerged starts hid it.
+    Both sides now read the same thing — serve the transcript file's timecodes
+    (`importer.turn_starts`), the run its raw segments merged by stage 6's rule and floored
+    (`pipeline._paragraph_starts`), pinned by a test that writes the file through stage 6.
+    (2) A carried pin re-applied on every import, reverting a later pick on the new slot; the
+    importer now records the code it landed on. (3) A pin outlived an undone recode — the next
+    run would have applied it; the speaker PUT now takes it away (`drop_withdrawn_pins`).
+    (4) The Mac's "pipeline busy" refusal, the missing cost estimate and an unreadable registry
+    now log instead of returning silently.
 
 23. **Built 6 Oct 2026 — the picker opens on the name, ready to overtype** (owner, the same
     day; web and Mac). A click on the current name always edits it, proposed or confirmed —
@@ -3386,9 +3398,12 @@ people as unique and roles as per-session is the People lens's long-term goal.
     an arrow goes to the list, Escape abandons the edit and the picker; the ✕ stays beside the
     field. A named participant has one field, their own name: no "New name for p3" row, since a
     participant record is one speaker's and typing over it is the rename. Moderators and
-    observers keep the new-person field, because renaming Martin changes him everywhere. Still
-    open: whether the swap row stays (the owner is weighing two plain acts with the old
-    participant offered by name), and §K, the paragraph question.
+    observers keep the new-person field, because renaming Martin changes him everywhere. **The
+    swap row is parked** (owner, 6 Oct 2026, `featureFlags.speakerSwap`, web and Mac): it does
+    two things at once, and the need it answered was narrower — one paragraph credited to m1
+    that was really p1, which is §K's paragraph question, not a whole-session exchange. Swapping
+    every turn of both speakers is rare. The server's `swap_with` and its undo stay live and
+    tested. Still open: §K, the paragraph question.
 
 ## §K — Paragraph and quote attribution: unsolved, and needed
 

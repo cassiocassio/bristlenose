@@ -11,6 +11,7 @@
 import i18n from "../i18n";
 import { apiGet } from "./api";
 import { isExportMode } from "./exportData";
+import { featureFlags } from "./featureFlags";
 import type { SpeakerNameState } from "./peopleChanged";
 import {
   personPickerNameTaken,
@@ -81,6 +82,7 @@ export function swapPartnerOf(
   speakers: SpeakerResponse[],
   sp: SpeakerResponse,
 ): PersonPickerSwap | undefined {
+  if (!featureFlags.speakerSwap) return undefined;
   const participants = speakers.filter((x) => pickerRoleOf(x.speaker_code) === "participant");
   const moderators = speakers.filter((x) => pickerRoleOf(x.speaker_code) === "moderator");
   if (participants.length !== 1 || moderators.length !== 1) return undefined;

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Tapestry</title>
+<!-- The shipped theme, verbatim: load_default_css(), comments stripped — the same stylesheet the SPA
+     serves at /report/assets/bristlenose-theme.css. Nothing below redefines a --bn-* token. -->
+<style>/*__THEME__*/</style>
+<style>
+:root { color-scheme: light dark; }
+body { margin: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text); font-family: var(--bn-font-body); }
+
+/* ── Mockup chrome (not product) ─────────────────────────────────────── */
+.mock-bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 16px; font: 11px var(--bn-font-mono); color: var(--bn-colour-muted);
+  background: repeating-linear-gradient(135deg, var(--bn-colour-bg) 0 8px, var(--bn-colour-quote-bg) 8px 9px);
+  border-bottom: 1px solid var(--bn-colour-border); }
+.mock-bar button { font: inherit; padding: 2px 8px; border-radius: var(--bn-radius-sm); border: 1px solid var(--bn-colour-border);
+  background: var(--bn-colour-bg); color: var(--bn-colour-text); cursor: pointer; }
+.mock-bar button[aria-pressed="true"] { border-color: var(--bn-colour-accent); color: var(--bn-colour-accent); }
+.mock-bar .dest { margin-left: auto; color: var(--bn-colour-accent); }
+.mock-stage { padding: 24px 32px 64px; overflow-x: auto; }
+.mock-viewport { outline: 1px dashed var(--bn-colour-border); outline-offset: 8px; }
+
+/* ── Tapestry (new) — every colour and size is a shipped token unless marked INVENTED ── */
+.bn-tapestry-toggle { border: 0; background: none; padding: 0; margin: 0 2px 0 -4px; width: 16px; height: 16px; vertical-align: -2px;
+  color: var(--bn-colour-muted); cursor: pointer; border-radius: var(--bn-radius-sm); }
+.bn-tapestry-toggle svg { transition: transform .15s ease; display: block; margin: auto; }
+.bn-tapestry-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+.bn-tapestry { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; transition: grid-template-rows .2s ease; }
+.bn-tapestry.open { grid-template-rows: 1fr; border-bottom: 1px solid var(--bn-colour-border); }
+.bn-tapestry > div { overflow: hidden; min-width: 0; }
+.bn-tapestry-scroll { background: var(--bn-colour-quote-bg); padding: var(--bn-space-sm) 0; overflow-x: auto; }
+.bn-tapestry-scroll svg { display: block; }
+@media (prefers-reduced-motion: reduce) { .bn-tapestry, .bn-tapestry-toggle svg { transition: none; } }
+
+.tp-lane { font: var(--bn-text-micro) var(--bn-font-mono); fill: var(--bn-colour-muted); }
+.tp-flag { font: var(--bn-weight-emphasis) var(--bn-text-badge) var(--bn-font-body); fill: var(--bn-colour-text); }
+.tp-tick { font: var(--bn-text-micro) var(--bn-font-mono); fill: var(--bn-colour-muted); }
+.tp-tag { font: var(--bn-weight-light) var(--bn-text-micro) var(--bn-font-mono); fill: var(--bn-colour-badge-text); }
+.tp-clip { font: var(--bn-weight-emphasis) var(--bn-text-micro) var(--bn-font-body); pointer-events: none; }
+.tp-bar { cursor: pointer; transition: opacity .12s; }
+.tp-bar:focus { outline: none; }
+.tp-bar.sel { stroke: var(--bn-colour-text); stroke-width: 1.25; }
+.tp-playhead { stroke: var(--bn-colour-accent); stroke-width: 1; pointer-events: none; }
+:root {
+  --tp-mod: light-dark(#b4bac2, #565c64);   /* INVENTED: clip fill when a session has no video */
+  --tp-ppt: light-dark(#5b6472, #b8c0cc);   /* INVENTED */
+  --tp-flag-rest: color-mix(in srgb, var(--bn-colour-bg) 94%, var(--bn-colour-text));   /* INVENTED: 6% tint */
+}
+
+/* Quote panel: the shipped .badge for the sentiment; panel itself is new */
+.tp-card { display: none; position: relative; margin: 0 var(--bn-space-md) var(--bn-space-md) 82px; max-width: 72ch;
+  padding: var(--bn-space-md); padding-left: calc(var(--bn-space-md) + 3px);
+  background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border); border-left: 3px solid var(--tp-accent, var(--bn-colour-border));
+  border-radius: var(--bn-radius-md); box-shadow: 0 1px 2px var(--bn-colour-shadow); cursor: pointer; transition: background-color .12s ease; }
+.tp-card.show { display: block; }
+.tp-card:hover { background: color-mix(in srgb, var(--bn-colour-bg) 96%, var(--bn-colour-text)); }   /* INVENTED: 4% */
+.tp-card .meta { display: flex; align-items: center; gap: var(--bn-space-sm); flex-wrap: wrap; font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
+.tp-card .meta .tc { font-family: var(--bn-font-mono); }
+.tp-card blockquote { margin: var(--bn-space-sm) 0 0; font-size: var(--bn-text-body); line-height: 1.5; padding-right: 48px;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
+.badge-none { background: var(--bn-colour-badge-bg); color: var(--bn-colour-muted); }   /* INVENTED: unrated quote */
+/* Prev/next: bristlenose.app's homepage .car-prev/.car-next at 12 px (from 26), 22 px hit area */
+.tp-nav { position: absolute; top: 6px; right: 6px; display: flex; }
+.tp-nav button { width: 22px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center;
+  opacity: 0; pointer-events: none; transition: opacity .15s ease-in-out; color: var(--bn-colour-text); }
+.tp-nav button span { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,.08);
+  background: rgba(255,255,255,.72); -webkit-backdrop-filter: blur(12px) saturate(1.5); backdrop-filter: blur(12px) saturate(1.5);
+  box-shadow: 0 .5px 1px rgba(0,0,0,.15); display: grid; place-items: center; }
+.tp-nav svg { width: 6px; height: 6px; }
+.tp-nav button:disabled span { opacity: .35; }
+.tp-card:hover .tp-nav button, .tp-card:focus-within .tp-nav button { opacity: 1; pointer-events: auto; }
+@media (prefers-color-scheme: dark) { .tp-nav button span { background: rgba(40,40,40,.72); border-color: rgba(255,255,255,.1); } }
+
+/* Zoom: Photos / Final Cut style mini slider in the section heading's action slot. INVENTED: no range control ships. */
+.tp-zoom { display: flex; align-items: center; gap: 2px; }
+.tp-zbtn { width: 16px; height: 16px; padding: 0; border: 0; background: none; color: var(--bn-colour-muted); display: grid; place-items: center; border-radius: var(--bn-radius-sm); cursor: pointer; }
+.tp-zbtn:hover { color: var(--bn-colour-text); }
+.tp-zbtn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+#tp-zoom { -webkit-appearance: none; appearance: none; width: 64px; height: 14px; background: none; margin: 0 2px; }
+#tp-zoom::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: var(--bn-colour-border); }
+#tp-zoom::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%; margin-top: -4px;
+  background: light-dark(#fff, #d8d8dc); box-shadow: 0 0 0 .5px rgb(0 0 0 / .3), 0 1px 2px rgb(0 0 0 / .25); }
+</style>
+</head>
+<body>
+<div class="mock-bar" aria-label="Mockup controls">
+  <span>Mockup · centre-column width:</span>
+  <button data-w="1256" title="1440 px window, sidebar closed">1256</button>
+  <button data-w="1096" title="1280 px window, sidebar closed">1096</button>
+  <button data-w="968" title="Grid breakpoint">968</button>
+  <button data-w="760">760</button>
+  <button data-w="560">560</button>
+  <span id="wlabel"></span>
+  <span class="dest" id="dest" aria-live="polite"></span>
+</div>
+<div class="mock-stage"><div class="mock-viewport" id="vp">
+  <section class="bn-session-table">
+    <div class="section-heading">
+      <h1>Sessions</h1>
+      <div class="section-heading-action">
+        <div class="tp-zoom" role="group" aria-label="Timeline zoom">
+          <button class="tp-zbtn" id="tp-zout" aria-label="Zoom out" title="Zoom Out (⌘−)"><svg viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5M4.5 6.5h4"/></svg></button>
+          <input type="range" id="tp-zoom" min="0" max="100" value="0" aria-label="Zoom">
+          <button class="tp-zbtn" id="tp-zin" aria-label="Zoom in" title="Zoom In (⌘+)"><svg viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5M4.5 6.5h4M6.5 4.5v4"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <p class="bn-session-moderators" id="mods"></p>
+    <div class="bn-sessions-grid" role="table" id="grid">
+      <div class="bn-sessions-row bn-sessions-head" role="row">
+        <div class="bn-sessions-cell bn-cell-id" role="columnheader">ID</div>
+        <div class="bn-sessions-cell bn-cell-thumb" role="columnheader"></div>
+        <div class="bn-sessions-cell bn-cell-speakers" role="columnheader">Speakers</div>
+        <div class="bn-sessions-cell bn-cell-start" role="columnheader"><span class="bn-sessions-h1">Start</span><span class="bn-sessions-h2">User journey</span></div>
+        <div class="bn-sessions-cell bn-cell-sentiment" role="columnheader">Sentiment</div>
+        <div class="bn-sessions-cell bn-cell-duration" role="columnheader">Duration</div>
+        <div class="bn-sessions-cell bn-cell-file" role="columnheader"><span class="bn-sessions-h1">Interviews</span></div>
+      </div>
+    </div>
+  </section>
+</div></div>
+
+<script>
+const DATA = /*__DATA__*/null;
+
+const POS = ["satisfaction", "delight", "confidence"];
+const ORDER = ["frustration", "confusion", "doubt", "surprise", "satisfaction", "delight", "confidence"];   // SessionsTable SENTIMENT_ORDER
+const L = 82, R = 14;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = sec => { sec = Math.round(sec); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  return h ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`; };
+const ns = "http://www.w3.org/2000/svg";
+const el = (tag, attrs, parent) => { const n = document.createElementNS(ns, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; };
+const h = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const mctx = document.createElement("canvas").getContext("2d");
+function fit(text, avail, font) {
+  mctx.font = font; if (avail < 10) return "";
+  if (mctx.measureText(text).width <= avail) return text;
+  let t = text; while (t.length > 1 && mctx.measureText(t + "…").width > avail) t = t.slice(0, -1);
+  return t.length > 1 ? t + "…" : "";
+}
+// Canvas fonts resolved from the same tokens the SVG classes use, so truncation measures what renders.
+const px = v => (v.endsWith("rem") ? parseFloat(v) * 16 : parseFloat(v)) + "px";
+const FONTS = {};
+function loadFonts() {
+  const body = css("--bn-font-body"), mono = css("--bn-font-mono");
+  FONTS.flag = `${css("--bn-weight-emphasis")} ${px(css("--bn-text-badge"))} ${body}`;
+  FONTS.tag = `${css("--bn-weight-light")} ${px(css("--bn-text-micro"))} ${mono}`;
+  FONTS.clip = `${css("--bn-weight-emphasis")} ${px(css("--bn-text-micro"))} ${body}`;
+}
+const isMod = code => /^[mo]/.test(code);
+
+// tn.rgb: mean video-keyframe colour inside the turn, computed by build.py.
+
+const state = { sPerPx: 4 };
+const dest = document.getElementById("dest");
+const jump = (s, sec, what) => { dest.textContent = `→ /report/sessions/${s.id}#t-${Math.floor(sec)} · ${fmt(sec)} · ${what}`; };
+
+// While a quote is open, ← → step quotes and Esc closes, whatever has focus (WebKit does not focus an
+// SVG element on click, so a bar-scoped handler let the arrow fall through to the horizontal scroll).
+let active = null;
+document.addEventListener("keydown", e => {
+  if (e.metaKey && !e.altKey) {
+    if (e.key === "=" || e.key === "+") { e.preventDefault(); zstep(20); }
+    else if (e.key === "-") { e.preventDefault(); zstep(-20); }
+    else if (e.key === "0") { e.preventDefault(); zoom.value = 0; render(); }
+    return;
+  }
+  if (!active || active._sel < 0 || e.altKey || e.ctrlKey) return;
+  if (e.target.matches?.("input, textarea, select")) return;
+  if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+    e.preventDefault();
+    select(active, Math.max(0, Math.min(active.quotes.length - 1, active._sel + (e.key === "ArrowRight" ? 1 : -1))));
+  } else if (e.key === "Escape") { e.preventDefault(); select(active, -1); }
+});
+
+function select(s, i, quiet = false) {
+  if (!quiet && active && active !== s) select(active, -1, true);
+  s._sel = i; active = i >= 0 ? s : (active === s ? null : active);
+  (s._bars || []).forEach((b, k) => { b.classList.toggle("sel", k === i); b.style.opacity = i < 0 || k === i ? "" : 0.3; });
+  const card = s._card;
+  if (i < 0) { card.classList.remove("show"); return; }
+  const bar = s._bars[i];
+  if (!quiet && bar) {
+    bar.focus({ preventScroll: true });
+    const wrap = bar.closest(".bn-tapestry-scroll"), bx = +(bar.getAttribute("x") ?? bar.getAttribute("cx"));
+    if (wrap && (bx < wrap.scrollLeft + 90 || bx > wrap.scrollLeft + wrap.clientWidth - 30)) wrap.scrollLeft = Math.max(0, bx - wrap.clientWidth / 2);
+  }
+  const q = s.quotes[i];
+  card.style.setProperty("--tp-accent", q.sentiment ? `var(--bn-sentiment-${q.sentiment})` : "var(--bn-colour-border)");
+  card.replaceChildren();
+  const nav = h("div", "tp-nav");
+  const mk = (label, d, path) => {
+    const b = h("button"); b.type = "button"; b.setAttribute("aria-label", label);
+    b.innerHTML = `<span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="${path}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+    b.disabled = i + d < 0 || i + d >= s.quotes.length;
+    b.addEventListener("click", e => { e.stopPropagation(); select(s, i + d); });
+    return b;
+  };
+  nav.append(mk("Previous quote", -1, "M7.5 2.5 4 6l3.5 3.5"), mk("Next quote", 1, "M4.5 2.5 8 6l-3.5 3.5"));
+  const meta = h("div", "meta");
+  meta.append(h("span", `badge badge-${q.sentiment || "none"}`, q.sentiment || "no sentiment"),
+              h("span", "tc", `${fmt(q.t0)}–${fmt(q.t1)}`),
+              h("span", null, q.section || q.theme || ""));
+  card.append(nav, meta, h("blockquote", null, `“${q.text}”`));
+  card.onclick = () => jump(s, q.t0, "quote");
+  card.classList.add("show");
+}
+
+function slice(s) {
+  const sPerPx = state.sPerPx, x = sec => L + sec / sPerPx, xEnd = x(s.duration), W = Math.ceil(xEnd + R);
+  const clips = sPerPx <= 2.5;
+  const MT = { y: 26, h: 16 }, PT = { y: 45, h: 18 }, SE = { mid: 104, amp: 30 }, TG = { y: 144, row: 17, rows: 3 };
+  const H = TG.y + TG.row * TG.rows + 14;
+  const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "group", "aria-label": `Timeline of session ${s.number}` });
+  const lbl = (y, t) => { el("text", { x: 12, y, class: "tp-lane" }, svg).textContent = t; };
+  lbl(14, "sections"); lbl(MT.y + 12, "moderator"); lbl(PT.y + 13, "participant"); lbl(SE.mid + 3, "sentiment"); lbl(TG.y + 11, "themes");
+  const nameOf = c => (s.speakers.find(p => p.code === c) || {}).name || c;
+
+  el("rect", { x: L, y: MT.y - 1, width: xEnd - L, height: PT.y + PT.h - MT.y + 2, rx: 4, fill: "var(--bn-colour-badge-bg)" }, svg);
+  s.turns.forEach(tn => {
+    const tr = isMod(tn.code) ? MT : PT, x0 = x(tn.t0), w = x(tn.t1) - x(tn.t0);
+    const rgb = tn.rgb, fill = rgb ? `rgb(${rgb.join(",")})` : isMod(tn.code) ? "var(--tp-mod)" : "var(--tp-ppt)";
+    if (clips) {
+      if (w < 1) return;
+      el("rect", { x: x0 + 0.5, y: tr.y, width: Math.max(1, w - 1), height: tr.h, rx: Math.min(3, w / 2), fill,
+        stroke: rgb ? "rgb(0 0 0 / .25)" : "none", "stroke-width": 0.75 }, svg);
+      const label = fit(nameOf(tn.code), w - 8, FONTS.clip) || (w > 22 ? tn.code : "");
+      if (label) {
+        const lum = rgb ? 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2] : (isMod(tn.code) ? 200 : 60);
+        el("text", { x: x0 + 4, y: tr.y + tr.h / 2 + 3.5, class: "tp-clip", fill: lum > 150 ? "#1a1a1a" : "#fff" }, svg).textContent = label;
+      }
+    } else el("rect", { x: x0, y: tr.y, width: Math.max(0.5, w), height: tr.h, fill }, svg);
+  });
+
+  // Section flags: truncated at rest; raised in full (with a faint shadow) while the pointer is in that stretch
+  const defs = el("defs", {}, svg), fid = `lift-${s.id}`;
+  el("feDropShadow", { dx: 0, dy: 0.6, stdDeviation: 0.9, "flood-color": "#000", "flood-opacity": 0.16 },
+    el("filter", { id: fid, x: "-10%", y: "-30%", width: "120%", height: "170%" }, defs));
+  const fg = el("g", {}, svg);
+  const flags = s.sections.map((tp, i) => {
+    const fx = x(tp.t0), next = i + 1 < s.sections.length ? x(s.sections[i + 1].t0) : xEnd;
+    const g = el("g", { style: "cursor:pointer" }, fg);
+    const draw = raised => {
+      g.replaceChildren();
+      el("line", { x1: fx + 0.5, x2: fx + 0.5, y1: 2, y2: MT.y - 2, stroke: "var(--bn-colour-text)" }, g);
+      const text = raised ? tp.label : fit(tp.label, next - fx - 20, FONTS.flag);
+      mctx.font = FONTS.flag;
+      const pw = (text ? mctx.measureText(text).width : 0) + 12;
+      el("path", { d: `M${fx + 1},2 h${pw} l-5,7 l5,7 h-${pw} z`, fill: raised ? "var(--bn-colour-bg)" : "var(--tp-flag-rest)",
+        stroke: raised ? "var(--bn-colour-text)" : "var(--bn-colour-border)", filter: raised ? `url(#${fid})` : "none" }, g);
+      if (text) el("text", { x: fx + 4, y: 13, class: "tp-flag" }, g).textContent = text;
+      el("title", {}, g).textContent = `${tp.label} · ${fmt(tp.t0)}`;
+    };
+    draw(false);
+    g.addEventListener("click", () => jump(s, tp.t0, `section “${tp.label}”`));
+    return { g, draw, t0: tp.t0 };
+  });
+  let raised = -1;
+  const raise = i => {
+    if (i === raised) return;
+    if (raised >= 0) { flags[raised].draw(false); flags.forEach(f => fg.appendChild(f.g)); }
+    raised = i;
+    if (i >= 0) { flags[i].draw(true); fg.appendChild(flags[i].g); }
+  };
+  const secAt = e => (e.clientX - svg.getBoundingClientRect().left - L) * sPerPx;
+  const lane = el("rect", { x: L, y: MT.y - 1, width: xEnd - L, height: PT.y + PT.h - MT.y + 2, fill: "transparent", style: "cursor:pointer" }, svg);
+  const ph = el("line", { y1: MT.y - 1, y2: SE.mid + SE.amp, class: "tp-playhead", visibility: "hidden" }, svg);
+  lane.addEventListener("mousemove", e => {
+    const sec = secAt(e); let i = -1; flags.forEach((f, k) => { if (f.t0 <= sec) i = k; }); raise(i);
+    ph.setAttribute("x1", x(sec)); ph.setAttribute("x2", x(sec)); ph.setAttribute("visibility", "visible");
+  });
+  lane.addEventListener("mouseleave", () => { raise(-1); ph.setAttribute("visibility", "hidden"); });
+  lane.addEventListener("click", e => {
+    const sec = Math.max(0, Math.min(s.duration, secAt(e))), tn = s.turns.find(t => sec < t.t1) || s.turns[s.turns.length - 1];
+    jump(s, sec, `${nameOf(tn.code)} speaking`);
+  });
+
+  // Sentiment: intensity sets height; unrated quotes are short ticks on the line
+  el("line", { x1: L, x2: xEnd, y1: SE.mid, y2: SE.mid, stroke: "var(--bn-colour-muted)", "stroke-width": 0.8 }, svg);
+  const bars = [];
+  s.quotes.forEach(q => {
+    const cx = x(q.t0), hh = (0.35 + 0.65 * (q.intensity - 1) / 2) * SE.amp;
+    let n;
+    if (!q.sentiment) n = el("rect", { x: cx - 0.75, y: SE.mid - 3, width: 1.5, height: 6, fill: "var(--bn-colour-muted)", class: "tp-bar" }, svg);
+    else if (q.sentiment === "surprise") n = el("circle", { cx, cy: SE.mid, r: 3.2, fill: "var(--bn-sentiment-surprise)", class: "tp-bar" }, svg);
+    else n = el("rect", { x: cx - 2, width: 4, y: POS.includes(q.sentiment) ? SE.mid - hh : SE.mid, height: hh, rx: 1,
+      fill: `var(--bn-sentiment-${q.sentiment})`, class: "tp-bar" }, svg);
+    n.dataset.theme = q.theme || "";
+    n.setAttribute("tabindex", "0"); n.setAttribute("role", "button");
+    n.setAttribute("aria-label", `${q.sentiment || "no sentiment"} at ${fmt(q.t0)}`);
+    const qi = bars.length;
+    n.addEventListener("click", () => select(s, qi));
+    n.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(s, qi); } });
+    bars.push(n);
+  });
+
+  // Theme spans: first to last quote in this session
+  const spans = {};
+  s.quotes.forEach(q => { if (!q.theme) return; const sp = spans[q.theme] ||= { t0: q.t0, t1: q.t0, n: 0 };
+    sp.t0 = Math.min(sp.t0, q.t0); sp.t1 = Math.max(sp.t1, q.t0); sp.n++; });
+  const ends = Array(TG.rows).fill(-1e9);
+  Object.entries(spans).sort((a, b) => a[1].t0 - b[1].t0).forEach(([theme, sp]) => {
+    const x0 = x(sp.t0), x1 = Math.max(x(sp.t1), x0 + 6);
+    const row = ends.indexOf(Math.min(...ends)), lx = Math.max(x0, ends[row] + 4), y = TG.y + row * TG.row;
+    const g = el("g", {}, svg);
+    el("rect", { x: x0, y: y + 5, width: x1 - x0, height: 4, rx: 2, fill: "var(--bn-colour-muted)", opacity: 0.5 }, g);
+    const text = fit(theme, Math.min(Math.max(x1 - lx, 120), W - R - lx - 8), FONTS.tag);
+    mctx.font = FONTS.tag;
+    const tw = text ? mctx.measureText(text).width : 0;
+    if (text) { el("rect", { x: lx, y, width: tw + 8, height: 14, rx: 3, fill: "var(--bn-colour-badge-bg)" }, g);
+      el("text", { x: lx + 4, y: y + 10.5, class: "tp-tag" }, g).textContent = text; }
+    el("title", {}, g).textContent = `${theme} · ${sp.n} quote${sp.n === 1 ? "" : "s"} · ${fmt(sp.t0)}–${fmt(sp.t1)}`;
+    ends[row] = Math.max(x1, lx + tw + 8);
+    g.addEventListener("mouseenter", () => bars.forEach(b => b.style.opacity = b.dataset.theme === theme ? 1 : 0.12));
+    g.addEventListener("mouseleave", () => bars.forEach((b, k) => b.style.opacity = s._sel < 0 || k === s._sel ? "" : 0.3));
+  });
+
+  s._bars = bars;
+  if (s._sel >= 0) select(s, s._sel, true);
+  const step = [60, 120, 300, 600, 900, 1800].find(st => st / sPerPx >= 64) || 3600;
+  for (let t = 0; t <= s.duration; t += step)
+    el("text", { x: x(t), y: H - 2, class: "tp-tick", "text-anchor": t === 0 ? "start" : "middle" }, svg).textContent = fmt(t);
+  return svg;
+}
+
+// ── Rows: SessionRow's real DOM (frontend/src/islands/SessionsTable.tsx), plus the disclosure in the ID cell
+const grid = document.getElementById("grid");
+const chevron = `<svg width="9" height="9" viewBox="0 0 10 10"><path d="M3 1.5 L7 5 L3 8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const wraps = [];
+const mods = new Set();
+DATA.sessions.forEach((s, i) => {
+  s.speakers.filter(p => isMod(p.code)).forEach(p => mods.add(p.name));
+  const row = h("div", "bn-sessions-row"); row.dataset.session = s.id; row.setAttribute("role", "row");
+  const cell = (cls) => { const c = h("div", `bn-sessions-cell ${cls}`); c.setAttribute("role", "cell"); row.append(c); return c; };
+
+  const id = cell("bn-cell-id bn-session-id");
+  const btn = h("button", "bn-tapestry-toggle"); btn.type = "button"; btn.innerHTML = chevron;
+  btn.setAttribute("aria-expanded", String(i < 2)); btn.setAttribute("aria-controls", `tap-${s.id}`);
+  btn.setAttribute("aria-label", `Timeline for session ${s.number}`);
+  const a = h("a", null, `#${s.number}`); a.href = "#";
+  id.append(btn, a);
+
+  const th = cell("bn-cell-thumb");
+  if (s.thumb) { const v = h("div", "bn-video-thumb"); const img = h("img"); img.src = s.thumb; img.alt = ""; v.append(img); th.append(v); }
+
+  const sp = cell("bn-cell-speakers bn-session-speakers");
+  s.speakers.forEach(p => {
+    const entry = h("span", "bn-session-speaker-entry bn-person-picker-anchor");
+    const trig = h("button", "bn-person-picker-trigger"); trig.type = "button";
+    const badge = h("span", "bn-person-badge"), split = h("span", "bn-speaker-badge--split");
+    split.append(h("span", "bn-speaker-badge-code", p.code)); badge.append(split); trig.append(badge);
+    const names = h("span");
+    names.append(h("span", "bn-speaker-editable-name bn-speaker-name-full", p.name), h("span", "bn-speaker-name-short", p.name.split(/\s+/)[0]));
+    entry.append(trig, names, Object.assign(h("button", "bn-name-pencil", "✎"), { type: "button" }));
+    sp.append(entry);
+  });
+
+  const st = cell("bn-cell-start");
+  st.append(h("div", null, s.date || "—"));
+  if (s.journey.length) {
+    const j = h("div", "bn-session-journey");
+    s.journey.forEach((lab, k) => {
+      const w = h("span");
+      if (k) { const sep = h("span", "bn-journey-sep", " → "); sep.setAttribute("aria-hidden", "true"); w.append(sep); }
+      const la = h("a", "bn-journey-label bn-journey-label--interactive", lab); la.href = "#"; w.append(la);
+      j.append(w);
+    });
+    st.append(j);
+  }
+
+  const se = cell("bn-cell-sentiment bn-session-sentiment");
+  const counts = {}; s.quotes.forEach(q => { if (q.sentiment) counts[q.sentiment] = (counts[q.sentiment] || 0) + 1; });
+  const maxC = Math.max(0, ...Object.values(counts));
+  if (maxC) {
+    const spark = h("div", "bn-sparkline"); spark.style.gap = "2px";
+    ORDER.forEach(k => { const b = h("span", "bn-sparkline-bar"); const c = counts[k] || 0;
+      Object.assign(b.style, { height: `${c ? Math.max(Math.round(c / maxC * 20), 2) : 0}px`, background: `var(--bn-sentiment-${k})`, opacity: 0.8 });
+      spark.append(b); });
+    se.append(spark);
+  }
+  cell("bn-cell-duration bn-session-duration").textContent = s.duration_human;
+  const fl = cell("bn-cell-file");
+  if (s.file) { const fa = h("a", "timecode", s.file); fa.href = "#"; fl.append(fa); } else fl.textContent = "—";
+
+  // The slice: a full-width grid item after its row
+  const tap = h("div", "bn-tapestry" + (i < 2 ? " open" : "")); tap.id = `tap-${s.id}`; tap.setAttribute("role", "row");
+  const inner = h("div"), wrap = h("div", "bn-tapestry-scroll"), card = h("div", "tp-card");
+  card.setAttribute("aria-live", "polite");
+  s._card = card; s._sel = -1;
+  inner.append(wrap, card); tap.append(inner); wraps.push([wrap, s]);
+  btn.addEventListener("click", e => {
+    e.stopPropagation();
+    const open = btn.getAttribute("aria-expanded") !== "true";
+    const targets = e.altKey ? [...grid.querySelectorAll(".bn-tapestry-toggle")] : [btn];
+    targets.forEach(b => { b.setAttribute("aria-expanded", String(open)); document.getElementById(b.getAttribute("aria-controls")).classList.toggle("open", open); });
+  });
+  grid.append(row, tap);
+});
+document.getElementById("mods").textContent = mods.size ? `Moderated by ${[...mods].join(", ")}` : "";
+
+// ── Shared scale: fit to the longest session, clamped 1–4 s/px; zoom runs from fit to 0.25 s/px
+const longest = Math.max(...DATA.sessions.map(s => s.duration));
+const zoom = document.getElementById("tp-zoom");
+const fitScale = () => Math.min(4, Math.max(1, longest / (grid.clientWidth - L - R)));
+function render() {
+  loadFonts();
+  const f = fitScale();
+  state.sPerPx = Math.exp(Math.log(f) + (Math.log(0.25) - Math.log(f)) * zoom.value / 100);
+  zoom.title = `${state.sPerPx.toFixed(2)} s/px · double-click to fit`;
+  const left = wraps[0][0].scrollLeft;
+  wraps.forEach(([w, s]) => { w.replaceChildren(slice(s)); w.scrollLeft = left; });
+  document.getElementById("wlabel").textContent = `· grid ${grid.clientWidth}px · ${state.sPerPx.toFixed(2)} s/px`;
+}
+let syncing = false;
+wraps.forEach(([w]) => w.addEventListener("scroll", () => {
+  if (syncing) return; syncing = true; wraps.forEach(([o]) => { if (o !== w) o.scrollLeft = w.scrollLeft; }); syncing = false; }));
+const zstep = d => { zoom.value = Math.max(0, Math.min(100, +zoom.value + d)); render(); };
+zoom.addEventListener("input", render);
+zoom.addEventListener("dblclick", () => { zoom.value = 0; render(); });
+document.getElementById("tp-zin").addEventListener("click", () => zstep(20));
+document.getElementById("tp-zout").addEventListener("click", () => zstep(-20));
+
+// Mockup width presets
+const vp = document.getElementById("vp");
+const setW = w => { vp.style.width = w + "px";
+  document.querySelectorAll(".mock-bar [data-w]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.w === w))); };
+document.querySelectorAll(".mock-bar [data-w]").forEach(b => b.addEventListener("click", () => setW(+b.dataset.w)));
+setW(1256);
+render();
+new ResizeObserver(render).observe(grid);
+</script>
+</body>
+</html>

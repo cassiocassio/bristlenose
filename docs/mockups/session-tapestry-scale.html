@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tapestry Scale</title>
+<style>
+/* Quick/loose mockup — companion to session-tapestry.html. Sessions are synthetic but drawn from
+   distributions MEASURED on real trial-run transcripts (aggregate numbers only, no content). */
+:root {
+  color-scheme: light dark;
+  --bn-colour-bg: light-dark(#ffffff, #1c1c1e);
+  --bn-colour-text: light-dark(#1d1d1f, #f2f2f7);
+  --bn-colour-muted: light-dark(#6e6e73, #98989d);
+  --bn-colour-border: light-dark(#e5e5ea, #38383a);
+  --bn-colour-hover: light-dark(#f5f5f7, #2c2c2e);
+  --bn-sentiment-frustration: #ea580c; --bn-sentiment-confusion: #dc2626; --bn-sentiment-doubt: #7c3aed;
+  --bn-sentiment-surprise: #d97706; --bn-sentiment-satisfaction: #16a34a; --bn-sentiment-delight: #059669;
+  --bn-sentiment-confidence: #2563eb;
+  --mod: light-dark(#aeb4bd, #5a6068);
+  --ppt: light-dark(#5b6472, #b8c0cc);
+  --slice-bg: light-dark(#fafafa, #232325);
+  --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --flag-rest: color-mix(in srgb, var(--bn-colour-bg) 94%, var(--bn-colour-text));
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text); font: 420 14px/1.45 var(--font); }
+main { max-width: 1240px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 20px; font-weight: 490; margin: 0 0 6px; }
+h2 { font-size: 15px; font-weight: 490; margin: 28px 0 8px; }
+p.lede { color: var(--bn-colour-muted); margin: 0 0 18px; max-width: 72ch; }
+table { border-collapse: collapse; font-size: 13px; margin: 8px 0 4px; }
+th, td { text-align: right; padding: 4px 12px; border-bottom: 1px solid var(--bn-colour-border); }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 490; color: var(--bn-colour-muted); }
+td.num { font-family: var(--mono); }
+.note { font-size: 12px; color: var(--bn-colour-muted); max-width: 90ch; }
+
+.frame { border: 1px solid var(--bn-colour-border); border-radius: 10px; overflow: hidden; margin: 10px 0 4px; }
+.chrome { height: 26px; display: flex; align-items: center; gap: 10px; padding: 0 10px; background: var(--bn-colour-hover);
+  border-bottom: 1px solid var(--bn-colour-border); font: 11px var(--mono); color: var(--bn-colour-muted); }
+.chrome b { color: var(--bn-colour-text); font-weight: 490; }
+.chrome .dest { margin-left: auto; color: var(--bn-sentiment-confidence); }
+.slice-wrap { background: var(--slice-bg); padding: 10px 12px 8px; overflow-x: auto; }
+.slice-wrap svg { display: block; overflow: visible; }
+.lane-label { font: 10px var(--mono); fill: var(--bn-colour-muted); }
+.scene { font: 490 11px var(--font); fill: var(--bn-colour-text); }
+.tick { font: 10px var(--mono); fill: var(--bn-colour-muted); }
+.tagtext { font: 10px var(--mono); fill: var(--bn-colour-text); }
+.clipcode { font: 490 10px var(--mono); fill: #fff; pointer-events: none; }
+/* Zoom control: a mini macOS slider flanked by magnifiers (Photos, Final Cut timeline). ~104 px wide. */
+.zoom { margin-left: 12px; display: flex; align-items: center; gap: 2px; }
+.chrome .dest + .zoom { margin-left: 12px; }
+.chrome .dest:empty + .zoom { margin-left: auto; }
+.zbtn { width: 16px; height: 16px; padding: 0; border: 0; background: none; color: var(--bn-colour-muted); cursor: default; display: grid; place-items: center; border-radius: 3px; }
+.zbtn:hover { color: var(--bn-colour-text); }
+.zbtn:focus-visible, #zslider:focus-visible { outline: 2px solid var(--bn-sentiment-confidence); outline-offset: 1px; }
+.zbtn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+#zslider { -webkit-appearance: none; appearance: none; width: 64px; height: 14px; background: none; margin: 0 2px; }
+#zslider::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: var(--bn-colour-border); }
+#zslider::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%; margin-top: -4px;
+  background: light-dark(#fff, #d8d8dc); box-shadow: 0 0 0 0.5px rgb(0 0 0 / .3), 0 1px 2px rgb(0 0 0 / .25); }
+#zslider::-moz-range-track { height: 3px; border-radius: 2px; background: var(--bn-colour-border); }
+#zslider::-moz-range-thumb { width: 11px; height: 11px; border: 0; border-radius: 50%; background: light-dark(#fff, #d8d8dc);
+  box-shadow: 0 0 0 0.5px rgb(0 0 0 / .3), 0 1px 2px rgb(0 0 0 / .25); }
+.verdict { border-left: 3px solid var(--bn-sentiment-confidence); padding: 2px 0 2px 12px; margin: 10px 0; max-width: 90ch; }
+.verdict b { font-weight: 490; }
+
+.commentary { margin-top: 32px; padding: 16px 20px; border-left: 3px solid var(--bn-colour-border);
+  background: repeating-linear-gradient(135deg, transparent 0 8px, light-dark(#0000000a,#ffffff08) 8px 9px); }
+.commentary .lbl { font: 11px var(--mono); color: var(--bn-colour-muted); text-transform: uppercase; letter-spacing: .06em; }
+.commentary ul { margin: 6px 0 0; padding-left: 18px; }
+.commentary li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Tapestry scale: seconds per pixel</h1>
+  <p class="lede">How dense a slice can get before each lane stops reading, measured against how often real transcripts
+  change speaker, change topic and produce a quote. The sessions below are synthetic, sampled from the measured distributions.</p>
+
+  <h2>Measured on real test recordings</h2>
+  <table>
+    <tr><th>Quantity</th><th>p10</th><th>p25</th><th>median</th><th>p75</th><th>p90</th><th>n</th></tr>
+    <tr><td>Speaker turn length</td><td class="num">2 s</td><td class="num">5 s</td><td class="num">10 s</td><td class="num">26 s</td><td class="num">46 s</td><td class="num">1,854</td></tr>
+    <tr><td>Topic segment length (s08)</td><td class="num">48 s</td><td class="num">86 s</td><td class="num">181 s</td><td class="num">266 s</td><td class="num">362 s</td><td class="num">194</td></tr>
+    <tr><td>Gap between quotes (s09)</td><td class="num">30 s</td><td class="num">45 s</td><td class="num">64 s</td><td class="num">92 s</td><td class="num">128 s</td><td class="num">397</td></tr>
+    <tr><td>Theme span in one session, share of session</td><td class="num">0%</td><td class="num">0%</td><td class="num">10%</td><td class="num">40%</td><td class="num">60%</td><td class="num">70</td></tr>
+  </table>
+  <p class="note">36 sessions of at least 10 minutes with at least two speakers, drawn from 9 trial-run projects; 16 of them fully
+  analysed. Rates over the analysed sessions: <b>3.1 topics</b> and <b>6.6 quotes per 10 minutes</b>, and about
+  <b>4–5 themes per session</b>. Turn lengths are dominated by the conversational usability sessions. The oral histories (fossda) show 4–24 turns an hour, which is long-monologue behaviour and probably also
+  under-split diarisation. Half the theme–session pairs are one or two quotes, so a theme usually lands as a point or a short span, not
+  a band across the session.</p>
+
+  <h2>What each lane needs</h2>
+  <table>
+    <tr><th>Lane</th><th>Legibility floor</th><th>Event it must survive</th><th>Needs at least</th></tr>
+    <tr><td>Speaker clips, rounded with a gap</td><td class="num">4 px per clip</td><td>median turn, 10 s</td><td class="num">≤ 2.5 s/px</td></tr>
+    <tr><td>Speaker clips, as slivers (no rounding)</td><td class="num">2 px</td><td>p25 turn, 5 s</td><td class="num">≤ 2.5 s/px</td></tr>
+    <tr><td>Topic flag with a few letters of label</td><td class="num">50 px</td><td>median segment, 181 s</td><td class="num">≤ 3.6 s/px</td></tr>
+    <tr><td>Topic flag, pennant only</td><td class="num">14 px</td><td>p10 segment, 48 s</td><td class="num">≤ 3.4 s/px</td></tr>
+    <tr><td>Sentiment bar, 4 px plus a gap</td><td class="num">8 px</td><td>p10 quote gap, 30 s</td><td class="num">≤ 3.75 s/px</td></tr>
+  </table>
+  <p class="note">The speaker lane is the binding constraint. Every other lane survives at about 4 s/px, but the turns
+  stop being individual clips beyond about 2.5 s/px. Long monologues (p90, 46 s) still show as clips at 4 s/px (11 px).</p>
+
+  <div class="verdict">
+    <b>Decision:</b> one shared scale per project, <b>fit to the longest session, clamped to 1–4 s/px</b>
+    (15–60 px per minute).
+    <ul>
+      <li><b>Upper clamp, 1 s/px:</b> beyond this a short project would be blown up to fill the width, with nothing gained. Every topic label already fits at the median, and every turn is a clip.</li>
+      <li><b>Lower clamp, 4 s/px:</b> a 60-minute session is then 900 px, which fits the Sessions grid on a laptop. Topics and sentiment still read. The speaker lane switches to slivers (no rounding, no gap, no code) below 2.5 s/px. It becomes a talk-pattern texture in which monologues stand out, the way clips do in Final Cut zoomed out.</li>
+      <li><b>Longer than about 60 minutes</b> (2 of the 36 measured sessions are over 90 minutes): the slice scrolls horizontally at 4 s/px rather than compressing further. Every lane stays legible, at the cost of one scrolling row.</li>
+    </ul>
+  </div>
+
+  <h2>15-minute session</h2>
+  <div id="f15"></div>
+  <h2>60-minute session</h2>
+  <div id="f60"></div>
+  <h2>Both in one project: shared scale, fit to the 60-minute session</h2>
+  <div id="fboth"></div>
+
+  <h2>Zoom: one control for the project's shared scale</h2>
+  <div class="frame" id="zoomframe">
+    <div class="chrome"><b>Sessions</b><span class="dest"></span>
+      <div class="zoom" role="group" aria-label="Timeline zoom">
+        <button class="zbtn" id="zout" aria-label="Zoom out" title="Zoom Out (⌘−)">
+          <svg viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5M4.5 6.5h4"/></svg></button>
+        <input type="range" id="zslider" min="0" max="100" value="0" aria-label="Zoom" title="Double-click to fit">
+        <button class="zbtn" id="zin" aria-label="Zoom in" title="Zoom In (⌘+)">
+          <svg viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5M4.5 6.5h4M6.5 4.5v4"/></svg></button>
+      </div>
+    </div>
+    <div class="slice-wrap" id="zs1"></div>
+    <div class="slice-wrap" id="zs2" style="border-top:1px solid var(--bn-colour-border)"></div>
+  </div>
+
+  <div class="commentary">
+    <div class="lbl">Commentary</div>
+    <ul>
+      <li><b>Clip colour is neutral here</b>: moderator muted, participant solid. This follows the design review, so that the sentiment hues are the only colour in the slice. The frame-colour idea from <code>session-tapestry.html</code> can come back as an option for speaker-view recordings.</li>
+      <li><b>Themes are drawn as spans</b> from first to last quote, not as a tag at the first quote. Per the measurements, most are points or short spans. A one-quote theme gets a short cap so it can still be hovered.</li>
+      <li><b>Turns are synthetic:</b> lognormal, median 10 s, p90 46 s (σ ≈ 1.19). Participant turns run ×1.5 and moderator turns ×0.6. Topic segments are lognormal with a median of 181 s, and quote gaps lognormal with a median of 64 s.</li>
+      <li><b>Hover and click:</b> hovering the speaker lane raises the flag for the topic under the pointer, with its full label drawn over its neighbours. Labels at rest are truncated so nothing overlaps. Clicking a clip jumps to the transcript at the start of that turn, and clicking a flag jumps to the start of that topic. (In the mockup the destination is shown in the frame's title bar.) The hit area is the whole speaker lane, so slivers at 4 s/px are as easy to hover as clips.</li>
+      <li><b>Zoom</b> sets the project's shared scale, so every expanded slice zooms together and the cross-session comparison survives. The control is borrowed from Photos and the Final Cut timeline: a 64 px slider between zoom-out and zoom-in magnifiers, about 104 px in all, placed in the Sessions header and not repeated per row. The left end is Fit, the default (fit to the longest session, clamped at 4 s/px). The right end is 0.25 s/px, for reading individual turns in a dense stretch. The steps are logarithmic, and ⌘− / ⌘+ / ⌘0 (fit) follow the View-menu convention. Double-clicking the slider also fits. Beyond Fit the slices scroll horizontally.</li>
+      <li><b>Not settled:</b> whether oral-history projects, which have few long turns, want a coarser floor. Their speaker lane is legible at any scale. Their topics are the dense lane.</li>
+    </ul>
+  </div>
+</main>
+
+<script>
+function rng(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+function lognorm(r, median, sigma) { // Box–Muller
+  const u = Math.max(1e-9, r()), v = r();
+  return median * Math.exp(sigma * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v));
+}
+const POS = ["satisfaction", "delight", "confidence"], NEG = ["frustration", "confusion", "doubt"];
+const TOPICS = ["Warm-up and introductions", "Current setup at home", "How they choose a supplier", "First look at the site",
+  "Finding the filter section", "Comparing two filters", "Reading the specifications", "Price and delivery",
+  "Checkout", "Account and order history", "Returns", "Advice from the community", "What would make them switch", "Wrap-up"];
+const THEMES = ["Specs written for experts", "Trust the shop, not the site", "Delivery cost decides", "Community advice beats the site",
+  "Search finds the wrong size", "Checkout asks twice"];
+
+function makeSession(mins, seed) {
+  const r = rng(seed), dur = mins * 60;
+  const s = { mins, dur, turns: [], topics: [], quotes: [], themes: [] };
+  let t = 0, mod = true;
+  while (t < dur) { const len = Math.min(mod ? 60 : 180, Math.max(1, lognorm(r, 10, 1.19) * (mod ? 0.6 : 1.5))); s.turns.push({ t0: t, t1: Math.min(dur, t + len), mod }); t += len; mod = !mod; }
+  t = 0; let i = 0;
+  while (t < dur - 20) { s.topics.push({ t0: t, label: TOPICS[i++ % TOPICS.length] }); t += Math.max(30, lognorm(r, 181, 0.54)); }
+  t = 15 + r() * 40;
+  while (t < dur - 5) {
+    const late = t / dur, x = r();
+    const sent = x < 0.08 ? "surprise" : x < 0.38 + late * 0.25 ? NEG[Math.floor(r() * 3)] : POS[Math.floor(r() * 3)];
+    s.quotes.push({ t, sent, w: 0.4 + r() * 0.6 }); t += Math.max(8, lognorm(r, 64, 0.54));
+  }
+  // Themes: each concentrated around a centre; about half get 1–2 quotes
+  const nT = 4 + Math.floor(r() * 2);
+  const centres = THEMES.slice(0, nT).map(name => ({ name, c: r() * dur, spread: (r() < 0.5 ? 0.02 : 0.05 + r() * 0.3) * dur }));
+  s.quotes.forEach(q => {
+    let best = centres[0], bd = Infinity;
+    centres.forEach(c => { const d = Math.abs(q.t - c.c) / (c.spread + 1); if (d < bd) { bd = d; best = c; } });
+    if (bd < 3) q.theme = best.name;
+  });
+  centres.forEach(c => {
+    const ts = s.quotes.filter(q => q.theme === c.name).map(q => q.t);
+    if (ts.length) s.themes.push({ name: c.name, t0: Math.min(...ts), t1: Math.max(...ts), n: ts.length });
+  });
+  s.themes.sort((a, b) => a.t0 - b.t0);
+  return s;
+}
+
+const ns = "http://www.w3.org/2000/svg";
+const el = (tag, attrs, parent) => { const n = document.createElementNS(ns, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; };
+const mctx = document.createElement("canvas").getContext("2d");
+function fit(text, avail, font) {
+  mctx.font = font; if (avail < 8) return "";
+  if (mctx.measureText(text).width <= avail) return text;
+  let t = text; while (t.length > 1 && mctx.measureText(t + "…").width > avail) t = t.slice(0, -1);
+  return t.length > 1 ? t + "…" : "";
+}
+const FLAG_FONT = "490 11px Inter, -apple-system, sans-serif", TAG_FONT = "10px ui-monospace, 'SF Mono', Menlo, monospace";
+const fmt = sec => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
+
+// Draw one slice at a given seconds-per-pixel.
+function slice(s, sPerPx, code, onJump = () => {}) {
+  const L = 74, R = 12, x = sec => L + sec / sPerPx, xEnd = x(s.dur), W = Math.ceil(xEnd + R);
+  const clips = sPerPx <= 2.5;   // rounded clips vs slivers
+  const FL = { y: 0 }, MT = { y: 26, h: 16 }, PT = { y: 45, h: 16 }, SE = { mid: 102, amp: 30 }, TG = { y: 140, row: 17 };
+  const H = TG.y + TG.row * 2 + 16;
+  const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
+  const lbl = (y, t) => { el("text", { x: 0, y, class: "lane-label" }, svg).textContent = t; };
+  lbl(14, "topics"); lbl(MT.y + 12, "moderator"); lbl(PT.y + 12, "participant"); lbl(SE.mid + 3, "sentiment"); lbl(TG.y + 12, "themes");
+
+  // Speaker lane
+  el("rect", { x: L, y: MT.y - 1, width: xEnd - L, height: PT.y + PT.h - MT.y + 2, rx: 4, fill: "var(--bn-colour-hover)" }, svg);
+  s.turns.forEach(tn => {
+    const tr = tn.mod ? MT : PT, x0 = x(tn.t0), w = x(tn.t1) - x(tn.t0);
+    const fill = tn.mod ? "var(--mod)" : "var(--ppt)";
+    if (clips) {
+      if (w < 1) return;
+      el("rect", { x: x0 + 0.5, y: tr.y, width: Math.max(1, w - 1), height: tr.h, rx: Math.min(3, w / 2), fill }, svg);
+      if (w > 26) el("text", { x: x0 + 4, y: tr.y + 11.5, class: "clipcode" }, svg).textContent = tn.mod ? "m1" : code;
+    } else {
+      el("rect", { x: x0, y: tr.y, width: Math.max(0.5, w), height: tr.h, fill }, svg);
+    }
+  });
+
+  // Topic flags. At rest each label is truncated to the room before the next flag, so nothing
+  // overlaps. Hovering the speaker lane raises the flag for the topic under the pointer: full
+  // label, drawn on top of its neighbours, outlined.
+  // Raised flag: pure background plus a barely-there shadow; resting flags carry a ~6% tint.
+  const defs = el("defs", {}, svg), fid = `lift-${Math.random().toString(36).slice(2, 8)}`;
+  el("feDropShadow", { dx: 0, dy: 0.6, stdDeviation: 0.9, "flood-color": "#000", "flood-opacity": 0.16 },
+    el("filter", { id: fid, x: "-10%", y: "-30%", width: "120%", height: "170%" }, defs));
+  const fg = el("g", {}, svg);
+  const flags = s.topics.map((tp, i) => {
+    const fx = x(tp.t0), next = i + 1 < s.topics.length ? x(s.topics[i + 1].t0) : xEnd;
+    const g = el("g", {}, fg);
+    const draw = raised => {
+      g.replaceChildren();
+      el("line", { x1: fx + 0.5, x2: fx + 0.5, y1: 2, y2: MT.y - 2, stroke: "var(--bn-colour-text)" }, g);
+      const text = raised ? tp.label : fit(tp.label, next - fx - 20, FLAG_FONT);
+      mctx.font = FLAG_FONT;
+      const pw = (text ? mctx.measureText(text).width : 0) + 12;
+      el("path", { d: `M${fx + 1},2 h${pw} l-5,7 l5,7 h-${pw} z`, fill: raised ? "var(--bn-colour-bg)" : "var(--flag-rest)",
+        stroke: raised ? "var(--bn-colour-text)" : "var(--bn-colour-border)", filter: raised ? `url(#${fid})` : "none" }, g);
+      if (text) el("text", { x: fx + 4, y: 13, class: "scene" }, g).textContent = text;
+      el("title", {}, g).textContent = `${tp.label} · ${fmt(tp.t0)}`;
+    };
+    draw(false);
+    g.style.cursor = "pointer";
+    g.addEventListener("click", () => onJump(tp.t0, `topic “${tp.label}”`));
+    return { g, draw, t0: tp.t0 };
+  });
+  let raised = -1;
+  const raise = i => {
+    if (i === raised) return;
+    if (raised >= 0) { flags[raised].draw(false); flags.forEach(f => fg.appendChild(f.g)); }  // restore order
+    raised = i;
+    if (i >= 0) { flags[i].draw(true); fg.appendChild(flags[i].g); }
+  };
+  const lane = el("rect", { x: L, y: MT.y - 1, width: xEnd - L, height: PT.y + PT.h - MT.y + 2, fill: "transparent",
+    style: "cursor:pointer" }, svg);   // hit area over the clips, so slivers are as easy to hover as clips
+  lane.addEventListener("mousemove", e => {
+    const sec = (e.clientX - svg.getBoundingClientRect().left - L) * sPerPx;
+    let i = -1; flags.forEach((f, k) => { if (f.t0 <= sec) i = k; });
+    raise(i);
+  });
+  lane.addEventListener("mouseleave", () => raise(-1));
+  lane.addEventListener("click", e => {   // jump to the start of the turn under the pointer
+    const sec = (e.clientX - svg.getBoundingClientRect().left - L) * sPerPx;
+    const tn = s.turns.find(t => sec < t.t1) || s.turns[s.turns.length - 1];
+    onJump(tn.t0, `${tn.mod ? "m1" : code} turn`);
+  });
+
+  // Sentiment
+  el("line", { x1: L, x2: xEnd, y1: SE.mid, y2: SE.mid, stroke: "var(--bn-colour-muted)", "stroke-width": 0.8 }, svg);
+  s.quotes.forEach(q => {
+    const cx = x(q.t), col = `var(--bn-sentiment-${q.sent})`;
+    const n = q.sent === "surprise" ? el("circle", { cx, cy: SE.mid, r: 3, fill: col }, svg)
+      : el("rect", { x: cx - 2, width: 4, y: POS.includes(q.sent) ? SE.mid - q.w * SE.amp : SE.mid, height: q.w * SE.amp, rx: 1, fill: col }, svg);
+    el("title", {}, n).textContent = `${fmt(q.t)} · ${q.sent}${q.theme ? " · " + q.theme : ""}`;
+  });
+
+  // Theme spans, packed into two rows, truncated
+  const ends = [-1e9, -1e9];
+  s.themes.forEach(th => {
+    const x0 = x(th.t0), x1 = Math.max(x(th.t1), x0 + 6);
+    const row = ends[0] <= ends[1] ? 0 : 1;
+    const lx = Math.max(x0, ends[row] + 4);    // label slides right past its neighbour; span stays true
+    const y = TG.y + row * TG.row;
+    const g = el("g", {}, svg);
+    el("rect", { x: x0, y: y + 5, width: x1 - x0, height: 4, rx: 2, fill: "var(--bn-colour-muted)", opacity: 0.55 }, g);
+    const text = fit(th.name, Math.min(Math.max(x1 - lx, 110), W - R - lx - 8), TAG_FONT);
+    mctx.font = TAG_FONT;
+    const tw = text ? mctx.measureText(text).width : 0;
+    if (text) { el("rect", { x: lx, y, width: tw + 8, height: 14, rx: 3, fill: "var(--bn-colour-hover)", stroke: "var(--bn-colour-border)" }, g);
+      el("text", { x: lx + 4, y: y + 10.5, class: "tagtext" }, g).textContent = text; }
+    el("title", {}, g).textContent = `${th.name} · ${th.n} quote${th.n === 1 ? "" : "s"} · ${fmt(th.t0)}–${fmt(th.t1)}`;
+    ends[row] = Math.max(x1, lx + tw + 8);
+  });
+
+  const step = [60, 120, 300, 600, 900].find(st => st / sPerPx >= 64) || 1200;   // ≥ 64 px between ticks
+  for (let t = 0; t <= s.dur; t += step)
+    el("text", { x: x(t), y: H - 2, class: "tick", "text-anchor": t === 0 ? "start" : "middle" }, svg).textContent = `${t / 60}:00`;
+  return { svg, W };
+}
+
+function frame(host, label, s, sPerPx, code) {
+  const f = document.createElement("div"); f.className = "frame";
+  const pxMin = (60 / sPerPx).toFixed(0);
+  f.innerHTML = `<div class="chrome"><b>${label}</b><span>${sPerPx} s/px · ${pxMin} px/min</span><span class="dest"></span></div>`;
+  const dest = f.querySelector(".dest");
+  const { svg } = slice(s, sPerPx, code, (sec, what) => {
+    dest.textContent = `→ transcript ${code === "p1" ? "s1" : "s2"} at ${fmt(sec)}, ${what}`;   // mockup: the product navigates
+  });
+  const wrap = document.createElement("div"); wrap.className = "slice-wrap"; wrap.appendChild(svg); f.appendChild(wrap);
+  document.getElementById(host).appendChild(f);
+}
+
+const s15 = makeSession(15, 7), s60 = makeSession(60, 31);
+frame("f15", "15 min at the upper clamp, 1 s/px", s15, 1, "p1");
+frame("f15", "15 min at 2.5 s/px (the clip/sliver threshold)", s15, 2.5, "p1");
+frame("f60", "60 min at the lower clamp, 4 s/px: fits the grid; clips become slivers", s60, 4, "p2");
+frame("f60", "60 min at 2.5 s/px: still clips, but 1,440 px wide, so it scrolls", s60, 2.5, "p2");
+frame("fboth", "Project scale = 60 min ÷ 900 px = 4 s/px · s1 (15 min)", s15, 4, "p1");
+frame("fboth", "Project scale = 4 s/px · s2 (60 min)", s60, 4, "p2");
+
+// Live zoom: slider 0 = fit, 100 = 0.25 s/px, logarithmic in between.
+(() => {
+  const zf = document.getElementById("zoomframe"), dest = zf.querySelector(".dest"), sl = document.getElementById("zslider");
+  const fitScale = () => Math.min(4, Math.max(1, s60.dur / (zf.clientWidth - 24 - 74 - 12)));
+  const scaleAt = v => Math.exp(Math.log(fitScale()) + (Math.log(0.25) - Math.log(fitScale())) * v / 100);
+  const render = () => {
+    const sp = scaleAt(+sl.value);
+    [["zs1", s15, "p1"], ["zs2", s60, "p2"]].forEach(([id, s, code]) =>
+      document.getElementById(id).replaceChildren(slice(s, sp, code, (sec, what) => {
+        dest.textContent = `→ transcript ${code === "p1" ? "s1" : "s2"} at ${fmt(sec)}, ${what}`; }).svg));
+    sl.title = `${sp.toFixed(2)} s/px — double-click to fit`;
+  };
+  const step = d => { sl.value = Math.max(0, Math.min(100, +sl.value + d)); render(); };
+  // The axis is shared, so the slices scroll together.
+  const z1 = document.getElementById("zs1"), z2 = document.getElementById("zs2");
+  let syncing = false;
+  [[z1, z2], [z2, z1]].forEach(([from, to]) => from.addEventListener("scroll", () => {
+    if (syncing) { syncing = false; return; } syncing = true; to.scrollLeft = from.scrollLeft; }));
+  sl.addEventListener("input", render);
+  sl.addEventListener("dblclick", () => { sl.value = 0; render(); });
+  document.getElementById("zin").addEventListener("click", () => step(20));
+  document.getElementById("zout").addEventListener("click", () => step(-20));
+  document.addEventListener("keydown", e => {
+    if (!e.metaKey) return;
+    if (e.key === "=" || e.key === "+") { e.preventDefault(); step(20); }
+    else if (e.key === "-") { e.preventDefault(); step(-20); }
+    else if (e.key === "0") { e.preventDefault(); sl.value = 0; render(); }
+  });
+  render();
+  new ResizeObserver(render).observe(zf);
+})();
+</script>
+</body>
+</html>

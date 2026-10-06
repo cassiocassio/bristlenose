@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Tapestry</title>
+<style>
+/* Quick/loose mockup. Sentiment colours are the shipped tokens (theme/tokens.css);
+   everything else is hand-rolled. Synthetic data, no participant content. */
+:root {
+  color-scheme: light dark;
+  --bn-colour-bg: light-dark(#ffffff, #1c1c1e);
+  --bn-colour-text: light-dark(#1d1d1f, #f2f2f7);
+  --bn-colour-muted: light-dark(#6e6e73, #98989d);
+  --bn-colour-border: light-dark(#e5e5ea, #38383a);
+  --bn-colour-hover: light-dark(#f5f5f7, #2c2c2e);
+  --bn-colour-accent: #007aff;
+  /* Shipped sentiment tokens, verbatim */
+  --bn-sentiment-frustration: #ea580c;
+  --bn-sentiment-confusion: #dc2626;
+  --bn-sentiment-doubt: #7c3aed;
+  --bn-sentiment-surprise: #d97706;
+  --bn-sentiment-satisfaction: #16a34a;
+  --bn-sentiment-delight: #059669;
+  --bn-sentiment-confidence: #2563eb;
+  --mod: light-dark(#a1a1a6, #636366);
+  --ppt: light-dark(#48484a, #c7c7cc);
+  --slice-bg: light-dark(#fafafa, #232325);
+  --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text); font: 420 14px/1.45 var(--font); }
+main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+
+.zone-key { display: flex; gap: 16px; font: 11px var(--mono); color: var(--bn-colour-muted); margin-bottom: 14px; }
+.frame { border: 1px solid var(--bn-colour-border); border-radius: 10px; overflow: hidden; }
+.chrome { height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 10px;
+  background: var(--bn-colour-hover); border-bottom: 1px solid var(--bn-colour-border);
+  font: 11px var(--mono); color: var(--bn-colour-muted); }
+.chrome i { width: 9px; height: 9px; border-radius: 50%; background: var(--bn-colour-border); }
+.surface { padding: 20px 20px 28px; }
+h2 { font-size: 20px; font-weight: 490; margin: 0 0 14px; }
+
+/* Grid, approximating sessions-grid.css columns */
+.grid { display: grid; grid-template-columns: 22px 44px 72px 1.3fr 1.6fr max-content 72px; column-gap: 14px; }
+.row, .head { display: contents; }
+.cell { padding: 10px 0; border-bottom: 1px solid var(--bn-colour-border); display: flex; align-items: center; min-width: 0; }
+.head .cell { font-size: 12px; color: var(--bn-colour-muted); font-weight: 490; padding-top: 0; }
+.row .cell { cursor: pointer; }
+.row:hover .cell { background: var(--bn-colour-hover); }
+.disclose { border: 0; background: none; padding: 0; color: var(--bn-colour-muted); cursor: pointer; width: 22px; height: 22px;
+  display: grid; place-items: center; border-radius: 4px; }
+.disclose svg { transition: transform .15s ease; }
+.row[aria-expanded="true"] .disclose svg { transform: rotate(90deg); }
+.id { font: 490 13px var(--mono); }
+.thumb { width: 64px; height: 36px; border-radius: 4px; display: block; }
+.speakers { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; font-size: 13px; }
+.speakers small { color: var(--bn-colour-muted); font-size: 12px; }
+.journey { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; font-size: 13px; }
+.journey small { color: var(--bn-colour-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spark { display: flex; align-items: flex-end; gap: 2px; height: 22px; }
+.spark i { width: 5px; border-radius: 1px; }
+.dur { font: 13px var(--mono); color: var(--bn-colour-muted); justify-content: flex-end; }
+
+/* The slice */
+.slice { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; transition: grid-template-rows .2s ease;
+  border-bottom: 1px solid var(--bn-colour-border); }
+.slice.open { grid-template-rows: 1fr; }
+.slice > div { overflow: hidden; }
+.slice.closed-border { border-bottom: 0; }
+.slice-inner { background: var(--slice-bg); padding: 12px 0 10px; }
+.slice svg { display: block; overflow: visible; }
+.clipcode { font: 490 10px var(--mono); pointer-events: none; }
+.tagtext { font: 10px var(--mono); fill: var(--bn-colour-text); }
+.flag, .tag { cursor: default; }
+.tag:hover rect { stroke: var(--bn-colour-muted); }
+.bar { transition: opacity .12s; }
+.lane-label { font: 10px var(--mono); fill: var(--bn-colour-muted); }
+.scene { font: 490 11px var(--font); fill: var(--bn-colour-text); }
+.tick { font: 10px var(--mono); fill: var(--bn-colour-muted); }
+.bar { cursor: pointer; }
+.bar:hover { opacity: .7; }
+.playhead { stroke: var(--bn-colour-accent); stroke-width: 1.5; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) { .slice, .disclose svg { transition: none; } }
+
+/* Commentary zone — deliberately not the product */
+.commentary { margin-top: 32px; padding: 16px 20px; border-left: 3px solid var(--bn-colour-border);
+  background: repeating-linear-gradient(135deg, transparent 0 8px, light-dark(#0000000a,#ffffff08) 8px 9px); }
+.commentary .lbl { font: 11px var(--mono); color: var(--bn-colour-muted); text-transform: uppercase; letter-spacing: .06em; }
+.commentary h3 { font-size: 14px; font-weight: 490; margin: 16px 0 4px; }
+.commentary ul { margin: 6px 0 0; padding-left: 18px; }
+.commentary li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <div class="zone-key"><span>■ Artefact: what ships</span><span>▨ Commentary: why</span></div>
+
+  <div class="frame">
+    <div class="chrome"><i></i><i></i><i></i>&nbsp; Sessions · s1 and s3 recorded in speaker view, s2 in gallery view</div>
+    <div class="surface">
+      <h2>Sessions</h2>
+      <div class="grid" id="grid">
+        <div class="head">
+          <div class="cell"></div>
+          <div class="cell">ID</div>
+          <div class="cell"></div>
+          <div class="cell">Speakers</div>
+          <div class="cell">Start · User journey</div>
+          <div class="cell">Sentiment</div>
+          <div class="cell" style="justify-content:flex-end">Duration</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="commentary">
+    <div class="lbl">Commentary</div>
+
+    <h3>What the slice is</h3>
+    <ul>
+      <li><b>One time axis, read top to bottom.</b> (1) <b>Topic flags</b> (s08) in the top border, a pennant at the start of each segment. The label is truncated to the space before the next flag, and the full name shows on hover. (2) <b>Speaker clips</b>, Final Cut style: one rounded clip per turn, on a moderator track and a participant track. The track says who is talking. The clip's fill is the mean colour of the video frames during that turn, which is secondary. In speaker view the call flips to whoever is talking and the colour flips with it (s1, s3). In gallery view or during a screen-share it does not (s2, and the pale clips in s1). The colour also shows screen-share stretches without any analysis. (3) <b>Sentiment</b>: one bar per quote at its timecode, in the shipped <code>--bn-sentiment-*</code> colour. Positive goes above the line and negative below. Surprise, the neutral flag, is a dot on the line. (4) <b>Theme tags</b> (s11) in the bottom border, one per theme at its first quote, packed into two rows and truncated. Hovering a tag fades every bar except that theme's.</li>
+      <li><b>Common scale across rows.</b> The longest session fills the width and shorter ones stop early, so expanded slices compare by eye: who went below the line at Checkout, and who ran out of time before the last task.</li>
+      <li><b>Interaction (proposed):</b> hover anywhere on the slice for a playhead through all four lanes. A click seeks the video (the barcode gets a thumbnail tooltip), and a click on a sentiment bar opens that quote. The disclosure is a plain chevron. Enter or Space toggles it, and Option-click expands all rows, as in a Finder outline.</li>
+      <li><b>The collapsed row is unchanged.</b> The sparkline already gives sentiment <em>counts</em>. The slice adds <em>when</em> they happened. The thumbnail could become a tiny barcode, which would make the collapsed row hint at the slice.</li>
+    </ul>
+
+    <h3>Ideas to borrow from</h3>
+    <ul>
+      <li><b>Movie barcodes</b> (the "moviebarcode" project; Charlie Clark's <i>The Colors of Motion</i>): a whole film as one strip of averaged frames. The direct source for lane 1. We'd sample about one frame a second with ffmpeg at thumbnail time, which is cheap because the keyframe pass already exists (<code>utils/video.py</code>).</li>
+      <li><b>The Bayeux tapestry:</b> captioned scenes in a top border, asides in the margins, and a narrative you read by walking along it.</li>
+      <li><b>SoundCloud's waveform with timed comments:</b> annotations pinned to a timeline the reader scrubs. This is the closest precedent for quotes on a strip.</li>
+      <li><b>YouTube's "Most replayed" graph</b> over the scrubber: a quantity drawn over time, sitting directly on top of the seek control.</li>
+      <li><b>NLE timelines</b> (Final Cut, Premiere): a filmstrip lane, audio lanes and markers stacked on one shared axis. Researchers who edit clips already read this layout.</li>
+      <li><b>Diarisation lanes</b> in Descript and Otter: who spoke when, as per-speaker bars.</li>
+      <li><b>Story-shape arcs</b> (Vonnegut; Reagan et al. 2016, <i>The emotional arcs of stories</i>): sentiment as a line over narrative time. Bars stay honest about each quote, where a smoothed arc implies a continuity we did not measure.</li>
+      <li><b>Strava's elevation profile with segments:</b> a profile under a map, with named segments you can compare across efforts. This is the same move as lane 2 over lane 4 across rows.</li>
+      <li><b>Tufte small multiples:</b> the same encoding on the same scale, stacked. This is why the axis is shared across rows and not fitted per row.</li>
+    </ul>
+
+    <h3>New vs existing</h3>
+    <ul>
+      <li>Existing: grid columns, the sentiment sparkline, the sentiment tokens, s08 topic segments, s09 quote timecodes, the keyframe extraction.</li>
+      <li>New: the disclosure column, the slice, and the per-frame colour sample (a new artefact, cached beside the thumbnails). The lane labels shown here are owner-written, not locale keys.</li>
+      <li>Not attempted: dark-palette tuning of the barcode, or a slice for sessions with no video. Audio-only would drop lane 1 and keep the rest.</li>
+    </ul>
+  </div>
+</main>
+
+<script>
+function rng(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+
+const POS = ["satisfaction", "delight", "confidence"];
+const NEG = ["frustration", "confusion", "doubt"];
+const ORDER = ["frustration", "confusion", "doubt", "surprise", "satisfaction", "delight", "confidence"];
+const SCENES = ["Warm-up and introductions", "Weekly shopping routine", "First look at the homepage", "Searching for a product",
+  "Comparing two options", "Checkout and payment", "Delivery and returns", "Wrap-up"];
+const THEMES = ["Shopping as a household chore", "Search finds the wrong size", "Unit prices are hard to compare",
+  "Trust in the total price", "Basket feels fragile", "Delivery slots drive the choice"];
+
+// Frame "looks". In speaker view the call flips to whoever is talking, so the mean frame
+// colour flips too; in gallery view or during a screen-share it does not.
+const LOOKS = {
+  modCam: [92, 108, 128],   // moderator's cool office
+  pCam: [184, 146, 112],    // participant's warm kitchen
+  gallery: [128, 120, 112], // both tiles averaged
+  share: [228, 232, 236],   // white web page
+  bluesite: [120, 160, 210],
+};
+
+const sessions = [
+  { id: "s1", p: "p1", name: "Alex", mod: "Rachel", date: "3 Sep 2026, 10:00", journey: "Search → Compare → Checkout", mins: 52, seed: 11, view: "speaker", open: true },
+  { id: "s2", p: "p2", name: "Priya", mod: "Rachel", date: "3 Sep 2026, 14:30", journey: "Search → Checkout", mins: 38, seed: 29, view: "gallery", open: true },
+  { id: "s3", p: "p3", name: "Tomás", mod: "Rachel", date: "4 Sep 2026, 09:30", journey: "Browse → Compare → Delivery", mins: 61, seed: 47, view: "speaker", open: true },
+  { id: "s4", p: "p4", name: "Mei", mod: "Rachel", date: "4 Sep 2026, 13:00", journey: "Search", mins: 27, seed: 83, view: "speaker" },
+];
+const MAX = Math.max(...sessions.map(s => s.mins));
+
+// Generate per-session data once, so row, sparkline and slice agree.
+sessions.forEach(s => {
+  const r = rng(s.seed);
+  // Scenes
+  const n = 5 + Math.floor(r() * 4);
+  const w = Array.from({ length: n }, () => 0.5 + r());
+  const sum = w.reduce((a, b) => a + b);
+  let t = 0;
+  s.scenes = w.map((x, i) => { const len = x / sum * s.mins; const sc = { t0: t, t1: t + len, label: SCENES[i] }; t += len; return sc; });
+  // Turns, each carrying the mean colour of its video frames
+  s.turns = []; t = 0; let mod = true; let share = null;
+  const jit = b => b.map(c => Math.round(Math.max(0, Math.min(255, c + (r() - 0.5) * 18))));
+  while (t < s.mins) {
+    const len = mod ? 0.15 + r() * 0.5 : 0.3 + r() * 2.4;
+    if (!share && t > s.mins * 0.25 && r() < 0.12) share = r() < 0.6 ? "share" : "bluesite";
+    else if (share && r() < 0.15) share = null;
+    const look = share || (s.view === "gallery" ? "gallery" : mod ? "modCam" : "pCam");
+    s.turns.push({ t0: t, t1: Math.min(s.mins, t + len), mod, rgb: jit(LOOKS[look]) });
+    t += len; mod = !mod;
+  }
+  // Thumbnail barcode: one sample per 10 s, taken from the turn on screen
+  s.frames = [];
+  for (let k = 0; k < s.mins * 6; k++) {
+    const m = k / 6;
+    s.frames.push((s.turns.find(tn => m < tn.t1) || s.turns[s.turns.length - 1]).rgb);
+  }
+  // Quotes with sentiment; later scenes skew negative (checkout pain)
+  s.quotes = [];
+  const nq = Math.round(s.mins * (0.45 + r() * 0.3));
+  for (let i = 0; i < nq; i++) {
+    const m = 1 + r() * (s.mins - 2);
+    const late = m / s.mins;
+    const x = r();
+    let sent;
+    if (x < 0.08) sent = "surprise";
+    else if (x < 0.08 + 0.3 + late * 0.25) sent = NEG[Math.floor(r() * 3)];
+    else sent = POS[Math.floor(r() * 3)];
+    s.quotes.push({ m, sent, w: 0.4 + r() * 0.6, theme: THEMES[Math.min(THEMES.length - 1, Math.floor(late * THEMES.length + (r() - 0.5) * 2.5))] || THEMES[0] });
+  }
+  s.counts = {};
+  s.quotes.forEach(q => s.counts[q.sent] = (s.counts[q.sent] || 0) + 1);
+});
+
+const fmt = m => `${Math.floor(m)}:${String(Math.round((m % 1) * 60)).padStart(2, "0")}`;
+const ns = "http://www.w3.org/2000/svg";
+const el = (tag, attrs, parent) => {
+  const n = document.createElementNS(ns, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+};
+
+function barcodeURL(s, w, h) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const g = c.getContext("2d");
+  for (let x = 0; x < w; x++) {
+    const f = s.frames[Math.floor(x / w * s.frames.length)];
+    g.fillStyle = `rgb(${f.join(",")})`;
+    g.fillRect(x, 0, 1, h);
+  }
+  return c.toDataURL();
+}
+
+// Truncate a label to fit `avail` px, measured with the real font.
+const mctx = document.createElement("canvas").getContext("2d");
+function fit(text, avail, font) {
+  mctx.font = font;
+  if (mctx.measureText(text).width <= avail) return text;
+  let t = text;
+  while (t.length > 1 && mctx.measureText(t + "…").width > avail) t = t.slice(0, -1);
+  return t.length > 1 ? t + "…" : "";
+}
+const FLAG_FONT = "490 11px Inter, -apple-system, sans-serif";
+const TAG_FONT = "10px ui-monospace, 'SF Mono', Menlo, monospace";
+
+function slice(s, W) {
+  const L = 74, R = 14;                       // px; L = lane-label gutter
+  const span = W - L - R;
+  const x = m => L + m / MAX * span;
+  const xEnd = x(s.mins);
+  // Top border (topic flags) · speaker clips (two tracks) · sentiment · bottom border (theme tags) · ticks
+  const FL = { y: 0, h: 22 }, MT = { y: 26, h: 18 }, PT = { y: 47, h: 18 }, SE = { mid: 110, amp: 32 }, TG = { y: 150, row: 18 };
+  const H = TG.y + TG.row * 2 + 16;
+  const svg = el("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img",
+    "aria-label": `Timeline of session ${s.id.slice(1)}` });
+
+  const lbl = (y, t) => { const n = el("text", { x: 0, y, class: "lane-label" }, svg); n.textContent = t; };
+  lbl(FL.y + 14, "topics"); lbl(MT.y + 13, "moderator"); lbl(PT.y + 13, "participant");
+  lbl(SE.mid + 3, "sentiment"); lbl(TG.y + 12, "themes");
+
+  // 1. Speaker clips, Final Cut style: one rounded clip per turn on its speaker's track,
+  //    filled with the mean colour of the video frames during that turn.
+  el("rect", { x: L, y: MT.y - 1, width: xEnd - L, height: PT.y + PT.h - MT.y + 2, rx: 4, fill: "var(--bn-colour-hover)" }, svg);
+  s.turns.forEach(tn => {
+    const tr = tn.mod ? MT : PT;
+    const x0 = x(tn.t0) + 0.5, w = Math.max(1, x(tn.t1) - x(tn.t0) - 1);
+    const fill = `rgb(${tn.rgb.join(",")})`;
+    const g = el("g", { class: "clip" }, svg);
+    el("rect", { x: x0, y: tr.y, width: w, height: tr.h, rx: Math.min(3, w / 2), fill, stroke: "rgb(0 0 0 / .28)", "stroke-width": 0.75 }, g);
+    if (w > 26) {
+      const lum = 0.299 * tn.rgb[0] + 0.587 * tn.rgb[1] + 0.114 * tn.rgb[2];
+      const t = el("text", { x: x0 + 4, y: tr.y + 12.5, class: "clipcode", fill: lum > 150 ? "#1d1d1f" : "#fff" }, g);
+      t.textContent = tn.mod ? "m1" : s.p;
+    }
+    el("title", {}, g).textContent = `${tn.mod ? "m1 " + s.mod : s.p + " " + s.name} · ${fmt(tn.t0)}–${fmt(tn.t1)}`;
+  });
+
+  // 0. Topic flags in the top border: pole down to the clips, pennant with truncated label
+  s.scenes.forEach((sc, i) => {
+    const fx = x(sc.t0);
+    const next = i + 1 < s.scenes.length ? x(s.scenes[i + 1].t0) : xEnd;
+    const g = el("g", { class: "flag" }, svg);
+    el("line", { x1: fx + 0.5, x2: fx + 0.5, y1: FL.y + 2, y2: MT.y - 2, stroke: "var(--bn-colour-text)", "stroke-width": 1 }, g);
+    const text = fit(sc.label, next - fx - 22, FLAG_FONT);
+    mctx.font = FLAG_FONT;
+    const tw = text ? mctx.measureText(text).width : 0;
+    const pw = tw + 14;
+    el("path", { d: `M${fx + 1},${FL.y + 2} h${pw} l-5,7 l5,7 h-${pw} z`, fill: "var(--bn-colour-bg)",
+      stroke: "var(--bn-colour-border)" }, g);
+    if (text) { const t = el("text", { x: fx + 5, y: FL.y + 13, class: "scene" }, g); t.textContent = text; }
+    el("title", {}, g).textContent = `${sc.label} · ${fmt(sc.t0)}–${fmt(sc.t1)}`;
+  });
+
+  // 4. Sentiment bars: positive up, negative down, surprise on the line
+  el("line", { x1: L, x2: xEnd, y1: SE.mid, y2: SE.mid, stroke: "var(--bn-colour-muted)", "stroke-width": 0.8 }, svg);
+  s.quotes.forEach(q => {
+    const cx = x(q.m), col = `var(--bn-sentiment-${q.sent})`;
+    let n;
+    if (q.sent === "surprise") {
+      n = el("circle", { cx, cy: SE.mid, r: 3.2, fill: col, class: "bar" }, svg);
+    } else {
+      const up = POS.includes(q.sent), h = q.w * SE.amp;
+      n = el("rect", { x: cx - 2, width: 4, y: up ? SE.mid - h : SE.mid, height: h, rx: 1, fill: col, class: "bar" }, svg);
+    }
+    n.dataset.theme = q.theme;
+    el("title", {}, n).textContent = `${fmt(q.m)} · ${q.sent} · ${q.theme}`;
+  });
+
+  // 5. Theme tags in the bottom border: one per theme, at its first quote, two rows, truncated.
+  //    Hover a tag → that theme's bars stay at full strength and the rest fade.
+  const firsts = {};
+  s.quotes.forEach(q => { if (!(q.theme in firsts) || q.m < firsts[q.theme]) firsts[q.theme] = q.m; });
+  const ends = [L - 999, L - 999];             // right edge used, per row
+  Object.entries(firsts).sort((a, b) => a[1] - b[1]).forEach(([theme, m]) => {
+    const tx = x(m);
+    const row = ends[0] <= ends[1] ? 0 : 1;
+    const start = Math.max(tx, ends[row] + 4);
+    const text = fit(theme, Math.min(150, W - R - start - 12), TAG_FONT);
+    if (!text) return;
+    mctx.font = TAG_FONT;
+    const tw = mctx.measureText(text).width + 10;
+    const y = TG.y + row * TG.row;
+    const g = el("g", { class: "tag" }, svg);
+    el("line", { x1: tx, x2: tx, y1: SE.mid + SE.amp + 2, y2: y, stroke: "var(--bn-colour-border)", "stroke-dasharray": "2 2" }, g);
+    el("rect", { x: start, y, width: tw, height: 15, rx: 3, fill: "var(--bn-colour-hover)", stroke: "var(--bn-colour-border)" }, g);
+    const t = el("text", { x: start + 5, y: y + 11, class: "tagtext" }, g); t.textContent = text;
+    el("title", {}, g).textContent = theme;
+    ends[row] = start + tw;
+    g.addEventListener("mouseenter", () => svg.querySelectorAll(".bar").forEach(b => b.style.opacity = b.dataset.theme === theme ? 1 : 0.15));
+    g.addEventListener("mouseleave", () => svg.querySelectorAll(".bar").forEach(b => b.style.opacity = ""));
+  });
+
+  // Ticks every 10 min, under the theme tags
+  for (let m = 0; m <= s.mins; m += 10) {
+    const t = el("text", { x: x(m), y: H - 2, class: "tick", "text-anchor": m === 0 ? "start" : "middle" }, svg);
+    t.textContent = `${m}:00`;
+  }
+
+  // Shared playhead
+  const ph = el("line", { x1: 0, x2: 0, y1: 0, y2: H - 12, class: "playhead", visibility: "hidden" }, svg);
+  svg.addEventListener("mousemove", e => {
+    const pt = svg.getBoundingClientRect();
+    const vx = (e.clientX - pt.left) / pt.width * W;
+    if (vx < L || vx > xEnd) { ph.setAttribute("visibility", "hidden"); return; }
+    ph.setAttribute("x1", vx); ph.setAttribute("x2", vx); ph.setAttribute("visibility", "visible");
+  });
+  svg.addEventListener("mouseleave", () => ph.setAttribute("visibility", "hidden"));
+  return svg;
+}
+
+const chevron = `<svg width="10" height="10" viewBox="0 0 10 10"><path d="M3 1.5 L7 5 L3 8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const grid = document.getElementById("grid");
+
+sessions.forEach(s => {
+  const row = document.createElement("div");
+  row.className = "row";
+  row.setAttribute("aria-expanded", s.open ? "true" : "false");
+  const maxC = Math.max(1, ...Object.values(s.counts));
+  const spark = ORDER.map(k => `<i style="height:${Math.max(2, (s.counts[k] || 0) / maxC * 22)}px;background:var(--bn-sentiment-${k});opacity:${s.counts[k] ? 1 : .25}"></i>`).join("");
+  row.innerHTML = `
+    <div class="cell"><button class="disclose" aria-label="Show timeline for session ${s.id.slice(1)}">${chevron}</button></div>
+    <div class="cell id">${s.id}</div>
+    <div class="cell"><img class="thumb" alt="" src="${barcodeURL(s, 64, 36)}"></div>
+    <div class="cell speakers"><span>${s.p} ${s.name}</span><small>Moderated by ${s.mod}</small></div>
+    <div class="cell journey"><span>${s.date}</span><small>${s.journey}</small></div>
+    <div class="cell"><div class="spark">${spark}</div></div>
+    <div class="cell dur">${s.mins}:00</div>`;
+  const sl = document.createElement("div");
+  sl.className = "slice" + (s.open ? " open" : "");
+  const inner = document.createElement("div");
+  const pad = document.createElement("div");
+  pad.className = "slice-inner";
+  pad.dataset.sid = s.id;
+  inner.appendChild(pad);
+  sl.appendChild(inner);
+  const toggle = () => {
+    const open = row.getAttribute("aria-expanded") !== "true";
+    const targets = [[row, sl]];
+    targets.forEach(([r, x]) => { r.setAttribute("aria-expanded", open); x.classList.toggle("open", open); });
+  };
+  row.addEventListener("click", e => {
+    if (e.altKey) {
+      const open = row.getAttribute("aria-expanded") !== "true";
+      document.querySelectorAll(".row").forEach(r => r.setAttribute("aria-expanded", open));
+      document.querySelectorAll(".slice").forEach(x => x.classList.toggle("open", open));
+    } else toggle();
+  });
+  grid.appendChild(row);
+  grid.appendChild(sl);
+});
+
+function redraw() {
+  document.querySelectorAll(".slice-inner").forEach(pad => {
+    const s = sessions.find(x => x.id === pad.dataset.sid);
+    pad.replaceChildren(slice(s, Math.floor(document.getElementById("grid").clientWidth)));
+  });
+}
+redraw();
+new ResizeObserver(redraw).observe(document.getElementById("grid"));
+</script>
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speaker Colour Lab</title>
+<style>
+/* Quick/loose lab page. Tunes the speaker-colour algorithm for the session tapestry. */
+:root { color-scheme: light dark;
+  --bg: light-dark(#fff, #111); --text: light-dark(#1a1a1a, #e5e7eb); --muted: light-dark(#6b7280, #9ca3af);
+  --border: light-dark(#e5e7eb, #2d2d2d); --panel: light-dark(#f9fafb, #1a1a1a); --accent: light-dark(#007aff, #0a84ff);
+  --warn: light-dark(#c2410c, #fb923c); --mono: "SF Mono", ui-monospace, monospace; --font: Inter, -apple-system, system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 420 13px/1.45 var(--font); }
+header { position: sticky; top: 0; z-index: 3; background: var(--bg); border-bottom: 1px solid var(--border); padding: 12px 16px; }
+h1 { font-size: 16px; font-weight: 490; margin: 0 0 8px; }
+.handles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 18px; }
+.handles label { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 12px; color: var(--muted); }
+.handles input[type=range], .handles select { grid-column: 1 / -1; width: 100%; }
+.handles output { font: 11px var(--mono); color: var(--text); }
+.summary { margin-top: 8px; font: 11px var(--mono); color: var(--muted); }
+main { padding: 12px 16px 64px; }
+.overview { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.ov { display: grid; gap: 2px; width: 92px; font: 10px var(--mono); color: var(--muted); }
+.ov .pair { display: flex; height: 22px; border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+.ov .pair i { flex: 1; }
+.ov span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.video { border-top: 1px solid var(--border); padding: 12px 0; }
+.vhead { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
+.vhead b { font-weight: 490; }
+.vhead .tag { font: 11px var(--mono); color: var(--muted); }
+.vhead .status { font: 11px var(--mono); }
+.status.ok { color: var(--muted); } .status.same { color: var(--warn); } .status.swap { color: var(--accent); } .status.fail { color: var(--warn); }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; }
+.role { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.role > .rl { width: 74px; font: 11px var(--mono); color: var(--muted); padding-top: 4px; }
+.fr { display: grid; gap: 2px; font: 10px var(--mono); color: var(--muted); }
+.fr canvas { width: 112px; height: 63px; image-rendering: pixelated; border-radius: 3px; display: block; }
+.fr .sw { height: 8px; border-radius: 2px; }
+.result { background: var(--panel); border-radius: 6px; padding: 8px 10px; display: grid; gap: 6px; align-content: start; }
+.res-row { display: grid; grid-template-columns: 74px 1fr 1fr; gap: 6px; align-items: center; font: 11px var(--mono); color: var(--muted); }
+.chip { height: 22px; border-radius: 4px; border: 1px solid rgb(0 0 0 / .1); display: grid; place-items: center; font: 10px var(--mono); }
+.lane { display: flex; gap: 1px; height: 38px; flex-direction: column; justify-content: center; background: light-dark(#f3f4f6, #252525); border-radius: 4px; padding: 2px; }
+.lane .tr { display: flex; height: 16px; gap: 1px; }
+.lane .tr i { border-radius: 3px; display: block; height: 100%; }
+.cands { display: flex; gap: 3px; flex-wrap: wrap; }
+.cands i { width: 26px; height: 12px; border-radius: 2px; position: relative; }
+.cands i.picked { outline: 2px solid var(--text); outline-offset: 1px; }
+.note { color: var(--muted); max-width: 90ch; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Speaker colour lab</h1>
+  <div class="handles" id="handles"></div>
+  <div class="summary" id="summary"></div>
+</header>
+<main>
+  <p class="note">Each recording: frames drawn from inside moderator turns and participant turns (random frames when there is no
+  transcript), at 32×18. Per speaker, the kept pixels of all their frames are clustered in OKLab. Only a cluster holding at least
+  the minimum share of pixels may be picked, so every colour shown is one that really fills that much of the frame. When the two
+  speakers come out closer than the distinctness threshold, the pair of eligible clusters that is furthest apart is used instead,
+  and if no eligible pair is far enough apart the speakers fall back to the neutral grey and slate. The tone mapping then moves
+  both colours the same way (lightness range, chroma gain), so hue and ordering are kept. The faint overlay on each frame marks
+  what was cropped or ignored.</p>
+  <div class="overview" id="overview"></div>
+  <div id="videos"></div>
+</main>
+
+<script>
+const DATA = /*__DATA__*/null;
+const W = DATA.w, H = DATA.h;
+
+// ── Handles ───────────────────────────────────────────────────────────────
+const P = {
+  bar:      { label: "Black-bar crop: edge row/col luma below", min: 0, max: 80, step: 1, value: 30 },
+  barFrac:  { label: "…for at least this share of its pixels %", min: 50, max: 100, step: 5, value: 85 },
+  dark:     { label: "Ignore pixels darker than (luma)", min: 0, max: 80, step: 1, value: 18 },
+  light:    { label: "Ignore pixels lighter than (luma)", min: 180, max: 256, step: 1, value: 256 },
+  k:        { label: "Clusters (k)", min: 2, max: 8, step: 1, value: 4 },
+  share:    { label: "Minimum share of pixels to be picked %", min: 5, max: 50, step: 1, value: 15 },
+  pick:     { label: "Pick among eligible clusters", options: ["largest", "most colourful", "mean of all pixels"], value: "most colourful" },
+  scene:    { label: "Same-scene test: cluster sets closer than ΔE", min: 0, max: 20, step: 0.5, value: 6 },
+  minDE:    { label: "Distinctness: min ΔE (OKLab × 100)", min: 0, max: 40, step: 1, value: 15 },
+  Lmin:     { label: "Tone: lightness floor (OKLab L)", min: 0, max: 0.9, step: 0.01, value: 0.42 },
+  Lmax:     { label: "Tone: lightness ceiling", min: 0.3, max: 1, step: 0.01, value: 0.88 },
+  cgain:    { label: "Tone: chroma gain ×", min: 0.5, max: 3, step: 0.05, value: 1.4 },
+};
+const hostH = document.getElementById("handles");
+for (const [k, p] of Object.entries(P)) {
+  const lab = document.createElement("label");
+  const name = document.createElement("span"); name.textContent = p.label;
+  const out = document.createElement("output");
+  let input;
+  if (p.options) {
+    input = document.createElement("select");
+    p.options.forEach(o => { const op = document.createElement("option"); op.value = op.textContent = o; input.append(op); });
+    input.value = p.value; out.textContent = "";
+  } else {
+    input = document.createElement("input"); input.type = "range";
+    Object.assign(input, { min: p.min, max: p.max, step: p.step, value: p.value }); out.textContent = p.value;
+  }
+  input.addEventListener("input", () => { p.value = p.options ? input.value : +input.value; out.textContent = p.options ? "" : input.value; schedule(); });
+  lab.append(name, out, input); hostH.append(lab);
+}
+let pending = 0;
+const schedule = () => { cancelAnimationFrame(pending); pending = requestAnimationFrame(run); };
+
+// ── Colour maths ──────────────────────────────────────────────────────────
+const lin = c => (c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+const gam = c => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
+function toLab([r, g, b]) {
+  r = lin(r); g = lin(g); b = lin(b);
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+          1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+          0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s];
+}
+function toRgbLinear([L, a, b]) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3,
+        s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+          -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+          -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s];
+}
+const inGamut = c => c.every(v => v >= -1e-4 && v <= 1 + 1e-4);
+function toCss(lab) {
+  let [L, a, b] = lab;
+  // gamut-map by reducing chroma
+  for (let i = 0; i < 30 && !inGamut(toRgbLinear([L, a, b])); i++) { a *= 0.92; b *= 0.92; }
+  const rgb = toRgbLinear([L, a, b]).map(v => Math.round(255 * gam(Math.min(1, Math.max(0, v)))));
+  return `rgb(${rgb.join(",")})`;
+}
+const dE = (p, q) => 100 * Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+const chroma = c => Math.hypot(c[1], c[2]);
+const luma = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b;
+function tone(lab) {
+  const L = P.Lmin.value + lab[0] * (P.Lmax.value - P.Lmin.value);
+  return [L, lab[1] * P.cgain.value, lab[2] * P.cgain.value];
+}
+
+// Decode frames once
+DATA.videos.forEach(v => v.frames.forEach(f => {
+  const bin = atob(f.px); f.rgb = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) f.rgb[i] = bin.charCodeAt(i);
+}));
+
+// Crop black bars and drop ignored pixels → { keep: Uint8Array mask, crop: {t,b,l,r} }
+function prepare(f) {
+  const px = (x, y) => { const i = (y * W + x) * 3; return [f.rgb[i], f.rgb[i + 1], f.rgb[i + 2]]; };
+  const darkLine = (pts) => pts.filter(([x, y]) => luma(...px(x, y)) < P.bar.value).length / pts.length >= P.barFrac.value / 100;
+  const row = y => Array.from({ length: W }, (_, x) => [x, y]), col = x => Array.from({ length: H }, (_, y) => [x, y]);
+  let t = 0, b = H - 1, l = 0, r = W - 1;
+  while (t < b && darkLine(row(t))) t++;
+  while (b > t && darkLine(row(b))) b--;
+  while (l < r && darkLine(col(l).slice(t, b + 1))) l++;
+  while (r > l && darkLine(col(r).slice(t, b + 1))) r--;
+  const keep = new Uint8Array(W * H), labs = [];
+  for (let y = t; y <= b; y++) for (let x = l; x <= r; x++) {
+    const c = px(x, y), lu = luma(...c);
+    if (lu < P.dark.value || lu >= P.light.value) continue;
+    keep[y * W + x] = 1; labs.push(toLab(c));
+  }
+  return { keep, crop: { t, b, l, r }, labs };
+}
+
+// Deterministic k-means++ in OKLab → clusters sorted by share
+function kmeans(labs, k) {
+  if (!labs.length) return [];
+  let seed = 12345; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const cents = [labs[Math.floor(rnd() * labs.length)]];
+  while (cents.length < Math.min(k, labs.length)) {
+    const d = labs.map(p => Math.min(...cents.map(c => (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2)));
+    const sum = d.reduce((a, b) => a + b, 0); if (!sum) break;
+    let r = rnd() * sum, i = 0; while ((r -= d[i]) > 0 && i < d.length - 1) i++;
+    cents.push(labs[i]);
+  }
+  let assign = new Int32Array(labs.length);
+  for (let it = 0; it < 12; it++) {
+    labs.forEach((p, i) => { let best = 0, bd = Infinity;
+      cents.forEach((c, j) => { const dd = (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2; if (dd < bd) { bd = dd; best = j; } });
+      assign[i] = best; });
+    const acc = cents.map(() => [0, 0, 0, 0]);
+    labs.forEach((p, i) => { const a = acc[assign[i]]; a[0] += p[0]; a[1] += p[1]; a[2] += p[2]; a[3]++; });
+    acc.forEach((a, j) => { if (a[3]) cents[j] = [a[0] / a[3], a[1] / a[3], a[2] / a[3]]; });
+  }
+  const counts = cents.map(() => 0); assign.forEach(j => counts[j]++);
+  return cents.map((c, j) => ({ lab: c, share: counts[j] / labs.length })).filter(c => c.share > 0).sort((a, b) => b.share - a.share);
+}
+const meanLab = labs => labs.reduce((a, p) => [a[0] + p[0] / labs.length, a[1] + p[1] / labs.length, a[2] + p[2] / labs.length], [0, 0, 0]);
+
+// Clusters → eligible candidates, ordered by preference
+function candidates(labs) {
+  if (!labs.length) return { all: [], eligible: [] };
+  const all = kmeans(labs, P.k.value);
+  if (P.pick.value === "mean of all pixels") { const m = { lab: meanLab(labs), share: 1 }; return { all, eligible: [m] }; }
+  let eligible = all.filter(c => c.share >= P.share.value / 100);
+  if (!eligible.length) eligible = all.slice(0, 1);
+  if (P.pick.value === "most colourful") eligible = [...eligible].sort((a, b) => chroma(b.lab) - chroma(a.lab));
+  return { all, eligible };
+}
+
+// How alike are two speakers' pictures? Share-weighted mean distance from each cluster to the
+// nearest cluster of the other speaker, symmetrised. Low = the camera shows the same thing whoever
+// talks (gallery view, one room), so the frame colour says nothing about the speaker.
+function sceneDistance(a, b) {
+  const one = (x, y) => x.reduce((acc, c) => acc + c.share * Math.min(...y.map(d => dE(c.lab, d.lab))), 0);
+  return (one(a, b) + one(b, a)) / 2;
+}
+
+// The honest-distinctness rule
+function pickPair(mod, ppt) {
+  if (!mod.eligible.length || !ppt.eligible.length) {
+    const one = (mod.eligible[0] || ppt.eligible[0]);
+    return { m: mod.eligible[0], p: ppt.eligible[0], status: "single", de: null, one };
+  }
+  const m0 = mod.eligible[0], p0 = ppt.eligible[0], d0 = dE(tone(m0.lab), tone(p0.lab));
+  const sd = sceneDistance(mod.all, ppt.all);
+  if (sd < P.scene.value) return { m: m0, p: p0, status: "same", de: d0, sd };
+  if (d0 >= P.minDE.value) return { m: m0, p: p0, status: "ok", de: d0 };
+  let best = null;
+  for (const m of mod.eligible) for (const p of ppt.eligible) {
+    const d = dE(tone(m.lab), tone(p.lab)); if (!best || d > best.de) best = { m, p, de: d };
+  }
+  if (best && best.de >= P.minDE.value) return { ...best, status: "swap" };
+  return { m: m0, p: p0, status: "fail", de: best ? best.de : d0 };
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+const host = document.getElementById("videos"), ov = document.getElementById("overview");
+const mk = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const NEUTRAL = { m: "light-dark(#b4bac2, #565c64)", p: "light-dark(#5b6472, #b8c0cc)" };
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+
+function drawFrame(f, prep) {
+  const c = mk("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d"), img = g.createImageData(W, H);
+  for (let i = 0; i < W * H; i++) {
+    const dim = !prep.keep[i];
+    img.data[i * 4] = f.rgb[i * 3]; img.data[i * 4 + 1] = f.rgb[i * 3 + 1]; img.data[i * 4 + 2] = f.rgb[i * 3 + 2];
+    img.data[i * 4 + 3] = dim ? 70 : 255;
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+
+function run() {
+  host.replaceChildren(); ov.replaceChildren();
+  const tally = { ok: 0, swap: 0, fail: 0, single: 0, same: 0 };
+  DATA.videos.forEach(v => {
+    const prep = v.frames.map(prepare);
+    const byRole = r => v.frames.map((f, i) => [f, prep[i]]).filter(([f]) => f.role === r);
+    // Two-speaker only when both roles actually have frames; a one-speaker transcript is a single colour.
+    const present = ["moderator", "participant"].filter(r => byRole(r).length);
+    const two = present.length === 2;
+    const roles = v.has_turns ? present : ["unknown"];
+    const solo = two ? null : roles[0];
+    const cands = Object.fromEntries(roles.map(r => [r, candidates(byRole(r).flatMap(([, p]) => p.labs))]));
+    const pair = two ? pickPair(cands.moderator, cands.participant) : { m: null, p: cands[solo].eligible[0], status: "single", de: null };
+    tally[pair.status]++;
+    const col = (c, fallback) => pair.status === "fail" || pair.status === "same" ? fallback : c ? toCss(tone(c.lab)) : fallback;
+    const raw = c => c ? toCss(c.lab) : "transparent";
+    const mCol = col(pair.m, NEUTRAL.m), pCol = col(pair.p, NEUTRAL.p);
+
+    // overview
+    const o = mk("div", "ov"), pr = mk("div", "pair");
+    if (two) { const a = mk("i"); a.style.background = mCol; pr.append(a); }
+    const b = mk("i"); b.style.background = pCol; pr.append(b);
+    o.append(pr, mk("span", null, v.name.split("/").pop())); o.title = v.name; ov.append(o);
+
+    // detail
+    const box = mk("section", "video"), head = mk("div", "vhead");
+    const statusText = { ok: `ΔE ${pair.de?.toFixed(1)} · distinct`, swap: `ΔE ${pair.de?.toFixed(1)} · used the furthest-apart eligible pair`,
+      fail: `ΔE ${pair.de?.toFixed(1)} · no eligible pair is distinct → neutral greys`,
+      same: `scene distance ${pair.sd?.toFixed(1)} · same picture whoever speaks → neutral greys`,
+      single: v.has_turns ? `one speaker (${solo}) · one colour` : "no transcript · one colour" }[pair.status];
+    head.append(mk("b", null, v.name), mk("span", "tag", `${fmt(v.duration)} · ${v.has_turns ? "frames from speaker turns" : "random frames"}`),
+                mk("span", `status ${pair.status}`, statusText));
+    const cols = mk("div", "cols"), left = mk("div");
+    roles.forEach(r => {
+      const rowEl = mk("div", "role"); rowEl.append(mk("div", "rl", r));
+      byRole(r).forEach(([f, p]) => {
+        const fr = mk("div", "fr"), cs = candidates(p.labs), sw = mk("div", "sw");
+        sw.style.background = cs.eligible[0] ? toCss(tone(cs.eligible[0].lab)) : "transparent";
+        fr.append(drawFrame(f, p), sw, mk("span", null, fmt(f.t)));
+        fr.title = `kept ${p.labs.length} of ${W * H} px`;
+        rowEl.append(fr);
+      });
+      left.append(rowEl);
+    });
+    const res = mk("div", "result");
+    const line = (label, cand, cs, css) => {
+      const r = mk("div", "res-row"); r.append(mk("span", null, label));
+      const a = mk("div", "chip"); a.style.background = raw(cand); a.title = "raw cluster colour";
+      const t = mk("div", "chip"); t.style.background = css; t.title = "after tone mapping";
+      if (cand) a.textContent = `${Math.round(cand.share * 100)}%`;
+      r.append(a, t); res.append(r);
+      const cc = mk("div", "cands"); cs.all.forEach(c => { const i = mk("i"); i.style.background = toCss(c.lab);
+        i.title = `${Math.round(c.share * 100)}% of pixels${c.share * 100 < P.share.value ? " — below min share" : ""}`;
+        if (c.share * 100 < P.share.value) i.style.opacity = .3;
+        if (cand && c.lab === cand.lab) i.classList.add("picked"); cc.append(i); });
+      const r2 = mk("div", "res-row"); r2.append(mk("span", null, "clusters"), cc); r2.lastChild.style.gridColumn = "2 / -1"; res.append(r2);
+    };
+    if (two) { line("moderator", pair.m, cands.moderator, mCol); line("participant", pair.p, cands.participant, pCol); }
+    else line(solo === "unknown" ? "all" : solo, pair.p, cands[solo], pCol);
+    // lane preview: alternating turns like the tapestry
+    const lane = mk("div", "lane"), tm = mk("div", "tr"), tp = mk("div", "tr");
+    let seed = v.name.length * 97;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 18; i++) {
+      const isM = two && i % 2 === 0, w = isM ? 6 + rnd() * 10 : 12 + rnd() * 40;
+      const a = mk("i"), gap = mk("i"); a.style.width = gap.style.width = w + "px";
+      a.style.background = isM ? mCol : pCol; gap.style.background = "transparent";
+      (isM ? tm : tp).append(a); (isM ? tp : tm).append(gap);
+    }
+    lane.append(tm, tp); res.append(lane);
+    cols.append(left, res); box.append(head, cols); host.append(box);
+  });
+  document.getElementById("summary").textContent =
+    `${DATA.videos.length} recordings · distinct as picked: ${tally.ok} · needed the furthest-apart pair: ${tally.swap} · same scene: ${tally.same} · ` +
+    `not separable (neutral fallback): ${tally.fail} · one speaker or no transcript: ${tally.single}`;
+}
+run();
+</script>
+</body>
+</html>

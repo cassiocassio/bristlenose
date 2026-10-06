@@ -90,6 +90,15 @@ open); `docs/testing/ratchet.json` names each.
   fails on the msstore source where the exact id works.
 - **The test VM is friendlier than a real machine**: UTM's unattended install turns
   UAC off.
+- **Driving the UTM VM from the Mac** (5 Oct 2026): typed keystrokes arrive garbled
+  (one run typed a row of A's), but the clipboard reaches the guest: write it, then
+  right-click in Windows Terminal to paste, and read the line before pressing Enter.
+  `utmctl exec` runs as SYSTEM, which is the wrong user for a per-user installer;
+  a scheduled task whose principal is the `BUILTIN\Users` group runs in the signed-in
+  user's session instead, and `Start-Transcript` plus `utmctl file pull` reads its
+  output back. Give each task its own name: Windows ignores a second start of one still
+  running. A process started that way may be refused child processes, so test any
+  `powershell -c "irm … | iex"` shape from a terminal the user opened.
 
 ### Open, in order
 

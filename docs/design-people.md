@@ -3057,3 +3057,35 @@ people as unique and roles as per-session is the People lens's long-term goal.
      code is emitted: the grid, the transcript, the export's "not identified" line, the
      MCP overview. Two new strings, the role word with a letter for moderator and
      observer, in the 21 full locales.
+
+10. **Second round of answers (6 Oct 2026).**
+    - **Land Phase 1 now**, with answer 2's three intents built in: point this slot at an
+      existing person, make a new person for this slot, or rename a person everywhere.
+    - **People left with no sessions are hidden from the picker, and their records are
+      kept.** Keep the names learned along the way: a later type-ahead on an unknown
+      speaker may offer them again.
+    - **A role-segment click only browses.** A researcher can look at the moderator list of
+      a participant's picker and nothing changes. A recode happens only when they click a
+      name under another role.
+    - **The transcript's picker is the same picker.** The owner's call, against the
+      names-only recommendation in point 7. It opens on the speaker's current role, which is
+      the role the pipeline assigned from how they spoke (questions, moderator phrases),
+      or the role the researcher has set since. Because a segment click only browses, a
+      look from a paragraph badge changes nothing. A name picked under another role recodes
+      the whole speaker in this session, not that paragraph. *Open:* whether the picker
+      needs to say so when it opens from a paragraph.
+    - **An unknown speaker opens with the cursor in the new-person field** (proposed, under
+      discussion). An unknown speaker is one with no name, as opposed to a proposed name or
+      one from a platform label. There is nothing to confirm, and typing is the likely act;
+      the grey italic hint already says what the field is for. The hazard is a duplicate:
+      typing "Martin" when Martin already exists makes a second Martin (answer 2: never merge
+      on a name). So the field has to surface the existing match as the default as the
+      researcher types. That is the type-ahead the previous bullet anticipates, and it turns
+      the field into a combobox.
+    - **Only people confirmed at least once are offered from other sessions**, plus this
+      speaker's own guess. For now.
+    - **Being addressed by name is a good clue.** "Thanks, Steve" in reply to the previous
+      turn names the previous turn's speaker. It proposes, dotted like any other guess,
+      because a human still says yes. The prompt must attribute the name to the person
+      addressed, not the one speaking; with three or more speakers, who was addressed can
+      be ambiguous.

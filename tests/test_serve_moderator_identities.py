@@ -321,7 +321,9 @@ class TestMigration:
         assert states == [("m1", "confirmed"), ("p1", "proposed")]
         assert all(uuids) and len(set(uuids)) == 2
         assert "name_confirmed" not in columns
-        assert version == "013"
+        from tests.test_migrations import MIGRATION_HEAD
+
+        assert version == MIGRATION_HEAD, "a 012 database migrates all the way up"
 
 
 class TestThreeActs:
@@ -580,11 +582,6 @@ class TestRecode:
         client.put("/api/projects/1/sessions/s2/speakers/m1", json={"kind": "observer", "person": kerri})
         client.put("/api/projects/1/sessions/s2/speakers/m1", json={"kind": "moderator", "person": kerri})
         assert _slots(client)[("s2", "m1")]["speaker_code"] == "m2"
-
-    def test_a_participant_is_not_recoded_here(self, tmp_path: Path) -> None:
-        client = _client(_project(tmp_path, _TWO))
-        resp = client.put("/api/projects/1/sessions/s1/speakers/p1", json={"kind": "moderator"})
-        assert resp.status_code == 409
 
     def test_no_read_disagrees_with_the_slot(self, tmp_path: Path) -> None:
         """The §J7 route walk: after Kerri (m2) is recoded as an observer, no

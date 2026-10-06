@@ -338,7 +338,7 @@ describe("PersonPicker", () => {
     expect(items()[0].querySelector("input")).toBeNull();
   });
 
-  describe("recoding between moderator and observer (§J7 R1)", () => {
+  describe("recoding a speaker's role (§J7 R1, R2)", () => {
     const byRole = {
       moderator: people("Martin", "Kerri"),
       participant: [],
@@ -346,10 +346,10 @@ describe("PersonPicker", () => {
     };
     const segments = () => screen.getAllByRole("radio") as HTMLButtonElement[];
 
-    it("a moderator's picker can browse Observer; Participant waits for R2", () => {
+    it("every segment is open on a moderator", () => {
       render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={byRole.moderator} knownByRole={byRole} onChoose={vi.fn()} onClose={vi.fn()} />);
       const [mod, part, obs] = segments();
-      expect([mod.disabled, part.disabled, obs.disabled]).toEqual([false, true, false]);
+      expect([mod.disabled, part.disabled, obs.disabled]).toEqual([false, false, false]);
     });
 
     it("browsing writes nothing, and lists the same person first, by the code they would carry", () => {
@@ -378,6 +378,7 @@ describe("PersonPicker", () => {
       const onChoose = vi.fn();
       render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={byRole.moderator} knownByRole={byRole} onChoose={onChoose} onClose={vi.fn()} />);
       fireEvent.keyDown(menu(), { key: "ArrowRight" });
+      fireEvent.keyDown(menu(), { key: "ArrowRight" });
       expect(segments()[2].getAttribute("aria-checked")).toBe("true");
       const field = screen.getByPlaceholderText("New observer");
       fireEvent.change(field, { target: { value: "Dana" } });
@@ -394,11 +395,48 @@ describe("PersonPicker", () => {
       expect(onChoose).not.toHaveBeenCalled();
     });
 
-    it("a participant's other segments stay disabled", () => {
-      const slot: PersonPickerSlot = { code: "p3", role: "participant", name: "Mary", confirmed: true };
-      render(<PersonPicker slot={slot} labels={labels(slot)} known={[{ name: "Mary", code: "p3" }]} knownByRole={byRole} onChoose={vi.fn()} onClose={vi.fn()} />);
+    const participants = [{ name: "Mary", code: "p1" }, { name: "Ann", code: "p2" }];
+    const withParticipants = { ...byRole, participant: participants };
+    const mary: PersonPickerSlot = { code: "p1", role: "participant", name: "Mary", confirmed: true };
+
+    it("under Participant, a moderator is offered alone, numbered after every participant", () => {
+      const onChoose = vi.fn();
+      render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={byRole.moderator} knownByRole={withParticipants} onChoose={onChoose} onClose={vi.fn()} />);
+      fireEvent.click(segments()[1]);
+      expect(items().map((li) => li.textContent)[0]).toContain("p3Martin");
+      expect(items().filter((li) => li.textContent?.includes("Mary"))).toHaveLength(0);
+      expect(screen.getByPlaceholderText("New name for p3")).toBeInTheDocument();
+      fireEvent.click(items()[0]);
+      expect(onChoose).toHaveBeenCalledWith({
+        kind: "person", role: "participant", row: { name: "Martin", code: "p3", person: "id-Martin" },
+      });
+    });
+
+    it("a participant's picker opens every segment, and under Moderator offers the team", () => {
+      const onChoose = vi.fn();
+      render(<PersonPicker slot={mary} labels={labels(mary)} known={participants} knownByRole={withParticipants} onChoose={onChoose} onClose={vi.fn()} />);
       const [mod, part, obs] = segments();
-      expect([mod.disabled, part.disabled, obs.disabled]).toEqual([true, false, true]);
+      expect([mod.disabled, part.disabled, obs.disabled]).toEqual([false, false, false]);
+      fireEvent.click(mod);
+      const rows = items().map((li) => li.textContent);
+      expect(rows.some((r) => r?.includes("Mary"))).toBe(false);
+      fireEvent.click(items()[0]);
+      expect(onChoose).toHaveBeenCalledWith({
+        kind: "person", role: "moderator", row: expect.objectContaining({ name: "Martin" }),
+      });
+    });
+
+    it("a new moderator typed from a participant's picker may not take a team name", () => {
+      const onChoose = vi.fn();
+      render(<PersonPicker slot={mary} labels={labels(mary)} known={participants} knownByRole={withParticipants} onChoose={onChoose} onClose={vi.fn()} />);
+      fireEvent.click(segments()[0]);
+      const field = screen.getByPlaceholderText("New moderator");
+      fireEvent.change(field, { target: { value: "jane" } });
+      fireEvent.keyDown(field, { key: "Enter" });
+      expect(onChoose).not.toHaveBeenCalled();
+      fireEvent.change(field, { target: { value: "Mary" } });
+      fireEvent.keyDown(field, { key: "Enter" });
+      expect(onChoose).toHaveBeenCalledWith({ kind: "new", name: "Mary", role: "moderator" });
     });
   });
 

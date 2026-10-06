@@ -213,11 +213,11 @@ def get_transcript(
         )
 
         # Quotes for this session + their cluster/theme assignments
-        quotes = (
-            db.query(Quote)
-            .filter_by(project_id=project_id, session_id=session_id)
-            .all()
-        )
+        out = speaker_slots.evidence_out(db, project_id)
+        quotes = [
+            q for q in db.query(Quote).filter_by(project_id=project_id, session_id=session_id).all()
+            if speaker_slots.counts(q, out)
+        ]
         quote_ids = [q.id for q in quotes]
 
         # Build assignment lookup: quote_id -> (label, label_type)
@@ -372,7 +372,10 @@ def get_transcript(
 
         # Journey labels for this session
         participant_screens = derive_journeys(db, project_id)
-        session_pids = [s.slot_code for s in slots if s.slot_code.startswith("p")]
+        session_pids = [
+            s.slot_code for s in slots
+            if s.slot_code.startswith("p") and not speaker_slots.is_recoded_out(s.row)
+        ]
         journey_labels: list[str] = []
         for pid in session_pids:
             for label in participant_screens.get(pid, []):

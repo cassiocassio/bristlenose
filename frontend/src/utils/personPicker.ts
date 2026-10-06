@@ -83,9 +83,22 @@ export function personPickerRows(slot: PersonPickerSlot, known: PersonPickerRow[
 }
 
 /** The code someone new would get: the next free number for this role
- *  (§J8.8), or a participant's own code, which never changes. */
-export function personPickerNewCode(slot: PersonPickerSlot, rows: PersonPickerRow[]): string {
-  if (slot.role === "participant") return slot.code;
+ *  (§J8.8), or a participant's own code, which never changes. A speaker
+ *  recoded into participant (§J7 R2) has none of their own, and is numbered
+ *  after every participant in the study, as the server numbers them. */
+export function personPickerNewCode(
+  slot: PersonPickerSlot,
+  rows: PersonPickerRow[],
+  known: PersonPickerRow[] = rows,
+): string {
+  if (slot.role === "participant") {
+    if (slot.code.startsWith("p") && !slot.code.endsWith("?")) return slot.code;
+    const numbers = known
+      .map((r) => /^p(\d+)$/.exec(r.code))
+      .filter((m): m is RegExpExecArray => m !== null)
+      .map((m) => Number(m[1]));
+    return `p${numbers.length ? Math.max(...numbers) + 1 : 1}`;
+  }
   const prefix = slot.role === "moderator" ? "m" : "o";
   const taken = rows
     .map((r) => /^([mo])(\d+)$/.exec(r.code))
@@ -118,8 +131,10 @@ export function personPickerNameTaken(
   slot: PersonPickerSlot,
   rows: PersonPickerRow[],
   name: string,
+  role: PickerRole = slot.role,
 ): string | null {
-  if (slot.role === "participant") return null;
+  // Participants may share a name: the check is for the team (§J8.11).
+  if (role === "participant") return null;
   const wanted = name.trim().toLocaleLowerCase();
   const hit = rows.find(
     (r) =>
@@ -144,17 +159,23 @@ export function personPickerTyped(
   return slot.role === "participant" ? { kind: "name", name: trimmed } : { kind: "new", name: trimmed };
 }
 
+/** The new-person field's hint under the role being browsed. */
+export function newPromptUnder(labels: PersonPickerLabels, role: PickerRole, recoding: boolean, code: string): string {
+  const under = recoding ? labels.newPromptFor?.[role] : undefined;
+  return (under ?? labels.newPrompt).replace("{{code}}", code);
+}
+
 /** A picker label with its `{{name}}` filled — the labels leave it open
  *  because the Mac picker fills it too. */
 export function withName(template: string, name: string): string {
   return template.replace("{{name}}", name);
 }
 
-/** The roles a slot's picker lets the researcher switch between (§J7): a
- *  moderator and an observer can be recoded as each other (R1); a
- *  participant, and recoding into participant, is R2 and not built. */
-export function personPickerRolesOpen(slot: PersonPickerSlot): PickerRole[] {
-  return slot.role === "participant" ? ["participant"] : ["moderator", "observer"];
+/** The roles a slot's picker lets the researcher switch between (§J7): every
+ *  one — moderator and observer as each other (R1), into and out of
+ *  participant (R2). A segment click only browses; a pick under it recodes. */
+export function personPickerRolesOpen(_slot: PersonPickerSlot): PickerRole[] {
+  return [...PICKER_ROLES];
 }
 
 /** What the picker offers under another role (§J7): the speaker's own person
@@ -166,6 +187,16 @@ export function personPickerRowsForRole(
   known: PersonPickerRow[],
 ): PersonPickerRow[] {
   if (role === slot.role) return personPickerRows(slot, known);
+  if (role === "participant") {
+    // Into participant (§J7 R2): only this speaker, under the number they
+    // would take. Another participant is never offered — picking one would
+    // join two people.
+    if (!slot.person || !slot.name) return [];
+    const code = personPickerNewCode({ ...slot, role, code: "p?" }, [], known);
+    return [{ name: slot.name, code, person: slot.person }];
+  }
+  // Out of participant, the speaker's own row is not offered: a participant
+  // carries no uuid to the client, so it is the team's people, or someone new.
   const others = personPickerRows({ ...slot, role, name: "", person: undefined }, known)
     .filter((r) => !(slot.person && r.person === slot.person));
   if (!slot.person || !slot.name) return others;
@@ -213,7 +244,8 @@ export interface PersonPickerLabels {
   roleGroup: string;
   /** The new-person field's hint, which follows the role. */
   newPrompt: string;
-  /** The hint under each role a recode can browse to (§J7 R1). */
+  /** The hint under each role a recode can browse to (§J7); the
+   *  participant's carries `{{code}}`, filled by `newPromptUnder`. */
   newPromptFor?: Partial<Record<PickerRole, string>>;
   /** "That’s Me ({{name}})" — native fills the account's name; null where the
    *  role has no That's Me row (a participant), and unused in the browser. */
@@ -248,6 +280,11 @@ export function personPickerLabels(slot: PersonPickerSlot, t: TFunction): Person
     newPromptFor: {
       moderator: t("sessions.picker.newModerator"),
       observer: t("sessions.picker.newObserver"),
+      // `{{code}}` is left for the caller, which knows the number (§J7 R2).
+      participant: t("sessions.picker.newNameFor", {
+        code: "{{code}}",
+        interpolation: { escapeValue: false },
+      }),
     },
     // i18next would fill {{name}}; it is left for native, which knows it.
     thatsMe:

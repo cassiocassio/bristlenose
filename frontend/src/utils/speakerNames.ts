@@ -66,22 +66,43 @@ function slotPath(sessionId: string, code: string): string {
   return `/sessions/${encodeURIComponent(sessionId)}/speakers/${encodeURIComponent(code)}`;
 }
 
-async function writeSlot(sessionId: string, code: string, state: SpeakerNameState): Promise<void> {
-  if (isSessionScopedCode(code)) {
+/** Whether a write goes through the slot's own route: every moderator or
+ *  observer, every speaker whose role a recode changes or changed (§J7), and
+ *  never a plain participant, whose name is written through to people.yaml. */
+function viaSlot(code: string, state: SpeakerNameState, other: SpeakerNameState): boolean {
+  return (
+    isSessionScopedCode(code) ||
+    (state.kind !== undefined && state.kind !== "participant") ||
+    state.kind !== other.kind
+  );
+}
+
+async function writeSlot(
+  sessionId: string,
+  code: string,
+  state: SpeakerNameState,
+  other: SpeakerNameState,
+): Promise<void> {
+  if (viaSlot(code, state, other)) {
     // One request carries the whole state: the person, their names (a
     // spelling fix wherever they appear) and the flag; nobody is `clear`.
+    // A participant carries no uuid, so back to participant names the role
+    // alone, and the server points the slot at the participant it held.
+    const kind = state.kind ? { kind: state.kind } : {};
     await sendPut(
       slotPath(sessionId, code),
       state.person
         ? {
             person: state.person,
             ...(state.create ? { create: true } : {}),
-            ...(state.kind ? { kind: state.kind } : {}),
+            ...kind,
             full_name: state.full_name,
             short_name: state.short_name,
             confirmed: state.confirmed,
           }
-        : { clear: true },
+        : state.kind === "participant"
+          ? { kind: "participant", full_name: state.full_name, short_name: state.short_name, confirmed: state.confirmed }
+          : { clear: true, ...kind },
     );
     return;
   }
@@ -120,16 +141,16 @@ export interface NameSpeakerArgs {
  */
 export function nameSpeaker({ sessionId, code, before, after }: NameSpeakerArgs): Promise<void> {
   if (isExportMode() || sameState(before, after)) return Promise.resolve();
-  const done = enqueue(() => writeSlot(sessionId, code, after));
+  const done = enqueue(() => writeSlot(sessionId, code, after, before));
   pushUndo({
     action: actionFor(code, before, after),
     undo: () => {
       announce(sessionId, code, before);
-      return enqueue(() => writeSlot(sessionId, code, before));
+      return enqueue(() => writeSlot(sessionId, code, before, after));
     },
     redo: () => {
       announce(sessionId, code, after);
-      return enqueue(() => writeSlot(sessionId, code, after));
+      return enqueue(() => writeSlot(sessionId, code, after, before));
     },
   });
   return done;

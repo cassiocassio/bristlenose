@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, selectinload
 
+from bristlenose.server import speaker_slots
 from bristlenose.server.models import (
     ClusterQuote,
     HeadingEdit,
@@ -48,6 +49,10 @@ class TapestryTurn(BaseModel):
     t1: float
     #: The transcript's own token for the speaker (``m1``, ``p2``) — the slot code.
     speaker: str
+    #: Whether the speaker is a moderator or observer *now*: the slot's role,
+    #: which a recode changes while the token keeps its letter
+    #: (design-people.md §J7). Read this, never the token's prefix.
+    team: bool = False
     #: The scene colour (``#rrggbb``) — what was on screen during the turn — or null when the
     #: session has no video or the pipeline has not computed it.
     colour: str | None = None
@@ -165,7 +170,8 @@ def get_tapestry(
                           .filter(ThemeGroup.project_id == project_id).all()):
             theme_of[tq.quote_id] = edits.get(f"theme-group-{theme.id}:title") or theme.theme_label
 
-        quotes = db.query(Quote).filter_by(project_id=project_id).all()
+        quotes = speaker_slots.evidence_quotes(db, project_id)
+        slots = speaker_slots.slot_map(db, project_id)
         ids = [q.id for q in quotes]
         hidden = {s.quote_id for s in db.query(QuoteState).filter(QuoteState.quote_id.in_(ids)).all() if s.is_hidden}
         edited: dict[int, str] = {}
@@ -182,8 +188,14 @@ def get_tapestry(
         result = []
         for sess in sessions:
             colours = _scene_colours(out_dir, sess.session_id)
-            turns = [TapestryTurn(t0=a, t1=b, speaker=code, colour=_colour_at(colours, a, b))
-                     for a, b, code in _turns(sess.transcript_segments, sess.duration_seconds)]
+            turns = [
+                TapestryTurn(
+                    t0=a, t1=b, speaker=code, colour=_colour_at(colours, a, b),
+                    team=speaker_slots.is_team(slots[(sess.session_id, code)].row)
+                    if (sess.session_id, code) in slots else code[:1] in ("m", "o"),
+                )
+                for a, b, code in _turns(sess.transcript_segments, sess.duration_seconds)
+            ]
             sq = sorted(by_session.get(sess.session_id, []), key=lambda q: q.start_timecode)
             firsts: dict[str, float] = {}
             for q in sq:

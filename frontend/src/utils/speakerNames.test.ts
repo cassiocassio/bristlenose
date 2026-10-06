@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getUndoState, redo, resetUndoStore, undo } from "../contexts/UndoStore";
 import { getPeople, sendPut } from "./api";
+import { nameStateOf } from "./speakerPicking";
+import type { SpeakerResponse } from "./types";
 import {
   PEOPLE_CHANGED_EVENT,
   actionFor,
@@ -203,5 +205,63 @@ describe("nameSpeaker — the undo entry", () => {
     expect(actionFor("m1", proposed, { ...proposed, confirmed: true })).toBe(
       "confirmName",
     );
+  });
+});
+
+describe("nameSpeaker — a recode into or out of participant (§J7 R2)", () => {
+  const mary: SpeakerNameState = { full_name: "Mary Adeyemi", short_name: "Mary", confirmed: true };
+  const asMartin: SpeakerNameState = {
+    full_name: "Martin Storey", short_name: "Martin", confirmed: true, person: "id-martin", kind: "moderator",
+  };
+
+  it("a plain participant's rename still goes through /people", async () => {
+    peopleMock.mockResolvedValue({ p1: { full_name: "Mary Adeyemi", short_name: "Mary", role: "" } });
+    const before = { ...mary, kind: "participant" as const };
+    await nameSpeaker({ sessionId: "s1", code: "p1", before, after: { ...before, short_name: "M" } });
+    expect(puts().map(([path]) => path)).toEqual(["/people", "/sessions/s1/speakers/p1"]);
+  });
+
+  it("a participant recoded as the moderator is one write to the slot, with the role", async () => {
+    await nameSpeaker({ sessionId: "s1", code: "p1", before: mary, after: asMartin });
+    expect(puts()).toEqual([[
+      "/sessions/s1/speakers/p1",
+      { person: "id-martin", kind: "moderator", full_name: "Martin Storey", short_name: "Martin", confirmed: true },
+    ]]);
+    expect(peopleMock).not.toHaveBeenCalled();
+  });
+
+  it("its undo names the role alone — a participant's uuid never leaves the server", async () => {
+    // `before` as the grid reads a plain participant, not built by hand: the
+    // first build tested a shape the app never produced (code review, R2).
+    const before = nameStateOf({
+      speaker_code: "p1", slot_code: "p1", name: "Mary", full_name: "Mary Adeyemi",
+      short_name: "Mary", name_confirmed: true, role: "participant",
+    } as SpeakerResponse);
+    await nameSpeaker({ sessionId: "s1", code: "p1", before, after: asMartin });
+    await undo();
+    expect(puts()[1]).toEqual([
+      "/sessions/s1/speakers/p1",
+      { kind: "participant", full_name: "Mary Adeyemi", short_name: "Mary", confirmed: true },
+    ]);
+    expect(peopleMock).not.toHaveBeenCalled();
+  });
+
+  it("a moderator recoded as a participant sends the role with their person", async () => {
+    const before: SpeakerNameState = { ...asMartin };
+    const after: SpeakerNameState = { ...asMartin, kind: "participant" };
+    await nameSpeaker({ sessionId: "s2", code: "m1", before, after });
+    expect(puts()).toEqual([[
+      "/sessions/s2/speakers/m1",
+      { person: "id-martin", kind: "participant", full_name: "Martin Storey", short_name: "Martin", confirmed: true },
+    ]]);
+    expect(actionFor("m1", before, after)).toBe("changeRole");
+  });
+
+  it("a cleared speaker's undo carries its role back too", async () => {
+    const unknown: SpeakerNameState = { full_name: "", short_name: "", confirmed: false, kind: "moderator" };
+    const named: SpeakerNameState = { ...asMartin, kind: "participant", create: true };
+    await nameSpeaker({ sessionId: "s2", code: "m1", before: unknown, after: named });
+    await undo();
+    expect(puts()[1]).toEqual(["/sessions/s2/speakers/m1", { clear: true, kind: "moderator" }]);
   });
 });

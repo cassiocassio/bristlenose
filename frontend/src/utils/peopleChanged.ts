@@ -18,9 +18,10 @@ export interface SpeakerNameState {
   /** With `person`: someone new by that client-made uuid, so a redo points at
    *  the same person instead of making a second one. */
   create?: boolean;
-  /** Moderators and observers: what this session's speaker is (§J7 R1). Sent
-   *  with every write so an undo of a recode puts the role back too. */
-  kind?: "moderator" | "observer";
+  /** What this session's speaker is (§J7): sent with every moderator or
+   *  observer write, and with a participant's once a recode is involved, so an
+   *  undo puts the role back too. Absent on a plain participant. */
+  kind?: "moderator" | "observer" | "participant";
 }
 
 export const PEOPLE_CHANGED_EVENT = "bn:people-changed";

@@ -885,8 +885,9 @@ def _import_speakers(
     known: dict[tuple[str, str], Person] = {}
     if project_id is not None:
         for slot in speaker_slots.project_slots(db, project_id):
-            if slot.person is not None and speaker_slots.is_team_code(slot.slot_code):
-                known.setdefault((slot.slot_code[:1], slot.person.full_name), slot.person)
+            if slot.person is not None and speaker_slots.is_team(slot.row):
+                known.setdefault((speaker_slots.kind_prefix(slot.row), slot.person.full_name),
+                                 slot.person)
     left: set[int | None] = set()
 
     for txt_file in sorted(transcripts_dir.glob("*.txt")):
@@ -920,7 +921,11 @@ def _import_speakers(
             _apply_stats(sp, stats.get(sid, {}).get(code))
 
             if not speaker_slots.is_team_code(code):
-                _import_participant(db, sp, people.get(code))
+                # A participant's tag a person recoded as moderator or observer
+                # (§J7 R2) is theirs: people.yaml's participant name must not be
+                # written onto whoever they picked.
+                if not speaker_slots.is_recoded_out(sp):
+                    _import_participant(db, sp, people.get(code))
                 continue
             # A person's yes, or their "not this person", outlives every re-run.
             if sp.state in (speaker_slots.CONFIRMED, speaker_slots.CLEARED) or evidence is None:

@@ -73,10 +73,14 @@ class SpeakerNameEdit(BaseModel):
     #: This slot is nobody we know (``m?``): an undo back to unknown, and the
     #: picker's "not this person".
     clear: bool | None = None
-    #: The cross-role recode (design-people.md §J7 R1): what this session's
-    #: speaker was, moderator or observer. Held on the slot; never reaches the
-    #: pipeline and re-analyses nothing. Into or out of participant is R2.
-    kind: Literal["moderator", "observer"] | None = None
+    #: The cross-role recode (design-people.md §J7): what this session's
+    #: speaker was. Held on the slot; never reaches the pipeline and
+    #: re-analyses nothing. Out of participant (R2), the session's quotes leave
+    #: the evidence until it is re-analysed (``speaker_slots.evidence_out``);
+    #: into participant, the speaker has no quotes until then. Into
+    #: participant takes the slot's own person or someone new — never another
+    #: participant, which would join two people.
+    kind: Literal["moderator", "observer", "participant"] | None = None
 
 
 def _is_session_scoped(speaker_code: str) -> bool:
@@ -382,6 +386,8 @@ def put_people(
     so every participant rename used to do exactly that. Those entries are
     ignored; ``PUT …/sessions/{sid}/speakers/{code}`` renames one session's.
     """
+    from bristlenose.server import speaker_slots
+
     db = _get_db(request)
     try:
         project = _check_project(db, project_id)
@@ -397,6 +403,10 @@ def put_people(
                 .first()
             )
             if not sp:
+                continue
+            # A participant's tag recoded as a moderator or observer (§J7 R2) is
+            # named through its session's slot, like any moderator.
+            if speaker_slots.is_recoded_out(sp):
                 continue
             person = db.get(Person, sp.person_id) if sp.person_id is not None else None
             if not person:
@@ -472,24 +482,63 @@ def put_session_speaker(
         sp = slot.row
         person = slot.person
         named = data.full_name is not None or data.short_name is not None
-        team = speaker_slots.is_team_code(slot.slot_code)
         left: set[int | None] = set()
         chose = False
 
+        was_team = speaker_slots.is_team(sp)
         if data.kind is not None:
-            if not team:
+            sp.speaker_role = {
+                "moderator": "researcher", "observer": "observer", "participant": "participant",
+            }[data.kind]
+        # A moderator or observer *now*: the role, which a recode just set,
+        # not the tag's letter.
+        team = speaker_slots.is_team(sp)
+        # Into participant from a moderator or observer tag (§J7 R2): picked
+        # like a team slot — the speaker's own person, or someone new.
+        recoded_in = not team and speaker_slots.is_team_code(slot.slot_code)
+        restored = False
+        own_tag_participant = not speaker_slots.is_team_code(slot.slot_code)
+        if own_tag_participant and team and not was_team:
+            # Out of participant: the write must say who they were — a person,
+            # or nobody (``clear``). Left on the participant's own record, the
+            # slot would read as a named moderator, and an anonymised export,
+            # which blanks by role, would keep the participant's name.
+            if data.person is None and not data.clear:
+                db.rollback()
                 raise HTTPException(
-                    status_code=409, detail="A participant's role is not changed here yet",
+                    status_code=409, detail="Say who they were: a person, or nobody",
                 )
-            sp.speaker_role = "researcher" if data.kind == "moderator" else "observer"
+            # Remember who the slot held, so the undo can point back at them
+            # without the participant's uuid ever leaving the server
+            # (``participant_person_id``).
+            if person is not None:
+                sp.participant_person_id = person.id
+        elif own_tag_participant and not team and was_team:
+            # Back to participant: the participant it held, unless a person is
+            # named in the same write.
+            # The person the slot holds now is the moderator it was recoded as;
+            # naming them again here means "back to who they were", never "make
+            # the moderator a participant", which would orphan the participant.
+            held = db.get(Person, sp.participant_person_id) if sp.participant_person_id else None
+            sp.participant_person_id = None
+            back = data.person is None or (
+                slot.person is not None and data.person == slot.person.uuid
+            )
+            if back and held is not None:
+                left.add(speaker_slots.point(
+                    sp, held, state=speaker_slots.CONFIRMED, evidence="participant",
+                ))
+                person = held
+                chose = True
+                restored = True
 
-        if data.clear and team:
+        if data.clear and (team or recoded_in):
             left.add(speaker_slots.point(sp, None, state=None, evidence=None))
             # Sticky: the next run must not propose the name that was refused.
             sp.state = speaker_slots.CLEARED
             person = None
-        elif data.person is not None:
-            if not team:
+        elif data.person is not None and not restored:
+            if not team and not recoded_in and data.kind is None:
                 raise HTTPException(status_code=409, detail="A participant is not picked")
             target = speaker_slots.by_uuid(db, data.person) or speaker_slots.identities(
                 db, project_id,
@@ -500,16 +549,27 @@ def put_session_speaker(
                 db.flush()
             if target is None:
                 raise HTTPException(status_code=404, detail="Person not found")
-            # A moderator or observer may be anyone who is not a participant: one
-            # person can moderate one session and observe another (§J7, call 3).
-            if speaker_slots.is_participant(db, target):
+            if not team and target is not slot.person and not data.create and (
+                db.query(SessionSpeaker)
+                .filter(SessionSpeaker.person_id == target.id, SessionSpeaker.id != sp.id)
+                .first() is not None
+            ):
+                # A participant is the slot's own person, someone new, or the one
+                # it held before a recode (an undo, pointing back at a person no
+                # slot holds): never someone another slot holds, which would join
+                # two people (§J7).
+                raise HTTPException(status_code=409, detail="A participant is not picked here")
+            # A moderator or observer may be anyone who is not a participant
+            # elsewhere: one person can moderate one session and observe another
+            # (§J7, call 3).
+            if team and speaker_slots.is_participant(db, target, but=sp):
                 raise HTTPException(status_code=409, detail="A participant is not picked here")
             left.add(speaker_slots.point(
                 sp, target, state=speaker_slots.CONFIRMED, evidence=speaker_slots.PICK,
             ))
             person = target
             chose = True
-        elif named and team and person is None:
+        elif named and (team or recoded_in) and person is None:
             person = Person(origin=speaker_slots.PICK)
             db.add(person)
             db.flush()
@@ -518,6 +578,28 @@ def put_session_speaker(
             ))
         elif person is None:
             raise HTTPException(status_code=409, detail="Nobody is identified here")
+
+        if not team and person is not None and person.origin != "participant" and (
+            recoded_in
+            or db.query(SessionSpeaker)
+            .filter(SessionSpeaker.person_id == person.id, SessionSpeaker.id != sp.id)
+            .first() is not None
+        ):
+            # Into participant as a member of the team: the participant gets a
+            # record of their own, named the same, so no person is ever both a
+            # research subject and a moderator or observer — an anonymised export
+            # blanks the one and names the other, and the team identity stays
+            # free to moderate elsewhere (§J7 R2).
+            own = Person(
+                full_name=person.full_name, short_name=person.short_name,
+                role_title=person.role_title, origin="participant",
+            )
+            db.add(own)
+            db.flush()
+            left.add(speaker_slots.point(
+                sp, own, state=speaker_slots.CONFIRMED, evidence=speaker_slots.PICK,
+            ))
+            person = own
 
         if person is not None and named and team:
             clash = speaker_slots.label_taken(

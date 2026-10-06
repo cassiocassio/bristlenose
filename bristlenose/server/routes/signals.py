@@ -40,6 +40,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from bristlenose.server import speaker_slots
 from bristlenose.signals.generic_detect import QuoteRecord, detect_signals_generic
 from bristlenose.signals.generic_matrix import QuoteContribution, build_matrix_from_contributions
 from bristlenose.signals.metrics import classify_flag
@@ -338,7 +339,7 @@ class _SharedProjectData:
 
 def _load_shared_data(db: Session, project_id: int) -> _SharedProjectData | None:
     """Load quotes, section/theme mappings — shared across codebook partitions."""
-    all_quotes = db.query(Quote).filter_by(project_id=project_id).all()
+    all_quotes = speaker_slots.evidence_quotes(db, project_id)
     if not all_quotes:
         return None
 

@@ -19,6 +19,7 @@ from fastapi.encoders import jsonable_encoder
 from starlette.responses import Response
 
 from bristlenose.i18n import canonical_locale, locale_resources
+from bristlenose.server import speaker_slots
 from bristlenose.server.routes.health import build_health_payload
 
 logger = logging.getLogger(__name__)
@@ -410,7 +411,6 @@ def export_report(
     Gathers all API data, embeds it in the React SPA shell, and returns
     a downloadable HTML file.
     """
-    from bristlenose.server.models import Quote
     from bristlenose.server.routes.codebook import get_codebook as _get_codebook_handler
     from bristlenose.server.routes.dashboard import (
         get_dashboard as _get_dashboard_handler,
@@ -510,7 +510,7 @@ def export_report(
     try:
         dom_ids = [
             _quote_dom_id(q)
-            for q in mod_db.query(Quote).filter_by(project_id=project_id).all()
+            for q in speaker_slots.evidence_quotes(mod_db, project_id)
         ]
     finally:
         mod_db.close()

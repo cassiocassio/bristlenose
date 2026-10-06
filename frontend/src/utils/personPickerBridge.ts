@@ -87,11 +87,12 @@ export function buildPersonPickerMessage(
   if (knownByRole) {
     for (const role of personPickerRolesOpen(slot)) {
       if (role === slot.role) continue;
-      const other = personPickerRowsForRole(slot, role, knownByRole[role] ?? []);
+      const theirs = knownByRole[role] ?? [];
+      const other = personPickerRowsForRole(slot, role, theirs);
       roles[role] = {
         names: other.map((r) => r.name),
         codes: other.map((r) => r.code),
-        newCode: personPickerNewCode({ ...slot, role }, other),
+        newCode: personPickerNewCode({ ...slot, role, code: "p?" }, other, theirs),
       };
     }
   }
@@ -108,7 +109,20 @@ export function buildPersonPickerMessage(
       width: Math.round(anchor.width),
       height: Math.round(anchor.height),
     },
-    labels: personPickerLabels(slot, t),
+    labels: wireLabels(personPickerLabels(slot, t), roles.participant?.newCode),
+  };
+}
+
+/** The labels as native draws them: the participant prompt's number filled,
+ *  since native has no `{{code}}` of its own to put there (§J7 R2). */
+function wireLabels(labels: PersonPickerLabels, participantCode: string | undefined): PersonPickerLabels {
+  const { participant, ...rest } = labels.newPromptFor ?? {};
+  return {
+    ...labels,
+    newPromptFor: {
+      ...rest,
+      ...(participant && participantCode ? { participant: participant.replace("{{code}}", participantCode) } : {}),
+    },
   };
 }
 
@@ -126,7 +140,10 @@ export function parsePersonPickerChoice(payload: unknown): WirePersonPickerReply
     typeof choice.name === "string" &&
     choice.name.trim()
   ) {
-    const role = choice.role === "moderator" || choice.role === "observer" ? choice.role : undefined;
+    const role =
+      choice.role === "moderator" || choice.role === "observer" || choice.role === "participant"
+        ? choice.role
+        : undefined;
     return {
       sessionId: p.sessionId,
       code: p.code,
@@ -184,7 +201,7 @@ export function resolvePersonPickerChoice(
     }
     if (kind === "new" || kind === "me") {
       const everyone = [...(found.knownByRole.moderator ?? []), ...(found.knownByRole.observer ?? [])];
-      const clash = personPickerNameTaken(slot, everyone, name);
+      const clash = personPickerNameTaken(slot, everyone, name, role);
       if (clash) return { sessionId, code, taken: clash };
       const choice = personPickerTyped(slot, name, role);
       return choice ? { sessionId, code, choice } : null;

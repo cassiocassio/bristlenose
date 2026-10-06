@@ -16,6 +16,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session as DbSession
 
+from bristlenose.server import speaker_slots
 from bristlenose.server.models import (
     ClusterQuote,
     Person,
@@ -207,7 +208,9 @@ def extract_quotes_for_export(
 def _resolve_quote_ids(
     db: DbSession, project_id: int, dom_ids: list[str]
 ) -> list[Quote]:
-    """Resolve DOM IDs to Quote rows (order preserved)."""
+    """Resolve DOM IDs to Quote rows (order preserved), leaving out any that no
+    longer count as evidence (``speaker_slots.evidence_out``)."""
+    out = speaker_slots.evidence_out(db, project_id)
     quotes: list[Quote] = []
     for dom_id in dom_ids:
         try:
@@ -224,14 +227,15 @@ def _resolve_quote_ids(
             )
             .first()
         )
-        if q:
+        if q and speaker_slots.counts(q, out):
             quotes.append(q)
     return quotes
 
 
 def _load_all_visible(db: DbSession, project_id: int) -> list[Quote]:
-    """Load all non-hidden quotes for a project."""
-    return (
+    """Load all non-hidden quotes for a project that count as evidence."""
+    out = speaker_slots.evidence_out(db, project_id)
+    return [q for q in (
         db.query(Quote)
         .outerjoin(QuoteState, QuoteState.quote_id == Quote.id)
         .filter(
@@ -239,7 +243,7 @@ def _load_all_visible(db: DbSession, project_id: int) -> list[Quote]:
             (QuoteState.is_hidden == False) | (QuoteState.id == None),  # noqa: E711, E712
         )
         .all()
-    )
+    ) if speaker_slots.counts(q, out)]
 
 
 def _load_edits(db: DbSession, quote_ids: list[int]) -> dict[int, str]:

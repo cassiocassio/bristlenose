@@ -169,7 +169,9 @@ def assemble_corpus_context(
     project = db.query(Project).filter_by(id=project_id).first()
     project_name = project.name if project else f"project {project_id}"
 
-    all_quotes = db.query(Quote).filter_by(project_id=project_id).all()
+    from bristlenose.server import speaker_slots
+
+    all_quotes = speaker_slots.evidence_quotes(db, project_id)
     quote_by_pk: dict[int, Quote] = {q.id: q for q in all_quotes}
     quote_pks = list(quote_by_pk.keys())
 
@@ -448,23 +450,17 @@ def resolve_speaker_names(db: SASession, project_id: int) -> dict[str, str]:
     return names
 
 
-def is_session_scoped_code(code: str) -> bool:
-    """A transcript's ``m*``/``o*`` token restarts in every session (it is the
-    slot); the identity codes the routes emit are study-wide."""
-    return code[:1] in ("m", "o")
-
-
 def session_team(db: SASession, project_id: int) -> dict[str, list[tuple[str, str]]]:
     """Session id → its moderators and observers as (identity code, role).
 
     Codes only, no names — ungated like the rest of the code roster. An
     unidentified slot is listed as ``m?`` / ``o?``.
     """
-    from bristlenose.server.speaker_slots import is_team_code, project_slots
+    from bristlenose.server.speaker_slots import is_team, project_slots
 
     result: dict[str, list[tuple[str, str]]] = {}
     for slot in project_slots(db, project_id):
-        if is_team_code(slot.slot_code):
+        if is_team(slot.row):
             result.setdefault(slot.session_id, []).append((slot.code, slot.role))
     return result
 
@@ -479,14 +475,14 @@ def resolve_session_speaker_names(
     are not here: the flat map names them.
     """
     from bristlenose.server.models import Project
-    from bristlenose.server.speaker_slots import is_team_code, project_slots
+    from bristlenose.server.speaker_slots import is_team, project_slots
 
     project = db.get(Project, project_id)
     if project is None or _mcp_anonymise_active(project):
         return {}
     result: dict[str, dict[str, str]] = {}
     for slot in project_slots(db, project_id):
-        if not is_team_code(slot.slot_code) or not slot.name:
+        if not is_team(slot.row) or not slot.name:
             continue
         result.setdefault(slot.session_id, {})[slot.code] = slot.name
     return result
@@ -530,7 +526,6 @@ def load_signals(
         CodebookGroup,
         DeletedBadge,
         ProjectCodebookGroup,
-        Quote,
         QuoteEdit,
         QuoteState,
         QuoteTag,
@@ -551,7 +546,9 @@ def load_signals(
         msg = f"unknown lens {lens!r} — valid lenses: {list(SIGNAL_LENSES)}"
         raise ValueError(msg)
 
-    all_quotes = db.query(Quote).filter_by(project_id=project_id).all()
+    from bristlenose.server import speaker_slots
+
+    all_quotes = speaker_slots.evidence_quotes(db, project_id)
     if not all_quotes:
         return SignalsResult(signals=[], total_participants=0, group_colour_sets={})
     quote_pks = [q.id for q in all_quotes]

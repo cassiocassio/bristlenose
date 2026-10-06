@@ -64,11 +64,10 @@ describe("person picker bridge contract", () => {
     expect(resolvePersonPickerChoice(c.payload, () => null)).toBeNull();
   });
 
-  it("a pick under another role is dropped for a participant (R2 is not built)", () => {
+  it("a role reply with no people by role to read is dropped, never read as a pick in the speaker's own role", () => {
     const slot: PersonPickerSlot = { code: "p3", role: "participant", name: "Mary", confirmed: true };
     const payload = { sessionId: "s3", code: "p3", choice: { kind: "new", name: "Jo Bloggs", role: "observer" } };
-    const known = { moderator: [], participant: [], observer: [] };
-    expect(resolvePersonPickerChoice(payload, () => ({ slot, known: [], knownByRole: known }))).toBeNull();
+    expect(resolvePersonPickerChoice(payload, () => ({ slot, known: [] }))).toBeNull();
   });
 
   it("a malformed payload is dropped", () => {

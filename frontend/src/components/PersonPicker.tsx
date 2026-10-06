@@ -38,6 +38,7 @@ import {
   personPickerRolesOpen,
   personPickerRowsForRole,
   personPickerTyped,
+  newPromptUnder,
   withName,
   type PersonPickerChoice,
   type PersonPickerLabels,
@@ -69,9 +70,8 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
   const [browsing, setBrowsing] = useState<PickerRole>(slot.role);
   const recoding = browsing !== slot.role;
   const knownFor = (role: PickerRole) => (role === slot.role ? known : knownByRole?.[role] ?? []);
-  const everyone = [...known, ...Object.entries(knownByRole ?? {})
-    .filter(([role]) => role !== slot.role && role !== "participant")
-    .flatMap(([, rows]) => rows ?? [])];
+  // The team, whose names may not repeat (§J8.11); participants may.
+  const everyone = [...knownFor("moderator"), ...knownFor("observer")];
   const people = personPickerRowsForRole(slot, browsing, knownFor(browsing));
   const keyOf = (r: PersonPickerRow) => r.person ?? `name:${r.name}`;
   const rows = [...people.map(keyOf), NEW];
@@ -88,7 +88,11 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
   const [renaming, setRenaming] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
   const renameRef = useRef<HTMLInputElement>(null);
-  const newCode = personPickerNewCode({ ...slot, role: browsing }, people);
+  const newCode = personPickerNewCode(
+    browsing === slot.role ? slot : { ...slot, role: browsing, code: "p?" },
+    people,
+    knownFor(browsing),
+  );
   const menuRef = useRef<HTMLUListElement>(null);
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
   const typed = useRef({ buffer: "", at: 0 });
@@ -164,7 +168,7 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
   };
 
   const submitDraft = () => {
-    const clash = personPickerNameTaken(slot, everyone, draft);
+    const clash = personPickerNameTaken(slot, everyone, draft, browsing);
     if (clash) {
       setTaken(clash);
       return;
@@ -218,7 +222,7 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
     }
   };
 
-  const newPrompt = (recoding && labels.newPromptFor?.[browsing]) || labels.newPrompt;
+  const newPrompt = newPromptUnder(labels, browsing, recoding, newCode);
   const open = personPickerRolesOpen(slot);
   const browse = (role: PickerRole) => {
     if (role === browsing) return;

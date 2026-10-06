@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from bristlenose.config import load_settings
 from bristlenose.server import codebook_builder as cb
+from bristlenose.server import speaker_slots
 from bristlenose.server.models import (
     Project,
     Quote,
@@ -344,13 +345,13 @@ async def find_candidates(
                 topic_label=q.topic_label or "",
                 sentiment=q.sentiment or "",
             )
-            for q in db.query(Quote).filter_by(project_id=project_id).all()
+            for q in speaker_slots.evidence_quotes(db, project_id)
             if q.id not in coded_ids
         ]
         # Map db_id -> DOM id for the response.
         dom_by_id = {
             q.id: _quote_dom_id(q)
-            for q in db.query(Quote).filter_by(project_id=project_id).all()
+            for q in speaker_slots.evidence_quotes(db, project_id)
         }
     finally:
         db.close()

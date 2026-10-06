@@ -91,7 +91,9 @@ class TestMigration:
             rows = conn.execute(sa.text("SELECT state FROM session_speakers")).all()
             version = conn.execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
         assert rows == [("proposed",)]
-        assert version == "013"
+        from tests.test_migrations import MIGRATION_HEAD
+
+        assert version == MIGRATION_HEAD
 
 
 class TestReimportKeepsAConfirmedName:

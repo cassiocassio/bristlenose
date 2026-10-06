@@ -337,6 +337,11 @@ class SessionSpeaker(Base):
     #: Why the slot points where it does: ``platform-name``, ``heard``,
     #: ``label``, ``inherited``, ``participant`` or ``pick``.
     evidence: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
+    #: The participant this slot held before a person recoded its participant
+    #: tag as a moderator or observer (``design-people.md`` §J7 R2), so the
+    #: undo points back at them. ``None`` otherwise. Not a foreign key, so the
+    #: ``person`` relationship stays unambiguous (014).
+    participant_person_id: Mapped[int | None] = mapped_column(nullable=True, default=None)
 
     session: Mapped[Session] = relationship(back_populates="session_speakers")
     person: Mapped[Person | None] = relationship(back_populates="session_speakers")

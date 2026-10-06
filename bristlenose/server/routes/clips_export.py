@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session as DbSession
 
 from bristlenose.i18n import get_locale
+from bristlenose.server import speaker_slots
 from bristlenose.server.clip_backend import FFmpegBackend
 from bristlenose.server.clip_manifest import (
     ClipSpec,
@@ -175,8 +176,9 @@ def _load_session_media(
 
 
 def _load_starred_quotes(db, project_id: int) -> list[Quote]:  # type: ignore[no-untyped-def]
-    """Load all starred quotes for a project."""
-    return (
+    """Load all starred quotes for a project that count as evidence."""
+    out = speaker_slots.evidence_out(db, project_id)
+    return [q for q in (
         db.query(Quote)
         .join(QuoteState, QuoteState.quote_id == Quote.id)
         .filter(
@@ -184,7 +186,7 @@ def _load_starred_quotes(db, project_id: int) -> list[Quote]:  # type: ignore[no
             QuoteState.is_starred == True,  # noqa: E712
         )
         .all()
-    )
+    ) if speaker_slots.counts(q, out)]
 
 
 def _quotes_to_quotelike(
@@ -349,9 +351,11 @@ def session_cues(db: DbSession, project_id: int, session_id: str) -> list[Cue]:
     tokens = [tok for seg in segments for tok in tokens_for_segment(seg)]
     for corr in _load_corrections(db, project_id, session_id, 0.0, float("inf")):
         tokens, _outcome = apply_correction(tokens, corr)
+    # A participant's tag recoded as the moderator (§J7 R2) is not primary.
+    out = {tag for sid, tag in speaker_slots.evidence_out(db, project_id) if sid == session_id}
     words: dict[str, int] = {}
     for tok in tokens:
-        if tok.speaker_code.startswith("p"):
+        if tok.speaker_code.startswith("p") and tok.speaker_code not in out:
             words[tok.speaker_code] = words.get(tok.speaker_code, 0) + 1
     primary = max(words, key=lambda c: words[c]) if words else ""
     end = max((tok.end for tok in tokens), default=0.0)
@@ -679,7 +683,7 @@ async def start_clip_extraction(
         starred_quotes = _load_starred_quotes(db, project_id)
         starred_ids = {q.id for q in starred_quotes}
 
-        all_quotes = db.query(Quote).filter(Quote.project_id == project_id).all()
+        all_quotes = speaker_slots.evidence_quotes(db, project_id)
 
         if body is not None and body.ids is not None:
             # Scoped export — clip exactly the quotes the picker handed over.

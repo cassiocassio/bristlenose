@@ -22,6 +22,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from bristlenose.server import speaker_slots
 from bristlenose.server.models import Project, Quote, QuoteEdit, QuoteState
 
 logger = logging.getLogger(__name__)
@@ -70,7 +71,7 @@ class _ReportQuote:
 
 def _report_quotes(db: Session, project_id: int) -> dict[tuple[str, str, float], _ReportQuote]:
     """(session, participant, start rounded to 0.01 s) → the report's quote."""
-    rows = db.query(Quote).filter_by(project_id=project_id).all()
+    rows = speaker_slots.evidence_quotes(db, project_id)
     hidden = {s.quote_id for s in db.query(QuoteState).join(Quote, QuoteState.quote_id == Quote.id)
               .filter(Quote.project_id == project_id, QuoteState.is_hidden).all()}
     edited: dict[int, str] = {}

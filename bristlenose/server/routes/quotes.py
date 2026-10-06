@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from bristlenose.server import speaker_slots
 from bristlenose.server.models import (
     AutoCodeJob,
     ClusterQuote,
@@ -399,7 +400,7 @@ def get_quotes(
         _check_project(db, project_id)
 
         # Load all quotes
-        all_quotes = db.query(Quote).filter_by(project_id=project_id).all()
+        all_quotes = speaker_slots.evidence_quotes(db, project_id)
         quote_by_id: dict[int, Quote] = {q.id: q for q in all_quotes}
         quote_ids = list(quote_by_id.keys())
 

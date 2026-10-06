@@ -8,17 +8,17 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from bristlenose.server import speaker_slots
 from bristlenose.server.journey import derive_journeys_with_anchors
 from bristlenose.server.models import (
     Project,
-    Quote,
     SessionSpeaker,
     SourceFile,
 )
 from bristlenose.server.models import (
     Session as SessionModel,
 )
-from bristlenose.server.speaker_slots import is_team_code, slot_map
+from bristlenose.server.speaker_slots import is_recoded_out, is_team, slot_map
 
 router = APIRouter(prefix="/api")
 
@@ -165,10 +165,13 @@ def get_sessions(
                         full_name=slot.full_name,
                         short_name=slot.person.short_name if slot.person else "",
                         slot_code=sp.speaker_code,
+                        # A moderator's or observer's only: a participant's
+                        # uuid could link them across studies. A recode out of
+                        # participant is undone through the slot's own memory
+                        # (``participant_person_id``), not the uuid.
                         person=(
                             slot.person.uuid
-                            if slot.person is not None
-                            and is_team_code(sp.speaker_code)
+                            if slot.person is not None and is_team(sp)
                             else ""
                         ),
                     )
@@ -198,7 +201,7 @@ def get_sessions(
             # Dedup by label (keep first occurrence + its anchor).
             session_pids = [
                 sp.speaker_code for sp in sess.session_speakers
-                if sp.speaker_code.startswith("p")
+                if sp.speaker_code.startswith("p") and not is_recoded_out(sp)
             ]
             journey: list[JourneyStepResponse] = []
             seen_labels: set[str] = set()
@@ -283,7 +286,7 @@ def _aggregate_sentiments(
 
     Returns session_id → {sentiment: count}.
     """
-    quotes = db.query(Quote).filter_by(project_id=project_id).all()
+    quotes = speaker_slots.evidence_quotes(db, project_id)
     result: dict[str, dict[str, int]] = {}
     for q in quotes:
         if q.sentiment:

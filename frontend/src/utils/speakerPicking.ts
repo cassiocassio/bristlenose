@@ -9,7 +9,7 @@
  */
 
 import i18n from "../i18n";
-import { apiGet, isSessionScopedCode } from "./api";
+import { apiGet } from "./api";
 import { isExportMode } from "./exportData";
 import type { SpeakerNameState } from "./peopleChanged";
 import {
@@ -89,13 +89,17 @@ export function pickerSlotOf(sp: SpeakerResponse): PersonPickerSlot {
 /** What a speaker's slot holds, as an undo records it. A missing flag reads
  *  as confirmed, as the grid draws it. */
 export function nameStateOf(sp: SpeakerResponse): SpeakerNameState {
+  // What the speaker is now — the displayed code's role, which a recode
+  // changes (§J7), not the slot's tag. A participant carries no uuid.
+  const kind = pickerRoleOf(sp.speaker_code);
   return {
     full_name: sp.full_name,
     short_name: sp.short_name ?? sp.name,
     confirmed: sp.name_confirmed !== false,
-    ...(isSessionScopedCode(slotOf(sp))
-      ? { person: sp.person || undefined, kind: sp.speaker_code.startsWith("o") ? "observer" as const : "moderator" as const }
-      : {}),
+    ...(kind !== "participant" ? { person: sp.person || undefined } : {}),
+    // Always: an undo compares the role before and after, and a plain
+    // participant's "participant" is what sends a recode's undo home.
+    kind,
   };
 }
 
@@ -137,9 +141,9 @@ export function stateAfter(
 }
 
 /** The role a pick leaves the slot in: the one it was picked under, or the
- *  one it had. Participants carry none (they are not recoded, §J7 R2). */
+ *  one it had (§J7). */
 function kindAfter(role: PickerRole | undefined, before: SpeakerNameState): Pick<SpeakerNameState, "kind"> {
-  if (role === "moderator" || role === "observer") return { kind: role };
+  if (role) return { kind: role };
   return before.kind ? { kind: before.kind } : {};
 }
 
@@ -190,7 +194,8 @@ export function applySpeakerChoice(ctx: SpeakerPickContext, choice: PersonPicker
   if (isExportMode()) return;
   if (choice.kind === "new" || choice.kind === "name") {
     const everyone = [...ctx.knownByRole.moderator, ...ctx.knownByRole.observer];
-    const clash = personPickerNameTaken(ctx.slot, ctx.slot.role === "participant" ? ctx.known : everyone, choice.name);
+    const role = (choice.kind === "new" && choice.role) || ctx.slot.role;
+    const clash = personPickerNameTaken(ctx.slot, everyone, choice.name, role);
     if (clash) {
       refuseTakenName(clash);
       return;

@@ -38,7 +38,6 @@ from typing import TYPE_CHECKING, Any
 from bristlenose.server.grounding import (
     INVARIANTS,
     SIGNAL_LENSES,
-    is_session_scoped_code,
     load_signals,
     quote_dom_id,
     resolve_session_speaker_names,
@@ -357,9 +356,10 @@ def _curation_maps(
     db: Any, project_id: int,
 ) -> tuple[list[Any], set[int], set[int], dict[int, str], set[tuple[int, str]]]:
     """(all_quotes, hidden, starred, edited_text, deleted_badges) for a project."""
-    from bristlenose.server.models import DeletedBadge, Quote, QuoteEdit, QuoteState
+    from bristlenose.server import speaker_slots
+    from bristlenose.server.models import DeletedBadge, QuoteEdit, QuoteState
 
-    all_quotes = db.query(Quote).filter_by(project_id=project_id).all()
+    all_quotes = speaker_slots.evidence_quotes(db, project_id)
     pks = [q.id for q in all_quotes]
     hidden: set[int] = set()
     starred: set[int] = set()
@@ -426,7 +426,6 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     from bristlenose.server.models import (
         ClusterQuote,
         ScreenCluster,
-        SessionSpeaker,
         TagDefinition,
         ThemeGroup,
         ThemeQuote,
@@ -458,11 +457,13 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     # one nobody has identified, which the flat map leaves out.
     team_by_session = session_team(db, project_id)
     if session_db_ids:
-        for sp in db.query(SessionSpeaker).filter(
-            SessionSpeaker.session_id.in_(session_db_ids)
-        ):
-            if not is_session_scoped_code(sp.speaker_code):
-                speakers.setdefault(sp.speaker_code, sp.speaker_role)
+        from bristlenose.server import speaker_slots
+
+        # Participants by what they are now (a recode moves a speaker in or
+        # out, §J7 R2), under the code the routes emit.
+        for slot in speaker_slots.project_slots(db, project_id):
+            if not speaker_slots.is_team(slot.row):
+                speakers.setdefault(slot.code, slot.role)
     for team in team_by_session.values():
         for code, role in team:
             if not code.endswith("?"):

@@ -2718,12 +2718,14 @@ rather than lines, and why anyone building from it should re-derive the anchors
 first — the repo's own gotcha about a bug report describing the tree its author
 read applies to design docs too.
 
-### J7 · The cross-role recode — plan (4 Oct 2026; R1 built 6 Oct 2026)
+### J7 · The cross-role recode — plan (4 Oct 2026; R1 and R2 built 6 Oct 2026)
 
-> **Status, 6 Oct 2026: R1 (moderator ↔ observer) is built on all three surfaces — see
-> [§J8 point 19](#j8--the-owners-answers--6-oct-2026) for what shipped and where it departs
-> from the R1 row below** (no new column and no `/kind` route: the slot's existing
-> `speaker_role` holds the kind, and the speaker PUT takes `kind`). R2 and R3 are not built.
+> **Status, 6 Oct 2026: R1 (moderator ↔ observer) and R2 (into and out of participant,
+> relabel only) are built on all three surfaces — see
+> [§J8 points 19 and 20](#j8--the-owners-answers--6-oct-2026) for what shipped and where it
+> departs from the rows below** (no `/kind` route: the slot's existing `speaker_role` holds the
+> kind, and the speaker PUT takes `kind`). Not built: R2's *Swap with m1* row (call 4) and its
+> *Re-analyse this session* offer, which waits for R3's act; R3 itself.
 
 *Written to unblock the picker's disabled segments (UX iteration 3: Moderator |
 Participant | Observer, only the current one enabled until this exists). Builds on
@@ -3283,3 +3285,41 @@ people as unique and roles as per-session is the People lens's long-term goal.
     if any read calls a recoded speaker by their old code (red with the role ignored); a
     re-run keeps the recode; undo puts the role back; vitest pins each segment pick's
     payload; the Swift contract tests decode the v6 rows and send the same payloads.
+
+20. **Built 6 Oct 2026 — §J7 R2, into and out of participant, relabel only** (job 8 in the
+    speaker jobs map, without its swap). Every segment is open on every speaker.
+    **Out of participant** — `p3` was really the moderator: the researcher picks the moderator
+    (or types someone new); a participant carries no uuid to the client, so their own row is
+    not offered there. The session's quotes are then the moderator's words, and they leave
+    every evidence surface — the Quotes lens, the dashboard and its counts, signals, search
+    and the MCP tools, the Discussion lens, the tapestry, clips, CSV/XLSX and the HTML
+    export — through one predicate, `speaker_slots.evidence_out` / `evidence_quotes`.
+    Hidden, never deleted: the undo brings them back with their stars and tags. AutoCode
+    still reads them, so their tags survive the round trip. The write must say who they were
+    (a person, or `clear`); a role alone is refused, since it would leave the participant's
+    own record on a named moderator slot. The slot remembers the participant it held
+    (`session_speakers.participant_person_id`, migration 014, a plain integer), so the undo
+    points back at exactly that person without their uuid ever reaching the client — the
+    3 Oct rule that `/sessions` never carries a participant's uuid stands. **Into
+    participant** — a moderator or observer was really the participant: only the speaker is
+    offered, numbered after every participant in the study (`p3` when there are two);
+    another participant is never offered, since picking one would join two people. The
+    participant side always gets a record of its own, named the same, so no person is both
+    a research subject and a member of the team: an anonymised export blanks the one and
+    names the other, and the team identity stays free to moderate elsewhere. **The privacy
+    gate** holds because every route emits the code of what a speaker *is*: Kerri recoded
+    into participant reads `p3` everywhere, and `_anonymise_data`, which blanks by the
+    emitted prefix, removes her name from `/people`, `/sessions`, `/dashboard`, `/quotes` and
+    the transcripts (a test, proved red with recoded-in slots keeping their tag's code).
+    Coverage and the participant count follow the slot's role; `/tapestry` carries a `team`
+    flag per turn for the timeline's tracks. **Reviewed the same day** (code review and a
+    privacy review; their fixes are in): the two refusals above, the undo of a recode out of
+    participant (the first build sent `clear`), and picking the moderator under the
+    Participant segment of a recoded-out slot, which now means "back to who they were".
+    **Open, owner's calls:** (a) a recoded-in participant's number is worked out on read from
+    the highest participant tag present, so it moves when a new session brings that number,
+    and can land on a deleted session's retired number — reserving it needs the registry or
+    a stored code; (b) the Participant segment of a recoded-out slot shows the moderator's
+    name although picking it restores the participant, because the client cannot know the
+    participant's name without being told it; (c) the *Swap with m1* row and the
+    *Re-analyse this session* offer.

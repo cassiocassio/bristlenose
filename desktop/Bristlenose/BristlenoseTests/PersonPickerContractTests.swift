@@ -60,7 +60,16 @@ struct PersonPickerContractTests {
         // A recode (§J7 R1): the observers, the speaker first under the next code.
         #expect(moderator.others.isEmpty, "an SPA that sends no roles leaves the segments off")
         let recode = try #require(requests[2])
-        #expect(recode.openRoles == [.moderator, .observer])
+        #expect(recode.openRoles == [.moderator, .observer, .participant])
+        #expect(recode.others[.participant]
+            == .init(names: ["Martin B Storey"], codes: ["p2"], newCode: "p2"))
+        #expect(recode.newPrompt(for: .participant) == "New name for p2")
+
+        // R2: a participant can be recoded too — the team, never themself.
+        let recodeParticipant = try #require(requests[3])
+        #expect(recodeParticipant.openRoles == [.moderator, .observer, .participant])
+        #expect(recodeParticipant.others[.moderator]?.names == ["Kerri Ng", "Martin B Storey"])
+        #expect(recodeParticipant.others[.moderator]?.newCode == "m3")
         #expect(recode.others[.observer]
             == .init(names: ["Martin B Storey", "Ana Ruiz"], codes: ["o2", "o1"], newCode: "o3"))
         #expect(recode.newPrompt(for: .observer) == "New observer")
@@ -77,8 +86,11 @@ struct PersonPickerContractTests {
         #expect(model.names == ["Kerri Ng", "Martin B Storey"])
         #expect(model.isAnswer("Martin B Storey") && model.canClear && model.canRename("Martin B Storey"))
 
-        model.browse(.participant)   // not open: nothing changes
-        #expect(model.browsing == .moderator)
+        // A role the SPA sent no rows for is not open: nothing changes.
+        let noRoles = PersonPickerModel(request: try #require(try wires().compactMap {
+            PersonPickerRequest(message: $0) }.first), onChoose: { _ in }, onClose: {})
+        noRoles.browse(.participant)
+        #expect(noRoles.browsing == .moderator)
 
         model.browse(.observer)
         #expect(model.recoding)
@@ -95,6 +107,10 @@ struct PersonPickerContractTests {
             PersonPickerPick(name: "Martin B Storey", kind: .name, role: .observer),
             PersonPickerPick(name: "Mike Alvarez", kind: .new, role: .observer),
         ])
+
+        model.browse(.participant)
+        model.choose("Martin B Storey")
+        #expect(sent.last == PersonPickerPick(name: "Martin B Storey", kind: .name, role: .participant))
 
         model.browse(.moderator)
         #expect(!model.recoding && model.isAnswer("Martin B Storey"))

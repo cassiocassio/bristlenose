@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { knownPeopleOf, stateAfter } from "./speakerPicking";
-import type { SessionsListResponse } from "./types";
+import { knownPeopleOf, nameStateOf, stateAfter } from "./speakerPicking";
+import type { SessionsListResponse, SpeakerResponse } from "./types";
 
 const study = (speakers: Array<Record<string, unknown>>[]): SessionsListResponse =>
   ({ sessions: speakers.map((sp, i) => ({ session_id: `s${i + 1}`, speakers: sp })) }) as unknown as SessionsListResponse;
@@ -32,5 +32,37 @@ describe("stateAfter", () => {
     expect(stateAfter({ kind: "new", name: "Mike" }, before, () => "id-new")).toEqual({
       person: "id-new", create: true, full_name: "Mike", short_name: "Mike", confirmed: true,
     });
+  });
+});
+
+
+describe("a speaker's state, as a recode reads it (§J7 R2)", () => {
+  const sp = (o: Partial<SpeakerResponse>): SpeakerResponse =>
+    ({ name: "Mary", full_name: "Mary A", short_name: "Mary", name_confirmed: true, role: "participant", ...o }) as SpeakerResponse;
+
+  it("a plain participant carries its role and no person", () => {
+    expect(nameStateOf(sp({ speaker_code: "p1", slot_code: "p1" }))).toEqual({
+      full_name: "Mary A", short_name: "Mary", confirmed: true, kind: "participant",
+    });
+  });
+
+  it("a participant's tag recoded as the moderator reads as the moderator it now is", () => {
+    const state = nameStateOf(sp({ speaker_code: "m1", slot_code: "p1", person: "id-martin" }));
+    expect(state).toMatchObject({ kind: "moderator", person: "id-martin" });
+  });
+
+  it("a moderator's tag recoded as a participant carries the role and no uuid", () => {
+    const state = nameStateOf(sp({ speaker_code: "p3", slot_code: "m1", person: "" }));
+    expect(state.kind).toBe("participant");
+    expect(state.person).toBeUndefined();
+  });
+
+  it("a pick under Participant leaves the slot a participant", () => {
+    const before = { full_name: "Martin Storey", short_name: "Martin", confirmed: true, person: "id-martin", kind: "moderator" as const };
+    const after = stateAfter(
+      { kind: "person", role: "participant", row: { name: "Martin", code: "p3", person: "id-martin" } }, before,
+    );
+    expect(after.kind).toBe("participant");
+    expect(after.person).toBe("id-martin");
   });
 });

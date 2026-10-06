@@ -25,7 +25,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session as DbSession
 
-from bristlenose.server.models import Person, SessionSpeaker
+from bristlenose.server.models import Person, Quote, SessionSpeaker
 from bristlenose.server.models import Session as SessionModel
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,19 @@ _ROLE_PREFIX = {"researcher": "m", "observer": "o", "participant": "p"}
 def kind_prefix(sp: SessionSpeaker) -> str:
     """The prefix a slot's code takes: its role's, else its tag's."""
     return _ROLE_PREFIX.get(sp.speaker_role or "", sp.speaker_code[:1])
+
+
+def is_team(sp: SessionSpeaker) -> bool:
+    """Whether a slot is a moderator or observer *now* — its role, not its
+    tag's letter, which a recode leaves alone (design-people.md §J7)."""
+    return kind_prefix(sp) in ("m", "o")
+
+
+def is_recoded_out(sp: SessionSpeaker) -> bool:
+    """A participant's tag whose speaker was recoded as moderator or observer
+    (§J7 R2). The session's quotes are credited to that tag, and they leave
+    the evidence until the session is re-analysed (``evidence_out``)."""
+    return sp.speaker_code[:1] == "p" and is_team(sp)
 
 
 def unidentified_code(slot_code: str, letter: str = "") -> str:
@@ -141,18 +154,24 @@ def _derive_codes(
     ordered = sorted(rows, key=lambda r: (r[1], r[0], _slot_sort_key(r[2].speaker_code)))
     letters: dict[tuple[str, str], dict[str, str]] = {}
     for sid, _n, sp, _p in ordered:
-        if is_team_code(sp.speaker_code):
+        if is_team(sp):
             letters.setdefault((sid, kind_prefix(sp)), {})[sp.speaker_code] = ""
     for group, codes in letters.items():
         letters[group] = lettered(list(codes))
-    numbers: dict[str, int] = {}
+    # A speaker recoded into participant (§J7 R2) has no participant number of
+    # their own: they are numbered after every number the pipeline issued, so
+    # they can never read as another participant.
+    numbers: dict[str, int] = {
+        "p": max((_number(sp.speaker_code) for _s, _n, sp, _p in rows
+                  if sp.speaker_code[:1] == "p"), default=0),
+    }
     issued: dict[tuple[str, int], str] = {}
     out: dict[int, str] = {}
     for sid, _n, sp, person in ordered:
-        if not is_team_code(sp.speaker_code):
+        prefix = kind_prefix(sp)
+        if prefix == "p" and sp.speaker_code[:1] == "p":
             out[sp.id] = sp.speaker_code
             continue
-        prefix = kind_prefix(sp)
         if person is None:
             letter = letters.get((sid, prefix), {}).get(sp.speaker_code, "")
             out[sp.id] = f"{prefix}{letter}?"
@@ -169,8 +188,10 @@ def display_code(sp: SessionSpeaker, person: Person | None, letter: str = "") ->
     """A slot's code without its project around it: its tag's, or ``m?``.
     Routes read ``Slot.code``, worked out across the project; this is for a
     caller with one row and no project to number it against."""
-    if person is None and is_team_code(sp.speaker_code):
+    if person is None and is_team(sp):
         return unidentified_code(kind_prefix(sp), letter)
+    if kind_prefix(sp) != sp.speaker_code[:1]:
+        return unidentified_code(kind_prefix(sp))
     return sp.speaker_code
 
 
@@ -282,15 +303,53 @@ def label_taken(
     return None
 
 
-def is_participant(db: DbSession, person: Person) -> bool:
-    """Whether a person is someone's participant slot — never a moderator or
-    observer's to pick (a participant recode is R2, not built)."""
+def is_participant(db: DbSession, person: Person, *, but: SessionSpeaker | None = None) -> bool:
+    """Whether a person is a participant in some session, other than in the
+    slot ``but`` — never a moderator or observer's to pick: that would join two
+    participants' identities, which a recode does not do (§J7)."""
     if person.id is None:
         return False
     return any(
-        not is_team_code(code)
-        for (code,) in db.query(SessionSpeaker.speaker_code).filter_by(person_id=person.id)
+        not is_team(sp)
+        for sp in db.query(SessionSpeaker).filter_by(person_id=person.id)
+        if sp is not but
     )
+
+
+def evidence_out(db: DbSession, project_id: int) -> set[tuple[str, str]]:
+    """``(session id, tag)`` for every participant tag whose speaker was
+    recoded as a moderator or observer (design-people.md §J7 R2, §C4).
+
+    A session's quotes are credited to its participant's tag, so when that
+    speaker turns out to be the moderator, their quotes are the moderator's
+    words: they leave the Quotes lens, search, the dashboard, signals and every
+    export until the session is re-analysed. Hidden, never deleted — the
+    recode's undo brings them back with their stars and tags. One predicate,
+    read everywhere through ``counts`` / ``evidence_quotes``.
+    """
+    rows = (
+        db.query(SessionModel.session_id, SessionSpeaker)
+        .join(SessionSpeaker, SessionSpeaker.session_id == SessionModel.id)
+        .filter(
+            SessionModel.project_id == project_id,
+            SessionSpeaker.speaker_code.like("p%"),
+            SessionSpeaker.speaker_role != "participant",
+        )
+        .all()
+    )
+    return {(sid, sp.speaker_code) for sid, sp in rows if is_recoded_out(sp)}
+
+
+def counts(quote: object, out: set[tuple[str, str]]) -> bool:
+    """Whether a quote is evidence: its credited speaker is still a participant."""
+    return (getattr(quote, "session_id", ""), getattr(quote, "participant_id", "")) not in out
+
+
+def evidence_quotes(db: DbSession, project_id: int) -> list[Quote]:
+    """The project's quotes that count as evidence (``evidence_out``)."""
+    out = evidence_out(db, project_id)
+    quotes = db.query(Quote).filter_by(project_id=project_id).all()
+    return [q for q in quotes if counts(q, out)] if out else quotes
 
 
 def by_uuid(db: DbSession, uuid: str) -> Person | None:

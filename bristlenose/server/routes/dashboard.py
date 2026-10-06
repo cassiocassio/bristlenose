@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from bristlenose.server import speaker_slots
 from bristlenose.server.export_core import pick_featured_quotes
 from bristlenose.server.models import (
     Project,
@@ -207,7 +208,7 @@ def _aggregate_sentiments(
     project_id: int,
 ) -> dict[str, dict[str, int]]:
     """Aggregate sentiment counts by session_id."""
-    quotes = db.query(Quote).filter_by(project_id=project_id).all()
+    quotes = speaker_slots.evidence_quotes(db, project_id)
     result: dict[str, dict[str, int]] = {}
     for q in quotes:
         if q.sentiment:
@@ -289,12 +290,18 @@ def _calculate_coverage(
         return None
 
     # Load all quotes and build coverage ranges: string_session_id → [(start, end)]
-    quotes = db.query(Quote).filter_by(project_id=project_id).all()
+    quotes = speaker_slots.evidence_quotes(db, project_id)
     quote_ranges: dict[str, list[tuple[float, float]]] = {}
     for q in quotes:
         quote_ranges.setdefault(q.session_id, []).append(
             (q.start_timecode, q.end_timecode)
         )
+
+    # What each speaker is now: a recode moves their words between the buckets
+    # (design-people.md §J7 R2), so the tag's letter is not the answer.
+    is_team_by_tag = {
+        key: speaker_slots.is_team(slot.row) for key, slot in slot_map(db, project_id).items()
+    }
 
     # Walk segments
     participant_words_total = 0
@@ -312,7 +319,8 @@ def _calculate_coverage(
         text = seg.text
         wc = len(text.split())
 
-        if _is_moderator_code(code):
+        team = is_team_by_tag.get((str_sid, code))
+        if team if team is not None else _is_moderator_code(code):
             moderator_words_total += wc
         else:
             # Participant (or unknown code — treat as participant)
@@ -505,7 +513,7 @@ def get_dashboard(
             )
 
         # --- Quotes (all, for stats + featured selection) ---
-        all_quotes = db.query(Quote).filter_by(project_id=project_id).all()
+        all_quotes = speaker_slots.evidence_quotes(db, project_id)
         n_quotes = len(all_quotes)
 
         # The tag pair.  Both halves count rows in ``quote_tags``, split on
@@ -660,17 +668,12 @@ def get_project_info(
         session_count = (
             db.query(SessionModel).filter_by(project_id=project_id).count()
         )
-        # Count distinct participant speaker codes (p1, p2, ...)
-        participant_codes = (
-            db.query(SessionSpeaker.speaker_code)
-            .join(SessionModel, SessionSpeaker.session_id == SessionModel.id)
-            .filter(
-                SessionModel.project_id == project_id,
-                SessionSpeaker.speaker_code.startswith("p"),
-            )
-            .distinct()
-            .count()
-        )
+        # Count distinct participants, by what each speaker is now (a recode
+        # moves one in or out, design-people.md §J7 R2).
+        participant_codes = len({
+            slot.code for slot in speaker_slots.project_slots(db, project_id)
+            if not speaker_slots.is_team(slot.row)
+        })
 
         return ProjectInfoResponse(
             project_name=project.name,

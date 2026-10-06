@@ -1,6 +1,6 @@
 ---
-status: in progress — plan + design v1; reducer and report-server POC built; Mac implementation designed, not built
-last-trued: 2026-09-28
+status: in progress — phases A and B shipped in 0.31.5 (the POC code was production code); D, C, E, F designed, not built
+last-trued: 2026-10-06
 owner: project status across Python, the report server, the SPA and the Mac app
 ---
 
@@ -73,8 +73,8 @@ new state enters through a fixture case.**
 
 | Phase | Scope | Status |
 |---|---|---|
-| **A — reducer** | `bristlenose/run_condition.py`, the shared fixture, property tests, differential run over real logs | **POC built** (§4) |
-| **B — report server** | output-location resolution, identity-keyed watcher, condition state, `last_run` as data version only, import overlay, intercept policy, in-progress status page, condition endpoint | **POC built** (§4) |
+| **A — reducer** | `bristlenose/run_condition.py`, the shared fixture, property tests, differential run over real logs | **shipped 0.31.5** (`d367bcca`; §4) |
+| **B — report server** | output-location resolution, identity-keyed watcher, condition state, `last_run` as data version only, import overlay, intercept policy, in-progress status page, condition endpoint | **shipped 0.31.5** (`d367bcca`, test fix `e6c39a05`; §4) |
 | **D — Swift reducer parity** | `RunCondition.reduce` in Swift, reading the same fixture; `EventLogReader` gains the report slot | designed (§5.1) — **before C** (revised by §4: the sidebar needs the condition for projects with no server running) |
 | **C — Mac** | `ProjectStatus` aggregate + resolvers, overlays instead of `.idle` writes, run-id freshness, libproc liveness, reload on a signal | **designed** (§5), not built |
 | E — cause table + status page copy | shared JSON; category headline; `t_in` + `lang` | designed (§3.7) |

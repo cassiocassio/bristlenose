@@ -54,6 +54,14 @@ modal retired in July"), which was this register's largest open item.
 | No telemetry paragraph on either privacy page | website repo: `docs-src/privacy.md`, `content/privacy.html` |
 | The accepted export gap is unrecorded | `docs/design-export-html.md` |
 
+**Before taking the `?` row, read the website keyboard-shortcuts item in the
+maintainer's private planning notes, kept outside the public tree.** It already
+owns that page, records that `?` opens it on **both** channels, and carries an
+outstanding correctness fix: the page advertises `j` / `↓` as equivalent, which
+stopped being true when the arrows became geometric while `j`/`k` stayed
+reading-order. Repointing `?` and fixing what it opens are one piece of work, not
+two — and the page lives in the website repo, so it cannot be fixed from here.
+
 The telemetry one is the only one with a clock on it. Both privacy pages make an
 absolute claim — *"no usage tracking"*, and what leaves the machine *"only in
 these cases"* — which is **true today**: `BRISTLENOSE_TELEMETRY_ENABLED` defaults

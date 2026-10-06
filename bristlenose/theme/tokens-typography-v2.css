@@ -25,6 +25,7 @@
     --bn-weight-normal: 420;
     --bn-weight-emphasis: 490;
     --bn-weight-starred: 520;
+    --bn-weight-semibold: 600;
     --bn-weight-strong: 700;
 
     /* Typography scale — 8 stops, size + line-height pairs.

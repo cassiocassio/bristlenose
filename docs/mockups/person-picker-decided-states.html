@@ -435,6 +435,7 @@
     --bn-weight-normal: 420;     /* body text, descriptions, quote content */
     --bn-weight-emphasis: 490;   /* headings, labels, section titles */
     --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
+    --bn-weight-semibold: 600;
     --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
 
     /* Typography scale — 8 stops, size + line-height pairs.
@@ -3701,12 +3702,49 @@ body { padding: 0; }
 .m-stage .bn-picker-scope { display: flex; justify-content: center; gap: var(--bn-space-lg); padding: .35rem .8rem .5rem; }
 .m-stage .m-scope-btn { font: inherit; font-size: var(--bn-text-label); background: none; border: 0; padding: 0; cursor: pointer;
   color: var(--bn-colour-muted); font-weight: var(--bn-weight-normal); }
-/* Semibold (600) has no token: the scale goes 490 emphasis → 520 starred → 700 strong. Flagged, not settled. */
-.m-stage .m-scope-btn[aria-checked="true"] { color: var(--bn-colour-text); font-weight: 600; }
+.m-stage .m-scope-btn[aria-checked="true"] { color: var(--bn-colour-text); font-weight: var(--bn-weight-semibold); }
 /* Reserve each word's bold width so the pair does not shift when the choice flips. */
 .m-stage .m-scope-btn { display: inline-grid; }
-.m-stage .m-scope-btn::after { content: attr(data-text); font-weight: 600; height: 0; visibility: hidden; overflow: hidden; }
+.m-stage .m-scope-btn::after { content: attr(data-text); font-weight: var(--bn-weight-semibold); height: 0; visibility: hidden; overflow: hidden; }
 .m-stage .m-plain-name { color: var(--bn-colour-text); }
+/* Live frame (section 7) */
+.m-live .segment-speaker .bn-person-badge { cursor: pointer; }
+.m-live .m-live-said { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); min-height: 1.4em; padding: .4rem .2rem 0; }
+.m-live .export-dropdown-item { cursor: pointer; }
+.m-live .m-live-reset { margin-top: .6rem; }
+.m-live input.m-live-name { font: inherit; border: 0; outline: none; background: transparent; padding: 0; width: 9em; color: var(--bn-colour-text); }
+/* ── Section 7, Mac frame: an approximation of the AppKit popover at the SHIPPED
+   small size — PickerMetrics in desktop/…/PersonPickerPopover.swift: 10pt padding,
+   8pt between control and list, NSSegmentedControl .small (20pt tall, 11pt
+   system font, equal segments), 24pt rows in the 11pt menu font, 19pt tick
+   column, 5pt badge–name gap. The segmented control is drawn key-window, from the
+   owner's screenshot of the real control; the popover's corner radius and
+   material are not measured. Nothing here ships. ── */
+.m-mac7 { font-family: var(--bn-font-body); font-size: 11px; line-height: 13px; color: var(--bn-colour-text);
+  -webkit-font-smoothing: auto; width: 15rem; padding: 10px; border-radius: 12px; /* unmeasured */
+  background: var(--bn-colour-bg); border: 0.5px solid var(--bn-colour-border); box-shadow: 0 10px 30px var(--bn-colour-shadow); }
+.m-mac7 .m7-scope { display: flex; justify-content: center; gap: 14px; margin-bottom: 6px; }
+.m-mac7 .m7-scope span { display: inline-grid; color: var(--bn-colour-muted); font-weight: var(--bn-weight-normal); }
+.m-mac7 .m7-scope span.on { color: var(--bn-colour-text); font-weight: var(--bn-weight-semibold); }
+.m-mac7 .m7-scope span::after { content: attr(data-text); font-weight: var(--bn-weight-semibold); height: 0; visibility: hidden; overflow: hidden; }
+/* Key window, as the owner's screenshot of the real control shows it (6 Oct 2026):
+   a hairline-bordered white control whose selected segment is filled with the
+   accent and set in white. v3's grey track and grey pill were sampled with the
+   window NOT key, which is why they differ. */
+.m-mac7 .m7-seg { display: flex; height: 20px; box-sizing: border-box; margin-bottom: 8px; overflow: hidden;
+  border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); background: var(--bn-colour-bg); }
+.m-mac7 .m7-seg span { flex: 1; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+.m-mac7 .m7-seg span + span { border-left: 1px solid var(--bn-colour-border); }
+.m-mac7 .m7-seg span.on { background: var(--bn-colour-accent); color: #fff; }
+.m-mac7 .m7-seg span.on + span { border-left-color: transparent; }
+.m-mac7 .m7-row { display: flex; align-items: center; height: 24px; border-radius: var(--bn-radius-md); padding-right: 6px; }
+.m-mac7 .m7-row.sel { background: light-dark(#0064E1, #0059D1); color: #fff; } /* selectedContentBackgroundColor, read from AppKit */
+.m-mac7 .m7-tick { width: 19px; flex: none; display: inline-flex; justify-content: center; }
+.m-mac7 .m7-tick svg { width: 11px; height: 11px; }
+.m-mac7 .m7-code { font-family: var(--bn-font-mono); font-size: 10px; padding: 1px 4px; border-radius: 4px;
+  background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); margin-right: 5px; }
+.m-mac7 .m7-row.sel .m7-code { background: rgb(255 255 255 / .22); color: #fff; }
+.m-mac7 .m7-hint { color: var(--bn-colour-muted); }
 /* The split point: the caret sits in the paragraph's own text. */
 .m-stage .m-split-after { color: var(--bn-colour-muted); }
 </style>
@@ -3773,6 +3811,8 @@ body { padding: 0; }
 
 <section><h2 class="m-h2">7 · A scope switch: speaker or paragraph — speculative</h2>
 <h3 class="m-h3">From a transcript paragraph</h3><div class="m-grid wide" id="g-switch"></div>
+<h3 class="m-h3">Live: click a badge, flip the scope, pick someone</h3><div class="m-grid wide" id="g-switch-live"></div>
+<h3 class="m-h3">The Mac popover, at the shipped small size</h3><div class="m-grid wide" id="g-switch-mac"></div>
 <h3 class="m-h3">Sticky: a run of wrong paragraphs</h3><div class="m-grid wide" id="g-switch-run"></div>
 <h3 class="m-h3">From the Sessions grid: no switch</h3><div class="m-grid wide" id="g-switch-grid"></div></section>
 <aside class="m-commentary"><span class="m-label">Commentary — speculative, not decided</span>
@@ -3781,11 +3821,12 @@ body { padding: 0; }
 <p><b>Questions it raises</b>, in rough order of weight:</p>
 <ul>
 <li><b>What Paragraph does to a name.</b> A name is always the speaker's, so with Paragraph on, the name is not a field (7b: plain row, no rename). Typing a new person under Paragraph makes that person and credits this paragraph to them. That is a new speaker in the session, which Speaker scope never creates.</li>
-<li><b>The switch is plain text, not a second segmented control</b> (owner, 6 Oct 2026). Two stacked <code>.dimension-toggle</code>s read as one control in two rows; drawn as words, semibold in body ink for the chosen one and regular in muted grey for the other (owner, 6 Oct; semibold is 600, a value the weight scale has no token for), it reads as a heading. The eye starts at the role toggle, which is where the act is. No box, no blue, no rule. It stays a radio group for VoiceOver and the keyboard. Note it is new: the house has no text-weight toggle yet, so this is a small new primitive, not a reuse.</li>
+<li><b>The switch is plain text, not a second segmented control</b> (owner, 6 Oct 2026). Two stacked <code>.dimension-toggle</code>s read as one control in two rows; drawn as words, semibold in body ink for the chosen one and regular in muted grey for the other (owner, 6 Oct; <code>--bn-weight-semibold</code>, 600, added to the scale for it), it reads as a heading. The eye starts at the role toggle, which is where the act is. No box, no blue, no rule. It stays a radio group for VoiceOver and the keyboard. Note it is new: the house has no text-weight toggle yet, so this is a small new primitive, not a reuse.</li>
 <li><b>Where the stickiness lives.</b> Per transcript page and reset on leaving it? Per session? Per window? A sticky Paragraph forgotten on is the risk: the next "rename Simon" would not be possible, which is at least a visible failure, not a silent one. Resetting when the page changes is the conservative answer.</li>
 <li><b>The labels.</b> <em>Speaker</em> vs <em>All of p1</em>; <em>Paragraph</em> vs <em>This paragraph</em>. A count (<em>All 43</em>) says what Speaker will touch. All are owner-unseen placeholders, not locale keys.</li>
 <li><b>What a paragraph move costs.</b> Speaker scope on a moderator ↔ participant change is today's recode, then <em>Re-analyse…</em>. A paragraph move needs storage the next run respects: the split/join table (<code>transcript_layout_edits</code>, keyed by position and first words) can hold a "speaker" edit the same way. The evidence follows only once quote membership is paragraph-aware (§K, job 11). Until then a paragraph moved off p1 still counts as p1's evidence. Moving a moderator's question off the participant is the useful case, and it is the one evidence-membership has to honour.</li>
 <li><b>Sticky could carry the pick too.</b> On a run of a moderator's questions, the picker could open on the role and person last picked (Moderator, Martin focused), so each paragraph is click then Return. Cheap, and it is what makes "click click click" literal.</li>
+<li><b>Two pickers, two drawings.</b> Frames 7a–7f draw the web picker, whose role toggle is the house <code>.dimension-toggle</code> (blue-washed active segment); the "Mac app (SF)" switch at the top changes only its typeface. The Mac popover is AppKit (7g, 7h): an <code>NSSegmentedControl</code> at the small size, 11pt type, 24pt rows, all from <code>PickerMetrics</code>. In a key window the selected segment is filled with the accent and set in white, as the owner's screenshot of the real control shows; the grey pill in <code>moderator-identity-picker-v3.html</code> was sampled with the window not key. On the Mac the scope words would be two borderless 11pt labels, <code>labelColor</code> semibold and <code>secondaryLabelColor</code> regular, centred over the control.</li>
 <li><b>Undo.</b> Each paragraph pick is its own ⌘Z entry, so a run of five is five undos. A whole-run undo is not proposed.</li>
 </ul>
 </aside>
@@ -3931,6 +3972,93 @@ document.getElementById("g-switch-grid").innerHTML = [
     gridCell([["m1", "Martin Storey", false], ["p1", "Simon", false]]) +
     menu(head("Participant") + renameOwn("p1", "Simon"))),
 ].join("");
+
+// ── Section 7 live frame: the switch, working ──
+(() => {
+  const host = document.getElementById("g-switch-live");
+  host.innerHTML = specFrame("7f · live", "click a badge · sticky scope", `<div class="m-live" id="m-live"></div>`);
+  const el = document.getElementById("m-live");
+  const START = () => ({
+    people: { m1: { name: "Martin Storey", role: "Moderator" }, m2: { name: "Kerri Wade", role: "Moderator" },
+              p1: { name: "Simon", role: "Participant" } },
+    paras: [["07:30", "m1", "Thanks for coming in. Shall we start with the wardrobe?"],
+            ["07:41", "p1", Q1], ["07:52", "p1", Q2], ["08:03", "p1", Q3], ["08:10", "p1", ANS]],
+    open: null, para: false, browse: null, said: "",
+  });
+  let st = START();
+  const roleOf = (c) => st.people[c].role;
+  const codesIn = (role) => Object.keys(st.people).filter((c) => st.people[c].role === role);
+  const render = () => {
+    const rows = st.paras.map(([tc, code, text], i) => {
+      const mod = roleOf(code) !== "Participant";
+      const seg = `<div class="transcript-segment${mod ? " segment-moderator" : ""}" data-i="${i}"><span class="timecode"><span class="timecode-bracket">[</span>${tc}<span class="timecode-bracket">]</span></span><span class="segment-speaker" data-badge="${i}">${badge(code)}</span><div class="segment-body">${text}</div></div>`;
+      if (st.open !== i) return seg;
+      const cur = code, role = st.browse || roleOf(cur);
+      const people = codesIn(role).map((c) => {
+        const own = c === cur;
+        if (own && !st.para) {
+          return `<li class="export-dropdown-item export-dropdown-scope m-focus" role="menuitemradio" aria-checked="true" data-pick="${c}"><span class="export-dropdown-check" aria-hidden="true">${CHECK}</span><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">${c}</span><span class="bn-speaker-badge-name"><input class="m-live-name" value="${st.people[c].name}" aria-label="Name"></span></span></span></li>`;
+        }
+        return `<li class="export-dropdown-item export-dropdown-scope" role="menuitemradio" aria-checked="${own}" data-pick="${c}"><span class="export-dropdown-check" aria-hidden="true">${own ? CHECK : ""}</span>${badge(c, st.people[c].name)}</li>`;
+      }).join("");
+      const roleHead = `<li class="bn-picker-head" role="none"><span class="dimension-toggle" role="radiogroup" aria-label="Role">${
+        ROLES.map((r) => `<button type="button" class="dimension-btn${r === role ? " active" : ""}" role="radio" aria-checked="${r === role}" data-role="${r}">${r}</button>`).join("")}</span></li>`;
+      const scope = `<li class="bn-picker-scope" role="radiogroup" aria-label="Scope">${
+        ["Speaker", "Paragraph"].map((r, k) => { const on = (k === 1) === st.para; return `<button type="button" class="m-scope-btn" role="radio" aria-checked="${on}" data-text="${r}" data-scope="${k}">${r}</button>`; }).join("")}</li>`;
+      return seg + menu(scope + roleHead + (people || newRow(role[0].toLowerCase() + "1", { hint: `New ${role.toLowerCase()}` })));
+    }).join("");
+    el.innerHTML = rows + `<div class="m-live-said" aria-live="polite">${st.said}</div><button type="button" class="bn-btn bn-btn-cancel m-live-reset">Reset</button>`;
+    const input = el.querySelector(".m-live-name");
+    if (input) { input.focus(); input.select(); }
+  };
+  el.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-badge],[data-scope],[data-role],[data-pick],.m-live-reset");
+    if (!t) return;
+    if (t.classList.contains("m-live-reset")) { const para = st.para; st = START(); st.para = para; render(); return; }
+    if (t.dataset.badge !== undefined) { const i = +t.dataset.badge; st.open = st.open === i ? null : i; st.browse = null; render(); return; }
+    if (t.dataset.scope !== undefined) { st.para = t.dataset.scope === "1"; render(); return; }
+    if (t.dataset.role) { st.browse = t.dataset.role; render(); return; }
+    if (t.dataset.pick) {
+      if (t.querySelector("input")) return;
+      const to = t.dataset.pick, i = st.open, from = st.paras[i][1];
+      if (to === from) { st.open = null; render(); return; }
+      if (st.para) {
+        st.paras[i][1] = to;
+        st.said = `This paragraph is now ${to} ${st.people[to].name}. Scope stays on Paragraph: click the next badge.`;
+      } else {
+        const n = st.paras.filter((x) => x[1] === from).length;
+        st.paras.forEach((x) => { if (x[1] === from) x[1] = to; });
+        const recode = st.people[to].role !== st.people[from].role;
+        st.said = `All ${n} of ${from}'s paragraphs are now ${to} ${st.people[to].name}` +
+          (recode ? ` — a recode, so the session would offer Re-analyse.` : `.`);
+      }
+      st.open = null; render();
+    }
+  });
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { st.open = null; render(); }
+    if (e.key === "Enter" && e.target.classList.contains("m-live-name")) {
+      const code = st.paras[st.open][1], name = e.target.value.trim();
+      if (name) { st.people[code].name = name; st.said = `Renamed ${code} to ${name}, everywhere they appear.`; }
+      st.open = null; render();
+    }
+  });
+  render();
+})();
+
+// ── Section 7, Mac frame ──
+(() => {
+  const mac = (para, role, rows) => `<div class="m-mac7"><div class="m7-scope" role="radiogroup" aria-label="Scope">${
+    ["Speaker", "Paragraph"].map((r, i) => `<span class="${(i === 1) === para ? "on" : ""}" data-text="${r}">${r}</span>`).join("")}</div><div class="m7-seg">${
+    ROLES.map((r) => `<span class="${r === role ? "on" : ""}">${r}</span>`).join("")}</div>${
+    rows.map(([code, name, tick, sel, hint]) => `<div class="m7-row${sel ? " sel" : ""}"><span class="m7-tick">${tick ? CHECK : ""}</span><span class="m7-code">${code}</span><span class="${hint ? "m7-hint" : ""}">${name}</span></div>`).join("")}</div>`;
+  document.getElementById("g-switch-mac").innerHTML = [
+    specFrame("7g · Mac, Speaker (default)", "PickerMetrics small · key window",
+      `<div data-platform="desktop">${mac(false, "Participant", [["p1", "Simon", true, false]])}</div>`),
+    specFrame("7h · Mac, Paragraph, browsing Moderator", "PickerMetrics small · key window",
+      `<div data-platform="desktop">${mac(true, "Moderator", [["m1", "Martin Storey", false, true], ["m2", "Kerri Wade", false, false], ["m3", "New moderator", false, false, true]])}</div>`),
+  ].join("");
+})();
 
 function setAttr(btns, key, apply) {
   btns.forEach(b => b.addEventListener("click", () => {

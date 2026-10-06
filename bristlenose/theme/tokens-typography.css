@@ -26,6 +26,7 @@
     --bn-weight-normal: 420;     /* body text, descriptions, quote content */
     --bn-weight-emphasis: 490;   /* headings, labels, section titles */
     --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
+    --bn-weight-semibold: 600;   /* a chosen word in a text-only switch (picker scope) */
     --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
 
     /* Typography scale — 8 stops, size + line-height pairs.

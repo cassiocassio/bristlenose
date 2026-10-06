@@ -55,10 +55,14 @@ _SRC = _REPO_ROOT / "frontend" / "src"
 # §"Which surfaces are targets" — a property of the surface, not a stage.
 # PickerSpecimen is the web half of Diagnostics ▸ Picker Lab (DEBUG builds only),
 # English by design like the other contributor tools here.
+# The tapestry playground and its toggle render only when SessionsTable's IS_DEV
+# holds (a dev build), so they are contributor tools too.
 _DEV_ONLY = frozenset({
     "components/PlaygroundFab.tsx",
     "pages/VisualDiff.tsx",
     "islands/PickerSpecimen.tsx",
+    "components/TapestryPlayground.tsx",
+    "components/TapestryPlaygroundToggle.tsx",
 })
 
 # Shipping components that carry the defect today. Named so the debt is

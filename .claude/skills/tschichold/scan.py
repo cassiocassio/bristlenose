@@ -17,6 +17,7 @@ import re
 import sys
 from pathlib import Path
 
+
 def _site_root() -> Path:
     """The website checkout: $BRISTLENOSE_WEBSITE, else the working directory if
     it is one, else ../bristlenose-website beside the main repo this skill lives in."""

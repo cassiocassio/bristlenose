@@ -54,6 +54,61 @@ struct PersonPickerContractTests {
         #expect(participant.labels.newPrompt == "New name for p3")
         #expect(participant.codes == ["p3"])
         #expect(participant.newCode == "p3")
+        #expect(participant.others.isEmpty)
+        #expect(participant.openRoles == [.participant])
+
+        // A recode (§J7 R1): the observers, the speaker first under the next code.
+        #expect(moderator.others.isEmpty, "an SPA that sends no roles leaves the segments off")
+        let recode = try #require(requests[2])
+        #expect(recode.openRoles == [.moderator, .observer])
+        #expect(recode.others[.observer]
+            == .init(names: ["Martin B Storey", "Ana Ruiz"], codes: ["o2", "o1"], newCode: "o3"))
+        #expect(recode.newPrompt(for: .observer) == "New observer")
+        #expect(recode.newPrompt(for: .moderator) == "New moderator")
+    }
+
+    /// Switching the segment to Observer shows the observers; a pick there is
+    /// a recode, carrying the role, and nothing under it is the current answer.
+    @Test func anotherRolesSegmentBrowsesItAndAPickThereRecodes() throws {
+        let request = try #require(try wires().compactMap { PersonPickerRequest(message: $0) }[2])
+        var sent: [PersonPickerPick] = []
+        let model = PersonPickerModel(request: request, meName: "Jo Bloggs",
+                                      onChoose: { sent.append($0) }, onClose: {})
+        #expect(model.names == ["Kerri Ng", "Martin B Storey"])
+        #expect(model.isAnswer("Martin B Storey") && model.canClear && model.canRename("Martin B Storey"))
+
+        model.browse(.participant)   // not open: nothing changes
+        #expect(model.browsing == .moderator)
+
+        model.browse(.observer)
+        #expect(model.recoding)
+        #expect(model.names == ["Martin B Storey", "Ana Ruiz"])
+        #expect(model.code(for: "Martin B Storey") == "o2")
+        #expect(model.newCode == "o3" && model.newPrompt == "New observer")
+        #expect(model.selection == "Martin B Storey")
+        #expect(!model.isAnswer("Martin B Storey") && !model.canClear && !model.canRename("Martin B Storey"))
+
+        model.choose("Martin B Storey")   // not a rename here: the same person, recoded
+        model.draft = "Mike Alvarez"
+        model.submitDraft()
+        #expect(sent == [
+            PersonPickerPick(name: "Martin B Storey", kind: .name, role: .observer),
+            PersonPickerPick(name: "Mike Alvarez", kind: .new, role: .observer),
+        ])
+
+        model.browse(.moderator)
+        #expect(!model.recoding && model.isAnswer("Martin B Storey"))
+    }
+
+    /// The popover is sized for every role at once, so a segment never
+    /// resizes it under the pointer.
+    @Test func browsingARoleNeverResizesThePicker() throws {
+        let request = try #require(try wires().compactMap { PersonPickerRequest(message: $0) }[2])
+        let model = PersonPickerModel(request: request, meName: "Jo", onChoose: { _ in }, onClose: {})
+        let before = model.contentWidth
+        model.browse(.observer)
+        #expect(model.contentWidth == before)
+        #expect(request.allCodes.contains("o3"))
     }
 
     @Test func aRequestMissingWhatItNeedsIsDropped() throws {
@@ -70,7 +125,8 @@ struct PersonPickerContractTests {
             let (action, payload) = PersonPickerAction.choose(
                 sessionId: try #require(native["sessionId"]),
                 code: try #require(native["code"]),
-                pick: PersonPickerPick(name: try #require(native["name"]), kind: kind))
+                pick: PersonPickerPick(name: try #require(native["name"]), kind: kind,
+                                       role: native["role"].flatMap(PersonPickerRequest.Role.init(rawValue:))))
             #expect(action == "personPickerChoose")
             let expected = try #require(c["payload"] as? NSDictionary)
             #expect(NSDictionary(dictionary: payload) == expected)

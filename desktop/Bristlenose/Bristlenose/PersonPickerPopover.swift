@@ -45,6 +45,17 @@ struct PersonPickerRequest: Equatable {
         var proposed: String? = nil
         /// "Not {{name}}": the ✕ on the current row.
         var notThisPerson: String? = nil
+        /// "New observer" and the like: the new row's prompt under each role a
+        /// recode browses (§J7 R1).
+        var newPromptFor: [Role: String] = [:]
+    }
+
+    /// Another role's rows, browsed to recode the speaker (§J7 R1): the
+    /// speaker's own person first, under the code they would carry there.
+    struct RoleRows: Equatable {
+        let names: [String]
+        let codes: [String]
+        let newCode: String
     }
 
     let sessionId: String
@@ -59,9 +70,12 @@ struct PersonPickerRequest: Equatable {
     /// The badge, in CSS pixels from the web view's top-left.
     let anchor: CGRect
     let labels: Labels
+    /// The other roles the speaker can be recoded to; empty for a participant
+    /// (R2 is not built) and from an SPA older than the recode.
+    let others: [Role: RoleRows]
 
     init(sessionId: String, slot: Slot, names: [String], codes: [String]? = nil,
-         newCode: String? = nil, anchor: CGRect, labels: Labels) {
+         newCode: String? = nil, anchor: CGRect, labels: Labels, others: [Role: RoleRows] = [:]) {
         self.sessionId = sessionId
         self.slot = slot
         self.names = names
@@ -69,15 +83,34 @@ struct PersonPickerRequest: Equatable {
         self.newCode = newCode ?? slot.code
         self.anchor = anchor
         self.labels = labels
+        self.others = others.filter { $0.key != slot.role }
+    }
+
+    /// The roles the segments let the researcher move between.
+    var openRoles: Set<Role> { Set(others.keys).union([slot.role]) }
+
+    /// A role's rows: the speaker's own, or another's to recode into.
+    func rows(for role: Role) -> RoleRows {
+        if role != slot.role, let other = others[role] { return other }
+        return RoleRows(names: names, codes: codes, newCode: newCode)
     }
 
     /// The code a row's badge shows.
-    func code(for name: String) -> String {
-        names.firstIndex(of: name).map { codes[$0] } ?? slot.code
+    func code(for name: String, in role: Role? = nil) -> String {
+        let rows = rows(for: role ?? slot.role)
+        return rows.names.firstIndex(of: name).map { rows.codes[$0] } ?? slot.code
     }
 
-    /// Every code the picker draws, for sizing the badge column.
-    var allCodes: [String] { [slot.code, newCode] + codes }
+    /// The new row's prompt under a role.
+    func newPrompt(for role: Role) -> String {
+        role == slot.role ? labels.newPrompt : labels.newPromptFor[role] ?? labels.newPrompt
+    }
+
+    /// Every code the picker draws, under any role, for sizing the badge
+    /// column — so browsing a role never moves the names.
+    var allCodes: [String] {
+        [slot.code, newCode] + codes + others.values.flatMap { [$0.newCode] + $0.codes }
+    }
 
     /// The `person-picker` message body; nil when anything it needs is missing.
     init?(message body: [String: Any]) {
@@ -106,19 +139,36 @@ struct PersonPickerRequest: Equatable {
         self.anchor = CGRect(x: x, y: y, width: w, height: h)
         var words: [Role: String] = [:]
         for (k, v) in roleWords { if let r = Role(rawValue: k) { words[r] = v } }
+        var prompts: [Role: String] = [:]
+        for (k, v) in l["newPromptFor"] as? [String: String] ?? [:] {
+            if let r = Role(rawValue: k) { prompts[r] = v }
+        }
         self.labels = Labels(roles: words, roleGroup: l["roleGroup"] as? String ?? "",
                              newPrompt: newPrompt, thatsMe: l["thatsMe"] as? String, menu: menu,
                              proposed: l["proposed"] as? String,
-                             notThisPerson: l["notThisPerson"] as? String)
+                             notThisPerson: l["notThisPerson"] as? String,
+                             newPromptFor: prompts)
+        // A role whose rows are malformed is left out: its segment stays off.
+        var others: [Role: RoleRows] = [:]
+        for (k, v) in body["roles"] as? [String: Any] ?? [:] {
+            guard let r = Role(rawValue: k), r != role, let o = v as? [String: Any],
+                  let names = o["names"] as? [String], let codes = o["codes"] as? [String],
+                  codes.count == names.count,
+                  let newCode = o["newCode"] as? String, !newCode.isEmpty else { continue }
+            others[r] = RoleRows(names: names, codes: codes, newCode: newCode)
+        }
+        self.others = others
     }
 }
 
 /// What was picked: a name, and which row it came from. The SPA decides what
-/// it means (a pick, someone new, That's Me) — never this side.
+/// it means (a pick, someone new, That's Me) — never this side. `role` is set
+/// when the pick was made under another role: a recode (§J7 R1).
 struct PersonPickerPick: Equatable {
     enum Kind: String { case name, new, me, clear, rename }
     let name: String
     let kind: Kind
+    var role: PersonPickerRequest.Role? = nil
 }
 
 /// What this side sends back, as `(action, payload)` for
@@ -127,9 +177,10 @@ struct PersonPickerPick: Equatable {
 enum PersonPickerAction {
     static func choose(sessionId: String, code: String, pick: PersonPickerPick) -> (String, [String: Any]) {
         // "Not this person" names nobody.
-        let choice: [String: Any] = pick.kind == .clear
+        var choice: [String: Any] = pick.kind == .clear
             ? ["kind": "clear"]
             : ["kind": pick.kind.rawValue, "name": pick.name]
+        if let role = pick.role { choice["role"] = role.rawValue }
         return ("personPickerChoose", ["sessionId": sessionId, "code": code, "choice": choice])
     }
 }
@@ -169,6 +220,9 @@ final class PersonPickerModel: ObservableObject {
     @Published var renaming = false
     @Published var renameDraft = ""
     @Published var selection: String?
+    /// The role whose rows are shown: the speaker's own, or another the
+    /// segments switched to, where a pick recodes them (§J7 R1).
+    @Published private(set) var browsing: PersonPickerRequest.Role
     /// Bumped when an arrow leaves the new-person field, so the list takes the
     /// keyboard back.
     @Published var focusListRequest = 0
@@ -184,6 +238,7 @@ final class PersonPickerModel: ObservableObject {
         self.meName = request.labels.thatsMe != nil && !me.isEmpty ? me : nil
         self.onChoose = onChoose
         self.onClose = onClose
+        self.browsing = request.slot.role
         // The selection opens on the current answer. With no answer there is
         // nothing to confirm, so the cursor starts in the new-person field
         // (design-people.md §J8.10), where an empty Return does nothing.
@@ -191,8 +246,28 @@ final class PersonPickerModel: ObservableObject {
         self.selection = !name.isEmpty && request.names.contains(name) ? name : Self.newRow
     }
 
+    /// The names under the role being browsed.
+    var names: [String] { request.rows(for: browsing).names }
+
+    /// Whether the rows shown are another role's: every pick is then a recode.
+    var recoding: Bool { browsing != request.slot.role }
+
     var rows: [String] {
-        request.names + [Self.newRow] + (meName == nil ? [] : [Self.meRow])
+        names + [Self.newRow] + (meName == nil ? [] : [Self.meRow])
+    }
+
+    func code(for row: String) -> String { request.code(for: row, in: browsing) }
+    var newCode: String { request.rows(for: browsing).newCode }
+    var newPrompt: String { request.newPrompt(for: browsing) }
+
+    /// Show another role's rows, or the speaker's own again. The selection
+    /// lands on the speaker's own person, who heads every role's list.
+    func browse(_ role: PersonPickerRequest.Role) {
+        guard role != browsing, request.openRoles.contains(role) else { return }
+        renaming = false
+        browsing = role
+        let name = request.slot.name
+        selection = !name.isEmpty && names.contains(name) ? name : Self.newRow
     }
 
     var thatsMeLabel: String? {
@@ -212,7 +287,10 @@ final class PersonPickerModel: ObservableObject {
     /// than stretching the popover — and never narrower than the role segments.
     var contentWidth: CGFloat {
         let font = metrics.nameFont
-        let texts = request.names + [request.labels.newPrompt] + (thatsMeLabel.map { [$0] } ?? [])
+        // Every role's rows and prompt, so browsing a role never resizes it.
+        let roles = request.openRoles
+        let texts = roles.flatMap { request.rows(for: $0).names + [request.newPrompt(for: $0)] }
+            + (thatsMeLabel.map { [$0] } ?? [])
         let widest = texts.map { ($0 as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
         // Cell inset 8 + check column + badge column + gap + text + trailing 10,
         // inside the source-list capsule's 10 a side, inside the 10 pt padding.
@@ -229,12 +307,14 @@ final class PersonPickerModel: ObservableObject {
         if isAnswer(row), !request.slot.confirmed, let proposed = request.labels.proposed {
             return proposed
         }
-        return "\(request.code(for: row)) \(row)"
+        return "\(code(for: row)) \(row)"
     }
 
+    /// The tick: the speaker's current answer, which exists only in the role
+    /// they have — under another, nothing is yet.
     func isAnswer(_ row: String) -> Bool {
         let name = request.slot.name
-        guard !name.isEmpty else { return false }
+        guard !name.isEmpty, !recoding else { return false }
         return row == Self.meRow ? meName == name : row == name
     }
 
@@ -242,7 +322,7 @@ final class PersonPickerModel: ObservableObject {
     /// confirmed answer, which has nothing to choose. A proposed one is
     /// confirmed first, by its own click or Return.
     func canRename(_ row: String) -> Bool {
-        row != Self.newRow && row != Self.meRow && request.slot.confirmed
+        !recoding && row != Self.newRow && row != Self.meRow && request.slot.confirmed
             && !request.slot.name.isEmpty && row == request.slot.name
     }
 
@@ -282,7 +362,8 @@ final class PersonPickerModel: ObservableObject {
     /// Whether the current answer can be refused with the ✕: a moderator or
     /// observer the slot points at (design-people.md §J8.8).
     var canClear: Bool {
-        request.slot.role != .participant && request.slot.person != nil && !request.slot.name.isEmpty
+        !recoding && request.slot.role != .participant && request.slot.person != nil
+            && !request.slot.name.isEmpty
     }
 
     /// "Not this person": the slot returns to unknown.
@@ -295,7 +376,7 @@ final class PersonPickerModel: ObservableObject {
     private func send(_ raw: String, kind: PersonPickerPick.Kind) {
         let name = raw.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
-        onChoose(PersonPickerPick(name: name, kind: kind))
+        onChoose(PersonPickerPick(name: name, kind: kind, role: recoding ? browsing : nil))
         onClose()
     }
 
@@ -322,7 +403,7 @@ struct PersonPickerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            PersonPickerRoles(request: model.request, controlSize: model.metrics.controlSize)
+            PersonPickerRoles(model: model)
                 .frame(maxWidth: .infinity)
             PersonPickerList(model: model)
         }
@@ -331,15 +412,34 @@ struct PersonPickerView: View {
     }
 }
 
-/// Moderator | Participant | Observer, with only the speaker's own role
-/// enabled: changing a role is the §J recode, not built (owner, 4 Oct 2026).
-/// AppKit, because SwiftUI's segmented picker cannot disable one segment.
+/// Moderator | Participant | Observer. The speaker's own role, and each role
+/// they can be recoded to (§J7 R1: a moderator and an observer, as each
+/// other), is enabled; switching shows that role's rows, where a pick recodes
+/// them. Participant stays off for a moderator or observer, and every other
+/// segment for a participant, until R2. AppKit, because SwiftUI's segmented
+/// picker cannot disable one segment.
 private struct PersonPickerRoles: NSViewRepresentable {
-    let request: PersonPickerRequest
-    let controlSize: NSControl.ControlSize
+    @ObservedObject var model: PersonPickerModel
+
+    func makeCoordinator() -> Coordinator { Coordinator(model: model) }
 
     func makeNSView(context: Context) -> NSSegmentedControl {
-        Self.makeControl(request: request, controlSize: controlSize)
+        let control = Self.makeControl(request: model.request, controlSize: model.metrics.controlSize)
+        control.target = context.coordinator
+        control.action = #selector(Coordinator.segmentChanged(_:))
+        return control
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        let model: PersonPickerModel
+        init(model: PersonPickerModel) { self.model = model }
+
+        @objc func segmentChanged(_ sender: NSSegmentedControl) {
+            let roles = PersonPickerRequest.Role.allCases
+            guard roles.indices.contains(sender.selectedSegment) else { return }
+            model.browse(roles[sender.selectedSegment])
+        }
     }
 
     /// Built here and nowhere else, so the width the picker reserves is
@@ -352,8 +452,9 @@ private struct PersonPickerRoles: NSViewRepresentable {
         control.controlSize = controlSize
         control.font = NSFont.systemFont(ofSize: NSFont.systemFontSize(for: controlSize))
         control.segmentDistribution = .fillEqually
+        let open = request.openRoles
         for (i, role) in roles.enumerated() {
-            control.setEnabled(role == request.slot.role, forSegment: i)
+            control.setEnabled(open.contains(role), forSegment: i)
         }
         control.selectedSegment = roles.firstIndex(of: request.slot.role) ?? 0
         control.setAccessibilityLabel(request.labels.roleGroup)
@@ -361,7 +462,10 @@ private struct PersonPickerRoles: NSViewRepresentable {
         return control
     }
 
-    func updateNSView(_ control: NSSegmentedControl, context: Context) {}
+    func updateNSView(_ control: NSSegmentedControl, context: Context) {
+        let i = PersonPickerRequest.Role.allCases.firstIndex(of: model.browsing) ?? 0
+        if control.selectedSegment != i { control.selectedSegment = i }
+    }
 }
 
 private struct PersonPickerList: NSViewRepresentable {
@@ -405,6 +509,7 @@ private struct PersonPickerList: NSViewRepresentable {
     }
 
     func updateNSView(_ scroll: NSScrollView, context: Context) {
+        context.coordinator.syncBrowsing()
         context.coordinator.syncRenaming()
         context.coordinator.syncSelection()
     }
@@ -417,6 +522,15 @@ private struct PersonPickerList: NSViewRepresentable {
         private weak var renameField: NSTextField?
         private var focusListRequest = 0
         private var wasRenaming = false
+        private var shownRole: PersonPickerRequest.Role?
+
+        /// Another role's segment redraws the list with that role's rows.
+        func syncBrowsing() {
+            guard model.browsing != shownRole, let table else { return }
+            let first = shownRole == nil
+            shownRole = model.browsing
+            if !first { table.reloadData() }
+        }
 
         /// Entering or leaving a rename redraws the current row as a field, or
         /// back as a name.
@@ -478,13 +592,13 @@ private struct PersonPickerList: NSViewRepresentable {
             var label = ""
             switch id {
             case PersonPickerModel.newRow:
-                let newCode = model.request.newCode
+                let newCode = model.newCode
                 lead = PickerBadge(code: newCode, proposed: false)
-                let field = PickerRowView.nameField(text: model.draft, prompt: model.request.labels.newPrompt)
+                let field = PickerRowView.nameField(text: model.draft, prompt: model.newPrompt)
                 field.delegate = self
                 newField = field
                 name = field
-                label = "\(newCode), \(model.request.labels.newPrompt)"
+                label = "\(newCode), \(model.newPrompt)"
             case PersonPickerModel.meRow:
                 let icon = NSImageView(image: NSImage(systemSymbolName: "person.crop.circle.badge.checkmark",
                                                       accessibilityDescription: nil) ?? NSImage())
@@ -495,7 +609,7 @@ private struct PersonPickerList: NSViewRepresentable {
                 label = model.thatsMeLabel ?? ""
             default:
                 let proposed = model.isAnswer(id) && !slot.confirmed
-                lead = PickerBadge(code: model.request.code(for: id), proposed: proposed)
+                lead = PickerBadge(code: model.code(for: id), proposed: proposed)
                 if model.renaming, model.canRename(id) {
                     let field = PickerRowView.nameField(text: model.renameDraft, prompt: id)
                     field.setAccessibilityLabel(model.request.labels.menu)

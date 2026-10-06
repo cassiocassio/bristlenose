@@ -165,6 +165,22 @@ final class PickerLabModel: ObservableObject {
         }
         let prompt = slot.role == .moderator ? "New moderator"
             : slot.role == .observer ? "New observer" : "New name for \(slot.code)"
+        // A moderator or observer can be recoded as the other (§J7 R1): that
+        // role's people, the speaker first under the next code there.
+        var others: [Role: PersonPickerRequest.RoleRows] = [:]
+        if slot.role != .participant {
+            let role: Role = slot.role == .moderator ? .observer : .moderator
+            let prefix = role == .moderator ? "m" : "o"
+            var theirs = (known[role] ?? []).filter { !$0.isEmpty && $0 != slot.name }
+            var codes = theirs.indices.map { "\(prefix)\($0 + 1)" }
+            let next = "\(prefix)\(theirs.count + 1)"
+            if !slot.name.isEmpty {
+                theirs.insert(slot.name, at: 0)
+                codes.insert(next, at: 0)
+            }
+            others[role] = .init(names: theirs, codes: codes,
+                                 newCode: "\(prefix)\(theirs.count + 1)")
+        }
         return PersonPickerRequest(
             sessionId: "s1", slot: slot, names: names, anchor: .zero,
             labels: .init(roles: [.moderator: "Moderator", .participant: "Participant", .observer: "Observer"],
@@ -172,21 +188,25 @@ final class PickerLabModel: ObservableObject {
                           thatsMe: slot.role == .participant ? nil : "That’s Me ({{name}})",
                           menu: "Edit name for \(slot.code)",
                           proposed: slot.name.isEmpty || slot.confirmed
-                              ? nil : "\(slot.code), proposed name \(slot.name)"))
+                              ? nil : "\(slot.code), proposed name \(slot.name)",
+                          newPromptFor: [.moderator: "New moderator", .observer: "New observer"]),
+            others: others)
     }
 
     func rebuild() {
         picker = PersonPickerModel(
             request: request, small: small,
-            onChoose: { [weak self] pick in self?.picked(pick.name) },
+            onChoose: { [weak self] pick in self?.picked(pick.name, role: pick.role) },
             onClose: { [weak self] in self?.isOpen = false })
     }
 
     /// What the SPA does with a picked name: the slot's own proposed name is a
     /// yes; any other name renames it.
-    private func picked(_ name: String) {
-        slot = .init(code: slot.code, role: slot.role, name: name, confirmed: true)
-        if !(known[slot.role] ?? []).contains(name) { known[slot.role, default: []].append(name) }
+    private func picked(_ name: String, role: Role? = nil) {
+        let role = role ?? slot.role
+        let code = role == slot.role ? slot.code : role == .moderator ? "m1" : "o1"
+        slot = .init(code: code, role: role, name: name, confirmed: true)
+        if !(known[role] ?? []).contains(name) { known[role, default: []].append(name) }
         rebuild()
     }
 }

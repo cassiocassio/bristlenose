@@ -217,6 +217,8 @@ export interface NativePick {
   code: string;
   slot: PersonPickerSlot;
   known: PersonPickerRow[];
+  /** Everyone by role, so native can browse a recode (§J7 R1). */
+  knownByRole?: Record<PickerRole, PersonPickerRow[]>;
   apply: (choice: PersonPickerChoice) => void;
   refuse: (name: string) => void;
 }
@@ -230,7 +232,9 @@ function onMenuAction(e: Event): void {
   const open = pending;
   void import("./personPickerBridge").then(({ resolvePersonPickerChoice }) => {
     const pick = resolvePersonPickerChoice(payload, (sessionId, code) =>
-      sessionId === open.sessionId && code === open.code ? { slot: open.slot, known: open.known } : null,
+      sessionId === open.sessionId && code === open.code
+        ? { slot: open.slot, known: open.known, knownByRole: open.knownByRole }
+        : null,
     );
     if (!pick) return;
     if (pending === open) pending = null;
@@ -251,7 +255,9 @@ export function openNativePicker(pick: NativePick, anchor: HTMLElement): void {
   const rect = anchor.getBoundingClientRect();
   void Promise.all([import("./personPickerBridge"), import("../shims/bridge")]).then(
     ([{ buildPersonPickerMessage }, { postPersonPicker }]) =>
-      postPersonPicker(buildPersonPickerMessage(pick.sessionId, pick.slot, pick.known, rect, i18n.t)),
+      postPersonPicker(
+        buildPersonPickerMessage(pick.sessionId, pick.slot, pick.known, rect, i18n.t, pick.knownByRole),
+      ),
   );
 }
 

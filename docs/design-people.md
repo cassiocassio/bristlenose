@@ -2718,7 +2718,12 @@ rather than lines, and why anyone building from it should re-derive the anchors
 first — the repo's own gotcha about a bug report describing the tree its author
 read applies to design docs too.
 
-### J7 · The cross-role recode — plan (4 Oct 2026; not built)
+### J7 · The cross-role recode — plan (4 Oct 2026; R1 built 6 Oct 2026)
+
+> **Status, 6 Oct 2026: R1 (moderator ↔ observer) is built on all three surfaces — see
+> [§J8 point 19](#j8--the-owners-answers--6-oct-2026) for what shipped and where it departs
+> from the R1 row below** (no new column and no `/kind` route: the slot's existing
+> `speaker_role` holds the kind, and the speaker PUT takes `kind`). R2 and R3 are not built.
 
 *Written to unblock the picker's disabled segments (UX iteration 3: Moderator |
 Participant | Observer, only the current one enabled until this exists). Builds on
@@ -3251,3 +3256,27 @@ people as unique and roles as per-session is the People lens's long-term goal.
     Phase 1's half (a moved tag gets its slot), the importer now reconciles slots in both
     directions. The recode itself (R1) is next; the owner's "good — onward" on 6 Oct is
     read as yes to §J7 calls 1, 2, 4 and 5.
+
+19. **Built 6 Oct 2026 — §J7 R1, moderator ↔ observer, on the server, the web picker and
+    the Mac picker** (job 7 in the speaker jobs map). It departs from the R1 row of the
+    §J7 sequence in two places, both simpler. **The kind is held on the slot's existing
+    `speaker_role` column**, which the slot already carried from its tag; there is no
+    `speaker_role_override` and no Alembic revision. **The write is the speaker PUT
+    everyone already uses**, with `kind: "moderator" | "observer"` beside `person`, so a
+    recode and its undo are one write each; a participant is refused (409), that being R2.
+    **Codes are worked out on read** (`speaker_slots._derive_codes`), per person and role
+    in order of first appearance, so one person can be `m1` where they moderate and `o1`
+    where they observe (call 3); `Person.code` is kept as a record only, and nothing stores
+    a per-(person, role) code — a table for that waits for the People lens, which may need
+    one. The pipeline is never touched (call 1): the transcript's `is_moderator` and both
+    moderator-question queries now read the slot, not the tag's letter. **The picker:**
+    Moderator and Observer are both enabled on a moderator or observer; switching shows
+    that role's people, the speaker first under the code they would carry there, and a pick
+    or a typed name recodes them. Nothing under the other role is ticked, renamed or ✕'d —
+    the speaker has no answer there yet. Participant stays off, and a participant's picker
+    keeps its other segments off. On the Mac the rows for each open role arrive over the
+    bridge (contract v6, `roles`) and the reply carries `role`; the SPA resolves it, as it
+    resolves every pick. **Gates:** a walk over every project GET in the app's OpenAPI fails
+    if any read calls a recoded speaker by their old code (red with the role ignored); a
+    re-run keeps the recode; undo puts the role back; vitest pins each segment pick's
+    payload; the Swift contract tests decode the v6 rows and send the same payloads.

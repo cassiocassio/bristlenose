@@ -18,13 +18,23 @@ import {
   personPickerNameTaken,
   personPickerNewCode,
   personPickerRenamed,
+  personPickerRolesOpen,
   personPickerRows,
+  personPickerRowsForRole,
   personPickerTyped,
   type PersonPickerChoice,
   type PersonPickerLabels,
   type PersonPickerRow,
   type PersonPickerSlot,
+  type PickerRole,
 } from "./personPicker";
+
+/** One other role's rows, for browsing it to recode the speaker (§J7 R1). */
+export interface WireRoleRows {
+  names: string[];
+  codes: string[];
+  newCode: string;
+}
 
 export interface WirePersonPicker {
   sessionId: string;
@@ -36,6 +46,9 @@ export interface WirePersonPicker {
   codes: string[];
   /** The code someone new would get. */
   newCode: string;
+  /** The other roles the speaker can be recoded to, each with its rows; absent
+   *  when there are none (a participant, until R2). */
+  roles?: Partial<Record<PickerRole, WireRoleRows>>;
   /** The badge, in CSS pixels from the web view's top-left. */
   anchor: { x: number; y: number; width: number; height: number };
   labels: PersonPickerLabels;
@@ -46,7 +59,7 @@ export interface WirePersonPicker {
 export type WireNativeChoice =
   | { kind: "confirm" }
   | { kind: "clear" }
-  | { kind: "name" | "new" | "me" | "rename"; name: string };
+  | { kind: "name" | "new" | "me" | "rename"; name: string; role?: PickerRole };
 
 /** What `personPickerChoose` carries back. */
 export interface WirePersonPickerReply {
@@ -67,14 +80,28 @@ export function buildPersonPickerMessage(
   known: PersonPickerRow[],
   anchor: { x: number; y: number; width: number; height: number },
   t: TFunction,
+  knownByRole?: Partial<Record<PickerRole, PersonPickerRow[]>>,
 ): WirePersonPicker {
   const rows = personPickerRows(slot, known);
+  const roles: Partial<Record<PickerRole, WireRoleRows>> = {};
+  if (knownByRole) {
+    for (const role of personPickerRolesOpen(slot)) {
+      if (role === slot.role) continue;
+      const other = personPickerRowsForRole(slot, role, knownByRole[role] ?? []);
+      roles[role] = {
+        names: other.map((r) => r.name),
+        codes: other.map((r) => r.code),
+        newCode: personPickerNewCode({ ...slot, role }, other),
+      };
+    }
+  }
   return {
     sessionId,
     slot,
     names: rows.map((r) => r.name),
     codes: rows.map((r) => r.code),
     newCode: personPickerNewCode(slot, rows),
+    ...(Object.keys(roles).length ? { roles } : {}),
     anchor: {
       x: Math.round(anchor.x),
       y: Math.round(anchor.y),
@@ -99,7 +126,12 @@ export function parsePersonPickerChoice(payload: unknown): WirePersonPickerReply
     typeof choice.name === "string" &&
     choice.name.trim()
   ) {
-    return { sessionId: p.sessionId, code: p.code, choice: { kind, name: choice.name.trim() } };
+    const role = choice.role === "moderator" || choice.role === "observer" ? choice.role : undefined;
+    return {
+      sessionId: p.sessionId,
+      code: p.code,
+      choice: { kind, name: choice.name.trim(), ...(role ? { role } : {}) },
+    };
   }
   return null;
 }
@@ -116,7 +148,14 @@ export function parsePersonPickerChoice(payload: unknown): WirePersonPickerReply
  */
 export function resolvePersonPickerChoice(
   payload: unknown,
-  slotFor: (sessionId: string, code: string) => { slot: PersonPickerSlot; known: PersonPickerRow[] } | null,
+  slotFor: (
+    sessionId: string,
+    code: string,
+  ) => {
+    slot: PersonPickerSlot;
+    known: PersonPickerRow[];
+    knownByRole?: Partial<Record<PickerRole, PersonPickerRow[]>>;
+  } | null,
 ): ResolvedPersonPick | null {
   const pick = parsePersonPickerChoice(payload);
   if (!pick) return null;
@@ -130,6 +169,28 @@ export function resolvePersonPickerChoice(
   }
   const rows = personPickerRows(slot, found.known);
   const { kind, name } = pick.choice;
+  // Under another role: a recode (§J7 R1). A listed name is that person in
+  // that role; a typed one someone new there, unless anyone already has it.
+  const role = pick.choice.role;
+  if (role && role !== slot.role) {
+    // A role this speaker cannot move to (a participant, until R2) is dropped,
+    // never read as a pick in the role it has.
+    if (!personPickerRolesOpen(slot).includes(role) || !found.knownByRole) return null;
+    const other = personPickerRowsForRole(slot, role, found.knownByRole[role] ?? []);
+    const row = other.find((r) => r.name === name);
+    if (kind === "name" || (kind === "me" && row)) {
+      const choice = row ? personPickerChoice(slot, row, role) : null;
+      return choice ? { sessionId, code, choice } : null;
+    }
+    if (kind === "new" || kind === "me") {
+      const everyone = [...(found.knownByRole.moderator ?? []), ...(found.knownByRole.observer ?? [])];
+      const clash = personPickerNameTaken(slot, everyone, name);
+      if (clash) return { sessionId, code, taken: clash };
+      const choice = personPickerTyped(slot, name, role);
+      return choice ? { sessionId, code, choice } : null;
+    }
+    return null;
+  }
   if (kind === "rename") {
     const clash = personPickerNameTaken(slot, found.known, name);
     if (clash) return { sessionId, code, taken: clash };

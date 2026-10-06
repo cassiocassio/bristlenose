@@ -1,6 +1,6 @@
 {
-  "_comment": "The person picker across the Mac bridge (docs/design-people.md § UX iteration 3). Vitest (frontend/src/utils/personPickerBridge.test.ts) builds each web_to_native `wire` from `input` with the English strings, and resolves each native_to_web `payload` against its `slot` to `effect`. Swift (BristlenoseTests/PersonPickerContractTests.swift) decodes every `wire` exactly as BridgeHandler receives it and builds every `payload` from `native`. Change a shape here first, then both sides. Version 3 (6 Oct 2026, design-people.md §J8): rows carry their own codes, the new row the next free one, and a reply says which row it came from — a listed name, a typed one (`new`) or That's Me (`me`) — so a typed name is never read as a pick. A reply the SPA refuses resolves to `{\"taken\": name}`. Version 4 (6 Oct 2026): the ✕ — native replies `{\"kind\": \"clear\"}`, carrying no name, and the SPA applies it only where the slot holds a moderator or observer (§J8.8). Version 5 (6 Oct 2026): rename in place — native replies `{\"kind\": \"rename\", \"name\": …}` for the current, confirmed row; the SPA refuses a taken name and treats it as a new spelling for that person everywhere (§J8.16).",
-  "version": 5,
+  "_comment": "The person picker across the Mac bridge (docs/design-people.md § UX iteration 3). Vitest (frontend/src/utils/personPickerBridge.test.ts) builds each web_to_native `wire` from `input` with the English strings, and resolves each native_to_web `payload` against its `slot` to `effect`. Swift (BristlenoseTests/PersonPickerContractTests.swift) decodes every `wire` exactly as BridgeHandler receives it and builds every `payload` from `native`. Change a shape here first, then both sides. Version 3 (6 Oct 2026, design-people.md §J8): rows carry their own codes, the new row the next free one, and a reply says which row it came from — a listed name, a typed one (`new`) or That's Me (`me`) — so a typed name is never read as a pick. A reply the SPA refuses resolves to `{\"taken\": name}`. Version 4 (6 Oct 2026): the ✕ — native replies `{\"kind\": \"clear\"}`, carrying no name, and the SPA applies it only where the slot holds a moderator or observer (§J8.8). Version 5 (6 Oct 2026): rename in place — native replies `{\"kind\": \"rename\", \"name\": …}` for the current, confirmed row; the SPA refuses a taken name and treats it as a new spelling for that person everywhere (§J8.16). Version 6 (6 Oct 2026): a recode (§J7 R1) — web sends `roles`, the other roles the speaker can move to, each with its own rows, codes and next code (built from `knownByRole`, the people by role); native replies with `role` when the pick was made under another role, and the SPA resolves it as that person, or someone new, in that role.",
+  "version": 6,
   "web_to_native": [
     {
       "name": "a proposed moderator, every moderator known once, each by their own code",
@@ -149,6 +149,138 @@
           "newPromptFor": {
             "moderator": "New moderator",
             "observer": "New observer"
+          }
+        }
+      }
+    },
+    {
+      "name": "a confirmed moderator can be recoded: the observers, the speaker first under the next observer code",
+      "input": {
+        "sessionId": "s1",
+        "slot": {
+          "code": "m1",
+          "role": "moderator",
+          "name": "Martin B Storey",
+          "confirmed": true,
+          "person": "id-martin"
+        },
+        "known": [
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "Martin B Storey",
+            "code": "m1",
+            "person": "id-martin"
+          },
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "",
+            "code": "m?"
+          }
+        ],
+        "anchor": {
+          "x": 10.4,
+          "y": 20.6,
+          "width": 30,
+          "height": 17.5
+        },
+        "knownByRole": {
+          "moderator": [
+            {
+              "name": "Kerri Ng",
+              "code": "m2",
+              "person": "id-kerri"
+            },
+            {
+              "name": "Martin B Storey",
+              "code": "m1",
+              "person": "id-martin"
+            },
+            {
+              "name": "Kerri Ng",
+              "code": "m2",
+              "person": "id-kerri"
+            },
+            {
+              "name": "",
+              "code": "m?"
+            }
+          ],
+          "observer": [
+            {
+              "name": "Ana Ruiz",
+              "code": "o1",
+              "person": "id-ana"
+            }
+          ],
+          "participant": [
+            {
+              "name": "Sarah Chen",
+              "code": "p1"
+            }
+          ]
+        }
+      },
+      "wire": {
+        "sessionId": "s1",
+        "slot": {
+          "code": "m1",
+          "role": "moderator",
+          "name": "Martin B Storey",
+          "confirmed": true,
+          "person": "id-martin"
+        },
+        "names": [
+          "Kerri Ng",
+          "Martin B Storey"
+        ],
+        "codes": [
+          "m2",
+          "m1"
+        ],
+        "newCode": "m3",
+        "anchor": {
+          "x": 10,
+          "y": 21,
+          "width": 30,
+          "height": 18
+        },
+        "labels": {
+          "roles": {
+            "moderator": "Moderator",
+            "participant": "Participant",
+            "observer": "Observer"
+          },
+          "roleGroup": "Role",
+          "newPrompt": "New moderator",
+          "thatsMe": "That’s Me ({{name}})",
+          "menu": "Edit name for m1",
+          "proposed": null,
+          "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart.",
+          "notThisPerson": "Not {{name}}",
+          "newPromptFor": {
+            "moderator": "New moderator",
+            "observer": "New observer"
+          }
+        },
+        "roles": {
+          "observer": {
+            "names": [
+              "Martin B Storey",
+              "Ana Ruiz"
+            ],
+            "codes": [
+              "o2",
+              "o1"
+            ],
+            "newCode": "o3"
           }
         }
       }
@@ -699,6 +831,364 @@
         }
       ],
       "effect": null
+    },
+    {
+      "name": "the speaker's own person under Observer is a recode",
+      "native": {
+        "sessionId": "s1",
+        "code": "m1",
+        "name": "Martin B Storey",
+        "kind": "name",
+        "role": "observer"
+      },
+      "payload": {
+        "sessionId": "s1",
+        "code": "m1",
+        "choice": {
+          "kind": "name",
+          "name": "Martin B Storey",
+          "role": "observer"
+        }
+      },
+      "slot": {
+        "code": "m1",
+        "role": "moderator",
+        "name": "Martin B Storey",
+        "confirmed": true,
+        "person": "id-martin"
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "knownByRole": {
+        "moderator": [
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "Martin B Storey",
+            "code": "m1",
+            "person": "id-martin"
+          },
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "",
+            "code": "m?"
+          }
+        ],
+        "observer": [
+          {
+            "name": "Ana Ruiz",
+            "code": "o1",
+            "person": "id-ana"
+          }
+        ],
+        "participant": [
+          {
+            "name": "Sarah Chen",
+            "code": "p1"
+          }
+        ]
+      },
+      "effect": {
+        "kind": "person",
+        "row": {
+          "name": "Martin B Storey",
+          "code": "o2",
+          "person": "id-martin"
+        },
+        "role": "observer"
+      }
+    },
+    {
+      "name": "an observer picked under Observer is that person, as an observer",
+      "native": {
+        "sessionId": "s1",
+        "code": "m1",
+        "name": "Ana Ruiz",
+        "kind": "name",
+        "role": "observer"
+      },
+      "payload": {
+        "sessionId": "s1",
+        "code": "m1",
+        "choice": {
+          "kind": "name",
+          "name": "Ana Ruiz",
+          "role": "observer"
+        }
+      },
+      "slot": {
+        "code": "m1",
+        "role": "moderator",
+        "name": "Martin B Storey",
+        "confirmed": true,
+        "person": "id-martin"
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "knownByRole": {
+        "moderator": [
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "Martin B Storey",
+            "code": "m1",
+            "person": "id-martin"
+          },
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "",
+            "code": "m?"
+          }
+        ],
+        "observer": [
+          {
+            "name": "Ana Ruiz",
+            "code": "o1",
+            "person": "id-ana"
+          }
+        ],
+        "participant": [
+          {
+            "name": "Sarah Chen",
+            "code": "p1"
+          }
+        ]
+      },
+      "effect": {
+        "kind": "person",
+        "row": {
+          "name": "Ana Ruiz",
+          "code": "o1",
+          "person": "id-ana"
+        },
+        "role": "observer"
+      }
+    },
+    {
+      "name": "a name typed under Observer is someone new there",
+      "native": {
+        "sessionId": "s1",
+        "code": "m1",
+        "name": "Mike Alvarez",
+        "kind": "new",
+        "role": "observer"
+      },
+      "payload": {
+        "sessionId": "s1",
+        "code": "m1",
+        "choice": {
+          "kind": "new",
+          "name": "Mike Alvarez",
+          "role": "observer"
+        }
+      },
+      "slot": {
+        "code": "m1",
+        "role": "moderator",
+        "name": "Martin B Storey",
+        "confirmed": true,
+        "person": "id-martin"
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "knownByRole": {
+        "moderator": [
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "Martin B Storey",
+            "code": "m1",
+            "person": "id-martin"
+          },
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "",
+            "code": "m?"
+          }
+        ],
+        "observer": [
+          {
+            "name": "Ana Ruiz",
+            "code": "o1",
+            "person": "id-ana"
+          }
+        ],
+        "participant": [
+          {
+            "name": "Sarah Chen",
+            "code": "p1"
+          }
+        ]
+      },
+      "effect": {
+        "kind": "new",
+        "name": "Mike Alvarez",
+        "role": "observer"
+      }
+    },
+    {
+      "name": "a name typed under Observer that a moderator goes by is refused",
+      "native": {
+        "sessionId": "s1",
+        "code": "m1",
+        "name": "kerri ng",
+        "kind": "new",
+        "role": "observer"
+      },
+      "payload": {
+        "sessionId": "s1",
+        "code": "m1",
+        "choice": {
+          "kind": "new",
+          "name": "kerri ng",
+          "role": "observer"
+        }
+      },
+      "slot": {
+        "code": "m1",
+        "role": "moderator",
+        "name": "Martin B Storey",
+        "confirmed": true,
+        "person": "id-martin"
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "knownByRole": {
+        "moderator": [
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "Martin B Storey",
+            "code": "m1",
+            "person": "id-martin"
+          },
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "",
+            "code": "m?"
+          }
+        ],
+        "observer": [
+          {
+            "name": "Ana Ruiz",
+            "code": "o1",
+            "person": "id-ana"
+          }
+        ],
+        "participant": [
+          {
+            "name": "Sarah Chen",
+            "code": "p1"
+          }
+        ]
+      },
+      "effect": {
+        "taken": "Kerri Ng"
+      }
     }
   ]
 }

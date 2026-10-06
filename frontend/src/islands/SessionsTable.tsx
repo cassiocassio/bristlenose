@@ -477,6 +477,7 @@ export function SessionsTable({
           code: slot.code,
           slot,
           known: knownPeople[slot.role],
+          knownByRole: knownPeople,
           apply: (choice) => applyPickerChoice(sessionId, slotOf(sp), choice),
           refuse: refuseTaken,
         },

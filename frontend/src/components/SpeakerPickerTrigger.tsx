@@ -64,6 +64,7 @@ export function SpeakerPickerTrigger({ sessionId, code, role, name, tabbable = t
             code,
             slot: ctx.slot,
             known: ctx.known,
+            knownByRole: ctx.knownByRole,
             apply: (choice) => applySpeakerChoice(ctx, choice),
             refuse: refuseTakenName,
           },

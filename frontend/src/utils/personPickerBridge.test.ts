@@ -6,7 +6,7 @@
  */
 import contractJson from "../../../tests/fixtures/person-picker-bridge-contract.json";
 import i18n from "../i18n";
-import type { PersonPickerRow, PersonPickerSlot } from "./personPicker";
+import type { PersonPickerRow, PersonPickerSlot, PickerRole } from "./personPicker";
 import { buildPersonPickerMessage, resolvePersonPickerChoice } from "./personPickerBridge";
 
 interface WebToNativeCase {
@@ -15,6 +15,7 @@ interface WebToNativeCase {
     sessionId: string;
     slot: PersonPickerSlot;
     known: PersonPickerRow[];
+    knownByRole?: Record<PickerRole, PersonPickerRow[]>;
     anchor: { x: number; y: number; width: number; height: number };
   };
   wire: unknown;
@@ -25,6 +26,7 @@ interface NativeToWebCase {
   payload: unknown;
   slot: PersonPickerSlot;
   known: PersonPickerRow[];
+  knownByRole?: Record<PickerRole, PersonPickerRow[]>;
   effect: unknown;
 }
 
@@ -40,14 +42,18 @@ describe("person picker bridge contract", () => {
 
   for (const c of contract.web_to_native) {
     it(`builds: ${c.name}`, () => {
-      const { sessionId, slot, known, anchor } = c.input;
-      expect(buildPersonPickerMessage(sessionId, slot, known, anchor, i18n.t)).toEqual(c.wire);
+      const { sessionId, slot, known, anchor, knownByRole } = c.input;
+      expect(buildPersonPickerMessage(sessionId, slot, known, anchor, i18n.t, knownByRole)).toEqual(c.wire);
     });
   }
 
   for (const c of contract.native_to_web) {
     it(`resolves: ${c.name}`, () => {
-      const pick = resolvePersonPickerChoice(c.payload, () => ({ slot: c.slot, known: c.known }));
+      const pick = resolvePersonPickerChoice(c.payload, () => ({
+        slot: c.slot,
+        known: c.known,
+        knownByRole: c.knownByRole,
+      }));
       const effect = pick === null ? null : "taken" in pick ? { taken: pick.taken } : pick.choice;
       expect(effect).toEqual(c.effect);
     });
@@ -56,6 +62,13 @@ describe("person picker bridge contract", () => {
   it("a pick for a speaker the grid no longer has is dropped", () => {
     const [c] = contract.native_to_web;
     expect(resolvePersonPickerChoice(c.payload, () => null)).toBeNull();
+  });
+
+  it("a pick under another role is dropped for a participant (R2 is not built)", () => {
+    const slot: PersonPickerSlot = { code: "p3", role: "participant", name: "Mary", confirmed: true };
+    const payload = { sessionId: "s3", code: "p3", choice: { kind: "new", name: "Jo Bloggs", role: "observer" } };
+    const known = { moderator: [], participant: [], observer: [] };
+    expect(resolvePersonPickerChoice(payload, () => ({ slot, known: [], knownByRole: known }))).toBeNull();
   });
 
   it("a malformed payload is dropped", () => {

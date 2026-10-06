@@ -409,6 +409,44 @@ Not insertion — *unmarked* insertion of speech-looking text that a reader or t
 
 ---
 
+## Split and join, stage 1 — built 6 Oct 2026
+
+The common case (owner, 6 Oct 2026): a long paragraph that does not read as one thing, split in
+two with the same speaker; and the reverse. Speaker reassignment of a half is stage 2, and waits
+on the scope question in `design-people.md` §K.
+
+- **Interaction.** A paragraph's text takes a caret (`contenteditable`) and nothing else: typing,
+  dictation, autocorrect, pasting and dropping are refused by a native `beforeinput` guard, since
+  the words are the recording's. **Return** splits at the caret; **Backspace** at a paragraph's
+  start joins it to the one above, same speaker only. **⌘Z / ⇧⌘Z** undo and redo from the
+  paragraph (the page's own ⌘Z stands down inside editable text) and from Edit ▸ Undo. Not in an
+  exported report. Prior art agrees on Return: Dovetail, Trint and Condens.
+- **The cut** lands at the word boundary before the caret, counted in the words the page draws —
+  Whisper's words where the paragraph has them, else its text — so the researcher's cut and the
+  server's agree. Both halves keep the speaker; the second starts on its first word's time, or a
+  share of the paragraph's time by text length without word timings, or the same time with none.
+- **Storage.** Each edit is a row of `transcript_layout_edits` (migration 015): kind, the
+  paragraph's position in reading order (start, ordinal, id), the split's word count, and the
+  first words it was made against. The importer rebuilds a session's paragraphs from the
+  pipeline's transcript on every import and replays the edits in order
+  (`transcript_layout.replay`), so a split outlives a re-run; an edit whose words changed under it
+  (a re-analysis rewrote the transcript) is skipped and logged, never made on other words. Undo
+  forgets the edit and rebuilds that session's paragraphs (`rebuild_session_paragraphs`).
+- **Departure from the converged spec above.** The spec's rule is that a split forks any quote
+  spanning it (sentiment re-evaluated, tags copied, `durable_id` kept by one half). Stage 1 does
+  not fork quotes: the split is for reading, and the quote's highlight already marks both halves,
+  because the match is by time window. The fork rule stays for when a split means "two points",
+  with stage 2.
+- **Known limits.** Positions count in reading order, so a paragraph that shares its start second
+  with another keeps the page's existing anchor collision (`t-<second>`). The pipeline's own
+  outputs (transcript files, markdown) do not carry splits; they are serve-side curation, like
+  quote edits.
+- **Direct editing of a paragraph's words** is the next distinct piece (owner, 6 Oct 2026):
+  connected to quote editing with revert, wanted simpler, reusing that logic and UX where it fits.
+  Not started.
+
+---
+
 ## References
 
 - `docs/design-curation-persistence.md`, `docs/design-curation-persistence-plan.md` — the durable-id + frozen_form overlay this spec extends (shipped v0.20.0)

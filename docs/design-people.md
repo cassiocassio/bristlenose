@@ -3378,3 +3378,102 @@ people as unique and roles as per-session is the People lens's long-term goal.
     the log, not the Mac's pipeline popover (a `PipelineSummary` field is a two-file change);
     whether a transcript paragraph's badge should speak for the paragraph (job 10) rather than
     the whole speaker — the owner's 6 Oct reading of the picker — is the next design question.
+
+23. **Built 6 Oct 2026 — the picker opens on the name, ready to overtype** (owner, the same
+    day; web and Mac). A click on the current name always edits it, proposed or confirmed —
+    Return on a proposed name left as it is is the yes, which replaces the first-click confirm of
+    point 16. The picker opens with that name as a field, selected, so typing replaces it; Tab or
+    an arrow goes to the list, Escape abandons the edit and the picker; the ✕ stays beside the
+    field. A named participant has one field, their own name: no "New name for p3" row, since a
+    participant record is one speaker's and typing over it is the rename. Moderators and
+    observers keep the new-person field, because renaming Martin changes him everywhere. Still
+    open: whether the swap row stays (the owner is weighing two plain acts with the old
+    participant offered by name), and §K, the paragraph question.
+
+## §K — Paragraph and quote attribution: unsolved, and needed
+
+*Recorded 6 Oct 2026, from a design conversation with the owner. Nothing here is decided
+except where it says built. The speaker-level work above (§J7 R1–R3) fixes **who a speaker
+is**; this part is about **who said a particular paragraph or quote**, which it does not fix.*
+
+### K1 · Two questions that the transcript badge conflates
+
+- **Naming is always speaker-wide.** Renaming from a paragraph means "this voice is Simon",
+  never "only this paragraph". Every tool surveyed renames globally without asking.
+- **Reassigning has a scope.** A whole speaker can be wrong (the pipeline inverted moderator and
+  participant), or one paragraph (the transcription glued a question onto an answer). On the
+  Sessions grid only the speaker question makes sense; in the transcript both are live, and
+  the owner's first reading of the picker on a paragraph badge — *"this quote was actually
+  from m1"* — is the paragraph question, which the picker as built answers as the speaker one.
+- Three ways to draw the difference are in `docs/mockups/person-picker-decided-states.html`
+  §5, marked speculative: (A) the paragraph asks "who said this?" and then offers the wider
+  fix; (B) a this-paragraph / all-of-p1's toggle in the picker; (C) the speaker picker on a
+  speaker strip, the paragraph badge for the paragraph only. Undecided. Until then the
+  paragraph badge keeps opening the speaker-wide picker.
+
+### K2 · Prior art (6 Oct 2026, from each product's own help pages)
+
+- **Rename is global, unasked:** Otter, Descript, Dovetail, Trint, Looppanel.
+- **Reassignment with a scope choice is one control plus a binary choice at the act:** Marvin
+  ("one instance or across the transcript", plus a *Swap* of two speakers' dialogue), Grain
+  ("this speaker block / all speaker blocks"), Rev (a "Change all [label] to:" checkbox).
+  Nobody offers the wider fix afterwards, and nobody uses two places.
+- **Microsoft Teams is not prior art for this** — corrected the same day by the owner. It knows
+  who spoke from each person's login and microphone; its transcript text can be edited but a
+  paragraph cannot be split or reassigned. Its "Just this one / Update all" belongs only to a
+  Teams Room, where several people share one microphone and one claims their own lines.
+- **Split is Enter in the text, then assign the new paragraph:** Dovetail (which refuses
+  reassignment until every speaker is named), Trint, Condens. Descript's reassignment
+  reportedly changes a whole consecutive run by default, and users have asked for it to
+  change only the selected paragraph.
+- **None of the research tools has roles that affect evidence** (Dovetail, Marvin, Condens,
+  Looppanel treat "Interviewer" as a name). Excluding the moderator's words from evidence is
+  Bristlenose's own; there is nothing to borrow.
+- Where the problem lives: platform transcripts (Teams, Zoom) carry reliable attribution, so
+  paragraph errors come mostly from recordings Bristlenose transcribes itself, plus shared room
+  microphones.
+
+### K3 · How quotes meet paragraphs today (read from the code, 6 Oct 2026)
+
+- A quote stores the session, `participant_id` — **the session's first participant code, not
+  the speaker of the paragraph it came from** (`s09_quote_extraction.py`) — start and end
+  times, the verbatim excerpt, and a `segment_index` (the paragraph whose start is at or
+  before the quote's, or −1 without timings).
+- The transcript marks a quote by matching at read time: a paragraph whose start falls inside
+  the quote's window and whose speaker code equals the quote's `participant_id`; moderator
+  paragraphs are never marked (`routes/transcript.py`). No stored link; `segment_index` is not
+  used there.
+- Two suspected weaknesses, unmeasured: a quote starting partway into a paragraph may not mark
+  it (the match wants the paragraph's start inside the window); and transcripts without timings
+  put every paragraph at 0:00, where a time match means nothing.
+- Consequence: moving one paragraph to the moderator would unmark it in the transcript but leave
+  the quote in the evidence, credited to the participant (job 11). Evidence would have to become
+  paragraph-aware — the speakers of the paragraphs a quote's window covers — or quotes credited
+  per speaker at extraction.
+- The same gap shows after a speaker-level recode out of participant (§J7 R2): a lecturing
+  project manager recoded to observer leaves their lecture quotes in the evidence until the
+  session is re-analysed — or hides every quote of the session, if they held the first
+  participant code. Re-analysis (R3) puts both right.
+
+### K4 · Split and join — stage 1 built, stage 2 not
+
+- **Built 6 Oct 2026** (`design-transcript-editing.md` §"Split and join, stage 1"): Return at a
+  caret splits a paragraph, same speaker; Backspace at a paragraph's start joins it to the one
+  above; ⌘Z undoes. Recorded and replayed on every import. Quotes are not split.
+- **Stage 2, reassign the second half**, is the paragraph question of K1 and waits on it.
+  Drawn speculative in the mockup's §6.
+- **Direct editing of a paragraph's words** is a distinct later piece (owner, 6 Oct 2026):
+  connected to quote editing with revert but not the same, and wanted simpler; reuse that
+  logic and UX if it fits. Not started; tracked with the live-editable-transcript item.
+
+### K5 · What it needs
+
+1. A decision on K1's scope options.
+2. A reassignment the importer replays, like a split — keyed by paragraph, not by speaker label,
+   since a paragraph has no label of its own to pin (R3's pins are per label).
+3. Evidence that knows which paragraphs a quote spans, or quotes credited per speaker.
+4. A decision on whether a paragraph reassignment re-extracts (paid, like R3) or relabels and
+   leaves the evidence to a read-time rule.
+
+Tracked in the maintainer's private planning notes as three items: per-paragraph
+reassignment, per-quote reassignment, and what each means for re-analysis.

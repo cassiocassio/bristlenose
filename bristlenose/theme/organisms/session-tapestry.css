@@ -99,6 +99,12 @@
 .bn-tp-flag.raised line,
 .bn-tp-flag.raised path { stroke: var(--bn-colour-text); }
 .bn-tp-flag.raised path { fill: var(--bn-colour-bg); }
+/* Directly under the pointer: the app's selected blue — ink and wash — on the same
+   hairline, so it is clear a click goes there. */
+.bn-tp-flag.hot line,
+.bn-tp-flag.hot path { stroke: var(--bn-selection-border); }
+.bn-tp-flag.hot path { fill: var(--bn-selection-bg); }
+.bn-tp-flag.hot text { fill: var(--bn-colour-accent); }
 .bn-tp-flag text {
     font: var(--bn-weight-emphasis) var(--bn-text-badge) var(--bn-font-body);
     fill: var(--bn-colour-text);

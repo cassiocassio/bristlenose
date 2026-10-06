@@ -97,6 +97,21 @@ describe("SessionTapestry — hover", () => {
   });
 });
 
+describe("SessionTapestry — hovering a section flag", () => {
+  it("selects it: blue, full label, the cursor at its time", () => {
+    setup();
+    const flag = document.querySelectorAll(".bn-tp-flag")[1];
+    fireEvent.mouseEnter(flag);
+    const hot = document.querySelector(".bn-tp-flag.hot")!;
+    expect(hot.textContent).toContain("Checkout and payment"); // full label, never truncated
+    expect(document.querySelector(".bn-tp-playhead")).not.toBeNull();
+    expect(Array.from(document.querySelectorAll(".bn-tp-tick.near")).map((n) => n.textContent)).toEqual(["06:00"]);
+    fireEvent.mouseLeave(document.querySelector(".bn-tp-flag.hot")!);
+    expect(document.querySelector(".bn-tp-flag.hot")).toBeNull();
+    expect(document.querySelector(".bn-tp-playhead")).toBeNull();
+  });
+});
+
 describe("SessionTapestry — which track a speaker is on", () => {
   it("follows the server's team flag over the transcript tag (a recoded speaker)", () => {
     const recoded = { ...session, turns: [{ t0: 0, t1: 600, speaker: "p1", colour: null, team: true }] };

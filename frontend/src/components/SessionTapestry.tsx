@@ -111,6 +111,8 @@ export default function SessionTapestry({
   const { t } = useTranslation();
   const svgRef = useRef<SVGSVGElement>(null);
   const [raised, setRaised] = useState(-1);
+  // A flag directly under the pointer: selected-blue, full label, cursor at its time.
+  const [hotFlag, setHotFlag] = useState(-1);
   const [playhead, setPlayhead] = useState<number | null>(null);
   const [selected, setSelected] = useState(-1);
   const [themeFocus, setThemeFocus] = useState<string | null>(null);
@@ -283,8 +285,9 @@ export default function SessionTapestry({
   const ticks: number[] = [];
   for (let tk = 0; tk <= s.duration_seconds; tk += tickStep) ticks.push(tk);
 
-  const flagOrder = s.sections.map((_, i) => i).filter((i) => i !== raised);
-  if (raised >= 0) flagOrder.push(raised); // raised flag draws last, on top
+  const top = hotFlag >= 0 ? hotFlag : raised;
+  const flagOrder = s.sections.map((_, i) => i).filter((i) => i !== top);
+  if (top >= 0) flagOrder.push(top); // raised or hot flag draws last, on top
 
   const themeEnds = Array(TG.rows).fill(-1e9) as number[];
   const sel: TapestryQuote | undefined = selQ;
@@ -344,14 +347,23 @@ export default function SessionTapestry({
           {/* Section flags */}
           {flagOrder.map((i) => {
             const f = s.sections[i];
-            const isRaised = i === raised;
+            const isHot = i === hotFlag;
+            const isRaised = i === raised || isHot;
             const fx = x(f.t0);
             const next = i + 1 < s.sections.length ? x(s.sections[i + 1].t0) : xEnd;
             const text = isRaised ? f.label : fit(f.label, next - fx - 20, F.flag);
             const pw = (text ? measure(text, F.flag) : 0) + 12;
             return (
-              <g key={`f${i}`} className={`bn-tp-flag${isRaised ? " raised" : ""}`}
-                onClick={() => onJump(f.t0)}>
+              <g key={`f${i}`} className={`bn-tp-flag${isRaised ? " raised" : ""}${isHot ? " hot" : ""}`}
+                onClick={() => onJump(f.t0)}
+                onMouseEnter={() => {
+                  setHotFlag(i);
+                  setPlayhead(f.t0);
+                }}
+                onMouseLeave={() => {
+                  setHotFlag(-1);
+                  setPlayhead(null);
+                }}>
                 <title>{`${f.label} · ${formatTimecode(f.t0)}`}</title>
                 <line x1={fx + 0.5} x2={fx + 0.5} y1={2} y2={MT.y - 2} />
                 {/* Half-pixel coordinates: a 1px stroke on whole pixels smears across two and

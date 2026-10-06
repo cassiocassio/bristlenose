@@ -3029,3 +3029,31 @@ people as unique and roles as per-session is the People lens's long-term goal.
    - **One tick, not two.** That's Me and the matching name were both ticked in the
      owner's screenshot (the 4 Oct code review's question). One tick: on That's Me when
      this person is the account holder, otherwise on the name.
+
+9. **Two or more unknown speakers of one role in a session are lettered (6 Oct 2026).**
+   - **The problem.** Phase 1 shows every unidentified moderator as `m?`. The transcript's
+     paragraph badges show only the code, so a session with two unknown moderators shows
+     two different people as the same `m?`. The owner found this by naming one `m?`: the
+     other half stayed `m?`, which revealed the voice pass had split one moderator into
+     two.
+   - **The rule.** One unknown of a role in a session stays `m?`, with the grey italic role
+     word *Moderator*. Two or more become `mA?`, `mB?` on every badge, grid and
+     transcript alike, with *Moderator A*, *Moderator B* in the grey italic name half.
+     Observers likewise: `oA?`, `oB?`. Letters, never numbers, so an unknown can't be read
+     as `m1` or `m2`; they also echo diarisation's *Speaker A / B*. Letters follow the
+     speakers' order in the session, and a named speaker leaves the others' letters
+     unchanged.
+   - **Participants are untouched.** Their codes are numbered across the study, never
+     reused, and anchor quotes, so two unknown participants are already `p3` and `p4`.
+   - **Merging is a pick.** Naming the second unknown the same person as the first
+     points both slots at that person, an identity-level merge with no transcript edit.
+     The second slot's picker should list the person just named in this session at the top.
+   - **Rare, measured.** Of 211 sessions in 57 local trial-run projects (speaker codes
+     only), 0 of 162 audio sessions and 1 of 49 platform-transcript sessions had two
+     moderators. That corpus is the maintainer's own runs, not cohort data, and most of it
+     predates the 0.33 voice pass.
+   - **Cost.** A read-time display rule on Phase 1's `m?`, with no new data: count a
+     session's unknown slots per role and letter them. It applies wherever an unknown
+     code is emitted: the grid, the transcript, the export's "not identified" line, the
+     MCP overview. Two new strings, the role word with a letter for moderator and
+     observer, in the 21 full locales.

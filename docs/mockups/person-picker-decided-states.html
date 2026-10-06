@@ -3701,10 +3701,11 @@ body { padding: 0; }
 .m-stage .bn-picker-scope { display: flex; justify-content: center; gap: var(--bn-space-lg); padding: .35rem .8rem .5rem; }
 .m-stage .m-scope-btn { font: inherit; font-size: var(--bn-text-label); background: none; border: 0; padding: 0; cursor: pointer;
   color: var(--bn-colour-muted); font-weight: var(--bn-weight-normal); }
-.m-stage .m-scope-btn[aria-checked="true"] { color: var(--bn-colour-text); font-weight: var(--bn-weight-strong); }
+/* Semibold (600) has no token: the scale goes 490 emphasis → 520 starred → 700 strong. Flagged, not settled. */
+.m-stage .m-scope-btn[aria-checked="true"] { color: var(--bn-colour-text); font-weight: 600; }
 /* Reserve each word's bold width so the pair does not shift when the choice flips. */
 .m-stage .m-scope-btn { display: inline-grid; }
-.m-stage .m-scope-btn::after { content: attr(data-text); font-weight: var(--bn-weight-strong); height: 0; visibility: hidden; overflow: hidden; }
+.m-stage .m-scope-btn::after { content: attr(data-text); font-weight: 600; height: 0; visibility: hidden; overflow: hidden; }
 .m-stage .m-plain-name { color: var(--bn-colour-text); }
 /* The split point: the caret sits in the paragraph's own text. */
 .m-stage .m-split-after { color: var(--bn-colour-muted); }
@@ -3780,7 +3781,7 @@ body { padding: 0; }
 <p><b>Questions it raises</b>, in rough order of weight:</p>
 <ul>
 <li><b>What Paragraph does to a name.</b> A name is always the speaker's, so with Paragraph on, the name is not a field (7b: plain row, no rename). Typing a new person under Paragraph makes that person and credits this paragraph to them. That is a new speaker in the session, which Speaker scope never creates.</li>
-<li><b>The switch is plain text, not a second segmented control</b> (owner, 6 Oct 2026). Two stacked <code>.dimension-toggle</code>s read as one control in two rows; drawn as words, with weight (<code>--bn-weight-strong</code>) for the chosen one and muted for the other, it reads as a heading. The eye starts at the role toggle, which is where the act is. No box, no blue, no rule. It stays a radio group for VoiceOver and the keyboard. Note it is new: the house has no text-weight toggle yet, so this is a small new primitive, not a reuse.</li>
+<li><b>The switch is plain text, not a second segmented control</b> (owner, 6 Oct 2026). Two stacked <code>.dimension-toggle</code>s read as one control in two rows; drawn as words, semibold in body ink for the chosen one and regular in muted grey for the other (owner, 6 Oct; semibold is 600, a value the weight scale has no token for), it reads as a heading. The eye starts at the role toggle, which is where the act is. No box, no blue, no rule. It stays a radio group for VoiceOver and the keyboard. Note it is new: the house has no text-weight toggle yet, so this is a small new primitive, not a reuse.</li>
 <li><b>Where the stickiness lives.</b> Per transcript page and reset on leaving it? Per session? Per window? A sticky Paragraph forgotten on is the risk: the next "rename Simon" would not be possible, which is at least a visible failure, not a silent one. Resetting when the page changes is the conservative answer.</li>
 <li><b>The labels.</b> <em>Speaker</em> vs <em>All of p1</em>; <em>Paragraph</em> vs <em>This paragraph</em>. A count (<em>All 43</em>) says what Speaker will touch. All are owner-unseen placeholders, not locale keys.</li>
 <li><b>What a paragraph move costs.</b> Speaker scope on a moderator ↔ participant change is today's recode, then <em>Re-analyse…</em>. A paragraph move needs storage the next run respects: the split/join table (<code>transcript_layout_edits</code>, keyed by position and first words) can hold a "speaker" edit the same way. The evidence follows only once quote membership is paragraph-aware (§K, job 11). Until then a paragraph moved off p1 still counts as p1's evidence. Moving a moderator's question off the participant is the useful case, and it is the one evidence-membership has to honour.</li>

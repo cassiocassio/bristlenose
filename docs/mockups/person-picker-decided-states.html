@@ -3738,12 +3738,14 @@ body { padding: 0; }
 .m-mac7 .m7-seg span.on { background: var(--bn-colour-accent); color: #fff; }
 .m-mac7 .m7-seg span.on + span { border-left-color: transparent; }
 .m-mac7 .m7-row { display: flex; align-items: center; height: 24px; border-radius: var(--bn-radius-md); padding-right: 6px; }
-.m-mac7 .m7-row.sel { background: light-dark(#0064E1, #0059D1); color: #fff; } /* selectedContentBackgroundColor, read from AppKit */
+/* The un-emphasized source-list capsule (SourceListSelectionRowView pins
+   isEmphasized = false): grey ground, the name stays labelColor. Owner, 6 Oct:
+   it is grey, not the emphasized blue. --bn-nav-selection-bg is that grey. */
+.m-mac7 .m7-row.sel { background: var(--bn-nav-selection-bg, light-dark(#efefef, #2b2b2b)); }
 .m-mac7 .m7-tick { width: 19px; flex: none; display: inline-flex; justify-content: center; }
 .m-mac7 .m7-tick svg { width: 11px; height: 11px; }
 .m-mac7 .m7-code { font-family: var(--bn-font-mono); font-size: 10px; padding: 1px 4px; border-radius: 4px;
   background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); margin-right: 5px; }
-.m-mac7 .m7-row.sel .m7-code { background: rgb(255 255 255 / .22); color: #fff; }
 .m-mac7 .m7-hint { color: var(--bn-colour-muted); }
 /* The split point: the caret sits in the paragraph's own text. */
 .m-stage .m-split-after { color: var(--bn-colour-muted); }

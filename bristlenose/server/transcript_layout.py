@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+from difflib import SequenceMatcher
 
 from sqlalchemy.orm import Session as DbSession
 
@@ -76,6 +78,41 @@ def tokens(seg: TranscriptSegment) -> list[str]:
     return seg.text.split()
 
 
+def _norm(word: str) -> str:
+    """A word as the alignment compares it: case and punctuation dropped."""
+    return re.sub(r"[^\w']", "", word.casefold())
+
+
+def text_cut(text: str, drawn: list[str], token: int) -> int:
+    """Where in the paragraph's own text the drawn word ``token`` starts.
+
+    The cut is counted in the words the page draws, which for a timed
+    paragraph are Whisper's — lower-cased, unpunctuated, and not always the
+    text word for word (a platform transcript's "(Speaker B)" is not among
+    them; a sentence's first words can sit in the previous paragraph's word
+    list). So the drawn words are aligned to the text's words, and the text is
+    cut where the chosen word landed: its case, punctuation and spacing stay.
+    A word that found no partner moves the cut to the next one that did; with
+    none, the cut falls the same share of the way through the text.
+    """
+    spans = [(m.start(), m.group()) for m in re.finditer(r"\S+", text)]
+    if not spans:
+        return 0
+    if [w for _, w in spans] == drawn:
+        return spans[token][0]
+    matcher = SequenceMatcher(None, [_norm(w) for w in drawn], [_norm(w) for _, w in spans],
+                              autojunk=False)
+    to_text: dict[int, int] = {}
+    for block in matcher.get_matching_blocks():
+        for k in range(block.size):
+            to_text[block.a + k] = block.b + k
+    for i in range(token, len(drawn)):
+        if i in to_text and to_text[i] > 0:
+            return spans[to_text[i]][0]
+    share = round(len(spans) * token / max(len(drawn), 1))
+    return spans[min(max(share, 1), len(spans) - 1)][0]
+
+
 def split_verify(seg: TranscriptSegment, token: int) -> str:
     return _verify(tokens(seg)[token:])
 
@@ -107,6 +144,12 @@ def _split(db: DbSession, segs: list[TranscriptSegment], position: int, token: i
     else:
         start = seg.start_time
     start = min(max(start, seg.start_time), seg.end_time)
+    # The text is cut at the same word, in the text's own spelling (text_cut):
+    # rebuilding it from Whisper's words lost case and punctuation.
+    at = text_cut(seg.text, drawn, token)
+    left_text, right_text = seg.text[:at].rstrip(), seg.text[at:].strip()
+    if not left_text or not right_text:
+        raise LayoutRefusedError("a split needs words on both sides")
     if start <= seg.start_time:
         # No time to share (an untimed paragraph, or one whose first word is
         # at its start): put the second half a hair after the first, short of
@@ -119,13 +162,13 @@ def _split(db: DbSession, segs: list[TranscriptSegment], position: int, token: i
         speaker_code=seg.speaker_code,
         start_time=start,
         end_time=max(seg.end_time, start),
-        text=" ".join(drawn[token:]),
+        text=right_text,
         source=seg.source,
         segment_index=seg.segment_index,
         words_json=json.dumps(right_words, separators=(",", ":")) if right_words else None,
         moved_from=seg.moved_from,
     )
-    seg.text = " ".join(drawn[:token])
+    seg.text = left_text
     seg.end_time = min(seg.end_time, start) if seg.end_time > seg.start_time else seg.end_time
     seg.words_json = json.dumps(left_words, separators=(",", ":")) if left_words else None
     db.add(second)

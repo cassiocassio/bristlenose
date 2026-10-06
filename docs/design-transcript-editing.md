@@ -423,7 +423,10 @@ on the scope question in `design-people.md` §K.
   exported report. Prior art agrees on Return: Dovetail, Trint and Condens.
 - **The cut** lands at the word boundary before the caret, counted in the words the page draws —
   Whisper's words where the paragraph has them, else its text — so the researcher's cut and the
-  server's agree. Both halves keep the speaker; the second starts on its first word's time, or a
+  server's agree. The text is cut at the same word in its own spelling: the drawn words are
+  aligned to the text's words (`transcript_layout.text_cut`), so a timed paragraph keeps its
+  case and punctuation (until 6 Oct 2026 the halves were rebuilt from Whisper's words,
+  lower-cased and unpunctuated). Both halves keep the speaker; the second starts on its first word's time, or a
   share of the paragraph's time by text length without word timings. With no time to share, it
   starts a hair after the first half, short of the next paragraph, so splitting the first half
   again lands between the two (a tie fell through to insertion order, reviewed 6 Oct).

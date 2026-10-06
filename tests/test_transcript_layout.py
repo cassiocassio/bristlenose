@@ -333,3 +333,54 @@ class TestReassignToANewModerator:
         client = _client(project)
         self._new(client)
         assert "m5" in self._s1(client)
+
+
+class TestSplitKeepsTheTextsOwnSpelling:
+    """A timed paragraph is cut where the researcher sees it, in Whisper's
+    words, but its text keeps its own case and punctuation (6 Oct 2026: split
+    used to rebuild the text from the words, lower-cased and unpunctuated)."""
+
+    # From a real platform transcript: the words start mid-sentence, are lower
+    # case, carry no punctuation and know nothing of "(Speaker B)".
+    TEXT = ("(Speaker B) Interesting that you clicked on that, but you told me you would go "
+            "straight to search. Yes. Well, because that's it.")
+    WORDS = "told me you would go straight to search um yes well because that's it".split()
+
+    def test_the_text_is_cut_at_the_aligned_word(self) -> None:
+        from bristlenose.server.transcript_layout import text_cut
+
+        at = text_cut(self.TEXT, self.WORDS, self.WORDS.index("yes"))
+        assert self.TEXT[:at].rstrip().endswith("go straight to search.")
+        assert self.TEXT[at:] == "Yes. Well, because that's it."
+
+    def test_a_word_with_no_partner_moves_the_cut_to_the_next_that_has_one(self) -> None:
+        from bristlenose.server.transcript_layout import text_cut
+
+        # "um" is not in the text: cutting before it lands before "Yes."
+        at = text_cut(self.TEXT, self.WORDS, self.WORDS.index("um"))
+        assert self.TEXT[at:].startswith("Yes.")
+
+    def test_with_nothing_aligned_the_cut_falls_by_share(self) -> None:
+        from bristlenose.server.transcript_layout import text_cut
+
+        text = "uno dos tres cuatro"
+        assert text[text_cut(text, ["a", "b", "c", "d"], 2):] == "tres cuatro"
+
+    def test_a_split_through_the_api_keeps_both_halves_spelling(self, tmp_path: Path) -> None:
+        from bristlenose.server.models import TranscriptSegment
+
+        client = _client(_project(tmp_path, _TWO))
+        db = client.app.state.db_factory()
+        try:
+            seg = db.query(TranscriptSegment).filter_by(speaker_code="p1").first()
+            seg.text = "Thanks for having me, it is good to be here."
+            words = "thanks for having me it is good to be here".split()
+            seg.words_json = json.dumps(
+                [{"t": w, "s": 10.0 + i, "e": 10.5 + i} for i, w in enumerate(words)])
+            db.commit()
+        finally:
+            db.close()
+        _split(client, 1, 4, "it is good to be here")
+        assert [t for _, t in _texts(client)][1:3] == [
+            "Thanks for having me,", "it is good to be here.",
+        ]

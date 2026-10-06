@@ -3550,11 +3550,12 @@ serve's own API):
   unconfirmed moderator slot the transcript does not use, so the replay makes it again —
   unless the pipeline's own transcript now uses that code, when the move is refused rather
   than landed on a real speaker. Undo removes the slot if nothing else uses it.
-- **Splitting a timed paragraph rewrites its text from Whisper's words**, lower-cased and
+- **Splitting a timed paragraph rewrote its text from Whisper's words**, lower-cased and
   unpunctuated ("(Speaker B) Interesting that you clicked…" became "told me you would go
-  straight to search um"). This is stage 1's split, not new here. The page already draws those
-  words, so nothing changes on screen, but the text field is what exports and the agent read.
-  Worth fixing before splits are common.
+  straight to search um"). Stage 1's split, found here; **fixed the same day**: the cut is
+  still counted in the drawn words, which are aligned to the text's own words
+  (`transcript_layout.text_cut`), and the text is cut where the chosen word landed, so both
+  halves keep their case, punctuation and "(Speaker B)".
 - **Word timings and paragraph text can disagree at the edges.** The moderator's opening words
   of that paragraph sat in the previous paragraph's word list. A cut counted in drawn words is
   consistent with what the researcher sees, which is the point, but the two sources are not

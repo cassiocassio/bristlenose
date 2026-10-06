@@ -20,14 +20,15 @@ export function zoomScale(fit: number, value: number): number {
 }
 
 // ── What the researcher left open ─────────────────────────────────────────
-// Which timelines are open, the zoom and the sideways scroll, per project, so going to a
+// Which timelines are open, the zoom and each timeline's sideways scroll, per project, so going to a
 // transcript and back shows the same page. Module state covers in-app navigation;
 // sessionStorage covers a reload. A per-viewer convenience: every storage access is guarded.
 
 export interface TapestryView {
   open: string[];
   zoom: number;
-  scrollLeft: number;
+  /** Each session's own sideways scroll: the timelines scroll independently. */
+  scroll: Record<string, number>;
 }
 
 const views = new Map<string, TapestryView>();
@@ -43,7 +44,9 @@ export function loadTapestryView(projectId: string): TapestryView {
       const view = {
         open: Array.isArray(v.open) ? v.open.filter((x): x is string => typeof x === "string") : [],
         zoom: typeof v.zoom === "number" ? Math.max(0, Math.min(100, v.zoom)) : 0,
-        scrollLeft: typeof v.scrollLeft === "number" ? Math.max(0, v.scrollLeft) : 0,
+        scroll: v.scroll && typeof v.scroll === "object"
+          ? Object.fromEntries(Object.entries(v.scroll).filter(([, n]) => typeof n === "number" && n >= 0))
+          : {},
       };
       views.set(projectId, view);
       return view;
@@ -51,7 +54,7 @@ export function loadTapestryView(projectId: string): TapestryView {
   } catch {
     // Storage unavailable or unreadable: start closed.
   }
-  return { open: [], zoom: 0, scrollLeft: 0 };
+  return { open: [], zoom: 0, scroll: {} };
 }
 
 export function saveTapestryView(projectId: string, patch: Partial<TapestryView>): void {

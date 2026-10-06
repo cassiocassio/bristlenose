@@ -563,14 +563,13 @@ export function SessionsTable({
       </button>
     </div>
   ) : null;
-  // Open slices scroll together: the axis is shared.
-  const syncScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  // Each timeline scrolls on its own; remember where, so Back restores it.
+  const rememberScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const src = e.target as HTMLElement;
     if (!src.classList?.contains("bn-tapestry-scroll")) return;
-    gridRef.current?.querySelectorAll<HTMLElement>(".bn-tapestry-scroll").forEach((el) => {
-      if (el !== src && el.scrollLeft !== src.scrollLeft) el.scrollLeft = src.scrollLeft;
-    });
-    saveTapestryView(projectId, { scrollLeft: src.scrollLeft });
+    const sid = src.closest(".bn-tapestry")?.id.replace(/^bn-tapestry-/, "");
+    if (!sid) return;
+    saveTapestryView(projectId, { scroll: { ...loadTapestryView(projectId).scroll, [sid]: src.scrollLeft } });
   };
 
   return (
@@ -593,7 +592,7 @@ export function SessionsTable({
           theme/organisms/sessions-grid.css — this component renders every
           cell at every width and lets container queries decide what shows,
           so there is no width measurement in JS. */}
-      <div className="bn-sessions-grid" role="table" ref={gridRef} onScrollCapture={syncScroll}>
+      <div className="bn-sessions-grid" role="table" ref={gridRef} onScrollCapture={rememberScroll}>
         <div className="bn-sessions-row bn-sessions-head" role="row">
           <div className="bn-sessions-cell bn-cell-id" role="columnheader">
             {t("sessions.colId")}
@@ -656,7 +655,7 @@ export function SessionsTable({
                   <SessionTapestry
                     session={ts}
                     sPerPx={sPerPx}
-                    initialScrollLeft={loadTapestryView(projectId).scrollLeft}
+                    initialScrollLeft={loadTapestryView(projectId).scroll[sess.session_id] ?? 0}
                     nameOf={nameOf}
                     codeOf={codeOf}
                     onJump={(sec) =>

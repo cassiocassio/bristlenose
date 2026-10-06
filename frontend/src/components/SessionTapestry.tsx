@@ -101,7 +101,7 @@ interface Props {
   /** The displayed code for a slot; its first letter (m/o = team) picks the track. Defaults to the slot. */
   codeOf?: (slot: string) => string;
   onJump: (seconds: number) => void;
-  /** Sideways scroll to restore on mount (the slices share one). */
+  /** This timeline's sideways scroll, restored on mount. */
   initialScrollLeft?: number;
 }
 
@@ -125,7 +125,7 @@ export default function SessionTapestry({
   const scrollRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (scrollRef.current && initialScrollLeft) scrollRef.current.scrollLeft = initialScrollLeft;
-    // Mount only: afterwards the shared scroll is driven by the slices themselves.
+    // Mount only: afterwards the researcher's own scrolling drives it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

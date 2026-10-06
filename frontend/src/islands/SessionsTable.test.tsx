@@ -1193,6 +1193,19 @@ describe("SessionsTable — session tapestry", () => {
     expect(screen.getByRole("slider", { name: "Timeline zoom" })).toHaveValue("40");
   });
 
+  it("scrolls each open timeline on its own", async () => {
+    const two = { sessions: [tapestryResponse.sessions[0], { ...tapestryResponse.sessions[0], session_id: "s2" }] };
+    mockWithTapestry(two);
+    render(<SessionsTable projectId="1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Timeline for session 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Timeline for session 2" }));
+    await waitFor(() => expect(document.querySelectorAll(".bn-tapestry-scroll")).toHaveLength(2));
+    const [a, b] = Array.from(document.querySelectorAll<HTMLElement>(".bn-tapestry-scroll"));
+    a.scrollLeft = 300;
+    fireEvent.scroll(a);
+    expect(b.scrollLeft).toBe(0);
+  });
+
   it("keeps each project's open timelines to itself", async () => {
     mockWithTapestry(tapestryResponse);
     const first = render(<SessionsTable projectId="1" />);

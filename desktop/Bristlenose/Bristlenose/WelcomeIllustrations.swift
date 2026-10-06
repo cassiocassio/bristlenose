@@ -2218,7 +2218,7 @@ enum WelcomeIllustrationHTML {
           *{ box-sizing:border-box; }
           html,body{ margin:0; height:100%; overflow:hidden; background:transparent; }
           body{ display:flex; align-items:center; padding:9px 14px; font-family:var(--bn-font-body); color:var(--bn-colour-text); }
-          #stage{ position:relative; width:100%; transform-origin:50% 50%; }
+          #stage{ position:relative; width:100%; }
           .sh-toolbar{ display:flex; justify-content:flex-end; align-items:center; min-height:18px; margin-bottom:3px; }
           .bn-hidden-toggle{ background:none; border:none; font-size:var(--bn-text-label); color:var(--bn-colour-accent); font-family:var(--bn-font-body); padding:2px 4px; display:inline-block; }
           .bn-hidden-chevron{ font-size:.7em; margin-left:.15em; }
@@ -2276,19 +2276,7 @@ enum WelcomeIllustrationHTML {
           var PTR_SVG='<svg width="21" height="21" viewBox="0 0 12 19"><path d="M1.2 1.2 L1.2 14.6 L4.8 11.3 L7.1 16.8 L9.3 15.8 L7.0 10.4 L11.4 10.4 Z" fill="#ffffff" stroke="#111111" stroke-width="1.1" stroke-linejoin="round"/></svg>';
           var HIDE_SVG='<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"><path d="M2 8s2.3-4 6-4 6 4 6 4-2.3 4-6 4-6-4-6-4Z"/><circle cx="8" cy="8" r="1.7"/><line x1="3.2" y1="12.8" x2="12.8" y2="3.2"/></svg>';
           function mkPointer(){ var p=document.createElement("div"); p.className="ptr"; p.innerHTML='<span class="ptr-ico">'+PTR_SVG+'</span>'; host.appendChild(p); return p; }
-          // Shrink to fit the slot: two quotes that wrap to two lines each outgrow it,
-          // and the centred body clipped the toolbar and card B. Measured on the full
-          // scene (both cards shown), never above natural size, and frozen while card
-          // B collapses so the picture does not zoom mid-play. relXY divides the scale
-          // back out because the pointer and caps are positioned in unscaled px.
-          var FIT=1;
-          function fit(){
-            host.style.transform="none";
-            var s=Math.min(1,(window.innerHeight-6)/host.offsetHeight);
-            FIT=(isFinite(s)&&s>0)?s:1; host.style.transform="scale("+FIT+")";
-          }
-          window.addEventListener("resize",function(){ if(!host.querySelector(".bn-hiding,.bn-hidden")) fit(); });
-          function relXY(el, dx, dy){ var hr=host.getBoundingClientRect(), r=el.getBoundingClientRect(); return [(r.left-hr.left)/FIT+(dx||0), (r.top-hr.top)/FIT+(dy||0)]; }
+          function relXY(el, dx, dy){ var hr=host.getBoundingClientRect(), r=el.getBoundingClientRect(); return [r.left-hr.left+(dx||0), r.top-hr.top+(dy||0)]; }
           function setPtr(p,x,y){ p.style.transition="none"; p.style.transform="translate("+x+"px,"+y+"px)"; p._x=x; p._y=y; }
           function bez(a,c,b,t){ var u=1-t; return u*u*a+2*u*t*c+t*t*b; }
           function glideCurve(p, el, dx, dy){
@@ -2327,7 +2315,6 @@ enum WelcomeIllustrationHTML {
           // read, and the establishing beat only works if the scene is on screen.
           function buildStarHide(){
             host.innerHTML=shToolbar(2)+'<div class="sh-stage">'+fullCard(SHQ[0])+fullCard(SHQ[1])+'</div>';
-            fit();
           }
           function paintStill(){
             buildStarHide();

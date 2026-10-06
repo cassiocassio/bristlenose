@@ -60,7 +60,7 @@ import type {
   TapestryResponse,
   TapestrySession,
 } from "../utils/types";
-import { fitScale, zoomScale } from "../utils/tapestryScale";
+import { fitScale, loadTapestryView, saveTapestryView, zoomScale } from "../utils/tapestryScale";
 import { refetchOverlayProps } from "../hooks/useRefetching";
 
 // The picker's code is loaded when someone first opens it: the grid is part of
@@ -200,8 +200,14 @@ export function SessionsTable({
   const [isRefetching, setIsRefetching] = useState(false);
   // The timeline slice under each row (GET /tapestry). Absent → no disclosure.
   const [tapestry, setTapestry] = useState<Record<string, TapestrySession> | null>(null);
-  const [openTapestries, setOpenTapestries] = useState<Set<string>>(() => new Set());
-  const [zoom, setZoom] = useState(0);
+  // Restored, so a visit to a transcript and Back shows the same page.
+  const [openTapestries, setOpenTapestries] = useState<Set<string>>(
+    () => new Set(loadTapestryView(projectId).open),
+  );
+  const [zoom, setZoom] = useState(() => loadTapestryView(projectId).zoom);
+  useEffect(() => {
+    saveTapestryView(projectId, { open: [...openTapestries], zoom });
+  }, [projectId, openTapestries, zoom]);
   const [gridWidth, setGridWidth] = useState(0);
   const gridRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -564,6 +570,7 @@ export function SessionsTable({
     gridRef.current?.querySelectorAll<HTMLElement>(".bn-tapestry-scroll").forEach((el) => {
       if (el !== src && el.scrollLeft !== src.scrollLeft) el.scrollLeft = src.scrollLeft;
     });
+    saveTapestryView(projectId, { scrollLeft: src.scrollLeft });
   };
 
   return (
@@ -646,6 +653,7 @@ export function SessionsTable({
                   <SessionTapestry
                     session={ts}
                     sPerPx={sPerPx}
+                    initialScrollLeft={loadTapestryView(projectId).scrollLeft}
                     nameOf={nameOf}
                     onJump={(sec) =>
                       navigate({ pathname: `/report/sessions/${sess.session_id}`, hash: `#t-${Math.floor(sec)}` })
@@ -777,7 +785,11 @@ function SessionRow({
   }
 
   return (
-    <div className="bn-sessions-row" data-session={session_id} role="row">
+    <div
+      className={`bn-sessions-row${tapestryOpen ? " bn-tapestry-open" : ""}`}
+      data-session={session_id}
+      role="row"
+    >
       <div className="bn-sessions-cell bn-cell-id bn-session-id" role="cell">
         {tapestryOpen !== undefined && (
           <button

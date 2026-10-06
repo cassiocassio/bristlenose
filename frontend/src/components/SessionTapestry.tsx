@@ -100,9 +100,11 @@ interface Props {
   /** Display name for a slot code; falls back to the code. */
   nameOf: (slot: string) => string;
   onJump: (seconds: number) => void;
+  /** Sideways scroll to restore on mount (the slices share one). */
+  initialScrollLeft?: number;
 }
 
-export default function SessionTapestry({ session, sPerPx, nameOf, onJump }: Props) {
+export default function SessionTapestry({ session, sPerPx, nameOf, onJump, initialScrollLeft = 0 }: Props) {
   const { t } = useTranslation();
   const svgRef = useRef<SVGSVGElement>(null);
   const [raised, setRaised] = useState(-1);
@@ -115,6 +117,12 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump }: Pro
   const popRef = useRef<HTMLDivElement>(null);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [pop, setPop] = useState<{ left: number; top: number; width: number; arrow: number } | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (scrollRef.current && initialScrollLeft) scrollRef.current.scrollLeft = initialScrollLeft;
+    // Mount only: afterwards the shared scroll is driven by the slices themselves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const choose = (i: number) => {
     setSelected(i);
@@ -269,7 +277,7 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump }: Pro
 
   return (
     <div className="bn-tp-wrap" ref={wrapRef}>
-      <div className="bn-tapestry-scroll" onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}>
+      <div className="bn-tapestry-scroll" ref={scrollRef} onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}>
         <svg
           ref={svgRef}
           className="bn-tapestry-svg"

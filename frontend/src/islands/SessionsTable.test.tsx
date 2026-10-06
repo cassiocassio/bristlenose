@@ -13,6 +13,7 @@ import { _resetEmbeddedCache } from "../utils/embedded";
 import { _resetExportCache } from "../utils/exportData";
 import { getUndoState, redo, resetUndoStore, undo } from "../contexts/UndoStore";
 import { resetSpeakerNameQueue } from "../utils/speakerNames";
+import { resetTapestryViews } from "../utils/tapestryScale";
 
 // SessionsTable uses useNavigate (journey deep-links) — provide a Router.
 const render = (ui: Parameters<typeof rtlRender>[0]) =>
@@ -1125,6 +1126,8 @@ describe("SessionsTable person picker", () => {
 // ---------------------------------------------------------------------------
 
 describe("SessionsTable — session tapestry", () => {
+  beforeEach(() => resetTapestryViews());
+
   const tapestryResponse = {
     sessions: [
       {
@@ -1175,6 +1178,28 @@ describe("SessionsTable — session tapestry", () => {
     // The slice is a row of the grid, right after its session's row.
     const row = document.querySelector('[data-session="s1"]');
     expect(row?.nextElementSibling?.id).toBe("bn-tapestry-s1");
+  });
+
+  it("keeps a timeline open across a visit to a transcript and back", async () => {
+    mockWithTapestry(tapestryResponse);
+    const first = render(<SessionsTable projectId="1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Timeline for session 1" }));
+    fireEvent.change(screen.getByRole("slider", { name: "Timeline zoom" }), { target: { value: "40" } });
+    first.unmount(); // the lens unmounts when the router goes to the transcript
+    render(<SessionsTable projectId="1" />);
+    const toggle = await screen.findByRole("button", { name: "Timeline for session 1" });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByRole("group", { name: "Session timeline" })).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: "Timeline zoom" })).toHaveValue("40");
+  });
+
+  it("keeps each project's open timelines to itself", async () => {
+    mockWithTapestry(tapestryResponse);
+    const first = render(<SessionsTable projectId="1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Timeline for session 1" }));
+    first.unmount();
+    render(<SessionsTable projectId="2" />);
+    expect(await screen.findByRole("button", { name: "Timeline for session 1" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("degrades to no timelines when /tapestry fails", async () => {

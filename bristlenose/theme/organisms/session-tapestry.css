@@ -37,15 +37,26 @@
 .bn-tapestry-toggle svg { transition: transform 0.15s ease; }
 .bn-tapestry-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
 
+/* An open session reads as one unit: its row and its slice share the tint, with no
+   keyline between them; the keyline and a band of empty space come after the slice,
+   before the next session. */
+.bn-sessions-row.bn-tapestry-open {
+    background: var(--bn-colour-quote-bg);
+    border-bottom-color: transparent;
+}
+/* Hover would tint the row alone and split the unit (beats the grid's 0-3-0 hover rule). */
+.bn-sessions-row.bn-tapestry-open[data-session]:hover { background: var(--bn-colour-quote-bg); }
+
 /* The slice: a full-width grid item after its row. */
 .bn-tapestry {
     grid-column: 1 / -1;
     min-width: 0;
+    background: var(--bn-colour-quote-bg);
     border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: var(--bn-space-lg);
 }
 .bn-tapestry-cell { min-width: 0; }
 .bn-tapestry-scroll {
-    background: var(--bn-colour-quote-bg);
     padding: var(--bn-space-sm) 0;
     /* Room under the timecodes for the horizontal scrollbar: macOS draws an overlay
        bar over the content (~11px, ~15px while hovered), so it would cover them. */

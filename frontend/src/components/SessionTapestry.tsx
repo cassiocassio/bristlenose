@@ -66,7 +66,7 @@ function fonts(): { flag: string; tag: string; clip: string; lane: string } {
   const body = v("--bn-font-body", "system-ui, sans-serif");
   return {
     flag: `${v("--bn-weight-emphasis", "490")} ${px(v("--bn-text-badge", "11.5px"))} ${body}`,
-    tag: `${v("--bn-weight-normal", "420")} ${px(v("--bn-text-micro", "9.6px"))} ${body}`,
+    tag: `${v("--bn-weight-normal", "420")} ${px(v("--bn-text-badge", "11.5px"))} ${body}`,
     clip: `${v("--bn-weight-emphasis", "490")} ${px(v("--bn-text-micro", "9.6px"))} ${body}`,
     lane: `${v("--bn-weight-emphasis", "490")} ${px(v("--bn-text-caption", "12px"))} ${body}`,
   };
@@ -161,7 +161,7 @@ export default function SessionTapestry({
   const MT = { y: 26, h: 16 };
   const PT = { y: 45, h: 18 };
   const SE = { mid: 104, amp: 30 };
-  const TG = { y: 144, row: 17, rows: 3 };
+  const TG = { y: 144, row: 19, rows: 3 };
   const H = TG.y + TG.row * TG.rows + 14;
 
   // While a quote is open, ← → step quotes and Esc closes, whatever has focus:
@@ -452,11 +452,11 @@ export default function SessionTapestry({
               <g key={theme} className="bn-tp-theme" onMouseEnter={() => setThemeFocus(theme)}
                 onMouseLeave={() => setThemeFocus(null)}>
                 <title>{theme}</title>
-                <rect className="bn-tp-span" x={x0} y={y + 5} width={x1 - x0} height={4} rx={2} />
+                <rect className="bn-tp-span" x={x0} y={y + 6} width={x1 - x0} height={4} rx={2} />
                 {text && (
                   <>
-                    <rect className="bn-tp-tag" x={lx} y={y} width={tw + 8} height={14} rx={3} />
-                    <text className="bn-tp-tag-text" x={lx + 4} y={y + 10.5}>{text}</text>
+                    <rect className="bn-tp-tag" x={lx} y={y} width={tw + 8} height={16} rx={3} />
+                    <text className="bn-tp-tag-text" x={lx + 4} y={y + 12}>{text}</text>
                   </>
                 )}
               </g>

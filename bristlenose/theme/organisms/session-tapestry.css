@@ -126,7 +126,7 @@
 .bn-tp-tag { fill: var(--bn-colour-badge-bg); }
 /* Sans, not mono: monospace is reserved for tag text, and a theme is not a tag. */
 .bn-tp-tag-text {
-    font: var(--bn-weight-normal) var(--bn-text-micro) var(--bn-font-body);
+    font: var(--bn-weight-normal) var(--bn-text-badge) var(--bn-font-body);
     fill: var(--bn-colour-badge-text);
 }
 

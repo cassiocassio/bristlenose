@@ -920,5 +920,98 @@ eq "the step is recorded failed" fail "$(status_of 1.0.0 inventory)"
 grep -q 'cannot generate the supply-chain inventory' "$WORK/out" \
     && ok "and names the reason" || bad "unattributed failure"
 
+# ---------------------------------------------------------------------------
+# 45-47 · the CI gate decides early, and asks GitHub about the right commit
+#
+# 0.34.0 (release-premortem 6 Oct list): a failed job decided the strict run
+# ten minutes in, twice, and the gate waited ~38 minutes each time; and the
+# lookup reported "no run" for a run that existed, because GitHub's filtered
+# listing answered with a stale page.
+# ---------------------------------------------------------------------------
+
+head_ "45 · a failed BLOCKING job stops the gate before the run finishes"
+fresh
+steps <<'EOF'
+strict-ci|dispatch strict CI|plain|1m|||__DISPATCH__
+ci-green|GATE strict CI green|gate|1m|||__CIWAIT__
+EOF
+stub sleep 'exit 0'
+stub gh 'case "$1 $2" in
+  "run list")  echo 12345 ;;
+  "run view")  printf "in_progress\nruff\tsuccess\ne2e\tfailure\n" ;;
+  "run watch") echo x >> "$PWD/watched"; exit 0 ;;
+  *) exit 0 ;;
+esac'
+rc=$(drive 1.0.0)
+eq "the run fails"                  1 "$rc"
+eq "the gate records the failure" fail "$(status_of 1.0.0 ci-green)"
+[ -f "$WORK/repo/watched" ] && bad "it still waited on the watch" || ok "it never waited on the watch"
+grep -q 'job "e2e" failed' "$WORK/out" && ok "and names the job" || bad "the failing job is not named"
+
+head_ "46 · a SOFT job's failure does not stop the gate"
+# ci.yml marks mypy continue-on-error, and it fails on every run; stopping on
+# it would make the gate fail every release.
+fresh
+steps <<'EOF'
+strict-ci|dispatch strict CI|plain|1m|||__DISPATCH__
+ci-green|GATE strict CI green|gate|1m|||__CIWAIT__
+EOF
+mkdir -p "$WORK/repo/.github/workflows"
+printf '        include:\n          - gate: mypy\n            soft: true\n' > "$WORK/repo/.github/workflows/ci.yml"
+stub sleep 'exit 0'
+stub gh 'case "$1 $2" in
+  "run list")  echo 12345 ;;
+  "run view")  n=$(cat "$PWD/view-n" 2>/dev/null || echo 0); n=$((n+1)); echo "$n" > "$PWD/view-n"
+               [ "$n" -ge 3 ] && echo completed || printf "in_progress\nmypy\tfailure\n" ;;
+  "run watch") exit 0 ;;
+  *) exit 0 ;;
+esac'
+rc=$(drive 1.0.0)
+eq "the run completes"   75 "$rc"
+eq "the gate goes green" ok "$(status_of 1.0.0 ci-green)"
+
+head_ "47 · the lookup asks GitHub for runs OF THE COMMIT, not the newest ten on main"
+fresh
+steps <<'EOF'
+bump|bump + commit|plain|1m|||git commit -q --allow-empty -m bumped
+strict-ci|dispatch strict CI|plain|1m|||__DISPATCH__
+ci-green|GATE strict CI green|gate|1m|||__CIWAIT__
+EOF
+stub gh 'case "$1 $2" in
+  "run list")  printf "%s\n" "$*" >> "$PWD/list-args"; echo 12345 ;;
+  "run watch") exit 0 ;;
+  *) exit 0 ;;
+esac'
+rc=$(drive 1.0.0)
+eq "the run completes" 75 "$rc"
+_post=$( cd "$WORK/repo" && git rev-parse HEAD )
+grep -q -- "--commit $_post" "$WORK/repo/list-args" 2>/dev/null \
+    && ok "it filtered by the post-bump commit" || bad "the lookup did not ask about this commit"
+grep -q -- "--branch" "$WORK/repo/list-args" 2>/dev/null \
+    && bad "it still filters by branch" || ok "no branch filter"
+
+head_ "48 · an unreadable job list hands over to the watch after three tries"
+# Without the counter, an expired token kept the poll asking for two hours
+# while the run itself finished (silent-failure review, 6 Oct 2026).
+fresh
+steps <<'EOF'
+strict-ci|dispatch strict CI|plain|1m|||__DISPATCH__
+ci-green|GATE strict CI green|gate|1m|||__CIWAIT__
+EOF
+stub sleep 'exit 0'
+stub gh 'case "$1 $2" in
+  "run list")  echo 12345 ;;
+  "run view")  echo x >> "$PWD/views"; echo "HTTP 401: token expired" >&2; exit 1 ;;
+  "run watch") exit 0 ;;
+  *) exit 0 ;;
+esac'
+rc=$(drive 1.0.0)
+eq "the run completes"            75 "$rc"
+eq "the gate goes green"          ok "$(status_of 1.0.0 ci-green)"
+eq "it asked three times, not 120" 3 "$(wc -l < "$WORK/repo/views" | tr -d ' ')"
+_log="$WORK/repo/.release/1.0.0/logs/ci-green.1.log"   # a green step is not echoed to the run's output
+grep -q 'could not read run 12345' "$_log" && grep -q 'token expired' "$_log" \
+    && ok "and says why, with gh's own words" || bad "the hand-over is silent"
+
 meta_check
 finish

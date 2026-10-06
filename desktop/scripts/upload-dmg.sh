@@ -143,6 +143,34 @@ stale_stagings() {
     return 0
 }
 
+# retry_transfer <attempts> <pause-seconds> <cmd>... — run a transfer, and on
+# failure run it again, up to <attempts> times in all. Each retry RESUMES:
+# rsync --partial --inplace continues into the staging file that
+# staging_on_exit now keeps. 0.34.0: one drop at 555 MB of 709 failed the
+# release step, and the step's retry was a whole new run of this script; a
+# loaded shared host drops connections routinely, so the script absorbs that
+# itself. Returns the last attempt's status. The pause goes through
+# ${UPLOAD_SLEEP:-sleep} so the test does not wait.
+#
+# Only rsync's TRANSIENT exit codes are retried — 10 socket I/O, 12 protocol
+# data stream, 23 partial transfer, 30 timeout, 35 daemon timeout, and 255,
+# ssh's connection drop. A usage error, a bad path (1, 3) or a full remote disk
+# (11) fails at once: retrying it costs ninety seconds and calls it a drop.
+retry_transfer() {
+    local n="$1" pause="$2" i rc=1; shift 2
+    for i in $(seq 1 "$n"); do
+        "$@" && return 0
+        rc=$?
+        case "$rc" in 10|12|23|30|35|255) ;; *) return "$rc" ;; esac
+        if [ "$i" -lt "$n" ]; then
+            printf '    transfer dropped (attempt %s of %s, status %s) — resuming in %ss\n' \
+                "$i" "$n" "$rc" "$pause" >&2
+            ${UPLOAD_SLEEP:-sleep} "$pause"
+        fi
+    done
+    return "$rc"
+}
+
 # Sourced by the test? Everything below is I/O; stop here.
 [ "${UPLOAD_DMG_SOURCE_ONLY:-0}" = "1" ] && return 0
 
@@ -372,9 +400,9 @@ else
     # Same TTY gate upload-testflight.sh:198 already applies to --show-progress.
     RSYNC_ARGS=(-e "ssh ${SSH_OPTS[*]}" --partial --inplace)
     [ -t 1 ] && RSYNC_ARGS+=(--progress)
-    rsync "${RSYNC_ARGS[@]}" \
+    retry_transfer 4 30 rsync "${RSYNC_ARGS[@]}" \
         "$DMG_PATH" "$REMOTE_HOST:$REMOTE_DIR/$STAGING" \
-        || { TRANSFER_FAILED=1; die "upload failed"; }
+        || { TRANSFER_FAILED=1; die "upload failed after 4 attempts"; }
     ok "uploaded to $STAGING"
 fi
 

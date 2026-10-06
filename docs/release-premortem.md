@@ -298,8 +298,8 @@ it can be inspected.
 > system needs three outcomes, not two.** A gate with two has to spend one of
 > them on both "no" and "I could not ask".
 
-> **6 Oct 2026 — incidents 35–38, from the 0.33.0 and 0.34.0 runs.** Three
-> closed the same night; the fourth is recorded open, unexamined.
+> **6 Oct 2026 — incidents 35–41, from the 0.33.0 and 0.34.0 runs.** Every one
+> closed on 6 Oct except 41, which is a watch item.
 >
 > - **35 — Apple's Program License Agreement had lapsed (0.33.0).** The
 >   credential probe's `notarytool history` returned HTTP 403, *"a required
@@ -321,18 +321,57 @@ it can be inspected.
 >   transfer keeps its partial (`staging_on_exit`), other failures still clean,
 >   and each run reaps other versions' partials (`stale_stagings`).
 >   `test-upload-dmg.sh` pins both, and reverting the keep rule fails exactly
->   the new check.
+>   the new check. ✅ And the script now resumes by itself: `retry_transfer`
+>   runs rsync up to four times, 30 s apart, each attempt continuing the
+>   partial, so one drop no longer fails the release step.
 > - **38 — the strict-CI gate said "no run" for a run that existed (0.34.0).**
 >   `ci_await_verdict` reported *"no strict-CI run on main for 44fa367a — the
 >   dispatch did not take"* after three lookups, while `gh run list` showed
 >   that commit's `workflow_dispatch` run (`37352155082`) **in progress** the
 >   whole time. The run later failed on its merits, so nothing wrong shipped,
->   and the next attempt's lookup found its run. ⚠️ **Open and unexamined** —
->   the first suspect is the lookup's filter (branch, event or status) rather
->   than the wire, since incident 34's fix already separates the two. Until
->   it is read, treat a "no run" verdict as *cannot answer*, check
->   `gh run list --workflow=ci.yml` by hand, and `release.sh retry <v>
->   strict-ci` only if the run is genuinely absent.
+>   and the next attempt's lookup found its run. **Cause, measured 6 Oct:**
+>   the lookup took the ten newest dispatch runs filtered by branch and event,
+>   and GitHub's filtered listing intermittently answers *successfully* with a
+>   stale page — one call returned three August runs, the next four returned
+>   the right ten. A successful call with a wrong answer is the case neither
+>   `verdict_run_lookup` outcome can see. ✅ The lookup asks for runs **of the
+>   commit** (`gh run list --commit <sha>`), which found the run on every
+>   try; e2e test 47 pins it, and reverting fails it.
+> - **39 — the strict-CI gate waited out runs that were already decided
+>   (0.34.0, twice).** A blocking job failed about ten minutes in, and the gate
+>   waited for the whole ~38-minute run before saying so; a fix landed
+>   mid-release meant killing the run and retrying a stranded step by hand.
+>   ✅ While the run is in progress the gate reads its jobs once a minute and
+>   stops on the first failed **blocking** job (`verdict_failfast`), taking the
+>   soft set from `ci.yml`'s own `soft: true` entries (`ci_soft_jobs`), so
+>   mypy's routine failure never stops it. e2e 45–46 and the unit tests pin
+>   both directions; removing the fail-fast fails four checks. Hardened in
+>   review the same day: three unreadable job lists in a row hand over to
+>   the watch with gh's own error (e2e 48 — without it an expired token sat
+>   silent for two hours), the soft set is read by absolute path and per list
+>   entry (an empty set would stop every release on mypy), and the real jq
+>   program is tested against gh-shaped JSON.
+> - **40 — work went live before the version it describes existed (0.34.0).**
+>   An install guide and the one-line installer reached `main`, and the
+>   website, while PyPI still served 0.33.0, which crashes on Windows. The
+>   guide had been held off `main` by hand; a push that did not know why took
+>   it out. And a feature landed on `main` mid-planning, turning a patch into
+>   a minor, with sessions frozen only by messages. ✅ Two mechanisms: work
+>   held for a version waits on `after-pypi/<version>`, which `release.sh
+>   verify` lists and says when to land (`held_for_version`); and a live
+>   release run freezes `main` through the `release-freeze` pre-commit hook
+>   (`scripts/check-release-freeze.sh`), its own commits and
+>   `BN_RELEASE_FREEZE_OK=1` excepted. It counts a lock only while its pid is
+>   a live `release.sh run` (macOS reuses pids), names the stale-lock remedy,
+>   and says plainly what it does not cover: local commits only, and only
+>   while the driver runs. The upload's retry resumes only rsync's transient
+>   exit codes; a bad path or a full disk fails at once.
+> - **41 — the test app exited cleanly mid-`s22b` once (0.34.0).** Xcode
+>   restarted it, every later scenario passed, and the rebuilt `.dmg`'s suite
+>   was green. ⚠️ **Unexplained; a watch item.** A clean exit points at
+>   something asking the app to quit — an outside quit request, or the app
+>   closing itself when its last window shut. If it recurs, read the test
+>   host's unified log around the exit before re-running.
 
 ---
 

@@ -54,6 +54,25 @@ B="$(printf 'b%.0s' {1..64})"
 [ "$(staging_on_exit 1 1)" = keep ]   && ok "failed transfer → partial kept, so a re-run resumes" || bad "failed transfer did not keep the partial — every retry restarts from zero"
 [ "$(staging_on_exit 1 0)" = remove ] && ok "other failure → staging removed" || bad "a non-transfer failure left ~700 MB on the host"
 
+# retry_transfer: a dropped transfer is resumed in-script, a hopeless one gives up
+_RT=$(mktemp -d); export UPLOAD_SLEEP=true
+_flaky() { n=$(cat "$_RT/n" 2>/dev/null || echo 0); n=$((n+1)); echo "$n" > "$_RT/n"; [ "$n" -ge "$1" ] || return 12; }
+retry_transfer 4 30 _flaky 3 2>/dev/null && [ "$(cat "$_RT/n")" = 3 ] \
+    && ok "two drops then success → succeeds on the third attempt" || bad "did not resume through two drops"
+rm -f "$_RT/n"
+_rc=0; retry_transfer 4 30 _flaky 9 2>/dev/null || _rc=$?
+[ "$_rc" -ne 0 ] && [ "$(cat "$_RT/n")" = 4 ] \
+    && ok "never succeeds → gives up after exactly 4 attempts, non-zero" || bad "retry count or status wrong (rc=$_rc, n=$(cat "$_RT/n"))"
+rm -f "$_RT/n"
+retry_transfer 4 30 _flaky 1 2>/dev/null && [ "$(cat "$_RT/n")" = 1 ] \
+    && ok "succeeds first time → no retry" || bad "retried a successful transfer"
+rm -f "$_RT/n"
+_hard() { n=$(cat "$_RT/n" 2>/dev/null || echo 0); echo $((n+1)) > "$_RT/n"; return 3; }
+_rc=0; retry_transfer 4 30 _hard 2>/dev/null || _rc=$?
+[ "$_rc" = 3 ] && [ "$(cat "$_RT/n")" = 1 ] \
+    && ok "a non-transient error (a bad path, 3) is not retried, and keeps its status" || bad "retried a hopeless error (rc=$_rc, n=$(cat "$_RT/n"))"
+rm -rf "$_RT"; unset UPLOAD_SLEEP
+
 # stale_stagings: other versions' partials are reaped, this run's is not
 _st="$(stale_stagings .upload-Bristlenose-0.35.0.dmg.part .upload-Bristlenose-0.34.0.dmg.part .upload-Bristlenose-0.35.0.dmg.part Bristlenose-0.34.0.dmg .htaccess | tr '\n' ' ')"
 [ "$_st" = ".upload-Bristlenose-0.34.0.dmg.part " ] && ok "stale partials: only other versions' .part files are reaped" || bad "stale_stagings picked '$_st'"

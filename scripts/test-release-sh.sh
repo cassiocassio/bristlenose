@@ -207,6 +207,86 @@ eq "not an id — two of them"       absent      "$(verdict_run_lookup 0 '12 34'
 eq "unreadable rc fails closed"    unreadable  "$(verdict_run_lookup boom 12345)"
 eq "no arguments at all"           unreadable  "$(verdict_run_lookup)"
 
+head_ "check-release-freeze — no commits while a release run is live"
+# 0.34.0: a feature reached main mid-planning and the release became a minor;
+# the freeze was a message sent between sessions. A live lock now refuses.
+_FZ=$(mktemp -d); ( cd "$_FZ" && git init -q . )
+_fz() { ( cd "$_FZ" && env -u BN_RELEASE_RUN -u BN_RELEASE_FREEZE_OK "$@" "$ROOT/scripts/check-release-freeze.sh" >/dev/null 2>&1 ); echo $?; }
+eq "no release dir"               0 "$(_fz)"
+# A live pid only counts if it is a release driver: macOS reuses pids, and a
+# crashed driver's lock must not freeze main for whatever program inherits it.
+# '; :' stops bash replacing itself with a lone sleep, which would drop the
+# command line the hook reads.
+bash -c 'sleep 60; :' bash scripts/release.sh run 9.9.0 & _DRV=$!
+mkdir -p "$_FZ/.release/9.9.0/.lock"; echo $_DRV > "$_FZ/.release/9.9.0/.lock/pid"
+eq "a live lock refuses"          1 "$(_fz)"
+eq "the release's own commit"     0 "$(_fz BN_RELEASE_RUN=9.9.0)"
+eq "a deliberate override"        0 "$(_fz BN_RELEASE_FREEZE_OK=1)"
+echo 999999 > "$_FZ/.release/9.9.0/.lock/pid"
+eq "a dead driver's lock"         0 "$(_fz)"
+echo $$ > "$_FZ/.release/9.9.0/.lock/pid"
+eq "a reused pid, not a release"  0 "$(_fz)"
+# Identity given explicitly: a fresh CI runner has none, the commit then fails,
+# no worktree exists, and the cd failure would print the expected 1 (review).
+mkdir -p "$_FZ/wt"
+( cd "$_FZ" && git -c user.name=t -c user.email=t@t commit -q --allow-empty -m x && git worktree add -q "$_FZ/wt/w" ) >/dev/null 2>&1
+[ -d "$_FZ/wt/w" ] && ok "the worktree exists" || bad "worktree setup failed — the next check would prove nothing"
+echo $_DRV > "$_FZ/.release/9.9.0/.lock/pid"
+eq "a worktree sees the main checkout's lock" 1 "$( ( cd "$_FZ/wt/w" && env -u BN_RELEASE_RUN -u BN_RELEASE_FREEZE_OK "$ROOT/scripts/check-release-freeze.sh" >/dev/null 2>&1 ); echo $?)"
+kill $_DRV 2>/dev/null; wait $_DRV 2>/dev/null
+rm -rf "$_FZ"
+
+head_ "held_for_version — work held until a version is on PyPI"
+eq "nothing held"             ""                                 "$(held_for_version 1.2.0)"
+eq "the exact branch"         "after-pypi/1.2.0"                 "$(held_for_version 1.2.0 after-pypi/1.2.0)"
+eq "a suffixed branch"        "after-pypi/1.2.0-guide"           "$(held_for_version 1.2.0 after-pypi/1.2.0-guide)"
+eq "another version's hold"   ""                                 "$(held_for_version 1.2.0 after-pypi/1.2.1 after-pypi/1.20.0)"
+eq "not a hold at all"        ""                                 "$(held_for_version 1.2.0 main wip after-pypi)"
+
+head_ "ci_soft_jobs — read from ci.yml, never written down twice"
+# The fail-fast must not stop on a job ci.yml lets fail; the list comes from the
+# workflow, so a second soft cell is picked up without touching release.sh.
+eq "the repo's soft set is mypy"   "mypy " "$(ci_soft_jobs)"
+_TY=$(mktemp); printf '      include:\n        - gate: ruff\n          run: x\n        - gate: a\n          soft: true\n        - gate: b\n          run: y\n        - gate: c\n          soft: true\n' > "$_TY"
+eq "two soft cells, in order"      "a c "  "$(ci_soft_jobs "$_TY")"
+eq "a missing file is no soft set" ""      "$(ci_soft_jobs /nonexistent/ci.yml)"
+# An empty answer would stop every release on mypy, so the layouts a person
+# might reasonably write must all read the same (silent-failure review, 6 Oct).
+printf '        - soft: true\n          gate: mypy\n' > "$_TY"
+eq "soft before gate"              "mypy " "$(ci_soft_jobs "$_TY")"
+printf '        - gate: "mypy"\n          soft: True\n' > "$_TY"
+eq "quoted name, capital True"     "mypy " "$(ci_soft_jobs "$_TY")"
+printf "        - gate: 'mypy'\n          soft: yes\n" > "$_TY"
+eq "single quotes, yes"            "mypy " "$(ci_soft_jobs "$_TY")"
+printf '        - gate: ruff\n          run: x\n      steps:\n        - name: y\n          soft: true\n' > "$_TY"
+eq "a stray soft: is not ruff's"   ""      "$(ci_soft_jobs "$_TY")"
+eq "from another directory"        "mypy " "$(cd /tmp && ci_soft_jobs)"
+rm -f "$_TY"
+
+head_ "CI_JOBS_JQ — the real program, on the shape gh returns"
+# Test 45 stubs gh with pre-formatted lines; this runs the program itself.
+_J='{"status":"in_progress","jobs":[{"name":"mypy","conclusion":"failure"},{"name":"test (3.12, ubuntu-latest)","conclusion":null}]}'
+eq "status first"                  "in_progress"          "$(printf '%s' "$_J" | jq -r "$CI_JOBS_JQ" | head -n 1)"
+eq "a null conclusion is empty"    "$(printf 'test (3.12, ubuntu-latest)\t')" "$(printf '%s' "$_J" | jq -r "$CI_JOBS_JQ" | sed -n 3p)"
+eq "end to end through the verdict" go "$(printf '%s' "$_J" | jq -r "$CI_JOBS_JQ" | tail -n +2 | verdict_failfast mypy)"
+eq "no jobs yet is just the status" "queued" "$(printf '{"status":"queued","jobs":[]}' | jq -r "$CI_JOBS_JQ")"
+
+head_ "verdict_failfast — a blocking failure decides the run, a soft one does not"
+# 0.34.0 waited ~38 min twice for verdicts a failed job had decided ten minutes
+# in. release-premortem incidents 1-2 of the 6 Oct list (items 1 and 2).
+_ff() { printf '%b' "$2" | verdict_failfast "$1"; }
+eq "nothing finished yet"          go                 "$(_ff 'mypy' '')"
+eq "all green so far"              go                 "$(_ff 'mypy' 'ruff\tsuccess\ne2e\t\n')"
+eq "a soft job failed"             go                 "$(_ff 'mypy' 'mypy\tfailure\n')"
+eq "a blocking job failed"         "fail:e2e"         "$(_ff 'mypy' 'mypy\tfailure\ne2e\tfailure\n')"
+eq "a name with spaces"            "fail:test (3.12, ubuntu-latest)" "$(_ff 'mypy' 'test (3.12, ubuntu-latest)\tfailure\n')"
+eq "cancelled is decisive"         "fail:ruff"        "$(_ff 'mypy' 'ruff\tcancelled\n')"
+eq "timed out is decisive"         "fail:ruff"        "$(_ff 'mypy' 'ruff\ttimed_out\n')"
+eq "skipped is not"                go                 "$(_ff 'mypy' 'ruff\tskipped\n')"
+eq "no soft set: mypy decides"     "fail:mypy"        "$(_ff '' 'mypy\tfailure\n')"
+# A soft name must match WHOLE: a blocking job whose name contains it still decides.
+eq "soft name is not a substring"  "fail:mypy-strict" "$(_ff 'mypy' 'mypy-strict\tfailure\n')"
+
 head_ "verdict_watch_drop — one exit code, two unrelated facts"
 # `gh run watch --exit-status` says non-zero both when CI failed and when the
 # WATCH failed. Only the run's own state tells them apart. release-log 0.31.1.

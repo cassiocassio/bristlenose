@@ -1,6 +1,11 @@
 {
   "_policy": "A gate whose red nobody has seen is unproven, not passing. Automated proofs are derived from the test-<name> naming convention; this file records the ones that convention cannot see. Enforced by scripts/check-gate-proofs.py; the unproven COUNT is held by the ratchet metric `gates_without_proof`.",
   "declared": {
+    "check-release-freeze": {
+      "evidence": "exit 1 with a live lock, naming the version and pid and the override; exit 0 for the release's own commit (BN_RELEASE_RUN), for BN_RELEASE_FREEZE_OK=1, for a dead driver's pid, and with no .release dir; exit 1 from a worktree against the main checkout's lock",
+      "how": "scripts/test-release-sh.sh, block 'check-release-freeze': a throwaway git repo with .release/9.9.0/.lock/pid set to a live pid, then a dead one, plus a linked worktree",
+      "observed": "2026-10-06"
+    },
     "check-bundle-integrity": {
       "evidence": "exit 1, '1 of 1 Mach-O files have a hole', names the file and offset; the unmodified copy exits 0. Real bundle never touched. LIMIT FOUND: 42 of the bundle's Mach-Os have a __text smaller than one page, so at --min-run 4096 they are unscannable by construction \u2014 the first probe (a 1,972-byte __text) stayed green for that reason, not because the checker was broken.",
       "how": "manual: copied a bundle .so to a temp dir, zeroed 4096 bytes inside __TEXT,__text using the checker's own section parser, ran at the default threshold",

@@ -9,9 +9,9 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 6351 | collected (expands parametrize — authoritative) | `tests/` |
-| `vitest` | frontend unit | 139 files | test files | `frontend/src/**/*.test.*` |
-| `BristlenoseTests` | swift unit | 1697 in 140 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
+| `pytest` | python unit/integration | 6499 | collected (expands parametrize — authoritative) | `tests/` |
+| `vitest` | frontend unit | 145 files | test files | `frontend/src/**/*.test.*` |
+| `BristlenoseTests` | swift unit | 1706 in 141 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 9 files | spec files | `e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts)` |
 
 **Ingest formats: 27** (audio 10, docx 1, subtitle_srt 1, subtitle_vtt 1, video 14) — from `models.ALL_EXTENSIONS`. Do not restate this number in prose; link here. It was simultaneously 16 and 27 in two docs on 2 Sep 2026, one of which named the other as its single source.
@@ -159,7 +159,7 @@ Two scripts, two certificates, two channels. Neither covers the other.
 
 ## Local gates
 
-**pre-commit:** gitleaks, no tracked files match .gitignore
+**pre-commit:** gitleaks, no tracked files match .gitignore, no commits while a release run is live
 
 - `SessionStart:* -> install-git-guards.sh`
 - `SessionStart:* -> memory-index-size.sh`

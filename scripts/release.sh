@@ -277,6 +277,68 @@ verdict_watch_drop() {
     esac
 }
 
+# held_for_version <version> <branch>... — which branches hold work that waits
+#   for <version> to reach PyPI: after-pypi/<version> and after-pypi/<version>-*.
+#   0.34.0: an install guide and the one-line installer pointed Windows users at
+#   a version PyPI did not have yet; the guide had been held by hand, and the
+#   hold was broken by a push that did not know about it.
+held_for_version() {
+    local v="$1" b; shift
+    for b in "$@"; do
+        case "$b" in "after-pypi/$v"|"after-pypi/$v"-*) echo "$b" ;; esac
+    done
+    return 0
+}
+
+# ci_soft_jobs [ci.yml] — the job names ci.yml lets fail without failing the run.
+#   Read from the workflow itself (a matrix entry carrying both `gate:` and
+#   `soft: true`), never written down here: a list kept in this file is a list
+#   that drifts from the one CI obeys. Space-separated; today it prints `mypy`.
+#   Parsed per list entry, so key order, quotes and `true`/`True`/`yes` do not
+#   matter. An EMPTY answer is dangerous — mypy fails every run by design, so an
+#   empty soft set would stop every release on it — which is why the default
+#   path is absolute ($ROOT) and why the unit tests cover the layouts.
+ci_soft_jobs() {
+    awk '
+        function flush() { if (g != "" && soft) print g; g = ""; soft = 0 }
+        /^[[:space:]]*-[[:space:]]/ { flush() }
+        {
+            line = $0; gsub(/["\047]/, "", line)
+            if (match(line, /(^|[[:space:]-])gate:[[:space:]]*[A-Za-z0-9_.-]+/)) {
+                v = substr(line, RSTART, RLENGTH); sub(/^.*gate:[[:space:]]*/, "", v); g = v
+            }
+            if (tolower(line) ~ /(^|[[:space:]-])soft:[[:space:]]*(true|yes)[[:space:]]*$/) soft = 1
+        }
+        END { flush() }' \
+        "${1:-${ROOT:-.}/.github/workflows/ci.yml}" 2>/dev/null | tr '\n' ' '
+}
+
+# CI_JOBS_JQ — what the fail-fast reads from `gh run view --json status,jobs`:
+#   the run's status, then one "<job name>\t<conclusion>" line per job. A
+#   variable so the unit tests can run the real program against real-shaped
+#   JSON rather than a stub that prints pre-formatted lines.
+CI_JOBS_JQ='.status, (.jobs[]? | "\(.name)\t\(.conclusion // "")")'
+
+# verdict_failfast <soft-names> — stdin is "<job name>\t<conclusion>" lines for
+# a run still in progress. Has a job that BLOCKS the run already failed?
+#   fail:<name>  a blocking job concluded failure, cancelled or timed_out
+#   go           nothing decisive yet — keep waiting for the run
+#
+#   0.34.0 waited the full strict run twice (~38 min each) for a verdict that a
+#   failed job had already decided ten minutes in, and the mid-run fix meant
+#   killing the release and retrying a stranded step by hand. A soft job's
+#   failure is NOT decisive: ci.yml marks it continue-on-error, so the run goes
+#   green regardless, and mypy fails on every run by design.
+verdict_failfast() {
+    local soft=" ${1:-} " name concl
+    while IFS=$'\t' read -r name concl; do
+        case "$concl" in failure|cancelled|timed_out) ;; *) continue ;; esac
+        case "$soft" in *" $name "*) continue ;; esac
+        echo "fail:$name"; return
+    done
+    echo go
+}
+
 # verdict_remedy — stdin is a failed step's log. Is there a known, mechanical
 # remedy for what went wrong?
 #
@@ -838,7 +900,26 @@ cmd_verify() {
     case "${1-}" in ""|-*) _v="$(resolve_run)" ;; *) _v="$1" ;; esac
     export_sink_for "$_v"
     board_link "$_v" || true
-    exec "$ROOT/scripts/verify-channels.sh" "$@"
+    local _rc=0 _held
+    "$ROOT/scripts/verify-channels.sh" "$@" || _rc=$?
+    # Work that must not land before this version is on PyPI waits on a branch
+    # named after-pypi/<version>[-anything] (scripts/README.md). Say so here,
+    # because "after PyPI" is exactly the moment nothing else announces.
+    # Local branches AND origin's: a hold pushed from a cloud session or another
+    # clone exists only as origin/after-pypi/…. lstrip, not :short, because
+    # :short turns an ambiguous name into heads/after-pypi/… (review, 6 Oct).
+    _held="$(held_for_version "$_v" $( { git -C "$ROOT" for-each-ref --format='%(refname:lstrip=2)' 'refs/heads/after-pypi/'
+                                          git -C "$ROOT" for-each-ref --format='%(refname:lstrip=3)' 'refs/remotes/origin/after-pypi/'
+                                        } 2>/dev/null | sort -u))"
+    if [ -n "$_held" ]; then
+        if [ "$_rc" -eq 0 ]; then
+            printf '\n  held until %s was on PyPI, and every channel now verifies — land these:\n' "$_v"
+        else
+            printf '\n  held until %s is on PyPI — verify has not passed yet; land these once it does:\n' "$_v"
+        fi
+        printf '    %s\n' $_held
+    fi
+    return "$_rc"
 }
 
 cmd_status() {
@@ -849,7 +930,7 @@ cmd_status() {
     held=0
     # Status is the one verb that asks GitHub, so it is where CI facts enter the
     # sink: the strict run on the sha strict-ci dispatched (the same selector
-    # CI_CMD uses — --event workflow_dispatch, headSha == ci-sha; a sha-only
+    # CI_CMD uses — --event workflow_dispatch, --commit ci-sha; a sha-only
     # match picks the non-strict push run, release-log 0.25.2), and the release
     # run. Results are tri-state: a run, `no run for sha`, or `unreachable`.
     _sv="$(resolve_run)"; export_sink_for "$_sv"
@@ -857,7 +938,7 @@ cmd_status() {
         if [ -n "${_sv:-}" ] && [ -f ".release/$_sv/ci-sha" ]; then
             _sha="$(cat ".release/$_sv/ci-sha" 2>/dev/null)"
             if printf '%s' "$_sha" | grep -qE '^[0-9a-f]{40}$'; then
-                _ci="$(SHA="$_sha" gh run list --workflow=$WF_CI --event workflow_dispatch --branch main --limit 10 \
+                _ci="$(SHA="$_sha" gh run list --workflow=$WF_CI --event workflow_dispatch --commit "$_sha" --limit 10 \
                         --json databaseId,headSha,status,conclusion \
                         --jq '[.[]|select(.headSha==env.SHA)]|.[0] | "\(.databaseId) \(.status) \(.conclusion // "-")"' 2>/dev/null)"
                 if [ -z "$_ci" ]; then
@@ -1123,8 +1204,14 @@ ci_await_verdict() {
     # than interpolating into the jq program: one less quoting level, and the
     # sha never passes through a string the shell re-parses.
     for try in 1 2 3; do
+        # --commit asks GitHub for runs OF THIS SHA. The old query took the ten
+        # newest dispatch runs on main and filtered them here, and GitHub's
+        # filtered listing intermittently answers SUCCESSFULLY with a stale,
+        # partial page: on 0.34.0 three lookups in a row returned three
+        # August runs and "no run for 44fa367a" while that run was in progress
+        # (release-premortem incident 38). The jq filter stays as a cross-check.
         out=$(SHA="$sha" gh run list --workflow="$wf" --event workflow_dispatch \
-                  --branch main --limit 10 --json databaseId,headSha \
+                  --commit "$sha" --limit 10 --json databaseId,headSha \
                   --jq '[.[]|select(.headSha==env.SHA)]|.[0].databaseId'); rc=$?
         last=$(verdict_run_lookup "$rc" "$out")
         case "$last" in found:*) id="${last#found:}"; break ;; esac
@@ -1145,6 +1232,48 @@ ci_await_verdict() {
         esac
         return 1
     fi
+
+    # Fail fast. While the run is in progress, read its jobs once a minute and
+    # stop the moment a BLOCKING job has failed (verdict_failfast): the run's
+    # verdict is decided then, and waiting out the remaining half hour only
+    # delays the fix. An unreadable view decides nothing and is simply asked
+    # again; a status that is neither in progress nor completed hands over to
+    # the watch below, which owns every verdict that is not an early failure.
+    # Three unreadable polls in a row hand over to the watch too: without that,
+    # an expired token or a gh that dropped a field would sit silent for two
+    # hours while the run itself finished long before (review, 6 Oct 2026).
+    local soft view ff polls=0 unread=0 err
+    soft=$(ci_soft_jobs)
+    while [ "$polls" -lt "${BN_CI_FAILFAST_POLLS:-120}" ]; do
+        polls=$((polls + 1))
+        err=$(mktemp "${TMPDIR:-/tmp}/bn-ci-view.XXXXXX")
+        if ! view=$(gh run view "$id" --json status,jobs --jq "$CI_JOBS_JQ" 2>"$err"); then
+            unread=$((unread + 1))
+            if [ "$unread" -ge 3 ]; then
+                printf '    could not read run %s'"'"'s jobs 3 times (%s) — no early verdict; waiting on the run instead\n' \
+                    "$id" "$(head -c 200 "$err" | tr '\n' ' ')"
+                rm -f "$err"; break
+            fi
+            rm -f "$err"; sleep 60; continue
+        fi
+        rm -f "$err"; unread=0
+        st=$(printf '%s\n' "$view" | head -n 1)
+        [ "$st" = completed ] && break
+        ff=$(printf '%s\n' "$view" | tail -n +2 | verdict_failfast "$soft")
+        case "$ff" in
+            fail:*)
+                # The run is left to finish: its other jobs' results are still
+                # worth reading before the fix, and cancelling is a choice the
+                # gate need not make for anyone.
+                printf '    strict CI job "%s" failed (run %s) — stopping now instead of waiting for the rest of the run. %s\n' \
+                    "${ff#fail:}" "$id" "$hint"
+                return 1 ;;
+        esac
+        case "$st" in
+            queued|in_progress|requested|waiting|pending) sleep 60 ;;
+            *) break ;;
+        esac
+    done
 
     # Watch it. A non-zero `gh run watch` is only a verdict if the RUN says it
     # finished; otherwise the watch broke and the run is still going, so

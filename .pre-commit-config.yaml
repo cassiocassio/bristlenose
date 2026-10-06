@@ -18,6 +18,15 @@ repos:
         language: script
         pass_filenames: false
         always_run: true
+      - id: release-freeze
+        name: no commits while a release run is live
+        # A commit mid-release moves HEAD under it: rebuilds, re-runs strict
+        # CI, and can change what ships (0.34.0). Override for a fix the
+        # release needs: BN_RELEASE_FREEZE_OK=1 git commit …
+        entry: scripts/check-release-freeze.sh
+        language: script
+        pass_filenames: false
+        always_run: true
 
 # pre-push is a NATIVE hook, deliberately not a pre-commit stage:
 #   scripts/git-hooks/pre-push   (install: see its header -- one symlink)

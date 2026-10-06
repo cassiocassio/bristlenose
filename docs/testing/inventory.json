@@ -8,11 +8,11 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 6351
+        "tests": 6499
       },
       {
         "basis": "test files",
-        "files": 139,
+        "files": 145,
         "kind": "frontend unit",
         "runner": "vitest",
         "source": "frontend/src/**/*.test.*",
@@ -21,12 +21,12 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 140,
+        "files": 141,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 1697
+        "tests": 1706
       },
       {
         "basis": "spec files",
@@ -212,7 +212,8 @@
       ],
       "pre_commit": [
         "gitleaks",
-        "no tracked files match .gitignore"
+        "no tracked files match .gitignore",
+        "no commits while a release run is live"
       ]
     },
     "suites": [

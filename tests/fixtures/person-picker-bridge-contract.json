@@ -1,6 +1,6 @@
 {
-  "_comment": "The person picker across the Mac bridge (docs/design-people.md § UX iteration 3). Vitest (frontend/src/utils/personPickerBridge.test.ts) builds each web_to_native `wire` from `input` with the English strings, and resolves each native_to_web `payload` against its `slot` to `effect`. Swift (BristlenoseTests/PersonPickerContractTests.swift) decodes every `wire` exactly as BridgeHandler receives it and builds every `payload` from `native`. Change a shape here first, then both sides. Version 3 (6 Oct 2026, design-people.md §J8): rows carry their own codes, the new row the next free one, and a reply says which row it came from — a listed name, a typed one (`new`) or That's Me (`me`) — so a typed name is never read as a pick. A reply the SPA refuses resolves to `{\"taken\": name}`.",
-  "version": 3,
+  "_comment": "The person picker across the Mac bridge (docs/design-people.md § UX iteration 3). Vitest (frontend/src/utils/personPickerBridge.test.ts) builds each web_to_native `wire` from `input` with the English strings, and resolves each native_to_web `payload` against its `slot` to `effect`. Swift (BristlenoseTests/PersonPickerContractTests.swift) decodes every `wire` exactly as BridgeHandler receives it and builds every `payload` from `native`. Change a shape here first, then both sides. Version 3 (6 Oct 2026, design-people.md §J8): rows carry their own codes, the new row the next free one, and a reply says which row it came from — a listed name, a typed one (`new`) or That's Me (`me`) — so a typed name is never read as a pick. A reply the SPA refuses resolves to `{\"taken\": name}`. Version 4 (6 Oct 2026): the ✕ — native replies `{\"kind\": \"clear\"}`, carrying no name, and the SPA applies it only where the slot holds a moderator or observer (§J8.8).",
+  "version": 4,
   "web_to_native": [
     {
       "name": "a proposed moderator, every moderator known once, each by their own code",
@@ -76,7 +76,8 @@
           "thatsMe": "That’s Me ({{name}})",
           "menu": "Edit name for m1",
           "proposed": "m1, proposed name Martin B Storey",
-          "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart."
+          "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart.",
+          "notThisPerson": "Not {{name}}"
         }
       }
     },
@@ -139,7 +140,8 @@
           "thatsMe": null,
           "menu": "Edit name for p3",
           "proposed": null,
-          "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart."
+          "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart.",
+          "notThisPerson": "Not {{name}}"
         }
       }
     }
@@ -470,6 +472,82 @@
         "kind": "new",
         "name": "Jo Bloggs"
       }
+    },
+    {
+      "name": "the ✕ returns the slot to unknown",
+      "native": {
+        "sessionId": "s1",
+        "code": "m1",
+        "name": "",
+        "kind": "clear"
+      },
+      "payload": {
+        "sessionId": "s1",
+        "code": "m1",
+        "choice": {
+          "kind": "clear"
+        }
+      },
+      "slot": {
+        "code": "m1",
+        "role": "moderator",
+        "name": "Martin B Storey",
+        "confirmed": false,
+        "person": "id-martin"
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "effect": {
+        "kind": "clear"
+      }
+    },
+    {
+      "name": "a participant has nothing to clear",
+      "native": {
+        "sessionId": "s3",
+        "code": "p3",
+        "name": "",
+        "kind": "clear"
+      },
+      "payload": {
+        "sessionId": "s3",
+        "code": "p3",
+        "choice": {
+          "kind": "clear"
+        }
+      },
+      "slot": {
+        "code": "p3",
+        "role": "participant",
+        "name": "Mary Adeyemi",
+        "confirmed": true
+      },
+      "known": [
+        {
+          "name": "Mary Adeyemi",
+          "code": "p3"
+        }
+      ],
+      "effect": null
     }
   ]
 }

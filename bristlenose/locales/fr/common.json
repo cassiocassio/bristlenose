@@ -128,7 +128,9 @@
     "speakerPlaceholder": {
       "moderator": "Animateur",
       "participant": "Participant",
-      "observer": "Observateur"
+      "observer": "Observateur",
+      "moderatorLettered": "Animateur {{letter}}",
+      "observerLettered": "Observateur {{letter}}"
     },
     "picker": {
       "role": "Rôle",
@@ -137,7 +139,8 @@
       "newNameFor": "Nouveau nom pour {{code}}",
       "thatsMe": "C’est moi ({{name}})",
       "proposedName": "{{code}}, nom propos\u00e9 {{name}}",
-      "nameTaken": "{{name}} figure d\u00e9j\u00e0 dans la liste. Choisissez cette personne, ou ajoutez de quoi distinguer les deux."
+      "nameTaken": "{{name}} figure d\u00e9j\u00e0 dans la liste. Choisissez cette personne, ou ajoutez de quoi distinguer les deux.",
+      "notThisPerson": "Ce n\u2019est pas {{name}}"
     },
     "failedToLoad": "Échec du chargement des entretiens : {{error}}",
     "loading": "Chargement des entretiens…"
@@ -647,7 +650,8 @@
       "editQuote": "Annuler la modification du verbatim",
       "renameSection": "Annuler le changement de nom de la section",
       "renameTheme": "Annuler le changement de nom du thème",
-      "editDescription": "Annuler la modification de la description"
+      "editDescription": "Annuler la modification de la description",
+      "clearName": "Annuler l\u2019effacement du nom"
     },
     "redo": {
       "renameModerator": "Rétablir le changement de nom de l’animateur",
@@ -663,7 +667,8 @@
       "editQuote": "Rétablir la modification du verbatim",
       "renameSection": "Rétablir le changement de nom de la section",
       "renameTheme": "Rétablir le changement de nom du thème",
-      "editDescription": "Rétablir la modification de la description"
+      "editDescription": "Rétablir la modification de la description",
+      "clearName": "R\u00e9tablir l\u2019effacement du nom"
     }
   }
 }

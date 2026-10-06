@@ -133,7 +133,9 @@
     "speakerPlaceholder": {
       "moderator": "\u30e2\u30c7\u30ec\u30fc\u30bf\u30fc",
       "participant": "\u53c2\u52a0\u8005",
-      "observer": "\u30aa\u30d6\u30b6\u30fc\u30d0\u30fc"
+      "observer": "\u30aa\u30d6\u30b6\u30fc\u30d0\u30fc",
+      "moderatorLettered": "\u30e2\u30c7\u30ec\u30fc\u30bf\u30fc {{letter}}",
+      "observerLettered": "\u30aa\u30d6\u30b6\u30fc\u30d0\u30fc {{letter}}"
     },
     "picker": {
       "role": "役割",
@@ -142,7 +144,8 @@
       "newNameFor": "{{code}} の新しい名前",
       "thatsMe": "自分（{{name}}）",
       "proposedName": "{{code}}\u3001\u63d0\u6848\u3055\u308c\u305f\u540d\u524d {{name}}",
-      "nameTaken": "{{name}} \u306f\u3059\u3067\u306b\u30ea\u30b9\u30c8\u306b\u3042\u308a\u307e\u3059\u3002\u305d\u306e\u4eba\u3092\u9078\u3076\u304b\u3001\u533a\u5225\u3067\u304d\u308b\u3088\u3046\u306b\u4f55\u304b\u52a0\u3048\u3066\u304f\u3060\u3055\u3044\u3002"
+      "nameTaken": "{{name}} \u306f\u3059\u3067\u306b\u30ea\u30b9\u30c8\u306b\u3042\u308a\u307e\u3059\u3002\u305d\u306e\u4eba\u3092\u9078\u3076\u304b\u3001\u533a\u5225\u3067\u304d\u308b\u3088\u3046\u306b\u4f55\u304b\u52a0\u3048\u3066\u304f\u3060\u3055\u3044\u3002",
+      "notThisPerson": "{{name}} \u3067\u306f\u306a\u3044"
     },
     "failedToLoad": "セッションの読み込みに失敗しました: {{error}}",
     "loading": "セッションを読み込み中…"
@@ -637,7 +640,8 @@
       "editQuote": "取り消す - 発言の編集",
       "renameSection": "取り消す - セクションの名称変更",
       "renameTheme": "取り消す - テーマの名称変更",
-      "editDescription": "取り消す - 説明の編集"
+      "editDescription": "取り消す - 説明の編集",
+      "clearName": "\u53d6\u308a\u6d88\u3059 - \u540d\u524d\u306e\u6d88\u53bb"
     },
     "redo": {
       "renameModerator": "やり直す - モデレーターの名称変更",
@@ -653,7 +657,8 @@
       "editQuote": "やり直す - 発言の編集",
       "renameSection": "やり直す - セクションの名称変更",
       "renameTheme": "やり直す - テーマの名称変更",
-      "editDescription": "やり直す - 説明の編集"
+      "editDescription": "やり直す - 説明の編集",
+      "clearName": "\u3084\u308a\u76f4\u3059 - \u540d\u524d\u306e\u6d88\u53bb"
     }
   }
 }

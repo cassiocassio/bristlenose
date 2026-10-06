@@ -34,7 +34,9 @@ struct PersonPickerContractTests {
         let requests = try wires().map { PersonPickerRequest(message: $0) }
         let moderator = try #require(requests[0])
         #expect(moderator.sessionId == "s1")
-        #expect(moderator.slot == .init(code: "m1", role: .moderator, name: "Martin B Storey", confirmed: false))
+        #expect(moderator.slot == .init(code: "m1", role: .moderator, name: "Martin B Storey",
+                                        confirmed: false, person: "id-martin"))
+        #expect(moderator.labels.notThisPerson == "Not {{name}}")
         #expect(moderator.names == ["Kerri Ng", "Martin B Storey"])
         #expect(moderator.codes == ["m2", "m1"])
         #expect(moderator.newCode == "m3")
@@ -162,6 +164,31 @@ struct PersonPickerContractTests {
 
     /// A picked row, That's Me and a typed name each say which they are, so
     /// the SPA never reads a typed name as a pick.
+    /// The ✕ refuses the current answer: only for a moderator or observer the
+    /// slot points at, and its reply names nobody (design-people.md §J8.8).
+    @Test func theCrossClearsOnlyAKnownModeratorOrObserver() throws {
+        let requests = try wires().compactMap { PersonPickerRequest(message: $0) }
+        var sent: [PersonPickerPick] = []
+        var closed = 0
+        let moderator = PersonPickerModel(request: requests[0], onChoose: { sent.append($0) },
+                                          onClose: { closed += 1 })
+        #expect(moderator.canClear)
+        moderator.clearCurrent()
+        #expect(sent == [PersonPickerPick(name: "", kind: .clear)])
+        #expect(closed == 1)
+
+        let participant = PersonPickerModel(request: requests[1], onChoose: { sent.append($0) },
+                                            onClose: { closed += 1 })
+        #expect(!participant.canClear)
+        participant.clearCurrent()
+        #expect(sent.count == 1, "a participant has nothing to clear")
+
+        let (_, payload) = PersonPickerAction.choose(
+            sessionId: "s1", code: "m1", pick: PersonPickerPick(name: "", kind: .clear))
+        #expect(NSDictionary(dictionary: payload)
+            == NSDictionary(dictionary: ["sessionId": "s1", "code": "m1", "choice": ["kind": "clear"]]))
+    }
+
     @Test func choosingSendsTheNameAndItsKindAndCloses() throws {
         let request = try #require(try wires().compactMap { PersonPickerRequest(message: $0) }.first)
         var sent: [PersonPickerPick] = []

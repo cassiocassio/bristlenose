@@ -922,7 +922,8 @@ def _import_speakers(
             if not speaker_slots.is_team_code(code):
                 _import_participant(db, sp, people.get(code))
                 continue
-            if sp.state == speaker_slots.CONFIRMED or evidence is None:
+            # A person's yes, or their "not this person", outlives every re-run.
+            if sp.state in (speaker_slots.CONFIRMED, speaker_slots.CLEARED) or evidence is None:
                 continue
             entry = evidence.get(sid, {}).get(code) or {}
             name = (entry.get("full_name") or "").strip()

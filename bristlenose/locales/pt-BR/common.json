@@ -138,7 +138,9 @@
     "speakerPlaceholder": {
       "moderator": "Moderador",
       "participant": "Participante",
-      "observer": "Observador"
+      "observer": "Observador",
+      "moderatorLettered": "Moderador {{letter}}",
+      "observerLettered": "Observador {{letter}}"
     },
     "picker": {
       "role": "Função",
@@ -147,7 +149,8 @@
       "newNameFor": "Novo nome para {{code}}",
       "thatsMe": "Sou eu ({{name}})",
       "proposedName": "{{code}}, nome proposto {{name}}",
-      "nameTaken": "{{name}} j\u00e1 est\u00e1 na lista. Escolha essa pessoa ou acrescente algo para diferenciar as duas."
+      "nameTaken": "{{name}} j\u00e1 est\u00e1 na lista. Escolha essa pessoa ou acrescente algo para diferenciar as duas.",
+      "notThisPerson": "N\u00e3o \u00e9 {{name}}"
     },
     "failedToLoad": "Falha ao carregar sessões: {{error}}",
     "loading": "Carregando sessões…"
@@ -647,7 +650,8 @@
       "editQuote": "Desfazer Editar citação",
       "renameSection": "Desfazer Renomear seção",
       "renameTheme": "Desfazer Renomear tema",
-      "editDescription": "Desfazer Editar descrição"
+      "editDescription": "Desfazer Editar descrição",
+      "clearName": "Desfazer Limpar nome"
     },
     "redo": {
       "renameModerator": "Refazer Renomear moderador",
@@ -663,7 +667,8 @@
       "editQuote": "Refazer Editar citação",
       "renameSection": "Refazer Renomear seção",
       "renameTheme": "Refazer Renomear tema",
-      "editDescription": "Refazer Editar descrição"
+      "editDescription": "Refazer Editar descrição",
+      "clearName": "Refazer Limpar nome"
     }
   }
 }

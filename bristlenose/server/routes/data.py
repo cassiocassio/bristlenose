@@ -439,7 +439,8 @@ def put_session_speaker(
     - a name, with no ``person``: a spelling fix for the person this slot
       points at, everywhere they appear. On ``m?`` there is nobody to fix, so
       it is someone new for this slot.
-    - ``clear``: this slot is nobody we know (``m?``).
+    - ``clear``: this slot is nobody we know (``m?``) — and stays so: the state
+      is ``cleared``, which a re-run does not re-propose over.
 
     ``confirmed`` alone is yes (or no) to the person the slot holds; 409 on
     ``m?``. A participant's name is its identity's. Changes only the fields
@@ -473,6 +474,8 @@ def put_session_speaker(
 
         if data.clear and team:
             left.add(speaker_slots.point(sp, None, state=None, evidence=None))
+            # Sticky: the next run must not propose the name that was refused.
+            sp.state = speaker_slots.CLEARED
             person = None
         elif data.person is not None:
             if not team:

@@ -99,3 +99,26 @@
 .bn-person-picker .bn-picker-new:focus-within {
     background: var(--bn-colour-quote-bg);
 }
+
+/* "Not this person" — the ✕ at the end of the current row (design-people.md
+   §J8.8). Hidden until the row is hovered or selected, so a picker opened to
+   confirm a name does not lead with a way to remove it. */
+.bn-person-picker .bn-picker-clear {
+    all: unset;
+    margin-left: auto;
+    padding: 0 0 0 var(--bn-space-md);
+    display: inline-flex;
+    align-items: center;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    visibility: hidden;
+}
+
+.bn-person-picker .export-dropdown-item:hover .bn-picker-clear,
+.bn-person-picker .export-dropdown-item:focus .bn-picker-clear {
+    visibility: visible;
+}
+
+.bn-person-picker .bn-picker-clear:hover {
+    color: var(--bn-colour-text);
+}

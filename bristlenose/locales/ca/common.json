@@ -138,7 +138,9 @@
     "speakerPlaceholder": {
       "moderator": "Moderador",
       "participant": "Participant",
-      "observer": "Observador"
+      "observer": "Observador",
+      "moderatorLettered": "Moderador {{letter}}",
+      "observerLettered": "Observador {{letter}}"
     },
     "picker": {
       "role": "Rol",
@@ -147,7 +149,8 @@
       "newNameFor": "Nom nou per a {{code}}",
       "thatsMe": "Soc jo ({{name}})",
       "proposedName": "{{code}}, nom proposat {{name}}",
-      "nameTaken": "{{name}} ja \u00e9s a la llista. Tria aquesta persona o afegeix-hi alguna cosa per distingir-les."
+      "nameTaken": "{{name}} ja \u00e9s a la llista. Tria aquesta persona o afegeix-hi alguna cosa per distingir-les.",
+      "notThisPerson": "No \u00e9s {{name}}"
     },
     "failedToLoad": "No s'han pogut carregar les sessions: {{error}}",
     "loading": "S'estan carregant les sessions…"
@@ -647,7 +650,8 @@
       "editQuote": "Desfés l’edició de la cita",
       "renameSection": "Desfés el canvi de nom de la secció",
       "renameTheme": "Desfés el canvi de nom del tema",
-      "editDescription": "Desfés l’edició de la descripció"
+      "editDescription": "Desfés l’edició de la descripció",
+      "clearName": "Desf\u00e9s la supressi\u00f3 del nom"
     },
     "redo": {
       "renameModerator": "Refés el canvi de nom del moderador",
@@ -663,7 +667,8 @@
       "editQuote": "Refés l’edició de la cita",
       "renameSection": "Refés el canvi de nom de la secció",
       "renameTheme": "Refés el canvi de nom del tema",
-      "editDescription": "Refés l’edició de la descripció"
+      "editDescription": "Refés l’edició de la descripció",
+      "clearName": "Ref\u00e9s la supressi\u00f3 del nom"
     }
   }
 }

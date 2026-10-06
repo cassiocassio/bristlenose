@@ -12,6 +12,7 @@
 import type { TFunction } from "i18next";
 
 import {
+  personPickerCanClear,
   personPickerChoice,
   personPickerLabels,
   personPickerNameTaken,
@@ -39,9 +40,10 @@ export interface WirePersonPicker {
   labels: PersonPickerLabels;
 }
 
-/** What native picked: a listed row, a typed name, or That's Me. */
+/** What native picked: a listed row, a typed name, That's Me, or the ✕. */
 export type WireNativeChoice =
   | { kind: "confirm" }
+  | { kind: "clear" }
   | { kind: "name" | "new" | "me"; name: string };
 
 /** What `personPickerChoose` carries back. */
@@ -88,6 +90,7 @@ export function parsePersonPickerChoice(payload: unknown): WirePersonPickerReply
   const choice = p.choice as Record<string, unknown> | undefined;
   if (typeof p.sessionId !== "string" || typeof p.code !== "string" || !choice) return null;
   if (choice.kind === "confirm") return { sessionId: p.sessionId, code: p.code, choice: { kind: "confirm" } };
+  if (choice.kind === "clear") return { sessionId: p.sessionId, code: p.code, choice: { kind: "clear" } };
   const kind = choice.kind;
   if (
     (kind === "name" || kind === "new" || kind === "me") &&
@@ -105,7 +108,8 @@ export function parsePersonPickerChoice(payload: unknown): WirePersonPickerReply
  * against the slot and rows as the grid holds them now:
  * - `name`: the listed person by that name (a yes, if it is the slot's own);
  * - `new`: someone new — refused if another person already goes by it;
- * - `me`: the listed person by the account's name, else someone new.
+ * - `me`: the listed person by the account's name, else someone new;
+ * - `clear`: not this person, where the slot has someone to refuse.
  */
 export function resolvePersonPickerChoice(
   payload: unknown,
@@ -118,6 +122,9 @@ export function resolvePersonPickerChoice(
   const found = slotFor(sessionId, code);
   if (!found) return null;
   const { slot } = found;
+  if (pick.choice.kind === "clear") {
+    return personPickerCanClear(slot) ? { sessionId, code, choice: { kind: "clear" } } : null;
+  }
   const rows = personPickerRows(slot, found.known);
   const { kind, name } = pick.choice;
   const listed = rows.find((r) => r.name === name);

@@ -138,7 +138,9 @@
     "speakerPlaceholder": {
       "moderator": "Moderat\u00f6r",
       "participant": "Kat\u0131l\u0131mc\u0131",
-      "observer": "G\u00f6zlemci"
+      "observer": "G\u00f6zlemci",
+      "moderatorLettered": "Moderat\u00f6r {{letter}}",
+      "observerLettered": "G\u00f6zlemci {{letter}}"
     },
     "picker": {
       "role": "Rol",
@@ -147,7 +149,8 @@
       "newNameFor": "{{code}} için yeni ad",
       "thatsMe": "Bu benim ({{name}})",
       "proposedName": "{{code}}, \u00f6nerilen ad {{name}}",
-      "nameTaken": "{{name}} zaten listede. Bu ki\u015fiyi se\u00e7in ya da ikisini ay\u0131rt edecek bir \u015fey ekleyin."
+      "nameTaken": "{{name}} zaten listede. Bu ki\u015fiyi se\u00e7in ya da ikisini ay\u0131rt edecek bir \u015fey ekleyin.",
+      "notThisPerson": "{{name}} de\u011fil"
     },
     "failedToLoad": "Oturumlar yüklenemedi: {{error}}",
     "loading": "Oturumlar yükleniyor…"
@@ -647,7 +650,8 @@
       "editQuote": "Alıntıyı Düzenlemeyi Geri Al",
       "renameSection": "Bölümün Adını Değiştirmeyi Geri Al",
       "renameTheme": "Temanın Adını Değiştirmeyi Geri Al",
-      "editDescription": "Açıklamayı Düzenlemeyi Geri Al"
+      "editDescription": "Açıklamayı Düzenlemeyi Geri Al",
+      "clearName": "Ad\u0131 Temizlemeyi Geri Al"
     },
     "redo": {
       "renameModerator": "Moderatörün Adını Değiştirmeyi Yinele",
@@ -663,7 +667,8 @@
       "editQuote": "Alıntıyı Düzenlemeyi Yinele",
       "renameSection": "Bölümün Adını Değiştirmeyi Yinele",
       "renameTheme": "Temanın Adını Değiştirmeyi Yinele",
-      "editDescription": "Açıklamayı Düzenlemeyi Yinele"
+      "editDescription": "Açıklamayı Düzenlemeyi Yinele",
+      "clearName": "Ad\u0131 Temizlemeyi Yinele"
     }
   }
 }

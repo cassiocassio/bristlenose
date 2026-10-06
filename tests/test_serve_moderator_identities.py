@@ -429,3 +429,71 @@ class TestThreeActs:
         resp = client.put("/api/projects/1/sessions/s3/speakers/m1",
                           json={"full_name": "Martin Storey", "short_name": "Martin"})
         assert resp.status_code == 200
+
+
+class TestNotThisPerson:
+    """§J8.8: the picker's ✕ says "not this person". The slot returns to
+    unknown and a re-run must not propose the refused name again."""
+
+    def test_a_cleared_slot_survives_a_re_run(self, tmp_path: Path) -> None:
+        project = _project(tmp_path, _TWO)
+        client = _client(project)
+        client.put("/api/projects/1/sessions/s2/speakers/m1", json={"clear": True})
+        _reimport(client, project)
+        slot = _slots(client)[("s2", "m1")]
+        assert (slot["speaker_code"], slot["name"], slot["person"]) == ("m?", "", "")
+
+    def test_a_pick_after_a_clear_still_works(self, tmp_path: Path) -> None:
+        client = _client(_project(tmp_path, _TWO))
+        martin = _slots(client)[("s1", "m1")]["person"]
+        client.put("/api/projects/1/sessions/s2/speakers/m1", json={"clear": True})
+        client.put("/api/projects/1/sessions/s2/speakers/m1", json={"person": martin})
+        assert _slots(client)[("s2", "m1")]["person"] == martin
+
+
+class TestLetteredUnknowns:
+    """§J8.9: two unknown moderators in one session never read as the same
+    ``m?``; the letter is the slot's place among that role's speakers."""
+
+    def test_letters_follow_slot_order(self) -> None:
+        from bristlenose.server.speaker_slots import lettered
+
+        assert lettered(["m2", "m1"]) == {"m1": "A", "m2": "B"}
+        assert lettered(["m1"]) == {}
+        assert lettered([f"m{i}" for i in range(1, 29)])["m27"] == "AA"
+
+    def test_two_unknown_moderators_are_ma_and_mb(self, tmp_path: Path) -> None:
+        from bristlenose.server.models import SessionSpeaker
+
+        client = _client(_project(tmp_path, {"s1": _TWO["s1"]}))
+        db = client.app.state.db_factory()
+        try:
+            s2 = db.query(SessionSpeaker).filter_by(speaker_code="m1").all()
+            sess = [sp for sp in s2 if sp.session.session_id == "s2"][0]
+            db.add(SessionSpeaker(session_id=sess.session_id, person_id=None,
+                                  speaker_code="m2", speaker_role="researcher"))
+            db.commit()
+        finally:
+            db.close()
+        slots = _slots(client)
+        assert (slots[("s2", "m1")]["speaker_code"], slots[("s2", "m2")]["speaker_code"]) == (
+            "mA?", "mB?",
+        )
+        assert slots[("s1", "m1")]["speaker_code"] == "m1", "one moderator needs no letter"
+
+    def test_naming_one_leaves_the_others_letter(self, tmp_path: Path) -> None:
+        from bristlenose.server.models import SessionSpeaker
+
+        client = _client(_project(tmp_path, {"s1": _TWO["s1"]}))
+        db = client.app.state.db_factory()
+        try:
+            sess = [sp for sp in db.query(SessionSpeaker).filter_by(speaker_code="m1")
+                    if sp.session.session_id == "s2"][0]
+            db.add(SessionSpeaker(session_id=sess.session_id, person_id=None,
+                                  speaker_code="m2", speaker_role="researcher"))
+            db.commit()
+        finally:
+            db.close()
+        client.put("/api/projects/1/sessions/s2/speakers/m1",
+                   json={"full_name": "Dana Whitfield", "short_name": "Dana"})
+        assert _slots(client)[("s2", "m2")]["speaker_code"] == "mB?"

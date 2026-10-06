@@ -152,7 +152,9 @@
     "speakerPlaceholder": {
       "moderator": "Moder\u00e1tor",
       "participant": "\u00da\u010dastn\u00edk",
-      "observer": "Pozorovatel"
+      "observer": "Pozorovatel",
+      "moderatorLettered": "Moder\u00e1tor {{letter}}",
+      "observerLettered": "Pozorovatel {{letter}}"
     },
     "picker": {
       "role": "Role",
@@ -161,7 +163,8 @@
       "newNameFor": "Nové jméno pro {{code}}",
       "thatsMe": "To jsem já ({{name}})",
       "proposedName": "{{code}}, navr\u017een\u00e9 jm\u00e9no {{name}}",
-      "nameTaken": "{{name}} u\u017e v seznamu je. Vyberte tuto osobu, nebo dopl\u0148te n\u011bco, \u010d\u00edm se ob\u011b rozli\u0161\u00ed."
+      "nameTaken": "{{name}} u\u017e v seznamu je. Vyberte tuto osobu, nebo dopl\u0148te n\u011bco, \u010d\u00edm se ob\u011b rozli\u0161\u00ed.",
+      "notThisPerson": "Nen\u00ed to {{name}}"
     },
     "failedToLoad": "Nepodařilo se načíst sezení: {{error}}",
     "loading": "Načítání sezení…"
@@ -710,7 +713,8 @@
       "editQuote": "Odvolat akci Upravit citát",
       "renameSection": "Odvolat akci Přejmenovat sekci",
       "renameTheme": "Odvolat akci Přejmenovat téma",
-      "editDescription": "Odvolat akci Upravit popis"
+      "editDescription": "Odvolat akci Upravit popis",
+      "clearName": "Odvolat akci Vymazat jm\u00e9no"
     },
     "redo": {
       "renameModerator": "Opakovat akci Přejmenovat moderátora",
@@ -726,7 +730,8 @@
       "editQuote": "Opakovat akci Upravit citát",
       "renameSection": "Opakovat akci Přejmenovat sekci",
       "renameTheme": "Opakovat akci Přejmenovat téma",
-      "editDescription": "Opakovat akci Upravit popis"
+      "editDescription": "Opakovat akci Upravit popis",
+      "clearName": "Opakovat akci Vymazat jm\u00e9no"
     }
   }
 }

@@ -32,6 +32,9 @@ logger = logging.getLogger(__name__)
 
 PROPOSED = "proposed"
 CONFIRMED = "confirmed"
+#: A person said "not this person": the slot holds nobody, and a re-run must not
+#: propose the same name again (design-people.md §C5's sticky ``cleared``, §J8.8).
+CLEARED = "cleared"
 #: The evidence a person's own act leaves on a slot.
 PICK = "pick"
 
@@ -44,9 +47,37 @@ def is_team_code(code: str) -> bool:
     return code[:1] in ("m", "o")
 
 
-def unidentified_code(slot_code: str) -> str:
-    """``m1`` → ``m?``: what an unidentified slot reads."""
-    return f"{slot_code[:1]}?"
+def unidentified_code(slot_code: str, letter: str = "") -> str:
+    """``m1`` → ``m?``: what an unidentified slot reads; ``mA?`` when its
+    session has more than one speaker of that role (``lettered``)."""
+    return f"{slot_code[:1]}{letter}?"
+
+
+def lettered(slot_codes: list[str]) -> dict[str, str]:
+    """The letter each of one session's moderator (or observer) slots goes by.
+
+    One speaker of a role in a session needs no letter: ``m?``. Two or more are
+    ``A``, ``B``… in slot order, so two unknowns never read as the same ``m?``
+    in a transcript, whose badges show the code alone (design-people.md §J8.9).
+    The letter is the slot's place among *all* that role's speakers, not among
+    the unknown ones, so naming ``mA?`` leaves ``mB?`` as it was. Letters, never
+    numbers, so an unknown cannot be read as ``m1`` or ``m2``.
+    """
+    ordered = sorted(slot_codes, key=_number)
+    if len(ordered) < 2:
+        return {}
+    return {code: _letter(i) for i, code in enumerate(ordered)}
+
+
+def _letter(i: int) -> str:
+    """A, B, … Z, then AA, AB — a session with 27 moderators is not a study, but
+    the label must still be distinct."""
+    out = ""
+    i += 1
+    while i:
+        i, r = divmod(i - 1, 26)
+        out = chr(ord("A") + r) + out
+    return out
 
 
 def _number(code: str) -> int:
@@ -81,11 +112,12 @@ class Slot:
         return self.person.short_name or self.person.full_name or ""
 
 
-def display_code(sp: SessionSpeaker, person: Person | None) -> str:
-    """The code a client sees for this slot."""
+def display_code(sp: SessionSpeaker, person: Person | None, letter: str = "") -> str:
+    """The code a client sees for this slot. ``letter`` is the slot's
+    ``lettered`` letter in its session, used only while nobody is identified."""
     if person is None:
         return sp.speaker_code if not is_team_code(sp.speaker_code) else (
-            unidentified_code(sp.speaker_code)
+            unidentified_code(sp.speaker_code, letter)
         )
     # A person not yet numbered (between migration 013 and the first import)
     # shows its slot code, as before route C.
@@ -107,8 +139,20 @@ def project_slots(db: DbSession, project_id: int) -> list[Slot]:
         .filter(SessionModel.project_id == project_id)
         .all()
     )
+    letters: dict[tuple[str, str], dict[str, str]] = {}
+    for sid, _number_, sp, _person in rows:
+        if is_team_code(sp.speaker_code):
+            letters.setdefault((sid, sp.speaker_code[:1]), {})[sp.speaker_code] = ""
+    for key, codes in letters.items():
+        letters[key] = lettered(list(codes))
     slots = [
-        Slot(sid, number, sp.speaker_code, display_code(sp, person), sp, person)
+        Slot(
+            sid, number, sp.speaker_code,
+            display_code(sp, person, letters.get((sid, sp.speaker_code[:1]), {}).get(
+                sp.speaker_code, "",
+            )),
+            sp, person,
+        )
         for sid, number, sp, person in rows
     ]
     slots.sort(key=lambda s: (s.session_number, s.session_id, _slot_sort_key(s.slot_code)))
@@ -131,7 +175,14 @@ def code_for(db: DbSession, session_pk: int, slot_code: str) -> str:
     if sp is None:
         return slot_code
     person = db.get(Person, sp.person_id) if sp.person_id is not None else None
-    return display_code(sp, person)
+    letter = ""
+    if person is None and is_team_code(slot_code):
+        siblings = [
+            code for (code,) in db.query(SessionSpeaker.speaker_code).filter_by(session_id=session_pk)
+            if code[:1] == slot_code[:1]
+        ]
+        letter = lettered(siblings).get(slot_code, "")
+    return display_code(sp, person, letter)
 
 
 def identities(db: DbSession, project_id: int) -> dict[str, Person]:

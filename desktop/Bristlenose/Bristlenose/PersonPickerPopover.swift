@@ -28,6 +28,9 @@ struct PersonPickerRequest: Equatable {
         let role: Role
         let name: String
         let confirmed: Bool
+        /// The person a moderator or observer slot points at; nil on `m?` and
+        /// on participants.
+        var person: String? = nil
     }
 
     struct Labels: Equatable {
@@ -40,6 +43,8 @@ struct PersonPickerRequest: Equatable {
         /// "m1, proposed name Sarah" for a proposed slot's own row, or nil:
         /// the ring and the grey name say it only to the eye.
         var proposed: String? = nil
+        /// "Not {{name}}": the ✕ on the current row.
+        var notThisPerson: String? = nil
     }
 
     let sessionId: String
@@ -92,7 +97,8 @@ struct PersonPickerRequest: Equatable {
         else { return nil }
         self.sessionId = sessionId
         self.slot = Slot(code: code, role: role, name: s["name"] as? String ?? "",
-                         confirmed: s["confirmed"] as? Bool ?? true)
+                         confirmed: s["confirmed"] as? Bool ?? true,
+                         person: (s["person"] as? String).flatMap { $0.isEmpty ? nil : $0 })
         self.names = names
         let codes = body["codes"] as? [String]
         self.codes = codes?.count == names.count ? codes! : names.map { _ in code }
@@ -102,14 +108,15 @@ struct PersonPickerRequest: Equatable {
         for (k, v) in roleWords { if let r = Role(rawValue: k) { words[r] = v } }
         self.labels = Labels(roles: words, roleGroup: l["roleGroup"] as? String ?? "",
                              newPrompt: newPrompt, thatsMe: l["thatsMe"] as? String, menu: menu,
-                             proposed: l["proposed"] as? String)
+                             proposed: l["proposed"] as? String,
+                             notThisPerson: l["notThisPerson"] as? String)
     }
 }
 
 /// What was picked: a name, and which row it came from. The SPA decides what
 /// it means (a pick, someone new, That's Me) — never this side.
 struct PersonPickerPick: Equatable {
-    enum Kind: String { case name, new, me }
+    enum Kind: String { case name, new, me, clear }
     let name: String
     let kind: Kind
 }
@@ -119,8 +126,11 @@ struct PersonPickerPick: Equatable {
 /// the fixture without a web view.
 enum PersonPickerAction {
     static func choose(sessionId: String, code: String, pick: PersonPickerPick) -> (String, [String: Any]) {
-        ("personPickerChoose", ["sessionId": sessionId, "code": code,
-                                "choice": ["kind": pick.kind.rawValue, "name": pick.name]])
+        // "Not this person" names nobody.
+        let choice: [String: Any] = pick.kind == .clear
+            ? ["kind": "clear"]
+            : ["kind": pick.kind.rawValue, "name": pick.name]
+        return ("personPickerChoose", ["sessionId": sessionId, "code": code, "choice": choice])
     }
 }
 
@@ -234,6 +244,19 @@ final class PersonPickerModel: ObservableObject {
     /// The typed name: someone new, unless the web side finds the name taken.
     func submitDraft() { send(draft, kind: .new) }
 
+    /// Whether the current answer can be refused with the ✕: a moderator or
+    /// observer the slot points at (design-people.md §J8.8).
+    var canClear: Bool {
+        request.slot.role != .participant && request.slot.person != nil && !request.slot.name.isEmpty
+    }
+
+    /// "Not this person": the slot returns to unknown.
+    func clearCurrent() {
+        guard canClear else { return }
+        onChoose(PersonPickerPick(name: "", kind: .clear))
+        onClose()
+    }
+
     private func send(_ raw: String, kind: PersonPickerPick.Kind) {
         let name = raw.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
@@ -328,6 +351,10 @@ private struct PersonPickerList: NSViewRepresentable {
         table.action = #selector(Coordinator.rowClicked(_:))
         table.commitHandler = { [weak coordinator = context.coordinator] in coordinator?.commitSelected() }
         table.cancelHandler = { [weak model] in model?.close() }
+        // Delete or Backspace on the current answer: not this person.
+        table.deleteHandler = { [weak coordinator = context.coordinator] in coordinator?.clearIfCurrent() }
+        // An unknown speaker opens in the new-person field, not the list.
+        table.claimsFocusOnAppear = model.selection != PersonPickerModel.newRow
         table.setAccessibilityLabel(model.request.labels.menu)
 
         let scroll = NSScrollView()
@@ -425,13 +452,36 @@ private struct PersonPickerList: NSViewRepresentable {
             let ticked = model.isAnswer(id)
             let rowView = PickerRowView(tick: ticked, lead: lead, name: name, column: badgeColumn, metrics: m)
             rowView.translatesAutoresizingMaskIntoConstraints = false
-            let cell = NSTableCellView()
+            let cell = HoverRevealCell()
             cell.addSubview(rowView)
-            NSLayoutConstraint.activate([
+            var constraints = [
                 rowView.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 8),
-                rowView.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -10),
                 rowView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
-            ])
+            ]
+            if ticked, id != PersonPickerModel.meRow, model.canClear {
+                // "Not this person", shown while the pointer is on the row.
+                let clear = NSButton(image: NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)
+                    ?? NSImage(), target: self, action: #selector(clearClicked(_:)))
+                clear.isBordered = false
+                clear.symbolConfiguration = .init(pointSize: m.nameFont.pointSize - 1, weight: .regular)
+                clear.contentTintColor = .secondaryLabelColor
+                let label = (model.request.labels.notThisPerson ?? "")
+                    .replacingOccurrences(of: "{{name}}", with: id)
+                clear.setAccessibilityLabel(label)
+                clear.toolTip = label
+                clear.translatesAutoresizingMaskIntoConstraints = false
+                clear.isHidden = true
+                cell.addSubview(clear)
+                cell.revealed = clear
+                constraints += [
+                    clear.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -8),
+                    clear.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+                    rowView.trailingAnchor.constraint(lessThanOrEqualTo: clear.leadingAnchor, constant: -4),
+                ]
+            } else {
+                constraints.append(rowView.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -10))
+            }
+            NSLayoutConstraint.activate(constraints)
             cell.setAccessibilityElement(true)
             cell.setAccessibilityLabel(label)
             cell.setAccessibilitySelected(ticked)
@@ -502,10 +552,18 @@ private struct PersonPickerList: NSViewRepresentable {
             }
         }
 
+        @objc func clearClicked(_ sender: Any?) { model.clearCurrent() }
+
         @objc func rowClicked(_ sender: Any?) {
             guard let table, table.clickedRow >= 0, table.clickedRow < rows.count else { return }
             let id = rows[table.clickedRow]
             if id == PersonPickerModel.newRow { focusNewField() } else { model.choose(id) }
+        }
+
+        func clearIfCurrent() {
+            guard let table, table.selectedRow >= 0, table.selectedRow < rows.count,
+                  model.isAnswer(rows[table.selectedRow]) else { return }
+            model.clearCurrent()
         }
 
         func commitSelected() {
@@ -647,6 +705,25 @@ final class PickerBadge: NSView {
         super.viewDidChangeEffectiveAppearance()
         needsLayout = true
     }
+}
+
+// MARK: - A cell that shows one control only while the pointer is over it
+
+/// The current row's ✕ appears on hover, as a Mac list's row actions do, so a
+/// picker opened to confirm a name does not lead with a way to remove it.
+final class HoverRevealCell: NSTableCellView {
+    weak var revealed: NSView?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        for area in trackingAreas where area.owner === self { removeTrackingArea(area) }
+        addTrackingArea(NSTrackingArea(rect: .zero,
+                                       options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                       owner: self))
+    }
+
+    override func mouseEntered(with event: NSEvent) { revealed?.isHidden = false }
+    override func mouseExited(with event: NSEvent) { revealed?.isHidden = true }
 }
 
 // MARK: - Presenting it over the report

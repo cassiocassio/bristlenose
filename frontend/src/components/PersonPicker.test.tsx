@@ -243,6 +243,33 @@ describe("PersonPicker", () => {
     expect(document.activeElement).toBe(items()[1]);
   });
 
+  it("the ✕ on the current row says not this person (§J8.8)", () => {
+    const onChoose = vi.fn();
+    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={people("Martin", "Kerri")} onChoose={onChoose} onClose={vi.fn()} />);
+    const clears = menu().querySelectorAll<HTMLButtonElement>(".bn-picker-clear");
+    expect(clears).toHaveLength(1);
+    expect(items()[0].contains(clears[0])).toBe(true);
+    expect(clears[0].getAttribute("aria-label")).toBe("Not Martin");
+    fireEvent.click(clears[0]);
+    expect(onChoose).toHaveBeenCalledWith({ kind: "clear" });
+  });
+
+  it("Delete on the current row clears it; on another row it does nothing", () => {
+    const onChoose = vi.fn();
+    render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={people("Martin", "Kerri")} onChoose={onChoose} onClose={vi.fn()} />);
+    fireEvent.keyDown(menu(), { key: "ArrowDown" });
+    fireEvent.keyDown(menu(), { key: "Delete" });
+    expect(onChoose).not.toHaveBeenCalled();
+    fireEvent.keyDown(menu(), { key: "ArrowUp" });
+    fireEvent.keyDown(menu(), { key: "Backspace" });
+    expect(onChoose).toHaveBeenCalledWith({ kind: "clear" });
+  });
+
+  it("an unknown speaker or a participant has no ✕", () => {
+    render(<PersonPicker slot={moderator("", false, "m?")} labels={labels(moderator("", false, "m?"))} known={people("Martin")} onChoose={vi.fn()} onClose={vi.fn()} />);
+    expect(menu().querySelector(".bn-picker-clear")).toBeNull();
+  });
+
   it("Escape closes without choosing", () => {
     const onChoose = vi.fn();
     const onClose = vi.fn();

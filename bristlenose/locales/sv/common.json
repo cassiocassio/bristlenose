@@ -125,7 +125,9 @@
     "speakerPlaceholder": {
       "moderator": "Moderator",
       "participant": "Deltagare",
-      "observer": "Observat\u00f6r"
+      "observer": "Observat\u00f6r",
+      "moderatorLettered": "Moderator {{letter}}",
+      "observerLettered": "Observat\u00f6r {{letter}}"
     },
     "picker": {
       "role": "Roll",
@@ -134,7 +136,8 @@
       "newNameFor": "Nytt namn för {{code}}",
       "thatsMe": "Det är jag ({{name}})",
       "proposedName": "{{code}}, f\u00f6reslaget namn {{name}}",
-      "nameTaken": "{{name}} finns redan i listan. V\u00e4lj personen eller l\u00e4gg till n\u00e5got som skiljer de tv\u00e5 \u00e5t."
+      "nameTaken": "{{name}} finns redan i listan. V\u00e4lj personen eller l\u00e4gg till n\u00e5got som skiljer de tv\u00e5 \u00e5t.",
+      "notThisPerson": "Inte {{name}}"
     },
     "moderatedBy": "Modererad av {{names}}",
     "observer_one": "Observatör: {{names}}",
@@ -647,7 +650,8 @@
       "editQuote": "Ångra Redigera citat",
       "renameSection": "Ångra Byt namn på avsnitt",
       "renameTheme": "Ångra Byt namn på tema",
-      "editDescription": "Ångra Redigera beskrivning"
+      "editDescription": "Ångra Redigera beskrivning",
+      "clearName": "\u00c5ngra Rensa namn"
     },
     "redo": {
       "renameModerator": "Gör om Byt namn på moderator",
@@ -663,7 +667,8 @@
       "editQuote": "Gör om Redigera citat",
       "renameSection": "Gör om Byt namn på avsnitt",
       "renameTheme": "Gör om Byt namn på tema",
-      "editDescription": "Gör om Redigera beskrivning"
+      "editDescription": "Gör om Redigera beskrivning",
+      "clearName": "G\u00f6r om Rensa namn"
     }
   }
 }

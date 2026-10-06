@@ -291,10 +291,16 @@ final class SessionsPopoverHoverRowView: SourceListSelectionRowView {
 final class SessionsPopoverTableView: NSTableView {
     var commitHandler: (() -> Void)?
     var cancelHandler: (() -> Void)?
+    /// Delete or Backspace on the selected row; nil passes them on. The person
+    /// picker uses it for "not this person" (design-people.md §J8.8).
+    var deleteHandler: (() -> Void)?
+    /// False when something else in the popover should have the keyboard on
+    /// open — the person picker's new-person field, for an unknown speaker.
+    var claimsFocusOnAppear = true
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        guard window != nil else { return }
+        guard window != nil, claimsFocusOnAppear else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self, let window = self.window else { return }
             window.makeFirstResponder(self)
@@ -305,6 +311,8 @@ final class SessionsPopoverTableView: NSTableView {
         switch event.charactersIgnoringModifiers {
         case "\r", "\u{3}", " ":   // Return, keypad Enter, Space — commit
             commitHandler?()
+        case "\u{7F}", "\u{F728}" where deleteHandler != nil:   // Backspace, Forward Delete
+            deleteHandler?()
         default:
             super.keyDown(with: event)
         }

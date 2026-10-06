@@ -125,7 +125,9 @@
     "speakerPlaceholder": {
       "moderator": "Moderator",
       "participant": "Deelnemer",
-      "observer": "Waarnemer"
+      "observer": "Waarnemer",
+      "moderatorLettered": "Moderator {{letter}}",
+      "observerLettered": "Waarnemer {{letter}}"
     },
     "picker": {
       "role": "Rol",
@@ -134,7 +136,8 @@
       "newNameFor": "Nieuwe naam voor {{code}}",
       "thatsMe": "Dat ben ik ({{name}})",
       "proposedName": "{{code}}, voorgestelde naam {{name}}",
-      "nameTaken": "{{name}} staat al in de lijst. Kies die persoon of voeg iets toe om de twee uit elkaar te houden."
+      "nameTaken": "{{name}} staat al in de lijst. Kies die persoon of voeg iets toe om de twee uit elkaar te houden.",
+      "notThisPerson": "Niet {{name}}"
     },
     "moderatedBy": "Gemodereerd door {{names}}",
     "observer_one": "Waarnemer: {{names}}",
@@ -647,7 +650,8 @@
       "editQuote": "Herstel citaat bewerken",
       "renameSection": "Herstel naam sectie wijzigen",
       "renameTheme": "Herstel naam thema wijzigen",
-      "editDescription": "Herstel beschrijving bewerken"
+      "editDescription": "Herstel beschrijving bewerken",
+      "clearName": "Herstel naam wissen"
     },
     "redo": {
       "renameModerator": "Opnieuw naam moderator wijzigen",
@@ -663,7 +667,8 @@
       "editQuote": "Opnieuw citaat bewerken",
       "renameSection": "Opnieuw naam sectie wijzigen",
       "renameTheme": "Opnieuw naam thema wijzigen",
-      "editDescription": "Opnieuw beschrijving bewerken"
+      "editDescription": "Opnieuw beschrijving bewerken",
+      "clearName": "Opnieuw naam wissen"
     }
   }
 }

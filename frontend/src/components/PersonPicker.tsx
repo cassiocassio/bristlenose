@@ -28,12 +28,14 @@ import type { TFunction } from "i18next";
 
 import {
   PICKER_ROLES,
+  personPickerCanClear,
   personPickerChoice,
   personPickerLabels,
   personPickerNameTaken,
   personPickerNewCode,
   personPickerRows,
   personPickerTyped,
+  withName,
   type PersonPickerChoice,
   type PersonPickerLabels,
   type PersonPickerRow,
@@ -139,6 +141,9 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
       if (selected && selected !== NEW) choose(selected);
     }
     else if (e.key === "Escape") { handled(); dismiss(); }
+    else if ((e.key === "Delete" || e.key === "Backspace") && own && selected === keyOf(own)) {
+      if (personPickerCanClear(slot)) { handled(); finish({ kind: "clear" }); }
+    }
     else if (e.key.length === 1 && /\S/.test(e.key) && !e.metaKey && !e.ctrlKey) {
       // Type-to-jump on any word of a name, the way a menu does.
       const now = e.timeStamp;
@@ -204,6 +209,20 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
             ) : (
               <PersonBadge code={row.code} role={slot.role} name={row.name} />
             )}
+            {isAnswer && personPickerCanClear(slot) && (
+              // "Not this person": shown on hover and on the selected row, and
+              // on Delete or Backspace there. Not a list stop of its own.
+              <button
+                type="button"
+                className="bn-picker-clear"
+                tabIndex={-1}
+                aria-label={withName(labels.notThisPerson, row.name)}
+                title={withName(labels.notThisPerson, row.name)}
+                onClick={(e) => { e.stopPropagation(); finish({ kind: "clear" }); }}
+              >
+                <Icon name="x" size="menu" />
+              </button>
+            )}
           </li>
         );
       })}
@@ -240,7 +259,7 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
       </li>
       {taken !== null && (
         <li id="bn-picker-taken" className="export-dropdown-hint" role="alert">
-          {labels.nameTaken.replace("{{name}}", taken)}
+          {withName(labels.nameTaken, taken)}
         </li>
       )}
     </ul>

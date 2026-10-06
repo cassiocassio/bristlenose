@@ -108,6 +108,11 @@ describe("nameSpeaker — someone new, and back to nobody", () => {
     ]);
   });
 
+  it("clearing a speaker is labelled as such in Edit ▸ Undo", () => {
+    expect(actionFor("m1", proposed, unknown)).toBe("clearName");
+    expect(actionFor("m1", unknown, mike)).toBe("renameModerator");
+  });
+
   it("a pick never sends a bare name the server could read as a rename", async () => {
     await nameSpeaker({ sessionId: "s1", code: "m1", before: proposed, after: picked });
     expect(puts()[0][1]).toHaveProperty("person", "id-jo");

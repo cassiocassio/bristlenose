@@ -994,6 +994,54 @@ describe("SessionsTable person picker", () => {
     expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Sarah", "Kerri"]);
   });
 
+  it("the ✕ clears this session's moderator, and undo points back (§J8.8)", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[1]);
+    const picker = await pickerMenu();
+    fireEvent.click(picker.querySelector(".bn-picker-clear") as HTMLElement);
+    await waitFor(() => expect(puts()).toHaveLength(1));
+    expect(puts()[0].url).toContain("/sessions/s2/speakers/m1");
+    expect(puts()[0].body).toEqual({ clear: true });
+    expect(getUndoState().undoAction).toBe("clearName");
+    await waitFor(() => expect(screen.getAllByTestId("bn-name-m1")[1].textContent).toBe("Moderator"));
+
+    await act(async () => {
+      await undo();
+    });
+    await waitFor(() => expect(puts()).toHaveLength(2));
+    expect(puts()[1].body).toEqual({ person: "id-kerri", short_name: "Kerri", confirmed: true });
+  });
+
+  it("two unknown moderators read Moderator A and Moderator B (§J8.9)", async () => {
+    const lettered = {
+      ...pickerSessions,
+      sessions: [
+        {
+          ...pickerSessions.sessions[0],
+          speakers: [
+            { speaker_code: "mA?", slot_code: "m1", name: "", role: "researcher", name_confirmed: false },
+            { speaker_code: "mB?", slot_code: "m2", name: "", role: "researcher", name_confirmed: false },
+            { speaker_code: "p1", name: "Alice", role: "participant", name_confirmed: true },
+          ],
+        },
+        pickerSessions.sessions[1],
+      ],
+    };
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) =>
+      Promise.resolve(
+        url.includes("/sessions")
+          ? { ok: true, json: async () => lettered }
+          : { ok: true, json: async () => peopleResponse },
+      ),
+    );
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    expect(screen.getByTestId("bn-name-mA?").textContent).toBe("Moderator A");
+    expect(screen.getByTestId("bn-name-mB?").textContent).toBe("Moderator B");
+  });
+
   it("the pencil cannot give a moderator someone else's name (§J8.11)", async () => {
     mockPicker();
     render(<SessionsTable projectId="1" />);

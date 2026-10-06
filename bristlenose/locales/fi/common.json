@@ -138,7 +138,9 @@
     "speakerPlaceholder": {
       "moderator": "Moderaattori",
       "participant": "Osallistuja",
-      "observer": "Tarkkailija"
+      "observer": "Tarkkailija",
+      "moderatorLettered": "Moderaattori {{letter}}",
+      "observerLettered": "Tarkkailija {{letter}}"
     },
     "picker": {
       "role": "Rooli",
@@ -147,7 +149,8 @@
       "newNameFor": "Uusi nimi osallistujalle {{code}}",
       "thatsMe": "Tämä olen minä ({{name}})",
       "proposedName": "{{code}}, ehdotettu nimi {{name}}",
-      "nameTaken": "{{name}} on jo luettelossa. Valitse kyseinen henkil\u00f6 tai lis\u00e4\u00e4 jotain, joka erottaa heid\u00e4t."
+      "nameTaken": "{{name}} on jo luettelossa. Valitse kyseinen henkil\u00f6 tai lis\u00e4\u00e4 jotain, joka erottaa heid\u00e4t.",
+      "notThisPerson": "Ei {{name}}"
     },
     "failedToLoad": "Istuntojen lataus epäonnistui: {{error}}",
     "loading": "Ladataan istuntoja…"
@@ -647,7 +650,8 @@
       "editQuote": "Peru sitaatin muokkaus",
       "renameSection": "Peru osion uudelleennimeäminen",
       "renameTheme": "Peru teeman uudelleennimeäminen",
-      "editDescription": "Peru kuvauksen muokkaus"
+      "editDescription": "Peru kuvauksen muokkaus",
+      "clearName": "Peru nimen poistaminen"
     },
     "redo": {
       "renameModerator": "Nimeä moderaattori sittenkin uudelleen",
@@ -663,7 +667,8 @@
       "editQuote": "Muokkaa sitaattia sittenkin",
       "renameSection": "Nimeä osio sittenkin uudelleen",
       "renameTheme": "Nimeä teema sittenkin uudelleen",
-      "editDescription": "Muokkaa kuvausta sittenkin"
+      "editDescription": "Muokkaa kuvausta sittenkin",
+      "clearName": "Poista nimi sittenkin"
     }
   }
 }

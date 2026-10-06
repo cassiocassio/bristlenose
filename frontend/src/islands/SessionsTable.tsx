@@ -24,6 +24,7 @@ import { Thumbnail } from "../components/Thumbnail";
 import {
   personPickerNameTaken,
   personPickerRows,
+  unknownLetter,
   type PersonPickerChoice,
   type PersonPickerRow,
   type PersonPickerSlot,
@@ -122,9 +123,23 @@ function knownPeopleOf(data: SessionsListResponse | null): Record<PickerRole, Pe
  * prefix (m/o/…) rather than the stored role string, which is more robust (the
  * m-code speaker's stored role is "researcher", never "moderator").
  */
-function speakerRolePlaceholder(code: string, t: (key: string) => string): string {
-  if (code.startsWith("m")) return t("sessions.speakerPlaceholder.moderator");
-  if (code.startsWith("o")) return t("sessions.speakerPlaceholder.observer");
+function speakerRolePlaceholder(
+  code: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  // Two unknowns of a role in one session are lettered, mA? and mB?, and so
+  // are their names: Moderator A, Moderator B (design-people.md §J8.9).
+  const letter = unknownLetter(code);
+  if (code.startsWith("m")) {
+    return letter
+      ? t("sessions.speakerPlaceholder.moderatorLettered", { letter })
+      : t("sessions.speakerPlaceholder.moderator");
+  }
+  if (code.startsWith("o")) {
+    return letter
+      ? t("sessions.speakerPlaceholder.observerLettered", { letter })
+      : t("sessions.speakerPlaceholder.observer");
+  }
   return t("sessions.speakerPlaceholder.participant");
 }
 
@@ -408,6 +423,9 @@ export function SessionsTable({
     (sessionId: string, speakerCode: string, choice: PersonPickerChoice) => {
       if (choice.kind === "confirm") {
         renameSlot(sessionId, speakerCode, (before) => ({ ...before, confirmed: true }));
+      } else if (choice.kind === "clear") {
+        // Not this person: the slot holds nobody, and the server keeps it so.
+        renameSlot(sessionId, speakerCode, () => ({ full_name: "", short_name: "", confirmed: false }));
       } else if (choice.kind === "name") {
         handleNameCommit(sessionId, speakerCode, choice.name);
       } else if (choice.kind === "person") {

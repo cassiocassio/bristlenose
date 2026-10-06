@@ -138,7 +138,9 @@
     "speakerPlaceholder": {
       "moderator": "Moderator",
       "participant": "Participant",
-      "observer": "Observer"
+      "observer": "Observer",
+      "moderatorLettered": "Moderator {{letter}}",
+      "observerLettered": "Observer {{letter}}"
     },
     "picker": {
       "role": "Role",
@@ -147,7 +149,8 @@
       "newNameFor": "New name for {{code}}",
       "thatsMe": "That’s Me ({{name}})",
       "proposedName": "{{code}}, proposed name {{name}}",
-      "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart."
+      "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart.",
+      "notThisPerson": "Not {{name}}"
     },
     "failedToLoad": "Failed to load sessions: {{error}}",
     "loading": "Loading sessions…"
@@ -649,7 +652,8 @@
       "editQuote": "Undo Edit Quote",
       "renameSection": "Undo Rename Section",
       "renameTheme": "Undo Rename Theme",
-      "editDescription": "Undo Edit Description"
+      "editDescription": "Undo Edit Description",
+      "clearName": "Undo Clear Name"
     },
     "redo": {
       "renameModerator": "Redo Rename Moderator",
@@ -665,7 +669,8 @@
       "editQuote": "Redo Edit Quote",
       "renameSection": "Redo Rename Section",
       "renameTheme": "Redo Rename Theme",
-      "editDescription": "Redo Edit Description"
+      "editDescription": "Redo Edit Description",
+      "clearName": "Redo Clear Name"
     }
   }
 }

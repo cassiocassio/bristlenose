@@ -32,6 +32,7 @@ export { PEOPLE_CHANGED_EVENT, type PeopleChangedDetail, type SpeakerNameState }
 
 /** The act, as Edit ▸ Undo names it (`undo.undo.<action>`). */
 export function actionFor(code: string, before: SpeakerNameState, after: SpeakerNameState): string {
+  if (isSessionScopedCode(code) && before.person && !after.person) return "clearName";
   const renamed =
     before.full_name !== after.full_name || before.short_name !== after.short_name;
   if (!renamed) return "confirmName";

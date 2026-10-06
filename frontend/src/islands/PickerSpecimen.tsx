@@ -68,7 +68,8 @@ function labels(slot: PersonPickerSlot): PersonPickerLabels {
     thatsMe: null,
     menu: `Edit name for ${slot.code}`,
     proposed: slot.name && !slot.confirmed ? `${slot.code}, proposed name ${slot.name}` : null,
-    nameTaken: "There’s already a {{name}}. Pick them from the list, or add something to tell them apart.",
+    nameTaken: "{{name}} is already in the list. Pick them, or add something to tell the two apart.",
+    notThisPerson: "Not {{name}}",
   };
 }
 
@@ -105,6 +106,8 @@ export function PickerSpecimen() {
                 const row = { name: choice.name, code: slot.code, person };
                 setSlot({ ...slot, name: choice.name, person, confirmed: true });
                 setKnown({ ...known, [slot.role]: [...known[slot.role], row] });
+              } else if (choice.kind === "clear") {
+                setSlot({ ...slot, name: "", person: undefined, confirmed: false });
               } else {
                 setSlot({ ...slot, confirmed: true });
               }

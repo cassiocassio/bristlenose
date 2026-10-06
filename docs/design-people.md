@@ -3169,8 +3169,9 @@ people as unique and roles as per-session is the People lens's long-term goal.
       version 3.
     - **Undo**: records the person, so undoing a pick points back, undoing a new person
       returns the slot to unknown, and redo points at the same new person.
-    - **Not yet built:** the hover ✕ (needs a sticky `cleared` state), rename in place on
-      the picker's row, `mA?`/`mB?` letters, the picker on the transcript and dashboard,
+    - **Not yet built:** ~~the hover ✕~~ and ~~the `mA?`/`mB?` letters~~ (both built the
+      same day, point 14), rename in place on the picker's row, the picker on the
+      transcript and dashboard,
       and the list offering only people confirmed at least once (§J8.10): it still offers
       every moderator or observer any session points at.
 
@@ -3178,3 +3179,22 @@ people as unique and roles as per-session is the People lens's long-term goal.
     wrong speaker, and a moderator's words shown as the participant's quote (in the Quotes
     lens or on a signal card). Both need transcript edits that survive a re-run (roadmap
     Layer 9); §B9's quote-card half is the design for the second.
+
+14. **Built 6 Oct 2026 — the ✕ and the letters.**
+    - **Not this person.** The current row's ✕ (on hover in the web picker and the Mac
+      popover; Delete or Backspace on the selected current row in both) sends `clear`.
+      The slot returns to unknown with state `cleared`, which the importer treats like
+      `confirmed`: a re-run does not propose the refused name again (§C5's sticky
+      `cleared`, at last). Undo points the slot back at the person; Edit ▸ Undo says
+      *Undo Clear Name*. Only a moderator or observer the slot points at can be cleared;
+      a participant's code is never unknown. The Mac reply is `{"kind": "clear"}`,
+      naming nobody (bridge contract version 4).
+    - **`mA?` / `mB?`.** Lettered in the one resolver (`speaker_slots.lettered`), so every
+      route — grid, transcript, export, MCP overview — reads the same code. The grid's
+      grey italic name follows: *Moderator A*, *Observer B*. **One refinement to point 9,
+      forced by its own rule:** "a named speaker leaves the others' letters unchanged"
+      only holds if the letter is the slot's place among *all* that role's speakers in
+      the session, not among the unknown ones. So letters appear whenever a session has
+      two or more speakers of a role, on whichever of them are unknown: a Teams-named
+      `m1` beside an unidentified second moderator reads `mB?`, not `m?`. One speaker of
+      a role is still plain `m?`.

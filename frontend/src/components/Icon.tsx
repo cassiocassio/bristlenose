@@ -14,6 +14,8 @@
 const PATHS = {
   /** A menu's current answer: short left leg, long right leg, as a Mac menu's. */
   check: "M2 8.5 6 12.5 14 3.5",
+  /** "Not this person": clears a speaker back to unknown (the person picker). */
+  x: "M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5",
 } as const;
 
 export type IconName = keyof typeof PATHS;

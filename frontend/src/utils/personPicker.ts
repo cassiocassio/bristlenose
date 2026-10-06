@@ -40,10 +40,12 @@ export interface PersonPickerRow {
  * - `confirm`: yes to the name the slot holds;
  * - `person`: this slot is that person;
  * - `new`: someone new for this slot, by this name;
- * - `name`: a participant's name (a participant is never picked).
+ * - `name`: a participant's name (a participant is never picked);
+ * - `clear`: not this person — the slot returns to unknown (§J8.8).
  */
 export type PersonPickerChoice =
   | { kind: "confirm" }
+  | { kind: "clear" }
   | { kind: "person"; row: PersonPickerRow }
   | { kind: "new"; name: string }
   | { kind: "name"; name: string };
@@ -120,6 +122,25 @@ export function personPickerTyped(slot: PersonPickerSlot, name: string): PersonP
   return slot.role === "participant" ? { kind: "name", name: trimmed } : { kind: "new", name: trimmed };
 }
 
+/** A picker label with its `{{name}}` filled — the labels leave it open
+ *  because the Mac picker fills it too. */
+export function withName(template: string, name: string): string {
+  return template.replace("{{name}}", name);
+}
+
+/** Whether the slot's current answer can be refused with the ✕: a moderator
+ *  or observer the slot points at. A participant's code is never unknown. */
+export function personPickerCanClear(slot: PersonPickerSlot): boolean {
+  return slot.role !== "participant" && !!slot.person && !!slot.name;
+}
+
+/** The letter an unknown moderator or observer goes by (`mA?` → "A"), or null
+ *  for `m?` and every known code (design-people.md §J8.9). */
+export function unknownLetter(code: string): string | null {
+  const m = /^[mo]([A-Z]+)\?$/.exec(code);
+  return m ? m[1] : null;
+}
+
 /** The speaker roles in their segment order. */
 export const PICKER_ROLES: PickerRole[] = ["moderator", "participant", "observer"];
 
@@ -144,6 +165,9 @@ export interface PersonPickerLabels {
   /** "There's already a {{name}}…" — the web picker's refusal of a taken name
    *  (§J8.11), with `{{name}}` left for the caller. */
   nameTaken: string;
+  /** "Not {{name}}" — the ✕ on the current row, with `{{name}}` left for the
+   *  caller. */
+  notThisPerson: string;
 }
 
 /** The picker's strings for one slot. */
@@ -167,6 +191,7 @@ export function personPickerLabels(slot: PersonPickerSlot, t: TFunction): Person
     menu: t("sessions.editName", { code: slot.code }),
     proposed: personPickerProposedLabel(slot, t),
     nameTaken: t("sessions.picker.nameTaken", { name: "{{name}}", interpolation: { escapeValue: false } }),
+    notThisPerson: t("sessions.picker.notThisPerson", { name: "{{name}}", interpolation: { escapeValue: false } }),
   };
 }
 

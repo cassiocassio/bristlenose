@@ -138,7 +138,9 @@
     "speakerPlaceholder": {
       "moderator": "Moderatore",
       "participant": "Partecipante",
-      "observer": "Osservatore"
+      "observer": "Osservatore",
+      "moderatorLettered": "Moderatore {{letter}}",
+      "observerLettered": "Osservatore {{letter}}"
     },
     "picker": {
       "role": "Ruolo",
@@ -147,7 +149,8 @@
       "newNameFor": "Nuovo nome per {{code}}",
       "thatsMe": "Sono io ({{name}})",
       "proposedName": "{{code}}, nome proposto {{name}}",
-      "nameTaken": "{{name}} \u00e8 gi\u00e0 nell\u2019elenco. Scegli quella persona o aggiungi qualcosa per distinguere le due."
+      "nameTaken": "{{name}} \u00e8 gi\u00e0 nell\u2019elenco. Scegli quella persona o aggiungi qualcosa per distinguere le due.",
+      "notThisPerson": "Non \u00e8 {{name}}"
     },
     "failedToLoad": "Impossibile caricare le sessioni: {{error}}",
     "loading": "Caricamento delle sessioni…"
@@ -647,7 +650,8 @@
       "editQuote": "Annulla Modifica citazione",
       "renameSection": "Annulla Rinomina sezione",
       "renameTheme": "Annulla Rinomina tema",
-      "editDescription": "Annulla Modifica descrizione"
+      "editDescription": "Annulla Modifica descrizione",
+      "clearName": "Annulla Cancella nome"
     },
     "redo": {
       "renameModerator": "Ripristina Rinomina moderatore",
@@ -663,7 +667,8 @@
       "editQuote": "Ripristina Modifica citazione",
       "renameSection": "Ripristina Rinomina sezione",
       "renameTheme": "Ripristina Rinomina tema",
-      "editDescription": "Ripristina Modifica descrizione"
+      "editDescription": "Ripristina Modifica descrizione",
+      "clearName": "Ripristina Cancella nome"
     }
   }
 }

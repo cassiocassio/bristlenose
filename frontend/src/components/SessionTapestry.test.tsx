@@ -130,6 +130,31 @@ describe("SessionTapestry — keyboard, focus and contrast", () => {
 });
 
 describe("SessionTapestry — the quote popover", () => {
+  it("claims Esc before the app's global shortcuts", () => {
+    const global = vi.fn();
+    document.addEventListener("keydown", global); // the app's cascade listens in the bubble phase
+    const { bars } = setup();
+    fireEvent.click(bars()[0]);
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(screen.queryByText("That was easy to find")).not.toBeInTheDocument();
+    expect(global).not.toHaveBeenCalled();
+    fireEvent.keyDown(document.body, { key: "Escape" }); // nothing open: Esc goes on to the app
+    expect(global).toHaveBeenCalledTimes(1);
+    document.removeEventListener("keydown", global);
+  });
+
+  it("stands aside while a modal holds the page", () => {
+    const root = document.createElement("div");
+    root.id = "bn-app-root";
+    document.body.appendChild(root);
+    const { bars } = setup();
+    fireEvent.click(bars()[0]);
+    (root as HTMLElement & { inert: boolean }).inert = true;
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(screen.getByText("That was easy to find")).toBeInTheDocument();
+    root.remove();
+  });
+
   it("closes from its X", () => {
     const { bars } = setup();
     fireEvent.click(bars()[0]);

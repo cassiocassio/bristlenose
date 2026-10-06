@@ -105,7 +105,8 @@
 .bn-tp-bar.sel { stroke: var(--bn-colour-text); stroke-width: 1.25; }
 /* Focus is its own ring, so a keyboard user can tell it from the selection. */
 .bn-tp-bar:focus-visible { stroke: var(--bn-colour-accent); stroke-width: 2; }
-.bn-tp-bar.dim { opacity: 0.25; }
+/* 0.4, not lower: a dimmed bar is still a control and must keep 3:1 (WCAG 1.4.11). */
+.bn-tp-bar.dim { opacity: 0.4; }
 .bn-tp-unrated { fill: var(--bn-colour-muted); }
 
 .bn-tp-span { fill: var(--bn-colour-muted); opacity: 0.5; }

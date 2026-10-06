@@ -161,20 +161,26 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump, initi
   // the arrow fall through to the slice's horizontal scroll.
   useEffect(() => {
     if (selected < 0) return;
+    // Capture phase, like the modals: an open quote claims Esc before the app's global
+    // cascade (selection, search) can spend it. A modal over the page wins: it makes the
+    // app root inert, and then the timeline stands aside.
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.metaKey || e.altKey || e.ctrlKey) return;
+      if ((document.getElementById("bn-app-root") as (HTMLElement & { inert?: boolean }) | null)?.inert) return;
       const tgt = e.target as HTMLElement | null;
       if (tgt?.closest?.("input, textarea, select, [contenteditable='true']")) return;
       if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
         e.preventDefault();
+        e.stopPropagation();
         choose(Math.max(0, Math.min(s.quotes.length - 1, selected + (e.key === "ArrowRight" ? 1 : -1))));
       } else if (e.key === "Escape") {
         e.preventDefault();
+        e.stopPropagation();
         setSelected(-1);
       }
     };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
     // choose is stable in behaviour; selected and the quote count are the inputs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, s.quotes.length]);

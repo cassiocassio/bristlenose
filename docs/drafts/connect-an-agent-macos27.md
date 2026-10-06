@@ -88,11 +88,11 @@ switch cuts Claude off from every project.
 If you installed with pipx or uv, reinstall with the extra:
 
 ```
-pipx install --force 'bristlenose[serve,mcp]'
+pipx install --force 'bristlenose[mcp]'
 ```
 
 ```
-uv tool install --force 'bristlenose[serve,mcp]'
+uv tool install --force 'bristlenose[mcp]'
 ```
 
 If you installed with pip, run `pip install 'bristlenose[mcp]'` in the same

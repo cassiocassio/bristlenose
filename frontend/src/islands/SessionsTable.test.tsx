@@ -1,3 +1,4 @@
+import { resetNativePicker } from "../utils/speakerPicking";
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import {
   act,
@@ -787,6 +788,36 @@ describe("SessionsTable person picker", () => {
     delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_NATIVE_PERSON_PICKER__;
     delete (window as unknown as Record<string, unknown>).webkit;
     _resetEmbeddedCache();
+    resetNativePicker();
+  });
+
+  /** Open the Mac app's picker on one speaker, as a click in the app does,
+   *  then send what native would answer. A reply nobody asked for is ignored. */
+  async function nativeReply(index: number, choice: Record<string, unknown>, sessionId: string) {
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_NATIVE_PERSON_PICKER__ = true;
+    _resetEmbeddedCache();
+    const postMessage = vi.fn();
+    (window as unknown as Record<string, unknown>).webkit = { messageHandlers: { navigation: { postMessage } } };
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[index]);
+    await waitFor(() => expect(postMessage.mock.calls.some(([m]) => m.type === "person-picker")).toBe(true));
+    window.dispatchEvent(new CustomEvent("bn:menu-action", {
+      detail: { action: "personPickerChoose", payload: { sessionId, code: "m1", choice } },
+    }));
+  }
+
+  it("a native reply nobody asked for is ignored", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    window.dispatchEvent(new CustomEvent("bn:menu-action", {
+      detail: { action: "personPickerChoose", payload: { sessionId: "s2", code: "m1", choice: { kind: "new", name: "Mike" } } },
+    }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(puts()).toHaveLength(0);
   });
 
   it("draws a proposed name with the dotted ring and the grey name", async () => {
@@ -942,12 +973,7 @@ describe("SessionsTable person picker", () => {
   });
 
   it("native picking the slot's own proposed name is a yes, not a rename", async () => {
-    mockPicker();
-    render(<SessionsTable projectId="1" />);
-    await screen.findByText("#1");
-    window.dispatchEvent(new CustomEvent("bn:menu-action", {
-      detail: { action: "personPickerChoose", payload: { sessionId: "s1", code: "m1", choice: { kind: "name", name: "Sarah" } } },
-    }));
+    await nativeReply(0, { kind: "name", name: "Sarah" }, "s1");
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
     expect((puts()[0].body as { confirmed?: boolean }).confirmed).toBe(true);
@@ -957,38 +983,25 @@ describe("SessionsTable person picker", () => {
   });
 
   it("native picking the slot's own confirmed name sends nothing", async () => {
-    mockPicker();
-    render(<SessionsTable projectId="1" />);
-    await screen.findByText("#1");
-    window.dispatchEvent(new CustomEvent("bn:menu-action", {
-      detail: { action: "personPickerChoose", payload: { sessionId: "s2", code: "m1", choice: { kind: "name", name: "Kerri" } } },
-    }));
+    await nativeReply(1, { kind: "name", name: "Kerri" }, "s2");
     // Give the on-demand bridge module time to load and answer.
     await new Promise((r) => setTimeout(r, 50));
     expect(puts()).toHaveLength(0);
   });
 
   it("native's choice comes back as a menu action and is applied", async () => {
-    mockPicker();
-    render(<SessionsTable projectId="1" />);
-    await screen.findByText("#1");
-    window.dispatchEvent(new CustomEvent("bn:menu-action", {
-      detail: { action: "personPickerChoose", payload: { sessionId: "s2", code: "m1", choice: { kind: "new", name: "Mike" } } },
-    }));
+    await nativeReply(1, { kind: "new", name: "Mike" }, "s2");
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0].url).toContain("/sessions/s2/speakers/m1");
     expect(puts()[0].body).toMatchObject({ create: true, full_name: "Mike", short_name: "Mike", confirmed: true });
     expect(typeof (puts()[0].body as { person?: unknown }).person).toBe("string");
-    expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Sarah", "Mike"]);
+    await waitFor(() =>
+      expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Sarah", "Mike"]),
+    );
   });
 
   it("native's typed name another moderator goes by is refused, and nothing is written (§J8.11)", async () => {
-    mockPicker();
-    render(<SessionsTable projectId="1" />);
-    await screen.findByText("#1");
-    window.dispatchEvent(new CustomEvent("bn:menu-action", {
-      detail: { action: "personPickerChoose", payload: { sessionId: "s2", code: "m1", choice: { kind: "new", name: "sarah" } } },
-    }));
+    await nativeReply(1, { kind: "new", name: "sarah" }, "s2");
     await new Promise((r) => setTimeout(r, 50));
     expect(puts()).toHaveLength(0);
     expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Sarah", "Kerri"]);

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { Dashboard } from "./Dashboard";
 import type { DashboardResponse } from "../utils/types";
 
@@ -245,5 +245,22 @@ describe("Dashboard stat-card destinations", () => {
     );
     expect(card).toBeTruthy();
     expect(card!.getAttribute("href")).toBe("/report/signals/#section-x-sentiment");
+  });
+});
+
+describe("Dashboard sessions table — the person picker (design-people.md §J8.7)", () => {
+  it("each speaker is the picker's button, and a write re-reads the dashboard", async () => {
+    mockFetch(baseDashboard);
+    render(<Dashboard projectId="1" />);
+    await waitFor(() => expect(screen.getByTestId("bn-speaker-trigger-m1")).toBeTruthy());
+    expect(screen.getByTestId("bn-speaker-trigger-p1").closest(".bn-session-speakers")).not.toBeNull();
+
+    mockFetch(baseDashboard);
+    const before = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+    window.dispatchEvent(new CustomEvent("bn:speakers-written"));
+    await waitFor(() =>
+      expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(before + 1),
+    );
+    expect(String((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[before][0])).toContain("/dashboard");
   });
 });

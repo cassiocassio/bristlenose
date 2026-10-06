@@ -672,3 +672,29 @@ describe("TranscriptPage", () => {
     expect(screen.getByTestId("session-label").textContent).toContain("Session 1");
   });
 });
+
+describe("TranscriptPage — the person picker (design-people.md §J8.7)", () => {
+  it("names the speaker from the header, the roles line or any paragraph", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-roles")).toBeTruthy());
+    const header = screen.getByTestId("transcript-header-people");
+    const roles = screen.getByTestId("transcript-roles");
+    // Header and roles line: reachable by Tab.
+    expect(header.querySelector('[data-testid="bn-speaker-trigger-p1"]')?.getAttribute("tabindex")).toBe("0");
+    expect(roles.querySelector('[data-testid="bn-speaker-trigger-m1"]')?.getAttribute("tabindex")).toBe("0");
+    // Paragraphs: a click target each, never a Tab stop each.
+    const paragraphs = document.querySelectorAll(".segment-speaker .bn-person-picker-trigger");
+    expect(paragraphs.length).toBeGreaterThan(0);
+    paragraphs.forEach((b) => expect(b.getAttribute("tabindex")).toBe("-1"));
+  });
+
+  it("re-reads the transcript when a speaker write has landed", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-roles")).toBeTruthy());
+    const before = mockedGetTranscript.mock.calls.length;
+    window.dispatchEvent(new CustomEvent("bn:speakers-written"));
+    await waitFor(() => expect(mockedGetTranscript.mock.calls.length).toBe(before + 1));
+  });
+});

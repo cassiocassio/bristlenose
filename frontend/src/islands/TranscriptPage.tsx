@@ -17,6 +17,8 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import i18n from "../i18n";
 import { JourneyChain, PersonBadge, TimecodeLink } from "../components";
+import { SpeakerPickerTrigger } from "../components/SpeakerPickerTrigger";
+import { useSpeakersChanged } from "../hooks/useSpeakersChanged";
 import { Annotation } from "../components/Annotation";
 import type { AnnotationTag } from "../components/Annotation";
 import { Selector } from "../components/Selector";
@@ -220,14 +222,15 @@ function renderSessionItem(s: SessionListItem): React.ReactNode {
 // ---------------------------------------------------------------------------
 
 /** Render a list of speakers as badge + name fragments with Oxford-comma joining. */
-function oxfordJoin(people: TranscriptSpeakerResponse[]): React.ReactNode[] {
+function oxfordJoin(people: TranscriptSpeakerResponse[], sessionId: string): React.ReactNode[] {
   return people.map((sp, i) => {
     const badgeRole = sp.code.startsWith("m")
       ? "moderator" as const
       : "observer" as const;
     const person = (
       <span key={sp.code} className="bn-transcript-roles__person">
-        <PersonBadge
+        <SpeakerPickerTrigger
+          sessionId={sessionId}
           code={sp.code}
           role={badgeRole}
           name={sp.name !== sp.code ? sp.name : undefined}
@@ -247,6 +250,7 @@ function oxfordJoin(people: TranscriptSpeakerResponse[]): React.ReactNode[] {
 function renderSessionRoles(
   speakers: TranscriptSpeakerResponse[],
   t: TFunction,
+  sessionId: string,
 ): React.ReactNode | null {
   const moderators = speakers.filter((s) => s.role === "researcher");
   const observers = speakers.filter((s) => s.role === "observer");
@@ -259,7 +263,7 @@ function renderSessionRoles(
           {moderators.length === 1
             ? `${t("transcript.moderator")} `
             : `${t("transcript.moderators")} `}
-          {oxfordJoin(moderators)}
+          {oxfordJoin(moderators, sessionId)}
         </span>
       )}
       {moderators.length > 0 && observers.length > 0 && ", "}
@@ -272,7 +276,7 @@ function renderSessionRoles(
             : (observers.length === 1
                 ? `${t("transcript.observer")} `
                 : `${t("transcript.observers")} `)}
-          {oxfordJoin(observers)}
+          {oxfordJoin(observers, sessionId)}
         </span>
       )}
     </div>
@@ -306,6 +310,12 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       })
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  // Re-read after a speaker is named, picked or cleared — here or by undo.
+  const reloadTranscript = useCallback(() => {
+    getTranscript(sessionId).then(setData).catch(() => undefined);
+  }, [sessionId]);
+  useSpeakersChanged(reloadTranscript);
 
   // Fetch session list for dropdown
   useEffect(() => {
@@ -471,8 +481,9 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
             data-testid="transcript-header-people"
           >
             {participants.map((sp) => (
-              <PersonBadge
+              <SpeakerPickerTrigger
                 key={sp.code}
+                sessionId={sessionId}
                 code={sp.code}
                 role="participant"
                 name={sp.name !== sp.code ? sp.name : undefined}
@@ -492,7 +503,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       </div>
 
       {/* Session roles — moderator/observer line (scrolls away naturally) */}
-      {renderSessionRoles(speakers, t)}
+      {renderSessionRoles(speakers, t, sessionId)}
 
       {/* Transcript body */}
       <section
@@ -592,9 +603,14 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                 </span>
               )}
               <span className="segment-speaker" data-participant={seg.speaker_code}>
-                <PersonBadge
+                {/* The same picker as the header's (owner, 6 Oct 2026): naming
+                    from a paragraph names the speaker everywhere. A click
+                    target, not a Tab stop per paragraph. */}
+                <SpeakerPickerTrigger
+                  sessionId={sessionId}
                   code={seg.speaker_code}
-                  role={seg.is_moderator ? "moderator" : "participant"}
+                  role={seg.speaker_code.startsWith("o") ? "observer" : seg.is_moderator ? "moderator" : "participant"}
+                  tabbable={false}
                 />
               </span>
               <div className="segment-body">

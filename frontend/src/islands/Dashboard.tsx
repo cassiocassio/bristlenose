@@ -10,13 +10,15 @@
  * falling back to vanilla JS globals for legacy island mode.
  */
 
-import { useContext, useEffect, useState, useMemo } from "react";
+import { useCallback, useContext, useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge, PersonBadge, TimecodeLink } from "../components";
 import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet } from "../utils/api";
 import { reportHref } from "../utils/reportHref";
 import { refetchOverlayProps } from "../hooks/useRefetching";
+import { useSpeakersChanged } from "../hooks/useSpeakersChanged";
+import { SpeakerPickerTrigger } from "../components/SpeakerPickerTrigger";
 import { formatDurationHuman, formatFinderDate, formatFinderFilename, formatTimecode } from "../utils/format";
 import type {
   CoverageResponse,
@@ -306,8 +308,9 @@ function CompactSessionRow({
       </td>
       <td className="bn-session-speakers">
         {speakers.map((sp) => (
-          <PersonBadge
+          <SpeakerPickerTrigger
             key={sp.speaker_code}
+            sessionId={session_id}
             code={sp.speaker_code}
             role={sp.role as "participant" | "moderator" | "observer"}
             name={sp.name || undefined}
@@ -651,6 +654,12 @@ export function Dashboard({ projectId, refreshKey = 0 }: DashboardProps) {
       .catch((err: Error) => setError(err.message))
       .finally(() => setIsRefetching(false));
   }, [projectId, refreshKey]);
+
+  // Re-read after a speaker is named, picked or cleared — here or by undo.
+  const reloadDashboard = useCallback(() => {
+    apiGet<DashboardResponse>("/dashboard").then(setData).catch(() => undefined);
+  }, []);
+  useSpeakersChanged(reloadDashboard);
 
   if (error) {
     return (

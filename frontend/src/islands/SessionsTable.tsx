@@ -39,9 +39,18 @@ import {
   type SpeakerNameState,
 } from "../utils/peopleChanged";
 import { nameSpeaker, speakerWritesSettled } from "../utils/speakerNames";
-import { toast } from "../utils/toast";
+import {
+  hasNativePersonPicker,
+  knownPeopleOf,
+  nameStateOf,
+  openNativePicker,
+  pickerRoleOf,
+  refuseTakenName,
+  slotOf,
+  stateAfter,
+} from "../utils/speakerPicking";
 import type { PersonData } from "../utils/api";
-import { postPersonPicker, postProjectAction } from "../shims/bridge";
+import { postProjectAction } from "../shims/bridge";
 import { isEmbedded } from "../utils/embedded";
 import { isExportMode } from "../utils/exportData";
 import { formatDurationHuman, formatFinderDate, formatFinderFilename } from "../utils/format";
@@ -54,15 +63,7 @@ import { refetchOverlayProps } from "../hooks/useRefetching";
 const PersonPickerPopover = lazy(() =>
   import("../components/PersonPicker").then((m) => ({ default: m.PersonPickerPopover })),
 );
-const loadPickerBridge = () => import("../utils/personPickerBridge");
 
-/** Whether the host draws its own picker. The Mac app says so by setting this
- *  flag in the web view; without it — the browser, or an app build from
- *  before the native picker — the web picker opens, so a click never sends a
- *  message nothing answers. */
-function hasNativePersonPicker(): boolean {
-  return (window as unknown as Record<string, unknown>).__BRISTLENOSE_NATIVE_PERSON_PICKER__ === true;
-}
 
 // ---------------------------------------------------------------------------
 // Sentiment → Sparkline mapping
@@ -77,45 +78,6 @@ const SENTIMENT_ORDER = [
   "delight",
   "satisfaction",
 ];
-
-/** The picker's role for a speaker code (the code prefix is the role; the
- *  stored moderator role is "researcher", never "moderator"). */
-function pickerRoleOf(code: string): PickerRole {
-  if (code.startsWith("m")) return "moderator";
-  if (code.startsWith("o")) return "observer";
-  return "participant";
-}
-
-/** How a write addresses a speaker: the slot code (`m1`, this session's
- *  first moderator), not the identity code the badge shows (`m2`). A pick
- *  can renumber identities, so a display code is never an address
- *  (docs/design-people.md §H H9, Phase 1). */
-function slotOf(sp: SpeakerResponse): string {
-  return sp.slot_code ?? sp.speaker_code;
-}
-
-/** The people known for each role across the study, in first-seen order —
- *  what a picker offers (`personPickerRows`). A moderator or observer is one
- *  row per person; a participant per name. */
-function knownPeopleOf(data: SessionsListResponse | null): Record<PickerRole, PersonPickerRow[]> {
-  const known: Record<PickerRole, PersonPickerRow[]> = { moderator: [], participant: [], observer: [] };
-  for (const sess of data?.sessions ?? []) {
-    for (const sp of sess.speakers) {
-      if (!sp.name) continue;
-      const list = known[pickerRoleOf(sp.speaker_code)];
-      const key = sp.person || `name:${sp.name}`;
-      if (list.some((r) => (r.person || `name:${r.name}`) === key)) continue;
-      list.push({
-        name: sp.name,
-        code: sp.speaker_code,
-        person: sp.person || undefined,
-        full_name: sp.full_name,
-        short_name: sp.short_name,
-      });
-    }
-  }
-  return known;
-}
 
 /**
  * Placeholder role word shown (muted/italic) when a speaker has no identified
@@ -274,13 +236,7 @@ export function SessionsTable({
   const slotState = useCallback((sessionId: string, code: string): SpeakerNameState | null => {
     const sess = dataRef.current?.sessions.find((s) => s.session_id === sessionId);
     const sp = sess?.speakers.find((x) => slotOf(x) === code);
-    if (!sp) return null;
-    return {
-      full_name: sp.full_name,
-      short_name: sp.short_name ?? sp.name,
-      confirmed: sp.name_confirmed !== false,
-      ...(isSessionScopedCode(code) ? { person: sp.person || undefined } : {}),
-    };
+    return sp ? nameStateOf(sp) : null;
   }, []);
 
   /** Draw a slot's state. A participant code is study-wide, so every session
@@ -365,11 +321,7 @@ export function SessionsTable({
     return () => window.removeEventListener(PEOPLE_CHANGED_EVENT, onChanged);
   }, [drawSlot]);
 
-  /** A name another person already goes by, refused aloud (§J8.11). */
-  const refuseTaken = useCallback(
-    (name: string) => toast(t("sessions.picker.nameTaken", { name }), 5000),
-    [t],
-  );
+  const refuseTaken = refuseTakenName;
 
   /** The rows a slot's picker offers, from the grid as it is now. */
   const rowsFor = useCallback((sessionId: string, code: string) => {
@@ -416,67 +368,20 @@ export function SessionsTable({
     [renameSlot, rowsFor, refuseTaken],
   );
 
-  // A pick, a new person or a confirm from either picker (§J8, answer 2).
-  // A pick writes the person's own names back unchanged; someone new gets a
-  // client-made uuid, so a redo finds the same person.
+  // A pick, a new person, a confirm or a clear, from either picker. What each
+  // means is the shared rule (stateAfter); a participant's typed name goes the
+  // pencil's way, which refuses a taken one.
   const applyPickerChoice = useCallback(
     (sessionId: string, speakerCode: string, choice: PersonPickerChoice) => {
-      if (choice.kind === "confirm") {
-        renameSlot(sessionId, speakerCode, (before) => ({ ...before, confirmed: true }));
-      } else if (choice.kind === "clear") {
-        // Not this person: the slot holds nobody, and the server keeps it so.
-        renameSlot(sessionId, speakerCode, () => ({ full_name: "", short_name: "", confirmed: false }));
-      } else if (choice.kind === "name") {
+      if (choice.kind === "name") {
         handleNameCommit(sessionId, speakerCode, choice.name);
-      } else if (choice.kind === "person") {
-        const { row } = choice;
-        renameSlot(sessionId, speakerCode, () => ({
-          person: row.person,
-          full_name: row.full_name,
-          short_name: row.short_name ?? row.name,
-          confirmed: true,
-        }));
-      } else {
-        renameSlot(sessionId, speakerCode, () => ({
-          person: crypto.randomUUID(),
-          create: true,
-          full_name: choice.name,
-          short_name: choice.name,
-          confirmed: true,
-        }));
+        return;
       }
+      renameSlot(sessionId, speakerCode, (before) => stateAfter(choice, before));
     },
     [renameSlot, handleNameCommit],
   );
 
-  // The Mac app's native picker answers through the menu-action channel with
-  // a name and which row it came from; resolvePersonPickerChoice decides what
-  // it means by the web picker's own rules, against the grid as it is now.
-  useEffect(() => {
-    // The native picker carries the code its badge showed — the identity's —
-    // so it is turned back into the slot's address against the grid as it is.
-    const speakerFor = (sessionId: string, code: string) =>
-      dataRef.current?.sessions
-        .find((s) => s.session_id === sessionId)
-        ?.speakers.find((x) => x.speaker_code === code);
-    const slotFor = (sessionId: string, code: string) => {
-      const sp = speakerFor(sessionId, code);
-      return sp ? rowsFor(sessionId, slotOf(sp)) : null;
-    };
-    const handler = (e: Event) => {
-      const { action, payload } = (e as CustomEvent<{ action: string; payload?: unknown }>).detail;
-      if (action !== "personPickerChoose") return;
-      void loadPickerBridge().then(({ resolvePersonPickerChoice }) => {
-        const pick = resolvePersonPickerChoice(payload, slotFor);
-        const sp = pick ? speakerFor(pick.sessionId, pick.code) : undefined;
-        if (!pick || !sp) return;
-        if ("taken" in pick) refuseTaken(pick.taken);
-        else applyPickerChoice(pick.sessionId, slotOf(sp), pick.choice);
-      });
-    };
-    window.addEventListener("bn:menu-action", handler);
-    return () => window.removeEventListener("bn:menu-action", handler);
-  }, [applyPickerChoice, rowsFor, refuseTaken]);
 
   if (error) {
     return (
@@ -520,10 +425,21 @@ export function SessionsTable({
   const openPicker = (sessionId: string, slot: PersonPickerSlot, anchor: HTMLElement) => {
     if (isExportMode()) return;
     if (embedded && hasNativePersonPicker()) {
-      const rect = anchor.getBoundingClientRect();
-      const known = knownPeople[slot.role];
-      void loadPickerBridge().then(({ buildPersonPickerMessage }) =>
-        postPersonPicker(buildPersonPickerMessage(sessionId, slot, known, rect, t)),
+      // Native answers as a menu action, handed back to this grid's rule.
+      const sp = data.sessions
+        .find((s) => s.session_id === sessionId)
+        ?.speakers.find((x) => x.speaker_code === slot.code);
+      if (!sp) return;
+      openNativePicker(
+        {
+          sessionId,
+          code: slot.code,
+          slot,
+          known: knownPeople[slot.role],
+          apply: (choice) => applyPickerChoice(sessionId, slotOf(sp), choice),
+          refuse: refuseTaken,
+        },
+        anchor,
       );
     } else {
       // A second click on the badge closes it, as a menu button does.

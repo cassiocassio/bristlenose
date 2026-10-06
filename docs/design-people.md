@@ -3170,8 +3170,8 @@ people as unique and roles as per-session is the People lens's long-term goal.
     - **Undo**: records the person, so undoing a pick points back, undoing a new person
       returns the slot to unknown, and redo points at the same new person.
     - **Not yet built:** ~~the hover ✕~~ and ~~the `mA?`/`mB?` letters~~ (both built the
-      same day, point 14), rename in place on the picker's row, the picker on the
-      transcript and dashboard,
+      same day, point 14), rename in place on the picker's row, ~~the picker on the
+      transcript and dashboard~~ (built the same day, point 15),
       and the list offering only people confirmed at least once (§J8.10): it still offers
       every moderator or observer any session points at.
 
@@ -3198,3 +3198,24 @@ people as unique and roles as per-session is the People lens's long-term goal.
       two or more speakers of a role, on whichever of them are unknown: a Teams-named
       `m1` beside an unidentified second moderator reads `mB?`, not `m?`. One speaker of
       a role is still plain `m?`.
+
+15. **Built 6 Oct 2026 — the picker on the transcript and the dashboard.**
+    - **Where:** the transcript's sticky header (participants), its moderator and observer
+      line, and every paragraph's badge; the project dashboard's sessions table. Each is
+      the same picker, opening on the speaker's current role; an unknown speaker opens in
+      the field. Paragraph badges are click targets but not Tab stops — a long transcript
+      would otherwise be hundreds of them; the header and roles line are reachable by Tab.
+      An exported report draws the badges plain.
+    - **How:** `components/SpeakerPickerTrigger.tsx` reads the speaker fresh from
+      `/sessions` when it opens (the transcript and dashboard payloads name a speaker but
+      carry no slot address, person or flag), and applies the choice through the same
+      rule the grid uses (`utils/speakerPicking.ts`: `stateAfter`, the duplicate-name
+      refusal, `nameSpeaker`). The surface re-reads its own data once the write, or its
+      undo, has landed (`hooks/useSpeakersChanged.ts`) — it does not draw optimistically,
+      because a pick can renumber codes.
+    - **The Mac picker answers whoever opened it.** Native replies used to go to the
+      Sessions grid's own listener; with three surfaces that would have answered the wrong
+      one, or none. `openNativePicker` keeps the one open request and hands the reply to
+      its opener; a reply nobody asked for is ignored. The grid uses it too.
+    - **Still open:** whether opening the picker from a paragraph should say it changes
+      the speaker, not the paragraph (point 10). Nothing in the picker says so yet.

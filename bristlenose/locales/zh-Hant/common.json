@@ -630,7 +630,8 @@
       "renameSection": "還原重新命名區段",
       "renameTheme": "還原重新命名主題",
       "editDescription": "還原編輯說明",
-      "clearName": "\u9084\u539f\u6e05\u9664\u540d\u7a31"
+      "clearName": "\u9084\u539f\u6e05\u9664\u540d\u7a31",
+      "changeRole": "\u9084\u539f\u8b8a\u66f4\u89d2\u8272"
     },
     "redo": {
       "renameModerator": "重做重新命名主持人",
@@ -647,7 +648,8 @@
       "renameSection": "重做重新命名區段",
       "renameTheme": "重做重新命名主題",
       "editDescription": "重做編輯說明",
-      "clearName": "\u91cd\u505a\u6e05\u9664\u540d\u7a31"
+      "clearName": "\u91cd\u505a\u6e05\u9664\u540d\u7a31",
+      "changeRole": "\u91cd\u505a\u8b8a\u66f4\u89d2\u8272"
     }
   }
 }

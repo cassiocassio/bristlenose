@@ -660,7 +660,8 @@
       "renameSection": "Bölümün Adını Değiştirmeyi Geri Al",
       "renameTheme": "Temanın Adını Değiştirmeyi Geri Al",
       "editDescription": "Açıklamayı Düzenlemeyi Geri Al",
-      "clearName": "Ad\u0131 Temizlemeyi Geri Al"
+      "clearName": "Ad\u0131 Temizlemeyi Geri Al",
+      "changeRole": "Rol\u00fc De\u011fi\u015ftirmeyi Geri Al"
     },
     "redo": {
       "renameModerator": "Moderatörün Adını Değiştirmeyi Yinele",
@@ -677,7 +678,8 @@
       "renameSection": "Bölümün Adını Değiştirmeyi Yinele",
       "renameTheme": "Temanın Adını Değiştirmeyi Yinele",
       "editDescription": "Açıklamayı Düzenlemeyi Yinele",
-      "clearName": "Ad\u0131 Temizlemeyi Yinele"
+      "clearName": "Ad\u0131 Temizlemeyi Yinele",
+      "changeRole": "Rol\u00fc De\u011fi\u015ftirmeyi Yinele"
     }
   }
 }

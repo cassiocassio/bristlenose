@@ -660,7 +660,8 @@
       "renameSection": "Desfés el canvi de nom de la secció",
       "renameTheme": "Desfés el canvi de nom del tema",
       "editDescription": "Desfés l’edició de la descripció",
-      "clearName": "Desf\u00e9s la supressi\u00f3 del nom"
+      "clearName": "Desf\u00e9s la supressi\u00f3 del nom",
+      "changeRole": "Desf\u00e9s el canvi de rol"
     },
     "redo": {
       "renameModerator": "Refés el canvi de nom del moderador",
@@ -677,7 +678,8 @@
       "renameSection": "Refés el canvi de nom de la secció",
       "renameTheme": "Refés el canvi de nom del tema",
       "editDescription": "Refés l’edició de la descripció",
-      "clearName": "Ref\u00e9s la supressi\u00f3 del nom"
+      "clearName": "Ref\u00e9s la supressi\u00f3 del nom",
+      "changeRole": "Ref\u00e9s el canvi de rol"
     }
   }
 }

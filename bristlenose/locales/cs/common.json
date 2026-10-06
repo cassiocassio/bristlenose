@@ -723,7 +723,8 @@
       "renameSection": "Odvolat akci Přejmenovat sekci",
       "renameTheme": "Odvolat akci Přejmenovat téma",
       "editDescription": "Odvolat akci Upravit popis",
-      "clearName": "Odvolat akci Vymazat jm\u00e9no"
+      "clearName": "Odvolat akci Vymazat jm\u00e9no",
+      "changeRole": "Odvolat akci Zm\u011bnit roli"
     },
     "redo": {
       "renameModerator": "Opakovat akci Přejmenovat moderátora",
@@ -740,7 +741,8 @@
       "renameSection": "Opakovat akci Přejmenovat sekci",
       "renameTheme": "Opakovat akci Přejmenovat téma",
       "editDescription": "Opakovat akci Upravit popis",
-      "clearName": "Opakovat akci Vymazat jm\u00e9no"
+      "clearName": "Opakovat akci Vymazat jm\u00e9no",
+      "changeRole": "Opakovat akci Zm\u011bnit roli"
     }
   }
 }

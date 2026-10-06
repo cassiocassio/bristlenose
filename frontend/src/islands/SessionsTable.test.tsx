@@ -660,7 +660,7 @@ describe("SessionsTable moderators are named per session", () => {
     await waitFor(() => expect(putCalls()).toHaveLength(1));
     const puts = putCalls();
     expect(puts[0].url).toMatch(/\/sessions\/s2\/speakers\/m1$/);
-    expect(puts[0].body).toEqual({ person: "id-jo", short_name: "Joanna", confirmed: true });
+    expect(puts[0].body).toEqual({ person: "id-jo", short_name: "Joanna", confirmed: true, kind: "moderator" });
   });
 
   it("Edit ▸ Undo puts the session's moderator back, name and flag", async () => {
@@ -680,7 +680,7 @@ describe("SessionsTable moderators are named per session", () => {
     expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Martin", "Jo"]);
     expect(putCalls()[1].url).toMatch(/\/sessions\/s2\/speakers\/m1$/);
     // The fixture's slot carries no flag, which the grid reads as confirmed.
-    expect(putCalls()[1].body).toEqual({ person: "id-jo", short_name: "Jo", confirmed: true });
+    expect(putCalls()[1].body).toEqual({ person: "id-jo", short_name: "Jo", confirmed: true, kind: "moderator" });
 
     await act(async () => {
       await redo();
@@ -874,7 +874,7 @@ describe("SessionsTable person picker", () => {
     fireEvent.keyDown(await pickerMenu(), { key: "Enter" });
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
-    expect(puts()[0].body).toEqual({ person: "id-sarah", short_name: "Sarah", confirmed: true });
+    expect(puts()[0].body).toEqual({ person: "id-sarah", short_name: "Sarah", confirmed: true, kind: "moderator" });
     expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("bn-person-proposed")).toBe(false);
   });
 
@@ -891,7 +891,7 @@ describe("SessionsTable person picker", () => {
       await undo();
     });
     expect(puts()[1].url).toContain("/sessions/s1/speakers/m1");
-    expect(puts()[1].body).toEqual({ person: "id-sarah", short_name: "Sarah", confirmed: false });
+    expect(puts()[1].body).toEqual({ person: "id-sarah", short_name: "Sarah", confirmed: false, kind: "moderator" });
     expect(screen.getAllByTestId("bn-picker-trigger-m1")[0].classList.contains("bn-person-proposed")).toBe(true);
     expect(screen.getAllByTestId("bn-name-m1")[0].textContent).toBe("Sarah");
   });
@@ -917,7 +917,7 @@ describe("SessionsTable person picker", () => {
     fireEvent.click(kerri);
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
-    expect(puts()[0].body).toEqual({ person: "id-kerri", short_name: "Kerri", confirmed: true });
+    expect(puts()[0].body).toEqual({ person: "id-kerri", short_name: "Kerri", confirmed: true, kind: "moderator" });
     expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Kerri", "Kerri"]);
   });
 
@@ -1024,7 +1024,7 @@ describe("SessionsTable person picker", () => {
       await undo();
     });
     await waitFor(() => expect(puts()).toHaveLength(2));
-    expect(puts()[1].body).toEqual({ person: "id-kerri", short_name: "Kerri", confirmed: true });
+    expect(puts()[1].body).toEqual({ person: "id-kerri", short_name: "Kerri", confirmed: true, kind: "moderator" });
   });
 
   it("two unknown moderators read Moderator A and Moderator B (§J8.9)", async () => {
@@ -1085,7 +1085,26 @@ describe("SessionsTable person picker", () => {
     fireEvent.keyDown(field, { key: "Enter" });
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0].url).toContain("/sessions/s2/speakers/m1");
-    expect(puts()[0].body).toEqual({ person: "id-kerri", short_name: "Keri", confirmed: true });
+    expect(puts()[0].body).toEqual({ person: "id-kerri", short_name: "Keri", confirmed: true, kind: "moderator" });
+  });
+
+  it("recoding a moderator as an observer is one write with the role, and undo puts it back (§J7 R1)", async () => {
+    mockPicker();
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[1]);
+    const picker = await pickerMenu();
+    fireEvent.click(picker.querySelectorAll<HTMLButtonElement>(".dimension-btn")[2]);
+    fireEvent.click(picker.querySelectorAll<HTMLElement>(".export-dropdown-item")[0]);
+    await waitFor(() => expect(puts()).toHaveLength(1));
+    expect(puts()[0].url).toContain("/sessions/s2/speakers/m1");
+    expect(puts()[0].body).toEqual({ person: "id-kerri", short_name: "Kerri", confirmed: true, kind: "observer" });
+    expect(getUndoState().undoAction).toBe("changeRole");
+    await act(async () => {
+      await undo();
+    });
+    await waitFor(() => expect(puts()).toHaveLength(2));
+    expect(puts()[1].body).toMatchObject({ person: "id-kerri", kind: "moderator" });
   });
 
   it("the pencil cannot give a moderator someone else's name (§J8.11)", async () => {

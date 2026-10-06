@@ -650,7 +650,8 @@
       "renameSection": "取り消す - セクションの名称変更",
       "renameTheme": "取り消す - テーマの名称変更",
       "editDescription": "取り消す - 説明の編集",
-      "clearName": "\u53d6\u308a\u6d88\u3059 - \u540d\u524d\u306e\u6d88\u53bb"
+      "clearName": "\u53d6\u308a\u6d88\u3059 - \u540d\u524d\u306e\u6d88\u53bb",
+      "changeRole": "\u53d6\u308a\u6d88\u3059 - \u5f79\u5272\u306e\u5909\u66f4"
     },
     "redo": {
       "renameModerator": "やり直す - モデレーターの名称変更",
@@ -667,7 +668,8 @@
       "renameSection": "やり直す - セクションの名称変更",
       "renameTheme": "やり直す - テーマの名称変更",
       "editDescription": "やり直す - 説明の編集",
-      "clearName": "\u3084\u308a\u76f4\u3059 - \u540d\u524d\u306e\u6d88\u53bb"
+      "clearName": "\u3084\u308a\u76f4\u3059 - \u540d\u524d\u306e\u6d88\u53bb",
+      "changeRole": "\u3084\u308a\u76f4\u3059 - \u5f79\u5272\u306e\u5909\u66f4"
     }
   }
 }

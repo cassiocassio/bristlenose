@@ -660,7 +660,8 @@
       "renameSection": "Angre navneendring for seksjon",
       "renameTheme": "Angre navneendring for tema",
       "editDescription": "Angre redigering av beskrivelse",
-      "clearName": "Angre fjerning av navn"
+      "clearName": "Angre fjerning av navn",
+      "changeRole": "Angre rolleendring"
     },
     "redo": {
       "renameModerator": "Utfør navneendring for moderator likevel",
@@ -677,7 +678,8 @@
       "renameSection": "Utfør navneendring for seksjon likevel",
       "renameTheme": "Utfør navneendring for tema likevel",
       "editDescription": "Utfør redigering av beskrivelse likevel",
-      "clearName": "Utf\u00f8r fjerning av navn likevel"
+      "clearName": "Utf\u00f8r fjerning av navn likevel",
+      "changeRole": "Utf\u00f8r rolleendring likevel"
     }
   }
 }

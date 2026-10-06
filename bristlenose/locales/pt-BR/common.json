@@ -660,7 +660,8 @@
       "renameSection": "Desfazer Renomear seção",
       "renameTheme": "Desfazer Renomear tema",
       "editDescription": "Desfazer Editar descrição",
-      "clearName": "Desfazer Limpar nome"
+      "clearName": "Desfazer Limpar nome",
+      "changeRole": "Desfazer Alterar papel"
     },
     "redo": {
       "renameModerator": "Refazer Renomear moderador",
@@ -677,7 +678,8 @@
       "renameSection": "Refazer Renomear seção",
       "renameTheme": "Refazer Renomear tema",
       "editDescription": "Refazer Editar descrição",
-      "clearName": "Refazer Limpar nome"
+      "clearName": "Refazer Limpar nome",
+      "changeRole": "Refazer Alterar papel"
     }
   }
 }

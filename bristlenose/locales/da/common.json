@@ -660,7 +660,8 @@
       "renameSection": "Fortryd Omdøb afsnit",
       "renameTheme": "Fortryd Omdøb tema",
       "editDescription": "Fortryd Rediger beskrivelse",
-      "clearName": "Fortryd Ryd navn"
+      "clearName": "Fortryd Ryd navn",
+      "changeRole": "Fortryd Skift rolle"
     },
     "redo": {
       "renameModerator": "Gentag Omdøb moderator",
@@ -677,7 +678,8 @@
       "renameSection": "Gentag Omdøb afsnit",
       "renameTheme": "Gentag Omdøb tema",
       "editDescription": "Gentag Rediger beskrivelse",
-      "clearName": "Gentag Ryd navn"
+      "clearName": "Gentag Ryd navn",
+      "changeRole": "Gentag Skift rolle"
     }
   }
 }

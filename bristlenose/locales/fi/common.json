@@ -660,7 +660,8 @@
       "renameSection": "Peru osion uudelleennimeäminen",
       "renameTheme": "Peru teeman uudelleennimeäminen",
       "editDescription": "Peru kuvauksen muokkaus",
-      "clearName": "Peru nimen poistaminen"
+      "clearName": "Peru nimen poistaminen",
+      "changeRole": "Peru roolin vaihtaminen"
     },
     "redo": {
       "renameModerator": "Nimeä moderaattori sittenkin uudelleen",
@@ -677,7 +678,8 @@
       "renameSection": "Nimeä osio sittenkin uudelleen",
       "renameTheme": "Nimeä teema sittenkin uudelleen",
       "editDescription": "Muokkaa kuvausta sittenkin",
-      "clearName": "Poista nimi sittenkin"
+      "clearName": "Poista nimi sittenkin",
+      "changeRole": "Vaihda rooli sittenkin"
     }
   }
 }

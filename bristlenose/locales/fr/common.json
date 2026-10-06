@@ -660,7 +660,8 @@
       "renameSection": "Annuler le changement de nom de la section",
       "renameTheme": "Annuler le changement de nom du thème",
       "editDescription": "Annuler la modification de la description",
-      "clearName": "Annuler l\u2019effacement du nom"
+      "clearName": "Annuler l\u2019effacement du nom",
+      "changeRole": "Annuler le changement de r\u00f4le"
     },
     "redo": {
       "renameModerator": "Rétablir le changement de nom de l’animateur",
@@ -677,7 +678,8 @@
       "renameSection": "Rétablir le changement de nom de la section",
       "renameTheme": "Rétablir le changement de nom du thème",
       "editDescription": "Rétablir la modification de la description",
-      "clearName": "R\u00e9tablir l\u2019effacement du nom"
+      "clearName": "R\u00e9tablir l\u2019effacement du nom",
+      "changeRole": "R\u00e9tablir le changement de r\u00f4le"
     }
   }
 }

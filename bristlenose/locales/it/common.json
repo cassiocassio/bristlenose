@@ -660,7 +660,8 @@
       "renameSection": "Annulla Rinomina sezione",
       "renameTheme": "Annulla Rinomina tema",
       "editDescription": "Annulla Modifica descrizione",
-      "clearName": "Annulla Cancella nome"
+      "clearName": "Annulla Cancella nome",
+      "changeRole": "Annulla Cambia ruolo"
     },
     "redo": {
       "renameModerator": "Ripristina Rinomina moderatore",
@@ -677,7 +678,8 @@
       "renameSection": "Ripristina Rinomina sezione",
       "renameTheme": "Ripristina Rinomina tema",
       "editDescription": "Ripristina Modifica descrizione",
-      "clearName": "Ripristina Cancella nome"
+      "clearName": "Ripristina Cancella nome",
+      "changeRole": "Ripristina Cambia ruolo"
     }
   }
 }

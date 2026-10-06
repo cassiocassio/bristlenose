@@ -734,7 +734,8 @@
       "renameSection": "Cofnij zmianę nazwy sekcji",
       "renameTheme": "Cofnij zmianę nazwy tematu",
       "editDescription": "Cofnij edycję opisu",
-      "clearName": "Cofnij usuni\u0119cie imienia"
+      "clearName": "Cofnij usuni\u0119cie imienia",
+      "changeRole": "Cofnij zmian\u0119 roli"
     },
     "redo": {
       "renameModerator": "Przywróć zmianę imienia moderatora",
@@ -751,7 +752,8 @@
       "renameSection": "Przywróć zmianę nazwy sekcji",
       "renameTheme": "Przywróć zmianę nazwy tematu",
       "editDescription": "Przywróć edycję opisu",
-      "clearName": "Przywr\u00f3\u0107 usuni\u0119cie imienia"
+      "clearName": "Przywr\u00f3\u0107 usuni\u0119cie imienia",
+      "changeRole": "Przywr\u00f3\u0107 zmian\u0119 roli"
     }
   }
 }

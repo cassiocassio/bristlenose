@@ -283,7 +283,11 @@ export function SessionsTable({
     const current = dataRef.current?.sessions
       .find((sess) => sess.session_id === sessionId)
       ?.speakers.find((sp) => slotOf(sp) === code);
-    const repointed = sessionScoped && (current?.person || undefined) !== (state.person || undefined);
+    const currentKind = current?.speaker_code.startsWith("o") ? "observer" : "moderator";
+    const repointed =
+      sessionScoped &&
+      ((current?.person || undefined) !== (state.person || undefined) ||
+        (!!state.kind && state.kind !== currentKind));
     const named = (sp: SpeakerResponse) => ({
       ...sp,
       name: state.short_name || state.full_name || "",
@@ -368,7 +372,12 @@ export function SessionsTable({
       confirmed: !(sp.name && sp.name_confirmed === false),
       person: sp.person || undefined,
     };
-    return { slot, known: knownPeopleOf(dataRef.current)[slot.role] };
+    const byRole = knownPeopleOf(dataRef.current);
+    // A name is taken by any moderator or observer, whichever role (§J8.11).
+    return {
+      slot,
+      known: slot.role === "participant" ? byRole.participant : [...byRole.moderator, ...byRole.observer],
+    };
   }, []);
 
   // The pencil: a spelling fix for whoever the slot is, everywhere they
@@ -920,6 +929,7 @@ function SessionRow({
                   <PersonPickerPopover
                     slot={slot}
                     known={knownPeople[slot.role]}
+                    knownByRole={knownPeople}
                     t={t}
                     onChoose={(choice) => onPickerChoose(session_id, slotOf(sp), choice)}
                     onClose={onPickerClose}

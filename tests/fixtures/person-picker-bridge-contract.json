@@ -77,7 +77,11 @@
           "menu": "Edit name for m1",
           "proposed": "m1, proposed name Martin B Storey",
           "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart.",
-          "notThisPerson": "Not {{name}}"
+          "notThisPerson": "Not {{name}}",
+          "newPromptFor": {
+            "moderator": "New moderator",
+            "observer": "New observer"
+          }
         }
       }
     },
@@ -141,7 +145,11 @@
           "menu": "Edit name for p3",
           "proposed": null,
           "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart.",
-          "notThisPerson": "Not {{name}}"
+          "notThisPerson": "Not {{name}}",
+          "newPromptFor": {
+            "moderator": "New moderator",
+            "observer": "New observer"
+          }
         }
       }
     }

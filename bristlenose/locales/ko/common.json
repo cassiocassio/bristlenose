@@ -630,7 +630,8 @@
       "renameSection": "섹션 이름 변경 실행 취소",
       "renameTheme": "테마 이름 변경 실행 취소",
       "editDescription": "설명 편집 실행 취소",
-      "clearName": "\uc774\ub984 \uc9c0\uc6b0\uae30 \uc2e4\ud589 \ucde8\uc18c"
+      "clearName": "\uc774\ub984 \uc9c0\uc6b0\uae30 \uc2e4\ud589 \ucde8\uc18c",
+      "changeRole": "\uc5ed\ud560 \ubcc0\uacbd \uc2e4\ud589 \ucde8\uc18c"
     },
     "redo": {
       "renameModerator": "진행자 이름 변경 복귀",
@@ -647,7 +648,8 @@
       "renameSection": "섹션 이름 변경 복귀",
       "renameTheme": "테마 이름 변경 복귀",
       "editDescription": "설명 편집 복귀",
-      "clearName": "\uc774\ub984 \uc9c0\uc6b0\uae30 \ubcf5\uadc0"
+      "clearName": "\uc774\ub984 \uc9c0\uc6b0\uae30 \ubcf5\uadc0",
+      "changeRole": "\uc5ed\ud560 \ubcc0\uacbd \ubcf5\uadc0"
     }
   }
 }

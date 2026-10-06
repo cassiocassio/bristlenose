@@ -660,7 +660,8 @@
       "renameSection": "Ångra Byt namn på avsnitt",
       "renameTheme": "Ångra Byt namn på tema",
       "editDescription": "Ångra Redigera beskrivning",
-      "clearName": "\u00c5ngra Rensa namn"
+      "clearName": "\u00c5ngra Rensa namn",
+      "changeRole": "\u00c5ngra Byt roll"
     },
     "redo": {
       "renameModerator": "Gör om Byt namn på moderator",
@@ -677,7 +678,8 @@
       "renameSection": "Gör om Byt namn på avsnitt",
       "renameTheme": "Gör om Byt namn på tema",
       "editDescription": "Gör om Redigera beskrivning",
-      "clearName": "G\u00f6r om Rensa namn"
+      "clearName": "G\u00f6r om Rensa namn",
+      "changeRole": "G\u00f6r om Byt roll"
     }
   }
 }

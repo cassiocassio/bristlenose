@@ -660,7 +660,8 @@
       "renameSection": "Herstel naam sectie wijzigen",
       "renameTheme": "Herstel naam thema wijzigen",
       "editDescription": "Herstel beschrijving bewerken",
-      "clearName": "Herstel naam wissen"
+      "clearName": "Herstel naam wissen",
+      "changeRole": "Herstel rol wijzigen"
     },
     "redo": {
       "renameModerator": "Opnieuw naam moderator wijzigen",
@@ -677,7 +678,8 @@
       "renameSection": "Opnieuw naam sectie wijzigen",
       "renameTheme": "Opnieuw naam thema wijzigen",
       "editDescription": "Opnieuw beschrijving bewerken",
-      "clearName": "Opnieuw naam wissen"
+      "clearName": "Opnieuw naam wissen",
+      "changeRole": "Opnieuw rol wijzigen"
     }
   }
 }

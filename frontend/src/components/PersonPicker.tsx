@@ -35,13 +35,15 @@ import {
   personPickerNameTaken,
   personPickerNewCode,
   personPickerRenamed,
-  personPickerRows,
+  personPickerRolesOpen,
+  personPickerRowsForRole,
   personPickerTyped,
   withName,
   type PersonPickerChoice,
   type PersonPickerLabels,
   type PersonPickerRow,
   type PersonPickerSlot,
+  type PickerRole,
 } from "../utils/personPicker";
 
 const NEW = "\u0000new";
@@ -51,6 +53,9 @@ interface PersonPickerProps {
   /** People known for this slot's role across the study (`personPickerRows`
    *  filters and orders them). */
   known: PersonPickerRow[];
+  /** The people of the other roles, for browsing them to recode the speaker
+   *  (§J7 R1). Without it the other role segments stay disabled. */
+  knownByRole?: Partial<Record<PickerRole, PersonPickerRow[]>>;
   /** Its strings, localised by the caller (`personPickerLabels`): the same
    *  object the Mac app's native picker receives. */
   labels: PersonPickerLabels;
@@ -58,11 +63,21 @@ interface PersonPickerProps {
   onClose: () => void;
 }
 
-export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonPickerProps) {
-  const people = personPickerRows(slot, known);
+export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClose }: PersonPickerProps) {
+  // The role being looked at. A segment click only browses (§J8.10): nothing
+  // is written until a name is chosen under it.
+  const [browsing, setBrowsing] = useState<PickerRole>(slot.role);
+  const recoding = browsing !== slot.role;
+  const knownFor = (role: PickerRole) => (role === slot.role ? known : knownByRole?.[role] ?? []);
+  const everyone = [...known, ...Object.entries(knownByRole ?? {})
+    .filter(([role]) => role !== slot.role && role !== "participant")
+    .flatMap(([, rows]) => rows ?? [])];
+  const people = personPickerRowsForRole(slot, browsing, knownFor(browsing));
   const keyOf = (r: PersonPickerRow) => r.person ?? `name:${r.name}`;
   const rows = [...people.map(keyOf), NEW];
-  const own = people.find((r) => (slot.person ? r.person === slot.person : r.name === slot.name));
+  const own = recoding
+    ? undefined
+    : people.find((r) => (slot.person ? r.person === slot.person : r.name === slot.name));
   // The selection opens on the current answer. With no answer there is nothing
   // to confirm, so the cursor starts in the new-person field (§J8.10) — and a
   // single Return there, empty, does nothing.
@@ -73,7 +88,7 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
   const [renaming, setRenaming] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
   const renameRef = useRef<HTMLInputElement>(null);
-  const newCode = personPickerNewCode(slot, people);
+  const newCode = personPickerNewCode({ ...slot, role: browsing }, people);
   const menuRef = useRef<HTMLUListElement>(null);
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
   const typed = useRef({ buffer: "", at: 0 });
@@ -120,7 +135,7 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
     if (!row) return;
     // The current, confirmed answer has nothing to choose, so a click or
     // Return on it is the rename, the way Finder renames a selected name.
-    if (personPickerCanRename(slot, row)) {
+    if (!recoding && personPickerCanRename(slot, row)) {
       if (!renaming) {
         setRenameDraft(row.name);
         setTaken(null);
@@ -128,11 +143,11 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
       }
       return;
     }
-    finish(personPickerChoice(slot, row));
+    finish(personPickerChoice(slot, row, browsing));
   };
 
   const submitRename = () => {
-    const clash = personPickerNameTaken(slot, known, renameDraft);
+    const clash = personPickerNameTaken(slot, everyone, renameDraft);
     if (clash) {
       setTaken(clash);
       return;
@@ -149,12 +164,12 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
   };
 
   const submitDraft = () => {
-    const clash = personPickerNameTaken(slot, known, draft);
+    const clash = personPickerNameTaken(slot, everyone, draft);
     if (clash) {
       setTaken(clash);
       return;
     }
-    finish(personPickerTyped(slot, draft));
+    finish(personPickerTyped(slot, draft, browsing));
   };
 
   const dismiss = () => {
@@ -181,6 +196,13 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
       if (selected && selected !== NEW) choose(selected);
     }
     else if (e.key === "Escape") { handled(); dismiss(); }
+    else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && knownByRole && open.length > 1) {
+      // Left and right move between the roles a recode can browse (§J7 R1),
+      // since the segments themselves take no Tab stop.
+      handled();
+      const i = open.indexOf(browsing);
+      browse(open[(i + (e.key === "ArrowRight" ? 1 : open.length - 1)) % open.length]);
+    }
     else if ((e.key === "Delete" || e.key === "Backspace") && own && selected === keyOf(own)) {
       if (personPickerCanClear(slot)) { handled(); finish({ kind: "clear" }); }
     }
@@ -196,7 +218,17 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
     }
   };
 
-  const newPrompt = labels.newPrompt;
+  const newPrompt = (recoding && labels.newPromptFor?.[browsing]) || labels.newPrompt;
+  const open = personPickerRolesOpen(slot);
+  const browse = (role: PickerRole) => {
+    if (role === browsing) return;
+    setBrowsing(role);
+    setDraft("");
+    setTaken(null);
+    setRenaming(false);
+    const first = personPickerRowsForRole(slot, role, knownFor(role))[0];
+    setSelected(first ? keyOf(first) : NEW);
+  };
 
   return (
     <ul
@@ -213,10 +245,11 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
             <button
               key={r}
               type="button"
-              className={`dimension-btn${r === slot.role ? " active" : ""}`}
+              className={`dimension-btn${r === browsing ? " active" : ""}`}
               role="radio"
-              aria-checked={r === slot.role}
-              disabled={r !== slot.role}
+              aria-checked={r === browsing}
+              disabled={r !== slot.role && (!open.includes(r) || !knownByRole)}
+              onClick={() => browse(r)}
               tabIndex={-1}
             >
               {labels.roles[r]}

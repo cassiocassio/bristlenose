@@ -660,7 +660,8 @@
       "renameSection": "Deshacer cambio de nombre de la sección",
       "renameTheme": "Deshacer cambio de nombre del tema",
       "editDescription": "Deshacer edición de la descripción",
-      "clearName": "Deshacer borrado del nombre"
+      "clearName": "Deshacer borrado del nombre",
+      "changeRole": "Deshacer cambio de rol"
     },
     "redo": {
       "renameModerator": "Rehacer cambio de nombre del moderador",
@@ -677,7 +678,8 @@
       "renameSection": "Rehacer cambio de nombre de la sección",
       "renameTheme": "Rehacer cambio de nombre del tema",
       "editDescription": "Rehacer edición de la descripción",
-      "clearName": "Rehacer borrado del nombre"
+      "clearName": "Rehacer borrado del nombre",
+      "changeRole": "Rehacer cambio de rol"
     }
   }
 }

@@ -662,7 +662,8 @@
       "renameSection": "Undo Rename Section",
       "renameTheme": "Undo Rename Theme",
       "editDescription": "Undo Edit Description",
-      "clearName": "Undo Clear Name"
+      "clearName": "Undo Clear Name",
+      "changeRole": "Undo Change Role"
     },
     "redo": {
       "renameModerator": "Redo Rename Moderator",
@@ -679,7 +680,8 @@
       "renameSection": "Redo Rename Section",
       "renameTheme": "Redo Rename Theme",
       "editDescription": "Redo Edit Description",
-      "clearName": "Redo Clear Name"
+      "clearName": "Redo Clear Name",
+      "changeRole": "Redo Change Role"
     }
   }
 }

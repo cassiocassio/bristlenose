@@ -83,7 +83,7 @@ describe("SpeakerPickerTrigger", () => {
       fireEvent.click(kerri);
       await waitFor(() => expect(puts()).toHaveLength(1));
       expect(puts()[0].url).toMatch(/\/sessions\/s1\/speakers\/m1$/);
-      expect(puts()[0].body).toEqual({ person: "id-kerri", short_name: "Kerri", confirmed: true });
+      expect(puts()[0].body).toEqual({ person: "id-kerri", short_name: "Kerri", confirmed: true, kind: "moderator" });
       await waitFor(() => expect(written).toHaveBeenCalled());
     } finally {
       window.removeEventListener(SPEAKERS_WRITTEN_EVENT, written);

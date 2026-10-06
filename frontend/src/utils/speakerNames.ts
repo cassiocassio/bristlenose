@@ -33,6 +33,7 @@ export { PEOPLE_CHANGED_EVENT, type PeopleChangedDetail, type SpeakerNameState }
 /** The act, as Edit ▸ Undo names it (`undo.undo.<action>`). */
 export function actionFor(code: string, before: SpeakerNameState, after: SpeakerNameState): string {
   if (isSessionScopedCode(code) && before.person && !after.person) return "clearName";
+  if (before.kind && after.kind && before.kind !== after.kind) return "changeRole";
   const renamed =
     before.full_name !== after.full_name || before.short_name !== after.short_name;
   if (!renamed) return "confirmName";
@@ -46,7 +47,8 @@ function sameState(a: SpeakerNameState, b: SpeakerNameState): boolean {
     a.full_name === b.full_name &&
     a.short_name === b.short_name &&
     a.confirmed === b.confirmed &&
-    a.person === b.person
+    a.person === b.person &&
+    a.kind === b.kind
   );
 }
 
@@ -74,6 +76,7 @@ async function writeSlot(sessionId: string, code: string, state: SpeakerNameStat
         ? {
             person: state.person,
             ...(state.create ? { create: true } : {}),
+            ...(state.kind ? { kind: state.kind } : {}),
             full_name: state.full_name,
             short_name: state.short_name,
             confirmed: state.confirmed,

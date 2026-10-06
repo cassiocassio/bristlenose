@@ -93,6 +93,7 @@ export function SpeakerPickerTrigger({ sessionId, code, role, name, tabbable = t
           <PersonPickerPopover
             slot={open.slot}
             known={open.known}
+            knownByRole={open.knownByRole}
             t={t}
             onChoose={(choice) => applySpeakerChoice(open, choice)}
             onClose={() => setOpen(null)}

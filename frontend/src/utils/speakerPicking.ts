@@ -93,7 +93,9 @@ export function nameStateOf(sp: SpeakerResponse): SpeakerNameState {
     full_name: sp.full_name,
     short_name: sp.short_name ?? sp.name,
     confirmed: sp.name_confirmed !== false,
-    ...(isSessionScopedCode(slotOf(sp)) ? { person: sp.person || undefined } : {}),
+    ...(isSessionScopedCode(slotOf(sp))
+      ? { person: sp.person || undefined, kind: sp.speaker_code.startsWith("o") ? "observer" as const : "moderator" as const }
+      : {}),
   };
 }
 
@@ -120,6 +122,7 @@ export function stateAfter(
         full_name: choice.row.full_name,
         short_name: choice.row.short_name ?? choice.row.name,
         confirmed: true,
+        ...kindAfter(choice.role, before),
       };
     case "new":
       return {
@@ -128,8 +131,16 @@ export function stateAfter(
         full_name: choice.name,
         short_name: choice.name,
         confirmed: true,
+        ...kindAfter(choice.role, before),
       };
   }
+}
+
+/** The role a pick leaves the slot in: the one it was picked under, or the
+ *  one it had. Participants carry none (they are not recoded, §J7 R2). */
+function kindAfter(role: PickerRole | undefined, before: SpeakerNameState): Pick<SpeakerNameState, "kind"> {
+  if (role === "moderator" || role === "observer") return { kind: role };
+  return before.kind ? { kind: before.kind } : {};
 }
 
 /** A name another person already goes by, refused aloud (§J8.11). */
@@ -157,6 +168,8 @@ export interface SpeakerPickContext {
   before: SpeakerNameState;
   /** The people the picker offers for this speaker's role. */
   known: PersonPickerRow[];
+  /** Everyone, by role: what a recode browses (§J7 R1). */
+  knownByRole: Record<PickerRole, PersonPickerRow[]>;
 }
 
 /** The speaker a badge shows, from /sessions as it is now: the transcript's
@@ -167,7 +180,8 @@ export async function loadSpeakerContext(sessionId: string, code: string): Promi
   const sp = data.sessions.find((s) => s.session_id === sessionId)?.speakers.find((x) => x.speaker_code === code);
   if (!sp) return null;
   const slot = pickerSlotOf(sp);
-  return { sessionId, slotCode: slotOf(sp), slot, before: nameStateOf(sp), known: knownPeopleOf(data)[slot.role] };
+  const knownByRole = knownPeopleOf(data);
+  return { sessionId, slotCode: slotOf(sp), slot, before: nameStateOf(sp), known: knownByRole[slot.role], knownByRole };
 }
 
 /** Apply a choice to a speaker read by `loadSpeakerContext`, undoably, and
@@ -175,7 +189,8 @@ export async function loadSpeakerContext(sessionId: string, code: string): Promi
 export function applySpeakerChoice(ctx: SpeakerPickContext, choice: PersonPickerChoice): void {
   if (isExportMode()) return;
   if (choice.kind === "new" || choice.kind === "name") {
-    const clash = personPickerNameTaken(ctx.slot, ctx.known, choice.name);
+    const everyone = [...ctx.knownByRole.moderator, ...ctx.knownByRole.observer];
+    const clash = personPickerNameTaken(ctx.slot, ctx.slot.role === "participant" ? ctx.known : everyone, choice.name);
     if (clash) {
       refuseTakenName(clash);
       return;

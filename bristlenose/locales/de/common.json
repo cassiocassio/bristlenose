@@ -660,7 +660,8 @@
       "renameSection": "Abschnitt umbenennen widerrufen",
       "renameTheme": "Thema umbenennen widerrufen",
       "editDescription": "Beschreibung bearbeiten widerrufen",
-      "clearName": "Namen l\u00f6schen widerrufen"
+      "clearName": "Namen l\u00f6schen widerrufen",
+      "changeRole": "Rolle \u00e4ndern widerrufen"
     },
     "redo": {
       "renameModerator": "Moderator umbenennen wiederholen",
@@ -677,7 +678,8 @@
       "renameSection": "Abschnitt umbenennen wiederholen",
       "renameTheme": "Thema umbenennen wiederholen",
       "editDescription": "Beschreibung bearbeiten wiederholen",
-      "clearName": "Namen l\u00f6schen wiederholen"
+      "clearName": "Namen l\u00f6schen wiederholen",
+      "changeRole": "Rolle \u00e4ndern wiederholen"
     }
   }
 }

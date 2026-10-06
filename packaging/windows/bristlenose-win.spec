@@ -22,7 +22,6 @@ from PyInstaller.utils.hooks import (
     copy_metadata,
 )
 
-PROJECT_ROOT = os.path.abspath(os.path.join(SPECPATH, "..", ".."))
 # The package as installed in the build venv, so a wheel install works the same
 # as an editable one (data dirs come from wherever `bristlenose` resolves).
 PKG = os.path.dirname(_ilu.find_spec("bristlenose").origin)
@@ -61,7 +60,9 @@ def _pkg(*parts):
 
 a = Analysis(
     [os.path.join(SPECPATH, "entry.py")],
-    pathex=[PROJECT_ROOT],
+    # No repo root here (the Mac spec has one, for its editable install): it
+    # would put the checkout's bristlenose ahead of the wheel's in the bundle.
+    pathex=[],
     binaries=[
         *_CT2_BINARIES,
         *_SQLADMIN_BINARIES,

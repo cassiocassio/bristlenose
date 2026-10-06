@@ -105,6 +105,58 @@ begin
   RegWriteExpandStringValue(HKCU, EnvKey, 'Path', Path);
 end;
 
+// A running bristlenose.exe (serve, or a transcription) holds its files open.
+// Restart Manager cannot always close it: for a non-admin user RmGetList
+// failed on Windows Server 2025, the exe could not be replaced, and the
+// rollback left bristlenose.exe without _internal, which [InstallDelete] had
+// already removed. So refuse up front, before anything is touched, rather than
+// kill what may be a long transcription.
+//
+// The test is the lock itself: Windows refuses a write open of a running
+// image, for any user. A WMI process query was tried first and failed open,
+// because a non-admin user can be refused WMI access ("SWbemLocator: Access
+// denied", measured over SSH on Windows Server 2025).
+function BristlenoseRunning(): Boolean;
+var
+  Exe: string;
+  Stream: TFileStream;
+begin
+  Result := False;
+  Exe := ExpandConstant('{app}\bristlenose.exe');
+  if not FileExists(Exe) then
+    exit;
+  try
+    Stream := TFileStream.Create(Exe, fmOpenReadWrite or fmShareExclusive);
+    Stream.Free;
+  except
+    Log('bristlenose.exe is in use: ' + GetExceptionMessage);
+    Result := True;
+  end;
+end;
+
+function RunningMessage(): String;
+begin
+  Result := 'Bristlenose is running (bristlenose serve, or a transcription). ' +
+    'Stop it, then run this again.';
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
+  if BristlenoseRunning() then
+    Result := RunningMessage;
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+  Result := True;
+  if BristlenoseRunning() then
+  begin
+    SuppressibleMsgBox(RunningMessage, mbError, MB_OK, IDOK);
+    Result := False;
+  end;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then

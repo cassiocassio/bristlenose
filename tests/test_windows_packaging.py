@@ -81,3 +81,26 @@ def test_the_manifest_templates_use_only_what_the_build_fills() -> None:
     for template in (WIN / "winget").glob("*.yaml"):
         used = set(re.findall(r"\$\{([A-Z_0-9]+)\}", template.read_text(encoding="utf-8")))
         assert used and used <= filled, (template.name, used - filled)
+
+
+def test_the_build_packages_the_wheel_not_the_checkout() -> None:
+    """Run from the repo root, a cwd or repo-root entry on sys.path makes the
+    bundle carry the working tree instead of the released wheel (found on the
+    acceptance box, 6 Oct 2026)."""
+    spec = (WIN / "bristlenose-win.spec").read_text(encoding="utf-8")
+    assert "pathex=[]" in spec and "PROJECT_ROOT" not in spec
+    build = (WIN / "build.ps1").read_text(encoding="utf-8")
+    assert '& $py -P -c "import bristlenose' in build
+    assert 'Run $py @("-P", "-m", "PyInstaller"' in build
+
+
+def test_the_installer_refuses_while_bristlenose_runs() -> None:
+    """Restart Manager could not close a running serve for a non-admin user, and
+    the aborted upgrade left bristlenose.exe without _internal. The check must be
+    the file lock: a WMI query was refused to that user and failed open."""
+    iss = (WIN / "bristlenose.iss").read_text(encoding="utf-8")
+    assert "fmOpenReadWrite or fmShareExclusive" in iss
+    assert "SWbemLocator')" not in iss
+    for hook in ("function PrepareToInstall", "function InitializeUninstall"):
+        body = iss.split(hook, 1)[1].split("\nend;", 1)[0]
+        assert "BristlenoseRunning()" in body, hook

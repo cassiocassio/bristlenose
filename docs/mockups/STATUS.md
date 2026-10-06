@@ -33,7 +33,7 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `analysis-failure-states.html` | 3 Sep 2026 | IMPLEMENTED — the popover half of the sidebar failure states; cited as the mockup (“16 states, real SF Symbols”) by `design-pipeline-diagnostic-popover.md`, and `ProjectDiagnosticPopover.swift` ships |
+| `analysis-failure-states.html` | 3 Sep 2026 | IMPLEMENTED — the *surface* ships (`ProjectDiagnosticPopover.swift`); cited as the mockup (“16 states, real SF Symbols”) by `design-pipeline-diagnostic-popover.md`. Its proposed three-part body (state · cause · action) and shortfall count do **not** ship — verified 6 Oct 2026, the popover still renders `degradedBody`/`bucketsBody` only; they are phases C/E of `design-project-condition.md`, so point at that doc for what is built |
 | `analysis-inspector-panel-v2.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · SUPERSEDED 19 Mar 2026 by `analysis-inspector-panel-v3.html` — second iteration |
 | `analysis-inspector-panel-v3.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · IMPLEMENTED — `InspectorPanel.tsx` ships |
 | `analysis-inspector-panel.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · SUPERSEDED 19 Mar 2026 by `analysis-inspector-panel-v2.html` — first iteration |

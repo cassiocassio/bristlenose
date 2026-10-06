@@ -481,6 +481,21 @@ native cover (`runCover` needs `.statusPage`). Keying the cover on the overlay
    three-part body", not decided. The POC makes it one environment switch
    (`_BRISTLENOSE_REPORT_POLICY=last-good-report`) and the mockup shows both.
    Default today: latest-attempt, which is what the server did at startup.
+
+   **Input from the 1-3 Sep 2026 design session**, which lived only in that
+   transcript until now. The owner leaned yes - show the last good report - with
+   one caveat: *if the failure is bad enough we probably have real reasons to
+   hide it; the data is bad in some way.* That caveat resolves by classifying the
+   **artefact, not the failure's severity**: serve the last good report when a
+   coherent one exists, degrade to the status page when it does not. A severity
+   taxonomy of failures would be a judgement machine someone has to maintain, and
+   would drift like every other hand-enumerated list in this repo; artefact
+   existence is mechanical and is most of what the reducer already computes.
+   Measured that week and **before** this work: a failed run wrote no
+   `run_completed`, the live serve re-imported only on that event, so the previous
+   analysis and its curation were untouched and the status page was the only thing
+   in front of them. `d367bcca` changed the watcher's trigger to the run id -
+   re-measure rather than quote that sentence.
 2. **Where should the database of a never-run project live?** Today: the
    interview folder's `.bristlenose/`. The resolver says `bristlenose-output/`,
    which `bristlenose run` refuses to start into if it already exists. Options:
@@ -489,6 +504,17 @@ native cover (`runCover` needs `.statusPage`). Keying the cover on the overlay
 3. **Sandbox liveness** (§4.4) — measure before phase C.
 4. **Copy for three pages that don't exist yet** — import failed with no earlier
    data, history unreadable, lost contact — phase E, with the cause table.
+5. **Does a failed run leave a partial stage set that the next serve start
+   ingests?** `_import_on_startup` (`server/app.py`) is unconditional - every
+   serve start calls `import_project` on whatever is on disk, with no terminus
+   check. F6 fixed a *failed import* being published as the data version, which
+   is a different question from whether the ingest runs at all. Unverified in
+   either direction: it depends on what a run abandoned mid-pipeline leaves in
+   `intermediate/` and how `import_project` upserts it. It matters because D4-B
+   rests on *a failed analysis leaves the project exactly as it was*, and a
+   restart is the one thing that could break that invariant. The check is to read
+   `import_project`'s upsert path against a half-written stage set. Raised 1-3 Sep
+   2026, not done.
 
 ---
 

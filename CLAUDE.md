@@ -1484,7 +1484,7 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** — shipping build **0.32.0 (4035)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+**Internal TestFlight since 14 Jul 2026** — shipping build **0.34.0 (4420)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
 
 **0.34.0 shipped 5 Oct 2026, evening — tag `v0.34.0` on `4c5855b5`, TestFlight
 build 4420, verified 9 of 9.** A minor: the CLI on Windows, the one-line installer

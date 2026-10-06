@@ -298,6 +298,42 @@ it can be inspected.
 > system needs three outcomes, not two.** A gate with two has to spend one of
 > them on both "no" and "I could not ask".
 
+> **6 Oct 2026 — incidents 35–38, from the 0.33.0 and 0.34.0 runs.** Three
+> closed the same night; the fourth is recorded open, unexamined.
+>
+> - **35 — Apple's Program License Agreement had lapsed (0.33.0).** The
+>   credential probe's `notarytool history` returned HTTP 403, *"a required
+>   agreement is missing or has expired"*, and the run stopped before any act.
+>   ✅ This is the probe doing its job: nothing was bumped, built or uploaded.
+>   The owner accepted the agreement and it cleared in about two minutes.
+> - **36 — the `.dmg`'s Swift suite failed on a locked screen (0.33.0).** The
+>   run held `caffeinate -i`, which stops idle *system* sleep and not *display*
+>   sleep; the display slept, the session locked, Core Animation stopped, and
+>   `SidebarFitHarnessTests` s05/s07/s08/s12/s20 failed exactly as
+>   `desktop/CLAUDE.md` predicts. ✅ `e53d17e7`: the run holds `caffeinate -d -i`.
+>   ⚠️ A lock pressed by hand still breaks them; `-d` only prevents the idle one.
+> - **37 — a dropped `.dmg` upload could never resume (0.34.0).** The shared
+>   host (load ~23) dropped rsync at 555 of 709 MB, and the retry re-sent all
+>   709. `upload-dmg.sh` used `--partial --inplace` precisely so a drop would
+>   resume, but its EXIT trap deleted the staging file on **any** failure,
+>   rsync's own included, so there was never a partial to resume — a design
+>   intention that had never once been exercised. ✅ `62a8c7dc`: a failed
+>   transfer keeps its partial (`staging_on_exit`), other failures still clean,
+>   and each run reaps other versions' partials (`stale_stagings`).
+>   `test-upload-dmg.sh` pins both, and reverting the keep rule fails exactly
+>   the new check.
+> - **38 — the strict-CI gate said "no run" for a run that existed (0.34.0).**
+>   `ci_await_verdict` reported *"no strict-CI run on main for 44fa367a — the
+>   dispatch did not take"* after three lookups, while `gh run list` showed
+>   that commit's `workflow_dispatch` run (`37352155082`) **in progress** the
+>   whole time. The run later failed on its merits, so nothing wrong shipped,
+>   and the next attempt's lookup found its run. ⚠️ **Open and unexamined** —
+>   the first suspect is the lookup's filter (branch, event or status) rather
+>   than the wire, since incident 34's fix already separates the two. Until
+>   it is read, treat a "no run" verdict as *cannot answer*, check
+>   `gh run list --workflow=ci.yml` by hand, and `release.sh retry <v>
+>   strict-ci` only if the run is genuinely absent.
+
 ---
 
 ## What this exercise changed

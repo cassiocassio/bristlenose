@@ -126,6 +126,15 @@
     "copyFolderPath": "拷貝檔案夾路徑",
     "showInFinder": "\u5728 Finder \u4e2d\u986f\u793a",
     "editName": "編輯 {{code}} 的名字",
+    "tapestry": {
+      "label": "\u5834\u6b21\u6642\u9593\u8ef8",
+      "toggle": "\u5834\u6b21 {{number}} \u7684\u6642\u9593\u8ef8",
+      "zoom": "\u6642\u9593\u8ef8\u7e2e\u653e",
+      "zoomIn": "\u653e\u5927",
+      "zoomOut": "\u7e2e\u5c0f",
+      "previousQuote": "\u4e0a\u4e00\u5247\u5f15\u8ff0",
+      "nextQuote": "\u4e0b\u4e00\u5247\u5f15\u8ff0"
+    },
     "speakerPlaceholder": {
       "moderator": "\u4e3b\u6301\u4eba",
       "participant": "\u53c3\u8207\u8005",

@@ -152,6 +152,15 @@
     "copyFolderPath": "Kopier mappebane",
     "showInFinder": "Vis i Finder",
     "editName": "Rediger navn for {{code}}",
+    "tapestry": {
+      "label": "\u00d8ktens tidslinje",
+      "toggle": "Tidslinje for \u00f8kt {{number}}",
+      "zoom": "Zoom i tidslinjen",
+      "zoomIn": "Zoom inn",
+      "zoomOut": "Zoom ut",
+      "previousQuote": "Forrige sitat",
+      "nextQuote": "Neste sitat"
+    },
     "failedToLoad": "Klarte ikke å laste inn økter: {{error}}",
     "loading": "Laster inn økter …"
   },

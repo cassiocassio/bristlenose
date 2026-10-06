@@ -152,6 +152,15 @@
     "copyFolderPath": "Kopiera mappsökväg",
     "showInFinder": "Visa i Finder",
     "editName": "Redigera namn för {{code}}",
+    "tapestry": {
+      "label": "Sessionens tidslinje",
+      "toggle": "Tidslinje f\u00f6r session {{number}}",
+      "zoom": "Zoomning av tidslinjen",
+      "zoomIn": "Zooma in",
+      "zoomOut": "Zooma ut",
+      "previousQuote": "F\u00f6reg\u00e5ende citat",
+      "nextQuote": "N\u00e4sta citat"
+    },
     "failedToLoad": "Kunde inte läsa in sessioner: {{error}}",
     "loading": "Läser in sessioner…"
   },

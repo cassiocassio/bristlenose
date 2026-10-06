@@ -153,6 +153,15 @@
     "copyFolderPath": "Kopiuj ścieżkę folderu",
     "showInFinder": "Poka\u017c w Finderze",
     "editName": "Edytuj imię dla {{code}}",
+    "tapestry": {
+      "label": "O\u015b czasu sesji",
+      "toggle": "O\u015b czasu sesji {{number}}",
+      "zoom": "Powi\u0119kszenie osi czasu",
+      "zoomIn": "Powi\u0119ksz",
+      "zoomOut": "Pomniejsz",
+      "previousQuote": "Poprzedni cytat",
+      "nextQuote": "Nast\u0119pny cytat"
+    },
     "speakerPlaceholder": {
       "moderator": "Moderator",
       "participant": "Uczestnik",

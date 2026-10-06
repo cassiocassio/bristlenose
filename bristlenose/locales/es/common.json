@@ -125,6 +125,15 @@
     "copyFolderPath": "Copiar ruta de carpeta",
     "showInFinder": "Mostrar en Finder",
     "editName": "Editar nombre de {{code}}",
+    "tapestry": {
+      "label": "L\u00ednea temporal de la sesi\u00f3n",
+      "toggle": "L\u00ednea temporal de la sesi\u00f3n {{number}}",
+      "zoom": "Zoom de la l\u00ednea temporal",
+      "zoomIn": "Ampliar",
+      "zoomOut": "Reducir",
+      "previousQuote": "Cita anterior",
+      "nextQuote": "Siguiente cita"
+    },
     "speakerPlaceholder": {
       "moderator": "Moderador",
       "participant": "Participante",

@@ -43,7 +43,12 @@ The clip colour is computed by `bristlenose/utils/scene_colour.py`, which `Pipel
 
 **The module's constants are the colour lab's defaults.** To retune, regenerate the lab, move the handles, then copy the new values into the module and into the `P` table at the top of `colour-lab.html` in the same commit. The lab still carries the per-speaker distinctness and same-scene handles. The pipeline doesn't use them, because the lab showed the picture never changes with who is speaking.
 
-Not wired yet: serve does not read the files, `analyze` (no video) and render-only runs don't compute them, and projects analysed before this change won't have them until their next `run`.
+**In the app (6 Oct 2026):** `GET /api/projects/{id}/tapestry` (`bristlenose/server/routes/tapestry.py`) serves every session's turns, section flags and quotes from the database, so hidden quotes, quote edits and heading renames apply. It matches each turn to a scene colour by time, so a speaker edit made in serve doesn't orphan the colours. The route is embedded in the HTML export. `frontend/src/components/SessionTapestry.tsx` draws it as a disclosure under each Sessions-grid row. The chevron sits in the ID cell, so the grid gains no column. The component is lazy-loaded; only `utils/tapestryScale.ts` is on first paint. The CSS is `bristlenose/theme/organisms/session-tapestry.css`.
+
+Not wired yet:
+- `analyze` (no video) and render-only runs don't compute colours.
+- Projects analysed before this change show neutral clips until their next `run`.
+- The zoom has no keyboard shortcut. ⌘+ and ⌘− are the browser's.
 
 ## Measured
 

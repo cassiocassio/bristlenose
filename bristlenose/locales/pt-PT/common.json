@@ -135,6 +135,15 @@
     "copyFolderPath": "Copiar caminho da pasta",
     "showInFinder": "Mostrar no Finder",
     "editName": "Editar nome de {{code}}",
+    "tapestry": {
+      "label": "Cronologia da sess\u00e3o",
+      "toggle": "Cronologia da sess\u00e3o {{number}}",
+      "zoom": "Zoom da cronologia",
+      "zoomIn": "Aumentar Zoom",
+      "zoomOut": "Diminuir Zoom",
+      "previousQuote": "Cita\u00e7\u00e3o Anterior",
+      "nextQuote": "Cita\u00e7\u00e3o Seguinte"
+    },
     "speakerPlaceholder": {
       "moderator": "Moderador",
       "participant": "Participante",

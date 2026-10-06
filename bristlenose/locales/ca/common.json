@@ -135,6 +135,15 @@
     "copyFolderPath": "Copia el camí de la carpeta",
     "showInFinder": "Mostra-ho al Finder",
     "editName": "Edita el nom de {{code}}",
+    "tapestry": {
+      "label": "L\u00ednia de temps de la sessi\u00f3",
+      "toggle": "L\u00ednia de temps de la sessi\u00f3 {{number}}",
+      "zoom": "Zoom de la l\u00ednia de temps",
+      "zoomIn": "Amplia",
+      "zoomOut": "Redueix",
+      "previousQuote": "Cita anterior",
+      "nextQuote": "Cita seg\u00fcent"
+    },
     "speakerPlaceholder": {
       "moderator": "Moderador",
       "participant": "Participant",

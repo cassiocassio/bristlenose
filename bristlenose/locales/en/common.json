@@ -135,6 +135,15 @@
     "copyFolderPath": "Copy folder path",
     "showInFinder": "Show in Finder",
     "editName": "Edit name for {{code}}",
+    "tapestry": {
+      "label": "Session timeline",
+      "toggle": "Timeline for session {{number}}",
+      "zoom": "Timeline zoom",
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "previousQuote": "Previous Quote",
+      "nextQuote": "Next Quote"
+    },
     "speakerPlaceholder": {
       "moderator": "Moderator",
       "participant": "Participant",

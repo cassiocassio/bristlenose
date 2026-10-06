@@ -142,6 +142,15 @@
     "copyFolderPath": "Ordnerpfad kopieren",
     "showInFinder": "Im Finder zeigen",
     "editName": "Name von {{code}} bearbeiten",
+    "tapestry": {
+      "label": "Zeitleiste des Interviews",
+      "toggle": "Zeitleiste f\u00fcr Interview {{number}}",
+      "zoom": "Zoom der Zeitleiste",
+      "zoomIn": "Vergr\u00f6\u00dfern",
+      "zoomOut": "Verkleinern",
+      "previousQuote": "Vorheriges Zitat",
+      "nextQuote": "N\u00e4chstes Zitat"
+    },
     "failedToLoad": "Fehler beim Laden der Interviews: {{error}}",
     "loading": "Interviews werden geladen…"
   },

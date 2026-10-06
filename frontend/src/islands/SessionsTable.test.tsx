@@ -1100,3 +1100,72 @@ describe("SessionsTable person picker", () => {
     expect(puts()).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Session tapestry: the timeline slice under each row
+// ---------------------------------------------------------------------------
+
+describe("SessionsTable — session tapestry", () => {
+  const tapestryResponse = {
+    sessions: [
+      {
+        session_id: "s1",
+        duration_seconds: 1800,
+        turns: [
+          { t0: 0, t1: 60, speaker: "m1", colour: null },
+          { t0: 60, t1: 1800, speaker: "p1", colour: "#c4a893" },
+        ],
+        sections: [{ t0: 120, label: "Checkout" }],
+        quotes: [
+          { t0: 120, t1: 140, text: "I can't find the basket", sentiment: "frustration", intensity: 2, section: "Checkout", theme: null },
+        ],
+      },
+    ],
+  };
+
+  function mockWithTapestry(tapestry: unknown) {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes("/tapestry")) {
+        return tapestry
+          ? Promise.resolve({ ok: true, json: async () => tapestry })
+          : Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+      }
+      if (url.includes("/sessions")) return Promise.resolve({ ok: true, json: async () => sessionsResponse });
+      if (url.includes("/people")) return Promise.resolve({ ok: true, json: async () => peopleResponse });
+      return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+    });
+  }
+
+  it("offers a disclosure only for sessions the tapestry covers, closed by default", async () => {
+    mockWithTapestry(tapestryResponse);
+    render(<SessionsTable projectId="1" />);
+    const toggle = await screen.findByRole("button", { name: "Timeline for session 1" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "Timeline for session 2" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Session timeline" })).not.toBeInTheDocument();
+  });
+
+  it("opens the slice under its row and shows the zoom control", async () => {
+    mockWithTapestry(tapestryResponse);
+    render(<SessionsTable projectId="1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Timeline for session 1" }));
+    // Lazy-loaded: the slice arrives a tick after the click.
+    expect(await screen.findByRole("group", { name: "Session timeline" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Timeline for session 1" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("slider", { name: "Timeline zoom" })).toBeInTheDocument();
+    // The slice is a row of the grid, right after its session's row.
+    const row = document.querySelector('[data-session="s1"]');
+    expect(row?.nextElementSibling?.id).toBe("bn-tapestry-s1");
+  });
+
+  it("degrades to no timelines when /tapestry fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockWithTapestry(null);
+    render(<SessionsTable projectId="1" />);
+    await screen.findAllByText("Alice");
+    await waitFor(() => expect(warn).toHaveBeenCalled());
+    expect(screen.queryByRole("button", { name: /Timeline for session/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("slider", { name: "Timeline zoom" })).not.toBeInTheDocument();
+    warn.mockRestore();
+  });
+});

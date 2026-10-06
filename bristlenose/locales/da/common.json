@@ -152,6 +152,15 @@
     "copyFolderPath": "Kopiér mappesti",
     "showInFinder": "Vis i Finder",
     "editName": "Redigér navn for {{code}}",
+    "tapestry": {
+      "label": "Sessionens tidslinje",
+      "toggle": "Tidslinje for session {{number}}",
+      "zoom": "Zoom p\u00e5 tidslinjen",
+      "zoomIn": "Zoom ind",
+      "zoomOut": "Zoom ud",
+      "previousQuote": "Forrige citat",
+      "nextQuote": "N\u00e6ste citat"
+    },
     "failedToLoad": "Kunne ikke indlæse sessioner: {{error}}",
     "loading": "Indlæser sessioner…"
   },

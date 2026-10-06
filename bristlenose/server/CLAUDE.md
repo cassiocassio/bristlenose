@@ -18,6 +18,7 @@ bristlenose/server/
   routes/
     health.py     — GET /api/health (status/version + footer links/feedback config)
     sessions.py   — GET /api/projects/{id}/sessions (React sessions table, includes source_folder_uri)
+    tapestry.py   — GET /api/projects/{id}/tapestry (timeline slice under each Sessions row; reads scene colours from intermediate/scene-colours/)
     quotes.py     — GET /api/projects/{id}/quotes (quotes grouped by section/theme)
     data.py       — 12 data API endpoints (Phase 1 researcher state sync)
     autocode.py   — 8 AutoCode endpoints (start, status, cancel, proposals, accept/deny, accept-all/deny-all)

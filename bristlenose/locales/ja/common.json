@@ -130,6 +130,15 @@
     "copyFolderPath": "フォルダパスをコピー",
     "showInFinder": "Finder \u306b\u8868\u793a",
     "editName": "{{code}} の名前を編集",
+    "tapestry": {
+      "label": "\u30bb\u30c3\u30b7\u30e7\u30f3\u306e\u30bf\u30a4\u30e0\u30e9\u30a4\u30f3",
+      "toggle": "\u30bb\u30c3\u30b7\u30e7\u30f3 {{number}} \u306e\u30bf\u30a4\u30e0\u30e9\u30a4\u30f3",
+      "zoom": "\u30bf\u30a4\u30e0\u30e9\u30a4\u30f3\u306e\u30ba\u30fc\u30e0",
+      "zoomIn": "\u62e1\u5927",
+      "zoomOut": "\u7e2e\u5c0f",
+      "previousQuote": "\u524d\u306e\u767a\u8a00",
+      "nextQuote": "\u6b21\u306e\u767a\u8a00"
+    },
     "speakerPlaceholder": {
       "moderator": "\u30e2\u30c7\u30ec\u30fc\u30bf\u30fc",
       "participant": "\u53c2\u52a0\u8005",

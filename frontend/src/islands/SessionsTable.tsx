@@ -53,12 +53,23 @@ import { postProjectAction } from "../shims/bridge";
 import { isEmbedded } from "../utils/embedded";
 import { isExportMode } from "../utils/exportData";
 import { formatDurationHuman, formatFinderDate, formatFinderFilename } from "../utils/format";
-import type { SessionResponse, SessionsListResponse, SpeakerResponse } from "../utils/types";
+import type {
+  SessionResponse,
+  SessionsListResponse,
+  SpeakerResponse,
+  TapestryResponse,
+  TapestrySession,
+} from "../utils/types";
+import { fitScale, zoomScale } from "../utils/tapestryScale";
 import { refetchOverlayProps } from "../hooks/useRefetching";
 
 // The picker's code is loaded when someone first opens it: the grid is part of
 // first paint, and the picker is needed only on a click. The browser loads the
 // web picker; the Mac app loads only the bridge, to ask for its native one.
+// The timeline slice: lazy, because this island is on the first-paint path and
+// a slice is only drawn once a row is opened.
+const SessionTapestry = lazy(() => import("../components/SessionTapestry"));
+
 const PersonPickerPopover = lazy(() =>
   import("../components/PersonPicker").then((m) => ({ default: m.PersonPickerPopover })),
 );
@@ -187,6 +198,13 @@ export function SessionsTable({
   const [pickerKey, setPickerKey] = useState<string | null>(null);
 
   const [isRefetching, setIsRefetching] = useState(false);
+  // The timeline slice under each row (GET /tapestry). Absent → no disclosure.
+  const [tapestry, setTapestry] = useState<Record<string, TapestrySession> | null>(null);
+  const [openTapestries, setOpenTapestries] = useState<Set<string>>(() => new Set());
+  const [zoom, setZoom] = useState(0);
+  const [gridWidth, setGridWidth] = useState(0);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   // Bumped after a moderator or observer write lands: a pick or a new person
   // can renumber identities (m2 → m1), which only the server knows.
   const [reloadKey, setReloadKey] = useState(0);
@@ -212,6 +230,12 @@ export function SessionsTable({
     // rather than toasting. But it must not stay silent: an empty catch made
     // a failed fetch render pixel-identically to a study whose speakers
     // simply have no names, and those want different reactions.
+    apiGet<TapestryResponse>("/tapestry")
+      .then((json) =>
+        setTapestry(Object.fromEntries(json.sessions.map((ts) => [ts.session_id, ts]))),
+      )
+      .catch((err) => console.warn("SessionsTable: /tapestry failed; no timelines", err));
+
     getPeople()
       .then(setPeopleMap)
       .catch((err) =>
@@ -221,6 +245,16 @@ export function SessionsTable({
         ),
       );
   }, [projectId, refreshKey, reloadKey]);
+
+  // The slices share one scale, fitted to the grid's width.
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setGridWidth(el.clientWidth));
+    ro.observe(el);
+    setGridWidth(el.clientWidth);
+    return () => ro.disconnect();
+  }, [data]);
 
   // The grid's own copy, read by the write paths below at call time, so an
   // undo entry records what the slot held at the moment of the act.
@@ -484,6 +518,43 @@ export function SessionsTable({
     t("sessions.interviews")
   );
 
+  // ── Session tapestry: one scale for every open slice, so sessions compare by eye.
+  const hasTapestry = tapestry !== null && sessions.some((sess) => tapestry[sess.session_id]);
+  const longest = Math.max(1, ...sessions.map((sess) => tapestry?.[sess.session_id]?.duration_seconds ?? 0));
+  const sPerPx = zoomScale(fitScale(longest, gridWidth || 1000), zoom);
+  const toggleTapestry = (sid: string, all: boolean) =>
+    setOpenTapestries((prev) => {
+      const open = !prev.has(sid);
+      if (all) return open ? new Set(sessions.map((sess) => sess.session_id)) : new Set();
+      const next = new Set(prev);
+      if (open) next.add(sid);
+      else next.delete(sid);
+      return next;
+    });
+  const zoomControl = hasTapestry ? (
+    <div className="bn-tp-zoom" role="group" aria-label={t("sessions.tapestry.zoom")}>
+      <button type="button" className="bn-tp-zoom-btn" aria-label={t("sessions.tapestry.zoomOut")}
+        title={t("sessions.tapestry.zoomOut")} onClick={() => setZoom((z) => Math.max(0, z - 20))}>
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" /><path d="M10 10l3.5 3.5M4.5 6.5h4" /></svg>
+      </button>
+      <input type="range" className="bn-tp-zoom-slider" min={0} max={100} value={zoom}
+        aria-label={t("sessions.tapestry.zoom")} onChange={(e) => setZoom(Number(e.target.value))}
+        onDoubleClick={() => setZoom(0)} />
+      <button type="button" className="bn-tp-zoom-btn" aria-label={t("sessions.tapestry.zoomIn")}
+        title={t("sessions.tapestry.zoomIn")} onClick={() => setZoom((z) => Math.min(100, z + 20))}>
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" /><path d="M10 10l3.5 3.5M4.5 6.5h4M6.5 4.5v4" /></svg>
+      </button>
+    </div>
+  ) : null;
+  // Open slices scroll together: the axis is shared.
+  const syncScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const src = e.target as HTMLElement;
+    if (!src.classList?.contains("bn-tapestry-scroll")) return;
+    gridRef.current?.querySelectorAll<HTMLElement>(".bn-tapestry-scroll").forEach((el) => {
+      if (el !== src && el.scrollLeft !== src.scrollLeft) el.scrollLeft = src.scrollLeft;
+    });
+  };
+
   return (
     <section {...refetchOverlayProps(isRefetching, "bn-session-table")}>
       {/* Zone title. Must be a direct child of this <section> for the
@@ -491,7 +562,7 @@ export function SessionsTable({
           (`.center > main > section:first-of-type > .section-heading`).
           Reuses `nav.sessions` rather than minting `sessions.heading` — the
           word is identical and already reviewed in all 20 locales. */}
-      <SectionHeading>{t("nav.sessions")}</SectionHeading>
+      <SectionHeading action={zoomControl}>{t("nav.sessions")}</SectionHeading>
       {/* From the grid's own speakers, not the payload's moderator_names:
           the payload is read once, so a rename left the line naming
           moderators the grid no longer shows. */}
@@ -504,7 +575,7 @@ export function SessionsTable({
           theme/organisms/sessions-grid.css — this component renders every
           cell at every width and lets container queries decide what shows,
           so there is no width measurement in JS. */}
-      <div className="bn-sessions-grid" role="table">
+      <div className="bn-sessions-grid" role="table" ref={gridRef} onScrollCapture={syncScroll}>
         <div className="bn-sessions-row bn-sessions-head" role="row">
           <div className="bn-sessions-cell bn-cell-id" role="columnheader">
             {t("sessions.colId")}
@@ -528,9 +599,16 @@ export function SessionsTable({
             {interviewsHeader}
           </div>
         </div>
-        {sessions.map((sess) => (
+        {sessions.flatMap((sess) => {
+          const ts = tapestry?.[sess.session_id];
+          const open = !!ts && openTapestries.has(sess.session_id);
+          const nameOf = (slot: string) =>
+            sess.speakers.find((sp) => (sp.slot_code || sp.speaker_code) === slot)?.name || slot;
+          return [
           <SessionRow
             key={sess.session_id}
+            tapestryOpen={ts ? open : undefined}
+            onToggleTapestry={(all) => toggleTapestry(sess.session_id, all)}
             session={sess}
             peopleMap={peopleMap}
             editingKey={editingKey}
@@ -545,8 +623,26 @@ export function SessionsTable({
             onPickerOpen={openPicker}
             onPickerClose={() => setPickerKey(null)}
             onPickerChoose={applyPickerChoice}
-          />
-        ))}
+          />,
+          open && ts ? (
+            <div key={`${sess.session_id}-tapestry`} className="bn-tapestry" role="row"
+              id={`bn-tapestry-${sess.session_id}`}>
+              <div role="cell" className="bn-tapestry-cell">
+                <Suspense fallback={null}>
+                  <SessionTapestry
+                    session={ts}
+                    sPerPx={sPerPx}
+                    nameOf={nameOf}
+                    onJump={(sec) =>
+                      navigate({ pathname: `/report/sessions/${sess.session_id}`, hash: `#t-${Math.floor(sec)}` })
+                    }
+                  />
+                </Suspense>
+              </div>
+            </div>
+          ) : null,
+          ];
+        })}
       </div>
     </section>
   );
@@ -572,7 +668,13 @@ function SessionRow({
   onPickerOpen,
   onPickerClose,
   onPickerChoose,
+  tapestryOpen,
+  onToggleTapestry,
 }: {
+  /** undefined = this session has no timeline; true/false = its disclosure state. */
+  tapestryOpen?: boolean;
+  /** `all` = Option-click: open or close every row, as in a Finder outline. */
+  onToggleTapestry?: (all: boolean) => void;
   session: SessionResponse;
   peopleMap: Record<string, PersonData> | null;
   editingKey: string | null;
@@ -663,6 +765,23 @@ function SessionRow({
   return (
     <div className="bn-sessions-row" data-session={session_id} role="row">
       <div className="bn-sessions-cell bn-cell-id bn-session-id" role="cell">
+        {tapestryOpen !== undefined && (
+          <button
+            type="button"
+            className="bn-tapestry-toggle"
+            aria-expanded={tapestryOpen}
+            aria-controls={`bn-tapestry-${session_id}`}
+            aria-label={t("sessions.tapestry.toggle", { number: session_number })}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleTapestry?.(e.altKey);
+            }}
+          >
+            <svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true">
+              <path d="M3 1.5 L7 5 L3 8.5" />
+            </svg>
+          </button>
+        )}
         <a href={isExportMode() ? `#${sessionPath}` : sessionPath}>
           #{session_number}
         </a>

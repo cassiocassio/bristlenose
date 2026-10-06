@@ -50,6 +50,7 @@ EMBED_PATH_TEMPLATES: frozenset[str] = frozenset(
         "/projects/{project_id}/info",
         "/projects/{project_id}/dashboard",
         "/projects/{project_id}/sessions",
+        "/projects/{project_id}/tapestry",
         "/projects/{project_id}/quotes",
         "/projects/{project_id}/codebook",
         "/projects/{project_id}/people",
@@ -437,6 +438,7 @@ def export_report(
     from bristlenose.server.routes.signals import (
         get_sentiment_analysis as _get_sentiment_analysis_handler,
     )
+    from bristlenose.server.routes.tapestry import get_tapestry as _get_tapestry_handler
     from bristlenose.server.routes.transcript import (
         get_transcript as _get_transcript_handler,
     )
@@ -462,6 +464,8 @@ def export_report(
         sessions = _get_sessions_handler(project_id, db=db)
     finally:
         db.close()
+    # The handler closes the session it is given.
+    tapestry = _get_tapestry_handler(project_id, request, db=request.app.state.db_factory())
 
     disc_db = request.app.state.db_factory()
     try:
@@ -524,6 +528,7 @@ def export_report(
         "/info": jsonable_encoder(project_info),
         "/dashboard": jsonable_encoder(dashboard),
         "/sessions": jsonable_encoder(sessions),
+        "/tapestry": jsonable_encoder(tapestry),
         "/quotes": jsonable_encoder(quotes),
         "/codebook": jsonable_encoder(codebook),
         "/people": jsonable_encoder(people),

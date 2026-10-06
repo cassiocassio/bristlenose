@@ -125,6 +125,15 @@
     "copyFolderPath": "Copier le chemin du dossier",
     "showInFinder": "Afficher dans le Finder",
     "editName": "Modifier le nom de {{code}}",
+    "tapestry": {
+      "label": "Chronologie de l\u2019entretien",
+      "toggle": "Chronologie de l\u2019entretien {{number}}",
+      "zoom": "Zoom de la chronologie",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arri\u00e8re",
+      "previousQuote": "Verbatim pr\u00e9c\u00e9dent",
+      "nextQuote": "Verbatim suivant"
+    },
     "speakerPlaceholder": {
       "moderator": "Animateur",
       "participant": "Participant",

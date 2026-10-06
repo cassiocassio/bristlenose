@@ -84,6 +84,8 @@ _THEME_FILES: list[str] = [
     "organisms/global-nav.css",
     # After global-nav.css: the picker composes the Export menu's classes.
     "organisms/person-picker.css",
+    # The timeline slice under a Sessions-grid row (SPA only).
+    "organisms/session-tapestry.css",
     "organisms/codebook-panel.css",
     # Codebook v2 runs beside the shipped panel (D29), so it must load AFTER
     # it — every rule is scoped under .v2-rail and redefines nothing it owns.

@@ -50,6 +50,7 @@ from bristlenose.server.routes.quotes_export import router as quotes_export_rout
 from bristlenose.server.routes.runs import router as runs_router
 from bristlenose.server.routes.sessions import router as sessions_router
 from bristlenose.server.routes.signals import router as analysis_router
+from bristlenose.server.routes.tapestry import router as tapestry_router
 from bristlenose.server.routes.transcript import router as transcript_router
 from bristlenose.server.status_page import detect_status, render_page
 
@@ -239,6 +240,7 @@ def create_app(
     app.include_router(quotes_export_router)
     app.include_router(runs_router)
     app.include_router(sessions_router)
+    app.include_router(tapestry_router)
     app.include_router(discussion_router)
     app.include_router(quotes_router)
     app.include_router(transcript_router)

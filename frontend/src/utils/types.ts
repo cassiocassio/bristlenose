@@ -587,6 +587,46 @@ export interface SessionsListResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Session tapestry — GET /api/projects/{id}/tapestry (server/routes/tapestry.py)
+// ---------------------------------------------------------------------------
+
+export interface TapestryTurn {
+  t0: number;
+  t1: number;
+  /** The transcript's slot code for the speaker (`m1`, `p2`). */
+  speaker: string;
+  /** Scene colour (`#rrggbb`): what was on screen during the turn. Null without video. */
+  colour: string | null;
+}
+
+export interface TapestrySection {
+  t0: number;
+  label: string;
+}
+
+export interface TapestryQuote {
+  t0: number;
+  t1: number;
+  text: string;
+  sentiment: string | null;
+  intensity: number;
+  section: string | null;
+  theme: string | null;
+}
+
+export interface TapestrySession {
+  session_id: string;
+  duration_seconds: number;
+  turns: TapestryTurn[];
+  sections: TapestrySection[];
+  quotes: TapestryQuote[];
+}
+
+export interface TapestryResponse {
+  sessions: TapestrySession[];
+}
+
+// ---------------------------------------------------------------------------
 // Analysis — unified signal types (shared by SignalsPage + SignalsSidebar)
 // ---------------------------------------------------------------------------
 

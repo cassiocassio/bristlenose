@@ -152,6 +152,15 @@
     "copyFolderPath": "Mappad kopiëren",
     "showInFinder": "Toon in Finder",
     "editName": "Naam bewerken voor {{code}}",
+    "tapestry": {
+      "label": "Tijdlijn van de sessie",
+      "toggle": "Tijdlijn voor sessie {{number}}",
+      "zoom": "Zoom van de tijdlijn",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom uit",
+      "previousQuote": "Vorig citaat",
+      "nextQuote": "Volgend citaat"
+    },
     "failedToLoad": "Kon sessies niet laden: {{error}}",
     "loading": "Sessies laden…"
   },

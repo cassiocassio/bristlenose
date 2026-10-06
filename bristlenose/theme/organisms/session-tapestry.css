@@ -1,0 +1,226 @@
+/* Session tapestry — the timeline slice under a row of the Sessions grid
+   (frontend/src/components/SessionTapestry.tsx). Lanes: section flags, speaker
+   clips, sentiment bars, theme spans. Every colour and size is a shipped token
+   except the three marked NEW. Design + measurements:
+   experiments/session-tapestry/README.md. */
+
+:root {
+    /* NEW: resting section flag — the page background with a 6% tint, so the
+       raised flag (pure background + shadow) reads as in front. */
+    --bn-tp-flag-rest: color-mix(in srgb, var(--bn-colour-bg) 94%, var(--bn-colour-text));
+    /* NEW: hover tint on the quote panel (4%), the sign that it opens the transcript. */
+    --bn-tp-card-hover: color-mix(in srgb, var(--bn-colour-bg) 96%, var(--bn-colour-text));
+}
+
+/* Disclosure, inside the ID cell — no new grid column, so the width ladder is untouched. */
+.bn-tapestry-toggle {
+    all: unset;
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    margin: 0 2px 0 -4px;
+    vertical-align: -2px;
+    border-radius: var(--bn-radius-sm);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+}
+.bn-tapestry-toggle:hover { color: var(--bn-colour-text); }
+.bn-tapestry-toggle:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.bn-tapestry-toggle path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.bn-tapestry-toggle svg { transition: transform 0.15s ease; }
+.bn-tapestry-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+
+/* The slice: a full-width grid item after its row. */
+.bn-tapestry {
+    grid-column: 1 / -1;
+    min-width: 0;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+.bn-tapestry-cell { min-width: 0; }
+.bn-tapestry-scroll {
+    background: var(--bn-colour-quote-bg);
+    padding: var(--bn-space-sm) 0;
+    overflow-x: auto;
+}
+.bn-tapestry-svg { display: block; }
+
+.bn-tp-lane,
+.bn-tp-tick {
+    font: var(--bn-text-micro) var(--bn-font-mono);
+    fill: var(--bn-colour-muted);
+}
+.bn-tp-track { fill: var(--bn-colour-badge-bg); }
+/* Without video the clips fall back to neutral greys; the track says who speaks. */
+.bn-tp-clip-team { fill: var(--bn-colour-border-hover); }
+.bn-tp-clip-ppt { fill: var(--bn-colour-muted); }
+.bn-tp-clip[data-video] { stroke: rgb(0 0 0 / 0.25); stroke-width: 0.75; }
+.bn-tp-clip-label {
+    font: var(--bn-weight-emphasis) var(--bn-text-micro) var(--bn-font-body);
+    fill: var(--bn-colour-text);
+    pointer-events: none;
+}
+.bn-tp-clip-label.on-dark { fill: #fff; }
+
+.bn-tp-flag { cursor: pointer; }
+.bn-tp-flag line { stroke: var(--bn-colour-text); }
+.bn-tp-flag path { fill: var(--bn-tp-flag-rest); stroke: var(--bn-colour-border); }
+.bn-tp-flag.raised path { fill: var(--bn-colour-bg); stroke: var(--bn-colour-text); }
+.bn-tp-flag text {
+    font: var(--bn-weight-emphasis) var(--bn-text-badge) var(--bn-font-body);
+    fill: var(--bn-colour-text);
+}
+.bn-tp-hit { cursor: pointer; }
+.bn-tp-playhead { stroke: var(--bn-colour-accent); stroke-width: 1; pointer-events: none; }
+
+.bn-tp-axis { stroke: var(--bn-colour-muted); stroke-width: 0.8; }
+.bn-tp-bar { cursor: pointer; transition: opacity 0.12s; }
+.bn-tp-bar:focus { outline: none; }
+.bn-tp-bar:focus-visible,
+.bn-tp-bar.sel { stroke: var(--bn-colour-text); stroke-width: 1.25; }
+.bn-tp-bar.dim { opacity: 0.25; }
+.bn-tp-unrated { fill: var(--bn-colour-muted); }
+
+.bn-tp-span { fill: var(--bn-colour-muted); opacity: 0.5; }
+.bn-tp-tag { fill: var(--bn-colour-badge-bg); }
+.bn-tp-tag-text {
+    font: var(--bn-weight-light) var(--bn-text-micro) var(--bn-font-mono);
+    fill: var(--bn-colour-badge-text);
+}
+
+/* Quote panel: revealed by clicking a sentiment bar. The whole panel opens the
+   transcript; the faint hover tint is the affordance. */
+.bn-tp-card {
+    position: relative;
+    margin: 0 var(--bn-space-md) var(--bn-space-md) 82px;
+    max-width: 72ch;
+    padding: var(--bn-space-md);
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-left: 3px solid var(--bn-tp-accent, var(--bn-colour-border));
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 1px 2px var(--bn-colour-shadow);
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+.bn-tp-card:hover { background: var(--bn-tp-card-hover); }
+.bn-tp-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    flex-wrap: wrap;
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+}
+.bn-tp-tc { font-family: var(--bn-font-mono); }
+.bn-tp-card blockquote {
+    margin: var(--bn-space-sm) 0 0;
+    padding-right: 48px;
+    font-size: var(--bn-text-body);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+/* Previous / next: bristlenose.app's homepage carousel buttons, at 12 px (from
+   26) inside a 22 px hit area, revealed on hover or keyboard focus as there. */
+.bn-tp-nav { position: absolute; top: 6px; right: 6px; display: flex; }
+.bn-tp-nav button {
+    all: unset;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease-in-out;
+    color: var(--bn-colour-text);
+}
+.bn-tp-nav button > span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(12px) saturate(1.5);
+    backdrop-filter: blur(12px) saturate(1.5);
+    box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.15);
+    display: grid;
+    place-items: center;
+}
+.bn-tp-nav svg { width: 6px; height: 6px; }
+.bn-tp-nav path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.bn-tp-nav button:disabled > span { opacity: 0.35; }
+.bn-tp-card:hover .bn-tp-nav button,
+.bn-tp-card:focus-within .bn-tp-nav button { opacity: 1; pointer-events: auto; }
+.bn-tp-nav button:focus-visible > span { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+@media (prefers-color-scheme: dark) {
+    .bn-tp-nav button > span { background: rgba(40, 40, 40, 0.72); border-color: rgba(255, 255, 255, 0.1); }
+}
+
+/* NEW: zoom — a mini slider between magnifiers (Photos, the Final Cut timeline),
+   in the section heading's action slot; no range control ships elsewhere. */
+.bn-tp-zoom { display: flex; align-items: center; gap: 2px; }
+.bn-tp-zoom-btn {
+    all: unset;
+    width: 16px;
+    height: 16px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--bn-radius-sm);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+}
+.bn-tp-zoom-btn:hover { color: var(--bn-colour-text); }
+.bn-tp-zoom-btn:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.bn-tp-zoom-btn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+.bn-tp-zoom-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 64px;
+    height: 14px;
+    margin: 0 2px;
+    background: none;
+}
+.bn-tp-zoom-slider:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.bn-tp-zoom-slider::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: var(--bn-colour-border); }
+.bn-tp-zoom-slider::-moz-range-track { height: 3px; border-radius: 2px; background: var(--bn-colour-border); }
+.bn-tp-zoom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 11px;
+    height: 11px;
+    margin-top: -4px;
+    border-radius: 50%;
+    background: light-dark(#fff, #d8d8dc);
+    box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.3), 0 1px 2px rgb(0 0 0 / 0.25);
+}
+.bn-tp-zoom-slider::-moz-range-thumb {
+    width: 11px;
+    height: 11px;
+    border: 0;
+    border-radius: 50%;
+    background: light-dark(#fff, #d8d8dc);
+    box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.3), 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-tapestry-toggle svg,
+    .bn-tp-bar,
+    .bn-tp-card,
+    .bn-tp-nav button { transition: none; }
+}
+
+@media print {
+    .bn-tapestry-toggle,
+    .bn-tp-zoom { display: none; }
+}

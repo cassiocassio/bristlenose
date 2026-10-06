@@ -135,6 +135,15 @@
     "copyFolderPath": "Kopioi kansion polku",
     "showInFinder": "N\u00e4yt\u00e4 Finderissa",
     "editName": "Muokkaa nimeä: {{code}}",
+    "tapestry": {
+      "label": "Istunnon aikajana",
+      "toggle": "Istunnon {{number}} aikajana",
+      "zoom": "Aikajanan zoomaus",
+      "zoomIn": "Suurenna",
+      "zoomOut": "Pienenn\u00e4",
+      "previousQuote": "Edellinen sitaatti",
+      "nextQuote": "Seuraava sitaatti"
+    },
     "speakerPlaceholder": {
       "moderator": "Moderaattori",
       "participant": "Osallistuja",

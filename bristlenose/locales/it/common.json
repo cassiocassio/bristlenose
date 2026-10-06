@@ -135,6 +135,15 @@
     "copyFolderPath": "Copia percorso della cartella",
     "showInFinder": "Mostra nel Finder",
     "editName": "Modifica nome per {{code}}",
+    "tapestry": {
+      "label": "Timeline della sessione",
+      "toggle": "Timeline della sessione {{number}}",
+      "zoom": "Zoom della timeline",
+      "zoomIn": "Aumenta lo zoom",
+      "zoomOut": "Riduci lo zoom",
+      "previousQuote": "Citazione precedente",
+      "nextQuote": "Citazione successiva"
+    },
     "speakerPlaceholder": {
       "moderator": "Moderatore",
       "participant": "Partecipante",

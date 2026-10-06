@@ -135,6 +135,15 @@
     "copyFolderPath": "Klasör yolunu kopyala",
     "showInFinder": "Finder\u2019da G\u00f6ster",
     "editName": "{{code}} için adı düzenle",
+    "tapestry": {
+      "label": "Oturum zaman \u00e7izelgesi",
+      "toggle": "{{number}}. oturumun zaman \u00e7izelgesi",
+      "zoom": "Zaman \u00e7izelgesi yak\u0131nla\u015ft\u0131rmas\u0131",
+      "zoomIn": "Yak\u0131nla\u015ft\u0131r",
+      "zoomOut": "Uzakla\u015ft\u0131r",
+      "previousQuote": "\u00d6nceki Al\u0131nt\u0131",
+      "nextQuote": "Sonraki Al\u0131nt\u0131"
+    },
     "speakerPlaceholder": {
       "moderator": "Moderat\u00f6r",
       "participant": "Kat\u0131l\u0131mc\u0131",

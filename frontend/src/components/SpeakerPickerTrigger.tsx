@@ -65,6 +65,7 @@ export function SpeakerPickerTrigger({ sessionId, code, role, name, tabbable = t
             slot: ctx.slot,
             known: ctx.known,
             knownByRole: ctx.knownByRole,
+            swap: ctx.swap,
             apply: (choice) => applySpeakerChoice(ctx, choice),
             refuse: refuseTakenName,
           },
@@ -95,6 +96,7 @@ export function SpeakerPickerTrigger({ sessionId, code, role, name, tabbable = t
             slot={open.slot}
             known={open.known}
             knownByRole={open.knownByRole}
+            swap={open.swap}
             t={t}
             onChoose={(choice) => applySpeakerChoice(open, choice)}
             onClose={() => setOpen(null)}

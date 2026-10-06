@@ -159,7 +159,8 @@
       "thatsMe": "Soc jo ({{name}})",
       "proposedName": "{{code}}, nom proposat {{name}}",
       "nameTaken": "{{name}} ja \u00e9s a la llista. Tria aquesta persona o afegeix-hi alguna cosa per distingir-les.",
-      "notThisPerson": "No \u00e9s {{name}}"
+      "notThisPerson": "No \u00e9s {{name}}",
+      "swapWith": "Intercanvia amb {{code}}"
     },
     "failedToLoad": "No s'han pogut carregar les sessions: {{error}}",
     "loading": "S'estan carregant les sessions…"
@@ -661,7 +662,8 @@
       "renameTheme": "Desfés el canvi de nom del tema",
       "editDescription": "Desfés l’edició de la descripció",
       "clearName": "Desf\u00e9s la supressi\u00f3 del nom",
-      "changeRole": "Desf\u00e9s el canvi de rol"
+      "changeRole": "Desf\u00e9s el canvi de rol",
+      "swapRoles": "Desf\u00e9s l\u2019intercanvi de rols"
     },
     "redo": {
       "renameModerator": "Refés el canvi de nom del moderador",
@@ -679,7 +681,8 @@
       "renameTheme": "Refés el canvi de nom del tema",
       "editDescription": "Refés l’edició de la descripció",
       "clearName": "Ref\u00e9s la supressi\u00f3 del nom",
-      "changeRole": "Ref\u00e9s el canvi de rol"
+      "changeRole": "Ref\u00e9s el canvi de rol",
+      "swapRoles": "Ref\u00e9s l\u2019intercanvi de rols"
     }
   }
 }

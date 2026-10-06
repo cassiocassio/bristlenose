@@ -44,10 +44,12 @@ import {
   type PersonPickerLabels,
   type PersonPickerRow,
   type PersonPickerSlot,
+  type PersonPickerSwap,
   type PickerRole,
 } from "../utils/personPicker";
 
 const NEW = "\u0000new";
+const SWAP = "\u0000swap";
 
 interface PersonPickerProps {
   slot: PersonPickerSlot;
@@ -60,11 +62,14 @@ interface PersonPickerProps {
   /** Its strings, localised by the caller (`personPickerLabels`): the same
    *  object the Mac app's native picker receives. */
   labels: PersonPickerLabels;
+  /** The speaker this one would swap with (§J7 call 4), when the session has
+   *  exactly one participant and one moderator. */
+  swap?: PersonPickerSwap;
   onChoose: (choice: PersonPickerChoice) => void;
   onClose: () => void;
 }
 
-export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClose }: PersonPickerProps) {
+export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClose, swap }: PersonPickerProps) {
   // The role being looked at. A segment click only browses (§J8.10): nothing
   // is written until a name is chosen under it.
   const [browsing, setBrowsing] = useState<PickerRole>(slot.role);
@@ -74,7 +79,10 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
   const everyone = [...knownFor("moderator"), ...knownFor("observer")];
   const people = personPickerRowsForRole(slot, browsing, knownFor(browsing));
   const keyOf = (r: PersonPickerRow) => r.person ?? `name:${r.name}`;
-  const rows = [...people.map(keyOf), NEW];
+  // The swap is an act on this speaker as they are, so it is offered under
+  // their own role only.
+  const swapRow = swap && !recoding ? swap : undefined;
+  const rows = [...people.map(keyOf), ...(swapRow ? [SWAP] : []), NEW];
   const own = recoding
     ? undefined
     : people.find((r) => (slot.person ? r.person === slot.person : r.name === slot.name));
@@ -135,6 +143,10 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
   }, [renaming]);
 
   const choose = (key: string) => {
+    if (key === SWAP && swapRow) {
+      finish({ kind: "swap", slot: swapRow.slot });
+      return;
+    }
     const row = people.find((r) => keyOf(r) === key);
     if (!row) return;
     // The current, confirmed answer has nothing to choose, so a click or
@@ -325,6 +337,19 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
           </li>
         );
       })}
+      {swapRow && (
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events
+        <li
+          ref={(el) => { itemRefs.current[SWAP] = el; }}
+          className="export-dropdown-item export-dropdown-scope bn-picker-swap"
+          role="menuitem"
+          tabIndex={-1}
+          onClick={() => choose(SWAP)}
+        >
+          <span className="export-dropdown-check" aria-hidden="true" />
+          {labels.swapWith.replace("{{code}}", swapRow.code)}
+        </li>
+      )}
       <li
         className="export-dropdown-item export-dropdown-scope bn-picker-new"
         role="none"

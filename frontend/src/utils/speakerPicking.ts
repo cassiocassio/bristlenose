@@ -17,9 +17,10 @@ import {
   type PersonPickerChoice,
   type PersonPickerRow,
   type PersonPickerSlot,
+  type PersonPickerSwap,
   type PickerRole,
 } from "./personPicker";
-import { nameSpeaker, speakerWritesSettled } from "./speakerNames";
+import { nameSpeaker, speakerWritesSettled, swapSpeakers } from "./speakerNames";
 import { toast } from "./toast";
 import type { SessionsListResponse, SpeakerResponse } from "./types";
 
@@ -74,6 +75,19 @@ export function knownPeopleOf(data: SessionsListResponse | null): Record<PickerR
   return known;
 }
 
+/** Who a speaker would swap with (§J7 call 4): in a session of exactly one
+ *  participant and one moderator, the other one. Observers do not count. */
+export function swapPartnerOf(
+  speakers: SpeakerResponse[],
+  sp: SpeakerResponse,
+): PersonPickerSwap | undefined {
+  const participants = speakers.filter((x) => pickerRoleOf(x.speaker_code) === "participant");
+  const moderators = speakers.filter((x) => pickerRoleOf(x.speaker_code) === "moderator");
+  if (participants.length !== 1 || moderators.length !== 1) return undefined;
+  const other = sp === participants[0] ? moderators[0] : sp === moderators[0] ? participants[0] : undefined;
+  return other ? { code: other.speaker_code, slot: slotOf(other) } : undefined;
+}
+
 /** A speaker as the picker sees it. */
 export function pickerSlotOf(sp: SpeakerResponse): PersonPickerSlot {
   const name = sp.name || "";
@@ -118,6 +132,9 @@ export function stateAfter(
       return { ...before, confirmed: true };
     case "clear":
       return { full_name: "", short_name: "", confirmed: false };
+    case "swap":
+      // Two slots at once: the caller writes it (`swapSpeakers`).
+      return before;
     case "name":
       return { ...before, short_name: choice.name, confirmed: true };
     case "person":
@@ -174,6 +191,8 @@ export interface SpeakerPickContext {
   known: PersonPickerRow[];
   /** Everyone, by role: what a recode browses (§J7 R1). */
   knownByRole: Record<PickerRole, PersonPickerRow[]>;
+  /** Who this speaker would swap with, if anyone (§J7 call 4). */
+  swap?: PersonPickerSwap;
 }
 
 /** The speaker a badge shows, from /sessions as it is now: the transcript's
@@ -181,17 +200,25 @@ export interface SpeakerPickContext {
  *  person or flag. Null when the speaker is not (or no longer) there. */
 export async function loadSpeakerContext(sessionId: string, code: string): Promise<SpeakerPickContext | null> {
   const data = await apiGet<SessionsListResponse>("/sessions");
-  const sp = data.sessions.find((s) => s.session_id === sessionId)?.speakers.find((x) => x.speaker_code === code);
+  const speakers = data.sessions.find((s) => s.session_id === sessionId)?.speakers ?? [];
+  const sp = speakers.find((x) => x.speaker_code === code);
   if (!sp) return null;
   const slot = pickerSlotOf(sp);
   const knownByRole = knownPeopleOf(data);
-  return { sessionId, slotCode: slotOf(sp), slot, before: nameStateOf(sp), known: knownByRole[slot.role], knownByRole };
+  return {
+    sessionId, slotCode: slotOf(sp), slot, before: nameStateOf(sp), known: knownByRole[slot.role], knownByRole,
+    swap: swapPartnerOf(speakers, sp),
+  };
 }
 
 /** Apply a choice to a speaker read by `loadSpeakerContext`, undoably, and
  *  tell the page when it has landed. */
 export function applySpeakerChoice(ctx: SpeakerPickContext, choice: PersonPickerChoice): void {
   if (isExportMode()) return;
+  if (choice.kind === "swap") {
+    void swapSpeakers(ctx.sessionId, ctx.slotCode, choice.slot).catch(() => undefined);
+    return;
+  }
   if (choice.kind === "new" || choice.kind === "name") {
     const everyone = [...ctx.knownByRole.moderator, ...ctx.knownByRole.observer];
     const role = (choice.kind === "new" && choice.role) || ctx.slot.role;
@@ -224,6 +251,8 @@ export interface NativePick {
   known: PersonPickerRow[];
   /** Everyone by role, so native can browse a recode (§J7 R1). */
   knownByRole?: Record<PickerRole, PersonPickerRow[]>;
+  /** Who this speaker would swap with (§J7 call 4). */
+  swap?: PersonPickerSwap;
   apply: (choice: PersonPickerChoice) => void;
   refuse: (name: string) => void;
 }
@@ -238,7 +267,7 @@ function onMenuAction(e: Event): void {
   void import("./personPickerBridge").then(({ resolvePersonPickerChoice }) => {
     const pick = resolvePersonPickerChoice(payload, (sessionId, code) =>
       sessionId === open.sessionId && code === open.code
-        ? { slot: open.slot, known: open.known, knownByRole: open.knownByRole }
+        ? { slot: open.slot, known: open.known, knownByRole: open.knownByRole, swap: open.swap }
         : null,
     );
     if (!pick) return;
@@ -261,7 +290,7 @@ export function openNativePicker(pick: NativePick, anchor: HTMLElement): void {
   void Promise.all([import("./personPickerBridge"), import("../shims/bridge")]).then(
     ([{ buildPersonPickerMessage }, { postPersonPicker }]) =>
       postPersonPicker(
-        buildPersonPickerMessage(pick.sessionId, pick.slot, pick.known, rect, i18n.t, pick.knownByRole),
+        buildPersonPickerMessage(pick.sessionId, pick.slot, pick.known, rect, i18n.t, pick.knownByRole, pick.swap),
       ),
   );
 }

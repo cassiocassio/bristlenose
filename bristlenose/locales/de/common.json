@@ -127,7 +127,8 @@
       "thatsMe": "Das bin ich ({{name}})",
       "proposedName": "{{code}}, vorgeschlagener Name {{name}}",
       "nameTaken": "{{name}} ist bereits in der Liste. W\u00e4hlen Sie diese Person aus oder erg\u00e4nzen Sie etwas, um beide zu unterscheiden.",
-      "notThisPerson": "Nicht {{name}}"
+      "notThisPerson": "Nicht {{name}}",
+      "swapWith": "Mit {{code}} tauschen"
     },
     "moderatedBy": "Moderiert von {{names}}",
     "observer_one": "Beobachter: {{names}}",
@@ -661,7 +662,8 @@
       "renameTheme": "Thema umbenennen widerrufen",
       "editDescription": "Beschreibung bearbeiten widerrufen",
       "clearName": "Namen l\u00f6schen widerrufen",
-      "changeRole": "Rolle \u00e4ndern widerrufen"
+      "changeRole": "Rolle \u00e4ndern widerrufen",
+      "swapRoles": "Rollen tauschen widerrufen"
     },
     "redo": {
       "renameModerator": "Moderator umbenennen wiederholen",
@@ -679,7 +681,8 @@
       "renameTheme": "Thema umbenennen wiederholen",
       "editDescription": "Beschreibung bearbeiten wiederholen",
       "clearName": "Namen l\u00f6schen wiederholen",
-      "changeRole": "Rolle \u00e4ndern wiederholen"
+      "changeRole": "Rolle \u00e4ndern wiederholen",
+      "swapRoles": "Rollen tauschen wiederholen"
     }
   }
 }

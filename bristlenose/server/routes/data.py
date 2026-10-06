@@ -81,6 +81,12 @@ class SpeakerNameEdit(BaseModel):
     #: participant takes the slot's own person or someone new — never another
     #: participant, which would join two people.
     kind: Literal["moderator", "observer", "participant"] | None = None
+    #: The swap (design-people.md §J7 call 4): this session's participant and
+    #: its moderator or observer were the other way round. The other slot's
+    #: code; the two slots exchange their roles and their people in one write,
+    #: so there is never a moment with no participant, and a swap undoes
+    #: itself. Every other field is ignored.
+    swap_with: str | None = None
 
 
 def _is_session_scoped(speaker_code: str) -> bool:
@@ -480,6 +486,9 @@ def put_session_speaker(
         if slot is None:
             raise HTTPException(status_code=404, detail="Speaker not found")
         sp = slot.row
+        if data.swap_with is not None:
+            _swap(db, project_id, session_id, sp, data.swap_with)
+            return {"status": "ok"}
         person = slot.person
         named = data.full_name is not None or data.short_name is not None
         left: set[int | None] = set()
@@ -631,6 +640,45 @@ def put_session_speaker(
         return {"status": "ok"}
     finally:
         db.close()
+
+
+def _swap(
+    db: Session, project_id: int, session_id: str, sp: SessionSpeaker, other_code: str,
+) -> None:
+    """Exchange two of one session's slots: roles, people and their states.
+
+    One must be the participant and the other a moderator or observer — the
+    common inversion, where the pipeline called the moderator ``p3`` and the
+    participant ``m1``. The tags stay put, so the session's quotes, credited to
+    the participant's tag, leave the evidence until it is re-analysed, as any
+    recode out of participant does (``speaker_slots.evidence_out``). Swapping
+    again puts everything back, which is the undo.
+    """
+    from bristlenose.server import speaker_slots
+
+    other = next(
+        (s.row for s in speaker_slots.session_slots(db, project_id, session_id)
+         if s.slot_code == other_code and s.row is not sp),
+        None,
+    )
+    if other is None:
+        raise HTTPException(status_code=404, detail="Speaker not found")
+    if speaker_slots.is_team(sp) == speaker_slots.is_team(other):
+        raise HTTPException(
+            status_code=409, detail="A swap is a participant and a moderator or observer",
+        )
+    for field in ("speaker_role", "person_id", "state", "evidence"):
+        a, b = getattr(sp, field), getattr(other, field)
+        setattr(sp, field, b)
+        setattr(other, field, a)
+    # ``participant_person_id`` stays with its tag: it matters only when a
+    # participant's tag goes back to participant, and clearing it here would
+    # leave an earlier recode's undo nowhere to go after this swap is undone.
+    db.flush()
+    db.expire(sp, ["person"])
+    db.expire(other, ["person"])
+    speaker_slots.renumber(db, project_id)
+    db.commit()
 
 
 # ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@
  */
 import contractJson from "../../../tests/fixtures/person-picker-bridge-contract.json";
 import i18n from "../i18n";
-import type { PersonPickerRow, PersonPickerSlot, PickerRole } from "./personPicker";
+import type { PersonPickerRow, PersonPickerSlot, PersonPickerSwap, PickerRole } from "./personPicker";
 import { buildPersonPickerMessage, resolvePersonPickerChoice } from "./personPickerBridge";
 
 interface WebToNativeCase {
@@ -16,6 +16,7 @@ interface WebToNativeCase {
     slot: PersonPickerSlot;
     known: PersonPickerRow[];
     knownByRole?: Record<PickerRole, PersonPickerRow[]>;
+    swap?: PersonPickerSwap;
     anchor: { x: number; y: number; width: number; height: number };
   };
   wire: unknown;
@@ -27,6 +28,7 @@ interface NativeToWebCase {
   slot: PersonPickerSlot;
   known: PersonPickerRow[];
   knownByRole?: Record<PickerRole, PersonPickerRow[]>;
+  swap?: PersonPickerSwap;
   effect: unknown;
 }
 
@@ -42,8 +44,8 @@ describe("person picker bridge contract", () => {
 
   for (const c of contract.web_to_native) {
     it(`builds: ${c.name}`, () => {
-      const { sessionId, slot, known, anchor, knownByRole } = c.input;
-      expect(buildPersonPickerMessage(sessionId, slot, known, anchor, i18n.t, knownByRole)).toEqual(c.wire);
+      const { sessionId, slot, known, anchor, knownByRole, swap } = c.input;
+      expect(buildPersonPickerMessage(sessionId, slot, known, anchor, i18n.t, knownByRole, swap)).toEqual(c.wire);
     });
   }
 
@@ -53,6 +55,7 @@ describe("person picker bridge contract", () => {
         slot: c.slot,
         known: c.known,
         knownByRole: c.knownByRole,
+        swap: c.swap,
       }));
       const effect = pick === null ? null : "taken" in pick ? { taken: pick.taken } : pick.choice;
       expect(effect).toEqual(c.effect);

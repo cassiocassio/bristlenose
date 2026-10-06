@@ -2724,8 +2724,9 @@ read applies to design docs too.
 > relabel only) are built on all three surfaces — see
 > [§J8 points 19 and 20](#j8--the-owners-answers--6-oct-2026) for what shipped and where it
 > departs from the rows below** (no `/kind` route: the slot's existing `speaker_role` holds the
-> kind, and the speaker PUT takes `kind`). Not built: R2's *Swap with m1* row (call 4) and its
-> *Re-analyse this session* offer, which waits for R3's act; R3 itself.
+> kind, and the speaker PUT takes `kind`). R2's *Swap with m1* row (call 4) is built too
+> ([§J8 point 21](#j8--the-owners-answers--6-oct-2026)). Not built: the *Re-analyse this
+> session* offer, which waits for R3's act; R3 itself.
 
 *Written to unblock the picker's disabled segments (UX iteration 3: Moderator |
 Participant | Observer, only the current one enabled until this exists). Builds on
@@ -3321,5 +3322,28 @@ people as unique and roles as per-session is the People lens's long-term goal.
     and can land on a deleted session's retired number — reserving it needs the registry or
     a stored code; (b) the Participant segment of a recoded-out slot shows the moderator's
     name although picking it restores the participant, because the client cannot know the
-    participant's name without being told it; (c) the *Swap with m1* row and the
-    *Re-analyse this session* offer.
+    participant's name without being told it; (c) the *Re-analyse this session* offer
+    (the *Swap with m1* row is built: point 21).
+
+21. **Built 6 Oct 2026 — the swap (§J7 call 4).** In a session of exactly one participant and
+    one moderator, each one's picker offers *Swap with m1* (or *p3*) under their own role,
+    between the people and the new-person field; observers do not count. One write — the
+    speaker PUT with `swap_with`, the other slot's code — exchanges the two slots' roles,
+    people and states, so there is never a moment with no participant, and the swap undoes
+    itself: ⌘Z sends the same write again (*Undo Swap Roles*). The tags stay put, so the
+    session's quotes, credited to the participant's tag, leave the evidence as any recode
+    out of participant does, and the participant's own record moves to the other slot, named
+    and anonymised there (a test). Two of the team are not swapped (409). On the Mac the
+    message carries `swap` (contract v8) and the reply `{"kind": "swap"}`, applied only where
+    the SPA offered one. Strings: `sessions.picker.swapWith`, `undo.{undo,redo}.swapRoles`,
+    in all 21 locales. Not offered yet: the *Re-analyse this session* prompt that should
+    follow, which waits for R3. **Reviewed the same day**, fixed: the swap keeps each tag's
+    remembered participant, so an earlier recode's undo still finds its way home after the
+    swap is undone (a test unwinds recode-out, recode-in and swap back to the start); the undo
+    is recorded only once the swap lands, since a refused one would otherwise be performed by
+    ⌘Z; and the grid re-reads after every queued write. **Open, owner's calls:** (a) the
+    participant takes the recoded-in number (`p3` becomes `p8` in a study of seven), the same
+    question as point 20(a); (b) an edit made outside the undo stack between a swap and its
+    undo (a re-analyse, another window) is exchanged too — the server could refuse a stale
+    undo if the write carried the roles it expects; (c) the server accepts any participant ↔
+    moderator-or-observer pair in a session, looser than the picker's offer.

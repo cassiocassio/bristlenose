@@ -137,7 +137,8 @@
       "thatsMe": "Det er mig ({{name}})",
       "proposedName": "{{code}}, foresl\u00e5et navn {{name}}",
       "nameTaken": "{{name}} st\u00e5r allerede p\u00e5 listen. V\u00e6lg personen, eller tilf\u00f8j noget, der adskiller de to.",
-      "notThisPerson": "Ikke {{name}}"
+      "notThisPerson": "Ikke {{name}}",
+      "swapWith": "Byt med {{code}}"
     },
     "moderatedBy": "Modereret af {{names}}",
     "observer_one": "Observatør: {{names}}",
@@ -661,7 +662,8 @@
       "renameTheme": "Fortryd Omdøb tema",
       "editDescription": "Fortryd Rediger beskrivelse",
       "clearName": "Fortryd Ryd navn",
-      "changeRole": "Fortryd Skift rolle"
+      "changeRole": "Fortryd Skift rolle",
+      "swapRoles": "Fortryd Byt roller"
     },
     "redo": {
       "renameModerator": "Gentag Omdøb moderator",
@@ -679,7 +681,8 @@
       "renameTheme": "Gentag Omdøb tema",
       "editDescription": "Gentag Rediger beskrivelse",
       "clearName": "Gentag Ryd navn",
-      "changeRole": "Gentag Skift rolle"
+      "changeRole": "Gentag Skift rolle",
+      "swapRoles": "Gentag Byt roller"
     }
   }
 }

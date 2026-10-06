@@ -116,6 +116,29 @@ struct PersonPickerContractTests {
         #expect(!model.recoding && model.isAnswer("Martin B Storey"))
     }
 
+    /// The swap (§J7 call 4): offered under the speaker's own role only, and
+    /// its reply names nobody.
+    @Test func theSwapRowIsOfferedAndSendsTheSwap() throws {
+        let requests = try wires().compactMap { PersonPickerRequest(message: $0) }
+        let offered = try #require(requests.last)
+        #expect(offered.swap == "p3")
+        #expect(requests[0].swap == nil)
+        var sent: [PersonPickerPick] = []
+        var closed = 0
+        let model = PersonPickerModel(request: offered, meName: "Jo", onChoose: { sent.append($0) },
+                                      onClose: { closed += 1 })
+        #expect(model.swapLabel == "Swap with p3")
+        #expect(model.rows.contains(PersonPickerModel.swapRow))
+        #expect(!PersonPickerModel(request: requests[0], onChoose: { _ in }, onClose: {})
+            .rows.contains(PersonPickerModel.swapRow))
+        model.choose(PersonPickerModel.swapRow)
+        #expect(sent == [PersonPickerPick(name: "", kind: .swap)])
+        #expect(closed == 1)
+        let (_, payload) = PersonPickerAction.choose(sessionId: "s1", code: "m1", pick: sent[0])
+        #expect(NSDictionary(dictionary: payload)
+            == NSDictionary(dictionary: ["sessionId": "s1", "code": "m1", "choice": ["kind": "swap"]]))
+    }
+
     /// The popover is sized for every role at once, so a segment never
     /// resizes it under the pointer.
     @Test func browsingARoleNeverResizesThePicker() throws {

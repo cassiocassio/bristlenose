@@ -48,6 +48,8 @@ struct PersonPickerRequest: Equatable {
         /// "New observer" and the like: the new row's prompt under each role a
         /// recode browses (§J7 R1).
         var newPromptFor: [Role: String] = [:]
+        /// "Swap with {{code}}": the swap row (§J7 call 4).
+        var swapWith: String? = nil
     }
 
     /// Another role's rows, browsed to recode the speaker (§J7 R1): the
@@ -70,12 +72,17 @@ struct PersonPickerRequest: Equatable {
     /// The badge, in CSS pixels from the web view's top-left.
     let anchor: CGRect
     let labels: Labels
-    /// The other roles the speaker can be recoded to; empty for a participant
-    /// (R2 is not built) and from an SPA older than the recode.
+    /// The other roles the speaker can be recoded to; empty from an SPA older
+    /// than the recode.
     let others: [Role: RoleRows]
+    /// The code of the speaker this one would swap with (§J7 call 4), when the
+    /// session has exactly one participant and one moderator.
+    let swap: String?
 
     init(sessionId: String, slot: Slot, names: [String], codes: [String]? = nil,
-         newCode: String? = nil, anchor: CGRect, labels: Labels, others: [Role: RoleRows] = [:]) {
+         newCode: String? = nil, anchor: CGRect, labels: Labels, others: [Role: RoleRows] = [:],
+         swap: String? = nil) {
+        self.swap = swap
         self.sessionId = sessionId
         self.slot = slot
         self.names = names
@@ -147,7 +154,9 @@ struct PersonPickerRequest: Equatable {
                              newPrompt: newPrompt, thatsMe: l["thatsMe"] as? String, menu: menu,
                              proposed: l["proposed"] as? String,
                              notThisPerson: l["notThisPerson"] as? String,
-                             newPromptFor: prompts)
+                             newPromptFor: prompts,
+                             swapWith: l["swapWith"] as? String)
+        self.swap = (body["swap"] as? String).flatMap { $0.isEmpty ? nil : $0 }
         // A role whose rows are malformed is left out: its segment stays off.
         var others: [Role: RoleRows] = [:]
         for (k, v) in body["roles"] as? [String: Any] ?? [:] {
@@ -165,7 +174,7 @@ struct PersonPickerRequest: Equatable {
 /// it means (a pick, someone new, That's Me) — never this side. `role` is set
 /// when the pick was made under another role: a recode (§J7 R1).
 struct PersonPickerPick: Equatable {
-    enum Kind: String { case name, new, me, clear, rename }
+    enum Kind: String { case name, new, me, clear, rename, swap }
     let name: String
     let kind: Kind
     var role: PersonPickerRequest.Role? = nil
@@ -176,9 +185,9 @@ struct PersonPickerPick: Equatable {
 /// the fixture without a web view.
 enum PersonPickerAction {
     static func choose(sessionId: String, code: String, pick: PersonPickerPick) -> (String, [String: Any]) {
-        // "Not this person" names nobody.
-        var choice: [String: Any] = pick.kind == .clear
-            ? ["kind": "clear"]
+        // "Not this person" and the swap name nobody.
+        var choice: [String: Any] = pick.kind == .clear || pick.kind == .swap
+            ? ["kind": pick.kind.rawValue]
             : ["kind": pick.kind.rawValue, "name": pick.name]
         if let role = pick.role { choice["role"] = role.rawValue }
         return ("personPickerChoose", ["sessionId": sessionId, "code": code, "choice": choice])
@@ -209,6 +218,7 @@ struct PickerMetrics {
 final class PersonPickerModel: ObservableObject {
     static let newRow = "\u{0}new"
     static let meRow = "\u{0}me"
+    static let swapRow = "\u{0}swap"
 
     let request: PersonPickerRequest
     let metrics: PickerMetrics
@@ -253,7 +263,16 @@ final class PersonPickerModel: ObservableObject {
     var recoding: Bool { browsing != request.slot.role }
 
     var rows: [String] {
-        names + [Self.newRow] + (meName == nil ? [] : [Self.meRow])
+        // The swap is an act on the speaker as they are, so it is offered
+        // under their own role only (§J7 call 4).
+        names + (swapLabel != nil && !recoding ? [Self.swapRow] : [])
+            + [Self.newRow] + (meName == nil ? [] : [Self.meRow])
+    }
+
+    /// "Swap with m1", or nil where the session offers no swap.
+    var swapLabel: String? {
+        guard let code = request.swap, let template = request.labels.swapWith else { return nil }
+        return template.replacingOccurrences(of: "{{code}}", with: code)
     }
 
     func code(for row: String) -> String { request.code(for: row, in: browsing) }
@@ -290,7 +309,7 @@ final class PersonPickerModel: ObservableObject {
         // Every role's rows and prompt, so browsing a role never resizes it.
         let roles = request.openRoles
         let texts = roles.flatMap { request.rows(for: $0).names + [request.newPrompt(for: $0)] }
-            + (thatsMeLabel.map { [$0] } ?? [])
+            + (thatsMeLabel.map { [$0] } ?? []) + (swapLabel.map { [$0] } ?? [])
         let widest = texts.map { ($0 as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
         // Cell inset 8 + check column + badge column + gap + text + trailing 10,
         // inside the source-list capsule's 10 a side, inside the 10 pt padding.
@@ -345,6 +364,11 @@ final class PersonPickerModel: ObservableObject {
     /// A picked row. The web side decides what it means.
     func choose(_ row: String) {
         guard row != Self.newRow else { return }
+        if row == Self.swapRow {
+            onChoose(PersonPickerPick(name: "", kind: .swap))
+            onClose()
+            return
+        }
         if canRename(row) {
             if !renaming {
                 renameDraft = row
@@ -599,6 +623,14 @@ private struct PersonPickerList: NSViewRepresentable {
                 newField = field
                 name = field
                 label = "\(newCode), \(model.newPrompt)"
+            case PersonPickerModel.swapRow:
+                let icon = NSImageView(image: NSImage(systemSymbolName: "arrow.left.arrow.right",
+                                                      accessibilityDescription: nil) ?? NSImage())
+                icon.contentTintColor = .secondaryLabelColor
+                icon.symbolConfiguration = .init(pointSize: m.nameFont.pointSize, weight: .regular)
+                lead = icon
+                name = NSTextField(labelWithString: model.swapLabel ?? "")
+                label = model.swapLabel ?? ""
             case PersonPickerModel.meRow:
                 let icon = NSImageView(image: NSImage(systemSymbolName: "person.crop.circle.badge.checkmark",
                                                       accessibilityDescription: nil) ?? NSImage())
@@ -734,6 +766,7 @@ private struct PersonPickerList: NSViewRepresentable {
             switch id {
             case PersonPickerModel.newRow: return ""
             case PersonPickerModel.meRow: return model.thatsMeLabel ?? ""
+            case PersonPickerModel.swapRow: return model.swapLabel ?? ""
             default: return id
             }
         }

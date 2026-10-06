@@ -177,7 +177,8 @@
       "thatsMe": "To ja ({{name}})",
       "proposedName": "{{code}}, proponowane imi\u0119 {{name}}",
       "nameTaken": "{{name}} jest ju\u017c na li\u015bcie. Wybierz t\u0119 osob\u0119 albo dodaj co\u015b, co odr\u00f3\u017cni obie.",
-      "notThisPerson": "To nie {{name}}"
+      "notThisPerson": "To nie {{name}}",
+      "swapWith": "Zamie\u0144 z {{code}}"
     },
     "failedToLoad": "Nie udało się wczytać sesji: {{error}}",
     "loading": "Wczytywanie sesji…"
@@ -735,7 +736,8 @@
       "renameTheme": "Cofnij zmianę nazwy tematu",
       "editDescription": "Cofnij edycję opisu",
       "clearName": "Cofnij usuni\u0119cie imienia",
-      "changeRole": "Cofnij zmian\u0119 roli"
+      "changeRole": "Cofnij zmian\u0119 roli",
+      "swapRoles": "Cofnij zamian\u0119 r\u00f3l"
     },
     "redo": {
       "renameModerator": "Przywróć zmianę imienia moderatora",
@@ -753,7 +755,8 @@
       "renameTheme": "Przywróć zmianę nazwy tematu",
       "editDescription": "Przywróć edycję opisu",
       "clearName": "Przywr\u00f3\u0107 usuni\u0119cie imienia",
-      "changeRole": "Przywr\u00f3\u0107 zmian\u0119 roli"
+      "changeRole": "Przywr\u00f3\u0107 zmian\u0119 roli",
+      "swapRoles": "Przywr\u00f3\u0107 zamian\u0119 r\u00f3l"
     }
   }
 }

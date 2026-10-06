@@ -292,3 +292,92 @@ def test_the_tapestry_draws_a_recoded_participant_on_the_moderators_track(tmp_pa
     assert {t["speaker"]: t["team"] for t in s1["turns"]} == {"m1": True, "p1": True}
     s2 = next(s for s in sessions if s["session_id"] == "s2")
     assert {t["speaker"]: t["team"] for t in s2["turns"]} == {"m1": True, "p2": False}
+
+
+class TestSwap:
+    """§J7 call 4: the pipeline called the moderator ``p1`` and the participant
+    ``m1``. One act, never a moment with no participant, and its own undo."""
+
+    def _swap(self, client: TestClient) -> None:
+        resp = client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
+        assert resp.status_code == 200, resp.text
+
+    def test_the_two_exchange_roles_and_people(self, tmp_path: Path) -> None:
+        client = _client(_with_quotes(tmp_path))
+        martin = _martin(client)
+        self._swap(client)
+        slots = _slots(client)
+        assert (slots[("s1", "p1")]["speaker_code"], slots[("s1", "p1")]["name"],
+                slots[("s1", "p1")]["person"]) == ("m1", "Martin", martin)
+        assert (slots[("s1", "m1")]["speaker_code"], slots[("s1", "m1")]["name"],
+                slots[("s1", "m1")]["person"]) == ("p3", "P1", "")
+        assert _quote_ids(client) == {"q-p2-10"}, "the moderator's words leave the evidence"
+
+    def test_swapping_again_puts_everything_back(self, tmp_path: Path) -> None:
+        client = _client(_with_quotes(tmp_path))
+        before = _slots(client)
+        self._swap(client)
+        resp = client.put("/api/projects/1/sessions/s1/speakers/m1", json={"swap_with": "p1"})
+        assert resp.status_code == 200, resp.text
+        assert _slots(client) == before
+        assert _quote_ids(client) == {"q-p1-10", "q-p2-10"}
+
+    def test_the_participant_is_anonymised_where_they_now_sit(self, tmp_path: Path) -> None:
+        from bristlenose.server.routes.export import _anonymise_data
+
+        client = _client(_with_quotes(tmp_path))
+        client.put("/api/projects/1/people",
+                   json={"p1": {"full_name": "Wylie Coyote", "short_name": "Wylie", "role": ""}})
+        self._swap(client)
+        endpoints = {
+            path: client.get(f"/api/projects/1{path}").json()
+            for path in ("/people", "/sessions", "/dashboard", "/transcripts/s1")
+        }
+        assert "Wylie" in json.dumps(endpoints)
+        _anonymise_data(endpoints)
+        assert "Wylie" not in json.dumps(endpoints)
+
+    def test_a_swap_between_two_recodes_unwinds_back_to_the_start(self, tmp_path: Path) -> None:
+        """Review, 6 Oct: the swap must leave an earlier recode's way home intact."""
+        client = _client(_with_quotes(tmp_path))
+        before = _slots(client)
+        martin, kerri = _martin(client), _slots(client)[("s2", "m1")]["person"]
+        def put(slot: str, body: dict):
+            return client.put(f"/api/projects/1/sessions/s1/speakers/{slot}", json=body)
+
+        assert put("p1", {"kind": "moderator", "person": kerri}).status_code == 200
+        assert put("m1", {"kind": "participant", "person": martin}).status_code == 200
+        assert put("p1", {"swap_with": "m1"}).status_code == 200
+        # Undo, newest first: the swap, the recode in, the recode out.
+        assert put("p1", {"swap_with": "m1"}).status_code == 200
+        assert put("m1", {"kind": "moderator", "person": martin}).status_code == 200
+        assert put("p1", {"kind": "participant", "confirmed": True}).status_code == 200
+        after = _slots(client)
+        assert {k: (v["speaker_code"], v["name"]) for k, v in after.items()} == {
+            k: (v["speaker_code"], v["name"]) for k, v in before.items()
+        }
+        assert _quote_ids(client) == {"q-p1-10", "q-p2-10"}
+
+    def test_a_slot_with_nobody_swaps_as_nobody(self, tmp_path: Path) -> None:
+        client = _client(_with_quotes(tmp_path))
+        client.put("/api/projects/1/sessions/s1/speakers/m1", json={"clear": True})
+        resp = client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
+        assert resp.status_code == 200, resp.text
+        slots = _slots(client)
+        assert (slots[("s1", "p1")]["speaker_code"], slots[("s1", "p1")]["name"]) == ("m?", "")
+        assert slots[("s1", "m1")]["name"] == "P1"
+
+    def test_an_unknown_speaker_is_not_found(self, tmp_path: Path) -> None:
+        client = _client(_with_quotes(tmp_path))
+        resp = client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "o9"})
+        assert resp.status_code == 404
+
+    def test_two_of_the_team_are_not_swapped(self, tmp_path: Path) -> None:
+        client = _client(_with_quotes(tmp_path))
+        resp = client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "p1"})
+        assert resp.status_code == 404
+        kerri = _slots(client)[("s2", "m1")]["person"]
+        client.put("/api/projects/1/sessions/s1/speakers/p1",
+                   json={"kind": "observer", "person": kerri})
+        resp = client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
+        assert resp.status_code == 409

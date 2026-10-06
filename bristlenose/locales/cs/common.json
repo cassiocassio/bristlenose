@@ -173,7 +173,8 @@
       "thatsMe": "To jsem já ({{name}})",
       "proposedName": "{{code}}, navr\u017een\u00e9 jm\u00e9no {{name}}",
       "nameTaken": "{{name}} u\u017e v seznamu je. Vyberte tuto osobu, nebo dopl\u0148te n\u011bco, \u010d\u00edm se ob\u011b rozli\u0161\u00ed.",
-      "notThisPerson": "Nen\u00ed to {{name}}"
+      "notThisPerson": "Nen\u00ed to {{name}}",
+      "swapWith": "Prohodit s {{code}}"
     },
     "failedToLoad": "Nepodařilo se načíst sezení: {{error}}",
     "loading": "Načítání sezení…"
@@ -724,7 +725,8 @@
       "renameTheme": "Odvolat akci Přejmenovat téma",
       "editDescription": "Odvolat akci Upravit popis",
       "clearName": "Odvolat akci Vymazat jm\u00e9no",
-      "changeRole": "Odvolat akci Zm\u011bnit roli"
+      "changeRole": "Odvolat akci Zm\u011bnit roli",
+      "swapRoles": "Odvolat akci Prohodit role"
     },
     "redo": {
       "renameModerator": "Opakovat akci Přejmenovat moderátora",
@@ -742,7 +744,8 @@
       "renameTheme": "Opakovat akci Přejmenovat téma",
       "editDescription": "Opakovat akci Upravit popis",
       "clearName": "Opakovat akci Vymazat jm\u00e9no",
-      "changeRole": "Opakovat akci Zm\u011bnit roli"
+      "changeRole": "Opakovat akci Zm\u011bnit roli",
+      "swapRoles": "Opakovat akci Prohodit role"
     }
   }
 }

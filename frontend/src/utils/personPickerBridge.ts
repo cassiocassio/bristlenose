@@ -26,6 +26,7 @@ import {
   type PersonPickerLabels,
   type PersonPickerRow,
   type PersonPickerSlot,
+  type PersonPickerSwap,
   type PickerRole,
 } from "./personPicker";
 
@@ -51,6 +52,9 @@ export interface WirePersonPicker {
   roles?: Partial<Record<PickerRole, WireRoleRows>>;
   /** The badge, in CSS pixels from the web view's top-left. */
   anchor: { x: number; y: number; width: number; height: number };
+  /** The code of the speaker this one would swap with (§J7 call 4); absent
+   *  when the session offers no swap. */
+  swap?: string;
   labels: PersonPickerLabels;
 }
 
@@ -58,6 +62,7 @@ export interface WirePersonPicker {
  *  current row renamed in place. */
 export type WireNativeChoice =
   | { kind: "confirm" }
+  | { kind: "swap" }
   | { kind: "clear" }
   | { kind: "name" | "new" | "me" | "rename"; name: string; role?: PickerRole };
 
@@ -81,6 +86,7 @@ export function buildPersonPickerMessage(
   anchor: { x: number; y: number; width: number; height: number },
   t: TFunction,
   knownByRole?: Partial<Record<PickerRole, PersonPickerRow[]>>,
+  swap?: PersonPickerSwap,
 ): WirePersonPicker {
   const rows = personPickerRows(slot, known);
   const roles: Partial<Record<PickerRole, WireRoleRows>> = {};
@@ -103,6 +109,7 @@ export function buildPersonPickerMessage(
     codes: rows.map((r) => r.code),
     newCode: personPickerNewCode(slot, rows),
     ...(Object.keys(roles).length ? { roles } : {}),
+    ...(swap ? { swap: swap.code } : {}),
     anchor: {
       x: Math.round(anchor.x),
       y: Math.round(anchor.y),
@@ -134,6 +141,7 @@ export function parsePersonPickerChoice(payload: unknown): WirePersonPickerReply
   if (typeof p.sessionId !== "string" || typeof p.code !== "string" || !choice) return null;
   if (choice.kind === "confirm") return { sessionId: p.sessionId, code: p.code, choice: { kind: "confirm" } };
   if (choice.kind === "clear") return { sessionId: p.sessionId, code: p.code, choice: { kind: "clear" } };
+  if (choice.kind === "swap") return { sessionId: p.sessionId, code: p.code, choice: { kind: "swap" } };
   const kind = choice.kind;
   if (
     (kind === "name" || kind === "new" || kind === "me" || kind === "rename") &&
@@ -172,6 +180,7 @@ export function resolvePersonPickerChoice(
     slot: PersonPickerSlot;
     known: PersonPickerRow[];
     knownByRole?: Partial<Record<PickerRole, PersonPickerRow[]>>;
+    swap?: PersonPickerSwap;
   } | null,
 ): ResolvedPersonPick | null {
   const pick = parsePersonPickerChoice(payload);
@@ -183,6 +192,10 @@ export function resolvePersonPickerChoice(
   const { slot } = found;
   if (pick.choice.kind === "clear") {
     return personPickerCanClear(slot) ? { sessionId, code, choice: { kind: "clear" } } : null;
+  }
+  if (pick.choice.kind === "swap") {
+    // Only the swap the picker was offered: the session may have changed.
+    return found.swap ? { sessionId, code, choice: { kind: "swap", slot: found.swap.slot } } : null;
   }
   const rows = personPickerRows(slot, found.known);
   const { kind, name } = pick.choice;

@@ -137,7 +137,8 @@
       "thatsMe": "Det är jag ({{name}})",
       "proposedName": "{{code}}, f\u00f6reslaget namn {{name}}",
       "nameTaken": "{{name}} finns redan i listan. V\u00e4lj personen eller l\u00e4gg till n\u00e5got som skiljer de tv\u00e5 \u00e5t.",
-      "notThisPerson": "Inte {{name}}"
+      "notThisPerson": "Inte {{name}}",
+      "swapWith": "Byt med {{code}}"
     },
     "moderatedBy": "Modererad av {{names}}",
     "observer_one": "Observatör: {{names}}",
@@ -661,7 +662,8 @@
       "renameTheme": "Ångra Byt namn på tema",
       "editDescription": "Ångra Redigera beskrivning",
       "clearName": "\u00c5ngra Rensa namn",
-      "changeRole": "\u00c5ngra Byt roll"
+      "changeRole": "\u00c5ngra Byt roll",
+      "swapRoles": "\u00c5ngra Byt roller"
     },
     "redo": {
       "renameModerator": "Gör om Byt namn på moderator",
@@ -679,7 +681,8 @@
       "renameTheme": "Gör om Byt namn på tema",
       "editDescription": "Gör om Redigera beskrivning",
       "clearName": "G\u00f6r om Rensa namn",
-      "changeRole": "G\u00f6r om Byt roll"
+      "changeRole": "G\u00f6r om Byt roll",
+      "swapRoles": "G\u00f6r om Byt roller"
     }
   }
 }

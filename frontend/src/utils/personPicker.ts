@@ -53,7 +53,20 @@ export type PersonPickerChoice =
   | { kind: "clear" }
   | { kind: "person"; row: PersonPickerRow; role?: PickerRole }
   | { kind: "new"; name: string; role?: PickerRole }
-  | { kind: "name"; name: string };
+  | { kind: "name"; name: string }
+  /** §J7 call 4: this speaker and `slot` (the other's slot code) were the
+   *  other way round — one write that exchanges their roles and people. */
+  | { kind: "swap"; slot: string };
+
+/** The speaker a swap would exchange with: in a session of exactly one
+ *  participant and one moderator, each is the other's (§J7 call 4) — the
+ *  common inversion, where the pipeline called the moderator `p3`. */
+export interface PersonPickerSwap {
+  /** The code the other speaker shows (`m1`). */
+  code: string;
+  /** Their slot code, which a write addresses. */
+  slot: string;
+}
 
 function isOwnRow(slot: PersonPickerSlot, row: PersonPickerRow): boolean {
   return slot.person ? row.person === slot.person : row.name === slot.name;
@@ -262,6 +275,9 @@ export interface PersonPickerLabels {
   /** "Not {{name}}" — the ✕ on the current row, with `{{name}}` left for the
    *  caller. */
   notThisPerson: string;
+  /** "Swap with {{code}}" — the swap row (§J7 call 4), `{{code}}` left for
+   *  the caller. */
+  swapWith: string;
 }
 
 /** The picker's strings for one slot. */
@@ -295,6 +311,7 @@ export function personPickerLabels(slot: PersonPickerSlot, t: TFunction): Person
     proposed: personPickerProposedLabel(slot, t),
     nameTaken: t("sessions.picker.nameTaken", { name: "{{name}}", interpolation: { escapeValue: false } }),
     notThisPerson: t("sessions.picker.notThisPerson", { name: "{{name}}", interpolation: { escapeValue: false } }),
+    swapWith: t("sessions.picker.swapWith", { code: "{{code}}", interpolation: { escapeValue: false } }),
   };
 }
 

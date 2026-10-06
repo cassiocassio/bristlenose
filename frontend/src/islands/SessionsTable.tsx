@@ -37,7 +37,7 @@ import {
   type PeopleChangedDetail,
   type SpeakerNameState,
 } from "../utils/peopleChanged";
-import { nameSpeaker, speakerWritesSettled } from "../utils/speakerNames";
+import { nameSpeaker, speakerWritesSettled, swapSpeakers } from "../utils/speakerNames";
 import {
   hasNativePersonPicker,
   knownPeopleOf,
@@ -46,6 +46,7 @@ import {
   pickerRoleOf,
   refuseTakenName,
   slotOf,
+  swapPartnerOf,
   stateAfter,
 } from "../utils/speakerPicking";
 import type { PersonData } from "../utils/api";
@@ -354,6 +355,13 @@ export function SessionsTable({
     [slotState, drawSlot],
   );
 
+  // A swap, or its undo or redo, changed two slots: read them again.
+  useEffect(() => {
+    // Through reloadAfterWrites: a quick ⌘Z then ⌘⇧Z must read after both land.
+    window.addEventListener("bn:speakers-written", reloadAfterWrites);
+    return () => window.removeEventListener("bn:speakers-written", reloadAfterWrites);
+  }, [reloadAfterWrites]);
+
   // Undo and redo redraw the slot they changed.
   useEffect(() => {
     const onChanged = (e: Event) => {
@@ -424,6 +432,12 @@ export function SessionsTable({
         handleNameCommit(sessionId, speakerCode, choice.name);
         return;
       }
+      if (choice.kind === "swap") {
+        // Two slots change at once; the grid re-reads when it lands (and on
+        // its undo), since only the server knows the codes they now show.
+        void swapSpeakers(sessionId, speakerCode, choice.slot).catch(() => undefined);
+        return;
+      }
       renameSlot(sessionId, speakerCode, (before) => stateAfter(choice, before));
     },
     [renameSlot, handleNameCommit],
@@ -484,6 +498,9 @@ export function SessionsTable({
           slot,
           known: knownPeople[slot.role],
           knownByRole: knownPeople,
+          swap: swapPartnerOf(
+            data.sessions.find((s) => s.session_id === sessionId)?.speakers ?? [], sp,
+          ),
           apply: (choice) => applyPickerChoice(sessionId, slotOf(sp), choice),
           refuse: refuseTaken,
         },
@@ -950,6 +967,7 @@ function SessionRow({
                     slot={slot}
                     known={knownPeople[slot.role]}
                     knownByRole={knownPeople}
+                    swap={swapPartnerOf(speakers, sp)}
                     t={t}
                     onChoose={(choice) => onPickerChoose(session_id, slotOf(sp), choice)}
                     onClose={onPickerClose}

@@ -159,7 +159,8 @@
       "thatsMe": "Tämä olen minä ({{name}})",
       "proposedName": "{{code}}, ehdotettu nimi {{name}}",
       "nameTaken": "{{name}} on jo luettelossa. Valitse kyseinen henkil\u00f6 tai lis\u00e4\u00e4 jotain, joka erottaa heid\u00e4t.",
-      "notThisPerson": "Ei {{name}}"
+      "notThisPerson": "Ei {{name}}",
+      "swapWith": "Vaihda kesken\u00e4\u00e4n: {{code}}"
     },
     "failedToLoad": "Istuntojen lataus epäonnistui: {{error}}",
     "loading": "Ladataan istuntoja…"
@@ -661,7 +662,8 @@
       "renameTheme": "Peru teeman uudelleennimeäminen",
       "editDescription": "Peru kuvauksen muokkaus",
       "clearName": "Peru nimen poistaminen",
-      "changeRole": "Peru roolin vaihtaminen"
+      "changeRole": "Peru roolin vaihtaminen",
+      "swapRoles": "Peru roolien vaihtaminen kesken\u00e4\u00e4n"
     },
     "redo": {
       "renameModerator": "Nimeä moderaattori sittenkin uudelleen",
@@ -679,7 +681,8 @@
       "renameTheme": "Nimeä teema sittenkin uudelleen",
       "editDescription": "Muokkaa kuvausta sittenkin",
       "clearName": "Poista nimi sittenkin",
-      "changeRole": "Vaihda rooli sittenkin"
+      "changeRole": "Vaihda rooli sittenkin",
+      "swapRoles": "Vaihda roolit kesken\u00e4\u00e4n sittenkin"
     }
   }
 }

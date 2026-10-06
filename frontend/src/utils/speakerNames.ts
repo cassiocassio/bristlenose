@@ -156,6 +156,25 @@ export function nameSpeaker({ sessionId, code, before, after }: NameSpeakerArgs)
   return done;
 }
 
+/**
+ * Swap two of one session's speakers (§J7 call 4): their roles and people
+ * change places in one write, and the undo is the same write again. Views
+ * re-read afterwards (`bn:speakers-written`): two slots changed, and only the
+ * server knows the codes they now show.
+ */
+export function swapSpeakers(sessionId: string, code: string, other: string): Promise<void> {
+  if (isExportMode()) return Promise.resolve();
+  const write = () =>
+    enqueue(() => sendPut(slotPath(sessionId, code), { swap_with: other })).then(written);
+  // Recorded once the swap has landed: its undo is the same write, so an
+  // entry for a refused swap would perform it on ⌘Z.
+  return write().then(() => pushUndo({ action: "swapRoles", undo: write, redo: write }));
+}
+
+function written(): void {
+  window.dispatchEvent(new CustomEvent("bn:speakers-written"));
+}
+
 /** Resolves when every queued write has landed (or failed), so a view can
  *  re-read what the server renumbered. */
 export function speakerWritesSettled(): Promise<void> {

@@ -137,7 +137,8 @@
       "thatsMe": "Det er meg ({{name}})",
       "proposedName": "{{code}}, foresl\u00e5tt navn {{name}}",
       "nameTaken": "{{name}} st\u00e5r allerede i listen. Velg personen, eller legg til noe som skiller de to.",
-      "notThisPerson": "Ikke {{name}}"
+      "notThisPerson": "Ikke {{name}}",
+      "swapWith": "Bytt med {{code}}"
     },
     "moderatedBy": "Moderert av {{names}}",
     "observer_one": "Observatør: {{names}}",
@@ -661,7 +662,8 @@
       "renameTheme": "Angre navneendring for tema",
       "editDescription": "Angre redigering av beskrivelse",
       "clearName": "Angre fjerning av navn",
-      "changeRole": "Angre rolleendring"
+      "changeRole": "Angre rolleendring",
+      "swapRoles": "Angre rollebytte"
     },
     "redo": {
       "renameModerator": "Utfør navneendring for moderator likevel",
@@ -679,7 +681,8 @@
       "renameTheme": "Utfør navneendring for tema likevel",
       "editDescription": "Utfør redigering av beskrivelse likevel",
       "clearName": "Utf\u00f8r fjerning av navn likevel",
-      "changeRole": "Utf\u00f8r rolleendring likevel"
+      "changeRole": "Utf\u00f8r rolleendring likevel",
+      "swapRoles": "Utf\u00f8r rollebytte likevel"
     }
   }
 }

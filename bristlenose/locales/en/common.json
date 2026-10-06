@@ -159,7 +159,8 @@
       "thatsMe": "That’s Me ({{name}})",
       "proposedName": "{{code}}, proposed name {{name}}",
       "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart.",
-      "notThisPerson": "Not {{name}}"
+      "notThisPerson": "Not {{name}}",
+      "swapWith": "Swap with {{code}}"
     },
     "failedToLoad": "Failed to load sessions: {{error}}",
     "loading": "Loading sessions…"
@@ -663,7 +664,8 @@
       "renameTheme": "Undo Rename Theme",
       "editDescription": "Undo Edit Description",
       "clearName": "Undo Clear Name",
-      "changeRole": "Undo Change Role"
+      "changeRole": "Undo Change Role",
+      "swapRoles": "Undo Swap Roles"
     },
     "redo": {
       "renameModerator": "Redo Rename Moderator",
@@ -681,7 +683,8 @@
       "renameTheme": "Redo Rename Theme",
       "editDescription": "Redo Edit Description",
       "clearName": "Redo Clear Name",
-      "changeRole": "Redo Change Role"
+      "changeRole": "Redo Change Role",
+      "swapRoles": "Redo Swap Roles"
     }
   }
 }

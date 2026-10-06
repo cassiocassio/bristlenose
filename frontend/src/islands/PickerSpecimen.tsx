@@ -70,6 +70,7 @@ function labels(slot: PersonPickerSlot): PersonPickerLabels {
     proposed: slot.name && !slot.confirmed ? `${slot.code}, proposed name ${slot.name}` : null,
     nameTaken: "{{name}} is already in the list. Pick them, or add something to tell the two apart.",
     notThisPerson: "Not {{name}}",
+    swapWith: "Swap with {{code}}",
   };
 }
 

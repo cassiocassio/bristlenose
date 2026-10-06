@@ -1,6 +1,6 @@
 {
-  "_comment": "The person picker across the Mac bridge (docs/design-people.md § UX iteration 3). Vitest (frontend/src/utils/personPickerBridge.test.ts) builds each web_to_native `wire` from `input` with the English strings, and resolves each native_to_web `payload` against its `slot` to `effect`. Swift (BristlenoseTests/PersonPickerContractTests.swift) decodes every `wire` exactly as BridgeHandler receives it and builds every `payload` from `native`. Change a shape here first, then both sides. Version 3 (6 Oct 2026, design-people.md §J8): rows carry their own codes, the new row the next free one, and a reply says which row it came from — a listed name, a typed one (`new`) or That's Me (`me`) — so a typed name is never read as a pick. A reply the SPA refuses resolves to `{\"taken\": name}`. Version 4 (6 Oct 2026): the ✕ — native replies `{\"kind\": \"clear\"}`, carrying no name, and the SPA applies it only where the slot holds a moderator or observer (§J8.8). Version 5 (6 Oct 2026): rename in place — native replies `{\"kind\": \"rename\", \"name\": …}` for the current, confirmed row; the SPA refuses a taken name and treats it as a new spelling for that person everywhere (§J8.16). Version 6 (6 Oct 2026): a recode (§J7 R1) — web sends `roles`, the other roles the speaker can move to, each with its own rows, codes and next code (built from `knownByRole`, the people by role); native replies with `role` when the pick was made under another role, and the SPA resolves it as that person, or someone new, in that role. Version 7 (6 Oct 2026): R2 — every role is open on every speaker. `roles` carries `participant` for a moderator or observer (only the speaker themself, numbered after every participant) and `moderator`/`observer` for a participant (the team; a participant has no uuid to offer as themself); `newPromptFor.participant` arrives with its number filled. Replies may carry `role: participant`.",
-  "version": 7,
+  "_comment": "The person picker across the Mac bridge (docs/design-people.md § UX iteration 3). Vitest (frontend/src/utils/personPickerBridge.test.ts) builds each web_to_native `wire` from `input` with the English strings, and resolves each native_to_web `payload` against its `slot` to `effect`. Swift (BristlenoseTests/PersonPickerContractTests.swift) decodes every `wire` exactly as BridgeHandler receives it and builds every `payload` from `native`. Change a shape here first, then both sides. Version 3 (6 Oct 2026, design-people.md §J8): rows carry their own codes, the new row the next free one, and a reply says which row it came from — a listed name, a typed one (`new`) or That's Me (`me`) — so a typed name is never read as a pick. A reply the SPA refuses resolves to `{\"taken\": name}`. Version 4 (6 Oct 2026): the ✕ — native replies `{\"kind\": \"clear\"}`, carrying no name, and the SPA applies it only where the slot holds a moderator or observer (§J8.8). Version 5 (6 Oct 2026): rename in place — native replies `{\"kind\": \"rename\", \"name\": …}` for the current, confirmed row; the SPA refuses a taken name and treats it as a new spelling for that person everywhere (§J8.16). Version 6 (6 Oct 2026): a recode (§J7 R1) — web sends `roles`, the other roles the speaker can move to, each with its own rows, codes and next code (built from `knownByRole`, the people by role); native replies with `role` when the pick was made under another role, and the SPA resolves it as that person, or someone new, in that role. Version 7 (6 Oct 2026): R2 — every role is open on every speaker. `roles` carries `participant` for a moderator or observer (only the speaker themself, numbered after every participant) and `moderator`/`observer` for a participant (the team; a participant has no uuid to offer as themself); `newPromptFor.participant` arrives with its number filled. Replies may carry `role: participant`. Version 8 (6 Oct 2026): the swap (§J7 call 4) — web sends `swap`, the code of the speaker this one would exchange with, in a session of exactly one participant and one moderator; labels carry `swapWith` with `{{code}}` left for native; native replies `{\"kind\": \"swap\"}`, which the SPA applies only where it offered one.",
+  "version": 8,
   "web_to_native": [
     {
       "name": "a proposed moderator, every moderator known once, each by their own code",
@@ -81,7 +81,8 @@
           "newPromptFor": {
             "moderator": "New moderator",
             "observer": "New observer"
-          }
+          },
+          "swapWith": "Swap with {{code}}"
         }
       }
     },
@@ -149,7 +150,8 @@
           "newPromptFor": {
             "moderator": "New moderator",
             "observer": "New observer"
-          }
+          },
+          "swapWith": "Swap with {{code}}"
         }
       }
     },
@@ -269,7 +271,8 @@
             "moderator": "New moderator",
             "observer": "New observer",
             "participant": "New name for p2"
-          }
+          },
+          "swapWith": "Swap with {{code}}"
         },
         "roles": {
           "observer": {
@@ -390,7 +393,8 @@
           "newPromptFor": {
             "moderator": "New moderator",
             "observer": "New observer"
-          }
+          },
+          "swapWith": "Swap with {{code}}"
         },
         "roles": {
           "moderator": {
@@ -414,6 +418,95 @@
             "newCode": "o2"
           }
         }
+      }
+    },
+    {
+      "name": "a moderator in a session with one participant is offered the swap",
+      "input": {
+        "sessionId": "s1",
+        "slot": {
+          "code": "m1",
+          "role": "moderator",
+          "name": "Martin B Storey",
+          "confirmed": false,
+          "person": "id-martin"
+        },
+        "known": [
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "Martin B Storey",
+            "code": "m1",
+            "person": "id-martin"
+          },
+          {
+            "name": "Kerri Ng",
+            "code": "m2",
+            "person": "id-kerri"
+          },
+          {
+            "name": "",
+            "code": "m?"
+          }
+        ],
+        "anchor": {
+          "x": 10.4,
+          "y": 20.6,
+          "width": 30,
+          "height": 17.5
+        },
+        "swap": {
+          "code": "p3",
+          "slot": "p3"
+        }
+      },
+      "wire": {
+        "sessionId": "s1",
+        "slot": {
+          "code": "m1",
+          "role": "moderator",
+          "name": "Martin B Storey",
+          "confirmed": false,
+          "person": "id-martin"
+        },
+        "names": [
+          "Kerri Ng",
+          "Martin B Storey"
+        ],
+        "codes": [
+          "m2",
+          "m1"
+        ],
+        "newCode": "m3",
+        "anchor": {
+          "x": 10,
+          "y": 21,
+          "width": 30,
+          "height": 18
+        },
+        "labels": {
+          "roles": {
+            "moderator": "Moderator",
+            "participant": "Participant",
+            "observer": "Observer"
+          },
+          "roleGroup": "Role",
+          "newPrompt": "New moderator",
+          "thatsMe": "That’s Me ({{name}})",
+          "menu": "Edit name for m1",
+          "proposed": "m1, proposed name Martin B Storey",
+          "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart.",
+          "notThisPerson": "Not {{name}}",
+          "newPromptFor": {
+            "moderator": "New moderator",
+            "observer": "New observer"
+          },
+          "swapWith": "Swap with {{code}}"
+        },
+        "swap": "p3"
       }
     }
   ],
@@ -1576,6 +1669,103 @@
         },
         "role": "moderator"
       }
+    },
+    {
+      "name": "the swap exchanges the two, where one was offered",
+      "native": {
+        "sessionId": "s1",
+        "code": "m1",
+        "name": "",
+        "kind": "swap"
+      },
+      "payload": {
+        "sessionId": "s1",
+        "code": "m1",
+        "choice": {
+          "kind": "swap"
+        }
+      },
+      "slot": {
+        "code": "m1",
+        "role": "moderator",
+        "name": "Martin B Storey",
+        "confirmed": false,
+        "person": "id-martin"
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "effect": {
+        "kind": "swap",
+        "slot": "p3"
+      },
+      "swap": {
+        "code": "p3",
+        "slot": "p3"
+      }
+    },
+    {
+      "name": "a swap nobody offered is dropped",
+      "native": {
+        "sessionId": "s1",
+        "code": "m1",
+        "name": "",
+        "kind": "swap"
+      },
+      "payload": {
+        "sessionId": "s1",
+        "code": "m1",
+        "choice": {
+          "kind": "swap"
+        }
+      },
+      "slot": {
+        "code": "m1",
+        "role": "moderator",
+        "name": "Martin B Storey",
+        "confirmed": false,
+        "person": "id-martin"
+      },
+      "known": [
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "Martin B Storey",
+          "code": "m1",
+          "person": "id-martin"
+        },
+        {
+          "name": "Kerri Ng",
+          "code": "m2",
+          "person": "id-kerri"
+        },
+        {
+          "name": "",
+          "code": "m?"
+        }
+      ],
+      "effect": null
     }
   ]
 }

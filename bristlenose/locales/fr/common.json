@@ -149,7 +149,8 @@
       "thatsMe": "C’est moi ({{name}})",
       "proposedName": "{{code}}, nom propos\u00e9 {{name}}",
       "nameTaken": "{{name}} figure d\u00e9j\u00e0 dans la liste. Choisissez cette personne, ou ajoutez de quoi distinguer les deux.",
-      "notThisPerson": "Ce n\u2019est pas {{name}}"
+      "notThisPerson": "Ce n\u2019est pas {{name}}",
+      "swapWith": "\u00c9changer avec {{code}}"
     },
     "failedToLoad": "Échec du chargement des entretiens : {{error}}",
     "loading": "Chargement des entretiens…"
@@ -661,7 +662,8 @@
       "renameTheme": "Annuler le changement de nom du thème",
       "editDescription": "Annuler la modification de la description",
       "clearName": "Annuler l\u2019effacement du nom",
-      "changeRole": "Annuler le changement de r\u00f4le"
+      "changeRole": "Annuler le changement de r\u00f4le",
+      "swapRoles": "Annuler l\u2019\u00e9change des r\u00f4les"
     },
     "redo": {
       "renameModerator": "Rétablir le changement de nom de l’animateur",
@@ -679,7 +681,8 @@
       "renameTheme": "Rétablir le changement de nom du thème",
       "editDescription": "Rétablir la modification de la description",
       "clearName": "R\u00e9tablir l\u2019effacement du nom",
-      "changeRole": "R\u00e9tablir le changement de r\u00f4le"
+      "changeRole": "R\u00e9tablir le changement de r\u00f4le",
+      "swapRoles": "R\u00e9tablir l\u2019\u00e9change des r\u00f4les"
     }
   }
 }

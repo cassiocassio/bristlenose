@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { knownPeopleOf, nameStateOf, stateAfter } from "./speakerPicking";
+import { knownPeopleOf, nameStateOf, stateAfter, swapPartnerOf } from "./speakerPicking";
 import type { SessionsListResponse, SpeakerResponse } from "./types";
 
 const study = (speakers: Array<Record<string, unknown>>[]): SessionsListResponse =>
@@ -64,5 +64,29 @@ describe("a speaker's state, as a recode reads it (§J7 R2)", () => {
     );
     expect(after.kind).toBe("participant");
     expect(after.person).toBe("id-martin");
+  });
+});
+
+
+describe("who a speaker would swap with (§J7 call 4)", () => {
+  const sp = (speaker_code: string, slot_code = speaker_code) =>
+    ({ speaker_code, slot_code, name: "", role: "" }) as SpeakerResponse;
+
+  it("in a session of one participant and one moderator, each is the other's", () => {
+    const [m, p, o] = [sp("m1"), sp("p3"), sp("o1")];
+    expect(swapPartnerOf([m, p, o], p)).toEqual({ code: "m1", slot: "m1" });
+    expect(swapPartnerOf([m, p, o], m)).toEqual({ code: "p3", slot: "p3" });
+    expect(swapPartnerOf([m, p, o], o)).toBeUndefined();
+  });
+
+  it("no swap with two participants or two moderators", () => {
+    const [m, p, q] = [sp("m1"), sp("p3"), sp("p4")];
+    expect(swapPartnerOf([m, p, q], p)).toBeUndefined();
+    expect(swapPartnerOf([m, sp("m2", "m2"), p], p)).toBeUndefined();
+  });
+
+  it("addresses the other speaker by their slot, not the code they show", () => {
+    const [m, p] = [sp("m2", "m1"), sp("p3")];
+    expect(swapPartnerOf([m, p], p)).toEqual({ code: "m2", slot: "m1" });
   });
 });

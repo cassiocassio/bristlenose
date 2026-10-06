@@ -9,6 +9,7 @@ import {
   actionFor,
   nameSpeaker,
   resetSpeakerNameQueue,
+  swapSpeakers,
   type PeopleChangedDetail,
   type SpeakerNameState,
 } from "./speakerNames";
@@ -263,5 +264,31 @@ describe("nameSpeaker — a recode into or out of participant (§J7 R2)", () => 
     await nameSpeaker({ sessionId: "s2", code: "m1", before: unknown, after: named });
     await undo();
     expect(puts()[1]).toEqual(["/sessions/s2/speakers/m1", { clear: true, kind: "moderator" }]);
+  });
+});
+
+
+describe("swapSpeakers (§J7 call 4)", () => {
+  it("is one write, and its undo is the same write again", async () => {
+    const written = vi.fn();
+    window.addEventListener("bn:speakers-written", written);
+    try {
+      await swapSpeakers("s1", "p1", "m1");
+      expect(puts()).toEqual([["/sessions/s1/speakers/p1", { swap_with: "m1" }]]);
+      expect(getUndoState().undoAction).toBe("swapRoles");
+      await undo();
+      expect(puts()[1]).toEqual(["/sessions/s1/speakers/p1", { swap_with: "m1" }]);
+      expect(written).toHaveBeenCalledTimes(2);
+    } finally {
+      window.removeEventListener("bn:speakers-written", written);
+    }
+  });
+});
+
+describe("swapSpeakers — a refused swap", () => {
+  it("records nothing, so ⌘Z cannot perform the swap that failed", async () => {
+    putMock.mockRejectedValueOnce(new Error("PUT 409"));
+    await expect(swapSpeakers("s1", "p1", "m1")).rejects.toThrow();
+    expect(getUndoState().canUndo).toBe(false);
   });
 });

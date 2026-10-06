@@ -142,7 +142,8 @@
       "thatsMe": "나 ({{name}})",
       "proposedName": "{{code}}, \uc81c\uc548\ub41c \uc774\ub984 {{name}}",
       "nameTaken": "{{name}}\uc740(\ub294) \uc774\ubbf8 \ubaa9\ub85d\uc5d0 \uc788\uc2b5\ub2c8\ub2e4. \uadf8 \uc0ac\ub78c\uc744 \uc120\ud0dd\ud558\uac70\ub098 \ub458\uc744 \uad6c\ubcc4\ud560 \uc218 \uc788\ub3c4\ub85d \ubb34\uc5b8\uac00\ub97c \ucd94\uac00\ud558\uc138\uc694.",
-      "notThisPerson": "{{name}} \uc544\ub2d8"
+      "notThisPerson": "{{name}} \uc544\ub2d8",
+      "swapWith": "{{code}}\uc640(\uacfc) \ub9de\ubc14\uafb8\uae30"
     },
     "failedToLoad": "세션 로드 실패: {{error}}",
     "loading": "세션 로드 중…"
@@ -631,7 +632,8 @@
       "renameTheme": "테마 이름 변경 실행 취소",
       "editDescription": "설명 편집 실행 취소",
       "clearName": "\uc774\ub984 \uc9c0\uc6b0\uae30 \uc2e4\ud589 \ucde8\uc18c",
-      "changeRole": "\uc5ed\ud560 \ubcc0\uacbd \uc2e4\ud589 \ucde8\uc18c"
+      "changeRole": "\uc5ed\ud560 \ubcc0\uacbd \uc2e4\ud589 \ucde8\uc18c",
+      "swapRoles": "\uc5ed\ud560 \ub9de\ubc14\uafb8\uae30 \uc2e4\ud589 \ucde8\uc18c"
     },
     "redo": {
       "renameModerator": "진행자 이름 변경 복귀",
@@ -649,7 +651,8 @@
       "renameTheme": "테마 이름 변경 복귀",
       "editDescription": "설명 편집 복귀",
       "clearName": "\uc774\ub984 \uc9c0\uc6b0\uae30 \ubcf5\uadc0",
-      "changeRole": "\uc5ed\ud560 \ubcc0\uacbd \ubcf5\uadc0"
+      "changeRole": "\uc5ed\ud560 \ubcc0\uacbd \ubcf5\uadc0",
+      "swapRoles": "\uc5ed\ud560 \ub9de\ubc14\uafb8\uae30 \ubcf5\uadc0"
     }
   }
 }

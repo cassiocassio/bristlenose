@@ -137,7 +137,8 @@
       "thatsMe": "Dat ben ik ({{name}})",
       "proposedName": "{{code}}, voorgestelde naam {{name}}",
       "nameTaken": "{{name}} staat al in de lijst. Kies die persoon of voeg iets toe om de twee uit elkaar te houden.",
-      "notThisPerson": "Niet {{name}}"
+      "notThisPerson": "Niet {{name}}",
+      "swapWith": "Wisselen met {{code}}"
     },
     "moderatedBy": "Gemodereerd door {{names}}",
     "observer_one": "Waarnemer: {{names}}",
@@ -661,7 +662,8 @@
       "renameTheme": "Herstel naam thema wijzigen",
       "editDescription": "Herstel beschrijving bewerken",
       "clearName": "Herstel naam wissen",
-      "changeRole": "Herstel rol wijzigen"
+      "changeRole": "Herstel rol wijzigen",
+      "swapRoles": "Herstel rollen wisselen"
     },
     "redo": {
       "renameModerator": "Opnieuw naam moderator wijzigen",
@@ -679,7 +681,8 @@
       "renameTheme": "Opnieuw naam thema wijzigen",
       "editDescription": "Opnieuw beschrijving bewerken",
       "clearName": "Opnieuw naam wissen",
-      "changeRole": "Opnieuw rol wijzigen"
+      "changeRole": "Opnieuw rol wijzigen",
+      "swapRoles": "Opnieuw rollen wisselen"
     }
   }
 }

@@ -440,6 +440,37 @@ describe("PersonPicker", () => {
     });
   });
 
+  describe("the swap row (§J7 call 4)", () => {
+    const mary: PersonPickerSlot = { code: "p3", role: "participant", name: "Mary", confirmed: true };
+    const byRole = { moderator: people("Martin"), participant: [{ name: "Mary", code: "p3" }], observer: [] };
+
+    it("offers the swap and sends it, addressed by the other's slot", () => {
+      const onChoose = vi.fn();
+      render(<PersonPicker slot={mary} labels={labels(mary)} known={byRole.participant} knownByRole={byRole} swap={{ code: "m2", slot: "m1" }} onChoose={onChoose} onClose={vi.fn()} />);
+      fireEvent.click(screen.getByText("Swap with m2"));
+      expect(onChoose).toHaveBeenCalledWith({ kind: "swap", slot: "m1" });
+    });
+
+    it("is reached by the keyboard, between the people and the new-person field", () => {
+      const onChoose = vi.fn();
+      render(<PersonPicker slot={mary} labels={labels(mary)} known={byRole.participant} knownByRole={byRole} swap={{ code: "m2", slot: "m1" }} onChoose={onChoose} onClose={vi.fn()} />);
+      fireEvent.keyDown(menu(), { key: "ArrowDown" });
+      fireEvent.keyDown(menu(), { key: "Enter" });
+      expect(onChoose).toHaveBeenCalledWith({ kind: "swap", slot: "m1" });
+    });
+
+    it("is offered under the speaker's own role only", () => {
+      render(<PersonPicker slot={mary} labels={labels(mary)} known={byRole.participant} knownByRole={byRole} swap={{ code: "m2", slot: "m1" }} onChoose={vi.fn()} onClose={vi.fn()} />);
+      fireEvent.click(screen.getAllByRole("radio")[0]);
+      expect(screen.queryByText("Swap with m2")).toBeNull();
+    });
+
+    it("is absent where no swap is offered", () => {
+      render(<PersonPicker slot={mary} labels={labels(mary)} known={byRole.participant} knownByRole={byRole} onChoose={vi.fn()} onClose={vi.fn()} />);
+      expect(screen.queryByText(/Swap with/)).toBeNull();
+    });
+  });
+
   it("Escape closes without choosing", () => {
     const onChoose = vi.fn();
     const onClose = vi.fn();

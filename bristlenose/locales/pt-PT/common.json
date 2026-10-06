@@ -159,7 +159,8 @@
       "thatsMe": "Sou eu ({{name}})",
       "proposedName": "{{code}}, nome proposto {{name}}",
       "nameTaken": "{{name}} j\u00e1 est\u00e1 na lista. Escolha essa pessoa ou acrescente algo para distinguir as duas.",
-      "notThisPerson": "N\u00e3o \u00e9 {{name}}"
+      "notThisPerson": "N\u00e3o \u00e9 {{name}}",
+      "swapWith": "Trocar com {{code}}"
     },
     "failedToLoad": "Falha ao carregar sessões: {{error}}",
     "loading": "A carregar sessões…"
@@ -661,7 +662,8 @@
       "renameTheme": "Desfazer Alterar nome do tema",
       "editDescription": "Desfazer Editar descrição",
       "clearName": "Desfazer Limpar nome",
-      "changeRole": "Desfazer Alterar fun\u00e7\u00e3o"
+      "changeRole": "Desfazer Alterar fun\u00e7\u00e3o",
+      "swapRoles": "Desfazer Trocar fun\u00e7\u00f5es"
     },
     "redo": {
       "renameModerator": "Refazer Alterar nome do moderador",
@@ -679,7 +681,8 @@
       "renameTheme": "Refazer Alterar nome do tema",
       "editDescription": "Refazer Editar descrição",
       "clearName": "Refazer Limpar nome",
-      "changeRole": "Refazer Alterar fun\u00e7\u00e3o"
+      "changeRole": "Refazer Alterar fun\u00e7\u00e3o",
+      "swapRoles": "Refazer Trocar fun\u00e7\u00f5es"
     }
   }
 }

@@ -424,6 +424,15 @@ class TestReanalyse:
         assert pins["Me"]["role"] == "participant"
         assert pins["Me"]["starts"] == [2.0, 20.0]
 
+    def test_undoing_the_recode_takes_the_pin_away(self, tmp_path: Path) -> None:
+        """A pin waits for the next run; one whose recode was undone must not
+        be applied by it (a later run after adding a session, say)."""
+        client, _, reg = self._swapped(tmp_path)
+        assert client.post("/api/projects/1/sessions/s1/reanalyse").status_code == 200
+        assert json.loads(reg.read_text())["pins"]["s1"]
+        client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
+        assert "s1" not in json.loads(reg.read_text())["pins"]
+
     def test_nothing_to_pin_is_refused(self, tmp_path: Path) -> None:
         project = _with_quotes(tmp_path)
         _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}})
@@ -464,3 +473,10 @@ class TestReanalyse:
         # The starred quote from the wrong speaker is kept — hidden, star intact.
         assert client.get("/api/projects/1/hidden").json().get("q-p1-10") is True
         assert client.get("/api/projects/1/starred").json().get("q-p1-10") is True
+
+        # Carried once: the pin now names its new code, so a later pick on that
+        # slot survives the next import instead of being put back.
+        assert json.loads(reg.read_text())["pins"]["s1"]["Wylie"]["from_code"] == "m1"
+        client.put("/api/projects/1/sessions/s1/speakers/m1", json={"clear": True})
+        _reimport(client, project)
+        assert _slots(client)[("s1", "m1")]["person"] != martin

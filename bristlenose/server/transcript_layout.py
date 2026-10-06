@@ -104,18 +104,25 @@ def _split(db: DbSession, segs: list[TranscriptSegment], position: int, token: i
     else:
         start = seg.start_time
     start = min(max(start, seg.start_time), seg.end_time)
+    if start <= seg.start_time:
+        # No time to share (an untimed paragraph, or one whose first word is
+        # at its start): put the second half a hair after the first, short of
+        # whatever reads next, so a second split of the first half still lands
+        # between the two — ties would fall through to insertion order.
+        later = [s.start_time for s in segs[position + 1:] if s.start_time > seg.start_time]
+        start = seg.start_time + ((later[0] - seg.start_time) / 2 if later else 0.001)
     second = TranscriptSegment(
         session_id=seg.session_id,
         speaker_code=seg.speaker_code,
         start_time=start,
-        end_time=seg.end_time,
+        end_time=max(seg.end_time, start),
         text=" ".join(drawn[token:]),
         source=seg.source,
         segment_index=seg.segment_index,
         words_json=json.dumps(right_words, separators=(",", ":")) if right_words else None,
     )
     seg.text = " ".join(drawn[:token])
-    seg.end_time = start
+    seg.end_time = min(seg.end_time, start) if seg.end_time > seg.start_time else seg.end_time
     seg.words_json = json.dumps(left_words, separators=(",", ":")) if left_words else None
     db.add(second)
     db.flush()
@@ -164,6 +171,6 @@ def replay(db: DbSession, session: SessionModel) -> int:
             apply(db, edit)
             made += 1
         except LayoutRefusedError as exc:
-            logger.info("%s: a paragraph %s was not re-made (%s)", session.session_id,
+            logger.warning("%s: a paragraph %s was not re-made (%s)", session.session_id,
                         edit.kind, exc)
     return made

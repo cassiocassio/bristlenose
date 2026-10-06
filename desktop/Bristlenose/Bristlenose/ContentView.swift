@@ -1228,9 +1228,16 @@ struct ContentView: View {
     /// that session's quotes are extracted again. Refused while a run owns the
     /// project; the SPA asked serve first, which says the same.
     private func reanalyseSession() {
+        // The pins are already written; a run that cannot start now applies
+        // them on the next one, so a refusal here loses nothing — but say so.
         guard let project = selectedProject, !project.path.isEmpty,
               SidebarOutlineController.pipelineIsFree(pipelineRunner.state[project.id])
-        else { return }
+        else {
+            Logger(subsystem: "app.bristlenose", category: "reanalyse").notice(
+                "Re-analyse not started: no project, or its pipeline is busy; the next run applies the pins"
+            )
+            return
+        }
         pipelineRunner.start(project: project)
     }
 

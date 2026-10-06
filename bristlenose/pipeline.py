@@ -570,6 +570,31 @@ def _assign_session_codes(
     return maps
 
 
+def _paragraph_starts(
+    segments: list[TranscriptSegment], max_gap: float = 2.0,
+) -> dict[str, list[float]]:
+    """Where each label's paragraphs start, in whole seconds — the evidence a
+    role pin carries, because serve reads it from the transcript file.
+
+    Stage 6 merges a label's consecutive segments within *max_gap* into one
+    paragraph and the file writes its start rounded down to the second, so the
+    raw segments' own fractional starts never match. This mirrors that merge
+    (``_merge_same_speaker``) without running it: that function extends the
+    first segment's word list in place, and these are the live segments.
+    """
+    out: dict[str, list[float]] = {}
+    prev_label: str | None = None
+    prev_end = 0.0
+    for seg in sorted(segments, key=lambda s: s.start_time):
+        label = seg.speaker_label
+        if label is not None and label == prev_label and seg.start_time - prev_end <= max_gap:
+            prev_end = max(prev_end, seg.end_time)
+            continue
+        out.setdefault(label or "Unknown", []).append(float(int(max(0.0, seg.start_time))))
+        prev_label, prev_end = label, seg.end_time
+    return out
+
+
 def apply_role_pins(
     sid: str, segments: list[TranscriptSegment], registry: SessionRegistry,
 ) -> list[str]:
@@ -586,10 +611,14 @@ def apply_role_pins(
     from bristlenose.session_registry import pin_starts
 
     pins = registry.pins.get(sid) or {}
+    if not pins:
+        return []
+    starts = _paragraph_starts(segments)
     dropped: list[str] = []
     for label, pin in list(pins.items()):
         mine = [seg for seg in segments if (seg.speaker_label or "Unknown") == label]
-        if pin_starts([seg.start_time for seg in mine]) != pin.starts:
+        evidence = pin_starts(starts.get(label, []))
+        if evidence != pin.starts:
             del pins[label]
             dropped.append(label)
             logger.warning(

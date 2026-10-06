@@ -9,6 +9,7 @@ import { getUndoState, redo, resetUndoStore, undo } from "../contexts/UndoStore"
 import { deleteParagraphEdit, postParagraphJoin, postParagraphSplit } from "./api";
 import {
   TRANSCRIPT_WRITTEN_EVENT,
+  caretAtStart,
   caretWords,
   drawnTokens,
   joinParagraphs,
@@ -77,6 +78,20 @@ describe("the caret, in words", () => {
     document.body.appendChild(other);
     caretIn(other, other.firstChild!, 2);
     expect(caretWords(el)).toBeNull();
+  });
+
+  it("is at the start only before the first character, where Backspace joins", () => {
+    const el = body();
+    caretIn(el, el.firstChild!, 0);
+    expect(caretAtStart(el)).toBe(true);
+    caretIn(el, el.firstChild!, "Tha".length);
+    expect(caretWords(el)).toBe(0);
+    expect(caretAtStart(el)).toBe(false);
+    const cjk = document.createElement("div");
+    cjk.textContent = "今日はよろしくお願いします";
+    document.body.appendChild(cjk);
+    caretIn(cjk, cjk.firstChild!, 4);
+    expect(caretAtStart(cjk)).toBe(false);
   });
 
   it("counts the words the page draws: Whisper's where there are any", () => {

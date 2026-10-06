@@ -27,6 +27,7 @@ import { isExportMode } from "../utils/exportData";
 import { redo, undo } from "../contexts/UndoStore";
 import {
   TRANSCRIPT_WRITTEN_EVENT,
+  caretAtStart,
   caretWords,
   drawnTokens,
   joinParagraphs,
@@ -364,7 +365,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         const token = caretWords(e.currentTarget);
         if (token === null || token <= 0 || token >= tokens.length) return;
         void splitParagraph(sessionId, position, token, verifyOf(tokens, token)).catch(() => undefined);
-      } else if (e.key === "Backspace" && caretWords(e.currentTarget) === 0) {
+      } else if (e.key === "Backspace" && caretAtStart(e.currentTarget)) {
         e.preventDefault();
         const above = segs[position - 1];
         if (!above || above.speaker_code !== segs[position]?.speaker_code) return;

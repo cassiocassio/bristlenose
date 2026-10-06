@@ -95,6 +95,28 @@ class TestSplit:
         assert len(segs[1]["words"]) == 4
 
 
+    def test_an_untimed_paragraph_split_twice_keeps_its_reading_order(
+        self, tmp_path: Path,
+    ) -> None:
+        """No time to share (end == start): splitting the first half again must
+        put the new piece between the halves, not after the tail."""
+        from bristlenose.server.models import TranscriptSegment
+
+        client = _client(_project(tmp_path, _TWO))
+        db = client.app.state.db_factory()
+        try:
+            seg = db.query(TranscriptSegment).filter_by(speaker_code="p1").first()
+            seg.end_time = seg.start_time
+            db.commit()
+        finally:
+            db.close()
+        _split(client, 1, 8, "be here.")
+        _split(client, 1, 3, "me, it is good to")
+        assert [t for _, t in _texts(client)][1:4] == [
+            "Thanks for having", "me, it is good to", "be here.",
+        ]
+
+
 class TestJoin:
     def test_two_halves_join_back(self, tmp_path: Path) -> None:
         client = _client(_project(tmp_path, _TWO))

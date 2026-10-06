@@ -7,8 +7,10 @@ call PUT after every localStorage write (fire-and-forget background sync).
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
@@ -39,6 +41,7 @@ from bristlenose.server.models import (
 )
 from bristlenose.server.models import Session as SessionModel
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 
@@ -488,6 +491,7 @@ def put_session_speaker(
         sp = slot.row
         if data.swap_with is not None:
             _swap(db, project_id, session_id, sp, data.swap_with)
+            drop_withdrawn_pins(db, project_id, session_id)
             return {"status": "ok"}
         person = slot.person
         named = data.full_name is not None or data.short_name is not None
@@ -637,9 +641,49 @@ def put_session_speaker(
         speaker_slots.release(db, left)
         speaker_slots.renumber(db, project_id)
         db.commit()
+        drop_withdrawn_pins(db, project_id, session_id)
         return {"status": "ok"}
     finally:
         db.close()
+
+
+def drop_withdrawn_pins(db: Session, project_id: int, session_id: str) -> None:
+    """Take away a re-analysis pin whose recode the researcher has undone.
+
+    A pin waits in the registry for the next run (§J7 R3); without this, one
+    set and then undone would still be applied by any later run — after a new
+    session is added, say. A pin the run has honoured agrees with its slot's
+    role, so it stays.
+    """
+    from bristlenose.server import speaker_slots
+    from bristlenose.server.routes.reanalyse import needs_reanalysis
+    from bristlenose.session_registry import SessionRegistry
+
+    project = db.get(Project, project_id)
+    if project is None:
+        return
+    output_dir = Path(project.output_dir)
+    try:
+        registry = SessionRegistry.load(output_dir)
+    except ValueError:
+        logger.warning("Could not read the session registry; pins were not checked",
+                       exc_info=True)
+        return
+    held = registry.pins.get(session_id)
+    if not held:
+        return
+    changed = False
+    for slot in speaker_slots.session_slots(db, project_id, session_id):
+        label = registry.label_for(session_id, slot.slot_code)
+        if label is None or label not in held:
+            continue
+        if not needs_reanalysis(slot) and held[label].role != slot.row.speaker_role:
+            del held[label]
+            changed = True
+    if changed:
+        if not held:
+            del registry.pins[session_id]
+        registry.save()
 
 
 def _swap(

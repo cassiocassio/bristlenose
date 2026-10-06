@@ -424,7 +424,11 @@ on the scope question in `design-people.md` §K.
 - **The cut** lands at the word boundary before the caret, counted in the words the page draws —
   Whisper's words where the paragraph has them, else its text — so the researcher's cut and the
   server's agree. Both halves keep the speaker; the second starts on its first word's time, or a
-  share of the paragraph's time by text length without word timings, or the same time with none.
+  share of the paragraph's time by text length without word timings. With no time to share, it
+  starts a hair after the first half, short of the next paragraph, so splitting the first half
+  again lands between the two (a tie fell through to insertion order, reviewed 6 Oct).
+  Backspace joins only with the caret before the first character — not inside the first word,
+  and not anywhere in a paragraph with no spaces, as the word count would have had it.
 - **Storage.** Each edit is a row of `transcript_layout_edits` (migration 015): kind, the
   paragraph's position in reading order (start, ordinal, id), the split's word count, and the
   first words it was made against. The importer rebuilds a session's paragraphs from the
@@ -437,6 +441,12 @@ on the scope question in `design-people.md` §K.
   not fork quotes: the split is for reading, and the quote's highlight already marks both halves,
   because the match is by time window. The fork rule stays for when a split means "two points",
   with stage 2.
+- **Known limits, from the 6 Oct review, not yet fixed.** A click into a paragraph's text makes
+  the page "editing", so bare-key shortcuts stand down until focus leaves; an input method's
+  composition cannot be cancelled by the `beforeinput` guard; a split or join the server refuses
+  is silent (it needs a string); Return cannot split a paragraph with no spaces (CJK — needs a
+  decision on what a cut means there); and one refused edit in a replay shifts every later
+  position, so those are refused too and logged.
 - **Known limits.** Positions count in reading order, so a paragraph that shares its start second
   with another keeps the page's existing anchor collision (`t-<second>`). The pipeline's own
   outputs (transcript files, markdown) do not carry splits; they are serve-side curation, like

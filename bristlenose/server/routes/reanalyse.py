@@ -19,6 +19,7 @@ carries each pick to the speaker's new code.
 
 from __future__ import annotations
 
+import logging
 import shlex
 from pathlib import Path
 
@@ -27,9 +28,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots
-from bristlenose.server.models import Project, TranscriptSegment
+from bristlenose.server.models import Project
 from bristlenose.server.models import Session as SessionModel
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 
@@ -76,7 +78,8 @@ def _cost(request: Request, project: Project) -> float | None:
         settings = getattr(request.app.state, "settings", None) or load_settings()
         run_dir = Path(project.output_dir) / ".bristlenose"
         return estimate_pipeline_cost(settings.llm_model, 1, run_dir)
-    except Exception:  # an estimate never blocks the act; it is just not shown
+    except Exception:  # an estimate never blocks the act — but say why it is missing
+        logger.warning("Could not estimate a session re-analysis's cost", exc_info=True)
         return None
 
 
@@ -109,6 +112,7 @@ def post_reanalyse(project_id: int, session_id: str, request: Request) -> Reanal
     a role the researcher no longer holds. 409 while a run owns the project.
     """
     from bristlenose.run_lifecycle import run_in_progress
+    from bristlenose.server.importer import turn_starts
     from bristlenose.session_registry import RolePin, SessionRegistry, pin_starts
 
     db: Session = request.app.state.db_factory()
@@ -133,12 +137,10 @@ def post_reanalyse(project_id: int, session_id: str, request: Request) -> Reanal
                 continue
             held = registry.pins.get(session_id, {}).get(label)
             if needs_reanalysis(slot):
-                starts = [
-                    t for (t,) in db.query(TranscriptSegment.start_time).filter_by(
-                        session_id=session.id, speaker_code=slot.slot_code,
-                    )
-                ]
+                starts = turn_starts(project, session_id, slot.slot_code)
                 if not starts:
+                    logger.warning("%s: no transcript turns for %s; its role was not pinned",
+                                   session_id, slot.slot_code)
                     continue
                 registry.pin(session_id, label, RolePin(
                     role=slot.row.speaker_role, starts=pin_starts(starts),

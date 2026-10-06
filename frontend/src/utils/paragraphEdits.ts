@@ -52,6 +52,20 @@ export function caretWords(body: HTMLElement): number | null {
   return after.length === 0 || /^\s/.test(after) ? whole : whole - 1;
 }
 
+/** Whether a collapsed caret sits before every character of ``body`` — where
+ *  Backspace joins. Not ``caretWords(body) === 0``: that is also true inside
+ *  the first word, and anywhere in a paragraph with no spaces. */
+export function caretAtStart(body: HTMLElement): boolean {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+  const caret = sel.getRangeAt(0);
+  if (!body.contains(caret.startContainer)) return false;
+  const before = document.createRange();
+  before.selectNodeContents(body);
+  before.setEnd(caret.startContainer, caret.startOffset);
+  return before.toString().trim().length === 0;
+}
+
 function written(): void {
   window.dispatchEvent(new CustomEvent(TRANSCRIPT_WRITTEN_EVENT));
 }

@@ -408,3 +408,49 @@ class TestRolePins:
         assert dropped == ["s1 Me"]
         assert [s.speaker_role for s in segs] == [R, P, R]
         assert "Me" not in reg.pins.get("s1", {})
+
+    def _real_segs(self) -> list[TranscriptSegment]:
+        """Whisper-shaped: fractional starts, and two "Me" turns stage 6 merges."""
+        def seg(a: float, b: float, label: str, role: SpeakerRole) -> TranscriptSegment:
+            return TranscriptSegment(start_time=a, end_time=b, text="words",
+                                     speaker_label=label, speaker_role=role)
+        return [seg(0.4, 1.2, "Me", P), seg(1.9, 3.0, "Me", P),
+                seg(3.5, 5.0, "Wylie", R), seg(9.7, 11.0, "Me", P)]
+
+    def test_a_pin_matches_real_fractional_merged_turns(self, tmp_path: Path) -> None:
+        """The evidence serve records is the transcript file's paragraph starts —
+        merged, whole seconds. The run must compare the same thing, or every pin
+        on a real recording is dropped and a paid re-analysis changes nothing."""
+        from bristlenose.pipeline import _assign_session_codes
+        from bristlenose.session_registry import RolePin
+
+        reg = SessionRegistry.load(tmp_path)
+        s1 = self._session()
+        reg.pin("s1", "Me", RolePin(role="researcher", starts=[0.0, 9.0], from_code="p1"))
+        reg.pin("s1", "Wylie", RolePin(role="participant", starts=[3.0], from_code="m1"))
+        segs = self._real_segs()
+        dropped: list[str] = []
+        _assign_session_codes([s1], {"s1": segs}, reg, dropped)
+        assert dropped == []
+        assert [s.speaker_role for s in segs] == [R, R, P, R]
+
+    def test_the_run_and_serve_read_the_same_starts(self, tmp_path: Path) -> None:
+        """The contract under the test above: stage 6's file, as the importer
+        parses it, gives each code the starts the run derives from raw segments."""
+        from bristlenose.pipeline import _paragraph_starts
+        from bristlenose.server.importer import _SEGMENT_RE, _parse_timecode_to_seconds
+        from bristlenose.stages.s06_merge_transcript import (
+            merge_transcripts,
+            write_raw_transcripts,
+        )
+
+        segs = self._real_segs()
+        for s in segs:
+            s.speaker_code = "p1" if s.speaker_label == "Me" else "m1"
+        expected = _paragraph_starts(segs)
+        transcripts = merge_transcripts([self._session()], {"s1": segs})
+        (path,) = write_raw_transcripts(transcripts, tmp_path)
+        heard: dict[str, list[float]] = {}
+        for tc, code, _ in _SEGMENT_RE.findall(path.read_text(encoding="utf-8")):
+            heard.setdefault(code, []).append(_parse_timecode_to_seconds(tc))
+        assert heard == {"p1": expected["Me"], "m1": expected["Wylie"]}

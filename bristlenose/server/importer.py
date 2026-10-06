@@ -573,6 +573,21 @@ def _replay_layout_edits(db: Session, session_map: dict[str, SessionModel]) -> N
         transcript_layout.replay(db, sess)
 
 
+def turn_starts(project: Project, session_id: str, code: str) -> list[float]:
+    """When a speaker's paragraphs start, in whole seconds, as the pipeline's
+    transcript file writes them — the evidence a role pin carries (§J7 R3).
+    From the file, not the DB: the DB also holds the researcher's splits."""
+    transcripts_dir = _find_transcripts_dir(Path(project.input_dir), Path(project.output_dir))
+    path = transcripts_dir / f"{session_id}.txt"
+    if not path.is_file():
+        return []
+    return [
+        _parse_timecode_to_seconds(tc)
+        for tc, tag, _ in _SEGMENT_RE.findall(path.read_text(encoding="utf-8"))
+        if tag == code
+    ]
+
+
 def rebuild_session_paragraphs(db: Session, project: Project, sess: SessionModel) -> None:
     """Rebuild one session's paragraphs from the pipeline's transcript and
     re-make the edits still recorded — how an undone split or join goes away."""
@@ -1016,8 +1031,11 @@ def _carry_pinned_picks(
     try:
         registry = SessionRegistry.load(output_dir)
     except ValueError:
+        logger.warning("Could not read the session registry; speaker picks were not carried",
+                       exc_info=True)
         return
     prefix = {"researcher": "m", "observer": "o", "participant": "p"}
+    carried = False
     for sid, pins in registry.pins.items():
         sess = session_map.get(sid)
         if sess is None:
@@ -1047,6 +1065,17 @@ def _carry_pinned_picks(
                 del slots[pin.from_code]
                 if pin.from_code.startswith("p") and pin.role != "participant":
                     _hide_wrong_speakers_quotes(db, sess, pin.from_code)
+            # Carried: the pin now names the code it landed on, so the next
+            # import moves nothing and a later pick on that slot stands. The
+            # run still reads the pin for the role.
+            pin.from_code = code
+            carried = True
+    if carried:
+        try:
+            registry.save()
+        except OSError:
+            logger.warning("Could not record carried speaker picks; the next import "
+                           "will carry them again", exc_info=True)
 
 
 def _hide_wrong_speakers_quotes(db: Session, sess: SessionModel, code: str) -> None:

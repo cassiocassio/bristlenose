@@ -33,6 +33,7 @@ import {
   personPickerChoice,
   personPickerLabels,
   personPickerNameTaken,
+  personPickerOffersNew,
   personPickerNewCode,
   personPickerRenamed,
   personPickerRolesOpen,
@@ -82,19 +83,21 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
   // The swap is an act on this speaker as they are, so it is offered under
   // their own role only.
   const swapRow = swap && !recoding ? swap : undefined;
-  const rows = [...people.map(keyOf), ...(swapRow ? [SWAP] : []), NEW];
+  const offersNew = personPickerOffersNew(slot, browsing);
+  const rows = [...people.map(keyOf), ...(swapRow ? [SWAP] : []), ...(offersNew ? [NEW] : [])];
   const own = recoding
     ? undefined
     : people.find((r) => (slot.person ? r.person === slot.person : r.name === slot.name));
-  // The selection opens on the current answer. With no answer there is nothing
-  // to confirm, so the cursor starts in the new-person field (§J8.10) — and a
+  // The picker opens with the current name as a field, selected, so typing
+  // replaces it (owner, 6 Oct 2026); Tab or an arrow moves to the list. With
+  // no answer, the cursor starts in the new-person field (§J8.10) — and a
   // single Return there, empty, does nothing.
   const [selected, setSelected] = useState<string | null>(own ? keyOf(own) : NEW);
   const [draft, setDraft] = useState("");
   const [taken, setTaken] = useState<string | null>(null);
-  // Rename in place (§J8.8): the current, confirmed row's name as a field.
-  const [renaming, setRenaming] = useState(false);
-  const [renameDraft, setRenameDraft] = useState("");
+  // Rename in place (§J8.8): the current row's name as a field.
+  const [renaming, setRenaming] = useState(() => !!own && personPickerCanRename(slot, own));
+  const [renameDraft, setRenameDraft] = useState(() => own?.name ?? "");
   const renameRef = useRef<HTMLInputElement>(null);
   const newCode = personPickerNewCode(
     browsing === slot.role ? slot : { ...slot, role: browsing, code: "p?" },
@@ -177,6 +180,17 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
     setRenaming(false);
     setTaken(null);
     if (own) itemRefs.current[keyOf(own)]?.focus();
+  };
+
+  /** Leave the name field for the list, as Tab or an arrow does. */
+  const leaveRename = (delta: number) => {
+    setRenaming(false);
+    setTaken(null);
+    if (!own) return;
+    const i = rows.indexOf(keyOf(own));
+    const next = rows[Math.min(Math.max(i + delta, 0), rows.length - 1)];
+    setSelected(next);
+    itemRefs.current[next]?.focus();
   };
 
   const submitDraft = () => {
@@ -307,7 +321,11 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
                       onKeyDown={(e) => {
                         const handled = () => { e.preventDefault(); e.stopPropagation(); };
                         if (e.key === "Enter") { handled(); submitRename(); }
-                        else if (e.key === "Escape") { handled(); cancelRename(); }
+                        // Escape abandons the edit and the picker, as it
+                        // would a menu: the field is where the picker opens.
+                        else if (e.key === "Escape") { handled(); dismiss(); }
+                        else if (e.key === "ArrowDown" || (e.key === "Tab" && !e.shiftKey)) { handled(); leaveRename(1); }
+                        else if (e.key === "ArrowUp" || (e.key === "Tab" && e.shiftKey)) { handled(); leaveRename(-1); }
                       }}
                     />
                   </span>
@@ -320,7 +338,7 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
             ) : (
               <PersonBadge code={row.code} role={slot.role} name={row.name} />
             )}
-            {isAnswer && !renaming && personPickerCanClear(slot) && (
+            {isAnswer && personPickerCanClear(slot) && (
               // "Not this person": shown on hover and on the selected row, and
               // on Delete or Backspace there. Not a list stop of its own.
               <button
@@ -350,6 +368,7 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
           {labels.swapWith.replace("{{code}}", swapRow.code)}
         </li>
       )}
+      {offersNew && (
       <li
         className="export-dropdown-item export-dropdown-scope bn-picker-new"
         role="none"
@@ -381,6 +400,7 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
           </span>
         </span>
       </li>
+      )}
       {taken !== null && (
         <li id="bn-picker-taken" className="export-dropdown-hint" role="alert">
           {withName(labels.nameTaken, taken)}

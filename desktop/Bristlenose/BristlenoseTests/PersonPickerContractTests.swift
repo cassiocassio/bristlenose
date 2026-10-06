@@ -257,11 +257,11 @@ struct PersonPickerContractTests {
             == PersonPickerModel.newRow)
     }
 
-    /// A picked row, That's Me and a typed name each say which they are, so
-    /// the SPA never reads a typed name as a pick.
-    /// Rename in place (design-people.md §J8.8): the current, confirmed row
-    /// becomes a field; a proposed one is still confirmed by choosing it.
-    @Test func theCurrentConfirmedRowRenamesInPlace() throws {
+    /// The picker opens on the current name as a field, selected, so typing
+    /// replaces it (owner, 6 Oct 2026). Left as it is, a proposed name is a
+    /// yes and a confirmed one changes nothing; a change renames, proposed or
+    /// confirmed; Tab or an arrow goes to the list.
+    @Test func thePickerOpensOnTheNameAsAField() throws {
         let wire = try #require(try wires().compactMap { PersonPickerRequest(message: $0) }.first)
         let confirmed = PersonPickerRequest(
             sessionId: "s1",
@@ -270,27 +270,45 @@ struct PersonPickerContractTests {
         var sent: [PersonPickerPick] = []
         var closed = 0
         let model = PersonPickerModel(request: confirmed, onChoose: { sent.append($0) }, onClose: { closed += 1 })
-        #expect(model.canRename("Martin B Storey"))
+        #expect(model.renaming && model.renameDraft == "Martin B Storey")
         #expect(!model.canRename("Kerri Ng"))
 
-        model.choose("Martin B Storey")
-        #expect(model.renaming)
-        #expect(model.renameDraft == "Martin B Storey")
-        #expect(sent.isEmpty && closed == 0)
-
-        model.submitRename()   // unchanged: back to the list, nothing sent
+        model.submitRename()   // a confirmed name, unchanged: back to the list, nothing sent
         #expect(!model.renaming)
         #expect(sent.isEmpty && closed == 0)
 
-        model.choose("Martin B Storey")
+        model.choose("Martin B Storey")   // a click on the name edits it again
         model.renameDraft = " Martyn B Storey "
         model.submitRename()
         #expect(sent == [PersonPickerPick(name: "Martyn B Storey", kind: .rename)])
         #expect(closed == 1)
 
-        // A proposed answer is not renamed: choosing it is the yes.
-        let proposed = PersonPickerModel(request: wire, onChoose: { _ in }, onClose: {})
-        #expect(!proposed.canRename("Martin B Storey"))
+        // A proposed name opens as a field too; Return on it unchanged is the yes.
+        var yes: [PersonPickerPick] = []
+        let proposed = PersonPickerModel(request: wire, onChoose: { yes.append($0) }, onClose: {})
+        #expect(proposed.renaming && proposed.canRename("Martin B Storey"))
+        proposed.submitRename()
+        #expect(yes == [PersonPickerPick(name: "Martin B Storey", kind: .name)])
+
+        // Tab or an arrow leaves the field for the row below.
+        let leaving = PersonPickerModel(request: confirmed, onChoose: { _ in }, onClose: {})
+        leaving.leaveRename(by: 1)
+        #expect(!leaving.renaming)
+        #expect(leaving.selection == leaving.rows[leaving.rows.firstIndex(of: "Martin B Storey")! + 1])
+    }
+
+    /// A named participant has one field, their name: typing over it is the
+    /// rename, so there is no second field for a new name (owner, 6 Oct 2026).
+    @Test func aNamedParticipantHasNoNewNameField() throws {
+        let requests = try wires().compactMap { PersonPickerRequest(message: $0) }
+        let participant = PersonPickerModel(request: requests[1], onChoose: { _ in }, onClose: {})
+        #expect(!participant.rows.contains(PersonPickerModel.newRow))
+        #expect(participant.renaming)
+        let unnamed = PersonPickerRequest(
+            sessionId: "s3", slot: .init(code: "p3", role: .participant, name: "", confirmed: false),
+            names: [], anchor: .zero, labels: requests[1].labels)
+        #expect(PersonPickerModel(request: unnamed, onChoose: { _ in }, onClose: {}).rows
+            == [PersonPickerModel.newRow])
     }
 
     /// The ✕ refuses the current answer: only for a moderator or observer the

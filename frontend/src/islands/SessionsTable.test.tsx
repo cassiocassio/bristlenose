@@ -872,7 +872,9 @@ describe("SessionsTable person picker", () => {
     render(<SessionsTable projectId="1" />);
     await screen.findByText("#1");
     fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[0]);
-    fireEvent.keyDown(await pickerMenu(), { key: "Enter" });
+    await pickerMenu();
+    // The picker opens on the name as a field; Return on it unchanged is yes.
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: "Enter" });
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(puts()[0].url).toContain("/sessions/s1/speakers/m1");
     expect(puts()[0].body).toEqual({ person: "id-sarah", short_name: "Sarah", confirmed: true, kind: "moderator" });
@@ -884,7 +886,9 @@ describe("SessionsTable person picker", () => {
     render(<SessionsTable projectId="1" />);
     await screen.findByText("#1");
     fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[0]);
-    fireEvent.keyDown(await pickerMenu(), { key: "Enter" });
+    await pickerMenu();
+    // The picker opens on the name as a field; Return on it unchanged is yes.
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: "Enter" });
     await waitFor(() => expect(puts()).toHaveLength(1));
     expect(getUndoState().undoAction).toBe("confirmName");
 

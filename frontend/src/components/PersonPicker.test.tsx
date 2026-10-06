@@ -119,13 +119,21 @@ describe("personPickerTyped and personPickerNameTaken", () => {
 });
 
 describe("PersonPicker", () => {
-  it("opens on the proposed answer: ticked, ringed, selected", () => {
+  it("opens on the current name as a field, ticked and selected, so typing replaces it", () => {
     render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin", "Kerri")} onChoose={vi.fn()} onClose={vi.fn()} />);
     const [martin, kerri] = items();
     expect(martin.querySelector(".export-dropdown-check .bn-icon-check")).not.toBeNull();
-    expect(martin.querySelector(".bn-person-proposed")).not.toBeNull();
     expect(kerri.querySelector(".export-dropdown-check .bn-icon-check")).toBeNull();
-    expect(document.activeElement).toBe(martin);
+    const field = martin.querySelector("input") as HTMLInputElement;
+    expect(document.activeElement).toBe(field);
+    expect([field.value, field.selectionStart, field.selectionEnd]).toEqual(["Martin", 0, 6]);
+  });
+
+  it("a proposed name keeps its ring once the field is left", () => {
+    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin", "Kerri")} onChoose={vi.fn()} onClose={vi.fn()} />);
+    fireEvent.keyDown(items()[0].querySelector("input") as HTMLInputElement, { key: "ArrowDown" });
+    expect(items()[0].querySelector(".bn-person-proposed")).not.toBeNull();
+    expect(document.activeElement).toBe(items()[1]);
   });
 
   it("a proposed answer says so to assistive tech, a confirmed one does not", () => {
@@ -138,21 +146,22 @@ describe("PersonPicker", () => {
     expect(items()[0].getAttribute("aria-label")).toBeNull();
   });
 
-  it("Enter on the proposed answer says yes", () => {
+  it("Return on a proposed name left as it is says yes", () => {
     const onChoose = vi.fn();
     const onClose = vi.fn();
     render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin")} onChoose={onChoose} onClose={onClose} />);
-    fireEvent.keyDown(menu(), { key: "Enter" });
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: "Enter" });
     expect(onChoose).toHaveBeenCalledWith({ kind: "confirm" });
     expect(onClose).toHaveBeenCalled();
   });
 
   it("Space on a row chooses it once", () => {
     const onChoose = vi.fn();
-    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin")} onChoose={onChoose} onClose={vi.fn()} />);
-    fireEvent.keyDown(items()[0], { key: " " });
+    render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin", "Kerri")} onChoose={onChoose} onClose={vi.fn()} />);
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: "ArrowDown" });
+    fireEvent.keyDown(items()[1], { key: " " });
     expect(onChoose).toHaveBeenCalledTimes(1);
-    expect(onChoose).toHaveBeenCalledWith({ kind: "confirm" });
+    expect(onChoose).toHaveBeenCalledWith({ kind: "person", row: expect.objectContaining({ name: "Kerri" }) });
   });
 
   it("a key the picker handles does not reach the page's shortcuts", () => {
@@ -247,11 +256,22 @@ describe("PersonPicker", () => {
     expect(onChoose).toHaveBeenCalledWith({ kind: "new", name: "Mike Alvarez" });
   });
 
-  it("a participant's field is a new name for that participant", () => {
+  it("a named participant has one field, their name: no second one for a new name", () => {
+    const onChoose = vi.fn();
     const slot: PersonPickerSlot = { code: "p3", role: "participant", name: "Mary", confirmed: true };
-    render(<PersonPicker slot={slot} labels={labels(slot)} known={[{ name: "Sarah", code: "p1" }]} onChoose={vi.fn()} onClose={vi.fn()} />);
-    expect(screen.getByPlaceholderText("New name for p3")).toBeInTheDocument();
-    expect(items()).toHaveLength(2); // Mary and the field
+    render(<PersonPicker slot={slot} labels={labels(slot)} known={[{ name: "Sarah", code: "p1" }]} onChoose={onChoose} onClose={vi.fn()} />);
+    expect(screen.queryByPlaceholderText("New name for p3")).toBeNull();
+    expect(items()).toHaveLength(1);
+    const field = document.activeElement as HTMLInputElement;
+    fireEvent.change(field, { target: { value: "Wylie E. Coyote" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(onChoose).toHaveBeenCalledWith({ kind: "name", name: "Wylie E. Coyote" });
+  });
+
+  it("an unnamed participant opens in the field for their name", () => {
+    const slot: PersonPickerSlot = { code: "p3", role: "participant", name: "", confirmed: false };
+    render(<PersonPicker slot={slot} labels={labels(slot)} known={[]} onChoose={vi.fn()} onClose={vi.fn()} />);
+    expect(document.activeElement).toBe(screen.getByPlaceholderText("New name for p3"));
   });
 
   it("type-to-jump lands on any word of a name", () => {
@@ -302,25 +322,27 @@ describe("PersonPicker", () => {
     expect(onChoose).toHaveBeenCalledWith({ kind: "name", name: "Martyn" });
   });
 
-  it("Return on the current, confirmed row renames too; Escape goes back to the list, open", () => {
+  it("Escape in the field abandons the edit and closes; Tab and the arrows go to the list", () => {
     const onChoose = vi.fn();
     const onClose = vi.fn();
     render(<PersonPicker slot={moderator("Martin", true)} labels={labels(moderator("Martin", true))} known={people("Martin", "Kerri")} onChoose={onChoose} onClose={onClose} />);
-    fireEvent.keyDown(menu(), { key: "Enter" });
     const field = items()[0].querySelector("input") as HTMLInputElement;
-    expect(field).not.toBeNull();
-    fireEvent.keyDown(field, { key: "Escape" });
+    fireEvent.keyDown(field, { key: "Tab" });
     expect(items()[0].querySelector("input")).toBeNull();
-    expect(onClose).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(items()[1]);
+    fireEvent.click(items()[0]); // back into the field
+    fireEvent.keyDown(items()[0].querySelector("input") as HTMLInputElement, { key: "Escape" });
+    expect(onClose).toHaveBeenCalled();
     expect(onChoose).not.toHaveBeenCalled();
-    expect(document.activeElement).toBe(items()[0]);
   });
 
-  it("a proposed answer still confirms on click, it is not renamed", () => {
+  it("a proposed name is edited like a confirmed one: a change renames it", () => {
     const onChoose = vi.fn();
     render(<PersonPicker slot={moderator("Martin", false)} labels={labels(moderator("Martin", false))} known={people("Martin")} onChoose={onChoose} onClose={vi.fn()} />);
-    fireEvent.click(items()[0]);
-    expect(onChoose).toHaveBeenCalledWith({ kind: "confirm" });
+    const field = items()[0].querySelector("input") as HTMLInputElement;
+    fireEvent.change(field, { target: { value: "Martyn" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(onChoose).toHaveBeenCalledWith({ kind: "name", name: "Martyn" });
   });
 
   it("a rename to another person's name is refused in place; an unchanged one does nothing", () => {

@@ -15,7 +15,8 @@ describe("PickerSpecimen", () => {
 
   it("Enter says yes: the badge loses its ring and the picker closes", () => {
     render(<PickerSpecimen />);
-    fireEvent.keyDown(menu()!, { key: "Enter" });
+    // The picker opens on the name as a field; Return on it unchanged is yes.
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: "Enter" });
     expect(menu()).toBeNull();
     expect(document.querySelector(".bn-person-picker-trigger.bn-person-proposed")).toBeNull();
   });
@@ -23,7 +24,9 @@ describe("PickerSpecimen", () => {
   it("opens on the scenario the lab puts in the URL", () => {
     window.history.replaceState(null, "", "/report/picker-specimen?scenario=participant");
     render(<PickerSpecimen />);
-    expect(screen.getByPlaceholderText("New name for p3")).toBeInTheDocument();
+    // A named participant opens on their own name, the one field there is.
+    expect((document.activeElement as HTMLInputElement).value).toBe("Mary Adeyemi");
+    expect(screen.queryByPlaceholderText("New name for p3")).toBeNull();
   });
 
   it("a new moderator becomes the answer and joins the list", () => {

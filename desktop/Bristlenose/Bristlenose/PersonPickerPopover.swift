@@ -254,6 +254,12 @@ final class PersonPickerModel: ObservableObject {
         // (design-people.md §J8.10), where an empty Return does nothing.
         let name = request.slot.name
         self.selection = !name.isEmpty && request.names.contains(name) ? name : Self.newRow
+        // The picker opens on the current name as a field, selected, so typing
+        // replaces it (owner, 6 Oct 2026); Tab or an arrow moves to the list.
+        if !name.isEmpty, request.names.contains(name) {
+            self.renaming = true
+            self.renameDraft = name
+        }
     }
 
     /// The names under the role being browsed.
@@ -266,7 +272,16 @@ final class PersonPickerModel: ObservableObject {
         // The swap is an act on the speaker as they are, so it is offered
         // under their own role only (§J7 call 4).
         names + (swapLabel != nil && !recoding ? [Self.swapRow] : [])
-            + [Self.newRow] + (meName == nil ? [] : [Self.meRow])
+            + (offersNew ? [Self.newRow] : []) + (meName == nil ? [] : [Self.meRow])
+    }
+
+    /// Whether the new-person field is shown. A named participant's record
+    /// belongs to that one speaker, so typing another name over theirs is the
+    /// same act as renaming: no second field (owner, 6 Oct 2026). A moderator or
+    /// observer keeps it — renaming Martin changes him everywhere.
+    var offersNew: Bool {
+        !(browsing == request.slot.role && request.slot.role == .participant
+            && !request.slot.name.isEmpty)
     }
 
     /// "Swap with m1", or nil where the session offers no swap.
@@ -338,22 +353,38 @@ final class PersonPickerModel: ObservableObject {
     }
 
     /// Whether a row is renamed in place rather than chosen: the slot's own
-    /// confirmed answer, which has nothing to choose. A proposed one is
-    /// confirmed first, by its own click or Return.
+    /// answer, proposed or confirmed — a click on the name always edits it
+    /// (owner, 6 Oct 2026).
     func canRename(_ row: String) -> Bool {
-        !recoding && row != Self.newRow && row != Self.meRow && request.slot.confirmed
+        !recoding && row != Self.newRow && row != Self.meRow
             && !request.slot.name.isEmpty && row == request.slot.name
     }
 
-    /// The new spelling: sent unless it is empty or unchanged, which ends the
-    /// rename and leaves the picker open.
+    /// The new spelling. Left as it is, a proposed name is a yes (sent as a
+    /// pick of its own row, which the SPA reads as a confirm); a confirmed one
+    /// changes nothing and the rename ends with the picker open.
     func submitRename() {
         let name = renameDraft.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty, name != request.slot.name else {
+        guard !name.isEmpty else {
             cancelRename()
             return
         }
+        if name == request.slot.name {
+            if request.slot.confirmed { cancelRename() } else { send(name, kind: .name) }
+            return
+        }
         send(name, kind: .rename)
+    }
+
+    /// Tab or an arrow out of the name field: back to the list, on the row
+    /// above or below.
+    func leaveRename(by delta: Int) {
+        renaming = false
+        let name = request.slot.name
+        if let i = rows.firstIndex(of: name), rows.indices.contains(i + delta) {
+            selection = rows[i + delta]
+        }
+        focusListRequest += 1
     }
 
     func cancelRename() {
@@ -517,7 +548,8 @@ private struct PersonPickerList: NSViewRepresentable {
         // Delete or Backspace on the current answer: not this person.
         table.deleteHandler = { [weak coordinator = context.coordinator] in coordinator?.clearIfCurrent() }
         // An unknown speaker opens in the new-person field, not the list.
-        table.claimsFocusOnAppear = model.selection != PersonPickerModel.newRow
+        // The current name opens as a field, which takes the keyboard itself.
+        table.claimsFocusOnAppear = model.selection != PersonPickerModel.newRow && !model.renaming
         table.setAccessibilityLabel(model.request.labels.menu)
 
         let scroll = NSScrollView()
@@ -665,7 +697,7 @@ private struct PersonPickerList: NSViewRepresentable {
                 rowView.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 8),
                 rowView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
             ]
-            if ticked, id != PersonPickerModel.meRow, model.canClear, !model.renaming {
+            if ticked, id != PersonPickerModel.meRow, model.canClear {
                 // "Not this person", shown while the pointer is on the row.
                 let clear = NSButton(image: NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)
                     ?? NSImage(), target: self, action: #selector(clearClicked(_:)))
@@ -721,13 +753,17 @@ private struct PersonPickerList: NSViewRepresentable {
         /// Return names someone new, Escape closes, and the arrows leave the
         /// field — the field editor's own commands, which arrive before it acts.
         func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
-            // The rename field: Return renames, Escape goes back to the list
-            // with the picker still open, and the arrows stay in the field.
+            // The rename field, where the picker opens: Return renames (or says
+            // yes to a proposed name left as it is), Escape abandons the edit
+            // and the picker, and Tab or an arrow goes to the list.
             if control === renameField {
                 switch selector {
                 case #selector(NSResponder.insertNewline(_:)): model.submitRename(); return true
-                case #selector(NSResponder.cancelOperation(_:)): model.cancelRename(); return true
-                case #selector(NSResponder.moveUp(_:)), #selector(NSResponder.moveDown(_:)): return true
+                case #selector(NSResponder.cancelOperation(_:)): model.close(); return true
+                case #selector(NSResponder.moveDown(_:)), #selector(NSResponder.insertTab(_:)):
+                    model.leaveRename(by: 1); return true
+                case #selector(NSResponder.moveUp(_:)), #selector(NSResponder.insertBacktab(_:)):
+                    model.leaveRename(by: -1); return true
                 default: return false
                 }
             }

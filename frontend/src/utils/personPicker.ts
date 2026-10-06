@@ -220,16 +220,28 @@ export function personPickerRowsForRole(
 /** Whether a row can be renamed in place: the slot's own confirmed answer
  *  (§J8.8). A proposed one is confirmed first, by its own click or Return. */
 export function personPickerCanRename(slot: PersonPickerSlot, row: PersonPickerRow): boolean {
-  return slot.confirmed && !!slot.name && isOwnRow(slot, row);
+  // Proposed or confirmed: a click on the name always edits it (owner, 6 Oct
+  // 2026), and Return on a proposed name left as it is says yes to it.
+  return !!slot.name && isOwnRow(slot, row);
 }
 
-/** What a rename in place means: a new spelling for that person everywhere,
- *  or nothing when empty or unchanged. A taken name is the caller's to refuse
- *  first. */
+/** What a rename in place means: a new spelling for that person everywhere;
+ *  a yes, when a proposed name is left as it is; nothing when empty or
+ *  unchanged. A taken name is the caller's to refuse first. */
 export function personPickerRenamed(slot: PersonPickerSlot, name: string): PersonPickerChoice | null {
   const trimmed = name.trim();
-  if (!trimmed || trimmed === slot.name) return null;
+  if (!trimmed) return null;
+  if (trimmed === slot.name) return slot.confirmed ? null : { kind: "confirm" };
   return { kind: "name", name: trimmed };
+}
+
+/** Whether the picker shows a field for someone new. A named participant's
+ *  record belongs to that one speaker, so typing a different name over theirs
+ *  is the same act as renaming: no second field (owner, 6 Oct 2026). A
+ *  moderator or observer keeps it — renaming Martin changes him everywhere,
+ *  "someone else" must not. */
+export function personPickerOffersNew(slot: PersonPickerSlot, role: PickerRole = slot.role): boolean {
+  return !(role === slot.role && slot.role === "participant" && !!slot.name);
 }
 
 /** Whether the slot's current answer can be refused with the ✕: a moderator

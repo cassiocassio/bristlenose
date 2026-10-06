@@ -132,7 +132,7 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
   };
 
   const submitRename = () => {
-    const clash = personPickerNameTaken(slot, people, renameDraft);
+    const clash = personPickerNameTaken(slot, known, renameDraft);
     if (clash) {
       setTaken(clash);
       return;
@@ -149,7 +149,7 @@ export function PersonPicker({ slot, known, labels, onChoose, onClose }: PersonP
   };
 
   const submitDraft = () => {
-    const clash = personPickerNameTaken(slot, people, draft);
+    const clash = personPickerNameTaken(slot, known, draft);
     if (clash) {
       setTaken(clash);
       return;

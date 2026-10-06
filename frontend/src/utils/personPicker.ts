@@ -32,6 +32,10 @@ export interface PersonPickerRow {
   /** The stored names behind `name`, so a pick writes them back unchanged. */
   full_name?: string;
   short_name?: string;
+  /** False when nobody has ever said yes to this person in any session: a
+   *  pipeline guess. Such a person is offered only on their own speaker
+   *  (§J8.10). Absent reads as confirmed. */
+  confirmed?: boolean;
 }
 
 /**
@@ -64,6 +68,9 @@ export function personPickerRows(slot: PersonPickerSlot, known: PersonPickerRow[
   const seen = new Set<string>();
   for (const row of known) {
     if (!row.name) continue;
+    // Another session's guess is not offered here (§J8.10): one wrong guess
+    // must not spread. The slot's own guess is added below.
+    if (row.confirmed === false && !isOwnRow(slot, row)) continue;
     const key = row.person ?? `name:${row.name}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -95,9 +102,11 @@ export function personPickerChoice(slot: PersonPickerSlot, row: PersonPickerRow)
   return { kind: "person", row };
 }
 
-/** The name another person in the list already goes by, if `name` is theirs
+/** The name another person already goes by, if `name` is theirs
  *  (case-insensitive). Someone new may not take it (§J8.11): there are two
- *  Martins, who need telling apart, or the researcher meant to pick Martin. */
+ *  Martins, who need telling apart, or the researcher meant to pick Martin.
+ *  Pass every person known for the role — not only the offered rows — since
+ *  an unoffered guess still holds its name, and the server refuses it too. */
 export function personPickerNameTaken(
   slot: PersonPickerSlot,
   rows: PersonPickerRow[],

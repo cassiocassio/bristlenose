@@ -3172,8 +3172,7 @@ people as unique and roles as per-session is the People lens's long-term goal.
     - **Not yet built:** ~~the hover ✕~~ and ~~the `mA?`/`mB?` letters~~ (both built the
       same day, point 14), ~~rename in place on the picker's row~~ (point 16), ~~the picker on the
       transcript and dashboard~~ (built the same day, point 15),
-      and the list offering only people confirmed at least once (§J8.10): it still offers
-      every moderator or observer any session points at.
+      ~~and the list offering only people confirmed at least once~~ (point 17).
 
 13. **Priority once attribution starts (owner, 6 Oct 2026):** a paragraph credited to the
     wrong speaker, and a moderator's words shown as the participant's quote (in the Quotes
@@ -3229,3 +3228,14 @@ people as unique and roles as per-session is the People lens's long-term goal.
     comes after. Web and Mac; the Mac replies `{"kind": "rename", "name": …}`, which the
     SPA resolves by the same rules (bridge contract version 5). The grid's pencil is
     unchanged and now does the same act; whether to keep both is still open (point 8).
+
+17. **Built 6 Oct 2026 — only confirmed people are offered.** A moderator or observer
+    appears in another speaker's picker only once someone has said yes to them in some
+    session; a pipeline guess appears only on its own speaker, so one wrong guess does
+    not spread across the study. The filter sits in `personPickerRows`, so the web
+    picker, the Mac picker (whose rows arrive over the bridge) and every surface get it
+    at once. **An unoffered guess still holds its name:** the duplicate-name check reads
+    every person known for the role, not only the rows offered, because the server's
+    refusal does too — otherwise a second "Kerri" could be typed beside a hidden one and
+    fail as a save error instead of the plain refusal. The "Moderated by" line still
+    names every moderator, guesses included: it reports, it does not offer.

@@ -131,7 +131,7 @@ export function resolvePersonPickerChoice(
   const rows = personPickerRows(slot, found.known);
   const { kind, name } = pick.choice;
   if (kind === "rename") {
-    const clash = personPickerNameTaken(slot, rows, name);
+    const clash = personPickerNameTaken(slot, found.known, name);
     if (clash) return { sessionId, code, taken: clash };
     const choice = personPickerRenamed(slot, name);
     return choice ? { sessionId, code, choice } : null;
@@ -141,7 +141,7 @@ export function resolvePersonPickerChoice(
     const choice = listed ? personPickerChoice(slot, listed) : null;
     return choice ? { sessionId, code, choice } : null;
   }
-  const clash = personPickerNameTaken(slot, rows, name);
+  const clash = personPickerNameTaken(slot, found.known, name);
   if (clash) return { sessionId, code, taken: clash };
   const choice = personPickerTyped(slot, name);
   return choice ? { sessionId, code, choice } : null;

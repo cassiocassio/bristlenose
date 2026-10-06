@@ -48,6 +48,24 @@ describe("personPickerRows", () => {
   });
 });
 
+describe("personPickerRows — only people someone has said yes to (§J8.10)", () => {
+  const guess: PersonPickerRow = { name: "Kerri", code: "m2", person: "id-Kerri", confirmed: false };
+
+  it("another session's guess is not offered", () => {
+    const rows = personPickerRows(moderator("Martin", true), [...people("Martin"), guess]);
+    expect(rows.map((r) => r.name)).toEqual(["Martin"]);
+  });
+
+  it("the speaker's own guess is", () => {
+    const own: PersonPickerSlot = { code: "m2", role: "moderator", name: "Kerri", confirmed: false, person: "id-Kerri" };
+    expect(personPickerRows(own, [...people("Martin"), guess]).map((r) => r.name)).toEqual(["Martin", "Kerri"]);
+  });
+
+  it("an unoffered guess still holds its name: someone new may not take it", () => {
+    expect(personPickerNameTaken(moderator("", false, "m?"), [...people("Martin"), guess], "kerri")).toBe("Kerri");
+  });
+});
+
 describe("personPickerNewCode", () => {
   it("is the next free number for the role (§J8.8)", () => {
     expect(personPickerNewCode(moderator("", false, "m?"), people("Martin", "Kerri"))).toBe("m3");

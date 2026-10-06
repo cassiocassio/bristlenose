@@ -23,7 +23,6 @@ import { Sparkline } from "../components/Sparkline";
 import { Thumbnail } from "../components/Thumbnail";
 import {
   personPickerNameTaken,
-  personPickerRows,
   unknownLetter,
   type PersonPickerChoice,
   type PersonPickerRow,
@@ -346,8 +345,7 @@ export function SessionsTable({
       setEditingKey(null);
       const found = rowsFor(sessionId, speakerCode);
       if (found) {
-        const rows = personPickerRows(found.slot, found.known);
-        const clash = personPickerNameTaken(found.slot, rows, newName);
+        const clash = personPickerNameTaken(found.slot, found.known, newName);
         if (clash) {
           refuseTaken(clash);
           return;

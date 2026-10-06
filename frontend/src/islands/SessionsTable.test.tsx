@@ -1055,6 +1055,23 @@ describe("SessionsTable person picker", () => {
     expect(screen.getByTestId("bn-name-mB?").textContent).toBe("Moderator B");
   });
 
+  it("another session's guess is not offered, but still holds its name (§J8.10)", async () => {
+    mockPicker(); // s1's Sarah is a pipeline guess; s2's Kerri was confirmed
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-picker-trigger-m1")[1]);
+    const picker = await pickerMenu();
+    const names = Array.from(picker.querySelectorAll(".export-dropdown-item .bn-speaker-badge-name"))
+      .map((n) => n.textContent)
+      .filter((n) => n !== "New moderator");
+    expect(names).toEqual(["Kerri"]);
+    const field = screen.getByPlaceholderText("New moderator");
+    fireEvent.change(field, { target: { value: "Sarah" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(screen.getByRole("alert").textContent).toContain("Sarah");
+    expect(puts()).toHaveLength(0);
+  });
+
   it("renaming in the picker fixes that person's spelling everywhere (§J8.8)", async () => {
     mockPicker();
     render(<SessionsTable projectId="1" />);

@@ -14,7 +14,6 @@ import { isExportMode } from "./exportData";
 import type { SpeakerNameState } from "./peopleChanged";
 import {
   personPickerNameTaken,
-  personPickerRows,
   type PersonPickerChoice,
   type PersonPickerRow,
   type PersonPickerSlot,
@@ -54,13 +53,21 @@ export function knownPeopleOf(data: SessionsListResponse | null): Record<PickerR
       if (!sp.name) continue;
       const list = known[pickerRoleOf(sp.speaker_code)];
       const key = sp.person || `name:${sp.name}`;
-      if (list.some((r) => (r.person || `name:${r.name}`) === key)) continue;
+      // Confirmed if anyone said yes to this person in any session; a
+      // missing flag reads as confirmed, as the grid draws it.
+      const yes = sp.name_confirmed !== false;
+      const seen = list.find((r) => (r.person || `name:${r.name}`) === key);
+      if (seen) {
+        if (yes) seen.confirmed = true;
+        continue;
+      }
       list.push({
         name: sp.name,
         code: sp.speaker_code,
         person: sp.person || undefined,
         full_name: sp.full_name,
         short_name: sp.short_name,
+        confirmed: yes,
       });
     }
   }
@@ -168,7 +175,7 @@ export async function loadSpeakerContext(sessionId: string, code: string): Promi
 export function applySpeakerChoice(ctx: SpeakerPickContext, choice: PersonPickerChoice): void {
   if (isExportMode()) return;
   if (choice.kind === "new" || choice.kind === "name") {
-    const clash = personPickerNameTaken(ctx.slot, personPickerRows(ctx.slot, ctx.known), choice.name);
+    const clash = personPickerNameTaken(ctx.slot, ctx.known, choice.name);
     if (clash) {
       refuseTakenName(clash);
       return;

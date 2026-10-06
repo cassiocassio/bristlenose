@@ -105,7 +105,10 @@ open); `docs/testing/ratchet.json` names each.
    Windows 11 Arm VM as the signed-in user under the default Restricted policy (fresh,
    re-run, new window, forced zip, both failure messages), and on a fresh Windows
    Server 2025 x64 box as a standard non-admin user and as Administrator, both forms,
-   against the live URL. CI runs it twice on windows-latest (`install-test.yml`,
+   against the live URL. Against 0.34.0 on PyPI, on the Windows 11 VM: a fresh install,
+   then `bristlenose transcribe` of an 11 s m4a (exit 0, transcript written), then a
+   re-run through the short address (upgrade path), so Windows `irm` follows its 302.
+   CI runs it twice on windows-latest (`install-test.yml`,
    `windows-install-ps1`). **Defender**: `powershell -ExecutionPolicy Bypass -c "irm
    http://<IP>/… | iex"` is blocked at launch as Trojan:Win32/Commando.A!ml and
    surfaces as "Access is denied"; https to a named host, raw GitHub included, was
@@ -120,16 +123,15 @@ open); `docs/testing/ratchet.json` names each.
      time and no profile file exists, so the mechanism is unexplained. Launched from cmd,
      SSH or a Run box it worked. No user doc gives this form; if one does, include
      `-NoProfile`. The installer's own Astral call already does;
-   - the short address is live only from the website deploy after 0.34.0; the redirect
-     was proved under macOS's Apache, not yet on DreamHost or through Windows `irm`;
+   - never run: Windows 10; Windows 11 on x64 hardware; a winget that has never been
+     used (its first-run prompt); the voice extra installed after the one-liner;
    - the installer can fetch a GTS-rooted host (astral.sh) before doctor's TLS check,
      so on a fresh box its doctor run does not prove item 9's certifi fix; test that
      with doctor before the installer.
 2. **The two unrun checks**: `run --clean` twice, and `serve` then Ctrl-C.
 3. **Decisions for the maintainer**: whether `run` with no provider should exit
    non-zero (it exits 0 in a terminal by design); `CONTRIBUTING.md` still calls this
-   port "parked" and points at Scoop; the website's Windows install steps predate all
-   of this.
+   port "parked" and points at Scoop.
 4. **Every platform, seen first on Windows**: warning log lines interleave with the
    run UI (including a developer note); Hugging Face warnings print twice and the
    1.6 GB Whisper download shows no progress; the player does not seek when an

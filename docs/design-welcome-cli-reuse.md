@@ -1,6 +1,6 @@
 ---
-status: current
-last-trued: 2026-09-21
+status: parked
+last-trued: 2026-10-06
 ---
 
 # The CLI welcome, built on the Mac Welcome
@@ -19,6 +19,64 @@ English and stays English. The blocker for the Mac is a non-issue on the web.
 
 This doc is a reuse register, not a plan. It exists so the two surfaces can be
 kept in sync deliberately rather than drifting into two unrelated welcomes.
+
+---
+
+## Status — parked 6 Oct 2026, by the owner
+
+**No page was written, and that was the finding, not an omission.** The brief
+this came from scoped a four-section page; of those sections, 1 (what you're
+looking at), 1b (Signals), 2 (shortcuts) and 4 (the app) are already live,
+actively-maintained pages on the docs site — `how-it-works`, `signals`,
+`keyboard-shortcuts`, `install` — and `signals.md` is tighter than the orphaned
+`help.signals.*` corpus it would have been harvested from. The `welcome` slug is
+taken by the alpha-tester onboarding page. Writing the page as scoped would have
+duplicated most of a curated Diátaxis tree and given the sentiment taxonomy, the
+metrics and the install claim each a second home.
+
+**The genuine gap was the entry point, not the prose:** `?` opens the
+keyboard-shortcuts reference and Help opens the docs index, so nothing greets
+someone who has just run `bristlenose serve` from a terminal. That gap, and this
+register's reuse buckets, are what a future session should pick up.
+
+**Closed since this was written:** the 130 orphaned `help.*` keys are gone —
+deleted in `1ff44e60` ("delete the help block: 2,794 translated values for a
+modal retired in July"), which was this register's largest open item.
+
+**Still open, each independent and none blocking the others:**
+
+| Item | Where |
+|---|---|
+| `?` opens the shortcuts reference, not a front door | `frontend/src/layouts/AppLayout.tsx:177` |
+| `DEFAULT_HELP_URL` defined and never put in the payload | `bristlenose/server/routes/health.py:19` |
+| Man page SEE ALSO points at the GitHub repo, not the docs site | `bristlenose/data/bristlenose.1:750` |
+| Typer app has no `epilog`, so `--help` carries no docs pointer | `bristlenose/cli.py` |
+| No telemetry paragraph on either privacy page | website repo: `docs-src/privacy.md`, `content/privacy.html` |
+| The accepted export gap is unrecorded | `docs/design-export-html.md` |
+
+The telemetry one is the only one with a clock on it. Both privacy pages make an
+absolute claim — *"no usage tracking"*, and what leaves the machine *"only in
+these cases"* — which is **true today**: `BRISTLENOSE_TELEMETRY_ENABLED` defaults
+`True` and the endpoint ships in the `/api/health` payload, but nothing sends
+anything (verified 21 Sep 2026: `DEFAULT_TELEMETRY_URL` appears only in its own
+default literal in `frontend/src/utils/health.ts`, no `fetch`, nothing in Swift or
+Python). Telemetry Phase 2 would make that sentence false silently, on a page in
+another repo that nobody editing a sender would think to open.
+
+**Two truing notes for whoever reads the table in §1a next:**
+
+- **`WelcomeIllustrationHTML` now holds 11 `static func`s, and that is not
+  drift.** Two of them — `curtain` and `stringsBlock` — are shared helpers, not
+  illustrations; `WelcomeIllustration` still has the same 13 cases, so `ingest`
+  and `clips` are still the only pair with no web ancestor. Count the enum, not
+  the builders.
+- **The Mac Welcome became its own window on 3 Oct 2026** (Model 2 —
+  `design-welcome-screen.md`, commits `e9e1d5f6` → `79a7ee2b`). That does not
+  move anything between the buckets below: the φ-spiral geometry was already in
+  §3 *Drop*, and the reusable assets are the content pools and the illustrations,
+  which the window change did not touch.
+
+---
 
 ---
 

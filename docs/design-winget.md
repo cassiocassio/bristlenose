@@ -169,13 +169,27 @@ on any Windows x64 machine produces an installer that passes every smoke test be
 the product changes are merged with their tests; the plan and the Windows record say
 what is true.
 
-**Where it stands (5 Oct 2026, late):** 1.1–1.8 are committed on main
-(`git log --grep='winget step'`). Nothing in 1.5–1.7 has run on Windows yet — no
-PowerShell on the Mac — so the acceptance run below is the first execution of
-`smoke.ps1` and `-Manifest`. Uninstall with `serve` running (1.6) is a question
-for that run, not code: add an `InitializeUninstall` check only if Inno's
-uninstaller does not close it. The box's winget may predate schema 1.12.0; pass
-`-ManifestVersion 1.9.0` there, or update winget.
+**Where it stands (6 Oct 2026):** 1.1–1.8 are on main, and the acceptance run on a
+fresh Windows Server 2025 box (aella) passed everything but the winget install:
+
+- `build.ps1 -Installer -Manifest` from a HEAD wheel: all nine smoke checks green
+  (deepest path 101, 615 MB folder, 157 MB installer), `winget validate` of the
+  1.12.0 manifest passed under winget 1.29.
+- Non-admin install: user PATH, a per-user Apps & Features entry (Bristlenose
+  0.34.0), doctor and transcribe from a new session. Administrator install too.
+- With `serve` running, install refuses (exit 7) and uninstall refuses (exit 1),
+  the install intact; both are clean once it stops.
+- **Not settled:** `winget install --manifest` downloaded, verified and marked the
+  installer, then waited with no setup process over headless SSH, most likely on a
+  security prompt with no desktop to show it. The Windows 11 VM check below answers
+  it.
+
+The run found two defects, fixed in the same commit (`git log --grep='winget
+acceptance'`): the build packaged the checkout instead of the wheel when run from
+the repo root, and an upgrade or uninstall over a running `serve` as a non-admin
+user (Restart Manager's `RmGetList` failed) left `bristlenose.exe` without
+`_internal`. The installer now refuses when the exe is locked, checked by a write
+open; a WMI query was refused to that user and failed open.
 
 ### 1.1 Restore `winget-wip` onto main
 

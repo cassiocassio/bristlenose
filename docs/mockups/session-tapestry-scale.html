@@ -111,7 +111,7 @@ td.num { font-family: var(--mono); }
     (15–60 px per minute).
     <ul>
       <li><b>Upper clamp, 1 s/px:</b> beyond this a short project would be blown up to fill the width, with nothing gained. Every topic label already fits at the median, and every turn is a clip.</li>
-      <li><b>Lower clamp, 4 s/px:</b> a 60-minute session is then 900 px, which fits the Sessions grid on a laptop. Topics and sentiment still read. The speaker lane switches to slivers (no rounding, no gap, no code) below 2.5 s/px. It becomes a talk-pattern texture in which monologues stand out, the way clips do in Final Cut zoomed out.</li>
+      <li><b>Lower clamp, 4 s/px:</b> a 60-minute session is then 900 px, which fits the Sessions grid on a laptop. Topics and sentiment still read. The speaker lane switches to slivers (no rounding, no gap, no code) beyond 2.5 s/px. It becomes a talk-pattern texture in which monologues stand out, the way clips do in Final Cut zoomed out.</li>
       <li><b>Longer than about 60 minutes</b> (2 of the 36 measured sessions are over 90 minutes): the slice scrolls horizontally at 4 s/px rather than compressing further. Every lane stays legible, at the cost of one scrolling row.</li>
     </ul>
   </div>
@@ -127,10 +127,10 @@ td.num { font-family: var(--mono); }
   <div class="frame" id="zoomframe">
     <div class="chrome"><b>Sessions</b><span class="dest"></span>
       <div class="zoom" role="group" aria-label="Timeline zoom">
-        <button class="zbtn" id="zout" aria-label="Zoom out" title="Zoom Out (⌘−)">
+        <button class="zbtn" id="zout" aria-label="Zoom out" title="Zoom Out">
           <svg viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5M4.5 6.5h4"/></svg></button>
         <input type="range" id="zslider" min="0" max="100" value="0" aria-label="Zoom" title="Double-click to fit">
-        <button class="zbtn" id="zin" aria-label="Zoom in" title="Zoom In (⌘+)">
+        <button class="zbtn" id="zin" aria-label="Zoom in" title="Zoom In">
           <svg viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5M4.5 6.5h4M6.5 4.5v4"/></svg></button>
       </div>
     </div>
@@ -141,6 +141,7 @@ td.num { font-family: var(--mono); }
   <div class="commentary">
     <div class="lbl">Commentary</div>
     <ul>
+      <li><b>Post-script, 6 Oct 2026 — what shipped differs from this page in five ways</b> (the measurements and the verdict above stand): (1) <b>no zoom shortcut</b> — ⌘+ and ⌘− stay the browser's text zoom, by decision; (2) the zoom is shared but <b>each slice scrolls on its own</b>; (3) clip colour is the <b>per-turn scene colour for every session with video</b>, not an option — the bullet below about neutral clips is the earlier position; (4) a click on the speaker lane opens the transcript at <b>exactly the clicked moment</b>, not the start of the turn; (5) the top lane is <b>sections</b>, not topics — "topic" below names the s08 data the rates were measured from. Sentiment bars shipped at <b>6 px</b>, not 4: at 4 s/px two bars at the p10 gap (30 s, 7.5 px) now sit 1.5 px apart rather than 3.5, still separate. Each has an invisible click target 2 px wider than the mark that stops halfway to its neighbour, so close bars stay individually clickable. Themes carry their name in full on a chip at the span's start. Shipped design: <code>experiments/session-tapestry/README.md</code>.</li>
       <li><b>Clip colour is neutral here</b>: moderator muted, participant solid. This follows the design review, so that the sentiment hues are the only colour in the slice. The frame-colour idea from <code>session-tapestry.html</code> can come back as an option for speaker-view recordings.</li>
       <li><b>Themes are drawn as spans</b> from first to last quote, not as a tag at the first quote. Per the measurements, most are points or short spans. A one-quote theme gets a short cap so it can still be hovered.</li>
       <li><b>Turns are synthetic:</b> lognormal, median 10 s, p90 46 s (σ ≈ 1.19). Participant turns run ×1.5 and moderator turns ×0.6. Topic segments are lognormal with a median of 181 s, and quote gaps lognormal with a median of 64 s.</li>

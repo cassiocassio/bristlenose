@@ -5,7 +5,7 @@
  * moderator and a participant track, sentiment bars (positive above the line,
  * negative below, surprise on it), and theme spans (bottom border). Hovering
  * the speaker lane raises that stretch's section flag in full; clicking the
- * lane, a flag or the quote panel jumps to the transcript.
+ * lane, a flag or the quote popover jumps to the transcript.
  *
  * Data: GET /api/projects/{id}/tapestry (server/routes/tapestry.py). Clip
  * colour is the pipeline's per-turn scene colour (utils/scene_colour.py) —

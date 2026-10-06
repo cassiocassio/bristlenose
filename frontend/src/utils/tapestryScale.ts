@@ -7,7 +7,7 @@ export const TAPESTRY_RIGHT = 14;
  * One shared scale for every slice: fit the longest session, clamped to 1–4 s/px.
  * Upper clamp: a short project is never blown up. Lower clamp: below 4 s/px a
  * 60-minute session still fits a laptop's grid; longer ones scroll.
- * Measured basis: experiments/session-tapestry/README.md.
+ * Measured basis: docs/mockups/session-tapestry-scale.html.
  */
 export function fitScale(longestSeconds: number, width: number): number {
   const usable = Math.max(1, width - TAPESTRY_GUTTER - TAPESTRY_RIGHT);

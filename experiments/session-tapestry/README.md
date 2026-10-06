@@ -28,18 +28,18 @@ The app's preview pane will not open a local page much over 500 KB. That is why 
 
 - **Scale:** one shared scale per project, fitted to the longest session and held between 1 and 4 s/px. The speaker lane switches from clips to slivers above 2.5 s/px. Zoom runs from that fit down to 0.25 s/px.
 - **Top lane:** sections, not s08 topics. "Topics" is not a product noun. Each section is flagged at its first quote in the session, which is the anchor the row's User journey chain links to.
-- **Clip colour:** the per-turn scene colour, in seven steps. These are the colour lab's defaults:
+- **Clip colour:** the per-turn scene colour. These are the colour lab's defaults. The pipeline runs steps 1–6; step 7 is a lab handle only (see below):
   1. Crop black bars: drop an edge row or column when 85% of its pixels have luma below 30.
   2. Ignore pixels with luma below 18. Keep whites.
   3. Cluster the remaining pixels in OKLab, k = 4.
   4. A cluster is eligible only if it holds at least 15% of the pixels.
   5. Pick the most colourful eligible cluster.
   6. Tone it: map OKLab L into 0.42–0.88 and multiply chroma by 1.4.
-  7. If the cluster sets of two speakers are within a scene distance of 6, treat them as one scene and do not assign per-speaker colours.
+  7. (Lab only.) If the cluster sets of two speakers are within a scene distance of 6, treat them as one scene and do not assign per-speaker colours.
 
 ## In the pipeline (6 Oct 2026)
 
-The clip colour is computed by `bristlenose/utils/scene_colour.py`, which `Pipeline.run()` calls just before render. It writes `.bristlenose/intermediate/scene-colours/<session>.json`: one `{t0, t1, speaker, colour, share}` per turn. The file is cached by the video's identity and the turn boundaries, so a re-run costs nothing until the recording or the speaker turns change. A failure logs a warning and leaves the session without colours, the same as thumbnails.
+The clip colour is computed by `bristlenose/utils/scene_colour.py`, which `Pipeline.run()` calls just before render. It writes `.bristlenose/intermediate/scene-colours/<session>.json`: one `{t0, t1, speaker, colour, share}` per turn. The file is cached by the video's identity and the turn boundaries, so a re-run costs nothing until the recording or the speaker turns change. A failure logs a warning and leaves the session without colours, the same as thumbnails. A cloud placeholder (an iCloud or OneDrive file not yet downloaded) is read like any other file, through `ensure_materialised`, as thumbnails are. Don't add a skip for dataless files: Bristlenose manages no storage policy, and an attempt at one was abandoned on 6 Oct 2026.
 
 **The module's constants are the colour lab's defaults.** To retune, regenerate the lab, move the handles, then copy the new values into the module and into the `P` table at the top of `colour-lab.html` in the same commit. The lab still carries the per-speaker distinctness and same-scene handles. The pipeline doesn't use them, because the lab showed the picture never changes with who is speaking.
 
@@ -50,7 +50,17 @@ Not wired yet:
 - Projects analysed before this change show neutral clips until their next `run`.
 
 
-**Tuning lives in `frontend/src/utils/tapestryTuning.ts`, and the playground stays (decided 6 Oct 2026).** The defaults there are the shipped type steps and container padding. Under `serve --dev`, a slider icon beside the zoom opens `TapestryPlayground`. It moves each kind of text along the existing `--bn-text-*` ladder, the popover padding along `--bn-space-*`, and the pixel paddings and bar width only through the snapped lists in `PAD_STEPS`. It then lists the changes to commit. It is dev-only and code-split, so it is not dead code: keep it.
+**Tuning lives in `frontend/src/utils/tapestryTuning.ts`, and the playground stays (decided 6 Oct 2026).** The defaults there are the shipped type steps and container padding. Under `serve --dev`, a slider icon beside the zoom opens `TapestryPlayground`. It moves each kind of text along the existing `--bn-text-*` ladder, the popover padding along `--bn-space-*`, and the pixel paddings, bar width and bar click margin only through the snapped lists in `PAD_STEPS`. It then lists the changes to commit. It is dev-only and code-split, so it is not dead code: keep it.
+
+## Interaction (shipped 6 Oct 2026)
+
+- **Zoom is shared, scrolling is not.** The zoom control sets one scale for every open slice; each slice scrolls horizontally on its own.
+- **State survives Back.** Which slices are open, the zoom and each slice's scroll position are kept per project (module state plus sessionStorage key `bn-tapestry-view:<projectId>`, in `utils/tapestryScale.ts`), so visiting a transcript and returning shows the same page.
+- **Speaker track from the role, not the tag.** The route sends a `team` flag per turn from the speaker slot's role; the client falls back to the first letter of the displayed code. A recode in serve therefore moves a turn between tracks (`docs/design-people.md` §J7).
+- **Clicks jump.** A click on the speaker lane opens the transcript at exactly that moment; a click on a section flag opens it at the section's first quote. While the pointer is on the speaker lane, the nearest timecode tick lights in accent blue.
+- **Sentiment marks are 6 px wide** (`barW`). Each carries an invisible click target 2 px wider (`hitExtra`) and at least 12 px tall, which stops halfway to a neighbouring mark, so close marks never steal each other's clicks.
+- **The quote is a floating popover** under its bar, with an arrow, an X, and ← → to step between quotes. An outside click or Esc closes it (Esc is claimed in the capture phase, unless a modal has made the app inert), and focus returns to the bar. Only one slice holds an open quote at a time.
+- **Themes are spans** from a theme's first quote to its last, packed into up to three rows. Each carries its name in full on a chip at the span's start; a chip is cut only at the slice edge, and its fill fades out over its last 20%.
 
 **Decided (6 Oct 2026): the zoom has no keyboard shortcut.** ⌘+ and ⌘− stay the browser's text zoom, because readers rely on text size more than they would on a timeline zoom. Don't add a shortcut.
 

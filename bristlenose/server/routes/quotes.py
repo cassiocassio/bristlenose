@@ -19,6 +19,7 @@ from bristlenose.server.models import (
     QuoteState,
     QuoteTag,
     ScreenCluster,
+    SessionSpeaker,
     TagDefinition,
     ThemeGroup,
     ThemeQuote,
@@ -526,12 +527,14 @@ def get_quotes(
         # Check if any session has a moderator speaker (speaker_code starting
         # with "m").  Solo sessions (no moderator) shouldn't offer the
         # "Question?" pill on quotes.
+        # A moderator is a slot whose role says so — a recoded tag included
+        # (design-people.md §J7) — so ask the slots, not the tags' letters.
         has_moderator = db.query(
-            db.query(TranscriptSegment)
-            .join(SessionModel, TranscriptSegment.session_id == SessionModel.id)
+            db.query(SessionSpeaker)
+            .join(SessionModel, SessionSpeaker.session_id == SessionModel.id)
             .filter(
                 SessionModel.project_id == project_id,
-                TranscriptSegment.speaker_code.like("m%"),
+                SessionSpeaker.speaker_role == "researcher",
             )
             .exists()
         ).scalar() or False
@@ -608,12 +611,20 @@ def get_moderator_question(
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        # Find the last moderator segment before this quote's segment.
+        # Find the last moderator segment before this quote's segment. The
+        # session's moderators are its slots whose role says so, so a recoded
+        # tag counts as what it was recoded to (design-people.md §J7).
+        moderator_tags = [
+            code for (code,) in db.query(SessionSpeaker.speaker_code).filter(
+                SessionSpeaker.session_id == session.id,
+                SessionSpeaker.speaker_role == "researcher",
+            )
+        ]
         segment = (
             db.query(TranscriptSegment)
             .filter(
                 TranscriptSegment.session_id == session.id,
-                TranscriptSegment.speaker_code.like("m%"),
+                TranscriptSegment.speaker_code.in_(moderator_tags),
                 TranscriptSegment.segment_index < quote.segment_index,
             )
             .order_by(TranscriptSegment.segment_index.desc())

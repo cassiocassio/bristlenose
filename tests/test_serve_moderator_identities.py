@@ -525,3 +525,105 @@ class TestReconcileSlots:
         _reimport(client, project)
         s2 = {k[1]: v for k, v in _slots(client).items() if k[0] == "s2"}
         assert s2["m1"]["name"] == "Kerri", "a person's yes outlives the run"
+
+
+class TestRecode:
+    """§J7 R1: moderator ↔ observer, held on the slot. The person stays; the
+    role and therefore the code change, in this session only; nothing is
+    re-analysed. Codes are per person and role (call 3)."""
+
+    def test_a_moderator_recoded_as_an_observer_reads_o_in_that_session_only(
+        self, tmp_path: Path,
+    ) -> None:
+        client = _client(_project(tmp_path, _TWO))
+        kerri = _slots(client)[("s2", "m1")]["person"]
+        resp = client.put("/api/projects/1/sessions/s2/speakers/m1",
+                          json={"kind": "observer", "person": kerri})
+        assert resp.status_code == 200
+        slots = _slots(client)
+        assert (slots[("s2", "m1")]["speaker_code"], slots[("s2", "m1")]["role"]) == ("o1", "observer")
+        assert slots[("s2", "m1")]["person"] == kerri, "the same person"
+        assert slots[("s1", "m1")]["speaker_code"] == "m1"
+        s2 = next(s for s in client.get("/api/projects/1/sessions").json()["sessions"]
+                  if s["session_id"] == "s2")
+        assert s2["speakers"][0]["role"] == "observer"
+
+    def test_one_person_can_moderate_one_session_and_observe_another(self, tmp_path: Path) -> None:
+        client = _client(_project(tmp_path, _TWO))
+        martin = _slots(client)[("s1", "m1")]["person"]
+        client.put("/api/projects/1/sessions/s2/speakers/m1",
+                   json={"kind": "observer", "person": martin})
+        slots = _slots(client)
+        assert slots[("s1", "m1")]["speaker_code"] == "m1"
+        assert slots[("s2", "m1")]["speaker_code"] == "o1"
+        assert slots[("s1", "m1")]["person"] == slots[("s2", "m1")]["person"] == martin
+
+    def test_the_transcript_follows_the_slot_not_the_tag(self, tmp_path: Path) -> None:
+        client = _client(_project(tmp_path, _TWO))
+        kerri = _slots(client)[("s2", "m1")]["person"]
+        client.put("/api/projects/1/sessions/s2/speakers/m1", json={"kind": "observer", "person": kerri})
+        body = client.get("/api/projects/1/transcripts/s2").json()
+        team = [s for s in body["segments"] if s["speaker_code"].startswith(("m", "o"))]
+        assert team and all(s["speaker_code"] == "o1" and not s["is_moderator"] for s in team)
+
+    def test_a_recode_survives_a_re_run(self, tmp_path: Path) -> None:
+        project = _project(tmp_path, _TWO)
+        client = _client(project)
+        kerri = _slots(client)[("s2", "m1")]["person"]
+        client.put("/api/projects/1/sessions/s2/speakers/m1", json={"kind": "observer", "person": kerri})
+        _reimport(client, project)
+        assert _slots(client)[("s2", "m1")]["speaker_code"] == "o1"
+
+    def test_undo_puts_the_role_back(self, tmp_path: Path) -> None:
+        client = _client(_project(tmp_path, _TWO))
+        kerri = _slots(client)[("s2", "m1")]["person"]
+        client.put("/api/projects/1/sessions/s2/speakers/m1", json={"kind": "observer", "person": kerri})
+        client.put("/api/projects/1/sessions/s2/speakers/m1", json={"kind": "moderator", "person": kerri})
+        assert _slots(client)[("s2", "m1")]["speaker_code"] == "m2"
+
+    def test_a_participant_is_not_recoded_here(self, tmp_path: Path) -> None:
+        client = _client(_project(tmp_path, _TWO))
+        resp = client.put("/api/projects/1/sessions/s1/speakers/p1", json={"kind": "moderator"})
+        assert resp.status_code == 409
+
+    def test_no_read_disagrees_with_the_slot(self, tmp_path: Path) -> None:
+        """The §J7 route walk: after Kerri (m2) is recoded as an observer, no
+        project read anywhere may still call anyone m2. Every GET route in the
+        app's own OpenAPI is called with the sessions filled in."""
+        import re
+
+        client = _client(_project(tmp_path, _TWO))
+        kerri = _slots(client)[("s2", "m1")]["person"]
+        client.put("/api/projects/1/sessions/s2/speakers/m1", json={"kind": "observer", "person": kerri})
+
+        spec = client.app.openapi()
+        prefix = "/api/projects/{project_id}"
+        codes: list[str] = []
+        called = 0
+
+        def walk(value: object, key: str = "") -> None:
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    walk(v, k)
+            elif isinstance(value, list):
+                for v in value:
+                    walk(v, key)
+            elif isinstance(value, str) and key in {"code", "speaker_code", "participant_id"}:
+                codes.append(value)
+
+        for path, item in spec["paths"].items():
+            if "get" not in item or not path.startswith(prefix):
+                continue
+            params = set(re.findall(r"\{(\w+)\}", path)) - {"project_id"}
+            if params - {"session_id"}:
+                continue
+            for sid in (["s1", "s2"] if "session_id" in params else [None]):
+                url = path.replace("{project_id}", "1").replace("{session_id}", sid or "")
+                resp = client.get(url)
+                if resp.status_code != 200 or "json" not in resp.headers.get("content-type", ""):
+                    continue
+                called += 1
+                walk(resp.json())
+        assert called >= 5, "the walk must actually read the project"
+        assert "o1" in codes, "the recoded speaker is visible somewhere"
+        assert "m2" not in codes, "a read still calls the recoded speaker a moderator"

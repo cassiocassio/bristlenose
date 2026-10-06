@@ -321,7 +321,12 @@ def get_transcript(
         # Build segment responses with quote overlap detection
         seg_responses: list[TranscriptSegmentResponse] = []
         for seg in segments:
-            is_moderator = seg.speaker_code.startswith("m")
+            # The slot's role, not the tag's: a recoded m1 is an observer.
+            seg_slot = by_slot.get(seg.speaker_code)
+            is_moderator = (
+                seg_slot.role == "researcher" if seg_slot is not None
+                else seg.speaker_code.startswith("m")
+            )
 
             # Find overlapping quotes (same logic as render/transcript_pages.py)
             seg_quotes = [

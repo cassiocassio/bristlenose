@@ -47,6 +47,18 @@ def is_team_code(code: str) -> bool:
     return code[:1] in ("m", "o")
 
 
+#: A slot's stored role → the prefix its code takes. The role is the slot's
+#: own (``SessionSpeaker.speaker_role``), set from the transcript tag when the
+#: slot is made and changed only by a person's recode (design-people.md §J7):
+#: an ``m1`` tag recoded as an observer reads ``o…``.
+_ROLE_PREFIX = {"researcher": "m", "observer": "o", "participant": "p"}
+
+
+def kind_prefix(sp: SessionSpeaker) -> str:
+    """The prefix a slot's code takes: its role's, else its tag's."""
+    return _ROLE_PREFIX.get(sp.speaker_role or "", sp.speaker_code[:1])
+
+
 def unidentified_code(slot_code: str, letter: str = "") -> str:
     """``m1`` → ``m?``: what an unidentified slot reads; ``mA?`` when its
     session has more than one speaker of that role (``lettered``)."""
@@ -112,16 +124,54 @@ class Slot:
         return self.person.short_name or self.person.full_name or ""
 
 
+def _derive_codes(
+    rows: list[tuple[str, int, SessionSpeaker, Person | None]],
+) -> dict[int, str]:
+    """Every slot's code, by the slot row's id — worked out on read.
+
+    A participant is its slot's code (global, never reissued). A moderator or
+    observer is numbered per (person, role) in the order the pair first appears
+    — session order, then slot order — so Steve is ``m2`` where he moderates and
+    ``o1`` where he observes, and the name joins them (design-people.md §J7,
+    call 3). An unidentified one is ``m?``, lettered ``mA?``, ``mB?`` when its
+    session has more than one speaker of that role (``lettered``). Nothing is
+    stored: the session registry keeps sessions and tags stable, so codes only
+    move when the map does — two people joined, or a recode.
+    """
+    ordered = sorted(rows, key=lambda r: (r[1], r[0], _slot_sort_key(r[2].speaker_code)))
+    letters: dict[tuple[str, str], dict[str, str]] = {}
+    for sid, _n, sp, _p in ordered:
+        if is_team_code(sp.speaker_code):
+            letters.setdefault((sid, kind_prefix(sp)), {})[sp.speaker_code] = ""
+    for group, codes in letters.items():
+        letters[group] = lettered(list(codes))
+    numbers: dict[str, int] = {}
+    issued: dict[tuple[str, int], str] = {}
+    out: dict[int, str] = {}
+    for sid, _n, sp, person in ordered:
+        if not is_team_code(sp.speaker_code):
+            out[sp.id] = sp.speaker_code
+            continue
+        prefix = kind_prefix(sp)
+        if person is None:
+            letter = letters.get((sid, prefix), {}).get(sp.speaker_code, "")
+            out[sp.id] = f"{prefix}{letter}?"
+            continue
+        pair = (prefix, person.id)
+        if pair not in issued:
+            numbers[prefix] = numbers.get(prefix, 0) + 1
+            issued[pair] = f"{prefix}{numbers[prefix]}"
+        out[sp.id] = issued[pair]
+    return out
+
+
 def display_code(sp: SessionSpeaker, person: Person | None, letter: str = "") -> str:
-    """The code a client sees for this slot. ``letter`` is the slot's
-    ``lettered`` letter in its session, used only while nobody is identified."""
-    if person is None:
-        return sp.speaker_code if not is_team_code(sp.speaker_code) else (
-            unidentified_code(sp.speaker_code, letter)
-        )
-    # A person not yet numbered (between migration 013 and the first import)
-    # shows its slot code, as before route C.
-    return person.code or sp.speaker_code
+    """A slot's code without its project around it: its tag's, or ``m?``.
+    Routes read ``Slot.code``, worked out across the project; this is for a
+    caller with one row and no project to number it against."""
+    if person is None and is_team_code(sp.speaker_code):
+        return unidentified_code(kind_prefix(sp), letter)
+    return sp.speaker_code
 
 
 def _slot_sort_key(code: str) -> tuple[int, int]:
@@ -139,22 +189,8 @@ def project_slots(db: DbSession, project_id: int) -> list[Slot]:
         .filter(SessionModel.project_id == project_id)
         .all()
     )
-    letters: dict[tuple[str, str], dict[str, str]] = {}
-    for sid, _number_, sp, _person in rows:
-        if is_team_code(sp.speaker_code):
-            letters.setdefault((sid, sp.speaker_code[:1]), {})[sp.speaker_code] = ""
-    for key, codes in letters.items():
-        letters[key] = lettered(list(codes))
-    slots = [
-        Slot(
-            sid, number, sp.speaker_code,
-            display_code(sp, person, letters.get((sid, sp.speaker_code[:1]), {}).get(
-                sp.speaker_code, "",
-            )),
-            sp, person,
-        )
-        for sid, number, sp, person in rows
-    ]
+    codes = _derive_codes([(sid, number, sp, person) for sid, number, sp, person in rows])
+    slots = [Slot(sid, number, sp.speaker_code, codes[sp.id], sp, person) for sid, number, sp, person in rows]
     slots.sort(key=lambda s: (s.session_number, s.session_id, _slot_sort_key(s.slot_code)))
     return slots
 
@@ -171,18 +207,11 @@ def session_slots(db: DbSession, project_id: int, session_id: str) -> list[Slot]
 def code_for(db: DbSession, session_pk: int, slot_code: str) -> str:
     """One slot's identity code, by the session row's primary key — for a
     route that translates a single transcript token (a per-quote call)."""
-    sp = db.query(SessionSpeaker).filter_by(session_id=session_pk, speaker_code=slot_code).first()
-    if sp is None:
+    session = db.get(SessionModel, session_pk)
+    if session is None:
         return slot_code
-    person = db.get(Person, sp.person_id) if sp.person_id is not None else None
-    letter = ""
-    if person is None and is_team_code(slot_code):
-        siblings = [
-            code for (code,) in db.query(SessionSpeaker.speaker_code).filter_by(session_id=session_pk)
-            if code[:1] == slot_code[:1]
-        ]
-        letter = lettered(siblings).get(slot_code, "")
-    return display_code(sp, person, letter)
+    slot = slot_map(db, session.project_id).get((session.session_id, slot_code))
+    return slot.code if slot is not None else slot_code
 
 
 def identities(db: DbSession, project_id: int) -> dict[str, Person]:
@@ -204,19 +233,15 @@ def renumber(db: DbSession, project_id: int) -> None:
     derived, not stored identity (``design-people.md`` §C2).
     """
     db.flush()
-    next_number: dict[str, int] = {}
     seen: set[int] = set()
     for slot in project_slots(db, project_id):
         person = slot.person
         if person is None or person.id in seen:
             continue
         seen.add(person.id)
-        prefix = slot.slot_code[:1]
-        if is_team_code(slot.slot_code):
-            next_number[prefix] = next_number.get(prefix, 0) + 1
-            person.code = f"{prefix}{next_number[prefix]}"
-        else:
-            person.code = slot.slot_code
+        # The person's first code. A record only: the routes read Slot.code,
+        # worked out per (person, role) on every read (_derive_codes).
+        person.code = slot.code
 
 
 def release(db: DbSession, person_ids: set[int | None]) -> None:
@@ -255,6 +280,17 @@ def label_taken(
             if held and held.strip().casefold() in wanted:
                 return held
     return None
+
+
+def is_participant(db: DbSession, person: Person) -> bool:
+    """Whether a person is someone's participant slot — never a moderator or
+    observer's to pick (a participant recode is R2, not built)."""
+    if person.id is None:
+        return False
+    return any(
+        not is_team_code(code)
+        for (code,) in db.query(SessionSpeaker.speaker_code).filter_by(person_id=person.id)
+    )
 
 
 def by_uuid(db: DbSession, uuid: str) -> Person | None:

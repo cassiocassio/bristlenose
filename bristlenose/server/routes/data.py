@@ -73,6 +73,10 @@ class SpeakerNameEdit(BaseModel):
     #: This slot is nobody we know (``m?``): an undo back to unknown, and the
     #: picker's "not this person".
     clear: bool | None = None
+    #: The cross-role recode (design-people.md §J7 R1): what this session's
+    #: speaker was, moderator or observer. Held on the slot; never reaches the
+    #: pipeline and re-analyses nothing. Into or out of participant is R2.
+    kind: Literal["moderator", "observer"] | None = None
 
 
 def _is_session_scoped(speaker_code: str) -> bool:
@@ -472,6 +476,13 @@ def put_session_speaker(
         left: set[int | None] = set()
         chose = False
 
+        if data.kind is not None:
+            if not team:
+                raise HTTPException(
+                    status_code=409, detail="A participant's role is not changed here yet",
+                )
+            sp.speaker_role = "researcher" if data.kind == "moderator" else "observer"
+
         if data.clear and team:
             left.add(speaker_slots.point(sp, None, state=None, evidence=None))
             # Sticky: the next run must not propose the name that was refused.
@@ -489,8 +500,10 @@ def put_session_speaker(
                 db.flush()
             if target is None:
                 raise HTTPException(status_code=404, detail="Person not found")
-            if target.code and target.code[:1] != slot.slot_code[:1]:
-                raise HTTPException(status_code=409, detail="A pick keeps the speaker's role")
+            # A moderator or observer may be anyone who is not a participant: one
+            # person can moderate one session and observe another (§J7, call 3).
+            if speaker_slots.is_participant(db, target):
+                raise HTTPException(status_code=409, detail="A participant is not picked here")
             left.add(speaker_slots.point(
                 sp, target, state=speaker_slots.CONFIRMED, evidence=speaker_slots.PICK,
             ))

@@ -645,7 +645,9 @@
       "editDescription": "설명 편집 실행 취소",
       "clearName": "\uc774\ub984 \uc9c0\uc6b0\uae30 \uc2e4\ud589 \ucde8\uc18c",
       "changeRole": "\uc5ed\ud560 \ubcc0\uacbd \uc2e4\ud589 \ucde8\uc18c",
-      "swapRoles": "\uc5ed\ud560 \ub9de\ubc14\uafb8\uae30 \uc2e4\ud589 \ucde8\uc18c"
+      "swapRoles": "\uc5ed\ud560 \ub9de\ubc14\uafb8\uae30 \uc2e4\ud589 \ucde8\uc18c",
+      "splitParagraph": "\ub2e8\ub77d \ub098\ub204\uae30 \uc2e4\ud589 \ucde8\uc18c",
+      "joinParagraphs": "\ub2e8\ub77d \ud569\uce58\uae30 \uc2e4\ud589 \ucde8\uc18c"
     },
     "redo": {
       "renameModerator": "진행자 이름 변경 복귀",
@@ -664,7 +666,9 @@
       "editDescription": "설명 편집 복귀",
       "clearName": "\uc774\ub984 \uc9c0\uc6b0\uae30 \ubcf5\uadc0",
       "changeRole": "\uc5ed\ud560 \ubcc0\uacbd \ubcf5\uadc0",
-      "swapRoles": "\uc5ed\ud560 \ub9de\ubc14\uafb8\uae30 \ubcf5\uadc0"
+      "swapRoles": "\uc5ed\ud560 \ub9de\ubc14\uafb8\uae30 \ubcf5\uadc0",
+      "splitParagraph": "\ub2e8\ub77d \ub098\ub204\uae30 \ubcf5\uadc0",
+      "joinParagraphs": "\ub2e8\ub77d \ud569\uce58\uae30 \ubcf5\uadc0"
     }
   }
 }

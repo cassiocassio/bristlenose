@@ -675,7 +675,9 @@
       "editDescription": "Beschreibung bearbeiten widerrufen",
       "clearName": "Namen l\u00f6schen widerrufen",
       "changeRole": "Rolle \u00e4ndern widerrufen",
-      "swapRoles": "Rollen tauschen widerrufen"
+      "swapRoles": "Rollen tauschen widerrufen",
+      "splitParagraph": "Absatz teilen widerrufen",
+      "joinParagraphs": "Absätze verbinden widerrufen"
     },
     "redo": {
       "renameModerator": "Moderator umbenennen wiederholen",
@@ -694,7 +696,9 @@
       "editDescription": "Beschreibung bearbeiten wiederholen",
       "clearName": "Namen l\u00f6schen wiederholen",
       "changeRole": "Rolle \u00e4ndern wiederholen",
-      "swapRoles": "Rollen tauschen wiederholen"
+      "swapRoles": "Rollen tauschen wiederholen",
+      "splitParagraph": "Absatz teilen wiederholen",
+      "joinParagraphs": "Absätze verbinden wiederholen"
     }
   }
 }

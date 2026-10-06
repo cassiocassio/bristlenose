@@ -349,6 +349,8 @@ def import_project(db: Session, project_dir: Path) -> Project:
     _import_transcript_segments(db, session_map, transcripts_dir)
     db.flush()  # ensure segments have IDs before word enrichment
     _enrich_words_from_intermediate(db, session_map, output_dir)
+    # The researcher's splits and joins, made again on the rebuilt paragraphs.
+    _replay_layout_edits(db, session_map)
 
     # --- Import persons + session_speakers from transcript segments ------
     _import_speakers(db, session_map, transcripts_dir, output_dir)
@@ -559,6 +561,27 @@ def _guess_file_type(filename: str) -> str:
     if ext == ".docx":
         return "docx"
     return "other"
+
+
+def _replay_layout_edits(db: Session, session_map: dict[str, SessionModel]) -> None:
+    """Re-make each session's paragraph splits and joins (stage 1 of transcript
+    editing) on the paragraphs just rebuilt from the pipeline's transcript."""
+    from bristlenose.server import transcript_layout
+
+    db.flush()
+    for sess in session_map.values():
+        transcript_layout.replay(db, sess)
+
+
+def rebuild_session_paragraphs(db: Session, project: Project, sess: SessionModel) -> None:
+    """Rebuild one session's paragraphs from the pipeline's transcript and
+    re-make the edits still recorded — how an undone split or join goes away."""
+    project_dir, output_dir = Path(project.input_dir), Path(project.output_dir)
+    one = {sess.session_id: sess}
+    _import_transcript_segments(db, one, _find_transcripts_dir(project_dir, output_dir))
+    db.flush()
+    _enrich_words_from_intermediate(db, one, output_dir)
+    _replay_layout_edits(db, one)
 
 
 def _import_transcript_segments(

@@ -677,7 +677,9 @@
       "editDescription": "Undo Edit Description",
       "clearName": "Undo Clear Name",
       "changeRole": "Undo Change Role",
-      "swapRoles": "Undo Swap Roles"
+      "swapRoles": "Undo Swap Roles",
+      "splitParagraph": "Undo Split Paragraph",
+      "joinParagraphs": "Undo Join Paragraphs"
     },
     "redo": {
       "renameModerator": "Redo Rename Moderator",
@@ -696,7 +698,9 @@
       "editDescription": "Redo Edit Description",
       "clearName": "Redo Clear Name",
       "changeRole": "Redo Change Role",
-      "swapRoles": "Redo Swap Roles"
+      "swapRoles": "Redo Swap Roles",
+      "splitParagraph": "Redo Split Paragraph",
+      "joinParagraphs": "Redo Join Paragraphs"
     }
   }
 }

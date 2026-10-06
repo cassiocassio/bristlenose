@@ -675,7 +675,9 @@
       "editDescription": "Açıklamayı Düzenlemeyi Geri Al",
       "clearName": "Ad\u0131 Temizlemeyi Geri Al",
       "changeRole": "Rol\u00fc De\u011fi\u015ftirmeyi Geri Al",
-      "swapRoles": "Rolleri Takas Etmeyi Geri Al"
+      "swapRoles": "Rolleri Takas Etmeyi Geri Al",
+      "splitParagraph": "Paragrafı Bölmeyi Geri Al",
+      "joinParagraphs": "Paragrafları Birleştirmeyi Geri Al"
     },
     "redo": {
       "renameModerator": "Moderatörün Adını Değiştirmeyi Yinele",
@@ -694,7 +696,9 @@
       "editDescription": "Açıklamayı Düzenlemeyi Yinele",
       "clearName": "Ad\u0131 Temizlemeyi Yinele",
       "changeRole": "Rol\u00fc De\u011fi\u015ftirmeyi Yinele",
-      "swapRoles": "Rolleri Takas Etmeyi Yinele"
+      "swapRoles": "Rolleri Takas Etmeyi Yinele",
+      "splitParagraph": "Paragrafı Bölmeyi Yinele",
+      "joinParagraphs": "Paragrafları Birleştirmeyi Yinele"
     }
   }
 }

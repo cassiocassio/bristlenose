@@ -675,7 +675,9 @@
       "editDescription": "Fortryd Rediger beskrivelse",
       "clearName": "Fortryd Ryd navn",
       "changeRole": "Fortryd Skift rolle",
-      "swapRoles": "Fortryd Byt roller"
+      "swapRoles": "Fortryd Byt roller",
+      "splitParagraph": "Fortryd Opdel afsnit",
+      "joinParagraphs": "Fortryd Sammenføj afsnit"
     },
     "redo": {
       "renameModerator": "Gentag Omdøb moderator",
@@ -694,7 +696,9 @@
       "editDescription": "Gentag Rediger beskrivelse",
       "clearName": "Gentag Ryd navn",
       "changeRole": "Gentag Skift rolle",
-      "swapRoles": "Gentag Byt roller"
+      "swapRoles": "Gentag Byt roller",
+      "splitParagraph": "Gentag Opdel afsnit",
+      "joinParagraphs": "Gentag Sammenføj afsnit"
     }
   }
 }

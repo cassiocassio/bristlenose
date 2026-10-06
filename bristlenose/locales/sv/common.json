@@ -675,7 +675,9 @@
       "editDescription": "Ångra Redigera beskrivning",
       "clearName": "\u00c5ngra Rensa namn",
       "changeRole": "\u00c5ngra Byt roll",
-      "swapRoles": "\u00c5ngra Byt roller"
+      "swapRoles": "\u00c5ngra Byt roller",
+      "splitParagraph": "\u00c5ngra Dela stycke",
+      "joinParagraphs": "\u00c5ngra Sammanfoga stycken"
     },
     "redo": {
       "renameModerator": "Gör om Byt namn på moderator",
@@ -694,7 +696,9 @@
       "editDescription": "Gör om Redigera beskrivning",
       "clearName": "G\u00f6r om Rensa namn",
       "changeRole": "G\u00f6r om Byt roll",
-      "swapRoles": "G\u00f6r om Byt roller"
+      "swapRoles": "G\u00f6r om Byt roller",
+      "splitParagraph": "G\u00f6r om Dela stycke",
+      "joinParagraphs": "G\u00f6r om Sammanfoga stycken"
     }
   }
 }

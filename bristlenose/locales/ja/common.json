@@ -665,7 +665,9 @@
       "editDescription": "取り消す - 説明の編集",
       "clearName": "\u53d6\u308a\u6d88\u3059 - \u540d\u524d\u306e\u6d88\u53bb",
       "changeRole": "\u53d6\u308a\u6d88\u3059 - \u5f79\u5272\u306e\u5909\u66f4",
-      "swapRoles": "\u53d6\u308a\u6d88\u3059 - \u5f79\u5272\u306e\u5165\u308c\u66ff\u3048"
+      "swapRoles": "\u53d6\u308a\u6d88\u3059 - \u5f79\u5272\u306e\u5165\u308c\u66ff\u3048",
+      "splitParagraph": "\u53d6\u308a\u6d88\u3059 - \u6bb5\u843d\u306e\u5206\u5272",
+      "joinParagraphs": "\u53d6\u308a\u6d88\u3059 - \u6bb5\u843d\u306e\u7d50\u5408"
     },
     "redo": {
       "renameModerator": "やり直す - モデレーターの名称変更",
@@ -684,7 +686,9 @@
       "editDescription": "やり直す - 説明の編集",
       "clearName": "\u3084\u308a\u76f4\u3059 - \u540d\u524d\u306e\u6d88\u53bb",
       "changeRole": "\u3084\u308a\u76f4\u3059 - \u5f79\u5272\u306e\u5909\u66f4",
-      "swapRoles": "\u3084\u308a\u76f4\u3059 - \u5f79\u5272\u306e\u5165\u308c\u66ff\u3048"
+      "swapRoles": "\u3084\u308a\u76f4\u3059 - \u5f79\u5272\u306e\u5165\u308c\u66ff\u3048",
+      "splitParagraph": "\u3084\u308a\u76f4\u3059 - \u6bb5\u843d\u306e\u5206\u5272",
+      "joinParagraphs": "\u3084\u308a\u76f4\u3059 - \u6bb5\u843d\u306e\u7d50\u5408"
     }
   }
 }

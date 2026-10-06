@@ -380,6 +380,35 @@ class TranscriptSegment(Base):
 # ---------------------------------------------------------------------------
 
 
+class TranscriptLayoutEdit(Base):
+    """A researcher's split or join of a session's transcript paragraphs
+    (design-transcript-editing.md §"Split and join, stage 1").
+
+    The importer rebuilds a session's paragraphs from the pipeline's
+    transcript on every import, then replays these in order, so a split
+    outlives a re-run. ``position`` is the paragraph's place in the session's
+    ordered list when the edit was made, which a replay reproduces; ``verify``
+    is the text the edit was made against, so a transcript that changed under
+    it (a re-analysis) skips the edit instead of splitting the wrong words.
+    Text and timing only: quotes are not split (stage 1).
+    """
+
+    __tablename__ = "transcript_layout_edits"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(10))  # "split" | "join"
+    #: The paragraph's place in the session's ordered list: the one split, or
+    #: for a join the second paragraph, joined onto the one before it.
+    position: Mapped[int] = mapped_column(Integer)
+    #: A split's place: how many words stay in the first paragraph.
+    token: Mapped[int] = mapped_column(Integer, default=0)
+    #: The words the edit was made against — a split's first words after the
+    #: cut, a join's first words of the second paragraph.
+    verify: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(default=func.now())
+
+
 class Quote(Base):
     """A single verbatim quote extracted from participant speech.
 

@@ -23,6 +23,16 @@ import { Annotation } from "../components/Annotation";
 import type { AnnotationTag } from "../components/Annotation";
 import { Selector } from "../components/Selector";
 import { isEmbedded } from "../utils/embedded";
+import { isExportMode } from "../utils/exportData";
+import { redo, undo } from "../contexts/UndoStore";
+import {
+  TRANSCRIPT_WRITTEN_EVENT,
+  caretWords,
+  drawnTokens,
+  joinParagraphs,
+  splitParagraph,
+  verifyOf,
+} from "../utils/paragraphEdits";
 import {
   getTranscript,
   getSessionList,
@@ -316,6 +326,53 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     getTranscript(sessionId).then(setData).catch(() => undefined);
   }, [sessionId]);
   useSpeakersChanged(reloadTranscript);
+  // …and after a paragraph split or join, or its undo.
+  useEffect(() => {
+    window.addEventListener(TRANSCRIPT_WRITTEN_EVENT, reloadTranscript);
+    return () => window.removeEventListener(TRANSCRIPT_WRITTEN_EVENT, reloadTranscript);
+  }, [reloadTranscript]);
+
+  // Splitting and joining paragraphs: not in an exported report, which has no
+  // server to keep them.
+  const paragraphEditing = !isExportMode();
+  // The browser's own input events — typing, dictation, autocorrect, a context
+  // menu's delete — never edit a paragraph. Native, not React's onBeforeInput,
+  // which is a keypress polyfill and misses most of them.
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body || !paragraphEditing) return;
+    const refuse = (e: Event) => {
+      if ((e.target as HTMLElement | null)?.closest?.(".segment-body")) e.preventDefault();
+    };
+    body.addEventListener("beforeinput", refuse);
+    return () => body.removeEventListener("beforeinput", refuse);
+  }, [paragraphEditing, data]);
+  const onParagraphKey = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>, position: number, tokens: string[]) => {
+      const mod = e.metaKey || e.ctrlKey;
+      // The page's own ⌘Z stands down inside editable text, so the report's
+      // undo is reached from here.
+      if (mod && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        void (e.shiftKey ? redo() : undo());
+        return;
+      }
+      if (mod || e.altKey) return;
+      const segs = data?.segments ?? [];
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const token = caretWords(e.currentTarget);
+        if (token === null || token <= 0 || token >= tokens.length) return;
+        void splitParagraph(sessionId, position, token, verifyOf(tokens, token)).catch(() => undefined);
+      } else if (e.key === "Backspace" && caretWords(e.currentTarget) === 0) {
+        e.preventDefault();
+        const above = segs[position - 1];
+        if (!above || above.speaker_code !== segs[position]?.speaker_code) return;
+        void joinParagraphs(sessionId, position, verifyOf(tokens, 0)).catch(() => undefined);
+      }
+    },
+    [sessionId, data],
+  );
 
   // Fetch session list for dropdown
   useEffect(() => {
@@ -511,7 +568,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         ref={bodyRef}
         data-testid="transcript-body"
       >
-        {segments.map((seg) => {
+        {segments.map((seg, position) => {
           const anchor = `t-${Math.floor(seg.start_time)}`;
           const classes = [
             "transcript-segment",
@@ -613,7 +670,26 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                   tabbable={false}
                 />
               </span>
-              <div className="segment-body">
+              <div
+                className="segment-body"
+                // The text takes a caret, so Return can split the paragraph
+                // there and Backspace at its start can join it to the one
+                // above (design-transcript-editing.md §"Split and join, stage
+                // 1"). Nothing else edits: typing, pasting and dropping are
+                // refused, since the words are the recording's.
+                {...(paragraphEditing
+                  ? {
+                      contentEditable: true,
+                      suppressContentEditableWarning: true,
+                      spellCheck: false,
+                      onPaste: (e: React.ClipboardEvent) => e.preventDefault(),
+                      onDrop: (e: React.DragEvent) => e.preventDefault(),
+                      onCut: (e: React.ClipboardEvent) => e.preventDefault(),
+                      onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) =>
+                        onParagraphKey(e, position, drawnTokens(seg.text, seg.words)),
+                    }
+                  : {})}
+              >
                 {seg.words && seg.words.length > 0 ? (
                   // Word-level spans for karaoke highlighting during playback.
                   // When words exist we skip html_text (<mark> quote highlighting)

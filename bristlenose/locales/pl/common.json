@@ -749,7 +749,9 @@
       "editDescription": "Cofnij edycję opisu",
       "clearName": "Cofnij usuni\u0119cie imienia",
       "changeRole": "Cofnij zmian\u0119 roli",
-      "swapRoles": "Cofnij zamian\u0119 r\u00f3l"
+      "swapRoles": "Cofnij zamian\u0119 r\u00f3l",
+      "splitParagraph": "Cofnij podzia\u0142 akapitu",
+      "joinParagraphs": "Cofnij scalenie akapit\u00f3w"
     },
     "redo": {
       "renameModerator": "Przywróć zmianę imienia moderatora",
@@ -768,7 +770,9 @@
       "editDescription": "Przywróć edycję opisu",
       "clearName": "Przywr\u00f3\u0107 usuni\u0119cie imienia",
       "changeRole": "Przywr\u00f3\u0107 zmian\u0119 roli",
-      "swapRoles": "Przywr\u00f3\u0107 zamian\u0119 r\u00f3l"
+      "swapRoles": "Przywr\u00f3\u0107 zamian\u0119 r\u00f3l",
+      "splitParagraph": "Przywr\u00f3\u0107 podzia\u0142 akapitu",
+      "joinParagraphs": "Przywr\u00f3\u0107 scalenie akapit\u00f3w"
     }
   }
 }

@@ -229,6 +229,13 @@
 }
 
 /* Moderator segments are visually receded so participant answers stand out */
+/* A paragraph's text takes a caret — Return splits there, Backspace at the
+   start joins (design-transcript-editing.md §"Split and join, stage 1") — but
+   is not a field: the caret is the only sign, no focus ring round the text. */
+.transcript-segment .segment-body[contenteditable="true"]:focus {
+    outline: none;
+}
+
 .segment-moderator .segment-body {
     color: var(--bn-colour-muted);
 }

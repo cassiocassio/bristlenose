@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from bristlenose.server import speaker_slots
+from bristlenose.server import speaker_slots, transcript_layout
 from bristlenose.server.journey import derive_journeys
 from bristlenose.server.models import (
     ClusterQuote,
@@ -23,7 +23,7 @@ from bristlenose.server.models import (
     TagDefinition,
     ThemeGroup,
     ThemeQuote,
-    TranscriptSegment,
+    TranscriptLayoutEdit,
 )
 from bristlenose.server.models import Session as SessionModel
 
@@ -204,13 +204,9 @@ def get_transcript(
             for slot in slots
         ]
 
-        # Transcript segments ordered by start_time
-        segments = (
-            db.query(TranscriptSegment)
-            .filter_by(session_id=sess.id)
-            .order_by(TranscriptSegment.start_time)
-            .all()
-        )
+        # Transcript segments in reading order — the order a split or join
+        # counts its position in (``transcript_layout.ordered``).
+        segments = transcript_layout.ordered(db, sess.id)
 
         # Quotes for this session + their cluster/theme assignments
         out = speaker_slots.evidence_out(db, project_id)
@@ -398,5 +394,104 @@ def get_transcript(
             annotations=annotations,
             journey_labels=journey_labels,
         )
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# Split and join (design-transcript-editing.md §"Split and join, stage 1")
+# ---------------------------------------------------------------------------
+
+
+class SplitBody(BaseModel):
+    #: The paragraph's place in the transcript, as GET returned it.
+    position: int
+    #: How many words stay in the first paragraph.
+    token: int
+    #: The first words after the cut, as the page drew them.
+    verify: str
+
+
+class JoinBody(BaseModel):
+    #: The second paragraph's place: it joins the one above.
+    position: int
+    #: Its first words, as the page drew them.
+    verify: str
+
+
+class LayoutEditResult(BaseModel):
+    id: int
+
+
+def _layout_session(db: Session, project_id: int, session_id: str) -> SessionModel:
+    sess = db.query(SessionModel).filter_by(project_id=project_id, session_id=session_id).first()
+    if sess is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return sess
+
+
+def _record(db: Session, edit: TranscriptLayoutEdit) -> LayoutEditResult:
+    db.add(edit)
+    db.flush()
+    try:
+        transcript_layout.apply(db, edit)
+    except transcript_layout.LayoutRefusedError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    db.commit()
+    return LayoutEditResult(id=edit.id)
+
+
+@router.post("/projects/{project_id}/transcripts/{session_id}/split",
+             response_model=LayoutEditResult)
+def split_paragraph(project_id: int, session_id: str, body: SplitBody,
+                    request: Request) -> LayoutEditResult:
+    """Split one paragraph in two at a word boundary, same speaker. Recorded,
+    so the split is made again after every re-import."""
+    db = _get_db(request)
+    try:
+        sess = _layout_session(db, project_id, session_id)
+        return _record(db, TranscriptLayoutEdit(
+            session_id=sess.id, kind="split", position=body.position, token=body.token,
+            verify=body.verify,
+        ))
+    finally:
+        db.close()
+
+
+@router.post("/projects/{project_id}/transcripts/{session_id}/join",
+             response_model=LayoutEditResult)
+def join_paragraphs(project_id: int, session_id: str, body: JoinBody,
+                    request: Request) -> LayoutEditResult:
+    """Join a paragraph onto the one above it — the same speaker's only."""
+    db = _get_db(request)
+    try:
+        sess = _layout_session(db, project_id, session_id)
+        return _record(db, TranscriptLayoutEdit(
+            session_id=sess.id, kind="join", position=body.position, verify=body.verify,
+        ))
+    finally:
+        db.close()
+
+
+@router.delete("/projects/{project_id}/transcripts/{session_id}/layout-edits/{edit_id}")
+def undo_layout_edit(project_id: int, session_id: str, edit_id: int,
+                     request: Request) -> dict[str, str]:
+    """Take a split or join back: forget it, then rebuild the session's
+    paragraphs from the transcript and make the edits that remain."""
+    from bristlenose.server.importer import rebuild_session_paragraphs
+    db = _get_db(request)
+    try:
+        sess = _layout_session(db, project_id, session_id)
+        edit = db.query(TranscriptLayoutEdit).filter_by(id=edit_id, session_id=sess.id).first()
+        if edit is None:
+            raise HTTPException(status_code=404, detail="Edit not found")
+        db.delete(edit)
+        db.flush()
+        project = db.get(Project, project_id)
+        assert project is not None
+        rebuild_session_paragraphs(db, project, sess)
+        db.commit()
+        return {"status": "ok"}
     finally:
         db.close()

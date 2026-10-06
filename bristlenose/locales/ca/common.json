@@ -675,7 +675,9 @@
       "editDescription": "Desfés l’edició de la descripció",
       "clearName": "Desf\u00e9s la supressi\u00f3 del nom",
       "changeRole": "Desf\u00e9s el canvi de rol",
-      "swapRoles": "Desf\u00e9s l\u2019intercanvi de rols"
+      "swapRoles": "Desf\u00e9s l\u2019intercanvi de rols",
+      "splitParagraph": "Desf\u00e9s la divisi\u00f3 del par\u00e0graf",
+      "joinParagraphs": "Desf\u00e9s la uni\u00f3 dels par\u00e0grafs"
     },
     "redo": {
       "renameModerator": "Refés el canvi de nom del moderador",
@@ -694,7 +696,9 @@
       "editDescription": "Refés l’edició de la descripció",
       "clearName": "Ref\u00e9s la supressi\u00f3 del nom",
       "changeRole": "Ref\u00e9s el canvi de rol",
-      "swapRoles": "Ref\u00e9s l\u2019intercanvi de rols"
+      "swapRoles": "Ref\u00e9s l\u2019intercanvi de rols",
+      "splitParagraph": "Ref\u00e9s la divisi\u00f3 del par\u00e0graf",
+      "joinParagraphs": "Ref\u00e9s la uni\u00f3 dels par\u00e0grafs"
     }
   }
 }

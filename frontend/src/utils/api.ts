@@ -137,6 +137,24 @@ async function apiPost<T>(path: string, body: unknown): Promise<T> {
   return resp.json() as Promise<T>;
 }
 
+/** Split a transcript paragraph in two at a word boundary (design-transcript-
+ *  editing.md §"Split and join, stage 1"). Returns the recorded edit's id. */
+export function postParagraphSplit(
+  sessionId: string, position: number, token: number, verify: string,
+): Promise<{ id: number }> {
+  return apiPost(`/transcripts/${encodeURIComponent(sessionId)}/split`, { position, token, verify });
+}
+
+/** Join a paragraph onto the one above it (the same speaker's only). */
+export function postParagraphJoin(sessionId: string, position: number, verify: string): Promise<{ id: number }> {
+  return apiPost(`/transcripts/${encodeURIComponent(sessionId)}/join`, { position, verify });
+}
+
+/** Take a split or join back. */
+export function deleteParagraphEdit(sessionId: string, id: number): Promise<void> {
+  return apiDelete(`/transcripts/${encodeURIComponent(sessionId)}/layout-edits/${id}`);
+}
+
 /** Whether a session needs a paid re-analysis after a speaker recode, and what
  *  it would cost (design-people.md §J7 R3). */
 export interface ReanalyseInfo {

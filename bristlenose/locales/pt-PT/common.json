@@ -675,7 +675,9 @@
       "editDescription": "Desfazer Editar descrição",
       "clearName": "Desfazer Limpar nome",
       "changeRole": "Desfazer Alterar fun\u00e7\u00e3o",
-      "swapRoles": "Desfazer Trocar fun\u00e7\u00f5es"
+      "swapRoles": "Desfazer Trocar fun\u00e7\u00f5es",
+      "splitParagraph": "Desfazer Dividir par\u00e1grafo",
+      "joinParagraphs": "Desfazer Juntar par\u00e1grafos"
     },
     "redo": {
       "renameModerator": "Refazer Alterar nome do moderador",
@@ -694,7 +696,9 @@
       "editDescription": "Refazer Editar descrição",
       "clearName": "Refazer Limpar nome",
       "changeRole": "Refazer Alterar fun\u00e7\u00e3o",
-      "swapRoles": "Refazer Trocar fun\u00e7\u00f5es"
+      "swapRoles": "Refazer Trocar fun\u00e7\u00f5es",
+      "splitParagraph": "Refazer Dividir par\u00e1grafo",
+      "joinParagraphs": "Refazer Juntar par\u00e1grafos"
     }
   }
 }

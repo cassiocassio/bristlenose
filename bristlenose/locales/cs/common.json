@@ -738,7 +738,9 @@
       "editDescription": "Odvolat akci Upravit popis",
       "clearName": "Odvolat akci Vymazat jm\u00e9no",
       "changeRole": "Odvolat akci Zm\u011bnit roli",
-      "swapRoles": "Odvolat akci Prohodit role"
+      "swapRoles": "Odvolat akci Prohodit role",
+      "splitParagraph": "Odvolat akci Rozdělit odstavec",
+      "joinParagraphs": "Odvolat akci Spojit odstavce"
     },
     "redo": {
       "renameModerator": "Opakovat akci Přejmenovat moderátora",
@@ -757,7 +759,9 @@
       "editDescription": "Opakovat akci Upravit popis",
       "clearName": "Opakovat akci Vymazat jm\u00e9no",
       "changeRole": "Opakovat akci Zm\u011bnit roli",
-      "swapRoles": "Opakovat akci Prohodit role"
+      "swapRoles": "Opakovat akci Prohodit role",
+      "splitParagraph": "Opakovat akci Rozdělit odstavec",
+      "joinParagraphs": "Opakovat akci Spojit odstavce"
     }
   }
 }

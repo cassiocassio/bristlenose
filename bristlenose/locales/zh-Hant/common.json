@@ -645,7 +645,9 @@
       "editDescription": "還原編輯說明",
       "clearName": "\u9084\u539f\u6e05\u9664\u540d\u7a31",
       "changeRole": "\u9084\u539f\u8b8a\u66f4\u89d2\u8272",
-      "swapRoles": "\u9084\u539f\u4e92\u63db\u89d2\u8272"
+      "swapRoles": "\u9084\u539f\u4e92\u63db\u89d2\u8272",
+      "splitParagraph": "\u9084\u539f\u5206\u5272\u6bb5\u843d",
+      "joinParagraphs": "\u9084\u539f\u5408\u4f75\u6bb5\u843d"
     },
     "redo": {
       "renameModerator": "重做重新命名主持人",
@@ -664,7 +666,9 @@
       "editDescription": "重做編輯說明",
       "clearName": "\u91cd\u505a\u6e05\u9664\u540d\u7a31",
       "changeRole": "\u91cd\u505a\u8b8a\u66f4\u89d2\u8272",
-      "swapRoles": "\u91cd\u505a\u4e92\u63db\u89d2\u8272"
+      "swapRoles": "\u91cd\u505a\u4e92\u63db\u89d2\u8272",
+      "splitParagraph": "\u91cd\u505a\u5206\u5272\u6bb5\u843d",
+      "joinParagraphs": "\u91cd\u505a\u5408\u4f75\u6bb5\u843d"
     }
   }
 }

@@ -79,6 +79,7 @@ class TestTableCreation:
         "source_files",
         "session_speakers",
         "transcript_segments",
+        "transcript_layout_edits",
         "quotes",
         "screen_clusters",
         "theme_groups",

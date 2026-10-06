@@ -675,7 +675,9 @@
       "editDescription": "Angre redigering av beskrivelse",
       "clearName": "Angre fjerning av navn",
       "changeRole": "Angre rolleendring",
-      "swapRoles": "Angre rollebytte"
+      "swapRoles": "Angre rollebytte",
+      "splitParagraph": "Angre deling av avsnitt",
+      "joinParagraphs": "Angre sammenslåing av avsnitt"
     },
     "redo": {
       "renameModerator": "Utfør navneendring for moderator likevel",
@@ -694,7 +696,9 @@
       "editDescription": "Utfør redigering av beskrivelse likevel",
       "clearName": "Utf\u00f8r fjerning av navn likevel",
       "changeRole": "Utf\u00f8r rolleendring likevel",
-      "swapRoles": "Utf\u00f8r rollebytte likevel"
+      "swapRoles": "Utf\u00f8r rollebytte likevel",
+      "splitParagraph": "Utfør deling av avsnitt likevel",
+      "joinParagraphs": "Utfør sammenslåing av avsnitt likevel"
     }
   }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { TranscriptPage } from "./TranscriptPage";
 import type { TranscriptPageResponse } from "../utils/types";
 
@@ -130,6 +130,9 @@ vi.mock("../utils/api", () => ({
   getSessionList: vi.fn().mockResolvedValue([]),
   putDeletedBadges: vi.fn(),
   putTags: vi.fn(),
+  postParagraphSplit: vi.fn().mockResolvedValue({ id: 1 }),
+  postParagraphJoin: vi.fn().mockResolvedValue({ id: 2 }),
+  deleteParagraphEdit: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock embedded detection — default false (browser); flip per-test. The house
@@ -140,7 +143,7 @@ vi.mock("../utils/embedded", () => ({
   isEmbedded: () => mockEmbedded,
 }));
 
-import { getTranscript, getSessionList } from "../utils/api";
+import { getTranscript, getSessionList, postParagraphJoin, postParagraphSplit } from "../utils/api";
 
 const mockedGetTranscript = vi.mocked(getTranscript);
 const mockedGetSessionList = vi.mocked(getSessionList);
@@ -696,5 +699,49 @@ describe("TranscriptPage — the person picker (design-people.md §J8.7)", () =>
     const before = mockedGetTranscript.mock.calls.length;
     window.dispatchEvent(new CustomEvent("bn:speakers-written"));
     await waitFor(() => expect(mockedGetTranscript.mock.calls.length).toBe(before + 1));
+  });
+});
+
+
+describe("TranscriptPage — split and join (design-transcript-editing.md, stage 1)", () => {
+  const bodyOf = (i: number) =>
+    screen.getByTestId("transcript-body").querySelectorAll<HTMLElement>(".segment-body")[i];
+  const caret = (el: HTMLElement, offset: number) => {
+    const range = document.createRange();
+    range.setStart(el.firstChild!.firstChild ?? el.firstChild!, offset);
+    range.collapse(true);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+  };
+
+  it("Return at a caret splits the paragraph there, counted in words", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    const body = bodyOf(0);
+    expect(body.getAttribute("contenteditable")).toBe("true");
+    caret(body, "Thanks for ".length);
+    fireEvent.keyDown(body, { key: "Enter" });
+    await waitFor(() => expect(postParagraphSplit).toHaveBeenCalledWith("s1", 0, 2, "joining me today."));
+  });
+
+  it("typing is refused: the words are the recording's", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    const event = new InputEvent("beforeinput", { bubbles: true, cancelable: true, data: "x" });
+    bodyOf(0).dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("Backspace at the start joins only the same speaker's paragraph above", async () => {
+    const twoInARow = { ...mockData, segments: [mockData.segments[1], { ...mockData.segments[1], start_time: 15, text: "And slow." }] };
+    mockedGetTranscript.mockResolvedValue(twoInARow);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    const second = bodyOf(1);
+    caret(second, 0);
+    fireEvent.keyDown(second, { key: "Backspace" });
+    await waitFor(() => expect(postParagraphJoin).toHaveBeenCalledWith("s1", 1, "And slow."));
   });
 });

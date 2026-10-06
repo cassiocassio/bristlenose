@@ -675,7 +675,9 @@
       "editDescription": "Peru kuvauksen muokkaus",
       "clearName": "Peru nimen poistaminen",
       "changeRole": "Peru roolin vaihtaminen",
-      "swapRoles": "Peru roolien vaihtaminen kesken\u00e4\u00e4n"
+      "swapRoles": "Peru roolien vaihtaminen kesken\u00e4\u00e4n",
+      "splitParagraph": "Peru kappaleen jakaminen",
+      "joinParagraphs": "Peru kappaleiden yhdist\u00e4minen"
     },
     "redo": {
       "renameModerator": "Nimeä moderaattori sittenkin uudelleen",
@@ -694,7 +696,9 @@
       "editDescription": "Muokkaa kuvausta sittenkin",
       "clearName": "Poista nimi sittenkin",
       "changeRole": "Vaihda rooli sittenkin",
-      "swapRoles": "Vaihda roolit kesken\u00e4\u00e4n sittenkin"
+      "swapRoles": "Vaihda roolit kesken\u00e4\u00e4n sittenkin",
+      "splitParagraph": "Jaa kappale sittenkin",
+      "joinParagraphs": "Yhdist\u00e4 kappaleet sittenkin"
     }
   }
 }

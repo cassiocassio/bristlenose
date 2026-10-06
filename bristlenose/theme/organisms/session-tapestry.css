@@ -128,6 +128,8 @@
 .bn-tp-bar-hit { fill: transparent; cursor: pointer; }
 
 .bn-tp-span { fill: var(--bn-colour-muted); opacity: 0.5; }
+/* The chip's fill is a gradient set inline (solid, then fading out over its last 20%), so
+   only its left edge is hard — on the timecode where the theme starts. */
 .bn-tp-tag { fill: var(--bn-colour-badge-bg); }
 /* Sans, not mono: monospace is reserved for tag text, and a theme is not a tag. */
 .bn-tp-tag-text {

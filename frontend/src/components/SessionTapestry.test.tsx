@@ -274,6 +274,17 @@ describe("SessionTapestry — sentiment click targets", () => {
   });
 });
 
+describe("SessionTapestry — theme tags", () => {
+  it("show the whole name when there is room, on a chip that fades out to the right", () => {
+    // Early in the session, so the full name fits before the slice's right edge.
+    const early = { ...session, quotes: [{ ...session.quotes[2], t0: 50 }] };
+    render(<SessionTapestry session={early} sPerPx={1} nameOf={(c) => c} onJump={() => {}} />);
+    expect(document.querySelector(".bn-tp-tag-text")!.textContent).toBe("Shopping as a household chore");
+    // Before, a name was cut to its span or 120px even with room to spare.
+    expect(document.querySelector<SVGRectElement>(".bn-tp-tag")!.style.fill).toMatch(/url\(.*bn-tp-fade-s1/);
+  });
+});
+
 describe("tapestry scale", () => {
   it("fits the longest session, held between 1 and 4 s/px", () => {
     expect(fitScale(300, 1000)).toBe(1);        // short project: never blown up

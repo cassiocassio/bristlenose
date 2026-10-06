@@ -335,6 +335,11 @@ export default function SessionTapestry({
             <filter id={`bn-tp-lift-${s.session_id}`} x="-10%" y="-30%" width="120%" height="170%">
               <feDropShadow dx={0} dy={0.6} stdDeviation={0.9} floodColor="#000" floodOpacity={0.16} />
             </filter>
+            {/* Theme chips: solid for their first 80%, fading out over the rightmost 20%. */}
+            <linearGradient id={`bn-tp-fade-${s.session_id}`} x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0.8" style={{ stopColor: "var(--bn-colour-badge-bg)", stopOpacity: 1 }} />
+              <stop offset="1" style={{ stopColor: "var(--bn-colour-badge-bg)", stopOpacity: 0 }} />
+            </linearGradient>
           </defs>
           <text className="bn-tp-lane" x={12} y={2.5 + P.flagH / 2 + centre(F.px.lane)}>{lane(t("quotes.sections"))}</text>
           <text className="bn-tp-lane" x={12} y={MT.y + MT.h / 2 + centre(F.px.lane)}>{lane(t("sessions.speakerPlaceholder.moderator"))}</text>
@@ -494,7 +499,9 @@ export default function SessionTapestry({
             const row = themeEnds.indexOf(Math.min(...themeEnds));
             const lx = Math.max(x0, themeEnds[row] + 4);
             const y = TG.y + row * TG.row;
-            const text = fit(theme, Math.min(Math.max(x1 - lx, 120), W - RIGHT - lx - 2 * P.themeX), F.tag);
+            // Truncated only at the slice's edge, never to the span: the chip marks where the theme
+            // starts (its left edge, on the timecode), and fades out to the right.
+            const text = fit(theme, W - RIGHT - lx - 2 * P.themeX, F.tag);
             const tw = text ? measure(text, F.tag) : 0;
             themeEnds[row] = Math.max(x1, lx + tw + 2 * P.themeX);
             return (
@@ -504,7 +511,8 @@ export default function SessionTapestry({
                 <rect className="bn-tp-span" x={x0} y={y + P.themeH / 2 - 2} width={x1 - x0} height={4} rx={2} />
                 {text && (
                   <>
-                    <rect className="bn-tp-tag" x={lx} y={y} width={tw + 2 * P.themeX} height={P.themeH} rx={3} />
+                    <rect className="bn-tp-tag" x={lx} y={y} width={tw + 2 * P.themeX} height={P.themeH} rx={3}
+                      style={{ fill: `url(#bn-tp-fade-${s.session_id})` }} />
                     <text className="bn-tp-tag-text" x={lx + P.themeX} y={y + P.themeH / 2 + centre(F.px.tag)}>{text}</text>
                   </>
                 )}

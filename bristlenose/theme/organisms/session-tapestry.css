@@ -63,10 +63,11 @@
 .bn-tp-clip[data-video] { stroke: rgb(0 0 0 / 0.25); stroke-width: 0.75; }
 .bn-tp-clip-label {
     font: var(--bn-weight-emphasis) var(--bn-text-micro) var(--bn-font-body);
-    fill: var(--bn-colour-text);
     pointer-events: none;
 }
-.bn-tp-clip-label.on-dark { fill: #fff; }
+/* Neutral clips only; a scene-coloured clip's ink is chosen in JS by WCAG contrast. */
+.bn-tp-clip-label.on-team { fill: var(--bn-colour-text); }
+.bn-tp-clip-label.on-ppt { fill: light-dark(#fff, #111); }
 
 .bn-tp-flag { cursor: pointer; }
 .bn-tp-flag line { stroke: var(--bn-colour-text); }
@@ -82,8 +83,9 @@
 .bn-tp-axis { stroke: var(--bn-colour-muted); stroke-width: 0.8; }
 .bn-tp-bar { cursor: pointer; transition: opacity 0.12s; }
 .bn-tp-bar:focus { outline: none; }
-.bn-tp-bar:focus-visible,
 .bn-tp-bar.sel { stroke: var(--bn-colour-text); stroke-width: 1.25; }
+/* Focus is its own ring, so a keyboard user can tell it from the selection. */
+.bn-tp-bar:focus-visible { stroke: var(--bn-colour-accent); stroke-width: 2; }
 .bn-tp-bar.dim { opacity: 0.25; }
 .bn-tp-unrated { fill: var(--bn-colour-muted); }
 
@@ -118,7 +120,15 @@
     font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
 }
-.bn-tp-tc { font-family: var(--bn-font-mono); }
+.bn-tp-tc {
+    all: unset;
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+}
+.bn-tp-tc:hover { color: var(--bn-colour-text); }
+.bn-tp-tc:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
 .bn-tp-card blockquote {
     margin: var(--bn-space-sm) 0 0;
     padding-right: 48px;
@@ -193,8 +203,9 @@
     background: none;
 }
 .bn-tp-zoom-slider:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
-.bn-tp-zoom-slider::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: var(--bn-colour-border); }
-.bn-tp-zoom-slider::-moz-range-track { height: 3px; border-radius: 2px; background: var(--bn-colour-border); }
+/* Track and thumb ring meet 3:1 against the page (WCAG 1.4.11). */
+.bn-tp-zoom-slider::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: var(--bn-colour-muted); }
+.bn-tp-zoom-slider::-moz-range-track { height: 3px; border-radius: 2px; background: var(--bn-colour-muted); }
 .bn-tp-zoom-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 11px;
@@ -202,7 +213,7 @@
     margin-top: -4px;
     border-radius: 50%;
     background: light-dark(#fff, #d8d8dc);
-    box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.3), 0 1px 2px rgb(0 0 0 / 0.25);
+    box-shadow: 0 0 0 1px var(--bn-colour-muted), 0 1px 2px rgb(0 0 0 / 0.25);
 }
 .bn-tp-zoom-slider::-moz-range-thumb {
     width: 11px;
@@ -210,7 +221,7 @@
     border: 0;
     border-radius: 50%;
     background: light-dark(#fff, #d8d8dc);
-    box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.3), 0 1px 2px rgb(0 0 0 / 0.25);
+    box-shadow: 0 0 0 1px var(--bn-colour-muted), 0 1px 2px rgb(0 0 0 / 0.25);
 }
 
 @media (prefers-reduced-motion: reduce) {

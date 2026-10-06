@@ -548,6 +548,7 @@ export function SessionsTable({
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" /><path d="M10 10l3.5 3.5M4.5 6.5h4" /></svg>
       </button>
       <input type="range" className="bn-tp-zoom-slider" min={0} max={100} value={zoom}
+        aria-valuetext={zoom === 0 ? "1×" : `${(fitScale(longest, gridWidth || 1000) / sPerPx).toFixed(1)}×`}
         aria-label={t("sessions.tapestry.zoom")} onChange={(e) => setZoom(Number(e.target.value))}
         onDoubleClick={() => setZoom(0)} />
       <button type="button" className="bn-tp-zoom-btn" aria-label={t("sessions.tapestry.zoomIn")}
@@ -612,8 +613,11 @@ export function SessionsTable({
         {sessions.flatMap((sess) => {
           const ts = tapestry?.[sess.session_id];
           const open = !!ts && openTapestries.has(sess.session_id);
-          const nameOf = (slot: string) =>
-            sess.speakers.find((sp) => (sp.slot_code || sp.speaker_code) === slot)?.name || slot;
+          const nameOf = (slot: string) => {
+            // Unnamed: the identity code the row shows (m2, m?), not the transcript's slot token.
+            const sp = sess.speakers.find((x) => (x.slot_code || x.speaker_code) === slot);
+            return sp?.name || sp?.speaker_code || slot;
+          };
           return [
           <SessionRow
             key={sess.session_id}
@@ -637,7 +641,7 @@ export function SessionsTable({
           open && ts ? (
             <div key={`${sess.session_id}-tapestry`} className="bn-tapestry" role="row"
               id={`bn-tapestry-${sess.session_id}`}>
-              <div role="cell" className="bn-tapestry-cell">
+              <div role="cell" className="bn-tapestry-cell" aria-colspan={7}>
                 <Suspense fallback={null}>
                   <SessionTapestry
                     session={ts}

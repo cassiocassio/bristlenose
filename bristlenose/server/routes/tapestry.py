@@ -19,7 +19,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from bristlenose.server.models import (
     ClusterQuote,
@@ -80,6 +80,10 @@ class TapestryResponse(BaseModel):
     sessions: list[TapestrySession]
 
 
+def _clip(text: str) -> str:
+    return text if len(text) <= _QUOTE_TEXT_LIMIT else text[:_QUOTE_TEXT_LIMIT].rstrip() + "…"
+
+
 def _get_db(request: Request) -> Session:
     db: Session = request.app.state.db_factory()
     return db
@@ -108,13 +112,16 @@ def _scene_colours(output_dir: Path | None, session_id: str) -> list[dict[str, o
 
 
 def _colour_at(colours: list[dict[str, object]], t0: float, t1: float) -> str | None:
-    """The scene colour covering the turn's midpoint (pipeline turns may differ from today's)."""
+    """The scene colour in force at the turn's midpoint: the latest pipeline turn starting at or
+    before it. Pipeline turns may differ from today's, and the pipeline's last turn ends at the
+    last speech while this route's runs on to the end of the recording."""
     mid = (t0 + t1) / 2
+    best: tuple[float, str] | None = None
     for c in colours:
-        a, b, col = c.get("t0"), c.get("t1"), c.get("colour")
-        if isinstance(a, (int, float)) and isinstance(b, (int, float)) and a <= mid < b:
-            return col if isinstance(col, str) else None
-    return None
+        a, col = c.get("t0"), c.get("colour")
+        if isinstance(a, (int, float)) and isinstance(col, str) and a <= mid and (best is None or a >= best[0]):
+            best = (float(a), col)
+    return best[1] if best else None
 
 
 def _turns(segments: list[TranscriptSegment], duration: float) -> list[tuple[float, float, str]]:
@@ -170,6 +177,7 @@ def get_tapestry(
                 by_session.setdefault(q.session_id, []).append(q)
 
         sessions = (db.query(SessionModel).filter_by(project_id=project_id)
+                    .options(selectinload(SessionModel.transcript_segments))
                     .order_by(SessionModel.session_number).all())
         result = []
         for sess in sessions:
@@ -189,7 +197,7 @@ def get_tapestry(
                 sections=[TapestrySection(t0=t, label=lab) for lab, t in sorted(firsts.items(), key=lambda kv: kv[1])],
                 quotes=[TapestryQuote(
                     t0=q.start_timecode, t1=q.end_timecode,
-                    text=edited.get(q.id, q.text)[:_QUOTE_TEXT_LIMIT],
+                    text=_clip(edited.get(q.id, q.text)),
                     sentiment=q.sentiment, intensity=q.intensity or 1,
                     section=section_of.get(q.id), theme=theme_of.get(q.id),
                 ) for q in sq],

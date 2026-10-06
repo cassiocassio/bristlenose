@@ -132,6 +132,44 @@ class TestCache:
         sc.extract_scene_colours([_session(video)], [t2], out)
         assert len(calls) == 2
 
+    def test_a_mismatched_or_empty_sample_raises_and_caches_nothing(self, tmp_path, monkeypatch):
+        """Times and frames pair by position, so a count that disagrees must not be cached as a
+        colourless session — or every later run would skip it for good."""
+        class Proc:
+            returncode = 0
+            def __init__(self, stderr, stdout):
+                self.stderr, self.stdout = stderr, stdout
+        frame = bytes(W * H * 3)
+        for stderr, stdout in [(b"", b""), (b"pts_time:0.0 pts_time:5.0", frame)]:
+            monkeypatch.setattr(sc.subprocess, "run", lambda *a, _e=stderr, _o=stdout, **k: Proc(_e, _o))
+            with pytest.raises(RuntimeError):
+                sc.sample_keyframes(tmp_path / "v.mp4")
+        monkeypatch.undo()
+        video = tmp_path / "v.mp4"
+        video.write_bytes(b"x")
+        monkeypatch.setattr(sc, "sample_keyframes", lambda p: (_ for _ in ()).throw(RuntimeError("0 times")))
+        out = tmp_path / "scene-colours"
+        assert sc.extract_scene_colours([_session(video)], [_transcript([(0, 5, "p1")])], out) == {}
+        assert not (out / "s1.json").exists()
+
+    def test_an_unreadable_recording_does_not_stop_the_next_session(self, tmp_path, monkeypatch):
+        a, b = tmp_path / "a.mp4", tmp_path / "b.mp4"
+        a.write_bytes(b"x")
+        b.write_bytes(b"x")
+        real_key = sc._cache_key
+
+        def key(video, turns):
+            if video == a:
+                raise PermissionError("sandbox said no")
+            return real_key(video, turns)
+
+        monkeypatch.setattr(sc, "_cache_key", key)
+        monkeypatch.setattr(sc, "sample_keyframes", lambda p: [(1.0, [sc.rgb_to_oklab(200, 170, 140)] * 50)])
+        s2 = _session(b).model_copy(update={"session_id": "s2"})
+        t2 = _transcript([(0, 5, "p1")]).model_copy(update={"session_id": "s2"})
+        written = sc.extract_scene_colours([_session(a), s2], [_transcript([(0, 5, "p1")]), t2], tmp_path / "out")
+        assert list(written) == ["s2"]
+
     def test_a_failed_sample_leaves_no_file(self, tmp_path, monkeypatch):
         video = tmp_path / "v.mp4"
         video.write_bytes(b"x")
@@ -157,7 +195,9 @@ def test_real_video_round_trip(tmp_path):
         check=True,
     )
     kf = sc.sample_keyframes(video)
-    assert kf, "no keyframes sampled"
+    # -g 5 at 10 fps over 4 s: a keyframe every 0.5 s, so the pairing is checked against a count.
+    assert len(kf) >= 7, len(kf)
+    assert [round(t, 1) for t, _ in kf[:3]] == [0.0, 0.5, 1.0]
     out = sc.session_scene_colours(kf, [(0.0, 2.0, "m1"), (2.0, 4.0, "p1")])
     first = [int(out[0]["colour"][i:i + 2], 16) for i in (1, 3, 5)]
     second = [int(out[1]["colour"][i:i + 2], 16) for i in (1, 3, 5)]

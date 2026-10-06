@@ -160,11 +160,15 @@ def sample_keyframes(video: Path) -> list[tuple[float, list[Lab]]]:
     )
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.decode("utf-8", "replace")[-300:])
-    times = [float(t) for t in re.findall(rb"pts_time:([\d.]+)", proc.stderr)]
+    times = [float(t) for t in re.findall(rb"pts_time:(-?[\d.]+(?:e-?\d+)?)", proc.stderr)]
     size = FRAME_W * FRAME_H * 3
     data = proc.stdout
-    return [(t, frame_pixels(data[i * size:(i + 1) * size]))
-            for i, t in enumerate(times) if (i + 1) * size <= len(data)]
+    # Times (stderr) and frames (stdout) are paired by position, so a count that disagrees would
+    # shift every later colour onto the wrong moment. Refuse rather than mis-pair; refuse nothing
+    # sampled too, or an empty result would be cached as a session that has no colours.
+    if not times or len(times) * size != len(data):
+        raise RuntimeError(f"keyframe sampling gave {len(times)} times for {len(data) // size} frames")
+    return [(t, frame_pixels(data[i * size:(i + 1) * size])) for i, t in enumerate(times)]
 
 
 # ── Clustering ───────────────────────────────────────────────────────────
@@ -293,7 +297,11 @@ def extract_scene_colours(
         if not turns:
             continue
         path = out_dir / f"{session.session_id}.json"
-        key = _cache_key(video, turns)
+        try:
+            key = _cache_key(video, turns)
+        except OSError as exc:  # one unreadable recording must not stop the rest
+            logger.warning("No scene colours for %s: %s", session.session_id, exc)
+            continue
         try:
             if path.exists() and json.loads(path.read_text(encoding="utf-8")).get("key") == key:
                 written[session.session_id] = path

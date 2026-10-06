@@ -84,6 +84,51 @@ describe("SessionTapestry", () => {
   });
 });
 
+describe("SessionTapestry — keyboard, focus and contrast", () => {
+  it("keeps one Tab stop per slice: the first bar, then the selected one", () => {
+    const { bars } = setup();
+    expect(bars().map((b) => b.getAttribute("tabindex"))).toEqual(["0", "-1", "-1"]);
+    fireEvent.click(bars()[1]);
+    expect(bars().map((b) => b.getAttribute("tabindex"))).toEqual(["-1", "0", "-1"]);
+    expect(bars()[1]).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("lets only one slice hold an open quote, so one arrow press steps one panel", () => {
+    const other = { ...session, session_id: "s2", quotes: session.quotes.map((q) => ({ ...q, text: `${q.text} (s2)` })) };
+    render(
+      <>
+        <SessionTapestry session={session} sPerPx={1} nameOf={(c) => c} onJump={() => {}} />
+        <SessionTapestry session={other} sPerPx={1} nameOf={(c) => c} onJump={() => {}} />
+      </>,
+    );
+    const all = Array.from(document.querySelectorAll<SVGElement>(".bn-tp-bar"));
+    fireEvent.click(all[0]); // s1, first quote
+    fireEvent.click(all[3]); // s2, first quote — s1's panel closes
+    expect(screen.queryByText("That was easy to find")).not.toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: "ArrowRight" });
+    expect(screen.getByText("Why does it ask me again? (s2)")).toBeInTheDocument();
+    expect(screen.queryByText("Why does it ask me again?")).not.toBeInTheDocument();
+  });
+
+  it("opens the transcript from the timecode, which is a real button", () => {
+    const { bars, onJump } = setup();
+    fireEvent.click(bars()[1]);
+    fireEvent.click(screen.getByRole("button", { name: "05:10–05:30" }));
+    expect(onJump).toHaveBeenCalledTimes(1);
+    expect(onJump).toHaveBeenCalledWith(310);
+  });
+
+  it("inks a light scene colour dark and a dark one white", () => {
+    const light = { ...session, turns: [{ t0: 0, t1: 600, speaker: "p1", colour: "#e8e0d0" }] };
+    const { unmount } = render(<SessionTapestry session={light} sPerPx={0.25} nameOf={() => "Alex"} onJump={() => {}} />);
+    expect(document.querySelector<SVGTextElement>(".bn-tp-clip-label")!.style.fill).toMatch(/#1a1a1a|rgb\(26, 26, 26\)/);
+    unmount();
+    const dark = { ...session, turns: [{ t0: 0, t1: 600, speaker: "p1", colour: "#4a3a30" }] };
+    render(<SessionTapestry session={dark} sPerPx={0.25} nameOf={() => "Alex"} onJump={() => {}} />);
+    expect(document.querySelector<SVGTextElement>(".bn-tp-clip-label")!.style.fill).toMatch(/#fff|rgb\(255, 255, 255\)/);
+  });
+});
+
 describe("tapestry scale", () => {
   it("fits the longest session, held between 1 and 4 s/px", () => {
     expect(fitScale(300, 1000)).toBe(1);        // short project: never blown up

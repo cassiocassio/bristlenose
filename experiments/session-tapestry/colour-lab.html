@@ -63,6 +63,10 @@ main { padding: 12px 16px 64px; }
   and if no eligible pair is far enough apart the speakers fall back to the neutral grey and slate. The tone mapping then moves
   both colours the same way (lightness range, chroma gain), so hue and ordering are kept. The faint overlay on each frame marks
   what was cropped or ignored.</p>
+  <p class="note"><b>The defaults here are the constants in <code>bristlenose/utils/scene_colour.py</code></b>, which computes the
+  per-turn scene colour in the pipeline. Retune here, then change both together. The pipeline uses the crop, ignore, cluster,
+  share, pick and tone steps per turn. It does not use the per-speaker distinctness or same-scene handles, because no recording
+  in the test corpus changed its picture with the speaker.</p>
   <div class="overview" id="overview"></div>
   <div id="videos"></div>
 </main>

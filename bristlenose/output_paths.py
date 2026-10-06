@@ -32,7 +32,8 @@ Layout (v2):
         │   ├── extracted_quotes.json
         │   ├── screen_clusters.json
         │   ├── theme_groups.json
-        │   └── topic_boundaries.json
+        │   ├── topic_boundaries.json
+        │   └── scene-colours/{session_id}.json   # per-turn scene colour (utils/scene_colour.py)
         └── temp/
 
 Notes:

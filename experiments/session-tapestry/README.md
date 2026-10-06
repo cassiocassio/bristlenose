@@ -37,6 +37,14 @@ The app's preview pane will not open a local page much over 500 KB. That is why 
   6. Tone it: map OKLab L into 0.42–0.88 and multiply chroma by 1.4.
   7. If the cluster sets of two speakers are within a scene distance of 6, treat them as one scene and do not assign per-speaker colours.
 
+## In the pipeline (6 Oct 2026)
+
+The clip colour is computed by `bristlenose/utils/scene_colour.py`, which `Pipeline.run()` calls just before render. It writes `.bristlenose/intermediate/scene-colours/<session>.json`: one `{t0, t1, speaker, colour, share}` per turn. The file is cached by the video's identity and the turn boundaries, so a re-run costs nothing until the recording or the speaker turns change. A failure logs a warning and leaves the session without colours, the same as thumbnails.
+
+**The module's constants are the colour lab's defaults.** To retune, regenerate the lab, move the handles, then copy the new values into the module and into the `P` table at the top of `colour-lab.html` in the same commit. The lab still carries the per-speaker distinctness and same-scene handles. The pipeline doesn't use them, because the lab showed the picture never changes with who is speaking.
+
+Not wired yet: serve does not read the files, `analyze` (no video) and render-only runs don't compute them, and projects analysed before this change won't have them until their next `run`.
+
 ## Measured
 
 - **The video never flips with the speaker.** Across 25 distinct recordings in the maintainer's test corpus, all 12 with two speakers showed the same picture whoever spoke (scene distance 0.3–4.6). The speaker is shown by the track; the colour shows what was on screen.

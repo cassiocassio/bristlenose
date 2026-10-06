@@ -2728,6 +2728,19 @@ class Pipeline:
             )
             display_names = build_display_name_map(people)
 
+            # Scene colour per speaker turn, for the session tapestry (utils/scene_colour.py).
+            # Cosmetic like thumbnails: cached by video + turn boundaries, ~1.5 s per hour of
+            # video when it does run, and a failure leaves the session without colours.
+            from bristlenose.utils.scene_colour import extract_scene_colours
+
+            try:
+                extract_scene_colours(
+                    sessions, transcripts,
+                    output_dir / ".bristlenose" / "intermediate" / "scene-colours",
+                )
+            except Exception:  # noqa: BLE001 — must never fail a run
+                logger.warning("Scene colours skipped", exc_info=True)
+
             # ── Stage 12: Render output ──────────────────────────────
             mark_stage_running(manifest, _M_STAGE_RENDER)
             # Render is unconditional (no cached branch, no _emit_remaining),

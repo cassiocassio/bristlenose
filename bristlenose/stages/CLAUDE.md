@@ -35,6 +35,7 @@ interviews/bristlenose-output/          # default output location
 │   └── s1.md
 └── .bristlenose/
     ├── intermediate/                   # JSON snapshots (render_output.py)
+    │   └── scene-colours/s1.json       # per-turn scene colour (utils/scene_colour.py), cached by video + turns
     └── temp/                           # FFmpeg scratch files
 ```
 

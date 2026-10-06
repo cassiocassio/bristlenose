@@ -22,6 +22,7 @@ import yaml
 
 from bristlenose.stages.s12_render.theme_assets import load_default_css
 from bristlenose.utils.markdown import format_finder_date, format_finder_filename
+from bristlenose.utils.scene_colour import sample_keyframes, session_scene_colours
 from bristlenose.utils.timecodes import format_duration_human
 
 HERE = Path(__file__).parent
@@ -56,26 +57,17 @@ def read_transcript(path: Path) -> tuple[float, str | None, str | None, list[dic
     return float(dur), source, date, turns
 
 
-def keyframe_colours(video: Path) -> list[list[float]]:
-    """[[t, r, g, b], ...] — mean colour of each keyframe (area-scaled to 1×1)."""
-    proc = subprocess.run(
-        ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "info", "-skip_frame", "nokey",
-         "-i", str(video), "-an", "-vf", "scale=1:1:flags=area,showinfo",
-         "-fps_mode", "vfr", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
-        capture_output=True, check=False,
-    )
-    times = [float(x) for x in re.findall(rb"pts_time:([\d.]+)", proc.stderr)]
-    px = proc.stdout
-    return [[round(t, 1), px[i * 3], px[i * 3 + 1], px[i * 3 + 2]]
-            for i, t in enumerate(times) if i * 3 + 2 < len(px)]
+def _colours(keyframes: list, turns: list[dict]) -> list[dict | None]:
+    """One scene colour per turn, aligned with *turns* (None where the session has no video)."""
+    if not keyframes:
+        return [None] * len(turns)
+    out = session_scene_colours(keyframes, [(t["t0"], t["t1"], t["code"]) for t in turns])
+    by_t0 = {o["t0"]: o for o in out}
+    return [by_t0.get(round(t["t0"], 2)) for t in turns]
 
 
-def turn_colour(frames: list[list[float]], t0: float, t1: float) -> list[int] | None:
-    """Mean keyframe colour inside [t0, t1); the nearest keyframe when none falls inside."""
-    if not frames:
-        return None
-    inside = [f for f in frames if t0 <= f[0] < t1] or [min(frames, key=lambda f: abs(f[0] - t0))]
-    return [round(sum(f[i] for f in inside) / len(inside)) for i in (1, 2, 3)]
+def turn_rgb(colour: str | None) -> list[int] | None:
+    return [int(colour[i:i + 2], 16) for i in (1, 3, 5)] if colour else None
 
 
 def build(out_dir: Path) -> dict:
@@ -112,7 +104,8 @@ def build(out_dir: Path) -> dict:
         if not turns:
             continue
         video = (out_dir.parent / source) if source else None
-        frames = keyframe_colours(video) if video and video.exists() else []
+        # The pipeline's own scene colour (bristlenose/utils/scene_colour.py), so this page shows what ships.
+        keyframes = sample_keyframes(video) if video and video.exists() else []
         topics = [{"t0": b["timecode_seconds"], "label": b["topic_label"]}
                   for e in boundaries if e["session_id"] == sid for b in e["boundaries"]]
         # The panel shows four lines and the click opens the transcript, so 600 characters is plenty.
@@ -142,7 +135,8 @@ def build(out_dir: Path) -> dict:
             "date": when, "file": format_finder_filename(Path(source).name) if source else None,
             "thumb": str(thumb) if thumb.exists() else None,   # copied beside the page in main()
             "journey": journey, "sections": sorted(({"t0": t, "label": lab} for lab, t in firsts.items()), key=lambda x: x["t0"]),
-            "turns": [dict(t, rgb=turn_colour(frames, t["t0"], t["t1"])) for t in turns],
+            "turns": [dict(t, rgb=turn_rgb(c["colour"] if c else None))
+                      for t, c in zip(turns, _colours(keyframes, turns))],
             "topics": sorted(topics, key=lambda t: t["t0"]), "quotes": sorted(sq, key=lambda q: q["t0"]),
             "speakers": [{"code": c, "name": name(c)} for c in codes],
         })

@@ -3695,6 +3695,9 @@ body { padding: 0; }
 .m-stage .m-strip { display: flex; gap: .9rem; padding: .4rem .2rem .6rem; border-bottom: 1px solid var(--bn-colour-border); align-self: stretch; }
 .m-stage .m-question { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); padding: .3rem .8rem .1rem; }
 .m-h3 { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); margin: .8rem 0 .4rem; }
+/* Section 7: the scope switch sits above the role toggle, ruled off from it. */
+.m-stage .bn-picker-scope { padding-bottom: .35rem; margin-bottom: .2rem; border-bottom: 1px solid var(--bn-colour-border); }
+.m-stage .m-plain-name { color: var(--bn-colour-text); }
 /* The split point: the caret sits in the paragraph's own text. */
 .m-stage .m-split-after { color: var(--bn-colour-muted); }
 </style>
@@ -3704,7 +3707,7 @@ body { padding: 0; }
 
 <header>
   <h1 class="m-title">Person picker — decided states</h1>
-  <p class="m-lede">The owner's answers of 6 Oct 2026 (<code>design-people.md</code> §J8, points 8–10) drawn on the shipped picker — and, in section 5, dashed and marked speculative, three undecided ways to tell a paragraph's speaker from the whole speaker: the Export menu's box and rows, the role toggle, the split person badge, the house check from <code>components/Icon.tsx</code>, and the grid and transcript classes, with CSS inlined from the tree. Each chrome bar names what is new in that frame. Codes follow Phase 1 (per person and role), which is not on <code>main</code> yet.</p>
+  <p class="m-lede">The owner's answers of 6 Oct 2026 (<code>design-people.md</code> §J8, points 8–10) drawn on the shipped picker — and, in section 5, dashed and marked speculative, three undecided ways to tell a paragraph's speaker from the whole speaker, and in section 7 a fourth, the owner's sticky Speaker | Paragraph switch: the Export menu's box and rows, the role toggle, the split person badge, the house check from <code>components/Icon.tsx</code>, and the grid and transcript classes, with CSS inlined from the tree. Each chrome bar names what is new in that frame. Codes follow Phase 1 (per person and role), which is not on <code>main</code> yet.</p>
 </header>
 
 <div class="m-toolbar" role="group" aria-label="Mockup switches">
@@ -3757,6 +3760,25 @@ body { padding: 0; }
 <p><b>Stage 1 is the common case</b> (owner, 6 Oct 2026): a long paragraph that does not read as one thing, split in two with the same speaker. It follows the convention of the research tools that support splitting at all — Dovetail, Trint and Condens: place the caret in the text and press Return. <b>6a</b> is the caret; <b>6b</b> the result: two paragraphs, one speaker, the second with its own start time. Where the transcript has word timings, the split point gives that time exactly (07:58 here is the start of the word after the caret); without them the second half keeps the first's time. <b>6c</b>: ⌘Z joins them again, and so does Delete at the start of the second, the same convention in reverse.</p>
 <p><b>Stage 2 is the rarer case</b>: the second half was really another speaker. Its badge opens the paragraph-scoped picker from section 5's option A or C — "who said this?" — and choosing Martin moves that paragraph alone (<b>6d</b>, <b>6e</b>). Nothing here changes Simon's other paragraphs.</p>
 <p>Both stages meet the wall the jobs map names: the next run replaces paragraphs, so a split and a reassigned half have to be held somewhere the pipeline respects. Stage 2 also meets the evidence question — a quote whose time window covers the moved half is still credited to the participant until membership is paragraph-aware (job 11). Strings here are placeholders; none is a locale key.</p>
+</aside>
+
+<section><h2 class="m-h2">7 · A scope switch: speaker or paragraph — speculative</h2>
+<h3 class="m-h3">From a transcript paragraph</h3><div class="m-grid wide" id="g-switch"></div>
+<h3 class="m-h3">Sticky: a run of wrong paragraphs</h3><div class="m-grid wide" id="g-switch-run"></div>
+<h3 class="m-h3">From the Sessions grid: no switch</h3><div class="m-grid wide" id="g-switch-grid"></div></section>
+<aside class="m-commentary"><span class="m-label">Commentary — speculative, not decided</span>
+<p><b>The idea</b> (owner, 6 Oct 2026): on the transcript only, a two-way switch above Moderator · Participant · Observer, <em>Speaker | Paragraph</em>, defaulting to Speaker. Below it the picker is exactly today's. With Speaker it acts on every one of p1's turns in the session; with Paragraph it is an atomic "who said this one?". The switch is <b>sticky</b>: leave it on Paragraph and a run of mis-credited paragraphs is click, pick, click, pick. It is section 5's option B with the default settled and the stickiness added, which answers B's main cost (asking every time): you are asked nothing, and the scope is visible before you act rather than offered afterwards.</p>
+<p><b>What it settles.</b> The scope is chosen first and is on screen while you choose. The common case (the whole speaker is wrong, or you are naming them) costs nothing extra. The Sessions grid never shows the switch (7e): a grid row is a speaker. And it gives each scope room to differ later without the two looking alike, which was option C's weakness.</p>
+<p><b>Questions it raises</b>, in rough order of weight:</p>
+<ul>
+<li><b>What Paragraph does to a name.</b> A name is always the speaker's, so with Paragraph on, the name is not a field (7b: plain row, no rename). Typing a new person under Paragraph makes that person and credits this paragraph to them. That is a new speaker in the session, which Speaker scope never creates.</li>
+<li><b>Two segmented controls stacked.</b> Both are <code>.dimension-toggle</code>. The rule between them is the only thing saying they are different axes. Worth trying the scope as a smaller control or a header line before deciding; this frame draws the plainest version.</li>
+<li><b>Where the stickiness lives.</b> Per transcript page and reset on leaving it? Per session? Per window? A sticky Paragraph forgotten on is the risk: the next "rename Simon" would not be possible, which is at least a visible failure, not a silent one. Resetting when the page changes is the conservative answer.</li>
+<li><b>The labels.</b> <em>Speaker</em> vs <em>All of p1</em>; <em>Paragraph</em> vs <em>This paragraph</em>. A count (<em>All 43</em>) says what Speaker will touch. All are owner-unseen placeholders, not locale keys.</li>
+<li><b>What a paragraph move costs.</b> Speaker scope on a moderator ↔ participant change is today's recode, then <em>Re-analyse…</em>. A paragraph move needs storage the next run respects: the split/join table (<code>transcript_layout_edits</code>, keyed by position and first words) can hold a "speaker" edit the same way. The evidence follows only once quote membership is paragraph-aware (§K, job 11). Until then a paragraph moved off p1 still counts as p1's evidence. Moving a moderator's question off the participant is the useful case, and it is the one evidence-membership has to honour.</li>
+<li><b>Sticky could carry the pick too.</b> On a run of a moderator's questions, the picker could open on the role and person last picked (Moderator, Martin focused), so each paragraph is click then Return. Cheap, and it is what makes "click click click" literal.</li>
+<li><b>Undo.</b> Each paragraph pick is its own ⌘Z entry, so a run of five is five undos. A whole-run undo is not proposed.</li>
+</ul>
 </aside>
 
 </div>
@@ -3868,6 +3890,37 @@ document.getElementById("g-split2").innerHTML = [
     menu(question("Who said this?") + row("m1", "Martin Storey") + row("p1", "Simon", { tick: true, focus: true }))),
   specFrame("6e · that paragraph alone is Martin's", "paragraph scope",
     paraAt("07:41", "p1", A, false) + paraAt("07:58", "m1", B, true)),
+].join("");
+
+// ── Section 7 (speculative): the scope switch ──
+const scopeSwitch = (para) => `<li class="bn-picker-head bn-picker-scope" role="none"><span class="dimension-toggle" role="radiogroup" aria-label="Scope">${
+  ["Speaker", "Paragraph"].map((r, i) => { const on = (i === 1) === para; return `<button type="button" class="dimension-btn${on ? " active" : ""}" role="radio" aria-checked="${on}">${r}</button>`; }).join("")}</span></li>`;
+const plainOwn = (code, name) => row(code, "", { tick: true, focus: true, extra: `<span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">${code}</span><span class="bn-speaker-badge-name m-plain-name">${name}</span></span></span>` });
+const renameOwn = (code, name) => row(code, "", { tick: true, focus: true, x: true, extra: `<span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">${code}</span><span class="bn-speaker-badge-name"><span class="m-rename">${name}<span class="m-caret"></span></span></span></span></span>` });
+const Q1 = "And when you got to step nine, what did you do?";
+const Q2 = "Did you have the instructions open, or were you going from memory?";
+const Q3 = "So nothing lined up — what did you try first?";
+const ANS = "Honestly I just pushed the doors on and hoped for the best.";
+document.getElementById("g-switch").innerHTML = [
+  specFrame("7a · default: Speaker — today's picker", "new: scope switch",
+    paraAt("07:41", "p1", Q1, false) +
+    menu(scopeSwitch(false) + head("Participant") + renameOwn("p1", "Simon"))),
+  specFrame("7b · Paragraph: who said this one?", "new: paragraph scope",
+    paraAt("07:41", "p1", Q1, false) +
+    menu(scopeSwitch(true) + head("Moderator") + row("m1", "Martin Storey", { focus: true }) + row("m2", "Kerri Wade") + newRow("m3"))),
+  specFrame("7c · Paragraph, own role: no rename", "names stay the speaker's",
+    paraAt("07:41", "p1", Q1, false) +
+    menu(scopeSwitch(true) + head("Participant") + plainOwn("p1", "Simon"))),
+].join("");
+document.getElementById("g-switch-run").innerHTML = [
+  specFrame("7d · still on Paragraph: the third of three", "sticky until you leave the page",
+    paraAt("07:41", "m1", Q1, true) + paraAt("07:52", "m1", Q2, true) + paraAt("08:03", "p1", Q3, false) + paraAt("08:10", "p1", ANS, false) +
+    menu(scopeSwitch(true) + head("Moderator") + row("m1", "Martin Storey", { focus: true }) + row("m2", "Kerri Wade") + newRow("m3"))),
+].join("");
+document.getElementById("g-switch-grid").innerHTML = [
+  specFrame("7e · Sessions grid: a row is a speaker", "unchanged",
+    gridCell([["m1", "Martin Storey", false], ["p1", "Simon", false]]) +
+    menu(head("Participant") + renameOwn("p1", "Simon"))),
 ].join("");
 
 function setAttr(btns, key, apply) {

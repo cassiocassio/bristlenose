@@ -3639,13 +3639,72 @@ body { padding: 0; }
 .m-stage .m-rename { display: inline-flex; align-items: baseline; border: 1px solid var(--bn-colour-accent); border-radius: var(--bn-radius-sm); padding: 0 4px; background: var(--bn-colour-bg); }
 .m-stage .m-typed { background: color-mix(in srgb, var(--bn-colour-accent) 22%, transparent); }
 </style>
+<style>
+/* ── Section 5 (speculative): shipped rules inlined from the tree ── */
+/* ════ bristlenose/theme/atoms/modal.css — lines 117–127 ════ */
+.bn-btn {
+    font-family: inherit;
+    font-size: var(--bn-text-label);
+    padding: 0.4rem 1rem;
+    border-radius: var(--bn-radius-md);
+    border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
+}
+/* ════ bristlenose/theme/atoms/modal.css — lines 134–137 ════ */
+.bn-btn-cancel {
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+}
+/* ════ bristlenose/theme/atoms/modal.css — lines 157–161 ════ */
+.bn-btn-primary {
+    background: var(--bn-colour-accent);
+    color: #fff;
+    border-color: var(--bn-colour-accent);
+}
+/* ════ bristlenose/theme/atoms/toast.css — lines 3–17 ════ */
+.clipboard-toast {
+    position: fixed;
+    bottom: 90px;
+    right: var(--bn-space-lg);
+    background: var(--bn-colour-text);
+    color: var(--bn-colour-bg);
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--bn-radius-lg);
+    font-size: var(--bn-text-label);
+    opacity: 0;
+    transform: translateY(0.5rem);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 200;
+    pointer-events: none;
+}
+/* ════ bristlenose/theme/atoms/toast.css — lines 19–22 ════ */
+.clipboard-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+/* ── Mockup-only: draw the toast in flow, not fixed to the window ── */
+.m-stage .clipboard-toast { position: static; display: inline-flex; gap: .8rem; align-items: baseline; pointer-events: auto; }
+.m-stage .clipboard-toast .bn-btn { padding: .15rem .55rem; font-size: var(--bn-text-caption); }
+/* Speculative frames wear a dashed border so nobody reads them as decided. */
+.m-frame.m-spec { border-style: dashed; }
+.m-spec-flag { color: var(--bn-colour-muted); }
+/* A transcript speaker strip above the paragraphs (option C only). */
+.m-stage .m-strip { display: flex; gap: .9rem; padding: .4rem .2rem .6rem; border-bottom: 1px solid var(--bn-colour-border); align-self: stretch; }
+.m-stage .m-question { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); padding: .3rem .8rem .1rem; }
+.m-h3 { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); margin: .8rem 0 .4rem; }
+/* The split point: the caret sits in the paragraph's own text. */
+.m-stage .m-split-after { color: var(--bn-colour-muted); }
+</style>
 </head>
 <body>
 <div class="m-wrap">
 
 <header>
   <h1 class="m-title">Person picker — decided states</h1>
-  <p class="m-lede">The owner's answers of 6 Oct 2026 (<code>design-people.md</code> §J8, points 8–10) drawn on the shipped picker: the Export menu's box and rows, the role toggle, the split person badge, the house check from <code>components/Icon.tsx</code>, and the grid and transcript classes, with CSS inlined from the tree. Each chrome bar names what is new in that frame. Codes follow Phase 1 (per person and role), which is not on <code>main</code> yet.</p>
+  <p class="m-lede">The owner's answers of 6 Oct 2026 (<code>design-people.md</code> §J8, points 8–10) drawn on the shipped picker — and, in section 5, dashed and marked speculative, three undecided ways to tell a paragraph's speaker from the whole speaker: the Export menu's box and rows, the role toggle, the split person badge, the house check from <code>components/Icon.tsx</code>, and the grid and transcript classes, with CSS inlined from the tree. Each chrome bar names what is new in that frame. Codes follow Phase 1 (per person and role), which is not on <code>main</code> yet.</p>
 </header>
 
 <div class="m-toolbar" role="group" aria-label="Mockup switches">
@@ -3678,6 +3737,26 @@ body { padding: 0; }
 <section><h2 class="m-h2">4 · Two unknown moderators in one session</h2><div class="m-grid wide" id="g-two"></div></section>
 <aside class="m-commentary"><span class="m-label">Commentary</span>
 <p>§J8.9: two or more unknowns of one role are lettered on every badge, <code>mA?</code> and <code>mB?</code>, with <em>Moderator A</em> and <em>Moderator B</em> as their grey italic names. The two letter labels are new strings for the 21 locales. 4b is the transcript, where badges carry the code alone, which is why the letter sits in the code. Naming both "Martin" in the picker merges them; that is an identity-level fix with no transcript edit.</p>
+</aside>
+
+<section><h2 class="m-h2">5 · Paragraph or speaker? — speculative</h2><div class="m-grid wide" id="g-scope"></div></section>
+<aside class="m-commentary"><span class="m-label">Commentary — speculative, not decided</span>
+<p>The owner's reading of 6 Oct 2026: opened from a transcript paragraph, <em>"this quote was actually from m1"</em> is about that paragraph, but the picker as built changes the whole speaker for the session. Renaming is not in question — a name is always the speaker's. Reassigning is. Three ways to draw it, none decided; research on how Otter, Descript, Dovetail and Marvin handle the same question is under way, and this section should be read beside it.</p>
+<ul>
+<li><b>A · paragraph first, then the offer.</b> The paragraph badge asks only "who said this?" — no role toggle, since a paragraph has a speaker, not a role. After the change, one line offers the wider fix: p1 has 42 more paragraphs. The scope is decided from evidence, not in the abstract, at the cost of a second question.</li>
+<li><b>B · scope inside the picker.</b> One picker, with a second toggle above the roles: this paragraph, or all of p1's. Explicit, but every visit asks the question, including the common speaker-wide case.</li>
+<li><b>C · two places.</b> The speaker picker moves to a speaker strip at the top of the transcript (and stays on the Sessions grid, where only the speaker question makes sense); a paragraph's badge asks only about that paragraph. No question asked, but two controls that look alike do different things.</li>
+</ul>
+<p>Every paragraph-scoped option needs storage the pipeline respects — the next run replaces paragraphs — and quotes are credited to the session's participant, not to each paragraph's speaker, so moving one paragraph changes the evidence only once membership becomes paragraph-aware (jobs 10 and 11). The strings in these frames are owner-unseen placeholders, named in each chrome bar; none is a locale key.</p>
+</aside>
+
+<section><h2 class="m-h2">6 · Split a paragraph, then reassign the second half — speculative</h2>
+<h3 class="m-h3">Stage 1 · split</h3><div class="m-grid wide" id="g-split"></div>
+<h3 class="m-h3">Stage 2 · reassign the second half</h3><div class="m-grid wide" id="g-split2"></div></section>
+<aside class="m-commentary"><span class="m-label">Commentary — speculative, not decided</span>
+<p><b>Stage 1 is the common case</b> (owner, 6 Oct 2026): a long paragraph that does not read as one thing, split in two with the same speaker. It follows the convention of the research tools that support splitting at all — Dovetail, Trint and Condens: place the caret in the text and press Return. <b>6a</b> is the caret; <b>6b</b> the result: two paragraphs, one speaker, the second with its own start time. Where the transcript has word timings, the split point gives that time exactly (07:58 here is the start of the word after the caret); without them the second half keeps the first's time. <b>6c</b>: ⌘Z joins them again, and so does Delete at the start of the second, the same convention in reverse.</p>
+<p><b>Stage 2 is the rarer case</b>: the second half was really another speaker. Its badge opens the paragraph-scoped picker from section 5's option A or C — "who said this?" — and choosing Martin moves that paragraph alone (<b>6d</b>, <b>6e</b>). Nothing here changes Simon's other paragraphs.</p>
+<p>Both stages meet the wall the jobs map names: the next run replaces paragraphs, so a split and a reassigned half have to be held somewhere the pipeline respects. Stage 2 also meets the evidence question — a quote whose time window covers the moved half is still credited to the participant until membership is paragraph-aware (job 11). Strings here are placeholders; none is a locale key.</p>
 </aside>
 
 </div>
@@ -3744,6 +3823,51 @@ document.getElementById("g-two").innerHTML = [
     seg("mA?", "So, to start, could you tell me how you usually plan the week's shopping?") +
     seg("p4", "Mostly on Sunday. I check what's left in the fridge first.", false) +
     seg("mB?", "And does anyone else in the house add to the list?")),
+].join("");
+
+// ── Section 5 (speculative) ──
+const specFrame = (title, flag, inner) => `<div class="m-frame m-spec"><div class="m-chrome"><span><b>${title}</b></span><span class="m-flag m-spec-flag">speculative · ${flag}</span></div><div class="m-stage m-anchor">${inner}</div></div>`;
+const para = (code, text, mod) =>
+  `<div class="transcript-segment${mod ? " segment-moderator" : ""}"><span class="timecode"><span class="timecode-bracket">[</span>07:41<span class="timecode-bracket">]</span></span><span class="segment-speaker">${badge(code)}</span><div class="segment-body">${text}</div></div>`;
+const WORDS = "you know, do you keep the furniture, I mean, or does it go when you move?";
+const question = (q) => `<li class="m-question" role="none">${q}</li>`;
+const scopeHead = (on) => `<li class="bn-picker-head" role="none"><span class="dimension-toggle" role="radiogroup" aria-label="Scope">${
+  ["This paragraph", "All 43 of p1’s"].map((r, i) => `<button type="button" class="dimension-btn${i === on ? " active" : ""}" role="radio" aria-checked="${i === on}">${r}</button>`).join("")}</span></li>`;
+document.getElementById("g-scope").innerHTML = [
+  specFrame("5a · A: the paragraph asks who said it", "new string: Who said this?",
+    para("p1", WORDS, false) +
+    menu(question("Who said this?") + row("m1", "Martin Storey") + row("p1", "Simon", { tick: true, focus: true }))),
+  specFrame("5b · A: then the wider fix is offered", "new strings: the offer",
+    para("m1", WORDS, true) +
+    `<div class="clipboard-toast show">Moved to m1 Martin. p1 has 42 more paragraphs.<button type="button" class="bn-btn bn-btn-primary">Move all 43</button><button type="button" class="bn-btn bn-btn-cancel">Just this one</button></div>`),
+  specFrame("5c · B: scope inside the picker", "new strings: scope toggle",
+    para("p1", WORDS, false) +
+    menu(scopeHead(0) + head("Participant") + row("p1", "Simon", { tick: true, focus: true }) + newRow("p1", { hint: "New name for p1" }))),
+  specFrame("5d · C: two places", "new: speaker strip, paragraph-only picker",
+    `<div class="m-strip">${badge("m1", "Martin Storey")}${badge("p1", "Simon")}</div>` +
+    para("p1", WORDS, false) +
+    menu(question("Who said this?") + row("m1", "Martin Storey") + row("p1", "Simon", { tick: true, focus: true }))),
+].join("");
+
+// ── Section 6 (speculative): split, then reassign ──
+const paraAt = (tc, code, html, mod) =>
+  `<div class="transcript-segment${mod ? " segment-moderator" : ""}"><span class="timecode"><span class="timecode-bracket">[</span>${tc}<span class="timecode-bracket">]</span></span><span class="segment-speaker">${badge(code)}</span><div class="segment-body">${html}</div></div>`;
+const A = "I mean, honestly the wardrobe instructions were fine until step nine, where the doors go on, and then nothing lined up and I ended up doing it twice.";
+const B = "So when you say nothing lined up, what did you try first?";
+document.getElementById("g-split").innerHTML = [
+  specFrame("6a · caret in the text", "convention: Return splits",
+    paraAt("07:41", "p1", `${A}<span class="m-caret"></span> <span class="m-split-after">${B}</span>`, false)),
+  specFrame("6b · two paragraphs, one speaker", "new: start time from word timings",
+    paraAt("07:41", "p1", A, false) + paraAt("07:58", "p1", B, false)),
+  specFrame("6c · undo joins them", "⌘Z, or Delete at the start",
+    paraAt("07:41", "p1", `${A} ${B}`, false)),
+].join("");
+document.getElementById("g-split2").innerHTML = [
+  specFrame("6d · the second half's badge: who said this?", "new string: Who said this?",
+    paraAt("07:41", "p1", A, false) + paraAt("07:58", "p1", B, false) +
+    menu(question("Who said this?") + row("m1", "Martin Storey") + row("p1", "Simon", { tick: true, focus: true }))),
+  specFrame("6e · that paragraph alone is Martin's", "paragraph scope",
+    paraAt("07:41", "p1", A, false) + paraAt("07:58", "m1", B, true)),
 ].join("");
 
 function setAttr(btns, key, apply) {

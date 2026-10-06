@@ -2994,3 +2994,32 @@ people as unique and roles as per-session is the People lens's long-term goal.
    changes are made from the header and the roles line. When Layer 3 arrives, the paragraph
    badge gains a "this paragraph only" scope, without the same click changing meaning under
    the researcher.
+
+8. **The picker, from the owner's look at the Mac popover (6 Oct 2026).**
+   - **Click the name to fix its spelling.** This is answer 2 at work: the edit renames the
+     person everywhere. *Proposed, not ruled on:* on a proposed (dotted) row, the first
+     click or Enter still confirms; on a confirmed current row, clicking the name text
+     makes it a field, the Finder idiom. Whether the grid keeps its pencil as well is open.
+   - **"New moderator" shows the next free code** (`m2` when Martin is `m1`). Offering a
+     new moderator implies `m1` is a real moderator, just not this one. This replaces the
+     v1.1 rule that every row carries the slot's own code. Under Phase 1's codes per
+     person and role, each row shows its person's code.
+   - **A hover ✕ on the current named row** removes the name and returns the slot to
+     unknown: the role word in grey italic, `m?` once Phase 1 lands. It means "not this
+     person", not "delete Martin"; deleting a person waits for the People lens (answer 3),
+     so the ✕ is on the current row only. It needs the sticky `cleared` state from §C5, or
+     the next run proposes the platform label again. Also Delete or Backspace on the
+     selected row, a VoiceOver action, and ⌘Z.
+   - **Grey italic means unknown, and only unknown.** `.bn-speaker-editable-name.edited`
+     lost its italic (done 6 Oct 2026). The native popover's new-person placeholder,
+     upright as AppKit draws it, is held until the owner has seen it upright and italic
+     side by side: the web half in `mockups/person-picker-tick-options.html`, the native
+     half owed in Picker Lab.
+   - **The tick is too big and ugly.** Web candidates in
+     `mockups/person-picker-tick-options.html`. The native popover already uses AppKit's
+     menu checkmark (`NSImage.menuOnStateTemplateName`) but leaves it at the image's own
+     size, unconstrained, so it renders larger than a menu draws it. That is a sizing
+     defect to fix against a real `NSMenu` in Picker Lab.
+   - **One tick, not two.** That's Me and the matching name were both ticked in the
+     owner's screenshot (the 4 Oct code review's question). One tick: on That's Me when
+     this person is the account holder, otherwise on the name.

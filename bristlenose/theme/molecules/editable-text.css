@@ -63,11 +63,10 @@
 
 /* ── Committed state (dashed underline indicates edit was made) ─────────── */
 
-/* Deliberately NOT shared with the speaker name, which marks the same fact in
-   italic (`person-badge.css`), or with the codebook, which marks it not at all
-   — a codebook name was never the model's to override, so there is nothing to
-   say "you changed this" about. One editing signal, three committed ones, on
-   purpose. */
+/* Deliberately NOT shared with the speaker name or the codebook, which mark
+   it not at all. A codebook name was never the model's to override; a speaker
+   name's italic was dropped on 6 Oct 2026 so that grey italic means only
+   "unknown" (`person-badge.css`). One editing signal, one committed one. */
 .editable-text.edited {
     border-bottom: 1px dashed var(--bn-colour-muted);
 }

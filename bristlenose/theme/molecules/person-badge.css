@@ -115,12 +115,11 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
 /* The editing state lives in `molecules/editable-text.css`, which names this
    class alongside `.editable-text` — one rule for "a name, title or
    description on neutral ground", so the speakers grid and the quotes lens
-   cannot drift apart. Only the metrics above and the committed italic below
-   are local to the speaker name. */
-
-.bn-speaker-editable-name.edited {
-    font-style: italic;
-}
+   cannot drift apart. Only the metrics above are local to the speaker name.
+   An edited name carries no committed mark: italic is reserved for the
+   unidentified placeholder below (grey italic = unknown), and since migration
+   012 the confirmed state says what "you edited this" used to (owner,
+   6 Oct 2026; design-people.md §J8.8). */
 
 /* Unidentified speaker: role word shown as a muted-italic placeholder
    (PowerPoint-title convention) to read as editable, not as a real name. */

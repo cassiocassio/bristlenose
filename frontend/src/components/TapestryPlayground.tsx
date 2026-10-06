@@ -42,6 +42,7 @@ const PAD_ROWS: [Exclude<keyof TapestryTuning["pad"], "popover">, string][] = [
   ["themeX", "Theme inset"],
   ["themeH", "Theme height"],
   ["themeGap", "Theme row gap"],
+  ["barW", "Sentiment bar width"],
 ];
 
 function tokenPx(step: Step): string {

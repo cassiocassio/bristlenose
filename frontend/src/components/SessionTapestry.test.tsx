@@ -56,6 +56,7 @@ describe("SessionTapestry", () => {
     expect(mid).toBe(108);
     expect(Number(pos.getAttribute("y")) + Number(pos.getAttribute("height"))).toBe(mid);
     expect(Number(neg.getAttribute("y"))).toBe(mid);
+    expect(pos.getAttribute("width")).toBe("6");
   });
 
   it("opens the quote panel on a bar, and the arrows step quotes whatever has focus", () => {

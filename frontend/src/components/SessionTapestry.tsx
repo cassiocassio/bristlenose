@@ -461,7 +461,7 @@ export default function SessionTapestry({
             const fill = `var(--bn-sentiment-${q.sentiment})`;
             if (q.sentiment === "surprise") return <circle key={i} {...common} cx={cx} cy={SE.mid} r={3.2} style={{ fill }} />;
             return (
-              <rect key={i} {...common} style={{ fill }} x={cx - 2} width={4} rx={1} height={h}
+              <rect key={i} {...common} style={{ fill }} x={cx - P.barW / 2} width={P.barW} rx={1} height={h}
                 y={POSITIVE.has(q.sentiment) ? SE.mid - h : SE.mid} />
             );
           })}

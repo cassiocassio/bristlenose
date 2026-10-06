@@ -84,6 +84,21 @@ describe("SessionTapestry", () => {
   });
 });
 
+describe("SessionTapestry — which track a speaker is on", () => {
+  it("follows the server's team flag over the transcript tag (a recoded speaker)", () => {
+    const recoded = { ...session, turns: [{ t0: 0, t1: 600, speaker: "p1", colour: null, team: true }] };
+    render(<SessionTapestry session={recoded} sPerPx={1} nameOf={(c) => c} onJump={() => {}} />);
+    expect(document.querySelectorAll(".bn-tp-clip-team")).toHaveLength(1);
+    expect(document.querySelectorAll(".bn-tp-clip-ppt")).toHaveLength(0);
+  });
+
+  it("falls back to the displayed code, not the raw tag, when the server sends no flag", () => {
+    const old = { ...session, turns: [{ t0: 0, t1: 600, speaker: "p1", colour: null }] };
+    render(<SessionTapestry session={old} sPerPx={1} nameOf={(c) => c} codeOf={() => "m2"} onJump={() => {}} />);
+    expect(document.querySelectorAll(".bn-tp-clip-team")).toHaveLength(1);
+  });
+});
+
 describe("SessionTapestry — keyboard, focus and contrast", () => {
   it("keeps one Tab stop per slice: the first bar, then the selected one", () => {
     const { bars } = setup();

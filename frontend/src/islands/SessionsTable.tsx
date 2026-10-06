@@ -620,11 +620,14 @@ export function SessionsTable({
         {sessions.flatMap((sess) => {
           const ts = tapestry?.[sess.session_id];
           const open = !!ts && openTapestries.has(sess.session_id);
-          const nameOf = (slot: string) => {
-            // Unnamed: the identity code the row shows (m2, m?), not the transcript's slot token.
-            const sp = sess.speakers.find((x) => (x.slot_code || x.speaker_code) === slot);
-            return sp?.name || sp?.speaker_code || slot;
-          };
+          // A turn carries the transcript's raw tag (the slot). The tag is only a join key: what
+          // the row shows — and whose first letter is the speaker's kind after a recode — is the
+          // displayed code /sessions emits (design-people.md §J7: nothing outside the server
+          // reads a raw tag).
+          const speakerOf = (slot: string) =>
+            sess.speakers.find((x) => (x.slot_code || x.speaker_code) === slot);
+          const codeOf = (slot: string) => speakerOf(slot)?.speaker_code || slot;
+          const nameOf = (slot: string) => speakerOf(slot)?.name || codeOf(slot);
           return [
           <SessionRow
             key={sess.session_id}
@@ -655,6 +658,7 @@ export function SessionsTable({
                     sPerPx={sPerPx}
                     initialScrollLeft={loadTapestryView(projectId).scrollLeft}
                     nameOf={nameOf}
+                    codeOf={codeOf}
                     onJump={(sec) =>
                       navigate({ pathname: `/report/sessions/${sess.session_id}`, hash: `#t-${Math.floor(sec)}` })
                     }

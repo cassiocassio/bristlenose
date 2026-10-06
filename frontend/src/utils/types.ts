@@ -595,6 +595,9 @@ export interface TapestryTurn {
   t1: number;
   /** The transcript's slot code for the speaker (`m1`, `p2`). */
   speaker: string;
+  /** True for anyone who is not a participant, from the slot's role (a recode can make a `p` tag a
+   *  moderator). The server's answer; absent from older servers, where the displayed code decides. */
+  team?: boolean;
   /** Scene colour (`#rrggbb`): what was on screen during the turn. Null without video. */
   colour: string | null;
 }

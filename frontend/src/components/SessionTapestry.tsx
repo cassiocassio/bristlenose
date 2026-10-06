@@ -99,12 +99,16 @@ interface Props {
   sPerPx: number;
   /** Display name for a slot code; falls back to the code. */
   nameOf: (slot: string) => string;
+  /** The displayed code for a slot; its first letter (m/o = team) picks the track. Defaults to the slot. */
+  codeOf?: (slot: string) => string;
   onJump: (seconds: number) => void;
   /** Sideways scroll to restore on mount (the slices share one). */
   initialScrollLeft?: number;
 }
 
-export default function SessionTapestry({ session, sPerPx, nameOf, onJump, initialScrollLeft = 0 }: Props) {
+export default function SessionTapestry({
+  session, sPerPx, nameOf, codeOf = (slot) => slot, onJump, initialScrollLeft = 0,
+}: Props) {
   const { t } = useTranslation();
   const svgRef = useRef<SVGSVGElement>(null);
   const [raised, setRaised] = useState(-1);
@@ -146,6 +150,9 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump, initi
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
   const s = session;
+  // The server's per-turn answer wins (it reads the slot's role); otherwise the displayed code.
+  const teamTurn = (tn: TapestrySession["turns"][number]) =>
+    typeof tn.team === "boolean" ? tn.team : isTeam(codeOf(tn.speaker));
   const x = (sec: number) => TAPESTRY_GUTTER + sec / sPerPx;
   const xEnd = x(s.duration_seconds);
   const W = Math.ceil(xEnd + RIGHT);
@@ -308,10 +315,10 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump, initi
           <rect className="bn-tp-track" x={TAPESTRY_GUTTER} y={MT.y - 1} width={Math.max(0, xEnd - TAPESTRY_GUTTER)}
             height={PT.y + PT.h - MT.y + 2} rx={4} />
           {s.turns.map((tn, i) => {
-            const tr = isTeam(tn.speaker) ? MT : PT;
+            const tr = teamTurn(tn) ? MT : PT;
             const x0 = x(tn.t0);
             const w = x(tn.t1) - x0;
-            const cls = `bn-tp-clip ${isTeam(tn.speaker) ? "bn-tp-clip-team" : "bn-tp-clip-ppt"}`;
+            const cls = `bn-tp-clip ${teamTurn(tn) ? "bn-tp-clip-team" : "bn-tp-clip-ppt"}`;
             const style = tn.colour ? { fill: tn.colour } : undefined;
             if (!clips) {
               return <rect key={i} className={cls} style={style} x={x0} y={tr.y} width={Math.max(0.5, w)} height={tr.h} />;
@@ -324,7 +331,7 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump, initi
                 <rect className={cls} style={style} x={x0 + 0.5} y={tr.y} width={Math.max(1, w - 1)} height={tr.h}
                   rx={Math.min(3, w / 2)} data-video={tn.colour ? "" : undefined} />
                 {label && (
-                  <text className={`bn-tp-clip-label ${isTeam(tn.speaker) ? "on-team" : "on-ppt"}`}
+                  <text className={`bn-tp-clip-label ${teamTurn(tn) ? "on-team" : "on-ppt"}`}
                     style={ink ? { fill: ink } : undefined} x={x0 + 4} y={tr.y + tr.h / 2 + 3.5}>
                     {label}
                   </text>

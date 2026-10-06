@@ -2838,8 +2838,11 @@ session*, and that is the one place a registry pin is written (R3 below).
   raw tags: `routes/transcript.py` (`is_moderator`, and the participant list),
   `routes/sessions.py`, `routes/dashboard.py` (coverage and the participant
   filter), `grounding.py` (participants counted from quotes),
-  `export_core._load_speakers`, `routes/clips_export._load_speaker_names` and
-  `resolve_speaker_names`. One resolver, `(session, tag) → (kind, code, person)`,
+  `export_core._load_speakers`, `routes/clips_export._load_speaker_names`,
+  `routes/tapestry.py` (the Sessions-grid timeline builds its speaker turns from
+  `TranscriptSegment.speaker_code`; added 6 Oct 2026 — it sends a per-turn `team`
+  flag from the slot's role, and the frontend picks the track from that, else from
+  the displayed code) and `resolve_speaker_names`. One resolver, `(session, tag) → (kind, code, person)`,
   in one module, used by all of them. *4 Oct 2026: Phase 1 builds that resolver on
   its branch (`bristlenose/server/speaker_slots.py`), and its `PUT
   …/sessions/{sid}/speakers/{code}` takes the slot code; a recode that changes a

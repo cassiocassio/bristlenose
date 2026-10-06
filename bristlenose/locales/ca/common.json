@@ -160,7 +160,10 @@
       "proposedName": "{{code}}, nom proposat {{name}}",
       "nameTaken": "{{name}} ja \u00e9s a la llista. Tria aquesta persona o afegeix-hi alguna cosa per distingir-les.",
       "notThisPerson": "No \u00e9s {{name}}",
-      "swapWith": "Intercanvia amb {{code}}"
+      "swapWith": "Intercanvia amb {{code}}",
+      "scopeSession": "Sessi\u00f3",
+      "scopeParagraph": "Par\u00e0graf",
+      "scopeGroup": "S\u2019aplica a"
     },
     "reanalyse": {
       "button": "Torna a analitzar…",
@@ -676,6 +679,7 @@
       "clearName": "Desf\u00e9s la supressi\u00f3 del nom",
       "changeRole": "Desf\u00e9s el canvi de rol",
       "swapRoles": "Desf\u00e9s l\u2019intercanvi de rols",
+      "reassignParagraph": "Desf\u00e9s la reassignaci\u00f3 del par\u00e0graf",
       "splitParagraph": "Desf\u00e9s la divisi\u00f3 del par\u00e0graf",
       "joinParagraphs": "Desf\u00e9s la uni\u00f3 dels par\u00e0grafs"
     },
@@ -697,6 +701,7 @@
       "clearName": "Ref\u00e9s la supressi\u00f3 del nom",
       "changeRole": "Ref\u00e9s el canvi de rol",
       "swapRoles": "Ref\u00e9s l\u2019intercanvi de rols",
+      "reassignParagraph": "Ref\u00e9s la reassignaci\u00f3 del par\u00e0graf",
       "splitParagraph": "Ref\u00e9s la divisi\u00f3 del par\u00e0graf",
       "joinParagraphs": "Ref\u00e9s la uni\u00f3 dels par\u00e0grafs"
     }

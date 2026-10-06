@@ -3492,3 +3492,97 @@ is**; this part is about **who said a particular paragraph or quote**, which it 
 
 Tracked in the maintainer's private planning notes as three items: per-paragraph
 reassignment, per-quote reassignment, and what each means for re-analysis.
+
+### K6 · Paragraph scope — built 6 Oct 2026
+
+The answers to K5, as built. **1:** the owner's sticky switch, *Session | Paragraph*,
+transcript only to start with (mockup §7). **2:** a third layout edit, `kind = "speaker"`, beside
+split and join (migration 016): the paragraph's position and first words, and the **slot** it
+moves to. Replayed on every import, undone by forgetting it, as a split is. **3:** evidence
+reads which paragraphs a quote overlaps, but only in sessions where a paragraph was moved.
+**4:** it relabels and does not re-extract. Nothing is paid for.
+
+- **The switch.** Two words above the role toggle: semibold ink for the chosen one, regular
+  grey for the other (`--bn-weight-semibold`, added for it). Session is today's picker
+  unchanged. Paragraph asks "who said this one?" from **this session's speakers**, by role.
+  It offers no rename (a name is the person's, everywhere) and no ✕. Under Moderator its last
+  row is **New moderator** (owner, 6 Oct 2026): an unknown moderator the move makes, for a
+  call collapsed into one voice, named afterwards from the paragraph's badge like any
+  unknown speaker. The
+  choice sticks for a run of paragraphs and goes back to Session on leaving the transcript
+  (`utils/paragraphScope.ts`). On the Mac the same request carries `scope`, and a paragraph
+  pick replies `{kind: "paragraph", slot}` (bridge contract version 9).
+- **Evidence** (`speaker_slots.evidence_out` → `EvidenceOut.quotes`). A quote leaves when a
+  paragraph its window overlaps was moved off its credited tag (`transcript_segments.moved_from`)
+  and no paragraph it overlaps is still that tag's. A quote that spans a moved half and a kept
+  half stays. Overlap is strict, so a paragraph that only touches the window does not count.
+  Every evidence surface reads it through `counts`, so the Quotes lens, signals, dashboard,
+  search, exports and the agent endpoint agree. The transcript stops marking the paragraph,
+  because a quote marks only paragraphs credited to its own tag.
+- **What it does not do.** A paragraph moved *into* the participant brings no quotes with it;
+  only a re-analysis would find them, and R3's pins are per speaker label, not per paragraph.
+  A move whose target slot has gone after a re-analysis (R3 renumbers) is refused at replay and
+  logged, like a split whose words changed.
+
+**Tested on real data** (6 Oct 2026, a copy of the "IKEA with uxfriends" trial run, through
+serve's own API):
+
+- The case it exists for is real. In session 1 the moderator's think-aloud instruction ("if
+  you could think aloud… give me some first impressions") was credited to p1 and was a quote,
+  `q-p1-431`, counted as the participant's evidence. Moving that one paragraph to the moderator
+  took exactly that quote out (28 → 27 quotes) and left the neighbouring paragraphs and every
+  other session alone. It survived a re-import, and undoing it out of order brought the quote
+  back while the later edits stood.
+- **Mixed paragraphs are common, so split then move is the everyday path.** The same session
+  has the moderator's "…you told me you would go straight to search" and p1's "Yes. Well…" in
+  one paragraph. Split at "yes", move the first half: works. The quote over both halves stays,
+  correctly by the rule, but its verbatim still begins with the moderator's words. Fixing that
+  is quote editing, not attribution.
+- **A session with no moderator has nobody to move a paragraph to.** In 17 of 69 real sessions
+  across the trial runs no moderator was heard. Most of these are solo think-alouds, where
+  that is right. But one (`IKEA with uxfriends` s4) is a two-person call collapsed into one
+  voice ("No, that's good. And have you been travelling at all?"). Hence the **new moderator**
+  row, built the same day: split at "And", move the question to New moderator, and the
+  session gains an unknown moderator, `m?`. Named "Kerri" from that paragraph's badge, it
+  reads `m1 Kerri`, and both the move and the name survive a re-import. Mechanics: the server
+  numbers the slot above every code the session has had (slots and the registry's issued
+  codes), and records the edit as having made it (`token = 1`). The importer drops an
+  unconfirmed moderator slot the transcript does not use, so the replay makes it again —
+  unless the pipeline's own transcript now uses that code, when the move is refused rather
+  than landed on a real speaker. Undo removes the slot if nothing else uses it.
+- **Splitting a timed paragraph rewrites its text from Whisper's words**, lower-cased and
+  unpunctuated ("(Speaker B) Interesting that you clicked…" became "told me you would go
+  straight to search um"). This is stage 1's split, not new here. The page already draws those
+  words, so nothing changes on screen, but the text field is what exports and the agent read.
+  Worth fixing before splits are common.
+- **Word timings and paragraph text can disagree at the edges.** The moderator's opening words
+  of that paragraph sat in the previous paragraph's word list. A cut counted in drawn words is
+  consistent with what the researcher sees, which is the point, but the two sources are not
+  the same text.
+- Rough rate: short participant paragraphs ending in a question are 1–4% of participant
+  paragraphs across four real projects. That is a noisy upper bound, since focus-group
+  participants ask each other questions.
+
+**Reviewed the same day; three fixes.** A moved paragraph is not joined to one that was not
+(a join would lose `moved_from`, and the quote would count again); a move is replayed after the
+import's speakers, since it checks its target against them; and on the scope words Escape
+closes the picker and an arrow keeps focus on the words.
+
+**Open, and each a decision:**
+
+1. A new *observer* under Paragraph: not offered; the moderator row is the case seen.
+2. Two rules for which paragraph a quote belongs to. The transcript marks paragraphs whose
+   *start* falls in the quote's window; evidence uses *overlap*. A quote that starts partway
+   into a kept paragraph and runs into a moved one counts and is marked nowhere. `segment_index`
+   is an exact key both could use, and would cover untimed transcripts too.
+3. A move the server refuses (the words changed, or the target speaker is gone after a
+   re-analysis) is silent: the menu closes and nothing happens. Saying so needs a string.
+4. Undoing a move out of order, then redoing it, puts it after a later join that depended on
+   it, and that join stays refused on every replay. Splits and joins already have this
+   property; a move is the first edit that creates a join's precondition.
+5. Stickiness differs: on the web the switch itself sets it, on the Mac only a pick does.
+6. Whether Paragraph opens on the person last picked, so a run is click then Return
+   (mockup §7), and whether the switch spreads beyond the transcript.
+7. `EvidenceOut` is a set subclass so every caller kept working; `bool(out)` no longer means
+   "nothing is excluded" (`evidence_quotes` checks `.quotes` too). A dataclass would break
+   callers loudly now instead.

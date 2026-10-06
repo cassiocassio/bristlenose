@@ -174,7 +174,10 @@
       "proposedName": "{{code}}, navr\u017een\u00e9 jm\u00e9no {{name}}",
       "nameTaken": "{{name}} u\u017e v seznamu je. Vyberte tuto osobu, nebo dopl\u0148te n\u011bco, \u010d\u00edm se ob\u011b rozli\u0161\u00ed.",
       "notThisPerson": "Nen\u00ed to {{name}}",
-      "swapWith": "Prohodit s {{code}}"
+      "swapWith": "Prohodit s {{code}}",
+      "scopeSession": "Sezen\u00ed",
+      "scopeParagraph": "Odstavec",
+      "scopeGroup": "Plat\u00ed pro"
     },
     "reanalyse": {
       "button": "Znovu analyzovat…",
@@ -739,6 +742,7 @@
       "clearName": "Odvolat akci Vymazat jm\u00e9no",
       "changeRole": "Odvolat akci Zm\u011bnit roli",
       "swapRoles": "Odvolat akci Prohodit role",
+      "reassignParagraph": "Odvolat akci P\u0159e\u0159adit odstavec",
       "splitParagraph": "Odvolat akci Rozdělit odstavec",
       "joinParagraphs": "Odvolat akci Spojit odstavce"
     },
@@ -760,6 +764,7 @@
       "clearName": "Opakovat akci Vymazat jm\u00e9no",
       "changeRole": "Opakovat akci Zm\u011bnit roli",
       "swapRoles": "Opakovat akci Prohodit role",
+      "reassignParagraph": "Opakovat akci P\u0159e\u0159adit odstavec",
       "splitParagraph": "Opakovat akci Rozdělit odstavec",
       "joinParagraphs": "Opakovat akci Spojit odstavce"
     }

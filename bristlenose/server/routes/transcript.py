@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import html
 import json
+import logging
 import re
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -20,13 +22,16 @@ from bristlenose.server.models import (
     Quote,
     QuoteTag,
     ScreenCluster,
+    SessionSpeaker,
     TagDefinition,
     ThemeGroup,
     ThemeQuote,
     TranscriptLayoutEdit,
+    TranscriptSegment,
 )
 from bristlenose.server.models import Session as SessionModel
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 
@@ -419,6 +424,19 @@ class JoinBody(BaseModel):
     verify: str
 
 
+class ReassignBody(BaseModel):
+    #: The paragraph's place in the transcript, as GET returned it.
+    position: int
+    #: Its first words, as the page drew them.
+    verify: str
+    #: The speaker it moves to: a **slot** code of this session (``slot_code``
+    #: in ``/sessions``), never the identity code a route displays.
+    slot: str = ""
+    #: Or someone new in a role, made by the move: ``"moderator"``, for a
+    #: session that has none to move to.
+    new: str | None = None
+
+
 class LayoutEditResult(BaseModel):
     id: int
 
@@ -474,10 +492,67 @@ def join_paragraphs(project_id: int, session_id: str, body: JoinBody,
         db.close()
 
 
+@router.post("/projects/{project_id}/transcripts/{session_id}/reassign",
+             response_model=LayoutEditResult)
+def reassign_paragraph(project_id: int, session_id: str, body: ReassignBody,
+                       request: Request) -> LayoutEditResult:
+    """Credit one paragraph to another speaker of this session (§K, the
+    picker's Paragraph scope). Recorded and replayed like a split; a quote from
+    a paragraph moved off its participant leaves the evidence. Undone like a
+    split, by forgetting the edit."""
+    db = _get_db(request)
+    try:
+        sess = _layout_session(db, project_id, session_id)
+        slot, creates = body.slot, 0
+        if body.new is not None:
+            if body.new not in transcript_layout.NEW_ROLES:
+                raise HTTPException(status_code=422, detail="Unknown role")
+            slot, creates = transcript_layout.mint_code(
+                db, sess.id, body.new, _issued_codes(db, project_id, session_id),
+            ), 1
+        if not slot:
+            raise HTTPException(status_code=422, detail="No speaker named")
+        return _record(db, TranscriptLayoutEdit(
+            session_id=sess.id, kind="speaker", position=body.position, verify=body.verify,
+            speaker_code=slot, token=creates,
+        ))
+    finally:
+        db.close()
+
+
+def _drop_unused_slot(db: Session, sess: SessionModel, code: str) -> None:
+    """After undoing the move that made a speaker: let the speaker go too, if
+    no paragraph is theirs and nobody has confirmed who they are."""
+    if db.query(TranscriptSegment).filter_by(session_id=sess.id, speaker_code=code).first():
+        return
+    sp = db.query(SessionSpeaker).filter_by(session_id=sess.id, speaker_code=code).first()
+    if sp is None or sp.state == speaker_slots.CONFIRMED:
+        return
+    left = {sp.person_id}
+    db.delete(sp)
+    speaker_slots.release(db, left)
+
+
+def _issued_codes(db: Session, project_id: int, session_id: str) -> list[str]:
+    """Every code the pipeline has issued this session, from its registry."""
+    from bristlenose.session_registry import SessionRegistry
+
+    project = db.get(Project, project_id)
+    if project is None:
+        return []
+    try:
+        registry = SessionRegistry.load(Path(project.output_dir))
+    except ValueError:
+        logger.warning("Could not read the session registry; minting from the slots alone",
+                       exc_info=True)
+        return []
+    return list(registry.speakers.get(session_id, {}).values())
+
+
 @router.delete("/projects/{project_id}/transcripts/{session_id}/layout-edits/{edit_id}")
 def undo_layout_edit(project_id: int, session_id: str, edit_id: int,
                      request: Request) -> dict[str, str]:
-    """Take a split or join back: forget it, then rebuild the session's
+    """Take a split, join or reassignment back: forget it, then rebuild the session's
     paragraphs from the transcript and make the edits that remain."""
     from bristlenose.server.importer import rebuild_session_paragraphs
     db = _get_db(request)
@@ -486,11 +561,14 @@ def undo_layout_edit(project_id: int, session_id: str, edit_id: int,
         edit = db.query(TranscriptLayoutEdit).filter_by(id=edit_id, session_id=sess.id).first()
         if edit is None:
             raise HTTPException(status_code=404, detail="Edit not found")
+        made = edit.speaker_code if edit.kind == "speaker" and edit.token == 1 else None
         db.delete(edit)
         db.flush()
         project = db.get(Project, project_id)
         assert project is not None
         rebuild_session_paragraphs(db, project, sess)
+        if made is not None:
+            _drop_unused_slot(db, sess, made)
         db.commit()
         return {"status": "ok"}
     finally:

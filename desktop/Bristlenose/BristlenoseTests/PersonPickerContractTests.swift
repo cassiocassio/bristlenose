@@ -139,6 +139,52 @@ struct PersonPickerContractTests {
             == NSDictionary(dictionary: ["sessionId": "s1", "code": "m1", "choice": ["kind": "swap"]]))
     }
 
+    /// The transcript's Session | Paragraph switch (design-people.md §K): only
+    /// a paragraph's request carries it; on Paragraph the rows are the
+    /// session's speakers, nothing is renamed or made, and a pick names its
+    /// speaker by slot.
+    @Test func theParagraphScopeListsTheSessionsSpeakersAndSendsASlot() throws {
+        let requests = try wires().compactMap { PersonPickerRequest(message: $0) }
+        #expect(requests[0].scope == nil && requests[0].labels.scopeParagraph == "Paragraph")
+        let scoped = try #require(requests.first { $0.scope != nil })
+        #expect(scoped.scope?.paragraph == true)
+        #expect(scoped.scope?.speakers.map(\.slot) == ["m1", "p3"])
+
+        var sent: [PersonPickerPick] = []
+        var closed = 0
+        let model = PersonPickerModel(request: scoped, meName: "Jo",
+                                      onChoose: { sent.append($0) }, onClose: { closed += 1 })
+        #expect(model.paragraph && !model.renaming && !model.offersNew)
+        #expect(model.openRoles == [.moderator, .participant])
+        // The paragraph's own speaker is ticked; picking them moves nothing.
+        let own = try #require(model.rows.first)
+        #expect(model.isAnswer(own) && model.displayName(own) == "Mary Adeyemi" && !model.canRename(own))
+        model.choose(own)
+        #expect(sent.isEmpty && closed == 1)
+
+        model.browse(.moderator)
+        #expect(model.rows.last == PersonPickerModel.paragraphNewModerator)
+        #expect(model.displayName(PersonPickerModel.paragraphNewModerator) == "New moderator")
+        let martin = try #require(model.rows.first)
+        #expect(model.code(for: martin) == "m1" && model.displayName(martin) == "Martin")
+        model.choose(martin)
+        #expect(sent == [PersonPickerPick(name: "", kind: .paragraph, slot: "m1")])
+        let (_, payload) = PersonPickerAction.choose(sessionId: "s3", code: "p3", pick: sent[0])
+        #expect(NSDictionary(dictionary: payload) == NSDictionary(dictionary:
+            ["sessionId": "s3", "code": "p3", "choice": ["kind": "paragraph", "slot": "m1"]]))
+
+        // The new-moderator row makes one (a call collapsed into one voice).
+        sent.removeAll()
+        model.setParagraph(true)
+        model.browse(.moderator)
+        model.choose(PersonPickerModel.paragraphNewModerator)
+        #expect(sent == [PersonPickerPick(name: "", kind: .paragraph, newRole: "moderator")])
+
+        // Back to Session: today's picker, its own role and name.
+        model.setParagraph(false)
+        #expect(!model.paragraph && model.browsing == scoped.slot.role && model.renaming)
+    }
+
     /// The popover is sized for every role at once, so a segment never
     /// resizes it under the pointer.
     @Test func browsingARoleNeverResizesThePicker() throws {
@@ -164,8 +210,9 @@ struct PersonPickerContractTests {
             let (action, payload) = PersonPickerAction.choose(
                 sessionId: try #require(native["sessionId"]),
                 code: try #require(native["code"]),
-                pick: PersonPickerPick(name: try #require(native["name"]), kind: kind,
-                                       role: native["role"].flatMap(PersonPickerRequest.Role.init(rawValue:))))
+                pick: PersonPickerPick(name: native["name"] ?? "", kind: kind,
+                                       role: native["role"].flatMap(PersonPickerRequest.Role.init(rawValue:)),
+                                       slot: native["slot"], newRole: native["new"]))
             #expect(action == "personPickerChoose")
             let expected = try #require(c["payload"] as? NSDictionary)
             #expect(NSDictionary(dictionary: payload) == expected)

@@ -156,3 +156,180 @@ def test_015_creates_the_table_on_a_014_database(tmp_path: Path) -> None:
     run_migrations(engine)
     with engine.connect() as conn:
         assert "transcript_layout_edits" in sa.inspect(conn).get_table_names()
+
+
+def test_016_adds_the_reassignment_columns_on_a_015_database(tmp_path: Path) -> None:
+    import sqlalchemy as sa
+
+    from bristlenose.server.db import init_db, run_migrations
+
+    engine = sa.create_engine(f"sqlite:///{tmp_path / 'old.db'}")
+    init_db(engine)
+    with engine.connect() as conn:
+        conn.execute(sa.text("ALTER TABLE transcript_layout_edits DROP COLUMN speaker_code"))
+        conn.execute(sa.text("ALTER TABLE transcript_segments DROP COLUMN moved_from"))
+        conn.execute(sa.text("UPDATE alembic_version SET version_num = '015'"))
+        conn.commit()
+    run_migrations(engine)
+    with engine.connect() as conn:
+        inspect = sa.inspect(conn)
+        assert "speaker_code" in {c["name"] for c in inspect.get_columns("transcript_layout_edits")}
+        assert "moved_from" in {c["name"] for c in inspect.get_columns("transcript_segments")}
+
+
+def _reassign(client: TestClient, position: int, verify: str, slot: str) -> int:
+    resp = client.post("/api/projects/1/transcripts/s1/reassign",
+                       json={"position": position, "verify": verify, "slot": slot})
+    assert resp.status_code == 200, resp.text
+    return resp.json()["id"]
+
+
+class TestReassign:
+    """§K, the picker's Paragraph scope: one paragraph credited to another
+    speaker of its session. Recorded and replayed like a split; a quote from
+    words moved off the participant leaves the evidence."""
+
+    def test_one_paragraph_moves_and_the_others_stay(self, tmp_path: Path) -> None:
+        from tests.test_serve_participant_recode import _with_quotes
+
+        client = _client(_with_quotes(tmp_path))
+        _reassign(client, 1, "Thanks for having me, it is", "m1")
+        assert [c for c, _ in _texts(client)] == ["m1", "m1", "m1"]
+
+    def test_its_quote_leaves_the_evidence_and_comes_back_on_undo(self, tmp_path: Path) -> None:
+        from tests.test_serve_participant_recode import _quote_ids, _with_quotes
+
+        client = _client(_with_quotes(tmp_path))
+        assert _quote_ids(client) == {"q-p1-10", "q-p2-10"}
+        edit = _reassign(client, 1, "Thanks for having me, it is", "m1")
+        assert _quote_ids(client) == {"q-p2-10"}, "the other session's quote stays"
+        assert not any(s["is_quoted"] for s in _segments(client))
+        client.delete(f"/api/projects/1/transcripts/s1/layout-edits/{edit}")
+        assert _quote_ids(client) == {"q-p1-10", "q-p2-10"}
+
+    def test_it_outlives_a_re_import(self, tmp_path: Path) -> None:
+        from tests.test_serve_participant_recode import _quote_ids, _with_quotes
+
+        project = _with_quotes(tmp_path)
+        client = _client(project)
+        _reassign(client, 1, "Thanks for having me, it is", "m1")
+        _reimport(client, project)
+        assert [c for c, _ in _texts(client)] == ["m1", "m1", "m1"]
+        assert _quote_ids(client) == {"q-p2-10"}
+
+    def test_moving_it_back_restores_the_evidence(self, tmp_path: Path) -> None:
+        from tests.test_serve_participant_recode import _quote_ids, _with_quotes
+
+        client = _client(_with_quotes(tmp_path))
+        _reassign(client, 1, "Thanks for having me, it is", "m1")
+        _reassign(client, 1, "Thanks for having me, it is", "p1")
+        assert _quote_ids(client) == {"q-p1-10", "q-p2-10"}
+
+    def test_a_quote_spanning_a_moved_and_a_kept_paragraph_stays(self, tmp_path: Path) -> None:
+        from tests.test_serve_participant_recode import _quote_ids, _with_quotes
+
+        client = _client(_with_quotes(tmp_path))
+        # Split p1's paragraph inside the quote's window (10–18), then move
+        # only the second half: the quote still has words of p1's.
+        _split(client, 1, 4, "it is good to be here.")
+        segs = _segments(client)
+        assert 10.0 < segs[2]["start_time"] < 18.0
+        _reassign(client, 2, "it is good to be here.", "m1")
+        assert "q-p1-10" in _quote_ids(client)
+
+    def test_refused_for_a_speaker_not_in_the_session_or_changed_words(
+        self, tmp_path: Path,
+    ) -> None:
+        client = _client(_project(tmp_path, _TWO))
+        bad = client.post("/api/projects/1/transcripts/s1/reassign",
+                          json={"position": 1, "verify": "Thanks for having me, it is", "slot": "o7"})
+        assert bad.status_code == 409
+        bad = client.post("/api/projects/1/transcripts/s1/reassign",
+                          json={"position": 1, "verify": "other words", "slot": "m1"})
+        assert bad.status_code == 409
+        bad = client.post("/api/projects/1/transcripts/s1/reassign",
+                          json={"position": 1, "verify": "Thanks for having me, it is", "slot": "p1"})
+        assert bad.status_code == 409, "already that speaker's"
+
+    def test_a_moved_paragraph_is_not_joined_to_the_speakers_own(self, tmp_path: Path) -> None:
+        """Joining would lose whose words they were, and the quote would count again."""
+        from tests.test_serve_participant_recode import _quote_ids, _with_quotes
+
+        client = _client(_with_quotes(tmp_path))
+        _reassign(client, 1, "Thanks for having me, it is", "m1")
+        resp = client.post("/api/projects/1/transcripts/s1/join",
+                           json={"position": 1, "verify": "Thanks for having me, it is"})
+        assert resp.status_code == 409
+        assert "q-p1-10" not in _quote_ids(client)
+
+
+class TestReassignToANewModerator:
+    """§K: a call collapsed into one voice has no moderator to move a paragraph
+    to, so Paragraph scope can make one — an unknown moderator, named later."""
+
+    V = "Thanks for having me, it is"
+
+    def _new(self, client: TestClient) -> int:
+        resp = client.post("/api/projects/1/transcripts/s1/reassign",
+                           json={"position": 1, "verify": self.V, "new": "moderator"})
+        assert resp.status_code == 200, resp.text
+        return resp.json()["id"]
+
+    def _s1(self, client: TestClient) -> list[str]:
+        sessions = client.get("/api/projects/1/sessions").json()["sessions"]
+        return sorted(sp["slot_code"] for s in sessions if s["session_id"] == "s1" for sp in s["speakers"])
+
+    def test_it_makes_an_unknown_moderator_and_moves_the_paragraph(self, tmp_path: Path) -> None:
+        from tests.test_serve_participant_recode import _quote_ids, _with_quotes
+
+        client = _client(_with_quotes(tmp_path))
+        self._new(client)
+        assert self._s1(client) == ["m1", "m2", "p1"]
+        # Unknown, and lettered beside the session's other moderator (§J8.9).
+        assert _segments(client)[1]["speaker_code"] == "mB?"
+        assert _segments(client)[1]["is_moderator"] is True
+        assert "q-p1-10" not in _quote_ids(client)
+
+    def test_it_survives_a_re_import_that_drops_unheard_moderators(self, tmp_path: Path) -> None:
+        from tests.test_serve_participant_recode import _with_quotes
+
+        project = _with_quotes(tmp_path)
+        client = _client(project)
+        self._new(client)
+        _reimport(client, project)
+        assert self._s1(client) == ["m1", "m2", "p1"]
+        assert _segments(client)[1]["speaker_code"] == "mB?"
+
+    def test_undo_takes_the_new_moderator_away_too(self, tmp_path: Path) -> None:
+        from tests.test_serve_participant_recode import _quote_ids, _with_quotes
+
+        client = _client(_with_quotes(tmp_path))
+        edit = self._new(client)
+        client.delete(f"/api/projects/1/transcripts/s1/layout-edits/{edit}")
+        assert self._s1(client) == ["m1", "p1"]
+        assert "q-p1-10" in _quote_ids(client)
+
+    def test_it_never_lands_on_a_speaker_a_later_run_hears(self, tmp_path: Path) -> None:
+        """A re-run hears a second moderator and issues them m2: the move made
+        for an unknown m2 is refused, not credited to that real person."""
+        from tests.test_serve_participant_recode import _with_quotes
+
+        project = _with_quotes(tmp_path)
+        client = _client(project)
+        self._new(client)
+        raw = project / "bristlenose-output" / "transcripts-raw" / "s1.txt"
+        text = raw.read_text(encoding="utf-8")
+        assert "[m1] Shall we" in text
+        raw.write_text(text.replace("[m1] Shall we", "[m2] Shall we"), encoding="utf-8")
+        _reimport(client, project)
+        segs = _segments(client)
+        assert segs[1]["speaker_code"] == "p1", "the move was refused, the words stay p1's"
+
+    def test_it_is_numbered_above_every_code_the_pipeline_issued(self, tmp_path: Path) -> None:
+        from tests.test_serve_participant_recode import _registry, _with_quotes
+
+        project = _with_quotes(tmp_path)
+        _registry(project, {"s1": {"Me": "m1", "Wylie": "p1", "Gone": "m4"}})
+        client = _client(project)
+        self._new(client)
+        assert "m5" in self._s1(client)

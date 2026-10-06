@@ -12,7 +12,8 @@
  */
 
 import { pushUndo } from "../contexts/UndoStore";
-import { deleteParagraphEdit, postParagraphJoin, postParagraphSplit } from "./api";
+import type { ParagraphTarget } from "./personPicker";
+import { deleteParagraphEdit, postParagraphJoin, postParagraphReassign, postParagraphSplit } from "./api";
 
 /** Fired when a split, a join or its undo has landed, so the transcript re-reads. */
 export const TRANSCRIPT_WRITTEN_EVENT = "bn:transcript-written";
@@ -95,6 +96,24 @@ export async function joinParagraphs(sessionId: string, position: number, verify
     action: "joinParagraphs",
     undo: () => deleteParagraphEdit(sessionId, id).then(written),
     redo: () => postParagraphJoin(sessionId, position, verify).then((r) => {
+      id = r.id;
+      written();
+    }),
+  });
+}
+
+/** Credit paragraph ``position`` to another speaker of the session, by slot
+ *  (design-people.md §K). Undo forgets the move; redo makes it again. A quote
+ *  from those words leaves the evidence while it stands. */
+export async function reassignParagraph(
+  sessionId: string, position: number, verify: string, to: ParagraphTarget,
+): Promise<void> {
+  let id = (await postParagraphReassign(sessionId, position, verify, to)).id;
+  written();
+  pushUndo({
+    action: "reassignParagraph",
+    undo: () => deleteParagraphEdit(sessionId, id).then(written),
+    redo: () => postParagraphReassign(sessionId, position, verify, to).then((r) => {
       id = r.id;
       written();
     }),

@@ -50,6 +50,27 @@ struct PersonPickerRequest: Equatable {
         var newPromptFor: [Role: String] = [:]
         /// "Swap with {{code}}": the swap row (§J7 call 4).
         var swapWith: String? = nil
+        /// The transcript's scope words, Session | Paragraph, and their group's
+        /// name (design-people.md §K).
+        var scopeSession: String = ""
+        var scopeParagraph: String = ""
+        var scopeGroup: String = ""
+    }
+
+    /// A speaker of this session, as the Paragraph scope offers them (§K):
+    /// `slot` addresses the move, `code` is what the badge shows.
+    struct SessionSpeaker: Equatable {
+        let code: String
+        let slot: String
+        let name: String
+        let role: Role
+    }
+
+    /// From a transcript paragraph's badge only: where the switch opens, and
+    /// who the paragraph can be credited to.
+    struct Scope: Equatable {
+        let paragraph: Bool
+        let speakers: [SessionSpeaker]
     }
 
     /// Another role's rows, browsed to recode the speaker (§J7 R1): the
@@ -78,11 +99,14 @@ struct PersonPickerRequest: Equatable {
     /// The code of the speaker this one would swap with (§J7 call 4), when the
     /// session has exactly one participant and one moderator.
     let swap: String?
+    /// The Session | Paragraph switch, from a transcript paragraph only (§K).
+    let scope: Scope?
 
     init(sessionId: String, slot: Slot, names: [String], codes: [String]? = nil,
          newCode: String? = nil, anchor: CGRect, labels: Labels, others: [Role: RoleRows] = [:],
-         swap: String? = nil) {
+         swap: String? = nil, scope: Scope? = nil) {
         self.swap = swap
+        self.scope = scope
         self.sessionId = sessionId
         self.slot = slot
         self.names = names
@@ -117,6 +141,7 @@ struct PersonPickerRequest: Equatable {
     /// column — so browsing a role never moves the names.
     var allCodes: [String] {
         [slot.code, newCode] + codes + others.values.flatMap { [$0.newCode] + $0.codes }
+            + (scope?.speakers.map(\.code) ?? [])
     }
 
     /// The `person-picker` message body; nil when anything it needs is missing.
@@ -150,12 +175,32 @@ struct PersonPickerRequest: Equatable {
         for (k, v) in l["newPromptFor"] as? [String: String] ?? [:] {
             if let r = Role(rawValue: k) { prompts[r] = v }
         }
-        self.labels = Labels(roles: words, roleGroup: l["roleGroup"] as? String ?? "",
+        var labels = Labels(roles: words, roleGroup: l["roleGroup"] as? String ?? "",
                              newPrompt: newPrompt, thatsMe: l["thatsMe"] as? String, menu: menu,
                              proposed: l["proposed"] as? String,
                              notThisPerson: l["notThisPerson"] as? String,
                              newPromptFor: prompts,
                              swapWith: l["swapWith"] as? String)
+        if let words = l["scope"] as? [String: String] {
+            labels.scopeSession = words["session"] ?? ""
+            labels.scopeParagraph = words["paragraph"] ?? ""
+            labels.scopeGroup = words["group"] ?? ""
+        }
+        // A speaker with any field missing is left out; a scope with nobody in
+        // it, or without its words, is no scope.
+        if let sc = body["scope"] as? [String: Any], !labels.scopeParagraph.isEmpty,
+           let list = sc["speakers"] as? [[String: Any]] {
+            let speakers = list.compactMap { d -> SessionSpeaker? in
+                guard let code = d["code"] as? String, let slot = d["slot"] as? String, !slot.isEmpty,
+                      let role = (d["role"] as? String).flatMap(Role.init(rawValue:)) else { return nil }
+                return SessionSpeaker(code: code, slot: slot, name: d["name"] as? String ?? "", role: role)
+            }
+            self.scope = speakers.isEmpty ? nil
+                : Scope(paragraph: sc["paragraph"] as? Bool ?? false, speakers: speakers)
+        } else {
+            self.scope = nil
+        }
+        self.labels = labels
         self.swap = (body["swap"] as? String).flatMap { $0.isEmpty ? nil : $0 }
         // A role whose rows are malformed is left out: its segment stays off.
         var others: [Role: RoleRows] = [:]
@@ -174,10 +219,14 @@ struct PersonPickerRequest: Equatable {
 /// it means (a pick, someone new, That's Me) — never this side. `role` is set
 /// when the pick was made under another role: a recode (§J7 R1).
 struct PersonPickerPick: Equatable {
-    enum Kind: String { case name, new, me, clear, rename, swap }
+    enum Kind: String { case name, new, me, clear, rename, swap, paragraph }
     let name: String
     let kind: Kind
     var role: PersonPickerRequest.Role? = nil
+    /// A paragraph pick's speaker, by slot (§K).
+    var slot: String? = nil
+    /// Or the role of a new speaker a paragraph pick makes ("moderator").
+    var newRole: String? = nil
 }
 
 /// What this side sends back, as `(action, payload)` for
@@ -185,9 +234,13 @@ struct PersonPickerPick: Equatable {
 /// the fixture without a web view.
 enum PersonPickerAction {
     static func choose(sessionId: String, code: String, pick: PersonPickerPick) -> (String, [String: Any]) {
-        // "Not this person" and the swap name nobody.
+        // "Not this person" and the swap name nobody; a paragraph pick names
+        // its speaker by slot.
         var choice: [String: Any] = pick.kind == .clear || pick.kind == .swap
             ? ["kind": pick.kind.rawValue]
+            : pick.kind == .paragraph
+                ? (pick.newRole.map { ["kind": pick.kind.rawValue, "new": $0] }
+                    ?? ["kind": pick.kind.rawValue, "slot": pick.slot ?? ""])
             : ["kind": pick.kind.rawValue, "name": pick.name]
         if let role = pick.role { choice["role"] = role.rawValue }
         return ("personPickerChoose", ["sessionId": sessionId, "code": code, "choice": choice])
@@ -219,6 +272,12 @@ final class PersonPickerModel: ObservableObject {
     static let newRow = "\u{0}new"
     static let meRow = "\u{0}me"
     static let swapRow = "\u{0}swap"
+    /// A Paragraph-scope row's id: the prefix and the speaker's slot, since two
+    /// unknown speakers share an empty name (§K).
+    static let paragraphPrefix = "\u{0}p:"
+    /// The Paragraph scope's new-moderator row: for a call collapsed into one
+    /// voice, which has no moderator to move a paragraph to.
+    static let paragraphNewModerator = "\u{0}pnew"
 
     let request: PersonPickerRequest
     let metrics: PickerMetrics
@@ -236,6 +295,9 @@ final class PersonPickerModel: ObservableObject {
     /// Bumped when an arrow leaves the new-person field, so the list takes the
     /// keyboard back.
     @Published var focusListRequest = 0
+    /// The Paragraph scope (§K): "who said this one?", from this session's
+    /// speakers. Only where the request carries a scope.
+    @Published private(set) var paragraph: Bool
 
     private let onChoose: (PersonPickerPick) -> Void
     private let onClose: () -> Void
@@ -249,6 +311,7 @@ final class PersonPickerModel: ObservableObject {
         self.onChoose = onChoose
         self.onClose = onClose
         self.browsing = request.slot.role
+        self.paragraph = false
         // The selection opens on the current answer. With no answer there is
         // nothing to confirm, so the cursor starts in the new-person field
         // (design-people.md §J8.10), where an empty Return does nothing.
@@ -260,18 +323,80 @@ final class PersonPickerModel: ObservableObject {
             self.renaming = true
             self.renameDraft = name
         }
+        if request.scope?.paragraph == true { setParagraph(true) }
     }
 
-    /// The names under the role being browsed.
-    var names: [String] { request.rows(for: browsing).names }
+    // MARK: Paragraph scope (§K)
+
+    /// The paragraph's own speaker, among the session's.
+    private var paragraphSpeaker: PersonPickerRequest.SessionSpeaker? {
+        request.scope?.speakers.first { $0.code == request.slot.code }
+    }
+
+    func speaker(_ id: String) -> PersonPickerRequest.SessionSpeaker? {
+        guard id.hasPrefix(Self.paragraphPrefix) else { return nil }
+        let slot = String(id.dropFirst(Self.paragraphPrefix.count))
+        return request.scope?.speakers.first { $0.slot == slot }
+    }
+
+    /// Switch between Session and Paragraph. Each opens as it would on its own:
+    /// Session on the speaker's name, Paragraph on the paragraph's speaker.
+    func setParagraph(_ on: Bool) {
+        guard request.scope != nil else { return }
+        paragraph = on
+        draft = ""
+        if on {
+            renaming = false
+            browsing = paragraphSpeaker?.role ?? request.slot.role
+            selection = paragraphSpeaker.map { Self.paragraphPrefix + $0.slot } ?? names.first
+        } else {
+            browsing = request.slot.role
+            let name = request.slot.name
+            let own = !name.isEmpty && request.names.contains(name)
+            selection = own ? name : Self.newRow
+            renaming = own
+            renameDraft = own ? name : ""
+        }
+        focusListRequest += 1
+    }
+
+    /// The roles the segments let the researcher move between: on Paragraph,
+    /// those this session has a speaker in.
+    var openRoles: Set<PersonPickerRequest.Role> {
+        // Moderator is always open on Paragraph: its new-moderator row is how
+        // a session with none gets one.
+        paragraph ? Set(request.scope?.speakers.map(\.role) ?? []).union([.moderator]) : request.openRoles
+    }
+
+    /// What a row's name reads: a Paragraph row's speaker's name, or the role's
+    /// word for one nobody has named.
+    func displayName(_ id: String) -> String {
+        if id == Self.paragraphNewModerator {
+            return request.labels.newPromptFor[.moderator] ?? request.labels.newPrompt
+        }
+        guard let s = speaker(id) else { return id }
+        return s.name.isEmpty ? request.labels.roles[s.role] ?? "" : s.name
+    }
+
+    /// The names under the role being browsed — on Paragraph, the session's
+    /// speakers in that role, by id.
+    var names: [String] {
+        if paragraph {
+            return (request.scope?.speakers ?? []).filter { $0.role == browsing }
+                .map { Self.paragraphPrefix + $0.slot }
+                + (browsing == .moderator ? [Self.paragraphNewModerator] : [])
+        }
+        return request.rows(for: browsing).names
+    }
 
     /// Whether the rows shown are another role's: every pick is then a recode.
-    var recoding: Bool { browsing != request.slot.role }
+    var recoding: Bool { !paragraph && browsing != request.slot.role }
 
     var rows: [String] {
+        if paragraph { return names }
         // The swap is an act on the speaker as they are, so it is offered
         // under their own role only (§J7 call 4).
-        names + (swapLabel != nil && !recoding ? [Self.swapRow] : [])
+        return names + (swapLabel != nil && !recoding ? [Self.swapRow] : [])
             + (offersNew ? [Self.newRow] : []) + (meName == nil ? [] : [Self.meRow])
     }
 
@@ -280,7 +405,7 @@ final class PersonPickerModel: ObservableObject {
     /// same act as renaming: no second field (owner, 6 Oct 2026). A moderator or
     /// observer keeps it — renaming Martin changes him everywhere.
     var offersNew: Bool {
-        !(browsing == request.slot.role && request.slot.role == .participant
+        !paragraph && !(browsing == request.slot.role && request.slot.role == .participant
             && !request.slot.name.isEmpty)
     }
 
@@ -290,16 +415,23 @@ final class PersonPickerModel: ObservableObject {
         return template.replacingOccurrences(of: "{{code}}", with: code)
     }
 
-    func code(for row: String) -> String { request.code(for: row, in: browsing) }
+    func code(for row: String) -> String {
+        if row == Self.paragraphNewModerator { return "m?" }
+        return speaker(row)?.code ?? request.code(for: row, in: browsing)
+    }
     var newCode: String { request.rows(for: browsing).newCode }
     var newPrompt: String { request.newPrompt(for: browsing) }
 
     /// Show another role's rows, or the speaker's own again. The selection
     /// lands on the speaker's own person, who heads every role's list.
     func browse(_ role: PersonPickerRequest.Role) {
-        guard role != browsing, request.openRoles.contains(role) else { return }
+        guard role != browsing, openRoles.contains(role) else { return }
         renaming = false
         browsing = role
+        if paragraph {
+            selection = names.first { speaker($0)?.code == request.slot.code } ?? names.first
+            return
+        }
         let name = request.slot.name
         selection = !name.isEmpty && names.contains(name) ? name : Self.newRow
     }
@@ -325,6 +457,7 @@ final class PersonPickerModel: ObservableObject {
         let roles = request.openRoles
         let texts = roles.flatMap { request.rows(for: $0).names + [request.newPrompt(for: $0)] }
             + (thatsMeLabel.map { [$0] } ?? []) + (swapLabel.map { [$0] } ?? [])
+            + (request.scope?.speakers.map { $0.name.isEmpty ? request.labels.roles[$0.role] ?? "" : $0.name } ?? [])
         let widest = texts.map { ($0 as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
         // Cell inset 8 + check column + badge column + gap + text + trailing 10,
         // inside the source-list capsule's 10 a side, inside the 10 pt padding.
@@ -338,6 +471,9 @@ final class PersonPickerModel: ObservableObject {
     /// What VoiceOver hears for a name row: the SPA's proposed wording on the
     /// slot's own unconfirmed name, code and name on every other.
     func accessibilityLabel(for row: String) -> String {
+        if speaker(row) != nil || row == Self.paragraphNewModerator {
+            return "\(code(for: row)) \(displayName(row))"
+        }
         if isAnswer(row), !request.slot.confirmed, let proposed = request.labels.proposed {
             return proposed
         }
@@ -347,6 +483,7 @@ final class PersonPickerModel: ObservableObject {
     /// The tick: the speaker's current answer, which exists only in the role
     /// they have — under another, nothing is yet.
     func isAnswer(_ row: String) -> Bool {
+        if paragraph { return speaker(row)?.code == request.slot.code }
         let name = request.slot.name
         guard !name.isEmpty, !recoding else { return false }
         return row == Self.meRow ? meName == name : row == name
@@ -356,7 +493,7 @@ final class PersonPickerModel: ObservableObject {
     /// answer, proposed or confirmed — a click on the name always edits it
     /// (owner, 6 Oct 2026).
     func canRename(_ row: String) -> Bool {
-        !recoding && row != Self.newRow && row != Self.meRow
+        !paragraph && !recoding && row != Self.newRow && row != Self.meRow
             && !request.slot.name.isEmpty && row == request.slot.name
     }
 
@@ -395,6 +532,19 @@ final class PersonPickerModel: ObservableObject {
     /// A picked row. The web side decides what it means.
     func choose(_ row: String) {
         guard row != Self.newRow else { return }
+        if row == Self.paragraphNewModerator {
+            onChoose(PersonPickerPick(name: "", kind: .paragraph, newRole: "moderator"))
+            onClose()
+            return
+        }
+        if let target = speaker(row) {
+            // The paragraph's own speaker moves nothing.
+            if target.code != request.slot.code {
+                onChoose(PersonPickerPick(name: "", kind: .paragraph, slot: target.slot))
+            }
+            onClose()
+            return
+        }
         if row == Self.swapRow {
             onChoose(PersonPickerPick(name: "", kind: .swap))
             onClose()
@@ -417,7 +567,7 @@ final class PersonPickerModel: ObservableObject {
     /// Whether the current answer can be refused with the ✕: a moderator or
     /// observer the slot points at (design-people.md §J8.8).
     var canClear: Bool {
-        !recoding && request.slot.role != .participant && request.slot.person != nil
+        !paragraph && !recoding && request.slot.role != .participant && request.slot.person != nil
             && !request.slot.name.isEmpty
     }
 
@@ -458,12 +608,50 @@ struct PersonPickerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if model.request.scope != nil {
+                PersonPickerScope(model: model)
+                    .frame(maxWidth: .infinity)
+            }
             PersonPickerRoles(model: model)
                 .frame(maxWidth: .infinity)
             PersonPickerList(model: model)
         }
         .padding(10)
         .frame(width: model.contentWidth)
+    }
+}
+
+/// Session | Paragraph, on a transcript paragraph's picker only (design-people.md
+/// §K, owner 6 Oct 2026): two words, not a second segmented control, so they
+/// read as a heading over the roles. The chosen one is semibold in the label
+/// colour, the other regular in the secondary label colour, at the picker's
+/// small type; each holds its semibold width so the pair never shifts.
+private struct PersonPickerScope: View {
+    @ObservedObject var model: PersonPickerModel
+
+    var body: some View {
+        let labels = model.request.labels
+        HStack(spacing: 14) {
+            word(labels.scopeSession, chosen: !model.paragraph) { model.setParagraph(false) }
+            word(labels.scopeParagraph, chosen: model.paragraph) { model.setParagraph(true) }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(labels.scopeGroup)
+    }
+
+    private func word(_ text: String, chosen: Bool, action: @escaping () -> Void) -> some View {
+        let size = model.metrics.nameFont.pointSize
+        return Button(action: action) {
+            ZStack {
+                // Reserves the semibold width.
+                Text(text).font(.system(size: size, weight: .semibold)).hidden()
+                Text(text)
+                    .font(.system(size: size, weight: chosen ? .semibold : .regular))
+                    .foregroundStyle(chosen ? Color(nsColor: .labelColor) : Color(nsColor: .secondaryLabelColor))
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(chosen ? [.isSelected] : [])
     }
 }
 
@@ -518,7 +706,13 @@ private struct PersonPickerRoles: NSViewRepresentable {
     }
 
     func updateNSView(_ control: NSSegmentedControl, context: Context) {
-        let i = PersonPickerRequest.Role.allCases.firstIndex(of: model.browsing) ?? 0
+        let roles = PersonPickerRequest.Role.allCases
+        // The open roles follow the scope: on Paragraph, those the session has.
+        let open = model.openRoles
+        for (i, role) in roles.enumerated() where control.isEnabled(forSegment: i) != open.contains(role) {
+            control.setEnabled(open.contains(role), forSegment: i)
+        }
+        let i = roles.firstIndex(of: model.browsing) ?? 0
         if control.selectedSegment != i { control.selectedSegment = i }
     }
 }
@@ -579,12 +773,15 @@ private struct PersonPickerList: NSViewRepresentable {
         private var focusListRequest = 0
         private var wasRenaming = false
         private var shownRole: PersonPickerRequest.Role?
+        private var shownParagraph = false
 
-        /// Another role's segment redraws the list with that role's rows.
+        /// Another role's segment, or the other scope, redraws the list.
         func syncBrowsing() {
-            guard model.browsing != shownRole, let table else { return }
+            guard model.browsing != shownRole || model.paragraph != shownParagraph, let table
+            else { return }
             let first = shownRole == nil
             shownRole = model.browsing
+            shownParagraph = model.paragraph
             if !first { table.reloadData() }
         }
 
@@ -681,7 +878,7 @@ private struct PersonPickerList: NSViewRepresentable {
                     renameField = field
                     name = field
                 } else {
-                    name = NSTextField(labelWithString: id)
+                    name = NSTextField(labelWithString: model.displayName(id))
                 }
                 label = model.accessibilityLabel(for: id)
             }
@@ -803,7 +1000,7 @@ private struct PersonPickerList: NSViewRepresentable {
             case PersonPickerModel.newRow: return ""
             case PersonPickerModel.meRow: return model.thatsMeLabel ?? ""
             case PersonPickerModel.swapRow: return model.swapLabel ?? ""
-            default: return id
+            default: return model.displayName(id)
             }
         }
 

@@ -47,6 +47,8 @@ import {
   type PersonPickerSlot,
   type PersonPickerSwap,
   type PickerRole,
+  type PickerSessionSpeaker,
+  type ParagraphTarget,
 } from "../utils/personPicker";
 
 const NEW = "\u0000new";
@@ -66,11 +68,210 @@ interface PersonPickerProps {
   /** The speaker this one would swap with (§J7 call 4), when the session has
    *  exactly one participant and one moderator. */
   swap?: PersonPickerSwap;
+  /** The transcript's scope switch (design-people.md §K): present only on a
+   *  paragraph's badge. On Paragraph the picker answers "who said this one?"
+   *  from this session's speakers; on Session it is the picker as everywhere
+   *  else. */
+  scope?: PickerScope;
   onChoose: (choice: PersonPickerChoice) => void;
   onClose: () => void;
 }
 
-export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClose, swap }: PersonPickerProps) {
+export interface PickerScope {
+  paragraph: boolean;
+  speakers: PickerSessionSpeaker[];
+  onScope: (paragraph: boolean) => void;
+  /** Credit the paragraph to a speaker of the session, or to a new moderator. */
+  onMove: (to: ParagraphTarget) => void;
+}
+
+export function PersonPicker(props: PersonPickerProps) {
+  return props.scope?.paragraph
+    ? <ParagraphPicker {...props} scope={props.scope} />
+    : <SessionPicker {...props} />;
+}
+
+/** The scope words: plain text, the chosen one semibold (owner, 6 Oct 2026),
+ *  so they read as a heading over the role toggle. A radio group: the chosen
+ *  word is the Tab stop and the arrows move between them. */
+function ScopeHead({ scope, labels, onEscape }: {
+  scope: PickerScope; labels: PersonPickerLabels; onEscape: () => void;
+}) {
+  const words: [boolean, string][] = [[false, labels.scope.session], [true, labels.scope.paragraph]];
+  return (
+    <li className="bn-picker-scope" role="none">
+      <span role="radiogroup" aria-label={labels.scope.group}>
+        {words.map(([paragraph, word]) => (
+          <button
+            key={word}
+            type="button"
+            className="bn-picker-scope-btn"
+            role="radio"
+            aria-checked={paragraph === scope.paragraph}
+            data-text={word}
+            tabIndex={paragraph === scope.paragraph ? 0 : -1}
+            onClick={() => scope.onScope(paragraph)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.preventDefault();
+                e.stopPropagation();
+                onEscape();
+                return;
+              }
+              if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+              e.preventDefault();
+              e.stopPropagation();
+              // The other scope's picker mounts and takes focus into its rows;
+              // hand it back to the chosen word once it has, so the arrows keep
+              // moving between the two words.
+              const anchor = e.currentTarget.closest(".bn-person-picker-anchor") ?? document;
+              scope.onScope(!scope.paragraph);
+              setTimeout(() => {
+                anchor.querySelector<HTMLElement>('.bn-picker-scope-btn[aria-checked="true"]')?.focus();
+              }, 0);
+            }}
+          >
+            {word}
+          </button>
+        ))}
+      </span>
+    </li>
+  );
+}
+
+/**
+ * "Who said this one?" — the Paragraph scope (design-people.md §K). Lists this
+ * session's speakers by role; a pick credits the one paragraph to them. No
+ * rename (a name is the person's, everywhere) and no ✕. Under Moderator the
+ * last row is a new moderator, unknown, for a call collapsed into one voice:
+ * named afterwards from the paragraph's badge, as any unknown speaker is.
+ */
+function ParagraphPicker({ slot, labels, onClose, scope }: PersonPickerProps & { scope: PickerScope }) {
+  const current = scope.speakers.find((s) => s.code === slot.code);
+  const [browsing, setBrowsing] = useState<PickerRole>(current?.role ?? slot.role);
+  const rows = scope.speakers.filter((s) => s.role === browsing);
+  const [selected, setSelected] = useState<string | null>(
+    (rows.find((r) => r.code === slot.code) ?? rows[0])?.slot ?? null,
+  );
+  const menuRef = useRef<HTMLUListElement>(null);
+  const itemRefs = useRef<Record<string, HTMLElement | null>>({});
+  // Moderator is always open: its new-moderator row is how a session with
+  // none gets one.
+  const roles = PICKER_ROLES.filter(
+    (r) => r === "moderator" || scope.speakers.some((s) => s.role === r),
+  );
+  const keys = [...rows.map((r) => r.slot), ...(browsing === "moderator" ? [NEW] : [])];
+
+  useEffect(() => {
+    if (selected) itemRefs.current[selected]?.focus();
+    else menuRef.current?.focus();
+  }, [selected]);
+
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      const anchor = menuRef.current?.parentElement;
+      if (anchor && !anchor.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [onClose]);
+
+  const finish = (target: string | null) => {
+    if (target === NEW) scope.onMove({ new: "moderator" });
+    else if (target && target !== current?.slot) scope.onMove({ slot: target });
+    menuRef.current?.parentElement?.querySelector<HTMLElement>(".bn-person-picker-trigger")?.focus();
+    onClose();
+  };
+
+  const browse = (role: PickerRole) => {
+    setBrowsing(role);
+    setSelected(scope.speakers.find((s) => s.role === role)?.slot ?? (role === "moderator" ? NEW : null));
+  };
+
+  const onListKey = (e: KeyboardEvent<HTMLUListElement>) => {
+    if ((e.target as HTMLElement).tagName === "BUTTON") return;
+    const handled = () => { e.preventDefault(); e.stopPropagation(); };
+    const i = selected === null ? -1 : keys.indexOf(selected);
+    if (e.key === "ArrowDown") { handled(); setSelected(keys[Math.min(i + 1, keys.length - 1)] ?? null); }
+    else if (e.key === "ArrowUp") { handled(); setSelected(keys[Math.max(i - 1, 0)] ?? null); }
+    else if (e.key === "Enter" || e.key === " ") { handled(); finish(selected); }
+    else if (e.key === "Escape") { handled(); finish(null); }
+    else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && roles.length > 1) {
+      handled();
+      const at = roles.indexOf(browsing);
+      browse(roles[(at + (e.key === "ArrowRight" ? 1 : roles.length - 1)) % roles.length]);
+    }
+  };
+
+  return (
+    <ul
+      ref={menuRef}
+      className="export-dropdown-menu bn-person-picker"
+      role="menu"
+      aria-label={labels.menu}
+      tabIndex={-1}
+      onKeyDown={onListKey}
+    >
+      <ScopeHead scope={scope} labels={labels} onEscape={() => finish(null)} />
+      <li className="bn-picker-head" role="none">
+        <span className="dimension-toggle" role="radiogroup" aria-label={labels.roleGroup}>
+          {PICKER_ROLES.map((r) => (
+            <button
+              key={r}
+              type="button"
+              className={`dimension-btn${r === browsing ? " active" : ""}`}
+              role="radio"
+              aria-checked={r === browsing}
+              disabled={!roles.includes(r)}
+              onClick={() => browse(r)}
+              tabIndex={-1}
+            >
+              {labels.roles[r]}
+            </button>
+          ))}
+        </span>
+      </li>
+      {rows.map((row) => {
+        const isAnswer = row.code === slot.code;
+        return (
+          // eslint-disable-next-line jsx-a11y/click-events-have-key-events
+          <li
+            key={row.slot}
+            ref={(el) => { itemRefs.current[row.slot] = el; }}
+            className="export-dropdown-item export-dropdown-scope"
+            role="menuitemradio"
+            aria-checked={isAnswer}
+            tabIndex={-1}
+            onClick={() => finish(row.slot)}
+          >
+            <span className="export-dropdown-check" aria-hidden="true">{isAnswer && <Icon name="check" size="menu" />}</span>
+            <PersonBadge code={row.code} role={row.role} name={row.name} />
+          </li>
+        );
+      })}
+      {browsing === "moderator" && (
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events
+        <li
+          ref={(el) => { itemRefs.current[NEW] = el; }}
+          className="export-dropdown-item export-dropdown-scope bn-picker-new"
+          role="menuitem"
+          tabIndex={-1}
+          onClick={() => finish(NEW)}
+        >
+          <span className="export-dropdown-check" aria-hidden="true" />
+          <span className="bn-person-badge">
+            <span className="bn-speaker-badge--split">
+              <span className="bn-speaker-badge-code">m?</span>
+              <span className="bn-speaker-badge-name unnamed">{labels.newPromptFor?.moderator ?? labels.newPrompt}</span>
+            </span>
+          </span>
+        </li>
+      )}
+    </ul>
+  );
+}
+
+function SessionPicker({ slot, known, knownByRole, labels, onChoose, onClose, swap, scope }: PersonPickerProps) {
   // The role being looked at. A segment click only browses (§J8.10): nothing
   // is written until a name is chosen under it.
   const [browsing, setBrowsing] = useState<PickerRole>(slot.role);
@@ -269,6 +470,7 @@ export function PersonPicker({ slot, known, knownByRole, labels, onChoose, onClo
       tabIndex={-1}
       onKeyDown={onListKey}
     >
+      {scope && <ScopeHead scope={scope} labels={labels} onEscape={dismiss} />}
       <li className="bn-picker-head" role="none">
         <span className="dimension-toggle" role="radiogroup" aria-label={labels.roleGroup}>
           {PICKER_ROLES.map((r) => (

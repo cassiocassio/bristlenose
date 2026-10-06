@@ -138,7 +138,10 @@
       "proposedName": "{{code}}, foresl\u00e5et navn {{name}}",
       "nameTaken": "{{name}} st\u00e5r allerede p\u00e5 listen. V\u00e6lg personen, eller tilf\u00f8j noget, der adskiller de to.",
       "notThisPerson": "Ikke {{name}}",
-      "swapWith": "Byt med {{code}}"
+      "swapWith": "Byt med {{code}}",
+      "scopeSession": "Session",
+      "scopeParagraph": "Afsnit",
+      "scopeGroup": "G\u00e6lder for"
     },
     "moderatedBy": "Modereret af {{names}}",
     "observer_one": "Observatør: {{names}}",
@@ -676,6 +679,7 @@
       "clearName": "Fortryd Ryd navn",
       "changeRole": "Fortryd Skift rolle",
       "swapRoles": "Fortryd Byt roller",
+      "reassignParagraph": "Fortryd Tildel afsnit igen",
       "splitParagraph": "Fortryd Opdel afsnit",
       "joinParagraphs": "Fortryd Sammenføj afsnit"
     },
@@ -697,6 +701,7 @@
       "clearName": "Gentag Ryd navn",
       "changeRole": "Gentag Skift rolle",
       "swapRoles": "Gentag Byt roller",
+      "reassignParagraph": "Gentag Tildel afsnit igen",
       "splitParagraph": "Gentag Opdel afsnit",
       "joinParagraphs": "Gentag Sammenføj afsnit"
     }

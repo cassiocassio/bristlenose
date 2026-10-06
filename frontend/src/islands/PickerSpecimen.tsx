@@ -71,6 +71,7 @@ function labels(slot: PersonPickerSlot): PersonPickerLabels {
     nameTaken: "{{name}} is already in the list. Pick them, or add something to tell the two apart.",
     notThisPerson: "Not {{name}}",
     swapWith: "Swap with {{code}}",
+    scope: { session: "Session", paragraph: "Paragraph", group: "Applies to" },
   };
 }
 

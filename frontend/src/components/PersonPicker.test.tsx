@@ -502,3 +502,105 @@ describe("PersonPicker", () => {
     expect(onChoose).not.toHaveBeenCalled();
   });
 });
+
+describe("the transcript's Session | Paragraph switch (design-people.md §K)", () => {
+  const simon: PersonPickerSlot = { code: "p1", role: "participant", name: "Simon", confirmed: true };
+  const speakers = [
+    { code: "m1", slot: "m1", name: "Martin", role: "moderator" as const },
+    { code: "p1", slot: "p1", name: "Simon", role: "participant" as const },
+  ];
+  const scope = (paragraph: boolean) => ({ paragraph, speakers, onScope: vi.fn(), onMove: vi.fn() });
+  const words = () => Array.from(menu().querySelectorAll<HTMLElement>(".bn-picker-scope-btn"));
+
+  it("is absent where no paragraph opened the picker", () => {
+    render(<PersonPicker slot={simon} known={[]} labels={labels(simon)} onChoose={vi.fn()} onClose={vi.fn()} />);
+    expect(words()).toEqual([]);
+  });
+
+  it("opens on Session as today's picker, the words above the roles", () => {
+    render(<PersonPicker slot={simon} known={[{ name: "Simon", code: "p1" }]} labels={labels(simon)}
+      scope={scope(false)} onChoose={vi.fn()} onClose={vi.fn()} />);
+    expect(words().map((w) => [w.textContent, w.getAttribute("aria-checked")]))
+      .toEqual([["Session", "true"], ["Paragraph", "false"]]);
+    expect(menu().querySelector(".bn-picker-scope")?.nextElementSibling?.classList.contains("bn-picker-head")).toBe(true);
+    expect(menu().querySelector("input")).not.toBeNull(); // the rename field, as everywhere
+  });
+
+  it("a click on Paragraph asks to switch", () => {
+    const s = scope(false);
+    render(<PersonPicker slot={simon} known={[]} labels={labels(simon)} scope={s} onChoose={vi.fn()} onClose={vi.fn()} />);
+    fireEvent.click(words()[1]);
+    expect(s.onScope).toHaveBeenCalledWith(true);
+  });
+
+  it("on Paragraph lists the session's speakers, ticks this one's, and offers no rename", () => {
+    render(<PersonPicker slot={simon} known={[]} labels={labels(simon)} scope={scope(true)}
+      onChoose={vi.fn()} onClose={vi.fn()} />);
+    expect(items().map((li) => [li.textContent, li.getAttribute("aria-checked")])).toEqual([["p1Simon", "true"]]);
+    expect(menu().querySelector("input")).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "Moderator" }));
+    expect(items().map((li) => li.textContent)).toEqual(["m1Martin", "m?New moderator"]);
+    expect(screen.getByRole("radio", { name: "Observer" })).toBeDisabled();
+  });
+
+  it("a pick on Paragraph moves the paragraph, by slot, and nothing else", () => {
+    const s = scope(true);
+    const onChoose = vi.fn();
+    const onClose = vi.fn();
+    render(<PersonPicker slot={simon} known={[]} labels={labels(simon)} scope={s} onChoose={onChoose} onClose={onClose} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Moderator" }));
+    fireEvent.click(items()[0]);
+    expect(s.onMove).toHaveBeenCalledWith({ slot: "m1" });
+    expect(onChoose).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("picking the paragraph's own speaker moves nothing", () => {
+    const s = scope(true);
+    render(<PersonPicker slot={simon} known={[]} labels={labels(simon)} scope={s} onChoose={vi.fn()} onClose={vi.fn()} />);
+    fireEvent.click(items()[0]);
+    expect(s.onMove).not.toHaveBeenCalled();
+  });
+});
+
+describe("the scope words from the keyboard", () => {
+  const simon: PersonPickerSlot = { code: "p1", role: "participant", name: "Simon", confirmed: true };
+  const speakers = [{ code: "p1", slot: "p1", name: "Simon", role: "participant" as const }];
+
+  it("Escape on a scope word closes the picker and goes no further", () => {
+    const onClose = vi.fn();
+    const outside = vi.fn();
+    document.addEventListener("keydown", outside);
+    render(<PersonPicker slot={simon} known={[]} labels={labels(simon)}
+      scope={{ paragraph: true, speakers, onScope: vi.fn(), onMove: vi.fn() }} onChoose={vi.fn()} onClose={onClose} />);
+    fireEvent.keyDown(menu().querySelector(".bn-picker-scope-btn[aria-checked='true']")!, { key: "Escape" });
+    expect(onClose).toHaveBeenCalled();
+    expect(outside).not.toHaveBeenCalled();
+    document.removeEventListener("keydown", outside);
+  });
+
+  it("an arrow flips the scope", () => {
+    const onScope = vi.fn();
+    render(<PersonPicker slot={simon} known={[]} labels={labels(simon)}
+      scope={{ paragraph: false, speakers, onScope, onMove: vi.fn() }} onChoose={vi.fn()} onClose={vi.fn()} />);
+    fireEvent.keyDown(menu().querySelector(".bn-picker-scope-btn[aria-checked='true']")!, { key: "ArrowRight" });
+    expect(onScope).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("Paragraph scope's new moderator (design-people.md §K)", () => {
+  it("is offered where the session has no moderator, and makes one", () => {
+    const solo: PersonPickerSlot = { code: "p4", role: "participant", name: "", confirmed: true };
+    const onMove = vi.fn();
+    render(<PersonPicker slot={solo} known={[]} labels={labels(solo)}
+      scope={{ paragraph: true, speakers: [{ code: "p4", slot: "p4", name: "", role: "participant" }],
+        onScope: vi.fn(), onMove }}
+      onChoose={vi.fn()} onClose={vi.fn()} />);
+    const moderator = screen.getByRole("radio", { name: "Moderator" });
+    expect(moderator).not.toBeDisabled();
+    fireEvent.click(moderator);
+    expect(items().map((li) => li.textContent)).toEqual(["m?New moderator"]);
+    fireEvent.click(items()[0]);
+    expect(onMove).toHaveBeenCalledWith({ new: "moderator" });
+  });
+});

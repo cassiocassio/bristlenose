@@ -138,7 +138,10 @@
       "proposedName": "{{code}}, f\u00f6reslaget namn {{name}}",
       "nameTaken": "{{name}} finns redan i listan. V\u00e4lj personen eller l\u00e4gg till n\u00e5got som skiljer de tv\u00e5 \u00e5t.",
       "notThisPerson": "Inte {{name}}",
-      "swapWith": "Byt med {{code}}"
+      "swapWith": "Byt med {{code}}",
+      "scopeSession": "Session",
+      "scopeParagraph": "Stycke",
+      "scopeGroup": "G\u00e4ller f\u00f6r"
     },
     "moderatedBy": "Modererad av {{names}}",
     "observer_one": "Observatör: {{names}}",
@@ -676,6 +679,7 @@
       "clearName": "\u00c5ngra Rensa namn",
       "changeRole": "\u00c5ngra Byt roll",
       "swapRoles": "\u00c5ngra Byt roller",
+      "reassignParagraph": "\u00c5ngra Tilldela stycke",
       "splitParagraph": "\u00c5ngra Dela stycke",
       "joinParagraphs": "\u00c5ngra Sammanfoga stycken"
     },
@@ -697,6 +701,7 @@
       "clearName": "G\u00f6r om Rensa namn",
       "changeRole": "G\u00f6r om Byt roll",
       "swapRoles": "G\u00f6r om Byt roller",
+      "reassignParagraph": "G\u00f6r om Tilldela stycke",
       "splitParagraph": "G\u00f6r om Dela stycke",
       "joinParagraphs": "G\u00f6r om Sammanfoga stycken"
     }

@@ -150,7 +150,15 @@ export function postParagraphJoin(sessionId: string, position: number, verify: s
   return apiPost(`/transcripts/${encodeURIComponent(sessionId)}/join`, { position, verify });
 }
 
-/** Take a split or join back. */
+/** Credit one paragraph to another speaker of its session, by that speaker's
+ *  slot code (design-people.md §K, the picker's Paragraph scope). */
+export function postParagraphReassign(
+  sessionId: string, position: number, verify: string, to: { slot: string } | { new: "moderator" },
+): Promise<{ id: number }> {
+  return apiPost(`/transcripts/${encodeURIComponent(sessionId)}/reassign`, { position, verify, ...to });
+}
+
+/** Take a split, join or reassignment back. */
 export function deleteParagraphEdit(sessionId: string, id: number): Promise<void> {
   return apiDelete(`/transcripts/${encodeURIComponent(sessionId)}/layout-edits/${id}`);
 }

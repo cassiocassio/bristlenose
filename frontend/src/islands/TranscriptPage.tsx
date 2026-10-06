@@ -25,6 +25,7 @@ import { Selector } from "../components/Selector";
 import { isEmbedded } from "../utils/embedded";
 import { isExportMode } from "../utils/exportData";
 import { redo, undo } from "../contexts/UndoStore";
+import { resetParagraphScope } from "../utils/paragraphScope";
 import {
   TRANSCRIPT_WRITTEN_EVENT,
   caretAtStart,
@@ -336,6 +337,9 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   // Splitting and joining paragraphs: not in an exported report, which has no
   // server to keep them.
   const paragraphEditing = !isExportMode();
+  // The picker's Paragraph scope sticks for a run of paragraphs and goes back
+  // to Session on leaving this transcript (design-people.md §K).
+  useEffect(() => () => resetParagraphScope(), [sessionId]);
   // The browser's own input events — typing, dictation, autocorrect, a context
   // menu's delete — never edit a paragraph. Native, not React's onBeforeInput,
   // which is a keypress polyfill and misses most of them.
@@ -662,13 +666,19 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
               )}
               <span className="segment-speaker" data-participant={seg.speaker_code}>
                 {/* The same picker as the header's (owner, 6 Oct 2026): naming
-                    from a paragraph names the speaker everywhere. A click
+                    from a paragraph names the speaker everywhere. With the
+                    Session | Paragraph switch (§K), it can also credit this
+                    one paragraph to another speaker of the session. A click
                     target, not a Tab stop per paragraph. */}
                 <SpeakerPickerTrigger
                   sessionId={sessionId}
                   code={seg.speaker_code}
                   role={seg.speaker_code.startsWith("o") ? "observer" : seg.is_moderator ? "moderator" : "participant"}
                   tabbable={false}
+                  paragraph={isExportMode() ? undefined : {
+                    position,
+                    verify: verifyOf(drawnTokens(seg.text, seg.words), 0),
+                  }}
                 />
               </span>
               <div

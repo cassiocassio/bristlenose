@@ -290,6 +290,24 @@ export interface PersonPickerLabels {
   /** "Swap with {{code}}" — the swap row (§J7 call 4), `{{code}}` left for
    *  the caller. */
   swapWith: string;
+  /** The transcript's scope words (design-people.md §K): a pick for the
+   *  speaker across the session, or for one paragraph. */
+  scope: { session: string; paragraph: string; group: string };
+}
+
+/** Where a paragraph moves under the Paragraph scope (§K): a speaker this
+ *  session has, by slot, or a new unknown moderator the move makes — for a
+ *  call collapsed into one voice, which has none to move to. */
+export type ParagraphTarget = { slot: string } | { new: "moderator" };
+
+/** A speaker of this session, as the Paragraph scope offers them (§K): who a
+ *  paragraph can be credited to. `slot` addresses the write; `code` is what
+ *  the badge shows. */
+export interface PickerSessionSpeaker {
+  code: string;
+  slot: string;
+  name: string;
+  role: PickerRole;
 }
 
 /** The picker's strings for one slot. */
@@ -324,6 +342,11 @@ export function personPickerLabels(slot: PersonPickerSlot, t: TFunction): Person
     nameTaken: t("sessions.picker.nameTaken", { name: "{{name}}", interpolation: { escapeValue: false } }),
     notThisPerson: t("sessions.picker.notThisPerson", { name: "{{name}}", interpolation: { escapeValue: false } }),
     swapWith: t("sessions.picker.swapWith", { code: "{{code}}", interpolation: { escapeValue: false } }),
+    scope: {
+      session: t("sessions.picker.scopeSession"),
+      paragraph: t("sessions.picker.scopeParagraph"),
+      group: t("sessions.picker.scopeGroup"),
+    },
   };
 }
 

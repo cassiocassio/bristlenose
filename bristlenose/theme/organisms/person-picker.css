@@ -36,6 +36,54 @@
     list-style: none;
 }
 
+/* The transcript's scope words, Session | Paragraph (design-people.md §K):
+   plain text, not a second segmented control, so they read as a heading and
+   the eye falls to the role toggle. The chosen word is semibold in body ink;
+   the other is regular and muted. Each reserves its semibold width, so the
+   pair does not shift when the choice flips. */
+.bn-person-picker .bn-picker-scope {
+    display: flex;
+    justify-content: center;
+    padding: 0.45rem 0.85rem 0.1rem;
+    list-style: none;
+}
+
+.bn-person-picker .bn-picker-scope [role="radiogroup"] {
+    display: flex;
+    gap: var(--bn-space-lg);
+}
+
+.bn-person-picker .bn-picker-scope-btn {
+    display: inline-grid;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: var(--bn-text-label);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+}
+
+.bn-person-picker .bn-picker-scope-btn[aria-checked="true"] {
+    font-weight: var(--bn-weight-semibold);
+    color: var(--bn-colour-text);
+}
+
+.bn-person-picker .bn-picker-scope-btn::after {
+    content: attr(data-text);
+    font-weight: var(--bn-weight-semibold);
+    height: 0;
+    visibility: hidden;
+    overflow: hidden;
+}
+
+.bn-person-picker .bn-picker-scope-btn:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+    border-radius: var(--bn-radius-sm);
+}
+
 /* Three segments: the shipped toggle draws its divider for two. */
 .bn-person-picker .dimension-toggle {
     display: flex;

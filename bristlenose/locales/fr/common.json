@@ -150,7 +150,10 @@
       "proposedName": "{{code}}, nom propos\u00e9 {{name}}",
       "nameTaken": "{{name}} figure d\u00e9j\u00e0 dans la liste. Choisissez cette personne, ou ajoutez de quoi distinguer les deux.",
       "notThisPerson": "Ce n\u2019est pas {{name}}",
-      "swapWith": "\u00c9changer avec {{code}}"
+      "swapWith": "\u00c9changer avec {{code}}",
+      "scopeSession": "Session",
+      "scopeParagraph": "Paragraphe",
+      "scopeGroup": "S\u2019applique \u00e0"
     },
     "reanalyse": {
       "button": "Réanalyser…",
@@ -676,6 +679,7 @@
       "clearName": "Annuler l\u2019effacement du nom",
       "changeRole": "Annuler le changement de r\u00f4le",
       "swapRoles": "Annuler l\u2019\u00e9change des r\u00f4les",
+      "reassignParagraph": "Annuler la r\u00e9attribution du paragraphe",
       "splitParagraph": "Annuler la division du paragraphe",
       "joinParagraphs": "Annuler la fusion des paragraphes"
     },
@@ -697,6 +701,7 @@
       "clearName": "R\u00e9tablir l\u2019effacement du nom",
       "changeRole": "R\u00e9tablir le changement de r\u00f4le",
       "swapRoles": "R\u00e9tablir l\u2019\u00e9change des r\u00f4les",
+      "reassignParagraph": "R\u00e9tablir la r\u00e9attribution du paragraphe",
       "splitParagraph": "R\u00e9tablir la division du paragraphe",
       "joinParagraphs": "R\u00e9tablir la fusion des paragraphes"
     }

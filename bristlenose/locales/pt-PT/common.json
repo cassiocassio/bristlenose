@@ -160,7 +160,10 @@
       "proposedName": "{{code}}, nome proposto {{name}}",
       "nameTaken": "{{name}} j\u00e1 est\u00e1 na lista. Escolha essa pessoa ou acrescente algo para distinguir as duas.",
       "notThisPerson": "N\u00e3o \u00e9 {{name}}",
-      "swapWith": "Trocar com {{code}}"
+      "swapWith": "Trocar com {{code}}",
+      "scopeSession": "Sess\u00e3o",
+      "scopeParagraph": "Par\u00e1grafo",
+      "scopeGroup": "Aplica-se a"
     },
     "reanalyse": {
       "button": "Reanalisar…",
@@ -676,6 +679,7 @@
       "clearName": "Desfazer Limpar nome",
       "changeRole": "Desfazer Alterar fun\u00e7\u00e3o",
       "swapRoles": "Desfazer Trocar fun\u00e7\u00f5es",
+      "reassignParagraph": "Desfazer Reatribuir par\u00e1grafo",
       "splitParagraph": "Desfazer Dividir par\u00e1grafo",
       "joinParagraphs": "Desfazer Juntar par\u00e1grafos"
     },
@@ -697,6 +701,7 @@
       "clearName": "Refazer Limpar nome",
       "changeRole": "Refazer Alterar fun\u00e7\u00e3o",
       "swapRoles": "Refazer Trocar fun\u00e7\u00f5es",
+      "reassignParagraph": "Refazer Reatribuir par\u00e1grafo",
       "splitParagraph": "Refazer Dividir par\u00e1grafo",
       "joinParagraphs": "Refazer Juntar par\u00e1grafos"
     }

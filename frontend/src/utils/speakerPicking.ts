@@ -19,6 +19,8 @@ import {
   type PersonPickerRow,
   type PersonPickerSlot,
   type PersonPickerSwap,
+  type ParagraphTarget,
+  type PickerSessionSpeaker,
   type PickerRole,
 } from "./personPicker";
 import { nameSpeaker, speakerWritesSettled, swapSpeakers } from "./speakerNames";
@@ -195,6 +197,8 @@ export interface SpeakerPickContext {
   knownByRole: Record<PickerRole, PersonPickerRow[]>;
   /** Who this speaker would swap with, if anyone (§J7 call 4). */
   swap?: PersonPickerSwap;
+  /** This session's speakers, for the transcript's Paragraph scope (§K). */
+  sessionSpeakers: PickerSessionSpeaker[];
 }
 
 /** The speaker a badge shows, from /sessions as it is now: the transcript's
@@ -210,6 +214,9 @@ export async function loadSpeakerContext(sessionId: string, code: string): Promi
   return {
     sessionId, slotCode: slotOf(sp), slot, before: nameStateOf(sp), known: knownByRole[slot.role], knownByRole,
     swap: swapPartnerOf(speakers, sp),
+    sessionSpeakers: speakers.map((x) => ({
+      code: x.speaker_code, slot: slotOf(x), name: x.name || "", role: pickerRoleOf(x.speaker_code),
+    })),
   };
 }
 
@@ -255,6 +262,15 @@ export interface NativePick {
   knownByRole?: Record<PickerRole, PersonPickerRow[]>;
   /** Who this speaker would swap with (§J7 call 4). */
   swap?: PersonPickerSwap;
+  /** From a transcript paragraph (§K): the Session | Paragraph switch. A
+   *  paragraph pick moves the paragraph; any other pick from a scoped picker
+   *  was made on Session, which is where the switch then stays. */
+  scope?: {
+    paragraph: boolean;
+    speakers: PickerSessionSpeaker[];
+    onScope: (paragraph: boolean) => void;
+    onMove: (to: ParagraphTarget) => void;
+  };
   apply: (choice: PersonPickerChoice) => void;
   refuse: (name: string) => void;
 }
@@ -269,11 +285,18 @@ function onMenuAction(e: Event): void {
   void import("./personPickerBridge").then(({ resolvePersonPickerChoice }) => {
     const pick = resolvePersonPickerChoice(payload, (sessionId, code) =>
       sessionId === open.sessionId && code === open.code
-        ? { slot: open.slot, known: open.known, knownByRole: open.knownByRole, swap: open.swap }
+        ? { slot: open.slot, known: open.known, knownByRole: open.knownByRole, swap: open.swap,
+            speakers: open.scope?.speakers }
         : null,
     );
     if (!pick) return;
     if (pending === open) pending = null;
+    if ("paragraph" in pick) {
+      open.scope?.onScope(true);
+      open.scope?.onMove(pick.paragraph);
+      return;
+    }
+    open.scope?.onScope(false);
     if ("taken" in pick) open.refuse(pick.taken);
     else open.apply(pick.choice);
   });
@@ -292,7 +315,10 @@ export function openNativePicker(pick: NativePick, anchor: HTMLElement): void {
   void Promise.all([import("./personPickerBridge"), import("../shims/bridge")]).then(
     ([{ buildPersonPickerMessage }, { postPersonPicker }]) =>
       postPersonPicker(
-        buildPersonPickerMessage(pick.sessionId, pick.slot, pick.known, rect, i18n.t, pick.knownByRole, pick.swap),
+        buildPersonPickerMessage(
+          pick.sessionId, pick.slot, pick.known, rect, i18n.t, pick.knownByRole, pick.swap,
+          pick.scope ? { paragraph: pick.scope.paragraph, speakers: pick.scope.speakers } : undefined,
+        ),
       ),
   );
 }

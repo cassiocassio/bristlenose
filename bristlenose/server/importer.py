@@ -349,11 +349,13 @@ def import_project(db: Session, project_dir: Path) -> Project:
     _import_transcript_segments(db, session_map, transcripts_dir)
     db.flush()  # ensure segments have IDs before word enrichment
     _enrich_words_from_intermediate(db, session_map, output_dir)
-    # The researcher's splits and joins, made again on the rebuilt paragraphs.
-    _replay_layout_edits(db, session_map)
 
     # --- Import persons + session_speakers from transcript segments ------
     _import_speakers(db, session_map, transcripts_dir, output_dir)
+    # The researcher's splits, joins and moved paragraphs, made again on the
+    # rebuilt paragraphs — after the speakers, since a move checks its target
+    # against this import's slots.
+    _replay_layout_edits(db, session_map)
 
     # --- Import quotes, clusters, themes ---------------------------------
     quote_map = _import_quotes_from_clusters(

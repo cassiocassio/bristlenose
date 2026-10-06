@@ -160,7 +160,10 @@
       "proposedName": "{{code}}, proposed name {{name}}",
       "nameTaken": "{{name}} is already in the list. Pick them, or add something to tell the two apart.",
       "notThisPerson": "Not {{name}}",
-      "swapWith": "Swap with {{code}}"
+      "swapWith": "Swap with {{code}}",
+      "scopeSession": "Session",
+      "scopeParagraph": "Paragraph",
+      "scopeGroup": "Applies to"
     },
     "reanalyse": {
       "button": "Re-analyse…",
@@ -678,6 +681,7 @@
       "clearName": "Undo Clear Name",
       "changeRole": "Undo Change Role",
       "swapRoles": "Undo Swap Roles",
+      "reassignParagraph": "Undo Reassign Paragraph",
       "splitParagraph": "Undo Split Paragraph",
       "joinParagraphs": "Undo Join Paragraphs"
     },
@@ -699,6 +703,7 @@
       "clearName": "Redo Clear Name",
       "changeRole": "Redo Change Role",
       "swapRoles": "Redo Swap Roles",
+      "reassignParagraph": "Redo Reassign Paragraph",
       "splitParagraph": "Redo Split Paragraph",
       "joinParagraphs": "Redo Join Paragraphs"
     }

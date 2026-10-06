@@ -138,7 +138,10 @@
       "proposedName": "{{code}}, voorgestelde naam {{name}}",
       "nameTaken": "{{name}} staat al in de lijst. Kies die persoon of voeg iets toe om de twee uit elkaar te houden.",
       "notThisPerson": "Niet {{name}}",
-      "swapWith": "Wisselen met {{code}}"
+      "swapWith": "Wisselen met {{code}}",
+      "scopeSession": "Sessie",
+      "scopeParagraph": "Alinea",
+      "scopeGroup": "Geldt voor"
     },
     "moderatedBy": "Gemodereerd door {{names}}",
     "observer_one": "Waarnemer: {{names}}",
@@ -676,6 +679,7 @@
       "clearName": "Herstel naam wissen",
       "changeRole": "Herstel rol wijzigen",
       "swapRoles": "Herstel rollen wisselen",
+      "reassignParagraph": "Herstel alinea toewijzen",
       "splitParagraph": "Herstel alinea splitsen",
       "joinParagraphs": "Herstel alinea’s samenvoegen"
     },
@@ -697,6 +701,7 @@
       "clearName": "Opnieuw naam wissen",
       "changeRole": "Opnieuw rol wijzigen",
       "swapRoles": "Opnieuw rollen wisselen",
+      "reassignParagraph": "Opnieuw alinea toewijzen",
       "splitParagraph": "Opnieuw alinea splitsen",
       "joinParagraphs": "Opnieuw alinea’s samenvoegen"
     }

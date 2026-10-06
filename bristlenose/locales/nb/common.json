@@ -138,7 +138,10 @@
       "proposedName": "{{code}}, foresl\u00e5tt navn {{name}}",
       "nameTaken": "{{name}} st\u00e5r allerede i listen. Velg personen, eller legg til noe som skiller de to.",
       "notThisPerson": "Ikke {{name}}",
-      "swapWith": "Bytt med {{code}}"
+      "swapWith": "Bytt med {{code}}",
+      "scopeSession": "\u00d8kt",
+      "scopeParagraph": "Avsnitt",
+      "scopeGroup": "Gjelder for"
     },
     "moderatedBy": "Moderert av {{names}}",
     "observer_one": "Observatør: {{names}}",
@@ -676,6 +679,7 @@
       "clearName": "Angre fjerning av navn",
       "changeRole": "Angre rolleendring",
       "swapRoles": "Angre rollebytte",
+      "reassignParagraph": "Angre ny tildeling av avsnitt",
       "splitParagraph": "Angre deling av avsnitt",
       "joinParagraphs": "Angre sammenslåing av avsnitt"
     },
@@ -697,6 +701,7 @@
       "clearName": "Utf\u00f8r fjerning av navn likevel",
       "changeRole": "Utf\u00f8r rolleendring likevel",
       "swapRoles": "Utf\u00f8r rollebytte likevel",
+      "reassignParagraph": "Utf\u00f8r ny tildeling av avsnitt likevel",
       "splitParagraph": "Utfør deling av avsnitt likevel",
       "joinParagraphs": "Utfør sammenslåing av avsnitt likevel"
     }

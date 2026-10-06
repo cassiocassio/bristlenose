@@ -11,6 +11,9 @@ importer rebuilds a session's paragraphs from the pipeline's transcript on every
 import and replays them in order (``replay``), so a split outlives a re-run.
 A split is made at a word boundary, counted in words, so it means the same thing
 whether the paragraph is drawn from Whisper's words or from its text.
+
+A third kind, ``speaker``, credits one paragraph to another speaker of the same
+session — the transcript picker's Paragraph scope (``design-people.md`` §K).
 """
 
 from __future__ import annotations
@@ -21,7 +24,7 @@ import logging
 from sqlalchemy.orm import Session as DbSession
 
 from bristlenose.server.models import Session as SessionModel
-from bristlenose.server.models import TranscriptLayoutEdit, TranscriptSegment
+from bristlenose.server.models import SessionSpeaker, TranscriptLayoutEdit, TranscriptSegment
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +123,7 @@ def _split(db: DbSession, segs: list[TranscriptSegment], position: int, token: i
         source=seg.source,
         segment_index=seg.segment_index,
         words_json=json.dumps(right_words, separators=(",", ":")) if right_words else None,
+        moved_from=seg.moved_from,
     )
     seg.text = " ".join(drawn[:token])
     seg.end_time = min(seg.end_time, start) if seg.end_time > seg.start_time else seg.end_time
@@ -134,6 +138,10 @@ def _join(db: DbSession, segs: list[TranscriptSegment], position: int, verify: s
     first, second = segs[position - 1], segs[position]
     if first.speaker_code != second.speaker_code:
         raise LayoutRefusedError("two speakers' paragraphs are not joined")
+    # A moved paragraph keeps whose words it was (``moved_from``), which a join
+    # would lose or spread over words that were never moved (§K).
+    if first.moved_from != second.moved_from:
+        raise LayoutRefusedError("a moved paragraph is not joined to one that was not")
     if join_verify(second) != verify:
         raise LayoutRefusedError("the paragraph has changed")
     a, b = _words(first), _words(second)
@@ -146,6 +154,60 @@ def _join(db: DbSession, segs: list[TranscriptSegment], position: int, verify: s
     db.flush()
 
 
+#: Roles a Paragraph-scope move can create a speaker in, by their code's letter.
+NEW_ROLES = {"moderator": ("m", "researcher")}
+
+
+def mint_code(db: DbSession, session_pk: int, role: str, issued: list[str]) -> str:
+    """The next code of ``role``'s letter in this session: above every slot it
+    has and every code the pipeline ever issued it (``issued``), so a later
+    re-run's own speaker never takes it."""
+    letter, _ = NEW_ROLES[role]
+    held = [sp.speaker_code for sp in db.query(SessionSpeaker).filter_by(session_id=session_pk)]
+    numbers = [
+        int(c[1:]) for c in held + issued
+        if c[:1] == letter and c[1:].isdigit()
+    ]
+    return f"{letter}{max(numbers, default=0) + 1}"
+
+
+def _speaker(db: DbSession, segs: list[TranscriptSegment], position: int, verify: str,
+             code: str, creates: bool = False) -> None:
+    """Credit one paragraph to another speaker of its session (§K, the
+    picker's Paragraph scope). The words and timing stay; ``moved_from``
+    remembers whose they were, so a quote from them leaves the evidence.
+
+    ``creates``: the move made its speaker, a new unknown moderator (a call
+    collapsed into one voice has none to move to). The importer drops a
+    moderator slot nobody confirmed that the transcript no longer uses, so the
+    replay makes it again — unless the pipeline's own transcript now uses the
+    code, when the move is refused rather than landed on someone real."""
+    if not 0 <= position < len(segs):
+        raise LayoutRefusedError("no such paragraph")
+    seg = segs[position]
+    if join_verify(seg) != verify:
+        raise LayoutRefusedError("the paragraph has changed")
+    if code == seg.speaker_code:
+        raise LayoutRefusedError("the paragraph is already that speaker's")
+    held = {
+        sp.speaker_code
+        for sp in db.query(SessionSpeaker).filter_by(session_id=seg.session_id)
+    }
+    if creates and any(g.speaker_code == code and g.moved_from is None for g in segs):
+        raise LayoutRefusedError("the new speaker's code is now someone else's")
+    if code not in held:
+        role = next((r for k, (letter, r) in NEW_ROLES.items() if code[:1] == letter), None)
+        if not creates or role is None:
+            raise LayoutRefusedError("no such speaker in this session")
+        db.add(SessionSpeaker(session_id=seg.session_id, person_id=None,
+                              speaker_code=code, speaker_role=role))
+    origin = seg.moved_from or seg.speaker_code
+    seg.speaker_code = code
+    # Moved back to whoever it came from: it is theirs again.
+    seg.moved_from = None if code == origin else origin
+    db.flush()
+
+
 def apply(db: DbSession, edit: TranscriptLayoutEdit) -> None:
     """Make one recorded edit on the session's live paragraphs."""
     segs = ordered(db, edit.session_id)
@@ -153,6 +215,8 @@ def apply(db: DbSession, edit: TranscriptLayoutEdit) -> None:
         _split(db, segs, edit.position, edit.token, edit.verify)
     elif edit.kind == "join":
         _join(db, segs, edit.position, edit.verify)
+    elif edit.kind == "speaker":
+        _speaker(db, segs, edit.position, edit.verify, edit.speaker_code, creates=edit.token == 1)
     else:
         raise LayoutRefusedError(f"unknown edit {edit.kind!r}")
 

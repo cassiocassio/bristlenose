@@ -371,6 +371,10 @@ class TranscriptSegment(Base):
     source: Mapped[str] = mapped_column(String(50), default="")  # whisper, srt, vtt, docx
     segment_index: Mapped[int] = mapped_column(Integer, default=-1)
     words_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    #: The slot this paragraph was credited to before the researcher moved it
+    #: to another speaker (§K, the picker's Paragraph scope). Set by the
+    #: layout edit's replay; a quote from these words leaves the evidence.
+    moved_from: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
 
     session: Mapped[Session] = relationship(back_populates="transcript_segments")
 
@@ -397,7 +401,7 @@ class TranscriptLayoutEdit(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True)
-    kind: Mapped[str] = mapped_column(String(10))  # "split" | "join"
+    kind: Mapped[str] = mapped_column(String(10))  # "split" | "join" | "speaker"
     #: The paragraph's place in the session's ordered list: the one split, or
     #: for a join the second paragraph, joined onto the one before it.
     position: Mapped[int] = mapped_column(Integer)
@@ -406,6 +410,8 @@ class TranscriptLayoutEdit(Base):
     #: The words the edit was made against — a split's first words after the
     #: cut, a join's first words of the second paragraph.
     verify: Mapped[str] = mapped_column(Text, default="")
+    #: A "speaker" edit's target: the slot the paragraph is moved to (§K).
+    speaker_code: Mapped[str] = mapped_column(String(20), default="")
     created_at: Mapped[datetime] = mapped_column(default=func.now())
 
 

@@ -16,6 +16,9 @@ import { useTranslation } from "react-i18next";
 import { PersonBadge } from "./PersonBadge";
 import { isExportMode } from "../utils/exportData";
 import { isEmbedded } from "../utils/embedded";
+import { reassignParagraph } from "../utils/paragraphEdits";
+import { paragraphScopeFor, setParagraphScope } from "../utils/paragraphScope";
+import type { ParagraphTarget } from "../utils/personPicker";
 import {
   applySpeakerChoice,
   hasNativePersonPicker,
@@ -38,11 +41,34 @@ interface SpeakerPickerTriggerProps {
   /** False for a badge repeated on every paragraph: a click target, but not
    *  a Tab stop each, or a long transcript would be hundreds of them. */
   tabbable?: boolean;
+  /** On a transcript paragraph: which paragraph, so the picker offers the
+   *  Session | Paragraph switch (design-people.md §K). Its place and first
+   *  words, as the page drew them. */
+  paragraph?: { position: number; verify: string };
 }
 
-export function SpeakerPickerTrigger({ sessionId, code, role, name, tabbable = true }: SpeakerPickerTriggerProps) {
+export function SpeakerPickerTrigger({
+  sessionId, code, role, name, tabbable = true, paragraph,
+}: SpeakerPickerTriggerProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<SpeakerPickContext | null>(null);
+  // Sticky across the transcript's badges (paragraphScope), read on open.
+  const [onParagraph, setOnParagraph] = useState(false);
+  const scopeFor = (ctx: SpeakerPickContext) =>
+    paragraph
+      ? {
+          paragraph: onParagraph,
+          speakers: ctx.sessionSpeakers,
+          onScope: (p: boolean) => {
+            setParagraphScope(sessionId, p);
+            setOnParagraph(p);
+          },
+          onMove: (to: ParagraphTarget) => {
+            void reassignParagraph(sessionId, paragraph.position, paragraph.verify, to)
+              .catch(() => undefined);
+          },
+        }
+      : undefined;
   const badge = <PersonBadge code={code} role={role} name={name} />;
 
   // An exported report draws the badge plain: nothing it does could be saved.
@@ -55,9 +81,13 @@ export function SpeakerPickerTrigger({ sessionId, code, role, name, tabbable = t
       return;
     }
     const anchor = e.currentTarget;
+    setOnParagraph(paragraphScopeFor(sessionId));
     void loadSpeakerContext(sessionId, code).then((ctx) => {
       if (!ctx) return;
       if (isEmbedded() && hasNativePersonPicker()) {
+        const scope = paragraph
+          ? { ...scopeFor(ctx)!, paragraph: paragraphScopeFor(sessionId) }
+          : undefined;
         openNativePicker(
           {
             sessionId,
@@ -66,6 +96,7 @@ export function SpeakerPickerTrigger({ sessionId, code, role, name, tabbable = t
             known: ctx.known,
             knownByRole: ctx.knownByRole,
             swap: ctx.swap,
+            scope,
             apply: (choice) => applySpeakerChoice(ctx, choice),
             refuse: refuseTakenName,
           },
@@ -97,6 +128,7 @@ export function SpeakerPickerTrigger({ sessionId, code, role, name, tabbable = t
             known={open.known}
             knownByRole={open.knownByRole}
             swap={open.swap}
+            scope={scopeFor(open)}
             t={t}
             onChoose={(choice) => applySpeakerChoice(open, choice)}
             onClose={() => setOpen(null)}

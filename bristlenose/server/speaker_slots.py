@@ -21,11 +21,12 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session as DbSession
 
-from bristlenose.server.models import Person, Quote, SessionSpeaker
+from bristlenose.server.models import Person, Quote, SessionSpeaker, TranscriptSegment
 from bristlenose.server.models import Session as SessionModel
 
 logger = logging.getLogger(__name__)
@@ -316,7 +317,53 @@ def is_participant(db: DbSession, person: Person, *, but: SessionSpeaker | None 
     )
 
 
-def evidence_out(db: DbSession, project_id: int) -> set[tuple[str, str]]:
+class EvidenceOut(set[tuple[str, str]]):
+    """What leaves the evidence: ``(session id, tag)`` pairs, as a set, plus
+    ``quotes`` — the ids of quotes whose words were moved off their participant
+    one paragraph at a time (§K). A set, so a caller that reads the pairs alone
+    keeps working; ``counts`` reads both."""
+
+    def __init__(self, pairs: Iterable[tuple[str, str]] = (), quotes: Iterable[int] = ()) -> None:
+        super().__init__(pairs)
+        self.quotes: set[int] = set(quotes)
+
+
+def _moved_quotes(db: DbSession, project_id: int) -> set[int]:
+    """Quotes whose words now belong to someone else (§K, Paragraph scope).
+
+    Only sessions where a paragraph was moved are read. A quote leaves when a
+    paragraph its window overlaps was moved off its credited tag and no
+    paragraph it overlaps is still that tag's — so a quote spanning a moved
+    and an unmoved paragraph stays. Overlap is strict: a paragraph that only
+    touches the window at its edge does not count. Untimed transcripts (every
+    paragraph at 0:00) overlap nothing, so nothing leaves there.
+    """
+    moved = (
+        db.query(TranscriptSegment, SessionModel.session_id)
+        .join(SessionModel, SessionModel.id == TranscriptSegment.session_id)
+        .filter(SessionModel.project_id == project_id, TranscriptSegment.moved_from.isnot(None))
+        .all()
+    )
+    if not moved:
+        return set()
+    out: set[int] = set()
+    for sid in {s for _, s in moved}:
+        sess = db.query(SessionModel).filter_by(project_id=project_id, session_id=sid).first()
+        if sess is None:
+            continue
+        segs = db.query(TranscriptSegment).filter_by(session_id=sess.id).all()
+        for q in db.query(Quote).filter_by(project_id=project_id, session_id=sid):
+            over = [
+                g for g in segs
+                if g.start_time < q.end_timecode and g.end_time > q.start_timecode
+            ]
+            if (any(g.moved_from == q.participant_id for g in over)
+                    and not any(g.speaker_code == q.participant_id for g in over)):
+                out.add(q.id)
+    return out
+
+
+def evidence_out(db: DbSession, project_id: int) -> EvidenceOut:
     """``(session id, tag)`` for every participant tag whose speaker was
     recoded as a moderator or observer (design-people.md §J7 R2, §C4).
 
@@ -337,19 +384,25 @@ def evidence_out(db: DbSession, project_id: int) -> set[tuple[str, str]]:
         )
         .all()
     )
-    return {(sid, sp.speaker_code) for sid, sp in rows if is_recoded_out(sp)}
+    return EvidenceOut(
+        {(sid, sp.speaker_code) for sid, sp in rows if is_recoded_out(sp)},
+        _moved_quotes(db, project_id),
+    )
 
 
 def counts(quote: object, out: set[tuple[str, str]]) -> bool:
-    """Whether a quote is evidence: its credited speaker is still a participant."""
-    return (getattr(quote, "session_id", ""), getattr(quote, "participant_id", "")) not in out
+    """Whether a quote is evidence: its credited speaker is still a participant,
+    and its words were not moved to someone else a paragraph at a time."""
+    if (getattr(quote, "session_id", ""), getattr(quote, "participant_id", "")) in out:
+        return False
+    return getattr(quote, "id", None) not in getattr(out, "quotes", ())
 
 
 def evidence_quotes(db: DbSession, project_id: int) -> list[Quote]:
     """The project's quotes that count as evidence (``evidence_out``)."""
     out = evidence_out(db, project_id)
     quotes = db.query(Quote).filter_by(project_id=project_id).all()
-    return [q for q in quotes if counts(q, out)] if out else quotes
+    return [q for q in quotes if counts(q, out)] if out or out.quotes else quotes
 
 
 def by_uuid(db: DbSession, uuid: str) -> Person | None:

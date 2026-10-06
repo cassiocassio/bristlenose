@@ -160,7 +160,10 @@
       "proposedName": "{{code}}, \u00f6nerilen ad {{name}}",
       "nameTaken": "{{name}} zaten listede. Bu ki\u015fiyi se\u00e7in ya da ikisini ay\u0131rt edecek bir \u015fey ekleyin.",
       "notThisPerson": "{{name}} de\u011fil",
-      "swapWith": "{{code}} ile yer de\u011fi\u015ftir"
+      "swapWith": "{{code}} ile yer de\u011fi\u015ftir",
+      "scopeSession": "Oturum",
+      "scopeParagraph": "Paragraf",
+      "scopeGroup": "Uygulama kapsam\u0131"
     },
     "reanalyse": {
       "button": "Yeniden Analiz Et…",
@@ -676,6 +679,7 @@
       "clearName": "Ad\u0131 Temizlemeyi Geri Al",
       "changeRole": "Rol\u00fc De\u011fi\u015ftirmeyi Geri Al",
       "swapRoles": "Rolleri Takas Etmeyi Geri Al",
+      "reassignParagraph": "Paragraf\u0131 Yeniden Atamay\u0131 Geri Al",
       "splitParagraph": "Paragrafı Bölmeyi Geri Al",
       "joinParagraphs": "Paragrafları Birleştirmeyi Geri Al"
     },
@@ -697,6 +701,7 @@
       "clearName": "Ad\u0131 Temizlemeyi Yinele",
       "changeRole": "Rol\u00fc De\u011fi\u015ftirmeyi Yinele",
       "swapRoles": "Rolleri Takas Etmeyi Yinele",
+      "reassignParagraph": "Paragraf\u0131 Yeniden Atamay\u0131 Yinele",
       "splitParagraph": "Paragrafı Bölmeyi Yinele",
       "joinParagraphs": "Paragrafları Birleştirmeyi Yinele"
     }

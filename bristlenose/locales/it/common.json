@@ -160,7 +160,10 @@
       "proposedName": "{{code}}, nome proposto {{name}}",
       "nameTaken": "{{name}} \u00e8 gi\u00e0 nell\u2019elenco. Scegli quella persona o aggiungi qualcosa per distinguere le due.",
       "notThisPerson": "Non \u00e8 {{name}}",
-      "swapWith": "Scambia con {{code}}"
+      "swapWith": "Scambia con {{code}}",
+      "scopeSession": "Sessione",
+      "scopeParagraph": "Paragrafo",
+      "scopeGroup": "Si applica a"
     },
     "reanalyse": {
       "button": "Rianalizza…",
@@ -676,6 +679,7 @@
       "clearName": "Annulla Cancella nome",
       "changeRole": "Annulla Cambia ruolo",
       "swapRoles": "Annulla Scambia ruoli",
+      "reassignParagraph": "Annulla Riassegna paragrafo",
       "splitParagraph": "Annulla Dividi paragrafo",
       "joinParagraphs": "Annulla Unisci paragrafi"
     },
@@ -697,6 +701,7 @@
       "clearName": "Ripristina Cancella nome",
       "changeRole": "Ripristina Cambia ruolo",
       "swapRoles": "Ripristina Scambia ruoli",
+      "reassignParagraph": "Ripristina Riassegna paragrafo",
       "splitParagraph": "Ripristina Dividi paragrafo",
       "joinParagraphs": "Ripristina Unisci paragrafi"
     }

@@ -178,7 +178,10 @@
       "proposedName": "{{code}}, proponowane imi\u0119 {{name}}",
       "nameTaken": "{{name}} jest ju\u017c na li\u015bcie. Wybierz t\u0119 osob\u0119 albo dodaj co\u015b, co odr\u00f3\u017cni obie.",
       "notThisPerson": "To nie {{name}}",
-      "swapWith": "Zamie\u0144 z {{code}}"
+      "swapWith": "Zamie\u0144 z {{code}}",
+      "scopeSession": "Sesja",
+      "scopeParagraph": "Akapit",
+      "scopeGroup": "Dotyczy"
     },
     "reanalyse": {
       "button": "Analizuj ponownie…",
@@ -750,6 +753,7 @@
       "clearName": "Cofnij usuni\u0119cie imienia",
       "changeRole": "Cofnij zmian\u0119 roli",
       "swapRoles": "Cofnij zamian\u0119 r\u00f3l",
+      "reassignParagraph": "Cofnij ponowne przypisanie akapitu",
       "splitParagraph": "Cofnij podzia\u0142 akapitu",
       "joinParagraphs": "Cofnij scalenie akapit\u00f3w"
     },
@@ -771,6 +775,7 @@
       "clearName": "Przywr\u00f3\u0107 usuni\u0119cie imienia",
       "changeRole": "Przywr\u00f3\u0107 zmian\u0119 roli",
       "swapRoles": "Przywr\u00f3\u0107 zamian\u0119 r\u00f3l",
+      "reassignParagraph": "Przywr\u00f3\u0107 ponowne przypisanie akapitu",
       "splitParagraph": "Przywr\u00f3\u0107 podzia\u0142 akapitu",
       "joinParagraphs": "Przywr\u00f3\u0107 scalenie akapit\u00f3w"
     }

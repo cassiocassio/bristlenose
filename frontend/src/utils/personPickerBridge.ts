@@ -28,6 +28,8 @@ import {
   type PersonPickerSlot,
   type PersonPickerSwap,
   type PickerRole,
+  type ParagraphTarget,
+  type PickerSessionSpeaker,
 } from "./personPicker";
 
 /** One other role's rows, for browsing it to recode the speaker (§J7 R1). */
@@ -55,6 +57,10 @@ export interface WirePersonPicker {
   /** The code of the speaker this one would swap with (§J7 call 4); absent
    *  when the session offers no swap. */
   swap?: string;
+  /** From a transcript paragraph's badge only (design-people.md §K): the
+   *  Session | Paragraph switch, where it opens, and this session's speakers —
+   *  who the paragraph can be credited to. */
+  scope?: { paragraph: boolean; speakers: PickerSessionSpeaker[] };
   labels: PersonPickerLabels;
 }
 
@@ -64,6 +70,8 @@ export type WireNativeChoice =
   | { kind: "confirm" }
   | { kind: "swap" }
   | { kind: "clear" }
+  | { kind: "paragraph"; slot: string }
+  | { kind: "paragraph"; new: "moderator" }
   | { kind: "name" | "new" | "me" | "rename"; name: string; role?: PickerRole };
 
 /** What `personPickerChoose` carries back. */
@@ -77,7 +85,8 @@ export interface WirePersonPickerReply {
  *  already goes by, which the grid refuses aloud (§J8.11). */
 export type ResolvedPersonPick =
   | { sessionId: string; code: string; choice: PersonPickerChoice }
-  | { sessionId: string; code: string; taken: string };
+  | { sessionId: string; code: string; taken: string }
+  | { sessionId: string; code: string; paragraph: ParagraphTarget };
 
 export function buildPersonPickerMessage(
   sessionId: string,
@@ -87,6 +96,7 @@ export function buildPersonPickerMessage(
   t: TFunction,
   knownByRole?: Partial<Record<PickerRole, PersonPickerRow[]>>,
   swap?: PersonPickerSwap,
+  scope?: { paragraph: boolean; speakers: PickerSessionSpeaker[] },
 ): WirePersonPicker {
   const rows = personPickerRows(slot, known);
   const roles: Partial<Record<PickerRole, WireRoleRows>> = {};
@@ -110,6 +120,7 @@ export function buildPersonPickerMessage(
     newCode: personPickerNewCode(slot, rows),
     ...(Object.keys(roles).length ? { roles } : {}),
     ...(swap ? { swap: swap.code } : {}),
+    ...(scope ? { scope: { paragraph: scope.paragraph, speakers: scope.speakers } } : {}),
     anchor: {
       x: Math.round(anchor.x),
       y: Math.round(anchor.y),
@@ -142,6 +153,12 @@ export function parsePersonPickerChoice(payload: unknown): WirePersonPickerReply
   if (choice.kind === "confirm") return { sessionId: p.sessionId, code: p.code, choice: { kind: "confirm" } };
   if (choice.kind === "clear") return { sessionId: p.sessionId, code: p.code, choice: { kind: "clear" } };
   if (choice.kind === "swap") return { sessionId: p.sessionId, code: p.code, choice: { kind: "swap" } };
+  if (choice.kind === "paragraph" && choice.new === "moderator") {
+    return { sessionId: p.sessionId, code: p.code, choice: { kind: "paragraph", new: "moderator" } };
+  }
+  if (choice.kind === "paragraph" && typeof choice.slot === "string" && choice.slot) {
+    return { sessionId: p.sessionId, code: p.code, choice: { kind: "paragraph", slot: choice.slot } };
+  }
   const kind = choice.kind;
   if (
     (kind === "name" || kind === "new" || kind === "me" || kind === "rename") &&
@@ -181,6 +198,8 @@ export function resolvePersonPickerChoice(
     known: PersonPickerRow[];
     knownByRole?: Partial<Record<PickerRole, PersonPickerRow[]>>;
     swap?: PersonPickerSwap;
+    /** This session's speakers, where the picker offered the Paragraph scope. */
+    speakers?: PickerSessionSpeaker[];
   } | null,
 ): ResolvedPersonPick | null {
   const pick = parsePersonPickerChoice(payload);
@@ -196,6 +215,14 @@ export function resolvePersonPickerChoice(
   if (pick.choice.kind === "swap") {
     // Only the swap the picker was offered: the session may have changed.
     return found.swap ? { sessionId, code, choice: { kind: "swap", slot: found.swap.slot } } : null;
+  }
+  if (pick.choice.kind === "paragraph") {
+    // Only where the picker offered the Paragraph scope (§K): to a speaker
+    // this session has, by slot, or to a new moderator.
+    if (!found.speakers) return null;
+    if ("new" in pick.choice) return { sessionId, code, paragraph: { new: "moderator" } };
+    const target = pick.choice.slot;
+    return found.speakers.some((s) => s.slot === target) ? { sessionId, code, paragraph: { slot: target } } : null;
   }
   const rows = personPickerRows(slot, found.known);
   const { kind, name } = pick.choice;

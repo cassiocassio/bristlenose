@@ -72,6 +72,14 @@ Not wired yet:
 - **Dimmed bars at 0.4 opacity** are fine for v1.
 - **The export carries quote text twice** (in `/quotes`, and up to 400 characters each in `/tapestry`). Deferred to v1.1.
 
+**Open after the second review (6 Oct 2026), for the owner to decide:**
+- While a quote is open, the slice takes Esc and the arrow keys first, ahead of other surfaces (the person picker's Esc, the grid's arrows).
+- The sessionStorage key falls back to project id `1` when the page has none, so two such projects in one tab share a view.
+- Theme chips can now overlap a neighbouring chip on the same row, since names are no longer cut.
+- Scroll is stored in pixels, not seconds, so a restored position drifts if the zoom changed.
+- Clicking a slice's scrollbar counts as an outside click and closes the popover; the popover also stays open when its bar scrolls out of view.
+- Accessibility: Prev/Next moves focus off the bar; the popover has no role or accessible name; the timecode button's name doesn't say it opens the transcript; a selection is announced twice; Option-click "open all" has no keyboard path; in dark mode the span bar shows through the chip's fade at about 4.4:1.
+
 ## Measured
 
 - **The video never flips with the speaker.** Across 25 distinct recordings in the maintainer's test corpus, all 12 with two speakers showed the same picture whoever spoke (scene distance 0.3–4.6). The speaker is shown by the track; the colour shows what was on screen.

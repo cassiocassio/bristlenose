@@ -64,10 +64,9 @@ function fonts(): { flag: string; tag: string; clip: string; lane: string } {
   const v = (n: string, fallback: string) => cs.getPropertyValue(n).trim() || fallback;
   const px = (val: string) => (val.endsWith("rem") ? `${parseFloat(val) * 16}px` : val);
   const body = v("--bn-font-body", "system-ui, sans-serif");
-  const mono = v("--bn-font-mono", "ui-monospace, monospace");
   return {
     flag: `${v("--bn-weight-emphasis", "490")} ${px(v("--bn-text-badge", "11.5px"))} ${body}`,
-    tag: `${v("--bn-weight-light", "370")} ${px(v("--bn-text-micro", "9.6px"))} ${mono}`,
+    tag: `${v("--bn-weight-normal", "420")} ${px(v("--bn-text-micro", "9.6px"))} ${body}`,
     clip: `${v("--bn-weight-emphasis", "490")} ${px(v("--bn-text-micro", "9.6px"))} ${body}`,
     lane: `${v("--bn-weight-emphasis", "490")} ${px(v("--bn-text-caption", "12px"))} ${body}`,
   };
@@ -279,6 +278,8 @@ export default function SessionTapestry({
   const lane = (label: string) => fit(label, TAPESTRY_GUTTER - 18, F.lane) || label.slice(0, 1);
 
   const tickStep = [60, 120, 300, 600, 900, 1800].find((st) => st / sPerPx >= 64) ?? 3600;
+  // While hovering the speaker lane, the tick nearest the playhead lights up.
+  const nearTick = playhead === null ? null : Math.round(playhead / tickStep) * tickStep;
   const ticks: number[] = [];
   for (let tk = 0; tk <= s.duration_seconds; tk += tickStep) ticks.push(tk);
 
@@ -451,7 +452,7 @@ export default function SessionTapestry({
           })}
 
           {ticks.map((tk) => (
-            <text key={tk} className="bn-tp-tick" x={x(tk)} y={H - 2} textAnchor={tk === 0 ? "start" : "middle"}>
+            <text key={tk} className={`bn-tp-tick${nearTick === tk ? " near" : ""}`} x={x(tk)} y={H - 2} textAnchor={tk === 0 ? "start" : "middle"}>
               {formatTimecode(tk)}
             </text>
           ))}

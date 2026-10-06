@@ -75,6 +75,8 @@
     font: var(--bn-text-micro) var(--bn-font-mono);
     fill: var(--bn-colour-muted);
 }
+/* The tick nearest the hover playhead, in the timecode blue: about where a click lands. */
+.bn-tp-tick.near { fill: var(--bn-colour-accent); }
 .bn-tp-track { fill: var(--bn-colour-badge-bg); }
 /* Without video the clips fall back to neutral greys; the track says who speaks. */
 .bn-tp-clip-team { fill: var(--bn-colour-border-hover); }
@@ -116,8 +118,9 @@
 
 .bn-tp-span { fill: var(--bn-colour-muted); opacity: 0.5; }
 .bn-tp-tag { fill: var(--bn-colour-badge-bg); }
+/* Sans, not mono: monospace is reserved for tag text, and a theme is not a tag. */
 .bn-tp-tag-text {
-    font: var(--bn-weight-light) var(--bn-text-micro) var(--bn-font-mono);
+    font: var(--bn-weight-normal) var(--bn-text-micro) var(--bn-font-body);
     fill: var(--bn-colour-badge-text);
 }
 

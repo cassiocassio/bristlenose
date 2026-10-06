@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import SessionTapestry from "./SessionTapestry";
 import { fitScale, zoomScale } from "../utils/tapestryScale";
 import type { TapestrySession } from "../utils/types";
@@ -81,6 +81,19 @@ describe("SessionTapestry", () => {
     const { onJump } = setup();
     fireEvent.click(document.querySelectorAll(".bn-tp-flag")[1]);
     expect(onJump).toHaveBeenCalledWith(300);
+  });
+});
+
+describe("SessionTapestry — hover", () => {
+  it("lights the tick nearest the playhead while the speaker lane is hovered", async () => {
+    setup(); // 1 s/px: ticks every 2 min
+    const lane = document.querySelector(".bn-tp-hit")!;
+    fireEvent.mouseMove(lane, { clientX: 82 + 250 }); // 4:10
+    await waitFor(() =>
+      expect(Array.from(document.querySelectorAll(".bn-tp-tick.near")).map((n) => n.textContent)).toEqual(["04:00"]),
+    );
+    fireEvent.mouseLeave(lane);
+    expect(document.querySelectorAll(".bn-tp-tick.near")).toHaveLength(0);
   });
 });
 

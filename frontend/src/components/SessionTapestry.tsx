@@ -17,7 +17,7 @@
  * helpers the table needs eagerly live in utils/tapestryScale.ts.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "./Badge";
 import type { TapestryQuote, TapestrySession } from "../utils/types";
@@ -59,7 +59,7 @@ function fit(text: string, avail: number, font: string): string {
   while (t.length > 1 && measure(t + "…", font) > avail) t = t.slice(0, -1);
   return t.length > 1 ? t + "…" : "";
 }
-function fonts(): { flag: string; tag: string; clip: string } {
+function fonts(): { flag: string; tag: string; clip: string; lane: string } {
   const cs = getComputedStyle(document.documentElement);
   const v = (n: string, fallback: string) => cs.getPropertyValue(n).trim() || fallback;
   const px = (val: string) => (val.endsWith("rem") ? `${parseFloat(val) * 16}px` : val);
@@ -69,6 +69,7 @@ function fonts(): { flag: string; tag: string; clip: string } {
     flag: `${v("--bn-weight-emphasis", "490")} ${px(v("--bn-text-badge", "11.5px"))} ${body}`,
     tag: `${v("--bn-weight-light", "370")} ${px(v("--bn-text-micro", "9.6px"))} ${mono}`,
     clip: `${v("--bn-weight-emphasis", "490")} ${px(v("--bn-text-micro", "9.6px"))} ${body}`,
+    lane: `${v("--bn-weight-emphasis", "490")} ${px(v("--bn-text-caption", "12px"))} ${body}`,
   };
 }
 
@@ -110,6 +111,10 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump }: Pro
   const [themeFocus, setThemeFocus] = useState<string | null>(null);
   const F = useMemo(() => fonts(), []);
   const panelId = `bn-tp-panel-${session.session_id}`;
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [pop, setPop] = useState<{ left: number; top: number; width: number; arrow: number } | null>(null);
 
   const choose = (i: number) => {
     setSelected(i);
@@ -166,6 +171,18 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump }: Pro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, s.quotes.length]);
 
+  // A click anywhere that is not a bar or the popover closes the quote, like a Mac popover.
+  useEffect(() => {
+    if (selected < 0) return;
+    const onDown = (e: PointerEvent) => {
+      const tgt = e.target as Element | null;
+      if (tgt?.closest?.(".bn-tp-bar, .bn-tp-popover")) return;
+      setSelected(-1);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [selected]);
+
   // Keep the selected bar in view inside the horizontally scrolling slice; focus follows the
   // selection (clicking an SVG element does not focus it in WebKit); announce the change.
   useEffect(() => {
@@ -215,6 +232,31 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump }: Pro
     return [...by.entries()].sort((a, b) => a[1].t0 - b[1].t0);
   }, [s.quotes]);
 
+  // The popover floats under its bar — over the themes track, not below the slice — with its
+  // arrow on the bar. Measured after layout: the slice scrolls, the popover does not.
+  const selQ = selected >= 0 ? s.quotes[selected] : undefined;
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    const svg = svgRef.current;
+    if (!selQ || !wrap || !svg) {
+      setPop(null);
+      return;
+    }
+    const w = wrap.getBoundingClientRect();
+    const g = svg.getBoundingClientRect();
+    const barX = g.left - w.left + x(selQ.t0);
+    const h = (0.35 + (0.65 * (Math.min(3, Math.max(1, selQ.intensity)) - 1)) / 2) * SE.amp;
+    const below = selQ.sentiment && !POSITIVE.has(selQ.sentiment) && selQ.sentiment !== "surprise" ? SE.mid + h : SE.mid + 4;
+    const width = Math.max(200, Math.min(440, (wrap.clientWidth || 440) - 16));
+    const left = Math.max(8, Math.min(barX - 48, (wrap.clientWidth || width + 16) - width - 8));
+    setPop({ left, top: g.top - w.top + below + 9, width, arrow: Math.max(14, Math.min(width - 14, barX - left)) });
+    // x depends on sPerPx; scrollLeft moves the bar under a fixed popover.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selQ, sPerPx, scrollLeft]);
+
+  // Lane labels are fitted to the gutter, so a long translation ellipsises rather than overruns.
+  const lane = (label: string) => fit(label, TAPESTRY_GUTTER - 18, F.lane) || label.slice(0, 1);
+
   const tickStep = [60, 120, 300, 600, 900, 1800].find((st) => st / sPerPx >= 64) ?? 3600;
   const ticks: number[] = [];
   for (let tk = 0; tk <= s.duration_seconds; tk += tickStep) ticks.push(tk);
@@ -223,11 +265,11 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump }: Pro
   if (raised >= 0) flagOrder.push(raised); // raised flag draws last, on top
 
   const themeEnds = Array(TG.rows).fill(-1e9) as number[];
-  const sel: TapestryQuote | undefined = selected >= 0 ? s.quotes[selected] : undefined;
+  const sel: TapestryQuote | undefined = selQ;
 
   return (
-    <>
-      <div className="bn-tapestry-scroll">
+    <div className="bn-tp-wrap" ref={wrapRef}>
+      <div className="bn-tapestry-scroll" onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}>
         <svg
           ref={svgRef}
           className="bn-tapestry-svg"
@@ -242,11 +284,11 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump }: Pro
               <feDropShadow dx={0} dy={0.6} stdDeviation={0.9} floodColor="#000" floodOpacity={0.16} />
             </filter>
           </defs>
-          <text className="bn-tp-lane" x={8} y={14}>{t("quotes.sections")}</text>
-          <text className="bn-tp-lane" x={8} y={MT.y + 12}>{t("sessions.speakerPlaceholder.moderator")}</text>
-          <text className="bn-tp-lane" x={8} y={PT.y + 13}>{t("sessions.speakerPlaceholder.participant")}</text>
-          <text className="bn-tp-lane" x={8} y={SE.mid + 3}>{t("sessions.colSentiment")}</text>
-          <text className="bn-tp-lane" x={8} y={TG.y + 11}>{t("quotes.themes")}</text>
+          <text className="bn-tp-lane" x={12} y={14}>{lane(t("quotes.sections"))}</text>
+          <text className="bn-tp-lane" x={12} y={MT.y + 12}>{lane(t("sessions.speakerPlaceholder.moderator"))}</text>
+          <text className="bn-tp-lane" x={12} y={PT.y + 13}>{lane(t("sessions.speakerPlaceholder.participant"))}</text>
+          <text className="bn-tp-lane" x={12} y={SE.mid + 3}>{lane(t("sessions.colSentiment"))}</text>
+          <text className="bn-tp-lane" x={12} y={TG.y + 11}>{lane(t("quotes.themes"))}</text>
 
           {/* Speaker clips */}
           <rect className="bn-tp-track" x={TAPESTRY_GUTTER} y={MT.y - 1} width={Math.max(0, xEnd - TAPESTRY_GUTTER)}
@@ -394,33 +436,50 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump }: Pro
       </div>
 
       {sel && (
-        // The whole panel opens the transcript at the quote; the faint hover tint says so.
+        // The whole popover opens the transcript at the quote; the faint hover tint says so.
         // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
         <div
-          className="bn-tp-card"
-          style={{ "--bn-tp-accent": sel.sentiment ? `var(--bn-sentiment-${sel.sentiment})` : "var(--bn-colour-border)" } as React.CSSProperties}
+          ref={popRef}
+          className="bn-tp-popover"
           id={panelId}
+          style={{
+            left: pop?.left ?? 0,
+            top: pop?.top ?? 0,
+            width: pop?.width,
+            visibility: pop ? "visible" : "hidden",
+            "--bn-tp-arrow-x": `${pop?.arrow ?? 24}px`,
+            "--bn-tp-accent": sel.sentiment ? `var(--bn-sentiment-${sel.sentiment})` : "var(--bn-colour-border)",
+          } as React.CSSProperties}
           onClick={() => onJump(sel.t0)}
         >
-          <div className="bn-tp-nav">
-            <button type="button" aria-label={t("sessions.tapestry.previousQuote")} disabled={selected <= 0}
+          <div className="bn-tp-actions">
+            <div className="bn-tp-nav">
+              <button type="button" aria-label={t("sessions.tapestry.previousQuote")} disabled={selected <= 0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  choose(Math.max(0, selected - 1));
+                }}>
+                <span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5 4 6l3.5 3.5" /></svg></span>
+              </button>
+              <button type="button" aria-label={t("sessions.tapestry.nextQuote")} disabled={selected >= s.quotes.length - 1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  choose(Math.min(s.quotes.length - 1, selected + 1));
+                }}>
+                <span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" /></svg></span>
+              </button>
+            </div>
+            <button type="button" className="bn-tp-close" aria-label={t("buttons.close")}
               onClick={(e) => {
                 e.stopPropagation();
-                choose(Math.max(0, selected - 1));
+                setSelected(-1);
               }}>
-              <span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5 4 6l3.5 3.5" /></svg></span>
-            </button>
-            <button type="button" aria-label={t("sessions.tapestry.nextQuote")} disabled={selected >= s.quotes.length - 1}
-              onClick={(e) => {
-                e.stopPropagation();
-                choose(Math.min(s.quotes.length - 1, selected + 1));
-              }}>
-              <span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" /></svg></span>
+              <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6" /></svg>
             </button>
           </div>
           <div className="bn-tp-meta">
             {sel.sentiment && <Badge text={sel.sentiment} variant="readonly" sentiment={sel.sentiment} />}
-            {/* The keyboard way into the transcript; the whole panel is the mouse way. */}
+            {/* The keyboard way into the transcript; the whole popover is the mouse way. */}
             <button type="button" className="bn-tp-tc" onClick={(e) => {
               e.stopPropagation();
               onJump(sel.t0);
@@ -432,6 +491,6 @@ export default function SessionTapestry({ session, sPerPx, nameOf, onJump }: Pro
           <blockquote>{sel.text}</blockquote>
         </div>
       )}
-    </>
+    </div>
   );
 }

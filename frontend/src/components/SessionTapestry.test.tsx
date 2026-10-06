@@ -129,6 +129,34 @@ describe("SessionTapestry — keyboard, focus and contrast", () => {
   });
 });
 
+describe("SessionTapestry — the quote popover", () => {
+  it("closes from its X", () => {
+    const { bars } = setup();
+    fireEvent.click(bars()[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByText("That was easy to find")).not.toBeInTheDocument();
+  });
+
+  it("closes on a click anywhere that is not a bar or the popover", () => {
+    const { bars } = setup();
+    fireEvent.click(bars()[0]);
+    fireEvent.pointerDown(screen.getByText("That was easy to find"));
+    expect(screen.getByText("That was easy to find")).toBeInTheDocument(); // inside: stays
+    fireEvent.pointerDown(bars()[1]);
+    expect(screen.getByText("That was easy to find")).toBeInTheDocument(); // another bar: the click selects
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByText("That was easy to find")).not.toBeInTheDocument();
+  });
+
+  it("floats rather than taking space, with its arrow on the bar", () => {
+    const { bars } = setup();
+    fireEvent.click(bars()[1]);
+    const pop = document.querySelector<HTMLElement>(".bn-tp-popover")!;
+    expect(pop.parentElement).toHaveClass("bn-tp-wrap");
+    expect(pop.style.getPropertyValue("--bn-tp-arrow-x")).toMatch(/px$/);
+  });
+});
+
 describe("tapestry scale", () => {
   it("fits the longest session, held between 1 and 4 s/px", () => {
     expect(fitScale(300, 1000)).toBe(1);        // short project: never blown up

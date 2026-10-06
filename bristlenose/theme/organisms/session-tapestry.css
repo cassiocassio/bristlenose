@@ -8,8 +8,8 @@
     /* NEW: resting section flag — the page background with a 6% tint, so the
        raised flag (pure background + shadow) reads as in front. */
     --bn-tp-flag-rest: color-mix(in srgb, var(--bn-colour-bg) 94%, var(--bn-colour-text));
-    /* NEW: hover tint on the quote panel (4%), the sign that it opens the transcript. */
-    --bn-tp-card-hover: color-mix(in srgb, var(--bn-colour-bg) 96%, var(--bn-colour-text));
+    /* NEW: hover tint on the quote popover (4%), the sign that it opens the transcript. */
+    --bn-tp-popover-hover: color-mix(in srgb, var(--bn-colour-bg) 96%, var(--bn-colour-text));
 }
 
 /* Disclosure, inside the ID cell — no new grid column, so the width ladder is untouched. */
@@ -47,11 +47,19 @@
 .bn-tapestry-scroll {
     background: var(--bn-colour-quote-bg);
     padding: var(--bn-space-sm) 0;
+    /* Room under the timecodes for the horizontal scrollbar: macOS draws an overlay
+       bar over the content (~11px, ~15px while hovered), so it would cover them. */
+    padding-bottom: calc(var(--bn-space-sm) + 14px);
     overflow-x: auto;
 }
 .bn-tapestry-svg { display: block; }
 
-.bn-tp-lane,
+/* Lane labels read as headings: the column headers' face, weight and ink
+   (.bn-sessions-head), one stop down the ladder. */
+.bn-tp-lane {
+    font: var(--bn-weight-emphasis) var(--bn-text-caption) var(--bn-font-body);
+    fill: var(--bn-colour-text);
+}
 .bn-tp-tick {
     font: var(--bn-text-micro) var(--bn-font-mono);
     fill: var(--bn-colour-muted);
@@ -96,27 +104,46 @@
     fill: var(--bn-colour-badge-text);
 }
 
-/* Quote panel: revealed by clicking a sentiment bar. The whole panel opens the
-   transcript; the faint hover tint is the affordance. */
-.bn-tp-card {
-    position: relative;
-    margin: 0 var(--bn-space-md) var(--bn-space-md) 82px;
-    max-width: 72ch;
+/* Quote popover: floats under the selected bar, over the themes track, with an
+   arrow on the bar — a Mac popover. The whole popover opens the transcript; the
+   faint hover tint is the affordance. Shadow: the focused-card token. */
+.bn-tp-wrap { position: relative; }
+.bn-tp-popover {
+    position: absolute;
+    z-index: 20;
+    box-sizing: border-box;
     padding: var(--bn-space-md);
     background: var(--bn-colour-bg);
-    border: 1px solid var(--bn-colour-border);
-    border-left: 3px solid var(--bn-tp-accent, var(--bn-colour-border));
-    border-radius: var(--bn-radius-md);
-    box-shadow: 0 1px 2px var(--bn-colour-shadow);
+    border-radius: var(--bn-radius-lg);
+    box-shadow: var(--bn-focus-shadow);
     cursor: pointer;
     transition: background-color 0.12s ease;
 }
-.bn-tp-card:hover { background: var(--bn-tp-card-hover); }
+/* The arrow: a square turned 45°, sharing the popover's ground (so it takes the
+   hover tint too) and its hairline on the two outward edges. */
+.bn-tp-popover::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: calc(var(--bn-tp-arrow-x, 24px) - 6px);
+    width: 12px;
+    height: 12px;
+    background: inherit;
+    transform: rotate(45deg);
+    box-shadow: -1px -1px 0 rgba(0, 0, 0, 0.05);
+    border-top-left-radius: 2px;
+}
+.bn-tp-popover:hover { background: var(--bn-tp-popover-hover); }
+/* --bn-focus-shadow has no dark value, and a dark shadow on a dark ground is no
+   edge at all; dark mode adds a faint light hairline instead. */
+.bn-tp-popover { outline: 1px solid light-dark(transparent, rgb(255 255 255 / 0.1)); }
+.bn-tp-popover::before { box-shadow: -1px -1px 0 light-dark(rgba(0, 0, 0, 0.05), rgb(255 255 255 / 0.1)); }
 .bn-tp-meta {
     display: flex;
     align-items: center;
     gap: var(--bn-space-sm);
     flex-wrap: wrap;
+    padding-right: 72px; /* room for prev / next / close */
     font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
 }
@@ -129,9 +156,8 @@
 }
 .bn-tp-tc:hover { color: var(--bn-colour-text); }
 .bn-tp-tc:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
-.bn-tp-card blockquote {
+.bn-tp-popover blockquote {
     margin: var(--bn-space-sm) 0 0;
-    padding-right: 48px;
     font-size: var(--bn-text-body);
     line-height: 1.5;
     display: -webkit-box;
@@ -140,10 +166,31 @@
     line-clamp: 4;
     overflow: hidden;
 }
+.bn-tp-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    align-items: center;
+}
+.bn-tp-close {
+    all: unset;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--bn-radius-sm);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+}
+.bn-tp-close:hover { color: var(--bn-colour-text); }
+.bn-tp-close:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: -2px; }
+.bn-tp-close svg { width: 10px; height: 10px; }
+.bn-tp-close path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 
 /* Previous / next: bristlenose.app's homepage carousel buttons, at 12 px (from
    26) inside a 22 px hit area, revealed on hover or keyboard focus as there. */
-.bn-tp-nav { position: absolute; top: 6px; right: 6px; display: flex; }
+.bn-tp-nav { display: flex; }
 .bn-tp-nav button {
     all: unset;
     width: 22px;
@@ -171,8 +218,8 @@
 .bn-tp-nav svg { width: 6px; height: 6px; }
 .bn-tp-nav path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .bn-tp-nav button:disabled > span { opacity: 0.35; }
-.bn-tp-card:hover .bn-tp-nav button,
-.bn-tp-card:focus-within .bn-tp-nav button { opacity: 1; pointer-events: auto; }
+.bn-tp-popover:hover .bn-tp-nav button,
+.bn-tp-popover:focus-within .bn-tp-nav button { opacity: 1; pointer-events: auto; }
 .bn-tp-nav button:focus-visible > span { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
 @media (prefers-color-scheme: dark) {
     .bn-tp-nav button > span { background: rgba(40, 40, 40, 0.72); border-color: rgba(255, 255, 255, 0.1); }
@@ -227,7 +274,7 @@
 @media (prefers-reduced-motion: reduce) {
     .bn-tapestry-toggle svg,
     .bn-tp-bar,
-    .bn-tp-card,
+    .bn-tp-popover,
     .bn-tp-nav button { transition: none; }
 }
 

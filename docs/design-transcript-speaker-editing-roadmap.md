@@ -55,6 +55,13 @@ Make the pipeline's quote extraction visible in context. The mechanism is built 
 
 ### Layer 2: Editable speaker summary on project page
 
+> **Status, 6 Oct 2026.** 2a is built, and not as written: the Sessions grid names a
+> speaker through the **person picker** (pick, confirm, someone new, undo) and the
+> pencil fixes a spelling everywhere that person appears; moderators and observers
+> are written per session through `PUT …/sessions/{sid}/speakers/{slot}`, not
+> `/people`. 2b's dropdown became the picker's role segments, which only browse
+> until the recode ships (`design-people.md` §J7, §J8).
+
 The project page shows all speakers across sessions — always visible, always editable. Not a gate or confirmation modal.
 
 **2a. Inline name editing on SessionsTable**
@@ -96,6 +103,9 @@ Fix "this segment is p2, not p1" — the core Dovetail-style correction.
 ---
 
 ### Layer 4: Speaker dropdown on quote cards
+
+> **Priority, 6 Oct 2026.** This layer and Layer 3 are the owner's first jobs once
+> attribution starts (`design-people.md` §J8.13). Both depend on Layer 9.
 
 Fix "this quote is attributed to the wrong person."
 

@@ -521,6 +521,18 @@ accident of English.
 
 ### B3 · The menu is short because the anchor already carries the scope
 
+> **Status, 6 Oct 2026 — half overtaken, half standing.** What was built for *who a
+> speaker is* is not this menu but the **person picker** (§H9 UX iteration 3, §J8): a
+> popover with role segments, a per-role list and a new-person row, on the Sessions
+> grid, the transcript and probably the dashboard (§J8.7). The `Set Name…` / `m1 Is ▸` /
+> `That's Me` / `Role in Session 4 ▸` items of the Sessions-grid row below are that
+> picker now. **Still standing, and needed next:** the attribution half — `This Turn
+> Is ▸`, `These N Turns Are ▸`, `This Quote Is ▸`, split and merge — and the reach
+> rule (a reading surface acts on the thing under the cursor). Those are the
+> owner's top-priority jobs (a paragraph credited to the wrong speaker; a moderator
+> quote shown as the participant's). Re-check this table against the picker before
+> building them. Pixels: `mockups/person-picker-decided-states.html`.
+
 Zones in a fixed order — **name · identity · role · membership · go to** — of
 which only the first two vary. Contents are a function of *(what you clicked,
 what state it is in)*, so an unnamed participant gets three items and a contested
@@ -869,6 +881,22 @@ analysis, and analysis is theirs. Closing this door is what keeps S1, S2 and S3
 from turning into a data-model feature.
 
 ### B9 · The attribution picker — grouped, and creatable
+
+> **Status, 6 Oct 2026 — the cast-list shape is overtaken for naming; the quote-card
+> half stands.** The picker that shipped for *who a speaker is* does not group
+> `p`/`m`/`o` in one list. It has **role segments** that only browse, a list per role
+> with each person's own code, and a **new-person row** carrying the next free code,
+> which an unknown speaker opens on (§J8.8, §J8.10; built 6 Oct). "Picking a group
+> *is* setting a role" is replaced by "a role segment browses; a name picked under
+> another role recodes the speaker" (§J7, §J8.10), and `New Moderator…` offering the
+> bank is replaced by a plain field that refuses a name someone else already goes by
+> (§J8.11) until a type-ahead exists. **What still stands is everything below
+> "On a quote card the picker means something different":** a quote is a view onto
+> speech, membership is a fact while star and hide are judgements, and moving a
+> moderator's words out of a quote takes the card out of the lens. That is the design
+> for the owner's two top-priority jobs, and none of it is built. When it is, the
+> quote card's picker carries no role segments, because what is wrong there is who
+> said the words, not what role the speaker has (§J8.7).
 
 Choosing who speech belongs to is a **cast list**, not a text field, and it is
 grouped by kind:
@@ -2253,12 +2281,22 @@ means), so they cannot disagree.
   roles with only the speaker's own enabled; moderator and observer rows are
   every name known for that role in the study, each carrying this slot's own
   code; a participant's picker holds only that participant; an unknown slot
-  pre-selects nothing, so Return cannot confirm a guess; That's Me is the Mac
+  pre-selects nothing, so Return cannot confirm a guess *(superseded 6 Oct
+  2026: it opens in the new-person field, where an empty Return does nothing,
+  §J8.10; and every row now shows its own person's code, the new row the next
+  free one, §J8.8)*; That's Me is the Mac
   account's name (`NSFullUserName`) and the browser has no such row; a spelling
   fix is the pencil, a click is the picker; undo is ⌘Z (§B10), and picking
   again also works.
 
-Still open: whether a "don't know who" row is needed; whether the Participant
+*Answered 6 Oct 2026 (§J8):* the "don't know who" row is the hover ✕ back to unknown
+(§J8.8); the Participant segment ships after moderator ↔ observer (§J7 R2, owner's
+call 10); the moderator list offers only people confirmed at least once (§J8.10);
+one tick, not two (§J8.8); light-dismiss discards a half-typed name and keyboard
+stays in the list, as recommended and not overruled. Still open as of that date:
+right-click as a second native surface.
+
+Still open (as written 4 Oct): whether a "don't know who" row is needed; whether the Participant
 segment (a real recode, §J) ships with the first picker or after it, with its
 undo (planned in §J7: after it, as R2, with moderator ↔ observer first as R1);
 right-click as a second native surface; whether the keyboard lives in the list
@@ -2380,6 +2418,12 @@ carve-out guessed wrong, and that is the number that decides whether P2 holds.
 ---
 
 ## §I — The menu, enumerated (H5)
+
+> **Status, 6 Oct 2026.** This enumerates the §B3 menu as `items = f(surface,
+> state)`. The Sessions-grid naming items are now the person picker (§B3's status
+> note, §J8); the transcript-turn, quote-card and People-lens rows are not built and
+> remain the reference for them. The domain table's inputs (`kind` is role,
+> `nameClass` collapsing 3:1, `cleared` sticky in storage) still hold.
 
 *The function §B3 asserts, written out. Produced 25 Aug 2026 by a seven-agent
 pass with two adversarial verifications; the contradictions they found between
@@ -3091,3 +3135,46 @@ people as unique and roles as per-session is the People lens's long-term goal.
       because a human still says yes. The prompt must attribute the name to the person
       addressed, not the one speaking; with three or more speakers, who was addressed can
       be ambiguous.
+
+11. **One name, one person, in the picker's list (6 Oct 2026).** Creating a second
+    moderator or observer with the name another already goes by is refused, case
+    insensitively: "{{name}} is already in the list. Pick them, or add something to tell
+    the two apart." Either there really are two Martins in a small study, who need
+    telling apart ("Martin S"), or the researcher meant to pick Martin. A rename that
+    would take someone else's name is refused for the same reason. Scope: moderators and
+    observers, the people the picker lists; a person no session points at any more is
+    hidden and never blocks a name. Whether two *participants* may share a name is open.
+    This is also what lets the Mac picker keep answering with a name: within a role, a
+    name now names one person.
+
+12. **Built 6 Oct 2026 — the three acts, end to end.**
+    - **Server** (`PUT …/sessions/{sid}/speakers/{slot}`): `person` (a uuid, or an
+      identity code) points the slot at that person; with `create`, a client-made uuid
+      makes someone new, so a redo finds the same person; a bare name renames the slot's
+      person everywhere, or makes someone new on `m?`; `clear` returns the slot to
+      unknown; an explicit `confirmed` always wins, so an undo can put a proposal back.
+      The name-guessing (`named`, `shared`) is gone. A taken name is a 409 with
+      `{"reason": "name-taken", "name": …}`. `release()` keeps people, so they are
+      hidden rather than deleted (answer 3).
+    - **`/sessions`** reports `person` (the uuid) for moderators and observers only —
+      never for a participant, whose uuid would link them across studies in an
+      anonymised export.
+    - **Web picker**: rows are people, each with their own code; the new row shows the
+      next free code; an unknown speaker opens in the field; a taken name is refused in
+      the picker, which stays open. The grid's pencil refuses it too, and reloads
+      `/sessions` only when a write points a slot at a different person, since only that
+      can renumber codes.
+    - **Mac picker**: draws each row's code and the next code; replies with the kind of
+      row (`name`, `new`, `me`), so a typed name is never read as a pick. Bridge contract
+      version 3.
+    - **Undo**: records the person, so undoing a pick points back, undoing a new person
+      returns the slot to unknown, and redo points at the same new person.
+    - **Not yet built:** the hover ✕ (needs a sticky `cleared` state), rename in place on
+      the picker's row, `mA?`/`mB?` letters, the picker on the transcript and dashboard,
+      and the list offering only people confirmed at least once (§J8.10): it still offers
+      every moderator or observer any session points at.
+
+13. **Priority once attribution starts (owner, 6 Oct 2026):** a paragraph credited to the
+    wrong speaker, and a moderator's words shown as the participant's quote (in the Quotes
+    lens or on a signal card). Both need transcript edits that survive a re-run (roadmap
+    Layer 9); §B9's quote-card half is the design for the second.

@@ -35,6 +35,16 @@ The pipeline's job is to get from the first to the second — turn flowing text 
 
 ## What exists today
 
+> **Status, 6 Oct 2026 — the first two rows are out of date; the rest stand.** Naming
+> a speaker has a UI: the person picker on the Sessions grid, web and Mac, with
+> confirm, pick, someone new, undo, and a refusal of a name someone else already goes
+> by (`design-people.md` §H9 UX iteration 3, §J8). Moderators and observers are
+> people now, one per identity, and a session's speaker points at one (route C
+> Phase 1, on `main` 6 Oct 2026). Changing a speaker's role is planned, not built
+> (`design-people.md` §J7). Reassigning speech, split and merge are unchanged:
+> no endpoint, no UI, and the quote cascade is still unsolved. Those are the
+> owner's priority once attribution work starts (`design-people.md` §J8.13).
+
 | Capability | Status |
 |-----------|--------|
 | Name a speaker (full/short name) | API exists (`PUT /people`), write-through to `people.yaml`. No UI |

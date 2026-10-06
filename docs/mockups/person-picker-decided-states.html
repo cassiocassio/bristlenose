@@ -3818,14 +3818,14 @@ body { padding: 0; }
 <h3 class="m-h3">Sticky: a run of wrong paragraphs</h3><div class="m-grid wide" id="g-switch-run"></div>
 <h3 class="m-h3">From the Sessions grid: no switch</h3><div class="m-grid wide" id="g-switch-grid"></div></section>
 <aside class="m-commentary"><span class="m-label">Commentary — speculative, not decided</span>
-<p><b>The idea</b> (owner, 6 Oct 2026): on the transcript only, a two-way switch above Moderator · Participant · Observer, first drawn as <em>Speaker | Paragraph</em> and now labelled <em>All of p1 | This paragraph</em> (below), defaulting to All of p1. Below it the picker is exactly today's. With Speaker it acts on every one of p1's turns in the session; with Paragraph it is an atomic "who said this one?". The switch is <b>sticky</b>: leave it on Paragraph and a run of mis-credited paragraphs is click, pick, click, pick. It is section 5's option B with the default settled and the stickiness added, which answers B's main cost (asking every time): you are asked nothing, and the scope is visible before you act rather than offered afterwards.</p>
+<p><b>The idea</b> (owner, 6 Oct 2026): on the transcript only, a two-way switch above Moderator · Participant · Observer, first drawn as <em>Speaker | Paragraph</em> and now labelled <em>Session | Paragraph</em> (below), defaulting to Session. Below it the picker is exactly today's. With Speaker it acts on every one of p1's turns in the session; with Paragraph it is an atomic "who said this one?". The switch is <b>sticky</b>: leave it on Paragraph and a run of mis-credited paragraphs is click, pick, click, pick. It is section 5's option B with the default settled and the stickiness added, which answers B's main cost (asking every time): you are asked nothing, and the scope is visible before you act rather than offered afterwards.</p>
 <p><b>What it settles.</b> The scope is chosen first and is on screen while you choose. The common case (the whole speaker is wrong, or you are naming them) costs nothing extra. The Sessions grid never shows the switch (7e): a grid row is a speaker. <b>Offered on the transcript only, to start with</b> (owner, 6 Oct 2026); any other surface waits until this one has been used. And it gives each scope room to differ later without the two looking alike, which was option C's weakness.</p>
 <p><b>Questions it raises</b>, in rough order of weight:</p>
 <ul>
 <li><b>What Paragraph does to a name.</b> A name is always the speaker's, so with Paragraph on, the name is not a field (7b: plain row, no rename). Typing a new person under Paragraph makes that person and credits this paragraph to them. That is a new speaker in the session, which Speaker scope never creates.</li>
 <li><b>The switch is plain text, not a second segmented control</b> (owner, 6 Oct 2026). Two stacked <code>.dimension-toggle</code>s read as one control in two rows; drawn as words, semibold in body ink for the chosen one and regular in muted grey for the other (owner, 6 Oct; <code>--bn-weight-semibold</code>, 600, added to the scale for it), it reads as a heading. The eye starts at the role toggle, which is where the act is. No box, no blue, no rule. It stays a radio group for VoiceOver and the keyboard. Note it is new: the house has no text-weight toggle yet, so this is a small new primitive, not a reuse.</li>
 <li><b>Where the stickiness lives.</b> Per transcript page and reset on leaving it? Per session? Per window? A sticky Paragraph forgotten on is the risk: the next "rename Simon" would not be possible, which is at least a visible failure, not a silent one. Resetting when the page changes is the conservative answer.</li>
-<li><b>The labels: <em>All of p1 | This paragraph</em></b> (owner, 6 Oct 2026: "Speaker" was too high level). The prior art names what will change, never a mode: Grain <em>This speaker block / All speaker blocks</em>, Marvin <em>one instance / across the transcript</em>, Rev a <em>Change all [label] to:</em> checkbox (§K2). The code follows the badge opened, so on a p2 paragraph it reads <em>All of p2</em>; "paragraph" is already the transcript's word (Edit ▸ Undo Split Paragraph). The default sits first. No count (<em>All 43 of p1</em>): Rev shows none, and it would change as paragraphs move. One new key with the code interpolated, one plain.</li>
+<li><b>The labels: <em>Session | Paragraph</em></b> (owner, 6 Oct 2026). <em>Speaker</em> was too high level; <em>All of p1</em> overclaimed for a moderator, since m1 Martin runs through every session while a pick or a recode reaches only this session's slot; <em>This session | This paragraph</em> repeated "This". The pair names the reach of the act, as the prior art does (Grain <em>This speaker block / All speaker blocks</em>, Marvin <em>one instance / across the transcript</em>, Rev a <em>Change all [label] to:</em> checkbox, §K2). A rename is the person's everywhere whichever is chosen, as names are elsewhere. "Paragraph" is already the transcript's word (Edit ▸ Undo Split Paragraph). Two plain keys, no interpolation.</li>
 <li><b>What a paragraph move costs.</b> Speaker scope on a moderator ↔ participant change is today's recode, then <em>Re-analyse…</em>. A paragraph move needs storage the next run respects: the split/join table (<code>transcript_layout_edits</code>, keyed by position and first words) can hold a "speaker" edit the same way. The evidence follows only once quote membership is paragraph-aware (§K, job 11). Until then a paragraph moved off p1 still counts as p1's evidence. Moving a moderator's question off the participant is the useful case, and it is the one evidence-membership has to honour.</li>
 <li><b>Sticky could carry the pick too.</b> On a run of a moderator's questions, the picker could open on the role and person last picked (Moderator, Martin focused), so each paragraph is click then Return. Cheap, and it is what makes "click click click" literal.</li>
 <li><b>Two pickers, two drawings.</b> Frames 7a–7f draw the web picker, whose role toggle is the house <code>.dimension-toggle</code> (blue-washed active segment); the "Mac app (SF)" switch at the top changes only its typeface. The Mac popover is AppKit (7g, 7h): an <code>NSSegmentedControl</code> at the small size, 11pt type, 24pt rows, all from <code>PickerMetrics</code>. In a key window the selected segment is filled with the accent and set in white, as the owner's screenshot of the real control shows; the grey pill in <code>moderator-identity-picker-v3.html</code> was sampled with the window not key. On the Mac the scope words would be two borderless 11pt labels, <code>labelColor</code> semibold and <code>secondaryLabelColor</code> regular, centred over the control.</li>
@@ -3945,8 +3945,8 @@ document.getElementById("g-split2").innerHTML = [
 ].join("");
 
 // ── Section 7 (speculative): the scope switch ──
-const scopeSwitch = (para, code = "p1") => `<li class="bn-picker-scope" role="radiogroup" aria-label="Scope">${
-  [`All of ${code}`, "This paragraph"].map((r, i) => { const on = (i === 1) === para; return `<button type="button" class="m-scope-btn" role="radio" aria-checked="${on}" data-text="${r}">${r}</button>`; }).join("")}</li>`;
+const scopeSwitch = (para) => `<li class="bn-picker-scope" role="radiogroup" aria-label="Scope">${
+  ["Session", "Paragraph"].map((r, i) => { const on = (i === 1) === para; return `<button type="button" class="m-scope-btn" role="radio" aria-checked="${on}" data-text="${r}">${r}</button>`; }).join("")}</li>`;
 const plainOwn = (code, name) => row(code, "", { tick: true, focus: true, extra: `<span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">${code}</span><span class="bn-speaker-badge-name m-plain-name">${name}</span></span></span>` });
 const renameOwn = (code, name) => row(code, "", { tick: true, focus: true, x: true, extra: `<span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">${code}</span><span class="bn-speaker-badge-name"><span class="m-rename">${name}<span class="m-caret"></span></span></span></span></span>` });
 const Q1 = "And when you got to step nine, what did you do?";
@@ -3954,18 +3954,18 @@ const Q2 = "Did you have the instructions open, or were you going from memory?";
 const Q3 = "So nothing lined up — what did you try first?";
 const ANS = "Honestly I just pushed the doors on and hoped for the best.";
 document.getElementById("g-switch").innerHTML = [
-  specFrame("7a · default: All of p1 — today's picker", "new: scope switch",
+  specFrame("7a · default: Session — today's picker", "new: scope switch",
     paraAt("07:41", "p1", Q1, false) +
     menu(scopeSwitch(false) + head("Participant") + renameOwn("p1", "Simon"))),
-  specFrame("7b · This paragraph: who said this one?", "new: paragraph scope",
+  specFrame("7b · Paragraph: who said this one?", "new: paragraph scope",
     paraAt("07:41", "p1", Q1, false) +
     menu(scopeSwitch(true) + head("Moderator") + row("m1", "Martin Storey", { focus: true }) + row("m2", "Kerri Wade") + newRow("m3"))),
-  specFrame("7c · This paragraph, own role: no rename", "names stay the speaker's",
+  specFrame("7c · Paragraph, own role: no rename", "names stay the speaker's",
     paraAt("07:41", "p1", Q1, false) +
     menu(scopeSwitch(true) + head("Participant") + plainOwn("p1", "Simon"))),
 ].join("");
 document.getElementById("g-switch-run").innerHTML = [
-  specFrame("7d · still on This paragraph: the third of three", "sticky until you leave the page",
+  specFrame("7d · still on Paragraph: the third of three", "sticky until you leave the page",
     paraAt("07:41", "m1", Q1, true) + paraAt("07:52", "m1", Q2, true) + paraAt("08:03", "p1", Q3, false) + paraAt("08:10", "p1", ANS, false) +
     menu(scopeSwitch(true) + head("Moderator") + row("m1", "Martin Storey", { focus: true }) + row("m2", "Kerri Wade") + newRow("m3"))),
 ].join("");
@@ -4006,7 +4006,7 @@ document.getElementById("g-switch-grid").innerHTML = [
       const roleHead = `<li class="bn-picker-head" role="none"><span class="dimension-toggle" role="radiogroup" aria-label="Role">${
         ROLES.map((r) => `<button type="button" class="dimension-btn${r === role ? " active" : ""}" role="radio" aria-checked="${r === role}" data-role="${r}">${r}</button>`).join("")}</span></li>`;
       const scope = `<li class="bn-picker-scope" role="radiogroup" aria-label="Scope">${
-        [`All of ${cur}`, "This paragraph"].map((r, k) => { const on = (k === 1) === st.para; return `<button type="button" class="m-scope-btn" role="radio" aria-checked="${on}" data-text="${r}" data-scope="${k}">${r}</button>`; }).join("")}</li>`;
+        ["Session", "Paragraph"].map((r, k) => { const on = (k === 1) === st.para; return `<button type="button" class="m-scope-btn" role="radio" aria-checked="${on}" data-text="${r}" data-scope="${k}">${r}</button>`; }).join("")}</li>`;
       return seg + menu(scope + roleHead + (people || newRow(role[0].toLowerCase() + "1", { hint: `New ${role.toLowerCase()}` })));
     }).join("");
     el.innerHTML = rows + `<div class="m-live-said" aria-live="polite">${st.said}</div><button type="button" class="bn-btn bn-btn-cancel m-live-reset">Reset</button>`;
@@ -4026,12 +4026,12 @@ document.getElementById("g-switch-grid").innerHTML = [
       if (to === from) { st.open = null; render(); return; }
       if (st.para) {
         st.paras[i][1] = to;
-        st.said = `This paragraph is now ${to} ${st.people[to].name}. The switch stays on This paragraph: click the next badge.`;
+        st.said = `This paragraph is now ${to} ${st.people[to].name}. The switch stays on Paragraph: click the next badge.`;
       } else {
         const n = st.paras.filter((x) => x[1] === from).length;
         st.paras.forEach((x) => { if (x[1] === from) x[1] = to; });
         const recode = st.people[to].role !== st.people[from].role;
-        st.said = `All ${n} of ${from}'s paragraphs are now ${to} ${st.people[to].name}` +
+        st.said = `All ${n} of ${from}'s paragraphs in this session are now ${to} ${st.people[to].name}` +
           (recode ? ` — a recode, so the session would offer Re-analyse.` : `.`);
       }
       st.open = null; render();
@@ -4051,13 +4051,13 @@ document.getElementById("g-switch-grid").innerHTML = [
 // ── Section 7, Mac frame ──
 (() => {
   const mac = (para, role, rows) => `<div class="m-mac7"><div class="m7-scope" role="radiogroup" aria-label="Scope">${
-    ["All of p1", "This paragraph"].map((r, i) => `<span class="${(i === 1) === para ? "on" : ""}" data-text="${r}">${r}</span>`).join("")}</div><div class="m7-seg">${
+    ["Session", "Paragraph"].map((r, i) => `<span class="${(i === 1) === para ? "on" : ""}" data-text="${r}">${r}</span>`).join("")}</div><div class="m7-seg">${
     ROLES.map((r) => `<span class="${r === role ? "on" : ""}">${r}</span>`).join("")}</div>${
     rows.map(([code, name, tick, sel, hint]) => `<div class="m7-row${sel ? " sel" : ""}"><span class="m7-tick">${tick ? CHECK : ""}</span><span class="m7-code">${code}</span><span class="${hint ? "m7-hint" : ""}">${name}</span></div>`).join("")}</div>`;
   document.getElementById("g-switch-mac").innerHTML = [
-    specFrame("7g · Mac, All of p1 (default)", "PickerMetrics small · key window",
+    specFrame("7g · Mac, Session (default)", "PickerMetrics small · key window",
       `<div data-platform="desktop">${mac(false, "Participant", [["p1", "Simon", true, false]])}</div>`),
-    specFrame("7h · Mac, This paragraph, browsing Moderator", "PickerMetrics small · key window",
+    specFrame("7h · Mac, Paragraph, browsing Moderator", "PickerMetrics small · key window",
       `<div data-platform="desktop">${mac(true, "Moderator", [["m1", "Martin Storey", false, true], ["m2", "Kerri Wade", false, false], ["m3", "New moderator", false, false, true]])}</div>`),
   ].join("");
 })();

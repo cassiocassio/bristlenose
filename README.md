@@ -388,6 +388,31 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.35.0** — _7 Oct 2026_
+
+Each session opens into a timeline of the interview, a speaker's role can be changed after the fact, and transcript paragraphs can be split, joined and moved to another speaker.
+
+**New**
+
+- **Each session can open into a timeline.** In the Sessions lens, the chevron beside a session number opens a strip under that row that runs the length of the interview. It shows where each section starts, who is talking, every quote as a sentiment mark (positive above the line, negative below), and the span of each theme. The talking turns are tinted with the colour of what was on screen at the time. Click the strip to open the transcript at that moment, or click a sentiment mark to read the quote. One zoom control sets the scale for every open timeline, and they stay open when you come back from a transcript. On-screen colours are worked out when a project is run, so a project analysed before 0.35.0, or with `analyze` alone, shows plain grey turns until its next `run`.
+- **Change a speaker's role.** In the person picker, a moderator can now be made an observer and back, and any speaker can be moved into or out of participant. The picker also opens from the transcript and the dashboard, not only the Sessions page, and it opens on the current name, ready to type over. Edit ▸ Undo takes a change back.
+- **Re-analyse one session.** If a participant turns out to have been the moderator, or the other way round, that session's quotes came from the wrong person. They leave the report until the session is re-analysed, and come back with their stars and tags if you undo. The Sessions page offers Re-analyse… on that session, saying what will change and what it costs; on the Mac it runs from there, and in the browser it shows the command to run.
+- **Split and join transcript paragraphs.** Place the caret in a paragraph and press Return to split it in two; Backspace at the start of a paragraph joins it to the one above when both are the same speaker. The words themselves can't be edited — they are the recording's. A split survives a re-run, and Undo takes it back.
+- **Move one paragraph to another speaker.** The transcript's picker has a **Session | Paragraph** switch: Session changes who the speaker is throughout, Paragraph gives just that paragraph to someone else — including a new moderator, for a call where two voices were heard as one. A quote whose words moved away from its participant leaves that participant.
+
+**Improved**
+
+- **The ✕ in the person picker means "not this person".** The speaker goes back to unknown, and a re-run won't propose that name again.
+- **The picker offers only people someone has confirmed.** A name Bristlenose guessed for one speaker no longer appears in every other speaker's list, so one wrong guess doesn't spread.
+- **Renaming a person renames them everywhere**, and a name another moderator or observer already has is refused rather than merging the two.
+- **Two unknown moderators in one session are told apart** as mA? and mB?.
+
+**Fixed**
+
+- **A new voice in a re-run could take an earlier moderator's code, and their name with it.** A moderator's code is now never reissued within a session.
+- **The Star & hide picture on the Welcome screen was cut off in a narrow window.** It now shrinks to fit.
+- **The Windows installer said "Bristlenose was not installed" when it had been.** A failure after the install now says Bristlenose is installed, and what went wrong.
+
 **0.34.0** — _5 Oct 2026_
 
 The command-line tool now installs and runs on Windows, through pipx or uv with x64 Python — newly tested there, so expect rough edges. Installing with pipx or uv no longer needs `[serve]`.

@@ -161,6 +161,34 @@ function section4() {
   eq("there is a table view of the same numbers", true, !!d.querySelector("#pane-history table.hist-t"));
   eq("every SVG title is text, never markup", true, [...svg.querySelectorAll("title")].every(t => t.children.length === 0));
   // (a reload restoring the view is not asserted: each JSDOM gets its own storage)
+  // machine versions: the synthetic tree has no git, so there are none to split by — the control says so
+  const slider = d.getElementById("hist-era");
+  eq("the machine-version slider exists", true, !!slider);
+  d.getElementById("hist-mode-era").click();
+  eq("By machine version with no named changes says there is nothing to split by", true, /no named release-machine changes to split by/.test(d.querySelector(".hist-ver").textContent));
+  eq("…and draws no fault", null, d.getElementById("fault"));
+  {
+    const h = JSON.parse(JSON.stringify(m.history)), inv0 = h.releases[0].invocations[0];
+    const later = JSON.parse(JSON.stringify(inv0)); later.id = "1.0.0#2"; later.start = "2999-01-01T00:00:00Z";
+    later.exit = { kind: "completed", step: "snap" }; later.steps = [{ step: "preflight", status: "ok" }, { step: "snap", status: "ok" }];
+    h.releases[0].invocations.push(later);
+    h.machine_commits = [{ sha: "abcdef12", ts: "2998-01-01T00:00:00Z", subject: "x", milestone: "a named change" }];
+    const { d: d5, errors: e5 } = load(htmlFor({ ...m, history: h }));
+    eq("two versions: no renderer error", 0, e5.filter(e => /Uncaught/.test(e)).length);
+    d5.getElementById("view-history").click();
+    const s5 = d5.getElementById("hist-era");
+    eq("the slider has one stop per version an attempt ran under", "1", s5.max);
+    s5.value = "0"; s5.dispatchEvent(new d5.defaultView.Event("input"));
+    eq("sliding switches to By machine version", "true", d5.getElementById("hist-mode-era").getAttribute("aria-pressed"));
+    const groups = [...d5.querySelectorAll("#pane-history g.inv")];
+    eq("…and dims the attempts outside the selected version", ["1", "0.1"], groups.map(g => g.getAttribute("opacity")));
+    eq("…and names the version in words", true, /version 1 of 2 · before #1/.test(d5.querySelector(".hist-ver").textContent));
+    s5.value = "1"; s5.dispatchEvent(new d5.defaultView.Event("input"));
+    eq("the newest version names the change that began it", true, /after #1 .*a named change/.test(d5.querySelector(".hist-ver").textContent));
+    eq("…and its one clean attempt is a 100% yield", true, /100% yield/.test(d5.querySelector(".hist-ver").textContent));
+    d5.getElementById("hist-mode-all").click();
+    eq("All releases undims every attempt", ["1", "1"], [...d5.querySelectorAll("#pane-history g.inv")].map(g => g.getAttribute("opacity")));
+  }
   // a history that could not be read is a nodata line, not a fault band
   const broken = { ...m, history: { schema: 1, error: "ValueError: boom", releases: [] } };
   const { d: d4, errors: e4 } = load(htmlFor(broken));

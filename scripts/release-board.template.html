@@ -136,6 +136,11 @@
   .hist-sum{display:flex;flex-wrap:wrap;gap:8px 18px;margin:2px 0 8px;color:var(--ink-2)}
   .hist-sum b{color:var(--ink);font-variant-numeric:tabular-nums}
   .hist-wrap{display:flex;align-items:flex-start}
+  .hist-ctl{display:flex;align-items:flex-end;margin:0 0 4px}
+  .hist-ctl-l{flex:1 1 auto}
+  .hist-ctl-r{flex:none;display:flex;flex-direction:column;gap:5px;padding-left:10px;box-sizing:border-box}
+  .hist-ctl-r input[type=range]{width:100%;margin:0;accent-color:var(--now)}
+  .hist-ver{color:var(--ink-2);font-size:10.5px;line-height:1.35;min-height:2.7em}
   .hist-scroll{flex:1 1 auto;min-width:0;overflow-x:auto;padding-bottom:4px;direction:rtl}
   .hist-scroll>svg{direction:ltr}
   .hist-fixed{flex:none;border-left:1px solid var(--rule)}
@@ -733,7 +738,8 @@
 
     // ── the funnel ──
     fsvg.appendChild(S("text", {x: fcx, y: TOP - 34, "text-anchor": "middle", "class": "rowlab", "font-weight": 600}, "of 100 attempts, how many get past each step"));
-    fsvg.appendChild(S("text", {x: fcx, y: TOP - 20, "text-anchor": "middle", "class": "muted", "font-size": 9.5}, "one outline per release, newest on top · grey: all pooled"));
+    var fsub = S("text", {x: fcx, y: TOP - 20, "text-anchor": "middle", "class": "muted", "font-size": 9.5}, "one outline per release, newest on top · grey: all pooled");
+    fsvg.appendChild(fsub);
     [0.5, 1].forEach(function(f){ [-1, 1].forEach(function(sg){ var xx = fcx + sg*f*FW/2; fsvg.appendChild(S("line", {x1: xx, x2: xx, y1: TOP - 6, y2: H_ALL - 18, stroke: "var(--rule)", "stroke-width": 1})); }); fsvg.appendChild(S("text", {x: fcx + f*FW/2, y: TOP - 8, "text-anchor": "middle", "class": "muted", "font-size": 9}, (f*100)+"%")); });
     var shape = function(ys){
       if (!ys.length) return null;
@@ -826,25 +832,27 @@
     var prevEnd = {};
     cols.forEach(function(c){
       var inv = c.inv, x = inv.exit || {};
+      var cg = S("g", {"class": "inv"}); svg.appendChild(cg); c.g = cg;   // one group per attempt, so a machine version can dim the rest
       var hit = S("rect", {x: c.x - COL/2, y: TOP - 4, width: COL, height: H_ALL - TOP - 14, fill: "transparent"});
       tip(hit, describe(inv));
-      if (!inv.entry) { var dot = S("circle", {cx: c.x, cy: TOP + 4, r: 2.5, fill: "none", stroke: "var(--mute)"}); svg.appendChild(dot); svg.appendChild(hit); return; }
+      if (!inv.entry) { var dot = S("circle", {cx: c.x, cy: TOP + 4, r: 2.5, fill: "none", stroke: "var(--mute)"}); cg.appendChild(dot); cg.appendChild(hit); return; }
       var y0 = yOf(rowIx[inv.entry]), er = exitRow(inv), y1 = er != null ? yOf(er) : y0;
       // a resume: dashed curve from this release's previous end to this start — up is a U-turn
       var pe = prevEnd[c.r.version];
-      if (pe) svg.appendChild(S("path", {d: "M"+pe.x+","+pe.y+" C"+(pe.x+COL*0.9)+","+pe.y+" "+(c.x-COL*0.9)+","+y0+" "+c.x+","+y0, fill: "none", stroke: "var(--mute)", "stroke-width": 1, "stroke-dasharray": "2 2", opacity: .8}));
-      if (rowIx[inv.entry] > 0) svg.appendChild(S("path", {d: "M"+(c.x-5)+","+(y0-3)+"L"+(c.x-1)+","+y0+"L"+(c.x-5)+","+(y0+3), fill: "none", stroke: "var(--ink-2)", "stroke-width": 1.4}));
-      svg.appendChild(S("line", {x1: c.x, x2: c.x, y1: y0, y2: y1, stroke: x.kind === "completed" ? "var(--ink-2)" : "var(--ink-2)", "stroke-width": 2, "stroke-linecap": "round"}));
-      svg.appendChild(glyph(x.kind || "stopped", c.x, y1));
+      if (pe) cg.appendChild(S("path", {d: "M"+pe.x+","+pe.y+" C"+(pe.x+COL*0.9)+","+pe.y+" "+(c.x-COL*0.9)+","+y0+" "+c.x+","+y0, fill: "none", stroke: "var(--mute)", "stroke-width": 1, "stroke-dasharray": "2 2", opacity: .8}));
+      if (rowIx[inv.entry] > 0) cg.appendChild(S("path", {d: "M"+(c.x-5)+","+(y0-3)+"L"+(c.x-1)+","+y0+"L"+(c.x-5)+","+(y0+3), fill: "none", stroke: "var(--ink-2)", "stroke-width": 1.4}));
+      cg.appendChild(S("line", {x1: c.x, x2: c.x, y1: y0, y2: y1, stroke: x.kind === "completed" ? "var(--ink-2)" : "var(--ink-2)", "stroke-width": 2, "stroke-linecap": "round"}));
+      cg.appendChild(glyph(x.kind || "stopped", c.x, y1));
       prevEnd[c.r.version] = {x: c.x, y: y1};
       if (x.kind === "completed" && c.r.verify) {
         var yc0 = yOf(nS - 1) + 5;
-        svg.appendChild(S("line", {x1: c.x, x2: c.x, y1: yc0, y2: yOf(rows.length - 1), stroke: "var(--rule2)", "stroke-width": 1, "stroke-dasharray": "2 2"}));
-        chans.forEach(function(ch, k){ var r = c.r.verify.rows[ch]; if (!r) return; var gg = glyph(r.result === "ok" ? "chan-ok" : "chan-bad", c.x, yOf(nS + k)); tip(gg, c.r.version+" · "+ch+": "+r.result+(r.pass > 1 ? " (first seen ok on verify pass "+r.pass+")" : "")+(r.evidence ? " — "+r.evidence : "")); svg.appendChild(gg); });
+        cg.appendChild(S("line", {x1: c.x, x2: c.x, y1: yc0, y2: yOf(rows.length - 1), stroke: "var(--rule2)", "stroke-width": 1, "stroke-dasharray": "2 2"}));
+        chans.forEach(function(ch, k){ var r = c.r.verify.rows[ch]; if (!r) return; var gg = glyph(r.result === "ok" ? "chan-ok" : "chan-bad", c.x, yOf(nS + k)); tip(gg, c.r.version+" · "+ch+": "+r.result+(r.pass > 1 ? " (first seen ok on verify pass "+r.pass+")" : "")+(r.evidence ? " — "+r.evidence : "")); cg.appendChild(gg); });
       }
-      svg.appendChild(hit);
+      cg.appendChild(hit);
     });
 
+    var applyEra = null;
     var paintSel = function(){
       var s = window.__histSel || rels[rels.length - 1].version;
       layerEls.forEach(function(l){
@@ -863,8 +871,90 @@
       (r.unledgered || []).forEach(function(u){ add(ul, $("li", null, "before the ledger: stopped at "+u.where+" — "+u.cause+(u.incident ? " (premortem incident "+u.incident+")" : "")+" · the release log records it; no ledger line exists")); });
       if (r.verify) chans.forEach(function(ch){ var v = r.verify.rows[ch]; if (v && v.result !== "ok") add(ul, $("li", null, ch+": never verified ok — "+(v.evidence || v.result))); });
       if (ul.firstChild) add(selBox, ul); else add(selBox, $("div", "hist-sel", "no stops: one invocation, start to finish."));
+      if (applyEra) applyEra(false);
     };
 
+    // ── machine versions: the funnel per version of the release machine ──────
+    // A version is the machine as it stood between two NAMED changes (the
+    // numbered rules). Raw commits would be fifty stops, most with no attempt
+    // under them; several changes often land in one gap between releases, so a
+    // stop is a version at least one attempt actually ran under. An attempt
+    // belongs to the version in force when it started; a release's channels to
+    // the version that shipped it (its last attempt).
+    var ms = (mc || []).filter(function(m){ return m.milestone; }).sort(function(a, b){ return a.ts < b.ts ? -1 : 1; });
+    var eraOf = function(ts){ var k = 0; for (var i = 0; i < ms.length; i++) if (ms[i].ts <= ts) k = i + 1; return k; };
+    cols.forEach(function(c){ c.era = eraOf(c.inv.start || ""); });
+    var present = []; cols.forEach(function(c){ if (c.inv.entry && present.indexOf(c.era) < 0) present.push(c.era); });
+    present.sort(function(a, b){ return a - b; });
+    var eraTally = function(e){
+      var t = rows.map(function(){ return {tries: 0, pass: 0, stops: []}; });
+      rels.forEach(function(r){
+        var iv = r.invocations.filter(function(inv){ return eraOf(inv.start || "") === e; }); if (!iv.length) return;
+        var last = r.invocations[r.invocations.length - 1];
+        tally(iv, eraOf(last.start || "") === e ? r.verify : null).forEach(function(x, i){ t[i].tries += x.tries; t[i].pass += x.pass; });
+      });
+      return t;
+    };
+    var stops2 = present.map(function(e, k){
+      var prev = k ? present[k - 1] : 0;
+      var cs = cols.filter(function(c){ return c.era === e && c.inv.entry; });
+      var relsIn = []; cs.forEach(function(c){ if (relsIn.indexOf(c.r.version) < 0) relsIn.push(c.r.version); });
+      var y = yieldOf(eraTally(e), rows.length);
+      return {e: e, from: prev, cols: cs, rels: relsIn, y: y, poly: null,
+              clean: relsIn.filter(function(v){ var r = rels.filter(function(x){ return x.version === v; })[0]; return invsOf(r) === 1 && r.shipped; }).length};
+    });
+    stops2.forEach(function(st, k){
+      var poly = S("polygon", {points: shape(st.y), fill: "none", stroke: "var(--ink-2)", "stroke-width": 1, "stroke-linejoin": "round", display: "none"});
+      tip(poly, "machine version "+(k+1)+": "+Math.round(100*st.y[st.y.length-1])+"% of its attempts got through");
+      st.poly = poly; fsvg.appendChild(poly);
+    });
+    var verLabel = function(st, k){
+      if (!ms.length) return "one version on record — no named release-machine changes to split by";
+      var range = st.e === 0 ? "before #1" : (st.from + 1 < st.e ? "after #"+(st.from+1)+"–"+st.e : "after #"+st.e);
+      var m = st.e ? ms[st.e - 1] : null;
+      return "version "+(k+1)+" of "+stops2.length+" · "+range+(m ? " ("+m.ts.slice(5, 10).replace("-", "/")+")" : "");
+    };
+    var ctl = $("div","hist-ctl"); var ctlR = $("div","hist-ctl-r"); ctlR.style.width = FWID+"px";
+    var modeSeg = $("span","seg"); modeSeg.setAttribute("role","group"); modeSeg.setAttribute("aria-label","funnel layers");
+    var mode = window.__histMode || "all";
+    var era = window.__histEra != null && window.__histEra < stops2.length ? window.__histEra : stops2.length - 1;
+    var slider = $("input"); slider.type = "range"; slider.min = 0; slider.max = Math.max(0, stops2.length - 1); slider.value = era; slider.id = "hist-era";
+    slider.setAttribute("aria-label", "release-machine version");
+    var verTxt = $("div","hist-ver");
+    [["all","All releases"],["era","By machine version"]].forEach(function(o){
+      var b = $("button", null, o[1]); b.type = "button"; b.id = "hist-mode-"+o[0];
+      b.addEventListener("click", function(){ mode = window.__histMode = o[0]; applyEra(true); });
+      add(modeSeg, b);
+    });
+    add(ctlR, modeSeg, slider, verTxt);
+    if (stops2.length < 2) { slider.disabled = true; }
+    add(ctl, $("div","hist-ctl-l"), ctlR);
+    slider.addEventListener("input", function(){ era = window.__histEra = Number(slider.value); if (mode !== "era") { mode = window.__histMode = "era"; } applyEra(true); });
+    applyEra = function(scrollTo){
+      var on = mode === "era" && stops2.length > 0;
+      fsub.textContent = on ? "one outline per machine version · blue: the one selected · grey: all pooled" : "one outline per release, newest on top · grey: all pooled";
+      var bs = modeSeg.querySelectorAll("button"); for (var i = 0; i < bs.length; i++) bs[i].setAttribute("aria-pressed", String(bs[i].id === "hist-mode-"+mode));
+      layerEls.forEach(function(l){ l.el.setAttribute("display", on ? "none" : "inline"); });
+      stops2.forEach(function(st, k){
+        var sel = k === era;
+        st.poly.setAttribute("display", on ? "inline" : "none");
+        st.poly.setAttribute("stroke", sel ? "var(--now)" : "var(--ink-2)");
+        st.poly.setAttribute("stroke-width", sel ? 2.4 : 1);
+        st.poly.setAttribute("stroke-opacity", sel ? 1 : 0.3);
+        st.poly.setAttribute("fill", sel ? "var(--now)" : "none");
+        st.poly.setAttribute("fill-opacity", sel ? 0.1 : 0);
+        if (sel && on) st.poly.parentNode.appendChild(st.poly);
+      });
+      var cur = stops2[era];
+      cols.forEach(function(c){ if (c.g) c.g.setAttribute("opacity", on && cur && c.era !== cur.e ? 0.1 : 1); });
+      relEls.forEach(function(o){ o.g.setAttribute("opacity", on && cur && cur.rels.indexOf(o.v) < 0 ? 0.25 : 1); });
+      if (!on || !cur) { verTxt.textContent = stops2.length ? stops2.length+" machine versions — slide to see each one's funnel" : "no release-machine changes to split by"; return; }
+      var named = ms.slice(cur.from, cur.e).map(function(m, i){ return "#"+(cur.from+i+1)+" "+m.milestone; });
+      verTxt.textContent = verLabel(cur, era)+" · "+cur.cols.length+" attempt"+(cur.cols.length === 1 ? "" : "s")+" across "+cur.rels.join(", ")
+        +" · "+Math.round(100*cur.y[cur.y.length-1])+"% yield"+(named.length ? " · new: "+named.join("; ") : " · the machine as first recorded");
+      if (scrollTo && cur.cols.length) { var g0 = cur.cols[cur.cols.length - 1].g; if (g0 && typeof g0.scrollIntoView === "function") try { g0.scrollIntoView({block: "nearest", inline: "center", behavior: "smooth"}); } catch(e) {} }
+    };
+    add(P, ctl);
     var wrap = $("div","hist-wrap"), scroll = $("div","hist-scroll");
     scroll.tabIndex = 0; scroll.setAttribute("aria-label", "release attempts — scroll left for older");
     scroll.appendChild(svg); add(wrap, scroll); wrap.appendChild(fsvg); add(P, wrap);

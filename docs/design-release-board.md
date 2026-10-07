@@ -578,6 +578,21 @@ every other commit to `MACHINE_PATHS` still appears, unnamed, in its gap.
   invocation's end to the next one's start, so a resume reads as a U-turn.
   Dashed vertical rules are commits to the release machine landing between
   two attempts; the numbered ones are the milestones, listed under the chart.
+- **Above the funnel, All releases · By machine version** and a slider. A
+  machine version is the release machine as it stood between two *named*
+  changes (`MACHINE_MILESTONES`), not every commit: fifty commits would be
+  fifty stops, most with no attempt under them, and several changes often land
+  in one gap between releases. So the slider has one stop per version at least
+  one attempt ran under (11 at 0.35.0). An attempt belongs to the version in
+  force when it started; a release's channel row to the version that shipped
+  it. In version mode the funnel draws one outline per version, built from the
+  attempts that ran under it (the selected one blue), the timeline dims every
+  attempt outside it and scrolls to it, and a line names the version, its
+  attempts, its yield and the changes that began it. All releases is the
+  per-release onion. Read at 0.35.0: every version through 10 sits between 0
+  and 13 % because one bad night (0.32.0's eight attempts) outweighs three
+  clean releases in the same version; version 11 is the first at 100 %, on one
+  attempt — a trend to watch, not yet a measurement.
 - Under it: the selected release's stops in words (click a release label),
   a table of where attempts stopped by step and class (the chart's text
   equivalent), and the milestone list.

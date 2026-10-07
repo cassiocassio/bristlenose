@@ -379,14 +379,20 @@ it can be inspected.
 >   0.34.0, several sessions' commits reddened the aria-label gate, the ratchet,
 >   ruff and both Mac Build runners. The handoff caught it by asking; nothing
 >   mechanical did, because the readiness check reads CI only for HEAD and HEAD
->   was not yet pushed. ✅ For this release: fixed before the run (release log
->   § 0.35.0). ⚠️ Owed: a red latest CI run on `origin/main` should be a
->   readiness row of its own, independent of whether HEAD is pushed.
+>   was not yet pushed. ✅ Fixed 7 Oct: preflight reads the last completed push
+>   run on `main` of each workflow in `WF_MAIN_WATCH` (`ci.yml`,
+>   `mac-build.yml`), soft jobs filtered through `ci_soft_jobs`. Blocking reds
+>   FAIL when HEAD has no CI of its own, and WARN when HEAD's own run is the
+>   verdict (`verdict_main_ci`; replayed against the real incident run, and
+>   mutation-proved in `test-preflight-substance.sh`).
 > - **43 — `release.sh board` could not start: the previous release's board
 >   still held 8151** (started 5 Oct, idle-exit not yet reached). The run is
 >   unaffected, since the board is optional, but the printed "not up" sent a
->   cycle to its log. Worked round with `--port 8152`. ⚠️ Owed: the board
->   should take the next free port, or retire a board serving a finished run.
+>   cycle to its log. Worked round with `--port 8152`. ✅ Fixed 7 Oct: a board
+>   for a finished run is retired so the new one keeps 8151; a live run's board
+>   or a non-board is left alone and the next free port taken
+>   (`bind_with_fallback`, mutation-proved). Proved live the same day: it
+>   retired 0.34.0's board, up since 5 Oct, and took 8151.
 
 ---
 

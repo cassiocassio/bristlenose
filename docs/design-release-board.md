@@ -357,6 +357,14 @@ writers knowing nothing above the files:
 
 **The server** is stdlib `ThreadingHTTPServer` on `127.0.0.1`, port 8151 by
 default (deterministic, because the browser keys the saved layout by origin).
+**When 8151 is taken** (incident 43, 0.35.0: the previous release's board,
+hours from its idle exit, held it), the server reads the other boards'
+handshakes. A board for another version whose run has **finished** is retired
+(TERM, then wait on the port, not the pid) so the new run keeps the origin; a
+board whose run is live, or anything that is not a board, is never touched, and
+the server takes the next free port of nine and says so. An explicit `--port`
+is honoured or fails. `bind_with_fallback` in `scripts/release-board.py`;
+`PortFallback` in `scripts/test-release-board.py`.
 **Loopback is not a boundary between users or processes on one Mac**, so every
 request carries a per-run token minted at start and written only into the
 0600 handshake — the house pattern of serve mode's auth token and the scoped

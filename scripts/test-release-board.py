@@ -1018,6 +1018,91 @@ class Server(unittest.TestCase):
                 p.kill()
 
 
+class PortFallback(unittest.TestCase):
+    """Incident 43: a stale board on the default port. A finished run's board is
+    retired so the new one keeps the origin; a live run's board, an explicit
+    --port, and anything that is not a board are never touched."""
+
+    def setUp(self):
+        self.t = Tree()
+        ev0 = ev("2026-09-05T10:00:00Z", "run", "started") + "\n"
+        self.t.run("0.9.0", events=ev0)
+        self.t.run("1.0.0", events=ev0)
+        self.procs = []
+
+    def tearDown(self):
+        for p in self.procs:
+            if p.poll() is None:
+                p.kill()
+                p.wait(timeout=5)
+        self.t.close()
+
+    def old_board(self):
+        """A real 0.9.0 board on a free port, as the previous release left it."""
+        run = self.t.root / ".release" / "0.9.0"
+        p = subprocess.Popen([PY, str(GEN), "0.9.0", "--serve", "--root", str(self.t.root), "--port", "0", "--poll", "0.1"],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.procs.append(p)
+        deadline = time.time() + 10
+        while not (run / "board-server.json").exists() and time.time() < deadline:
+            time.sleep(0.05)
+        return p, json.loads((run / "board-server.json").read_text())["port"]
+
+    def bind(self, port, explicit=False):
+        def _bind(p):
+            s = socket.socket()
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind(("127.0.0.1", p))
+                s.listen(1)
+            except OSError:
+                s.close()
+                raise
+            self.addCleanup(s.close)
+            return s
+        return rb.bind_with_fallback(self.t.root, "1.0.0", port, explicit, _bind)
+
+    def test_a_finished_runs_board_is_retired_and_the_port_kept(self):
+        old, port = self.old_board()
+        s, note = self.bind(port)
+        self.assertEqual(s.getsockname()[1], port)
+        self.assertIn("retired 0.9.0", note)
+        self.assertIsNotNone(old.poll(), "the stale board is still running")
+
+    def test_a_live_runs_board_is_left_alone(self):
+        (self.t.root / ".release" / "0.9.0" / ".lock").mkdir()
+        (self.t.root / ".release" / "0.9.0" / ".lock" / "pid").write_text(str(os.getpid()))
+        old, port = self.old_board()
+        s, note = self.bind(port)
+        self.assertNotEqual(s.getsockname()[1], port)
+        self.assertIn("busy", note)
+        self.assertIsNone(old.poll(), "a live run's board was killed")
+
+    def test_an_explicit_port_is_honoured_or_fails(self):
+        old, port = self.old_board()
+        with self.assertRaises(OSError):
+            self.bind(port, explicit=True)
+        self.assertIsNone(old.poll(), "an explicit --port retired a board")
+
+    def test_an_unknown_occupant_is_never_touched(self):
+        squatter = socket.socket()
+        squatter.bind(("127.0.0.1", 0))
+        squatter.listen(1)
+        self.addCleanup(squatter.close)
+        port = squatter.getsockname()[1]
+        s, note = self.bind(port)
+        self.assertNotEqual(s.getsockname()[1], port)
+        self.assertIn("busy", note)
+
+    def test_a_free_default_port_is_simply_taken(self):
+        probe = socket.socket()
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+        probe.close()
+        s, note = self.bind(port)
+        self.assertEqual((s.getsockname()[1], note), (port, None))
+
+
 class Heartbeat(unittest.TestCase):
     def test_cadence_matches_release_sh_default(self):
         sh = (ROOT / "scripts" / "release.sh").read_text()

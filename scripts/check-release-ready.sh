@@ -50,6 +50,33 @@ verdict_shippable() {
     echo nothing
 }
 
+# verdict_main_ci <soft-names> <head-pushed:0|1> — PURE, no gh.
+#   stdin: one "<job name>\t<conclusion>" line per job of the LATEST COMPLETED
+#   CI run on origin/main (empty stdin = no such run). Incident 42 (0.35.0):
+#   main sat red on four blocking checks for a day and this script said nothing,
+#   because its only CI row asks about HEAD, and HEAD was not pushed. A red on
+#   main is the strict gate's verdict arriving early; it belongs in preflight.
+#   Prints one of:
+#     none                   no completed run to read
+#     green                  no job failed, or only soft ones (ci.yml soft: true)
+#     red-unverified:<jobs>  blocking jobs red and HEAD has no CI of its own,
+#                            so nothing says HEAD fixed them — FAIL
+#     red-superseded:<jobs>  blocking jobs red, but HEAD is pushed and its own
+#                            run (the row above) is the verdict — WARN
+verdict_main_ci() {
+    local soft=" ${1:-} " pushed="${2:-0}" name concl red="" seen=0
+    while IFS=$'\t' read -r name concl; do
+        [ -n "$name" ] || continue
+        seen=1
+        case "$concl" in failure|cancelled|timed_out) ;; *) continue ;; esac
+        case "$soft" in *" $name "*) continue ;; esac
+        red="${red:+$red; }$name"
+    done
+    [ "$seen" = 1 ] || { echo none; return; }
+    [ -z "$red" ] && { echo green; return; }
+    if [ "$pushed" = 1 ]; then echo "red-superseded:$red"; else echo "red-unverified:$red"; fi
+}
+
 # Sourcing hook: CHECK_RELEASE_READY_LIB=1 exposes the pure verdict_* helpers
 # without running a single check. Placed before argument parsing so a caller's
 # own $@ is never interpreted as ours.
@@ -535,6 +562,41 @@ else
         completed\|*)      bad  "CI status" "conclusion '${RUN#*|}' for $SHORT" ;;
         *)                 warn "CI status" "run is ${RUN%%|*} for $SHORT — not finished" ;;
     esac
+fi
+
+# main's own last verdict per watched workflow, independent of HEAD (incident
+# 42). Skipped for a run that IS HEAD's — the row above already said it. The
+# soft set comes from release.sh's ci_soft_jobs reading that workflow file; a
+# copy here would drift.
+if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    HEAD_PUSHED=0
+    git branch -r --contains "$SHA" 2>/dev/null | grep -q origin && HEAD_PUSHED=1
+    for WF in $WF_MAIN_WATCH; do
+        LABEL="main ${WF%.yml}"
+        MAIN_RUN=$(gh run list --workflow "$WF" --branch main --event push --status completed \
+                   --limit 1 --json databaseId,headSha \
+                   --jq '.[0] // {} | "\(.databaseId // "")|\(.headSha // "")"' 2>/dev/null || echo "|")
+        MAIN_ID=${MAIN_RUN%%|*}; MAIN_SHA=${MAIN_RUN#*|}
+        if [ -z "$MAIN_ID" ]; then
+            warn "$LABEL" "could not read main's last completed run — state unknown"
+            continue
+        fi
+        [ "$MAIN_SHA" = "$SHA" ] && [ "$WF" = "$WF_CI" ] && continue
+        SOFT_JOBS=$(ROOT="$ROOT" WF="$WF" RELEASE_LIB=1 bash -c \
+            '. "$ROOT/scripts/release.sh"; ci_soft_jobs "$ROOT/.github/workflows/$WF"' 2>/dev/null)
+        MAIN_V=$(gh run view "$MAIN_ID" --json jobs --jq '.jobs[] | "\(.name)\t\(.conclusion // "")"' 2>/dev/null \
+                 | verdict_main_ci "$SOFT_JOBS" "$HEAD_PUSHED")
+        JOBS=${MAIN_V#*:}
+        # Joined by "; " because a matrix job's own name carries ", ".
+        NJOBS=$(awk -F'; ' '{print NF}' <<<"$JOBS")
+        [ "$NJOBS" -gt 3 ] && JOBS="$(awk -F'; ' '{print $1"; "$2"; "$3}' <<<"$JOBS") +$((NJOBS - 3)) more"
+        case "$MAIN_V" in
+            green)            ok   "$LABEL" "last completed run green (${MAIN_SHA:0:8})" ;;
+            none)             warn "$LABEL" "run $MAIN_ID listed no jobs — state unknown" ;;
+            red-unverified:*) bad  "$LABEL" "red at ${MAIN_SHA:0:8}: $JOBS — HEAD has no CI of its own; fix, or rerun a flake (gh run rerun $MAIN_ID --failed)" ;;
+            red-superseded:*) warn "$LABEL" "red at ${MAIN_SHA:0:8}: $JOBS — HEAD's own run is the verdict" ;;
+        esac
+    done
 fi
 
 # What gates PyPI, now that nothing human does.

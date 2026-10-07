@@ -1570,13 +1570,99 @@ def remove_handshake(p: Path) -> None:
         pass
 
 
-def serve_board(root: Path, version: str, port: int, poll_s: float, with_logs: bool, idle_s: float) -> int:
-    run_dir = root / ".release" / version
+def port_holder(root: Path, port: int, version: str) -> dict | None:
+    """Another version's live board holding `port`, read from its handshake.
+    None for anything else on the port: only a board we can name is ours to touch."""
+    for hs in sorted((root / ".release").glob(f"*/{BOARD_SERVER_FILE}")):
+        try:
+            d = json.loads(hs.read_text(encoding="utf-8", errors="replace"))
+        except (OSError, ValueError):
+            continue
+        pid = d.get("pid")
+        if d.get("port") != port or d.get("version") == version or not isinstance(pid, int) or not 0 < pid < 2**31:
+            continue
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            continue
+        except PermissionError:
+            pass
+        # a recycled pid is not the board: its command line must be this script
+        try:
+            import subprocess
+            args = subprocess.run(["ps", "-o", "args=", "-p", str(pid)], capture_output=True, text=True, timeout=5).stdout
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if "release-board.py" not in args:
+            continue
+        return {"version": d.get("version"), "pid": pid, "run_dir": hs.parent}
+    return None
+
+
+def retire_stale_board(root: Path, port: int, version: str) -> str | None:
+    """Incident 43 (0.35.0): the previous release's board, idle-exit hours away,
+    still held the default port, so the new run's board never came up and
+    `release.sh board` said "not up". A board whose run has finished is
+    yesterday's news; retire it so the new one keeps the default origin (the
+    browser's saved layout is keyed by it). A board whose run is LIVE is never
+    touched. Returns a line saying what it did, or None."""
+    h = port_holder(root, port, version)
+    if h is None or read_liveness(h["run_dir"])["alive"]:
+        return None
     try:
-        httpd, state, _ = make_server(root, version, port, poll_s, with_logs, idle_s=idle_s)
+        os.kill(h["pid"], signal.SIGTERM)
+    except OSError:
+        return None
+    # Wait on the PORT, not the pid: what we need is the socket, and a pid can
+    # outlive its server (an unreaped child reads as alive to kill(pid, 0)).
+    import socket
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        try:
+            socket.create_connection(("127.0.0.1", port), timeout=0.2).close()
+        except OSError:
+            return f"retired {h['version']}'s board (pid {h['pid']}; its run has finished) to take :{port}"
+        time.sleep(0.1)
+    return None
+
+
+def bind_with_fallback(root: Path, version: str, port: int, explicit: bool, bind) -> tuple:
+    """bind(port) -> the make_server tuple. An explicit --port is honoured or
+    fails. The default port, when busy, is first reclaimed from a finished
+    run's board, then any of the next nine ports is taken. Returns
+    (bound tuple, note or None); raises the first OSError when nothing binds."""
+    try:
+        return bind(port), None
+    except OSError as first:
+        if explicit or port == 0:
+            raise
+        retired = retire_stale_board(root, port, version)
+        if retired:
+            try:
+                return bind(port), retired
+            except OSError:
+                pass
+        for alt in range(port + 1, port + 10):
+            try:
+                return bind(alt), f":{port} is busy ({first.strerror or first}); serving on :{alt} instead"
+            except OSError:
+                continue
+        raise first
+
+
+def serve_board(root: Path, version: str, port: int | None, poll_s: float, with_logs: bool, idle_s: float) -> int:
+    run_dir = root / ".release" / version
+    explicit = port is not None
+    port = DEFAULT_PORT if port is None else port
+    try:
+        (httpd, state, _), note = bind_with_fallback(
+            root, version, port, explicit,
+            lambda p: make_server(root, version, p, poll_s, with_logs, idle_s=idle_s))
     except OSError as e:
         sys.stderr.write(f"error: cannot bind 127.0.0.1:{port} ({e.strerror or e}) — another board, or pass --port\n")
         return 1
+    if note:
+        sys.stderr.write(f"  board: {note}\n")
     actual = httpd.server_address[1]
     hs = write_handshake(run_dir, actual, version, state.token)
     atexit.register(remove_handshake, hs)
@@ -1611,7 +1697,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--backfill-preflight", action="store_true", help="write the preflight rows a pre-sink run never recorded, from the driver's captured logs/preflight.N.log (refused if rows exist)")
     ap.add_argument("--dry-run", action="store_true", help="with --backfill-preflight: print the rows, write nothing")
     ap.add_argument("--serve", action="store_true", help="serve the board live on loopback with a per-run token: the page patches itself as the run dir changes; add --with-logs for tails")
-    ap.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"with --serve: port (default {DEFAULT_PORT}; 0 = a free one, but the browser's saved layout is keyed by origin)")
+    ap.add_argument("--port", type=int, default=None, help=f"with --serve: port (default {DEFAULT_PORT}, reclaimed from a finished run's board or else the next free one; an explicit port is honoured or fails; 0 = any free one, but the browser's saved layout is keyed by origin)")
     ap.add_argument("--poll", type=float, default=1.0, help="with --serve: seconds between run-dir checks")
     ap.add_argument("--idle", type=float, default=DEFAULT_IDLE_S, help="with --serve: exit after this many seconds without a request")
     ap.add_argument("--root", type=Path, default=ROOT, help=argparse.SUPPRESS)

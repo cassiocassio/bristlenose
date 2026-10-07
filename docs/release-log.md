@@ -67,6 +67,42 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.35.0 — 7 Oct 2026 · Tier 1 (minor — the session timeline, role recodes, split/join/move paragraphs)
+
+**What shipped.** Each session opens into a timeline under its Sessions row (scene colours per
+speaker turn, sentiment marks, theme spans); a speaker's role can be changed in the person picker,
+which now opens from the transcript and the dashboard too; one session can be re-analysed after a
+recode into or out of participant; transcript paragraphs split, join, and move to another speaker
+(**Session | Paragraph**). Plus three picker refinements and three fixes, one of them the Welcome
+screen's Star & hide picture, committed for its session at the owner's call.
+
+**Verified 9 of 9** (`release.sh verify 0.35.0`, exit 0) at 05:29 BST: PyPI (200 at ~05:25),
+GitHub Release, Homebrew, TestFlight 4528, `.dmg`, Snap edge, Copr, and the website, deployed
+from a clean worktree of the website repo's committed HEAD. Tag `v0.35.0` on `acc9feb8`, the
+exact commit strict CI passed.
+
+**The run went clean end to end: 65 min from start to tag, no stop.** preflight 164 s · build-all
+457 s · build-dmg 800 s · strict CI 804 s · TestFlight 438 s · `.dmg` upload 1231 s (20 min, against
+84 the night before, with no resume needed) · tag 2 s. Overnight and unattended, 03:56–05:01 BST.
+
+### Four reds on `main` fixed before the run, none in the product
+
+`origin/main`'s CI was red on four blocking checks from the day's commits, none noticed:
+
+| check | cause | fix |
+|---|---|---|
+| every test cell | the tapestry's dev playground carried English aria-labels the gate did not know were dev-only | `6e788d95`: the toggle moved to its own file; both files in `_DEV_ONLY` |
+| `ratchet` | `test_scene_colour`'s ffmpeg skipif took the skip count to 52 | `6e788d95`: ceiling 52, reasoned in `ratchet.json` |
+| `ruff` | an unsorted import in the tschichold skill's `scan.py` | `6e788d95` |
+| Mac Build, both runners | `PersonPickerPopover.swift:458` timed out the type-checker (one `+` chain of four optional-mapped arrays); the Mac here compiled it | `06931971`: typed parts; Swift suite 1811 passed |
+
+**One flake during the run, outside the gate.** The *push* run of the release commit failed
+`frontend-lint-type-test` on `test-release-board-dom.js`: elapsed read `9Xs` where the test took
+only `8Xs`. The gate reads only the dispatched run, which passed, so the release did not stop.
+`301dbd9c` widens the band after the tag.
+
+---
+
 ## 0.34.0 — 5 Oct 2026 · Tier 1 (minor — the CLI on Windows, the one-line installer, winget Ollama)
 
 **What shipped.** The command-line tool installs and runs on Windows (pipx or uv, x64 Python, Windows on

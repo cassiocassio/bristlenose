@@ -1497,7 +1497,15 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** — shipping build **0.34.0 (4420)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+**Internal TestFlight since 14 Jul 2026** — shipping build **0.35.0 (4528)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+
+**0.35.0 shipped 7 Oct 2026, overnight and unattended — tag `v0.35.0` on `acc9feb8`,
+TestFlight build 4528, verified 9 of 9.** A minor: the session timeline under each Sessions
+row, role recodes in the person picker (now on the transcript and dashboard too), one-session
+re-analyse, and split/join/move for transcript paragraphs. The run itself went clean, 65 min to
+tag; the work was before it — `main` was red on four blocking checks from the day's commits,
+including a Swift expression that timed out CI's type-checker. Full account:
+`docs/release-log.md` § 0.35.0.
 
 **0.34.0 shipped 5 Oct 2026, evening — tag `v0.34.0` on `4c5855b5`, TestFlight
 build 4420, verified 9 of 9.** A minor: the CLI on Windows, the one-line installer

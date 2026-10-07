@@ -371,7 +371,22 @@ it can be inspected.
 >   was green. ⚠️ **Unexplained; a watch item.** A clean exit points at
 >   something asking the app to quit — an outside quit request, or the app
 >   closing itself when its last window shut. If it recurs, read the test
->   host's unified log around the exit before re-running.
+>   host's unified log around the exit before re-running. **Did not recur in
+  0.35.0** (build-dmg's suite green first time).
+
+> **7 Oct 2026 — 0.35.0 ran clean; two new items.**
+> - **42 — `main` sat red on four blocking checks and nobody was told.** After
+>   0.34.0, several sessions' commits reddened the aria-label gate, the ratchet,
+>   ruff and both Mac Build runners. The handoff caught it by asking; nothing
+>   mechanical did, because the readiness check reads CI only for HEAD and HEAD
+>   was not yet pushed. ✅ For this release: fixed before the run (release log
+>   § 0.35.0). ⚠️ Owed: a red latest CI run on `origin/main` should be a
+>   readiness row of its own, independent of whether HEAD is pushed.
+> - **43 — `release.sh board` could not start: the previous release's board
+>   still held 8151** (started 5 Oct, idle-exit not yet reached). The run is
+>   unaffected, since the board is optional, but the printed "not up" sent a
+>   cycle to its log. Worked round with `--port 8152`. ⚠️ Owed: the board
+>   should take the next free port, or retire a board serving a finished run.
 
 ---
 

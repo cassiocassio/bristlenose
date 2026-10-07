@@ -355,6 +355,9 @@ jobs:
           echo "::group::test-release-board"
           .venv/bin/python scripts/test-release-board.py </dev/null || { echo "::error::test-release-board failed"; rc=1; }
           echo "::endgroup::"
+          echo "::group::test-release-history"
+          .venv/bin/python scripts/test-release-history.py </dev/null || { echo "::error::test-release-history failed"; rc=1; }
+          echo "::endgroup::"
           exit $rc
 
   frontend-lint-type-test:

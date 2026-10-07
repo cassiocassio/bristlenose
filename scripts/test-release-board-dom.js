@@ -142,8 +142,36 @@ function section3() {
   eq("its elapsed counts from the frame's clock, not today's", true, running && /running · \d+s/.test(running.querySelector("small").textContent) && !/\d+m/.test(running.querySelector("small").textContent));
 }
 
+function section4() {
+  console.log("4 · the History tab: a toggle that sticks, every invocation drawn, a bad read is a state");
+  const m = model();
+  const { d, w, errors } = load(htmlFor(m));
+  eq("no renderer error with the history in the model", 0, errors.filter(e => /Uncaught/.test(e)).length);
+  const screen = d.getElementById("screen");
+  eq("the board opens on This run", "run", screen.getAttribute("data-view"));
+  eq("the History pane is in the DOM", true, !!d.getElementById("pane-history"));
+  d.getElementById("view-history").click();
+  eq("clicking History switches the view", "history", screen.getAttribute("data-view"));
+  eq("…and presses its button", "true", d.getElementById("view-history").getAttribute("aria-pressed"));
+  eq("the run's panes stay in the DOM, so a live patch still lands", true, !!d.getElementById("main") && !!d.getElementById("pane-preflight"));
+  eq("the choice is remembered", "history", w.localStorage.getItem("rb-view"));
+  const svg = d.querySelector("#pane-history svg.hist-svg");
+  eq("one release label for the one release in .release/", 1, svg ? svg.querySelectorAll("g.rel").length : 0);
+  eq("its invocation ends in a stopped mark (the ledger stops after build-all)", true, !!svg && [...svg.querySelectorAll("rect")].some(r => r.getAttribute("stroke") === "var(--warn)"));
+  eq("there is a table view of the same numbers", true, !!d.querySelector("#pane-history table.hist-t"));
+  eq("every SVG title is text, never markup", true, [...svg.querySelectorAll("title")].every(t => t.children.length === 0));
+  // (a reload restoring the view is not asserted: each JSDOM gets its own storage)
+  // a history that could not be read is a nodata line, not a fault band
+  const broken = { ...m, history: { schema: 1, error: "ValueError: boom", releases: [] } };
+  const { d: d4, errors: e4 } = load(htmlFor(broken));
+  eq("a bad history read renders no fault band", null, d4.getElementById("fault"));
+  eq("…and says what went wrong in the pane", true, /boom/.test(d4.getElementById("pane-history").textContent));
+  eq("…with no renderer error", 0, e4.filter(e => /Uncaught/.test(e)).length);
+  w.close();
+}
+
 (async () => {
-  try { await section2(); section3(); }
+  try { await section2(); section3(); section4(); }
   catch (e) { bad("suite threw: " + (e && e.stack || e)); }
   fs.rmSync(work, { recursive: true, force: true });
   console.log(`\n${passes} passed, ${fails} failed`);

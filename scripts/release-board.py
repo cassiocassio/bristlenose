@@ -106,6 +106,28 @@ def _load_bn_events():
 bn_events = _load_bn_events()
 
 
+def _load_release_stats():
+    # release-stats.py owns the cross-release tally and the one failure taxonomy;
+    # the History tab draws its model rather than keeping a second count here
+    spec = importlib.util.spec_from_file_location("release_stats", ROOT / "scripts" / "release-stats.py")
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    return mod
+
+
+release_stats = _load_release_stats()
+
+
+def history_pane(root: Path) -> dict:
+    """Every invocation of every release under root/.release — the History tab.
+    A failure to read it is a pane state, never a board that fails to render."""
+    try:
+        return release_stats.history(root)
+    except Exception as e:  # noqa: BLE001 — the run board must survive a bad history read
+        return {"schema": 1, "error": f"{type(e).__name__}: {e}"[:200], "releases": []}
+
+
 def utc_now() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -1157,6 +1179,7 @@ def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: Non
                  "meta": {k: v for k, v in grouped["meta"].items() if k in ("title", "done_title", "bundle")}},
         "confounded": conf_log,
         "previous": prev["version"] if prev else None,
+        "history": history_pane(root),
     }
     return model
 

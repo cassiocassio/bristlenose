@@ -280,7 +280,7 @@ One file, no framework, no CDN, opens from `file://`. Hand-rolled tokens (§0.6)
 
 ## 5 · Out of scope, by decision
 
-History overlay and Welford estimates (review-log Finding 22); probing from
+History overlay (the cross-release view shipped 7 Oct 2026 as a tab, §9) and Welford estimates (review-log Finding 22); probing from
 the board; ~~any server (`--serve`, SSE, FastAPI, SwiftUI)~~ — **the server
 shipped the same day this list was written; see §8** (`--serve`, loopback
 `127.0.0.1:8151`, per-run token in the 0600 handshake, self-exiting after four
@@ -499,3 +499,93 @@ clock and assumed liveness. fetch and EventSource are stubbed (jsdom has
 neither), so the wire is proven by the Python suite and the page's reaction
 to a model by the node one; the two together cover what a single-language
 harness could not.
+
+## 9 · History: every release attempt, on one step axis (7 Oct 2026)
+
+**What it answers.** The maintainer's three questions, after 0.35.0 became the
+first release since 0.31.5 to run start to finish unattended: (i) where do most
+attempts stop, and what are the edge cases; (ii) is the machine getting
+better; (iii) every release attempt we have made, over time. The run board
+answers none of them, because it is one run.
+
+**It is a tab, not a page.** A segmented control in the header, **This run ·
+History**, stored in `localStorage` (`rb-view`), the theme toggle's pattern.
+The run's panes stay in the DOM under History, so a live patch still lands;
+`pane-history` is one more slice in the patch map.
+
+**No `--history` flag, by decision.** The tab reads every `.release/*/events.jsonl`
+and `bn-events.log` on every model build — 16 ledgers, ~60 KB of model — and
+needs nothing the run dir does not already hold. A flag would hide the one
+view that answers "are we getting better" behind a thing nobody remembers to
+type. The cost is bounded by caching: `history()` is keyed on the ledgers'
+and sinks' mtimes and sizes, and each failed log's class on its own, so the
+live server re-derives nothing between changes. §5's "History overlay … out of
+scope" is superseded by this section for the cross-release view; the
+per-run overlay (Welford estimates) stays out.
+
+**The model is `release-stats.py`'s, not the board's.** `release_stats.history(root)`
+returns one record per `run started` line, grouped by the ledger's own `run`
+field (so the renamed `0.31.3-stopped-*` dirs are invocations of 0.31.3). Each
+has an **entry** — the first step it executed, because resume skips completed
+steps silently and a resumed run enters mid-line — and an **exit**:
+
+| exit | when | drawn as |
+|---|---|---|
+| `fail` | a step wrote `fail`; class from the ledger stamp (`class=`, since 0.32.0), else `verdict_failure_class` on the step log | ✕ |
+| `stopped` | the ledger just ends: killed, or stopped by hand. `mid_step` says whether a step was running. Also `run completed` over a table that never reached `snap` (incident 22's first form, 0.28.0) | ▢ |
+| `skipped` | `run completed` over a skipped irreversible step with no tag pushed (incident 22 reopened, 0.31.3) | ◇ |
+| `completed` | every step it ran was ok, through `snap` | ● |
+
+Channels come from `release.sh verify` in the sink: a channel is **reached** if
+any complete pass saw it ok, because a later pass reads `bad` only once the
+next release has moved the channel on. No sink is no record (0.28.0, 0.29.0),
+never zero. `CAUSES` and `UNLEDGERED` are the two hand-kept tables — the cause
+of a stop where the release log or the premortem names it, keyed
+`version#n`, and stops that happened before `run started` was written (0.33.0's
+notary 403). Absent a cause, the chart shows the class alone; it never invents
+one. `MACHINE_MILESTONES` names the release-machine commits worth labelling;
+every other commit to `MACHINE_PATHS` still appears, unnamed, in its gap.
+
+**The picture.** Rows are steps in plan order, then the eight channels.
+
+- **Left, a funnel**: of 100 attempts that start, how many get past each step.
+  The width at a step is the share of that step's attempts that passed it,
+  multiplied down the line — rolled throughput yield, from process
+  engineering. A plain head-count was tried first and rejected: resumed
+  attempts join mid-line, so the count bulges instead of narrowing, and the
+  owner's "100 starts, fewer finish, where did they abandon" stops being
+  readable. One outline per release, newest on top and bold; every older
+  layer carries a 5 % fill, so where many releases got through reads darker
+  (the onion). The grey behind is every release pooled; the number at each
+  row's edge is how many attempts stopped there. An attempt stopped *between*
+  steps is counted as abandoned at the next one.
+- **Right, every invocation** as its own vertical line, oldest left, grouped by
+  release (dated). It starts at the step it entered (▸ when mid-line), runs
+  down, and ends in its exit mark; a dashed curve carries a release from one
+  invocation's end to the next one's start, so a resume reads as a U-turn.
+  Dashed vertical rules are commits to the release machine landing between
+  two attempts; the numbered ones are the milestones, listed under the chart.
+- Under it: the selected release's stops in words (click a release label),
+  a table of where attempts stopped by step and class (the chart's text
+  equivalent), and the milestone list.
+
+**Prior art.** The right half is a Marey chart (E. J. Marey's 1885 Paris–Lyon
+train schedule: stations on one axis, one line per train, a reversing train
+turns back) crossed with the clinical swimmer plot (one bar per patient, an
+event mark where something happened, an arrow for "still going"); the
+demographers' Lexis diagram draws the same lifelines with a mark at death. The
+left half is a funnel read as rolled throughput yield. The closest software
+analogue is a CI stage view (build × stage grid), which loses both the resume
+shape and the cross-release trend this view exists for.
+
+**Proof.** `scripts/test-release-history.py` (unittest, in the `release-suites`
+CI job): a clean run, a resume that enters mid-line with its stamped class,
+`completed` over an unfinished table, a skipped tag versus a skipped act
+already done, stopped mid-step versus between steps, renamed dirs grouped by
+`run`, a channel reached on an earlier pass, no sink is no record, torn lines
+counted, a root git cannot answer for is `None`, and the board surviving a
+failed history read. Two of those were proven red on mutants (the
+claimed-complete rule; reached-on-any-pass). `test-release-board-dom.js`
+section 4: the toggle, the pane, one release label per release, the stopped
+mark, the table view, text-only SVG titles, and a bad read as a nodata line,
+not the fault band.

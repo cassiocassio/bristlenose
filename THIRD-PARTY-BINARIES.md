@@ -126,7 +126,7 @@ procurement; under-listing would be a compliance risk.
 | `google-genai` | 2.28.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
 | `greenlet` | 3.5.6 | MIT AND PSF-2.0 | <https://greenlet.readthedocs.io> |
 | `h11` | 0.16.0 | MIT License | <https://github.com/python-hyper/h11> |
-| `hf-xet` | 1.6.0 | Apache-2.0 | <https://github.com/huggingface/xet-core> |
+| `hf-xet` | 1.7.0 | Apache-2.0 | <https://github.com/huggingface/xet-core> |
 | `httpcore` | 1.0.9 | BSD-3-Clause | <https://www.encode.io/httpcore/> |
 | `httpcore2` | 2.13.1 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
 | `httptools` | 0.8.0 | MIT | <https://github.com/MagicStack/httptools> |
@@ -158,9 +158,9 @@ procurement; under-listing would be a compliance risk.
 | `numba` | 0.68.0 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
 | `onnxruntime` | 1.30.0 | MIT License | <https://onnxruntime.ai> |
-| `openai` | 3.24.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| `openai` | 3.26.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
-| `opentelemetry-api` | 1.45.0 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
+| `opentelemetry-api` | 1.45.1 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
 | `phonenumbers` | 9.0.40 | Apache-2.0 | <https://github.com/daviddrysdale/python-phonenumbers> |
 | `preshed` | 3.0.13 | MIT License | <https://github.com/explosion/preshed> |
@@ -204,7 +204,7 @@ procurement; under-listing would be a compliance risk.
 | `tqdm` | 4.70.1 | MPL-2.0 AND MIT | <https://tqdm.github.io> |
 | `truststore` | 0.10.4 | MIT | <https://github.com/sethmlarson/truststore> |
 | `typeguard` | 4.6.0 | MIT | <https://typeguard.readthedocs.io/en/latest/> |
-| `typer` | 0.27.2 | MIT | <https://github.com/fastapi/typer> |
+| `typer` | 0.27.3 | MIT | <https://github.com/fastapi/typer> |
 | `typing_extensions` | 4.16.0 | PSF-2.0 | <https://github.com/python/typing_extensions> |
 | `urllib3` | 2.8.0 | MIT | <https://github.com/urllib3/urllib3/blob/main/CHANGES.rst> |
 | `uvicorn` | 0.54.0 | BSD-3-Clause | <https://uvicorn.dev/> |

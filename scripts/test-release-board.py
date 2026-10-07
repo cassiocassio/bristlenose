@@ -1103,6 +1103,60 @@ class PortFallback(unittest.TestCase):
         self.assertEqual((s.getsockname()[1], note), (port, None))
 
 
+class OneBoardPerRun(unittest.TestCase):
+    """The handshake is one file per version. A second board for a version that
+    already has a live one must not take the file over: on 7 Oct 2026 a preview
+    board for 0.35.0 overwrote the release's handshake, `release.sh board --stop`
+    then killed the preview, and the preview's exit deleted the file the
+    release's board still needed."""
+
+    def setUp(self):
+        self.t = Tree()
+        self.t.run("1.0.0", events=ev("2026-09-05T10:00:00Z", "run", "started") + "\n")
+        self.run_dir = self.t.root / ".release" / "1.0.0"
+        self.procs = []
+
+    def tearDown(self):
+        for p in self.procs:
+            if p.poll() is None:
+                p.kill()
+                p.wait(timeout=5)
+        self.t.close()
+
+    def serve(self):
+        p = subprocess.Popen([PY, str(GEN), "1.0.0", "--serve", "--root", str(self.t.root), "--port", "0", "--poll", "0.1"],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        self.procs.append(p)
+        return p
+
+    def handshake(self):
+        return json.loads((self.run_dir / "board-server.json").read_text())
+
+    def test_a_second_board_for_the_same_run_defers_and_leaves_the_handshake(self):
+        first = self.serve()
+        deadline = time.time() + 10
+        while not (self.run_dir / "board-server.json").exists() and time.time() < deadline:
+            time.sleep(0.05)
+        before = self.handshake()
+        self.assertEqual(before["pid"], first.pid)
+        second = self.serve()
+        _, err = second.communicate(timeout=15)
+        self.assertEqual(second.returncode, 0)
+        self.assertIn("already serving 1.0.0", err)
+        self.assertIn(before["url"], err, "it names the board that is up")
+        self.assertEqual(self.handshake(), before, "the live board's handshake is untouched")
+        self.assertIsNone(first.poll(), "the first board is still serving")
+
+    def test_a_handshake_naming_a_dead_or_foreign_pid_is_ours_to_replace(self):
+        (self.run_dir / "board-server.json").write_text(json.dumps({"pid": 2**31 - 2, "port": 1, "url": "http://127.0.0.1:1/"}))
+        self.assertIsNone(rb.live_board(self.run_dir), "dead pid")
+        # a live process that is not a board (this test's own parent shell would do; use pid 1)
+        (self.run_dir / "board-server.json").write_text(json.dumps({"pid": 1, "port": 1, "url": "http://127.0.0.1:1/"}))
+        self.assertIsNone(rb.live_board(self.run_dir), "a live pid that is not a release board")
+        (self.run_dir / "board-server.json").write_text("not json")
+        self.assertIsNone(rb.live_board(self.run_dir), "unreadable")
+
+
 class Heartbeat(unittest.TestCase):
     def test_cadence_matches_release_sh_default(self):
         sh = (ROOT / "scripts" / "release.sh").read_text()

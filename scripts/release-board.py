@@ -1593,6 +1593,25 @@ def remove_handshake(p: Path) -> None:
         pass
 
 
+def _is_board_pid(pid) -> bool:
+    """A live process that is a release board. A recycled pid is not the board:
+    its command line must be this script."""
+    if not isinstance(pid, int) or not 0 < pid < 2**31:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        pass
+    try:
+        import subprocess
+        args = subprocess.run(["ps", "-o", "args=", "-p", str(pid)], capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return "release-board.py" in args
+
+
 def port_holder(root: Path, port: int, version: str) -> dict | None:
     """Another version's live board holding `port`, read from its handshake.
     None for anything else on the port: only a board we can name is ours to touch."""
@@ -1602,24 +1621,29 @@ def port_holder(root: Path, port: int, version: str) -> dict | None:
         except (OSError, ValueError):
             continue
         pid = d.get("pid")
-        if d.get("port") != port or d.get("version") == version or not isinstance(pid, int) or not 0 < pid < 2**31:
-            continue
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            continue
-        except PermissionError:
-            pass
-        # a recycled pid is not the board: its command line must be this script
-        try:
-            import subprocess
-            args = subprocess.run(["ps", "-o", "args=", "-p", str(pid)], capture_output=True, text=True, timeout=5).stdout
-        except (OSError, subprocess.SubprocessError):
-            continue
-        if "release-board.py" not in args:
+        if d.get("port") != port or d.get("version") == version or not _is_board_pid(pid):
             continue
         return {"version": d.get("version"), "pid": pid, "run_dir": hs.parent}
     return None
+
+
+def live_board(run_dir: Path) -> dict | None:
+    """The board already serving this run, from its handshake: a board process
+    that is not us, whose port answers. None when the handshake is absent,
+    unreadable, or names something dead — then it is ours to replace."""
+    try:
+        d = json.loads((run_dir / BOARD_SERVER_FILE).read_text(encoding="utf-8", errors="replace"))
+    except (OSError, ValueError):
+        return None
+    pid, port = d.get("pid"), d.get("port")
+    if pid == os.getpid() or not isinstance(port, int) or not 0 < port < 65536 or not _is_board_pid(pid):
+        return None
+    import socket
+    try:
+        socket.create_connection(("127.0.0.1", port), timeout=0.5).close()
+    except OSError:
+        return None
+    return {"pid": pid, "port": port, "url": d.get("url")}
 
 
 def retire_stale_board(root: Path, port: int, version: str) -> str | None:
@@ -1675,6 +1699,17 @@ def bind_with_fallback(root: Path, version: str, port: int, explicit: bool, bind
 
 def serve_board(root: Path, version: str, port: int | None, poll_s: float, with_logs: bool, idle_s: float) -> int:
     run_dir = root / ".release" / version
+    # One live board per run. The handshake is one file per version, and the
+    # driver's `board`, `--stop` and `run --board` all read it: a second board
+    # for the same version overwrote the first's handshake, so `release.sh board
+    # --stop` killed the second board (somebody's preview), and the second's exit
+    # then deleted the file the first still needed (7 Oct 2026, two sessions on
+    # 0.35.0). Point at the board that is up instead of taking its place.
+    existing = live_board(run_dir)
+    if existing:
+        sys.stderr.write(f"  board: already serving {version} at {existing['url']} (pid {existing['pid']}) — one board per run; "
+                         f"open that one, or `release.sh board {version} --restart` to replace it\n")
+        return 0
     explicit = port is not None
     port = DEFAULT_PORT if port is None else port
     try:

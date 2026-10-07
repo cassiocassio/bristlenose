@@ -475,6 +475,16 @@ each CI run id as an Actions run, `ratchet.json` pinned to the ci-sha. The
 template sets `href` in one place, every url is https, and a sha that is not
 hex or a run id that is not digits gets plain text.
 
+**One live board per run** (7 Oct 2026). The handshake is one file per
+version and everything in `release.sh` reads it, so a second `--serve` for a
+version that already has a live board (a board process, not us, whose port
+answers) prints that board's url and exits 0 instead of taking the file over.
+Before this, a preview board for 0.35.0 overwrote the release's handshake;
+`release.sh board --stop` then killed the preview, and the preview's exit
+deleted the file the release's board still needed. `live_board()` in
+`release-board.py`; `OneBoardPerRun` in the suite, proved red with the guard
+removed.
+
 **Writes are atomic**: `write_private` writes a sibling temp file
 (`O_EXCL|O_NOFOLLOW`, 0600, fsync) and renames it over the destination, so a
 reloading browser or a poller never reads a half file and a symlink at the
@@ -548,7 +558,7 @@ every other commit to `MACHINE_PATHS` still appears, unnamed, in its gap.
 
 **The picture.** Rows are steps in plan order, then the eight channels.
 
-- **Left, a funnel**: of 100 attempts that start, how many get past each step.
+- **Right, a funnel** (fixed): of 100 attempts that start, how many get past each step.
   The width at a step is the share of that step's attempts that passed it,
   multiplied down the line — rolled throughput yield, from process
   engineering. A plain head-count was tried first and rejected: resumed
@@ -559,8 +569,11 @@ every other commit to `MACHINE_PATHS` still appears, unnamed, in its gap.
   (the onion). The grey behind is every release pooled; the number at each
   row's edge is how many attempts stopped there. An attempt stopped *between*
   steps is counted as abandoned at the next one.
-- **Right, every invocation** as its own vertical line, oldest left, grouped by
-  release (dated). It starts at the step it entered (▸ when mid-line), runs
+- **Beside it, every invocation** as its own vertical line, grouped by release
+  (dated), newest against the funnel and oldest far left. The timeline is its
+  own horizontal scroll, right-anchored (`direction: rtl`), so it opens on the
+  newest runs and you swipe left to go back in time; the row labels and the
+  funnel stay fixed to its right. It starts at the step it entered (▸ when mid-line), runs
   down, and ends in its exit mark; a dashed curve carries a release from one
   invocation's end to the next one's start, so a resume reads as a U-turn.
   Dashed vertical rules are commits to the release machine landing between

@@ -73,7 +73,9 @@ console.log("1 · a live page renders every pane, and the tick counts from stamp
   const running = d.querySelector(".station.running");
   eq("the running station pulses while the heartbeat is fresh (20 s old, cadence 300)", true, running.classList.contains("fresh"));
   const since = running.querySelector("[data-since]");
-  eq("elapsed counts from the ledger stamp (~87 s)", true, /running · (1m|8\ds)/.test(since.textContent));
+  // ~87 s plus however long the two generator runs above took: a cold CI runner
+  // spent over 3 s there and read "9Xs" (0.35.0 push run), so the band is 87 s to 2 min.
+  eq("elapsed counts from the ledger stamp (~87 s)", true, /running · (1m|8[7-9]s|9\ds)/.test(since.textContent));
   // the tick, fast-forwarded: a heartbeat 20 minutes old is stale
   m.liveness.heartbeat.epoch = Math.floor(Date.now() / 1000) - 1200;
   const { d: d2 } = load(htmlFor(m));

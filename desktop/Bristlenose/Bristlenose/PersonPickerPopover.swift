@@ -455,9 +455,16 @@ final class PersonPickerModel: ObservableObject {
         let font = metrics.nameFont
         // Every role's rows and prompt, so browsing a role never resizes it.
         let roles = request.openRoles
-        let texts = roles.flatMap { request.rows(for: $0).names + [request.newPrompt(for: $0)] }
-            + (thatsMeLabel.map { [$0] } ?? []) + (swapLabel.map { [$0] } ?? [])
-            + (request.scope?.speakers.map { $0.name.isEmpty ? request.labels.roles[$0.role] ?? "" : $0.name } ?? [])
+        // Built in typed parts: as one `+` chain it outran the type-checker on CI.
+        var texts: [String] = roles.flatMap { role -> [String] in
+            request.rows(for: role).names + [request.newPrompt(for: role)]
+        }
+        if let thatsMeLabel { texts.append(thatsMeLabel) }
+        if let swapLabel { texts.append(swapLabel) }
+        let speakers = request.scope?.speakers ?? []
+        texts += speakers.map { speaker -> String in
+            speaker.name.isEmpty ? (request.labels.roles[speaker.role] ?? "") : speaker.name
+        }
         let widest = texts.map { ($0 as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
         // Cell inset 8 + check column + badge column + gap + text + trailing 10,
         // inside the source-list capsule's 10 a side, inside the 10 pt padding.

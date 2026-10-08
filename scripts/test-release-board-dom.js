@@ -187,7 +187,8 @@ function section4() {
     eq("a run with no lock and nothing running has no live mark", null, d7.querySelector("#pane-history .hist-live"));
   }
   { const lg = d.querySelector("#pane-history .hist-legend");
-    eq("the key sits beside the controls, in its own titled box", true, !!lg && lg.parentNode.classList.contains("hist-head") && lg.firstChild.textContent === "Key" && lg.previousSibling === d.querySelector("#pane-history .hist-ctl")); }
+    eq("the key sits beside the controls, in its own titled box", true, !!lg && lg.parentNode.classList.contains("hist-head") && lg.querySelector(".hist-keygrid").firstChild.textContent === "Key" && lg.previousSibling === d.querySelector("#pane-history .hist-ctl"));
+    eq("…with the summary numbers stacked as its first column", ["hist-sum", 5], [lg.firstChild.className, lg.firstChild.children.length]); }
   { const insp = d.getElementById("hist-insp"), sv = d.querySelector("#pane-history .hist-scroll svg.hist-svg");
     eq("the inspector is a panel to the right of the strip, not under it", true, !!insp && insp.parentNode.classList.contains("hist-wrap") && insp.previousSibling.classList.contains("hist-scroll"));
     eq("…exactly as tall as the step rows, so the tables below never move", sv.getAttribute("height")+"px", insp.style.height);

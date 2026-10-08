@@ -155,7 +155,7 @@ function section4() {
   eq("…and presses its button", "true", d.getElementById("view-history").getAttribute("aria-pressed"));
   eq("the run's panes stay in the DOM, so a live patch still lands", true, !!d.getElementById("main") && !!d.getElementById("pane-preflight"));
   eq("the choice is remembered", "history", w.localStorage.getItem("rb-view"));
-  const svg = d.querySelector("#pane-history svg.hist-svg");
+  const svg = d.querySelector("#pane-history .hist-scroll svg.hist-svg");
   eq("one release label for the one release in .release/", 1, svg ? svg.querySelectorAll("g.rel").length : 0);
   eq("its invocation ends in a stopped mark (the ledger stops after build-all)", true, !!svg && [...svg.querySelectorAll("rect")].some(r => r.getAttribute("stroke") === "var(--warn)"));
   eq("there is a table view of the same numbers", true, !!d.querySelector("#pane-history table.hist-t"));

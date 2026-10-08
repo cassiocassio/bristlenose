@@ -558,7 +558,7 @@ every other commit to `MACHINE_PATHS` still appears, unnamed, in its gap.
 
 **The picture.** Rows are steps in plan order, then the eight channels.
 
-- **Right, a funnel** (fixed): of 100 attempts that start, how many get past each step.
+- **Left, a funnel** (fixed): of 100 attempts that start, how many get past each step.
   The width at a step is the share of that step's attempts that passed it,
   multiplied down the line — rolled throughput yield, from process
   engineering. A plain head-count was tried first and rejected: resumed
@@ -569,13 +569,14 @@ every other commit to `MACHINE_PATHS` still appears, unnamed, in its gap.
   (the onion). The grey behind is every release pooled; the number at each
   row's edge is how many attempts stopped there. An attempt stopped *between*
   steps is counted as abandoned at the next one.
-- **Beside it, every invocation** as its own vertical line, grouped by release
-  (dated), newest against the funnel and oldest far left. The timeline is its
-  own horizontal scroll, right-anchored (`direction: rtl`), so it opens on the
-  newest runs and you swipe left to go back in time; the row labels and the
-  funnel stay fixed to its right. It starts at the step it entered (▸ when mid-line), runs
+- **To its right, every invocation** as its own vertical line, grouped by
+  release (dated). Time runs right to left so the newest attempt sits against
+  the funnel: the strip is laid out oldest-first and mirrored (`DIR = -1`), so
+  it opens on the newest runs with no scroll measuring, and you scroll right to
+  go back in time. The row labels and the funnel stay fixed on the left. It starts at the step it entered (▸ when mid-line), runs
   down, and ends in its exit mark; a dashed curve carries a release from one
-  invocation's end to the next one's start, so a resume reads as a U-turn.
+  invocation's end to the next one's start (leftward, since later is left), so
+  a resume reads as a U-turn.
   Dashed vertical rules are commits to the release machine landing between
   two attempts; the numbered ones are the milestones, listed under the chart.
 - **Above the funnel, All releases · By machine version** and a slider. A

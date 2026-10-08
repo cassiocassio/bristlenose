@@ -138,12 +138,11 @@
   .hist-wrap{display:flex;align-items:flex-start}
   .hist-ctl{display:flex;align-items:flex-end;margin:0 0 4px}
   .hist-ctl-l{flex:1 1 auto}
-  .hist-ctl-r{flex:none;display:flex;flex-direction:column;gap:5px;padding-left:10px;box-sizing:border-box}
+  .hist-ctl-r{flex:none;display:flex;flex-direction:column;gap:5px;padding-right:10px;box-sizing:border-box}
   .hist-ctl-r input[type=range]{width:100%;margin:0;accent-color:var(--now)}
   .hist-ver{color:var(--ink-2);font-size:10.5px;line-height:1.35;min-height:2.7em}
-  .hist-scroll{flex:1 1 auto;min-width:0;overflow-x:auto;padding-bottom:4px;direction:rtl}
-  .hist-scroll>svg{direction:ltr}
-  .hist-fixed{flex:none;border-left:1px solid var(--rule)}
+  .hist-scroll{flex:1 1 auto;min-width:0;overflow-x:auto;padding-bottom:4px}
+  .hist-fixed{flex:none;border-right:1px solid var(--rule)}
   .hist-svg{display:block;font:10.5px var(--font)}
   .hist-svg text{fill:var(--ink-2)}
   .hist-svg .rowlab{fill:var(--ink)}
@@ -670,7 +669,7 @@
     var LAB = 92, FW = 250, COL = 13, RGAP = 12, ROWH = 21, TOP = 120, DIV = 22;
     var yOf = function(i){ return TOP + i*ROWH + (i >= nS ? DIV : 0) + ROWH/2; };
     var H_ALL = yOf(rows.length - 1) + ROWH/2 + 18;
-    var fcx = LAB + FW/2, FWID = LAB + FW + 44, tx0 = 10;
+    var fcx = LAB + FW/2, FWID = LAB + FW + 44, tx0 = 50;
 
     // ── per release: tries and passes per row, by the ledger's own outcomes ──
     var tally = function(invs, verify){
@@ -716,7 +715,13 @@
     // Two drawings on one row grid: the timeline scrolls (oldest far left, newest
     // against the funnel, and it opens at the newest end); the row labels and the
     // funnel stay put to its right, so swiping back in time never loses the axis.
-    var W = x + 50;   // room for the newest label's slant and the "since the last run" rule
+    // Time runs right to left: laid out oldest-first, then mirrored, so the newest
+    // attempt sits against the funnel and the strip opens on it with no measuring.
+    // DIR is the x direction of later-in-time; the 50 px laid out ahead of the
+    // oldest becomes room on the right for its label's slant.
+    var W = x + 10, DIR = -1;
+    cols.forEach(function(c){ c.x = W - c.x; });
+    relSpan.forEach(function(s){ var a0 = s.x0, a1 = s.x1; s.x0 = W - a1; s.x1 = W - a0; });
     var svg = S("svg", {"class": "hist-svg", width: W, height: H_ALL, viewBox: "0 0 "+W+" "+H_ALL, role: "img",
       "aria-label": "Release attempts, oldest left: "+total+" invocations across "+rels.length+" releases; "+clean.length+" shipped from a single clean run. The table below carries the same data."});
     var fsvg = S("svg", {"class": "hist-svg hist-fixed", width: FWID, height: H_ALL, viewBox: "0 0 "+FWID+" "+H_ALL, role: "img",
@@ -734,7 +739,7 @@
     fsvg.appendChild(S("text", {x: 4, y: yTag - 3, "class": "muted", "font-size": 9}, "irreversible ↑"));
     var yDiv = yOf(nS - 1) + ROWH/2 + DIV/2 + 3;
     fsvg.appendChild(S("text", {x: LAB - 8, y: yDiv, "text-anchor": "end", "class": "muted", "font-size": 9.5}, "channels"));
-    svg.appendChild(S("text", {x: W - 50, y: yDiv, "text-anchor": "end", "class": "muted", "font-size": 9.5}, "after the tag: release.sh verify — a channel reached on any pass (none recorded before 0.29.1)"));
+    svg.appendChild(S("text", {x: 12, y: yDiv, "text-anchor": "start", "class": "muted", "font-size": 9.5}, "after the tag: release.sh verify — a channel reached on any pass (none recorded before 0.29.1)"));
 
     // ── the funnel ──
     fsvg.appendChild(S("text", {x: fcx, y: TOP - 34, "text-anchor": "middle", "class": "rowlab", "font-weight": 600}, "of 100 attempts, how many get past each step"));
@@ -796,8 +801,7 @@
         var lo = c.inv.start, hi = i + 1 < ordered.length ? ordered[i+1].inv.start : "9999";
         var inGap = mc.filter(function(m){ return m.ts > lo && m.ts <= hi; });
         if (!inGap.length) return;
-        var xr = i + 1 < ordered.length ? (c.x + ordered[i+1].x)/2 : c.x + 20;
-        if (i + 1 < ordered.length && ordered[i+1].ri !== c.ri) { var nx = relSpan[ordered[i+1].ri].x0; xr = nx - RGAP/2; }
+        var xr = i + 1 < ordered.length ? (c.x + ordered[i+1].x)/2 : c.x + DIR*20;   // the midpoint lands in a release gap too
         gaps.push({x: xr, commits: inGap, last: i + 1 >= ordered.length});
       });
       gaps.forEach(function(g){
@@ -839,8 +843,8 @@
       var y0 = yOf(rowIx[inv.entry]), er = exitRow(inv), y1 = er != null ? yOf(er) : y0;
       // a resume: dashed curve from this release's previous end to this start — up is a U-turn
       var pe = prevEnd[c.r.version];
-      if (pe) cg.appendChild(S("path", {d: "M"+pe.x+","+pe.y+" C"+(pe.x+COL*0.9)+","+pe.y+" "+(c.x-COL*0.9)+","+y0+" "+c.x+","+y0, fill: "none", stroke: "var(--mute)", "stroke-width": 1, "stroke-dasharray": "2 2", opacity: .8}));
-      if (rowIx[inv.entry] > 0) cg.appendChild(S("path", {d: "M"+(c.x-5)+","+(y0-3)+"L"+(c.x-1)+","+y0+"L"+(c.x-5)+","+(y0+3), fill: "none", stroke: "var(--ink-2)", "stroke-width": 1.4}));
+      if (pe) cg.appendChild(S("path", {d: "M"+pe.x+","+pe.y+" C"+(pe.x+DIR*COL*0.9)+","+pe.y+" "+(c.x-DIR*COL*0.9)+","+y0+" "+c.x+","+y0, fill: "none", stroke: "var(--mute)", "stroke-width": 1, "stroke-dasharray": "2 2", opacity: .8}));
+      if (rowIx[inv.entry] > 0) cg.appendChild(S("path", {d: "M"+(c.x-DIR*5)+","+(y0-3)+"L"+(c.x-DIR*1)+","+y0+"L"+(c.x-DIR*5)+","+(y0+3), fill: "none", stroke: "var(--ink-2)", "stroke-width": 1.4}));
       cg.appendChild(S("line", {x1: c.x, x2: c.x, y1: y0, y2: y1, stroke: x.kind === "completed" ? "var(--ink-2)" : "var(--ink-2)", "stroke-width": 2, "stroke-linecap": "round"}));
       cg.appendChild(glyph(x.kind || "stopped", c.x, y1));
       prevEnd[c.r.version] = {x: c.x, y: y1};
@@ -928,7 +932,7 @@
     });
     add(ctlR, modeSeg, slider, verTxt);
     if (stops2.length < 2) { slider.disabled = true; }
-    add(ctl, $("div","hist-ctl-l"), ctlR);
+    add(ctl, ctlR, $("div","hist-ctl-l"));   // over the funnel, which is on the left
     slider.addEventListener("input", function(){ era = window.__histEra = Number(slider.value); if (mode !== "era") { mode = window.__histMode = "era"; } applyEra(true); });
     applyEra = function(scrollTo){
       var on = mode === "era" && stops2.length > 0;
@@ -956,17 +960,17 @@
     };
     add(P, ctl);
     var wrap = $("div","hist-wrap"), scroll = $("div","hist-scroll");
-    scroll.tabIndex = 0; scroll.setAttribute("aria-label", "release attempts — scroll left for older");
-    scroll.appendChild(svg); add(wrap, scroll); wrap.appendChild(fsvg); add(P, wrap);
-    // the scroll is right-anchored (direction: rtl), so it opens on the newest runs with no
-    // measuring; a live re-render puts the reader back where they had swiped to
+    scroll.tabIndex = 0; scroll.setAttribute("aria-label", "release attempts, newest first — scroll right for older");
+    scroll.appendChild(svg); wrap.appendChild(fsvg); add(wrap, scroll); add(P, wrap);
+    // the strip opens at its left edge, where the newest runs are; a live re-render puts
+    // the reader back where they had swiped to
     if (window.__histScroll) requestAnimationFrame(function(){ scroll.scrollLeft = window.__histScroll; });
     scroll.addEventListener("scroll", function(){ window.__histScroll = scroll.scrollLeft; }, {passive: true});
     // legend: identity never by colour alone
     var lg = $("div","hist-legend");
     var sw = function(kind, label){ var s = $("span"); var m = S("svg", {width: 14, height: 14, viewBox: "0 0 14 14"}); m.appendChild(glyph(kind, 7, 7)); s.appendChild(m); s.appendChild(document.createTextNode(label)); return s; };
     add(lg, sw("fail", "failed at this step"), sw("stopped", "stopped (killed or by hand; no terminal event)"), sw("skipped", "skipped an irreversible step"), sw("completed", "reached the end"),
-        $("span", null, "▸ entered mid-line (a resume)"), $("span", null, "┄ curve: the same release's next attempt"), $("span", null, "scroll the timeline left for older releases"), $("span", null, "numbered rule: a release-machine change (list below)"));
+        $("span", null, "▸ entered mid-line (a resume)"), $("span", null, "┄ curve: the same release's next attempt"), $("span", null, "newest beside the funnel — scroll right for older releases"), $("span", null, "numbered rule: a release-machine change (list below)"));
     add(P, lg);
     var selBox = $("div","hist-sel"); add(P, selBox);
     paintSel();

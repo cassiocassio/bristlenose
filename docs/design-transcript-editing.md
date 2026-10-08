@@ -497,6 +497,28 @@ moves one paragraph to another speaker — `design-people.md` §K6, `POST …/tr
 
 ---
 
+### Open after the 8 Oct 2026 review — owner's calls
+
+- **Is a focused transcript "editing"?** One editable region means a click on a margin or a
+  timecode's text focuses it, and the page's bare-key shortcuts (`[` `]` `/` `?` `m`) stand
+  down until something else takes focus. The region takes no typing, so it could be excluded
+  from `isEditing()`; or the caret owns the keyboard, consistently. jsdom cannot see this.
+- **What a screen reader hears.** VoiceOver likely announces the whole transcript as an
+  editable text area although typing is refused. `role="document"` + `aria-readonly`, or a
+  caret only while a split/join mode is on. Needs a VoiceOver pass by hand.
+- **`::first-letter` in an editable region** — WebKit and Chromium have old caret bugs there
+  (the caret between the drawn capital and the next letter). Check by hand.
+- **Position + six words as an edit's anchor.** A re-run that adds or removes an earlier
+  paragraph shifts every later position, and those edits are refused; a short paragraph
+  ("Yeah.") could in principle match a neighbour. Time + words would survive the shift and
+  refuse an ambiguous match. Edits that fail to replay are logged, not shown anywhere.
+- **Undo is newest-first only in the UI**; `DELETE …/layout-edits/{id}` takes any edit, and
+  deleting a middle one silently drops later edits whose words then fail. Refuse a
+  non-newest delete, or keep the API general?
+- **Small, recorded:** the Backspace join guard compares displayed codes where the server
+  compares slots, so two slots of one person get a silent 409; an untimed transcript's
+  second split of a first half still sorts after the other half (ties fall to insertion).
+
 ## Copying from the transcript — built 8 Oct 2026
 
 A drag across paragraphs copies the house transcript format, not the page's

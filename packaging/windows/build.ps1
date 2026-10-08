@@ -20,7 +20,10 @@ param(
     # Where the installer will be downloaded from; a local URL for testing.
     [string]$InstallerUrl = "",
     # 1.12.0 is what winget-pkgs' tooling (Komac) emits as of Oct 2026.
-    [string]$ManifestVersion = "1.12.0"
+    [string]$ManifestVersion = "1.12.0",
+    # Check the manifest against winget's vendored JSON schemas instead of
+    # `winget validate`: for CI, whose runner cannot install winget.
+    [switch]$ValidateWithSchema
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
@@ -42,8 +45,8 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { throw "uv is not on P
 if ($Manifest -and -not $Installer) { throw "-Manifest needs -Installer" }
 # A release build is smoke-tested and validated; neither may be skipped quietly.
 if ($SkipSmoke -and $Installer) { throw "-SkipSmoke is for iterating on the folder; an installer build runs the smoke tests" }
-if ($Manifest -and -not (Get-Command winget -ErrorAction SilentlyContinue)) {
-    throw "-Manifest needs winget on PATH to validate what it writes"
+if ($Manifest -and -not $ValidateWithSchema -and -not (Get-Command winget -ErrorAction SilentlyContinue)) {
+    throw "-Manifest needs winget on PATH to validate what it writes (or -ValidateWithSchema)"
 }
 uv --version
 
@@ -214,6 +217,10 @@ if ($Installer) {
             [IO.File]::WriteAllText((Join-Path $manifestDir $template.Name), $text, (New-Object Text.UTF8Encoding $false))
         }
         Step "manifest: $manifestDir"
-        Run winget @("validate", "--manifest", $manifestDir)
+        if ($ValidateWithSchema) {
+            Run $py @("-P", (Join-Path $PSScriptRoot "validate_manifest.py"), $manifestDir)
+        } else {
+            Run winget @("validate", "--manifest", $manifestDir)
+        }
     }
 }

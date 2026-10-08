@@ -66,7 +66,56 @@ def test_the_build_refuses_an_installed_set_the_constraints_do_not_pin() -> None
 def test_a_manifest_build_must_validate() -> None:
     build = (WIN / "build.ps1").read_text(encoding="utf-8")
     assert 'Run winget @("validate", "--manifest", $manifestDir)' in build
-    assert "if ($Manifest -and -not (Get-Command winget" in build
+    assert '(Join-Path $PSScriptRoot "validate_manifest.py"), $manifestDir)' in build
+    assert "if ($Manifest -and -not $ValidateWithSchema -and -not (Get-Command winget" in build
+
+
+def _validator():
+    spec = importlib.util.spec_from_file_location(
+        "bn_windows_validate", WIN / "validate_manifest.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _filled_manifests(out: Path, overrides: dict[str, dict[str, str]] | None = None) -> Path:
+    """The templates as build.ps1 fills them; ``overrides`` maps a template's
+    file name to values that replace the defaults in that file only."""
+    defaults = {
+        "VERSION": "1.2.3",
+        "MANIFEST_VERSION": "1.12.0",
+        "INSTALLER_URL": "https://github.com/cassiocassio/bristlenose/releases/download/v1.2.3/bristlenose-1.2.3-setup-x64.exe",
+        "INSTALLER_SHA256": "A" * 64,
+        "RELEASE_DATE": "2026-10-08",
+    }
+    out.mkdir(parents=True)
+    for template in (WIN / "winget").glob("*.yaml"):
+        values = {**defaults, **(overrides or {}).get(template.name, {})}
+        text = template.read_text(encoding="utf-8")
+        for key, value in values.items():
+            text = text.replace("${" + key + "}", value)
+        (out / template.name).write_text(text, encoding="utf-8")
+    return out
+
+
+def test_the_filled_templates_pass_winget_schemas(tmp_path: Path) -> None:
+    """What CI runs instead of `winget validate`, since its runner cannot
+    install winget: the templates, filled, must satisfy winget's own schemas."""
+    assert _validator().validate_dir(_filled_manifests(tmp_path / "m")) == []
+
+
+def test_the_schema_check_rejects_a_bad_manifest(tmp_path: Path) -> None:
+    validator = _validator()
+    bad_hash = _filled_manifests(tmp_path / "a", {
+        "Bristlenose.Bristlenose.installer.yaml": {"INSTALLER_SHA256": "not-a-sha"},
+    })
+    assert any("InstallerSha256" in p for p in validator.validate_dir(bad_hash))
+    mismatch = _filled_manifests(tmp_path / "b", {
+        "Bristlenose.Bristlenose.yaml": {"VERSION": "9.9.9"},
+    })
+    assert any("disagree" in p for p in validator.validate_dir(mismatch))
 
 
 def test_the_smoke_tests_fixture_is_where_they_look() -> None:

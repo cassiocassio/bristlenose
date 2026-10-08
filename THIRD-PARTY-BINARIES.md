@@ -100,7 +100,7 @@ procurement; under-listing would be a compliance risk.
 | `alembic` | 1.20.0 | MIT | <https://alembic.sqlalchemy.org> |
 | `annotated-doc` | 0.0.5 | MIT | <https://github.com/fastapi/annotated-doc> |
 | `annotated-types` | 0.8.0 | MIT | <https://github.com/annotated-types/annotated-types> |
-| `anthropic` | 1.11.0 | MIT License | <https://github.com/anthropics/anthropic-sdk-python> |
+| `anthropic` | 1.12.1 | MIT License | <https://github.com/anthropics/anthropic-sdk-python> |
 | `anyio` | 4.15.1 | MIT | <https://anyio.readthedocs.io/en/stable/versionhistory.html> |
 | `attrs` | 26.1.0 | MIT | <https://www.attrs.org/en/stable/changelog.html> |
 | `av` | 18.1.0 | BSD-3-Clause | <https://pyav.basswood.io> |
@@ -118,12 +118,12 @@ procurement; under-listing would be a compliance risk.
 | `distro` | 1.9.0 | Apache Software License | <https://github.com/python-distro/distro> |
 | `docstring_parser` | 0.18.0 | MIT License | <https://github.com/rr-/docstring_parser> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
-| `fastapi` | 0.142.2 | MIT | <https://github.com/fastapi/fastapi> |
+| `fastapi` | 0.143.0 | MIT | <https://github.com/fastapi/fastapi> |
 | `filelock` | 4.0.12 | MIT | <https://github.com/tox-dev/py-filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
-| `google-auth` | 2.60.0 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
-| `google-genai` | 2.28.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
+| `google-auth` | 2.61.0 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
+| `google-genai` | 2.29.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
 | `greenlet` | 3.5.6 | MIT AND PSF-2.0 | <https://greenlet.readthedocs.io> |
 | `h11` | 0.16.0 | MIT License | <https://github.com/python-hyper/h11> |
 | `hf-xet` | 1.7.0 | Apache-2.0 | <https://github.com/huggingface/xet-core> |
@@ -158,19 +158,19 @@ procurement; under-listing would be a compliance risk.
 | `numba` | 0.68.0 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
 | `onnxruntime` | 1.30.0 | MIT License | <https://onnxruntime.ai> |
-| `openai` | 3.26.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| `openai` | 3.26.1 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.45.1 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
-| `phonenumbers` | 9.0.40 | Apache-2.0 | <https://github.com/daviddrysdale/python-phonenumbers> |
+| `phonenumbers` | 9.0.41 | Apache-2.0 | <https://github.com/daviddrysdale/python-phonenumbers> |
 | `preshed` | 3.0.13 | MIT License | <https://github.com/explosion/preshed> |
 | `protobuf` | 7.36.2 | 3-Clause BSD License | <https://developers.google.com/protocol-buffers/> |
 | `pyasn1` | 0.6.4 | BSD-2-Clause | <https://github.com/pyasn1/pyasn1> |
 | `pyasn1_modules` | 0.4.2 | BSD License | <https://github.com/pyasn1/pyasn1-modules> |
-| `pycparser` | 3.0 | BSD-3-Clause | <https://github.com/eliben/pycparser> |
-| `pydantic` | 2.13.5 | MIT | <https://github.com/pydantic/pydantic> |
+| `pycparser` | 3.1 | BSD-3-Clause | <https://github.com/eliben/pycparser> |
+| `pydantic` | 2.14.0 | MIT | <https://github.com/pydantic/pydantic> |
 | `pydantic-settings` | 2.15.0 | MIT | <https://github.com/pydantic/pydantic-settings> |
-| `pydantic_core` | 2.46.5 | MIT | <https://github.com/pydantic> |
+| `pydantic_core` | 2.50.0 | MIT | <https://github.com/pydantic> |
 | `Pygments` | 2.21.0 | BSD-2-Clause | <https://pygments.org> |
 | `PyJWT` | 2.15.1 | MIT | <https://github.com/jpadilla/pyjwt> |
 | `pysrt` | 1.1.2 | GPL-3.0-or-later | <https://github.com/byroot/pysrt> |
@@ -191,7 +191,7 @@ procurement; under-listing would be a compliance risk.
 | `spacy-legacy` | 3.0.12 | MIT License | <https://spacy.io> |
 | `spacy-loggers` | 1.0.5 | MIT | <https://github.com/explosion/spacy-loggers> |
 | `sqladmin` | 0.32.0 | BSD-3-Clause | <https://github.com/smithyhq/sqladmin> |
-| `SQLAlchemy` | 2.1.3 | MIT | <https://www.sqlalchemy.org> |
+| `SQLAlchemy` | 2.1.4 | MIT | <https://www.sqlalchemy.org> |
 | `srsly` | 2.5.4 | MIT License | <https://github.com/explosion/srsly> |
 | `sse-starlette` | 3.5.0 | BSD-3-Clause | <https://github.com/sysid/sse-starlette> |
 | `starlette` | 1.7.0 | BSD-3-Clause | <https://github.com/Kludex/starlette> |

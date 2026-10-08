@@ -583,6 +583,15 @@ History**, stored in `localStorage` (`rb-view`), the theme toggle's pattern.
 The run's panes stay in the DOM under History, so a live patch still lands;
 `pane-history` is one more slice in the patch map.
 
+**Layout, after the owner's first reading (8 Oct 2026).** The key sits top
+right in a titled, keylined box beside the controls, and wraps its own text
+rather than dropping onto a line of its own. The focused release's detail is
+an **inspector** to the right of the scrolling strip, not under it. It is
+exactly as tall as the step rows (`H_ALL`, the depth of the funnel's step
+list) and scrolls inside, so choosing another release never moves the
+"Where attempts stopped" tables below it. They used to jump with every
+choice. Below 900 px it drops under the strip at a capped height.
+
 **No `--history` flag, by decision.** The tab reads every `.release/*/events.jsonl`
 and `bn-events.log` on every model build — 16 ledgers, ~60 KB of model — and
 needs nothing the run dir does not already hold. A flag would hide the one

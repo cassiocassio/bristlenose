@@ -80,9 +80,9 @@
   .top{position:relative;display:flex;flex-wrap:wrap;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 46px 8px 14px}
   .top h1{margin:0;font-size:14px;font-weight:600}
   .top .v{font:600 15px var(--mono)}
-  .top select.runpick{field-sizing:content;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:6px;padding:1px 4px;cursor:pointer;max-width:22em}
+  .top select.runpick{field-sizing:content;font:500 12px var(--font);color:var(--ink);background:var(--panel);border:1px solid var(--rule2);border-radius:6px;padding:2px 6px;height:24px;cursor:pointer;max-width:20em}
   .pastback{font:inherit;color:inherit;background:none;border:0;padding:0;text-decoration:underline dotted;text-underline-offset:2px;cursor:pointer}
-  .top select.runpick:hover{border-color:var(--rule2);background:var(--panel)} .top select.runpick:focus-visible{outline:2px solid var(--now);outline-offset:1px}
+  .top select.runpick:hover{border-color:var(--now-bd)} .top select.runpick:focus-visible{outline:2px solid var(--now);outline-offset:1px}
   .top .m{color:var(--mute);font-size:11px}
   a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px} a:hover{text-decoration-style:solid;color:var(--now)}
   .pill{padding:3px 9px;border-radius:12px;border:1px solid var(--rule2);font-size:11px;color:var(--mute)}
@@ -196,6 +196,11 @@
   ol.hist-ms li{margin:0 0 3px}
   ol.hist-ms code{font:10.5px var(--mono);color:var(--mute)}
   .hist-sel{margin:6px 0 0;color:var(--ink-2)}
+  .hist-insp{flex:0 0 280px;box-sizing:border-box;overflow-y:auto;border-left:1px solid var(--rule);padding:4px 0 8px 14px;margin-left:12px;color:var(--ink-2);font-size:11px;line-height:1.4}
+  .hist-insp .hist-key{display:block;font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 6px}
+  .hist-insp-body>b{color:var(--ink);font:600 12px var(--mono)}
+  .hist-insp ul{margin:8px 0 0;padding-left:14px} .hist-insp li{margin:0 0 6px}
+  @media (max-width: 900px){ .hist-wrap{flex-wrap:wrap} .hist-insp{flex:1 1 100%;height:auto !important;max-height:260px;border-left:0;border-top:1px solid var(--rule);margin:8px 0 0;padding:8px 0 0} }
   .hist-sel li{margin:2px 0}
   /* the activity band: one skinny full-width row under the line — events belong to the whole process */
   .band{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:4px 14px;display:flex;align-items:center;gap:12px;min-height:30px}
@@ -411,10 +416,10 @@
   // run). The live run is the bare URL; any other is ?run=<id>, opened read-only.
   if (data.live && data.runs && data.runs.length > 1) {
     var liveRun = data.live.past ? data.live.live_run : data.version;
-    var pick = $("select","v runpick"); pick.id = "run-pick"; pick.setAttribute("aria-label", "show another run");
+    var pick = $("select","runpick"); pick.id = "run-pick"; pick.setAttribute("aria-label", "show another run");
     data.runs.forEach(function(r){
       var day = r.started ? new Date(r.started) : null;
-      var o = $("option", null, (/^\d/.test(r.id) ? "v" : "")+r.id+(day && !isNaN(day.getTime()) ? " · "+day.toLocaleDateString(undefined, {day:"numeric", month:"short"}) : "")+(r.id === liveRun ? " · live" : ""));
+      var o = $("option", null, r.id+(day && !isNaN(day.getTime()) ? " · "+day.toLocaleDateString(undefined, {day:"numeric", month:"short"}) : "")+(r.id === liveRun ? " (live)" : ""));
       o.value = r.id; if (r.id === data.version) o.selected = true; add(pick, o);
     });
     pick.addEventListener("change", function(){
@@ -1062,7 +1067,13 @@
     var head = $("div","hist-head"); add(head, ctl); add(P, head);
     var wrap = $("div","hist-wrap"), scroll = $("div","hist-scroll");
     scroll.tabIndex = 0; scroll.setAttribute("aria-label", "release attempts, newest first — scroll right for older");
-    scroll.appendChild(svg); wrap.appendChild(fsvg); add(wrap, scroll); add(P, wrap);
+    // the inspector: the focused release, to the right of the strip and exactly as tall as
+    // the step rows (H_ALL) — it scrolls inside, so choosing another release never moves
+    // what is below it (owner, 8 Oct 2026; it sat under the strip and the tables jumped)
+    var insp = $("div","hist-insp"); insp.id = "hist-insp"; insp.style.height = H_ALL+"px";
+    insp.setAttribute("role", "region"); insp.setAttribute("aria-label", "the focused release"); insp.setAttribute("aria-live", "polite");
+    add(insp, $("b", "hist-key", "Inspector")); var selBox = $("div","hist-insp-body"); add(insp, selBox);
+    scroll.appendChild(svg); wrap.appendChild(fsvg); add(wrap, scroll, insp); add(P, wrap);
     // the strip opens at its left edge, where the newest runs are; a live re-render puts
     // the reader back where they had swiped to
     if (window.__histScroll) requestAnimationFrame(function(){ scroll.scrollLeft = window.__histScroll; });
@@ -1073,7 +1084,6 @@
     add(lg, sw("fail", "failed at this step"), sw("stopped", "stopped (killed or by hand; no terminal event)"), sw("skipped", "skipped an irreversible step"), sw("completed", "reached the end"),
         $("span", null, "▸ entered mid-line (a resume)"), $("span", null, "┄ curve: the same release's next attempt"), $("span", null, "newest beside the funnel — scroll right for older releases"), $("span", null, "numbered rule: a release-machine change (list below)"));
     add(head, lg);
-    var selBox = $("div","hist-sel"); add(P, selBox);
     paintSel();
 
     // table view: the same numbers, readable without the picture

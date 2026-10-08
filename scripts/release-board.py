@@ -1600,7 +1600,10 @@ class BoardHandler(http.server.BaseHTTPRequestHandler):
         runs = list_runs(st.root / ".release")
         want = (qs.get("run") or [""])[0]
         if want and want != st.version and want not in {r["id"] for r in runs}:   # only a listed run dir, never a path
-            self._send(404, "text/plain; charset=utf-8", b"no such run")
+            sys.stderr.write(f"  board: no run dir {want[:80]!r} under .release/ (listed: {', '.join(r['id'] for r in runs) or 'none'})\n")
+            self._send(404, "text/plain; charset=utf-8",
+                       (f"No run {want[:80]!r} under .release/ on this board's machine. It lists: "
+                        + (", ".join(r["id"] for r in runs) or "none") + ". Go back and pick one of those.").encode("utf-8"))
             return
         past = want if want and want != st.version else None
         if path in ("/", "/board.html") and past:

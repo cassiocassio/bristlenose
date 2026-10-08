@@ -388,8 +388,10 @@ cmd_run() {
     fi
     echo $$ > "$STATE/.lock/pid"
     trap 'stop_guest; rm -rf "$STATE/.lock"' EXIT
-    trap 'exit 143' TERM
-    trap 'exit 130' INT
+    # A run stopped by a signal says so; with no line, the morning would blame
+    # the trigger. The EXIT trap then stops the guest and drops the lock.
+    trap 'write_report "$(run_name) · error: interrupted by a signal"; exit 143' TERM
+    trap 'write_report "$(run_name) · error: interrupted by a signal"; exit 130' INT
 
     run_gates
     if [ -n "$GATE_REASONS" ]; then

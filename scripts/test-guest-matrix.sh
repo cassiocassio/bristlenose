@@ -248,6 +248,7 @@ for i in $(seq 1 50); do [ -f "$W/fake/booted" ] && [ -f "$ST/.lock/pid" ] && br
 kill -TERM "$(cat "$ST/.lock/pid" 2>/dev/null)" 2>/dev/null; wait $! 2>/dev/null
 eq "the guest was stopped"        yes "$([ -f "$W/fake/stopped-seq" ] && echo yes || echo no)"
 eq "…and the lock released"       no "$([ -d "$ST/.lock" ] && echo yes || echo no)"
+eq "…and the night says it was interrupted" yes "$(has 'error: interrupted by a signal' "$(report)")"
 
 head_ "a lock left by a crash"
 reset_env; mkdir -p "$ST/.lock"; echo 999999 > "$ST/.lock/pid"

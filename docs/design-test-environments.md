@@ -234,8 +234,11 @@ could lie or go missing; each is now a test case:
 - the lock carries its holder's pid, and a dead holder's lock is taken over; a
   live one is a named skip ("a run is still in progress"), never silence;
 - the exit trap stops the running guest, so a runner killed by a signal does not
-  leave a VM up for every later night to trip over; `tart stop` and the agent
-  probe are time-boxed, and a VM that ignores the stop is killed;
+  leave a VM up for every later night to trip over (measured on `sequoia`:
+  SIGTERM to the runner, runner gone in 1 s, guest stopped 2 s later, no tart
+  process left), and the night records `error: interrupted by a signal`;
+  `tart stop` and the agent probe are time-boxed, and a VM that ignores the
+  stop is killed;
 - a failure after the gates (unwritable share, no HEAD) writes `error: …`, which
   `report` treats as red, instead of reading as "the trigger never ran";
 - a guest-side warning (a failed screen-size prep) rides on the cell.
@@ -280,11 +283,12 @@ wakes it for the :30 tick; the runner then holds idle sleep off with
 display stays asleep regardless.
 
 **Proof.** `scripts/test-guest-matrix.sh` drives the real script against fake
-`tart`, `pmset`, `ps` and `sysctl` in a throwaway repo (72 cases, in CI). Eleven
+`tart`, `pmset`, `ps` and `sysctl` in a throwaway repo (73 cases, in CI). Twelve
 mutants each turn their cases red: battery accepted, exit 0 read as green, commit
 marked tested after a missing verdict, release gate removed, process probe
 removed, a trial filed as the night, no stale-lock takeover, a trap that leaves
-the VM up, a silent post-gate failure, no carried verdict, locales not counted.
+the VM up, a silent post-gate failure, a silent signal, no carried verdict, locales not
+counted.
 
 **Not yet measured:** whether a guest without Xcode can run a host-built bundle
 with `test-without-building` (if so, guests shrink by about 30 GB and a macOS 27

@@ -33,7 +33,7 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from bristlenose.utils.bundled_binary import bundled_binary_path
+from bristlenose.utils.bundled_binary import binary_command
 from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
 if TYPE_CHECKING:
@@ -151,9 +151,8 @@ def frame_pixels(raw: bytes) -> list[Lab]:
 
 def sample_keyframes(video: Path) -> list[tuple[float, list[Lab]]]:
     """Every keyframe of *video* as (seconds, kept OKLab pixels). Decodes keyframes only."""
-    ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
     proc = subprocess.run(
-        [ffmpeg, "-nostdin", "-hide_banner", "-loglevel", "info", "-skip_frame", "nokey",
+        [binary_command("ffmpeg"), "-nostdin", "-hide_banner", "-loglevel", "info", "-skip_frame", "nokey",
          "-i", str(video), "-an", "-vf", f"scale={FRAME_W}:{FRAME_H}:flags=area,showinfo",
          "-fps_mode", "vfr", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
         capture_output=True, timeout=600,

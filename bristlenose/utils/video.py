@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from bristlenose.utils.bundled_binary import bundled_binary_path
+from bristlenose.utils.bundled_binary import binary_command
 from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
 if TYPE_CHECKING:
@@ -100,11 +100,10 @@ def extract_thumbnail(
         logger.warning("No thumbnail for %s: %s", video_path.name, exc)
         return None
 
-    ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
     try:
         result = subprocess.run(
             [
-                ffmpeg,
+                binary_command("ffmpeg"),
                 *hwaccel,
                 "-ss", str(timestamp),
                 "-i", str(video_path),

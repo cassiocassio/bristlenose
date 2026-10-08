@@ -12,7 +12,9 @@ Channels already handled elsewhere:
 - **Desktop**: ships ffmpeg in ``.app/Contents/Resources/`` (covered by
   ``bristlenose.utils.bundled_binary`` PATH-prepend, so ``shutil.which`` finds it).
 
-This preflight only fires when ``shutil.which("ffmpeg")`` returns None,
+This preflight only fires when ``bundled_binary_path("ffmpeg")`` returns None —
+the same lookup the stages run FFmpeg with, so a Windows ``ffmpeg.exe`` in the
+current directory neither satisfies it nor runs —
 which means none of the above provided it — i.e., a pip install on a system
 where the user hasn't installed ffmpeg themselves.
 """
@@ -31,6 +33,7 @@ from typing import TYPE_CHECKING
 from bristlenose.i18n import t
 from bristlenose.preflight import PreflightAbortedError
 from bristlenose.ui_kinds import MessageKind, cli_prefix
+from bristlenose.utils.bundled_binary import bundled_binary_path
 
 if TYPE_CHECKING:
     from rich.console import Console
@@ -211,7 +214,7 @@ def preflight_ffmpeg(
     """
     if os.environ.get("BRISTLENOSE_SKIP_PREFLIGHT") == "1":
         return
-    if shutil.which("ffmpeg"):
+    if bundled_binary_path("ffmpeg"):
         return
 
     distro = _detect_distro()
@@ -225,7 +228,7 @@ def preflight_ffmpeg(
     ):
         _run_brew_install(console, status)
         # Confirm post-install — brew may have failed silently (rare).
-        if shutil.which("ffmpeg"):
+        if bundled_binary_path("ffmpeg"):
             return
         # Fall through to the abort path with the install table still on screen.
 

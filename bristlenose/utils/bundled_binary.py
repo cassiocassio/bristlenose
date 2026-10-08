@@ -14,8 +14,10 @@ Resolves a binary by name across three runtime modes:
    Layout matches ``desktop/scripts/fetch-ffmpeg.sh`` and the Xcode "Copy
    Sidecar Resources" build phase.
 
-3. CLI / non-bundled — ``shutil.which(name)`` against the inherited PATH.
-   This is the only path that runs in CI and on Homebrew/Snap/pip installs.
+3. CLI / non-bundled — ``safe_which(name)`` against the inherited PATH
+   (``shutil.which`` off Windows; on Windows, absolute PATH entries only, never
+   the current directory). This is the only path that runs in CI and on
+   Homebrew/Snap/pip installs.
 
 Returns ``None`` when not found by any branch; callers preserve their
 existing "raise on missing" behaviour, so error messages on the CLI are
@@ -25,9 +27,10 @@ unchanged from the bare ``"ffmpeg"`` argv form.
 from __future__ import annotations
 
 import os
-import shutil
 import sys
 from pathlib import Path
+
+from bristlenose.utils.safe_which import safe_which
 
 _ENV_VAR_PREFIX = "BRISTLENOSE_"
 _HOST_SENTINEL = "_BRISTLENOSE_HOSTED_BY_DESKTOP"
@@ -64,7 +67,24 @@ def bundled_binary_path(name: str) -> str | None:
         if bundle_path is not None:
             return bundle_path
 
-    return shutil.which(name)
+    return safe_which(name)
+
+
+def binary_command(name: str) -> str:
+    """What to put in argv[0] to run ``name``.
+
+    The resolved path when there is one. Otherwise the bare name off Windows,
+    where exec searches PATH only and a missing binary fails as it always did;
+    on Windows a bare name would be looked up in the current directory first,
+    so this raises ``FileNotFoundError`` instead — the error subprocess would
+    have raised for a missing binary, so callers' handling is unchanged.
+    """
+    found = bundled_binary_path(name)
+    if found is not None:
+        return found
+    if sys.platform == "win32":
+        raise FileNotFoundError(f"{name} not found")
+    return name
 
 
 def bundled_binaries_dir() -> Path | None:

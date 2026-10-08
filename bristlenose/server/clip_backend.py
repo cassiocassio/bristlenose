@@ -16,7 +16,7 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from bristlenose.utils.bundled_binary import bundled_binary_path
+from bristlenose.utils.bundled_binary import binary_command, bundled_binary_path
 from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
 if TYPE_CHECKING:
@@ -159,7 +159,11 @@ class FFmpegBackend:
             logger.warning("Clip extraction skipped for %s: %s", source.name, exc)
             return None
 
-        ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
+        try:
+            ffmpeg = binary_command("ffmpeg")
+        except FileNotFoundError:
+            logger.warning("FFmpeg not found when extracting clip from %s", source.name)
+            return None
         cmd = [ffmpeg, "-ss", f"{start:.3f}", "-to", f"{end:.3f}", "-i", str(source)]
         if subtitles is not None:
             cmd += ["-i", str(subtitles)]
@@ -231,9 +235,9 @@ class FFmpegBackend:
         """
         from bristlenose.server.clip_subtitles import to_ass
 
-        ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
-        ffprobe = bundled_binary_path("ffprobe") or "ffprobe"
         try:
+            ffmpeg = binary_command("ffmpeg")
+            ffprobe = binary_command("ffprobe")
             probe = subprocess.run(
                 [ffprobe, "-v", "error", "-select_streams", "v:0",
                  "-show_entries",

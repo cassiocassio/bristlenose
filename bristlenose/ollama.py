@@ -13,6 +13,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from bristlenose.utils.safe_which import safe_which
+
 logger = logging.getLogger(__name__)
 
 # Models known to work well with structured output, in preference order.
@@ -53,31 +55,12 @@ def _windows_install_dir() -> Path | None:
     return Path(local) / "Programs" / "Ollama" if local else None
 
 
-def _windows_path_lookup() -> str | None:
-    """``ollama.exe`` from an absolute PATH entry — never the current directory.
-
-    ``shutil.which`` on Windows searches the current directory before PATH and
-    honours PATHEXT, so an ``ollama.exe``/``.bat``/``.cmd`` in the folder a
-    researcher runs from (a client's unzipped interviews) would be executed.
-    Ollama ships only ``ollama.exe``, so nothing else is accepted, and a
-    relative PATH entry (``.``, empty) is skipped because it names the cwd.
-    """
-    for entry in os.environ.get("PATH", "").split(os.pathsep):
-        entry = entry.strip().strip('"')
-        if not entry or not os.path.isabs(entry):
-            continue
-        candidate = Path(entry) / "ollama.exe"
-        if candidate.is_file():
-            return str(candidate)
-    return None
-
-
 def ollama_executable() -> str | None:
     """Absolute path to the ``ollama`` CLI, or None.
 
     Windows: the install folder first, then absolute PATH entries — never the
-    current directory (see ``_windows_path_lookup``). Elsewhere: ``which``,
-    which searches PATH only.
+    current directory (``utils.safe_which``). Elsewhere: ``which``, which
+    searches PATH only.
     """
     import platform
     import shutil
@@ -86,7 +69,7 @@ def ollama_executable() -> str | None:
         folder = _windows_install_dir()
         if folder is not None and (folder / "ollama.exe").is_file():
             return str(folder / "ollama.exe")
-        return _windows_path_lookup()
+        return safe_which("ollama")
     return shutil.which("ollama")
 
 

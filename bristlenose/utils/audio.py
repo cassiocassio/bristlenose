@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from bristlenose.models import MediaTimeMeta
-from bristlenose.utils.bundled_binary import bundled_binary_path
+from bristlenose.utils.bundled_binary import binary_command
 from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 from bristlenose.utils.timecodes import parse_iso_lenient
 
@@ -172,13 +172,13 @@ def probe_media(file_path: Path) -> tuple[float | None, MediaTimeMeta | None]:
     last case under the first would have cost a file its duration for one bad
     date tag.
     """
-    ffprobe = bundled_binary_path("ffprobe") or "ffprobe"
     try:
         ensure_materialised(file_path)
     except CloudFetchTimeoutError as exc:
         logger.warning("Could not probe %s: %s", file_path, exc)
         return None, None
     try:
+        ffprobe = binary_command("ffprobe")
         result = subprocess.run(
             [ffprobe, "-v", "error", "-print_format", "json",
              "-show_entries", "format:stream_tags", "--", str(file_path)],
@@ -255,10 +255,9 @@ def extract_audio_from_video(
     # Harmless no-op for audio-only inputs; ignored if unsupported.
     hwaccel = ["-hwaccel", "videotoolbox"] if platform.system() == "Darwin" else []
 
-    ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
     result = subprocess.run(
         [
-            ffmpeg,
+            binary_command("ffmpeg"),
             *hwaccel,
             "-i", str(video_path),
             "-vn",                    # no video
@@ -297,7 +296,6 @@ def has_audio_stream(file_path: Path) -> bool:
             ``-v error`` (not ``-v quiet``) so the failure reason survives in
             stderr for the exception message.
     """
-    ffprobe = bundled_binary_path("ffprobe") or "ffprobe"
     try:
         # Fetch first if this is a cloud placeholder. Without this the download
         # happens *inside* the 30s timeout below and surfaces as "ffprobe timed
@@ -309,7 +307,7 @@ def has_audio_stream(file_path: Path) -> bool:
     try:
         result = subprocess.run(
             [
-                ffprobe,
+                binary_command("ffprobe"),
                 "-v", "error",
                 "-select_streams", "a",
                 "-show_entries", "stream=codec_type",
@@ -322,7 +320,7 @@ def has_audio_stream(file_path: Path) -> bool:
         )
     except FileNotFoundError as exc:
         raise AudioToolError(
-            f"ffprobe binary not found ({ffprobe!r}); cannot probe {file_path.name}"
+            f"ffprobe binary not found ({exc}); cannot probe {file_path.name}"
         ) from exc
     except subprocess.TimeoutExpired as exc:
         raise AudioToolError(

@@ -30,7 +30,7 @@ class TestEnvVarBranch:
     def test_empty_env_var_falls_through(self, monkeypatch, tmp_path):
         monkeypatch.setenv("BRISTLENOSE_FFMPEG", "")
         monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
-        with patch("bristlenose.utils.bundled_binary.shutil.which", return_value="/from/which"):
+        with patch("shutil.which", return_value="/from/which"):
             assert bundled_binary_path("ffmpeg") == "/from/which"
 
 
@@ -59,7 +59,7 @@ class TestBundleRelativeBranch:
     def test_bundle_relative_skipped_when_sentinel_unset(self, monkeypatch):
         monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
         monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
-        with patch("bristlenose.utils.bundled_binary.shutil.which", return_value="/usr/local/bin/ffmpeg"):
+        with patch("shutil.which", return_value="/usr/local/bin/ffmpeg"):
             assert bundled_binary_path("ffmpeg") == "/usr/local/bin/ffmpeg"
 
     def test_bundle_relative_falls_through_when_file_missing(self, monkeypatch, tmp_path):
@@ -74,7 +74,7 @@ class TestBundleRelativeBranch:
         # Note: no ffmpeg file written — bundle branch must fall through
 
         with patch("bristlenose.utils.bundled_binary.sys.executable", str(sidecar)), \
-             patch("bristlenose.utils.bundled_binary.shutil.which", return_value="/which/ffmpeg"):
+             patch("shutil.which", return_value="/which/ffmpeg"):
             assert bundled_binary_path("ffmpeg") == "/which/ffmpeg"
 
     @pytest.mark.skipif(os.name != "posix", reason="Windows has no exec bit to withhold; the bundle-relative branch is the macOS app's")
@@ -94,7 +94,7 @@ class TestBundleRelativeBranch:
         ffmpeg.chmod(0o644)
 
         with patch("bristlenose.utils.bundled_binary.sys.executable", str(sidecar)), \
-             patch("bristlenose.utils.bundled_binary.shutil.which", return_value="/which/ffmpeg"):
+             patch("shutil.which", return_value="/which/ffmpeg"):
             assert bundled_binary_path("ffmpeg") == "/which/ffmpeg"
 
 
@@ -104,13 +104,13 @@ class TestPathFallback:
     def test_which_used_when_no_env_var_no_sentinel(self, monkeypatch):
         monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
         monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
-        with patch("bristlenose.utils.bundled_binary.shutil.which", return_value="/opt/homebrew/bin/ffmpeg"):
+        with patch("shutil.which", return_value="/opt/homebrew/bin/ffmpeg"):
             assert bundled_binary_path("ffmpeg") == "/opt/homebrew/bin/ffmpeg"
 
     def test_returns_none_when_nothing_found(self, monkeypatch):
         monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
         monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
-        with patch("bristlenose.utils.bundled_binary.shutil.which", return_value=None):
+        with patch("shutil.which", return_value=None):
             assert bundled_binary_path("ffmpeg") is None
 
 

@@ -303,13 +303,12 @@ def load_audio_16k(path: Path) -> Any:
     """
     import numpy as np
 
-    from bristlenose.utils.bundled_binary import bundled_binary_path
+    from bristlenose.utils.bundled_binary import binary_command
     from bristlenose.utils.fs import ensure_materialised
 
     ensure_materialised(path)
-    ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
     result = subprocess.run(
-        [ffmpeg, "-nostdin", "-v", "error", "-i", str(path),
+        [binary_command("ffmpeg"), "-nostdin", "-v", "error", "-i", str(path),
          "-vn", "-ac", "1", "-ar", str(SAMPLE_RATE), "-f", "s16le", "-"],
         capture_output=True,
         timeout=600,

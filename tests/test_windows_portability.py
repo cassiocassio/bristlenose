@@ -444,12 +444,15 @@ def test_the_frozen_windows_build_finds_its_own_ffmpeg_first(
     monkeypatch.setattr(sys, "executable", str(app / "bristlenose.exe"))
     monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
     monkeypatch.delenv("BRISTLENOSE_FFPROBE", raising=False)
-    monkeypatch.setattr(bundled_binary.shutil, "which", lambda name: f"C:/elsewhere/{name}.exe")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (elsewhere / "ffmpeg.exe").write_bytes(b"")
+    monkeypatch.setenv("PATH", str(elsewhere))
 
     assert bundled_binary.bundled_binary_path("ffmpeg") == str(app / "tools" / "ffmpeg.exe")
     assert bundled_binary.bundled_binaries_dir() == app / "tools"
     monkeypatch.setattr(sys, "frozen", False)
-    assert bundled_binary.bundled_binary_path("ffmpeg") == "C:/elsewhere/ffmpeg.exe"
+    assert bundled_binary.bundled_binary_path("ffmpeg") == str(elsewhere / "ffmpeg.exe")
 
 
 def test_a_damaged_frozen_build_runs_no_one_elses_ffmpeg(
@@ -466,7 +469,7 @@ def test_a_damaged_frozen_build_runs_no_one_elses_ffmpeg(
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(app / "bristlenose.exe"))
     monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
-    monkeypatch.setattr(bundled_binary.shutil, "which", lambda name: f"C:/project/{name}.exe")
+    monkeypatch.setattr("shutil.which", lambda name: f"C:/project/{name}.exe")
 
     assert bundled_binary.bundled_binary_path("ffmpeg") is None
     (app / "tools").mkdir()
@@ -580,11 +583,10 @@ class TestBundleTranscriptionSelfTest:
 
     def test_ffmpeg_from_elsewhere_fails(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from bristlenose.doctor import CheckStatus, check_bundle_transcription
-        from bristlenose.utils import bundled_binary
 
         app = self._bundle(tmp_path, monkeypatch)
         (app / "tools" / "ffmpeg.exe").unlink()
-        monkeypatch.setattr(bundled_binary.shutil, "which", lambda name: f"C:/elsewhere/{name}.exe")
+        monkeypatch.setattr("shutil.which", lambda name: f"C:/elsewhere/{name}.exe")
         result = check_bundle_transcription()
         assert result.status == CheckStatus.FAIL and "ffmpeg" in result.detail
 

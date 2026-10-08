@@ -1467,6 +1467,44 @@ _ORT_IDENTITY_MODEL = (
 )
 
 
+def _transcription_probe(ffmpeg: str | None) -> str | None:
+    """Run the engine rather than look at it; return what failed, or None.
+
+    Presence proved nothing about the failures that have happened: a
+    quarantined or truncated ffmpeg.exe, or a PyAV that imports but cannot
+    decode (av 19, Sep 2026). So run the bundled FFmpeg, and decode a generated
+    half-second WAV through faster-whisper's own decoder (PyAV), which is the
+    path a researcher's first recording takes.
+    """
+    import os
+    import tempfile
+    import wave
+
+    if ffmpeg:
+        try:
+            proc = subprocess.run([ffmpeg, "-version"], capture_output=True, timeout=60)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return f"{ffmpeg} -version did not run: {exc}"
+        if proc.returncode != 0:
+            return f"{ffmpeg} -version exited {proc.returncode}"
+    try:
+        from faster_whisper.audio import decode_audio
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "probe.wav")
+            with wave.open(path, "wb") as w:
+                w.setnchannels(1)
+                w.setsampwidth(2)
+                w.setframerate(16000)
+                w.writeframes(b"\x00\x00" * 8000)
+            samples = decode_audio(path)
+    except Exception as exc:  # PyAV raises its own error types
+        return f"audio decoding failed: {exc}"
+    if len(samples) == 0:
+        return "audio decoding returned no samples"
+    return None
+
+
 def check_bundle_transcription() -> CheckResult:
     """The Windows build's transcription engine: ctranslate2, faster-whisper, FFmpeg.
 
@@ -1498,6 +1536,7 @@ def check_bundle_transcription() -> CheckResult:
         return CheckResult(status=CheckStatus.FAIL, label=label,
                            detail=f"faster-whisper's VAD model is missing ({vad})",
                            fix_key="bundle_dir_missing")
+    ffmpeg = None
     if getattr(sys, "frozen", False):
         from bristlenose.utils.bundled_binary import bundled_binary_path
 
@@ -1509,8 +1548,15 @@ def check_bundle_transcription() -> CheckResult:
                                    detail=f"{name} resolves to {found or 'nothing'}, "
                                           f"not the bundled copy in {tools}",
                                    fix_key="bundle_dir_missing")
+            if name == "ffmpeg":
+                ffmpeg = found
+    problem = _transcription_probe(ffmpeg)
+    if problem:
+        return CheckResult(status=CheckStatus.FAIL, label=label, detail=problem,
+                           fix_key="bundle_dir_missing")
     return CheckResult(status=CheckStatus.OK, label=label,
-                       detail=f"ctranslate2 {ctranslate2.__version__}, VAD model, FFmpeg")
+                       detail=f"ctranslate2 {ctranslate2.__version__}, VAD model, "
+                              f"FFmpeg runs, audio decodes")
 
 
 def check_bundle_voice() -> CheckResult:

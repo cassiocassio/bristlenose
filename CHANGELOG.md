@@ -2,6 +2,23 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.36.0** — _8 Oct 2026_
+
+Transcript text can be selected across paragraphs and pasted into a document with its timecodes, and the transcript no longer shows a platform's speaker name past anonymisation.
+
+**New**
+
+- **Copy transcript paragraphs into a document.** Drag across as many paragraphs as you like and paste: a plain-text editor gets Markdown, one paragraph per block with its speaker code and timecode; Word and other rich-text editors get the timecode styled as the app draws it. Badges, annotations and buttons are left behind.
+- **A paragraph starts with a capital where a sentence begins** — the first paragraph, a new speaker's turn, or after a full stop. This is display only: the transcribed words are unchanged, and a word spelled lower-case on purpose, such as iPhone, keeps its spelling.
+
+**Fixed**
+
+- **A speaker's name from the source transcript could appear past anonymisation.** Imported text kept the label written after each speaker code — "(Speaker B)", or a meeting platform's real name — and it reached exports, search and the agent endpoint. It is now removed on import; "(laughs)" and similar stay.
+- **Removing a session that had a split, join or move made every later import fail.** Its edits now go with it.
+- **A paragraph given to a new moderator could pass that moderator's code, and name, to another voice on a re-run.**
+- **A split in a paragraph without word timings appeared at the end of the session** instead of where it was made.
+- **Paragraph edits from 0.35.0 could stop applying** after a change to speaker labels or to PII redaction.
+
 **0.35.0** — _7 Oct 2026_
 
 Each session opens into a timeline of the interview, a speaker's role can be changed after the fact, and transcript paragraphs can be split, joined and moved to another speaker.

@@ -194,7 +194,9 @@ function section4() {
   { const insp = d.getElementById("hist-insp"), sv = d.querySelector("#pane-history .hist-scroll svg.hist-svg");
     eq("the inspector is a panel to the right of the strip, not under it", true, !!insp && insp.parentNode.classList.contains("hist-wrap") && insp.previousSibling.classList.contains("hist-scroll"));
     eq("…exactly as tall as the step rows, so the tables below never move", sv.getAttribute("height")+"px", insp.style.height);
-    eq("…and it names the focused release", true, /1\.0\.0/.test(insp.textContent)); }
+    eq("…and it names the focused release", true, /1\.0\.0/.test(insp.textContent));
+    eq("…after the machine version's details", ["Machine version", "hist-ver", "Release"], [insp.children[0].textContent, insp.children[1].className, insp.children[2].textContent]);
+    eq("…and it scrolls rather than grows", "auto", d.defaultView.getComputedStyle(insp).overflowY); }
   eq("there is a table view of the same numbers", true, !!d.querySelector("#pane-history table.hist-t"));
   eq("every SVG title is text, never markup", true, [...svg.querySelectorAll("title")].every(t => t.children.length === 0));
   // (a reload restoring the view is not asserted: each JSDOM gets its own storage)
@@ -216,6 +218,7 @@ function section4() {
     const s5 = d5.getElementById("hist-era");
     eq("the slider has one stop per version an attempt ran under", "1", s5.max);
     s5.value = "0"; s5.dispatchEvent(new d5.defaultView.Event("input"));
+    eq("the slider's own label is just \"version 1 of 2\"", "version 1 of 2", d5.getElementById("hist-vershort").textContent);
     eq("sliding switches to By machine version", "true", d5.getElementById("hist-mode-era").getAttribute("aria-pressed"));
     const groups = [...d5.querySelectorAll("#pane-history g.inv")];
     eq("…and dims the attempts outside the selected version", ["1", "0.1"], groups.map(g => g.getAttribute("opacity")));

@@ -187,7 +187,6 @@
   .hist-head .hist-ctl{grid-column:1;min-width:0;margin:0;align-items:flex-start;padding:8px 12px 9px;border:1px solid var(--rule2);border-radius:6px;background:var(--panel)}
   .hist-head .hist-ctl-r{width:100% !important;padding-right:0;min-width:0}
   .hist-head .hist-ctl-l{display:none}
-  .hist-head .hist-ver{width:0;min-width:100%}   /* wraps to the column; never widens it */
   .hist-ctl .hist-key{display:block;font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 2px}
   .hist-legend{grid-column:2/5;min-width:0;display:grid;grid-template-columns:subgrid;align-items:start;padding:8px 12px 9px;border:1px solid var(--rule2);border-radius:6px;background:var(--panel);color:var(--ink-2);font-size:10.5px;line-height:1.35}
   .hist-legend .hist-sum{grid-column:1;min-width:0;flex-direction:column;flex-wrap:nowrap;gap:3px;margin:0;padding-right:12px;border-right:1px solid var(--rule);font-size:11px;align-self:stretch}
@@ -213,6 +212,10 @@
   ol.hist-ms code{font:10.5px var(--mono);color:var(--mute)}
   .hist-sel{margin:6px 0 0;color:var(--ink-2)}
   .hist-insp{flex:0 0 280px;box-sizing:border-box;overflow-y:auto;border-left:1px solid var(--rule);padding:4px 0 8px 14px;margin-left:12px;color:var(--ink-2);font-size:11px;line-height:1.4}
+  .hist-slrow{display:flex;align-items:center;gap:8px} .hist-slrow input{flex:1 1 auto;min-width:40px}
+  .hist-vershort{flex:none;font-size:10.5px;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .hist-insp .hist-key-2{margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)}
+  .hist-insp .hist-ver{min-height:0;font-size:11px}
   .hist-insp .hist-key{display:block;font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 6px}
   .hist-insp-body>b{color:var(--ink);font:600 12px var(--mono)}
   .hist-insp ul{margin:8px 0 0;padding-left:14px} .hist-insp li{margin:0 0 6px}
@@ -1047,13 +1050,14 @@
     var era = window.__histEra != null && window.__histEra < stops2.length ? window.__histEra : stops2.length - 1;
     var slider = $("input"); slider.type = "range"; slider.min = 0; slider.max = Math.max(0, stops2.length - 1); slider.value = era; slider.id = "hist-era";
     slider.setAttribute("aria-label", "release-machine version");
-    var verTxt = $("div","hist-ver");
+    var verTxt = $("div","hist-ver"), verShort = $("span","hist-vershort"); verShort.id = "hist-vershort";
     [["all","All releases"],["era","By machine version"]].forEach(function(o){
       var b = $("button", null, o[1]); b.type = "button"; b.id = "hist-mode-"+o[0];
       b.addEventListener("click", function(){ mode = window.__histMode = o[0]; applyEra(true); });
       add(modeSeg, b);
     });
-    add(ctlR, $("b", "hist-key", "History"), modeSeg, slider, verTxt);
+    var slRow = $("div","hist-slrow"); add(slRow, slider, verShort);
+    add(ctlR, $("b", "hist-key", "History"), modeSeg, slRow);   // "version 9 of 11" here; the version's details live in the inspector
     if (stops2.length < 2) { slider.disabled = true; }
     add(ctl, ctlR, $("div","hist-ctl-l"));   // over the funnel, which is on the left
     slider.addEventListener("input", function(){ era = window.__histEra = Number(slider.value); if (mode !== "era") { mode = window.__histMode = "era"; } applyEra(true); });
@@ -1075,6 +1079,7 @@
       var cur = stops2[era];
       cols.forEach(function(c){ if (c.g) c.g.setAttribute("opacity", on && cur && c.era !== cur.e ? 0.1 : 1); });
       relEls.forEach(function(o){ o.g.setAttribute("opacity", on && cur && cur.rels.indexOf(o.v) < 0 ? 0.25 : 1); });
+      verShort.textContent = on && cur ? "version "+(era+1)+" of "+stops2.length : (stops2.length ? stops2.length+" versions" : "");
       if (!on || !cur) { verTxt.textContent = stops2.length ? stops2.length+" machine versions — slide to see each one's funnel" : "no release-machine changes to split by"; return; }
       var named = ms.slice(cur.from, cur.e).map(function(m, i){ return "#"+(cur.from+i+1)+" "+m.milestone; });
       verTxt.textContent = verLabel(cur, era)+" · "+cur.cols.length+" attempt"+(cur.cols.length === 1 ? "" : "s")+" across "+cur.rels.join(", ")
@@ -1093,7 +1098,9 @@
     // what is below it (owner, 8 Oct 2026; it sat under the strip and the tables jumped)
     var insp = $("div","hist-insp"); insp.id = "hist-insp"; insp.style.height = H_ALL+"px";
     insp.setAttribute("role", "region"); insp.setAttribute("aria-label", "the focused release"); insp.setAttribute("aria-live", "polite");
-    add(insp, $("b", "hist-key", "Inspector")); var selBox = $("div","hist-insp-body"); add(insp, selBox);
+    // machine version first (what the slider picked), then the focused release
+    add(insp, $("b", "hist-key", "Machine version"), verTxt, $("b", "hist-key hist-key-2", "Release"));
+    var selBox = $("div","hist-insp-body"); add(insp, selBox);
     scroll.appendChild(svg); wrap.appendChild(fsvg); add(wrap, scroll, insp); add(P, wrap);
     // the strip opens at its left edge, where the newest runs are; a live re-render puts
     // the reader back where they had swiped to

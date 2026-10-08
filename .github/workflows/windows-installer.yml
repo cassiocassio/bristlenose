@@ -1,0 +1,106 @@
+name: Windows installer
+
+# Step 2 of docs/design-winget.md: build the winget installer on Windows before
+# the tag, so the Windows verdict exists before the irreversible act. Runs
+# build.ps1 (wheel -> PyInstaller folder -> smoke tests -> Inno installer ->
+# winget manifest) and keeps the installer, manifest and build log as an
+# artefact. A published version's installer is never rebuilt: winget pins its
+# SHA-256, and a rebuild changes it.
+#
+# Not yet a release gate: the release machine does not call this until a first
+# version has been accepted into winget-pkgs (the plan's step 3).
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  pull_request:
+    paths:
+      - "packaging/windows/**"
+      - ".github/workflows/windows-installer.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packaging/windows/**"
+      - ".github/workflows/windows-installer.yml"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  # The compiler the installer was tested with (6 Oct 2026). The runner image
+  # ships an older Inno Setup; build.ps1 picks the newest one installed.
+  INNO_VERSION: "7.1.0"
+  INNO_SHA256: "0362a383ed217d4c4239b5933866dd96d3eb2102737da92f80f6057a4b40df2f"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (windows x64)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version-file: '.tool-versions'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version-file: '.tool-versions'
+
+      - name: Set up uv
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip uv
+          uv --version
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Build the wheel (frontend included)
+        shell: bash
+        run: |
+          (cd frontend && npm ci && npm run build)
+          python -m pip install build
+          python -m build --wheel
+          ls -l dist
+
+      - name: Install Inno Setup ${{ env.INNO_VERSION }}
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:RUNNER_TEMP "innosetup.exe"
+          Invoke-WebRequest "https://github.com/jrsoftware/issrc/releases/download/is-$($env:INNO_VERSION -replace '\.','_')/innosetup-$env:INNO_VERSION-x64.exe" -OutFile $exe
+          $sha = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+          if ($sha -ne $env:INNO_SHA256) { throw "Inno Setup download hash $sha, expected $env:INNO_SHA256" }
+          $p = Start-Process -Wait -PassThru $exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/SP-","/ALLUSERS"
+          if ($p.ExitCode -ne 0) { throw "Inno Setup install exited $($p.ExitCode)" }
+          Get-ChildItem "$env:ProgramFiles\Inno Setup *\ISCC.exe" | ForEach-Object { $_.FullName }
+
+      # The manifest is checked against winget's own schemas, vendored in
+      # packaging/windows/winget/schemas: the runner cannot install winget
+      # (Add-AppxPackage refuses the bundle, first run 8 Oct 2026), so
+      # `winget validate` runs on a real Windows machine before a submission.
+      - name: Build, smoke-test, package
+        shell: powershell
+        run: |
+          $wheel = (Get-ChildItem dist\bristlenose-*.whl | Select-Object -First 1).FullName
+          # To a file, through cmd: a pipeline leaves $LASTEXITCODE unreliable,
+          # and a PowerShell redirect turns any stderr line from a native tool
+          # ("Using CPython ..." from uv) into a terminating error, because
+          # GitHub runs this step with $ErrorActionPreference = 'Stop'.
+          cmd /c "powershell -NoProfile -ExecutionPolicy Bypass -File packaging\windows\build.ps1 -Wheel `"$wheel`" -Out build\windows -Installer -Manifest -ValidateWithSchema > build-windows.log 2>&1"
+          $code = $LASTEXITCODE
+          Get-Content build-windows.log
+          if ($code -ne 0) { throw "build.ps1 exited $code" }
+
+      - name: Keep the installer and manifest
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: bristlenose-windows-installer
+          if-no-files-found: warn
+          path: |
+            build/windows/bristlenose-*-setup-x64.exe
+            build/windows/winget/
+            build-windows.log

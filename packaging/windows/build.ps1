@@ -20,7 +20,10 @@ param(
     # Where the installer will be downloaded from; a local URL for testing.
     [string]$InstallerUrl = "",
     # 1.12.0 is what winget-pkgs' tooling (Komac) emits as of Oct 2026.
-    [string]$ManifestVersion = "1.12.0"
+    [string]$ManifestVersion = "1.12.0",
+    # Check the manifest against winget's vendored JSON schemas instead of
+    # `winget validate`: for CI, whose runner cannot install winget.
+    [switch]$ValidateWithSchema
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
@@ -40,6 +43,12 @@ $py = Join-Path $venv "Scripts\python.exe"
 
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { throw "uv is not on PATH" }
 if ($Manifest -and -not $Installer) { throw "-Manifest needs -Installer" }
+# A release build is smoke-tested and validated; neither may be skipped quietly.
+if ($SkipSmoke -and $Installer) { throw "-SkipSmoke is for iterating on the folder; an installer build runs the smoke tests" }
+if ($Manifest -and -not $ValidateWithSchema -and -not (Get-Command winget -ErrorAction SilentlyContinue)) {
+    throw "-Manifest needs winget on PATH to validate what it writes (or -ValidateWithSchema)"
+}
+uv --version
 
 # The bundle ships exactly the released wheel (the one PyPI gets), so it must be
 # the version this checkout describes; a mismatch means the wrong file was passed.
@@ -50,19 +59,46 @@ if ($wheelVersion -ne $checkoutVersion -and -not $AllowVersionMismatch) {
 }
 $commit = "unknown"
 if (Get-Command git -ErrorAction SilentlyContinue) {
-    $sha = (& git -C $root rev-parse --short HEAD 2>$null)
-    if ($LASTEXITCODE -eq 0 -and $sha) { $commit = $sha.Trim() }
+    # In Windows PowerShell 5.1, under Stop, any stderr line from git (not a
+    # repo, "dubious ownership") is a terminating error; the stamp is optional.
+    try {
+        $sha = (& git -C $root rev-parse --short HEAD 2>$null)
+        if ($LASTEXITCODE -eq 0 -and $sha) { $commit = $sha.Trim() }
+    } catch { }
 }
 
 Step "build venv (Python $Python)"
 if (Test-Path $venv) { Remove-Item -Recurse -Force $venv }
 Run uv @("venv", "--python", $Python, $venv)
-$wheelUrl = "file:///" + ($Wheel -replace "\\", "/")
+# Percent-encoded: in a PEP 508 direct reference a space ends the URL.
+$wheelUrl = ([uri]$Wheel).AbsoluteUri
 # Pinned to the set CI tested (packaging/windows/lock.py writes it); a build
 # that resolved its own dependencies would ship something nothing tested.
 $constraints = Join-Path $root "packaging\windows\constraints.txt"
 Run uv @("pip", "install", "--python", $py, "--constraint", $constraints,
     "bristlenose[voice] @ $wheelUrl", "pyinstaller")
+
+# --constraint pins only what it names: a dependency the wheel declares that
+# constraints.txt lacks (a PyPI wheel built from a newer pyproject than this
+# checkout's) would install at whatever version PyPI has today. So every
+# installed distribution must be pinned, at the pinned version.
+function Normalize-Name($n) { ($n.ToLower() -replace '[-_.]+', '-') }
+$pins = @{}
+foreach ($line in Get-Content $constraints) {
+    if ($line -match '^\s*([A-Za-z0-9][A-Za-z0-9_.\-]*)==([^\s;#]+)') { $pins[(Normalize-Name $Matches[1])] = $Matches[2] }
+}
+$installed = & uv pip freeze --python $py
+if ($LASTEXITCODE -ne 0) { throw "uv pip freeze exited $LASTEXITCODE" }
+$drift = @()
+foreach ($line in $installed) {
+    if ($line -notmatch '^([A-Za-z0-9][A-Za-z0-9_.\-]*)==(\S+)$') { continue }  # bristlenose @ file:///...
+    $name = Normalize-Name $Matches[1]; $ver = $Matches[2]
+    if (-not $pins.ContainsKey($name)) { $drift += "$name==$ver (not in constraints.txt)" }
+    elseif ($pins[$name] -ne $ver) { $drift += "$name==$ver (constraints.txt pins $($pins[$name]))" }
+}
+if ($drift.Count -gt 0) {
+    throw ("installed set differs from constraints.txt; run packaging/windows/lock.py:`n  " + ($drift -join "`n  "))
+}
 
 # Provenance, as the Mac sidecar bakes it (bristlenose/_build.py reads it):
 # written into the build venv's copy of the package, never the repo.
@@ -99,14 +135,17 @@ $ffDir = Join-Path $Out "ffmpeg"
 if (Test-Path $ffDir) { Remove-Item -Recurse -Force $ffDir }
 Expand-Archive -Path $ffZip -DestinationPath $ffDir
 $bin = Get-ChildItem -Path $ffDir -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+if (-not $bin) { throw "no ffmpeg.exe in $ffZip" }
 # In tools\, not beside bristlenose.exe: the app folder goes on the user PATH,
 # and ours must not shadow (or be shadowed by) a user's own FFmpeg.
 $tools = Join-Path $app "tools"
 New-Item -ItemType Directory -Force $tools | Out-Null
 Copy-Item (Join-Path $bin.DirectoryName "ffmpeg.exe") $tools
 Copy-Item (Join-Path $bin.DirectoryName "ffprobe.exe") $tools
+# FFmpeg is GPL: the licence text ships with it, or the build stops.
 $lic = Get-ChildItem -Path $ffDir -Recurse -Filter LICENSE* | Select-Object -First 1
-if ($lic) { Copy-Item $lic.FullName (Join-Path $tools "FFmpeg-LICENSE.txt") }
+if (-not $lic) { throw "no LICENSE in $ffZip; the FFmpeg licence must ship with FFmpeg" }
+Copy-Item $lic.FullName (Join-Path $tools "FFmpeg-LICENSE.txt")
 
 # Tells doctor this is the winget/installer build, so its fix text says
 # "reinstall with winget", never "pip install" (doctor_fixes.INSTALL_MARKER,
@@ -131,7 +170,22 @@ if ($Installer) {
         "${env:ProgramFiles(x86)}\Inno Setup *\ISCC.exe", "$env:LOCALAPPDATA\Programs\Inno Setup *\ISCC.exe" |
         Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
     if (-not $iscc) { throw "Inno Setup (ISCC.exe) not found" }
-    $version = (& (Join-Path $app "bristlenose.exe") --version).Trim() -replace "^.*?(\d+\.\d+\.\d+).*$", '$1'
+    # ISCC.exe carries no version resource (0.0.0.0) and its banner names only
+    # the major version; its Apps & Features entry has the full one.
+    $isccDir = Split-Path $iscc -Parent
+    $isccEntry = Get-ItemProperty -ErrorAction SilentlyContinue `
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*" |
+        Where-Object { $_.InstallLocation -and $_.InstallLocation.TrimEnd("\") -eq $isccDir } |
+        Select-Object -First 1
+    $isccVersion = if ($isccEntry) { $isccEntry.DisplayVersion } else { "version unknown" }
+    Step "ISCC: $iscc ($isccVersion)"
+    # The whole version (0.35.0.post1, 0.36.0rc1), not just X.Y.Z, so it can
+    # be compared with the wheel's.
+    $versionLine = (& (Join-Path $app "bristlenose.exe") --version | Out-String).Trim()
+    if ($versionLine -notmatch '^bristlenose\s+(\S+)') { throw "unexpected --version output: $versionLine" }
+    $version = $Matches[1]
     # AppVersion becomes the Apps & Features DisplayVersion, which winget matches
     # against PackageVersion; both must be the wheel's version.
     if ($version -ne $wheelVersion) { throw "the built exe says $version but the wheel is $wheelVersion" }
@@ -157,10 +211,19 @@ if ($Installer) {
         foreach ($template in Get-ChildItem (Join-Path $root "packaging\windows\winget") -Filter *.yaml) {
             $text = [IO.File]::ReadAllText($template.FullName)
             foreach ($key in $values.Keys) { $text = $text.Replace('${' + $key + '}', $values[$key]) }
-            if ($text -match '\$\{[A-Z_0-9]+\}') { throw "$($template.Name): unfilled $($Matches[0])" }
+            if ($text -cmatch '\$\{[A-Z_0-9]+\}') { throw "$($template.Name): unfilled $($Matches[0])" }
+            # The templates' own notes ("# Template: ...") are not for winget-pkgs.
+            $text = (($text -split "`n") | Where-Object { $_ -notmatch '^# Template:' }) -join "`n"
             [IO.File]::WriteAllText((Join-Path $manifestDir $template.Name), $text, (New-Object Text.UTF8Encoding $false))
         }
         Step "manifest: $manifestDir"
-        if (Get-Command winget -ErrorAction SilentlyContinue) { Run winget @("validate", "--manifest", $manifestDir) }
+        if ($ValidateWithSchema) {
+            # In its own throwaway environment: jsonschema is not in the build
+            # venv, and adding it there would put it in the frozen set.
+            Run uv @("run", "--no-project", "--python", $Python, "--with", "jsonschema", "--with", "pyyaml",
+                (Join-Path $PSScriptRoot "validate_manifest.py"), $manifestDir)
+        } else {
+            Run winget @("validate", "--manifest", $manifestDir)
+        }
     }
 }

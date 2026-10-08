@@ -11,6 +11,10 @@ InstallModes:
 - silentWithProgress
 Commands:
 - bristlenose
+# bristlenose.iss refuses with 7 (PrepareToInstall) while bristlenose.exe runs.
+ExpectedReturnCodes:
+- InstallerReturnCode: 7
+  ReturnResponse: packageInUse
 ReleaseDate: ${RELEASE_DATE}
 AppsAndFeaturesEntries:
 - DisplayName: Bristlenose

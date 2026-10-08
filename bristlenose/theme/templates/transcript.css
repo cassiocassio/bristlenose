@@ -235,10 +235,6 @@
     justify-self: end;
 }
 
-/* Moderator segments are visually receded so participant answers stand out */
-/* A paragraph's text takes a caret — Return splits there, Backspace at the
-   start joins (design-transcript-editing.md §"Split and join, stage 1") — but
-   is not a field: the caret is the only sign, no focus ring round the text. */
 /* A paragraph that begins a sentence draws its first letter as a capital
    (design-transcript-editing.md, option C): display only, and it follows the
    paragraph's lang, so Turkish i becomes İ. Scripts without case are untouched. */

@@ -400,3 +400,110 @@ def test_the_transcript_carries_the_sessions_language(tmp_path: Path) -> None:
     finally:
         db.close()
     assert client.get("/api/projects/1/transcripts/s1").json()["language"] == "tr"
+
+
+# ── Review fixes, 8 Oct 2026 ─────────────────────────────────────────────
+
+
+def _record(client: TestClient, **edit: object) -> None:
+    """A layout edit as an earlier version recorded it, straight into the table."""
+    from bristlenose.server.models import Session as SessionModel
+    from bristlenose.server.models import TranscriptLayoutEdit
+
+    db = client.app.state.db_factory()
+    try:
+        sess = db.query(SessionModel).filter_by(session_id="s1").one()
+        db.add(TranscriptLayoutEdit(session_id=sess.id, **edit))
+        db.commit()
+    finally:
+        db.close()
+
+
+class TestReplayReadsTheSameWords:
+    """A recorded edit still lands when the paragraph says the same words
+    counted another way: a 0.35.0 check that counted the "(Speaker B)" label
+    the importer now strips, or lower-case bare words against punctuated text
+    (a redaction switch drops word timings, so a re-import counts the other)."""
+
+    def test_a_split_that_counted_the_label(self, tmp_path: Path) -> None:
+        project = _project(tmp_path, _TWO)
+        client = _client(project)
+        # "(Speaker B) Thanks for having me, it…": "it" was word 6, not 4.
+        _record(client, kind="split", position=1, token=6, verify="it is good to be here.")
+        _reimport(client, project)
+        assert [t for _, t in _texts(client)][1:3] == ["Thanks for having me,", "it is good to be here."]
+
+    def test_a_move_that_counted_the_label(self, tmp_path: Path) -> None:
+        project = _project(tmp_path, _TWO)
+        client = _client(project)
+        _record(client, kind="speaker", position=1, token=0, speaker_code="m1",
+                verify="(Speaker B) Thanks for having me, it")
+        _reimport(client, project)
+        assert _texts(client)[1][0] == "m1"
+
+    def test_the_same_words_without_case_or_punctuation(self, tmp_path: Path) -> None:
+        project = _project(tmp_path, _TWO)
+        client = _client(project)
+        _record(client, kind="split", position=1, token=4, verify="it is good to be here")
+        _reimport(client, project)
+        assert [t for _, t in _texts(client)][1:3] == ["Thanks for having me,", "it is good to be here."]
+
+    def test_other_words_are_still_refused(self, tmp_path: Path) -> None:
+        project = _project(tmp_path, _TWO)
+        client = _client(project)
+        before = _texts(client)
+        _record(client, kind="split", position=1, token=4, verify="it is bad to be here")
+        _reimport(client, project)
+        assert _texts(client) == before
+
+
+def test_removing_a_session_takes_its_edits_and_the_import_still_runs(tmp_path: Path) -> None:
+    """Consent withdrawal: a session's recording goes, and with it the
+    researcher's splits — the import must not fail on the rows pointing at it."""
+    project = _project(tmp_path, _TWO)
+    client = _client(project)
+    resp = client.post("/api/projects/1/transcripts/s2/split",
+                       json={"position": 1, "token": 4, "verify": "it is good to be here."})
+    assert resp.status_code == 200, resp.text
+    (project / "bristlenose-output" / "transcripts-raw" / "s2.txt").unlink()
+    _reimport(client, project)
+    sessions = client.get("/api/projects/1/sessions").json()["sessions"]
+    assert [s["session_id"] for s in sessions] == ["s1"]
+
+
+def test_an_untimed_split_reads_in_place(tmp_path: Path) -> None:
+    """A Word transcript has every paragraph at 0:00: the second half sits
+    after the first, not after the whole session."""
+    from bristlenose.server.models import TranscriptSegment
+
+    client = _client(_project(tmp_path, _TWO))
+    db = client.app.state.db_factory()
+    try:
+        for seg in db.query(TranscriptSegment).all():
+            seg.start_time = seg.end_time = 0.0
+        db.commit()
+    finally:
+        db.close()
+    _split(client, 1, 4, "it is good to be here.")
+    assert [t for _, t in _texts(client)] == [
+        "Welcome, thanks for coming in today.",
+        "Thanks for having me,",
+        "it is good to be here.",
+        "Shall we start?",
+    ]
+
+
+def test_a_new_moderators_code_is_kept_from_the_pipeline(tmp_path: Path) -> None:
+    """The pipeline gives a newly heard voice the lowest code its registry has
+    not issued; a code the researcher made is recorded there, so a named new
+    moderator's name never passes to someone else on the next run."""
+    from bristlenose.session_registry import SessionRegistry
+    from tests.test_serve_participant_recode import _with_quotes
+
+    project = _with_quotes(tmp_path)
+    client = _client(project)
+    resp = client.post("/api/projects/1/transcripts/s1/reassign",
+                       json={"position": 1, "verify": "Thanks for having me, it is", "new": "moderator"})
+    assert resp.status_code == 200, resp.text
+    registry = SessionRegistry.load(project / "bristlenose-output")
+    assert "m2" in registry.speakers["s1"].values()

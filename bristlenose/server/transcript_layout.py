@@ -83,6 +83,31 @@ def _norm(word: str) -> str:
     return re.sub(r"[^\w']", "", word.casefold())
 
 
+#: A leading "(Speaker B)" — the label a 0.35.0 check counted as words before the
+#: importer stopped keeping it in the text (one level of nesting, as it strips).
+_LABEL_LEAD = re.compile(r"^\([^()]*(?:\([^()]*\)[^()]*)?\)\s*")
+
+
+def _still_reads(now: str, recorded: str) -> bool:
+    """Whether a paragraph still reads as the words an edit recorded.
+
+    Exact first. Then case and punctuation aside, since the same words can be
+    counted from Whisper's (lower-case, bare) or the text's own (a redaction
+    switch drops word timings, so a re-import counts the other one). Then
+    without a leading speaker label, which checks made before the importer
+    stripped it carried. Never looser than that: a paragraph that says other
+    words is another paragraph.
+    """
+    if now == recorded:
+        return True
+    have = [w for w in map(_norm, now.split()) if w]
+    for check in (recorded, _LABEL_LEAD.sub("", recorded)):
+        want = [w for w in map(_norm, check.split()) if w]
+        if want and have[: len(want)] == want:
+            return True
+    return False
+
+
 def text_cut(text: str, drawn: list[str], token: int) -> int:
     """Where in the paragraph's own text the drawn word ``token`` starts.
 
@@ -121,16 +146,31 @@ def join_verify(seg: TranscriptSegment) -> str:
     return _verify(tokens(seg))
 
 
+def _split_token(seg: TranscriptSegment, drawn: list[str], token: int, verify: str) -> int:
+    """Where a recorded split cuts this paragraph now. Its own count, unless the
+    paragraph lost a leading label since (a 0.35.0 split counted the label's
+    words): then the one nearby count that reads as the recorded words, and
+    refused if none, or more than one, does."""
+    if 0 < token < len(drawn) and _still_reads(split_verify(seg, token), verify):
+        return token
+    shifted = [
+        t for t in range(token - 4, token)
+        if 0 < t < len(drawn) and _still_reads(split_verify(seg, t), verify)
+    ]
+    if len(shifted) == 1:
+        return shifted[0]
+    if not 0 < token < len(drawn):
+        raise LayoutRefusedError("a split needs words on both sides")
+    raise LayoutRefusedError("the paragraph has changed")
+
+
 def _split(db: DbSession, segs: list[TranscriptSegment], position: int, token: int,
            verify: str) -> None:
     if not 0 <= position < len(segs):
         raise LayoutRefusedError("no such paragraph")
     seg = segs[position]
     drawn = tokens(seg)
-    if not 0 < token < len(drawn):
-        raise LayoutRefusedError("a split needs words on both sides")
-    if split_verify(seg, token) != verify:
-        raise LayoutRefusedError("the paragraph has changed")
+    token = _split_token(seg, drawn, token, verify)
     words = _words(seg)
     left_words = right_words = None
     if words:
@@ -156,7 +196,14 @@ def _split(db: DbSession, segs: list[TranscriptSegment], position: int, token: i
         # whatever reads next, so a second split of the first half still lands
         # between the two — ties would fall through to insertion order.
         later = [s.start_time for s in segs[position + 1:] if s.start_time > seg.start_time]
-        start = seg.start_time + ((later[0] - seg.start_time) / 2 if later else 0.001)
+        tied = any(s.start_time == seg.start_time for s in segs[position + 1:])
+        if later:
+            start = seg.start_time + (later[0] - seg.start_time) / 2
+        elif not tied:
+            start = seg.start_time + 0.001
+        # Tied with what follows (an untimed transcript, every paragraph at
+        # 0:00): keep the start, so the pipeline's ordinal places the half —
+        # it shares the first half's and reads before the next paragraph's.
     second = TranscriptSegment(
         session_id=seg.session_id,
         speaker_code=seg.speaker_code,
@@ -185,7 +232,7 @@ def _join(db: DbSession, segs: list[TranscriptSegment], position: int, verify: s
     # would lose or spread over words that were never moved (§K).
     if first.moved_from != second.moved_from:
         raise LayoutRefusedError("a moved paragraph is not joined to one that was not")
-    if join_verify(second) != verify:
+    if not _still_reads(join_verify(second), verify):
         raise LayoutRefusedError("the paragraph has changed")
     a, b = _words(first), _words(second)
     first.text = f"{first.text} {second.text}".strip()
@@ -228,7 +275,7 @@ def _speaker(db: DbSession, segs: list[TranscriptSegment], position: int, verify
     if not 0 <= position < len(segs):
         raise LayoutRefusedError("no such paragraph")
     seg = segs[position]
-    if join_verify(seg) != verify:
+    if not _still_reads(join_verify(seg), verify):
         raise LayoutRefusedError("the paragraph has changed")
     if code == seg.speaker_code:
         raise LayoutRefusedError("the paragraph is already that speaker's")

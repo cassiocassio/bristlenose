@@ -628,7 +628,10 @@ def get_moderator_question(
                 TranscriptSegment.speaker_code.in_(moderator_tags),
                 TranscriptSegment.segment_index < quote.segment_index,
             )
-            .order_by(TranscriptSegment.segment_index.desc())
+            # The two halves of a split share an ordinal; the later half holds
+            # the end of the turn, where the question usually is.
+            .order_by(TranscriptSegment.segment_index.desc(),
+                      TranscriptSegment.start_time.desc(), TranscriptSegment.id.desc())
             .first()
         )
         if not segment:

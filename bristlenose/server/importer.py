@@ -45,6 +45,7 @@ from bristlenose.server.models import (
     ThemeGroup,
     ThemeQuote,
     TopicBoundary,
+    TranscriptLayoutEdit,
     TranscriptSegment,
 )
 from bristlenose.server.models import (
@@ -694,9 +695,7 @@ def _import_transcript_segments(
 
 #: The raw ``.txt`` writes each line's speaker label after its code —
 #: ``[00:14] [p1] (Speaker B) Okay…`` (``utils/markdown.format_raw_segment_txt``),
-#: and a platform transcript's label is the person's real name. One level of
-#: nested brackets, as a Teams display name can carry its own.
-_LEADING_LABEL_RE = re.compile(r"^\(((?:[^()]|\([^()]*\))*)\)\s*")
+#: and a platform transcript's label is the person's real name.
 
 
 def _session_speaker_labels(output_dir: Path, sid: str) -> set[str]:
@@ -737,10 +736,13 @@ def _without_speaker_label(text: str, labels: set[str]) -> str:
     """A paragraph's words without the speaker label the ``.txt`` carries in
     front of them (6 Oct 2026: "(Speaker B)" was drawn in the transcript, and a
     platform transcript's real name with it, past anonymisation). Only one of
-    this session's own labels is taken, so a transcript's "(laughs)" stays."""
-    m = _LEADING_LABEL_RE.match(text)
-    if m and m.group(1).strip() in labels and text[m.end():].strip():
-        return text[m.end():]
+    this session's own labels is taken, so a transcript's "(laughs)" stays.
+    Matched literally, longest first, so a label holding brackets of its own —
+    "Jo (Acme (UK))", "Smith (Acme" — goes whole."""
+    for label in sorted(labels, key=len, reverse=True):
+        lead = f"({label})"
+        if label and text.startswith(lead) and text[len(lead):].strip():
+            return text[len(lead):].lstrip()
     return text
 
 
@@ -761,9 +763,9 @@ def _words_read_as(words: list[dict[str, object]], text: str) -> bool:
     Whisper's word-level text and its segment text disagree by a word or two
     on long segments (a repeated "it's", a dropped "you know"), so exact
     equality would throw away good timings. 0.9 on the token sequence keeps
-    those and refuses any pairing with a different paragraph. The ``.txt``
-    carries a ``(Speaker A)`` label ahead of the utterance, which the words
-    do not.
+    those and refuses any pairing with a different paragraph. A leading
+    bracket is set aside — a label the importer did not know, or a
+    "(laughs)" — since the words never carry one.
 
     Japanese and Chinese have no spaces, so a word boundary in Whisper's
     words is not one in the text: ``ありがとう`` + ``ございます。`` is two
@@ -2118,6 +2120,11 @@ def _cleanup_stale_data(
         ).delete(synchronize_session="fetch")
         db.query(TranscriptSegment).filter(
             TranscriptSegment.session_id.in_(stale_session_db_ids)
+        ).delete(synchronize_session="fetch")
+        # The researcher's splits, joins and moves go with their session: they
+        # point at it, and a withdrawn session keeps nothing behind.
+        db.query(TranscriptLayoutEdit).filter(
+            TranscriptLayoutEdit.session_id.in_(stale_session_db_ids)
         ).delete(synchronize_session="fetch")
         db.query(TopicBoundary).filter(
             TopicBoundary.session_id.in_(stale_session_db_ids)

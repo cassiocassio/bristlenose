@@ -761,6 +761,30 @@ describe("TranscriptPage — split and join (design-transcript-editing.md, stage
     expect(event.defaultPrevented).toBe(true);
   });
 
+  it("a field inside an island still takes typing and Backspace; a timecode keeps its Enter", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    // The inline picker's name field sits in the speaker island.
+    const field = document.createElement("input");
+    document.querySelector(".segment-speaker")!.appendChild(field);
+    const typed = new InputEvent("beforeinput", { bubbles: true, cancelable: true, data: "x" });
+    field.dispatchEvent(typed);
+    expect(typed.defaultPrevented).toBe(false);
+    expect(fireEvent.keyDown(field, { key: "Backspace" })).toBe(true);
+    const link = document.querySelector(".segment-timecode-cell a, .segment-timecode-cell .timecode")!;
+    expect(fireEvent.keyDown(link, { key: "Enter" })).toBe(true);
+    expect(postParagraphSplit).not.toHaveBeenCalled();
+    expect(postParagraphJoin).not.toHaveBeenCalled();
+  });
+
+  it("an unknown session language is no language, not the interface's", async () => {
+    mockedGetTranscript.mockResolvedValue({ ...mockData, language: null });
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    expect(bodyOf(0).getAttribute("lang")).toBe("");
+  });
+
   it("marks the paragraphs that begin a sentence, and gives them the session's language", async () => {
     const p = mockData.segments[1];
     const split = {

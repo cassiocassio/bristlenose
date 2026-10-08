@@ -516,10 +516,13 @@ def reassign_paragraph(project_id: int, session_id: str, body: ReassignBody,
             ), 1
         if not slot:
             raise HTTPException(status_code=422, detail="No speaker named")
-        return _record(db, TranscriptLayoutEdit(
+        result = _record(db, TranscriptLayoutEdit(
             session_id=sess.id, kind="speaker", position=body.position, verify=body.verify,
             speaker_code=slot, token=creates,
         ))
+        if creates:
+            _reserve_code(db, project_id, session_id, slot)
+        return result
     finally:
         db.close()
 
@@ -551,6 +554,26 @@ def _issued_codes(db: Session, project_id: int, session_id: str) -> list[str]:
                        exc_info=True)
         return []
     return list(registry.speakers.get(session_id, {}).values())
+
+
+def _reserve_code(db: Session, project_id: int, session_id: str, code: str) -> None:
+    """Keep a code the researcher made out of the pipeline's hands. The
+    pipeline gives a newly heard voice the lowest code its registry has not
+    issued in the session; without this, a re-run could hand a named new
+    moderator's code to a different voice, who would inherit the name. Kept
+    like a retired code: issued, never reissued."""
+    from bristlenose.session_registry import SessionRegistry, retired_label
+
+    project = db.get(Project, project_id)
+    if project is None:
+        return
+    try:
+        registry = SessionRegistry.load(Path(project.output_dir))
+        if code not in registry.speakers.get(session_id, {}).values():
+            registry.record_speakers(session_id, {retired_label(code): code})
+            registry.save()
+    except (ValueError, OSError):
+        logger.warning("Could not reserve %s in %s's registry", code, session_id, exc_info=True)
 
 
 @router.delete("/projects/{project_id}/transcripts/{session_id}/layout-edits/{edit_id}")

@@ -40,6 +40,9 @@ def test_only_the_sessions_own_label_is_taken() -> None:
         "Right, we are recording."
     )
     assert _without_speaker_label("(Robert (Bob) Smith) Hi.", labels) == "Hi."
+    # Matched literally: any nesting, or an unbalanced label, goes whole.
+    assert _without_speaker_label("(Jo (Acme (UK))) Hi.", {"Jo (Acme (UK))"}) == "Hi."
+    assert _without_speaker_label("(Smith (Acme) Hi.", {"Smith (Acme"}) == "Hi."
     # The transcript's own brackets stay.
     assert _without_speaker_label("(laughs) yeah", labels) == "(laughs) yeah"
     assert _without_speaker_label("(Speaker C) hello", labels) == "(Speaker C) hello"

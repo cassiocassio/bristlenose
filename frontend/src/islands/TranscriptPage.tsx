@@ -301,6 +301,11 @@ function renderSessionRoles(
 // Component
 // ---------------------------------------------------------------------------
 
+/** Inside a non-editable island of the transcript (timecode, speaker, margin). */
+function inIsland(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('[contenteditable="false"]') !== null;
+}
+
 export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptPageProps) {
   void _projectId; // API base URL from window global already includes project ID
   const { t } = useTranslation();
@@ -348,7 +353,11 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   useEffect(() => {
     const body = bodyRef.current;
     if (!body || !paragraphEditing) return;
-    const refuse = (e: Event) => e.preventDefault();
+    // Only the paragraphs' text: the islands hold real inputs (the speaker
+    // picker's name field) that must still take typing.
+    const refuse = (e: Event) => {
+      if (!inIsland(e.target)) e.preventDefault();
+    };
     body.addEventListener("beforeinput", refuse);
     return () => body.removeEventListener("beforeinput", refuse);
   }, [paragraphEditing, data]);
@@ -364,6 +373,9 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       }
       if (mod || e.altKey) return;
       if (e.key !== "Enter" && e.key !== "Backspace") return;
+      // A key in an island is the island's (a timecode link's Enter, the
+      // picker's Backspace); an IME's Enter confirms its composition.
+      if (inIsland(e.target) || e.nativeEvent.isComposing) return;
       // The whole transcript is one editable region, so a selection can run
       // across paragraphs; the paragraph is the one holding the caret.
       e.preventDefault();
@@ -672,7 +684,8 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
 
           return (
             <div
-              key={anchor}
+              // Two halves of a split can share a whole second (or 0:00, untimed).
+              key={`${anchor}-${position}`}
               className={classes}
               id={anchor}
               data-participant={seg.speaker_code}
@@ -721,7 +734,10 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                 // follows `lang`, so Turkish gets İ). Display only; a word
                 // spelled lower-case on purpose (iPhone) keeps its spelling.
                 className={`segment-body${drawsCapital(segments, position, drawnTokens(seg.text, seg.words)[0] ?? "") ? " bn-sentence-start" : ""}`}
-                lang={data?.language ?? undefined}
+                // Unknown language: "" (no language), not the page's UI
+                // language — a Turkish interface must not draw İ in an English
+                // transcript.
+                lang={data?.language ?? ""}
                 // Where Return and Backspace find their paragraph.
                 data-position={position}
               >

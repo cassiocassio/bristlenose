@@ -435,7 +435,9 @@ moves one paragraph to another speaker — `design-people.md` §K6, `POST …/tr
   one of the session's own recorded labels (`speaker-info/<sid>.json`, the registry),
   never any other bracket: "(laughs)" stays. Measured on 3,237 real paragraphs: none
   still starts with a label. A split, join or move made in 0.35.0 on an *untimed*
-  labelled paragraph counted the label's two words, so its replay is refused and logged.
+  labelled paragraph counted the label's words; replay reads past them (8 Oct 2026,
+  `transcript_layout._still_reads` / `_split_token`), and past case and punctuation, so
+  a redaction switch — which drops word timings — does not lose the edits either.
 - **Interaction.** The transcript's text takes a caret (the `contenteditable` host above) and nothing else: typing,
   dictation, autocorrect, pasting and dropping are refused by a native `beforeinput` guard, since
   the words are the recording's. **Return** splits at the caret; **Backspace** at a paragraph's

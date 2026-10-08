@@ -11,8 +11,12 @@
  * as it was transcribed.
  */
 
-/** Ends a sentence: . ? ! … (and their CJK forms), allowing a closing quote or bracket after. */
-const SENTENCE_END = /[.?!…。？！]["'”’)\]]*\s*$/;
+/** Ends a sentence: . ? ! … and their CJK, Devanagari and Arabic forms, then any
+ *  closing quotes or brackets (German “, French and Russian », with or without a
+ *  space), then any bracketed stage directions — "ok. (laughs)". Greek's ; is not
+ *  here: it is a semicolon everywhere else. */
+const SENTENCE_END =
+  /[.?!…。？！।؟](?:["'”’“»›)\]]|\s)*(?:[([][^\])]*[\])]\s*)*$/;
 
 export function startsSentence(
   segments: readonly { speaker_code: string; text: string }[],

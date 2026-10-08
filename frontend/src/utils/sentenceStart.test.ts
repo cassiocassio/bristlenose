@@ -33,6 +33,15 @@ describe("startsSentence", () => {
     expect(startsSentence([{ speaker_code: "p1", text: "Why?" }, { speaker_code: "p1", text: "so" }], 1)).toBe(true);
     expect(startsSentence([{ speaker_code: "p1", text: "そうです。" }, { speaker_code: "p1", text: "x" }], 1)).toBe(true);
   });
+
+  it("other languages' closing quotes and sentence ends, and a stage direction after one", () => {
+    const after = (text: string) =>
+      startsSentence([{ speaker_code: "p1", text }, { speaker_code: "p1", text: "x" }], 1);
+    for (const t of ["„Ja.“", "«Да.»", "« oui. »", "हाँ।", "نعم؟", "ok. (laughs)", "ok. [inaudible] "]) {
+      expect(after(t), t).toBe(true);
+    }
+    expect(after("ok (laughs)")).toBe(false);
+  });
 });
 
 describe("drawsCapital — the iPhone guard", () => {

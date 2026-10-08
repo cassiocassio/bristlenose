@@ -98,7 +98,7 @@ function asDrawn(body: HTMLElement, text: string, fromStart: boolean): string {
   if (!fromStart || !body.classList.contains("bn-sentence-start")) return text;
   // ::first-letter takes the first letter OR digit; a digit draws no capital.
   return text.replace(/^([^\p{L}\p{N}]*)(\p{L})/u, (_, lead: string, c: string) =>
-    lead + c.toLocaleUpperCase(body.lang || undefined),
+    lead + c.toLocaleUpperCase(body.lang || "und"),
   );
 }
 

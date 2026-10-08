@@ -8,6 +8,7 @@ trued-against: HEAD@main on 2026-09-12
 
 ## Changelog
 
+- _2026-10-08_ — `markdown_speech` added, aligned from birth: the `.md` transcript export and the transcript page's copy escape speech the same way. Anchors: `bristlenose/utils/markdown.py::escape_markdown_speech`, `frontend/src/utils/transcriptCopy.ts::escapeMarkdownSpeech`, `experiments/transcript-copy/`.
 - _2026-09-12_ — trued up against the time audit: timecode entry gains the H5 breach-and-closure and a forward-ref to the prompt-only sibling; duration_human records the canonical move to `utils/timecodes.py` and the superseded `1 h 0 min` shape; the zero fork stated as catalogued-but-unasserted and by-datum; finder_date deferred to Tier 2 with H9/H10; new "Open holes" block; the lint-rule item cites H5. Anchors: `bristlenose/miro_board.py:129-133`, `utils/timecodes.py:68`, `tests/test_shared_format_contract.py:105-120`, `docs/time-defects.md` H5/H7/H9/H10/H12.
 
 # Shared formats across Python, TypeScript and Swift
@@ -102,6 +103,7 @@ not a new invention, which is most of why it is cheap.
 | `finder_date` | Finder-style relative timestamp | `format_finder_date` | `formatFinderDate` | `SessionsFinderDate.format` | **aligned by pair**, one deliberate fork |
 | `timecode` | position in a recording | `format_timecode` | `formatTimecode` | — | **aligned**, pinned · also parsed |
 | `finder_filename` | middle-ellipsis truncation | `format_finder_filename` | `formatFinderFilename` | — | **aligned**, pinned |
+| `markdown_speech` | speech escaped for a Markdown transcript | `escape_markdown_speech` (`.md` export) | `escapeMarkdownSpeech` (transcript copy) | — | **aligned**, pinned |
 | `plural_category` | count-dependent noun forms | `count_noun` (inflect, CLI) · `plural_category` (CLDR, server) | i18next CLDR | `I18n.pluralCategory` | **aligned by pair**, pinned ([`cldr-plural-contract.json`](../tests/fixtures/cldr-plural-contract.json)) |
 
 Per-entry detail, measured values and the exact case tables live in the JSON

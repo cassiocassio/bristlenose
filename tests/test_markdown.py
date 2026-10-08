@@ -284,12 +284,12 @@ def test_format_raw_segment_txt_no_speaker() -> None:
 
 def test_format_raw_segment_md_with_speaker() -> None:
     result = format_raw_segment_md("00:16", "p1", "Speaker B", "Hello")
-    assert result == "**[00:16] p1** (Speaker B) Hello"
+    assert result == "**`[00:16]` p1** (Speaker B) Hello"
 
 
 def test_format_raw_segment_md_no_speaker() -> None:
     result = format_raw_segment_md("00:16", "p1", None, "Hello")
-    assert result == "**[00:16] p1** Hello"
+    assert result == "**`[00:16]` p1** Hello"
 
 
 def test_format_cooked_segment_txt() -> None:
@@ -299,7 +299,7 @@ def test_format_cooked_segment_txt() -> None:
 
 def test_format_cooked_segment_md() -> None:
     result = format_cooked_segment_md("00:16", "p1", "[NAME] said hi")
-    assert result == "**[00:16] p1** [NAME] said hi"
+    assert result == "**`[00:16]` p1** [NAME] said hi"
 
 
 # ---------------------------------------------------------------------------
@@ -410,3 +410,41 @@ def test_format_finder_filename_keeps_front_and_back() -> None:
     assert result.startswith("Fishkeeping")
     # Back portion of stem + extension preserved
     assert result.endswith("S3.vtt") or result.endswith(".vtt")
+
+
+def test_md_segment_escapes_speech_but_txt_keeps_it_verbatim() -> None:
+    # The .txt is read back by the pipeline; only the .md is a rendered surface.
+    said = "it cost 2*3 and <b>x</b>"
+    assert format_raw_segment_txt("00:16", "p1", None, said) == f"[00:16] [p1] {said}"
+    assert format_raw_segment_md("00:16", "p1", None, said) == (
+        "**`[00:16]` p1** it cost 2\\*3 and \\<b>x\\</b>"
+    )
+
+
+def test_md_segment_renders_as_spoken() -> None:
+    """The whole point of the escape: a Markdown renderer shows what was said."""
+    import html
+    import re
+
+    from markdown_it import MarkdownIt
+
+    md = MarkdownIt("commonmark").enable("strikethrough")
+    for said in (
+        "the file was snake_case_name, 2*3*4 pounds, *really*",
+        "[laughs] I typed [the brand](which one?) then ![image] and [1]",
+        "it said <b>error</b> <https://example.com> &copy; AT&T &amp; co",
+        r"C:\Users\me\Desktop\*final* and \n, a trailing backslash \\",
+        "use `npm` ~~not~~ yarn, __bold__ claim, 50% off_peak",
+        "我觉得这个*价格*有点贵。それは「_いい_」ですね",
+    ):
+        rendered = md.render(format_cooked_segment_md("00:16", "p1", said))
+        text = html.unescape(re.sub(r"<[^>]+>", "", rendered)).strip()
+        assert text == f"[00:16] p1 {said}"
+        assert "<em>" not in rendered and "<a " not in rendered and "<s>" not in rendered
+
+
+def test_md_segment_escapes_a_speaker_label_from_a_client_file() -> None:
+    # A .vtt voice name is html-unescaped on the way in, so it can carry markup.
+    assert format_raw_segment_md("00:01", "p1", "Ms <b>Jones", "hi") == (
+        "**`[00:01]` p1** (Ms \\<b>Jones) hi"
+    )

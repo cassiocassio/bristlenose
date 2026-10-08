@@ -20,6 +20,7 @@
 import { describe, expect, it } from "vitest";
 import contractJson from "../../../tests/fixtures/shared-format-contract.json";
 import { formatDurationHuman, formatFinderFilename, formatTimecode } from "./format";
+import { escapeMarkdownSpeech } from "./transcriptCopy";
 
 // Imported rather than read through node:fs on purpose. `npm run build` runs
 // `tsc -b` over the test files with no @types/node in scope, so a `readFileSync`
@@ -45,6 +46,7 @@ const IMPLS: Record<string, (value: number | string) => string> = {
   duration_human: (v) => formatDurationHuman(v as number),
   timecode: (v) => formatTimecode(v as number),
   finder_filename: (v) => formatFinderFilename(v as string),
+  markdown_speech: (v) => escapeMarkdownSpeech(v as string),
 };
 
 describe("shared format contract — aligned formats", () => {

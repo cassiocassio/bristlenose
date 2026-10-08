@@ -113,8 +113,8 @@ def test_write_raw_transcripts_md_segments(tmp_path: Path) -> None:
     write_raw_transcripts_md([transcript], tmp_path)
     content = (tmp_path / "s1.md").read_text(encoding="utf-8")
     # Bold timecode + participant code
-    assert "**[00:00] p1**" in content
-    assert "**[00:16] p1**" in content
+    assert "**`[00:00]` p1**" in content
+    assert "**`[00:16]` p1**" in content
     # Speaker labels in parentheses
     assert "(Speaker A)" in content
     assert "(Speaker B)" in content
@@ -186,8 +186,8 @@ def test_write_cooked_transcripts_md_segments(tmp_path: Path) -> None:
     write_cooked_transcripts_md([transcript], tmp_path)
     content = (tmp_path / "s1.md").read_text(encoding="utf-8")
     # Bold timecode + participant code (no speaker label in cooked)
-    assert "**[00:00] p1**" in content
-    assert "**[00:16] p1**" in content
+    assert "**`[00:00]` p1**" in content
+    assert "**`[00:16]` p1**" in content
     # No parenthesised speaker labels
     assert "(Speaker" not in content
     # PII redaction label preserved in text
@@ -473,8 +473,8 @@ def test_write_raw_md_long_session(tmp_path: Path) -> None:
     )
     write_raw_transcripts_md([long], tmp_path)
     content = (tmp_path / "s6.md").read_text(encoding="utf-8")
-    assert "**[00:30] p6**" in content      # MM:SS
-    assert "**[1:01:00] p6**" in content     # H:MM:SS
+    assert "**`[00:30]` p6**" in content      # MM:SS
+    assert "**`[1:01:00]` p6**" in content     # H:MM:SS
     assert "**Duration:** 2:00:00" in content
 
 

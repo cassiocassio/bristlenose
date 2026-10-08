@@ -53,6 +53,10 @@ def _python_impl(name: str):
         from bristlenose.utils.markdown import format_finder_filename
 
         return format_finder_filename
+    if name == "markdown_speech":
+        from bristlenose.utils.markdown import escape_markdown_speech
+
+        return escape_markdown_speech
     return None
 
 

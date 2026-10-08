@@ -222,6 +222,71 @@
       "cases": null,
       "notes": "Not machine-pinned: all three take a clock and a locale, so a fixture would need injected time and an Intl/CLDR-stable locale on three runtimes. The Swift header (SessionsFinderDate.swift:1-46) is the exemplar contract docstring in this codebase — read it before writing a new mirror. Its KNOWN-WRONG section also records that the underlying VALUE is questionable (st_birthtime, not session start), which is a data problem rather than a format one and is tracked separately."
     },
+    "markdown_speech": {
+      "status": "aligned",
+      "datum": "Speech in a Markdown transcript: the text after the bold stamp, escaped only where a character would change how it renders.",
+      "canonical": "frontend/src/utils/transcriptCopy.ts::escapeMarkdownSpeech",
+      "decision": "8 Oct 2026: escape the minimum, not every punctuation mark. The text never starts a line, so block syntax is inert; brackets matter only as ']('. On 28,908 real paragraphs 7 needed any escape, so a reader of the plain file almost never meets a backslash, while every worst case here renders as spoken (experiments/transcript-copy/).",
+      "implementations": {
+        "python": "bristlenose/utils/markdown.py::escape_markdown_speech — the .md transcript export (s06, s07)",
+        "typescript": "frontend/src/utils/transcriptCopy.ts::escapeMarkdownSpeech — the transcript page's copy",
+        "swift": "none"
+      },
+      "cases": [
+        [
+          "price was the thing, # of people who asked was maybe five",
+          "price was the thing, # of people who asked was maybe five"
+        ],
+        [
+          "- like, which one? 1. the price 2. the colour > the size",
+          "- like, which one? 1. the price 2. the colour > the size"
+        ],
+        [
+          "the file was called snake_case_name and it cost 2*3*4 pounds, *really*",
+          "the file was called snake_case_name and it cost 2\\*3\\*4 pounds, \\*really\\*"
+        ],
+        [
+          "[laughs] I typed [the brand](which one?) into the box, then ![image] and [1]",
+          "[laughs] I typed [the brand\\](which one?) into the box, then ![image] and [1]"
+        ],
+        [
+          "[NAME] said hi",
+          "[NAME] said hi"
+        ],
+        [
+          "it was [this][that] one",
+          "it was [this][that] one"
+        ],
+        [
+          "between 5~10 and 20~30 minutes",
+          "between 5\\~10 and 20\\~30 minutes"
+        ],
+        [
+          "it said <b>error</b> and <https://example.com> &copy; AT&T &amp; co",
+          "it said \\<b>error\\</b> and \\<https://example.com> \\&copy; AT&T \\&amp; co"
+        ],
+        [
+          "saved it to C:\\Users\\me\\Desktop\\*final* and typed \\n by mistake",
+          "saved it to C:\\Users\\me\\Desktop\\\\\\*final\\* and typed \\n by mistake"
+        ],
+        [
+          "use `npm` ~~not~~ yarn | a pipe | here, __bold__ claim, 50% off_peak",
+          "use \\`npm\\` \\~\\~not\\~\\~ yarn | a pipe | here, \\_\\_bold\\_\\_ claim, 50% off_peak"
+        ],
+        [
+          "我觉得这个*价格*有点贵。それは「_いい_」ですね 👍🏽 — honestly…",
+          "我觉得这个\\*价格\\*有点贵。それは「\\_いい\\_」ですね 👍🏽 — honestly…"
+        ],
+        [
+          "a trailing backslash \\",
+          "a trailing backslash \\\\"
+        ],
+        [
+          "x < 3 and 5 > 2, a ~ b, _start and end_",
+          "x < 3 and 5 > 2, a \\~ b, \\_start and end\\_"
+        ]
+      ]
+    },
     "plural_category": {
       "status": "deliberately-forked",
       "datum": "Count-dependent noun forms.",

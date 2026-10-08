@@ -488,6 +488,38 @@ on the scope question in `design-people.md` §K.
 
 ---
 
+## Copying from the transcript — built 8 Oct 2026
+
+A drag across paragraphs copies the house transcript format, not the page's
+markup (`frontend/src/utils/transcriptCopy.ts`, wired as `onCopy` on
+`section.transcript-body`, export mode included). Decided with the owner, 8 Oct
+2026, against real pastes into iA Writer and Word:
+
+- **text/plain is Markdown**, the same shape as the `.md` export:
+  `` **`[00:42]` p1** words ``, one paragraph per block. The timecode is a code span
+  so a renderer sets it in monospace; the stamp is bold.
+- **text/html carries the same structure for Word**: the stamp bold, the
+  timecode in Menlo / Consolas, nothing else styled, so the words take the
+  document's font. Margin annotations, × buttons and the speaker picker never
+  reach the clipboard.
+- **Speech is escaped minimally** (`escape_markdown_speech` / `escapeMarkdownSpeech`,
+  pinned together in `tests/fixtures/shared-format-contract.json` →
+  `markdown_speech`). The text never starts a line, so `#`, `-`, `>` and `1.` are
+  inert; brackets matter only as `](`. Measured: 7 of 28,908 real paragraphs
+  need any backslash. Rejected: escaping every punctuation mark (83 backslashes
+  on the worst-case set, all visible in a source editor such as iA Writer), and
+  transmuting characters (`*` → `∗`), which changes a verbatim quote.
+- **A paragraph entered part-way** keeps only the selected words and takes the
+  time of the first selected word, where words are timed.
+- **A selection inside one paragraph copies plain words, unescaped** — a
+  snippet for a sentence, not a document.
+- **Capitals as drawn**: where option C draws a sentence-start capital and the
+  selection takes the first letter, the copy carries the capital too.
+- **Codes, not names; no source line.** iA Writer names an untitled document
+  after its first line; that is its behaviour, not ours.
+
+The prototype and its worst cases: `experiments/transcript-copy/`.
+
 ## References
 
 - `docs/design-curation-persistence.md`, `docs/design-curation-persistence-plan.md` — the durable-id + frozen_form overlay this spec extends (shipped v0.20.0)

@@ -791,3 +791,25 @@ describe("TranscriptPage — split and join (design-transcript-editing.md, stage
     await waitFor(() => expect(postParagraphJoin).toHaveBeenCalledWith("s1", 1, "And slow."));
   });
 });
+
+describe("TranscriptPage copy", () => {
+  it("a drag across paragraphs copies the house transcript format", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    const body = screen.getByTestId("transcript-body");
+    const paras = body.querySelectorAll<HTMLElement>(".segment-body");
+    const range = document.createRange();
+    range.setStart(paras[0], 0);
+    range.setEnd(paras[1], paras[1].childNodes.length);
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+    const data = new Map<string, string>();
+    fireEvent.copy(body, {
+      clipboardData: { setData: (type: string, v: string) => data.set(type, v) },
+    });
+    expect(data.get("text/plain")).toMatch(/^\*\*`\[00:02\]` m1\*\* Thanks for joining me today\.\n\n\*\*`\[/);
+    expect(data.get("text/html")).toContain('<span style="font-family:Menlo,Consolas,monospace">[00:02]</span> m1</b>');
+  });
+});

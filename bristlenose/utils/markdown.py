@@ -18,6 +18,7 @@ concrete example in the docstring.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -138,14 +139,16 @@ MD_TRANSCRIPT_META = "**{key}:** {value}"
 """A metadata line in a .md transcript.  Key is bold, value is plain.
 Example: **Source:** interview_01.mp4"""
 
-MD_TRANSCRIPT_SEGMENT_RAW = "**[{timecode}] {participant_id}**{speaker} {text}"
-"""A segment in a raw .md transcript.  Timecode and participant code are bold.
-Speaker label (in parentheses) is optional.
-Example: **[00:16] p1** (Speaker B) Yeah I\u2019ve been using this..."""
+MD_TRANSCRIPT_SEGMENT_RAW = "**`[{timecode}]` {participant_id}**{speaker} {text}"
+"""A segment in a raw .md transcript.  Timecode and participant code are bold,
+the timecode a code span so it sets in monospace.  Speaker label (in
+parentheses) is optional.  The transcript page's copy writes the same shape.
+Example: **`[00:16]` p1** (Speaker B) Yeah I\u2019ve been using this..."""
 
-MD_TRANSCRIPT_SEGMENT_COOKED = "**[{timecode}] {participant_id}** {text}"
-"""A segment in a cooked .md transcript.  Timecode and participant code are bold.
-Example: **[00:16] p1** [NAME] has been using this..."""
+MD_TRANSCRIPT_SEGMENT_COOKED = "**`[{timecode}]` {participant_id}** {text}"
+"""A segment in a cooked .md transcript.  Timecode and participant code are bold,
+the timecode a code span.
+Example: **`[00:16]` p1** [NAME] has been using this..."""
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -354,6 +357,50 @@ def format_transcript_header_md(
     return "\n".join(lines)
 
 
+_MD_PUNCT = frozenset("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")
+_MD_ENTITY = re.compile(r"&(#\d+|#x[0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
+_MD_TAG_START = re.compile(r"[A-Za-z/!?]")
+
+
+def escape_markdown_speech(text: str) -> str:
+    """Escape only the characters that would change how speech renders as Markdown.
+
+    Segment text never starts a line (the bold stamp comes first), so ``#``,
+    ``-``, ``>`` and ``1.`` are inert and left alone.  Speech almost never needs
+    any of this — 7 of 28,908 real paragraphs did (8 Oct 2026) — so a reader of
+    the plain file meets a backslash about once a project.  Mirrors
+    ``escapeMarkdownSpeech`` in ``frontend/src/utils/transcriptCopy.ts`` (the
+    transcript page's copy); ``tests/fixtures/shared-format-contract.json`` pins both.
+
+    Example::
+
+        it cost 2*3 [laughs] snake_case  →  it cost 2\\*3 [laughs] snake_case
+    """
+    out: list[str] = []
+    n = len(text)
+    for i, ch in enumerate(text):
+        prev = text[i - 1] if i else " "
+        nxt = text[i + 1] if i + 1 < n else " "
+        if ch == "\\":
+            esc = nxt in _MD_PUNCT or i == n - 1
+        elif ch in "*`":
+            esc = True
+        elif ch == "_":
+            esc = not (prev.isalnum() and nxt.isalnum())  # intraword is inert
+        elif ch == "~":
+            esc = True  # strikethrough: GitHub and Slack take a single ~ too
+        elif ch == "]":
+            esc = nxt == "("  # a link destination; a transcript carries no definitions
+        elif ch == "<":
+            esc = bool(_MD_TAG_START.match(nxt))  # a tag or an autolink
+        elif ch == "&":
+            esc = bool(_MD_ENTITY.match(text, i))
+        else:
+            esc = False
+        out.append("\\" + ch if esc else ch)
+    return "".join(out)
+
+
 def format_raw_segment_txt(
     timecode: str,
     participant_id: str,
@@ -403,12 +450,13 @@ def format_raw_segment_md(
 
     Example::
 
-        **[00:16] p1** (Speaker B) Yeah I\u2019ve been using this...
+        **`[00:16]` p1** (Speaker B) Yeah I\u2019ve been using this...
     """
-    speaker_part = f" ({speaker})" if speaker else ""
+    # The label can come from a client's subtitle file, so it is escaped too.
+    speaker_part = f" ({escape_markdown_speech(speaker)})" if speaker else ""
     return MD_TRANSCRIPT_SEGMENT_RAW.format(
         timecode=timecode, participant_id=participant_id,
-        speaker=speaker_part, text=text,
+        speaker=speaker_part, text=escape_markdown_speech(text),
     )
 
 
@@ -451,10 +499,10 @@ def format_cooked_segment_md(
 
     Example::
 
-        **[00:16] p1** [NAME] has been using this...
+        **`[00:16]` p1** [NAME] has been using this...
     """
     return MD_TRANSCRIPT_SEGMENT_COOKED.format(
-        timecode=timecode, participant_id=participant_id, text=text,
+        timecode=timecode, participant_id=participant_id, text=escape_markdown_speech(text),
     )
 
 

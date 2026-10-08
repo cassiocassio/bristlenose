@@ -26,6 +26,7 @@ import { isEmbedded } from "../utils/embedded";
 import { isExportMode } from "../utils/exportData";
 import { redo, undo } from "../contexts/UndoStore";
 import { resetParagraphScope } from "../utils/paragraphScope";
+import { copyTranscriptSelection } from "../utils/transcriptCopy";
 import { drawsCapital } from "../utils/sentenceStart";
 import {
   TRANSCRIPT_WRITTEN_EVENT,
@@ -581,6 +582,9 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         className="transcript-body"
         ref={bodyRef}
         data-testid="transcript-body"
+        // A drag across paragraphs copies the house transcript format —
+        // Markdown, and rich text for Word — not the page's markup.
+        onCopy={(e) => bodyRef.current && copyTranscriptSelection(e, bodyRef.current)}
         // One editable region, not one per paragraph: a selection can't leave
         // the editable element it starts in, so per-paragraph regions made a
         // drag across paragraphs impossible (owner, 7 Oct 2026). It takes a

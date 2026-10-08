@@ -169,8 +169,8 @@ class TestTranscriptRoundTrip:
         write_raw_transcripts_md([transcript], tmp_path)
         content = (tmp_path / "s1.md").read_text(encoding="utf-8")
 
-        assert "**[00:00] m1**" in content
-        assert "**[00:11] p1**" in content
+        assert "**`[00:00]` m1**" in content
+        assert "**`[00:11]` p1**" in content
 
     def test_cooked_txt_contains_moderator_codes(self, tmp_path: Path) -> None:
         from bristlenose.stages.s07_pii_removal import write_cooked_transcripts
@@ -207,8 +207,8 @@ class TestTranscriptRoundTrip:
         write_cooked_transcripts_md([transcript], tmp_path)
         content = (tmp_path / "s1.md").read_text(encoding="utf-8")
 
-        assert "**[00:00] m1**" in content
-        assert "**[00:11] p1**" in content
+        assert "**`[00:00]` m1**" in content
+        assert "**`[00:11]` p1**" in content
 
     def test_load_recovers_moderator_role(self, tmp_path: Path) -> None:
         """Write with [m1]/[p1] codes, load back, verify roles and codes."""

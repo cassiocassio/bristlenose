@@ -1,0 +1,3698 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default" data-platform="desktop">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transcript readability versions</title>
+<style>
+/* ============================================================================
+   SHIPPED CSS, inlined verbatim from the tree by a generator, in index.css
+   order. Each block is headed by its source path and line range, so it can be
+   diffed against the tree. Nothing in this <style> is written for the mockup.
+   ========================================================================= */
+/* ════ bristlenose/theme/tokens.css — whole file, lines 1–394 ════ */
+/* Design tokens — the single source of truth for all visual decisions.
+
+   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
+   ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap), and
+   SEMANTIC ALIASES that name a decision rather than a value (the inline
+   edit-field set below). An alias points at a palette token, so it costs no
+   per-palette maintenance and cannot drift from the palette it borrows from.
+
+   TYPOGRAPHY tokens are in tokens-typography.css (web) / tokens-desktop.css (macOS).
+   COLOUR PALETTE tokens are in colors/palette-default.css and colors/palette-edo.css.
+
+   Override palette tokens with data-color-theme="<name>" on <html>.
+   Override platform tokens with data-platform="desktop" on <html>. */
+
+:root {
+    /* Sentiment colours (v0.7+ taxonomy) — analytical, NOT theme-overridable.
+       See docs/academic-sources.html for theoretical foundations. */
+
+    /* Negative sentiments */
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    /* Error text — sentiment-frustration (#ea580c) is a fill hue, only 3.56:1
+       on white as body text; this darker shade clears WCAG AA (4.5:1). */
+    --bn-colour-error-text: #c2410c;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+
+    /* Neutral (investigation flag) */
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+
+    /* Positive sentiments */
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* Analysis heatmap — OKLCH colour ramp tokens */
+    --bn-heat-frustration-h: 55;
+    --bn-heat-confusion-h: 30;
+    --bn-heat-doubt-h: 295;
+    --bn-heat-surprise-h: 75;
+    --bn-heat-satisfaction-h: 155;
+    --bn-heat-delight-h: 170;
+    --bn-heat-confidence-h: 260;
+    --bn-heat-chroma: 0.12;
+    --bn-heat-l-min: 95%;
+    --bn-heat-l-max: 45%;
+    --bn-heat-depleted-h: 75;
+    --bn-heat-depleted-chroma: 0.08;
+
+    /* Codebook user-tag colours — OKLCH v5 pentadic palette.
+       5 sets at ~72° hue anchors, ±25° per set, ~12° steps.
+       Light mode: washed (pale bg, dark text).
+       Dark mode: saturated (mid-dark bg, white text).
+       See immutable-chasing-patterson plan for rationale. */
+
+    /* UX set (blue, H=225-275, anchor 250) */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+
+    /* Emotion set (red-pink, H=340-40, anchor 10) */
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+
+    /* Task set (green-teal, H=130-180, anchor 155) */
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+
+    /* Trust set (purple, H=275-325, anchor 300) */
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+
+    /* Opportunity set (amber, H=50-100, anchor 75) */
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+
+    /* Sentiment set — numeric aliases for the codebook colour system.
+       Maps index-based getTagBg() to the existing named sentiment vars. */
+    --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+    --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+    --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+    --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+    --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+    --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+    --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+
+    /* Custom / ungrouped */
+    --bn-custom-bg: oklch(94% 0.005 260);
+
+    /* Group card background tints (very subtle set tint for codebook panel) */
+    --bn-group-ux:        oklch(97% 0.015 250);
+    --bn-group-emo:       oklch(97% 0.015 10);
+    --bn-group-task:      oklch(97% 0.015 155);
+    --bn-group-trust:     oklch(97% 0.015 300);
+    --bn-group-opp:       oklch(97% 0.015 75);
+    --bn-group-sentiment: oklch(97% 0.010 200);
+
+    /* Micro histogram bar colours (slightly more saturated than badge bg) */
+    --bn-bar-ux:        oklch(70% 0.08 250);
+    --bn-bar-emo:       oklch(70% 0.08 10);
+    --bn-bar-task:      oklch(70% 0.06 155);
+    --bn-bar-trust:     oklch(70% 0.07 300);
+    --bn-bar-opp:       oklch(72% 0.07 75);
+    --bn-bar-sentiment: oklch(65% 0.06 200);
+
+    /* Set indicator dots (saturated anchors for codebook panel) */
+    --bn-set-ux-dot: oklch(50% 0.12 250);
+    --bn-set-emo-dot: oklch(50% 0.12 10);
+    --bn-set-task-dot: oklch(50% 0.10 155);
+    --bn-set-trust-dot: oklch(50% 0.11 300);
+    --bn-set-opp-dot: oklch(52% 0.11 75);
+
+    /* Legacy sentiment colours (deprecated — kept for backward compat) */
+    --bn-colour-confusion: var(--bn-sentiment-confusion);
+    --bn-colour-confusion-bg: var(--bn-sentiment-confusion-bg);
+    --bn-colour-frustration: var(--bn-sentiment-frustration);
+    --bn-colour-frustration-bg: var(--bn-sentiment-frustration-bg);
+    --bn-colour-delight: var(--bn-sentiment-delight);
+    --bn-colour-delight-bg: var(--bn-sentiment-delight-bg);
+
+    /* Layout */
+    --bn-max-width: 52rem;
+    --bn-quote-max-width: 23rem;   /* card reading measure — ~5 words/line */
+    --bn-grid-gap: 1.25rem;        /* gap between grid columns */
+    --bn-flow-tolerance: 5em;      /* grid-lanes masonry: how much height imbalance
+                                      to tolerate before breaking reading order.
+                                      Safari 26.4+ only. Provisional — tuned on the
+                                      Phase-1 mockup, pending real-corpus validation. */
+    --bn-toolbar-height: 3rem;
+
+    /* Sidebar layout (serve-mode dual-sidebar with resizable panels) */
+    --bn-sidebar-width: 280px;   /* default panel width */
+    --bn-sidebar-min: 200px;     /* minimum resize bound */
+    --bn-sidebar-max: 480px;     /* maximum resize bound */
+    --bn-rail-width: 36px;       /* collapsed icon rail width */
+    --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
+    --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
+    --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
+    --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
+
+    /* (--bn-first-baseline retired 25 Jul 2026. It was a cross-seam datum
+       aligning webview baselines to the native sidebar's "Project" row — an
+       alignment the red-background test proved unrealisable (the webview's
+       layout viewport starts at the toolbar seam, below that native baseline).
+       With the toolbar-inset residual now 0, content and the flanking inspector
+       share one web-internal datum of --bn-space-xl below the seam; the base
+       .tag-sidebar bleed and the body top-pad already agree. See
+       organisms/sidebar.css § "First-baseline datum".) */
+
+    /* Breakpoints — reference values for @media queries across the system.
+       CSS @media can't consume var(), so use these values directly in
+       media queries and reference the token name in a comment.
+       When adding a new media query, pick from this list or add a new entry. */
+    --bn-breakpoint-compact:  500px;   /* help overlay, single-column fallback */
+    --bn-breakpoint-toolbar:  600px;   /* toolbar collapse (planned) */
+    --bn-breakpoint-content:  1100px;  /* transcript annotation margin layout */
+    --bn-breakpoint-wide:     1400px;  /* 16"+ / wide displays — dashboard featured quotes go to 5 across */
+
+    /* Spacing scale */
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
+       the same in light and dark; the dark text reads on it in both modes. */
+    --bn-colour-new-highlight: #75fb4c;
+    --bn-colour-new-highlight-text: #0f2b08;
+
+    /* Radii */
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    /* ── Inline edit fields — READ THIS BEFORE STYLING A NEW ONE ──────────
+     *
+     * An inline edit field is a piece of text the researcher can click into
+     * and retype: a theme heading, a session name, a code group's title, a
+     * code. There are exactly TWO treatments and the choice is mechanical,
+     * decided by the GROUND the field sits on, not by which lens you are in:
+     *
+     *   field on page background  →  --bn-field-edit-fill-on-page  (tints up)
+     *   field on a tinted surface →  --bn-field-edit-fill-on-tint  (blanks to
+     *                                                               neutral)
+     *
+     * Both carry --bn-field-edit-edge at 1px. The fill inverts because the
+     * ground does; the edge never changes, so the signal is one signal.
+     * Border or outline is yours to pick — outline for a span in running
+     * prose (it costs no layout and will not reflow the line), border for
+     * something that already has a box. That is a mechanism, not a meaning.
+     *
+     * DO NOT invent a third fill. Two surfaces got one each before these
+     * tokens existed (a quote-bg tint, a page-bg blank) and two more got
+     * nothing at all, which is how "is this field live?" came to have four
+     * answers on one screen.
+     *
+     * THE ONE EXEMPTION is quote cropping — `.crop-editable` and the bracket
+     * handles in molecules/editable-text.css. That is not "edit this text",
+     * it is "move this boundary", it was designed as a single signal with the
+     * burnt-amber brackets, and it keeps --bn-colour-crop-bg. Do not reach
+     * for that yellow for anything else, and do not restyle crop to match
+     * these: a different verb is allowed a different look. The token was
+     * called --bn-colour-editing-bg until 20 Sep 2026; it was renamed
+     * because a token named for a state it must not be used in is how the
+     * four-answers-on-one-screen problem started. */
+    --bn-field-edit-edge: var(--bn-colour-accent);
+    --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+    --bn-field-edit-fill-on-tint: var(--bn-colour-bg);
+    --bn-field-edit-radius: var(--bn-radius-sm);
+    --bn-field-edit-offset: 1px;
+
+    /* Section-divider keyline — the colour of the h2 / .section-heading /
+       .framework-section-header bottom rules and the header <hr>. Aliases
+       --bn-colour-border by default (visible); set to `transparent`
+       (globally here, or per-surface) to hide every section divider WITHOUT
+       moving anything — the 1px box still lays out, it just stops painting.
+       The reversible borders-off experiment. Table-header (th) rules keep
+       --bn-colour-border (data-grid chrome, not a section divider).
+       See docs/design-lens-template.md § Keylines. */
+    --bn-colour-keyline: var(--bn-colour-border);
+
+    /* Transitions */
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-transition-slow: 0.3s ease;
+
+    /* Focus Mode — the distraction-free reading state (templates/focus-mode.css,
+       docs/design-focus-mode.md). Structural, NOT palette-overridable: the whole
+       transform is colour-free by design, which is what lets it compose with
+       every palette × appearance with zero per-palette overrides. Deliberately
+       here and not in colors/_contract.css — a Focus token in the contract would
+       oblige every future palette author to answer a question the feature
+       doesn't ask. "Dusk, not a light-switch": no overshoot, no bounce — the
+       wrong register for reading evidence. */
+    --bn-focus-ghost-opacity: 0.14;
+    --bn-focus-heading-opacity: 0.4;
+    --bn-focus-dur: 320ms;
+    --bn-focus-ease: ease-in-out;
+    /* How much of a receded card's outline survives — the border is mixed
+       toward transparent by the remainder. One number for both lenses (the
+       quote card's left edge, the signal card's box and fused seam); it was a
+       literal 40% in two places until the Signals lens made it three. */
+    --bn-focus-outline-mix: 40%;
+
+    /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
+       Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md
+       §4.7.1). Consuming surfaces set --bn-shimmer-base (resting text colour)
+       and --bn-shimmer-peak (the pole the band moves toward: white where text
+       is dark, the surface background where text is light) so the sheen has
+       headroom in every theme. See atoms/shimmer.css. */
+    --bn-shimmer-contrast: 5%;    /* band peak = 5% from base toward the peak pole */
+    --bn-shimmer-band: 34%;       /* feathered band width, as % of the gradient */
+    --bn-shimmer-angle: 100deg;   /* slight off-horizontal tilt */
+    --bn-shimmer-sweep: 1800ms;   /* travel time (documentation; keyframe encodes the split) */
+    --bn-shimmer-gap: 900ms;      /* dark hold between sweeps (documentation) */
+    --bn-shimmer-period: 2700ms;  /* sweep + gap — the animation duration */
+    --bn-shimmer-easing: ease-in-out;
+
+    /* Legacy aliases — used by inline styles in generated HTML.
+       Theme authors: override the --bn-* versions above;
+       these aliases follow automatically. */
+    --font-body: var(--bn-font-body);
+    --font-mono: var(--bn-font-mono);
+    --colour-bg: var(--bn-colour-bg);
+    --colour-text: var(--bn-colour-text);
+    --colour-muted: var(--bn-colour-muted);
+    --colour-border: var(--bn-colour-border);
+    --colour-accent: var(--bn-colour-accent);
+    --colour-quote-bg: var(--bn-colour-quote-bg);
+    --colour-badge-bg: var(--bn-colour-badge-bg);
+    --colour-badge-text: var(--bn-colour-badge-text);
+    --colour-confusion: var(--bn-colour-confusion);
+    --colour-frustration: var(--bn-colour-frustration);
+    --colour-delight: var(--bn-colour-delight);
+    --colour-suggestion: var(--bn-colour-suggestion);
+    --max-width: var(--bn-max-width);
+}
+
+/* Dark mode overrides for analytical tokens.
+   Palette colours are handled in their own palette-*.css files. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+
+        /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
+        --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg:   light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-confusion:        light-dark(#dc2626, #f87171);
+        --bn-colour-error-text:          light-dark(#c2410c, #fb923c);
+        --bn-sentiment-confusion-bg:     light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt:            light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:         light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise:         light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg:      light-dark(#fffbeb, #2d2305);
+        --bn-sentiment-satisfaction:     light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg:  light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-delight:          light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
+
+        /* Analysis heatmap — dark mode overrides */
+        --bn-heat-chroma: light-dark(0.12, 0.10);
+        --bn-heat-l-min: light-dark(95%, 30%);
+        --bn-heat-l-max: light-dark(45%, 75%);
+        --bn-heat-depleted-chroma: light-dark(0.08, 0.06);
+
+        /* Codebook user-tag colours — dark mode: saturated bg, white text */
+        --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+        --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+        --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+        --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+        --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+        --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+        --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+        --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+        --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+        --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+        --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+        --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+        --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+        --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+        --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+        --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+        --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+        --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+        --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+        --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+        --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+        --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+        --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+        --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+        --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+        --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+        --bn-custom-bg: light-dark(oklch(94% 0.005 260), oklch(52% 0.02 260));
+        /* Group card background tints */
+        --bn-group-ux:        light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+        --bn-group-emo:       light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+        --bn-group-task:      light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+        --bn-group-trust:     light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+        --bn-group-opp:       light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+        --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+
+        /* Micro histogram bar colours */
+        --bn-bar-ux:        light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
+        --bn-bar-emo:       light-dark(oklch(70% 0.08 10),  oklch(55% 0.08 10));
+        --bn-bar-task:      light-dark(oklch(70% 0.06 155), oklch(55% 0.06 155));
+        --bn-bar-trust:     light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
+        --bn-bar-opp:       light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
+        --bn-bar-sentiment: light-dark(oklch(65% 0.06 200), oklch(50% 0.06 200));
+
+        --bn-set-ux-dot: light-dark(oklch(50% 0.12 250), oklch(60% 0.10 250));
+        --bn-set-emo-dot: light-dark(oklch(50% 0.12 10), oklch(60% 0.10 10));
+        --bn-set-task-dot: light-dark(oklch(50% 0.10 155), oklch(60% 0.08 155));
+        --bn-set-trust-dot: light-dark(oklch(50% 0.11 300), oklch(60% 0.09 300));
+        --bn-set-opp-dot: light-dark(oklch(52% 0.11 75), oklch(62% 0.09 75));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-confusion:        var(--bn-sentiment-confusion);
+        --bn-colour-confusion-bg:     var(--bn-sentiment-confusion-bg);
+        --bn-colour-frustration:      var(--bn-sentiment-frustration);
+        --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
+        --bn-colour-delight:          var(--bn-sentiment-delight);
+        --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
+    }
+
+    /* Explicit overrides — lock theme regardless of OS preference */
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ════ bristlenose/theme/tokens-typography.css — whole file, lines 1–50 ════ */
+/* Typography tokens — web defaults (Inter Variable from Google Fonts).
+   Desktop overrides are in tokens-desktop.css.
+
+   Scale D — 8 stops. Semantic intent:
+   - label (13px) = app's voice (chrome, UI labels, navigation, context)
+   - body  (15px) = participant's voice (quote text, transcript segments)
+
+   Archive of previous scale: tokens-typography-v1.css */
+
+:root {
+    /* Font family — Inter Variable loaded from Google Fonts (see index.html).
+       Fallback chain: Segoe UI Variable (Win 11), Segoe UI (Win 10),
+       system-ui, SF Pro (macOS), CJK families. */
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",   /* macOS Japanese */
+        "Yu Gothic UI",                                  /* Windows Japanese */
+        "Malgun Gothic",                                 /* Windows Korean */
+        "Apple SD Gothic Neo",                           /* macOS Korean */
+        "Noto Sans CJK JP", "Noto Sans CJK KR",         /* Linux CJK */
+        sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
+       On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
+    --bn-weight-light: 370;      /* subordinate text (sidebar nav links, secondary lists) */
+    --bn-weight-normal: 420;     /* body text, descriptions, quote content */
+    --bn-weight-emphasis: 490;   /* headings, labels, section titles */
+    --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
+    --bn-weight-semibold: 600;
+    --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
+
+    /* Typography scale — 8 stops, size + line-height pairs.
+       Line-height decreases as size increases (Bringhurst principle:
+       large letterforms provide visual anchoring, need less leading). */
+    --bn-text-micro:       0.6rem;      /* 9.6px  — delete ×, confidence badges */
+    --bn-text-micro-lh:    1.2;
+    --bn-text-badge:       0.72rem;     /* 11.5px — badges, group headers, tag counts */
+    --bn-text-badge-lh:    1.3;
+    --bn-text-caption:     0.75rem;     /* 12px   — footnotes, footer, modal footer, kbd */
+    --bn-text-caption-lh:  1.4;
+    --bn-text-label:       0.8125rem;   /* 13px   — toolbar, filters, context, timecodes (app voice) */
+    --bn-text-label-lh:    1.45;
+    --bn-text-body:        0.9375rem;   /* 15px   — quote text, transcript segments (participant voice) */
+    --bn-text-body-lh:     1.5;
+    --bn-text-heading:     1.125rem;    /* 18px   — section headings, h3, modal titles */
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title:       1.375rem;    /* 22px   — page titles, h2, logotype */
+    --bn-text-title-lh:    1.25;
+    --bn-text-display:     1.75rem;     /* 28px   — report h1 */
+    --bn-text-display-lh:  1.2;
+}
+
+/* ════ bristlenose/theme/tokens-desktop.css — whole file, lines 1–70 ════ */
+/* Desktop typography overrides — SF Pro for macOS native feel.
+   Active when data-platform="desktop" is set on <html> AND the user hasn't
+   opted back to Inter. The macOS app sets data-platform via
+   BRISTLENOSE_PLATFORM=desktop; the Appearance ▸ Typography setting writes
+   BRISTLENOSE_TYPOGRAPHY, and "inter" makes the server emit
+   data-typography="inter" — which this block's :not() excludes, so the cascade
+   falls back to :root (Inter). On web/CLI neither var is set, so this never
+   matches: SF Pro is licensed for Apple platforms only, Inter ships everywhere.
+
+   SF Pro is a system font on macOS — no download needed.
+   SF Pro Text is optimised for body sizes (<20pt), SF Pro Display for headings (≥20pt).
+   -apple-system resolves to SF Pro automatically on macOS.
+
+   Scale — calibrated against the live macOS AppKit ladder via the Type Parity
+   Inspector (Debug ▸ Type Parity Inspector), macOS 26.4.1 @2x, Color LCD. Each
+   bn stop is width-matched to its measured native style (Δ ≈ 0px), so the labels
+   below are the *real* macOS styles (the old "Apple callout = 15px" label was
+   wrong — callout is 12pt):
+   - micro:   caption2     (10px)
+   - badge:   subheadline  (11px)
+   - caption: callout      (12px)
+   - label:   body         (13px)  — app voice
+   - body:    title3       (15px)  — participant voice (quotes + transcript)
+   - heading: title2       (17px)
+   - title:   title1       (22px)
+   - display: largeTitle   (26px)
+
+   Line-heights are Apple's absolute leadings expressed as size-relative ratios,
+   except body — loosened slightly by eye (1.4) for reading comfort. --bn-track-* carries Apple's per-size
+   tracking — empirically ≈0 across this range (only micro is non-zero), and
+   currently unconsumed (no letter-spacing wired yet). Sizes are kept in rem so
+   they still honour the user's root font-size; the px in each comment is the
+   value at the default 16px root (the condition this was calibrated under).
+   Re-true on a different scale/colour profile. Archive: tokens-desktop-v1.css */
+
+[data-platform="desktop"]:not([data-typography="inter"]) {
+    /* Font family — SF Pro via -apple-system, no Google Fonts needed */
+    --bn-font-body: -apple-system, "SF Pro Text", "SF Pro", system-ui,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+        sans-serif;
+    --bn-font-mono: "SF Mono", ui-monospace, monospace;
+
+    --bn-text-micro:       0.625rem;    /* 10px  — macOS caption2 */
+    --bn-text-micro-lh:    1.300;
+    --bn-track-micro:      0.013em;
+    --bn-text-badge:       0.6875rem;   /* 11px  — macOS subheadline */
+    --bn-text-badge-lh:    1.273;
+    --bn-track-badge:      0;
+    --bn-text-caption:     0.75rem;     /* 12px  — macOS callout */
+    --bn-text-caption-lh:  1.250;
+    --bn-track-caption:    0;
+    --bn-text-label:       0.8125rem;   /* 13px  — macOS body */
+    --bn-text-label-lh:    1.231;
+    --bn-track-label:      0;
+    --bn-text-body:        0.9375rem;   /* 15px  — macOS title3 */
+    --bn-text-body-lh:     1.4;         /* looser than title3's 1.333 — tuned by eye in the stress-bench for reading comfort (participant voice) */
+    --bn-track-body:       0;
+    --bn-text-heading:     1.0625rem;   /* 17px  — macOS title2 */
+    --bn-text-heading-lh:  1.294;
+    --bn-track-heading:    0;
+    --bn-text-title:       1.375rem;    /* 22px  — macOS title1 */
+    --bn-text-title-lh:    1.182;
+    --bn-track-title:      0;
+    --bn-text-display:     1.625rem;    /* 26px  — macOS largeTitle */
+    --bn-text-display-lh:  1.231;
+    --bn-track-display:    0;
+
+    /* Weight scale — SF Pro optical weights at same numeric values.
+       No change needed — Inter and SF Pro share the weight axis range. */
+}
+
+/* ════ bristlenose/theme/colors/palette-default.css — whole file, lines 1–170 ════ */
+/* palette-default — Bristlenose's standard blue/grey colour theme.
+   This is the web-mode default palette, loaded as :root fallback.
+   Tokens defined here are overridden by any active [data-color-theme] palette.
+
+   To create a new theme: copy this file, change the selector to
+   [data-color-theme="your-theme"], and remap every token.
+   See _contract.css for the full list of required tokens. */
+
+:root,
+[data-color-theme="default"] {
+    /* Colour palette */
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #007aff;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-inspector-bg: #f9f9fa;          /* Inspector chrome — Xcode Tahoe's flat inspector tint (~2% off white) */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-crop-bg: #fffbe6;
+    --bn-crop-handle-colour: #c4850a;
+    --bn-crop-handle-hover: #a06d08;
+    --bn-colour-active-bg: #f0fdf4;
+    --bn-colour-highlight: #fef08a;
+
+    /* Destructive action */
+    --bn-colour-negative: #dc2626;
+
+    /* Success and caution — the other two semantic kinds */
+    --bn-colour-positive: #16a34a;
+    --bn-colour-warning: #f59e0b;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(0, 122, 255, 0.06);
+    --bn-glow-colour-strong: rgba(0, 122, 255, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #e5e7eb;
+    --bn-minimap-heading: #b0b5bd;
+    --bn-minimap-viewport-bg: rgba(0, 122, 255, 0.15);
+    --bn-minimap-viewport-border: rgba(0, 122, 255, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #93b4f4;
+    --bn-coverage-moderator: #d97706;
+    --bn-coverage-omitted: #d1d5db;
+
+    /* Group card background tints */
+    --bn-group-none: #f9fafb;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #d1d5db;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+    --bn-focus-ring: 0 0 0 2px rgba(0, 122, 255, 0.12);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(0, 0, 0, 0.04);
+    --bn-hover-bg-subtle: rgba(0, 0, 0, 0.03);
+
+    /* Selection state */
+    --bn-selection-bg: #eef4fc;
+    --bn-selection-border: #007aff;
+    --bn-selection-bg-inactive: #e5e7eb;
+    --bn-selection-border-inactive: #9ca3af;
+    /* Sidebar nav selected-row capsule — NSColor unemphasizedSelectedContentBackgroundColor,
+       sampled (no canonical Apple hex; dynamic + vibrant composite). Re-sample at OS bumps. */
+    --bn-nav-selection-bg: #efefef;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #007aff;
+    --bn-colour-suggestion-bg: #eff6ff;
+}
+
+/* Dark mode — uses light-dark() with the color-scheme property.
+   Browsers without light-dark() support (~13%) fall back to the
+   plain light values above. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root,
+    [data-color-theme="default"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#ffffff, #111111);
+        --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:           light-dark(#007aff, #0a84ff);
+        --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
+        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #1c1c1e);   /* Inspector chrome — one step up from the #111 editor (Apple systemGray6 dark) */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
+        --bn-colour-user-tag-bg:      light-dark(#f3f4f6, #252525);
+        --bn-colour-user-tag-text:    light-dark(#4b5563, #d1d5db);
+        --bn-colour-crop-bg:          light-dark(#fffbe6, #2a2614);
+        --bn-crop-handle-colour:      light-dark(#c4850a, #f0b830);
+        --bn-crop-handle-hover:       light-dark(#a06d08, #f5cc60);
+        --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
+        --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
+        --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(0, 122, 255, 0.06), rgba(10, 132, 255, 0.12));
+        --bn-glow-colour-strong:      light-dark(rgba(0, 122, 255, 0.11), rgba(10, 132, 255, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#e5e7eb, #333333);
+        --bn-minimap-heading:         light-dark(#b0b5bd, #555555);
+        --bn-minimap-viewport-bg:     light-dark(rgba(0, 122, 255, 0.15), rgba(10, 132, 255, 0.2));
+        --bn-minimap-viewport-border: light-dark(rgba(0, 122, 255, 0.3), rgba(10, 132, 255, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#93b4f4, #4a7ecf);
+        --bn-coverage-moderator: light-dark(#d97706, #fbbf24);
+        --bn-coverage-omitted:   light-dark(#d1d5db, #4b5563);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f9fafb, #1e1e1e);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#d1d5db, #4b5563);
+
+        /* Destructive action */
+        --bn-colour-negative:         light-dark(#dc2626, #ef4444);
+
+        /* Success and caution */
+        --bn-colour-positive:         light-dark(#16a34a, #22c55e);
+        --bn-colour-warning:          light-dark(#f59e0b, #fbbf24);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
+        --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
+        --bn-colour-starred:          light-dark(#999, #ccc);
+        --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              light-dark(0 0 0 2px rgba(0, 122, 255, 0.12), 0 0 0 2px rgba(10, 132, 255, 0.2));
+        --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
+        --bn-selection-border:        light-dark(#007aff, #0a84ff);
+        --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
+        --bn-selection-border-inactive: light-dark(#9ca3af, #4b5563);
+        --bn-nav-selection-bg:          light-dark(#efefef, #2b2b2b);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.04));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-suggestion:       light-dark(#007aff, #0a84ff);
+        --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
+    }
+}
+
+/* ════ bristlenose/theme/colors/palette-edo.css — whole file, lines 1–183 ════ */
+/* palette-edo — Edo-period Japanese art colour theme.
+   Sampled from three artworks seen at the British Museum Samurai exhibition,
+   1 Mar 2026. See docs/mockups/edo-colour-palette.html for source analysis.
+
+   Pigments: rokusho (verdigris), sumi (iron-gall ink), cinnabar vermillion,
+   bero-ai (Prussian blue), yellow ochre.
+
+   Desktop default. Activate: data-color-theme="edo" on <html>.
+   Env/CLI: BRISTLENOSE_PALETTE=edo or --palette edo (canonical; BRISTLENOSE_COLOR_THEME
+   is the deprecated alias). Internal <html> attribute stays data-color-theme (glossary §Display settings).
+
+   ── v1 decisions (Jul 2026) ──
+   Accent uses Prussian blue's vivid UNDERTONE (#0f5c9e), not the dull masstone
+   sampled off aged prints — that masstone reads too low-chroma for links/icons/selection.
+   Dark accent is vivid blue (#4d9fe0), not verdigris. Background is bright Paper
+   White (#fdfbf7). Body ink is passport navy (#1b2230 / #e8e3d6 dark).
+
+   Alternatives considered — for future edo2/edo3 variants (explore in
+   docs/mockups/edo-theme-studio.html):
+     paper  — Snow White #fdfbf7, Warm off-white #f0e9d8, Washi Cream #ede5d1 (warmer/more washi)
+     accent — masstone Prussian #0f5c9e, midpoint #164e80, electric #2a7ac0; dark verdigris #7ba8a0
+     ink    — Sumi Black #1b2230 light / Sail Parchment #d4c9a8 dark; Moonlight #e4e6ea (cool dark ink)
+   Known follow-up: warm surfaces (quote-bg #f0e9d8, hover #ede5d1, badge #e8dfc9)
+   now read warmer against the brighter paper — revisit surface harmony next pass. */
+
+[data-color-theme="edo"] {
+    /* Colour palette — warm paper with indigo/verdigris accents */
+    --bn-colour-bg: #fdfbf7;                    /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;                   /* Passport navy — near-black, indigo whisper */
+    --bn-colour-muted: #4a698a;                  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
+    --bn-colour-border: #d4c9a8;                 /* Sail Parchment — warm border */
+    --bn-colour-accent: #0f5c9e;                 /* Vivid Prussian — bero-ai undertone */
+    --bn-colour-hover: #ede5d1;                  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #f7f2e6;           /* Inspector chrome — warm washi; the mirror of Xcode's #f9f9fa (Apple cools the neutral, Edo warms the paper). One notch off Paper White, lighter than quote-bg so it reads as chrome not content */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f0e9d8;              /* Warm off-white */
+    --bn-colour-badge-bg: #e8dfc9;              /* Parchment badge */
+    --bn-colour-badge-text: #2d3654;            /* Court Indigo */
+    --bn-colour-user-tag-bg: #e8dfc9;
+    --bn-colour-user-tag-text: #3d4a5c;
+    --bn-colour-crop-bg: #f5ecd0;               /* Gold Ochre tint */
+    --bn-crop-handle-colour: #b5432a;           /* Vermillion */
+    --bn-crop-handle-hover: #8b3a3a;            /* Bengara Red */
+    --bn-colour-active-bg: #e8f0e4;             /* Pine Green tint */
+    --bn-colour-highlight: #c4a96a;             /* Gold Ochre highlight */
+
+    /* Destructive action — vermillion */
+    --bn-colour-negative: #b5432a;
+
+    /* Success — Pine Green (matsuba-iro), the hue active-bg already tints toward.
+       Caution — Gold Ochre, deepened for legibility on paper. */
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #a8842c;
+
+    /* Playback-sync glow — Prussian Blue based */
+    --bn-glow-colour: rgba(15, 92, 158, 0.08);
+    --bn-glow-colour-strong: rgba(15, 92, 158, 0.15);
+
+    /* Minimap — warm parchment tones */
+    --bn-minimap-quote: #d4c9a8;
+    --bn-minimap-heading: #9e8b6e;
+    --bn-minimap-viewport-bg: rgba(15, 92, 158, 0.12);
+    --bn-minimap-viewport-border: rgba(15, 92, 158, 0.25);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #5a7d9b;
+    --bn-coverage-moderator: #c4a96a;
+    --bn-coverage-omitted: #d4c9a8;
+
+    /* Group card — neutral */
+    --bn-group-none: #f0e9d8;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #c4b898;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #b8ad91;
+    --bn-colour-icon-idle: #b8ad91;
+    --bn-colour-starred: #9e8b6e;
+    --bn-colour-shadow: rgba(30, 20, 10, 0.12);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
+    --bn-focus-ring: 0 0 0 2px rgba(15, 92, 158, 0.15);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(30, 20, 10, 0.05);
+    --bn-hover-bg-subtle: rgba(30, 20, 10, 0.03);
+
+    /* Selection state — Prussian Blue */
+    --bn-selection-bg: #e0e8f0;
+    --bn-selection-border: #0f5c9e;
+    --bn-selection-bg-inactive: #e8e2d4;
+    --bn-selection-border-inactive: #b8ad91;
+    /* Sidebar nav selected-row capsule — warm parchment grey (edo's native-grey analogue) */
+    --bn-nav-selection-bg: #e6ddc9;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #0f5c9e;
+    --bn-colour-suggestion-bg: #e0e8f0;
+}
+
+/* Dark mode — Sumi Black bg, warm parchment text */
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="edo"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#fdfbf7, #1a1816);
+        --bn-colour-text:             light-dark(#1b2230, #e8e3d6);
+        --bn-colour-muted:            light-dark(#4a698a, #7ba8a0);
+        --bn-colour-border:           light-dark(#d4c9a8, #2d2820);
+        --bn-colour-accent:           light-dark(#0f5c9e, #4d9fe0);
+        --bn-colour-hover:            light-dark(#ede5d1, #252118);
+        --bn-colour-inspector-bg:     light-dark(#f7f2e6, #211e18);   /* Inspector chrome — warm washi light / one warm step off Sumi dark */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f0e9d8, #211e18);
+        --bn-colour-badge-bg:         light-dark(#e8dfc9, #2d2820);
+        --bn-colour-badge-text:       light-dark(#2d3654, #c4b898);
+        --bn-colour-user-tag-bg:      light-dark(#e8dfc9, #2d2820);
+        --bn-colour-user-tag-text:    light-dark(#3d4a5c, #c4b898);
+        --bn-colour-crop-bg:          light-dark(#f5ecd0, #2d2614);
+        --bn-crop-handle-colour:      light-dark(#b5432a, #e06a4a);
+        --bn-crop-handle-hover:       light-dark(#8b3a3a, #e88a6a);
+        --bn-colour-active-bg:        light-dark(#e8f0e4, #1a2818);
+        --bn-colour-highlight:        light-dark(#c4a96a, #6b5528);
+        --bn-colour-cited-bg:         light-dark(#f5ecd0, #3b3010);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(15, 92, 158, 0.08), rgba(77, 159, 224, 0.10));
+        --bn-glow-colour-strong:      light-dark(rgba(15, 92, 158, 0.15), rgba(77, 159, 224, 0.18));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#d4c9a8, #2d2820);
+        --bn-minimap-heading:         light-dark(#9e8b6e, #4a4030);
+        --bn-minimap-viewport-bg:     light-dark(rgba(15, 92, 158, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border: light-dark(rgba(15, 92, 158, 0.25), rgba(77, 159, 224, 0.3));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#5a7d9b, #4a6a80);
+        --bn-coverage-moderator: light-dark(#c4a96a, #a08848);
+        --bn-coverage-omitted:   light-dark(#d4c9a8, #3d3830);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f0e9d8, #211e18);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#c4b898, #4a4030);
+
+        /* Destructive action — vermillion */
+        --bn-colour-negative:         light-dark(#b5432a, #e06a4a);
+
+        /* Success — Pine Green; caution — Gold Ochre */
+        --bn-colour-positive:         light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:          light-dark(#a8842c, #c4a96a);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#b8ad91, #4a4030);
+        --bn-colour-icon-idle:        light-dark(#b8ad91, #4a4030);
+        --bn-colour-starred:          light-dark(#9e8b6e, #b8a880);
+        --bn-colour-shadow:           light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              light-dark(0 0 0 2px rgba(15, 92, 158, 0.15), 0 0 0 2px rgba(77, 159, 224, 0.2));
+        --bn-selection-bg:            light-dark(#e0e8f0, #1e2830);
+        --bn-selection-border:        light-dark(#0f5c9e, #4d9fe0);
+        --bn-selection-bg-inactive:     light-dark(#e8e2d4, #26231d);
+        --bn-selection-border-inactive: light-dark(#b8ad91, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#e6ddc9, #2d2922);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
+
+        /* Legacy aliases */
+        --bn-colour-suggestion:       light-dark(#0f5c9e, #4d9fe0);
+        --bn-colour-suggestion-bg:    light-dark(#e0e8f0, #1e2830);
+    }
+}
+
+/* ════ bristlenose/theme/templates/report.css — whole file, lines 1–350 ════ */
+/* Template: report — page-level layout, typography, and base elements */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    margin: 0;
+    /* No bottom padding on body (20 Sep 2026). The sidebars are sticky INSIDE
+       the .layout grid, so anything body pads below the grid is ground a panel
+       can never cover: scrolled to the end, the panel stopped one padding short
+       of the window bottom and the (transparent, embedded) body showed the
+       window surface there — a white bar under the pale panel on macOS 27. The
+       bottom breathing room now lives on `.layout > .center` (sidebar.css) for
+       the SPA and on `article` below for the static render, both of which sit
+       inside the row the panels span. */
+    padding: var(--bn-space-xl) var(--bn-space-lg) 0;
+}
+
+/* Translucent chrome (spike): when the SPA runs inside the macOS WKWebView
+   the WebView paints transparent (WebView.swift: drawsBackground=false) and
+   extends behind the unified toolbar, so a solid body background would cover
+   the vibrancy the toolbar frost is trying to sample. main.tsx sets
+   [data-embedded="true"] on <html> before first paint.
+
+   The extended WebView also means the top of `body` sits BEHIND the toolbar;
+   BridgeHandler.syncToolbarInset pushes the titlebar+toolbar delta as
+   `--bn-toolbar-inset` on <html> at `ready`. Add it to the existing top pad
+   so first-of-content is fully out from under the frost. The `, 0px` fallback
+   keeps non-embedded (browser/serve) surfaces on the current spacing.
+
+   The horizontal padding goes to 0 here, not just the top. Until 20 Sep 2026
+   this override replaced padding-top ONLY, so the 24px `--bn-space-lg` flank
+   survived into the app — and because the body is transparent it showed the
+   WINDOW surface through it: a strip between the native sidebar and the
+   content-nav panel (and again past the tag sidebar) that read as a failed
+   join. Measured on macOS 27 as pure #ffffff beside a #f9f9f9 panel. The
+   panels must be flush with the split divider and the window edge; the prose
+   keeps its distance via `.center` padding (sidebar.css § "Desktop embedded"). */
+html[data-embedded="true"] body {
+    background: transparent;
+    padding-top: calc(var(--bn-toolbar-inset, 0px) + var(--bn-space-xl));
+    padding-left: 0;
+    padding-right: 0;
+}
+
+article {
+    max-width: none;
+    margin: 0 auto;
+    padding: 0 var(--bn-space-lg) var(--bn-space-xl);
+}
+
+/* Single-column elements keep the reading-width cap on wide screens.
+   The dashboard is deliberately NOT capped — it fills the lens width like every
+   other tab (full-span panes stretch; the two nav lists share a flush 1fr 1fr row). */
+h1, h2, h3, .description {
+    max-width: var(--bn-max-width);
+}
+
+h1 {
+    font-size: var(--bn-text-display);
+    font-weight: var(--bn-weight-strong);
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.01em;
+}
+
+h2 {
+    font-size: var(--bn-text-title);
+    font-weight: var(--bn-weight-emphasis);
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.4rem;
+    /* A section divider is a *structural* concern, not a *reading-width* one:
+       un-cap so the rule spans the full pane (overriding the reading-width
+       cap the h1/h2/h3/.description group sets above). 1px is the canonical
+       divider weight, matching .framework-section-header (codebook). This
+       retires the old 2px reading-width-capped treatment (D7 in
+       docs/design-improvement-opportunities.md) — every h2 is now one
+       consistent 1px full-pane divider. See docs/design-lens-template.md
+       § Keylines. */
+    max-width: none;
+    border-bottom: 1px solid var(--bn-colour-keyline);
+}
+
+/* The .section-heading ATOM moved to atoms/section-heading.css (6 Aug 2026).
+   Only its page-layout rule stays here: an atom should not know where on a
+   page it sits. */
+
+
+/* First zone-title on a lens sits flush at the content datum (no top gap).
+   Quotes: the first <section> in <main> ("Sections", before "Themes").
+   Analysis: the first heading in the scroll pane ("Sentiment", before "Tag").
+   Browser: flush at the body top-pad. The app's absolute datum is re-scoped
+   with the toolbar-inset fix (Phase B); this rule is surface-agnostic. */
+.center > main > section:first-of-type > .section-heading,
+.signals-center > .section-heading:first-of-type {
+    margin-top: 0;
+}
+
+h3 {
+    font-size: var(--bn-text-heading);
+    font-weight: var(--bn-weight-emphasis);
+    margin: 1.8rem 0 0.25rem;
+}
+
+.bn-about {
+    display: flex;
+    gap: var(--bn-space-xl);
+    align-items: flex-start;
+}
+
+.bn-about-sidebar {
+    width: 180px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 1rem;
+}
+
+.bn-about-sidebar button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 0;
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color var(--bn-transition-fast);
+}
+
+.bn-about-sidebar button:hover {
+    color: var(--bn-colour-text);
+}
+
+.bn-about-sidebar button.active {
+    color: var(--bn-colour-text);
+    font-weight: var(--bn-weight-emphasis);
+}
+
+.bn-about-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.bn-about-content h2 {
+    margin-top: 0;
+}
+
+.bn-about-content h3 {
+    margin: 1rem 0 0.15rem;
+}
+
+.bn-about-content h4 {
+    margin: 0.8rem 0 0.1rem;
+    font-size: var(--bn-text-label);
+}
+
+.bn-about-citation {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+    text-indent: -1.5rem;
+    font-size: var(--bn-text-label);
+}
+
+.bn-about-citation a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+}
+
+.bn-about-citation a:hover {
+    text-decoration: underline;
+}
+
+.bn-about-citation .summary {
+    text-indent: 0;
+    padding-left: 1.5rem;
+    color: var(--bn-colour-muted);
+    font-size: var(--bn-text-label);
+    margin-top: 0.2rem;
+}
+
+.bn-about-footer {
+    margin-top: 1.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--bn-colour-border);
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-muted);
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--bn-colour-keyline);
+    margin: var(--bn-space-xl) 0;
+}
+
+.description {
+    color: var(--bn-colour-muted);
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--bn-text-label);
+    margin: 1rem 0;
+}
+
+th {
+    text-align: left;
+    font-weight: var(--bn-weight-emphasis);
+    padding: 0.6rem var(--bn-space-md);
+    border-bottom: 2px solid var(--bn-colour-border);
+    white-space: nowrap;
+}
+
+td {
+    padding: 0.5rem var(--bn-space-md);
+    border-bottom: 1px solid var(--bn-colour-border);
+    vertical-align: top;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+th.bn-sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+th.bn-sortable:hover {
+    color: var(--bn-colour-accent);
+}
+
+.bn-sort-arrow {
+    font-size: 0.65em;
+    margin-left: 0.25em;
+    vertical-align: middle;
+}
+
+.bn-sort-ghost {
+    opacity: 0.2;
+}
+
+.bn-sort-active {
+    opacity: 0.6;
+}
+
+td a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+}
+
+td a:hover {
+    text-decoration: underline;
+}
+
+/* Session table */
+.bn-session-table {
+    margin: 0;
+}
+
+.bn-session-table tr {
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.bn-session-table tr:last-child {
+    border-bottom: none;
+}
+
+.bn-session-table td {
+    border-bottom: none;
+}
+
+.bn-session-table tbody tr[data-session] {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.bn-session-table tbody tr[data-session]:hover {
+    background-color: var(--bn-colour-hover);
+}
+
+.bn-session-moderators {
+    font-size: var(--bn-text-label);
+    margin: 0 0 0.5rem;
+    color: var(--bn-colour-text);
+}
+
+.bn-session-speakers {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+
+.bn-session-meta {
+    /* Start column is the only shrinkable column in the row (all others are
+       nowrap or fixed-width), so auto table-layout dumps all shrink pressure
+       here and the journey path collapses to one word per line at narrow
+       widths. A floor keeps the path readable (a couple of words per line)
+       while the date above it still wraps freely. */
+    min-width: 12rem;
+}
+
+.bn-session-journey {
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-muted);
+    margin-top: 0.25rem;
+    white-space: normal;
+}
+
+.bn-session-id {
+    white-space: nowrap;
+}
+
+.bn-session-duration {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.bn-interviews-link {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.bn-interviews-link:hover {
+    text-decoration: none;
+    opacity: 0.8;
+}
+
+.bn-folder-icon {
+    flex-shrink: 0;
+}
+
+/* ════ bristlenose/theme/atoms/badge.css — whole file, lines 1–327 ════ */
+/* Atom: badge — base badge, sentiment variants, AI and user variants */
+
+/* The weight is DECLARED. It never was, so every chip in the product rendered
+   at the user agent's 400 — a value in nobody's ladder. `light` is the rung the
+   system reserves for subordinate text, and that is what a chip is: the row's
+   words carry the finding, the chip says which vocabulary they came from. */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-light);
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+
+/* Sentiment variants (v0.7+ taxonomy) — see docs/academic-sources.html */
+.badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-confusion { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-doubt { background: var(--bn-sentiment-doubt-bg); color: var(--bn-sentiment-doubt); }
+.badge-surprise { background: var(--bn-sentiment-surprise-bg); color: var(--bn-sentiment-surprise); }
+.badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+.badge-delight { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-confidence { background: var(--bn-sentiment-confidence-bg); color: var(--bn-sentiment-confidence); }
+
+/* Legacy variants (deprecated — kept for backward compat with old intermediate JSON) */
+.badge-suggestion { background: var(--bn-colour-suggestion-bg); color: var(--bn-colour-suggestion); }
+.badge-frustrated { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-delighted { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-confused { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-amused { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-critical { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-sarcastic { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-judgment { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-narration { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-task_management { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+
+/* AI badge — deletable on hover */
+.badge-ai {
+    cursor: pointer;
+    position: relative;
+    transition: opacity var(--bn-transition-fast);
+}
+
+.badge-ai:hover {
+    opacity: 0.8;
+}
+
+/* Delete circle — white floating chip with grey ×.
+   Pure flexbox centering (10c-fix2 approach).
+   TODO: replace × character with SVG icon for cross-platform consistency. */
+.badge-ai::after {
+    content: "\00d7";
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-negative);
+    border-radius: 50%;
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-strong);
+    line-height: 1;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.badge-ai:hover::after {
+    opacity: 1;
+}
+
+/* User tag — mode-dependent treatment.
+   Light mode: dark text on washed codebook bg (pale tint).
+   Dark mode: white text on saturated codebook bg.
+   Background colour set via inline style from codebook.js.
+   Falls back to --bn-colour-user-tag-bg when no codebook colour assigned. */
+.badge-user {
+    background: var(--bn-colour-user-tag-bg);
+    color: var(--bn-colour-text);
+    font-weight: var(--bn-weight-normal);
+    cursor: default;
+    position: relative;
+}
+
+/* Dark mode: user tags switch to white-on-saturated */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .badge-user {
+        color: #ffffff;
+        font-weight: var(--bn-weight-emphasis);
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .badge-user {
+            color: #ffffff;
+            font-weight: var(--bn-weight-emphasis);
+        }
+    }
+}
+
+/* AI tag visibility toggle */
+body.hide-ai-tags .badge-ai { display: none; }
+
+.badge-user .badge-delete {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    border: none;
+    border-radius: 50%;
+    color: var(--bn-colour-negative);
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-strong);
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.badge-user:hover .badge-delete {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Add-tag ghost button */
+.badge-add {
+    border: 1px dashed var(--bn-colour-border);
+    background: transparent;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    transition: border-color var(--bn-transition-fast), color var(--bn-transition-fast);
+    user-select: none;
+}
+
+.badge-add:hover {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+}
+
+/* Proposed badge — pulsating dashed border (AutoCode) */
+@keyframes bn-proposed-pulse {
+    0%   { opacity: 0.50; }
+    50%  { opacity: 0.78; }
+    100% { opacity: 0.50; }
+}
+
+.badge-proposed {
+    animation: bn-proposed-pulse 3s ease-in-out infinite;
+    border: 1px dashed currentColor;
+    cursor: pointer;
+    position: relative;
+}
+
+.badge-proposed:hover {
+    animation: none;
+    opacity: 1 !important;
+}
+
+/* Action pill — floating [✗ | ✓] bar at badge top-right.
+   ✗ (deny) anchored at delete-circle position, ✓ (accept) hangs right.
+   16px compartments, pill-shaped, appears on hover. */
+.badge-action-pill {
+    position: absolute;
+    top: calc(-0.3rem - 1px);              /* same vertical as delete × */
+    right: calc(-0.3rem - 1px - 1rem);     /* ✗ aligns with delete × position,
+                                              ✓ extends past badge right edge */
+    display: flex;
+    gap: 0;
+    background: var(--bn-colour-bg);
+    border-radius: var(--bn-radius-pill);   /* clamps to half-height; survives a height change */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;                              /* sit above adjacent badges */
+}
+
+.badge-proposed:hover .badge-action-pill,
+.badge-proposed:focus-within .badge-action-pill {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.badge-action-deny,
+.badge-action-accept {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;       /* 16px */
+    height: 1rem;
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-strong);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    padding: 0;
+    transition: background var(--bn-transition-fast);
+}
+
+.badge-action-deny {
+    color: var(--bn-colour-negative);
+}
+
+.badge-action-accept {
+    color: var(--bn-colour-positive);
+    border-left: 1px solid var(--bn-colour-border);
+}
+
+.badge-action-deny:hover { background: #fef2f2; }
+.badge-action-accept:hover { background: #dcfce7; }
+
+/* Keyboard focus ring — inset (outline-offset negative) because the pill has
+   overflow:hidden, which would clip an outset ring on these 16px buttons. */
+.badge-action-deny:focus-visible,
+.badge-action-accept:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+/* Dark mode: pill and action compartments */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .badge-action-pill {
+        background: var(--bn-colour-bg);
+    }
+    [data-theme="dark"] .badge-action-deny:hover {
+        background: rgba(220, 38, 38, 0.25);
+        color: #f87171;
+    }
+    [data-theme="dark"] .badge-action-accept:hover {
+        background: rgba(22, 163, 74, 0.25);
+        color: #4ade80;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .badge-action-pill {
+            background: var(--bn-colour-bg);
+        }
+        :root:not([data-theme="light"]) .badge-action-deny:hover {
+            background: rgba(220, 38, 38, 0.25);
+            color: #f87171;
+        }
+        :root:not([data-theme="light"]) .badge-action-accept:hover {
+            background: rgba(22, 163, 74, 0.25);
+            color: #4ade80;
+        }
+    }
+}
+
+/* Accept flash — brief brightness burst when a proposed tag is accepted.
+   Applied by React (QuoteCard) on the new user badge for ~400ms. */
+@keyframes badge-accept-flash {
+    0%   { filter: brightness(1.35); }
+    100% { filter: brightness(1); }
+}
+
+.badge-accept-flash {
+    animation: badge-accept-flash 0.4s ease-out;
+}
+
+/* Badge animations */
+@keyframes badge-fade-out {
+    to { opacity: 0; transform: scale(0.8); }
+}
+
+.badge-removing {
+    animation: badge-fade-out 0.15s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes badge-fade-in {
+    from { opacity: 0; transform: scale(0.8); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.badge-appearing {
+    animation: badge-fade-in 0.15s ease-out;
+}
+
+/* Bulk-tag flash — asymmetric highlight (0.2s in, 0.6s hold+out).
+   Uses box-shadow spread to avoid overriding codebook background colour. */
+@keyframes badge-bulk-flash {
+    0%   { box-shadow: 0 0 0 0 var(--bn-selection-border); }
+    25%  { box-shadow: 0 0 0 3px var(--bn-selection-border); }
+    100% { box-shadow: 0 0 0 0 var(--bn-selection-border); }
+}
+
+.badge-bulk-flash {
+    animation: badge-bulk-flash 0.8s ease-out;
+}
+
+/* "New" material marker — a body-sized highlighter shown inline after a
+   section/theme title (Phase 3, 3c).  Placeholder styling; click to dismiss
+   (it evaporates, no undo — it has served its purpose once noticed). */
+.bn-new-badge {
+    display: inline;
+    margin-left: 0.4rem;
+    padding: 0.05em 0.3em;
+    border: none;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-new-highlight);
+    color: var(--bn-colour-new-highlight-text);
+    font-family: inherit;
+    font-size: var(--bn-text-body);
+    font-weight: var(--bn-weight-emphasis);
+    line-height: 1;
+    cursor: pointer;
+    vertical-align: baseline;
+}
+.bn-new-badge:hover { filter: brightness(0.95); }
+.bn-new-badge:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 1px;
+}
+
+/* ════ bristlenose/theme/atoms/icon.css — whole file, lines 1–21 ════ */
+/* Atom: icon — the house glyphs drawn by `components/Icon.tsx`.
+   One em square by default, sitting on the text it accompanies. The stroke
+   weight is set on the SVG and does not scale, so only the box sizes here. */
+
+.bn-icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+    flex: none;
+}
+
+/* A menu's check gutter: the tick sized to the row's text, about 9 px of
+   visible check at a 13 px label. Used by the person picker, the Export
+   menu and the search token menu, so the web app has one tick (owner,
+   6 Oct 2026; design-people.md §J8.8). */
+.bn-icon--menu {
+    width: 0.9em;
+    height: 0.9em;
+    vertical-align: -0.1em;
+}
+
+/* ════ bristlenose/theme/atoms/timecode.css — whole file, lines 1–97 ════ */
+/* Atom: timecode — clickable and plain timecode links */
+
+a.timecode,
+a.timecode:visited {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-label);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+span.timecode {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-label);
+}
+
+a.timecode:hover {
+    text-decoration: underline;
+}
+
+.timecode-bracket {
+    color: var(--bn-colour-muted);
+}
+
+/* --- Glow states: synced playback highlight (driven by player.js) --- */
+
+.bn-timecode-glow {
+    box-shadow: 0 0 8px 2px var(--bn-glow-colour);
+    border-left-color: var(--bn-colour-accent);
+    background-color: var(--bn-glow-colour);
+    border-radius: var(--bn-radius-sm);
+    transition: box-shadow var(--bn-transition-normal),
+                background-color var(--bn-transition-normal);
+}
+
+@keyframes bn-glow-pulse {
+    0%, 100% { box-shadow: 0 0 8px 2px var(--bn-glow-colour); }
+    50%      { box-shadow: 0 0 12px 4px var(--bn-glow-colour-strong); }
+}
+
+.bn-timecode-glow.bn-timecode-playing {
+    animation: bn-glow-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-timecode-glow.bn-timecode-playing {
+        animation: none;
+    }
+}
+
+/* --- Progress fill: left border grows top-to-bottom during playback ---
+   Driven by --bn-segment-progress (0–1) set in PlayerContext.tsx.
+   Only appears on transcript segments (not report blockquotes). */
+
+.transcript-segment.bn-timecode-glow {
+    position: relative;
+}
+
+.transcript-segment.bn-timecode-glow::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: calc(var(--bn-segment-progress, 0) * 100%);
+    background: var(--bn-colour-accent);
+    border-radius: 0 0 1px 1px;
+    transition: height 0.25s linear;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .transcript-segment.bn-timecode-glow::before {
+        transition: none;
+    }
+}
+
+/* --- Word-level highlight: karaoke-style during playback ---
+   Driven by .bn-word-active toggled in PlayerContext.tsx.
+   Only appears when word timing data is available (Whisper sessions). */
+
+.transcript-word.bn-word-active {
+    background: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent);
+    border-radius: 2px;
+    transition: background 0.1s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .transcript-word.bn-word-active {
+        text-decoration: underline;
+        text-decoration-color: var(--bn-colour-accent);
+        background: none;
+        transition: none;
+    }
+}
+
+/* ════ bristlenose/theme/molecules/person-badge.css — whole file, lines 1–185 ════ */
+/* Molecule: person-badge — two-tone split speaker badge
+ *
+ * Structure:  .bn-person-badge > .bn-speaker-badge--split
+ *               > .bn-speaker-badge-code + .bn-speaker-badge-name
+ *
+ * Display mode: data-person-display="code" on <html> hides the name half.
+ * Hover: linked badges increase contrast (name bg lightens, code text darkens).
+ */
+
+/* Wrapper — keeps backward compat with existing selectors */
+.bn-person-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    white-space: nowrap;
+}
+
+/* Split badge container */
+.bn-speaker-badge--split {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+    background: none;
+    vertical-align: baseline;
+}
+
+/* Left half: code lozenge */
+.bn-speaker-badge--split .bn-speaker-badge-code {
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    padding: var(--bn-space-xs) 0.4rem;
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    border: 1px solid var(--bn-colour-border);
+    border-right: none;
+    border-radius: var(--bn-radius-sm) 0 0 var(--bn-radius-sm);
+    transition: color var(--bn-transition-fast);
+}
+
+/* Right half: name */
+.bn-speaker-badge--split .bn-speaker-badge-name {
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-emphasis);
+    padding: var(--bn-space-xs) 0.45rem var(--bn-space-xs) 0.35rem;
+    background: var(--bn-colour-quote-bg);
+    color: var(--bn-colour-text);
+    border: 1px solid var(--bn-colour-border);
+    border-left: none;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    transition: background var(--bn-transition-fast);
+}
+
+/* No name available — code gets full radius */
+.bn-speaker-badge--split .bn-speaker-badge-code:last-child {
+    border-radius: var(--bn-radius-sm);
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+/* --- Hover states (linked badges only) --- */
+
+/* Code-and-name: name bg lightens towards white */
+a:hover .bn-speaker-badge--split .bn-speaker-badge-name {
+    background: var(--bn-colour-bg);
+}
+
+/* Code-only / code-and-name: code text darkens towards black */
+a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
+    color: var(--bn-colour-text);
+}
+
+/* --- Display mode toggle via data-person-display on <html> --- */
+
+[data-person-display="code"] .bn-speaker-badge-name {
+    display: none;
+}
+
+[data-person-display="code"] .bn-speaker-badge--split .bn-speaker-badge-code {
+    border-radius: var(--bn-radius-sm);
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+/* Highlighted state */
+.bn-person-badge-highlighted .bn-speaker-badge-code {
+    box-shadow: 0 0 0 2px var(--bn-colour-accent);
+}
+
+/* --- Sessions grid: decomposed badge + editable name --- */
+
+.bn-session-speaker-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.bn-speaker-editable-name {
+    font-family: var(--bn-font-body);
+    font-size: inherit;
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    cursor: text;
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-xs) 0.2rem;
+    min-width: 2rem;
+}
+
+.bn-speaker-editable-name:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+/* The editing state lives in `molecules/editable-text.css`, which names this
+   class alongside `.editable-text` — one rule for "a name, title or
+   description on neutral ground", so the speakers grid and the quotes lens
+   cannot drift apart. Only the metrics above are local to the speaker name.
+   An edited name carries no committed mark: italic is reserved for the
+   unidentified placeholder below (grey italic = unknown), and since migration
+   012 the confirmed state says what "you edited this" used to (owner,
+   6 Oct 2026; design-people.md §J8.8). */
+
+/* Unidentified speaker: role word shown as a muted-italic placeholder
+   (PowerPoint-title convention) to read as editable, not as a real name. */
+.bn-speaker-editable-name.unnamed {
+    font-weight: var(--bn-weight-normal);
+    font-style: italic;
+    color: var(--bn-colour-muted);
+}
+
+/* Same placeholder on the narrow-width rung, where the short form is shown
+   instead. Rehomed from `molecules/name-edit.css` when that file was deleted
+   on 20 Sep 2026: it was a bare `.unnamed` in the global sheet, and the two
+   classes above and below are its only consumers. Deliberately NOT merged
+   into one selector — the full name also drops to normal weight, the short
+   one never carried emphasis to drop. */
+.bn-speaker-name-short.unnamed {
+    font-style: italic;
+    color: var(--bn-colour-muted);
+}
+
+.bn-name-pencil {
+    all: unset;
+    cursor: pointer;
+    font-size: var(--bn-text-micro);
+    opacity: 0;
+    color: var(--bn-colour-muted);
+    transition: opacity var(--bn-transition-fast);
+    padding: 0 0.1rem;
+}
+
+.bn-session-speaker-entry:hover .bn-name-pencil {
+    opacity: 0.4;
+}
+
+.bn-name-pencil:hover {
+    opacity: 0.8 !important;
+}
+
+/* --- A proposed name (design-people.md § UX iteration 3) ---
+   A name the pipeline found, not yet a person's yes
+   (`session_speakers.name_confirmed`): one dotted ring round the whole split
+   badge, and the name in grey that darkens on hover. Saying yes in the picker
+   makes both solid. The halves lose their own borders so the ring is the only
+   line — the `--split` qualifier matches the specificity of the
+   `.bn-speaker-badge-code:last-child` rule above, and later in the file wins,
+   so a code-only badge keeps no solid edge inside the dashes. */
+.bn-person-proposed .bn-speaker-badge--split {
+    border: 1px dashed currentColor;
+}
+
+.bn-person-proposed .bn-speaker-badge--split .bn-speaker-badge-code,
+.bn-person-proposed .bn-speaker-badge--split .bn-speaker-badge-name {
+    border: none;
+}
+
+.bn-speaker-editable-name.proposed {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+.bn-session-speaker-entry:hover .bn-speaker-editable-name.proposed {
+    color: var(--bn-colour-text);
+}
+
+/* ════ bristlenose/theme/molecules/editable-text.css — whole file, lines 1–183 ════ */
+/* Molecule: editable-text — shared editing and committed states for
+   inline contenteditable fields (quotes, headings, names) */
+
+/* ── Editing state ──────────────────────────────────────────────────────────
+ *
+ * THREE edit idioms ship, and they differ for a reason rather than by drift:
+ *
+ *   1. CROP (`.crop-editable`, below) — yellow `--bn-colour-crop-bg`. Not
+ *      "edit this text" but "move this boundary": it reads as one signal with
+ *      the bracket handles, and it is now the only surface on which the
+ *      yellow means anything at all.
+ *
+ *   2. A CODE ON A TINTED CARD (`.tag-input-box` in atoms/input.css,
+ *      `.tag-edit-inline` in organisms/codebook-panel.css) — page background,
+ *      1px accent edge. The ground is already coloured, so the field blanks to
+ *      neutral in order to read as a field.
+ *
+ *   3. A NAME, TITLE OR DESCRIPTION ON NEUTRAL GROUND — this rule. The ground
+ *      is already page white, so the field TINTS instead.
+ *
+ * Same 1px accent edge either way; the fill inverts because the ground does.
+ *
+ * `outline`, not `border`: these are spans inside running prose, and a border
+ * would add 2px and reflow the line. `outline` is drawn outside the box and
+ * costs no layout — the same reason the codebook chip's cursor is an outline.
+ *
+ * The `[contenteditable="true"]` half is what makes this fire in the SPA AT
+ * ALL. `EditableText` never adds a class for the editing state; `.editing` is
+ * written by the frozen vanilla renderer alone (`theme/js/editing.js`,
+ * `names.js`). So for as long as this rule keyed on `.editing`, a researcher
+ * editing a theme heading in the app got the browser's own focus ring and
+ * nothing else — a styled state that had never once been seen on the surface
+ * it was written for. Key on the attribute: it IS the state, it needs no
+ * co-operation from the component, and it cannot fall out of sync.
+ */
+
+.quote-card.editing .edit-pencil {
+    color: var(--bn-colour-accent);
+}
+
+.quote-card.editing .quote-text {
+    min-width: 10rem;
+    cursor: text;
+}
+
+.editable-text[contenteditable="true"],
+.editable-text.editing,
+.bn-speaker-editable-name[contenteditable="true"] {
+    outline: 1px solid var(--bn-field-edit-edge);
+    outline-offset: var(--bn-field-edit-offset);
+    background: var(--bn-field-edit-fill-on-page);
+    border-radius: var(--bn-field-edit-radius);
+    cursor: text;
+}
+
+/* The box exists at rest so entering it moves no text — padding out, margin
+   back, net zero, the idiom `.group-title-text` already uses. Without it the
+   tint hugs the glyphs and the heading jumps by a few pixels on every edit. */
+.editable-text {
+    padding: 1px 3px;
+    margin: -1px -3px;
+}
+
+/* ── Committed state (dashed underline indicates edit was made) ─────────── */
+
+/* Deliberately NOT shared with the speaker name or the codebook, which mark
+   it not at all. A codebook name was never the model's to override; a speaker
+   name's italic was dropped on 6 Oct 2026 so that grey italic means only
+   "unknown" (`person-badge.css`). One editing signal, one committed one. */
+.editable-text.edited {
+    border-bottom: 1px dashed var(--bn-colour-muted);
+}
+
+/* ── Crop bracket handles ──────────────────────────────────────────────── */
+
+.crop-handle {
+    display: inline;
+    font-size: 1.15em;
+    font-weight: var(--bn-weight-strong);
+    color: var(--bn-crop-handle-colour);
+    cursor: col-resize;
+    user-select: none;
+    line-height: 1;
+    padding: 0 1px;
+    transition: color var(--bn-transition-fast);
+    vertical-align: baseline;
+}
+
+/* Hide smart quotes when editing — brackets replace them */
+.quote-card.editing .smart-quote {
+    display: none;
+}
+
+.crop-handle:hover {
+    color: var(--bn-crop-handle-hover);
+}
+
+.crop-handle.dragging {
+    color: var(--bn-colour-accent);
+}
+
+/* Delayed entrance: hidden initially, fade in after 250ms */
+.crop-handle.bracket-delayed {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.crop-handle.bracket-visible {
+    opacity: 1;
+    visibility: visible;
+    animation: bracket-fade-in 0.15s ease;
+}
+
+@keyframes bracket-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ── Crop editable span (hybrid mode contenteditable) ──────────────────── */
+
+.crop-editable {
+    background: var(--bn-colour-crop-bg);
+    padding: var(--bn-space-xs) 0;
+    border-radius: var(--bn-radius-sm);
+    outline: none;
+}
+
+/* ── Crop word spans (crop/word-span mode) ─────────────────────────────── */
+
+.crop-word {
+    display: inline;
+    transition: color var(--bn-transition-fast);
+}
+
+/* Included region wrapper: continuous yellow background covers words
+   AND inter-word spaces — prevents white gaps between word spans */
+.crop-included-region {
+    background: var(--bn-colour-crop-bg);
+    border-radius: 2px;
+    padding: 1px 0;
+}
+
+/* Excluded words: grey + strikethrough, no yellow */
+.crop-word.excluded {
+    color: var(--bn-colour-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--bn-colour-muted);
+    text-decoration-thickness: 1px;
+    background: none;
+}
+
+/* ── Crop ellipsis (after commit) ──────────────────────────────────────── */
+
+.crop-ellipsis {
+    color: var(--bn-colour-muted);
+    user-select: none;
+    font-style: normal;
+}
+
+/* ── Undo button (replaces pencil icon for edited quotes) ──────────────── */
+
+.undo-btn {
+    position: absolute;
+    top: 0.65rem;
+    right: 3.35rem;
+    background: none;
+    border: none;
+    padding: var(--bn-space-xs);
+    font-size: var(--bn-text-label);
+    cursor: pointer;
+    color: var(--bn-colour-muted);
+    line-height: 1;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast), color var(--bn-transition-fast);
+}
+
+blockquote:hover .undo-btn.visible {
+    opacity: 1;
+}
+
+.undo-btn.visible:hover {
+    color: var(--bn-colour-accent);
+}
+
+/* ════ bristlenose/theme/organisms/global-nav.css — whole file, lines 1–414 ════ */
+/* Organism: global-nav — top-level tab bar for report navigation */
+
+.bn-global-nav {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: var(--bn-space-lg);
+}
+
+.bn-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--bn-space-sm);
+    padding: 0.6rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-label);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color var(--bn-transition-fast), border-color var(--bn-transition-fast);
+    white-space: nowrap;
+}
+
+.bn-tab:hover {
+    color: var(--bn-colour-text);
+}
+
+.bn-tab.active {
+    color: var(--bn-colour-accent);
+    border-bottom-color: var(--bn-colour-accent);
+}
+
+/* Spacer pushes icon tabs to the right */
+.bn-tab-spacer {
+    flex: 1;
+}
+
+/* Icon-only utility tabs (Settings, About) */
+.bn-tab-icon {
+    padding: 0.6rem 0.75rem;
+}
+
+.bn-tab-icon svg {
+    display: block;
+}
+
+/* Tab panels — only the active one is visible */
+.bn-tab-panel {
+    display: none;
+}
+
+.bn-tab-panel.active {
+    display: block;
+}
+
+/* Session sub-navigation (inside Sessions tab) */
+.bn-session-subnav {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-md);
+    padding: 0.5rem 0;
+    margin-bottom: var(--bn-space-md);
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.bn-session-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    background: none;
+    border: none;
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-accent);
+    cursor: pointer;
+    padding: 0.3rem 0.5rem;
+    border-radius: var(--bn-radius-md);
+    transition: background var(--bn-transition-fast);
+}
+
+.bn-session-back:hover {
+    background: var(--bn-hover-bg);
+}
+
+.bn-session-label {
+    font-size: var(--bn-text-label);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+}
+
+/* Project tab: dashboard grid */
+.bn-dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--bn-space-lg);
+}
+
+.bn-dashboard-pane {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-lg);
+    min-width: 0; /* prevent grid blowout from wide tables */
+    overflow-x: auto;
+}
+
+.bn-dashboard-pane h3 {
+    margin-top: 0;
+}
+
+/* Paired pane — two halves side-by-side, shared border, no divider */
+.bn-dashboard-pane--pair {
+    display: flex;
+    gap: 0;
+    padding: 0;
+}
+.bn-dashboard-pane--pair-half {
+    flex: 1;
+    padding: var(--bn-space-lg);
+    min-width: 0;
+}
+
+/* Full-width pane spans both columns */
+.bn-dashboard-full {
+    grid-column: 1 / -1;
+}
+
+/* Tables inside dashboard panes — kill base table margin (1rem 0) */
+.bn-dashboard-pane table {
+    margin: 0;
+}
+
+/* Compact nav lists (sections/themes) — mirrors .toc pattern */
+.bn-dashboard-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.bn-dashboard-nav li {
+    margin: var(--bn-space-xs) 0;
+    font-size: var(--bn-text-label);
+}
+.bn-dashboard-nav a {
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+}
+.bn-dashboard-nav a:hover {
+    text-decoration: underline;
+}
+
+/* Stat cards inside the stats pane */
+.bn-project-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bn-space-md);
+}
+
+.bn-project-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--bn-space-md) var(--bn-space-lg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    min-width: 5.5rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    text-decoration: none;
+    color: inherit;
+}
+.bn-project-stat:hover {
+    background-color: var(--bn-colour-hover);
+}
+
+.bn-project-stat-value {
+    font-size: var(--bn-text-display);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-text);
+    line-height: var(--bn-text-display-lh);
+}
+
+.bn-project-stat-label {
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-text);
+    margin-top: 0.15rem;
+    text-align: center;
+}
+
+/* Paired stat card — two value/label stacks side-by-side, shared border */
+.bn-project-stat--pair {
+    flex-direction: row;
+    padding: 0;
+    gap: 0;
+    cursor: default;
+}
+.bn-project-stat--pair:hover {
+    background-color: transparent;
+}
+.bn-project-stat--pair-half {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--bn-space-md) var(--bn-space-lg);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    border-radius: var(--bn-radius-md);
+    text-decoration: none;
+    color: inherit;
+}
+.bn-project-stat--pair-half:hover {
+    background-color: var(--bn-colour-hover);
+}
+
+/* Text-style stat card (e.g. "Moderator: Name, Name, and Name") */
+.bn-project-stat--text {
+    flex-direction: row;
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-text);
+}
+.bn-project-stat--text .bn-project-stat-label {
+    font-size: inherit;
+    margin-top: 0;
+    white-space: nowrap;
+}
+
+/* Featured quotes row — 3 cards across on laptops, up to 5 on wide displays.
+   Default (and the static-render path, which renders 3 + hidden backups
+   reshuffled by global-nav.js) stays at 3. */
+.bn-featured-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--bn-space-md);
+}
+
+/* SPA / serve / export path only (#bn-app-root): Dashboard.tsx renders up to 5
+   featured quotes. Keep 3 visible on laptops, reveal the 4th/5th only at 16"+ so
+   the visible count always matches the column count — never a ragged right edge.
+   Scoped to #bn-app-root so the frozen static/vanilla reshuffle path is untouched. */
+#bn-app-root .bn-featured-quote:nth-child(n+4) {
+    display: none;
+}
+@media (min-width: 1400px) {  /* --bn-breakpoint-wide */
+    #bn-app-root .bn-featured-row {
+        grid-template-columns: repeat(5, 1fr);
+    }
+    #bn-app-root .bn-featured-quote:nth-child(n+4) {
+        display: flex;  /* restore the card's own display (see .bn-featured-quote) */
+    }
+}
+
+.bn-featured-quote {
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-lg);
+    padding: var(--bn-space-md) var(--bn-space-lg);
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.bn-featured-quote:hover {
+    background-color: var(--bn-colour-hover);
+}
+
+/* SPECIAL CASE — do NOT normalise this to a leading token.
+   The dashboard's featured quotes are the front door of the report, and the
+   1.55 is a deliberate hand-tune: chrome-sized text (13px) in a narrow card,
+   led looser than anything around it because the reader is meant to stop here.
+   It is rhetorical rather than metric — it cannot be derived from size or
+   measure, which is exactly why it resists a token. In the Mac app it sits
+   ~26% above the 1.231 chrome baseline; that gap is the point, not drift.
+   See docs/design-native-typography-grid.md § Leading. */
+.bn-featured-quote .quote-text {
+    font-size: var(--bn-text-label);
+    line-height: 1.55;
+    flex: 1;
+}
+
+.bn-featured-quote .context {
+    display: block;
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-muted);
+    margin-bottom: var(--bn-space-xs);
+}
+
+/* Footer: timecode + speaker badge, with optional sentiment badge */
+.bn-featured-footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: var(--bn-space-sm);
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-muted);
+    flex-wrap: wrap;
+}
+.bn-featured-footer a.badge {
+    text-decoration: none;
+    color: var(--bn-colour-badge-text);
+}
+
+/* Export dropdown (NavBar) — action menu for quote/report exports */
+.export-dropdown-wrapper {
+    position: relative;
+}
+
+.export-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin: 0.25rem 0 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    min-width: 14rem;
+    z-index: 200;
+}
+
+.export-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 0.4rem 0.85rem;
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+    white-space: nowrap;
+}
+
+.export-dropdown-item:hover,
+.export-dropdown-item:focus {
+    background: var(--bn-colour-quote-bg);
+    outline: none;
+}
+
+/* The tint alone is ~1.05:1 against the menu, so keyboard focus also gets the
+   house ring (badge.css's focus-visible). */
+.export-dropdown-item:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+.export-dropdown-hint {
+    padding: 0 0.85rem 0.25rem;
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+    list-style: none;
+}
+
+/* Scope-picker group: a muted category label above three indented scope rows
+   (All / Selected / Starred). Mirrors the native Quotes menu taxonomy. */
+.export-dropdown-group-label {
+    padding: 0.35rem 0.85rem 0.1rem;
+    font-size: var(--bn-text-caption);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    list-style: none;
+}
+
+.export-dropdown-scope {
+    padding-left: 1.5rem;
+}
+
+/* The checkmark gutter of a menuitemcheckbox row (Burn subtitles…), hung in
+   the scope indent so the label lines up with the scope rows above it. */
+.export-dropdown-check {
+    display: inline-block;
+    width: 0.75rem;
+    margin-left: -1rem;
+    text-align: center;
+}
+
+.export-dropdown-item.is-disabled {
+    color: var(--bn-colour-muted);
+    cursor: default;
+    pointer-events: none;
+}
+
+.export-dropdown-separator {
+    height: 0;
+    margin: 0.25rem 0;
+    border-top: 1px solid var(--bn-colour-border);
+    list-style: none;
+}
+
+/* Responsive: collapse dashboard to single column, scroll nav */
+@media (max-width: 600px) {
+    .bn-global-nav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .bn-tab {
+        font-size: var(--bn-text-label);
+        padding: 0.5rem 0.75rem;
+    }
+
+    .bn-dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    .bn-featured-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ════ bristlenose/theme/organisms/inspector.css — whole file, lines 1–393 ════ */
+/* ── Inspector panel — collapsible bottom heatmap pane ──── */
+
+/* Signals scrolls the PAGE, like every other lens (26 Sep 2026). The heatmap
+   pane is pinned to the window bottom with `position: sticky; bottom: 0`
+   (Panel shell, below) — the primitive the side panels use at the top edge.
+
+   Until then this was the one lens with a private scroll model: the grid
+   capped to the viewport, `overflow: hidden` down the chain, and the cards
+   scrolling inside .signals-center. Every Signals-only layout bug of Sep 2026
+   came from it — a phantom page scrollbar (306a7efd), the pane stopping a pad
+   short of the window bottom (1c563b29), the left panel's band clipped 32px
+   low (4c678097), the heading cut off 32px under the toolbar in the app, and
+   the card shadows clipped at the scroll edge. The mockup that measured the
+   swap: docs/mockups/signals-heatmap-sticky-pane.html.
+
+   KEEP THIS CHAIN FREE OF `overflow: hidden | auto | scroll`. Any ancestor of the pane that clips or
+   scrolls (.layout, .center, .bn-main, .signals-layout) becomes the pane's
+   sticky reference, and the pane quietly stops pinning to the window.
+   tests/test_signals_sticky_pane_css.py holds the line. */
+
+/* Two rules stay Signals-specific. (1) No bottom pad on .center: the pad sits
+   below the pane, so at scroll end a sticky pane would rest 32px off the
+   window bottom — the 1c563b29 bug, which the mockup reproduced exactly. */
+.layout > .center:has(.signals-layout) {
+    padding-bottom: 0;
+}
+
+/* (2) The report footer stays hidden — browser only, the app renders none.
+   Shown, it arrives after the pane at scroll end and carries it off its pin.
+   The footer is a sibling of <main.bn-main>, not of .signals-layout, so the
+   combinator reaches up to .center. */
+.center:has(.signals-layout) > .report-footer {
+    display: none;
+}
+
+/* The pinned pane covers the bottom of the window, so everything in the card
+   list carries a bottom scroll-margin as tall as the pane: scroll-into-view (a
+   heatmap-cell click, the left panel) and focus scrolling (Tab) land it ABOVE
+   the pane, not behind it. Measured without: a jump with the pane at 45% left
+   the card 73px under it.
+
+   On the targets, NOT `scroll-padding-bottom` on <html> (the first cut). Page
+   padding also reserves the strip the pane itself sits in, so focusing a
+   control INSIDE the pane — a tab, the grip — scrolled the page to "reveal"
+   something already on screen: +19 to +523px, measured in WebKit and Chromium
+   (review, 26 Sep 2026). Margins on targets are the house pattern
+   (toolbar.css, transcript.css). InspectorPanel publishes the pane's live
+   height on <html>; it inherits down to here. */
+.signals-center * {
+    scroll-margin-bottom: var(--bn-inspector-pane-height, 28px);
+}
+
+/* A short lens must still put the pane on the window bottom. Sticky only
+   LIFTS an element that would fall below the window; it never pulls one down,
+   so with three cards the pane would sit under the last one, mid-window. The
+   chain therefore grows to fill the grid row, whose floor is the viewport
+   (sidebar.css `.layout` min-height) — by flex-grow, never a height or an
+   overflow, so nothing here can become a clipping ancestor. With long content
+   these grow by nothing and size to the cards. */
+.bn-main:has(.signals-layout) {
+    flex: 1 0 auto;
+}
+
+/* Full column width: bleeds out of .center's side padding (the properties
+   sidebar.css publishes) so the heatmap bar runs edge to edge like a panel —
+   to the left panel's keyline and the window edge — and .signals-center takes
+   the same padding back, so the cards stay on the shared content edge. */
+.signals-layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 auto;
+    margin-left: calc(-1 * var(--bn-center-pad-left, 0px));
+    margin-right: calc(-1 * var(--bn-center-pad-right, 0px));
+}
+
+.signals-center {
+    flex: 1 0 auto;   /* pushes the pane to the bottom of a short lens */
+    /* Takes back exactly the side padding .signals-layout bled out of, so the
+       cards sit on the shared content edge — and, with no scroll edge beside
+       them any more, their shadows are never clipped.
+
+       Top padding is 0 so the first heading flushes to the same datum as every
+       other lens's first content. Bottom keeps space-lg so the last card
+       clears the pane at scroll end. */
+    padding: 0 var(--bn-center-pad-right, 0px) var(--bn-space-lg) var(--bn-center-pad-left, 0px);
+}
+
+/* ── Panel shell ────────────────────────────────────────── */
+
+.inspector-panel {
+    flex-shrink: 0;
+    /* Pinned to the window bottom while the page scrolls. It stays in flow at
+       the end of the lens, so the last card ends above it with no padding.
+       The opaque background matters now: cards scroll behind it. z-index 2
+       lifts it over the cards (position: relative, z auto) and nothing else. */
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    /* A pane taller than the window would push its own handle off the top,
+       with no way to drag it back. The store allows 600px whatever the window;
+       this keeps the handle reachable and a band of cards above it. */
+    max-height: calc(100vh - 3 * var(--bn-space-xl));
+    max-height: calc(100dvh - 3 * var(--bn-space-xl));
+    border-top: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    display: flex;
+    flex-direction: column;
+    transition: height 75ms cubic-bezier(0, 0, 0.2, 1);  /* decelerate — matches sidebar reveal */
+    overflow: hidden;
+    height: var(--inspector-height);
+}
+
+.inspector-panel.collapsed {
+    height: auto !important;
+}
+
+/* During closing animation, keep height at last known value (set via React style prop).
+   No transition — clip-path keyframe handles the visual. */
+.inspector-panel.closing {
+    transition: none;
+}
+
+/* Disable transition during pointer drag */
+body.dragging-v .inspector-panel {
+    transition: none !important;
+}
+
+/* Vertical drag cursor — override sidebar's col-resize */
+body.dragging-v {
+    user-select: none;
+    cursor: ns-resize !important;
+}
+
+body.dragging-v * {
+    cursor: ns-resize !important;
+}
+
+/* ── Handle bar ─────────────────────────────────────────── */
+
+.inspector-handle {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 0 var(--bn-space-md);
+    /* A 28pt pitch in both states, on the 4pt grid: 1pt keyline + 27pt fill,
+       the unit Safari's Web Inspector bar repeats on (measured 26 Sep 2026).
+       The fill is 27 and the bar's own bottom line — drawn only when open —
+       sits OUTSIDE it (content-box), so collapsed = pane keyline 1 + 27 = 28,
+       and open = pane keyline 1 + 27 to the next line, the tabs row's. As
+       border-box at 1.75rem the fill grew to 28 once the bottom line went, and
+       the closed pane stood 29. COLLAPSED_HEIGHT (useVerticalDragResize.ts)
+       and the auto-height sum (InspectorPanel.tsx) both assume this. */
+    box-sizing: content-box;
+    height: calc(1.75rem - 1px);
+    min-height: calc(1.75rem - 1px);
+    user-select: none;
+    border-bottom: 1px solid var(--bn-colour-border);
+    /* Chrome, not content: the same tint as the left panel (.toc-sidebar) so
+       the bar reads as another panel edge. Only the bar — the heatmap body
+       below it stays on --bn-colour-bg. The keyline above is the panel's
+       border-top, already --bn-colour-border like the left panel's. */
+    background: var(--bn-colour-inspector-bg);
+}
+
+.collapsed .inspector-handle {
+    border-bottom: none;
+}
+
+/* Grid icon / close × toggle button */
+.inspector-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: none;
+    /* Text colour, not muted: the grid glyph is the web twin of the Mac
+       toolbar's square.grid.2x2, which draws in the primary label colour. */
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.inspector-icon-btn:hover {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-text);
+}
+
+/* Title text — the same heading as the left panel's "Signals"
+   (`.toc-sidebar-header .sidebar-title`, sidebar.css): label size, emphasis
+   weight, text colour. Two panel headings in one lens, one typography. */
+.inspector-handle-title {
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    cursor: default;
+}
+
+/* Shimmer teaching animation — plays when a signal card is focused
+   while the panel is collapsed. sessionStorage counter: max 3 times. */
+@keyframes inspector-shimmer {
+    0%   { color: var(--bn-colour-text); }
+    25%  { color: var(--bn-colour-accent); }
+    50%  { color: var(--bn-colour-text); }
+    75%  { color: var(--bn-colour-accent); }
+    100% { color: var(--bn-colour-text); }
+}
+
+.inspector-handle-title.shimmer {
+    animation: inspector-shimmer 1.2s ease-out;
+}
+
+/* Grab handle — click to open, click+drag to resize */
+.inspector-handle-grip {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    height: 100%;
+}
+
+/* When panel is open, grip is for resize */
+.inspector-panel:not(.collapsed) .inspector-handle-grip {
+    cursor: ns-resize;
+}
+
+.inspector-handle-grip::before {
+    content: "";
+    display: block;
+    width: 32px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--bn-colour-border);
+    transition: background var(--bn-transition-fast);
+}
+
+.inspector-handle-grip:hover::before {
+    background: var(--bn-colour-border-hover);
+}
+
+/* ── Open / close content animations ──────────────────────
+   Vertical clip-path reveal/hide mirroring the TOC sidebar's
+   toc-reveal / toc-hide keyframes (75ms, material easing).  */
+
+@keyframes inspector-reveal {
+    from { clip-path: inset(100% 0 0 0); opacity: 0; }
+    to   { clip-path: inset(0);           opacity: 1; }
+}
+
+@keyframes inspector-hide {
+    from { clip-path: inset(0);           opacity: 1; }
+    to   { clip-path: inset(100% 0 0 0); opacity: 0; }
+}
+
+/* Content reveals on open */
+.inspector-panel:not(.collapsed):not(.closing) .inspector-tabs,
+.inspector-panel:not(.collapsed):not(.closing) .inspector-body {
+    animation: inspector-reveal 75ms cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+/* Content hides on close */
+.inspector-panel.closing .inspector-tabs,
+.inspector-panel.closing .inspector-body {
+    animation: inspector-hide 75ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+/* Disable content animations during pointer drag */
+body.dragging-v .inspector-tabs,
+body.dragging-v .inspector-body {
+    animation: none !important;
+}
+
+/* ── Source tabs ─────────────────────────────────────────── */
+
+.inspector-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 var(--bn-space-sm);
+    height: 2rem;
+    min-height: 2rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+
+.inspector-tab {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--bn-space-md);
+    height: 100%;
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+    transition: color var(--bn-transition-fast);
+    border: none;
+    background: none;
+}
+
+.inspector-tab:hover { color: var(--bn-colour-text); }
+.inspector-tab.active { color: var(--bn-colour-text); }
+
+.inspector-tab.active::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: var(--bn-space-sm);
+    right: var(--bn-space-sm);
+    height: 2px;
+    background: var(--bn-colour-accent);
+    border-radius: 1px;
+}
+
+/* ── Heatmap body ───────────────────────────────────────── */
+
+.inspector-body {
+    flex: 1;
+    overflow: auto;
+    /* No top padding — sticky thead must sit flush against the tab bar. */
+    padding: 0 var(--bn-space-md) var(--bn-space-md);
+}
+
+/* Sticky column headers when scrolling tall matrices */
+.inspector-body .analysis-heatmap thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--bn-colour-bg);
+}
+
+/* ── Section/Theme toggle — lives in the table top-left cell ── */
+
+.dimension-toggle {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+}
+
+.dimension-btn {
+    border: none;
+    background: none;
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    cursor: pointer;
+    transition: all var(--bn-transition-fast);
+}
+
+.dimension-btn:first-child {
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+.dimension-btn:hover {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-text);
+}
+
+.dimension-btn.active {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-accent);
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* ── Collapsed hides tabs + body ────────────────────────── */
+
+.collapsed .inspector-tabs,
+.collapsed .inspector-body {
+    display: none;
+}
+
+/* ── Row label truncation ───────────────────────────────── */
+
+.inspector-body .analysis-heatmap td:first-child {
+    max-width: 200px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* ════ bristlenose/theme/organisms/person-picker.css — whole file, lines 1–101 ════ */
+/* Person picker — "who is this speaker?", opened from a speaker in the
+   Sessions grid (design-people.md § UX iteration 3). The browser's picker; the
+   Mac app opens a native one in its place.
+
+   Composed from shipped pieces: the Export menu's box and rows
+   (organisms/global-nav.css), the role toggle (.dimension-toggle,
+   organisms/inspector.css), and the split person badge. Only the composition
+   lives here. */
+
+.bn-person-picker-anchor {
+    position: relative;
+}
+
+/* The speaker's badge is the picker's button. */
+.bn-person-picker-trigger {
+    all: unset;
+    display: inline-flex;
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+}
+
+.bn-person-picker-trigger:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+/* Opens under the badge it names, from the left edge (the Export menu hangs
+   from the right of the toolbar). */
+.bn-person-picker.export-dropdown-menu {
+    left: 0;
+    right: auto;
+}
+
+.bn-person-picker .bn-picker-head {
+    padding: 0.4rem 0.85rem;
+    list-style: none;
+}
+
+/* Three segments: the shipped toggle draws its divider for two. */
+.bn-person-picker .dimension-toggle {
+    display: flex;
+    width: 100%;
+}
+
+.bn-person-picker .dimension-btn {
+    flex: 1;
+}
+
+.bn-person-picker .dimension-btn:first-child {
+    border-right: none;
+}
+
+.bn-person-picker .dimension-btn + .dimension-btn {
+    border-left: 1px solid var(--bn-colour-border);
+}
+
+/* Changing a speaker's role is not built yet (design-people.md §J); the other
+   roles are shown, and dimmed. */
+.bn-person-picker .dimension-btn:disabled,
+.bn-person-picker .dimension-btn:disabled:hover {
+    background: none;
+    color: var(--bn-colour-muted);
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* Someone new is the next badge: the code and its name half as the field. The
+   name half sizes to its text — a hidden copy sets the width, the input lies
+   over it — so typing grows a badge like the ones above. */
+.bn-person-picker .bn-picker-new-name {
+    display: inline-grid;
+}
+
+.bn-person-picker .bn-picker-new-name > * {
+    grid-area: 1 / 1;
+    font: inherit;
+    white-space: pre;
+}
+
+.bn-person-picker .bn-picker-new-name > span {
+    visibility: hidden;
+    min-width: 2ch;
+}
+
+.bn-person-picker .bn-picker-new-name > input {
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    outline: none;
+}
+
+.bn-person-picker .bn-picker-new-name > input::placeholder {
+    color: var(--bn-colour-muted);
+}
+
+.bn-person-picker .bn-picker-new:focus-within {
+    background: var(--bn-colour-quote-bg);
+}
+
+/* ════ bristlenose/theme/organisms/sessions-grid.css — whole file, lines 1–302 ════ */
+/* Organism: sessions-grid — the Sessions lens row grid.
+ *
+ * Replaces the raw <table> at table-layout:auto that the Sessions lens used
+ * until Aug 2026. That table had no responsive strategy: every column was
+ * nowrap or fixed except Start, so all shrink pressure landed there and the
+ * journey path collapsed to one word per line (the `min-width: 12rem` on
+ * .bn-session-meta was a stopgap, never a column system). Measured, it
+ * overflowed the page by 195px at 616px of content width.
+ *
+ * Design explored in docs/mockups/sessions-grid-playground.html (variants
+ * A/B/C, commits 004cd6a9 + 83d4c25a). This is variant C.
+ *
+ * ── Column order, held at EVERY width ──────────────────────────────────
+ *   ID · thumbnail · speakers · start+journey · sentiment · duration · file
+ * Nothing rearranges as a breakpoint is crossed. What changes is only what
+ * is *given up*, so the eye never has to re-find a column.
+ *
+ * ── SUBGRID is load-bearing ────────────────────────────────────────────
+ * One parent grid owns the tracks; each row is `grid-template-columns:
+ * subgrid`. The obvious build — each row its own grid — does not work: a
+ * content-sized track then resolves per row, so row 3's speakers column is a
+ * different width from row 1's and the table stops lining up. Only fixed
+ * lengths would align, and fixed lengths mean truncated names or dead space.
+ * Subgrid gives both: rows stay real boxes (so :hover works) while tracks are
+ * shared and content-sized across every row, exactly as a table's are.
+ *
+ * max-content tracks size around each cell's own padding, which is why no
+ * track here carries a hand-added allowance for it.
+ *
+ * ── The shrink pair ────────────────────────────────────────────────────
+ * Below the switch, speakers and start+journey become proportional fr tracks
+ * (1 : 1.5) so they give up width TOGETHER rather than Start absorbing every
+ * squeeze. `minmax(0, …)` on both is load-bearing — an fr track's default
+ * minimum is auto, which refuses to shrink below content and would reinstate
+ * exactly the rigidity being removed. Duration+file joins the pair below
+ * 900, which also drops its 9rem floor (a fixed minimum on a column is what
+ * forces a row to overflow once everything else has given up all it can).
+ *
+ * ── The degradation ladder ─────────────────────────────────────────────
+ * The code badge is the stable identity anchor: it never drops to its own
+ * line, and names are never broken mid-word. What degrades is the name's
+ * DETAIL, in this order as width falls:
+ *     surname (→ short name)  →  user journey  →  names entirely (badges)
+ * Note the journey — a whole column of content — is spent BEFORE identity
+ * legibility. Decided 6 Aug 2026.
+ *
+ * ── These thresholds are DELIBERATELY off the shared scale ─────────────
+ * The seven values below (1285 / 968 / 900 / 750 / 700 / 560 / 480) are not
+ * drawn from `--bn-breakpoint-*` and should not be moved onto it. Decided
+ * 6 Aug 2026 (Martin): that scale exists to serve card-flow surfaces — the
+ * quote grid, signal cards, code groups — which reflow by column count. This
+ * is a seven-column data grid with a shrink pair and a degradation ladder;
+ * every value here was measured against where its own content actually
+ * breaks. Snapping them to a scale built for card reflow would trade a
+ * working design for a tidier-looking one.
+ *
+ * The same applies to the track geometry (`minmax(11rem, 1fr)`,
+ * `minmax(9rem, 15rem)`) and the 1 : 1.5 shrink ratio — bespoke to this grid,
+ * not candidates for global tokens.
+ *
+ * So: if you are here on a tokenisation sweep, this file is the exception,
+ * and that is on purpose. Tune the numbers by eye in
+ * docs/mockups/sessions-grid-playground.html; don't generalise them.
+ *
+ * Thresholds are CONTAINER inline size, i.e. usable content width, not
+ * viewport width. In the browser with the sidebar closed, content =
+ * window − 184 (48 body padding + 72 rails + 64 centre padding).
+ */
+
+/* The container. Thresholds below are measured against this box. */
+.bn-session-table {
+    container-type: inline-size;
+    container-name: bn-sessions;
+}
+
+.bn-sessions-grid {
+    display: grid;
+    font-size: var(--bn-text-label);
+    /* Widest: duration and interviews are separate columns. */
+    grid-template-columns:
+        max-content          /* id                                     */
+        max-content          /* thumbnail (.bn-video-thumb is 96x54)   */
+        max-content          /* speakers — sized to the longest name   */
+        minmax(11rem, 1fr)   /* start + user journey                   */
+        max-content          /* sentiment — sized by header, not bars  */
+        max-content          /* duration                               */
+        minmax(9rem, 15rem); /* interviews (filename)                  */
+}
+
+.bn-sessions-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: start;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.bn-sessions-row:last-child { border-bottom: none; }
+
+.bn-sessions-row[data-session] {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.bn-sessions-row[data-session]:hover { background: var(--bn-colour-hover); }
+
+/* Mirrors the old td: 0.5rem var(--bn-space-md), top-aligned.
+   min-width: 0 is load-bearing — without it an fr track cannot shrink below
+   its content and the row overflows instead of wrapping. */
+.bn-sessions-cell {
+    padding: 0.5rem var(--bn-space-md);
+    min-width: 0;
+}
+
+/* Mirrors the old th: heavier, 0.6rem block padding, 2px rule. */
+.bn-sessions-head { border-bottom-width: 2px; }
+
+.bn-sessions-head .bn-sessions-cell {
+    padding-block: 0.6rem;
+    font-weight: var(--bn-weight-emphasis);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+}
+
+/* Stacked double-header. Structure-agnostic: display:block rather than
+   relying on the flex column, so the same spans stack anywhere. The second
+   line takes the colour of the thing it labels — muted for "User journey"
+   (matching the muted chain), accent for "Interviews" (matching the file
+   link) — so the header reads as a legend for its cell. */
+.bn-sessions-h1,
+.bn-sessions-h2 { display: block; }
+
+.bn-sessions-h2 {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+/* Scoped to direct children so journey labels (nested inside
+   .bn-session-journey) keep their own `all: unset` colour rules. */
+.bn-cell-id > a { color: var(--bn-colour-accent); text-decoration: none; }
+.bn-cell-id > a:hover { text-decoration: underline; }
+
+/* Duration keeps its shipped right alignment while it is its own column. */
+.bn-cell-duration { text-align: right; }
+
+/* Name variants. Both are rendered; CSS picks one, so the ladder needs no
+   JS width measurement. Redundant DOM is the price of a pure-CSS ladder,
+   and it is a few dozen bytes per row. */
+.bn-speaker-name-short { display: none; }
+
+/* ── Below the switch: the C grid ──────────────────────────────────────
+   Duration and interviews merge into one column, stacked, and the shrink
+   pair takes over. This is the ONLY structural change across the whole
+   range — everything below is subtraction. */
+@container bn-sessions (max-width: 1285px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content            /* id                    */
+            max-content            /* thumbnail             */
+            minmax(0, 1fr)         /* speakers  — pair      */
+            minmax(0, 1.5fr)       /* start     — pair      */
+            max-content            /* sentiment             */
+            minmax(9rem, 15rem);   /* duration + interviews */
+    }
+
+    /* Two rows so duration can sit above the filename in one column. */
+    .bn-sessions-row { grid-template-rows: auto auto; }
+
+    .bn-cell-id,
+    .bn-cell-thumb,
+    .bn-cell-speakers,
+    .bn-cell-start,
+    .bn-cell-sentiment { grid-row: 1 / span 2; }
+
+    .bn-cell-duration {
+        grid-column: 6;
+        grid-row: 1;
+        padding-bottom: 0;
+    }
+
+    /* Left-aligned now it sits above the filename rather than being its own
+       column — right alignment only earned its keep as a column.
+       Specificity 0-2-0 is deliberate: .bn-session-duration carries
+       `text-align: right` from templates/report.css, which concatenates AFTER
+       organisms, so a bare .bn-cell-duration ties on specificity and LOSES on
+       source order. Measured shipping right-aligned before this was raised. */
+    .bn-sessions-row .bn-cell-duration { text-align: left; }
+
+    .bn-cell-file {
+        grid-column: 6;
+        grid-row: 2;
+        padding-top: 0.15rem;
+    }
+
+    .bn-cell-file > a { overflow-wrap: anywhere; }
+
+    /* The speakers column is now a shrink-pair member, so it must be able to
+       give up width — which means names wrap rather than holding the track
+       open. flex-start keeps the code badge on the name's first line instead
+       of centred against a two-line name.
+
+       Specificity 0-2-0 on the cell for the SAME reason `.bn-cell-duration`
+       carries it below, and this is the rule that proves the trap is worth
+       documenting twice: the cell also carries `.bn-session-speakers`, which
+       sets `white-space: nowrap` in templates/report.css — concatenated ~5000
+       lines AFTER organisms, so a bare `.bn-cell-speakers` ties at 0-1-0 and
+       loses on source order. Names therefore never wrapped, the track shrank
+       to its `minmax(0, …)` floor anyway, and the un-wrappable content spilled
+       rightwards across Start and Sentiment. That is the header-text overlap
+       reported on 17 Aug 2026 — and it means rung 1 of the ladder had never
+       actually worked since it shipped on 6 Aug.
+
+       Fixing it here rather than in report.css on purpose: that nowrap is
+       still correct for the `<table>` the sealed static render uses, which
+       shares the class. */
+    .bn-sessions-row .bn-cell-speakers,
+    .bn-cell-speakers .bn-session-speaker-entry { white-space: normal; }
+    .bn-cell-speakers .bn-session-speaker-entry { align-items: flex-start; }
+
+    /* A wrapped name must be flush left on EVERY line, first included.
+       .bn-speaker-editable-name carries `padding: … 0.2rem` and is an inline
+       box, so its left padding paints only at the start of its first line
+       fragment — leaving line 1 indented ~3.2px and wrapped lines flush.
+       (Same inline-box behaviour journey-label.css documents for wrapping
+       journey chains.) inline-block applies the padding to the box, so all
+       lines share one left edge while the hover chip still shrink-wraps. */
+    .bn-cell-speakers .bn-speaker-editable-name { display: inline-block; }
+}
+
+/* Sentiment: the cheapest column on the row (~87px) and the one that makes
+   the grid scannable for triage, so it outlives the layout switch. */
+@container bn-sessions (max-width: 968px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content max-content minmax(0, 1fr) minmax(0, 1.5fr)
+            minmax(9rem, 15rem);
+    }
+    /* 0-2-0 to clear `.bn-sessions-head .bn-sessions-cell { display: flex }`
+       above, which is also 0-2-0 but earlier in source. A bare
+       `.bn-cell-sentiment` is 0-1-0 and loses outright — and it loses ONLY in
+       the header, so the column vanished from every body row while its title
+       stayed, kept a track the grid no longer had, and the explicitly-placed
+       Duration/Interviews cell landed on top of it. That is the header text
+       reported overlapping on 17 Aug 2026 ("Senatidmoent" = Sentiment over
+       Duration). Same trap as `.bn-sessions-h2` below, which was already
+       raised for exactly this reason. */
+    .bn-sessions-row .bn-cell-sentiment { display: none; }
+    .bn-cell-duration,
+    .bn-cell-file { grid-column: 5; }
+}
+
+/* Duration+interviews joins the shrink pair, and loses its 9rem floor. */
+@container bn-sessions (max-width: 900px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content max-content minmax(0, 1fr) minmax(0, 1.5fr)
+            minmax(0, 1fr);
+    }
+}
+
+/* Ladder rung 1 — surnames go; fall back to the short name. */
+@container bn-sessions (max-width: 750px) {
+    /* Specificity 0-2-0 to beat the .bn-cell-speakers .bn-speaker-editable-name
+       inline-block rule above (also 0-2-0, but earlier in source). A bare
+       .bn-speaker-name-full is 0-1-0 and loses, which shows BOTH names at
+       once rather than swapping them — measured before this was raised. */
+    .bn-cell-speakers .bn-speaker-name-full { display: none; }
+    .bn-cell-speakers .bn-speaker-name-short { display: inline-block; }
+}
+
+/* Thumbnail goes. */
+@container bn-sessions (max-width: 700px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
+    }
+    /* 0-2-0 for the same reason as sentiment above — otherwise the header
+       keeps an (empty) thumbnail track that no body row has, and everything
+       to its right sits one column off. */
+    .bn-sessions-row .bn-cell-thumb { display: none; }
+    .bn-cell-duration,
+    .bn-cell-file { grid-column: 4; }
+}
+
+/* Ladder rung 2 — the user journey goes, leaving the start time alone. The
+   header stops being a stack too: a "User journey" label over a column that
+   no longer has one is a promise the row does not keep. */
+@container bn-sessions (max-width: 560px) {
+    .bn-cell-start .bn-session-journey { display: none; }
+    .bn-sessions-head .bn-cell-start .bn-sessions-h2 { display: none; }
+}
+
+/* Ladder rung 3 — names go entirely. Badges only; the pencil goes with them
+   since there is no longer a name to edit. */
+@container bn-sessions (max-width: 480px) {
+    .bn-cell-speakers .bn-speaker-editable-name,
+    .bn-cell-speakers .bn-speaker-name-full,
+    .bn-cell-speakers .bn-speaker-name-short,
+    .bn-cell-speakers .bn-name-pencil { display: none; }
+}
+
+/* ════ bristlenose/theme/templates/transcript.css — whole file, lines 1–266 ════ */
+/* Template: transcript — per-participant transcript page layout */
+
+.transcript-meta {
+    color: var(--bn-colour-muted);
+    font-size: var(--bn-text-label);
+    margin-bottom: var(--bn-space-md);
+}
+
+/* ── Sticky journey header ────────────────────────────────────────────── */
+
+.bn-transcript-journey-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bn-colour-bg);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    padding: var(--bn-space-xs) var(--bn-space-md) var(--bn-space-xs) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-md);
+}
+
+/* Participant badges — the persistent "who is p2" answer. Never shrink; the
+   journey chain absorbs the squeeze (it already scrolls with edge fades). */
+.bn-transcript-journey-header__people {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    flex-shrink: 0;
+}
+
+/* Journey chain: horizontal scroll mode on transcript pages */
+.bn-session-journey--overflow {
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex: 1;
+    min-width: 0;
+}
+
+.bn-session-journey--overflow::-webkit-scrollbar {
+    display: none;
+}
+
+/* Fade masks for overflow edges */
+.bn-journey--fade-right {
+    mask-image: linear-gradient(to right, black 0, black calc(100% - 2rem), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 0, black calc(100% - 2rem), transparent 100%);
+}
+
+.bn-journey--fade-left {
+    mask-image: linear-gradient(to right, transparent 0, black 2rem, black 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 2rem, black 100%);
+}
+
+.bn-journey--fade-both {
+    mask-image: linear-gradient(to right, transparent 0, black 2rem, black calc(100% - 2rem), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 2rem, black calc(100% - 2rem), transparent 100%);
+}
+
+/* Selector — reusable dropdown primitive (bn-selector) */
+.bn-selector {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.bn-selector__trigger {
+    all: unset;
+    font: inherit;
+    font-size: var(--bn-text-label);
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.bn-selector__trigger:hover {
+    color: var(--bn-colour-accent);
+}
+
+.bn-selector__trigger:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+.bn-selector__caret {
+    font-size: var(--bn-text-badge);
+    opacity: 0.6;
+}
+
+.bn-selector__menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: -0.75rem;  /* outdent by item padding so menu text aligns with trigger */
+    z-index: 20;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0;
+    max-height: 20rem;
+    overflow-y: auto;
+}
+
+.bn-selector__item {
+    all: unset;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    color: inherit;
+    text-decoration: none;
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+    cursor: pointer;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.bn-selector__item:hover {
+    background: var(--bn-colour-hover, #f0f0f0);
+}
+
+.bn-selector__item--active {
+    color: var(--bn-colour-accent);
+}
+
+/* Session-specific: secondary detail line (date) */
+.bn-selector__detail {
+    font-size: var(--bn-text-caption);
+    font-weight: 400;
+    color: var(--bn-colour-muted);
+}
+
+/* Plain session label when there is only one session (no dropdown) */
+.bn-session-selector__label {
+    font-size: var(--bn-text-label);
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Segments need scroll-margin to not hide behind sticky header */
+.bn-transcript-journey-header ~ .transcript-body .transcript-segment[id] {
+    scroll-margin-top: var(--bn-journey-header-height, 3rem);
+}
+
+/* ── Session roles (moderator/observer line) ────────────────────────── */
+
+.bn-transcript-roles {
+    color: var(--bn-colour-muted);
+    font-size: var(--bn-text-label);
+    margin: var(--bn-space-lg) 0 0;
+    line-height: 1.5;
+}
+
+.bn-transcript-roles__person {
+    white-space: nowrap;
+}
+
+.bn-transcript-roles__name {
+    margin-left: 0.25rem;
+}
+
+/* ── Transcript body ─────────────────────────────────────────────────── */
+
+.transcript-body {
+    margin-top: var(--bn-space-lg);
+    position: relative;
+    display: grid;
+    /* Timecode: ~4.5rem for [HH:MM:SS] in monospace.
+       Badge: right-aligned in a 2.2rem slot (fits p1–p99, m1–m99).
+       Body: remaining space for text. */
+    grid-template-columns: 4.5rem 2.2rem 1fr;
+    gap: 0 0.5rem;
+}
+
+/* At the annotation breakpoint (see molecules/transcript-annotations.css) the
+   body gains a 4th column for margin annotations. clamp() narrows it as the
+   window narrows, so section/theme labels wrap at medium widths and fit at wide. */
+@media (min-width: 800px) {
+    .transcript-body {
+        grid-template-columns: 4.5rem 2.2rem 1fr clamp(8.5rem, 13vw, 12.5rem);
+    }
+}
+
+/* SPECIAL CASE — do NOT normalise this to a leading token.
+   The 1.7 here is STRUCTURAL, not typographic. This row is a baseline-aligned
+   grid (`align-items: baseline`), and the 1.7 sets the rhythm the timecode and
+   speaker-badge columns align to; `.segment-body` inside deliberately resets to
+   the prose token for the text itself. Pull this onto --bn-text-*-lh and the
+   timecode stops sitting on the first line of its segment.
+   It is also the largest leading in the theme, which makes it the most obvious
+   target for a normalising sweep — hence this comment. Any change here wants
+   the transcript page open beside it.
+   See docs/design-native-typography-grid.md § Leading. */
+.transcript-segment {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    align-items: baseline;
+    margin: 0.5rem 0;
+    line-height: 1.7;
+}
+
+.transcript-segment .timecode {
+    white-space: nowrap;
+    justify-self: start;
+}
+
+.transcript-segment .segment-body {
+    min-width: 0;
+    font-size: var(--bn-text-body);
+    line-height: var(--bn-text-body-lh);
+}
+
+.transcript-segment .segment-speaker {
+    white-space: nowrap;
+    justify-self: end;
+}
+
+/* Moderator segments are visually receded so participant answers stand out */
+.segment-moderator .segment-body {
+    color: var(--bn-colour-muted);
+}
+
+.segment-moderator .segment-speaker .badge {
+    opacity: 0.55;
+}
+
+/* Quoted segments — non-quoted participant text knocked back */
+.transcript-segment:not(.segment-quoted):not(.segment-moderator) .segment-body {
+    opacity: 0.6;
+}
+
+/* Inline citation highlight — wraps the verbatim excerpt within a segment.
+   Currently invisible while we rethink the visual treatment; the <mark>
+   elements and --bn-colour-cited-bg token are preserved so this can be
+   re-enabled by restoring `background: var(--bn-colour-cited-bg)`. */
+.bn-cited {
+    background: transparent;
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+/* Anchor highlight animation — flash yellow, fade to normal over 5s.
+   Applied by transcript-names.js when navigating via #t-NNN anchor. */
+@keyframes anchor-fade {
+    0%   { background-color: var(--bn-colour-highlight); }
+    100% { background-color: transparent; }
+}
+
+.transcript-segment.anchor-highlight {
+    animation: anchor-fade 5s ease-out forwards;
+    border-radius: var(--bn-radius-sm);
+}
+</style>
+<style>
+/* ============================================================================
+   MOCKUP CHROME — not the product. Prefixed `m-` throughout.
+   The shipped CSS above is copied verbatim from transcript-paragraph-
+   capitalisation.html, whose generator inlined it from the tree on 6 Oct 2026.
+   ========================================================================= */
+html { color-scheme: light; }
+body { padding: 0; }
+.m-wrap { max-width: 1440px; margin: 0 auto; padding: 2rem clamp(1rem, 3vw, 2rem) 6rem; display: flex; flex-direction: column; gap: 1.6rem; }
+.m-title { font-size: var(--bn-text-display); font-weight: var(--bn-weight-strong); margin: 0; }
+.m-lede { color: var(--bn-colour-muted); max-width: 90ch; margin: .4rem 0 0; }
+.m-h2 { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 0 0 .2rem; }
+.m-h2 small { font-weight: var(--bn-weight-normal); color: var(--bn-colour-muted); font-size: var(--bn-text-label); margin-left: .5rem; }
+.m-toolbar { position: sticky; top: 0; z-index: 300; display: flex; flex-wrap: wrap; gap: .8rem 1.6rem; align-items: center;
+  padding: .55rem .9rem; background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border);
+  border-radius: var(--bn-radius-md); box-shadow: 0 2px 8px var(--bn-colour-shadow); font-size: var(--bn-text-caption); }
+.m-group { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.m-group > b { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); }
+.m-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); overflow: hidden; }
+.m-seg button { all: unset; cursor: pointer; padding: .25rem .6rem; color: var(--bn-colour-text); }
+.m-seg button + button { border-left: 1px solid var(--bn-colour-border); }
+.m-seg button[aria-pressed="true"] { background: var(--bn-colour-accent); color: #fff; }
+.m-seg button:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: -2px; }
+.m-key { display: flex; flex-wrap: wrap; gap: 1rem; font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
+.m-key span { display: inline-flex; align-items: center; gap: .4rem; }
+.m-key i { width: 18px; height: 12px; border-radius: 3px; display: inline-block; }
+.m-key .k-art { border: 1px solid var(--bn-colour-border); background: var(--bn-colour-bg); }
+.m-key .k-com { background: repeating-linear-gradient(135deg, var(--bn-colour-hover) 0 4px, transparent 4px 8px); border-left: 2px solid var(--bn-colour-muted); }
+.m-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; align-items: start; }
+@media (max-width: 900px) { .m-pair { grid-template-columns: 1fr; } }
+.m-frame { border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg); overflow: hidden; background: var(--bn-colour-bg); }
+.m-chrome { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; padding: .4rem .75rem;
+  font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); color: var(--bn-colour-muted);
+  background: var(--bn-colour-hover); border-bottom: 1px solid var(--bn-colour-border); }
+.m-chrome b { color: var(--bn-colour-text); font-weight: var(--bn-weight-emphasis); }
+.m-stage { padding: .4rem 1.1rem 1rem; }
+.m-empty { color: var(--bn-colour-muted); font-size: var(--bn-text-label); padding: 1rem 0; }
+/* The margin-annotation column only exists at full page width; a half-width frame drops it. */
+.m-stage .transcript-body { grid-template-columns: 4.5rem 2.2rem 1fr; margin-top: var(--bn-space-sm); }
+.m-commentary { background: repeating-linear-gradient(135deg, var(--bn-colour-hover) 0 4px, transparent 4px 8px);
+  border-left: 3px solid var(--bn-colour-muted); border-radius: var(--bn-radius-md); padding: 1rem 1.2rem;
+  font-size: var(--bn-text-label); line-height: 1.55; }
+.m-commentary > .m-label { font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); text-transform: uppercase;
+  letter-spacing: .08em; color: var(--bn-colour-muted); margin: 0 0 .5rem; display: block; }
+.m-commentary p { margin: 0 0 .6rem; max-width: 100ch; }
+.m-commentary ul { margin: 0 0 .6rem; padding-left: 1.2rem; }
+.m-commentary code { font-family: var(--bn-font-mono); font-size: .92em; }
+.m-note { color: var(--bn-colour-muted); font-size: var(--bn-text-label); margin: 0 0 .5rem; }
+.m-table { width: 100%; border-collapse: collapse; background: var(--bn-colour-bg); font-size: var(--bn-text-label); }
+.m-table th, .m-table td { text-align: left; vertical-align: top; padding: .45rem .6rem; border-bottom: 1px solid var(--bn-colour-border); }
+.m-table th { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); font-size: var(--bn-text-caption); }
+.m-table td:first-child { font-weight: var(--bn-weight-emphasis); width: 18%; }
+.m-table td:nth-child(2) { width: 34%; }
+.m-pc { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: .9rem; }
+.m-pc h3 { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); margin: 0 0 .3rem; }
+.m-showchanges .m-changed { text-decoration: underline dotted var(--bn-colour-accent); text-underline-offset: 3px;
+  background: color-mix(in srgb, var(--bn-colour-accent) 14%, transparent); }
+/* PROPOSED, not shipped: a filler drawn in the muted text colour. */
+.m-filler { color: var(--bn-colour-muted); }
+.m-nofill .m-filler { color: inherit; }
+</style>
+</head>
+<body>
+<div class="m-wrap">
+<header>
+  <h1 class="m-title">Transcript readability: today against the proposed versions</h1>
+  <p class="m-lede">IKEA with uxfriends, s1. Left: what the transcript page draws today. Right: the same stretches, re-transcribed locally with the proposed Whisper settings, then put through the version's paragraph and display rules. Pick a version at the top. The research is in <code>docs/design-transcript-readability.md</code>.</p>
+</header>
+<div class="m-toolbar" role="group" aria-label="Mockup switches">
+  <div class="m-group"><b>Version</b><span class="m-seg" id="m-versions"></span></div>
+  <div class="m-group"><b>Appearance</b><span class="m-seg"><button data-scheme="light" aria-pressed="true">Light</button><button data-scheme="dark" aria-pressed="false">Dark</button></span></div>
+  <div class="m-group"><b>Type</b><span class="m-seg"><button data-platform="desktop" aria-pressed="true">Mac app (SF)</button><button data-platform="web" aria-pressed="false">Browser (Inter)</button></span></div>
+  <div class="m-group"><b>Changed letters</b><span class="m-seg"><button data-show="on" aria-pressed="false">Show</button><button data-show="off" aria-pressed="true">Hide</button></span></div>
+</div>
+<div class="m-key"><span><i class="k-art"></i>Artefact: the transcript as drawn</span><span><i class="k-com"></i>Commentary: not the product</span></div>
+<div id="m-passages"></div>
+<aside class="m-commentary" id="m-why"></aside>
+<aside class="m-commentary"><span class="m-label">How this was made</span>
+<p><b>Left column.</b> The project's paragraphs from its database, with word timings joined by time exactly as the importer does (<code>_enrich_words_from_intermediate</code>), so a paragraph shows Whisper's word list when the words pass the 0.9 match and its stored text when they do not. In this project the stored text comes from a 16 Jul Whisper run and the words from a 27 Aug one. Where the stored text is drawn it carries its “(Speaker A)” label; I found nothing that strips it on the page.</p>
+<p><b>Right column.</b> Fresh local transcriptions of the same audio (mlx-whisper 0.4.3, large-v3-turbo, M2 Max, 6 Oct 2026; no paid calls). <b>Speaker badges are borrowed</b>: speaker identification was not re-run (its pass may call an LLM), so each new sentence takes the speaker of today's paragraph it overlaps most. Where today's speakers are wrong, the borrowed ones can be too.</p>
+<p><b>Shown at full strength.</b> The page draws participant paragraphs with no quote in them at 60% opacity. Every paragraph here is drawn as quoted, so the text is comparable. The dimmed filler style is the one new style on the page, and is a proposal.</p>
+</aside>
+</div>
+<script>
+const M = {"passages": [{"id": "a", "a": 75, "b": 166, "title": "A question lands in the answer", "note": "1:15\u20132:46. Today the moderator's \"okay what is it\" sits at the end of the participant's paragraph."}, {"id": "b", "a": 166, "b": 247, "title": "A run-on answer", "note": "2:46\u20134:07. Lower case, no full stops, \"i\" for \"I\"."}, {"id": "c", "a": 247, "b": 367, "title": "The long paragraph", "note": "4:07\u20136:07. Today one paragraph runs 92 seconds and 307 words."}, {"id": "d", "a": 431, "b": 495, "title": "The think-aloud prompt", "note": "7:11\u20138:15. Today the moderator's instructions are labelled as the participant. The stretch where the 2.4 setting leaked its prompt."}], "data": {"today": {"a": [{"tc": "01:15", "code": "m1", "text": "Maybe not so tech. Not so tech.", "cont": false}, {"tc": "01:18", "code": "p1", "text": "Okay, so an object I've bought that I really like that's in my house. Could be a vase or a bed or a bookcase or a lemon squeezer. probably probably not something from the technology aisle fine um i've got uh one of those old style crock pots that you use for fermentation oh interesting okay so but we put the water in it creates a seal so it's kind of right and it's yeah so it's it's good because it's kind of it's a practical thing but it's designed to kind of you know right be emotive i guess okay what is it", "cont": false}, {"tc": "01:57", "code": "m1", "text": "(Speaker A) that you like about it?", "cont": false}, {"tc": "02:00", "code": "p1", "text": "(Speaker B) Well, you know, a lot of like household stuff, sort of quite utilitarian, which is very good. And this is, you know, it looks like it's something from the past, but yet it's quite, you know, it's modern, but it's got like basic kind of, you know, the design of it's good. And it's got like, so you put a little bit of water in it and it kind of, so when it's fermenting, The gas can come out as well. So it's kind of a simple, ingenious solution. The alternatives, you just get loads of plastic and you can get these plastic lids that kind of burp things and stuff like that and kind of let the air out. But this is kind of like \u2013 this is somehow a classic design, but do you know what I mean?", "cont": false}, {"tc": "02:45", "code": "m1", "text": "(Speaker A) Okay.", "cont": false}], "b": [{"tc": "02:46", "code": "p1", "text": "(Speaker B) Yeah, it's a new thing, but yeah, so it looks good. It looks good and it's practical and \u2013", "cont": false}, {"tc": "02:53", "code": "m1", "text": "(Speaker A) What do you think \u2013 your choice of that object \u2013 says about you and your personal style and your values and", "cont": false}, {"tc": "03:04", "code": "p1", "text": "(Speaker B) um well I think kind of buying something dedicated to ferment shows kind of that I'm a bit of a cooking nerd I guess and I enjoy you know geeking out but also um as I said you know I looked into kind of you get these kind of fancy kind of uh lids and stuff like that you can get for like existing stuff but this is you know what I mean it's like a okay it's a tried and tested solution do you know what I mean and it's not like right you know so although I like tech stuff it's you know it's kind of yeah it's people have been using this technique for God knows how long you know okay um changing me as it gives a bit um yeah", "cont": false}, {"tc": "03:47", "code": "m1", "text": "to what I think might be an almost universal human experience tell me about a trip to Ikea a particular memory of a particular trip that springs to mind should it be good or bad", "cont": false}], "c": [{"tc": "04:07", "code": "p1", "text": "(Speaker B) um well actually we went recently um and it springs to mind because uh i mean you know obviously it's not just like recency but um sorry hang on a second sorry hang on", "cont": false}, {"tc": "04:35", "code": "p1", "text": "Yeah, so what's interesting is, you know, been going to Ikea for kind of years, you know, had a child, sort of, you know, started dragging him around Ikea. But this was, we actually went shopping for him. We had to get some kind of, do you know what I mean? It's like, you know, you need a desk chair, you know, because he's now spending a lot of time doing homework and stuff like that. So it's one of these things, it's almost a little bit of a rite of passage, but, you know, it's kind of, we're shopping for him as well. And he has opinions now about, you know, the kind of, items in his in his room and stuff like that so it just felt it was that's why it's interesting because it's do you know what I mean it's a different thing or we would have just gone and bought something even if it was you know for his room we'd have gone like right fine this is what you want but yeah it's a different kind of different kind of experience than normal okay um and zooming out a bit just in general what emotions do you associate with a trip to Ikea maybe when it's coming up or during it or after it um i quite in there's something i quite enjoy it um in a weird way because well i quite look forward to it um because in a weird way i quite like building the furniture like doing some of my hands so so i kind of you know that's there's kind of a bit of like cool i'm gonna have something get it home and do not me be able to put it together and feel like I've achieved something um you know I kind of uh", "cont": false}], "d": [{"tc": "07:11", "code": "p1", "text": "No, that's great. Okay. and if you could think aloud and explore give me some first impressions tell me anything that stands out to you areas you might investigate tell me what you're thinking as you explore yeah so I mean this is our kid at com so this is interesting this feels more like a corporate site than actually you know Do you know what I mean? It doesn't feel like a furniture. I mean, okay, I've gone down here and it kind of feels like furniture. But, yeah, it's a corporate site. It's actually selling. So, you know, my kind of \u2013 I'm initially obviously kind of drawn to the go shopping. So I see that it feels like that's going to ikea .co .uk. So this feels like this is not the \u2013 you know, I'm not going to be able to buy anything here. This is about IKEA itself. Let's go into ikea .co .uk. Yeah, yeah.", "cont": false}, {"tc": "08:14", "code": "p1", "text": "so okay there we go cool yeah okay um tell me about some of the main choices you have here uh um well", "cont": false}]}, "v1": {"a": [{"tc": "01:17", "code": "p1", "text": "Not so tech. Okay. So an object I've bought that I really like that's in my house. Could be a vase, vase or a bed or a bookcase or a lemon squeezer, probably not something from a technology aisle. Fine. Um, I've got, uh, one of those old style crock pots that you use for fermentation. Oh, interesting. Okay. So, but we put the water in and it creates a seal.", "cont": false}, {"tc": "01:46", "code": "p1", "text": "So it's kind of, and it's, yeah, so it's, it's good because it's kind of, it's a practical thing, But it's designed to kind of, you know, be emotive, I guess. Okay.", "cont": false}, {"tc": "01:56", "code": "m1", "text": "What is it that you like about it?", "cont": false}, {"tc": "01:59", "code": "p1", "text": "Um, well, you know, a lot of like household stuff, uh, sort of, you quite utilitarian, which is very good. And this is, you know, it looks like it's something from the past, but yet it's quite, you know, it's modern, but it's got like basic kind of, you know, The design of it's good. And it's got like, um, they put a little bit of water in it.", "cont": false}, {"tc": "02:24", "code": "p1", "text": "And it kind of, so when it's fermenting, the gas can come out as well. So it's, it's kind of a simple ingenious solution. Your alternatives, you just get like loads of plastic and you can get like these plastic lids that kind of burp things and stuff like that. And kind of let the air out. But this is kind of like, this is somehow a classic design.", "cont": false}, {"tc": "02:43", "code": "p1", "text": "But do you not mean it's kind of, yeah, it's a new kind of, it's a new. But yeah, so it looks good. It looks good and it's practical and, you know.", "cont": false}], "b": [{"tc": "02:53", "code": "m1", "text": "What do you think your choice of that object says about you and your personal style and your values?", "cont": false}, {"tc": "03:03", "code": "p1", "text": "Um, well, I think kind of buying something dedicated to ferment shows kind of that I'm a bit of a cooking nerd, I guess, and I enjoy geeking out. But also, um, as I said, you know, I looked into kind of, you get these kind of fancy kind of, uh, lids and stuff like that you can get for like existing stuff.", "cont": false}, {"tc": "03:27", "code": "p1", "text": "But this is, you know what I mean? It's like a, it's a tried and tested solution. Do you know what I mean? And it's not like, you know, so although I like tech stuff, it's, you know, it's, it's kind of, yeah, it's, it's, it's, people have been using this technique for God knows how long. Okay.", "cont": false}, {"tc": "03:44", "code": "m1", "text": "Um, changing gears a bit, um, to, um, yeah, what I think might be an almost universal, um, human experience. Um, tell me about a trip to Ikea, a particular memory of a particular trip that springs to mind. Should it be good or bad?", "cont": false}], "c": [{"tc": "04:08", "code": "p1", "text": "Um, well, actually we went recently, um, and it springs to mind because, uh, I mean, you know, obviously it's, it's not just like recency, but, um, sorry, hang on a second. Sorry. Hang on. You go around some door.", "cont": false}, {"tc": "04:35", "code": "p1", "text": "Um, yeah. So what I, interesting is, you know, been going to Ikea for kind of years, uh, you know, had a child sort of, you know, started dragging him around Ikea, but this was, we actually went shopping for him. Uh, we had to get some kind of, do you know what I mean? It's like, you know, desk chair, uh, you know, because he's now spending a lot of time doing homework and stuff like that.", "cont": false}, {"tc": "04:59", "code": "p1", "text": "So it's one of these things, it's almost a little bit of a rite of passage, but you know, So it's kind of, we're shopping for him as well. And he has opinions now about, you know, the kind of items in his, in his room and stuff like that. So it just felt it was, that's why it's interesting because it's, do you know what I mean?", "cont": false}, {"tc": "05:15", "code": "p1", "text": "It's a different thing or we would have just gone and bought something, even if it was, you know, for his room, we'd have gone like, right, fine, this is what you want. But yeah, it's a different kind of, different kind of experience than normal. Okay. Um, and zooming out a bit, just in general, what emotions do you associate with a trip to Ikea?", "cont": false}, {"tc": "05:33", "code": "p1", "text": "Maybe when it's coming up or during it or after it? Um, I quite, there's something, I quite enjoy it, um, in a weird way because, well, I quite look forward to it, um, because in a weird way, I quite like building the furniture, like doing some of my hands. Um, so, so I kind of, you know, that's, there's kind of a bit of like, cool.", "cont": false}, {"tc": "05:56", "code": "p1", "text": "I'm going to have something, get it home. And do you not mean be able to put it together and feel like I've achieved something. Um, you know, I kind of, uh, uh, disappointment in a way as well sometimes because the rooms all look, you know, they're kind of, the designs they kind of do look all really good.", "cont": false}], "d": [{"tc": "07:11", "code": "p1", "text": "And that's great. Okay. And if you could think aloud and explore, give me some first impressions Um, uh, tell me anything that stands out to you, um, areas you might investigate. Um, tell me what you're thinking as you explore. Yeah. So, I mean, this is IKEA .com. So this is interesting. This feels more like a corporate site than actually, you know, do you know what I mean?", "cont": false}, {"tc": "07:44", "code": "p1", "text": "It doesn't feel like a furniture. I mean, okay. I've gone down here and there's, it kind of feels like furniture, but it, yeah, it's a corporate site. It's actually selling. So, you know, my kind of, I'm initially obviously kind of drawn to the go shopping. So I see that it feels like that's going to Ikea .co .uk.", "cont": false}, {"tc": "07:58", "code": "p1", "text": "So this feels like this is not the, you know, I'm not gonna be able to buy anything here. This is about Ikea itself. Let's go into Ikea .co .uk. Yeah.", "cont": false}, {"tc": "08:14", "code": "p1", "text": "Okay. There we go. Cool. Yeah. Okay. Um, tell me about some of the main choices you have here.", "cont": false}]}, "v2": {"a": [{"tc": "01:17", "code": "p1", "text": "Not so tech. Okay. So an object I've bought that I really like that's in my house. Could be a vase, vase or a bed or a bookcase or a lemon squeezer, probably not something from a technology aisle. Fine. Um, I've got, uh, one of those old style crock pots that you use for fermentation. Oh, interesting. Okay. So, but we put the water in and it creates a seal. So it's kind of, and it's, yeah, so it's, it's good because it's kind of, it's a practical thing, But it's designed to kind of, you know, be emotive, I guess.", "cont": false}, {"tc": "01:56", "code": "m1", "text": "Okay. What is it that you like about it?", "cont": false}, {"tc": "01:59", "code": "p1", "text": "Um, well, you know, a lot of like household stuff, uh, sort of, you quite utilitarian, which is very good. And this is, you know, it looks like it's something from the past, but yet it's quite, you know, it's modern, but it's got like basic kind of, you know, The design of it's good. And it's got like, um, they put a little bit of water in it. And it kind of, so when it's fermenting, the gas can come out as well. So it's, it's kind of a simple ingenious solution. Your alternatives, you just get like loads of plastic and you can get like these plastic lids that kind of burp things and stuff like that. And kind of let the air out. But this is kind of like, this is somehow a classic design. But do you not mean it's kind of, yeah, it's a new kind of, it's a new. But yeah, so it looks good. It looks good and it's practical and, you know.", "cont": false}], "b": [{"tc": "02:53", "code": "m1", "text": "What do you think your choice of that object says about you and your personal style and your values?", "cont": false}, {"tc": "03:03", "code": "p1", "text": "Um, well, I think kind of buying something dedicated to ferment shows kind of that I'm a bit of a cooking nerd, I guess, and I enjoy geeking out. But also, um, as I said, you know, I looked into kind of, you get these kind of fancy kind of, uh, lids and stuff like that you can get for like existing stuff. But this is, you know what I mean? It's like a, it's a tried and tested solution. Do you know what I mean? And it's not like, you know, so although I like tech stuff, it's, you know, it's, it's kind of, yeah, it's, it's, it's, people have been using this technique for God knows how long.", "cont": false}, {"tc": "03:42", "code": "m1", "text": "Okay. Um, changing gears a bit, um, to, um, yeah, what I think might be an almost universal, um, human experience. Um, tell me about a trip to Ikea, a particular memory of a particular trip that springs to mind. Should it be good or bad?", "cont": false}], "c": [{"tc": "04:08", "code": "p1", "text": "Um, well, actually we went recently, um, and it springs to mind because, uh, I mean, you know, obviously it's, it's not just like recency, but, um, sorry, hang on a second. Sorry. Hang on. You go around some door.", "cont": false}, {"tc": "04:35", "code": "p1", "text": "Um, yeah. So what I, interesting is, you know, been going to Ikea for kind of years, uh, you know, had a child sort of, you know, started dragging him around Ikea, but this was, we actually went shopping for him. Uh, we had to get some kind of, do you know what I mean? It's like, you know, desk chair, uh, you know, because he's now spending a lot of time doing homework and stuff like that. So it's one of these things, it's almost a little bit of a rite of passage, but you know, So it's kind of, we're shopping for him as well. And he has opinions now about, you know, the kind of items in his, in his room and stuff like that. So it just felt it was, that's why it's interesting because it's, do you know what I mean? It's a different thing or we would have just gone and bought something, even if it was, you know, for his room, we'd have gone like, right, fine, this is what you want. But yeah, it's a different kind of, different kind of experience than normal. Okay. Um, and zooming out a bit, just in general, what emotions do you associate with a trip to Ikea? Maybe when it's coming up or during it or after it? Um, I quite, there's something, I quite enjoy it, um, in a weird way because, well, I quite look forward to it, um, because in a weird way, I quite like building the furniture, like doing some of my hands. Um, so, so I kind of, you know, that's, there's kind of a bit of like, cool. I'm going to have something, get it home. And do you not mean be able to put it together and feel like I've achieved something. Um, you know, I kind of, uh, uh, disappointment in a way as well sometimes because the rooms all look, you know, they're kind of, the designs they kind of do look all really good. But when you get the thing home and put it in your own house, it somehow doesn't kind of tie together. Do you not mean quite the way they design the kind of the styles. Um, And again, I also kind of wonder that I'm being lazy. Do you know what I mean? And maybe there's got to be some other options out there. And we do obviously just not get, you know, we've got lots of stuff. I get lots of stuff, not from Ikea, but it is kind of, you know, pretty straightforward. But I also quite treat myself to hot dog at the end as well. Ah, okay. That's great. Um, thank you. Um, uh, so let's, um, let's go to Ikea.com. Uh, if you can show your screen.", "cont": false}], "d": [{"tc": "07:11", "code": "p1", "text": "And that's great. Okay. And if you could think aloud and explore, give me some first impressions Um, uh, tell me anything that stands out to you, um, areas you might investigate. Um, tell me what you're thinking as you explore. Yeah. So, I mean, this is IKEA.com. So this is interesting. This feels more like a corporate site than actually, you know, do you know what I mean? It doesn't feel like a furniture. I mean, okay. I've gone down here and there's, it kind of feels like furniture, but it, yeah, it's a corporate site. It's actually selling. So, you know, my kind of, I'm initially obviously kind of drawn to the go shopping. So I see that it feels like that's going to Ikea.co.uk. So this feels like this is not the, you know, I'm not gonna be able to buy anything here. This is about Ikea itself. Let's go into Ikea.co.uk. Yeah.", "cont": false}, {"tc": "08:14", "code": "p1", "text": "Okay. There we go. Cool. Yeah. Okay. Um, tell me about some of the main choices you have here.", "cont": false}]}, "v3": {"a": [{"tc": "01:15", "code": "m1", "text": "Maybe not so tech. Not so tech.", "cont": false}, {"tc": "01:18", "code": "p1", "text": "Okay, so an object I've bought that I really like that's in my house. Could be a vase or a bed or a bookcase or a lemon squeezer. probably not something from the technology aisle fine um i've got uh one of those old style crock pots that you use for fermentation oh interesting okay so but we put the water in it creates a seal so it's kind of right and it's yeah so it's good because it's kind of it's a practical thing but it's designed to kind of you know right be emotive i guess okay what is it", "cont": false}, {"tc": "01:57", "code": "m1", "text": "that you like about it?", "cont": false}, {"tc": "02:00", "code": "p1", "text": "Well, you know, a lot of like household stuff, sort of quite utilitarian, which is very good. And this is, you know, it looks like it's something from the past, but yet it's quite, you know, it's modern, but it's got like basic kind of, you know, the design of it's good. And it's got like, so you put a little bit of water in it and it kind of, so when it's fermenting, The gas can come out as well.", "cont": false}, {"tc": "02:00", "code": "p1", "text": "So it's kind of a simple, ingenious solution. The alternatives, you just get loads of plastic and you can get these plastic lids that kind of burp things and stuff like that and kind of let the air out. But this is kind of like \u2013 this is somehow a classic design, but do you know what I mean?", "cont": true}, {"tc": "02:45", "code": "m1", "text": "Okay.", "cont": false}], "b": [{"tc": "02:46", "code": "p1", "text": "Yeah, it's a new thing, but yeah, so it looks good. It looks good and it's practical and \u2013", "cont": false}, {"tc": "02:53", "code": "m1", "text": "What do you think \u2013 your choice of that object \u2013 says about you and your personal style and your values and", "cont": false}, {"tc": "03:04", "code": "p1", "text": "um well I think kind of buying something dedicated to ferment shows kind of that I'm a bit of a cooking nerd I guess and I enjoy you know geeking out but also um as I said you know I looked into kind of you get these kind of fancy kind of uh lids and stuff like that you can get for like existing stuff but this is you know what I mean it's like a okay it's a tried and tested solution do you know what I mean and it's not like right you know so although I like tech stuff it's you know it's kind of yeah it's people have been using this technique for God knows how long you know okay um changing me as it gives a bit um yeah", "cont": false}, {"tc": "03:47", "code": "m1", "text": "to um yeah what I think might be an almost universal um human experience um tell me about a trip to ikea a particular memory of a particular trip that springs to mind should be good or bad", "cont": false}], "c": [{"tc": "04:07", "code": "p1", "text": "um well actually we went recently um and it springs to mind because uh i mean you know obviously it's not just like recency but um sorry hang on a second sorry hang on", "cont": false}, {"tc": "04:35", "code": "p1", "text": "yeah so what interesting is you know been going to Ikea for kind of years you know had a child sort of you know started dragging him around Ikea but this was we actually went shopping for him we had to get some kind of do you know what I mean it's like you know he needed a desk chair uh you know because he's now spending a lot of time doing homework and stuff like that so it's one of these things it's almost a little bit of a rite of passage but you know it's kind of we're shopping for him as well and he has opinions now about you know the kind of items in his room and stuff like that so it just felt it was that's why it's interesting because it's do not mean it's a different thing or we would have just gone and bought something even if it was you know for his room we'd have gone like right fine this is what you want but yeah it's a different kind of experience than normal okay um and zooming out a bit just in general what emotions do you associate with a trip to ikea maybe when it's coming up or during it or after it um i quite in there's something i quite enjoy it um in a weird way because well i quite look forward to it um because in a weird way i quite like building the furniture like doing some of my hands so so I kind of you know that's there's kind of a bit of like cool I'm gonna have something get it home and do not me be able to put it together and feel like I've achieved something um you know I kind of uh", "cont": false}], "d": [{"tc": "07:11", "code": "p1", "text": "okay that's great okay um and uh if you could think aloud um and explore give me some first impressions um uh tell me anything that stands out to you um areas you might investigate um tell me what you're thinking as you explore yeah so i mean this is our kid at com so this is interesting this feels more like a corporate site than actually you know do not mean it doesn't feel like a furniture I mean okay I've gone down here and there's it kind of feels like furniture but it yeah it's a corporate site it's actually selling so you know my kind of I'm initially obviously kind of drawn to the go shopping so I see that it feels like that's going to Ikea.co.uk so this feels like this is not the you know I'm not gonna be able to buy anything here this is about ikea itself um let's go into ikea yeah yeah", "cont": false}, {"tc": "08:14", "code": "p1", "text": "okay there we go cool yeah okay um tell me about some of the main choices you have here uh", "cont": false}]}, "v4": {"a": [{"tc": "01:15", "code": "m1", "text": "Maybe not so tech.", "cont": false}, {"tc": "01:17", "code": "p1", "text": "Not so tech. Okay, so an object I've bought that I really like that's in my house. It could be a vase or a bed or a bookcase or a lemon squeezer. Probably not something from the technology aisle. Fine. I've got one of those old style crock pots that you use for fermentation. Oh, interesting. OK. So, but we put the water in and it creates a seal. So it's kind of...", "cont": false}, {"tc": "01:47", "code": "p1", "text": " And it's, yeah, so it's good because it's kind of, it's a practical thing, but it's designed to kind of, you know, be emotive, I guess.", "cont": false}, {"tc": "01:56", "code": "m1", "text": "Okay. What is it that you like about it?", "cont": false}, {"tc": "02:00", "code": "p1", "text": "Well, you know, a lot of like household stuff, sort of, quite utilitarian, which is very good. It looks like it's something from the past, but yet it's modern, but it's got basic design. The design of it's good. You put a little bit of water in it, so when it's fermenting, the gas can come out as well. It's a simple, ingenious solution.", "cont": false}, {"tc": "02:32", "code": "p1", "text": "Your alternatives, you just get loads of plastic and you can get these plastic lids that burp things and stuff like that. Let the air out. But this is somehow a classic design. It's a new thing. It looks good. It looks good. It's practical.", "cont": false}], "b": [{"tc": "02:52", "code": "m1", "text": "What do you think your choice of that object says about you and your personal style and your values?", "cont": false}, {"tc": "03:04", "code": "p1", "text": "Well, I think buying something dedicated to ferment shows that I'm a bit of a cooking nerd, I guess, and I enjoy geeking out. But also, as I said, I looked into kind of, you get these kind of fancy kind of lids and stuff like that. You can get for like existing stuff. But this is, you know what I mean?", "cont": false}, {"tc": "03:29", "code": "p1", "text": "It's like a, it's a tried and tested solution. Do you know what I mean? And it's not like, you know, so although I like tech stuff, it's, you know, it's kind of, yeah, it's people have been using this technique for God knows how long.", "cont": false}, {"tc": "03:42", "code": "m1", "text": "Okay. Changing gears a bit to what I think might be an almost universal human experience. Tell me about a trip to Ikea. A particular memory of a particular trip that springs to mind. Should it be good or bad?", "cont": false}], "c": [{"tc": "04:08", "code": "p1", "text": "Well, actually, we went recently. And it springs to mind because, I mean, you know, obviously, it's not just like recency. But sorry, hang on a second. Sorry. Hang on. Yeah, so what's interesting is, you know, been going to Ikea for kind of years, you know, had a child, sort of, you know, started dragging him around Ikea. But this was, we actually went shopping for him. We had to get some kind of, do you know what I mean? It's like, you know, you need a desk chair, you know, because he's now spending a lot of time doing homework and stuff like that. So it's one of these things, it's almost a little bit of a rite of passage.", "cont": false}, {"tc": "05:02", "code": "p1", "text": "But, you know, it's kind of we're shopping for him as well. And he has opinions now about, you know, the kind of items in his room and stuff like that. So it just felt it was that's why it's interesting, because it's, do you know what I mean? It's a different thing. We would have just gone and bought something, even if it was, you know, for his room.", "cont": false}, {"tc": "05:20", "code": "p1", "text": "We'd have gone like, right, fine, this is what you want. But yeah, it's a different kind of different kind of experience than normal. Okay. And zooming out a bit, just in general, what emotions do you associate with a trip to Ikea? Maybe when it's coming up or during it or after it? I quite enjoy it in a weird way because, well, I quite look forward to it because in a weird way, I quite like building the furniture. I like doing some of my hands.", "cont": false}, {"tc": "05:52", "code": "p1", "text": "So, I kind of, you know, that's, there's kind of a bit of like, cool, I'm gonna have something, get it home and do not be able to put it together and feel like I've achieved something.", "cont": false}], "d": null}, "v5": {"a": [{"tc": "01:17", "code": "p1", "text": "Not so tech. Okay, so an object I've bought that I really like that's in my house. Could be a vase, vase or a bed or a bookcase or a lemon squeezer. Probably not something from the technology aisle. Fine. Um, I've got, uh, one of those old style crock pots that you use for fermentation. Oh, interesting. Okay. So, but we put the water in and it creates a seal.", "cont": false}, {"tc": "01:46", "code": "p1", "text": "So it's kind of, and it's, yeah, so it's, it's good because it's kind of, it's a practical thing, But it's designed to kind of, you know, be emotive, I guess. Okay.", "cont": false}, {"tc": "01:56", "code": "m1", "text": "What is it that you like about it?", "cont": false}, {"tc": "01:59", "code": "p1", "text": "Um, well, you know, a lot of, like, household stuff. Uh, sort of, you're quite utilitarian, which is very good. And this is, you know, it looks like it's something from the past. But yet, it's quite, you know, it's modern. But it's got, like, basic kind of, you know, the design of it. The design of it's good and it's got like, um, so you put a little bit of water in it and it kind of, so when it's fermenting, the gas can come out as well.", "cont": false}, {"tc": "02:29", "code": "p1", "text": "So it's, it's kind of a simple, ingenious solution. Your alternatives, you just get like loads of plastic and you can get like these plastic lids that kind of burp things and stuff like that and kind of let the air out. But this is kind of like, this is somehow a classic design, but do you know what I mean?", "cont": false}, {"tc": "02:45", "code": "p1", "text": "It's kind of, yeah, it's a new kind of, it's a new thing. But yeah, so it looks good. It looks good and it's practical and, you know.", "cont": false}], "b": [{"tc": "02:53", "code": "m1", "text": "What do you think your choice of that object says about you and your personal style and your values?", "cont": false}, {"tc": "03:04", "code": "p1", "text": "Um, well, I think kind of buying something dedicated to ferment shows kind of that I'm a bit of a cooking nerd, I guess, and I enjoy geeking out. But, but also, um, as I said, you know, I looked into kind of, you get these kind of fancy kind of, uh, lids and stuff like that you can get for like existing stuff, but this is, you know what I mean?", "cont": false}, {"tc": "03:29", "code": "p1", "text": "It's like a, it's a tried and tested solution. Do you know what I mean? And it's not like, you know, so although I like tech stuff, it's, you know, it's, it's kind of, yeah, it's, it's, it's people have been using this technique for God knows how long, you know? Okay.", "cont": false}, {"tc": "03:44", "code": "m1", "text": "Um, changing gears a bit, um, to, um, yeah, what I think might be an almost universal, um, human experience. Um, tell me about a trip to Ikea, a particular memory of a particular trip that springs to mind. Could it be good or bad?", "cont": false}], "c": [{"tc": "04:08", "code": "p1", "text": "Um, well, actually we went recently, um, and it springs to mind because, uh, I mean, you know, obviously it's, it's not just like recency, but, um, sorry, hang on a second. Sorry. Hang on. You go around some door.", "cont": false}, {"tc": "04:35", "code": "p1", "text": "Um, yeah, so what I, interesting is, you know, been going to Ikea for kind of years, uh, you know, had a child sort of, you know, started dragging him around Ikea, but this was, we actually went shopping for him. Uh, we had to get some kind of, do you know what I mean? It's like, you know, you need a desk chair, uh, you know, because he's now spending a lot of time doing homework and stuff like that.", "cont": false}, {"tc": "04:59", "code": "p1", "text": "So it's one of these things, it's almost a little bit of a rite of passage, but, you know, it's kind of a rite of passage. Kind of, we're shopping for him as well and he has opinions now about, you know, the kind of items in his, in his room and stuff like that. So it just felt, it was, that's why it's interesting because it's, do you know what I mean?", "cont": false}, {"tc": "05:15", "code": "p1", "text": "It's a different thing or we would have just gone and bought something, even if it was, you know, for his room, we'd have gone like, right, fine, this is what you want. But yeah, it's a different kind of, different kind of experience than normal. Okay. Um, and zooming out a bit, just in general, what emotions do you associate with a trip to Ikea?", "cont": false}, {"tc": "05:33", "code": "p1", "text": "Maybe when it's coming up or during it or after it? Um, I quite, there's something, I quite enjoy it, um, in a weird way because, well, I quite look forward to it, um, because in a weird way, I quite like building the furniture. I like doing some of my hands. So, so I kind of, you know, that's, there's kind of a bit of like, cool, I'm going to have something, get it home and do not mean to be able to put it together and feel like I've achieved something.", "cont": false}, {"tc": "06:00", "code": "p1", "text": "Um, you know, I kind of, uh, disappointment in a way as well sometimes, because the rooms all look, you know, the kind of the designs they kind of do look all really good. But when you get the thing home and put it in your own house, it somehow doesn't kind of tie together. Do you know what I mean?", "cont": false}], "d": [{"tc": "07:11", "code": "p1", "text": "That's great. Okay. Um, and, uh, if you could think aloud, um, and explore, give me some first", "cont": false}, {"tc": "07:23", "code": "p1", "text": "Tell me about it. Tell me about it. Tell me about it. Tell me about it. Tell me what you're thinking as you explore. Yeah, so, I mean, this is our kid at com, so this is interesting. This feels more like a corporate site than actually, you know, do you know what I mean? It doesn't feel like a furniture.", "cont": false}, {"tc": "07:45", "code": "p1", "text": "I mean, okay, I've gone down here and there's, it kind of feels like furniture, but it, yeah, it's a corporate site. It's actually selling. So, you know, my kind of, I'm initially obviously kind of drawn to the go shopping. So I see that it feels like that's going to Ikea .co .uk. So this feels like this is not the, you know, I'm not gonna be able to buy anything here.", "cont": false}, {"tc": "08:04", "code": "p1", "text": "This is about Ikea itself. Let's go into Ikea .co .uk. Yeah. Yeah. Yeah.", "cont": false}]}}, "versions": [{"id": "v1", "name": "1 \u00b7 Recommended", "flag": "re-transcribe \u00b7 new paragraph rule \u00b7 display layer", "caps": true, "dim": true, "table": [["Whisper prompt", "A short punctuated prompt on every 30 s window", "Whisper copies the prompt's style. Without it, each window picks its own style, and filler-heavy speech often comes out lower case with no punctuation."], ["Prompt text", "\u201cHmm, okay. Well, yes, I suppose so, um, and then? Right.\u201d", "Hesitation and assent only, nothing a moderator would say. It contains \u201cum\u201d, so fillers are kept: quotes need verbatim input."], ["Prompt language", "The session's language, decided before transcribing", "An English prompt on Japanese audio produced English loops. No prompt if the language has no reviewed one."], ["condition_on_previous_text", "False (unchanged)", "True locks a bad style in for the rest of the file and brings back repetition loops."], ["compression_ratio_threshold", "1.8 (unchanged)", "It caught the prompt-leak at 7:23 that 2.4 let through (version 5). Costs some repeatability: 23 of 159 segments re-decoded by sampling."], ["Paragraph break", "Speaker change, or a gap over 2 s (unchanged)", "Every tool breaks at turns; the gap rule is today's."], ["Length rule", "Once a paragraph reaches 60 words, end it at the next sentence end, inside a Whisper segment too (timed from the word timings)", "About four sentences for this speaker; human-paragraphed talks average 4.4. Never cuts mid-sentence."], ["Which text is drawn", "The transcript text, Whisper's own spelling", "One transcription, so the text and the word timings agree."], ["First letter", "Capital where a sentence begins (capitalisation mockup, option C)", "A new turn or a new sentence starts with a capital; a mid-sentence continuation does not."], ["Fillers", "um, uh, er, erm, hmm drawn in the muted colour (proposed style)", "Kept in full for verbatim, de-emphasised for scanning. Ambiguous ones (\u201clike\u201d, \u201cyou know\u201d) left alone."], ["Stored text changed?", "Only by re-transcribing; the display layer changes nothing", "Exports and the agent read the stored text."], ["Applies to", "Sessions transcribed after the change", "Existing projects keep their transcripts and their splits."], ["Measured on s1 (18 min)", "277 sentences (today 72) \u00b7 longest unpunctuated run 24 words (today 681) \u00b7 no prompt leak \u00b7 52 s to transcribe (today 84 s)", "Local runs on an M2 Max, large-v3-turbo. Two runs of the same setting gave the same counts within two words."]], "pros": ["Reads as sentences, with capitals and full stops, and keeps every word.", "Questions come out as their own lines, so the moderator gets them back.", "Paragraphs are short enough to scan (longest here: 80 words)."], "cons": ["Needs re-transcription, so it only reaches new sessions.", "A small patch to mlx-whisper that has to be re-checked on every upgrade.", "Fillers are now written out (\u201cUm,\u201d \u201cuh,\u201d); dimming is what keeps them quiet."]}, {"id": "v2", "name": "2 \u00b7 Whisper fix only", "flag": "re-transcribe \u00b7 today's paragraph rule \u00b7 no display layer", "caps": false, "dim": false, "table": [["Whisper prompt", "As version 1", "\u2014"], ["Prompt text", "As version 1", "\u2014"], ["compression_ratio_threshold", "1.8 (unchanged)", "\u2014"], ["Paragraph break", "Speaker change, or a gap over 2 s (today's rule, nothing added)", "Shows what the Whisper fix does on its own."], ["Length rule", "None", "\u2014"], ["Which text is drawn", "The transcript text", "\u2014"], ["First letter", "As transcribed", "\u2014"], ["Fillers", "As transcribed, full strength", "\u2014"], ["Measured on s1", "25 paragraphs; the longest is 692 words", "Punctuated segments are longer, so the 2 s merge swallows more of them."]], "pros": ["Smallest change: stage 5 only.", "Text is punctuated and cased."], "cons": ["Paragraphs get longer, not shorter: the whole answer becomes one block.", "Fillers at full strength now that they are written out."]}, {"id": "v3", "name": "3 \u00b7 Display only, no re-transcription", "flag": "today's transcript \u00b7 display layer only", "caps": true, "dim": true, "table": [["Whisper", "Not re-run", "What an existing project could get without re-transcribing."], ["Which text is drawn", "The stored text instead of Whisper's word list", "In this project the two come from different Whisper runs; the stored text is usually the better punctuated of the two."], ["Length rule", "A visual break at a sentence end every ~60 words, inside one paragraph: no new timecode or badge", "Display only, so splits and quotes are untouched."], ["First letter", "Capital where a sentence begins (option C)", "As version 1."], ["Fillers", "Dimmed, as version 1", "As version 1."], ["Stored text changed?", "No", "\u2014"], ["Measured on s1", "48 drawn blocks; the longest is still 300 words", "Where the stored text has no full stops there is nothing to break at."]], "pros": ["Works on every existing project, now.", "No change to the pipeline or to splits."], "cons": ["Cannot fix what the text never had: unpunctuated stretches stay one block, in lower case.", "Wrong speaker edges stay wrong (7:11 is still the participant).", "The \u201c(Speaker A)\u201d label in the stored text shows where a paragraph has no word timings."]}, {"id": "v4", "name": "4 \u00b7 Prompt without fillers", "flag": "re-transcribe \u00b7 fillers dropped by Whisper \u00b7 1:00\u20136:00 only", "caps": true, "dim": true, "table": [["Prompt text", "\u201cHello. Welcome, everyone. Let's begin.\u201d", "A clean prompt, no fillers."], ["compression_ratio_threshold", "1.8", "As version 1."], ["Length rule", "60 words, at a sentence end, between Whisper segments only", "This run kept no word timings, so it cannot break inside a segment."], ["First letter / fillers", "As version 1", "\u2014"], ["Measured on the 1:00\u20136:00 excerpt", "737 words against 864 with a prompt that contains fillers; 65 sentences", "Whisper drops fillers, and some other words with them."]], "pros": ["Reads cleanest of all.", "Shortest sentences."], "cons": ["It is no longer verbatim: Whisper decides what to drop, and nobody can see what it dropped.", "Quotes lose their \u201c...\u201d for hesitations, which carry meaning (Clark \u0026 Fox Tree).", "Only run on 1:00\u20136:00, so the last passage is empty."]}, {"id": "v5", "name": "5 \u00b7 Faster, threshold 2.4", "flag": "re-transcribe \u00b7 2.4 threshold \u00b7 shows the prompt leak", "caps": true, "dim": true, "table": [["Prompt text", "\u201cOkay, so, um, tell me about it. Well, I think it's good, you know? Yeah.\u201d", "The first prompt tried. It contains an interview phrase."], ["compression_ratio_threshold", "2.4 (Whisper's default)", "No fallback sampling: deterministic, and 35 s instead of 52 s."], ["Length rule / first letter / fillers", "As version 1", "\u2014"], ["Measured on s1", "282 sentences; one segment replaced the moderator's words with \u201cTell me about it.\u201d four times (7:23)", "At 2.4 nothing re-decodes a looping window."]], "pros": ["Fastest and fully repeatable."], "cons": ["The prompt leaked into the transcript, replacing real speech: see 7:23.", "Heard \u201cIKEA.com\u201d as \u201cour kid at com\u201d."]}]};
+const FILL = /^(um+|uh+|er|erm|hmm+|mm+)([,.?!…]*)$/i;
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
+const badge = code => `<span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">${code}</span></span></span>`;
+function body(text, v, startsSentence) {
+  let words = text.split(/\s+/);
+  let first = true, out = [];
+  for (let w of words) {
+    let h = esc(w);
+    if (v && v.dim && FILL.test(w)) h = `<span class="m-filler">${h}</span>`;
+    if (first && v && v.caps && startsSentence) {
+      const up = w.charAt(0).toLocaleUpperCase("en");
+      if (up !== w.charAt(0)) h = `<span class="m-changed">${esc(up)}</span>` + h.replace(/^(<span class="m-filler">)?./, "$1");
+    }
+    first = false; out.push(h);
+  }
+  return out.join(" ");
+}
+function transcript(paras, v) {
+  return paras.map((p, i) => {
+    const prev = paras[i-1];
+    const starts = !prev || prev.code !== p.code || /[.?!…]["”’)]?$/.test(prev.text);
+    const mod = p.code.startsWith("m");
+    const tc = p.cont ? "" : `<span class="timecode-bracket">[</span>${p.tc}<span class="timecode-bracket">]</span>`;
+    return `<div class="transcript-segment segment-quoted${mod ? " segment-moderator" : ""}">` +
+      `<span class="timecode">${tc}</span><span class="segment-speaker">${p.cont ? "" : badge(p.code)}</span>` +
+      `<div class="segment-body">${body(p.text, v, starts && !p.cont)}</div></div>`;
+  }).join("");
+}
+function frame(title, flag, paras, v) {
+  const inner = paras === null ? `<div class="m-empty">Not transcribed with this setting: this run covered 1:00–6:00 only.</div>`
+    : `<div class="transcript-body">${transcript(paras, v)}</div>`;
+  return `<div class="m-frame"><div class="m-chrome"><span><b>${title}</b></span><span>${flag}</span></div><div class="m-stage">${inner}</div></div>`;
+}
+let current = "v1";
+function render() {
+  const v = M.versions.find(x => x.id === current);
+  document.getElementById("m-passages").innerHTML = M.passages.map(P =>
+    `<section><h2 class="m-h2">${P.title}<small>${P.note}</small></h2><div class="m-pair">` +
+    frame("Today", "as the page draws it", M.data.today[P.id], null) +
+    frame(v.name, v.flag, M.data[v.id][P.id], v) + `</div></section>`).join("");
+  const rows = v.table.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("");
+  document.getElementById("m-why").innerHTML = `<span class="m-label">Commentary · ${esc(v.name)}</span>` +
+    `<table class="m-table"><thead><tr><th>Choice</th><th>Value</th><th>Rationale</th></tr></thead><tbody>${rows}</tbody></table>` +
+    `<div class="m-pc"><div><h3>For</h3><ul>${v.pros.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>` +
+    `<div><h3>Against</h3><ul>${v.cons.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div></div>`;
+}
+const vs = document.getElementById("m-versions");
+vs.innerHTML = M.versions.map(v => `<button data-v="${v.id}" aria-pressed="${v.id===current}">${esc(v.name)}</button>`).join("");
+function wire(sel, key, apply) {
+  const btns = document.querySelectorAll(sel);
+  btns.forEach(b => b.addEventListener("click", () => {
+    btns.forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false")); apply(b.dataset[key]); }));
+}
+const root = document.documentElement;
+wire("[data-v]", "v", id => { current = id; render(); });
+wire("[data-scheme]", "scheme", s => { root.style.colorScheme = s; });
+wire("[data-platform]", "platform", p => { p === "desktop" ? root.setAttribute("data-platform", "desktop") : root.removeAttribute("data-platform"); });
+wire("[data-show]", "show", s => { document.body.classList.toggle("m-showchanges", s === "on"); });
+render();
+</script>
+</body>
+</html>

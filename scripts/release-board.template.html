@@ -158,7 +158,14 @@
   .hist-ctl{display:flex;align-items:flex-end;margin:0 0 4px}
   .hist-ctl-l{flex:1 1 auto}
   .hist-ctl-r{flex:none;display:flex;flex-direction:column;gap:5px;padding-right:10px;box-sizing:border-box}
-  .hist-ctl-r input[type=range]{width:100%;margin:0;accent-color:var(--now)}
+  .hist-ctl-r .seg{align-self:flex-start}   /* as wide as its labels, not the column */
+  /* the slider one size down: a thin track and a small thumb, quieter than the control it serves */
+  .hist-ctl-r input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:14px;margin:0;background:transparent;cursor:pointer}
+  .hist-ctl-r input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:var(--rule2)}
+  .hist-ctl-r input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:var(--rule2)}
+  .hist-ctl-r input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;margin-top:-4px;border-radius:50%;background:var(--panel);border:1.5px solid var(--now);box-sizing:border-box}
+  .hist-ctl-r input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:var(--panel);border:1.5px solid var(--now);box-sizing:border-box}
+  .hist-ctl-r input[type=range]:focus-visible{outline:2px solid var(--now);outline-offset:2px;border-radius:3px}
   .hist-ver{color:var(--ink-2);font-size:10.5px;line-height:1.35;min-height:2.7em}
   .hist-scroll{flex:1 1 auto;min-width:0;overflow-x:auto;padding-bottom:4px}
   .hist-fixed{flex:none;border-right:1px solid var(--rule)}
@@ -726,7 +733,7 @@
   // Everything is read from release-stats.py's model; nothing here re-derives
   // a cause.
   add(screen, (function(H){
-    var P = panel("history", "History", "every release attempt in .release/", H && H.releases ? (H.releases.length+" releases") : null);
+    var P = panel("history", "History", null, H && H.releases ? (H.releases.length+" releases") : null);
     if (!H || H.error || !H.releases || !H.releases.length) { add(P, nodata(H && H.error ? "history could not be read — "+H.error : "no ledgers under .release/ yet")); return P; }
     var NS = "http://www.w3.org/2000/svg";
     var S = function(n, a, text){ var e = document.createElementNS(NS, n); for (var k in a) if (a[k] != null) e.setAttribute(k, a[k]); if (text != null) e.textContent = String(text); return e; };
@@ -789,7 +796,7 @@
     var clean = rels.filter(function(r){ return invsOf(r) === 1 && r.shipped; });
     var total = rels.reduce(function(a, r){ return a + invsOf(r); }, 0);
     var stops = pooled.reduce(function(a, p){ return a + p.stops.length; }, 0);
-    var sum = $("div","hist-sum");
+    var sum = $("div","hist-sum"); add(sum, $("b", "hist-key", "Release attempts"));
     var kv = function(k, v){ var s = $("span"); add(s, $("b",null,v), document.createTextNode(" "+k)); return s; };
     add(sum, kv("releases", rels.length), kv("invocations", total), kv("stops (incl. channels)", stops), kv("shipped from one clean run", clean.length+" of "+rels.length));
     var lastN = rels.slice(-5), lastClean = lastN.filter(function(r){ return invsOf(r) === 1 && r.shipped; }).length;

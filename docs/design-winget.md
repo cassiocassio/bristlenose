@@ -82,8 +82,9 @@ source is applied the same way, so the same dialog is expected there (inferred).
 uv route and the one-liner run no downloaded `.exe`, so they are unaffected.
 
 So the unsigned period hits **every winget user**, not only people who download the
-installer by hand. The decision above rested on the opposite assumption; whether to
-submit unsigned anyway, or sign before the first submission, is reopened for Martin.
+installer by hand. The decision above rested on the opposite assumption, so it was
+reopened. **Decision (8 Oct 2026): buy the Certum certificate next month (November
+2026); held until then for cost.**
 
 ## What exists (on main since 5 Oct 2026; unreleased)
 

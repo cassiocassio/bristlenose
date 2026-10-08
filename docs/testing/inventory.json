@@ -8,11 +8,11 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 6505
+        "tests": 6536
       },
       {
         "basis": "test files",
-        "files": 146,
+        "files": 147,
         "kind": "frontend unit",
         "runner": "vitest",
         "source": "frontend/src/**/*.test.*",
@@ -789,6 +789,27 @@
           "push [main]",
           "pull_request [main]",
           "workflow_dispatch"
+        ]
+      },
+      {
+        "default_shell": null,
+        "file": "windows-installer.yml",
+        "jobs": [
+          {
+            "calls": null,
+            "id": "build",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "windows-latest"
+          }
+        ],
+        "name": "Windows installer",
+        "piped_steps": [],
+        "triggers": [
+          "workflow_dispatch",
+          "workflow_call",
+          "pull_request paths=packaging/windows/**,.github/workflows/windows-installer.yml",
+          "push [main] paths=packaging/windows/**,.github/workflows/windows-installer.yml"
         ]
       }
     ]

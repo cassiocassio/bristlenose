@@ -32,9 +32,11 @@ def test_constraints_match_the_dependencies_they_were_compiled_from() -> None:
 
 
 def test_the_digest_moves_when_a_dependency_does() -> None:
+    """Synthetic edit, not a real pin: a test keyed to one pin's text breaks the
+    day that pin is lifted, for a reason that has nothing to do with the digest."""
     lock = _lock()
     text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    bumped = text.replace('"av<19"', '"av<20"', 1)
+    bumped = text.replace("dependencies = [", 'dependencies = [\n    "not-a-real-package>=1",', 1)
     assert bumped != text
     assert lock.inputs_digest(bumped) != lock.inputs_digest(text)
 
@@ -44,9 +46,27 @@ def test_the_build_installs_against_the_constraints() -> None:
     assert '"--constraint", $constraints' in build
 
 
-def test_the_build_runs_the_smoke_tests() -> None:
+def test_the_build_runs_the_smoke_tests_and_heeds_them() -> None:
     build = (WIN / "build.ps1").read_text(encoding="utf-8")
-    assert '"smoke.ps1") -App $app' in build
+    call = build.index('"smoke.ps1") -App $app')
+    assert 'if ($LASTEXITCODE -ne 0) { throw "smoke tests failed" }' in build[call:call + 200]
+    # and an installer build cannot skip them
+    assert "if ($SkipSmoke -and $Installer) { throw" in build
+
+
+def test_the_build_refuses_an_installed_set_the_constraints_do_not_pin() -> None:
+    """--constraint pins only what it names; a PyPI wheel from a newer
+    pyproject could pull in an unpinned dependency at today's version."""
+    build = (WIN / "build.ps1").read_text(encoding="utf-8")
+    freeze = build.index("& uv pip freeze --python $py")
+    assert build.index('"--constraint", $constraints') < freeze
+    assert 'if ($drift.Count -gt 0) {' in build[freeze:]
+
+
+def test_a_manifest_build_must_validate() -> None:
+    build = (WIN / "build.ps1").read_text(encoding="utf-8")
+    assert 'Run winget @("validate", "--manifest", $manifestDir)' in build
+    assert "if ($Manifest -and -not (Get-Command winget" in build
 
 
 def test_the_smoke_tests_fixture_is_where_they_look() -> None:
@@ -99,8 +119,36 @@ def test_the_installer_refuses_while_bristlenose_runs() -> None:
     the aborted upgrade left bristlenose.exe without _internal. The check must be
     the file lock: a WMI query was refused to that user and failed open."""
     iss = (WIN / "bristlenose.iss").read_text(encoding="utf-8")
-    assert "fmOpenReadWrite or fmShareExclusive" in iss
+    # Share-all: a running image still refuses the write open, and a reader
+    # that shares (Defender, Explorer's preview) no longer reads as "running".
+    assert "TFileStream.Create(Exe, fmOpenReadWrite or fmShareDenyNone)" in iss
     assert "SWbemLocator')" not in iss
     for hook in ("function PrepareToInstall", "function InitializeUninstall"):
         body = iss.split(hook, 1)[1].split("\nend;", 1)[0]
         assert "BristlenoseRunning()" in body, hook
+
+
+def test_uninstall_never_deletes_the_install_folder_wholesale() -> None:
+    """winget passes --location through as /DIR=, so {app} can be a folder of
+    the user's; "filesandordirs {app}" would delete everything in it."""
+    import re
+
+    iss = (WIN / "bristlenose.iss").read_text(encoding="utf-8")
+    section = iss.split("[UninstallDelete]", 1)[1].split("\n[", 1)[0]
+    entries = [ln for ln in section.splitlines() if ln.startswith("Type:")]
+    assert entries, "no [UninstallDelete] entries"
+    for line in entries:
+        kind, name = re.match(r'Type: (\w+); Name: "([^"]+)"', line).groups()
+        assert not (kind == "filesandordirs" and name == "{app}"), line
+    assert 'Type: dirifempty; Name: "{app}"' in section
+
+
+def test_winget_reads_the_refusal_as_package_in_use() -> None:
+    """Silent mode shows no message: without this mapping a user sees only
+    "Installer failed with exit code: 7"."""
+    iss = (WIN / "bristlenose.iss").read_text(encoding="utf-8")
+    assert "function PrepareToInstall" in iss  # the refusal that exits 7
+    installer = (WIN / "winget" / "Bristlenose.Bristlenose.installer.yaml").read_text(
+        encoding="utf-8"
+    )
+    assert "- InstallerReturnCode: 7\n  ReturnResponse: packageInUse" in installer

@@ -9,8 +9,8 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 6505 | collected (expands parametrize — authoritative) | `tests/` |
-| `vitest` | frontend unit | 146 files | test files | `frontend/src/**/*.test.*` |
+| `pytest` | python unit/integration | 6536 | collected (expands parametrize — authoritative) | `tests/` |
+| `vitest` | frontend unit | 147 files | test files | `frontend/src/**/*.test.*` |
 | `BristlenoseTests` | swift unit | 1706 in 141 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 9 files | spec files | `e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts)` |
 
@@ -135,6 +135,12 @@
   - `build` · on `ubuntu-latest`
   - `publish-edge` · on `ubuntu-latest`
   - `publish-stable` · on `ubuntu-latest`
+
+### Windows installer (`windows-installer.yml`)
+
+- **Triggers:** workflow_dispatch; workflow_call; pull_request paths=packaging/windows/**,.github/workflows/windows-installer.yml; push [main] paths=packaging/windows/**,.github/workflows/windows-installer.yml
+- **Default shell:** GitHub default (`bash -e`, no pipefail) — no piped steps
+  - `build` · on `windows-latest`
 
 ## Build gates — both shipping entry points, in order
 

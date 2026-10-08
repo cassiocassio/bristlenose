@@ -167,7 +167,17 @@ if ($Installer) {
         "${env:ProgramFiles(x86)}\Inno Setup *\ISCC.exe", "$env:LOCALAPPDATA\Programs\Inno Setup *\ISCC.exe" |
         Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
     if (-not $iscc) { throw "Inno Setup (ISCC.exe) not found" }
-    Step ("ISCC {0}" -f (Get-Item $iscc).VersionInfo.ProductVersion)
+    # ISCC.exe carries no version resource (0.0.0.0) and its banner names only
+    # the major version; its Apps & Features entry has the full one.
+    $isccDir = Split-Path $iscc -Parent
+    $isccEntry = Get-ItemProperty -ErrorAction SilentlyContinue `
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*" |
+        Where-Object { $_.InstallLocation -and $_.InstallLocation.TrimEnd("\") -eq $isccDir } |
+        Select-Object -First 1
+    $isccVersion = if ($isccEntry) { $isccEntry.DisplayVersion } else { "version unknown" }
+    Step "ISCC: $iscc ($isccVersion)"
     # The whole version (0.35.0.post1, 0.36.0rc1), not just X.Y.Z, so it can
     # be compared with the wheel's.
     $versionLine = (& (Join-Path $app "bristlenose.exe") --version | Out-String).Trim()

@@ -218,7 +218,10 @@ if ($Installer) {
         }
         Step "manifest: $manifestDir"
         if ($ValidateWithSchema) {
-            Run $py @("-P", (Join-Path $PSScriptRoot "validate_manifest.py"), $manifestDir)
+            # In its own throwaway environment: jsonschema is not in the build
+            # venv, and adding it there would put it in the frozen set.
+            Run uv @("run", "--no-project", "--python", $Python, "--with", "jsonschema", "--with", "pyyaml",
+                (Join-Path $PSScriptRoot "validate_manifest.py"), $manifestDir)
         } else {
             Run winget @("validate", "--manifest", $manifestDir)
         }

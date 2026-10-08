@@ -67,6 +67,8 @@ def test_a_manifest_build_must_validate() -> None:
     build = (WIN / "build.ps1").read_text(encoding="utf-8")
     assert 'Run winget @("validate", "--manifest", $manifestDir)' in build
     assert '(Join-Path $PSScriptRoot "validate_manifest.py"), $manifestDir)' in build
+    # jsonschema is not in the build venv: the validator gets its own environment
+    assert '"--with", "jsonschema"' in build
     assert "if ($Manifest -and -not $ValidateWithSchema -and -not (Get-Command winget" in build
 
 

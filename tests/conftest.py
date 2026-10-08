@@ -168,6 +168,41 @@ def sample_quotes() -> list[ExtractedQuote]:
     ]
 
 
+_FIXTURES_ROOT = Path(__file__).resolve().parent / "fixtures"
+
+
+@pytest.fixture(autouse=True, scope="session")
+def no_log_file_in_committed_fixtures():
+    """Tests never write ``bristlenose.log`` into the committed fixture tree.
+
+    ``create_app(project_dir=<smoke-test fixture>)`` calls ``setup_logging``,
+    which opened a RotatingFileHandler on the ONE fixture log from every xdist
+    worker at once. At 5 MB a worker rolls over by renaming the file, and
+    Windows refuses that while other workers hold it open, so a later open
+    raised PermissionError. The failure moved between tests from run to run
+    (0.36.0's push CI, 8 Oct 2026: green at the strict run on the same
+    commit, red on the push run). It also grew a 14 MB untracked log in the
+    tree on every Mac. Terminal logging is unchanged, and so is the file log for any
+    other directory, which ``test_logging.py`` covers in ``tmp_path``.
+
+    Session-scoped because module-scoped fixtures build the app before any
+    per-test fixture runs: at function scope the patch arrived too late and
+    the fixture log was still written.
+    """
+    import bristlenose.logging as bn_logging
+
+    real = bn_logging.setup_logging
+
+    def setup_logging(*, output_dir=None, verbose=False):
+        if output_dir is not None and _FIXTURES_ROOT in Path(output_dir).resolve().parents:
+            output_dir = None
+        real(output_dir=output_dir, verbose=verbose)
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(bn_logging, "setup_logging", setup_logging)
+        yield
+
+
 @pytest.fixture
 def which_is_shutil_which(monkeypatch):
     """For tests that choose what is installed by stubbing ``shutil.which``.

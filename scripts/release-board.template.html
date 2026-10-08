@@ -173,8 +173,12 @@
   .hist-svg .rel{cursor:pointer}
   .hist-svg .rel:focus:not(:focus-visible){outline:none}
   .hist-svg .rel:hover text,.hist-svg .rel.sel text{fill:var(--now);font-weight:600}
-  .hist-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:8px 0;color:var(--ink-2)}
-  .hist-legend svg{vertical-align:-3px;margin-right:4px}
+  .hist-head{display:flex;align-items:flex-start;gap:10px 24px;margin:0 0 6px}   /* no wrap: the key shrinks and wraps its own text instead of dropping a line */
+  .hist-head .hist-ctl{margin:0;flex:none}
+  .hist-legend{margin-left:auto;flex:0 1 auto;min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,auto));gap:3px 18px;padding:8px 12px 9px;border:1px solid var(--rule2);border-radius:6px;background:var(--panel);color:var(--ink-2);font-size:10.5px;line-height:1.35;max-width:100%}
+  .hist-legend .hist-key{grid-column:1/-1;font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 2px}
+  .hist-legend svg{vertical-align:-3px;margin-right:5px}
+  @media (max-width: 760px){ .hist-head{flex-wrap:wrap} .hist-legend{grid-template-columns:minmax(0,auto);margin-left:0} }
   .hist-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px 24px;margin-top:6px}
   .hist-cols h3{font-size:11px;margin:4px 0 6px;font-weight:600}
   table.hist-t{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
@@ -410,7 +414,7 @@
     var pick = $("select","v runpick"); pick.id = "run-pick"; pick.setAttribute("aria-label", "show another run");
     data.runs.forEach(function(r){
       var day = r.started ? new Date(r.started) : null;
-      var o = $("option", null, (/^\d/.test(r.id) ? "v" : "")+r.id+(day && !isNaN(day.getTime()) ? " · "+day.toLocaleDateString(undefined, {day:"numeric", month:"short"}) : "")+(r.id === liveRun ? " · this board's run" : ""));
+      var o = $("option", null, (/^\d/.test(r.id) ? "v" : "")+r.id+(day && !isNaN(day.getTime()) ? " · "+day.toLocaleDateString(undefined, {day:"numeric", month:"short"}) : "")+(r.id === liveRun ? " · live" : ""));
       o.value = r.id; if (r.id === data.version) o.selected = true; add(pick, o);
     });
     pick.addEventListener("change", function(){
@@ -1054,7 +1058,8 @@
         +" · "+Math.round(100*cur.y[cur.y.length-1])+"% yield"+(named.length ? " · new: "+named.join("; ") : " · the machine as first recorded");
       if (scrollTo && cur.cols.length) { var g0 = cur.cols[cur.cols.length - 1].g; if (g0 && typeof g0.scrollIntoView === "function") try { g0.scrollIntoView({block: "nearest", inline: "center", behavior: "smooth"}); } catch(e) {} }
     };
-    add(P, ctl);
+    // controls left, the key top right in its own keylined box (owner, 8 Oct 2026)
+    var head = $("div","hist-head"); add(head, ctl); add(P, head);
     var wrap = $("div","hist-wrap"), scroll = $("div","hist-scroll");
     scroll.tabIndex = 0; scroll.setAttribute("aria-label", "release attempts, newest first — scroll right for older");
     scroll.appendChild(svg); wrap.appendChild(fsvg); add(wrap, scroll); add(P, wrap);
@@ -1063,11 +1068,11 @@
     if (window.__histScroll) requestAnimationFrame(function(){ scroll.scrollLeft = window.__histScroll; });
     scroll.addEventListener("scroll", function(){ window.__histScroll = scroll.scrollLeft; }, {passive: true});
     // legend: identity never by colour alone
-    var lg = $("div","hist-legend");
+    var lg = $("div","hist-legend"); lg.setAttribute("role", "note"); lg.setAttribute("aria-label", "key"); add(lg, $("b", "hist-key", "Key"));
     var sw = function(kind, label){ var s = $("span"); var m = S("svg", {width: 14, height: 14, viewBox: "0 0 14 14"}); m.appendChild(glyph(kind, 7, 7)); s.appendChild(m); s.appendChild(document.createTextNode(label)); return s; };
     add(lg, sw("fail", "failed at this step"), sw("stopped", "stopped (killed or by hand; no terminal event)"), sw("skipped", "skipped an irreversible step"), sw("completed", "reached the end"),
         $("span", null, "▸ entered mid-line (a resume)"), $("span", null, "┄ curve: the same release's next attempt"), $("span", null, "newest beside the funnel — scroll right for older releases"), $("span", null, "numbered rule: a release-machine change (list below)"));
-    add(P, lg);
+    add(head, lg);
     var selBox = $("div","hist-sel"); add(P, selBox);
     paintSel();
 

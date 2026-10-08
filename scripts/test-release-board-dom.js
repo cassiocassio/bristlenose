@@ -186,6 +186,8 @@ function section4() {
     const { d: d7 } = load(htmlFor(done));
     eq("a run with no lock and nothing running has no live mark", null, d7.querySelector("#pane-history .hist-live"));
   }
+  { const lg = d.querySelector("#pane-history .hist-legend");
+    eq("the key sits beside the controls, in its own titled box", true, !!lg && lg.parentNode.classList.contains("hist-head") && lg.firstChild.textContent === "Key" && lg.previousSibling === d.querySelector("#pane-history .hist-ctl")); }
   eq("there is a table view of the same numbers", true, !!d.querySelector("#pane-history table.hist-t"));
   eq("every SVG title is text, never markup", true, [...svg.querySelectorAll("title")].every(t => t.children.length === 0));
   // (a reload restoring the view is not asserted: each JSDOM gets its own storage)
@@ -324,7 +326,7 @@ async function section6() {
     const { d, w } = load(htmlFor(m));
     const pick = d.getElementById("run-pick");
     eq("a served board's version is a picker of every run", ["1.0.0", "0.9.0"], pick ? [...pick.options].map(o => o.value) : null);
-    eq("…on this run, named as this board's", true, pick.value === "1.0.0" && /this board's run/.test(pick.options[0].textContent));
+    eq("…on this run, named as this board's", true, pick.value === "1.0.0" && / · live$/.test(pick.options[0].textContent));
     w.close();
   }
   // the same server, showing 0.9.0

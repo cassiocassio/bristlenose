@@ -952,6 +952,41 @@ class Server(unittest.TestCase):
         rb.remove_handshake(self.hs)   # not ours: left alone
         self.assertTrue(self.hs.exists())
 
+    def test_replay_route_serves_the_lines_frames_behind_the_token(self):
+        self.assertEqual(self.get("/replay.json")[0], 404)   # no token, nothing here
+        st, hd, body = self.get("/replay.json" + self.k)
+        self.assertEqual(st, 200)
+        self.assertEqual(hd["Cache-Control"], "no-store")
+        j = json.loads(body)
+        self.assertEqual(j["version"], "1.0.0")
+        self.assertEqual([f["i"] for f in j["frames"]], [0, 1, 2])
+        # the line and nothing else: no history, no panes the line does not draw
+        self.assertEqual(set(j["frames"][0]), {"i", "of", "caption", "now", "line", "lane_ids"})
+        self.assertEqual(j["frames"][2]["now"], "2026-09-05T10:00:01Z")
+        # the last frame IS the board, liveness included: this run holds no lock, so
+        # bump reads stranded on both (it once read "not alive" from the copy alone)
+        board = json.loads(self.get("/board.json" + self.k)[2])
+        self.assertEqual(stations({"line": j["frames"][-1]["line"]}), stations(board))
+        # a run that takes its lock without a new ledger line: the last frame follows the board
+        lock = self.t.root / ".release" / "1.0.0" / ".lock"
+        lock.mkdir()
+        (lock / "pid").write_text(str(os.getpid()))
+        self.state.refresh(force=True)
+        j = json.loads(self.get("/replay.json" + self.k)[2])
+        self.assertEqual(stations({"line": j["frames"][-1]["line"]})["bump"], "running")
+        self.assertEqual(stations({"line": j["frames"][1]["line"]})["bump"], "pending")
+        # a new ledger line is a new frame on the next ask; a heartbeat alone is not a rebuild
+        self.state.replay()
+        first = self.state._replay[1]
+        (self.t.root / ".release" / "1.0.0" / "heartbeat").write_text("1\tbump\t60\tx\n")
+        self.state.replay()
+        self.assertIs(self.state._replay[1], first, "a heartbeat must not rebuild the frames")
+        with open(self.t.root / ".release" / "1.0.0" / "events.jsonl", "a") as fh:
+            fh.write(ev("2026-09-05T10:00:09Z", "bump", "ok", "8s") + "\n")
+        j = json.loads(self.get("/replay.json" + self.k)[2])
+        self.assertEqual(len(j["frames"]), 4)
+        self.assertEqual({s["id"]: s["state"] for s in j["frames"][3]["line"]["stations"]}["bump"], "ok")
+
     def test_log_route_serves_a_tail_only_with_logs_and_only_known_steps(self):
         (self.t.root / ".release" / "1.0.0" / "logs").mkdir(exist_ok=True)
         (self.t.root / ".release" / "1.0.0" / "logs" / "bump.1.log").write_text("one\ntwo\n")

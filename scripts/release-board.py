@@ -1238,7 +1238,13 @@ def replay_frames(root: Path, version: str) -> list[dict]:
                 (trun / "bn-events.log").write_text("".join(ln + "\n" for ln in keep), encoding="utf-8")
             fold = read_ledger(trun)["fold"]
             running = any(f.get("status") == "running" for f in fold.values())
-            live = {"lock": running and i < len(ledger), "pid": None, "alive": running and i < len(ledger), "heartbeat": None, "replay": True}
+            if i < len(ledger):
+                live = {"lock": running, "pid": None, "alive": running, "heartbeat": None, "replay": True}
+            else:
+                # The last frame IS the board, liveness included: read the real run
+                # dir (the copy has no .lock). Assuming "not alive" here drew a run
+                # still in progress as stranded on the live board's line replay.
+                live = read_liveness(run_dir)
             model = build_model(troot, version, False, liveness_override=live)
             model["now"] = upto   # the frame's clock: a running station's elapsed counts from here, not from today
             caption = "before the first event"
@@ -1253,6 +1259,16 @@ def replay_frames(root: Path, version: str) -> list[dict]:
             frames.append({"i": i, "of": len(ledger), "caption": caption, "model": model})
     return frames
 
+
+def line_frames(root: Path, version: str) -> list[dict]:
+    """THE LINE's replay, for the live board's replay control: replay_frames
+    projected to the one pane that animates. Not a second frame model — the same
+    generator on the same ledger prefixes, minus every slice the line does not
+    draw (the cross-release history above all, which no frame of one run needs).
+    0.34.0's 55 frames: 1.6 MB as full models, 178 KB as this."""
+    return [{"i": f["i"], "of": f["of"], "caption": f["caption"], "now": f["model"].get("now"),
+             "line": f["model"]["line"], "lane_ids": f["model"]["build"].get("lane_ids") or []}
+            for f in replay_frames(root, version)]
 
 def render_html(model: dict, template: Path) -> str:
     tpl = template.read_text(encoding="utf-8")
@@ -1327,12 +1343,42 @@ class BoardState:
         self.exit_reason: str | None = None
         self.request_exit = lambda reason: None   # serve_board wires this to httpd.shutdown
         self._stop = threading.Event()
+        self._replay: tuple | None = None   # (ledger+sink stamp, frames): the line's replay, built on first ask
+        self._replay_lock = threading.Lock()
         # the previous run cannot change while this one is live: read it once
         try:
             conf = read_conf(root / "scripts" / "project.conf")
             self.previous = previous_run(root / ".release", version, conf)
         except Exception:
             self.previous = None
+
+    def replay(self) -> list[dict]:
+        """The line's frames, rebuilt only when the ledger or the sink moved —
+        a heartbeat or a log line does not change what any frame shows. One
+        build at a time; ~2 s for a long run, off the watcher thread."""
+        key = []
+        for p in (self.run_dir / "events.jsonl", self.run_dir / "bn-events.log"):
+            try:
+                st = p.stat()
+                key.append((st.st_mtime_ns, st.st_size))
+            except OSError:
+                key.append((None, None))   # the watcher's stamp spells an absent file the same way
+        with self._replay_lock:
+            if self._replay is None or self._replay[0] != key:
+                self._replay = (key, line_frames(self.root, self.version))
+            frames = self._replay[1]
+        # Liveness moves without the ledger (a lock taken, a pid gone), so the
+        # cached last frame can go stale. The last frame is the board: take its
+        # line from the current model, so replay ends exactly where live resumes.
+        # Only when the model was built from the same ledger and sink — the
+        # watcher can lag a fresh append by a poll.
+        with self.lock:
+            line = self.model and self.model.get("line")
+            seen = {n: (m, z) for n, m, z in (self.stamp or ()) if n in ("events.jsonl", "bn-events.log")}
+        same = [seen.get("events.jsonl"), seen.get("bn-events.log")] == key
+        if frames and line and same:
+            frames = frames[:-1] + [{**frames[-1], "line": line}]
+        return frames
 
     def newest(self) -> tuple:
         """(name, mtime_ns, size) of every watched file — size too, since two writes
@@ -1526,6 +1572,13 @@ class BoardHandler(http.server.BaseHTTPRequestHandler):
             entry = read_logs(st.run_dir, [sid], True, st.root).get(sid)
             body = json.dumps({"step": sid, **(entry or {})}, ensure_ascii=True, allow_nan=False).encode("utf-8")
             self._send(200 if entry else 404, "application/json; charset=utf-8", body)
+        elif path == "/replay.json":
+            try:
+                body = json.dumps({"version": st.version, "frames": st.replay()}, ensure_ascii=True, allow_nan=False).encode("utf-8")
+            except Exception as e:  # noqa: BLE001 — a bad replay is the control's state, never the board's
+                self._send(500, "application/json; charset=utf-8", json.dumps({"error": f"{type(e).__name__}: {e}"}).encode("utf-8"))
+                return
+            self._send(200, "application/json; charset=utf-8", body)
         elif path == "/health":
             with st.lock:
                 body = json.dumps({"generation": st.generation, "version": st.version, "error": st.error, "changed_at": st.changed_at}).encode("utf-8")

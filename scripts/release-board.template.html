@@ -100,6 +100,27 @@
   .station.soft i{border-style:dashed}
   .station b{font-size:10.5px;font-weight:500;margin-top:5px;text-align:center;white-space:nowrap}
   .station small{font:10px var(--mono);color:var(--mute)}
+  /* the line's replay: a control top right, a bar under the heading while replaying */
+  .line h2 .r{margin-left:auto}
+  .rpbtn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:1px solid var(--rule2);border-radius:5px;background:var(--panel);color:var(--ink-2);cursor:pointer;flex:none}
+  .rpbtn svg{width:13px;height:13px}
+  .rpbtn:hover{color:var(--now);border-color:var(--now-bd);background:var(--now-bg)}
+  .rpbtn:focus-visible,.rplive:focus-visible{outline:2px solid var(--now);outline-offset:1px}
+  .rpbtn:disabled{opacity:.35;cursor:default} .rpbtn:disabled:hover{color:var(--ink-2);border-color:var(--rule2);background:var(--panel)}
+  .rpbtn[aria-busy="true"]{opacity:.5;cursor:progress} .rpbtn.err{color:var(--warn);border-color:var(--warn-bd)}
+  #line-replay[aria-pressed="true"]{color:var(--now);border-color:var(--now-bd);background:var(--now-bg)}
+  .line.replaying{border-color:var(--warn-bd);box-shadow:0 0 0 2px var(--warn-bg)}
+  .rp{display:flex;align-items:center;gap:6px;margin:0 0 8px;font:11px/1.3 var(--font);flex-wrap:wrap}
+  .rptag{font-weight:600;letter-spacing:.07em;font-size:9.5px;color:var(--warn);background:var(--warn-bg);border:1px solid var(--warn-bd);border-radius:4px;padding:2px 5px}
+  .rpscrub{position:relative;flex:1 1 180px;min-width:140px;height:22px}
+  .rpscrub input{position:absolute;inset:0;width:100%;margin:0;accent-color:var(--warn);background:transparent}
+  .rpmarks{position:absolute;left:7px;right:7px;top:0;bottom:0;pointer-events:none}
+  .rpmarks i{position:absolute;top:2px;width:2px;height:6px;margin-left:-1px;border-radius:1px}
+  .rpmarks i.fail{background:var(--bad);height:7px} .rpmarks i.att{background:var(--soft)}
+  .rpcount{font:10.5px var(--mono);color:var(--mute);white-space:nowrap}
+  .rpcap{font:10.5px var(--mono);color:var(--ink-2);flex:1 1 260px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rpcap.fail{color:var(--bad);font-weight:600}
+  .rplive{font:inherit;font-size:11px;padding:3px 10px;border:1px solid var(--now-bd);border-radius:5px;background:var(--now-bg);color:var(--now);cursor:pointer;font-weight:600}
   .station.irrev-after{border-right:1px dashed var(--bad);padding-right:4px}
   /* main grid */
   /* three columns: before the tag · after the tag · the stream. The gutters set
@@ -338,6 +359,36 @@
   // The one place an href is set. Every url comes from the generator's links
   // (project.conf constants + validated ids), never from a sink or ledger string.
   var link = function(text, url, cls){ if (!url) return $("span", cls, text); var a = $("a", cls, text); a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; return a; };
+  // ── the line ────────────────────────────────────────────────────────────
+  // A function of its own because two callers draw it: render, from the
+  // model, and the line's replay, from a frame ({line, now, build.lane_ids}).
+  var lineHook = null;
+  var lineEl = function(data){
+  // Station → pane. Build lanes are mapped from data.build.lane_ids; these are
+  // the rest. test-release-board.py asserts every key is a station id in the
+  // fixture's steps.tbl and every value a pane this file creates.
+  var CLICK_MAP = {"preflight":"preflight","ci-green":"ci","strict-ci":"ci","testflight":"channels","dmg":"channels","tag":"tag","snap":"channels","snap-stable":"channels"};
+
+  var lineP = $("div","line"); lineP.id = "line";
+  var lh = $("h2"); add(lh, $("span",null,"THE LINE"), $("b",null, data.line.source==="steps.tbl" ? "steps.tbl" : "ledger order (no steps.tbl)"), $("span","r", (data.line.stations.length)+" stations"+(data.line.unknown_steps.length?" · "+data.line.unknown_steps.length+" unknown":"")+(data.line.ledger_unparsed?" · "+data.line.ledger_unparsed+" unparsed":"")+(data.line.ledger_partial?" · partial line":"")));
+  if (lineHook) lineHook(lh, data);   // the replay control, live boards only
+  lh.style.margin = "0 0 6px"; lh.style.alignItems = "center"; lh.style.font = "600 10.5px var(--font)"; lh.style.color = "var(--mute)"; lh.style.letterSpacing = ".07em"; lh.style.display = "flex"; lh.style.gap = "8px";
+  add(lineP, lh);
+  var track = $("div","track");
+  data.line.stations.forEach(function(s){
+    var st = $("div","station "+s.state+" "+s.kind);
+    idle(st, s.state === "pending" || s.state === "later" || s.state === "not-in-this-run");
+    if (s.id === "tag") st.classList.add("irrev-after");
+    var sm = $("small"); if (s.state === "running" && s.ts) { sm.setAttribute("data-since", s.ts); if (s.attempt>1) sm.setAttribute("data-attempt", s.attempt); sm.textContent = "running · "+elapsed(((data.now ? Date.parse(data.now) : Date.now())-Date.parse(s.ts))/1000)+(s.attempt>1 ? " · #"+s.attempt : ""); } else sm.textContent = s.state + (s.elapsed!=null ? " · "+elapsed(s.elapsed) : (s.est && s.state==="pending" ? " · est "+s.est : "")) + (s.attempt>1 ? " · #"+s.attempt : "");
+    if (s.state === "fail" && s.fclass) sm.textContent += " · " + s.fclass;
+    add(st, $("i"), $("b",null,s.id), sm);
+    st.title = (s.label||s.id)+" — "+s.kind+(s.consequence?" — "+s.consequence:"");
+    st.addEventListener("click", function(){ var target = (data.build.lane_ids||[]).indexOf(s.id) >= 0 ? "build-"+s.id : CLICK_MAP[s.id]; var el = target && document.getElementById("pane-"+target); if (el) el.scrollIntoView({behavior:"smooth", block:"center"}); });
+    add(track, st);
+  });
+  add(lineP, track);
+  return lineP;
+  };
   var render = function(data, root){
   var L = data.links || {channels: {}};
   var chip = function(state, label, evidence){ var c = $("div","chip "+(state||"no-data")); add(c, $("i","dot"), $("span",null,String(label).replace(/https?:\/\/[^\s"')]+/g, shortUrl)));
@@ -426,30 +477,7 @@
   add(top, $("span","m", (data.live ? "model built " : "snapshot generated ")+fmtT(data.generated)+" · newest source "+fmtT(h.newest_source)+(h.with_logs ? " · CONTAINS RAW BUILD LOGS — do not attach to anything" : "")));
   add(screen, top);
 
-  // Station → pane. Build lanes are mapped from data.build.lane_ids; these are
-  // the rest. test-release-board.py asserts every key is a station id in the
-  // fixture's steps.tbl and every value a pane this file creates.
-  var CLICK_MAP = {"preflight":"preflight","ci-green":"ci","strict-ci":"ci","testflight":"channels","dmg":"channels","tag":"tag","snap":"channels","snap-stable":"channels"};
-
-  // ── the line ────────────────────────────────────────────────────────────
-  var lineP = $("div","line"); lineP.id = "line";
-  var lh = $("h2"); add(lh, $("span",null,"THE LINE"), $("b",null, data.line.source==="steps.tbl" ? "steps.tbl" : "ledger order (no steps.tbl)"), $("span","r", (data.line.stations.length)+" stations"+(data.line.unknown_steps.length?" · "+data.line.unknown_steps.length+" unknown":"")+(data.line.ledger_unparsed?" · "+data.line.ledger_unparsed+" unparsed":"")+(data.line.ledger_partial?" · partial line":"")));
-  lh.style.margin = "0 0 6px"; lh.style.font = "600 10.5px var(--font)"; lh.style.color = "var(--mute)"; lh.style.letterSpacing = ".07em"; lh.style.display = "flex"; lh.style.gap = "8px";
-  add(lineP, lh);
-  var track = $("div","track");
-  data.line.stations.forEach(function(s){
-    var st = $("div","station "+s.state+" "+s.kind);
-    idle(st, s.state === "pending" || s.state === "later" || s.state === "not-in-this-run");
-    if (s.id === "tag") st.classList.add("irrev-after");
-    var sm = $("small"); if (s.state === "running" && s.ts) { sm.setAttribute("data-since", s.ts); if (s.attempt>1) sm.setAttribute("data-attempt", s.attempt); sm.textContent = "running · "+elapsed(((data.now ? Date.parse(data.now) : Date.now())-Date.parse(s.ts))/1000)+(s.attempt>1 ? " · #"+s.attempt : ""); } else sm.textContent = s.state + (s.elapsed!=null ? " · "+elapsed(s.elapsed) : (s.est && s.state==="pending" ? " · est "+s.est : "")) + (s.attempt>1 ? " · #"+s.attempt : "");
-    if (s.state === "fail" && s.fclass) sm.textContent += " · " + s.fclass;
-    add(st, $("i"), $("b",null,s.id), sm);
-    st.title = (s.label||s.id)+" — "+s.kind+(s.consequence?" — "+s.consequence:"");
-    st.addEventListener("click", function(){ var target = (data.build.lane_ids||[]).indexOf(s.id) >= 0 ? "build-"+s.id : CLICK_MAP[s.id]; var el = target && document.getElementById("pane-"+target); if (el) el.scrollIntoView({behavior:"smooth", block:"center"}); });
-    add(track, st);
-  });
-  add(lineP, track);
-  add(screen, lineP);
+  add(screen, lineEl(data));
 
   // ── activity band ───────────────────────────────────────────────────────
   var act = data.activity;
@@ -1084,6 +1112,141 @@
   add(screen, foot);
   };
 
+  // ── the line's replay (live boards only) ──────────────────────────────────
+  // Owner's decisions, 8 Oct 2026 (docs/design-release-board.md §8): only THE
+  // LINE moves; the whole release, every attempt; frames evenly spaced, about
+  // ten seconds end to end; the last frame holds, labelled, until "back to
+  // live". Frames are the generator's own replay_frames, projected to the line
+  // and fetched from /replay.json on each open — never inlined, never a second
+  // frame model. While replaying, a live patch leaves #line alone; everything
+  // else on the board stays live. Reduced motion: the replay opens paused on
+  // the first frame, and plays only when asked.
+  var rp = null;   // {frames, at, timer, attempts, ctl} while replaying
+  if (!payload.replay && payload.live) (function(){
+    var NS = "http://www.w3.org/2000/svg";
+    var svg = function(paths, filled){
+      var g = document.createElementNS(NS, "svg"); g.setAttribute("viewBox", "0 0 16 16"); g.setAttribute("aria-hidden", "true");
+      g.setAttribute("fill", filled ? "currentColor" : "none"); g.setAttribute("stroke", filled ? "none" : "currentColor");
+      g.setAttribute("stroke-width", "1.5"); g.setAttribute("stroke-linecap", "round"); g.setAttribute("stroke-linejoin", "round");
+      paths.forEach(function(d){ var e = document.createElementNS(NS, "path"); e.setAttribute("d", d); g.appendChild(e); });
+      return g;
+    };
+    var GLYPH = {
+      replay: function(){ return svg(["M3.2 6.2A5 5 0 1 1 3 9.6", "M3 2.6v3.8h3.8"]); },
+      play:   function(){ return svg(["M5 3.2v9.6l7.6-4.8z"], true); },
+      pause:  function(){ return svg(["M4.4 3.2h2.4v9.6H4.4z", "M9.2 3.2h2.4v9.6H9.2z"], true); },
+      back:   function(){ return svg(["M3.6 3.4v9.2", "M12.4 3.4v9.2L5.6 8z"], true); },
+      fwd:    function(){ return svg(["M12.4 3.4v9.2", "M3.6 3.4v9.2L10.4 8z"], true); }
+    };
+    var btn = function(glyph, label, id){ var b = $("button","rpbtn"); b.type = "button"; if (id) b.id = id; b.appendChild(GLYPH[glyph]()); b.title = label; b.setAttribute("aria-label", label); return b; };
+    var reduced = function(){ try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch(e) { return false; } };
+    var DWELL = function(n){ return Math.max(120, Math.min(1000, Math.round(10000 / Math.max(1, n - 1)))); };   // evenly spaced, ~10 s
+
+    var frameData = function(f){ return {line: f.line, now: f.now, build: {lane_ids: f.lane_ids || []}}; };
+    var pause = function(){ if (rp && rp.timer) { clearInterval(rp.timer); rp.timer = null; } paintCtl(); };
+    var show = function(i){
+      if (!rp) return;
+      rp.at = Math.max(0, Math.min(rp.frames.length - 1, i));
+      var f = rp.frames[rp.at], line = document.getElementById("line"); if (!line) return;
+      var fresh = lineEl(frameData(f));
+      // swap the track and the count, never the controls: a keyboard user's focus stays put
+      var ot = line.querySelector(".track"), nt = fresh.querySelector(".track"); if (ot && nt) ot.replaceWith(nt);
+      var oc = line.querySelector("h2 .r"), nc = fresh.querySelector("h2 .r"); if (oc && nc) oc.textContent = nc.textContent;
+      paintCtl();
+      if (typeof tick === "function") tick();
+    };
+    var play = function(){
+      if (!rp) return;
+      if (rp.at >= rp.frames.length - 1) show(0);
+      if (rp.timer) clearInterval(rp.timer);
+      rp.timer = setInterval(function(){ if (!rp) return; if (rp.at >= rp.frames.length - 1) { pause(); return; } show(rp.at + 1); }, DWELL(rp.frames.length));
+      paintCtl();
+    };
+    var buildCtl = function(){
+      var c = $("div","rp"); c.id = "line-replay-ctl"; c.setAttribute("role", "group"); c.setAttribute("aria-label", "replay of this run's line");
+      var tag = $("span","rptag","REPLAY");
+      var back = btn("back", "step back (←)", "rp-back"), pp = btn("play", "play (space)", "rp-play"), fwd = btn("fwd", "step forward (→)", "rp-fwd");
+      var scrub = $("div","rpscrub"), marks = $("div","rpmarks"), range = $("input"); range.type = "range"; range.id = "rp-range"; range.min = "0"; range.step = "1"; range.setAttribute("aria-label", "frame");
+      add(scrub, marks, range);
+      var count = $("span","rpcount"), cap = $("span","rpcap");
+      var live = $("button","rplive","back to live"); live.type = "button"; live.id = "rp-live"; live.title = "back to the live line (Esc)";
+      back.addEventListener("click", function(){ pause(); show(rp.at - 1); });
+      fwd.addEventListener("click", function(){ pause(); show(rp.at + 1); });
+      pp.addEventListener("click", function(){ if (rp.timer) pause(); else play(); });
+      range.addEventListener("input", function(){ var to = Number(range.value); pause(); show(to); });   // read first: pause() repaints the range
+      live.addEventListener("click", function(){ exit(); });
+      add(c, tag, back, pp, fwd, scrub, count, cap, live);
+      return {el: c, pp: pp, back: back, fwd: fwd, range: range, marks: marks, count: count, cap: cap};
+    };
+    var paintCtl = function(){
+      if (!rp) return;
+      var k = rp.ctl, n = rp.frames.length, f = rp.frames[rp.at];
+      while (k.pp.firstChild) k.pp.removeChild(k.pp.firstChild);
+      k.pp.appendChild(GLYPH[rp.timer ? "pause" : "play"]()); k.pp.setAttribute("aria-label", rp.timer ? "pause (space)" : "play (space)"); k.pp.title = k.pp.getAttribute("aria-label");
+      k.pp.setAttribute("aria-pressed", String(!!rp.timer));
+      k.back.disabled = rp.at === 0; k.fwd.disabled = rp.at === n - 1;
+      k.range.max = String(n - 1); k.range.value = String(rp.at);
+      k.count.textContent = "frame "+rp.at+" of "+(n - 1)+(rp.attempts[rp.at] ? " · attempt "+rp.attempts[rp.at]+" of "+rp.attempts[n - 1] : "");
+      var rest = f.now ? String(f.caption).replace(/^\S+\s+/, "") : String(f.caption);
+      k.cap.textContent = (f.now ? fmtT(f.now)+"  " : "") + rest + (rp.at === n - 1 ? "  · last frame — the line as it stands" : "");
+      k.cap.title = f.caption;
+      k.cap.className = "rpcap" + (/ fail\b/.test(f.caption) ? " fail" : "");
+    };
+    var attach = function(){
+      // (re)decorate whichever #line is in the page: on open, and after a live re-render rebuilt the screen
+      var line = document.getElementById("line"); if (!line || !rp) return;
+      line.classList.add("replaying");
+      var h = line.querySelector("h2"); if (h && rp.ctl.el.parentNode !== line) h.parentNode.insertBefore(rp.ctl.el, h.nextSibling);
+      var b = document.getElementById("line-replay"); if (b) b.setAttribute("aria-pressed", "true");
+      show(rp.at);
+    };
+    var exit = function(){
+      if (!rp) return;
+      pause(); rp = null;
+      var line = document.getElementById("line");
+      if (line && latest) { var nl = lineEl(latest); line.replaceWith(nl); }
+      if (typeof tick === "function") tick();
+      var b = document.getElementById("line-replay"); if (b) b.focus();
+    };
+    var open = function(b){
+      if (typeof fetch !== "function") return;
+      b.setAttribute("aria-busy", "true"); b.classList.remove("err");
+      fetch("/replay.json"+(payload.live.token ? "?k="+encodeURIComponent(payload.live.token) : ""), {cache: "no-store"})
+        .then(function(r){ return r.json().then(function(j){ if (!r.ok || !j.frames) throw new Error(j && j.error || "HTTP "+r.status); return j; }); })
+        .then(function(j){
+          b.removeAttribute("aria-busy");
+          if (!j.frames.length) throw new Error("no frames");
+          pause();
+          var att = 0, attempts = j.frames.map(function(f){ if (/^\S+\s+run started\b/.test(f.caption)) att++; return att; });
+          rp = {frames: j.frames, at: 0, timer: null, attempts: attempts, ctl: rp && rp.ctl || buildCtl()};
+          var n = j.frames.length, marks = rp.ctl.marks; marks.textContent = "";
+          j.frames.forEach(function(f, i){
+            var kind = / fail\b/.test(f.caption) ? "fail" : (i > 0 && attempts[i] !== attempts[i - 1] ? "att" : null);
+            if (!kind) return;
+            var m = $("i", kind); m.style.left = (n > 1 ? 100 * i / (n - 1) : 0)+"%"; m.title = "frame "+i+": "+f.caption; add(marks, m);
+          });
+          attach();
+          if (!reduced()) play();
+        })
+        .catch(function(e){ b.removeAttribute("aria-busy"); b.classList.add("err"); b.title = "replay unavailable — "+(e && e.message ? e.message : e); b.setAttribute("aria-label", b.title); });
+    };
+    lineHook = function(h2, data){
+      var b = btn("replay", "replay this run's line — every attempt, about 10 s", "line-replay");
+      b.setAttribute("aria-pressed", String(!!rp));
+      b.addEventListener("click", function(){ open(b); });
+      add(h2, b);
+    };
+    window.__lineReplay = {active: function(){ return !!rp; }, reattach: attach};
+    document.addEventListener("keydown", function(e){
+      if (!rp || e.metaKey || e.ctrlKey || e.altKey) return;
+      var t = e.target && e.target.tagName; if (t === "INPUT" || t === "SELECT" || t === "TEXTAREA" || (t === "BUTTON" && (e.key === " " || e.key === "Enter"))) return;
+      if (e.key === "ArrowLeft") { pause(); show(rp.at - 1); e.preventDefault(); }
+      else if (e.key === "ArrowRight") { pause(); show(rp.at + 1); e.preventDefault(); }
+      else if (e.key === " ") { if (rp.timer) pause(); else play(); e.preventDefault(); }
+      else if (e.key === "Escape") { exit(); e.preventDefault(); }
+    });
+  })();
+
   var latest = null;
   if (payload.replay) {
     // ── replay scrubber: a design tool over real frames; never on the real board ──
@@ -1122,13 +1285,14 @@
     for (var i = 0; i < els.length; i++) { els[i].textContent = age(els[i].getAttribute("data-ts")); var pane = els[i].closest(".panel"); if (pane) pane.classList.toggle("fresh", (now - Date.parse(els[i].getAttribute("data-ts")))/1000 < PANE_FRESH_S); }
     var since = document.querySelectorAll("[data-since]");
     var clock = latest && latest.now ? Date.parse(latest.now) : now;   // a replay frame keeps its own clock
-    for (var j = 0; j < since.length; j++) since[j].textContent = "running · "+elapsed((clock - Date.parse(since[j].getAttribute("data-since")))/1000)+(since[j].getAttribute("data-attempt") ? " · #"+since[j].getAttribute("data-attempt") : "");
+    var rpClock = rp && rp.frames[rp.at].now ? Date.parse(rp.frames[rp.at].now) : null;   // the line under replay keeps its frame's clock
+    for (var j = 0; j < since.length; j++) since[j].textContent = "running · "+elapsed(((rpClock != null && since[j].closest("#line") ? rpClock : clock) - Date.parse(since[j].getAttribute("data-since")))/1000)+(since[j].getAttribute("data-attempt") ? " · #"+since[j].getAttribute("data-attempt") : "");
     var lv = latest && latest.liveness, fresh = false;
     if (lv && lv.replay) fresh = true;
     else if (lv && lv.heartbeat && isFinite(lv.heartbeat.epoch)) fresh = (now/1000 - lv.heartbeat.epoch) < hbStaleS(lv);
     else if (lv && lv.alive && latest.header && latest.header.newest_source) fresh = (now - Date.parse(latest.header.newest_source))/1000 < hbStaleS(lv);  // a pid exists (maybe recycled), no heartbeat: trust it only while something is being written
     var run = document.querySelectorAll(".station.running, .hist-live.running");
-    for (var k = 0; k < run.length; k++) { run[k].classList.toggle("fresh", fresh); run[k].classList.toggle("stale", !fresh); }
+    for (var k = 0; k < run.length; k++) { var f2 = fresh || (!!rp && !!run[k].closest("#line")); run[k].classList.toggle("fresh", f2); run[k].classList.toggle("stale", !f2); }   // a replayed frame's liveness is assumed
     var pill = document.getElementById("live-pill"); if (pill && latest && latest.live && !pill.getAttribute("data-unreachable")) pill.classList.toggle("stale", (now - Date.parse(latest.live.served_at))/1000 > 3 * (latest.live.poll_ms/1000) + 10);
   };
   tick(); setInterval(tick, 1000);
@@ -1164,12 +1328,12 @@
       if (latest && latest.live && next.live && next.live.generation < latest.live.generation) return;  // an older pull landing after a newer one
       var sN = slices(next), sO = slices(latest), ids = Object.keys(sN);
       var sameShape = ids.length === Object.keys(sO).length && ids.every(function(id){ return id in sO; });
-      if (!sameShape) { render(next); latest = next; tick(); return; }
+      if (!sameShape) { render(next); latest = next; if (rp) window.__lineReplay.reattach(); tick(); return; }
       var stamp = function(){
         var hbEl = document.querySelector("[data-hb] [data-ts]"); if (hbEl && next.liveness && next.liveness.heartbeat && isFinite(next.liveness.heartbeat.epoch)) hbEl.setAttribute("data-ts", new Date(next.liveness.heartbeat.epoch*1000).toISOString());
         var pill = document.getElementById("live-pill"); if (pill) { var pa = pill.querySelector("[data-ts]"); if (pa && next.live) pa.setAttribute("data-ts", next.live.served_at); }
       };
-      var moved = ids.filter(function(id){ return JSON.stringify(sN[id]) !== JSON.stringify(sO[id]); });
+      var moved = ids.filter(function(id){ return JSON.stringify(sN[id]) !== JSON.stringify(sO[id]) && !(rp && id === "line"); });   // the line under replay is the reader's; "back to live" redraws it from the newest model
       if (!moved.length) { stamp(); latest = next; tick(); return; }   // nothing to draw: no detached render, but the stamps still move
       var tmp = document.createElement("div"); render(next, tmp);
       moved.forEach(function(id){

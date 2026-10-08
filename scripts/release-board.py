@@ -156,6 +156,29 @@ def resolve_version(arg: str | None, release_dir: Path, narrate=lambda s: None) 
     return candidates[0].name
 
 
+_RUN_DIR = re.compile(r"[0-9A-Za-z][0-9A-Za-z.+_-]{0,63}")
+
+
+def list_runs(release_dir: Path) -> list[dict]:
+    """Every run dir under .release/ with a ledger, newest first by its first
+    ledger stamp: what the board's run picker offers. The name is the id, and
+    the only ids a served board will open are the ones listed here."""
+    out = []
+    try:
+        dirs = [d for d in release_dir.iterdir() if d.is_dir() and _RUN_DIR.fullmatch(d.name) and (d / "events.jsonl").is_file()]
+    except OSError:
+        return out
+    for d in dirs:
+        started = None
+        try:
+            with open(d / "events.jsonl", encoding="utf-8", errors="replace") as fh:
+                started = json.loads(fh.readline()).get("ts")
+        except (OSError, ValueError, AttributeError):
+            pass
+        out.append({"id": d.name, "started": started if isinstance(started, str) else None})
+    out.sort(key=lambda r: (r["started"] or "", r["id"]), reverse=True)
+    return out
+
 def read_steps(run_dir: Path) -> tuple[list[dict], str, str | None, list[str]]:
     """→ (steps, source, version_line, problems). source: 'steps.tbl' | 'ledger'.
     problems: an unknown version stamp, or rows with fewer than seven fields —
@@ -1344,6 +1367,7 @@ class BoardState:
         self.request_exit = lambda reason: None   # serve_board wires this to httpd.shutdown
         self._stop = threading.Event()
         self._replay: tuple | None = None   # (ledger+sink stamp, frames): the line's replay, built on first ask
+        self._past_replay: tuple | None = None   # the same, for the one past run last picked
         self._replay_lock = threading.Lock()
         # the previous run cannot change while this one is live: read it once
         try:
@@ -1352,10 +1376,25 @@ class BoardState:
         except Exception:
             self.previous = None
 
-    def replay(self) -> list[dict]:
+    def replay(self, run: str | None = None) -> list[dict]:
         """The line's frames, rebuilt only when the ledger or the sink moved —
         a heartbeat or a log line does not change what any frame shows. One
-        build at a time; ~2 s for a long run, off the watcher thread."""
+        build at a time; ~2 s for a long run, off the watcher thread. `run` is
+        a past run picked on the board (a listed id); its frames are cached
+        the same way, and only this run's last frame follows the live model."""
+        if run and run != self.version:
+            rdir = self.root / ".release" / run
+            key = [run]
+            for p in (rdir / "events.jsonl", rdir / "bn-events.log"):
+                try:
+                    st = p.stat()
+                    key.append((st.st_mtime_ns, st.st_size))
+                except OSError:
+                    key.append((None, None))
+            with self._replay_lock:
+                if self._past_replay is None or self._past_replay[0] != key:
+                    self._past_replay = (key, line_frames(self.root, run))
+                return self._past_replay[1]
         key = []
         for p in (self.run_dir / "events.jsonl", self.run_dir / "bn-events.log"):
             try:
@@ -1491,6 +1530,17 @@ class BoardState:
             return m, self.error
 
 
+    def past(self, run: str) -> dict:
+        """A finished (or abandoned) run picked from the board: the generator's
+        model of that run dir, read-only. It carries the live token, so its
+        replay can be fetched, and `past`, so the page never patches it from
+        this run's stream."""
+        m = build_model(self.root, run, self.with_logs)
+        m["live"] = {"generation": 0, "poll_ms": int(self.poll_s * 1000), "changed_at": None, "served_at": utc_now(),
+                     "error": None, "token": self.token, "with_logs": self.with_logs, "past": True, "live_run": self.version}
+        return m
+
+
 class BoardHandler(http.server.BaseHTTPRequestHandler):
     state: BoardState  # set on the server class
     server_version = "release-board/1"
@@ -1543,8 +1593,26 @@ class BoardHandler(http.server.BaseHTTPRequestHandler):
             return
         st = self.state
         st.last_request = time.monotonic()
-        if path in ("/", "/board.html"):
+        qs = urllib.parse.parse_qs(query)
+        runs = list_runs(st.root / ".release")
+        want = (qs.get("run") or [""])[0]
+        if want and want != st.version and want not in {r["id"] for r in runs}:   # only a listed run dir, never a path
+            self._send(404, "text/plain; charset=utf-8", b"no such run")
+            return
+        past = want if want and want != st.version else None
+        if path in ("/", "/board.html") and past:
+            try:
+                model = st.past(past)
+                model["runs"] = runs
+                body = render_html(model, TEMPLATE).encode("utf-8")
+            except Exception as e:  # noqa: BLE001
+                self._send(500, "text/plain; charset=utf-8", f"could not draw {past} — {type(e).__name__}: {e}".encode())
+                return
+            self._send(200, "text/html; charset=utf-8", body)
+        elif path in ("/", "/board.html"):
             model, err = st.snapshot()
+            if model is not None:
+                model["runs"] = runs
             if model is None:
                 self._send(503, "text/plain; charset=utf-8", f"no model yet — {err or 'first build pending'}".encode())
                 return
@@ -1556,6 +1624,8 @@ class BoardHandler(http.server.BaseHTTPRequestHandler):
             self._send(200, "text/html; charset=utf-8", body)
         elif path == "/board.json":
             model, err = st.snapshot()
+            if model is not None:
+                model["runs"] = runs
             body = json.dumps(model if model is not None else {"error": err}, ensure_ascii=True, allow_nan=False).encode("utf-8")
             self._send(200 if model is not None else 503, "application/json; charset=utf-8", body)
         elif path.startswith("/log/"):
@@ -1574,7 +1644,7 @@ class BoardHandler(http.server.BaseHTTPRequestHandler):
             self._send(200 if entry else 404, "application/json; charset=utf-8", body)
         elif path == "/replay.json":
             try:
-                body = json.dumps({"version": st.version, "frames": st.replay()}, ensure_ascii=True, allow_nan=False).encode("utf-8")
+                body = json.dumps({"version": past or st.version, "frames": st.replay(past)}, ensure_ascii=True, allow_nan=False).encode("utf-8")
             except Exception as e:  # noqa: BLE001 — a bad replay is the control's state, never the board's
                 self._send(500, "application/json; charset=utf-8", json.dumps({"error": f"{type(e).__name__}: {e}"}).encode("utf-8"))
                 return

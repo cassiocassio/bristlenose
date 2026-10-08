@@ -987,6 +987,33 @@ class Server(unittest.TestCase):
         self.assertEqual(len(j["frames"]), 4)
         self.assertEqual({s["id"]: s["state"] for s in j["frames"][3]["line"]["stations"]}["bump"], "ok")
 
+    def test_run_picker_opens_a_listed_past_run_read_only_and_nothing_else(self):
+        past = self.t.root / ".release" / "0.9.0"
+        past.mkdir()
+        (past / "events.jsonl").write_text(ev("2026-08-01T09:00:00Z", "run", "started").replace("1.0.0", "0.9.0") + "\n"
+                                           + ev("2026-08-01T09:00:02Z", "bump", "fail", "exit 1").replace("1.0.0", "0.9.0") + "\n")
+        j = json.loads(self.get("/board.json" + self.k)[2])
+        self.assertEqual([r["id"] for r in j["runs"]], ["1.0.0", "0.9.0"])   # newest first, by first ledger stamp
+        st, _, body = self.get("/" + self.k + "&run=0.9.0")
+        self.assertEqual(st, 200)
+        g = _ScriptGrabber()
+        g.feed(body.decode())
+        m = json.loads(g.data)
+        self.assertEqual(m["version"], "0.9.0")
+        self.assertTrue(m["live"]["past"])
+        self.assertEqual(m["live"]["live_run"], "1.0.0")
+        self.assertEqual(stations(m)["bump"], "fail")
+        fr = json.loads(self.get("/replay.json" + self.k + "&run=0.9.0")[2])
+        self.assertEqual((fr["version"], len(fr["frames"])), ("0.9.0", 3))
+        # the live run's own replay is untouched by a past one
+        self.assertEqual(json.loads(self.get("/replay.json" + self.k)[2])["version"], "1.0.0")
+        # only a listed run dir: never a path, never a dir without a ledger
+        (self.t.root / ".release" / "0.8.0").mkdir()
+        for bad in ("..", "../.release/1.0.0", "0.8.0", "nope", "%2e%2e"):
+            self.assertEqual(self.get("/" + self.k + "&run=" + bad)[0], 404, bad)
+            self.assertEqual(self.get("/replay.json" + self.k + "&run=" + bad)[0], 404, bad)
+        self.assertEqual(self.get("/?run=0.9.0")[0], 404)   # no token, nothing here
+
     def test_log_route_serves_a_tail_only_with_logs_and_only_known_steps(self):
         (self.t.root / ".release" / "1.0.0" / "logs").mkdir(exist_ok=True)
         (self.t.root / ".release" / "1.0.0" / "logs" / "bump.1.log").write_text("one\ntwo\n")

@@ -512,6 +512,20 @@ red on their mutants: the patch filter, the reduced-motion guard, the frame
 clock) and by
 `Server.test_replay_route_serves_the_lines_frames_behind_the_token`.
 
+**The run picker** (8 Oct 2026, owner's ask). On a served board the version in
+the header is a pull-down of every run under `.release/` that has a ledger,
+newest first by its first stamp (`list_runs`). Abandoned dirs such as
+`0.31.3-stopped-24sep` are included, because they are runs. The board's own
+run is the bare URL. Any other run is `?run=<id>`, which the server draws with
+the same generator (`BoardState.past`) and serves **read-only**: the page reads
+it once, never patches it from the live run's stream, says "past run ·
+read-only", and offers a way back. Its line replay fetches
+`/replay.json?run=<id>`, and the replay's last button reads "done", not "back
+to live". Only a listed id is ever opened: anything else, a path included, is
+a 404, behind the same token. A snapshot has no picker, because there is no
+server to ask. The cross-release question still belongs to History; this is for
+looking at one run as its own board.
+
 **Links.** Every public page is an anchor built in the generator from
 `project.conf` constants (`read_conf` expands its own `${VAR}`s) and validated
 ids: PyPI at the version, the release tag, the tap formula, snapcraft, Copr,

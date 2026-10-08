@@ -80,6 +80,9 @@
   .top{position:relative;display:flex;flex-wrap:wrap;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:8px 46px 8px 14px}
   .top h1{margin:0;font-size:14px;font-weight:600}
   .top .v{font:600 15px var(--mono)}
+  .top select.runpick{field-sizing:content;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:6px;padding:1px 4px;cursor:pointer;max-width:22em}
+  .pastback{font:inherit;color:inherit;background:none;border:0;padding:0;text-decoration:underline dotted;text-underline-offset:2px;cursor:pointer}
+  .top select.runpick:hover{border-color:var(--rule2);background:var(--panel)} .top select.runpick:focus-visible{outline:2px solid var(--now);outline-offset:1px}
   .top .m{color:var(--mute);font-size:11px}
   a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px} a:hover{text-decoration-style:solid;color:var(--now)}
   .pill{padding:3px 9px;border-radius:12px;border:1px solid var(--rule2);font-size:11px;color:var(--mute)}
@@ -399,7 +402,23 @@
 
   // ── header ──────────────────────────────────────────────────────────────
   var top = $("div","top"); top.id = "top";
-  add(top, $("h1",null,"Release board"), $("span","v", "v"+data.version));
+  add(top, $("h1",null,"Release board"));
+  // The run picker: served boards only (a snapshot has no server to ask for another
+  // run). The live run is the bare URL; any other is ?run=<id>, opened read-only.
+  if (data.live && data.runs && data.runs.length > 1) {
+    var liveRun = data.live.past ? data.live.live_run : data.version;
+    var pick = $("select","v runpick"); pick.id = "run-pick"; pick.setAttribute("aria-label", "show another run");
+    data.runs.forEach(function(r){
+      var day = r.started ? new Date(r.started) : null;
+      var o = $("option", null, (/^\d/.test(r.id) ? "v" : "")+r.id+(day && !isNaN(day.getTime()) ? " · "+day.toLocaleDateString(undefined, {day:"numeric", month:"short"}) : "")+(r.id === liveRun ? " · this board's run" : ""));
+      o.value = r.id; if (r.id === data.version) o.selected = true; add(pick, o);
+    });
+    pick.addEventListener("change", function(){
+      var q = new URLSearchParams(location.search); if (pick.value === liveRun) q.delete("run"); else q.set("run", pick.value);
+      location.search = q.toString();
+    });
+    add(top, pick);
+  } else add(top, $("span","v", "v"+data.version));
   // This run | History. The choice survives a reload and a live re-render; the
   // run's panes stay in the DOM under History, so a live patch still lands.
   (function(){
@@ -423,7 +442,11 @@
   var liveTxt = !live.lock ? "no lock — not running" : (live.alive ? "lock held · a process with pid "+live.pid+" exists" : "lock held · no process with pid "+live.pid+" — stranded?");
   add(top, $("span","pill "+(!live.lock?"":(live.alive?"now":"bad")), liveTxt));
   if (live.heartbeat) { var hb = $("span","m"); hb.setAttribute("data-hb", "1"); if (live.heartbeat.state==="mid-write") hb.textContent = "heartbeat mid-write"; else if (live.heartbeat.state==="unparseable" || !isFinite(live.heartbeat.epoch)) hb.textContent = "heartbeat: timestamp unparseable"; else add(hb, frag("heartbeat ", ageEl(new Date(live.heartbeat.epoch*1000).toISOString()), " · "+(live.heartbeat.step||"")+" · "+(live.heartbeat.last_line||""))); add(top, hb); }
-  if (data.live) add(top, frag(function(){ var p = $("span","pill live"); p.id = "live-pill"; add(p, frag("live · ", ageEl(data.live.served_at), data.live.error ? " · generator error: "+data.live.error : "")); return p; }()));
+  if (data.live && data.live.past) add(top, frag(function(){
+    var p = $("span","pill warn", "past run · read-only · "); var a = $("button", "pastback", "back to v"+data.live.live_run); a.type = "button";
+    a.addEventListener("click", function(){ var q = new URLSearchParams(location.search); q.delete("run"); location.search = q.toString(); });   // a button, not an href: the template sets href in one place
+    add(p, a); p.id = "past-pill"; return p; }()));
+  else if (data.live) add(top, frag(function(){ var p = $("span","pill live"); p.id = "live-pill"; add(p, frag("live · ", ageEl(data.live.served_at), data.live.error ? " · generator error: "+data.live.error : "")); return p; }()));
   var conf = data.confounded;
   add(top, $("span","pill "+(conf.computable ? (conf.count ? "warn" : "ok") : "hatch"), conf.computable ? ("confounded expectations: "+conf.count) : "confounded log: not computable"));
   // Theme override. The board follows the browser unless someone says
@@ -1162,7 +1185,8 @@
       var tag = $("span","rptag","REPLAY");
       var back = btn("back", "step back (←)", "rp-back"), pp = btn("play", "play (space)", "rp-play"), fwd = btn("fwd", "step forward (→)", "rp-fwd");
       var count = $("span","rpcount"), cap = $("span","rpcap");
-      var live = $("button","rplive","back to live"); live.type = "button"; live.id = "rp-live"; live.title = "back to the live line (Esc)";
+      var past = !!payload.live.past;   // a past run has no live line to go back to: the replay ends on how it finished
+      var live = $("button","rplive", past ? "done" : "back to live"); live.type = "button"; live.id = "rp-live"; live.title = (past ? "back to how this run finished" : "back to the live line")+" (Esc)";
       back.addEventListener("click", function(){ pause(); show(rp.at - 1); });
       fwd.addEventListener("click", function(){ pause(); show(rp.at + 1); });
       pp.addEventListener("click", function(){ if (rp.timer) pause(); else play(); });
@@ -1202,7 +1226,7 @@
     var open = function(b){
       if (typeof fetch !== "function") return;
       b.setAttribute("aria-busy", "true"); b.classList.remove("err");
-      fetch("/replay.json"+(payload.live.token ? "?k="+encodeURIComponent(payload.live.token) : ""), {cache: "no-store"})
+      fetch("/replay.json?"+(payload.live.token ? "k="+encodeURIComponent(payload.live.token) : "")+(payload.live.past ? "&run="+encodeURIComponent(payload.version) : ""), {cache: "no-store"})
         .then(function(r){
           // The template is re-read per request but the server is not: a board started
           // before /replay.json existed draws this control and answers 404 with no body
@@ -1292,7 +1316,7 @@
   };
   tick(); setInterval(tick, 1000);
 
-  if (!payload.replay && payload.live) {
+  if (!payload.replay && payload.live && !payload.live.past) {   // a past run is read once and never patched from this run's stream
     // ── live: SSE says "changed", the page fetches board.json and swaps only the panes whose data moved ──
     var slices = function(d){
       var m = {top: [d.version, d.phase, d.header, d.liveness && {lock: d.liveness.lock, alive: d.liveness.alive, pid: d.liveness.pid, hbs: d.liveness.heartbeat && d.liveness.heartbeat.state}, d.confounded.count, d.confounded.computable, d.live && d.live.error],

@@ -309,9 +309,39 @@ async function section5() {
   w.close();
 }
 const run_dir = () => run;
+async function section6() {
+  console.log("6 · the run picker: any run under .release/, a past one read-only and never patched");
+  const runs = [{ id: "1.0.0", started: iso(T0) }, { id: "0.9.0", started: "2026-08-01T09:00:00Z" }];
+  {
+    const { d } = load(htmlFor({ ...model(), runs }), "file:///board.html");
+    eq("a snapshot has no picker (no server to ask)", null, d.getElementById("run-pick"));
+  }
+  const m = model(); m.runs = runs; m.live = { generation: 1, poll_ms: 1000, served_at: iso(Date.now()), changed_at: iso(Date.now()), error: null, token: "t", with_logs: false };
+  {
+    const { d, w } = load(htmlFor(m));
+    const pick = d.getElementById("run-pick");
+    eq("a served board's version is a picker of every run", ["1.0.0", "0.9.0"], pick ? [...pick.options].map(o => o.value) : null);
+    eq("…on this run, named as this board's", true, pick.value === "1.0.0" && /this board's run/.test(pick.options[0].textContent));
+    w.close();
+  }
+  // the same server, showing 0.9.0
+  const past = { ...m, version: "0.9.0", live: { ...m.live, past: true, live_run: "1.0.0", generation: 0 } };
+  const { d, w, errors } = load(htmlFor(past), "http://127.0.0.1:8151/?k=t&run=0.9.0");
+  const asked = [];
+  w.fetch = (u) => { asked.push(u); return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(m), text: () => Promise.resolve(JSON.stringify({ version: "0.9.0", frames: [] })) }); };
+  eq("a past run selects itself in the picker", "0.9.0", d.getElementById("run-pick").value);
+  eq("…says it is past and read-only, with the way back", true, /past run · read-only/.test(d.getElementById("past-pill").textContent) && /back to v1\.0\.0/.test(d.getElementById("past-pill").textContent));
+  eq("…and does not call itself live", null, d.getElementById("live-pill"));
+  await sleep(2400);
+  eq("a past run is never patched from the live run's stream", [], asked.filter(u => /board\.json/.test(u)));
+  d.getElementById("line-replay").click(); await sleep(50);
+  eq("its replay asks for that run", true, asked.some(u => /^\/replay\.json\?k=t&run=0\.9\.0$/.test(u)));
+  eq("no renderer error on a past run", 0, errors.filter(e => /Uncaught/.test(e)).length);
+  w.close();
+}
 
 (async () => {
-  try { await section2(); section3(); section4(); await section5(); }
+  try { await section2(); section3(); section4(); await section5(); await section6(); }
   catch (e) { bad("suite threw: " + (e && e.stack || e)); }
   fs.rmSync(work, { recursive: true, force: true });
   console.log(`\n${passes} passed, ${fails} failed`);

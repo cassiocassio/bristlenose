@@ -498,8 +498,9 @@ markup (`frontend/src/utils/transcriptCopy.ts`, wired as `onCopy` on
 - **text/plain is Markdown**, the same shape as the `.md` export:
   `` **`[00:42]` p1** words ``, one paragraph per block. The timecode is a code span
   so a renderer sets it in monospace; the stamp is bold.
-- **text/html carries the same structure for Word**: the stamp bold, the
-  timecode in Menlo / Consolas, nothing else styled, so the words take the
+- **text/html carries the same structure for Word**: the timecode as the app
+  draws it — Menlo / Consolas at 85%, regular weight, accent blue with grey
+  brackets — the code bold, and the words unstyled so they take the
   document's font. Margin annotations, × buttons and the speaker picker never
   reach the clipboard.
 - **Speech is escaped minimally** (`escape_markdown_speech` / `escapeMarkdownSpeech`,

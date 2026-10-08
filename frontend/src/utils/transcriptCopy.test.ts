@@ -51,10 +51,13 @@ describe("transcriptClipboard", () => {
       { seconds: 3661, code: "p1", text: "the one at 2*3 <b>" },
     ]);
     expect(plain).toBe("**`[00:42]` m1** so which one?\n\n**`[1:01:01]` p1** the one at 2\\*3 \\<b>");
+    const stamp = (tc: string) =>
+      '<span style="font-family:Menlo,Consolas,monospace;font-size:85%;font-weight:normal;color:#007aff">' +
+      `<span style="color:#6b7280">[</span>${tc}<span style="color:#6b7280">]</span></span>`;
     expect(html).toBe(
       '<meta charset="utf-8">' +
-        '<p><b><span style="font-family:Menlo,Consolas,monospace">[00:42]</span> m1</b> so which one?</p>' +
-        '<p><b><span style="font-family:Menlo,Consolas,monospace">[1:01:01]</span> p1</b> the one at 2*3 &lt;b&gt;</p>',
+        `<p>${stamp("00:42")} <b>m1</b> so which one?</p>` +
+        `<p>${stamp("1:01:01")} <b>p1</b> the one at 2*3 &lt;b&gt;</p>`,
     );
   });
 });
@@ -137,7 +140,7 @@ describe("copyTranscriptSelection", () => {
     const { data, prevented } = copy(root, range);
     expect(prevented).toBe(true);
     expect(data.get("text/plain")).toBe("**`[00:42]` m1** So which one?\n\n**`[00:49]` p1** The one at 2\\*3");
-    expect(data.get("text/html")).toContain("[00:49]</span> p1</b> The one at 2*3</p>");
+    expect(data.get("text/html")).toContain("49<span style=\"color:#6b7280\">]</span></span> <b>p1</b> The one at 2*3</p>");
     root.remove();
   });
 

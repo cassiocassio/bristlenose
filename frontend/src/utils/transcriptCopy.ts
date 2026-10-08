@@ -4,9 +4,9 @@
  * Two flavours, written together (owner, 8 Oct 2026):
  *   text/plain — Markdown in the house transcript format, `**`[00:42]` p1** text`,
  *                one paragraph per block. Matches the `.md` transcript export.
- *   text/html  — the same structure for Word, Pages and Google Docs: the stamp
- *                bold, the timecode in a monospace face, no other styling, so the
- *                words take the document's own font.
+ *   text/html  — the same structure for Word, Pages and Google Docs: the
+ *                timecode as the app draws it (monospace, regular, blue), the
+ *                code bold, the words unstyled so they take the document's font.
  *
  * Words inside a single paragraph copy as plain text, unescaped: that is a
  * snippet for a sentence, not a document.
@@ -60,6 +60,21 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// The timecode as the app draws it (atoms/timecode.css): monospace, regular
+// weight, label size, accent blue with muted brackets. Fixed values, since a
+// pasted document has no theme to follow.
+const MONO = "font-family:Menlo,Consolas,monospace;font-size:85%;font-weight:normal";
+const BLUE = "#007aff";
+const GREY = "#6b7280";
+
+function stampHtml(seconds: number): string {
+  const bracket = (c: string) => `<span style="color:${GREY}">${c}</span>`;
+  return (
+    `<span style="${MONO};color:${BLUE}">` +
+    `${bracket("[")}${formatTimecode(seconds)}${bracket("]")}</span>`
+  );
+}
+
 /** Both clipboard flavours for a selection spanning several paragraphs. */
 export function transcriptClipboard(paras: CopiedParagraph[]): { plain: string; html: string } {
   const plain = paras
@@ -70,8 +85,7 @@ export function transcriptClipboard(paras: CopiedParagraph[]): { plain: string; 
     paras
       .map(
         (p) =>
-          `<p><b><span style="font-family:Menlo,Consolas,monospace">[${formatTimecode(p.seconds)}]</span> ` +
-          `${escapeHtml(p.code)}</b> ${escapeHtml(p.text)}</p>`,
+          `<p>${stampHtml(p.seconds)} <b>${escapeHtml(p.code)}</b> ${escapeHtml(p.text)}</p>`,
       )
       .join("");
   return { plain, html };

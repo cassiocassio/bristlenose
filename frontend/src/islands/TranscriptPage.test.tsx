@@ -810,6 +810,6 @@ describe("TranscriptPage copy", () => {
       clipboardData: { setData: (type: string, v: string) => data.set(type, v) },
     });
     expect(data.get("text/plain")).toMatch(/^\*\*`\[00:02\]` m1\*\* Thanks for joining me today\.\n\n\*\*`\[/);
-    expect(data.get("text/html")).toContain('<span style="font-family:Menlo,Consolas,monospace">[00:02]</span> m1</b>');
+    expect(data.get("text/html")).toMatch(/font-family:Menlo,Consolas,monospace[^>]*color:#007aff">.*00:02.*<\/span> <b>m1<\/b> Thanks/);
   });
 });

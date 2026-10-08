@@ -529,11 +529,20 @@ fi
 # make — CI runs one macOS, this Mac runs another. Informational: a red here is
 # a reason to look before shipping, and a skipped night is normal (no desktop
 # change, a busy Mac, Iona in a drawer), so neither fails preflight.
+# A green that tested an older commit is a green about that commit, so the row
+# also says how many app-affecting commits HEAD carries that no guest has run.
 GM_LINE=$("$ROOT/desktop/scripts/guest-matrix.sh" report 2>/dev/null); GM_RC=$?
+GM_BEHIND=$("$ROOT/desktop/scripts/guest-matrix.sh" behind 2>/dev/null)
+case "$GM_BEHIND" in
+    0) GM_NOTE="" ;;
+    never) GM_NOTE=" — HEAD never tested on the older macOS guests" ;;
+    *) GM_NOTE=" — $GM_BEHIND app commit(s) at HEAD not yet tested on them" ;;
+esac
 case "$GM_RC" in
-    0) ok   "macOS guests" "${GM_LINE#* · }" ;;
+    0) if [ -z "$GM_NOTE" ]; then ok "macOS guests" "${GM_LINE#* · }"
+       else warn "macOS guests" "${GM_LINE#* · }$GM_NOTE"; fi ;;
     1) warn "macOS guests" "${GM_LINE#* · } — red on an older macOS" ;;
-    *) ok   "macOS guests" "${GM_LINE:-no report} (informational)" ;;
+    *) ok   "macOS guests" "${GM_LINE:-no report} (informational)$GM_NOTE" ;;
 esac
 fi
 

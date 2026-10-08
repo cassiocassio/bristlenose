@@ -192,7 +192,7 @@ fails is named in the line, all of them at once:
 
 | Gate | Says no when | Ends the night? |
 |---|---|---|
-| change | no commit touching `desktop/` since the commit the last full run tested | yes |
+| change | no commit touching `desktop/` or `bristlenose/locales/` (the suite reads the locale JSON) since the commit the last full run tested; the line carries that run's verdict, so a red stays in view | yes |
 | power | `pmset -g batt` is not on AC | no — retried next tick |
 | release | a live `release.sh run` lock, a ledger whose last `run` event is not `completed`, or `__version__` bumped past the last tag (`scripts/lib-release-state.sh`, shared with the pre-commit freeze) | no |
 | idle | a Claude Code transcript written in the last 15 min; `xcodebuild`, `pytest`, `vitest`, `playwright`, `swift-frontend` or `pyinstaller` running; 5-min load above 4 | no |
@@ -203,9 +203,18 @@ still gets a run by 01:30. The night's last tick (05:30) posts the skip as a
 notification, so a quiet morning is never ambiguous. A missing Iona is a normal
 night, not a fault: the line says so and nothing nags.
 
+**First real run, 8 Oct 2026**, through the shipped path with the idle gate
+overridden from a working session: `✓ 15.7.3 1811 passed · ✓ 26.6.2 1811 passed`,
+about **5 minutes per guest** including a cold unsigned compile, so the per-guest
+timeout is 30 minutes. `tart exec` reaches the guest's GUI session (the window
+tests pass), so no ssh key is needed. Before that run the guest script lacked
+CI's two stub steps (an empty sidecar executable and `generate-build-info.sh`)
+that `/Volumes/Iona/tart/bin/guest-run.sh` already did; it has them now.
+
 **What it tests.** The committed HEAD, never the working tree, which a concurrent
 session may be half-way through. HEAD goes into the guest as a `git bundle` on a
-read-only tart share. The guest clones it, runs
+read-only tart share, named for its commit: VirtioFS has served the old bytes
+of a file rewritten at the same size, and a new name cannot be stale. The guest clones it, runs
 `CI=1 caffeinate -dimsu /bin/bash desktop/scripts/test-swift.sh` with a fresh
 DerivedData, and reports through `GM-*` lines. `caffeinate -d` matters: the
 sidebar animation scenarios fail deterministically with the guest's display
@@ -216,13 +225,32 @@ with a non-zero exit, or an exit 0 with no green line, is "no verdict", never �
 the guests have SIP off, which is fine for this suite and voids any permissions result (§3.6).
 
 **The commit is marked tested only when every guest gave a verdict.** A guest that
-did not boot, timed out (90 min) or never reported leaves `last-tested-sha` where
-it was, so the next night tries again rather than calling the commit covered.
+did not boot, timed out or never reported leaves `last-tested-sha` where it was,
+so the next night tries again rather than calling the commit covered.
+
+**Nothing it starts outlives it, and nothing fails without a line.** A review of
+the first version against the trial's data (8 Oct 2026) found eight ways the line
+could lie or go missing; each is now a test case:
+- the lock carries its holder's pid, and a dead holder's lock is taken over; a
+  live one is a named skip ("a run is still in progress"), never silence;
+- the exit trap stops the running guest, so a runner killed by a signal does not
+  leave a VM up for every later night to trip over; `tart stop` and the agent
+  probe are time-boxed, and a VM that ignores the stop is killed;
+- a failure after the gates (unwritable share, no HEAD) writes `error: …`, which
+  `report` treats as red, instead of reading as "the trigger never ran";
+- a guest-side warning (a failed screen-size prep) rides on the cell.
+
+**A daytime `run --now` is a trial.** It is filed as `reports/trial-<date>-<time>.txt`,
+never under a night, because filed under the night it was mistaken for a finished
+night and cancelled the scheduled run (the review's worst finding). It does
+advance `last-tested-sha`: it tested the commit.
 
 **Where the line lands.** `~/Library/Logs/bristlenose-guest-matrix/latest.txt`, a
 notification when a run finishes, and a `macOS guests` row in
 `scripts/check-release-ready.sh`, which the release board also shows.
-That row is informational: a red is a reason to look, not a failed preflight.
+That row is informational: a red is a reason to look, not a failed preflight. It
+also warns when HEAD carries app commits no guest has run (`guest-matrix.sh behind`),
+because a green about an older commit says nothing about this one.
 `guest-matrix.sh report` prints last night's line and exits 0 green, 1 red,
 3 skipped, 4 no report. Exit 4 reads as "the trigger never ran" (asleep all
 night, or the agent unloaded), never as a quiet night.
@@ -237,23 +265,33 @@ TART_HOME=/Volumes/Iona/tart/<tart-home>      # where those VMs live
 GUEST_PREP='<command run in the guest first, e.g. set the screen size>'   # optional
 ```
 
+**Installing it.** `guest-matrix.sh install` builds a small applet,
+*Bristlenose Guest Matrix*, and loads a LaunchAgent that runs it. The applet is
+there so System Settings ▸ General ▸ Login Items & Extensions lists the job by
+that name rather than as "bash", and so a permission prompt is asked of it, not
+of bash. Its shell command creates its own log folder and ends in `|| true`: an
+applet whose command fails puts up a dialog, and a dialog at 02:00 waits forever.
+With the folder missing, the first version exited 0 in half a second and did
+nothing at all. `uninstall` removes both.
+
 **Waking for it.** A sleeping Mac runs nothing. `sudo pmset repeat wake MTWRFSU 23:29:00`
 wakes it for the :30 tick; the runner then holds idle sleep off with
 `caffeinate -i -s` for as long as it runs. A lid-closed MacBook with no external
 display stays asleep regardless.
 
 **Proof.** `scripts/test-guest-matrix.sh` drives the real script against fake
-`tart`, `pmset`, `ps` and `sysctl` in a throwaway repo (51 cases, in CI). Five
-mutants each turn their cases red: battery accepted, exit 0 read as green,
-commit marked tested after a missing verdict, release gate removed, process
-probe removed.
+`tart`, `pmset`, `ps` and `sysctl` in a throwaway repo (72 cases, in CI). Eleven
+mutants each turn their cases red: battery accepted, exit 0 read as green, commit
+marked tested after a missing verdict, release gate removed, process probe
+removed, a trial filed as the night, no stale-lock takeover, a trap that leaves
+the VM up, a silent post-gate failure, no carried verdict, locales not counted.
 
-**Not yet measured** (needs Iona attached): whether a guest without Xcode can run
-a host-built bundle with `test-without-building` (if so, guests shrink by about
-30 GB and a macOS 27 guest becomes affordable); the guest-agent boot time; and
-whether launchd's `/bin/bash` meets a Removable Volumes prompt on its first read
-of `/Volumes/Iona`. That prompt would be a modal at night, which is exactly
-the wedge §3.7 exists to avoid, so the first run under launchd is watched.
+**Not yet measured:** whether a guest without Xcode can run a host-built bundle
+with `test-without-building` (if so, guests shrink by about 30 GB and a macOS 27
+guest becomes affordable), and whether the applet meets a Removable Volumes
+prompt on its first read of `/Volumes/Iona` under launchd. That prompt would
+be a modal at night, the wedge this section exists to avoid, so the first
+scheduled run is watched.
 
 ## 4. The instrument for the seam question
 

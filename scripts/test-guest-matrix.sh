@@ -20,7 +20,10 @@ GM="${GM_SCRIPT:-$ROOT/desktop/scripts/guest-matrix.sh}"
 
 W="$(mktemp -d)"
 BGPIDS=""
-trap 'for p in $BGPIDS; do kill "$p" 2>/dev/null; done; rm -rf "$W"' EXIT
+# The fake `tart run` waits for a stop file. A runner that fails to stop its
+# guest (the bug the kill case exists to catch) leaves one polling forever, so
+# sweep them up by path rather than trusting the runner under test.
+trap 'for p in $BGPIDS; do kill "$p" 2>/dev/null; done; pkill -f "$W/bin/tart" 2>/dev/null; rm -rf "$W"' EXIT
 REPO="$W/repo"; BIN="$W/bin"; IONA="$W/iona"; ST="$W/state"; CL="$W/claude"
 mkdir -p "$REPO/desktop/Bristlenose" "$REPO/bristlenose" "$REPO/scripts" "$BIN" "$CL"
 cp "$ROOT/scripts/lib-release-state.sh" "$REPO/scripts/"
@@ -63,7 +66,7 @@ case "$1" in
         while [ ! -f "$FAKE_DIR/stopped-$vm" ]; do sleep 0.1; done; exit 0 ;;
   stop) touch "$FAKE_DIR/stopped-$vm"; exit 0 ;;
   exec) [ "$3" = /usr/bin/true ] && { [ -f "$FAKE_DIR/noboot-$vm" ] && exit 1; exit 0; }
-        [ -f "$FAKE_DIR/hang-$vm" ] && sleep 30
+        [ -f "$FAKE_DIR/hang-$vm" ] && exec sleep 30
         cat "$FAKE_DIR/guest-$vm.out" 2>/dev/null; exit "$(cat "$FAKE_DIR/guest-$vm.rc" 2>/dev/null || echo 0)" ;;
 esac
 EOF
@@ -103,7 +106,9 @@ eq "a green line with a non-zero exit is not green" "✗ 15.7.3 no verdict (exit
    "$(cell 'GM-OS: 15.7.3\nSwift suite green — 9 passed, 0 failed\nGM-RC: 1\n')"
 eq "a guest that never reported"   "✗ 15.7.3 no verdict (the guest never reported)" "$(cell 'GM-OS: 15.7.3\n')"
 eq "a guest that did not boot"     "✗ seq did not boot" "$(cell 'GM-BOOT-FAILED\n')"
-eq "a guest that timed out"        "✗ 15.7.3 timed out after 90 min" "$(cell 'GM-OS: 15.7.3\nGM-TIMEOUT\n')"
+eq "a guest that timed out"        "✗ 15.7.3 timed out after 30 min" "$(cell 'GM-OS: 15.7.3\nGM-TIMEOUT\n')"
+eq "a guest-side warning rides on the cell" "✓ 15.7.3 9 passed (warn: guest prep exited 1)" \
+   "$(cell 'GM-OS: 15.7.3\nGM-WARN: guest prep exited 1\nSwift suite green — 9 passed, 0 failed\nGM-RC: 0\n')"
 
 # --- the gates ---------------------------------------------------------------
 head_ "gates: each reason is named, and all of them at once"
@@ -157,7 +162,7 @@ eq "both guests, one line" \
    "2026-10-08 · tested $HEAD8 (first run) · ✓ 15.7.3 1569 passed · ✓ 26.6.2 1569 passed" "$(report)"
 eq "the tested commit is recorded"    "$(git -C "$REPO" rev-parse HEAD)" "$(cat "$ST/last-tested-sha" 2>/dev/null)"
 eq "guests ran one after another, both stopped" "seq tahoe" "$(tr '\n' ' ' < "$W/fake/booted" | sed 's/ $//')"
-eq "the guest got the committed tree as a bundle" yes "$([ -f "$IONA/share/guest-matrix/tree.bundle" ] && echo yes || echo no)"
+eq "the guest got the committed tree as a bundle" yes "$([ -f "$IONA/share/guest-matrix/tree-$(git -C "$REPO" rev-parse HEAD).bundle" ] && echo yes || echo no)"
 eq "report exits 0 on green"          0 "$(gm report >/dev/null; echo $?)"
 rm -f "$W/fake/booted"
 gm run GM_NO_NOTIFY=1 >/dev/null 2>&1
@@ -197,6 +202,68 @@ gm run GM_HOUR=05 GM_MINUTE=30 FAKE_POWER='Battery Power' >/dev/null 2>&1
 eq "the night's last tick posts it"   yes "$(has 'on battery' "$(cat "$W/fake/notified" 2>/dev/null)")"
 gm run GM_NO_NOTIFY=1 >/dev/null 2>&1
 eq "a retryable skip is retried, and the run replaces it" yes "$(has '✓ 15.7.3' "$(report)")"
+
+head_ "a daytime trial does not stand in for the night"
+reset_env
+gm "run --now" GM_HOUR=14 GM_IGNORE_IDLE=1 GM_NO_NOTIFY=1 >/dev/null 2>&1
+T="$(ls "$ST"/reports/trial-*.txt 2>/dev/null | head -1)"
+eq "run --now in the day is filed as a trial" yes "$([ -n "$T" ] && echo yes || echo no)"
+eq "…and says the idle gate was overridden" yes "$(has 'idle gate overridden' "$(cat "$T" 2>/dev/null)")"
+eq "…and is not the night's report" "" "$(report)"
+rm -f "$W/fake/booted"
+gm run GM_NO_NOTIFY=1 >/dev/null 2>&1
+eq "that night's tick still runs its gates and writes its own line" yes \
+   "$(has 'skipped: no desktop change since' "$(report)")"
+eq "…carrying the trial's verdict forward" yes "$(has '(last: ✓ 15.7.3 1569 passed' "$(report)")"
+
+head_ "a red stays red behind 'nothing changed'"
+reset_env
+printf 'GM-OS: 26.6.2\nSWIFT SUITE RED — 1 failed, 1568 passed\nTest case '"'"'A.b()'"'"' failed on '"'"'Mac'"'"' (0.1 seconds)\nGM-RC: 1\n' > "$W/fake/guest-tahoe.out"
+echo 1 > "$W/fake/guest-tahoe.rc"
+gm run GM_NO_NOTIFY=1 >/dev/null 2>&1
+gm run GM_NO_NOTIFY=1 GM_NIGHT=2026-10-09 >/dev/null 2>&1
+eq "the next night names the red it is carrying" yes \
+   "$(has '(last: ✓ 15.7.3 1569 passed · ✗ 26.6.2 1 failed: A.b())' "$(cat "$ST/reports/2026-10-09.txt" 2>/dev/null)")"
+eq "…and report exits 1, not 3"  1 "$(gm report GM_NIGHT=2026-10-09 >/dev/null; echo $?)"
+eq "behind: nothing untested at HEAD" 0 "$(gm behind)"
+mkdir -p "$REPO/bristlenose/locales/en"; printf '{}\n' > "$REPO/bristlenose/locales/en/common.json"
+git -C "$REPO" add -A && gitc commit -qm "locale only"
+eq "a locale-only commit counts as a change" 1 "$(gm behind)"
+rm -f "$W/fake/booted"
+gm run GM_NO_NOTIFY=1 GM_NIGHT=2026-10-10 >/dev/null 2>&1
+eq "…and the next night runs for it" yes "$([ -f "$W/fake/booted" ] && echo yes || echo no)"
+
+head_ "a guest that hangs is stopped, and the commit stays untested"
+reset_env; touch "$W/fake/hang-seq"
+gm run GM_NO_NOTIFY=1 GM_GUEST_TIMEOUT_S=2 GM_POLL_S=1 >/dev/null 2>&1
+eq "the line says it timed out"   yes "$(has '✗ seq timed out after 2s' "$(report)")"
+eq "…the hung guest was stopped"  yes "$([ -f "$W/fake/stopped-seq" ] && echo yes || echo no)"
+eq "…the next guest still ran"    yes "$(has '✓ 26.6.2' "$(report)")"
+eq "…and the commit is NOT marked tested" no "$([ -f "$ST/last-tested-sha" ] && echo yes || echo no)"
+
+head_ "a runner killed mid-guest takes its VM down with it"
+reset_env; touch "$W/fake/hang-seq"
+( gm run GM_NO_NOTIFY=1 GM_GUEST_TIMEOUT_S=60 GM_POLL_S=1 >/dev/null 2>&1 ) &
+for i in $(seq 1 50); do [ -f "$W/fake/booted" ] && [ -f "$ST/.lock/pid" ] && break; sleep 0.2; done
+kill -TERM "$(cat "$ST/.lock/pid" 2>/dev/null)" 2>/dev/null; wait $! 2>/dev/null
+eq "the guest was stopped"        yes "$([ -f "$W/fake/stopped-seq" ] && echo yes || echo no)"
+eq "…and the lock released"       no "$([ -d "$ST/.lock" ] && echo yes || echo no)"
+
+head_ "a lock left by a crash"
+reset_env; mkdir -p "$ST/.lock"; echo 999999 > "$ST/.lock/pid"
+gm run GM_NO_NOTIFY=1 >/dev/null 2>&1
+eq "a dead holder's lock is taken over, and the night runs" yes "$(has '✓ 15.7.3' "$(report)")"
+reset_env; mkdir -p "$ST/.lock"
+( exec -a guest-matrix-holder sleep 30 ) & HP=$!; BGPIDS="$BGPIDS $HP"; echo "$HP" > "$ST/.lock/pid"
+gm run GM_NO_NOTIFY=1 >/dev/null 2>&1
+eq "a live holder's lock is a named skip, not silence" yes "$(has "a run is still in progress (pid $HP)" "$(report)")"
+kill "$HP" 2>/dev/null
+
+head_ "a failure after the gates still leaves a line"
+reset_env; mkdir -p "$IONA"; : > "$IONA/share"
+gm run GM_NO_NOTIFY=1 >/dev/null 2>&1
+eq "the line says what failed"    yes "$(has 'error: cannot write to' "$(report)")"
+eq "…and report exits 1"          1 "$(gm report >/dev/null; echo $?)"
 
 head_ "outside the window, and the morning with no report"
 reset_env

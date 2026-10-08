@@ -12,6 +12,7 @@
 #   guest-matrix.sh run --now run outside the night window (still gated)
 #   guest-matrix.sh report    print last night's line; exit 0 green, 1 red,
 #                             3 skipped, 4 no report (the trigger never ran)
+#   guest-matrix.sh behind    change commits at HEAD no full run has tested
 #   guest-matrix.sh install   load the LaunchAgent (uninstall removes it)
 #
 # WHEN IT RUNS — every gate must pass, and a failing gate is a REASON in the
@@ -54,10 +55,19 @@ GM_QUIET_MIN="${GM_QUIET_MIN:-15}"
 GM_MAX_LOAD="${GM_MAX_LOAD:-4}"
 GM_WINDOW_START="${GM_WINDOW_START:-23}"
 GM_WINDOW_END="${GM_WINDOW_END:-6}"
-# Per guest: boot, unpack, a full unsigned compile and the suite. A first compile
-# in a guest has taken ~25 min; 90 leaves room without letting a hang eat the night.
-GM_GUEST_TIMEOUT_MIN="${GM_GUEST_TIMEOUT_MIN:-90}"
+# Per guest: boot, clone, a full unsigned compile and the suite. Measured 8 Oct
+# 2026: about 5 min each (15.7.3 and 26.6.2, 1811 tests). 30 is six times that,
+# room for a slow night without letting a hang eat it.
+GM_GUEST_TIMEOUT_MIN="${GM_GUEST_TIMEOUT_MIN:-30}"
+GM_GUEST_TIMEOUT_S="${GM_GUEST_TIMEOUT_S:-$((GM_GUEST_TIMEOUT_MIN * 60))}"
 GM_BOOT_TIMEOUT_S="${GM_BOOT_TIMEOUT_S:-300}"
+GM_POLL_S="${GM_POLL_S:-10}"
+# How long `tart stop` gets before the VM process is killed outright. A stop that
+# never returns would otherwise hold the lock and keep the Mac awake for good.
+GM_STOP_TIMEOUT_S="${GM_STOP_TIMEOUT_S:-90}"
+# What counts as a change worth a night. The Swift suite reads the locale JSON
+# (I18nTests), so a locale edit can turn it red with nothing under desktop/.
+CHANGE_PATHS="desktop/ bristlenose/locales/"
 
 . "$REPO/scripts/lib-release-state.sh"
 
@@ -66,6 +76,15 @@ die() { echo "guest-matrix: $*" >&2; exit 2; }
 hour() { local h="${GM_HOUR:-$(date +%H)}"; echo $((10#$h)); }
 # The night is named for its evening: 02:00 on the 9th belongs to the 8th.
 night() { echo "${GM_NIGHT:-$(date -v-12H +%F)}"; }
+# What this run's report and logs are filed under. A `run --now` outside the
+# window is a TRIAL, filed under its own name: filed under the night, it would
+# overwrite the morning's line, or (filed under today) be read at 23:00 as a
+# finished night and cancel the scheduled run (found by review, 8 Oct 2026).
+RUN_NAME=""
+run_name() {
+    [ -n "$RUN_NAME" ] || RUN_NAME="$(night)"
+    echo "$RUN_NAME"
+}
 in_window() {
     local h; h="$(hour)"
     [ "$h" -ge "$GM_WINDOW_START" ] || [ "$h" -lt "$GM_WINDOW_END" ]
@@ -85,9 +104,21 @@ gate_changed() {
     last="$(cat "$STATE/last-tested-sha" 2>/dev/null)"
     [ -n "$last" ] || return 0                        # never run: everything is new
     git -C "$REPO" merge-base --is-ancestor "$last" "$head" 2>/dev/null || return 0
-    n="$(git -C "$REPO" rev-list --count "$last..$head" -- desktop/)"
+    n="$(git -C "$REPO" rev-list --count "$last..$head" -- $CHANGE_PATHS)"
     [ "$n" -gt 0 ] && return 0
-    echo "no desktop change since ${last:0:8}"
+    # Carry the last verdict, so a red from an earlier night stays in view
+    # instead of vanishing behind "nothing changed".
+    local lastv; lastv="$(cat "$STATE/last-verdict" 2>/dev/null)"
+    echo "no desktop change since ${last:0:8}${lastv:+ (last: $lastv)}"
+}
+
+# behind — how many change commits HEAD carries that no full run has tested.
+# "never" when nothing has been tested. Read by the release preflight.
+cmd_behind() {
+    local last; last="$(cat "$STATE/last-tested-sha" 2>/dev/null)"
+    [ -n "$last" ] || { echo never; return; }
+    git -C "$REPO" merge-base --is-ancestor "$last" HEAD 2>/dev/null || { echo never; return; }
+    git -C "$REPO" rev-list --count "$last..HEAD" -- $CHANGE_PATHS
 }
 
 gate_power() {
@@ -104,6 +135,9 @@ gate_release() { release_engaged "$REPO"; }
 
 gate_idle() {
     local recent procs load
+    # A deliberate daytime trial from a working session would trip every one of
+    # these; GM_IGNORE_IDLE=1 skips them and the morning line says it did.
+    [ -n "${GM_IGNORE_IDLE:-}" ] && return 0
     recent="$(find "$CLAUDE_DIR" -name '*.jsonl' -mmin "-$GM_QUIET_MIN" 2>/dev/null | head -1)"
     [ -n "$recent" ] && { echo "a Claude Code session wrote in the last $GM_QUIET_MIN min"; return; }
     # Whole command lines, because pytest runs as `python3.12` and vitest as
@@ -170,10 +204,17 @@ rm -rf "$src" "$dd"; mkdir -p "$HOME/guest-matrix"
 echo "GM-OS: $(sw_vers -productVersion)"
 echo "GM-SIP: $(csrutil status 2>&1 | head -1)"
 echo "GM-XCODE: $(xcodebuild -version 2>/dev/null | head -1)"
-git clone -q "$share/tree.bundle" "$src" 2>&1 || { echo "GM-ERROR: could not clone the tree bundle"; exit 4; }
-git -C "$src" checkout -q "$1" 2>&1 || { echo "GM-ERROR: commit $1 is not in the bundle"; exit 4; }
+git -c advice.detachedHead=false clone -q "$share/tree-$1.bundle" "$src" 2>&1 || { echo "GM-ERROR: could not clone the tree bundle"; exit 4; }
+git -C "$src" -c advice.detachedHead=false checkout -q "$1" 2>&1 || { echo "GM-ERROR: commit $1 is not in the bundle"; exit 4; }
 [ -n "${2:-}" ] && { /bin/bash -c "$2" 2>&1 || echo "GM-WARN: guest prep exited $?"; }
 cd "$src" || exit 4
+# CI's two stub steps (mac-build.yml): the sidecar is a hard build input, and
+# GeneratedBuildInfo.swift is gitignored, so a fresh clone has neither.
+mkdir -p desktop/Bristlenose/Resources/bristlenose-sidecar
+: > desktop/Bristlenose/Resources/bristlenose-sidecar/bristlenose-sidecar
+chmod +x desktop/Bristlenose/Resources/bristlenose-sidecar/bristlenose-sidecar
+desktop/scripts/generate-build-info.sh >/dev/null 2>&1 || echo "GM-WARN: generate-build-info.sh failed"
+sudo -n xcodebuild -license accept >/dev/null 2>&1 || true
 # -d keeps the guest's display awake: Core Animation stops with it asleep and the
 # animation-driven sidebar scenarios then fail deterministically (desktop/CLAUDE.md).
 CI=1 BN_DERIVED_DATA="$dd" /usr/bin/caffeinate -dimsu /bin/bash desktop/scripts/test-swift.sh 2>&1
@@ -189,11 +230,17 @@ EOF
 # Only test-swift.sh's own verdict lines count. Its exit code and its counts are
 # reconciled THERE (a red at 0.000s, a reporter change); this only reads them.
 summarise_guest() {
+    # A guest-side warning (a failed screen-size prep leaves the guest at
+    # 1024x768, which fails the window tests every time) rides on the cell.
+    local warn; warn="$(sed -n 's/^GM-WARN: //p' "$2" | head -1)"
+    printf '%s%s\n' "$(summarise_verdict "$1" "$2")" "${warn:+ (warn: $warn)}"
+}
+summarise_verdict() {
     local vm="$1" log="$2" os rc green red names
     os="$(sed -n 's/^GM-OS: //p' "$log" | head -1)"; os="${os:-$vm}"
     rc="$(sed -n 's/^GM-RC: //p' "$log" | tail -1)"
     if grep -q '^GM-BOOT-FAILED' "$log"; then echo "✗ $vm did not boot"; return; fi
-    if grep -q '^GM-TIMEOUT' "$log"; then echo "✗ $os timed out after ${GM_GUEST_TIMEOUT_MIN} min"; return; fi
+    if grep -q '^GM-TIMEOUT' "$log"; then local t="$((GM_GUEST_TIMEOUT_S / 60)) min"; [ "$GM_GUEST_TIMEOUT_S" -lt 120 ] && t="${GM_GUEST_TIMEOUT_S}s"; echo "✗ $os timed out after $t"; return; fi
     if grep -q '^GM-ERROR' "$log"; then echo "✗ $os $(sed -n 's/^GM-ERROR: //p' "$log" | head -1)"; return; fi
     green="$(sed -n 's/^Swift suite green — \([0-9]*\) passed.*/\1/p' "$log" | tail -1)"
     if [ "$rc" = 0 ] && [ -n "$green" ]; then echo "✓ $os $green passed"; return; fi
@@ -207,41 +254,77 @@ summarise_guest() {
     echo "✗ $os no verdict (exit $rc)"
 }
 
+# with_timeout <secs> <cmd…> — macOS has no `timeout`. Exit status is the
+# command's, or the kill's when the clock wins.
+with_timeout() {
+    local s="$1" p w rc; shift
+    "$@" & p=$!
+    ( sleep "$s"; kill "$p" 2>/dev/null ) >/dev/null 2>&1 & w=$!
+    wait "$p"; rc=$?
+    kill "$w" 2>/dev/null; wait "$w" 2>/dev/null
+    return "$rc"
+}
+
+# The guest this run has up, so the exit trap can take it down: a runner killed
+# by launchd or a signal must not leave a VM running, or every later night skips
+# with "a guest is already running" until someone notices.
+CUR_VM=""; CUR_PID=""; CUR_EXEC=""
+stop_guest() {
+    [ -n "$CUR_EXEC" ] && kill "$CUR_EXEC" 2>/dev/null
+    if [ -n "$CUR_VM" ]; then
+        with_timeout 60 "$TART" stop "$CUR_VM" >/dev/null 2>&1
+        local i=0
+        while [ -n "$CUR_PID" ] && kill -0 "$CUR_PID" 2>/dev/null && [ "$i" -lt "$GM_STOP_TIMEOUT_S" ]; do
+            sleep 1; i=$((i + 1))
+        done
+        [ -n "$CUR_PID" ] && kill -9 "$CUR_PID" 2>/dev/null
+    fi
+    CUR_VM=""; CUR_PID=""; CUR_EXEC=""
+}
+
 run_guest() {
-    local vm="$1" sha="$2" share="$3" log="$4" pid i deadline rc
+    local vm="$1" sha="$2" share="$3" log="$4" i deadline
     : > "$log"
     "$TART" run --no-graphics --no-audio --dir="gm:$share:ro" "$vm" >>"$log.tart" 2>&1 &
-    pid=$!
+    CUR_PID=$!; CUR_VM="$vm"
     i=0
-    until "$TART" exec "$vm" /usr/bin/true >/dev/null 2>&1; do
+    until with_timeout 20 "$TART" exec "$vm" /usr/bin/true >/dev/null 2>&1; do
         i=$((i + 5))
-        if [ "$i" -ge "$GM_BOOT_TIMEOUT_S" ] || ! kill -0 "$pid" 2>/dev/null; then
+        if [ "$i" -ge "$GM_BOOT_TIMEOUT_S" ] || ! kill -0 "$CUR_PID" 2>/dev/null; then
             echo "GM-BOOT-FAILED" >> "$log"
-            "$TART" stop "$vm" >/dev/null 2>&1; wait "$pid" 2>/dev/null
+            stop_guest
             return
         fi
         sleep 5
     done
     "$TART" exec "$vm" /bin/bash "/Volumes/My Shared Files/gm/run-in-guest.sh" "$sha" "${GUEST_PREP:-}" >> "$log" 2>&1 &
-    rc=$!
-    deadline=$(( $(date +%s) + GM_GUEST_TIMEOUT_MIN * 60 ))
-    while kill -0 "$rc" 2>/dev/null; do
+    CUR_EXEC=$!
+    deadline=$(( $(date +%s) + GM_GUEST_TIMEOUT_S ))
+    while kill -0 "$CUR_EXEC" 2>/dev/null; do
         if [ "$(date +%s)" -ge "$deadline" ]; then
-            kill "$rc" 2>/dev/null; echo "GM-TIMEOUT" >> "$log"; break
+            kill "$CUR_EXEC" 2>/dev/null; echo "GM-TIMEOUT" >> "$log"; break
         fi
-        sleep 10
+        sleep "$GM_POLL_S"
     done
-    wait "$rc" 2>/dev/null
-    "$TART" stop "$vm" >/dev/null 2>&1
-    wait "$pid" 2>/dev/null
+    wait "$CUR_EXEC" 2>/dev/null
+    CUR_EXEC=""
+    stop_guest
 }
 
 # --- the report --------------------------------------------------------------
 
 write_report() { # write_report <line>
     mkdir -p "$STATE/reports"
-    printf '%s\n' "$1" > "$STATE/reports/$(night).txt"
+    printf '%s\n' "$1" > "$STATE/reports/$(run_name).txt"
     printf '%s\n' "$1" > "$STATE/latest.txt"
+}
+
+# After the gates pass, a failure must still leave a line: exiting quietly here
+# reads in the morning as "the trigger never ran", which is a different fault.
+run_error() {
+    write_report "$(run_name) · error: $*"
+    notify "error: $*"
+    exit 2
 }
 
 notify() {
@@ -262,6 +345,8 @@ cmd_report() {
     fi
     cat "$f"
     case "$(cat "$f")" in
+        *"error:"*) return 1 ;;
+        *"skipped:"*"(last: "*"✗"*) return 1 ;;
         *"skipped:"*) return 3 ;;
         *"✗"*) return 1 ;;
         *) return 0 ;;
@@ -276,7 +361,8 @@ cmd_check() {
 
 cmd_run() {
     local now="${1:-}" head last n shortlog cells cell sha share vm verdict all_ran=1
-    local f
+    local f lockpid
+    if [ "$now" = "--now" ] && ! in_window; then RUN_NAME="trial-$(date +%F-%H%M)"; fi
     if [ "$now" != "--now" ]; then
         in_window || return 0
         # A finished night — it ran, or there was nothing to test — is not
@@ -287,8 +373,23 @@ cmd_run() {
         fi
     fi
     mkdir -p "$STATE" || die "cannot create $STATE"
-    mkdir "$STATE/.lock" 2>/dev/null || { echo "another guest-matrix run is in progress" >&2; return 0; }
-    trap 'rm -rf "$STATE/.lock"' EXIT
+    # The lock carries its holder's pid. A lock whose holder is gone — a runner
+    # killed with -9, a panic, a power cut — is taken over; left alone it would
+    # block every later night and leave no line at all.
+    if ! mkdir "$STATE/.lock" 2>/dev/null; then
+        lockpid="$(tr -cd '0-9' < "$STATE/.lock/pid" 2>/dev/null)"
+        if [ -n "$lockpid" ] && kill -0 "$lockpid" 2>/dev/null \
+            && ps -p "$lockpid" -o command= 2>/dev/null | grep -qF guest-matrix; then
+            write_report "$(run_name) · skipped: a run is still in progress (pid $lockpid)"
+            return 0
+        fi
+        rm -rf "$STATE/.lock"
+        mkdir "$STATE/.lock" 2>/dev/null || run_error "cannot take the lock in $STATE"
+    fi
+    echo $$ > "$STATE/.lock/pid"
+    trap 'stop_guest; rm -rf "$STATE/.lock"' EXIT
+    trap 'exit 143' TERM
+    trap 'exit 130' INT
 
     run_gates
     if [ -n "$GATE_REASONS" ]; then
@@ -303,24 +404,28 @@ cmd_run() {
     # awake (not the display) for exactly as long as this process lives.
     [ -n "${GM_NO_CAFFEINATE:-}" ] || caffeinate -i -s -w $$ >/dev/null 2>&1 &
 
-    head="$(git -C "$REPO" rev-parse --verify HEAD)" || die "cannot read HEAD"
+    head="$(git -C "$REPO" rev-parse --verify HEAD)" || run_error "cannot read HEAD"
     last="$(cat "$STATE/last-tested-sha" 2>/dev/null)"
     if [ -n "$last" ]; then
-        n="$(git -C "$REPO" rev-list --count "$last..$head" -- desktop/)"
+        n="$(git -C "$REPO" rev-list --count "$last..$head" -- $CHANGE_PATHS)"
         shortlog="$n desktop commit$([ "$n" = 1 ] || echo s) since ${last:0:8}"
     else
         shortlog="first run"
     fi
     share="$GM_IONA/share/guest-matrix"
-    mkdir -p "$share" || die "cannot write to $share"
-    git -C "$REPO" bundle create "$share/tree.bundle.tmp" HEAD >/dev/null 2>&1 \
-        && mv "$share/tree.bundle.tmp" "$share/tree.bundle" || die "could not bundle HEAD"
-    write_guest_script "$share/run-in-guest.sh"
+    mkdir -p "$share" 2>/dev/null || run_error "cannot write to $share"
+    # Named for the commit, never rewritten in place: the guest's VirtioFS share
+    # has served the old bytes of a file rewritten at the same size (Iona README,
+    # 25 Sep 2026). A new name cannot be stale.
+    rm -f "$share"/tree-*.bundle
+    git -C "$REPO" bundle create "$share/tree-$head.bundle.tmp" HEAD >/dev/null 2>&1 \
+        && mv "$share/tree-$head.bundle.tmp" "$share/tree-$head.bundle" || run_error "could not bundle HEAD into $share"
+    write_guest_script "$share/run-in-guest.sh" || run_error "could not write the guest script into $share"
 
-    mkdir -p "$STATE/logs/$(night)"
+    mkdir -p "$STATE/logs/$(run_name)"
     cells=""
     for vm in $GUESTS; do
-        log="$STATE/logs/$(night)/$vm.log"
+        log="$STATE/logs/$(run_name)/$vm.log"
         run_guest "$vm" "$head" "$share" "$log"
         cell="$(summarise_guest "$vm" "$log")"
         cells="${cells:+$cells · }$cell"
@@ -328,9 +433,12 @@ cmd_run() {
         # must retry rather than read this commit as covered.
         case "$cell" in *"did not boot"*|*"timed out"*|*"no verdict"*|*"could not"*|*"not in the bundle"*) all_ran=0 ;; esac
     done
-    verdict="$(night) · tested ${head:0:8} ($shortlog) · $cells"
+    verdict="$(run_name) · tested ${head:0:8} ($shortlog)${GM_IGNORE_IDLE:+, idle gate overridden} · $cells"
     write_report "$verdict"
-    [ "$all_ran" = 1 ] && printf '%s\n' "$head" > "$STATE/last-tested-sha"
+    if [ "$all_ran" = 1 ]; then
+        printf '%s\n' "$head" > "$STATE/last-tested-sha"
+        printf '%s\n' "$cells" > "$STATE/last-verdict"
+    fi
     notify "$cells"
     return 0
 }
@@ -338,10 +446,37 @@ cmd_run() {
 # install / uninstall — the LaunchAgent that ticks `run` on :00 and :30. A
 # calendar interval, not StartInterval: launchd fires one missed calendar event
 # on wake, so a Mac woken at 23:29 by `pmset repeat wake` runs the :30 tick.
+#
+# launchd runs a small applet, not /bin/bash, for two reasons. System Settings ▸
+# General ▸ Login Items names a background item after the program it launches,
+# so bare bash would be listed as "bash"; the applet is listed by its own name.
+# And macOS asks permission prompts (an external drive, for one) of that same
+# program, so the applet gets an entry of its own instead of bash getting one
+# that covers every script on the machine. Same shape as the code-backup agent.
 LABEL="com.cassio.bristlenose-guest-matrix"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+APP_NAME="Bristlenose Guest Matrix"
+APP="$HOME/Library/Application Support/$APP_NAME/$APP_NAME.app"
+build_applet() {
+    local src; src="$(mktemp -d)/applet.applescript"
+    # `|| true` and the redirect are load-bearing: an applet whose shell command
+    # exits non-zero puts up an error dialog, and a dialog at 02:00 waits for a
+    # click that never comes. The mkdir is too: with the log's directory gone the
+    # redirect fails, `|| true` swallows it, and every night does nothing
+    # (measured 8 Oct 2026 — exit 0 in half a second, no run, no log).
+    cat > "$src" <<EOF
+do shell script "mkdir -p " & quoted form of "$STATE" & "; /bin/bash " & quoted form of "$REPO/desktop/scripts/guest-matrix.sh" & " run >> " & quoted form of "$STATE/launchd.log" & " 2>&1 || true"
+EOF
+    rm -rf "$APP"; mkdir -p "$(dirname "$APP")"
+    osacompile -o "$APP" "$src" || die "osacompile failed"
+    # No Dock icon while it runs.
+    plutil -replace LSUIElement -bool true "$APP/Contents/Info.plist" || die "could not set LSUIElement"
+    plutil -replace CFBundleIdentifier -string "$LABEL" "$APP/Contents/Info.plist"
+    codesign --force --sign - "$APP" >/dev/null 2>&1 || die "could not sign $APP"
+}
 cmd_install() {
     mkdir -p "$STATE" "$(dirname "$PLIST")"
+    build_applet
     cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -349,11 +484,9 @@ cmd_install() {
 <dict>
     <key>Label</key><string>$LABEL</string>
     <key>ProgramArguments</key>
-    <array><string>/bin/bash</string><string>$REPO/desktop/scripts/guest-matrix.sh</string><string>run</string></array>
+    <array><string>$APP/Contents/MacOS/applet</string></array>
     <key>StartCalendarInterval</key>
     <array><dict><key>Minute</key><integer>0</integer></dict><dict><key>Minute</key><integer>30</integer></dict></array>
-    <key>EnvironmentVariables</key>
-    <dict><key>PATH</key><string>/usr/bin:/bin:/usr/sbin:/sbin:$HOME/bin:/opt/homebrew/bin</string></dict>
     <key>Umask</key><integer>63</integer>
     <key>StandardOutPath</key><string>$STATE/launchd.log</string>
     <key>StandardErrorPath</key><string>$STATE/launchd.log</string>
@@ -365,10 +498,11 @@ EOF
     launchctl bootstrap "gui/$(id -u)" "$PLIST" || die "launchctl bootstrap refused $PLIST"
     launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1 || die "loaded, but launchctl cannot see $LABEL"
     echo "installed $LABEL — ticks on :00 and :30, runs 23:00–06:00"
+    echo "listed in System Settings ▸ General ▸ Login Items as \"$APP_NAME\""
 }
 cmd_uninstall() {
     launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null
-    rm -f "$PLIST"
+    rm -f "$PLIST"; rm -rf "$(dirname "$APP")"
     echo "removed $LABEL"
 }
 
@@ -378,6 +512,7 @@ case "${1:-}" in
     uninstall) cmd_uninstall ;;
     run)    cmd_run "${2:-}" ;;
     report) cmd_report ;;
+    behind) cmd_behind ;;
     summarise) summarise_guest "$2" "$3" ;;   # the test's seam; pure
     *) echo "usage: $(basename "$0") check | run [--now] | report | install | uninstall" >&2; exit 2 ;;
 esac

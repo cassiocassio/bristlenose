@@ -218,13 +218,14 @@ function section4() {
     const s5 = d5.getElementById("hist-era");
     eq("the slider has one stop per version an attempt ran under", "1", s5.max);
     s5.value = "0"; s5.dispatchEvent(new d5.defaultView.Event("input"));
-    eq("the slider's own label is just \"version 1 of 2\"", "version 1 of 2", d5.getElementById("hist-vershort").textContent);
+    eq("the slider names the version by the change number on the chart, not a count of its own", "before #1", d5.getElementById("hist-vershort").textContent);
     eq("sliding switches to By machine version", "true", d5.getElementById("hist-mode-era").getAttribute("aria-pressed"));
     const groups = [...d5.querySelectorAll("#pane-history g.inv")];
     eq("…and dims the attempts outside the selected version", ["1", "0.1"], groups.map(g => g.getAttribute("opacity")));
-    eq("…and names the version in words", true, /version 1 of 2 · before #1/.test(d5.querySelector(".hist-ver").textContent));
+    eq("…and names the version in words", true, /^the machine before #1/.test(d5.querySelector(".hist-ver").textContent));
     s5.value = "1"; s5.dispatchEvent(new d5.defaultView.Event("input"));
     eq("the newest version names the change that began it", true, /after #1 .*a named change/.test(d5.querySelector(".hist-ver").textContent));
+    eq("…and the slider says the same number the inspector's change block does", ["after #1", "#1"], [d5.getElementById("hist-vershort").textContent, d5.querySelector(".hist-ver .hist-chg-n").textContent]);
     eq("…in its own block: number, sha and date, then what changed", ["#1", "abcdef12 2998-01-01", "a named change"], [...d5.querySelector(".hist-ver .hist-chg").children].map(e => e.textContent));
     eq("the bottom-right list of changes is gone (the inspector carries them)", false, /Release-machine changes named on the chart/.test(d5.getElementById("pane-history").textContent));
     eq("…and its one clean attempt is a 100% yield", true, /100% yield/.test(d5.querySelector(".hist-ver").textContent));

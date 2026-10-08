@@ -1038,14 +1038,17 @@
     });
     stops2.forEach(function(st, k){
       var poly = S("polygon", {points: shape(st.y), fill: "none", stroke: "var(--ink-2)", "stroke-width": 1, "stroke-linejoin": "round", display: "none"});
-      tip(poly, "machine version "+(k+1)+": "+Math.round(100*st.y[st.y.length-1])+"% of its attempts got through");
+      tip(poly, "the machine "+verRange(st)+": "+Math.round(100*st.y[st.y.length-1])+"% of its attempts got through");
       st.poly = poly; fsvg.appendChild(poly);
     });
-    var verLabel = function(st, k){
+    // A version is named by the change that began it — the same #n as the rules on the
+    // chart. A separate "version k of N" count drifted from those numbers whenever two
+    // changes landed with no release between them (owner, 8 Oct 2026: version 10 was #12).
+    function verRange(st){ return st.e === 0 ? "before #1" : (st.from + 1 < st.e ? "after #"+(st.from+1)+"–"+st.e : "after #"+st.e); }   // a declaration: the funnel tooltips above call it
+    var verLabel = function(st){
       if (!ms.length) return "one version on record — no named release-machine changes to split by";
-      var range = st.e === 0 ? "before #1" : (st.from + 1 < st.e ? "after #"+(st.from+1)+"–"+st.e : "after #"+st.e);
-      var m = st.e ? ms[st.e - 1] : null;
-      return "version "+(k+1)+" of "+stops2.length+" · "+range+(m ? " ("+m.ts.slice(5, 10).replace("-", "/")+")" : "");
+      var m = st.e ? ms[st.e - 1] : null, d = m ? new Date(m.ts) : null;
+      return "the machine "+verRange(st)+(d && !isNaN(d.getTime()) ? " · "+d.toLocaleDateString(undefined, {day: "numeric", month: "short"}) : "");
     };
     var ctl = $("div","hist-ctl"); var ctlR = $("div","hist-ctl-r"); ctlR.style.width = FWID+"px";
     var modeSeg = $("span","seg"); modeSeg.setAttribute("role","group"); modeSeg.setAttribute("aria-label","funnel layers");
@@ -1082,12 +1085,12 @@
       var cur = stops2[era];
       cols.forEach(function(c){ if (c.g) c.g.setAttribute("opacity", on && cur && c.era !== cur.e ? 0.1 : 1); });
       relEls.forEach(function(o){ o.g.setAttribute("opacity", on && cur && cur.rels.indexOf(o.v) < 0 ? 0.25 : 1); });
-      verShort.textContent = on && cur ? "version "+(era+1)+" of "+stops2.length : (stops2.length ? stops2.length+" versions" : "");
-      if (!on || !cur) { verTxt.textContent = stops2.length ? stops2.length+" machine versions — slide to see each one's funnel" : "no release-machine changes to split by"; return; }
+      verShort.textContent = on && cur ? verRange(cur) : "";
+      if (!on || !cur) { verTxt.textContent = stops2.length ? "the machine after each change on the chart — slide to see its funnel" : "no release-machine changes to split by"; return; }
       // version line, then the change(s) that began it — each in its own block, as in the
       // "Release-machine changes" list — then how it did (owner, 8 Oct 2026)
       verTxt.textContent = "";
-      add(verTxt, $("div", "hist-ver-h", verLabel(cur, era)));
+      add(verTxt, $("div", "hist-ver-h", verLabel(cur)));
       var named = ms.slice(cur.from, cur.e);
       if (named.length) named.forEach(function(m, i){ var c = $("div", "hist-chg"); add(c, $("span", "hist-chg-n", "#"+(cur.from+i+1)), $("code", null, m.sha+" "+m.ts.slice(0, 10)), $("div", null, m.milestone)); add(verTxt, c); });
       else add(verTxt, $("div", "hist-chg", "the machine as first recorded"));

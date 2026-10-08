@@ -657,11 +657,16 @@ every other commit to `MACHINE_PATHS` still appears, unnamed, in its gap.
   force when it started; a release's channel row to the version that shipped
   it. In version mode the funnel draws one outline per version, built from the
   attempts that ran under it (the selected one blue), the timeline dims every
-  attempt outside it and scrolls to it, and a line names the version, its
-  attempts, its yield and the changes that began it. All releases is the
-  per-release onion. Read at 0.35.0: every version through 10 sits between 0
-  and 13 % because one bad night (0.32.0's eight attempts) outweighs three
-  clean releases in the same version; version 11 is the first at 100 %, on one
+  attempt outside it and scrolls to it, and the inspector names the version,
+  the changes that began it (one block each: #n, sha, date, subject), its
+  attempts and its yield. **A version is named by the change that began it**
+  (`after #12`, `after #13–14`, `before #1`), the same numbers as the rules on
+  the chart. It once also carried a count of its own ("version 10 of 11"),
+  which drifted from those numbers whenever two changes landed with no release
+  between them: the owner read version 10 and found #12 (8 Oct 2026). All releases is the
+  per-release onion. Read at 0.35.0: every version up to the one after #12 sits
+  between 0 and 13 % because one bad night (0.32.0's eight attempts) outweighs three
+  clean releases in the same version; the one after #13–14 is the first at 100 %, on one
   attempt — a trend to watch, not yet a measurement.
 - **The run in progress** is drawn with the run board's own semantics and
   tokens, never a second verdict: whether the newest attempt is running or

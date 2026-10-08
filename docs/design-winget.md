@@ -1,5 +1,5 @@
 ---
-status: plan v2 (5 Oct 2026) — step 1 written on main (1.1–1.8), not yet run on a box; its acceptance run is next
+status: plan v2 — step 1 done and re-proven on a box after a review (8 Oct 2026); step 2's CI job written, not yet run on GitHub
 ---
 
 # Bristlenose on winget
@@ -68,16 +68,22 @@ manifest carries the new hash. Published versions stay unsigned (signing changes
 bytes, and winget pins the hash). SmartScreen reputation starts accruing when signing
 starts. Certum verifies identity documents first, so order a few days ahead.
 
-**What the warning hits, and what it may not.** SmartScreen's dialog is triggered by an
-unsigned executable carrying the Mark of the Web (the `Zone.Identifier` a browser adds to
-a download), which is what a double-click on a downloaded installer meets. An installer
-that winget downloads and runs itself normally carries no such mark, so a `winget
-install` may never show the dialog (inferred, not yet measured; step 1's acceptance
-measures it on a stock Windows 11 box). The uv route and the one-liner run no downloaded
-`.exe` at all. So the unsigned period mostly affects people who download the installer
-from a GitHub Release by hand, which is not a route we will advertise. For a researcher
-who does meet it, the blue "Windows protected your PC" screen reads as malware, which is
-why signing is the next step once Windows is a real channel, not polish.
+**What the warning hits: winget installs too (measured 8 Oct 2026).** SmartScreen's
+dialog is triggered by an unsigned executable carrying the Mark of the Web. The plan
+inferred that an installer winget downloads and runs itself would carry no such mark,
+so `winget install` might never show the dialog. **That was wrong.** winget applies the
+mark itself (its log: "Started applying motw using IAttachmentExecute"), and on a
+Windows Server 2025 desktop session `winget install --manifest` of the unsigned
+installer stopped at the full-screen "Windows protected your PC — Microsoft Defender
+SmartScreen prevented an unrecognized app from starting", Publisher: Unknown publisher,
+with **Run anyway** behind "More info". It appeared again on `winget install --force`.
+Measured with a local manifest served from 127.0.0.1; a package from the community
+source is applied the same way, so the same dialog is expected there (inferred). The
+uv route and the one-liner run no downloaded `.exe`, so they are unaffected.
+
+So the unsigned period hits **every winget user**, not only people who download the
+installer by hand. The decision above rested on the opposite assumption; whether to
+submit unsigned anyway, or sign before the first submission, is reopened for Martin.
 
 ## What exists (on main since 5 Oct 2026; unreleased)
 
@@ -142,13 +148,44 @@ two installs coexisting (a uv/pipx `bristlenose` and the winget one on one PATH,
 older install opening a database a newer one migrated), long project paths,
 Smart App Control.
 
+A third review (8 Oct 2026: correctness, silent failures, security) of the step-1
+code. Fixed and re-proven on a fresh Server 2025 box the same night
+(`git log --grep='review fixes' --grep='runs the engine'`):
+
+- **Uninstall deleted `{app}` wholesale.** winget passes `--location` through as
+  `/DIR=`, so `{app}` can be a folder of the user's. Now `_internal` and `tools`,
+  then `{app}` only if empty; measured: a `keep.txt` in the chosen folder survives.
+- **The running check refused on any open handle.** It now opens the exe sharing
+  everything: a running image still refuses (exit 7), a sharing reader (Defender,
+  Explorer's preview) does not; measured both ways.
+- **No check ran the engine.** The self-test now runs the bundled `ffmpeg -version`
+  and decodes a generated WAV through faster-whisper's decoder (PyAV).
+- **The build could install unpinned packages** (`--constraint` pins only what it
+  names): every installed distribution must now be in `constraints.txt` at its pin.
+- **Smaller:** a stale server could pass the serve check; vcruntime was accepted
+  anywhere; the moved-folder check ran only `--version`; a damaged install fell
+  back to an FFmpeg on PATH (and Windows' `which` searches the current directory
+  first); exit 7 now maps to winget's `packageInUse`; post-release versions, wheel
+  paths with spaces, git stderr and a missing FFmpeg licence are handled.
+
+Open from that review: dependency **hashes** (`--generate-hashes` /
+`--require-hashes`; the pins stop drift but not a wheel added to a pinned version);
+an `[InstallDelete]` rollback that a failure *other* than a running exe (disk full,
+antivirus on a `.pyd`) can still leave half-installed; `winget` and `nvidia-smi`
+still launched by bare name (`ollama.py`, `doctor_fixes.py`, `utils/hardware.py` —
+`utils/safe_which.py` is the drop-in). The current-directory lookup for Ollama and
+FFmpeg was fixed separately (`5f3d5ac8`, `47ee59af`).
+
 ## The road
 
 1. **Land the work** (detailed below). ~1 day.
 2. **Build it in CI before the tag.** A `workflow_dispatch` job on `windows-latest`
    runs step 1's build and smoke tests from `main` and keeps the installer as an
    artefact, so the Windows verdict exists before the irreversible act (the release
-   machine's own rule). The release then attaches that exact installer to the GitHub
+   machine's own rule). *Written 8 Oct 2026 as
+   `.github/workflows/windows-installer.yml` (also on pull requests and pushes that
+   touch `packaging/windows/`), with Inno Setup 7.1.0 pinned by hash and winget
+   installed to validate the manifest; not yet run on GitHub.* The release then attaches that exact installer to the GitHub
    Release; it is **never rebuilt** for a published version (a rebuild changes the
    hash winget pinned).
 3. **First submission by hand** with Komac or `wingetcreate`: one version per PR, sign
@@ -179,10 +216,15 @@ fresh Windows Server 2025 box (aella) passed everything but the winget install:
   0.34.0), doctor and transcribe from a new session. Administrator install too.
 - With `serve` running, install refuses (exit 7) and uninstall refuses (exit 1),
   the install intact; both are clean once it stops.
-- **Not settled:** `winget install --manifest` downloaded, verified and marked the
-  installer, then waited with no setup process over headless SSH, most likely on a
-  security prompt with no desktop to show it. The Windows 11 VM check below answers
-  it.
+- **Settled 8 Oct 2026, on a desktop session over RDP:** `winget install
+  --manifest` downloads, verifies the hash, then stops at SmartScreen's "Windows
+  protected your PC / Unknown publisher" (the headless run on 6 Oct was waiting on
+  exactly this, with no desktop to show it). After Run anyway it installs (exit 0);
+  `winget install --force` reinstalls the same version (so doctor's reinstall advice
+  works), with the dialog again. `winget list --id` and `winget uninstall --id` find
+  nothing for a local manifest, which is not a source winget can match; that part is
+  only testable once a version is published. See *Signing*: the dialog reopens the
+  unsigned-first decision.
 
 The run found two defects, fixed in the same commit (`git log --grep='winget
 acceptance'`): the build packaged the checkout instead of the wheel when run from

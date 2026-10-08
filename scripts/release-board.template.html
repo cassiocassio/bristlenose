@@ -1212,7 +1212,17 @@
       if (typeof fetch !== "function") return;
       b.setAttribute("aria-busy", "true"); b.classList.remove("err");
       fetch("/replay.json"+(payload.live.token ? "?k="+encodeURIComponent(payload.live.token) : ""), {cache: "no-store"})
-        .then(function(r){ return r.json().then(function(j){ if (!r.ok || !j.frames) throw new Error(j && j.error || "HTTP "+r.status); return j; }); })
+        .then(function(r){
+          // The template is re-read per request but the server is not: a board started
+          // before /replay.json existed draws this control and answers 404 with no body
+          // (7 Oct board, 8 Oct page — Safari said only "The string did not match the expected pattern").
+          if (r.status === 404) throw new Error("this board server predates replay — restart it: scripts/release.sh board "+(payload.version || "<version>")+" --restart");
+          return r.text().then(function(t){
+            var j = null; try { j = JSON.parse(t); } catch(e) { throw new Error("HTTP "+r.status+" — not JSON"+(t ? ": "+t.slice(0, 120) : "")); }
+            if (!r.ok || !j.frames) throw new Error(j && j.error || "HTTP "+r.status);
+            return j;
+          });
+        })
         .then(function(j){
           b.removeAttribute("aria-busy");
           if (!j.frames.length) throw new Error("no frames");

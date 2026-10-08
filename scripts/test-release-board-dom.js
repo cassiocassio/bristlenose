@@ -246,7 +246,7 @@ async function section5() {
   w.matchMedia = (q) => ({ matches: /reduce/.test(q), addEventListener() {} });
   const asked = [];
   const board = () => ({ ok: true, status: 200, json: () => Promise.resolve(m), text: () => Promise.resolve("") });
-  w.fetch = (u) => { asked.push(u); return Promise.resolve(/replay\.json/.test(u) ? { ok: true, status: 200, json: () => Promise.resolve({ version: "1.0.0", frames }), text: () => Promise.resolve("") } : board()); };
+  w.fetch = (u) => { asked.push(u); return Promise.resolve(/replay\.json/.test(u) ? { ok: true, status: 200, json: () => Promise.resolve({ version: "1.0.0", frames }), text: () => Promise.resolve(JSON.stringify({ version: "1.0.0", frames })) } : board()); };
   const btn = d.getElementById("line-replay");
   eq("the live line carries a replay control, top right of its heading", true, !!btn && btn.parentNode === d.querySelector("#line h2"));
   eq("…drawn with createElementNS, not markup", "svg", btn && btn.firstChild && btn.firstChild.localName);
@@ -298,9 +298,13 @@ async function section5() {
   eq("…the control bar is gone", null, d.getElementById("line-replay-ctl"));
   eq("…and focus returns to the replay control", "line-replay", d.activeElement && d.activeElement.id);
   // a failing fetch is the control's state, never the board's
-  w.fetch = () => Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: "boom" }), text: () => Promise.resolve("") });
+  w.fetch = () => Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: "boom" }), text: () => Promise.resolve(JSON.stringify({ error: "boom" })) });
   d.getElementById("line-replay").click(); await sleep(50);
   eq("a failed replay fetch marks the control and says why", true, d.getElementById("line-replay").classList.contains("err") && /boom/.test(d.getElementById("line-replay").title));
+  // a server started before the route existed: 404, empty text body (Safari: "The string did not match the expected pattern")
+  w.fetch = () => Promise.resolve({ ok: false, status: 404, json: () => Promise.reject(new Error("The string did not match the expected pattern.")), text: () => Promise.resolve("") });
+  d.getElementById("line-replay").click(); await sleep(50);
+  eq("a board server older than the route says to restart it, by name", true, /predates replay — restart it: scripts\/release\.sh board 1\.0\.0 --restart/.test(d.getElementById("line-replay").title));
   eq("…and draws no fault band", null, d.getElementById("fault"));
   eq("no renderer error across the replay", 0, errors.filter(e => /Uncaught/.test(e)).length);
   w.close();

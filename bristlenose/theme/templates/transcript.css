@@ -217,6 +217,13 @@
     justify-self: start;
 }
 
+/* The timecode's non-editable island is the grid item now; it sits as the
+   timecode did. */
+.transcript-segment .segment-timecode-cell {
+    white-space: nowrap;
+    justify-self: start;
+}
+
 .transcript-segment .segment-body {
     min-width: 0;
     font-size: var(--bn-text-body);
@@ -239,7 +246,9 @@
     text-transform: uppercase;
 }
 
-.transcript-segment .segment-body[contenteditable="true"]:focus {
+/* The transcript is one editable region (a caret for split and join); it
+   draws no focus ring, as the paragraphs did not. */
+.transcript-body[contenteditable="true"]:focus {
     outline: none;
 }
 

@@ -415,6 +415,20 @@ The common case (owner, 6 Oct 2026): a long paragraph that does not read as one 
 two with the same speaker; and the reverse. Speaker reassignment of a half is stage 2, and waits
 on the scope question in `design-people.md` §K.
 
+- **One editable region, not one per paragraph** (7 Oct 2026). The transcript section is
+  the editing host; timecodes, badges and the margin are non-editable islands inside it,
+  and Return and Backspace find their paragraph from the caret (`data-position`). Each
+  paragraph was its own host until then, and a selection cannot leave the host it starts
+  in, so dragging to select across paragraphs was impossible (owner).
+- **The speaker label is not part of the text** (7 Oct 2026). The raw `.txt` writes each
+  line's label after its code, `[00:14] [p1] (Speaker B) Okay…`, and a platform
+  transcript's label is the person's real name. The importer kept it, so the page drew
+  "(Speaker B)" and "(Rachel Okafor)" in front of the words, and the name reached exports,
+  search and the agent endpoint past anonymisation. It now drops a leading label that is
+  one of the session's own recorded labels (`speaker-info/<sid>.json`, the registry),
+  never any other bracket: "(laughs)" stays. Measured on 3,237 real paragraphs: none
+  still starts with a label. A split, join or move made in 0.35.0 on an *untimed*
+  labelled paragraph counted the label's two words, so its replay is refused and logged.
 - **Interaction.** A paragraph's text takes a caret (`contenteditable`) and nothing else: typing,
   dictation, autocorrect, pasting and dropping are refused by a native `beforeinput` guard, since
   the words are the recording's. **Return** splits at the caret; **Backspace** at a paragraph's

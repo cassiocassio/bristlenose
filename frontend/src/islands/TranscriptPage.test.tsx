@@ -719,10 +719,37 @@ describe("TranscriptPage — split and join (design-transcript-editing.md, stage
     render(<TranscriptPage projectId="1" sessionId="s1" />);
     await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
     const body = bodyOf(0);
-    expect(body.getAttribute("contenteditable")).toBe("true");
     caret(body, "Thanks for ".length);
     fireEvent.keyDown(body, { key: "Enter" });
     await waitFor(() => expect(postParagraphSplit).toHaveBeenCalledWith("s1", 0, 2, "joining me today."));
+  });
+
+  it("the whole transcript is one editable region, so a selection can run across paragraphs", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    const section = screen.getByTestId("transcript-body");
+    expect(section.getAttribute("contenteditable")).toBe("true");
+    // No paragraph is an editing region of its own: a selection could not leave one.
+    expect(bodyOf(0).getAttribute("contenteditable")).toBeNull();
+    expect(bodyOf(1).getAttribute("contenteditable")).toBeNull();
+    // Timecodes, badges and the margin take no caret.
+    for (const sel of [".segment-timecode-cell", ".segment-speaker"]) {
+      expect(section.querySelector(sel)?.getAttribute("contenteditable")).toBe("false");
+    }
+  });
+
+  it("Return in a selection spanning paragraphs splits nothing", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    const range = document.createRange();
+    range.setStart(bodyOf(0).firstChild!, 2);
+    range.setEnd(bodyOf(1), 1);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    fireEvent.keyDown(bodyOf(0), { key: "Enter" });
+    expect(postParagraphSplit).not.toHaveBeenCalled();
   });
 
   it("typing is refused: the words are the recording's", async () => {

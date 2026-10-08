@@ -663,6 +663,7 @@ def _import_transcript_segments(
 
         content = txt_file.read_text(encoding="utf-8")
         segments = _SEGMENT_RE.findall(content)
+        labels = _session_speaker_labels(transcripts_dir.parent, sid)
         # The last segment has no successor to end at. `# Duration:` is written
         # from that segment's own end (s06: `merged[-1].end_time`), so it is
         # the right end, floored to the second. A flat "+10 s" cut the playback
@@ -684,11 +685,63 @@ def _import_transcript_segments(
                 speaker_code=speaker_code,
                 start_time=start,
                 end_time=end,
-                text=text.strip(),
+                text=_without_speaker_label(text.strip(), labels),
                 source="transcript",
                 segment_index=i,
             )
             db.add(seg)
+
+
+#: The raw ``.txt`` writes each line's speaker label after its code —
+#: ``[00:14] [p1] (Speaker B) Okay…`` (``utils/markdown.format_raw_segment_txt``),
+#: and a platform transcript's label is the person's real name. One level of
+#: nested brackets, as a Teams display name can carry its own.
+_LEADING_LABEL_RE = re.compile(r"^\(((?:[^()]|\([^()]*\))*)\)\s*")
+
+
+def _session_speaker_labels(output_dir: Path, sid: str) -> set[str]:
+    """The speaker labels the pipeline gave this session — the exact set the
+    ``.txt`` writer put in front of its lines. From the identify stage's
+    ``speaker-info/<sid>.json`` (its speakers, and each segment's label) and the
+    session registry. Empty when neither
+    knows, and then nothing is stripped."""
+    labels: set[str] = set()
+    info = output_dir / ".bristlenose" / "intermediate" / "speaker-info" / f"{sid}.json"
+    try:
+        data = json.loads(info.read_text(encoding="utf-8"))
+        # A split recording names its labels in speaker_infos; a platform
+        # transcript (VTT voice tags) leaves that empty and carries them on
+        # each segment.
+        labels |= {
+            str(s.get("speaker_label")).strip()
+            for key in ("speaker_infos", "segments_with_roles")
+            for s in data.get(key, [])
+            if s.get("speaker_label")
+        }
+    except (OSError, ValueError, AttributeError):
+        pass
+    try:
+        from bristlenose.session_registry import NO_PARTICIPANT_LABEL, SessionRegistry
+
+        held = SessionRegistry.load(output_dir).speakers.get(sid, {})
+        labels |= {
+            label for label in held
+            if not label.startswith("\u0000") and label != NO_PARTICIPANT_LABEL
+        }
+    except (OSError, ValueError, ImportError):
+        pass
+    return labels
+
+
+def _without_speaker_label(text: str, labels: set[str]) -> str:
+    """A paragraph's words without the speaker label the ``.txt`` carries in
+    front of them (6 Oct 2026: "(Speaker B)" was drawn in the transcript, and a
+    platform transcript's real name with it, past anonymisation). Only one of
+    this session's own labels is taken, so a transcript's "(laughs)" stays."""
+    m = _LEADING_LABEL_RE.match(text)
+    if m and m.group(1).strip() in labels and text[m.end():].strip():
+        return text[m.end():]
+    return text
 
 
 _SPEAKER_PREFIX_RE = re.compile(r"^\([^)]*\)\s*")

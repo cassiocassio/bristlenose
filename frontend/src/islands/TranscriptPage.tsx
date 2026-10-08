@@ -347,14 +347,12 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   useEffect(() => {
     const body = bodyRef.current;
     if (!body || !paragraphEditing) return;
-    const refuse = (e: Event) => {
-      if ((e.target as HTMLElement | null)?.closest?.(".segment-body")) e.preventDefault();
-    };
+    const refuse = (e: Event) => e.preventDefault();
     body.addEventListener("beforeinput", refuse);
     return () => body.removeEventListener("beforeinput", refuse);
   }, [paragraphEditing, data]);
-  const onParagraphKey = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>, position: number, tokens: string[]) => {
+  const onTranscriptKey = useCallback(
+    (e: React.KeyboardEvent<HTMLElement>) => {
       const mod = e.metaKey || e.ctrlKey;
       // The page's own ⌘Z stands down inside editable text, so the report's
       // undo is reached from here.
@@ -364,14 +362,24 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         return;
       }
       if (mod || e.altKey) return;
+      if (e.key !== "Enter" && e.key !== "Backspace") return;
+      // The whole transcript is one editable region, so a selection can run
+      // across paragraphs; the paragraph is the one holding the caret.
+      e.preventDefault();
+      const anchor = window.getSelection()?.anchorNode ?? null;
+      const el = anchor instanceof Element ? anchor : anchor?.parentElement ?? null;
+      const paragraph = el?.closest<HTMLElement>(".segment-body[data-position]");
+      if (!paragraph) return;
+      const position = Number(paragraph.dataset.position);
       const segs = data?.segments ?? [];
+      const seg = segs[position];
+      if (!seg) return;
+      const tokens = drawnTokens(seg.text, seg.words);
       if (e.key === "Enter") {
-        e.preventDefault();
-        const token = caretWords(e.currentTarget);
+        const token = caretWords(paragraph);
         if (token === null || token <= 0 || token >= tokens.length) return;
         void splitParagraph(sessionId, position, token, verifyOf(tokens, token)).catch(() => undefined);
-      } else if (e.key === "Backspace" && caretAtStart(e.currentTarget)) {
-        e.preventDefault();
+      } else if (caretAtStart(paragraph)) {
         const above = segs[position - 1];
         if (!above || above.speaker_code !== segs[position]?.speaker_code) return;
         void joinParagraphs(sessionId, position, verifyOf(tokens, 0)).catch(() => undefined);
@@ -573,6 +581,25 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         className="transcript-body"
         ref={bodyRef}
         data-testid="transcript-body"
+        // One editable region, not one per paragraph: a selection can't leave
+        // the editable element it starts in, so per-paragraph regions made a
+        // drag across paragraphs impossible (owner, 7 Oct 2026). It takes a
+        // caret so Return splits and Backspace at a paragraph's start joins
+        // (design-transcript-editing.md §"Split and join, stage 1"); nothing
+        // else edits — typing, cutting, pasting and dropping are refused, as
+        // the words are the recording's. Timecodes, badges and the margin are
+        // non-editable islands inside it.
+        {...(paragraphEditing
+          ? {
+              contentEditable: true,
+              suppressContentEditableWarning: true,
+              spellCheck: false,
+              onPaste: (e: React.ClipboardEvent) => e.preventDefault(),
+              onDrop: (e: React.DragEvent) => e.preventDefault(),
+              onCut: (e: React.ClipboardEvent) => e.preventDefault(),
+              onKeyDown: onTranscriptKey,
+            }
+          : {})}
       >
         {segments.map((seg, position) => {
           const anchor = `t-${Math.floor(seg.start_time)}`;
@@ -652,6 +679,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                 : {})}
               data-testid={`segment-${anchor}`}
             >
+              <span className="segment-timecode-cell" contentEditable={false}>
               {data.has_media ? (
                 <TimecodeLink
                   seconds={seg.start_time}
@@ -665,7 +693,8 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                   <span className="timecode-bracket">]</span>
                 </span>
               )}
-              <span className="segment-speaker" data-participant={seg.speaker_code}>
+              </span>
+              <span className="segment-speaker" data-participant={seg.speaker_code} contentEditable={false}>
                 {/* The same picker as the header's (owner, 6 Oct 2026): naming
                     from a paragraph names the speaker everywhere. With the
                     Session | Paragraph switch (§K), it can also credit this
@@ -689,23 +718,8 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                 // spelled lower-case on purpose (iPhone) keeps its spelling.
                 className={`segment-body${drawsCapital(segments, position, drawnTokens(seg.text, seg.words)[0] ?? "") ? " bn-sentence-start" : ""}`}
                 lang={data?.language ?? undefined}
-                // The text takes a caret, so Return can split the paragraph
-                // there and Backspace at its start can join it to the one
-                // above (design-transcript-editing.md §"Split and join, stage
-                // 1"). Nothing else edits: typing, pasting and dropping are
-                // refused, since the words are the recording's.
-                {...(paragraphEditing
-                  ? {
-                      contentEditable: true,
-                      suppressContentEditableWarning: true,
-                      spellCheck: false,
-                      onPaste: (e: React.ClipboardEvent) => e.preventDefault(),
-                      onDrop: (e: React.DragEvent) => e.preventDefault(),
-                      onCut: (e: React.ClipboardEvent) => e.preventDefault(),
-                      onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) =>
-                        onParagraphKey(e, position, drawnTokens(seg.text, seg.words)),
-                    }
-                  : {})}
+                // Where Return and Backspace find their paragraph.
+                data-position={position}
               >
                 {seg.words && seg.words.length > 0 ? (
                   // Word-level spans for karaoke highlighting during playback.
@@ -731,7 +745,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
 
               {/* Margin annotations */}
               {segAnnotations.length > 0 && (
-                <div className="segment-margin">
+                <div className="segment-margin" contentEditable={false}>
                   {segAnnotations.map(({ quoteId, ann, showLabel, showSentiment, shownTags }) => {
                     const sentimentBadge = showSentiment
                       ? {

@@ -1283,15 +1283,18 @@ def replay_frames(root: Path, version: str) -> list[dict]:
     return frames
 
 
-def line_frames(root: Path, version: str) -> list[dict]:
-    """THE LINE's replay, for the live board's replay control: replay_frames
-    projected to the one pane that animates. Not a second frame model — the same
-    generator on the same ledger prefixes, minus every slice the line does not
-    draw (the cross-release history above all, which no frame of one run needs).
-    0.34.0's 55 frames: 1.6 MB as full models, 178 KB as this."""
-    return [{"i": f["i"], "of": f["of"], "caption": f["caption"], "now": f["model"].get("now"),
-             "line": f["model"]["line"], "lane_ids": f["model"]["build"].get("lane_ids") or []}
-            for f in replay_frames(root, version)]
+def board_frames(root: Path, version: str) -> list[dict]:
+    """The board's replay, for the live board's replay control: replay_frames,
+    with the one slice no frame of one run needs taken out — the cross-release
+    history, which the page keeps from its live model. Not a second frame
+    model: the same generator on the same ledger prefixes. 0.34.0's 55 frames
+    are about 1.6 MB, fetched once per open over loopback."""
+    out = []
+    for f in replay_frames(root, version):
+        m = {k: v for k, v in f["model"].items() if k != "history"}
+        out.append({"i": f["i"], "of": f["of"], "caption": f["caption"], "now": m.get("now"), "model": m})
+    return out
+
 
 def render_html(model: dict, template: Path) -> str:
     tpl = template.read_text(encoding="utf-8")
@@ -1393,7 +1396,7 @@ class BoardState:
                     key.append((None, None))
             with self._replay_lock:
                 if self._past_replay is None or self._past_replay[0] != key:
-                    self._past_replay = (key, line_frames(self.root, run))
+                    self._past_replay = (key, board_frames(self.root, run))
                 return self._past_replay[1]
         key = []
         for p in (self.run_dir / "events.jsonl", self.run_dir / "bn-events.log"):
@@ -1404,19 +1407,19 @@ class BoardState:
                 key.append((None, None))   # the watcher's stamp spells an absent file the same way
         with self._replay_lock:
             if self._replay is None or self._replay[0] != key:
-                self._replay = (key, line_frames(self.root, self.version))
+                self._replay = (key, board_frames(self.root, self.version))
             frames = self._replay[1]
         # Liveness moves without the ledger (a lock taken, a pid gone), so the
-        # cached last frame can go stale. The last frame is the board: take its
-        # line from the current model, so replay ends exactly where live resumes.
+        # cached last frame can go stale. The last frame is the board: take it
+        # from the current model, so replay ends exactly where live resumes.
         # Only when the model was built from the same ledger and sink — the
         # watcher can lag a fresh append by a poll.
         with self.lock:
-            line = self.model and self.model.get("line")
+            cur = {k: v for k, v in self.model.items() if k not in ("history", "live")} if self.model else None
             seen = {n: (m, z) for n, m, z in (self.stamp or ()) if n in ("events.jsonl", "bn-events.log")}
         same = [seen.get("events.jsonl"), seen.get("bn-events.log")] == key
-        if frames and line and same:
-            frames = frames[:-1] + [{**frames[-1], "line": line}]
+        if frames and cur and same:
+            frames = frames[:-1] + [{**frames[-1], "model": cur}]   # no frozen clock: a run in progress keeps counting
         return frames
 
     def newest(self) -> tuple:

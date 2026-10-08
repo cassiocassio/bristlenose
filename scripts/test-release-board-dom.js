@@ -227,9 +227,9 @@ function section4() {
 }
 
 async function section5() {
-  console.log("5 · THE LINE replays in place on a live board, and only the line");
+  console.log("5 · the replay redraws the whole board as it stood; live pulls wait for \"back to live\"");
   // the generator's own frames, as /replay.json serves them
-  const frames = JSON.parse(execFileSync(PY, ["-c", "import importlib.util,json,sys;from pathlib import Path\ns=importlib.util.spec_from_file_location('rb',sys.argv[1]);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)\nprint(json.dumps(m.line_frames(Path(sys.argv[2]),'1.0.0')))", GEN, work], { encoding: "utf8" }));
+  const frames = JSON.parse(execFileSync(PY, ["-c", "import importlib.util,json,sys;from pathlib import Path\ns=importlib.util.spec_from_file_location('rb',sys.argv[1]);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)\nprint(json.dumps(m.board_frames(Path(sys.argv[2]),'1.0.0')))", GEN, work], { encoding: "utf8" }));
   // a failure for the caption to mark: the client reads a frame's caption, so one rewritten caption is enough
   frames[2].caption = frames[2].caption.replace(/ ok\b/, " fail");
   const m = model(); m.live = { generation: 1, poll_ms: 1000, served_at: iso(Date.now()), changed_at: iso(Date.now()), error: null, token: "t", with_logs: false };
@@ -250,11 +250,11 @@ async function section5() {
   const btn = d.getElementById("line-replay");
   eq("the live line carries a replay control, top right of its heading", true, !!btn && btn.parentNode === d.querySelector("#line h2"));
   eq("…drawn with createElementNS, not markup", "svg", btn && btn.firstChild && btn.firstChild.localName);
-  const lineNode = d.getElementById("line"), pre = d.getElementById("pane-preflight");
+  let pre;
   btn.click(); await sleep(50);
   const at = () => String(Number((/^(\d+) of /.exec(d.querySelector("#line .rpcount").textContent) || [])[1]) - 1);   // the count is 1-based: "1 of 27"
   eq("it asks the server for the frames, with the token", true, asked.some(u => /^\/replay\.json\?k=t$/.test(u)));
-  eq("the line enters replay, in place (same node)", true, d.getElementById("line") === lineNode && lineNode.classList.contains("replaying"));
+  eq("the board enters replay, controls on the line", true, d.getElementById("screen").classList.contains("replaying") && d.getElementById("line").classList.contains("replaying"));
   eq("…with a labelled control bar", true, /REPLAY/.test(d.getElementById("line-replay-ctl").textContent));
   eq("no scrubber: the buttons are the controls", null, d.querySelector("#line-replay-ctl input"));
   eq("the count reads \"1 of N\", no \"frame\"", true, new RegExp("^1 of " + frames.length + "\\b").test(d.querySelector("#line .rpcount").textContent));
@@ -272,14 +272,16 @@ async function section5() {
   const run = d.querySelector("#line .station.running");
   eq("→ steps too; the frame where build-all runs pulses (liveness assumed)", true, !!run && run.classList.contains("fresh"));
   eq("…and counts elapsed from the frame's clock, not today's", true, !!run && /running · \d+s/.test(run.querySelector("small").textContent));
-  // a live patch while replaying: every pane may move, the line may not
+  // live, the events pane already holds build-all's "ok · 57s" (section 2); the frame where build-all is running cannot
+  eq("every pane follows the frame, not only the line: the events pane is the frame's", [true, false], [/57s/.test(htmlFor(m)), /57s/.test(d.getElementById("pane-events").textContent)]);
+  eq("…and the cross-release history is kept from the live model", true, !!d.querySelector("#pane-history svg.hist-svg"));
+  // a live pull while replaying: nothing on the board moves
+  pre = d.getElementById("pane-preflight");
   fs.appendFileSync(path.join(run_dir(), "events.jsonl"), ev(iso(T0 + 70000), "tag", "running", "attempt 1") + "\n");
   const next = model(); next.live = { ...m.live, generation: 9, served_at: iso(Date.now()) };
   w.fetch = (u) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(next), text: () => Promise.resolve("") });
   await sleep(2400);
-  eq("a live patch leaves the replaying line alone", true, d.getElementById("line") === lineNode && lineNode.classList.contains("replaying") && at() === "4");
-  eq("…while the rest of the board stays live", true, /tag/.test(d.getElementById("pane-events").textContent));
-  eq("…and preflight, unmoved, is the same node", true, d.getElementById("pane-preflight") === pre);
+  eq("a live pull leaves the replaying board alone", true, d.getElementById("line").classList.contains("replaying") && at() === "4" && d.getElementById("pane-preflight") === pre && !/tag/.test(d.getElementById("pane-events").textContent));
   // play from a mid frame, under no reduced motion: it advances on its own
   w.matchMedia = () => ({ matches: false, addEventListener() {} });
   d.getElementById("rp-play").click();
@@ -294,6 +296,7 @@ async function section5() {
   eq("space pauses", "false", d.getElementById("rp-play").getAttribute("aria-pressed"));
   d.getElementById("rp-live").click();
   eq("back to live: the line is redrawn from the newest model", true, !d.getElementById("line").classList.contains("replaying") && st()["tag"] === "running");
+  eq("…and so is every pane: the pull that arrived during replay is on the board", true, /tag/.test(d.getElementById("pane-events").textContent) && !d.getElementById("screen").classList.contains("replaying"));
   eq("…the control bar is gone", null, d.getElementById("line-replay-ctl"));
   eq("…and focus returns to the replay control", "line-replay", d.activeElement && d.activeElement.id);
   // a failing fetch is the control's state, never the board's

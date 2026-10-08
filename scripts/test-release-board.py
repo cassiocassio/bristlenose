@@ -960,21 +960,23 @@ class Server(unittest.TestCase):
         j = json.loads(body)
         self.assertEqual(j["version"], "1.0.0")
         self.assertEqual([f["i"] for f in j["frames"]], [0, 1, 2])
-        # the line and nothing else: no history, no panes the line does not draw
-        self.assertEqual(set(j["frames"][0]), {"i", "of", "caption", "now", "line", "lane_ids"})
+        # the whole board per frame, minus the cross-release history the page keeps from its live model
+        self.assertEqual(set(j["frames"][0]), {"i", "of", "caption", "now", "model"})
+        self.assertNotIn("history", j["frames"][0]["model"])
+        self.assertEqual(len(j["frames"][1]["model"]["events"]), 1)   # frame 1 knows one ledger line
         self.assertEqual(j["frames"][2]["now"], "2026-09-05T10:00:01Z")
         # the last frame IS the board, liveness included: this run holds no lock, so
         # bump reads stranded on both (it once read "not alive" from the copy alone)
         board = json.loads(self.get("/board.json" + self.k)[2])
-        self.assertEqual(stations({"line": j["frames"][-1]["line"]}), stations(board))
+        self.assertEqual(stations(j["frames"][-1]["model"]), stations(board))
         # a run that takes its lock without a new ledger line: the last frame follows the board
         lock = self.t.root / ".release" / "1.0.0" / ".lock"
         lock.mkdir()
         (lock / "pid").write_text(str(os.getpid()))
         self.state.refresh(force=True)
         j = json.loads(self.get("/replay.json" + self.k)[2])
-        self.assertEqual(stations({"line": j["frames"][-1]["line"]})["bump"], "running")
-        self.assertEqual(stations({"line": j["frames"][1]["line"]})["bump"], "pending")
+        self.assertEqual(stations(j["frames"][-1]["model"])["bump"], "running")
+        self.assertEqual(stations(j["frames"][1]["model"])["bump"], "pending")
         # a new ledger line is a new frame on the next ask; a heartbeat alone is not a rebuild
         self.state.replay()
         first = self.state._replay[1]
@@ -985,7 +987,7 @@ class Server(unittest.TestCase):
             fh.write(ev("2026-09-05T10:00:09Z", "bump", "ok", "8s") + "\n")
         j = json.loads(self.get("/replay.json" + self.k)[2])
         self.assertEqual(len(j["frames"]), 4)
-        self.assertEqual({s["id"]: s["state"] for s in j["frames"][3]["line"]["stations"]}["bump"], "ok")
+        self.assertEqual(stations(j["frames"][3]["model"])["bump"], "ok")
 
     def test_run_picker_opens_a_listed_past_run_read_only_and_nothing_else(self):
         past = self.t.root / ".release" / "0.9.0"

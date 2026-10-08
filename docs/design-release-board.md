@@ -467,16 +467,19 @@ the one thing a prefix cannot read, so a step a prefix leaves running is shown
 running and the frame says "liveness assumed". A design tool for the info
 design; the real board never renders the scrubber.
 
-**The line's replay on the live board** (8 Oct 2026). A replay icon at the top
+**The board's replay** (8 Oct 2026). A replay icon at the top
 right of THE LINE (served boards only: a snapshot has no server to ask, and the
 `--replay` page is already a replay) replays the run in place, with
 back / play-pause / forward, ←/→, space and Esc, and a count (`17 of 55 · attempt 1 of 6`). A scrubber with attempt and fail ticks shipped first and was dropped the same day at the owner's word: too much; the buttons are enough. The owner's
 decisions, asked before it was built:
 
-- **Only THE LINE moves.** Every other pane stays live underneath. While
-  replaying, the live patch skips the `line` slice (a re-render of the whole
-  screen re-attaches the replay), and **back to live** redraws the line from
-  the newest model, so nothing that happened during the replay is lost.
+- **The whole board moves** (revised the same day). It first shipped with
+  only THE LINE moving and every other pane live underneath; the owner then
+  asked for the rest of the board to follow. Each step now renders the frame's
+  full model; the controls stay on THE LINE as one persistent node, so focus
+  survives. While replaying, a live pull only updates the page's newest model
+  and draws nothing; **back to live** draws that model, so nothing that
+  happened during the replay is lost.
 - **The whole release, every attempt.** 0.34.0's failures are all in attempts
   1–5, and its last attempt is clean. The control bar names the attempt
   (`attempt 5 of 6`).
@@ -489,14 +492,14 @@ decisions, asked before it was built:
 - **The last frame holds**, captioned "the line as it stands", until
   back-to-live or Esc. Play from the last frame starts again at frame 0.
 
-Frames are **`replay_frames` projected to the line** (`line_frames`: `line`,
-`now`, `lane_ids`, caption). There is no second frame model, and the frames
-carry neither the cross-release history nor any other pane. The page fetches
-them from `/replay.json` (token-gated like everything else) on each open,
-and never inlines them. 0.34.0 is 55 frames: 178 KB here, 1.6 MB as full models,
-about 1.7 s to build. `BoardState` caches them by the ledger's and the sink's
-(mtime, size), so a heartbeat does not rebuild them. **The last frame's line is
-the current model's**, when the model was built from the same ledger and sink.
+Frames are **`replay_frames` minus the cross-release history**
+(`board_frames`: `model`, `now`, caption). There is no second frame model. The
+History pane keeps the live model's history, whose mark for this run follows
+the frame's line. The page fetches the frames from `/replay.json`
+(token-gated like everything else) on each open, and never inlines them.
+0.34.0 is 55 frames, about 1.6 MB, about 1.7 s to build. `BoardState` caches them by the ledger's and the sink's
+(mtime, size), so a heartbeat does not rebuild them. **The last frame is the
+current model**, when the model was built from the same ledger and sink.
 Liveness moves without the ledger (a lock taken, a pid gone), and a cached last
 frame said *stranded* for a run in progress. `replay_frames` had the same
 defect for any prefix that is the whole ledger: it assumed "not alive" from the
@@ -504,12 +507,10 @@ copy, which has no `.lock`. It now reads the real run dir's liveness for that
 frame. A replayed running station pulses (liveness assumed) and counts elapsed
 from its frame's clock, through the same tick as the rest of the board.
 
-Rendering keeps the no-DOM-sinks rule (icons by `createElementNS`). A step
-swaps only the track and the count, never the controls, so keyboard focus
-stays where it is. **Reduced motion:** the replay opens paused on frame 0 and
+Rendering keeps the no-DOM-sinks rule (icons by `createElementNS`). **Reduced motion:** the replay opens paused on frame 0 and
 plays only when asked. Pinned by section 5 of `test-release-board-dom.js` (all
-red on their mutants: the patch filter, the reduced-motion guard, the frame
-clock) and by
+red on their mutants: the live-pull hold, a line-only render, the reduced-motion
+guard, the frame clock) and by
 `Server.test_replay_route_serves_the_lines_frames_behind_the_token`.
 
 **The run picker** (8 Oct 2026, owner's ask). On a served board the version in
@@ -519,7 +520,7 @@ newest first by its first stamp (`list_runs`). Abandoned dirs such as
 run is the bare URL. Any other run is `?run=<id>`, which the server draws with
 the same generator (`BoardState.past`) and serves **read-only**: the page reads
 it once, never patches it from the live run's stream, says "past run ·
-read-only", and offers a way back. Its line replay fetches
+read-only", and offers a way back. Its replay fetches
 `/replay.json?run=<id>`, and the replay's last button reads "done", not "back
 to live". Only a listed id is ever opened: anything else, a path included, is
 a 404, behind the same token. A snapshot has no picker, because there is no

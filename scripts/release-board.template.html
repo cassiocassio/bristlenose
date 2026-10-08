@@ -1130,15 +1130,16 @@
   add(screen, foot);
   };
 
-  // ── the line's replay (live boards only) ──────────────────────────────────
-  // Owner's decisions, 8 Oct 2026 (docs/design-release-board.md §8): only THE
-  // LINE moves; the whole release, every attempt; frames evenly spaced, about
-  // ten seconds end to end; the last frame holds, labelled, until "back to
-  // live". Frames are the generator's own replay_frames, projected to the line
-  // and fetched from /replay.json on each open — never inlined, never a second
-  // frame model. While replaying, a live patch leaves #line alone; everything
-  // else on the board stays live. Reduced motion: the replay opens paused on
-  // the first frame, and plays only when asked.
+  // ── the board's replay (served boards only) ───────────────────────────────
+  // Owner's decisions, 8 Oct 2026 (docs/design-release-board.md §8): the whole
+  // board moves (first only THE LINE; widened the same day); the whole
+  // release, every attempt; frames evenly spaced, about ten seconds end to
+  // end; the last frame holds, labelled, until "back to live". The controls
+  // live on THE LINE. Frames are the generator's own replay_frames, minus the
+  // cross-release history (kept from the live model), fetched from
+  // /replay.json on each open — never inlined, never a second frame model.
+  // While replaying, live pulls only update `latest`; "back to live" draws it.
+  // Reduced motion: the replay opens paused on the first frame.
   var rp = null;   // {frames, at, timer, attempts, ctl} while replaying
   if (!payload.replay && payload.live) (function(){
     var NS = "http://www.w3.org/2000/svg";
@@ -1160,17 +1161,25 @@
     var reduced = function(){ try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch(e) { return false; } };
     var DWELL = function(n){ return Math.max(120, Math.min(1000, Math.round(10000 / Math.max(1, n - 1)))); };   // evenly spaced, ~10 s
 
-    var frameData = function(f){ return {line: f.line, now: f.now, build: {lane_ids: f.lane_ids || []}}; };
+    // a frame is a full model minus what the page keeps from the live one
+    var frameModel = function(f){ var m = {}; for (var k in f.model) m[k] = f.model[k]; m.live = latest && latest.live; m.runs = latest && latest.runs; m.history = latest && latest.history; return m; };
+    var decorate = function(){
+      var line = document.getElementById("line"); if (!line || !rp) return;
+      line.classList.add("replaying"); screenEl.classList.add("replaying");
+      var h = line.querySelector("h2"); if (h && rp.ctl.el.parentNode !== line) h.parentNode.insertBefore(rp.ctl.el, h.nextSibling);
+      var b = document.getElementById("line-replay"); if (b) b.setAttribute("aria-pressed", "true");
+    };
     var pause = function(){ if (rp && rp.timer) { clearInterval(rp.timer); rp.timer = null; } paintCtl(); };
     var show = function(i){
       if (!rp) return;
       rp.at = Math.max(0, Math.min(rp.frames.length - 1, i));
-      var f = rp.frames[rp.at], line = document.getElementById("line"); if (!line) return;
-      var fresh = lineEl(frameData(f));
-      // swap the track and the count, never the controls: a keyboard user's focus stays put
-      var ot = line.querySelector(".track"), nt = fresh.querySelector(".track"); if (ot && nt) ot.replaceWith(nt);
-      var oc = line.querySelector("h2 .r"), nc = fresh.querySelector("h2 .r"); if (oc && nc) oc.textContent = nc.textContent;
-      paintCtl();
+      // the whole board, as it stood; the controls are one persistent node moved
+      // into the new line, so a keyboard user's focus is put back where it was
+      var a = document.activeElement, fid = a && rp.ctl.el.contains(a) ? a.id : null, y = window.scrollY;
+      render(frameModel(rp.frames[rp.at]));
+      decorate(); paintCtl();
+      try { window.scrollTo(0, y); } catch(e) {}
+      if (fid) { var fe = document.getElementById(fid); if (fe && !fe.disabled) fe.focus(); }
       if (typeof tick === "function") tick();
     };
     var play = function(){
@@ -1207,19 +1216,11 @@
       k.cap.title = f.caption;
       k.cap.className = "rpcap" + (/ fail\b/.test(f.caption) ? " fail" : "");
     };
-    var attach = function(){
-      // (re)decorate whichever #line is in the page: on open, and after a live re-render rebuilt the screen
-      var line = document.getElementById("line"); if (!line || !rp) return;
-      line.classList.add("replaying");
-      var h = line.querySelector("h2"); if (h && rp.ctl.el.parentNode !== line) h.parentNode.insertBefore(rp.ctl.el, h.nextSibling);
-      var b = document.getElementById("line-replay"); if (b) b.setAttribute("aria-pressed", "true");
-      show(rp.at);
-    };
+
     var exit = function(){
       if (!rp) return;
-      pause(); rp = null;
-      var line = document.getElementById("line");
-      if (line && latest) { var nl = lineEl(latest); line.replaceWith(nl); }
+      pause(); rp = null; screenEl.classList.remove("replaying");
+      var y = window.scrollY; if (latest) render(latest); try { window.scrollTo(0, y); } catch(e) {}
       if (typeof tick === "function") tick();
       var b = document.getElementById("line-replay"); if (b) b.focus();
     };
@@ -1244,18 +1245,17 @@
           pause();
           var att = 0, attempts = j.frames.map(function(f){ if (/^\S+\s+run started\b/.test(f.caption)) att++; return att; });
           rp = {frames: j.frames, at: 0, timer: null, attempts: attempts, ctl: rp && rp.ctl || buildCtl()};
-          attach();
+          show(0);
           if (!reduced()) play();
         })
         .catch(function(e){ b.removeAttribute("aria-busy"); b.classList.add("err"); b.title = "replay unavailable — "+(e && e.message ? e.message : e); b.setAttribute("aria-label", b.title); });
     };
     lineHook = function(h2, data){
-      var b = btn("replay", "replay this run's line — every attempt, about 10 s", "line-replay");
+      var b = btn("replay", "replay this run — the whole board, every attempt, about 10 s", "line-replay");
       b.setAttribute("aria-pressed", String(!!rp));
       b.addEventListener("click", function(){ open(b); });
       add(h2, b);
     };
-    window.__lineReplay = {active: function(){ return !!rp; }, reattach: attach};
     document.addEventListener("keydown", function(e){
       if (!rp || e.metaKey || e.ctrlKey || e.altKey) return;
       var t = e.target && e.target.tagName; if (t === "INPUT" || t === "SELECT" || t === "TEXTAREA" || (t === "BUTTON" && (e.key === " " || e.key === "Enter"))) return;
@@ -1304,14 +1304,14 @@
     for (var i = 0; i < els.length; i++) { els[i].textContent = age(els[i].getAttribute("data-ts")); var pane = els[i].closest(".panel"); if (pane) pane.classList.toggle("fresh", (now - Date.parse(els[i].getAttribute("data-ts")))/1000 < PANE_FRESH_S); }
     var since = document.querySelectorAll("[data-since]");
     var clock = latest && latest.now ? Date.parse(latest.now) : now;   // a replay frame keeps its own clock
-    var rpClock = rp && rp.frames[rp.at].now ? Date.parse(rp.frames[rp.at].now) : null;   // the line under replay keeps its frame's clock
-    for (var j = 0; j < since.length; j++) since[j].textContent = "running · "+elapsed(((rpClock != null && since[j].closest("#line") ? rpClock : clock) - Date.parse(since[j].getAttribute("data-since")))/1000)+(since[j].getAttribute("data-attempt") ? " · #"+since[j].getAttribute("data-attempt") : "");
+    if (rp) clock = rp.frames[rp.at].model.now ? Date.parse(rp.frames[rp.at].model.now) : now;   // a replayed frame keeps its own clock
+    for (var j = 0; j < since.length; j++) since[j].textContent = "running · "+elapsed((clock - Date.parse(since[j].getAttribute("data-since")))/1000)+(since[j].getAttribute("data-attempt") ? " · #"+since[j].getAttribute("data-attempt") : "");
     var lv = latest && latest.liveness, fresh = false;
     if (lv && lv.replay) fresh = true;
     else if (lv && lv.heartbeat && isFinite(lv.heartbeat.epoch)) fresh = (now/1000 - lv.heartbeat.epoch) < hbStaleS(lv);
     else if (lv && lv.alive && latest.header && latest.header.newest_source) fresh = (now - Date.parse(latest.header.newest_source))/1000 < hbStaleS(lv);  // a pid exists (maybe recycled), no heartbeat: trust it only while something is being written
     var run = document.querySelectorAll(".station.running, .hist-live.running");
-    for (var k = 0; k < run.length; k++) { var f2 = fresh || (!!rp && !!run[k].closest("#line")); run[k].classList.toggle("fresh", f2); run[k].classList.toggle("stale", !f2); }   // a replayed frame's liveness is assumed
+    for (var k = 0; k < run.length; k++) { var f2 = fresh || !!rp; run[k].classList.toggle("fresh", f2); run[k].classList.toggle("stale", !f2); }   // a replayed frame's liveness is assumed
     var pill = document.getElementById("live-pill"); if (pill && latest && latest.live && !pill.getAttribute("data-unreachable")) pill.classList.toggle("stale", (now - Date.parse(latest.live.served_at))/1000 > 3 * (latest.live.poll_ms/1000) + 10);
   };
   tick(); setInterval(tick, 1000);
@@ -1345,14 +1345,15 @@
     if (payload.log_focus && !(payload.logs && payload.logs[payload.log_focus] && payload.logs[payload.log_focus].tail)) fetchLog(payload.log_focus);
     var patch = function(next){
       if (latest && latest.live && next.live && next.live.generation < latest.live.generation) return;  // an older pull landing after a newer one
+      if (rp) { latest = next; return; }   // the board under replay is the reader's; "back to live" draws the newest model
       var sN = slices(next), sO = slices(latest), ids = Object.keys(sN);
       var sameShape = ids.length === Object.keys(sO).length && ids.every(function(id){ return id in sO; });
-      if (!sameShape) { render(next); latest = next; if (rp) window.__lineReplay.reattach(); tick(); return; }
+      if (!sameShape) { render(next); latest = next; tick(); return; }
       var stamp = function(){
         var hbEl = document.querySelector("[data-hb] [data-ts]"); if (hbEl && next.liveness && next.liveness.heartbeat && isFinite(next.liveness.heartbeat.epoch)) hbEl.setAttribute("data-ts", new Date(next.liveness.heartbeat.epoch*1000).toISOString());
         var pill = document.getElementById("live-pill"); if (pill) { var pa = pill.querySelector("[data-ts]"); if (pa && next.live) pa.setAttribute("data-ts", next.live.served_at); }
       };
-      var moved = ids.filter(function(id){ return JSON.stringify(sN[id]) !== JSON.stringify(sO[id]) && !(rp && id === "line"); });   // the line under replay is the reader's; "back to live" redraws it from the newest model
+      var moved = ids.filter(function(id){ return JSON.stringify(sN[id]) !== JSON.stringify(sO[id]) });
       if (!moved.length) { stamp(); latest = next; tick(); return; }   // nothing to draw: no detached render, but the stamps still move
       var tmp = document.createElement("div"); render(next, tmp);
       moved.forEach(function(id){

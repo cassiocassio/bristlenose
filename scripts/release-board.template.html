@@ -144,7 +144,11 @@
   .hist-scroll{flex:1 1 auto;min-width:0;overflow-x:auto;padding-bottom:4px}
   .hist-fixed{flex:none;border-right:1px solid var(--rule)}
   .hist-svg{display:block;font:10.5px var(--font)}
-  .hist-svg text{fill:var(--ink-2)}
+  .hist-svg text:not([fill]){fill:var(--ink-2)}
+  .hist-live .pulse{transform-box:fill-box;transform-origin:center;opacity:0}
+  .hist-live.running.fresh .pulse{animation:rb-hist-pulse 1.4s ease-out infinite}
+  .hist-live.running.stale .dot{fill:var(--warn);stroke:none}
+  @keyframes rb-hist-pulse{0%{transform:scale(1);opacity:.5}100%{transform:scale(3.4);opacity:0}}
   .hist-svg .rowlab{fill:var(--ink)}
   .hist-svg .muted{fill:var(--mute)}
   .hist-svg .rel{cursor:pointer}
@@ -157,7 +161,14 @@
   table.hist-t{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
   table.hist-t th,table.hist-t td{text-align:left;padding:3px 8px 3px 0;border-bottom:1px solid var(--rule);vertical-align:top}
   table.hist-t th{color:var(--mute);font-weight:500}
-  table.hist-t td.n{text-align:right}
+  table.hist-t td.n,table.hist-t th.n{text-align:right}
+  table.hist-t th button.sort{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+  table.hist-t th button.sort:hover{color:var(--ink)}
+  table.hist-t th[aria-sort="ascending"] button.sort,table.hist-t th[aria-sort="descending"] button.sort{color:var(--ink);font-weight:600}
+  table.hist-t td.bar-cell{min-width:64px}
+  table.hist-t td:first-child{white-space:nowrap}
+  .cellbar{display:block;height:3px;margin-top:2px;background:var(--rule);border-radius:2px;overflow:hidden}
+  .cellbar i{display:block;height:100%;background:var(--bad);border-radius:2px}
   ol.hist-ms{margin:0;padding-left:20px}
   ol.hist-ms li{margin:0 0 3px}
   ol.hist-ms code{font:10.5px var(--mono);color:var(--mute)}
@@ -202,7 +213,7 @@
   .panel.changed,.band.changed{animation:rb-glisten 1.2s ease-out}
   .panel.fresh{border-color:var(--now-bd);box-shadow:0 0 0 2px var(--now-bg)}
   .pill.live{background:var(--now-bg);border-color:var(--now-bd);color:var(--now)} .pill.live.stale{background:var(--warn-bg);border-color:var(--warn-bd);color:var(--warn)}
-  @media (prefers-reduced-motion: reduce){ .station.running.fresh i{animation:none;outline:2px solid var(--now);outline-offset:2px} .panel.changed,.band.changed{animation:none} .is-now{animation:none;outline:1px solid var(--now)} }
+  @media (prefers-reduced-motion: reduce){ .station.running.fresh i{animation:none;outline:2px solid var(--now);outline-offset:2px} .panel.changed,.band.changed{animation:none} .is-now{animation:none;outline:1px solid var(--now)} .hist-live.running.fresh .pulse{animation:none} .hist-live.running.fresh .dot{stroke:var(--now)} }
   .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:3px 14px}
   /* 330px, not 150px: with a 150px minimum a wider column buys MORE COLUMNS
      and each row stays too narrow to carry its evidence — the extra width
@@ -666,30 +677,53 @@
     var steps = H.steps, chans = H.channels, rels = H.releases;
     var rows = steps.concat(chans), nS = steps.length;
     var rowIx = {}; steps.forEach(function(s, i){ rowIx[s] = i; });
-    var LAB = 92, FW = 250, COL = 13, RGAP = 12, ROWH = 21, TOP = 120, DIV = 22;
+    var LAB = 92, FW = 250, COL = 13, RGAP = 12, ROWH = 21, TOP = 150, DIV = 22;
     var yOf = function(i){ return TOP + i*ROWH + (i >= nS ? DIV : 0) + ROWH/2; };
     var H_ALL = yOf(rows.length - 1) + ROWH/2 + 18;
     var fcx = LAB + FW/2, FWID = LAB + FW + 44, tx0 = 50;
+
+    // ── the live run: the run board's own verdict, never a second one ─────────
+    // Whether the newest attempt is running, stranded or done is decided once,
+    // by the generator's station fold (the lock, its pid, the heartbeat) — the
+    // same state the line above shows. Here it only picks which attempt carries
+    // it. Between two steps no station is running, but a held lock with a live
+    // pid still means a run in progress, as the header's lock pill says.
+    var stations = (data.line && data.line.stations) || [];
+    var liveSt = stations.filter(function(st){ return st.state === "running" || st.state === "stranded" || st.state === "corrupt"; })[0] || null;
+    var inProgress = !!(data.liveness && data.liveness.lock && data.liveness.alive && !(data.header && data.header.completed));
+    var liveRel = rels.filter(function(r){ return r.version === data.version; })[0] || null;
+    var live = null;
+    if (liveRel && liveRel.invocations.length && (liveSt || inProgress)) {
+      var li = liveRel.invocations[liveRel.invocations.length - 1];
+      var lastRan = li.steps.length ? li.steps[li.steps.length - 1].step : null;
+      live = {inv: li, state: liveSt && liveSt.state !== "running" ? "stranded" : "running", step: liveSt ? liveSt.id : lastRan, since: liveSt ? liveSt.ts : null};
+    }
+    var isLive = function(inv){ return !!live && inv === live.inv; };
 
     // ── per release: tries and passes per row, by the ledger's own outcomes ──
     var tally = function(invs, verify){
       var t = rows.map(function(){ return {tries: 0, pass: 0, stops: []}; });
       invs.forEach(function(inv){
         if (!inv.entry) return;
-        var x = inv.exit || {};
+        var x = inv.exit || {}, running = isLive(inv) && live.state === "running";
         inv.steps.forEach(function(s){
+          if (running && s.status === "running") return;   // not decided yet: neither a pass nor a stop
           var i = rowIx[s.step]; if (i == null) return;
           if (s.status === "ok") { t[i].tries++; t[i].pass++; }
           else if (s.status === "fail" || s.status === "running" || (s.status === "skipped" && x.kind === "skipped" && s.step === x.step)) { t[i].tries++; t[i].stops.push(inv); }
         });
         // stopped between steps: the next step is where it was abandoned
-        if (x.kind === "stopped" && !x.mid_step && x.step && rowIx[x.step] != null && rowIx[x.step] + 1 < nS) { var j = rowIx[x.step] + 1; t[j].tries++; t[j].stops.push(inv); }
+        if (!running && x.kind === "stopped" && !x.mid_step && x.step && rowIx[x.step] != null && rowIx[x.step] + 1 < nS) { var j = rowIx[x.step] + 1; t[j].tries++; t[j].stops.push(inv); }
       });
       if (verify && verify.rows) chans.forEach(function(c, k){ var r = verify.rows[c]; if (!r) return; var i = nS + k; t[i].tries++; if (r.result === "ok") t[i].pass++; else t[i].stops.push({id: c, exit: {kind: "channel", cause: r.evidence}}); });
       return t;
     };
     var yieldOf = function(t, upto){ var y = 1, out = []; for (var i = 0; i < upto; i++) { if (t[i].tries) y *= t[i].pass / t[i].tries; out.push(y); } return out; };
-    var perRel = rels.map(function(r){ var t = tally(r.invocations, r.verify); return {r: r, t: t, y: yieldOf(t, r.verify ? rows.length : nS)}; });
+    // a release still running has a yield only as far as it has got: its layer stops at the
+    // live step and is drawn dashed, never as a column that passed steps it has not reached
+    var sofarRow = live && live.state === "running" && live.step && rowIx[live.step] != null ? rowIx[live.step] : null;
+    var perRel = rels.map(function(r){ var t = tally(r.invocations, r.verify), sofar = r === liveRel && sofarRow != null;
+      return {r: r, t: t, sofar: sofar, y: yieldOf(t, sofar ? sofarRow + 1 : (r.verify ? rows.length : nS))}; });
     var pooled = rows.map(function(_, i){ var tr = 0, pa = 0, st = []; perRel.forEach(function(p){ tr += p.t[i].tries; pa += p.t[i].pass; st = st.concat(p.t[i].stops.map(function(inv){ return {rel: p.r.version, inv: inv}; })); }); return {tries: tr, pass: pa, stops: st}; });
     var pooledY = yieldOf(pooled, rows.length);
 
@@ -759,8 +793,10 @@
       // onion skin: every layer carries a faint fill, so where many releases got through reads darker;
       // older outlines fade, the newest is the one bold line
       var poly = S("polygon", {points: shape(p.y), fill: newest ? "none" : "var(--ink)", "fill-opacity": newest ? null : .05,
-        stroke: newest ? "var(--now)" : "var(--ink-2)", "stroke-width": newest ? 2.2 : 1, "stroke-opacity": newest ? 1 : Math.max(0.2, 0.75 - age*0.045), "stroke-linejoin": "round"});
-      tip(poly, p.r.version+": "+Math.round(100*(p.y[p.y.length-1]))+"% of attempts got through"+(p.r.verify ? " every channel" : " to snap (no channel record)"));
+        stroke: newest ? "var(--now)" : "var(--ink-2)", "stroke-width": newest ? 2.2 : 1, "stroke-opacity": newest ? 1 : Math.max(0.2, 0.75 - age*0.045), "stroke-linejoin": "round",
+        "stroke-dasharray": p.sofar ? "5 3" : null});
+      tip(poly, p.sofar ? p.r.version+": running — "+Math.round(100*(p.y[p.y.length-1]))+"% of its attempts have got as far as "+live.step+" so far"
+                        : p.r.version+": "+Math.round(100*(p.y[p.y.length-1]))+"% of attempts got through"+(p.r.verify ? " every channel" : " to snap (no channel record)"));
       layerEls.push({v: p.r.version, el: poly, newest: newest, op: poly.getAttribute("stroke-opacity")});
       fsvg.appendChild(poly);
     });
@@ -782,7 +818,9 @@
       g.appendChild(S("rect", {x: s.x0 - 2, y: 6, width: s.x1 - s.x0 + 4, height: TOP - 40, fill: "transparent"}));
       var d0 = s.r.invocations.length && s.r.invocations[0].start ? new Date(s.r.invocations[0].start) : null;
       var dl = d0 && !isNaN(d0) ? " · "+d0.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d0.getMonth()] : "";
-      g.appendChild(S("text", {x: cx, y: TOP - 44, transform: "rotate(-55 "+cx+" "+(TOP-44)+")", "font-size": 10.5}, s.r.version+dl));
+      var liveLab = live && s.r === liveRel ? (live.state === "running" ? " · running" : " · stranded") : "";
+      g.appendChild(S("text", {x: cx, y: TOP - 44, transform: "rotate(-55 "+cx+" "+(TOP-44)+")", "font-size": 10.5,
+        fill: liveLab ? (live.state === "running" ? "var(--now)" : "var(--bad)") : null, "font-weight": liveLab ? 600 : null}, s.r.version+dl+liveLab));
       svg.appendChild(S("line", {x1: s.x0, x2: s.x1 - 1, y1: TOP - 38, y2: TOP - 38, stroke: "var(--rule2)", "stroke-width": 2}));
       var n = invsOf(s.r);
       tip(g, s.r.version+": "+n+" invocation"+(n === 1 ? "" : "s")+(s.r.shipped ? ", shipped" : ", not tagged")+" — click to outline it in the funnel");
@@ -824,9 +862,11 @@
       else if (kind === "chan-ok") g.appendChild(S("circle", {cx: cx, cy: cy, r: 2.6, fill: "var(--ok)"}));
       return g;
     };
-    var exitRow = function(inv){ var x = inv.exit || {}; if (x.kind === "stopped" && !x.mid_step && x.step && rowIx[x.step] != null && rowIx[x.step] + 1 < nS) return rowIx[x.step] + 1; return x.step != null && rowIx[x.step] != null ? rowIx[x.step] : null; };
+    var exitRow = function(inv){ var x = inv.exit || {}; if (isLive(inv) && live.step && rowIx[live.step] != null) return rowIx[live.step]; if (x.kind === "stopped" && !x.mid_step && x.step && rowIx[x.step] != null && rowIx[x.step] + 1 < nS) return rowIx[x.step] + 1; return x.step != null && rowIx[x.step] != null ? rowIx[x.step] : null; };
     var describe = function(inv){
       var x = inv.exit || {}, out = inv.id+" · started "+fmtT(inv.start)+"\nentered at "+(inv.entry || "—")+" · ";
+      if (isLive(inv)) return out + (live.state === "running" ? "running now"+(live.step ? " · "+live.step+(live.since ? " since "+fmtT(live.since) : "") : "")
+                                                            : "stranded at "+live.step+" — the ledger says running and no live process holds the lock");
       out += {fail: "failed at "+x.step, stopped: x.claimed_complete ? "reported complete, but stopped after "+x.step : (x.mid_step ? "stopped during "+x.step : "stopped after "+x.step+" (no terminal event)"), skipped: "skipped "+(x.skipped || []).join(", "), completed: "completed"}[x.kind] || "ran no step";
       if (x["class"]) out += "\nclass: "+x["class"];
       if (x.cause) out += "\n"+x.cause;
@@ -839,14 +879,24 @@
       var cg = S("g", {"class": "inv"}); svg.appendChild(cg); c.g = cg;   // one group per attempt, so a machine version can dim the rest
       var hit = S("rect", {x: c.x - COL/2, y: TOP - 4, width: COL, height: H_ALL - TOP - 14, fill: "transparent"});
       tip(hit, describe(inv));
-      if (!inv.entry) { var dot = S("circle", {cx: c.x, cy: TOP + 4, r: 2.5, fill: "none", stroke: "var(--mute)"}); cg.appendChild(dot); cg.appendChild(hit); return; }
-      var y0 = yOf(rowIx[inv.entry]), er = exitRow(inv), y1 = er != null ? yOf(er) : y0;
+      var lv = isLive(inv);
+      if (!inv.entry && !lv) { var dot = S("circle", {cx: c.x, cy: TOP + 4, r: 2.5, fill: "none", stroke: "var(--mute)"}); cg.appendChild(dot); cg.appendChild(hit); return; }
+      var er = exitRow(inv), y0 = inv.entry ? yOf(rowIx[inv.entry]) : (er != null ? yOf(er) : TOP + 4), y1 = er != null ? yOf(er) : y0;
       // a resume: dashed curve from this release's previous end to this start — up is a U-turn
       var pe = prevEnd[c.r.version];
       if (pe) cg.appendChild(S("path", {d: "M"+pe.x+","+pe.y+" C"+(pe.x+DIR*COL*0.9)+","+pe.y+" "+(c.x-DIR*COL*0.9)+","+y0+" "+c.x+","+y0, fill: "none", stroke: "var(--mute)", "stroke-width": 1, "stroke-dasharray": "2 2", opacity: .8}));
-      if (rowIx[inv.entry] > 0) cg.appendChild(S("path", {d: "M"+(c.x-DIR*5)+","+(y0-3)+"L"+(c.x-DIR*1)+","+y0+"L"+(c.x-DIR*5)+","+(y0+3), fill: "none", stroke: "var(--ink-2)", "stroke-width": 1.4}));
-      cg.appendChild(S("line", {x1: c.x, x2: c.x, y1: y0, y2: y1, stroke: x.kind === "completed" ? "var(--ink-2)" : "var(--ink-2)", "stroke-width": 2, "stroke-linecap": "round"}));
-      cg.appendChild(glyph(x.kind || "stopped", c.x, y1));
+      if (inv.entry && rowIx[inv.entry] > 0) cg.appendChild(S("path", {d: "M"+(c.x-DIR*5)+","+(y0-3)+"L"+(c.x-DIR*1)+","+y0+"L"+(c.x-DIR*5)+","+(y0+3), fill: "none", stroke: "var(--ink-2)", "stroke-width": 1.4}));
+      cg.appendChild(S("line", {x1: c.x, x2: c.x, y1: y0, y2: y1, stroke: lv && live.state === "running" ? "var(--now)" : "var(--ink-2)", "stroke-width": 2, "stroke-linecap": "round"}));
+      if (lv) {
+        // the station's own marks: blue and pulsing while the heartbeat is fresh, amber when it
+        // goes stale (the tick decides, as it does for .station.running), red and broken when stranded
+        var lg = S("g", {"class": "hist-live "+live.state});
+        if (live.state === "running") {
+          lg.appendChild(S("circle", {"class": "pulse", cx: c.x, cy: y1, r: 5, fill: "var(--now)"}));
+          lg.appendChild(S("circle", {"class": "dot", cx: c.x, cy: y1, r: 4.5, fill: "var(--now)", stroke: "var(--now-bd)", "stroke-width": 3}));
+        } else lg.appendChild(S("circle", {"class": "dot", cx: c.x, cy: y1, r: 4.5, fill: "var(--bad-bg)", stroke: "var(--bad)", "stroke-width": 2, "stroke-dasharray": "2.5 1.5"}));
+        cg.appendChild(lg);
+      } else cg.appendChild(glyph(x.kind || "stopped", c.x, y1));
       prevEnd[c.r.version] = {x: c.x, y: y1};
       if (x.kind === "completed" && c.r.verify) {
         var yc0 = yOf(nS - 1) + 5;
@@ -978,12 +1028,44 @@
     // table view: the same numbers, readable without the picture
     var grid = $("div","hist-cols");
     var c1 = $("div"); add(c1, $("h3", null, "Where attempts stopped (all releases)"));
-    var tb = $("table","hist-t"), hr = $("tr"); ["step","attempts","stopped","how"].forEach(function(h){ add(hr, $("th", null, h)); }); add(tb, hr);
+    // Sortable on every heading (click again to reverse); "step" sorts by plan
+    // order, not the alphabet. The stop count carries an in-cell bar scaled to
+    // the column's largest, like a spreadsheet's data bar. The sort survives a
+    // live re-render.
+    var trows = [];
     rows.forEach(function(name, i){
       var p = pooled[i]; if (!p.tries) return;
       var counts = {}; p.stops.forEach(function(s){ var x = s.inv.exit || {}; var c = x["class"] || x.kind || "?"; var lab = c + (x.incident ? " #"+x.incident : ""); counts[lab] = (counts[lab] || 0) + 1; });
-      var tr = $("tr"); add(tr, $("td", null, name), $("td","n", p.tries), $("td","n", p.stops.length || "—"), $("td", null, Object.keys(counts).map(function(c){ return c+(counts[c] > 1 ? " ×"+counts[c] : ""); }).join(", ") || "")); add(tb, tr);
+      var how = Object.keys(counts).sort(function(a, b){ return counts[b] - counts[a]; }).map(function(c){ return c+(counts[c] > 1 ? " ×"+counts[c] : ""); }).join(", ");
+      trows.push({step: i >= nS ? name+" (channel)" : name, order: i, attempts: p.tries, stopped: p.stops.length, how: how});
     });
+    var maxStop = trows.reduce(function(a, r){ return Math.max(a, r.stopped); }, 0) || 1;
+    var cols4 = [{k: "step", label: "step", key: function(r){ return r.order; }}, {k: "attempts", label: "attempts", n: true, key: function(r){ return r.attempts; }},
+                 {k: "stopped", label: "stopped", n: true, key: function(r){ return r.stopped; }}, {k: "how", label: "how", key: function(r){ return r.how.toLowerCase(); }}];
+    var sortSt = window.__histSort || {k: "step", dir: 1};
+    var tb = $("table","hist-t"), thead = $("thead"), hr = $("tr"), tbody = $("tbody");
+    var drawBody = function(){
+      var col = cols4.filter(function(c){ return c.k === sortSt.k; })[0] || cols4[0];
+      var sorted = trows.slice().sort(function(a, b){ var x = col.key(a), y = col.key(b); return (x < y ? -1 : x > y ? 1 : a.order - b.order) * sortSt.dir; });
+      while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+      sorted.forEach(function(r){
+        var sc = $("td","n bar-cell"); add(sc, $("span", null, r.stopped || "—"));
+        var track = $("span","cellbar"), fill = $("i"); fill.style.width = (100 * r.stopped / maxStop)+"%"; add(track, fill); add(sc, track);
+        sc.title = r.stopped+" of "+r.attempts+" attempts stopped at "+r.step+(r.attempts ? " ("+Math.round(100 * r.stopped / r.attempts)+"%)" : "");
+        var tr = $("tr"); add(tr, $("td", null, r.step), $("td","n", r.attempts), sc, $("td", null, r.how)); add(tbody, tr);
+      });
+      var ths = hr.querySelectorAll("th");
+      for (var i = 0; i < ths.length; i++) { var on = cols4[i].k === sortSt.k; ths[i].setAttribute("aria-sort", on ? (sortSt.dir > 0 ? "ascending" : "descending") : "none"); ths[i].querySelector(".arr").textContent = on ? (sortSt.dir > 0 ? " ▲" : " ▼") : ""; }
+    };
+    cols4.forEach(function(c){
+      var th = $("th", c.n ? "n" : null), b = $("button","sort", c.label); b.type = "button"; add(b, $("span","arr"));
+      b.addEventListener("click", function(){
+        sortSt = window.__histSort = {k: c.k, dir: sortSt.k === c.k ? -sortSt.dir : (c.n ? -1 : 1)};   // numbers open largest-first
+        drawBody();
+      });
+      add(th, b); add(hr, th);
+    });
+    add(thead, hr); add(tb, thead, tbody); drawBody();
     add(c1, tb, $("div","hist-sel", "“#n” is the premortem incident. Classes come from verdict_failure_class in release.sh, stamped at failure time since 0.32.0 and re-derived from the step log before that."));
     var c2 = $("div"); add(c2, $("h3", null, "Release-machine changes named on the chart"));
     if (mc == null) add(c2, nodata("git could not answer — no change markers"));
@@ -1045,7 +1127,7 @@
     if (lv && lv.replay) fresh = true;
     else if (lv && lv.heartbeat && isFinite(lv.heartbeat.epoch)) fresh = (now/1000 - lv.heartbeat.epoch) < hbStaleS(lv);
     else if (lv && lv.alive && latest.header && latest.header.newest_source) fresh = (now - Date.parse(latest.header.newest_source))/1000 < hbStaleS(lv);  // a pid exists (maybe recycled), no heartbeat: trust it only while something is being written
-    var run = document.querySelectorAll(".station.running");
+    var run = document.querySelectorAll(".station.running, .hist-live.running");
     for (var k = 0; k < run.length; k++) { run[k].classList.toggle("fresh", fresh); run[k].classList.toggle("stale", !fresh); }
     var pill = document.getElementById("live-pill"); if (pill && latest && latest.live && !pill.getAttribute("data-unreachable")) pill.classList.toggle("stale", (now - Date.parse(latest.live.served_at))/1000 > 3 * (latest.live.poll_ms/1000) + 10);
   };
@@ -1056,7 +1138,7 @@
     var slices = function(d){
       var m = {top: [d.version, d.phase, d.header, d.liveness && {lock: d.liveness.lock, alive: d.liveness.alive, pid: d.liveness.pid, hbs: d.liveness.heartbeat && d.liveness.heartbeat.state}, d.confounded.count, d.confounded.computable, d.live && d.live.error],
                line: d.line, "pane-activity": d.activity, "pane-preflight": d.preflight, "pane-ci": d.ci, "pane-ratchets": d.ratchets, "pane-tag": d.tag,
-               "pane-channels": d.channels, "pane-clocks": d.clocks, "pane-confounded": d.confounded, "pane-log": [d.log_index, d.log_focus], "pane-events": [d.events, d.events_total, d.sink], "pane-history": d.history};
+               "pane-channels": d.channels, "pane-clocks": d.clocks, "pane-confounded": d.confounded, "pane-log": [d.log_index, d.log_focus], "pane-events": [d.events, d.events_total, d.sink], "pane-history": [d.history, (d.line && d.line.stations || []).filter(function(s){ return /running|stranded|corrupt/.test(s.state); }).map(function(s){ return s.id+":"+s.state; }), d.liveness && [d.liveness.lock, d.liveness.alive], d.header && d.header.completed]};
       (d.build.lanes || []).forEach(function(l){ m["pane-build-"+l.id] = l; });
       return m;
     };

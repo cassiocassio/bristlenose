@@ -594,9 +594,22 @@ every other commit to `MACHINE_PATHS` still appears, unnamed, in its gap.
   and 13 % because one bad night (0.32.0's eight attempts) outweighs three
   clean releases in the same version; version 11 is the first at 100 %, on one
   attempt — a trend to watch, not yet a measurement.
+- **The run in progress** is drawn with the run board's own semantics and
+  tokens, never a second verdict: whether the newest attempt is running or
+  stranded comes from the generator's station fold (lock, pid, heartbeat),
+  plus a held lock with a live pid between two steps. Running: a `--now` line
+  and a pulsing dot (`.hist-live.running`, toggled `fresh`/`stale` by the same
+  tick and heartbeat rule as `.station.running`, amber when stale, still under
+  reduced motion), and "· running" on its release label. Stranded: a broken
+  `--bad` ring, never pulsing. Its funnel layer stops at the live step, dashed
+  ("so far"), and the undecided step counts as neither a pass nor a stop. The
+  live slice for the patch map includes the station states and the lock, so a
+  run going stranded re-draws the pane even when the ledger has not moved.
 - Under it: the selected release's stops in words (click a release label),
   a table of where attempts stopped by step and class (the chart's text
-  equivalent), and the milestone list.
+  equivalent; every heading sorts, "step" by plan order, numbers
+  largest-first, and the stop count carries an in-cell data bar), and the
+  milestone list.
 
 **Prior art.** The right half is a Marey chart (E. J. Marey's 1885 Paris–Lyon
 train schedule: stations on one axis, one line per train, a reversing train

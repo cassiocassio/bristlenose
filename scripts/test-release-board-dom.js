@@ -157,7 +157,35 @@ function section4() {
   eq("the choice is remembered", "history", w.localStorage.getItem("rb-view"));
   const svg = d.querySelector("#pane-history .hist-scroll svg.hist-svg");
   eq("one release label for the one release in .release/", 1, svg ? svg.querySelectorAll("g.rel").length : 0);
-  eq("its invocation ends in a stopped mark (the ledger stops after build-all)", true, !!svg && [...svg.querySelectorAll("rect")].some(r => r.getAttribute("stroke") === "var(--warn)"));
+  // the synthetic run holds a live lock (this process's pid) with a fresh heartbeat: it is the run in progress
+  const liveMark = svg && svg.querySelector(".hist-live");
+  eq("the run in progress is drawn live, not as a stop", "hist-live running", liveMark && liveMark.getAttribute("class").replace(/ (fresh|stale)/g, ""));
+  eq("…pulsing on the run board's own freshness rule (the tick)", true, !!liveMark && liveMark.classList.contains("fresh"));
+  eq("…its release label says so", true, /running/.test(svg.querySelector("g.rel").textContent));
+  eq("…and the funnel does not count the undecided step as a stop", true, ![...d.querySelectorAll("#pane-history table.hist-t tbody tr")].some(tr => tr.cells[2].textContent.trim().startsWith("1")));
+  // sortable table with in-cell bars
+  const ths = [...d.querySelectorAll("#pane-history table.hist-t th button.sort")];
+  eq("every heading sorts", 4, ths.length);
+  ths[1].click();
+  eq("attempts opens largest-first", "descending", d.querySelectorAll("#pane-history table.hist-t th")[1].getAttribute("aria-sort"));
+  ths[1].click();
+  eq("…and reverses on a second click", "ascending", d.querySelectorAll("#pane-history table.hist-t th")[1].getAttribute("aria-sort"));
+  eq("the stopped column carries a data bar per row", d.querySelectorAll("#pane-history table.hist-t tbody tr").length, d.querySelectorAll("#pane-history .cellbar i").length);
+  {
+    // the same run, stranded: the generator's fold said so, and the history agrees
+    const st = JSON.parse(JSON.stringify(m));
+    st.line.stations.forEach(x => { if (x.id === "build-all") x.state = "stranded"; });
+    st.liveness.alive = false;
+    const { d: d6 } = load(htmlFor(st));
+    const mk = d6.querySelector("#pane-history .hist-live");
+    eq("a stranded run is drawn stranded, never pulsing", "hist-live stranded", mk && mk.getAttribute("class").replace(/ (fresh|stale)/g, ""));
+    // and finished: no live mark at all
+    const done = JSON.parse(JSON.stringify(m));
+    done.line.stations.forEach(x => { if (x.state === "running") x.state = "ok"; });
+    done.liveness.lock = false; done.liveness.alive = false;
+    const { d: d7 } = load(htmlFor(done));
+    eq("a run with no lock and nothing running has no live mark", null, d7.querySelector("#pane-history .hist-live"));
+  }
   eq("there is a table view of the same numbers", true, !!d.querySelector("#pane-history table.hist-t"));
   eq("every SVG title is text, never markup", true, [...svg.querySelectorAll("title")].every(t => t.children.length === 0));
   // (a reload restoring the view is not asserted: each JSDOM gets its own storage)

@@ -1067,7 +1067,9 @@ describe("performance", () => {
     console.warn(report);
     if (pct(0.95) > 50) console.warn(`PERF WARNING: p95 above the 50 ms keystroke budget`);
     expect(times.length).toBeGreaterThan(0);
-  });
+    // A report, not a gate: the whole test takes ~4.9 s on a CI runner, so the
+    // 5 s default timed it out at 5049 ms and stopped 0.36.0's strict CI.
+  }, 30_000);
 
   it("hostile sizes: long text marks, long queries, apostrophe runs", () => {
     const big = ("the delivery was late and the price ".repeat(300) + "ﬁ".repeat(500)).slice(0, 12_000);

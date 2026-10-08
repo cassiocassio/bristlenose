@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-09-02
-trued-against: HEAD@main on 2026-09-02
+last-trued: 2026-10-08
+trued-against: HEAD@main on 2026-10-08 (§3.7 and §6 only)
 ---
 
 ## Changelog
@@ -72,8 +72,8 @@ worst at.
 | Environment | Have it? | Proves | Blind to |
 |---|---|---|---|
 | **macOS 27, Apple Silicon, bare metal** | ✅ daily driver (since Sep 2026) | everything, at full fidelity | other OS versions |
-| **macOS 15 Sequoia, VM** | ✅ 15.7.3, Xcode 26.3 (§3.6) | geometry, behaviour, launch, regressions, the Swift suite | Liquid Glass fidelity (§3.2); anything needing an Apple ID (§3.3) |
-| **macOS 26 Tahoe, VM** | ✅ 26.6.2, Xcode 27.0 (§3.6) | the same, on the inset-plateau geometry | the same |
+| **macOS 15 Sequoia, VM** | ✅ 15.7.3, Xcode 26.3 (§3.6) | geometry, behaviour, launch, regressions, the Swift suite (nightly, §3.7) | Liquid Glass fidelity (§3.2); anything needing an Apple ID (§3.3) |
+| **macOS 26 Tahoe, VM** | ✅ 26.6.2, Xcode 27.0 (§3.6) | the same, on the inset-plateau geometry (nightly too) | the same |
 | **Linux x86_64, GitHub Actions** | ✅ | CI matrix, packaging, release pipeline | anything GUI; no LLM keys, no Ollama |
 | **Claude Code Cloud VM** | ✅ | code/test/lint/frontend build | GUI; **not for pipeline runs on private interview data** |
 | **Fedora 43 x86_64** | ✅ real Intel hardware | Copr packaging end to end | GUI |
@@ -289,6 +289,10 @@ marked tested after a missing verdict, release gate removed, process probe
 removed, a trial filed as the night, no stale-lock takeover, a trap that leaves
 the VM up, a silent post-gate failure, a silent signal, no carried verdict, locales not
 counted.
+
+**Installed 8 Oct 2026**, and macOS's background-item record (`sfltool dumpbtm`)
+reads `Name: Bristlenose Guest Matrix`, `Type: legacy agent`,
+`Disposition: [enabled, allowed, not notified]`: one entry, no "bash".
 
 **Not yet measured:** whether a guest without Xcode can run a host-built bundle
 with `test-without-building` (if so, guests shrink by about 30 GB and a macOS 27

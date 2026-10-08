@@ -84,7 +84,9 @@ uv route and the one-liner run no downloaded `.exe`, so they are unaffected.
 So the unsigned period hits **every winget user**, not only people who download the
 installer by hand. The decision above rested on the opposite assumption, so it was
 reopened. **Decision (8 Oct 2026): buy the Certum certificate next month (November
-2026); held until then for cost.**
+2026); held until then for cost. The first submission does not wait for it** — it goes
+up unsigned, accepting the SmartScreen screen for early users, and signed builds take
+over from the first release after the certificate arrives.
 
 ## What exists (on main since 5 Oct 2026; unreleased)
 

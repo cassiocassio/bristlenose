@@ -842,8 +842,11 @@
     svg.appendChild(S("text", {x: 12, y: yDiv, "text-anchor": "start", "class": "muted", "font-size": 9.5}, "after the tag: release.sh verify — a channel reached on any pass (none recorded before 0.29.1)"));
 
     // ── the funnel ──
-    fsvg.appendChild(S("text", {x: fcx, y: TOP - 34, "text-anchor": "middle", "class": "rowlab", "font-weight": 600}, "of 100 attempts, how many get past each step"));
-    var fsub = S("text", {x: fcx, y: TOP - 20, "text-anchor": "middle", "class": "muted", "font-size": 9.5}, "one outline per release, newest on top · grey: all pooled");
+    // its caption in a keylined box titled like the boxes above it (owner, 8 Oct 2026)
+    fsvg.appendChild(S("rect", {x: 8.5, y: TOP - 88.5, width: FWID - 17, height: 66, rx: 6, fill: "var(--panel)", stroke: "var(--rule2)", "stroke-width": 1, "class": "hist-fbox"}));
+    fsvg.appendChild(S("text", {x: 21, y: TOP - 69, "font-size": 9.5, "font-weight": 600, "letter-spacing": ".08em", fill: "var(--mute)", "class": "hist-fkey"}, "RELEASE FUNNEL"));
+    fsvg.appendChild(S("text", {x: 21, y: TOP - 51, "class": "rowlab", "font-weight": 600}, "of 100 attempts, how many get past each step"));
+    var fsub = S("text", {x: 21, y: TOP - 36, "class": "muted", "font-size": 9.5}, "one outline per release, newest on top · grey: all pooled");
     fsvg.appendChild(fsub);
     [0.5, 1].forEach(function(f){ [-1, 1].forEach(function(sg){ var xx = fcx + sg*f*FW/2; fsvg.appendChild(S("line", {x1: xx, x2: xx, y1: TOP - 6, y2: H_ALL - 18, stroke: "var(--rule)", "stroke-width": 1})); }); fsvg.appendChild(S("text", {x: fcx + f*FW/2, y: TOP - 8, "text-anchor": "middle", "class": "muted", "font-size": 9}, (f*100)+"%")); });
     var shape = function(ys){

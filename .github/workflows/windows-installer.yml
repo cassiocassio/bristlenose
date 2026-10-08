@@ -85,9 +85,11 @@ jobs:
         shell: powershell
         run: |
           $wheel = (Get-ChildItem dist\bristlenose-*.whl | Select-Object -First 1).FullName
-          # To a file, not through Tee-Object: a pipeline leaves $LASTEXITCODE
-          # unreliable, and this exit code is the verdict.
-          & powershell -NoProfile -ExecutionPolicy Bypass -File packaging\windows\build.ps1 -Wheel $wheel -Out build\windows -Installer -Manifest -ValidateWithSchema *> build-windows.log
+          # To a file, through cmd: a pipeline leaves $LASTEXITCODE unreliable,
+          # and a PowerShell redirect turns any stderr line from a native tool
+          # ("Using CPython ..." from uv) into a terminating error, because
+          # GitHub runs this step with $ErrorActionPreference = 'Stop'.
+          cmd /c "powershell -NoProfile -ExecutionPolicy Bypass -File packaging\windows\build.ps1 -Wheel `"$wheel`" -Out build\windows -Installer -Manifest -ValidateWithSchema > build-windows.log 2>&1"
           $code = $LASTEXITCODE
           Get-Content build-windows.log
           if ($code -ne 0) { throw "build.ps1 exited $code" }

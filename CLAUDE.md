@@ -388,6 +388,8 @@ The Bash tool runs under zsh. When a glob matches nothing, zsh prints `zsh: no m
 
 **Same family, one line up the stack: an unquoted glob in a *flag argument* kills the whole call.** `grep -rn "x" dir --include=*.swift` fails with `zsh: no matches found: --include=*.swift` — zsh tries to expand `*.swift` against the *current directory* before grep ever sees it, so the flag only survives when a matching file happens to sit in `cwd`. It works from the repo root and fails from anywhere else, which reads as "grep is broken here". Bash passes the same string through untouched, so the idiom is muscle memory from everywhere else. **Quote it: `--include='*.swift'`.** Applies equally to `--exclude=`, `rsync --filter=`, `find -name`, and any tool taking a pattern as a flag value.
 
+
+**Same family: an UNQUOTED heredoc runs `$(…)` inside the text it carries — and the call carries on.** `python3 - <<PY` (no quotes) whose Python inserts JavaScript like `$("span","seg")` hands that to the shell as a command substitution: zsh prints `command not found`, substitutes nothing, and the script writes `var seg = ;` into the file with exit 0 (8 Oct 2026, the release board's History toggle — caught only by the browser's fault band). **Quote the delimiter (`<<'PY'`) whenever the payload is code**, and read files in rather than interpolating shell variables into it.
 ### `/dev/tcp` is bash, not zsh — a port probe sourced into the Bash tool reads every port as closed
 
 `release.sh`'s `board_link` checks the board's port with `( exec 3<>/dev/tcp/127.0.0.1/$port )`.

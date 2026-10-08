@@ -172,5 +172,28 @@ else
         || bad "spec bundles these but the fingerprint ignores them —"$'\n'"      editing one ships stale while the gate reports fresh:$uncovered"
 fi
 
+# --keep-venv: one live resolve per release. Both release lanes pass it (build-all
+# since 84b8a742, build-dmg since 8 Oct 2026); the guard keeps the venv ONLY for the
+# run that resolved it. Read off the real venv's stamp rather than writing one, so
+# nothing needs restoring. Untested until 8 Oct 2026 — the flag shipped with a
+# guard no test ever exercised.
+RF="$ROOT/.venv-sidecar/.resolved-for"
+if [ ! -f "$ROOT/.venv-sidecar/.deps-ok" ] || [ ! -s "$RF" ]; then
+    echo "  skip — no resolved .venv-sidecar (.deps-ok + .resolved-for); the keep-venv guard needs one"
+else
+    run_id="$(cat "$RF")"
+    v_line() { "$@" bash "$SCRIPT_DIR/build-sidecar.sh" "${KV_ARGS[@]}" --dry-run 2>&1 | grep '\[V\]' || true; }
+    KV_ARGS=(--force --keep-venv)
+    out="$(v_line env BN_RELEASE_RUN="$run_id")"
+    case "$out" in *"[V] skip"*) ok "--force --keep-venv in the run that resolved: the venv is kept" ;; *) bad "kept-venv case: $out" ;; esac
+    out="$(v_line env BN_RELEASE_RUN="not-$run_id")"
+    case "$out" in *"REBUILD — forced"*) ok "--keep-venv in a different run: resolved fresh" ;; *) bad "other-run case: $out" ;; esac
+    out="$(v_line env -u BN_RELEASE_RUN)"
+    case "$out" in *"REBUILD — forced"*) ok "--keep-venv outside a release (no BN_RELEASE_RUN): resolved fresh" ;; *) bad "no-run case: $out" ;; esac
+    KV_ARGS=(--force)
+    out="$(v_line env BN_RELEASE_RUN="$run_id")"
+    case "$out" in *"REBUILD — forced"*) ok "--force without --keep-venv, same run: resolved fresh" ;; *) bad "no-flag case: $out" ;; esac
+fi
+
 echo "== $pass passed, $fail failed =="
 [ "$fail" -eq 0 ]

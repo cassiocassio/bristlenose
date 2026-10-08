@@ -9,8 +9,8 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 6499 | collected (expands parametrize — authoritative) | `tests/` |
-| `vitest` | frontend unit | 145 files | test files | `frontend/src/**/*.test.*` |
+| `pytest` | python unit/integration | 6505 | collected (expands parametrize — authoritative) | `tests/` |
+| `vitest` | frontend unit | 146 files | test files | `frontend/src/**/*.test.*` |
 | `BristlenoseTests` | swift unit | 1706 in 141 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 9 files | spec files | `e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts)` |
 
@@ -74,6 +74,13 @@
 - **Default shell:** `bash` (pipefail on)
   - `build` · on `${{ matrix.runner }}`
     - Build and test — runs tests, **hard**
+
+### Mac Release Archive (`mac-release-archive.yml`)
+
+- **Triggers:** schedule (23 2 * * *); workflow_dispatch
+- **Default shell:** `bash` (pipefail on)
+  - `archive` · on `macos-26`
+    - Archive Release — App Store and Developer-ID configurations — gate, **hard**
 
 ### mockup register (`mockup-register.yml`)
 

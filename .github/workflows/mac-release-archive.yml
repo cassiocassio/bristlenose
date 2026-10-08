@@ -1,0 +1,69 @@
+name: Mac Release Archive
+
+# Nightly rehearsal of both RELEASE archives, unsigned, on the latest main.
+#
+# Mac Build compiles and tests DEBUG on every desktop push. Both release lanes
+# archive RELEASE (build-all.sh for the App Store; build-dmg.sh with
+# DEVELOPER_ID_BETA for the .dmg), and until 8 Oct 2026 nothing compiled that
+# configuration before release night — so a Release-only break, or an Xcode
+# image that moved under us, was found by a thirty-minute release step. This
+# runs desktop/scripts/check-release-archive.sh every night whether or not
+# anything changed (the runner image changes without a commit), and on demand.
+#
+# It does NOT sign: an ad-hoc archive of the app fails without a provisioning
+# profile (measured 8 Oct 2026), so signing, entitlements, notarisation and
+# Gatekeeper remain release-night facts. The script header says what it can
+# and cannot see.
+#
+# Never a required check, and it blocks no push. A red night reaches the owner
+# twice: GitHub's email for a failed scheduled run, and the release preflight,
+# which lists this workflow in WF_ADVISORY (scripts/project.conf) — one red
+# night warns, three in a row stop a release.
+
+on:
+  schedule:
+    - cron: "23 2 * * *"   # nightly, ~03:23 London (BST)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash   # pipefail on every step — see mac-build.yml's note
+
+jobs:
+  archive:
+    runs-on: macos-26
+    timeout-minutes: 45   # two Release compiles
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Show toolchain
+        run: |
+          sw_vers -productVersion
+          xcodebuild -version
+
+      - name: Stub bundled sidecar input path
+        # Same reason as mac-build.yml: the copy phase declares the sidecar binary
+        # as a hard input; compiling needs only that the path exists.
+        run: |
+          mkdir -p desktop/Bristlenose/Resources/bristlenose-sidecar
+          touch desktop/Bristlenose/Resources/bristlenose-sidecar/bristlenose-sidecar
+          chmod +x desktop/Bristlenose/Resources/bristlenose-sidecar/bristlenose-sidecar
+
+      - name: Generate build-info source
+        run: desktop/scripts/generate-build-info.sh
+
+      - name: Archive Release — App Store and Developer-ID configurations
+        env:
+          BN_ARCHIVE_DIR: ${{ github.workspace }}/desktop/build/release-archive-check
+        run: desktop/scripts/check-release-archive.sh both
+
+      - name: Upload archive logs on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: release-archive-logs
+          path: desktop/build/release-archive-check/*.log
+          retention-days: 30

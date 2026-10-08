@@ -17,7 +17,7 @@
 # Chain (bails on any non-zero exit):
 #   1. Pre-flight  — Developer ID cert, create-dmg, notarytool creds.
 #   1b. Swift tests — test-swift.sh (SKIP_SWIFT_TESTS=1 to bypass).
-#   2. Sidecar     — ensure-sidecar.sh --force, signed under the Developer ID cert.
+#   2. Sidecar     — ensure-sidecar.sh --force --keep-venv, signed under the Developer ID cert.
 #   3. Archive     — xcodebuild archive, Developer-ID signing overrides.
 #   4. Export      — xcodebuild -exportArchive → standalone .app.
 #   5. Verify app  — codesign --deep --strict (catches the sandbox/keychain-group spike).
@@ -266,9 +266,18 @@ ok "target: $DMG_NAME  ·  team $TEAM_ID"
 # ensure-sidecar.sh --force, ~10 minutes every time, and a compile break should
 # not buy that first. No ad-hoc branch is needed here — this script refuses
 # ad-hoc signing outright, so every run of it is a real one.
+#
+# Not re-run when build-all.sh already passed it on this exact tree in this
+# release run: test-swift.sh --green-here answers from the receipt that only a
+# green run of the suite writes (run + commit + whole-tree fingerprint). The
+# second run could only fail on the environment — two of this lane's stops were
+# exactly that (a locked screen, incident 36; a test host that exited mid-suite,
+# 41). Any mismatch, a standalone run of this script, or no receipt: it runs.
 say "Swift unit suite (BristlenoseTests)"
 if [ "${SKIP_SWIFT_TESTS:-0}" = "1" ]; then
     ok "SKIPPED — SKIP_SWIFT_TESTS=1, gate deliberately bypassed"
+elif _green="$("$SCRIPT_DIR/test-swift.sh" --green-here 2>/dev/null)"; then
+    ok "not re-run — $_green (build-all step 1c)"
 else
     "$SCRIPT_DIR/test-swift.sh" --quiet || die "Swift suite did not pass.
      reproduce: desktop/scripts/test-swift.sh"
@@ -282,9 +291,20 @@ fi
 # Distribution won't notarise). ensure-sidecar.sh --force rebuilds and re-signs
 # the whole PyInstaller tree under SIGN_IDENTITY. _BRISTLENOSE_RELEASE=1
 # authorises signing with a real identity (the IDE inner loop is refused one).
+#
+# --keep-venv: inside a release run, reuse the dependency closure preflight
+# resolved and checked, exactly as build-all.sh does. Without it this lane
+# re-resolved every `>=` floor against live PyPI minutes after the check, so the
+# .dmg could ship a closure no gate had seen — every build-dmg log from 0.31.4 to
+# 0.35.0 says "[V] REBUILD — forced" while build-all's kept the venv (incident 23,
+# closed for one lane in 84b8a742 and left open on this one). The flag is keyed
+# on BN_RELEASE_RUN, so a standalone run of this script still resolves fresh, and
+# every other rebuild reason (missing venv, half-install, a moved interpreter
+# minor, a changed closure) still applies. The PyInstaller build and the
+# Developer-ID signing below run regardless: only the resolve is shared.
 say "Sidecar — fetch · build · sign (Developer ID)"
 export SIGN_IDENTITY
-_BRISTLENOSE_RELEASE=1 "$SCRIPT_DIR/ensure-sidecar.sh" --force
+_BRISTLENOSE_RELEASE=1 "$SCRIPT_DIR/ensure-sidecar.sh" --force --keep-venv
 ok "sidecar built + signed under $SIGN_IDENTITY"
 
 # ------------------------------------------------------------

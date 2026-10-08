@@ -8,11 +8,11 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 6499
+        "tests": 6505
       },
       {
         "basis": "test files",
-        "files": 145,
+        "files": 146,
         "kind": "frontend unit",
         "runner": "vitest",
         "source": "frontend/src/**/*.test.*",
@@ -525,6 +525,33 @@
         "triggers": [
           "push [main] paths=desktop/**,.github/workflows/mac-build.yml",
           "pull_request [main] paths=desktop/**,.github/workflows/mac-build.yml"
+        ]
+      },
+      {
+        "default_shell": "bash",
+        "file": "mac-release-archive.yml",
+        "jobs": [
+          {
+            "calls": null,
+            "id": "archive",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Archive Release \u2014 App Store and Developer-ID configurations",
+                "piped": false,
+                "runs_tests": false
+              }
+            ],
+            "runs_on": "macos-26"
+          }
+        ],
+        "name": "Mac Release Archive",
+        "piped_steps": [],
+        "triggers": [
+          "schedule (23 2 * * *)",
+          "workflow_dispatch"
         ]
       },
       {

@@ -147,7 +147,10 @@ it can be inspected.
 >   discovery been of the right venv. Same night, the live-provider probe ran
 >   under `.venv` and passed 7/7 on an SDK eleven minors older than the one
 >   shipping. Fix: resolve once, in preflight; lanes reuse. **✅ built 24 Sep
->   2026** — `84b8a742` + `2be60bf2` (`build-sidecar.sh --keep-venv`, the stamp
+>   2026 for build-all only; the .dmg lane kept re-resolving until 8 Oct 2026**
+>   (every build-dmg log 0.31.4–0.35.0 says `[V] REBUILD — forced`; build-dmg.sh
+>   now passes `--keep-venv` too, and test-ensure-sidecar.sh finally tests the
+>   guard) — `84b8a742` + `2be60bf2` (`build-sidecar.sh --keep-venv`, the stamp
 >   keyed on `BN_RELEASE_RUN`, and a new `inventory` step).
 > - **24 — eleven green tests over an archive that could not run.**
 >   `test_entitlements_split.py` asserted the `CODE_SIGN_ENTITLEMENTS` override
@@ -373,6 +376,25 @@ it can be inspected.
 >   closing itself when its last window shut. If it recurs, read the test
 >   host's unified log around the exit before re-running. **Did not recur in
   0.35.0** (build-dmg's suite green first time).
+
+> **8 Oct 2026 — the .dmg lane stops re-proving what build-all proved.** The
+> History tab's stop count put build-dmg on top (13 of 29 attempts). Read by
+> cause, the 13 are many one-offs, not one recurring cause, so the answer was a
+> sturdier lane rather than one more gate. Three changes, each proved on synthetic
+> input and mutants:
+> - **The second dependency resolve is gone** — build-dmg now passes
+>   `--keep-venv` like build-all (incident 23's note above).
+> - **The second Swift suite is skipped when it would only re-test the
+>   environment.** 36 and 41 both happened in a re-run of a suite build-all had
+>   just passed. `test-swift.sh` now writes a green receipt (run, commit, a
+>   whole-tree fingerprint taken before and after the suite), and build-dmg skips
+>   its run only on an exact match (`scripts/test-dmg-lane.sh`).
+> - **Release is compiled every night, unsigned, in both configurations**
+>   (`check-release-archive.sh`, `mac-release-archive.yml`, in the preflight's
+>   advisory streak). Signing cannot be rehearsed: an ad-hoc archive fails
+>   without a provisioning profile, measured. Three of the four Developer-ID
+>   contract drifts on record were already pinned on every push by
+>   `tests/test_entitlements_split.py`.
 
 > **7 Oct 2026 — 0.35.0 ran clean; two new items.**
 > - **42 — `main` sat red on four blocking checks and nobody was told.** After

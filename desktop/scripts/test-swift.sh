@@ -42,6 +42,20 @@
 # Usage:
 #   desktop/scripts/test-swift.sh [--quiet]
 #   BN_DERIVED_DATA=<dir> desktop/scripts/test-swift.sh   # private DerivedData
+#   desktop/scripts/test-swift.sh --green-here            # exit 0 iff this exact tree was green in this release run
+#
+# The green receipt (8 Oct 2026). Inside a release run (BN_RELEASE_RUN set), a
+# green verdict writes desktop/build/swift-green.stamp: the run, the commit, and
+# a fingerprint of the WHOLE working tree (HEAD + `git diff HEAD` + every
+# untracked, unignored file's content) taken before the suite AND after it — a
+# tree that moved while the suite ran gets no receipt. Every run deletes the
+# receipt first, so a red run can never leave an older green behind. build-dmg.sh
+# asks `--green-here` and skips its own run of this suite only on an exact match:
+# build-all.sh has just passed it on the same tree, and the second run could only
+# fail on the environment — a locked screen (incident 36), a host that exits
+# mid-suite (41). Only this script writes or reads the receipt, so there is one
+# format, and nothing but a real green can produce one: SKIP_SWIFT_TESTS in
+# build-all never reaches here, so it cannot mint a receipt either.
 #
 # Exit codes:
 #   0  Suite green.
@@ -52,13 +66,44 @@
 set -euo pipefail
 
 QUIET=0
+GREEN_HERE=0
 case "${1:-}" in
   --quiet) QUIET=1 ;;
+  --green-here) GREEN_HERE=1 ;;
   "") ;;
-  *) echo "usage: $(basename "$0") [--quiet]" >&2; exit 2 ;;
+  *) echo "usage: $(basename "$0") [--quiet | --green-here]" >&2; exit 2 ;;
 esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+STAMP="$SCRIPT_DIR/../build/swift-green.stamp"
+
+# The working tree's identity: what the suite compiled and read (the test bundle
+# also copies bristlenose/locales in, so desktop/ alone is too narrow). Empty when
+# git cannot answer, and an empty fingerprint never matches and is never written.
+tree_fingerprint() {
+  local head
+  head=$(git -C "$REPO_ROOT" rev-parse --verify HEAD 2>/dev/null) || return 0
+  { printf '%s\n' "$head"
+    git -C "$REPO_ROOT" diff HEAD --binary 2>/dev/null
+    ( cd "$REPO_ROOT" && git ls-files -o --exclude-standard -z | xargs -0 shasum -a 256 -- 2>/dev/null ) || true
+  } | shasum -a 256 | cut -c1-64
+}
+
+if [ "$GREEN_HERE" -eq 1 ]; then
+  [ -n "${BN_RELEASE_RUN:-}" ] || exit 1
+  [ -f "$STAMP" ] || exit 1
+  want="run=$BN_RELEASE_RUN sha=$(git -C "$REPO_ROOT" rev-parse --verify HEAD 2>/dev/null) tree=$(tree_fingerprint)"
+  case "$want" in *"sha= "*|*"tree=") exit 1 ;; esac
+  [ "$(cat "$STAMP")" = "$want" ] || exit 1
+  sha=$(git -C "$REPO_ROOT" rev-parse --short=8 HEAD)
+  echo "green at $sha on this exact tree, earlier in run $BN_RELEASE_RUN"
+  exit 0
+fi
+
+rm -f "$STAMP"
+FP_BEFORE=""
+[ -n "${BN_RELEASE_RUN:-}" ] && FP_BEFORE="$(tree_fingerprint)"
 PROJECT_DIR="$SCRIPT_DIR/../Bristlenose"
 [ -d "$PROJECT_DIR" ] || { echo "not found: $PROJECT_DIR" >&2; exit 2; }
 command -v xcodebuild >/dev/null 2>&1 || { echo "xcodebuild not on PATH" >&2; exit 2; }
@@ -192,3 +237,16 @@ if [ "$passed" -eq 0 ]; then
 fi
 
 [ "$QUIET" -eq 1 ] || echo "Swift suite green — $passed passed, 0 failed"
+
+# The green receipt (see the header): only in a release run, only if the tree the
+# suite started on is the tree it finished on.
+if [ -n "${BN_RELEASE_RUN:-}" ] && [ -n "$FP_BEFORE" ]; then
+  FP_AFTER="$(tree_fingerprint)"
+  if [ "$FP_AFTER" = "$FP_BEFORE" ]; then
+    mkdir -p "$(dirname "$STAMP")"
+    printf 'run=%s sha=%s tree=%s' "$BN_RELEASE_RUN" "$(git -C "$REPO_ROOT" rev-parse --verify HEAD)" "$FP_AFTER" > "$STAMP.tmp" \
+      && mv "$STAMP.tmp" "$STAMP"
+  else
+    echo "note: the working tree changed while the suite ran — no green receipt written" >&2
+  fi
+fi

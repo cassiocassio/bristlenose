@@ -734,6 +734,25 @@ describe("TranscriptPage — split and join (design-transcript-editing.md, stage
     expect(event.defaultPrevented).toBe(true);
   });
 
+  it("marks the paragraphs that begin a sentence, and gives them the session's language", async () => {
+    const p = mockData.segments[1];
+    const split = {
+      ...mockData,
+      language: "tr",
+      segments: [
+        { ...p, text: "so when it's fermenting the air" },
+        { ...p, start_time: 15, text: "it's kind of a simple solution." },
+        { ...p, start_time: 17, text: "it keeps the air out" },
+      ],
+    };
+    mockedGetTranscript.mockResolvedValue(split);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    // First paragraph: a start. Second carries on mid-sentence. Third follows a full stop.
+    expect([0, 1, 2].map((i) => bodyOf(i).classList.contains("bn-sentence-start"))).toEqual([true, false, true]);
+    expect(bodyOf(0).getAttribute("lang")).toBe("tr");
+  });
+
   it("Backspace at the start joins only the same speaker's paragraph above", async () => {
     const twoInARow = { ...mockData, segments: [mockData.segments[1], { ...mockData.segments[1], start_time: 15, text: "And slow." }] };
     mockedGetTranscript.mockResolvedValue(twoInARow);

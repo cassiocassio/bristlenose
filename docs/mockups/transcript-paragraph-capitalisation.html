@@ -3742,7 +3742,7 @@ body { padding: 0; }
 </ul>
 <p><b>All four are display only.</b> Nothing rewrites the stored text, which stays what the transcript said; exports and the agent read the text. Changing the stored text at split time (capitalising the second half when the cut follows a full stop) is a fifth option, not drawn: it fixes exports too, but it is the first time the transcript's words would be changed by anything other than the researcher typing.</p>
 <p><b>Languages.</b> Capitalising must use the session's language (<code>toLocaleUpperCase</code>), or Turkish "i" becomes "I" instead of "İ". Japanese, Chinese and Korean have no case, so A–C draw the same there and D's "…" is the only visible difference. Within a paragraph, Whisper's lower-case "i" ("i guess", "i'm") is untouched by every option here: that is a separate fix, and English-only.</p>
-<p><b>Recommendation: C</b>, reading sentence ends from the stored text, and from the words only where there is no text. It looks after a turn's start and a split after a sentence, and it leaves a mid-sentence split looking like the continuation it is. D's mark is worth trying only if researchers find mid-sentence splits confusing to read back.</p>
+<p><b>Decided 7 Oct 2026: C</b> (owner), built after measuring it on 3,237 real paragraphs (<code>experiments/paragraph-case/</code>), with a guard for words spelled lower-case on purpose (iPhone). <b>Was the recommendation: C</b>, reading sentence ends from the stored text, and from the words only where there is no text. It looks after a turn's start and a split after a sentence, and it leaves a mid-sentence split looking like the continuation it is. D's mark is worth trying only if researchers find mid-sentence splits confusing to read back.</p>
 </aside>
 
 </div>

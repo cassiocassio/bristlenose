@@ -95,6 +95,9 @@ class TranscriptPageResponse(BaseModel):
     segments: list[TranscriptSegmentResponse]
     annotations: dict[str, QuoteAnnotationResponse]
     journey_labels: list[str]
+    #: The session's spoken language (ISO 639-1) when known — the page sets it
+    #: as the paragraphs' ``lang`` so a drawn capital follows the language.
+    language: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -398,6 +401,7 @@ def get_transcript(
             segments=seg_responses,
             annotations=annotations,
             journey_labels=journey_labels,
+            language=sess.language,
         )
     finally:
         db.close()

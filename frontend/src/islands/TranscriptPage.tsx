@@ -26,6 +26,7 @@ import { isEmbedded } from "../utils/embedded";
 import { isExportMode } from "../utils/exportData";
 import { redo, undo } from "../contexts/UndoStore";
 import { resetParagraphScope } from "../utils/paragraphScope";
+import { drawsCapital } from "../utils/sentenceStart";
 import {
   TRANSCRIPT_WRITTEN_EVENT,
   caretAtStart,
@@ -682,7 +683,12 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                 />
               </span>
               <div
-                className="segment-body"
+                // Option C (owner, 6 Oct 2026): the first letter is drawn as a
+                // capital where a sentence begins (CSS ::first-letter, which
+                // follows `lang`, so Turkish gets İ). Display only; a word
+                // spelled lower-case on purpose (iPhone) keeps its spelling.
+                className={`segment-body${drawsCapital(segments, position, drawnTokens(seg.text, seg.words)[0] ?? "") ? " bn-sentence-start" : ""}`}
+                lang={data?.language ?? undefined}
                 // The text takes a caret, so Return can split the paragraph
                 // there and Backspace at its start can join it to the one
                 // above (design-transcript-editing.md §"Split and join, stage

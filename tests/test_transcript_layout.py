@@ -384,3 +384,19 @@ class TestSplitKeepsTheTextsOwnSpelling:
         assert [t for _, t in _texts(client)][1:3] == [
             "Thanks for having me,", "it is good to be here.",
         ]
+
+
+def test_the_transcript_carries_the_sessions_language(tmp_path: Path) -> None:
+    """The page sets it as the paragraphs' lang, so a drawn capital follows the
+    language (Turkish i → İ); None when nothing knew it."""
+    from bristlenose.server.models import Session as SessionModel
+
+    client = _client(_project(tmp_path, _TWO))
+    assert client.get("/api/projects/1/transcripts/s1").json()["language"] is None
+    db = client.app.state.db_factory()
+    try:
+        db.query(SessionModel).filter_by(session_id="s1").one().language = "tr"
+        db.commit()
+    finally:
+        db.close()
+    assert client.get("/api/projects/1/transcripts/s1").json()["language"] == "tr"

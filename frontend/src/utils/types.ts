@@ -304,6 +304,9 @@ export interface TranscriptPageResponse {
   segments: TranscriptSegmentResponse[];
   annotations: Record<string, QuoteAnnotationResponse>;
   journey_labels: string[];
+  /** The session's spoken language (ISO 639-1), when known: the paragraph
+   *  text's `lang`, so casing follows the language. */
+  language?: string | null;
 }
 
 // ---------------------------------------------------------------------------

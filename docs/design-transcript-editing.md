@@ -444,6 +444,20 @@ on the scope question in `design-people.md` §K.
   not fork quotes: the split is for reading, and the quote's highlight already marks both halves,
   because the match is by time window. The fork rule stays for when a split means "two points",
   with stage 2.
+- **A paragraph's first letter** (owner, 7 Oct 2026: option C of
+  `docs/mockups/transcript-paragraph-capitalisation.html`). Drawn as a capital where a
+  sentence begins: the first paragraph, a new speaker's turn, or after a paragraph of the
+  same speaker whose stored text ended a sentence (`utils/sentenceStart.ts`, read from the
+  text because it carries punctuation more often than the word timings). A paragraph that
+  carries on mid-sentence after a split stays as transcribed. Display only — CSS
+  `::first-letter` on `.bn-sentence-start`, following the paragraphs' `lang` (the session's
+  spoken language, `language` on `/transcripts/{sid}`) — so the stored text and the drawn
+  words never change. A first word spelled lower-case on purpose (iPhone, eBay,
+  ikea.com) keeps its spelling. Measured on 3,237 real paragraphs before building
+  (`experiments/paragraph-case/`): 55 capitalised, all correct in the sample; 207 kept
+  lower-case, mostly true continuations; about 31 real starts missed where the previous
+  text has no punctuation, which stay as today. It does nothing for sentence starts and
+  "i" *inside* a paragraph — that is the larger problem, and a separate one.
 - **Known limits, from the 6 Oct review, not yet fixed.** A click into a paragraph's text makes
   the page "editing", so bare-key shortcuts stand down until focus leaves; an input method's
   composition cannot be cancelled by the `beforeinput` guard; a split or join the server refuses

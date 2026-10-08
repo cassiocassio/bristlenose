@@ -337,6 +337,11 @@ async function section6() {
     const pick = d.getElementById("run-pick");
     eq("a served board's version is a picker of every run", ["1.0.0", "0.9.0"], pick ? [...pick.options].map(o => o.value) : null);
     eq("…on this run, named as this board's", true, pick.value === "1.0.0" && / \(live\)$/.test(pick.options[0].textContent));
+    // the page also has the Log pane's step picker: choosing a run must ask for THAT run (it once asked for ?run=snap)
+    eq("(the Log pane's own picker is on the page too)", true, !!d.querySelector("#pane-log select"));
+    const nav = []; w.__rbNavigate = (q) => nav.push(q);
+    pick.value = "0.9.0"; pick.dispatchEvent(new w.Event("change"));
+    eq("choosing a run navigates to that run", ["k=t&run=0.9.0"], nav);
     w.close();
   }
   // the same server, showing 0.9.0
@@ -345,6 +350,8 @@ async function section6() {
   const asked = [];
   w.fetch = (u) => { asked.push(u); return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(m), text: () => Promise.resolve(JSON.stringify({ version: "0.9.0", frames: [] })) }); };
   eq("a past run selects itself in the picker", "0.9.0", d.getElementById("run-pick").value);
+  { const nav = []; w.__rbNavigate = (q) => nav.push(q); const rp = d.getElementById("run-pick"); rp.value = "1.0.0"; rp.dispatchEvent(new w.Event("change"));
+    eq("…and choosing the live run goes back to the bare URL", ["k=t"], nav); }
   eq("…says it is past and read-only, with the way back", true, /past run · read-only/.test(d.getElementById("past-pill").textContent) && /back to v1\.0\.0/.test(d.getElementById("past-pill").textContent));
   eq("…and does not call itself live", null, d.getElementById("live-pill"));
   await sleep(2400);

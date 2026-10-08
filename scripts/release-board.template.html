@@ -435,17 +435,19 @@
   // run). The live run is the bare URL; any other is ?run=<id>, opened read-only.
   if (data.live && data.runs && data.runs.length > 1) {
     var liveRun = data.live.past ? data.live.live_run : data.version;
-    var pick = $("select","runpick"); pick.id = "run-pick"; pick.setAttribute("aria-label", "show another run");
+    var runPick = $("select","runpick"); runPick.id = "run-pick"; runPick.setAttribute("aria-label", "show another run");
     data.runs.forEach(function(r){
       var day = r.started ? new Date(r.started) : null;
       var o = $("option", null, r.id+(day && !isNaN(day.getTime()) ? " · "+day.toLocaleDateString(undefined, {day:"numeric", month:"short"}) : "")+(r.id === liveRun ? " (live)" : ""));
-      o.value = r.id; if (r.id === data.version) o.selected = true; add(pick, o);
+      o.value = r.id; if (r.id === data.version) o.selected = true; add(runPick, o);
     });
-    pick.addEventListener("change", function(){
-      var q = new URLSearchParams(location.search); if (pick.value === liveRun) q.delete("run"); else q.set("run", pick.value);
-      location.search = q.toString();
+    runPick.addEventListener("change", function(){
+      var q = new URLSearchParams(location.search); if (runPick.value === liveRun) q.delete("run"); else q.set("run", runPick.value);
+      // runPick, never `pick`: the Log pane declares its own `var pick` in this same function,
+      // and while both were `pick` this read the log's step ("snap") and asked for ?run=snap (8 Oct 2026)
+      (window.__rbNavigate || function(sq){ location.search = sq; })(q.toString());
     });
-    add(top, pick);
+    add(top, runPick);
   } else add(top, $("span","v", "v"+data.version));
   // This run | History. The choice survives a reload and a live re-render; the
   // run's panes stay in the DOM under History, so a live patch still lands.

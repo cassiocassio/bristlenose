@@ -1,5 +1,7 @@
 ---
 status: built 5 Sep 2026 — feed, generator, template and suites on main; as-built notes at the end
+last-trued: 2026-10-08
+trued-against: HEAD@main on 2026-10-08 (§8 replay, run picker, one board per run; §9 History as laid out after 5fb31dde)
 date: 2026-09-05
 decides: docs/design-release-train-dashboard.md § 3 → sketch B, the board
 sketch: docs/mockups/release-train-board.html
@@ -525,7 +527,16 @@ read-only", and offers a way back. Its replay fetches
 to live". Only a listed id is ever opened: anything else, a path included, is
 a 404, behind the same token. A snapshot has no picker, because there is no
 server to ask. The cross-release question still belongs to History; this is for
-looking at one run as its own board.
+looking at one run as its own board. Pinned by
+`test_run_picker_opens_a_listed_past_run_read_only_and_nothing_else`
+(`test-release-board.py`) and section 6 of `test-release-board-dom.js`. One
+trap it hit: the picker's variable shared a name with the Log pane's inside
+the one `render()` function, so it asked for `?run=snap` (80ce3a8f). Names in
+that function are not scoped by pane.
+
+A board server started before the replay existed answers `/replay.json` with a
+404; the page then says the server predates replay and names the fix, `release.sh
+board <v> --restart`, rather than failing silently.
 
 **Links.** Every public page is an anchor built in the generator from
 `project.conf` constants (`read_conf` expands its own `${VAR}`s) and validated
@@ -583,21 +594,31 @@ History**, stored in `localStorage` (`rb-view`), the theme toggle's pattern.
 The run's panes stay in the DOM under History, so a live patch still lands;
 `pane-history` is one more slice in the patch map.
 
-**Layout, after the owner's first reading (8 Oct 2026).** The key sits top
-right in a titled, keylined box beside the controls, and wraps its own text
-rather than dropping onto a line of its own. The focused release's detail is
-an **inspector** to the right of the scrolling strip, not under it. It is
-exactly as tall as the step rows (`H_ALL`, the depth of the funnel's step
-list) and scrolls inside, so choosing another release never moves the
-"Where attempts stopped" tables below it. They used to jump with every
-choice. Below 900 px it drops under the strip at a capped height.
+**Layout, after the owner's first reading (8 Oct 2026).** A header row of four
+equal columns (stacking below 760 px) holds two keylined boxes. The first is
+the **History** box: it carries the pane's title (the pane's own `h2` is
+removed), the **All releases · By machine version** toggle, and the slider with
+its short readout (`after #12`, `before #1`). The second, top right, opens with
+a **Release attempts** column (releases, invocations, stops, shipped from one
+clean run, and how many of the last five ran clean) and then the **Key**, which
+wraps its own text. Under the header, the funnel (its caption in a keylined box
+titled RELEASE FUNNEL), the scrolling strip, and an **inspector** to the right
+of the strip. The inspector reads **Machine version** first (what the slider
+picked: the version's name and date, one block per change that began it — `#n`,
+sha, date, subject — then its attempts and yield), then **Release** (the focused
+release's stops in words). It is exactly as tall as the step rows (`H_ALL`) and
+scrolls inside, so choosing another release never moves the "Where attempts
+stopped" table below it; it used to jump with every choice. Below 900 px it
+drops under the strip at a capped height. The list of release-machine changes
+that once sat under the chart is gone: each change is a block in the
+inspector.
 
 **No `--history` flag, by decision.** The tab reads every `.release/*/events.jsonl`
 and `bn-events.log` on every model build — 16 ledgers, ~60 KB of model — and
 needs nothing the run dir does not already hold. A flag would hide the one
 view that answers "are we getting better" behind a thing nobody remembers to
-type. The cost is bounded by caching: `history()` is keyed on the ledgers'
-and sinks' mtimes and sizes, and each failed log's class on its own, so the
+type. The cost is bounded by caching: `history()` is keyed on each ledger's
+mtime and size and each sink's mtime, and each failed log's class on its own, so the
 live server re-derives nothing between changes. §5's "History overlay … out of
 scope" is superseded by this section for the cross-release view; the
 per-run overlay (Welford estimates) stays out.
@@ -647,8 +668,9 @@ every other commit to `MACHINE_PATHS` still appears, unnamed, in its gap.
   invocation's end to the next one's start (leftward, since later is left), so
   a resume reads as a U-turn.
   Dashed vertical rules are commits to the release machine landing between
-  two attempts; the numbered ones are the milestones, listed under the chart.
-- **Above the funnel, All releases · By machine version** and a slider. A
+  two attempts; the numbered ones are the milestones, each described in the
+  inspector when its version is selected.
+- **In the History box, All releases · By machine version** and a slider. A
   machine version is the release machine as it stood between two *named*
   changes (`MACHINE_MILESTONES`), not every commit: fifty commits would be
   fifty stops, most with no attempt under them, and several changes often land
@@ -679,11 +701,10 @@ every other commit to `MACHINE_PATHS` still appears, unnamed, in its gap.
   ("so far"), and the undecided step counts as neither a pass nor a stop. The
   live slice for the patch map includes the station states and the lock, so a
   run going stranded re-draws the pane even when the ledger has not moved.
-- Under it: the selected release's stops in words (click a release label),
-  a table of where attempts stopped by step and class (the chart's text
-  equivalent; every heading sorts, "step" by plan order, numbers
-  largest-first, and the stop count carries an in-cell data bar), and the
-  milestone list.
+- **Under it**, a table of where attempts stopped by step and class (the
+  chart's text equivalent; every heading sorts, "step" by plan order, numbers
+  largest-first, and the stop count carries an in-cell data bar). Clicking a
+  release label puts that release's stops, in words, in the inspector.
 
 **Prior art.** The right half is a Marey chart (E. J. Marey's 1885 Paris–Lyon
 train schedule: stations on one axis, one line per train, a reversing train
@@ -702,6 +723,8 @@ already done, stopped mid-step versus between steps, renamed dirs grouped by
 counted, a root git cannot answer for is `None`, and the board surviving a
 failed history read. Two of those were proven red on mutants (the
 claimed-complete rule; reached-on-any-pass). `test-release-board-dom.js`
-section 4: the toggle, the pane, one release label per release, the stopped
-mark, the table view, text-only SVG titles, and a bad read as a nodata line,
-not the fault band.
+section 4: the toggle, the pane, one release label per release, the run in
+progress drawn live (running, stranded, finished), the sortable table and its
+data bars, the header boxes and the inspector's place, height and order, the
+slider naming `before #1` / `after #1`, the change blocks, text-only SVG
+titles, and a bad read as a nodata line, not the fault band.

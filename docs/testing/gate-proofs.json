@@ -3,7 +3,7 @@
   "declared": {
     "check-release-archive": {
       "evidence": "on the unmodified tree both configurations archive (exit 0). With `return .developerIDMutant` inside DistributionChannel.swift's `#elseif DEVELOPER_ID_BETA` branch \u2014 code Debug never compiles, so Mac Build cannot see it \u2014 the developer-id archive exits 1 naming DistributionChannel.swift:37, and the appstore archive stays green, which is why both are compiled",
-      "how": "manual, local, unsigned exactly as the nightly runner does it: desktop/scripts/check-release-archive.sh developer-id and appstore against the mutated tree, then the file restored",
+      "how": "manual, local, unsigned exactly as the push-triggered runner does it: desktop/scripts/check-release-archive.sh developer-id and appstore against the mutated tree, then the file restored",
       "observed": "2026-10-08"
     },
     "check-release-freeze": {

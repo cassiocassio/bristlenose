@@ -33,8 +33,11 @@ a gate needs a colour *and* either an expiry or a ratchet.
 ### G1. ✅ `build-dmg.sh` has no Swift gate — CLOSED 3 Sep 2026
 
 Closed by commit "G1 and G5: gate the last ungated channel, and take the free
-promotion". `desktop/scripts/build-dmg.sh:273` calls `test-swift.sh --quiet || die`,
-honouring `SKIP_SWIFT_TESTS`.
+promotion". `desktop/scripts/build-dmg.sh` step 1b calls `test-swift.sh --quiet || die`,
+honouring `SKIP_SWIFT_TESTS`. Since 8 Oct 2026 it skips that call when
+`test-swift.sh --green-here` matches: build-all passed the suite on this exact tree
+in this release run (the receipt only a green run writes). The gate is not weaker —
+the same suite on the same tree has already passed.
 
 **Re-measured 12 Sep 2026:** the evidence line below now returns the opposite of
 what it says — `3`, not `0`. Kept because a register entry whose own command

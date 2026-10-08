@@ -221,7 +221,9 @@ build-all.sh ──────────────── App Store / TestFl
   └─ check-appearance-seam.sh
 
 build-dmg.sh ──────────────── Developer-ID .dmg
-  ├─ ensure-sidecar.sh                 (same subtree as above)
+  ├─ test-swift.sh --green-here        (skips the suite if build-all passed it on this tree, this run)
+  ├─ test-swift.sh                     (otherwise)
+  ├─ ensure-sidecar.sh --keep-venv     (same subtree as above; reuses the release's resolve)
   ├─ check-release-binary.sh
   └─ check-dmg-shippable.sh            (step 10; the publish gate)
 
@@ -283,7 +285,7 @@ safe to hand a stranger”, so there's no second implementation to drift.
 
 | Script | What it does |
 |---|---|
-| `build-dmg.sh` | The 10-stage cut: sidecar → archive → export as Developer ID → verify → `create-dmg` → notarise + staple `.dmg` (**one** round trip — app-level notarisation retired 14 Aug 2026; the dmg's ticket covers the nested app, trading offline-first-launch of a dragged-out app) → manifest → gates. |
+| `build-dmg.sh` | The 10-stage cut: Swift suite (step 1b, skipped on a matching green receipt — `test-swift.sh --green-here`) → sidecar (`--keep-venv`) → archive → export as Developer ID → verify → `create-dmg` → notarise + staple `.dmg` (**one** round trip — app-level notarisation retired 14 Aug 2026; the dmg's ticket covers the nested app, trading offline-first-launch of a dragged-out app) → manifest → gates. |
 | `check-dmg-shippable.sh <dmg>` | Versioned filename; image signed, stapled, Gatekeeper-accepted; and the load-bearing one — the app **inside the mounted image** passes `codesign --deep --strict` and reads `source=Notarized Developer ID` (the latter via **online** ticket lookup — the inner app is deliberately unstapled since 14 Aug, so this gate needs network). Plus filename↔`Info.plist` version agreement and manifest↔image sha256. |
 | `upload-dmg.sh [--dry-run] [--keep N]` | Gates, stages to a dot-prefixed name **in the target dir** (so `mv` stays atomic), verifies the sha256 of what landed, `chmod 644`, swaps, repoints the permalink, reaps all but the newest N. Skips the transfer if identical bytes are already on the host. |
 
@@ -293,7 +295,9 @@ safe to hand a stranger”, so there's no second implementation to drift.
 |---|---|
 | `reset-sandbox-state.sh` | Clears stale App-Sandbox container state that wedges `libsecinit`. `--quiet`, `--dry-run`. macOS only. |
 | `reset-app-state.sh` | "Clean-ish profile" reset for UX walkthroughs; calls the above. |
-| `test-ensure-sidecar.sh` | Build-gating and orchestrator decisions, via `--dry-run` + controlled stamp state. |
+| `test-ensure-sidecar.sh` | Build-gating and orchestrator decisions, via `--dry-run` + controlled stamp state, including the `--keep-venv` guard (local only: it needs a resolved `.venv-sidecar`). |
+| `test-swift.sh` | The Swift suite with an honest verdict (counts `' failed on`, checks xcodebuild's own status). In a release run a green verdict writes a receipt (run, commit, whole-tree fingerprint) that `--green-here` answers from. Its receipt logic is tested end to end by `scripts/test-dmg-lane.sh`. |
+| `check-release-archive.sh [appstore\|developer-id\|both]` | Archives the **Release** configuration unsigned, App Store and Developer-ID (`DEVELOPER_ID_BETA`), which Mac Build (Debug) never compiles. Run by `.github/workflows/mac-release-archive.yml` on desktop pushes. Cannot rehearse signing. |
 | `test-upload-dmg.sh` | The publish path's decisions — the swap decision (incl. empty-vs-empty, where a bare equality test reads two *failed measurements* as a match), retention, the unconfigured refusal, and the shippability gate proven against a real notarised artefact. |
 
 ---

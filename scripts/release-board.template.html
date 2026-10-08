@@ -1063,7 +1063,7 @@
       add(modeSeg, b);
     });
     var slRow = $("div","hist-slrow"); add(slRow, slider, verShort);
-    add(ctlR, $("b", "hist-key", "History"), modeSeg, slRow);   // "version 9 of 11" here; the version's details live in the inspector
+    add(ctlR, $("b", "hist-key", "History"), modeSeg, slRow);   // the slider's readout is the short name ("after #12"); the version's details live in the inspector
     if (stops2.length < 2) { slider.disabled = true; }
     add(ctl, ctlR, $("div","hist-ctl-l"));   // over the funnel, which is on the left
     slider.addEventListener("input", function(){ era = window.__histEra = Number(slider.value); if (mode !== "era") { mode = window.__histMode = "era"; } applyEra(true); });
@@ -1087,8 +1087,8 @@
       relEls.forEach(function(o){ o.g.setAttribute("opacity", on && cur && cur.rels.indexOf(o.v) < 0 ? 0.25 : 1); });
       verShort.textContent = on && cur ? verRange(cur) : "";
       if (!on || !cur) { verTxt.textContent = stops2.length ? "the machine after each change on the chart — slide to see its funnel" : "no release-machine changes to split by"; return; }
-      // version line, then the change(s) that began it — each in its own block, as in the
-      // "Release-machine changes" list — then how it did (owner, 8 Oct 2026)
+      // version line, then the change(s) that began it, each in its own block (the list
+      // that once sat under the chart is gone), then how it did (owner, 8 Oct 2026)
       verTxt.textContent = "";
       add(verTxt, $("div", "hist-ver-h", verLabel(cur)));
       var named = ms.slice(cur.from, cur.e);

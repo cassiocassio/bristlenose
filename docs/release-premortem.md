@@ -150,7 +150,8 @@ it can be inspected.
 >   2026 for build-all only; the .dmg lane kept re-resolving until 8 Oct 2026**
 >   (every build-dmg log 0.31.4–0.35.0 says `[V] REBUILD — forced`; build-dmg.sh
 >   now passes `--keep-venv` too, and test-ensure-sidecar.sh finally tests the
->   guard) — `84b8a742` + `2be60bf2` (`build-sidecar.sh --keep-venv`, the stamp
+>   guard — locally only: it skips without a resolved `.venv-sidecar` and no
+>   workflow runs it) — `84b8a742` + `2be60bf2` (`build-sidecar.sh --keep-venv`, the stamp
 >   keyed on `BN_RELEASE_RUN`, and a new `inventory` step).
 > - **24 — eleven green tests over an archive that could not run.**
 >   `test_entitlements_split.py` asserted the `CODE_SIGN_ENTITLEMENTS` override

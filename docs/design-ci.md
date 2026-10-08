@@ -99,7 +99,8 @@ test (10 cells) ───┘
 frontend ──────────┘
 
 package ───────────────  (wheel + sdist, publishes nothing — added 8 Aug)
-mac-build.yml ─────────  (separate workflow: Swift compile check, macos-15)
+mac-build.yml ─────────  (separate workflow: Debug build + Swift suite, macos-26 and macos-15)
+mac-release-archive.yml  (separate workflow: Release archived unsigned, both configurations)
 ```
 
 Jobs in `ci.yml`, plus the shipped Mac workflow:
@@ -113,7 +114,8 @@ Jobs in `ci.yml`, plus the shipped Mac workflow:
 | `e2e` | ubuntu, Python 3.12 + Node 24 | `test` + `frontend` | Yes |
 | `release-suites` | ubuntu | — | Yes — the release chain's own ~390 assertions (`release.sh`, `verify-channels.sh`, the preflight and doc gates). No network, no keys, no release; seconds. Added 28 Aug 2026, and its first run found two defects invisible on macOS |
 | `package` | ubuntu | — | Yes — wheel + sdist + `twine check` + an assertion the React SPA is inside the wheel |
-| `mac-build.yml` *(separate workflow)* | macos-26 | — | path-filtered to `desktop/**`; compiles **and runs the Swift suite** (`test-swift.sh`), no signing. `macos-15`'s Xcode 16.4 cannot compile the macOS 26 APIs now in use |
+| `mac-build.yml` *(separate workflow)* | macos-26, and macos-15 with Xcode 26.3 selected | — | path-filtered to `desktop/**`; compiles the **Debug** configuration **and runs the Swift suite** (`test-swift.sh`), no signing. The macos-15 leg selects Xcode 26.3 because the image's default 16.4 cannot compile the macOS 26 APIs now in use |
+| `mac-release-archive.yml` *(separate workflow, since 8 Oct 2026)* | macos-26 | — | path-filtered to `desktop/**`, plus `workflow_dispatch`; archives the **Release** configuration twice, unsigned (App Store, and Developer-ID with `DEVELOPER_ID_BETA`) via `desktop/scripts/check-release-archive.sh`, because nothing else compiles Release before release night. Cannot rehearse signing (an ad-hoc archive needs a provisioning profile). Advisory: in the preflight's `WF_ADVISORY` streak |
 
 Every gate cell, `supply-chain`, `test` and `frontend` run in parallel. `e2e`
 waits for `test` and `frontend`. **`test` deliberately does not wait for the

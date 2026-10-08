@@ -57,7 +57,14 @@ Strategy (who it's for, why it expires) is out of scope here; this doc is the
 `build-dmg.sh` bails on any non-zero exit. Stages:
 
 1. **Preflight** — cert present, `create-dmg`, notary profile.
-2. **Sidecar** — `ensure-sidecar.sh --force`: rebuild the PyInstaller bundle,
+1b. **Swift suite** — `test-swift.sh`, unless build-all already passed it on this
+   exact tree in this release run: `test-swift.sh --green-here` answers from the
+   receipt a green run writes (run, commit, whole-tree fingerprint), and a match
+   skips the second run (since 8 Oct 2026; `scripts/test-dmg-lane.sh`).
+   `SKIP_SWIFT_TESTS=1` still bypasses it outright.
+2. **Sidecar** — `ensure-sidecar.sh --force --keep-venv`: inside a release run,
+   reuse the dependency closure preflight resolved and checked, as build-all
+   does (before 8 Oct 2026 this lane re-resolved from live PyPI); rebuild the PyInstaller bundle,
    run `doctor --self-test` on it **pre-sign** (the only window it can run —
    sandbox-signed it aborts standalone; writes `.selftest-stamp`), then
    Developer-ID-sign every inner `.dylib`/`.so`/framework (Apple Distribution

@@ -207,15 +207,16 @@
   table.hist-t td:first-child{white-space:nowrap}
   .cellbar{display:block;height:3px;margin-top:2px;background:var(--rule);border-radius:2px;overflow:hidden}
   .cellbar i{display:block;height:100%;background:var(--bad);border-radius:2px}
-  ol.hist-ms{margin:0;padding-left:20px}
-  ol.hist-ms li{margin:0 0 3px}
-  ol.hist-ms code{font:10.5px var(--mono);color:var(--mute)}
   .hist-sel{margin:6px 0 0;color:var(--ink-2)}
   .hist-insp{flex:0 0 280px;box-sizing:border-box;overflow-y:auto;border-left:1px solid var(--rule);padding:4px 0 8px 14px;margin-left:12px;color:var(--ink-2);font-size:11px;line-height:1.4}
   .hist-slrow{display:flex;align-items:center;gap:8px} .hist-slrow input{flex:1 1 auto;min-width:40px}
   .hist-vershort{flex:none;font-size:10.5px;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
   .hist-insp .hist-key-2{margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)}
   .hist-insp .hist-ver{min-height:0;font-size:11px}
+  .hist-insp .hist-ver-h{color:var(--ink);font-weight:600;margin:0 0 6px}
+  .hist-chg{margin:0 0 6px;padding:6px 8px;border:1px solid var(--rule);border-radius:5px;background:var(--panel-2)}
+  .hist-chg code{font:10.5px var(--mono);color:var(--mute);margin-left:4px} .hist-chg-n{font-weight:600;color:var(--now)}
+  .hist-chg div{margin-top:2px;color:var(--ink)}
   .hist-insp .hist-key{display:block;font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 6px}
   .hist-insp-body>b{color:var(--ink);font:600 12px var(--mono)}
   .hist-insp ul{margin:8px 0 0;padding-left:14px} .hist-insp li{margin:0 0 6px}
@@ -1083,9 +1084,14 @@
       relEls.forEach(function(o){ o.g.setAttribute("opacity", on && cur && cur.rels.indexOf(o.v) < 0 ? 0.25 : 1); });
       verShort.textContent = on && cur ? "version "+(era+1)+" of "+stops2.length : (stops2.length ? stops2.length+" versions" : "");
       if (!on || !cur) { verTxt.textContent = stops2.length ? stops2.length+" machine versions — slide to see each one's funnel" : "no release-machine changes to split by"; return; }
-      var named = ms.slice(cur.from, cur.e).map(function(m, i){ return "#"+(cur.from+i+1)+" "+m.milestone; });
-      verTxt.textContent = verLabel(cur, era)+" · "+cur.cols.length+" attempt"+(cur.cols.length === 1 ? "" : "s")+" across "+cur.rels.join(", ")
-        +" · "+Math.round(100*cur.y[cur.y.length-1])+"% yield"+(named.length ? " · new: "+named.join("; ") : " · the machine as first recorded");
+      // version line, then the change(s) that began it — each in its own block, as in the
+      // "Release-machine changes" list — then how it did (owner, 8 Oct 2026)
+      verTxt.textContent = "";
+      add(verTxt, $("div", "hist-ver-h", verLabel(cur, era)));
+      var named = ms.slice(cur.from, cur.e);
+      if (named.length) named.forEach(function(m, i){ var c = $("div", "hist-chg"); add(c, $("span", "hist-chg-n", "#"+(cur.from+i+1)), $("code", null, m.sha+" "+m.ts.slice(0, 10)), $("div", null, m.milestone)); add(verTxt, c); });
+      else add(verTxt, $("div", "hist-chg", "the machine as first recorded"));
+      add(verTxt, $("div", null, cur.cols.length+" attempt"+(cur.cols.length === 1 ? "" : "s")+" across "+cur.rels.join(", ")+" · "+Math.round(100*cur.y[cur.y.length-1])+"% yield"));
       if (scrollTo && cur.cols.length) { var g0 = cur.cols[cur.cols.length - 1].g; if (g0 && typeof g0.scrollIntoView === "function") try { g0.scrollIntoView({block: "nearest", inline: "center", behavior: "smooth"}); } catch(e) {} }
     };
     // controls left, the key top right in its own keylined box (owner, 8 Oct 2026)
@@ -1113,7 +1119,7 @@
     var box = $("div","hist-legend"); var lg = $("div","hist-keygrid"); lg.setAttribute("role", "note"); lg.setAttribute("aria-label", "key"); add(lg, $("b", "hist-key", "Key"));
     var sw = function(kind, label){ var s = $("span"); var m = S("svg", {width: 14, height: 14, viewBox: "0 0 14 14"}); m.appendChild(glyph(kind, 7, 7)); s.appendChild(m); s.appendChild(document.createTextNode(label)); return s; };
     add(lg, sw("fail", "failed at this step"), sw("stopped", "stopped (killed or by hand; no terminal event)"), sw("skipped", "skipped an irreversible step"), sw("completed", "reached the end"),
-        $("span", null, "▸ entered mid-line (a resume)"), $("span", null, "┄ curve: the same release's next attempt"), $("span", null, "newest beside the funnel — scroll right for older releases"), $("span", null, "numbered rule: a release-machine change (list below)"));
+        $("span", null, "▸ entered mid-line (a resume)"), $("span", null, "┄ curve: the same release's next attempt"), $("span", null, "newest beside the funnel — scroll right for older releases"), $("span", null, "numbered rule: a release-machine change (By machine version shows it)"));
     add(box, sum, lg); add(head, box);
     paintSel();
 
@@ -1159,12 +1165,11 @@
     });
     add(thead, hr); add(tb, thead, tbody); drawBody();
     add(c1, tb, $("div","hist-sel", "“#n” is the premortem incident. Classes come from verdict_failure_class in release.sh, stamped at failure time since 0.32.0 and re-derived from the step log before that."));
-    var c2 = $("div"); add(c2, $("h3", null, "Release-machine changes named on the chart"));
-    if (mc == null) add(c2, nodata("git could not answer — no change markers"));
-    else if (!msList.length) add(c2, nodata("none in this window"));
-    else { var ol = $("ol","hist-ms"); msList.forEach(function(o){ var li = $("li"); li.value = o.n; add(li, $("code", null, o.m.sha+" "+o.m.ts.slice(0,10)), document.createTextNode(" "+o.m.milestone)); add(ol, li); }); add(c2, ol); }
-    if (H.unparsed_lines) add(c2, $("div","hist-sel", H.unparsed_lines+" ledger line(s) could not be parsed and are not drawn."));
-    add(grid, c1, c2); add(P, grid);
+    // the release-machine changes are read in the inspector, one block per change under its
+    // version (owner, 8 Oct 2026); only the states of the list survive, as notes
+    if (mc == null) add(c1, $("div","hist-sel", "git could not answer — no release-machine change markers on the chart."));
+    if (H.unparsed_lines) add(c1, $("div","hist-sel", H.unparsed_lines+" ledger line(s) could not be parsed and are not drawn."));
+    add(grid, c1); add(P, grid);
     return P;
   })(data.history));
 

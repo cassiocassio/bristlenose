@@ -31,6 +31,9 @@ def _silent_console() -> Console:
 # ---------------------------------------------------------------------------
 
 
+
+pytestmark = pytest.mark.usefixtures("which_is_shutil_which")
+
 class TestDetectDistro:
     def test_macos_via_sys_platform(self):
         with patch("bristlenose.preflight.ffmpeg.sys.platform", "darwin"):

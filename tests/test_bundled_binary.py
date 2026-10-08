@@ -14,6 +14,7 @@ from bristlenose.utils.bundled_binary import (
     prepend_bundled_to_path,
 )
 
+pytestmark = pytest.mark.usefixtures("which_is_shutil_which")
 
 class TestEnvVarBranch:
     """Branch 1: BRISTLENOSE_<NAME> env var wins."""

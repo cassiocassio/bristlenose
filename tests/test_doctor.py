@@ -148,6 +148,7 @@ class TestDoctorReport:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("which_is_shutil_which")
 class TestCheckFfmpeg:
     def test_ffmpeg_found(self) -> None:
         with patch("bristlenose.doctor.shutil.which", return_value="/usr/bin/ffmpeg"):

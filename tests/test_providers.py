@@ -146,6 +146,7 @@ class TestConfigProviderAliases:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("which_is_shutil_which")
 class TestOllamaHelpers:
     def test_check_ollama_not_running(self) -> None:
         import urllib.error

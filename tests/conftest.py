@@ -169,6 +169,25 @@ def sample_quotes() -> list[ExtractedQuote]:
 
 
 @pytest.fixture
+def which_is_shutil_which(monkeypatch):
+    """For tests that choose what is installed by stubbing ``shutil.which``.
+
+    On Windows ``safe_which`` does not call ``shutil.which`` (it walks absolute
+    PATH entries itself, so a cwd ``ffmpeg.exe`` is never found), so those stubs
+    stopped reaching it and the tests read the runner's own PATH instead:
+    windows-latest has Chocolatey's ffmpeg, and 20 tests failed there, green on
+    every Mac (0.36.0 strict CI, 8 Oct 2026). This sends ``safe_which`` down its
+    ``shutil.which`` branch on every OS. The Windows resolver itself is tested
+    in ``test_windows_cwd_binaries.py``, which must not use this fixture.
+    """
+    import types
+
+    import bristlenose.utils.safe_which as sw
+
+    monkeypatch.setattr(sw, "sys", types.SimpleNamespace(platform="test-not-win32"))
+
+
+@pytest.fixture
 def no_discussion_stage(monkeypatch):
     """For suites that drive the whole pipeline to test OTHER stages.
 

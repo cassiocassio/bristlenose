@@ -157,3 +157,101 @@ def test_doctor_offers_winget_on_windows(windows: Path) -> None:
     text = get_fix("ollama_not_installed", "pip")
     assert "winget install --id Ollama.Ollama -e --source winget" in text
     assert "bristlenose configure local" in text
+
+
+# --- the current directory is never searched ----------------------------------
+#
+# A researcher unzips a client's folder, cds into it, and runs
+# `bristlenose run . --llm local`. CPython's shutil.which on Windows looks in
+# the current directory before PATH and honours PATHEXT, and CreateProcess
+# searches it for a bare name too, so an ollama.exe/.bat/.cmd planted there
+# would run. `windows_which` reproduces that lookup so the old behaviour is
+# what these tests would catch.
+
+
+@pytest.fixture
+def hostile_cwd(
+    windows: Path, monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> Path:
+    """A cwd holding ollama.exe/.bat/.cmd, an empty PATH, and a Windows-shaped which."""
+    cwd = tmp_path_factory.mktemp("interviews")
+    for name in ("ollama.exe", "ollama.bat", "ollama.cmd"):
+        (cwd / name).write_bytes(b"")
+    monkeypatch.chdir(cwd)
+    monkeypatch.setenv("PATH", "")
+
+    def windows_which(name: str) -> str | None:
+        dirs = [str(cwd), *filter(None, ollama.os.environ.get("PATH", "").split(ollama.os.pathsep))]
+        for d in dirs:
+            for ext in ("", ".exe", ".bat", ".cmd"):
+                candidate = Path(d) / f"{name}{ext}"
+                if candidate.is_file():
+                    return str(candidate)
+        return None
+
+    monkeypatch.setattr("shutil.which", windows_which)
+    return cwd
+
+
+def test_ollama_in_the_current_directory_is_not_found(hostile_cwd: Path) -> None:
+    assert ollama.ollama_executable() is None
+    assert ollama.is_ollama_installed() is False
+
+
+def test_a_relative_path_entry_does_not_reach_the_current_directory(
+    hostile_cwd: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PATH", ollama.os.pathsep.join([".", "", "sub"]))
+    assert ollama.ollama_executable() is None
+
+
+def test_list_runs_nothing_when_ollama_is_not_resolved(
+    hostile_cwd: Path, no_shellouts: list[list[str]]
+) -> None:
+    with pytest.raises(FileNotFoundError):
+        ollama.list_models()
+    assert no_shellouts == []
+
+
+def test_pull_runs_nothing_when_ollama_is_not_resolved(
+    hostile_cwd: Path, no_shellouts: list[list[str]]
+) -> None:
+    assert ollama.pull_model("llama3.2:3b") is False
+    assert no_shellouts == []
+
+
+def test_serve_runs_nothing_when_ollama_is_not_resolved(
+    hostile_cwd: Path, no_shellouts: list[list[str]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(ollama, "check_ollama", lambda: _status(False))
+    assert ollama.start_ollama_serve() is False
+    assert no_shellouts == []
+
+
+def test_an_absolute_path_entry_is_still_found(
+    hostile_cwd: Path, monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """The other answer: ollama genuinely on PATH (a non-winget install) is used."""
+    bin_dir = tmp_path_factory.mktemp("bin")
+    (bin_dir / "ollama.exe").write_bytes(b"")
+    monkeypatch.setenv("PATH", str(bin_dir))
+    assert ollama.ollama_executable() == str(bin_dir / "ollama.exe")
+
+
+def test_the_install_folder_is_preferred_to_path(
+    hostile_cwd: Path, windows: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path_factory: pytest.TempPathFactory,
+) -> None:
+    app = _install(windows, "ollama.exe")
+    bin_dir = tmp_path_factory.mktemp("bin")
+    (bin_dir / "ollama.exe").write_bytes(b"")
+    monkeypatch.setenv("PATH", str(bin_dir))
+    assert ollama.ollama_executable() == str(app / "ollama.exe")
+
+
+def test_off_windows_which_is_still_the_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(platform, "system", lambda: "Linux")
+    monkeypatch.setattr("shutil.which", lambda n: "/usr/bin/ollama" if n == "ollama" else None)
+    assert ollama.ollama_executable() == "/usr/bin/ollama"
+    monkeypatch.setattr("shutil.which", lambda n: None)
+    assert ollama.ollama_executable() is None

@@ -53,19 +53,58 @@ def _windows_install_dir() -> Path | None:
     return Path(local) / "Programs" / "Ollama" if local else None
 
 
+def _windows_path_lookup() -> str | None:
+    """``ollama.exe`` from an absolute PATH entry — never the current directory.
+
+    ``shutil.which`` on Windows searches the current directory before PATH and
+    honours PATHEXT, so an ``ollama.exe``/``.bat``/``.cmd`` in the folder a
+    researcher runs from (a client's unzipped interviews) would be executed.
+    Ollama ships only ``ollama.exe``, so nothing else is accepted, and a
+    relative PATH entry (``.``, empty) is skipped because it names the cwd.
+    """
+    for entry in os.environ.get("PATH", "").split(os.pathsep):
+        entry = entry.strip().strip('"')
+        if not entry or not os.path.isabs(entry):
+            continue
+        candidate = Path(entry) / "ollama.exe"
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
 def ollama_executable() -> str | None:
-    """Path to the ``ollama`` CLI: PATH first, then Windows' install folder."""
+    """Absolute path to the ``ollama`` CLI, or None.
+
+    Windows: the install folder first, then absolute PATH entries — never the
+    current directory (see ``_windows_path_lookup``). Elsewhere: ``which``,
+    which searches PATH only.
+    """
     import platform
     import shutil
 
-    found = shutil.which("ollama")
-    if found is not None:
-        return found
     if platform.system() == "Windows":
         folder = _windows_install_dir()
         if folder is not None and (folder / "ollama.exe").is_file():
             return str(folder / "ollama.exe")
-    return None
+        return _windows_path_lookup()
+    return shutil.which("ollama")
+
+
+def _ollama_argv0() -> str:
+    """The command to run ollama with.
+
+    Off Windows a bare name is safe — exec searches PATH, not the cwd. On
+    Windows CreateProcess searches the current directory first, so with no
+    resolved path there is nothing safe to run: raise as a missing binary.
+    """
+    import platform
+
+    found = ollama_executable()
+    if found is not None:
+        return found
+    if platform.system() == "Windows":
+        raise FileNotFoundError("ollama")
+    return "ollama"
 
 
 def _windows_tray_app() -> Path | None:
@@ -176,7 +215,7 @@ def list_models(timeout: float = 2.0) -> list[str]:
     a non-zero exit.
     """
     result = subprocess.run(
-        [ollama_executable() or "ollama", "list"],
+        [_ollama_argv0(), "list"],
         capture_output=True,
         text=True, encoding="utf-8",
         errors="replace",  # a wedged binary's non-UTF-8 bytes must not raise
@@ -399,7 +438,9 @@ def get_start_command() -> tuple[list[str], str]:
         return ([str(tray)], "open Ollama from the Start menu")
 
     # Fallback: generic ollama serve (resolved, so a fresh Windows install
-    # works before the new user PATH reaches this process)
+    # works before the new user PATH reaches this process). On Windows with
+    # nothing resolved, argv0 stays the bare name for display only;
+    # start_ollama_serve refuses to run it.
     return ([ollama_executable() or "ollama", "serve"], "ollama serve")
 
 
@@ -472,7 +513,11 @@ def start_ollama_serve() -> bool:
                     logger.debug("systemctl start failed: %s", result.stderr.decode())
                     return False
         else:
-            # Generic ollama serve: run in background
+            # Generic ollama serve: run in background. A bare name on Windows
+            # would be found in the current directory first.
+            if platform.system() == "Windows" and not os.path.isabs(cmd[0]):
+                logger.debug("Ollama not found; not running a bare name on Windows")
+                return False
             subprocess.Popen(
                 cmd,
                 stdout=subprocess.DEVNULL,
@@ -506,7 +551,7 @@ def pull_model(model: str = DEFAULT_MODEL) -> bool:
     """
     try:
         result = subprocess.run(
-            [ollama_executable() or "ollama", "pull", model],
+            [_ollama_argv0(), "pull", model],
             stdout=sys.stdout,  # Show Ollama's progress bar
             stderr=sys.stderr,
         )

@@ -1,5 +1,5 @@
 ---
-status: plan v2 — step 1 done and re-proven on a box after a review (8 Oct 2026); step 2's CI job written, not yet run on GitHub
+status: plan v2 — step 1 done and re-proven after a review, step 2's CI build green on GitHub (8 Oct 2026); step 3, the first submission, is next
 ---
 
 # Bristlenose on winget
@@ -187,8 +187,14 @@ FFmpeg was fixed separately (`5f3d5ac8`, `47ee59af`).
    artefact, so the Windows verdict exists before the irreversible act (the release
    machine's own rule). *Written 8 Oct 2026 as
    `.github/workflows/windows-installer.yml` (also on pull requests and pushes that
-   touch `packaging/windows/`), with Inno Setup 7.1.0 pinned by hash and winget
-   installed to validate the manifest; not yet run on GitHub.* The release then attaches that exact installer to the GitHub
+   touch `packaging/windows/`), with Inno Setup 7.1.0 pinned by hash. Green on GitHub
+   on its fourth run (PR #156, 6.5 min): all nine smoke checks, a 157 MB installer,
+   the manifest checked against winget's own schemas, the installer kept as a
+   164 MB artefact. GitHub's runner cannot install winget (`Add-AppxPackage`
+   refuses the bundle), so CI validates against the vendored schemas
+   (`packaging/windows/validate_manifest.py`); `winget validate` runs on a real
+   Windows machine before a submission. Two builds of one commit differ in hash
+   (timestamps), which is why a published version is never rebuilt.* The release then attaches that exact installer to the GitHub
    Release; it is **never rebuilt** for a published version (a rebuild changes the
    hash winget pinned).
 3. **First submission by hand** with Komac or `wingetcreate`: one version per PR, sign

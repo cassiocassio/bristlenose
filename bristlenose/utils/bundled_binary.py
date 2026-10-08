@@ -50,11 +50,14 @@ def bundled_binary_path(name: str) -> str | None:
     if env_value:
         return env_value
 
-    tools = _frozen_windows_tools_dir()
-    if tools is not None:
-        candidate = tools / f"{name}.exe"
-        if candidate.is_file():
-            return str(candidate)
+    if _is_frozen_windows():
+        # Ours or nothing. Falling through to which() would run an FFmpeg we did
+        # not ship, and on Windows which() searches the current directory first,
+        # so a damaged install (antivirus quarantining tools\ffmpeg.exe) would
+        # run whatever ffmpeg.exe sat in the researcher's project folder. None
+        # makes the preflight and doctor say FFmpeg is missing instead.
+        candidate = Path(sys.executable).parent / "tools" / f"{name}.exe"
+        return str(candidate) if candidate.is_file() else None
 
     if os.environ.get(_HOST_SENTINEL) == "1":
         bundle_path = _bundle_relative_path(name)
@@ -103,7 +106,7 @@ def _frozen_windows_tools_dir() -> Path | None:
     down so it neither shadows nor is shadowed by an FFmpeg the user installed
     themselves, and our lookup still finds ours first (docs/design-winget.md).
     """
-    if sys.platform != "win32" or not getattr(sys, "frozen", False):
+    if not _is_frozen_windows():
         return None
     tools = Path(sys.executable).parent / "tools"
     return tools if tools.is_dir() else None
@@ -148,3 +151,8 @@ def _bundle_relative_path(name: str) -> str | None:
     if candidate.is_file() and os.access(candidate, os.X_OK):
         return str(candidate)
     return None
+
+
+def _is_frozen_windows() -> bool:
+    """The PyInstaller build the winget installer ships."""
+    return sys.platform == "win32" and bool(getattr(sys, "frozen", False))

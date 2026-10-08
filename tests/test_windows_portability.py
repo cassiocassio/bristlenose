@@ -452,6 +452,27 @@ def test_the_frozen_windows_build_finds_its_own_ffmpeg_first(
     assert bundled_binary.bundled_binary_path("ffmpeg") == "C:/elsewhere/ffmpeg.exe"
 
 
+def test_a_damaged_frozen_build_runs_no_one_elses_ffmpeg(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With tools\ffmpeg.exe gone (antivirus quarantine), the frozen build must
+    say FFmpeg is missing, not run one off PATH: Windows' which() searches the
+    current directory first, so that could be a file in the project folder."""
+    from bristlenose.utils import bundled_binary
+
+    app = tmp_path / "Bristlenose"
+    app.mkdir()  # no tools\ at all
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(app / "bristlenose.exe"))
+    monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
+    monkeypatch.setattr(bundled_binary.shutil, "which", lambda name: f"C:/project/{name}.exe")
+
+    assert bundled_binary.bundled_binary_path("ffmpeg") is None
+    (app / "tools").mkdir()
+    assert bundled_binary.bundled_binary_path("ffmpeg") is None
+
+
 def test_the_windows_installer_build_says_winget_not_pip(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -476,6 +497,10 @@ def test_the_frozen_windows_build_refuses_pii_in_its_own_words(
     """The Mac wording ("add it to the PyInstaller datas list") is a build note."""
     from bristlenose.utils.package_install import FrozenSidecarError, ensure_spacy_model
 
+    # spaCy (and thinc's torch) before the platform is faked: torch's import
+    # reaches for ctypes.WinDLL under "win32" and dies. Green in the full suite,
+    # where an earlier test imports torch first; red on its own.
+    pytest.importorskip("spacy")
     monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     with pytest.raises(FrozenSidecarError, match="Windows installer build"):
@@ -535,6 +560,9 @@ class TestBundleTranscriptionSelfTest:
         monkeypatch.setattr(sys, "executable", str(app / "bristlenose.exe"))
         monkeypatch.delenv("BRISTLENOSE_FFMPEG", raising=False)
         monkeypatch.delenv("BRISTLENOSE_FFPROBE", raising=False)
+        from bristlenose import doctor
+
+        monkeypatch.setattr(doctor, "_transcription_probe", lambda ffmpeg: None)
         return app
 
     def test_a_whole_bundle_passes(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -565,3 +593,35 @@ class TestBundleTranscriptionSelfTest:
 
         monkeypatch.setattr(sys, "platform", "darwin")
         assert check_bundle_transcription().status == CheckStatus.SKIP
+
+    def test_an_engine_that_will_not_run_fails(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Present but broken (a quarantined ffmpeg.exe, a PyAV that cannot
+        decode) must fail, which presence checks alone could not see."""
+        from bristlenose import doctor
+
+        app = self._bundle(tmp_path, monkeypatch)
+        seen: list[str | None] = []
+
+        def probe(ffmpeg: str | None) -> str | None:
+            seen.append(ffmpeg)
+            return "audio decoding failed: boom"
+
+        monkeypatch.setattr(doctor, "_transcription_probe", probe)
+        result = doctor.check_bundle_transcription()
+        assert result.status == doctor.CheckStatus.FAIL and "boom" in result.detail
+        assert seen == [str(app / "tools" / "ffmpeg.exe")]
+
+    def test_the_probe_reports_an_ffmpeg_that_exits_non_zero(self) -> None:
+        from bristlenose.doctor import _transcription_probe
+
+        # Python rejects "-version" (exit 2): any executable that fails will do.
+        problem = _transcription_probe(sys.executable)
+        assert problem is not None and "-version exited" in problem
+
+    def test_the_probe_decodes_real_audio(self) -> None:
+        pytest.importorskip("faster_whisper")
+        from bristlenose.doctor import _transcription_probe
+
+        assert _transcription_probe(None) is None

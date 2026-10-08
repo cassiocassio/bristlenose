@@ -36,17 +36,8 @@ set -uo pipefail
 common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || exit 0
 root="$(dirname "$common")"
 
-live=""
-for pidfile in "$root"/.release/*/.lock/pid; do
-    [ -f "$pidfile" ] || continue
-    pid="$(tr -cd '0-9' < "$pidfile")"
-    [ -n "$pid" ] || continue
-    kill -0 "$pid" 2>/dev/null || continue
-    ps -p "$pid" -o command= 2>/dev/null | grep -qF 'release.sh run' || continue
-    v="${pidfile#"$root"/.release/}"; v="${v%%/*}"
-    live="$v (pid $pid)"
-    break
-done
+. "$(dirname "$0")/lib-release-state.sh"
+live="$(release_live_lock "$root")"
 
 [ -z "$live" ] && exit 0
 

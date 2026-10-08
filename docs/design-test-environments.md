@@ -6,6 +6,9 @@ trued-against: HEAD@main on 2026-09-02
 
 ## Changelog
 
+- _2026-10-08_ — §3.7: the guests run the Swift suite overnight, unattended,
+  when desktop/ has changed and the Mac is idle, on power, and clear of any
+  release; one line waits in the morning. §6 item 3 narrowed accordingly.
 - _2026-09-29_ — §3.6: the guests have SIP off (every Cirrus `-base`/`-xcode`
   image does), so they can't answer a permissions question until SIP is
   re-enabled. Found when a macOS 27 TCC test passed for the wrong reason.
@@ -173,6 +176,85 @@ because they carry machine paths. What matters here:
   and 27 match the declaration. And `test-swift.sh` exited 0 without building under stock `/bin/bash` 3.2,
   which only a clean machine could show.
 
+### 3.7 The overnight run (8 Oct 2026)
+
+`desktop/scripts/guest-matrix.sh` runs the Swift suite in each guest, one after
+another, and leaves one line for the morning:
+
+```
+2026-10-08 · tested 30f0e684 (3 desktop commits since a944eb76) · ✓ 15.7.3 1569 passed · ✓ 26.6.2 1569 passed
+2026-10-09 · skipped: on battery · Iona not attached
+```
+
+**When it runs.** A LaunchAgent (`guest-matrix.sh install`) ticks it on :00 and
+:30; it does nothing outside 23:00–06:00. Every gate must pass, and each one that
+fails is named in the line, all of them at once:
+
+| Gate | Says no when | Ends the night? |
+|---|---|---|
+| change | no commit touching `desktop/` since the commit the last full run tested | yes |
+| power | `pmset -g batt` is not on AC | no — retried next tick |
+| release | a live `release.sh run` lock, a ledger whose last `run` event is not `completed`, or `__version__` bumped past the last tag (`scripts/lib-release-state.sh`, shared with the pre-commit freeze) | no |
+| idle | a Claude Code transcript written in the last 15 min; `xcodebuild`, `pytest`, `vitest`, `playwright`, `swift-frontend` or `pyinstaller` running; 5-min load above 4 | no |
+| Iona | the drive is absent, its `guest-matrix.conf` is missing, or a guest is already running | no |
+
+A retryable skip is asked again every half hour, so a goal that finishes at 01:00
+still gets a run by 01:30. The night's last tick (05:30) posts the skip as a
+notification, so a quiet morning is never ambiguous. A missing Iona is a normal
+night, not a fault: the line says so and nothing nags.
+
+**What it tests.** The committed HEAD, never the working tree, which a concurrent
+session may be half-way through. HEAD goes into the guest as a `git bundle` on a
+read-only tart share. The guest clones it, runs
+`CI=1 caffeinate -dimsu /bin/bash desktop/scripts/test-swift.sh` with a fresh
+DerivedData, and reports through `GM-*` lines. `caffeinate -d` matters: the
+sidebar animation scenarios fail deterministically with the guest's display
+asleep (`desktop/CLAUDE.md`). The verdict cell is read from test-swift.sh's own
+lines, which already reconcile its exit code against its counts. A green line
+with a non-zero exit, or an exit 0 with no green line, is "no verdict", never ✓.
+`csrutil status` goes in the per-guest log (`~/Library/Logs/bristlenose-guest-matrix/logs/<night>/`):
+the guests have SIP off, which is fine for this suite and voids any permissions result (§3.6).
+
+**The commit is marked tested only when every guest gave a verdict.** A guest that
+did not boot, timed out (90 min) or never reported leaves `last-tested-sha` where
+it was, so the next night tries again rather than calling the commit covered.
+
+**Where the line lands.** `~/Library/Logs/bristlenose-guest-matrix/latest.txt`, a
+notification when a run finishes, and a `macOS guests` row in
+`scripts/check-release-ready.sh`, which the release board also shows.
+That row is informational: a red is a reason to look, not a failed preflight.
+`guest-matrix.sh report` prints last night's line and exits 0 green, 1 red,
+3 skipped, 4 no report. Exit 4 reads as "the trigger never ran" (asleep all
+night, or the agent unloaded), never as a quiet night.
+
+**Machine specifics stay on the drive.** The script reads
+`$GM_IONA/guest-matrix.conf` (default `/Volumes/Iona/tart/`), a sourced shell
+file:
+
+```sh
+GUESTS="<sequoia-vm-name> <tahoe-vm-name>"   # run in this order
+TART_HOME=/Volumes/Iona/tart/<tart-home>      # where those VMs live
+GUEST_PREP='<command run in the guest first, e.g. set the screen size>'   # optional
+```
+
+**Waking for it.** A sleeping Mac runs nothing. `sudo pmset repeat wake MTWRFSU 23:29:00`
+wakes it for the :30 tick; the runner then holds idle sleep off with
+`caffeinate -i -s` for as long as it runs. A lid-closed MacBook with no external
+display stays asleep regardless.
+
+**Proof.** `scripts/test-guest-matrix.sh` drives the real script against fake
+`tart`, `pmset`, `ps` and `sysctl` in a throwaway repo (51 cases, in CI). Five
+mutants each turn their cases red: battery accepted, exit 0 read as green,
+commit marked tested after a missing verdict, release gate removed, process
+probe removed.
+
+**Not yet measured** (needs Iona attached): whether a guest without Xcode can run
+a host-built bundle with `test-without-building` (if so, guests shrink by about
+30 GB and a macOS 27 guest becomes affordable); the guest-agent boot time; and
+whether launchd's `/bin/bash` meets a Removable Volumes prompt on its first read
+of `/Volumes/Iona`. That prompt would be a modal at night, which is exactly
+the wedge §3.7 exists to avoid, so the first run under launchd is watched.
+
 ## 4. The instrument for the seam question
 
 **Diagnostics ▸ Seam Lab**
@@ -218,8 +300,8 @@ measurements. Paste each host's readout into this doc as it is captured.
 2. **The Seam Lab readouts are still uncaptured on every host** (§4). Both guests
    can now run the Debug app; the lab is a menu item, so it needs a person at the
    guest window.
-3. **Nothing here is automated.** These are instruments for the human walk and
-   for one-off measurement, not a matrix that runs nightly. Whether any of it
+3. **Only the Swift suite is automated** (§3.7). Everything else here is an
+   instrument for the human walk and for one-off measurement. Whether any of it
    should join the mechanical tier is an
    [`testing/acceptance-matrix.md`](testing/acceptance-matrix.md) question,
    deliberately not answered here.

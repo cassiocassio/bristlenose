@@ -523,6 +523,18 @@ if [ -n "${PII_PACK_URL:-}" ]; then
         fi
     fi
 fi
+
+# The overnight macOS-guest run (desktop/scripts/guest-matrix.sh): the Swift
+# suite on every supported macOS, the one check nothing else in this list can
+# make — CI runs one macOS, this Mac runs another. Informational: a red here is
+# a reason to look before shipping, and a skipped night is normal (no desktop
+# change, a busy Mac, Iona in a drawer), so neither fails preflight.
+GM_LINE=$("$ROOT/desktop/scripts/guest-matrix.sh" report 2>/dev/null); GM_RC=$?
+case "$GM_RC" in
+    0) ok   "macOS guests" "${GM_LINE#* · }" ;;
+    1) warn "macOS guests" "${GM_LINE#* · } — red on an older macOS" ;;
+    *) ok   "macOS guests" "${GM_LINE:-no report} (informational)" ;;
+esac
 fi
 
 # ---------------------------------------------------------------------------

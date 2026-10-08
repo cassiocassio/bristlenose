@@ -188,6 +188,8 @@ function section4() {
   }
   { const lg = d.querySelector("#pane-history .hist-legend");
     eq("the key sits beside the controls, in its own titled box", true, !!lg && lg.parentNode.classList.contains("hist-head") && lg.querySelector(".hist-keygrid").firstChild.textContent === "Key" && lg.previousSibling === d.querySelector("#pane-history .hist-ctl"));
+    const cb = d.querySelector("#pane-history .hist-ctl");
+    eq("the controls are the left box and carry the pane's title; the pane has no separate heading", [true, null], [cb.querySelector(".hist-key").textContent === "History", d.querySelector("#pane-history > h2")]);
     eq("…with the summary numbers stacked as its first column", ["hist-sum", "Release attempts", 6], [lg.firstChild.className, lg.firstChild.firstChild.textContent, lg.firstChild.children.length]); }
   { const insp = d.getElementById("hist-insp"), sv = d.querySelector("#pane-history .hist-scroll svg.hist-svg");
     eq("the inspector is a panel to the right of the strip, not under it", true, !!insp && insp.parentNode.classList.contains("hist-wrap") && insp.previousSibling.classList.contains("hist-scroll"));

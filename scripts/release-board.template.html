@@ -180,8 +180,11 @@
   .hist-svg .rel{cursor:pointer}
   .hist-svg .rel:focus:not(:focus-visible){outline:none}
   .hist-svg .rel:hover text,.hist-svg .rel.sel text{fill:var(--now);font-weight:600}
-  .hist-head{display:flex;align-items:flex-start;gap:10px 24px;margin:0 0 6px}   /* no wrap: the key shrinks and wraps its own text instead of dropping a line */
-  .hist-head .hist-ctl{margin:0;flex:none}
+  .hist-head{display:flex;align-items:stretch;gap:10px 12px;margin:0 0 6px}   /* no wrap: the key shrinks and wraps its own text instead of dropping a line */
+  .hist-head .hist-ctl{margin:0;flex:none;align-items:flex-start;padding:8px 12px 9px;border:1px solid var(--rule2);border-radius:6px;background:var(--panel)}
+  .hist-head .hist-ctl-r{padding-right:0}
+  .hist-head .hist-ctl-l{display:none}
+  .hist-ctl .hist-key{display:block;font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 2px}
   .hist-legend{margin-left:auto;flex:0 1 auto;min-width:0;display:flex;align-items:flex-start;gap:16px;padding:8px 12px 9px;border:1px solid var(--rule2);border-radius:6px;background:var(--panel);color:var(--ink-2);font-size:10.5px;line-height:1.35;max-width:100%}
   .hist-legend .hist-sum{flex:none;flex-direction:column;flex-wrap:nowrap;gap:3px;margin:0;padding-right:16px;border-right:1px solid var(--rule);font-size:11px}
   .hist-keygrid{min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,auto));gap:3px 18px}
@@ -1043,7 +1046,7 @@
       b.addEventListener("click", function(){ mode = window.__histMode = o[0]; applyEra(true); });
       add(modeSeg, b);
     });
-    add(ctlR, modeSeg, slider, verTxt);
+    add(ctlR, $("b", "hist-key", "History"), modeSeg, slider, verTxt);
     if (stops2.length < 2) { slider.disabled = true; }
     add(ctl, ctlR, $("div","hist-ctl-l"));   // over the funnel, which is on the left
     slider.addEventListener("input", function(){ era = window.__histEra = Number(slider.value); if (mode !== "era") { mode = window.__histMode = "era"; } applyEra(true); });
@@ -1073,6 +1076,9 @@
     };
     // controls left, the key top right in its own keylined box (owner, 8 Oct 2026)
     var head = $("div","hist-head"); add(head, ctl); add(P, head);
+    // the pane's title lives in the controls' box, so both boxes start on one line;
+    // the release count it carried is the summary column's first number
+    var ph = P.querySelector("h2"); if (ph) ph.remove();
     var wrap = $("div","hist-wrap"), scroll = $("div","hist-scroll");
     scroll.tabIndex = 0; scroll.setAttribute("aria-label", "release attempts, newest first — scroll right for older");
     // the inspector: the focused release, to the right of the strip and exactly as tall as

@@ -79,14 +79,27 @@ try {
         $code = Invoke-Redirected $exe "transcribe `"$study`"" $out
         if ($code -ne 0) { throw "exit $code`n$(Get-Content $out -Raw)" }
         $raw = Join-Path $study "bristlenose-output\transcripts-raw"
-        if (-not (Get-ChildItem $raw -Filter *.txt -ErrorAction SilentlyContinue)) { throw "no transcript in $raw" }
+        $txt = Get-ChildItem $raw -Filter *.txt -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $txt) { throw "no transcript in $raw" }
+        # A line from the fixture: an empty or garbled transcript must not pass.
+        if ((Get-Content $txt.FullName -Raw -Encoding UTF8) -notmatch "dashboard pretty confusing") {
+            throw "$($txt.Name) does not carry the fixture's words"
+        }
         "transcript written"
     }
 
     Check "serve /report/" {
+        # A leftover server on the port would answer for ours (the stale-:8150
+        # trap in CLAUDE.md), so the port must be free, and the answer must name
+        # this fixture's project through our own token.
+        if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) {
+            throw "port $Port is already in use; stop whatever is listening there"
+        }
         $project = Join-Path $work "serve-project"
         Copy-Item -Recurse $Fixture $project
         $log = Join-Path $work "serve.txt"
+        $token = [guid]::NewGuid().ToString("N")
+        $env:_BRISTLENOSE_AUTH_TOKEN = $token
         $proc = Start-Process -PassThru -WindowStyle Hidden -FilePath $exe `
             -ArgumentList "serve", "`"$project`"", "--port", "$Port", "--no-open" `
             -RedirectStandardOutput $log -RedirectStandardError "$log.err"
@@ -101,19 +114,26 @@ try {
                 } catch { }
             }
             if (-not $ok) { throw "no report with bn-app-root on port $Port within 60 s" }
+            $info = Invoke-RestMethod -TimeoutSec 10 -Headers @{ Authorization = "Bearer $token" } `
+                "http://127.0.0.1:$Port/api/projects/1/info"
+            if ($info.project_name -ne "Smoke Test") { throw "the server on $Port is serving '$($info.project_name)', not the fixture" }
             "report served"
         } finally {
+            Remove-Item Env:_BRISTLENOSE_AUTH_TOKEN -ErrorAction SilentlyContinue
             Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            $proc.WaitForExit(15000) | Out-Null
         }
     }
 
     Check "runs from a moved folder" {
+        # The self-test, not --version: --version returns before any native
+        # library or data file loads, so a build-time path would still pass it.
         $moved = Join-Path $work ("Bristle nose " + [char]0x00F1 + " " + [char]0x8A66)
         Copy-Item -Recurse $App $moved
         $out = Join-Path $work "moved.txt"
-        $code = Invoke-Redirected (Join-Path $moved "bristlenose.exe") "--version" $out
-        if ($code -ne 0) { throw "exit $code" }
-        "ok"
+        $code = Invoke-Redirected (Join-Path $moved "bristlenose.exe") "doctor --self-test" $out
+        if ($code -ne 0) { throw "exit $code`n$(Get-Content $out -Raw)" }
+        "self-test passes from $moved"
     }
 
     Check "deepest path <= $MaxPathLength" {
@@ -133,10 +153,14 @@ try {
     }
 
     Check "VC++ runtime bundled" {
-        foreach ($dll in "vcruntime140.dll", "vcruntime140_1.dll") {
-            if (-not (Get-ChildItem $App -Recurse -File -Filter $dll)) { throw "$dll missing" }
+        # Beside python312.dll, where the loader looks; a copy deeper in a
+        # package folder would not be found, and the runner's System32 copy
+        # would hide that from every other check.
+        $internal = Join-Path $App "_internal"
+        foreach ($dll in "python312.dll", "vcruntime140.dll", "vcruntime140_1.dll") {
+            if (-not (Test-Path (Join-Path $internal $dll))) { throw "$dll missing from $internal" }
         }
-        "vcruntime140, vcruntime140_1"
+        "vcruntime140, vcruntime140_1 beside python312.dll"
     }
 } finally {
     $env:Path = $savedPath

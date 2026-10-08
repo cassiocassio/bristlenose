@@ -58,9 +58,15 @@ Type: filesandordirs; Name: "{app}\_internal"
 Type: filesandordirs; Name: "{app}\tools"
 
 [UninstallDelete]
-; Everything the installer put down. User data (~\.config\bristlenose, the
-; Whisper model cache, project folders) is not here and is left alone.
-Type: filesandordirs; Name: "{app}"
+; Inno removes the files it installed; these catch anything created inside our
+; own folders since. Never "{app}" itself with filesandordirs: winget passes
+; --location through as /DIR=, so {app} can be a folder of the user's, and that
+; entry would delete everything in it. dirifempty removes {app} only when
+; nothing of theirs is left. User data (~\.config\bristlenose, the Whisper
+; model cache, project folders) is elsewhere and is left alone.
+Type: filesandordirs; Name: "{app}\_internal"
+Type: filesandordirs; Name: "{app}\tools"
+Type: dirifempty; Name: "{app}"
 
 [Code]
 const
@@ -76,12 +82,22 @@ var
   Path: string;
 begin
   if not RegQueryStringValue(HKCU, EnvKey, 'Path', Path) then
+  begin
+    // A Path that exists but cannot be read as a string must not be replaced
+    // by one holding only our folder.
+    if RegValueExists(HKCU, EnvKey, 'Path') then
+    begin
+      Log('User Path exists but could not be read; left unchanged.');
+      exit;
+    end;
     Path := '';
+  end;
   if PathHasDir(Path, Dir) then
     exit;
   if (Path <> '') and (Path[Length(Path)] <> ';') then
     Path := Path + ';';
-  RegWriteExpandStringValue(HKCU, EnvKey, 'Path', Path + Dir);
+  if not RegWriteExpandStringValue(HKCU, EnvKey, 'Path', Path + Dir) then
+    Log('Could not write the user Path.');
 end;
 
 procedure RemoveFromUserPath(Dir: string);
@@ -102,7 +118,8 @@ begin
     P := Pos(Needle, Upper);
   end;
   Path := Copy(Path, 2, Length(Path) - 2);
-  RegWriteExpandStringValue(HKCU, EnvKey, 'Path', Path);
+  if not RegWriteExpandStringValue(HKCU, EnvKey, 'Path', Path) then
+    Log('Could not write the user Path.');
 end;
 
 // A running bristlenose.exe (serve, or a transcription) holds its files open.
@@ -113,7 +130,9 @@ end;
 // kill what may be a long transcription.
 //
 // The test is the lock itself: Windows refuses a write open of a running
-// image, for any user. A WMI process query was tried first and failed open,
+// image, for any user, whatever share mode is asked for. Sharing everything
+// keeps readers that also share (Defender scanning, Explorer's preview) from
+// reading as "running". A WMI process query was tried first and failed open,
 // because a non-admin user can be refused WMI access ("SWbemLocator: Access
 // denied", measured over SSH on Windows Server 2025).
 function BristlenoseRunning(): Boolean;
@@ -126,7 +145,7 @@ begin
   if not FileExists(Exe) then
     exit;
   try
-    Stream := TFileStream.Create(Exe, fmOpenReadWrite or fmShareExclusive);
+    Stream := TFileStream.Create(Exe, fmOpenReadWrite or fmShareDenyNone);
     Stream.Free;
   except
     Log('bristlenose.exe is in use: ' + GetExceptionMessage);
@@ -136,8 +155,8 @@ end;
 
 function RunningMessage(): String;
 begin
-  Result := 'Bristlenose is running (bristlenose serve, or a transcription). ' +
-    'Stop it, then run this again.';
+  Result := 'Bristlenose is running (bristlenose serve, or a transcription), ' +
+    'or bristlenose.exe is locked. Stop it, then run this again.';
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;

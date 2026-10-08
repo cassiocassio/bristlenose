@@ -112,11 +112,6 @@
   .line.replaying{border-color:var(--warn-bd);box-shadow:0 0 0 2px var(--warn-bg)}
   .rp{display:flex;align-items:center;gap:6px;margin:0 0 8px;font:11px/1.3 var(--font);flex-wrap:wrap}
   .rptag{font-weight:600;letter-spacing:.07em;font-size:9.5px;color:var(--warn);background:var(--warn-bg);border:1px solid var(--warn-bd);border-radius:4px;padding:2px 5px}
-  .rpscrub{position:relative;flex:1 1 180px;min-width:140px;height:22px}
-  .rpscrub input{position:absolute;inset:0;width:100%;margin:0;accent-color:var(--warn);background:transparent}
-  .rpmarks{position:absolute;left:7px;right:7px;top:0;bottom:0;pointer-events:none}
-  .rpmarks i{position:absolute;top:2px;width:2px;height:6px;margin-left:-1px;border-radius:1px}
-  .rpmarks i.fail{background:var(--bad);height:7px} .rpmarks i.att{background:var(--soft)}
   .rpcount{font:10.5px var(--mono);color:var(--mute);white-space:nowrap}
   .rpcap{font:10.5px var(--mono);color:var(--ink-2);flex:1 1 260px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rpcap.fail{color:var(--bad);font-weight:600}
@@ -1166,17 +1161,14 @@
       var c = $("div","rp"); c.id = "line-replay-ctl"; c.setAttribute("role", "group"); c.setAttribute("aria-label", "replay of this run's line");
       var tag = $("span","rptag","REPLAY");
       var back = btn("back", "step back (←)", "rp-back"), pp = btn("play", "play (space)", "rp-play"), fwd = btn("fwd", "step forward (→)", "rp-fwd");
-      var scrub = $("div","rpscrub"), marks = $("div","rpmarks"), range = $("input"); range.type = "range"; range.id = "rp-range"; range.min = "0"; range.step = "1"; range.setAttribute("aria-label", "frame");
-      add(scrub, marks, range);
       var count = $("span","rpcount"), cap = $("span","rpcap");
       var live = $("button","rplive","back to live"); live.type = "button"; live.id = "rp-live"; live.title = "back to the live line (Esc)";
       back.addEventListener("click", function(){ pause(); show(rp.at - 1); });
       fwd.addEventListener("click", function(){ pause(); show(rp.at + 1); });
       pp.addEventListener("click", function(){ if (rp.timer) pause(); else play(); });
-      range.addEventListener("input", function(){ var to = Number(range.value); pause(); show(to); });   // read first: pause() repaints the range
       live.addEventListener("click", function(){ exit(); });
-      add(c, tag, back, pp, fwd, scrub, count, cap, live);
-      return {el: c, pp: pp, back: back, fwd: fwd, range: range, marks: marks, count: count, cap: cap};
+      add(c, tag, back, pp, fwd, count, cap, live);
+      return {el: c, pp: pp, back: back, fwd: fwd, count: count, cap: cap};
     };
     var paintCtl = function(){
       if (!rp) return;
@@ -1185,8 +1177,7 @@
       k.pp.appendChild(GLYPH[rp.timer ? "pause" : "play"]()); k.pp.setAttribute("aria-label", rp.timer ? "pause (space)" : "play (space)"); k.pp.title = k.pp.getAttribute("aria-label");
       k.pp.setAttribute("aria-pressed", String(!!rp.timer));
       k.back.disabled = rp.at === 0; k.fwd.disabled = rp.at === n - 1;
-      k.range.max = String(n - 1); k.range.value = String(rp.at);
-      k.count.textContent = "frame "+rp.at+" of "+(n - 1)+(rp.attempts[rp.at] ? " · attempt "+rp.attempts[rp.at]+" of "+rp.attempts[n - 1] : "");
+      k.count.textContent = (rp.at + 1)+" of "+n+(rp.attempts[rp.at] ? " · attempt "+rp.attempts[rp.at]+" of "+rp.attempts[n - 1] : "");
       var rest = f.now ? String(f.caption).replace(/^\S+\s+/, "") : String(f.caption);
       k.cap.textContent = (f.now ? fmtT(f.now)+"  " : "") + rest + (rp.at === n - 1 ? "  · last frame — the line as it stands" : "");
       k.cap.title = f.caption;
@@ -1229,12 +1220,6 @@
           pause();
           var att = 0, attempts = j.frames.map(function(f){ if (/^\S+\s+run started\b/.test(f.caption)) att++; return att; });
           rp = {frames: j.frames, at: 0, timer: null, attempts: attempts, ctl: rp && rp.ctl || buildCtl()};
-          var n = j.frames.length, marks = rp.ctl.marks; marks.textContent = "";
-          j.frames.forEach(function(f, i){
-            var kind = / fail\b/.test(f.caption) ? "fail" : (i > 0 && attempts[i] !== attempts[i - 1] ? "att" : null);
-            if (!kind) return;
-            var m = $("i", kind); m.style.left = (n > 1 ? 100 * i / (n - 1) : 0)+"%"; m.title = "frame "+i+": "+f.caption; add(marks, m);
-          });
           attach();
           if (!reduced()) play();
         })

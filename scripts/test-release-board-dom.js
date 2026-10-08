@@ -230,7 +230,7 @@ async function section5() {
   console.log("5 · THE LINE replays in place on a live board, and only the line");
   // the generator's own frames, as /replay.json serves them
   const frames = JSON.parse(execFileSync(PY, ["-c", "import importlib.util,json,sys;from pathlib import Path\ns=importlib.util.spec_from_file_location('rb',sys.argv[1]);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)\nprint(json.dumps(m.line_frames(Path(sys.argv[2]),'1.0.0')))", GEN, work], { encoding: "utf8" }));
-  // a failure for the scrubber to mark: the client reads a frame's caption, so one rewritten caption is enough
+  // a failure for the caption to mark: the client reads a frame's caption, so one rewritten caption is enough
   frames[2].caption = frames[2].caption.replace(/ ok\b/, " fail");
   const m = model(); m.live = { generation: 1, poll_ms: 1000, served_at: iso(Date.now()), changed_at: iso(Date.now()), error: null, token: "t", with_logs: false };
   {
@@ -252,21 +252,20 @@ async function section5() {
   eq("…drawn with createElementNS, not markup", "svg", btn && btn.firstChild && btn.firstChild.localName);
   const lineNode = d.getElementById("line"), pre = d.getElementById("pane-preflight");
   btn.click(); await sleep(50);
+  const at = () => String(Number((/^(\d+) of /.exec(d.querySelector("#line .rpcount").textContent) || [])[1]) - 1);   // the count is 1-based: "1 of 27"
   eq("it asks the server for the frames, with the token", true, asked.some(u => /^\/replay\.json\?k=t$/.test(u)));
   eq("the line enters replay, in place (same node)", true, d.getElementById("line") === lineNode && lineNode.classList.contains("replaying"));
   eq("…with a labelled control bar", true, /REPLAY/.test(d.getElementById("line-replay-ctl").textContent));
-  eq("reduced motion: it opens paused on frame 0", ["0", "false"], [d.getElementById("rp-range").value, d.getElementById("rp-play").getAttribute("aria-pressed")]);
+  eq("no scrubber: the buttons are the controls", null, d.querySelector("#line-replay-ctl input"));
+  eq("the count reads \"1 of N\", no \"frame\"", true, new RegExp("^1 of " + frames.length + "\\b").test(d.querySelector("#line .rpcount").textContent));
+  eq("reduced motion: it opens paused on frame 0", ["0", "false"], [at(), d.getElementById("rp-play").getAttribute("aria-pressed")]);
   const st = () => Object.fromEntries([...d.querySelectorAll("#line .station")].map(s => [s.querySelector("b").textContent, s.className.split(" ")[1]]));
   eq("frame 0 is before the first event", "pending", st()["preflight"]);
   d.getElementById("rp-fwd").click(); d.getElementById("rp-fwd").click();
-  eq("step forward twice: frame 2, preflight decided", ["2", "ok"], [d.getElementById("rp-range").value, st()["preflight"]]);
+  eq("step forward twice: frame 2, preflight decided", ["2", "ok"], [at(), st()["preflight"]]);
   eq("a fail frame's caption is marked", true, d.querySelector("#line .rpcap").classList.contains("fail"));
-  eq("the scrubber marks the fail frame", 1, d.querySelectorAll("#line .rpmarks i.fail").length);
   d.getElementById("rp-back").click();
-  eq("step back: frame 1", "1", d.getElementById("rp-range").value);
-  { const r = d.getElementById("rp-range"); r.value = "3"; r.dispatchEvent(new w.Event("input")); }
-  eq("dragging the scrubber jumps to its frame", ["3", true], [d.getElementById("rp-range").value, d.querySelector("#line .rpcount").textContent.startsWith("frame 3 of ")]);
-  d.getElementById("rp-back").click(); d.getElementById("rp-back").click();
+  eq("step back: frame 1", "1", at());
   w.document.dispatchEvent(new w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
   w.document.dispatchEvent(new w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
   w.document.dispatchEvent(new w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
@@ -278,7 +277,7 @@ async function section5() {
   const next = model(); next.live = { ...m.live, generation: 9, served_at: iso(Date.now()) };
   w.fetch = (u) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(next), text: () => Promise.resolve("") });
   await sleep(2400);
-  eq("a live patch leaves the replaying line alone", true, d.getElementById("line") === lineNode && lineNode.classList.contains("replaying") && d.getElementById("rp-range").value === "4");
+  eq("a live patch leaves the replaying line alone", true, d.getElementById("line") === lineNode && lineNode.classList.contains("replaying") && at() === "4");
   eq("…while the rest of the board stays live", true, /tag/.test(d.getElementById("pane-events").textContent));
   eq("…and preflight, unmoved, is the same node", true, d.getElementById("pane-preflight") === pre);
   // play from a mid frame, under no reduced motion: it advances on its own
@@ -286,11 +285,11 @@ async function section5() {
   d.getElementById("rp-play").click();
   eq("play presses the button", "true", d.getElementById("rp-play").getAttribute("aria-pressed"));
   await sleep(2700);
-  eq("…and advances a frame on its own (evenly spaced, ~10 s end to end) to the last", String(frames.length - 1), d.getElementById("rp-range").value);
+  eq("…and advances a frame on its own (evenly spaced, ~10 s end to end) to the last", String(frames.length - 1), at());
   eq("the last frame holds: play stops there", "false", d.getElementById("rp-play").getAttribute("aria-pressed"));
   eq("…labelled as the line as it stands", true, /last frame/.test(d.querySelector("#line .rpcap").textContent));
   w.document.dispatchEvent(new w.KeyboardEvent("keydown", { key: " ", bubbles: true }));
-  eq("space at the end replays from the start", ["0", "true"], [d.getElementById("rp-range").value, d.getElementById("rp-play").getAttribute("aria-pressed")]);
+  eq("space at the end replays from the start", ["0", "true"], [at(), d.getElementById("rp-play").getAttribute("aria-pressed")]);
   w.document.dispatchEvent(new w.KeyboardEvent("keydown", { key: " ", bubbles: true }));
   eq("space pauses", "false", d.getElementById("rp-play").getAttribute("aria-pressed"));
   d.getElementById("rp-live").click();

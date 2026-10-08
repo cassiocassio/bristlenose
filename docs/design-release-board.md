@@ -470,7 +470,7 @@ design; the real board never renders the scrubber.
 **The line's replay on the live board** (8 Oct 2026). A replay icon at the top
 right of THE LINE (served boards only: a snapshot has no server to ask, and the
 `--replay` page is already a replay) replays the run in place, with
-back / play-pause / forward, a scrubber, ←/→, space and Esc. The owner's
+back / play-pause / forward, ←/→, space and Esc, and a count (`17 of 55 · attempt 1 of 6`). A scrubber with attempt and fail ticks shipped first and was dropped the same day at the owner's word: too much; the buttons are enough. The owner's
 decisions, asked before it was built:
 
 - **Only THE LINE moves.** Every other pane stays live underneath. While
@@ -479,13 +479,12 @@ decisions, asked before it was built:
   the newest model, so nothing that happened during the replay is lost.
 - **The whole release, every attempt.** 0.34.0's failures are all in attempts
   1–5, and its last attempt is clean. The control bar names the attempt
-  (`attempt 5 of 6`), and the scrubber marks each attempt boundary (grey) and
-  each fail frame (red).
+  (`attempt 5 of 6`).
 - **Evenly spaced.** About 10 s from start to end: `10 s / (frames − 1)`,
   clamped to 120 ms–1 s per frame. Proportional time was offered, with a
   minimum dwell and an automatic pause on fail, and was declined. So a 13-minute
   build-dmg gets the same beat as a 2-second inventory, and play does not stop
-  on a failure. The red ticks and the red caption are how a failure is found.
+  on a failure. The red caption is how a failure is found.
   Step to it, don't wait for it.
 - **The last frame holds**, captioned "the line as it stands", until
   back-to-live or Esc. Play from the last frame starts again at frame 0.
@@ -510,7 +509,7 @@ swaps only the track and the count, never the controls, so keyboard focus
 stays where it is. **Reduced motion:** the replay opens paused on frame 0 and
 plays only when asked. Pinned by section 5 of `test-release-board-dom.js` (all
 red on their mutants: the patch filter, the reduced-motion guard, the frame
-clock, the scrubber read-before-pause) and by
+clock) and by
 `Server.test_replay_route_serves_the_lines_frames_behind_the_token`.
 
 **Links.** Every public page is an anchor built in the generator from

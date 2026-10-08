@@ -10,7 +10,7 @@ FastAPI server (`bristlenose serve`) that serves a React SPA (React Router, path
 bristlenose/server/
   app.py          — FastAPI factory (create_app), dev-mode HTML injection
   db.py           — SQLAlchemy engine, session factory, SQLite with WAL + FK
-  models.py       — 24 ORM tables (see docs/archive/design-serve-milestone-1.md)
+  models.py       — the ORM tables (count: `grep -c __tablename__ models.py`; history in docs/archive/design-serve-milestone-1.md)
   importer.py     — Pipeline JSON → SQLite on startup (idempotent upsert)
   admin.py        — SQLAdmin browser (dev-only, /admin/)
   autocode.py     — AutoCode engine (taxonomy, batching, async job runner)
@@ -310,17 +310,22 @@ Moderator and observer tokens restart in every session, so a slot is not a
 person. `session_speakers.person_id` is the per-session map: it points at one
 `Person` per **identity** — a participant, or a moderator or observer across
 however many sessions they ran — or is `NULL` when nothing has identified the
-slot. `session_speakers.state` is `NULL` · `proposed` · `confirmed`;
+slot. `session_speakers.state` is `NULL` · `proposed` · `confirmed` · `cleared`
+(the researcher said *not this person*; sticky across re-imports);
 `evidence` says why (`platform-name`, `heard`, `label`, `inherited`,
-`participant`, `pick`). Each identity carries a project-wide `persons.code`,
-**recomputed** from the map by `speaker_slots.renumber` (moderators numbered as
-they first appear); a participant's code is its slot code. Migration 013;
-`docs/design-people.md` §H H9.
+`participant`, `pick`). **Codes are worked out on read**
+(`speaker_slots._derive_codes`): a participant is its slot's code; a moderator or
+observer is numbered per **(person, role)** as the pair first appears, so one
+person is `m2` where they moderate and `o1` where they observe. The role is the
+slot's `speaker_role`, which a recode changes (§J7) — not the tag's letter.
+`persons.code` is kept by `renumber` as a record, not read by routes. Migration
+013; `docs/design-people.md` §H H9, §J8.
 
 **Every route emits the identity's code, never the slot's**: session 2's
 moderator reads `m2` in `/sessions`, `/transcripts/{sid}` (speakers *and*
 segments), `/dashboard`, `/people`, the moderator-question route and the MCP
-overview, and an unidentified slot reads `m?` / `o?`. `/sessions` also carries
+overview, and an unidentified slot reads `m?` / `o?` — lettered `mA?` / `mB?` when
+the session has more than one unknown of that role. `/sessions` also carries
 `slot_code`, which is how a client addresses a slot, because a pick can renumber
 identities. Read slots through `speaker_slots.project_slots` / `slot_map` /
 `session_slots` — an outer join. **Never inner-join `session_speakers` to
@@ -337,10 +342,27 @@ from before 3 Oct 2026) existing slots keep what they hold and new ones arrive
 unidentified — `people.yaml` never names a moderator. `PUT
 …/sessions/{sid}/speakers/{code}` takes the **slot** code only — never the
 identity code, because both are `mN` and a pick renumbers identities, so a
-stale grid's display code could name a different slot. `person` points the slot at an identity; a name says who *this*
-session's speaker is (an existing identity's name points at it, a new name
-renames an identity no other session shares, otherwise mints someone new). It
-never renames someone in another session.
+stale grid's display code could name a different slot. Its fields: `person`
+points the slot at an identity (with `create`, a client-made uuid for someone
+new); `clear` makes it nobody (`m?`); `kind` recodes the speaker's role (§J7
+R1/R2); `swap_with` exchanges a participant and a moderator (its picker row is
+parked). Names are never guessed from text — a name edit renames that person
+everywhere (§J8.12).
+
+**Evidence is filtered on read.** `speaker_slots.evidence_out` / `evidence_quotes`
+drop quotes credited to a slot recoded out of participant, and quotes overlapping a
+paragraph moved to another speaker, until the session is re-analysed (R3,
+`routes/reanalyse.py`). Count quotes through them, not a bare `Quote` query.
+
+**Transcript layout edits** (`transcript_layout_edits`, migrations 015–016): a
+paragraph split, join, or move to another speaker (`/split`, `/join`, `/reassign`,
+undo by `DELETE /layout-edits/{id}`) is recorded with the words it named and
+replayed by `transcript_layout.replay` on every import, after `_import_speakers`;
+an edit whose paragraph no longer matches is refused and logged, never guessed.
+`design-transcript-editing.md` §"Split and join, stage 1", `design-people.md` §K6.
+The importer also strips a leading speaker label ("(Speaker B)", or a platform's
+real name) from paragraph text (`_without_speaker_label`) — a privacy fix as much
+as a display one: the name used to reach exports and the agent endpoint.
 
 **Participants are still named from `people.yaml`**, as below — the file is
 not yet retired as a store (that is Phase 5's, with the docs that promise an

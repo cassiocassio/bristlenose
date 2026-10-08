@@ -35,15 +35,21 @@ The pipeline's job is to get from the first to the second — turn flowing text 
 
 ## What exists today
 
-> **Status, 6 Oct 2026 — the first two rows are out of date; the rest stand.** Naming
-> a speaker has a UI: the person picker on the Sessions grid, web and Mac, with
-> confirm, pick, someone new, undo, and a refusal of a name someone else already goes
-> by (`design-people.md` §H9 UX iteration 3, §J8). Moderators and observers are
-> people now, one per identity, and a session's speaker points at one (route C
-> Phase 1, on `main` 6 Oct 2026). Changing a speaker's role is planned, not built
-> (`design-people.md` §J7). Reassigning speech, split and merge are unchanged:
-> no endpoint, no UI, and the quote cascade is still unsolved. Those are the
-> owner's priority once attribution work starts (`design-people.md` §J8.13).
+> **Status, 8 Oct 2026 — the table below is the 25 Aug picture; all of its first three rows
+> have moved.** Shipped in 0.35.0 (7 Oct 2026):
+> - **Naming** — the person picker on the Sessions grid, the transcript and the dashboard,
+>   web and Mac (`design-people.md` §H9 UX iteration 3, §J8.15–16).
+> - **Changing a speaker's role** — moderator ↔ observer, and into or out of participant,
+>   with *Re-analyse this session* after a recode (§J7, §J8.19–22).
+> - **Reassigning speech** — one paragraph moves to another speaker or a new moderator
+>   (the picker's Paragraph scope, §K6, `POST …/transcripts/{sid}/reassign`), and
+>   paragraphs split and join (`design-transcript-editing.md` §"Split and join, stage 1").
+>   Edits are recorded and replayed on every import.
+> - **The quote cascade is partly answered:** evidence now has a read-time filter —
+>   `speaker_slots.evidence_out` drops quotes credited to a slot that is no longer a
+>   participant, and quotes overlapping a moved paragraph — so the last sentence of the
+>   25 Aug note below is no longer true. Quotes are still not split with a paragraph.
+> - **Merge** stays what naming does (25 Aug note).
 
 | Capability | Status |
 |-----------|--------|

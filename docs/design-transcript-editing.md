@@ -1,6 +1,12 @@
 # Transcript Editing — Design Document
 
-**Status:** Research phase. Now GA-gating (not beta) — target the GA cycle, ~2027. See [Bidirectional editing — the converged spec (26 Jul 2026)](#bidirectional-editing--the-converged-spec-26-jul-2026), which supersedes the two-operation framing below where they conflict.
+---
+status: partial
+last-trued: 2026-10-08
+trued-against: HEAD@main on 2026-10-08
+---
+
+**Status:** Partly built — split, join, moving one paragraph to another speaker (0.35.0) and copying (8 Oct 2026); see the two "built" sections near the end. Direct editing of the words is still research. Now GA-gating (not beta) — target the GA cycle, ~2027. See [Bidirectional editing — the converged spec (26 Jul 2026)](#bidirectional-editing--the-converged-spec-26-jul-2026), which supersedes the two-operation framing below where they conflict.
 
 **Created:** 1 Mar 2026 · **Spec section added:** 26 Jul 2026
 
@@ -361,7 +367,7 @@ There is **no shared string** to bind. A quote is a *detached copy* with weak ba
 - `segment_index` — a **single loose ordinal** (`-1` common), **not an FK**, and it cannot represent a multi-segment quote.
 - **No character offset, no word-index range.**
 
-Runtime matching is recomputed every request in `bristlenose/server/routes/transcript.py`: segment↔quote by **timecode-range + `speaker_code`** (`:341-348`), in-segment offset by **case-insensitive `str.find()` of `verbatim_excerpt`** (`:116-166`), with a **whole-segment `<mark>` fallback** when the substring doesn't match. Consequences that already ship today:
+Runtime matching is recomputed every request in `bristlenose/server/routes/transcript.py`: segment↔quote by **timecode-range + `speaker_code`** (the `seg_quotes` match in `get_transcript`), in-segment offset by **case-insensitive `str.find()` of `verbatim_excerpt`** (`_highlight_quoted_text`), with a **whole-segment `<mark>` fallback** when the substring doesn't match. Consequences that already ship today:
 
 - **Editing a quote already desyncs the highlight** — the `QuoteEdit` override no longer substring-matches its segment, so highlighting silently falls back to marking the whole segment.
 - **The common Whisper (word-level) path skips citation highlighting entirely** — `TranscriptPage.tsx` renders per-word spans and drops the `<mark>` reconciliation ("a future enhancement").
@@ -413,7 +419,8 @@ Not insertion — *unmarked* insertion of speech-looking text that a reader or t
 
 The common case (owner, 6 Oct 2026): a long paragraph that does not read as one thing, split in
 two with the same speaker; and the reverse. Speaker reassignment of a half is stage 2, and waits
-on the scope question in `design-people.md` §K.
+on the scope question in `design-people.md` §K. *(Built 6 Oct 2026: the picker's Paragraph scope
+moves one paragraph to another speaker — `design-people.md` §K6, `POST …/transcripts/{sid}/reassign`.)*
 
 - **One editable region, not one per paragraph** (7 Oct 2026). The transcript section is
   the editing host; timecodes, badges and the margin are non-editable islands inside it,
@@ -429,11 +436,11 @@ on the scope question in `design-people.md` §K.
   never any other bracket: "(laughs)" stays. Measured on 3,237 real paragraphs: none
   still starts with a label. A split, join or move made in 0.35.0 on an *untimed*
   labelled paragraph counted the label's two words, so its replay is refused and logged.
-- **Interaction.** A paragraph's text takes a caret (`contenteditable`) and nothing else: typing,
+- **Interaction.** The transcript's text takes a caret (the `contenteditable` host above) and nothing else: typing,
   dictation, autocorrect, pasting and dropping are refused by a native `beforeinput` guard, since
   the words are the recording's. **Return** splits at the caret; **Backspace** at a paragraph's
   start joins it to the one above, same speaker only. **⌘Z / ⇧⌘Z** undo and redo from the
-  paragraph (the page's own ⌘Z stands down inside editable text) and from Edit ▸ Undo. Not in an
+  transcript (the page's own ⌘Z stands down inside editable text) and from Edit ▸ Undo. Not in an
   exported report. Prior art agrees on Return: Dovetail, Trint and Condens.
 - **The cut** lands at the word boundary before the caret, counted in the words the page draws —
   Whisper's words where the paragraph has them, else its text — so the researcher's cut and the

@@ -21,6 +21,15 @@ The transcript is continuous text. Segments are a pipeline artefact, not a user 
 
 ## Work Breakdown
 
+> **Status, 8 Oct 2026.** Several layers below shipped in 0.35.0 in a different shape from the
+> one written here; the text is kept as the original breakdown. **Layer 3** (reassignment) is
+> the person picker's Paragraph scope — one paragraph moves to another speaker or a new
+> moderator (`design-people.md` §K6). **Layers 5 and 6** (split, merge) are Return and
+> Backspace in the transcript (`design-transcript-editing.md` §"Split and join, stage 1").
+> **Layer 9** (corrections survive a re-run) holds for those three: each is a recorded layout
+> edit replayed on every import (`server/transcript_layout.replay`), refused and logged when
+> the paragraph it named has changed.
+
 ### Layer 0: Pipeline speaker improvements (done)
 
 LLM splitting pre-pass for single-speaker transcripts, generalised heuristic (word asymmetry, broader phrases), format-agnostic LLM prompt.
@@ -60,7 +69,8 @@ Make the pipeline's quote extraction visible in context. The mechanism is built 
 > pencil fixes a spelling everywhere that person appears; moderators and observers
 > are written per session through `PUT …/sessions/{sid}/speakers/{slot}`, not
 > `/people`. 2b's dropdown became the picker's role segments, which only browse
-> until the recode ships (`design-people.md` §J7, §J8).
+> until the recode ships (`design-people.md` §J7, §J8). *(8 Oct: the recode shipped in
+> 0.35.0 — a picked name under another role recodes the speaker, §J8.19–22.)*
 
 The project page shows all speakers across sessions — always visible, always editable. Not a gate or confirmation modal.
 

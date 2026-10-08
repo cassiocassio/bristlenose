@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-10-04
-trued-against: HEAD@main on 2026-10-04
+last-trued: 2026-10-08
+trued-against: HEAD@main on 2026-10-08
 ---
 
 # People — who is in a study, and how the researcher fixes it
@@ -12,13 +12,22 @@ functionality and data that fall out. Most of the UX in this document is not
 built. **Built on `main` as of 4 Oct 2026:** per-session moderator and observer
 names, the name-confirmed state (migration 012), the person picker on the
 Sessions grid on both channels (speaker ID v1.1 — §H H9, UX iteration 3), and
-undo on speaker naming (§B10). Route C Phase 1, project-wide identities, is
-on `main` since 6 Oct 2026 (unreleased; `git log -S'speaker_slots' --oneline`). The people *file* and its endpoints
+undo on speaker naming (§B10). Route C Phase 1, project-wide identities, shipped
+in 0.35.0 (7 Oct 2026), with the picker on the transcript and the dashboard, the
+role recodes R1–R3 (§J7, §J8.19–22), and moving one transcript paragraph to
+another speaker (§K6). The people *file* and its endpoints
 predate all of it — `get_people` / `put_people` in `server/routes/data.py`,
 `PeopleFile` in `models.py`, and `/people` in the export embed.*
 
 ## Changelog
 
+- _2026-10-08_ — **Trued to 0.35.0 and the work after it.** The intro, §I's status, §J7's
+  banner (the swap row is parked behind `speakerSwap`, not offered), and the points that
+  §J8.22 and §K6 answered (§J8.10, 15, 20(c), 21, 22; §K1, K3, K4) each gain a dated
+  pointer, the original kept. Recorded here because the §J8 points carried it alone: R1 and
+  R2 recodes, the swap and its parking, the picker opening on the name, R3 re-analyse, and
+  §K's Session | Paragraph switch with its New moderator row (§K6). Since: the importer
+  strips a leading speaker label from paragraph text (§K6 post-script).
 - _2026-10-06_ — **The owner answered the Phase 1 and §J7 calls (§J8).** Four answers, three
   of which change the design. **(1)** A self-introduction proposes a name and creates a
   person, overriding §C5's "a heard name is never a proposal". **(2)** A person is unique and
@@ -2422,7 +2431,8 @@ carve-out guessed wrong, and that is the number that decides whether P2 holds.
 > **Status, 6 Oct 2026.** This enumerates the §B3 menu as `items = f(surface,
 > state)`. The Sessions-grid naming items are now the person picker (§B3's status
 > note, §J8); the transcript-turn, quote-card and People-lens rows are not built and
-> remain the reference for them. The domain table's inputs (`kind` is role,
+> remain the reference for them. *(8 Oct: the transcript paragraph's picker is built — §J8.15
+> and §K6's Session | Paragraph switch; quote-card and People-lens rows remain unbuilt.)* The domain table's inputs (`kind` is role,
 > `nameClass` collapsing 3:1, `cleared` sticky in storage) still hold.
 
 *The function §B3 asserts, written out. Produced 25 Aug 2026 by a seven-agent
@@ -2724,8 +2734,9 @@ read applies to design docs too.
 > relabel only) are built on all three surfaces — see
 > [§J8 points 19 and 20](#j8--the-owners-answers--6-oct-2026) for what shipped and where it
 > departs from the rows below** (no `/kind` route: the slot's existing `speaker_role` holds the
-> kind, and the speaker PUT takes `kind`). R2's *Swap with m1* row (call 4) is built too
-> ([§J8 point 21](#j8--the-owners-answers--6-oct-2026)), and so is R3, *Re-analyse this
+> kind, and the speaker PUT takes `kind`). R2's *Swap with m1* row (call 4) was built
+> ([§J8 point 21](#j8--the-owners-answers--6-oct-2026)) and then **parked** the same day,
+> behind the `speakerSwap` flag (owner: one row doing two things), and so is R3, *Re-analyse this
 > session* ([§J8 point 22](#j8--the-owners-answers--6-oct-2026)) — whose pins live in the
 > registry, now version 2, as planned below.
 
@@ -3131,7 +3142,8 @@ people as unique and roles as per-session is the People lens's long-term goal.
       or the role the researcher has set since. Because a segment click only browses, a
       look from a paragraph badge changes nothing. A name picked under another role recodes
       the whole speaker in this session, not that paragraph. *Open:* whether the picker
-      needs to say so when it opens from a paragraph.
+      needs to say so when it opens from a paragraph. *(8 Oct: answered by §K6's
+      Session | Paragraph switch.)*
     - **An unknown speaker opens with the cursor in the new-person field** (proposed, under
       discussion). An unknown speaker is one with no name, as opposed to a proposed name or
       one from a platform label. There is nothing to confirm, and typing is the likely act;
@@ -3230,6 +3242,7 @@ people as unique and roles as per-session is the People lens's long-term goal.
       its opener; a reply nobody asked for is ignored. The grid uses it too.
     - **Still open:** whether opening the picker from a paragraph should say it changes
       the speaker, not the paragraph (point 10). Nothing in the picker says so yet.
+      *(8 Oct: answered — the Session | Paragraph switch, §K6.)*
 
 16. **Built 6 Oct 2026 — rename in place.** On the current, confirmed row, a click or
     Return turns the name into a field (Finder's rename; the row had nothing to choose,
@@ -3324,7 +3337,7 @@ people as unique and roles as per-session is the People lens's long-term goal.
     a stored code; (b) the Participant segment of a recoded-out slot shows the moderator's
     name although picking it restores the participant, because the client cannot know the
     participant's name without being told it; (c) the *Re-analyse this session* offer
-    (the *Swap with m1* row is built: point 21).
+    (the *Swap with m1* row is built: point 21). *(8 Oct: (c) is built — point 22.)*
 
 21. **Built 6 Oct 2026 — the swap (§J7 call 4).** In a session of exactly one participant and
     one moderator, each one's picker offers *Swap with m1* (or *p3*) under their own role,
@@ -3338,7 +3351,8 @@ people as unique and roles as per-session is the People lens's long-term goal.
     message carries `swap` (contract v8) and the reply `{"kind": "swap"}`, applied only where
     the SPA offered one. Strings: `sessions.picker.swapWith`, `undo.{undo,redo}.swapRoles`,
     in all 21 locales. Not offered yet: the *Re-analyse this session* prompt that should
-    follow, which waits for R3. **Reviewed the same day**, fixed: the swap keeps each tag's
+    follow, which waits for R3. *(8 Oct: R3 is built, point 22, and offers re-analysis after
+    a swap; the swap row itself is parked behind `speakerSwap`.)* **Reviewed the same day**, fixed: the swap keeps each tag's
     remembered participant, so an earlier recode's undo still finds its way home after the
     swap is undone (a test unwinds recode-out, recode-in and swap back to the start); the undo
     is recorded only once the swap lands, since a refused one would otherwise be performed by
@@ -3378,6 +3392,7 @@ people as unique and roles as per-session is the People lens's long-term goal.
     the log, not the Mac's pipeline popover (a `PipelineSummary` field is a two-file change);
     whether a transcript paragraph's badge should speak for the paragraph (job 10) rather than
     the whole speaker — the owner's 6 Oct reading of the picker — is the next design question.
+    *(8 Oct: answered in §K6.)*
     **Reviewed the same day; four fixes.** (1) The pin's evidence could never match a real
     recording: serve took starts from the DB (whole seconds, stage 6's merged paragraphs, and
     any split halves) while the run compared stage 5's raw fractional segments, so every pin was
@@ -3424,7 +3439,8 @@ is**; this part is about **who said a particular paragraph or quote**, which it 
   §5, marked speculative: (A) the paragraph asks "who said this?" and then offers the wider
   fix; (B) a this-paragraph / all-of-p1's toggle in the picker; (C) the speaker picker on a
   speaker strip, the paragraph badge for the paragraph only. Undecided. Until then the
-  paragraph badge keeps opening the speaker-wide picker.
+  paragraph badge keeps opening the speaker-wide picker. *(8 Oct: decided and built as (B),
+  Session | Paragraph — §K6.)*
 
 ### K2 · Prior art (6 Oct 2026, from each product's own help pages)
 
@@ -3464,7 +3480,8 @@ is**; this part is about **who said a particular paragraph or quote**, which it 
 - Consequence: moving one paragraph to the moderator would unmark it in the transcript but leave
   the quote in the evidence, credited to the participant (job 11). Evidence would have to become
   paragraph-aware — the speakers of the paragraphs a quote's window covers — or quotes credited
-  per speaker at extraction.
+  per speaker at extraction. *(Superseded by §K6: evidence now drops a quote overlapping a
+  moved paragraph — `speaker_slots._moved_quotes`.)*
 - The same gap shows after a speaker-level recode out of participant (§J7 R2): a lecturing
   project manager recoded to observer leaves their lecture quotes in the evidence until the
   session is re-analysed — or hides every quote of the session, if they held the first
@@ -3476,7 +3493,8 @@ is**; this part is about **who said a particular paragraph or quote**, which it 
   caret splits a paragraph, same speaker; Backspace at a paragraph's start joins it to the one
   above; ⌘Z undoes. Recorded and replayed on every import. Quotes are not split.
 - **Stage 2, reassign the second half**, is the paragraph question of K1 and waits on it.
-  Drawn speculative in the mockup's §6.
+  Drawn speculative in the mockup's §6. *(8 Oct: built — split, then move the half with the
+  Paragraph scope; §K6 calls it the everyday path.)*
 - **Direct editing of a paragraph's words** is a distinct later piece (owner, 6 Oct 2026):
   connected to quote editing with revert but not the same, and wanted simpler; reuse that
   logic and UX if it fits. Not started; tracked with the live-editable-transcript item.
@@ -3555,7 +3573,9 @@ serve's own API):
   straight to search um"). Stage 1's split, found here; **fixed the same day**: the cut is
   still counted in the drawn words, which are aligned to the text's own words
   (`transcript_layout.text_cut`), and the text is cut where the chosen word landed, so both
-  halves keep their case, punctuation and "(Speaker B)".
+  halves keep their case, punctuation and "(Speaker B)". *(8 Oct post-script: the importer
+  now strips a leading speaker label from paragraph text — `importer._without_speaker_label`
+  — so there is no "(Speaker B)" left to keep.)*
 - **Word timings and paragraph text can disagree at the edges.** The moderator's opening words
   of that paragraph sat in the previous paragraph's word list. A cut counted in drawn words is
   consistent with what the researcher sees, which is the point, but the two sources are not

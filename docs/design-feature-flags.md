@@ -39,7 +39,7 @@ yet".
 
 ## 1. Parked-feature flags — React SPA only
 
-**File:** `frontend/src/utils/featureFlags.ts`. A typed object with three
+**File:** `frontend/src/utils/featureFlags.ts`. A typed object of
 booleans, all `false` in `DEFAULTS`, exported mutable so tests can flip them,
 with `resetFeatureFlags()` to restore.
 
@@ -58,13 +58,14 @@ header states the three rules and they are the whole contract:
    concludes the feature isn't worth finishing, delete the feature and the
    flag together in one commit.
 
-**The three flags as of 20 Sep 2026:**
+**The four flags as of 8 Oct 2026:**
 
 | Flag | Parked | Design doc | Why |
 |---|---|---|---|
 | `quoteContextExpansion` | 5 Aug 2026 | `design-quote-context-expansion.md` | chevrons read as decoration; expansion is one-way |
 | `moderatorQuestionPill` | 5 Aug 2026 | `design-moderator-question-pill.md` | hover target is an unmarked zone |
 | `proposalRationaleTooltip` | 20 Sep 2026 | `design-autocode.md` § Parked | lands over the next row and is z-index-clipped; the rationale text is verbose and restates the tag |
+| `speakerSwap` | 6 Oct 2026 | `design-people.md` §J8 point 23 | the swap row does two things at once; the real need is one paragraph credited to the wrong speaker, answered by §K6's Paragraph scope |
 
 **Test discipline — this is what keeps a parked feature from rotting.** Two
 shapes are in use; both are required, in the same file:

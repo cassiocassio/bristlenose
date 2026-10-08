@@ -77,24 +77,17 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "Inno Setup install exited $($p.ExitCode)" }
           Get-ChildItem "$env:ProgramFiles\Inno Setup *\ISCC.exe" | ForEach-Object { $_.FullName }
 
-      - name: Install winget (for manifest validation)
-        shell: powershell
-        run: |
-          Install-PackageProvider -Name NuGet -Force | Out-Null
-          Set-PSRepository PSGallery -InstallationPolicy Trusted
-          Install-Module Microsoft.WinGet.Client -Force -Scope AllUsers
-          Import-Module Microsoft.WinGet.Client
-          Repair-WinGetPackageManager -AllUsers -Latest
-          winget --version
-          if ($LASTEXITCODE -ne 0) { throw "winget is not usable" }
-
+      # The manifest is checked against winget's own schemas, vendored in
+      # packaging/windows/winget/schemas: the runner cannot install winget
+      # (Add-AppxPackage refuses the bundle, first run 8 Oct 2026), so
+      # `winget validate` runs on a real Windows machine before a submission.
       - name: Build, smoke-test, package
         shell: powershell
         run: |
           $wheel = (Get-ChildItem dist\bristlenose-*.whl | Select-Object -First 1).FullName
           # To a file, not through Tee-Object: a pipeline leaves $LASTEXITCODE
           # unreliable, and this exit code is the verdict.
-          & powershell -NoProfile -ExecutionPolicy Bypass -File packaging\windows\build.ps1 -Wheel $wheel -Out build\windows -Installer -Manifest *> build-windows.log
+          & powershell -NoProfile -ExecutionPolicy Bypass -File packaging\windows\build.ps1 -Wheel $wheel -Out build\windows -Installer -Manifest -ValidateWithSchema *> build-windows.log
           $code = $LASTEXITCODE
           Get-Content build-windows.log
           if ($code -ne 0) { throw "build.ps1 exited $code" }

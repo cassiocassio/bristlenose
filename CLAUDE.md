@@ -1502,6 +1502,13 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 **Internal TestFlight since 14 Jul 2026** — shipping build **0.35.0 (4528)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
 
+**0.36.0 shipped 8 Oct 2026, late evening — tag `v0.36.0` on `e08a44d5`, TestFlight build
+4588, verified 9 of 9.** A minor: transcript copy across paragraphs (Markdown and Word rich
+text), sentence-start capitals, and the speaker-label leak past anonymisation. Three attempts,
+each stopped by a test, none by the product: Windows tests reading the runner's ffmpeg after the
+`safe_which` change, and a perf test on vitest's 5 s default. Full account:
+`docs/release-log.md` § 0.36.0.
+
 **0.35.0 shipped 7 Oct 2026, overnight and unattended — tag `v0.35.0` on `acc9feb8`,
 TestFlight build 4528, verified 9 of 9.** A minor: the session timeline under each Sessions
 row, role recodes in the person picker (now on the transcript and dashboard too), one-session

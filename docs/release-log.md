@@ -67,6 +67,34 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.36.0 — 8 Oct 2026 · Tier 1 (minor — transcript copy across paragraphs, sentence capitals, a speaker-label leak)
+
+**What shipped.** Transcript text selects across paragraphs and pastes as Markdown, or as rich
+text in Word with the timecode styled; a paragraph starts with a capital where a sentence begins
+(display only). Fixed: the label after each speaker code ("(Speaker B)", or a platform's real
+name) reached exports, search and the agent endpoint past anonymisation; on Windows an
+`ffmpeg.exe`/`ollama.exe` in the current folder could run in place of the real one; four
+transcript-edit fixes from the 8 Oct review. The winget session's packaging work rode along,
+none of it in the wheel.
+
+**Verified 9 of 9** (`release.sh verify 0.36.0`) shortly after midnight BST: PyPI (200),
+GitHub Release, Homebrew, TestFlight 4588, `.dmg`, Snap edge, Copr, and the website, deployed
+from a clean worktree of the website repo's committed HEAD. Tag `v0.36.0` on `e08a44d5`, the
+exact commit strict CI passed.
+
+**Three attempts, no product defect.** (1) Strict CI red on `test (3.12, windows-latest)`: 20
+tests chose what is installed by stubbing `shutil.which`, which `47ee59af`'s Windows-only
+`safe_which` no longer calls, so they read the runner's Chocolatey ffmpeg — the "tests read the
+machine" class. Fixed in tests (`331d81ff`), proved red/green under a simulated win32 lookup.
+(2) Strict CI red on a search perf test timing out at 5049 ms against vitest's 5 s default (4908
+ms the run before); it reports timings and asserts none, so it got an explicit 30 s
+(`e08a44d5`). Each fix moved HEAD; the resume re-pushed, re-dispatched and rebuilt both
+artefacts unprompted, as the moved-HEAD guards intend. (3) Clean: tag at 23:46 BST.
+After the tag, the push CI on the same commit hit a Windows-only `PermissionError` on the
+smoke fixture's `bristlenose.log`: every xdist worker logged into that one committed file, and
+a rollover cannot rename it while others hold it open. Fixed after the tag (`0f1a81d9`, tests
+only); the PyPI run's own CI happened to pass.
+
 ## 0.35.0 — 7 Oct 2026 · Tier 1 (minor — the session timeline, role recodes, split/join/move paragraphs)
 
 **What shipped.** Each session opens into a timeline under its Sessions row (scene colours per

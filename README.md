@@ -400,6 +400,7 @@ Transcript text can be selected across paragraphs and pasted into a document wit
 **Fixed**
 
 - **A speaker's name from the source transcript could appear past anonymisation.** Imported text kept the label written after each speaker code — "(Speaker B)", or a meeting platform's real name — and it reached exports, search and the agent endpoint. It is now removed on import; "(laughs)" and similar stay.
+- **On Windows, an `ffmpeg.exe` or `ollama.exe` in the folder you ran Bristlenose from could run in place of the real one.** A file planted in a client's interview folder would have been run. Bristlenose now looks only in the install folder and in the folders on PATH.
 - **Removing a session that had a split, join or move made every later import fail.** Its edits now go with it.
 - **A paragraph given to a new moderator could pass that moderator's code, and name, to another voice on a re-run.**
 - **A split in a paragraph without word timings appeared at the end of the session** instead of where it was made.

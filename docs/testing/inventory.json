@@ -550,7 +550,7 @@
         "name": "Mac Release Archive",
         "piped_steps": [],
         "triggers": [
-          "schedule (23 2 * * *)",
+          "push [main] paths=desktop/**,.github/workflows/mac-release-archive.yml",
           "workflow_dispatch"
         ]
       },

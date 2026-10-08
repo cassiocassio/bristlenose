@@ -1,28 +1,34 @@
 name: Mac Release Archive
 
-# Nightly rehearsal of both RELEASE archives, unsigned, on the latest main.
+# Rehearse both RELEASE archives, unsigned, on every desktop push to main.
 #
 # Mac Build compiles and tests DEBUG on every desktop push. Both release lanes
 # archive RELEASE (build-all.sh for the App Store; build-dmg.sh with
 # DEVELOPER_ID_BETA for the .dmg), and until 8 Oct 2026 nothing compiled that
-# configuration before release night — so a Release-only break, or an Xcode
-# image that moved under us, was found by a thirty-minute release step. This
-# runs desktop/scripts/check-release-archive.sh every night whether or not
-# anything changed (the runner image changes without a commit), and on demand.
+# configuration before release night — so a Release-only break was found by a
+# thirty-minute release step. This runs desktop/scripts/check-release-archive.sh
+# on the push that could cause one, and on demand.
+#
+# No schedule, by decision (8 Oct 2026). A nightly run was tried first, to catch
+# the runner image moving without a commit — but that image is GitHub's Xcode,
+# not the one the release Mac builds with (0.35.0 shipped from Xcode 27.0), so
+# its drift says little about what ships, and a week without pushes would have
+# spent seven runs re-proving an unchanged tree.
 #
 # It does NOT sign: an ad-hoc archive of the app fails without a provisioning
 # profile (measured 8 Oct 2026), so signing, entitlements, notarisation and
 # Gatekeeper remain release-night facts. The script header says what it can
 # and cannot see.
 #
-# Never a required check, and it blocks no push. A red night reaches the owner
-# twice: GitHub's email for a failed scheduled run, and the release preflight,
-# which lists this workflow in WF_ADVISORY (scripts/project.conf) — one red
-# night warns, three in a row stop a release.
+# Never a required check, and it blocks no push. A red run reaches the owner as
+# GitHub's failed-run email and in the release preflight, which lists this
+# workflow in WF_ADVISORY (scripts/project.conf): one red run warns, three in a
+# row stop a release.
 
 on:
-  schedule:
-    - cron: "23 2 * * *"   # nightly, ~03:23 London (BST)
+  push:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/mac-release-archive.yml']
   workflow_dispatch:
 
 permissions:

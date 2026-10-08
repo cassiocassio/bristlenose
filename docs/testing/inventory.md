@@ -77,7 +77,7 @@
 
 ### Mac Release Archive (`mac-release-archive.yml`)
 
-- **Triggers:** schedule (23 2 * * *); workflow_dispatch
+- **Triggers:** push [main] paths=desktop/**,.github/workflows/mac-release-archive.yml; workflow_dispatch
 - **Default shell:** `bash` (pipefail on)
   - `archive` · on `macos-26`
     - Archive Release — App Store and Developer-ID configurations — gate, **hard**

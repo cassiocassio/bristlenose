@@ -389,7 +389,7 @@ it can be inspected.
 >   just passed. `test-swift.sh` now writes a green receipt (run, commit, a
 >   whole-tree fingerprint taken before and after the suite), and build-dmg skips
 >   its run only on an exact match (`scripts/test-dmg-lane.sh`).
-> - **Release is compiled every night, unsigned, in both configurations**
+> - **Release is compiled on every desktop push, unsigned, in both configurations**
 >   (`check-release-archive.sh`, `mac-release-archive.yml`, in the preflight's
 >   advisory streak). Signing cannot be rehearsed: an ad-hoc archive fails
 >   without a provisioning profile, measured. Three of the four Developer-ID

@@ -10,7 +10,7 @@
 # branch that no longer compiles, an optimiser-only diagnostic, an Xcode image
 # whose SDK moved under us — is first seen on release night, by the step that is
 # then ten minutes into a thirty-minute build. This compiles exactly those two
-# configurations, nightly on a GitHub runner (mac-release-archive.yml) and on
+# configurations, on every desktop push to main (mac-release-archive.yml) and on
 # demand here.
 #
 # What it CANNOT see, measured 8 Oct 2026: signing. An ad-hoc archive of the app

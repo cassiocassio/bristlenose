@@ -280,7 +280,7 @@ def _load_sections(db: DbSession, quote_ids: list[int]) -> dict[int, str]:
         .filter(ClusterQuote.quote_id.in_(quote_ids))
         .all()
     )
-    return {qid: label for qid, label in rows}
+    return dict(rows)
 
 
 def _load_themes(db: DbSession, quote_ids: list[int]) -> dict[int, list[str]]:
@@ -344,7 +344,7 @@ def _load_section_order(db: DbSession, project_id: int) -> dict[str, int]:
         .filter(ScreenCluster.project_id == project_id)
         .all()
     )
-    return {label: order for label, order in rows}
+    return dict(rows)
 
 
 # ---------------------------------------------------------------------------

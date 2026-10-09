@@ -619,11 +619,10 @@ def _setup_local_provider() -> str | None:
                 console.print()
                 _say(MessageKind.SUCCESS, f"Downloaded {DEFAULT_MODEL}")
                 return "local"
-            else:
-                console.print()
-                _say(MessageKind.ERROR, "Download failed.")
-                console.print("Try manually: [bold]ollama pull llama3.2[/bold]")
-                return None
+            console.print()
+            _say(MessageKind.ERROR, "Download failed.")
+            console.print("Try manually: [bold]ollama pull llama3.2[/bold]")
+            return None
         return None
 
     # Ready to go
@@ -2446,7 +2445,7 @@ def configure(
     if is_valid is False:
         _say(MessageKind.ERROR, f"Invalid — {error}")
         raise typer.Exit(1)
-    elif is_valid is None:
+    if is_valid is None:
         _say(MessageKind.WARNING, f"Could not validate: {error}")
         console.print("Storing anyway...")
     else:
@@ -2471,7 +2470,7 @@ def configure(
         console.print(f"  export BRISTLENOSE_{env_var}={key}", markup=False)
         console.print()
         console.print("[dim](The key is not stored anywhere — save it yourself)[/dim]")
-        raise typer.Exit(0)
+        raise typer.Exit(0) from None
 
     if not persisted:
         _say(

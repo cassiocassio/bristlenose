@@ -32,6 +32,7 @@ import time
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -144,7 +145,7 @@ def voice_install_hint() -> str:
     if "pipx" in parts:
         return 'pipx install --force "bristlenose[voice]"'
     # uv tool venvs: ~/.local/share/uv/tools/<name>, or under %APPDATA% on Windows.
-    if any(a == "uv" and b == "tools" for a, b in zip(parts, parts[1:])):
+    if any(a == "uv" and b == "tools" for a, b in pairwise(parts)):
         return 'uv tool install --force "bristlenose[voice]"'
     return 'pip install "bristlenose[voice]"'
 
@@ -407,7 +408,7 @@ def cluster_voices(
             vecs.append(None)
             continue
         vecs.append(v / norm)
-    fit_rows = [v for v, (a, b) in zip(vecs, spans) if v is not None and b - a >= MIN_FIT_S]
+    fit_rows = [v for v, (a, b) in zip(vecs, spans, strict=True) if v is not None and b - a >= MIN_FIT_S]
     if len(fit_rows) < MIN_FIT_SEGMENTS:
         return None
     c = _kmeans2(np.stack(fit_rows))
@@ -463,7 +464,7 @@ def merge_voice_and_text(
     verdicts = [c for c in vc.clusters if c is not None]
     a, b = sorted({lab for lab in labels if lab})
     agree = {(0, a): 0, (0, b): 0, (1, a): 0, (1, b): 0}
-    for lab, cl in zip(labels, vc.clusters):
+    for lab, cl in zip(labels, vc.clusters, strict=True):
         if cl is not None and lab in (a, b):
             agree[(cl, lab)] += 1
     straight = agree[(0, a)] + agree[(1, b)]
@@ -474,7 +475,7 @@ def merge_voice_and_text(
         return 0, (f"voice and text disagree on {would_move} of {len(verdicts)} judged lines; "
                    "keeping the text split")
     relabelled = 0
-    for seg, cl in zip(segments, vc.clusters):
+    for seg, cl in zip(segments, vc.clusters, strict=True):
         if cl is None:
             continue
         new = mapping[cl]

@@ -46,6 +46,7 @@ import re
 import unicodedata
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
+from itertools import pairwise
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -256,7 +257,7 @@ def _split_timing(word: WordTiming) -> tuple[WordTiming, ...]:
         return (word,)
     return tuple(
         WordTiming(text=p, start=s, end=e)
-        for p, (s, e) in zip(pieces, spread_evenly(pieces, word.start, word.end))
+        for p, (s, e) in zip(pieces, spread_evenly(pieces, word.start, word.end), strict=True)
     )
 
 
@@ -280,7 +281,7 @@ def _join(texts: Sequence[str], seps: Sequence[str | None]) -> str:
     if not texts:
         return ""
     out = texts[0]
-    for prev, text, sep in zip(texts, texts[1:], seps[1:]):
+    for (prev, text), sep in zip(pairwise(texts), seps[1:], strict=True):
         if sep is None:
             cjk = _CJK_CHAR.match(prev[-1:]) or _CJK_CHAR.match(text[:1])
             sep = "" if cjk else " "
@@ -357,7 +358,7 @@ def tokens_for_segment(seg: SegmentInput) -> list[Token]:
         spans = spread_evenly(words, seg.start, seg.end)
     return [
         Token(text=w, start=s, end=e, speaker_code=seg.speaker_code, sep=sep)
-        for (w, sep), (s, e) in zip(pieces, spans)
+        for (w, sep), (s, e) in zip(pieces, spans, strict=True)
     ]
 
 
@@ -397,7 +398,7 @@ def _respell(spoken: str, researcher: str) -> str:
 def _retime(texts: list[str], start: float, end: float, speaker: str) -> list[Token]:
     return [
         Token(text=t, start=s, end=e, speaker_code=speaker)
-        for t, (s, e) in zip(texts, spread_evenly(texts, start, end))
+        for t, (s, e) in zip(texts, spread_evenly(texts, start, end), strict=True)
     ]
 
 

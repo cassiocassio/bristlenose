@@ -202,10 +202,9 @@ def parse_subtitle_file(input_file: InputFile) -> list[TranscriptSegment]:
     """
     if input_file.file_type == FileType.SUBTITLE_SRT:
         return _parse_srt(input_file.path)
-    elif input_file.file_type == FileType.SUBTITLE_VTT:
+    if input_file.file_type == FileType.SUBTITLE_VTT:
         return _parse_vtt(input_file.path)
-    else:
-        raise ValueError(f"Not a subtitle file: {input_file.file_type}")
+    raise ValueError(f"Not a subtitle file: {input_file.file_type}")
 
 
 def _parse_srt(path: Path) -> list[TranscriptSegment]:

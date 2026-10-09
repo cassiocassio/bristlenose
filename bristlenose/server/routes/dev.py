@@ -220,12 +220,11 @@ def sessions_table_html(
                 "source_folder_uri": source_folder_uri,
             })
 
-        html = _jinja_env.get_template("session_table.html").render(
+        return _jinja_env.get_template("session_table.html").render(
             rows=rows,
             moderator_header=moderator_header,
             observer_header=observer_header,
         ).rstrip("\n")
-        return html
     finally:
         db.close()
 

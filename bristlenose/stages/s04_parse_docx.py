@@ -349,7 +349,7 @@ def _parse_plain_paragraphs(paragraphs: list[str]) -> list[TranscriptSegment]:
     Each paragraph becomes a segment at time 0.0.
     """
     segments: list[TranscriptSegment] = []
-    for i, para in enumerate(paragraphs):
+    for para in paragraphs:
         segments.append(
             TranscriptSegment(
                 start_time=0.0,

@@ -211,11 +211,11 @@ def kmeans(points: list[Lab], k: int = K) -> list[tuple[Lab, float]]:
             a[1] += p[1]
             a[2] += p[2]
             a[3] += 1
-        cents = [(a[0] / a[3], a[1] / a[3], a[2] / a[3]) if a[3] else c for a, c in zip(acc, cents)]
+        cents = [(a[0] / a[3], a[1] / a[3], a[2] / a[3]) if a[3] else c for a, c in zip(acc, cents, strict=True)]
     counts = [0] * len(cents)
     for j in assign:
         counts[j] += 1
-    out = [(c, n / len(points)) for c, n in zip(cents, counts) if n]
+    out = [(c, n / len(points)) for c, n in zip(cents, counts, strict=True) if n]
     return sorted(out, key=lambda cs: -cs[1])
 
 
@@ -247,7 +247,7 @@ def turns_of(transcript: FullTranscript) -> list[tuple[float, float, str]]:
             turns.append((seg.start_time, seg.end_time, code))
     # A turn lasts until the next one starts.
     return [(t0, max(t1, nxt[0]) if nxt else t1, code)
-            for (t0, t1, code), nxt in zip(turns, [*turns[1:], None])]
+            for (t0, t1, code), nxt in zip(turns, [*turns[1:], None], strict=True)]
 
 
 def session_scene_colours(

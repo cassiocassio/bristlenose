@@ -239,7 +239,7 @@ _FRAGMENT_THRESHOLD = 3
 
 def _is_moderator_code(code: str) -> bool:
     """Check if a speaker code is moderator or observer (not participant)."""
-    return code.startswith("m") or code.startswith("o")
+    return code.startswith(("m", "o"))
 
 
 def _format_fragments_html(fragment_counts: list[tuple[str, int]]) -> str:

@@ -120,7 +120,7 @@ def _tag_quote_counts(db: Session, tag_ids: list[int]) -> dict[int, int]:
         .group_by(QuoteTag.tag_definition_id)
         .all()
     )
-    return {tid: cnt for tid, cnt in rows}
+    return dict(rows)
 
 
 def _tag_tentative_counts(db: Session, tag_ids: list[int]) -> dict[int, int]:
@@ -136,7 +136,7 @@ def _tag_tentative_counts(db: Session, tag_ids: list[int]) -> dict[int, int]:
         .group_by(ProposedTag.tag_definition_id)
         .all()
     )
-    return {tid: cnt for tid, cnt in rows}
+    return dict(rows)
 
 
 def _get_or_create_uncategorised(db: Session) -> CodebookGroup:

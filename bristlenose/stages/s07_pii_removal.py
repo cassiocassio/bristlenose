@@ -689,7 +689,7 @@ def _redact_text(
 
     # Build operator config: replace each entity type with its label
     operators: dict[str, OperatorConfig] = {}
-    for entity_type in set(r.entity_type for r in results):
+    for entity_type in {r.entity_type for r in results}:
         replacement = _ENTITY_MAP.get(entity_type, "[PII]")
         operators[entity_type] = OperatorConfig(
             "replace", {"new_value": replacement}

@@ -3061,7 +3061,7 @@ class Pipeline:
             # ── Heuristic speaker identification (no LLM) ──
             status.update("[dim]Identifying speakers...[/dim]")
             t0 = time.perf_counter()
-            for pid, segments in session_segments.items():
+            for segments in session_segments.values():
                 identify_speaker_roles_heuristic(segments)
             # Code them as a full run does, and record the codes: an unrecorded
             # number would be issued again to someone else by the next run.
@@ -3635,7 +3635,7 @@ class Pipeline:
                 self._detected_languages.update(whisper_languages)
                 pinned = (self.settings.whisper_language or "").strip().lower()
                 if pinned and pinned != "auto":
-                    self._pinned_languages.update({sid: pinned for sid in whisper_results})
+                    self._pinned_languages.update(dict.fromkeys(whisper_results, pinned))
                 transcript_outcome.attempted += whisper_outcome.attempted
                 transcript_outcome.succeeded += whisper_outcome.succeeded
                 transcript_outcome.failed.extend(whisper_outcome.failed)

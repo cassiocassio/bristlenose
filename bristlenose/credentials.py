@@ -285,13 +285,12 @@ def get_credential_store() -> CredentialStore:
         from bristlenose.credentials_macos import MacOSCredentialStore
 
         return MacOSCredentialStore()
-    elif sys.platform.startswith("linux"):
+    if sys.platform.startswith("linux"):
         from bristlenose.credentials_linux import get_linux_store
 
         return get_linux_store()
-    else:
-        # Windows, etc. — no native keyring wired yet; persist to the config file.
-        return FileCredentialStore()
+    # Windows, etc. — no native keyring wired yet; persist to the config file.
+    return FileCredentialStore()
 
 
 def get_credential(provider: str) -> str | None:

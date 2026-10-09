@@ -897,7 +897,7 @@ def _enrich_words_from_intermediate(
                 continue
             buckets[k].extend(w for w in pseg["words"] if w.get("text"))
 
-        for db_seg, words in zip(db_segs, buckets):
+        for db_seg, words in zip(db_segs, buckets, strict=True):
             if not words or not _words_read_as(words, db_seg.text):
                 continue
             compact = [

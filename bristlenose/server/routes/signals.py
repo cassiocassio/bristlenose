@@ -599,7 +599,7 @@ def get_sentiment_analysis(
             cluster_adapters.append(ca)
 
         # Attach quotes to clusters via ClusterQuote join
-        cluster_id_to_adapter = {c.id: ca for c, ca in zip(clusters, cluster_adapters)}
+        cluster_id_to_adapter = {c.id: ca for c, ca in zip(clusters, cluster_adapters, strict=True)}
         cqs = (
             db.query(ClusterQuote)
             .filter(ClusterQuote.cluster_id.in_(cluster_id_to_adapter.keys()))
@@ -619,7 +619,7 @@ def get_sentiment_analysis(
             theme_adapters.append(ta)
 
         # Attach quotes to themes via ThemeQuote join
-        theme_id_to_adapter = {t.id: ta for t, ta in zip(themes, theme_adapters)}
+        theme_id_to_adapter = {t.id: ta for t, ta in zip(themes, theme_adapters, strict=True)}
         tqs = (
             db.query(ThemeQuote)
             .filter(ThemeQuote.theme_id.in_(theme_id_to_adapter.keys()))
@@ -1098,7 +1098,7 @@ def _resolve_active_groups(
         except ValueError:
             raise HTTPException(
                 status_code=400, detail="groups must be comma-separated integers",
-            )
+            ) from None
         return (
             db.query(CodebookGroup)
             .filter(CodebookGroup.id.in_(group_ids))

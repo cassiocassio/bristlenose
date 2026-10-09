@@ -133,9 +133,7 @@ def apply_smart_quotes(text: str) -> str:
 
     # Single quotes / apostrophes
     # Apostrophes within words (don't, it's, I'm) — use right single quote
-    result = re.sub(r"(\w)'(\w)", "\\1\u2019\\2", result)
-
-    return result
+    return re.sub(r"(\w)'(\w)", "\\1\u2019\\2", result)
 
 
 def wrap_in_smart_quotes(text: str) -> str:
@@ -197,9 +195,7 @@ def remove_disfluencies(text: str) -> str:
 
     # Don't start or end with ellipsis
     result = re.sub(r"^\.\.\.\s*", "", result)
-    result = re.sub(r"\s*\.\.\.$", "", result)
-
-    return result
+    return re.sub(r"\s*\.\.\.$", "", result)
 
 
 def format_editorial_insertion(word: str) -> str:
@@ -226,5 +222,4 @@ def clean_transcript_text(text: str) -> str:
     result = re.sub(r"\s+", " ", result)
     result = result.strip()
     # Fix double periods
-    result = re.sub(r"\.{2}(?!\.)", ".", result)
-    return result
+    return re.sub(r"\.{2}(?!\.)", ".", result)

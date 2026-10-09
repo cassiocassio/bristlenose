@@ -308,7 +308,7 @@ async def split_single_speaker_llm(
         return segments
 
     # Guard: only split when there's a single speaker (or none)
-    unique_labels = set(seg.speaker_label or "Unknown" for seg in segments)
+    unique_labels = {seg.speaker_label or "Unknown" for seg in segments}
     if len(unique_labels) >= 2:
         return segments
 
@@ -390,7 +390,7 @@ async def split_single_speaker_llm(
         logger.info("LLM speaker splitting: single speaker confirmed")
         return segments
 
-    for seg, label in zip(segments, labels):
+    for seg, label in zip(segments, labels, strict=True):
         if label is not None:
             seg.speaker_label = label
 
@@ -442,9 +442,9 @@ async def identify_speaker_roles_llm(
     sample_text = "\n".join(sample_lines)
 
     # Collect unique speakers
-    unique_speakers = sorted(set(
+    unique_speakers = sorted({
         seg.speaker_label or "Unknown" for seg in segments
-    ))
+    })
 
     _tmpl = get_prompt_template("speaker-identification")
 

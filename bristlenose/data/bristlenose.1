@@ -144,8 +144,9 @@ No LLM calls, no network — purely offline. Use \fB\-v\fR for per-session detai
 .B doctor
 Check runtime dependencies and show tailored fix instructions. Tests FFmpeg,
 transcription backend, Whisper model cache, API key validity, network
-connectivity, PII redaction dependencies, and disk space. Also runs automatically
-on first invocation and as a pre-flight check before pipeline commands.
+connectivity, PII redaction dependencies, and disk space. Exits 1 if any check
+fails; warnings and notes exit 0. Also runs automatically on first invocation
+and as a pre-flight check before pipeline commands.
 .TP
 .B configure \fIprovider\fR [\fB\-k\fR \fIKEY\fR]
 Store API credentials securely in the system credential store (macOS Keychain
@@ -728,7 +729,8 @@ structured failure cause). Read by the desktop diagnostic popover.
 Success.
 .TP
 .B 1
-Error (missing input, configuration problem, pipeline failure).
+Error (missing input, configuration problem, pipeline failure), or a failed
+check in \fBdoctor\fR.
 .TP
 .B 2
 Preflight aborted: a required dependency is missing and could not be

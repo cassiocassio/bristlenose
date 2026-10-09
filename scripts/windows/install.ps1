@@ -280,8 +280,14 @@
 
         # ----- 5. Check --------------------------------------------------------
         Write-Step 'Checking the installation (bristlenose doctor)'
+        & $found.Source --version
+        if ($LASTEXITCODE -ne 0) { Exit-Install "bristlenose did not start (exit code $LASTEXITCODE; its message is above). Open a new terminal and run bristlenose doctor to check it." }
         & $found.Source doctor
-        if ($LASTEXITCODE -ne 0) { Exit-Install "bristlenose doctor did not run (exit code $LASTEXITCODE; its message is above). Open a new terminal and run bristlenose doctor to check it." }
+        # doctor exits 1 when a check fails. Straight after an install that is
+        # expected: no AI provider is connected yet, which is the next step
+        # below. Any other failure is named in doctor's table above.
+        if ($LASTEXITCODE -gt 1) { Exit-Install "bristlenose doctor did not run (exit code $LASTEXITCODE; its message is above). Open a new terminal and run bristlenose doctor to check it." }
+        if ($LASTEXITCODE -eq 1) { Write-Caution 'bristlenose doctor marked something to fix (above). Usually that is the AI provider, which is the next step.' }
 
         Write-Host ''
         Write-Host 'Bristlenose is installed.' -ForegroundColor Green

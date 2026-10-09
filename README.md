@@ -224,7 +224,7 @@ Then open a new terminal window (or run `source ~/.zshrc` / `source ~/.bashrc`).
 
 **Alternative: `.env` file.** Create a `.env` file in your project folder -- see `.env.example` for a template.
 
-**Troubleshooting:** Run `bristlenose doctor` at any time to check your setup — it verifies your API key, FFmpeg, transcription backend, and other dependencies.
+**Troubleshooting:** Run `bristlenose doctor` at any time to check your setup — it verifies your API key, FFmpeg, transcription backend, and other dependencies, and exits non-zero if any check fails, so a script can rely on it.
 
 ---
 

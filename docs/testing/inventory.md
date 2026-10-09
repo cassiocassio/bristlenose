@@ -9,7 +9,7 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 6536 | collected (expands parametrize — authoritative) | `tests/` |
+| `pytest` | python unit/integration | 6581 | collected (expands parametrize — authoritative) | `tests/` |
 | `vitest` | frontend unit | 147 files | test files | `frontend/src/**/*.test.*` |
 | `BristlenoseTests` | swift unit | 1706 in 141 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 9 files | spec files | `e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts)` |
@@ -61,11 +61,15 @@
 - **Default shell:** GitHub default (`bash -e`, **no pipefail**). Piped steps below report the LAST stage's exit status, not the command's — check each is not load-bearing. (This is what hid 16 compile errors behind a green Mac Build, 20 May – 2 Sep 2026.)
   - piped: _Verify CLI and serve packages_
   - `linux-pip` · on `ubuntu-latest`
+    - Prove the doctor check can fail — gate, **hard**
+    - Run doctor (no API key expected; anything else must pass) — gate, **hard**
   - `linux-pipx` · on `ubuntu-latest`
   - `windows-pipx` · on `windows-latest`
   - `windows-install-ps1` · on `windows-latest`
   - `macos-pip` · on `macos-latest`
+    - Run doctor (no API key expected; anything else must pass) — gate, **hard**
   - `macos-brew` · on `macos-latest`
+    - Run doctor (no API key expected; anything else must pass) — gate, **hard**
   - `full-run` · on `ubuntu-latest`
 
 ### Mac Build (`mac-build.yml`)

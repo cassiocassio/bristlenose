@@ -69,10 +69,14 @@ jobs:
       - name: Verify CLI is available
         run: bristlenose --version
 
-      - name: Run doctor (skip API key check)
-        # Doctor will warn about missing API key — that's expected.
-        # We just want to verify FFmpeg and Python deps are found.
-        run: bristlenose doctor || true
+      - name: Prove the doctor check can fail
+        run: bash scripts/test-check-doctor-install.sh
+
+      - name: Run doctor (no API key expected; anything else must pass)
+        # The runner has no provider key, so doctor's API-key row fails and it
+        # exits 1. The script fails the step on any OTHER failed check —
+        # FFmpeg, the transcription backend, the Python deps.
+        run: bash scripts/check-doctor-install.sh
 
   # ── Linux: pipx install from source ─────────────────────────────
 
@@ -105,8 +109,7 @@ jobs:
   windows-pipx:
     # The route INSTALL.md gives Windows users, from a clean runner. Plain
     # `pipx install` with no extra: since 5 Oct 2026 the serve packages are
-    # core dependencies, and `pipx runpip ... show` proves they arrived — the
-    # other jobs' `doctor || true` would not notice if they hadn't.
+    # core dependencies, and `pipx runpip ... show` proves they arrived.
     runs-on: windows-latest
     timeout-minutes: 20
     defaults:
@@ -227,8 +230,8 @@ jobs:
       - name: Verify CLI
         run: bristlenose --version
 
-      - name: Run doctor
-        run: bristlenose doctor || true
+      - name: Run doctor (no API key expected; anything else must pass)
+        run: bash scripts/check-doctor-install.sh
 
   # ── macOS: Homebrew tap install ─────────────────────────────────
 
@@ -249,8 +252,8 @@ jobs:
       - name: Verify CLI
         run: bristlenose --version
 
-      - name: Run doctor
-        run: bristlenose doctor || true
+      - name: Run doctor (no API key expected; anything else must pass)
+        run: bash scripts/check-doctor-install.sh
 
   # ── Full pipeline run with real API key (weekly only) ───────────
 

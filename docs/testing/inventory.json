@@ -8,7 +8,7 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 6536
+        "tests": 6581
       },
       {
         "basis": "test files",
@@ -443,7 +443,22 @@
             "calls": null,
             "id": "linux-pip",
             "job_colour": "hard",
-            "notable_steps": [],
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Prove the doctor check can fail",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Run doctor (no API key expected; anything else must pass)",
+                "piped": false,
+                "runs_tests": false
+              }
+            ],
             "runs_on": "ubuntu-latest"
           },
           {
@@ -471,14 +486,30 @@
             "calls": null,
             "id": "macos-pip",
             "job_colour": "hard",
-            "notable_steps": [],
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Run doctor (no API key expected; anything else must pass)",
+                "piped": false,
+                "runs_tests": false
+              }
+            ],
             "runs_on": "macos-latest"
           },
           {
             "calls": null,
             "id": "macos-brew",
             "job_colour": "hard",
-            "notable_steps": [],
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Run doctor (no API key expected; anything else must pass)",
+                "piped": false,
+                "runs_tests": false
+              }
+            ],
             "runs_on": "macos-latest"
           },
           {

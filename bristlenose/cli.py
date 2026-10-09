@@ -2553,7 +2553,8 @@ def doctor(
     With --self-test, runs only the bundle-integrity checks — asserts every
     runtime-data file the code will look for (React SPA, codebook YAMLs,
     LLM prompts, locales, theme, Alembic) is present and non-trivial.
-    Exits non-zero on any failure. Used by desktop/scripts/build-all.sh
+    Exits 1 when any check fails (warnings and notes exit 0). --self-test
+    exits non-zero on any failure too, and is used by desktop/scripts/build-all.sh
     step 7a to catch BUG-3/4/5-class packaging bugs at build time.
     """
     if fetch:
@@ -2619,6 +2620,12 @@ def doctor(
     # Always update sentinel on explicit doctor
     _write_doctor_sentinel()
     console.print()
+
+    # A failed check is a non-zero exit, so a script or CI step can rely on it.
+    # Warnings and notes are advice and stay 0. (Until 9 Oct 2026 doctor exited
+    # 0 whatever it found, and `bristlenose doctor || true` checked nothing.)
+    if report.has_failures:
+        raise typer.Exit(1)
 
 
 @app.command()

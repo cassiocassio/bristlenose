@@ -107,7 +107,15 @@ version_ge 0.36.1 0.36.0; eq "patch above"                0 "$?"
 version_ge 0.36.0 0.36.1; eq "patch below"                1 "$?"
 version_ge 0.36.10 0.36.9; eq "0.36.10 > 0.36.9 (not lexical)" 0 "$?"
 version_ge 1.0.0 0.99.99; eq "major wins"                 0 "$?"
-version_ge 0.36.08 0.36.7; eq "a leading zero is not octal" 0 "$?"
+version_ge 0.36.08 0.36.7; eq "a leading zero is neither (PEP 440 would read 0.36.8)" 2 "$?"
+version_ge 1..2.3 1.2.3;   eq "an empty field is neither"   2 "$?"
+version_ge 1.2.3.4 1.2.3;  eq "a fourth field is neither"   2 "$?"
+version_ge 1234567.0.0 1.0.0; eq "a 7-digit field is neither (overflow guard)" 2 "$?"
+
+head_ "is_xyz — exactly X.Y.Z, the one shape every version check here uses"
+for _x in 0.36.0 0.0.0 10.20.30 999999.0.1; do is_xyz "$_x" && ok "accepts $_x" || bad "refused $_x"; done
+for _x in 0.36 0.36.0.1 1..2.3 .1.2 1.2. 0.36.08 01.2.3 v0.36.0 "0.36.0 " 0.36.0-rc1 1234567.0.0 '' "0.36.0;id"; do
+    is_xyz "$_x" && bad "accepted '$_x'" || ok "refuses '$_x'"; done
 version_ge NONE 0.36.0;    eq "malformed left is neither (2)"  2 "$?"
 version_ge 0.36.0 '';      eq "empty right is neither (2)"     2 "$?"
 version_ge '0.36.0;x' 0.1.0; eq "injection shape is neither (2)" 2 "$?"
@@ -147,6 +155,10 @@ for v in "0.28.O" "../../tmp" "" "latest" "v0.28.0"; do
     out=$(bash "$ROOT/scripts/verify-channels.sh" "$v" 2>&1); rc=$?
     if [ "$rc" = "2" ]; then ok "refused '$v' (exit 2)"
     else bad "accepted '$v' (exit $rc) — should be a usage error"; fi
+done
+for a in 0.26 0.26.0.1 "0.26.0;id"; do
+    out=$(bash "$ROOT/scripts/verify-channels.sh" 0.36.0 --abandoned "$a" 2>&1); rc=$?
+    [ "$rc" = "2" ] && ok "refused --abandoned '$a' (exit 2)" || bad "accepted --abandoned '$a' (exit $rc)"
 done
 out=$(bash "$ROOT/scripts/verify-channels.sh" --bogus 2>&1); rc=$?
 [ "$rc" = "2" ] && ok "refused unknown flag" || bad "accepted unknown flag (exit $rc)"

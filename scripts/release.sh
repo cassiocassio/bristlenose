@@ -79,9 +79,19 @@ set -uo pipefail
 # verdict_version <string> — is this a version we will act on?
 #   The realistic failure is not traversal, it is a typo selecting the wrong
 #   thing silently: `0.28.O` (letter O) reads as a different release entirely.
+#   is_xyz (verify-channels.sh) is the shape: exactly X.Y.Z, no leading zero.
+#   The glob it replaced accepted 0.36.08, 1..2.3 and 0.36.0.1, and verify
+#   refuses all three, so a run could reach its irreversible acts on a version
+#   its own verify step would then refuse (channel-scenarios review, 9 Oct).
+#   is_xyz is sourced below, after this function; the glob is only the fallback
+#   for a release.sh copied without its sibling.
 verdict_version() {
-    case "${1-}" in
-        "")                     echo empty ;;
+    case "${1-}" in "") echo empty; return ;; esac
+    if declare -F is_xyz >/dev/null 2>&1; then
+        if is_xyz "$1"; then echo ok; else echo malformed; fi
+        return
+    fi
+    case "$1" in
         *[!0-9.]*)              echo malformed ;;
         [0-9]*.[0-9]*.[0-9]*)   echo ok ;;
         *)                      echo malformed ;;
@@ -345,9 +355,12 @@ verdict_hold() {
     if [ "$hv" != "$v" ]; then
         printf 'wait\tfor a later version than %s\n' "$v"; return 0
     fi
+    # Only a verdict that says "looked, and it is not there yet" is a wait.
+    # unreachable, skipped (no probe from this machine), or anything this code
+    # does not know is "could not tell" (channel-scenarios H2).
     case "$verdict" in
-        unreachable) printf 'unknown\t%s unreachable\n' "$ch" ;;
-        *)           printf 'wait\t%s is %s for %s\n' "$ch" "$verdict" "$v" ;;
+        bad|pending|overdue|superseded) printf 'wait\t%s is %s for %s\n' "$ch" "$verdict" "$v" ;;
+        *)                              printf 'unknown\t%s is %s for %s\n' "$ch" "$verdict" "$v" ;;
     esac
 }
 

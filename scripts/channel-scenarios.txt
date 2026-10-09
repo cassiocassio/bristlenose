@@ -113,7 +113,6 @@ flip_after=1
 served_after=0.36.0
 prs_after=none
 expect.winget=ok
-known=W1
 
 id=fast-zero-age
 about=the PR was opened this second
@@ -127,7 +126,6 @@ served=404
 prs=0.36.0@-2
 expect.winget=pending
 expect.out=open 0h
-known=W5
 
 id=slow-but-finishes
 about=GitHub answers the folder read after 6 s
@@ -190,7 +188,77 @@ served=404
 prs=0.36.0@2
 title=New version: Bristlenose.Bristlenose {v}
 expect.winget=pending
-known=W4
+
+id=W4-bracketed
+about=a bot writes "[<Id>] v<v>"
+served=404
+prs=0.36.0@2
+title=[Bristlenose.Bristlenose] v{v}
+expect.winget=pending
+
+id=lookalike-hyphen
+about=a PR for Bristlenose.Bristlenose-Beta is not ours
+served=404
+prs=0.36.0@2
+title=Add version: Bristlenose.Bristlenose-Beta version {v}
+expect.winget=bad
+
+id=lookalike-mention
+about=another package's PR that mentions ours in its title is not ours
+served=404
+prs=0.36.0@2
+title=Add version: Foo.Bar version 1.2.3 (needs Bristlenose.Bristlenose {v})
+expect.winget=bad
+
+id=removal-pr
+about=an open PR REMOVING this version is not this version in flight
+served=0.35.0
+prs=0.36.0@2
+title=Remove version: Bristlenose.Bristlenose version {v}
+expect.winget=bad
+
+id=removing-pr
+about=a "Removing version:" title is a removal, not this version in flight
+served=0.35.0
+prs=0.36.0@2
+title=Removing version: Bristlenose.Bristlenose version {v}
+expect.winget=bad
+
+id=deprecate-pr
+about=a "Deprecate:" title is not this version in flight
+served=0.35.0
+prs=0.36.0@2
+title=Deprecate: Bristlenose.Bristlenose {v}
+expect.winget=bad
+
+id=two-versions-in-title
+about=a title naming an older version before the wanted one is still the wanted one
+served=404
+prs=0.36.0@2
+title=Add version: Bristlenose.Bristlenose (was 0.35.0) version {v}
+expect.winget=pending
+
+id=lowercase-id
+about=winget ids are case-insensitive, so a lower-cased bot title is ours
+served=404
+prs=0.36.0@2
+title=New version: bristlenose.bristlenose {v}
+expect.winget=pending
+
+id=leading-zero-title
+about=a title naming 0.36.08 beside a real 0.36.5 in flight: 0.36.5 supersedes 0.36.4
+version=0.36.4
+served=404
+prs=0.36.08@2,0.36.5@1
+expect.winget=superseded
+
+id=budget-display
+about=an unreadable budget never prints as "72hh"
+served=404
+prs=0.36.0@3
+budget=72h
+expect.winget=pending
+expect.out=open 3h · serves
 
 id=lookalike
 about=a PR for Bristlenose.Bristlenose.Beta is not ours
@@ -214,20 +282,40 @@ expect.winget=pending
 known=W9
 
 id=W6-budget-typo
-about=WINGET_BUDGET_HOURS="72h": the budget is unreadable
+about=WINGET_BUDGET_HOURS="72h": overdue cannot fire, and the row says so (test-release-sh refuses it in the conf)
 served=404
 prs=0.36.0@500
 budget=72h
-expect.winget=overdue
-known=W6
+expect.winget=pending
+expect.out=budget '72h' unreadable
 
 id=W7-malformed-version
-about=verify accepts 1..2.3 as a version
+about=verify refuses 1..2.3 as a version
 version=1..2.3
 served=404
 prs=none
 expect.exit=2
-known=W7
+
+id=W7-four-field
+about=verify refuses 0.36.0.1: it would probe a release that cannot exist
+version=0.36.0.1
+expect.exit=2
+
+id=W7-leading-zero
+about=0.36.08 is refused: PEP 440 reads it as 0.36.8, so it names another spelling of a release
+version=0.36.08
+expect.exit=2
+
+id=W7-overflow
+about=a field too long for bash arithmetic is refused, not compared wrongly
+version=99999999999999999999.0.0
+expect.exit=2
+
+id=junk-folder-leading-zero
+about=a folder named 0.36.08 is not read as a version
+served=0.36.08 0.35.0
+prs=none
+expect.winget=bad
 
 # ── holds ───────────────────────────────────────────────────────────────────
 
@@ -299,7 +387,6 @@ about=a testflight hold when testflight cannot be probed here
 results=version:0.36.0 verdict:testflight:skipped verdict:pypi:ok
 holds=after-testflight/0.36.0
 expect.hold.after-testflight/0.36.0=unknown
-known=H2
 
 id=H3-four-field
 about=after-pypi/0.36.0.1 is not X.Y.Z and must not be read as 0.36.0
@@ -307,7 +394,19 @@ served=404
 prs=none
 holds=after-pypi/0.36.0.1
 expect.hold.after-pypi/0.36.0.1=badname
-known=H3
+
+id=H2-unknown-verdict
+about=a verdict this code does not know is "could not tell", never wait
+results=version:0.36.0 verdict:pypi:corrupt
+holds=after-pypi/0.36.0
+expect.hold.after-pypi/0.36.0=unknown
+
+id=H3-leading-zero-hold
+about=after-pypi/0.36.08 is a bad name, not 0.36.8
+served=404
+prs=none
+holds=after-pypi/0.36.08
+expect.hold.after-pypi/0.36.08=badname
 
 id=hold-unreachable
 about=a hold on a channel whose probe failed is unknown, not wait

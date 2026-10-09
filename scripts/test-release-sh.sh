@@ -24,7 +24,9 @@ RELEASE_LIB=1 . "$ROOT/scripts/release.sh"
 
 head_ "verdict_version — a typo must not select a different release silently"
 eq "normal"                ok        "$(verdict_version 0.28.0)"
-eq "four-part"             ok        "$(verdict_version 0.28.0.1)"
+eq "four-part"             malformed "$(verdict_version 0.28.0.1)"
+eq "leading zero"          malformed "$(verdict_version 0.28.08)"
+eq "empty field"           malformed "$(verdict_version 0.28..0)"
 eq "letter O for zero"     malformed "$(verdict_version 0.28.O)"
 eq "v prefix"              malformed "$(verdict_version v0.28.0)"
 eq "path traversal"        malformed "$(verdict_version ../../tmp)"
@@ -860,6 +862,12 @@ for _f in ${CHANNELS_FOLLOW:-}; do
     case " $CHANNELS " in *" $_f "*) bad "follower '$_f' is also in CHANNELS — in the exit code or not?" ;;
                           *) ok "follower '$_f' is outside CHANNELS" ;; esac
 done
+# A follower budget is whole hours. "72h" would leave every open PR pending
+# forever, because verdict_follower can only compare integers (W6).
+case "${WINGET_BUDGET_HOURS:-}" in
+    ""|*[!0-9]*) bad "WINGET_BUDGET_HOURS='${WINGET_BUDGET_HOURS:-}' is not a whole number of hours" ;;
+    *)           ok "WINGET_BUDGET_HOURS is whole hours ($WINGET_BUDGET_HOURS)" ;;
+esac
 # Derived URLs must actually carry the identity, or a rename half-lands.
 case "$DMG_PERMALINK"  in *"$SITE"*)            ok "DMG_PERMALINK derives from SITE" ;;  *) bad "DMG_PERMALINK does not use SITE" ;; esac
 case "$TAP_FORMULA_RAW" in *"$TAP_REPO"*)       ok "TAP_FORMULA_RAW derives from TAP_REPO" ;; *) bad "TAP_FORMULA_RAW does not use TAP_REPO" ;; esac

@@ -451,3 +451,35 @@ as blocks when they matter:
 - a website repo that is a worktree with a detached HEAD;
 - a Mac App Store follower whose review is rejected and resubmitted under the
   same version.
+
+### 7.1 Fixed the same day: the "deletes" set, then a review of the fixes
+
+**Fixed:**
+- **W1:** the PRs are read before the folders.
+- **W4:** the title match was rewritten, and stays case-insensitive.
+- **W6:** an unreadable budget is said in the row, and `test-release-sh.sh`
+  refuses one in the conf.
+- **W7 and H3:** one strict shape, `is_xyz`: exactly X.Y.Z, no leading zero, at
+  most six digits a field. It is used by verify, `version_ge`, the folder filter,
+  hold names and `--abandoned`.
+- **H2:** only `bad`, `pending`, `overdue` and `superseded` mean wait; anything
+  else is unknown.
+- **W5** came with the title rewrite (the age is clamped at 0).
+
+An independent adversarial review of those fixes found nothing high, and six
+smaller things, all fixed:
+1. `release.sh`'s `verdict_version` still used the old glob. A run could
+   therefore reach its irreversible acts on `0.36.08` or `0.36.0.1`, and its own
+   verify would refuse that version afterwards. It now calls `is_xyz`. The old
+   test pinning four-part versions as `ok`, which no tag has ever used, now pins
+   them as malformed.
+2. "Removing version:" and "Deprecate:" titles counted as in flight.
+3. The first X.Y.Z in a title won over the wanted one, so "(was 0.35.0) version
+   0.36.0" read as 0.35.0.
+4. Titles were not held to the strict shape.
+5. Winget ids are case-insensitive, and the match was not.
+6. An unreadable budget printed as "72hh", and `--abandoned` took any string.
+
+**Results.** 48 scenarios pass, and 5 remain known: W2, W3, W9, H1, H4, the
+ones that would add a read or widen behaviour, left by decision. The new removal
+and wanted-version scenarios were mutation-proved.

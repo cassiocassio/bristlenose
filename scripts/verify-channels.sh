@@ -182,20 +182,27 @@ verdict_testflight_probe() {
     esac
 }
 
-# version_ge <a> <b> — is release a ≥ release b? X.Y.Z, numeric per field.
-#   Returns 2 (neither true nor false) on anything not X.Y.Z, so a malformed
+# is_xyz <string> — exactly X.Y.Z: three dot-separated fields of digits, no
+#   leading zero (PEP 440 normalises 0.36.08 to 0.36.8, so the two spellings
+#   would name one release), at most six digits a field (bash arithmetic
+#   overflows past 2^63, and a version that long is a typo). The glob
+#   [0-9]*.[0-9]*.[0-9]* this replaced accepted 1..2.3 and 1.2.3.4, the second
+#   read as 1.2.3 (channel-scenarios W7, H3).
+is_xyz() {
+    [[ "${1-}" =~ ^(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})$ ]]
+}
+
+# version_ge <a> <b> — is release a ≥ release b? Numeric per field.
+#   Returns 2 (neither true nor false) unless both are is_xyz, so a malformed
 #   value can never be read as "newer". The callers take only an exit of 0 as yes.
 version_ge() {
-    local a="${1-}" b="${2-}" i x y
-    case "$a" in ""|*[!0-9.]*) return 2 ;; [0-9]*.[0-9]*.[0-9]*) : ;; *) return 2 ;; esac
-    case "$b" in ""|*[!0-9.]*) return 2 ;; [0-9]*.[0-9]*.[0-9]*) : ;; *) return 2 ;; esac
-    local IFS=.
+    is_xyz "${1-}" && is_xyz "${2-}" || return 2
+    local IFS=. i
     # shellcheck disable=SC2206
-    local -a A=($a) B=($b)
+    local -a A=($1) B=($2)
     for i in 0 1 2; do
-        x=$((10#${A[i]:-0})); y=$((10#${B[i]:-0}))
-        [ "$x" -gt "$y" ] && return 0
-        [ "$x" -lt "$y" ] && return 1
+        [ "${A[i]}" -gt "${B[i]}" ] && return 0
+        [ "${A[i]}" -lt "${B[i]}" ] && return 1
     done
     return 0
 }
@@ -270,16 +277,14 @@ if [ -z "$VERSION" ]; then
     [ -n "$VERSION" ] || { echo "usage: verify-channels.sh <X.Y.Z> [--abandoned <X.Y.Z>] — and no tree version to default to" >&2; exit 2; }
     VERSION_SOURCE=" · the tree's version"
 fi
-# NEGATED CLASS FIRST. `[0-9]*.[0-9]*.[0-9]*` reads as "a digit, ANYTHING, a
-# dot, a digit, ANYTHING, a dot, a digit, anything" — it accepts
-# 0';id;'.0.0 and 1x.2y.3"; system("x"). Measured. The strict form is
-# already in scripts/release.sh as verdict_version, with a test asserting
-# 0.28.0;rm -rf / is malformed.
-case "$VERSION" in
-    ""|*[!0-9.]*) echo "refusing: unexpected version shape '$VERSION'" >&2; exit 2 ;;
-    [0-9]*.[0-9]*.[0-9]*) : ;;
-    *) echo "refusing: unexpected version shape '$VERSION'" >&2; exit 2 ;;
-esac
+# is_xyz, not a glob. `[0-9]*.[0-9]*.[0-9]*` reads as "a digit, ANYTHING, a
+# dot…": with a negated class first it still accepted 1..2.3 and 1.2.3.4, the
+# latter probed as a release that cannot exist (channel-scenarios W7).
+is_xyz "$VERSION" || { echo "refusing: unexpected version shape '$VERSION' (want X.Y.Z)" >&2; exit 2; }
+# --abandoned is matched against the live changelog, so a loose value ("0.26")
+# would be tested as a bare substring. Same shape as the version.
+[ -z "$ABANDONED" ] || is_xyz "$ABANDONED" \
+    || { echo "refusing: --abandoned '$ABANDONED' is not X.Y.Z" >&2; exit 2; }
 
 G=$'\033[32m'; Y=$'\033[33m'; R=$'\033[31m'; D=$'\033[2m'; N=$'\033[0m'
 [ -t 1 ] || { G=""; Y=""; R=""; D=""; N=""; }
@@ -425,30 +430,26 @@ print(best or '')
 
 probe_winget() {
     # A FOLLOWER (CHANNELS_FOLLOW). Two GitHub reads against winget-pkgs, both
-    # through gh, which the github row already needs:
+    # through gh, which the github row already needs, in this order:
+    #   inflight — open PRs whose title names the id (see the parse below). Other
+    #              people's update PRs count too: any open submission is in
+    #              flight, and the evidence names its number. A PR that removes
+    #              a version does not.
     #   served   — the version folders under manifests/<l>/<Id path>/. A folder
     #              exists only once a PR has MERGED, and Microsoft publishes to
     #              clients within about an hour of the merge (winget-pkgs FAQ),
     #              so for that hour "served" is slightly early. The evidence
     #              says "merged" rather than claiming more.
-    #   inflight — open PRs whose title names the id. komac writes
-    #              "Add version: <Id> version X.Y.Z" and "New package: …"; the
-    #              parse keys on "<Id> version X.Y.Z", not the prefix. Other
-    #              people's update PRs count too: any open submission is
-    #              in flight, and the evidence names its number.
     # A 404 on the folder is NONE (no version merged yet: the honest state of
     # a new package). Any other failure is QUERY_FAILED, never a negative.
     command -v gh >/dev/null 2>&1 || { printf 'unreachable|gh not installed'; return; }
     local first path out served inflight rc
     first=$(printf '%s' "${WINGET_ID:0:1}" | tr 'A-Z' 'a-z')
     path="manifests/${first}/${WINGET_ID//.//}"
-    out=$(gh api "repos/${WINGET_REPO}/contents/${path}" --jq '.[] | select(.type=="dir") | .name' 2>&1); rc=$?
-    if [ "$rc" -eq 0 ]; then
-        served=$(printf '%s\n' "$out" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-        [ -n "$served" ] || served=NONE
-    else
-        case "$out" in *"HTTP 404"*) served=NONE ;; *) served=QUERY_FAILED ;; esac
-    fi
+    # The PRs FIRST, the folders second. A merge landing between the two reads
+    # is then seen by the folder read (ok). In the other order the folder read
+    # missed it and the PR read found nothing open: a false `bad`
+    # (channel-scenarios W1).
     out=$(gh pr list --repo "$WINGET_REPO" --state open --search "${WINGET_ID} in:title" \
           --json number,title,createdAt 2>/dev/null); rc=$?
     local pick="" pr="" age=""
@@ -463,19 +464,36 @@ from datetime import datetime, timezone
 try: prs = json.load(sys.stdin)
 except Exception: sys.exit(3)
 if not isinstance(prs, list): sys.exit(3)
-pat = re.compile(re.escape(os.environ["ID"]) + r" version (\d+\.\d+\.\d+)(?![\d.])")
+# Whose PR: <Id> at the start of the title or straight after its first colon
+# (a PR for another package that merely mentions ours is not ours), optionally
+# bracketed, not followed by a word character, dot or hyphen (<Id>.Beta and
+# <Id>-Beta are not ours). Case-insensitive, because winget ids are.
+owner = re.compile(r"^(?:[^:]*:)?\s*\[?" + re.escape(os.environ["ID"]) + r"\]?(?![\w.\-])", re.I)
+# Which version: every strict X.Y.Z after the id (the same shape as is_xyz),
+# and the wanted one if it is among them. The first match alone read "(was
+# 0.35.0) version 0.36.0" as 0.35.0. komac writes "Add version: <Id> version
+# X.Y.Z"; other bots drop the word "version" (channel-scenarios W4).
+xyz = re.compile(r"(?<![\d.])((?:0|[1-9]\d{0,5})\.(?:0|[1-9]\d{0,5})\.(?:0|[1-9]\d{0,5}))(?![\d.])")
+# A PR that removes, deletes or deprecates a version is not that version in flight.
+removal = re.compile(r"^\s*(remov|delet|deprecat)", re.I)
+want_v = os.environ["WANT"]
 found = []
 for p in prs:
-    m = pat.search(p.get("title") or "")
+    title = p.get("title") or ""
+    if removal.search(title): continue
+    m = owner.search(title)
     if not m: continue
+    vs = xyz.findall(title[m.end():])
+    if not vs: continue
+    v = want_v if want_v in vs else max(vs, key=lambda s: tuple(int(x) for x in s.split(".")))
     try:
         t = datetime.fromisoformat((p.get("createdAt") or "").replace("Z", "+00:00"))
-        age = str(int((datetime.now(timezone.utc) - t).total_seconds() // 3600))
+        age = str(max(0, int((datetime.now(timezone.utc) - t).total_seconds() // 3600)))
     except Exception:
         age = ""
-    found.append((tuple(int(x) for x in m.group(1).split(".")), m.group(1), p.get("number"), age))
+    found.append((tuple(int(x) for x in v.split(".")), v, p.get("number"), age))
 if not found: sys.exit(0)
-want = [f for f in found if f[1] == os.environ["WANT"]]
+want = [f for f in found if f[1] == want_v]
 f = want[0] if want else max(found)
 print(f[1], f[2], f[3])
 ' 2>/dev/null); rc=$?
@@ -484,13 +502,29 @@ print(f[1], f[2], f[3])
         else read -r inflight pr age <<<"$pick"
         fi
     fi
-    local v
-    v=$(verdict_follower "$served" "$inflight" "$VERSION" "$age" "$WINGET_BUDGET_HOURS")
+    out=$(gh api "repos/${WINGET_REPO}/contents/${path}" --jq '.[] | select(.type=="dir") | .name' 2>&1); rc=$?
+    if [ "$rc" -eq 0 ]; then
+        served=""
+        local f
+        while IFS= read -r f; do
+            is_xyz "$f" || continue
+            if [ -z "$served" ] || version_ge "$f" "$served"; then served="$f"; fi
+        done <<<"$out"
+        [ -n "$served" ] || served=NONE
+    else
+        case "$out" in *"HTTP 404"*) served=NONE ;; *) served=QUERY_FAILED ;; esac
+    fi
+    local v budget="$WINGET_BUDGET_HOURS" bnote=""
+    # A budget that is not a whole number of hours ("72h", "3d") would leave
+    # every open PR `pending` forever, silently. Say so in the row; the suite
+    # also refuses one in project.conf (channel-scenarios W6).
+    case "$budget" in ""|*[!0-9]*) bnote=" · budget '$budget' unreadable, so overdue cannot fire"; budget="" ;; esac
+    v=$(verdict_follower "$served" "$inflight" "$VERSION" "$age" "$budget")
     case "$served" in [0-9]*) results_line served winget "$served" ;; esac
     [ "$served" = NONE ] && served="nothing yet"
     case "$v" in
         ok)          printf 'ok|merged into %s: %s' "$WINGET_REPO" "$served" ;;
-        pending)     printf 'pending|PR #%s for %s open %sh of a %sh budget · serves %s' "$pr" "$VERSION" "${age:-?}" "$WINGET_BUDGET_HOURS" "$served" ;;
+        pending)     printf 'pending|PR #%s for %s open %sh%s · serves %s%s' "$pr" "$VERSION" "${age:-?}" "${budget:+ of a ${budget}h budget}" "$served" "$bnote" ;;
         overdue)     printf 'overdue|PR #%s for %s open %sh, past the %sh budget · serves %s' "$pr" "$VERSION" "${age:-?}" "$WINGET_BUDGET_HOURS" "$served" ;;
         superseded)  printf 'superseded|%s never landed; PR #%s for %s is in flight · serves %s' "$VERSION" "$pr" "$inflight" "$served" ;;
         bad)         printf 'bad|no open PR for %s · serves %s' "$VERSION" "$served" ;;

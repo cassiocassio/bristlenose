@@ -217,9 +217,19 @@ line-length = 100
 exclude = ["e2e", "experiments"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP"]
+# B, C4, RET and PIE added 9 Oct 2026, after the tree was cleared of all 141
+# findings (B905 zip(strict=) decided per call, never blanket). Ruff floats
+# (`ruff>=0.8`), so a new ruff release can add rules to these families; if one
+# reddens main on unchanged code, fix the findings or pin ruff — never drop
+# the family.
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "RET", "PIE"]
 ignore = ["E501"]
 unfixable = ["F401"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection idiom: Depends() in a default is evaluated
+# once by design and is not the mutable-default bug B008 looks for.
+extend-immutable-calls = ["fastapi.Depends"]
 
 [tool.mypy]
 python_version = "3.10"

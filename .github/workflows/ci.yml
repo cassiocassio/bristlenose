@@ -388,9 +388,12 @@ jobs:
         # tick and the fault band — the third of the board no Python test can
         # reach. It runs here because this is the job with node_modules; it
         # exits 3 and says SKIPPED when jsdom is absent, which must not be green.
-        run: |
-          python3 -m venv .venv && .venv/bin/pip install --quiet -e . >/dev/null 2>&1 || true
-          node scripts/test-release-board-dom.js
+        # No install: release-board.py and the two scripts it loads are
+        # stdlib-only, and the test falls back to the runner's python3. (It used
+        # to pip-install the package with `>/dev/null 2>&1 || true`, which bought
+        # nothing and would have swallowed a failure. Proven 9 Oct 2026 by
+        # running the test from a copy with no .venv: 115 passed.)
+        run: node scripts/test-release-board-dom.js
 
       - name: Frontend lint
         # Blocking gate. Cleared to zero errors on 30 Jun 2026 (jsx-a11y

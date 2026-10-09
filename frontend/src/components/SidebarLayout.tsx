@@ -468,7 +468,6 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
             aria-valuemin={MIN_WIDTH}
             aria-valuemax={MAX_WIDTH}
             aria-label={t("nav.resizeTableOfContents")}
-            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
             tabIndex={0}
             onPointerDown={tocEdge.handlePointerDown}
             onKeyDown={tocEdge.handleKeyDown}
@@ -519,7 +518,6 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
                 aria-valuemin={MIN_WIDTH}
                 aria-valuemax={MAX_WIDTH}
                 aria-label={t("nav.resizeTagSidebar")}
-                // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
                 tabIndex={0}
                 onPointerDown={tagEdge.handlePointerDown}
                 onKeyDown={tagEdge.handleKeyDown}

@@ -123,6 +123,7 @@ Measured candidates, all currently ungated in this direction:
 | skip sites in `tests/` | 25 (3 skip, 3 skipif, 19 runtime) | a skip reads as a pass |
 | `@pytest.mark.slow` | 7 | excluded from CI by `-m "not slow"` |
 | e2e allowlist entries | 4 | governed, but uncapped |
+| frontend ESLint warnings | 69 (9 Oct 2026) | held by `--max-warnings` in `frontend/package.json`'s `lint` script, not by `check-ratchet.py`; ESLint is lockfile-pinned, so local = CI; ceiling only falls (rule in `frontend/eslint.config.js`) |
 
 The colour vocabulary was hard / soft / informational. **The missing fourth is the
 ratchet** — a number allowed to be non-zero but not allowed to rise. It is the

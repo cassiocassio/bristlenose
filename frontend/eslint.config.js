@@ -8,6 +8,17 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   jsxA11y.flatConfigs.recommended,
   {
+    // A stale `eslint-disable` directive is an error: it silences nothing
+    // today and would silently hide a real problem tomorrow.
+    //
+    // Warnings are held by `--max-warnings` in package.json's `lint` script.
+    // That number is a CEILING THAT MAY ONLY FALL: lower it in the same
+    // commit that fixes warnings. Raising it is a deliberate edit, with the
+    // reason stated in the commit message. (package.json cannot carry a
+    // comment, so this is where the rule lives.)
+    linterOptions: { reportUnusedDisableDirectives: "error" },
+  },
+  {
     rules: {
       // `PersonBadge` (and similar) take a domain prop literally named
       // `role` ("participant" / "moderator") that collides with the DOM

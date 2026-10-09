@@ -20,7 +20,6 @@ export function RouteError() {
     const detail = isRouteErrorResponse(error)
       ? `${error.status} ${error.statusText}`
       : error;
-    // eslint-disable-next-line no-console
     console.error("[RouteError]", detail);
   }
 

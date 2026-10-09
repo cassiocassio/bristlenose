@@ -9,7 +9,7 @@
     "build:export": "vite build --config vite.export.config.ts",
     "preview": "vite preview",
     "test": "vitest run",
-    "lint": "eslint src/",
+    "lint": "eslint src/ --max-warnings 69",
     "typecheck": "tsc --noEmit",
     "size": "python3 ../scripts/check-bundle-budget.py"
   },

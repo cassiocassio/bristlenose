@@ -80,6 +80,9 @@ findings. That failure is your baseline.
 - List every **caller and path** that runs the gated thing (a reusable
   workflow called from a release workflow, a second entry point) and measure
   each. A number sized on one path can break another.
+- Measure against CI's **installed set**, not just its platform flag: a
+  dependency with a platform marker (mlx is darwin-only) is typed on the Mac
+  and absent on the Linux runner, so a check can pass here and fail there.
 - Reproduce locally with the same command and version (a scratch venv if
   yours differs; `--platform linux` or the tool's equivalent). Explain every
   local/CI difference before going on.
@@ -87,7 +90,9 @@ findings. That failure is your baseline.
 ### Step 2 — Categorise
 
 Count by rule/code, then by file, then look for the one construct behind many
-findings. Output a table — slice, count, files, fix shape, chance of real
+findings. **Exception: when fixers will run an autofixer that rewrites whole
+files** (`ruff --fix`, `eslint --fix`), slice by directory instead, so no two
+fixers ever hold the same file — two causes sharing a file is a lost update. Output a table — slice, count, files, fix shape, chance of real
 bugs — and show it to the user unless they already said go.
 
 ### Step 3 — Brief
@@ -125,7 +130,10 @@ Rules:
 
 ### Step 4 — Fan out
 
-Background subagents (`Agent`, all in one message) for small slices; separate
+While fixers are editing `main`, **don't commit there yourself**: pre-commit
+stashes every unstaged change in the checkout while its hooks run, so for
+those seconds the fixers' edits vanish. Work on a branch worktree, or warn
+them. Background subagents (`Agent`, all in one message) for small slices; separate
 sessions (`spawn_task`) for large ones — tell the user each chip opens a
 worktree by default while the brief says `main`, and let them choose. Do not
 work a slice yourself while it is out.
@@ -171,3 +179,10 @@ user's next acts in order.
 - A fixer judged a lock "passing" from `| tail`'s exit code. Unpiped runs only.
 - Reusable CI jobs ran 4× longer when called from the release workflow than in
   plain CI (29 vs 7.5 min). Size against the slowest caller.
+- Triage before fan-out paid: of six audit items, three failed "when not to
+  use" (a design status per mockup; `doctor || true`, which hid that `doctor`
+  always exits 0 — a CLI behaviour decision; making `npm audit` blocking — a
+  policy call). Measuring an item is often how you find it is not a squish.
+- A swallowed step (`pip install … >/dev/null 2>&1 || true`) turned out to be
+  unneeded entirely; the honest fix was deletion, proven by running the test
+  without what it claimed to need.

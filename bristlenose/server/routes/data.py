@@ -106,7 +106,8 @@ def _is_session_scoped(speaker_code: str) -> bool:
 
 def _get_db(request: Request) -> Session:
     """Get the database session from app state."""
-    return request.app.state.db_factory()
+    db: Session = request.app.state.db_factory()
+    return db
 
 
 def _check_project(db: Session, project_id: int) -> Project:
@@ -218,7 +219,7 @@ def _is_sentiment_tag(db: Session, tag_definition_id: int) -> bool:
     # no_autoflush: called mid-``put_tags`` after a QuoteTag is ``db.add``ed
     # but before flush; letting autoflush fire emits a spurious SAWarning.
     with db.no_autoflush:
-        framework_id = (
+        framework_id: str | None = (
             db.query(CodebookGroup.framework_id)
             .join(TagDefinition, TagDefinition.codebook_group_id == CodebookGroup.id)
             .filter(TagDefinition.id == tag_definition_id)

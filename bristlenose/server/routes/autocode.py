@@ -102,7 +102,8 @@ class BulkActionRequest(BaseModel):
 
 
 def _get_db(request: Request) -> Session:
-    return request.app.state.db_factory()
+    db: Session = request.app.state.db_factory()
+    return db
 
 
 def _check_project(db: Session, project_id: int) -> Project:

@@ -181,7 +181,8 @@ def _group_is_new(quotes: list[Quote], new_session_ids: set[str]) -> bool:
 
 def _get_db(request: Request) -> Session:
     """Get the database session from app state."""
-    return request.app.state.db_factory()
+    db: Session = request.app.state.db_factory()
+    return db
 
 
 def _check_project(db: Session, project_id: int) -> Project:

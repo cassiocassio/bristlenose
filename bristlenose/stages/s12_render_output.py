@@ -247,6 +247,7 @@ def write_intermediate_json(
 
     from pydantic import BaseModel
 
+    json_data: object
     if isinstance(data, list):
         json_data = [
             item.model_dump(mode="json") if isinstance(item, BaseModel) else item
@@ -302,9 +303,10 @@ def read_pipeline_metadata(output_dir: Path) -> dict[str, str]:
         path = intermediate_dir / "metadata.json"
         if path.exists():
             try:
-                return json.loads(path.read_text(encoding="utf-8"))
+                data = json.loads(path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
                 return {}
+            return data if isinstance(data, dict) else {}
     return {}
 
 

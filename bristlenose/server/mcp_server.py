@@ -33,7 +33,7 @@ import os
 import re
 import time
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from bristlenose.server.grounding import (
     INVARIANTS,
@@ -50,6 +50,8 @@ if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
 
 logger = logging.getLogger(__name__)
+
+_T = TypeVar("_T")
 
 #: Hard caps (design doc §4 — the three-transcript ceiling is the constraint).
 DEFAULT_SEARCH_LIMIT = 20
@@ -964,7 +966,7 @@ def create_mcp_server(
         instructions=build_instructions(),
     )
 
-    def _run(tool: str, project_id: int, fn: Callable[[Any], Any]) -> Any:
+    def _run(tool: str, project_id: int, fn: Callable[[Any], _T]) -> _T:
         start = time.perf_counter()
         # Checked BEFORE the activity recorder: a refused call is not activity,
         # and counting it would radiate the sidebar antenna for a project the

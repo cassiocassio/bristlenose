@@ -105,6 +105,8 @@ def read_state() -> dict[str, Any]:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {"version": _STATE_VERSION, "first_run": True, "providers": {}}
+    if not isinstance(data, dict):
+        return {"version": _STATE_VERSION, "first_run": True, "providers": {}}
     data.setdefault("version", _STATE_VERSION)
     data.setdefault("first_run", True)
     data.setdefault("providers", {})

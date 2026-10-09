@@ -115,7 +115,8 @@ class VideoMapResponse(BaseModel):
 
 def _get_db(request: Request) -> Session:
     """Get the database session from app state."""
-    return request.app.state.db_factory()
+    db: Session = request.app.state.db_factory()
+    return db
 
 
 # ---------------------------------------------------------------------------

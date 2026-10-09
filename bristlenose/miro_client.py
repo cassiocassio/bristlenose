@@ -149,7 +149,9 @@ def exchange_code_for_tokens(client_id: str, code: str, redirect_uri: str,
     }, timeout=30)
     if resp.status_code != 200:
         raise MiroError(f"token exchange failed: {resp.status_code} {resp.text[:200]}")
-    return resp.json()
+    # RFC 6749 §5.1: a 200 token response is a JSON object.
+    tokens: dict[str, Any] = resp.json()
+    return tokens
 
 
 def refresh_access_token(client_id: str, refresh_token: str) -> dict[str, Any]:
@@ -161,7 +163,9 @@ def refresh_access_token(client_id: str, refresh_token: str) -> dict[str, Any]:
     }, timeout=30)
     if resp.status_code != 200:
         raise MiroError(f"token refresh failed: {resp.status_code} {resp.text[:200]}")
-    return resp.json()
+    # RFC 6749 §5.1: a 200 token response is a JSON object.
+    tokens: dict[str, Any] = resp.json()
+    return tokens
 
 
 # ---------------------------------------------------------------------------

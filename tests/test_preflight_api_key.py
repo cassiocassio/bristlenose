@@ -102,6 +102,18 @@ class TestStateFile:
         state = read_state()
         assert state["first_run"] is True
 
+    def test_non_object_json_falls_back_to_empty_schema(self, monkeypatch, tmp_path):
+        # Valid JSON that is not an object used to raise AttributeError on
+        # `.setdefault` instead of returning the promised empty schema.
+        path = tmp_path / "state.json"
+        path.write_text("[]", encoding="utf-8")
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.state_path", lambda: path,
+        )
+        state = read_state()
+        assert state["first_run"] is True
+        assert state["providers"] == {}
+
 
 class TestTTL:
     def test_recent_validation_within_window(self):

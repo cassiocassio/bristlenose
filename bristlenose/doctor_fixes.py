@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import platform
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 #: Written into the private prefix by a packaging recipe that wants to be
@@ -625,7 +626,7 @@ def _fix_auth_token_env_set(_method: str) -> str:
 # Lookup table
 # ---------------------------------------------------------------------------
 
-_FIX_TABLE: dict[str, object] = {
+_FIX_TABLE: dict[str, Callable[[str], str]] = {
     "ffmpeg_missing": _fix_ffmpeg_missing,
     "backend_import_fail": _fix_backend_import_fail,
     "api_key_missing_anthropic": _fix_api_key_missing_anthropic,

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -90,7 +91,7 @@ class WelfordStat:
 
     @property
     def stddev(self) -> float:
-        return self.variance ** 0.5
+        return math.sqrt(self.variance)
 
     def to_dict(self) -> dict[str, float | int]:
         return {"mean": self.mean, "m2": self.m2, "n": self.n}

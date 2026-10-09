@@ -89,7 +89,7 @@ _LANGUAGE_LINE_RE = re.compile(r"^#\s*Language:\s*(\S+)\s*\((detected|set)\)", r
 
 
 def _dominant_cause(
-    failures: list[Any],
+    failures: list[StageFailure],
     *,
     default_category: CauseCategoryEnum,
     message: str,

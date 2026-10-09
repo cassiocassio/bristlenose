@@ -75,7 +75,7 @@ def build_health_payload(*, dev: bool = False) -> dict[str, object]:
 
 def _project_key_or_none(request: Request) -> str | None:
     """This serve's project key, or None before a project is loaded."""
-    cached = getattr(request.app.state, "project_key", None)
+    cached: str | None = getattr(request.app.state, "project_key", None)
     if cached is not None:
         return cached
     factory = getattr(request.app.state, "db_factory", None)

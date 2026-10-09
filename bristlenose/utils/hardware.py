@@ -97,6 +97,9 @@ def _load_hardware_cache() -> dict[str, Any] | None:
         if not _CACHE_FILE.exists():
             return None
         data = json.loads(_CACHE_FILE.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            logger.debug("Hardware cache is not a JSON object, re-detecting")
+            return None
         if time.time() - data.get("timestamp", 0) < _CACHE_TTL_SECONDS:
             logger.debug("Using cached hardware info (age: %.0fs)", time.time() - data["timestamp"])
             return data
@@ -283,7 +286,8 @@ def _check_cuda_available() -> bool:
         return False
     try:
         import ctranslate2
-        return ctranslate2.get_cuda_device_count() > 0
+        count: int = ctranslate2.get_cuda_device_count()
+        return count > 0
     except (ImportError, Exception):
         return False
 

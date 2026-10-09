@@ -1,5 +1,5 @@
 ---
-status: plan v2 — steps 1 and 2 done; step 3 submitted 9 Oct 2026 (microsoft/winget-pkgs#449372), awaiting the CLA, validation and a moderator
+status: plan v2 — steps 1 and 2 done; step 3 submitted 9 Oct 2026 (microsoft/winget-pkgs#449372), validation passed the same morning, awaiting a moderator
 ---
 
 # Bristlenose on winget
@@ -206,7 +206,11 @@ FFmpeg was fixed separately (`5f3d5ac8`, `47ee59af`).
    `63850c4d…6a0d2`). Komac 2.16's `submit` needs the fork to exist first
    (`gh repo fork microsoft/winget-pkgs`), and its `analyze` refuses Inno Setup 7
    installers ("newer than the maximum supported version 6.7"); if validation
-   trips on the same limit, rebuild with Inno 6.7.* With Komac or `wingetcreate`: one version per PR, sign
+   trips on the same limit, rebuild with Inno 6.7. Validation failed once on a 404
+   `ReleaseNotesUrl`, then passed all ten checks by 08:30 BST on 9 Oct, the
+   installer scan and a real install included: the unsigned PyInstaller build drew no
+   antivirus flag, and the Inno 7 installer raised nothing. Labelled `New-Package`;
+   waiting for a volunteer moderator.* With Komac or `wingetcreate`: one version per PR, sign
    Microsoft's CLA on the PR (a click-through, no country restriction), expect a
    false-positive cycle (submit to microsoft.com/wdsi/filesubmission, then
    `@wingetbot run`), days in the new-package moderator queue.

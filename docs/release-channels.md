@@ -31,9 +31,12 @@ but the sidecar.
 | **TestFlight** | `build-all.sh` → `upload-testflight.sh` | you, locally | `.pkg` → ASC | **90 days** |
 | **Developer-ID `.dmg`** | `build-dmg.sh` → `upload-dmg.sh` | you, locally | `.dmg` → bristlenose.app | **30 days from the *build*** |
 
-**winget is not a row yet.** The first version (0.36.0) was submitted by hand on
-9 Oct 2026 and is waiting in Microsoft's moderator queue; `release.sh` neither runs nor
-verifies it. Procedure: `docs/release-winget.md`.
+**winget is not a row: it is a *follower*.** The first version (0.36.0) was submitted by
+hand on 9 Oct 2026 and is waiting in Microsoft's moderator queue. `release.sh` does not run
+it. `release.sh verify` probes it and reports it under *following*, with a `pending` state
+backed by the open PR, and keeps it out of the exit code (`CHANNELS_FOLLOW` in
+`scripts/project.conf`; `docs/design-channel-version-lag.md` §5.2). Procedure:
+`docs/release-winget.md`.
 
 ---
 

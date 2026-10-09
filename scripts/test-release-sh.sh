@@ -802,6 +802,15 @@ for _u in $CHANNELS_UNPROBEABLE; do
     case " $CHANNELS " in *" $_u "*) ok "unprobeable '$_u' is a real channel" ;;
                           *) bad "CHANNELS_UNPROBEABLE names '$_u', which is not in CHANNELS" ;; esac
 done
+# Followers (CHANNELS_FOLLOW): each needs a probe, and none may also be in
+# CHANNELS, where it would count in the exit code it exists to stay out of.
+for _f in ${CHANNELS_FOLLOW:-}; do
+    grep -q "^probe_${_f}()" "$ROOT/scripts/verify-channels.sh" \
+        && ok "follower '$_f' has a probe" \
+        || bad "follower '$_f' is listed with NO probe"
+    case " $CHANNELS " in *" $_f "*) bad "follower '$_f' is also in CHANNELS — in the exit code or not?" ;;
+                          *) ok "follower '$_f' is outside CHANNELS" ;; esac
+done
 # Derived URLs must actually carry the identity, or a rename half-lands.
 case "$DMG_PERMALINK"  in *"$SITE"*)            ok "DMG_PERMALINK derives from SITE" ;;  *) bad "DMG_PERMALINK does not use SITE" ;; esac
 case "$TAP_FORMULA_RAW" in *"$TAP_REPO"*)       ok "TAP_FORMULA_RAW derives from TAP_REPO" ;; *) bad "TAP_FORMULA_RAW does not use TAP_REPO" ;; esac

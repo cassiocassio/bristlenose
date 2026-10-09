@@ -21,12 +21,13 @@
 # normally reads it.
 #
 # Usage:
-#   verify-channels.sh 0.28.0            # all seven channels
+#   verify-channels.sh 0.28.0            # every channel, then the followers
 #   verify-channels.sh 0.28.0 --abandoned 0.27.9
 #                                        # also assert this version is GONE from
 #                                        # any surface rendered from CHANGELOG.md
 #
-# Exit codes:
+# Exit codes (CHANNELS only; followers in CHANNELS_FOLLOW are printed under
+# their own heading and never counted, see verdict_follower):
 #   0  every channel is on this version
 #   1  at least one channel is not (including unreachable — unverified is not ok)
 #   2  usage error
@@ -179,6 +180,62 @@ verdict_testflight_probe() {
         1) echo bad ;;
         *) echo skipped ;;
     esac
+}
+
+# version_ge <a> <b> — is release a ≥ release b? X.Y.Z, numeric per field.
+#   Returns 2 (neither true nor false) on anything not X.Y.Z, so a malformed
+#   value can never be read as "newer". The callers take only an exit of 0 as yes.
+version_ge() {
+    local a="${1-}" b="${2-}" i x y
+    case "$a" in ""|*[!0-9.]*) return 2 ;; [0-9]*.[0-9]*.[0-9]*) : ;; *) return 2 ;; esac
+    case "$b" in ""|*[!0-9.]*) return 2 ;; [0-9]*.[0-9]*.[0-9]*) : ;; *) return 2 ;; esac
+    local IFS=.
+    # shellcheck disable=SC2206
+    local -a A=($a) B=($b)
+    for i in 0 1 2; do
+        x=$((10#${A[i]:-0})); y=$((10#${B[i]:-0}))
+        [ "$x" -gt "$y" ] && return 0
+        [ "$x" -lt "$y" ] && return 1
+    done
+    return 0
+}
+
+# verdict_follower <served> <inflight> <want> <age_hours> <budget_hours>
+#   The decision for a FOLLOWER channel (CHANNELS_FOLLOW in project.conf): one
+#   that lands on a reviewer's clock and may skip a version. Never rolled into
+#   the exit code, but held to the same rule as everything above: a failed
+#   query is `unreachable`, never a negative, and `pending` needs EVIDENCE (a
+#   submission for <want> that is still open). Time passing is not evidence.
+#
+#   served    newest version the channel serves · NONE (serves nothing yet) ·
+#             QUERY_FAILED or empty (could not look)
+#   inflight  version of the open submission (the one for <want> if there is
+#             one, else the newest) · NONE · QUERY_FAILED or empty
+#   age/budget  whole hours. An unreadable age leaves a proven submission pending
+#
+#   ok          serves ≥ want. ≥ and not ==, because a follower that skipped
+#               straight to want+1 has what want promised
+#   pending     an open submission for want, inside the budget
+#   overdue     an open submission for want, past the budget
+#   superseded  want never landed, and a newer version is in flight. That is
+#               the channel working as designed, so it is not `bad`
+#   bad         nothing serves want and nothing is submitted: someone has to act
+#   unreachable  either query failed
+verdict_follower() {
+    local served="${1-}" inflight="${2-}" want="${3-}" age="${4-}" budget="${5-}"
+    case "$served" in ""|QUERY_FAILED) echo unreachable; return ;; esac
+    [ -z "$want" ] && { echo unreachable; return; }
+    if [ "$served" != NONE ] && version_ge "$served" "$want"; then echo ok; return; fi
+    case "$inflight" in ""|QUERY_FAILED) echo unreachable; return ;; esac
+    if [ "$inflight" = "$want" ]; then
+        case "$age$budget" in
+            *[!0-9]*|"") echo pending ;;
+            *) if [ -n "$age" ] && [ -n "$budget" ] && [ "$age" -gt "$budget" ]; then echo overdue; else echo pending; fi ;;
+        esac
+        return
+    fi
+    if [ "$inflight" != NONE ] && version_ge "$inflight" "$want"; then echo superseded; return; fi
+    echo bad
 }
 
 [ "${VERIFY_CHANNELS_LIB:-0}" = "1" ] && return 0 2>/dev/null
@@ -357,6 +414,80 @@ print(best or '')
     printf '%s|latest succeeded build: %s' "$(verdict_json_field "$ver" "$VERSION")" "${ver:-none}"
 }
 
+probe_winget() {
+    # A FOLLOWER (CHANNELS_FOLLOW). Two GitHub reads against winget-pkgs, both
+    # through gh, which the github row already needs:
+    #   served   — the version folders under manifests/<l>/<Id path>/. A folder
+    #              exists only once a PR has MERGED, and Microsoft publishes to
+    #              clients within about an hour of the merge (winget-pkgs FAQ),
+    #              so for that hour "served" is slightly early. The evidence
+    #              says "merged" rather than claiming more.
+    #   inflight — open PRs whose title names the id. komac writes
+    #              "Add version: <Id> version X.Y.Z" and "New package: …"; the
+    #              parse keys on "<Id> version X.Y.Z", not the prefix. Other
+    #              people's update PRs count too: any open submission is
+    #              in flight, and the evidence names its number.
+    # A 404 on the folder is NONE (no version merged yet: the honest state of
+    # a new package). Any other failure is QUERY_FAILED, never a negative.
+    command -v gh >/dev/null 2>&1 || { printf 'unreachable|gh not installed'; return; }
+    local first path out served inflight rc
+    first=$(printf '%s' "${WINGET_ID:0:1}" | tr 'A-Z' 'a-z')
+    path="manifests/${first}/${WINGET_ID//.//}"
+    out=$(gh api "repos/${WINGET_REPO}/contents/${path}" --jq '.[] | select(.type=="dir") | .name' 2>&1); rc=$?
+    if [ "$rc" -eq 0 ]; then
+        served=$(printf '%s\n' "$out" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+        [ -n "$served" ] || served=NONE
+    else
+        case "$out" in *"HTTP 404"*) served=NONE ;; *) served=QUERY_FAILED ;; esac
+    fi
+    out=$(gh pr list --repo "$WINGET_REPO" --state open --search "${WINGET_ID} in:title" \
+          --json number,title,createdAt 2>/dev/null); rc=$?
+    local pick="" pr="" age=""
+    if [ "$rc" -ne 0 ]; then
+        inflight=QUERY_FAILED
+    else
+        # One line out: "<version> <number> <age_hours>", or nothing. The PR
+        # for <want> wins; otherwise the newest version in flight.
+        pick=$(printf '%s' "$out" | WANT="$VERSION" ID="$WINGET_ID" python3 -c '
+import json, os, re, sys
+from datetime import datetime, timezone
+try: prs = json.load(sys.stdin)
+except Exception: sys.exit(3)
+if not isinstance(prs, list): sys.exit(3)
+pat = re.compile(re.escape(os.environ["ID"]) + r" version (\d+\.\d+\.\d+)(?![\d.])")
+found = []
+for p in prs:
+    m = pat.search(p.get("title") or "")
+    if not m: continue
+    try:
+        t = datetime.fromisoformat((p.get("createdAt") or "").replace("Z", "+00:00"))
+        age = str(int((datetime.now(timezone.utc) - t).total_seconds() // 3600))
+    except Exception:
+        age = ""
+    found.append((tuple(int(x) for x in m.group(1).split(".")), m.group(1), p.get("number"), age))
+if not found: sys.exit(0)
+want = [f for f in found if f[1] == os.environ["WANT"]]
+f = want[0] if want else max(found)
+print(f[1], f[2], f[3])
+' 2>/dev/null); rc=$?
+        if [ "$rc" -ne 0 ]; then inflight=QUERY_FAILED
+        elif [ -z "$pick" ]; then inflight=NONE
+        else read -r inflight pr age <<<"$pick"
+        fi
+    fi
+    local v
+    v=$(verdict_follower "$served" "$inflight" "$VERSION" "$age" "$WINGET_BUDGET_HOURS")
+    [ "$served" = NONE ] && served="nothing yet"
+    case "$v" in
+        ok)          printf 'ok|merged into %s: %s' "$WINGET_REPO" "$served" ;;
+        pending)     printf 'pending|PR #%s for %s open %sh of a %sh budget · serves %s' "$pr" "$VERSION" "${age:-?}" "$WINGET_BUDGET_HOURS" "$served" ;;
+        overdue)     printf 'overdue|PR #%s for %s open %sh, past the %sh budget · serves %s' "$pr" "$VERSION" "${age:-?}" "$WINGET_BUDGET_HOURS" "$served" ;;
+        superseded)  printf 'superseded|%s never landed; PR #%s for %s is in flight · serves %s' "$VERSION" "$pr" "$inflight" "$served" ;;
+        bad)         printf 'bad|no open PR for %s · serves %s' "$VERSION" "$served" ;;
+        *)           printf 'unreachable|winget-pkgs query failed (served=%s, in flight=%s)' "$served" "$inflight" ;;
+    esac
+}
+
 probe_website() {
     # The STRONGEST probe available: that page renders from CHANGELOG.md at build
     # time, so a hit proves the deploy ran AFTER the entry existed.
@@ -449,6 +580,40 @@ esac
 printf '  %sexpiry   .dmg 30d from the BUILD · TestFlight 90d from the UPLOAD%s\n' "$D" "$N"
 echo
 
+# Followers: CHANNELS_FOLLOW. Probed like any channel, printed under their own
+# heading, and NEVER pushed onto VERDICTS. That is the whole point of them: a
+# channel on a reviewer's clock must not hold the exit code for days. The sink
+# still gets each row (follow=1), so the board shows them as extras.
+FOLLOW_SUMMARY=()
+if [ -n "${CHANNELS_FOLLOW:-}" ]; then
+    printf '  %sfollowing — on a reviewer'"'"'s clock; reported, never in the exit code%s\n' "$D" "$N"
+    for _ch in $CHANNELS_FOLLOW; do
+        case " $CHANNELS " in *" $_ch "*)
+            # Listed in both is a contradiction: is it in the exit code or not?
+            # Refuse it loudly rather than pick one.
+            row "$_ch" "bad" "listed in both CHANNELS and CHANNELS_FOLLOW"
+            continue ;;
+        esac
+        if ! declare -F "probe_$_ch" >/dev/null 2>&1; then
+            _res="unreachable|no probe_$_ch function — follower listed but unchecked"
+        else
+            _res="$(probe_"$_ch")"
+        fi
+        _verdict="${_res%%|*}"
+        case "$_verdict" in
+            ok)                 _glyph="${G}✓${N}" ;;
+            pending)            _glyph="${D}…${N}" ;;
+            superseded)         _glyph="${D}↷${N}" ;;
+            overdue|bad)        _glyph="${Y}!${N}" ;;
+            *)                  _glyph="${Y}⚠${N}" ;;
+        esac
+        printf '  %b %-18s %s%s%s\n' "$_glyph" "$_ch" "$D" "${_res#*|}" "$N"
+        FOLLOW_SUMMARY+=("$_ch $_verdict")
+        sink_line row src=verify follow=1 label="$_ch" result="$_verdict" evidence="${_res#*|}"
+    done
+    echo
+fi
+
 # Floor at the CALL SITE, not inside rollup — rollup is a pure function driven
 # by synthetic input, and a floor there makes it untestable at small scale.
 # A rollup over nothing is not a pass: that is the class this work exists for.
@@ -470,6 +635,9 @@ if [ "$RC" = "0" ]; then
 else
     printf '  %b %s of %s channels on %s · %s outstanding\n\n' \
         "${R}✗${N}" "$oks" "$total" "$VERSION" "$((total-oks))"
+fi
+if [ "${#FOLLOW_SUMMARY[@]}" -gt 0 ]; then
+    printf '  %sfollowing: %s%s\n\n' "$D" "$(IFS=,; printf '%s' "${FOLLOW_SUMMARY[*]}" | sed 's/,/ · /g')" "$N"
 fi
 sink_line verify status=done version="$VERSION" rollup="$RC" channels="$total" ok="$oks"
 exit "$RC"

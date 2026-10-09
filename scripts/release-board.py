@@ -87,7 +87,8 @@ RUN_STATES = {"started", "completed"}                                    # the `
 CLOCK_NAMES = {"testflight", "dmg"}
 STEPS_TBL_VERSION = "# steps.tbl v1"
 STEP_STATES = {"start", "ok", "skip", "fail", "end"}
-ROW_RESULTS = {"ok", "warn", "bad", "skipped", "unreachable"}
+ROW_RESULTS = {"ok", "warn", "bad", "skipped", "unreachable",
+               "pending", "overdue", "superseded"}   # the last three: follower rows only (CHANNELS_FOLLOW)
 CI_RESULTS = {"success", "failure", "cancelled", "skipped", "queued", "in_progress", "waiting", "unreachable", "no run for sha", "neutral", "timed_out", "action_required", "stale", "startup_failure", "completed", "-"}
 CONTEXT_ALLOWLIST = ("os", "arch", "xcode", "python", "disk_free_gb", "git")
 CI_VERDICT_ROW = "publish gate"   # the preflight row the CI tile keys on

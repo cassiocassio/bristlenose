@@ -8,10 +8,16 @@ The per-release procedure, as run by hand for 0.36.0, and what went wrong on the
 The plan and its reasoning are in `docs/design-winget.md`. This page covers the
 mechanics only.
 
-winget is **not yet a release-machine channel**. `release.sh` does not run any of
-this, and `release.sh verify` does not check it. Automation (`winget-releaser`, a
-channel row in `scripts/project.conf`) is step 5 of the plan, after one or two
-accepted versions.
+winget is **a follower channel, not a release-machine step.** `release.sh` runs
+none of the steps below. `release.sh verify` reports winget under its own
+heading (*following*) as `ok`, `pending` (an open PR for the version, inside
+`WINGET_BUDGET_HOURS`), `overdue`, `superseded` (a newer version is in flight),
+`bad` (nothing merged, nothing submitted) or `unreachable`. It never counts
+toward verify's exit code: the moderator queue takes days, and holding the
+release open that long would be wrong. Design:
+`docs/design-channel-version-lag.md` §5.2. Automating the submission
+(`winget-releaser`) is still step 5 of the plan, after one or two accepted
+versions.
 
 ## The shape
 

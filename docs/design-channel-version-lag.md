@@ -1,5 +1,5 @@
 ---
-status: proposal — investigation 9 Oct 2026, no code or public-doc change made; the recommendation needs the maintainer's decision
+status: proposal — investigation 9 Oct 2026; §5.2(a) follower channels built 9 Oct 2026, §5.2(b) and the docs options await the maintainer's decision
 measured-against: PyPI JSON (upload times), `gh run list` for release.yml / snap.yml / windows-installer.yml, the GitHub Releases API, the homebrew-bristlenose tap's commit log, Copr's build API, the Snap Store info API, microsoft/winget-pkgs#449372, docs/release-log.md 0.27.0–0.36.0
 ---
 
@@ -366,8 +366,21 @@ for them.
   `channels.json` reaches the site without the maintainer's SSH agent, and the
   rendering rule for `unreachable`. These get answered if B is picked up, not
   before.
-- **Implementation.** Nothing in §5.2 is built. It touches `project.conf`,
-  `verify-channels.sh` (a follower loop and `probe_winget`), `release.sh`
-  (`held_for`), and both test suites (`test-verify-channels.sh`,
-  `test-release-sh.sh`), whose canned-input pattern covers the new tri-state
-  verdicts directly.
+- **Implementation.** **§5.2(a) is built (9 Oct 2026).** It consists of
+  `CHANNELS_FOLLOW`, `WINGET_*` and `WINGET_BUDGET_HOURS` in `project.conf`;
+  `version_ge`, `verdict_follower` and `probe_winget` in `verify-channels.sh`,
+  plus a follower section that never touches `VERDICTS`; and the three new
+  results in the board's `ROW_RESULTS`.
+  - **Tests:** `test-verify-channels.sh` has pure verdict cases and driver cases
+    through a stubbed `gh`. The exit-code assertion runs against a baseline of 0.
+    Mutation-proved: a follower pushed onto `VERDICTS` fails exactly that
+    assertion. `test-release-sh.sh` asserts every follower has a probe and is
+    not also in `CHANNELS`.
+  - **Two details beyond the plan above.** "Served" means merged into
+    winget-pkgs, which Microsoft publishes within about an hour, and the
+    evidence says *merged* rather than claiming more. Any open PR naming the
+    exact id counts as in flight, including third-party ones; a look-alike id
+    does not.
+  - **§5.2(b), the `after-<channel>/<version>` holds, is not built.**
+    `held_for_version` still knows only `after-pypi`, and the two existing
+    `after-winget*` branches are unrenamed.

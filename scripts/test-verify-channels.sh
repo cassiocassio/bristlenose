@@ -101,6 +101,36 @@ eq "skipped does not fail"      0 "$(rollup ok skipped ok)"
 eq "skipped + bad still fails"  1 "$(rollup ok skipped bad)"
 eq "all skipped passes"         0 "$(rollup skipped skipped)"
 
+head_ "version_ge — numeric per field, and malformed is never 'newer'"
+version_ge 0.36.0 0.36.0; eq "equal is ≥"                 0 "$?"
+version_ge 0.36.1 0.36.0; eq "patch above"                0 "$?"
+version_ge 0.36.0 0.36.1; eq "patch below"                1 "$?"
+version_ge 0.36.10 0.36.9; eq "0.36.10 > 0.36.9 (not lexical)" 0 "$?"
+version_ge 1.0.0 0.99.99; eq "major wins"                 0 "$?"
+version_ge 0.36.08 0.36.7; eq "a leading zero is not octal" 0 "$?"
+version_ge NONE 0.36.0;    eq "malformed left is neither (2)"  2 "$?"
+version_ge 0.36.0 '';      eq "empty right is neither (2)"     2 "$?"
+version_ge '0.36.0;x' 0.1.0; eq "injection shape is neither (2)" 2 "$?"
+
+head_ "verdict_follower — pending needs evidence, and a failed query is never a negative"
+eq "serves want"                         ok          "$(verdict_follower 0.36.0 NONE 0.36.0 '' 72)"
+eq "serves newer than want (≥)"          ok          "$(verdict_follower 0.37.0 NONE 0.36.0 '' 72)"
+eq "open PR for want, inside budget"     pending     "$(verdict_follower NONE 0.36.0 0.36.0 9 72)"
+eq "open PR at exactly the budget"       pending     "$(verdict_follower NONE 0.36.0 0.36.0 72 72)"
+eq "open PR past the budget"             overdue     "$(verdict_follower 0.35.0 0.36.0 0.36.0 80 72)"
+eq "unreadable age leaves it pending"    pending     "$(verdict_follower NONE 0.36.0 0.36.0 '' 72)"
+eq "want skipped, newer in flight"       superseded  "$(verdict_follower NONE 0.37.0 0.36.0 3 72)"
+eq "0.36.10 in flight supersedes 0.36.9" superseded  "$(verdict_follower NONE 0.36.10 0.36.9 3 72)"
+eq "nothing in flight"                   bad         "$(verdict_follower NONE NONE 0.36.0 '' 72)"
+eq "only an OLDER version in flight"     bad         "$(verdict_follower NONE 0.35.0 0.36.0 3 72)"
+eq "serves older, nothing in flight"     bad         "$(verdict_follower 0.35.0 NONE 0.36.0 '' 72)"
+eq "served query failed"                 unreachable "$(verdict_follower QUERY_FAILED 0.36.0 0.36.0 3 72)"
+eq "served empty"                        unreachable "$(verdict_follower '' 0.36.0 0.36.0 3 72)"
+eq "in-flight query failed"              unreachable "$(verdict_follower NONE QUERY_FAILED 0.36.0 '' 72)"
+eq "in-flight empty"                     unreachable "$(verdict_follower NONE '' 0.36.0 '' 72)"
+eq "a failed PR query cannot hide ok"    ok          "$(verdict_follower 0.36.0 QUERY_FAILED 0.36.0 '' 72)"
+eq "no want"                             unreachable "$(verdict_follower 0.36.0 NONE '' '' 72)"
+
 head_ "meta — the assertions can actually fail"
 # The deliberate failure runs inside $( ), i.e. a SUBSHELL — so its FAIL++ is
 # lost and there is nothing to discount. An earlier draft decremented anyway,
@@ -142,16 +172,30 @@ for a in "$@"; do case "$a" in
   *changelog*) cat "$BN_FAKE_CHANGELOG"; exit 0 ;;
   *snapcraft*) echo '{"channel-map":[{"channel":{"name":"edge"},"version":"9.9.9"}]}'; exit 0 ;;
   *copr*) echo '{"items":[{"state":"'"${BN_FAKE_COPR_STATE:-succeeded}"'","source_package":{"version":"'"${BN_FAKE_COPR_VER:-9.9.9-1}"'"}}]}'; exit 0 ;;
-  *.dmg.sha256) exit 22 ;;
+  *.dmg.sha256) [ -n "${BN_FAKE_DMG_SHA:-}" ] && { echo "$BN_FAKE_DMG_SHA"; exit 0; }; exit 22 ;;
   *dmg*) printf 'HTTP/2 302
-location: https://x/App-9.9.9.dmg
+location: https://x/Bristlenose-9.9.9.dmg
 '; exit 0 ;;
+  *Formula/*) echo 'url "https://files.pythonhosted.org/x/bristlenose-9.9.9.tar.gz"'; exit 0 ;;
   *pypi*) case " $* " in *" -w "*) printf '200' ;; esac; exit 0 ;;
 esac; done
 exit 0
 CURL
 cat > "$WORK/bin/gh" <<'GH'
 #!/bin/sh
+# winget-pkgs reads, driven by env. BN_FAKE_WINGET_SERVED: version folders
+# (space-separated), 404, or FAIL. BN_FAKE_WINGET_PRS: the PR-list JSON, or FAIL.
+case "$1" in
+  api) case "${BN_FAKE_WINGET_SERVED:-404}" in
+         404)  echo 'gh: Not Found (HTTP 404)' >&2; exit 1 ;;
+         FAIL) echo 'gh: error connecting to api.github.com' >&2; exit 1 ;;
+         *)    printf '%s\n' $BN_FAKE_WINGET_SERVED; exit 0 ;;
+       esac ;;
+  pr)  case "${BN_FAKE_WINGET_PRS:-[]}" in
+         FAIL) exit 1 ;;
+         *)    printf '%s' "${BN_FAKE_WINGET_PRS:-[]}"; exit 0 ;;
+       esac ;;
+esac
 echo v9.9.9
 GH
 chmod +x "$WORK/bin/curl" "$WORK/bin/gh"
@@ -252,6 +296,68 @@ esac
 verify 9.9.9 >/dev/null 2>&1; rc=$?
 [ "$rc" = "1" ] && ok "and it fails the rollup" || bad "undeclared skip passed the rollup (exit $rc)"
 printf '%s' "$_orig" > "$_conf"
+
+# ---------------------------------------------------------------------------
+head_ "followers — reported with evidence, and NEVER in the exit code"
+# The reason CHANNELS_FOLLOW exists: winget on a moderator's clock would hold
+# the exit code for days. So the first assertion is that the exit code is the
+# same whatever the follower says, ok or bad or unreachable.
+# ---------------------------------------------------------------------------
+printf '9.9.9 released\n' > "$WORK/changelog"
+win_row() { printf '%s' "$1" | sed 's/\x1b\[[0-9;]*m//g' | grep -E ' winget  ' | head -1; }
+_now=$(python3 -c 'from datetime import datetime,timezone;print(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))')
+# A valid digest, so every LOCKSTEP row is green and the baseline exit is 0.
+# Against a baseline of 1, a follower leaking into the rollup would change
+# nothing, and the exit-code assertion below could not fail.
+export BN_FAKE_DMG_SHA="$(printf 'a%.0s' $(seq 64))  App-9.9.9.dmg"
+_pr() { printf '[{"number":%s,"title":"Add version: Bristlenose.Bristlenose version %s","createdAt":"%s"}]' "$1" "$2" "$3"; }
+
+out=$(BN_FAKE_WINGET_SERVED=9.9.9 verify 9.9.9); rc_ok=$?
+case "$(win_row "$out")" in *"merged into"*"9.9.9"*) ok "a merged version reads ok" ;; *) bad "merged version: $(win_row "$out")" ;; esac
+
+out=$(BN_FAKE_WINGET_PRS="$(_pr 42 9.9.9 "$_now")" verify 9.9.9); rc_pend=$?
+case "$(win_row "$out")" in *"PR #42 for 9.9.9 open 0h of a 72h budget"*"nothing yet"*) ok "an open PR for the version reads pending, with its number" ;;
+                            *) bad "pending: $(win_row "$out")" ;; esac
+case "$out" in *"following: winget pending"*) ok "and the summary line says so" ;; *) bad "no follower summary line" ;; esac
+
+out=$(BN_FAKE_WINGET_PRS="$(_pr 42 9.9.9 2020-01-01T00:00:00Z)" verify 9.9.9); rc_over=$?
+case "$(win_row "$out")" in *"past the 72h budget"*) ok "an old open PR reads overdue" ;; *) bad "overdue: $(win_row "$out")" ;; esac
+
+out=$(BN_FAKE_WINGET_PRS="$(_pr 43 9.9.10 "$_now")" verify 9.9.9); rc_sup=$?
+case "$(win_row "$out")" in *"9.9.9 never landed; PR #43 for 9.9.10"*) ok "a newer version in flight reads superseded (numeric, not lexical)" ;;
+                            *) bad "superseded: $(win_row "$out")" ;; esac
+
+out=$(verify 9.9.9); rc_bad=$?
+case "$(win_row "$out")" in *"no open PR for 9.9.9"*) ok "nothing merged and nothing submitted reads bad" ;; *) bad "bad: $(win_row "$out")" ;; esac
+
+out=$(BN_FAKE_WINGET_SERVED=FAIL BN_FAKE_WINGET_PRS="$(_pr 42 9.9.9 "$_now")" verify 9.9.9); rc_unr=$?
+case "$(win_row "$out")" in *"query failed"*) ok "a failed folder read is unreachable, even with a PR open" ;; *) bad "served FAIL: $(win_row "$out")" ;; esac
+out=$(BN_FAKE_WINGET_PRS=FAIL verify 9.9.9)
+case "$(win_row "$out")" in *"query failed"*) ok "a failed PR query is unreachable, not bad" ;; *) bad "PR FAIL: $(win_row "$out")" ;; esac
+
+# A PR for a different package whose id merely CONTAINS ours must not count.
+out=$(BN_FAKE_WINGET_PRS='[{"number":7,"title":"Add version: Bristlenose.BristlenoseX version 9.9.9","createdAt":"2026-01-01T00:00:00Z"}]' verify 9.9.9)
+case "$(win_row "$out")" in *"no open PR"*) ok "a look-alike id is not our submission" ;; *) bad "look-alike counted: $(win_row "$out")" ;; esac
+
+if [ "$rc_ok" = "$rc_pend" ] && [ "$rc_ok" = "$rc_over" ] && [ "$rc_ok" = "$rc_sup" ] \
+   && [ "$rc_ok" = "$rc_bad" ] && [ "$rc_ok" = "$rc_unr" ]; then
+    ok "the exit code is the same for every follower verdict ($rc_ok)"
+else
+    bad "a follower moved the exit code: ok=$rc_ok pending=$rc_pend overdue=$rc_over superseded=$rc_sup bad=$rc_bad unreachable=$rc_unr"
+fi
+if [ "$rc_ok" = 0 ]; then ok "and that exit code is 0: every lockstep channel green, so a leak would show"
+else bad "baseline exit is $rc_ok, not 0 — the equality above cannot catch a leak"; fi
+
+# A channel in BOTH lists is a contradiction, and it must fail rather than
+# silently pick one. Prove the edit took first.
+_conf="$WORK/repo/scripts/project.conf"; _orig=$(cat "$_conf")
+printf '%s\n' "${_orig//CHANNELS_FOLLOW=\"winget\"/CHANNELS_FOLLOW=\"winget copr\"}" > "$_conf"
+grep -q 'CHANNELS_FOLLOW="winget copr"' "$_conf" && ok "the fixture listed copr in both" \
+                                                || bad "fixture edit did not take — the test below proves nothing"
+out=$(BN_FAKE_WINGET_SERVED=9.9.9 verify 9.9.9)
+case "$out" in *"listed in both CHANNELS and CHANNELS_FOLLOW"*) ok "a channel in both lists is refused" ;; *) bad "both-lists contradiction passed silently" ;; esac
+printf '%s' "$_orig" > "$_conf"
+unset BN_FAKE_DMG_SHA
 
 # The direction that matters for the exit code: a present abandoned version
 # must make the whole verify fail, not merely print a red row.

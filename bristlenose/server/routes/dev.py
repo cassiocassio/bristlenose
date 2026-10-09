@@ -11,7 +11,7 @@ import tempfile
 from datetime import datetime, timezone
 from html import escape as _esc
 from pathlib import Path as _Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
@@ -31,6 +31,9 @@ from bristlenose.stages.s12_render.sentiment import _render_sentiment_sparkline
 from bristlenose.stages.s12_render.theme_assets import _jinja_env
 from bristlenose.utils.markdown import format_finder_date, format_finder_filename
 from bristlenose.utils.timecodes import format_duration_human
+
+if TYPE_CHECKING:
+    from bristlenose.config import BristlenoseSettings
 
 router = APIRouter(prefix="/api/dev")
 
@@ -514,7 +517,7 @@ class _LabCandidatesRequest(BaseModel):
     exclude_texts: list[str] = Field(default_factory=list)
 
 
-def _lab_settings():
+def _lab_settings() -> BristlenoseSettings:
     from bristlenose.config import load_settings
 
     return load_settings()

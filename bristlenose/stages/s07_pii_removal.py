@@ -629,7 +629,8 @@ def _init_presidio(
         }
     )
     analyzer = AnalyzerEngine(nlp_engine=provider.create_engine())
-    anonymizer = AnonymizerEngine()
+    # presidio-anonymizer ships py.typed but its __init__ lacks `-> None`.
+    anonymizer = AnonymizerEngine()  # type: ignore[no-untyped-call]
 
     logger.info("Presidio engines initialised.")
     return analyzer, anonymizer

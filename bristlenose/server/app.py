@@ -10,8 +10,9 @@ import os
 import re
 import secrets
 import traceback
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -54,6 +55,9 @@ from bristlenose.server.routes.signals import router as analysis_router
 from bristlenose.server.routes.tapestry import router as tapestry_router
 from bristlenose.server.routes.transcript import router as transcript_router
 from bristlenose.server.status_page import detect_status, render_page
+
+if TYPE_CHECKING:
+    from bristlenose.events import RunCompletedEvent
 
 logger = logging.getLogger(__name__)
 
@@ -386,7 +390,7 @@ def _compose_mcp_lifespan(app: FastAPI, mcp_server: object) -> None:
     previous = app.router.lifespan_context
 
     @asynccontextmanager
-    async def _with_mcp(app_: FastAPI):
+    async def _with_mcp(app_: FastAPI) -> AsyncIterator[None]:
         async with previous(app_):
             async with mcp_server.session_manager.run():  # type: ignore[attr-defined]
                 yield
@@ -1088,7 +1092,7 @@ def _make_run_completed_handler(
     session_factory: object,
     project_dir: Path,
     engine: Engine | None = None,
-):
+) -> Callable[[RunCompletedEvent], Awaitable[None]]:
     """Build the watcher callback: re-import THEN publish ``last_run``.
 
     Extracted to module level so the race ordering (import before
@@ -1100,7 +1104,6 @@ def _make_run_completed_handler(
     ``engine`` (when given) lets the re-import heal a database whose file
     the run deleted — see ``ensure_schema``.
     """
-    from bristlenose.events import RunCompletedEvent
     from bristlenose.server.db import ensure_schema
     from bristlenose.server.importer import import_project
 
@@ -1222,7 +1225,7 @@ def _install_event_watcher(
     )
 
     @asynccontextmanager
-    async def _lifespan(_: FastAPI):
+    async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         task = asyncio.create_task(
             run_event_watcher(
                 _events_file, _on_run_completed, on_change=_on_change,

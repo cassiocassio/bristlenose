@@ -76,11 +76,12 @@ _jobs: dict[int, dict[str, Any]] = {}  # project_id → job state
 # ---------------------------------------------------------------------------
 
 
-def _get_db(request: Request):  # type: ignore[no-untyped-def]
-    return request.app.state.db_factory()
+def _get_db(request: Request) -> DbSession:
+    db: DbSession = request.app.state.db_factory()
+    return db
 
 
-def _check_project(db, project_id: int) -> Project:  # type: ignore[no-untyped-def]
+def _check_project(db: DbSession, project_id: int) -> Project:
     project = db.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -98,7 +99,7 @@ def _resolve_output_dir(project_dir: Path | None) -> Path | None:
 
 
 def _load_speaker_names(
-    db, project_id: int,
+    db: DbSession, project_id: int,
 ) -> dict[tuple[str, str], str]:
     """Map (session_id, speaker_code) → display_name.
 
@@ -124,7 +125,7 @@ def _load_speaker_names(
 
 
 def _load_session_media(
-    db, project_id: int, project_dir: Path,
+    db: DbSession, project_id: int, project_dir: Path,
 ) -> tuple[dict[str, tuple[Path, bool]], dict[str, float]]:
     """Load session media paths and durations.
 

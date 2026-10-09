@@ -389,9 +389,6 @@ def _resolve_backend(configured: str, hw: HardwareInfo) -> str:
 # MLX backend (Apple Silicon GPU)
 # ---------------------------------------------------------------------------
 
-TranscribeFn = type(lambda path, settings: [])  # callable type hint placeholder
-
-
 def _init_mlx_backend(
     settings: BristlenoseSettings,
 ) -> callable:  # type: ignore[valid-type]

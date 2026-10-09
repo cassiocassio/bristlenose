@@ -41,7 +41,7 @@ from bristlenose.miro_board import (
     layout_board,
 )
 from bristlenose.miro_render_svg import render_html
-from bristlenose.server.export_core import extract_quotes_for_export
+from bristlenose.server.export_core import ExportableQuote, extract_quotes_for_export
 from bristlenose.utils.safe_url import is_safe_url
 from bristlenose.utils.timecodes import parse_timecode
 
@@ -82,7 +82,7 @@ def _parse_timecode(s: str) -> float:
         return 0.0
 
 
-def _clip_url(base: str, q) -> str | None:
+def _clip_url(base: str, q: ExportableQuote) -> str | None:
     """Best-effort clip URL from a user-supplied folder base + filename convention.
 
     Only http(s) bases are accepted — `html.escape` does NOT neutralise a

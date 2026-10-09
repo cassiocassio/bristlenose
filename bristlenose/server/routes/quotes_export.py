@@ -12,6 +12,7 @@ import io
 import logging
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from sqlalchemy.orm import Session
 from starlette.responses import Response
 
 from bristlenose.server.export_core import (
@@ -52,12 +53,13 @@ _DEFAULT_HEADERS = [
 # ---------------------------------------------------------------------------
 
 
-def _get_db(request: Request):
+def _get_db(request: Request) -> Session:
     """Get the database session from app state."""
-    return request.app.state.db_factory()
+    db: Session = request.app.state.db_factory()
+    return db
 
 
-def _check_project(db, project_id: int) -> Project:
+def _check_project(db: Session, project_id: int) -> Project:
     """Return the project or raise 404."""
     project = db.get(Project, project_id)
     if not project:
@@ -113,7 +115,7 @@ async def export_quotes_csv(
     anonymise: bool = Query(False),
     headers: str | None = Query(None, alias="col_headers",
                                 description="Comma-separated translated column headers"),
-):
+) -> Response:
     """Export quotes as CSV with UTF-8 BOM."""
     db = _get_db(request)
     try:
@@ -159,7 +161,7 @@ async def export_quotes_xlsx(
     anonymise: bool = Query(False),
     headers: str | None = Query(None, alias="col_headers",
                                 description="Comma-separated translated column headers"),
-):
+) -> Response:
     """Export quotes as XLSX with frozen header row and auto-filter."""
     db = _get_db(request)
     try:

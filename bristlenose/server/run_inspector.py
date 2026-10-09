@@ -359,7 +359,7 @@ def reconstruct_stages(events: list[dict[str, Any]]) -> tuple[list[dict[str, Any
 
 
 def _terminus(events: list[dict[str, Any]]) -> dict[str, Any] | None:
-    for e in reversed(events):
+    for e in events[::-1]:
         if _event_type(e) in ("run_completed", "run_cancelled", "run_failed"):
             return e
     return None

@@ -57,6 +57,8 @@ from bristlenose.server.routes.transcript import router as transcript_router
 from bristlenose.server.status_page import detect_status, render_page
 
 if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
     from bristlenose.events import RunCompletedEvent
 
 logger = logging.getLogger(__name__)
@@ -1037,13 +1039,13 @@ def _ensure_index_symlink(output_dir: Path) -> None:
 
 
 def _import_on_startup(
-    session_factory: object,
+    session_factory: Callable[[], Session],
     project_dir: Path,
 ) -> None:
     """Import project data into SQLite during app startup."""
     from bristlenose.server.importer import import_project
 
-    db = session_factory()  # type: ignore[operator]
+    db = session_factory()
     try:
         import_project(db, project_dir)
     except Exception:
@@ -1052,7 +1054,7 @@ def _import_on_startup(
         db.close()
 
 
-def _reconcile_orphaned_autocode_jobs(session_factory: object) -> None:
+def _reconcile_orphaned_autocode_jobs(session_factory: Callable[[], Session]) -> None:
     """Reset AutoCode jobs stranded 'running'/'pending' by a prior crash.
 
     No AutoCode job survives a serve restart (each is an in-process asyncio
@@ -1063,7 +1065,7 @@ def _reconcile_orphaned_autocode_jobs(session_factory: object) -> None:
     from bristlenose.server.autocode import reconcile_orphaned_jobs
     from bristlenose.server.codebook_sync import sync_installed_frameworks
 
-    db = session_factory()  # type: ignore[operator]
+    db = session_factory()
     try:
         n = reconcile_orphaned_jobs(db)
         if n:
@@ -1076,7 +1078,7 @@ def _reconcile_orphaned_autocode_jobs(session_factory: object) -> None:
     # A framework YAML may have been reworded since this instance imported it
     # (norman 2.3 renamed eight tags and two groups). Rename the rows in place
     # now, so the UI and the next AutoCode run agree with the YAML.
-    db = session_factory()  # type: ignore[operator]
+    db = session_factory()
     try:
         for report in sync_installed_frameworks(db):
             if report.changed:
@@ -1089,7 +1091,7 @@ def _reconcile_orphaned_autocode_jobs(session_factory: object) -> None:
 
 def _make_run_completed_handler(
     app: FastAPI,
-    session_factory: object,
+    session_factory: Callable[[], Session],
     project_dir: Path,
     engine: Engine | None = None,
 ) -> Callable[[RunCompletedEvent], Awaitable[None]]:
@@ -1120,7 +1122,7 @@ def _make_run_completed_handler(
                 logger.exception(
                     "Schema heal before re-import failed for %s", project_dir,
                 )
-        db = session_factory()  # type: ignore[operator]
+        db = session_factory()
         try:
             import_project(db, project_dir)
             return True
@@ -1169,7 +1171,7 @@ def _make_run_completed_handler(
 
 def _install_event_watcher(
     app: FastAPI,
-    session_factory: object,
+    session_factory: Callable[[], Session],
     project_dir: Path,
     engine: Engine | None = None,
 ) -> None:

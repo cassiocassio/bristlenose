@@ -164,6 +164,7 @@ def sync_installed_frameworks(db: SASession) -> list[SyncReport]:
     ids = [
         fid for (fid,) in db.query(CodebookGroup.framework_id)
         .filter(CodebookGroup.framework_id.isnot(None)).distinct().all()
+        if fid is not None  # the filter already excludes it; this narrows the type
     ]
     reports: list[SyncReport] = []
     for fid in ids:

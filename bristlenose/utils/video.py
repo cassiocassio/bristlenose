@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import platform
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -137,7 +138,7 @@ def extract_thumbnail(
 
 def extract_thumbnails(
     sessions: list[InputSession],
-    transcripts: list[FullTranscript],
+    transcripts: Sequence[FullTranscript],
     thumbnails_dir: Path,
 ) -> dict[str, Path]:
     """Extract thumbnail frames for all video sessions.

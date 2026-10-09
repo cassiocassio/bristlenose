@@ -1811,6 +1811,8 @@ def _auto_tag_from_sentiment_field(db: Session, project: Project) -> None:
 
     created = 0
     for quote in quotes_with_sentiment:
+        if not quote.sentiment:
+            continue  # the query excludes these; this tells the type checker
         td = tag_by_name.get(quote.sentiment)
         if td is None:
             continue

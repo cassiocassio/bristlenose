@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from pathlib import Path
 
 from bristlenose.models import (
@@ -125,7 +126,7 @@ def render_transcript_pages(
     color_scheme: str = "auto",
     display_names: dict[str, str] | None = None,
     people: PeopleFile | None = None,
-    transcripts: list[FullTranscript] | None = None,
+    transcripts: Sequence[FullTranscript] | None = None,
     all_quotes: list[ExtractedQuote] | None = None,
     screen_clusters: list[ScreenCluster] | None = None,
     theme_groups: list[ThemeGroup] | None = None,
@@ -491,7 +492,7 @@ def _render_inline_transcripts(
     video_map: dict[str, str] | None,
     people: PeopleFile | None,
     display_names: dict[str, str] | None,
-    transcripts: list[FullTranscript] | None,
+    transcripts: Sequence[FullTranscript] | None,
     all_quotes: list[ExtractedQuote] | None,
     screen_clusters: list[ScreenCluster] | None,
     theme_groups: list[ThemeGroup] | None,

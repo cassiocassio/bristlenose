@@ -224,8 +224,8 @@ def assemble_corpus_context(
     # Grouping joins, mirroring routes/quotes.py.
     cluster_to_pks: dict[int, list[int]] = {}
     if quote_pks:
-        for cq in db.query(ClusterQuote).filter(ClusterQuote.quote_id.in_(quote_pks)):
-            cluster_to_pks.setdefault(cq.cluster_id, []).append(cq.quote_id)
+        for link in db.query(ClusterQuote).filter(ClusterQuote.quote_id.in_(quote_pks)):
+            cluster_to_pks.setdefault(link.cluster_id, []).append(link.quote_id)
     theme_to_pks: dict[int, list[int]] = {}
     if quote_pks:
         for tq in db.query(ThemeQuote).filter(ThemeQuote.quote_id.in_(quote_pks)):
@@ -290,13 +290,13 @@ def assemble_corpus_context(
     included = 0
     truncated = False
     char_count = sum(len(line) + 1 for line in lines)
-    for kind, heading, members in blocks:
+    for kind, heading, block_quotes in blocks:
         if truncated:
             break
         header_line = f"## {kind}: {heading}"
         char_count += len(header_line) + 2
         lines.append(header_line)
-        for cq in members:
+        for cq in block_quotes:
             line = _quote_line(included + 1, cq)
             if char_count + len(line) + 1 > max_chars:
                 truncated = True

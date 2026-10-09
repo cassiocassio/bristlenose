@@ -450,7 +450,9 @@ def timing_compare(
         if not isinstance(stat, dict):
             continue
         stage = _TIMING_METRIC_STAGE.get(metric)
-        act = stage_actuals.get(stage) if stage else None
+        if stage is None:
+            continue
+        act = stage_actuals.get(stage)
         if act is None:
             continue
         n = _int(stat.get("n"))

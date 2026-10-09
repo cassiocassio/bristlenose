@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import shutil
 import warnings
+from collections.abc import Sequence
 from pathlib import Path
 
 from bristlenose.coverage import calculate_coverage
@@ -73,7 +74,7 @@ def render_html(
     color_scheme: str = "auto",
     display_names: dict[str, str] | None = None,
     people: PeopleFile | None = None,
-    transcripts: list[FullTranscript] | None = None,
+    transcripts: Sequence[FullTranscript] | None = None,
     analysis: object | None = None,
     serve_mode: bool = False,
 ) -> Path:

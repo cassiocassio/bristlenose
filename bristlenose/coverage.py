@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from bristlenose.models import ExtractedQuote, FullTranscript, format_timecode
@@ -55,7 +56,7 @@ def _is_participant_code(code: str) -> bool:
 
 
 def calculate_coverage(
-    transcripts: list[FullTranscript],
+    transcripts: Sequence[FullTranscript],
     quotes: list[ExtractedQuote],
 ) -> CoverageStats:
     """Calculate transcript coverage statistics.
@@ -85,7 +86,7 @@ def calculate_coverage(
     participant_words_total = 0
     participant_words_in_quotes = 0
     moderator_words_total = 0
-    omitted_by_session: dict[str, list[tuple[str, str, str, int]]] = {}
+    omitted_by_session: dict[str, list[tuple[str, str, int, str, int]]] = {}
 
     for transcript in transcripts:
         session_id = transcript.session_id

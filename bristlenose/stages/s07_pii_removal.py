@@ -697,7 +697,9 @@ def _redact_text(
 
     anonymized = anonymizer.anonymize(
         text=text,
-        analyzer_results=results,
+        # presidio's two packages each define RecognizerResult; anonymize() copies
+        # its input into its own class reading only start/end/entity_type/score.
+        analyzer_results=results,  # type: ignore[arg-type]
         operators=operators,
     )
 

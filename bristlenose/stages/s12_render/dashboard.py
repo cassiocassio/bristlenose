@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import logging
 import os
+from collections.abc import Sequence
 from datetime import datetime
 
 from bristlenose.coverage import CoverageStats
@@ -417,7 +418,7 @@ def _render_project_tab(
     people: PeopleFile | None,
     display_names: dict[str, str] | None,
     video_map: dict[str, str] | None,
-    transcripts: list[FullTranscript] | None,
+    transcripts: Sequence[FullTranscript] | None,
     now: datetime,
 ) -> str:
     """Render the Project tab as a dashboard with tessellated panes."""

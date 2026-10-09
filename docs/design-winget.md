@@ -1,6 +1,15 @@
 ---
 status: plan v2 — steps 1 and 2 done; step 3 submitted 9 Oct 2026 (microsoft/winget-pkgs#449372), validation passed the same morning, awaiting a moderator
+last-trued: 2026-10-09
+trued-against: HEAD@main on 2026-10-09 (357ab3f3)
 ---
+
+> **Trued 9 Oct 2026.** "What exists" is shipped with 0.36.0, not unreleased; the
+> Inno 7 and antivirus worries in step 3 did not happen; step 5's pending state is
+> built (`CHANNELS_FOLLOW` in `scripts/project.conf`); client Windows 10/11 testing
+> moved to VirtualBox VMs on an Intel Mac (`docs/release-winget.md` § Client Windows
+> in VMs), and Azure was decided against for it (9 Oct, cost). The per-release
+> procedure is `docs/release-winget.md`.
 
 # Bristlenose on winget
 
@@ -91,7 +100,7 @@ reopened. **Decision (8 Oct 2026): buy the Certum certificate next month (Novemb
 up unsigned, accepting the SmartScreen screen for early users, and signed builds take
 over from the first release after the certificate arrives.
 
-## What exists (on main since 5 Oct 2026; unreleased)
+## What exists (on main since 5 Oct 2026; shipped as the 0.36.0 installer)
 
 - `packaging/windows/bristlenose-win.spec` — the PyInstaller spec (fork of the Mac
   sidecar spec, with ctranslate2's DLLs and faster-whisper's VAD model collected
@@ -178,8 +187,9 @@ Open from that review: dependency **hashes** (`--generate-hashes` /
 `--require-hashes`; the pins stop drift but not a wheel added to a pinned version);
 an `[InstallDelete]` rollback that a failure *other* than a running exe (disk full,
 antivirus on a `.pyd`) can still leave half-installed; `winget` and `nvidia-smi`
-still launched by bare name (`ollama.py`, `doctor_fixes.py`, `utils/hardware.py` —
-`utils/safe_which.py` is the drop-in). The current-directory lookup for Ollama and
+still launched by bare name (`ollama.py`'s `winget install` argv and
+`utils/hardware.py`'s `nvidia-smi`; ollama itself now resolves through `safe_which`,
+and `doctor_fixes.py` only names winget as an install method). The current-directory lookup for Ollama and
 FFmpeg was fixed separately (`5f3d5ac8`, `47ee59af`).
 
 ## The road
@@ -197,27 +207,31 @@ FFmpeg was fixed separately (`5f3d5ac8`, `47ee59af`).
    refuses the bundle), so CI validates against the vendored schemas
    (`packaging/windows/validate_manifest.py`); `winget validate` runs on a real
    Windows machine before a submission. Two builds of one commit differ in hash
-   (timestamps), which is why a published version is never rebuilt.* The release then attaches that exact installer to the GitHub
-   Release; it is **never rebuilt** for a published version (a rebuild changes the
+   (timestamps), which is why a published version is never rebuilt.* That exact installer
+   is attached to the GitHub Release **by hand** for now (`docs/release-winget.md`
+   steps 1–3; `release.yml` has no Windows job); it is **never rebuilt** for a published version (a rebuild changes the
    hash winget pinned).
 3. **First submission by hand** — *submitted 9 Oct 2026 as
    microsoft/winget-pkgs#449372 (0.36.0, installer built on the tag by
    windows-installer.yml and attached to the GitHub Release, SHA-256
    `63850c4d…6a0d2`). Komac 2.16's `submit` needs the fork to exist first
    (`gh repo fork microsoft/winget-pkgs`), and its `analyze` refuses Inno Setup 7
-   installers ("newer than the maximum supported version 6.7"); if validation
-   trips on the same limit, rebuild with Inno 6.7. Validation failed once on a 404
+   installers ("newer than the maximum supported version 6.7"), but winget's own
+   validation accepted the Inno 7 installer, so no 6.7 rebuild. Validation failed once on a 404
    `ReleaseNotesUrl`, then passed all ten checks by 08:30 BST on 9 Oct, the
    installer scan and a real install included: the unsigned PyInstaller build drew no
    antivirus flag, and the Inno 7 installer raised nothing. Labelled `New-Package`;
    waiting for a volunteer moderator.* With Komac or `wingetcreate`: one version per PR, sign
-   Microsoft's CLA on the PR (a click-through, no country restriction), expect a
-   false-positive cycle (submit to microsoft.com/wdsi/filesubmission, then
-   `@wingetbot run`), days in the new-package moderator queue.
-4. **Signing** (Certum) when Windows earns it; a manual SimplySign step per release.
+   Microsoft's CLA on the PR (a click-through, no country restriction), days in the
+   new-package moderator queue. The plan expected a Defender false-positive cycle
+   (microsoft.com/wdsi/filesubmission, then `@wingetbot run`); 0.36.0 drew none.
+4. **Signing** (Certum): buy in November 2026 (see *Signing*); a manual SimplySign
+   step per release from then on.
 5. **Automate** after one or two accepted versions: `winget-releaser` (classic PAT with
-   `public_repo` + `workflow`, a winget-pkgs fork), a winget channel in
-   `scripts/project.conf` with an expected "pending" state while moderators merge.
+   `public_repo` + `workflow`, a winget-pkgs fork). *The verify half is built:
+   winget is a follower channel (`CHANNELS_FOLLOW="winget"`, a 72-hour budget) whose
+   "pending" state sits outside the exit code ("verify: follower channels with a
+   pending state, outside the exit code").*
 6. **Later, if earned:** machine scope for IT/Intune, a native Arm build once
    ctranslate2 publishes one, a shared FFmpeg build to roughly halve the size.
 
@@ -228,7 +242,7 @@ on any Windows x64 machine produces an installer that passes every smoke test be
 the product changes are merged with their tests; the plan and the Windows record say
 what is true.
 
-**Where it stands (6 Oct 2026):** 1.1–1.8 are on main, and the acceptance run on a
+**Where it stands (6 Oct 2026; step 1 is done, see the front-matter):** 1.1–1.8 are on main, and the acceptance run on a
 fresh Windows Server 2025 box (aella) passed everything but the winget install:
 
 - `build.ps1 -Installer -Manifest` from a HEAD wheel: all nine smoke checks green
@@ -342,6 +356,12 @@ On a stock Windows 11 machine (the UTM VM): `winget install --manifest` of the u
 installer, recording whether SmartScreen's dialog appears (the Mark-of-the-Web question
 above), and the same installer double-clicked after a browser download, for comparison.
 Then `aella down`.
+
+*As run (9 Oct 2026):* client Windows moved to VirtualBox VMs on an Intel Mac
+(`packaging/windows/vbox-test.sh`; Windows 10 22H2 and Windows 11 26H2 both pass every
+product check, `docs/release-winget.md` § Client Windows in VMs). That harness installs
+the setup.exe silently and never runs `winget install --manifest`, so the
+SmartScreen-under-winget check on client Windows is still undone; Server 2025 has it.
 
 ## Who to lean on
 

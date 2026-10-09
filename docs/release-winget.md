@@ -208,10 +208,11 @@ Each of these cost a cycle at least once.
   then poll `gh repo view cassiocassio/winget-pkgs` until it answers. A fork takes
   seconds to appear. A failed submit creates nothing, so retrying is safe.
 - **Komac's `analyze` refuses Inno Setup 7** ("newer than the maximum supported version
-  6.7"). `submit` with prebuilt manifests never analyzes, so it isn't blocked. winget's
-  own validation pipeline may use similar parsing. If it fails on this, the fallback is
-  Inno 6.7: change `INNO_VERSION`/`INNO_SHA256` in `windows-installer.yml`, after
-  checking that `bristlenose.iss` compiles under 6.x.
+  6.7"). `submit` with prebuilt manifests never analyzes, so it isn't blocked, and
+  winget's own validation accepted the Inno 7 installer for 0.36.0 (installer scan and
+  metadata checks passed). If that ever changes, the fallback is Inno 6.7: change
+  `INNO_VERSION`/`INNO_SHA256` in `windows-installer.yml`, after checking that
+  `bristlenose.iss` compiles under 6.x.
 - **Send Komac's output to a file; don't filter it.** On the first submit attempt, a
   `grep -v` meant to strip manifest echo also hid the error, and the failure looked
   like silence.

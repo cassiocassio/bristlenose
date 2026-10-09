@@ -77,7 +77,10 @@ worst at.
 | **Linux x86_64, GitHub Actions** | ✅ | CI matrix, packaging, release pipeline | anything GUI; no LLM keys, no Ollama |
 | **Claude Code Cloud VM** | ✅ | code/test/lint/frontend build | GUI; **not for pipeline runs on private interview data** |
 | **Fedora 43 x86_64** | ✅ real Intel hardware | Copr packaging end to end | GUI |
-| **`aella` amd64 boxes** | ✅ on demand | amd64 Linux behaviour | GUI |
+| **`aella` amd64 boxes** | ✅ on demand | amd64 Linux behaviour; Windows Server 2025 x64 with `aella up --windows` (installer acceptance, `docs/design-winget.md`) | GUI; client Windows editions |
+| **Windows x64, GitHub Actions** | ✅ `test (3.12, windows-latest)` blocks; `windows-installer.yml` builds the installer | the suite on Windows; the installer build, smoke tests and manifest schemas | winget itself (the runner cannot install it); client editions |
+| **Windows 11 on Arm, UTM VM** | ✅ on this Mac | the x64 build under Windows' own emulation; the report in Edge (`docs/design-windows-port.md`) | native x64 |
+| **Windows 10 22H2 and 11 26H2 x64, VirtualBox on an Intel Mac (`benbecula`)** | ✅ since 9 Oct 2026 | the release installer on client Windows: install, doctor, transcription, uninstall (`packaging/windows/vbox-test.sh`, `docs/release-winget.md`) | SmartScreen and Smart App Control (no Mark of the Web); speed (a 2014 CPU); the 11 eval expires ~90 days after its build |
 
 ## 3. macOS specifics
 

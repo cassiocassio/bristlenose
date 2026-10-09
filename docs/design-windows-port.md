@@ -1,4 +1,17 @@
+---
+status: current
+last-trued: 2026-10-09
+trued-against: HEAD@main on 2026-10-09 (357ab3f3)
+---
+
 # Windows port
+
+> **Trued 9 Oct 2026.** Since the 5 Oct status: a Windows artefact exists (the 0.36.0
+> winget installer on the GitHub Release, attached by hand), winget is a follower
+> channel in `release.sh verify`, and the first submission (microsoft/winget-pkgs#449372)
+> passed validation and waits for a moderator. Client Windows 10 22H2 and Windows 11
+> 26H2 ran that installer in VirtualBox VMs on an Intel Mac (`docs/release-winget.md`
+> § Client Windows in VMs). The pipx/uv route below is unchanged.
 
 ## Status — 5 Oct 2026: the CLI installs and runs; not a channel
 
@@ -16,13 +29,16 @@ on **x64 Python** and runs on Windows. Proved three ways on 5 Oct 2026:
 - **A fresh Windows Server 2025 x64 box** (`aella up --windows`): the same install
   path, the redirect cases, and `configure` against a fresh root store.
 
-**What it is not.** Not a release channel: there is no Windows artifact, no release
-step and no verify row. Windows users get the same `pipx`/`uv` install as any Python
+**What it is not (5 Oct; see the banner for since).** Not a release channel: there was
+no Windows artifact, no release step and no verify row. *By 9 Oct there is an artefact
+and a follower verify row; still no release step.* Windows users get the same `pipx`/`uv` install as any Python
 user. The 0.34.0 changelog says exactly that (it was drafted as 0.33.1; the release became a minor when winget joined it).
 
 **Never exercised on Windows:** `run --clean` twice on a real project; `serve` alone
 then Ctrl-C; OneDrive or network-share project folders; long paths; the voice-model
-download; Windows 11 on x64 hardware; the GUI clicks of python.org's install manager.
+download; Windows 11 on x64 hardware (the winget installer has since run on Windows 11
+26H2 and Windows 10 22H2 x64 in VirtualBox, virtualised rather than bare metal; the
+pipx/uv route and the one-liner have not); the GUI clicks of python.org's install manager.
 
 ### What was broken, and is fixed
 
@@ -147,12 +163,15 @@ open); `docs/testing/ratchet.json` names each.
    already-open window has ended; the MCP hint says `pip` to pipx users; session
    times render UTC as local (H9 in `docs/time-defects.md`); the transcript header
    floors a duration the CLI rounds.
-5. **A Windows channel: winget.** On `main` since 5 Oct 2026, unreleased: the plan
-   (`docs/design-winget.md`), the PyInstaller build, a user-scope Inno Setup
-   installer, smoke tests, manifest templates and frozen-build fixes. Next: the
-   step-1 acceptance run on a box, then a Windows job in `release.yml`. Signing is
-   decided: the first submission goes unsigned, Certum's open-source certificate
-   later (Microsoft's signing service takes UK organisations, not UK individuals). Scoop and an MSI were set aside: researchers
+5. **A Windows channel: winget.** The plan (`docs/design-winget.md`), the PyInstaller
+   build, a user-scope Inno Setup installer, smoke tests, manifest templates and
+   frozen-build fixes, on `main` since 5 Oct 2026. *As of 9 Oct:* the acceptance run
+   passed (6 and 8 Oct), `windows-installer.yml` builds it in CI (dispatched by hand,
+   not a `release.yml` job), and 0.36.0 is submitted as microsoft/winget-pkgs#449372,
+   validated and waiting for a moderator; procedure in `docs/release-winget.md`.
+   Signing: the first submission went unsigned; Certum's open-source certificate is
+   bought in November 2026 (Microsoft's signing service takes UK organisations, not
+   UK individuals). Scoop and an MSI were set aside: researchers
    will not have Scoop, and the one-liner already covers the gap.
 
 Done since the 5 Oct status was written: plain-ASCII symbols when output is not a UTF-8

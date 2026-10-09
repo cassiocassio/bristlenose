@@ -1,5 +1,5 @@
 ---
-status: plan v2 — step 1 done and re-proven after a review, step 2's CI build green on GitHub (8 Oct 2026); step 3, the first submission, is next
+status: plan v2 — steps 1 and 2 done; step 3 submitted 9 Oct 2026 (microsoft/winget-pkgs#449372), awaiting the CLA, validation and a moderator
 ---
 
 # Bristlenose on winget
@@ -197,7 +197,13 @@ FFmpeg was fixed separately (`5f3d5ac8`, `47ee59af`).
    (timestamps), which is why a published version is never rebuilt.* The release then attaches that exact installer to the GitHub
    Release; it is **never rebuilt** for a published version (a rebuild changes the
    hash winget pinned).
-3. **First submission by hand** with Komac or `wingetcreate`: one version per PR, sign
+3. **First submission by hand** — *submitted 9 Oct 2026 as
+   microsoft/winget-pkgs#449372 (0.36.0, installer built on the tag by
+   windows-installer.yml and attached to the GitHub Release, SHA-256
+   `63850c4d…6a0d2`). Komac 2.16's `submit` needs the fork to exist first
+   (`gh repo fork microsoft/winget-pkgs`), and its `analyze` refuses Inno Setup 7
+   installers ("newer than the maximum supported version 6.7"); if validation
+   trips on the same limit, rebuild with Inno 6.7.* With Komac or `wingetcreate`: one version per PR, sign
    Microsoft's CLA on the PR (a click-through, no country restriction), expect a
    false-positive cycle (submit to microsoft.com/wdsi/filesubmission, then
    `@wingetbot run`), days in the new-package moderator queue.

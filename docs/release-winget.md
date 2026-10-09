@@ -53,7 +53,14 @@ gh run download <run-id> -n bristlenose-windows-installer -D <scratch-dir>
 The installer lands at `<scratch-dir>/build/windows/bristlenose-X.Y.Z-setup-x64.exe`,
 and the manifests at `<scratch-dir>/build/windows/winget/Bristlenose.Bristlenose/X.Y.Z/`.
 Compare the installer's `shasum -a 256` with the `InstallerSha256` in
-`Bristlenose.Bristlenose.installer.yaml`.
+`Bristlenose.Bristlenose.installer.yaml`. Then fetch every URL in the three files,
+because winget's bot does and a single 404 fails the PR:
+
+```bash
+grep -hoE 'https?://[^ "]+' <manifest-dir>/*.yaml | sort -u | while read u; do echo "$(curl -sL -o /dev/null -w '%{http_code}' "$u") $u"; done
+```
+
+The installer URL will 404 until step 3 attaches it; every other URL must be 200.
 
 **3. Attach it, then check what the public gets.**
 
@@ -117,6 +124,11 @@ Each of these cost a cycle at least once.
 
 **Release mechanics**
 
+- **winget's bot fetches every URL in the manifest, and the schema check can't.**
+  0.36.0's first validation failed on `ReleaseNotesUrl:
+  https://bristlenose.app/changelog.html`, which was a 404. The changelog lives at
+  `/docs/changelog.html`, since the website v2 cutover. The fix went onto the PR branch
+  as a commit to the fork (any later push re-runs validation), and into the template.
 - **Never rebuild a published version's installer.** Two builds of the same commit
   differ in hash (timestamps inside the installer), and winget pins the hash. Upload
   the artefact built on the tag. If the installer really has to change, the manifest's

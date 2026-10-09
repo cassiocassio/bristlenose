@@ -17,6 +17,6 @@ Tags:
 - transcription
 - interviews
 - whisper
-ReleaseNotesUrl: https://bristlenose.app/changelog.html
+ReleaseNotesUrl: https://bristlenose.app/docs/changelog.html
 ManifestType: defaultLocale
 ManifestVersion: ${MANIFEST_VERSION}

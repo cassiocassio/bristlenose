@@ -339,9 +339,11 @@ for them.
 2. When winget's second version has merged, so its update cadence is measured,
    decide whether `INSTALL.md` / `docs-src/install.md` carry a cadence sentence
    for it, and what it says.
-3. Decide whether the README's `.dmg` link (§1.3) should point at
-   `bristlenose.app/dmg/Bristlenose.dmg`, the channel's own artefact. That is
-   pattern 1 from §3, and the one live defect of this kind.
+3. ~~Decide whether the README's `.dmg` link (§1.3) should point at
+   `bristlenose.app/dmg/Bristlenose.dmg`, the channel's own artefact.~~
+   **Done 9 Oct 2026, at the maintainer's request:** README.md:69 now links the
+   permalink, which 302s to the current versioned `.dmg`. That is pattern 1
+   from §3.
 
 ---
 

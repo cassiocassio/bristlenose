@@ -66,7 +66,7 @@ For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, **Gemin
 
 ### macOS (desktop app) — easiest
 
-Download **[Bristlenose.dmg](https://github.com/cassiocassio/bristlenose/releases/latest)**, drag to Applications, open it. The app prompts for your Claude API key on first launch and bundles everything else (Python, FFmpeg, Whisper). No terminal needed.
+Download **[Bristlenose.dmg](https://bristlenose.app/dmg/Bristlenose.dmg)**, drag to Applications, open it. The app prompts for your Claude API key on first launch and bundles everything else (Python, FFmpeg, Whisper). No terminal needed.
 
 First launch: because it's downloaded from the internet, macOS shows a "are you sure you want to open it?" confirmation — click **Open**. One time only. (The app is signed and notarised, so there's no "unidentified developer" block to work around.)
 

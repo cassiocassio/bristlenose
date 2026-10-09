@@ -26,6 +26,7 @@ jobs:
   build:
     needs: ci
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     # Elevated over the read-only default so this job can mint a signed
     # SBOM attestation (actions/attest below). id-token: write is the OIDC
@@ -118,6 +119,7 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     # Required for PyPI trusted publishing (OIDC).
     permissions:
@@ -147,6 +149,7 @@ jobs:
   github-release:
     needs: publish
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     permissions:
       contents: write
@@ -179,6 +182,7 @@ jobs:
     # time we get here, and auto-deletion would mask that.
     needs: publish
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Poll PyPI for the published version
@@ -202,6 +206,7 @@ jobs:
   notify-homebrew:
     needs: publish
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Extract version from tag
@@ -229,6 +234,7 @@ jobs:
     # (No checkout: buildscm clones the repo itself from the URL below.)
     needs: verify-pypi
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Trigger the Copr build
         env:

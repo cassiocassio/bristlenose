@@ -51,6 +51,7 @@ jobs:
   # wall-clock, and buys one status check per gate.
   gates:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -91,6 +92,7 @@ jobs:
 
   supply-chain:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: Set up Python
@@ -126,6 +128,7 @@ jobs:
     # repo, and release.yml gates on the WORKFLOW's conclusion, so every job
     # still has to be green before a tag can publish.
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 65
     # macOS is informational on daily pushes (catches platform bugs without
     # blocking merges) but BLOCKING when strict-macos is passed — release.yml
     # passes it, so "CI green" on a release means green on both platforms.
@@ -314,6 +317,7 @@ jobs:
     # fail as "gate is blind", which is a true statement about a missing venv
     # and a false one about the gate.
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -362,6 +366,7 @@ jobs:
 
   frontend-lint-type-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -553,6 +558,7 @@ jobs:
   package:
     name: Build wheel + sdist (no publish)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 

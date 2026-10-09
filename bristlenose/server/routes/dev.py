@@ -44,7 +44,8 @@ router = APIRouter(prefix="/api/dev")
 
 
 def _get_db(request: Request) -> Session:
-    return request.app.state.db_factory()
+    db: Session = request.app.state.db_factory()
+    return db
 
 
 # ---------------------------------------------------------------------------

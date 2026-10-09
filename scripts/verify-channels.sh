@@ -324,6 +324,28 @@ results_line() {
 # is not 64 characters" against a good, byte-identical artefact. Every
 # fetch call site is a content read; all of them want the final body.
 fetch() { curl -sfL --max-time 20 "$1" 2>/dev/null || true; }
+
+# bounded <seconds> <cmd…> — run cmd with a deadline; exit 124 when it is hit.
+#   curl carries --max-time; gh has no such flag, and a gh that never answers
+#   (a stuck connection, an auth prompt waiting on a terminal) used to hang
+#   verify for good (channel-scenarios W3). The command runs in its own process
+#   group and the whole group is killed at the deadline, so a child still
+#   holding stdout cannot keep the $(…) around it waiting. perl, because macOS
+#   has no `timeout`; without perl the command runs unbounded, as it always
+#   did, rather than not at all.
+GH_TIMEOUT_S="${BN_GH_TIMEOUT_S:-20}"
+bounded() {
+    local secs="$1"; shift
+    command -v perl >/dev/null 2>&1 || { "$@"; return; }
+    perl -e '
+        my $t = shift; my $pid = fork;
+        die "fork: $!" unless defined $pid;
+        if (!$pid) { setpgrp(0, 0); exec @ARGV or exit 127; }
+        $SIG{ALRM} = sub { kill "KILL", -$pid; waitpid($pid, 0); exit 124 };
+        alarm $t; waitpid($pid, 0); alarm 0;
+        exit($? & 127 ? 128 + ($? & 127) : $? >> 8);
+    ' "$secs" "$@"
+}
 code_of() { curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$1" 2>/dev/null || echo 000; }
 
 # ---------------------------------------------------------------------------
@@ -345,7 +367,7 @@ probe_pypi() {
 probe_github() {
     command -v gh >/dev/null 2>&1 || { printf 'unreachable|gh not installed'; return; }
     local out
-    out=$(gh release view "v$VERSION" --json tagName --jq .tagName 2>/dev/null || true)
+    out=$(bounded "$GH_TIMEOUT_S" gh release view "v$VERSION" --json tagName --jq .tagName 2>/dev/null || true)
     printf '%s|%s' "$(verdict_json_field "$out" "v$VERSION")" "${out:-query failed}"
 }
 
@@ -360,7 +382,9 @@ probe_homebrew() {
 probe_testflight() {
     local _rc
     if [ -x "$ROOT/desktop/scripts/upload-testflight.sh" ]; then
-        "$ROOT/desktop/scripts/upload-testflight.sh" --probe "$VERSION" >/dev/null 2>&1
+        # Bounded too: an exit of 124 maps to "could not look", never "absent".
+        # 90 s plus any propagation window the caller asked the probe to wait out.
+        bounded "${BN_TESTFLIGHT_TIMEOUT_S:-$((90 + ${BN_PROBE_WINDOW_S:-0}))}" "$ROOT/desktop/scripts/upload-testflight.sh" --probe "$VERSION" >/dev/null 2>&1
         _rc=$?
     else
         _rc=3
@@ -450,9 +474,10 @@ probe_winget() {
     # is then seen by the folder read (ok). In the other order the folder read
     # missed it and the PR read found nothing open: a false `bad`
     # (channel-scenarios W1).
-    out=$(gh pr list --repo "$WINGET_REPO" --state open --search "${WINGET_ID} in:title" \
+    out=$(bounded "$GH_TIMEOUT_S" gh pr list --repo "$WINGET_REPO" --state open --search "${WINGET_ID} in:title" \
           --json number,title,createdAt 2>/dev/null); rc=$?
-    local pick="" pr="" age=""
+    local pick="" pr="" age="" timed_out=0
+    [ "$rc" = 124 ] && timed_out=1
     if [ "$rc" -ne 0 ]; then
         inflight=QUERY_FAILED
     else
@@ -502,7 +527,8 @@ print(f[1], f[2], f[3])
         else read -r inflight pr age <<<"$pick"
         fi
     fi
-    out=$(gh api "repos/${WINGET_REPO}/contents/${path}" --jq '.[] | select(.type=="dir") | .name' 2>&1); rc=$?
+    out=$(bounded "$GH_TIMEOUT_S" gh api "repos/${WINGET_REPO}/contents/${path}" --jq '.[] | select(.type=="dir") | .name' 2>&1); rc=$?
+    [ "$rc" = 124 ] && timed_out=1
     if [ "$rc" -eq 0 ]; then
         served=""
         local f
@@ -528,7 +554,11 @@ print(f[1], f[2], f[3])
         overdue)     printf 'overdue|PR #%s for %s open %sh, past the %sh budget · serves %s' "$pr" "$VERSION" "${age:-?}" "$WINGET_BUDGET_HOURS" "$served" ;;
         superseded)  printf 'superseded|%s never landed; PR #%s for %s is in flight · serves %s' "$VERSION" "$pr" "$inflight" "$served" ;;
         bad)         printf 'bad|no open PR for %s · serves %s' "$VERSION" "$served" ;;
-        *)           printf 'unreachable|winget-pkgs query failed (served=%s, in flight=%s)' "$served" "$inflight" ;;
+        *)           if [ "$timed_out" = 1 ]; then
+                         printf 'unreachable|winget-pkgs did not answer within %ss (served=%s, in flight=%s)' "$GH_TIMEOUT_S" "$served" "$inflight"
+                     else
+                         printf 'unreachable|winget-pkgs query failed (served=%s, in flight=%s)' "$served" "$inflight"
+                     fi ;;
     esac
 }
 

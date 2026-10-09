@@ -1004,6 +1004,11 @@
       (r.unledgered || []).forEach(function(u){ add(ul, $("li", null, "before the ledger: stopped at "+u.where+" — "+u.cause+(u.incident ? " (premortem incident "+u.incident+")" : "")+" · the release log records it; no ledger line exists")); });
       if (r.verify) chans.forEach(function(ch){ var v = r.verify.rows[ch]; if (v && v.result !== "ok") add(ul, $("li", null, ch+": never verified ok — "+(v.evidence || v.result))); });
       if (ul.firstChild) add(selBox, ul); else add(selBox, $("div", "hist-sel", "no stops: one invocation, start to finish."));
+      // Followers (CHANNELS_FOLLOW): their last state, in their own list and never
+      // counted as a stop — winget pending for days is the channel working.
+      var fl = $("ul","hist-sel");
+      if (r.verify) (H.followers || []).forEach(function(ch){ var v = r.verify.rows[ch]; if (v) add(fl, $("li", null, "following · "+ch+": "+v.result+(v.evidence ? " — "+v.evidence : ""))); });
+      if (fl.firstChild) add(selBox, fl);
       if (applyEra) applyEra(false);
     };
 

@@ -83,7 +83,37 @@ def _attempts(events: Path) -> tuple[int, list[tuple[str, str]]]:
 STEP_ORDER = ["preflight", "inventory", "bump", "push-main", "strict-ci", "build-all",
               "build-dmg", "ci-green", "testflight", "dmg", "tag", "snap"]
 IRREVERSIBLE = {"testflight", "dmg", "tag"}
-CHANNEL_ORDER = ["pypi", "github", "homebrew", "testflight", "dmg", "snap", "copr", "website"]
+
+
+def conf_raw(conf: Path) -> dict[str, str]:
+    """project.conf's NAME="value" lines, with the file's own ${VAR} references
+    expanded. The one reader of that file on the Python side: the board's
+    read_conf calls it. An unreadable file reads as empty, never as a guess."""
+    raw: dict[str, str] = {}
+    try:
+        text = conf.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return raw
+    for line in text.splitlines():
+        m = re.match(r'^([A-Z_]+)=(?:"([^"]*)"|\'([^\']*)\'|(\S*))\s*(#.*)?$', line)
+        if m:
+            raw[m.group(1)] = m.group(2) if m.group(2) is not None else (m.group(3) if m.group(3) is not None else m.group(4) or "")
+    for _ in range(4):
+        raw = {k: re.sub(r"\$\{([A-Z_]+)\}", lambda mm, src=raw: src.get(mm.group(1), ""), v) for k, v in raw.items()}
+    return raw
+
+
+def channel_order(root: Path, key: str = "CHANNELS") -> list[str]:
+    """A channel list from project.conf: CHANNELS (lockstep, the chart's rows
+    and the funnel) or CHANNELS_FOLLOW (followers, listed but never counted as a
+    stop, since their lag is by design). This used to be a hand-kept list here,
+    a second copy of CHANNELS, so the History tab never showed winget and would
+    have dropped any channel added later (R1 in
+    docs/design-channel-version-lag.md section 7)."""
+    conf = root / "scripts" / "project.conf"
+    if not conf.is_file():
+        conf = ROOT / "scripts" / "project.conf"
+    return conf_raw(conf).get(key, "").split()
 
 # The paths whose commits change how a release runs. A commit to any of these
 # between two invocations is a new version of the release machine.
@@ -171,6 +201,7 @@ def _load_bn_events(root: Path):
 def _final_verify(run_dirs: list[Path], root: Path) -> dict | None:
     """The last complete `release.sh verify` pass across a release's dirs, or None."""
     bn = _load_bn_events(root)
+    order = channel_order(root) + channel_order(root, "CHANNELS_FOLLOW")
     passes: list[tuple[str, dict, int]] = []
     for d in run_dirs:
         p = d / "bn-events.log"
@@ -196,13 +227,13 @@ def _final_verify(run_dirs: list[Path], root: Path) -> dict | None:
     # pass first saw it, so "needed three verifies" stays visible.
     rows: dict[str, dict] = {}
     for n, (_ts, p, _c) in enumerate(passes, 1):
-        for c in CHANNEL_ORDER:
+        for c in order:
             r = p["rows"].get(c)
             if r is None:
                 continue
             if c not in rows or (rows[c]["result"] != "ok" and r["result"] == "ok"):
                 rows[c] = {**r, "pass": n}
-    return {"ts": passes[-1][0], "passes": len(passes), "rows": {c: rows[c] for c in CHANNEL_ORDER if c in rows}}
+    return {"ts": passes[-1][0], "passes": len(passes), "rows": {c: rows[c] for c in order if c in rows}}
 
 
 def _machine_commits(root: Path, since: str) -> list[dict] | None:
@@ -355,7 +386,7 @@ def history(root: Path = ROOT) -> dict:
         for c in commits:
             c["ts"] = _iso_utc(c["ts"])
 
-    value = {"schema": 1, "steps": STEP_ORDER, "irreversible": sorted(IRREVERSIBLE), "channels": CHANNEL_ORDER,
+    value = {"schema": 1, "steps": STEP_ORDER, "irreversible": sorted(IRREVERSIBLE), "channels": channel_order(root), "followers": channel_order(root, "CHANNELS_FOLLOW"),
              "releases": releases, "machine_commits": commits, "unparsed_lines": unparsed,
              "ledgers": len(ledgers)}
     _HISTORY_CACHE["key"], _HISTORY_CACHE["value"] = (key, sinks, str(root)), value

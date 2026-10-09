@@ -27,6 +27,8 @@
 #                  something happened BETWEEN two reads
 #   publish=       failed: the merge went in, Microsoft's publish pipeline did not
 #   budget=        WINGET_BUDGET_HOURS in the sandbox conf (default 72)
+#   release=HANG   `gh release view` (the github row) never answers
+#   gh_timeout=    seconds verify gives each gh call (BN_GH_TIMEOUT_S; default 20)
 #
 #   Holds, as branches:
 #   holds=         after-* branches in this repo (space-separated)
@@ -135,12 +137,38 @@ expect.winget=ok
 expect.seconds=20
 
 id=W3-gh-hangs
-about=gh never answers (a stuck TCP connection, an auth prompt)
+about=gh never answers the folder read (a stuck connection, an auth prompt); the fake's sleep is a child that keeps the pipe open
+served=HANG
+prs=none
+gh_timeout=3
+expect.winget=unreachable
+expect.out=did not answer within 3s
+expect.seconds=15
+
+id=W3-pr-read-hangs
+about=the PR read hangs but the version is merged: a timeout cannot hide ok
+served=0.36.0
+prs=HANG
+gh_timeout=3
+expect.winget=ok
+expect.seconds=15
+
+id=W3-github-row-hangs
+about=the github row's gh release view hangs: unreachable, exit 1, verify still finishes
+served=0.36.0
+prs=none
+release=HANG
+gh_timeout=3
+expect.exit=1
+expect.out=github
+expect.seconds=15
+
+id=W3-default-deadline
+about=with no override, a hung gh is still cut off (the 20 s default)
 served=HANG
 prs=none
 expect.winget=unreachable
-expect.seconds=30
-known=W3
+expect.seconds=35
 
 id=budget-edge
 about=open exactly at the budget is still pending

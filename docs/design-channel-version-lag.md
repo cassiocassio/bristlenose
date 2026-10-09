@@ -483,3 +483,32 @@ smaller things, all fixed:
 **Results.** 48 scenarios pass, and 5 remain known: W2, W3, W9, H1, H4, the
 ones that would add a read or widen behaviour, left by decision. The new removal
 and wanted-version scenarios were mutation-proved.
+
+### 7.2 W3 and R1, fixed 10 Oct 2026
+
+**W3, a hung `gh`.** Every `gh` call in `verify-channels.sh` now runs through
+`bounded`: winget's two reads and the github row's `gh release view`, plus the
+TestFlight probe. The deadline is `BN_GH_TIMEOUT_S`, 20 s by default. TestFlight
+gets 90 s plus any `BN_PROBE_WINDOW_S` it was asked to wait out.
+- **How it works.** `bounded` forks the command into its own process group under
+  a perl alarm and kills the *group* at the deadline. Exit 124 reads as
+  `unreachable`; on winget the row says "did not answer within 20s".
+- **Why the group.** A child still holding stdout keeps the `$(…)` waiting even
+  after its parent is killed.
+- **Proof.** Mutation-proved both ways: with no deadline, and with only the
+  process killed instead of its group. Each hangs the scenario until the
+  harness's own watchdog kills it.
+- **Scenarios.** Four: the folder read hangs; the PR read hangs while the version
+  is merged, which stays `ok`; the github row hangs; and the 20 s default with no
+  override.
+
+**R1, History's channel list.**
+- **The fix.** `release-stats.py` reads both lists from `project.conf` through
+  `conf_raw`, which is now the only parser of that file on the Python side; the
+  board's `read_conf` calls it.
+- **The chart.** The rows and the funnel stay **lockstep only**. A follower's
+  `pending` is the channel working as designed, and the funnel would count it as
+  a stopped attempt.
+- **Followers.** They appear in a release's detail as `following · winget:
+  pending — …`, in their own list, so the "no stops" line is unaffected.
+- **Proof.** Mutation-proved: putting the hand-kept list back fails the new test.

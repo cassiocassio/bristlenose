@@ -151,6 +151,34 @@ class History(unittest.TestCase):
         self.assertEqual((v["rows"]["pypi"]["result"], v["rows"]["pypi"]["pass"]), ("ok", 1))
         self.assertNotIn("github", v["rows"])
 
+    def test_channels_and_followers_come_from_project_conf(self):
+        # R1: CHANNEL_ORDER was a hand-kept copy of CHANNELS, so a channel the
+        # conf added (winget, or anything later) never reached History.
+        (self.root / "scripts").mkdir()
+        (self.root / "scripts" / "project.conf").write_text(
+            'NAME="x"\nCHANNELS="pypi flatpak"\nCHANNELS_FOLLOW="winget"   # a comment\n')
+        sink = "\n".join([
+            "@bn verify ts=2026-10-01T04:00:00Z run=1.0.0 status=start version=1.0.0",
+            "@bn row ts=2026-10-01T04:00:00Z run=1.0.0 src=verify label=flatpak result=ok evidence=x",
+            "@bn row ts=2026-10-01T04:00:00Z run=1.0.0 src=verify follow=1 label=winget result=pending evidence=PR",
+            "@bn row ts=2026-10-01T04:00:00Z run=1.0.0 src=verify label=homebrew result=ok evidence=not-in-this-conf",
+            "@bn verify ts=2026-10-01T04:00:01Z run=1.0.0 status=done version=1.0.0",
+        ]) + "\n"
+        self.write("1.0.0", [ev("01:00:00", "1.0.0", "run", "started")], sink=sink)
+        h = rs.history(self.root)
+        self.assertEqual(h["channels"], ["pypi", "flatpak"])
+        self.assertEqual(h["followers"], ["winget"])
+        rows = h["releases"][0]["verify"]["rows"]
+        self.assertEqual(rows["flatpak"]["result"], "ok")
+        self.assertEqual(rows["winget"]["result"], "pending")   # recorded, for the follower list
+        self.assertNotIn("homebrew", rows)                      # the conf decides, not a hand-kept list
+
+    def test_conf_raw_expands_and_an_unreadable_conf_is_empty(self):
+        c = self.root / "p.conf"
+        c.write_text('A="x"\nB="${A}-y"\nlower="z"\n')
+        self.assertEqual(rs.conf_raw(c), {"A": "x", "B": "x-y"})
+        self.assertEqual(rs.conf_raw(self.root / "nope.conf"), {})
+
     def test_no_sink_is_no_record_not_zero(self):
         self.write("1.0.0", [ev("01:00:00", "1.0.0", "run", "started")])
         self.assertIsNone(rs.history(self.root)["releases"][0]["verify"])

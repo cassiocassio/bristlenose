@@ -67,7 +67,8 @@ case "$1" in api|pr) n=$((n+1)); echo "$n" > "$W/calls"; echo "$1" >> "$W/order"
 sfx=""; f=$(cat "$W/flip_after" 2>/dev/null || echo 0)
 [ "$f" -gt 0 ] && [ "$n" -gt "$f" ] && sfx="_after"
 case "$1" in
-  release) echo "v$BN_V"; exit 0 ;;
+  release) case "$(cat "$W/release" 2>/dev/null)" in HANG) sleep 600; exit 1 ;; esac
+           echo "v$BN_V"; exit 0 ;;
   api)
     s=$(cat "$W/served$sfx" 2>/dev/null || cat "$W/served")
     case "$s" in
@@ -176,6 +177,7 @@ run_one() {
     [ -n "$(get prs_after)" ] && render_prs "$(get prs_after)" "$title" > "$world/prs_after.json"
     get flip_after 0 > "$world/flip_after"
     get publish ok > "$world/publish"
+    get release ok > "$world/release"
 
     # the holds: branches off main; a landed one is a commit already merged
     for b in $(get holds); do
@@ -201,7 +203,7 @@ run_one() {
         rc_expected_skip=1
     else
         out=$(cd "$sb" && PATH="$WORK/bin:$PATH" BN_V="$v" BN_WORLD="$world" BN_WEBSITE_REPO="$site" \
-              run_watched "$secs" bash scripts/release.sh verify "$v"); rc=$?
+              BN_GH_TIMEOUT_S="$(get gh_timeout 20)" run_watched "$secs" bash scripts/release.sh verify "$v"); rc=$?
         rc_expected_skip=0
     fi
     local took=$(( $(date +%s) - start ))

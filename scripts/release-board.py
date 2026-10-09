@@ -360,13 +360,7 @@ def read_conf(conf: Path) -> dict:
     out: dict = {"CHANNELS": [], "CHANNELS_UNPROBEABLE": []}
     if not conf.is_file():
         return out
-    raw: dict[str, str] = {}
-    for line in conf.read_text(encoding="utf-8", errors="replace").splitlines():
-        m = re.match(r'^([A-Z_]+)=(?:"([^"]*)"|\'([^\']*)\'|(\S*))\s*(#.*)?$', line)
-        if m:
-            raw[m.group(1)] = m.group(2) if m.group(2) is not None else (m.group(3) if m.group(3) is not None else m.group(4) or "")
-    for _ in range(4):
-        raw = {k: re.sub(r"\$\{([A-Z_]+)\}", lambda mm, src=raw: src.get(mm.group(1), ""), v) for k, v in raw.items()}
+    raw = release_stats.conf_raw(conf)   # the one parser of project.conf, in release-stats.py
     for k in ("CHANNELS", "CHANNELS_UNPROBEABLE"):
         out[k] = raw.get(k, "").split()
     for k in _CONF_SCALARS:

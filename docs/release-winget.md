@@ -126,6 +126,61 @@ from the branches `after-winget/<version>` in this repo and the website's.
 `release.sh verify` lists them as `wait` until winget serves that version or a
 later one, then as `land`.
 
+## Client Windows in VMs (benbecula)
+
+CI and aella are Windows Server. Windows 10 and 11 desktop editions are tested on an
+old Intel Mac, `benbecula` (2014 MacBook Pro, 16 GB, Big Sur), with VirtualBox 7.0.26.
+That is the last VirtualBox for Big Sur, and it needs no kernel extensions: it runs on
+Apple's Hypervisor framework. `packaging/windows/vbox-test.sh` does the work:
+
+- `build <vm> <iso> [index]` creates the VM and installs Windows unattended from
+  Microsoft's ISO, with VirtualBox's guest additions, then snapshots it as `clean`.
+  It took 33 min for Windows 11 and 16 min for Windows 10 on that Mac.
+- `test <vm> <setup.exe>` reverts to `clean`, installs silently as a normal user, then
+  checks `--version`, `doctor --self-test`, a real transcription of a spoken WAV
+  (generated with macOS `say`, checked for its words), the user PATH entry, and an
+  uninstall that removes the folder and the PATH entry.
+
+The VMs as of 9 Oct 2026:
+
+- `win10-22h2`: consumer ISO, Pro (image 6), unactivated, installed with the published
+  KMS client key.
+- `win11-26h2`: the Enterprise evaluation (90 days), build 26300.
+
+Both images come from Microsoft. The Windows 10 evaluation is gone from the Evaluation
+Center, so its ISO comes from microsoft.com/software-download/windows10ISO. That page
+blocks scripted requests ("Sentinel marked this request as rejected"), so the download
+needs Safari, by hand. The Windows 11 evaluation ISO is a direct fwlink.
+
+**First results (0.36.0):**
+
+- **Windows 10 22H2: all ten checks pass.** Transcription took 4 min 26 s, almost all of
+  it the first-run download of the 1.6 GB `large-v3-turbo` model.
+- **Windows 11 26H2:** the installer's own log reads "Installation process succeeded"
+  after 45 s. `--version` and `doctor --self-test` pass. Everything ran 5 to 10 times
+  slower than on Windows 10, with the Mac's iCloud daemons busy beside the VM.
+- **Seen in the transcription output:** huggingface_hub prints three warnings to the
+  user's terminal on the first run (unauthenticated requests, symlinks needing Developer
+  Mode or admin rights, and `pip install huggingface_hub[hf_xet]`). Each warning appears
+  twice. Not a failure, but advice no Windows researcher should act on.
+
+**Harness gotchas, all paid for on the first run:**
+
+- A UEFI Windows ISO waits on "Press any key to boot from CD or DVD" and then falls
+  through to "No bootable device". The build presses Enter for 25 s after power-on.
+- `guestcontrol run` in 7.0 takes argv[0] from `--exe`. Repeating the path after `--`
+  made it argv[1], so bristlenose answered "No such command 'C:\…\bristlenose.exe'".
+- Never route a guest path containing a space through `cmd /c`: the quoting breaks, and
+  an `if exist` then reads an error as "absent". Existence checks use
+  `guestcontrol stat`, and transcripts are read by `copyfrom` to the Mac.
+- A `while` loop's status is that of its last body command. A trailing `[ … ] && log`
+  made a finished wait report failure, so both first builds were never snapshotted.
+- On Windows 11 the installer finished in 45 s, but `guestcontrol run` did not return
+  until the 30-minute step timeout. Unexplained so far. Read `setup.log` (copied out
+  with `copyfrom`) before believing a "silent install" failure.
+- VirtualBox's own Windows 11 answer file already sets the LabConfig bypass keys
+  (`BypassTPMCheck`, `BypassCPUCheck`), so Windows 11 installs on a 2014 CPU.
+
 ## Gotchas
 
 Each of these cost a cycle at least once.

@@ -28,6 +28,9 @@ ships with Windows 10 and 11.
 So the work is ours: **a self-contained Windows build** (Windows has no system Python)
 and **an installer** around it, then one manifest per release.
 
+**The per-release procedure and its gotchas** are in `docs/release-winget.md`; this
+page is the plan and the reasoning.
+
 ## Decisions
 
 | | Decision | Why |

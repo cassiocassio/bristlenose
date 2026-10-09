@@ -29,7 +29,7 @@ import Combine
 /// Which illustration a Welcome-screen rotator slot carries (`.none` = plain text slot).
 enum WelcomeIllustration: Equatable {
     case none, sentimentFan, books, emergentThemes, quote, signal,
-         autocode, manualTags, tag, starHide, agentChat, ingest, clips, miro
+         autocode, manualTags, tag, starHide, agentChat, ingest, clips, miro, timeline
 }
 
 /// sRGB colour from a 0xRRGGBB literal (file-private helper).
@@ -1211,6 +1211,51 @@ struct MiroIllustrationView: View {
             dark: scheme == .dark, reduce: reduceMotion, strings: strings),
             active: active && !reduceMotion, onDone: { turnDone() })
             .id("miro-\(scheme)-\(reduceMotion)-\(i18n.locale)")
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Study-tools — Session timeline: the Sessions-lens timeline, in three beats.
+/// The row's chevron opens the slice and the lanes fill in; the pointer reads
+/// along the speaker lane, stopping in each section while its flag rises; then
+/// it opens a quote from a sentiment mark. Drawn with the shipped stylesheet
+/// (`WelcomeTimelineCSS`, generated from bristlenose/theme/), so the colours and
+/// type are the lens's own. Storyboard and the liberties it takes to fit:
+/// docs/mockups/welcome-tapestry-cell.html §D.
+struct TimelineIllustrationView: View {
+    @EnvironmentObject private var i18n: I18n
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
+    @Environment(\.welcomeTurnDone) private var turnDone
+    @AppStorage("palette") private var palette: String = "default"
+
+    var body: some View {
+        // OURS: the lane labels are the lens's own keys, and the sentiment is the
+        // enum's. GENERATED: section and theme names are pipeline output, which
+        // comes back in the researcher's language, so they are the same keyed
+        // examples the Signals card and the emergent-themes picture use. THEIRS:
+        // the quote is a participant's words, the Tag picture's example.
+        let strings = [
+            "laneSections": i18n.t("common.quotes.sections"),
+            "laneModerator": i18n.t("common.sessions.speakerPlaceholder.moderator"),
+            "laneParticipant": i18n.t("common.sessions.speakerPlaceholder.participant"),
+            "laneSentiment": i18n.t("common.sessions.colSentiment"),
+            "laneThemes": i18n.t("common.quotes.themes"),
+            "delight": i18n.t("enums.sentiment.delight"),
+            "sec0": i18n.t("desktop.welcome.examples.sectionOnboarding"),
+            "sec1": i18n.t("desktop.welcome.examples.sectionSearchResults"),
+            "sec2": i18n.t("desktop.welcome.examples.sectionCheckout"),
+            "sec3": i18n.t("desktop.welcome.examples.sectionSettings"),
+            "themeA": i18n.t("desktop.welcome.examples.themeNameA"),
+            "themeB": i18n.t("desktop.welcome.examples.themeNameB"),
+            "quote": i18n.t("desktop.welcome.examples.tagQuote"),
+        ]
+        return IllustrationWebView(html: WelcomeIllustrationHTML.timeline(
+            dark: scheme == .dark, palette: palette, reduce: reduceMotion, strings: strings),
+            active: active && !reduceMotion, onDone: { turnDone() })
+            .id("timeline-\(scheme)-\(palette)-\(reduceMotion)-\(i18n.locale)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -2569,6 +2614,327 @@ enum WelcomeIllustrationHTML {
             play:  async function(){
               for(var i=0;i<STK.length;i++){ STK[i].classList.add("on"); await BN.wait(Math.round(480*PACE)); }
               fit();
+            }
+          });
+        </script>
+        </body></html>
+        """
+    }
+
+    /// Session timeline — the Sessions lens's timeline slice, unfurled, read along,
+    /// and a quote opened. Every rule it draws with is the shipped stylesheet
+    /// (`WelcomeTimelineCSS.shipped`, generated from bristlenose/theme/ with a drift
+    /// test) and every number in its geometry is `SessionTapestry.tsx`'s, except
+    /// the four liberties listed in `docs/mockups/welcome-tapestry-cell.html` §D,
+    /// each taken to fit a slot that is 105–240 pt tall.
+    ///
+    /// **Fit.** The picture scales down (never up) to the slot's height, and the
+    /// logical width grows by the same factor, so a short slot shows more of the
+    /// session rather than a smaller copy of one crop. The time scale is then the
+    /// lens's own rule — fit the session to the width, held to 1–4 s/px — so the
+    /// 40-minute example draws as slivers and scrolls sideways under the pointer
+    /// whenever the slot is narrower than ~700 logical px, which is the lens's
+    /// behaviour in a narrow window.
+    ///
+    /// **Holds are absolute.** The read beat's pause on each section is reading
+    /// time, so it does not pass through `PACE` (see `WelcomeTempo`'s note on
+    /// holds); every motion does.
+    static func timeline(dark: Bool, palette: String, reduce: Bool,
+                         strings: [String: String]) -> String {
+        let kind = WelcomeIllustration.timeline
+        return """
+        <!doctype html><html data-theme="\(dark ? "dark" : "light")" data-color-theme="\(palette)" data-platform="desktop" data-reduce="\(reduce ? "1" : "0")">
+        <head><meta charset="utf-8"><style>
+        \(WelcomeTimelineCSS.shipped)
+          /* ── the illustration's own frame: everything below is layout, not look ── */
+          *{ box-sizing:border-box; }
+          html,body{ margin:0; height:100%; overflow:hidden; background:transparent; }
+          body{ font-family:var(--bn-font-body); color:var(--bn-colour-text); }
+          #stage{ position:absolute; left:0; top:0; transform-origin:0 0; }
+          /* A crop of the Sessions grid: the page ground, one row, its slice. */
+          .tl-card{ background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden; }
+          .tl-row{ display:flex; align-items:center; gap:var(--bn-space-sm); height:28px; padding:0 12px 0 10px;
+                   border-bottom:1px solid var(--bn-colour-border); font-size:var(--bn-text-label); transition:background-color .2s ease; }
+          .tl-row.open{ background:var(--bn-colour-quote-bg); border-bottom-color:transparent; }
+          .tl-row .tl-num{ font-weight:var(--bn-weight-emphasis); margin-right:4px; }
+          .tl-row .tl-dur{ margin-left:auto; font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+          .tl-row .bn-tapestry-toggle{ margin:0; }
+          .tl-slice{ overflow:hidden; height:0; }
+          .tl-slice .bn-tapestry{ margin-bottom:0; border-bottom:0; }
+          .tl-slice .bn-tapestry-scroll{ overflow:hidden; }
+          /* The overlay scroller, drawn: a programmatic scroll does not reliably show macOS's own. */
+          .tl-bar{ position:absolute; bottom:3px; height:7px; border-radius:4px; opacity:0; transition:opacity .3s ease;
+                   background:light-dark(rgba(0,0,0,.42), rgba(255,255,255,.42)); }
+          .tl-bar.on{ opacity:1; transition:opacity .12s ease; }
+          .bar-grow{ transform-box:fill-box; transition:transform .3s cubic-bezier(.2,.8,.2,1.15); }
+          .bar-up{ transform-origin:50% 100%; } .bar-down{ transform-origin:50% 0%; } .bar-dot{ transform-origin:50% 50%; }
+          .bar-hidden{ transform:scaleY(0); } .bar-dot.bar-hidden{ transform:scale(0); }
+          .flag-in{ transition:opacity .25s ease, transform .25s ease; } .flag-hidden{ opacity:0; transform:translateY(-4px); }
+          .ptr{ position:absolute; left:0; top:0; z-index:30; pointer-events:none; opacity:0; filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.35)); }
+          .ptr-ico{ display:block; transform-origin:4px 3px; }
+          .ptr.ptr-click .ptr-ico{ animation:ptr-click .24s ease; }
+          @keyframes ptr-click{ 50%{ transform:scale(.82); } }
+          .bn-tp-popover{ animation:tl-pop .2s ease-out; }
+          .bn-tp-popover blockquote{ -webkit-line-clamp:2; line-clamp:2; }
+          @keyframes tl-pop{ from{ opacity:0; transform:translateY(-3px); } }
+          @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
+        </style></head>
+        <body><div id="stage"></div>
+        \(stringsBlock(strings))
+        \(curtain(kind))
+        <script>
+          var stage=document.getElementById("stage");
+          var PACE=\(WelcomeTempo.jsStretch(for: kind));
+          function sleep(ms){ return BN.wait(Math.round(ms*PACE)); }   // motion: follows the group tempo
+          function hold(ms){ return BN.wait(ms); }                      // reading: absolute
+          var NS="http://www.w3.org/2000/svg";
+          function el(tag, a, parent){ var e=document.createElementNS(NS, tag); for(var k in a) e.setAttribute(k, a[k]); if(parent) parent.appendChild(e); return e; }
+          function div(cls, parent){ var e=document.createElement("div"); e.className=cls; if(parent) parent.appendChild(e); return e; }
+          function span(cls, text, parent){ var e=document.createElement("span"); if(cls) e.className=cls; if(text) e.textContent=text; if(parent) parent.appendChild(e); return e; }
+
+          // ── SessionTapestry.tsx geometry; LIBERTY marks the four departures ──
+          var GUT=82, RIGHT=14, P={ flagX:3, flagH:18, clipX:4, clipH:16, themeX:4, themeH:18, barW:6 };
+          var MT={ y:P.flagH+12, h:P.clipH }, PT={ y:P.flagH+12+P.clipH+3, h:P.clipH+2 };
+          var SE={ mid:PT.y+PT.h+34, amp:30 };   // LIBERTY: 34 of air (the lens: 41)
+          var TG={ y:SE.mid+34 };                // LIBERTY: 34 (the lens: 40), and one row, not three
+          var H=TG.y+P.themeH+16, ROW=28;
+          var POS={ satisfaction:1, delight:1, confidence:1 };
+
+          // ── a 40-minute interview; every word comes from S ──
+          var DUR=2400;
+          var SECTIONS=[ [0,"sec0"], [420,"sec1"], [1080,"sec2"], [1800,"sec3"] ];
+          // [t0, sentiment, intensity, theme key or ""]; the last opens.
+          var QUOTES=[
+            [95,"confusion",2,"themeA"], [180,"doubt",1.5,"themeA"], [262,"confusion",2.6,"themeA"], [340,"frustration",2,"themeA"],
+            [470,"satisfaction",1.5,""], [610,"confidence",2,"themeB"], [722,"surprise",2,""], [860,"delight",2.2,"themeB"], [990,"satisfaction",1.4,"themeB"],
+            [1150,"frustration",2.8,""], [1290,"confusion",2,""], [1420,"doubt",1.2,""], [1600,"satisfaction",2,""], [1720,"frustration",1.6,""],
+            [1905,"confidence",1.8,"themeB"], [2050,"delight",2.9,"themeB"], [2250,"satisfaction",1.5,""]
+          ];
+          var PICK=15, PICK_T1=2059;
+          // Turns: a short moderator question, a longer answer, from a fixed seed.
+          var TURNS=(function(){
+            var s=7, out=[], t=0, team=true;
+            function rnd(){ s=(s*16807)%2147483647; return (s-1)/2147483646; }
+            function scene(at, isTeam){
+              if(at<300||at>=2280) return isTeam?"#9ea9b5":"#c19f82";   // gallery view: faces
+              if(at<1080||at>=1800) return "#a7c4e3";                    // shared prototype
+              return "#bcd2ec";                                          // its checkout page
+            }
+            while(t<DUR){
+              var len=team? 8+rnd()*22 : 24+rnd()*95;
+              var t1=Math.min(DUR, t+len);
+              out.push([t, t1, team, scene(t, team)]);
+              t=t1+1+rnd()*2; team=!team;
+            }
+            return out;
+          })();
+
+          // ── fonts, measured as the lens measures them ──
+          var cv=document.createElement("canvas").getContext("2d");
+          function cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+          function pxOf(step){ var r=cssv("--bn-text-"+step); return r.slice(-3)==="rem"? parseFloat(r)*16 : parseFloat(r); }
+          function measure(t, font){ cv.font=font; return cv.measureText(t).width; }
+          function fitText(t, avail, font){ if(avail<10) return ""; if(measure(t,font)<=avail) return t; while(t.length>1 && measure(t+"…",font)>avail) t=t.slice(0,-1); return t.length>1? t+"…" : ""; }
+          function tc(sec){ var m=Math.floor(sec/60), x=Math.round(sec%60); return (m<10?"0":"")+m+":"+(x<10?"0":"")+x; }
+
+          var PTR='<svg width="21" height="21" viewBox="0 0 12 19"><path d="M1.2 1.2 L1.2 14.6 L4.8 11.3 L7.1 16.8 L9.3 15.8 L7.0 10.4 L11.4 10.4 Z" fill="#ffffff" stroke="#111111" stroke-width="1.1" stroke-linejoin="round"/></svg>';
+          var CHEV='<svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><path d="M3 1.5 L7 5 L3 8.5"/></svg>';
+
+          var V, sPerPx, W, scale=1, scrollX=0, RUN=0;
+          var row, slice, scrollEl, svg, bar, ptr, pop, playhead, wipe, flags, bars, spans, ticks, tickStep;
+          function x(sec){ return GUT+sec/sPerPx; }
+          // Where the svg's origin sits in stage px. offsetTop, not getBoundingClientRect:
+          // the stage is scaled, and offsets are the unscaled layout the pointer lives in.
+          function origin(){
+            var e=scrollEl, ox=0, oy=0;
+            while(e && e!==stage){ ox+=e.offsetLeft; oy+=e.offsetTop; e=e.offsetParent; }
+            var cs=getComputedStyle(scrollEl);
+            return [ox+parseFloat(cs.paddingLeft)-scrollX, oy+parseFloat(cs.paddingTop)];
+          }
+
+          function build(width){
+            V=width; stage.style.width=V+"px"; stage.innerHTML=""; pop=null;
+            sPerPx=Math.max(1, Math.min(4, DUR/Math.max(1, V-GUT-RIGHT)));   // the lens's fit rule
+            W=Math.ceil(x(DUR)+RIGHT);
+            var body=cssv("--bn-font-body"), emph=cssv("--bn-weight-emphasis"), norm=cssv("--bn-weight-normal");
+            var F={ flag:emph+" "+pxOf("label")+"px "+body, tag:norm+" "+pxOf("label")+"px "+body, lane:emph+" "+pxOf("caption")+"px "+body };
+            var card=div("tl-card", stage);
+            row=div("tl-row", card);
+            var tg=document.createElement("span"); tg.className="bn-tapestry-toggle"; tg.setAttribute("aria-expanded","false"); tg.innerHTML=CHEV; row.appendChild(tg);
+            span("tl-num","1",row); span("badge","p1",row); span("badge","m1",row); span("tl-dur",tc(DUR),row);
+            slice=div("tl-slice", card);
+            var tap=div("bn-tapestry", slice), wrap=div("bn-tp-wrap", tap);
+            scrollEl=div("bn-tapestry-scroll", wrap);
+            bar=div("tl-bar", wrap);
+            svg=el("svg", { "class":"bn-tapestry-svg", width:W, height:H, viewBox:"0 0 "+W+" "+H });
+            scrollEl.appendChild(svg);
+            var defs=el("defs", {}, svg);
+            var fl=el("filter", { id:"tl-lift", x:"-10%", y:"-30%", width:"120%", height:"170%" }, defs);
+            el("feDropShadow", { dx:0, dy:0.6, stdDeviation:0.9, "flood-color":"#000", "flood-opacity":0.16 }, fl);
+            var gr=el("linearGradient", { id:"tl-fade", x1:0, x2:1, y1:0, y2:0 }, defs);
+            el("stop", { offset:"0.8", style:"stop-color:var(--bn-colour-badge-bg);stop-opacity:1" }, gr);
+            el("stop", { offset:"1", style:"stop-color:var(--bn-colour-badge-bg);stop-opacity:0" }, gr);
+            wipe=el("rect", { x:0, y:0, width:W, height:H }, el("clipPath", { id:"tl-wipe" }, defs));
+
+            var c=pxOf("caption")*0.35;
+            [[S["laneSections"], 2.5+P.flagH/2], [S["laneModerator"], MT.y+MT.h/2], [S["laneParticipant"], PT.y+PT.h/2],
+             [S["laneSentiment"], SE.mid], [S["laneThemes"], TG.y+P.themeH/2]].forEach(function(l){
+              var t=el("text", { "class":"bn-tp-lane", x:12, y:l[1]+c }, svg); t.textContent=fitText(l[0], GUT-18, F.lane)||l[0].slice(0,1);
+            });
+            el("rect", { "class":"bn-tp-track", x:GUT, y:MT.y-1, width:x(DUR)-GUT, height:PT.y+PT.h-MT.y+2, rx:4 }, svg);
+            var clips=el("g", { "clip-path":"url(#tl-wipe)" }, svg), sliver=sPerPx>2.5;
+            TURNS.forEach(function(tn){
+              var tr=tn[2]?MT:PT, x0=x(tn[0]), w=x(tn[1])-x0, cls="bn-tp-clip "+(tn[2]?"bn-tp-clip-team":"bn-tp-clip-ppt");
+              if(sliver) el("rect", { "class":cls, style:"fill:"+tn[3], x:x0, y:tr.y, width:Math.max(0.5,w), height:tr.h }, clips);
+              else if(w>=1) el("rect", { "class":cls, style:"fill:"+tn[3], x:x0+0.5, y:tr.y, width:Math.max(1,w-1), height:tr.h, rx:Math.min(3,w/2), "data-video":"" }, clips);
+            });
+            flags=SECTIONS.map(function(sec, i){
+              var label=S[sec[1]], fx=x(sec[0]), next=i+1<SECTIONS.length? x(SECTIONS[i+1][0]) : x(DUR), half=P.flagH/2;
+              var g=el("g", { "class":"bn-tp-flag flag-in" }, svg);
+              el("line", { x1:fx+0.5, x2:fx+0.5, y1:2, y2:MT.y-2 }, g);
+              var path=el("path", {}, g), text=el("text", { x:fx+1+P.flagX, y:2.5+half+pxOf("label")*0.35 }, g);
+              function draw(full){
+                var t=full? label : fitText(label, next-fx-20, F.flag), pw=(t? measure(t,F.flag):0)+2*P.flagX+6;
+                path.setAttribute("d", "M"+(fx+1.5)+",2.5 h"+pw+" l-5,"+half+" l5,"+half+" h-"+pw+" z"); text.textContent=t;
+              }
+              draw(false);
+              return { g:g, t0:sec[0], raise:function(on){ draw(on); g.classList.toggle("raised", on); if(on){ path.setAttribute("filter","url(#tl-lift)"); svg.appendChild(g); } else path.removeAttribute("filter"); } };
+            });
+            playhead=el("line", { "class":"bn-tp-playhead", x1:0, x2:0, y1:MT.y-1, y2:SE.mid+SE.amp, style:"display:none" }, svg);
+            el("line", { "class":"bn-tp-axis", x1:GUT, x2:x(DUR), y1:SE.mid, y2:SE.mid }, svg);
+            bars=QUOTES.map(function(q){
+              var cx=x(q[0]), h=(0.35+0.65*(Math.min(3,Math.max(1,q[2]))-1)/2)*SE.amp, up=!!POS[q[1]], m;
+              if(q[1]==="surprise") m=el("circle", { "class":"bn-tp-bar bar-grow bar-dot", cx:cx, cy:SE.mid, r:3.2, style:"fill:var(--bn-sentiment-surprise)" }, svg);
+              else m=el("rect", { "class":"bn-tp-bar bar-grow "+(up?"bar-up":"bar-down"), style:"fill:var(--bn-sentiment-"+q[1]+")", x:cx-P.barW/2, width:P.barW, rx:1, height:h, y:up? SE.mid-h : SE.mid }, svg);
+              return { m:m, cx:cx, h:h, up:up, q:q };
+            });
+            var by={}, order=[], end=-1e9;
+            QUOTES.forEach(function(q){ if(!q[3]) return; if(!by[q[3]]){ by[q[3]]=[q[0],q[0]]; order.push(q[3]); } by[q[3]][1]=Math.max(by[q[3]][1], q[0]); });
+            spans=order.map(function(k){
+              var x0=x(by[k][0]), x1=Math.max(x(by[k][1]), x0+6), lx=Math.max(x0, end+4), g=el("g", {}, svg);
+              var sp=el("rect", { "class":"bn-tp-span", x:x0, y:TG.y+P.themeH/2-2, width:x1-x0, height:4, rx:2 }, g);
+              var t=fitText(S[k], W-RIGHT-lx-2*P.themeX, F.tag), tw=t? measure(t,F.tag):0;
+              el("rect", { "class":"bn-tp-tag", x:lx, y:TG.y, width:tw+2*P.themeX, height:P.themeH, rx:3, style:"fill:url(#tl-fade)" }, g);
+              var tt=el("text", { "class":"bn-tp-tag-text", x:lx+P.themeX, y:TG.y+P.themeH/2+pxOf("label")*0.35 }, g); tt.textContent=t;
+              end=Math.max(x1, lx+tw+2*P.themeX);
+              return { g:g, sp:sp, w:x1-x0 };
+            });
+            tickStep=[60,120,300,600,900,1800].filter(function(st){ return st/sPerPx>=64; })[0]||3600;
+            ticks=[];
+            for(var tk=0; tk<=DUR; tk+=tickStep){ var te=el("text", { "class":"bn-tp-tick", x:x(tk), y:H-2, "text-anchor":tk===0?"start":"middle" }, svg); te.textContent=tc(tk); ticks.push([te,tk]); }
+            ptr=div("ptr", stage); ptr.innerHTML='<span class="ptr-ico">'+PTR+'</span>';
+            setScroll(0, false);
+          }
+
+          // ── state setters ──
+          function sliceH(){ return scrollEl.scrollHeight; }
+          function setOpen(on, animate){
+            var chev=row.firstChild.firstChild;   // a still must not replay the chevron's 0.15 s turn
+            chev.style.transition=animate? "" : "none";
+            row.classList.toggle("open", on); row.firstChild.setAttribute("aria-expanded", on?"true":"false");
+            void chev.getBoundingClientRect(); if(!animate) requestAnimationFrame(function(){ chev.style.transition=""; });
+            slice.style.transition=animate? "height "+Math.round(320*PACE)+"ms cubic-bezier(.2,.7,.2,1)" : "none";
+            slice.style.height=on? sliceH()+"px" : "0px";
+          }
+          function setWipe(k){ wipe.setAttribute("width", GUT+(x(DUR)-GUT)*k+1); }
+          function setLanes(on){
+            setWipe(on?1:0);
+            flags.forEach(function(f){ f.g.classList.toggle("flag-hidden", !on); });
+            bars.forEach(function(b){ b.m.classList.toggle("bar-hidden", !on); });
+            spans.forEach(function(s){ s.g.style.opacity=on?1:0; s.sp.setAttribute("width", s.w); });
+          }
+          function setScroll(px, showBar){
+            scrollX=Math.max(0, Math.min(W-V, px)); scrollEl.scrollLeft=scrollX;
+            var room=W>V;
+            bar.style.display=room?"":"none";
+            if(room){ var bw=Math.max(24, V*V/W); bar.style.width=bw+"px"; bar.style.left=(2+(V-bw-4)*(scrollX/(W-V)))+"px"; bar.classList.toggle("on", !!showBar); }
+          }
+          function playheadAt(sec){
+            if(sec===null){ playhead.style.display="none"; ticks.forEach(function(t){ t[0].classList.remove("near"); }); flags.forEach(function(f){ if(f.g.classList.contains("raised")) f.raise(false); }); return; }
+            playhead.style.display=""; playhead.setAttribute("x1", x(sec)); playhead.setAttribute("x2", x(sec));
+            var near=Math.round(sec/tickStep)*tickStep; ticks.forEach(function(t){ t[0].classList.toggle("near", t[1]===near); });
+            var cur=-1; flags.forEach(function(f, k){ if(f.t0<=sec) cur=k; });
+            flags.forEach(function(f, k){ if((k===cur)!==f.g.classList.contains("raised")) f.raise(k===cur); });
+          }
+          function select(i){ bars.forEach(function(b, k){ b.m.classList.toggle("sel", k===i); b.m.classList.toggle("dim", i>=0 && k!==i); }); }
+          function openQuote(i){
+            var b=bars[i], q=b.q, width=Math.max(200, Math.min(440, V-16)), bx=b.cx-scrollX;
+            var o=origin(), left=Math.max(8, Math.min(bx-48, V-width-8)), top=o[1]+(b.up||q[1]==="surprise"? SE.mid+4 : SE.mid+b.h)+9;
+            pop=div("bn-tp-popover", stage);
+            pop.style.cssText="left:"+left+"px;top:"+top+"px;width:"+width+"px;--bn-tp-arrow-x:"+Math.max(14, Math.min(width-14, bx-left))+"px";
+            var meta=div("bn-tp-meta", pop);
+            span("badge badge-"+q[1], S[q[1]], meta); span("bn-tp-tc", tc(q[0])+"–"+tc(PICK_T1), meta);
+            var sec=""; SECTIONS.forEach(function(s){ if(s[0]<=q[0]) sec=S[s[1]]; }); span("", sec, meta);
+            var bq=document.createElement("blockquote"); bq.textContent=S["quote"]; pop.appendChild(bq);
+            return pop;
+          }
+          function ptrTo(px, py, ms){
+            ptr.style.transition=ms? "transform "+Math.round(ms*PACE)+"ms cubic-bezier(.4,0,.2,1), opacity .25s" : "none";
+            ptr.style.transform="translate("+px+"px,"+py+"px)"; ptr.style.opacity=1; if(!ms) void ptr.offsetWidth;
+          }
+          function click(){ ptr.classList.remove("ptr-click"); void ptr.offsetWidth; ptr.classList.add("ptr-click"); }
+          function tween(ms, f){ var d=Math.round(ms*PACE); return new Promise(function(r){ var t0=performance.now(); (function step(now){ var k=Math.min(1,(now-t0)/d); f(k); if(k<1) requestAnimationFrame(step); else r(); })(t0); }); }
+          function ease(k){ return k<0.5? 2*k*k : 1-Math.pow(-2*k+2,2)/2; }
+          function scrollFor(sec){ return x(sec)-V*0.55; }   // keep the moment a little right of centre
+
+          // ── fit: scale to the height, then lay out at the width that scale buys ──
+          // The scale always comes from the FINISHED frame (open slice, quote up), so the
+          // opening frame and the resting one share it and nothing zooms between them.
+          function fit(final){
+            function natural(){ var h=stage.offsetHeight; if(pop) h=Math.max(h, pop.offsetTop+pop.offsetHeight+2); return h; }
+            var s0=Math.min(1, window.innerHeight/236);
+            build(window.innerWidth/s0); paint(true);
+            scale=Math.min(1, window.innerHeight/natural());
+            if(Math.abs(scale-s0)>0.02){ build(window.innerWidth/scale); paint(true); }
+            if(!final) paint(false);
+            stage.style.transform="scale("+scale+")";
+          }
+          function paint(final){
+            if(pop){ pop.remove(); pop=null; }
+            setOpen(final, false); setLanes(final); select(-1); playheadAt(null);
+            ptr.style.opacity=0;
+            if(final){ setScroll(scrollFor(QUOTES[PICK][0]), false); select(PICK); openQuote(PICK); }
+          }
+          window.addEventListener("resize", function(){ RUN++; fit(true); });
+
+          BN.register({
+            still: function(){ RUN++; fit(true); },
+            open:  function(){ RUN++; fit(false); ptrTo(V*0.6, ROW+90, 0); ptr.style.opacity=0; },   // parked off the chevron, unseen
+            play:  async function(){
+              var me=RUN; function gone(){ return me!==RUN; }
+              // 1 · Unfurl
+              ptrTo(14, 12, 500); await sleep(560); if(gone()) return;
+              click(); await sleep(120); if(gone()) return;
+              setOpen(true, true); await sleep(260); if(gone()) return;
+              await tween(700, function(k){ if(!gone()) setWipe(ease(k)); }); if(gone()) return;
+              for(var i=0;i<flags.length;i++){ flags[i].g.classList.remove("flag-hidden"); await sleep(80); if(gone()) return; }
+              for(var j=0;j<bars.length;j++){ bars[j].m.classList.remove("bar-hidden"); await sleep(32); if(gone()) return; }
+              for(var s=0;s<spans.length;s++){ var sp=spans[s]; sp.g.style.opacity=1; await tween(300, function(k){ sp.sp.setAttribute("width", sp.w*ease(k)); }); if(gone()) return; }
+              await hold(400); if(gone()) return;
+              // 2 · Read: one stop per section, the flag raised and held
+              var o=origin(), y=o[1]+PT.y+5, stops=SECTIONS.map(function(z){ return z[0]+60; });
+              ptrTo(o[0]+x(stops[0]), y, 420); await sleep(460); if(gone()) return;
+              playheadAt(stops[0]); await hold(950); if(gone()) return;
+              for(var k=1;k<stops.length;k++){
+                var a=stops[k-1], b=stops[k], s0=scrollX, s1=Math.max(s0, Math.min(W-V, scrollFor(b))), moving=s1!==s0;
+                await tween(560, function(e){
+                  if(gone()) return;
+                  var t=a+(b-a)*ease(e); if(moving) setScroll(s0+(s1-s0)*ease(e), true);
+                  ptrTo(origin()[0]+x(t), y, 0); playheadAt(t);
+                });
+                if(gone()) return;
+                setScroll(scrollX, false);
+                await hold(950); if(gone()) return;
+              }
+              playheadAt(null);
+              // 3 · A quote, from a sentiment mark
+              var pb=bars[PICK], s2=scrollX, s3=Math.max(0, Math.min(W-V, scrollFor(QUOTES[PICK][0])));
+              if(s3!==s2){ await tween(380, function(e){ if(!gone()) setScroll(s2+(s3-s2)*ease(e), true); }); if(gone()) return; setScroll(scrollX, false); }
+              var o2=origin(); ptrTo(o2[0]+pb.cx-2, o2[1]+SE.mid-pb.h/2-4, 480); await sleep(540); if(gone()) return;
+              click(); await sleep(110); if(gone()) return;
+              select(PICK); openQuote(PICK); await sleep(320); if(gone()) return;
+              ptrTo(o2[0]+pb.cx+36, o2[1]+SE.mid+46, 380); await sleep(420); if(gone()) return;
+              if(pop) pop.style.background="var(--bn-tp-popover-hover)";
             }
           });
         </script>

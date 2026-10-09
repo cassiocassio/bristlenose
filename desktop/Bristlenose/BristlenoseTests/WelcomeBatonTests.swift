@@ -120,7 +120,7 @@ struct WelcomeTempoTests {
         // sit above the curtain's own overhead by a margin for every illustration.
         for kind in [WelcomeIllustration.sentimentFan, .books, .emergentThemes, .quote,
                      .signal, .autocode, .manualTags, .tag, .starHide, .agentChat,
-                     .ingest, .clips, .miro] {
+                     .ingest, .clips, .miro, .timeline] {
             let overhead = WelcomeTempo.establish(for: kind)
                 + 2 * WelcomeTempo.fadeSeconds
                 + WelcomeTempo.holdEndSeconds

@@ -131,6 +131,10 @@ private enum WelcomeContent {
         .init(key: "tools.tag", href: docs + "tag-for-meaning.html", illustration: .tag),
         .init(key: "tools.starHide", href: docs + "keyboard-shortcuts.html", illustration: .starHide),
         .init(key: "tools.clips", href: docs + "export-clips.html", illustration: .clips),
+        // Beside Video clips: the timeline's clip colours are what was on screen.
+        // Links to the transcripts page until docs/session-timeline.html publishes (it is
+        // written and parked, waiting for its screenshots) — then point it there.
+        .init(key: "tools.timeline", href: docs + "read-transcripts.html", illustration: .timeline),
         .init(key: "tools.miro", href: docs + "send-to-miro.html", illustration: .miro),
         // The only slot whose first step is setup, so the primary CTA opens the control
         // (Settings ▸ MCP Agents) rather than a docs page — same destination as the
@@ -909,6 +913,7 @@ private struct SlotRotator: View {
         case .ingest:         return 196   // five surtitled rows (5×32 + 4×8)
         case .clips:          return 100   // three thumbnail rows; the menu + pointer play out in the same region
         case .miro:           return 148   // sticky row (140) + shadow room
+        case .timeline:       return 240   // row + slice + the open quote (~236 natural); shrinks to the slot
         case .books:          return 252   // caption + covers + link (see BookShelfView.naturalHeight)
         }
     }
@@ -933,6 +938,7 @@ private struct SlotRotator: View {
         case .ingest:         IngestIllustrationView()
         case .clips:          ClipsIllustrationView()
         case .miro:           MiroIllustrationView()
+        case .timeline:       TimelineIllustrationView()
         }
     }
 

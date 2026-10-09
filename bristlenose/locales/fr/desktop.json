@@ -522,6 +522,11 @@
           "text": "Exportez les verbatim choisis en clips vidéo.",
           "link": "Options d’export"
         },
+        "timeline": {
+          "title": "Chronologie de l\u2019entretien",
+          "text": "La chronologie de chaque entretien, comme en montage vid\u00e9o : ce qui s\u2019est pass\u00e9, et quand",
+          "link": "Lire un entretien"
+        },
         "miro": {
           "title": "Envoyer vers Miro",
           "text": "Envoyez des verbatim vers Miro.",

@@ -522,6 +522,11 @@
           "text": "Trasforma le citazioni scelte in clip video.",
           "link": "Esportazione"
         },
+        "timeline": {
+          "title": "Timeline della sessione",
+          "text": "Timeline di ogni intervista, come in un programma di montaggio: cosa \u00e8 successo e quando",
+          "link": "Leggi una sessione"
+        },
         "miro": {
           "title": "Invia a Miro",
           "text": "Invia le citazioni a Miro.",

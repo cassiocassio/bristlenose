@@ -522,6 +522,11 @@
           "text": "Fes clips de vídeo amb les cites triades.",
           "link": "Opcions d'exportació"
         },
+        "timeline": {
+          "title": "L\u00ednia de temps de la sessi\u00f3",
+          "text": "L\u00ednia de temps de cada entrevista, com en un editor de v\u00eddeo: qu\u00e8 va passar i quan",
+          "link": "Llegeix una sessi\u00f3"
+        },
         "miro": {
           "title": "Envia a Miro",
           "text": "Envia cites a un tauler de Miro.",

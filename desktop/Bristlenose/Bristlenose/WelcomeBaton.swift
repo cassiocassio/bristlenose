@@ -316,6 +316,7 @@ extension WelcomeIllustration {
         case .ingest:         base = 12   // five rows blink + type, then hold
         case .clips:          base = 14   // menu click → three clips land unit by unit, then hold
         case .miro:           base = 9    // three stickies pop in order, then hold
+        case .timeline:       base = 12   // unfurl, four held section stops, a quote — holds are absolute, so generous
         }
         let estimate = base * WelcomeTempo.stretch(for: self)
             + WelcomeTempo.establish(for: self)

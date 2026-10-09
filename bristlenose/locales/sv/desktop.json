@@ -522,6 +522,11 @@
           "text": "G\u00f6r markerade citat till videoklipp.",
           "link": "Exportalternativ"
         },
+        "timeline": {
+          "title": "Sessionens tidslinje",
+          "text": "Tidslinje f\u00f6r varje intervju som i ett videoredigeringsprogram: vad som h\u00e4nde och n\u00e4r",
+          "link": "L\u00e4s en session"
+        },
         "miro": {
           "title": "Skicka till Miro",
           "text": "Skicka citat till en Miro-tavla.",

@@ -522,6 +522,11 @@
           "text": "Ausgewählte Zitate werden zu Videoclips.",
           "link": "Exportoptionen"
         },
+        "timeline": {
+          "title": "Zeitleiste des Interviews",
+          "text": "Zeitleiste jedes Interviews wie im Videoschnitt: was wann passiert ist",
+          "link": "Ein Interview lesen"
+        },
         "miro": {
           "title": "An Miro senden",
           "text": "Zitate auf ein Miro-Board senden.",

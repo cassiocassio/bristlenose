@@ -558,6 +558,11 @@
           "text": "Zamień wybrane cytaty w klipy wideo.",
           "link": "Opcje eksportu"
         },
+        "timeline": {
+          "title": "O\u015b czasu sesji",
+          "text": "O\u015b czasu ka\u017cdego wywiadu jak w programie do monta\u017cu: co si\u0119 dzia\u0142o i kiedy",
+          "link": "Przeczytaj sesj\u0119"
+        },
         "miro": {
           "title": "Wyślij do Miro",
           "text": "Wyślij cytaty na tablicę Miro.",

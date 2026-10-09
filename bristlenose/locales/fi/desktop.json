@@ -522,6 +522,11 @@
           "text": "Tee valituista sitaateista videoleikkeit\u00e4.",
           "link": "Vientivaihtoehdot"
         },
+        "timeline": {
+          "title": "Istunnon aikajana",
+          "text": "Jokaisen haastattelun aikajana kuin videoeditorissa: mit\u00e4 tapahtui ja milloin",
+          "link": "Lue istunto"
+        },
         "miro": {
           "title": "L\u00e4het\u00e4 Miroon",
           "text": "L\u00e4het\u00e4 sitaatit Miro-taululle.",

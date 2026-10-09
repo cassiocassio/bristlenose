@@ -525,6 +525,11 @@
           "text": "Turn selected quotes into video clips.",
           "link": "Export options"
         },
+        "timeline": {
+          "title": "Session timeline",
+          "text": "Video-editing style timeline of each interview: what happened, when",
+          "link": "Read a session"
+        },
         "miro": {
           "title": "Send to Miro",
           "text": "Send quotes to a Miro board.",

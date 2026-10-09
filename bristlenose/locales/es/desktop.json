@@ -522,6 +522,11 @@
           "text": "Crea clips de vídeo de las citas que elijas.",
           "link": "Cómo exportar"
         },
+        "timeline": {
+          "title": "L\u00ednea temporal de la sesi\u00f3n",
+          "text": "L\u00ednea temporal de cada entrevista, como en un editor de v\u00eddeo: qu\u00e9 pas\u00f3 y cu\u00e1ndo",
+          "link": "Leer una sesi\u00f3n"
+        },
         "miro": {
           "title": "Enviar a Miro",
           "text": "Envía citas a un tablero de Miro.",

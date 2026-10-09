@@ -522,6 +522,11 @@
           "text": "Maak van geselecteerde citaten videoclips.",
           "link": "Exportopties"
         },
+        "timeline": {
+          "title": "Tijdlijn van de sessie",
+          "text": "Tijdlijn van elk interview zoals in een videobewerkingsprogramma: wat er gebeurde, en wanneer",
+          "link": "Een sessie lezen"
+        },
         "miro": {
           "title": "Stuur naar Miro",
           "text": "Stuur citaten naar een Miro-bord.",

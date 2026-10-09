@@ -522,6 +522,11 @@
           "text": "Gør valgte citater til videoklip.",
           "link": "Eksportmuligheder"
         },
+        "timeline": {
+          "title": "Sessionens tidslinje",
+          "text": "Tidslinje for hvert interview som i et videoredigeringsprogram: hvad der skete, og hvorn\u00e5r",
+          "link": "L\u00e6s en session"
+        },
         "miro": {
           "title": "Send til Miro",
           "text": "Send citater til et Miro-board.",

@@ -522,6 +522,11 @@
           "text": "Se\u00e7ili al\u0131nt\u0131lar\u0131 video klibe d\u00f6n\u00fc\u015ft\u00fcr\u00fcn.",
           "link": "D\u0131\u015fa aktarma yollar\u0131"
         },
+        "timeline": {
+          "title": "Oturum zaman \u00e7izelgesi",
+          "text": "Video d\u00fczenleyicideki gibi her g\u00f6r\u00fc\u015fmenin zaman \u00e7izelgesi: ne oldu, ne zaman",
+          "link": "Bir oturumu okuyun"
+        },
         "miro": {
           "title": "Miro'ya g\u00f6nder",
           "text": "Miro panosuna al\u0131nt\u0131 g\u00f6nderin.",

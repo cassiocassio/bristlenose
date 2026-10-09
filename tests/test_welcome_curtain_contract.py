@@ -71,7 +71,7 @@ def test_the_set_of_templates_is_what_we_think_it_is() -> None:
     count moves when the set does. A template that stops matching the regex would
     otherwise drop out of every check below in silence.
     """
-    assert len(NAMES) == 9, f"expected 9 illustration templates, found {len(NAMES)}: {NAMES}"
+    assert len(NAMES) == 10, f"expected 10 illustration templates, found {len(NAMES)}: {NAMES}"
 
 
 @pytest.mark.parametrize("name", NAMES)

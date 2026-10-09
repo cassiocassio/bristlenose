@@ -522,6 +522,11 @@
           "text": "Faça clipes de vídeo das citações escolhidas.",
           "link": "Opções de exportação"
         },
+        "timeline": {
+          "title": "Cronologia da sess\u00e3o",
+          "text": "Cronologia de cada entrevista, como num editor de v\u00eddeo: o que aconteceu e quando",
+          "link": "Ler uma sess\u00e3o"
+        },
         "miro": {
           "title": "Enviar para o Miro",
           "text": "Envie citações a um quadro Miro.",

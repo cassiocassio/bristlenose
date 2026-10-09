@@ -557,6 +557,11 @@
           "text": "Prom\u011b\u0148te vybran\u00e9 cit\u00e1ty ve videoklipy.",
           "link": "Mo\u017enosti exportu"
         },
+        "timeline": {
+          "title": "\u010casov\u00e1 osa sezen\u00ed",
+          "text": "\u010casov\u00e1 osa ka\u017ed\u00e9ho rozhovoru jako ve st\u0159ihov\u00e9m programu: co se stalo a kdy",
+          "link": "Projd\u011bte sezen\u00ed"
+        },
         "miro": {
           "title": "Odeslat do Mira",
           "text": "Ode\u0161lete cit\u00e1ty na tabuli Miro.",

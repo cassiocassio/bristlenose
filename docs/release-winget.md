@@ -156,9 +156,12 @@ needs Safari, by hand. The Windows 11 evaluation ISO is a direct fwlink.
 
 - **Windows 10 22H2: all ten checks pass.** Transcription took 4 min 26 s, almost all of
   it the first-run download of the 1.6 GB `large-v3-turbo` model.
-- **Windows 11 26H2:** the installer's own log reads "Installation process succeeded"
-  after 45 s. `--version` and `doctor --self-test` pass. Everything ran 5 to 10 times
-  slower than on Windows 10, with the Mac's iCloud daemons busy beside the VM.
+- **Windows 11 26H2: every product check passes.** Install (the installer's own log reads
+  "Installation process succeeded" after 45 s), `--version`, `doctor --self-test`,
+  transcription (11 min 42 s, the same words), the PATH entry, and a clean uninstall.
+  Only the harness's install step "failed", on the unexplained wait below. Everything
+  ran 5 to 10 times slower than on Windows 10, with the Mac's iCloud daemons busy
+  beside the VM.
 - **Seen in the transcription output:** huggingface_hub prints three warnings to the
   user's terminal on the first run (unauthenticated requests, symlinks needing Developer
   Mode or admin rights, and `pip install huggingface_hub[hf_xet]`). Each warning appears

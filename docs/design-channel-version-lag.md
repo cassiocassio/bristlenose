@@ -395,3 +395,59 @@ for them.
       `unreachable` never folding into `wait`.
     - The two existing holds were renamed locally to `after-winget/0.36.0`
       (same commits; neither had been pushed).
+
+---
+
+## 7. Fault-injection review, 9 Oct 2026: what the corpus found
+
+`scripts/channel-scenarios.txt` is a corpus of worlds, each stating the correct
+answer. `scripts/test-channel-scenarios.sh` builds each world (a sandbox repo,
+a website repo, fake `gh` and `curl`, a watchdog) and runs the real
+`release.sh verify`. A scenario the code gets wrong today carries `known=<id>`
+and reports KNOWN. When a fix makes it pass, the suite goes red until the tag is
+removed. The ratchet was proved by applying W1's fix temporarily: the suite
+reported `FIXED … remove known=W1` and exited 1.
+
+**This is a test, not a gate.** It runs in CI's release-suite loop and never
+during a release, so a new scenario cannot narrow the path a release takes. The
+code it tests adds no receipts either. The results file is per invocation and
+deleted. The sink rows are evidence, and nothing reads one to skip work. Holds
+are re-derived from refs on every run, never cached.
+
+First run: 25 pass, 12 known. Below, each fix is marked by kind:
+- **deletes:** removes a failure mode.
+- **widens:** turns a stuck or false answer into an honest one.
+- **adds a read:** a new check, built only if an incident earns it.
+
+| id | world | today | fix | kind |
+|---|---|---|---|---|
+| **W1** | the PR merges between the folder read and the PR read | `bad`, falsely | read the PRs *before* the folders. A merge in the gap is then seen by the folder read. Moving one block; proved by the ratchet | deletes |
+| **W2** | the PR exists but GitHub's search index lags | `bad` for a minute or two | accept it: followers are outside the exit code and a re-run clears it. Listing the fork's branches would add a read for a transient | — |
+| **W3** | `gh` never answers | `release.sh verify` hangs indefinitely. `probe_github` has always had the same exposure. `run` does not call verify, so a release cannot stall on it | bound every `gh` call (the harness's process-group watchdog, ~10 lines) so a hang becomes `unreachable` | widens |
+| **W4** | a third-party bot titles it `New version: <Id> <v>` | `bad` | match `<Id>`, then anything but `.`/word characters, then `X.Y.Z`. The look-alike scenario (`<Id>.Beta`) must stay `bad` | deletes |
+| **W5** | the local clock is behind GitHub's | "open -2h" | clamp the age at 0 | cosmetic |
+| **W6** | `WINGET_BUDGET_HOURS="72h"` | never `overdue`, silently | assert an integer in `test-release-sh.sh`, a static check off the release path | deletes |
+| **W7** | version `1..2.3` or `1.2.3.4` | accepted. The glob `[0-9]*.[0-9]*.[0-9]*` matches both; this predates followers | use `release.sh`'s strict `verdict_version` in verify-channels and `version_ge` | deletes |
+| **W9** | merged, but Microsoft's publish pipeline failed | `ok` | **don't build yet.** The evidence already says "merged". A PR-label read would be a new check with no incident behind it | adds a read |
+| **H1** | a hold already merged into main | `land`, forever | `git merge-base --is-ancestor <hold> origin/main` → "landed: delete the branch" | adds a read |
+| **H2** | a hold on an unprobeable channel (testflight) | `wait` | a `skipped` verdict → `unknown` | deletes |
+| **H3** | `after-pypi/0.36.0.1` | read as 0.36.0, `land` | same strict parse as W7 → `badname` | deletes |
+| **H4** | a stale bare `after-winget` | git refuses `after-winget/<v>` in the same repo: refs are files *and* directories | the `badname` line should say so ("it blocks after-winget/<version>; rename it") | wording |
+
+**Two findings outside the new code, both pre-existing:**
+- **R1.** `scripts/release-stats.py` carries its own `CHANNEL_ORDER`, a
+  hand-written copy of `CHANNELS`. The History tab therefore never shows winget,
+  and would drop any new lockstep channel the same way. Fix: read `project.conf`,
+  as the board's `read_conf` already does.
+- **R2.** A bare `release.sh verify` writes rows into the *newest* run's sink but
+  probes the *tree's* version. The board flags the mismatch, but the two choices
+  are made in two places.
+
+**Ways for the world to be weird that the corpus does not reach yet.** Add them
+as blocks when they matter:
+- winget-pkgs removing a version after it merged;
+- a moderator closing the PR unmerged;
+- two verify runs writing one sink at once;
+- a website repo that is a worktree with a detached HEAD;
+- a Mac App Store follower whose review is rejected and resubmitted under the
+  same version.

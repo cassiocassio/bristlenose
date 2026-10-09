@@ -1,0 +1,324 @@
+# channel-scenarios.txt — the fault-injection corpus for follower channels and
+# after-<channel>/<version> holds. Run by scripts/test-channel-scenarios.sh.
+#
+# WHY A CORPUS
+#
+# The release machine talks to systems whose contracts are undocumented and
+# change without notice (docs/design-release-principles.md, "Formalisms worth
+# the effort"). It cannot be proved correct, so it is fed unlikely-but-possible
+# worlds, and each one records what the RIGHT answer is. When a new way for the
+# world to be weird turns up, in a release or in a review, it becomes a block
+# here. That is the whole maintenance model.
+#
+# FORMAT — blocks separated by blank lines, key=value, # comments.
+#
+#   id=            unique; a known issue's id is the prefix by convention
+#   about=         one line: the world this scenario builds
+#   version=       the version verify probes (default 0.36.0)
+#
+#   The world, as winget-pkgs shows it to `gh`:
+#   served=        version folders under manifests/…, space-separated;
+#                  or 404 (none yet) · 403 (rate limit) · FAIL · HANG · SLOW:<s>:<folders>
+#   prs=           open PRs: <version>@<age-hours>[,…]; none · FAIL · HANG
+#                  age may be negative (the local clock behind GitHub's)
+#   title=         PR title template, {v} for the version
+#                  (default "Add version: Bristlenose.Bristlenose version {v}")
+#   flip_after=N   after N gh calls the world becomes served_after / prs_after:
+#                  something happened BETWEEN two reads
+#   publish=       failed: the merge went in, Microsoft's publish pipeline did not
+#   budget=        WINGET_BUDGET_HOURS in the sandbox conf (default 72)
+#
+#   Holds, as branches:
+#   holds=         after-* branches in this repo (space-separated)
+#   site_holds=    after-* branches in the website repo
+#   landed=        holds whose commit is already on main
+#   results=       skip the probes; feed release.sh this results file instead,
+#                  lines `kind:a:b` joined by spaces (verdict:pypi:ok served:winget:0.36.1)
+#
+#   What correct looks like:
+#   expect.winget=     the follower's verdict
+#   expect.exit=       verify's exit code
+#   expect.hold.<b>=   land · wait · unknown · badname · landed
+#   expect.seconds=    verify must finish inside this (default 30)
+#   expect.out=        a substring the output must contain
+#
+#   known=<ISSUE>      the code is known to get this wrong today; the issue is
+#                      written up in docs/design-channel-version-lag.md §7.
+#                      Reported KNOWN, not FAIL. When the code starts getting it
+#                      right the runner FAILS until this line is removed, so a
+#                      fix cannot land without retiring its scenario's tag.
+
+# ── baseline worlds ─────────────────────────────────────────────────────────
+
+id=base-pending
+about=the first submission is open and young
+served=404
+prs=0.36.0@3
+expect.winget=pending
+expect.exit=0
+
+id=base-merged
+about=the version folder exists
+served=0.35.0 0.36.0
+prs=none
+expect.winget=ok
+expect.exit=0
+
+id=base-nothing
+about=nothing merged, nothing submitted
+served=404
+prs=none
+expect.winget=bad
+expect.exit=0
+
+id=skip-ahead
+about=winget skipped straight to a later version
+served=0.36.1
+prs=none
+expect.winget=ok
+
+id=superseded
+about=the version never landed and a newer one is in flight
+served=0.35.0
+prs=0.36.1@2
+expect.winget=superseded
+
+id=superseded-lexical
+about=0.36.10 in flight supersedes 0.36.9 (numeric, not string, order)
+version=0.36.9
+served=404
+prs=0.36.10@2
+expect.winget=superseded
+
+id=two-prs
+about=a PR for this version and one for the next, both open
+served=404
+prs=0.36.1@1,0.36.0@20
+expect.winget=pending
+
+id=overdue
+about=open well past the budget
+served=404
+prs=0.36.0@200
+expect.winget=overdue
+expect.exit=0
+
+# ── timing: slow, fast, and things happening between reads ──────────────────
+
+id=W1-merge-between-reads
+about=the PR merges in the gap between the folder read and the PR read
+served=404
+prs=0.36.0@5
+flip_after=1
+served_after=0.36.0
+prs_after=none
+expect.winget=ok
+known=W1
+
+id=fast-zero-age
+about=the PR was opened this second
+served=404
+prs=0.36.0@0
+expect.winget=pending
+
+id=clock-skew
+about=the local clock is behind GitHub's: the PR looks opened in the future
+served=404
+prs=0.36.0@-2
+expect.winget=pending
+expect.out=open 0h
+known=W5
+
+id=slow-but-finishes
+about=GitHub answers the folder read after 6 s
+served=SLOW:6:0.36.0
+prs=none
+expect.winget=ok
+expect.seconds=20
+
+id=W3-gh-hangs
+about=gh never answers (a stuck TCP connection, an auth prompt)
+served=HANG
+prs=none
+expect.winget=unreachable
+expect.seconds=30
+known=W3
+
+id=budget-edge
+about=open exactly at the budget is still pending
+served=404
+prs=0.36.0@72
+expect.winget=pending
+
+id=budget-edge-plus
+about=one hour past the budget
+served=404
+prs=0.36.0@73
+expect.winget=overdue
+
+# ── the API lying, refusing, or answering a different question ──────────────
+
+id=rate-limited
+about=403 on the folder read: a rate limit is not an absence
+served=403
+prs=0.36.0@3
+expect.winget=unreachable
+expect.exit=0
+
+id=pr-query-fails
+about=the PR query fails while the folder read is clean
+served=404
+prs=FAIL
+expect.winget=unreachable
+
+id=pr-query-fails-but-merged
+about=a failed PR query cannot hide a version that is already merged
+served=0.36.0
+prs=FAIL
+expect.winget=ok
+
+id=W2-search-lag
+about=the PR exists but GitHub's search index has not caught up
+served=404
+prs=none
+expect.winget=pending
+known=W2
+
+id=W4-title-variant
+about=a third-party bot titles it "New version: <Id> <v>" without the word version
+served=404
+prs=0.36.0@2
+title=New version: Bristlenose.Bristlenose {v}
+expect.winget=pending
+known=W4
+
+id=lookalike
+about=a PR for Bristlenose.Bristlenose.Beta is not ours
+served=404
+prs=0.36.0@2
+title=Add version: Bristlenose.Bristlenose.Beta version {v}
+expect.winget=bad
+
+id=junk-folders
+about=the package folder holds things that are not versions
+served=.validation README.md 0.36.0.1 0.35.0
+prs=none
+expect.winget=bad
+
+id=W9-publish-failed
+about=merged, but Microsoft's publish pipeline failed: clients cannot install it
+served=0.36.0
+prs=none
+publish=failed
+expect.winget=pending
+known=W9
+
+id=W6-budget-typo
+about=WINGET_BUDGET_HOURS="72h": the budget is unreadable
+served=404
+prs=0.36.0@500
+budget=72h
+expect.winget=overdue
+known=W6
+
+id=W7-malformed-version
+about=verify accepts 1..2.3 as a version
+version=1..2.3
+served=404
+prs=none
+expect.exit=2
+known=W7
+
+# ── holds ───────────────────────────────────────────────────────────────────
+
+id=hold-waits
+about=the docs that make winget the lead route wait while it is pending
+served=404
+prs=0.36.0@3
+holds=after-winget/0.36.0
+site_holds=after-winget/0.36.0
+expect.hold.after-winget/0.36.0=wait
+
+id=hold-lands-on-merge
+about=and land once it merges
+served=0.36.0
+prs=none
+holds=after-winget/0.36.0 after-pypi/0.36.0-guide
+expect.hold.after-winget/0.36.0=land
+expect.hold.after-pypi/0.36.0-guide=land
+
+id=hold-skipped-version
+about=a hold on a version winget skipped lands when a later one merges
+served=0.36.1
+prs=none
+holds=after-winget/0.36.0
+expect.hold.after-winget/0.36.0=land
+
+id=hold-older-pypi
+about=an old after-pypi hold lands once a newer version is on PyPI
+served=404
+prs=none
+holds=after-pypi/0.35.0
+expect.hold.after-pypi/0.35.0=land
+
+id=hold-badname
+about=after-winget with no version, and a word for a version, are reported, never skipped
+served=404
+prs=none
+holds=after-winget/first-version
+site_holds=after-winget
+expect.hold.after-winget/first-version=badname
+expect.hold.after-winget=badname
+
+id=H4-bare-name-blocks-hold
+about=a stale bare after-winget makes after-winget/<v> impossible in that repo (git: refs are files and directories)
+served=404
+prs=none
+holds=after-winget after-winget/0.37.0
+expect.hold.after-winget/0.37.0=wait
+known=H4
+
+id=hold-unknown-channel
+about=a hold for a channel this project does not ship
+served=404
+prs=none
+holds=after-flatpak/0.36.0
+expect.hold.after-flatpak/0.36.0=unknown
+
+id=H1-landed-hold
+about=a hold already merged into main still reads land, forever
+served=0.36.0
+prs=none
+holds=after-winget/0.36.0
+landed=after-winget/0.36.0
+expect.hold.after-winget/0.36.0=landed
+known=H1
+
+id=H2-skipped-channel
+about=a testflight hold when testflight cannot be probed here
+results=version:0.36.0 verdict:testflight:skipped verdict:pypi:ok
+holds=after-testflight/0.36.0
+expect.hold.after-testflight/0.36.0=unknown
+known=H2
+
+id=H3-four-field
+about=after-pypi/0.36.0.1 is not X.Y.Z and must not be read as 0.36.0
+served=404
+prs=none
+holds=after-pypi/0.36.0.1
+expect.hold.after-pypi/0.36.0.1=badname
+known=H3
+
+id=hold-unreachable
+about=a hold on a channel whose probe failed is unknown, not wait
+results=version:0.36.0 verdict:pypi:unreachable
+holds=after-pypi/0.36.0
+expect.hold.after-pypi/0.36.0=unknown
+
+id=hold-site-missing
+about=the website repo path does not exist: say so
+served=404
+prs=none
+holds=after-winget/0.36.0
+site=missing
+expect.out=website repo not found

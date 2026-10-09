@@ -626,10 +626,10 @@ def session_speaker_names(
 
         codes_for_label = label_codes.get(sid, {})
         llm: dict[str, SpeakerInfo] = {}
-        for info in speaker_infos.get(sid, []):
-            code = codes_for_label.get(info.speaker_label, "")
+        for speaker_info in speaker_infos.get(sid, []):
+            code = codes_for_label.get(speaker_info.speaker_label, "")
             if code and code[0] in "mo":
-                llm[code] = info
+                llm[code] = speaker_info
 
         names: dict[str, dict[str, str]] = {}
         for code in sorted(set(counts) | set(llm)):

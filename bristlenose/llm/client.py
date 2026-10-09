@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     # inside the methods that use them) while letting annotations name them.
     import anthropic
     import openai
+    from anthropic.types import MessageParam, ToolChoiceToolParam, ToolParam
+    from google import genai
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.llm import telemetry
@@ -81,7 +83,10 @@ def _flatten_schema_for_gemini(schema: dict[str, Any]) -> dict[str, Any]:
                     # anyOf: [{"type": "string"}, {"type": "null"}] → {"type": "string"}
                     merged = {**node}
                     del merged["anyOf"]
-                    merged.update(_resolve(non_null[0]))
+                    resolved = _resolve(non_null[0])
+                    # A schema variant is an object, and _resolve returns one for one.
+                    assert isinstance(resolved, dict)
+                    merged.update(resolved)
                     merged.pop("default", None)  # remove null default
                     return merged
 
@@ -290,11 +295,11 @@ class LLMClient:
     def __init__(self, settings: BristlenoseSettings) -> None:
         self.settings = settings
         self.provider = settings.llm_provider
-        self._anthropic_client: object | None = None
-        self._openai_client: object | None = None
-        self._azure_client: object | None = None
-        self._google_client: object | None = None
-        self._local_client: object | None = None
+        self._anthropic_client: anthropic.AsyncAnthropic | None = None
+        self._openai_client: openai.AsyncOpenAI | None = None
+        self._azure_client: openai.AsyncAzureOpenAI | None = None
+        self._google_client: genai.Client | None = None
+        self._local_client: openai.AsyncOpenAI | None = None
         self.tracker = LLMUsageTracker()
 
         # Log the resolved target BEFORE validation so we capture it even when
@@ -607,7 +612,7 @@ class LLMClient:
         schema = response_model.model_json_schema()
         tool_name = "structured_output"
 
-        tool = {
+        tool: ToolParam = {
             "name": tool_name,
             "description": f"Return the analysis result as a {response_model.__name__} object.",
             "input_schema": schema,
@@ -633,6 +638,9 @@ class LLMClient:
         # `extra_body` exists on 0.x and 1.x alike, so this is version-agnostic;
         # it is what let the `anthropic<1` ceiling go (5 Sep 2026) without a
         # second code change.
+        messages: list[MessageParam] = [{"role": "user", "content": user_prompt}]
+        tool_choice: ToolChoiceToolParam = {"type": "tool", "name": tool_name}
+
         sampling: dict[str, float] = {}
         if request_model in _ANTHROPIC_ACCEPTS_SAMPLING:
             sampling["temperature"] = self.settings.llm_temperature
@@ -649,9 +657,9 @@ class LLMClient:
                 model=request_model,
                 max_tokens=max_tokens,
                 system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
+                messages=messages,
                 tools=[tool],
-                tool_choice={"type": "tool", "name": tool_name},
+                tool_choice=tool_choice,
                 # Explicit timeout bypasses the SDK's heuristic that rejects
                 # non-streaming requests when max_tokens is high (>~21K).
                 timeout=600.0,
@@ -1175,7 +1183,7 @@ class LLMClient:
                 api_key="ollama",  # Required by SDK but ignored by Ollama
             )
 
-        client: openai.AsyncOpenAI = self._local_client  # type: ignore[assignment]
+        client = self._local_client
 
         # Add JSON schema instruction to the system prompt
         schema = response_model.model_json_schema()

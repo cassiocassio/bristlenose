@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import logging
-import platform
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import NamedTuple
@@ -55,9 +55,11 @@ def _get_creation_time(path: Path) -> datetime:
       to st_mtime (last modification) which is the most stable proxy.
     """
     stat = path.stat()
-    if platform.system() == "Darwin":
+    # ``sys.platform`` rather than ``platform.system()``: mypy narrows on it,
+    # and ``st_birthtime`` exists on the macOS ``stat_result`` only.
+    if sys.platform == "darwin":
         ts = stat.st_birthtime
-    elif platform.system() == "Windows":
+    elif sys.platform == "win32":
         ts = stat.st_ctime  # true creation time on NTFS
     else:
         # Linux: st_ctime is inode change time, not creation.

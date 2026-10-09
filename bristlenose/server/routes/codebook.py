@@ -673,7 +673,8 @@ def list_templates(
                 .distinct()
                 .all()
             )
-            imported_ids = {r[0] for r in fw_rows}
+            # The query filters NULLs; the guard tells mypy the same.
+            imported_ids = {r[0] for r in fw_rows if r[0] is not None}
 
         # `restorable` is gone (D20 option A — uninstall keeps nothing), and with
         # it register A3: the flag was computed instance-wide with no project

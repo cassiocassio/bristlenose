@@ -79,6 +79,8 @@ if TYPE_CHECKING:  # annotation only — s01 stays a lazy import
     from bristlenose.discussion.models import DiscussionRecord
     from bristlenose.llm.client import LLMClient
     from bristlenose.stages.s01_ingest import SkippedFile
+    from bristlenose.stages.s05_transcribe import ProgressCallback, SegmentCallback
+    from bristlenose.timing import PipelineEvent, TimingEstimator
 
 logger = logging.getLogger(__name__)
 console = Console(width=min(80, Console().width))
@@ -873,15 +875,14 @@ class Pipeline:
         self,
         settings: BristlenoseSettings,
         verbose: bool = False,
-        on_event: object | None = None,
-        estimator: object | None = None,
+        on_event: Callable[[PipelineEvent], None] | None = None,
+        estimator: TimingEstimator | None = None,
     ) -> None:
         self.settings = settings
         self.verbose = verbose
-        # Callable[[PipelineEvent], None] — typed as object to avoid
-        # importing timing at module level (lazy import pattern).
+        # timing is imported for annotations only (TYPE_CHECKING), keeping
+        # the lazy-import pattern at runtime.
         self._on_event = on_event
-        # TimingEstimator — typed as object for the same reason.
         self._estimator = estimator
         # Structured progress sink (RunHandle.progress) — set inside the
         # run_lifecycle block by the CLI. None on no-lifecycle paths.
@@ -928,10 +929,10 @@ class Pipeline:
         setup_logging(output_dir=output_dir, verbose=self.verbose)
         self._logging_configured = True
 
-    def _emit(self, event: object) -> None:
+    def _emit(self, event: PipelineEvent) -> None:
         """Fire a PipelineEvent to the registered callback (if any)."""
         if self._on_event is not None:
-            self._on_event(event)  # type: ignore[operator]
+            self._on_event(event)
 
     def _emit_remaining(self, stage: str, elapsed: float) -> None:
         """Emit a revised remaining-time estimate after a stage completes."""
@@ -1056,7 +1057,7 @@ class Pipeline:
         what is left to run, not the whole pipeline.
         """
         if self._estimator is not None:
-            changed, remaining = self._estimator.skip_to(stage)  # type: ignore[attr-defined]
+            changed, remaining = self._estimator.skip_to(stage)
             if changed:
                 self._carry_eta(remaining)
         self._emit_progress(
@@ -1071,7 +1072,7 @@ class Pipeline:
         counted from here, and the corrected figure goes out at once."""
         if self._estimator is None:
             return
-        changed, remaining = self._estimator.stage_runs(stage)  # type: ignore[attr-defined]
+        changed, remaining = self._estimator.stage_runs(stage)
         if changed:
             self._carry_eta(remaining)
             self._emit_progress(
@@ -3492,8 +3493,8 @@ class Pipeline:
         self,
         sessions: list[InputSession],
         *,
-        on_progress: object | None = None,
-        on_segment: object | None = None,
+        on_progress: ProgressCallback | None = None,
+        on_segment: SegmentCallback | None = None,
     ) -> tuple[dict[str, list[TranscriptSegment]], StageOutcome]:
         """Gather transcript segments from all sources (subtitle, docx, whisper).
 

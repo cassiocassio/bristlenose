@@ -35,6 +35,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 from types import FrameType, TracebackType
+from typing import TypedDict
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,17 @@ logger = logging.getLogger(__name__)
 # overwrite an early signal cause with a later atexit fallback.
 _INITIAL_REASON = "normal_shutdown"
 
-_state: dict[str, object] = {
+
+class _LifecycleState(TypedDict):
+    exit_reason: str
+    exc_type: str | None
+    started_at: float
+    original_ppid: int
+    installed: bool
+    watcher_started: bool
+
+
+_state: _LifecycleState = {
     "exit_reason": _INITIAL_REASON,
     "exc_type": None,
     "started_at": time.monotonic(),
@@ -69,7 +80,7 @@ def _set_reason(reason: str, *, exc_type: str | None = None) -> None:
 
 
 def _log_exit() -> None:
-    uptime = time.monotonic() - float(_state["started_at"])  # type: ignore[arg-type]
+    uptime = time.monotonic() - _state["started_at"]
     current_ppid = os.getppid()
     parts = [
         f"reason={_state['exit_reason']}",
@@ -101,12 +112,14 @@ def install_exit_logger() -> None:
 
     def _on_sigterm(signum: int, frame: FrameType | None) -> None:
         _set_reason("sigterm")
-        if callable(prev_sigterm) and prev_sigterm not in (signal.SIG_DFL, signal.SIG_IGN):
+        # SIG_DFL / SIG_IGN are ``signal.Handlers`` ints, never callable, so
+        # ``callable`` alone excludes them (and None, for a C-installed handler).
+        if callable(prev_sigterm):
             prev_sigterm(signum, frame)
 
     def _on_sigint(signum: int, frame: FrameType | None) -> None:
         _set_reason("sigint")
-        if callable(prev_sigint) and prev_sigint not in (signal.SIG_DFL, signal.SIG_IGN):
+        if callable(prev_sigint):
             prev_sigint(signum, frame)
 
     def _on_exception(
@@ -192,7 +205,7 @@ def install_parent_death_watcher(*, poll_interval_sec: float = 2.0) -> None:
         return
     _state["watcher_started"] = True
 
-    original_ppid = int(_state["original_ppid"])
+    original_ppid = _state["original_ppid"]
 
     def _watch() -> None:
         while True:

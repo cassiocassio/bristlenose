@@ -1089,6 +1089,7 @@ def reassign_quotes(
         _check_project(db, project_id)
 
         # Validate the target exists and belongs to this project.
+        target: ScreenCluster | ThemeGroup | None
         if data.target_kind == "section":
             target = db.get(ScreenCluster, data.target_id)
         else:

@@ -317,6 +317,10 @@ async def run_autocode_job(
         proposed_count = 0
         processed_count = 0
         progress_lock = asyncio.Lock()
+        # Read into locals: ``job`` is reassigned later in this function, so
+        # its not-None narrowing does not reach the closure below.
+        job_id = job.id
+        total_quotes = job.total_quotes
 
         async def _process_batch(batch: list[QuoteBatchItem]) -> list[ProposedTag]:
             nonlocal processed_count
@@ -366,7 +370,7 @@ async def run_autocode_job(
                         continue
                     proposals.append(
                         ProposedTag(
-                            job_id=job.id,
+                            job_id=job_id,
                             quote_id=quote_item.db_id,
                             tag_definition_id=tag_def_id,
                             confidence=assignment.confidence,
@@ -377,7 +381,7 @@ async def run_autocode_job(
                 logger.info(
                     "AutoCode batch done: %d/%d quotes, %d proposals",
                     processed_count,
-                    job.total_quotes,
+                    total_quotes,
                     len(proposals),
                 )
                 # Commit incremental progress via a separate short-lived session so
@@ -412,7 +416,7 @@ async def run_autocode_job(
                         logger.warning(
                             "AutoCode progress update skipped (non-fatal): %d/%d",
                             processed_count,
-                            job.total_quotes,
+                            total_quotes,
                         )
                     finally:
                         progress_db.close()

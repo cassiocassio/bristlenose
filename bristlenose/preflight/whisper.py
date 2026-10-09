@@ -328,7 +328,9 @@ def preflight_whisper(
     # the programmatic call still suppresses `Fetching N files:` and the
     # trailing `Download complete: : 0.00B` summary line.
     try:
-        from huggingface_hub.utils import disable_progress_bars
+        # The defining module: ``huggingface_hub.utils`` re-exports it implicitly,
+        # which strict mypy does not count as an export.
+        from huggingface_hub.utils.tqdm import disable_progress_bars
         disable_progress_bars()
     except ImportError:
         pass

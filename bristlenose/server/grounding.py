@@ -743,27 +743,27 @@ def load_signals(
     section_lookup: dict[str, list[QuoteRecord]] = {}
     theme_lookup: dict[str, list[QuoteRecord]] = {}
     for pk, per_group in quote_groups.items():
-        q = quote_by_pk.get(pk)
-        if q is None:
+        quote = quote_by_pk.get(pk)
+        if quote is None:
             continue
         section_label = quote_section.get(pk)
         theme_label = quote_theme.get(pk)
         for gname, tag_names in per_group.items():
             record = QuoteRecord(
-                text=edited_text.get(pk, q.text),
-                participant_id=q.participant_id,
-                session_id=q.session_id,
-                start_seconds=q.start_timecode,
-                intensity=q.intensity,
+                text=edited_text.get(pk, quote.text),
+                participant_id=quote.participant_id,
+                session_id=quote.session_id,
+                start_seconds=quote.start_timecode,
+                intensity=quote.intensity,
                 tag_names=tag_names,
-                segment_index=q.segment_index,
+                segment_index=quote.segment_index,
             )
             if section_label:
                 section_contributions.append(QuoteContribution(
                     row_label=section_label,
                     col_label=gname,
-                    participant_id=q.participant_id,
-                    intensity=q.intensity,
+                    participant_id=quote.participant_id,
+                    intensity=quote.intensity,
                     weight=1.0,
                 ))
                 section_lookup.setdefault(f"{section_label}|{gname}", []).append(record)
@@ -771,8 +771,8 @@ def load_signals(
                 theme_contributions.append(QuoteContribution(
                     row_label=theme_label,
                     col_label=gname,
-                    participant_id=q.participant_id,
-                    intensity=q.intensity,
+                    participant_id=quote.participant_id,
+                    intensity=quote.intensity,
                     weight=1.0,
                 ))
                 theme_lookup.setdefault(f"{theme_label}|{gname}", []).append(record)

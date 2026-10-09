@@ -74,7 +74,9 @@ def _slug_map(rows: Sequence[Any]) -> dict[tuple[Any, str], int]:
 
 def _unique_constraint_names(table: str) -> set[str]:
     insp = sa.inspect(op.get_bind())
-    return {uc["name"] for uc in insp.get_unique_constraints(table)}
+    # An unnamed constraint reports ``name: None``; callers only test membership
+    # of a specific name, so it can never match and is dropped here.
+    return {name for uc in insp.get_unique_constraints(table) if (name := uc["name"])}
 
 
 def upgrade() -> None:

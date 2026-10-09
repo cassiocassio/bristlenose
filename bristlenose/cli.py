@@ -24,7 +24,11 @@ from bristlenose.ui_kinds import MessageKind, cli_prefix
 from bristlenose.utils.text import count_noun
 
 if TYPE_CHECKING:  # imported lazily at runtime; mypy still resolves the name
+    from collections.abc import Callable
+
+    from bristlenose.config import BristlenoseSettings
     from bristlenose.status import ProjectStatus
+    from bristlenose.timing import PipelineEvent, TimingEstimator
 
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
 _COMMANDS = {
@@ -714,7 +718,7 @@ def _maybe_guide_provider_setup(settings: object) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _print_header(settings: object, *, show_provider: bool = True, show_hardware: bool = True) -> None:
+def _print_header(settings: BristlenoseSettings, *, show_provider: bool = True, show_hardware: bool = True) -> None:
     """Print the Bristlenose version + provider + hardware header line."""
     from bristlenose._build import build_label
     from bristlenose.providers import PROVIDERS
@@ -986,15 +990,17 @@ def _active_api_key_suffix(settings: object, provider: str | None) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _build_estimator(settings: object) -> tuple[object, object]:
+def _build_estimator(
+    settings: BristlenoseSettings,
+) -> tuple[TimingEstimator | None, Callable[[PipelineEvent], None] | None]:
     """Build a TimingEstimator and an event callback for printing estimates.
 
     Returns (estimator, on_event) — both may be None if something goes wrong.
     """
-    from bristlenose.timing import PipelineEvent, TimingEstimator, build_hardware_key
+    from bristlenose.timing import TimingEstimator, build_hardware_key
 
     try:
-        hw_key = build_hardware_key(settings)  # type: ignore[arg-type]
+        hw_key = build_hardware_key(settings)
         config_dir = _doctor_sentinel_dir()
         estimator = TimingEstimator(hw_key, config_dir)
     except Exception:

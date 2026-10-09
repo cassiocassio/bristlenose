@@ -87,7 +87,7 @@ def get_token_info(token: str) -> dict[str, str | None]:
     Enterprise it disambiguates a team within a company ("Design team · BigCorp").
     Parsed defensively; an unexpected shape just yields None, never raises.
     """
-    none = {"user_name": None, "team_name": None, "org_name": None}
+    none: dict[str, str | None] = {"user_name": None, "team_name": None, "org_name": None}
     try:
         resp = httpx.get(
             "https://api.miro.com/v1/oauth-token",
@@ -200,15 +200,24 @@ def _request(method: str, token: str, path: str, json: dict[str, Any] | list[Any
     raise MiroError(f"{method} {path} failed after rate-limit retries")
 
 
+def _request_object(method: str, token: str, path: str,
+                    json: dict[str, Any] | list[Any] | None = None) -> dict[str, Any]:
+    """``_request`` for endpoints that answer with one object, not a list."""
+    result = _request(method, token, path, json)
+    if not isinstance(result, dict):
+        raise MiroError(f"{method} {path} -> expected an object, got {type(result).__name__}")
+    return result
+
+
 def create_board(token: str, name: str, description: str = "") -> dict[str, Any]:
     """Create a board. Returns the board object (id, viewLink, ...)."""
-    return _request("POST", token, "/boards", {"name": name[:60], "description": description[:300]})
+    return _request_object("POST", token, "/boards", {"name": name[:60], "description": description[:300]})
 
 
 def create_frame(token: str, board_id: str, title: str, x: float, y: float,
                  width: float, height: float) -> dict[str, Any]:
     """Create a named frame. Position is the frame CENTRE (Miro convention)."""
-    return _request("POST", token, f"/boards/{board_id}/frames", {
+    return _request_object("POST", token, f"/boards/{board_id}/frames", {
         "data": {"title": title[:255], "format": "custom", "type": "freeform"},
         "position": {"x": x, "y": y},
         "geometry": {"width": width, "height": height},
@@ -228,7 +237,7 @@ def bulk_create_items(token: str, board_id: str, items: list[dict[str, Any]]) ->
 def create_text(token: str, board_id: str, content: str, x: float, y: float,
                 width: float, font_size: int = 18) -> dict[str, Any]:
     """Create a free text item (real fontSize/colour, unlike a sticky)."""
-    return _request("POST", token, f"/boards/{board_id}/texts", {
+    return _request_object("POST", token, f"/boards/{board_id}/texts", {
         "data": {"content": content},
         "position": {"x": x, "y": y},
         "geometry": {"width": width},

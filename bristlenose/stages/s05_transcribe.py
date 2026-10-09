@@ -11,7 +11,9 @@ The backend can be overridden via settings.whisper_backend.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
+from typing import Protocol
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.events import (
@@ -186,7 +188,23 @@ def segment_has_signal(start: float, end: float, levels: object) -> bool:
     return bool(np.max(arr[i0:i1]) >= _SIGNAL_FLOOR_DBFS)
 
 
-ProgressCallback = type(lambda current, total: None)
+#: ``(files_done, files_total)``, called after each file.
+ProgressCallback = Callable[[int, int], None]
+#: ``(file_index, file_total, seconds_done, file_seconds)``, called within a file.
+SegmentCallback = Callable[[int, int, float, float], None]
+#: ``(seconds_done, file_seconds)``: the per-file heartbeat a backend calls.
+FileSegmentCallback = Callable[[float, float], None]
+
+
+class TranscribeFn(Protocol):
+    """A transcription backend, as returned by the ``_init_*_backend`` functions."""
+
+    def __call__(
+        self,
+        audio_path: Path,
+        settings: BristlenoseSettings,
+        on_segment: FileSegmentCallback | None = None,
+    ) -> tuple[list[TranscriptSegment], str | None]: ...
 
 
 def transcribe_sessions(
@@ -194,7 +212,7 @@ def transcribe_sessions(
     settings: BristlenoseSettings,
     *,
     on_progress: ProgressCallback | None = None,
-    on_segment: object | None = None,
+    on_segment: SegmentCallback | None = None,
 ) -> tuple[dict[str, list[TranscriptSegment]], dict[str, str], StageOutcome]:
     """Transcribe audio for sessions that need it.
 
@@ -391,7 +409,7 @@ def _resolve_backend(configured: str, hw: HardwareInfo) -> str:
 
 def _init_mlx_backend(
     settings: BristlenoseSettings,
-) -> callable:  # type: ignore[valid-type]
+) -> TranscribeFn:
     """Initialise the MLX-whisper backend.
 
     MLX runs on Apple's Metal GPU. It uses unified memory, so the model
@@ -408,7 +426,9 @@ def _init_mlx_backend(
     # Programmatically disable its download progress bars — the env var
     # may have been too late if huggingface_hub was imported earlier.
     try:
-        from huggingface_hub.utils import disable_progress_bars
+        # The defining module: ``huggingface_hub.utils`` re-exports it implicitly,
+        # which strict mypy does not count as an export.
+        from huggingface_hub.utils.tqdm import disable_progress_bars
         disable_progress_bars()
     except ImportError:
         pass
@@ -421,7 +441,7 @@ def _init_mlx_backend(
     def transcribe_mlx(
         audio_path: Path,
         settings: BristlenoseSettings,
-        on_segment: object | None = None,
+        on_segment: FileSegmentCallback | None = None,
     ) -> tuple[list[TranscriptSegment], str | None]:
         # on_segment is ignored: mlx_whisper.transcribe() is one blocking call
         # that returns every segment at once, so there's no within-file
@@ -552,7 +572,7 @@ def _mlx_model_name(whisper_model: str) -> str:
 def _init_faster_whisper_backend(
     settings: BristlenoseSettings,
     hw: HardwareInfo,
-) -> callable:  # type: ignore[valid-type]
+) -> TranscribeFn:
     """Initialise the faster-whisper backend.
 
     Uses CUDA on NVIDIA GPUs, CPU with INT8 quantization otherwise.
@@ -601,7 +621,7 @@ def _init_faster_whisper_backend(
     def transcribe_faster_whisper(
         audio_path: Path,
         settings: BristlenoseSettings,
-        on_segment: object | None = None,
+        on_segment: FileSegmentCallback | None = None,
     ) -> tuple[list[TranscriptSegment], str | None]:
         segments_iter, info = model.transcribe(
             str(audio_path),

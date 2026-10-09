@@ -47,6 +47,7 @@ from bristlenose.signals.metrics import classify_flag
 
 if TYPE_CHECKING:
     from bristlenose.server.elaboration import ElaborationResult
+    from bristlenose.signals.models import Matrix, Signal
 from bristlenose.server.models import (
     UNCATEGORISED_GROUP_NAME,
     ClusterQuote,
@@ -606,9 +607,9 @@ def get_sentiment_analysis(
         ) if cluster_id_to_adapter else []
         for cq in cqs:
             aq = adapter_quotes.get(cq.quote_id)
-            ca = cluster_id_to_adapter.get(cq.cluster_id)
-            if aq and ca:
-                ca.quotes.append(aq)
+            cluster_adapter = cluster_id_to_adapter.get(cq.cluster_id)
+            if aq and cluster_adapter:
+                cluster_adapter.quotes.append(aq)
 
         # Build theme adapters
         themes = db.query(ThemeGroup).filter_by(project_id=project_id).all()
@@ -626,9 +627,9 @@ def get_sentiment_analysis(
         ) if theme_id_to_adapter else []
         for tq in tqs:
             aq = adapter_quotes.get(tq.quote_id)
-            ta = theme_id_to_adapter.get(tq.theme_id)
-            if aq and ta:
-                ta.quotes.append(aq)
+            theme_adapter = theme_id_to_adapter.get(tq.theme_id)
+            if aq and theme_adapter:
+                theme_adapter.quotes.append(aq)
 
         # Run analysis pipeline functions
         section_matrix = build_section_matrix(cluster_adapters)  # type: ignore[arg-type]
@@ -686,9 +687,9 @@ def _compute_group_analysis(
     db: Session,
     top_n: int,
 ) -> tuple[
-    list[object],  # Signal list
-    object,  # section_matrix
-    object,  # theme_matrix
+    list[Signal],
+    Matrix,  # section_matrix
+    Matrix,  # theme_matrix
     list[str],  # col_labels
     SourceBreakdown,
     dict[str, str],  # group_name -> colour_set
@@ -899,7 +900,7 @@ def get_tag_analysis(
 
         signal_pids: set[str] = set()
         for s in signals:
-            signal_pids.update(s.participants)  # type: ignore[attr-defined]
+            signal_pids.update(s.participants)
 
         return TagSignalsResponse(
             signals=[_serialize_signal(s, colour_sets, shared.total_participants) for s in signals],
@@ -1040,7 +1041,7 @@ async def get_codebook_analysis(
 
             signal_pids: set[str] = set()
             for s in signals:
-                signal_pids.update(s.participants)  # type: ignore[attr-defined]
+                signal_pids.update(s.participants)
 
             # Resolve codebook name and representative colour_set
             codebook_name, codebook_colour = _resolve_codebook_identity(

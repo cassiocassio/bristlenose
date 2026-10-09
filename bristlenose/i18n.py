@@ -104,7 +104,7 @@ def _resolution_order(locale: str) -> tuple[str, ...]:
 
 def locale_resources(
     locale: str, namespaces: Sequence[str]
-) -> dict[str, dict[str, object]]:
+) -> dict[str, dict[str, dict[str, object]]]:
     """Every namespace in ``locale``'s resolution order, keyed locale -> namespace.
 
     Built for the HTML export, which inlines the chrome strings for exactly the
@@ -119,7 +119,7 @@ def locale_resources(
     Locales that contribute no files are omitted rather than returned empty, so
     the caller can embed the result without pruning.
     """
-    out: dict[str, dict[str, object]] = {}
+    out: dict[str, dict[str, dict[str, object]]] = {}
     for loc in _resolution_order(canonical_locale(locale)):
         bundle = {
             ns: data for ns in namespaces if (data := _load_namespace(loc, ns))

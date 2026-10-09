@@ -420,6 +420,21 @@ def test_lifecycle_writes_pid_file_with_our_pid_and_start_time(tmp_path: Path):
         assert data["start_time"]
 
 
+@pytest.mark.parametrize("payload", ["[]", '"x"', "3", "null"])
+def test_pid_file_holding_non_object_json_reads_as_absent(tmp_path: Path, payload: str):
+    """Valid JSON that is not an object is as unreadable as invalid JSON.
+
+    It used to be returned as-is, and the concurrent-run check then called
+    ``.get`` on a list or a string and crashed the run at start.
+    """
+    path = pid_file_path(tmp_path)
+    path.parent.mkdir(parents=True)
+    path.write_text(payload, encoding="utf-8")
+    assert _read_pid_file(tmp_path) is None
+    with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
+        pass
+
+
 def test_lifecycle_started_event_includes_process_envelope(tmp_path: Path):
     with run_lifecycle(tmp_path, KindEnum.ANALYZE, install_signal_handlers=False):
         pass

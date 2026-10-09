@@ -40,7 +40,7 @@ import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from bristlenose import __version__ as _bristlenose_version
 from bristlenose.cost import RunCost
@@ -291,14 +291,27 @@ def _write_pid_file(output_dir: Path, run_id: str, start_time: str) -> Path:
     return path
 
 
+class _TerminusKwargs(TypedDict, total=False):
+    """The cost + summary fields every terminus event shares (events.py)."""
+
+    input_tokens: int | None
+    output_tokens: int | None
+    cost_usd_estimate: float | None
+    price_table_version: str | None
+    summary: PipelineSummary | None
+
+
 def _read_pid_file(output_dir: Path) -> dict[str, Any] | None:
     path = pid_file_path(output_dir)
     if not path.exists():
         return None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+    # Valid JSON that is not an object is as unreadable as invalid JSON:
+    # callers `.get` on the result.
+    return data if isinstance(data, dict) else None
 
 
 def _remove_pid_file(output_dir: Path) -> None:
@@ -785,9 +798,9 @@ def run_lifecycle(
         started_at=started_at,
     )
 
-    def _terminus_kwargs() -> dict[str, object]:
+    def _terminus_kwargs() -> _TerminusKwargs:
         """Render handle-attached cost + summary as terminus-event kwargs."""
-        out: dict[str, object] = {}
+        out: _TerminusKwargs = {}
         if handle.cost is not None:
             out["input_tokens"] = handle.cost.input_tokens
             out["output_tokens"] = handle.cost.output_tokens

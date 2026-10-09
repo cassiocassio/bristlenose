@@ -277,17 +277,131 @@ verdict_watch_drop() {
     esac
 }
 
-# held_for_version <version> <branch>... — which branches hold work that waits
-#   for <version> to reach PyPI: after-pypi/<version> and after-pypi/<version>-*.
-#   0.34.0: an install guide and the one-line installer pointed Windows users at
-#   a version PyPI did not have yet; the guide had been held by hand, and the
-#   hold was broken by a push that did not know about it.
-held_for_version() {
-    local v="$1" b; shift
-    for b in "$@"; do
-        case "$b" in "after-pypi/$v"|"after-pypi/$v"-*) echo "$b" ;; esac
+# version_ge, the one numeric version comparison, lives in verify-channels.sh.
+# Sourced in its LIB mode so there is one definition, not two that drift.
+# Conditional: every verb loads this file, and only `verify` needs the
+# comparison, so a release.sh copied without its sibling (the plan suite's
+# sandbox does exactly that) must still run. verdict_hold says `unknown` then.
+_vc_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/verify-channels.sh"
+if ! declare -F version_ge >/dev/null 2>&1 && [ -f "$_vc_lib" ]; then
+    # shellcheck source=scripts/verify-channels.sh
+    VERIFY_CHANNELS_LIB=1 . "$_vc_lib"
+fi
+unset _vc_lib
+
+# verdict_hold <branch> <verified-version> <channel-verdict> <served> — what to
+#   do with a branch named after-<channel>/<version>[-anything]. That is work
+#   that must not land before <channel> carries <version>: an install guide
+#   naming a version, docs that make winget the lead Windows route.
+#   (docs/design-channel-version-lag.md §5.2b)
+#
+#   <verified-version> is the version this verify probed. <channel-verdict> is
+#   that channel's verdict for it ("" when the channel was not probed at all).
+#   <served> is the version the channel serves if its probe knows one (the
+#   followers' probes do), else "".
+#
+#   Prints "<action>	<reason>":
+#     land     the channel carries ≥ the hold's version. ≥ and not ==, because
+#              a follower that skipped straight to a later version still
+#              carries what the hold waited for
+#     wait     not yet
+#     unknown  this verify cannot tell (unreachable, a hold older than the
+#              version probed with nothing to compare against, a channel this
+#              project does not have). Never folded into wait or land
+#     badname  after-* with no /X.Y.Z (after-winget, after-winget/first). Reported, never
+#              skipped: a hold nobody can read is a hold nobody will land
+#   Anything not named after-*/ prints nothing.
+#
+#   0.34.0 is why holds exist: an install guide and the one-line installer
+#   pointed Windows users at a version PyPI did not have yet. The guide had
+#   been held by hand, and a push that did not know about the hold broke it.
+verdict_hold() {
+    local br="${1-}" v="${2-}" verdict="${3-}" served="${4-}" ch rest hv
+    case "$br" in
+        after-*/*) : ;;
+        after-?*)  printf 'badname\tno /<version>: name it %s/<version>[-anything]\n' "$br"; return 0 ;;
+        *)         return 0 ;;
+    esac
+    declare -F version_ge >/dev/null 2>&1 \
+        || { printf 'unknown\tverify-channels.sh not beside release.sh; cannot compare versions\n'; return 0; }
+    ch="${br%%/*}"; ch="${ch#after-}"; rest="${br#*/}"
+    hv="${rest%%-*}"
+    if [ -z "$ch" ] || ! version_ge "$hv" "$hv" 2>/dev/null; then
+        printf 'badname\tno X.Y.Z after the slash: name it after-%s/<version>[-anything]\n' "${ch:-<channel>}"
+        return 0
+    fi
+    if [ -n "$served" ] && version_ge "$served" "$hv"; then
+        printf 'land\t%s serves %s\n' "$ch" "$served"; return 0
+    fi
+    case "$verdict" in
+        "") printf 'unknown\tno channel %s was probed (CHANNELS / CHANNELS_FOLLOW)\n' "$ch"; return 0 ;;
+        ok) if version_ge "$v" "$hv"; then printf 'land\t%s has %s\n' "$ch" "$v"; return 0; fi ;;
+    esac
+    if ! version_ge "$hv" "$v"; then
+        # The hold is for an OLDER version than the one probed, and nothing
+        # said the channel has the newer one: this run cannot say about hv.
+        printf 'unknown\t%s is %s for %s; run verify %s for this hold\n' "$ch" "$verdict" "$v" "$hv"; return 0
+    fi
+    if [ "$hv" != "$v" ]; then
+        printf 'wait\tfor a later version than %s\n' "$v"; return 0
+    fi
+    case "$verdict" in
+        unreachable) printf 'unknown\t%s unreachable\n' "$ch" ;;
+        *)           printf 'wait\t%s is %s for %s\n' "$ch" "$verdict" "$v" ;;
+    esac
+}
+
+# print_holds <results-file> — every after-*/ branch here and in the website
+#   repo, with verdict_hold's action for it. The results file is what
+#   verify-channels.sh wrote under BN_VERIFY_RESULTS: a `version` line, one
+#   `verdict <channel> <verdict>` per channel, and `served <channel> <version>`
+#   where a probe knows it.
+print_holds() {
+    local res="$1" v line br act why repo label any=0 ch verdict served
+    v="$(awk -F'\t' '$1=="version"{print $2; exit}' "$res" 2>/dev/null)"
+    [ -n "$v" ] || return 0
+    local root; root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    for repo in "$root" "${WEBSITE_REPO:-}"; do
+        [ -n "$repo" ] || continue
+        if [ "$repo" = "$root" ]; then label="here"; else label="website"; fi
+        if [ ! -d "$repo/.git" ] && [ ! -f "$repo/.git" ]; then
+            printf '\n  %s(website repo not found at %s; its holds are unchecked. Set BN_WEBSITE_REPO)%s\n' "${D:-}" "$repo" "${N:-}"
+            continue
+        fi
+        while IFS= read -r br; do
+            [ -n "$br" ] || continue
+            ch="${br%%/*}"; ch="${ch#after-}"
+            verdict="$(awk -F'\t' -v c="$ch" '$1=="verdict" && $2==c {print $3; exit}' "$res")"
+            served="$(awk -F'\t' -v c="$ch" '$1=="served" && $2==c {print $3; exit}' "$res")"
+            line="$(verdict_hold "$br" "$v" "$verdict" "$served")"
+            [ -n "$line" ] || continue
+            if [ "$any" = 0 ]; then
+                printf '  %sholds%s — work waiting on a channel (after-<channel>/<version>)\n' "${B:-}" "${N:-}"
+                any=1
+            fi
+            act="${line%%$'\t'*}"; why="${line#*$'\t'}"
+            case "$act" in
+                land)    printf '    %bland%b     %-34s %-8s %s\n' "${G:-}" "${N:-}" "$br" "$label" "$why" ;;
+                wait)    printf '    %swait%s     %-34s %-8s %s\n' "${D:-}" "${N:-}" "$br" "$label" "$why" ;;
+                badname) printf '    %b?name%b    %-34s %-8s %s\n' "${Y:-}" "${N:-}" "$br" "$label" "$why" ;;
+                *)       printf '    %b?%b        %-34s %-8s %s\n' "${Y:-}" "${N:-}" "$br" "$label" "$why" ;;
+            esac
+        done <<<"$(hold_refs "$repo")"
     done
+    [ "$any" = 1 ] && echo
     return 0
+}
+
+# hold_refs <repo> — the after-*/ branches in <repo>, local and origin's, once
+#   each. Origin's because a hold pushed from a cloud session or another clone
+#   exists only there. lstrip, not :short, because :short turns an ambiguous
+#   name into heads/after-…  (review, 6 Oct).
+hold_refs() {
+    # NOT 'refs/heads/after-*': for-each-ref's * stops at a slash, so that
+    # pattern matches `after-x` and misses every after-x/<version> (measured).
+    { git -C "$1" for-each-ref --format='%(refname:lstrip=2)' refs/heads/
+      git -C "$1" for-each-ref --format='%(refname:lstrip=3)' refs/remotes/origin/
+    } 2>/dev/null | grep -E '^after-' | sort -u
 }
 
 # ci_soft_jobs [ci.yml] — the job names ci.yml lets fail without failing the run.
@@ -900,25 +1014,16 @@ cmd_verify() {
     case "${1-}" in ""|-*) _v="$(resolve_run)" ;; *) _v="$1" ;; esac
     export_sink_for "$_v"
     board_link "$_v" || true
-    local _rc=0 _held
-    "$ROOT/scripts/verify-channels.sh" "$@" || _rc=$?
-    # Work that must not land before this version is on PyPI waits on a branch
-    # named after-pypi/<version>[-anything] (scripts/README.md). Say so here,
-    # because "after PyPI" is exactly the moment nothing else announces.
-    # Local branches AND origin's: a hold pushed from a cloud session or another
-    # clone exists only as origin/after-pypi/…. lstrip, not :short, because
-    # :short turns an ambiguous name into heads/after-pypi/… (review, 6 Oct).
-    _held="$(held_for_version "$_v" $( { git -C "$ROOT" for-each-ref --format='%(refname:lstrip=2)' 'refs/heads/after-pypi/'
-                                          git -C "$ROOT" for-each-ref --format='%(refname:lstrip=3)' 'refs/remotes/origin/after-pypi/'
-                                        } 2>/dev/null | sort -u))"
-    if [ -n "$_held" ]; then
-        if [ "$_rc" -eq 0 ]; then
-            printf '\n  held until %s was on PyPI, and every channel now verifies — land these:\n' "$_v"
-        else
-            printf '\n  held until %s is on PyPI — verify has not passed yet; land these once it does:\n' "$_v"
-        fi
-        printf '    %s\n' $_held
-    fi
+    local _rc=0 _res
+    _res="$(mktemp "${TMPDIR:-/tmp}/bn-verify.XXXXXX")" || _res=""
+    BN_VERIFY_RESULTS="$_res" "$ROOT/scripts/verify-channels.sh" "$@" || _rc=$?
+    # Work held for a channel waits on a branch named
+    # after-<channel>/<version>[-anything], in this repo or the website's
+    # (scripts/README.md). Say what each one is waiting for, per channel,
+    # because "now PyPI has it" or "winget merged it" is exactly the moment
+    # nothing else announces.
+    [ -n "$_res" ] && print_holds "$_res"
+    [ -n "$_res" ] && rm -f "$_res"
     return "$_rc"
 }
 

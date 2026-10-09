@@ -1384,8 +1384,13 @@ strict-CI run, and could change what ships (0.34.0 was planned as 0.33.1 and
 became a minor that way). The release's own commits pass; a fix the release
 needs goes in with `BN_RELEASE_FREEZE_OK=1 git commit …`. **Work that must not
 go live before the new version is on PyPI** (an install guide naming it, a
-one-liner that installs it) waits on a branch named `after-pypi/<version>`;
-`release.sh verify` lists those branches and says when to land them.
+one-liner that installs it) waits on a branch named `after-pypi/<version>`.
+The same holds for any channel: `after-<channel>/<version>[-anything]`
+(`after-winget/0.36.0` holds the docs that make winget the lead Windows route),
+in this repo or the website's. `release.sh verify` lists every hold in both
+repos with `land`, `wait` or `?` per channel. It lands a hold when that channel
+carries the version or a later one, without waiting for every channel to
+verify, and reports a misnamed `after-*` branch rather than skipping it.
 
 **Why:** avoids release notifications during client working hours; batches
 releases into a predictable window. Both halves of that purpose are about *when

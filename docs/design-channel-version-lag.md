@@ -1,5 +1,5 @@
 ---
-status: proposal — investigation 9 Oct 2026; §5.2(a) follower channels built 9 Oct 2026, §5.2(b) and the docs options await the maintainer's decision
+status: proposal — investigation 9 Oct 2026; §5.2 (follower channels, after-<channel> holds) built 9 Oct 2026; the docs options await the maintainer's decision
 measured-against: PyPI JSON (upload times), `gh run list` for release.yml / snap.yml / windows-installer.yml, the GitHub Releases API, the homebrew-bristlenose tap's commit log, Copr's build API, the Snap Store info API, microsoft/winget-pkgs#449372, docs/release-log.md 0.27.0–0.36.0
 ---
 
@@ -381,6 +381,17 @@ for them.
     evidence says *merged* rather than claiming more. Any open PR naming the
     exact id counts as in flight, including third-party ones; a look-alike id
     does not.
-  - **§5.2(b), the `after-<channel>/<version>` holds, is not built.**
-    `held_for_version` still knows only `after-pypi`, and the two existing
-    `after-winget*` branches are unrenamed.
+  - **§5.2(b), the `after-<channel>/<version>` holds, built the same day.**
+    - `verify-channels.sh` writes the per-channel verdicts, plus winget's served
+      version, to `BN_VERIFY_RESULTS`. `release.sh`'s `verdict_hold` turns each
+      hold into `land`, `wait`, `unknown` or `badname`; `hold_refs` lists local
+      and origin's `after-*` branches; `print_holds` covers this repo and
+      `WEBSITE_REPO`.
+    - `verdict_hold` replaces `held_for_version`. Its `version_ge` comes from
+      the verify lib rather than a second copy.
+    - **Found while building:** `for-each-ref 'refs/heads/after-*'` stops at a
+      slash. It matches `after-x` and misses every `after-x/<version>`, so the
+      obvious pattern would have listed no holds at all. Mutation-proved, as is
+      `unreachable` never folding into `wait`.
+    - The two existing holds were renamed locally to `after-winget/0.36.0`
+      (same commits; neither had been pushed).

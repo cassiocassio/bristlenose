@@ -121,8 +121,10 @@ What comes back:
 **7. After the merge.** Run `winget search Bristlenose` on any Windows machine. Then
 `winget install --id Bristlenose.Bristlenose -e`, and confirm that `winget list --id`
 and `winget uninstall --id` find it. Those last two can't be tested before publication
-(see below). The user-facing docs that name winget go live then, from the waiting
-branches, with Martin's OK.
+(see below). The user-facing docs that name winget go live then, with Martin's OK,
+from the branches `after-winget/<version>` in this repo and the website's.
+`release.sh verify` lists them as `wait` until winget serves that version or a
+later one, then as `land`.
 
 ## Gotchas
 

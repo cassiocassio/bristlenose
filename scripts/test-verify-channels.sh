@@ -348,6 +348,22 @@ fi
 if [ "$rc_ok" = 0 ]; then ok "and that exit code is 0: every lockstep channel green, so a leak would show"
 else bad "baseline exit is $rc_ok, not 0 — the equality above cannot catch a leak"; fi
 
+# BN_VERIFY_RESULTS: what release.sh reads to decide which after-<channel>
+# holds land. One version line, a verdict per channel (followers included), a
+# served line where the probe knows one, and nothing at all without the var.
+_rf="$WORK/results"; rm -f "$_rf"
+( cd "$WORK/repo" && PATH="$WORK/bin:$PATH" BN_FAKE_CHANGELOG="$WORK/changelog" BN_FAKE_WINGET_SERVED="9.9.8 9.9.9" \
+  BN_VERIFY_RESULTS="$_rf" bash scripts/verify-channels.sh 9.9.9 ) >/dev/null 2>&1
+eq "results: the version"          "9.9.9"  "$(awk -F'\t' '$1=="version"{print $2}' "$_rf")"
+eq "results: pypi's verdict"       "ok"     "$(awk -F'\t' '$1=="verdict"&&$2=="pypi"{print $3}' "$_rf")"
+eq "results: the follower's too"   "ok"     "$(awk -F'\t' '$1=="verdict"&&$2=="winget"{print $3}' "$_rf")"
+eq "results: winget serves 9.9.9"  "9.9.9"  "$(awk -F'\t' '$1=="served"&&$2=="winget"{print $3}' "$_rf")"
+eq "results: no row for the digest" ""      "$(awk -F'\t' '$2==".dmg sha256"' "$_rf")"
+eq "results: one line per channel" "9"      "$(awk -F'\t' '$1=="verdict"' "$_rf" | wc -l | tr -d ' ')"
+rm -f "$_rf"
+verify 9.9.9 >/dev/null 2>&1
+[ ! -e "$_rf" ] && ok "no BN_VERIFY_RESULTS, no file" || bad "a results file appeared unasked"
+
 # A channel in BOTH lists is a contradiction, and it must fail rather than
 # silently pick one. Prove the edit took first.
 _conf="$WORK/repo/scripts/project.conf"; _orig=$(cat "$_conf")

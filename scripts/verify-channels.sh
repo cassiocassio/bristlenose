@@ -297,6 +297,15 @@ row() { # row <name> <verdict> <evidence>
     printf '  %b %-18s %s%s%s\n' "$glyph" "$1" "$D" "$3" "$N"
     VERDICTS+=("$2")
     sink_line row src=verify label="$1" result="$2" evidence="$3"
+    case " $CHANNELS " in *" $1 "*) results_line verdict "$1" "$2" ;; esac
+}
+
+# results_line <kind> <a> [<b>] — a tab-separated line for release.sh, which
+# reads it to decide which after-<channel>/<version> holds can land. Written
+# only when BN_VERIFY_RESULTS names a file; a plain run writes nothing.
+results_line() {
+    [ -n "${BN_VERIFY_RESULTS:-}" ] || return 0
+    printf '%s\t%s\t%s\n' "$1" "$2" "${3-}" >> "$BN_VERIFY_RESULTS" 2>/dev/null || true
 }
 
 # -f: fail on an HTTP error rather than returning the error PAGE as content.
@@ -477,6 +486,7 @@ print(f[1], f[2], f[3])
     fi
     local v
     v=$(verdict_follower "$served" "$inflight" "$VERSION" "$age" "$WINGET_BUDGET_HOURS")
+    case "$served" in [0-9]*) results_line served winget "$served" ;; esac
     [ "$served" = NONE ] && served="nothing yet"
     case "$v" in
         ok)          printf 'ok|merged into %s: %s' "$WINGET_REPO" "$served" ;;
@@ -514,6 +524,7 @@ case " $CHANNELS " in *" website "*) _need_site=1 ;; esac
 printf '\n\033[1mChannels · %s\033[0m\033[2m%s\033[0m\n\n' "$VERSION" "$VERSION_SOURCE"
 
 sink_line verify status=start version="$VERSION"
+results_line version "$VERSION"
 for _ch in $CHANNELS; do
     # CHANNELS_UNPROBEABLE is the allow-list for "no probe exists here", and it
     # is consulted in BOTH directions. It used to be consulted in neither: the
@@ -609,6 +620,7 @@ if [ -n "${CHANNELS_FOLLOW:-}" ]; then
         esac
         printf '  %b %-18s %s%s%s\n' "$_glyph" "$_ch" "$D" "${_res#*|}" "$N"
         FOLLOW_SUMMARY+=("$_ch $_verdict")
+        results_line verdict "$_ch" "$_verdict"
         sink_line row src=verify follow=1 label="$_ch" result="$_verdict" evidence="${_res#*|}"
     done
     echo

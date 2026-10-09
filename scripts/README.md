@@ -29,7 +29,10 @@ Every script resolves its own paths (via `$0`), so invoke it from anywhere.
                               # Four of seven past releases died on something this
                               # asks about — a dirty tree, or genuinely red tests.
 ./scripts/release.sh run      # do it — bare = the next minor; typing the version is the consent
-./scripts/release.sh verify   # is it actually live on every channel? bare = the tree's version
+./scripts/release.sh verify   # is it actually live on every channel? bare = the tree's version.
+                              # Then the holds: after-<channel>/<version>[-x] branches,
+                              # here and in WEBSITE_REPO, each marked land/wait/? for
+                              # its own channel (≥ the version, so a skipped one lands)
 ./scripts/release.sh status   # fold the event log for the current run
 ```
 

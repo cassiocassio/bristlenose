@@ -236,12 +236,61 @@ eq "a worktree sees the main checkout's lock" 1 "$( ( cd "$_FZ/wt/w" && env -u B
 kill $_DRV 2>/dev/null; wait $_DRV 2>/dev/null
 rm -rf "$_FZ"
 
-head_ "held_for_version — work held until a version is on PyPI"
-eq "nothing held"             ""                                 "$(held_for_version 1.2.0)"
-eq "the exact branch"         "after-pypi/1.2.0"                 "$(held_for_version 1.2.0 after-pypi/1.2.0)"
-eq "a suffixed branch"        "after-pypi/1.2.0-guide"           "$(held_for_version 1.2.0 after-pypi/1.2.0-guide)"
-eq "another version's hold"   ""                                 "$(held_for_version 1.2.0 after-pypi/1.2.1 after-pypi/1.20.0)"
-eq "not a hold at all"        ""                                 "$(held_for_version 1.2.0 main wip after-pypi)"
+head_ "verdict_hold — after-<channel>/<version>, decided per channel"
+_vh() { verdict_hold "$@" | cut -f1; }
+eq "not a hold"                       ""        "$(_vh main 1.2.0 ok '')"
+eq "not a hold (wip)"                 ""        "$(_vh wip 1.2.0 ok '')"
+eq "exact version, channel ok"        land      "$(_vh after-pypi/1.2.0 1.2.0 ok '')"
+eq "suffixed, channel ok"             land      "$(_vh after-pypi/1.2.0-guide 1.2.0 ok '')"
+eq "older hold, channel ok for newer (≥)" land  "$(_vh after-pypi/1.1.0 1.2.0 ok '')"
+eq "exact version, channel not yet"   wait      "$(_vh after-pypi/1.2.0 1.2.0 bad '')"
+eq "follower pending"                 wait      "$(_vh after-winget/1.2.0 1.2.0 pending '')"
+eq "hold for a LATER version"         wait      "$(_vh after-pypi/1.2.1 1.2.0 ok '')"
+eq "1.20.0 is later than 1.2.0"       wait      "$(_vh after-pypi/1.20.0 1.2.0 ok '')"
+eq "served ≥ hold lands, whatever the verdict" land "$(_vh after-winget/1.2.0 1.3.0 superseded 1.2.5)"
+eq "served < hold does not land"      wait      "$(_vh after-winget/1.2.0 1.2.0 pending 1.1.0)"
+eq "unreachable is unknown, not wait" unknown   "$(_vh after-pypi/1.2.0 1.2.0 unreachable '')"
+eq "older hold, channel not ok: unknown" unknown "$(_vh after-pypi/1.1.0 1.2.0 bad '')"
+eq "a channel nobody probed"          unknown   "$(_vh after-flatpak/1.2.0 1.2.0 '' '')"
+eq "no slash is a bad name, not skipped" badname "$(_vh after-winget 1.2.0 ok '')"
+eq "a word for a version is a bad name"  badname "$(_vh after-winget/first-version 1.2.0 ok '')"
+eq "after-/1.2.0 is a bad name"       badname   "$(_vh after-/1.2.0 1.2.0 ok '')"
+case "$(verdict_hold after-winget/1.2.0 1.2.0 pending '')" in
+    *$'\t'"winget is pending for 1.2.0") ok "the reason names the channel and its verdict" ;;
+    *) bad "reason: $(verdict_hold after-winget/1.2.0 1.2.0 pending '')" ;; esac
+
+head_ "hold_refs + print_holds — both repos, local and origin, and a missing website said aloud"
+_HR=$(mktemp -d)
+git -C "$_HR" init -q here && git -C "$_HR/here" commit -q --allow-empty -m x
+git -C "$_HR" init -q site && git -C "$_HR/site" commit -q --allow-empty -m x
+git -C "$_HR/here" branch after-pypi/1.2.0-guide
+git -C "$_HR/here" branch after-winget/1.2.0
+git -C "$_HR/here" branch after-thought
+git -C "$_HR/here" branch feature/after-pypi/9.9.9
+git -C "$_HR/here" update-ref refs/remotes/origin/after-pypi/1.1.0 HEAD
+git -C "$_HR/site" branch after-winget/1.2.0
+_refs=$(hold_refs "$_HR/here" | tr '\n' ' ')
+# for-each-ref's * stops at a slash: 'refs/heads/after-*' finds after-thought
+# and misses every after-x/<version>. These are the refs that pattern drops.
+eq "local and origin holds, and only holds" "after-pypi/1.1.0 after-pypi/1.2.0-guide after-thought after-winget/1.2.0 " "$_refs"
+_RF="$_HR/results"
+printf 'version\t1.2.0\t\nverdict\tpypi\tok\nverdict\twinget\tpending\n' > "$_RF"
+# print_holds reads this repo's own refs as "here"; drive it with a copy of the
+# function whose root is the sandbox, so the real repo's holds stay out.
+eval "$(declare -f print_holds | sed 's#root="$(cd "$(dirname "${BASH_SOURCE\[0\]}")/.." \&\& pwd)"#root="$_HR/here"#')"
+declare -f print_holds | grep -q 'root="$_HR/here"' && ok "the sandbox root took" || bad "print_holds still reads the real repo — what follows proves nothing"
+_out=$(WEBSITE_REPO="$_HR/site" print_holds "$_RF")
+_line() { printf '%s\n' "$_out" | grep -E "$1" | sed 's/  */ /g'; }
+eq "pypi hold lands"            " land after-pypi/1.2.0-guide here pypi has 1.2.0" "$(_line 'after-pypi/1.2.0-guide')"
+eq "older pypi hold lands (≥)"  " land after-pypi/1.1.0 here pypi has 1.2.0"       "$(_line 'after-pypi/1.1.0')"
+eq "winget hold waits, here"    " wait after-winget/1.2.0 here winget is pending for 1.2.0" "$(_line 'after-winget/1.2.0 +here')"
+eq "and in the website repo"    " wait after-winget/1.2.0 website winget is pending for 1.2.0" "$(_line 'website')"
+case "$(_line 'after-thought')" in *"?name"*) ok "an unreadable hold name is reported" ;; *) bad "after-thought: $(_line after-thought)" ;; esac
+_out=$(WEBSITE_REPO="$_HR/nope" print_holds "$_RF")
+case "$_out" in *"website repo not found at $_HR/nope"*"unchecked"*) ok "a missing website repo is said, not skipped" ;; *) bad "missing website silent" ;; esac
+_out=$(WEBSITE_REPO="$_HR/site" print_holds /nonexistent)
+eq "no results file, nothing printed" "" "$_out"
+rm -rf "$_HR"
 
 head_ "ci_soft_jobs — read from ci.yml, never written down twice"
 # The fail-fast must not stop on a job ci.yml lets fail; the list comes from the

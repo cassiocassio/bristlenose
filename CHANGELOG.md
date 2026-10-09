@@ -2,6 +2,12 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**Unreleased**
+
+**Fixed**
+
+- **`bristlenose doctor` exited 0 even when a check failed.** It now exits 1, so a script or CI step can rely on it. Warnings still exit 0.
+
 **0.36.0** — _8 Oct 2026_
 
 Transcript text can be selected across paragraphs and pasted into a document with its timecodes, and the transcript no longer shows a platform's speaker name past anonymisation.

@@ -36,7 +36,9 @@ def test_python_matches_the_contract(locale: str) -> None:
         f"{locale}: "
         + ", ".join(
             f"{n} → {a} (contract says {e})"
-            for n, a, e in zip(_COUNTS, actual, expected)
+            # strict=False: a length mismatch already fails the assert above; this
+            # only builds its message, which must not raise instead.
+            for n, a, e in zip(_COUNTS, actual, expected, strict=False)
             if a != e
         )
     )
@@ -58,8 +60,8 @@ def test_czech_never_returns_many_for_an_integer() -> None:
     `many` is Czech's *decimals-only* category. `I18n.swift` carries the warning
     in a comment; this is the version that fails.
     """
-    assert "many" not in {plural_category(n, "cs") for n in range(0, 200)}
-    assert "many" in {plural_category(n, "pl") for n in range(0, 200)}
+    assert "many" not in {plural_category(n, "cs") for n in range(200)}
+    assert "many" in {plural_category(n, "pl") for n in range(200)}
 
 
 def test_the_teens_exception_is_real() -> None:

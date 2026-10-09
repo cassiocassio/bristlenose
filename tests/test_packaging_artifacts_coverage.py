@@ -63,7 +63,7 @@ def _gitignored_bristlenose_paths() -> list[str]:
     for raw in text.splitlines():
         line = raw.strip()
         # Skip comments, blanks, and negations (re-inclusions, not exclusions).
-        if not line or line.startswith("#") or line.startswith("!"):
+        if not line or line.startswith(("#", "!")):
             continue
         # Only entries anchored inside the importable package matter here.
         # ".bristlenose/" is a per-run output dir, not part of the package.

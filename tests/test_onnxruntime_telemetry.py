@@ -43,7 +43,7 @@ def _run(tmp_path: Path, first_import: str) -> list[Path]:
         env["ORT_DISABLE_TELEMETRY"] = "0"
     subprocess.run([sys.executable, "-c", _PROBE, first_import],
                    env=env, check=True, timeout=120)
-    return [p for p in home.rglob(".onnxruntime")]
+    return list(home.rglob(".onnxruntime"))
 
 
 def test_importing_bristlenose_sets_the_opt_out() -> None:

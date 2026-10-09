@@ -42,10 +42,10 @@ class TestValidateCodebookSlug:
     ) -> None:
         """When every codebook is disabled, the validator still exits cleanly
         and skips the empty `Available:` line."""
-        monkeypatch.setattr("bristlenose.cli.list_available_slugs", lambda: [], raising=False)
+        monkeypatch.setattr("bristlenose.cli.list_available_slugs", list, raising=False)
         # The CLI helper imports lazily, so patch at the source module too.
         monkeypatch.setattr(
-            "bristlenose.server.codebook.list_available_slugs", lambda: []
+            "bristlenose.server.codebook.list_available_slugs", list
         )
         with pytest.raises(typer.Exit):
             _validate_codebook_slug("anything")

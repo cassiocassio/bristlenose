@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import itertools
+
 from bristlenose.miro_board import (
     DEFAULT_QUOTE_TOKEN,
     HEADER_TOKEN,
@@ -85,7 +87,7 @@ def test_no_overlap_within_column() -> None:
         by_x.setdefault(s.x, []).append(s)
     for col in by_x.values():
         col.sort(key=lambda s: s.y)
-        for upper, lower in zip(col, col[1:]):
+        for upper, lower in itertools.pairwise(col):
             assert upper.y + upper.height <= lower.y + 0.01
 
 

@@ -61,9 +61,9 @@ def _started(run_id: str = "RUN0001") -> RunStartedEvent:
 
 
 def _progress(**kw: object) -> RunProgressEvent:
-    base: dict[str, object] = dict(
-        ts=_now_iso(), run_id="RUN0001", kind=KindEnum.RUN, started_at=_now_iso(),
-    )
+    base: dict[str, object] = {
+        "ts": _now_iso(), "run_id": "RUN0001", "kind": KindEnum.RUN, "started_at": _now_iso(),
+    }
     base.update(kw)
     return RunProgressEvent(**base)  # type: ignore[arg-type]
 

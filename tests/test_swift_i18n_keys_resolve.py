@@ -84,7 +84,7 @@ def _flat(locale: str) -> dict[str, str]:
             if not isinstance(node, dict):
                 return
             for k, v in node.items():
-                if k.startswith("_comment") or k.startswith("_divergent"):
+                if k.startswith(("_comment", "_divergent")):
                     continue
                 if isinstance(v, dict):
                     walk(v, prefix + k + ".")

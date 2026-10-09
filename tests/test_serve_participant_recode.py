@@ -464,7 +464,7 @@ class TestReanalyse:
         _reimport(client, project)
 
         slots = _slots(client)
-        assert set(k for k in slots if k[0] == "s1") == {("s1", "m1"), ("s1", "p3")}
+        assert {k for k in slots if k[0] == "s1"} == {("s1", "m1"), ("s1", "p3")}
         assert (slots[("s1", "m1")]["name"], slots[("s1", "m1")]["person"]) == ("Martin", martin)
         assert slots[("s1", "p3")]["name"] == "P1", "Wylie's own record, carried"
         sessions = {s["session_id"]: s for s in client.get("/api/projects/1/sessions").json()["sessions"]}

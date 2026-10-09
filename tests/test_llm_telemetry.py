@@ -247,7 +247,7 @@ def test_async_contextvar_isolation(tmp_path: Path) -> None:
                         output_tokens=1,
                     )
 
-            return None
+            return
 
         await asyncio.gather(*[one(f"p{i}") for i in range(20)])
 

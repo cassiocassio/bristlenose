@@ -150,7 +150,7 @@ def main() -> int:
     names = sorted(compiled)
     wanted = [None if args.latest else compiled[n] for n in names]
     with ThreadPoolExecutor(max_workers=8) as pool:
-        results = dict(zip(names, pool.map(supported_versions, names, wanted)))
+        results = dict(zip(names, pool.map(supported_versions, names, wanted), strict=True))
 
     unknown = {n: err for n, (_, err) in results.items() if err}
     known = {n: vers for n, (vers, err) in results.items() if not err}

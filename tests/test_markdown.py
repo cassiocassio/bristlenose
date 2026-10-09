@@ -409,7 +409,7 @@ def test_format_finder_filename_keeps_front_and_back() -> None:
     # Front portion of stem preserved
     assert result.startswith("Fishkeeping")
     # Back portion of stem + extension preserved
-    assert result.endswith("S3.vtt") or result.endswith(".vtt")
+    assert result.endswith(("S3.vtt", ".vtt"))
 
 
 def test_md_segment_escapes_speech_but_txt_keeps_it_verbatim() -> None:

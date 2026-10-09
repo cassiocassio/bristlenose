@@ -49,15 +49,15 @@ def _values(locale_dir: Path):
     for f in sorted(locale_dir.glob("*.json")):
         data = json.loads(f.read_text(encoding="utf-8"))
 
-        def walk(node, path=""):
+        def walk(node, path="", stem=f.stem):
             for k, v in node.items():
                 if k.startswith("_"):
                     continue
                 p = f"{path}.{k}" if path else k
                 if isinstance(v, dict):
-                    yield from walk(v, p)
+                    yield from walk(v, p, stem)
                 elif isinstance(v, str):
-                    yield f"{f.stem}.{p}", v
+                    yield f"{stem}.{p}", v
 
         yield from walk(data)
 

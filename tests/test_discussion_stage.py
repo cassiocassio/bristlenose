@@ -431,7 +431,7 @@ def test_prompts_format_without_stray_braces(name):
     from bristlenose.llm.prompts import get_prompt_template
     t = get_prompt_template(name)
     vars_ = set(re.findall(r"\{(\w+)\}", t.user))
-    t.user.format(**{v: "x" for v in vars_})  # raises on an unescaped literal brace
+    t.user.format(**dict.fromkeys(vars_, "x"))  # raises on an unescaped literal brace
 
 
 def test_analyze_finds_the_guide_beside_its_output_or_one_level_up(tmp_path):

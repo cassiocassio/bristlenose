@@ -143,7 +143,7 @@ class TestSpacyModelPresenceAcrossDeliveryShapes:
         def _no_package(name, path=None, target=None):
             if name == "en_core_web_lg":
                 raise ModuleNotFoundError(name)
-            return None
+            return
 
         monkeypatch.setattr("importlib.util.find_spec", _no_package)
 

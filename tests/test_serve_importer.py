@@ -1582,8 +1582,7 @@ class TestWordEnrichment:
             json.dumps({"s1": segments}, ensure_ascii=False), encoding="utf-8",
         )
         import_project(db, tmp_path)
-        seg = db.query(TranscriptSegment).one()
-        return seg
+        return db.query(TranscriptSegment).one()
 
     def test_japanese_words_are_attached(self, db: Session, tmp_path: Path) -> None:
         """Japanese has no spaces, so Whisper's word boundaries are not the text's.

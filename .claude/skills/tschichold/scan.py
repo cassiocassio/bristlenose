@@ -42,16 +42,14 @@ def prose_md(text: str) -> str:
     text = re.sub(r"^(```|~~~).*?^\1", _blank, text, flags=re.S | re.M)
     text = re.sub(r"`[^`\n]+`", _blank, text)
     text = re.sub(r"\]\([^)]*\)", _blank, text)          # link targets
-    text = re.sub(r"<[^>\n]+>", _blank, text)            # inline HTML tags
-    return text
+    return re.sub(r"<[^>\n]+>", _blank, text)            # inline HTML tags
 
 
 def prose_html(text: str) -> str:
     text = re.sub(r"<(script|style|pre|code|kbd|textarea)\b.*?</\1>", _blank, text, flags=re.S | re.I)
     text = re.sub(r"<!--.*?-->", _blank, text, flags=re.S)
     text = re.sub(r"<[^>]+>", _blank, text, flags=re.S)  # tags and their attributes
-    text = re.sub(r"&nbsp;|&#160;", " ", text)
-    return text
+    return re.sub(r"&nbsp;|&#160;", " ", text)
 
 
 UNIT = r"(?:GB|MB|KB|TB|ms|px|fps|kHz|Hz|dB|min|minutes?|hours?|seconds?|days?|weeks?)"

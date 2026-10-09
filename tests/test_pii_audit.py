@@ -23,6 +23,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
+from pydantic import ValidationError
 
 from bristlenose.config import BristlenoseSettings
 
@@ -83,11 +84,11 @@ class TestPiiConfig:
         assert settings.pii_score_threshold == 0.5
 
     def test_score_threshold_bounds_low(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError, match="pii_score_threshold"):
             BristlenoseSettings(pii_score_threshold=-0.1)
 
     def test_score_threshold_bounds_high(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError, match="pii_score_threshold"):
             BristlenoseSettings(pii_score_threshold=1.1)
 
     def test_uk_nhs_in_default_entities(self) -> None:

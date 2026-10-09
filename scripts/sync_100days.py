@@ -259,10 +259,9 @@ def gh_graphql(query: str, retries: int = 3) -> dict:
                     time.sleep(1)
                     continue
             return data
-        else:
-            print(f"  gh error: {result.stderr}", file=sys.stderr)
-            if attempt < retries - 1:
-                time.sleep(1)
+        print(f"  gh error: {result.stderr}", file=sys.stderr)
+        if attempt < retries - 1:
+            time.sleep(1)
     return {"errors": ["max retries exceeded"]}
 
 

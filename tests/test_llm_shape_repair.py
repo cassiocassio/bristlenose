@@ -203,4 +203,4 @@ def test_every_shipped_response_model_survives_a_repair_attempt():
     not raise on any of them — including ones with no list field at all."""
     for model in (QuoteExtractionResult, ScreenClusteringResult, ThematicGroupingResult):
         assert repair_candidates({}, model) == []
-        repair_candidates({f: "x" for f in model.model_fields}, model)
+        repair_candidates(dict.fromkeys(model.model_fields, "x"), model)

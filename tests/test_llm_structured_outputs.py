@@ -18,6 +18,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from pydantic import ValidationError
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.llm import structured as st
@@ -131,7 +132,7 @@ class TestNullRoundTrip:
             "text": "a quote", "topic_label": "onboarding",
             "quote_type": "pain_point", "verbatim_excerpt": None,
         }
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError, match="verbatim_excerpt"):
             ExtractedQuoteItem.model_validate(raw)
 
 

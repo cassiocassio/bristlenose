@@ -766,7 +766,7 @@ class TestRenderAnalysisPage:
         assert data["totalParticipants"] == result.total_participants
 
         # Signal locations and sentiments should match in order
-        for json_sig, py_sig in zip(data["signals"], result.signals):
+        for json_sig, py_sig in zip(data["signals"], result.signals, strict=True):
             assert json_sig["location"] == py_sig.location
             assert json_sig["sentiment"] == py_sig.sentiment
             assert json_sig["count"] == py_sig.count

@@ -73,11 +73,10 @@ def bump_version(current: str, bump_type: str) -> str:
             parts = [parts[0], parts[1], parts[2] + 1]
 
         return ".".join(str(p) for p in parts)
-    else:
-        # Assume explicit version
-        if not re.match(r"^\d+\.\d+\.\d+$", bump_type):
-            sys.exit(f"Invalid version: {bump_type} (expected x.y.z)")
-        return bump_type
+    # Assume explicit version
+    if not re.match(r"^\d+\.\d+\.\d+$", bump_type):
+        sys.exit(f"Invalid version: {bump_type} (expected x.y.z)")
+    return bump_type
 
 
 def _sub_or_die(pattern: str, repl: str, text: str, *, path: Path, what: str) -> str:

@@ -21,35 +21,35 @@ from bristlenose.server.clip_manifest import (
 # ---------------------------------------------------------------------------
 
 def _make_spec(**overrides) -> ClipSpec:  # type: ignore[no-untyped-def]
-    defaults = dict(
-        quote_id="q-p1-42",
-        participant_id="p1",
-        session_id="s1",
-        source_path=Path("/media/video.mp4"),
-        start=39.0,
-        end=56.0,
-        raw_start=42.0,
-        speaker_name="Sarah",
-        quote_gist="onboarding was confusing",
-        is_audio_only=False,
-        is_starred=True,
-        is_hero=False,
-    )
+    defaults = {
+        "quote_id": "q-p1-42",
+        "participant_id": "p1",
+        "session_id": "s1",
+        "source_path": Path("/media/video.mp4"),
+        "start": 39.0,
+        "end": 56.0,
+        "raw_start": 42.0,
+        "speaker_name": "Sarah",
+        "quote_gist": "onboarding was confusing",
+        "is_audio_only": False,
+        "is_starred": True,
+        "is_hero": False,
+    }
     defaults.update(overrides)
     return ClipSpec(**defaults)
 
 
 def _make_quote(**overrides) -> _QuoteLike:  # type: ignore[no-untyped-def]
-    defaults = dict(
-        quote_id="q-p1-42",
-        participant_id="p1",
-        session_id="s1",
-        start_timecode=42.0,
-        end_timecode=54.0,
-        text="The onboarding was really confusing for me",
-        is_starred=True,
-        is_hero=False,
-    )
+    defaults = {
+        "quote_id": "q-p1-42",
+        "participant_id": "p1",
+        "session_id": "s1",
+        "start_timecode": 42.0,
+        "end_timecode": 54.0,
+        "text": "The onboarding was really confusing for me",
+        "is_starred": True,
+        "is_hero": False,
+    }
     defaults.update(overrides)
     return _QuoteLike(**defaults)
 

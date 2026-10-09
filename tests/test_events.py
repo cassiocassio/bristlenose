@@ -564,7 +564,7 @@ def test_append_event_round_trip_100(tmp_path: Path):
         written.append(started)
     read_back = read_events(f)
     assert len(read_back) == 100
-    for w, r in zip(written, read_back):
+    for w, r in zip(written, read_back, strict=True):
         assert isinstance(r, RunStartedEvent)
         assert r.run_id == w.run_id
 

@@ -118,7 +118,7 @@ class TestEstimatePipelineCost:
         from bristlenose.llm import pricing
         from bristlenose.llm.pricing import estimate_pipeline_cost
 
-        monkeypatch.setattr(pricing, "_load_baselines", lambda: [])
+        monkeypatch.setattr(pricing, "_load_baselines", list)
         cost = estimate_pipeline_cost(
             "claude-sonnet-4-20250514", 10, run_dir=tmp_path,
         )
@@ -316,7 +316,7 @@ class TestEstimatePipelineCost:
         from bristlenose.llm.pricing import estimate_pipeline_cost
         from bristlenose.llm.telemetry import record_call
 
-        monkeypatch.setattr(pricing, "_load_baselines", lambda: [])
+        monkeypatch.setattr(pricing, "_load_baselines", list)
 
         # Five autocode rows that would otherwise satisfy the N≥3 threshold.
         for _ in range(5):
@@ -507,7 +507,7 @@ class TestPerRunStagesDoNotVetoLocalData:
     ) -> None:
         from bristlenose.llm import pricing
 
-        monkeypatch.setattr(pricing, "_load_baselines", lambda: [])
+        monkeypatch.setattr(pricing, "_load_baselines", list)
         self._write_fossda_shaped_log(tmp_path)
 
         cost = pricing.estimate_pipeline_cost(
@@ -531,7 +531,7 @@ class TestPerRunStagesDoNotVetoLocalData:
         """
         from bristlenose.llm import pricing
 
-        monkeypatch.setattr(pricing, "_load_baselines", lambda: [])
+        monkeypatch.setattr(pricing, "_load_baselines", list)
         self._write_fossda_shaped_log(tmp_path)
 
         buckets = pricing._scan_local_jsonl(tmp_path, "claude-sonnet", "4")

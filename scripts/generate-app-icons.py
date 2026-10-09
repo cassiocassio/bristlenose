@@ -172,7 +172,7 @@ def main():
     mono = fg_dark.copy()
     data = mono.getdata()
     new_data = []
-    for r, g, b, a in data:
+    for _r, _g, _b, a in data:
         if a > 0:
             new_data.append((255, 255, 255, a))
         else:

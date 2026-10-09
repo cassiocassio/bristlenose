@@ -368,7 +368,7 @@ class TestExtractionWritesSubtitles:
 
         def fake_extract(self, *args, **kwargs):  # type: ignore[no-untyped-def]
             calls.append(args)
-            return None
+            return
 
         def never_arrives(path):  # type: ignore[no-untyped-def]
             raise CloudFetchTimeoutError(path, 1800.0)

@@ -354,7 +354,7 @@ def test_a_path_delivered_model_redacts_with_no_package_installed(monkeypatch):
         def find_spec(self, name, path=None, target=None):
             if name == "en_core_web_lg":
                 raise ModuleNotFoundError(name)
-            return None
+            return
 
     blocker = _Blocker()
     sys.meta_path.insert(0, blocker)

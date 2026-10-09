@@ -69,10 +69,10 @@ def db(app_fx):
 
 
 def _search(db, **kwargs):
-    defaults = dict(
-        project_id=1, query=None, tag=None, sentiment=None, participant=None,
-        section=None, theme=None, starred_only=False, limit=20, offset=0,
-    )
+    defaults = {
+        "project_id": 1, "query": None, "tag": None, "sentiment": None, "participant": None,
+        "section": None, "theme": None, "starred_only": False, "limit": 20, "offset": 0,
+    }
     defaults.update(kwargs)
     return _tool_search_quotes(db, **defaults)
 

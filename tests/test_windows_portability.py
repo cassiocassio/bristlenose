@@ -328,7 +328,7 @@ def test_a_config_file_key_store_is_not_called_secure(monkeypatch: pytest.Monkey
     for label, secure in (("config file", False), ("Keychain", True)):
         buf = io.StringIO()
         monkeypatch.setattr(cli, "console", Console(file=buf, width=200, color_system=None))
-        monkeypatch.setattr("bristlenose.credentials.get_credential_store_label", lambda: label)
+        monkeypatch.setattr("bristlenose.credentials.get_credential_store_label", lambda label=label: label)
         cli._print_provider_guidance()
         assert (f"stores it securely ({label})" in buf.getvalue()) is secure, label
         assert f"stores it ({label})" in buf.getvalue() or secure, label

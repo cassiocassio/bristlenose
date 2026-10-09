@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import itertools
+
 import pytest
 
 from bristlenose.server.clip_subtitles import (
@@ -46,7 +48,7 @@ class TestSpreadEvenly:
         spans = spread_evenly(["a", "bbb", "cc"], 10.0, 19.0)
         assert spans[0][0] == 10.0
         assert spans[-1][1] == pytest.approx(19.0)
-        for (s1, e1), (s2, _e2) in zip(spans, spans[1:]):
+        for (s1, e1), (s2, _e2) in itertools.pairwise(spans):
             assert e1 == pytest.approx(s2)
             assert s1 < e1
 

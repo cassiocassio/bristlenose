@@ -366,7 +366,7 @@ def read_conf(conf: Path) -> dict:
         if m:
             raw[m.group(1)] = m.group(2) if m.group(2) is not None else (m.group(3) if m.group(3) is not None else m.group(4) or "")
     for _ in range(4):
-        raw = {k: re.sub(r"\$\{([A-Z_]+)\}", lambda mm: raw.get(mm.group(1), ""), v) for k, v in raw.items()}
+        raw = {k: re.sub(r"\$\{([A-Z_]+)\}", lambda mm, src=raw: src.get(mm.group(1), ""), v) for k, v in raw.items()}
     for k in ("CHANNELS", "CHANNELS_UNPROBEABLE"):
         out[k] = raw.get(k, "").split()
     for k in _CONF_SCALARS:
@@ -1089,7 +1089,7 @@ def confounded(steps: list[dict], steps_source: str, stations: list[dict], unkno
                 log["changed"].append({"what": f"step '{sid}' removed since {previous['version']}"})
         if prev_ids and cur_ids and [s for s in cur_ids if s in prev_ids] != [s for s in prev_ids if s in cur_ids]:
             log["changed"].append({"what": f"step order changed since {previous['version']}"})
-        prev_ch, cur_ch = set(previous.get("channels", [])), set(c["name"] for c in channels["cards"])
+        prev_ch, cur_ch = set(previous.get("channels", [])), {c["name"] for c in channels["cards"]}
         for ch in sorted(cur_ch - prev_ch):
             log["changed"].append({"what": f"channel '{ch}' added since {previous['version']}"})
         for ch in sorted(prev_ch - cur_ch):
@@ -1171,7 +1171,7 @@ def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: Non
         phase = "stopped"
     sources = [p for p in (run_dir / "events.jsonl", run_dir / "bn-events.log", run_dir / "steps.tbl", run_dir / "heartbeat") if p.exists()]
     newest_source = max((mtime_iso(p) or "" for p in sources), default=None) or None
-    model = {
+    return {
         "schema": 1,
         "generated": utc_now(),
         "version": version,
@@ -1205,7 +1205,6 @@ def build_model(root: Path, version: str, with_logs: bool, narrate=lambda s: Non
         "previous": prev["version"] if prev else None,
         "history": history_pane(root),
     }
-    return model
 
 
 # ── output ───────────────────────────────────────────────────────────────────

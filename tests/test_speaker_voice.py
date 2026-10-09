@@ -51,10 +51,10 @@ class TestClusterVoices:
     def test_two_voices_come_back_as_two_clusters(self) -> None:
         who = [0, 1] * 6
         spans = [(i * 10.0, i * 10.0 + 3.0) for i in range(12)]
-        vc = voice.cluster_voices(spans, _embedder({a: w for (a, _), w in zip(spans, who)}))
+        vc = voice.cluster_voices(spans, _embedder({a: w for (a, _), w in zip(spans, who, strict=True)}))
         assert vc is not None
         # Same partition as the truth, whichever way round the ids fall.
-        assert len({(c, w) for c, w in zip(vc.clusters, who)}) == 2
+        assert len({(c, w) for c, w in zip(vc.clusters, who, strict=True)}) == 2
         assert vc.centroid_cos < 0.3
         assert vc.fit_segments == 12
 

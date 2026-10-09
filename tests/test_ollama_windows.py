@@ -48,7 +48,7 @@ def no_shellouts(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
 
     def popen(cmd, *a, **k):  # noqa: ANN001, ANN002, ANN003
         calls.append(list(cmd))
-        return None
+        return
 
     monkeypatch.setattr(subprocess, "run", run)
     monkeypatch.setattr(subprocess, "Popen", popen)

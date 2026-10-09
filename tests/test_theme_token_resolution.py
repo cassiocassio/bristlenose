@@ -33,8 +33,8 @@ _RUNTIME_DEFINED = {
 
 def _css_files() -> list[Path]:
     return sorted(
-        [p for p in _THEME.rglob("*.css")]
-        + [p for p in _FRONTEND.rglob("*.css")]
+        list(_THEME.rglob("*.css"))
+        + list(_FRONTEND.rglob("*.css"))
     )
 
 

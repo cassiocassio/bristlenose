@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import json
 import shutil
 from pathlib import Path
@@ -29,8 +30,8 @@ def _session(client: TestClient) -> dict:
 def test_turns_merge_segments_and_cover_the_recording(client: TestClient) -> None:
     s = _session(client)
     turns = s["turns"]
-    assert all(a["speaker"] != b["speaker"] for a, b in zip(turns, turns[1:]))  # merged
-    assert all(a["t1"] == b["t0"] for a, b in zip(turns, turns[1:]))           # contiguous
+    assert all(a["speaker"] != b["speaker"] for a, b in itertools.pairwise(turns))  # merged
+    assert all(a["t1"] == b["t0"] for a, b in itertools.pairwise(turns))           # contiguous
     assert turns[-1]["t1"] == s["duration_seconds"]
     assert {t["speaker"][0] for t in turns} == {"m", "p"}
 

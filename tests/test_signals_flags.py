@@ -224,17 +224,17 @@ class TestTheFlagOnThePathThatRenders:
     def _signal(**over):
         from bristlenose.signals.models import Signal, SignalQuote
 
-        base = dict(
-            location="Shopping bag", source_type="section", sentiment="Sentiment",
-            count=3, participants=["p1", "p2", "p3"],
-            n_eff=2.5, mean_intensity=2.5, concentration=1.0,
-            composite_signal=0.05, confidence="moderate",
-            quotes=[
+        base = {
+            "location": "Shopping bag", "source_type": "section", "sentiment": "Sentiment",
+            "count": 3, "participants": ["p1", "p2", "p3"],
+            "n_eff": 2.5, "mean_intensity": 2.5, "concentration": 1.0,
+            "composite_signal": 0.05, "confidence": "moderate",
+            "quotes": [
                 SignalQuote(text="t", participant_id=f"p{i}", session_id="s1",
                             start_seconds=0.0, intensity=3, tag_names=["satisfaction"])
                 for i in (1, 2, 3)
             ],
-        )
+        }
         base.update(over)
         return Signal(**base)
 

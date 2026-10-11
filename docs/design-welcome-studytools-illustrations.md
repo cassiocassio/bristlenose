@@ -1,11 +1,20 @@
 ---
 status: current
-last-trued: 2026-09-22
-previous-trued: 2026-09-20
-trued-against: HEAD@main on 2026-09-22 — the baton section rewritten for v2 (the illustration owns the clock, the curtain, the two webview channels, carousel claims); illustration status carries its 2026-08-02 verdict
+last-trued: 2026-10-11
+previous-trued: 2026-09-22
+trued-against: HEAD@main on 2026-10-11 — status/handoff (every tool shipped), Tools 3–8 table, the Session timeline (tool 10), the curtain's blank start and snapped frames, the stylesheet-sourcing rule, Where things live
 ---
 
 # Welcome screen — study-tools cell illustrations
+
+> **Trued 2026-10-11 — nothing is left to build.** Video clips, Send to Miro and Ingest
+> shipped on 20 Aug 2026 (native, webview, native; the last three screenshot imagesets
+> are deleted), and a tenth illustration, the **Session timeline**, shipped on 9 Oct
+> 2026 — see "Added tool — Session timeline" below. The brief text further down is kept
+> as written; it read "three remaining" until this pass. Counts at HEAD: **10 webview
+> templates** (`tests/test_welcome_curtain_contract.py` asserts the number) and **4
+> native views** (SentimentFan, BookShelf, Ingest, Clips). The curtain changed on
+> 11 Oct: see §"The curtain".
 
 > **Trued 2026-07-26** — Codebooks (tool 2) shipped this session as the manual-tags
 > illustration, and the seven-sentiments fan was halved in speed. Updated from
@@ -157,12 +166,12 @@ React to these as we go; lock nothing until it's mocked.
 |---|------|--------------|---------------|
 | 3 | **Tag** | ~~select quotes, press `t` (keycap), a code chip attaches~~ **DONE** — shipped as webview (`.tag`) | webview + keycap |
 | 4 | **Star & hide** | ~~`s` stars, `h` collapses a row away~~ **DONE** — shipped as webview (`.starHide`) | webview + keycap |
-| 5 | **Video clips** | a quote turns into a film frame with a play triangle / scrubber | themed Swift *or* webview |
-| 6 | **Send to Miro** | quotes fly onto a board as sticky notes | themed Swift *or* webview |
-| 7 | **Ingest** | a folder drops, files fan out (audio/video/doc icons) → transcript → report | themed Swift *or* webview |
+| 5 | **Video clips** | ~~a quote turns into a film frame with a play triangle / scrubber~~ **DONE** (20 Aug 2026) — native (`ClipsIllustrationView`): the real Export-menu row clicked, three clips land with filenames assembling | themed Swift |
+| 6 | **Send to Miro** | ~~quotes fly onto a board as sticky notes~~ **DONE** (20 Aug 2026) — webview (`.miro`): just the stickies, appearing in order | webview |
+| 7 | **Ingest** | ~~a folder drops, files fan out (audio/video/doc icons) → transcript → report~~ **DONE** (20 Aug 2026) — native (`IngestIllustrationView`): one example of every importable kind, surtitled | themed Swift |
 | 8 | ~~**Redact PII**~~ | ~~a name in a quote → a redaction bar sweeps over it~~ **WITHHELD** — the capability isn't in the `.app` (see the 2 Aug note); the strike-animation seed is worth keeping for whenever it lands | — |
 
-**These three are the last screenshots in the app, and they go.** Today they ship
+_(Done 20 Aug 2026: all three converted and their imagesets deleted; the `2 quote(s)` bug is gone — the Miro sticky now lifts `common.miro.boardQuoteCount`. Kept as written.)_ **These three are the last screenshots in the app, and they go.** Today they ship
 as light-mode `@2x` PNGs (`welcome-clips`, `welcome-miro`, `welcome-ingest`) with
 no dark variant — and they're not even Bristlenose UI: two are Finder lists and
 one is a Miro canvas complete with Miro's logo, which sits badly next to the
@@ -219,8 +228,8 @@ back word-by-word.
 ## Dependencies / open items
 
 - **Keycaps** — Tag (`t`) and Star & hide (`s`/`h`) show keypresses. The keycap
-  system is decided (six skins, one glyph map; `docs/design-keycaps.md`) but
-  unbuilt. Fake keycaps in the mock; decide build-vs-fake when those tools land.
+  system is decided (six skins, one glyph map; `docs/design-keycaps.md`).
+  _(Built 20 Aug 2026: Skin A caps ship in the welcome cells.)_
 - ~~**Enum rename**~~ **DONE (2 Aug 2026)** — `ScienceIllustration` → `WelcomeIllustration`
   (it stopped being science-only five cases ago). Blast radius was exactly three
   files — `WelcomeIllustrations.swift` (decl), `WelcomeHomeView.swift`
@@ -230,7 +239,9 @@ back word-by-word.
   real `ShoalView` boids are *deliberately not used* here (see
   `design-welcome-screen.md` §Cell 2), so the old name asserted the opposite of
   the decision. The three `case` switches were re-aligned to the new longest label.
-- **Frame heights** — each illustration sets its own `.frame(height:)` in
+- **Frame heights** — _(Superseded: each kind now has a natural-height **cap**,
+  100–252 pt, in `illustrationNaturalHeight`, and self-scales below it; the stacked
+  cell sizes to its tallest slot, which is the Session timeline at 240.)_ Each illustration sets its own `.frame(height:)` in
   `illustrationView`. AutoCode is 160; tune per tool against the real large cell
   (the mock's cell frame min-height was 172). Fixed height avoids φ-cell reflow.
 - **Copy** — AutoCode's quote-2 wording is a working trim; Martin to finalise.
@@ -286,6 +297,23 @@ already running:
 - **The end hold is longer than the establish, deliberately.** The opening frame is a
   stage nobody has earned yet; the closing one is the result. Pinned by
   `WelcomeTempoTests` because someone will eventually tidy them to match.
+- **Nothing paints until the cell says which it is (11 Oct 2026).** The body starts
+  blank (`bn-blank`) and the **first** `setActive` decides: `true` paints the opening
+  frame and fades up from blank with no dip; `false` paints the still and fades up to
+  rest. A first `false` waits `GRACE` (200 ms), because a carousel claim reaches the
+  baton on its next 100 ms tick and can land just after it; `FALLBACK` (1000 ms)
+  paints the still for a host that never calls `setActive`. Reduce-motion paints the
+  still at `register`, as before. **Why:** a slide reached with the chevrons is a fresh
+  webview that is already the baton holder, so it painted its finished frame on load
+  and then dipped it away to reach the opening one. Measured off a 120 fps recording:
+  finished timeline at +0.20 s, dimmed out by +0.50 s, opening frame from +0.57 s.
+- **Frames are jumped to, never animated to (11 Oct 2026).** `still` and `open` run
+  inside `bn-snap` (every transition off), then a forced style flush. An illustration
+  that reaches its opening frame by toggling a class with a CSS transition — Miro's
+  stickies drop `.on`, a 0.32 s fade — was still mid-fade when the curtain lifted, and
+  the stickies came back as a second flash. A probe of the Miro page measured them
+  visible at 0–340 ms and again at 519–702 ms before the fix, and not at all until the
+  play added the first after it.
 - **Rest is a recession, not a blackout** (`WelcomeTempo.restOpacity`). The curtain
   needs somewhere to fall that is neither a hole in the grid nor — since the resting
   frame and the finished frame are the same picture — a blink. It earns its keep
@@ -299,10 +327,13 @@ already running:
    turnDone`, called once the curtain is down. Webviews get this free by enrolling
    with `BN.register({still, open, play})`; natives call it after
    `WelcomeCurtain.pass(…)`.
-3. **Register three frames, not one.** `still` = the finished frame, painted at load
-   so a cell that has not had a turn still shows a picture; `open` = the opening
+3. **Register three frames, not one.** `still` = the finished frame, painted once the
+   cell is told it is resting (it was painted at load until 11 Oct 2026 — see the
+   curtain); `open` = the opening
    frame, painted *behind* the curtain so the establishing beat lands on the scene the
-   pass is about to act on; `play` = one pass, which must not loop.
+   pass is about to act on; `play` = one pass, which must not loop. Neither `still` nor
+   `open` may depend on the other having run first: a slide reached by navigation is
+   painted `open` straight from blank.
 4. **Declare a watchdog** in `WelcomeIllustration.welcomeTurn`. Generous, not tight —
    a ceiling that trips during a healthy pass is the two-clock bug all over again.
 5. **The cell wires both halves together** with `.batonCell(slot, baton)` — one
@@ -328,7 +359,8 @@ fade". Nothing made that true — identity replacement has no transition.)*
 Moving a rotator to a new slide IS "show me this one". `SlotRotator.onCurrent` now
 carries whether the researcher put it there, and a user-initiated change calls
 `baton.claim(slot)`, which interrupts whatever was playing and restarts the new slide
-from the top. Without it a new slide sat on its still until the spiral came round —
+from the top — and, since 11 Oct 2026, opens from blank without first showing its
+finished frame. Without it a new slide sat on its still until the spiral came round —
 most of a minute — which reads as a broken illustration. A claim for a cell with
 nothing to animate is ignored, so paging the Tip cell never takes the baton off a
 cell that is mid-play.
@@ -337,8 +369,39 @@ AutoCode's in-app JS plays **once per turn** (random quote, picked behind the cu
 so the establishing beat is on the card the pass is about) then holds — its standalone
 3-burst-then-rest loop (still in the mock) is not used in-app.
 
+## Added tool — Session timeline (DONE, 9–11 Oct 2026)
+
+`.timeline`, `TimelineIllustrationView` + `WelcomeIllustrationHTML.timeline`, sixth in
+the pool beside Video clips. Three beats: the row's chevron opens the slice and the
+lanes fill in; the pointer parks on the speaker lane while the timeline **swipes under
+it** with momentum, so each section's flag rises as its section arrives and holds an
+absolute 0.8 s; then a quote opens off a Delight mark. Every word is an existing key
+(lane labels, the four example sections, two example themes, the Tag picture's quote).
+
+**It is the first illustration drawn with the shipped stylesheet, not a copy of it.**
+The webview rule above says "reuses the shipped CSS verbatim, so it re-syncs" — for the
+nine older templates that is a hand-copied subset of tokens with **no** drift gate.
+The timeline instead interpolates `WelcomeTimelineCSS.shipped`, which
+`scripts/gen-welcome-timeline.py` generates from `tokens.css`, the typography and
+palette files, `badge.css` and `session-tapestry.css`; `tests/test_welcome_timeline.py`
+fails while the two disagree. **Copy this pattern for the next illustration that
+reproduces report chrome.** The same script's `--mockup` regenerates storyboard D of
+`docs/mockups/welcome-tapestry-cell.html` from the Swift template, so the harness shows
+the exact HTML the app loads at the Welcome window's real slot sizes.
+
+Liberties it takes to fit a 105–240 pt slot, each recorded in the template: drawn ~2.2
+slots wide (the lens opens fitted, but a timeline that fits its frame reads as a static
+chart), one theme row instead of three, 34 pt of air around the sentiment axis instead
+of 41/40, a one-row crop standing in for the Sessions grid row, and a drawn overlay
+scroller. It scales down, never up, and a shorter slot gets a wider logical width.
+
 ## Where things live
 
+- Session timeline: `docs/mockups/welcome-tapestry-cell.html` §D (generated),
+  `scripts/gen-welcome-timeline.py`, `desktop/Bristlenose/Bristlenose/WelcomeTimelineCSS.swift`
+  (generated), `tests/test_welcome_timeline.py`
+- Curtain and baton: `WelcomeIllustrationHTML.curtain` (its doc comment is the spec),
+  `desktop/Bristlenose/Bristlenose/WelcomeBaton.swift`, `tests/test_welcome_curtain_contract.py`
 - Mock: `docs/mockups/welcome-studytools-animations.html`
 - In-app illustrations: `desktop/Bristlenose/Bristlenose/WelcomeIllustrations.swift`
 - Cell wiring: `desktop/Bristlenose/Bristlenose/WelcomeHomeView.swift`

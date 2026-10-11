@@ -1,9 +1,30 @@
 ---
-status: current
-last-trued: 2026-09-21
+status: partial
+last-trued: 2026-10-11
+previous-trued: 2026-09-21
+trued-against: HEAD@main on 2026-10-11 — status note and the shelf-link line only; the body is the 21 Sep plan, kept as written
 ---
 
 # Welcome illustrations — the i18n second pass
+
+> **Status, trued 2026-10-11: this plan shipped on 21–22 Sep 2026; the body below is
+> the plan as written, not the as-built.** The examples are keyed under
+> `desktop.welcome.examples.*` in all 21 locales (the intro's "still English" was true
+> on the morning it was written), every builder takes a `stringsBlock` table, every
+> illustration's `.id` keys on `i18n.locale` (§8a), and the cover fallback walks
+> locale → parent → English (§7). The canonical rules are now
+> `docs/design-i18n.md` §"Examples, mockups and illustrations — the rules"; the gates
+> are `tests/test_welcome_locale_keys.py` and `tests/test_welcome_curtain_contract.py`.
+> **Counts below say nine webviews; there are ten** — the Session timeline (9 Oct 2026)
+> reads only existing keys (`common.quotes.sections`/`themes`,
+> `common.sessions.speakerPlaceholder.*`, `common.sessions.colSentiment`,
+> `enums.sentiment.delight`, `desktop.welcome.examples.section*`/`themeName*`/`tagQuote`)
+> and adds slot keys `desktop.welcome.home.tools.timeline.{title,text,link}`.
+> **Superseded in the body:** §5a's "close the Miro board English" (the board is
+> localised server-side and the sticky count lifts `common.miro.boardQuoteCount`) and
+> §4's token-array disfluency (it shipped as one `~`-marked line per locale).
+> **Still open:** §5b / Q5 accessibility of the illustrations, the §6 locale mockup
+> page, Q6 (Miro still uses an Inter-led font stack), Q7, and Q8's HK rule.
 
 **Why this is the higher-value half.** The docs site is English and will stay
 English. For a researcher in any of the twenty non-English locales, the Welcome
@@ -68,7 +89,10 @@ busy.” · “The obvious thing to pick here is … and tableware.”
 `BookShelfView.line` (4), `IngestIllustrationView.surtitle` (5), the clips
 menu row (title from `desktop.menu.quotes.extractClips`, subtitle from
 `welcome.home.clipsIllustration.subtitle`) and the shelf's "Learn more →"
-(`welcome.home.learnMore`) are wired and translated in all 21 locales.
+(`welcome.home.learnMore`) are wired and translated in all 21 locales. _(Since 11 Oct 2026
+the shelf reads a per-book `linkKey` instead — `welcome.home.bookLinks.*` or
+`welcome.home.science.emergentThemes.link`; `learnMore` survives only as `resolve()`'s
+default.)_
 
 ## Open questions for the pass
 

@@ -219,6 +219,7 @@ state is still evidenced, the day is not.
 | `search-ideas.html` | 29 Sep 2026 | *unreviewed* — landed with `92e7ff0`; not yet classified against the code |
 | `toolbar-search.html` | 29 Sep 2026 | *unreviewed* — landed with `92e7ff0`; not yet classified against the code |
 | `transcript-paragraph-capitalisation.html` | 6 Oct 2026 | PROPOSED 6 Oct 2026 · IMPLEMENTED 8 Oct 2026 — four ways to draw a transcript paragraph's first letter; the owner chose **C** (a capital where a sentence begins, display only, `::first-letter` following the session's `lang`). `utils/sentenceStart.ts`; measured on 3,237 real paragraphs in `experiments/paragraph-case/`. Unreleased at 8 Oct. |
+| `transcript-readability-versions.html` | 8 Oct 2026 | *unreviewed* |
 
 ## out-of-credit
 
@@ -266,6 +267,8 @@ state is still evidenced, the day is not.
 |---|---|---|
 | `sessions-grid-playground.html` | 6 Aug 2026 | SANDPIT · design settled 6 Aug 2026 — the width-at-three-widths instrument behind the Sessions grid |
 | `sessions-popover-navigation.html` | 14 Aug 2026 | IMPLEMENTED — the native session switcher replaced the embedded left panel (0.25.0) |
+| `session-tapestry.html` | 6 Oct 2026 | *unreviewed* — first sketch of the session timeline (`experiments/session-tapestry/README.md`) |
+| `session-tapestry-scale.html` | 6 Oct 2026 | *unreviewed* — the session timeline's scale rule, from measured transcript rates (`experiments/session-tapestry/README.md`) |
 
 ## sidebar
 
@@ -336,6 +339,7 @@ state is still evidenced, the day is not.
 | `welcome-studytools-animations.html` | 20 Aug 2026 | IMPLEMENTED — cited from `WelcomeHomeView.swift`’s own doc comment |
 | `welcome-focus-cell-build.html` | 22 Sep 2026 | *unreviewed* |
 | `welcome-focus-cell.html` | 22 Sep 2026 | *unreviewed* |
+| `welcome-tapestry-cell.html` | 11 Oct 2026 | IMPLEMENTED 9 Oct 2026 — the Session timeline slot in Study tools. Storyboard D (top) is generated from the shipped Swift template by `scripts/gen-welcome-timeline.py --mockup`; candidates A–C below it are the drafts it was assembled from |
 
 ## window
 

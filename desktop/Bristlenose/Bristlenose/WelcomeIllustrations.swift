@@ -1280,7 +1280,7 @@ enum WelcomeIllustrationHTML {
     /// literal wants JSON encoding, an HTML text node wants entity encoding
     /// (JSON encoding would inject literal quote marks), an attribute wants both
     /// plus the quote, and anything concatenated into `innerHTML` inside the
-    /// script is a fourth that the first three do not cover. Nine templates
+    /// script is a fourth that the first three do not cover. Ten templates
     /// times ~57 strings is not a set of decisions worth making individually.
     ///
     /// So the strings cross the boundary exactly once, as JSON, and are read

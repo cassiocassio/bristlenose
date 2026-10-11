@@ -641,6 +641,8 @@ def _setup_local_provider() -> str | None:
 def _use_local_model(found: str, available: list[str]) -> str:
     """The model the next run will ask Ollama for, saved if it has to change.
 
+    An interim model picker: fix, don't grow (docs/design-pluggable-llm-routing.md §Interim model pickers).
+
     The configured model (``BRISTLENOSE_LOCAL_MODEL``, default
     ``llama3.2:3b``) is kept when Ollama has it. Otherwise ``found`` is saved
     to the user-level config, beside the current provider — before this,

@@ -365,6 +365,8 @@ def transcribe_sessions(
 def _resolve_backend(configured: str, hw: HardwareInfo) -> str:
     """Resolve which backend to use.
 
+    An interim model picker: fix, don't grow (docs/design-pluggable-llm-routing.md §Interim model pickers).
+
     Args:
         configured: The user's setting — "auto", "mlx", or "faster-whisper".
         hw: Detected hardware info.
@@ -535,6 +537,10 @@ def _init_mlx_backend(
     return transcribe_mlx
 
 
+# Interim model picker: fix, don't grow. Model choice belongs to the
+# per-stage resolver that is not built yet (docs/design-pluggable-llm-routing.md §Interim model pickers) —
+# fix a wrong ID or tag here, but add no tiers, ladders or new picking.
+#
 # Short model names to the mlx-community conversions mlx-whisper loads. The
 # Whisper preflight (``bristlenose/preflight/whisper.py``) and ``doctor`` read
 # this same table, so the repo the preflight fetches is the repo stage 5 opens.

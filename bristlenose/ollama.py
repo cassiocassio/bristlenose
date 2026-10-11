@@ -17,6 +17,10 @@ from bristlenose.utils.safe_which import safe_which
 
 logger = logging.getLogger(__name__)
 
+# Interim model picker: fix, don't grow. Model choice belongs to the
+# per-stage resolver that is not built yet (docs/design-pluggable-llm-routing.md §Interim model pickers) —
+# fix a wrong ID or tag here, but add no tiers, ladders or new picking.
+#
 # Models known to work well with structured output, in preference order.
 # Based on Ollama's structured output documentation.
 PREFERRED_MODELS = [

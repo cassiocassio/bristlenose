@@ -167,7 +167,8 @@ class BristlenoseSettings(BaseSettings):
         ),
     )
 
-    # Local LLM (Ollama)
+    # Local LLM (Ollama). `local_model` and the Whisper defaults below are
+    # interim model pickers: fix, don't grow (docs/design-pluggable-llm-routing.md §Interim model pickers).
     local_url: str = "http://localhost:11434/v1"
     local_model: str = "llama3.2:3b"
 

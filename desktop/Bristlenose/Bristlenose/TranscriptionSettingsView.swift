@@ -6,6 +6,7 @@ struct TranscriptionSettingsView: View {
     @EnvironmentObject var i18n: I18n
 
     @AppStorage("whisperBackend") private var backend: String = "auto"
+    // Interim model picker: fix, don't grow (docs/design-pluggable-llm-routing.md §Interim model pickers).
     @AppStorage("whisperModel") private var model: String = "large-v3-turbo"
 
     var body: some View {

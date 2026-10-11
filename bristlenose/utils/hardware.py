@@ -43,6 +43,8 @@ class HardwareInfo:
     mlx_available: bool = False
     cuda_available: bool = False
 
+    # The two recommendations below are interim model pickers: fix, don't
+    # grow (docs/design-pluggable-llm-routing.md §Interim model pickers).
     @property
     def recommended_whisper_backend(self) -> str:
         """Return the recommended whisper backend for this hardware."""

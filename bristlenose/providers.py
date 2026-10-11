@@ -29,6 +29,7 @@ class ProviderSpec:
     display_name: str  # User-facing: "Claude", "ChatGPT", "Local (Ollama)"
     aliases: list[str] = field(default_factory=list)  # CLI aliases: ["claude"], ["ollama"]
     config_fields: list[ConfigField] = field(default_factory=list)
+    # Interim model picker: fix, don't grow (docs/design-pluggable-llm-routing.md §Interim model pickers).
     default_model: str = ""
     sdk_module: str = ""  # e.g. "anthropic", "openai"
     pricing_url: str = ""

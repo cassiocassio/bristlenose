@@ -56,6 +56,8 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         needsAPIKey ? rawValue : nil
     }
 
+    /// Interim model picker: fix, don't grow (docs/design-pluggable-llm-routing.md §Interim model pickers).
+    ///
     /// Default model for this provider. Ollama default is RAM-aware via
     /// `OllamaCatalog.recommendedTag()` — see end of file.
     var defaultModel: String {
@@ -316,6 +318,11 @@ extension Notification.Name {
 }
 
 // MARK: - Ollama catalog
+//
+// Interim model picker: fix, don't grow (docs/design-pluggable-llm-routing.md §Interim model pickers). The curated list and the
+// RAM ladder below are the most elaborate local copy of what the per-stage
+// resolver will own; a tag or floor that is wrong gets fixed here (and in
+// `pipeline_view/catalogue.py`), but no new rungs or hardware rules.
 
 /// Curated Ollama models with sizes + RAM tiers. The list is local
 /// (we know what models exist + their costs without needing Ollama

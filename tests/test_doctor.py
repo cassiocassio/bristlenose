@@ -700,6 +700,28 @@ class TestCheckNetwork:
         assert result.status == CheckStatus.FAIL
         assert result.fix_key == "network_unreachable"
 
+    @pytest.mark.parametrize("endpoint", [
+        "myres.openai.azure.com", "myres.openai.azure.com/", "//myres.openai.azure.com",
+    ])
+    def test_azure_endpoint_without_scheme_fails_with_advice(self, endpoint) -> None:
+        """Was an uncaught ValueError from urllib.request.Request — a traceback
+        out of every run's preflight for a one-word configuration slip."""
+        settings = _settings(llm_provider="azure", azure_endpoint=endpoint)
+        with patch("urllib.request.urlopen") as urlopen:
+            result = check_network(settings)
+        urlopen.assert_not_called()
+        assert result.status == CheckStatus.FAIL
+        assert "https://" in result.detail
+        assert result.fix_key == "api_key_invalid_azure"
+
+    def test_azure_endpoint_with_scheme_is_checked(self) -> None:
+        settings = _settings(
+            llm_provider="azure", azure_endpoint="https://myres.openai.azure.com/")
+        with patch("urllib.request.urlopen"):
+            result = check_network(settings)
+        assert result.status == CheckStatus.OK
+        assert "myres.openai.azure.com" in result.detail
+
     def test_network_reachable_openai(self) -> None:
         settings = _settings(llm_provider="openai")
         with patch("urllib.request.urlopen"):

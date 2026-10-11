@@ -653,6 +653,15 @@ def check_network(settings: BristlenoseSettings) -> CheckResult:
                 label="Network",
                 detail="azure endpoint not configured",
             )
+        # urllib.request.Request raises on a URL with no scheme, outside the
+        # try below — every run's preflight died with a traceback.
+        if not endpoint.lower().startswith(("https://", "http://")):
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="Network",
+                detail=f"Azure endpoint must start with https:// ({endpoint})",
+                fix_key="api_key_invalid_azure",
+            )
         url = endpoint.rstrip("/")
         host = url.replace("https://", "").replace("http://", "").split("/")[0]
     elif provider == "google":

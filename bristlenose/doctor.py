@@ -1754,6 +1754,32 @@ def run_preflight(
 # API key validation helpers (cheap calls)
 # ---------------------------------------------------------------------------
 
+# Every provider's keys are drawn from these characters. Anything else — a
+# trailing newline from `echo key > .env`, a pasted space — cannot be sent in
+# a header or a URL, and urllib's complaint about it quotes the key verbatim.
+_KEY_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_."
+)
+_UNSENDABLE_KEY = (
+    "the key contains a space, line break or other character an API key "
+    "never has — paste it again"
+)
+
+
+def _key_is_sendable(key: str) -> bool:
+    return all(ch in _KEY_CHARS for ch in key)
+
+
+def _without_key(text: str, key: str) -> str:
+    """An error message with the key taken out. The doctor table is printed
+    on every run, so a message carrying the key puts it in scrollback and in
+    any captured log."""
+    for fragment in {key, key.strip()}:
+        if len(fragment) >= 8:
+            text = text.replace(fragment, "<key>")
+    return text
+
+
 
 def _validate_anthropic_key(key: str) -> tuple[bool | None, str]:
     """Validate an Anthropic API key with a cheap API call.
@@ -1763,6 +1789,9 @@ def _validate_anthropic_key(key: str) -> tuple[bool | None, str]:
     """
     import urllib.error
     import urllib.request
+
+    if not _key_is_sendable(key):
+        return (False, _UNSENDABLE_KEY)
 
     try:
         # GET /v1/models — a model-agnostic key check (mirrors the OpenAI
@@ -1791,9 +1820,9 @@ def _validate_anthropic_key(key: str) -> tuple[bool | None, str]:
             return (True, "")
         return (None, f"HTTP {exc.code}")
     except urllib.error.URLError as exc:
-        return (None, str(exc.reason))
+        return (None, _without_key(str(exc.reason), key))
     except Exception as exc:
-        return (None, str(exc))
+        return (None, _without_key(str(exc), key))
 
 
 def _validate_openai_key(key: str) -> tuple[bool | None, str]:
@@ -1804,6 +1833,9 @@ def _validate_openai_key(key: str) -> tuple[bool | None, str]:
     """
     import urllib.error
     import urllib.request
+
+    if not _key_is_sendable(key):
+        return (False, _UNSENDABLE_KEY)
 
     try:
         req = urllib.request.Request(
@@ -1821,9 +1853,9 @@ def _validate_openai_key(key: str) -> tuple[bool | None, str]:
             return (True, "")
         return (None, f"HTTP {exc.code}")
     except urllib.error.URLError as exc:
-        return (None, str(exc.reason))
+        return (None, _without_key(str(exc.reason), key))
     except Exception as exc:
-        return (None, str(exc))
+        return (None, _without_key(str(exc), key))
 
 
 def _validate_azure_key(
@@ -1836,6 +1868,9 @@ def _validate_azure_key(
     """
     import urllib.error
     import urllib.request
+
+    if not _key_is_sendable(key):
+        return (False, _UNSENDABLE_KEY)
 
     url = (
         f"{endpoint.rstrip('/')}/openai/deployments/{deployment}"
@@ -1868,9 +1903,9 @@ def _validate_azure_key(
             return (True, "")
         return (None, f"HTTP {exc.code}")
     except urllib.error.URLError as exc:
-        return (None, str(exc.reason))
+        return (None, _without_key(str(exc.reason), key))
     except Exception as exc:
-        return (None, str(exc))
+        return (None, _without_key(str(exc), key))
 
 
 def _validate_google_key(key: str) -> tuple[bool | None, str]:
@@ -1881,6 +1916,9 @@ def _validate_google_key(key: str) -> tuple[bool | None, str]:
     """
     import urllib.error
     import urllib.request
+
+    if not _key_is_sendable(key):
+        return (False, _UNSENDABLE_KEY)
 
     try:
         # List models endpoint — lightweight, no generation needed.
@@ -1908,6 +1946,6 @@ def _validate_google_key(key: str) -> tuple[bool | None, str]:
             return (True, "")
         return (None, f"HTTP {exc.code}")
     except urllib.error.URLError as exc:
-        return (None, str(exc.reason))
+        return (None, _without_key(str(exc.reason), key))
     except Exception as exc:
-        return (None, str(exc))
+        return (None, _without_key(str(exc), key))

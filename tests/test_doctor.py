@@ -622,6 +622,60 @@ class TestCheckApiKey:
 
 
 # ---------------------------------------------------------------------------
+# Key validators never put the key in their error text
+# ---------------------------------------------------------------------------
+
+_SECRET = "sk-ant-api03-SECRETVALUE0123456789abcdef"
+
+
+def _validators():
+    from bristlenose.doctor import (
+        _validate_anthropic_key,
+        _validate_azure_key,
+        _validate_google_key,
+        _validate_openai_key,
+    )
+
+    return [
+        pytest.param(_validate_anthropic_key, id="anthropic"),
+        pytest.param(_validate_openai_key, id="openai"),
+        pytest.param(_validate_google_key, id="google"),
+        pytest.param(
+            lambda key: _validate_azure_key(
+                "https://x.openai.azure.com", key, "dep", "2024-02-01"),
+            id="azure",
+        ),
+    ]
+
+
+class TestKeyValidatorsNeverEchoTheKey:
+    """The doctor table is printed on every run, so an error carrying the key
+    puts a secret in scrollback and captured logs. A key with a line break
+    made urllib raise "Invalid header value b'<key>\\n'" verbatim."""
+
+    @pytest.mark.parametrize("validate", _validators())
+    @pytest.mark.parametrize("key", [
+        _SECRET + "\n", _SECRET + "\r\n", " " + _SECRET, "sk-ant-AAAA\nBBBBBBBB",
+        "sk-ant-AAAA BBBBBBBB",
+    ])
+    def test_unsendable_key_is_rejected_without_a_request(self, validate, key) -> None:
+        with patch("urllib.request.urlopen") as urlopen:
+            valid, err = validate(key)
+        urlopen.assert_not_called()
+        assert valid is False
+        assert key.strip() not in err
+        assert "SECRET" not in err and "AAAA" not in err
+
+    @pytest.mark.parametrize("validate", _validators())
+    def test_unexpected_error_text_is_scrubbed(self, validate) -> None:
+        err_text = f"Invalid header value b'{_SECRET}' at /v1?key={_SECRET}"
+        with patch("urllib.request.urlopen", side_effect=ValueError(err_text)):
+            valid, err = validate(_SECRET)
+        assert valid is None
+        assert _SECRET not in err
+
+
+# ---------------------------------------------------------------------------
 # check_network
 # ---------------------------------------------------------------------------
 

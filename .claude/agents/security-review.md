@@ -72,6 +72,15 @@ When given code to review (diff, file paths, or description):
 - **LLM prompt injection** — malicious transcript content manipulating
   analysis prompts. f-strings or `.format()` in prompt construction with
   unsanitised participant text
+- **Injection through the tool-calling surfaces** — the chat lens and the MCP
+  endpoint put transcript-derived text in front of a model that can act on it.
+  In the chat lens, check the text reaches the model inside `wrap_untrusted`
+  (`bristlenose/llm/boundary.py`), and that nothing in a quote can choose which
+  tool runs, with what arguments, or what is written back to the researcher.
+  Over MCP the text goes to another vendor's model, so check the tools stay
+  read-only and project-scoped, and that no tool result reads as an instruction
+  from Bristlenose. _(Idea from the modern-threats reference in Sentry's
+  `security-review` skill.)_
 - **SQL injection** — raw SQL, string interpolation in SQLAlchemy. `.execute(
   text(...))`, f-string queries
 - **Command injection** — `subprocess`/`os.system`/`os.popen` with

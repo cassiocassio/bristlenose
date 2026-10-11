@@ -59,6 +59,21 @@ try/except (Python), try/catch (TS), error callbacks, fallback/default-on-failur
 ### 4. Hidden-failure patterns (generic)
 Empty catch blocks; catch-and-continue; returning null/default on error without logging; `?.` that skips failing ops; multi-approach fallback chains; retries that exhaust silently.
 
+Two more shapes, both of which pass type-checking and raise nothing:
+- **A comparison against a value nothing produces.** A status, kind, role or flag
+  compared as a string (`status == "done"`) where the producer actually sends
+  something else (`"completed"`): the branch never runs, and the code reads as
+  correct. Find the producer (the enum, the API schema, the writer) and check the
+  literal is one of its real values before trusting the branch. A dictionary
+  keyed by a name the writer spells differently is the same bug.
+- **Fail-open validation.** A check whose "could not decide" path returns the
+  success value: an exception, timeout, unexpected status code or unknown state
+  mapped to valid, allowed, healthy or "nothing new". For every check, ask what
+  it returns when it *cannot* tell, and flag it if that is the pass.
+
+_(The two shapes are borrowed from the stringly-typed and fail-open sections of
+Trail of Bits' `sharp-edges` skill. Paraphrased, not copied.)_
+
 ## Output Format
 For each issue: **Location** (file:line) · **Severity** (CRITICAL = silent failure / wrong-result-passes-as-success / broad catch; HIGH = unjustified fallback / poor message; MEDIUM = missing context) · **Issue** · **Hidden errors** (list what could be swallowed) · **User/data impact** · **Recommendation** · **Corrected example**.
 

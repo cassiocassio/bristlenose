@@ -92,6 +92,21 @@ Output this structure:
   - "This duplicates logic from Y. Intentional (to avoid coupling) or accidental?"
   - "Alternative approach: Z. Tradeoff: simpler but less extensible. Worth considering?"
 
+### Two checks on any diff
+
+- **Is this undoing an earlier fix?** For each hunk that removes or rewrites a
+  guard, a condition, an ordering or a comment explaining one, run
+  `git log -S'<the removed text>' --oneline -- <file>`. If it was added by a
+  commit that fixed something, the removal is a finding unless the diff says
+  why the fix no longer applies.
+- **Comment drift.** A comment that argues against the code under it, counts
+  something ("two callers"), or names a type or function that no longer exists
+  (`git ls-files | grep -i <Name>`). Report the drift.
+
+_(Kept in step with the same section in `.claude/agents/code-review.md`. Ideas
+from Trail of Bits' `differential-review` and the pr-review-toolkit
+`comment-analyzer`.)_
+
 ### What to NEVER flag
 
 - Code style, formatting, import order — Ruff and ESLint handle that

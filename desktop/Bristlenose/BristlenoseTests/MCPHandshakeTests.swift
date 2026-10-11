@@ -197,4 +197,25 @@ struct MCPHandshakeTests {
         #expect(!FileManager.default.fileExists(atPath: stale.path))
         #expect(FileManager.default.fileExists(atPath: data.appendingPathComponent(MCPHandshake.filename).path))
     }
+
+    /// The same rule for the data-container copy, which the Node proxy reads.
+    /// Only the group copy used to fail closed: a data copy that could not be
+    /// rewritten kept the previous set — a revoked project's port and bearer —
+    /// and the caller ignores the return value, so nothing else removed it.
+    @Test func writeBoth_removesTheDataCopy_whenItCannotBeRewritten() throws {
+        let data = Self.makeTempDir(), group = Self.makeTempDir()
+        defer { Self.cleanup(data); Self.cleanup(group) }
+        #expect(MCPHandshake.writeOne(entries: [Self.entry("unshared")], directory: data))
+        let stale = data.appendingPathComponent(MCPHandshake.filename)
+        #expect(FileManager.default.fileExists(atPath: stale.path))
+
+        let ok = MCPHandshake.writeBoth(entries: [], data: data, group: group) { bytes, dir in
+            dir == data ? false : MCPHandshake.writeBytes(bytes, directory: dir)
+        }
+        #expect(!ok)
+        // If this fails: a failed rewrite left a handshake naming a project
+        // whose Agent Access is off, with its port and token, for the proxy.
+        #expect(!FileManager.default.fileExists(atPath: stale.path))
+        #expect(FileManager.default.fileExists(atPath: group.appendingPathComponent(MCPHandshake.filename).path))
+    }
 }

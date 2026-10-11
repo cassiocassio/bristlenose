@@ -147,12 +147,14 @@ enum MCPHandshake {
         return writeBoth(entries: entries, data: defaultDirectory(), group: groupDirectory())
     }
 
-    /// Both copies, failing CLOSED on the group copy (design-mcp-native-proxy
-    /// §6.9 D4). A group copy that could not be rewritten still holds the
-    /// previous set, and the previous set may name a project whose Agent
-    /// Access has just been turned off — so it is removed, not left. (serve
-    /// refuses an out-of-scope project anyway; this keeps the file honest
-    /// too.) `writer` is the seam that lets a test make the group write fail.
+    /// Both copies, failing CLOSED on each (design-mcp-native-proxy §6.9 D4).
+    /// A copy that could not be rewritten still holds the previous set, and
+    /// the previous set may name a project whose Agent Access has just been
+    /// turned off — so it is removed, not left. (serve refuses an
+    /// out-of-scope project anyway; this keeps the file honest too.) The data
+    /// copy only failed closed from 11 Oct 2026; its sole caller ignores the
+    /// return value, so before that a failed rewrite left the old file in
+    /// place. `writer` is the seam that lets a test make either write fail.
     ///
     /// The payload is built ONCE and the same bytes go to both directories.
     /// Built per copy, each carried its own `updated_at`, so two writes that
@@ -167,7 +169,12 @@ enum MCPHandshake {
             log.error("handshake group copy not written; removing the previous copy")
             removeOne(directory: group)
         }
-        return writer(bytes, data)
+        let written = writer(bytes, data)
+        if !written {
+            log.error("handshake data copy not written; removing the previous copy")
+            removeOne(directory: data)
+        }
+        return written
     }
 
     static func writeOne(entries: [HandshakeExposure.Entry], directory: URL?) -> Bool {

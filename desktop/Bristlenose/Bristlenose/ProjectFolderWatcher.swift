@@ -207,6 +207,19 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         NSFileCoordinator.removeFilePresenter(self)
     }
 
+    /// Unregister from `NSFileCoordinator`. Call it before dropping the last
+    /// reference: the coordinator retains its registered presenters, so
+    /// `deinit` — and the removal in it — never runs on its own, and a
+    /// released watcher would keep its lease (the security scope) open and
+    /// go on scanning. Pinned by `ProjectFolderWatcherLifetimeTests`.
+    func stop() {
+        NSFileCoordinator.removeFilePresenter(self)
+        scanQueue.async { [weak self] in
+            self?.pendingScan?.cancel()
+            self?.pendingScan = nil
+        }
+    }
+
     // MARK: - Public API
 
     /// Extend the known-basenames set after a copy completes. Suppresses the

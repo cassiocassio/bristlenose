@@ -1228,9 +1228,9 @@ final class ProjectIndex: ObservableObject {
 
     private func releaseLeaseAndWatcher(for id: UUID) {
         if let watcher = watchers.removeValue(forKey: id) {
-            // NSFilePresenter is removed in deinit; explicit nil-out drops
-            // our strong reference so deinit fires now.
-            _ = watcher
+            // NSFileCoordinator retains registered presenters, so dropping our
+            // reference alone never reaches deinit — unregister explicitly.
+            watcher.stop()
         }
         leases.removeValue(forKey: id)
         unanalysed.removeValue(forKey: id)

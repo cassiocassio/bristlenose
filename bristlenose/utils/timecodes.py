@@ -30,15 +30,6 @@ def format_timecode(seconds: float) -> str:
     return f"{m:02d}:{s:02d}"
 
 
-def format_timecode_ms(seconds: float) -> str:
-    """Format seconds as HH:MM:SS.mmm."""
-    total = max(0.0, seconds)
-    h = int(total // 3600)
-    m = int((total % 3600) // 60)
-    s = total % 60
-    return f"{h:02d}:{m:02d}:{s:06.3f}"
-
-
 def format_timecode_prompt(seconds: float) -> str:
     """Format seconds as zero-padded ``HH:MM:SS``, for LLM PROMPTS ONLY.
 

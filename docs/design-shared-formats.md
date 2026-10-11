@@ -363,10 +363,11 @@ The register asserts more than it tests. Standing gaps, each with a home in
 - **H10 — `finder_date` has three implementations and zero pinned cases.**
 - **H12 — the zero-duration fork is catalogued, not asserted.**
 - **Unregistered renderers in the canonical module and beside it:**
-  `format_timecode_ms` (zero callers repo-wide — dead code),
   `format_clip_timecode` (`server/clip_manifest.py:107`, hour-eliding bounded
   by its caller and audited sound — `docs/design-export-clips.md`), and the
-  prompt-only `format_timecode_prompt` (deliberate, above).
+  prompt-only `format_timecode_prompt` (deliberate, above). A third,
+  `format_timecode_ms`, had zero callers and was deleted on 11 Oct 2026, after a
+  property test showed 59.9996 s rendering as `00:00:60.000`.
 
 ### Closing a gap
 

@@ -530,8 +530,9 @@ A one-line clamp; the case stays in the fixture so it cannot come back.
 | `duration_human` | 9 | 66180 s | zero catalogued in `divergences`, **unasserted** (H12); negative pinned in pytest |
 | `finder_date` | **0** | — | three implementations, nothing pinned (H10) |
 
-Untested entirely: `format_timecode_ms` (zero callers repo-wide — an H1-shaped dead sibling
-in the canonical module) and every timezone behaviour in § 3c. The others this list named
+Untested entirely: every timezone behaviour in § 3c. (`format_timecode_ms`, the zero-caller
+dead sibling this line also named, was deleted on 11 Oct 2026; a property test had shown
+59.9996 s rendering as `00:00:60.000`.) The others this list named
 on 12 Sep — `fmt_timecode`, `format_duration_human`, `dev._format_duration`,
 `pipeline._format_duration` — are now pinned in `tests/test_time_tier0.py`.
 

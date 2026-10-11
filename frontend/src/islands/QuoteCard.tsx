@@ -217,6 +217,16 @@ export function QuoteCard({
     featureFlags.moderatorQuestionPill && hasModerator && quote.segment_index > 0;
   const textSpanRef = useRef<HTMLSpanElement>(null);
 
+  // Focus the editable span when it mounts. Stable, so React calls it only on
+  // mount and unmount: an inline arrow is a new ref every render, re-run each
+  // time, and the bracket-reveal re-render 250 ms into an edit pulled focus
+  // back from anything the researcher had moved to — the tag input included.
+  const focusEditableOnMount = useCallback((el: HTMLSpanElement | null) => {
+    if (el && document.activeElement !== el) {
+      el.focus();
+    }
+  }, []);
+
   // ── Crop edit hook ──────────────────────────────────────────────────
 
   const handleCropCommit = useCallback(
@@ -514,12 +524,7 @@ export function QuoteCard({
             suppressContentEditableWarning
             onKeyDown={handleEditKeyDown}
             onBlur={handleEditBlur}
-            ref={(el) => {
-              // Auto-focus on mount
-              if (el && document.activeElement !== el) {
-                el.focus();
-              }
-            }}
+            ref={focusEditableOnMount}
           >
             {includedText}
           </span>

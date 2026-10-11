@@ -618,6 +618,7 @@ def _setup_local_provider() -> str | None:
             if pull_model(DEFAULT_MODEL):
                 console.print()
                 _say(MessageKind.SUCCESS, f"Downloaded {DEFAULT_MODEL}")
+                _use_local_model(DEFAULT_MODEL, [DEFAULT_MODEL])
                 return "local"
             console.print()
             _say(MessageKind.ERROR, "Download failed.")
@@ -626,13 +627,43 @@ def _setup_local_provider() -> str | None:
         return None
 
     # Ready to go
+    assert status.recommended_model is not None  # has_suitable_model
+    model = _use_local_model(status.recommended_model, status.available_models)
     console.print()
-    _say(MessageKind.SUCCESS, f"Using local AI ({status.recommended_model})")
+    _say(MessageKind.SUCCESS, f"Using local AI ({model})")
     console.print("[dim]This is slower than cloud APIs but completely free and private.[/dim]")
     console.print("[dim]For production quality: export BRISTLENOSE_ANTHROPIC_API_KEY=...[/dim]")
     console.print()
 
     return "local"
+
+
+def _use_local_model(found: str, available: list[str]) -> str:
+    """The model the next run will ask Ollama for, saved if it has to change.
+
+    The configured model (``BRISTLENOSE_LOCAL_MODEL``, default
+    ``llama3.2:3b``) is kept when Ollama has it. Otherwise ``found`` is saved
+    to the user-level config, beside the current provider — before this,
+    setup said "Using local AI (<found>)" and saved nothing, so the next run
+    asked for the default and was refused because it was not installed.
+    """
+    from bristlenose.config import hosted_by_desktop, load_settings
+    from bristlenose.credentials import write_user_config_var
+
+    configured = load_settings().local_model
+    names = set(available) | {n.removesuffix(":latest") for n in available}
+    if configured in names or hosted_by_desktop():  # the GUI owns it there
+        return configured
+
+    write_user_config_var("BRISTLENOSE_LOCAL_MODEL", found)
+    env_override = os.environ.get("BRISTLENOSE_LOCAL_MODEL")
+    if env_override and env_override != found:
+        _say(
+            MessageKind.WARNING,
+            f"BRISTLENOSE_LOCAL_MODEL={env_override} is set in your environment "
+            "and overrides this choice — unset it to make this stick.",
+        )
+    return found
 
 
 def _maybe_guide_provider_setup(settings: object) -> None:

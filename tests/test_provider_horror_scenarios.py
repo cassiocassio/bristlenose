@@ -219,6 +219,52 @@ class TestProviderGuidance:
         assert not (tmp_path / "bristlenose" / ".env").exists()
 
 
+class TestConfigureLocalRemembersTheModel:
+    """`configure local` said "Using local AI (mistral:7b)" and saved nothing,
+    so the next run asked Ollama for the default llama3.2:3b and was refused."""
+
+    @staticmethod
+    def _status(available: list[str], recommended: str | None):  # type: ignore[no-untyped-def]
+        from bristlenose.ollama import OllamaStatus
+
+        return OllamaStatus(
+            is_running=True, has_suitable_model=recommended is not None,
+            recommended_model=recommended, available_models=available, message="",
+        )
+
+    def _setup(self, tmp_path: Path, monkeypatch, status):  # type: ignore[no-untyped-def]
+        from bristlenose.cli import _setup_local_provider
+
+        monkeypatch.delenv("SNAP_USER_COMMON", raising=False)
+        monkeypatch.delenv("BRISTLENOSE_LOCAL_MODEL", raising=False)
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+        with patch("bristlenose.ollama.check_ollama", return_value=status):
+            return _setup_local_provider()
+
+    def _stored(self, tmp_path: Path) -> str:
+        env = tmp_path / "bristlenose" / ".env"
+        return env.read_text(encoding="utf-8") if env.exists() else ""
+
+    def test_the_model_it_names_is_the_one_saved(self, tmp_path: Path, monkeypatch) -> None:
+        result = self._setup(tmp_path, monkeypatch,
+                             self._status(["mistral:7b"], "mistral:7b"))
+        assert result == "local"
+        assert "BRISTLENOSE_LOCAL_MODEL=mistral:7b" in self._stored(tmp_path)
+
+    def test_an_installed_configured_model_is_kept(self, tmp_path: Path, monkeypatch) -> None:
+        self._setup(tmp_path, monkeypatch,
+                    self._status(["mistral:7b", "llama3.2:3b"], "llama3.2:3b"))
+        assert "BRISTLENOSE_LOCAL_MODEL" not in self._stored(tmp_path)
+
+    def test_a_pulled_default_becomes_the_model(self, tmp_path: Path, monkeypatch) -> None:
+        configured = BristlenoseSettings(local_model="qwen2.5:7b")  # gone from Ollama
+        with patch("rich.prompt.Confirm.ask", return_value=True), \
+                patch("bristlenose.ollama.pull_model", return_value=True), \
+                patch("bristlenose.config.load_settings", return_value=configured):
+            self._setup(tmp_path, monkeypatch, self._status([], None))
+        assert "BRISTLENOSE_LOCAL_MODEL=llama3.2:3b" in self._stored(tmp_path)
+
+
 # ---------------------------------------------------------------------------
 # Scenario 2: User has OpenAI key but selected Claude (or vice versa)
 # ---------------------------------------------------------------------------

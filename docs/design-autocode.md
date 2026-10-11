@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-09-20
-trued-against: HEAD@main on 2026-09-20 (835cde98)
+last-trued: 2026-10-11
+trued-against: HEAD@main on 2026-10-11 (after 83bab663)
 ---
 
 > **Truing status:** Partial — the architecture is current (trued 2026-09-20);
@@ -12,6 +12,7 @@ trued-against: HEAD@main on 2026-09-20 (835cde98)
 
 ## Changelog
 
+- _2026-10-11_ — trued up: proposals are one per quote (highest confidence) on both store paths, not every assignment; the `ProposedTag` unique constraint named; the Review door's path (`islands/`) and the test counts corrected. Anchors: commit "autocode: one duplicate assignment no longer throws away the whole paid job"; `bristlenose/server/models.py` `uq_proposed_tag_job_quote`.
 - _2026-09-20_ — the rationale hover tooltip on proposed badges is **parked**
   behind `featureFlags.proposalRationaleTooltip` (see § Parked). The
   `rationale` field is unchanged on the wire.
@@ -60,10 +61,11 @@ proposals with confidence + rationale).
    definition/apply_when/not_this)
 5. LLM returns best-fit tag + confidence (0.0-1.0) + rationale per quote — no hard
    NO_FIT (`llm/prompts/autocode.md`: "Always return a tag name")
-6. Results stored as `ProposedTag` rows (status: "pending")
+6. Results stored as `ProposedTag` rows (status: "pending"), **one per quote**: when the
+   model returns two assignments for one quote, the higher-confidence one is kept (see Gotchas)
 7. Progress surfaces as an activity chip (`addJob("autocode:" + id)`,
    `CodebookV2.tsx:409`). Review is **pulled, not pushed**: a Review door on the
-   codebook tile (`frontend/src/pages/CodebookV2Page.tsx:231`) opens
+   codebook tile (`frontend/src/islands/CodebookV2Page.tsx:233`) opens
    `ThresholdReviewModal`. Nothing auto-opens on poll.
 
 ## API endpoints
@@ -113,8 +115,14 @@ proposals with confidence + rationale).
   context can't fit taxonomy + quotes) — 503 `PROVIDER_LOCAL`.
 - **Background task**: First feature to call LLMs from serve mode. Uses
   `asyncio.create_task()` — job runs after endpoint returns. No Celery/Redis needed
+- **One proposal per quote**: `ProposedTag` is unique on `(job_id, quote_id)`, and the
+  prompt's "single best" tag is a request, not a guarantee. Both store paths (the first
+  run and `reapply_to_new_quotes`) collapse to the highest-confidence assignment per quote.
+  Until 11 Oct 2026 the first run did not: a duplicate raised IntegrityError at commit,
+  rolled back every batch's proposals, failed the paid job, and failed every retry the
+  same way. Runtime detail: `bristlenose/server/CLAUDE.md` § AutoCode.
 - **Confidence filter**: Proposals endpoint accepts `min_confidence` query param
-  (default 0.5). All assignments stored regardless, filtered at query time. The
+  (default 0.5). Every quote's proposal is stored regardless of confidence and filtered at query time; per quote, only the highest-confidence assignment is stored. The
   user-facing threshold control **shipped** — `ThresholdReviewModal.tsx` +
   `DualThresholdSlider.tsx` + `ConfidenceHistogram.tsx`; see
   `docs/design-autocode-threshold-review.md`.
@@ -123,9 +131,9 @@ proposals with confidence + rationale).
 
 ## Testing
 
-148 tests across 5 files (`test_autocode_discrimination.py` 15,
-`test_autocode_engine.py` 43, `test_autocode_models.py` 20,
-`test_autocode_taxonomy.py` 24, `test_serve_autocode_api.py` 46). Live LLM eval
+149 tests across 5 files, counted 11 Oct 2026 (`test_autocode_discrimination.py` 15,
+`test_autocode_engine.py` 44, `test_autocode_models.py` 20,
+`test_autocode_taxonomy.py` 23, `test_serve_autocode_api.py` 47). Live LLM eval
 harness (`test_autocode_discrimination.py`) has 20 golden Garrett quotes — run with
 `pytest -m slow` (~$0.01/run, ≥80% accuracy threshold).
 

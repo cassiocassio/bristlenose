@@ -13,6 +13,13 @@ trued-against: HEAD on 2026-08-27 — Part 2 (snap) and the fix table only; Part
 > which was rebuilt from `doctor_fixes.py` (it had four rows against six
 > branching functions and no `rpm` column).
 >
+> **11 Oct 2026: the fix table has drifted again since 27 Aug, so it is no longer
+> trued to HEAD.** The `serve_deps_missing` fix is now a per-channel reinstall (the
+> serve packages became core on 5 Oct); `spacy_model_missing` names
+> `en_core_web_lg` since 12 Sep; and five of the six branching functions gained a
+> `winget` arm on 5 Oct, which the table has no column for. Read
+> `bristlenose/doctor_fixes.py` for current text.
+>
 > **NOT trued — last substantively checked 2026-04-21, and known to have
 > drifted** through the Ollama, serve-deps, brew-tap-trust, auth-token,
 > admin-panel, MCP and RPM work. Specifically suspect: the check counts ("seven
@@ -32,6 +39,7 @@ trued-against: HEAD on 2026-08-27 — Part 2 (snap) and the fix table only; Part
 
 ## Changelog
 
+- _2026-10-11_ — narrow pass: the banner withdraws "fix table trued to HEAD" and names what drifted; the matrix gains a dated `serve_deps` note (live since `fd6286ee`). The rest of the 11 Oct audit (snap size, brew formula, `--prefetch-model`, the spaCy model the snap and RPM bundle) is listed in the maintainer's private truing note, not applied. Anchor: commit "doctor: serve_deps ran in no preflight, so serve checked nothing".
 - _2026-08-27_ — trued up against `snap/snapcraft.yaml` and the live store API. **Decision reversal recorded:** "Decision: classic confinement" is superseded — `snapcraft.yaml:3` is `confinement: strict` and the published snap reports strict. Kept the original four-point argument and mapped each objection to how it actually resolved (dotfiles: partly real, lived with; paths outside `$HOME`: `removable-media` plug, the one that needs a manual `snap connect`; CUDA: accepted limitation; HF cache: solved via `HF_HOME`/`XDG_CACHE_HOME` → `$SNAP_USER_COMMON`). Corrected six install commands that would fail as written (`--classic` on a strict snap) and added `--edge`, since `latest/edge` is the only channel ever published — deliberately did NOT touch `snap install snapcraft --classic` or `snap install lxd`, which are other snaps and correct. Corrected the yaml sketch's `confinement:`, the pre-launch checklist (classic approval was never requested and blocks nothing; name registration is done, `snap-id` `xzQ4aizlSc3NA6shGdFVmcLTKbPqvPI5`), and Phase 2 steps 3 and 7. Flagged the classic-only rpath linter note as possibly no longer applicable. Sibling fixes in the same pass: `INSTALL.md` §Snap (was "coming soon" + `--classic`) and the website's `docs-src/install.md` (Snap section added). Also corrected a false claim carried on both the website and the homepage — the snap does **not** bundle the transcription model; `snapcraft.yaml` points the Whisper cache at `$SNAP_USER_COMMON`, so models download on first run. Only the spaCy model is bundled.
 - _2026-04-21_ — trued up: added new sub-section "Bundle-integrity checks (`--self-test`)" covering the six `check_bundle_*` functions shipped for desktop sidecar bundle validation; added `--self-test` to the command-to-check matrix; noted `check-bundle-manifest.sh` as sibling gate; promoted docstring invariant (catch BUG-3/4/5 class at build time, not first runtime); corrected Phase 2 snap status (store publication pending, not ✅; CI workflow shipped-but-failing since 2026-04-17; snap-name registration blocked on identity recovery). Anchors: `bristlenose/doctor.py:690-942`, `desktop/scripts/check-bundle-manifest.sh`, commits "bristlenose doctor --self-test for bundle integrity (P2)", "check-bundle-manifest.sh — source→spec coverage gate", "serve fail-loud when React bundle missing (P1)", "bundle React SPA static/ into the sidecar (BUG-3 fix)". Preserved: original doctor seven-checks design and snap build/testing sections (both shipped as described — only store publication status corrected).
 
@@ -160,6 +168,12 @@ Alembic migrations                                                              
 
 (1) only if --redact-pii
 render: no pre-flight at all — it reads JSON, writes HTML, needs nothing external
+
+11 Oct 2026, not yet folded into the grid: a `serve_deps` row (serve packages
+present) applies to run, run --skip-tx, analyze and serve. It was listed for those
+commands from May but never dispatched, so it ran nowhere until fd6286ee. `render`
+is a removed command; `transcribe-only` is the internal key for `bristlenose
+transcribe`.
 --self-test: bundle-integrity only; no runtime dependency checks
 ```
 

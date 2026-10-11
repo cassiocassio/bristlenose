@@ -1,7 +1,7 @@
 ---
-status: current — built on main (P1–P5), not yet released
-last-trued: 2026-09-29
-trued-against: HEAD@main on 2026-09-29 (after bb50067c)
+status: current — shipped in 0.32.0 (30 Sep 2026); P1–P5 landed 29 Sep
+last-trued: 2026-10-11
+trued-against: HEAD@main on 2026-10-11 (after 7a519706)
 ---
 
 # ChatGPT plugin, macOS 27, and the native proxy
@@ -20,6 +20,10 @@ Related docs:
 - [`design-mcp-extension.md`](design-mcp-extension.md) — the shipped Claude Desktop `.mcpb`
 - [`design-mcp-server.md`](design-mcp-server.md) — the `/mcp` endpoint
 - [`design-mcp-files-and-folders.md`](design-mcp-files-and-folders.md) — the System Settings route; drafted the same day
+
+## Changelog
+
+- _2026-10-11_ — trued up: the helper is shipped (0.32.0), not "unreleased"; D4 now covers both copies (the data copy failed open until `7a519706`). Anchors: CHANGELOG 0.32.0; commit "mcp handshake: the data copy now fails closed too".
 
 > **Truing note (29 Sep 2026, evening).** Sections 1–6.8 are the day's
 > measurements, kept as the record. Where one was later overtaken by what was
@@ -57,14 +61,14 @@ Related docs:
    inside ChatGPT (§6.2). **A real upload (build 3907) processed as VALID,
    App Store eligible** (§6.7). Human App Review remains. The native port
    carries all of the Node proxy's states (§4.3, pinned by `tests/test_mcp_helper.py`).
-7. **Built on main, 29 Sep 2026 (not yet released).** D1–D9 decided (§6.9). The
+7. **Built 29 Sep 2026; shipped in 0.32.0 on 30 Sep.** D1–D9 decided (§6.9). The
    app writes the handshake into the team group (P1); a sandboxed helper,
    `bristlenose-mcp`, is built into every signed build (P2); the ChatGPT tab
    installs it as a plugin in one click and the Claude tab installs it as a
    runtime `.mcpb`, with no Files & Folders step (P3–P5). ChatGPT end to end is
    proven on this Mac, and a 34-case break harness plus seven live ChatGPT
    attacks found and fixed two defects (§6.10). Claude through the native
-   package ran end to end at 22:39 (§6.9). Still to run: a TestFlight build, the 15/26 guests, and App Review (§6.8).
+   package ran end to end at 22:39 (§6.9). Still to run on 29 Sep: a TestFlight build, the 15/26 guests, and App Review (§6.8). The TestFlight build went out with 0.32.0 (build 4035); whether the guest runs happened is not recorded here.
 
 ## 1. The ChatGPT plugin channel
 
@@ -835,7 +839,7 @@ All nine were taken as proposed below, with these notes from the maintainer:
 | D1 | Helper identifier | **Fresh ids, one per signer class** (how many classes: measured in P0.2). The spike's `app.bristlenose.mcp-proxy` is never shipped: its container on the maintainer's Mac records a spike signer (§6.6). | A different id per *copy*: identical bytes share a container safely. A symlink for the marketplace copy: ChatGPT copies the plugin into its cache, where a link breaks. A `.dev` id: rejected here, then **added** when D2 was amended (Apple Development is its own signer category, so Debug builds need their own id). Ad-hoc builds still carry no helper. |
 | D2 | How the helper is built | **Compiled and signed inside the Copy phase** from the identity the host is being signed with (`EXPANDED_CODE_SIGN_IDENTITY_NAME`; skipped when that is empty or `-`), and skipped when its stamp matches. *As built:* Debug builds carry it too, as `.dev` (see the amended D2 above); the `.dmg` lane pins `BRISTLENOSE_HELPER_CHANNEL=devid` at archive, because it archives with development signing and re-signs at export. | A pre-built script product plus freshness stamp (the ffmpeg pattern): it can go stale and ship an ad-hoc helper in a Release archive. An Xcode command-line target: `build-dmg.sh`'s command-line `CODE_SIGN_ENTITLEMENTS` override would apply to it too and give it the host's entitlements. |
 | D3 | Gates | **One post-export gate, both copies, both lanes**: sandboxed, no `inherit`, the team group equal to the host's, Info.plist id equal to the signing id, the channel's id, team = `TEAM_ID`, the two copies byte-identical, no `responsibility_*` and no `--seed` string. *As built* (`check-mcp-helper.sh`): copies are compared by **CDHash**, not bytes, because export re-signs each nested copy; the gate also checks `minos` equals the app's floor and refuses the test-build path `BN_TEST_HANDSHAKE_PATH`. `nm` and `strings` output written to a file before `grep`. | Five separate gate proposals. |
-| D4 | Group write failure | **Fail closed:** if the group write fails, delete the group copy; a read-back test pins it. Otherwise turning Agent Access off could leave a project readable through a stale group copy. | Log-and-continue (the draft's behaviour). |
+| D4 | Group write failure | **Fail closed:** if the group write fails, delete the group copy; a read-back test pins it. Otherwise turning Agent Access off could leave a project readable through a stale group copy. *As built, 11 Oct 2026:* **both** copies now fail closed. Until `7a519706` the data-container copy, the one the Node proxy reads, did exactly what the rejected option describes: `writeBoth` returned false and its sole caller (`ServeFleet.swift`) ignored it, so a failed rewrite left the previous set. Pinned by `writeBoth_removesTheDataCopy_whenItCannotBeRewritten`. | Log-and-continue (the draft's behaviour). |
 | D5 | Proxy diagnostics | **None added.** Build defects are caught by D3; the proxy's messages stay as ported. | A launch breadcrumb (needs the helper to write the group, and watches the client); a group marker file; an HMAC probe challenge (same exposure as the Node proxy today; the real fix is option 2, Mach IPC). Tokens are re-minted at launch when a leftover handshake is found. |
 | D6 | Rollout | **No feature flag.** The switch-over (Claude tab native, ChatGPT tab Install Plugin…, Files & Folders copy recovery-only) lands as one commit, after P6 passes on a checkpoint build. *As built:* it landed in two commits (ChatGPT with P3, Claude with P4) before P6 finished; a build without the helper keeps the old layout on both tabs. | A `UserDefaults` flag or `enum FeatureFlags` plus a Diagnostics toggle: before P6 the only audience is one internal tester and local builds. |
 | D7 | ChatGPT marketplace location | **Inside the app bundle**, because a copy in our container is a cross-team read macOS 27 denies. A translocated app (a `.dmg` app run in place) is refused with "move Bristlenose to Applications". Written down so nobody "fixes" it. | The container (denied); a download (not reviewed code). |
@@ -850,7 +854,7 @@ phase may regress it:
 
 | Shipped mechanism | Driven by | Obligation |
 |---|---|---|
-| Sidebar antenna, solid (exposed now) | `ServeFleet.handshakeProjectPaths` | P1 writes the group copy from the same set in the same call; D4 stops a group copy outliving the solid antenna |
+| Sidebar antenna, solid (exposed now) | `ServeFleet.handshakeProjectPaths` | P1 writes the group copy from the same set in the same call; D4 stops either copy outliving the solid antenna (the data copy since 11 Oct 2026) |
 | Antenna radiating, then the two-tap sign-off (an agent is reading, then has finished) | serve's per-project tool-call counter, `/api/agent-activity` | Nothing to build: the helper calls the same `/mcp/` with the same bearer. P6 checks a ChatGPT and a Claude question each radiate the right project. **ChatGPT confirmed 29 Sep 2026:** the antenna radiated on the asked project and Last asked read *Just now*; Claude still to check |
 | Projects register: Active / Available when opened, tick, Sessions, Last asked, roll-up, receipts, empty state, scope note | `AgentProjectRegister`, `projectsSection` | Untouched. P5 edits only the pane's top half; `AgentProjectRegisterTests` and `MCPAgentsSettingsViewTests` pass unedited |
 | Turn On / Off Agent Access, the badge tooltip, consent v2 | `AgentAccessPolicy`, menu verbs | Untouched |
@@ -868,7 +872,7 @@ register in every Settings frame for this reason.
   - P0.3: re-export the `.dmg` with the group requested; confirm the minted profile lists it.
   - P0.4 (**done 29 Sep**, both halves — the install path with a probe, then the real artefact, see *Claude through the native package* below): end to end through **Claude's own extraction** of a runtime `.mcpb`, on a clean 27 guest: quarantine flag, exec bit, `__MACOSX` entries, `spctl`; it answers with Files & Folders off.
   - P0.5: a second install at a bumped version, on each host: what ChatGPT and Claude offer. (**done 29 Sep**: ChatGPT outcome B, ⋯ ▸ Uninstall then Install plugin; Claude outcome A, Update in place when the version rises.)
-- **P1 — host half** (**landed 29 Sep**: both copies written, D4 fail-closed via `MCPHandshake.writeBoth` with a read-back test; Swift 1553 passed, Python 5617 passed; P0.3 turned out not to gate it), only after P0.1 and P0.3 pass: the draft patch, amended to fail closed (D4) with a read-back test, and the reader set written into design-mcp-extension §3.1.
+- **P1 — host half** (**landed 29 Sep**: both copies written, D4 fail-closed via `MCPHandshake.writeBoth` with a read-back test (group copy; the data copy joined on 11 Oct 2026, `7a519706`); Swift 1553 passed, Python 5617 passed; P0.3 turned out not to gate it), only after P0.1 and P0.3 pass: the draft patch, amended to fail closed (D4) with a read-back test, and the reader set written into design-mcp-extension §3.1.
 - **P2 — helper** (**landed 29 Sep**: `desktop/mcp-helper/main.swift` + `build-helper.sh`, the D3 gate `desktop/scripts/check-mcp-helper.sh` (also run by `check-pkg-shippable.sh` and `check-dmg-shippable.sh`), `tests/test_mcp_helper.py`; built in the Copy Sidecar Resources phase into `Contents/Helpers` and the ChatGPT marketplace; copies compared by CDHash) per D1–D3, source moved to `desktop/mcp-helper/`; the tool list read from the `BN-TOOLS-JSON` block with its annotations; that block moves out of `desktop/mcpb/` before the Node extension is retired, **and `tests/test_mcpb_proxy.py` moves with it in the same commit** (re-point `_PROXY_JS` and the regex). It is the only check that the static tool list and its annotations match the server's `tools/list`, and it looks like it belongs to the Node extension, so it would otherwise be deleted with it and leave the helper's list unguarded.
 - **P3 — ChatGPT** (**landed and proven end to end 29 Sep**, §6.10): marketplace per D7, Install Plugin… per D8, link query encoded strictly (unit-tested with `& + # %` and spaces).
 - **P4 — Claude** (**landed and proven end to end 29 Sep**: `NativeExtensionPackage` zips the helper at click time; the live install is recorded below): runtime `.mcpb` per P0.4; `MCPExtensionInstaller`'s bundled-file assumptions (`claudeDesktopCanInstall`, the disabled state, `bundledStamp`) repointed at the runtime artefact with a stamp beside it.

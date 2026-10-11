@@ -1,8 +1,8 @@
 ---
-status: shipped (Node .mcpb); native helper built on main, unreleased
-last-trued: 2026-10-04
-previous-trued: 2026-09-29
-trued-against: HEAD@main on 2026-10-04 (after 8cb6811b)
+status: shipped (Node .mcpb; native helper and ChatGPT plugin since 0.32.0, 30 Sep 2026)
+last-trued: 2026-10-11
+previous-trued: 2026-10-04
+trued-against: HEAD@main on 2026-10-11 (after 7a519706)
 ---
 
 # The Bristlenose extension — connecting Claude Desktop without a config file
@@ -44,9 +44,9 @@ over a real study through the installed extension.
 | Settings agent-access project list | **Uncut and shipped 21 Aug 2026** — cut 1 Aug (`76d9e92a`), rebuilt as the projects register | §5a-bis, `AgentProjectRegister.swift`, `2741a61c` / `5f5c8eda` / `028d539b` |
 | `bristlenose mcp-proxy` CLI subcommand | **Not shipped** | §7 Q3 |
 | Directory submission | Not done — local install only | §7 Q4, as recommended |
-| Native helper `bristlenose-mcp` (sandboxed, team app group) | **Built on main 29 Sep 2026, unreleased** — the Claude tab installs it as a `type: binary` `.mcpb` when the build carries it; the Node `.mcpb` stays the fallback | `desktop/mcp-helper/`, `NativeExtensionPackage.swift`, native-proxy §6.9 |
-| ChatGPT plugin (Install Plugin…) | **Built on main 29 Sep 2026, unreleased**; proven end to end | `ChatGPTPluginInstaller.swift`, native-proxy §6.10 |
-| Handshake in the team app group | **Built on main 29 Sep 2026** — written beside the container copy, fail-closed | `MCPHandshake.writeBoth`, §3.1 |
+| Native helper `bristlenose-mcp` (sandboxed, team app group) | **Shipped in 0.32.0 (30 Sep 2026)** — the Claude tab installs it as a `type: binary` `.mcpb` when the build carries it; the Node `.mcpb` stays the fallback | `desktop/mcp-helper/`, `NativeExtensionPackage.swift`, native-proxy §6.9 |
+| ChatGPT plugin (Install Plugin…) | **Shipped in 0.32.0 (30 Sep 2026)**; proven end to end | `ChatGPTPluginInstaller.swift`, native-proxy §6.10 |
+| Handshake in the team app group | **Shipped in 0.32.0** — written beside the container copy; both copies fail closed (the data copy since 11 Oct 2026) | `MCPHandshake.writeBoth`, §3.1 |
 | Per-host proxy versions (D8) | **Built on main 29 Sep 2026** — `proxy_versions` on `/api/agent-activity` | native-proxy §6.9 *Wire contract* |
 
 **Still owed** (TODO.md, before the next TestFlight): the `.mcpb` has no
@@ -79,6 +79,7 @@ did not account for.
 
 ## Changelog
 
+- _2026-10-11_ — trued up: the native helper, ChatGPT plugin and group handshake are shipped (0.32.0), not "unreleased"; both handshake copies now fail closed (the data copy since `7a519706`); §5a-bis's failed-share item names the caller that drops the signal. Anchors: CHANGELOG 0.32.0; commit "mcp handshake: the data copy now fails closed too".
 - _29 Sep 2026 (evening)_ — **trued after the native helper was built.** Status
   table gains four rows; the macOS 27 work list marks items 3–13 done or
   changed; §3.4, §3.5, §3.7, §4 and §5c carry a line each pointing at the built
@@ -193,6 +194,8 @@ docs; this section is the state and the work left, in order.
 
 ### Shipped to `main`, not yet released
 
+> **Released in 0.32.0 (30 Sep 2026).** Kept as the record of what was planned for that release; work list A was discharged by the 0.32.0 changelog.
+
 > **Evening, 29 Sep 2026:** the native path landed on `main` too (native-proxy
 > §6.9 P1–P5): the group handshake, the helper and its gate, **Install
 > Plugin…** on the ChatGPT tab, and the runtime `type: binary` `.mcpb` on the
@@ -229,7 +232,7 @@ docs; this section is the state and the work left, in order.
 below, full record in native-proxy §6.9.
 5. ~~**Decide:**~~ **Decided 29 Sep 2026** (D1–D9). **Decide:** adopt native-proxy §6.4, the sandboxed app-group binary on both
    channels.
-6. **Done 29 Sep 2026 (P1).** `MCPHandshake.writeBoth`, fail-closed; all
+6. **Done 29 Sep 2026 (P1).** `MCPHandshake.writeBoth`, fail-closed (the group copy; the data copy joined on 11 Oct 2026, `7a519706`); all
    three entitlements files carry the group. The profile re-export (P0.3) turned
    out not to gate it (P0.1: "Disallowing" is soft on 15/26/27). **Host half:** apply `docs/drafts/native-proxy-group-handshake/`, which also
    writes the handshake into the group. Keep writing the data-container copy
@@ -456,8 +459,11 @@ on warm re-point, and removes it on stop:
 > | native helper `bristlenose-mcp` (`desktop/mcp-helper/`) | the group copy | sandboxed and carrying the group, so it reads it with no grant under any host (`design-mcp-native-proxy.md` §6.2) |
 > | the sidecar's `install_handshake_cleanup` | the data-container copy | deletes it on graceful exit; a stranded group copy fails closed at the proxy's `/api/health` instance check |
 >
-> The group copy fails **closed**: if it can't be rewritten it is removed rather
-> than left naming the previous set (`MCPHandshake.writeBoth`, §6.9 D4). Serve
+> Each copy fails **closed**: if it can't be rewritten it is removed rather than
+> left naming the previous set (`MCPHandshake.writeBoth`, native-proxy §6.9 D4).
+> The group copy did from the start. The data-container copy only did from
+> 11 Oct 2026 (`7a519706`); before that, a failed rewrite left the previous set,
+> a revoked project's port and token included, for the Node proxy to read. Serve
 > refuses an out-of-scope project either way (`mcp_server._run`).
 >
 > "The same bytes" is literal: `writeBoth` builds the payload once and hands it
@@ -2091,7 +2097,11 @@ detail, and should be a deliberate acceptance rather than a discovery.
 **Also worth surfacing: a failed share.** If the handshake write fails
 (Keychain refusal, disk error) the toggle says shared and the project is not
 actually reachable. That is a UI-is-lying case and deserves a signal if it is
-detectable — but an error treatment, not a fourth badge tier.
+detectable — but an error treatment, not a fourth badge tier. *It is detectable
+(11 Oct 2026):* `MCPHandshake.write` returns the data copy's result, and its sole
+caller (`ServeFleet.swift`, the `MCPHandshake.write(entries:)` call) ignores it.
+Since `7a519706` a failed write leaves no handshake rather than a stale one, so
+the failure is safe but still silent.
 
 **Open: colour.** It is currently `.secondaryLabelColor`, matching the iCloud
 sibling, on the argument that ambient status joins the quiet family (and a Mac

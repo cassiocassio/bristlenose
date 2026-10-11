@@ -106,7 +106,7 @@ both arms with no hint:
 | # | Defect | Where | Severity | Fixed |
 |---|---|---|---|---|
 | 1 | Two LLM assignments for one quote violate `uq_proposed_tag_job_quote`, which rolls back **the whole paid AutoCode job**, and a retry repeats it. The `best_by_quote` collapse exists only in the re-apply path | `server/autocode.py` ~358–377, 510 | high | `83bab663` |
-| 2 | `serve_deps` sits in five `_COMMAND_CHECKS` lists but is absent from `_check_fns`, and is silently skipped, so the gate cannot fail | `doctor.py` ~1733–1747 | medium | `fd6286ee` |
+| 2 | `serve_deps` sits in four `_COMMAND_CHECKS` lists (`run`, `run_skip_tx`, `analyze`, `serve`) but is absent from `_check_fns`, and is silently skipped, so the gate cannot fail | `doctor.py` ~1733–1747 | medium | `fd6286ee` |
 | 3 | `WKUserContentController` retains the Coordinator, which retains the web view. No `removeScriptMessageHandler` exists, so replaced web views leak and keep posting into the shared bridge | `WebView.swift` ~152, 165, 231 | medium | `d29c4fc4` |
 | 4 | `removeFilePresenter` is called only from `deinit`. If the coordinator retains presenters, `deinit` never runs and the security scope stays open. The retention premise is unverified, and a weak-ref test settles it | `ProjectFolderWatcher.swift` ~199–208 | medium | `1e6dcf7f` |
 | 5 | Inline `ref` callback calls `el.focus()` on every render, which pulls focus back during the blur window | `QuoteCard.tsx` ~517 | low-med | `473786f7` |

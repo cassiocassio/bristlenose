@@ -1,6 +1,17 @@
+---
+status: partial
+last-trued: 2026-10-11
+trued-against: HEAD@main on 2026-10-11 (after fd6286ee)
+---
+
 # Design: Serve-mode doctor checks
 
 Last updated: 17 Feb 2026
+
+## Changelog
+
+- _2026-10-11_ — trued up for the serve preflight only: `check_serve_deps` shipped (six packages, core dependencies since 5 Oct); the serve preflight was wired but ran no check until `fd6286ee`. The rest of the doc (Vite port discovery, `node_modules`, database checks, the fix-key table) was not re-checked in this pass and is mostly unbuilt. Anchors: commit "doctor: serve_deps ran in no preflight, so serve checked nothing"; `bristlenose/doctor.py` `check_serve_deps`, `run_preflight`.
+- _2026-02-17_ — initial draft.
 
 ## Problem
 
@@ -57,6 +68,8 @@ Do both: auto-discover first, fall back to `BRISTLENOSE_VITE_PORT` env var, fall
 
 Try importing the four `[serve]` extras: `fastapi`, `uvicorn`, `sqlalchemy`, `sqladmin`. Any `ImportError` → fail with fix message `pip install -e ".[serve]"`.
 
+> **Shipped, differently (as of 11 Oct 2026).** `check_serve_deps` probes six packages (`alembic` and `openpyxl` added) with `importlib.util.find_spec`. They became core dependencies on 5 Oct 2026, so a gap now means a damaged install, and the fix is a per-channel reinstall (`doctor_fixes.py`, `serve_deps_missing`), not the `[serve]` extra.
+
 ### `check_node_modules()`
 
 Check `frontend/node_modules` exists. Optionally compare `node_modules/.package-lock.json` mtime against `package.json` mtime to detect staleness. Missing or stale → warn with `cd frontend && npm install`.
@@ -107,6 +120,8 @@ Add fix keys:
 ### Preflight in `bristlenose serve`
 
 Run `run_preflight(settings, "serve")` at the start of the serve command, same pattern as the existing `run` preflight. Block startup on failures, warn on warnings.
+
+> **Shipped, but empty until 11 Oct 2026.** The call has existed in `cli.py` (`_run_preflight(settings, "serve")`), and `_COMMAND_CHECKS["serve"]` listed `serve_deps`, but `run_preflight`'s dispatch table had no entry for it, so serve preflight ran no check at all (nor did `serve_deps` under `run` or `analyze`). Fixed in `fd6286ee`. `test_every_listed_check_runs` now fails if any listed check has no runner.
 
 ### `app.py` changes
 

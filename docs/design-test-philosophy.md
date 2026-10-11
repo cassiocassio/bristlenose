@@ -1,6 +1,10 @@
 # Test Philosophy & the James Bach Reviewer
 
-_May 2026; boundary-contract section + reviewer-status trued June 2026. Companion to `design-test-strategy.md` (which is the per-layer audit). This doc is the **decision framework** — how to choose the right level of testing for a given change, and the agent role that should be applied at planning time._
+_May 2026; boundary-contract section + reviewer-status trued June 2026. Companion to [`archive/design-test-strategy.md`](archive/design-test-strategy.md) (the per-layer audit, now archived). This doc is the **decision framework** — how to choose the right level of testing for a given change, and the agent role that should be applied at planning time._
+
+## Changelog
+
+- _2026-10-11_ — trued up: the Swift suite runs in CI (`mac-build.yml`, since 3 Sep 2026), so "pytest is the only CI suite" is corrected where it is stated, with the original reasoning kept; per-suite counts now point at the generated inventory instead of restating it; the Hypothesis placement rule added; the archived strategy doc's links fixed. Anchors: `.github/workflows/mac-build.yml`; `docs/testing/gaps.md` G1; commit "property-based testing: vendor the trail of bits skill, add hypothesis".
 
 ## TL;DR
 
@@ -14,10 +18,12 @@ _May 2026; boundary-contract section + reviewer-status trued June 2026. Companio
 
 Bristlenose has accumulated four test surfaces:
 
-- **Python** (~2,300 pytest tests) — pipeline, server, analysis, LLM
-- **TypeScript / React** (~1,300 Vitest tests) — frontend components, stores
+- **Python** (pytest) — pipeline, server, analysis, LLM
+- **TypeScript / React** (Vitest) — frontend components, stores
 - **Playwright** (`e2e/`) — browser-level integration
-- **Swift** (~150 `@Test` declarations) — the `BristlenoseTests` target is now wired into the Xcode project (`xcodebuild -list` shows it; runs via `build-for-testing` + `test-without-building`; see [desktop/CLAUDE.md](../desktop/CLAUDE.md#testing)). It does **not** yet run in CI — there is no `desktop-build` job, so pytest is the only suite that fires on every push (this asymmetry is the reason the boundary contract below is pinned from the *Python* side)
+- **Swift** (Swift Testing `@Test`) — the `BristlenoseTests` target is wired into the Xcode project; run it with `desktop/scripts/test-swift.sh` (see [desktop/CLAUDE.md](../desktop/CLAUDE.md#testing)). **Since 3 Sep 2026 it runs in CI**: `mac-build.yml` runs it on pushes and PRs to `main` that touch `desktop/**`, on a stub sidecar. It is path-filtered and not a required check, so a Python-only change still never runs it. When this doc was written it did not run in CI at all, which is why the boundary contract below is pinned from the *Python* side. The path filter keeps that reasoning valid.
+
+Current counts per suite are generated, not written down here: [`docs/testing/inventory.md`](testing/inventory.md). (At this doc's writing, about 2,300 pytest, 1,300 Vitest and 150 Swift tests; on 11 Oct 2026 about 6,500, 2,600 and 1,800.)
 
 The Python and TS layers grew with sensible defaults baked in from the start — the tooling pulled their philosophy along with them (pytest, Vitest, RTL ship opinions). The Swift layer is growing **piecemeal, per code surface, per dev environment**: tests appear next to the file the author was thinking about, not as the output of a deliberate "where does this behaviour belong on the pyramid?" decision.
 
@@ -156,7 +162,7 @@ The candidate plan was six tests (four Swift, two Python). Bach's adjudication c
 | **Swift #1–4** — the env-dict half: `overlayPreferences` and `overlayAPIKeys`, each in its active-provider and nil-provider case | **KEEP — but on inspection, 3 of 4 already shipped** | When the plan was actually executed, [`ServeManagerEnvTests.swift`](../desktop/Bristlenose/BristlenoseTests/ServeManagerEnvTests.swift) already held #1 (`overlayPreferences_injects_provider_and_matching_model_together`), #2 (`overlayPreferences_no_active_provider_injects_neither` — the anti-404 case), and #3 (`only_active_provider_key_is_injected`), written alongside the Defect-M / C3 fixes. Only #4 was genuinely new: the nil-`activeProvider` → `?? pythonDefaultProvider` key-fallback branch (`no_active_provider_falls_back_to_python_default_key`). Both `overlay*` are `static` (reachable via `@testable import`), no view-factoring needed. **The "minimum 4" was really "minimum 1."** |
 | **Python #5** — introspect Typer's `--llm` default via `inspect.signature` | **CUT** | Tests the *implementation* (that the default is `None`), not the *invariant* (that an injected env var wins). Implementation-coupling; brittle to a refactor that changes how the default is expressed. |
 | **Python #6** — behavioural: env var wins when no CLI override | **CUT — already shipped** | Pinned at fix-time: `tests/test_desktop_config_resolution.py::TestRunCommandDefaultDoesNotOverrideEnv::test_env_provider_wins_when_no_cli_override` (and `test_explicit_cli_override_still_wins`). Verified present before cutting — see the "trust but verify" note below. |
-| **Cross-language constant** (the "nice-to-have") | **SHIP** | Now `tests/test_swift_python_contract.py` — reads the tracked Swift source as text and asserts `pythonDefaultProvider` equals `config.py`'s default. Runs in pytest (the only CI suite), no build needed. Defence-in-depth *different in kind* from Swift #4: #4 proves the Swift code uses the constant correctly; this proves the constant's *value* hasn't drifted from Python. |
+| **Cross-language constant** (the "nice-to-have") | **SHIP** | Now `tests/test_swift_python_contract.py` — reads the tracked Swift source as text and asserts `pythonDefaultProvider` equals `config.py`'s default. Runs in pytest (then the only CI suite; still the only one that runs on a Python-only change), no build needed. Defence-in-depth *different in kind* from Swift #4: #4 proves the Swift code uses the constant correctly; this proves the constant's *value* hasn't drifted from Python. |
 | **"Open an old analysis"** flow | **SKIP** | Its argv seam is `ServeManager.arguments(...)`, currently `private`. **Don't drop `private` to enable a test** — the open-old path is well-exercised by the cohort every session and has no history of silent regression. Widening visibility purely to test it inverts the cost/value test. |
 
 Net genuine new work, once existing coverage was actually read rather than assumed: **one Swift test** (`no_active_provider_falls_back_to_python_default_key`). The Python half was already defended at fix-time; three of the four Swift tests already existed; the constant is now pinned by the grep test; the open-old flow rides the cohort. A six-test plan collapsed to one — and the collapse only happened because the plan was checked against the files rather than written into them.
@@ -167,7 +173,7 @@ Net genuine new work, once existing coverage was actually read rather than assum
 - **A correctly-`private` seam being untestable is a feature, not a gap.** The instinct to drop `private` on `ServeManager.arguments` "so we can test it" is the tail wagging the dog. Encapsulation that the test wants to break is usually encapsulation worth keeping; the question is whether the *behaviour* is silent-regression-prone, and here it isn't. (Contrast the factored-helper convention: factor a *view decision* out because it's silent-regression-prone, not because a test can't reach it.)
 - **Verify existing coverage before adding a test — it fired twice on this one change.** (1) Bach asserted Python #6 was already shipped at two named line numbers; reading those lines confirmed both tests exist with a docstring naming the `94892fd` regression. (2) Then, at *implementation* time, reading `ServeManagerEnvTests.swift` before writing showed that 3 of the 4 planned Swift tests already existed — the "minimum 4" was really "minimum 1." Both times, "a plan/reviewer said X" was a hypothesis and the test file was the ground truth. The first instance prevents a *false cut* (dropping a planned test that wasn't really covered); the second prevents *duplicate writes* (adding tests that already exist). Same discipline, opposite failure modes. Cheap to run, and it's the difference between a six-test plan and the one test that was actually missing.
 - **Even the test that *was* missing defends the half that didn't break.** All four Swift tests pin the env-dict the *Swift* side emits — and Swift's side was correct on the night of the 404. They're future-drift insurance for the Swift half, not a re-test of the wound. The test that actually defends the `94892fd` class is the *composed* Python behavioural test (`test_env_provider_wins_when_no_cli_override`) plus the resolution ledger. This is the uncomfortable tell that unit-testing the halves and defending the contract are different jobs — see the two principles below.
-- **Why a Python test reads Swift source.** `tests/test_swift_python_contract.py` is a pytest test that greps a `.swift` file. It looks like a category error until you remember the CI asymmetry (above): pytest is the only suite that fires on every push, and the contract's authoritative side is Python anyway. If/when a `desktop-build` Swift-test job runs in CI, this can flip to a `@Test` that reads `config.py`. The test is parsimonious *given today's CI*, not eternally.
+- **Why a Python test reads Swift source.** `tests/test_swift_python_contract.py` is a pytest test that greps a `.swift` file. It looks like a category error until you remember the CI asymmetry (above): pytest is the only suite that fires on every push, and the contract's authoritative side is Python anyway. If/when a `desktop-build` Swift-test job runs in CI, this can flip to a `@Test` that reads `config.py`. The test is parsimonious *given today's CI*, not eternally. *(11 Oct 2026: that job exists since 3 Sep, but it only runs when `desktop/**` changes, and a drift would start from a `config.py` edit. So the pytest side stays, for the reason it was written.)*
 
 ### Two principles the 404 added to the doctrine
 
@@ -233,7 +239,7 @@ Given a change, ask in order:
 
 ## Cross-refs
 
-- [`docs/archive/design-test-strategy.md`](design-test-strategy.md) — per-layer audit, tool choices, timeline (counts as of Feb 2026 — superseded by the TL;DR figures here)
+- [`docs/archive/design-test-strategy.md`](archive/design-test-strategy.md) — per-layer audit, tool choices, timeline (counts as of Feb 2026 — superseded by the TL;DR figures here)
 - [`docs/design-playwright-testing.md`](design-playwright-testing.md) — Playwright specifics
 - [`docs/testing/test-data-generation.md`](testing/test-data-generation.md) — fixtures
 - [`docs/testing/README.md`](testing/README.md) — the acceptance-testing hub (three-tier model, coverage inventory, human ↔ mechanical map)

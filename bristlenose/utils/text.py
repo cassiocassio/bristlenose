@@ -98,12 +98,14 @@ def safe_filename(text: str, max_length: int = _MAX_FILENAME_LENGTH) -> str:
         "../../etc/cron.d/evil" → "etccron.devil"
         'He said "delete everything"' → "He said delete everything"
     """
+    # Remove unsafe characters FIRST. Stripping ".." first let a removed
+    # separator reassemble it: "a.:.b" lost the ":" and came out "a..b",
+    # breaking the guarantee above (found by a property test, 11 Oct 2026).
+    text = _UNSAFE_FILENAME_CHARS.sub("", text)
+
     # Strip path traversal sequences (loop handles reassembly, e.g. "....//")
     while ".." in text:
         text = text.replace("..", "")
-
-    # Remove unsafe characters
-    text = _UNSAFE_FILENAME_CHARS.sub("", text)
 
     # Collapse multiple spaces (from removed chars)
     text = re.sub(r"  +", " ", text)

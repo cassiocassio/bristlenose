@@ -301,7 +301,8 @@ class TestOllamaHelpers:
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
             assert install_ollama("curl") is True
-            mock_run.assert_called_once()
+            # Download, then run — no pipe (tests/test_ollama_install.py).
+            assert [c[0][0][0] for c in mock_run.call_args_list] == ["curl", "sh"]
 
     def test_install_ollama_no_method(self) -> None:
         from bristlenose.ollama import install_ollama
@@ -572,7 +573,7 @@ class TestDoctorFixesOllama:
         # Off Windows: the download page (Windows gets winget — the next test)
         with patch("platform.system", return_value="Linux"):
             fix = get_fix("ollama_not_installed", "pip")
-        assert "ollama.ai" in fix
+        assert "ollama.com/download" in fix
         # Auto-start message instead of manual command (we can't know the start
         # command before Ollama is installed)
         assert "bristlenose will start it automatically" in fix

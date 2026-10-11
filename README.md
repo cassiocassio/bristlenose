@@ -62,7 +62,7 @@ The report includes:
 
 ## Install
 
-For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, **Gemini**, or **Local AI** (free, via [Ollama](https://ollama.ai)) — see [Getting an API key](#getting-an-api-key) below.
+For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, **Gemini**, or **Local AI** (free, via [Ollama](https://ollama.com)) — see [Getting an API key](#getting-an-api-key) below.
 
 ### macOS (desktop app) — easiest
 
@@ -174,7 +174,7 @@ bristlenose run interviews -o results/ --llm gemini
 
 Run analysis entirely on your machine using open-source models. No account, no API key, no cost.
 
-1. Install [Ollama](https://ollama.ai) (one download, no signup)
+1. Install [Ollama](https://ollama.com) (one download, no signup)
 2. Run bristlenose — it will offer to set up local AI automatically:
 
 ```bash

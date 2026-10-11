@@ -513,7 +513,7 @@ class TestOllamaNotAvailable:
         They'll see:
             LLM provider  !!   Ollama is not installed
 
-            Install Ollama from https://ollama.ai (free, no account needed).
+            Install Ollama from https://ollama.com/download (free, no account needed).
 
             After installing, bristlenose will start it automatically.
 
@@ -537,7 +537,7 @@ class TestOllamaNotAvailable:
             patch("platform.system", return_value="Linux"),
         ):
             fix = get_fix(result.fix_key)
-        assert "ollama.ai" in fix
+        assert "ollama.com/download" in fix
         assert "bristlenose will start it automatically" in fix
         assert "--llm claude" in fix
 

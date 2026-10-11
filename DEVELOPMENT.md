@@ -81,7 +81,7 @@ Copy `.env.example` to `.env`. You only need one LLM provider key:
 | `BRISTLENOSE_GOOGLE_API_KEY` | Gemini key (from aistudio.google.com) |
 | `BRISTLENOSE_WHISPER_BACKEND` | `auto`, `mlx` (Apple Silicon), `faster-whisper` (CUDA/CPU) |
 
-For Ollama (free, no key): set `BRISTLENOSE_LLM_PROVIDER=local` and install [Ollama](https://ollama.ai). See `.env.example` for all options.
+For Ollama (free, no key): set `BRISTLENOSE_LLM_PROVIDER=local` and install [Ollama](https://ollama.com). See `.env.example` for all options.
 
 ## Two render paths
 

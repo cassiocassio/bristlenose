@@ -561,7 +561,7 @@ def _setup_local_provider() -> str | None:
                 elif method == "winget":
                     install_cmd = " ".join(WINGET_INSTALL_CMD)
                 else:
-                    install_cmd = "curl -fsSL https://ollama.ai/install.sh | sh"
+                    install_cmd = "curl -fsSL https://ollama.com/install.sh | sh"
 
                 if Confirm.ask("Install Ollama now?", default=True):
                     console.print()
@@ -586,16 +586,16 @@ def _setup_local_provider() -> str | None:
                         # Installation failed — fall back to download page
                         console.print()
                         _say(MessageKind.ERROR, "Installation failed.")
-                        console.print("Install manually from: [link]https://ollama.ai[/link]")
+                        console.print("Install manually from: [link]https://ollama.com/download[/link]")
                         if Confirm.ask("Open the download page?", default=True):
-                            webbrowser.open("https://ollama.ai")
+                            webbrowser.open("https://ollama.com/download")
                         return None
                 else:
                     return None
             else:
                 # No install method available (Windows without winget, or missing tools)
                 console.print()
-                console.print("Install Ollama from: [link]https://ollama.ai[/link]")
+                console.print("Install Ollama from: [link]https://ollama.com/download[/link]")
                 console.print("[dim](Single download, no account needed)[/dim]")
                 console.print()
                 console.print("After installing, run:")
@@ -605,7 +605,7 @@ def _setup_local_provider() -> str | None:
                 console.print("Then try again.")
                 console.print()
                 if Confirm.ask("Open the download page?", default=True):
-                    webbrowser.open("https://ollama.ai")
+                    webbrowser.open("https://ollama.com/download")
                 return None
 
     if not status.has_suitable_model:

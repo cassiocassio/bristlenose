@@ -524,7 +524,7 @@ def _fix_ollama_not_installed(_method: str) -> str:
         )
     # Can't know the start command before install, so give generic advice
     return (
-        "Install Ollama from https://ollama.ai (free, no account needed).\n\n"
+        "Install Ollama from https://ollama.com/download (free, no account needed).\n\n"
         "After installing, bristlenose will start it automatically.\n\n"
         f"{hint}\n\n"
         "For interactive setup: bristlenose doctor"

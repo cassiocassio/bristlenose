@@ -298,6 +298,12 @@ def import_project(db: Session, project_dir: Path) -> Project:
     session_meta = _parse_transcript_headers(transcripts_dir)
     _resolve_redacted_sources(session_meta, output_dir / "transcripts-raw")
 
+    # Asked before anything below writes, while the DB still describes the
+    # previous import.
+    missing_output = _missing_output(
+        db, project, sc_path.exists() and tg_path.exists(), bool(session_meta),
+    )
+
     # --- Build sessions from all data sources ----------------------------
     # Collect all session_ids from quotes, transcripts, etc.
     session_ids: set[str] = set()
@@ -376,7 +382,19 @@ def import_project(db: Session, project_dir: Path) -> Project:
         _import_topic_boundaries(db, session_map, tb_path)
 
     # --- Clean up stale data from previous pipeline runs -----------------
-    _cleanup_stale_data(db, project, session_ids, now)
+    # Only when the output is whole. Cleanup reads absence as "the re-run
+    # removed it", so an output missing files it used to have would delete
+    # every quote, its hidden flag and tags, and — with the transcripts gone
+    # too — starred and edited quotes and whole sessions. Present-but-empty
+    # files are the pipeline's real answer and are honoured.
+    if missing_output:
+        logger.warning(
+            "Pipeline output is missing %s; keeping the existing quotes and "
+            "sessions instead of treating them as removed.",
+            missing_output,
+        )
+    else:
+        _cleanup_stale_data(db, project, session_ids, now)
     # A removed session can take a moderator's first appearance with it.
     from bristlenose.server.speaker_slots import renumber
 
@@ -1832,6 +1850,34 @@ def _auto_tag_from_sentiment_field(db: Session, project: Project) -> None:
             created,
             project.name,
         )
+
+
+def _missing_output(
+    db: Session,
+    project: Project,
+    quote_files_present: bool,
+    transcripts_present: bool,
+) -> str | None:
+    """Name what the output folder has lost since the last import, or None.
+
+    Lost means the DB holds data that came from it and it is no longer on
+    disk. A project imported before its first run has nothing to lose, and
+    an output that never carried transcripts is not missing them.
+    """
+    lost: list[str] = []
+    if not quote_files_present and (
+        db.query(Quote.id).filter_by(project_id=project.id).first() is not None
+    ):
+        lost.append("screen_clusters.json / theme_groups.json")
+    if not transcripts_present and (
+        db.query(TranscriptSegment.id)
+        .join(SessionModel, TranscriptSegment.session_id == SessionModel.id)
+        .filter(SessionModel.project_id == project.id)
+        .first()
+        is not None
+    ):
+        lost.append("the transcripts")
+    return " and ".join(lost) or None
 
 
 def _pinned_quote_ids(db: Session, project_id: int) -> set[int]:

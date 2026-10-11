@@ -405,6 +405,94 @@ class TestImportMissing:
         assert project.slug == "my-project"
 
 
+class TestImportIncompleteOutput:
+    """An output folder missing files it used to have is not a re-run that
+    removed everything. Clearing the intermediate folder, a partial sync or a
+    copied project must not delete the researcher's quotes and state."""
+
+    @pytest.fixture()
+    def project_dir(self, tmp_path: Path) -> Path:
+        import shutil
+
+        dest = tmp_path / "input"
+        shutil.copytree(_FIXTURE_DIR, dest)
+        return dest
+
+    @staticmethod
+    def _seed_state(db: Session, project_dir: Path) -> None:
+        import_project(db, project_dir)
+        quotes = db.query(Quote).order_by(Quote.id).all()
+        assert len(quotes) >= 3
+        db.add(QuoteState(quote_id=quotes[0].id, is_hidden=True))
+        db.add(QuoteState(quote_id=quotes[1].id, is_starred=True))
+        db.add(QuoteEdit(quote_id=quotes[2].id, edited_text="researcher fix"))
+        db.commit()
+
+    @staticmethod
+    def _intermediate(project_dir: Path) -> Path:
+        return project_dir / "bristlenose-output" / ".bristlenose" / "intermediate"
+
+    def test_absent_cluster_and_theme_files_keep_quotes(
+        self, db: Session, project_dir: Path,
+    ) -> None:
+        self._seed_state(db, project_dir)
+        quotes_before = db.query(Quote).count()
+        (self._intermediate(project_dir) / "screen_clusters.json").unlink()
+        (self._intermediate(project_dir) / "theme_groups.json").unlink()
+
+        import_project(db, project_dir)
+
+        assert db.query(Quote).count() == quotes_before
+        assert db.query(QuoteState).filter_by(is_hidden=True).count() == 1
+        assert db.query(QuoteState).filter_by(is_starred=True).count() == 1
+        assert db.query(QuoteEdit).count() == 1
+
+    def test_one_absent_file_keeps_quotes(self, db: Session, project_dir: Path) -> None:
+        self._seed_state(db, project_dir)
+        quotes_before = db.query(Quote).count()
+        (self._intermediate(project_dir) / "theme_groups.json").unlink()
+
+        import_project(db, project_dir)
+
+        assert db.query(Quote).count() == quotes_before
+        assert db.query(QuoteState).filter_by(is_hidden=True).count() == 1
+
+    def test_absent_quotes_and_transcripts_keep_sessions(
+        self, db: Session, project_dir: Path,
+    ) -> None:
+        import shutil
+
+        self._seed_state(db, project_dir)
+        sessions_before = db.query(SessionModel).count()
+        (self._intermediate(project_dir) / "screen_clusters.json").unlink()
+        (self._intermediate(project_dir) / "theme_groups.json").unlink()
+        out = project_dir / "bristlenose-output"
+        for name in ("transcripts-raw", "transcripts-cooked", "raw_transcripts",
+                     "cooked_transcripts"):
+            if (out / name).exists():
+                shutil.rmtree(out / name)
+
+        import_project(db, project_dir)
+
+        assert db.query(SessionModel).count() == sessions_before
+        assert db.query(QuoteState).filter_by(is_starred=True).count() == 1
+        assert db.query(QuoteEdit).count() == 1
+
+    def test_present_but_empty_files_still_remove_quotes(
+        self, db: Session, project_dir: Path,
+    ) -> None:
+        """Empty lists are the pipeline saying "no quotes" — that is honoured."""
+        self._seed_state(db, project_dir)
+        (self._intermediate(project_dir) / "screen_clusters.json").write_text("[]")
+        (self._intermediate(project_dir) / "theme_groups.json").write_text("[]")
+
+        import_project(db, project_dir)
+
+        # Pinned quotes (starred, edited) survive by design; the rest go.
+        assert db.query(Quote).count() == 2
+        assert db.query(QuoteState).filter_by(is_hidden=True).count() == 0
+
+
 # ---------------------------------------------------------------------------
 # Helpers for re-import tests
 # ---------------------------------------------------------------------------

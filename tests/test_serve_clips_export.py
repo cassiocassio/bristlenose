@@ -72,6 +72,20 @@ class TestStartClipExtraction:
             resp = client.post("/api/projects/1/export/clips")
             assert resp.status_code == 409
 
+    def test_cancelled_job_still_cutting_returns_409(self, client: TestClient) -> None:
+        """Its last clip would land after the new export cleared the folder."""
+        class StillCutting:
+            def done(self) -> bool:
+                return False
+
+        clips_export._jobs[1] = {"status": "cancelled", "task": StillCutting()}
+        with patch(
+            "bristlenose.server.routes.clips_export.FFmpegBackend.check_available",
+            return_value=(True, ""),
+        ):
+            resp = client.post("/api/projects/1/export/clips")
+            assert resp.status_code == 409
+
     def test_requires_auth(self) -> None:
         """Unauthenticated request gets 401."""
         clips_export._jobs.clear()
@@ -382,6 +396,89 @@ class TestExtractionWritesSubtitles:
             ))
         assert calls == []  # ffmpeg never ran, so nothing was run twice
         assert clips_export._jobs[1]["skipped_count"] == 1
+
+
+class TestReExportReplacesTheLastExport:
+    """`clips/` is reused by every export. An anonymised export must not sit
+    beside the named files an earlier export left there."""
+
+    @staticmethod
+    def _named(source: Path, start: float = 7.0) -> ClipSpec:
+        return ClipSpec(
+            quote_id=f"q-p1-{int(start)}", participant_id="p1", session_id="s1",
+            source_path=source, start=start, end=start + 13.0, raw_start=start + 3.0,
+            speaker_name="Sarah", quote_gist="i found the dashboard",
+            is_audio_only=False, is_starred=True, is_hero=False,
+        )
+
+    @staticmethod
+    def _export(clips_dir: Path, specs: list[ClipSpec], anonymise: bool,
+                fail_on: int | None = None) -> None:
+        calls = {"n": 0}
+
+        def fake_extract(self, source, output, start, end, subtitles=None, subtitle_language="und"):  # type: ignore[no-untyped-def]
+            calls["n"] += 1
+            if fail_on is not None and calls["n"] == fail_on:
+                raise RuntimeError("ffmpeg vanished")
+            output.write_bytes(b"clip")
+            return output
+
+        cues = {i: [Cue(start=0.0, end=2.0, speaker_code="p1", colour="white",
+                        lines=("Hi.",))] for i in range(len(specs))}
+        clips_export._jobs[1] = {"status": "running", "progress": 0, "total": len(specs)}
+        with patch.object(clips_export.FFmpegBackend, "extract_clip", fake_extract):
+            asyncio.run(clips_export._run_clip_extraction(
+                1, specs, clips_dir, 1, False, anonymise, cues,
+            ))
+
+    def test_anonymised_export_removes_the_earlier_named_clips(self, tmp_path: Path) -> None:
+        src = tmp_path / "src.mp4"
+        self._export(tmp_path, [self._named(src)], anonymise=False)
+        assert any("Sarah" in p.name for p in tmp_path.iterdir())
+
+        self._export(tmp_path, [self._named(src)], anonymise=True)
+
+        names = sorted(p.name for p in tmp_path.iterdir())
+        assert not [n for n in names if "Sarah" in n], names
+        manifest = json.loads((tmp_path / "clips_manifest.json").read_text(encoding="utf-8"))
+        assert manifest["anonymised"] is True
+        assert (tmp_path / manifest["clips"][0]["filename"]).exists()
+
+    def test_files_bristlenose_did_not_write_are_left_alone(self, tmp_path: Path) -> None:
+        src = tmp_path / "src.mp4"
+        self._export(tmp_path, [self._named(src)], anonymise=False)
+        mine = tmp_path / "notes for Mike.txt"
+        mine.write_text("keep me", encoding="utf-8")
+
+        self._export(tmp_path, [self._named(src)], anonymise=True)
+
+        assert mine.read_text(encoding="utf-8") == "keep me"
+
+    def test_a_failed_export_still_records_what_it_wrote(self, tmp_path: Path) -> None:
+        src = tmp_path / "src.mp4"
+        self._export(tmp_path, [self._named(src, 7.0), self._named(src, 60.0)],
+                     anonymise=False, fail_on=2)
+        assert clips_export._jobs[1]["status"] == "failed"
+        assert any("Sarah" in p.name for p in tmp_path.iterdir())
+
+        self._export(tmp_path, [self._named(src)], anonymise=True)
+
+        assert not [p.name for p in tmp_path.iterdir() if "Sarah" in p.name]
+
+    def test_a_manifest_naming_paths_outside_the_folder_is_not_followed(
+        self, tmp_path: Path,
+    ) -> None:
+        clips_dir = tmp_path / "clips"
+        clips_dir.mkdir()
+        outside = tmp_path / "precious.mp4"
+        outside.write_bytes(b"x")
+        (clips_dir / "clips_manifest.json").write_text(json.dumps({"clips": [
+            {"filename": "../precious.mp4", "subtitles": "/etc/hosts", "burned": None},
+        ]}), encoding="utf-8")
+
+        self._export(clips_dir, [self._named(tmp_path / "src.mp4")], anonymise=True)
+
+        assert outside.exists()
 
 
 class TestExportComposesSubtitles:

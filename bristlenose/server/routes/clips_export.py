@@ -460,6 +460,50 @@ async def _cut_clip(
     return result, False
 
 
+_MANIFEST_NAME = "clips_manifest.json"
+
+
+def _remove_previous_export(clips_dir: Path) -> None:
+    """Delete the files the last export's manifest says it wrote.
+
+    Every export writes into the same ``clips/``, and filenames depend on the
+    anonymise switch, so an anonymised export would otherwise sit beside the
+    earlier export's clips with participants' names in them — in the folder
+    Reveal hands over. Only files the manifest names, as plain names inside
+    this folder, are touched; anything the researcher put here stays.
+    """
+    manifest_path = clips_dir / _MANIFEST_NAME
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        entries = manifest.get("clips", [])
+    except FileNotFoundError:
+        return
+    except (OSError, ValueError, AttributeError):
+        logger.warning("Unreadable %s; earlier clips left in place", _MANIFEST_NAME,
+                       exc_info=True)
+        return
+    for entry in entries if isinstance(entries, list) else []:
+        if not isinstance(entry, dict):
+            continue
+        for key in ("filename", "subtitles", "burned"):
+            name = entry.get(key)
+            if not isinstance(name, str) or not name or name != Path(name).name \
+                    or name.startswith("."):
+                continue
+            try:
+                (clips_dir / name).unlink(missing_ok=True)
+            except OSError:
+                logger.warning("Could not remove earlier clip %s", name, exc_info=True)
+    manifest_path.unlink(missing_ok=True)
+
+
+def _write_manifest(clips_dir: Path, manifest: dict[str, Any]) -> None:
+    """Replace the manifest whole, so a reader never sees half of one."""
+    tmp = clips_dir / f".{_MANIFEST_NAME}.tmp"
+    tmp.write_text(json.dumps(manifest, indent=2, ensure_ascii=True), encoding="utf-8")
+    os.replace(tmp, clips_dir / _MANIFEST_NAME)
+
+
 async def _run_clip_extraction(
     project_id: int,
     clips: list[ClipSpec],
@@ -488,6 +532,18 @@ async def _run_clip_extraction(
 
     try:
         manifest_entries: list[dict[str, Any]] = []
+        _remove_previous_export(clips_dir)
+
+        def manifest() -> dict[str, Any]:
+            return {
+                "extracted_at": datetime.now(timezone.utc).isoformat(),
+                "total": len(clips),
+                "completed": job.get("completed_count", 0),
+                "skipped": job.get("skipped_count", 0),
+                "burned": job.get("burned_count", 0),
+                "anonymised": anonymise,
+                "clips": manifest_entries,
+            }
 
         for i, spec in enumerate(clips):
             # Stop if cancelled, or if a newer job has replaced this one
@@ -560,6 +616,9 @@ async def _run_clip_extraction(
                     "start": spec.start,
                     "end": spec.end,
                 })
+                # Recorded as it lands, so a run that dies part-way still
+                # names what it left for the next export to clear.
+                _write_manifest(clips_dir, manifest())
             else:
                 job["skipped_count"] = job.get("skipped_count", 0) + 1
                 logger.warning("Skipped clip %s (extraction failed)", filename)
@@ -572,18 +631,10 @@ async def _run_clip_extraction(
                 # name redacted to "[her]"), and nothing would say it is stale.
                 burned_path.unlink(missing_ok=True)
 
-        # Write clips_manifest.json
-        manifest = {
-            "extracted_at": datetime.now(timezone.utc).isoformat(),
-            "total": len(clips),
-            "completed": job.get("completed_count", 0),
-            "skipped": job.get("skipped_count", 0),
-            "burned": job.get("burned_count", 0),
-            "anonymised": anonymise,
-            "clips": manifest_entries,
-        }
-        manifest_path = clips_dir / "clips_manifest.json"
-        manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=True), encoding="utf-8")
+        # A job replaced mid-run (cancel, then export again) leaves the
+        # manifest to the job that replaced it.
+        if _jobs.get(project_id) is job:
+            _write_manifest(clips_dir, manifest())
 
         # A cancelled job broke out of the loop early — record that, don't
         # overwrite it with "completed". Clips written before the break stay on
@@ -669,6 +720,12 @@ async def start_clip_extraction(
     existing = _jobs.get(project_id)
     if existing and existing.get("status") in ("pending", "running"):
         raise HTTPException(status_code=409, detail="Clip extraction already in progress")
+    # A cancelled job finishes the clip it is cutting. Starting another
+    # meanwhile would let that clip land after the new export cleared the
+    # folder, unlisted — named, beside an anonymised export.
+    task = existing.get("task") if existing else None
+    if task is not None and not task.done():
+        raise HTTPException(status_code=409, detail="The last clip export is still stopping")
 
     db = _get_db(request)
     try:
@@ -750,8 +807,9 @@ async def start_clip_extraction(
             "output_dir": None,
         }
 
-        # Spawn background task
-        asyncio.create_task(
+        # Spawn background task, held by the job so the loop's weak
+        # reference cannot drop it mid-run.
+        _jobs[project_id]["task"] = asyncio.create_task(
             _run_clip_extraction(
                 project_id, specs, clips_dir, participant_count,
                 use_hours, anonymise, cues_by_clip, languages, burn,

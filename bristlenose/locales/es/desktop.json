@@ -552,19 +552,23 @@
       "science": {
         "emergentThemes": {
           "title": "Temas emergentes",
-          "text": "Los temas surgen del habla de los participantes, no de una taxonomía fija (Braun & Clarke, 2006)."
+          "text": "Los temas surgen del habla de los participantes, no de una taxonomía fija (Braun & Clarke, 2006).",
+          "link": "M\u00e9todo de an\u00e1lisis"
         },
         "sentiments": {
           "title": "Siete sentimientos",
-          "text": "Siete sentimientos, según la teoría de la valoración (Scherer) y el afecto central (Russell)."
+          "text": "Siete sentimientos, según la teoría de la valoración (Scherer) y el afecto central (Russell).",
+          "link": "Definiciones"
         },
         "signals": {
           "title": "Señales",
-          "text": "Una señal es una puntuación que combina la fuerza de las opiniones o sentimientos de los participantes, su grado de atención a un área o tema y una medida de su acuerdo."
+          "text": "Una señal es una puntuación que combina la fuerza de las opiniones o sentimientos de los participantes, su grado de atención a un área o tema y una medida de su acuerdo.",
+          "link": "C\u00f3mo se punt\u00faan"
         },
         "dignity": {
           "title": "Dignidad sin distorsión",
-          "text": "Las citas se pulen, nunca se tergiversan; la voz del participante se respeta."
+          "text": "Las citas se pulen, nunca se tergiversan; la voz del participante se respeta.",
+          "link": "Criterios de edici\u00f3n"
         }
       },
       "books": {
@@ -572,6 +576,10 @@
         "nielsen": "Diez heurísticas de usabilidad que siguen guiando cómo se detecta la fricción.",
         "braunClarke": "La guía práctica del análisis temático reflexivo — temas desde las palabras de los participantes.",
         "lazarus": "La teoría de la valoración — la emoción es cómo valoramos lo que nos pasa."
+      },
+      "bookLinks": {
+        "codebook": "El libro de c\u00f3digos",
+        "sentimentTaxonomy": "Taxonom\u00eda de sentimientos"
       },
       "tips": {
         "firstAnalysis": {

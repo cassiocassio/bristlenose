@@ -552,19 +552,23 @@
       "science": {
         "emergentThemes": {
           "title": "Emergente temaer",
-          "text": "Temaer opstår af deltagernes egne ord, ikke en fast taksonomi (Braun & Clarke, 2006)."
+          "text": "Temaer opstår af deltagernes egne ord, ikke en fast taksonomi (Braun & Clarke, 2006).",
+          "link": "Analysemetode"
         },
         "sentiments": {
           "title": "Syv stemninger",
-          "text": "Syv stemninger, forankret i appraisal-teori (Scherer) og core affect (Russell)."
+          "text": "Syv stemninger, forankret i appraisal-teori (Scherer) og core affect (Russell).",
+          "link": "Definitioner"
         },
         "signals": {
           "title": "Signaler",
-          "text": "Et signal er en score, der kombinerer styrken af deltagernes holdninger eller følelser, deres fokus på et område eller tema og et mål for deres enighed."
+          "text": "Et signal er en score, der kombinerer styrken af deltagernes holdninger eller følelser, deres fokus på et område eller tema og et mål for deres enighed.",
+          "link": "S\u00e5dan beregnes de"
         },
         "dignity": {
           "title": "Værdighed uden fordrejning",
-          "text": "Citater ryddes op, men fordrejes aldrig — deltagerens stemme respekteres."
+          "text": "Citater ryddes op, men fordrejes aldrig — deltagerens stemme respekteres.",
+          "link": "Redigeringsregler"
         }
       },
       "books": {
@@ -572,6 +576,10 @@
         "nielsen": "Ti usability-heuristikker, der stadig forankrer, hvordan faget får øje på friktion.",
         "braunClarke": "Den praktiske guide til refleksiv tematisk analyse — temaer fra deltagernes egne ord.",
         "lazarus": "Appraisal-teorien om emotion — hvordan vi vurderer det, der sker os."
+      },
+      "bookLinks": {
+        "codebook": "Kodebogen",
+        "sentimentTaxonomy": "Stemningstaksonomi"
       },
       "tips": {
         "firstAnalysis": {

@@ -552,19 +552,23 @@
       "science": {
         "emergentThemes": {
           "title": "Nousevat teemat",
-          "text": "Teemat nousevat osallistujien omista sanoista, eiv\u00e4t valmiista luokittelusta (Braun & Clarke, 2006)."
+          "text": "Teemat nousevat osallistujien omista sanoista, eiv\u00e4t valmiista luokittelusta (Braun & Clarke, 2006).",
+          "link": "Analyysimenetelm\u00e4"
         },
         "sentiments": {
           "title": "Seitsem\u00e4n tunnes\u00e4vy\u00e4",
-          "text": "Seitsem\u00e4n tunnes\u00e4vy\u00e4, jotka perustuvat arviointiteoriaan (Scherer) ja ydinaffektiin (Russell)."
+          "text": "Seitsem\u00e4n tunnes\u00e4vy\u00e4, jotka perustuvat arviointiteoriaan (Scherer) ja ydinaffektiin (Russell).",
+          "link": "M\u00e4\u00e4ritelm\u00e4t"
         },
         "signals": {
           "title": "Signaalit",
-          "text": "Signaali on luku, joka yhdist\u00e4\u00e4 osallistujien mielipiteiden tai tunteiden voimakkuuden, heid\u00e4n keskittymisens\u00e4 alueeseen tai teemaan ja mitan heid\u00e4n yksimielisyydest\u00e4\u00e4n."
+          "text": "Signaali on luku, joka yhdist\u00e4\u00e4 osallistujien mielipiteiden tai tunteiden voimakkuuden, heid\u00e4n keskittymisens\u00e4 alueeseen tai teemaan ja mitan heid\u00e4n yksimielisyydest\u00e4\u00e4n.",
+          "link": "N\u00e4in ne pisteytet\u00e4\u00e4n"
         },
         "dignity": {
           "title": "Arvokkuus v\u00e4\u00e4rist\u00e4m\u00e4tt\u00e4",
-          "text": "Sitaatit siistit\u00e4\u00e4n mutta ei koskaan v\u00e4\u00e4ristet\u00e4; osallistujan \u00e4\u00e4nt\u00e4 kunnioitetaan."
+          "text": "Sitaatit siistit\u00e4\u00e4n mutta ei koskaan v\u00e4\u00e4ristet\u00e4; osallistujan \u00e4\u00e4nt\u00e4 kunnioitetaan.",
+          "link": "Muokkauss\u00e4\u00e4nn\u00f6t"
         }
       },
       "books": {
@@ -572,6 +576,10 @@
         "nielsen": "Kymmenen k\u00e4ytett\u00e4vyysheuristiikkaa, joilla ala yh\u00e4 tunnistaa kitkan.",
         "braunClarke": "K\u00e4yt\u00e4nn\u00f6n opas refleksiiviseen temaattiseen analyysiin \u2014 teemat osallistujien omista sanoista.",
         "lazarus": "Arviointiteoria (appraisal) \u2014 tunne on tapa punnita, mit\u00e4 meille tapahtuu."
+      },
+      "bookLinks": {
+        "codebook": "Koodikirja",
+        "sentimentTaxonomy": "Tunnes\u00e4vyjen luokitus"
       },
       "tips": {
         "firstAnalysis": {

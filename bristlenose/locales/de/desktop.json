@@ -552,19 +552,23 @@
       "science": {
         "emergentThemes": {
           "title": "Emergente Themen",
-          "text": "Themen kommen aus den Worten der Teilnehmer, nicht aus einer festen Taxonomie (Braun & Clarke, 2006)."
+          "text": "Themen kommen aus den Worten der Teilnehmer, nicht aus einer festen Taxonomie (Braun & Clarke, 2006).",
+          "link": "Analysemethode"
         },
         "sentiments": {
           "title": "Sieben Stimmungen",
-          "text": "Sieben Stimmungen, gestützt auf Appraisal-Theorie (Scherer) und Kernaffekt (Russell)."
+          "text": "Sieben Stimmungen, gestützt auf Appraisal-Theorie (Scherer) und Kernaffekt (Russell).",
+          "link": "Definitionen"
         },
         "signals": {
           "title": "Signale",
-          "text": "Ein Signal ist ein Wert, der die Stärke der Meinungen oder Gefühle der Teilnehmer, ihren Fokus auf einen Bereich oder ein Thema und das Maß ihrer Übereinstimmung verbindet."
+          "text": "Ein Signal ist ein Wert, der die Stärke der Meinungen oder Gefühle der Teilnehmer, ihren Fokus auf einen Bereich oder ein Thema und das Maß ihrer Übereinstimmung verbindet.",
+          "link": "So werden sie bewertet"
         },
         "dignity": {
           "title": "Würde ohne Verzerrung",
-          "text": "Zitate werden geglättet, nie verdreht — die Stimme der Teilnehmer bleibt gewahrt."
+          "text": "Zitate werden geglättet, nie verdreht — die Stimme der Teilnehmer bleibt gewahrt.",
+          "link": "Bearbeitungsregeln"
         }
       },
       "books": {
@@ -572,6 +576,10 @@
         "nielsen": "Zehn Usability-Heuristiken, an denen das Fach Reibung bis heute erkennt.",
         "braunClarke": "Der praktische Leitfaden zur reflexiven thematischen Analyse — Themen aus den Worten der Teilnehmer.",
         "lazarus": "Appraisal-Theorie der Emotion — wie wir bewerten, was uns geschieht."
+      },
+      "bookLinks": {
+        "codebook": "Das Codebuch",
+        "sentimentTaxonomy": "Stimmungstaxonomie"
       },
       "tips": {
         "firstAnalysis": {

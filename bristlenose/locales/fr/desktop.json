@@ -552,19 +552,23 @@
       "science": {
         "emergentThemes": {
           "title": "Thèmes émergents",
-          "text": "Les thèmes émergent des mots des participants, non d’une taxonomie figée (Braun & Clarke, 2006)."
+          "text": "Les thèmes émergent des mots des participants, non d’une taxonomie figée (Braun & Clarke, 2006).",
+          "link": "M\u00e9thode d\u2019analyse"
         },
         "sentiments": {
           "title": "Sept sentiments",
-          "text": "Sept sentiments, fondés sur la théorie de l’évaluation (Scherer) et l’affect central (Russell)."
+          "text": "Sept sentiments, fondés sur la théorie de l’évaluation (Scherer) et l’affect central (Russell).",
+          "link": "D\u00e9finitions"
         },
         "signals": {
           "title": "Signaux",
-          "text": "Un signal est un score qui combine la force des opinions ou des ressentis des participants, leur degré d’attention à un sujet ou un thème, et une mesure de leur accord."
+          "text": "Un signal est un score qui combine la force des opinions ou des ressentis des participants, leur degré d’attention à un sujet ou un thème, et une mesure de leur accord.",
+          "link": "Leur calcul"
         },
         "dignity": {
           "title": "Dignité sans distorsion",
-          "text": "Les verbatim sont nettoyés, jamais déformés ; la voix du participant est respectée."
+          "text": "Les verbatim sont nettoyés, jamais déformés ; la voix du participant est respectée.",
+          "link": "R\u00e8gles d\u2019\u00e9dition"
         }
       },
       "books": {
@@ -572,6 +576,10 @@
         "nielsen": "Dix heuristiques d’utilisabilité qui guident encore la détection des frictions.",
         "braunClarke": "Le guide pratique de l’analyse thématique réflexive — des thèmes issus des mots des participants.",
         "lazarus": "La théorie de l’évaluation — l’émotion juge ce qui nous arrive."
+      },
+      "bookLinks": {
+        "codebook": "La grille de codage",
+        "sentimentTaxonomy": "Taxonomie des sentiments"
       },
       "tips": {
         "firstAnalysis": {

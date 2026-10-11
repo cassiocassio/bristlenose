@@ -552,19 +552,23 @@
       "science": {
         "emergentThemes": {
           "title": "Framvoksende temaer",
-          "text": "Temaer vokser fram av deltakernes egne ord, ikke av en fast taksonomi (Braun & Clarke, 2006)."
+          "text": "Temaer vokser fram av deltakernes egne ord, ikke av en fast taksonomi (Braun & Clarke, 2006).",
+          "link": "Analysemetode"
         },
         "sentiments": {
           "title": "Sju sentimenter",
-          "text": "Sju sentimenter, forankret i vurderingsteori (Scherer) og kjerneaffekt (Russell)."
+          "text": "Sju sentimenter, forankret i vurderingsteori (Scherer) og kjerneaffekt (Russell).",
+          "link": "Definisjoner"
         },
         "signals": {
           "title": "Signaler",
-          "text": "Et signal er en verdi som veier sammen styrken i deltakernes meninger eller følelser, hvor mye de fokuserer på et område eller tema, og et mål på hvor enige de er."
+          "text": "Et signal er en verdi som veier sammen styrken i deltakernes meninger eller følelser, hvor mye de fokuserer på et område eller tema, og et mål på hvor enige de er.",
+          "link": "Slik beregnes de"
         },
         "dignity": {
           "title": "Verdighet uten forvrengning",
-          "text": "Sitater ryddes, men forvrenges aldri; deltakerens stemme respekteres."
+          "text": "Sitater ryddes, men forvrenges aldri; deltakerens stemme respekteres.",
+          "link": "Redigeringsregler"
         }
       },
       "books": {
@@ -572,6 +576,10 @@
         "nielsen": "Ti brukskvalitetsheuristikker som fortsatt styrer hvordan faget finner friksjon.",
         "braunClarke": "Den praktiske guiden til refleksiv tematisk analyse – temaer fra deltakernes egne ord.",
         "lazarus": "Vurderingsteori (appraisal) – følelser er slik vi veier det som skjer."
+      },
+      "bookLinks": {
+        "codebook": "Kodeboken",
+        "sentimentTaxonomy": "Sentimenttaksonomi"
       },
       "tips": {
         "firstAnalysis": {

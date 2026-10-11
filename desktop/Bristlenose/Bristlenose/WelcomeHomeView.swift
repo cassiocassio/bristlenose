@@ -95,10 +95,10 @@ private func cta(_ label: String) -> String {
 }
 
 /// Resolve a slot. `fallbackLink` is the label for a pool whose slots carry no
-/// `link` of their own — the science cell has always read "Learn more →" and the
-/// configured-AI cell "More →", and neither has per-slot labels yet
-/// (design-welcome-screen.md §Cell 3 wants descriptive ones; that is new copy in
-/// 21 languages, tracked separately). It is a parameter rather than one global
+/// `link` of their own. The science slots have carried their own since 11 Oct 2026
+/// (a link reads on from its headline rather than saying "Learn more"; research in
+/// docs/research/link-text.md), so today only the configured-AI cell falls back,
+/// to "More →". It is a parameter rather than one global
 /// default because a single default silently demotes one of the two pools —
 /// which is exactly what happened when this shipped: every science slot quietly
 /// went from "Learn more →" to "More →" in all 21 locales.
@@ -157,13 +157,16 @@ private enum WelcomeContent {
         // .init(key: "tools.redactPii", href: docs + "redact-pii.html"),
     ]
 
+    // Each link lands on the section that answers it (the docs build's heading ids),
+    // so its label can promise that section rather than the whole page. A renamed
+    // heading on the website degrades to the top of the page, not a dead link.
     static let science: [SlotItem] = [
-        .init(key: "science.emergentThemes", href: docs + "research-foundations.html", illustration: .emergentThemes),
+        .init(key: "science.emergentThemes", href: docs + "research-foundations.html#the-analysis-method", illustration: .emergentThemes),
         // One "tip the hat" shelf for all the source books — BookShelfView owns its own author + line + link, synced to the front cover (no key here).
         .init(key: nil, href: "", illustration: .books),
-        .init(key: "science.sentiments", href: docs + "signals.html", illustration: .sentimentFan),
-        .init(key: "science.signals", href: docs + "signals.html", illustration: .signal),
-        .init(key: "science.dignity", href: docs + "research-foundations.html", illustration: .quote),
+        .init(key: "science.sentiments", href: docs + "signals.html#sentiment", illustration: .sentimentFan),
+        .init(key: "science.signals", href: docs + "signals.html#how-a-signal-is-measured", illustration: .signal),
+        .init(key: "science.dignity", href: docs + "research-foundations.html#the-analysis-method", illustration: .quote),
     ]
 
     // An ambient map of the docs. ORDER mirrors the website's sidebar curriculum

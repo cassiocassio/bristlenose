@@ -557,19 +557,23 @@
       "science": {
         "emergentThemes": {
           "title": "Emergent themes",
-          "text": "Themes emerge from participants’ own words, not a fixed taxonomy (Braun & Clarke, 2006)."
+          "text": "Themes emerge from participants’ own words, not a fixed taxonomy (Braun & Clarke, 2006).",
+          "link": "Analysis method"
         },
         "sentiments": {
           "title": "Seven sentiments",
-          "text": "Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell)."
+          "text": "Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell).",
+          "link": "Definitions"
         },
         "signals": {
           "title": "Signals",
-          "text": "A signal is a score that combines the strength of participants’ opinions or feelings, their level of focus on an area or theme, and a measure of their agreement."
+          "text": "A signal is a score that combines the strength of participants’ opinions or feelings, their level of focus on an area or theme, and a measure of their agreement.",
+          "link": "How they\u2019re scored"
         },
         "dignity": {
           "title": "Dignity without distortion",
-          "text": "Quotes are tidied but never twisted; the participant’s voice is honoured."
+          "text": "Quotes are tidied but never twisted; the participant’s voice is honoured.",
+          "link": "Editing rules"
         }
       },
       "books": {
@@ -577,6 +581,10 @@
         "nielsen": "Ten usability heuristics that still anchor how the field spots friction.",
         "braunClarke": "The practical guide to reflexive thematic analysis — themes from participants’ own words.",
         "lazarus": "Appraisal theory — emotion as how we weigh what happens to us."
+      },
+      "bookLinks": {
+        "codebook": "The codebook",
+        "sentimentTaxonomy": "Sentiment taxonomy"
       },
       "tips": {
         "firstAnalysis": {

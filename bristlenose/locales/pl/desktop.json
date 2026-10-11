@@ -588,19 +588,23 @@
       "science": {
         "emergentThemes": {
           "title": "Tematy emergentne",
-          "text": "Tematy wyłaniają się ze słów uczestników, a nie z ustalonej taksonomii (Braun & Clarke, 2006)."
+          "text": "Tematy wyłaniają się ze słów uczestników, a nie z ustalonej taksonomii (Braun & Clarke, 2006).",
+          "link": "Metoda analizy"
         },
         "sentiments": {
           "title": "Siedem sentymentów",
-          "text": "Siedem sentymentów, opartych na teorii oceny (Scherer) i afekcie rdzennym (Russell)."
+          "text": "Siedem sentymentów, opartych na teorii oceny (Scherer) i afekcie rdzennym (Russell).",
+          "link": "Definicje"
         },
         "signals": {
           "title": "Sygnały",
-          "text": "Sygnał to wynik łączący siłę opinii lub uczuć uczestników, stopień ich skupienia na danym obszarze lub temacie oraz miarę ich zgodności."
+          "text": "Sygnał to wynik łączący siłę opinii lub uczuć uczestników, stopień ich skupienia na danym obszarze lub temacie oraz miarę ich zgodności.",
+          "link": "Jak s\u0105 liczone"
         },
         "dignity": {
           "title": "Godność bez zniekształceń",
-          "text": "Cytaty są porządkowane, nigdy przekręcane; głos uczestnika jest szanowany."
+          "text": "Cytaty są porządkowane, nigdy przekręcane; głos uczestnika jest szanowany.",
+          "link": "Zasady redakcji"
         }
       },
       "books": {
@@ -608,6 +612,10 @@
         "nielsen": "Dziesięć heurystyk użyteczności, które wciąż uczą branżę wykrywać tarcia.",
         "braunClarke": "Praktyczny przewodnik po refleksyjnej analizie tematycznej — tematy ze słów samych uczestników.",
         "lazarus": "Teoria oceny poznawczej emocji — emocja to ważenie tego, co nas spotyka."
+      },
+      "bookLinks": {
+        "codebook": "Ksi\u0119ga kod\u00f3w",
+        "sentimentTaxonomy": "Taksonomia sentyment\u00f3w"
       },
       "tips": {
         "firstAnalysis": {

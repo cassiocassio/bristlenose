@@ -552,19 +552,23 @@
       "science": {
         "emergentThemes": {
           "title": "Framv\u00e4xande teman",
-          "text": "Teman v\u00e4xer fram ur deltagarnas egna ord, inte ur en fast taxonomi (Braun & Clarke, 2006)."
+          "text": "Teman v\u00e4xer fram ur deltagarnas egna ord, inte ur en fast taxonomi (Braun & Clarke, 2006).",
+          "link": "Analysmetod"
         },
         "sentiments": {
           "title": "Sju sentiment",
-          "text": "Sju sentiment, f\u00f6rankrade i appraisalteorin (Scherer) och k\u00e4rnaffekt (Russell)."
+          "text": "Sju sentiment, f\u00f6rankrade i appraisalteorin (Scherer) och k\u00e4rnaffekt (Russell).",
+          "link": "Definitioner"
         },
         "signals": {
           "title": "Signaler",
-          "text": "En signal \u00e4r ett v\u00e4rde som v\u00e4ger samman styrkan i deltagarnas \u00e5sikter eller k\u00e4nslor, hur mycket de fokuserar p\u00e5 ett omr\u00e5de eller tema, och ett m\u00e5tt p\u00e5 deras samst\u00e4mmighet."
+          "text": "En signal \u00e4r ett v\u00e4rde som v\u00e4ger samman styrkan i deltagarnas \u00e5sikter eller k\u00e4nslor, hur mycket de fokuserar p\u00e5 ett omr\u00e5de eller tema, och ett m\u00e5tt p\u00e5 deras samst\u00e4mmighet.",
+          "link": "S\u00e5 ber\u00e4knas de"
         },
         "dignity": {
           "title": "V\u00e4rdighet utan f\u00f6rvr\u00e4ngning",
-          "text": "Citat st\u00e4das men f\u00f6rvr\u00e4ngs aldrig; deltagarens r\u00f6st respekteras."
+          "text": "Citat st\u00e4das men f\u00f6rvr\u00e4ngs aldrig; deltagarens r\u00f6st respekteras.",
+          "link": "Redigeringsregler"
         }
       },
       "books": {
@@ -572,6 +576,10 @@
         "nielsen": "Tio heuristiker f\u00f6r anv\u00e4ndbarhet som fortfarande styr hur f\u00e4ltet hittar friktion.",
         "braunClarke": "Den praktiska handboken i reflexiv tematisk analys \u2013 teman ur deltagarnas egna ord.",
         "lazarus": "V\u00e4rderingsteorin (appraisal) \u2013 k\u00e4nslor som hur vi v\u00e4ger det som sker."
+      },
+      "bookLinks": {
+        "codebook": "Kodboken",
+        "sentimentTaxonomy": "Sentimenttaxonomi"
       },
       "tips": {
         "firstAnalysis": {

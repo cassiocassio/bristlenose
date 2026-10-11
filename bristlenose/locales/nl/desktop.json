@@ -552,19 +552,23 @@
       "science": {
         "emergentThemes": {
           "title": "Emergente thema's",
-          "text": "Thema's komen uit de eigen woorden van deelnemers, niet uit een vaste taxonomie (Braun & Clarke, 2006)."
+          "text": "Thema's komen uit de eigen woorden van deelnemers, niet uit een vaste taxonomie (Braun & Clarke, 2006).",
+          "link": "Analysemethode"
         },
         "sentiments": {
           "title": "Zeven sentimenten",
-          "text": "Zeven sentimenten, gegrond in appraisaltheorie (Scherer) en core affect (Russell)."
+          "text": "Zeven sentimenten, gegrond in appraisaltheorie (Scherer) en core affect (Russell).",
+          "link": "Definities"
         },
         "signals": {
           "title": "Signalen",
-          "text": "Een signaal is een score die de kracht van meningen of gevoelens van deelnemers, hun focus op een gebied of thema en de mate van overeenstemming combineert."
+          "text": "Een signaal is een score die de kracht van meningen of gevoelens van deelnemers, hun focus op een gebied of thema en de mate van overeenstemming combineert.",
+          "link": "Zo worden ze berekend"
         },
         "dignity": {
           "title": "Waardigheid zonder vertekening",
-          "text": "Citaten worden opgeschoond, nooit verdraaid — de stem van de deelnemer wordt geëerd."
+          "text": "Citaten worden opgeschoond, nooit verdraaid — de stem van de deelnemer wordt geëerd.",
+          "link": "Redactieregels"
         }
       },
       "books": {
@@ -572,6 +576,10 @@
         "nielsen": "Tien usability-heuristieken die nog altijd bepalen hoe het vak frictie herkent.",
         "braunClarke": "De praktische gids voor reflexieve thematische analyse — thema's uit de eigen woorden van deelnemers.",
         "lazarus": "Appraisaltheorie van emotie — hoe we wegen wat ons overkomt."
+      },
+      "bookLinks": {
+        "codebook": "Het codeboek",
+        "sentimentTaxonomy": "Sentimenttaxonomie"
       },
       "tips": {
         "firstAnalysis": {

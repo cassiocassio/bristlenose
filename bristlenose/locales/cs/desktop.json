@@ -587,19 +587,23 @@
       "science": {
         "emergentThemes": {
           "title": "Emergentn\u00ed t\u00e9mata",
-          "text": "T\u00e9mata vyr\u016fstaj\u00ed z vlastn\u00edch slov \u00fa\u010dastn\u00edk\u016f, ne z pevn\u00e9 taxonomie (Braun & Clarke, 2006)."
+          "text": "T\u00e9mata vyr\u016fstaj\u00ed z vlastn\u00edch slov \u00fa\u010dastn\u00edk\u016f, ne z pevn\u00e9 taxonomie (Braun & Clarke, 2006).",
+          "link": "Analytick\u00e1 metoda"
         },
         "sentiments": {
           "title": "Sedm n\u00e1lad",
-          "text": "Sedm n\u00e1lad, ukotven\u00fdch v teorii hodnocen\u00ed (Scherer) a j\u00e1drov\u00e9m afektu (Russell)."
+          "text": "Sedm n\u00e1lad, ukotven\u00fdch v teorii hodnocen\u00ed (Scherer) a j\u00e1drov\u00e9m afektu (Russell).",
+          "link": "Definice"
         },
         "signals": {
           "title": "Sign\u00e1ly",
-          "text": "Sign\u00e1l je sk\u00f3re, kter\u00e9 spojuje s\u00edlu n\u00e1zor\u016f \u010di pocit\u016f \u00fa\u010dastn\u00edk\u016f, m\u00edru jejich soust\u0159ed\u011bn\u00ed na oblast nebo t\u00e9ma a m\u00edru jejich shody."
+          "text": "Sign\u00e1l je sk\u00f3re, kter\u00e9 spojuje s\u00edlu n\u00e1zor\u016f \u010di pocit\u016f \u00fa\u010dastn\u00edk\u016f, m\u00edru jejich soust\u0159ed\u011bn\u00ed na oblast nebo t\u00e9ma a m\u00edru jejich shody.",
+          "link": "Jak se hodnot\u00ed"
         },
         "dignity": {
           "title": "D\u016fstojnost bez zkreslen\u00ed",
-          "text": "Cit\u00e1ty jsou upraven\u00e9, nikdy p\u0159ekroucen\u00e9; hlas \u00fa\u010dastn\u00edka je ct\u011bn."
+          "text": "Cit\u00e1ty jsou upraven\u00e9, nikdy p\u0159ekroucen\u00e9; hlas \u00fa\u010dastn\u00edka je ct\u011bn.",
+          "link": "Pravidla \u00faprav"
         }
       },
       "books": {
@@ -607,6 +611,10 @@
         "nielsen": "Deset heuristik pou\u017eitelnosti, podle nich\u017e obor dodnes hled\u00e1 t\u0159en\u00ed.",
         "braunClarke": "Praktick\u00fd pr\u016fvodce reflexivn\u00ed tematickou anal\u00fdzou \u2014 t\u00e9mata z vlastn\u00edch slov \u00fa\u010dastn\u00edk\u016f.",
         "lazarus": "Teorie kognitivn\u00edho hodnocen\u00ed \u2014 emoce jako v\u00e1\u017een\u00ed toho, co se n\u00e1m d\u011bje."
+      },
+      "bookLinks": {
+        "codebook": "Kniha k\u00f3d\u016f",
+        "sentimentTaxonomy": "Taxonomie n\u00e1lad"
       },
       "tips": {
         "firstAnalysis": {

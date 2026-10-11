@@ -552,19 +552,23 @@
       "science": {
         "emergentThemes": {
           "title": "Temes emergents",
-          "text": "Els temes emergeixen de les paraules dels participants, no d'una taxonomia fixa (Braun & Clarke, 2006)."
+          "text": "Els temes emergeixen de les paraules dels participants, no d'una taxonomia fixa (Braun & Clarke, 2006).",
+          "link": "M\u00e8tode d\u2019an\u00e0lisi"
         },
         "sentiments": {
           "title": "Set sentiments",
-          "text": "Set sentiments, fonamentats en la teoria de l'avaluació (Scherer) i l'afecte nuclear (Russell)."
+          "text": "Set sentiments, fonamentats en la teoria de l'avaluació (Scherer) i l'afecte nuclear (Russell).",
+          "link": "Definicions"
         },
         "signals": {
           "title": "Senyals",
-          "text": "Un senyal és una puntuació que combina la força de les opinions o els sentiments dels participants, el seu grau d'atenció en una àrea o un tema, i una mesura del seu acord."
+          "text": "Un senyal és una puntuació que combina la força de les opinions o els sentiments dels participants, el seu grau d'atenció en una àrea o un tema, i una mesura del seu acord.",
+          "link": "Com es puntuen"
         },
         "dignity": {
           "title": "Dignitat sense distorsió",
-          "text": "Les cites es poleixen, mai es tergiversen; la veu del participant es respecta."
+          "text": "Les cites es poleixen, mai es tergiversen; la veu del participant es respecta.",
+          "link": "Criteris d\u2019edici\u00f3"
         }
       },
       "books": {
@@ -572,6 +576,10 @@
         "nielsen": "Deu heurístiques d'usabilitat que encara guien com el camp detecta les friccions.",
         "braunClarke": "La guia pràctica de l'anàlisi temàtica reflexiva — temes a partir de les paraules dels participants.",
         "lazarus": "La teoria de l'avaluació cognitiva — l'emoció jutja el que ens passa."
+      },
+      "bookLinks": {
+        "codebook": "El llibre de codis",
+        "sentimentTaxonomy": "Taxonomia de sentiments"
       },
       "tips": {
         "firstAnalysis": {

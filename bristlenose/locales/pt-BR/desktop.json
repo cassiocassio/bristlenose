@@ -552,19 +552,23 @@
       "science": {
         "emergentThemes": {
           "title": "Temas emergentes",
-          "text": "Os temas emergem da fala dos participantes, não de uma taxonomia fixa (Braun & Clarke, 2006)."
+          "text": "Os temas emergem da fala dos participantes, não de uma taxonomia fixa (Braun & Clarke, 2006).",
+          "link": "M\u00e9todo de an\u00e1lise"
         },
         "sentiments": {
           "title": "Sete sentimentos",
-          "text": "Sete sentimentos, com base na teoria da avaliação (Scherer) e no afeto central (Russell)."
+          "text": "Sete sentimentos, com base na teoria da avaliação (Scherer) e no afeto central (Russell).",
+          "link": "Defini\u00e7\u00f5es"
         },
         "signals": {
           "title": "Sinais",
-          "text": "Um sinal é uma pontuação que combina a força das opiniões ou sentimentos dos participantes, o quanto se concentram em uma área ou tema e uma medida de sua concordância."
+          "text": "Um sinal é uma pontuação que combina a força das opiniões ou sentimentos dos participantes, o quanto se concentram em uma área ou tema e uma medida de sua concordância.",
+          "link": "Como s\u00e3o pontuados"
         },
         "dignity": {
           "title": "Dignidade sem distorção",
-          "text": "As citações são polidas, nunca distorcidas; a voz do participante é respeitada."
+          "text": "As citações são polidas, nunca distorcidas; a voz do participante é respeitada.",
+          "link": "Regras de edi\u00e7\u00e3o"
         }
       },
       "books": {
@@ -572,6 +576,10 @@
         "nielsen": "Dez heurísticas de usabilidade que ainda orientam como a área detecta atrito.",
         "braunClarke": "O guia prático da análise temática reflexiva — temas a partir das palavras dos participantes.",
         "lazarus": "Teoria da avaliação cognitiva — emoção é como pesamos o que nos acontece."
+      },
+      "bookLinks": {
+        "codebook": "O livro de c\u00f3digos",
+        "sentimentTaxonomy": "Taxonomia de sentimentos"
       },
       "tips": {
         "firstAnalysis": {

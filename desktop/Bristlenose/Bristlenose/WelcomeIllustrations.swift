@@ -232,7 +232,9 @@ struct BookShelfView: View {
     // edition with its title drawn into the design, so a translated title over
     // English artwork is incoherent. `cover(_:)` resolves them as a pair.
     private struct Book {
-        let author, titleKey, line, href: String
+        /// `linkKey` names what the link adds to the author above it, not "Learn more".
+        /// Braun & Clarke share the Emergent themes slot's key: same place, same words.
+        let author, titleKey, line, href, linkKey: String
         let spine: UInt
         var image: String? = nil
     }
@@ -262,16 +264,20 @@ struct BookShelfView: View {
     private let books: [Book] = [
         .init(author: "Don Norman", titleKey: "desktop.welcome.examples.bookTitleNorman",
               line: "norman",
-              href: "https://bristlenose.app/docs/codebook-frameworks.html", spine: 0x334155, image: "welcome-book-norman"),
+              href: "https://bristlenose.app/docs/codebook-frameworks.html#design-and-usability-frameworks",
+              linkKey: "desktop.welcome.home.bookLinks.codebook", spine: 0x334155, image: "welcome-book-norman"),
         .init(author: "Jakob Nielsen", titleKey: "desktop.welcome.examples.bookTitleNielsen",
               line: "nielsen",
-              href: "https://bristlenose.app/docs/codebook-frameworks.html", spine: 0x0f5c9e, image: "welcome-book-nielsen"),
+              href: "https://bristlenose.app/docs/codebook-frameworks.html#design-and-usability-frameworks",
+              linkKey: "desktop.welcome.home.bookLinks.codebook", spine: 0x0f5c9e, image: "welcome-book-nielsen"),
         .init(author: "Braun & Clarke", titleKey: "desktop.welcome.examples.bookTitleBraunClarke",
               line: "braunClarke",
-              href: "https://bristlenose.app/docs/research-foundations.html", spine: 0x7c3aed, image: "welcome-book-braun-clarke"),
+              href: "https://bristlenose.app/docs/research-foundations.html#the-analysis-method",
+              linkKey: "desktop.welcome.home.science.emergentThemes.link", spine: 0x7c3aed, image: "welcome-book-braun-clarke"),
         .init(author: "Richard Lazarus", titleKey: "desktop.welcome.examples.bookTitleLazarus",
               line: "lazarus",
-              href: "https://bristlenose.app/docs/signals.html", spine: 0xb45309, image: "welcome-book-lazarus"),
+              href: "https://bristlenose.app/docs/research-foundations.html#the-sentiment-taxonomy",
+              linkKey: "desktop.welcome.home.bookLinks.sentimentTaxonomy", spine: 0xb45309, image: "welcome-book-lazarus"),
     ]
     private let cardW: CGFloat = 106     // 80×114 grown ~33% to use more of the cell
     private let cardH: CGFloat = 152
@@ -290,7 +296,7 @@ struct BookShelfView: View {
         let current = books[min(front, n - 1)]
         return VStack(alignment: .leading, spacing: 6) {
             caption(current)
-            // The curtain falls on the FAN alone. The caption and the Learn-more link
+            // The curtain falls on the FAN alone. The caption and the link
             // are content, not animation — a live link resting at 70% is a contrast
             // regression, and the caption already cross-fades on its own `.id`.
             //
@@ -300,7 +306,7 @@ struct BookShelfView: View {
             // shelf that read as a cross-fade stuck halfway. Flatten, then fade.
             coverFan.compositingGroup().opacity(curtain)
             if let url = URL(string: current.href) {
-                Link(i18n.t("desktop.welcome.home.learnMore") + " \u{2192}", destination: url)
+                Link(i18n.t(current.linkKey) + " \u{2192}", destination: url)
                     .font(.callout)
                     .id("lnk-\(front)")
                     .transition(.opacity)

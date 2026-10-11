@@ -552,19 +552,23 @@
       "science": {
         "emergentThemes": {
           "title": "Temi emergenti",
-          "text": "I temi emergono dalle parole stesse dei partecipanti, non da una tassonomia fissa (Braun & Clarke, 2006)."
+          "text": "I temi emergono dalle parole stesse dei partecipanti, non da una tassonomia fissa (Braun & Clarke, 2006).",
+          "link": "Metodo di analisi"
         },
         "sentiments": {
           "title": "Sette sentiment",
-          "text": "Sette sentiment, fondati sulla teoria dell'appraisal (Scherer) e sul core affect (Russell)."
+          "text": "Sette sentiment, fondati sulla teoria dell'appraisal (Scherer) e sul core affect (Russell).",
+          "link": "Definizioni"
         },
         "signals": {
           "title": "Segnali",
-          "text": "Un segnale è un punteggio che combina l'intensità delle opinioni o delle emozioni dei partecipanti, il loro grado di attenzione a un'area o a un tema e una misura del loro accordo."
+          "text": "Un segnale è un punteggio che combina l'intensità delle opinioni o delle emozioni dei partecipanti, il loro grado di attenzione a un'area o a un tema e una misura del loro accordo.",
+          "link": "Come si calcolano"
         },
         "dignity": {
           "title": "Dignità senza distorsione",
-          "text": "Le citazioni vengono ripulite, mai distorte; la voce del partecipante è rispettata."
+          "text": "Le citazioni vengono ripulite, mai distorte; la voce del partecipante è rispettata.",
+          "link": "Regole di editing"
         }
       },
       "books": {
@@ -572,6 +576,10 @@
         "nielsen": "Dieci euristiche di usabilità che ancora orientano l'individuazione degli attriti.",
         "braunClarke": "La guida pratica all'analisi tematica riflessiva — i temi dalle parole stesse dei partecipanti.",
         "lazarus": "La teoria dell'appraisal — l'emozione valuta ciò che ci accade."
+      },
+      "bookLinks": {
+        "codebook": "Il libro dei codici",
+        "sentimentTaxonomy": "Tassonomia dei sentiment"
       },
       "tips": {
         "firstAnalysis": {

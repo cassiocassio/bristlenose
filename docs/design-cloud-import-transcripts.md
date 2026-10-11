@@ -981,6 +981,12 @@ The downloader sets no file dates, so an imported meeting is dated the day it wa
 (`s01_ingest.py` reads birthtime). Set the files' creation and modification dates to the meeting start
 (S, Swift).
 
+> **✅ Resolved differently, 11 Oct 2026** (`git log -S resolve_session_start`): ingest now reads the
+> meeting start from the download stamp the importer already writes into the filename
+> (`2026-09-03 1000 — Title`), so no file dates need setting — see `docs/design-timezones.md` § 5.9.
+> The ordering hazard above is handled the same way: a project with a session registry (0b) is
+> numbered by start, and a project analysed before 0b keeps its old creation-time order.
+
 ---
 
 ## 6. Tests

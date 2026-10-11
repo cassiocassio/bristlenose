@@ -262,6 +262,12 @@ disagrees on the separator ("Today at 16:59"). The popover adopts the **TS**
 contract. No cross-language fixture — this is independent local rendering, not a
 wire contract, so a mismatch is cosmetic; literal Swift cases suffice.
 
+> **✅ Fixed 11 Oct 2026** — `session_date` is now the session's resolved start
+> (`bristlenose/utils/session_start.py`; `docs/design-timezones.md` § 5.9) and
+> reaches both surfaces UTC-marked, so it renders on the viewer's clock. The
+> paragraph below is the record of the defect. Still true: a transcript-only
+> session's date-only header is a fabricated (now local) midnight — § 5.10.
+
 **The underlying value is wrong and is tracked as a must-fix** (planning board,
 §2 Broken · Must). `session_date` is the file's birth time — when the recording
 was *saved*, at the end of the session. The drift equals the session duration,

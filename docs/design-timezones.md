@@ -216,7 +216,7 @@ sites were the duration probe and a `stream=codec_type` query;
 
 **3. The filename.** Zoom, Teams and macOS Screen Recording all write the start
 time into the name — and **Python already parses these patterns and then
-discards the timestamp**. `_normalise_stem` (`s01_ingest.py:393`) strips the
+discards the timestamp** _(until 11 Oct 2026 — `utils/session_start.py` now keeps it; § 5.9)_. `_normalise_stem` (`s01_ingest.py:393`) strips the
 date/time *in order to group* files into sessions (`_TEAMS_SUFFIX_RE`,
 `_ZOOM_CLOUD_TAIL_RE`, `_ZOOM_LOCAL_DIR_RE`, `_GMEET_TAIL_RE`). The best
 available local signal is recognised, used for matching, and thrown away.
@@ -406,7 +406,7 @@ assumption stands until a second writer family is measured (§ 5.8)._
 
 ### 5.1a — What the capture does NOT do
 
-The preconditions § 5.4's resolver will read from this doc, in one place:
+The preconditions § 5.4's resolver reads (since 11 Oct 2026), in one place:
 
 - **Not persisted.** `container_meta` lives on `InputFile` in memory for the run; the database column (`server/models.py:220`) still drops the offset. § 5.3 is the schema step.
 - **Not surfaced.** `bristlenose status` shows nothing of it — a CLI surface with man-page and README obligations, held until § 5.4 gives it something to say.
@@ -423,6 +423,8 @@ consent-delay sign test only informs; § 5.5 depends on § 5.3; § 5.6 is gated 
 § 4, which is the one that decides whose time is "the" time._
 
 ### 5.2 Classify the writer
+
+_Partly done 11 Oct 2026 — the measured rows are in § 5.9's table and `_END_WRITERS`; the owed rows are § 5.10 item 4. The plan below stands as written._
 
 The single question that decides whether `birthtime − duration` applies is
 *does this writer create the file at the start or at the end?* — and the
@@ -469,6 +471,8 @@ must be made before the column exists.
 
 ### 5.4 The resolver — precedence, tolerance, and disagreement
 
+_✅ Landed 11 Oct 2026, with four departures recorded in § 5.9 (filenames above the container; unzoned local names converted; container sanity checks; `session_date` rewritten in place). The plan below is the original._
+
 One function, one session in, one `(instant, offset, source, conflict)` out.
 Precedence, highest first:
 
@@ -500,6 +504,8 @@ after "are you happy for me to start recording?"). Log it; do not auto-correct.
 
 ### 5.5 Backfill
 
+_Superseded 11 Oct 2026: a re-run is the backfill (§ 5.9) — ingest re-resolves, the registry keeps the best start, the importer refreshes the database. No separate command was built._
+
 `bristlenose backfill-start-times <project>` — re-probe every session's media
 on disk, run 5.4, write 5.3's columns, and print one line per session naming the
 source that won and any conflict. **Dry-run by default, `--apply` to write**,
@@ -507,6 +513,8 @@ same shape as `experiments/quote-stability/repair_cached_boundaries.py`. Session
 whose media is gone get `source = none` and are listed, not skipped silently.
 
 ### 5.6 Display — after, not before, the decision in § 4
+
+_Half landed 11 Oct 2026: the instant is right and renders in the viewer's zone on all three surfaces (§ 5.9). The marker for a differing or unknown zone is still owed (§ 5.10)._
 
 Until § 4 is decided, one rule that is defensible under every option: render the
 UTC instant in the **viewer's** zone (what the SPA and Swift already do, now

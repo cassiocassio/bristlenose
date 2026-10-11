@@ -1,13 +1,14 @@
 ---
 status: partial
-last-trued: 2026-09-12
-trued-against: HEAD@main on 2026-09-12
+last-trued: 2026-10-11
+trued-against: HEAD@main on 2026-10-11
 ---
 
-> **Truing status:** Partial — the findings and their outcomes are current (trued 2026-09-12, same day as the fixes); the pre-fix measurement tables in § 4 and the § 3b surface matrix are retained as the baseline the fixes are measured against. § 3c and Tier 2 items are correctly open. See changelog.
+> **Truing status:** Partial — trued 2026-10-11 after the start-time resolver landed (`git log -S resolve_session_start`). **H9's wire/render half is closed:** the API marks `session_date` UTC and all three surfaces render it on the viewer's clock (`docs/design-timezones.md` § 5.9). H9's DB-column half, H10's pins, H12 and the § 4 display-frame decision stay open (§ 5.10 there). The § 3b start-time row and the H9 measurement are kept, labelled pre-11-Oct, as the baseline the fix is measured against. Line anchors outside the start-time sections were not re-pointed in this pass. See changelog.
 
 ## Changelog
 
+- _2026-10-11_ — trued after the start-time resolver (commit "session start: when it began, not when its file was saved"): H9 split into a closed wire/render half and an open column half; § 2, § 3b, T0-7, the "leave alone" list and the T0-7 deferral note no longer claim a naive wire; § 3c's naive and date-only rows record their decisions; London/New York zone tests now exist (`tests/test_session_start_surfaces.py`), so § 5's and § 6's "untested" lists are narrower than they read — not re-edited in this pass. Also 11 Oct: `format_timecode_ms` deleted ("timecodes: delete format_timecode_ms…").
 - _2026-09-12_ — trued up after the fixes landed: preamble no longer says nothing is fixed; finding count twelve; § 3a parse table shows the decided outcomes; § 3b duration cell and H7's table gain a post-fix line; H10/H12/§ 5 counts moved 15→21 and the zero fork stated as catalogued-but-unasserted; § 5's "untested" list reduced to `format_timecode_ms` and § 3c; new "Landed guard-rails" subsection; anchors re-pointed (`miro_board.py:129-133`, `pipeline.py:2904`, `dashboard.py:503`, `clips_export.py:370-371`); `_iso_lenient` named as the historical name of `parse_iso_lenient`; T0-6 marker and body reconciled. Anchors: commits "time: tier 0 and tier 1 of the audit", "time: review fixes — one probe, a parser that cannot crash a scan, and tests that can fail".
 
 # Time in Bristlenose — three data types, their ranges, and an end-to-end audit
@@ -89,8 +90,9 @@ corpus already contains a 99.7-minute session.
 
 **Start time.** Any time of day, any date, and — because the maintainer is in
 London — **both sides of a DST boundary**. A session started at 14:23 BST is
-13:23 UTC. Which of those the researcher sees is currently surface-dependent
-(H9).
+13:23 UTC. Which of those the researcher sees was surface-dependent until
+11 Oct 2026 (H9); since then every surface shows the viewer's clock (§ 5.9 of
+`design-timezones.md`).
 
 ### The elide-the-hour convention — a decided house rule, not an accident
 
@@ -212,8 +214,8 @@ corpus; each is an instance of the requirement, not its boundary.
 |---|---|
 | `2026-05-09T14:23:00+01:00` | BST — the common London case; must stay 13:23 UTC |
 | `2026-05-09T14:23:00Z` | explicit UTC |
-| `2026-05-09T14:23:00` | naive — must decide *and document* whether this means local or UTC |
-| `2026-05-09` | legacy date-only |
+| `2026-05-09T14:23:00` | naive — must decide *and document* whether this means local or UTC. _Decided: UTC (`parse_header_datetime`)._ |
+| `2026-05-09` | legacy date-only. _Decided 11 Oct 2026: local midnight, so the day stays the day (`design-timezones.md` § 5.9); still a fabricated time._ |
 | `2026-03-29T01:30:00+00:00` | inside the UK DST spring-forward gap — this wall time does not exist |
 | `2026-10-25T01:30:00+01:00` / `+00:00` | the repeated hour — same wall time, two instants |
 | midnight / 23:59 | day-boundary rollover for "Today"/"Yesterday" |
@@ -241,7 +243,8 @@ follow the same rules, and is the join between Swift and the webview invisible?*
 |---|---|---|---|---|---|---|
 | **position** | `03m45` · `0h03m45` | `05:30` · `1:12:45` | — *(none; Mac positions go through the SPA)* | — | `05:30` · `1:12:45` | float seconds |
 | **duration** | — | `26m` · `1h 3m` · `—` at 0 | `26m` · `1h 3m` · `0m` at 0 | `3m 41s` · `0.1s` | `26m` · `1h 3m` (one helper since T0-4) | float + `duration_human` string |
-| **start time** | — | `Today, 14:23` **(viewer-local)** | `Today, 14:23` **(viewer-local)** | — | `Today at 16:59` **(UTC)** | **naive** ISO, no offset |
+| **start time** _(pre-11 Oct 2026)_ | — | `Today, 14:23` **(viewer-local)** | `Today, 14:23` **(viewer-local)** | — | `Today at 16:59` **(UTC)** | **naive** ISO, no offset |
+| **start time** _(since 11 Oct 2026)_ | — | viewer-local, right instant | viewer-local, right instant | — | `Today at …` local | UTC-marked ISO (`+00:00`, `iso_utc`) |
 
 **Position — different notation, same rule.** Filenames use `03m45` rather than
 `05:30` because a colon is hostile in a filename and sorts badly in a listing;
@@ -257,7 +260,7 @@ aggregate subtitle, where 0 is a real total). That fork is written down in
 `format.ts` and is correct. The CLI's `3m 41s` is a different context
 (sub-second stage timing), not the same format.
 
-**Start time — the surfaces agree; the wire is where it goes wrong.**
+**Start time — the surfaces agree; the wire is where it went wrong** _(until 11 Oct 2026, when `iso_utc` marked it UTC — the paragraph and crossings table below are the pre-fix record)_.
 `SessionsFinderDate.swift` is an explicit, heavily-reasoned mirror of the
 TypeScript contract — same `en*→en_GB` mapping, same forced 24-hour clock, same
 `DateComponents`-based Today/Yesterday, same em-dash for absent. **The Swift ⇄
@@ -466,6 +469,8 @@ only when the value is naive. So the CLI resume path and the server import path
 can derive **different instants from one file**.
 
 ### H9 — REFRAMED: the timezone is destroyed at the DB column, not at a surface
+
+> **Wire/render half ✅ CLOSED 11 Oct 2026** — `iso_utc` marks the value UTC at `/sessions`, `/dashboard` and MCP; `format_finder_date` converts to local; the importer refreshes the start on every import; and "upstream of all of it" below — the value being `st_birthtime` — is replaced by the start resolver, with birthtime as its last rung (`docs/design-timezones.md` § 5.9). **Column half still open:** `server/models.py`'s `session_date` has no `timezone=True` (§ 5.10 item 2 there). The finding below is the pre-fix record.
 
 *Raised as "Python renders UTC, TypeScript renders local"; that is true but it is
 the symptom, and naming it as a rendering fork points the fix at the wrong layer.*
@@ -677,7 +682,8 @@ cross an hour. Fix is `divmod` into `h`/`m`/`s`. Landed the same day
   branch needs an injectable `now`, which TS lacks — add a `now` parameter to
   `formatFinderDate` first, or leave that branch catalogued. Record Python's
   `Today at 16:59` separator in `divergences` (H10). Inputs must be **naive**
-  strings to match today's wire (`design-timezones.md` § 1).
+  strings to match today's wire (`design-timezones.md` § 1). _(Since 11 Oct 2026
+  the wire is UTC-marked, so cases can use aware inputs.)_
 
 **T0-8 ✅ · Round-trip property test** — `tests/test_timecode_roundtrip.py`.
 - For `s in range(0, 360000, 7)`: `int(parse_timecode(format_timecode(s))) == s`,
@@ -728,7 +734,9 @@ cross an hour. Fix is `divmod` into `h`/`m`/`s`. Landed the same day
   purpose.
 - `format_clip_timecode` — H6 withdrawn; sound by construction.
 - The Swift/webview start-time rendering — consistent with each other; the
-  defect is upstream (`design-timezones.md` § 1) and belongs to Tier 2.
+  defect is upstream (`design-timezones.md` § 1) and belongs to Tier 2. _✅ That
+  Tier 2 slice landed 11 Oct 2026 (§ 5.9 there); neither surface needed a code
+  change._
 - `ProjectRow.formatBareDate`'s verbatim copy in `SidebarSubtitleText.swift` —
   a Swift-internal duplicate of a *different* datum (project activity). Fold
   into a Swift tidy-up, not this plan.
@@ -764,4 +772,6 @@ injectable `now` that `formatFinderDate` (TS) lacks — an API change on a
 function three components call. And any case written now must use a **naive**
 input to match the current wire, which Tier 2 § 5.3 changes. Pinning twice is
 worse than pinning once after the wire settles. Recorded here so it is not
-mistaken for forgotten.
+mistaken for forgotten. _(11 Oct 2026: the wire settled without § 5.3 —
+`iso_utc` marks it UTC — so the naive-input reason is gone; only the TS `now`
+injection still blocks the relative branch.)_

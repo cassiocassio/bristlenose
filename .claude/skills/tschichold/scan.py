@@ -33,22 +33,39 @@ ROOT = _site_root()
 DOCS, CONTENT = ROOT / "docs-src", ROOT / "content"
 
 
-def _blank(m: re.Match) -> str:
-    """Replace a match with spaces, keeping its newlines so line numbers hold."""
-    return re.sub(r"[^\n]", " ", m.group(0))
+# Blanked text keeps only its newlines, so line numbers hold; columns don't
+# matter. Blanking with spaces read "coding. <mark>Try" and "3. `CODE`" as double
+# spaces, so code becomes one placeholder character (the words either side of
+# it don't run together) and inline tags vanish.
+CODE = "\x1a"
+INLINE_TAGS = ("a|abbr|b|bdi|bdo|cite|data|del|dfn|em|i|ins|mark|q|s|small|span|"
+               "strong|sub|sup|time|u|wbr|font|label")
+
+
+def _nl(m: re.Match) -> str:
+    return "\n" * m.group(0).count("\n")
+
+
+def _code(m: re.Match) -> str:
+    return CODE + _nl(m)
+
+
+def _tag(m: re.Match) -> str:
+    inline = re.match(rf"</?(?:{INLINE_TAGS})\b", m.group(0), re.I)
+    return _nl(m) if inline else CODE + _nl(m)
 
 
 def prose_md(text: str) -> str:
-    text = re.sub(r"^(```|~~~).*?^\1", _blank, text, flags=re.S | re.M)
-    text = re.sub(r"`[^`\n]+`", _blank, text)
-    text = re.sub(r"\]\([^)]*\)", _blank, text)          # link targets
-    return re.sub(r"<[^>\n]+>", _blank, text)            # inline HTML tags
+    text = re.sub(r"^(```|~~~).*?^\1", _code, text, flags=re.S | re.M)
+    text = re.sub(r"`[^`\n]+`", _code, text)
+    text = re.sub(r"\]\([^)]*\)", "]", text)             # link targets
+    return re.sub(r"<[^>\n]+>", _tag, text)              # inline HTML tags
 
 
 def prose_html(text: str) -> str:
-    text = re.sub(r"<(script|style|pre|code|kbd|textarea)\b.*?</\1>", _blank, text, flags=re.S | re.I)
-    text = re.sub(r"<!--.*?-->", _blank, text, flags=re.S)
-    text = re.sub(r"<[^>]+>", _blank, text, flags=re.S)  # tags and their attributes
+    text = re.sub(r"<(script|style|pre|code|kbd|textarea)\b.*?</\1>", _code, text, flags=re.S | re.I)
+    text = re.sub(r"<!--.*?-->", _nl, text, flags=re.S)
+    text = re.sub(r"<[^>]+>", _tag, text, flags=re.S)    # tags and their attributes
     return re.sub(r"&nbsp;|&#160;", " ", text)
 
 

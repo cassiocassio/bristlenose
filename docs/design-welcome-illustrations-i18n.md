@@ -155,7 +155,7 @@ default.)_
    | ko | YES24 | **도널드 노먼의 디자인과 인간 심리**, 학지사, 2016, tr. 박창호 |
    | ru | Litres | **Дизайн привычных вещей**, tr. Б. Л. Глушак — listed but *нет в продаже* |
    | cs | Kosmas | no match for Donald Norman |
-   | uk | Yakaboo | **UNCHECKED** — Cloudflare-blocked from here. Not a nil |
+   | uk | Yakaboo | **UNCHECKED** — Cloudflare-blocked from here. Not a nil _(checked later: it had an edition; `welcome-book-norman-uk` ships)_ |
    | pt-PT | Wook | search path redirects; likely carries the Brazilian edition |
    | ca | La Central (Barcelona) | **nil, measured 22 Sep 2026.** Nine Norman titles, not one in Catalan — *El diseño de las cosas cotidianas* (Capitán Swing), *El ordenador invisible* (Paidós), the English original. `disseny de les coses` returns nothing. Catalan readers are served by the Spanish edition |
    | da, fi, nb, sv | Saxo, Adlibris, Ark | nil — each store's own language facet reads English for every hit |
@@ -442,7 +442,7 @@ as literals in a static array, so they need the same key treatment as everything
 else.
 
 Prioritisation, **measured 22 Sep 2026** (the per-market table is in §"Open
-questions for the pass" item 1): **Norman has six editions**, Braun & Clarke has
+questions for the pass" item 1): **Norman has six editions** _(superseded: ten, per the measured table above — de, es, fr, it, ja, ko, pt-BR, ru, uk, zh-Hant — and each ships as a cover)_, Braun & Clarke has
 **one** (Polish), and Nielsen and Lazarus have none in any Amazon market. So the
 work is seven (book × language) covers, not the 4 × 21 this section budgeted
 for — which retires the bundle-size concern below rather than answering it.
@@ -555,7 +555,7 @@ Search links per market, for confirming an edition exists and capturing its
 cover. **Start with Norman**: the research in `design-i18n.md` says it is the
 only one of the four with broad translation, so it is where the effort pays.
 Nielsen has no French edition at all and ranks near zero everywhere; Braun &
-Clarke and Lazarus are unverified in every market, so treat a nil result there
+Clarke and Lazarus are unverified in every market _(superseded by the measured table above: Braun & Clarke has a Polish edition; Lazarus and Nielsen measured nil)_, so treat a nil result there
 as information rather than a failed search.
 
 Each link searches the **original English title** — that is what finds a

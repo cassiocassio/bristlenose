@@ -216,8 +216,9 @@ struct BookShelfView: View {
     //
     // **A cover shows the local edition's title only where that edition
     // exists** (`design-welcome-illustrations-i18n.md` §7). Measured 22 Sep 2026
-    // across ten Amazon markets: Norman has six editions (de, es, fr, it, ja,
-    // pt-BR), Braun & Clarke one (pl), Nielsen and Lazarus none — so most
+    // and extended after: Norman has ten local editions (de, es, fr, it, ja, ko,
+    // pt-BR, ru, uk, zh-Hant), Braun & Clarke one (pl), Nielsen and Lazarus none
+    // — each shipped as a `welcome-book-*` cover. So most
     // locales' value for `titleKey` is the English title, and that is correct
     // rather than untranslated. A translated title for a book with no
     // translation is a false claim the reader can act on: they go looking for

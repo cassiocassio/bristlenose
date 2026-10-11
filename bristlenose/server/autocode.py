@@ -436,8 +436,15 @@ async def run_autocode_job(
         # named. Without it, 33 quotes' worth of "credit balance is too low"
         # wrote status="completed", failure_kind=NULL, and the toast reported a
         # partial success whose partial was zero.
+        #
+        # Collapse to one proposal per quote (keep highest confidence), as
+        # ``reapply_to_new_quotes`` does. ProposedTag is unique on
+        # (job_id, quote_id), and the prompt asking for "the single best" tag
+        # does not stop a model returning two — so storing both raised
+        # IntegrityError at commit and rolled back every batch's proposals.
         batch_errors = 0
         first_error: BaseException | None = None
+        best_by_quote: dict[int, ProposedTag] = {}
         for batch_result in batch_results:
             if isinstance(batch_result, BaseException):
                 logger.error("Batch failed: %s", batch_result)
@@ -446,8 +453,12 @@ async def run_autocode_job(
                     first_error = batch_result
                 continue
             for proposal in batch_result:
-                db.add(proposal)
-                proposed_count += 1
+                prev = best_by_quote.get(proposal.quote_id)
+                if prev is None or proposal.confidence > prev.confidence:
+                    best_by_quote[proposal.quote_id] = proposal
+        for proposal in best_by_quote.values():
+            db.add(proposal)
+            proposed_count += 1
 
         logger.info(
             "AutoCode job finished: %d proposals from %d quotes (%d batch errors)",

@@ -534,6 +534,58 @@ class TestRunAutoCodeJob:
         assert len(proposals) == 1
         db.close()
 
+    def test_two_assignments_for_one_quote_keep_the_job(self, project_with_garrett) -> None:
+        """An LLM that tags one quote twice must not cost the whole job.
+
+        ``ProposedTag`` is unique on (job_id, quote_id). Storing both
+        assignments raised IntegrityError at commit, which rolled back every
+        proposal of every batch and marked the job failed — the spend lost, and
+        a retry hitting the same duplicate failed the same way. The re-apply
+        path already collapses to the best assignment per quote; this pins the
+        same contract on the first run.
+        """
+        project_id, framework_id, db_factory = project_with_garrett
+
+        mock_result = AutoCodeBatchResult(
+            assignments=[
+                AutoCodeTagAssignment(
+                    quote_index=0,
+                    tag_name="user need",
+                    confidence=0.4,
+                    rationale="Weaker reading",
+                ),
+                AutoCodeTagAssignment(
+                    quote_index=0,
+                    tag_name="visual design",
+                    confidence=0.9,
+                    rationale="Stronger reading",
+                ),
+                AutoCodeTagAssignment(
+                    quote_index=1,
+                    tag_name="user need",
+                    confidence=0.7,
+                    rationale="Unrelated quote",
+                ),
+            ]
+        )
+
+        with _patch_llm(AsyncMock(return_value=mock_result), 4000, 750):
+            asyncio.run(
+                run_autocode_job(db_factory, project_id, framework_id, _mock_settings())
+            )
+
+        db = db_factory()
+        job = db.query(AutoCodeJob).filter_by(project_id=project_id).first()
+        assert job is not None
+        assert job.status == "completed"
+        assert job.proposed_count == 2
+        proposals = db.query(ProposedTag).order_by(ProposedTag.confidence.desc()).all()
+        assert [(p.confidence, p.rationale) for p in proposals] == [
+            (0.9, "Stronger reading"),
+            (0.7, "Unrelated quote"),
+        ]
+        db.close()
+
     def test_token_usage_tracked(self, project_with_garrett) -> None:
         """Job row has input_tokens and output_tokens after completion."""
         project_id, framework_id, db_factory = project_with_garrett

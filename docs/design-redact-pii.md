@@ -1463,11 +1463,23 @@ UX for phases 3–4 is specced in `docs/mockups/mockup-privacy-settings.html` §
   12 MB (all 21 carry the corrected string), **zero** occurrences of
   `en_core_web_sm` remain in `doctor.py` or `doctor_fixes.py`, and the model
   name does now have one shared constant — `SPACY_MODEL` plus
-  `resolve_spacy_model()`, which every consumer routes through. The only
-  surviving `en_core_web_sm` strings in the tree are `tests/test_package_install.py`,
-  where the name is an arbitrary argument proving `ensure_spacy_model` is
-  model-agnostic, and a past-tense comment in `s07_pii_removal.py` explaining
-  why the constant is public. Both are correct as they stand.
+  `resolve_spacy_model()`, which every consumer routes through. **The census
+  stopped at `bristlenose/`, and that was wrong.** The packaging still installed
+  `sm`: `snap/snapcraft.yaml` (`spacy download en_core_web_sm`),
+  `rpm/bristlenose.spec.in` (`%global spacy_model en_core_web_sm`) and
+  `rpm/make-srpm.sh` (the wheelhouse URL). Reproduced on 0.36.0, 11 Oct 2026,
+  on an amd64 box with the edge snap (rev 26) and in a Fedora 43 container with
+  the Copr RPM: `doctor` with PII on fails with `spaCy model en_core_web_lg not
+  found` and suggests `snap refresh` or `dnf reinstall`, neither of which can
+  help (the RPM text even says the package "bundles en_core_web_lg"). Stage 7's
+  lazy fetch then downloads the whole 400 MB and fails writing it, with `EROFS`
+  on the snap's squashfs and a permission error in the RPM's root-owned venv.
+  So `--redact-pii` does not work on either channel. It probably never did,
+  since Presidio's bare `AnalyzerEngine()` was already loading `lg` before this
+  phase. That is inferred, not reproduced. The surviving `en_core_web_sm`
+  strings that *are* correct: `tests/test_package_install.py` (an arbitrary
+  argument proving `ensure_spacy_model` doesn't care which model) and a
+  past-tense comment in `s07_pii_removal.py`.
 - **Phase 1 — the BA spike.** A throwaway target with the App Group entitlement,
   **no extension**, one `scheduleDownload:` of a small self-hosted file. Does it
   transfer, or return `BAErrorCodeCallerConnectionNotAccepted` (55) /

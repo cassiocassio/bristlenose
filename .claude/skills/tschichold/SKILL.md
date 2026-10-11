@@ -33,6 +33,11 @@ Two mechanical differences matter:
 Run builds and edits there. The website's own gitignored `.claude/skills/` has a
 symlink to this folder, so the skill also loads in website sessions.
 
+A portable twin with no Bristlenose specifics is public at
+<https://github.com/cassiocassio/what-would-tschichold-do> (`~/Code/what-would-tschichold-do`).
+A fix to the method or to `scan.py` belongs in both; that repo's pre-push leak gate
+keeps project detail out of the public copy.
+
 ## Why Tschichold
 
 Jan Tschichold (1902–1974) is the right patron because he changed his mind.

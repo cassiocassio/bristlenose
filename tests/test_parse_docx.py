@@ -182,6 +182,78 @@ class TestGoogleMeetStructure:
         assert "Key decision" not in segments[0].text
         assert "Next step" not in segments[0].text
 
+    def test_every_turn_under_one_timecode_is_kept(self, tmp_path: Path) -> None:
+        """Meet stamps a timecode every few minutes, not every turn. Only the
+        first turn after each stamp used to survive; the rest were dropped."""
+        paragraphs = [
+            "📖 Transcript",
+            "00:00:00",
+            "Martin Storey: So tell me how you found the checkout.",
+            "Ana Ferrer: Honestly it was slow.",
+            "Martin Storey: Slow how?",
+            "Ana Ferrer: The address form kept resetting.",
+            "00:05:00",
+            "Martin Storey: Let's move on to delivery.",
+        ]
+        segments = parse_docx_file(_make_docx(tmp_path, paragraphs))
+
+        texts = [s.text for s in segments]
+        assert texts == [
+            "So tell me how you found the checkout.",
+            "Honestly it was slow.",
+            "Slow how?",
+            "The address form kept resetting.",
+            "Let's move on to delivery.",
+        ]
+        starts = [s.start_time for s in segments]
+        assert starts[0] == 0.0 and starts[-1] == 300.0
+        # Turns inside a block are placed in order, inside the block, and on
+        # distinct seconds — quotes are keyed by (participant, start time).
+        assert starts == sorted(starts) and all(t < 300.0 for t in starts[:-1])
+        assert len({int(t) for t in starts}) == len(starts)
+
+    def test_last_block_ends_at_the_transcription_end_line(self, tmp_path: Path) -> None:
+        paragraphs = [
+            "00:00:11",
+            "Martin Storey: Okay, talking.",
+            "Ana Ferrer: Yes, I can hear you fine.",
+            "Transcription ended after 00:00:39",
+            "This editable transcript was computer generated and might contain errors.",
+        ]
+        segments = parse_docx_file(_make_docx(tmp_path, paragraphs))
+
+        assert [s.speaker_label for s in segments] == ["Martin Storey", "Ana Ferrer"]
+        assert 11.0 < segments[1].start_time < 39.0
+        assert "computer generated" not in " ".join(s.text for s in segments)
+
+    def test_a_non_turn_line_closes_the_block(self, tmp_path: Path) -> None:
+        """Notes after the transcript (tab order is the author's) stay out."""
+        paragraphs = [
+            "00:00:11",
+            "Martin Storey: The price was the thing.",
+            "📝 Notes",
+            "Key decision: ship on Friday",
+        ]
+        segments = parse_docx_file(_make_docx(tmp_path, paragraphs))
+
+        assert [s.text for s in segments] == ["The price was the thing."]
+
+    def test_dropped_speaker_lines_are_reported(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        paragraphs = [
+            "00:00:11",
+            "Martin Storey: The price was the thing.",
+            "an untagged line Meet should never write",
+            "Ana Ferrer: This turn is orphaned from any timecode.",
+        ]
+        with caplog.at_level("WARNING"):
+            segments = parse_docx_file(_make_docx(tmp_path, paragraphs))
+
+        assert len(segments) == 1
+        assert any("speaker" in r.getMessage() and r.levelname == "WARNING"
+                   for r in caplog.records)
+
     def test_timecode_without_a_speaker_line_is_refused(self, tmp_path: Path) -> None:
         """Timecodes we cannot align to a speaker are a refusal, not plain text."""
         paragraphs = [

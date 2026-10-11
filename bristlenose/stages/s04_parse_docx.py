@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 #: pipeline folds it into the transcribe stage's input fingerprint, so a
 #: .docx session is re-parsed on the next run rather than served from a cache
 #: the old parser wrote. Sibling of ``SUBTITLE_PARSER_VERSION`` in s03.
-DOCX_PARSER_VERSION = 1
+DOCX_PARSER_VERSION = 2
 
 # Teams transcript patterns:
 # "Speaker Name  00:01:23" or "Speaker Name 0:01:23"
@@ -68,12 +68,13 @@ _TIMESTAMP_ONLY = re.compile(
 # the fixtures invented alongside them.
 #
 # So we do NOT look for the tab boundary at all. We recognise SPEECH, by its
-# structure: a paragraph that is nothing but an HH:MM:SS timecode, IMMEDIATELY
-# followed by a paragraph of the form "Display Name: words". Only that pair
-# yields a segment; every other paragraph is dropped. Gemini's prose carries no
-# such pairing, so the Notes tab cannot be ingested as testimony — which is the
-# failure that matters. The rule is also locale-independent: no emoji, no
-# English word, nothing Google can rename.
+# structure: a paragraph that is nothing but an HH:MM:SS timecode opens a
+# block, and the "Display Name: words" paragraphs straight after it are its
+# turns — Meet stamps every few minutes, not every turn. The first paragraph
+# that is neither closes the block; every paragraph outside a block is dropped.
+# Gemini's prose never follows a bare timecode, so the Notes tab cannot be
+# ingested as testimony — which is the failure that matters. The rule is also
+# locale-independent: no emoji, no English word, nothing Google can rename.
 #
 # Grounded in a real specimen (Business Standard tenant, en-GB/BST, captured
 # 15 Aug 2026) — tests/fixtures/platform-transcripts/gmeet-notes-by-gemini-2026-08-15.json.
@@ -84,6 +85,14 @@ _GMEET_TIMECODE_ONLY = re.compile(r"^(\d{1,2}:\d{2}:\d{2})$")
 # bounded, and must be followed by non-empty speech. The mandatory preceding
 # timecode does the real discriminating work; this is a sanity bound.
 _GMEET_SPEAKER_TEXT = re.compile(r"^(?P<name>[^:]{1,80}):\s+(?P<text>\S.*)$")
+
+# A timecode anywhere in a line — used only to read the bound off the
+# trailer that follows the last turn ("Transcription ended after 00:00:39").
+_GMEET_TIMECODE_IN_LINE = re.compile(r"\b(\d{1,2}:\d{2}:\d{2})\b")
+
+# For the last block when no trailer bounds it: a conversational speaking
+# rate, so the turns' estimated times stay plausible and distinct.
+_GMEET_CHARS_PER_SECOND = 15.0
 
 
 class DocxParseRefusedError(RuntimeError):
@@ -127,7 +136,7 @@ def _parse_docx(path: Path) -> list[TranscriptSegment]:
     # shape, and a Meet document can incidentally satisfy the looser Teams
     # header pattern (the localised "Transcription ended after 00:00:39" trailer
     # matches `_TEAMS_SPEAKER_LINE`, for one).
-    meet_segments, meet_dropped = _try_parse_gmeet_format(lines)
+    meet_segments, meet_dropped, meet_orphans = _try_parse_gmeet_format(lines)
     if meet_segments:
         logger.info(
             "Parsed %d segments from Google Meet format (%d non-speech "
@@ -136,6 +145,16 @@ def _parse_docx(path: Path) -> list[TranscriptSegment]:
             meet_dropped,
             path.name,
         )
+        if meet_orphans:
+            # Counts only: the lines are participant speech, and this log is
+            # not a place for it.
+            logger.warning(
+                "%d speaker lines in %s sat outside any timecode block and were "
+                "not read; check the transcript in Bristlenose against the "
+                "document.",
+                meet_orphans,
+                path.name,
+            )
         return _merge_adjacent_segments(meet_segments)
 
     segments = _try_parse_teams_format(lines)
@@ -201,45 +220,96 @@ def _document_lines(doc: object) -> list[str]:
 
 def _try_parse_gmeet_format(
     lines: list[str],
-) -> tuple[list[TranscriptSegment], int]:
+) -> tuple[list[TranscriptSegment], int, int]:
     """Try to parse lines as a Google Meet transcript export.
 
-    Recognises speech structurally — an ``HH:MM:SS``-only line immediately
-    followed by ``Name: text`` — and drops everything else. See the module-level
-    Google Meet note for why this is boundary-free rather than heading-matched.
+    Recognises speech structurally: an ``HH:MM:SS``-only line opens a block,
+    and every ``Name: text`` line straight after it is a turn in that block,
+    until the next timecode or the first line that is not a turn. Everything
+    else is dropped. See the module-level Google Meet note for why this is
+    boundary-free rather than heading-matched.
+
+    Meet stamps a timecode every few minutes, not every turn, so a block
+    usually holds many turns. Until 11 Oct 2026 only the first turn after each
+    stamp was kept and the rest were dropped as "non-speech", silently.
+
+    Turns inside a block get times spread across it in proportion to their
+    length — the block's own stamp for the first, the next stamp (or the
+    "…ended after HH:MM:SS" line, for the last block) as the bound. Meet gives
+    nothing finer, and the turns must not share one time: quotes are keyed by
+    (session, participant, start time), so two turns at one time would become
+    one quote.
 
     Returns:
-        ``(segments, dropped_line_count)``. Empty segments means "not this
-        format"; the caller falls through.
+        ``(segments, dropped_line_count, dropped_turn_count)`` — the last
+        counts ``Name: text`` lines that sat in no block. Empty segments means
+        "not this format"; the caller falls through.
     """
-    segments: list[TranscriptSegment] = []
+    blocks: list[tuple[float, list[tuple[str, str]]]] = []
+    end_bound: float | None = None
     consumed = 0
-    i = 0
+    dropped_turns = 0
+    current: list[tuple[str, str]] | None = None
 
-    while i < len(lines):
-        ts_match = _GMEET_TIMECODE_ONLY.match(lines[i])
-        if ts_match and i + 1 < len(lines):
-            speech = _GMEET_SPEAKER_TEXT.match(lines[i + 1])
-            if speech:
-                start = parse_timecode(ts_match.group(1))
-                segments.append(
-                    TranscriptSegment(
-                        start_time=start,
-                        # Meet gives no turn end. Mirroring the Teams simple
-                        # format (end == start) keeps `_merge_adjacent_segments`
-                        # behaving identically across both platforms.
-                        end_time=start,
-                        text=speech.group("text").strip(),
-                        speaker_label=speech.group("name").strip(),
-                        source="docx",
-                    )
+    for line in lines:
+        ts_match = _GMEET_TIMECODE_ONLY.match(line)
+        if ts_match:
+            current = []
+            blocks.append((parse_timecode(ts_match.group(1)), current))
+            consumed += 1
+            continue
+        speech = _GMEET_SPEAKER_TEXT.match(line)
+        if speech and current is not None:
+            current.append((speech.group("name").strip(), speech.group("text").strip()))
+            consumed += 1
+            continue
+        current = None
+        if speech and blocks:
+            # Only after the transcript has begun: before it, colon lines are
+            # Gemini's notes ("Key decision: …"), dropped by design.
+            dropped_turns += 1
+        elif blocks and end_bound is None:
+            # The trailer after the last turn ("Transcription ended after
+            # 00:00:39", localised) bounds the last block. Read the timecode,
+            # never the words.
+            tail = _GMEET_TIMECODE_IN_LINE.search(line)
+            if tail:
+                end_bound = parse_timecode(tail.group(1))
+
+    # A timecode with no turn under it was not speech.
+    consumed -= sum(1 for _, turns in blocks if not turns)
+    blocks = [(t, turns) for t, turns in blocks if turns]
+
+    segments: list[TranscriptSegment] = []
+    for b, (t0, turns) in enumerate(blocks):
+        chars = [max(len(text), 1) for _, text in turns]
+        total = sum(chars)
+        if b + 1 < len(blocks):
+            t1 = blocks[b + 1][0]
+        elif end_bound is not None:
+            t1 = end_bound
+        else:
+            t1 = t0 + total / _GMEET_CHARS_PER_SECOND
+        if t1 <= t0:
+            t1 = t0 + total / _GMEET_CHARS_PER_SECOND
+        before = 0
+        for (name, text), n in zip(turns, chars, strict=True):
+            start = round(t0 + (t1 - t0) * before / total, 2)
+            before += n
+            segments.append(
+                TranscriptSegment(
+                    start_time=start,
+                    # Meet gives no turn end. Mirroring the Teams simple
+                    # format (end == start) keeps `_merge_adjacent_segments`
+                    # behaving identically across both platforms.
+                    end_time=start,
+                    text=text,
+                    speaker_label=name,
+                    source="docx",
                 )
-                consumed += 2
-                i += 2
-                continue
-        i += 1
+            )
 
-    return segments, len(lines) - consumed
+    return segments, len(lines) - consumed, dropped_turns
 
 
 def _try_parse_teams_format(lines: list[str]) -> list[TranscriptSegment] | None:

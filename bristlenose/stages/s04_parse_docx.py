@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 
 from bristlenose.models import InputFile, TranscriptSegment
+from bristlenose.utils.docx_text import block_texts
 from bristlenose.utils.timecodes import parse_timecode
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 #: pipeline folds it into the transcribe stage's input fingerprint, so a
 #: .docx session is re-parsed on the next run rather than served from a cache
 #: the old parser wrote. Sibling of ``SUBTITLE_PARSER_VERSION`` in s03.
-DOCX_PARSER_VERSION = 2
+DOCX_PARSER_VERSION = 3
 
 # Teams transcript patterns:
 # "Speaker Name  00:01:23" or "Speaker Name 0:01:23"
@@ -210,8 +211,11 @@ def _document_lines(doc: object) -> list[str]:
     would now be seen rather than missed.
     """
     lines: list[str] = []
-    for para in doc.paragraphs:  # type: ignore[attr-defined]
-        for raw in para.text.split("\n"):
+    # Tables too, in reading order: text in a table is not in
+    # `doc.paragraphs`, and a transcript laid out as a table came out empty.
+    # A timed table this parser cannot align is then refused, not lost.
+    for text_block in block_texts(doc):
+        for raw in text_block.split("\n"):
             text = raw.strip()
             if text:
                 lines.append(text)

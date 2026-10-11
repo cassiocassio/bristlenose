@@ -68,7 +68,11 @@ def _read_text(path: Path) -> str:
     if path.suffix.lower() == ".docx":
         import docx  # python-docx: lazy, as every heavy import here
 
-        return "\n".join(p.text for p in docx.Document(str(path)).paragraphs)
+        from bristlenose.utils.docx_text import block_texts
+
+        # Tables included: a guide laid out as question | probe would
+        # otherwise read as nearly empty.
+        return "\n".join(block_texts(docx.Document(str(path))))
     return path.read_text(encoding="utf-8", errors="replace")
 
 

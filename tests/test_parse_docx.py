@@ -509,3 +509,50 @@ class TestParagraphIsNotTheUnitOfStructure:
 
         assert all(s.speaker_label is None for s in segments)
         assert len(segments) == 3
+
+
+# ── Text inside a Word table ───────────────────────────────────────────────
+
+
+def _table_docx(tmp_path: Path, rows: list[list[str]]) -> InputFile:
+    from docx import Document
+
+    doc = Document()
+    doc.add_paragraph("Interview transcript")
+    table = doc.add_table(rows=len(rows), cols=len(rows[0]))
+    for r, row in enumerate(rows):
+        for c, text in enumerate(row):
+            table.cell(r, c).text = text
+    path = tmp_path / "table.docx"
+    doc.save(str(path))
+    stat = path.stat()
+    return InputFile(
+        path=path,
+        file_type=FileType.DOCX,
+        created_at=datetime.fromtimestamp(stat.st_mtime),
+        size_bytes=stat.st_size,
+    )
+
+
+class TestTextInsideATable:
+    """A transcript laid out in a table used to read as one title line."""
+
+    def test_teams_turns_in_table_cells_are_read(self, tmp_path: Path) -> None:
+        segments = parse_docx_file(_table_docx(tmp_path, [
+            ["Martin Storey   0:04", "So how did the checkout go?"],
+            ["Ana Ferrer   0:09", "It kept resetting the address."],
+        ]))
+
+        assert [s.speaker_label for s in segments] == ["Martin Storey", "Ana Ferrer"]
+        assert segments[1].text == "It kept resetting the address."
+
+    def test_a_timed_table_it_cannot_align_is_refused_not_emptied(
+        self, tmp_path: Path,
+    ) -> None:
+        """time | speaker | text rows: timecodes we cannot pair with a turn are
+        a refusal the researcher sees, not a near-empty session."""
+        with pytest.raises(DocxParseRefusedError):
+            parse_docx_file(_table_docx(tmp_path, [
+                ["00:00:04", "Martin Storey", "So how did the checkout go?"],
+                ["00:00:09", "Ana Ferrer", "It kept resetting the address."],
+            ]))

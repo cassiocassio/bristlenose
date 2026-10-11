@@ -447,3 +447,25 @@ def test_analyze_finds_the_guide_beside_its_output_or_one_level_up(tmp_path):
     assert guide_home(project, project.parent) == project
     # no guide anywhere: the first candidate, so "no guide" is still answered
     assert guide_home(tmp_path / "x", tmp_path) == tmp_path / "x"
+
+
+def test_a_guide_laid_out_in_a_table_is_read(tmp_path):
+    """Text in a Word table is not in `Document.paragraphs`; a guide that was
+    all table came back empty and was reported as unreadable."""
+    from docx import Document
+
+    folder = tmp_path / GUIDE_FOLDER
+    folder.mkdir()
+    doc = Document()
+    table = doc.add_table(rows=2, cols=2)
+    table.cell(0, 0).text = "Who do you live with?"
+    table.cell(0, 1).text = "Probe: who does the shopping"
+    table.cell(1, 0).text = "Walk me through your last order."
+    table.cell(1, 1).text = "Probe: what nearly made you stop"
+    doc.save(str(folder / "guide.docx"))
+
+    g = find_guide(tmp_path)
+
+    assert g is not None and not g.problem
+    assert "Who do you live with?" in g.text
+    assert "what nearly made you stop" in g.text

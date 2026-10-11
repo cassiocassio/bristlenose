@@ -95,8 +95,12 @@ has billing balance, before any transcription begins. Result cached for
 24 hours per provider in the state file (see \fBFILES\fR). Set
 \fBBRISTLENOSE_SKIP_PREFLIGHT=1\fR to skip.
 .IP \(bu 4
-\fBspaCy PII model\fR \(em fetched lazily on the first
-\fB\-\-redact\-pii\fR run; one inline line, no banner.
+\fBspaCy PII model\fR \(em \fBen_core_web_lg\fR, \(ti400 MB, fetched on the
+first \fB\-\-redact\-pii\fR run behind a framed banner. pip and Homebrew
+install it with \fBspacy download\fR; the snap and the Fedora package, whose
+install is read-only, download it into the model cache (see \fBFILES\fR).
+Doctor shows a missing model as a warning, and as a failure only under
+\fB\-\-no\-fetch\fR.
 .PP
 The block ends with a closing line (\fINo more questions. \(ti<X> min to your
 report. Ctrl+C anytime.\fR) after which no prompt fires for the rest of the run.
@@ -715,6 +719,12 @@ no transcript data. Delete the file to force re-validation on next run.
 .I ~/.cache/huggingface/hub/ \fR(or \fB$HF_HUB_CACHE\fR)
 Whisper model cache. Several GB depending on chosen model. Pre-warm with
 \fBbristlenose doctor \-\-fetch\fR for offline / air-gapped use.
+.TP
+.I ~/.cache/bristlenose/models/ \fR(snap: \fI~/snap/bristlenose/common/models/\fR)
+Models Bristlenose downloads itself: the voice model, and on the snap and the
+Fedora package the PII model (\fIen_core_web_lg\-<version>/\fR, \(ti430 MB).
+Honours \fB$XDG_CACHE_HOME\fR. Safe to delete; a deleted model is fetched again
+when next needed.
 .TP
 .I <output-dir>/.bristlenose/bristlenose.log
 Per-project log file (default level \fBINFO\fR; override with

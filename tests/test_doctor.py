@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import sys
+from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -1223,12 +1224,13 @@ class TestRunPreflight:
             patch("bristlenose.doctor.check_network") as m5,
             patch("bristlenose.doctor.check_pii") as m6,
             patch("bristlenose.doctor.check_disk_space") as m7,
+            patch("bristlenose.doctor.check_serve_deps") as m8,
         ):
-            for m in (m1, m2, m3, m4, m5, m6, m7):
+            for m in (m1, m2, m3, m4, m5, m6, m7, m8):
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_preflight(settings, "run")
 
-        assert len(report.results) == 7
+        assert len(report.results) == 8
 
     def test_transcribe_only_skips_api_and_network(self) -> None:
         settings = _settings()
@@ -1254,12 +1256,13 @@ class TestRunPreflight:
             patch("bristlenose.doctor.check_api_key") as m1,
             patch("bristlenose.doctor.check_network") as m2,
             patch("bristlenose.doctor.check_disk_space") as m3,
+            patch("bristlenose.doctor.check_serve_deps") as m4,
         ):
-            for m in (m1, m2, m3):
+            for m in (m1, m2, m3, m4):
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_preflight(settings, "analyze")
 
-        assert len(report.results) == 3
+        assert len(report.results) == 4
 
     def test_run_skip_tx_omits_transcription_checks(self) -> None:
         settings = _settings()
@@ -1268,12 +1271,43 @@ class TestRunPreflight:
             patch("bristlenose.doctor.check_network") as m2,
             patch("bristlenose.doctor.check_pii") as m3,
             patch("bristlenose.doctor.check_disk_space") as m4,
+            patch("bristlenose.doctor.check_serve_deps") as m5,
         ):
-            for m in (m1, m2, m3, m4):
+            for m in (m1, m2, m3, m4, m5):
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_preflight(settings, "run", skip_transcription=True)
 
-        assert len(report.results) == 4
+        assert len(report.results) == 5
+
+    def test_serve_refuses_when_serve_deps_fail(self) -> None:
+        """`serve` lists only serve_deps, and the gate must be able to fail.
+
+        It was listed in five command tuples and registered in none of them,
+        so ``run_preflight`` skipped it silently: `serve` checked nothing, and
+        the three counts above were pinning that.
+        """
+        settings = _settings()
+        fail = CheckResult(status=CheckStatus.FAIL, label="Serve mode", detail="missing: fastapi")
+        with patch("bristlenose.doctor.check_serve_deps", return_value=fail):
+            report = run_preflight(settings, "serve")
+
+        assert [r.label for r in report.results] == ["Serve mode"]
+        assert report.has_failures
+
+    def test_every_listed_check_runs(self) -> None:
+        """A name in a command's list with no runner is a check that cannot
+        fail. Count results per command against the list itself, so adding a
+        name without registering it goes red here."""
+        from bristlenose import doctor
+
+        ok = CheckResult(status=CheckStatus.OK, label="test")
+        names = sorted({n for checks in doctor._COMMAND_CHECKS.values() for n in checks})
+        with ExitStack() as stack:
+            for name in names:
+                stack.enter_context(patch(f"bristlenose.doctor.check_{name}", return_value=ok))
+            for command, checks in doctor._COMMAND_CHECKS.items():
+                report = run_preflight(_settings(), command)
+                assert len(report.results) == len(checks), command
 
     def test_unknown_command_has_no_checks(self) -> None:
         """Unknown command name → empty preflight (safe default)."""

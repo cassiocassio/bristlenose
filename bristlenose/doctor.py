@@ -1738,6 +1738,7 @@ def run_preflight(
         "network": lambda: check_network(settings),
         "pii": lambda: check_pii(settings),
         "disk_space": lambda: check_disk_space(settings),
+        "serve_deps": lambda: check_serve_deps(),
     }
 
     results = []

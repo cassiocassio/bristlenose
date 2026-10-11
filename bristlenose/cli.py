@@ -600,7 +600,7 @@ def _setup_local_provider() -> str | None:
                 console.print()
                 console.print("After installing, run:")
                 console.print()
-                console.print("  [bold]ollama pull llama3.2[/bold]")
+                console.print(f"  [bold]ollama pull {DEFAULT_MODEL}[/bold]")
                 console.print()
                 console.print("Then try again.")
                 console.print()
@@ -622,7 +622,7 @@ def _setup_local_provider() -> str | None:
                 return "local"
             console.print()
             _say(MessageKind.ERROR, "Download failed.")
-            console.print("Try manually: [bold]ollama pull llama3.2[/bold]")
+            console.print(f"Try manually: [bold]ollama pull {DEFAULT_MODEL}[/bold]")
             return None
         return None
 
@@ -649,10 +649,10 @@ def _use_local_model(found: str, available: list[str]) -> str:
     """
     from bristlenose.config import hosted_by_desktop, load_settings
     from bristlenose.credentials import write_user_config_var
+    from bristlenose.ollama import ollama_has_model
 
     configured = load_settings().local_model
-    names = set(available) | {n.removesuffix(":latest") for n in available}
-    if configured in names or hosted_by_desktop():  # the GUI owns it there
+    if ollama_has_model(configured, available) or hosted_by_desktop():  # GUI owns it there
         return configured
 
     write_user_config_var("BRISTLENOSE_LOCAL_MODEL", found)

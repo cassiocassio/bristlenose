@@ -560,6 +560,20 @@ def pull_model(model: str = DEFAULT_MODEL) -> bool:
         return False
 
 
+def ollama_has_model(name: str, installed: list[str]) -> bool:
+    """Whether Ollama would load ``name``, given the names it lists as installed.
+
+    Ollama's own rule: a tag is its own name even when two tags share
+    weights, and a bare name means ``:latest``. So ``llama3.2:3b`` installed
+    does NOT make ``llama3.2`` loadable — measured against a real Ollama (11
+    Oct 2026, ``/api/show`` 404s). Every "is it installed?" answer goes
+    through here, so doctor, ``configure local`` and the run agree.
+    """
+    if name in installed:
+        return True
+    return ":" not in name and f"{name}:latest" in installed
+
+
 def validate_local_endpoint(url: str, model: str) -> tuple[bool | None, str]:
     """Validate that a local endpoint is reachable and has the specified model.
 
@@ -584,16 +598,8 @@ def validate_local_endpoint(url: str, model: str) -> tuple[bool | None, str]:
             models = data.get("models", [])
             available = [m.get("name", "") for m in models]
 
-            # Check if the requested model is available
-            if model in available:
+            if ollama_has_model(model, available):
                 return (True, "")
-
-            # Check for partial match (e.g. "llama3.2" matches "llama3.2:3b")
-            model_base = model.split(":")[0]
-            for m in available:
-                if m.startswith(model_base):
-                    return (True, "")
-
             return (False, f"Model '{model}' not found. Run: ollama pull {model}")
 
     except urllib.error.URLError:

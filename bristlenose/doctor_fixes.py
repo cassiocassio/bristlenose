@@ -532,10 +532,12 @@ def _fix_ollama_not_installed(_method: str) -> str:
 
 
 def _fix_ollama_model_missing(_method: str) -> str:
+    from bristlenose.ollama import DEFAULT_MODEL
+
     hint = _get_cloud_fallback_hint()
     return (
-        "Download the model:\n\n"
-        "  ollama pull llama3.2\n\n"
+        "Download the model named above — for the default one:\n\n"
+        f"  ollama pull {DEFAULT_MODEL}\n\n"
         f"{hint}\n\n"
         "For interactive setup: bristlenose doctor"
     )

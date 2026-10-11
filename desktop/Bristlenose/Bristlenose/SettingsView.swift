@@ -57,9 +57,6 @@ final class SettingsWindow {
     /// agent support" for the whole session with a live serve running. Holding
     /// the fleet means the panes resolve the current one when they are built.
     var serveFleet: ServeFleet?
-
-    /// The fronted serve, or the fleet's idle stand-in.
-    private var serveManager: ServeManager? { serveFleet?.frontedOrIdle }
     var projectIndex: ProjectIndex?
     /// Read for one question only: is an analysis running? A language change
     /// offers to relaunch, and relaunching mid-run would kill the subprocess.
@@ -281,13 +278,13 @@ final class SettingsWindow {
                 ) {
                     // The serve is needed for one thing only: disconnecting
                     // Miro has to clear the running sidecar's in-memory copy of
-                    // the token as well as the Keychain one. Same shape as the
-                    // cloud disconnect reaching an open import window, and the
-                    // same `if let` as MCP Agents below — the pane is built
-                    // lazily on first open, by which point launch has set it.
+                    // the token as well as the Keychain one. The pane gets the
+                    // fleet and resolves the fronted serve itself, like MCP
+                    // Agents below: this closure runs once, so a serve resolved
+                    // here would be pinned for the process.
                     Group {
-                        if let serve = self.serveManager {
-                            AccountsSettingsView(serveManager: serve)
+                        if let fleet = self.serveFleet {
+                            AccountsSettingsView(serveFleet: fleet)
                         }
                     }
                     .environmentObject(i18n)

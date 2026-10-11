@@ -32,7 +32,13 @@ import SwiftUI
 // `AccountService.displayName` and `CloudPlatform.displayName`.
 
 struct AccountsSettingsView: View {
-    @ObservedObject var serveManager: ServeManager
+    /// The fleet, not a serve. The Settings package builds this pane once, so
+    /// a serve captured at build time stayed whichever was fronted when
+    /// Settings was first opened, and Disconnect Miro cleared the token in
+    /// that one. Same fix, same reason, as `MCPAgentsSettingsView`.
+    @ObservedObject var serveFleet: ServeFleet
+    /// The fronted serve, resolved per use.
+    private var serveManager: ServeManager { serveFleet.frontedOrIdle }
     @EnvironmentObject private var i18n: I18n
 
     @State private var sections: [AccountSection]
@@ -47,8 +53,8 @@ struct AccountsSettingsView: View {
     /// single header tall and clipped the other three services below the frame,
     /// which reads as a broken pane rather than a short one. Everything the
     /// first render needs is on disk, so there is nothing to wait for.
-    init(serveManager: ServeManager) {
-        self.serveManager = serveManager
+    init(serveFleet: ServeFleet) {
+        self.serveFleet = serveFleet
         _sections = State(initialValue: Self.currentSections())
     }
 

@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-10-09
-trued-against: HEAD@main on 2026-10-09 (357ab3f3)
+last-trued: 2026-10-11
+trued-against: HEAD@main on 2026-10-11 (4bf5299a)
 ---
 
 # Windows port
@@ -158,7 +158,8 @@ open); `docs/testing/ratchet.json` names each.
    non-zero (it exits 0 in a terminal by design); `CONTRIBUTING.md` still calls this
    port "parked" and points at Scoop.
 4. **Every platform, seen first on Windows**: warning log lines interleave with the
-   run UI (including a developer note); Hugging Face warnings print twice and the
+   run UI (including a developer note); Hugging Face warnings print twice (*silenced
+   11 Oct 2026, unreleased: `HF_HUB_VERBOSITY` in `bristlenose/__init__.py`*) and the
    1.6 GB Whisper download shows no progress; the player does not seek when an
    already-open window has ended; the MCP hint says `pip` to pipx users; session
    times render UTC as local (H9 in `docs/time-defects.md`); the transcript header

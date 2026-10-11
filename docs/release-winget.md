@@ -165,7 +165,11 @@ needs Safari, by hand. The Windows 11 evaluation ISO is a direct fwlink.
 - **Seen in the transcription output:** huggingface_hub prints three warnings to the
   user's terminal on the first run (unauthenticated requests, symlinks needing Developer
   Mode or admin rights, and `pip install huggingface_hub[hf_xet]`). Each warning appears
-  twice. Not a failure, but advice no Windows researcher should act on.
+  twice. Not a failure, but advice no Windows researcher should act on. *Fixed 11 Oct
+  2026 for the next release: `bristlenose/__init__.py` defaults `HF_HUB_VERBOSITY=error`
+  and `HF_HUB_DISABLE_SYMLINKS_WARNING=1` (`tests/test_hf_hub_quiet.py`), and the Windows
+  spec now bundles `hf_xet` with its metadata, so downloads use Xet instead of plain
+  HTTP. Re-check the first transcription in the VMs on the next installer.*
 
 **Harness gotchas, all paid for on the first run:**
 

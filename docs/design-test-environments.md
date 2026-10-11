@@ -74,7 +74,7 @@ worst at.
 | **macOS 27, Apple Silicon, bare metal** | ✅ daily driver (since Sep 2026) | everything, at full fidelity | other OS versions |
 | **macOS 15 Sequoia, VM** | ✅ 15.7.3, Xcode 26.3 (§3.6) | geometry, behaviour, launch, regressions, the Swift suite (nightly, §3.7) | Liquid Glass fidelity (§3.2); anything needing an Apple ID (§3.3) |
 | **macOS 26 Tahoe, VM** | ✅ 26.6.2, Xcode 27.0 (§3.6) | the same, on the inset-plateau geometry (nightly too) | the same |
-| **Linux x86_64, GitHub Actions** | ✅ | CI matrix, packaging, release pipeline | anything GUI; no LLM keys, no Ollama |
+| **Linux x86_64, GitHub Actions** | ✅ | CI matrix, packaging, release pipeline; the report at Windows 125% and 150% scaling, emulated in Chromium (`e2e/tests/windows-scaling.spec.ts`) | anything GUI; no LLM keys, no Ollama; Windows font rendering |
 | **Claude Code Cloud VM** | ✅ | code/test/lint/frontend build | GUI; **not for pipeline runs on private interview data** |
 | **Fedora 43 x86_64** | ✅ real Intel hardware | Copr packaging end to end | GUI |
 | **`aella` amd64 boxes** | ✅ on demand | amd64 Linux behaviour; Windows Server 2025 x64 with `aella up --windows` (installer acceptance, `docs/design-winget.md`) | GUI; client Windows editions |

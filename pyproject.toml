@@ -99,6 +99,9 @@ dev = [
     # presidio incident. docs/design-test-performance.md.
     "pytest-xdist>=3.8",
     "pytest-asyncio>=0.24",
+    # Property-based tests for round-trip and format contracts. Placement rule:
+    # docs/design-test-philosophy.md; method: .claude/skills/property-based-testing/.
+    "hypothesis>=6.100",
     "ruff>=0.8",
     "mypy>=1.13",
     # SECURITY.md names the gitleaks pre-commit hook as a control. It was not

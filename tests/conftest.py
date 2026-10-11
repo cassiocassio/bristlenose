@@ -12,6 +12,7 @@ import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from hypothesis import settings as hypothesis_settings
 
 # Bypass all preflight checks by default. The front-loaded preflight block
 # in Pipeline.run (Whisper / ffmpeg / API-key) aborts on CI runners that
@@ -42,6 +43,17 @@ from bristlenose.models import (
     SpeakerRole,
     TranscriptSegment,
 )
+
+# Hypothesis profiles (property-based tests; .claude/skills/property-based-testing/).
+# `ci` is derandomised: under a random seed a property can kill a bug on one run
+# and miss it on the next, which is a flake in CI. Measured 11 Oct 2026, two of
+# eleven mutants were killed on two seeds out of three. Locally the default
+# explores fresh examples each run. No deadline in either: shared runners are
+# slow, and the Windows cells slower. Never register or load a profile inside a
+# test module, which silently overrides this one.
+hypothesis_settings.register_profile("ci", derandomize=True, deadline=None, max_examples=200)
+hypothesis_settings.register_profile("dev", deadline=None, max_examples=200)
+hypothesis_settings.load_profile("ci" if os.environ.get("CI") else "dev")
 
 # serve answers only to a loopback Host (LoopbackHostMiddleware). A bare
 # TestClient against create_app must pass this, not Starlette's "testserver".

@@ -206,3 +206,6 @@ docs/mockups/signal-card-rules.html
 docs/mockups/signal-card-valence.html
 docs/mockups/signal-card-valence-wall.html
 docs/mockups/signal-card-playground.html
+
+# Hypothesis example database (property-based tests)
+.hypothesis/

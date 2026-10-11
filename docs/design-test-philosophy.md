@@ -78,6 +78,18 @@ Each test type has a sweet spot. Pick the *highest* layer that gives you confide
 - **pytest unit** — pure functions, stage logic, model validation. Default for everything backend.
 - **pytest + FastAPI TestClient** — HTTP integration. Hits real SQLite, real handlers, mocked LLM.
 - **pytest subprocess** — CLI smoke (`bristlenose run /tmp/fixture`). Slow, rare, high signal.
+- **Hypothesis (property-based)** — use it when a function has an **algebra**
+  (a round trip, idempotence, an ordering, a bound) *and* a **parsed or
+  rendered contract** that someone else depends on: timecodes, durations,
+  filename sanitising, the transcript reader and writer, the shared-format
+  register (`docs/design-shared-formats.md`). Without both, write examples. A
+  property over code with no algebra only restates the implementation.
+  - Method: the vendored `.claude/skills/property-based-testing/`.
+  - Determinism: the `ci` profile in `tests/conftest.py`.
+  - Pin any kill that matters with `@example`, because CI runs derandomised.
+  - Measured 11 Oct 2026 (`experiments/skills-research/`): the first suite
+    killed mutants the example tests had let live, and found two real defects
+    the example tests never touched.
 
 ### TypeScript / React
 

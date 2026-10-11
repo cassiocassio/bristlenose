@@ -578,7 +578,7 @@ class QualityRating(BaseModel):
 # holds the same role; all three ran the full six-template fixture live on
 # 4–5 Sep. Haiku and Luna are new to this table in a cheaper class nobody has
 # an opinion about yet. Unrated is the honest state, not a gap to fill: the
-# eval harness (design-stage-backends.md §Recommendation) flips cells to
+# eval harness (design-pluggable-llm-routing.md §3, its canonical home) flips cells to
 # `internal_bench` when it ships.
 #
 # **Measurements now exist, and they did NOT move these ratings** —

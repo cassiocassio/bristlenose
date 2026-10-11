@@ -7,6 +7,7 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 **Fixed**
 
 - **`bristlenose doctor` exited 0 even when a check failed.** It now exits 1, so a script or CI step can rely on it. Warnings still exit 0.
+- **The first transcription printed Hugging Face warnings, each twice.** They asked for an access token, Developer Mode or administrator rights, and a `pip install`, none of which a researcher needs. They are now silent; real download failures still show.
 
 **0.36.0** — _8 Oct 2026_
 

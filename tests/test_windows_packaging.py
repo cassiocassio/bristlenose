@@ -203,3 +203,14 @@ def test_winget_reads_the_refusal_as_package_in_use() -> None:
         encoding="utf-8"
     )
     assert "- InstallerReturnCode: 7\n  ReturnResponse: packageInUse" in installer
+
+
+def test_hf_xet_is_bundled_with_its_metadata() -> None:
+    """huggingface_hub imports hf_xet lazily and finds it through importlib.metadata,
+    so the frozen build needs both; without them model downloads print "hf_xet is
+    not installed" and fall back to plain HTTP (seen on Windows 10/11, 9 Oct 2026)."""
+    spec = (WIN / "bristlenose-win.spec").read_text(encoding="utf-8")
+    assert '"hf_xet",' in spec
+    assert 'copy_metadata("hf-xet")' in spec
+    assert "hf-xet==" in (WIN / "constraints.txt").read_text(encoding="utf-8")
+

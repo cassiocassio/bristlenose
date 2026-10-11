@@ -33,6 +33,16 @@ import os as _os
 _os.environ.setdefault("TQDM_DISABLE", "1")
 _os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
+# huggingface_hub's other first-download chatter, seen on a fresh Windows install
+# (9 Oct 2026), each line printed twice (its own handler and ours): a symlink
+# warning advising Developer Mode or running as administrator, "hf_xet is not
+# installed ... pip install", and a server-sent X-HF-Warning asking for an
+# HF_TOKEN. None is anything a researcher should act on. HF_HUB_VERBOSITY is read
+# when huggingface_hub first configures its logger, so it too must be set before
+# the first import; failures still raise, they are not warnings.
+_os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+_os.environ.setdefault("HF_HUB_VERBOSITY", "error")
+
 # onnxruntime (the voice pass; faster-whisper's VAD) ships Microsoft 1DS
 # telemetry on macOS and Linux as of 1.29: a persistent device id plus a
 # queue under ~/Library/Application Support/Microsoft/DeveloperTools/

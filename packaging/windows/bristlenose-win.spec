@@ -77,6 +77,7 @@ a = Analysis(
         *_JSONSCHEMA_DATAS,
         *_VOICE_NOTICES,
         *copy_metadata("starlette"),
+        *copy_metadata("hf-xet"),
         *copy_metadata("bristlenose"),
         _pkg("theme"),
         _pkg("data"),
@@ -99,6 +100,10 @@ a = Analysis(
         "google.genai",
         "google.genai.types",
         "faster_whisper",
+        # huggingface_hub imports hf_xet lazily and checks its dist metadata, so
+        # neither is found by analysis; without both, model downloads fall back to
+        # plain HTTP and print "hf_xet is not installed" (9 Oct 2026, Windows 10/11).
+        "hf_xet",
         "ctranslate2",
         "onnxruntime",
         "kaldi_native_fbank",

@@ -219,16 +219,20 @@ or architecture that may be wrong or outdated>
   unchecked collection indexing (`arr[0]`) with no bounds guard
 - `@State` declared on a value passed in from the parent — silently ignores
   parent updates. Use `@Binding`, or let the parent own the state
-- For generic SwiftUI craft (deprecated API, view composition, data flow,
-  navigation, hygiene), read `.claude/skills/swiftui-pro/references/*.md` rather
-  than recite from training. It's iOS-first: `MEMORY.md`/`CLAUDE.md` and macOS
-  idiom win on conflict
-- For **concurrency** (actors, task groups, cancellation, `Sendable`, bridging,
-  async tests), read `.claude/skills/swift-concurrency-pro/references/*.md`
-  instead — it's the specialist source and platform-neutral. Note the app builds
-  in **Swift 5 language mode** with default actor isolation `nonisolated`, so
-  `@MainActor` annotations are genuinely needed and strict-concurrency
-  diagnostics mostly don't fire. See that skill's `VENDORED.md`
+- **Correctness first, references after.** Read the Swift for ordering,
+  lifetime, ownership and error paths before opening any reference: which
+  writer runs last, what retains what, what a failure leaves behind. Only then,
+  for API *facts* (is this deprecated, which property wrapper, what `Sendable`
+  requires), consult `.claude/skills/swiftui-pro/references/*.md`, or for
+  concurrency `.claude/skills/swift-concurrency-pro/references/*.md`, the
+  specialist, which outranks swiftui-pro there. Don't walk their checklists as
+  the review: measured on 14 historical bugs (11 Oct 2026), a reviewer using
+  them as its lens found fewer real defects than one reading the code plainly,
+  in both runs. swiftui-pro is iOS-first: `MEMORY.md`/`CLAUDE.md` and macOS
+  idiom win on conflict. The app builds in **Swift 5 language mode** with
+  default actor isolation `nonisolated`, so `@MainActor` annotations are
+  genuinely needed and strict-concurrency diagnostics mostly don't fire (see
+  that skill's `VENDORED.md`)
 - Read `desktop/CLAUDE.md` and `docs/design-desktop-app.md` for context
 
 # Brevity

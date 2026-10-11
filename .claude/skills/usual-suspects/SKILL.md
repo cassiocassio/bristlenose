@@ -97,11 +97,16 @@ Check which areas are touched (file extensions, directory prefixes, content):
 | `desktop/`, `.swift` files, macOS/HIG mentioned | `what-would-gruber-say` |
 | `.ts`/`.tsx`/`.css`, `package.json`, server, pipeline, perf-sensitive, or `.swift` (concurrency/cancellation) | `perf-review` |
 | Test files touched, new public API without tests, or any `.swift` change | `what-would-james-bach-say` (see three-way selector below) |
-| try/except or catch blocks, fallback logic, subprocess/shellouts, JSON serialization, or E2E/Playwright specs touched | `silent-failure-hunter` |
+| Any code change (`.py`, `.ts`/`.tsx`, `.swift`), and always for try/except or catch blocks, fallback logic, subprocess/shellouts, JSON serialization, or E2E/Playwright specs | `silent-failure-hunter` |
 | `.github/workflows/**` or other CI/release config touched | `security-review` + `silent-failure-hunter` (**CI workflow lens** — see below) |
 | New file, core data path, or >150 changed lines — and on `--fresh-eyes` | **fresh-eyes lane** (see below) |
 
-**`code-review` always runs.** The others run only if their area is touched.
+**`code-review` always runs, and `silent-failure-hunter` runs on any code
+change.** The others run only if their area is touched. The second rule is
+measured, not taste: on 14 historical bugs (11 Oct 2026) `silent-failure-hunter`
+was the strongest single reviewer and the most complementary to `code-review`.
+Adding it caught 1.5 more cases, where a second plain reader caught none,
+because the two plain readers missed the same ones. Evidence: the research record in `experiments/skills-research/` (branch `research/claude-skills-2026-10` until it lands on `main`).
 
 ### The fresh-eyes lane — deliberately context-free
 
@@ -251,18 +256,27 @@ Scope: <list of changed files from git diff --stat>
 
 When `.swift` files or `desktop/` are in scope, the SwiftUI-aware agents
 (`what-would-gruber-say`, `code-review`, `what-would-james-bach-say`) get an
-extra line telling them to consult the vendored **swiftui-pro** skill:
+extra line pointing them at the vendored **swiftui-pro** skill, as a source of
+facts consulted *after* their own reading:
 
 ```
-For generic SwiftUI craft (deprecated API, view composition, data flow,
-navigation, performance, hygiene), read the relevant reference files under
-.claude/skills/swiftui-pro/references/*.md before flagging. It is iOS-first:
-project hard rules (MEMORY.md / CLAUDE.md) and macOS idiom win on any conflict.
+Review the Swift for correctness first: ordering between writers, what retains
+what, what a failure leaves behind. Then, for API facts only (deprecated API,
+property-wrapper choice, view composition, data flow), read the relevant
+reference under .claude/skills/swiftui-pro/references/*.md before flagging.
+Don't walk its checklist as the review. It is iOS-first: project hard rules
+(MEMORY.md / CLAUDE.md) and macOS idiom win on any conflict.
 
-For concurrency specifically (actors, task groups, cancellation, Sendable,
-bridging, async tests), read .claude/skills/swift-concurrency-pro/references/*.md
-instead — the specialist source, platform-neutral. Start at hotspots.md.
+For concurrency facts (actors, task groups, cancellation, Sendable, bridging,
+async tests), read .claude/skills/swift-concurrency-pro/references/*.md
+instead: the specialist source, platform-neutral. Start at hotspots.md.
 ```
+
+**Why "after".** Used as the review lens, the pair scored below a plain reviewer
+on the same Swift bugs in both runs of the 11 Oct 2026 benchmark (2 and 3 of 5,
+against 3 and 4.5). Their checklists are API modernity and view hygiene; the
+bugs that ship here are ordering, lifetime and fail-open, which none of their
+items name. Evidence: the research record in `experiments/skills-research/` (branch `research/claude-skills-2026-10` until it lands on `main`).
 
 **Mac taste has its own source.** `mac-arsed-mac-app` (vendored, MIT, Bart
 Reardon) is the judgement layer for Mac craft — menus, keyboard, windows,

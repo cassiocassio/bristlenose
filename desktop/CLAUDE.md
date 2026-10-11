@@ -8,8 +8,11 @@ SwiftUI macOS app wrapping the Bristlenose React SPA in a WKWebView. Native proj
 `swiftui-pro`, MIT — see its `VENDORED.md`). It auto-triggers when you read,
 write, or review SwiftUI in the main conversation, and its `references/*.md`
 (deprecated API, view composition, data flow, navigation, design/HIG,
-accessibility, performance, modern Swift, hygiene) are read directly by the
-review agents during `/usual-suspects` on `.swift` changes.
+accessibility, performance, modern Swift, hygiene) are read by the review agents
+during `/usual-suspects` on `.swift` changes, for API facts, **after** their own
+correctness pass. They aren't walked as the review itself: used that way, they
+found fewer real bugs than a plain reading in the 11 Oct 2026 benchmark
+(`.claude/skills/usual-suspects/SKILL.md`, "Why after").
 
 It's a **knowledge source for generic SwiftUI craft**, not a Mac-taste
 authority — it's iOS-first. On any conflict, project hard rules (`MEMORY.md`,

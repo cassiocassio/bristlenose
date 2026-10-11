@@ -19,6 +19,12 @@ SwiftUI. Review **subagents** (gruber, code-review, james-bach) can't invoke
 skills — they `Read` the reference files directly. See the wiring note in
 `.claude/skills/usual-suspects/SKILL.md` and `what-would-gruber-say.md`.
 
+**Role since 11 Oct 2026: a fact source, consulted after a correctness pass,
+never the review lens.** Used as the lens (with swift-concurrency-pro), it
+scored below a plain reviewer on 5 historical Swift bugs in both runs of a blind
+benchmark. Its value is authoring and API modernity, which that benchmark didn't
+measure. Evidence: the research record in `experiments/skills-research/` (branch `research/claude-skills-2026-10` until it lands on `main`).
+
 ## macOS caveat (read before trusting it blindly)
 
 The skill is **iOS-first** (iOS 26 / Swift 6.2 default target). Bristlenose's

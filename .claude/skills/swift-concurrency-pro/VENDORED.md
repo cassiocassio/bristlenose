@@ -26,7 +26,9 @@ built for exactly the "where do I even look" pass.
 It auto-triggers in the **main** conversation on Swift concurrency work. Review
 **subagents** can't invoke skills — they `Read` the reference files directly,
 same wiring as swiftui-pro (see `.claude/skills/usual-suspects/SKILL.md` and
-`what-would-gruber-say.md`).
+`what-would-gruber-say.md`). The same role applies since 11 Oct 2026: a fact
+source consulted after a correctness pass, never the review lens (see
+swiftui-pro's `VENDORED.md` for the measurement).
 
 ## Project reality check (measured 3 Sep 2026 — read before trusting it)
 

@@ -228,8 +228,16 @@ struct WebView: NSViewRepresentable {
     /// registration exactly as `BridgeHandler.reset()` used to (see the note
     /// there). A dismantle that isn't the current registrant has nothing to
     /// say.
+    ///
+    /// The script message handler goes unconditionally, before the guard. The
+    /// content controller retains its handler and the Coordinator retains the
+    /// view, so a registration left in place keeps both alive after SwiftUI
+    /// drops them — every project switch leaked the previous report view,
+    /// still able to post into the shared bridge.
     static func dismantleNSView(_ nsView: WKWebView, coordinator: Coordinator) {
         MainActor.assumeIsolated {
+            nsView.configuration.userContentController
+                .removeScriptMessageHandler(forName: "navigation")
             guard coordinator.bridgeHandler.webView === nsView else { return }
             coordinator.bridgeHandler.webView = nil
         }

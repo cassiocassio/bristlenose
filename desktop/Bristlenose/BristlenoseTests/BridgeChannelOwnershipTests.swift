@@ -65,6 +65,43 @@ struct BridgeChannelOwnershipTests {
         #expect(bridge.webView == nil)
     }
 
+    /// A dismantled view must be freeable, and so must its Coordinator.
+    ///
+    /// `makeNSView` registers the Coordinator as the "navigation" script
+    /// message handler, which `WKUserContentController` retains strongly, and
+    /// the Coordinator holds the web view strongly. That is a cycle through the
+    /// view's own configuration, and nothing broke it: every replaced report
+    /// view (each project switch rebuilds it via `.id`) stayed alive with its
+    /// handler registered, still able to forward messages into the shared
+    /// bridge. The wiring below is `makeNSView`'s, minus the page load.
+    @Test func dismantleReleasesTheViewAndItsCoordinator() {
+        let bridge = BridgeHandler()
+        weak var weakCoordinator: Bristlenose.WebView.Coordinator?
+        weak var weakWebView: WKWebView?
+
+        autoreleasepool {
+            let coordinator = WebView.Coordinator(bridgeHandler: bridge, i18n: I18n())
+            let config = WKWebViewConfiguration()
+            let userContentController = WKUserContentController()
+            userContentController.add(coordinator, name: "navigation")
+            config.userContentController = userContentController
+            let webView = WKWebView(frame: .zero, configuration: config)
+            webView.navigationDelegate = coordinator
+            webView.uiDelegate = coordinator
+            coordinator.webView = webView
+            bridge.webView = webView
+            weakCoordinator = coordinator
+            weakWebView = webView
+
+            WebView.dismantleNSView(webView, coordinator: coordinator)
+        }
+
+        // If this fails: the script message handler is still registered when
+        // the view goes, so the Coordinator ↔ web view cycle outlives it.
+        #expect(weakCoordinator == nil)
+        #expect(weakWebView == nil)
+    }
+
     /// …and never anyone else's. SwiftUI may build the replacement before
     /// tearing down its predecessor; an unguarded clear here would reproduce
     /// the same wipe from the other direction.

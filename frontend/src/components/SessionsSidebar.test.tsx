@@ -198,7 +198,7 @@ const MULTI_MODERATOR: SessionsListResponse = {
 // baseFull  = 24 + 6 + 77 + 6 + 16 = 129
 // durationAt = 94 + 42 + 43 + 10 = 189
 // dowAt      = 94 + 70 + 43 + 10 = 217
-// fullNameAt = 129 + 42 + 43 + 10 = 224
+// fullNameAt = 129 + 70 + 43 + 10 = 252  (budgets the day-of-week date)
 // thumbAt    = Infinity (no video)
 //
 // (DURATION_W went 36 -> 43 on 22 Aug 2026 with the move to
@@ -360,7 +360,7 @@ describe("SessionsSidebar", () => {
   });
 
   it("shows short names at narrow width, full names when wide enough", async () => {
-    // fullNameAt ~217px for "Rachel Chen"
+    // fullNameAt ~252px for "Rachel Chen"
     initialWidth = 150;
     mockApiGet.mockResolvedValue(ONE_TO_ONE);
     renderInRouter("/report/sessions");
@@ -402,7 +402,7 @@ describe("SessionsSidebar", () => {
       expect(screen.getByText("Thu 12 Feb")).toBeDefined();
     });
 
-    // Widen to 400 — full names (fullNameAt ~217)
+    // Widen to 400 — full names (fullNameAt ~252)
     fireResize(400);
     await waitFor(() => {
       expect(screen.getByText("Rachel Chen")).toBeDefined();

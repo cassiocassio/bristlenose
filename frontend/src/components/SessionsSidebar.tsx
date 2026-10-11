@@ -112,8 +112,11 @@ function computeBreakpoints(
   // Day-of-week threshold: base + date_dow + duration + sep
   const dowAt = baseShort + DATE_DOW_W + DURATION_W + SEP_W;
 
-  // Full names threshold: same layout but with full name width
-  const fullNameAt = baseFull + DATE_SHORT_W + DURATION_W + SEP_W;
+  // Full names threshold: full name width, budgeting the day-of-week date.
+  // dowAt <= fullNameAt always (baseShort <= baseFull), so by the time full
+  // names show, "Wed 12 Feb" is already showing; budgeting the 42 px short
+  // date here overflowed the row by up to 28 px at the threshold.
+  const fullNameAt = baseFull + DATE_DOW_W + DURATION_W + SEP_W;
 
   // Thumbnail threshold: full names + thumb + thumb_gap + stacked date/duration
   const thumbAt = shape.hasVideo

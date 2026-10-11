@@ -276,6 +276,48 @@ class TestGeminiTruncation:
                 response_model=QuoteExtractionResult,
             )
 
+    @pytest.mark.asyncio
+    async def test_the_sdks_own_enum_is_recognised(self) -> None:
+        """The SDK hands back ``types.FinishReason.MAX_TOKENS``, whose str() is
+        'FinishReason.MAX_TOKENS' — the plain-string fake above never saw that,
+        so a real cut-off answer went on to fail as bad JSON and the quote
+        stage's split-and-retry for dense sessions never ran."""
+        types = pytest.importorskip("google.genai.types")
+        client = LLMClient(_make_settings(llm_provider="google", google_api_key="test-key"))
+        mock_response = SimpleNamespace(
+            candidates=[SimpleNamespace(finish_reason=types.FinishReason.MAX_TOKENS)],
+            text='{"quotes": [',
+            usage_metadata=SimpleNamespace(prompt_token_count=100, candidates_token_count=8192),
+        )
+        client._google_client = SimpleNamespace(aio=SimpleNamespace(
+            models=AsyncMock(generate_content=AsyncMock(return_value=mock_response)),
+        ))
+
+        with pytest.raises(TruncatedResponseError):
+            await client.analyze(
+                system_prompt="test", user_prompt="test",
+                response_model=QuoteExtractionResult,
+            )
+
+    @pytest.mark.asyncio
+    async def test_a_normal_finish_is_not_truncation(self) -> None:
+        types = pytest.importorskip("google.genai.types")
+        client = LLMClient(_make_settings(llm_provider="google", google_api_key="test-key"))
+        mock_response = SimpleNamespace(
+            candidates=[SimpleNamespace(finish_reason=types.FinishReason.STOP)],
+            text='{"quotes": []}',
+            usage_metadata=SimpleNamespace(prompt_token_count=100, candidates_token_count=10),
+        )
+        client._google_client = SimpleNamespace(aio=SimpleNamespace(
+            models=AsyncMock(generate_content=AsyncMock(return_value=mock_response)),
+        ))
+
+        result = await client.analyze(
+            system_prompt="test", user_prompt="test",
+            response_model=QuoteExtractionResult,
+        )
+        assert result.quotes == []
+
 
 # ---------------------------------------------------------------------------
 # Local (Ollama) truncation

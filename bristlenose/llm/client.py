@@ -1113,7 +1113,14 @@ class LLMClient:
             if response.candidates and response.candidates[0].finish_reason
             else None
         )
-        finish_reason = str(finish_reason_obj) if finish_reason_obj else None
+        # The SDK returns a `FinishReason` enum whose str() is
+        # "FinishReason.MAX_TOKENS", which never matched the check below — so
+        # a cut-off answer failed as bad JSON and quote extraction's
+        # split-and-retry never ran. Read the member's name.
+        finish_reason = (
+            getattr(finish_reason_obj, "name", None) or str(finish_reason_obj)
+            if finish_reason_obj else None
+        )
         response_model_str = getattr(response, "model_version", None) or request_model
         elapsed_ms = int((time.perf_counter() - t0) * 1000)
 

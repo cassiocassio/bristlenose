@@ -388,6 +388,46 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.37.0** — _12 Oct 2026_
+
+Transcripts come out punctuated, Word tables are read, PII redaction works on the Snap and Fedora packages, and the Sessions Start column shows when a session began.
+
+**New**
+
+- **Transcripts come out punctuated.** Whisper now gets a short punctuated prompt on every 30-second window, in English and Japanese, so a recording no longer turns into long lower-case stretches with no full stops. This applies to recordings transcribed from now on; existing transcripts are not redone.
+- **Text inside Word tables is read.** A discussion guide laid out as a table was reported unreadable, and a transcript in a table came out nearly empty. Tables are now read; a timed table that can't be aligned is refused with a clear message. Sessions from `.docx` files are re-parsed on the next run, so their analysis runs again.
+- **PII redaction on the Snap and Fedora packages.** They had shipped the wrong language model, so `--redact-pii` failed. The first redacting run now downloads the right model into your own cache, checked against a pinned hash.
+- **A session timeline on the Mac app's Welcome screen**, showing how a session's row opens into its timeline.
+
+**Improved**
+
+- **`bristlenose doctor` exits 1 when a check fails**, so a script or CI step can rely on it. Warnings still exit 0.
+- **A missing PII model is a warning on pip and Homebrew installs**, since the run downloads it. It had been a failure that stopped `run --redact-pii` before it could.
+- **The Welcome screen's background links say where they go** ("Analysis method", "Sentiment taxonomy") instead of "Learn more", in every language.
+- **Faster first model download on Windows**, which now uses Hugging Face's Xet transfer.
+
+**Fixed**
+
+- **The Sessions Start column showed when a recording was saved or downloaded, not when the session began.** Start now comes from the recording's own clock, from Bristlenose's import stamp, or from the meeting app's filename (Teams, Zoom, Meet, Screen Recording, Android, OBS). It also no longer shows an hour early during British Summer Time. Re-run a project to correct its existing sessions.
+- **Reopening a project whose output folder had lost files could delete your quotes.** With the cluster or theme files missing, quotes went with their hidden flags and tags, and with transcripts gone too, starred and edited quotes and whole sessions. The cleanup now runs only when the output is complete.
+- **One duplicate in an AutoCode answer threw away the whole job.** Every proposal was rolled back and a retry failed the same way. The best-scoring proposal per quote is now kept.
+- **An anonymised clip export sat beside the previous export's clips**, whose filenames carry participant names. Each export now removes the previous one's clips first.
+- **An API key containing a line break could be printed in full** by `doctor` and `run`. It is now refused with a fixed message.
+- **On Windows, a `winget.exe` or `nvidia-smi.exe` in the current folder could run in place of the real one.** The same fix 0.36.0 made for ffmpeg and Ollama.
+- **Google Meet `.docx` transcripts kept only the first turn after each timestamp.** Every turn is now read; turn times between Meet's timestamps are estimated from text length.
+- **A Gemini answer cut off at its output limit failed the session** instead of being split and retried, as with the other providers.
+- **`configure local` named a model it never saved**, so the next run asked for a model that wasn't installed.
+- **`doctor` reported a local model installed when only a similarly named one was**, and suggested pulling the wrong tag.
+- **A failed download of Ollama's install script was reported as "Ollama installed".**
+- **An Azure endpoint without `https://` crashed `run`** with a traceback. It now fails the network check with advice.
+- **The first transcription printed Hugging Face warnings, each twice**, asking for an access token, Developer Mode or a `pip install`. They are silent now; real download failures still show.
+- **`serve` never checked its own dependencies** before starting. It does now.
+- **Editing a quote could pull focus back from the tag field** in the same card.
+- **In the Mac app's Sessions sidebar, full names could overflow the row** at the width where they first appear.
+- **Disconnect Miro could clear the wrong project's connection** in the Mac app when several were open.
+- **The Mac app kept removed projects' folders open**, and old report views alive, until it quit.
+- **Turning off Agent Access could leave the previous connection file in place** if rewriting it failed. It is now removed.
+
 **0.36.0** — _8 Oct 2026_
 
 Transcript text can be selected across paragraphs and pasted into a document with its timecodes, and the transcript no longer shows a platform's speaker name past anonymisation.

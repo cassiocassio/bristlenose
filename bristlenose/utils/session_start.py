@@ -26,8 +26,11 @@ one is absent):
    machine's zone. The full list is ``_FILENAME_RULES`` plus the three
    dedicated patterns; design-timezones § 5.9 has the coverage table.
 4. **container** — the time the recorder wrote inside the file. Survives
-   copying and downloading, which birthtime does not. Moved back by the
-   duration only for a writer *measured* to stamp the end (``_END_WRITERS``).
+   copying and downloading, which birthtime does not: a field recorder's
+   Broadcast WAV start, a GoPro's local clock, Apple's capture date, or
+   ``creation_time`` (see ``_container_time``). Moved back by the duration
+   only for a writer known to stamp the end (``_END_WRITERS``). A device clock
+   on 1 January is a reset clock and is refused.
 5. **birthtime** — the file's creation time; what shipped before. Never
    adjusted.
 
@@ -143,14 +146,22 @@ class SessionStart:
 #   files a video at the moment recording began), not measured here.
 # - QuickTime Player / Photo Booth on a Mac (``model = Mac…``): the capture
 #   date is the start side and is read first (``_container_time``).
-_END_WRITERS: tuple[tuple[str, str], ...] = (("author", "ReplayKitRecording"),)
+_END_WRITERS: tuple[tuple[str, str], ...] = (
+    ("author", "ReplayKitRecording"),
+    # Voice Memos (``encoder = com.apple.VoiceMemos (iPhone Version …)``):
+    # INFERRED end — the one copy measured had creation_time 4 m 27 s before
+    # the file existed with a 6 m 5 s duration, so it cannot be the start.
+    ("encoder", "com.apple.VoiceMemos"),
+)
 
 
 def _stamps_end(file: InputFile) -> bool:
     meta = file.container_meta
     if meta is None:
         return False
-    return any((getattr(meta, field) or "").strip() == value for field, value in _END_WRITERS)
+    return any(
+        (getattr(meta, field) or "").strip().startswith(value) for field, value in _END_WRITERS
+    )
 
 
 # -- Filename signals ---------------------------------------------------------
@@ -215,6 +226,12 @@ _FILENAME_RULES: tuple[tuple[str, re.Pattern[str], str, bool], ...] = (
         r"(?P<y>\d{4})(?P<mo>\d{2})(?P<d>\d{2})[_-](?P<h>\d{2})(?P<mi>\d{2})(?P<s>\d{2})"
         r"(?:[_-][\w.-]{0,40})?(?:\(\d+\))?$",
         re.IGNORECASE,
+    ), "local", False),
+    # Apple Voice Memos' own file: "20240523 101530-3A2B9C1D" — the start,
+    # local (REPORTED by forensic write-ups; the folder is privacy-protected
+    # and was not measured). An exported copy is renamed to its title.
+    ("voice_memos", re.compile(
+        r"^(?P<y>\d{4})(?P<mo>\d{2})(?P<d>\d{2}) (?P<h>\d{2})(?P<mi>\d{2})(?P<s>\d{2})(?:-[0-9A-Fa-f]{8})?$",
     ), "local", False),
     # OBS Studio's default ("2026-01-15 14-30-22") and Windows Game Bar
     # ("Zoom Meeting 2026-01-15 14-30-22"): the start, local, hyphenated time.
@@ -352,33 +369,69 @@ def _filename_candidates(file: InputFile) -> list[StartCandidate]:
     return out
 
 
-def _container_time(file: InputFile) -> datetime | None:
-    """The container's best start-side time, as an aware value.
+_GOPRO_FIRMWARE_RE = re.compile(r"^(?:HD\d+|H\d{2}|FS\d)\.")
 
-    Apple's ``com.apple.quicktime.creationdate`` (``creation_local``) is the
-    capture date and wins when present; ``creation_time`` is otherwise taken.
-    On a Mac-made QuickTime file they differ — capture date 34 s before
-    ``creation_time``, which equals the save moment (measured 11 Oct 2026, one
-    file) — and on iPhone files they are identical, so preferring the capture
-    date costs nothing there. A naive value is never trusted: ``astimezone``
-    would read it as this machine's local time.
+
+def _is_gopro(file: InputFile) -> bool:
+    meta = file.container_meta
+    return bool(meta and meta.firmware and _GOPRO_FIRMWARE_RE.match(meta.firmware.strip()))
+
+
+def _reset_clock(at: datetime) -> bool:
+    """A device clock that lost its setting: field recorders and cameras fall
+    back to 1 January (measured: a Zoom H1 at 2010-01-01 counting up from
+    power-on, a GoPro HERO7 at 2016-01-01). A real New Year's Day session
+    is refused too — the cost of not trusting a reset clock."""
+    return at.month == 1 and at.day == 1
+
+
+def _container_time(file: InputFile) -> tuple[datetime, str] | None:
+    """The container's start-side time, aware, and which reading produced it.
+
+    In order:
+
+    - **Broadcast WAV** ``origination`` — a field recorder's start on its own
+      clock, naive, read on this machine's (no zone exists to read).
+    - **GoPro** — ``creation_time`` is the camera's LOCAL clock wearing a false
+      ``Z`` (measured on six models against their own GPS time: 7–8 h off in
+      California), and the START. Its wall-clock digits are read on this
+      machine's clock.
+    - **Apple's capture date** (``creationdate``) when present: on a Mac-made
+      QuickTime file it is 34 s before ``creation_time``, the save moment
+      (measured, one file); on iPhone files the two are identical.
+    - ``creation_time`` otherwise.
+
+    A naive value is never trusted as UTC: ``astimezone`` would read it as
+    this machine's local time.
     """
     meta = file.container_meta
     if meta is None:
         return None
+    if meta.origination is not None and meta.origination.tzinfo is None:
+        if _reset_clock(meta.origination):
+            return None
+        return from_local(meta.origination), "bwf"
+    if _is_gopro(file) and meta.creation_utc is not None:
+        wall = meta.creation_utc.replace(tzinfo=None)
+        if _reset_clock(wall):
+            return None
+        return from_local(wall), "gopro"
     for value in (meta.creation_local, meta.creation_utc):
         if value is not None and value.tzinfo is not None:
-            return value
+            return value, "container"
     return None
 
 
 def _container_candidate(file: InputFile) -> StartCandidate | None:
-    stamped = _container_time(file)
-    if stamped is None:
+    found = _container_time(file)
+    if found is None:
         return None
+    stamped, reading = found
     try:
         instant = stamped.astimezone(timezone.utc)
-        if not _instant_ok(instant) or instant > file.created_at + CONFLICT_TOLERANCE:
+        if not _instant_ok(instant) or instant > file.created_at + _LOCAL_CLOCK_SLACK.get(
+            reading, CONFLICT_TOLERANCE
+        ):
             logger.warning(
                 "session_start_container_refused | file=%s | container=%s | created=%s",
                 file.path.name, instant.isoformat(), file.created_at.isoformat(),
@@ -392,6 +445,12 @@ def _container_candidate(file: InputFile) -> StartCandidate | None:
     except (ValueError, OverflowError):
         return None
     return StartCandidate(instant, StartSource.CONTAINER, file.path.name)
+
+
+#: A device clock read on this machine's zone can legitimately run ahead of
+#: the file's creation here when the device was set to a zone east of this
+#: one — a GoPro set in Tokyo, read in London. Allow a day before refusing.
+_LOCAL_CLOCK_SLACK = {"bwf": timedelta(hours=14), "gopro": timedelta(hours=14)}
 
 
 def _birthtime_candidate(file: InputFile) -> StartCandidate:

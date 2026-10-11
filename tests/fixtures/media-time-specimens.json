@@ -1,0 +1,354 @@
+{
+ "_comment": "ffprobe JSON (format=duration:format_tags:stream_tags) of real recordings, GPS location tags removed. Sources: gopro/gpmf-parser samples/ (GoPro); public GitHub BWF fixtures (Zoom F8, Zoom H1). Measured 11 Oct 2026 \u2014 docs/design-timezones.md \u00a7 5.9.",
+ "specimens": {
+  "gopro_hero5": {
+   "streams": [
+    {
+     "tags": {
+      "creation_time": "2017-04-17T10:31:43.000000Z",
+      "language": "eng",
+      "handler_name": "\tGoPro AVC",
+      "encoder": "GoPro AVC encoder",
+      "timecode": "10:31:06:01"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2017-04-17T10:31:43.000000Z",
+      "language": "eng",
+      "handler_name": "\tGoPro AAC",
+      "timecode": "10:31:06:01"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2017-04-17T10:31:43.000000Z",
+      "language": "eng",
+      "handler_name": "\tGoPro TCD",
+      "timecode": "10:31:06:01"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2017-04-17T10:31:43.000000Z",
+      "language": "eng",
+      "handler_name": "\tGoPro MET"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2017-04-17T10:31:43.000000Z",
+      "language": "eng",
+      "handler_name": "\tGoPro SOS"
+     }
+    }
+   ],
+   "format": {
+    "duration": "34.576208",
+    "tags": {
+     "major_brand": "mp41",
+     "minor_version": "538120216",
+     "compatible_brands": "mp41",
+     "creation_time": "2017-04-17T10:31:43.000000Z",
+     "firmware": "HD5.02.02.00.00"
+    }
+   }
+  },
+  "gopro_hero6": {
+   "streams": [
+    {
+     "tags": {
+      "creation_time": "2018-01-24T11:27:32.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro AVC  ",
+      "encoder": "GoPro AVC encoder",
+      "timecode": "11:26:51:05"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2018-01-24T11:27:32.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro AAC  ",
+      "timecode": "11:26:51:05"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2018-01-24T11:27:32.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro TCD  ",
+      "timecode": "11:26:51:05"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2018-01-24T11:27:32.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro MET  "
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2018-01-24T11:27:32.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro SOS  "
+     }
+    }
+   ],
+   "format": {
+    "duration": "23.594667",
+    "tags": {
+     "major_brand": "mp41",
+     "minor_version": "538120216",
+     "compatible_brands": "mp41",
+     "creation_time": "2018-01-24T11:27:32.000000Z",
+     "firmware": "HD6.01.01.60.00"
+    }
+   }
+  },
+  "gopro_hero7_reset_clock": {
+   "streams": [
+    {
+     "tags": {
+      "creation_time": "2016-01-01T02:27:42.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro AVC  ",
+      "encoder": "GoPro AVC encoder",
+      "timecode": "02:27:33:15"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2016-01-01T02:27:42.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro AAC  ",
+      "timecode": "02:27:33:15"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2016-01-01T02:27:42.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro TCD  ",
+      "timecode": "02:27:33:15"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2016-01-01T02:27:42.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro MET  "
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2016-01-01T02:27:42.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro SOS  "
+     }
+    }
+   ],
+   "format": {
+    "duration": "12.714667",
+    "tags": {
+     "major_brand": "mp41",
+     "minor_version": "538120216",
+     "compatible_brands": "mp41",
+     "creation_time": "2016-01-01T02:27:42.000000Z",
+     "firmware": "HD7.01.01.80.00"
+    }
+   }
+  },
+  "gopro_hero8": {
+   "streams": [
+    {
+     "tags": {
+      "creation_time": "2019-11-18T15:41:25.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro AVC  ",
+      "encoder": "GoPro AVC encoder",
+      "timecode": "15:40:28:28"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2019-11-18T15:41:25.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro AAC  ",
+      "timecode": "15:40:28:28"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2019-11-18T15:41:25.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro TCD  ",
+      "timecode": "15:40:28:28"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2019-11-18T15:41:25.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro MET  "
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2019-11-18T15:41:25.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro SOS  "
+     }
+    }
+   ],
+   "format": {
+    "duration": "12.679000",
+    "tags": {
+     "major_brand": "mp41",
+     "minor_version": "538120216",
+     "compatible_brands": "mp41",
+     "creation_time": "2019-11-18T15:41:25.000000Z",
+     "firmware": "HD8.01.01.20.00"
+    }
+   }
+  },
+  "gopro_max": {
+   "streams": [
+    {
+     "tags": {
+      "creation_time": "2019-11-18T15:45:32.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro AVC  ",
+      "encoder": "GoPro AVC encoder",
+      "timecode": "15:44:35:10"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2019-11-18T15:45:32.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro AAC  ",
+      "timecode": "15:44:35:10"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2019-11-18T15:45:32.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro TCD  ",
+      "timecode": "15:44:35:10"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2019-11-18T15:45:32.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro MET  "
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2019-11-18T15:45:32.000000Z",
+      "language": "eng",
+      "handler_name": "\u000bGoPro SOS  "
+     }
+    }
+   ],
+   "format": {
+    "duration": "10.543000",
+    "tags": {
+     "major_brand": "mp41",
+     "minor_version": "538120216",
+     "compatible_brands": "mp41",
+     "creation_time": "2019-11-18T15:45:32.000000Z",
+     "firmware": "H19.03.01.30.00"
+    }
+   }
+  },
+  "gopro_fusion": {
+   "streams": [
+    {
+     "tags": {
+      "creation_time": "2017-12-31T12:15:25.000000Z",
+      "language": "eng",
+      "handler_name": "\tGoPro AVC",
+      "encoder": "GoPro AVC encoder",
+      "timecode": "12:14:41:16"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2017-12-31T12:15:25.000000Z",
+      "language": "eng",
+      "handler_name": "\tGoPro AAC",
+      "timecode": "12:14:41:16"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2017-12-31T12:15:25.000000Z",
+      "language": "eng",
+      "handler_name": "\tGoPro TCD",
+      "timecode": "12:14:41:16"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2017-12-31T12:15:25.000000Z",
+      "language": "eng",
+      "handler_name": "\tGoPro MET"
+     }
+    },
+    {
+     "tags": {
+      "creation_time": "2017-12-31T12:15:25.000000Z",
+      "language": "eng",
+      "handler_name": "\tGoPro SOS"
+     }
+    }
+   ],
+   "format": {
+    "duration": "15.168000",
+    "tags": {
+     "major_brand": "mp41",
+     "minor_version": "538120216",
+     "compatible_brands": "mp41",
+     "creation_time": "2017-12-31T12:15:25.000000Z",
+     "firmware": "FS1.04.01.70.00"
+    }
+   }
+  },
+  "zoom_f8": {
+   "streams": [
+    {}
+   ],
+   "format": {
+    "duration": "11.000000",
+    "tags": {
+     "comment": "SPEED=25.000ND\r\nTAKE=001\r\nUBITS=00000000\r\nSCENE=Scene_1_2AG\r\nTAPE=WINFO\r\nCIRCLED=FALSE\r\nTRL=TrL\r\nTRR=TrR\r\nTR1=Tr1\r\nTR2=Tr2\r\nTR3=Tr3\r\nTR4=Tr4\r\nTR5=Tr1\r\nTR6=Tr2\r\nTR7=Tr7\r\nTR8=Tr8\r\nNOTE=Test 01 wavinfo\r\n",
+     "encoded_by": "ZOOM F8",
+     "date": "2019-02-13",
+     "creation_time": "22:40:18",
+     "time_reference": "3917280000",
+     "coding_history": "A=PCM,F=48000,W=24,M=mono,T=F8;VERSION=1.10;1:1 0 0 L100 - 30;2:1 0 0 R100 - 30;3:1 0 0 R100 - 30;4:1 0 0 R100 - 30;5:1 0 1 R100 MUTE;6:1 0 1 R100 MUTE;7:1 0 0 R100 - 60;8:1 0 0 R100 - 60;L:0 1 0 CNTR   00;R:0 1 0 CNTR   00;FaderOffset=  00   00   00   00   00   00   00   00;"
+    }
+   }
+  },
+  "zoom_h1_reset_clock": {
+   "streams": [
+    {}
+   ],
+   "format": {
+    "duration": "10.916667",
+    "tags": {
+     "encoded_by": "ZOOM Handy Recorder H1",
+     "date": "2010-01-01",
+     "creation_time": "01:15:44",
+     "time_reference": "436224000",
+     "coding_history": "A=PCM,F=96000,W=24,M=stereo,T=ZOOM Handy Recorder H1"
+    }
+   }
+  }
+ }
+}

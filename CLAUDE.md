@@ -477,6 +477,21 @@ pathspec as a plain directory and compare the counts before believing the zero.
 Same family as the zsh nomatch and `rg -rn` entries: tooling that fails quietly
 and plausibly.
 
+**Sibling: `git for-each-ref`'s `*` stops at a slash too.** `for-each-ref
+'refs/heads/after-*'` matches `after-x` and *misses* `after-x/0.36.0`, so the
+obvious way to list `after-<channel>/<version>` holds listed none, with exit 0
+(measured 9 Oct 2026). List `refs/heads/` and filter with `grep -E '^after-'`.
+`hold_refs` in `scripts/release.sh` carries the pin.
+
+**And a deadline that kills the process but not its group still hangs `$(…)`.**
+A command substitution waits for EOF on its pipe. A child of the timed-out
+process that inherited stdout keeps the pipe open after its parent is killed, so
+`out=$(timeout-ish cmd)` waits anyway. Fork into a new process group and kill
+`-$pid`; `bounded` in `scripts/verify-channels.sh` is the working form, and the
+`W3-*` scenarios in `scripts/channel-scenarios.txt` hang if either half is
+removed (both mutants proved, 10 Oct 2026). macOS has no `timeout`; that is why
+it is perl.
+
 ### A gate that matches on PROXIMITY or on a NAME is a gate that drifts with the file
 
 Two shapes, both found on 22 Sep 2026 in the same hour, and the second one

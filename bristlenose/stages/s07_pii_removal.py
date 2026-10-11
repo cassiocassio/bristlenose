@@ -45,7 +45,8 @@ PII_MODEL_DIR_ENV = "BRISTLENOSE_PII_MODEL_DIR"
 # EACCES — reproduced on 0.36.0). On those channels the model is fetched as the
 # same wheel `spacy download` would install, verified against this pin, and its
 # inner model directory unpacked into the user's model cache. The pin must move
-# with the spaCy minor: en_core_web_lg 3.8.x loads on spaCy 3.8.
+# with the spaCy minor: en_core_web_lg 3.8.x loads on spaCy 3.8. Gated by
+# test_pinned_model_matches_the_installed_spacy_minor, since spaCy is unpinned.
 SPACY_MODEL_VERSION = "3.8.0"
 _SPACY_MODEL_WHEEL_URL = (
     "https://github.com/explosion/spacy-models/releases/download/"

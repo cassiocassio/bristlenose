@@ -534,3 +534,35 @@ class TestEnsureOnReadOnlyPackage:
             _ensure_spacy_model()
         fake_spacy.load.assert_called_once_with(str(dest.absolute()))
         s07.fetch_spacy_model.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# The pinned model must load on the spaCy that installs
+# ---------------------------------------------------------------------------
+
+
+def _minor(version: str) -> tuple[int, int]:
+    major, minor = version.split(".")[:2]
+    return int(major), int(minor)
+
+
+def test_pinned_model_matches_the_installed_spacy_minor():
+    """A spaCy minor release must turn this red before a package ships it.
+
+    spaCy is not pinned: it arrives through presidio-analyzer and resolves fresh
+    on every CI run, snap build and Copr build. A model x.y.z declares
+    ``spacy_version: >=x.y.0,<x.(y+1).0`` in its meta.json, so on a new minor
+    the snap and the RPM would fetch a model the installed spaCy does not
+    support, with nothing to say so.
+    """
+    from importlib.metadata import version
+
+    installed = version("spacy")
+    assert _minor(s07.SPACY_MODEL_VERSION) == _minor(installed), (
+        f"spaCy {installed} is installed, but stage 7 pins "
+        f"{SPACY_MODEL} {s07.SPACY_MODEL_VERSION}, which declares spaCy "
+        f"{'.'.join(map(str, _minor(s07.SPACY_MODEL_VERSION)))}.x only. "
+        "Either move SPACY_MODEL_VERSION to the matching model release and "
+        "re-measure _SPACY_MODEL_WHEEL_SHA256 and _SPACY_MODEL_WHEEL_BYTES from "
+        "the new wheel, or cap spacy in pyproject.toml until you do."
+    )

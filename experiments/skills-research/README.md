@@ -192,9 +192,21 @@ Every big pack fails on invasiveness before quality comes into it:
 - **fp-check:** global Stop and SubagentStop LLM hooks.
 - **web-design-guidelines:** fetches its rules from an unpinned URL at runtime.
 
-The one low-risk adopt candidate is **`swift-lsp`** (sourcekit-lsp is already
-on this Mac). It is untested here, but it directly targets the cross-file
-blind spot. `typescript-lsp` and `pyright-lsp` need global installs.
+`swift-lsp` looked like the one low-risk adopt candidate, so it was tested before
+installing, and it **fails on this project**. With no build server, sourcekit-lsp
+type-checks each `.swift` file alone. Driven by a minimal LSP client the way the
+plugin launches it (bare `sourcekit-lsp`, repo root), it returned:
+- no go-to-definition across files;
+- **zero** references to `MCPHandshake`, which four files use;
+- **24 false compile errors**, such as "Cannot find type 'ServeManager' in scope".
+
+Pointing it at an existing Xcode index store changed nothing. An agent given
+this tool would be shown errors that do not exist, which is worse than no tool.
+It would work only behind a build server (`xcode-build-server` plus a
+`buildServer.json` kept in step with the scheme), a maintenance cost with no
+measured need: in-repo reviewers already grep across files. Not adopted
+(11 Oct 2026). `typescript-lsp` and `pyright-lsp` need global installs, and
+`tsc` and mypy already cover them.
 
 ### Adapt: vendor a trimmed copy, the `swiftui-pro` pattern
 

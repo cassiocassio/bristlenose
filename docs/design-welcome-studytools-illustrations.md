@@ -314,6 +314,13 @@ already running:
   the stickies came back as a second flash. A probe of the Miro page measured them
   visible at 0–340 ms and again at 519–702 ms before the fix, and not at all until the
   play added the first after it.
+- **The native illustrations follow the same rule (11 Oct 2026).** Ingest, Video clips,
+  the sentiment fan and the book shelf start with `curtain = 0`; `WelcomeCurtain.pass`
+  takes `fromBlank:` and skips the dip, `WelcomeCurtain.rest` waits `restGrace` (0.2 s)
+  before a first resting paint, and `WelcomeCurtain.snap` paints frames with
+  `disablesAnimations` — which also stops the sentiment fan *dealing* while at rest,
+  since its `dealt` rides an implicit `.animation(_:value:)`. Pinned by
+  `WelcomeCurtainBlankStartTests` (mutation-proved: an always-dip `pass` fails it).
 - **Rest is a recession, not a blackout** (`WelcomeTempo.restOpacity`). The curtain
   needs somewhere to fall that is neither a hole in the grid nor — since the resting
   frame and the finished frame are the same picture — a blink. It earns its keep

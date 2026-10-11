@@ -130,3 +130,66 @@ struct WelcomeTempoTests {
         #expect(WelcomeIllustration.none.welcomeTurn == 0)
     }
 }
+
+// MARK: - The native curtain starts blank (11 Oct 2026)
+//
+// A slide reached with the carousel chevrons is a fresh view that is usually already
+// the baton holder. Dipping out of a frame it never showed, or painting its finished
+// frame and then dipping it away, put the end of the story on screen before the
+// beginning. These pin the order of the first calls, then cancel — the rest of a pass
+// is real time and is the illustration's business.
+
+@MainActor
+private final class CurtainLog {
+    var calls: [String] = []
+}
+
+@Suite @MainActor
+struct WelcomeCurtainBlankStartTests {
+
+    @Test func aPassFromBlankOpensWithoutDipping() async {
+        let log = CurtainLog()
+        let pass = Task { @MainActor in
+            await WelcomeCurtain.pass(.clips, fromBlank: true,
+                                      fade: { v, _ in log.calls.append("fade \(v)") },
+                                      open: { log.calls.append("open") },
+                                      play: {})
+        }
+        try? await Task.sleep(for: .milliseconds(80))
+        pass.cancel(); await pass.value
+        #expect(log.calls == ["open", "fade 1.0"])
+    }
+
+    @Test func aPassFromARestingFrameStillDips() async {
+        let log = CurtainLog()
+        let pass = Task { @MainActor in
+            await WelcomeCurtain.pass(.clips, fromBlank: false,
+                                      fade: { v, _ in log.calls.append("fade \(v)") },
+                                      open: { log.calls.append("open") },
+                                      play: {})
+        }
+        try? await Task.sleep(for: .milliseconds(80))
+        pass.cancel(); await pass.value
+        #expect(log.calls == ["fade 0.0"])
+    }
+
+    @Test func aFirstRestWaitsOutTheGraceAndIsCancellable() async {
+        // Cancelled inside the grace — what happens when the claim arrives — it paints nothing.
+        let early = CurtainLog()
+        let cut = Task { @MainActor in
+            await WelcomeCurtain.rest(fromBlank: true, reduceMotion: false,
+                                      paint: { early.calls.append("paint") },
+                                      fade: { v, _ in early.calls.append("fade \(v)") })
+        }
+        try? await Task.sleep(for: .milliseconds(50))
+        cut.cancel(); await cut.value
+        #expect(early.calls.isEmpty)
+
+        // Left alone, it paints the still and fades up to rest.
+        let late = CurtainLog()
+        await WelcomeCurtain.rest(fromBlank: true, reduceMotion: false,
+                                  paint: { late.calls.append("paint") },
+                                  fade: { v, _ in late.calls.append("fade \(v)") })
+        #expect(late.calls == ["paint", "fade \(WelcomeTempo.restOpacity)"])
+    }
+}

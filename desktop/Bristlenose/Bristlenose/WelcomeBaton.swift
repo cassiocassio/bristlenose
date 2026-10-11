@@ -261,16 +261,30 @@ enum WelcomeCurtain {
     ///
     /// Every step re-checks cancellation: losing the baton mid-pass has to stop here,
     /// not one hold later.
+    ///
+    /// **`fromBlank` (11 Oct 2026).** A native illustration starts with its curtain at 0
+    /// and paints nothing until its first turn decides what it is — the same rule as the
+    /// webviews' `curtain()`. A slide reached with the carousel chevrons is a fresh view
+    /// that is often already the baton holder; dipping out of a frame it never showed
+    /// cost a dead 0.45 s, and when the claim landed a moment after the view was built it
+    /// first painted its finished frame and then dipped it away — the end before the
+    /// beginning. So a pass that starts blank skips the dip and opens straight away.
+    ///
+    /// Frames are jumped to (`snap`), never animated to: `open` must not ride an implicit
+    /// `.animation(_:value:)` the way the sentiment fan's `dealt` would.
     static func pass(_ kind: WelcomeIllustration,
+                     fromBlank: Bool = false,
                      fade: @escaping (Double, Double) -> Void,
                      open: @escaping () -> Void,
                      play: () async -> Void) async {
         let f = WelcomeTempo.fadeSeconds
-        fade(0, f)
-        try? await Task.sleep(for: .seconds(f))
-        guard !Task.isCancelled else { return }
+        if !fromBlank {
+            fade(0, f)
+            try? await Task.sleep(for: .seconds(f))
+            guard !Task.isCancelled else { return }
+        }
 
-        open()
+        snap(open)
         fade(1, f)
         try? await Task.sleep(for: .seconds(f + WelcomeTempo.establish(for: kind)))
         guard !Task.isCancelled else { return }
@@ -283,6 +297,39 @@ enum WelcomeCurtain {
 
         fade(WelcomeTempo.restOpacity, f)
         try? await Task.sleep(for: .seconds(f))
+    }
+}
+
+extension WelcomeCurtain {
+    /// How long a first "you are resting" waits before it paints. A carousel claim
+    /// reaches the baton on its next 100 ms tick, so a slide the researcher navigated to
+    /// can be told "resting" by its first turn and "playing" a moment later; painting the
+    /// still in that gap is what made the end of the story flash before its beginning.
+    /// Same value as the webviews' `GRACE`.
+    static let restGrace: Double = 0.2
+
+    /// Paint the resting frame. A view still blank from construction waits `restGrace`
+    /// first (its task is cancelled and restarted if it becomes the holder meanwhile),
+    /// then fades up to rest; a view losing the baton mid-pass jumps straight there, as
+    /// before. Reduce-motion paints at once at full strength.
+    static func rest(fromBlank: Bool, reduceMotion: Bool,
+                     paint: @escaping () -> Void,
+                     fade: @escaping (Double, Double) -> Void) async {
+        if reduceMotion { snap(paint); snap { fade(1, 0) }; return }
+        if fromBlank {
+            try? await Task.sleep(for: .seconds(restGrace))
+            guard !Task.isCancelled else { return }
+        }
+        snap(paint)
+        fade(WelcomeTempo.restOpacity, fromBlank ? WelcomeTempo.fadeSeconds : 0)
+    }
+
+    /// Run a frame change with every animation off, implicit `.animation(_:value:)`
+    /// modifiers included — the native counterpart of the webviews' `bn-snap`.
+    static func snap(_ body: () -> Void) {
+        var t = Transaction()
+        t.disablesAnimations = true
+        withTransaction(t, body)
     }
 }
 

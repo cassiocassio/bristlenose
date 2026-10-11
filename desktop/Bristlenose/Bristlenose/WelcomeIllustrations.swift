@@ -55,7 +55,7 @@ struct SentimentFanView: View {
     @Environment(\.welcomeTurnDone) private var turnDone
     @State private var sizes: [Int: CGSize] = [:]
     @State private var dealt = false
-    @State private var curtain = WelcomeTempo.restOpacity
+    @State private var curtain = 0.0   // blank until the first turn decides (WelcomeCurtain.pass)
 
     /// `sentiment` is the canonical sentiment id — the value stored in the DB and sent
     /// to the LLM — resolved through `enums.sentiment.*` for display, exactly as
@@ -110,15 +110,14 @@ struct SentimentFanView: View {
     /// it is the frame to hold. The old loop gathered the chips back up afterwards to
     /// be ready for the next lap, and the baton cut that lap at 83% every time.
     private func drive() async {
+        let blank = curtain == 0
         guard active && !reduceMotion else {
-            await MainActor.run {
-                dealt = true
-                curtain = reduceMotion ? 1 : WelcomeTempo.restOpacity
-            }
+            await WelcomeCurtain.rest(fromBlank: blank, reduceMotion: reduceMotion,
+                                      paint: { dealt = true }, fade: { v, d in withAnimation(.easeInOut(duration: d)) { curtain = v } })
             return
         }
         await WelcomeCurtain.pass(
-            .sentimentFan,
+            .sentimentFan, fromBlank: blank,
             fade: { v, d in withAnimation(.easeInOut(duration: d)) { curtain = v } },
             open: { dealt = false },                       // gathered, as a deck
             play: {
@@ -289,7 +288,7 @@ struct BookShelfView: View {
     private let captionReserve: CGFloat = 38
     @Environment(\.welcomeAnimationActive) private var active
     @Environment(\.welcomeTurnDone) private var turnDone
-    @State private var curtain = WelcomeTempo.restOpacity
+    @State private var curtain = 0.0   // blank until the first turn decides (WelcomeCurtain.pass)
 
     var body: some View {
         let n = books.count
@@ -320,14 +319,16 @@ struct BookShelfView: View {
     /// on a different book from the one it started on — so the resting shelf changes
     /// between turns without anything rotating while the cell is at rest.
     private func drive() async {
+        let blank = curtain == 0
         guard active && !reduceMotion else {
-            await MainActor.run { curtain = reduceMotion ? 1 : WelcomeTempo.restOpacity }
+            await WelcomeCurtain.rest(fromBlank: blank, reduceMotion: reduceMotion,
+                                      paint: {}, fade: { v, d in withAnimation(.easeInOut(duration: d)) { curtain = v } })
             return
         }
         let n = books.count
         let dwell = 3.8 * WelcomeTempo.stretch(for: .books)
         await WelcomeCurtain.pass(
-            .books,
+            .books, fromBlank: blank,
             fade: { v, d in withAnimation(.easeInOut(duration: d)) { curtain = v } },
             open: {},                                  // resumes from wherever the last turn left it
             play: {
@@ -900,7 +901,7 @@ struct IngestIllustrationView: View {
     @State private var iconOn = [Bool](repeating: false, count: 5)
     @State private var detailOn = [Bool](repeating: false, count: 5)
     @State private var typed = [Int](repeating: 0, count: 5)
-    @State private var curtain = WelcomeTempo.restOpacity
+    @State private var curtain = 0.0   // blank until the first turn decides (WelcomeCurtain.pass)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -956,15 +957,14 @@ struct IngestIllustrationView: View {
     /// ~16s against a 26s turn, so the last thing on screen was always a second pass
     /// cut 58% through — the curtain and the baton between them own the rhythm now.
     private func drive() async {
+        let blank = curtain == 0
         guard active && !reduceMotion else {
-            await MainActor.run {
-                setComplete()
-                curtain = reduceMotion ? 1 : WelcomeTempo.restOpacity
-            }
+            await WelcomeCurtain.rest(fromBlank: blank, reduceMotion: reduceMotion,
+                                      paint: { setComplete() }, fade: { v, d in withAnimation(.easeInOut(duration: d)) { curtain = v } })
             return
         }
         await WelcomeCurtain.pass(
-            .ingest,
+            .ingest, fromBlank: blank,
             fade: { v, d in withAnimation(.easeInOut(duration: d)) { curtain = v } },
             open: { reset() },
             play: { await playOnce() })
@@ -1040,7 +1040,7 @@ struct ClipsIllustrationView: View {
     @State private var pointerHome = false
     @State private var thumbOn = [false, false, false]
     @State private var unitsShown = [0, 0, 0]
-    @State private var curtain = WelcomeTempo.restOpacity
+    @State private var curtain = 0.0   // blank until the first turn decides (WelcomeCurtain.pass)
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -1139,15 +1139,14 @@ struct ClipsIllustrationView: View {
     /// One pass per turn — see the note on `IngestIllustrationView.drive`. This one was
     /// cut 39% into its second pass, right as the first clip landed.
     private func drive() async {
+        let blank = curtain == 0
         guard active && !reduceMotion else {
-            await MainActor.run {
-                setComplete()
-                curtain = reduceMotion ? 1 : WelcomeTempo.restOpacity
-            }
+            await WelcomeCurtain.rest(fromBlank: blank, reduceMotion: reduceMotion,
+                                      paint: { setComplete() }, fade: { v, d in withAnimation(.easeInOut(duration: d)) { curtain = v } })
             return
         }
         await WelcomeCurtain.pass(
-            .clips,
+            .clips, fromBlank: blank,
             fade: { v, d in withAnimation(.easeInOut(duration: d)) { curtain = v } },
             open: { reset() },
             play: { await playOnce() })

@@ -315,7 +315,7 @@ def get_install_method() -> str | None:
     if system == "Windows":
         # winget ships with Windows 11 and current Windows 10 (App Installer);
         # Windows Server and LTSC may lack it, and they get the download page
-        if shutil.which("winget") is not None:
+        if safe_which("winget") is not None:
             return "winget"
         return None
 
@@ -398,10 +398,15 @@ def install_ollama(method: str | None = None) -> bool:
             return result.returncode == 0
 
         if method == "winget":
-            # Output goes straight to the terminal (winget draws its own
-            # progress), so there is no text-mode decode to name.
+            # Resolved, never the bare name: CreateProcess would look in the
+            # current directory first (utils.safe_which). Output goes straight
+            # to the terminal (winget draws its own progress), so there is no
+            # text-mode decode to name.
+            winget = safe_which("winget")
+            if winget is None:
+                return False
             result = subprocess.run(
-                WINGET_INSTALL_CMD,
+                [winget, *WINGET_INSTALL_CMD[1:]],
                 stdout=sys.stdout,
                 stderr=sys.stderr,
             )

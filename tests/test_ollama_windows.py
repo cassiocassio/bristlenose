@@ -66,10 +66,18 @@ def _install(folder: Path, *names: str) -> Path:
 # --- install method ---------------------------------------------------------
 
 
-def test_windows_with_winget_installs_with_winget(
-    windows: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr("shutil.which", lambda n: "C:/winget.exe" if n == "winget" else None)
+@pytest.fixture
+def winget_on_path(
+    windows: Path, monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> Path:
+    """winget.exe on an absolute PATH entry (WindowsApps, in real life)."""
+    apps = tmp_path_factory.mktemp("WindowsApps")
+    (apps / "winget.exe").write_bytes(b"")
+    monkeypatch.setenv("PATH", str(apps))
+    return apps / "winget.exe"
+
+
+def test_windows_with_winget_installs_with_winget(winget_on_path: Path) -> None:
     assert ollama.get_install_method() == "winget"
 
 
@@ -78,11 +86,11 @@ def test_windows_without_winget_falls_back_to_the_download_page(windows: Path) -
 
 
 def test_winget_install_names_the_package_and_accepts_once(
-    windows: Path, no_shellouts: list[list[str]]
+    winget_on_path: Path, no_shellouts: list[list[str]]
 ) -> None:
     assert ollama.install_ollama("winget") is True
     assert no_shellouts == [[
-        "winget", "install", "--id", "Ollama.Ollama", "-e", "--source", "winget",
+        str(winget_on_path), "install", "--id", "Ollama.Ollama", "-e", "--source", "winget",
         "--accept-package-agreements", "--accept-source-agreements",
     ]]
 
@@ -175,8 +183,9 @@ def hostile_cwd(
 ) -> Path:
     """A cwd holding ollama.exe/.bat/.cmd, an empty PATH, and a Windows-shaped which."""
     cwd = tmp_path_factory.mktemp("interviews")
-    for name in ("ollama.exe", "ollama.bat", "ollama.cmd"):
-        (cwd / name).write_bytes(b"")
+    for stem in ("ollama", "winget"):
+        for ext in (".exe", ".bat", ".cmd"):
+            (cwd / f"{stem}{ext}").write_bytes(b"")
     monkeypatch.chdir(cwd)
     monkeypatch.setenv("PATH", "")
 
@@ -255,3 +264,14 @@ def test_off_windows_which_is_still_the_answer(monkeypatch: pytest.MonkeyPatch) 
     assert ollama.ollama_executable() == "/usr/bin/ollama"
     monkeypatch.setattr("shutil.which", lambda n: None)
     assert ollama.ollama_executable() is None
+
+
+def test_winget_in_the_current_directory_is_not_an_install_method(hostile_cwd: Path) -> None:
+    assert ollama.get_install_method() is None
+
+
+def test_winget_install_runs_nothing_from_the_current_directory(
+    hostile_cwd: Path, no_shellouts: list[list[str]]
+) -> None:
+    assert ollama.install_ollama("winget") is False
+    assert no_shellouts == []

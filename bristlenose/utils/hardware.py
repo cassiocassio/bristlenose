@@ -21,6 +21,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from bristlenose.utils.safe_which import safe_which
+
 logger = logging.getLogger(__name__)
 
 
@@ -294,9 +296,14 @@ def _check_cuda_available() -> bool:
 
 def _get_cuda_device_name() -> str | None:
     """Get the CUDA GPU device name."""
+    # Resolved, never the bare name: on Windows that would be looked up in the
+    # current directory first (utils.safe_which).
+    nvidia_smi = safe_which("nvidia-smi")
+    if nvidia_smi is None:
+        return None
     try:
         result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+            [nvidia_smi, "--query-gpu=name", "--format=csv,noheader"],
             capture_output=True,
             text=True, encoding="utf-8", errors="replace",
             timeout=10,

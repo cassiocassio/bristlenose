@@ -42,7 +42,7 @@ def hostile_cwd(
 ) -> Path:
     """A pipx/uv install on Windows, run from a folder holding ffmpeg/ffprobe."""
     cwd = tmp_path_factory.mktemp("interviews")
-    for name in _NAMES:
+    for name in (*_NAMES, "nvidia-smi"):
         for ext in (".exe", ".bat", ".cmd"):
             (cwd / f"{name}{ext}").write_bytes(b"")
     monkeypatch.chdir(cwd)
@@ -234,3 +234,32 @@ def test_no_call_site_falls_back_to_a_bare_ffmpeg_name() -> None:
         if re.search(r'\bor\s+"ff(mpeg|probe)"', line)
     ]
     assert offenders == [], f"use bundled_binary.binary_command: {offenders}"
+
+
+# --- nvidia-smi -----------------------------------------------------------------
+
+
+def test_nvidia_smi_in_the_current_directory_is_not_run(
+    hostile_cwd: Path, shellouts: list[list[str]]
+) -> None:
+    from bristlenose.utils.hardware import _get_cuda_device_name
+
+    assert _get_cuda_device_name() is None
+    assert shellouts == []
+
+
+def test_nvidia_smi_on_an_absolute_path_entry_is_run(
+    hostile_cwd: Path, shellouts: list[list[str]], monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The other answer: the driver's nvidia-smi (System32, in real life) is used."""
+    from bristlenose.utils.hardware import _get_cuda_device_name
+
+    system32 = tmp_path / "System32"
+    system32.mkdir()
+    (system32 / "nvidia-smi.exe").write_bytes(b"")
+    monkeypatch.setenv("PATH", str(system32))
+    _get_cuda_device_name()
+    assert shellouts == [
+        [str(system32 / "nvidia-smi.exe"), "--query-gpu=name", "--format=csv,noheader"]
+    ]

@@ -256,7 +256,9 @@ def check_backend() -> CheckResult:
 
     # Warn if NVIDIA GPU detected but CUDA not available
     if accel == "CPU":
-        nvidia_detected = shutil.which("nvidia-smi") is not None
+        from bristlenose.utils.safe_which import safe_which
+
+        nvidia_detected = safe_which("nvidia-smi") is not None
         if nvidia_detected:
             return CheckResult(
                 status=CheckStatus.WARN,

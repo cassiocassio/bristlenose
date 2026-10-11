@@ -28,6 +28,13 @@ dependencies = [
     # faster-whisper 1.2.1, trial clip: 19.0.0 fails, 18.1.0 decodes 120 s).
     # Lift when a faster-whisper release drops the argument or supports av 19.
     "av<19",
+    # huggingface-hub downloads the Whisper models (faster-whisper, mlx-whisper)
+    # and doctor scans its cache. 2.x is a major nobody has run here: it began
+    # resolving on 11 Oct 2026 only because tokenizers 0.23.3 widened its cap
+    # from <2 to <3, and 0.36.0's bundle shipped 1.33.0. Capped so the release
+    # that night did not take an untested major. Lift after a real model
+    # download and `bristlenose doctor` pass on 2.x.
+    "huggingface-hub<2",
     "pysrt>=1.1",
     "webvtt-py>=0.5",
     "python-docx>=1.1",

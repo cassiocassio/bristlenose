@@ -106,7 +106,7 @@ change.** The others run only if their area is touched. The second rule is
 measured, not taste: on 14 historical bugs (11 Oct 2026) `silent-failure-hunter`
 was the strongest single reviewer and the most complementary to `code-review`.
 Adding it caught 1.5 more cases, where a second plain reader caught none,
-because the two plain readers missed the same ones. Evidence: the research record in `experiments/skills-research/` (branch `research/claude-skills-2026-10` until it lands on `main`).
+because the two plain readers missed the same ones. Evidence: the research record in `experiments/skills-research/`.
 
 ### The fresh-eyes lane — deliberately context-free
 
@@ -276,7 +276,7 @@ instead: the specialist source, platform-neutral. Start at hotspots.md.
 on the same Swift bugs in both runs of the 11 Oct 2026 benchmark (2 and 3 of 5,
 against 3 and 4.5). Their checklists are API modernity and view hygiene; the
 bugs that ship here are ordering, lifetime and fail-open, which none of their
-items name. Evidence: the research record in `experiments/skills-research/` (branch `research/claude-skills-2026-10` until it lands on `main`).
+items name. Evidence: the research record in `experiments/skills-research/`.
 
 **Mac taste has its own source.** `mac-arsed-mac-app` (vendored, MIT, Bart
 Reardon) is the judgement layer for Mac craft — menus, keyboard, windows,

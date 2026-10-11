@@ -1,0 +1,13 @@
+BASE rc=0 219 passed, 1 skipped in 2.95s
+M1 rc=1 11 failed, 208 passed, 1 skipped in 2.79s
+M2 rc=1 1 failed, 218 passed, 1 skipped in 3.00s
+M3 rc=1 5 failed, 214 passed, 1 skipped in 3.01s
+M4 rc=0 219 passed, 1 skipped in 3.16s
+M5 rc=0 219 passed, 1 skipped in 3.20s
+M6 rc=1 3 failed, 216 passed, 1 skipped in 3.29s
+M7 rc=1 2 failed, 217 passed, 1 skipped in 3.28s
+M8 rc=1 2 failed, 217 passed, 1 skipped in 3.20s
+M9 rc=1 3 failed, 216 passed, 1 skipped in 3.32s
+M10 rc=0 219 passed, 1 skipped in 3.16s
+M11 rc=0 219 passed, 1 skipped in 2.98s
+M12 rc=0 219 passed, 1 skipped in 3.15s

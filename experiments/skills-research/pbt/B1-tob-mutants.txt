@@ -1,0 +1,13 @@
+BASE kills=0/3  last: 19 passed, 2 xfailed in 3.09s
+M1 kills=2/3  last: 2 failed, 17 passed, 2 xfailed in 3.87s
+M2 kills=3/3  last: 1 failed, 18 passed, 2 xfailed in 3.00s
+M3 kills=3/3  last: 2 failed, 17 passed, 2 xfailed in 3.59s
+M4 kills=3/3  last: 1 failed, 18 passed, 2 xfailed in 3.00s
+M5 kills=0/3  last: 19 passed, 2 xfailed in 3.06s
+M6 kills=3/3  last: 1 failed, 18 passed, 2 xfailed in 2.99s
+M7 kills=3/3  last: 1 failed, 18 passed, 2 xfailed in 3.07s
+M8 kills=0/3  last: 19 passed, 2 xfailed in 2.98s
+M9 kills=3/3  last: 1 failed, 18 passed, 2 xfailed in 3.77s
+M10 kills=0/3  last: 19 passed, 2 xfailed in 2.99s
+M11 kills=0/3  last: 19 passed, 2 xfailed in 3.06s
+M12 kills=2/3  last: 1 failed, 18 passed, 2 xfailed in 3.57s

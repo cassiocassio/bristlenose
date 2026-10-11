@@ -8,7 +8,7 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 6581
+        "tests": 6819
       },
       {
         "basis": "test files",
@@ -21,19 +21,19 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 141,
+        "files": 142,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 1706
+        "tests": 1712
       },
       {
         "basis": "spec files",
-        "files": 9,
+        "files": 10,
         "kind": "browser e2e",
         "runner": "playwright",
-        "source": "e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts)",
+        "source": "e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts, windows-scaling.spec.ts)",
         "suite": "playwright",
         "tests": null
       }
@@ -242,7 +242,7 @@
         "basis": "spec files",
         "kind": "browser e2e",
         "runner": "playwright",
-        "source": "e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts)",
+        "source": "e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts, windows-scaling.spec.ts)",
         "suite": "playwright"
       }
     ],

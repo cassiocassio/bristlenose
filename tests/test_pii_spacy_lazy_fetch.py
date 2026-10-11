@@ -505,16 +505,18 @@ class TestEnsureOnReadOnlyPackage:
         fake_spacy = MagicMock()
         fake_spacy.load.side_effect = [OSError("not found"), MagicMock()]
         fetched = []
+        cached = Path("/cache/en_core_web_lg-3.8.0")
         monkeypatch.setattr(
             s07, "fetch_spacy_model",
-            lambda **k: fetched.append(1) or Path("/cache/en_core_web_lg-3.8.0"),
+            lambda **k: fetched.append(1) or cached,
         )
         with patch.dict(sys.modules, {"spacy": fake_spacy}), \
                 patch("bristlenose.utils.package_install.ensure_spacy_model") as installer:
             _ensure_spacy_model()
         installer.assert_not_called()
         assert fetched == [1]
-        fake_spacy.load.assert_called_with("/cache/en_core_web_lg-3.8.0")
+        # str(Path), not the literal: on Windows the separator is a backslash.
+        fake_spacy.load.assert_called_with(str(cached))
 
     def test_no_fetch_refuses_without_downloading(self, monkeypatch):
         fake_spacy = MagicMock()

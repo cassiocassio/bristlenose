@@ -295,6 +295,7 @@ class TestCheckBackend:
         assert result.status == CheckStatus.OK
         assert "CUDA" in result.detail
 
+    @pytest.mark.usefixtures("which_is_shutil_which")
     def test_nvidia_gpu_without_cuda_runtime(self) -> None:
         """Linux x86_64 with nvidia-smi but no CUDA runtime → WARN."""
         mock_fw = MagicMock(__version__="1.2.1")

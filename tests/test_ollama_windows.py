@@ -33,6 +33,9 @@ def windows(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     monkeypatch.setattr(platform, "system", lambda: "Windows")
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     monkeypatch.setattr("shutil.which", lambda name: None)
+    # On a real Windows runner safe_which walks PATH itself, and the runner's
+    # PATH has winget; "nothing on PATH" has to be said, not assumed.
+    monkeypatch.setenv("PATH", "")
     monkeypatch.setattr("time.sleep", lambda s: None)
     return tmp_path
 

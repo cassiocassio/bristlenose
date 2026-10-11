@@ -263,8 +263,14 @@ case "$(verdict_hold after-winget/1.2.0 1.2.0 pending '')" in
 
 head_ "hold_refs + print_holds — both repos, local and origin, and a missing website said aloud"
 _HR=$(mktemp -d)
-git -C "$_HR" init -q -b main here && git -C "$_HR/here" commit -q --allow-empty -m x
-git -C "$_HR" init -q -b main site && git -C "$_HR/site" commit -q --allow-empty -m x
+# commit and commit-tree need an identity: CI's runner has none, and macOS
+# invents one from the hostname, so this passed here and failed there.
+git -C "$_HR" init -q -b main here && git -C "$_HR" init -q -b main site
+for _r in here site; do
+    git -C "$_HR/$_r" config user.email "suite@bristlenose.test"
+    git -C "$_HR/$_r" config user.name "Release Suite"
+    git -C "$_HR/$_r" commit -q --allow-empty -m x
+done
 # A real hold carries a commit main lacks; a bare branch at main's tip reads
 # "landed, or never had a commit" (H1), so each hold here gets one.
 _hold() { git -C "$1" update-ref "$2" "$(git -C "$1" commit-tree 'HEAD^{tree}' -p HEAD -m "hold $2")"; }

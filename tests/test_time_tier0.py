@@ -132,10 +132,12 @@ class TestHeaderDate:
         dt = parse_header_datetime("2026-05-09T14:23:00+01:00")
         assert dt == datetime(2026, 5, 9, 13, 23, tzinfo=timezone.utc)
 
-    def test_naive_means_utc_by_documented_decision(self) -> None:
+    def test_naive_means_utc_by_documented_decision(self, london) -> None:
         from bristlenose.utils.timecodes import parse_header_datetime
         assert parse_header_datetime("2026-05-09T14:23:00") == datetime(2026, 5, 9, 14, 23, tzinfo=timezone.utc)
-        assert parse_header_datetime("2026-05-09") == datetime(2026, 5, 9, tzinfo=timezone.utc)
+        # A date with no time names a day: local midnight (11 Oct 2026,
+        # design-timezones § 5.9) — 00:00 BST on 9 May is 23:00 UTC on the 8th.
+        assert parse_header_datetime("2026-05-09") == datetime(2026, 5, 8, 23, 0, tzinfo=timezone.utc)
         assert parse_header_datetime("not a date") is None
 
     def test_both_readers_derive_the_same_instant_from_one_header(self, tmp_path: Path) -> None:

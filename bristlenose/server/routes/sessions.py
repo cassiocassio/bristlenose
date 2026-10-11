@@ -20,6 +20,7 @@ from bristlenose.server.models import (
 )
 from bristlenose.server.routes.reanalyse import needs_reanalysis
 from bristlenose.server.speaker_slots import is_recoded_out, is_team, slot_map
+from bristlenose.utils.timecodes import iso_utc
 
 router = APIRouter(prefix="/api")
 
@@ -234,9 +235,7 @@ def get_sessions(
                 SessionResponse(
                     session_id=sess.session_id,
                     session_number=sess.session_number,
-                    session_date=(
-                        sess.session_date.isoformat() if sess.session_date else None
-                    ),
+                    session_date=iso_utc(sess.session_date),
                     duration_seconds=sess.duration_seconds,
                     has_media=sess.has_media,
                     has_video=sess.has_video,

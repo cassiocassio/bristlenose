@@ -19,6 +19,7 @@ from bristlenose.models import (
 from bristlenose.refusals import MESSAGES, UnusableReason
 from bristlenose.utils.audio import probe_media
 from bristlenose.utils.fs import is_bristlenose_artefact, is_dataless
+from bristlenose.utils.session_start import resolve_session_start
 
 logger = logging.getLogger(__name__)
 
@@ -263,9 +264,8 @@ def _try_add_file(
     container_meta = None
     if file_type in (FileType.AUDIO, FileType.VIDEO) and not is_dataless(path):
         # One ffprobe: duration plus the container's own timestamp, zone and
-        # writer identity (docs/design-timezones.md § 5.1). The meta is capture
-        # only — session_date is not derived from it yet; that is § 5.4's
-        # resolver, once the writer table is measured.
+        # writer identity (docs/design-timezones.md § 5.1). `group_into_sessions`
+        # reads it through `utils.session_start` to place the session's start.
         duration, container_meta = probe_media(path)
 
     files.append(
@@ -513,7 +513,9 @@ def session_key(files: list[InputFile]) -> str:
     return f"stem:{key}"
 
 
-def group_into_sessions(files: list[InputFile]) -> list[InputSession]:
+def group_into_sessions(
+    files: list[InputFile], *, order_by_start: bool = False
+) -> list[InputSession]:
     """Group files into sessions and assign participant numbers.
 
     Grouping heuristic:
@@ -543,20 +545,37 @@ def group_into_sessions(files: list[InputFile]) -> list[InputSession]:
     stem_groups = _group_by_stem(remaining)
 
     # -- Merge both grouping passes into raw sessions --------------------------
+    # Each session's start comes from `utils.session_start` (when it started,
+    # not when its file was saved — design-timezones § 5.4).
+    #
+    # The ORDER is a separate question, because it numbers the sessions. With
+    # `order_by_start` they are numbered by that start, which is what a new
+    # project wants. Without it they keep the order they always had — earliest
+    # file creation time — because a project analysed before the session
+    # registry existed (3 Oct 2026) has no `sessions.json`, is numbered by this
+    # order on its next run, and moving the key would carry one interview's
+    # stars and names onto another. The pipeline decides (`_may_order_by_start`).
     raw_sessions: list[tuple[datetime, list[InputFile]]] = []
     for _dir, group_files in zoom_dir_groups.items():
-        session_date = min(f.created_at for f in group_files)
-        raw_sessions.append((session_date, group_files))
+        raw_sessions.append((min(f.created_at for f in group_files), group_files))
     for group_files in stem_groups:
-        session_date = min(f.created_at for f in group_files)
-        raw_sessions.append((session_date, group_files))
+        raw_sessions.append((min(f.created_at for f in group_files), group_files))
 
-    # Sort by session date, then first filename
-    raw_sessions.sort(key=lambda s: (s[0], s[1][0].path.name))
+    starts = [resolve_session_start(group_files) for _key, group_files in raw_sessions]
+    order = sorted(
+        range(len(raw_sessions)),
+        key=lambda n: (
+            starts[n].instant if order_by_start else raw_sessions[n][0],
+            raw_sessions[n][1][0].path.name,
+        ),
+    )
 
     # Assign session and provisional participant numbers
     sessions: list[InputSession] = []
-    for i, (session_date, group_files) in enumerate(raw_sessions, start=1):
+    for i, n in enumerate(order, start=1):
+        group_files = raw_sessions[n][1]
+        start = starts[n]
+        session_date = start.instant
         session_id = f"s{i}"
         participant_id = f"p{i}"  # provisional — reassigned after Stage 5b
 
@@ -574,13 +593,15 @@ def group_into_sessions(files: list[InputFile]) -> list[InputSession]:
             files=group_files,
             has_existing_transcript=has_transcript,
             session_date=session_date,
+            session_start_source=start.source.value,
         )
         sessions.append(session)
         logger.info(
-            "Session %s: %d files, date=%s, has_transcript=%s",
+            "Session %s: %d files, start=%s, start_source=%s, has_transcript=%s",
             session_id,
             len(group_files),
-            session_date.date(),
+            session_date.astimezone().isoformat(timespec="minutes"),
+            start.source.value,
             has_transcript,
         )
 
@@ -588,7 +609,10 @@ def group_into_sessions(files: list[InputFile]) -> list[InputSession]:
 
 
 def ingest(
-    input_dir: Path, skipped: list[SkippedFile] | None = None
+    input_dir: Path,
+    skipped: list[SkippedFile] | None = None,
+    *,
+    order_by_start: bool = False,
 ) -> list[InputSession]:
     """Full ingestion pipeline: discover files, group into sessions.
 
@@ -598,6 +622,9 @@ def ingest(
             put it on the run's terminus summary. Omit it and the behaviour is
             unchanged — the refusals are still logged, they just reach no
             surface but the log. Mirrors ``discover_files``.
+        order_by_start: Number sessions by their resolved start rather than
+            by file creation time. Only for a project whose numbering cannot
+            move — see ``group_into_sessions``.
 
     Returns:
         List of InputSession objects, ordered by participant number.
@@ -628,7 +655,7 @@ def ingest(
         return []
 
     logger.info("Found %d supported files", len(files))
-    sessions = group_into_sessions(files)
+    sessions = group_into_sessions(files, order_by_start=order_by_start)
     logger.info("Grouped into %d sessions", len(sessions))
 
     return sessions

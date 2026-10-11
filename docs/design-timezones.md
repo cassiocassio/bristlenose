@@ -1,13 +1,14 @@
 ---
 status: partial
-last-trued: 2026-09-12
-trued-against: HEAD@main on 2026-09-12
+last-trued: 2026-10-11
+trued-against: HEAD@main on 2026-10-11
 ---
 
-> **Truing status:** Partial by design — § 5.1 landed (trued 2026-09-12) and its "what landed" / § 5.1a blocks are current; § 5.2–5.8 are pending and read as the plan they are. § 1 and § 2 carry ✅ markers where a defect closed the same day. See changelog.
+> **Truing status:** Partial by design. § 5.1 landed 12 Sep 2026; **§ 5.4's resolver, a § 5.2 writer table, a never-downgrade store standing in for § 5.3, and the T1 wire fix landed 11 Oct 2026** — what was built, and where it departs from the plan below, is § 5.9. § 5.3's schema, § 5.6's markers and the § 4 decision are still open and listed in § 5.10. § 1 and § 2 carry ✅ markers where a defect closed. See changelog.
 
 ## Changelog
 
+- _2026-10-11_ — **the start time is resolved, not read off the file.** New § 5.9 records what was built (`utils/session_start.py`, the registry's `starts`, `iso_utc`, the importer refresh, the renderer's conversion) and its four departures from § 5.4; § 5.2's table gains the 11 Oct measurements (Teams downloads and ReplayKit measured, iPhone inferred, a Mac-made capture date); § 5.10 lists what is still owed. T1, T3 and T4 marked. Anchors: `git log -S resolve_session_start`.
 - _2026-09-12_ — trued up after § 5.1 landed: § 1 scoped to "persist"; T2/T5 marked fixed; § 2·5's "we read none of it" heading and body rewritten to "we read it since § 5.1"; § 5.1's plan bullets labelled as the plan with an accurate what-shipped (Pydantic model, tuple return, eight fields, one corpus test); (f) records the GPS allowlist as shipped code; new § 5.1a listing what the capture does not do; anchors re-pointed (`s01_ingest.py:467/470/393`, `pipeline.py:2904`); `timecode` count 15→21. Anchors: commits "ingest captures container time metadata", "time: review fixes — one probe…".
 
 # Timezones — what is broken, what is unknowable, and what an audit would have to cover
@@ -68,7 +69,11 @@ Each of these is in `time-defects.md` with its evidence; this is the timezone
 slice.
 
 **T1 — The offset is destroyed at the DB column.** MEASURED, § 1 above. The root
-cause; everything downstream is a faithful renderer of a lossy value.
+cause; everything downstream is a faithful renderer of a lossy value. _✅ Worked
+around at the wire 11 Oct 2026: the column still drops the offset, but every
+writer stores UTC, so `utils.timecodes.iso_utc` marks the emitted value UTC
+(`/sessions`, `/dashboard`, MCP) and both clients convert it to the viewer's
+clock. The column itself is § 5.3, still open._
 
 **T2 — ✅ FIXED 12 Sep 2026 — `.replace(tzinfo=utc)` relabelled instead of converting.** MEASURED at the time.
 `pipeline.py` (then `:2861`; `:2904` now, via the shared `parse_header_datetime`) read the transcript `# Date:` header as
@@ -78,7 +83,9 @@ instant is `13:23 UTC`. `server/importer.py:83` reads the *same header* correctl
 (relabels only when naive). So the CLI resume path and the server import path could
 derive different instants from one file. One reader now.
 
-**T3 — The value is not the session's start time in the first place.** From
+**T3 — The value is not the session's start time in the first place.** _✅ Fixed
+11 Oct 2026 by the resolver (§ 5.9); the paragraph below is the record of the
+defect._ From
 `SessionsFinderDate.swift`'s own KNOWN-WRONG note, which outranks everything
 above: `session_date` is the source file's `st_birthtime`, taken raw —
 MEASURED, `s01_ingest.py:467` and `:470` are `min(f.created_at for f in group_files)` and
@@ -90,7 +97,9 @@ note rules out is right for the commonest case.
 
 **T4 — Transcript-only imports fabricate midnight.** A bare `YYYY-MM-DD` header
 yields 00:00, which renders plausibly and is indistinguishable from a real
-midnight session.
+midnight session. _Partly addressed 11 Oct 2026: it is now **local** midnight
+(`parse_header_datetime`), so once the wire was marked UTC the day stays the day
+west of London. It is still a fabricated time — § 5.10._
 
 **T5 — ✅ FIXED 12 Sep 2026 (`local_now()`, aware and local, at all four) — Naive `now()` at four render sites.** `s12_render_output.py:81` and
 `:178`, `s12_render/report.py:164`, `utils/markdown.py:493`. Does not crash
@@ -532,6 +541,155 @@ catalogued divergence and stays.
   write side not.)
 - A second BST-era file from a different writer, to confirm the `Z` is honest
   beyond Apple's own tools.
+
+### 5.9 ✅ LANDED 11 Oct 2026 — the resolver, as built
+
+`bristlenose/utils/session_start.py`, called from `s01_ingest.group_into_sessions`.
+Every session's `session_date` is now its resolved start, and
+`InputSession.session_start_source` says which signal won.
+
+**Precedence as built** — and the four places it departs from § 5.4, each made in
+review on the day:
+
+1. `cloud_import` — Bristlenose's own download stamp, **only in the exact form
+   `CloudDownloadVerification.filename` writes** (`2026-09-03 1000 — Title` with an
+   em dash, the bare stamp for an untitled meeting, a ` (2)` part). A hand-typed
+   `2026-05-01 0001 - P1` is not read: a researcher's typed time is often the
+   booking, and a sequence number looks the same. Read as this machine's local
+   wall clock, because Swift wrote it on one.
+2. `filename_zoned` — names that state a zone: Teams `…_142007UTC-Meeting
+   Recording`, Zoom cloud `GMT…`, Pixel `PXL_…`, a Meet recording with `GMT±n`.
+3. `filename_local` — names on a local clock: the Zoom local folder, macOS
+   Screen Recording (localised, 12-hour, meridiem-first `오후`/`午後`), Android,
+   OBS, Windows Game Bar, a Meet recording named in this Mac's zone. WhatsApp's
+   `… at 14.30.22` is the message time and is not read.
+4. `container` — Apple's capture date (`creationdate`) when present, else
+   `creation_time`; moved back by the duration only for ReplayKit.
+5. `birthtime` — unchanged, never adjusted.
+
+- **Departure 1 — filenames outrank the container.** § 5.4 put the container
+  first. A recognised filename *states* the start; the container is either
+  derived (ReplayKit end − duration, which a trim shortens: a 20-minute trim
+  came out 20 minutes late) or from a writer nobody has measured (Zoom's local
+  transcode is expected to stamp the end, which would lose the folder's exact
+  start on every Zoom session). The container still beats birthtime. § 5.4's
+  order can return once § 5.2's table is complete.
+- **Departure 2 — an unzoned filename IS converted**, as local time, where
+  § 5.4 rung 5 said "never converted". Without § 5.3's columns and § 5.6's
+  marker there is nowhere to keep a zoneless value, and the machine's zone is
+  right for a file this Mac's own recorder named. **An unzoned Teams name is
+  not read at all** — measured: `…-20260815_200732-…` carries 20:07 against a
+  container of 18:07Z, i.e. the organiser's CEST, not this Mac's BST.
+- **Departure 3 — a container time is refused** before 2000 or later than the
+  file's creation + 5 min (a recorder cannot stamp a file after it exists).
+  Measured case it catches: a web recorder whose files carry `creation_time`
+  exactly 4 h after their creation (`20241206 0945 Recording.mp4`).
+- **Departure 4 — `session_date` is rewritten in place**, where § 5.3 said keep
+  it untouched during a migration. There is no migration; the field now means
+  what every surface already took it to mean.
+
+**Conflict**: two non-birthtime signals more than 5 min apart → the higher rung
+stands and a `session_start_conflict` WARNING names both files. Birthtime is
+excluded (for a download it is the download moment). The log is the only place
+it reaches — § 5.10.
+
+**Never downgrade** (stands in for § 5.3's `session_start_source`): the session
+registry (`.bristlenose/sessions.json`, optional `starts`) keeps each sid's best
+start and source; a later run replaces it only with a strictly better-ranked
+signal (`SessionRegistry.settle_starts`). So an iCloud-evicted recording, whose
+container ffprobe cannot read, does not fall back to its file date, and a
+re-run on a Mac in another zone does not move a filename-read start.
+
+**Numbering**: a new project, or one with a registry, is numbered by resolved
+start; a project analysed before the registry existed (transcripts, no
+`sessions.json`) keeps the old creation-time order, because moving it would
+carry stars and names between interviews (`pipeline._may_order_by_start`).
+
+**Reaching the screen**: the importer refreshes `session_date` on every import
+(it used to set it at creation only, so a re-run never reached the database);
+`iso_utc` marks the wire UTC; `format_finder_date` converts an aware value to
+the system zone (per instant, so DST is right on both sides of a change); the
+dev sessions page tags the naive DB value UTC.
+
+**Backfill (§ 5.5)** is a re-run: ingest re-resolves, the registry settles, the
+transcript headers are rewritten and the importer copies them. No separate
+command.
+
+**§ 5.2's table, as measured 11 Oct 2026** on the media files on the
+maintainer's Mac (metadata only; placeholders skipped):
+
+| writer (as identified) | stamps | evidence |
+|---|---|---|
+| macOS ReplayKit (`author = ReplayKitRecording`) | **end** | 32 files: container − birthtime is 0 or −1 s on every one |
+| Teams recording download (no writer tags, brand `isom`) | **start** | container within 1 s and 6 s of the filename's start on 2 files |
+| iPhone camera (`make = Apple`, `model = iPhone …`) | start — **INFERRED** | capture date = `creation_time` on 7 files; start-vs-end needs a known start |
+| QuickTime Player / Photo Booth on a Mac (`model = Mac…`) | capture date = start side; `creation_time` = save | 1 file: capture date 34 s before `creation_time`, which equals the file's creation |
+| an unidentified web recorder (`Web Recording 20240604 1356.mp4`) | wrong clock | `creation_time` exactly 4 h after creation — refused |
+| Voice Memos, WhatsApp audio (no writer tags) | unclear | not classifiable from tags; taken as written |
+
+**Tests**: `tests/test_session_start.py`, `tests/test_session_start_surfaces.py`,
+and `TestStickyStart` in `tests/test_pipeline_platform_transcripts.py` (through
+the real `Pipeline.run`). Every guard was mutation-checked: removing it turns
+its own test red.
+
+**Coverage — which recordings get a real start (11 Oct 2026).** By the
+signal that decides them; "measured" means checked against real files, "named"
+means the app's own documented naming states it.
+
+| source of the recording | how its start is read | basis |
+|---|---|---|
+| Bristlenose cloud import (Teams, Meet, Zoom via the Mac app) | the download stamp | the platform's own start, written by us |
+| Teams recording, hand-downloaded | `…UTC-Meeting Recording` name, else the container (stamps start) | measured, 2 files |
+| Zoom cloud download | `GMT…-…_Recording` name (UTC) | named |
+| Zoom local recording | the dated folder | named |
+| Google Meet recording, hand-downloaded | ` - YYYY/MM/DD HH:MM zone - <kind>` name, media files only | named; `GMT±n`/`UTC`, or this Mac's own zone name |
+| macOS Screen Recording / QuickTime screen capture | the name, else the container moved back by duration | measured, 32 files |
+| QuickTime Player / Photo Booth movie | the capture date | measured, 1 file |
+| iPhone camera | the container (capture date) | inferred start |
+| Android camera (`VID_`, Samsung), screen recorders | the name, local | named |
+| Google Pixel camera | `PXL_` name, UTC | named |
+| OBS Studio (default naming), Windows Game Bar | the name, local | named |
+| a copied, downloaded or renamed file from any recorder that writes `creation_time` | the container | survives copying |
+| everything else | the file's creation date — the old behaviour | — |
+
+### 5.10 Still owed — the next pass
+
+In rough order of value; none of these blocks the store launch on its own.
+
+1. **§ 4, whose time is "the" time** — the product decision every item below
+   waits on.
+2. **§ 5.3's schema** — persist the offset and the source on the session row,
+   and `DateTime(timezone=True)`. The registry's `starts` is the stopgap.
+3. **§ 5.6's marker** — a conflict and a fabricated time (T4's local midnight,
+   an unzoned local reading) should be visible, not only in the log. Today
+   nothing on screen distinguishes them from a measured start.
+4. **The rest of § 5.2's table**: iPhone start-vs-end against a known start;
+   Zoom's local transcode (does it write `creation_time`, at which end?); a
+   real OBS/browser `.webm`; Voice Memos. Then reconsider restoring § 5.4's
+   container-first order for measured writers.
+5. **Google Meet named zones** — a Meet recording's name is read (media files
+   only, so the Gemini notes Doc's later stamp never decides) when its zone is
+   `GMT±n`/`UTC`, or a name that is this Mac's own zone at that moment (`BST` on
+   a London Mac in July). Any other name (`CEST` on a London Mac) is not read:
+   abbreviations are ambiguous (`IST`, `BST`), and mapping them needs the
+   tenant's zone, which only the cloud import knows.
+6. **The consent-delay sign test** (§ 5.4) — needs a calendar start, which only
+   the cloud import has.
+7. **Recorders not yet covered, to research with real files:** Voice Memos
+   (Mac and iPhone — one measured file stamped neither start nor end), WhatsApp
+   voice notes and videos (the name is the message time; deliberately unread),
+   GoPro and action cameras (known to write local time as UTC), Webex and
+   Lookback/UserTesting/Riverside/Loom exports (naming unknown), and
+   broadcast WAV from field recorders (the `bext` origination date/time is the
+   start, but `probe_media` does not read it yet — an allowlist change in
+   `utils/audio.py`).
+8. **Measure the "named" rows.** Zoom cloud's GMT prefix, Pixel's UTC names
+   and the Android/OBS local names are each documented behaviour, not files we
+   have checked; one real file per row would make them "measured".
+9. **Old projects without a registry** keep creation-time numbering forever;
+   a one-off migration that writes their `sessions.json` from the current
+   database would let them be renumbered safely. Owner's call (3 Oct 2026:
+   not migrated).
 
 ## 6. Why this is not a beta concern
 

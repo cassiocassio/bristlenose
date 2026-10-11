@@ -29,17 +29,16 @@ import Foundation
 ///    date must stay distinguishable from the midnight that a date-only
 ///    transcript header produces (see the KNOWN-WRONG note below).
 ///
-/// KNOWN-WRONG (tracked, planning board §2 Broken · Must): the value being
-/// formatted is `sessions.session_date`, which is the source file's
-/// `st_birthtime` — file *creation* time, not the session's start. For
-/// save-at-close writers (Zoom local transcode) that is the session's END and
-/// the drift equals the duration; a progressively-written local recording is
-/// created at session START (≈0 drift); a file downloaded from a cloud service
-/// has an arbitrary later birthtime — so birthtime − duration is NOT a general
-/// correction, and Linux uses `st_mtime` besides. Transcript-only imports are a
-/// second, different wrongness: a bare `YYYY-MM-DD` header yields a fabricated
-/// midnight. All render plausibly, so no test will ever fail on them. Parity is
-/// deliberate so one fix lands on both surfaces at once.
+/// The value is `sessions.session_date`, the session's START as resolved by
+/// `bristlenose/utils/session_start.py` (11 Oct 2026): Bristlenose's own
+/// cloud-import stamp, a Teams/Zoom/Screen Recording filename, the recorder's
+/// own container time, or — last — the file's creation time. Until then it was
+/// the file's creation time, which for most recorders is the session's END.
+/// The server sends it UTC-marked (`+00:00`), so it renders on this Mac's clock.
+/// Still owed (`docs/design-timezones.md` § 5.10): a transcript-only import
+/// with a date-only header carries a fabricated local midnight, and a session
+/// whose signals disagree has no marker here — both render plausibly. Parity
+/// with the web is deliberate so one fix lands on both surfaces at once.
 ///
 /// There is also a third, Python implementation (`bristlenose/utils/markdown.py`
 /// `format_finder_date`) which renders `Today at 16:59` — a different separator.
@@ -89,11 +88,12 @@ enum SessionsFinderDate {
 
     // MARK: - Parsing
 
-    /// The server sends a naive `datetime.isoformat()` — no timezone, and
-    /// microseconds only when non-zero. JavaScript's `new Date(...)` parses that
-    /// as **local** time, so we do too; a bare `ISO8601DateFormatter` would fail
-    /// outright (it requires a timezone) and forcing UTC would shift every
-    /// session by the user's offset.
+    /// Since 11 Oct 2026 the server sends an AWARE UTC string (`+00:00`), which
+    /// the naive passes below reject and the ISO 8601 fallback reads — measured:
+    /// neither the strict nor the lenient formatter accepts a trailing offset.
+    /// The naive passes stay for older servers and the export of an older
+    /// project, which sent `datetime.isoformat()` with no zone; JavaScript's
+    /// `new Date(...)` reads that as **local** time, so we do too.
     ///
     /// `timeZone` is injectable for tests only (the DST case below is
     /// timezone-specific); production callers omit it.
@@ -118,8 +118,7 @@ enum SessionsFinderDate {
             if let date = df.date(from: iso) { return date }
         }
 
-        // Last resort: timezone-bearing strings (not what the server sends
-        // today, but a schema change must not render every row as an em-dash).
+        // Timezone-bearing strings — what the server sends since 11 Oct 2026.
         // DM3: the default-options formatter REJECTS fractional seconds, and
         // aware `datetime.isoformat()` emits microseconds on essentially every
         // real timestamp — so without the `.withFractionalSeconds` attempt this

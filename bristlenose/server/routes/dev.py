@@ -167,7 +167,13 @@ def sessions_table_html(
             session_num = sid[1:] if len(sid) > 1 and sid[1:].isdigit() else sid
 
             # Date
-            start = _esc(format_finder_date(sess.session_date, now=now)) if sess.session_date else "\u2014"
+            # The DB hands back naive UTC; mark it so it renders on the local clock.
+            start = (
+                _esc(format_finder_date(sess.session_date.replace(tzinfo=timezone.utc)
+                                        if sess.session_date.tzinfo is None
+                                        else sess.session_date, now=now))
+                if sess.session_date else "\u2014"
+            )
 
             # Duration
             duration = _format_duration(sess.duration_seconds)

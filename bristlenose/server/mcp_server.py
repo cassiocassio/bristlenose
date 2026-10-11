@@ -44,7 +44,7 @@ from bristlenose.server.grounding import (
     resolve_speaker_names,
     session_team,
 )
-from bristlenose.utils.timecodes import format_timecode
+from bristlenose.utils.timecodes import format_timecode, iso_utc
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
@@ -443,7 +443,7 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
     for s in sorted(sessions, key=lambda x: x.session_number):
         row: dict[str, Any] = {"session_id": s.session_id}
         if s.session_date is not None:
-            row["session_date"] = s.session_date.isoformat()
+            row["session_date"] = iso_utc(s.session_date)
         if s.duration_seconds:
             row["duration_seconds"] = round(s.duration_seconds)
         session_rows.append(row)

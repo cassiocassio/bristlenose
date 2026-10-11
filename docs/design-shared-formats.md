@@ -191,11 +191,13 @@ injected time and Intl/CLDR-stable behaviour on three runtimes. The cost is real
 and the payoff is small, since the pair is already documented on both sides.
 
 **Deferred to Tier 2, not declined** (12 Sep 2026). The absolute-date branch
-can be pinned once the wire carries an offset (`docs/design-timezones.md` § 5.3),
-and it should be: the time audit found a fork this register did not know about —
-`session_date` reaches the wire naive, so all three surfaces render the
-viewer's-local reading of a UTC instant, off by the offset *together* (H9, H10
-in `docs/time-defects.md`). "Exact parity" here is an assertion zero cases test.
+can be pinned now that the wire carries an offset, and it should be. _Until
+11 Oct 2026_ `session_date` reached the wire naive, so all three surfaces
+rendered the viewer's-local reading of a UTC instant, off by the offset
+*together* (H9, H10 in `docs/time-defects.md`). Since then the server marks it
+UTC (`utils.timecodes.iso_utc`) and Python's renderer converts an aware value
+to the local clock, so the three agree on the right hour — and "exact parity"
+is still an assertion zero cases test.
 
 **`SessionsFinderDate.swift`'s header is the exemplar contract docstring in this
 codebase.** Read it before writing any new mirror. It names its source with a

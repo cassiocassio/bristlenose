@@ -551,6 +551,19 @@ def format_finder_date(dt: datetime, *, now: datetime | None = None) -> str:
 
         now = local_now()  # the one render-clock seam; see timecodes.local_now
 
+    # An aware start is an instant; show it on this machine's clock.
+    # `session_date` is stored and passed in UTC, so without this every
+    # rendered start was the UTC hour — an hour early through BST.
+    # The system zone (`to_local`), NOT `now.tzinfo`: `local_now()` carries
+    # today's fixed offset, which is an hour wrong for a session on the other
+    # side of a DST change. A naive value, or a naive `now`, is left alone —
+    # the legacy contract, with no zone to convert to or from.
+    if dt.tzinfo is not None and now.tzinfo is not None:
+        from bristlenose.utils.timecodes import to_local
+
+        dt = to_local(dt)
+        now = to_local(now)
+
     time_part = f"{dt.hour:02d}:{dt.minute:02d}"
     dt_date = dt.date()
     now_date = now.date()

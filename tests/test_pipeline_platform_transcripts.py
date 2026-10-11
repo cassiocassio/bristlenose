@@ -209,7 +209,7 @@ def run_pipeline(
 
     run_index = {"n": 0}
 
-    def _fake_ingest(_input_dir: Path, _declined=None):
+    def _fake_ingest(_input_dir: Path, _declined=None, **_kw):
         return sessions_for_run(input_dir, run_index["n"])
 
     async def _passthrough(sess, _tmp, **_kw):
@@ -522,6 +522,32 @@ class TestPerSessionFingerprints:
 ANN = [("Martin Storey", "Thanks for joining, Ann."), ("Ann Archer", "Ann speaking: the kiosk lost my basket.")] * 3
 BEA = [("Martin Storey", "Thanks for joining, Bea."), ("Bea Baker", "Bea speaking: I never found the till.")] * 3
 CAL = [("Martin Storey", "Thanks for joining, Cal."), ("Cal Cooper", "Cal speaking: the receipt was blank.")] * 3
+
+
+class TestStickyStart:
+    """A run keeps the best start any run has resolved (design-timezones § 5.4).
+
+    Run 1 reads the recording's own clock; on run 2 the file is a cloud
+    placeholder, so only its file date is left. The transcript header — which
+    the serve importer copies into the database — must keep run 1's start.
+    """
+
+    @staticmethod
+    def _sessions(d: Path, run: int) -> list[InputSession]:
+        if run == 0:
+            s = pair_session(d, 1, "Bea interview", BEA,
+                             when=datetime(2026, 9, 10, 10, 0, tzinfo=timezone.utc))
+            s.session_start_source = "container"
+        else:
+            s = pair_session(d, 1, "Bea interview", BEA,
+                             when=datetime(2026, 9, 20, 8, 0, tzinfo=timezone.utc))
+            s.session_start_source = "birthtime"
+        return [s]
+
+    def test_a_worse_signal_on_a_rerun_does_not_move_the_start(self, tmp_path: Path) -> None:
+        h = run_pipeline(tmp_path, self._sessions, runs=2)
+        header = (h.output_dir / "transcripts-raw" / "s1.txt").read_text(encoding="utf-8")
+        assert "# Date: 2026-09-10T10:00:00+00:00" in header
 
 
 class TestStickySessions:

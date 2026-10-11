@@ -344,6 +344,11 @@ def import_project(db: Session, project_dir: Path) -> Project:
         # the header to a session imported before it existed.
         if meta.get("language"):
             sess.language = meta["language"]
+        # Likewise the start: it used to be set at creation only, so a re-run
+        # that resolves a better start (the recording's own clock instead of
+        # its file's save time) never reached a project already imported.
+        if meta.get("date") is not None:
+            sess.session_date = meta["date"]
         session_map[sid] = sess
 
     # --- Import source files ---------------------------------------------

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,24 @@ def format_duration_human(seconds: float) -> str:
     return f"{m}m" if m > 0 else "<1m"
 
 
+#: The zone "this machine's clock" means. ``None`` is the operating system's
+#: zone, which is every real run; tests set it to a fixed rule so a summer
+#: and a winter case prove DST handling on any OS, with no ``time.tzset``.
+_local_zone: tzinfo | None = None
+
+
+def from_local(naive: datetime) -> datetime:
+    """A wall-clock time on this machine as an aware datetime (DST per instant)."""
+    if _local_zone is not None:
+        return naive.replace(tzinfo=_local_zone)
+    return naive.astimezone()
+
+
+def to_local(aware: datetime) -> datetime:
+    """An aware instant on this machine's clock (DST per instant)."""
+    return aware.astimezone(_local_zone)
+
+
 def local_now() -> datetime:
     """The wall clock, AWARE and LOCAL — ``datetime.now().astimezone()``.
 
@@ -126,6 +144,9 @@ def parse_iso_lenient(value: str) -> datetime | None:
         return None
 
 
+_DATE_ONLY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
 def parse_header_datetime(value: str) -> datetime | None:
     """Read a transcript ``# Date:`` header value as a UTC-aware datetime.
 
@@ -143,15 +164,40 @@ def parse_header_datetime(value: str) -> datetime | None:
     ``YYYY-MM-DD`` is accepted by ``fromisoformat`` on all of them.
 
     **A naive value means UTC, by decision** — it appears only in output
-    written before the time-of-recording fix, which was UTC. Returns ``None``
+    written before the time-of-recording fix, which was UTC. **A date with no
+    time means local midnight** — it names a day, not an instant. Returns ``None``
     for anything unreadable; the caller keeps its own default, and logs.
     """
     dt = parse_iso_lenient(value)
     if dt is None:
         return None
+    if _DATE_ONLY_RE.fullmatch(value.strip()):
+        # A date with no time — a hand-supplied transcript, or one written
+        # before 16 May 2026. It names a DAY, so it is midnight on this
+        # machine's calendar. As UTC midnight it read as 19:00 the evening
+        # before to anyone west of London once the wire marked it UTC.
+        return from_local(dt.replace(tzinfo=None)).astimezone(timezone.utc)
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
+
+
+def iso_utc(dt: datetime | None) -> str | None:
+    """A stored instant as an ISO string that says it is UTC.
+
+    The database column holding ``session_date`` has no timezone, so SQLite
+    hands back a naive value — always UTC, because every writer converts
+    before storing (``parse_header_datetime``). Emitted bare, it is read as
+    LOCAL time by ``new Date()`` and by Swift's ``SessionsFinderDate.parse``,
+    so every start rendered an hour early through British Summer Time
+    (design-timezones § 1, T1). Marking it UTC lets both clients convert to
+    the viewer's zone, which they already do for aware strings.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).isoformat()
 
 
 def parse_timecode(tc: str) -> float:

@@ -380,3 +380,58 @@ def no_local_llm_config(
     ):
         _isolate_machine_config(monkeypatch, tmp_path_factory)
     return monkeypatch
+
+
+# ---------------------------------------------------------------------------
+# Pinning "this machine's clock" without time.tzset (which Windows lacks)
+# ---------------------------------------------------------------------------
+
+
+import datetime as _dt_mod  # noqa: E402
+
+
+class _LondonRule(_dt_mod.tzinfo):
+    """Europe/London by its rule — GMT, BST from the last Sunday of March to
+    the last Sunday of October — so a time-zone test runs the same on every
+    OS with no tz database. Wall-clock boundaries are approximate by an hour
+    on the two change days, which no test here touches."""
+
+    @staticmethod
+    def _last_sunday(year: int, month: int):
+        import datetime as _d
+
+        d = _d.date(year, month, 31)
+        return d - _d.timedelta(days=(d.weekday() + 1) % 7)
+
+    def dst(self, dt):
+        import datetime as _d
+
+        if dt is None:
+            return _d.timedelta(0)
+        start = _d.datetime.combine(self._last_sunday(dt.year, 3), _d.time(1))
+        end = _d.datetime.combine(self._last_sunday(dt.year, 10), _d.time(1))
+        return _d.timedelta(hours=1) if start <= dt.replace(tzinfo=None) < end else _d.timedelta(0)
+
+    def utcoffset(self, dt):
+        return self.dst(dt)
+
+    def tzname(self, dt):
+        import datetime as _d
+
+        return "BST" if self.dst(dt) != _d.timedelta(0) else "GMT"
+
+
+@pytest.fixture
+def pin_local_zone(monkeypatch: pytest.MonkeyPatch):
+    """Set the zone ``utils.timecodes`` treats as this machine's clock."""
+    import bristlenose.utils.timecodes as _tc
+
+    def _pin(zone):
+        monkeypatch.setattr(_tc, "_local_zone", zone)
+
+    return _pin
+
+
+@pytest.fixture
+def london(pin_local_zone):
+    pin_local_zone(_LondonRule())

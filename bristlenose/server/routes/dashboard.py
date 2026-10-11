@@ -22,7 +22,7 @@ from bristlenose.server.models import (
 )
 from bristlenose.server.models import Session as SessionModel
 from bristlenose.server.speaker_slots import slot_map
-from bristlenose.utils.timecodes import format_duration_human
+from bristlenose.utils.timecodes import format_duration_human, iso_utc
 
 router = APIRouter(prefix="/api")
 
@@ -501,9 +501,7 @@ def get_dashboard(
                 DashboardSessionResponse(
                     session_id=sess.session_id,
                     session_number=sess.session_number,
-                    session_date=(
-                        sess.session_date.isoformat() if sess.session_date else None
-                    ),
+                    session_date=iso_utc(sess.session_date),
                     duration_seconds=sess.duration_seconds,
                     duration_human=_format_duration_human(sess.duration_seconds),
                     speakers=speakers_data,

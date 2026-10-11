@@ -28,6 +28,15 @@ The registry remembers two things across runs:
   holds the label now (a re-run of speaker identification can hand
   *Speaker A* to the other voice).
 
+- **starts** (optional, 11 Oct 2026): per sid, the best start time a run has
+  resolved for it and the signal it came from (``utils.session_start``). A
+  later run replaces it only with a better-ranked signal, so a recording that
+  iCloud evicts — its container unreadable until downloaded — cannot fall back
+  to its file date, and a re-run on a Mac in another zone cannot move a start
+  read from a filename's local wall clock. Additive and optional: a release
+  that does not know it ignores it, and an entry this release cannot read is
+  skipped, never a reason to refuse the file.
+
 A project with no file behaves exactly as before on its first run: sessions in
 date order, codes from 1. Entries for sessions that disappear are kept, so their
 numbers are never handed to someone else. This is the first package of
@@ -43,6 +52,7 @@ import os
 import re
 import tempfile
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -105,6 +115,7 @@ class SessionRegistry:
     speakers: dict[str, dict[str, str]] = field(default_factory=dict)
     participants_issued: int = 0
     pins: dict[str, dict[str, RolePin]] = field(default_factory=dict)
+    starts: dict[str, dict[str, str]] = field(default_factory=dict)
 
     # ── persistence ──────────────────────────────────────────────────────
 
@@ -154,6 +165,7 @@ class SessionRegistry:
                 }
                 for sid, labels in (data.get("pins") or {}).items()
             },
+            starts=_readable_starts(data.get("starts")),
         )
 
     def save(self) -> None:
@@ -168,6 +180,7 @@ class SessionRegistry:
                 sid: {label: pin.to_json() for label, pin in sorted(self.pins[sid].items())}
                 for sid in sorted(self.pins) if self.pins[sid]
             },
+            "starts": {sid: self.starts[sid] for sid in sorted(self.starts)},
         }
         fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".sessions.", suffix=".tmp")
         try:
@@ -219,6 +232,42 @@ class SessionRegistry:
             session.participant_id = f"p{n}"  # provisional, as before — reassigned after 5b
             session.participant_number = n
         return sorted(sessions, key=lambda s: s.session_number)
+
+    # ── starts ───────────────────────────────────────────────────────────
+
+    def settle_starts(self, sessions: list[InputSession]) -> None:
+        """Keep each session's best start: this run's, unless a stored one ranks
+        at least as well. Mutates ``session_date`` / ``session_start_source``.
+
+        Ties keep the stored value on purpose — the same signal read again on
+        a machine in another zone, or with a file that has since moved, should
+        not move a start the researcher has already seen.
+        """
+        from bristlenose.utils.session_start import source_rank
+
+        for session in sessions:
+            new_rank = source_rank(session.session_start_source or "")
+            stored = self.starts.get(session.session_id)
+            stored_rank = source_rank(stored["source"]) if stored else None
+            if stored and stored_rank is not None and (
+                new_rank is None or stored_rank <= new_rank
+            ):
+                at = parse_iso_utc(stored["utc"])
+                if at is not None:
+                    if at != session.session_date:
+                        logger.info(
+                            "%s keeps its start %s (%s) over this run's %s (%s)",
+                            session.session_id, stored["utc"], stored["source"],
+                            session.session_date.isoformat(), session.session_start_source,
+                        )
+                    session.session_date = at
+                    session.session_start_source = stored["source"]
+                    continue
+            if new_rank is not None:
+                self.starts[session.session_id] = {
+                    "utc": session.session_date.astimezone(timezone.utc).isoformat(),
+                    "source": session.session_start_source or "",
+                }
 
     # ── speakers ─────────────────────────────────────────────────────────
 
@@ -328,6 +377,32 @@ def _problem(data: dict[str, Any]) -> str:
             ):
                 return f"{sid}'s pin on {label!r} carries no start times"
     return ""
+
+
+def parse_iso_utc(value: str) -> datetime | None:
+    try:
+        at = datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+    return at.astimezone(timezone.utc) if at.tzinfo else None
+
+
+def _readable_starts(raw: Any) -> dict[str, dict[str, str]]:
+    """The ``starts`` entries this release can use; anything else is skipped
+    with a log line, never a refusal — the file's job is numbering."""
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, dict[str, str]] = {}
+    for sid, entry in raw.items():
+        if (
+            isinstance(sid, str) and _SID.fullmatch(sid) and isinstance(entry, dict)
+            and isinstance(entry.get("utc"), str) and isinstance(entry.get("source"), str)
+            and parse_iso_utc(entry["utc"]) is not None
+        ):
+            out[sid] = {"utc": entry["utc"], "source": entry["source"]}
+        else:
+            logger.warning("sessions.json: ignoring an unreadable start for %r", sid)
+    return out
 
 
 def _number(code: str) -> int:

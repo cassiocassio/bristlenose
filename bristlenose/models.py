@@ -146,8 +146,8 @@ class MediaTimeMeta(BaseModel):
     """Time metadata read from a media CONTAINER — the recorder wrote it, and it
     survives copying and downloading, which the filesystem's birthtime does not.
 
-    Capture only (``docs/design-timezones.md`` § 5.1). Nothing derives a
-    session start from this yet; § 5.4's resolver will. Fields are optional
+    Captured at ingest (``docs/design-timezones.md`` § 5.1) and read by
+    ``utils.session_start`` to place a session's start (§ 5.4). Fields are optional
     because coverage is partial by construction: recorder-written files carry
     them, ffmpeg-transcoded ones do not.
 
@@ -181,7 +181,7 @@ class InputFile(BaseModel):
     created_at: datetime
     size_bytes: int
     duration_seconds: float | None = None
-    # Container time metadata, captured at ingest and not yet acted on.
+    # Container time metadata, captured at ingest; read by utils.session_start.
     container_meta: MediaTimeMeta | None = None
     error: str | None = None
 
@@ -197,6 +197,9 @@ class InputSession(BaseModel):
     audio_path: Path | None = None
     has_existing_transcript: bool = False
     session_date: datetime
+    #: Which signal `session_date` came from (`utils.session_start.StartSource`
+    #: value); None for a session not resolved by ingest.
+    session_start_source: str | None = None
 
     @property
     def has_audio(self) -> bool:

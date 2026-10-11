@@ -597,6 +597,22 @@ def _paragraph_starts(
     return out
 
 
+def _may_order_by_start(output_dir: Path) -> bool:
+    """Whether ingest may number this project's sessions by their start.
+
+    Yes for a new project, and for one with a session registry (its numbers are
+    pinned, so order only places sessions it has not seen). No for a project
+    analysed before the registry existed (3 Oct 2026): it has transcripts and
+    no ``sessions.json``, and it is numbered by ingest's order on its next run —
+    changing that order would carry stars and names between interviews.
+    """
+    from bristlenose.session_registry import registry_path
+
+    if registry_path(output_dir).exists():
+        return True
+    return not (output_dir / "transcripts-raw").exists()
+
+
 def apply_role_pins(
     sid: str, segments: list[TranscriptSegment], registry: SessionRegistry,
 ) -> list[str]:
@@ -1287,7 +1303,9 @@ class Pipeline:
         mark_stage_running(manifest, STAGE_INGEST)
         t0 = time.perf_counter()
         declined: list[SkippedFile] = []
-        sessions = ingest(input_dir, declined)
+        sessions = ingest(
+            input_dir, declined, order_by_start=_may_order_by_start(output_dir)
+        )
         if not sessions:
             console.print("[red]No supported files found.[/red]")
             return self._empty_result(output_dir)
@@ -1295,6 +1313,7 @@ class Pipeline:
         # older than the ones already analysed cannot renumber them.
         session_registry = SessionRegistry.load(output_dir)
         sessions = session_registry.apply(sessions)
+        session_registry.settle_starts(sessions)
         session_registry.save()
 
         ingest_elapsed = time.perf_counter() - t0
@@ -2932,7 +2951,9 @@ class Pipeline:
         # ── Stage 1: Ingest ──
         t0 = time.perf_counter()
         declined: list[SkippedFile] = []
-        sessions = ingest(input_dir, declined)
+        sessions = ingest(
+            input_dir, declined, order_by_start=_may_order_by_start(output_dir)
+        )
         if not sessions:
             console.print("[red]No supported files found.[/red]")
             raise PipelineAbandonedError(
@@ -2945,6 +2966,7 @@ class Pipeline:
             )
         session_registry = SessionRegistry.load(output_dir)
         sessions = session_registry.apply(sessions)
+        session_registry.settle_starts(sessions)
         session_registry.save()
 
         ingest_elapsed = time.perf_counter() - t0
@@ -3728,9 +3750,11 @@ class Pipeline:
         # --- Re-ingest input files for video linking ---
         from bristlenose.stages.s01_ingest import ingest
 
-        sessions = ingest(input_dir)
-        # Read-only: the ids the run gave these sessions.
-        sessions = SessionRegistry.load(output_dir).apply(sessions)
+        sessions = ingest(input_dir, order_by_start=_may_order_by_start(output_dir))
+        # Read-only: the ids and starts the run gave these sessions.
+        _registry = SessionRegistry.load(output_dir)
+        sessions = _registry.apply(sessions)
+        _registry.settle_starts(sessions)
 
         # --- Load existing people file for display names ---
         from bristlenose.people import build_display_name_map, load_people_file

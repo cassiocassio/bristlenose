@@ -1,7 +1,7 @@
 ---
-status: plan v2 — steps 1 and 2 done; step 3 submitted 9 Oct 2026 (microsoft/winget-pkgs#449372), validation passed the same morning, awaiting a moderator
-last-trued: 2026-10-09
-trued-against: HEAD@main on 2026-10-09 (357ab3f3)
+status: plan v2 — steps 1 and 2 done; step 3 submitted 9 Oct 2026 (microsoft/winget-pkgs#449372), validation passed the same morning, awaiting a moderator; step 5's verify half (follower channel, after-winget holds) built, its submission half not
+last-trued: 2026-10-11
+trued-against: HEAD@main on 2026-10-11 (after 9e4fd687)
 ---
 
 > **Trued 9 Oct 2026.** "What exists" is shipped with 0.36.0, not unreleased; the
@@ -155,7 +155,8 @@ Two reviews of plan v1 (a design review and a parsimony review). Adopted: CUDA g
 FFmpeg out of the PATH folder, stale files removed on upgrade (`[InstallDelete]`),
 doctor's install method and frozen-build split, PII refusal text, Apps & Features
 entries, pinned FFmpeg. Deferred by the parsimony review until a version is accepted:
-release automation (winget-releaser), the release-board row, machine scope / MSI,
+release automation (winget-releaser), the release-board row (since arrived anyway:
+verify's follower rows reach the board as chips, 9 Oct), machine scope / MSI,
 Sandbox testing, a CI Defender scan (Microsoft's validation already scans). Open and
 taken into step 1 below: dependency pinning, a transcription self-test, a long-path
 gate, smoke tests on the artefact, uninstall while running. Still open beyond step 1:
@@ -198,7 +199,11 @@ FFmpeg was fixed separately (`5f3d5ac8`, `47ee59af`).
 2. **Build it in CI before the tag.** A `workflow_dispatch` job on `windows-latest`
    runs step 1's build and smoke tests from `main` and keeps the installer as an
    artefact, so the Windows verdict exists before the irreversible act (the release
-   machine's own rule). *Written 8 Oct 2026 as
+   machine's own rule). *As run for 0.36.0 it was not before the tag: `release.sh`
+   does not dispatch this workflow, and the installer was built on the tag after it
+   was pushed (`docs/release-winget.md` step 1). A release that touches nothing under
+   `packaging/windows/` therefore reaches its tag with no Windows verdict. Open
+   (trued 11 Oct 2026).* *Written 8 Oct 2026 as
    `.github/workflows/windows-installer.yml` (also on pull requests and pushes that
    touch `packaging/windows/`), with Inno Setup 7.1.0 pinned by hash. Green on GitHub
    on its fourth run (PR #156, 6.5 min): all nine smoke checks, a 157 MB installer,
@@ -231,7 +236,10 @@ FFmpeg was fixed separately (`5f3d5ac8`, `47ee59af`).
    `public_repo` + `workflow`, a winget-pkgs fork). *The verify half is built:
    winget is a follower channel (`CHANNELS_FOLLOW="winget"`, a 72-hour budget) whose
    "pending" state sits outside the exit code ("verify: follower channels with a
-   pending state, outside the exit code").*
+   pending state, outside the exit code"). So are the holds: the docs that make
+   winget the lead route wait on `after-winget/<version>` branches here and in the
+   website repo, and `release.sh verify` reports each one as `wait` until winget
+   serves that version or a later one (`docs/design-channel-version-lag.md` §8).*
 6. **Later, if earned:** machine scope for IT/Intune, a native Arm build once
    ctranslate2 publishes one, a shared FFmpeg build to roughly halve the size.
 

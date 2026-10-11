@@ -1,7 +1,7 @@
 ---
 status: built 5 Sep 2026 — feed, generator, template and suites on main; as-built notes at the end
-last-trued: 2026-10-08
-trued-against: HEAD@main on 2026-10-08 (§8 replay, run picker, one board per run; §9 History as laid out after 5fb31dde)
+last-trued: 2026-10-11
+trued-against: HEAD@main on 2026-10-11 (§8 replay, run picker, one board per run; §9 History as laid out after 5fb31dde; follower rows and History's channels from project.conf after 3fcd4ef9)
 date: 2026-09-05
 decides: docs/design-release-train-dashboard.md § 3 → sketch B, the board
 sketch: docs/mockups/release-train-board.html
@@ -166,7 +166,7 @@ Inputs, and each pane's **no-data condition**:
 | CI | sink `ci` lines from `status` | none → "not queried (run `release.sh status`)" |
 | ratchets | `ratchet.json` | ceilings only: "ceiling N · current not measured" |
 | tag | `ci-sha` + the tag step's fold | as the line |
-| channels | `CHANNELS` from `project.conf` × newest complete verify's rows | no verify → no-data; verify without `done` → "partial, N of M"; a verify whose `version=` is not this run's → rows withheld and said (a bare `release.sh verify` probes the tree's version); `unreachable` amber never green; `as_of` is the batch's newest stamp |
+| channels | `CHANNELS` from `project.conf` × newest complete verify's rows | no verify → no-data; verify without `done` → "partial, N of M"; a verify whose `version=` is not this run's → rows withheld and said (a bare `release.sh verify` probes the tree's version); `unreachable` amber never green; `as_of` is the batch's newest stamp. A row whose label is not in `CHANNELS` (a follower such as winget, `.dmg sha256`, `↳ X gone`) is a chip under the cards, not a card. Follower rows carry `follow=1`, and their `pending` / `overdue` / `superseded` are in `ROW_RESULTS`, so they are never confounded |
 | clocks | sink `clock` | none → no-data; empty `expires` → no-data |
 | events | both ledgers merged `(ts, source_rank, line_index)`, conductor wins | — |
 | failed step | log **path** and exit code only; `--with-logs` adds a 12×200 tail with CSI/control bytes stripped, in `board-with-logs.html` **and** `board-with-logs.json` — `board.json` is never overwritten with tails | — |
@@ -260,7 +260,8 @@ One file, no framework, no CDN, opens from `file://`. Hand-rolled tokens (§0.6)
   `textContent`. No `innerHTML` anywhere (tested).
 - State colour carries `ok · warn · fail · running`; `pending · skipped ·
   unreachable · stranded · corrupt · later · unknown · no-data` are outlined
-  or hatched, never filled.
+  or hatched, never filled. A follower's `overdue` and `superseded` render as
+  chips with their own words (they reach only the channel extras).
 - Effort without a time axis: elapsed as a proportion of the run's longest
   step; the table estimate as a hatched extension; the events-per-minute strip.
 - The header says *snapshot, generated HH:MM*. **Superseded the same day by
@@ -428,7 +429,7 @@ anywhere in this document, and §2's usage line still showed
 | Surface | What it does |
 |---|---|
 | `release.sh run --board` | starts a detached server if none is serving, prints the link. Without the flag, `run` prints a link only if it finds one — the release never needs the board |
-| `release.sh board [<X.Y.Z>]` | the standalone verb (`cmd_board`, `release.sh:499`) — the eighth verb, absent from §19's list of seven in the sibling doc |
+| `release.sh board [<X.Y.Z>]` | the standalone verb (`cmd_board`, `release.sh:499`) — one of release.sh's verbs (ten as of 11 Oct 2026; the dispatch `case` is the list, which §19 of the sibling doc now says) |
 | `release.sh board --stop` / `--restart` | TERM not INT, deliberately (`release.sh:509`); pinned by `test-release-sh.sh:81-84` |
 | `release-board.py --json` | the board's model without the page (`:1576`) |
 | `release-board.py --backfill-preflight` | **changes §2's preflight-pane contract.** §2 says "no rows → no-data"; this *writes* rows a pre-sink run never recorded, from the driver's captured logs (`:1578`). `--dry-run` (`:1579`) reports what it would write |
@@ -646,7 +647,12 @@ notary 403). Absent a cause, the chart shows the class alone; it never invents
 one. `MACHINE_MILESTONES` names the release-machine commits worth labelling;
 every other commit to `MACHINE_PATHS` still appears, unnamed, in its gap.
 
-**The picture.** Rows are steps in plan order, then the eight channels.
+**The picture.** Rows are steps in plan order, then the channels in `CHANNELS`,
+read from `project.conf` through `release-stats.py`'s `conf_raw`, the one Python
+parser of that file (until 10 Oct 2026 a hand-kept copy that never saw winget).
+Followers (`CHANNELS_FOLLOW`) are **not** rows and never count as a stop in the
+chart or the funnel, because their `pending` for days is the channel working.
+A release's detail lists them separately: `following · winget: pending — …`.
 
 - **Left, a funnel** (fixed): of 100 attempts that start, how many get past each step.
   The width at a step is the share of that step's attempts that passed it,

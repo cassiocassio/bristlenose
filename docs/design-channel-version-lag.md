@@ -1,5 +1,7 @@
 ---
-status: proposal — investigation 9 Oct 2026; §5.2 (follower channels, after-<channel> holds) built 9 Oct 2026; the docs options await the maintainer's decision
+status: mixed — the docs half (§4–§5.1, Options A/B/C) is a proposal awaiting the maintainer's decision; the release-machine half (§5.2) is built, recorded in §8, and reviewed by fault injection in §7
+last-trued: 2026-10-11
+trued-against: HEAD@main on 2026-10-11 (after 9e4fd687 "holds: a hold already on main reads landed…")
 measured-against: PyPI JSON (upload times), `gh run list` for release.yml / snap.yml / windows-installer.yml, the GitHub Releases API, the homebrew-bristlenose tap's commit log, Copr's build API, the Snap Store info API, microsoft/winget-pkgs#449372, docs/release-log.md 0.27.0–0.36.0
 ---
 
@@ -22,7 +24,12 @@ longer treatment that decision asked for.
 
 Contents: §1 what was measured · §2 where the public surfaces name a version ·
 §3 how other projects handle it · §4 options · §5 recommendation · §6 what this
-does not settle.
+does not settle · §7 the fault-injection review and its fixes · §8 what was built.
+
+> **Trued 11 Oct 2026.** §5.2 was written as a proposal and then built on 9–11 Oct;
+> it keeps its proposal text, with the as-built differences at its head. The build
+> record that had collected under §6 is now §8. §7's table gained a status column.
+> The docs decision (Option A/B/C) is still the maintainer's.
 
 ---
 
@@ -120,7 +127,7 @@ winget, and it is the larger effect.
 | Website homepage (`content/index.html:492`) | The Mac button's version | **Fetched at view time from `/dmg/latest.json`**, which `upload-dmg.sh` writes in the same step that repoints the download | That this is the `.dmg`'s version, and it is. **This is the one surface already built the right way:** the channel reports its own version, and the typed `0.31.2` is only a fallback |
 | Website footer (`site.js` `VERSION`) | `v0.36.0` on every page | `build.py` stamps the package version at deploy; `deploy.sh` refuses a mismatch | That the deploy happens after PyPI, which it normally does. 0.31.3 shows what happens when it doesn't |
 | `docs-src/*.md` (install, windows, cli, feature pages) | No version numbers. A grep for `since/from/new in X.Y` finds none | Hand-written | That the reader runs the newest version. Feature pages describe current behaviour with no "added in" markers |
-| Held drafts: `after-winget/first-version` (this repo), `after-winget` (website) | No version, but they make **winget the lead Windows route** | Waiting branches | That winget serves a version as soon as the docs say so. Their names follow neither each other nor `after-pypi/<version>`, and `release.sh verify` sees neither |
+| Held drafts: `after-winget/0.36.0`, in this repo and the website's | No version, but they make **winget the lead Windows route** | Waiting branches | That winget serves a version as soon as the docs say so. When this was measured they were `after-winget/first-version` and a bare `after-winget`, and `release.sh verify` saw neither. Renamed 9 Oct; `verify` now lists both as `wait` until winget serves 0.36.0 (§8) |
 
 **So the version-bearing claims are few, and two of them are already solved.**
 The man page is solved because it ships with what it describes. The homepage
@@ -270,6 +277,18 @@ release is the first lag a real user will notice.
 
 ### 5.2 The release machine — needed under any option
 
+> **Built 9–11 Oct 2026; the record is §8.** The proposal below is kept as the
+> reasoning. Where the as-built differs:
+> - **The budget is `WINGET_BUDGET_HOURS=72`, not `FOLLOW_BUDGET_winget=72h`.** The
+>   proposed `72h` is exactly the value that would have silently disabled `overdue`
+>   (§7, W6).
+> - **`held_for_version` became `verdict_hold`,** and verify prints one *holds*
+>   block after the rollup, a channel per line, rather than holds beside each
+>   channel row.
+> - **Hold names are `after-<channel>/<X.Y.Z>[-anything]`.** Beyond `land`/`wait`
+>   the block also says `?` (could not tell), `?name` (unreadable name) and
+>   `landed` (already on main, §7.3).
+
 **(a) `verify` gets a `pending` state, and slow channels become *followers*
 outside the exit code.**
 
@@ -366,36 +385,7 @@ for them.
   `channels.json` reaches the site without the maintainer's SSH agent, and the
   rendering rule for `unreachable`. These get answered if B is picked up, not
   before.
-- **Implementation.** **§5.2(a) is built (9 Oct 2026).** It consists of
-  `CHANNELS_FOLLOW`, `WINGET_*` and `WINGET_BUDGET_HOURS` in `project.conf`;
-  `version_ge`, `verdict_follower` and `probe_winget` in `verify-channels.sh`,
-  plus a follower section that never touches `VERDICTS`; and the three new
-  results in the board's `ROW_RESULTS`.
-  - **Tests:** `test-verify-channels.sh` has pure verdict cases and driver cases
-    through a stubbed `gh`. The exit-code assertion runs against a baseline of 0.
-    Mutation-proved: a follower pushed onto `VERDICTS` fails exactly that
-    assertion. `test-release-sh.sh` asserts every follower has a probe and is
-    not also in `CHANNELS`.
-  - **Two details beyond the plan above.** "Served" means merged into
-    winget-pkgs, which Microsoft publishes within about an hour, and the
-    evidence says *merged* rather than claiming more. Any open PR naming the
-    exact id counts as in flight, including third-party ones; a look-alike id
-    does not.
-  - **§5.2(b), the `after-<channel>/<version>` holds, built the same day.**
-    - `verify-channels.sh` writes the per-channel verdicts, plus winget's served
-      version, to `BN_VERIFY_RESULTS`. `release.sh`'s `verdict_hold` turns each
-      hold into `land`, `wait`, `unknown` or `badname`; `hold_refs` lists local
-      and origin's `after-*` branches; `print_holds` covers this repo and
-      `WEBSITE_REPO`.
-    - `verdict_hold` replaces `held_for_version`. Its `version_ge` comes from
-      the verify lib rather than a second copy.
-    - **Found while building:** `for-each-ref 'refs/heads/after-*'` stops at a
-      slash. It matches `after-x` and misses every `after-x/<version>`, so the
-      obvious pattern would have listed no holds at all. Mutation-proved, as is
-      `unreachable` never folding into `wait`.
-    - The two existing holds were renamed locally to `after-winget/0.36.0`
-      (same commits; neither had been pushed).
-
+- **Implementation** is recorded in §8, not here: §5.2 is built.
 ---
 
 ## 7. Fault-injection review, 9 Oct 2026: what the corpus found
@@ -419,20 +409,20 @@ First run: 25 pass, 12 known. Below, each fix is marked by kind:
 - **widens:** turns a stuck or false answer into an honest one.
 - **adds a read:** a new check, built only if an incident earns it.
 
-| id | world | today | fix | kind |
-|---|---|---|---|---|
-| **W1** | the PR merges between the folder read and the PR read | `bad`, falsely | read the PRs *before* the folders. A merge in the gap is then seen by the folder read. Moving one block; proved by the ratchet | deletes |
-| **W2** | the PR exists but GitHub's search index lags | `bad` for a minute or two | accept it: followers are outside the exit code and a re-run clears it. Listing the fork's branches would add a read for a transient | — |
-| **W3** | `gh` never answers | `release.sh verify` hangs indefinitely. `probe_github` has always had the same exposure. `run` does not call verify, so a release cannot stall on it | bound every `gh` call (the harness's process-group watchdog, ~10 lines) so a hang becomes `unreachable` | widens |
-| **W4** | a third-party bot titles it `New version: <Id> <v>` | `bad` | match `<Id>`, then anything but `.`/word characters, then `X.Y.Z`. The look-alike scenario (`<Id>.Beta`) must stay `bad` | deletes |
-| **W5** | the local clock is behind GitHub's | "open -2h" | clamp the age at 0 | cosmetic |
-| **W6** | `WINGET_BUDGET_HOURS="72h"` | never `overdue`, silently | assert an integer in `test-release-sh.sh`, a static check off the release path | deletes |
-| **W7** | version `1..2.3` or `1.2.3.4` | accepted. The glob `[0-9]*.[0-9]*.[0-9]*` matches both; this predates followers | use `release.sh`'s strict `verdict_version` in verify-channels and `version_ge` | deletes |
-| **W9** | merged, but Microsoft's publish pipeline failed | `ok` | **don't build yet.** The evidence already says "merged". A PR-label read would be a new check with no incident behind it | adds a read |
-| **H1** | a hold already merged into main | `land`, forever | `git merge-base --is-ancestor <hold> origin/main` → "landed: delete the branch" | adds a read |
-| **H2** | a hold on an unprobeable channel (testflight) | `wait` | a `skipped` verdict → `unknown` | deletes |
-| **H3** | `after-pypi/0.36.0.1` | read as 0.36.0, `land` | same strict parse as W7 → `badname` | deletes |
-| **H4** | a stale bare `after-winget` | git refuses `after-winget/<v>` in the same repo: refs are files *and* directories | the `badname` line should say so ("it blocks after-winget/<version>; rename it") | wording |
+| id | world | found (9 Oct) | fix | kind | status (11 Oct) |
+|---|---|---|---|---|---|
+| **W1** | the PR merges between the folder read and the PR read | `bad`, falsely | read the PRs *before* the folders. A merge in the gap is then seen by the folder read. Moving one block; proved by the ratchet | deletes | fixed, §7.1 |
+| **W2** | the PR exists but GitHub's search index lags | `bad` for a minute or two | accept it: followers are outside the exit code and a re-run clears it. Listing the fork's branches would add a read for a transient | — | open, by decision |
+| **W3** | `gh` never answers | `release.sh verify` hangs indefinitely. `probe_github` has always had the same exposure. `run` does not call verify, so a release cannot stall on it | bound every `gh` call (the harness's process-group watchdog, ~10 lines) so a hang becomes `unreachable` | widens | fixed, §7.2 |
+| **W4** | a third-party bot titles it `New version: <Id> <v>` | `bad` | match `<Id>`, then anything but `.`/word characters, then `X.Y.Z`. The look-alike scenario (`<Id>.Beta`) must stay `bad` | deletes | fixed, §7.1 (wider than proposed: anchored, case-insensitive, removal PRs excluded) |
+| **W5** | the local clock is behind GitHub's | "open -2h" | clamp the age at 0 | cosmetic | fixed, §7.1 |
+| **W6** | `WINGET_BUDGET_HOURS="72h"` | never `overdue`, silently | assert an integer in `test-release-sh.sh`, a static check off the release path | deletes | fixed, §7.1 |
+| **W7** | version `1..2.3` or `1.2.3.4` | accepted. The glob `[0-9]*.[0-9]*.[0-9]*` matches both; this predates followers | use `release.sh`'s strict `verdict_version` in verify-channels and `version_ge` | deletes | fixed, §7.1. `verdict_version` turned out to be just as loose; both now use `is_xyz` |
+| **W9** | merged, but Microsoft's publish pipeline failed | `ok` | **don't build yet.** The evidence already says "merged". A PR-label read would be a new check with no incident behind it | adds a read | open, by decision |
+| **H1** | a hold already merged into main | `land`, forever | `git merge-base --is-ancestor <hold> origin/main` → "landed: delete the branch" | adds a read | fixed, §7.3, at the maintainer's request |
+| **H2** | a hold on an unprobeable channel (testflight) | `wait` | a `skipped` verdict → `unknown` | deletes | fixed, §7.1 |
+| **H3** | `after-pypi/0.36.0.1` | read as 0.36.0, `land` | same strict parse as W7 → `badname` | deletes | fixed, §7.1 |
+| **H4** | a stale bare `after-winget` | git refuses `after-winget/<v>` in the same repo: refs are files *and* directories | the `badname` line should say so ("it blocks after-winget/<version>; rename it") | wording | open, by decision |
 
 **Two findings outside the new code, both pre-existing:**
 - **R1.** `scripts/release-stats.py` carries its own `CHANNEL_ORDER`, a
@@ -526,6 +516,9 @@ origin/main. If so, the line reads `landed`: "nothing on it that main lacks
   is judged by its channel. It is never hidden as landed on a guess.
 - **Proof.** Mutation-proved: with `hold_on_main` always "no", the landed
   scenario fails.
+- **Why it was built without an incident.** §7 says a fix that adds a read waits
+  for an incident to earn it, and H1 had none. It was built because the
+  maintainer asked for it on 11 Oct. The rule still stands for W2, W9 and H4.
 - **Harness change.** The scenario harness and `test-release-sh.sh` now give
   every hold a commit of its own, as a real hold has. A bare branch at main's tip
   is exactly the case H1 reports.
@@ -534,3 +527,41 @@ origin/main. If so, the line reads `landed`: "nothing on it that main lacks
 (merged but not published) and H4 (git's file/directory rule for refs). All
 three are left by decision, because each fix would add a read or a rule without
 an incident behind it.
+
+---
+
+## 8. What was built
+
+The release-machine half of §5, as it shipped. §7 records the later fixes: the
+strict version shape, the `gh` deadline, History's channel list and `landed`
+holds.
+
+**§5.2(a), followers: built 9 Oct 2026.** The pieces:
+`CHANNELS_FOLLOW`, `WINGET_*` and `WINGET_BUDGET_HOURS` in `project.conf`;
+`version_ge`, `verdict_follower` and `probe_winget` in `verify-channels.sh`,
+plus a follower section that never touches `VERDICTS`; and the three new
+results in the board's `ROW_RESULTS`.
+- **Tests:** `test-verify-channels.sh` has pure verdict cases and driver cases
+  through a stubbed `gh`. The exit-code assertion runs against a baseline of 0.
+  Mutation-proved: a follower pushed onto `VERDICTS` fails exactly that
+  assertion. `test-release-sh.sh` asserts every follower has a probe and is
+  not also in `CHANNELS`.
+- **Two details beyond the plan above.** "Served" means merged into
+  winget-pkgs, which Microsoft publishes within about an hour, and the
+  evidence says *merged* rather than claiming more. Any open PR naming the
+  exact id counts as in flight, including third-party ones; a look-alike id
+  does not.
+- **§5.2(b), the `after-<channel>/<version>` holds, built the same day.**
+  - `verify-channels.sh` writes the per-channel verdicts, plus winget's served
+    version, to `BN_VERIFY_RESULTS`. `release.sh`'s `verdict_hold` turns each
+    hold into `land`, `wait`, `unknown` or `badname` (and `print_holds` adds `landed`, §7.3); `hold_refs` lists local
+    and origin's `after-*` branches; `print_holds` covers this repo and
+    `WEBSITE_REPO`.
+  - `verdict_hold` replaces `held_for_version`. Its `version_ge` comes from
+    the verify lib rather than a second copy.
+  - **Found while building:** `for-each-ref 'refs/heads/after-*'` stops at a
+    slash. It matches `after-x` and misses every `after-x/<version>`, so the
+    obvious pattern would have listed no holds at all. Mutation-proved, as is
+    `unreachable` never folding into `wait`.
+  - The two existing holds were renamed locally to `after-winget/0.36.0`
+    (same commits; neither had been pushed).

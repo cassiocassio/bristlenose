@@ -370,6 +370,11 @@ it can be inspected.
 >   and says plainly what it does not cover: local commits only, and only
 >   while the driver runs. The upload's retry resumes only rsync's transient
 >   exit codes; a bad path or a full disk fails at once.
+>   _Post-script, 11 Oct 2026: `held_for_version` is gone. Holds now cover any
+>   channel as `after-<channel>/<version>[-anything]`, in this repo and the
+>   website's (`WEBSITE_REPO`). `verdict_hold` judges each against its own
+>   channel at ≥ the version; a hold already on main reads `landed`. Design and
+>   fault-injection record: `docs/design-channel-version-lag.md` §5.2, §7, §8._
 > - **41 — the test app exited cleanly mid-`s22b` once (0.34.0).** Xcode
 >   restarted it, every later scenario passed, and the rebuilt `.dmg`'s suite
 >   was green. ⚠️ **Unexplained; a watch item.** A clean exit points at

@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-09-20
-trued-against: project.conf's eight CHANNELS incl. Copr; release.yml's seven jobs with trigger-copr needs verify-pypi; snap.yml building on every push and stamping a version suffix
+last-trued: 2026-10-11
+trued-against: project.conf's eight CHANNELS incl. Copr plus CHANNELS_FOLLOW=winget; after-<channel>/<version> holds in release.sh verify; release.yml's seven jobs with trigger-copr needs verify-pypi; snap.yml building on every push and stamping a version suffix
 ---
 
 # Release channels — the one-page map
@@ -16,7 +16,7 @@ trued-against: project.conf's eight CHANNELS incl. Copr; release.yml's seven job
 > timing and `scripts/release.sh`.
 
 
-Eight channels. **Nothing takes a `--destination` flag.** You choose a channel by
+Eight lockstep channels, plus winget as a follower (below). **Nothing takes a `--destination` flag.** You choose a channel by
 choosing a *script* or a *trigger*, and the two Mac channels share almost nothing
 but the sidecar.
 
@@ -182,7 +182,8 @@ files the train writes (no network, no time axis, no data is a third state):
 ```bash
 .venv/bin/python scripts/release-board.py            # → .release/<v>/board.html, open it
 ./scripts/release.sh status                          # asks GitHub; writes the CI tiles
-./scripts/release.sh verify <X.Y.Z>                  # asks the channels; writes the cards
+./scripts/release.sh verify <X.Y.Z>                  # asks the channels; writes the cards;
+                                                     # lists the after-<channel>/<version> holds
 ```
 
 Regenerate and reload to watch; `while sleep 5; do …; done` is the live mode.

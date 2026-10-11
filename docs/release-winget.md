@@ -1,5 +1,7 @@
 ---
 status: current — first run 8–9 Oct 2026 (0.36.0, microsoft/winget-pkgs#449372)
+last-trued: 2026-10-11
+trued-against: HEAD@main on 2026-10-11 (follower verify, after-winget holds incl. landed)
 ---
 
 # Shipping a version to winget
@@ -124,7 +126,8 @@ and `winget uninstall --id` find it. Those last two can't be tested before publi
 (see below). The user-facing docs that name winget go live then, with Martin's OK,
 from the branches `after-winget/<version>` in this repo and the website's.
 `release.sh verify` lists them as `wait` until winget serves that version or a
-later one, then as `land`.
+later one, then as `land`, and as `landed` once they are on main (delete the branch
+then). A name it cannot read is `?name`; a channel it could not check is `?`.
 
 ## Client Windows in VMs (benbecula)
 
@@ -229,7 +232,8 @@ Each of these cost a cycle at least once.
   `Spotify.Spotify`, `Ollama.Ollama`) and can't be renamed without a migration.
 - **winget lags PyPI by the moderator queue.** Expect days for a new package. The
   version-skew question across channels is open; nothing in the public docs addresses
-  it yet, by decision.
+  it yet, by decision. The measurements and the options for it are in
+  `docs/design-channel-version-lag.md`.
 
 **Testing the installer before submitting**
 

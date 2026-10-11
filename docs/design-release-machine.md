@@ -1,7 +1,8 @@
 ---
 status: current
 last-trued: 2026-09-20
-trued-against: release.sh's eight verbs incl. board/run/retry/recover; the RELEASE_STEPS_FILE credential seam; the pypi hold removed 23 Aug
+last-trued: 2026-10-11
+trued-against: release.sh's ten verbs incl. ready/stats/board/run/retry/recover; CHANNELS_FOLLOW followers and after-<channel> holds in verify; the RELEASE_STEPS_FILE credential seam; the pypi hold removed 23 Aug
 ---
 
 # The release machine — architecture
@@ -445,10 +446,10 @@ committed. The `.p8` lives outside the repo entirely.
 Tier A changes nothing a human types except adding `verify-channels.sh`.
 
 Tier B's subcommands are `plan · run · retry · recover · status · verify ·
-abandon` — plus `board` since 5 Sep 2026: **eight, and each earns its place** (`recover` and `abandon` landed
+abandon` — plus `board` since 5 Sep 2026, `ready`, and `stats` since 24 Sep: **ten, and each earns its place** (`recover` and `abandon` landed
 after this was written as five). `verify` is not `status --channels` because they are
-different cost classes: one folds a local file instantly, the other makes seven
-network probes.
+different cost classes: one folds a local file instantly, the other makes a
+network probe per channel, then the followers'.
 
 Five rules:
 
@@ -1062,11 +1063,13 @@ that it does not. Now: skip on an ad-hoc build, **fail on a real identity**.
 
 ## 19 · Tier B, read-only — shipped 23 Aug 2026
 
-`scripts/release.sh` — **eight verbs**: `plan` · `run` · `retry` · `recover` ·
-`status` · `verify` · `abandon` · `board`. Read them from the dispatch table at
-`scripts/release.sh:1530-1540` rather than from this sentence — a count in prose
+`scripts/release.sh` — **ten verbs**: `plan` · `ready` · `run` · `retry` · `recover` ·
+`status` · `verify` · `abandon` · `board` · `stats`. Read them from the dispatch `case` at
+the end of `scripts/release.sh` rather than from this sentence — a count in prose
 is a count nothing recomputes, which is how this line said *seven* for a
-fortnight after `board` shipped on 5 Sep 2026.
+fortnight after `board` shipped on 5 Sep 2026, and *eight* (with a line
+reference eight hundred lines stale) long after `ready` and `stats` (trued 11 Oct
+2026; the README said nine at the same time).
 
 > **Corrected 3 Sep 2026.** This paragraph said *"**No `run`,** and that is the
 > decision rather than an omission"*, and that `run` refuses and points at
@@ -1222,8 +1225,24 @@ there loses its last consumer, so it cannot quietly rot back.
 `CHANNELS` is the abstraction that earns its keep. Which channels a project
 ships on is the whole difference between a CLI (`pypi homebrew snap`), a Mac app
 (`testflight dmg`) and a hybrid that is both; `verify-channels.sh` iterates it
-and a channel with no `probe_<name>` is a hard error rather than a silent pass.
-A second project is a copy of that conf plus its probes.
+and a channel with no `probe_<name>` is a `bad` row, exit 1, rather than a silent
+pass (declared in `CHANNELS_UNPROBEABLE`, it is `skipped` and says why). A
+second project is a copy of that conf plus its probes.
+
+**Followers and holds (9–11 Oct 2026).** `CHANNELS_FOLLOW` (winget) holds the
+channels on a reviewer's clock. They are probed, printed under *following*, and
+never counted in the exit code. Their states are ok / pending / overdue /
+superseded / bad / unreachable, and `pending` needs evidence of an open
+submission. Listing a channel in both sets is a `bad` row.
+- **Holds.** `release.sh verify` then lists every
+  `after-<channel>/<X.Y.Z>[-anything]` branch, here and in `WEBSITE_REPO`, judged
+  against its own channel. This replaced the after-pypi-only `held_for_version`.
+- **Version shape.** One strict check, `is_xyz` (exactly X.Y.Z, no leading zero),
+  backs verify, `verdict_version` and the hold names.
+- **The `gh` deadline.** Every `gh` call is bounded (`BN_GH_TIMEOUT_S`).
+- **The record.** Design, measurements and the fault-injection corpus are in
+  `docs/design-channel-version-lag.md` §5.2, §7 and §8; this paragraph is only
+  the pointer.
 
 **`desktop/scripts/` is not extracted and would be the real work**: 164
 occurrences of the product name across 25 files, plus 12 bundle-id/domain
@@ -1308,7 +1327,10 @@ so a re-cut skips the rebuild; `plan --tier 2` prints a run command that cannot
 execute tier 2; `_stop_step` kills one process generation so a deep step tree
 orphans its payload; three probes conflate absent with unreachable; the tap
 workflow copy has diverged from the tap repo again; and `verify-channels.sh`
-still has no driver-level coverage for its remaining rows.
+still has no driver-level coverage for its remaining rows. _(Partly closed 9 Oct
+2026: `scripts/test-channel-scenarios.sh` runs the real `release.sh verify`
+against fake `gh`/`curl` for the follower and hold paths. The lockstep channels
+always answer live there, so their failure rows are still undriven.)_
 
 Do not treat that list as a backlog. It is a record of what was known and
 deliberately not done, which is the more useful thing to hand forward.

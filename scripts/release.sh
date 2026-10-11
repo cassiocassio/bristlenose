@@ -386,7 +386,15 @@ print_holds() {
             ch="${br%%/*}"; ch="${ch#after-}"
             verdict="$(awk -F'\t' -v c="$ch" '$1=="verdict" && $2==c {print $3; exit}' "$res")"
             served="$(awk -F'\t' -v c="$ch" '$1=="served" && $2==c {print $3; exit}' "$res")"
-            line="$(verdict_hold "$br" "$v" "$verdict" "$served")"
+            if hold_on_main "$repo" "$br"; then
+                # Asked before the channel: a hold already on main is finished
+                # business whatever the channel says, and "land" forever on a
+                # branch with nothing left to land is the noise that teaches
+                # people to stop reading this list (channel-scenarios H1).
+                line="$(printf 'landed\tnothing on it that main lacks (landed, or never had a commit): delete the branch')"
+            else
+                line="$(verdict_hold "$br" "$v" "$verdict" "$served")"
+            fi
             [ -n "$line" ] || continue
             if [ "$any" = 0 ]; then
                 printf '  %sholds%s — work waiting on a channel (after-<channel>/<version>)\n' "${B:-}" "${N:-}"
@@ -397,12 +405,27 @@ print_holds() {
                 land)    printf '    %bland%b     %-34s %-8s %s\n' "${G:-}" "${N:-}" "$br" "$label" "$why" ;;
                 wait)    printf '    %swait%s     %-34s %-8s %s\n' "${D:-}" "${N:-}" "$br" "$label" "$why" ;;
                 badname) printf '    %b?name%b    %-34s %-8s %s\n' "${Y:-}" "${N:-}" "$br" "$label" "$why" ;;
+                landed)  printf '    %slanded%s   %-34s %-8s %s\n' "${D:-}" "${N:-}" "$br" "$label" "$why" ;;
                 *)       printf '    %b?%b        %-34s %-8s %s\n' "${Y:-}" "${N:-}" "$br" "$label" "$why" ;;
             esac
         done <<<"$(hold_refs "$repo")"
     done
     [ "$any" = 1 ] && echo
     return 0
+}
+
+# hold_on_main <repo> <hold> — is every commit on the hold already on main?
+#   The hold is the local branch if there is one, else origin's; main is the
+#   local main, else origin/main. No main to ask about is "no", so the hold is
+#   judged by its channel as before, never hidden as landed on a guess.
+hold_on_main() {
+    local repo="$1" br="$2" ref base
+    ref="$(git -C "$repo" rev-parse -q --verify "refs/heads/$br" 2>/dev/null \
+        || git -C "$repo" rev-parse -q --verify "refs/remotes/origin/$br" 2>/dev/null)" || return 1
+    base="$(git -C "$repo" rev-parse -q --verify refs/heads/main 2>/dev/null \
+        || git -C "$repo" rev-parse -q --verify refs/remotes/origin/main 2>/dev/null)" || return 1
+    [ -n "$ref" ] && [ -n "$base" ] || return 1
+    git -C "$repo" merge-base --is-ancestor "$ref" "$base" 2>/dev/null
 }
 
 # hold_refs <repo> — the after-*/ branches in <repo>, local and origin's, once

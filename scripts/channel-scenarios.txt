@@ -402,13 +402,19 @@ holds=after-flatpak/0.36.0
 expect.hold.after-flatpak/0.36.0=unknown
 
 id=H1-landed-hold
-about=a hold already merged into main still reads land, forever
+about=a hold already merged into main reads landed (delete it), not land forever
 served=0.36.0
 prs=none
 holds=after-winget/0.36.0
 landed=after-winget/0.36.0
 expect.hold.after-winget/0.36.0=landed
-known=H1
+
+id=H1-unlanded-hold
+about=a hold with a commit main lacks is judged by its channel, not called landed
+served=0.36.0
+prs=none
+holds=after-winget/0.36.0
+expect.hold.after-winget/0.36.0=land
 
 id=H2-skipped-channel
 about=a testflight hold when testflight cannot be probed here

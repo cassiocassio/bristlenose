@@ -179,16 +179,22 @@ run_one() {
     get publish ok > "$world/publish"
     get release ok > "$world/release"
 
-    # the holds: branches off main; a landed one is a commit already merged
+    # the holds: each carries a commit main lacks, as a real one does (a bare
+    # branch at main's tip is "landed, or never had a commit"). A landed one is
+    # a commit already on main.
+    hold_branch() { # hold_branch <repo> <name>
+        local c; c=$(git -C "$1" -c user.email=s@t -c user.name=s commit-tree "HEAD^{tree}" -p HEAD -m "hold $2") \
+            && git -C "$1" branch "$2" "$c" 2>/dev/null
+    }
     for b in $(get holds); do
-        git -C "$sb" branch "$b" 2>/dev/null || problems+=("could not create branch $b")
+        hold_branch "$sb" "$b" || problems+=("could not create branch $b")
     done
     for b in $(get landed); do
         git -C "$sb" branch -D "$b" >/dev/null 2>&1
         git -C "$sb" -c user.email=s@t -c user.name=s commit -q --allow-empty -m "land $b"
         git -C "$sb" branch "$b"
     done
-    for b in $(get site_holds); do git -C "$site" branch "$b"; done
+    for b in $(get site_holds); do hold_branch "$site" "$b"; done
     [ "$(get site)" = missing ] && site="$WORK/$id/no-such-site"
 
     secs=$(get expect.seconds 30)

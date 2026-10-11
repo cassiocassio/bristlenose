@@ -263,18 +263,23 @@ case "$(verdict_hold after-winget/1.2.0 1.2.0 pending '')" in
 
 head_ "hold_refs + print_holds — both repos, local and origin, and a missing website said aloud"
 _HR=$(mktemp -d)
-git -C "$_HR" init -q here && git -C "$_HR/here" commit -q --allow-empty -m x
-git -C "$_HR" init -q site && git -C "$_HR/site" commit -q --allow-empty -m x
-git -C "$_HR/here" branch after-pypi/1.2.0-guide
-git -C "$_HR/here" branch after-winget/1.2.0
-git -C "$_HR/here" branch after-thought
-git -C "$_HR/here" branch feature/after-pypi/9.9.9
-git -C "$_HR/here" update-ref refs/remotes/origin/after-pypi/1.1.0 HEAD
-git -C "$_HR/site" branch after-winget/1.2.0
+git -C "$_HR" init -q -b main here && git -C "$_HR/here" commit -q --allow-empty -m x
+git -C "$_HR" init -q -b main site && git -C "$_HR/site" commit -q --allow-empty -m x
+# A real hold carries a commit main lacks; a bare branch at main's tip reads
+# "landed, or never had a commit" (H1), so each hold here gets one.
+_hold() { git -C "$1" update-ref "$2" "$(git -C "$1" commit-tree 'HEAD^{tree}' -p HEAD -m "hold $2")"; }
+_hold "$_HR/here" refs/heads/after-pypi/1.2.0-guide
+_hold "$_HR/here" refs/heads/after-winget/1.2.0
+_hold "$_HR/here" refs/heads/after-thought
+_hold "$_HR/here" refs/heads/feature/after-pypi/9.9.9
+_hold "$_HR/here" refs/remotes/origin/after-pypi/1.1.0
+_hold "$_HR/site" refs/heads/after-winget/1.2.0
+# H1: a hold whose commit is already on main, here as main's own tip.
+git -C "$_HR/here" branch after-pypi/1.0.0
 _refs=$(hold_refs "$_HR/here" | tr '\n' ' ')
 # for-each-ref's * stops at a slash: 'refs/heads/after-*' finds after-thought
 # and misses every after-x/<version>. These are the refs that pattern drops.
-eq "local and origin holds, and only holds" "after-pypi/1.1.0 after-pypi/1.2.0-guide after-thought after-winget/1.2.0 " "$_refs"
+eq "local and origin holds, and only holds" "after-pypi/1.0.0 after-pypi/1.1.0 after-pypi/1.2.0-guide after-thought after-winget/1.2.0 " "$_refs"
 _RF="$_HR/results"
 printf 'version\t1.2.0\t\nverdict\tpypi\tok\nverdict\twinget\tpending\n' > "$_RF"
 # print_holds reads this repo's own refs as "here"; drive it with a copy of the
@@ -288,6 +293,11 @@ eq "older pypi hold lands (≥)"  " land after-pypi/1.1.0 here pypi has 1.2.0"  
 eq "winget hold waits, here"    " wait after-winget/1.2.0 here winget is pending for 1.2.0" "$(_line 'after-winget/1.2.0 +here')"
 eq "and in the website repo"    " wait after-winget/1.2.0 website winget is pending for 1.2.0" "$(_line 'website')"
 case "$(_line 'after-thought')" in *"?name"*) ok "an unreadable hold name is reported" ;; *) bad "after-thought: $(_line after-thought)" ;; esac
+case "$(_line 'after-pypi/1.0.0')" in *" landed after-pypi/1.0.0 here "*"delete the branch"*) ok "a hold already on main reads landed (H1)" ;;
+                                      *) bad "landed hold: $(_line 'after-pypi/1.0.0')" ;; esac
+_noM=$(mktemp -d); git -C "$_noM" init -q -b trunk r && git -C "$_noM/r" commit -q --allow-empty -m x && git -C "$_noM/r" branch after-pypi/1.0.0
+hold_on_main "$_noM/r" after-pypi/1.0.0; eq "no main to ask: not landed, never a guess" 1 "$?"
+rm -rf "$_noM"
 _out=$(WEBSITE_REPO="$_HR/nope" print_holds "$_RF")
 case "$_out" in *"website repo not found at $_HR/nope"*"unchecked"*) ok "a missing website repo is said, not skipped" ;; *) bad "missing website silent" ;; esac
 _out=$(WEBSITE_REPO="$_HR/site" print_holds /nonexistent)

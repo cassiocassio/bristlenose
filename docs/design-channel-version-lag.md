@@ -512,3 +512,25 @@ gets 90 s plus any `BN_PROBE_WINDOW_S` it was asked to wait out.
 - **Followers.** They appear in a release's detail as `following · winget:
   pending — …`, in their own list, so the "no stops" line is unaffected.
 - **Proof.** Mutation-proved: putting the hand-kept list back fails the new test.
+
+### 7.3 H1, fixed 11 Oct 2026
+
+`print_holds` asks `hold_on_main` before it asks the channel. The question is
+whether every commit on the hold is already on main: the local main, else
+origin/main. If so, the line reads `landed`: "nothing on it that main lacks
+(landed, or never had a commit): delete the branch".
+- **The wording covers both cases.** A branch made at main's tip with nothing
+  committed yet is indistinguishable from one that has landed, and "delete it"
+  is right for both.
+- **No main means no.** With no main to ask about, the answer is no and the hold
+  is judged by its channel. It is never hidden as landed on a guess.
+- **Proof.** Mutation-proved: with `hold_on_main` always "no", the landed
+  scenario fails.
+- **Harness change.** The scenario harness and `test-release-sh.sh` now give
+  every hold a commit of its own, as a real hold has. A bare branch at main's tip
+  is exactly the case H1 reports.
+
+**Corpus now:** 54 pass, 3 known. The three are W2 (search-index lag), W9
+(merged but not published) and H4 (git's file/directory rule for refs). All
+three are left by decision, because each fix would add a read or a rule without
+an incident behind it.

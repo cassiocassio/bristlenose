@@ -30,6 +30,7 @@ PREFERRED_MODELS = [
 
 DEFAULT_MODEL = "llama3.2:3b"
 OLLAMA_API_URL = "http://localhost:11434"
+INSTALL_SCRIPT_URL = "https://ollama.com/install.sh"
 
 # The exact package from the community source, as for FFmpeg in doctor_fixes:
 # a bare `winget install Ollama` also asks the msstore source. The agreement
@@ -376,8 +377,21 @@ def install_ollama(method: str | None = None) -> bool:
             return result.returncode == 0
 
         if method == "curl":
+            # Download, check, then run — not `curl … | sh`. Without pipefail
+            # (which dash, Ubuntu's sh, has lacked) the pipe exits with sh's
+            # status, and sh runs an empty script cleanly, so a failed
+            # download was reported as "Ollama installed".
+            script = subprocess.run(
+                ["curl", "-fsSL", INSTALL_SCRIPT_URL],
+                capture_output=True,
+                timeout=120,
+            )
+            if script.returncode != 0 or not script.stdout.strip():
+                sys.stderr.write(script.stderr.decode("utf-8", "replace"))
+                return False
             result = subprocess.run(
-                ["sh", "-c", "curl -fsSL https://ollama.ai/install.sh | sh"],
+                ["sh"],
+                input=script.stdout,
                 stdout=sys.stdout,
                 stderr=sys.stderr,
             )

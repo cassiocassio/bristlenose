@@ -1320,16 +1320,37 @@ enum WelcomeIllustrationHTML {
     ///                   play:  async function(){ … } });  // exactly one pass
     ///
     /// `still` paints the FINISHED frame with nothing animating — it is what the cell
-    /// shows while resting, and it runs once at load so a cell that has not had a turn
-    /// yet still shows a picture rather than an empty stage. `open` paints the opening
-    /// frame and is called *behind the curtain*, so the establishing beat lands on the
-    /// scene the pass is about to act on rather than on a blank box (which is what the
-    /// old three-second lead-in actually showed for Tag and Star&hide — both built
-    /// their card inside the play function). `play` runs exactly one pass and must not
-    /// loop: the baton waits for it now (`WelcomeBaton.finish`), where it used to guess
-    /// a duration and guillotine whatever was on screen when the guess ran out.
+    /// shows while resting. `open` paints the opening frame and is called *behind the
+    /// curtain*, so the establishing beat lands on the scene the pass is about to act on
+    /// rather than on a blank box (which is what the old three-second lead-in actually
+    /// showed for Tag and Star&hide — both built their card inside the play function).
+    /// `play` runs exactly one pass and must not loop: the baton waits for it now
+    /// (`WelcomeBaton.finish`), where it used to guess a duration and guillotine
+    /// whatever was on screen when the guess ran out.
     ///
-    /// Under reduce-motion the whole thing is inert: `still` has already painted, the
+    /// **Nothing paints until the cell says which it is (11 Oct 2026).** `still` used
+    /// to run at `register`, during the parse. A slide reached with the carousel
+    /// chevrons is a fresh webview that is *already* the baton holder, so it painted
+    /// its finished frame, then took `setActive(true)` from `didFinish` and dipped
+    /// that frame away to reach the opening one — the end of the story on screen for
+    /// a third of a second before the beginning. Measured off a 120 fps recording:
+    /// finished timeline at +0.20 s, dimmed out by +0.50 s, opening frame from +0.57 s.
+    /// Now the body starts blank and the FIRST `setActive` decides. `true` opens
+    /// straight from blank with no dip; `false` paints the still and fades up to rest.
+    /// A `false` waits `GRACE` before committing, because a carousel claim reaches
+    /// the baton on its next 100 ms tick and can land just after the first `false`.
+    /// `FALLBACK` paints the still for a host that never calls `setActive` at all.
+    ///
+    /// **Frames are painted with transitions off.** `still` and `open` jump to a
+    /// frame; they do not animate to it. An illustration that reaches a frame by
+    /// toggling a class with a CSS transition (Miro's stickies drop `.on`, which has a
+    /// 0.32 s fade) was still mid-transition when the curtain lifted, so the stickies
+    /// came back as the cell faded up and then faded away — a second flash after the
+    /// first. `paint` adds `bn-snap` (every transition off), runs the frame, forces a
+    /// style flush, and removes it, so the computed style is already final and nothing
+    /// is left to transition.
+    ///
+    /// Under reduce-motion the whole thing is inert: `still` paints at `register`, the
     /// body stays at full strength, and `setActive` is refused, so nothing moves and no
     /// `done` is ever posted (the baton is stopped in that mode anyway).
     ///
@@ -1344,36 +1365,63 @@ enum WelcomeIllustrationHTML {
                                 transition:opacity \(WelcomeTempo.jsFadeMs)ms ease; }
           html.bn-curtain.bn-up body{ opacity:1; }
           html.bn-curtain.bn-blank body{ opacity:0; }
+          html.bn-snap *, html.bn-snap *::before, html.bn-snap *::after{ transition:none !important; }
         </style>
         <script>
         (function(){
           var H=document.documentElement;
           var R=H.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
           var FADE=\(WelcomeTempo.jsFadeMs), EST=\(WelcomeTempo.jsEstablishMs(for: kind)), HOLD=\(WelcomeTempo.jsHoldEndMs);
-          var still=null, open=null, play=null, gen=0, on=false;
-          if(!R) H.classList.add("bn-curtain");
+          var GRACE=200, FALLBACK=1000;
+          var still=null, open=null, play=null, gen=0, on=false, decided=false, graceT=0, fallbackT=0;
+          if(!R) H.classList.add("bn-curtain","bn-blank");   // blank until the first setActive decides
           function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
           function post(){ try{ webkit.messageHandlers.bn.postMessage("done"); }catch(e){} }
+          function paint(fn){                                  // jump to a frame, never animate to it
+            if(!fn) return;
+            H.classList.add("bn-snap"); fn(); void getComputedStyle(document.body).opacity; H.classList.remove("bn-snap");
+          }
+          function pass(fromBlank){
+            var mine=gen;
+            (async function(){
+              if(!fromBlank){
+                H.classList.remove("bn-up"); H.classList.add("bn-blank");   // dip out of the resting frame
+                await wait(FADE);                         if(mine!==gen) return;
+              }
+              paint(open);                                                // opening frame, unseen
+              H.classList.remove("bn-blank"); H.classList.add("bn-up");   // curtain up
+              await wait(FADE+EST);                       if(mine!==gen) return;
+              if(play) await play();                      if(mine!==gen) return;
+              await wait(HOLD);                           if(mine!==gen) return;
+              H.classList.remove("bn-up");                                // curtain down to rest
+              await wait(FADE);                           if(mine!==gen) return;
+              post();
+            })();
+          }
+          function decide(v){
+            if(decided) return;
+            decided=true; clearTimeout(graceT); clearTimeout(fallbackT);
+            if(v){ on=true; gen++; pass(true); return; }                 // reached by intent: straight from blank
+            paint(still); H.classList.remove("bn-blank");                 // resting: fade up to rest
+          }
           window.BN={
             wait:wait,
-            register:function(o){ still=o.still; open=o.open||o.still; play=o.play; if(still) still(); },
+            register:function(o){
+              still=o.still; open=o.open||o.still; play=o.play;
+              if(R){ paint(still); return; }
+              fallbackT=setTimeout(function(){ decide(false); }, FALLBACK);
+            },
             setActive:function(v){
-              if(R || v===on) return;
+              if(R) return;
+              if(!decided){
+                if(v) decide(true);
+                else if(!graceT) graceT=setTimeout(function(){ decide(false); }, GRACE);
+                return;
+              }
+              if(v===on) return;
               on=v; gen++;
-              if(!v){ H.classList.remove("bn-up","bn-blank"); if(still) still(); return; }  // baton lost
-              var mine=gen;
-              (async function(){
-                H.classList.remove("bn-up"); H.classList.add("bn-blank");   // dip out of the resting frame
-                await wait(FADE);                           if(mine!==gen) return;
-                if(open) open();                                            // opening frame, unseen
-                H.classList.remove("bn-blank"); H.classList.add("bn-up");   // curtain up
-                await wait(FADE+EST);                       if(mine!==gen) return;
-                if(play) await play();                      if(mine!==gen) return;
-                await wait(HOLD);                           if(mine!==gen) return;
-                H.classList.remove("bn-up");                                // curtain down to rest
-                await wait(FADE);                           if(mine!==gen) return;
-                post();
-              })();
+              if(!v){ H.classList.remove("bn-up","bn-blank"); paint(still); return; }  // baton lost
+              pass(false);
             }
           };
         })();

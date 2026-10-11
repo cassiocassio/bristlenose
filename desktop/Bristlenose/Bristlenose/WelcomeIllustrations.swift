@@ -2914,7 +2914,7 @@ enum WelcomeIllustrationHTML {
               // 2 · Read: one stop per section, the flag raised and held
               var o=origin(), y=o[1]+PT.y+5, stops=SECTIONS.map(function(z){ return z[0]+60; });
               ptrTo(o[0]+x(stops[0]), y, 420); await sleep(460); if(gone()) return;
-              playheadAt(stops[0]); await hold(950); if(gone()) return;
+              playheadAt(stops[0]); await hold(800); if(gone()) return;
               for(var k=1;k<stops.length;k++){
                 var a=stops[k-1], b=stops[k], s0=scrollX, s1=Math.max(s0, Math.min(W-V, scrollFor(b))), moving=s1!==s0;
                 await tween(560, function(e){
@@ -2924,7 +2924,7 @@ enum WelcomeIllustrationHTML {
                 });
                 if(gone()) return;
                 setScroll(scrollX, false);
-                await hold(950); if(gone()) return;
+                await hold(800); if(gone()) return;
               }
               playheadAt(null);
               // 3 · A quote, from a sentiment mark

@@ -471,6 +471,17 @@ _strip_literals(
 _strip_literals(
     a, "spacy.about", [("spacy-models", "spacy-modelx")], required=False
 )
+# Our own copy of the same URL: s07's _SPACY_MODEL_WHEEL_URL, which fetches the
+# model into the user cache on the snap and the RPM only (_READ_ONLY_INSTALLS).
+# The frozen sidecar never takes that path — it cannot fetch at all — so the
+# rewrite is inert here. Stopped the 0.37.0 build at step 2c (12 Oct 2026).
+# required=True: s07 is always bundled, so its absence means the module moved.
+_strip_literals(
+    a,
+    "bristlenose.stages.s07_pii_removal",
+    [("spacy-models", "spacy-modelx")],
+    required=True,
+)
 
 # onnxruntime's C library (`onnxruntime/capi/libonnxruntime.<ver>.dylib`, 33 MB
 # at 1.30.0) is collected by the contrib hook but never loaded from Python: the

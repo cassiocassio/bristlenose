@@ -101,3 +101,18 @@ class TestEnsureHfModel:
         fake_hf.snapshot_download.return_value = "/user/hf-cache/whisper"
         with patch.dict(sys.modules, {"huggingface_hub": fake_hf}):
             assert ensure_hf_model("openai/whisper-large-v3-turbo") == "/user/hf-cache/whisper"
+
+
+@pytest.mark.parametrize("method", ["snap", "rpm"])
+def test_ensure_spacy_model_refuses_on_a_read_only_package(method: str) -> None:
+    """The snap and the RPM install into a read-only prefix. Reproduced on
+    0.36.0: `spacy download` there pulled all 400 MB, then died with EROFS
+    (snap) or a permission error (RPM). Refuse before the download."""
+    fake_spacy = MagicMock()
+    fake_spacy.load.side_effect = OSError("[E050] Can't find model")
+    with patch.dict(sys.modules, {"spacy": fake_spacy}), \
+            patch("bristlenose.doctor_fixes.detect_install_method", return_value=method), \
+            patch("bristlenose.utils.package_install.subprocess.run") as run:
+        with pytest.raises(PackageInstallError, match="not available in this package"):
+            ensure_spacy_model("en_core_web_lg")
+    run.assert_not_called()

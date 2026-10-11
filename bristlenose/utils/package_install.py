@@ -60,6 +60,17 @@ def ensure_spacy_model(model_name: str) -> None:
     except OSError:
         pass
 
+    from bristlenose.doctor_fixes import detect_install_method
+
+    if detect_install_method() in ("snap", "rpm"):
+        # Read-only prefix: pip would download all 400 MB and then fail writing
+        # it (EROFS on the snap's squashfs, EACCES in the RPM's root-owned venv).
+        raise PackageInstallError(
+            "PII redaction is not available in this package yet: it needs the "
+            f"spaCy model {model_name!r}, which the package does not include. "
+            "Drop --redact-pii to run without it."
+        )
+
     if _is_frozen_sidecar():
         if sys.platform == "win32":
             # The Windows installer build cannot download a model into itself, and

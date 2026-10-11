@@ -116,6 +116,15 @@ _PII_NOT_IN_WINDOWS_INSTALLER = (
     "Or drop --redact-pii if you don't need it."
 )
 
+#: The snap and the RPM install into a read-only prefix, so neither can take the
+#: 400 MB spaCy model `spacy download` would put there, and neither bundles it.
+#: Neither may suggest pip or pipx (see `test_packaged_fixes_never_suggest_pip`).
+_PII_NOT_IN_LINUX_PACKAGE = (
+    "PII redaction is not available in the {package} yet: it needs a\n"
+    "400 MB language model the package does not include.\n"
+    "Drop --redact-pii to run without it."
+)
+
 
 def _fix_ffmpeg_missing(method: str) -> str:
     if method == "rpm":
@@ -347,20 +356,11 @@ def _fix_pii_model_dir_invalid(method: str) -> str:
 
 def _fix_spacy_model_missing(method: str) -> str:
     if method == "rpm":
-        return (
-            "spaCy model not found — this is a bug in the RPM package, which\n"
-            "bundles en_core_web_lg.\n"
-            "  sudo dnf reinstall bristlenose\n"
-            "If it persists: github.com/cassiocassio/bristlenose/issues"
-        )
+        return _PII_NOT_IN_LINUX_PACKAGE.format(package="Fedora package")
     if method == "winget":
         return _PII_NOT_IN_WINDOWS_INSTALLER
     if method == "snap":
-        return (
-            "spaCy model not found — this is a bug in the snap package.\n"
-            "  sudo snap refresh bristlenose\n"
-            "If it persists: github.com/cassiocassio/bristlenose/issues"
-        )
+        return _PII_NOT_IN_LINUX_PACKAGE.format(package="snap")
     if method == "brew":
         return (
             "PII redaction needs a spaCy language model.\n\n"

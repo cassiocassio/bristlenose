@@ -123,9 +123,8 @@ parts:
           sys.exit("voice runtime will not work: " + r.detail)
       print("voice runtime:", r.detail)
       PY
-      # Download spaCy model into the snap's Python environment so
-      # --redact-pii works out of the box without user action.
-      $CRAFT_PART_INSTALL/bin/python3 -m spacy download en_core_web_sm
+      # No spaCy model here. --redact-pii needs en_core_web_lg (~400 MB),
+      # and this used to download en_core_web_sm, which nothing loads.
       # Install man page (canonical location: bristlenose/data/). Reference the
       # pristine part source, not a relative path: the core24 python plugin
       # reorganises the build dir during `craftctl default` above, so a relative

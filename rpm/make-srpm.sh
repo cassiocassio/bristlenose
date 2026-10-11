@@ -252,14 +252,6 @@ if [ -n "${BN_LOCAL_DIST:-}" ]; then
     echo "    substituted the local bristlenose wheel"
 fi
 
-# spaCy's model ships from the spacy-models GitHub releases, not PyPI, so it
-# has to be named by URL. Bristlenose needs it for --redact-pii; the snap
-# bundles it for the same reason.
-SPACY_MODEL="en_core_web_sm-3.8.0"
-echo "==> adding spaCy model $SPACY_MODEL"
-"$BN_PYTHON" -m pip wheel --quiet --wheel-dir="$WORK/vendor" --no-cache-dir --no-deps \
-    "https://github.com/explosion/spacy-models/releases/download/${SPACY_MODEL}/${SPACY_MODEL}-py3-none-any.whl"
-
 # %install runs `pip install --no-index`, which cannot build an sdist without
 # reaching for setuptools over the network. `pip wheel` above should have left
 # only wheels; assert it, rather than discovering it inside mock.

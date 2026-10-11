@@ -1488,6 +1488,10 @@ class TestDetectInstallMethod:
                 assert text, f"{key} returned no fix text for {method}"
                 assert "pip install" not in text, f"{key}/{method} suggests pip:\n{text}"
                 assert "pipx" not in text, f"{key}/{method} suggests pipx:\n{text}"
+                if key == "spacy_model_missing":
+                    # Not a packaging defect: neither package carries the model,
+                    # so there is nothing for the package manager to repair.
+                    continue
                 assert manager in text, f"{key}/{method} offers no {manager} command:\n{text}"
 
     def test_rpm_fixes_never_suggest_pip(self) -> None:
@@ -1509,6 +1513,8 @@ class TestDetectInstallMethod:
             assert text, f"{key} returned no fix text for rpm"
             assert "pip install" not in text, f"{key} tells an RPM user to run pip:\n{text}"
             assert "pipx" not in text, f"{key} tells an RPM user to run pipx:\n{text}"
+            if key == "spacy_model_missing":
+                continue  # the RPM never carries the model; dnf cannot repair it
             assert "dnf" in text, f"{key} gives an RPM user no dnf command:\n{text}"
 
     # -- Homebrew --
@@ -1709,10 +1715,17 @@ class TestGetFixGrid:
 
     # -- spacy_model_missing: varies by method --
 
-    def test_spacy_model_missing_snap(self) -> None:
-        fix = get_fix("spacy_model_missing", "snap")
-        assert "bug in the snap" in fix
-        assert "snap refresh" in fix
+    @pytest.mark.parametrize(("method", "package"), [
+        ("snap", "snap"), ("rpm", "Fedora package"),
+    ])
+    def test_spacy_model_missing_linux_package(self, method: str, package: str) -> None:
+        """Neither package carries en_core_web_lg, so a refresh or reinstall
+        cannot help — reproduced on the 0.36.0 edge snap and Copr RPM, whose
+        texts said "bug in the package" and sent the user to do exactly that."""
+        fix = get_fix("spacy_model_missing", method)
+        assert f"not available in the {package}" in fix
+        assert "Drop --redact-pii" in fix
+        assert "refresh" not in fix and "reinstall" not in fix
 
     def test_spacy_model_missing_brew(self) -> None:
         fix = get_fix("spacy_model_missing", "brew")

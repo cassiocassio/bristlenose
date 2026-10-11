@@ -10,8 +10,6 @@
 %global bn_prefix   %{_libdir}/%{name}
 %global bn_python   %{bn_prefix}/bin/python
 %global marker_file     .install-method
-%global spacy_model     en_core_web_sm
-%global spacy_model_ver 3.8.0
 
 # The payload is 106 manylinux wheels — binaries built by upstream against a
 # different toolchain, not compiled here. Every one of rpm's post-build passes
@@ -120,12 +118,8 @@ python3 -m venv %{buildroot}%{bn_prefix}
     --no-index --find-links=vendor --no-cache-dir --no-compile \
     "%{name}[serve,voice]==%{version}"
 
-# spaCy's model is not on PyPI (it ships from the spacy-models GitHub
-# releases), so it is fetched into vendor/ by name at SRPM time. Installing it
-# here means --redact-pii works out of the box, as it does on the snap.
-%{buildroot}%{bn_prefix}/bin/pip install \
-    --no-index --find-links=vendor --no-cache-dir --no-compile \
-    "%{spacy_model}==%{spacy_model_ver}"
+# No spaCy model here. --redact-pii needs en_core_web_lg (~400 MB); this used
+# to install en_core_web_sm, which nothing loads.
 
 # A venv records the path it was created at, in pyvenv.cfg and in the shebang
 # of every console script. Right now that path is inside the buildroot. Strip

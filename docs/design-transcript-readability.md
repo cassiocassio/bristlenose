@@ -11,10 +11,11 @@ unpunctuated stretches; 60–105 s paragraphs; word lists that disagree with the
 paragraph text at the edges; and whether the raw transcript should get a readable
 presentation the way quotes already do.
 
-**Status, 8 Oct 2026.** One piece is built: sentence-start capitals (recommendation #3's
-second part, the capitalisation mockup's option C) shipped as display-only CSS in
-`512f0846`, recorded in `design-transcript-editing.md`. Recommendations #1 and #2, and
-the rest of #3, are not built. The side-by-side comparison of today's transcript against
+**Status, 11 Oct 2026.** Recommendation #1 is built (§8): a punctuated style prompt on
+every Whisper window, on both backends, for English and Japanese. Sentence-start capitals
+(recommendation #3's second part, the capitalisation mockup's option C) shipped as
+display-only CSS in `512f0846`, recorded in `design-transcript-editing.md`.
+Recommendation #2 and the rest of #3 are not built. The side-by-side comparison of today's transcript against
 five candidate versions is `docs/mockups/transcript-readability-versions.html`; the
 scripts behind it and behind every measurement here are in
 `experiments/transcript-readability/`.
@@ -512,3 +513,65 @@ extracted audio, never the project folder itself). The method, in brief:
 - **Whisper runs (§2.3)**: `mlx_whisper.transcribe` on a copy of the session's
   `s1_extracted.wav`, with the settings in the tables; the carried prompt is a copy of
   `mlx_whisper/transcribe.py` with L296 changed as quoted.
+
+---
+
+## 8. Recommendation #1 as built (11 Oct 2026)
+
+`bristlenose/stages/s05_transcribe.py`, `STYLE_PROMPTS` and the note above it.
+
+**The mechanism changed from §2.5's plan.** Three things moved it:
+
+- **Chunking the audio ourselves was measured and rejected.** Cutting at the quietest point
+  between 20 and 30 s and prompting each chunk gave 815 adjacent n-gram repeats against 6,
+  and a 248-word unpunctuated run (MEASURED, full s1).
+- **There is no `.py` source to patch in the Mac sidecar**, so the one-line patch in §2.3
+  could not ship as a source edit.
+- **mlx builds a fresh `DecodingOptions` for every window and every fallback temperature,**
+  after it has settled the language, and looks the name up in its own module each time.
+  Rebinding that name to a factory that fills an empty `prompt` reproduces the patched
+  form exactly, with no extra decode and no re-run for language detection (VERIFIED,
+  mlx-whisper 0.4.3 `transcribe.py`).
+
+On faster-whisper the prompt goes in as `hotwords`, which `get_prompt` adds to every window
+(VERIFIED, faster-whisper 1.2.1). Its language is detected first when not pinned.
+
+**Measured on the shipped code path** (mlx, large-v3-turbo, M2 Max):
+
+| | Today | Built |
+|---|---|---|
+| s1, sentences | 72–144 (varies by run) | 275 |
+| s1, lower-case "I" | 42–96 of ~170 | 0 of 174 |
+| s1, longest unpunctuated run | 300–681 words | 24 |
+| s1, windows falling back to sampling | 92–145 | 0–21 |
+| s1, two runs of the same file | 831 / 1,051 / 838 words | byte-identical |
+| s1, time | 74–84 s | 45–59 s |
+| Japanese file, 。 | 0 | 23 |
+
+Seeded matrix before the final code, three seeds each: English 267–286 sentences with the
+prompt against 80–144 without; Japanese 20–25 。 against 0; no repetition loops in any run.
+faster-whisper, 5-minute English excerpt, CPU int8: 0 → 49 sentences, 27 of 27 → 0 of 29
+lower-case "I". Its Japanese was already punctuated (26 。) and stayed so (25).
+
+**Choices, with the reviews that shaped them:**
+
+- **Two languages only.** No recordings in other languages exist to measure on. A
+  language without a prompt runs exactly as before. Chinese is left out on purpose.
+- **The Japanese prompt was changed after review** from one ending in a moderator's line
+  ("それでは始めましょう", let's begin) to filler and assent only:
+  "えーと、はい。そうですね、なるほど。" Re-measured: 23 。.
+- **`compression_ratio_threshold` stays at 1.8.** At 2.4 the prompt leaked into a
+  transcript once, replacing the moderator's words.
+- **The echo filter drops only the whole prompt**, once or repeated. Its parts are things
+  people say.
+- **Seeded per file** (`mx.random.seed(0)`) so transcripts are repeatable. A fixed seed
+  rather than one per file name keeps it simple; a per-name seed would avoid two files'
+  fallbacks being correlated, which nothing has shown to matter.
+- **Observable**: every mlx file logs `style prompt on, N of N decode steps`, and a
+  WARNING when the hook is installed but the decoder never went through it.
+- **Applies to new transcriptions only.** Cached `session_segments.json` is not redone.
+
+**Not done:** speaker identification was not re-run on the new output (its LLM pass may
+cost money), so the expected fix to the edge disagreements (§1.1) is still inferred.
+Recommendation #2 follows.
+

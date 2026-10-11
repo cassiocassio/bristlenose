@@ -480,3 +480,309 @@ class TestPipelineRecordsAPinnedLanguage:
         assert pipeline._detected_languages == {"s1": "ja", "s4": "fr"}
         assert pipeline._pinned_languages == {"s2": "es"}
 
+
+
+class TestStylePromptEcho:
+    """A segment that is only the style prompt is Whisper handing the prompt
+    back, not speech. Its parts are things people say, so they stay."""
+
+    def _en(self) -> str:
+        from bristlenose.stages.s05_transcribe import STYLE_PROMPTS
+
+        return STYLE_PROMPTS["en"]
+
+    def test_the_whole_prompt_is_an_echo(self) -> None:
+        from bristlenose.stages.s05_transcribe import is_prompt_echo
+
+        assert is_prompt_echo(self._en(), self._en())
+        assert is_prompt_echo(" " + self._en().upper() + " ", self._en())
+
+    def test_the_prompt_repeated_is_an_echo(self) -> None:
+        from bristlenose.stages.s05_transcribe import is_prompt_echo
+
+        assert is_prompt_echo(f"{self._en()} {self._en()}", self._en())
+
+    def test_a_part_of_the_prompt_said_once_or_twice_is_speech(self) -> None:
+        from bristlenose.stages.s05_transcribe import is_prompt_echo
+
+        for said in ("Right.", "Right. Right.", "Hmm, okay.", "Hmm, okay. Hmm, okay."):
+            assert not is_prompt_echo(said, self._en()), said
+
+    def test_the_prompt_with_anything_else_is_speech(self) -> None:
+        from bristlenose.stages.s05_transcribe import is_prompt_echo
+
+        assert not is_prompt_echo(f"{self._en()} And the sofa arrived late.", self._en())
+
+    def test_japanese_compares_without_spaces_or_punctuation(self) -> None:
+        from bristlenose.stages.s05_transcribe import STYLE_PROMPTS, is_prompt_echo
+
+        ja = STYLE_PROMPTS["ja"]
+        assert is_prompt_echo(ja.replace("、", " "), ja)
+        assert not is_prompt_echo("はい。", ja)
+
+    def test_empty_text_is_not_an_echo(self) -> None:
+        from bristlenose.stages.s05_transcribe import is_prompt_echo
+
+        assert not is_prompt_echo("", self._en())
+        assert not is_prompt_echo(" ... ", self._en())
+
+
+class TestStylePromptReachesEveryWindow:
+    """mlx builds a fresh DecodingOptions for every window and every fallback
+    temperature. The hook must fill an empty prompt with the style prompt for
+    the language mlx settled on — and do nothing outside our own call.
+    Needs mlx-whisper installed (Apple Silicon); skipped elsewhere."""
+
+    def _module(self):
+        import importlib
+
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        from bristlenose.stages import s05_transcribe
+
+        assert s05_transcribe._install_style_prompt_hook()
+        return importlib.import_module("mlx_whisper.transcribe"), s05_transcribe
+
+    def test_mlx_still_builds_options_where_the_hook_reaches(self) -> None:
+        """Pins the mlx-whisper shape the hook relies on. If an upgrade moves
+        it, this fails here rather than the prompt silently stopping."""
+        import inspect
+
+        module, _ = self._module()
+        source = inspect.getsource(module.transcribe)
+        assert "options = DecodingOptions(**kwargs, temperature=t)" in source
+        assert 'decode_options["prompt"] = all_tokens[prompt_reset_since:]' in source
+
+    def test_an_empty_prompt_gets_the_languages_style_prompt(self) -> None:
+        module, s05 = self._module()
+        token = s05._STYLE_PROMPT_ON.set(True)
+        try:
+            en = module.DecodingOptions(language="en", prompt=[], temperature=0.0)
+            ja = module.DecodingOptions(language="ja", prompt=[], temperature=0.4)
+            fr = module.DecodingOptions(language="fr", prompt=[], temperature=0.0)
+        finally:
+            s05._STYLE_PROMPT_ON.reset(token)
+        assert en.prompt == s05.STYLE_PROMPTS["en"]
+        assert ja.prompt == s05.STYLE_PROMPTS["ja"]
+        assert not fr.prompt
+
+    def test_a_prompt_already_there_is_left_alone(self) -> None:
+        module, s05 = self._module()
+        token = s05._STYLE_PROMPT_ON.set(True)
+        try:
+            opts = module.DecodingOptions(language="en", prompt=[50364, 1012])
+        finally:
+            s05._STYLE_PROMPT_ON.reset(token)
+        assert opts.prompt == [50364, 1012]
+
+    def test_nothing_changes_outside_our_call(self) -> None:
+        module, _ = self._module()
+        assert not module.DecodingOptions(language="en", prompt=[]).prompt
+
+
+class TestMlxBackendPromptsAndDropsEchoes:
+    """The wiring: during our transcribe call every window's options carry the
+    prompt, and a segment that only repeats the prompt is dropped."""
+
+    def test_windows_carry_the_prompt_and_echoes_are_dropped(
+        self, monkeypatch, tmp_path,
+    ) -> None:
+        import importlib
+
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        module = importlib.import_module("mlx_whisper.transcribe")
+        seen: list[object] = []
+        prompt = s05_transcribe.STYLE_PROMPTS["en"]
+
+        def _fake_transcribe(audio_in, **_kw):
+            # What mlx does per window, after detecting the language.
+            for t in (0.0, 0.2):
+                seen.append(module.DecodingOptions(language="en", prompt=[], temperature=t).prompt)
+            return {"language": "en", "segments": [
+                {"start": 1.0, "end": 4.0, "text": " We bought the sofa in May."},
+                {"start": 5.0, "end": 8.0, "text": " " + prompt},
+            ]}
+
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: _tone(10, -30))
+        monkeypatch.setattr(mlx_whisper, "transcribe", _fake_transcribe)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "auto"})()
+
+        fn = s05_transcribe._init_mlx_backend(settings)
+        segments, language = fn(tmp_path / "p1.wav", settings)
+
+        assert seen == [prompt, prompt]
+        assert [s.text for s in segments] == ["We bought the sofa in May."]
+        assert language == "en"
+        assert not module.DecodingOptions(language="en", prompt=[]).prompt
+
+
+class TestStylePromptLanguage:
+    def test_codes_and_names_reach_the_same_prompt(self) -> None:
+        from bristlenose.stages.s05_transcribe import STYLE_PROMPTS, style_prompt_for
+
+        for given in ("en", "EN", " en ", "English", "english"):
+            assert style_prompt_for(given) == STYLE_PROMPTS["en"], given
+        assert style_prompt_for("Japanese") == STYLE_PROMPTS["ja"]
+
+    def test_a_language_without_a_measured_prompt_gets_none(self) -> None:
+        from bristlenose.stages.s05_transcribe import style_prompt_for
+
+        for given in ("fr", "zh", "", None):
+            assert style_prompt_for(given) is None, given
+
+
+class TestStylePromptFailsOpen:
+    """If mlx-whisper's shape moves, transcription runs exactly as before:
+    no prompt, nothing dropped, a warning in the log."""
+
+    def test_a_changed_mlx_transcribes_without_the_prompt(
+        self, monkeypatch, tmp_path, caplog,
+    ) -> None:
+        import importlib
+
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        module = importlib.import_module("mlx_whisper.transcribe")
+
+        class _Moved:  # no `prompt` field, as a future mlx might have it
+            def __init__(self, **kw: object) -> None:
+                self.kw = kw
+
+        monkeypatch.setattr(module, "DecodingOptions", _Moved)
+        monkeypatch.setattr(s05_transcribe, "_hook_state", {})
+        prompt = s05_transcribe.STYLE_PROMPTS["en"]
+
+        def _fake_transcribe(audio_in, **_kw):
+            return {"language": "en", "segments": [
+                {"start": 1.0, "end": 4.0, "text": " We bought the sofa in May."},
+                {"start": 5.0, "end": 8.0, "text": " " + prompt},
+            ]}
+
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: _tone(10, -30))
+        monkeypatch.setattr(mlx_whisper, "transcribe", _fake_transcribe)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "auto"})()
+
+        with caplog.at_level("WARNING"):
+            fn = s05_transcribe._init_mlx_backend(settings)
+            segments, _ = fn(tmp_path / "p1.wav", settings)
+
+        assert module.DecodingOptions is _Moved
+        # Without the prompt nothing is an echo: both segments are kept.
+        assert len(segments) == 2
+        assert "Style prompt not applied" in caplog.text
+
+    def test_the_gate_closes_when_transcribe_raises(self, monkeypatch, tmp_path) -> None:
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        def _boom(audio_in, **_kw):
+            raise RuntimeError("decoder fell over")
+
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: _tone(10, -30))
+        monkeypatch.setattr(mlx_whisper, "transcribe", _boom)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "auto"})()
+
+        fn = s05_transcribe._init_mlx_backend(settings)
+        with pytest.raises(RuntimeError):
+            fn(tmp_path / "p1.wav", settings)
+        assert s05_transcribe._STYLE_PROMPT_ON.get() is False
+
+
+class TestFasterWhisperGetsTheStylePrompt:
+    """faster-whisper keeps conditioning on, so one unpunctuated window locks the
+    style for the file; its `hotwords` carries the prompt to every window. The
+    language has to be known first, so an unpinned run detects it before."""
+
+    def _backend(self, monkeypatch, detected: str):
+        import sys
+        import types
+
+        import pytest
+
+        pytest.importorskip("faster_whisper")
+        import faster_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        calls: dict[str, object] = {}
+
+        class _Model:
+            def __init__(self, *a: object, **kw: object) -> None:
+                pass
+
+            def detect_language(self, audio, **kw):
+                calls["detected_on"] = audio
+                return detected, 0.93, []
+
+            def transcribe(self, audio, **kw):
+                calls["transcribe"] = kw
+                info = types.SimpleNamespace(
+                    language=kw["language"], language_probability=1.0, duration=10.0,
+                )
+                return iter([]), info
+
+        fake = types.ModuleType("faster_whisper")
+        fake.WhisperModel = _Model  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "faster_whisper", fake)
+        monkeypatch.setitem(sys.modules, "faster_whisper.audio", faster_whisper.audio)
+        monkeypatch.setattr(faster_whisper.audio, "decode_audio", lambda _p: "AUDIO")
+        hw = type("H", (), {"cuda_available": False})()
+        return s05_transcribe, hw, calls
+
+    def _settings(self, language: str):
+        return type("S", (), {
+            "whisper_model": "tiny", "whisper_language": language,
+            "whisper_compute_type": "int8",
+        })()
+
+    def test_an_unpinned_run_detects_then_prompts(self, monkeypatch, tmp_path) -> None:
+        s05, hw, calls = self._backend(monkeypatch, detected="en")
+        settings = self._settings("auto")
+
+        fn = s05._init_faster_whisper_backend(settings, hw)
+        _segments, language = fn(tmp_path / "p1.wav", settings)
+
+        assert calls["detected_on"] == "AUDIO"
+        kw = calls["transcribe"]
+        assert kw["language"] == "en"
+        assert kw["hotwords"] == s05.STYLE_PROMPTS["en"]
+        assert language == "en"
+
+    def test_a_language_without_a_prompt_gets_none(self, monkeypatch, tmp_path) -> None:
+        s05, hw, calls = self._backend(monkeypatch, detected="fr")
+        settings = self._settings("auto")
+
+        fn = s05._init_faster_whisper_backend(settings, hw)
+        fn(tmp_path / "p1.wav", settings)
+
+        assert calls["transcribe"]["hotwords"] is None
+
+    def test_a_pinned_language_is_not_detected_again(self, monkeypatch, tmp_path) -> None:
+        s05, hw, calls = self._backend(monkeypatch, detected="fr")
+        settings = self._settings("ja")
+
+        fn = s05._init_faster_whisper_backend(settings, hw)
+        fn(tmp_path / "p1.wav", settings)
+
+        assert "detected_on" not in calls
+        assert calls["transcribe"]["language"] == "ja"
+        assert calls["transcribe"]["hotwords"] == s05.STYLE_PROMPTS["ja"]

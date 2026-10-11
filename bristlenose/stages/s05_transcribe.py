@@ -10,7 +10,10 @@ The backend can be overridden via settings.whisper_backend.
 
 from __future__ import annotations
 
+import contextvars
+import importlib
 import logging
+import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
@@ -186,6 +189,131 @@ def segment_has_signal(start: float, end: float, levels: object) -> bool:
         # Timestamps past the end of the audio — nothing to judge by, so keep.
         return True
     return bool(np.max(arr[i0:i1]) >= _SIGNAL_FLOOR_DBFS)
+
+
+# ---------------------------------------------------------------------------
+# Style prompt — punctuation and casing on every window
+# ---------------------------------------------------------------------------
+#
+# Whisper copies the style of the text it is prompted with. On mlx, with
+# `condition_on_previous_text=False` (set in `_init_mlx_backend` to break
+# repetition loops) each 30 s window is decoded with no prompt at all, so each
+# window picks a style afresh — and on filler-heavy conversation it often picks lower case with no
+# punctuation. Measured on an 18-minute interview (docs/design-transcript-
+# readability.md §2.3): 72 sentences, a 681-word unpunctuated run, 96 of 172
+# "I"s lower-case; and no full stop at all in a Japanese file. mlx's
+# `initial_prompt` reaches only the first window on these settings.
+#
+# So the decode step gets the prompt for the language mlx has decided on, on
+# every window and every fallback temperature (`_install_style_prompt_hook`). Measured with three seeds each:
+# 267–286 sentences, longest unpunctuated run 24–31 words, no lower-case "I",
+# and fewer windows falling back to sampling (5–21 against 92–123); Japanese
+# 20–25 full stops against 0. The prompt holds fillers on purpose: a prompt
+# without them makes Whisper drop "um" and "uh", and quotes need the verbatim.
+#
+# faster-whisper keeps `condition_on_previous_text` on, so one unpunctuated
+# window locks the style for the rest of the file: a 5-minute English excerpt
+# came back with no sentence end at all and every "I" lower-case. Its
+# `hotwords` reaches every window by design, so the same prompt goes there:
+# 49 sentences, no lower-case "I", longest unpunctuated run 31 words.
+#
+# Rules for adding a language: fillers in; nothing a moderator would say (an
+# interview phrase in the prompt was the one leak seen, "Tell me about it." x4);
+# the language's own punctuation; measured on a real recording first. A
+# language not listed gets no prompt, which is how every language ran before.
+# Chinese is deliberately absent: the prompt's script would decide whether the
+# transcript comes out Simplified or Traditional, and that is a product call.
+STYLE_PROMPTS: dict[str, str] = {
+    "en": "Hmm, okay. Well, yes, I suppose so, um, and then? Right.",
+    "ja": "えーと、はい。そうですね、なるほど。",
+}
+
+
+#: Whisper also accepts a language by name; a pinned ``--whisper-language
+#: English`` must reach the same prompt as ``en``.
+_LANGUAGE_NAMES: dict[str, str] = {"english": "en", "japanese": "ja"}
+
+
+def style_prompt_for(language: str | None) -> str | None:
+    """The style prompt for a Whisper language code or name, or None."""
+    code = (language or "").strip().lower()
+    return STYLE_PROMPTS.get(_LANGUAGE_NAMES.get(code, code))
+
+
+def _prompt_core(text: str) -> str:
+    return re.sub(r"[\W_]+", "", text.casefold())
+
+
+def is_prompt_echo(text: str, prompt: str) -> bool:
+    """True when ``text`` is nothing but the whole prompt, once or repeated.
+
+    Whisper can hand a prompt back as speech. Only the whole prompt counts:
+    its parts ("Right.", "Hmm, okay.") are things people say, so a segment
+    holding one of them, or the prompt plus anything else, is kept — a kept
+    echo is visible and deletable, a dropped word is not.
+    """
+    core, unit = _prompt_core(text), _prompt_core(prompt)
+    if not core or not unit or len(core) % len(unit):
+        return False
+    return core == unit * (len(core) // len(unit))
+
+
+#: True only inside our own `mlx_whisper.transcribe` call, so the hook below
+#: changes nothing for any other caller, in this thread or another.
+_STYLE_PROMPT_ON: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "bristlenose_style_prompt_on", default=False,
+)
+_hook_state: dict[str, bool] = {}
+#: Decode steps built and filled inside our calls, for the per-file log line
+#: that shows the prompt really reached the decoder.
+_hook_counts: dict[str, int] = {"built": 0, "filled": 0}
+
+
+def _install_style_prompt_hook() -> bool:
+    """Make mlx's decode step carry the style prompt. True when installed.
+
+    `mlx_whisper.transcribe.transcribe` builds a fresh ``DecodingOptions`` for
+    every window and every fallback temperature, looking the name up in its
+    own module, after it has settled the language. Rebinding that name to a
+    factory that fills an EMPTY ``prompt`` reaches every window without
+    patching source — which matters because the Mac sidecar ships no ``.py``
+    source to patch. A non-empty prompt (conditioning on previous text, or a
+    caller's own ``initial_prompt``) is left alone.
+
+    Fails open: if mlx-whisper's shape has moved, log once and transcribe as
+    before. ``tests/test_transcribe.py`` pins the shape so an upgrade that
+    moves it fails there first.
+    """
+    if "ok" in _hook_state:
+        return _hook_state["ok"]
+    try:
+        module = importlib.import_module("mlx_whisper.transcribe")
+        original = module.DecodingOptions
+        if getattr(original, "_bristlenose_style_prompt", False):
+            _hook_state["ok"] = True
+            return True
+        if "prompt" not in getattr(original, "__dataclass_fields__", {}):
+            raise AttributeError("DecodingOptions has no prompt field")
+    except (ImportError, AttributeError) as exc:
+        logger.warning("Style prompt not applied: mlx-whisper not as expected (%s)", exc)
+        _hook_state["ok"] = False
+        return False
+
+    def decoding_options(*args: object, **kwargs: object) -> object:
+        if _STYLE_PROMPT_ON.get():
+            _hook_counts["built"] += 1
+            if not kwargs.get("prompt"):
+                language = kwargs.get("language")
+                prompt = style_prompt_for(language if isinstance(language, str) else None)
+                if prompt:
+                    kwargs["prompt"] = prompt
+                    _hook_counts["filled"] += 1
+        return original(*args, **kwargs)
+
+    setattr(decoding_options, "_bristlenose_style_prompt", True)  # noqa: B010 (mypy: a function has no such attribute)
+    setattr(module, "DecodingOptions", decoding_options)  # noqa: B010 (mypy: mlx is untyped)
+    _hook_state["ok"] = True
+    return True
 
 
 #: ``(files_done, files_total)``, called after each file.
@@ -469,16 +597,46 @@ def _init_mlx_backend(
         # Loop-breaking kwargs for mlx-whisper. `no_speech_threshold` is inert
         # on large-v3-turbo (its no_speech_prob is always 0.0 — see the gate
         # note above); it is kept for the smaller models, where it still works.
-        result = mlx_whisper.transcribe(
-            audio,
-            path_or_hf_repo=model_name,
-            language=settings.whisper_language if settings.whisper_language != "auto" else None,
-            word_timestamps=True,
-            verbose=None,
-            condition_on_previous_text=False,
-            no_speech_threshold=0.85,
-            compression_ratio_threshold=1.8,
-        )
+        # The style prompt (see the note above `STYLE_PROMPTS`) rides on every
+        # window inside this block, and the seed makes the windows that fall
+        # back to sampling come out the same on every run of the same file.
+        hook_ready = _install_style_prompt_hook()
+        import mlx.core as mx
+
+        mx.random.seed(0)
+        _hook_counts.update(built=0, filled=0)
+        token = _STYLE_PROMPT_ON.set(hook_ready)
+        try:
+            result = mlx_whisper.transcribe(
+                audio,
+                path_or_hf_repo=model_name,
+                language=(
+                    settings.whisper_language
+                    if settings.whisper_language != "auto" else None
+                ),
+                word_timestamps=True,
+                verbose=None,
+                condition_on_previous_text=False,
+                no_speech_threshold=0.85,
+                compression_ratio_threshold=1.8,
+            )
+        finally:
+            _STYLE_PROMPT_ON.reset(token)
+        prompt = style_prompt_for(result.get("language")) if hook_ready else None
+        if hook_ready:
+            built, filled = _hook_counts["built"], _hook_counts["filled"]
+            if built == 0 or (prompt and filled == 0):
+                # The hook is installed but mlx no longer goes through it.
+                logger.warning(
+                    "%s: style prompt did not reach the decoder (%d of %d decode steps)",
+                    audio_path.name, filled, built,
+                )
+            else:
+                logger.info(
+                    "%s: style prompt %s, %d of %d decode steps (language=%s)",
+                    audio_path.name, "on" if prompt else "none for this language",
+                    filled, built, result.get("language"),
+                )
 
         # What the model decided the audio was. mlx computes the full
         # probability distribution internally (`model.detect_language` →
@@ -498,12 +656,16 @@ def _init_mlx_backend(
 
         segments: list[TranscriptSegment] = []
         in_silence = 0
+        echoes = 0
         for seg in result.get("segments", []):
             if not segment_has_signal(seg.get("start", 0.0), seg.get("end", 0.0), levels):
                 # A recording with speech in it can still carry long silent
                 # stretches, and Whisper fills those the same way.
                 if seg.get("text", "").strip():
                     in_silence += 1
+                continue
+            if prompt and is_prompt_echo(seg.get("text", ""), prompt):
+                echoes += 1
                 continue
             words: list[Word] = []
             for w in seg.get("words", []):
@@ -530,6 +692,11 @@ def _init_mlx_backend(
             logger.info(
                 "%s: dropped %d segment(s) with no signal above %.0f dBFS",
                 audio_path.name, in_silence, _SIGNAL_FLOOR_DBFS,
+            )
+        if echoes:
+            logger.info(
+                "%s: dropped %d segment(s) that repeat the style prompt",
+                audio_path.name, echoes,
             )
 
         return segments, result.get("language")
@@ -629,17 +796,35 @@ def _init_faster_whisper_backend(
         settings: BristlenoseSettings,
         on_segment: FileSegmentCallback | None = None,
     ) -> tuple[list[TranscriptSegment], str | None]:
+        from faster_whisper.audio import decode_audio
+
+        # Decode once: the language has to be known before the style prompt
+        # can be chosen, and transcribe would otherwise decode the file again.
+        audio = decode_audio(str(audio_path))
+        language = settings.whisper_language if settings.whisper_language != "auto" else None
+        detected_prob: float | None = None
+        if language is None:
+            # The same detection transcribe runs (speech only, via VAD).
+            language, detected_prob, _all = model.detect_language(audio, vad_filter=True)
+        prompt = style_prompt_for(language)
         segments_iter, info = model.transcribe(
-            str(audio_path),
-            language=settings.whisper_language if settings.whisper_language != "auto" else None,
+            audio,
+            language=language,
             word_timestamps=True,
             vad_filter=True,
+            hotwords=prompt,
+        )
+        logger.info(
+            "%s: style prompt %s (language=%s)",
+            audio_path.name, "on" if prompt else "none for this language", language,
         )
 
         logger.info(
             "Audio: language=%s (prob=%.2f), duration=%.0fs",
             info.language,
-            info.language_probability,
+            # transcribe reports 1.0 for a language it was given; the
+            # detection's own confidence is the one worth logging.
+            detected_prob if detected_prob is not None else info.language_probability,
             info.duration,
         )
 

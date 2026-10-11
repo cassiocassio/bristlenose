@@ -2678,11 +2678,11 @@ enum WelcomeIllustrationHTML {
     ///
     /// **Fit.** The picture scales down (never up) to the slot's height, and the
     /// logical width grows by the same factor, so a short slot shows more of the
-    /// session rather than a smaller copy of one crop. The time scale is then the
-    /// lens's own rule — fit the session to the width, held to 1–4 s/px — so the
-    /// 40-minute example draws as slivers and scrolls sideways under the pointer
-    /// whenever the slot is narrower than ~700 logical px, which is the lens's
-    /// behaviour in a narrow window.
+    /// session rather than a smaller copy of one crop. The timeline is then drawn
+    /// zoomed in, about 2.2 slots wide (a liberty: the lens opens fitted), because a
+    /// timeline that fits its frame reads as a static chart. Reading it means
+    /// swiping: the pointer parks on the speaker lane and the timeline slides under
+    /// it, so each section's flag rises as its section arrives.
     ///
     /// **Holds are absolute.** The read beat's pause on each section is reading
     /// time, so it does not pass through `PACE` (see `WelcomeTempo`'s note on
@@ -2783,6 +2783,11 @@ enum WelcomeIllustrationHTML {
           function pxOf(step){ var r=cssv("--bn-text-"+step); return r.slice(-3)==="rem"? parseFloat(r)*16 : parseFloat(r); }
           function measure(t, font){ cv.font=font; return cv.measureText(t).width; }
           function fitText(t, avail, font){ if(avail<10) return ""; if(measure(t,font)<=avail) return t; while(t.length>1 && measure(t+"…",font)>avail) t=t.slice(0,-1); return t.length>1? t+"…" : ""; }
+          // SessionTapestry.tsx's label ink: whichever of white and near-black has the higher
+          // WCAG contrast on the scene colour.
+          function lum(hex){ var n=parseInt(hex.slice(1),16); function l(c){ var v=c/255; return v<=0.03928? v/12.92 : Math.pow((v+0.055)/1.055,2.4); }
+            return 0.2126*l((n>>16)&255)+0.7152*l((n>>8)&255)+0.0722*l(n&255); }
+          function inkOn(hex){ var L=lum(hex); return 1.05/(L+0.05) >= (L+0.05)/(lum("#1a1a1a")+0.05)? "#fff" : "#1a1a1a"; }
           function tc(sec){ var m=Math.floor(sec/60), x=Math.round(sec%60); return (m<10?"0":"")+m+":"+(x<10?"0":"")+x; }
 
           var PTR='<svg width="21" height="21" viewBox="0 0 12 19"><path d="M1.2 1.2 L1.2 14.6 L4.8 11.3 L7.1 16.8 L9.3 15.8 L7.0 10.4 L11.4 10.4 Z" fill="#ffffff" stroke="#111111" stroke-width="1.1" stroke-linejoin="round"/></svg>';
@@ -2802,10 +2807,15 @@ enum WelcomeIllustrationHTML {
 
           function build(width){
             V=width; stage.style.width=V+"px"; stage.innerHTML=""; pop=null;
-            sPerPx=Math.max(1, Math.min(4, DUR/Math.max(1, V-GUT-RIGHT)));   // the lens's fit rule
+            // LIBERTY: zoomed in, as a researcher would to read one stretch. The timeline is
+            // ~2.2 slots wide, so it cannot sit still as a chart: reading it means swiping
+            // sideways. Held at or under 2.5 s/px, the lens's threshold for drawing clips
+            // (with their speaker) rather than slivers; 0.25 is the lens's deepest zoom.
+            sPerPx=Math.max(0.25, Math.min(2.5, DUR/(Math.max(1, V-GUT-RIGHT)*2.2)));
             W=Math.ceil(x(DUR)+RIGHT);
             var body=cssv("--bn-font-body"), emph=cssv("--bn-weight-emphasis"), norm=cssv("--bn-weight-normal");
-            var F={ flag:emph+" "+pxOf("label")+"px "+body, tag:norm+" "+pxOf("label")+"px "+body, lane:emph+" "+pxOf("caption")+"px "+body };
+            var F={ flag:emph+" "+pxOf("label")+"px "+body, tag:norm+" "+pxOf("label")+"px "+body, lane:emph+" "+pxOf("caption")+"px "+body,
+                    clip:emph+" "+pxOf("badge")+"px "+body };
             var card=div("tl-card", stage);
             row=div("tl-row", card);
             var tg=document.createElement("span"); tg.className="bn-tapestry-toggle"; tg.setAttribute("aria-expanded","false"); tg.innerHTML=CHEV; row.appendChild(tg);
@@ -2834,7 +2844,11 @@ enum WelcomeIllustrationHTML {
             TURNS.forEach(function(tn){
               var tr=tn[2]?MT:PT, x0=x(tn[0]), w=x(tn[1])-x0, cls="bn-tp-clip "+(tn[2]?"bn-tp-clip-team":"bn-tp-clip-ppt");
               if(sliver) el("rect", { "class":cls, style:"fill:"+tn[3], x:x0, y:tr.y, width:Math.max(0.5,w), height:tr.h }, clips);
-              else if(w>=1) el("rect", { "class":cls, style:"fill:"+tn[3], x:x0+0.5, y:tr.y, width:Math.max(1,w-1), height:tr.h, rx:Math.min(3,w/2), "data-video":"" }, clips);
+              else if(w>=1){
+                el("rect", { "class":cls, style:"fill:"+tn[3], x:x0+0.5, y:tr.y, width:Math.max(1,w-1), height:tr.h, rx:Math.min(3,w/2), "data-video":"" }, clips);
+                var code=tn[2]?"m1":"p1", lab=fitText(code, w-2*P.clipX, F.clip);
+                if(lab){ var lt=el("text", { "class":"bn-tp-clip-label", style:"fill:"+inkOn(tn[3]), x:x0+P.clipX, y:tr.y+tr.h/2+pxOf("badge")*0.35 }, clips); lt.textContent=lab; }
+              }
             });
             flags=SECTIONS.map(function(sec, i){
               var label=S[sec[1]], fx=x(sec[0]), next=i+1<SECTIONS.length? x(SECTIONS[i+1][0]) : x(DUR), half=P.flagH/2;
@@ -2941,7 +2955,8 @@ enum WelcomeIllustrationHTML {
             if(pop){ pop.remove(); pop=null; }
             setOpen(final, false); setLanes(final); select(-1); playheadAt(null);
             ptr.style.opacity=0;
-            if(final){ setScroll(scrollFor(QUOTES[PICK][0]), false); select(PICK); openQuote(PICK); }
+            setScroll(final? scrollFor(QUOTES[PICK][0]) : 0, false);   // the opening frame starts at 00:00
+            if(final){ select(PICK); openQuote(PICK); }
           }
           window.addEventListener("resize", function(){ RUN++; fit(true); });
 
@@ -2959,16 +2974,20 @@ enum WelcomeIllustrationHTML {
               for(var j=0;j<bars.length;j++){ bars[j].m.classList.remove("bar-hidden"); await sleep(32); if(gone()) return; }
               for(var s=0;s<spans.length;s++){ var sp=spans[s]; sp.g.style.opacity=1; await tween(300, function(k){ sp.sp.setAttribute("width", sp.w*ease(k)); }); if(gone()) return; }
               await hold(400); if(gone()) return;
-              // 2 · Read: one stop per section, the flag raised and held
-              var o=origin(), y=o[1]+PT.y+5, stops=SECTIONS.map(function(z){ return z[0]+60; });
-              ptrTo(o[0]+x(stops[0]), y, 420); await sleep(460); if(gone()) return;
-              playheadAt(stops[0]); await hold(800); if(gone()) return;
-              for(var k=1;k<stops.length;k++){
-                var a=stops[k-1], b=stops[k], s0=scrollX, s1=Math.max(s0, Math.min(W-V, scrollFor(b))), moving=s1!==s0;
-                await tween(560, function(e){
+              // 2 · Read: the pointer parks on the speaker lane and stays put, as a hand on a
+              // trackpad does; each two-finger swipe slides the timeline under it, with
+              // momentum. The playhead is whatever moment is under the pointer, so each
+              // section's flag rises as its section slides in, and holds for 0.8 s.
+              var o=origin(), y=o[1]+PT.y+5, px=Math.round(V*0.42);
+              function under(){ return (px-origin()[0]-GUT)*sPerPx; }   // the moment beneath the pointer
+              ptrTo(px, y, 420); await sleep(460); if(gone()) return;
+              playheadAt(under()); await hold(800); if(gone()) return;
+              for(var k=1;k<SECTIONS.length;k++){
+                var s0=scrollX, s1=Math.max(s0, Math.min(W-V, x(SECTIONS[k][0]+50)-(px-origin()[0]-scrollX)));
+                if(s1===s0) continue;
+                await tween(720, function(e){                           // a swipe: fast off the finger, easing to rest
                   if(gone()) return;
-                  var t=a+(b-a)*ease(e); if(moving) setScroll(s0+(s1-s0)*ease(e), true);
-                  ptrTo(origin()[0]+x(t), y, 0); playheadAt(t);
+                  setScroll(s0+(s1-s0)*(1-Math.pow(1-e,3)), true); playheadAt(under());
                 });
                 if(gone()) return;
                 setScroll(scrollX, false);

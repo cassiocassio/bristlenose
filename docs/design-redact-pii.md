@@ -1485,8 +1485,11 @@ UX for phases 3–4 is specced in `docs/mockups/mockup-privacy-settings.html` §
   (pinned SHA-256, 400,658,291 bytes), unpacks only
   `en_core_web_lg/en_core_web_lg-3.8.0/` into the user's model cache, and
   `resolve_spacy_model()` finds it there, after the override and before the
-  package name. Doctor reports an absent model on these channels as a warning,
-  since the run will fetch it, so preflight no longer refuses `--redact-pii`.
+  package name. Doctor reports an absent model as a warning wherever the run can
+  fetch it, so preflight no longer refuses `--redact-pii`. That was true of pip
+  and Homebrew too: a FAIL there made stage 7's own `spacy download` unreachable
+  through `run`. The frozen sidecar, the Windows installer and `--no-fetch`
+  still fail at preflight, before transcription rather than after it.
   Verified inside the edge snap's confinement and as a non-root user on the
   Copr RPM, both with the new code overlaid: the fetch ran, Presidio found a
   PERSON and a LOCATION, and doctor then read ✓. Keep the pin in step with

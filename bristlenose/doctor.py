@@ -740,7 +740,6 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
             PII_MODEL_DIR_ENV,
             SPACY_MODEL,
             resolve_spacy_model,
-            spacy_model_needs_user_cache,
         )
 
         model = resolve_spacy_model()
@@ -794,9 +793,16 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
                 detail=f"downloaded model at {model} is unreadable — delete it to fetch again",
                 fix_key="spacy_model_missing",
             )
-        if spacy_model_needs_user_cache():
-            # Not a failure: stage 7 fetches it into the user cache on the
-            # first --redact-pii run (the package's own prefix is read-only).
+        from bristlenose.utils.package_install import _is_frozen_sidecar
+
+        if not _is_frozen_sidecar() and not settings.no_fetch:
+            # Not a failure: stage 7 fetches it on the first --redact-pii run —
+            # `spacy download` on pip and Homebrew, the user cache on the snap
+            # and the RPM. A FAIL here refused that run at preflight, so the
+            # fetch it describes was unreachable through `run`. The frozen
+            # sidecar and the Windows installer cannot fetch, and --no-fetch
+            # forbids it; those still fail here, before transcription, rather
+            # than in stage 7 after it.
             return CheckResult(
                 status=CheckStatus.WARN,
                 label="PII redaction",

@@ -191,7 +191,7 @@ transcribe`.
 | API key valid | Yes | Cheap API call (~0.1s, catches expired/revoked keys) |
 | Whisper model cached | Yes | `huggingface_hub.scan_cache_dir()` or `local_files_only=True` |
 | Network reachable | Yes | Quick HTTPS HEAD |
-| spaCy model installed | Yes (if --redact-pii) | `spacy.load(resolve_spacy_model())` (`en_core_web_lg`); WARN, not FAIL, on snap/rpm, where the run fetches it |
+| spaCy model installed | Yes (if --redact-pii) | `spacy.load(resolve_spacy_model())` (`en_core_web_lg`); WARN, not FAIL, wherever the run can fetch it (every install but the frozen sidecar, and not under `--no-fetch`) |
 | Disk space | Yes | `shutil.disk_usage()` |
 | Model download mid-stream | No | Can only discover during download |
 | API rate limits mid-run | No | Transient |

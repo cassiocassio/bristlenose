@@ -984,38 +984,46 @@ class TestCheckPii:
         assert "presidio" in result.detail
         assert "spaCy" in result.detail
 
-    def test_pii_spacy_model_missing(self) -> None:
-        settings = _settings(pii_enabled=True)
-        mock_spacy = MagicMock()
-        mock_spacy.load.side_effect = OSError("model not found")
-
-        with patch.dict(sys.modules, {
-            "presidio_analyzer": MagicMock(),
-            "spacy": mock_spacy,
-        }):
-            with patch("importlib.metadata.version", return_value="2.2.360"):
-                result = check_pii(settings)
-
-        assert result.status == CheckStatus.FAIL
-        assert result.fix_key == "spacy_model_missing"
-
-    @pytest.mark.parametrize("method", ["snap", "rpm"])
-    def test_pii_model_absent_on_a_read_only_package_warns(
-        self, method: str, tmp_path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """On 0.36.0 this FAILed, so `run --redact-pii` was refused at preflight
-        on the snap and the RPM. Stage 7 now fetches the model into the user
-        cache there, so an absent model is a warning that lets the run start."""
-        monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
-        settings = _settings(pii_enabled=True)
+    @staticmethod
+    def _absent_model_result(settings, method: str = "pip"):
         mock_spacy = MagicMock()
         mock_spacy.load.side_effect = OSError("model not found")
         with patch.dict(sys.modules, {"presidio_analyzer": MagicMock(), "spacy": mock_spacy}), \
                 patch("importlib.metadata.version", return_value="2.2.360"), \
                 patch("bristlenose.doctor_fixes.detect_install_method", return_value=method):
-            result = check_pii(settings)
+            return check_pii(settings)
+
+    @pytest.mark.parametrize("method", ["pip", "brew", "snap", "rpm"])
+    def test_pii_model_absent_warns_where_the_run_can_fetch_it(
+        self, method: str, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """This FAILed, so `run --redact-pii` was refused at preflight and the
+        stage-7 fetch it promised was unreachable through `run` — on every
+        channel, not only the snap and the RPM (reproduced there on 0.36.0)."""
+        monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+        monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
+        result = self._absent_model_result(_settings(pii_enabled=True), method)
         assert result.status == CheckStatus.WARN
         assert "first --redact-pii run" in result.detail
+
+    def test_pii_model_absent_fails_under_no_fetch(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """--no-fetch would make stage 7 refuse after transcription; say so first."""
+        monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+        result = self._absent_model_result(_settings(pii_enabled=True, no_fetch=True))
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "spacy_model_missing"
+
+    def test_pii_model_absent_fails_in_the_frozen_sidecar(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The desktop sidecar and the Windows installer cannot fetch at all."""
+        monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        result = self._absent_model_result(_settings(pii_enabled=True))
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "spacy_model_missing"
 
     def test_pii_damaged_user_cache_is_not_blamed_on_the_override(
         self, tmp_path, monkeypatch: pytest.MonkeyPatch

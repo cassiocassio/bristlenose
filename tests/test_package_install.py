@@ -107,12 +107,13 @@ class TestEnsureHfModel:
 def test_ensure_spacy_model_refuses_on_a_read_only_package(method: str) -> None:
     """The snap and the RPM install into a read-only prefix. Reproduced on
     0.36.0: `spacy download` there pulled all 400 MB, then died with EROFS
-    (snap) or a permission error (RPM). Refuse before the download."""
+    (snap) or a permission error (RPM). Refuse before the download; stage 7
+    takes the user-cache route on these installs instead."""
     fake_spacy = MagicMock()
     fake_spacy.load.side_effect = OSError("[E050] Can't find model")
     with patch.dict(sys.modules, {"spacy": fake_spacy}), \
             patch("bristlenose.doctor_fixes.detect_install_method", return_value=method), \
             patch("bristlenose.utils.package_install.subprocess.run") as run:
-        with pytest.raises(PackageInstallError, match="not available in this package"):
+        with pytest.raises(PackageInstallError, match="read-only"):
             ensure_spacy_model("en_core_web_lg")
     run.assert_not_called()

@@ -116,14 +116,19 @@ _PII_NOT_IN_WINDOWS_INSTALLER = (
     "Or drop --redact-pii if you don't need it."
 )
 
-#: The snap and the RPM install into a read-only prefix, so neither can take the
-#: 400 MB spaCy model `spacy download` would put there, and neither bundles it.
-#: Neither may suggest pip or pipx (see `test_packaged_fixes_never_suggest_pip`).
-_PII_NOT_IN_LINUX_PACKAGE = (
-    "PII redaction is not available in the {package} yet: it needs a\n"
-    "400 MB language model the package does not include.\n"
-    "Drop --redact-pii to run without it."
-)
+def _pii_model_in_user_cache() -> str:
+    """The snap's and the RPM's answer: their prefix is read-only, so stage 7
+    fetches the model into the user's model cache instead. Neither may suggest
+    pip or pipx (see `test_packaged_fixes_never_suggest_pip`)."""
+    from bristlenose.stages.s07_pii_removal import SPACY_MODEL, spacy_model_cache_path
+
+    return (
+        f"PII redaction downloads its language model ({SPACY_MODEL}, ~400 MB)\n"
+        "on the first --redact-pii run, into:\n"
+        f"  {spacy_model_cache_path()}\n"
+        "If a copy there is damaged, delete that folder and run again.\n"
+        "If it persists: github.com/cassiocassio/bristlenose/issues"
+    )
 
 
 def _fix_ffmpeg_missing(method: str) -> str:
@@ -355,12 +360,10 @@ def _fix_pii_model_dir_invalid(method: str) -> str:
 
 
 def _fix_spacy_model_missing(method: str) -> str:
-    if method == "rpm":
-        return _PII_NOT_IN_LINUX_PACKAGE.format(package="Fedora package")
+    if method in ("rpm", "snap"):
+        return _pii_model_in_user_cache()
     if method == "winget":
         return _PII_NOT_IN_WINDOWS_INSTALLER
-    if method == "snap":
-        return _PII_NOT_IN_LINUX_PACKAGE.format(package="snap")
     if method == "brew":
         return (
             "PII redaction needs a spaCy language model.\n\n"

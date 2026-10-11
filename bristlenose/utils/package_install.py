@@ -65,10 +65,11 @@ def ensure_spacy_model(model_name: str) -> None:
     if detect_install_method() in ("snap", "rpm"):
         # Read-only prefix: pip would download all 400 MB and then fail writing
         # it (EROFS on the snap's squashfs, EACCES in the RPM's root-owned venv).
+        # Stage 7 fetches into the user cache on these installs instead
+        # (`s07_pii_removal.fetch_spacy_model`), so this is never its route.
         raise PackageInstallError(
-            "PII redaction is not available in this package yet: it needs the "
-            f"spaCy model {model_name!r}, which the package does not include. "
-            "Drop --redact-pii to run without it."
+            f"cannot install spaCy model {model_name!r} into this read-only "
+            "package; it is fetched into the user's model cache instead"
         )
 
     if _is_frozen_sidecar():

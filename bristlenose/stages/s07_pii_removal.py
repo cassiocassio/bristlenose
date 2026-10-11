@@ -40,6 +40,150 @@ SPACY_MODEL_SIZE_HUMAN = "~400 MB"
 #: leaves it unset and resolves by name.
 PII_MODEL_DIR_ENV = "BRISTLENOSE_PII_MODEL_DIR"
 
+# The snap and the RPM install into a read-only prefix, so `spacy download`
+# cannot put the model there (it pulled all 400 MB, then died on EROFS or
+# EACCES — reproduced on 0.36.0). On those channels the model is fetched as the
+# same wheel `spacy download` would install, verified against this pin, and its
+# inner model directory unpacked into the user's model cache. The pin must move
+# with the spaCy minor: en_core_web_lg 3.8.x loads on spaCy 3.8.
+SPACY_MODEL_VERSION = "3.8.0"
+_SPACY_MODEL_WHEEL_URL = (
+    "https://github.com/explosion/spacy-models/releases/download/"
+    f"{SPACY_MODEL}-{SPACY_MODEL_VERSION}/{SPACY_MODEL}-{SPACY_MODEL_VERSION}-py3-none-any.whl"
+)
+_SPACY_MODEL_WHEEL_SHA256 = "293e9547a655b25499198ab15a525b05b9407a75f10255e405e8c3854329ab63"
+_SPACY_MODEL_WHEEL_BYTES = 400_658_291
+#: Installs whose prefix cannot take a `spacy download`.
+_READ_ONLY_INSTALLS = frozenset({"snap", "rpm"})
+
+
+def spacy_model_cache_path() -> Path:
+    """Where a fetched model directory lives: the one holding ``config.cfg``."""
+    from bristlenose.utils.model_cache import model_cache_dir
+
+    return model_cache_dir() / f"{SPACY_MODEL}-{SPACY_MODEL_VERSION}"
+
+
+def _is_model_dir(path: Path) -> bool:
+    # Both files, in spaCy's own order — see resolve_spacy_model.
+    return all((path / f).is_file() for f in ("meta.json", "config.cfg"))
+
+
+def cached_spacy_model() -> Path | None:
+    """The fetched model directory, or ``None``. Never raises.
+
+    Only a fully unpacked directory is ever renamed into place, so presence is
+    the whole check; the wheel's hash was verified before unpacking.
+    """
+    try:
+        path = spacy_model_cache_path()
+        return path if _is_model_dir(path) else None
+    except OSError:
+        return None
+
+
+def spacy_model_needs_user_cache() -> bool:
+    """True where the model must be fetched into the user cache, not installed."""
+    from bristlenose.doctor_fixes import detect_install_method
+
+    return detect_install_method() in _READ_ONLY_INSTALLS
+
+
+def fetch_spacy_model(
+    *,
+    timeout: float = 60.0,
+    deadline: float = 3600.0,
+    on_progress: Callable[[int, int], None] | None = None,
+) -> Path:
+    """Download the model wheel, verify it, unpack its model directory, return it.
+
+    Streams the wheel into a uniquely named part file beside the destination,
+    hashing as it writes, and refuses on any size or hash mismatch. Only the
+    inner ``<model>/<model>-<version>/`` directory is unpacked — pure data, no
+    Python — into a temporary directory renamed into place at the end, so an
+    interrupted fetch is never where :func:`cached_spacy_model` would find it.
+    The wheel is deleted afterwards. ``timeout`` is per socket read;
+    ``deadline`` bounds the download. Raises on any failure.
+    """
+    import hashlib
+    import shutil
+    import tempfile
+    import urllib.request
+    import zipfile
+
+    from bristlenose.utils.tls import https_context
+
+    dest = spacy_model_cache_path()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    # A killed fetch leaves its uniquely named leftovers; clear old ones, which
+    # at 400 MB (wheel) and 445 MB (unpacked) must not pile up.
+    for stale in dest.parent.glob(dest.name + ".*.part"):
+        try:
+            if time.time() - stale.stat().st_mtime > 3600:
+                shutil.rmtree(stale) if stale.is_dir() else stale.unlink()
+        except OSError:
+            pass
+
+    fd, wheel_name = tempfile.mkstemp(dir=dest.parent, prefix=dest.name + ".", suffix=".part")
+    wheel = Path(wheel_name)
+    unpack = Path(tempfile.mkdtemp(dir=dest.parent, prefix=dest.name + ".", suffix=".part"))
+    try:
+        h = hashlib.sha256()
+        size = 0
+        started = time.monotonic()
+        with urllib.request.urlopen(
+            _SPACY_MODEL_WHEEL_URL, timeout=timeout, context=https_context()
+        ) as resp, os.fdopen(fd, "wb") as out:
+            if not resp.geturl().startswith("https://"):
+                raise ValueError(f"PII model download left https: {resp.geturl()}")
+            while chunk := resp.read(1 << 20):
+                size += len(chunk)
+                if size > _SPACY_MODEL_WHEEL_BYTES:
+                    raise ValueError("PII model download is larger than expected")
+                if time.monotonic() - started > deadline:
+                    raise TimeoutError(f"PII model download took over {deadline:.0f} s")
+                h.update(chunk)
+                out.write(chunk)
+                if on_progress is not None:
+                    on_progress(size, _SPACY_MODEL_WHEEL_BYTES)
+        if size != _SPACY_MODEL_WHEEL_BYTES or h.hexdigest() != _SPACY_MODEL_WHEEL_SHA256:
+            raise ValueError(
+                f"PII model hash mismatch: expected {_SPACY_MODEL_WHEEL_SHA256[:12]}…, "
+                f"got {h.hexdigest()[:12]}… ({size} bytes)"
+            )
+
+        prefix = f"{SPACY_MODEL}/{dest.name}/"
+        with zipfile.ZipFile(wheel) as zf:
+            members = [m for m in zf.infolist() if m.filename.startswith(prefix)]
+            for m in members:
+                rel = Path(m.filename[len(prefix):])
+                if not rel.parts or rel.is_absolute() or ".." in rel.parts:
+                    continue
+                target = unpack / rel
+                if m.is_dir():
+                    target.mkdir(parents=True, exist_ok=True)
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(m) as src, target.open("wb") as dst:
+                    shutil.copyfileobj(src, dst, 1 << 20)
+        if not _is_model_dir(unpack):
+            raise ValueError(f"PII model wheel holds no {prefix} model directory")
+        wheel.unlink()
+        if _is_model_dir(dest):
+            # A concurrent fetch finished first. Keep its copy (a run may be
+            # loading it); ours is discarded below.
+            return dest
+        if dest.exists():  # a damaged copy in the way
+            shutil.rmtree(dest)
+        unpack.replace(dest)
+    finally:
+        if wheel.exists():
+            wheel.unlink()
+        if unpack.exists():
+            shutil.rmtree(unpack, ignore_errors=True)
+    logger.info("PII model fetched to %s", dest)
+    return dest
+
 
 def resolve_spacy_model() -> str:
     """The model identifier both spaCy and Presidio must load — name or path.
@@ -52,6 +196,9 @@ def resolve_spacy_model() -> str:
     ``Path(...).exists()`` true and the download branch unreachable. Every call
     site therefore resolves through here, and there is exactly one of them.
 
+    Order: the override, then a model fetched into the user cache (the snap's
+    and the RPM's route, :func:`fetch_spacy_model`), then the package name.
+
     Raises:
         ValueError: when the override is set but does not name a loadable model
             directory. Deliberately fail-loud rather than falling back to the
@@ -59,7 +206,8 @@ def resolve_spacy_model() -> str:
     """
     override = os.environ.get(PII_MODEL_DIR_ENV, "").strip()
     if not override:
-        return SPACY_MODEL
+        cached = cached_spacy_model()
+        return str(cached.absolute()) if cached is not None else SPACY_MODEL
 
     path = Path(override).expanduser()
     # Both files, in spaCy's own order: `load_model_from_path` calls
@@ -124,9 +272,11 @@ def _ensure_spacy_model(
 
     model = resolve_spacy_model()
 
-    # A path means the host already placed the weights (BA, or the .dmg's own
-    # download). There is nothing to fetch and nothing to ask the network for —
-    # and on the frozen sidecar `ensure_spacy_model` would raise anyway.
+    # A path means the weights are already on disk: placed by the host (BA, or
+    # the .dmg's own download), or fetched earlier into the user cache on a
+    # read-only package. There is nothing to fetch and nothing to ask the
+    # network for — and on the frozen sidecar `ensure_spacy_model` would raise
+    # anyway.
     if model != SPACY_MODEL:
         spacy.load(model)
         return
@@ -141,6 +291,10 @@ def _ensure_spacy_model(
         from bristlenose.utils.package_install import PackageInstallError
 
         raise PackageInstallError(t("preflight.pii.aborted_no_fetch", model=model))
+
+    if spacy_model_needs_user_cache():
+        _fetch_into_user_cache(status=status)
+        return
 
     # Inside the desktop sidecar nothing will be downloaded: `ensure_spacy_model`
     # refuses at once with `FrozenSidecarError`. Announcing a 425 MB download
@@ -192,6 +346,53 @@ def _ensure_spacy_model(
 
     # Re-load to confirm Presidio's later spacy.load() will succeed (finding 23).
     spacy.load(model)
+
+def _fetch_into_user_cache(*, status: Status | None) -> None:
+    """The read-only-package arm of :func:`_ensure_spacy_model`, with a progress bar.
+
+    ``fetch_spacy_model`` downloads in-process, so unlike pip it prints nothing
+    of its own; 400 MB in silence reads as a hang.
+    """
+    from rich.progress import (
+        BarColumn,
+        DownloadColumn,
+        Progress,
+        TimeRemainingColumn,
+        TransferSpeedColumn,
+    )
+
+    from bristlenose.ui_kinds import MessageKind, cli_prefix
+
+    console = Console(width=min(80, Console().width))
+    console.print()
+    console.print("  " + t("preflight.pii.downloading"))
+    console.print()
+    if status is not None:
+        status.stop()
+    t0 = time.perf_counter()
+    try:
+        with Progress(
+            BarColumn(), DownloadColumn(), TransferSpeedColumn(), TimeRemainingColumn(),
+            console=console, transient=True,
+        ) as progress:
+            task = progress.add_task("", total=_SPACY_MODEL_WHEEL_BYTES)
+            path = fetch_spacy_model(
+                on_progress=lambda done, _total: progress.update(task, completed=done)
+            )
+    except Exception:
+        console.print(f"  {cli_prefix(MessageKind.ERROR)} {SPACY_MODEL}")
+        raise
+    finally:
+        if status is not None:
+            status.start()
+    elapsed = time.perf_counter() - t0
+    console.print(f"  {cli_prefix(MessageKind.SUCCESS)} {SPACY_MODEL} [{elapsed:.0f}s]")
+    console.print()
+
+    import spacy
+
+    spacy.load(str(path))  # confirm Presidio's later load will succeed
+
 
 # Pattern-matched entities: high-precision by construction, so they take a
 # lower score floor than the statistical PERSON recogniser. See `_redact_text`.

@@ -84,7 +84,10 @@ trued-against: HEAD@main 835cde98 on 2026-09-20 — s07_pii_removal.py's score_b
 - **One seam, three acquirers — one of which exists.** Every consumer resolves
   through `resolve_spacy_model()`, and the *seam* is real and proven: the path
   route was run with the package made unimportable and scored identically.
-  **Only the CLI acquirer is built** (`spacy download`). The `.dmg` plain-HTTPS
+  **Only the CLI acquirers are built**: `spacy download` on PyPI and Homebrew,
+  and on the Snap and Fedora, whose install prefix is read-only, a hash-pinned
+  fetch of the same wheel into the user's model cache
+  (`s07_pii_removal.fetch_spacy_model`, 11 Oct 2026). The `.dmg` plain-HTTPS
   fetch and the TestFlight/MAS managed-Background-Assets fetch are **designed,
   not written** — no call site, no pinned URL, no pinned SHA
   (`PIIModelPack.swift:11-12`; `scripts/project.conf:117-118`).
@@ -460,7 +463,8 @@ is untouched). Only the 425 MB of weights is acquired, and only that differs:
 
 | channel | acquirer | why this one |
 |---|---|---|
-| CLI — PyPI · Homebrew · Snap · Fedora | `spacy download` on first use | works today; no store rules exist on these channels |
+| CLI — PyPI · Homebrew | `spacy download` on first use | works today; no store rules exist on these channels |
+| CLI — Snap · Fedora | the same wheel, fetched on first use, verified against a pinned SHA-256, and only its inner model directory unpacked into the user's model cache (`$SNAP_USER_COMMON/models`, `~/.cache/bristlenose/models`) | the package's own prefix is read-only, so `spacy download` downloads 400 MB and then fails writing it (reproduced on 0.36.0) |
 | `.dmg` — Developer ID | plain HTTPS → Application Support | **App Store guidelines do not apply to this channel.** §2.5.2 is an App Store rule; the payload is data, so library validation is moot |
 | TestFlight / App Store | **managed** Background Assets, self-hosted pack | §2.5.2 wants the platform mechanism, and self-hosting is explicitly supported |
 
@@ -1476,7 +1480,17 @@ UX for phases 3–4 is specced in `docs/mockups/mockup-privacy-settings.html` §
   on the snap's squashfs and a permission error in the RPM's root-owned venv.
   So `--redact-pii` does not work on either channel. It probably never did,
   since Presidio's bare `AnalyzerEngine()` was already loading `lg` before this
-  phase. That is inferred, not reproduced. The surviving `en_core_web_sm`
+  phase. That is inferred, not reproduced. **Fixed 11 Oct 2026:** neither
+  package ships `sm` any more. On both, stage 7 fetches the `lg` wheel itself
+  (pinned SHA-256, 400,658,291 bytes), unpacks only
+  `en_core_web_lg/en_core_web_lg-3.8.0/` into the user's model cache, and
+  `resolve_spacy_model()` finds it there, after the override and before the
+  package name. Doctor reports an absent model on these channels as a warning,
+  since the run will fetch it, so preflight no longer refuses `--redact-pii`.
+  Verified inside the edge snap's confinement and as a non-root user on the
+  Copr RPM, both with the new code overlaid: the fetch ran, Presidio found a
+  PERSON and a LOCATION, and doctor then read ✓. Keep the pin in step with
+  spaCy's minor version, which an `lg` release must match. The surviving `en_core_web_sm`
   strings that *are* correct: `tests/test_package_install.py` (an arbitrary
   argument proving `ensure_spacy_model` doesn't care which model) and a
   past-tense comment in `s07_pii_removal.py`.

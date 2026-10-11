@@ -443,8 +443,12 @@ python3 -m venv %{buildroot}%{_libdir}/bristlenose
 pip install --no-index --find-links=vendor "bristlenose[serve]==%{version}"
 ```
 
-Plus: the spaCy model `en_core_web_sm` is vendored the same way and installed into the
-prefix, so `--redact-pii` works out of the box (the Snap does the same); the man page is
+No spaCy model is packaged. Until 11 Oct 2026 `en_core_web_sm` was vendored and
+installed here, but nothing loads it: stage 7 and doctor need `en_core_web_lg`, so
+`--redact-pii` was refused at preflight on every RPM (reproduced on 0.36.0), and the
+stage's `spacy download` could not write 400 MB into a root-owned venv anyway. Stage 7
+now fetches the `lg` wheel itself on first use, hash-pinned, and unpacks its model
+directory into `~/.cache/bristlenose/models` (`docs/design-redact-pii.md`, Phase 0). The man page is
 installed from `bristlenose/data/bristlenose.1` in `%install`, **not** `%post` — anything
 placed after the link phase never gets symlinked, a trap already paid for on Homebrew
 (`CLAUDE.md` § "Anything installed in brew `post_install` skips the auto-link phase").
@@ -458,7 +462,7 @@ All from the real build on Fedora 42 / x86_64 (Xeon 8488C, 2 vCPU):
 
 | | measured |
 |---|---|
-| Wheelhouse (`Source1`) | **225 MB**, 107 wheels (106 + the spaCy model). An earlier run measured 213 MB / 106 before the spaCy model was added — both figures appear in this doc's history; 225 MB is the shipped one |
+| Wheelhouse (`Source1`) | **225 MB**, 107 wheels (106 + the spaCy model). An earlier run measured 213 MB / 106 before the spaCy model was added — both figures appear in this doc's history; 225 MB is the shipped one. The `sm` model came out on 11 Oct 2026, so from the next build expect about 12 MB and one wheel fewer (not yet measured) |
 | sdist (`Source0`) | 14.3 MB |
 | **SRPM** | **248 MB** |
 | **Binary RPM** | **195 MB** |
@@ -575,9 +579,10 @@ a method no fix message handles.
 
 Five fix functions can fire on Linux — `ffmpeg_missing`, `backend_import_fail`,
 `spacy_model_missing`, `presidio_missing`, `serve_deps_missing` — and all five get an `rpm`
-arm of the same shape as `snap`'s: the RPM bundles ffmpeg's dependency, ctranslate2, the
-spaCy model, presidio and the serve extras, so a missing one is a packaging defect and the
-answer is `dnf`, not `pip`. `_fix_mlx_not_installed` is untouched; MLX is Apple-only.
+arm of the same shape as `snap`'s: the RPM bundles ffmpeg's dependency, ctranslate2,
+presidio and the serve extras, so a missing one is a packaging defect and the answer is
+`dnf`, not `pip`. The spaCy model is the exception since 11 Oct 2026: the RPM does not
+carry it, and the fix text says where the first `--redact-pii` run puts it. `_fix_mlx_not_installed` is untouched; MLX is Apple-only.
 
 The test pins the **invariant**, not the strings: no `rpm` fix may contain `pip install` or
 `pipx`, and each must offer a `dnf` command. The spec asserts the same thing in `%check`, so

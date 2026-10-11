@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import hashlib
+import io
 import sys
+import zipfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from bristlenose.stages import s07_pii_removal as s07
 from bristlenose.stages.s07_pii_removal import (
     PII_MODEL_DIR_ENV,
     SPACY_MODEL,
@@ -410,3 +414,123 @@ class TestTheFrozenSidecarNeverAnnouncesADownload:
 
         assert "Downloading" not in capsys.readouterr().out
         status.stop.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# The read-only-package route: fetch into the user cache (snap, RPM)
+# ---------------------------------------------------------------------------
+
+_INNER = f"{SPACY_MODEL}/{SPACY_MODEL}-{s07.SPACY_MODEL_VERSION}/"
+
+
+def _fake_wheel(*, with_model: bool = True) -> bytes:
+    """A wheel shaped like the real one: package, inner model dir, dist-info."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr(f"{SPACY_MODEL}/__init__.py", "import spacy\n")
+        zf.writestr(f"{SPACY_MODEL}/meta.json", "{}")
+        if with_model:
+            zf.writestr(_INNER + "meta.json", '{"version": "3.8.0"}')
+            zf.writestr(_INNER + "config.cfg", "[nlp]\n")
+            zf.writestr(_INNER + "ner/model", b"\x00" * 64)
+            zf.writestr(_INNER + "../../escaped", "must not land outside")
+        zf.writestr(f"{SPACY_MODEL}-3.8.0.dist-info/RECORD", "")
+    return buf.getvalue()
+
+
+class _Resp(io.BytesIO):
+    def geturl(self) -> str:
+        return "https://objects.githubusercontent.com/whatever"
+
+
+@pytest.fixture
+def cache(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+    monkeypatch.delenv(PII_MODEL_DIR_ENV, raising=False)
+    return tmp_path / "bristlenose" / "models"
+
+
+def _serve(monkeypatch, body: bytes, *, pin: bytes | None = None) -> None:
+    pinned = body if pin is None else pin
+    monkeypatch.setattr(s07, "_SPACY_MODEL_WHEEL_BYTES", len(pinned))
+    monkeypatch.setattr(s07, "_SPACY_MODEL_WHEEL_SHA256", hashlib.sha256(pinned).hexdigest())
+    monkeypatch.setattr("urllib.request.urlopen", lambda *a, **k: _Resp(body))
+
+
+class TestFetchIntoUserCache:
+    def test_unpacks_only_the_model_directory_and_resolves_to_it(self, cache, monkeypatch):
+        _serve(monkeypatch, _fake_wheel())
+        seen: list[int] = []
+        dest = s07.fetch_spacy_model(on_progress=lambda done, _t: seen.append(done))
+        assert dest == cache / f"{SPACY_MODEL}-{s07.SPACY_MODEL_VERSION}"
+        assert sorted(p.relative_to(dest).as_posix() for p in dest.rglob("*") if p.is_file()) \
+            == ["config.cfg", "meta.json", "ner/model"]
+        # No Python, no dist-info, no traversal, and no leftovers beside it.
+        assert sorted(p.name for p in cache.iterdir()) == [dest.name]
+        assert not (cache.parent / "escaped").exists()
+        assert seen and seen[-1] == s07._SPACY_MODEL_WHEEL_BYTES
+        assert resolve_spacy_model() == str(dest.absolute())
+
+    def test_a_tampered_wheel_leaves_nothing_behind(self, cache, monkeypatch):
+        _serve(monkeypatch, _fake_wheel(), pin=_fake_wheel() + b"x")
+        with pytest.raises(ValueError):
+            s07.fetch_spacy_model()
+        assert list(cache.iterdir()) == []
+        assert resolve_spacy_model() == SPACY_MODEL
+
+    def test_a_wheel_without_the_model_directory_is_refused(self, cache, monkeypatch):
+        _serve(monkeypatch, _fake_wheel(with_model=False))
+        with pytest.raises(ValueError, match="no .* model directory"):
+            s07.fetch_spacy_model()
+        assert list(cache.iterdir()) == []
+
+    def test_a_concurrent_fetch_that_finished_first_is_kept(self, cache, monkeypatch):
+        _serve(monkeypatch, _fake_wheel())
+        first = s07.fetch_spacy_model()
+        (first / "marker").write_text("theirs")
+        assert s07.fetch_spacy_model() == first
+        assert (first / "marker").read_text() == "theirs"
+        assert sorted(p.name for p in cache.iterdir()) == [first.name]
+
+
+class TestEnsureOnReadOnlyPackage:
+    """Reproduced on 0.36.0: on the snap and the RPM the old route pulled
+    400 MB through `spacy download` and failed writing it."""
+
+    @pytest.fixture(autouse=True)
+    def read_only(self, cache, monkeypatch):
+        monkeypatch.setattr(s07, "spacy_model_needs_user_cache", lambda: True)
+
+    def test_missing_model_is_fetched_into_the_cache_not_installed(self, monkeypatch):
+        fake_spacy = MagicMock()
+        fake_spacy.load.side_effect = [OSError("not found"), MagicMock()]
+        fetched = []
+        monkeypatch.setattr(
+            s07, "fetch_spacy_model",
+            lambda **k: fetched.append(1) or Path("/cache/en_core_web_lg-3.8.0"),
+        )
+        with patch.dict(sys.modules, {"spacy": fake_spacy}), \
+                patch("bristlenose.utils.package_install.ensure_spacy_model") as installer:
+            _ensure_spacy_model()
+        installer.assert_not_called()
+        assert fetched == [1]
+        fake_spacy.load.assert_called_with("/cache/en_core_web_lg-3.8.0")
+
+    def test_no_fetch_refuses_without_downloading(self, monkeypatch):
+        fake_spacy = MagicMock()
+        fake_spacy.load.side_effect = OSError("not found")
+        monkeypatch.setattr(s07, "fetch_spacy_model", MagicMock())
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            with pytest.raises(PackageInstallError):
+                _ensure_spacy_model(allow_fetch=False)
+        s07.fetch_spacy_model.assert_not_called()
+
+    def test_an_earlier_fetch_is_used_without_the_network(self, cache, monkeypatch):
+        _serve(monkeypatch, _fake_wheel())
+        dest = s07.fetch_spacy_model()
+        monkeypatch.setattr(s07, "fetch_spacy_model", MagicMock())
+        fake_spacy = MagicMock()
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            _ensure_spacy_model()
+        fake_spacy.load.assert_called_once_with(str(dest.absolute()))
+        s07.fetch_spacy_model.assert_not_called()

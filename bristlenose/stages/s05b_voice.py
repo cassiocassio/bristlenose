@@ -161,26 +161,10 @@ def voice_runtime_available() -> bool:
 
 
 def voice_model_cache_path() -> Path:
-    """Where a fetched model lives.
+    """Where a fetched model lives (see :func:`model_cache_dir`)."""
+    from bristlenose.utils.model_cache import model_cache_dir
 
-    In the Mac app: ``~/Library/Caches`` — the container's, since HOME is the
-    container under the sandbox — which Time Machine skips and macOS may
-    purge; a purged model is simply fetched again. On the CLI: the snap's
-    common area, ``$XDG_CACHE_HOME``, or ``~/.cache``.
-    """
-    import sys
-
-    from bristlenose.config import hosted_by_desktop
-
-    snap_common = os.environ.get("SNAP_USER_COMMON")
-    if sys.platform == "darwin" and hosted_by_desktop():
-        base = Path.home() / "Library" / "Caches" / "bristlenose" / "models"
-    elif snap_common:
-        base = Path(snap_common) / "models"
-    else:
-        xdg = os.environ.get("XDG_CACHE_HOME")
-        base = (Path(xdg) if xdg else Path.home() / ".cache") / "bristlenose" / "models"
-    return base / VOICE_MODEL_NAME
+    return model_cache_dir() / VOICE_MODEL_NAME
 
 
 def _sha256(path: Path) -> str:

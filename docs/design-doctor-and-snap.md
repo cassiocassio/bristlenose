@@ -18,7 +18,10 @@ trued-against: HEAD on 2026-08-27 — Part 2 (snap) and the fix table only; Part
 > serve packages became core on 5 Oct); `spacy_model_missing` names
 > `en_core_web_lg` since 12 Sep; and five of the six branching functions gained a
 > `winget` arm on 5 Oct, which the table has no column for. Read
-> `bristlenose/doctor_fixes.py` for current text.
+> `bristlenose/doctor_fixes.py` for current text. Later the same day the
+`spacy_model_missing` row was trued for snap and rpm: neither package ships a
+spaCy model now, and stage 7 fetches `en_core_web_lg` into the user cache there
+(`docs/design-redact-pii.md`, Phase 0).
 >
 > **NOT trued — last substantively checked 2026-04-21, and known to have
 > drifted** through the Ollama, serve-deps, brew-tap-trust, auth-token,
@@ -188,7 +191,7 @@ transcribe`.
 | API key valid | Yes | Cheap API call (~0.1s, catches expired/revoked keys) |
 | Whisper model cached | Yes | `huggingface_hub.scan_cache_dir()` or `local_files_only=True` |
 | Network reachable | Yes | Quick HTTPS HEAD |
-| spaCy model installed | Yes (if --redact-pii) | `spacy.load("en_core_web_sm")` |
+| spaCy model installed | Yes (if --redact-pii) | `spacy.load(resolve_spacy_model())` (`en_core_web_lg`); WARN, not FAIL, on snap/rpm, where the run fetches it |
 | Disk space | Yes | `shutil.disk_usage()` |
 | Model download mid-stream | No | Can only discover during download |
 | API rate limits mid-run | No | Transient |
@@ -378,24 +381,31 @@ $ bristlenose run ./interviews/ -o ./output/ --redact-pii
 
 PII redaction needs a spaCy language model.
 
-  python3 -m spacy download en_core_web_sm
+  python3 -m spacy download en_core_web_lg
 
 Then re-run. Or drop --redact-pii if you don't need it.
 ```
 
 For Brew installs specifically:
 ```
-  $(brew --prefix bristlenose)/libexec/bin/python -m spacy download en_core_web_sm
+  $(brew --prefix bristlenose)/libexec/bin/python -m spacy download en_core_web_lg
 ```
 
-#### PII redaction issue in snap (should not happen — model bundled)
+#### PII redaction in the snap or the Fedora package (model fetched on first run)
+
+Neither package carries the 400 MB model; the snap carried `en_core_web_sm`,
+which nothing loads, until 11 Oct 2026. Doctor reports an absent model as a
+warning and the run fetches it into the user cache:
 
 ```
 $ bristlenose run ./interviews/ -o ./output/ --redact-pii
 
-spaCy model not found — this is a bug in the snap package.
-  sudo snap refresh bristlenose
-If it persists: github.com/cassiocassio/bristlenose/issues
+ ⚠ PII redaction   en_core_web_lg not downloaded yet (~400 MB on the first
+--redact-pii run)
+...
+  Downloading PII detector (~400 MB, one-off)...
+
+  ✓ en_core_web_lg [9s]
 ```
 
 #### Insufficient disk space
@@ -465,7 +475,7 @@ bristlenose 0.6.0
   Whisper model   ok   large-v3-turbo cached (1.5 GB)
   API key         ok   Anthropic (sk-ant-...xyz)
   Network         ok   api.anthropic.com reachable (210ms)
-  PII redaction   ok   presidio 2.2.360, spaCy en_core_web_sm 3.8.0
+  PII redaction   ok   presidio 2.2.360, spaCy en_core_web_lg 3.8.0
   Disk space      ok   42 GB free
 
 All clear.
@@ -483,7 +493,7 @@ bristlenose 0.6.0
   Whisper model   --   large-v3-turbo not cached (~1.5 GB download)
   API key         !!   No API key configured
   Network         ok   api.anthropic.com reachable (85ms)
-  PII redaction   ok   presidio 2.2.360, spaCy en_core_web_sm 3.8.0
+  PII redaction   ok   presidio 2.2.360, spaCy en_core_web_lg 3.8.0
   Disk space      ok   18 GB free
 
 1 issue:
@@ -518,14 +528,15 @@ and discards it — brew-only by construction, correctly absent):
 |---|---|---|---|---|
 | `ffmpeg_missing` | bug in the snap → `snap refresh` | bug in the RPM → `dnf reinstall` | `brew install ffmpeg` | per-distro list (apt / dnf / pacman), or `brew install ffmpeg` on macOS |
 | `backend_import_fail` | bug in the snap → `snap refresh` | bug in the RPM → `dnf reinstall` | `$(brew --prefix bristlenose)/libexec/bin/python -m pip install --upgrade ctranslate2 faster-whisper` | `pipx inject bristlenose ctranslate2 faster-whisper`, with a venv fallback line |
-| `spacy_model_missing` | bug in the snap → `snap refresh` | bug in the RPM → `dnf reinstall` | `$(brew --prefix bristlenose)/libexec/bin/python -m spacy download en_core_web_sm` | `python3 -m spacy download en_core_web_sm` |
+| `spacy_model_missing` | downloaded on the first `--redact-pii` run into `$SNAP_USER_COMMON/models`; delete a damaged copy | same, into `~/.cache/bristlenose/models` | `$(brew --prefix bristlenose)/libexec/bin/python -m spacy download en_core_web_lg` | `python3 -m spacy download en_core_web_lg` |
 | `presidio_missing` | bug in the snap → `snap refresh` | bug in the RPM → `dnf reinstall` | `$(brew --prefix bristlenose)/libexec/bin/python -m pip install presidio-analyzer presidio-anonymizer` | `pipx inject bristlenose presidio-analyzer presidio-anonymizer` |
 | `serve_deps_missing` | bug in the snap → `snap refresh` | bug in the RPM → `dnf reinstall` | `brew upgrade cassiocassio/bristlenose/bristlenose` (**fully qualified** — a short name is refused on an untrusted tap) | `pipx install --force 'bristlenose[serve]'` when `"pipx" in sys.prefix`, else `pip install 'bristlenose[serve]'` |
 | `mlx_not_installed` | N/A — Apple-only | N/A — Apple-only | `$(brew --prefix bristlenose)/libexec/bin/python -m pip install mlx mlx-whisper` | `pipx inject bristlenose mlx mlx-whisper`, with a venv fallback |
 
 **The pattern, and the reason the `snap` and `rpm` columns read alike:** both
 bundle everything, so a missing component is a *packaging defect*, not something
-the user should install around. `presidio_missing` lacked its `snap` arm until
+the user should install around. The one exception is the spaCy model: neither
+package carries its 400 MB, and stage 7 fetches it into the user cache. `presidio_missing` lacked its `snap` arm until
 27 Aug 2026 and told snap users to `pipx inject` into a strictly-confined
 install; the invariant is now asserted for both in `tests/test_doctor.py`
 (`test_packaged_fixes_never_suggest_pip`) — no packaged install may be handed a

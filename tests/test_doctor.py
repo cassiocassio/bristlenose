@@ -999,6 +999,45 @@ class TestCheckPii:
         assert result.status == CheckStatus.FAIL
         assert result.fix_key == "spacy_model_missing"
 
+    @pytest.mark.parametrize("method", ["snap", "rpm"])
+    def test_pii_model_absent_on_a_read_only_package_warns(
+        self, method: str, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """On 0.36.0 this FAILed, so `run --redact-pii` was refused at preflight
+        on the snap and the RPM. Stage 7 now fetches the model into the user
+        cache there, so an absent model is a warning that lets the run start."""
+        monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+        settings = _settings(pii_enabled=True)
+        mock_spacy = MagicMock()
+        mock_spacy.load.side_effect = OSError("model not found")
+        with patch.dict(sys.modules, {"presidio_analyzer": MagicMock(), "spacy": mock_spacy}), \
+                patch("importlib.metadata.version", return_value="2.2.360"), \
+                patch("bristlenose.doctor_fixes.detect_install_method", return_value=method):
+            result = check_pii(settings)
+        assert result.status == CheckStatus.WARN
+        assert "first --redact-pii run" in result.detail
+
+    def test_pii_damaged_user_cache_is_not_blamed_on_the_override(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A cached copy that fails to load is ours to re-fetch; telling the user
+        to fix BRISTLENOSE_PII_MODEL_DIR, which they never set, would mislead."""
+        monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
+        monkeypatch.delenv("BRISTLENOSE_PII_MODEL_DIR", raising=False)
+        cached = tmp_path / "bristlenose" / "models" / "en_core_web_lg-3.8.0"
+        cached.mkdir(parents=True)
+        (cached / "meta.json").write_text("{}")
+        (cached / "config.cfg").write_text("")
+        settings = _settings(pii_enabled=True)
+        mock_spacy = MagicMock()
+        mock_spacy.load.side_effect = OSError("[E050] damaged")
+        with patch.dict(sys.modules, {"presidio_analyzer": MagicMock(), "spacy": mock_spacy}), \
+                patch("importlib.metadata.version", return_value="2.2.360"):
+            result = check_pii(settings)
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "spacy_model_missing"
+        assert "delete it" in result.detail
+
     def test_pii_presidio_missing(self) -> None:
         """presidio not installed → FAIL."""
         settings = _settings(pii_enabled=True)
@@ -1715,16 +1754,17 @@ class TestGetFixGrid:
 
     # -- spacy_model_missing: varies by method --
 
-    @pytest.mark.parametrize(("method", "package"), [
-        ("snap", "snap"), ("rpm", "Fedora package"),
-    ])
-    def test_spacy_model_missing_linux_package(self, method: str, package: str) -> None:
-        """Neither package carries en_core_web_lg, so a refresh or reinstall
-        cannot help — reproduced on the 0.36.0 edge snap and Copr RPM, whose
-        texts said "bug in the package" and sent the user to do exactly that."""
+    @pytest.mark.parametrize("method", ["snap", "rpm"])
+    def test_spacy_model_missing_linux_package(
+        self, method: str, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Neither package carries en_core_web_lg; stage 7 fetches it into the
+        user cache. The 0.36.0 texts said "bug in the package" and sent the user
+        to refresh or reinstall, which cannot help — reproduced on both."""
+        monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
         fix = get_fix("spacy_model_missing", method)
-        assert f"not available in the {package}" in fix
-        assert "Drop --redact-pii" in fix
+        assert "on the first --redact-pii run" in fix
+        assert str(tmp_path) in fix
         assert "refresh" not in fix and "reinstall" not in fix
 
     def test_spacy_model_missing_brew(self) -> None:

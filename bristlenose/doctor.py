@@ -737,11 +737,18 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
         import spacy
 
         from bristlenose.stages.s07_pii_removal import (
+            PII_MODEL_DIR_ENV,
             SPACY_MODEL,
             resolve_spacy_model,
+            spacy_model_needs_user_cache,
         )
 
         model = resolve_spacy_model()
+        # A path is either the operator's override or our own user-cache fetch;
+        # they fail for different reasons and are fixed differently.
+        import os
+
+        from_override = bool(os.environ.get(PII_MODEL_DIR_ENV, "").strip())
     except ValueError as exc:
         # The override names something that is not a loadable model directory.
         # Caught BEFORE the bare `except Exception` below, which used to
@@ -773,12 +780,28 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
         # likely. Saying "en_core_web_lg not found" there is technically true and
         # useless: the user set a path, and the fix is to re-fetch that pack, not
         # to install a package.
-        if model != SPACY_MODEL:
+        if model != SPACY_MODEL and from_override:
             return CheckResult(
                 status=CheckStatus.FAIL,
                 label="PII redaction",
                 detail=f"model at {model} is present but unreadable — re-fetch it",
                 fix_key="pii_model_dir_invalid",
+            )
+        if model != SPACY_MODEL:
+            return CheckResult(
+                status=CheckStatus.FAIL,
+                label="PII redaction",
+                detail=f"downloaded model at {model} is unreadable — delete it to fetch again",
+                fix_key="spacy_model_missing",
+            )
+        if spacy_model_needs_user_cache():
+            # Not a failure: stage 7 fetches it into the user cache on the
+            # first --redact-pii run (the package's own prefix is read-only).
+            return CheckResult(
+                status=CheckStatus.WARN,
+                label="PII redaction",
+                detail=f"{SPACY_MODEL} not downloaded yet (~400 MB on the first "
+                "--redact-pii run)",
             )
         return CheckResult(
             status=CheckStatus.FAIL,
@@ -806,7 +829,7 @@ def check_pii(settings: BristlenoseSettings) -> CheckResult:
             marker = code.group(0) if code else type(exc).__name__
             if model != SPACY_MODEL:
                 detail = f"model at {model} could not be loaded ({marker})"
-                fix = "pii_model_dir_invalid"
+                fix = "pii_model_dir_invalid" if from_override else "spacy_model_missing"
             else:
                 detail = f"spaCy could not load {SPACY_MODEL} ({marker})"
                 fix = "spacy_model_missing"

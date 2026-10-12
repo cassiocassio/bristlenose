@@ -1502,7 +1502,10 @@ def run(
     console.print("  [dim]Press Ctrl-C to stop the server[/dim]")
 
     try:
-        _start_server(input_dir, port=port, open_browser=False, dev=dev, verbose=verbose)
+        _start_server(
+            _serve_root_for(input_dir, output_dir),
+            port=port, open_browser=False, dev=dev, verbose=verbose,
+        )
     except Exception as exc:
         console.print()
         _say(MessageKind.WARNING, f"Could not start server: {exc}", indent="  ")
@@ -1750,6 +1753,16 @@ def _find_open_port(start: int = 8150, attempts: int = 10) -> int:
     raise RuntimeError(msg)
 
 
+def _serve_root_for(input_dir: Path, output_dir: Path) -> Path:
+    """The folder ``serve`` is handed after a run: the interview folder in the
+    default layout, the output folder itself under ``-o`` — where serving the
+    interview folder would root the server at a ``bristlenose-output/`` that
+    does not exist."""
+    if output_dir.resolve() == (input_dir / "bristlenose-output").resolve():
+        return input_dir
+    return output_dir
+
+
 def _start_server(
     project_dir: Path,
     *,
@@ -1933,11 +1946,19 @@ def _auto_render(project_dir: Path) -> None:
     if not intermediate.is_dir():
         return  # No intermediate data — nothing to render
 
-    # Resolve input_dir (for video linking) — same heuristic as render command
-    if output_dir.name == "bristlenose-output":
-        input_dir = output_dir.resolve().parent
-    else:
-        input_dir = output_dir.resolve().parent
+    # The interview folder is the output folder's parent ONLY in the default
+    # layout. An output folder named anything else (``run -o``) says nothing
+    # about where its interviews are, and rendering from its parent re-ingests
+    # whatever that is — ``$HOME`` crashed with UnsuitableInputDirError
+    # (measured 12 Oct 2026). The SPA reads the database, so skipping the
+    # static re-render costs nothing it shows.
+    if output_dir.name != "bristlenose-output":
+        console.print(
+            f" [dim]Not re-rendering the static report: {output_dir.name} is not a "
+            f"project's bristlenose-output folder[/dim]"
+        )
+        return
+    input_dir = output_dir.resolve().parent
 
     # Recover project name from pipeline metadata
     from bristlenose.stages.s12_render_output import read_pipeline_metadata
@@ -2145,6 +2166,7 @@ def status(
     ] = False,
 ) -> None:
     """Show pipeline status for a project (read-only, no LLM calls)."""
+    from bristlenose.output_paths import project_output_dir
     from bristlenose.status import get_project_status
 
     # Resolve output directory — accept either input dir or output dir
@@ -2154,6 +2176,9 @@ def status(
             f"No pipeline data found in [bold]{project_dir}[/bold].\n"
             f"Run [bold]bristlenose run {project_dir}[/bold] to start."
         )
+        # A hard crash can leave the previous report in the stash and no output
+        # folder at all — which is when the stash is the only copy (P2).
+        _report_stashed_output(project_output_dir(project_dir))
         raise typer.Exit(1)
 
     project_status = get_project_status(output_dir)
@@ -2162,6 +2187,7 @@ def status(
             f"No pipeline manifest in [bold]{output_dir}[/bold].\n"
             f"Run [bold]bristlenose run {project_dir}[/bold] to start."
         )
+        _report_stashed_output(output_dir)
         raise typer.Exit(1)
 
     _print_project_status(project_status, output_dir=output_dir, verbose=verbose)
@@ -2179,29 +2205,37 @@ def _report_stashed_output(output_dir: Path) -> None:
     """
     from bristlenose.utils import output_backup
 
-    for path, note in (
-        (output_backup.backup_path_for(output_dir), "your previous report, kept while a run is in flight"),
-        (output_backup.failed_path_for(output_dir), "a failed run's work, kept so a retry can resume"),
-    ):
-        if path.exists():
-            _say(MessageKind.INFO, f"{path.name} — {note}")
-            console.print(f"    Delete with: [bold]rm -rf {path}[/bold]")
+    backup = output_backup.backup_path_for(output_dir)
+    if backup.exists():
+        # While a run holds the project the stash is its safety net; otherwise it
+        # is what a crash left behind, and the next run puts it back. Either way
+        # it may be the only copy of the report, so no delete hint for it.
+        if output_backup.project_is_locked(output_dir):
+            note = "your previous report, kept while a run is in flight"
+        else:
+            note = "your previous report; the next run puts it back"
+        _say(MessageKind.INFO, f"{backup.name} — {note}")
+    failed = output_backup.failed_path_for(output_dir)
+    if failed.exists():
+        # Nothing resumes from it (handoff P4); the next run replaces it.
+        _say(MessageKind.INFO, f"{failed.name} — a failed run's work; the next run replaces it")
+        console.print(f"    Delete with: [bold]rm -rf {failed}[/bold]")
 
 
 def _resolve_output_dir(project_dir: Path) -> Path | None:
     """Find the output directory from an input dir or output dir path.
 
     Returns the output directory (the one containing ``.bristlenose/``),
-    or None if no pipeline data is found.
+    or None if no pipeline data is found. One rule, ``project_output_dir``:
+    this used to try ``<p>/.bristlenose`` first, so a project littered by a
+    serve that had rooted itself at the interview folder reported the litter
+    rather than the report (12 Oct 2026).
     """
-    # Direct: project_dir is the output dir
-    if (project_dir / ".bristlenose").is_dir():
-        return project_dir
+    from bristlenose.output_paths import project_output_dir
 
-    # Standard layout: input_dir/bristlenose-output/
-    nested = project_dir / "bristlenose-output"
-    if (nested / ".bristlenose").is_dir():
-        return nested
+    output_dir = project_output_dir(project_dir)
+    if (output_dir / ".bristlenose").is_dir():
+        return output_dir
 
     # Legacy layout: output/ directory
     legacy = project_dir / "output"

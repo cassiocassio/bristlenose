@@ -343,7 +343,12 @@ def create_app(
     # popout player can load them over HTTP instead of file:// URIs.
     # Extension allowlist prevents serving .env, .git, .db, etc.
     if project_dir is not None:
-        _mount_media_route(app, project_dir)
+        from bristlenose.output_paths import project_input_dir
+
+        # The interview folder, whether serve was handed it or its output folder
+        # (``serve <p>/bristlenose-output`` used to root /media/ at the output
+        # folder, and every recording 404'd).
+        _mount_media_route(app, project_input_dir(project_dir))
 
     # Serve the report SPA from the Vite build output
     if project_dir is not None:

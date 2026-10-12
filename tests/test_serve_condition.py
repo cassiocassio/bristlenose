@@ -34,6 +34,7 @@ from bristlenose.events import (
 from bristlenose.server import event_watcher
 from bristlenose.server.app import create_app
 from bristlenose.server.importer import import_project as real_import
+from bristlenose.server.models import Project
 from tests.conftest import AuthTestClient
 
 _VITE_INDEX_HTML = (
@@ -160,6 +161,18 @@ def test_serve_started_before_first_run_follows_the_output(
             assert _wait(lambda: (_latest(client) or {}).get("state") == "completed")
             assert _wait(
                 lambda: client.get("/api/projects/1/last-run").json() is not None)
+    # One project row, not two: the row made before the first run must carry the
+    # FUTURE output folder, or the run's import matches nothing and forks a
+    # second row that the SPA (hardcoded to project 1) never reads. This
+    # assertion was added 12 Oct 2026 and went red against the importer as it
+    # then stood (``tests/test_serve_project_root.py`` has the measured class).
+    db = app.state.db_factory()
+    try:
+        rows = db.query(Project).all()
+        assert len(rows) == 1, f"the first run's import forked a second row: {rows}"
+        assert Path(rows[0].output_dir).resolve() == out.resolve()
+    finally:
+        db.close()
 
 
 def test_failed_import_is_not_published(tmp_path: Path, fast_watcher) -> None:

@@ -383,7 +383,9 @@ class TestImportMissing:
     """Test import handles missing files gracefully."""
 
     def test_import_nonexistent_dir(self, db: Session, tmp_path: Path) -> None:
-        """Import from an empty dir should create a minimal project."""
+        """Import from an empty dir should create a minimal project — whose row
+        carries the FUTURE output folder, not the interview folder, so the first
+        run's import matches it instead of forking a second row."""
         empty = tmp_path / "empty"
         empty.mkdir()
         project = import_project(db, empty)
@@ -391,6 +393,8 @@ class TestImportMissing:
         assert project.imported_at is not None
         assert db.query(SessionModel).count() == 0
         assert db.query(Quote).count() == 0
+        assert Path(project.input_dir).resolve() == empty.resolve()
+        assert Path(project.output_dir).resolve() == (empty / "bristlenose-output").resolve()
 
     def test_import_only_metadata(self, db: Session, tmp_path: Path) -> None:
         """Import with only metadata.json should create named project."""

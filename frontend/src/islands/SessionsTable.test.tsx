@@ -1162,6 +1162,69 @@ describe("SessionsTable — session tapestry", () => {
     });
   }
 
+  it("refetches the tapestry while serve is still computing scene strips, then stops", async () => {
+    vi.useFakeTimers();
+    try {
+      let calls = 0;
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+        if (url.includes("/tapestry")) {
+          calls += 1;
+          // Pending on the first answer only: the second carries the strips.
+          const body = { ...tapestryResponse, strips_pending: calls === 1 };
+          return Promise.resolve({ ok: true, json: async () => body });
+        }
+        if (url.includes("/sessions")) return Promise.resolve({ ok: true, json: async () => sessionsResponse });
+        if (url.includes("/people")) return Promise.resolve({ ok: true, json: async () => peopleResponse });
+        return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+      });
+      render(<SessionsTable projectId="1" />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(calls).toBe(1);
+      await act(() => vi.advanceTimersByTimeAsync(5000));
+      expect(calls).toBe(2);
+      await act(() => vi.advanceTimersByTimeAsync(20000));
+      expect(calls).toBe(2); // not pending any more: no further poll
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps an open quote popover through a strip poll", async () => {
+    // Each poll builds new session objects; the slice must keep the ones it holds, or the popover
+    // resting on the quotes array's identity closes every few seconds while strips are pending.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let calls = 0;
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+        if (url.includes("/tapestry")) {
+          calls += 1;
+          const body = { ...tapestryResponse, strips_pending: calls === 1 };
+          return Promise.resolve({ ok: true, json: async () => body });
+        }
+        if (url.includes("/sessions")) return Promise.resolve({ ok: true, json: async () => sessionsResponse });
+        if (url.includes("/people")) return Promise.resolve({ ok: true, json: async () => peopleResponse });
+        return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+      });
+      render(<SessionsTable projectId="1" />);
+      fireEvent.click(await screen.findByRole("button", { name: "Timeline for session 1" }));
+      const bar = await waitFor(() => {
+        const b = document.querySelector<SVGElement>(".bn-tp-bar");
+        if (!b) throw new Error("no bar yet");
+        return b;
+      });
+      fireEvent.click(bar);
+      expect(document.querySelector(".bn-tp-popover")).not.toBeNull();
+      await act(() => vi.advanceTimersByTimeAsync(5000));
+      expect(calls).toBe(2);
+      expect(document.querySelector(".bn-tp-popover")).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("offers a disclosure only for sessions the tapestry covers, closed by default", async () => {
     mockWithTapestry(tapestryResponse);
     render(<SessionsTable projectId="1" />);

@@ -102,5 +102,19 @@ def test_an_unreadable_colours_file_degrades_to_none(tmp_path: Path) -> None:
     assert all(t["colour"] is None for t in _session(client)["turns"])
 
 
+def test_no_strip_file_means_no_strip(client: TestClient) -> None:
+    assert _session(client)["strip"] is None
+
+
+def test_an_unreadable_strip_file_degrades_to_none(tmp_path: Path) -> None:
+    project = tmp_path / "input"
+    shutil.copytree(_FIXTURE_DIR, project)
+    out = project / "bristlenose-output" / ".bristlenose" / "intermediate" / "scene-strips"
+    out.mkdir(parents=True)
+    out.joinpath("s1.json").write_text('{"fps": 4}')  # half a record: serve may be mid-write
+    client = AuthTestClient(create_app(project_dir=project, dev=True, db_url="sqlite://"))
+    assert _session(client)["strip"] is None
+
+
 def test_unknown_project_is_404(client: TestClient) -> None:
     assert client.get("/api/projects/99/tapestry").status_code == 404

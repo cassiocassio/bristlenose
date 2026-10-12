@@ -1215,7 +1215,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     outline-offset: 1px;
 }
 
-/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–319 ════ */
+/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–329 ════ */
 /* Session tapestry — the timeline slice under a row of the Sessions grid
    (frontend/src/components/SessionTapestry.tsx). Lanes: section flags, speaker
    clips, sentiment bars, theme spans. Every colour and size is a shipped token
@@ -1303,6 +1303,16 @@ body.hide-ai-tags .badge-ai { display: none; }
 .bn-tp-clip-team { fill: var(--bn-colour-border-hover); }
 .bn-tp-clip-ppt { fill: var(--bn-colour-muted); }
 .bn-tp-clip[data-video] { stroke: rgb(0 0 0 / 0.25); stroke-width: 0.75; }
+/* The scene strip — what was on screen, moment by moment (utils/scene_strip.py) — runs inside
+   the clips at an opacity. The opacity is the design: the clip keeps its colour and the track its
+   identity, and only change shows. The clip's edge is redrawn over it so a striped clip keeps its
+   outline. */
+.bn-tp-strip { pointer-events: none; }
+.bn-tp-strip-ppt { opacity: 0.7; }
+.bn-tp-strip-team { opacity: 0.75; }
+.bn-tp-clip-edge { fill: none; stroke: rgb(0 0 0 / 0.25); stroke-width: 0.75; pointer-events: none; }
+/* A notch where the scene changed: a short hairline just above the tracks, in the text ink. */
+.bn-tp-notch { stroke: var(--bn-colour-text); stroke-width: 1; opacity: 0.6; pointer-events: none; }
 .bn-tp-clip-label {
     font: var(--bn-weight-emphasis) var(--bn-tp-text-clip, var(--bn-text-badge)) var(--bn-font-body);
     pointer-events: none;

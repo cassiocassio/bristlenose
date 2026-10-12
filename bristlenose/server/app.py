@@ -1151,6 +1151,10 @@ def _make_run_completed_handler(
             "outcome": ev.outcome.value,
             "completed_at": ev.ended_at,
         }
+        # New sessions want scene strips; a running pass is asked to go round again.
+        job = getattr(app.state, "scene_strips", None)
+        if job is not None:
+            job.start()
         # After the new sessions import + publish, re-apply already-applied
         # codebooks to the newly-added quotes — delta only, at each job's stored
         # cutoff, no review. A safe no-op when nothing was applied or nothing is
@@ -1221,13 +1225,34 @@ def _install_event_watcher(
 
     async def _on_change() -> None:
         app.state.condition = read_condition(project_output_dir(project_dir))
+        # Any change to the log re-arms the scene-strip job: a run's start defers it, and a run
+        # that fails, is cancelled or dies writes no run_completed, so only this can start it
+        # again. A no-op while a pass runs or a run is in progress.
+        job = getattr(app.state, "scene_strips", None)
+        if job is not None:
+            job.start()
 
     _on_run_completed = _make_run_completed_handler(
         app, session_factory, project_dir, engine=engine,
     )
 
+    # The tapestry's scene strips: decoded on a thread after the report is readable, at startup
+    # and after each run completes (server/scene_strips.py). Deferred while a run is in progress.
+    from bristlenose.run_condition import RunStateEnum
+    from bristlenose.server.scene_strips import SceneStripJob
+
+    def _run_in_progress() -> bool:
+        # Liveness re-checked: a run that died without a terminus must not defer the job for good.
+        latest = current_condition(app, project_output_dir(project_dir)).latest
+        return latest is not None and latest.state == RunStateEnum.IN_PROGRESS
+
+    app.state.scene_strips = SceneStripJob(
+        session_factory, lambda: project_output_dir(project_dir), _run_in_progress,
+    )
+
     @asynccontextmanager
     async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
+        app.state.scene_strips.start()
         task = asyncio.create_task(
             run_event_watcher(
                 _events_file, _on_run_completed, on_change=_on_change,

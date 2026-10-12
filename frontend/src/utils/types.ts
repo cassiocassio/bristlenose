@@ -623,16 +623,32 @@ export interface TapestryQuote {
   theme: string | null;
 }
 
+/** What was on screen, moment by moment: a 1×n RGB PNG, one column per sample at `fps`, drawn
+ *  inside the speaker clips; `edges` are the seconds at which the scene changed (notches). */
+export interface TapestryStrip {
+  fps: number;
+  n: number;
+  /** Seconds of the first column: the recording's stream start, not always zero. */
+  t0: number;
+  /** A data URL. */
+  png: string;
+  edges: number[];
+}
+
 export interface TapestrySession {
   session_id: string;
   duration_seconds: number;
   turns: TapestryTurn[];
   sections: TapestrySection[];
   quotes: TapestryQuote[];
+  /** Null until serve's background job has computed it, or without video. Absent from older servers. */
+  strip?: TapestryStrip | null;
 }
 
 export interface TapestryResponse {
   sessions: TapestrySession[];
+  /** True while serve is still computing scene strips; the grid refetches until it is false. */
+  strips_pending?: boolean;
 }
 
 // ---------------------------------------------------------------------------

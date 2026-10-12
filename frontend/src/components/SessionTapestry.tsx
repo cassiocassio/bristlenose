@@ -191,6 +191,16 @@ export default function SessionTapestry({
   // Lane geometry follows the tuned flag and clip heights (defaults: the shipped layout).
   const MT = { y: P.flagH + 12, h: P.clipH };
   const PT = { y: P.flagH + 12 + P.clipH + 3, h: P.clipH + 2 };
+  // One geometry for a clip's fill, its window onto the scene strip and its edge: an inset rounded
+  // rect when the scale shows clips, a bare sliver above the threshold. Null for a clip too thin to draw.
+  const clipGeom = (tn: TapestrySession["turns"][number]) => {
+    const tr = teamTurn(tn) ? MT : PT;
+    const x0 = x(tn.t0);
+    const w = x(tn.t1) - x0;
+    if (!clips) return { x: x0, y: tr.y, w: Math.max(0.5, w), h: tr.h, rx: 0 };
+    if (w < 1) return null;
+    return { x: x0 + 0.5, y: tr.y, w: Math.max(1, w - 1), h: tr.h, rx: Math.min(3, w / 2) };
+  };
   const SE = { mid: PT.y + PT.h + 41, amp: 30 };
   const TG = { y: SE.mid + 40, row: P.themeH + P.themeGap, rows: 3 };
   const H = TG.y + TG.row * TG.rows + 14;
@@ -368,30 +378,63 @@ export default function SessionTapestry({
           <rect className="bn-tp-track" x={TAPESTRY_GUTTER} y={MT.y - 1} width={Math.max(0, xEnd - TAPESTRY_GUTTER)}
             height={PT.y + PT.h - MT.y + 2} rx={4} />
           {s.turns.map((tn, i) => {
-            const tr = teamTurn(tn) ? MT : PT;
-            const x0 = x(tn.t0);
-            const w = x(tn.t1) - x0;
+            const g = clipGeom(tn);
+            if (!g) return null;
             const cls = `bn-tp-clip ${teamTurn(tn) ? "bn-tp-clip-team" : "bn-tp-clip-ppt"}`;
-            const style = tn.colour ? { fill: tn.colour } : undefined;
-            if (!clips) {
-              return <rect key={i} className={cls} style={style} x={x0} y={tr.y} width={Math.max(0.5, w)} height={tr.h} />;
-            }
-            if (w < 1) return null;
+            // With a strip over it the clip's edge is drawn above the strip instead (below).
+            return (
+              <rect key={i} className={cls} style={tn.colour ? { fill: tn.colour } : undefined}
+                x={g.x} y={g.y} width={g.w} height={g.h} rx={g.rx || undefined}
+                data-video={clips && tn.colour && !s.strip ? "" : undefined} />
+            );
+          })}
+          {/* The scene strip: what was on screen, one column per sample, inside the clips of each
+              track at the track's opacity (CSS). One image spans the sampled time; the clips clip it. */}
+          {s.strip && [true, false].map((team) => {
+            const strip = s.strip!;
+            const tr = team ? MT : PT;
+            const id = `bn-tp-strip-${s.session_id}-${team ? "team" : "ppt"}`;
+            return (
+              <g key={id}>
+                <clipPath id={id}>
+                  {s.turns.map((tn, i) => {
+                    if (teamTurn(tn) !== team) return null;
+                    const g = clipGeom(tn);
+                    return g && <rect key={i} x={g.x} y={g.y} width={g.w} height={g.h} rx={g.rx || undefined} />;
+                  })}
+                </clipPath>
+                <image className={`bn-tp-strip ${team ? "bn-tp-strip-team" : "bn-tp-strip-ppt"}`} href={strip.png}
+                  x={x(strip.t0)} y={tr.y} width={Math.max(1, x(strip.t0 + strip.n / strip.fps) - x(strip.t0))} height={tr.h}
+                  preserveAspectRatio="none" clipPath={`url(#${id})`} aria-hidden="true" />
+              </g>
+            );
+          })}
+          {clips && s.turns.map((tn, i) => {
+            const g = clipGeom(tn);
+            if (!g) return null;
+            const w = g.w + 1;
             const label = fit(nameOf(tn.speaker), w - 2 * P.clipX, F.clip) || (w > 22 ? tn.speaker : "");
             const ink = tn.colour ? inkOn(tn.colour) : undefined;
+            if (!label && !(tn.colour && s.strip)) return null;
             return (
               <g key={i}>
-                <rect className={cls} style={style} x={x0 + 0.5} y={tr.y} width={Math.max(1, w - 1)} height={tr.h}
-                  rx={Math.min(3, w / 2)} data-video={tn.colour ? "" : undefined} />
+                {tn.colour && s.strip && (
+                  <rect className="bn-tp-clip-edge" x={g.x} y={g.y} width={g.w} height={g.h} rx={g.rx || undefined} />
+                )}
                 {label && (
                   <text className={`bn-tp-clip-label ${teamTurn(tn) ? "on-team" : "on-ppt"}`}
-                    style={ink ? { fill: ink } : undefined} x={x0 + P.clipX} y={tr.y + tr.h / 2 + centre(F.px.clip)}>
+                    style={ink ? { fill: ink } : undefined} x={x(tn.t0) + P.clipX} y={g.y + g.h / 2 + centre(F.px.clip)}>
                     {label}
                   </text>
                 )}
               </g>
             );
           })}
+          {/* Notches: where the scene changed, just above the tracks. Half-pixel like the flag staffs. */}
+          {s.strip?.edges.filter((t) => t <= s.duration_seconds).map((t) => (
+            <line key={t} className="bn-tp-notch" x1={Math.round(x(t)) + 0.5} x2={Math.round(x(t)) + 0.5}
+              y1={MT.y - 6} y2={MT.y - 2} />
+          ))}
 
           {/* Section flags */}
           {flagOrder.map((i) => {

@@ -48,6 +48,48 @@ describe("SessionTapestry", () => {
     expect(team.style.fill).toBe("");
   });
 
+  it("draws no strip and no notches without one", () => {
+    setup();
+    expect(document.querySelectorAll(".bn-tp-strip")).toHaveLength(0);
+    expect(document.querySelectorAll(".bn-tp-notch")).toHaveLength(0);
+    expect(document.querySelectorAll(".bn-tp-clip-edge")).toHaveLength(0);
+  });
+
+  it("draws the scene strip inside each track's clips, and a notch per scene change", () => {
+    // One notch past the recording's end (a stale strip from a longer recording) is not drawn.
+    const strip = { fps: 4, n: 2400, t0: 0, png: "data:image/png;base64,AA==", edges: [120, 450, 700] };
+    render(<SessionTapestry session={{ ...session, strip }} sPerPx={1} nameOf={(c) => c} onJump={vi.fn()} />);
+    const images = Array.from(document.querySelectorAll<SVGImageElement>(".bn-tp-strip"));
+    expect(images.map((i) => i.getAttribute("class"))).toEqual(["bn-tp-strip bn-tp-strip-team", "bn-tp-strip bn-tp-strip-ppt"]);
+    for (const img of images) {
+      expect(img.getAttribute("href")).toBe(strip.png);
+      expect(img.getAttribute("preserveAspectRatio")).toBe("none");
+      // The image spans the sampled time (600 s at 1 s/px) from t=0.
+      expect(Number(img.getAttribute("width"))).toBe(600);
+      const clip = document.getElementById(img.getAttribute("clip-path")!.slice(5, -1))!;
+      expect(clip.tagName).toBe("clipPath");
+      expect(clip.querySelectorAll("rect").length).toBeGreaterThan(0);
+    }
+    // The participant track's window is the one participant clip; the team track's the two moderator clips.
+    const [teamClip, pptClip] = images.map((i) => document.getElementById(i.getAttribute("clip-path")!.slice(5, -1))!);
+    expect(teamClip.querySelectorAll("rect")).toHaveLength(2);
+    expect(pptClip.querySelectorAll("rect")).toHaveLength(1);
+    // Notches at the scene changes, just above the tracks; the coloured clip keeps an edge over the strip.
+    const notches = Array.from(document.querySelectorAll<SVGLineElement>(".bn-tp-notch"));
+    expect(notches.map((n) => Number(n.getAttribute("x1")))).toEqual([120 + 82 + 0.5, 450 + 82 + 0.5]);
+    expect(document.querySelectorAll(".bn-tp-clip-edge")).toHaveLength(1);
+    // The clip itself is still painted, under the strip.
+    expect(document.querySelector<SVGRectElement>(".bn-tp-clip-ppt")!.style.fill).toMatch(/^(#9fceef|rgb\(159, 206, 239\))$/);
+  });
+
+  it("starts the strip at the stream's own first sample", () => {
+    const strip = { fps: 4, n: 2000, t0: 10, png: "data:image/png;base64,AA==", edges: [] };
+    render(<SessionTapestry session={{ ...session, strip }} sPerPx={1} nameOf={(c) => c} onJump={vi.fn()} />);
+    const img = document.querySelector<SVGImageElement>(".bn-tp-strip")!;
+    expect(Number(img.getAttribute("x"))).toBe(82 + 10);
+    expect(Number(img.getAttribute("width"))).toBe(500);
+  });
+
   it("puts positive sentiment above the line and negative below", () => {
     const { bars } = setup();
     const [pos, neg] = bars();

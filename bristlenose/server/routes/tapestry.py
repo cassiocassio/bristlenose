@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, selectinload
 
+from bristlenose.output_paths import project_output_dir
 from bristlenose.server import speaker_slots
 from bristlenose.server.models import (
     ClusterQuote,
@@ -73,16 +74,32 @@ class TapestryQuote(BaseModel):
     theme: str | None = None
 
 
+class TapestryStrip(BaseModel):
+    """What was on screen, moment by moment (``utils/scene_strip.py``): a 1×n RGB PNG, one
+    column per sample at ``fps``, drawn inside the speaker clips; ``edges`` are the seconds at
+    which the scene changed, drawn as notches."""
+    fps: int
+    n: int
+    #: Seconds of the first column: the recording's stream start, not always zero.
+    t0: float = 0.0
+    png: str  # data URL
+    edges: list[float]
+
+
 class TapestrySession(BaseModel):
     session_id: str
     duration_seconds: float
     turns: list[TapestryTurn]
     sections: list[TapestrySection]
     quotes: list[TapestryQuote]
+    #: Null until serve's background job has computed it, or when the session has no video.
+    strip: TapestryStrip | None = None
 
 
 class TapestryResponse(BaseModel):
     sessions: list[TapestrySession]
+    #: True while serve is computing strips; the grid refetches until it is false.
+    strips_pending: bool = False
 
 
 def _clip(text: str) -> str:
@@ -96,10 +113,7 @@ def _get_db(request: Request) -> Session:
 
 def _output_dir(request: Request) -> Path | None:
     project_dir: Path | None = getattr(request.app.state, "project_dir", None)
-    if project_dir is None:
-        return None
-    out = project_dir / "bristlenose-output"
-    return out if out.is_dir() else project_dir
+    return None if project_dir is None else project_output_dir(project_dir)
 
 
 def _scene_colours(output_dir: Path | None, session_id: str) -> list[dict[str, object]]:
@@ -114,6 +128,23 @@ def _scene_colours(output_dir: Path | None, session_id: str) -> list[dict[str, o
         logger.warning("Unreadable scene colours for %s: %s", session_id, exc)
         return []
     return [t for t in turns if isinstance(t, dict)]
+
+
+def _scene_strip(output_dir: Path | None, session_id: str) -> TapestryStrip | None:
+    """The session's strip, or None when absent or unreadable (serve may be writing it)."""
+    if output_dir is None:
+        return None
+    path = output_dir / ".bristlenose" / "intermediate" / "scene-strips" / f"{session_id}.json"
+    try:
+        rec = json.loads(path.read_text(encoding="utf-8"))
+        return TapestryStrip(fps=int(rec["fps"]), n=int(rec["n"]), t0=float(rec.get("t0", 0.0)),
+                             png="data:image/png;base64," + str(rec["png"]),
+                             edges=[float(t) for t in rec.get("edges", [])])
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        logger.warning("Unreadable scene strip for %s: %s", session_id, exc)
+        return None
 
 
 def _colour_at(colours: list[dict[str, object]], t0: float, t1: float) -> str | None:
@@ -185,6 +216,10 @@ def get_tapestry(
         sessions = (db.query(SessionModel).filter_by(project_id=project_id)
                     .options(selectinload(SessionModel.transcript_segments))
                     .order_by(SessionModel.session_number).all())
+        # Read before the strip files, so a job finishing between the two cannot answer
+        # "not pending" while a strip it just wrote is missing from this response.
+        job = getattr(request.app.state, "scene_strips", None)
+        strips_pending = bool(job is not None and job.running)
         result = []
         for sess in sessions:
             colours = _scene_colours(out_dir, sess.session_id)
@@ -206,6 +241,7 @@ def get_tapestry(
                 session_id=sess.session_id,
                 duration_seconds=sess.duration_seconds,
                 turns=turns,
+                strip=_scene_strip(out_dir, sess.session_id),
                 sections=[TapestrySection(t0=t, label=lab) for lab, t in sorted(firsts.items(), key=lambda kv: kv[1])],
                 quotes=[TapestryQuote(
                     t0=q.start_timecode, t1=q.end_timecode,
@@ -214,6 +250,6 @@ def get_tapestry(
                     section=section_of.get(q.id), theme=theme_of.get(q.id),
                 ) for q in sq],
             ))
-        return TapestryResponse(sessions=result)
+        return TapestryResponse(sessions=result, strips_pending=strips_pending)
     finally:
         db.close()

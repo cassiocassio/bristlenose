@@ -89,12 +89,43 @@ Not wired yet:
 - **Some transcripts have coarse or mislabelled turns** (FOSSDA s5 has the narrator on `m1` from about 10 minutes in). The slice makes this visible at a glance.
 - **Quote extraction does not record which words carried a quote's sentiment.** `verbatim_excerpt` is only the first 200 characters of the quote.
 
-## Scene stripes (exploratory, 12 Oct 2026)
+## Scene stripes (shipped in serve, 12 Oct 2026)
 
-The idea: the clip keeps its one scene colour, and over it, at an opacity, run stripes of what was on
-screen moment by moment, so a change of environment (call → share → terminal) shows inside the bar
-without the bar losing its track identity. A notch above the lane marks each change. Nothing of this
-ships yet; `strip_lab.py` is the experiment.
+The clip keeps its one scene colour, and over it, at an opacity, run stripes of what was on screen
+moment by moment, so a change of environment (call → share → terminal) shows inside the bar without
+the bar losing its track identity. A notch above the lane marks each change.
+
+**What ships.** `bristlenose/utils/scene_strip.py` samples every frame at 4 fps (one sample per
+pixel at the maximum zoom), takes the mean OKLab of each frame's kept pixels, tones it into a light
+band (0.64–1.0, the strip's own band, above the clip's 0.42–0.88) and writes
+`.bristlenose/intermediate/scene-strips/<session>.json`: a 1×n RGB PNG (a 1-hour session is a few
+KB) plus the notch times, cached by the recording's identity, written whole and renamed into place.
+**Serve computes it, never the pipeline** (`bristlenose/server/scene_strips.py`): a daemon thread
+started by the app lifespan and again after each `run_completed`, deferred while the project's
+latest run is in progress, a no-op while one is running. The tapestry route serves whatever exists
+and says `strips_pending` while the job runs; the Sessions grid refetches every 5 s (bounded) until
+it stops, so the stripes arrive without a reload. `SessionTapestry.tsx` draws one `<image>` per
+track, `preserveAspectRatio="none"`, clipped to that track's clips, at the track's CSS opacity
+(participant 0.7, moderator 0.75), with the clip's edge redrawn over it and a notch per edge above
+the tracks. Kill switch: `BRISTLENOSE_SCENE_STRIPS=0`. The HTML export carries the strips because it
+embeds the tapestry route. `analyze` and CLI-only runs never produce them: the static render is
+sealed and does not draw the tapestry.
+
+**Notches are measured on the untoned means**, with the mean of the 2 s before a moment against
+the 2 s after it, threshold ΔE 14, strongest within the window. Toned space was tried first and hid
+the Teams session's call-to-share transitions (6.5 toned against 17.9 untoned). Calibration over the
+28-recording corpus, notches per recording:
+
+| threshold | gallery calls (9, up to 100 min) | Teams usability session, 18 min | screen recordings, 3–4 min |
+|---|---|---|---|
+| ΔE 10 | 0–1 | 17 | 12–19 |
+| ΔE 14 | 0–1 | 9 | 11–14 |
+| ΔE 18 | 0–1 | 1 | 8–10 |
+
+At 14 a gallery call gets at most its title card, and a usability session with page switches one
+every couple of minutes. The lab's notch handle uses the same space; `strip_lab.py` is kept for
+retuning, and its defaults are the module's constants (strip tone, notch threshold and window) plus
+the owner's opacities.
 
 **Cost, measured 12 Oct 2026** (software decode to 32×18; VideoToolbox was 18× slower, the per-frame
 download dominates). One sample per pixel at the maximum zoom (0.25 s/px) means 4 fps:

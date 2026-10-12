@@ -70,6 +70,10 @@ import { refetchOverlayProps } from "../hooks/useRefetching";
 // The timeline slice: lazy, because this island is on the first-paint path and
 // a slice is only drawn once a row is opened.
 const SessionTapestry = lazy(() => import("../components/SessionTapestry"));
+/** Scene strips arrive after the report: while serve says they are pending, poll /tapestry from
+ *  5 s apart, backing off to 30 s, for a few hours (a 4K capture decodes at minutes per hour). */
+const stripPollDelay = (attempt: number) => Math.min(30_000, 5_000 * 1.5 ** attempt);
+const STRIP_POLL_LIMIT = 400;
 import { TapestryPlaygroundToggle } from "../components/TapestryPlaygroundToggle";
 // Dev-only (`serve --dev`): nudge the tapestry's type and padding along the existing ladders.
 const TapestryPlayground = lazy(() =>
@@ -257,11 +261,32 @@ export function SessionsTable({
     // rather than toasting. But it must not stay silent: an empty catch made
     // a failed fetch render pixel-identically to a study whose speakers
     // simply have no names, and those want different reactions.
-    apiGet<TapestryResponse>("/tapestry")
-      .then((json) =>
-        setTapestry(Object.fromEntries(json.sessions.map((ts) => [ts.session_id, ts]))),
-      )
-      .catch((err) => console.warn("SessionsTable: /tapestry failed; no timelines", err));
+    // While serve is still computing the scene strips (a background job after the report is
+    // readable), refetch every few seconds, bounded, so the stripes arrive without a reload.
+    let stripPoll: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+    const fetchTapestry = (attempt: number) => {
+      apiGet<TapestryResponse>("/tapestry")
+        .then((json) => {
+          if (cancelled) return;
+          // Built here, not in the updater: a bad body then lands in the catch below, not in render.
+          const next = Object.fromEntries(json.sessions.map((ts) => [ts.session_id, ts]));
+          setTapestry((prev) => {
+            if (attempt === 0 || !prev) return next;
+            // A poll brings strips and nothing else: keep the session objects the slices hold (an
+            // open quote popover rests on the quotes array's identity) and take only the strip.
+            return Object.fromEntries(
+              Object.entries(next).map(([sid, ts]) => [sid, prev[sid] ? { ...prev[sid], strip: ts.strip } : ts]),
+            );
+          });
+          // The export has no server to finish the job, so it never polls its own embedded answer.
+          if (json.strips_pending && !isExportMode() && attempt < STRIP_POLL_LIMIT) {
+            stripPoll = setTimeout(() => fetchTapestry(attempt + 1), stripPollDelay(attempt));
+          }
+        })
+        .catch((err) => console.warn("SessionsTable: /tapestry failed; no timelines", err));
+    };
+    fetchTapestry(0);
 
     getPeople()
       .then(setPeopleMap)
@@ -271,6 +296,10 @@ export function SessionsTable({
           err,
         ),
       );
+    return () => {
+      cancelled = true;
+      clearTimeout(stripPoll);
+    };
   }, [projectId, refreshKey, reloadKey]);
 
   // The slices share one scale, fitted to the grid's width.

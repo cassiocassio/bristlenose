@@ -435,3 +435,12 @@ def pin_local_zone(monkeypatch: pytest.MonkeyPatch):
 @pytest.fixture
 def london(pin_local_zone):
     pin_local_zone(_LondonRule())
+
+
+@pytest.fixture(autouse=True)
+def no_scene_strip_thread(monkeypatch):
+    """serve's scene-strip job (server/scene_strips.py) starts a thread from the app lifespan and
+    after every run_completed. On the shared in-memory connection that thread's session close is
+    the documented rollback flake (server/CLAUDE.md), so it is off for every test;
+    tests/test_serve_scene_strips.py opts back in."""
+    monkeypatch.setenv("BRISTLENOSE_SCENE_STRIPS", "0")

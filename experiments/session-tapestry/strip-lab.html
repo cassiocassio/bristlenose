@@ -46,7 +46,7 @@ main { padding: 12px 16px 64px; }
   is either the keyframes the pipeline already decodes, or every frame at 4 fps, which is one sample per pixel at the tapestry's
   maximum zoom. The <b>floor</b> hides a stripe whose colour is within that ΔE of its clip's colour, so a steady scene stays flat
   and only change shows. The raw row above each lane is the same data at full strength, the movie-barcode view, for reference.
-  Notches above the lane mark a scene change: the mean colour of a window before the moment against the window after it, above the edge threshold.</p>
+  Notches above the lane mark a scene change: the mean colour of a window before the moment against the window after it, above the edge threshold, measured on the untoned colours as the pipeline does.</p>
   <p class="note">Worst cases to look for: a uniform web session (should look like the lane does today); a scrolled or animated
   share (shimmer: try the median window); a gallery call where people move (camera drift: the floor should hide it); the 4K
   screen capture (its keyframes are already a second apart, so the keyframe source should be enough there).</p>
@@ -65,13 +65,15 @@ const P = {
   floor:   { label: "Floor: hide stripes within ΔE of the clip colour", min: 0, max: 40, step: 1, value: 2 },
   median:  { label: "Median window (samples)", options: ["1", "3", "5", "9"], value: "1" },
   smooth:  { label: "Downsample", options: ["smooth", "pixelated"], value: "smooth" },
-  edge:    { label: "Notch: before/after windows differ by ΔE", min: 0, max: 60, step: 1, value: 11 },
+  edge:    { label: "Notch: before/after windows differ by ΔE (untoned, shipped 14)", min: 0, max: 60, step: 1, value: 14 },
   edgeWin: { label: "Notch: window either side (s)", min: 0.5, max: 10, step: 0.5, value: 2 },
   notch:   { label: "Draw notches", options: ["off", "on"], value: "on" },
   raw:     { label: "Raw barcode row", options: ["on", "off"], value: "on" },
-  Lmin:    { label: "Tone: lightness floor (OKLab L)", min: 0, max: 0.9, step: 0.01, value: 0.64 },
-  Lmax:    { label: "Tone: lightness ceiling", min: 0.3, max: 1, step: 0.01, value: 1 },
-  cgain:   { label: "Tone: chroma gain ×", min: 0.5, max: 3, step: 0.05, value: 1.4 },
+  Lmin:    { label: "Strip tone: lightness floor (OKLab L)", min: 0, max: 0.9, step: 0.01, value: 0.64 },
+  Lmax:    { label: "Strip tone: lightness ceiling", min: 0.3, max: 1, step: 0.01, value: 1 },
+  cgain:   { label: "Strip tone: chroma gain ×", min: 0.5, max: 3, step: 0.05, value: 1.4 },
+  clipLmin:{ label: "Clip tone: lightness floor (shipped 0.42)", min: 0, max: 0.9, step: 0.01, value: 0.42 },
+  clipLmax:{ label: "Clip tone: lightness ceiling (shipped 0.88)", min: 0.3, max: 1, step: 0.01, value: 0.88 },
 };
 const hostH = document.getElementById("handles");
 for (const [k, p] of Object.entries(P)) {
@@ -111,6 +113,7 @@ function toRgb(lab) {
 const toCss = lab => `rgb(${toRgb(lab).join(",")})`;
 const dE = (p, q) => 100 * Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
 const tone = lab => [P.Lmin.value + lab[0] * (P.Lmax.value - P.Lmin.value), lab[1] * P.cgain.value, lab[2] * P.cgain.value];
+const toneClip = lab => [P.clipLmin.value + lab[0] * (P.clipLmax.value - P.clipLmin.value), lab[1] * P.cgain.value, lab[2] * P.cgain.value];
 const fmt = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
 // Unpack the three-byte samples once: L over 0..1, a and b over -0.4..0.4.
@@ -173,7 +176,7 @@ function render(v) {
   const toned = pts.map(p => tone(p.lab));
 
   // Which turn is each sample in, and its toned clip colour (null when the turn has no colour).
-  const turnLab = v.turns.map(t => t.lab ? tone(t.lab) : null);
+  const turnLab = v.turns.map(t => t.lab ? toneClip(t.lab) : null);
   let ti = 0;
   const turnOf = pts.map(p => { while (ti + 1 < v.turns.length && v.turns[ti + 1].t0 <= p.t) ti++; return ti; });
 
@@ -195,7 +198,8 @@ function render(v) {
   // keeping only the strongest within a window either side.
   const edges = [];
   const w = Math.max(1, Math.round(P.edgeWin.value / step));
-  const meanOf = (a, b) => { const m = [0, 0, 0]; for (let i = a; i < b; i++) { m[0] += toned[i][0]; m[1] += toned[i][1]; m[2] += toned[i][2]; } return m.map(v => v / (b - a)); };
+  // On the untoned means, as utils/scene_strip.py does: toning compresses lightness and hides a call becoming a white page.
+  const meanOf = (a, b) => { const m = [0, 0, 0]; for (let i = a; i < b; i++) { const l = pts[i].lab; m[0] += l[0]; m[1] += l[1]; m[2] += l[2]; } return m.map(v => v / (b - a)); };
   const d = new Float32Array(N);
   for (let i = w; i + w <= N; i++) d[i] = dE(meanOf(i - w, i), meanOf(i, i + w));
   for (let i = w; i + w <= N; i++) {
@@ -238,7 +242,7 @@ function render(v) {
     for (const t of v.turns) {
       if (isTeam(t.code) !== team) continue;
       const x0 = x(t.t0), w = x(t.t1) - x0;
-      g.fillStyle = t.lab ? toCss(tone(t.lab)) : clipFallback[team ? "m" : "p"];
+      g.fillStyle = t.lab ? toCss(toneClip(t.lab)) : clipFallback[team ? "m" : "p"];
       g.fillRect(x0, tr.y, w, tr.h);
     }
     g.globalAlpha = (team ? P.opM.value : P.opP.value) / 100;
@@ -253,7 +257,7 @@ function render(v) {
         const x0 = x(t.t0), w = x(t.t1) - x0;
         if (w < 1) continue;
         if (t.colour) { g.beginPath(); rr(g, x0 + 0.5, tr.y, Math.max(1, w - 1), tr.h, Math.min(3, w / 2)); g.stroke(); }
-        if (w > 22) { g.fillStyle = t.lab ? inkOn(toRgb(tone(t.lab))) : (team ? "#000" : "#fff"); g.fillText(t.code, x0 + 4, tr.y + tr.h / 2 + 0.5); }
+        if (w > 22) { g.fillStyle = t.lab ? inkOn(toRgb(toneClip(t.lab))) : (team ? "#000" : "#fff"); g.fillText(t.code, x0 + 4, tr.y + tr.h / 2 + 0.5); }
       }
     }
   }

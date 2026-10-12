@@ -1540,7 +1540,14 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** — shipping build **0.35.0 (4528)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+**Internal TestFlight since 14 Jul 2026** — shipping build **0.37.0 (4695)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+
+**0.37.0 shipped 12 Oct 2026, overnight and unattended — tag `v0.37.0` on `c236d797`, TestFlight
+build 4695, verified 9 of 9.** A minor: punctuated Whisper output, Word tables read, PII redaction on
+Snap and Copr, and the session start time. Three stops, none in the product: four tests that read
+their machine, huggingface-hub 2.x arriving through tokenizers (capped `<2`), and our own spacy-models
+URL tripping the App Store string gate (now stripped in the spec). Full account: `docs/release-log.md`
+§ 0.37.0.
 
 **0.36.0 shipped 8 Oct 2026, late evening — tag `v0.36.0` on `e08a44d5`, TestFlight build
 4588, verified 9 of 9.** A minor: transcript copy across paragraphs (Markdown and Word rich

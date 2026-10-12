@@ -67,6 +67,35 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.37.0 — 12 Oct 2026 · Tier 1 (minor — punctuated transcripts, Word tables, PII on Snap and Copr, session start)
+
+**What shipped.** Whisper gets a punctuated style prompt on every window (English and Japanese);
+text inside Word tables is read; PII redaction works on the Snap and Fedora packages (the model
+is fetched into the user cache against a pinned hash); the Sessions Start column shows when a
+session began. About twenty fixes, among them a reopened project with missing output files no
+longer deleting quotes, and one duplicate no longer failing a whole AutoCode job. Five sessions
+closed up first; the owner was asleep and the run went unattended.
+
+**Verified 9 of 9** (`release.sh verify 0.37.0`) at about 01:25 BST: PyPI (200), GitHub
+Release, Homebrew, TestFlight 4695, `.dmg`, Snap edge, Copr, and the website, deployed from a
+clean worktree of the website repo's committed HEAD. Tag `v0.37.0` on `c236d797`, the exact
+commit strict CI passed. winget, a follower, has no PR for 0.37.0; nobody submitted one.
+
+**Three attempts, no product defect.**
+
+| stop | cause | fix |
+|---|---|---|
+| preflight: main CI red | four tests read the machine: the hold fixture committed with no git identity (macOS invents one, the Linux runner has none); three Windows tests stubbed `shutil.which` or assumed an empty PATH, or compared a posix literal to `str(Path)` | `4c8b73b8`; each reproduced (`user.useConfigOnly`, a planted `winget.exe`) and proved to bite |
+| preflight: dependency major | tokenizers 0.23.3 widened its cap, so huggingface-hub 2.2.0 resolved | `5dc1df4c`: `huggingface-hub<2`, registered in the platform policy; Windows constraints kept their pins, only the digest moved |
+| preflight: test inventory | stale structure | regenerated in `4c8b73b8` |
+| build-all step 2c: App Store strings | `78f905c9` put the spacy-models wheel URL in `s07_pii_removal`, which freezes into the Mac sidecar | `c236d797`: the spec strips it at freeze time, as it already did spaCy's copy |
+
+The moved-HEAD guards did their job: the resume re-pushed, re-dispatched strict CI and rebuilt
+both artefacts at `c236d797`. Run times on the last attempt: build-all 431 s · build-dmg 560 s ·
+strict CI 986 s · TestFlight 421 s · `.dmg` upload 185 s · tag 2 s.
+
+---
+
 ## 0.36.0 — 8 Oct 2026 · Tier 1 (minor — transcript copy across paragraphs, sentence capitals, a speaker-label leak)
 
 **What shipped.** Transcript text selects across paragraphs and pastes as Markdown, or as rich

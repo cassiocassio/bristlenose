@@ -15,6 +15,7 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 - **Speech the transcriber couldn't make out is shown as inaudible, not as invented words.** On a Mac with Apple silicon, a line where Whisper only repeated its own example phrases ("Ainda, hum, na verdade.") is now marked as a gap of that length in the transcript, and its words are not kept, so they cannot be quoted. Applies to recordings transcribed from now on.
 - **Whisper's repetition loops are taken out of new transcripts.** A word or line repeated as many separate lines ("nada nada nada…", or "Gracias." every half minute over music) is removed, and the stretch is transcribed again in case speech was under it.
 - **`serve --dev` restarts only for changes to Bristlenose's own Python.** It used to watch the whole working directory, so a sidecar rebuild under `desktop/` restarted the dev server dozens of times.
+- **A re-run leaves the videos of sessions already transcribed alone.** Every run used to decode every video again, which for a project in iCloud meant downloading it again. A session's thumbnail is now re-cut when its video changes, where before it was kept for good.
 
 **Fixed**
 
@@ -24,6 +25,13 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 - **A session that was transcript-only gains its recording.** Source files are re-verified on every import, so a recording that turns up later plays, and a file that has gone is no longer marked as seen.
 - **`bristlenose status` finds the report, and names the stash.** It used to look for `.bristlenose/` at the project root first, and said nothing about a stashed previous report while the output folder was absent, which is when that stash is the only copy. It no longer offers `rm -rf` for it, or calls it "kept while a run is in flight" when no run is.
 - **`bristlenose serve` on an output folder outside the interview folder (`run -o`) no longer tries to analyse the folder above it**, which crashed when that was the home folder.
+- **Moving, renaming or copying a project folder no longer transcribes every recording again.** The transcription cache was keyed on each file's full path, so any change to the folder's location paid for transcription a second time. A project moved before its first run on this version still re-transcribes once.
+- **An interview you removed no longer comes back into the report.** Deleting or renaming a recording left its old transcript in the output folder, and the report rebuilt the session from it. A run now removes the files of sessions that are no longer in the project.
+- **Two recordings with the same name in different folders are two sessions.** They were merged into one, and the second was dropped without a word.
+- **Renaming a project folder leaves one report, not one per name.**
+- **The Mac app follows a project folder you rename in Finder.** It kept the report on the old path, and a re-analysis run after the rename never reached the report. A folder moved to the Bin shows as Can't find, with Locate…, instead of being served from there.
+- **Reopening the Mac app during an analysis shows that analysis.** The row said Analysing with a Stop button that did nothing, and Analyse could start a second run on the same folder.
+- **The Mac app's sidebar says when a project's report database holds a second project**, the shape the empty-report bug above left behind, instead of showing a session count the report could not.
 
 **0.37.0** — _12 Oct 2026_
 

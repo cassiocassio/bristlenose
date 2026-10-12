@@ -666,6 +666,63 @@ def _transcript_fingerprint(transcript: FullTranscript, *extra: str) -> str:
     return hash_bytes("|".join([payload, *extra]).encode("utf-8"))
 
 
+#: The output folders that hold one file (or two) per session, by session id.
+_PER_SESSION_DIRS = (
+    "transcripts-raw",
+    "transcripts-cooked",
+    "sessions",
+    "assets/thumbnails",
+    ".bristlenose/intermediate/speaker-info",
+    ".bristlenose/intermediate/scene-colours",
+    ".bristlenose/temp",
+)
+_PER_SESSION_FILE_RE = re.compile(r"^(?:transcript_)?(s\d+)(?:[._]|$)")
+
+
+def prune_stale_session_files(output_dir: Path, keep: Iterable[str]) -> list[Path]:
+    """Remove the per-session artefacts of sessions that are not in this run.
+
+    Nothing pruned them until 12 Oct 2026: deleting or renaming an interview
+    left its ``transcripts-raw/sN.txt``, transcript page, thumbnail and
+    speaker-info behind, and the serve importer — which rebuilds sessions
+    from every transcript header it finds — brought the deleted interview back
+    into the report (lifecycle handoff §1.2 P5). A renamed recording is a new
+    session with a new id, so its old files go the same way.
+
+    Only files whose name is a session id (``s2.txt``, ``transcript_s2.html``,
+    ``s2.jpg.src``, ``s2_extracted.wav``) in the folders that hold one per
+    session. The manifest, the session registry and the intermediate JSON
+    are never touched: the registry keeps the id reserved so it is not
+    reissued, and the caches are rewritten by the stages that own them.
+    Called once the run has succeeded; returns what was removed.
+    """
+    keep_ids = set(keep)
+    removed: list[Path] = []
+    for rel in _PER_SESSION_DIRS:
+        folder = output_dir / rel
+        if not folder.is_dir():
+            continue
+        for path in sorted(folder.iterdir()):
+            if not path.is_file():
+                continue
+            m = _PER_SESSION_FILE_RE.match(path.name)
+            if m is None or m.group(1) in keep_ids:
+                continue
+            try:
+                path.unlink()
+            except OSError as exc:
+                logger.warning("Could not remove stale %s: %s", path, exc)
+                continue
+            removed.append(path)
+    if removed:
+        gone = sorted({_PER_SESSION_FILE_RE.match(p.name).group(1) for p in removed})  # type: ignore[union-attr]
+        logger.info(
+            "Removed %d file(s) of sessions no longer in the project: %s",
+            len(removed), ", ".join(gone),
+        )
+    return removed
+
+
 def _discard_stale_redaction(output_dir: Path) -> None:
     """Remove a previous run's redaction output when this run is not redacting.
 
@@ -2937,6 +2994,8 @@ class Pipeline:
             )
             mark_stage_complete(manifest, _M_STAGE_RENDER)
             write_manifest(manifest, output_dir)
+            # The run succeeded: what it did not produce is not in the project.
+            prune_stale_session_files(output_dir, (s.session_id for s in sessions))
 
         elapsed = time.perf_counter() - pipeline_start
 
@@ -3177,6 +3236,7 @@ class Pipeline:
             write_raw_transcripts_md(
                 transcripts, raw_dir, sentence_paragraphs=sentence_paragraphs,
             )
+            prune_stale_session_files(output_dir, (s.session_id for s in sessions))
             _print_step("Merged transcripts", time.perf_counter() - t0)
 
         # People file (stats only, no rendering)

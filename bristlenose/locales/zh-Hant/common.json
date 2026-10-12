@@ -538,7 +538,8 @@
     "observers": "觀察員",
     "loading": "正在載入逐字稿⋯",
     "failedToLoad": "無法載入逐字稿",
-    "noData": "沒有可用的逐字稿資料。"
+    "noData": "沒有可用的逐字稿資料。",
+    "inaudible": "\u807d\u4e0d\u6e05\u695a"
   },
   "emptyState": {
     "prePipeline": "拖入一個訪談檔案夾以開始分析",

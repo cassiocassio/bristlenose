@@ -568,7 +568,8 @@
     "observers": "Tarkkailijat",
     "loading": "Ladataan litterointia…",
     "failedToLoad": "Litteroinnin lataus epäonnistui",
-    "noData": "Litterointitietoja ei ole saatavilla."
+    "noData": "Litterointitietoja ei ole saatavilla.",
+    "inaudible": "Ep\u00e4selv\u00e4"
   },
   "emptyState": {
     "prePipeline": "Aloita analyysi pudottamalla haastattelukansio",

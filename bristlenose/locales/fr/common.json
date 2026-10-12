@@ -568,7 +568,8 @@
     "observers": "Observateurs",
     "loading": "Chargement de la transcription…",
     "failedToLoad": "Échec du chargement de la transcription",
-    "noData": "Aucune donnée de transcription disponible."
+    "noData": "Aucune donnée de transcription disponible.",
+    "inaudible": "Inaudible"
   },
   "emptyState": {
     "prePipeline": "Déposez un dossier d’entretiens pour démarrer l’analyse",

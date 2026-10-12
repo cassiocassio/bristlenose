@@ -5,8 +5,9 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, model_serializer
 
 from bristlenose.events import PipelineSummary
 
@@ -251,6 +252,11 @@ SUBTITLE_SOURCES = frozenset({"srt", "vtt", CLOUD_TRANSCRIPT_SOURCE})
 PLATFORM_TRANSCRIPT_SOURCES = frozenset(SUBTITLE_SOURCES | {"docx"})
 
 
+#: How an inaudible segment is written in the transcript ``.txt``/``.md`` files,
+#: and read back. The usual transcription convention; it appears only in those
+#: files and in LLM input, never in the report, where the flag is drawn instead.
+INAUDIBLE_TOKEN = "[inaudible]"
+
 class TranscriptSegment(BaseModel):
     """A contiguous segment of speech from one speaker."""
 
@@ -263,6 +269,28 @@ class TranscriptSegment(BaseModel):
     words: list[Word] = Field(default_factory=list)
     source: str = ""  # "whisper" / "mlx-whisper" / "faster-whisper", "srt", "vtt", "cloud-vtt", "docx"
     segment_index: int = -1  # 0-based ordinal within the session transcript
+    #: Someone spoke here and nothing usable was heard. ``text`` is empty and
+    #: ``words`` too: Whisper's guess is not kept, so it can never be quoted.
+    #: Surfaces draw it as a gap of this duration, never as words; the
+    #: transcript files carry it as `INAUDIBLE_TOKEN`.
+    inaudible: bool = False
+
+    @property
+    def line_text(self) -> str:
+        """The text for a transcript file line or an LLM prompt: the inaudible
+        token for a gap, the words otherwise."""
+        return INAUDIBLE_TOKEN if self.inaudible else self.text
+
+    @model_serializer(mode="wrap")
+    def _omit_false_inaudible(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        # Absent unless set, so the dump of every existing segment is unchanged:
+        # the stage fingerprints hash it, and a new key would re-run (and bill)
+        # speaker identification, topics and quotes on every project.
+        data: dict[str, Any] = handler(self)
+        if not self.inaudible:
+            data.pop("inaudible", None)
+        return data
+
 
 
 class FullTranscript(BaseModel):
@@ -305,7 +333,7 @@ class FullTranscript(BaseModel):
         for seg in self.segments:
             tc = format_timecode_prompt(seg.start_time)
             role_tag = f" [{seg.speaker_role.value.upper()}]" if seg.speaker_role != SpeakerRole.UNKNOWN else ""
-            lines.append(f"[{tc}]{role_tag} {seg.text}")
+            lines.append(f"[{tc}]{role_tag} {seg.line_text}")
         return "\n\n".join(lines)
 
     def participant_text(self) -> str:
@@ -319,7 +347,7 @@ class FullTranscript(BaseModel):
         for seg in self.segments:
             if seg.speaker_role == SpeakerRole.PARTICIPANT:
                 tc = format_timecode_prompt(seg.start_time)
-                lines.append(f"[{tc}] {seg.text}")
+                lines.append(f"[{tc}] {seg.line_text}")
         return "\n\n".join(lines)
 
 

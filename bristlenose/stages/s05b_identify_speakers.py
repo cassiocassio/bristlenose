@@ -326,12 +326,12 @@ async def split_single_speaker_llm(
 
     for chunk_no, first in enumerate(range(0, len(segments), SPLIT_CHUNK_SEGMENTS)):
         last = min(first + SPLIT_CHUNK_SEGMENTS, len(segments))
-        lines = "\n".join(f"[{i}] {segments[i].text}" for i in range(first, last))
+        lines = "\n".join(f"[{i}] {segments[i].line_text}" for i in range(first, last))
         prior_context = ""
         if first > 0 and current is not None:
             lo = max(0, first - SPLIT_CONTEXT_SEGMENTS)
             labelled = "\n".join(
-                f"[{i}] ({labels[i]}) {segments[i].text}" for i in range(lo, first)
+                f"[{i}] ({labels[i]}) {segments[i].line_text}" for i in range(lo, first)
             )
             prior_context = (
                 "These lines come just before the part to label and are already "
@@ -434,7 +434,7 @@ async def identify_speaker_roles_llm(
         if seg.start_time > 300:  # 5 minutes
             break
         label = seg.speaker_label or "Unknown"
-        sample_lines.append(f"[{label}] {seg.text}")
+        sample_lines.append(f"[{label}] {seg.line_text}")
 
     if not sample_lines:
         return []

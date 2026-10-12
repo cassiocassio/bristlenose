@@ -375,6 +375,9 @@ class TranscriptSegment(Base):
     #: to another speaker (§K, the picker's Paragraph scope). Set by the
     #: layout edit's replay; a quote from these words leaves the evidence.
     moved_from: Mapped[str | None] = mapped_column(String(20), nullable=True, default=None)
+    #: Someone spoke here and nothing usable was heard (``models.TranscriptSegment
+    #: .inaudible``): ``text`` is empty, and the SPA draws a gap, never words.
+    inaudible: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
     session: Mapped[Session] = relationship(back_populates="transcript_segments")
 

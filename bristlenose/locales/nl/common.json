@@ -568,7 +568,8 @@
     "observers": "Waarnemers",
     "loading": "Transcript laden…",
     "failedToLoad": "Kon transcript niet laden",
-    "noData": "Geen transcriptgegevens beschikbaar."
+    "noData": "Geen transcriptgegevens beschikbaar.",
+    "inaudible": "Onverstaanbaar"
   },
   "emptyState": {
     "prePipeline": "Sleep een map met interviews om de analyse te starten",

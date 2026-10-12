@@ -279,6 +279,9 @@ export interface TranscriptSegmentResponse {
   quote_ids: string[];
   segment_index: number;
   words: WordTiming[] | null;
+  /** Someone spoke here and nothing usable was heard: `text` is empty, and the
+   *  page draws a gap of this span, never words. Absent from older servers. */
+  inaudible?: boolean;
 }
 
 export interface QuoteAnnotationResponse {

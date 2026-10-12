@@ -76,6 +76,26 @@ describe("selectedParagraphs", () => {
     root.remove();
   });
 
+  it("copies an inaudible gap as the files write it, not as the page's label", () => {
+    const root = page();
+    const gap = document.createElement("div");
+    gap.className = "transcript-segment";
+    gap.dataset.participant = "p1";
+    gap.dataset.startSeconds = "55";
+    gap.innerHTML =
+      '<div class="segment-body" data-position="9"><span class="segment-inaudible" contenteditable="false">Unverständlich</span></div>';
+    bodies(root)[2].closest(".transcript-segment")!.before(gap);
+    const range = document.createRange();
+    range.setStart(words(root)[3].firstChild!, 0); // "the"
+    range.setEnd(bodies(root)[3].firstChild!, 8); // "and then"
+    expect(selectedParagraphs(range, root)).toEqual([
+      { seconds: 49, code: "p1", text: "The one at 2*3" },
+      { seconds: 55, code: "p1", text: "[inaudible]" },
+      { seconds: 61, code: "p1", text: "and then" },
+    ]);
+    root.remove();
+  });
+
   it("a drag starting in the gap after a word takes the next word's time", () => {
     const root = page();
     const range = document.createRange();

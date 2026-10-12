@@ -628,6 +628,8 @@ def get_moderator_question(
                 TranscriptSegment.session_id == session.id,
                 TranscriptSegment.speaker_code.in_(moderator_tags),
                 TranscriptSegment.segment_index < quote.segment_index,
+                # A gap has no question to show.
+                TranscriptSegment.inaudible.is_(False),
             )
             # The two halves of a split share an ordinal; the later half holds
             # the end of the turn, where the question usually is.

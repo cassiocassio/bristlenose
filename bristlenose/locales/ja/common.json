@@ -558,7 +558,8 @@
     "observers": "オブザーバー",
     "loading": "トランスクリプトを読み込み中…",
     "failedToLoad": "トランスクリプトの読み込みに失敗しました",
-    "noData": "トランスクリプトデータはありません。"
+    "noData": "トランスクリプトデータはありません。",
+    "inaudible": "\u805e\u304d\u53d6\u308a\u4e0d\u80fd"
   },
   "emptyState": {
     "prePipeline": "インタビューのフォルダをドロップすると分析が始まります",

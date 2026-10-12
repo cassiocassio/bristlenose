@@ -568,7 +568,8 @@
     "observers": "Observatører",
     "loading": "Laster inn transkripsjon …",
     "failedToLoad": "Klarte ikke å laste inn transkripsjon",
-    "noData": "Ingen transkripsjonsdata tilgjengelig."
+    "noData": "Ingen transkripsjonsdata tilgjengelig.",
+    "inaudible": "Uh\u00f8rbart"
   },
   "emptyState": {
     "prePipeline": "Slipp en mappe med intervjuer for å starte analysen",

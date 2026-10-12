@@ -569,7 +569,8 @@
     "observers": "Observers",
     "loading": "Loading transcript…",
     "failedToLoad": "Failed to load transcript",
-    "noData": "No transcript data available."
+    "noData": "No transcript data available.",
+    "inaudible": "Inaudible"
   },
   "emptyState": {
     "prePipeline": "Drop a folder of interviews to start analysis",

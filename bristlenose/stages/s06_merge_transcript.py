@@ -223,7 +223,7 @@ def write_raw_transcripts(
             tc = format_timecode(seg.start_time)
             code = seg.speaker_code or transcript.participant_id
             lines.append(
-                format_raw_segment_txt(tc, code, seg.speaker_label, seg.text)
+                format_raw_segment_txt(tc, code, seg.speaker_label, seg.line_text)
             )
             lines.append("")
 
@@ -280,7 +280,7 @@ def write_raw_transcripts_md(
             tc = format_timecode(seg.start_time)
             code = seg.speaker_code or transcript.participant_id
             lines.append(
-                format_raw_segment_md(tc, code, seg.speaker_label, seg.text)
+                format_raw_segment_md(tc, code, seg.speaker_label, seg.line_text)
             )
             lines.append("")
 
@@ -356,7 +356,15 @@ def _merge_same_speaker(
         close = (seg.start_time - prev.end_time) <= max_gap
         full = sentence_paragraphs and length >= PARAGRAPH_LENGTH and last_ends
 
-        if same_speaker and close and not full:
+        if same_speaker and close and (prev.inaudible or seg.inaudible):
+            # A gap never joins speech: it stays its own paragraph, and two
+            # gaps side by side become one.
+            if prev.inaudible and seg.inaudible:
+                prev.end_time = max(prev.end_time, seg.end_time)
+            else:
+                merged.append(seg.model_copy())
+                length = reading_length(seg.text) if sentence_paragraphs else 0.0
+        elif same_speaker and close and not full:
             prev.end_time = max(prev.end_time, seg.end_time)
             prev.text = f"{prev.text} {seg.text}"
             prev.words.extend(seg.words)

@@ -627,6 +627,7 @@ export function QuoteCard({
           isModerator={seg.is_moderator}
           startTime={seg.start_time}
           text={seg.text}
+          inaudible={seg.inaudible}
           quoteParticipantId={quote.participant_id}
           data-testid={`bn-quote-${domId}-ctx-above-${i}`}
         />
@@ -829,6 +830,7 @@ export function QuoteCard({
           isModerator={seg.is_moderator}
           startTime={seg.start_time}
           text={seg.text}
+          inaudible={seg.inaudible}
           quoteParticipantId={quote.participant_id}
           data-testid={`bn-quote-${domId}-ctx-below-${i}`}
         />

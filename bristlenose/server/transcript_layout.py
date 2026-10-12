@@ -169,6 +169,8 @@ def _split(db: DbSession, segs: list[TranscriptSegment], position: int, token: i
     if not 0 <= position < len(segs):
         raise LayoutRefusedError("no such paragraph")
     seg = segs[position]
+    if seg.inaudible:
+        raise LayoutRefusedError("a gap where nothing was heard has no words to split")
     drawn = tokens(seg)
     token = _split_token(seg, drawn, token, verify)
     words = _words(seg)
@@ -232,6 +234,10 @@ def _join(db: DbSession, segs: list[TranscriptSegment], position: int, verify: s
     # would lose or spread over words that were never moved (§K).
     if first.moved_from != second.moved_from:
         raise LayoutRefusedError("a moved paragraph is not joined to one that was not")
+    # A gap where nothing was heard has no words to join, and joining it would
+    # either drop the gap or claim the speech around it was inaudible.
+    if first.inaudible or second.inaudible:
+        raise LayoutRefusedError("a gap where nothing was heard is not joined")
     if not _still_reads(join_verify(second), verify):
         raise LayoutRefusedError("the paragraph has changed")
     a, b = _words(first), _words(second)

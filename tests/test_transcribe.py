@@ -624,6 +624,80 @@ class TestMlxBackendPromptsAndDropsEchoes:
         assert not module.DecodingOptions(language="en", prompt=[]).prompt
 
 
+class TestPromptGuess:
+    """A partial echo Whisper barely believed is a guess; the same words
+    said with confidence, or other words at low confidence, are speech."""
+
+    PROMPT = "Ahn, então, hum, na verdade é isso, né? Eh, mais ou menos, porque, ahn, depende."
+
+    def test_prompt_words_at_low_confidence_are_a_guess(self) -> None:
+        from bristlenose.stages.s05_transcribe import is_prompt_guess
+
+        assert is_prompt_guess("Ainda, hum, na verdade.", self.PROMPT, [0.02, 0.01, 0.03, 0.02])
+        assert is_prompt_guess("Ahn, depende.", self.PROMPT, [0.01, 0.01])
+
+    def test_prompt_words_said_with_confidence_are_speech(self) -> None:
+        from bristlenose.stages.s05_transcribe import is_prompt_guess
+
+        assert not is_prompt_guess("Ahn, depende.", self.PROMPT, [0.8, 0.9])
+
+    def test_other_words_at_low_confidence_are_speech(self) -> None:
+        from bristlenose.stages.s05_transcribe import is_prompt_guess
+
+        assert not is_prompt_guess("Comprei o sofá em maio.", self.PROMPT, [0.05] * 5)
+
+    def test_one_word_is_never_a_guess(self) -> None:
+        from bristlenose.stages.s05_transcribe import is_prompt_guess
+
+        assert not is_prompt_guess("Depende.", self.PROMPT, [0.01])
+
+
+class TestMlxBackendMarksGuessesInaudible:
+    """A guess becomes an inaudible gap, never text the reader could take as spoken."""
+
+    def test_guesses_become_one_marker_and_speech_is_kept(self, monkeypatch, tmp_path) -> None:
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        def _words(text: str, start: float, p: float) -> list[dict[str, object]]:
+            return [{"word": " " + w, "start": start + i * 0.4, "end": start + i * 0.4 + 0.3,
+                     "probability": p} for i, w in enumerate(text.split())]
+
+        def _seg(start: float, end: float, text: str, p: float) -> dict[str, object]:
+            return {"start": start, "end": end, "text": " " + text, "words": _words(text, start, p)}
+
+        def _fake_transcribe(_audio, **_kw):
+            return {"language": "en", "segments": [
+                _seg(1.0, 3.0, "Okay. Uh, right.", 0.97),
+                _seg(3.0, 5.0, "Hmm, okay. Well,", 0.04),
+                _seg(5.0, 7.0, "Yes, I suppose so.", 0.03),
+                _seg(7.0, 9.0, "We bought the sofa in May.", 0.05),
+                _seg(9.0, 9.5, "Hmm, okay.", 0.02),
+                _seg(12.0, 13.0, "Hmm, okay.", 0.02),
+            ]}
+
+        monkeypatch.setattr(s05_transcribe, "SKIP_NET_ENABLED", False)
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: _tone(14, -30))
+        monkeypatch.setattr(mlx_whisper, "transcribe", _fake_transcribe)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "en"})()
+
+        segments, _ = s05_transcribe._init_mlx_backend(settings)(tmp_path / "p1.wav", settings)
+
+        assert [(s.text, s.inaudible) for s in segments] == [
+            ("Okay. Uh, right.", False), ("", True), ("We bought the sofa in May.", False),
+            ("", True), ("", True),
+        ]
+        # Markers merge only when they touch: a gap is time nothing came back for.
+        assert [(s.start_time, s.end_time) for s in segments[3:]] == [(9.0, 9.5), (12.0, 13.0)]
+        marker = segments[1]
+        assert (marker.start_time, marker.end_time, marker.words) == (3.0, 7.0, [])
+
+
 class TestStylePromptLanguage:
     def test_codes_and_names_reach_the_same_prompt(self) -> None:
         from bristlenose.stages.s05_transcribe import STYLE_PROMPTS, style_prompt_for

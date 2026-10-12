@@ -248,6 +248,14 @@
     outline: none;
 }
 
+/* Someone spoke and nothing usable was heard: an annotation, not words. Drawn
+   like the timecode, never like speech, so it cannot read as something said. */
+.segment-inaudible {
+    color: var(--bn-colour-muted);
+    font-style: italic;
+    user-select: none;
+}
+
 .segment-moderator .segment-body {
     color: var(--bn-colour-muted);
 }

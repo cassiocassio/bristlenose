@@ -623,7 +623,8 @@
     "observers": "Pozorovatelé",
     "loading": "Načítání přepisu…",
     "failedToLoad": "Nepodařilo se načíst přepis",
-    "noData": "Nejsou k dispozici žádná data přepisu."
+    "noData": "Nejsou k dispozici žádná data přepisu.",
+    "inaudible": "Nesrozumiteln\u00e9"
   },
   "emptyState": {
     "prePipeline": "Přetáhněte složku s rozhovory pro zahájení analýzy",

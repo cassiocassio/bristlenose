@@ -241,6 +241,8 @@ async def run_discussion(
         all_mod = [s for s in t.segments if s.speaker_role == SpeakerRole.RESEARCHER
                    or (s.speaker_role == SpeakerRole.UNKNOWN and s.speaker_code.startswith("m"))]
         for seg in all_mod:
+            if seg.inaudible:
+                continue  # nothing heard, so nothing asked
             tid = _turn_id(sid, seg.start_time, seen)
             turn = st.Turn(tid, sid, seg.start_time, seg.text.strip())
             speaker_of[tid] = seg.speaker_code or mt.code

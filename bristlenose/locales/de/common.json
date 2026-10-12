@@ -568,7 +568,8 @@
     "observers": "Beobachter",
     "loading": "Transkript wird geladen…",
     "failedToLoad": "Fehler beim Laden des Transkripts",
-    "noData": "Keine Transkriptdaten verfügbar."
+    "noData": "Keine Transkriptdaten verfügbar.",
+    "inaudible": "Unverst\u00e4ndlich"
   },
   "emptyState": {
     "prePipeline": "Ziehen Sie einen Ordner mit Interviews hierher, um die Analyse zu starten",

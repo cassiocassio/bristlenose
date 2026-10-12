@@ -568,7 +568,8 @@
     "observers": "Observadores",
     "loading": "Cargando transcripción…",
     "failedToLoad": "Error al cargar la transcripción",
-    "noData": "No hay datos de transcripción disponibles."
+    "noData": "No hay datos de transcripción disponibles.",
+    "inaudible": "Inaudible"
   },
   "emptyState": {
     "prePipeline": "Arrastra una carpeta de entrevistas para comenzar el análisis",

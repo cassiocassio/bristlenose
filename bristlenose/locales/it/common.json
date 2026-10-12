@@ -568,7 +568,8 @@
     "observers": "Osservatori",
     "loading": "Caricamento della trascrizione…",
     "failedToLoad": "Impossibile caricare la trascrizione",
-    "noData": "Nessun dato di trascrizione disponibile."
+    "noData": "Nessun dato di trascrizione disponibile.",
+    "inaudible": "Incomprensibile"
   },
   "emptyState": {
     "prePipeline": "Trascina una cartella di interviste per iniziare l'analisi",

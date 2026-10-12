@@ -25,6 +25,7 @@ from typing import Any
 from sqlalchemy import text as sa_text  # `text` clashes with a loop var below
 from sqlalchemy.orm import Session
 
+from bristlenose.models import INAUDIBLE_TOKEN
 from bristlenose.server.models import (
     ClusterQuote,
     CodebookGroup,
@@ -68,8 +69,10 @@ _HEADER_SOURCE_RE = re.compile(r"^#\s*Source:\s*(.+)$", re.MULTILINE)
 _HEADER_LANGUAGE_RE = re.compile(
     r"^#\s*Language:\s*([A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*)\b", re.MULTILINE,
 )
+#: Horizontal space only after the code: with ``\s`` an empty line's match
+#: crossed the newline and took the next line as its words, losing a segment.
 _SEGMENT_RE = re.compile(
-    r"^\[(\d+:\d{2}(?::\d{2})?)\]\s+\[(\w+)\]\s+(.+)$", re.MULTILINE
+    r"^\[(\d+:\d{2}(?::\d{2})?)\]\s+\[(\w+)\][ \t]+(.+)$", re.MULTILINE
 )
 
 
@@ -719,14 +722,24 @@ def _import_transcript_segments(
             else:
                 end = start + 10.0  # no usable header: a rough estimate
 
+            words = _without_speaker_label(text.strip(), labels)
+            # The pipeline's inaudible token is a gap: stored as the flag, never
+            # as words. Behind a label we could not name, any one leading
+            # parenthetical is taken as that label; with the session's labels
+            # known, only the token itself counts, so "(laughs) [inaudible]"
+            # stays as written.
+            inaudible = words == INAUDIBLE_TOKEN or (
+                not labels and _SPEAKER_PREFIX_RE.sub("", words) == INAUDIBLE_TOKEN
+            )
             seg = TranscriptSegment(
                 session_id=sess.id,
                 speaker_code=speaker_code,
                 start_time=start,
                 end_time=end,
-                text=_without_speaker_label(text.strip(), labels),
+                text="" if inaudible else words,
                 source="transcript",
                 segment_index=i,
+                inaudible=inaudible,
             )
             db.add(seg)
 
@@ -936,7 +949,7 @@ def _enrich_words_from_intermediate(
             buckets[k].extend(w for w in pseg["words"] if w.get("text"))
 
         for db_seg, words in zip(db_segs, buckets, strict=True):
-            if not words or not _words_read_as(words, db_seg.text):
+            if db_seg.inaudible or not words or not _words_read_as(words, db_seg.text):
                 continue
             compact = [
                 {"t": w["text"], "s": w["start_time"], "e": w["end_time"]}

@@ -125,7 +125,10 @@ export function selectedParagraphs(range: Range, root: HTMLElement): CopiedParag
   for (const body of root.querySelectorAll<HTMLElement>(".segment-body[data-position]")) {
     if (!range.intersectsNode(body)) continue;
     const cut = clamp(range, body);
-    const text = tidy(cut.toString());
+    // A gap is copied as the transcript files write it, never as the page's
+    // label, which is in the interface language and names a span.
+    const gap = body.querySelector(".segment-inaudible") !== null;
+    const text = gap ? "[inaudible]" : tidy(cut.toString());
     if (!text) continue;
     const before = document.createRange();
     before.selectNodeContents(body);
@@ -143,7 +146,7 @@ export function selectedParagraphs(range: Range, root: HTMLElement): CopiedParag
     out.push({
       seconds,
       code: row?.dataset.participant ?? "",
-      text: asDrawn(body, text, fromStart),
+      text: gap ? text : asDrawn(body, text, fromStart),
     });
   }
   return out.length ? out : null;

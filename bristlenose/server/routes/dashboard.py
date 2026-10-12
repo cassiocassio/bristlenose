@@ -313,8 +313,8 @@ def _calculate_coverage(
 
     for seg in segments:
         info = session_map.get(seg.session_id)
-        if not info:
-            continue
+        if not info or seg.inaudible:
+            continue  # a gap holds no words to cover or omit
         str_sid = info[0]
         code = seg.speaker_code
         text = seg.text

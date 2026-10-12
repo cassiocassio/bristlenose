@@ -261,6 +261,37 @@ def is_prompt_echo(text: str, prompt: str) -> bool:
     return core == unit * (len(core) // len(unit))
 
 
+#: Measured 12 Oct 2026 on seven recordings in six languages
+#: (docs/design-whisper-style-prompts.md): every line made mostly of prompt
+#: words with a mean word confidence under 0.15 was a partial echo ("Ainda,
+#: hum, na verdade." at 0.02); real speech made of the same words ("Ähm,
+#: genau." 0.75, "Okay. Uh, right." 0.97) sat far above it.
+_GUESS_PROMPT_SHARE = 0.6
+_GUESS_MAX_CONFIDENCE = 0.15
+
+
+def _word_keys(text: str) -> list[str]:
+    return [k for k in (re.sub(r"[\W_]+", "", w.casefold()) for w in text.split()) if k]
+
+
+def is_prompt_guess(text: str, prompt: str, confidences: list[float]) -> bool:
+    """True when ``text`` is a partial echo of the prompt Whisper barely believed.
+
+    `is_prompt_echo` catches the whole prompt handed back. This catches the
+    pieces: a line of at least two words, most of them the prompt's own,
+    decoded with a mean word confidence under `_GUESS_MAX_CONFIDENCE`. Either
+    condition alone is ordinary speech — people say "um, right", and noisy
+    recordings are full of low-confidence lines — so both must hold.
+    """
+    words = _word_keys(text)
+    if len(words) < 2 or not confidences:
+        return False
+    vocab = set(_word_keys(prompt))
+    share = sum(w in vocab for w in words) / len(words)
+    mean = sum(confidences) / len(confidences)
+    return share >= _GUESS_PROMPT_SHARE and mean < _GUESS_MAX_CONFIDENCE
+
+
 #: True only inside our own `mlx_whisper.transcribe` call, so the hook below
 #: changes nothing for any other caller, in this thread or another.
 _STYLE_PROMPT_ON: contextvars.ContextVar[bool] = contextvars.ContextVar(
@@ -806,6 +837,7 @@ def _init_mlx_backend(
             )
 
         segments: list[TranscriptSegment] = []
+        guesses = 0
         for seg in kept:
             if not segment_has_signal(seg.get("start", 0.0), seg.get("end", 0.0), levels):
                 in_silence += 1  # a re-decoded line over a silent part of its stretch
@@ -822,6 +854,23 @@ def _init_mlx_backend(
                     ))
 
             text = collapse_adjacent_repeats(seg.get("text", "").strip())
+            if prompt and is_prompt_guess(text, prompt, [w.confidence for w in words]):
+                # Kept as a gap rather than dropped, so the reader sees that
+                # someone spoke here and nothing was heard; Whisper's guess
+                # goes, so it can never be quoted.
+                guesses += 1
+                last = segments[-1] if segments else None
+                if last and last.inaudible and seg.get("start", 0.0) - last.end_time < 1.0:
+                    last.end_time = seg.get("end", 0.0)
+                    continue
+                segments.append(TranscriptSegment(
+                    start_time=seg.get("start", 0.0),
+                    end_time=seg.get("end", 0.0),
+                    text="",
+                    inaudible=True,
+                    source="mlx-whisper",
+                ))
+                continue
             if text:
                 segments.append(TranscriptSegment(
                     start_time=seg.get("start", 0.0),
@@ -840,6 +889,11 @@ def _init_mlx_backend(
             logger.info(
                 "%s: dropped %d segment(s) that repeat the style prompt",
                 audio_path.name, echoes,
+            )
+        if guesses:
+            logger.info(
+                "%s: marked %d segment(s) inaudible (prompt words at low confidence)",
+                audio_path.name, guesses,
             )
 
         return segments, result.get("language")

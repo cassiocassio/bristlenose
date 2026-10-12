@@ -568,7 +568,8 @@
     "observers": "Observadores",
     "loading": "Carregando transcrição…",
     "failedToLoad": "Falha ao carregar transcrição",
-    "noData": "Nenhum dado de transcrição disponível."
+    "noData": "Nenhum dado de transcrição disponível.",
+    "inaudible": "Inaud\u00edvel"
   },
   "emptyState": {
     "prePipeline": "Solte uma pasta de entrevistas para iniciar a análise",

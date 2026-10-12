@@ -184,6 +184,32 @@ describe("TranscriptPage", () => {
     expect(segments).toHaveLength(5);
   });
 
+  it("draws an inaudible segment as a gap, never as words", async () => {
+    const gap = {
+      ...mockData.segments[3],
+      start_time: 39.0,
+      end_time: 46.0,
+      text: "",
+      html_text: null,
+      is_quoted: false,
+      quote_ids: [],
+      segment_index: 4,
+      inaudible: true,
+    };
+    mockedGetTranscript.mockResolvedValue({
+      ...mockData,
+      segments: [...mockData.segments.slice(0, 4), gap, mockData.segments[4]],
+    });
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("segment-t-39")).toBeTruthy();
+    });
+    const marker = screen.getByTestId("segment-t-39").querySelector(".segment-inaudible");
+    expect(marker?.getAttribute("contenteditable")).toBe("false");
+    expect(marker?.textContent).toBe("Inaudible");
+    expect(screen.getByTestId("segment-t-26").querySelector(".segment-inaudible")).toBeNull();
+  });
+
   it("moderator segments get segment-moderator class", async () => {
     mockedGetTranscript.mockResolvedValue(mockData);
     render(<TranscriptPage projectId="1" sessionId="s1" />);

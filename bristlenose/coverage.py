@@ -93,6 +93,8 @@ def calculate_coverage(
         ranges = quote_ranges.get(session_id, [])
 
         for seg in transcript.segments:
+            if seg.inaudible:
+                continue  # a gap holds no words to cover or omit
             code = seg.speaker_code or transcript.participant_id
             text = seg.text
             wc = _word_count(text)

@@ -538,7 +538,8 @@
     "observers": "관찰자",
     "loading": "전사 로드 중…",
     "failedToLoad": "전사 로드 실패",
-    "noData": "전사 데이터가 없습니다."
+    "noData": "전사 데이터가 없습니다.",
+    "inaudible": "\ub4e4\ub9ac\uc9c0 \uc54a\uc74c"
   },
   "emptyState": {
     "prePipeline": "인터뷰 폴더를 끌어다 놓으면 분석이 시작됩니다",

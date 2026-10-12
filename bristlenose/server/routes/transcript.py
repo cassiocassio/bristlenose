@@ -70,6 +70,9 @@ class TranscriptSegmentResponse(BaseModel):
     quote_ids: list[str]
     segment_index: int = -1
     words: list[WordTimingResponse] | None = None
+    #: Someone spoke here and nothing usable was heard: ``text`` is empty and
+    #: the SPA draws a gap of this span, never words.
+    inaudible: bool = False
 
 
 class QuoteAnnotationResponse(BaseModel):
@@ -373,6 +376,7 @@ def get_transcript(
                 quote_ids=qids,
                 segment_index=seg.segment_index,
                 words=words,
+                inaudible=bool(seg.inaudible),
             ))
 
         # Journey labels for this session

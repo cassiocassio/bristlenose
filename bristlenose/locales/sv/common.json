@@ -568,7 +568,8 @@
     "observers": "Observatörer",
     "loading": "Läser in transkription…",
     "failedToLoad": "Kunde inte läsa in transkription",
-    "noData": "Ingen transkriptionsdata tillgänglig."
+    "noData": "Ingen transkriptionsdata tillgänglig.",
+    "inaudible": "Oh\u00f6rbart"
   },
   "emptyState": {
     "prePipeline": "Släpp en mapp med intervjuer för att starta analysen",

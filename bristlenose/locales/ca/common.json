@@ -568,7 +568,8 @@
     "observers": "Observadors",
     "loading": "S'està carregant la transcripció…",
     "failedToLoad": "No s'ha pogut carregar la transcripció",
-    "noData": "No hi ha dades de transcripció disponibles."
+    "noData": "No hi ha dades de transcripció disponibles.",
+    "inaudible": "Inaudible"
   },
   "emptyState": {
     "prePipeline": "Deixa-hi anar una carpeta d'entrevistes per començar l'anàlisi",

@@ -634,7 +634,8 @@
     "observers": "Obserwatorzy",
     "loading": "Wczytywanie transkrypcji…",
     "failedToLoad": "Nie udało się wczytać transkrypcji",
-    "noData": "Brak dostępnych danych transkrypcji."
+    "noData": "Brak dostępnych danych transkrypcji.",
+    "inaudible": "Niezrozumia\u0142e"
   },
   "emptyState": {
     "prePipeline": "Upuść folder z wywiadami, aby rozpocząć analizę",

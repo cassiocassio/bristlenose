@@ -741,7 +741,16 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                 // Where Return and Backspace find their paragraph.
                 data-position={position}
               >
-                {seg.words && seg.words.length > 0 ? (
+                {seg.inaudible ? (
+                  // A gap, not words: drawn as an annotation outside the
+                  // editable text, so it never reads as something said. No
+                  // end time: the transcript file carries starts only, so an
+                  // end here would be the next paragraph's start, an estimate.
+                  // Copy writes it as "[inaudible]" (utils/transcriptCopy.ts).
+                  <span className="segment-inaudible" contentEditable={false}>
+                    {t("transcript.inaudible")}
+                  </span>
+                ) : seg.words && seg.words.length > 0 ? (
                   // Word-level spans for karaoke highlighting during playback.
                   // When words exist we skip html_text (<mark> quote highlighting)
                   // because reconciling word boundaries with quote marks is a

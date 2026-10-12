@@ -4049,7 +4049,7 @@ def load_transcripts_from_dir(
     import re
     from datetime import datetime, timezone
 
-    from bristlenose.models import SpeakerRole
+    from bristlenose.models import INAUDIBLE_TOKEN, SpeakerRole
     from bristlenose.utils.timecodes import parse_header_datetime, parse_timecode
 
     transcripts: list[PiiCleanTranscript] = []
@@ -4134,14 +4134,20 @@ def load_transcripts_from_dir(
                         except ValueError:
                             pass
 
+                # Our own inaudible token, optionally after a speaker label,
+                # is the flag on the way back in: never words.
+                inaudible = bool(re.fullmatch(
+                    r"(?:\([^)]*\)\s*)?" + re.escape(INAUDIBLE_TOKEN), text.strip(),
+                ))
                 segments.append(
                     TranscriptSegment(
                         start_time=start_time,
                         end_time=start_time,
-                        text=text,
+                        text="" if inaudible else text,
                         speaker_role=role,
                         speaker_code=speaker_code,
                         source="file",
+                        inaudible=inaudible,
                     )
                 )
 

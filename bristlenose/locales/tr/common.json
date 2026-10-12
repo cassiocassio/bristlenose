@@ -568,7 +568,8 @@
     "observers": "Gözlemciler",
     "loading": "Deşifre yükleniyor…",
     "failedToLoad": "Deşifre yüklenemedi",
-    "noData": "Kullanılabilir deşifre verisi yok."
+    "noData": "Kullanılabilir deşifre verisi yok.",
+    "inaudible": "Anla\u015f\u0131lm\u0131yor"
   },
   "emptyState": {
     "prePipeline": "Analize başlamak için bir görüşme klasörü bırakın",

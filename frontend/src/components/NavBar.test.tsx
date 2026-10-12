@@ -134,5 +134,42 @@ describe("NavBar — lenses with nothing to show yet", () => {
     expect(quotes).toHaveAttribute("aria-disabled", "true");
     expect(quotes).not.toHaveAttribute("href");
   });
-});
 
+  it("leaves a withheld lens for Sessions, where the status page handed over", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: async () => ({
+        data_version: 0,
+        lenses: { project: false, sessions: true, quotes: false, codebook: false, signals: false, discussion: false },
+      }),
+    }) as unknown as typeof globalThis.fetch;
+    const router = createMemoryRouter(
+      [{ path: "/report/*", element: <NavBar /> }],
+      { initialEntries: ["/report/"] },
+    );
+    render(<RouterProvider router={router} />);
+    act(() => startConditionPolling("1"));
+    await screen.findByText("Project", { selector: "span" });
+    expect(router.state.location.pathname).toBe("/report/sessions/");
+  });
+
+  it("stays on a lens that is there", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: async () => ({
+        data_version: 0,
+        lenses: { project: false, sessions: true, quotes: true, codebook: false, signals: false, discussion: false },
+      }),
+    }) as unknown as typeof globalThis.fetch;
+    const router = createMemoryRouter(
+      [{ path: "/report/*", element: <NavBar /> }],
+      { initialEntries: ["/report/quotes/"] },
+    );
+    render(<RouterProvider router={router} />);
+    act(() => startConditionPolling("1"));
+    await screen.findByText("Project", { selector: "span" });
+    expect(router.state.location.pathname).toBe("/report/quotes/");
+  });
+});

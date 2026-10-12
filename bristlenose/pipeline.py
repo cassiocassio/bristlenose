@@ -2332,6 +2332,17 @@ class Pipeline:
                     mark_session_complete(manifest, STAGE_PII_REMOVAL, t.session_id)
                 mark_stage_complete(manifest, STAGE_PII_REMOVAL)
                 write_manifest(manifest, output_dir)
+                # The chain is off under redaction, so this is where a first
+                # analysis's sessions become readable: say so, as the chain
+                # does, or the Mac's shoal covers a report the server is serving.
+                _rendered = (
+                    _prev_manifest.stages.get(_M_STAGE_RENDER) if _prev_manifest else None
+                )
+                if _rendered is None or _rendered.status != StageStatus.COMPLETE:
+                    self._sessions_readable = max(
+                        self._sessions_readable, len(clean_transcripts),
+                    )
+                    self._emit_progress(sessions_readable=self._sessions_readable)
             else:
                 # Redaction is off, so any transcripts-cooked/ on disk is from
                 # an earlier run — and stage 6 has just rewritten

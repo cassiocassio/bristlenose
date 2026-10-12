@@ -82,7 +82,12 @@ async def chat_lens_ask(request: Request, body: _AskRequest) -> dict[str, object
                 status_code=404, detail=f"Project {body.project_id} not found"
             )
         try:
-            result = await ask_question(body.question, settings, db, body.project_id)
+            from bristlenose.server.grounding import delivery_coverage
+
+            result = await ask_question(
+                body.question, settings, db, body.project_id,
+                coverage=delivery_coverage(request.app.state),
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:

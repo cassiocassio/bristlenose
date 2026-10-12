@@ -643,3 +643,21 @@ class TestAskEdges:
         assert r.status_code == 502
         assert "RuntimeError" in r.json()["detail"]
         assert "provider exploded" in r.json()["detail"]
+
+
+def test_a_partial_delivery_puts_a_coverage_note_in_the_prompt() -> None:
+    """docs/design-progressive-lenses.md §5.5: before the whole report, an answer
+    states its coverage; the prompt carries the numbers to state."""
+    from bristlenose.server.lens_readiness import Progress
+
+    app = _make_app()
+    for progress, expected in (
+        (None, False),
+        (Progress(readable=frozenset({"s1"}), quoted=frozenset({"s1"})), True),
+    ):
+        app.state.progress = progress
+        mock = AsyncMock(return_value=_answer([]))
+        with _patch_llm(mock):
+            AuthTestClient(app).post("/api/dev/chat-lens/ask", json={"question": "q"})
+        prompt = mock.await_args_list[0].kwargs["user_prompt"]
+        assert ("Coverage note: this analysis is still running" in prompt) is expected

@@ -36,6 +36,9 @@ class Progress:
     #: Sections and themes are written — the barrier.
     joined: bool = False
     discussion_done: bool = False
+    #: The run ended without a whole report (stopped, failed, or its import
+    #: failed): what it delivered stays as it was, and nothing is processing.
+    ended: bool = False
 
 
 def lens_readiness(progress: Progress | None) -> dict[str, bool]:
@@ -71,9 +74,16 @@ def readable_in_manifest(manifest: PipelineManifest | None) -> frozenset[str]:
     # Under redaction a transcript is readable once it is redacted: the run
     # records no per-session merge then (those files are the unredacted ones),
     # and the redaction stage records each session it wrote.
-    if manifest is not None and STAGE_PII_REMOVAL in manifest.stages:
+    if redacting_in_manifest(manifest):
         return frozenset(get_completed_session_ids(manifest, STAGE_PII_REMOVAL))
     return frozenset(get_completed_session_ids(manifest, STAGE_MERGE_TRANSCRIPT))
+
+
+def redacting_in_manifest(manifest: PipelineManifest | None) -> bool:
+    """The run redacts: its readable transcripts are the redacted copies."""
+    from bristlenose.manifest import STAGE_PII_REMOVAL
+
+    return manifest is not None and STAGE_PII_REMOVAL in manifest.stages
 
 
 def quoted_in_manifest(manifest: PipelineManifest | None) -> frozenset[str]:
@@ -93,14 +103,15 @@ READABLE, PROCESSING, WAITING = "readable", "processing", "waiting"
 
 
 def session_states(
-    facts: list[dict[str, object]], readable: frozenset[str],
+    facts: list[dict[str, object]], readable: frozenset[str], *, running: bool = True,
 ) -> dict[str, str]:
     """Each ingested session's state, in session order.
 
     One session is processing: the first not yet readable after the last one
     that is, provided Whisper takes it (``transcribes``). A platform transcript
     is read the moment it is parsed, so it never shimmers (§2). A session that
-    failed to transcribe stays waiting; its outcome is the run's to state.
+    failed to transcribe stays waiting; its outcome is the run's to state. A run
+    that has ended has nothing processing.
     """
     states: dict[str, str] = {}
     last_readable = max(
@@ -111,7 +122,7 @@ def session_states(
         sid = str(f.get("session_id", ""))
         if sid in readable:
             states[sid] = READABLE
-        elif not processing_taken and i > last_readable and f.get("transcribes"):
+        elif running and not processing_taken and i > last_readable and f.get("transcribes"):
             states[sid] = PROCESSING
             processing_taken = True
         else:

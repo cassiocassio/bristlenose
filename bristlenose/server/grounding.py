@@ -65,7 +65,45 @@ INVARIANTS: tuple[str, ...] = (
     "If the corpus does not answer a question, say so plainly instead of "
     "filling the gap from general knowledge — an uncited research claim "
     "presented next to real findings is worse than no claim.",
+    "When the data carries a coverage note, the analysis has not finished: "
+    "state how much it covers in the answer (\"based on 6 of 10 sessions\"), "
+    "and know that quotes may not belong to any section or theme yet.",
 )
+
+
+def delivery_coverage(state: object) -> dict[str, object] | None:
+    """How much of a first analysis the database holds, while it is partial.
+
+    None once there is a whole report (``state.progress`` is None). Both
+    surfaces state it (docs/design-progressive-lenses.md §5.5): the MCP tools
+    attach it to every result, the chat lens puts it beside the invariants.
+    """
+    progress = getattr(state, "progress", None)
+    if progress is None:
+        return None
+    total = len(progress.readable)
+    project_dir = getattr(state, "project_dir", None)
+    if project_dir is not None:
+        from bristlenose.output_paths import project_output_dir
+        from bristlenose.server.lens_readiness import read_ingest_facts
+
+        total = max(total, len(read_ingest_facts(project_output_dir(project_dir))))
+    return {
+        "analysis": "stopped" if progress.ended else "running",
+        "sessions_readable": len(progress.readable),
+        "sessions_total": total,
+        "sessions_with_quotes": len(progress.quoted),
+    }
+
+
+def coverage_sentence(coverage: dict[str, object]) -> str:
+    """The coverage note as one statement for a prompt."""
+    verb = "stopped before it finished" if coverage["analysis"] == "stopped" else "is still running"
+    return (
+        f"Coverage note: this analysis {verb}. The data covers "
+        f"{coverage['sessions_readable']} of {coverage['sessions_total']} sessions, "
+        f"{coverage['sessions_with_quotes']} of them with quotes."
+    )
 
 
 # ---------------------------------------------------------------------------

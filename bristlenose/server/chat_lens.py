@@ -221,6 +221,7 @@ async def ask_question(
     settings: BristlenoseSettings,
     db: SASession,
     project_id: int,
+    coverage: dict[str, object] | None = None,
 ) -> AskResult:
     """Answer a researcher's question from the project corpus, cited.
 
@@ -249,8 +250,13 @@ async def ask_question(
     from bristlenose.llm.structured import ChatLensAnswer
 
     prompt_tmpl = get_prompt_template("chat-lens")
+    statements = [*INVARIANTS]
+    if coverage is not None:
+        from bristlenose.server.grounding import coverage_sentence
+
+        statements.append(coverage_sentence(coverage))
     user_prompt = prompt_tmpl.user.format(
-        invariants="\n".join(f"- {statement}" for statement in INVARIANTS),
+        invariants="\n".join(f"- {statement}" for statement in statements),
         corpus_text=wrap_untrusted("corpus", corpus.text),
         question=question,
     )

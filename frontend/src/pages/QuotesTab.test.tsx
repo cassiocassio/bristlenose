@@ -121,10 +121,12 @@ function renderQuotesTab() {
 // stale across the manual refresh.
 const sectionsKeys: number[] = [];
 const themesKeys: number[] = [];
+const sectionsActions: boolean[] = [];
 
 vi.mock("../islands/QuoteSections", () => ({
-  QuoteSections: ({ refreshKey = 0 }: { refreshKey?: number }) => {
+  QuoteSections: ({ refreshKey = 0, headingAction }: { refreshKey?: number; headingAction?: unknown }) => {
     sectionsKeys.push(refreshKey);
+    sectionsActions.push(headingAction != null);
     return null;
   },
 }));
@@ -259,8 +261,10 @@ describe("QuotesTab — during a first analysis (progressive lenses, Phase 2)", 
   });
 
   it("shows sections and themes after the run, with the control", async () => {
+    sectionsActions.length = 0;
     renderQuotesTab();
     await waitFor(() => expect(sectionsKeys.length).toBeGreaterThan(0));
     expect(sessionsRenders).toEqual([]);
+    expect(sectionsActions.every(Boolean)).toBe(true);
   });
 });

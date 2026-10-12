@@ -414,13 +414,20 @@ def export_report(
     Gathers all API data, embeds it in the React SPA shell, and returns
     a downloadable HTML file.
 
-    Refused while a first analysis is still delivering its sessions
-    (docs/design-progressive-lenses.md §5.6): the file would be a partial
+    Refused while the database holds a first analysis's partial delivery
+    (docs/design-progressive-lenses.md §5.6) — the run is still going, or it
+    stopped or failed before the whole report: the file would be a partial
     report, carrying rows for sessions it has no transcripts for.
     """
-    if getattr(request.app.state, "progress", None) is not None:
+    progress = getattr(request.app.state, "progress", None)
+    if progress is not None:
         raise HTTPException(
-            status_code=409, detail="The analysis is still running; export when it has finished.",
+            status_code=409,
+            detail=(
+                "The analysis did not finish; there is no whole report to export."
+                if progress.ended
+                else "The analysis is still running; export when it has finished."
+            ),
         )
     from bristlenose.server.routes.codebook import get_codebook as _get_codebook_handler
     from bristlenose.server.routes.dashboard import (

@@ -1053,11 +1053,28 @@ def _import_on_startup(
     session_factory: Callable[[], Session],
     project_dir: Path,
 ) -> None:
-    """Import project data into SQLite during app startup."""
-    from bristlenose.server.importer import import_project
+    """Import project data into SQLite during app startup.
 
+    Not during a first analysis: the whole-project import reads whatever
+    transcripts are on disk, which under redaction can be the unredacted ones
+    stage 7 has not reached yet. The progressive importer brings in each
+    session as the run records it readable (``server/progressive.py``), and the
+    watcher calls it once at start.
+    """
+    from bristlenose.output_paths import project_output_dir
+    from bristlenose.run_condition import read_condition
+    from bristlenose.server.importer import import_project, import_readable_sessions
+    from bristlenose.server.progressive import is_progressive
+
+    progressive = is_progressive(read_condition(project_output_dir(project_dir)))
     db = session_factory()
     try:
+        if progressive:
+            # The project row only: every route reads it, and the condition
+            # endpoint is how the SPA and the Mac follow the run.
+            logger.info("A first analysis is in progress: sessions import as it delivers them")
+            import_readable_sessions(db, project_dir, set())
+            return
         import_project(db, project_dir)
     except Exception:
         logger.exception("Failed to import project from %s", project_dir)
@@ -1118,10 +1135,14 @@ def _make_run_completed_handler(
     the run deleted — see ``ensure_schema``.
     """
     from bristlenose.server.db import ensure_schema
-    from bristlenose.server.importer import import_project
+    from bristlenose.server.importer import import_project, one_generation
 
-    def _reimport_sync() -> int | None:
-        """Re-import; the id of the project row that now holds the run, or None."""
+    def _reimport_sync(first_analysis: bool = False) -> int | None:
+        """Re-import; the id of the project row that now holds the run, or None.
+
+        ``first_analysis``: the run delivered its sessions one by one, and
+        nothing it delivered is New against the rest (``one_generation``).
+        """
         # `run --clean` rmtrees the output dir — database included — under
         # the live serve, leaving the pool pinned to a deleted inode and the
         # on-disk path holding a fresh, schema-less file. Heal before
@@ -1137,6 +1158,8 @@ def _make_run_completed_handler(
         db = session_factory()
         try:
             project = import_project(db, project_dir)
+            if first_analysis and getattr(project, "id", None) is not None:
+                one_generation(db, project.id)
             # A test double may return nothing; a real import always returns its row.
             return getattr(project, "id", 1)
         except Exception:
@@ -1151,13 +1174,18 @@ def _make_run_completed_handler(
         overlay = getattr(app.state, "import_overlay", None)
         if overlay is not None:
             overlay.update(importing=ev.run_id)
-        project_id = await asyncio.to_thread(_reimport_sync)
+        first_analysis = getattr(app.state, "progress", None) is not None
+        project_id = await asyncio.to_thread(_reimport_sync, first_analysis)
         if overlay is not None:
             overlay.update(importing=None, failed_run_id=None if project_id is not None else ev.run_id)
         if project_id is None:
             # ``last_run`` is the data version — "the database holds this run".
             # A failed import must not claim it; the SPA would refetch into
-            # stale or empty data and call it the new analysis.
+            # stale or empty data and call it the new analysis. A progressive
+            # run's overlay stays, ended: no session is still processing.
+            from bristlenose.server.progressive import mark_ended
+
+            mark_ended(app.state)
             return
         if project_id != 1:
             # The SPA reads project 1. A second row means the import forked the

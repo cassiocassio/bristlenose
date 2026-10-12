@@ -33,7 +33,7 @@ import os
 import re
 import time
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from bristlenose.server.grounding import (
     INVARIANTS,
@@ -922,6 +922,7 @@ def create_mcp_server(
     last_run: Callable[[], dict[str, Any] | None],
     on_tool_call: Callable[[], None] | None = None,
     readable: Callable[[], bool] | None = None,
+    coverage: Callable[[], dict[str, Any] | None] | None = None,
 ) -> Any:
     """Build the MCPServer with the four §9a tools registered.
 
@@ -939,6 +940,10 @@ def create_mcp_server(
     still a connected agent), but not calls the MCP framework's JSON-schema
     layer refuses first. The desktop host reads the resulting freshness off
     ``/api/health`` for its sidebar badge.
+
+    ``coverage``: while a first analysis's delivery is partial, how much the
+    data covers; attached to every result as ``coverage``, which an invariant
+    tells the model to state (docs/design-progressive-lenses.md §5.5).
     """
     from mcp.server.mcpserver import MCPServer
     from mcp.types import ToolAnnotations
@@ -989,6 +994,9 @@ def create_mcp_server(
             # be sanitised like any other server error, not reach the model.
             db = session_factory()
             result = fn(db)
+            note = coverage() if coverage is not None else None
+            if note is not None and isinstance(result, dict):
+                result = cast("_T", {**result, "coverage": note})
         except ToolInputError as exc:
             logger.info("mcp_tool_input_error | tool=%s | %s", tool, exc)
             raise
@@ -1166,7 +1174,12 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
         # finish, which is not a reason to answer questions about a study.
         return bool(getattr(app.state, "agent_readable", False))
 
-    server = create_mcp_server(session_factory, _last_run, _record_activity, _readable)
+    from bristlenose.server.grounding import delivery_coverage
+
+    server = create_mcp_server(
+        session_factory, _last_run, _record_activity, _readable,
+        coverage=lambda: delivery_coverage(app.state),
+    )
     http_app = server.streamable_http_app(
         streamable_http_path="/",
         json_response=True,

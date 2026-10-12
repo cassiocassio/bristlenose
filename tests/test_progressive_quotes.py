@@ -196,6 +196,52 @@ def test_sessions_of_one_first_analysis_are_not_new_to_each_other(first_analysis
     assert client.get("/api/projects/1/quotes").json()["new_since"] is None
 
 
+def test_a_serve_restarted_mid_run_does_not_make_the_run_new_to_itself(
+    first_analysis,  # noqa: F811
+) -> None:
+    """A second serve imports the rest of the run under the run's own stamp; the
+    whole import at the end makes the first analysis one generation, a session it
+    creates itself included."""
+    import asyncio
+    import time
+    from datetime import datetime, timezone
+
+    from bristlenose.events import (
+        KindEnum,
+        OutcomeEnum,
+        RunCompletedEvent,
+        append_event,
+        events_path,
+    )
+    from bristlenose.server.app import _make_run_completed_handler
+    from tests.test_progressive_lenses import _add_session
+
+    project, out, client = first_analysis
+    _record_readable(out, "s1")
+    _follow(client, project)
+    client.app.state.__dict__.pop("_test_follower")  # a new serve's follower
+    time.sleep(0.01)
+    _add_session(project, "s2", "p2", "21")
+    _record_readable(out, "s2")
+    _follow(client, project)
+    assert client.get("/api/projects/1/quotes").json()["new_since"] is None
+
+    time.sleep(0.01)
+    _add_session(project, "s3", "p3", "22")  # never delivered during the run
+    inter = _intermediate(out)
+    (inter / "screen_clusters.json").write_text("[]")
+    (inter / "theme_groups.json").write_text("[]")
+    now = datetime.now(timezone.utc).isoformat()
+    done = RunCompletedEvent(ts=now, run_id="RUN1", kind=KindEnum.RUN, started_at=now,
+                             ended_at=now, outcome=OutcomeEnum.COMPLETED)
+    append_event(events_path(out), done)
+    _follow(client, project)
+    handler = _make_run_completed_handler(client.app, client.app.state.db_factory, project)
+    asyncio.run(handler(done))
+    assert client.app.state.progress is None
+    assert client.get("/api/projects/1/quotes").json()["new_since"] is None
+
+
 def test_the_tapestry_draws_what_exists_during_the_run(first_analysis) -> None:  # noqa: F811
     """Phase 4 item 2: turns with the transcript, quotes with no section or theme
     once quoted, and no sections until the barrier — no schema change."""

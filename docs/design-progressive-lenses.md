@@ -1,13 +1,17 @@
 ---
-status: Phases 0–2 and 4 built 12 Oct 2026 (unreleased); Phase 3 deferred behind §7 item 17; Phase 5 blocked on the Project lens call
-last-trued: 2026-10-12
-trued-against: HEAD@main on 2026-10-12 (df8128c6, scene strips)
+status: Phases 0–2 and 4 built 12 Oct 2026 (unreleased), whole-feature review fixed 13 Oct (§5.7); Phase 3 deferred behind §7 item 17; Phase 5 blocked on the Project lens call
+last-trued: 2026-10-13
+trued-against: HEAD@main on 2026-10-13 (c6b9890d plus the review's fixes)
 owner: run progress across the pipeline, the report server, the SPA and the Mac app
 mockup: docs/mockups/progressive-lenses-replay.html
 ---
 
 ## Changelog
 
+- _2026-10-13_ — Whole-feature review (correctness, privacy, silent failures) and
+  its fixes: §5.7 is the as-built record. §5.1, §5.2, §5.4–§5.6 point at it. §7:
+  items 12 and 15 carry what was built; item 18 (a Mac Re-analyse is a first
+  analysis) and item 19 (the Mac on a withheld lens) are new.
 - _2026-10-12, late_ — Phase 2 built: as-built note replaces its build plan. Phase 3
   deferred behind §7 item 17, with the reason (the backend blocks the event loop, so
   chained quote calls would slow the run). §7: the duplicated item 6 renumbered (the second 6 and
@@ -690,12 +694,15 @@ subtitle is a native string and cannot animate). Blocked on §7's Project lens c
 `page_for` deliberately keeps showing the previous report during a re-run. Progressive
 import would replace it session by session. **v1: progressive applies only to a
 project with no report yet** (first analysis). A re-analyse behaves as today. An
-incremental run (new files) is a later question.
+incremental run (new files) is a later question. **But** the Mac's Re-analyse passes
+`--clean`, which stashes the report: to the pipeline and the server that run is a
+first analysis, so it is progressive (§7 item 18).
 
 ### 5.2 Stop
 
 Stopping mid-run keeps every readable session readable (principle 4). Resume
-continues from the manifest's per-session record.
+continues from the manifest's per-session record. As built, the cancelled status
+page covers them (§7 item 15); what an SPA still open shows is in §5.7.
 
 ### 5.3 Mixed projects (recordings and platform transcripts)
 
@@ -707,17 +714,81 @@ measured run never exercises this.
 ### 5.4 PII
 
 A transcript is never shown before its PII pass. A session is recorded readable in the
-manifest only after it.
+manifest only after it. The server's three locks on the same door are in §5.7.
 
 ### 5.5 The chat lens and MCP
 
 Both ground in `server/grounding.py`. Before `joined`, an answer must state coverage
 ("based on 6 of 10 sessions"), in `INVARIANTS`. Not in phase 1 (neither surface is
 usable before the run ends today); required before either is reachable mid-run.
+Built 13 Oct 2026, once Phase 2 made quotes reachable mid-run (§5.7).
 
 ### 5.6 The HTML export
 
-Disabled until the run ends.
+Disabled until the run ends. Refused (409) by the server while the overlay exists,
+including after a run that ended without a whole report (§5.7).
+
+### 5.7 As built after the whole-feature review (13 Oct 2026)
+
+Three reviews read Phases 0–4 end to end: the seams between phases and the run's
+lifecycle, the PII boundary, and swallowed errors. What they found, and what changed.
+Every fix has a test that goes red when the fix is reverted.
+
+**PII.**
+- A session already in the database when the run calls it readable is re-read from
+  the redacted copy (`import_readable_sessions`, `rebuild_session_paragraphs`), so its
+  edits are re-made on redacted text. Before, an unredacted import from an earlier
+  run (redaction off, failed) or from a serve started before stage 7 was kept, and
+  served as readable, until the run's end.
+- A serve started during a first analysis creates the project row and imports no
+  transcripts (`_import_on_startup`): the follower brings each session in when the
+  run says it is readable, and the watcher calls it once at start.
+- The follower reads the run's own folder: `transcripts-cooked/` when the manifest
+  records redaction, `transcripts-raw/` otherwise (`redacting_in_manifest`). A
+  redacted copy left by an earlier run is not read.
+- "The manifest is the previous run's" compared a `Z` timestamp (events) with a
+  `+00:00` one (manifest). Python 3.10 refuses the first and the check failed open.
+  Both forms parse now, and a timestamp that will not parse reads as the previous
+  run's.
+
+**A run that ends without a whole report** (stopped, failed, or its whole import
+failed): the overlay stays, marked `ended` (`progressive.mark_ended`). No row is
+processing, the lenses that wait for the whole report stay withheld, the Quotes lens
+stays By session, and export is refused with its own message. Before, every lens lit
+over a partial database: Quotes showed empty sections and no way to the quotes, and
+a partial report could be exported. A failed import left the overlay up with "still
+running" for good. A failed `--clean` run that puts the previous report back lifts
+the overlay and moves `data_version`, so the SPA refetches.
+
+**Smaller.**
+- The New flag: a first analysis's sessions are one generation after its whole
+  import (`importer.one_generation`). The run's stamp is its start time, so a serve
+  restarted mid-run stamps as the first did.
+- An import that raises is tried three times before the session waits for the whole
+  report (`_ATTEMPTS`): one "database is locked" while the researcher edits no longer
+  hides a session for an hour-long run.
+- The Mac's shoal: the redaction stage says `sessions_readable` on a first analysis
+  (the chain is off under redaction), so the shoal hands over when the server serves.
+- The web nav: a reader on a withheld lens goes to Sessions (`NavBar`, §7 item 12).
+  The status page hands over to `/report/`, the Project lens, which is withheld.
+- By session: a failed refetch's message clears when the next one answers.
+- MCP and the chat lens state coverage (§5.5): `grounding.delivery_coverage`, attached
+  to every MCP result as `coverage` and added beside the chat lens's invariants, with an
+  invariant telling the model to say it.
+- A test that could not fail: the Quotes control with sections and themes now
+  asserts the control is passed.
+
+**Known, not fixed.**
+- When the chain stops after a failed delivery, the next session shimmers as processing
+  until stage 6, while Whisper is further on.
+- If the chain counts a session the server refused, the Mac drops the shoal for a
+  status page that has nothing to say.
+- A progressive run's completion is not announced (`LastRunStore` reads its first id
+  as a seed).
+- `data_version` restarts at 0 when the serve restarts, so an SPA that last saw the
+  same number skips one refetch.
+- On a resumed run (the chain off, §7 item 16) the server still imports at stage 6,
+  so a browser sees sessions before the end while the Mac's shoal covers them.
 
 ## 6. Failure
 
@@ -765,7 +836,9 @@ Disabled until the run ends.
     still an iCloud placeholder at ingest (reading it would start a download); those
     rows read 0 until imported, and the scale can move once each.
 12. **A reader on a lens that becomes withheld** (project switch, Re-analyse): no
-    tab reads active, and the route stays. Phase 1 needs a rule.
+    tab reads active, and the route stays. Phase 1 needs a rule. **Built
+    provisionally in the browser** (13 Oct 2026): the web nav goes to Sessions
+    (`NavBar.tsx`). The Mac is item 19.
 13. **The disabled web nav tab's look.** It keeps the inactive tab's muted text
     (there is no disabled tier in the theme); only hover and pointer differ.
 14. **The motion spec's status-line shimmer.** §4.7.1 names the pipeline status line
@@ -775,7 +848,9 @@ Disabled until the run ends.
     readable; step 11 keeps the cancelled status page, which covers them. Phase 1
     built step 11. Which wins? **Built provisionally as the cancelled page**, so
     the rule is today's: a stopped run shows the cancelled status page, and the
-    sessions already imported are in the database for the next run to keep.
+    sessions already imported are in the database for the next run to keep. An SPA
+    still open after the stop keeps what was delivered, with nothing processing and
+    export refused (§5.7).
 16. **Progressive on resume.** A crash at session 6 of 10 turns the chain off for
     the rest (codes fold across the study). The registry already holds the first
     five sessions' codes, so a chain starting at the first uncached session would
@@ -787,3 +862,14 @@ Disabled until the run ends.
     LLM latency is added between Whisper files (transcription is a blocking call on
     the event loop). Running Whisper in a thread so the next decode overlaps would
     reopen Ctrl-C and the GIL; revisit if the added time is felt on real runs.
+18. **A Mac Re-analyse is a first analysis.** It passes `--clean`, which stashes the
+    output folder and its report, so the pipeline turns the chain on and the server
+    follows the run (§5.1 said a re-analyse behaves as today). Sessions arrive one by
+    one where the status page used to cover the run. Two costs: the Mac skips its
+    completion reload, so a transcript route remembered from the old numbering stays
+    live; and a run that fails restores the stash. The server lifts the overlay and
+    moves `data_version` then (§5.7), but nothing on the Mac reacts. Accept (a clean
+    re-analyse is a first analysis), or have the pipeline record "progressive" in
+    `ingest-facts.json` and gate both sides on it?
+19. **The Mac on a withheld lens.** The web nav goes to Sessions (item 12); the Mac's
+    lens rail does not. Activate `.sessions` on the same condition?

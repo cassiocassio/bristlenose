@@ -6,7 +6,8 @@
  * Settings, and Help are inlined.
  */
 
-import { NavLink } from "react-router-dom";
+import { useEffect } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLenses, type LensId } from "../contexts/ConditionStore";
 import { ExportDropdown } from "./ExportDropdown";
@@ -28,6 +29,15 @@ const TAB_ROUTES: readonly { to: string; key: string; lens: LensId; end?: boolea
   { to: "/report/discussion/", key: "nav.discussion", lens: "discussion" },
 ];
 
+/** The lens a report path belongs to; null for a path no lens owns (the specimen). */
+function lensForPath(pathname: string): LensId | null {
+  const path = pathname.endsWith("/") ? pathname : `${pathname}/`;
+  for (const { to, lens, end } of TAB_ROUTES) {
+    if (end ? path === to : path.startsWith(to)) return lens;
+  }
+  return null;
+}
+
 /** Dev mode — same signal AppLayout uses for the responsive playground. */
 const IS_DEV =
   (window as unknown as Record<string, unknown>).__BRISTLENOSE_DEV__ === true ||
@@ -41,6 +51,16 @@ function tabClassName({ isActive }: { isActive: boolean }): string {
 export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: NavBarProps) {
   const { t } = useTranslation();
   const lenses = useLenses();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  // The status page hands over to the SPA where the reader was, usually
+  // `/report/` — the Project lens, which a first analysis withholds. Don't draw
+  // a lens under a nav that says it is not there yet: go to Sessions.
+  const here = lensForPath(pathname);
+  const withheld = here !== null && !lenses[here] && lenses.sessions;
+  useEffect(() => {
+    if (withheld) navigate("/report/sessions/", { replace: true });
+  }, [withheld, navigate]);
   return (
     <nav className="bn-global-nav">
       {TAB_ROUTES.map(({ to, key, lens, end }) =>

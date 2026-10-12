@@ -516,6 +516,32 @@ def test_a_redacted_run_records_nothing_readable_before_redaction(tmp_path: Path
     assert not [f for f in progress if f.get("sessions_readable")]
 
 
+def test_a_redacted_first_analysis_says_its_sessions_are_readable_once_redacted(
+    tmp_path: Path,
+) -> None:
+    """The chain is off under redaction; redaction is where the sessions become
+    readable, and the Mac's shoal hands over on this count."""
+    from bristlenose.models import PiiCleanTranscript
+    from bristlenose.stages.s05_transcribe import SessionTranscription
+
+    def _iter(_needs, _settings, **_kw):
+        yield SessionTranscription("s1", _two_speakers())
+        yield SessionTranscription("s2", _two_speakers())
+
+    async def _roles(_segments, _client, **_kw):
+        return []
+
+    def _remove_pii(transcripts, settings, **_kw):
+        return [PiiCleanTranscript(**t.model_dump()) for t in transcripts], []
+
+    _out, progress = _run(
+        tmp_path, iter_fn=_iter, roles=_roles, pii=True,
+        extra=(("bristlenose.stages.s07_pii_removal.remove_pii", {"new": _remove_pii}),),
+    )
+    # Nothing before redaction is pinned by the test above; this one, the count after.
+    assert [f["sessions_readable"] for f in progress if f.get("sessions_readable")][-1:] == [2]
+
+
 def test_parsed_transcripts_are_identified_together_and_delivered_in_order(
     tmp_path: Path,
 ) -> None:
@@ -614,9 +640,32 @@ class TestFollowerEdges:
         _follow(client, project)
         rows = {r["session_id"] for r in client.get("/api/projects/1/sessions").json()["sessions"]}
         assert {"s1", "s3"} <= rows and "s2" not in rows
-        asked.clear()
+        for _ in range(4):
+            _follow(client, project)
+        assert asked.count("s2") == 3, "tried three times, not on every heartbeat for good"
+
+    def test_an_import_that_fails_once_is_tried_again(
+        self, first_analysis, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """One "database is locked" while the researcher edits must not hide a
+        session for the rest of the run."""
+        import bristlenose.server.importer as importer
+
+        project, out, client = first_analysis
+        real = importer.import_readable_sessions
+        calls = {"n": 0}
+
+        def _locked_once(db, project_dir, sids, **kw):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise RuntimeError("database is locked")
+            return real(db, project_dir, sids, **kw)
+
+        monkeypatch.setattr(importer, "import_readable_sessions", _locked_once)
+        _record_readable(out, "s1")
         _follow(client, project)
-        assert "s2" not in asked, "said once, not retried on every heartbeat"
+        _follow(client, project)
+        assert _segments(client, "s1"), "imported on the second try"
 
     def test_the_overlay_lasts_until_the_whole_report_is_imported(self, first_analysis) -> None:
         from bristlenose.events import (
@@ -765,3 +814,204 @@ def test_a_platform_transcripts_duration_is_known_at_ingest(tmp_path: Path) -> N
     (fact,) = ingest_facts([session])
     assert fact["duration_seconds"] == pytest.approx(302.5)
     assert fact["transcribes"] is False
+
+
+# ---------------------------------------------------------------------------
+# Redaction: nothing unredacted is readable during the run
+# ---------------------------------------------------------------------------
+
+
+def _record_redacted(output_dir: Path, *sids: str) -> None:
+    from bristlenose.manifest import STAGE_PII_REMOVAL
+
+    m = load_manifest(output_dir) or create_manifest("p", "0")
+    for sid in sids:
+        mark_session_complete(m, STAGE_PII_REMOVAL, sid)
+    write_manifest(m, output_dir)
+
+
+class TestRedactionDuringTheRun:
+    def test_a_session_imported_unredacted_is_reread_from_the_redacted_copy(
+        self, tmp_path: Path,
+    ) -> None:
+        """A first analysis with redaction off failed; the serve imported its raw
+        transcript. The re-run redacts, and calls s1 readable once stage 7 has it:
+        the rows the lens shows must be the redacted ones, not the raw ones."""
+        project = _project(tmp_path, _TWO, sessions=(("s1", "p1", "20"),))
+        out = project / "bristlenose-output"
+        for name in ("screen_clusters.json", "theme_groups.json"):
+            (out / ".bristlenose" / "intermediate" / name).unlink()
+        client = _bundled_client(project, tmp_path)  # no run yet: startup imports raw s1
+        assert ("p1", "Thanks for having me, it is good to be here.") in _segments(client, "s1")
+
+        _start_run(out)
+        cooked = out / "transcripts-cooked"
+        cooked.mkdir()
+        raw = (out / "transcripts-raw" / "s1.txt").read_text()
+        (cooked / "s1.txt").write_text(raw.replace("it is good to be here", "I am [NAME]"))
+        _record_redacted(out, "s1")
+        _follow(client, project)
+
+        texts = [t for _, t in _segments(client, "s1")]
+        assert "Thanks for having me, I am [NAME]." in texts
+        assert not any("good to be here" in t for t in texts), "raw text still served"
+        assert client.get("/api/projects/1/condition").json()["data_version"] == 1
+
+    def test_a_serve_started_during_a_first_analysis_imports_nothing_at_startup(
+        self, tmp_path: Path,
+    ) -> None:
+        """Stage 6 has written s1's unredacted transcript and stage 7 has not run:
+        a serve starting now must not read it in."""
+        project = _project(tmp_path, _TWO, sessions=(("s1", "p1", "20"),))
+        out = project / "bristlenose-output"
+        for name in ("screen_clusters.json", "theme_groups.json"):
+            (out / ".bristlenose" / "intermediate" / name).unlink()
+        _start_run(out)
+        client = _bundled_client(project, tmp_path)
+        from bristlenose.server.models import TranscriptSegment
+
+        db = client.app.state.db_factory()
+        try:
+            assert db.query(TranscriptSegment).count() == 0
+        finally:
+            db.close()
+        # …but the project row is there: every route reads it, the condition first.
+        assert client.get("/api/projects/1/condition").status_code == 200
+
+
+    def test_a_redacted_copy_left_by_an_earlier_run_is_not_this_runs(
+        self, first_analysis,
+    ) -> None:
+        """A redacted first analysis failed; the re-run has redaction off. Its
+        sessions are its raw transcripts, not the old redacted copies — and a
+        session the old copies do not hold is not refused as missing."""
+        project, out, client = first_analysis
+        cooked = out / "transcripts-cooked"
+        cooked.mkdir()
+        raw = (out / "transcripts-raw" / "s1.txt").read_text()
+        (cooked / "s1.txt").write_text(raw.replace("it is good to be here", "I am [NAME]"))
+        _add_session(project, "s2", "p2", "21")
+        _record_readable(out, "s1", "s2")
+        _follow(client, project)
+        assert ("p1", "Thanks for having me, it is good to be here.") in _segments(client, "s1")
+        assert _segments(client, "s2"), "s2 imported from this run's folder"
+
+
+class TestPredates:
+    def test_an_event_timestamp_in_z_form_compares(self) -> None:
+        from bristlenose.server.progressive import _predates
+
+        assert _predates("2020-01-01T00:00:00+00:00", "2026-10-12T21:00:00Z") is True
+        assert _predates("2026-10-12T21:00:05+00:00", "2026-10-12T21:00:00Z") is False
+
+    def test_a_timestamp_that_will_not_parse_reads_as_the_previous_runs(self) -> None:
+        from bristlenose.server.progressive import _predates
+
+        assert _predates("not a time", "2026-10-12T21:00:00Z") is True
+
+
+class TestARunThatEndsWithoutAReport:
+    def _cancel(self, out: Path) -> None:
+        from bristlenose.events import (
+            Cause,
+            CauseCategoryEnum,
+            KindEnum,
+            RunCancelledEvent,
+            append_event,
+            events_path,
+        )
+
+        now = datetime.now(timezone.utc).isoformat()
+        append_event(events_path(out), RunCancelledEvent(
+            ts=now, run_id="RUN1", kind=KindEnum.RUN, started_at=now, ended_at=now,
+            cause=Cause(category=CauseCategoryEnum.USER_SIGNAL),
+        ))
+
+    def test_a_stopped_first_analysis_keeps_what_it_delivered_as_it_was(
+        self, first_analysis,
+    ) -> None:
+        """Every lens lighting over a partial database would show empty sections and
+        let a partial report be exported; the overlay stays, with nothing processing."""
+        from bristlenose.readable_chain import write_ingest_facts
+
+        project, out, client = first_analysis
+        write_ingest_facts(out, _audio_sessions(project, 2))
+        _record_readable(out, "s1")
+        _follow(client, project)
+        before = client.get("/api/projects/1/condition").json()["data_version"]
+        self._cancel(out)
+        _follow(client, project)
+
+        body = client.get("/api/projects/1/condition").json()
+        assert body["lenses"]["signals"] is False and body["lenses"]["sessions"] is True
+        assert body["data_version"] == before + 1, "the grid refetches"
+        rows = client.get("/api/projects/1/sessions").json()["sessions"]
+        assert [(r["session_id"], r["state"]) for r in rows] == [
+            ("s1", "readable"), ("s2", "waiting"),
+        ], "nothing is processing once the run has stopped"
+        refused = client.get("/api/projects/1/export")
+        assert refused.status_code == 409
+        assert "did not finish" in refused.json()["detail"]
+
+        _follow(client, project)  # a later change to the log moves nothing
+        assert client.get("/api/projects/1/condition").json()["data_version"] == before + 1
+
+    def test_a_whole_import_that_fails_ends_the_overlay_without_lifting_it(
+        self, first_analysis,
+    ) -> None:
+        from bristlenose.events import (
+            KindEnum,
+            OutcomeEnum,
+            RunCompletedEvent,
+            append_event,
+            events_path,
+        )
+        from bristlenose.server import importer
+        from bristlenose.server.app import _make_run_completed_handler
+
+        project, out, client = first_analysis
+        _record_readable(out, "s1")
+        _follow(client, project)
+        now = datetime.now(timezone.utc).isoformat()
+        done = RunCompletedEvent(ts=now, run_id="RUN1", kind=KindEnum.RUN, started_at=now,
+                                 ended_at=now, outcome=OutcomeEnum.COMPLETED)
+        append_event(events_path(out), done)
+        _follow(client, project)
+
+        def _boom(*_a, **_kw):
+            raise RuntimeError("import failed")
+
+        with patch.object(importer, "import_project", _boom):  # bound when the handler is made
+            handler = _make_run_completed_handler(
+                client.app, client.app.state.db_factory, project,
+            )
+            asyncio.run(handler(done))
+        progress = client.app.state.progress
+        assert progress is not None and progress.ended
+        assert "did not finish" in client.get("/api/projects/1/export").json()["detail"]
+
+    def test_a_report_put_back_under_the_partial_delivery_is_refetched(
+        self, first_analysis,
+    ) -> None:
+        """A failed ``--clean`` run restores the stash: the previous report is the
+        project's again, and the SPA, still holding the partial delivery, refetches."""
+        from bristlenose.events import (
+            KindEnum,
+            OutcomeEnum,
+            RunCompletedEvent,
+            append_event,
+            events_path,
+        )
+
+        project, out, client = first_analysis
+        _record_readable(out, "s1")
+        _follow(client, project)
+        before = client.app.state.data_version
+        now = datetime.now(timezone.utc).isoformat()
+        append_event(events_path(out), RunCompletedEvent(
+            ts=now, run_id="OLD", kind=KindEnum.RUN, started_at=now, ended_at=now,
+            outcome=OutcomeEnum.COMPLETED,
+        ))
+        _follow(client, project)
+        assert client.app.state.progress is None
+        assert client.app.state.data_version == before + 1

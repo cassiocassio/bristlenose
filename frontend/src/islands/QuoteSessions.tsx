@@ -89,6 +89,9 @@ export function QuoteSessions({ projectId, refreshKey = 0, headingAction }: Quot
   const fetchQuotes = useCallback((replace = false) => {
     apiGet<QuotesListResponse>("/quotes")
       .then((json) => {
+        // One failed refetch during a run (there is one per import) must not
+        // stay on screen over the good data that follows.
+        setError(null);
         setData(json);
         initFromQuotes(
           [

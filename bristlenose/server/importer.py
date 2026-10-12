@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import func
 from sqlalchemy import text as sa_text  # `text` clashes with a loop var below
 from sqlalchemy.orm import Session
 
@@ -460,7 +461,7 @@ def import_project(db: Session, project_dir: Path) -> Project:
 
 def import_readable_sessions(
     db: Session, project_dir: Path, session_ids: set[str],
-    *, run_stamp: datetime | None = None,
+    *, run_stamp: datetime | None = None, redacted: bool | None = None,
 ) -> tuple[Project, set[str]]:
     """Import the sessions a run in progress has made readable. Never deletes.
 
@@ -473,13 +474,28 @@ def import_readable_sessions(
     split — is untouched while session 2 arrives. The whole-project import
     still runs on ``run_completed`` and settles everything.
 
-    Returns the project row and the sessions this call added.
+    One exception, for redaction: when the redacted copy is what is on disk, a
+    session already in the database has its paragraphs re-read from it (and its
+    edits re-made). Its rows may have come from the unredacted transcript — an
+    earlier run with redaction off, or a serve started before stage 7 — and the
+    run is about to call it readable.
+
+    ``redacted`` is the run's own answer, from its manifest: True reads
+    ``transcripts-cooked/``, False ``transcripts-raw/`` — a redacted copy left
+    by an earlier run is not this run's, and its sessions would be the old text
+    while the new ones were missing. None falls back to the whole import's
+    choice, redacted copy first.
+
+    Returns the project row and the sessions this call added or re-read.
     """
     project, project_dir, output_dir = _find_or_create_project(db, project_dir)
     # The folder the whole-project import reads, redacted copy first. The
     # pipeline never records a session readable before it is redacted; this is
     # the second lock on the same door.
-    transcripts_dir = _find_transcripts_dir(project_dir, output_dir)
+    if redacted is None:
+        transcripts_dir = _find_transcripts_dir(project_dir, output_dir)
+    else:
+        transcripts_dir = output_dir / ("transcripts-cooked" if redacted else "transcripts-raw")
     meta_all = _parse_transcript_headers(transcripts_dir)
     _resolve_redacted_sources(meta_all, output_dir / "transcripts-raw")
     present = {
@@ -489,6 +505,21 @@ def import_readable_sessions(
     # the "New" flag (`_new_session_ids`), and sessions of one first analysis
     # imported a minute apart are not new relative to each other.
     now = run_stamp or datetime.now(timezone.utc)
+    reread: set[str] = set()
+    if transcripts_dir.name == "transcripts-cooked":
+        for sess in db.query(SessionModel).filter(
+            SessionModel.project_id == project.id,
+            SessionModel.session_id.in_(sorted(session_ids & present)),
+        ):
+            if (transcripts_dir / f"{sess.session_id}.txt").is_file():
+                rebuild_session_paragraphs(db, project, sess)
+                reread.add(sess.session_id)
+        if reread:
+            db.commit()
+            logger.info(
+                "Re-read %d session(s) from the redacted transcripts during the run: %s",
+                len(reread), ", ".join(sorted(reread)),
+            )
     session_map: dict[str, SessionModel] = {}
     for sid in sorted(session_ids - present):
         meta = meta_all.get(sid)
@@ -511,7 +542,7 @@ def import_readable_sessions(
         session_map[sid] = sess
     if not session_map:
         db.commit()
-        return project, set()
+        return project, reread
     db.flush()
     meta = {sid: meta_all[sid] for sid in session_map}
     _import_source_files(db, session_map, meta, project_dir)
@@ -529,7 +560,26 @@ def import_readable_sessions(
         "Imported %d readable session(s) into project id=%d during the run: %s",
         len(session_map), project.id, ", ".join(sorted(session_map)),
     )
-    return project, set(session_map)
+    return project, set(session_map) | reread
+
+
+def one_generation(db: Session, project_id: int) -> None:
+    """Make every session of a project one generation: none is New.
+
+    After a first analysis's whole import. Its sessions arrived during the run
+    under the run's stamp (``import_readable_sessions``), but a run resumed
+    mid-way stamps again, and a session that would not import during the run
+    is created by the whole import under its own ``now``.
+    """
+    stamp = db.query(func.min(SessionModel.first_imported_at)).filter(
+        SessionModel.project_id == project_id,
+    ).scalar()
+    if stamp is None:
+        return
+    db.query(SessionModel).filter_by(project_id=project_id).update(
+        {"first_imported_at": stamp}, synchronize_session=False,
+    )
+    db.commit()
 
 
 def import_session_quotes(

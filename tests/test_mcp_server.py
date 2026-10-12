@@ -1344,3 +1344,43 @@ class TestModeratorsAreNamedPerSession:
         assert "Martin" not in blob and "Jo" not in blob
         rows = {r["session_id"]: r for r in overview["sessions"]["items"]}
         assert rows["s2"]["speakers"] == [{"code": "m2", "role": "researcher"}]
+
+
+def test_every_result_carries_coverage_while_the_delivery_is_partial(db) -> None:
+    """§5.5 of docs/design-progressive-lenses.md: mid-run, the agent is told how much
+    the data covers, on every tool, and an invariant tells it to say so."""
+    import anyio
+
+    from bristlenose.server.mcp_server import create_mcp_server
+
+    note = {"analysis": "running", "sessions_readable": 1, "sessions_total": 3,
+            "sessions_with_quotes": 1}
+    for coverage, expected in ((lambda: None, None), (lambda: note, note)):
+        server = create_mcp_server(
+            lambda: db, lambda: {"outcome": "in_progress"}, None, None, coverage=coverage,
+        )
+
+        async def _call(server=server):
+            return await server.call_tool("get_project_overview", {"project_id": 1})
+
+        result = anyio.run(_call)
+        structured = result[1] if isinstance(result, tuple) else result.structured_content
+        assert structured.get("coverage") == expected
+    assert any("coverage note" in s for s in INVARIANTS)
+
+
+def test_delivery_coverage_counts_from_the_overlay_and_the_ingest_facts(tmp_path) -> None:
+    from types import SimpleNamespace
+
+    from bristlenose.server.grounding import delivery_coverage
+    from bristlenose.server.lens_readiness import Progress
+
+    assert delivery_coverage(SimpleNamespace(progress=None)) is None
+    state = SimpleNamespace(
+        progress=Progress(readable=frozenset({"s1", "s2"}), quoted=frozenset({"s1"}), ended=True),
+        project_dir=None,
+    )
+    assert delivery_coverage(state) == {
+        "analysis": "stopped", "sessions_readable": 2, "sessions_total": 2,
+        "sessions_with_quotes": 1,
+    }

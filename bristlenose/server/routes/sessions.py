@@ -309,7 +309,7 @@ def _with_unread_sessions(
     # A row the database holds is readable: progress only moves forward
     # (§3 principle 4), even when a resumed run's fresh manifest has not yet
     # recorded what an earlier attempt delivered.
-    states = session_states(facts, frozenset(have))
+    states = session_states(facts, frozenset(have), running=not progress.ended)
     out: list[SessionResponse] = []
     for f in facts:
         sid = str(f.get("session_id", ""))

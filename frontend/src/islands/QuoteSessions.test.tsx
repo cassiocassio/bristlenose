@@ -101,6 +101,15 @@ describe("QuoteSessions", () => {
     expect(headings).toEqual(["Session 2", "Session 10"]);
     expect(container.querySelector(".bn-group-header .edit-pencil")).toBeNull();
   });
+
+  it("clears a failed refetch once the next one answers", async () => {
+    vi.mocked(apiGet).mockRejectedValueOnce(new Error("busy")).mockResolvedValue(DURING_THE_RUN);
+    const { rerender, container } = render(<QuoteSessions projectId="1" refreshKey={0} />);
+    await waitFor(() => expect(container.querySelector(".bn-empty-state")).not.toBeNull());
+    rerender(<QuoteSessions projectId="1" refreshKey={1} />);
+    await waitFor(() => expect(screen.getByText("s10 at 30")).toBeInTheDocument());
+    expect(container.querySelector(".bn-empty-state")).toBeNull();
+  });
 });
 
 describe("the grouping control", () => {

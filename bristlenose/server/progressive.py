@@ -20,6 +20,7 @@ every heartbeat of the events log.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -33,15 +34,51 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+#: An import that raised is tried this many times before the session waits for
+#: the whole report: one "database is locked" while the researcher edits must
+#: not hide a session for the rest of an hour-long run.
+_ATTEMPTS = 3
+
+
+def _parse_ts(value: str) -> datetime:
+    # Events write ``Z`` (``events._now_iso``), the manifest ``+00:00``; Python
+    # 3.10's ``fromisoformat`` refuses the former.
+    return datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)
+
 
 def _predates(created_at: str, run_started_at: str | None) -> bool:
-    """True when a manifest was created before the run started. Unparseable → False."""
+    """True when a manifest was created before the run started.
+
+    A timestamp that will not parse reads as the previous run's: the manifest's
+    sessions then wait for the whole import rather than risk being another run's
+    unredacted ones.
+    """
     if not run_started_at:
         return False
     try:
-        return datetime.fromisoformat(created_at) < datetime.fromisoformat(run_started_at)
+        return _parse_ts(created_at) < _parse_ts(run_started_at)
     except (TypeError, ValueError):
+        return True
+
+
+def _gave_up(failures: dict[str, int], sid: str) -> bool:
+    """Count one more failed import of ``sid``; True once it has had its attempts."""
+    failures[sid] = failures.get(sid, 0) + 1
+    if failures[sid] < _ATTEMPTS:
+        logger.info("progressive | %s did not import (attempt %d); trying again",
+                    sid, failures[sid])
         return False
+    return True
+
+
+def mark_ended(state: Any) -> None:
+    """The progressive run ended without a whole report: keep its overlay, ended."""
+    progress = getattr(state, "progress", None)
+    if progress is None or progress.ended:
+        return
+    state.progress = dataclasses.replace(progress, ended=True)
+    # The grid's processing row goes: the SPA refetches.
+    state.data_version = getattr(state, "data_version", 0) + 1
 
 
 def is_progressive(condition: Condition) -> bool:
@@ -75,9 +112,14 @@ class ProgressiveImport:
         self._quotes_done: set[str] = set()
         self._quoted: set[str] = set()
         self._quotes_refused: set[str] = set()
+        #: Imports that raised, per session: retried up to ``_ATTEMPTS``.
+        self._failures: dict[str, int] = {}
+        self._quote_failures: dict[str, int] = {}
         self._manifest_error: str | None = None
         #: The run's one import stamp (see ``import_readable_sessions``).
         self._run_stamp: datetime | None = None
+        #: Whether the run redacts, from its manifest: which folder is this run's.
+        self._redacted = False
 
     async def follow(self, condition: Condition) -> None:
         from bristlenose.run_condition import RunStateEnum
@@ -86,15 +128,25 @@ class ProgressiveImport:
         state = self._app.state
         if not is_progressive(condition):
             latest = condition.latest
-            if (
-                latest is not None and latest.run_id == self._run_id
-                and latest.state == RunStateEnum.COMPLETED
-            ):
-                # The run this follower imported for has just completed. The
-                # whole-project import is about to run; until it lands the
-                # lenses keep saying what is true now, and the completion
-                # handler clears the overlay when it has published.
-                return
+            if latest is not None and latest.run_id == self._run_id:
+                if latest.state == RunStateEnum.COMPLETED:
+                    # The run this follower imported for has just completed. The
+                    # whole-project import is about to run; until it lands the
+                    # lenses keep saying what is true now, and the completion
+                    # handler clears the overlay when it has published.
+                    return
+                if condition.report is None and state.progress is not None:
+                    # Stopped or failed with no report: the database holds what
+                    # the run delivered and nothing more. Lighting every lens
+                    # would show empty sections and allow an export of a partial
+                    # report, so the overlay stays, with nothing processing.
+                    mark_ended(state)
+                    return
+            if state.progress is not None:
+                # The overlay lifts without a whole import of ours: a failed
+                # ``--clean`` run's stash put the previous report back. What the
+                # SPA holds is the partial delivery; it refetches.
+                state.data_version = getattr(state, "data_version", 0) + 1
             state.progress = None
             return
         assert condition.latest is not None
@@ -102,12 +154,18 @@ class ProgressiveImport:
             self._run_id = condition.latest.run_id
             self._imported, self._refused = set(), set()
             self._quotes_done, self._quoted, self._quotes_refused = set(), set(), set()
-            self._run_stamp = datetime.now(timezone.utc)
+            self._failures, self._quote_failures = {}, {}
+            # The run's start, not this follower's: a serve restarted mid-run
+            # stamps its sessions as the first serve did.
+            try:
+                self._run_stamp = _parse_ts(condition.latest.started_at or "")
+            except ValueError:
+                self._run_stamp = datetime.now(timezone.utc)
             state.sessions_imported = False
         sets = self._manifest_sets(condition.latest.started_at)
         if sets is None:
             return  # unreadable manifest: keep saying what we said
-        readable, quoted = sets
+        readable, quoted, self._redacted = sets
         moved = False
         new = set(readable) - self._imported - self._refused
         if new:
@@ -133,8 +191,8 @@ class ProgressiveImport:
 
     def _manifest_sets(
         self, run_started_at: str | None,
-    ) -> tuple[frozenset[str], frozenset[str]] | None:
-        """``(readable, quoted)`` from the manifest, or None when it will not read.
+    ) -> tuple[frozenset[str], frozenset[str], bool] | None:
+        """``(readable, quoted, redacting)`` from the manifest, or None when it will not read.
 
         A manifest created before this run started is the previous run's: the
         pipeline builds the new one in memory and first writes it after ingest, so a
@@ -144,7 +202,11 @@ class ProgressiveImport:
         """
         from bristlenose.manifest import load_manifest
         from bristlenose.output_paths import project_output_dir
-        from bristlenose.server.lens_readiness import quoted_in_manifest, readable_in_manifest
+        from bristlenose.server.lens_readiness import (
+            quoted_in_manifest,
+            readable_in_manifest,
+            redacting_in_manifest,
+        )
 
         try:
             manifest = load_manifest(project_output_dir(self._project_dir))
@@ -157,8 +219,11 @@ class ProgressiveImport:
             return None
         self._manifest_error = None
         if manifest is None or _predates(manifest.created_at, run_started_at):
-            return frozenset(), frozenset()
-        return readable_in_manifest(manifest), quoted_in_manifest(manifest)
+            return frozenset(), frozenset(), False
+        return (
+            readable_in_manifest(manifest), quoted_in_manifest(manifest),
+            redacting_in_manifest(manifest),
+        )
 
     def _import_quotes(self, sids: set[str]) -> dict[str, int]:
         """Per session imported, how many quotes it holds. A session that will
@@ -179,12 +244,13 @@ class ProgressiveImport:
                     continue
                 counts[sid] = got.get(sid, 0)
             except Exception:
-                logger.warning(
-                    "progressive | %s's quotes did not import during the run; they "
-                    "arrive with the whole report", sid, exc_info=True,
-                )
                 db.rollback()
-                self._quotes_refused.add(sid)
+                if _gave_up(self._quote_failures, sid):
+                    logger.warning(
+                        "progressive | %s's quotes did not import during the run; they "
+                        "arrive with the whole report", sid, exc_info=True,
+                    )
+                    self._quotes_refused.add(sid)
             finally:
                 db.close()
         return counts
@@ -196,7 +262,10 @@ class ProgressiveImport:
         for sid in sorted(sids):
             outcome = self._import_one(sid)
             if outcome is None:
-                self._refused.add(sid)
+                # An import that raised is tried again; anything else is final.
+                failures = self._failures.get(sid, 0)
+                if failures == 0 or failures >= _ATTEMPTS:
+                    self._refused.add(sid)
                 continue
             if outcome:
                 added.add(sid)
@@ -212,6 +281,7 @@ class ProgressiveImport:
         try:
             project, added = import_readable_sessions(
                 db, self._project_dir, {sid}, run_stamp=self._run_stamp,
+                redacted=self._redacted,
             )
             if project.id != 1:
                 # The SPA reads row 1: a session imported elsewhere is invisible,
@@ -234,11 +304,12 @@ class ProgressiveImport:
                 return None
             return False
         except Exception:
-            logger.warning(
-                "progressive | %s did not import during the run; it arrives with the "
-                "whole report", sid, exc_info=True,
-            )
             db.rollback()
+            if _gave_up(self._failures, sid):
+                logger.warning(
+                    "progressive | %s did not import during the run; it arrives with the "
+                    "whole report", sid, exc_info=True,
+                )
             return None
         finally:
             db.close()

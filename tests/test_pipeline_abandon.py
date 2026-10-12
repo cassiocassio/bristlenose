@@ -43,6 +43,7 @@ from bristlenose.run_lifecycle import (
     _restore_signal_handlers,
     run_lifecycle,
 )
+from tests.conftest import iter_transcribe_from
 
 # ---------------------------------------------------------------------------
 # _dominant_cause
@@ -329,8 +330,8 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
 
     with (
         patch(
-            "bristlenose.stages.s05_transcribe.transcribe_sessions",
-            new=_fake_transcribe_sessions,
+            "bristlenose.stages.s05_transcribe.iter_transcribe_sessions",
+            new=iter_transcribe_from(_fake_transcribe_sessions),
         ),
         patch(
             "bristlenose.stages.s01_ingest.ingest",
@@ -733,8 +734,8 @@ def _run_to_pii_failure(tmp_path: Path, pii_exc: Exception):
             new=_async_passthrough,
         ),
         patch(
-            "bristlenose.stages.s05_transcribe.transcribe_sessions",
-            new=fake_transcribe,
+            "bristlenose.stages.s05_transcribe.iter_transcribe_sessions",
+            new=iter_transcribe_from(fake_transcribe),
         ),
         patch(
             "bristlenose.stages.s06_merge_transcript.merge_transcripts",
@@ -855,7 +856,7 @@ def test_pii_stage_reports_progress_like_its_siblings(tmp_path: Path) -> None:
         patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
         patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
               new=_async_passthrough),
-        patch("bristlenose.stages.s05_transcribe.transcribe_sessions", new=fake_transcribe),
+        patch("bristlenose.stages.s05_transcribe.iter_transcribe_sessions", new=iter_transcribe_from(fake_transcribe)),
         patch("bristlenose.stages.s06_merge_transcript.merge_transcripts",
               return_value=transcripts),
         patch("bristlenose.stages.s07_pii_removal.remove_pii", new=_redact_ok),
@@ -923,7 +924,7 @@ def test_the_llm_stages_report_how_many_sessions_they_have_finished(
         patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
         patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
               new=_async_passthrough),
-        patch("bristlenose.stages.s05_transcribe.transcribe_sessions", new=fake_transcribe),
+        patch("bristlenose.stages.s05_transcribe.iter_transcribe_sessions", new=iter_transcribe_from(fake_transcribe)),
         patch("bristlenose.stages.s05b_identify_speakers.identify_speaker_roles_llm",
               new=_fake_speakers),
         patch("bristlenose.stages.s06_merge_transcript.merge_transcripts",
@@ -984,7 +985,7 @@ def test_a_run_without_redaction_clears_the_previous_run_s_cooked_copy(
         patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
         patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
               new=_async_passthrough),
-        patch("bristlenose.stages.s05_transcribe.transcribe_sessions", new=fake_transcribe),
+        patch("bristlenose.stages.s05_transcribe.iter_transcribe_sessions", new=iter_transcribe_from(fake_transcribe)),
         patch("bristlenose.stages.s06_merge_transcript.merge_transcripts",
               return_value=transcripts),
         patch("bristlenose.stages.s08_topic_segmentation.segment_topics",
@@ -1037,7 +1038,7 @@ def test_pii_stage_reports_how_far_through_the_transcripts_it_is(
         patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
         patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
               new=_async_passthrough),
-        patch("bristlenose.stages.s05_transcribe.transcribe_sessions", new=fake_transcribe),
+        patch("bristlenose.stages.s05_transcribe.iter_transcribe_sessions", new=iter_transcribe_from(fake_transcribe)),
         patch("bristlenose.stages.s06_merge_transcript.merge_transcripts",
               return_value=transcripts),
         patch("bristlenose.stages.s07_pii_removal.remove_pii", new=_redact_reporting),

@@ -23,6 +23,7 @@ import {
   extractVideoClips,
 } from "../utils/exportActions";
 import { isExportMode } from "../utils/exportData";
+import { isReportPartial, useLenses } from "../contexts/ConditionStore";
 import { Icon } from "./Icon";
 import { toggleSubtitlePref, useSubtitlePrefs } from "../utils/subtitlePrefs";
 
@@ -65,6 +66,8 @@ interface ExportDropdownProps {
 
 export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownProps) {
   const { t } = useTranslation();
+  // A first analysis still delivering sessions: the report is not whole yet.
+  const reportPartial = isReportPartial(useLenses());
   const location = useLocation();
   const projectId = useProjectId();
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -266,8 +269,9 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
           <li
             role="menuitem"
             tabIndex={-1}
-            className="export-dropdown-item"
-            onClick={handleExportReport}
+            className={`export-dropdown-item${reportPartial ? " is-disabled" : ""}`}
+            aria-disabled={reportPartial || undefined}
+            onClick={reportPartial ? undefined : handleExportReport}
             onKeyDown={suppressKeyScroll}
           >
             {t("export.exportReport")}

@@ -16,6 +16,11 @@ Keys are the lens ids the SPA routes and the Mac's ``Tab`` raw values share.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bristlenose.manifest import PipelineManifest
 
 LENSES = ("project", "sessions", "quotes", "codebook", "signals", "discussion")
 
@@ -48,3 +53,62 @@ def lens_readiness(progress: Progress | None) -> dict[str, bool]:
         "project": False,
         "discussion": progress.discussion_done,
     }
+
+
+def readable_in_manifest(manifest: PipelineManifest | None) -> frozenset[str]:
+    """Sessions the run has made readable: their merged transcript is written.
+
+    The pipeline records a session merged only after its transcript files are
+    whole (``readable_chain.py``, and stage 6 for the rest), so the server can
+    import exactly these.
+    """
+    from bristlenose.manifest import STAGE_MERGE_TRANSCRIPT, get_completed_session_ids
+
+    return frozenset(get_completed_session_ids(manifest, STAGE_MERGE_TRANSCRIPT))
+
+
+#: A row in the Sessions grid during a run (§2): open it, it is being worked
+#: on now, or it exists and is waiting its turn.
+READABLE, PROCESSING, WAITING = "readable", "processing", "waiting"
+
+
+def session_states(
+    facts: list[dict[str, object]], readable: frozenset[str],
+) -> dict[str, str]:
+    """Each ingested session's state, in session order.
+
+    One session is processing: the first not yet readable after the last one
+    that is, provided Whisper takes it (``transcribes``). A platform transcript
+    is read the moment it is parsed, so it never shimmers (§2). A session that
+    failed to transcribe stays waiting; its outcome is the run's to state.
+    """
+    states: dict[str, str] = {}
+    last_readable = max(
+        (i for i, f in enumerate(facts) if f.get("session_id") in readable), default=-1,
+    )
+    processing_taken = False
+    for i, f in enumerate(facts):
+        sid = str(f.get("session_id", ""))
+        if sid in readable:
+            states[sid] = READABLE
+        elif not processing_taken and i > last_readable and f.get("transcribes"):
+            states[sid] = PROCESSING
+            processing_taken = True
+        else:
+            states[sid] = WAITING
+    return states
+
+
+def read_ingest_facts(output_dir: Path) -> list[dict[str, object]]:
+    """The session list ingest wrote, or empty when there is none to read."""
+    import json
+
+    from bristlenose.readable_chain import INGEST_FACTS
+
+    path = output_dir / ".bristlenose" / "intermediate" / INGEST_FACTS
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    sessions = data.get("sessions") if isinstance(data, dict) else None
+    return [s for s in sessions if isinstance(s, dict)] if isinstance(sessions, list) else []

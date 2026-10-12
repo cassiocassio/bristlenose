@@ -183,6 +183,75 @@ describe("SessionsTable", () => {
 // Editing tests
 // ---------------------------------------------------------------------------
 
+describe("SessionsTable during a first analysis", () => {
+  // docs/design-progressive-lenses.md §2: three row states, by markup.
+  const fileRow = (id: string, n: number, state: string, name: string) => ({
+    session_id: id,
+    session_number: n,
+    session_date: "2026-02-15",
+    duration_seconds: 600,
+    has_media: true,
+    has_video: true,
+    thumbnail_url: null,
+    speakers: [],
+    journey_labels: [],
+    journey: [],
+    sentiment_counts: {},
+    source_files: [{ path: name, file_type: "", filename: name }],
+    state,
+  });
+
+  beforeEach(() => {
+    const progressive = {
+      ...sessionsResponse,
+      sessions: [
+        sessionsResponse.sessions[0],
+        fileRow("s2", 2, "processing", "two.mov"),
+        fileRow("s3", 3, "waiting", "three.mov"),
+        fileRow("s4", 4, "waiting", "four.mov"),
+      ],
+    };
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) =>
+      Promise.resolve(
+        url.includes("/sessions")
+          ? { ok: true, json: async () => progressive }
+          : url.includes("/people")
+            ? { ok: true, json: async () => peopleResponse }
+            : { ok: false, status: 404, json: async () => ({}) },
+      ),
+    );
+  });
+
+  it("only a readable row is a destination", async () => {
+    const { container } = render(<SessionsTable projectId="1" />);
+    await screen.findByText("#4");
+    const rows = [...container.querySelectorAll('[role="row"]')].slice(1);
+    expect(rows.map((r) => r.getAttribute("data-session"))).toEqual(["s1", null, null, null]);
+    expect(rows.map((r) => r.getAttribute("aria-disabled"))).toEqual([null, "true", "true", "true"]);
+    expect(screen.getByText("#1").closest("a")).not.toBeNull();
+    expect(screen.getByText("#2").closest("a")).toBeNull();
+  });
+
+  it("shimmers exactly one element: the filename of the session being processed", async () => {
+    const { container } = render(<SessionsTable projectId="1" />);
+    await screen.findByText("#4");
+    const shimmering = container.querySelectorAll(".bn-thinking-shimmer");
+    expect(shimmering).toHaveLength(1);
+    expect(shimmering[0].textContent).toBe("two.mov");
+    expect(shimmering[0].closest('[role="row"]')?.querySelector("span")?.textContent).toBe("#2");
+  });
+
+  it("shows what ingest knew on a waiting row, and nothing it did not", async () => {
+    const { container } = render(<SessionsTable projectId="1" />);
+    await screen.findByText("#4");
+    const waiting = container.querySelectorAll('[role="row"]')[3];
+    expect(waiting.textContent).toContain("three.mov");
+    expect(waiting.querySelector(".bn-cell-thumb")?.childElementCount).toBe(0);
+    expect(waiting.querySelector(".bn-cell-speakers")?.childElementCount).toBe(0);
+    expect(waiting.querySelector("a")).toBeNull();
+  });
+});
+
 describe("SessionsTable name editing", () => {
   it("enters edit mode on pencil click", async () => {
     mockFetchResponses();

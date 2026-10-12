@@ -37,6 +37,7 @@ from bristlenose.models import (
 )
 from bristlenose.pipeline import Pipeline
 from bristlenose.stages.s05b_identify_speakers import SpeakerInfo
+from tests.conftest import iter_transcribe_from
 
 _T0 = datetime(2026, 9, 24, 10, 0, tzinfo=timezone.utc)
 
@@ -278,7 +279,7 @@ def run_pipeline(
         patch("bristlenose.stages.s01_ingest.ingest", new=_fake_ingest),
         patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions", new=_passthrough),
         patch("bristlenose.preflight.whisper.preflight_whisper", new=lambda **_kw: None),
-        patch("bristlenose.stages.s05_transcribe.transcribe_sessions", new=_fake_transcribe),
+        patch("bristlenose.stages.s05_transcribe.iter_transcribe_sessions", new=iter_transcribe_from(_fake_transcribe)),
         patch("bristlenose.stages.s05b_identify_speakers.split_single_speaker_llm", new=_fake_split),
         patch("bristlenose.stages.s05b_identify_speakers.identify_speaker_roles_llm", new=_fake_roles),
         patch("bristlenose.stages.s08_topic_segmentation.segment_topics", new=_fake_segment_topics),

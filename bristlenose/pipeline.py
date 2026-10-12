@@ -77,11 +77,17 @@ from bristlenose.utils.fs import is_os_metadata
 from bristlenose.utils.text import count_noun
 
 if TYPE_CHECKING:  # annotation only — s01 stays a lazy import
+    from collections.abc import Awaitable
+
     from bristlenose.discussion.models import DiscussionRecord
     from bristlenose.llm.client import LLMClient
+    from bristlenose.readable_chain import ReadableChain
     from bristlenose.stages.s01_ingest import SkippedFile
     from bristlenose.stages.s05_transcribe import ProgressCallback, SegmentCallback
     from bristlenose.timing import PipelineEvent, TimingEstimator
+
+    #: ``(session_id, segments or None)`` — one session's transcript, handed on.
+    SessionCallback = Callable[[str, list[TranscriptSegment] | None], Awaitable[None]]
 
 logger = logging.getLogger(__name__)
 console = Console(width=min(80, Console().width))
@@ -538,12 +544,19 @@ def _assign_session_codes(
     session_segments: dict[str, list[TranscriptSegment]],
     registry: SessionRegistry,
     dropped_pins: list[str] | None = None,
+    *,
+    placeholders: bool = True,
 ) -> dict[str, dict[str, str]]:
     """Give every speaker its code, and every session its primary participant.
 
     The registry keeps numbering stable across runs: a known speaker keeps
     their code, and a new participant is numbered after every code ever
     handed out. Returns each session's label → code map.
+
+    ``placeholders=False`` is the readable chain's one-session call
+    (``readable_chain.py``): a placeholder number reserved for a session that
+    heard no participant must not be taken before a later session's real
+    participant is numbered, so only the whole-run call reserves them.
     """
     from bristlenose.stages.s05b_identify_speakers import assign_speaker_codes
 
@@ -570,6 +583,8 @@ def _assign_session_codes(
     # A session that heard no participant still needs one — but not ingest's
     # provisional p<session number>, which can be anyone's real code. Taken
     # after the loop so a number reserved here cannot be issued above.
+    if not placeholders:
+        return maps
     for session in sessions:
         sid = session.session_id
         if any(c.startswith("p") for c in maps.get(sid, {}).values()):
@@ -1000,6 +1015,8 @@ class Pipeline:
         # Structured progress sink (RunHandle.progress) — set inside the
         # run_lifecycle block by the CLI. None on no-lifecycle paths.
         self._progress_sink: object | None = None
+        #: Sessions the readable chain has delivered this run (a count only).
+        self._sessions_readable = 0
         # perf_counter at run() entry, for elapsed/predicted-total emit.
         self._run_start_perf: float | None = None
         # Last-known ETA, carried onto estimator-independent stage-entry
@@ -1105,6 +1122,10 @@ class Pipeline:
         if self._progress_sink is None:
             return
         fields.setdefault("elapsed_seconds", self._elapsed_seconds())
+        if self._sessions_readable:
+            # Every line, not only the one that moved it: readers take the
+            # newest line, and the next heartbeat would otherwise hide it.
+            fields.setdefault("sessions_readable", self._sessions_readable)
         self._progress_sink(**fields)  # type: ignore[operator]
 
     def _on_session_progress(
@@ -1339,21 +1360,7 @@ class Pipeline:
         from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
         from bristlenose.stages.s05b_identify_speakers import (
             SpeakerInfo,
-            SplitGate,
-            identify_speaker_roles_heuristic,
-            identify_speaker_roles_llm,
-            real_speaker_names,
             speaker_info_from_dict,
-            speaker_info_to_dict,
-            split_gate,
-            split_single_speaker_llm,
-        )
-        from bristlenose.stages.s05b_voice import (
-            load_voice_model,
-            refine_speakers_by_voice,
-            resolve_voice_model,
-            voice_install_hint,
-            voice_runtime_available,
         )
         from bristlenose.stages.s06_merge_transcript import (
             merge_transcripts,
@@ -1413,6 +1420,11 @@ class Pipeline:
         sessions = session_registry.apply(sessions)
         session_registry.settle_starts(sessions)
         session_registry.save()
+        # What the Sessions lens shows from the first second of a first
+        # analysis: every session, with whatever ingest knows about it.
+        from bristlenose.readable_chain import write_ingest_facts
+
+        write_ingest_facts(output_dir, sessions)
 
         ingest_elapsed = time.perf_counter() - t0
 
@@ -1596,6 +1608,9 @@ class Pipeline:
             # didn't run this invocation; ``duration_ms`` reflects only
             # work this run actually did, per the contract).
             _fresh_transcript_outcome = StageOutcome()
+            # The progressive run's per-session chain (readable_chain.py);
+            # stages 5b and 6 pick up what it did.
+            _chain: ReadableChain | None = None
             _transcribe_elapsed: float | None = None
             if _is_stage_verified(
                 _prev_manifest, _M_STAGE_TRANSCRIBE, [_ss_path],
@@ -1726,13 +1741,30 @@ class Pipeline:
                             stage_fraction=stage_frac,
                         )
 
+                    if not _cached_tx_sids:
+                        # Codes fold in session order across the whole study, so
+                        # the chain runs only when every session is this run's.
+                        _chain = self._readable_chain(
+                            _remaining_sessions,
+                            prev_manifest=_prev_manifest,
+                            manifest=manifest,
+                            output_dir=output_dir,
+                            input_dir=input_dir,
+                            registry=session_registry,
+                            tx_fingerprints=_tx_session_fps,
+                            segments_path=_ss_path,
+                            status=status,
+                        )
                     _fresh_segments, _fresh_transcript_outcome = (
                         await self._gather_all_segments(
                             _remaining_sessions,
                             on_progress=_on_transcribe_progress,
                             on_segment=_on_transcribe_segment,
+                            on_session=_chain.offer if _chain is not None else None,
                         )
                     )
+                    if _chain is not None:
+                        _chain.stop()  # every session was offered; nothing should be left
                     for sid in _fresh_segments:
                         mark_session_complete(
                             manifest, _M_STAGE_TRANSCRIBE, sid,
@@ -1780,7 +1812,12 @@ class Pipeline:
                     if audio_str:
                         msg += f", {audio_str} audio"
                     msg += ")"
-                _transcribe_elapsed = time.perf_counter() - t0
+                # The readable chain identified speakers inside this window;
+                # that time is the speakers stage's, for the line and for the
+                # estimates the next run is timed by.
+                _transcribe_elapsed = time.perf_counter() - t0 - (
+                    _chain.seconds if _chain is not None else 0.0
+                )
                 _print_step(msg, _transcribe_elapsed)
                 _stage_actuals[STAGE_TRANSCRIBE] = StageActual(
                     elapsed=_transcribe_elapsed,
@@ -1940,6 +1977,14 @@ class Pipeline:
                 _cached_si_sids = fresh_session_ids(
                     _prev_manifest, STAGE_IDENTIFY_SPEAKERS, _si_session_fps,
                 )
+                # Sessions the readable chain identified during transcription,
+                # whose segments are still the ones it saw: loaded from the
+                # speaker cache it wrote, exactly as a resume would.
+                _chain_si_sids = {
+                    sid for sid, fp in (_chain.identified.items() if _chain else ())
+                    if _si_session_fps.get(sid) == fp
+                }
+                _cached_si_sids |= _chain_si_sids
                 all_speaker_infos = {}
                 if _cached_si_sids and _si_dir.is_dir():
                     _usable_si_sids: set[str] = set()
@@ -1978,144 +2023,52 @@ class Pipeline:
                     [s for s in sessions if s.session_id in _remaining_si_sids], temp_dir,
                 )
 
+                # The chain's records carry its provider, model and cache hash;
+                # `mark_stage_running` replaces the stage record, so keep them.
+                _si_before = manifest.stages.get(STAGE_IDENTIFY_SPEAKERS)
+                _chain_si_records = {
+                    sid: rec
+                    for sid, rec in ((_si_before.sessions or {}) if _si_before else {}).items()
+                    if sid in _chain_si_sids and sid in _cached_si_sids
+                }
                 mark_stage_running(manifest, STAGE_IDENTIFY_SPEAKERS)
                 # Carry forward the still-fresh session records only.
                 carry_forward_sessions(
                     manifest, _prev_manifest, STAGE_IDENTIFY_SPEAKERS,
                     _cached_si_sids, _si_session_fps,
                 )
+                _si_now = manifest.stages[STAGE_IDENTIFY_SPEAKERS]
+                if _chain_si_records and _si_now.sessions is not None:
+                    _si_now.sessions.update(_chain_si_records)
 
                 status.update("[dim]Identifying speakers...[/dim]")
                 t0 = time.perf_counter()
-                llm_client = LLMClient(self.settings)
-                _speaker_errors: list[str] = []
-                _split_records: dict[str, dict[str, object]] = {}
+                if _chain is not None:
+                    _speakers = _chain.speaker_pass
+                else:
+                    from bristlenose.speaker_pass import SpeakerPass
+
+                    _speakers = SpeakerPass(
+                        self.settings, LLMClient(self.settings),
+                        {s.session_id: s.audio_path for s in sessions},
+                        warn=_print_warn, status=status.update,
+                    )
+                llm_client = _speakers.llm_client  # type: ignore[assignment]
+                _speaker_errors = _speakers.errors
+                _split_records = _speakers.split_records
+                if _chain_si_sids and not _remaining_si_sids:
+                    # The chain identified every session during transcription.
+                    # Say so with this stage's own pair, or the Mac row keeps
+                    # transcription's count under "Identifying speakers".
+                    _n_chain = len(_chain_si_sids)
+                    self._on_session_progress(
+                        STAGE_SPEAKERS, status, "Identifying speakers",
+                        remaining=_n_chain, cached=len(_cached_si_sids) - _n_chain,
+                    )(_n_chain, _n_chain)
 
                 if _remaining_si_sids:
-                    # Split single-speaker transcripts (LLM pre-pass) — but
-                    # never a platform transcript that names its speakers, and
-                    # never a cloud transcript whose writer said it could not
-                    # separate them. `split_gate` holds the rule; a session it
-                    # keeps whole is stated, because the researcher will see
-                    # one voice where there were two and must know why.
-                    _gates = {
-                        sid: split_gate(session_segments[sid])
-                        for sid in sorted(_remaining_si_sids)
-                    }
-                    _split_sids = [
-                        sid for sid, gate in _gates.items()
-                        if gate is SplitGate.SPLIT
-                    ]
-                    for sid, gate in _gates.items():
-                        if gate is not SplitGate.NOT_SEPARATED:
-                            continue
-                        # NOT_SEPARATED is only ever a single real name now.
-                        _name = next(iter(real_speaker_names(session_segments[sid])))
-                        _msg = (
-                            f"{sid}: speakers not separated — the transcript names "
-                            f"one speaker ({_name}); kept as the platform wrote it, not split"
-                        )
-                        logger.warning(_msg)
-                        _print_warn(_msg)
-                    # What produced each session's speaker labels, written to
-                    # the speaker cache so a later stage (or a person) can tell
-                    # a voice-checked split from a text-only one.
-                    for sid, gate in _gates.items():
-                        if gate is SplitGate.SEPARATED:
-                            _split_records[sid] = {"method": "transcript-labels"}
-                        elif gate is SplitGate.NOT_SEPARATED:
-                            _split_records[sid] = {"method": "not-separated"}
-                    if _split_sids:
-                        _sem_split = asyncio.Semaphore(concurrency)
-                        # The voice pass is CPU-bound and multithreaded inside
-                        # onnxruntime: one session at a time, off the event loop.
-                        _sem_voice = asyncio.Semaphore(1)
-                        _voice_model: Path | None = None
-                        _voice_off = ""
-                        if not self.settings.voice_pass:
-                            _voice_off = "voice pass switched off (BRISTLENOSE_VOICE_PASS)"
-                        elif not voice_runtime_available():
-                            _voice_off = f"voice extra not installed ({voice_install_hint()})"
-                        else:
-                            status.update("[dim]Preparing the voice pass...[/dim]")
-                            _voice_model, _voice_off = await asyncio.to_thread(
-                                resolve_voice_model, allow_fetch=not self.settings.no_fetch,
-                            )
-                            _voice_fetchable = _voice_model is None
-                            if _voice_model is not None:
-                                # Load once, here: a model or runtime that will
-                                # not load must be one visible warning, not a
-                                # quiet text-only fallback in every session.
-                                _voice_off = await asyncio.to_thread(
-                                    load_voice_model, _voice_model,
-                                )
-                                if _voice_off:
-                                    _voice_model = None
-                            status.update("[dim]Identifying speakers...[/dim]")
-                            if _voice_model is None:
-                                # The researcher installed the extra to get this;
-                                # a decline they cannot see reads as "voice ran".
-                                _print_warn(rich_escape(f"Voice pass skipped: {_voice_off}"))
-                                _print_warn(
-                                    "Speakers told apart from the text alone; "
-                                    "`bristlenose doctor --fetch` fetches the model"
-                                    if _voice_fetchable else
-                                    "Speakers told apart from the text alone"
-                                )
-                        _audio_for = {s.session_id: s.audio_path for s in sessions}
-
-                        async def _split(
-                            sid: str,
-                            segments: list[TranscriptSegment],
-                        ) -> None:
-                            async with _sem_split:
-                                with _llm_telemetry.session(sid):
-                                    await split_single_speaker_llm(
-                                        segments, llm_client,
-                                        errors=_speaker_errors,
-                                    )
-                            async with _sem_voice:
-                                rec = await asyncio.to_thread(
-                                    refine_speakers_by_voice,
-                                    segments, _audio_for.get(sid), _voice_model,
-                                    unavailable_reason=_voice_off,
-                                )
-                            _split_records[sid] = rec.to_dict()
-                            logger.info(
-                                "voice_pass | session=%s | method=%s | elapsed_ms=%d"
-                                " | segments=%d | verdicts=%d | relabelled=%d"
-                                " | centroid_cos=%s | reason=%s",
-                                sid, rec.method, rec.elapsed_ms, rec.segments,
-                                rec.voice_verdicts, rec.relabelled, rec.centroid_cos,
-                                rec.reason or "-",
-                            )
-
-                        with _llm_telemetry.stage("s05b_identify_speakers"):
-                            await asyncio.gather(*(
-                                _split(sid, session_segments[sid])
-                                for sid in _split_sids
-                            ))
-
-                    # Heuristic pass for remaining sessions
-                    for sid in _remaining_si_sids:
-                        identify_speaker_roles_heuristic(
-                            session_segments[sid],
-                        )
-
-                    # LLM refinement concurrently
-                    _sem_5b = asyncio.Semaphore(concurrency)
-
-                    async def _identify(
-                        sid: str, segments: list[TranscriptSegment],
-                    ) -> tuple[str, list[SpeakerInfo]]:
-                        async with _sem_5b:
-                            with _llm_telemetry.session(sid):
-                                infos = await identify_speaker_roles_llm(
-                                    segments, llm_client,
-                                    errors=_speaker_errors,
-                                )
-                            return sid, infos
-
+                    # One session's passes run end to end (speaker_pass.py);
+                    # sessions run concurrently behind its semaphores.
                     _si_done = 0
                     _si_progress = self._on_session_progress(
                         STAGE_SPEAKERS, status, "Identifying speakers",
@@ -2132,15 +2085,14 @@ class Pipeline:
                         # is worse than none.
                         nonlocal _si_done
                         try:
-                            return await _identify(sid, segments)
+                            return sid, await _speakers.run(sid, segments)
                         finally:
                             _si_done += 1
                             _si_progress(_si_done, len(_remaining_si_sids))
 
-                    with _llm_telemetry.stage("s05b_identify_speakers"):
-                        _results_5b = await asyncio.gather(*(
-                            _identify_counted(sid, session_segments[sid])
-                            for sid in _remaining_si_sids
+                    _results_5b = await asyncio.gather(*(
+                        _identify_counted(sid, session_segments[sid])
+                        for sid in sorted(_remaining_si_sids)
                     ))
                     for sid, infos in _results_5b:
                         all_speaker_infos[sid] = infos
@@ -2153,22 +2105,15 @@ class Pipeline:
 
                     # Write speaker info cache for fresh sessions
                     if self.settings.write_intermediate:
+                        from bristlenose.readable_chain import speaker_cache_bytes
+
                         _si_dir.mkdir(parents=True, exist_ok=True)
                         for sid in _remaining_si_sids:
-                            _si_data = {
-                                "speaker_infos": [
-                                    speaker_info_to_dict(info)
-                                    for info in all_speaker_infos.get(sid, [])
-                                ],
-                                "segments_with_roles": [
-                                    seg.model_dump(mode="json")
-                                    for seg in session_segments[sid]
-                                ],
-                                "speaker_split": _split_records.get(sid),
-                            }
-                            _si_bytes = _json.dumps(
-                                _si_data, indent=2,
-                            ).encode("utf-8")
+                            _si_bytes = speaker_cache_bytes(
+                                all_speaker_infos.get(sid, []),
+                                session_segments[sid],
+                                _split_records.get(sid),
+                            )
                             (_si_dir / f"{sid}.json").write_bytes(_si_bytes)
                             # Update session record with content hash
                             _si_rec = manifest.stages.get(
@@ -2183,16 +2128,20 @@ class Pipeline:
                                     hash_bytes(_si_bytes)
                                 )
 
-                _speakers_elapsed = time.perf_counter() - t0
-                _n_new_si = len(_remaining_si_sids)
+                _speakers_elapsed = time.perf_counter() - t0 + (
+                    _chain.seconds if _chain is not None else 0.0
+                )
+                # The chain's sessions are this run's work, done earlier.
+                _n_new_si = len(_remaining_si_sids | _chain_si_sids)
+                _only_cached_si = _cached_si_sids - _chain_si_sids
                 _n_voice = sum(
                     1 for r in _split_records.values() if r.get("method") == "voice+text"
                 )
                 # Counts this run's sessions only; cached ones keep their own
                 # record in the speaker cache.
                 _detail = [
-                    f"{_n_new_si} new sessions" if _cached_si_sids and _n_new_si else "",
-                    (f"voice-checked: {_n_voice} of the new" if _cached_si_sids
+                    f"{_n_new_si} new sessions" if _only_cached_si and _n_new_si else "",
+                    (f"voice-checked: {_n_voice} of the new" if _only_cached_si
                      else f"voice-checked: {count_noun(_n_voice, 'session')}") if _n_voice else "",
                 ]
                 _detail_s = ", ".join(d for d in _detail if d)
@@ -2254,13 +2203,17 @@ class Pipeline:
             # wrote, which this stage is about to overwrite.
             self._recover_languages(raw_dir, session_segments)
             # Before the files are rewritten: a session keeps the paragraphs
-            # its splits and joins were made against.
-            sentence_paragraphs = sentence_paragraph_sessions(
-                raw_dir, [s.session_id for s in sessions],
-                analysed=(
-                    get_completed_session_ids(_prev_manifest, STAGE_TOPIC_SEGMENTATION)
-                    | get_completed_session_ids(_prev_manifest, STAGE_QUOTE_EXTRACTION)
-                ),
+            # its splits and joins were made against. The readable chain read
+            # this before it wrote any file; reading it now would see its files.
+            sentence_paragraphs = (
+                _chain.sentence_paragraphs if _chain is not None else
+                sentence_paragraph_sessions(
+                    raw_dir, [s.session_id for s in sessions],
+                    analysed=(
+                        get_completed_session_ids(_prev_manifest, STAGE_TOPIC_SEGMENTATION)
+                        | get_completed_session_ids(_prev_manifest, STAGE_QUOTE_EXTRACTION)
+                    ),
+                )
             )
             transcripts = merge_transcripts(
                 sessions, session_segments, input_dir,
@@ -2279,6 +2232,14 @@ class Pipeline:
                 output_dir, (seg.text for t in transcripts for seg in t.segments)
             )
             _print_step("Merged transcripts", time.perf_counter() - t0)
+            # Per session, as the readable chain records it: the server imports
+            # a session whose transcript the manifest calls merged. Never under
+            # redaction — these files are the unredacted ones, and a session is
+            # readable only once it is redacted (the chain is off for the same
+            # reason). The server would show them for the rest of the run.
+            if not self.settings.pii_enabled:
+                for t in transcripts:
+                    mark_session_complete(manifest, STAGE_MERGE_TRANSCRIPT, t.session_id)
             mark_stage_complete(manifest, STAGE_MERGE_TRANSCRIPT)
             write_manifest(manifest, output_dir)
 
@@ -3704,28 +3665,99 @@ class Pipeline:
         if failed:
             _print_refusals(failed)
 
+    def _readable_chain(
+        self,
+        order: list[InputSession],
+        *,
+        prev_manifest: PipelineManifest | None,
+        manifest: PipelineManifest,
+        output_dir: Path,
+        input_dir: Path,
+        registry: SessionRegistry,
+        tx_fingerprints: dict[str, str],
+        segments_path: Path,
+        status: Any,
+    ) -> ReadableChain | None:
+        """The progressive run's per-session chain, or None where it stays off.
+
+        On for a first analysis only: a project with a report shows that report
+        while it re-runs, so delivering transcripts early buys nothing and costs
+        the speaker pass its concurrency. Off under redaction (a transcript is
+        readable only once redacted) and without intermediate files (stage 5b
+        reuses the chain's work through its speaker cache).
+        """
+        from bristlenose.llm.client import LLMClient
+        from bristlenose.readable_chain import ReadableChain
+        from bristlenose.speaker_pass import SpeakerPass
+        from bristlenose.stages.s06_merge_transcript import sentence_paragraph_sessions
+
+        if self.settings.pii_enabled or not self.settings.write_intermediate:
+            return None
+        rendered = prev_manifest.stages.get(_M_STAGE_RENDER) if prev_manifest else None
+        if rendered is not None and rendered.status == StageStatus.COMPLETE:
+            return None
+        speaker_pass = SpeakerPass(
+            self.settings, LLMClient(self.settings),
+            {s.session_id: s.audio_path for s in order},
+            warn=_print_warn, status=status.update,
+        )
+
+        def _emit(readable: int) -> None:
+            self._sessions_readable = readable
+            self._emit_progress(sessions_readable=readable)
+
+        return ReadableChain(
+            order=order,
+            settings=self.settings,
+            speaker_pass=speaker_pass,
+            manifest=manifest,
+            output_dir=output_dir,
+            input_dir=input_dir,
+            registry=registry,
+            # Read before the chain writes a single transcript file: a session
+            # keeps the paragraphs its splits and joins were made against.
+            sentence_paragraphs=sentence_paragraph_sessions(
+                output_dir / "transcripts-raw",
+                [s.session_id for s in order],
+                analysed=(
+                    get_completed_session_ids(prev_manifest, STAGE_TOPIC_SEGMENTATION)
+                    | get_completed_session_ids(prev_manifest, STAGE_QUOTE_EXTRACTION)
+                ),
+            ),
+            languages=lambda: (self._detected_languages, self._pinned_languages),
+            fingerprint=_segments_fingerprint,
+            assign_codes=_assign_session_codes,
+            tx_fingerprints=tx_fingerprints,
+            segments_path=segments_path,
+            emit=_emit,
+        )
+
     async def _gather_all_segments(
         self,
         sessions: list[InputSession],
         *,
         on_progress: ProgressCallback | None = None,
         on_segment: SegmentCallback | None = None,
+        on_session: SessionCallback | None = None,
     ) -> tuple[dict[str, list[TranscriptSegment]], StageOutcome]:
         """Gather transcript segments from all sources (subtitle, docx, whisper).
 
         Args:
             sessions: Input sessions.
             on_progress: Optional callback(current, total) for transcription progress.
+            on_session: Optional coroutine called once per session, with its
+                segments (None when it produced none) as soon as they are known:
+                parsed transcripts before Whisper starts, each recording as
+                Whisper finishes it. The progressive run's readable chain.
 
         Returns:
             Tuple of (session_segments, transcript_outcome). Subtitle / docx
             sources are recorded as successes in the outcome (one per session
             that produced segments); Whisper failures come from
-            ``transcribe_sessions`` directly.
+            ``iter_transcribe_sessions``, one per session.
         """
         from bristlenose.stages.s03_parse_subtitles import parse_subtitle_file
         from bristlenose.stages.s04_parse_docx import DocxParseRefusedError, parse_docx_file
-        from bristlenose.stages.s05_transcribe import transcribe_sessions
         from bristlenose.stages.transcript_choice import (
             ParsedTranscriptFile,
             choose_transcript,
@@ -3829,31 +3861,51 @@ class Pipeline:
         )
 
         # Transcribe sessions that still need it
-        if not self.settings.skip_transcription:
-            needs_transcription = [
-                s for s in sessions
-                if s.session_id not in session_segments and s.audio_path is not None
-            ]
-            if needs_transcription:
-                whisper_results, whisper_languages, whisper_outcome = transcribe_sessions(
-                    needs_transcription,
-                    self.settings,
-                    on_progress=on_progress,
-                    on_segment=on_segment,
-                )
-                session_segments.update(whisper_results)
-                # Deliberately instance state, not a third return value.
-                # `_gather_all_segments` has two callers and `merge_transcripts`
-                # two more; widening all four to carry an optional map would
-                # cost more than it explains. Per-run derived data on a per-run
-                # object, read at the `merge_transcripts` call sites.
-                self._detected_languages.update(whisper_languages)
-                pinned = (self.settings.whisper_language or "").strip().lower()
+        needs_transcription = [] if self.settings.skip_transcription else [
+            s for s in sessions
+            if s.session_id not in session_segments and s.audio_path is not None
+        ]
+        if on_session is not None:
+            # Everything that will not wait for Whisper is known now. Handed
+            # over together, so their speaker passes run concurrently; the
+            # chain delivers them in session order.
+            whisper_ids = {s.session_id for s in needs_transcription}
+            await asyncio.gather(*(
+                on_session(s.session_id, session_segments.get(s.session_id))
+                for s in sessions if s.session_id not in whisper_ids
+            ))
+        if needs_transcription:
+            from bristlenose.stages.s05_transcribe import iter_transcribe_sessions
+
+            pinned = (self.settings.whisper_language or "").strip().lower()
+            # One session at a time, so each can be handed on (``on_session``)
+            # before the next is decoded. Languages are instance state rather
+            # than a third return value: `_gather_all_segments` has two callers
+            # and `merge_transcripts` two more; widening all four to carry an
+            # optional map would cost more than it explains. Per-run derived
+            # data on a per-run object, read at the `merge_transcripts` sites.
+            for done in iter_transcribe_sessions(
+                needs_transcription, self.settings,
+                on_progress=on_progress, on_segment=on_segment,
+            ):
+                transcript_outcome.attempted += 1
+                session_segments[done.session_id] = done.segments
+                if done.detected_language:
+                    self._detected_languages[done.session_id] = done.detected_language
                 if pinned and pinned != "auto":
-                    self._pinned_languages.update(dict.fromkeys(whisper_results, pinned))
-                transcript_outcome.attempted += whisper_outcome.attempted
-                transcript_outcome.succeeded += whisper_outcome.succeeded
-                transcript_outcome.failed.extend(whisper_outcome.failed)
+                    self._pinned_languages[done.session_id] = pinned
+                if done.failure is None:
+                    transcript_outcome.succeeded += 1
+                else:
+                    transcript_outcome.failed.append(done.failure)
+                if on_session is not None:
+                    await on_session(done.session_id, done.segments or None)
+            if on_session is not None:
+                # A session the backend declined to take is still owed its
+                # turn, or the chain would hold every session after it for good.
+                for s in needs_transcription:
+                    if s.session_id not in session_segments:
+                        await on_session(s.session_id, None)
 
         return session_segments, transcript_outcome
 

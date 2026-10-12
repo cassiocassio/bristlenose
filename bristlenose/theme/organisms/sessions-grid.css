@@ -104,6 +104,19 @@
 
 .bn-sessions-row[data-session]:hover { background: var(--bn-colour-hover); }
 
+/* A first analysis delivers sessions one by one (docs/design-progressive-
+   lenses.md §2). A row not readable yet keeps its geometry and shows what
+   ingest knew, in muted text (treatment A, §7), and is not a destination: it
+   has no data-session, so the pointer and hover above never reach it. The
+   one Whisper is working on shimmers its filename, from that muted resting
+   colour toward the text colour — the polarity follows the theme. */
+.bn-sessions-row[aria-disabled="true"] { color: var(--bn-colour-muted); }
+.bn-sessions-row[aria-disabled="true"] .bn-thinking-shimmer {
+    --bn-shimmer-base: var(--bn-colour-muted);
+    --bn-shimmer-peak: var(--bn-colour-text);
+    --bn-shimmer-contrast: 20%;
+}
+
 /* Mirrors the old td: 0.5rem var(--bn-space-md), top-aligned.
    min-width: 0 is load-bearing — without it an fr track cannot shrink below
    its content and the row overflows instead of wrapping. */

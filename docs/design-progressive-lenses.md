@@ -298,6 +298,50 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 
 ### Phase 1 — Sessions readable one by one
 
+> **Built 12 Oct 2026** (`git log --grep "progressive lenses phase 1"`). What
+> landed, and what changed against the steps below:
+> - **The chain** is `bristlenose/readable_chain.py`, fed by `_gather_all_segments`
+>   (which now always consumes `iter_transcribe_sessions`). Per session, in session
+>   order: incremental `session_segments.json`, the speaker pass
+>   (`bristlenose/speaker_pass.py`, shared with stage 5b), codes, merge, the
+>   transcript files, then the manifest's `merge_transcript` record and a
+>   `run_progress` line carrying `sessions_readable`. Stage 5b reuses each session
+>   through the speaker cache (no second LLM call); stage 6 reuses the chain's
+>   paragraph rule and marks merge per session. Speaker passes start on hand-over
+>   and run concurrently; only delivery takes turns, so a project of platform
+>   transcripts is not slower than the batch. **A failed delivery stops the
+>   chain** — the rest go to stage 5b — because delivering N+1 past a failed N
+>   would number N+1's participant first, and the registry keeps codes.
+> - **On only for a first analysis with every session this run's**: off when the
+>   previous manifest has a finished render, when any session is cached at
+>   transcription (a resume), under redaction, and without intermediate files.
+>   **Under redaction stage 6 writes no per-session merge records either**: those
+>   files are the unredacted ones (review — the server would have shown them for
+>   the rest of the run). The per-session importer also reads the redacted folder
+>   first, as the whole import does.
+> - **Steps 4, 5, 7, 8 partly deferred.** Thumbnails and scene colours stay at
+>   render; PII is not per session (so redacted runs are not progressive yet);
+>   `ingest-facts.json` records `has_video` by extension, not by the probed stream,
+>   and the waiting row shows no thumbnail placeholder. Timing: the chain's wall
+>   time is moved from transcription to speakers in the CLI lines and the Welford
+>   actuals.
+> - **Server:** `server/progressive.py` follows the manifest from the watcher's
+>   `on_change`; one session per transaction, a session that will not import is
+>   said once at WARNING and left to the whole import; `sessions_imported` comes
+>   from what the database holds (a serve restarted mid-run must not cover its
+>   imported sessions with the in-progress page); the overlay lasts until the
+>   `run_completed` import has published. Export is refused (409) and its menu
+>   item disabled while the overlay is set.
+> - **Grid:** a row the database holds is always readable (progress only moves
+>   forward); the rest come from ingest facts. Treatment A (muted) is built — one
+>   CSS rule, reversible if §7 settles on B. Known limitation: "processing" is
+>   the first unread transcribing session after the last readable one, so a
+>   Whisper failure keeps the shimmer on the failed session until the next one
+>   is delivered.
+> - **Mac:** the shoal gives way at `sessions_readable ≥ 1`; the completion
+>   reload is skipped only for a progressive run that succeeded under a live SPA.
+> - **Not done:** the folder-of-horrors acceptance walk through the app.
+
 **Pipeline (`bristlenose/pipeline.py`, `run`)**
 1. **Ingest writes the session list** to `.bristlenose/intermediate/ingest-facts.json`
    (not `sessions.json`: `.bristlenose/sessions.json` is already the session registry,
@@ -575,3 +619,13 @@ Disabled until the run ends.
 13. **The motion spec's status-line shimmer.** §4.7.1 names the pipeline status line
     as a shimmer target; this design makes it static. Amend §4.7.1. (Nothing ships
     the native status shimmer yet: `SidebarShimmerText` is used only in the tuner.)
+14. **Stopping a progressive run.** §5.2 says stopping keeps every readable session
+    readable; step 11 keeps the cancelled status page, which covers them. Phase 1
+    built step 11. Which wins?
+15. **Progressive on resume.** A crash at session 6 of 10 turns the chain off for
+    the rest (codes fold across the study). The registry already holds the first
+    five sessions' codes, so a chain starting at the first uncached session would
+    fold correctly. Simplification, or decision?
+16. **Serial Whisper.** The chain's LLM latency is added between Whisper files
+    (transcription is a blocking call on the event loop). Accept, or run Whisper in
+    a thread so the next decode overlaps — which reopens Ctrl-C and the GIL.

@@ -77,6 +77,25 @@ class AuthTestClient(TestClient):
             self.headers = httpx.Headers({"authorization": f"Bearer {token}"})
 
 
+def iter_transcribe_from(fake: Any) -> Any:
+    """Turn a ``transcribe_sessions``-shaped fake into the generator the
+    pipeline consumes (``iter_transcribe_sessions``, one session at a time).
+
+    ``fake(sessions, settings, **kw)`` returns ``(results, languages, outcome)``;
+    each session it names comes back as a ``SessionTranscription``, failures
+    matched to their session from ``outcome.failed``.
+    """
+    from bristlenose.stages.s05_transcribe import SessionTranscription
+
+    def _iter(sessions: Any, settings: Any, **kw: Any) -> Any:
+        results, languages, outcome = fake(sessions, settings, **kw)
+        failures = {f.session_id: f for f in outcome.failed}
+        for sid, segments in results.items():
+            yield SessionTranscription(sid, segments, languages.get(sid), failures.get(sid))
+
+    return _iter
+
+
 @pytest.fixture
 def tmp_dir(tmp_path: Path) -> Path:
     """Provide a temporary directory for test outputs."""

@@ -203,22 +203,12 @@ def _same_path(stored: str, target: Path) -> bool:
             return stored == str(target)
 
 
-def import_project(db: Session, project_dir: Path) -> Project:
-    """Import pipeline output into the database.
+def _find_or_create_project(db: Session, project_dir: Path) -> tuple[Project, Path, Path]:
+    """The project row for *project_dir*, created if new: ``(row, input, output)``.
 
-    Always re-imports to pick up pipeline re-runs (added/removed sessions).
-    Stale data from deleted sessions is cleaned up; researcher state
-    (starred, hidden, tags, edits, deleted badges) is preserved for quotes
-    that survive the re-import.
-
-    Args:
-        db: SQLAlchemy database session.
-        project_dir: Path to the project's input directory.
-            Expected structure: ``project_dir/bristlenose-output/``
-            with ``.bristlenose/intermediate/`` inside it.
-
-    Returns:
-        The Project row (created or existing).
+    One function, because two importers need the same match: the whole-project
+    import and the per-session import of a run in progress. A second spelling
+    of this match is how a project forks a second row.
     """
     # Identify a project by its *resolved* location, not the spelling the
     # caller happened to use.  Without this, ``run trial-runs/foo`` (relative)
@@ -286,6 +276,28 @@ def import_project(db: Session, project_dir: Path) -> Project:
         if project.name == "Untitled" and project_name != "Untitled":
             project.name = project_name
             project.slug = project_name.lower().replace(" ", "-")[:100]
+    return project, project_dir, output_dir
+
+
+def import_project(db: Session, project_dir: Path) -> Project:
+    """Import pipeline output into the database.
+
+    Always re-imports to pick up pipeline re-runs (added/removed sessions).
+    Stale data from deleted sessions is cleaned up; researcher state
+    (starred, hidden, tags, edits, deleted badges) is preserved for quotes
+    that survive the re-import.
+
+    Args:
+        db: SQLAlchemy database session.
+        project_dir: Path to the project's input directory.
+            Expected structure: ``project_dir/bristlenose-output/``
+            with ``.bristlenose/intermediate/`` inside it.
+
+    Returns:
+        The Project row (created or existing).
+    """
+    project, project_dir, output_dir = _find_or_create_project(db, project_dir)
+    intermediate = output_dir / ".bristlenose" / "intermediate"
 
     # --- Import timestamp ------------------------------------------------
     # Every entity touched during this import gets this timestamp.
@@ -444,6 +456,76 @@ def import_project(db: Session, project_dir: Path) -> Project:
         db.query(ThemeGroup).filter_by(project_id=project.id).count(),
     )
     return project
+
+
+def import_readable_sessions(
+    db: Session, project_dir: Path, session_ids: set[str],
+) -> tuple[Project, set[str]]:
+    """Import the sessions a run in progress has made readable. Never deletes.
+
+    Progressive lenses, Phase 1 (docs/design-progressive-lenses.md §4 step 10).
+    ``import_project`` rebuilds the session list from what is on disk and
+    cleans up whatever it does not find, so called mid-run it would treat every
+    session not yet transcribed as removed. This one only adds: a session
+    already in the database is left exactly as it is, so whatever the
+    researcher has done to session 1 — a rename, a role recode, a paragraph
+    split — is untouched while session 2 arrives. The whole-project import
+    still runs on ``run_completed`` and settles everything.
+
+    Returns the project row and the sessions this call added.
+    """
+    project, project_dir, output_dir = _find_or_create_project(db, project_dir)
+    # The folder the whole-project import reads, redacted copy first. The
+    # pipeline never records a session readable before it is redacted; this is
+    # the second lock on the same door.
+    transcripts_dir = _find_transcripts_dir(project_dir, output_dir)
+    meta_all = _parse_transcript_headers(transcripts_dir)
+    _resolve_redacted_sources(meta_all, output_dir / "transcripts-raw")
+    present = {
+        sid for (sid,) in db.query(SessionModel.session_id).filter_by(project_id=project.id)
+    }
+    now = datetime.now(timezone.utc)
+    session_map: dict[str, SessionModel] = {}
+    for sid in sorted(session_ids - present):
+        meta = meta_all.get(sid)
+        if meta is None:
+            continue  # recorded readable, file not there (moved aside): next time
+        num = int(sid[1:]) if len(sid) > 1 and sid[1:].isdigit() else 0
+        sess = SessionModel(
+            project_id=project.id,
+            session_id=sid,
+            session_number=num,
+            session_date=meta.get("date"),
+            duration_seconds=meta.get("duration_seconds", 0.0),
+            has_media=False,
+            has_video=False,
+            first_imported_at=now,
+        )
+        if meta.get("language"):
+            sess.language = meta["language"]
+        db.add(sess)
+        session_map[sid] = sess
+    if not session_map:
+        db.commit()
+        return project, set()
+    db.flush()
+    meta = {sid: meta_all[sid] for sid in session_map}
+    _import_source_files(db, session_map, meta, project_dir)
+    _import_thumbnails(session_map, output_dir)
+    _import_transcript_segments(db, session_map, transcripts_dir)
+    db.flush()
+    _enrich_words_from_intermediate(db, session_map, output_dir)
+    _import_speakers(db, session_map, transcripts_dir, output_dir)
+    from bristlenose.server.speaker_slots import renumber
+
+    renumber(db, project.id)
+    db.commit()
+    _checkpoint_wal(db)
+    logger.info(
+        "Imported %d readable session(s) into project id=%d during the run: %s",
+        len(session_map), project.id, ", ".join(sorted(session_map)),
+    )
+    return project, set(session_map)
 
 
 # ---------------------------------------------------------------------------

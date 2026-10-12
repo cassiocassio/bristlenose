@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path as _Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -91,6 +92,11 @@ class SessionResponse(BaseModel):
     #: A speaker here was recoded into or out of participant and the run that
     #: extracts the right quotes has not happened (§J7 R3).
     needs_reanalysis: bool = False
+    #: During a first analysis (docs/design-progressive-lenses.md §2): open it
+    #: (``readable``), being worked on now (``processing``), or known and
+    #: waiting its turn (``waiting``). Every row of a finished project is
+    #: ``readable``.
+    state: str = "readable"
 
 
 class SessionsListResponse(BaseModel):
@@ -128,6 +134,7 @@ def _get_db(request: Request) -> Session:
 @router.get("/projects/{project_id}/sessions", response_model=SessionsListResponse)
 def get_sessions(
     project_id: int,
+    request: Request,
     db: Session = Depends(_get_db),
 ) -> SessionsListResponse:
     """Return all sessions for a project with full data for the sessions table."""
@@ -253,6 +260,8 @@ def get_sessions(
                 )
             )
 
+        rows = _with_unread_sessions(rows, request)
+
         # Source folder URI (from first session's first source file).
         source_folder_uri = ""
         for sess in sessions:
@@ -274,6 +283,71 @@ def get_sessions(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _with_unread_sessions(
+    rows: list[SessionResponse], request: Request,
+) -> list[SessionResponse]:
+    """During a first analysis, every session ingest found, in session order.
+
+    The imported ones keep their rows; the rest come from the session list
+    ingest wrote, carrying the facts it knew (number, start, duration, source)
+    and nothing it did not — speakers, sentiment and thumbnail stay empty
+    until the session is readable.
+    """
+    from bristlenose.output_paths import project_output_dir
+    from bristlenose.server.lens_readiness import read_ingest_facts, session_states
+
+    progress = getattr(request.app.state, "progress", None)
+    project_dir = getattr(request.app.state, "project_dir", None)
+    if progress is None or project_dir is None:
+        return rows
+    facts = read_ingest_facts(project_output_dir(project_dir))
+    if not facts:
+        return rows
+    have = {r.session_id: r for r in rows}
+    # A row the database holds is readable: progress only moves forward
+    # (§3 principle 4), even when a resumed run's fresh manifest has not yet
+    # recorded what an earlier attempt delivered.
+    states = session_states(facts, frozenset(have))
+    out: list[SessionResponse] = []
+    for f in facts:
+        sid = str(f.get("session_id", ""))
+        row = have.pop(sid, None)
+        if row is not None:
+            out.append(row)
+            continue
+        state = states.get(sid, "waiting")
+        source = str(f.get("source") or "")
+        duration = f.get("duration_seconds")
+        number = f.get("session_number")
+        start = f.get("start")
+        out.append(SessionResponse(
+            session_id=sid,
+            session_number=number if isinstance(number, int) else 0,
+            session_date=iso_utc(_parse_iso(start)) if isinstance(start, str) else None,
+            duration_seconds=float(duration) if isinstance(duration, (int, float)) else 0.0,
+            has_media=bool(f.get("transcribes")) or bool(f.get("has_video")),
+            has_video=bool(f.get("has_video")),
+            speakers=[],
+            journey_labels=[],
+            journey=[],
+            sentiment_counts={},
+            source_files=[SourceFileResponse(path=source, file_type="", filename=source)]
+            if source else [],
+            state=state,
+        ))
+    # Anything imported that ingest did not list (it cannot happen in one run,
+    # but never drop a row the database holds).
+    out.extend(have.values())
+    return out
+
+
+def _parse_iso(value: str) -> datetime | None:
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
 
 
 def _speaker_sort_key(sp: SessionSpeaker) -> tuple[int, int]:

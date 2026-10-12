@@ -586,7 +586,13 @@ export interface SessionResponse {
   /** A speaker here moved into or out of participant, and the run that
    *  extracts the right quotes has not happened (§J7 R3). */
   needs_reanalysis?: boolean;
+  /** During a first analysis (docs/design-progressive-lenses.md §2): open it,
+   *  being worked on now, or known and waiting. Absent from older servers,
+   *  where every row is readable. */
+  state?: SessionState;
 }
+
+export type SessionState = "readable" | "processing" | "waiting";
 
 export interface SessionsListResponse {
   sessions: SessionResponse[];

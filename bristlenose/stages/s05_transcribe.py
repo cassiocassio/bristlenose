@@ -14,7 +14,8 @@ import contextvars
 import importlib
 import logging
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -434,6 +435,136 @@ class TranscribeFn(Protocol):
     ) -> tuple[list[TranscriptSegment], str | None]: ...
 
 
+def _needs_transcription(sessions: list[InputSession]) -> list[InputSession]:
+    return [
+        s for s in sessions
+        if s.audio_path is not None and not s.has_existing_transcript
+    ]
+
+
+@dataclass(frozen=True)
+class SessionTranscription:
+    """One session's transcription, as soon as it is done."""
+
+    session_id: str
+    #: Empty when the session failed (``failure`` says why) or was silent.
+    segments: list[TranscriptSegment]
+    #: The language the backend DETECTED; None when the language was pinned.
+    detected_language: str | None = None
+    failure: StageFailure | None = None
+
+
+def iter_transcribe_sessions(
+    sessions: list[InputSession],
+    settings: BristlenoseSettings,
+    *,
+    on_progress: ProgressCallback | None = None,
+    on_segment: SegmentCallback | None = None,
+) -> Iterator[SessionTranscription]:
+    """Transcribe the sessions that need it, yielding each one as it finishes.
+
+    The backend is initialised once. A caller that wants to act on session 1
+    while session 2 is still to come (progressive lenses: a transcript a
+    researcher can read before the run ends) consumes this; everyone else
+    calls :func:`transcribe_sessions`, which collects it.
+    """
+    needs_transcription = _needs_transcription(sessions)
+    if not needs_transcription:
+        logger.info("No sessions need transcription.")
+        return
+
+    # Detect hardware and choose backend
+    hw = detect_hardware()
+    backend = _resolve_backend(settings.whisper_backend, hw)
+
+    logger.info(
+        "Transcribing %d sessions | backend=%s | model=%s | %s",
+        len(needs_transcription),
+        backend,
+        settings.whisper_model,
+        hw.summary(),
+    )
+
+    # Initialise the chosen backend
+    if backend == "mlx":
+        transcribe_fn = _init_mlx_backend(settings)
+    else:
+        transcribe_fn = _init_faster_whisper_backend(settings, hw)
+
+    pinned = settings.whisper_language if settings.whisper_language != "auto" else None
+    total = len(needs_transcription)
+
+    for i, session in enumerate(needs_transcription, start=1):
+        assert session.audio_path is not None
+        logger.info(
+            "%s: Transcribing %s",
+            session.session_id,
+            session.audio_path.name,
+        )
+
+        seg_cb = None
+        if on_segment is not None:
+            def seg_cb(seconds_done: float, file_seconds: float, _i: int = i) -> None:
+                on_segment(_i, total, seconds_done, file_seconds)
+
+        try:
+            # Only pass on_segment when a caller actually wants the within-file
+            # heartbeat — keeps backward-compat with transcribe_fn callables
+            # (and test stubs) that take only (audio_path, settings).
+            if seg_cb is not None:
+                out = transcribe_fn(
+                    session.audio_path, settings, on_segment=seg_cb,
+                )
+            else:
+                out = transcribe_fn(session.audio_path, settings)
+            # Backends return (segments, label); a stub may still return a bare
+            # list — the same backward-compat the on_segment arity dance above
+            # exists for.
+            segments, detected = out if isinstance(out, tuple) else (out, None)
+            # Only record a label we did NOT supply. With the language pinned,
+            # every backend echoes the decode option straight back, so storing
+            # it would be our own input wearing the clothes of evidence.
+            done = SessionTranscription(
+                session.session_id, segments, detected if pinned is None and detected else None,
+            )
+            logger.info(
+                "%s: Transcribed %d segments",
+                session.session_id,
+                len(segments),
+            )
+        except Exception as exc:
+            logger.error(
+                "%s: Transcription failed: %s",
+                session.session_id,
+                exc,
+            )
+            # Categorise the exception. Default-category fallback is WHISPER
+            # (more useful than UNKNOWN for transcription-stage failures).
+            cause = categorise_exception(exc)
+            if cause.category == CauseCategoryEnum.UNKNOWN:
+                cause = Cause(
+                    category=CauseCategoryEnum.WHISPER,
+                    message=cause.message,
+                    stage="s05_transcribe",
+                    session_id=session.session_id,
+                )
+            else:
+                cause = cause.model_copy(update={
+                    "stage": "s05_transcribe",
+                    "session_id": session.session_id,
+                })
+            done = SessionTranscription(
+                session.session_id, [], None,
+                StageFailure(session_id=session.session_id, cause=cause),
+            )
+
+        if on_progress:
+            on_progress(i, total)
+        # After the progress callback, so the stage's own count has moved
+        # before the caller does anything with this session.
+        yield done
+
+
 def transcribe_sessions(
     sessions: list[InputSession],
     settings: BristlenoseSettings,
@@ -466,122 +597,27 @@ def transcribe_sessions(
         attempts/successes/failures so the orchestrator can decide whether to
         abandon the run.
 
-        **Every** return path returns all three. The early return below used
-        to return two, and the docstring above used to describe two — the
-        caller unpacks three, so that path raised ValueError rather than
-        returning nothing. See the comment there.
+        Returns all three when nothing needs transcribing too. Until
+        ``iter_transcribe_sessions`` took the work, that path was an early
+        return that gave two values to a caller unpacking three, so it raised
+        ValueError rather than returning nothing.
     """
-    needs_transcription = [
-        s for s in sessions
-        if s.audio_path is not None and not s.has_existing_transcript
-    ]
-
-    if not needs_transcription:
-        # Three values, not two. `pipeline.py` unpacks three, and it decides
-        # whether to call us with a DIFFERENT predicate than the one above:
-        # it asks "not already transcribed and has audio", we ask "has audio
-        # and has no existing transcript". A session with audio whose sidecar
-        # subtitle failed to parse satisfies the caller's test and fails ours,
-        # so this path is reachable with a non-empty `sessions` — and returned
-        # a 2-tuple into a 3-name unpack, crashing the run. Found by mypy
-        # during the 0.31.0 release; no test covered the empty path.
-        logger.info("No sessions need transcription.")
-        return {}, {}, StageOutcome()
-
-    # Detect hardware and choose backend
-    hw = detect_hardware()
-    backend = _resolve_backend(settings.whisper_backend, hw)
-
-    logger.info(
-        "Transcribing %d sessions | backend=%s | model=%s | %s",
-        len(needs_transcription),
-        backend,
-        settings.whisper_model,
-        hw.summary(),
-    )
-
-    # Initialise the chosen backend
-    if backend == "mlx":
-        transcribe_fn = _init_mlx_backend(settings)
-    else:
-        transcribe_fn = _init_faster_whisper_backend(settings, hw)
 
     results: dict[str, list[TranscriptSegment]] = {}
     #: session_id -> the language the backend DETECTED. Populated only when the
-    #: language was left to the backend; see the note at the assignment site.
+    #: language was left to the backend; see SessionTranscription.
     languages: dict[str, str] = {}
-    pinned = settings.whisper_language if settings.whisper_language != "auto" else None
-    outcome = StageOutcome(attempted=len(needs_transcription))
-    total = len(needs_transcription)
-
-    for i, session in enumerate(needs_transcription, start=1):
-        assert session.audio_path is not None
-        logger.info(
-            "%s: Transcribing %s",
-            session.session_id,
-            session.audio_path.name,
-        )
-
-        seg_cb = None
-        if on_segment is not None:
-            def seg_cb(seconds_done: float, file_seconds: float, _i: int = i) -> None:
-                on_segment(_i, total, seconds_done, file_seconds)
-
-        try:
-            # Only pass on_segment when a caller actually wants the within-file
-            # heartbeat — keeps backward-compat with transcribe_fn callables
-            # (and test stubs) that take only (audio_path, settings).
-            if seg_cb is not None:
-                out = transcribe_fn(
-                    session.audio_path, settings, on_segment=seg_cb,
-                )
-            else:
-                out = transcribe_fn(session.audio_path, settings)
-            # Backends return (segments, label); a stub may still return a bare
-            # list — the same backward-compat the on_segment arity dance above
-            # exists for.
-            segments, detected = out if isinstance(out, tuple) else (out, None)
-            results[session.session_id] = segments
-            # Only record a label we did NOT supply. With the language pinned,
-            # every backend echoes the decode option straight back, so storing
-            # it would be our own input wearing the clothes of evidence.
-            if pinned is None and detected:
-                languages[session.session_id] = detected
+    outcome = StageOutcome(attempted=len(_needs_transcription(sessions)))
+    for done in iter_transcribe_sessions(
+        sessions, settings, on_progress=on_progress, on_segment=on_segment,
+    ):
+        results[done.session_id] = done.segments
+        if done.detected_language:
+            languages[done.session_id] = done.detected_language
+        if done.failure is None:
             outcome.succeeded += 1
-            logger.info(
-                "%s: Transcribed %d segments",
-                session.session_id,
-                len(segments),
-            )
-        except Exception as exc:
-            logger.error(
-                "%s: Transcription failed: %s",
-                session.session_id,
-                exc,
-            )
-            results[session.session_id] = []
-            # Categorise the exception. Default-category fallback is WHISPER
-            # (more useful than UNKNOWN for transcription-stage failures).
-            cause = categorise_exception(exc)
-            if cause.category == CauseCategoryEnum.UNKNOWN:
-                cause = Cause(
-                    category=CauseCategoryEnum.WHISPER,
-                    message=cause.message,
-                    stage="s05_transcribe",
-                    session_id=session.session_id,
-                )
-            else:
-                cause = cause.model_copy(update={
-                    "stage": "s05_transcribe",
-                    "session_id": session.session_id,
-                })
-            outcome.failed.append(StageFailure(
-                session_id=session.session_id, cause=cause,
-            ))
-
-        if on_progress:
-            on_progress(i, total)
-
+        else:
+            outcome.failed.append(done.failure)
     return results, languages, outcome
 
 

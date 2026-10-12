@@ -436,7 +436,6 @@ class TestPipelineRecordsAPinnedLanguage:
         from unittest.mock import patch
 
         from bristlenose.config import BristlenoseSettings
-        from bristlenose.events import StageOutcome
         from bristlenose.models import InputSession, TranscriptSegment
         from bristlenose.pipeline import Pipeline
 
@@ -449,9 +448,11 @@ class TestPipelineRecordsAPinnedLanguage:
         )
         seg = TranscriptSegment(start_time=0.0, end_time=1.0, text="hola", speaker_label="A")
         pipeline = Pipeline(BristlenoseSettings(whisper_language=whisper_language))
+        from bristlenose.stages.s05_transcribe import SessionTranscription
+
         with patch(
-            "bristlenose.stages.s05_transcribe.transcribe_sessions",
-            return_value=({"s1": [seg]}, {}, StageOutcome(attempted=1, succeeded=1)),
+            "bristlenose.stages.s05_transcribe.iter_transcribe_sessions",
+            return_value=iter([SessionTranscription("s1", [seg])]),
         ):
             asyncio.run(pipeline._gather_all_segments([session]))
         return pipeline

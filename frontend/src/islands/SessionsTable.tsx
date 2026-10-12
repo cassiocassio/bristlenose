@@ -819,6 +819,11 @@ function SessionRow({
     sentiment_counts,
     source_files,
   } = session;
+  // A first analysis delivers sessions one by one (docs/design-progressive-
+  // lenses.md §2). A row that is not readable yet is not a destination: no
+  // data-session (the grid's hover and pointer key off it), no link, no player.
+  const readable = (session.state ?? "readable") === "readable";
+  const processing = session.state === "processing";
 
   // Journey arrow chain (now uses JourneyChain primitive). Each label deep-links
   // into this session's transcript at that screen's first moment, reusing the
@@ -842,7 +847,7 @@ function SessionRow({
   const playerCtx = useContext(PlayerContext);
   // Clicking either the filename link or the thumbnail opens the popout player.
   const openPlayer =
-    has_media && playerCtx ? () => playerCtx.seekTo(session_id, 0) : undefined;
+    readable && has_media && playerCtx ? () => playerCtx.seekTo(session_id, 0) : undefined;
   const videoTitle =
     source_files.length > 0 ? formatFinderFilename(source_files[0].filename) : undefined;
   let sourceEl: React.ReactNode = "\u2014";
@@ -851,7 +856,18 @@ function SessionRow({
     const displayName = formatFinderFilename(sf.filename);
     const titleAttr =
       displayName !== sf.filename ? sf.filename : undefined;
-    if (has_media && !isExportMode()) {
+    if (!readable) {
+      // The one being worked on carries the shimmer, on its filename only.
+      sourceEl = (
+        <span
+          title={titleAttr}
+          className={processing ? "bn-thinking-shimmer" : undefined}
+          data-testid={processing ? "bn-session-processing" : undefined}
+        >
+          {displayName}
+        </span>
+      );
+    } else if (has_media && !isExportMode()) {
       // Offline (export) has no media server / popout player — render the
       // filename as plain text rather than a dead #t=0 link.
       sourceEl = (
@@ -882,11 +898,12 @@ function SessionRow({
   return (
     <div
       className={`bn-sessions-row${tapestryOpen ? " bn-tapestry-open" : ""}`}
-      data-session={session_id}
+      data-session={readable ? session_id : undefined}
+      aria-disabled={readable ? undefined : true}
       role="row"
     >
       <div className="bn-sessions-cell bn-cell-id bn-session-id" role="cell">
-        {tapestryOpen !== undefined && (
+        {readable && tapestryOpen !== undefined && (
           <button
             type="button"
             className="bn-tapestry-toggle"
@@ -903,17 +920,23 @@ function SessionRow({
             </svg>
           </button>
         )}
-        <a href={isExportMode() ? `#${sessionPath}` : sessionPath}>
-          #{session_number}
-        </a>
+        {readable ? (
+          <a href={isExportMode() ? `#${sessionPath}` : sessionPath}>
+            #{session_number}
+          </a>
+        ) : (
+          <span>#{session_number}</span>
+        )}
       </div>
       <div className="bn-sessions-cell bn-cell-thumb" role="cell">
-        <Thumbnail
-          hasMedia={has_media}
-          thumbnailUrl={thumbnail_url ?? undefined}
-          onActivate={openPlayer}
-          title={videoTitle}
-        />
+        {readable && (
+          <Thumbnail
+            hasMedia={has_media}
+            thumbnailUrl={thumbnail_url ?? undefined}
+            onActivate={openPlayer}
+            title={videoTitle}
+          />
+        )}
       </div>
       <div className="bn-sessions-cell bn-cell-speakers bn-session-speakers" role="cell">
         {speakers.map((sp) => {
@@ -1089,7 +1112,7 @@ function SessionRow({
           Below the switch a container query drops them into one column,
           stacked — so the merge is CSS, not a second markup path. */}
       <div className="bn-sessions-cell bn-cell-duration bn-session-duration" role="cell">
-        {formatDurationHuman(duration_seconds)}
+        {readable || duration_seconds > 0 ? formatDurationHuman(duration_seconds) : null}
       </div>
       <div className="bn-sessions-cell bn-cell-file" role="cell">{sourceEl}</div>
     </div>

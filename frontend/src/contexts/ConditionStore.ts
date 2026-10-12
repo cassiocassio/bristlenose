@@ -168,3 +168,9 @@ const subscribe = (l: () => void) => {
 export function useLenses(): Lenses {
   return useSyncExternalStore(subscribe, () => state.lenses);
 }
+
+/** True while a first analysis is still delivering: some lens is withheld.
+ *  Export waits for the whole report (docs/design-progressive-lenses.md §5.6). */
+export function isReportPartial(lenses: Lenses = state.lenses): boolean {
+  return !LENS_IDS.every((id) => lenses[id]);
+}

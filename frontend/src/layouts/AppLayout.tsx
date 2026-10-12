@@ -88,7 +88,7 @@ import i18n from "../i18n";
 import { resolveBrowserLang } from "../i18n/LocaleStore";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
-import { startConditionPolling } from "../contexts/ConditionStore";
+import { isReportPartial, startConditionPolling } from "../contexts/ConditionStore";
 import { getExportData } from "../utils/exportData";
 import { DEFAULT_HEALTH_RESPONSE, type HealthResponse } from "../utils/health";
 import { asPhrase } from "../utils/searchMatch";
@@ -529,6 +529,9 @@ function AppShell() {
 
         // ── Tier 2: export, filter, help, zoom, dark mode ──────────────
         case "exportReport": {
+          // The native menu reaches here too: no partial report while a first
+          // analysis is still delivering (the server refuses it as well).
+          if (isReportPartial()) break;
           // Global Anonymise toggle (macOS menu) rides the payload; the web
           // dropdown sends no payload and surfaces anonymise via the modal.
           const anon = (payload as { anonymise?: boolean } | undefined)?.anonymise ?? false;

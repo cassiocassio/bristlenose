@@ -403,6 +403,11 @@ class RunProgressEvent(_EventBase):
     # (re-id-safe). None only on a full cache-hit run, which emits no progress.
     sessions_new: int | None = None
     sessions_cached: int | None = None
+    # How many sessions have a readable transcript so far — a first analysis
+    # delivers them one by one (docs/design-progressive-lenses.md, Phase 1).
+    # Carried on every progress line once it is non-zero, because readers take
+    # the newest line only. A count, never which sessions (re-id rule above).
+    sessions_readable: int | None = None
     # 0..1 measured within-stage progress where the backend exposes it
     # (e.g. within-file audio fraction on faster-whisper); None otherwise.
     stage_fraction: float | None = None

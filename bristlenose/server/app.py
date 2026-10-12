@@ -806,9 +806,13 @@ def _maybe_status_response(app: FastAPI, output_dir: Path) -> HTMLResponse | Non
         platform=os.environ.get("BRISTLENOSE_PLATFORM", ""),
         policy=policy_from_env(),
         importing=overlay.get("importing") is not None,
-        has_data=bool(getattr(app.state, "last_run", None)),
+        # Sessions a run in progress imported are data too: the run's own
+        # completion must not put the status page over them while the whole
+        # report imports.
+        has_data=bool(getattr(app.state, "last_run", None))
+        or bool(getattr(app.state, "sessions_imported", False)),
         # A server fact, not the manifest's: a session can be readable on disk
-        # before its rows are in the database. Phase 1's per-session import sets it.
+        # before its rows are in the database. The per-session import sets it.
         sessions_imported=bool(getattr(app.state, "sessions_imported", False)),
     )
     if status is None:
@@ -1168,6 +1172,11 @@ def _make_run_completed_handler(
             "outcome": ev.outcome.value,
             "completed_at": ev.ended_at,
         }
+        # A progressive run's overlay ends here, with the whole report in the
+        # database — not at the terminus, when the lenses would say ready over
+        # tables that are still empty.
+        app.state.progress = None
+        app.state.sessions_imported = False
         # New sessions want scene strips; a running pass is asked to go round again.
         job = getattr(app.state, "scene_strips", None)
         if job is not None:
@@ -1276,12 +1285,11 @@ def _install_event_watcher(
     # The SPA's refresh key while a run is in progress: bumped after each
     # per-session import (docs/design-progressive-lenses.md §3.2), never at run
     # end, where ``/last-run`` already moves and the SPA would refetch twice.
-    # Nothing bumps it until Phase 1 adds the per-session import.
     app.state.data_version = 0
     # Whether that import has put any session in the database yet (page_for).
     app.state.sessions_imported = False
-    # The per-session overlay for a progressive run (§3.1); None until Phase 1
-    # reads it from the manifest, and None means every lens is available.
+    # The per-session overlay for a progressive run (§3.1), kept by
+    # ``server/progressive.py``; None means every lens is available.
     app.state.progress = None
 
     # ``last_run`` is the DATA VERSION: "the database holds this run". Set only
@@ -1299,9 +1307,16 @@ def _install_event_watcher(
             "completed_at": report.ended_at or "",
         }
 
+    from bristlenose.server.progressive import ProgressiveImport
+
+    progressive = ProgressiveImport(app, session_factory, project_dir)
+
     async def _on_change() -> None:
         app.state.condition = read_condition(project_output_dir(project_dir))
         await _reattach_if_moved()
+        # A first analysis delivers its sessions one by one: import each as the
+        # run records it readable (docs/design-progressive-lenses.md, Phase 1).
+        await progressive.follow(current_condition(app, project_output_dir(project_dir)))
         # Any change to the log re-arms the scene-strip job: a run's start defers it, and a run
         # that fails, is cancelled or dies writes no run_completed, so only this can start it
         # again. A no-op while a pass runs or a run is in progress.

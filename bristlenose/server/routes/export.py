@@ -413,7 +413,15 @@ def export_report(
 
     Gathers all API data, embeds it in the React SPA shell, and returns
     a downloadable HTML file.
+
+    Refused while a first analysis is still delivering its sessions
+    (docs/design-progressive-lenses.md §5.6): the file would be a partial
+    report, carrying rows for sessions it has no transcripts for.
     """
+    if getattr(request.app.state, "progress", None) is not None:
+        raise HTTPException(
+            status_code=409, detail="The analysis is still running; export when it has finished.",
+        )
     from bristlenose.server.routes.codebook import get_codebook as _get_codebook_handler
     from bristlenose.server.routes.dashboard import (
         get_dashboard as _get_dashboard_handler,
@@ -464,7 +472,7 @@ def export_report(
     # get_sessions uses Depends(_get_db) — call with explicit db
     db = request.app.state.db_factory()
     try:
-        sessions = _get_sessions_handler(project_id, db=db)
+        sessions = _get_sessions_handler(project_id, request, db=db)
     finally:
         db.close()
     # The handler closes the session it is given.

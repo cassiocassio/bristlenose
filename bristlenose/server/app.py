@@ -1258,10 +1258,10 @@ def _install_event_watcher(
         now = _attached_files()
         if now == attached["files"]:
             return
-        attached["files"] = now
         if engine is None or db_file is None or not db_file.parent.is_dir():
             # Mid-stash: nothing on disk to attach to yet. The next change
             # (the run creating its tree) comes back here.
+            attached["files"] = now
             return
         logger.warning(
             "output folder replaced under the running server (database %s, events log %s) "
@@ -1271,7 +1271,9 @@ def _install_event_watcher(
         try:
             await asyncio.to_thread(ensure_schema, engine)
         except Exception:
+            # Left unrecorded, so the next change to the log tries again.
             logger.exception("could not reattach the database after the output folder moved")
+            return
         attached["files"] = _attached_files()
 
     # The project's condition — what it is doing, derived by one reducer.

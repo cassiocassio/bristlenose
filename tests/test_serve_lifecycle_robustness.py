@@ -14,6 +14,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -33,7 +34,8 @@ from tests.test_serve_importer import _make_quote, _write_pipeline_output, _writ
 from tests.test_serve_importer import db as db  # noqa: F401 — the in-memory DB fixture
 from tests.test_serve_moderator_identities import _client, _reimport, _slots
 from tests.test_serve_participant_recode import _registry, _with_quotes
-from tests.test_serve_project_root import _app, _project, _rows, _wait
+from tests.test_serve_project_root import _app, _project, _rows, _sessions, _wait
+from tests.test_serve_project_root import _client as _polling_client
 from tests.test_serve_project_root import fast_watcher as fast_watcher  # noqa: F401
 
 
@@ -52,32 +54,67 @@ def _unlock(out: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_a_restore_under_a_serve_started_after_the_stash_is_read(
-    tmp_path: Path, fast_watcher,
-) -> None:
-    """Serve A analysed the project; ``--clean`` stashed it; serve B started in
-    that window; the run failed and ``restore`` put A's report back. B's pool
-    is pinned to its own (now set-aside) database, and A's events log carries
-    nothing B could re-import — so only an inode-change heal lets B read the
-    report that is on disk."""
-    proj = _project(tmp_path)
-    out = proj / "bristlenose-output"
-    with AuthTestClient(_app(proj, tmp_path)) as client:
-        assert client.get("/api/projects/1/sessions").json()["sessions"]
-    # A's history: a run that started and failed. Nothing to re-import.
-    events_path(out).unlink()
-    _started(out, "X")
-    _failed(out, "X")
-    backup = output_backup.stash(out)
-    assert backup is not None
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows will not move a folder whose database serve holds open, so neither the stash nor the restore can happen there")
+class TestTheStashCycle:
+    """A serve that straddles ``--clean``'s stash and a failed run's restore
+    ends up reading the report that is on disk, in one project row."""
 
-    with AuthTestClient(_app(proj, tmp_path)) as client:
-        assert client.get("/api/projects/1/sessions").json()["sessions"] == []
-        assert output_backup.restore(backup, out).report_is_back
-        assert _wait(lambda: client.get("/api/projects/1/sessions").json()["sessions"]), (
-            "the serve kept answering from the database the restore set aside"
-        )
-    assert len(_rows(out / ".bristlenose" / "bristlenose.db")) == 1
+    def test_serve_while_the_output_is_stashed_then_restored(self, tmp_path: Path, fast_watcher) -> None:
+        """``run --clean`` moves the report aside; the Mac app (re)starts the serve in
+        that window on every Re-analyse; the run fails and ``restore`` puts the old
+        report back. The serve must end up reading it — one row, under the output
+        folder — not a second row beside an empty first."""
+        from bristlenose.utils import output_backup
+
+        proj = _project(tmp_path)
+        out = proj / "bristlenose-output"
+        backup = output_backup.stash(out)
+        assert backup is not None and not out.exists()
+
+        app = _app(proj, tmp_path)
+        with _polling_client(app) as client:  # this module's _client builds an app
+            db = out / ".bristlenose" / "bristlenose.db"
+            assert db.exists(), "the database belongs under the output folder, created eagerly"
+            assert not (proj / ".bristlenose").exists(), "litter at the project root"
+
+            # The run dies; its handler puts the previous report back (the serve's
+            # own eagerly-created tree is set aside as the failed run's).
+            assert output_backup.restore(backup, out).report_is_back
+            assert _wait(lambda: _sessions(client)), (
+                "the report the SPA reads (project 1) stayed empty after the restore"
+            )
+
+        rows = _rows(db)
+        assert len(rows) == 1, f"the restore's import forked a second project row: {rows}"
+        assert Path(rows[0][2]).resolve() == out.resolve()
+        assert not (proj / ".bristlenose").exists()
+
+    def test_a_restore_under_a_serve_started_after_the_stash_is_read(
+        self, tmp_path: Path, fast_watcher,
+    ) -> None:
+        """Serve A analysed the project; ``--clean`` stashed it; serve B started in
+        that window; the run failed and ``restore`` put A's report back. B's pool
+        is pinned to its own (now set-aside) database, and A's events log carries
+        nothing B could re-import — so only an inode-change heal lets B read the
+        report that is on disk."""
+        proj = _project(tmp_path)
+        out = proj / "bristlenose-output"
+        with AuthTestClient(_app(proj, tmp_path)) as client:
+            assert client.get("/api/projects/1/sessions").json()["sessions"]
+        # A's history: a run that started and failed. Nothing to re-import.
+        events_path(out).unlink()
+        _started(out, "X")
+        _failed(out, "X")
+        backup = output_backup.stash(out)
+        assert backup is not None
+
+        with _polling_client(_app(proj, tmp_path)) as client:
+            assert _sessions(client) == []
+            assert output_backup.restore(backup, out).report_is_back
+            assert _wait(lambda: _sessions(client)), (
+                "the serve kept answering from the database the restore set aside"
+            )
+        assert len(_rows(out / ".bristlenose" / "bristlenose.db")) == 1
 
 
 # ---------------------------------------------------------------------------

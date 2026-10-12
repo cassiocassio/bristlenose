@@ -79,9 +79,13 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-
     resolves. Applies to every connection (the event fires on each connect).
     """
     cursor = dbapi_connection.cursor()
+    # The timeout first: ``journal_mode=WAL`` takes a write lock, and a connection
+    # opened while ``init_db`` is creating a replaced database's schema (the
+    # serve's reattach) died at once with "database is locked" before the timeout
+    # it was about to set could apply (macOS CI, 12 Oct 2026).
+    cursor.execute("PRAGMA busy_timeout=5000")
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
 
 

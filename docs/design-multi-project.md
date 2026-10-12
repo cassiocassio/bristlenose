@@ -118,7 +118,7 @@ Over time, the CLI gains commands:
 
 The index stores only pointers (path, name, timestamps, location hints). All project data stays in its own directory. This means:
 - Projects on unmounted volumes appear greyed out, not broken — the index remembers where they live (see §3: Unavailable projects)
-- Moving a folder on a mounted volume breaks the pointer — the desktop app detects this (volume mounted but path gone) and prompts to relocate
+- Moving a folder on a mounted volume breaks the pointer — the desktop app detects this (volume mounted but path gone) and prompts to relocate. _As built (checked 12 Oct 2026):_ only when the security-scoped bookmark fails. When it resolves, `ProjectIndex.refreshAvailability` (`ProjectIndex.swift:1115-1135`) follows the move and rewrites the stored path silently, at launch and on volume mount — no prompt, which is what `docs/design-project-storage.md` ("renames/moves … resolve without UI") describes. The serve then imports at the new path, where `import_project` matches no row and forks a second project (`bristlenose/server/CLAUDE.md`, "Project identity is the resolved path")
 - Two users can share a project folder (Dropbox, git) without sharing an index
 - Deleting the index loses the project list but not the data — `bristlenose serve <folder>` still works
 

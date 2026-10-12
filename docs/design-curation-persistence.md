@@ -253,13 +253,18 @@ _Added 28 Jul 2026. This doc specified preservation exhaustively and never named
 the paths that don't preserve — so a reader could leave believing curation always
 survives. It doesn't, in three distinct ways._
 
-1. **`--clean` deletes the persistence layer itself.** `bristlenose run --clean`
-   does `shutil.rmtree(output_dir)` (`cli.py:1106`). The SQLite database holding
-   every `durable_id`, `frozen_form`, star, tag and edit lives at
-   `<output_dir>/.bristlenose/bristlenose.db` — **inside the tree being removed**.
-   So `--clean` doesn't merely lose curation; it destroys the machinery this whole
-   doc describes. It is **CLI-only today**: `PipelineRunner.start(project:clean:)`
-   defaults `false` and has **zero** `clean: true` callers in `desktop/`.
+1. **`--clean` discards the persistence layer itself.** `bristlenose run --clean`
+   moves `output_dir` aside and deletes the copy once the run succeeds
+   (`cli.py:1352-1360`, `utils/output_backup.py`; it was `shutil.rmtree` until
+   30 Aug 2026). The SQLite database holding every `durable_id`, `frozen_form`,
+   star, tag and edit lives at `<output_dir>/.bristlenose/bristlenose.db` —
+   **inside the tree being moved**. So `--clean` doesn't merely lose curation; it
+   destroys the machinery this whole doc describes. _Corrected 12 Oct 2026:_ it
+   is **not** CLI-only. The Mac app's **Re-analyse…** calls
+   `pipelineRunner.start(project:, clean: true)` (`ContentView.swift:1120` after
+   the counted confirmation sheet, and `:1618` directly when the curation count
+   is zero), so every app re-analysis takes this path — by design, with the loss
+   counted and confirmed (`docs/design-analysis-lifecycle.md` §6).
 2. **Whole-session removal drops that session's pins — by governance, not
    accident.** Pins protect a quote only while its session survives
    (`importer.py:1528`); the carve-out exists so consent withdrawal genuinely

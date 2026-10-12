@@ -325,10 +325,24 @@ version (it now reads the condition). All fixed, each with a test.
   puts the old tree back, so the condition names a report that is not on disk.
   A writer bug in `cli.py`: the terminus must be decided inside the lifecycle
   block. Phase B, pipeline side.
-- **The other eight output-location call sites** (`db.py`, `importer.py`, …)
+- **The other output-location call sites** (`db.py`, `importer.py`, …)
   still use the old two-line rule, so a serve started before the first run puts
   its database in the interview folder. Moving them changes where an existing
   project's database lives — a migration, not a refactor.
+  **Confirmed as a shipped defect on 12 Oct 2026, with a second trigger this
+  entry did not name.** It is not only "before the first run": every Mac
+  **Re-analyse…** passes `--clean`, which moves `bristlenose-output/` aside,
+  and the app starts or restarts the serve without regard to that
+  (`ContentView.swift:1327-1378`; nothing stops the serve before a run or
+  restarts it after). A serve started in that window roots its DB and log at
+  `<project>/.bristlenose/`, creates project row 1 "Untitled" with
+  `output_dir == input_dir`, and on `run_completed` the importer — which
+  re-derives `output_dir` with the old rule — matches nothing and creates row
+  2. `_make_run_completed_handler` publishes `last_run[1]` regardless
+  (`app.py:1127-1149`), so the SPA re-fetches an empty row 1 and every lens
+  shows zero. Measured on a real project, then reproduced on the smoke fixture
+  in 30 s with no LLM. Twelve sites carry the rule, not eight; the list and the
+  plan are in `TODO.md` (12 Oct 2026) and `bristlenose/server/CLAUDE.md`.
 - **An undecodable log with no known report fails open** (serves the SPA). The
   honest page needs copy ("this project's history can't be read") — phase E.
 - **The self-refresh script cannot say it lost contact** with a stopped server;
@@ -497,10 +511,18 @@ native cover (`runCover` needs `.statusPage`). Keying the cover on the overlay
    in front of them. `d367bcca` changed the watcher's trigger to the run id -
    re-measure rather than quote that sentence.
 2. **Where should the database of a never-run project live?** Today: the
-   interview folder's `.bristlenose/`. The resolver says `bristlenose-output/`,
-   which `bristlenose run` refuses to start into if it already exists. Options:
-   create the DB lazily on first import, or teach `run` to accept an output
-   folder holding only `.bristlenose/bristlenose.db`.
+   interview folder's `.bristlenose/`. The resolver says `bristlenose-output/`.
+   _Corrected 12 Oct 2026:_ `bristlenose run` does **not** refuse an output
+   folder holding only `.bristlenose/` — `_has_no_deliverable` (`cli.py:1051`,
+   called at `:1231`) reuses it silently, and
+   `tests/test_cli_run_output_dir.py::test_the_husk_a_hung_run_leaves_is_reusable`
+   pins that with `bristlenose.db`, `-wal` and `-shm` present. So the second
+   option below is already true, and the decision is narrower than it looked:
+   whether the serve creates the DB eagerly at `bristlenose-output/.bristlenose/`
+   (what `--clean` then stashes with the rest) or lazily on first import.
+   `project_output_dir`'s docstring (`output_paths.py:262`) still states the
+   refusal; it is wrong. Options as before: create the DB lazily on first
+   import, or let the serve create it in the future `bristlenose-output/`.
 3. **Sandbox liveness** (§4.4) — measure before phase C.
 4. **Copy for three pages that don't exist yet** — import failed with no earlier
    data, history unreadable, lost contact — phase E, with the cause table.

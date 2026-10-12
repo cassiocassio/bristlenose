@@ -62,14 +62,16 @@ Per-user state lives outside your project directories and persists across runs:
 - **Voice model cache** — `~/.cache/bristlenose/models/` on the CLI (or `$XDG_CACHE_HOME/bristlenose/models/`; `$SNAP_USER_COMMON/models/` under Snap); `~/Library/Containers/app.bristlenose/Data/Library/Caches/bristlenose/models/` in the Mac app (not backed up; macOS may purge it, and it is fetched again). 40 MB.
 - **Validation state** — `~/Library/Application Support/Bristlenose/state.json` on macOS, `$XDG_DATA_HOME/Bristlenose/state.json` (default `~/.local/share/Bristlenose/state.json`) on Linux. Contains last-validated timestamps per provider — no keys, no transcript data. Mode `0o600`.
 
-Project artefacts (transcripts, reports, intermediates) live exclusively under your input folder's `bristlenose-output/` and never leave it.
+Project artefacts (transcripts, reports, intermediates) live under your input folder's `bristlenose-output/`, with two exceptions.
 
-**One exception, and it is short-lived.** `bristlenose run --clean` no longer deletes the previous report before starting — a run that crashed used to leave you with neither the old report nor a new one. It now *moves* it to a hidden sibling, `.bristlenose-output-previous/`, and deletes that only once the run has produced a replacement. If the run fails, the report is put back and the failed attempt is kept at `.bristlenose-output-failed/` so a retry can resume from it. Both are removed by the next successful run.
+**The first is short-lived.** `bristlenose run --clean` no longer deletes the previous report before starting — a run that crashed used to leave you with neither the old report nor a new one. It now *moves* it to a hidden sibling, `.bristlenose-output-previous/`, and deletes that only once the run has produced a replacement. If the run fails, the report is put back and the failed attempt is kept at `.bristlenose-output-failed/`. Nothing resumes from that copy yet (measured 12 Oct 2026); the next `--clean` run removes it.
 
-While either exists it holds a full copy of the output directory, **including `pii_summary.txt` and `llm-calls.jsonl`** — so during that window `rm -rf bristlenose-output` alone does not remove every byte. To be certain, and this is the form to use in a deletion procedure:
+**The second is a known defect, open as of 12 Oct 2026.** A report server (`bristlenose serve`, or the Mac app) started while `bristlenose-output/` is absent — before the first run, or while a `--clean` run has moved it aside — writes its database, its log and any `llm-calls.jsonl` to `<project>/.bristlenose/` in the interview folder instead, and those files stay there after the run. The database holds participant names; the log holds file paths. Measured and recorded in `TODO.md` (12 Oct 2026); the fix is planned.
+
+While a stash exists it holds a full copy of the output directory, **including `pii_summary.txt` and `llm-calls.jsonl`** — so during that window `rm -rf bristlenose-output` alone does not remove every byte. To be certain, and this is the form to use in a deletion procedure (the last entry is the stray folder from the second exception; it is harmless to name when absent):
 
 ```sh
-rm -rf bristlenose-output .bristlenose-output-previous .bristlenose-output-failed
+rm -rf bristlenose-output .bristlenose-output-previous .bristlenose-output-failed .bristlenose
 ```
 
 `bristlenose status` reports either directory when it finds one. They are dot-prefixed so Bristlenose can never re-ingest a stashed report as interview material — which also means Finder will not show them to you.
@@ -82,7 +84,7 @@ rm -rf bristlenose-output .bristlenose-output-previous .bristlenose-output-faile
 
 Each message is capped at 4 KB; each stage's `failed` list is capped at 10 entries (with a synthetic "+ N more" overflow placeholder). These caps protect the desktop's 64 KB log-tail read window from a 50-session failure producing a 200 KB terminus line.
 
-**This file is a re-identification key** when combined with the transcript files in the same project (session ordinals correlate to participant codes). Never include in any export, support bundle, or shareable archive. Mode `0o600` + `O_NOFOLLOW` enforced. To purge: `rm <project>/.bristlenose/pipeline-events.jsonl` (deleting the project folder removes it automatically). The file is local-only and never transmitted.
+**This file is a re-identification key** when combined with the transcript files in the same project (session ordinals correlate to participant codes). Never include in any export, support bundle, or shareable archive. Mode `0o600` + `O_NOFOLLOW` enforced. To purge: `rm <project>/bristlenose-output/.bristlenose/pipeline-events.jsonl` (deleting the project folder removes it automatically). The file is local-only and never transmitted.
 
 #### Agent access record (`bristlenose.log`)
 
@@ -164,7 +166,7 @@ With Ollama (local models), this stays on your machine. With cloud LLM providers
 
 `pii_summary.txt` is written to the `.bristlenose/` hidden directory inside the output folder. It contains every original PII value with replacement labels, confidence scores, and timecodes — **this file is a re-identification key and must not be shared outside the research team.** Review it to catch false positives or missed items.
 
-`llm-calls.jsonl` is written to the same `.bristlenose/` directory. Each row records one LLM call's cost, timing, model, and participant code (`p1`, `p2` …) for the cost-forecasting feature. The file does **not** contain transcript text, quotes, or LLM prompt/response bodies. **It is a re-identification key when combined with the transcript files in the same project — must not be shared outside the research team, never include in any export or support bundle.** Mode `0o600` and `O_NOFOLLOW` are enforced. The file is local-only and never transmitted; there is no Bristlenose backend that sees this data. To purge: `rm <project>/.bristlenose/llm-calls.jsonl` (deletion of the project folder removes it automatically). Kill switch: `BRISTLENOSE_LLM_TELEMETRY=0` stops new appends. Retention is bounded by `BRISTLENOSE_LLM_CALLS_RETAIN` (default 1000 rows).
+`llm-calls.jsonl` is written to the same `.bristlenose/` directory. Each row records one LLM call's cost, timing, model, and participant code (`p1`, `p2` …) for the cost-forecasting feature. The file does **not** contain transcript text, quotes, or LLM prompt/response bodies. **It is a re-identification key when combined with the transcript files in the same project — must not be shared outside the research team, never include in any export or support bundle.** Mode `0o600` and `O_NOFOLLOW` are enforced. The file is local-only and never transmitted; there is no Bristlenose backend that sees this data. To purge: `rm <project>/bristlenose-output/.bristlenose/llm-calls.jsonl` (deletion of the project folder removes it automatically; see the second exception under "What Bristlenose writes to your machine" for the one case where a copy sits at `<project>/.bristlenose/` instead). Kill switch: `BRISTLENOSE_LLM_TELEMETRY=0` stops new appends. Retention is bounded by `BRISTLENOSE_LLM_CALLS_RETAIN` (default 1000 rows).
 
 ### Testing
 

@@ -608,8 +608,11 @@ through SwiftUI's own `ImageRenderer` rather than CSS. The drawing and the build
 now agree.
 
 **The finding that prompted the departure is real, and does not change the
-design.** `--clean` is `shutil.rmtree(output_dir)`, so a re-analysis always
-destroys the existing analysis, not only the curation on top of it. But derived
+design.** `--clean` moves `bristlenose-output/` aside and discards it once the
+run succeeds (`cli.py:1352-1360`, `utils/output_backup.py` — it was
+`shutil.rmtree(output_dir)` until 30 Aug 2026, and this sentence said so until
+12 Oct 2026), so a re-analysis always destroys the existing analysis, not only
+the curation on top of it. But derived
 output is not a loss for the researcher to weigh — it is the thing they just
 asked to have rebuilt, and the sheet's opening line already states it ("…will
 transcribe and analyse all 14 interviews again from scratch"). The counted block

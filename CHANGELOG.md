@@ -12,6 +12,7 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 **Improved**
 
 - **Speech the transcriber couldn't make out is shown as inaudible, not as invented words.** On a Mac with Apple silicon, a line where Whisper only repeated its own example phrases ("Ainda, hum, na verdade.") is now marked as a gap of that length in the transcript, and its words are not kept, so they cannot be quoted. Applies to recordings transcribed from now on.
+- **Whisper's repetition loops are taken out of new transcripts.** A word or line repeated as many separate lines ("nada nada nada…", or "Gracias." every half minute over music) is removed, and the stretch is transcribed again in case speech was under it.
 - **`serve --dev` restarts only for changes to Bristlenose's own Python.** It used to watch the whole working directory, so a sidecar rebuild under `desktop/` restarted the dev server dozens of times.
 
 **Fixed**

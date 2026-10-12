@@ -293,6 +293,40 @@ def is_prompt_guess(text: str, prompt: str, confidences: list[float]) -> bool:
     return share >= _GUESS_PROMPT_SHARE and mean < _GUESS_MAX_CONFIDENCE
 
 
+#: A run of consecutive segments with the same text is a Whisper loop, never
+#: speech, when it is this long, or this many spread over this many seconds.
+#: Measured 12 Oct 2026 on the twenty trial recordings (docs/design-whisper-
+#: style-prompts.md): loops ran 3-39 lines ("Gracias." three times over 60 s,
+#: "nada" 39 times in 29 s), while real repeated backchannel stayed tight
+#: ("Sim." four times in 2.4 s, "¡No!" six times in 6 s). Pairs are left
+#: alone: 202 of them, many real ("no", "¿Ya ves?").
+_LOOP_MIN_LINES = 3
+_LOOP_MIN_SPAN_S = 15.0
+_LOOP_ALWAYS_LINES = 8
+
+
+def find_segment_loops(segs: list[tuple[float, float, str]]) -> list[tuple[int, int]]:
+    """Runs ``[i, j)`` of consecutive segments that are one Whisper loop.
+
+    ``collapse_adjacent_repeats`` catches a loop inside one segment; this one
+    catches it spread across many, which that never sees ("nada" as 39
+    separate one-word lines). Text is compared on its letters and digits, so
+    "Gracias." and "gracias" are one line.
+    """
+    runs: list[tuple[int, int]] = []
+    i = 0
+    while i < len(segs):
+        key = _prompt_core(segs[i][2])
+        j = i + 1
+        while key and j < len(segs) and _prompt_core(segs[j][2]) == key:
+            j += 1
+        n, span = j - i, segs[j - 1][1] - segs[i][0]
+        if key and n >= _LOOP_MIN_LINES and (n >= _LOOP_ALWAYS_LINES or span >= _LOOP_MIN_SPAN_S):
+            runs.append((i, j))
+        i = j
+    return runs
+
+
 #: True only inside our own `mlx_whisper.transcribe` call, so the hook below
 #: changes nothing for any other caller, in this thread or another.
 _STYLE_PROMPT_ON: contextvars.ContextVar[bool] = contextvars.ContextVar(
@@ -867,6 +901,15 @@ def _init_mlx_backend(
                 continue
             kept.append(seg)
 
+        # A loop is never what was said, so it goes before the net: the stretch
+        # it covered then reads as the gap it is, and is re-decoded.
+        loops = find_segment_loops([
+            (float(x.get("start", 0.0)), float(x.get("end", 0.0)), str(x.get("text", "")))
+            for x in kept
+        ])
+        looped = {k for i, j in loops for k in range(i, j)}
+        kept = [x for k, x in enumerate(kept) if k not in looped]
+
         if SKIP_NET_ENABLED:
             kept = _recover_skipped(
                 kept, audio, levels, decode_kwargs, result.get("language"), audio_path.name,
@@ -925,6 +968,11 @@ def _init_mlx_backend(
             logger.info(
                 "%s: dropped %d segment(s) that repeat the style prompt",
                 audio_path.name, echoes,
+            )
+        if loops:
+            logger.info(
+                "%s: removed %d repetition loop(s), %d segment(s)",
+                audio_path.name, len(loops), len(looped),
             )
         if guesses:
             logger.info(

@@ -29,6 +29,7 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 - **An interview you removed no longer comes back into the report.** Deleting or renaming a recording left its old transcript in the output folder, and the report rebuilt the session from it. A run now removes the files of sessions that are no longer in the project.
 - **Two recordings with the same name in different folders are two sessions.** They were merged into one, and the second was dropped without a word.
 - **Renaming a project folder leaves one report, not one per name.**
+- **`bristlenose analyze` on a project's own transcripts keeps the project's name.** Pointed at `bristlenose-output/transcripts-raw`, it named the project and its report `transcripts-raw`.
 - **The Mac app follows a project folder you rename in Finder.** It kept the report on the old path, and a re-analysis run after the rename never reached the report. A folder moved to the Bin shows as Can't find, with Locate…, instead of being served from there.
 - **Reopening the Mac app during an analysis shows that analysis.** The row said Analysing with a Stop button that did nothing, and Analyse could start a second run on the same folder.
 - **The Mac app's sidebar says when a project's report database holds a second project**, the shape the empty-report bug above left behind, instead of showing a session count the report could not.

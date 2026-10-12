@@ -1654,7 +1654,19 @@ def analyze(
         _validate_codebook_slug(codebook)
 
     if project_name is None:
-        project_name = transcripts_dir.resolve().name
+        # A project's own transcripts folder is not its name: `analyze
+        # <p>/bristlenose-output/transcripts-raw` used to call the project
+        # "transcripts-raw", and every render removes the reports of names
+        # that are not the current one — so that run deleted the project's
+        # real report. Take the recorded name, then the project folder.
+        from bristlenose.stages.s12_render_output import read_pipeline_metadata
+
+        project_name = read_pipeline_metadata(output_dir).get("project_name")
+        inside_output = transcripts_dir.resolve().parent == output_dir.resolve()
+        if not project_name and inside_output and output_dir.name == "bristlenose-output":
+            project_name = output_dir.resolve().parent.name
+        if not project_name:
+            project_name = transcripts_dir.resolve().name
 
     settings_kwargs: dict[str, object] = {
         "output_dir": output_dir,

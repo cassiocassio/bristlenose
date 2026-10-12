@@ -26,7 +26,9 @@ LANG_NAMES = {"es": "Spanish", "fr": "French", "de": "German", "it": "Italian",
 #: Trial conditions, in order, with the label the page shows.
 CONDITIONS = {"none": "No prompt (today)", "none+net": "No prompt + net",
               "prompt": "Prompt v1", "prompt+net": "Prompt v1 + net", "prompt-v2": "Prompt v2",
-              "prompt-v2+net": "Prompt v2 + net"}
+              "prompt-v2+net": "Prompt v2 + net",
+              "prompt+net+inaudible": "Prompt v1 + net + inaudible",
+              "prompt-v2+net+inaudible": "Prompt v2 + net + inaudible"}
 METRICS = [
     ("words", "Words", "higher is not always better; a big drop means speech was lost"),
     ("sentences", "Sentence ends", "higher is better"),
@@ -114,6 +116,8 @@ body { padding: 0; }
 .m-head .m-sub { color: var(--bn-colour-muted); }
 .m-head code { font-family: var(--bn-font-mono); font-size: .92em; }
 .m-table { border-collapse: collapse; font-size: var(--bn-text-caption); margin: .6rem 0 0; }
+.m-gap { color: var(--bn-colour-muted); font-style: italic; border: 1px dashed var(--bn-colour-border);
+  border-radius: var(--bn-radius-sm, 3px); padding: 0 .3rem; white-space: nowrap; }
 .m-table th, .m-table td { padding: .2rem .7rem .2rem 0; text-align: left; }
 .m-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .m-table th { color: var(--bn-colour-muted); font-weight: var(--bn-weight-emphasis); }
@@ -140,14 +144,16 @@ body { padding: 0; }
   large-v3-turbo, seeded), once with no style prompt and once with the candidate prompt for its
   language. Text is shown in 30-second blocks so the two columns stay aligned in time. Speakers
   are not identified. Highlighting marks words that also appear in the prompt, the sign of a
-  prompt leaking into speech it could not hear.</p>
+  prompt leaking into speech it could not hear. The "+ inaudible" runs mark a line that is mostly
+  prompt words at very low confidence as a dashed gap ("inaudible 7 s") instead of words, as the
+  transcript page now does.</p>
 </header>
 <div class="m-toolbar" role="group" aria-label="Page switches">
   <div class="m-group"><b>Language</b><span class="m-seg" id="m-langs"></span></div>
   <div class="m-group"><b>Left</b><span class="m-seg">
     <button data-left="none" aria-pressed="true">No prompt</button><button data-left="prompt" aria-pressed="false">v1</button><button data-left="prompt-v2" aria-pressed="false">v2</button><button data-left="none+net" aria-pressed="false">No prompt + net</button></span></div>
   <div class="m-group"><b>Right</b><span class="m-seg">
-    <button data-right="best" aria-pressed="true">Latest</button><button data-right="prompt" aria-pressed="false">v1</button><button data-right="prompt-v2" aria-pressed="false">v2</button><button data-right="prompt-v2+net" aria-pressed="false">v2 + net</button></span></div>
+    <button data-right="best" aria-pressed="true">Latest</button><button data-right="prompt" aria-pressed="false">v1</button><button data-right="prompt-v2" aria-pressed="false">v2</button><button data-right="prompt-v2+net" aria-pressed="false">v2 + net</button><button data-right="prompt-v2+net+inaudible" aria-pressed="false">v2 + net + inaudible</button></span></div>
   <div class="m-group"><b>Show</b><span class="m-seg">
     <button data-span="360" aria-pressed="true">First 6 min</button><button data-span="99999" aria-pressed="false">Whole file</button></span></div>
   <div class="m-group"><b>Prompt words</b><span class="m-seg">
@@ -168,7 +174,9 @@ function blocks(segs, promptWords) {
   for (const s of segs) {
     if (s.start >= span) continue;
     const k = Math.floor(s.start / 30) * 30;
-    const words = s.text.split(/\s+/).map(w => promptWords.has(norm(w)) ? `<span class="m-pw">${esc(w)}</span>` : esc(w));
+    const words = s.inaudible
+      ? [`<span class="m-gap" title="${tc(s.start)}–${tc(s.end)}">inaudible ${Math.round(s.end - s.start)} s</span>`]
+      : s.text.split(/\s+/).map(w => promptWords.has(norm(w)) ? `<span class="m-pw">${esc(w)}</span>` : esc(w));
     out.set(k, (out.get(k) || []).concat(words.join(" ")));
   }
   return out;
@@ -200,7 +208,7 @@ function render() {
         return `<td class="num ${k !== "none" && better(m, a, b) ? "m-better" : ""}">${b}</td>`;
       }).join("") + `<td class="m-note">${hint}</td></tr>`).join("");
     const perBlock = segs => segs.reduce((acc, x) => { const b = Math.floor(x.start / 30);
-      acc.set(b, (acc.get(b) || 0) + x.text.split(/\s+/).length); return acc; }, new Map());
+      acc.set(b, (acc.get(b) || 0) + x.text.split(/\s+/).filter(Boolean).length); return acc; }, new Map());
     const base = perBlock(s.conds.none.segs);
     const lostOf = k => { const pb = perBlock(s.conds[k].segs);
       return [...base].filter(([b, n]) => n >= 20 && (pb.get(b) || 0) < n / 4).map(([b]) => tc(b * 30)); };
@@ -214,12 +222,17 @@ function render() {
       const d = s.conds[k].segs.reduce((n, x) => n + x.text.split(/\s+/).filter(w => pw.has(norm(w))).length, 0);
       return `<td class="num">${(100 * c / Math.max(1, s.conds.none.metrics.words)).toFixed(1)} → ${(100 * d / Math.max(1, s.conds[k].metrics.words)).toFixed(1)}</td>`;
     }).join("") + `<td class="m-note">no prompt → prompt; a big rise means the prompt is leaking into the text</td></tr>`;
+    const gapRow = `<tr><th>Marked inaudible</th>` + keys.map(k => {
+      const g = s.conds[k].segs.filter(x => x.inaudible);
+      if (!k.endsWith("+inaudible")) return `<td class="num">—</td>`;
+      return `<td class="num" title="${g.map(x => tc(x.start)).join(", ")}">${g.length} · ${Math.round(g.reduce((n, x) => n + x.end - x.start, 0))} s</td>`;
+    }).join("") + `<td class="m-note">lines that were mostly prompt words at very low confidence, shown as a gap instead of words; hover for times</td></tr>`;
     const lostR = R === "none" ? [] : lostOf(R);
     const prompts = keys.filter(k => s.conds[k].prompt).map(k => `${esc(D.condNames[k])}: <code>${esc(s.conds[k].prompt)}</code>`).join("<br>");
     return `<section class="m-sample"><div class="m-head"><h2>${esc(s.id)}</h2>` +
       `<div class="m-sub">${s.minutes} min · ${esc(s.licence)} · <a href="${esc(s.source)}">source</a> · detected ${esc(keys.map(k => s.conds[k].detected).join(" / "))}</div>` +
       `<div class="m-sub">${prompts}</div>` +
-      `<table class="m-table">${head}${table}${leakRow}${lostRow}</table>` +
+      `<table class="m-table">${head}${table}${leakRow}${lostRow}${gapRow}</table>` +
       (lostR.length ? `<div class="m-note">Vanished in ${esc(D.condNames[R])}: ${lostR.map(t => `<span class="timecode" data-t="${Number(t.slice(0,2))*60+Number(t.slice(3))}" style="cursor:pointer">[${t}]</span>`).join(" ")}</div>` : "") +
       `<audio controls preload="none" src="${esc(s.audio)}" style="width:100%;margin-top:.6rem"></audio></div>` +
       `<div class="m-cols">${column(D.condNames[L], s.conds[L].segs, L === "none" ? new Set() : pwOf(L))}` +

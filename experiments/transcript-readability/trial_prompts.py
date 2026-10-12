@@ -99,17 +99,24 @@ def run(wav: Path, lang: str, prompt: str | None) -> dict[str, object]:
     return {
         "detected": detected,
         "secs": round(secs),
-        "segments": [{"start": s.start_time, "end": s.end_time, "text": s.text} for s in segs],
+        "segments": [
+            {"start": s.start_time, "end": s.end_time, "text": s.text,
+             **({"inaudible": True} if s.inaudible else {})}
+            for s in segs
+        ],
         "metrics": metrics(texts, lang),
     }
 
 
 def main(root: str, only: list[str], variant: str = "prompt", net: bool = False,
-         include_none: bool = True) -> int:
-    # The skipped-window net is off unless asked for, so runs made before it
-    # existed stay comparable; a run with it is stored as "<condition>+net".
+         include_none: bool = True, inaudible: bool = False) -> int:
+    # The skipped-window and inaudible nets are off unless asked for, so runs
+    # made before they existed stay comparable; a run with them is stored as
+    # "<condition>+net" and "<condition>+net+inaudible".
     s05.SKIP_NET_ENABLED = net
-    suffix = "+net" if net else ""
+    if not inaudible:
+        s05.is_prompt_guess = lambda *_a, **_k: False  # type: ignore[assignment]
+    suffix = ("+net" if net else "") + ("+inaudible" if inaudible else "")
     base = Path(root)
     manifest = json.loads((base / "manifest.json").read_text(encoding="utf-8"))
     out_dir = base / "trials"
@@ -144,7 +151,7 @@ def main(root: str, only: list[str], variant: str = "prompt", net: bool = False,
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    variant, net, include_none = "prompt", False, True
+    variant, net, include_none, inaudible = "prompt", False, True, False
     while args and args[0].startswith("--"):
         flag = args.pop(0)
         if flag.startswith("--variant="):
@@ -153,4 +160,6 @@ if __name__ == "__main__":
             net = True
         elif flag == "--prompt-only":
             include_none = False
-    sys.exit(main(args[0], args[1:], variant, net, include_none))
+        elif flag == "--inaudible":
+            inaudible = True
+    sys.exit(main(args[0], args[1:], variant, net, include_none, inaudible))

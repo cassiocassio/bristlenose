@@ -37,7 +37,7 @@ bn_autowrap "$0" "$@"
 trap '_bn_ec=$?; [ "$_bn_ec" -ne 0 ] && bn_trap_fail' EXIT
 bn_meta title="App Store string scan" done_title="✓ App Store strings clean"
 bn_step_start 1 Verify "App Store string scan" \
-    narrative="Decompresses the sidecar PYZ and scans code-object constants for the itms-services literal (§2.5.2)."
+    narrative="Decompresses the sidecar PYZ and scans code-object constants for App-Store-noncompliant literals (NEEDLES, §2.5.2)."
 
 TARGET="$1"
 
@@ -60,7 +60,7 @@ if [ -z "$PY" ]; then
 fi
 
 if "$PY" "$SCRIPT_DIR/check-sidecar-appstore-strings.py" "$TARGET"; then
-    bn_step_ok 1 detail="no itms-services literal in PYZ or on disk"
+    bn_step_ok 1 detail="no App-Store-noncompliant literal (NEEDLES) in PYZ or on disk"
     bn_done ok
 else
     rc=$?

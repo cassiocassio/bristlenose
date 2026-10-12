@@ -424,7 +424,9 @@ fi
 # App Store Connect's automated scan rejects any binary CONTAINING the
 # literal `itms-services` (CPython ships it in urllib/parse.py; Homebrew's
 # python@3.12 isn't built with --with-app-store-compliance) — even when the
-# code never runs. The spec strips it at freeze time; this gate is the
+# code never runs. Since 12 Sep 2026 the needles also include spaCy's model-download
+# URLs (the NEEDLES tuple in check-sidecar-appstore-strings.py). The spec's
+# `_strip_literals` calls rewrite them at freeze time; this gate is the
 # independent backstop that the assembled bundle is clean. The literal is
 # marshalled inside a zlib-compressed PYZ, so this gate decompresses the PYZ
 # and scans code-object constants — a `strings`/`grep` on the bundle is a
@@ -432,11 +434,11 @@ fi
 # string is present regardless of signing identity), so a stale strip is
 # caught in the IDE inner loop, not at App Store upload.
 bn_step_start 2c Verify "App Store string scan" \
-    narrative="Decompresses the sidecar PYZ and scans for the itms-services literal (§2.5.2)."
+    narrative="Decompresses the sidecar PYZ and scans for App-Store-noncompliant literals: itms-services and spaCy model-download URLs (§2.5.2)."
 _bn_t2c=$SECONDS
 "$SCRIPT_DIR/check-sidecar-appstore-strings.sh" \
     "$DESKTOP_DIR/Bristlenose/Resources/bristlenose-sidecar" >/dev/null
-bn_step_ok 2c elapsed=$((SECONDS-_bn_t2c)) detail="no itms-services literal in PYZ or on disk"
+bn_step_ok 2c elapsed=$((SECONDS-_bn_t2c)) detail="no App-Store-noncompliant literal (NEEDLES) in PYZ or on disk"
 
 # ------------------------------------------------------------
 # 2d. Agent extension (.mcpb)

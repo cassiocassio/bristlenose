@@ -242,7 +242,10 @@ def _ensure_spacy_model(
     one-line inline treatment on that basis — the wrong model and so the wrong
     UX tier, since the design doc's "fetch UX should scale with fetch size" rule
     puts anything over 50 MB behind the framed banner used for Whisper. The
-    string now states the real size; the framed-banner treatment is still owed.
+    string now states the real size. The larger treatment landed the same day
+    (8d6d9841, "pii: the first-run model fetch gets the terminal to itself"):
+    the status steps aside and the fetch prints on its own lines, as Whisper's
+    does; the snap/RPM user-cache fetch has its own progress bar.
 
     On success the function returns, and :func:`_build_engines` binds the
     analyzer to this same model — so what is fetched is what is used.

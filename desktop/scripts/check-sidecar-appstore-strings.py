@@ -2,13 +2,16 @@
 """App Store §2.5.2 static-string gate for the PyInstaller sidecar.
 
 App Store Connect runs an automated static scan that rejects any binary
-CONTAINING the literal ``itms-services`` — "the app uses the itms-services
-URL scheme to install an app" — even when the code is never executed. CPython
-ships that literal in ``Lib/urllib/parse.py`` (the known-URL-scheme lists);
-Homebrew's python@3.12 is not built with ``--with-app-store-compliance``, so
-the literal freezes into the sidecar's ``urllib.parse``. The spec
-(``desktop/bristlenose-sidecar.spec``) strips it at freeze time; this gate is
-the independent backstop that verifies the *assembled* bundle is clean.
+CONTAINING certain literals, even when the code is never executed. The set we
+gate is the ``NEEDLES`` tuple below: CPython's ``itms-services`` ("the app uses
+the itms-services URL scheme to install an app", shipped in
+``Lib/urllib/parse.py``'s known-URL-scheme lists, since Homebrew's python@3.12
+is not built with ``--with-app-store-compliance``), and spaCy's model-download
+URLs, which reach the bundle both through spaCy itself and through
+Bristlenose's own ``s07_pii_removal`` (stopped the 0.37.0 build, 12 Oct 2026).
+The spec (``desktop/bristlenose-sidecar.spec``) rewrites each of them at freeze
+time with ``_strip_literals``; this gate is the independent backstop that
+verifies the *assembled* bundle is clean.
 
 The literal lives marshalled inside the module's code object, and the PYZ is
 zlib-compressed, so ``strings``/``grep`` on the bundle returns a FALSE

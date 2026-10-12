@@ -351,7 +351,7 @@ if [ ! -d "$SIDECAR" ]; then
 elif [ ! -x "$SCANNER" ]; then
     skip "§2.5.2 string scan" "scanner not executable at $SCANNER"
 elif "$SCANNER" "$SIDECAR" >"$WORK/pyz.log" 2>&1; then
-    ok "§2.5.2 string scan" "no itms-services in bundled PYZ"
+    ok "§2.5.2 string scan" "no App-Store-noncompliant literal (NEEDLES) in bundled PYZ"
 else
     die "§2.5.2 string scan" "$(tail -2 "$WORK/pyz.log" | tr '\n' ' ')"
 fi

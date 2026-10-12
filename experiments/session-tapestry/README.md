@@ -50,8 +50,9 @@ The clip colour is computed by `bristlenose/utils/scene_colour.py`, which `Pipel
 Not wired yet:
 - `analyze` (no video) and render-only runs (serve's `_auto_render`) don't compute colours.
 - Projects analysed before this change show neutral clips until their next `run`.
-- Under a progressive first analysis (phase 1, 12 Oct 2026) readable rows show neutral clips until
-  the run reaches render, which is where the colours are still computed.
+- ~~Under a progressive first analysis readable rows show neutral clips until render~~ — closed
+  the same night: the readable chain computes each session's colours before recording it merged
+  (`bristlenose/readable_chain.py`, `88a27592`).
 
 
 **Tuning lives in `frontend/src/utils/tapestryTuning.ts`, and the playground stays (decided 6 Oct 2026).** The defaults there are the shipped type steps and container padding. Under `serve --dev`, a slider icon beside the zoom opens `TapestryPlayground`. It moves each kind of text along the existing `--bn-text-*` ladder, the popover padding along `--bn-space-*`, and the pixel paddings, bar width and bar click margin only through the snapped lists in `PAD_STEPS`. It then lists the changes to commit. It is dev-only and code-split, so it is not dead code: keep it.
@@ -115,8 +116,10 @@ run that died without a terminus does not defer it for good), stops between sess
 starts mid-pass, and a `start` during a running pass asks for another pass, so sessions a run
 added meanwhile are not missed. The tapestry route serves whatever exists and says
 `strips_pending` while the job runs; the Sessions grid then refetches, from 5 s apart backing off
-to 30 s for a few hours, taking only the strip into the session objects it already holds (an open
-quote popover rests on the quotes array's identity), so the stripes arrive without a reload.
+to 30 s for a few hours, so the stripes arrive without a reload. Every refetch (a session import, a
+speaker write, a strip poll) merges layer by layer (`frontend/src/utils/tapestryMerge.ts`, since
+`88a27592`): turns, sections, quotes and strip are each kept by reference when unchanged, so an open
+quote popover survives and an idle poll re-renders nothing.
 `SessionTapestry.tsx` draws one `<image>` per track from the first sample's time,
 `preserveAspectRatio="none"`, clipped to that track's clips, at the track's CSS opacity
 (participant 0.7, moderator 0.75), with the clip's edge redrawn over it and a notch per edge above
@@ -126,9 +129,10 @@ The HTML export embeds whatever strips existed when it was made and never polls 
 have a video source file gets them, a transcribe-only project included; the only projects without
 them are CLI runs never opened in serve, since the static render is sealed and does not draw the
 tapestry. **Under a progressive first analysis** (phase 1, Mac, 12 Oct 2026) a session readable
-mid-run has no strip until the run ends and the job has decoded it, and no scene colour either
-until render; `docs/design-progressive-lenses.md` §7 carries whether the job should run per
-readable session instead.
+mid-run has no strip until the run ends and the job has decoded it; its scene colours do arrive
+with it, since the readable chain writes them per session (`88a27592`).
+`docs/design-progressive-lenses.md` §7 carries whether the strip job should run per readable
+session too.
 
 **Notches are measured on the untoned means**, with the mean of the 2 s before a moment against
 the 2 s after it, threshold ΔE 14, strongest within the window. Toned space was tried first and hid

@@ -326,9 +326,17 @@ version (it now reads the condition). All fixed, each with a test.
   A writer bug in `cli.py`: the terminus must be decided inside the lifecycle
   block. Phase B, pipeline side.
 - **The other output-location call sites** (`db.py`, `importer.py`, …)
-  still use the old two-line rule, so a serve started before the first run puts
-  its database in the interview folder. Moving them changes where an existing
-  project's database lives — a migration, not a refactor.
+  still used the old two-line rule, so a serve started before the first run put
+  its database in the interview folder. **Fixed 12 Oct 2026** (`git log
+  -S'one output-dir resolver'`, then `36009715`, `cbac1236`): all twelve sites
+  ask `project_output_dir`, the database and log are created eagerly under the
+  future `bristlenose-output/` (no migration was needed — `run` reuses an output
+  folder holding only `.bristlenose/`), a never-run row carries the future
+  output folder, the handler publishes under the row it was handed, and the
+  serve reattaches when the output folder is replaced under it. Pinned by
+  `tests/test_serve_project_root.py` and `tests/test_serve_lifecycle_robustness.py`,
+  which pass no `db_url`. The history below is what that fix was sized against;
+  its line numbers are the pre-fix tree.
   **Confirmed as a shipped defect on 12 Oct 2026, with a second trigger this
   entry did not name.** It is not only "before the first run": every Mac
   **Re-analyse…** passes `--clean`, which moves `bristlenose-output/` aside,
@@ -565,7 +573,7 @@ impact lenses; 26 further findings verified or reproduced (13 by running code);
 | N34 | Mac | orphan probe `/bin/ps` fails under sandbox, deletes PID file | phase C |
 | N35/N59 | Mac | one-shot reload on a clock | phase C / F |
 | N36, N60, N61, N63, N66, N68 | Mac | states written once and never re-derived | phase C |
-| N46/N54 | server | never-run serve watches the interview folder | **watcher fixed (POC)**; DB location open (§6.2) |
+| N46/N54 | server | never-run serve watches the interview folder | **fixed** — watcher (POC), then DB, log and project row (12 Oct 2026) |
 | N57 | server | `/report/*` served dotfiles and paths outside the output folder, no token | **fixed separately** — `ba4429c7`; re-verified 28 Sep: all three probes now 404 |
 | N58 | server | lost terminus demotes an imported report to "no run" | partly (legacy manifest fallback) |
 | N69 | contracts | category parity test compares Python to a hand-typed list | phase F |

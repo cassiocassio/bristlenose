@@ -48,8 +48,10 @@ The clip colour is computed by `bristlenose/utils/scene_colour.py`, which `Pipel
 **In the app (6 Oct 2026):** `GET /api/projects/{id}/tapestry` (`bristlenose/server/routes/tapestry.py`) serves every session's turns, section flags and quotes from the database, so hidden quotes, quote edits and heading renames apply. It matches each turn to a scene colour by time, so a speaker edit made in serve doesn't orphan the colours. The route is embedded in the HTML export. `frontend/src/components/SessionTapestry.tsx` draws it as a disclosure under each Sessions-grid row. The chevron sits in the ID cell, so the grid gains no column. The component is lazy-loaded; only `utils/tapestryScale.ts` is on first paint. The CSS is `bristlenose/theme/organisms/session-tapestry.css`.
 
 Not wired yet:
-- `analyze` (no video) and render-only runs don't compute colours.
+- `analyze` (no video) and render-only runs (serve's `_auto_render`) don't compute colours.
 - Projects analysed before this change show neutral clips until their next `run`.
+- Under a progressive first analysis (phase 1, 12 Oct 2026) readable rows show neutral clips until
+  the run reaches render, which is where the colours are still computed.
 
 
 **Tuning lives in `frontend/src/utils/tapestryTuning.ts`, and the playground stays (decided 6 Oct 2026).** The defaults there are the shipped type steps and container padding. Under `serve --dev`, a slider icon beside the zoom opens `TapestryPlayground`. It moves each kind of text along the existing `--bn-text-*` ladder, the popover padding along `--bn-space-*`, and the pixel paddings, bar width and bar click margin only through the snapped lists in `PAD_STEPS`. It then lists the changes to commit. It is dev-only and code-split, so it is not dead code: keep it.
@@ -100,16 +102,33 @@ pixel at the maximum zoom), takes the mean OKLab of each frame's kept pixels, to
 band (0.64–1.0, the strip's own band, above the clip's 0.42–0.88) and writes
 `.bristlenose/intermediate/scene-strips/<session>.json`: a 1×n RGB PNG (a 1-hour session is a few
 KB) plus the notch times, cached by the recording's identity, written whole and renamed into place.
+The first sample's time is read from ffmpeg (`showinfo`), never assumed to be zero: a stream that
+starts late (an edit list, a trimmed container) keeps its stripes and notches on the transcript's
+clock, and a decode whose frame and time counts disagree is refused rather than mis-paired. One
+recording per session: the first imported source file whose suffix is in the pipeline's
+`VIDEO_EXTENSIONS` and which exists on disk (the importer's own `file_type` is narrower).
 **Serve computes it, never the pipeline** (`bristlenose/server/scene_strips.py`): a daemon thread
-started by the app lifespan and again after each `run_completed`, deferred while the project's
-latest run is in progress, a no-op while one is running. The tapestry route serves whatever exists
-and says `strips_pending` while the job runs; the Sessions grid refetches every 5 s (bounded) until
-it stops, so the stripes arrive without a reload. `SessionTapestry.tsx` draws one `<image>` per
-track, `preserveAspectRatio="none"`, clipped to that track's clips, at the track's CSS opacity
+started by the app lifespan, after each `run_completed`, and on every change to the events log,
+which is what starts it again after a run that failed, was cancelled or died and so wrote no
+`run_completed`. It defers while the project's latest run is in progress (liveness re-checked, so a
+run that died without a terminus does not defer it for good), stops between sessions when a run
+starts mid-pass, and a `start` during a running pass asks for another pass, so sessions a run
+added meanwhile are not missed. The tapestry route serves whatever exists and says
+`strips_pending` while the job runs; the Sessions grid then refetches, from 5 s apart backing off
+to 30 s for a few hours, taking only the strip into the session objects it already holds (an open
+quote popover rests on the quotes array's identity), so the stripes arrive without a reload.
+`SessionTapestry.tsx` draws one `<image>` per track from the first sample's time,
+`preserveAspectRatio="none"`, clipped to that track's clips, at the track's CSS opacity
 (participant 0.7, moderator 0.75), with the clip's edge redrawn over it and a notch per edge above
-the tracks. Kill switch: `BRISTLENOSE_SCENE_STRIPS=0`. The HTML export carries the strips because it
-embeds the tapestry route. `analyze` and CLI-only runs never produce them: the static render is
-sealed and does not draw the tapestry.
+the tracks, notches past the recording's end dropped. Kill switch: `BRISTLENOSE_SCENE_STRIPS=0`.
+The HTML export embeds whatever strips existed when it was made and never polls its own embedded
+`strips_pending`. Strips do not depend on the run kind: any project opened in serve whose sessions
+have a video source file gets them, a transcribe-only project included; the only projects without
+them are CLI runs never opened in serve, since the static render is sealed and does not draw the
+tapestry. **Under a progressive first analysis** (phase 1, Mac, 12 Oct 2026) a session readable
+mid-run has no strip until the run ends and the job has decoded it, and no scene colour either
+until render; `docs/design-progressive-lenses.md` §7 carries whether the job should run per
+readable session instead.
 
 **Notches are measured on the untoned means**, with the mean of the 2 s before a moment against
 the 2 s after it, threshold ΔE 14, strongest within the window. Toned space was tried first and hid
@@ -125,7 +144,8 @@ the Teams session's call-to-share transitions (6.5 toned against 17.9 untoned). 
 At 14 a gallery call gets at most its title card, and a usability session with page switches one
 every couple of minutes. The lab's notch handle uses the same space; `strip_lab.py` is kept for
 retuning, and its defaults are the module's constants (strip tone, notch threshold and window) plus
-the owner's opacities.
+the owner's opacities. One difference from the shipped sampler: the lab calls bare `ffmpeg` without
+`showinfo`, so it places a late-starting stream at time 0 where the product does not.
 
 **Cost, measured 12 Oct 2026** (software decode to 32×18; VideoToolbox was 18× slower, the per-frame
 download dominates). One sample per pixel at the maximum zoom (0.25 s/px) means 4 fps:
@@ -136,10 +156,12 @@ download dominates). One sample per pixel at the maximum zoom (0.25 s/px) means 
 | YouTube-style 720p, 22 min | 10 s fixed | 0.6 s | 2.9 s |
 | macOS screen recording 3456×2234 @120 fps, 79 s | ~1 s | 5.3 s | 9.1 s |
 
-So a call recording costs about 8 s per hour of video for the dense pass, and the one expensive
-source already has keyframes a second apart, so it does not need it. An adaptive rule (dense pass only
-where the keyframe gap exceeds about a second) covers both. The lab's own numbers are higher because
-it computes the per-frame colour in pure Python per frame; the per-video cost is shown on the page.
+So a call recording costs about 8 s per hour of video for the dense pass, and a 4K 120 fps screen
+capture about 7 minutes per hour, under a 3,600 s decode limit per recording. **What ships decodes
+every frame of every recording**: the keyframe column above is the per-turn colour's pass, not a
+mode of the strip, and the adaptive rule once considered here (dense only where keyframes are more
+than about a second apart) was not built. The lab's own numbers are higher because it computes the
+per-frame colour in pure Python per frame; the per-video cost is shown on the page.
 
 **Decided in conversation, 12 Oct 2026:** the dense pass is a local enhancement that may arrive after
 the run, and must not gate the report being readable. Stripes go on both tracks, since the scene is a

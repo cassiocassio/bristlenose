@@ -54,7 +54,7 @@ def video_sessions(db: Session) -> dict[str, Path]:
 
 
 class SceneStripJob:
-    """One strip job per server; ``start`` is a no-op while a job is running."""
+    """One strip job per server; a ``start`` while a pass is running asks for another pass."""
 
     def __init__(
         self,

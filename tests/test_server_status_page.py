@@ -224,6 +224,19 @@ class TestDetectStatus:
         info = detect_status(tmp_path, _cond(tmp_path, alive=True))
         assert info is not None and info.outcome == "in-progress"
 
+    def test_first_run_with_sessions_imported_lets_the_spa_render(self, tmp_path: Path) -> None:
+        """Progressive lenses: once a first analysis has imported a session, the
+        Sessions lens is the useful surface while the rest is processed
+        (docs/design-progressive-lenses.md, Phase 0 step 5)."""
+        _started(tmp_path, "A")
+        assert detect_status(tmp_path, _cond(tmp_path, alive=True), sessions_imported=True) is None
+
+    def test_a_stranded_first_run_keeps_its_page_even_with_sessions(self, tmp_path: Path) -> None:
+        """A dead run reconciles to failed; its page carries the cause."""
+        _started(tmp_path, "A")
+        info = detect_status(tmp_path, _cond(tmp_path, alive=False), sessions_imported=True)
+        assert info is not None and info.outcome == "stranded"
+
     def test_rerun_in_progress_never_hides_the_report(self, tmp_path: Path) -> None:
         _completed(tmp_path, "A")
         _started(tmp_path, "B")

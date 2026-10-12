@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from bristlenose.server.models import Project
 from bristlenose.server.models import Session as SessionModel  # noqa: F401
@@ -73,6 +73,11 @@ class ConditionResponse(BaseModel):
     importing: str | None = None
     import_failed_run_id: str | None = None
     policy: str
+    #: Bumped after every successful import; the SPA refetches when it moves
+    #: (docs/design-progressive-lenses.md §3.2). Not a run id, not a time.
+    data_version: int = 0
+    #: Lens id → selectable now (``server/lens_readiness.py``).
+    lenses: dict[str, bool] = Field(default_factory=dict)
 
 
 @router.get(
@@ -99,9 +104,13 @@ def get_condition(project_id: int, request: Request) -> ConditionResponse:
 
     condition = current_condition(request.app, project_output_dir(project_dir))
     overlay = getattr(state, "import_overlay", None) or {}
+    from bristlenose.server.lens_readiness import lens_readiness
+
     return ConditionResponse(
         condition=condition.to_wire(),
         importing=overlay.get("importing"),
         import_failed_run_id=overlay.get("failed_run_id"),
         policy=policy_from_env().value,
+        data_version=getattr(state, "data_version", 0),
+        lenses=lens_readiness(getattr(state, "progress", None)),
     )

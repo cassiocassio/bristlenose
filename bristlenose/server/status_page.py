@@ -104,12 +104,15 @@ def page_for(
     *,
     importing: bool = False,
     has_data: bool = True,
+    sessions_imported: bool = False,
 ) -> str | None:
     """The status-page outcome to show, or ``None`` to let the SPA render.
 
     Pure: the condition, the policy, and two facts only the server knows —
     whether a re-import is in flight and whether the database holds any run
-    yet. The table it implements is docs/design-project-condition.md §3.5.
+    yet — plus, for a progressive first analysis, whether any session has been
+    imported while the run continues (docs/design-progressive-lenses.md §4,
+    Phase 0 step 5). The table it implements is docs/design-project-condition.md §3.5.
     """
     if not condition.decodable:
         # Fail closed on the *condition*, not on the reader: intercepting would
@@ -137,7 +140,14 @@ def page_for(
         # report in place; a --clean one stashes the log with the report, so a
         # stranded --clean run has report=None here anyway). Liveness can also
         # be wrong in the "can't tell" direction — not a reason to hide a report.
-        return None if report is not None else _OUTCOME_FOR_STATE[latest.state]
+        if report is not None:
+            return None
+        # A first analysis whose sessions are arriving: the Sessions lens is the
+        # useful surface while the rest is processed. In progress only — a
+        # stranded run reconciles to failed, and the failed page carries its cause.
+        if sessions_imported and latest.state == RunStateEnum.IN_PROGRESS:
+            return None
+        return _OUTCOME_FOR_STATE[latest.state]
     if report is not None and policy == ReportPolicy.LAST_GOOD_REPORT:
         return None
     return _OUTCOME_FOR_STATE[latest.state]
@@ -192,6 +202,7 @@ def detect_status(
     policy: ReportPolicy = ReportPolicy.LATEST_ATTEMPT,
     importing: bool = False,
     has_data: bool = True,
+    sessions_imported: bool = False,
 ) -> StatusInfo | None:
     """Decide whether to intercept the SPA route, from the project's condition.
 
@@ -199,7 +210,8 @@ def detect_status(
     otherwise. The decision is :func:`page_for`; this builds the page for it,
     reading the cause of the *same* run the decision was about.
     """
-    outcome = page_for(condition, policy, importing=importing, has_data=has_data)
+    outcome = page_for(condition, policy, importing=importing, has_data=has_data,
+                       sessions_imported=sessions_imported)
     if outcome is None:
         return None
     latest = condition.latest

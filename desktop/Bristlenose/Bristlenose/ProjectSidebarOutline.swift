@@ -1973,7 +1973,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // again at click time; a rescan in between could have cleared the drift.
         // An empty popover is worse than none.
         guard !data.newFiles.isEmpty || !data.missingFiles.isEmpty || data.databaseForked else { return }
-        let offered = Self.analyseIsOffered(
+        // A forked database makes row 1 read empty, so the project looks
+        // never-analysed and Analyse would be offered on the strength of the
+        // defect itself — beside a footer naming Re-analyse. The popover may
+        // act on the thing it shows; incremental Analyse is not that.
+        let offered = !data.databaseForked && Self.analyseIsOffered(
             isFolderShaped: project.inputFiles == nil,
             hasPath: !project.path.isEmpty,
             state: pipelineRunner?.state[id],

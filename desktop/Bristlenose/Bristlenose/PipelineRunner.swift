@@ -544,7 +544,7 @@ final class PipelineRunner: ObservableObject {
 
     /// Result of an off-main scan — either an orphan to attach to, or a
     /// resolved manifest state.
-    private enum ScanOutcome {
+    enum ScanOutcome {
         case orphan(pid: pid_t)
         case manifest(PipelineState)
     }
@@ -576,15 +576,18 @@ final class PipelineRunner: ObservableObject {
         }
     }
 
-    private nonisolated static func performScan(
-        project: Project, manifestURL: URL
+    nonisolated static func performScan(
+        project: Project, manifestURL: URL,
+        startTime: (pid_t) -> String? = EventLogReader.procStartTime
     ) async -> ScanOutcome {
-        if let pid = aliveOwnedRunPID(for: project) {
+        if let pid = aliveOwnedRunPID(for: project, startTime: startTime) {
             return .orphan(pid: pid)
         }
-        // No live orphan — sweep any stale PID file and fall through to a
-        // normal manifest read.
-        removePIDFile(for: project)
+        // No live orphan. The PID file's fate was decided inside
+        // `aliveOwnedRunPID`: removed on a definite `.stale`, KEPT on an
+        // `.indeterminate` check. A second, unconditional sweep sat here until
+        // 12 Oct 2026 and undid that keep one frame up — the callee logged
+        // "keeping its PID file" and this line deleted it (review finding 1).
         let resolved = await readManifestState(
             at: manifestURL, timeout: scanTimeout, allowTimeout: true
         )
@@ -594,6 +597,14 @@ final class PipelineRunner: ObservableObject {
     private func applyScan(outcome: ScanOutcome, project: Project, projectID: UUID) {
         switch outcome {
         case .orphan(let pid):
+            // A rescan during a run THIS process owns finds its own PID file
+            // and would attach to itself: progress reset, a second poller,
+            // double resolution on exit. Reachable since rescans fire on
+            // rename and bookmark heal, not only after Locate….
+            if currentlyRunning == projectID || attachedOrphanPIDs[projectID] != nil {
+                Self.logger.info("scan found our own live run for project=\(projectID.uuidString, privacy: .public) — not attaching")
+                return
+            }
             attachOrphan(project: project, pid: pid)
         case .manifest(let state):
             applyScanResult(state, for: projectID)
@@ -622,9 +633,18 @@ final class PipelineRunner: ObservableObject {
     /// The PID file is `"<pid>\n<start_time>"` — the start token is the
     /// libproc `"<tvsec>.<tvusec>"` string `EventLogReader.procStartTime`
     /// yields, recorded at spawn, so a pid the kernel has since reused fails
-    /// the comparison instead of matching on argv. Files from builds before
-    /// 12 Oct 2026 carry the pid alone; they are accepted on uid alone, and
-    /// the next spawn rewrites them in the new form.
+    /// the comparison instead of matching on argv. A file with no token (the
+    /// pid-only shape of builds before 12 Oct 2026) is **stale**: without the
+    /// token a reused pid matches on uid alone, and Stop would escalate to
+    /// SIGKILL into whatever now holds that pid. A spawn whose libproc query
+    /// failed writes `noStartToken` instead of nothing, which reads as
+    /// `.indeterminate` — a verifier that cannot verify must never upgrade a
+    /// pid to "ours", and must never read as a legacy file either.
+    /// Second line of a PID file whose spawn could not read a start token.
+    /// Non-empty on purpose: an empty second line is indistinguishable from
+    /// the legacy pid-only shape, which is stale.
+    nonisolated static let noStartToken = "no-start-token"
+
     nonisolated static func ownedRunVerdict(
         pidFileContents: String,
         isAlive: (pid_t) -> Bool,
@@ -640,7 +660,8 @@ final class PipelineRunner: ObservableObject {
         guard let uid = processUID(pid) else { return .indeterminate }
         guard uid == currentUID else { return .stale }
         let recorded = lines.count > 1 ? lines[1] : ""
-        guard !recorded.isEmpty else { return .alive(pid) }
+        guard !recorded.isEmpty else { return .stale }
+        guard recorded != noStartToken else { return .indeterminate }
         guard let live = startTime(pid) else { return .indeterminate }
         return live == recorded ? .alive(pid) : .stale
     }
@@ -891,7 +912,13 @@ final class PipelineRunner: ObservableObject {
             at: url.deletingLastPathComponent(), withIntermediateDirectories: true
         )
         // pid, then the libproc start-time token — see `ownedRunVerdict`.
-        let start = EventLogReader.procStartTime(pid: pid) ?? ""
+        let start: String
+        if let token = EventLogReader.procStartTime(pid: pid) {
+            start = token
+        } else {
+            logger.error("no start token for pid=\(pid, privacy: .public) at spawn — orphan attach for this run will be indeterminate")
+            start = noStartToken
+        }
         try? Data("\(pid)\n\(start)".utf8).write(to: url, options: .atomic)
     }
 

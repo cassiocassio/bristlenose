@@ -206,7 +206,7 @@
     "filesToAnalyse_other": "{{count}} \u500b\u6a94\u6848\u5f85\u5206\u6790",
     "titleSessions_other": "{{count}} 個工作階段",
     "missingSubtitle_other": "{{count}} 則遺失",
-    "databaseForked": "\u8cc7\u6599\u5eab\u5df2\u5206\u88c2",
+    "databaseForked": "\u5831\u544a\u975e\u6700\u65b0",
     "tooltipWaiting": "{{count}} 則等待中",
     "dateRelativeJustNow": "剛剛",
     "unanalysedSheetTitle": "{{project}} 中的未分析檔案",
@@ -242,7 +242,7 @@
       "unanalysedTitle": "\u672a\u5206\u6790\u7684\u6a94\u6848",
       "missingTitle": "\u907a\u5931\u7684\u6a94\u6848",
       "missingFooter": "\u9019\u4e9b\u6a94\u6848\u5df2\u4e0d\u5728\u5c08\u6848\u6a94\u6848\u593e\u4e2d\u3002",
-      "databaseForkedFooter": "\u5206\u6790\u8cc7\u6599\u5eab\u542b\u6709\u591a\u500b\u5c08\u6848\uff0c\u56e0\u6b64\u5831\u544a\u986f\u793a\u7684\u5167\u5bb9\u53ef\u80fd\u5c11\u65bc\u6b64\u5217\u6240\u8a08\u3002\u91cd\u65b0\u5206\u6790\u22ef \u6703\u91cd\u5efa\u8cc7\u6599\u5eab\u3002"
+      "databaseForkedFooter": "\u5831\u544a\u672a\u986f\u793a\u6700\u65b0\u7684\u5206\u6790\u3002\u5c08\u6848\u9078\u55ae\u4e2d\u7684\u300c\u91cd\u65b0\u5206\u6790\u300d\u6703\u91cd\u65b0\u8f49\u9304\u4e26\u5206\u6790\u6240\u6709\u8a2a\u8ac7\uff0c\u4e26\u6368\u68c4\u4f60\u7684\u7de8\u8f2f\u3001\u6a19\u7c64\u8207\u661f\u865f\u3002"
     },
     "pipeline": {
       "unreachable": {

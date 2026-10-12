@@ -42,7 +42,14 @@ struct ProjectFolderWatcherMoveTests {
         if let moveError { throw moveError }
     }
 
-    private func waitUntil(_ deadline: Duration = .seconds(3),
+    /// A watcher that has published its first scan is registered with the
+    /// coordinator and listening. Moving the folder before that races the
+    /// registration: under a full-suite load the move was coordinated with no
+    /// presenter to tell (one timeout in 1849, 12 Oct 2026). Wait for the state
+    /// the test acts on, not a proxy that merely precedes it.
+    final class Ready: @unchecked Sendable { var published = false }
+
+    private func waitUntil(_ deadline: Duration = .seconds(5),
                            _ condition: @escaping () -> Bool) async -> Bool {
         let clock = ContinuousClock()
         let end = clock.now + deadline
@@ -62,10 +69,12 @@ struct ProjectFolderWatcherMoveTests {
             try? FileManager.default.removeItem(at: new)
         }
         let lease = try ProjectBookmarkLease(bookmarkData: old.bookmarkData(options: .withSecurityScope))
+        let ready = Ready()
         let watcher = ProjectFolderWatcher(
-            projectID: UUID(), lease: lease, initialKnownBasenames: [], onChange: { _ in }
+            projectID: UUID(), lease: lease, initialKnownBasenames: [], onChange: { _ in ready.published = true }
         )
         defer { watcher.stop() }
+        #expect(await waitUntil { ready.published }, "the watcher never published its first scan")
 
         try coordinatedRename(old, to: new)
 
@@ -88,15 +97,17 @@ struct ProjectFolderWatcherMoveTests {
         final class Box: @unchecked Sendable { var moved: URL? }
         let box = Box()
         let lease = try ProjectBookmarkLease(bookmarkData: old.bookmarkData(options: .withSecurityScope))
+        let ready = Ready()
         let watcher = ProjectFolderWatcher(
             projectID: UUID(), lease: lease, initialKnownBasenames: [],
             onMove: { url in
                 dispatchPrecondition(condition: .onQueue(.main))
                 box.moved = url
             },
-            onChange: { _ in }
+            onChange: { _ in ready.published = true }
         )
         defer { watcher.stop() }
+        #expect(await waitUntil { ready.published }, "the watcher never published its first scan")
 
         try coordinatedRename(old, to: new)
 

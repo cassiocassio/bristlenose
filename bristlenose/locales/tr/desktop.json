@@ -214,7 +214,7 @@
     "titleSessions_other": "{{count}} Oturum",
     "missingSubtitle_one": "1 eksik",
     "missingSubtitle_other": "{{count}} eksik",
-    "databaseForked": "Veri taban\u0131 b\u00f6l\u00fcnm\u00fc\u015f",
+    "databaseForked": "Rapor g\u00fcncel de\u011fil",
     "tooltipWaiting": "{{count}} bekliyor",
     "dateRelativeJustNow": "Az önce",
     "unanalysedSheetTitle": "{{project}} içinde analiz edilmemiş dosyalar",
@@ -259,7 +259,7 @@
       "unanalysedTitle": "\u00c7\u00f6z\u00fcmlenmemi\u015f dosyalar",
       "missingTitle": "Eksik dosyalar",
       "missingFooter": "Bu dosyalar art\u0131k proje klas\u00f6r\u00fcnde de\u011fil.",
-      "databaseForkedFooter": "Analiz veri taban\u0131nda birden fazla proje var; bu y\u00fczden rapor, bu sat\u0131r\u0131n sayd\u0131\u011f\u0131ndan az\u0131n\u0131 g\u00f6sterebilir. Yeniden Analiz Et\u2026 veri taban\u0131n\u0131 yeniden olu\u015fturur."
+      "databaseForkedFooter": "Rapor en son analizi g\u00f6stermiyor. Proje men\u00fcs\u00fcndeki Yeniden Analiz Et t\u00fcm g\u00f6r\u00fc\u015fmeleri yeniden yaz\u0131ya d\u00f6ker ve analiz eder; d\u00fczenlemeleriniz, etiketleriniz ve y\u0131ld\u0131zlar\u0131n\u0131z silinir."
     },
     "pipeline": {
       "unreachable": {

@@ -214,7 +214,7 @@
     "titleSessions_other": "{{count}} Interviews",
     "missingSubtitle_one": "1 fehlt",
     "missingSubtitle_other": "{{count}} fehlen",
-    "databaseForked": "Datenbank aufgeteilt",
+    "databaseForked": "Bericht veraltet",
     "tooltipWaiting": "{{count}} ausstehend",
     "dateRelativeJustNow": "Gerade eben",
     "unanalysedSheetTitle": "Nicht analysierte Dateien in {{project}}",
@@ -259,7 +259,7 @@
       "unanalysedTitle": "Nicht analysierte Dateien",
       "missingTitle": "Fehlende Dateien",
       "missingFooter": "Diese Dateien befinden sich nicht mehr im Projektordner.",
-      "databaseForkedFooter": "Die Analysedatenbank enth\u00e4lt mehr als ein Projekt, daher kann der Bericht weniger zeigen, als diese Zeile z\u00e4hlt. Erneut analysieren\u2026 baut sie neu auf."
+      "databaseForkedFooter": "Der Bericht zeigt nicht die neueste Analyse. \u201eErneut analysieren\u201c im Projektmen\u00fc transkribiert und analysiert alle Interviews neu und verwirft Ihre Bearbeitungen, Tags und Markierungen."
     },
     "pipeline": {
       "unreachable": {

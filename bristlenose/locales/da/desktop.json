@@ -214,7 +214,7 @@
     "titleSessions_other": "{{count}} sessioner",
     "missingSubtitle_one": "1 mangler",
     "missingSubtitle_other": "{{count}} mangler",
-    "databaseForked": "Database opdelt",
+    "databaseForked": "Rapport for\u00e6ldet",
     "tooltipWaiting": "{{count}} venter",
     "dateRelativeJustNow": "Lige nu",
     "unanalysedSheetTitle": "Ikke-analyserede filer i {{project}}",
@@ -259,7 +259,7 @@
       "unanalysedTitle": "Ikke-analyserede arkiver",
       "missingTitle": "Manglende arkiver",
       "missingFooter": "Disse arkiver findes ikke l\u00e6ngere i projektmappen.",
-      "databaseForkedFooter": "Analysens database indeholder mere end \u00e9t projekt, s\u00e5 rapporten kan vise mindre, end denne r\u00e6kke t\u00e6ller. Analys\u00e9r igen\u2026 genopbygger den."
+      "databaseForkedFooter": "Rapporten viser ikke den seneste analyse. Analys\u00e9r igen i projektets menu transskriberer og analyserer alle interviews igen og sletter dine redigeringer, tags og stjerner."
     },
     "pipeline": {
       "unreachable": {

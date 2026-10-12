@@ -214,7 +214,7 @@
     "titleSessions_other": "{{count}} sessioner",
     "missingSubtitle_one": "1 saknas",
     "missingSubtitle_other": "{{count}} saknas",
-    "databaseForked": "Databasen \u00e4r delad",
+    "databaseForked": "Rapporten \u00e4r inaktuell",
     "tooltipWaiting": "{{count}} väntar",
     "dateRelativeJustNow": "Nyss",
     "unanalysedSheetTitle": "Oanalyserade filer i {{project}}",
@@ -259,7 +259,7 @@
       "unanalysedTitle": "Oanalyserade filer",
       "missingTitle": "Saknade filer",
       "missingFooter": "Filerna finns inte l\u00e4ngre i projektmappen.",
-      "databaseForkedFooter": "Analysens databas inneh\u00e5ller mer \u00e4n ett projekt, s\u00e5 rapporten kan visa mindre \u00e4n vad den h\u00e4r raden r\u00e4knar. Analysera igen\u2026 bygger om den."
+      "databaseForkedFooter": "Rapporten visar inte den senaste analysen. Analysera igen i projektets meny transkriberar och analyserar alla intervjuer p\u00e5 nytt och tar bort dina \u00e4ndringar, taggar och stj\u00e4rnor."
     },
     "pipeline": {
       "unreachable": {

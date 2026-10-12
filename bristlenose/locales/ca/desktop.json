@@ -214,7 +214,7 @@
     "titleSessions_other": "{{count}} sessions",
     "missingSubtitle_one": "1 que falta",
     "missingSubtitle_other": "{{count}} que falten",
-    "databaseForked": "Base de dades dividida",
+    "databaseForked": "Informe desactualitzat",
     "tooltipWaiting": "{{count}} en espera",
     "dateRelativeJustNow": "Ara mateix",
     "unanalysedSheetTitle": "Fitxers sense analitzar a {{project}}",
@@ -259,7 +259,7 @@
       "unanalysedTitle": "Fitxers sense analitzar",
       "missingTitle": "Fitxers que falten",
       "missingFooter": "Aquests fitxers ja no s\u00f3n a la carpeta del projecte.",
-      "databaseForkedFooter": "La base de dades de l'an\u00e0lisi cont\u00e9 m\u00e9s d'un projecte, de manera que l'informe pot mostrar menys del que indica aquesta fila. Torna a analitzar\u2026 la reconstrueix."
+      "databaseForkedFooter": "L'informe no mostra l'an\u00e0lisi m\u00e9s recent. Torna a analitzar, al men\u00fa del projecte, torna a transcriure i analitzar totes les entrevistes i descarta les teves edicions, etiquetes i estrelles."
     },
     "pipeline": {
       "unreachable": {

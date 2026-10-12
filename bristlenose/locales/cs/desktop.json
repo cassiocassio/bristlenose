@@ -229,7 +229,7 @@
     "missingSubtitle_few": "{{count}} chybí",
     "missingSubtitle_many": "{{count}} chybí",
     "missingSubtitle_other": "{{count}} chybí",
-    "databaseForked": "Datab\u00e1ze rozd\u011blena",
+    "databaseForked": "Zpr\u00e1va nen\u00ed aktu\u00e1ln\u00ed",
     "tooltipWaiting": "{{count}} čeká",
     "dateRelativeJustNow": "Právě teď",
     "unanalysedSheetTitle": "Neanalyzované soubory v {{project}}",
@@ -292,7 +292,7 @@
       "unanalysedTitle": "Neanalyzovan\u00e9 soubory",
       "missingTitle": "Chyb\u011bj\u00edc\u00ed soubory",
       "missingFooter": "Tyto soubory u\u017e ve slo\u017ece projektu nejsou.",
-      "databaseForkedFooter": "Datab\u00e1ze anal\u00fdzy obsahuje v\u00edce ne\u017e jeden projekt, tak\u017ee zpr\u00e1va m\u016f\u017ee ukazovat m\u00e9n\u011b, ne\u017e tento \u0159\u00e1dek po\u010d\u00edt\u00e1. Znovu analyzovat\u2026 ji znovu vytvo\u0159\u00ed."
+      "databaseForkedFooter": "Zpr\u00e1va nezobrazuje nejnov\u011bj\u0161\u00ed anal\u00fdzu. Znovu analyzovat v nab\u00eddce projektu znovu p\u0159ep\u00ed\u0161e a analyzuje v\u0161echny rozhovory a zahod\u00ed va\u0161e \u00fapravy, \u0161t\u00edtky a hv\u011bzdi\u010dky."
     },
     "pipeline": {
       "unreachable": {

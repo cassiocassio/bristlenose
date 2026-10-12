@@ -230,7 +230,7 @@
     "missingSubtitle_few": "{{count}} brakujące",
     "missingSubtitle_many": "{{count}} brakujących",
     "missingSubtitle_other": "{{count}} brakujących",
-    "databaseForked": "Baza danych rozdzielona",
+    "databaseForked": "Raport nieaktualny",
     "tooltipWaiting": "{{count}} oczekuje",
     "dateRelativeJustNow": "Przed chwilą",
     "unanalysedSheetTitle": "Nieprzeanalizowane pliki w {{project}}",
@@ -293,7 +293,7 @@
       "unanalysedTitle": "Nieprzeanalizowane pliki",
       "missingTitle": "Brakuj\u0105ce pliki",
       "missingFooter": "Tych plik\u00f3w nie ma ju\u017c w folderze projektu.",
-      "databaseForkedFooter": "Baza danych analizy zawiera wi\u0119cej ni\u017c jeden projekt, wi\u0119c raport mo\u017ce pokazywa\u0107 mniej, ni\u017c liczy ten wiersz. Analizuj ponownie\u2026 odbuduje j\u0105."
+      "databaseForkedFooter": "Raport nie pokazuje najnowszej analizy. Analizuj ponownie w menu projektu ponownie transkrybuje i analizuje wszystkie wywiady oraz odrzuca Twoje edycje, tagi i gwiazdki."
     },
     "pipeline": {
       "unreachable": {

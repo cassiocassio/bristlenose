@@ -411,13 +411,15 @@ final class ProjectIndex: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
-                // A folder renamed or moved while the app was in the background
-                // is healed here rather than at the next launch — the bookmark
-                // follows the folder, and `refreshAvailability` posts
-                // `.bristlenoseProjectPathChanged` for any path that moved so the
-                // serve follows too (12 Oct 2026: a serve left on the old path
-                // never imported the next run).
-                self.refreshAvailability()
+                // Deliberately NOT `refreshAvailability()`. It ran here for one
+                // commit (4ecf1437, 12 Oct 2026): per project it resolves a
+                // security-scoped bookmark on the main actor with mounting and
+                // UI allowed (a beachball or an auth dialog on a sleeping NAS
+                // per ⌘-Tab), leaks one sandbox extension per project per call
+                // (`resolveBookmark` starts a scope it never stops), and
+                // republishes the whole sidebar. A Finder rename while the app
+                // runs is followed by the watcher's `presentedItemDidMove`;
+                // launch and volume mount still heal the rest.
                 for watcher in self.watchers.values { watcher.refresh() }
             }
         }
@@ -1121,6 +1123,12 @@ final class ProjectIndex: ObservableObject {
     /// Tries bookmark resolution first, then volume-relative path fallback.
     func refreshAvailability() {
         var changed = false
+        // Announced only after the index, the save and the watchers are all
+        // consistent: `NotificationCenter` delivers synchronously, and the
+        // window's handler rescans the project at `projects[i].path` under the
+        // project's lease — posting mid-loop made it scan the old path and
+        // flip a healthy row to Can't find (review finding 3).
+        var moved: [(UUID, String)] = []
         for i in projects.indices {
             let project = projects[i]
             guard !project.path.isEmpty else { continue }
@@ -1129,12 +1137,16 @@ final class ProjectIndex: ObservableObject {
             if let bookmark = project.bookmarkData,
                let resolvedPath = Self.resolveBookmark(bookmark) {
                 if resolvedPath != project.path {
+                    // A bookmark follows its folder into the Trash. That is a
+                    // deletion, not a move: leave the path, so the row reads
+                    // Can't find with Locate…, rather than serving from the bin.
+                    if Self.isInTrash(URL(fileURLWithPath: resolvedPath)) { continue }
                     projects[i].path = resolvedPath
                     projects[i].lastSeenPath = resolvedPath
                     projects[i].location = Self.detectLocation(for: resolvedPath)
                     projects[i].bookmarkData = Self.createBookmark(for: resolvedPath)
                     changed = true
-                    Self.postPathChanged(id: project.id, path: resolvedPath)
+                    moved.append((project.id, resolvedPath))
                 }
                 // Lazy-capture resourceIdentifier on first successful resolution.
                 if projects[i].resourceIdentifier == nil,
@@ -1151,7 +1163,7 @@ final class ProjectIndex: ObservableObject {
                let relativePath = location.volumeRelativePath, !relativePath.isEmpty {
                 if let resolvedPath = Self.resolveVolumeRelativePath(relativePath) {
                     if resolvedPath != project.path {
-                        Self.postPathChanged(id: project.id, path: resolvedPath)
+                        moved.append((project.id, resolvedPath))
                     }
                     projects[i].path = resolvedPath
                     projects[i].lastSeenPath = resolvedPath
@@ -1168,6 +1180,7 @@ final class ProjectIndex: ObservableObject {
         if changed { save() }
         syncWatchers()
         objectWillChange.send()
+        for (id, path) in moved { Self.postPathChanged(id: id, path: path) }
     }
 
     // MARK: - Watcher lifecycle
@@ -1330,8 +1343,24 @@ final class ProjectIndex: ObservableObject {
     func projectFolderDidMove(id: UUID, to url: URL) {
         guard let project = projects.first(where: { $0.id == id }),
               !AgentActivity.samePath(project.path, url.path) else { return }
+        // Move to Trash is a coordinated move too. Following it would serve
+        // the study from the bin, and an Analyse would write there until Empty
+        // Trash destroyed it. The researcher deleted the folder: the honest
+        // state is Can't find, with Locate… and Remove in right-click.
+        guard !Self.isInTrash(url) else {
+            log.notice("project folder moved to the Trash; not following it")
+            return
+        }
         log.notice("project folder moved; following it")
         relocateProject(id: id, newPath: url.path)
+    }
+
+    /// Whether `url` sits in the user's Trash or a volume's `.Trashes`.
+    /// Component-based so it needs no filesystem access and works for a path
+    /// that no longer exists.
+    nonisolated static func isInTrash(_ url: URL) -> Bool {
+        let parts = url.standardizedFileURL.pathComponents
+        return parts.contains(".Trash") || parts.contains(".Trashes")
     }
 
     /// Every path change the index makes is announced here, so the serve for
@@ -1347,9 +1376,7 @@ final class ProjectIndex: ObservableObject {
     /// or the folder watcher reports a move).
     func relocateProject(id: UUID, newPath: String) {
         guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
-        if projects[index].path != newPath {
-            Self.postPathChanged(id: id, path: newPath)
-        }
+        let pathChanged = projects[index].path != newPath
         projects[index].path = newPath
         projects[index].lastSeenPath = newPath
         projects[index].location = Self.detectLocation(for: newPath)
@@ -1359,6 +1386,9 @@ final class ProjectIndex: ObservableObject {
         // Drop any old lease/watcher and re-establish against the new path.
         releaseLeaseAndWatcher(for: id)
         syncWatchers()
+        // Last, once the index, the file and the new lease all agree — the
+        // window's handler rescans under that lease (review finding 3).
+        if pathChanged { Self.postPathChanged(id: id, path: newPath) }
     }
 
     // MARK: - Persistence

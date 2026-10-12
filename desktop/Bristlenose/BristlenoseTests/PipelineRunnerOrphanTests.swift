@@ -44,13 +44,43 @@ struct PipelineRunnerOrphanTests {
         #expect(FileManager.default.fileExists(atPath: url.path), "the PID file was deleted on a check that should have passed")
     }
 
-    /// A file from a build before the start token existed: pid alone. Accepted
-    /// on uid, so an upgrade mid-run still attaches.
-    @Test func aLegacyPidOnlyFileIsStillRecognised() throws {
+    /// A file from a build before the start token existed: pid alone. Stale,
+    /// not ours: without the token a reused pid would match on uid alone and
+    /// Stop would SIGKILL whatever holds it now (review finding 9).
+    @Test func aLegacyPidOnlyFileIsStaleAndRemoved() throws {
         let p = project()
         let url = try writePIDFile("\(getpid())\n", for: p)
         defer { try? FileManager.default.removeItem(at: url) }
-        #expect(PipelineRunner.aliveOwnedRunPID(for: p) == getpid())
+        #expect(PipelineRunner.aliveOwnedRunPID(for: p) == nil)
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
+    /// The caller's half of the keep-file rule. `performScan` used to sweep the
+    /// PID file on any nil, which deleted a file the callee had just decided
+    /// to keep (review finding 1). Indeterminate here means the file survives
+    /// the whole scan, not just the verdict.
+    @Test func aScanWithAnIndeterminateCheckKeepsTheFile() async throws {
+        let p = project()
+        let url = try writePIDFile("\(getpid())\n\(PipelineRunner.noStartToken)\n", for: p)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let manifest = FileManager.default.temporaryDirectory
+            .appendingPathComponent("bn-orphan-scan-\(UUID().uuidString)/pipeline-manifest.json")
+
+        let outcome = await PipelineRunner.performScan(
+            project: p, manifestURL: manifest, startTime: { _ in nil })
+
+        if case .orphan = outcome { Issue.record("an indeterminate check attached as an orphan") }
+        #expect(FileManager.default.fileExists(atPath: url.path), "performScan deleted a PID file the verdict said to keep")
+    }
+
+    /// A spawn whose libproc query failed writes the sentinel, never an empty
+    /// line — an empty line is the legacy shape, which is stale.
+    @Test func theNoTokenSentinelIsIndeterminateNotStale() throws {
+        let p = project()
+        let url = try writePIDFile("\(getpid())\n\(PipelineRunner.noStartToken)\n", for: p)
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(PipelineRunner.aliveOwnedRunPID(for: p) == nil)
+        #expect(FileManager.default.fileExists(atPath: url.path))
     }
 
     /// A check that cannot finish is not a verdict. The file stays.
@@ -101,7 +131,9 @@ struct PipelineRunnerOrphanTests {
     @Test func verdictTable() {
         #expect(verdict("42\n100.200") == .alive(42))
         #expect(verdict("42\n100.200\n") == .alive(42))
-        #expect(verdict("42") == .alive(42), "legacy pid-only file")
+        #expect(verdict("42") == .stale, "legacy pid-only file: no token, no attach")
+        #expect(verdict("42\n") == .stale, "empty token line is the legacy shape")
+        #expect(verdict("42\n\(PipelineRunner.noStartToken)") == .indeterminate, "sentinel: could not verify")
         #expect(verdict("42\n100.201") == .stale, "start token differs — reused pid")
         #expect(verdict("42\n100.200", alive: false) == .stale)
         #expect(verdict("42\n100.200", uid: 502) == .stale, "another user's process")

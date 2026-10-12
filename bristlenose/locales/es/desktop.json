@@ -214,7 +214,7 @@
     "titleSessions_other": "{{count}} Sesiones",
     "missingSubtitle_one": "1 falta",
     "missingSubtitle_other": "{{count}} faltan",
-    "databaseForked": "Base de datos dividida",
+    "databaseForked": "Informe desactualizado",
     "tooltipWaiting": "{{count}} en espera",
     "dateRelativeJustNow": "Ahora",
     "unanalysedSheetTitle": "Archivos sin analizar en {{project}}",
@@ -259,7 +259,7 @@
       "unanalysedTitle": "Archivos sin analizar",
       "missingTitle": "Archivos que faltan",
       "missingFooter": "Estos archivos ya no est\u00e1n en la carpeta del proyecto.",
-      "databaseForkedFooter": "La base de datos del an\u00e1lisis contiene m\u00e1s de un proyecto, por lo que el informe puede mostrar menos de lo que indica esta fila. Reanalizar\u2026 la reconstruye."
+      "databaseForkedFooter": "El informe no muestra el an\u00e1lisis m\u00e1s reciente. Reanalizar, en el men\u00fa del proyecto, vuelve a transcribir y analizar todas las entrevistas y descarta tus ediciones, etiquetas y estrellas."
     },
     "pipeline": {
       "unreachable": {

@@ -214,7 +214,7 @@
     "titleSessions_other": "{{count}} istuntoa",
     "missingSubtitle_one": "1 puuttuu",
     "missingSubtitle_other": "{{count}} puuttuu",
-    "databaseForked": "Tietokanta jakautunut",
+    "databaseForked": "Raportti vanhentunut",
     "tooltipWaiting": "{{count}} odottaa",
     "dateRelativeJustNow": "Juuri nyt",
     "unanalysedSheetTitle": "Analysoimattomat tiedostot projektissa {{project}}",
@@ -259,7 +259,7 @@
       "unanalysedTitle": "Analysoimattomat tiedostot",
       "missingTitle": "Puuttuvat tiedostot",
       "missingFooter": "N\u00e4it\u00e4 tiedostoja ei en\u00e4\u00e4 ole projektikansiossa.",
-      "databaseForkedFooter": "Analyysin tietokannassa on useampi kuin yksi projekti, joten raportti voi n\u00e4ytt\u00e4\u00e4 v\u00e4hemm\u00e4n kuin t\u00e4m\u00e4 rivi laskee. Analysoi uudelleen\u2026 rakentaa sen uudelleen."
+      "databaseForkedFooter": "Raportti ei n\u00e4yt\u00e4 uusinta analyysi\u00e4. Analysoi uudelleen projektin valikossa litteroi ja analysoi kaikki haastattelut uudelleen ja hylk\u00e4\u00e4 muokkauksesi, tunnisteesi ja t\u00e4htesi."
     },
     "pipeline": {
       "unreachable": {

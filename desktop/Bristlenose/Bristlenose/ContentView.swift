@@ -864,14 +864,25 @@ struct ContentView: View {
         // follows: `start` on a different path tears the old one down and
         // respawns, so the serve stops polling a path with no folder behind it.
         .onReceive(NotificationCenter.default.publisher(for: .bristlenoseProjectPathChanged)) { note in
+            // Sole selection, not `contains`: a multi-selection shows no report
+            // and `applySelectionChange` has just cleared these bridge paths.
             guard let id = note.userInfo?["id"] as? UUID,
                   let path = note.userInfo?["path"] as? String,
-                  selection.contains(.project(id)) else { return }
+                  Self.soleProject(in: selection) == id else { return }
             bridgeHandler.selectedProjectPath = path
             bridgeHandler.selectedProjectRevealablePath = path
             rescanAfterRelocate(id)
-            if hasConsent, windowIsKey {
+            guard hasConsent else { return }
+            if windowIsKey {
                 serveFleet.manager(for: id).start(projectPath: path)
+            } else {
+                // In the scenario this exists for — a Finder rename — Finder
+                // is frontmost and no window is key. Queue the start for the
+                // moment this window is looked at, OVERWRITING any deferred
+                // start that still names the old path. Without this arm the
+                // serve stayed on the old path, which is the 12 Oct bug intact
+                // (review finding 2).
+                pendingStart = (id: id, path: path)
             }
         }
         // When consent is granted (version updated), start serve for the

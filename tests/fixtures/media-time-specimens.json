@@ -1,5 +1,5 @@
 {
- "_comment": "ffprobe JSON (format=duration:format_tags:stream_tags) of real recordings, GPS location tags removed. Sources: gopro/gpmf-parser samples/ (GoPro); public GitHub BWF fixtures (Zoom F8, Zoom H1). Measured 11 Oct 2026 \u2014 docs/design-timezones.md \u00a7 5.9.",
+ "_comment": "ffprobe JSON (format=duration:format_tags:stream_tags) of real recordings, GPS location tags removed. Sources: gopro/gpmf-parser samples/ (GoPro); public GitHub BWF fixtures (Zoom F8, Zoom H1). Measured 11 Oct 2026 \u2014 docs/design-timezones.md \u00a7 5.9. Voice Memos (Mac, 'iPad Version 27.0'): a 5 s memo the maintainer recorded and shared by drag, Mail and WhatsApp on 12 Oct 2026 \u2014 all three copies carry identical tags; this is the Mail copy, voice-memo-uuid removed.",
  "specimens": {
   "gopro_hero5": {
    "streams": [
@@ -347,6 +347,27 @@
      "creation_time": "01:15:44",
      "time_reference": "436224000",
      "coding_history": "A=PCM,F=96000,W=24,M=stereo,T=ZOOM Handy Recorder H1"
+    }
+   }
+  },
+  "voice_memos_mac_shared": {
+   "streams": [
+    {
+     "tags": {
+      "creation_time": "2026-10-12T20:34:39.000000Z",
+      "language": "und",
+      "handler_name": "Core Media Audio"
+     }
+    }
+   ],
+   "format": {
+    "duration": "5.178050",
+    "tags": {
+     "major_brand": "M4A ",
+     "minor_version": "0",
+     "compatible_brands": "M4A isommp42",
+     "creation_time": "2026-10-12T20:34:39.000000Z",
+     "encoder": "com.apple.VoiceMemos (iPad Version 27.0 (Build 26A428))"
     }
    }
   }

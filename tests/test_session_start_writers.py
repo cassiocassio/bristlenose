@@ -31,12 +31,14 @@ _SPECIMENS = json.loads(
 _COPIED = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
 
 
-def _file(name: str, specimen: str, file_type: FileType) -> InputFile:
+def _file(
+    name: str, specimen: str, file_type: FileType, created_at: datetime = _COPIED
+) -> InputFile:
     data = _SPECIMENS[specimen]
     return InputFile(
         path=Path("/input") / name,
         file_type=file_type,
-        created_at=_COPIED,
+        created_at=created_at,
         size_bytes=1000,
         duration_seconds=float(data["format"]["duration"]),
         container_meta=time_meta_from_ffprobe(data),
@@ -110,6 +112,19 @@ class TestVoiceMemos:
         start = resolve_session_start([f])
         assert start.source is StartSource.FILENAME_LOCAL
         assert start.instant == datetime(2026, 7, 15, 13, 30, 22, tzinfo=UTC)
+
+    def test_a_shared_copy_keeps_its_voice_memos_tags(self) -> None:
+        # Recorded on the Mac and shared by Mail (drag-out and WhatsApp copies
+        # carried identical tags): renamed to its title, encoder intact.
+        # The Mail copy as saved: 20:36:16Z, after the recording.
+        saved = datetime(2026, 10, 12, 20, 36, 16, tzinfo=UTC)
+        f = _file("via mail Barbican 11.m4a", "voice_memos_mac_shared", FileType.AUDIO, saved)
+        assert f.container_meta is not None
+        assert (f.container_meta.encoder or "").startswith("com.apple.VoiceMemos")
+        start = resolve_session_start([f])
+        assert start.source is StartSource.CONTAINER
+        # creation_time 20:34:39Z is the end; 5.18 s of audio before it.
+        assert start.instant == datetime(2026, 10, 12, 20, 34, 39, tzinfo=UTC) - timedelta(seconds=5.17805)
 
     def test_its_container_time_is_taken_as_the_end(self) -> None:
         meta = MediaTimeMeta(creation_utc=datetime(2026, 7, 23, 12, 6, 16, tzinfo=UTC),

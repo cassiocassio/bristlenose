@@ -634,7 +634,7 @@ maintainer's Mac (metadata only; placeholders skipped):
 | QuickTime Player / Photo Booth on a Mac (`model = Mac…`) | capture date = start side; `creation_time` = save | 1 file: capture date 34 s before `creation_time`, which equals the file's creation |
 | GoPro HERO5/6/7/8, MAX, Fusion (`firmware` HD5.–HD8., H19., FS1.) | **start**, on the camera's local clock with a false `Z` | 6 public sample files (gopro/gpmf-parser `samples/`), each checked against the GPS time in its own `gpmd` stream: 7 h (April) or 8 h (Jan/Nov) = Pacific, where they were shot; set clocks drift −44 s to +40 s from GPS |
 | Zoom F8, Zoom H1 (bext `Originator` "ZOOM F8" / "ZOOM Handy Recorder H1") | **start** (OriginationDate/Time), local, no zone | public BWF fixtures (iluvcapra/wavinfo `tests/test_files/zoom_F8`, and an H1 set); ffprobe exposes it as `date` + a bare `creation_time`; `time_reference` is timecode, not the clock |
-| Voice Memos (`encoder = com.apple.VoiceMemos …`) | end — **INFERRED** | one exported copy: `creation_time` 4 m 27 s before the file existed, duration 6 m 5 s |
+| Voice Memos (`encoder = com.apple.VoiceMemos …`) | end — **INFERRED** | a July copy: `creation_time` 4 m 27 s before the file existed with 6 m 5 s of audio, so it cannot be the start. **Measured 12 Oct 2026:** a memo recorded on the Mac and shared three ways (drag out, Mail, WhatsApp) — all three copies keep identical tags (`encoder`, `voice-memo-uuid`, `creation_time`), renamed to the memo's title; no `date` tag. The encoder, not the filename, is what identifies a Voice Memo |
 | a device clock that lost its setting | 1 January — refused | a Zoom H1 at 2010-01-01 counting up from power-on; a GoPro HERO7 at 2016-01-01 |
 | an unidentified web recorder (`Web Recording 20240604 1356.mp4`) | wrong clock | `creation_time` exactly 4 h after creation — refused |
 | Voice Memos, WhatsApp audio (no writer tags) | unclear | not classifiable from tags; taken as written |
@@ -698,8 +698,11 @@ In rough order of value; none of these blocks the store launch on its own.
    - **Voice Memos originals** — measure 5–10 with Full Disk Access granted:
      filename vs the `date` tag vs `creation_time` vs the app's database
      (ZDATE, ZDURATION), and one memo each after Trim, Enhance and resume.
-     An **exported** copy carries nothing recoverable (a generic AVFoundation
-     export, renamed to its title) — it gets the file date.
+     _(12 Oct 2026: a memo shared by drag, Mail and WhatsApp kept its
+     `com.apple.VoiceMemos` encoder in all three, so sharing does not strip it.
+     The July copy without tags came by an unknown route.)_ Still owed: one
+     memo of a minute or more with its start noted to the second, to turn
+     "end" from inferred to measured.
    - **GoPro HERO9–13** — no public sample; whether HERO11+ (which has a
      timezone setting) still writes local time is open. The exact zone is
      recoverable from the GPS time in the `gpmd` stream (its difference to

@@ -3067,9 +3067,12 @@ struct ContentView: View {
     /// is off. Falls through to the boot / "drop interviews" screens otherwise
     /// (the same surfaces it replaces), so the off-switch needs no separate UI.
     private func shouldShowShoal(_ project: Project) -> Bool {
-        showAnalysisAnimation
-            && !reduceMotion
-            && isAnalysing(pipelineRunner.state[project.id])
+        DetailPaneKind.shoalTakesPane(
+            animationOn: showAnalysisAnimation,
+            reduceMotion: reduceMotion,
+            analysing: isAnalysing(pipelineRunner.state[project.id]),
+            sessionsReadable: pipelineRunner.sessionsReadable[project.id]
+        )
     }
 
     /// Reload the report after a run finishes. The serve re-imports the finished
@@ -3111,6 +3114,14 @@ struct ContentView: View {
         // a run, and this is the transition that marks one (SessionsRouteMemory).
         bridgeHandler.clearSessionsRouteMemory()
         reportReloadTask?.cancel()
+        guard DetailPaneKind.reloadsOnCompletion(
+            documentState: bridgeHandler.documentState, settled: new[id],
+            // Set only by a run that delivered sessions as it went.
+            progressive: pipelineRunner.sessionsReadable[id] != nil
+        ) else {
+            Self.reloadLog.info("completion under a live report — no reload")
+            return
+        }
         reportReloadTask = Task { @MainActor in
             // Ride out the serve's ~1s re-import and any brief serve-restart or
             // webView-nil window. Wait through a not-yet-running serve rather

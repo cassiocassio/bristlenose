@@ -43,6 +43,19 @@ import Testing
         #expect(ev?.predictedTotalSeconds == 200.0)
     }
 
+    /// Progressive lenses: the count that hands the pane from the shoal to the
+    /// report. Absent on older lines, where it must read as nil, not zero.
+    @Test func sessionsReadableDecodesWhenPresent() throws {
+        let readable = runProgress.replacingOccurrences(
+            of: #""elapsed_seconds":40.0"#, with: #""elapsed_seconds":40.0,"sessions_readable":3"#
+        )
+        #expect(readable != runProgress, "the fixture line must actually change")
+        #expect(EventLogReader.latestProgress(at: try writeEvents([runStarted, readable]))?
+            .sessionsReadable == 3)
+        #expect(EventLogReader.latestProgress(at: try writeEvents([runStarted, runProgress]))?
+            .sessionsReadable == nil)
+    }
+
     @Test func tailEventSkipsTrailingProgress() throws {
         // run_started then a trailing run_progress: the lifecycle read returns
         // the run_started, not the progress line — so a live run isn't read as

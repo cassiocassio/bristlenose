@@ -57,6 +57,11 @@ enum EventLogReader {
         let stageFraction: Double?
         let etaRemainingSeconds: Double?
         let predictedTotalSeconds: Double?
+        /// Sessions with a readable transcript so far — a first analysis
+        /// delivers them one by one (docs/design-progressive-lenses.md, Phase 1).
+        /// Carried on every progress line once non-zero, so the newest line
+        /// always has it.
+        let sessionsReadable: Int?
 
         enum CodingKeys: String, CodingKey {
             case event, kind
@@ -72,6 +77,7 @@ enum EventLogReader {
             case stageFraction = "stage_fraction"
             case etaRemainingSeconds = "eta_remaining_seconds"
             case predictedTotalSeconds = "predicted_total_seconds"
+            case sessionsReadable = "sessions_readable"
         }
     }
 

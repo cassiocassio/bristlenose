@@ -54,6 +54,33 @@ enum DetailPaneKind: Equatable {
         return .report
     }
 
+    /// Whether the decorative shoal takes the pane: while analysing, with the
+    /// animation preference on and Reduce Motion off — and only until the
+    /// first session is readable. From then the report is the surface: the
+    /// Sessions lens can be read while the rest is processed
+    /// (docs/design-progressive-lenses.md, Phase 1 step 18).
+    static func shoalTakesPane(
+        animationOn: Bool, reduceMotion: Bool, analysing: Bool, sessionsReadable: Int?
+    ) -> Bool {
+        animationOn && !reduceMotion && analysing && (sessionsReadable ?? 0) == 0
+    }
+
+    /// Whether the report reloads when a run settles. Not when a progressive
+    /// first analysis succeeded under the report the researcher was reading
+    /// during it: the SPA refetches when `/last-run` moves, and a reload would
+    /// throw away their place in the transcript. A re-analyse still reloads
+    /// (it can renumber sessions under the same route), and so does a failure
+    /// — the page that describes it is the serve's.
+    static func reloadsOnCompletion(
+        documentState: DocumentState, settled: PipelineState?, progressive: Bool
+    ) -> Bool {
+        guard progressive, case .spa = documentState else { return true }
+        switch settled {
+        case .ready, .completedPartial: return false
+        default: return true
+        }
+    }
+
     /// What should cover a status page the serve is showing for a project that
     /// has a new run queued or under way — or nil to leave the page showing.
     ///

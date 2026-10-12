@@ -349,6 +349,13 @@ final class PipelineRunner: ObservableObject {
     /// yields to the stage ladder once a run reaches `.running`. Phase 2.
     @Published private(set) var addingInterviews: [UUID: Int] = [:]
 
+    /// How many of a running project's sessions have a readable transcript —
+    /// a first analysis delivers them one by one, and the first one hands the
+    /// pane from the shoal to the report (`DetailPaneKind.shoalTakesPane`).
+    /// Published here rather than on `liveData` because it moves once per
+    /// session, not once a second, and the window's pane reads it.
+    @Published private(set) var sessionsReadable: [UUID: Int] = [:]
+
     /// Show the "Adding N interviews…" ack for `projectID` and clear it no sooner
     /// than `floor` seconds from now (the visibility floor — the timer only bounds
     /// the *minimum* on-screen time; a run reaching `.running` overrides the
@@ -719,6 +726,9 @@ final class PipelineRunner: ObservableObject {
         }.value
         guard let event, event.runId == currentRunId,
               let current = liveData.progress[projectID] else { return }
+        if let readable = event.sessionsReadable, readable > (sessionsReadable[projectID] ?? 0) {
+            sessionsReadable[projectID] = readable
+        }
         let updated = RunProgressMath.apply(
             stage: event.stage,
             sessionsComplete: event.sessionsComplete,
@@ -744,6 +754,7 @@ final class PipelineRunner: ObservableObject {
         )
         attachedOrphanPIDs[project.id] = pid
         state[project.id] = .running
+        sessionsReadable[project.id] = nil
         var initial = PipelineProgress(startedAt: Date())
         initial.attachedFromOrphan = true
         liveData.setProgress(initial, for: project.id)
@@ -1371,6 +1382,7 @@ final class PipelineRunner: ObservableObject {
         currentParser = StdoutProgressParser()
         cancellationRequested = false
         state[project.id] = .running
+        sessionsReadable[project.id] = nil
         liveData.setProgress(PipelineProgress(startedAt: Date()), for: project.id)
         liveData.clearOutput(for: project.id)
         startProgressPoll(for: project, generation: gen)

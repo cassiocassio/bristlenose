@@ -119,4 +119,37 @@ struct DetailPaneRunCoverTests {
         #expect(DetailPaneKind.runCover(pipelineState: .stopped(stagesComplete: []), documentState: failedPage) == nil)
         #expect(DetailPaneKind.runCover(pipelineState: nil, documentState: failedPage) == nil)
     }
+
+    // MARK: - Progressive lenses (docs/design-progressive-lenses.md, Phase 1)
+
+    @Test func theShoalGivesWayAtTheFirstReadableSession() {
+        func shoal(_ readable: Int?) -> Bool {
+            DetailPaneKind.shoalTakesPane(
+                animationOn: true, reduceMotion: false, analysing: true, sessionsReadable: readable
+            )
+        }
+        #expect(shoal(nil))
+        #expect(shoal(0))
+        #expect(!shoal(1), "session 1 is readable: the report is the surface now")
+        #expect(!DetailPaneKind.shoalTakesPane(
+            animationOn: true, reduceMotion: false, analysing: false, sessionsReadable: nil))
+        #expect(!DetailPaneKind.shoalTakesPane(
+            animationOn: false, reduceMotion: false, analysing: true, sessionsReadable: nil))
+        #expect(!DetailPaneKind.shoalTakesPane(
+            animationOn: true, reduceMotion: true, analysing: true, sessionsReadable: nil))
+    }
+
+    @Test func aProgressiveRunThatSucceedsUnderItsLiveReportDoesNotReloadIt() {
+        let ready = PipelineState.ready(Date(timeIntervalSince1970: 0))
+        func reloads(_ doc: DocumentState, _ state: PipelineState, progressive: Bool = true) -> Bool {
+            DetailPaneKind.reloadsOnCompletion(documentState: doc, settled: state, progressive: progressive)
+        }
+        #expect(!reloads(.spa, ready))
+        #expect(reloads(.spa, ready, progressive: false),
+                "a re-analyse can renumber sessions under the same route")
+        #expect(reloads(.loading, ready))
+        #expect(reloads(.spa, .stopped(stagesComplete: [])),
+                "a stopped run's page is the serve's to describe")
+        #expect(reloads(.spa, .failed(.passthrough("x"), category: .network)))
+    }
 }

@@ -305,6 +305,20 @@ enum EventLogReader {
         return "\(info.pbi_start_tvsec).\(info.pbi_start_tvusec)"
     }
 
+    /// The owning uid of `pid`, from the same libproc query. Nil when the
+    /// query fails — a dead pid, or one we may not inspect — which the caller
+    /// must treat as *unknown*, never as *not ours*. Replaced the
+    /// `/bin/ps -o uid=` exec in `PipelineRunner.aliveOwnedRunPID`, which App
+    /// Sandbox refuses (measured 12 Oct 2026: `Operation not permitted` from
+    /// the sandboxed test host, while this call answered uid 501).
+    static func procUID(pid: Int32) -> uid_t? {
+        var info = proc_bsdinfo()
+        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+        let n = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size)
+        guard n == size else { return nil }
+        return info.pbi_uid
+    }
+
     /// Read the last `maxBytes` bytes of `url`. Returns `(data, wasTruncated)`
     /// where `wasTruncated` indicates the file exceeded `maxBytes` and the
     /// caller should drop the first slice (likely chopped mid-line).

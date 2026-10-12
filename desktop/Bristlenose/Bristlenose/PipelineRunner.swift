@@ -514,25 +514,6 @@ final class PipelineRunner: ObservableObject {
         self.projectIndex = index
     }
 
-    private nonisolated static func runCapturing(
-        executable: String, arguments: [String]
-    ) -> String? {
-        let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: executable)
-        proc.arguments = arguments
-        let pipe = Pipe()
-        proc.standardOutput = pipe
-        proc.standardError = FileHandle.nullDevice
-        do {
-            try proc.run()
-            proc.waitUntilExit()
-        } catch {
-            return nil
-        }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: data, encoding: .utf8)
-    }
-
     // MARK: - Progressive sidebar scan
 
     /// Kick off a per-project manifest read for every project in the index.
@@ -564,9 +545,9 @@ final class PipelineRunner: ObservableObject {
     /// Scan a single project's manifest, with orphan-attach taking priority
     /// if a live `bristlenose run` for this project is found.
     ///
-    /// All filesystem I/O (PID file read, `/bin/ps` exec for uid/argv
-    /// verification, manifest JSON parse) runs on a detached task. Only the
-    /// final state mutation hops back to MainActor.
+    /// All filesystem I/O (PID file read, libproc ownership check, manifest
+    /// JSON parse) runs on a detached task. Only the final state mutation hops
+    /// back to MainActor.
     func scan(project: Project) {
         let projectID = project.id
         let manifestURL = Self.manifestURL(for: project)
@@ -614,43 +595,88 @@ final class PipelineRunner: ObservableObject {
 
     // MARK: - Orphan attach (Slice 7)
 
-    /// Read `<project.path>/.bristlenose/pipeline.pid`, verify the PID is
-    /// (a) alive, (b) owned by the current uid, (c) running an argv that
-    /// contains `bristlenose run`. Returns the PID iff all three pass.
-    /// Removes the file silently if the PID is dead, foreign, or wrong-argv.
-    private nonisolated static func aliveOwnedRunPID(for project: Project) -> pid_t? {
+    /// What the PID file says about a run, judged against the live process
+    /// table. Pure: the probes are injected so the table below is testable
+    /// without a second process.
+    enum OwnedRunVerdict: Equatable {
+        /// A live run of ours. Attach to it.
+        case alive(pid_t)
+        /// Dead, foreign, or a reused pid. Remove the file.
+        case stale
+        /// The process is alive but the check could not finish (libproc
+        /// refused). **Keep the file** — deleting it is how orphan attach
+        /// became unreachable: `/bin/ps` failed under App Sandbox on every
+        /// launch, the failure read as "not ours", and the file was removed,
+        /// so a relaunch mid-run showed Analysing with an inert Stop while
+        /// Analyse could spawn a second run against the same folder.
+        case indeterminate
+    }
+
+    /// The PID file is `"<pid>\n<start_time>"` — the start token is the
+    /// libproc `"<tvsec>.<tvusec>"` string `EventLogReader.procStartTime`
+    /// yields, recorded at spawn, so a pid the kernel has since reused fails
+    /// the comparison instead of matching on argv. Files from builds before
+    /// 12 Oct 2026 carry the pid alone; they are accepted on uid alone, and
+    /// the next spawn rewrites them in the new form.
+    nonisolated static func ownedRunVerdict(
+        pidFileContents: String,
+        isAlive: (pid_t) -> Bool,
+        processUID: (pid_t) -> uid_t?,
+        startTime: (pid_t) -> String?,
+        currentUID: uid_t
+    ) -> OwnedRunVerdict {
+        let lines = pidFileContents
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        guard let first = lines.first, let pid = pid_t(first), pid > 0 else { return .stale }
+        guard isAlive(pid) else { return .stale }
+        guard let uid = processUID(pid) else { return .indeterminate }
+        guard uid == currentUID else { return .stale }
+        let recorded = lines.count > 1 ? lines[1] : ""
+        guard !recorded.isEmpty else { return .alive(pid) }
+        guard let live = startTime(pid) else { return .indeterminate }
+        return live == recorded ? .alive(pid) : .stale
+    }
+
+    /// Read the app's PID file for `project` and verify the pid is (a) alive,
+    /// (b) owned by the current uid, (c) the same process incarnation that
+    /// was spawned (start-time token). Returns the pid iff all three pass.
+    /// Removes the file only on a definite `.stale`; an `.indeterminate` check
+    /// leaves it for the next scan.
+    ///
+    /// Everything is libproc (`kill(pid, 0)`, `proc_pidinfo`): App Sandbox
+    /// blocks `Process()` exec of `/bin/ps` at the exec boundary (measured
+    /// 12 Oct 2026, `Operation not permitted`), and both build configurations
+    /// carry `ENABLE_APP_SANDBOX = YES`.
+    nonisolated static func aliveOwnedRunPID(
+        for project: Project,
+        processUID: (pid_t) -> uid_t? = EventLogReader.procUID,
+        startTime: (pid_t) -> String? = EventLogReader.procStartTime
+    ) -> pid_t? {
         let url = pidFileURL(for: project)
         guard let data = try? Data(contentsOf: url),
-              let str = String(data: data, encoding: .utf8),
-              let pid = pid_t(str.trimmingCharacters(in: .whitespacesAndNewlines)),
-              pid > 0 else {
+              let str = String(data: data, encoding: .utf8) else {
             return nil
         }
-        // (a) alive — kill(pid, 0) returns 0 if the process exists and we
-        // can signal it; ESRCH means no such process.
-        guard kill(pid, 0) == 0 else {
+        let verdict = ownedRunVerdict(
+            pidFileContents: str,
+            // kill(pid, 0) is 0 when the process exists and we may signal it;
+            // ESRCH means no such process.
+            isAlive: { kill($0, 0) == 0 },
+            processUID: processUID,
+            startTime: startTime,
+            currentUID: getuid()
+        )
+        switch verdict {
+        case .alive(let pid):
+            return pid
+        case .stale:
             try? FileManager.default.removeItem(at: url)
             return nil
-        }
-        // (b) uid match — ps -p <pid> -o uid=
-        guard let uidStr = runCapturing(
-            executable: "/bin/ps", arguments: ["-p", String(pid), "-o", "uid="]
-        )?.trimmingCharacters(in: .whitespacesAndNewlines),
-              let uid = uid_t(uidStr), uid == getuid() else {
-            // PID was reused by some other user's process — leave the foreign
-            // process alone and remove our stale file.
-            try? FileManager.default.removeItem(at: url)
+        case .indeterminate:
+            logger.warning("orphan check could not finish for project=\(project.id.uuidString, privacy: .public) — keeping its PID file")
             return nil
         }
-        // (c) argv contains `bristlenose run` — guards against PID reuse by
-        // an unrelated process owned by the same user.
-        guard let argv = runCapturing(
-            executable: "/bin/ps", arguments: ["-p", String(pid), "-o", "args="]
-        ), argv.contains("bristlenose run") else {
-            try? FileManager.default.removeItem(at: url)
-            return nil
-        }
-        return pid
     }
 
     /// Attach to a live orphan: surface as `.running` with the same UI as a
@@ -835,7 +861,7 @@ final class PipelineRunner: ObservableObject {
     /// the App Support container is always granted to the app. The PID file
     /// is a Swift-internal recovery hint that Python doesn't read, so the
     /// "lives next to manifest" symmetry costs us nothing to give up.
-    private nonisolated static func pidFileURL(for project: Project) -> URL {
+    nonisolated static func pidFileURL(for project: Project) -> URL {
         pidsDirectory().appendingPathComponent("\(project.id.uuidString).pid")
     }
 
@@ -853,7 +879,9 @@ final class PipelineRunner: ObservableObject {
         try? FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(), withIntermediateDirectories: true
         )
-        try? Data("\(pid)".utf8).write(to: url, options: .atomic)
+        // pid, then the libproc start-time token — see `ownedRunVerdict`.
+        let start = EventLogReader.procStartTime(pid: pid) ?? ""
+        try? Data("\(pid)\n\(start)".utf8).write(to: url, options: .atomic)
     }
 
     private nonisolated static func removePIDFile(for project: Project) {

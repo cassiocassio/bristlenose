@@ -217,6 +217,13 @@ def run_pipeline(
 
     async def _passthrough(sess, _tmp, **_kw):
         h.extracted.append([s.session_id for s in sess])
+        # As stage 2 does: a bare recording's audio path is its media file.
+        for s in sess:
+            if s.audio_path is None and not s.has_existing_transcript:
+                s.audio_path = next(
+                    (f.path for f in s.files if f.file_type in (FileType.AUDIO, FileType.VIDEO)),
+                    None,
+                )
         return sess
 
     def _fake_transcribe(sessions, _settings, **_kw):

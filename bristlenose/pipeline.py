@@ -1444,20 +1444,49 @@ class Pipeline:
             # Temp files go in .bristlenose/temp/
             temp_dir = output_dir / ".bristlenose" / "temp"
             temp_dir.mkdir(parents=True, exist_ok=True)
-            sessions = await extract_audio_for_sessions(sessions, temp_dir)
+            # ── Intermediate directory for cached JSON ────────────────
+            intermediate = output_dir / ".bristlenose" / "intermediate"
+            _ss_path = intermediate / "session_segments.json"
+            # Per session: what ITS transcription was computed from, so the
+            # per-session resume below can keep the sessions whose files did
+            # not change and redo only the ones whose did — a transcript
+            # dropped beside an analysed video, a parser bump.
+            _tx_session_fps = {
+                s.session_id: _session_input_fingerprint(s, input_dir) for s in sessions
+            }
+            # The pre-12-Oct-2026 spelling of the same thing, for a manifest
+            # written before fingerprints stopped carrying the absolute path.
+            _tx_session_fps_legacy = {
+                s.session_id: _session_input_fingerprint(s, None) for s in sessions
+            }
+            # A session the transcription cache will serve is not decoded: on
+            # iCloud a decode is a download, and until 12 Oct 2026 every run
+            # re-decoded every video whatever the cache held. Anything the
+            # cache then turns out not to hold is extracted on demand just
+            # before Whisper (`_ensure_audio`), so skipping here can never
+            # lose a session.
+            _cached_before_decode = (
+                fresh_session_ids(
+                    _prev_manifest, _M_STAGE_TRANSCRIBE, _tx_session_fps,
+                    accept=_tx_session_fps_legacy,
+                )
+                if _ss_path.exists() else set()
+            )
+            _to_decode = [s for s in sessions if s.session_id not in _cached_before_decode]
+            await extract_audio_for_sessions(_to_decode, temp_dir)
             _print_step(
-                f"Extracted audio from {count_noun(len(sessions), 'session')}",
+                f"Extracted audio from {count_noun(len(_to_decode), 'session')}"
+                + (
+                    f" ({count_noun(len(_cached_before_decode), 'session')} cached)"
+                    if _cached_before_decode else ""
+                ),
                 time.perf_counter() - t0,
             )
             self._record_ingest_outcome(sessions, declined, elapsed_s=ingest_elapsed)
             mark_stage_complete(manifest, STAGE_EXTRACT_AUDIO)
             write_manifest(manifest, output_dir)
 
-            # ── Intermediate directory for cached JSON ────────────────
-            intermediate = output_dir / ".bristlenose" / "intermediate"
-
             # ── Stages 3-5: Parse existing transcripts + Transcribe ──
-            _ss_path = intermediate / "session_segments.json"
             _source_paths = [f.path for s in sessions for f in s.files]
             _tx_input_hashes = {
                 "source_files": hash_file_metadata(_source_paths, relative_to=input_dir),
@@ -1473,18 +1502,6 @@ class Pipeline:
                     f"{_tx_input_hashes['source_files']}|parser={_transcript_parser_version()}"
                     .encode()
                 )
-            # Per session: what ITS transcription was computed from, so the
-            # per-session resume below can keep the sessions whose files did
-            # not change and redo only the ones whose did — a transcript
-            # dropped beside an analysed video, a parser bump.
-            _tx_session_fps = {
-                s.session_id: _session_input_fingerprint(s, input_dir) for s in sessions
-            }
-            # The pre-12-Oct-2026 spelling of the same thing, for a manifest
-            # written before fingerprints stopped carrying the absolute path.
-            _tx_session_fps_legacy = {
-                s.session_id: _session_input_fingerprint(s, None) for s in sessions
-            }
             # Outer-scope defaults — both branches below populate these.
             # ``_transcribe_elapsed`` stays None on full-cache-hit (stage
             # didn't run this invocation; ``duration_ms`` reflects only
@@ -1574,6 +1591,10 @@ class Pipeline:
                 t0 = time.perf_counter()
 
                 if _remaining_sessions:
+                    # Stage 2 skipped what the cache promised; a session the
+                    # cache then failed to serve is decoded now.
+                    await self._ensure_audio(_remaining_sessions, temp_dir)
+
                     def _on_transcribe_progress(
                         current: int, total: int,
                     ) -> None:
@@ -1861,6 +1882,12 @@ class Pipeline:
                     sid for sid in session_segments
                     if sid not in _cached_si_sids
                 }
+                # The voice pass listens to the recording; a session stage 2
+                # left undecoded because its transcription was cached gets
+                # its audio here, so a re-identified speaker is still voiced.
+                await self._ensure_audio(
+                    [s for s in sessions if s.session_id in _remaining_si_sids], temp_dir,
+                )
 
                 mark_stage_running(manifest, STAGE_IDENTIFY_SPEAKERS)
                 # Carry forward the still-fresh session records only.
@@ -3496,6 +3523,30 @@ class Pipeline:
             pipeline_warning=_p_warning_a,
             summary=self._summary,
         )
+
+    async def _ensure_audio(self, sessions: list[InputSession], temp_dir: Path) -> None:
+        """Decode the audio of any session stage 2 skipped that is about to be
+        transcribed or voiced after all.
+
+        Stage 2 leaves a session undecoded when the transcription cache says it
+        will serve it; a corrupt cache file, or a speaker record that needs
+        recomputing, can still want the audio later. A file stage 2 already
+        judged unusable (``InputFile.error`` set) is not retried, and a session
+        read from a transcript file never needs audio.
+        """
+        from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
+
+        pending = [
+            s for s in sessions
+            if s.audio_path is None
+            and not s.has_existing_transcript
+            and any(
+                f.file_type in (FileType.AUDIO, FileType.VIDEO) and f.error is None
+                for f in s.files
+            )
+        ]
+        if pending:
+            await extract_audio_for_sessions(pending, temp_dir)
 
     def _record_ingest_outcome(
         self,

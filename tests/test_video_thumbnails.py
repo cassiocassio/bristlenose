@@ -297,6 +297,31 @@ class TestExtractThumbnails:
         assert "s1" in result
         assert result["s1"] == thumb
 
+    def test_regenerates_when_the_video_changed(self, tmp_path: Path) -> None:
+        """A thumbnail is reused only while the video it came from is the
+        same file (size and mtime). Measured 12 Oct 2026: any ``sN.jpg`` on
+        disk was reused whatever the video now was."""
+        thumb = tmp_path / "s1.jpg"
+        thumb.write_bytes(b"\xff\xd8cached")
+        video_path = tmp_path / "video.mp4"
+        video_path.write_bytes(b"fake-video")
+        sessions = [_video_session(video_path=video_path)]
+        transcripts = [_transcript([_seg(0, 30)])]
+
+        with patch("bristlenose.utils.video.extract_thumbnail") as first:
+            extract_thumbnails(sessions, transcripts, tmp_path)
+        first.assert_not_called()  # a thumbnail with no record is adopted as-is
+
+        video_path.write_bytes(b"fake-video, re-exported at another length")
+        with patch("bristlenose.utils.video.extract_thumbnail", return_value=thumb) as second:
+            result = extract_thumbnails(sessions, transcripts, tmp_path)
+        second.assert_called_once()
+        assert result["s1"] == thumb
+
+        with patch("bristlenose.utils.video.extract_thumbnail") as third:
+            extract_thumbnails(sessions, transcripts, tmp_path)
+        third.assert_not_called()  # and the regenerated one is reused again
+
     def test_no_transcript_uses_fallback(self, tmp_path: Path) -> None:
         """Session without transcript falls back to 60s timestamp."""
         video_path = tmp_path / "video.mp4"

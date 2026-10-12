@@ -170,16 +170,22 @@ def extract_thumbnails(
         sid = session.session_id
         output_path = thumbnails_dir / f"{sid}.jpg"
 
-        # Cache: skip if already extracted.
-        if output_path.exists() and output_path.stat().st_size > 0:
-            thumbnail_map[sid] = output_path
-            continue
-
         # Find the video file.
         video_file = next(
             (f for f in session.files if f.file_type == FileType.VIDEO),
             None,
         )
+
+        # Cache: reuse the thumbnail while it still comes from this video.
+        if output_path.exists() and output_path.stat().st_size > 0:
+            if video_file is None or not video_file.path.exists():
+                thumbnail_map[sid] = output_path  # nothing to check against
+                continue
+            if _thumbnail_is_current(output_path, video_file.path):
+                thumbnail_map[sid] = output_path
+                continue
+            logger.info("Thumbnail for %s is from an older video; regenerating", sid)
+
         if video_file is None or not video_file.path.exists():
             continue
 
@@ -194,5 +200,46 @@ def extract_thumbnails(
         result = extract_thumbnail(video_file.path, output_path, timestamp)
         if result is not None:
             thumbnail_map[sid] = result
+            _record_thumbnail_source(output_path, video_file.path)
 
     return thumbnail_map
+
+
+def _source_stamp(video_path: Path) -> str:
+    st = video_path.stat()
+    return f"{st.st_size}:{st.st_mtime_ns}"
+
+
+def _stamp_path(thumbnail: Path) -> Path:
+    """``s1.jpg.src`` beside ``s1.jpg``: the size and mtime of the video the
+    thumbnail was cut from."""
+    return thumbnail.with_name(thumbnail.name + ".src")
+
+
+def _record_thumbnail_source(thumbnail: Path, video_path: Path) -> None:
+    try:
+        _stamp_path(thumbnail).write_text(_source_stamp(video_path), encoding="utf-8")
+    except OSError as exc:  # cosmetic: a missing stamp only costs a re-cut
+        logger.debug("Could not record thumbnail source for %s: %s", thumbnail.name, exc)
+
+
+def _thumbnail_is_current(thumbnail: Path, video_path: Path) -> bool:
+    """Whether *thumbnail* was cut from *video_path* as it is now.
+
+    Until 12 Oct 2026 any ``sN.jpg`` on disk was reused whatever the video had
+    become — a re-exported or replaced recording kept the old frame. A
+    thumbnail with no record (from before that date) is adopted as-is and
+    given one, so it is checked from then on.
+    """
+    stamp = _stamp_path(thumbnail)
+    try:
+        current = _source_stamp(video_path)
+    except OSError:
+        return True
+    if not stamp.exists():
+        _record_thumbnail_source(thumbnail, video_path)
+        return True
+    try:
+        return stamp.read_text(encoding="utf-8").strip() == current
+    except OSError:
+        return True

@@ -166,6 +166,29 @@ def test_media_is_rooted_at_the_interview_folder_from_either_entry(tmp_path: Pat
         assert client.get("/media/clip.mp4").status_code == 200
 
 
+def test_a_legacy_row_from_the_output_folder_entry_is_this_project(tmp_path: Path) -> None:
+    """Before 12 Oct 2026 ``serve <p>/bristlenose-output`` stored the output folder
+    as the row's input folder too. Keying rows on the interview folder must not
+    fork such a row on upgrade: it is matched, and its input folder healed."""
+    from bristlenose.server.db import create_session_factory, get_engine, init_db
+    from bristlenose.server.importer import import_project
+    from bristlenose.server.models import Project
+
+    proj = _project(tmp_path)
+    out = proj / "bristlenose-output"
+    engine = get_engine(f"sqlite:///{tmp_path / 'legacy.db'}")
+    init_db(engine)
+    db = create_session_factory(engine)()
+    db.add(Project(name="Smoke Test", slug="smoke-test",
+                   input_dir=str(out.resolve()), output_dir=str(out.resolve())))
+    db.commit()
+
+    project = import_project(db, proj)
+    assert db.query(Project).count() == 1, "the legacy row forked on upgrade"
+    assert Path(project.input_dir).resolve() == proj.resolve()
+    db.close()
+
+
 def test_import_before_and_after_the_first_run_is_one_row(tmp_path: Path) -> None:
     from bristlenose.server.db import create_session_factory, get_engine, init_db
     from bristlenose.server.importer import import_project

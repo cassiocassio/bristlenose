@@ -471,11 +471,20 @@ def put_session_speaker(
     sent. Not written through to ``people.yaml``. A person no slot points at
     any more is kept, hidden (``speaker_slots.release``).
     """
+    from bristlenose.run_lifecycle import run_in_progress
     from bristlenose.server import speaker_slots
 
     db = _get_db(request)
     try:
-        _check_project(db, project_id)
+        project = _check_project(db, project_id)
+        if (data.kind is not None or data.swap_with is not None) and run_in_progress(
+            Path(project.output_dir)
+        ):
+            # A recode writes the session registry (its re-analysis pins), which
+            # the running analysis loaded at its start and saves over at its end.
+            # A name lives in the database, which the run never touches, so a
+            # rename or a pick goes through.
+            raise HTTPException(status_code=409, detail="An analysis is running")
         if (
             db.query(SessionModel)
             .filter_by(project_id=project_id, session_id=session_id)
@@ -656,6 +665,7 @@ def drop_withdrawn_pins(db: Session, project_id: int, session_id: str) -> None:
     session is added, say. A pin the run has honoured agrees with its slot's
     role, so it stays.
     """
+    from bristlenose.run_lifecycle import run_in_progress
     from bristlenose.server import speaker_slots
     from bristlenose.server.routes.reanalyse import needs_reanalysis
     from bristlenose.session_registry import SessionRegistry
@@ -664,6 +674,11 @@ def drop_withdrawn_pins(db: Session, project_id: int, session_id: str) -> None:
     if project is None:
         return
     output_dir = Path(project.output_dir)
+    if run_in_progress(output_dir):
+        # The run saves over the registry at its end; a write now is lost, and
+        # the recode that would have withdrawn a pin was refused above.
+        logger.warning("A run owns %s; pins were not checked", output_dir)
+        return
     try:
         registry = SessionRegistry.load(output_dir)
     except ValueError:

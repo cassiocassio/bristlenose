@@ -13,6 +13,15 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 
 - **`serve --dev` restarts only for changes to Bristlenose's own Python.** It used to watch the whole working directory, so a sidecar rebuild under `desktop/` restarted the dev server dozens of times.
 
+**Fixed**
+
+- **A report could come up empty after the first analysis in the Mac app, with every signal green.** The app starts the report server on the next pass after it starts a run, so the server usually came up before the run had made `bristlenose-output/`, rooted its database at the interview folder, and the run's results then landed in a second project row the report never reads. The database and log are now created under `bristlenose-output/` before the first run, a never-analysed project's row names that folder, `serve <folder>` and `serve <folder>/bristlenose-output` are one project (recordings play from either), and the server says so in its log if a second row ever appears. One visible consequence: opening a never-analysed project in the app creates an empty `bristlenose-output/` folder beside the interviews straight away, where it used to leave a hidden `.bristlenose/` folder.
+- **The report server follows a replaced output folder.** A failed Re-analyse puts the previous report back, and the next run reclaims one left by a crash; the server used to keep answering from the copy that had been set aside, and curation went into it, until it was restarted. It reattaches to what is on disk the moment the folder changes. If the project folder itself is renamed or moved under a running server, the log says so once; restart the server at the new location.
+- **Nothing writes the session registry under a live run.** Swapping or recoding a speaker and reassigning a paragraph to a new moderator are refused while an analysis owns the project (the run would overwrite the write at its end), and the importer no longer carries speaker picks until the run has let go. `run --clean` no longer moves a live run's output out from under it.
+- **A session that was transcript-only gains its recording.** Source files are re-verified on every import, so a recording that turns up later plays, and a file that has gone is no longer marked as seen.
+- **`bristlenose status` finds the report, and names the stash.** It used to look for `.bristlenose/` at the project root first, and said nothing about a stashed previous report while the output folder was absent, which is when that stash is the only copy. It no longer offers `rm -rf` for it, or calls it "kept while a run is in flight" when no run is.
+- **`bristlenose serve` on an output folder outside the interview folder (`run -o`) no longer tries to analyse the folder above it**, which crashed when that was the home folder.
+
 **0.37.0** — _12 Oct 2026_
 
 Transcripts come out punctuated, Word tables are read, PII redaction works on the Snap and Fedora packages, and the Sessions Start column shows when a session began.

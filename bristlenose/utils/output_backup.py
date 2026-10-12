@@ -151,6 +151,16 @@ def stash(output_dir: Path, *, previous_backup_is_spent: bool = False) -> Path |
     if not output_dir.exists():
         return None
 
+    # A live run's output is not ours to move. `run --clean` used to rename a
+    # running run's tree — PID file and all — so the second run entered the
+    # lifecycle without ConcurrentRunError and the first wrote into a folder
+    # nothing would ever read. `reclaim_stale` declines the same way.
+    if project_is_locked(output_dir):
+        logger.warning(
+            "output_backup: a live run owns %s — refusing to move it aside", output_dir,
+        )
+        return None
+
     backup = backup_path_for(output_dir)
     if backup.exists():
         if not previous_backup_is_spent:

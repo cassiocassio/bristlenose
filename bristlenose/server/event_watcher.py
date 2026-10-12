@@ -45,6 +45,7 @@ async def run_event_watcher(
     *,
     on_change: Callable[[], Awaitable[None]] | None = None,
     poll_interval: float = 1.0,
+    root: Path | None = None,
 ) -> None:
     """Poll the events log; re-import on each new completion, and say when it changed.
 
@@ -70,6 +71,13 @@ async def run_event_watcher(
     started before the project's first run follows the output folder into
     existence rather than watching the interview folder forever.
 
+    ``root`` is the project folder the paths are derived from. A Finder rename
+    under a live serve leaves every open file working (the fd follows the
+    inode) while the watcher polls a path that no longer exists — a
+    ``run_completed`` written at the new path is never imported, and nothing
+    said so (measured 12 Oct 2026). It is said once now, at WARNING, and the
+    watcher keeps listening in case the folder comes back.
+
     Runs until cancelled. Callback and read errors are logged, never fatal: a
     watcher that dies takes the condition with it, silently.
     """
@@ -79,9 +87,23 @@ async def run_event_watcher(
     identity = _file_identity(path)
     logger.info("event_watcher started | file=%s baseline=%d", path, len(imported))
     await _call(on_change, "change")
+    root_gone = False
 
     while True:
         await asyncio.sleep(poll_interval)
+        if root is not None:
+            if not root.exists():
+                if not root_gone:
+                    root_gone = True
+                    logger.warning(
+                        "project folder %s is gone — moved or renamed? The server keeps "
+                        "answering from the files it has open, but it cannot see a new "
+                        "run until it is restarted at the folder's new path", root,
+                    )
+                continue
+            if root_gone:
+                root_gone = False
+                logger.info("project folder %s is back", root)
         path = resolve()
         current = _file_identity(path)
         if current == identity:

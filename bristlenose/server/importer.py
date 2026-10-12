@@ -249,8 +249,14 @@ def import_project(db: Session, project_dir: Path) -> Project:
         (
             p
             for p in db.query(Project).all()
-            if _same_path(p.input_dir, project_dir)
-            and _same_path(p.output_dir, output_dir)
+            if _same_path(p.output_dir, output_dir)
+            and (
+                _same_path(p.input_dir, project_dir)
+                # A row written by ``serve <p>/bristlenose-output`` before 12 Oct
+                # 2026 stored the output folder as its input folder too. It is
+                # this project; the heal below rewrites it to the interview folder.
+                or _same_path(p.input_dir, output_dir)
+            )
         ),
         None,
     )
@@ -510,22 +516,23 @@ def _import_source_files(
     session_meta: dict[str, dict[str, Any]],
     project_dir: Path,
 ) -> None:
-    """Import source file records from transcript metadata."""
+    """Import source file records from transcript metadata.
+
+    Re-verified on every import, not written once: ``verified_at`` is the
+    last time the file was seen on disk (``None`` when it is not there now),
+    the path follows the file when the project has moved (``source_name`` is
+    relative to the interview folder), and a session that was transcript-only
+    gains a row — and ``has_media`` — when a recording turns up and the next
+    run names it as the source. Until 12 Oct 2026 the first row was the only
+    row: ``has_media`` stayed false for good, and a moved project's rows kept
+    pointing at the old location.
+    """
     for sid, meta in session_meta.items():
         sess = session_map.get(sid)
         if not sess:
             continue
         source_name = meta.get("source", "")
         if not source_name:
-            continue
-
-        # Check if already imported
-        existing = (
-            db.query(SourceFile)
-            .filter_by(session_id=sess.id)
-            .first()
-        )
-        if existing:
             continue
 
         # Try to find the actual file.  New transcripts store a relative path
@@ -549,14 +556,20 @@ def _import_source_files(
             if file_type == "video":
                 sess.has_video = True
 
-        sf = SourceFile(
-            session_id=sess.id,
-            file_type=file_type,
-            path=str(source_path),
-            size_bytes=source_path.stat().st_size if source_path.exists() else 0,
-            verified_at=datetime.now(timezone.utc) if source_path.exists() else None,
+        present = source_path.exists()
+        sf = next(
+            (
+                f for f in db.query(SourceFile).filter_by(session_id=sess.id)
+                if Path(f.path).name == source_path.name
+            ),
+            None,
         )
-        db.add(sf)
+        if sf is None:
+            sf = SourceFile(session_id=sess.id, file_type=file_type, path=str(source_path))
+            db.add(sf)
+        sf.path = str(source_path)
+        sf.size_bytes = source_path.stat().st_size if present else 0
+        sf.verified_at = datetime.now(timezone.utc) if present else None
 
 
 def _import_thumbnails(
@@ -1107,9 +1120,16 @@ def _carry_pinned_picks(
     no longer heard. A pin the run dropped, or has not yet applied (its label
     still holds a code of the other kind), moves nothing.
     """
+    from bristlenose.run_lifecycle import run_in_progress
     from bristlenose.server import speaker_slots
     from bristlenose.session_registry import SessionRegistry
 
+    if run_in_progress(output_dir):
+        # The run loaded the registry at its start and saves over it at its
+        # end: a carry written now is lost, and a half-carried registry is what
+        # the run would read. The import after the run carries them.
+        logger.info("A run owns %s; speaker picks are carried on the next import", output_dir)
+        return
     try:
         registry = SessionRegistry.load(output_dir)
     except ValueError:

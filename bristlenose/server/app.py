@@ -1207,8 +1207,9 @@ def _install_event_watcher(
     from contextlib import asynccontextmanager
 
     from bristlenose.events import events_path
-    from bristlenose.output_paths import project_output_dir
+    from bristlenose.output_paths import project_input_dir, project_output_dir
     from bristlenose.run_condition import read_condition
+    from bristlenose.server.db import ensure_schema
     from bristlenose.server.event_watcher import run_event_watcher
 
     # Resolved on every poll: a serve started before the project's first run
@@ -1216,6 +1217,53 @@ def _install_event_watcher(
     # interview folder for its whole life (design-project-condition.md §4).
     def _events_file() -> Path:
         return events_path(project_output_dir(project_dir))
+
+    # The output folder moves under a live serve: ``--clean`` stashes it, a
+    # failed run's ``restore`` and the next run's ``reclaim_stale`` put the
+    # previous one back. The pool's connections follow the moved database
+    # file (the fd follows the inode), so the serve goes on answering from a
+    # set-aside copy and writing curation into it — while the file on disk,
+    # the one the next serve and the Mac sidebar read, holds something else.
+    # ``run_completed`` healed this; a failed run writes no such event, and a
+    # restored log may carry nothing new to import. So: whenever the database
+    # file or the events log changes identity, reattach. One pool recycle.
+    db_file: Path | None = None
+    if engine is not None and engine.url.database not in (None, "", ":memory:"):
+        db_file = Path(engine.url.database)
+
+    def _identity(path: Path | None) -> tuple[int, int] | None:
+        if path is None:
+            return None
+        try:
+            st = path.stat()
+        except OSError:
+            return None
+        return (st.st_dev, st.st_ino)
+
+    def _attached_files() -> tuple[tuple[int, int] | None, tuple[int, int] | None]:
+        return (_identity(db_file), _identity(_events_file()))
+
+    attached = {"files": _attached_files()}
+
+    async def _reattach_if_moved() -> None:
+        now = _attached_files()
+        if now == attached["files"]:
+            return
+        attached["files"] = now
+        if engine is None or db_file is None or not db_file.parent.is_dir():
+            # Mid-stash: nothing on disk to attach to yet. The next change
+            # (the run creating its tree) comes back here.
+            return
+        logger.warning(
+            "output folder replaced under the running server (database %s, events log %s) "
+            "— reattaching to what is on disk now",
+            "present" if now[0] else "absent", "present" if now[1] else "absent",
+        )
+        try:
+            await asyncio.to_thread(ensure_schema, engine)
+        except Exception:
+            logger.exception("could not reattach the database after the output folder moved")
+        attached["files"] = _attached_files()
 
     # The project's condition — what it is doing, derived by one reducer.
     # Status page and the condition endpoint read it; the watcher refreshes it
@@ -1253,6 +1301,7 @@ def _install_event_watcher(
 
     async def _on_change() -> None:
         app.state.condition = read_condition(project_output_dir(project_dir))
+        await _reattach_if_moved()
         # Any change to the log re-arms the scene-strip job: a run's start defers it, and a run
         # that fails, is cancelled or dies writes no run_completed, so only this can start it
         # again. A no-op while a pass runs or a run is in progress.
@@ -1284,6 +1333,10 @@ def _install_event_watcher(
         task = asyncio.create_task(
             run_event_watcher(
                 _events_file, _on_run_completed, on_change=_on_change,
+                # Said once at WARNING when the project folder is renamed or
+                # moved under the serve; the interview folder, so a ``--clean``
+                # stash of the output folder is not mistaken for it.
+                root=project_input_dir(project_dir),
             ),
             name="bristlenose-event-watcher",
         )

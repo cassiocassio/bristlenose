@@ -517,6 +517,15 @@ def reassign_paragraph(project_id: int, session_id: str, body: ReassignBody,
             ), 1
         if not slot:
             raise HTTPException(status_code=422, detail="No speaker named")
+        if creates:
+            # A new code is reserved in the session registry, which a running
+            # analysis loaded at its start and saves over at its end — the
+            # reservation would be lost, and the code reissued to another voice.
+            from bristlenose.run_lifecycle import run_in_progress
+
+            project = db.get(Project, project_id)
+            if project is not None and run_in_progress(Path(project.output_dir)):
+                raise HTTPException(status_code=409, detail="An analysis is running")
         result = _record(db, TranscriptLayoutEdit(
             session_id=sess.id, kind="speaker", position=body.position, verify=body.verify,
             speaker_code=slot, token=creates,

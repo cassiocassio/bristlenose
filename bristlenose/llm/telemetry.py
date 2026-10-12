@@ -150,10 +150,9 @@ def serve_run_context(project_dir: Path | None, run_id: str) -> Iterator[None]:
     if project_dir is None:
         yield
         return
-    output_dir = project_dir / "bristlenose-output"
-    if not output_dir.is_dir():
-        output_dir = project_dir
-    tokens = set_run_context(run_id, output_dir / ".bristlenose")
+    from bristlenose.output_paths import project_output_dir
+
+    tokens = set_run_context(run_id, project_output_dir(project_dir) / ".bristlenose")
     try:
         yield
     finally:

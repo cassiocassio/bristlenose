@@ -41,9 +41,9 @@ class DiscussionResponse(BaseModel):
 
 
 def _output_dir(project_dir: Path) -> Path:
-    # Mirrors app.py's own resolution: a project folder or its output folder.
-    out = project_dir / "bristlenose-output"
-    return out if out.is_dir() else project_dir
+    from bristlenose.output_paths import project_output_dir
+
+    return project_output_dir(project_dir)
 
 
 def _current_quotes_sha(intermediate: Path) -> str | None:

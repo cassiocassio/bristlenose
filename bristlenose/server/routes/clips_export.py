@@ -92,10 +92,9 @@ def _resolve_output_dir(project_dir: Path | None) -> Path | None:
     """Derive the bristlenose-output directory from the project dir."""
     if project_dir is None:
         return None
-    output_dir = project_dir / "bristlenose-output"
-    if output_dir.is_dir():
-        return output_dir
-    return project_dir
+    from bristlenose.output_paths import project_output_dir
+
+    return project_output_dir(project_dir)
 
 
 def _load_speaker_names(

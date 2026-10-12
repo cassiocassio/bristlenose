@@ -1924,9 +1924,9 @@ def _auto_render(project_dir: Path) -> None:
     Fast (<0.1s) and ensures the served HTML always matches the current
     render/ package code — no stale mount-point markers or missing CSS.
     """
-    output_dir = project_dir / "bristlenose-output"
-    if not output_dir.is_dir():
-        output_dir = project_dir
+    from bristlenose.output_paths import project_output_dir
+
+    output_dir = project_output_dir(project_dir)
     intermediate = output_dir / ".bristlenose" / "intermediate"
     if not intermediate.is_dir():
         intermediate = output_dir / "intermediate"

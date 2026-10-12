@@ -207,10 +207,9 @@ async def run_autocode_job(
     # to the canonical .bristlenose/ run dir.
     telemetry_tokens: tuple[object, object] | None = None
     if project_dir is not None:
-        _output_dir = project_dir / "bristlenose-output"
-        if not _output_dir.is_dir():
-            _output_dir = project_dir
-        run_dir = _output_dir / ".bristlenose"
+        from bristlenose.output_paths import project_output_dir
+
+        run_dir = project_output_dir(project_dir) / ".bristlenose"
         run_id = f"autocode-{project_id}-{framework_id}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
         telemetry_tokens = telemetry.set_run_context(run_id, run_dir)
 

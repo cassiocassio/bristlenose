@@ -259,8 +259,13 @@ def project_output_dir(project_dir: Path) -> Path:
     they rooted themselves at the *interview* folder, so a serve started before
     the first run watched the wrong events log for its whole life
     (docs/design-project-condition.md §4). This answers the future path instead,
-    and never creates it (a pre-existing ``bristlenose-output/`` makes
-    ``bristlenose run`` refuse with ``output_exists``).
+    and never creates it. (Creating it is safe: ``bristlenose run`` reuses an
+    output folder that holds nothing but ``.bristlenose/`` — ``cli._has_no_deliverable``
+    — which is what lets the serve create its database there before the first run.)
+
+    Every site that needs the output folder asks this; the two-line idiom it
+    replaced was at twelve sites until 12 Oct 2026, and the ones that kept it
+    forked a second project row on every first analysis in the Mac app.
     """
     candidate = project_dir / "bristlenose-output"
     if candidate.is_dir():
@@ -271,3 +276,16 @@ def project_output_dir(project_dir: Path) -> Path:
     ).exists():
         return project_dir
     return candidate
+
+
+def project_input_dir(project_dir: Path) -> Path:
+    """The interview folder for a serve handed either it or its output folder.
+
+    ``serve <p>`` and ``serve <p>/bristlenose-output`` are the same project; the
+    importer keys project rows on this, so the two entry points must agree.
+    Only the default layout can be walked back: an output folder named anything
+    else (``run -o``) does not say where its interviews are, so it is its own root.
+    """
+    if project_output_dir(project_dir) == project_dir and project_dir.name == "bristlenose-output":
+        return project_dir.parent
+    return project_dir

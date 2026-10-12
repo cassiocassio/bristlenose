@@ -577,10 +577,9 @@ def export_report(
     project_dir: Path | None = getattr(request.app.state, "project_dir", None)
     theme_css = ""
     if project_dir:
-        output_dir = project_dir / "bristlenose-output"
-        if not output_dir.is_dir():
-            output_dir = project_dir
-        css_path = output_dir / "assets" / "bristlenose-theme.css"
+        from bristlenose.output_paths import project_output_dir
+
+        css_path = project_output_dir(project_dir) / "assets" / "bristlenose-theme.css"
         if css_path.is_file():
             theme_css = css_path.read_text(encoding="utf-8")
     if not theme_css.strip():

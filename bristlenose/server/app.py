@@ -109,13 +109,12 @@ def create_app(
     # alongside the per-project SQLite DB.  Controlled by BRISTLENOSE_LOG_LEVEL
     # (default INFO).  Terminal verbosity is separate (-v on the CLI).
     if project_dir is not None:
-        _output_dir = project_dir / "bristlenose-output"
-        if not _output_dir.is_dir():
-            _output_dir = project_dir  # Already pointing at the output dir
-        if _output_dir.is_dir():
-            from bristlenose.logging import setup_logging
+        # The log sits beside the database, which is created eagerly under the
+        # (possibly future) output folder — so the log is too.
+        from bristlenose.logging import setup_logging
+        from bristlenose.output_paths import project_output_dir
 
-            setup_logging(output_dir=_output_dir, verbose=verbose)
+        setup_logging(output_dir=project_output_dir(project_dir), verbose=verbose)
 
     app = FastAPI(title="Bristlenose", docs_url="/api/docs", redoc_url=None)
 
@@ -348,9 +347,9 @@ def create_app(
 
     # Serve the report SPA from the Vite build output
     if project_dir is not None:
-        output_dir = project_dir / "bristlenose-output"
-        if not output_dir.is_dir():
-            output_dir = project_dir  # Caller already pointed at the output dir
+        from bristlenose.output_paths import project_output_dir
+
+        output_dir = project_output_dir(project_dir)
         if output_dir.is_dir():
             if hmr:
                 _mount_dev_report(app, output_dir)
@@ -1109,7 +1108,8 @@ def _make_run_completed_handler(
     from bristlenose.server.db import ensure_schema
     from bristlenose.server.importer import import_project
 
-    def _reimport_sync() -> bool:
+    def _reimport_sync() -> int | None:
+        """Re-import; the id of the project row that now holds the run, or None."""
         # `run --clean` rmtrees the output dir — database included — under
         # the live serve, leaving the pool pinned to a deleted inode and the
         # on-disk path holding a fresh, schema-less file. Heal before
@@ -1124,13 +1124,14 @@ def _make_run_completed_handler(
                 )
         db = session_factory()
         try:
-            import_project(db, project_dir)
-            return True
+            project = import_project(db, project_dir)
+            # A test double may return nothing; a real import always returns its row.
+            return getattr(project, "id", 1)
         except Exception:
             logger.exception(
                 "Re-import after run_completed failed for %s", project_dir,
             )
-            return False
+            return None
         finally:
             db.close()
 
@@ -1138,15 +1139,23 @@ def _make_run_completed_handler(
         overlay = getattr(app.state, "import_overlay", None)
         if overlay is not None:
             overlay.update(importing=ev.run_id)
-        ok = await asyncio.to_thread(_reimport_sync)
+        project_id = await asyncio.to_thread(_reimport_sync)
         if overlay is not None:
-            overlay.update(importing=None, failed_run_id=None if ok else ev.run_id)
-        if not ok:
+            overlay.update(importing=None, failed_run_id=None if project_id is not None else ev.run_id)
+        if project_id is None:
             # ``last_run`` is the data version — "the database holds this run".
             # A failed import must not claim it; the SPA would refetch into
             # stale or empty data and call it the new analysis.
             return
-        app.state.last_run[1] = {
+        if project_id != 1:
+            # The SPA reads project 1. A second row means the import forked the
+            # project (server/CLAUDE.md, "The SPA always reads project 1"), and the
+            # report the researcher sees is empty while everything else is green.
+            logger.error(
+                "run %s imported into project row %s, not 1 — the project forked; "
+                "the report reads row 1", ev.run_id, project_id,
+            )
+        app.state.last_run[project_id] = {
             "run_id": ev.run_id,
             "outcome": ev.outcome.value,
             "completed_at": ev.ended_at,
@@ -1166,7 +1175,7 @@ def _make_run_completed_handler(
             from bristlenose.server.autocode import reapply_active_frameworks
 
             settings = getattr(app.state, "settings", None) or load_settings()
-            await reapply_active_frameworks(session_factory, 1, settings)
+            await reapply_active_frameworks(session_factory, project_id, settings)
         except Exception:
             logger.exception("Auto re-apply after run_completed failed")
 

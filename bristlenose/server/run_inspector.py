@@ -550,11 +550,10 @@ def load_events_safe(internal_dir: Path) -> list[dict[str, Any]]:
 
 
 def resolve_internal_dir(project_dir: Path) -> Path:
-    """Mirror app.py: project_dir/bristlenose-output/.bristlenose, with fallback."""
-    out = project_dir / "bristlenose-output"
-    if not out.is_dir():
-        out = project_dir
-    return out / ".bristlenose"
+    """The project's internal-state folder: ``project_output_dir`` + ``.bristlenose``."""
+    from bristlenose.output_paths import project_output_dir
+
+    return project_output_dir(project_dir) / ".bristlenose"
 
 
 # ---------------------------------------------------------------------------

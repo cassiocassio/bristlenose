@@ -10,6 +10,7 @@ must only become observable after ``import_project`` has returned.
 from __future__ import annotations
 
 import asyncio
+import logging
 import sys
 import threading
 from pathlib import Path
@@ -413,3 +414,36 @@ class TestSchemaHealAfterClean:
         assert app.state.last_run[1]["outcome"] == "completed"
 
 
+
+
+@pytest.mark.asyncio
+async def test_handler_publishes_the_row_it_imported_and_says_when_it_is_not_one(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The handler used to discard the row the import returned and publish
+    ``last_run[1]`` whatever was written, so a forked second row advanced the
+    data version while the SPA (hardcoded to project 1) read an empty row —
+    every signal green (``server/CLAUDE.md``, measured 12 Oct 2026). A second
+    row is always a bug now: say so, and publish under the row that holds it."""
+    from types import SimpleNamespace
+
+    project_dir = _seed_project(tmp_path)
+    app = create_app(project_dir=project_dir, dev=True, db_url="sqlite://")
+    app.state.last_run = {}
+    monkeypatch.setattr(
+        "bristlenose.server.importer.import_project",
+        lambda _db, _dir: SimpleNamespace(id=2),
+    )
+    handler = _make_run_completed_handler(app, app.state.db_factory, project_dir)
+    rid = new_run_id()
+    # setup_logging stops the bristlenose tree propagating, so listen on the logger itself.
+    app_logger = logging.getLogger("bristlenose.server.app")
+    app_logger.addHandler(caplog.handler)
+    try:
+        await handler(_completed(rid))
+    finally:
+        app_logger.removeHandler(caplog.handler)
+
+    assert app.state.last_run.get(2, {}).get("run_id") == rid
+    assert 1 not in app.state.last_run
+    assert any("project row 2" in r.getMessage() for r in caplog.records), caplog.text

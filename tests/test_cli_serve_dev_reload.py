@@ -15,6 +15,20 @@ from bristlenose import cli
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 
 
+@pytest.fixture(autouse=True)
+def _restore_environ():
+    """The dev path stashes ``_BRISTLENOSE_PROJECT_DIR``, ``_BRISTLENOSE_DEV`` and the
+    port in ``os.environ`` for uvicorn's factory. Left behind, every later
+    ``create_app()`` in the same worker recovers this test's project and imports
+    it — ``test_empty_db_is_honest`` and the debug-500 test failed by order."""
+    import os
+
+    saved = dict(os.environ)
+    yield
+    os.environ.clear()
+    os.environ.update(saved)
+
+
 @pytest.fixture
 def project(tmp_path: Path) -> Path:
     p = tmp_path / "input"

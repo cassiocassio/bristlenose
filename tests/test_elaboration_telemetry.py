@@ -73,10 +73,14 @@ class TestServeRunContext:
         self, tmp_path: Path
     ) -> None:
         """Callers hold one or the other, and guessing wrong writes the file
-        somewhere nobody looks — which is indistinguishable from not writing."""
-        with telemetry.serve_run_context(tmp_path, "r"):
+        somewhere nobody looks — which is indistinguishable from not writing.
+        An output dir is one `project_output_dir` recognises: named so, or holding
+        a log (a bare folder is a project root whose output does not exist yet)."""
+        out = tmp_path / "bristlenose-output"
+        out.mkdir()
+        with telemetry.serve_run_context(out, "r"):
             _record_one()
-        assert (tmp_path / ".bristlenose" / "llm-calls.jsonl").exists()
+        assert (out / ".bristlenose" / "llm-calls.jsonl").exists()
 
     def test_no_project_dir_is_not_an_error(self, tmp_path: Path) -> None:
         """The app can run without a project. That must not raise, and must not

@@ -295,7 +295,14 @@ def test_html_escapes_script_breakout(tmp_path):
 def test_resolve_internal_dir(tmp_path):
     (tmp_path / "bristlenose-output").mkdir()
     assert ri.resolve_internal_dir(tmp_path) == tmp_path / "bristlenose-output" / ".bristlenose"
-    # fallback: caller already points at the output dir
+    # The caller points at an output dir: one with a log is recognised as such.
     other = tmp_path / "already-output"
-    other.mkdir()
+    (other / ".bristlenose").mkdir(parents=True)
+    (other / ".bristlenose" / "pipeline-events.jsonl").write_text("", encoding="utf-8")
     assert ri.resolve_internal_dir(other) == other / ".bristlenose"
+    # A never-run project answers its FUTURE output folder, never its own root
+    # (the old fallback rooted a never-run serve at the interview folder and
+    # forked a second project row; tests/test_serve_project_root.py).
+    fresh = tmp_path / "never-run"
+    fresh.mkdir()
+    assert ri.resolve_internal_dir(fresh) == fresh / "bristlenose-output" / ".bristlenose"

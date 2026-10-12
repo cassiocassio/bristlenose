@@ -224,12 +224,14 @@ def import_project(db: Session, project_dir: Path) -> Project:
     # orphaning the researcher's curation (starred/hidden/renames) on the old
     # row.  The module docstring's "researcher state is preserved" promise only
     # holds when the existing row is matched.
-    project_dir = _resolve(project_dir)
+    from bristlenose.output_paths import project_input_dir, project_output_dir
 
-    output_dir = project_dir / "bristlenose-output"
-    if not output_dir.is_dir():
-        output_dir = project_dir  # Caller already pointed at the output dir
-    output_dir = _resolve(output_dir)
+    # One project, whichever folder the serve was handed and whether or not it
+    # has been analysed yet: a never-run project's row carries its FUTURE output
+    # folder, so the first run's import matches it instead of forking row 2.
+    project_dir = _resolve(project_dir)
+    output_dir = _resolve(project_output_dir(project_dir))
+    project_dir = _resolve(project_input_dir(project_dir))
 
     intermediate = output_dir / ".bristlenose" / "intermediate"
 

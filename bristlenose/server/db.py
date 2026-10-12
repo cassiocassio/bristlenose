@@ -31,12 +31,15 @@ def db_url_for_project(project_dir: Path) -> str:
     """Return the SQLite URL for a per-project database.
 
     The DB lives at ``<output_dir>/.bristlenose/bristlenose.db`` so each
-    project gets its own database with no cross-project contamination.
+    project gets its own database with no cross-project contamination — and it
+    is created there **eagerly**, before the first run, so a serve started first
+    and the run that follows share one database and one project row. (A serve
+    that rooted itself at the interview folder instead forked a second row on the
+    run's import; ``tests/test_serve_project_root.py``.)
     """
-    output_dir = project_dir / "bristlenose-output"
-    if not output_dir.is_dir():
-        output_dir = project_dir  # caller already pointed at the output dir
-    db_path = output_dir / ".bristlenose" / "bristlenose.db"
+    from bristlenose.output_paths import project_output_dir
+
+    db_path = project_output_dir(project_dir) / ".bristlenose" / "bristlenose.db"
     db_path.parent.mkdir(parents=True, exist_ok=True)
     return f"sqlite:///{db_path}"
 

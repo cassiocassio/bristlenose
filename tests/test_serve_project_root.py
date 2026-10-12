@@ -123,6 +123,88 @@ def test_serve_started_before_the_first_run(tmp_path: Path, fast_watcher) -> Non
     assert Path(rows[0][2]).resolve() == out.resolve()
 
 
+def test_the_database_path_names_the_future_output_folder(tmp_path: Path) -> None:
+    """``db_url_for_project`` on its own, before anything else has made the folder.
+
+    Inside ``create_app`` the log setup runs first and creates
+    ``bristlenose-output/.bristlenose/``, so the old two-line rule there would
+    have found the folder and been right by accident — mutating ``db.py`` back
+    left every serve-level test green (measured 12 Oct 2026). This pins the
+    function, so the fix does not depend on the order of two calls in another
+    file."""
+    from bristlenose.server.db import db_url_for_project
+
+    proj = _project(tmp_path)
+    shutil.rmtree(proj / "bristlenose-output")  # never analysed
+
+    url = db_url_for_project(proj)
+    assert Path(url.removeprefix("sqlite:///")) == (
+        proj / "bristlenose-output" / ".bristlenose" / "bristlenose.db"
+    )
+    assert not (proj / ".bristlenose").exists(), "litter at the project root"
+
+
+def test_a_forked_import_is_logged_and_published_under_its_own_row(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    """When an import lands in a row other than 1, say so, and do not tell the
+    SPA (which reads row 1) that row 1 holds the run.
+
+    Every path that forks today is fixed, so this test makes the fork by hand:
+    the database already holds an unrelated row 1, and the project becomes row 2.
+    Before 12 Oct 2026 the handler published ``last_run[1]`` whatever row was
+    written, which is why the incident read as healthy."""
+    import logging
+
+    from bristlenose.events import KindEnum, RunCompletedEvent, append_event, events_path
+    from bristlenose.server.db import create_session_factory, get_engine, init_db
+    from bristlenose.server.models import Project
+
+    proj = _project(tmp_path)
+    out = proj / "bristlenose-output"
+    db_file = out / ".bristlenose" / "bristlenose.db"
+    engine = get_engine(f"sqlite:///{db_file}")
+    init_db(engine)
+    seed = create_session_factory(engine)()
+    elsewhere = tmp_path / "another-study"
+    seed.add(Project(name="Another study", slug="another-study",
+                     input_dir=str(elsewhere), output_dir=str(elsewhere / "bristlenose-output")))
+    seed.commit()
+    seed.close()
+    engine.dispose()
+
+    run_id = "01FORKTEST0000000000000001"
+    # Not caplog: ``create_app`` calls ``setup_logging``, which reconfigures the
+    # root logger and drops caplog's handler. A handler on the module's own
+    # logger survives that.
+    seen: list[str] = []
+
+    class _Keep(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            seen.append(record.getMessage())
+
+    keep = _Keep(level=logging.ERROR)
+    app_logger = logging.getLogger("bristlenose.server.app")
+    app_logger.addHandler(keep)
+    try:
+        app = _app(proj, tmp_path)
+        with AuthTestClient(app):
+            append_event(events_path(out), RunCompletedEvent(
+                ts="2026-10-12T23:00:00Z", run_id=run_id, kind=KindEnum.RUN,
+                started_at="2026-10-12T22:59:00Z", ended_at="2026-10-12T23:00:00Z"))
+            assert _wait(lambda: (app.state.last_run.get(2) or {}).get("run_id") == run_id), (
+                f"the run was not published under the row it was imported into: "
+                f"{app.state.last_run}"
+            )
+            assert (app.state.last_run.get(1) or {}).get("run_id") != run_id, (
+                "row 1 was told it holds a run that went into row 2"
+            )
+    finally:
+        app_logger.removeHandler(keep)
+
+    assert any("forked" in m and run_id in m for m in seen), "a forked import was not logged"
+
+
 def test_serve_on_the_output_folder_then_the_project(tmp_path: Path) -> None:
     """``serve <p>/bristlenose-output`` and ``serve <p>`` are the same project."""
     proj = _project(tmp_path)

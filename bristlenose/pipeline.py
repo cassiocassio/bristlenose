@@ -503,11 +503,18 @@ def _transcript_parser_version() -> str:
     )
 
 
-def _session_input_fingerprint(session: InputSession) -> str:
-    """What transcription of *session* depends on: its files (identity, size,
-    mtime) and, when any of them is a transcript file, the parser that reads
-    it. A Whisper-only session's fingerprint does not move on a parser bump."""
-    parts = hash_file_metadata([f.path for f in session.files])
+def _session_input_fingerprint(session: InputSession, input_dir: Path | None) -> str:
+    """What transcription of *session* depends on: its files (path inside the
+    project folder, size, mtime) and, when any of them is a transcript file,
+    the parser that reads it. A Whisper-only session's fingerprint does not
+    move on a parser bump, and no session's moves when the folder does.
+
+    ``input_dir=None`` is the form every manifest carried before 12 Oct 2026
+    — the resolved absolute path — kept so a run can recognise its own older
+    records (``fresh_session_ids(accept=…)``) and rewrite them, instead of
+    re-paying Whisper once per project on upgrade.
+    """
+    parts = hash_file_metadata([f.path for f in session.files], relative_to=input_dir)
     if session.has_existing_transcript:
         parts += f"|parser={_transcript_parser_version()}"
     return hash_bytes(parts.encode("utf-8"))
@@ -1452,7 +1459,9 @@ class Pipeline:
             # ── Stages 3-5: Parse existing transcripts + Transcribe ──
             _ss_path = intermediate / "session_segments.json"
             _source_paths = [f.path for s in sessions for f in s.files]
-            _tx_input_hashes = {"source_files": hash_file_metadata(_source_paths)}
+            _tx_input_hashes = {
+                "source_files": hash_file_metadata(_source_paths, relative_to=input_dir),
+            }
             if any(s.has_existing_transcript for s in sessions):
                 # The parser is an input to any session read from a transcript
                 # file. Folded into the existing value rather than added as a
@@ -1468,7 +1477,14 @@ class Pipeline:
             # per-session resume below can keep the sessions whose files did
             # not change and redo only the ones whose did — a transcript
             # dropped beside an analysed video, a parser bump.
-            _tx_session_fps = {s.session_id: _session_input_fingerprint(s) for s in sessions}
+            _tx_session_fps = {
+                s.session_id: _session_input_fingerprint(s, input_dir) for s in sessions
+            }
+            # The pre-12-Oct-2026 spelling of the same thing, for a manifest
+            # written before fingerprints stopped carrying the absolute path.
+            _tx_session_fps_legacy = {
+                s.session_id: _session_input_fingerprint(s, None) for s in sessions
+            }
             # Outer-scope defaults — both branches below populate these.
             # ``_transcribe_elapsed`` stays None on full-cache-hit (stage
             # didn't run this invocation; ``duration_ms`` reflects only
@@ -1508,6 +1524,7 @@ class Pipeline:
                 # matches and only transcribe the rest.
                 _cached_tx_sids = fresh_session_ids(
                     _prev_manifest, _M_STAGE_TRANSCRIBE, _tx_session_fps,
+                    accept=_tx_session_fps_legacy,
                 )
                 _cached_segments: dict[str, list[TranscriptSegment]] = {}
                 if _cached_tx_sids and _ss_path.exists():

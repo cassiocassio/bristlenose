@@ -99,3 +99,51 @@ def test_hash_file_metadata_detects_new_file(tmp_path: Path):
     f2.write_bytes(b"bbb")
     h2 = hash_file_metadata([f1, f2])
     assert h1 != h2
+
+
+def test_hash_file_metadata_relative_to_survives_a_folder_move(tmp_path: Path):
+    """Keyed on the input-relative path: moving or renaming the study folder
+    keeps every fingerprint (12 Oct 2026 — the absolute form re-paid Whisper
+    for every session on a rename)."""
+    import os
+
+    first = tmp_path / "study"
+    (first / "day 1").mkdir(parents=True)
+    f = first / "day 1" / "interview.mov"
+    f.write_bytes(b"video data")
+    before = hash_file_metadata([f], relative_to=first)
+
+    moved = tmp_path / "study (renamed)"
+    os.rename(first, moved)
+    after = hash_file_metadata([moved / "day 1" / "interview.mov"], relative_to=moved)
+    assert before == after
+
+
+def test_hash_file_metadata_relative_to_survives_a_copy_that_keeps_mtime(tmp_path: Path):
+    import shutil
+
+    first = tmp_path / "study"
+    first.mkdir()
+    f = first / "interview.mov"
+    f.write_bytes(b"video data")
+    copy = tmp_path / "study copy"
+    shutil.copytree(first, copy)  # copy2 semantics: mtime preserved, as Finder does
+    assert hash_file_metadata([f], relative_to=first) == hash_file_metadata(
+        [copy / "interview.mov"], relative_to=copy,
+    )
+
+
+def test_hash_file_metadata_relative_to_still_sees_a_file_moved_within_the_folder(
+    tmp_path: Path,
+):
+    """The relative path is part of the identity: the same bytes under another
+    name or folder are a different input."""
+    root = tmp_path / "study"
+    (root / "a").mkdir(parents=True)
+    (root / "b").mkdir()
+    f = root / "a" / "interview.mov"
+    f.write_bytes(b"video data")
+    h_a = hash_file_metadata([f], relative_to=root)
+    g = root / "b" / "interview.mov"
+    f.rename(g)
+    assert hash_file_metadata([g], relative_to=root) != h_a

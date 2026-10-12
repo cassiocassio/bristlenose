@@ -135,6 +135,8 @@ class Harness:
     role_calls: list[set[str]] = field(default_factory=list)
     #: Per run, the session ids the (stubbed) quote extractor was given.
     quoted: list[list[str]] = field(default_factory=list)
+    #: Per run, the session ids handed to (stubbed) stage 2 audio extraction.
+    extracted: list[list[str]] = field(default_factory=list)
 
     @property
     def intermediate(self) -> Path:
@@ -182,6 +184,7 @@ def run_pipeline(
     *,
     runs: int = 1,
     role_pass: Callable[[list[TranscriptSegment]], list[SpeakerInfo]] | None = None,
+    project_name: str = "pair-test",
 ) -> Harness:
     """Drive the real ``Pipeline.run`` ``runs`` times over ``tmp_path``.
 
@@ -197,7 +200,7 @@ def run_pipeline(
     h = Harness(input_dir=input_dir, output_dir=output_dir)
 
     settings = BristlenoseSettings(
-        project_name="pair-test",
+        project_name=project_name,
         skip_transcription=False,
         write_intermediate=True,
         llm_concurrency=1,
@@ -213,6 +216,7 @@ def run_pipeline(
         return sessions_for_run(input_dir, run_index["n"])
 
     async def _passthrough(sess, _tmp, **_kw):
+        h.extracted.append([s.session_id for s in sess])
         return sess
 
     def _fake_transcribe(sessions, _settings, **_kw):

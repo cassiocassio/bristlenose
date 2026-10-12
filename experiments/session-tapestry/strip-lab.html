@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scene Strip Lab</title>
+<style>
+/* Quick/loose lab page. Tunes the scene stripes drawn inside the tapestry's speaker clips. */
+:root { color-scheme: light dark;
+  --bg: light-dark(#fff, #111); --text: light-dark(#1a1a1a, #e5e7eb); --muted: light-dark(#6b7280, #9ca3af);
+  --border: light-dark(#e5e7eb, #2d2d2d); --panel: light-dark(#f9fafb, #1a1a1a); --accent: light-dark(#007aff, #0a84ff);
+  --track: light-dark(#f3f4f6, #252525); --clip-m: light-dark(#d1d5db, #4b5563); --clip-p: light-dark(#6b7280, #9ca3af);
+  --warn: light-dark(#c2410c, #fb923c); --mono: "SF Mono", ui-monospace, monospace; --font: Inter, -apple-system, system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 420 13px/1.45 var(--font); }
+header { position: sticky; top: 0; z-index: 3; background: var(--bg); border-bottom: 1px solid var(--border); padding: 12px 16px; }
+h1 { font-size: 16px; font-weight: 490; margin: 0 0 8px; }
+.handles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 18px; }
+.handles label { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 12px; color: var(--muted); }
+.handles input[type=range], .handles select { grid-column: 1 / -1; width: 100%; }
+.handles output { font: 11px var(--mono); color: var(--text); }
+.summary { margin-top: 8px; font: 11px var(--mono); color: var(--muted); }
+main { padding: 12px 16px 64px; }
+.note { color: var(--muted); max-width: 100ch; }
+.video { border-top: 1px solid var(--border); padding: 12px 0; }
+.vhead { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
+.vhead b { font-weight: 490; }
+.vhead .tag { font: 11px var(--mono); color: var(--muted); }
+.vhead .tag.warn { color: var(--warn); }
+.scroller { overflow-x: auto; overflow-y: hidden; }
+.scroller canvas { display: block; }
+.rows { display: grid; grid-template-columns: 84px 1fr; gap: 4px 0; align-items: center; }
+.rows .rl { font: 11px var(--mono); color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Scene strip lab</h1>
+  <div class="handles" id="handles"></div>
+  <div class="summary" id="summary"></div>
+</header>
+<main>
+  <p class="note">Each recording is drawn as the tapestry's speaker lane: the moderator track, the participant track, each clip in the
+  turn's shipped scene colour (the keyframe pass, as the pipeline computes it today). On top, at the chosen opacity and clipped to
+  the clips, run the <b>scene stripes</b>: one column per sample, the mean colour of what was on screen at that moment. The source
+  is either the keyframes the pipeline already decodes, or every frame at 4 fps, which is one sample per pixel at the tapestry's
+  maximum zoom. The <b>floor</b> hides a stripe whose colour is within that ΔE of its clip's colour, so a steady scene stays flat
+  and only change shows. The raw row above each lane is the same data at full strength, the movie-barcode view, for reference.
+  Notches above the lane mark a scene change: the mean colour of a window before the moment against the window after it, above the edge threshold.</p>
+  <p class="note">Worst cases to look for: a uniform web session (should look like the lane does today); a scrolled or animated
+  share (shimmer: try the median window); a gallery call where people move (camera drift: the floor should hide it); the 4K
+  screen capture (its keyframes are already a second apart, so the keyframe source should be enough there).</p>
+  <div id="videos"></div>
+</main>
+
+<script>
+const DATA = /*__DATA__*/null;
+
+// ── Handles ───────────────────────────────────────────────────────────────
+const P = {
+  source:  { label: "Stripe source", options: ["keyframes (today)", "every frame, 4 fps", "4 fps → 2 fps", "4 fps → 1 fps"], value: "every frame, 4 fps" },
+  zoom:    { label: "Zoom", options: ["fit (lane 960 px)", "4 s/px", "2 s/px", "1 s/px", "0.5 s/px", "0.25 s/px (max)"], value: "fit (lane 960 px)" },
+  opP:     { label: "Participant stripe opacity %", min: 0, max: 100, step: 5, value: 50 },
+  opM:     { label: "Moderator stripe opacity %", min: 0, max: 100, step: 5, value: 25 },
+  floor:   { label: "Floor: hide stripes within ΔE of the clip colour", min: 0, max: 40, step: 1, value: 0 },
+  median:  { label: "Median window (samples)", options: ["1", "3", "5", "9"], value: "1" },
+  smooth:  { label: "Downsample", options: ["smooth", "pixelated"], value: "smooth" },
+  edge:    { label: "Notch: before/after windows differ by ΔE", min: 0, max: 60, step: 1, value: 14 },
+  edgeWin: { label: "Notch: window either side (s)", min: 0.5, max: 10, step: 0.5, value: 2 },
+  notch:   { label: "Draw notches", options: ["off", "on"], value: "on" },
+  raw:     { label: "Raw barcode row", options: ["on", "off"], value: "on" },
+  Lmin:    { label: "Tone: lightness floor (OKLab L)", min: 0, max: 0.9, step: 0.01, value: 0.42 },
+  Lmax:    { label: "Tone: lightness ceiling", min: 0.3, max: 1, step: 0.01, value: 0.88 },
+  cgain:   { label: "Tone: chroma gain ×", min: 0.5, max: 3, step: 0.05, value: 1.4 },
+};
+const hostH = document.getElementById("handles");
+for (const [k, p] of Object.entries(P)) {
+  const lab = document.createElement("label");
+  const name = document.createElement("span"); name.textContent = p.label;
+  const out = document.createElement("output");
+  let input;
+  if (p.options) {
+    input = document.createElement("select");
+    p.options.forEach(o => { const op = document.createElement("option"); op.value = op.textContent = o; input.append(op); });
+    input.value = p.value; out.textContent = "";
+  } else {
+    input = document.createElement("input"); input.type = "range";
+    Object.assign(input, { min: p.min, max: p.max, step: p.step, value: p.value }); out.textContent = p.value;
+  }
+  input.addEventListener("input", () => { p.value = p.options ? input.value : +input.value; out.textContent = p.options ? "" : input.value; schedule(); });
+  lab.append(name, out, input); hostH.append(lab);
+}
+let pending = 0;
+const schedule = () => { cancelAnimationFrame(pending); pending = requestAnimationFrame(run); };
+
+// ── Colour maths (OKLab) ──────────────────────────────────────────────────
+const gam = c => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
+function toRgbLinear([L, a, b]) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3,
+        s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+          -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+          -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s];
+}
+const inGamut = c => c.every(v => v >= -1e-4 && v <= 1 + 1e-4);
+function toRgb(lab) {
+  let [L, a, b] = lab;
+  for (let i = 0; i < 30 && !inGamut(toRgbLinear([L, a, b])); i++) { a *= 0.92; b *= 0.92; }
+  return toRgbLinear([L, a, b]).map(v => Math.round(255 * gam(Math.min(1, Math.max(0, v)))));
+}
+const toCss = lab => `rgb(${toRgb(lab).join(",")})`;
+const dE = (p, q) => 100 * Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+const tone = lab => [P.Lmin.value + lab[0] * (P.Lmax.value - P.Lmin.value), lab[1] * P.cgain.value, lab[2] * P.cgain.value];
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+
+// Unpack the three-byte samples once: L over 0..1, a and b over -0.4..0.4.
+function unpack(b64) {
+  const bin = atob(b64), n = bin.length / 3, out = new Array(n);
+  for (let i = 0; i < n; i++) {
+    out[i] = [bin.charCodeAt(i * 3) / 255, bin.charCodeAt(i * 3 + 1) / 255 * 0.8 - 0.4, bin.charCodeAt(i * 3 + 2) / 255 * 0.8 - 0.4];
+  }
+  return out;
+}
+DATA.videos.forEach(v => { v.kf.labs = unpack(v.kf.lab); v.dense.labs = unpack(v.dense.lab); });
+
+// The samples for the chosen source: [{t, lab}] in time order, with a nominal spacing.
+function samples(v) {
+  const src = P.source.value;
+  if (src.startsWith("keyframes")) return { pts: v.kf.t.map((t, i) => ({ t, lab: v.kf.labs[i] })), step: v.kf_gap || 1 };
+  const fps = v.dense.fps, group = src.endsWith("2 fps") ? fps / 2 : src.endsWith("1 fps") ? fps : 1;
+  const pts = [];
+  for (let i = 0; i + group <= v.dense.labs.length; i += group) {
+    const m = [0, 0, 0];
+    for (let j = 0; j < group; j++) { const l = v.dense.labs[i + j]; m[0] += l[0] / group; m[1] += l[1] / group; m[2] += l[2] / group; }
+    pts.push({ t: i / fps, lab: m });
+  }
+  return { pts, step: group / fps };
+}
+
+function medianFilter(pts, w) {
+  if (w <= 1) return pts;
+  const h = (w - 1) / 2, out = [];
+  for (let i = 0; i < pts.length; i++) {
+    const win = pts.slice(Math.max(0, i - h), i + h + 1).map(p => p.lab);
+    const med = k => { const a = win.map(l => l[k]).sort((x, y) => x - y); return a[(a.length - 1) >> 1]; };
+    out.push({ t: pts[i].t, lab: [med(0), med(1), med(2)] });
+  }
+  return out;
+}
+
+// Canvas cannot parse light-dark(), so the palette is resolved here (the tapestry's track and
+// placeholder clip colours, light and dark).
+const DARK = matchMedia("(prefers-color-scheme: dark)").matches;
+const C = DARK ? { track: "#252525", clipM: "#4b5563", clipP: "#9ca3af", text: "#e5e7eb" }
+               : { track: "#f3f4f6", clipM: "#d1d5db", clipP: "#6b7280", text: "#1a1a1a" };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => location.reload());
+
+// ── Geometry, mirroring SessionTapestry.tsx ───────────────────────────────
+const GUT = 0, MT = { y: 8, h: 16 }, PT = { y: 8 + 16 + 3, h: 18 }, LANE_H = PT.y + PT.h + 8, RAW_H = 28;
+const isTeam = code => "mo".includes(code[0]);
+
+function sPerPx(v) {
+  const z = P.zoom.value;
+  if (z.startsWith("fit")) return v.duration / 960;
+  return parseFloat(z);
+}
+
+function render(v) {
+  const spp = sPerPx(v), W = Math.max(1, Math.ceil(v.duration / spp)), x = t => GUT + t / spp;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  let { pts, step } = samples(v);
+  pts = medianFilter(pts, +P.median.value);
+  const toned = pts.map(p => tone(p.lab));
+
+  // Which turn is each sample in, and its toned clip colour (null when the turn has no colour).
+  const turnLab = v.turns.map(t => t.lab ? tone(t.lab) : null);
+  let ti = 0;
+  const turnOf = pts.map(p => { while (ti + 1 < v.turns.length && v.turns[ti + 1].t0 <= p.t) ti++; return ti; });
+
+  // The strip as a 1×N image. Alpha: 0 under the floor, else full; the track opacity is applied at draw.
+  const N = pts.length, strip = document.createElement("canvas"); strip.width = N; strip.height = 1;
+  const sg = strip.getContext("2d"), img = sg.createImageData(N, 1);
+  const floor = P.floor.value;
+  toned.forEach((lab, i) => {
+    const [r, g, b] = toRgb(lab), tl = turnLab[turnOf[i]];
+    const hide = floor > 0 && tl && dE(lab, tl) < floor;
+    img.data[i * 4] = r; img.data[i * 4 + 1] = g; img.data[i * 4 + 2] = b; img.data[i * 4 + 3] = hide ? 0 : 255;
+  });
+  sg.putImageData(img, 0, 0);
+  // Stripe columns sit at their sample times: the image spans from the first sample to the last plus one step.
+  const sx0 = x(pts[0]?.t ?? 0), sx1 = x((pts[N - 1]?.t ?? 0) + step);
+
+  // Notches: a scene change, read as the mean colour of a window before a sample against the window
+  // after it (a fade or a slow transition is spread over several samples, so neighbours alone miss it),
+  // keeping only the strongest within a window either side.
+  const edges = [];
+  const w = Math.max(1, Math.round(P.edgeWin.value / step));
+  const meanOf = (a, b) => { const m = [0, 0, 0]; for (let i = a; i < b; i++) { m[0] += toned[i][0]; m[1] += toned[i][1]; m[2] += toned[i][2]; } return m.map(v => v / (b - a)); };
+  const d = new Float32Array(N);
+  for (let i = w; i + w <= N; i++) d[i] = dE(meanOf(i - w, i), meanOf(i, i + w));
+  for (let i = w; i + w <= N; i++) {
+    if (d[i] < P.edge.value) continue;
+    let peak = true;
+    for (let j = Math.max(0, i - w); j <= Math.min(N - 1, i + w); j++) if (d[j] > d[i] || (d[j] === d[i] && j < i)) { peak = false; break; }
+    if (peak) edges.push(x(pts[i].t));
+  }
+
+  const out = [];
+  if (P.raw.value === "on") {
+    const c = document.createElement("canvas"); c.width = W * dpr; c.height = RAW_H * dpr; c.style.width = W + "px"; c.style.height = RAW_H + "px";
+    const g = c.getContext("2d"); g.scale(dpr, dpr); g.imageSmoothingEnabled = P.smooth.value === "smooth";
+    // The raw row ignores the floor: it is the data, not the design.
+    const full = document.createElement("canvas"); full.width = N; full.height = 1;
+    const fg = full.getContext("2d"), fi = fg.createImageData(N, 1);
+    toned.forEach((lab, i) => { const [r, gg, b] = toRgb(lab); fi.data[i * 4] = r; fi.data[i * 4 + 1] = gg; fi.data[i * 4 + 2] = b; fi.data[i * 4 + 3] = 255; });
+    fg.putImageData(fi, 0, 0);
+    g.drawImage(full, sx0, 0, sx1 - sx0, RAW_H);
+    out.push(["raw", c]);
+  }
+
+  const c = document.createElement("canvas"); c.width = W * dpr; c.height = LANE_H * dpr; c.style.width = W + "px"; c.style.height = LANE_H + "px";
+  const g = c.getContext("2d"); g.scale(dpr, dpr);
+  g.imageSmoothingEnabled = P.smooth.value === "smooth";
+  const track = C.track, clipFallback = { m: C.clipM, p: C.clipP };
+  g.fillStyle = track; g.beginPath(); rr(g, GUT, MT.y - 1, W - GUT, PT.y + PT.h - MT.y + 2, 4); g.fill();
+  const sliver = spp > 2.5;
+  for (const team of [true, false]) {
+    const tr = team ? MT : PT;
+    // Clips of this track, then the strip source-atop them, then the clip strokes and labels.
+    g.save();
+    g.beginPath();
+    for (const t of v.turns) {
+      if (isTeam(t.code) !== team) continue;
+      const x0 = x(t.t0), w = x(t.t1) - x0;
+      if (sliver) rr(g, x0, tr.y, Math.max(0.5, w), tr.h, 0); else if (w >= 1) rr(g, x0 + 0.5, tr.y, Math.max(1, w - 1), tr.h, Math.min(3, w / 2));
+    }
+    g.clip();
+    for (const t of v.turns) {
+      if (isTeam(t.code) !== team) continue;
+      const x0 = x(t.t0), w = x(t.t1) - x0;
+      g.fillStyle = t.colour || clipFallback[team ? "m" : "p"];
+      g.fillRect(x0, tr.y, w, tr.h);
+    }
+    g.globalAlpha = (team ? P.opM.value : P.opP.value) / 100;
+    g.drawImage(strip, sx0, tr.y, sx1 - sx0, tr.h);
+    g.restore();
+    if (!sliver) {
+      g.strokeStyle = "rgb(0 0 0 / .25)"; g.lineWidth = 0.75;
+      g.font = "500 10px Inter, -apple-system, system-ui, sans-serif";
+      g.textBaseline = "middle";
+      for (const t of v.turns) {
+        if (isTeam(t.code) !== team) continue;
+        const x0 = x(t.t0), w = x(t.t1) - x0;
+        if (w < 1) continue;
+        if (t.colour) { g.beginPath(); rr(g, x0 + 0.5, tr.y, Math.max(1, w - 1), tr.h, Math.min(3, w / 2)); g.stroke(); }
+        if (w > 22) { g.fillStyle = t.colour ? inkOn(t.colour) : (team ? "#000" : "#fff"); g.fillText(t.code, x0 + 4, tr.y + tr.h / 2 + 0.5); }
+      }
+    }
+  }
+  if (P.notch.value === "on") {
+    g.strokeStyle = C.text; g.lineWidth = 1;
+    g.beginPath();
+    for (const ex of edges) { g.moveTo(Math.round(ex) + 0.5, 1); g.lineTo(Math.round(ex) + 0.5, MT.y - 2); }
+    g.stroke();
+  }
+  out.push(["lane", c]);
+  return { out, edges: edges.length, n: N };
+}
+
+function rr(g, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+// Readable ink on a scene colour: the same rule as the tapestry (luma threshold).
+function inkOn(hex) {
+  const r = parseInt(hex.slice(1, 3), 16), gg = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * gg + 0.114 * b) > 150 ? "#111" : "#fff";
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────
+const host = document.getElementById("videos");
+const mk = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+function run() {
+  host.replaceChildren();
+  let totalKf = 0, totalDense = 0, totalDur = 0, edgesAll = 0;
+  DATA.videos.forEach(v => {
+    const { out, edges, n } = render(v);
+    totalKf += v.cost.keyframes_s; totalDense += v.cost.dense_s; totalDur += v.duration; edgesAll += edges;
+    const box = mk("section", "video"), head = mk("div", "vhead");
+    head.append(mk("b", null, v.name),
+      mk("span", "tag", `${fmt(v.duration)} · ${v.has_turns ? "transcript turns" : "stand-in turns"} · keyframes every ${v.kf_gap ?? "?"} s`),
+      mk("span", "tag", `cost: keyframes ${v.cost.keyframes_s} s · 4 fps ${v.cost.dense_s} s (${(v.cost.dense_s / (v.duration / 3600)).toFixed(0)} s per hour)`),
+      mk("span", "tag", `${n} samples · ${edges} notches`));
+    const rows = mk("div", "rows");
+    for (const [label, canvas] of out) {
+      const sc = mk("div", "scroller"); sc.append(canvas);
+      rows.append(mk("div", "rl", label === "raw" ? "raw" : "lane"), sc);
+    }
+    // Scroll both rows together.
+    const scrollers = [...rows.querySelectorAll(".scroller")];
+    scrollers.forEach(s => s.addEventListener("scroll", () => scrollers.forEach(o => { if (o !== s) o.scrollLeft = s.scrollLeft; })));
+    box.append(head, rows); host.append(box);
+  });
+  document.getElementById("summary").textContent =
+    `${DATA.videos.length} recordings · ${fmt(totalDur)} of video · keyframe pass ${totalKf.toFixed(0)} s · 4 fps pass ${totalDense.toFixed(0)} s ` +
+    `(${(totalDense / (totalDur / 3600)).toFixed(0)} s per hour of video) · ${edgesAll} notches at ΔE ≥ ${P.edge.value}`;
+}
+run();
+</script>
+</body>
+</html>

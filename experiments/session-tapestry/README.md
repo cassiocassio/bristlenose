@@ -14,12 +14,14 @@ The design mockups are `docs/mockups/session-tapestry.html` (first sketch) and `
 |---|---|
 | `build.py` + `template.html` | Builds the tapestry from a real output folder, drawn in the real Sessions-grid markup with the shipped theme inlined |
 | `colour_lab.py` + `colour-lab.html` | Samples frames from every distinct recording under a folder, so the clip-colour algorithm can be tuned live |
+| `strip_lab.py` + `strip-lab.html` | Samples every recording at 4 fps as well as by keyframe, and draws scene stripes inside the tapestry's clips, so their opacity, floor and smoothing can be tuned live (see § Scene stripes) |
 
 Both pages carry participant content, so write them to a gitignored, private folder:
 
 ```bash
 .venv/bin/python experiments/session-tapestry/build.py <project>/bristlenose-output -o <private>/tapestry.html
 .venv/bin/python experiments/session-tapestry/colour_lab.py <folder-of-projects> -o <private>/colour-lab.html --per-role 4
+.venv/bin/python experiments/session-tapestry/strip_lab.py <folder-of-projects> -o <private>/strip-lab.html
 ```
 
 The app's preview pane will not open a local page much over 500 KB. That is why `--per-role 4` is used and the thumbnails are downscaled. A normal browser opens the larger pages fine.
@@ -86,3 +88,40 @@ Not wired yet:
 - **Keyframe colour sampling is cheap.** It takes about 1.5 s per hour of video (15 s for the 9 hours of the FOSSDA oral histories), cheap enough to run in the pipeline beside thumbnail extraction.
 - **Some transcripts have coarse or mislabelled turns** (FOSSDA s5 has the narrator on `m1` from about 10 minutes in). The slice makes this visible at a glance.
 - **Quote extraction does not record which words carried a quote's sentiment.** `verbatim_excerpt` is only the first 200 characters of the quote.
+
+## Scene stripes (exploratory, 12 Oct 2026)
+
+The idea: the clip keeps its one scene colour, and over it, at an opacity, run stripes of what was on
+screen moment by moment, so a change of environment (call → share → terminal) shows inside the bar
+without the bar losing its track identity. A notch above the lane marks each change. Nothing of this
+ships yet; `strip_lab.py` is the experiment.
+
+**Cost, measured 12 Oct 2026** (software decode to 32×18; VideoToolbox was 18× slower, the per-frame
+download dominates). One sample per pixel at the maximum zoom (0.25 s/px) means 4 fps:
+
+| source | keyframe gap | keyframes only (today) | every frame at 4 fps |
+|---|---|---|---|
+| Teams 1080p, 18 min | 6 s fixed | 0.7 s | 2.4 s |
+| YouTube-style 720p, 22 min | 10 s fixed | 0.6 s | 2.9 s |
+| macOS screen recording 3456×2234 @120 fps, 79 s | ~1 s | 5.3 s | 9.1 s |
+
+So a call recording costs about 8 s per hour of video for the dense pass, and the one expensive
+source already has keyframes a second apart, so it does not need it. An adaptive rule (dense pass only
+where the keyframe gap exceeds about a second) covers both. The lab's own numbers are higher because
+it computes the per-frame colour in pure Python per frame; the per-video cost is shown on the page.
+
+**Decided in conversation, 12 Oct 2026:** the dense pass is a local enhancement that may arrive after
+the run, and must not gate the report being readable. Stripes go on both tracks, since the scene is a
+property of the moment, with the moderator track at a lower opacity if it should sit quieter.
+
+**The lab page.** Each recording is drawn as the real lane geometry: track, moderator and participant
+clips in the shipped turn colour, stripes source-atop at the track's opacity. Handles: stripe source
+(keyframes as today, 4 fps, or 4 fps averaged down), zoom (fit to the maximum), per-track opacity, a
+floor that hides stripes within a ΔE of the clip colour so a steady scene stays flat, a median window
+against shimmer, notch threshold and window, and the tone handles shared with the colour lab. The raw
+row above each lane is the same data at full strength, the movie-barcode view. Worst cases to look
+for: a uniform web session, a scrolled or animated share, a gallery call with people moving, the 4K
+capture. Transcript turns are used where a recording has one; otherwise a fixed 15 s / 45 s
+alternation stands in. One thing the keyframe view exposes: a recording's first keyframe can be a
+splash or transition frame, which the per-turn colour already survives (it clusters the whole turn)
+but a stripe shows.

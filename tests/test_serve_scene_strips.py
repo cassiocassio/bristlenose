@@ -241,18 +241,29 @@ class TestWiring:
     def test_a_failed_run_re_arms_a_deferred_job(self, project, monkeypatch):
         """A run's start defers the job. Only run_completed used to start it again, so a run that
         failed left every strip missing until the next restart; any change to the log re-arms it."""
-        results: list[bool] = []
+        # Each start is recorded with whether a run was in progress when it was asked, because a
+        # start can also return False for a reason that is not the deferral under test: the
+        # lifespan's pass may still hold the lock when the watcher's first read asks again (it
+        # did on CI's Linux cells, not on macOS), and that False only means "going round again".
+        results: list[tuple[bool, bool]] = []
         orig = sj.SceneStripJob.start
-        monkeypatch.setattr(sj.SceneStripJob, "start", lambda self: results.append(orig(self)) or results[-1])
+
+        def start(self):
+            in_progress = self._run_in_progress()
+            ok = orig(self)
+            results.append((ok, in_progress))
+            return ok
+
+        monkeypatch.setattr(sj.SceneStripJob, "start", start)
         app = _app(project)
         events_file = events_path(project / "bristlenose-output")
         proc = Process(pid=os.getpid(), start_time=_TS, hostname="h", user="u", bristlenose_version="0",
                        python_version="3", os="darwin")
         with TestClient(app):
-            # The lifespan starts it, and the watcher's first read of the log asks again; both are
-            # allowed (nothing is running yet), neither is deferred.
+            # The lifespan starts it, and the watcher's first read of the log asks again.
             _wait(lambda: len(results) >= 2)
-            assert all(results)
+            assert results[0] == (True, False)
+            assert not any(in_progress for _, in_progress in results)
             seen = len(results)
             rid = new_run_id()
             # In progress means a started run whose PID file names a live process (the reducer reads
@@ -260,12 +271,12 @@ class TestWiring:
             _write_pid_file(project / "bristlenose-output", rid, _ps_start_time(os.getpid()) or "")
             append_event(events_file, RunStartedEvent(ts=_TS, run_id=rid, kind=KindEnum.RUN, started_at=_TS, process=proc))
             _wait(lambda: len(results) > seen)
-            assert results[-1] is False  # deferred: a run is in progress
+            assert results[-1] == (False, True)  # deferred: a run is in progress
             seen = len(results)
             append_event(events_file, RunFailedEvent(ts=_TS, run_id=rid, kind=KindEnum.RUN, started_at=_TS, ended_at=_TS,
                                                      cause=Cause(category=CauseCategoryEnum.USER_SIGNAL)))
-            _wait(lambda: len(results) > seen)
-            assert results[-1] is True  # re-armed by the failure, not by a completion
+            # Re-armed by the failure, not by a completion: the run is over and the start is taken.
+            _wait(lambda: len(results) > seen and results[-1] == (True, False))
 
     def test_the_lifespan_starts_the_job(self, project, monkeypatch):
         started: list[bool] = []

@@ -518,7 +518,7 @@ native cover (`runCover` needs `.statusPage`). Keying the cover on the overlay
    analysis and its curation were untouched and the status page was the only thing
    in front of them. `d367bcca` changed the watcher's trigger to the run id -
    re-measure rather than quote that sentence.
-2. **Where should the database of a never-run project live?** Today: the
+2. ~~**Where should the database of a never-run project live?**~~ Until 12 Oct 2026: the
    interview folder's `.bristlenose/`. The resolver says `bristlenose-output/`.
    _Corrected 12 Oct 2026:_ `bristlenose run` does **not** refuse an output
    folder holding only `.bristlenose/` — `_has_no_deliverable` (`cli.py:1051`,
@@ -528,9 +528,14 @@ native cover (`runCover` needs `.statusPage`). Keying the cover on the overlay
    option below is already true, and the decision is narrower than it looked:
    whether the serve creates the DB eagerly at `bristlenose-output/.bristlenose/`
    (what `--clean` then stashes with the rest) or lazily on first import.
-   `project_output_dir`'s docstring (`output_paths.py:262`) still states the
-   refusal; it is wrong. Options as before: create the DB lazily on first
-   import, or let the serve create it in the future `bristlenose-output/`.
+   **Settled by implementation, 12 Oct 2026 (`3f1bd013`): eagerly.** The
+   serve creates the database at `bristlenose-output/.bristlenose/` before
+   the first run, so the run and the serve share one database and one
+   project row; a never-run row carries the future output folder. Visible
+   consequence, accepted and in the changelog: selecting a never-analysed
+   project in the app creates an empty `bristlenose-output/` at once. The
+   owner can still choose lazy; the scenario table
+   (`tests/test_lifecycle_scenarios.py`) is what either must pass.
 3. **Sandbox liveness** (§4.4) — measure before phase C.
 4. **Copy for three pages that don't exist yet** — import failed with no earlier
    data, history unreadable, lost contact — phase E, with the cause table.

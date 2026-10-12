@@ -76,8 +76,14 @@ def _check_url(url: str, allowed: set[str]) -> None:
     parts = urllib.parse.urlsplit(url)
     if parts.scheme != "https":
         raise ValueError(f"not https: {url}")
-    if parts.hostname not in allowed:
-        raise ValueError(f"host not allowed: {parts.hostname}")
+    host = parts.hostname or ""
+    # "*.archive.org" allows the mirror hosts a download redirects to; nothing broader.
+    ok = host in allowed or any(
+        h.startswith("*.") and host.endswith(h[1:]) and host.count(".") >= h.count(".")
+        for h in allowed
+    )
+    if not ok:
+        raise ValueError(f"host not allowed: {host}")
 
 
 def _download(url: str, allowed: set[str], dest: Path) -> str:
@@ -169,6 +175,8 @@ def main(list_path: str) -> int:
         lang_dir = dest_root / item["lang"]
         lang_dir.mkdir(parents=True, exist_ok=True)
         suffix = Path(urllib.parse.urlsplit(item["url"]).path).suffix.lower() or ".bin"
+        if suffix == ".wav":
+            suffix = ".src.wav"  # the converted file takes <id>.wav
         src = lang_dir / f"{item['id']}{suffix}"
         wav = lang_dir / f"{item['id']}.wav"
         try:

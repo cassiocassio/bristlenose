@@ -24,7 +24,9 @@ CSS_SOURCE = REPO / "docs/mockups/transcript-paragraph-capitalisation.html"
 LANG_NAMES = {"es": "Spanish", "fr": "French", "de": "German", "it": "Italian",
               "pt": "Portuguese"}
 #: Trial conditions, in order, with the label the page shows.
-CONDITIONS = {"none": "No prompt (today)", "prompt": "Prompt v1", "prompt-v2": "Prompt v2"}
+CONDITIONS = {"none": "No prompt (today)", "none+net": "No prompt + net",
+              "prompt": "Prompt v1", "prompt+net": "Prompt v1 + net", "prompt-v2": "Prompt v2",
+              "prompt-v2+net": "Prompt v2 + net"}
 METRICS = [
     ("words", "Words", "higher is not always better; a big drop means speech was lost"),
     ("sentences", "Sentence ends", "higher is better"),
@@ -143,9 +145,9 @@ body { padding: 0; }
 <div class="m-toolbar" role="group" aria-label="Page switches">
   <div class="m-group"><b>Language</b><span class="m-seg" id="m-langs"></span></div>
   <div class="m-group"><b>Left</b><span class="m-seg">
-    <button data-left="none" aria-pressed="true">No prompt</button><button data-left="prompt" aria-pressed="false">v1</button><button data-left="prompt-v2" aria-pressed="false">v2</button></span></div>
+    <button data-left="none" aria-pressed="true">No prompt</button><button data-left="prompt" aria-pressed="false">v1</button><button data-left="prompt-v2" aria-pressed="false">v2</button><button data-left="none+net" aria-pressed="false">No prompt + net</button></span></div>
   <div class="m-group"><b>Right</b><span class="m-seg">
-    <button data-right="best" aria-pressed="true">Latest</button><button data-right="prompt" aria-pressed="false">v1</button><button data-right="prompt-v2" aria-pressed="false">v2</button></span></div>
+    <button data-right="best" aria-pressed="true">Latest</button><button data-right="prompt" aria-pressed="false">v1</button><button data-right="prompt-v2" aria-pressed="false">v2</button><button data-right="prompt-v2+net" aria-pressed="false">v2 + net</button></span></div>
   <div class="m-group"><b>Show</b><span class="m-seg">
     <button data-span="360" aria-pressed="true">First 6 min</button><button data-span="99999" aria-pressed="false">Whole file</button></span></div>
   <div class="m-group"><b>Prompt words</b><span class="m-seg">

@@ -786,3 +786,177 @@ class TestFasterWhisperGetsTheStylePrompt:
         assert "detected_on" not in calls
         assert calls["transcribe"]["language"] == "ja"
         assert calls["transcribe"]["hotwords"] == s05.STYLE_PROMPTS["ja"]
+
+
+class TestFindSkippedStretches:
+    """A stretch with sound and almost no words is speech Whisper jumped over."""
+
+    def _levels(self, seconds: float, loud: list[tuple[float, float]]):
+        import numpy as np
+
+        lv = np.full(int(seconds * 10), -70.0)  # room tone
+        for a, b in loud:
+            lv[int(a * 10):int(b * 10)] = -25.0  # speech
+        return lv
+
+    def test_a_gap_over_speech_is_found(self) -> None:
+        from bristlenose.stages.s05_transcribe import find_skipped_stretches
+
+        spans = [(0.0, 10.0, 25), (30.0, 40.0, 25)]
+        assert find_skipped_stretches(spans, self._levels(40, [(0, 40)]), 40) == [(10.0, 30.0)]
+
+    def test_a_gap_over_room_tone_is_a_pause(self) -> None:
+        from bristlenose.stages.s05_transcribe import find_skipped_stretches
+
+        spans = [(0.0, 10.0, 25), (30.0, 40.0, 25)]
+        loud = [(0, 10), (30, 40)]
+        assert find_skipped_stretches(spans, self._levels(40, loud), 40) == []
+
+    def test_one_long_near_empty_segment_is_found(self) -> None:
+        from bristlenose.stages.s05_transcribe import find_skipped_stretches
+
+        spans = [(0.0, 10.0, 25), (10.0, 36.0, 1), (36.0, 46.0, 25)]
+        assert find_skipped_stretches(spans, self._levels(46, [(0, 46)]), 46) == [(10.0, 36.0)]
+
+    def test_a_short_gap_is_not_a_skip(self) -> None:
+        from bristlenose.stages.s05_transcribe import find_skipped_stretches
+
+        spans = [(0.0, 10.0, 25), (15.0, 25.0, 25)]
+        assert find_skipped_stretches(spans, self._levels(25, [(0, 25)]), 25) == []
+
+    def test_speech_with_no_pauses_still_counts_as_sound(self) -> None:
+        """No quiet tenth to take a floor from: the cap keeps the net working."""
+        import numpy as np
+
+        from bristlenose.stages.s05_transcribe import find_skipped_stretches
+
+        spans = [(0.0, 10.0, 25), (30.0, 40.0, 25)]
+        assert find_skipped_stretches(spans, np.full(400, -25.0), 40) == [(10.0, 30.0)]
+
+    def test_a_silent_file_has_nothing_to_find(self) -> None:
+        import numpy as np
+
+        from bristlenose.stages.s05_transcribe import find_skipped_stretches
+
+        assert find_skipped_stretches([], np.full(300, -np.inf), 30) == []
+
+
+class TestMlxBackendRecoversSkippedSpeech:
+    """The wiring: a skipped stretch is re-decoded on its own and the new text
+    replaces the old only when it is real speech."""
+
+    def _run(self, monkeypatch, tmp_path, redecode_text: str):
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        calls: list[int] = []
+        first = [
+            {"start": 0.0, "end": 10.0, "text": " " + " ".join(f"a{i}" for i in range(25))},
+            {"start": 10.0, "end": 30.0, "text": " Certo."},
+            {"start": 30.0, "end": 40.0, "text": " " + " ".join(f"b{i}" for i in range(25))},
+        ]
+
+        def _fake(audio_in, **_kw):
+            calls.append(len(audio_in))
+            if len(calls) == 1:
+                return {"language": "pt", "segments": first}
+            return {"language": "pt", "segments": [
+                {"start": 0.5, "end": 19.5, "text": redecode_text,
+                 "words": [{"word": " x", "start": 1.0, "end": 1.2, "probability": 0.9}]},
+            ]}
+
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: _tone(40, -20))
+        monkeypatch.setattr(mlx_whisper, "transcribe", _fake)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "auto"})()
+        fn = s05_transcribe._init_mlx_backend(settings)
+        segments, _ = fn(tmp_path / "p1.wav", settings)
+        return segments, calls
+
+    def test_skipped_speech_is_recovered_in_place(self, monkeypatch, tmp_path) -> None:
+        recovered = " ".join(f"palavra{i}" for i in range(40))
+        segments, calls = self._run(monkeypatch, tmp_path, " " + recovered)
+
+        assert calls == [40 * 16000, 20 * 16000]  # the file, then just the stretch
+        assert [round(s.start_time) for s in segments] == [0, 10, 30]
+        assert segments[1].text == recovered
+        assert segments[1].words[0].start_time == 11.0  # word times moved too
+        assert "Certo." not in " ".join(s.text for s in segments)
+
+    def test_a_redecode_without_real_speech_changes_nothing(self, monkeypatch, tmp_path) -> None:
+        segments, calls = self._run(monkeypatch, tmp_path, " Obrigado.")
+
+        assert len(calls) == 2
+        assert [s.text for s in segments][1] == "Certo."
+
+    def test_a_dropped_prompt_echo_is_re_decoded(self, monkeypatch, tmp_path) -> None:
+        """The net runs after the echo filter, so the gap an echo leaves over
+        real speech is re-transcribed, without the prompt."""
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        prompt = s05_transcribe.STYLE_PROMPTS["en"]
+        calls: list[int] = []
+
+        def _fake(audio_in, **_kw):
+            calls.append(len(audio_in))
+            if len(calls) == 1:
+                return {"language": "en", "segments": [
+                    {"start": 0.0, "end": 10.0, "text": " " + " ".join(f"a{i}" for i in range(25))},
+                    {"start": 10.0, "end": 30.0, "text": " " + prompt},
+                    {"start": 30.0, "end": 40.0, "text": " " + " ".join(f"b{i}" for i in range(25))},
+                ]}
+            return {"language": "en", "segments": [
+                {"start": 0.5, "end": 19.5, "text": " " + " ".join(f"c{i}" for i in range(40))},
+            ]}
+
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: _tone(40, -20))
+        monkeypatch.setattr(mlx_whisper, "transcribe", _fake)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "auto"})()
+        segments, _ = s05_transcribe._init_mlx_backend(settings)(tmp_path / "p1.wav", settings)
+
+        assert calls == [40 * 16000, 20 * 16000]
+        assert [s.text.split()[0] for s in segments] == ["a0", "c0", "b0"]
+
+
+    def test_a_repetition_loop_is_treated_as_lost_speech(self, monkeypatch, tmp_path) -> None:
+        """Forty "nada"s are one word once the repeat filter has run, so the
+        stretch is a gap and is re-decoded."""
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        calls: list[int] = []
+
+        def _fake(audio_in, **_kw):
+            calls.append(len(audio_in))
+            if len(calls) == 1:
+                return {"language": "es", "segments": [
+                    {"start": 0.0, "end": 10.0, "text": " " + " ".join(f"a{i}" for i in range(25))},
+                    {"start": 10.0, "end": 30.0, "text": " " + " ".join(["nada"] * 40)},
+                    {"start": 30.0, "end": 40.0, "text": " " + " ".join(f"b{i}" for i in range(25))},
+                ]}
+            return {"language": "es", "segments": [
+                {"start": 0.5, "end": 19.5, "text": " " + " ".join(f"c{i}" for i in range(40))},
+            ]}
+
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: _tone(40, -20))
+        monkeypatch.setattr(mlx_whisper, "transcribe", _fake)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "auto"})()
+        segments, _ = s05_transcribe._init_mlx_backend(settings)(tmp_path / "p1.wav", settings)
+
+        assert calls == [40 * 16000, 20 * 16000]
+        assert [s.text.split()[0] for s in segments] == ["a0", "c0", "b0"]

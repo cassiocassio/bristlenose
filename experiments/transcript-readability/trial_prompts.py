@@ -104,7 +104,12 @@ def run(wav: Path, lang: str, prompt: str | None) -> dict[str, object]:
     }
 
 
-def main(root: str, only: list[str], variant: str = "prompt") -> int:
+def main(root: str, only: list[str], variant: str = "prompt", net: bool = False,
+         include_none: bool = True) -> int:
+    # The skipped-window net is off unless asked for, so runs made before it
+    # existed stay comparable; a run with it is stored as "<condition>+net".
+    s05.SKIP_NET_ENABLED = net
+    suffix = "+net" if net else ""
     base = Path(root)
     manifest = json.loads((base / "manifest.json").read_text(encoding="utf-8"))
     out_dir = base / "trials"
@@ -118,7 +123,11 @@ def main(root: str, only: list[str], variant: str = "prompt") -> int:
         prompts = VARIANTS[variant]
         if lang not in prompts:
             continue
-        for cond, prompt in (("none", None), (variant, prompts[lang])):
+        pairs = [("none", None), (variant, prompts[lang])]
+        if not include_none:
+            pairs = pairs[1:]
+        for base_cond, prompt in pairs:
+            cond = base_cond + suffix
             out = out_dir / f"{sid}.{cond}.json"
             if out.exists():
                 r = json.loads(out.read_text(encoding="utf-8"))
@@ -135,7 +144,13 @@ def main(root: str, only: list[str], variant: str = "prompt") -> int:
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    variant = "prompt"
-    if args and args[0].startswith("--variant="):
-        variant = args.pop(0).split("=", 1)[1]
-    sys.exit(main(args[0], args[1:], variant))
+    variant, net, include_none = "prompt", False, True
+    while args and args[0].startswith("--"):
+        flag = args.pop(0)
+        if flag.startswith("--variant="):
+            variant = flag.split("=", 1)[1]
+        elif flag == "--net":
+            net = True
+        elif flag == "--prompt-only":
+            include_none = False
+    sys.exit(main(args[0], args[1:], variant, net, include_none))

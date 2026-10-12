@@ -16,7 +16,7 @@ import logging
 import re
 from collections.abc import Callable
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.events import (
@@ -130,6 +130,9 @@ def collapse_adjacent_repeats(text: str) -> str:
 # Scope: *no signal*, not *no speech*. Room tone, music or a hum all pass, so
 # Whisper can still hallucinate over them. The gate fails open by design — a
 # kept hallucination is visible and deletable; a dropped word is not.
+
+#: Whisper's sample rate, which both backends decode to.
+_SAMPLE_RATE = 16000
 
 #: 100 ms windows at Whisper's 16 kHz sample rate.
 _LEVEL_WINDOW_SAMPLES = 1600
@@ -314,6 +317,71 @@ def _install_style_prompt_hook() -> bool:
     setattr(module, "DecodingOptions", decoding_options)  # noqa: B010 (mypy: mlx is untyped)
     _hook_state["ok"] = True
     return True
+
+
+# ---------------------------------------------------------------------------
+# Skipped-window net — speech Whisper jumped over
+# ---------------------------------------------------------------------------
+#
+# Whisper sometimes skips a stretch of real speech: it returns nothing for it,
+# or one long segment holding a word or two ("Tr", "Certo." over half a minute),
+# and carries on after it. Measured 12 Oct 2026 on twelve public interviews in
+# five languages (docs/design-whisper-style-prompts.md): it happens with no
+# prompt at all (a Portugal meeting, an Italian and a German interview, a
+# Mexican podcast each lost a stretch that another run heard at 2-5 words a
+# second), and more often under a style prompt in Spanish and Portuguese.
+#
+# The audio levels we already compute say where there is sound. A stretch of
+# at least `_SKIP_MIN_S` with fewer than `_SKIP_SLOW_WPS` words a second, where
+# at least `_SKIP_ACTIVE_FRACTION` of the 100 ms windows sit `_SKIP_OVER_FLOOR_DB`
+# above the recording's own noise floor, is re-decoded on its own, without the
+# style prompt. The new text replaces the old only if it reaches
+# `_RECOVER_MIN_WPS` words a second — real speech, not one invented "Thank
+# you." over music — so the net can only add speech, never lose any.
+SKIP_NET_ENABLED = True
+_SKIP_MIN_S = 8.0
+_SKIP_SLOW_WPS = 0.3
+_SKIP_OVER_FLOOR_DB = 15.0
+_SKIP_ACTIVE_FRACTION = 0.4
+_RECOVER_MIN_WPS = 1.0
+#: The noise floor is the quietest tenth of the recording, but never above this:
+#: a file that is loud throughout (wall-to-wall talk, a café) has no quiet tenth,
+#: and a floor at speech level would make the net blind exactly where skips are
+#: likeliest. Most measured floors sat at -45 to -49 dBFS.
+_SKIP_FLOOR_CAP_DBFS = -45.0
+
+
+def find_skipped_stretches(
+    spans: list[tuple[float, float, int]],
+    levels: object,
+    total_s: float,
+) -> list[tuple[float, float]]:
+    """Stretches with sound and almost no words: ``(start, end)`` in seconds.
+
+    ``spans`` are a transcript's segments as ``(start, end, word_count)``.
+    A segment slower than `_SKIP_SLOW_WPS` words a second counts as uncovered,
+    so one long near-empty segment is caught as well as a gap between two.
+    """
+    import numpy as np
+
+    arr = np.asarray(levels, dtype=np.float64)
+    finite = arr[np.isfinite(arr)]
+    if not finite.size:
+        return []
+    floor = min(float(np.percentile(finite, 10)), _SKIP_FLOOR_CAP_DBFS)
+    active = arr > floor + _SKIP_OVER_FLOOR_DB
+    covered = sorted(
+        (a, b) for a, b, n in spans if n / max(b - a, 0.01) >= _SKIP_SLOW_WPS
+    )
+    found: list[tuple[float, float]] = []
+    t = 0.0
+    for a, b in [*covered, (total_s, total_s)]:
+        if a - t >= _SKIP_MIN_S:
+            window = active[int(t * _LEVEL_WINDOWS_PER_SECOND):int(a * _LEVEL_WINDOWS_PER_SECOND)]
+            if window.size and float(np.mean(window)) >= _SKIP_ACTIVE_FRACTION:
+                found.append((t, a))
+        t = max(t, b)
+    return found
 
 
 #: ``(files_done, files_total)``, called after each file.
@@ -568,6 +636,62 @@ def _init_mlx_backend(
         settings.whisper_model,
     )
 
+    def _recover_skipped(
+        segs: list[dict[str, Any]],
+        audio: Any,
+        levels: object,
+        decode_kwargs: dict[str, object],
+        language: str | None,
+        name: str,
+    ) -> list[dict[str, Any]]:
+        """Re-decode stretches Whisper skipped; see the note above `find_skipped_stretches`.
+
+        Runs outside the style-prompt block, so the re-decode has no prompt.
+        """
+        total_s = len(audio) / _SAMPLE_RATE
+        # Words as the transcript will show them: after the repeat filter, a
+        # "nada nada nada..." loop is one word, so the stretch it covers reads
+        # as what it is (speech lost to a loop) and is re-decoded.
+        spans = [
+            (float(x.get("start", 0.0)), float(x.get("end", 0.0)),
+             len(collapse_adjacent_repeats(str(x.get("text", "")).strip()).split()))
+            for x in segs
+        ]
+        stretches = find_skipped_stretches(spans, levels, total_s)
+        kept = list(segs)
+        recovered = words = 0
+        for a, b in stretches:
+            chunk = audio[int(a * _SAMPLE_RATE):int(b * _SAMPLE_RATE)]
+            r = mlx_whisper.transcribe(chunk, language=language, **decode_kwargs)
+            new: list[dict[str, Any]] = []
+            for seg in r.get("segments", []):
+                seg = dict(seg)
+                seg["start"] = float(seg.get("start", 0.0)) + a
+                seg["end"] = float(seg.get("end", 0.0)) + a
+                seg["words"] = [
+                    {**w, "start": float(w.get("start", 0.0)) + a,
+                     "end": float(w.get("end", 0.0)) + a}
+                    for w in seg.get("words", [])
+                ]
+                if a <= (seg["start"] + seg["end"]) / 2 < b:
+                    new.append(seg)
+            n = sum(len(str(x.get("text", "")).split()) for x in new)
+            if n / max(b - a, 0.01) >= _RECOVER_MIN_WPS:
+                kept = [
+                    x for x in kept
+                    if not a <= (float(x.get("start", 0.0)) + float(x.get("end", 0.0))) / 2 < b
+                ] + new
+                recovered += 1
+                words += n
+        kept.sort(key=lambda x: float(x.get("start", 0.0)))
+        if stretches:
+            logger.info(
+                "%s: %d skipped stretch(es) found, %d recovered (%d words, %.0f s)",
+                name, len(stretches), recovered, words,
+                sum(b - a for a, b in stretches),
+            )
+        return kept
+
     def transcribe_mlx(
         audio_path: Path,
         settings: BristlenoseSettings,
@@ -606,19 +730,22 @@ def _init_mlx_backend(
         mx.random.seed(0)
         _hook_counts.update(built=0, filled=0)
         token = _STYLE_PROMPT_ON.set(hook_ready)
+        decode_kwargs: dict[str, object] = {
+            "path_or_hf_repo": model_name,
+            "word_timestamps": True,
+            "verbose": None,
+            "condition_on_previous_text": False,
+            "no_speech_threshold": 0.85,
+            "compression_ratio_threshold": 1.8,
+        }
         try:
             result = mlx_whisper.transcribe(
                 audio,
-                path_or_hf_repo=model_name,
                 language=(
                     settings.whisper_language
                     if settings.whisper_language != "auto" else None
                 ),
-                word_timestamps=True,
-                verbose=None,
-                condition_on_previous_text=False,
-                no_speech_threshold=0.85,
-                compression_ratio_threshold=1.8,
+                **decode_kwargs,
             )
         finally:
             _STYLE_PROMPT_ON.reset(token)
@@ -654,7 +781,11 @@ def _init_mlx_backend(
             result.get("language"),
         )
 
-        segments: list[TranscriptSegment] = []
+        # The two filters first, so the net looks at the transcript the reader
+        # will get: a dropped prompt echo leaves a gap over real speech, and the
+        # net re-decodes it; and "found", "recovered" and "still empty" all
+        # describe one transcript.
+        kept: list[dict[str, Any]] = []
         in_silence = 0
         echoes = 0
         for seg in result.get("segments", []):
@@ -666,6 +797,18 @@ def _init_mlx_backend(
                 continue
             if prompt and is_prompt_echo(seg.get("text", ""), prompt):
                 echoes += 1
+                continue
+            kept.append(seg)
+
+        if SKIP_NET_ENABLED:
+            kept = _recover_skipped(
+                kept, audio, levels, decode_kwargs, result.get("language"), audio_path.name,
+            )
+
+        segments: list[TranscriptSegment] = []
+        for seg in kept:
+            if not segment_has_signal(seg.get("start", 0.0), seg.get("end", 0.0), levels):
+                in_silence += 1  # a re-decoded line over a silent part of its stretch
                 continue
             words: list[Word] = []
             for w in seg.get("words", []):

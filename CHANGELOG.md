@@ -2,6 +2,12 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**Unreleased**
+
+**New**
+
+- **Long answers are broken into paragraphs.** In recordings transcribed from now on, a speaker's paragraph ends at a sentence end once it passes about 60 words. Existing transcripts keep their paragraphs, and the splits and joins made on them.
+
 **0.37.0** — _12 Oct 2026_
 
 Transcripts come out punctuated, Word tables are read, PII redaction works on the Snap and Fedora packages, and the Sessions Start column shows when a session began.

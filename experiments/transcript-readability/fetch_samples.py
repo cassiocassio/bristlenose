@@ -32,6 +32,7 @@ Usage::
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
@@ -171,6 +172,7 @@ def main(list_path: str) -> int:
     allowed = set(spec["allowed_hosts"])
     manifest_path = dest_root / "manifest.json"
     manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    done: set[str] = set()
     for item in spec["items"]:
         lang_dir = dest_root / item["lang"]
         lang_dir.mkdir(parents=True, exist_ok=True)
@@ -192,8 +194,15 @@ def main(list_path: str) -> int:
             "sha256": sha or manifest.get(item["id"], {}).get("sha256"),
             "duration_s": round(duration, 1),
         }
+        done.add(item["id"])
         print(f"✓ {item['id']}: {src.stat().st_size // 1024} KB, {duration / 60:.1f} min")
-    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    # Merge under a lock: two fetches running at once each loaded the manifest at
+    # start and the second write dropped the first's entries (12 Oct 2026).
+    with open(dest_root / ".manifest.lock", "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        current = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+        current.update({k: v for k, v in manifest.items() if k in done})
+        manifest_path.write_text(json.dumps(current, indent=2, ensure_ascii=False), encoding="utf-8")
     return 0
 
 

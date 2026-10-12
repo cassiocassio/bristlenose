@@ -60,6 +60,9 @@ final class BridgeHandler: ObservableObject {
     /// pattern as `hasSelectedProject` below. `.unattached` leaves it false,
     /// so the menu dims when no window is frontmost.
     @Published var lensesAvailable = false
+    /// Which lenses the document withholds while a run is in progress
+    /// (`lens-availability`); `.all` otherwise. See `LensReadiness`.
+    @Published var lensReadiness: LensReadiness = .all
 
     /// Where the reader is within the current lens — a heading id, or nil for
     /// the top. Posted by `useAnchorReporter` on scroll-settle; persisted per
@@ -529,6 +532,12 @@ final class BridgeHandler: ObservableObject {
     /// lets the popover's All Sessions row reach the grid without the memory
     /// bouncing it back.
     func activateLens(_ tab: Tab) {
+        // A lens the document withholds during a run has nothing to show; every
+        // caller (rail, outline, ⌘-number, menu) already dims it, this is the floor.
+        guard lensReadiness.allows(tab) else {
+            Self.log.notice("activateLens(\(tab.rawValue, privacy: .public)) → withheld")
+            return
+        }
         let decision = LensActivation.decide(
             tab: tab,
             activeTab: activeTab,
@@ -852,6 +861,9 @@ final class BridgeHandler: ObservableObject {
                 StatusPageOutcome(bridgeValue: body["outcome"] as? String)
             )
             pendingLensIntent = nil
+            // A status page withholds nothing of its own; the SPA's last
+            // `lens-availability` post no longer describes this document.
+            lensReadiness = .all
 
         case "route-change":
             if let url = body["url"] as? String {
@@ -961,6 +973,12 @@ final class BridgeHandler: ObservableObject {
             if burn != burnSubtitlesInClips { burnSubtitlesInClips = burn }
             UserDefaults.standard.set(player, forKey: Self.playerSubtitlesKey)
             UserDefaults.standard.set(burn, forKey: Self.burnSubtitlesKey)
+
+        case "lens-availability":
+            // Equality-guarded: the SPA posts on each project's first poll and
+            // on every change, and the rail and View menu rebuild on any assign.
+            let readiness = LensReadiness(message: body["lenses"] as? [String: Any] ?? [:])
+            if readiness != lensReadiness { lensReadiness = readiness }
 
         case "panel-state":
             // Sole writer of the three panel mirrors. Equality-guarded like
@@ -1083,6 +1101,8 @@ final class BridgeHandler: ObservableObject {
         personPicker.close()
         isReady = false
         documentState = .loading
+        // The next document says what it withholds; until then nothing is.
+        lensReadiness = .all
         pendingLensIntent = nil
         lensIntentReplayed = false
         currentPath = ""

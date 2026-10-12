@@ -2737,6 +2737,7 @@ struct ContentView: View {
                 lenses: LensItem.all,
                 activeTab: bridgeHandler.activeTab,
                 lensesEnabled: lensAvailability.isAvailable,
+                disabledLenses: bridgeHandler.lensReadiness.unavailable,
                 onActivateLens: { bridgeHandler.activateLens($0) },
                 onExternalDrop: { target, urls in
                     // Route to the same substrate-independent handlers the SwiftUI

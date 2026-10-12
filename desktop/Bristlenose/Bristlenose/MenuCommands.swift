@@ -929,7 +929,7 @@ private struct ViewMenuContent: View {
             // ContentView, since the derivation reads objects the menu bar
             // can't see. Before this, ⌘1–⌘5 fired unconditionally and the
             // activation died silently wherever the sidebar was dimmed.
-            .disabled(!bridgeHandler.lensesAvailable)
+            .disabled(!bridgeHandler.lensesAvailable || !bridgeHandler.lensReadiness.allows(tab))
             .keyboardShortcut(
                 KeyEquivalent(Character("\(index + 1)")),
                 modifiers: .command

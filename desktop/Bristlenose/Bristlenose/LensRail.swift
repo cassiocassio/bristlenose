@@ -68,6 +68,8 @@ private struct LensRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // A lens with nothing to show yet, during a run (LensReadiness).
+        .disabled(!bridgeHandler.lensReadiness.allows(item.tab))
         .accessibilityAddTraits(isActive ? [.isSelected] : [])
     }
 }

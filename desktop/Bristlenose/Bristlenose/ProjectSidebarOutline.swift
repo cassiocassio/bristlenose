@@ -74,6 +74,10 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     let lenses: [LensItem]
     let activeTab: Tab?
     let lensesEnabled: Bool
+    /// Lenses the document withholds while a run is in progress
+    /// (`LensReadiness.unavailable`). Narrows `lensesEnabled` per row; empty
+    /// outside a progressive run.
+    var disabledLenses: Set<Tab> = []
     let onActivateLens: (Tab) -> Void
     /// Finder folder/file drop landed on the outline — routed by target to the
     /// existing `ContentView` drop handlers. Internal project-reorder drags are
@@ -195,7 +199,8 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
             ),
             selection: selection,
             activeTab: activeTab,
-            lensesEnabled: lensesEnabled
+            lensesEnabled: lensesEnabled,
+            disabledLenses: disabledLenses
         )
         // After `update` — the rows have to exist before a row can enter edit.
         controller.applyRenameRequest(renameRequest)
@@ -341,6 +346,14 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// no-op (a mode switch is meaningless without a report). Restores the SwiftUI
     /// LensRail's `isEnabled` gating that the AppKit port initially dropped.
     private var lensesEnabled = false
+    /// Per-lens narrowing of `lensesEnabled` (progressive lenses).
+    private var disabledLenses: Set<Tab> = []
+
+    /// Whether one lens row can act: the lenses are live AND the document has
+    /// not withheld this one.
+    private func lensEnabled(_ tab: Tab) -> Bool {
+        lensesEnabled && !disabledLenses.contains(tab)
+    }
 
     // MARK: - Icon reveal (one-shot split-flap on project creation)
 
@@ -528,10 +541,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// Push a fresh tree + selection + active lens. Rebuilds the outline, restores
     /// expansion (groups always; folders per `collapsed`), and reflects selection.
     func update(roots: [OutlineNode], selection: Set<SidebarSelection>, activeTab: Tab?,
-                lensesEnabled: Bool) {
+                lensesEnabled: Bool, disabledLenses: Set<Tab> = []) {
         self.roots = roots
         self.activeTab = activeTab
         self.lensesEnabled = lensesEnabled
+        self.disabledLenses = disabledLenses
         self.lastSelection = selection
 
         // Reload guard: a `reloadData` while a name field is being edited destroys
@@ -763,7 +777,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // fire both. Lens rows never arm rename either way.
         if let lensNode = outlineView.item(atRow: row) as? OutlineNode,
            case .lens(let tab) = lensNode.kind {
-            if lensesEnabled, tab == activeTab {
+            if lensEnabled(tab), tab == activeTab {
                 DispatchQueue.main.async { [weak self] in self?.onActivateLens(tab) }
             }
             return
@@ -1081,7 +1095,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             // live in `BridgeHandler.activateLens` for every caller.
             projectRows = selectableRows(in: outlineView.selectedRowIndexes)
             if case .lens(let tab)? = (outlineView.item(atRow: lensRow) as? OutlineNode)?.kind,
-               lensesEnabled, tab != activeTab {
+               lensEnabled(tab), tab != activeTab {
                 DispatchQueue.main.async { [weak self] in self?.onActivateLens(tab) }
             }
         } else {
@@ -1444,7 +1458,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         case .lens(let tab):
             let lens = lensItems.first { $0.tab == tab }
             return iconCell(symbol: lens?.systemImage ?? "circle", text: lensLabel(tab),
-                            dimmed: !lensesEnabled)
+                            dimmed: !lensEnabled(tab))
         case .folder(let id):
             let name = projectIndex?.folders.first { $0.id == id }?.name ?? "Folder"
             return iconCell(symbol: "folder", text: name)
@@ -2029,7 +2043,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             // without this you could right-click a visibly-dimmed Quotes row on
             // the Welcome screen and get a window on a study you never named.
             // A context menu shows what is relevant; a dimmed row has nothing.
-            if lensesEnabled { buildLensMenu(menu) }
+            if lensEnabled(tab) { buildLensMenu(menu) }
         case .group:           menuClickedNodeID = nil   // no menu on group headers
         }
     }

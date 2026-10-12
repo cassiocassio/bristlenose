@@ -107,3 +107,35 @@ enum ArtifactPrior {
         }
     }
 }
+
+/// Which lenses the document says can be selected now — progressive lenses
+/// (docs/design-progressive-lenses.md §3.3). While a first analysis runs, the
+/// Sessions lens is usable from the first second and every other lens lights
+/// when it has content; the server derives which (`server/lens_readiness.py`)
+/// and the SPA posts it over the `lens-availability` bridge message.
+///
+/// A per-lens filter *under* `LensAvailability`, never a replacement for it: a
+/// lens is selectable when the lenses are available at all AND the document has
+/// not withheld that one. Absence is never a refusal — a lens the message does
+/// not name stays allowed, and `.all` (nothing withheld) is the state before
+/// any message and after every selection change.
+struct LensReadiness: Equatable {
+    var unavailable: Set<Tab>
+
+    static let all = LensReadiness(unavailable: [])
+
+    init(unavailable: Set<Tab>) {
+        self.unavailable = unavailable
+    }
+
+    /// From the bridge message's `lenses` dictionary (lens id → selectable).
+    /// Only an explicit `false` withholds a lens; unknown ids are ignored.
+    init(message lenses: [String: Any]) {
+        unavailable = Set(lenses.compactMap { key, value in
+            (value as? Bool) == false ? Tab(rawValue: key) : nil
+        })
+    }
+
+    func allows(_ tab: Tab) -> Bool { !unavailable.contains(tab) }
+}
+

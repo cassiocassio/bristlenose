@@ -111,7 +111,11 @@ describe("NavBar", () => {
 });
 
 describe("NavBar — lenses with nothing to show yet", () => {
-  afterEach(() => resetConditionStore());
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    resetConditionStore();
+    globalThis.fetch = realFetch;
+  });
 
   it("renders a disabled lens as text, not a link, and keeps it visible", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -122,14 +126,10 @@ describe("NavBar — lenses with nothing to show yet", () => {
         lenses: { project: false, sessions: true, quotes: false, codebook: false, signals: false, discussion: false },
       }),
     }) as unknown as typeof globalThis.fetch;
-    await act(async () => {
-      startConditionPolling("1");
-      await Promise.resolve();
-      await Promise.resolve();
-    });
     renderNavBar("/report/sessions/");
+    act(() => startConditionPolling("1"));
+    const quotes = await screen.findByText("Quotes", { selector: "span" });
     expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute("href", "/report/sessions/");
-    const quotes = screen.getByText("Quotes");
     expect(quotes.tagName).toBe("SPAN");
     expect(quotes).toHaveAttribute("aria-disabled", "true");
     expect(quotes).not.toHaveAttribute("href");

@@ -87,7 +87,9 @@ async function pollOnce(): Promise<void> {
     const lensesChanged = !sameLenses(prev.lenses, lenses);
 
     if (version !== prev.dataVersion || lensesChanged) {
-      setState({ dataVersion: version, lenses });
+      // Keep the lenses object when it is unchanged, so a version-only move
+      // does not re-render everything that reads useLenses.
+      setState({ dataVersion: version, lenses: lensesChanged ? lenses : prev.lenses });
     }
     if (versionMoved) bumpRefreshKey();
     if (lensesChanged || !postedOnce) {

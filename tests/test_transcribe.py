@@ -947,6 +947,12 @@ class TestFindSegmentLoops:
         mixed = [(0.0, 1.0, "Gracias."), (30.0, 31.0, "Hola."), (60.0, 61.0, "Gracias.")]
         assert find_segment_loops(mixed) == []
 
+    def test_lines_differing_only_in_repeats_are_one_line(self) -> None:
+        from bristlenose.stages.s05_transcribe import find_segment_loops
+
+        segs = [(k * 0.7, k * 0.7 + 0.2, "nada nada" if k % 2 else "nada") for k in range(10)]
+        assert find_segment_loops(segs) == [(0, 10)]
+
     def test_lines_differing_only_in_punctuation_and_case_are_one_line(self) -> None:
         from bristlenose.stages.s05_transcribe import find_segment_loops
 
@@ -990,6 +996,46 @@ class TestMlxBackendRemovesLoops:
         assert len(calls) == 2
         text = " ".join(s.text for s in segments)
         assert "nada" not in text and "c39" in text
+
+
+    def test_a_loop_formed_by_a_re_decode_beside_the_first_pass_goes(
+        self, monkeypatch, tmp_path,
+    ) -> None:
+        """Neither the first pass (one "Gracias.") nor the re-decode (two)
+        holds a loop; together they do."""
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        calls: list[int] = []
+
+        def _fake(audio_in, **_kw):
+            calls.append(len(audio_in))
+            if len(calls) == 1:
+                return {"language": "es", "segments": [
+                    {"start": 0.0, "end": 10.0, "text": " " + " ".join(f"a{i}" for i in range(25))},
+                    {"start": 44.0, "end": 45.4, "text": " Gracias."},
+                    {"start": 46.0, "end": 56.0, "text": " " + " ".join(f"b{i}" for i in range(25))},
+                ]}
+            return {"language": "es", "segments": [
+                {"start": 0.0, "end": 15.0, "text": " " + " ".join(f"c{i}" for i in range(40))},
+                {"start": 18.0, "end": 19.4, "text": " Gracias."},
+                {"start": 24.0, "end": 25.4, "text": " Gracias."},
+            ]}
+
+        monkeypatch.setattr(s05_transcribe, "STYLE_PROMPTS", {})
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: _tone(56, -20))
+        monkeypatch.setattr(mlx_whisper, "transcribe", _fake)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "auto"})()
+        segments, _ = s05_transcribe._init_mlx_backend(settings)(tmp_path / "p1.wav", settings)
+
+        assert len(calls) == 2
+        text = " ".join(s.text for s in segments)
+        assert "c39" in text and "Gracias" not in text
 
 
 class TestMlxBackendRecoversSkippedSpeech:

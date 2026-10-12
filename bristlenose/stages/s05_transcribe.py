@@ -310,15 +310,17 @@ def find_segment_loops(segs: list[tuple[float, float, str]]) -> list[tuple[int, 
 
     ``collapse_adjacent_repeats`` catches a loop inside one segment; this one
     catches it spread across many, which that never sees ("nada" as 39
-    separate one-word lines). Text is compared on its letters and digits, so
-    "Gracias." and "gracias" are one line.
+    separate one-word lines). Text is compared as the reader gets it, repeats
+    collapsed, on its letters and digits, so "Gracias.", "gracias" and "nada
+    nada" against "nada" are each one line.
     """
+    keys = [_prompt_core(collapse_adjacent_repeats(text.strip())) for _, _, text in segs]
     runs: list[tuple[int, int]] = []
     i = 0
     while i < len(segs):
-        key = _prompt_core(segs[i][2])
+        key = keys[i]
         j = i + 1
-        while key and j < len(segs) and _prompt_core(segs[j][2]) == key:
+        while key and j < len(segs) and keys[j] == key:
             j += 1
         n, span = j - i, segs[j - 1][1] - segs[i][0]
         if key and n >= _LOOP_MIN_LINES and (n >= _LOOP_ALWAYS_LINES or span >= _LOOP_MIN_SPAN_S):
@@ -927,6 +929,10 @@ def _init_mlx_backend(
             kept = _recover_skipped(
                 kept, audio, levels, decode_kwargs, result.get("language"), audio_path.name,
             )
+            # And once more on the whole: re-decodes of neighbouring stretches
+            # can line up into a loop no single one held.
+            kept, more = drop_segment_loops(kept)
+            looped += more
 
         segments: list[TranscriptSegment] = []
         guesses = 0

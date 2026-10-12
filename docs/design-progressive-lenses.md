@@ -1,5 +1,5 @@
 ---
-status: designed, not built — reviewed against the code 12 Oct 2026 (Fable), findings folded in
+status: Phase 0 built 12 Oct 2026 (inert apart from the project-row fix); Phases 1–5 designed, not built
 last-trued: 2026-10-12
 trued-against: HEAD@main on 2026-10-12 (df8128c6, scene strips)
 owner: run progress across the pipeline, the report server, the SPA and the Mac app
@@ -228,6 +228,46 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 
 ### Phase 0 — Prerequisites
 
+> **Built 12 Oct 2026** — `3f1bd013`, `0a366b3c`, `0fbb8f68` and the Swift commit
+> after them (`git log --grep "progressive lenses phase 0"`). Inert for users: the
+> server reports every lens available and `app.state.progress` stays `None` until
+> Phase 1, so the only visible change is step 1's fix. What changed against the
+> plan below:
+> - **Step 1** landed as WS1 steps 1–4 and 7 of the lifecycle plan (the handoff in
+>   the maintainer's private notes); steps 5–6 (the `status` resolver, `_auto_render`'s
+>   input dir) and WS2 belong to the lifecycle sessions. One finding from the WS1/WS2
+>   session's mutation pass: reverting `db.py` alone stays green, because the
+>   `setup_logging` call in `create_app` also creates the output folder before
+>   `db_url_for_project` runs; only reverting both turns the scenario test red.
+> - **Step 4 moved to Phase 1, narrowed.** The reload at run end also clears the
+>   remembered session route, because a re-analyse can renumber sessions (a
+>   remembered `s3` would restore to a different participant). So it cannot simply
+>   be switched off. In Phase 0 the SPA is never mounted during a first analysis,
+>   so there is nothing to gate; Phase 1 skips the reload only for a progressive
+>   first analysis, and keeps it for a re-analyse.
+> - **Step 6:** the theme has no disabled tier distinct from the inactive tab's
+>   muted text, so a disabled web nav tab looks like an inactive one at rest
+>   (it refuses the hover and the pointer). A design call (§7).
+> - **Step 5** is wired, not only declared: `detect_status` reads
+>   `app.state.sessions_imported`, a server fact Phase 1's per-session import sets.
+>   It was first wired to the progress overlay, but a session is readable in the
+>   manifest before its rows reach the database, so the status page would have
+>   stepped aside to an empty grid (review).
+> - **`data_version` moves only on a per-session import, never at run end.** The
+>   first build bumped it after every import, so at run end `/last-run` and
+>   `data_version` both moved and every lens refetched twice (review). With no
+>   per-session import until Phase 1, nothing moves it today.
+> - **A visible side effect of step 1:** selecting a never-analysed project now
+>   creates an empty `bristlenose-output/` in the interview folder, where the old
+>   (forking) behaviour left a hidden `.bristlenose/`. Nothing misreads it (the
+>   Mac's "is this analysed?" checks need the manifest; `run` reuses a folder
+>   holding only `.bristlenose/`); `bristlenose status` says "No pipeline manifest"
+>   rather than "No pipeline data found". The CHANGELOG entry carries the caveat.
+> - **Owed from the review, for the lifecycle sessions:** a database written by
+>   `serve <p>/bristlenose-output` under the old resolver holds rows keyed
+>   (output, output) and forks under the new key; the importer must also match
+>   that legacy shape (taken by the WS1+WS2 session).
+
 1. **Fix the project-row fork first.** A serve started before `bristlenose-output/`
    exists stores `output_dir == input_dir`; the run then creates the output dir,
    `import_project` matches rows on `(input_dir, output_dir)` (`importer.py:246-264`),
@@ -244,7 +284,8 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
    `panel-state` pattern). **This ships in the same change as Phase 1's `page_for`
    change**, or the SPA mounting makes `documentState == .spa` and every lens lights at
    once.
-4. **No cold reload at the end of the run.** `scheduleReportReloadOnCompletion`
+4. **No cold reload at the end of the run.** *(Moved to Phase 1, narrowed to first
+   analyses: see the note above.)* `scheduleReportReloadOnCompletion`
    (`ContentView.swift:3062`) reloads the report on analysing → settled. With the SPA
    mounted from the first second, that would remount it under someone reading session 1.
    Gate it on `documentState != .spa`; the `data_version` refetch replaces it.
@@ -527,6 +568,10 @@ Disabled until the run ends.
 9. **Tick steps under a minute** (30 s, 15 s) for short sessions at wide widths.
 10. **Platform-transcript durations at ingest** (§4.6): read from the last cue, or accept
     one scale move.
-11. **The motion spec's status-line shimmer.** §4.7.1 names the pipeline status line
+11. **A reader on a lens that becomes withheld** (project switch, Re-analyse): no
+    tab reads active, and the route stays. Phase 1 needs a rule.
+12. **The disabled web nav tab's look.** It keeps the inactive tab's muted text
+    (there is no disabled tier in the theme); only hover and pointer differ.
+13. **The motion spec's status-line shimmer.** §4.7.1 names the pipeline status line
     as a shimmer target; this design makes it static. Amend §4.7.1. (Nothing ships
     the native status shimmer yet: `SidebarShimmerText` is used only in the tuner.)

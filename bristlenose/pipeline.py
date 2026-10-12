@@ -666,6 +666,38 @@ def _transcript_fingerprint(transcript: FullTranscript, *extra: str) -> str:
     return hash_bytes("|".join([payload, *extra]).encode("utf-8"))
 
 
+_REPORT_FILE_RE = re.compile(r"^bristlenose-.+-report\.(?:html|md)$")
+
+
+def remove_superseded_reports(output_dir: Path, report_path: Path) -> list[Path]:
+    """Remove report files written under another project name.
+
+    The report is named after the project, and the project after its folder
+    unless ``--project`` says otherwise, so a renamed folder writes a new
+    ``bristlenose-<slug>-report.html`` beside the old one — three of them
+    after two renames (lifecycle handoff §1.2 P8, measured 12 Oct 2026). The
+    name follows the folder on purpose, as the Mac app's sidebar does; what
+    is removed is the stale pair, never anything but our own report files.
+    """
+    keep = {report_path.name, report_path.with_suffix(".md").name}
+    removed: list[Path] = []
+    for path in sorted(output_dir.glob("bristlenose-*-report.*")):
+        if path.name in keep or not _REPORT_FILE_RE.match(path.name) or not path.is_file():
+            continue
+        try:
+            path.unlink()
+        except OSError as exc:
+            logger.warning("Could not remove superseded report %s: %s", path, exc)
+            continue
+        removed.append(path)
+    if removed:
+        logger.info(
+            "Removed %d report file(s) from a previous project name: %s",
+            len(removed), ", ".join(p.name for p in removed),
+        )
+    return removed
+
+
 #: The output folders that hold one file (or two) per session, by session id.
 _PER_SESSION_DIRS = (
     "transcripts-raw",
@@ -2987,6 +3019,7 @@ class Pipeline:
                 transcripts=transcripts,
                 analysis=analysis,
             )
+            remove_superseded_reports(output_dir, report_path)
             _render_elapsed = time.perf_counter() - t0
             _print_step("Rendered report", _render_elapsed)
             _stage_actuals[STAGE_RENDER] = StageActual(
@@ -3545,7 +3578,8 @@ class Pipeline:
                 transcripts=clean_transcripts,
                 analysis=analysis,
             )
-            _print_step("Rendered report", time.perf_counter() - t0)
+            remove_superseded_reports(output_dir, report_path)
+        _print_step("Rendered report", time.perf_counter() - t0)
 
         elapsed = time.perf_counter() - pipeline_start
 
@@ -3964,6 +3998,7 @@ class Pipeline:
             transcripts=transcripts,
             analysis=analysis,
         )
+        remove_superseded_reports(output_dir, report_path)
         _print_step("Rendered report", time.perf_counter() - t0)
 
         return PipelineResult(

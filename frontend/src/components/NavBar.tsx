@@ -8,6 +8,7 @@
 
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useLenses, type LensId } from "../contexts/ConditionStore";
 import { ExportDropdown } from "./ExportDropdown";
 import { RefreshButton } from "./RefreshButton";
 
@@ -18,14 +19,14 @@ interface NavBarProps {
   onHelp?: () => void;
 }
 
-const TAB_ROUTES = [
-  { to: "/report/", key: "nav.project", end: true },
-  { to: "/report/sessions/", key: "nav.sessions" },
-  { to: "/report/quotes/", key: "nav.quotes" },
-  { to: "/report/codebook/", key: "nav.codebook" },
-  { to: "/report/signals/", key: "nav.signals" },
-  { to: "/report/discussion/", key: "nav.discussion" },
-] as const;
+const TAB_ROUTES: readonly { to: string; key: string; lens: LensId; end?: boolean }[] = [
+  { to: "/report/", key: "nav.project", lens: "project", end: true },
+  { to: "/report/sessions/", key: "nav.sessions", lens: "sessions" },
+  { to: "/report/quotes/", key: "nav.quotes", lens: "quotes" },
+  { to: "/report/codebook/", key: "nav.codebook", lens: "codebook" },
+  { to: "/report/signals/", key: "nav.signals", lens: "signals" },
+  { to: "/report/discussion/", key: "nav.discussion", lens: "discussion" },
+];
 
 /** Dev mode — same signal AppLayout uses for the responsive playground. */
 const IS_DEV =
@@ -39,18 +40,22 @@ function tabClassName({ isActive }: { isActive: boolean }): string {
 
 export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: NavBarProps) {
   const { t } = useTranslation();
+  const lenses = useLenses();
   return (
     <nav className="bn-global-nav">
-      {TAB_ROUTES.map(({ to, key, ...rest }) => (
-        <NavLink
-          key={to}
-          to={to}
-          className={tabClassName}
-          {...rest}
-        >
-          {t(key)}
-        </NavLink>
-      ))}
+      {TAB_ROUTES.map(({ to, key, lens, end }) =>
+        lenses[lens] ? (
+          <NavLink key={to} to={to} className={tabClassName} end={end}>
+            {t(key)}
+          </NavLink>
+        ) : (
+          // A lens with nothing to show yet, during a run: visible, not a link
+          // (docs/design-progressive-lenses.md §2 — disabled, never hidden).
+          <span key={to} className="bn-tab" role="link" aria-disabled="true" data-lens={lens}>
+            {t(key)}
+          </span>
+        ),
+      )}
       {IS_DEV && (
         // Debug lens — dev only, English only (dev tool; no locale keys, same
         // precedent as the responsive playground).

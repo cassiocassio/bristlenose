@@ -85,6 +85,7 @@ export type BridgeMessage =
       canCreateGroups: boolean;
     }
   | { type: "store-miro-token"; token: string }
+  | { type: "lens-availability"; lenses: Record<string, boolean> }
   | { type: "llm-failure"; kind: string; provider: string };
 
 // ---------------------------------------------------------------------------
@@ -390,6 +391,17 @@ export function postPanelState(
  */
 export function postStoreMiroToken(token: string): void {
   postNativeMessage({ type: "store-miro-token", token });
+}
+
+/**
+ * Which lenses can be selected now, from the server's one derivation
+ * (`server/lens_readiness.py`, via ConditionStore). The Mac's lens rail and its
+ * ⌘-number menu cannot see inside the web view, so they read this. Posted on
+ * the first poll of each project and on every change. No-ops outside the
+ * desktop WKWebView. docs/design-progressive-lenses.md, Phase 0 step 3.
+ */
+export function postLensAvailability(lenses: Record<string, boolean>): void {
+  postNativeMessage({ type: "lens-availability", lenses });
 }
 
 // ---------------------------------------------------------------------------

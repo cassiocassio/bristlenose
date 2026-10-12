@@ -228,6 +228,15 @@ export async function triggerManualRefresh(): Promise<void> {
   }
 }
 
+/**
+ * Bump `refreshKey` without announcing anything: the database holds new data
+ * but no run completed (ConditionStore, on `data_version` moving). The
+ * "Pipeline completed" announcement stays tied to `/last-run`.
+ */
+export function bumpRefreshKey(): void {
+  setState({ ...state, refreshKey: state.refreshKey + 1 });
+}
+
 /** Reset for tests. */
 export function resetLastRunStore(): void {
   stopLastRunPolling();

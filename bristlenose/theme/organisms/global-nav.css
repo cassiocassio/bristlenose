@@ -31,6 +31,18 @@
     color: var(--bn-colour-text);
 }
 
+/* A lens with nothing to show yet, during a run (progressive lenses): the
+   tab stays visible and is not a link — NavBar renders it as a span with
+   aria-disabled. It keeps the inactive tab's muted text and refuses the hover
+   that would promise a destination. The theme has no disabled tier distinct
+   from muted, so at rest it looks like an inactive tab: a design call owed
+   (docs/design-progressive-lenses.md §7). */
+.bn-tab[aria-disabled="true"],
+.bn-tab[aria-disabled="true"]:hover {
+    color: var(--bn-colour-muted);
+    cursor: default;
+}
+
 .bn-tab.active {
     color: var(--bn-colour-accent);
     border-bottom-color: var(--bn-colour-accent);

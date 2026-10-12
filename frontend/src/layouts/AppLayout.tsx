@@ -88,6 +88,7 @@ import i18n from "../i18n";
 import { resolveBrowserLang } from "../i18n/LocaleStore";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
+import { startConditionPolling } from "../contexts/ConditionStore";
 import { getExportData } from "../utils/exportData";
 import { DEFAULT_HEALTH_RESPONSE, type HealthResponse } from "../utils/health";
 import { asPhrase } from "../utils/searchMatch";
@@ -284,6 +285,13 @@ function AppShell() {
     if (!embedded) return;
     postExportCounts(totalQuoteCount, selectedQuoteCount, starredQuoteCount);
   }, [embedded, totalQuoteCount, selectedQuoteCount, starredQuoteCount]);
+
+  // The project's condition: the refresh key while a run imports data, and which
+  // lenses can be selected (nav here, the lens rail on the Mac). One poller for
+  // every lens, so it lives in the shell, not in each tab.
+  useEffect(() => {
+    startConditionPolling(projectId);
+  }, [projectId]);
 
   // Push the focused quote to native so the Quotes menu's focus-gated items
   // (Add Tag, Reveal in Transcript) enable exactly when a quote is focused —

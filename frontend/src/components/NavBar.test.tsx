@@ -1,7 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { act, render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { NavBar } from "./NavBar";
+import { resetConditionStore, startConditionPolling } from "../contexts/ConditionStore";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -108,3 +109,30 @@ describe("NavBar", () => {
     expect(screen.getByRole("button", { name: "Help" })).toHaveAttribute("aria-haspopup", "dialog");
   });
 });
+
+describe("NavBar — lenses with nothing to show yet", () => {
+  afterEach(() => resetConditionStore());
+
+  it("renders a disabled lens as text, not a link, and keeps it visible", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: async () => ({
+        data_version: 0,
+        lenses: { project: false, sessions: true, quotes: false, codebook: false, signals: false, discussion: false },
+      }),
+    }) as unknown as typeof globalThis.fetch;
+    await act(async () => {
+      startConditionPolling("1");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    renderNavBar("/report/sessions/");
+    expect(screen.getByRole("link", { name: "Sessions" })).toHaveAttribute("href", "/report/sessions/");
+    const quotes = screen.getByText("Quotes");
+    expect(quotes.tagName).toBe("SPAN");
+    expect(quotes).toHaveAttribute("aria-disabled", "true");
+    expect(quotes).not.toHaveAttribute("href");
+  });
+});
+

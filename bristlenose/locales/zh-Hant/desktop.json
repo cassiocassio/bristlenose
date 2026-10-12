@@ -206,6 +206,7 @@
     "filesToAnalyse_other": "{{count}} \u500b\u6a94\u6848\u5f85\u5206\u6790",
     "titleSessions_other": "{{count}} 個工作階段",
     "missingSubtitle_other": "{{count}} 則遺失",
+    "databaseForked": "\u8cc7\u6599\u5eab\u5df2\u5206\u88c2",
     "tooltipWaiting": "{{count}} 則等待中",
     "dateRelativeJustNow": "剛剛",
     "unanalysedSheetTitle": "{{project}} 中的未分析檔案",
@@ -240,7 +241,8 @@
     "filesPopover": {
       "unanalysedTitle": "\u672a\u5206\u6790\u7684\u6a94\u6848",
       "missingTitle": "\u907a\u5931\u7684\u6a94\u6848",
-      "missingFooter": "\u9019\u4e9b\u6a94\u6848\u5df2\u4e0d\u5728\u5c08\u6848\u6a94\u6848\u593e\u4e2d\u3002"
+      "missingFooter": "\u9019\u4e9b\u6a94\u6848\u5df2\u4e0d\u5728\u5c08\u6848\u6a94\u6848\u593e\u4e2d\u3002",
+      "databaseForkedFooter": "\u5206\u6790\u8cc7\u6599\u5eab\u542b\u6709\u591a\u500b\u5c08\u6848\uff0c\u56e0\u6b64\u5831\u544a\u986f\u793a\u7684\u5167\u5bb9\u53ef\u80fd\u5c11\u65bc\u6b64\u5217\u6240\u8a08\u3002\u91cd\u65b0\u5206\u6790\u22ef \u6703\u91cd\u5efa\u8cc7\u6599\u5eab\u3002"
     },
     "pipeline": {
       "unreachable": {

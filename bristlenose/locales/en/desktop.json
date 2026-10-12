@@ -215,6 +215,7 @@
     "titleSessions_other": "{{count}} Sessions",
     "missingSubtitle_one": "1 missing",
     "missingSubtitle_other": "{{count}} missing",
+    "databaseForked": "Report database split",
     "tooltipWaiting": "{{count}} waiting",
     "dateRelativeJustNow": "Just now",
     "unanalysedSheetTitle": "Unanalysed files in {{project}}",
@@ -258,7 +259,8 @@
     "filesPopover": {
       "unanalysedTitle": "Unanalysed files",
       "missingTitle": "Missing files",
-      "missingFooter": "These files are no longer in the project folder."
+      "missingFooter": "These files are no longer in the project folder.",
+      "databaseForkedFooter": "The analysis database holds more than one project, so the report can show less than this row counts. Re-analyse\u2026 rebuilds it."
     },
     "pipeline": {
       "unreachable": {

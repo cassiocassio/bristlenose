@@ -123,6 +123,7 @@ enum SidebarSubtitleText {
         switch delta {
         case .unanalysed(let count): return deltaText(prefix: "unanalysedSubtitle", count: count, i18n: i18n)
         case .missing(let count):    return deltaText(prefix: "missingSubtitle", count: count, i18n: i18n)
+        case .databaseForked:        return i18n.t("desktop.chrome.databaseForked")
         }
     }
 

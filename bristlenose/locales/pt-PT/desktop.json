@@ -214,6 +214,7 @@
     "titleSessions_other": "{{count}} sessões",
     "missingSubtitle_one": "1 em falta",
     "missingSubtitle_other": "{{count}} em falta",
+    "databaseForked": "Base de dados dividida",
     "tooltipWaiting": "{{count}} em espera",
     "dateRelativeJustNow": "Agora mesmo",
     "unanalysedSheetTitle": "Ficheiros não analisados em {{project}}",
@@ -257,7 +258,8 @@
     "filesPopover": {
       "unanalysedTitle": "Ficheiros n\u00e3o analisados",
       "missingTitle": "Ficheiros em falta",
-      "missingFooter": "Estes ficheiros j\u00e1 n\u00e3o est\u00e3o na pasta do projeto."
+      "missingFooter": "Estes ficheiros j\u00e1 n\u00e3o est\u00e3o na pasta do projeto.",
+      "databaseForkedFooter": "A base de dados da an\u00e1lise cont\u00e9m mais de um projeto, pelo que o relat\u00f3rio pode mostrar menos do que esta linha conta. Reanalisar\u2026 reconstr\u00f3i-a."
     },
     "pipeline": {
       "unreachable": {

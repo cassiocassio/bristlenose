@@ -34,6 +34,11 @@ struct ProjectFilesPopover: View {
     let newFiles: [URL]
     /// Files the analysis read that are no longer on disk.
     let missingFiles: [URL]
+    /// The analysis database holds more than one project row, so the report
+    /// shows a different project from the one the last run wrote. Not a file
+    /// list — one fact and the act that clears it — but it has no other home
+    /// and the row's glyph already opens here. `UnanalysedState.databaseForked`.
+    var databaseForked: Bool = false
     /// Starts the run **and** closes the popover — the caller owns both.
     ///
     /// `nil` when a run can't start right now (already running, or a file-subset
@@ -99,7 +104,8 @@ struct ProjectFilesPopover: View {
     /// unanalysed — so the popover's title agrees with the row's glyph rather
     /// than the two disagreeing about what this row is about.
     private var title: String {
-        missingFiles.isEmpty
+        if databaseForked { return i18n.t("desktop.chrome.databaseForked") }
+        return missingFiles.isEmpty
             ? i18n.t("desktop.chrome.filesPopover.unanalysedTitle")
             : i18n.t("desktop.chrome.filesPopover.missingTitle")
     }
@@ -107,6 +113,14 @@ struct ProjectFilesPopover: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // The fork first: the report itself is wrong, which outranks any
+            // file drift, and it is what the row's glyph is about.
+            if databaseForked {
+                section(files: [],
+                        label: i18n.t("desktop.chrome.databaseForked"),
+                        footer: i18n.t("desktop.chrome.filesPopover.databaseForkedFooter"),
+                        kind: .error)
+            }
             // Missing first when both are present: source that has vanished is
             // the more urgent fact, and it is the one the row's glyph is about.
             if !missingFiles.isEmpty {

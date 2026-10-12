@@ -214,6 +214,7 @@
     "titleSessions_other": "{{count}} Entretiens",
     "missingSubtitle_one": "1 manquant",
     "missingSubtitle_other": "{{count}} manquants",
+    "databaseForked": "Base de donn\u00e9es scind\u00e9e",
     "tooltipWaiting": "{{count}} en attente",
     "dateRelativeJustNow": "\u00c0 l\u2019instant",
     "unanalysedSheetTitle": "Fichiers non analys\u00e9s dans {{project}}",
@@ -257,7 +258,8 @@
     "filesPopover": {
       "unanalysedTitle": "Fichiers non analys\u00e9s",
       "missingTitle": "Fichiers manquants",
-      "missingFooter": "Ces fichiers ne sont plus dans le dossier du projet."
+      "missingFooter": "Ces fichiers ne sont plus dans le dossier du projet.",
+      "databaseForkedFooter": "La base de donn\u00e9es de l'analyse contient plusieurs projets. Le rapport peut donc afficher moins que ce que compte cette ligne. R\u00e9analyser\u2026 la reconstruit."
     },
     "pipeline": {
       "unreachable": {

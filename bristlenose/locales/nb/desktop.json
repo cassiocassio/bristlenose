@@ -214,6 +214,7 @@
     "titleSessions_other": "{{count}} økter",
     "missingSubtitle_one": "1 mangler",
     "missingSubtitle_other": "{{count}} mangler",
+    "databaseForked": "Databasen er delt",
     "tooltipWaiting": "{{count}} venter",
     "dateRelativeJustNow": "Akkurat nå",
     "unanalysedSheetTitle": "Uanalyserte filer i {{project}}",
@@ -257,7 +258,8 @@
     "filesPopover": {
       "unanalysedTitle": "Ikke-analyserte filer",
       "missingTitle": "Manglende filer",
-      "missingFooter": "Disse filene finnes ikke lenger i prosjektmappen."
+      "missingFooter": "Disse filene finnes ikke lenger i prosjektmappen.",
+      "databaseForkedFooter": "Analysedatabasen inneholder mer enn ett prosjekt, s\u00e5 rapporten kan vise mindre enn denne raden teller. Analyser p\u00e5 nytt\u2026 bygger den opp igjen."
     },
     "pipeline": {
       "unreachable": {

@@ -214,6 +214,7 @@
     "titleSessions_other": "{{count}} sessies",
     "missingSubtitle_one": "1 ontbrekend",
     "missingSubtitle_other": "{{count}} ontbrekend",
+    "databaseForked": "Database gesplitst",
     "tooltipWaiting": "{{count}} in wachtrij",
     "dateRelativeJustNow": "Zojuist",
     "unanalysedSheetTitle": "Niet-geanalyseerde bestanden in {{project}}",
@@ -257,7 +258,8 @@
     "filesPopover": {
       "unanalysedTitle": "Niet-geanalyseerde bestanden",
       "missingTitle": "Ontbrekende bestanden",
-      "missingFooter": "Deze bestanden staan niet meer in de projectmap."
+      "missingFooter": "Deze bestanden staan niet meer in de projectmap.",
+      "databaseForkedFooter": "De analysedatabase bevat meer dan \u00e9\u00e9n project, dus het rapport kan minder tonen dan deze rij telt. Opnieuw analyseren\u2026 bouwt haar opnieuw op."
     },
     "pipeline": {
       "unreachable": {

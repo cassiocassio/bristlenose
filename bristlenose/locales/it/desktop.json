@@ -214,6 +214,7 @@
     "titleSessions_other": "{{count}} sessioni",
     "missingSubtitle_one": "1 mancante",
     "missingSubtitle_other": "{{count}} mancanti",
+    "databaseForked": "Database diviso",
     "tooltipWaiting": "{{count}} in attesa",
     "dateRelativeJustNow": "Adesso",
     "unanalysedSheetTitle": "File non analizzati in {{project}}",
@@ -257,7 +258,8 @@
     "filesPopover": {
       "unanalysedTitle": "File non analizzati",
       "missingTitle": "File mancanti",
-      "missingFooter": "Questi file non sono pi\u00f9 nella cartella del progetto."
+      "missingFooter": "Questi file non sono pi\u00f9 nella cartella del progetto.",
+      "databaseForkedFooter": "Il database dell'analisi contiene pi\u00f9 di un progetto, quindi il report pu\u00f2 mostrare meno di quanto conta questa riga. Rianalizza\u2026 lo ricostruisce."
     },
     "pipeline": {
       "unreachable": {

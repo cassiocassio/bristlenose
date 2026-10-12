@@ -214,6 +214,7 @@
     "titleSessions_other": "{{count}} Sesiones",
     "missingSubtitle_one": "1 falta",
     "missingSubtitle_other": "{{count}} faltan",
+    "databaseForked": "Base de datos dividida",
     "tooltipWaiting": "{{count}} en espera",
     "dateRelativeJustNow": "Ahora",
     "unanalysedSheetTitle": "Archivos sin analizar en {{project}}",
@@ -257,7 +258,8 @@
     "filesPopover": {
       "unanalysedTitle": "Archivos sin analizar",
       "missingTitle": "Archivos que faltan",
-      "missingFooter": "Estos archivos ya no est\u00e1n en la carpeta del proyecto."
+      "missingFooter": "Estos archivos ya no est\u00e1n en la carpeta del proyecto.",
+      "databaseForkedFooter": "La base de datos del an\u00e1lisis contiene m\u00e1s de un proyecto, por lo que el informe puede mostrar menos de lo que indica esta fila. Reanalizar\u2026 la reconstruye."
     },
     "pipeline": {
       "unreachable": {

@@ -6,10 +6,12 @@ private let log = Logger(subsystem: "app.bristlenose", category: "curation-count
 
 /// What a researcher would lose if the analysis were rebuilt from scratch.
 ///
-/// `--clean` is `shutil.rmtree(output_dir)` — the whole directory, database
-/// included — so a re-analysis discards every one of these. Counting them is
-/// what lets the confirmation sheet *measure* the cost instead of saying "this
-/// cannot be undone", which tells a researcher nothing they can weigh.
+/// `--clean` moves `bristlenose-output/` aside — the whole directory, database
+/// included — and discards the copy once the new run succeeds (since 30 Aug
+/// 2026; it was an `rmtree` before that), so a re-analysis discards every one
+/// of these. Counting them is what lets the confirmation sheet *measure* the
+/// cost instead of saying "this cannot be undone", which tells a researcher
+/// nothing they can weigh.
 ///
 /// **The analysis itself is deliberately not counted here.** It is rebuilt, not
 /// lost, and it is the thing the researcher just asked for; the sheet's opening
@@ -43,9 +45,20 @@ struct CurationCounts: Equatable {
 /// project) yields zero for that line rather than failing the whole read,
 /// because a sheet listing four of five losses is still worth far more than no
 /// sheet at all.
+///
+/// Scoped to `SourceFilesReader.reportProjectID`, the one row the report shows:
+/// a database that has forked into two rows (12 Oct 2026) must not have the
+/// second row's curation counted as something the researcher would lose from
+/// a report that never showed it. `persons` is instance-scoped by design and
+/// stays unfiltered.
+///
+/// **Call it off the main actor.** It opens a file: on an iCloud-evicted or
+/// sleeping-volume database that is a materialisation or a spin-up, and the
+/// menu click that asks would beachball for it. `ContentView.askToReAnalyse`
+/// hops to a detached task and back.
 enum CurationCountsReader {
 
-    static func read(projectRoot: URL) -> CurationCounts {
+    nonisolated static func read(projectRoot: URL) -> CurationCounts {
         let dbURL = projectRoot
             .appendingPathComponent("bristlenose-output", isDirectory: true)
             .appendingPathComponent(".bristlenose", isDirectory: true)
@@ -64,18 +77,29 @@ enum CurationCountsReader {
         }
         defer { sqlite3_close(db) }
 
+        let pid = SourceFilesReader.reportProjectID
         var counts = CurationCounts()
-        counts.editedQuotes = count(db, "SELECT COUNT(*) FROM quote_edits")
+        // The quote tables carry no `project_id`; they scope through `quotes`.
+        counts.editedQuotes = count(db, """
+            SELECT COUNT(*) FROM quote_edits e JOIN quotes q ON q.id = e.quote_id
+            WHERE q.project_id = \(pid)
+            """)
         // `source` distinguishes a researcher's tag from one AutoCode proposed
         // and nobody confirmed. Only the human ones are a loss.
-        counts.tags = count(db, "SELECT COUNT(*) FROM quote_tags WHERE source = 'human'")
-        counts.starredQuotes = count(db, "SELECT COUNT(*) FROM quote_states WHERE is_starred = 1")
+        counts.tags = count(db, """
+            SELECT COUNT(*) FROM quote_tags t JOIN quotes q ON q.id = t.quote_id
+            WHERE t.source = 'human' AND q.project_id = \(pid)
+            """)
+        counts.starredQuotes = count(db, """
+            SELECT COUNT(*) FROM quote_states s JOIN quotes q ON q.id = s.quote_id
+            WHERE s.is_starred = 1 AND q.project_id = \(pid)
+            """)
         // A speaker is "renamed" once a person carries a name the pipeline
         // could not have produced — speaker codes are p1/m1/o1, so any non-empty
         // full name is the researcher's doing.
         counts.renamedSpeakers = count(
             db, "SELECT COUNT(*) FROM persons WHERE full_name IS NOT NULL AND full_name != ''")
-        counts.namedThemes = count(db, "SELECT COUNT(*) FROM heading_edits")
+        counts.namedThemes = count(db, "SELECT COUNT(*) FROM heading_edits WHERE project_id = \(pid)")
         log.info("read: \(counts.total) curated items")
         return counts
     }
@@ -83,7 +107,7 @@ enum CurationCountsReader {
     /// One scalar count. Returns 0 — never nil — for a table this schema
     /// doesn't have: the sheet's job is to name what it can see, and a missing
     /// table means there is nothing of that kind to lose.
-    private static func count(_ db: OpaquePointer?, _ sql: String) -> Int {
+    private nonisolated static func count(_ db: OpaquePointer?, _ sql: String) -> Int {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             log.info("count: prepare failed for \(sql, privacy: .public)")

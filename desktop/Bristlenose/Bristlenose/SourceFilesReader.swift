@@ -46,10 +46,23 @@ struct ProjectDBSnapshot: Equatable {
     /// Nil when the DB isn't readable or the column is absent; 0 when the
     /// sessions table is empty. Read in the same open as `sessionCount`.
     let totalDurationSeconds: Double?
+    /// Rows in the `projects` table. The report reads **one** project — row
+    /// `SourceFilesReader.reportProjectID` — so anything above 1 is a defect
+    /// signal, not a feature: a serve that started while `bristlenose-output/`
+    /// was moved aside rooted its database in the interview folder and made an
+    /// empty row 1, and the run that followed was imported as row 2 with
+    /// everything in it (12 Oct 2026). Every lens read zero while this
+    /// reader, summing across both rows, told the sidebar the right count.
+    /// Nil when unreadable (no table, locked), same vocabulary as the others.
+    let projectRowCount: Int?
+
+    /// More than one project row — the report and the sidebar are reading
+    /// different projects. Nil (unreadable) is not a claim either way.
+    var isForked: Bool { (projectRowCount ?? 1) > 1 }
 
     static let empty = ProjectDBSnapshot(
         ingestedBasenames: [], ingestedPaths: [],
-        sessionCount: nil, totalDurationSeconds: nil
+        sessionCount: nil, totalDurationSeconds: nil, projectRowCount: nil
     )
 }
 
@@ -63,6 +76,12 @@ struct ProjectDBSnapshot: Equatable {
 /// `null` once ingest completes). The SQLite `source_files` + `sessions`
 /// tables are the authoritative source-of-truth.
 enum SourceFilesReader {
+
+    /// The one project the report reads. The serve publishes `last_run[1]` and
+    /// the SPA fetches `/api/projects/1/...`; a desktop project folder holds
+    /// exactly one study. Every query here scopes to it — a count that sums
+    /// across rows describes a database the report never shows.
+    static let reportProjectID = 1
 
     /// Read both the ingested-basename set and the session count in one
     /// SQLite open. Returns `ProjectDBSnapshot.empty` if the database
@@ -115,12 +134,21 @@ enum SourceFilesReader {
         let sources = readSources(db: db)
         let sessions = readSessionCount(db: db)
         let totalDuration = readTotalDuration(db: db)
+        let projectRows = readProjectRowCount(db: db)
+        if let projectRows, projectRows > 1 {
+            // A second row is always a bug now (the serve creates one row per
+            // project folder, at the folder's future output dir); say so where
+            // a support bundle can find it, and let the snapshot carry it to
+            // the sidebar.
+            log.error("readSnapshot: projects table holds \(projectRows, privacy: .public) rows — the report reads row \(reportProjectID, privacy: .public) only; the database has forked")
+        }
         log.info("readSnapshot: ingested=\(sources.basenames.count), sessions=\(sessions.map { String($0) } ?? "nil", privacy: .public)")
         return ProjectDBSnapshot(
             ingestedBasenames: sources.basenames,
             ingestedPaths: sources.paths,
             sessionCount: sessions,
-            totalDurationSeconds: totalDuration
+            totalDurationSeconds: totalDuration,
+            projectRowCount: projectRows
         )
     }
 
@@ -139,7 +167,13 @@ enum SourceFilesReader {
         db: OpaquePointer?
     ) -> (basenames: Set<String>, paths: Set<String>?) {
         var stmt: OpaquePointer?
-        let sql = "SELECT path FROM source_files"
+        // Scoped through `sessions`: `source_files` carries no `project_id`
+        // of its own (`bristlenose/server/models.py`).
+        let sql = """
+            SELECT sf.path FROM source_files sf
+            JOIN sessions s ON s.id = sf.session_id
+            WHERE s.project_id = \(reportProjectID)
+            """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             return ([], nil)
         }
@@ -176,7 +210,7 @@ enum SourceFilesReader {
 
     private static func readSessionCount(db: OpaquePointer?) -> Int? {
         var stmt: OpaquePointer?
-        let sql = "SELECT COUNT(*) FROM sessions"
+        let sql = "SELECT COUNT(*) FROM sessions WHERE project_id = \(reportProjectID)"
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             return nil
         }
@@ -189,9 +223,18 @@ enum SourceFilesReader {
         return nil
     }
 
+    private static func readProjectRowCount(db: OpaquePointer?) -> Int? {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM projects", -1, &stmt, nil) == SQLITE_OK else {
+            return nil
+        }
+        defer { sqlite3_finalize(stmt) }
+        return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int64(stmt, 0)) : nil
+    }
+
     private static func readTotalDuration(db: OpaquePointer?) -> Double? {
         var stmt: OpaquePointer?
-        let sql = "SELECT SUM(duration_seconds) FROM sessions"
+        let sql = "SELECT SUM(duration_seconds) FROM sessions WHERE project_id = \(reportProjectID)"
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             // Prepare fails if the column/table is absent (older schema) —
             // nil so the subtitle falls back to the count alone.

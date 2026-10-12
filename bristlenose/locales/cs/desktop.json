@@ -229,6 +229,7 @@
     "missingSubtitle_few": "{{count}} chybí",
     "missingSubtitle_many": "{{count}} chybí",
     "missingSubtitle_other": "{{count}} chybí",
+    "databaseForked": "Datab\u00e1ze rozd\u011blena",
     "tooltipWaiting": "{{count}} čeká",
     "dateRelativeJustNow": "Právě teď",
     "unanalysedSheetTitle": "Neanalyzované soubory v {{project}}",
@@ -290,7 +291,8 @@
     "filesPopover": {
       "unanalysedTitle": "Neanalyzovan\u00e9 soubory",
       "missingTitle": "Chyb\u011bj\u00edc\u00ed soubory",
-      "missingFooter": "Tyto soubory u\u017e ve slo\u017ece projektu nejsou."
+      "missingFooter": "Tyto soubory u\u017e ve slo\u017ece projektu nejsou.",
+      "databaseForkedFooter": "Datab\u00e1ze anal\u00fdzy obsahuje v\u00edce ne\u017e jeden projekt, tak\u017ee zpr\u00e1va m\u016f\u017ee ukazovat m\u00e9n\u011b, ne\u017e tento \u0159\u00e1dek po\u010d\u00edt\u00e1. Znovu analyzovat\u2026 ji znovu vytvo\u0159\u00ed."
     },
     "pipeline": {
       "unreachable": {

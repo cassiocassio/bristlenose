@@ -205,6 +205,11 @@ extension SubtitleVariant {
             // "This project isn't usable" — warning by the 18 Jun rule, whose
             // discriminator is usability, not cause.
             return .warning
+        case .deltaOnly(.databaseForked), .ready(_, .some(.databaseForked)):
+            // The report is reading a different project row from the one the
+            // run wrote into. Nothing self-resolves; the database has to be
+            // rebuilt. `error` by the 18 Jun rule (usability + self-resolving).
+            return .error
         case .deltaOnly(.missing), .ready(_, .some(.missing)):
             // "Analysed files missing from disk → warning — beyond neutral,
             // files gone." The report cites recordings that aren't there.
@@ -238,10 +243,16 @@ extension SubtitleVariant {
 }
 
 /// The single data-drift segment a row may surface (it shows at most one;
-/// `ProjectSubtitle.pickDelta` arbitrates "missing wins over unanalysed").
+/// `ProjectSubtitle.pickDelta` arbitrates "forked wins over missing wins over
+/// unanalysed").
 enum SubtitleDelta: Equatable {
     case unanalysed(count: Int)
     case missing(count: Int)
+    /// The analysis database holds more than one project row, so the report
+    /// shows a different project from the one the last run wrote. A defect
+    /// signal, not drift the researcher caused — see
+    /// `UnanalysedState.databaseForked`.
+    case databaseForked
 }
 
 /// Display state of an in-flight drag-import copy into a project, fed to
@@ -292,7 +303,8 @@ enum ProjectSubtitle {
         importBatch: (done: Int, total: Int)?,
         lastRunAt: Date?,
         missingCount: Int,
-        unanalysedCount: Int
+        unanalysedCount: Int,
+        databaseForked: Bool = false
     ) -> SubtitleVariant {
         // Tier 1 — availability beats everything when the project can't be
         // reached. `.ready` / `.inCloud` fall through.
@@ -331,7 +343,8 @@ enum ProjectSubtitle {
                 importBatch: importBatch,
                 lastRunAt: lastRunAt,
                 missingCount: missingCount,
-                unanalysedCount: unanalysedCount
+                unanalysedCount: unanalysedCount,
+                databaseForked: databaseForked
             )
         }
     }
@@ -352,7 +365,8 @@ enum ProjectSubtitle {
         importBatch: (done: Int, total: Int)?,
         lastRunAt: Date?,
         missingCount: Int,
-        unanalysedCount: Int
+        unanalysedCount: Int,
+        databaseForked: Bool
     ) -> SubtitleVariant {
         // The pre-copy "Adding N interviews…" gesture ack outranks the copy and
         // the resting date/delta (the ~2 s floor keeps it up briefly). It yields
@@ -377,7 +391,8 @@ enum ProjectSubtitle {
             case .cancelling: return .copyCancelling
             }
         }
-        let delta = pickDelta(missingCount: missingCount, unanalysedCount: unanalysedCount)
+        let delta = pickDelta(missingCount: missingCount, unanalysedCount: unanalysedCount,
+                              databaseForked: databaseForked)
         // **Schema E (settled 29 Jul 2026) — a clean row is silent.** A delta is
         // an exception and earns a line; a project that is simply analysed and
         // fine says nothing, and `ProjectCellSpec` collapses `.placeholder` to a
@@ -394,9 +409,14 @@ enum ProjectSubtitle {
         return .placeholder
     }
 
-    /// Pick the single delta to surface: missing (data drift) wins over
-    /// unanalysed (a feature gap). Returns nil when neither applies.
-    static func pickDelta(missingCount: Int, unanalysedCount: Int) -> SubtitleDelta? {
+    /// Pick the single delta to surface: a forked database (the report is
+    /// wrong) wins over missing (data drift) wins over unanalysed (a feature
+    /// gap). Returns nil when none applies.
+    static func pickDelta(missingCount: Int, unanalysedCount: Int,
+                          databaseForked: Bool = false) -> SubtitleDelta? {
+        if databaseForked {
+            return .databaseForked
+        }
         if missingCount > 0 {
             return .missing(count: missingCount)
         }

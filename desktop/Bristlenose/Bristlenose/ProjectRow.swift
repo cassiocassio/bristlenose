@@ -466,6 +466,10 @@ struct ProjectRow: View {
             Text(deltaText(prefix: "missingSubtitle", count: count))
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        case .databaseForked:
+            Text(i18n.t("desktop.chrome.databaseForked"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -517,7 +521,8 @@ struct ProjectRow: View {
             importBatch: nil,
             lastRunAt: project.lastPipelineRunAt,
             missingCount: unanalysed?.missingFiles.count ?? 0,
-            unanalysedCount: unanalysed?.newFiles.count ?? 0
+            unanalysedCount: unanalysed?.newFiles.count ?? 0,
+            databaseForked: unanalysed?.databaseForked ?? false
         )
     }
 

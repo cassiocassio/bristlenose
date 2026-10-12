@@ -230,6 +230,48 @@ class TestWritesRefusedWhileARunOwnsTheProject:
             "the carry happens once the run has let go"
         )
 
+    def test_a_withdrawn_pin_is_not_dropped_under_a_live_run(self, tmp_path: Path) -> None:
+        """``drop_withdrawn_pins`` saves the registry, so it too must wait for
+        the run to let go. A person pick reaches it under a live run (only
+        recodes and swaps are refused), so the guard inside it is the only
+        thing stopping that write. A re-check mutation found it untested on
+        12 Oct 2026: removing it left every test green.
+
+        The setup builds a pin that WOULD be dropped — the recode undone in the
+        database, the pin still in the registry — so the unlocked call at the
+        end proves the test is not degenerate."""
+        from bristlenose.server.routes.data import drop_withdrawn_pins
+
+        project = _with_quotes(tmp_path)
+        out = project / "bristlenose-output"
+        reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}, "s2": {"Kerri": "m1", "Ann": "p2"}})
+        client = _client(project)
+        client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
+        assert client.post("/api/projects/1/sessions/s1/reanalyse").status_code == 200
+        pinned = reg.read_text()
+        assert json.loads(pinned)["pins"]["s1"]
+        # Undo the recode (which drops the pin), then put the pin back by hand:
+        # a withdrawn pin waiting to be dropped.
+        client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
+        reg.write_text(pinned)
+
+        def drop() -> None:
+            db = client.app.state.db_factory()
+            try:
+                drop_withdrawn_pins(db, 1, "s1")
+            finally:
+                db.close()
+
+        _lock(out)
+        drop()
+        assert reg.read_text() == pinned, "the registry was written under a live run"
+
+        _unlock(out)
+        drop()
+        assert "s1" not in json.loads(reg.read_text())["pins"], (
+            "with no run, the withdrawn pin is dropped — so the locked call above was a real refusal"
+        )
+
 
 # ---------------------------------------------------------------------------
 # WS2.4 — stash refuses a live run's output

@@ -1038,6 +1038,36 @@ class TestMlxBackendRemovesLoops:
         assert "c39" in text and "Gracias" not in text
 
 
+    def test_a_loop_hidden_by_a_line_the_gates_drop_still_goes(self, monkeypatch, tmp_path) -> None:
+        """A blank line splits the run in two short tight ones, which pass;
+        once the blank is gone the twelve lines are one loop."""
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        nada = [{"start": 12.0 + k * 0.5, "end": 12.2 + k * 0.5, "text": " nada"} for k in range(12)]
+
+        def _fake(_audio, **_kw):
+            return {"language": "es", "segments": [
+                {"start": 0.0, "end": 10.0, "text": " " + " ".join(f"a{i}" for i in range(25))},
+                *nada[:6], {"start": 15.05, "end": 15.1, "text": " "}, *nada[6:],
+                {"start": 20.0, "end": 30.0, "text": " " + " ".join(f"b{i}" for i in range(25))},
+            ]}
+
+        monkeypatch.setattr(s05_transcribe, "STYLE_PROMPTS", {})
+        monkeypatch.setattr(s05_transcribe, "SKIP_NET_ENABLED", False)
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: _tone(30, -20))
+        monkeypatch.setattr(mlx_whisper, "transcribe", _fake)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "auto"})()
+        segments, _ = s05_transcribe._init_mlx_backend(settings)(tmp_path / "p1.wav", settings)
+
+        assert "nada" not in " ".join(s.text for s in segments)
+
+
 class TestMlxBackendRecoversSkippedSpeech:
     """The wiring: a skipped stretch is re-decoded on its own and the new text
     replaces the old only when it is real speech."""

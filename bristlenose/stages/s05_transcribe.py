@@ -929,10 +929,6 @@ def _init_mlx_backend(
             kept = _recover_skipped(
                 kept, audio, levels, decode_kwargs, result.get("language"), audio_path.name,
             )
-            # And once more on the whole: re-decodes of neighbouring stretches
-            # can line up into a loop no single one held.
-            kept, more = drop_segment_loops(kept)
-            looped += more
 
         segments: list[TranscriptSegment] = []
         guesses = 0
@@ -977,6 +973,15 @@ def _init_mlx_backend(
                     words=words,
                     source="mlx-whisper",
                 ))
+
+        # And once more on the finished transcript: a re-decode beside a
+        # first-pass line of the same text can make a loop neither held, and a
+        # line the gates above dropped can have hidden one (es-1, 12 Oct 2026:
+        # 18 "nada" lines survived a check made before the gates).
+        final = find_segment_loops([(s.start_time, s.end_time, s.text) for s in segments])
+        gone = {k for i, j in final for k in range(i, j)}
+        segments = [s for k, s in enumerate(segments) if k not in gone]
+        looped += len(gone)
 
         if in_silence:
             logger.info(

@@ -711,3 +711,57 @@ def test_each_session_s_quotes_are_on_disk_before_the_manifest_says_so(tmp_path:
     )
     assert seen["quoted"] == frozenset({"s1"})
     assert [q["session_id"] for q in seen["file"]] == ["s1"]  # type: ignore[union-attr]
+
+
+def test_each_sessions_scene_colours_are_written_before_it_is_readable(tmp_path: Path) -> None:
+    """Phase 4 item 5: the colour layer arrives with the row, not at the barrier,
+    and a colour failure does not stop the session being delivered."""
+    from bristlenose.stages.s05_transcribe import SessionTranscription
+
+    calls: list[tuple[str, frozenset[str]]] = []
+
+    def _colours(sessions, transcripts, out_dir):
+        out = out_dir.parents[2]
+        sid = sessions[0].session_id
+        calls.append((sid, readable_in_manifest(load_manifest(out))))
+        if sid == "s1":
+            raise OSError("ffmpeg could not read the video")
+        return {}
+
+    def _iter(needs, _settings, **_kw):
+        yield SessionTranscription("s1", _two_speakers())
+        yield SessionTranscription("s2", _two_speakers())
+
+    async def _roles(*_a, **_kw):
+        return []
+
+    out, _ = _run(
+        tmp_path, iter_fn=_iter, roles=_roles, match="stop after the speakers",
+        extra=(("bristlenose.utils.scene_colour.extract_scene_colours", {"new": _colours}),),
+    )
+    assert calls[:2] == [("s1", frozenset()), ("s2", frozenset({"s1"}))]
+    assert readable_in_manifest(load_manifest(out)) == {"s1", "s2"}
+
+
+def test_a_platform_transcripts_duration_is_known_at_ingest(tmp_path: Path) -> None:
+    """§4.6 / §7 item 11: the last cue's end, so the timeline scale does not move
+    when a platform transcript is imported."""
+    from bristlenose.models import FileType, InputFile, InputSession
+    from bristlenose.readable_chain import ingest_facts
+
+    vtt = tmp_path / "s1.vtt"
+    vtt.write_text(
+        "WEBVTT\n\n00:00:01.000 --> 00:00:04.000\n<v Ann>Hello there.\n\n"
+        "00:04:58.000 --> 00:05:02.500\n<v Ben>Thanks, bye.\n",
+        encoding="utf-8",
+    )
+    session = InputSession(
+        session_id="s1", session_number=1, participant_id="p1", participant_number=1,
+        files=[InputFile(path=vtt, file_type=FileType.SUBTITLE_VTT,
+                         created_at=datetime(2026, 9, 20, tzinfo=timezone.utc), size_bytes=1)],
+        session_date=datetime(2026, 9, 20, tzinfo=timezone.utc),
+        has_existing_transcript=True,
+    )
+    (fact,) = ingest_facts([session])
+    assert fact["duration_seconds"] == pytest.approx(302.5)
+    assert fact["transcribes"] is False

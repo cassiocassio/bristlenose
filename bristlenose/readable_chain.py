@@ -235,6 +235,19 @@ class ReadableChain:
         write_raw_transcripts_md(
             transcripts, self._raw_dir, sentence_paragraphs=self.sentence_paragraphs,
         )
+        # Scene colours for the session's tapestry (docs/design-progressive-lenses.md,
+        # Phase 4 item 5), so they arrive with the row rather than at the barrier.
+        # About 1.5 s per hour of video; cached by video and turns, so the run's own
+        # pass before render costs nothing for this session. Cosmetic: never fatal.
+        try:
+            from bristlenose.utils.scene_colour import extract_scene_colours
+
+            extract_scene_colours(
+                [session], transcripts,
+                self._output_dir / ".bristlenose" / "intermediate" / "scene-colours",
+            )
+        except Exception:  # noqa: BLE001 — a session without colours is still readable
+            logger.warning("readable_chain | no scene colours for %s", sid, exc_info=True)
         # Last: the server imports a session the manifest calls merged, so the
         # files are whole before the record says so.
         mark_session_complete(self._manifest, STAGE_MERGE_TRANSCRIPT, sid)
@@ -286,8 +299,43 @@ def ingest_facts(sessions: list[InputSession]) -> list[dict[str, object]]:
             entry["source"] = named.path.name
         if durations:
             entry["duration_seconds"] = max(durations)
+        elif (cue_end := _last_cue_end(s)) is not None:
+            entry["duration_seconds"] = cue_end
         out.append(entry)
     return out
+
+
+def _last_cue_end(session: InputSession) -> float | None:
+    """A platform transcript's duration: its last cue's end, so the tapestry's scale is
+    fixed from the first second (docs/design-progressive-lenses.md §4.6). Unknown → None.
+
+    The file is parsed again at stage 3/4; the parse is cheap. A file not on disk yet
+    (an iCloud placeholder) is not read here: ingest must not start a download.
+    """
+    from bristlenose.models import FileType
+    from bristlenose.utils.fs import is_dataless
+
+    for f in session.files:
+        try:
+            if is_dataless(f.path):
+                continue
+            if f.file_type in (FileType.SUBTITLE_SRT, FileType.SUBTITLE_VTT):
+                from bristlenose.stages.s03_parse_subtitles import parse_subtitle_file
+
+                segments = parse_subtitle_file(f)
+            elif f.file_type == FileType.DOCX:
+                from bristlenose.stages.s04_parse_docx import parse_docx_file
+
+                segments = parse_docx_file(f)
+            else:
+                continue
+        except Exception:  # noqa: BLE001 — a fact we cannot read is a fact we leave out
+            logger.debug("ingest facts | no duration from %s", f.path.name, exc_info=True)
+            continue
+        ends = [seg.end_time for seg in segments if seg.end_time]
+        if ends:
+            return max(ends)
+    return None
 
 
 def write_ingest_facts(output_dir: Path, sessions: list[InputSession]) -> None:

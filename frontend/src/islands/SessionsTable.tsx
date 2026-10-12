@@ -62,6 +62,7 @@ import type {
   TapestrySession,
 } from "../utils/types";
 import { fitScale, loadTapestryView, saveTapestryView, zoomScale } from "../utils/tapestryScale";
+import { mergeTapestry } from "../utils/tapestryMerge";
 import { refetchOverlayProps } from "../hooks/useRefetching";
 
 // The picker's code is loaded when someone first opens it: the grid is part of
@@ -271,14 +272,9 @@ export function SessionsTable({
           if (cancelled) return;
           // Built here, not in the updater: a bad body then lands in the catch below, not in render.
           const next = Object.fromEntries(json.sessions.map((ts) => [ts.session_id, ts]));
-          setTapestry((prev) => {
-            if (attempt === 0 || !prev) return next;
-            // A poll brings strips and nothing else: keep the session objects the slices hold (an
-            // open quote popover rests on the quotes array's identity) and take only the strip.
-            return Object.fromEntries(
-              Object.entries(next).map(([sid, ts]) => [sid, prev[sid] ? { ...prev[sid], strip: ts.strip } : ts]),
-            );
-          });
+          // Every refetch — a session imported during a run, a speaker write, a strip poll —
+          // keeps the layers that did not change, so an open quote popover survives it.
+          setTapestry((prev) => mergeTapestry(prev, next));
           // The export has no server to finish the job, so it never polls its own embedded answer.
           if (json.strips_pending && !isExportMode() && attempt < STRIP_POLL_LIMIT) {
             stripPoll = setTimeout(() => fetchTapestry(attempt + 1), stripPollDelay(attempt));
@@ -602,12 +598,21 @@ export function SessionsTable({
 
   // ── Session tapestry: one scale for every open slice, so sessions compare by eye.
   const hasTapestry = tapestry !== null && sessions.some((sess) => tapestry[sess.session_id]);
-  const longest = Math.max(1, ...sessions.map((sess) => tapestry?.[sess.session_id]?.duration_seconds ?? 0));
-  const sPerPx = zoomScale(fitScale(longest, gridWidth || 1000), zoom);
+  // Every row's duration, readable or not — known from ingest (a recording's probe, a
+  // platform transcript's last cue), so the scale is fixed from the first second and an
+  // open timeline does not shrink when a longer one arrives. 0 (not known) is left out.
+  const durations = sessions.map((sess) => sess.duration_seconds || tapestry?.[sess.session_id]?.duration_seconds || 0);
+  const fit = fitScale(durations, gridWidth || 1000);
+  const sPerPx = zoomScale(fit, zoom);
   const toggleTapestry = (sid: string, all: boolean) =>
     setOpenTapestries((prev) => {
       const open = !prev.has(sid);
-      if (all) return open ? new Set(sessions.map((sess) => sess.session_id)) : new Set();
+      // Option-click opens every readable row; a row readable later arrives closed (§2).
+      if (all) {
+        return open
+          ? new Set(sessions.filter((sess) => (sess.state ?? "readable") === "readable").map((sess) => sess.session_id))
+          : new Set();
+      }
       const next = new Set(prev);
       if (open) next.add(sid);
       else next.delete(sid);
@@ -620,7 +625,7 @@ export function SessionsTable({
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" /><path d="M10 10l3.5 3.5M4.5 6.5h4" /></svg>
       </button>
       <input type="range" className="bn-tp-zoom-slider" min={0} max={100} value={zoom}
-        aria-valuetext={zoom === 0 ? "1×" : `${(fitScale(longest, gridWidth || 1000) / sPerPx).toFixed(1)}×`}
+        aria-valuetext={zoom === 0 ? "1×" : `${(fit / sPerPx).toFixed(1)}×`}
         aria-label={t("sessions.tapestry.zoom")} onChange={(e) => setZoom(Number(e.target.value))}
         onDoubleClick={() => setZoom(0)} />
       <button type="button" className="bn-tp-zoom-btn" aria-label={t("sessions.tapestry.zoomIn")}

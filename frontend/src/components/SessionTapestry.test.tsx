@@ -338,13 +338,53 @@ describe("SessionTapestry — theme tags", () => {
 });
 
 describe("tapestry scale", () => {
-  it("fits the longest session, held between 1 and 4 s/px", () => {
-    expect(fitScale(300, 1000)).toBe(1);        // short project: never blown up
-    expect(fitScale(6000, 1000)).toBe(4);       // 100 min: clamped, so it scrolls
-    expect(fitScale(1800, 1000)).toBeCloseTo(1800 / (1000 - 82 - 14));
+  // docs/design-progressive-lenses.md §4.6, at a 1280 px window: 906 px usable.
+  const W = 906 + 82 + 14;
+  const opens = (durations: number[]) => {
+    const fit = fitScale(durations, W);
+    return { fit, at: (d: number) => d / fit / 906 };
+  };
+  it("fits one five-minute first try to the width", () => {
+    const { fit, at } = opens([300]);
+    expect(fit).toBeCloseTo(0.33, 2);
+    expect(at(300)).toBeCloseTo(1, 5);
   });
-  it("zooms from fit down to 0.25 s/px", () => {
+  it("leaves out a short test among long sessions", () => {
+    const { fit, at } = opens([300, 3600, 3600, 3600]);
+    expect(fit).toBeCloseTo(3.97, 2);
+    expect(at(3600)).toBeCloseTo(1, 5);
+  });
+  it("leaves out one long session among short ones", () => {
+    const { fit, at } = opens([300, 300, 300, 2400]);
+    expect(fit).toBeCloseTo(0.33, 2);
+    expect(at(2400)).toBeCloseTo(8, 5);
+  });
+  it("fits the shortest of a homogeneous project", () => {
+    const { fit, at } = opens([1200, 2400, 3600]);
+    expect(fit).toBeCloseTo(1.32, 2);
+    expect(at(3600)).toBeCloseTo(3, 5);
+  });
+  it("lets the four-widths cap win on a wide spread (FOSSDA)", () => {
+    const { fit, at } = opens([2378, 3650, 5657, 2363, 5981, 1388, 3300, 2019, 1390, 1297]);
+    expect(fit).toBeCloseTo(1.65, 2);
+    expect(at(1297)).toBeCloseTo(0.87, 2);
+    expect(at(5981)).toBeCloseTo(4, 5);
+  });
+  it("has no lower clamp (Rockclimbing)", () => {
+    const { fit, at } = opens([77, 225, 229, 199, 232, 224, 242, 255]);
+    expect(fit).toBeCloseTo(0.085, 3);
+    expect(at(255)).toBeCloseTo(3.31, 2);
+  });
+  it("is held at 4 s/px on a narrow table", () => {
+    expect(fitScale([3600], 300)).toBe(4);
+  });
+  it("leaves out durations not known yet (0)", () => {
+    expect(fitScale([0, 0], W)).toBe(1);
+    expect(fitScale([1200, 0, 2400], W)).toBeCloseTo(fitScale([1200, 2400], W));
+  });
+  it("zooms from fit down to min(0.25, fit / 4)", () => {
     expect(zoomScale(4, 0)).toBeCloseTo(4);
     expect(zoomScale(4, 100)).toBeCloseTo(0.25);
+    expect(zoomScale(0.33, 100)).toBeCloseTo(0.0825);
   });
 });

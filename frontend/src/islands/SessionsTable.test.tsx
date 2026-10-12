@@ -1270,7 +1270,9 @@ describe("SessionsTable — session tapestry", () => {
       (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
         if (url.includes("/tapestry")) {
           calls += 1;
-          const body = { ...tapestryResponse, strips_pending: calls === 1 };
+          // A fresh object graph per answer, as a real fetch gives: a shared one keeps the
+          // quotes array's identity however the grid folds it in, and the test could not fail.
+          const body = { ...structuredClone(tapestryResponse), strips_pending: calls === 1 };
           return Promise.resolve({ ok: true, json: async () => body });
         }
         if (url.includes("/sessions")) return Promise.resolve({ ok: true, json: async () => sessionsResponse });
@@ -1341,6 +1343,60 @@ describe("SessionsTable — session tapestry", () => {
     a.scrollLeft = 300;
     fireEvent.scroll(a);
     expect(b.scrollLeft).toBe(0);
+  });
+
+  // docs/design-progressive-lenses.md §2 and Phase 4: during a first analysis.
+  function mockRun(state: { s2: string; tapestry: unknown }) {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes("/tapestry")) return Promise.resolve({ ok: true, json: async () => state.tapestry });
+      if (url.includes("/sessions")) {
+        const body = {
+          ...sessionsResponse,
+          sessions: sessionsResponse.sessions.map((sess) =>
+            sess.session_id === "s2" ? { ...sess, state: state.s2 } : sess),
+        };
+        return Promise.resolve({ ok: true, json: async () => body });
+      }
+      if (url.includes("/people")) return Promise.resolve({ ok: true, json: async () => peopleResponse });
+      return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+    });
+  }
+
+  it("option-click opens the readable rows only; a row readable later arrives closed", async () => {
+    const two = { sessions: [tapestryResponse.sessions[0], { ...tapestryResponse.sessions[0], session_id: "s2" }] };
+    const state = { s2: "waiting", tapestry: two as unknown };
+    mockRun(state);
+    const view = render(<SessionsTable projectId="1" refreshKey={0} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Timeline for session 1" }), { altKey: true });
+    expect(screen.getByRole("button", { name: "Timeline for session 1" })).toHaveAttribute("aria-expanded", "true");
+
+    state.s2 = "readable";
+    view.rerender(<SessionsTable projectId="1" refreshKey={1} />);
+    const s2 = await screen.findByRole("button", { name: "Timeline for session 2" });
+    expect(s2).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("keeps an open quote popover through a session arriving during the run", async () => {
+    const state = { s2: "processing", tapestry: tapestryResponse as unknown };
+    mockRun(state);
+    const view = render(<SessionsTable projectId="1" refreshKey={0} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Timeline for session 1" }));
+    const bar = await waitFor(() => {
+      const b = document.querySelector<SVGElement>(".bn-tp-bar");
+      if (!b) throw new Error("no bar yet");
+      return b;
+    });
+    fireEvent.click(bar);
+    expect(document.querySelector(".bn-tp-popover")).not.toBeNull();
+
+    // Session 2 is imported: a new answer for every session, s1's unchanged.
+    state.s2 = "readable";
+    state.tapestry = JSON.parse(JSON.stringify({
+      sessions: [tapestryResponse.sessions[0], { ...tapestryResponse.sessions[0], session_id: "s2" }],
+    }));
+    view.rerender(<SessionsTable projectId="1" refreshKey={1} />);
+    await screen.findByRole("button", { name: "Timeline for session 2" });
+    expect(document.querySelector(".bn-tp-popover")).not.toBeNull();
   });
 
   it("keeps each project's open timelines to itself", async () => {

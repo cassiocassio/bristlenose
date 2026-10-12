@@ -1,5 +1,5 @@
 ---
-status: Phases 0–2 built 12 Oct 2026 (unreleased); Phase 3 deferred; Phase 4 designed; Phase 5 blocked on the Project lens call
+status: Phases 0–2 and 4 built 12 Oct 2026 (unreleased); Phase 3 deferred behind §7 item 17; Phase 5 blocked on the Project lens call
 last-trued: 2026-10-12
 trued-against: HEAD@main on 2026-10-12 (df8128c6, scene strips)
 owner: run progress across the pipeline, the report server, the SPA and the Mac app
@@ -12,8 +12,10 @@ mockup: docs/mockups/progressive-lenses-replay.html
   deferred behind §7 item 17, with the reason (the backend blocks the event loop, so
   chained quote calls would slow the run). §7: the duplicated item 6 renumbered (the second 6 and
   everything after it go up by one, to 7–17); items 1, 9, 15 and 16 carry what was built provisionally. §2
-  and Phase 4 item 5: scene colours arrive at the barrier today, not after the turns.
+  and Phase 4 item 5: scene colours arrived at the barrier, not after the turns.
   Front matter says what is built.
+- _2026-10-12, later_ — Phase 4 built: option-click, the scale rule, the refetch merge
+  and scene colours per session; as-built note under Phase 4.
 - _2026-10-12_ — trued up against the scene strips that shipped the same afternoon
   (`df8128c6`): §2 lists the fifth tapestry layer and the fact that it waits for the
   whole run; §1.2 no longer says the mockup inlines the CSS verbatim; Phase 4 names the
@@ -139,9 +141,8 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
 - The disclosure appears once a row is readable, and the tapestry arrives in
   layers: **turns** with the transcript; **scene colours** about 1.5 s per hour of
   video later; **sentiment marks** with that session's quotes; **section flags and
-  theme spans** at the barrier. These are real turns, not a skeleton. (Scene colours
-  are computed today just before render, so until Phase 4 item 5 they arrive at the
-  barrier, not after the turns.)
+  theme spans** at the barrier. These are real turns, not a skeleton. (Under
+  redaction there is no per-session chain, so scene colours arrive at the barrier.)
 - A fifth layer shipped on 12 Oct 2026 and is the one later-arriving layer the app
   has: **scene strips and notches** (`utils/scene_strip.py`, every frame at 4 fps),
   computed by serve on a background thread (`server/scene_strips.py`) and **deferred
@@ -602,6 +603,37 @@ already anticipates. Independent of the UX; can land before or after phase 2.
    turn boundaries, about 1.5 s per hour of video, and both are known once a
    session is readable.
 
+> **As built, 12 Oct 2026.**
+> - **Option-click** (`SessionsTable.tsx`, `toggleTapestry`) opens the rows whose
+>   state is readable; a row readable later arrives closed.
+> - **The route** needed nothing: during a run a readable session comes back with
+>   turns, empty `sections` and empty `quotes`, then with quotes whose `section` and
+>   `theme` are null (`test_progressive_quotes.py`, through the real follower).
+> - **The scale** (`utils/tapestryScale.ts`, `fitScale(durations, width)`) is §4.6's
+>   rule, from every row's ingest `duration_seconds` — a platform transcript's from
+>   its last cue (§7 item 11) — so it is fixed from the first second; a duration of 0
+>   is left out. The six table rows are cases in
+>   `SessionTapestry.test.tsx`. `zoomScale`'s far end is `min(0.25, fit / 4)`.
+> - **The merge** (`utils/tapestryMerge.ts`) folds every refetch — a session imported,
+>   a speaker write, a strip poll — into what the slices hold: a layer whose content
+>   is unchanged keeps its reference, and a session with nothing changed keeps its
+>   object. Gated: an open quote popover survives a session arriving. The existing
+>   strip-poll test could not fail (its mock returned the same objects every call);
+>   it now clones per answer, and both go red on a replacing grid.
+> - **Scene colours per session** (item 5): the readable chain runs
+>   `extract_scene_colours` for the one session after writing its transcript and
+>   before recording it merged (`readable_chain.py`), so the row arrives with its
+>   colours; the pass before render then finds them cached. A colour failure is
+>   logged and the session is delivered. Not for redacted runs, which have no chain.
+> - **The merge's idle cost**: a held layer's serialisation is cached by reference,
+>   and a refetch that changed nothing returns the same record, so an idle strip poll
+>   re-renders nothing (`tapestryMerge.test.ts`).
+> - **Accepted:** a zoom saved before the change (sessionStorage, this tab) reopens at a
+>   different scale once, since both ends of the slider moved; double-click resets it.
+>   With two sessions more than about 7× apart the shorter is left out, which is the
+>   rule as written (§4.6 step 1) even when it is not a test file. Option-click selects
+>   by row state, the §2 rule, rather than by having a timeline (the same set today).
+
 #### 4.6 The opening scale
 
 Today: `fitScale(longest, width) = clamp(longest / (width − 96), 1, 4)` s/px, from
@@ -727,8 +759,11 @@ Disabled until the run ends.
    none** (Phase 2): a session group has no star-all or hide-all; quotes are acted on
    one at a time or through a selection, as everywhere else.
 10. **Tick steps under a minute** (30 s, 15 s) for short sessions at wide widths.
-11. **Platform-transcript durations at ingest** (§4.6): read from the last cue, or accept
-    one scale move.
+11. ~~**Platform-transcript durations at ingest**~~ **Built 12 Oct 2026 (Phase 4):** the
+    last cue's end (`readable_chain._last_cue_end`, `.srt`/`.vtt`/`.docx`), so the scale
+    is fixed from the first second. Left out: a Word file with no timings, and a file
+    still an iCloud placeholder at ingest (reading it would start a download); those
+    rows read 0 until imported, and the scale can move once each.
 12. **A reader on a lens that becomes withheld** (project switch, Re-analyse): no
     tab reads active, and the route stays. Phase 1 needs a rule.
 13. **The disabled web nav tab's look.** It keeps the inactive tab's muted text

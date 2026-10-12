@@ -4,19 +4,39 @@ export const TAPESTRY_GUTTER = 82;
 export const TAPESTRY_RIGHT = 14;
 
 /**
- * One shared scale for every slice: fit the longest session, clamped to 1–4 s/px.
- * Upper clamp: a short project is never blown up. Lower clamp: below 4 s/px a
- * 60-minute session still fits a laptop's grid; longer ones scroll.
- * Measured basis: docs/mockups/session-tapestry-scale.html.
+ * One shared scale for every slice, from every session's duration, so it is fixed
+ * from ingest and never moves while sessions arrive (docs/design-progressive-lenses.md
+ * §4.6; the reference is `fitShortest` in docs/mockups/progressive-lenses-replay.html):
+ *
+ * 1. Leave out outliers either way: sessions shorter than a quarter of the median or
+ *    longer than four times it. A minority must not set the scale for the rest; a
+ *    majority moves the median, so stays in. Left-out sessions still draw at this scale.
+ * 2. Fit the shortest that remain to the usable width: no timeline opens with white
+ *    space on its right.
+ * 3. Cap: the longest that remain opens at no more than four widths.
+ * 4. The 4 s/px ceiling wins over everything (it bites only below a ~220 px table).
+ *
+ * A duration of 0 (not known yet: a platform transcript before its import) is left out.
  */
-export function fitScale(longestSeconds: number, width: number): number {
+export function fitScale(durations: readonly number[], width: number): number {
   const usable = Math.max(1, width - TAPESTRY_GUTTER - TAPESTRY_RIGHT);
-  return Math.min(4, Math.max(1, longestSeconds / usable));
+  const sorted = durations.filter((d) => d > 0).sort((a, b) => a - b);
+  if (sorted.length === 0) return 1;
+  const mid = sorted.length / 2;
+  const median = sorted.length % 2
+    ? sorted[Math.floor(mid)]
+    : (sorted[mid - 1] + sorted[mid]) / 2;
+  const kept = sorted.filter((d) => d >= median / 4 && d <= median * 4);
+  const shortest = kept[0];
+  const longest = kept[kept.length - 1];
+  return Math.min(4, Math.max(shortest / usable, longest / (4 * usable)));
 }
 
-/** Zoom slider 0–100 → seconds per pixel, log-spaced from fit down to 0.25 s/px. */
+/** Zoom slider 0–100 → seconds per pixel, log-spaced from fit down to min(0.25, fit / 4),
+ *  so a short project fitted below 0.25 s/px still has room to zoom in. */
 export function zoomScale(fit: number, value: number): number {
-  return Math.exp(Math.log(fit) + (Math.log(0.25) - Math.log(fit)) * (value / 100));
+  const far = Math.min(0.25, fit / 4);
+  return Math.exp(Math.log(fit) + (Math.log(far) - Math.log(fit)) * (value / 100));
 }
 
 // ── What the researcher left open ─────────────────────────────────────────

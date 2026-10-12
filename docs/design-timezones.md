@@ -632,6 +632,10 @@ maintainer's Mac (metadata only; placeholders skipped):
 | Teams recording download (no writer tags, brand `isom`) | **start** | container within 1 s and 6 s of the filename's start on 2 files |
 | iPhone camera (`make = Apple`, `model = iPhone …`) | start — **INFERRED** | capture date = `creation_time` on 7 files; start-vs-end needs a known start |
 | QuickTime Player / Photo Booth on a Mac (`model = Mac…`) | capture date = start side; `creation_time` = save | 1 file: capture date 34 s before `creation_time`, which equals the file's creation |
+| GoPro HERO5/6/7/8, MAX, Fusion (`firmware` HD5.–HD8., H19., FS1.) | **start**, on the camera's local clock with a false `Z` | 6 public sample files (gopro/gpmf-parser `samples/`), each checked against the GPS time in its own `gpmd` stream: 7 h (April) or 8 h (Jan/Nov) = Pacific, where they were shot; set clocks drift −44 s to +40 s from GPS |
+| Zoom F8, Zoom H1 (bext `Originator` "ZOOM F8" / "ZOOM Handy Recorder H1") | **start** (OriginationDate/Time), local, no zone | public BWF fixtures (iluvcapra/wavinfo `tests/test_files/zoom_F8`, and an H1 set); ffprobe exposes it as `date` + a bare `creation_time`; `time_reference` is timecode, not the clock |
+| Voice Memos (`encoder = com.apple.VoiceMemos …`) | end — **INFERRED** | a July copy: `creation_time` 4 m 27 s before the file existed with 6 m 5 s of audio, so it cannot be the start. **Measured 12 Oct 2026:** a memo recorded on the Mac and shared three ways (drag out, Mail, WhatsApp) — all three copies keep identical tags (`encoder`, `voice-memo-uuid`, `creation_time`), renamed to the memo's title; no `date` tag. The encoder, not the filename, is what identifies a Voice Memo |
+| a device clock that lost its setting | 1 January — refused | a Zoom H1 at 2010-01-01 counting up from power-on; a GoPro HERO7 at 2016-01-01 |
 | an unidentified web recorder (`Web Recording 20240604 1356.mp4`) | wrong clock | `creation_time` exactly 4 h after creation — refused |
 | Voice Memos, WhatsApp audio (no writer tags) | unclear | not classifiable from tags; taken as written |
 
@@ -651,9 +655,13 @@ means the app's own documented naming states it.
 | Zoom cloud download | `GMT…-…_Recording` name (UTC) | named |
 | Zoom local recording | the dated folder | named |
 | Google Meet recording, hand-downloaded | ` - YYYY/MM/DD HH:MM zone - <kind>` name, media files only | named; `GMT±n`/`UTC`, or this Mac's own zone name |
-| macOS Screen Recording / QuickTime screen capture | the name, else the container moved back by duration | measured, 32 files |
+| macOS Screen Recording (⇧⌘5, whole screen or one window, mic on or off) | the name, else the container moved back by duration | measured: 7 distinct files, 3 with audio; untouched files land +11 to +32 s, trimmed copies −3 to −4 min — the name wins |
 | QuickTime Player / Photo Booth movie | the capture date | measured, 1 file |
 | iPhone camera | the container (capture date) | inferred start |
+| Apple Voice Memos, the original file | the `YYYYMMDD HHMMSS-XXXXXXXX` name, local | reported (forensic write-ups); the folder is privacy-protected and was not measured |
+| Apple Voice Memos, any copy with the `com.apple.VoiceMemos` encoder | the container moved back by duration | inferred end, from one file |
+| GoPro (HERO5 onwards, MAX, Fusion; `firmware` tag) | `creation_time` read as the camera's **local** wall clock, despite its `Z` | measured on 6 models against their own GPS: the start |
+| Zoom field recorders (H1n, H2n, H4n, H5, H6, H8, F-series) and other Broadcast WAV | the `bext` origination date and time, local | measured on a Zoom F8 and an H1; documented in Zoom's manuals and EBU Tech 3285 |
 | Android camera (`VID_`, Samsung), screen recorders | the name, local | named |
 | Google Pixel camera | `PXL_` name, UTC | named |
 | OBS Studio (default naming), Windows Game Bar | the name, local | named |
@@ -683,14 +691,33 @@ In rough order of value; none of these blocks the store launch on its own.
    tenant's zone, which only the cloud import knows.
 6. **The consent-delay sign test** (§ 5.4) — needs a calendar start, which only
    the cloud import has.
-7. **Recorders not yet covered, to research with real files:** Voice Memos
-   (Mac and iPhone — one measured file stamped neither start nor end), WhatsApp
-   voice notes and videos (the name is the message time; deliberately unread),
-   GoPro and action cameras (known to write local time as UTC), Webex and
-   Lookback/UserTesting/Riverside/Loom exports (naming unknown), and
-   broadcast WAV from field recorders (the `bext` origination date/time is the
-   start, but `probe_media` does not read it yet — an allowlist change in
-   `utils/audio.py`).
+7. **Recorders still to research with real files.** GoPro, Zoom field
+   recorders, Voice Memos and ⇧⌘5 window capture were researched 11–12 Oct 2026
+   (tables above; full notes with every source URL in `docs/research/research-gopro.md`,
+   `research-zoom-recorders.md`, `research-voicememos.md`). Still open:
+   - **Voice Memos originals** — measure 5–10 with Full Disk Access granted:
+     filename vs the `date` tag vs `creation_time` vs the app's database
+     (ZDATE, ZDURATION), and one memo each after Trim, Enhance and resume.
+     _(12 Oct 2026: a memo shared by drag, Mail and WhatsApp kept its
+     `com.apple.VoiceMemos` encoder in all three, so sharing does not strip it.
+     The July copy without tags came by an unknown route.)_ Still owed: one
+     memo of a minute or more with its start noted to the second, to turn
+     "end" from inferred to measured.
+   - **GoPro HERO9–13** — no public sample; whether HERO11+ (which has a
+     timezone setting) still writes local time is open. The exact zone is
+     recoverable from the GPS time in the `gpmd` stream (its difference to
+     `creation_time`, rounded to 15 min) — not built; today a GoPro is read on
+     this Mac's clock, right when the camera was set to the zone it is being
+     analysed in.
+   - **Zoom recorders' chained files** — over 2 GB a recording continues in a
+     new file named for when it continued; the session starts at the earliest.
+     Grouping such a chain into one session is not built. Zoom's
+     `YYMMDD-HHMMSS` naming is not read (the date order is user-set, so the
+     name alone is ambiguous); iXML `FILE_UID` is not read (ffmpeg ignores
+     iXML).
+   - WhatsApp (message time; deliberately unread), Webex,
+     Lookback/UserTesting/Riverside/Loom exports (naming unknown), other action
+     cameras (Insta360, DJI).
 8. **Measure the "named" rows.** Zoom cloud's GMT prefix, Pixel's UTC names
    and the Android/OBS local names are each documented behaviour, not files we
    have checked; one real file per row would make them "measured".

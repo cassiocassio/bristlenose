@@ -172,6 +172,14 @@ class MediaTimeMeta(BaseModel):
     software: str | None = None
     encoder: str | None = None
     author: str | None = None
+    #: Broadcast WAV start on the recorder's own clock — NAIVE, no zone
+    #: (bext OriginationDate + OriginationTime; ffprobe `date` + bare
+    #: `creation_time`). Field recorders: Zoom H/F series, Sound Devices, Tascam.
+    origination: datetime | None = None
+    #: bext Originator (ffprobe `encoded_by`), e.g. "ZOOM F8".
+    originator: str | None = None
+    #: GoPro's format-level `firmware` ("HD8.01.01.20.00"); identifies the camera.
+    firmware: str | None = None
 
 
 class InputFile(BaseModel):

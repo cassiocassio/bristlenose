@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import platform
+import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -93,6 +94,10 @@ def _tags(block: dict[str, Any] | None) -> dict[str, str]:
     return {k.lower(): str(v)[:_MAX_TAG_CHARS] for k, v in ((block or {}).get("tags") or {}).items()}
 
 
+_BWF_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+_BWF_TIME_RE = re.compile(r"\d{2}:\d{2}:\d{2}")
+
+
 def time_meta_from_ffprobe(data: dict[str, Any]) -> MediaTimeMeta | None:
     """Build a ``MediaTimeMeta`` from ffprobe's JSON. Pure; tested without
     ffprobe. ``None`` when the container carries nothing at all.
@@ -114,8 +119,22 @@ def time_meta_from_ffprobe(data: dict[str, Any]) -> MediaTimeMeta | None:
     if not fmt and not any(streams):
         return None
 
+    # Broadcast WAV (field recorders — Zoom H/F series, Sound Devices, Tascam):
+    # ffmpeg maps bext OriginationDate to `date` and OriginationTime to a BARE
+    # `creation_time` ("22:40:18"), the recording start on the device's own
+    # clock, which has no zone. Kept naive in `origination`; never read as UTC.
+    origination: datetime | None = None
+    bwf_date, bwf_time = fmt.get("date", ""), fmt.get("creation_time", "")
+    if _BWF_DATE_RE.fullmatch(bwf_date) and _BWF_TIME_RE.fullmatch(bwf_time):
+        try:
+            origination = datetime.fromisoformat(f"{bwf_date}T{bwf_time}")
+        except ValueError:
+            origination = None
+
     creation_utc: datetime | None = None
-    raw_utc = fmt.get("creation_time") or stream_first.get("creation_time")
+    raw_utc = None if origination is not None else (
+        fmt.get("creation_time") or stream_first.get("creation_time")
+    )
     if raw_utc:
         dt = parse_iso_lenient(raw_utc)
         if dt is not None:
@@ -147,6 +166,9 @@ def time_meta_from_ffprobe(data: dict[str, Any]) -> MediaTimeMeta | None:
         software=fmt.get("com.apple.quicktime.software"),
         encoder=fmt.get("encoder"),
         author=fmt.get("com.apple.quicktime.author"),
+        origination=origination,
+        originator=fmt.get("encoded_by"),
+        firmware=fmt.get("firmware"),
     )
     if all(getattr(meta, f) is None for f in MediaTimeMeta.model_fields):
         return None

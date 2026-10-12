@@ -1044,6 +1044,39 @@ class TestMlxBackendRecoversSkippedSpeech:
         assert len(calls) == 2
         assert [s.text for s in segments][1] == "Certo."
 
+    def test_a_re_decode_that_loops_is_not_accepted(self, monkeypatch, tmp_path) -> None:
+        """The re-decode loops too: "nada" as many separate lines reads as
+        enough words a second, and must not replace the stretch."""
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        calls: list[int] = []
+
+        def _fake(audio_in, **_kw):
+            calls.append(len(audio_in))
+            if len(calls) == 1:
+                return {"language": "es", "segments": [
+                    {"start": 0.0, "end": 10.0, "text": " " + " ".join(f"a{i}" for i in range(25))},
+                    {"start": 30.0, "end": 40.0, "text": " " + " ".join(f"b{i}" for i in range(25))},
+                ]}
+            return {"language": "es", "segments": [
+                {"start": 0.5 + k * 0.45, "end": 0.7 + k * 0.45, "text": " nada"} for k in range(39)
+            ]}
+
+        monkeypatch.setattr(s05_transcribe, "STYLE_PROMPTS", {})
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: _tone(40, -20))
+        monkeypatch.setattr(mlx_whisper, "transcribe", _fake)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "auto"})()
+        segments, _ = s05_transcribe._init_mlx_backend(settings)(tmp_path / "p1.wav", settings)
+
+        assert len(calls) == 2
+        assert "nada" not in " ".join(s.text for s in segments)
+
     def test_a_dropped_prompt_echo_is_re_decoded(self, monkeypatch, tmp_path) -> None:
         """The net runs after the echo filter, so the gap an echo leaves over
         real speech is re-transcribed, without the prompt."""

@@ -327,6 +327,17 @@ def find_segment_loops(segs: list[tuple[float, float, str]]) -> list[tuple[int, 
     return runs
 
 
+def drop_segment_loops(segs: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    """Whisper segments without the loops `find_segment_loops` finds, and how
+    many segments went."""
+    loops = find_segment_loops([
+        (float(x.get("start", 0.0)), float(x.get("end", 0.0)), str(x.get("text", "")))
+        for x in segs
+    ])
+    looped = {k for i, j in loops for k in range(i, j)}
+    return [x for k, x in enumerate(segs) if k not in looped], len(looped)
+
+
 #: True only inside our own `mlx_whisper.transcribe` call, so the hook below
 #: changes nothing for any other caller, in this thread or another.
 _STYLE_PROMPT_ON: contextvars.ContextVar[bool] = contextvars.ContextVar(
@@ -776,7 +787,14 @@ def _init_mlx_backend(
                 ]
                 if a <= (seg["start"] + seg["end"]) / 2 < b:
                     new.append(seg)
-            n = sum(len(str(x.get("text", "")).split()) for x in new)
+            # The re-decode loops too (12 Oct 2026: "nada" 39 times over 28 s,
+            # which read as 1.4 words a second and was accepted). Judged as the
+            # reader would get it: loops out, repeats collapsed.
+            new, _ = drop_segment_loops(new)
+            n = sum(
+                len(collapse_adjacent_repeats(str(x.get("text", "")).strip()).split())
+                for x in new
+            )
             if n / max(b - a, 0.01) >= _RECOVER_MIN_WPS:
                 kept = [
                     x for x in kept
@@ -903,12 +921,7 @@ def _init_mlx_backend(
 
         # A loop is never what was said, so it goes before the net: the stretch
         # it covered then reads as the gap it is, and is re-decoded.
-        loops = find_segment_loops([
-            (float(x.get("start", 0.0)), float(x.get("end", 0.0)), str(x.get("text", "")))
-            for x in kept
-        ])
-        looped = {k for i, j in loops for k in range(i, j)}
-        kept = [x for k, x in enumerate(kept) if k not in looped]
+        kept, looped = drop_segment_loops(kept)
 
         if SKIP_NET_ENABLED:
             kept = _recover_skipped(
@@ -969,10 +982,10 @@ def _init_mlx_backend(
                 "%s: dropped %d segment(s) that repeat the style prompt",
                 audio_path.name, echoes,
             )
-        if loops:
+        if looped:
             logger.info(
-                "%s: removed %d repetition loop(s), %d segment(s)",
-                audio_path.name, len(loops), len(looped),
+                "%s: removed %d segment(s) of repetition loops",
+                audio_path.name, looped,
             )
         if guesses:
             logger.info(

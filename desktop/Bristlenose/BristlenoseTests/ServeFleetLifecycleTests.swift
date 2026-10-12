@@ -277,3 +277,83 @@ struct WindowSeedDecodingTests {
         #expect(try JSONDecoder().decode(WindowSeed.self, from: data) == seed)
     }
 }
+
+/// A serve must not outlive the binary it was spawned from.
+///
+/// Measured 12 Oct 2026: a serve spawned at 23:25 on sidecar 0.36.0 outlived
+/// the 00:10 rebuild to 0.37.0 and served all morning. Runs re-resolve the
+/// binary per spawn, so the old serve imported the new runs' output. The
+/// manager resolved its binary once at `init` and the same-path `start()`
+/// returned early while `.running`, so nothing ever compared disk with memory.
+@Suite("ServeManager sidecar freshness")
+@MainActor
+struct ServeManagerFreshnessTests {
+
+    private static let spawned = SidecarBinaryStamp(size: 1, modified: Date(timeIntervalSince1970: 1))
+    private static let rebuilt = SidecarBinaryStamp(size: 2, modified: Date(timeIntervalSince1970: 2))
+
+    /// A manager that believes it is serving `/p/A` from a binary stamped
+    /// `spawned`, with a reader that reports `onDisk` for the file now. The
+    /// mode names a path that is not an executable, so a respawn fails fast
+    /// into `.failed` rather than launching anything — the assertion is only
+    /// that the guard did not keep the stale serve.
+    private func running(onDisk: SidecarBinaryStamp) -> ServeManager {
+        let binary = FileManager.default.temporaryDirectory
+            .appendingPathComponent("bn-fake-sidecar-\(UUID().uuidString)")
+        let m = ServeManager(resolvedMode: .success(.bundled(path: binary)))
+        m.instance.currentProjectPath = "/p/A"
+        m.instance.state = .running(port: 5000)
+        m.instance.spawnedSidecarStamp = Self.spawned
+        m.sidecarStampReader = { _ in onDisk }
+        return m
+    }
+
+    @Test func aSamePathStartKeepsAServeWhoseBinaryIsUnchanged() {
+        let m = running(onDisk: Self.spawned)
+        m.start(projectPath: "/p/A")
+        #expect(m.state == .running(port: 5000))
+        #expect(m.sidecarBinaryChangedOnDisk == false)
+    }
+
+    @Test func aSamePathStartRestartsAServeWhoseBinaryChangedOnDisk() {
+        let m = running(onDisk: Self.rebuilt)
+        #expect(m.sidecarBinaryChangedOnDisk)
+        m.start(projectPath: "/p/A")
+        #expect(m.state != .running(port: 5000), "a serve on a rebuilt sidecar was left running")
+    }
+
+    /// Fronting a project is the moment a window looks at it again, so it is
+    /// where a background serve catches up with a rebuild.
+    @Test func frontingAStudyRestartsItWhenItsBinaryChangedOnDisk() {
+        let fleet = ServeFleet()
+        let id = UUID()
+        let m = fleet.manager(for: id)
+        m.instance.currentProjectPath = "/p/A"
+        m.instance.state = .running(port: 5000)
+        m.instance.spawnedSidecarStamp = Self.spawned
+        m.sidecarStampReader = { _ in Self.rebuilt }
+        // `manager(for:)` resolves the mode from the bundle, which this test
+        // host may or may not carry; `sidecarBinaryChangedOnDisk` is false
+        // without a mode, so only assert the restart when there is one.
+        guard m.mode?.executableURL != nil else { return }
+
+        fleet.front(id)
+
+        #expect(m.state != .running(port: 5000), "fronting left a serve on a rebuilt sidecar running")
+    }
+
+    /// An unreadable binary (deleted, or `.external` with none) is not a newer
+    /// one — never restart on a nil read.
+    @Test func anUnreadableBinaryIsNotAChange() {
+        let m = running(onDisk: Self.spawned)
+        m.sidecarStampReader = { _ in nil }
+        #expect(m.sidecarBinaryChangedOnDisk == false)
+    }
+
+    @Test func externalModeNeverReadsAsChanged() {
+        let m = ServeManager(resolvedMode: .success(.external(port: 5001)))
+        m.instance.spawnedSidecarStamp = Self.spawned
+        m.sidecarStampReader = { _ in Self.rebuilt }
+        #expect(m.sidecarBinaryChangedOnDisk == false)
+    }
+}

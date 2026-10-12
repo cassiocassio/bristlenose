@@ -11,6 +11,22 @@ import OSLog
 private let log = Logger(subsystem: "app.bristlenose", category: "serve")
 
 /// State machine for the `bristlenose serve` subprocess.
+/// What `ServeManager` records about the sidecar binary at spawn, and compares
+/// against disk later. Size + mtime: a rebuild changes at least one; a
+/// re-sign that changes neither is not a reason to restart.
+struct SidecarBinaryStamp: Equatable, Sendable {
+    let size: UInt64
+    let modified: Date
+
+    /// Read from disk. Nil when the file is unreadable or absent.
+    static func read(at url: URL, fileManager: FileManager = .default) -> SidecarBinaryStamp? {
+        guard let attrs = try? fileManager.attributesOfItem(atPath: url.path),
+              let size = (attrs[.size] as? NSNumber)?.uint64Value,
+              let modified = attrs[.modificationDate] as? Date else { return nil }
+        return SidecarBinaryStamp(size: size, modified: modified)
+    }
+}
+
 enum ServeState: Equatable {
     case idle
     case starting
@@ -404,6 +420,20 @@ final class ServeManager: ObservableObject {
         set { instance.currentProjectPath = newValue }
     }
 
+    /// How the binary's stamp is read. A seam for tests, which have no sidecar
+    /// to rebuild; production reads the file.
+    var sidecarStampReader: (URL) -> SidecarBinaryStamp? = { SidecarBinaryStamp.read(at: $0) }
+
+    /// Is the sidecar binary on disk no longer the one this serve was spawned
+    /// from? False when nothing was spawned, for `.external`, or when the
+    /// binary cannot be read (an absent file is not a newer one).
+    var sidecarBinaryChangedOnDisk: Bool {
+        guard let spawned = instance.spawnedSidecarStamp,
+              let url = mode?.executableURL,
+              let now = sidecarStampReader(url) else { return false }
+        return now != spawned
+    }
+
     /// The most-recently-fronted project's sidecar, kept warm so switching
     /// back is an instant hand-off (Phase A2 warm-sidecar pool, single-slot).
     /// At most one. See `ParkedSidecar.swift` for the design + why one slot.
@@ -461,8 +491,19 @@ final class ServeManager: ObservableObject {
         if let current = currentProjectPath,
            AgentActivity.samePath(current, projectPath) {
             switch state {
-            case .running, .starting: return
-            case .idle, .failed: break
+            case .starting:
+                return
+            case .running:
+                // Same project, healthy serve — unless the binary it was spawned
+                // from has been replaced on disk, in which case this serve is
+                // running yesterday's code and the runs it imports are not. A
+                // same-path start is how a window re-fronts a project, so it is
+                // the moment to catch up; fall through to the stop-and-respawn
+                // below. Pinned by `ServeManagerFreshnessTests`.
+                guard sidecarBinaryChangedOnDisk else { return }
+                log.notice("sidecar binary changed on disk since this serve was spawned — restarting")
+            case .idle, .failed:
+                break
             }
         }
 
@@ -525,6 +566,9 @@ final class ServeManager: ObservableObject {
         case .external:
             return  // handled above
         }
+        // What we are about to run, so `sidecarBinaryChangedOnDisk` has a
+        // baseline to compare against.
+        instance.spawnedSidecarStamp = sidecarStampReader(executableURL)
 
         let proc = Process()
         self.process = proc

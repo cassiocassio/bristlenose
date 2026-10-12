@@ -108,6 +108,14 @@ enum SidecarResolveError: Error, Equatable, LocalizedError, CustomStringConverti
 
 extension SidecarMode {
 
+    /// The binary this mode spawns; nil for `.external`, which spawns nothing.
+    var executableURL: URL? {
+        switch self {
+        case .bundled(let path), .devSidecar(let path): return path
+        case .external: return nil
+        }
+    }
+
     /// Path inside `Bundle.main.resourceURL` of the bundled sidecar executable.
     /// Exposed for tests and for error messages.
     static let bundledRelativePath = "bristlenose-sidecar/bristlenose-sidecar"

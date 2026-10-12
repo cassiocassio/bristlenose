@@ -274,6 +274,15 @@ final class ServeFleet: ObservableObject {
         frontedProject = project
         if staleProjects.remove(project) != nil {
             managers[project]?.restartIfRunning()
+            return
+        }
+        // The other way a running serve goes stale: the sidecar binary was
+        // rebuilt under it. The same-path `start()` guard does the comparison
+        // and restarts only when the file differs, so this is a no-op on the
+        // common path. Pinned by `ServeFleetLifecycleTests`.
+        if let manager = managers[project], manager.sidecarBinaryChangedOnDisk,
+           let path = manager.currentProjectPath {
+            manager.start(projectPath: path)
         }
     }
 

@@ -90,6 +90,16 @@ final class ServeInstance: ObservableObject {
     /// than `==`.
     @Published var currentProjectPath: String?
 
+    /// Size and mtime of the sidecar binary **as it was when this serve was
+    /// spawned**. `ServeManager.sidecarBinaryChangedOnDisk` compares it with
+    /// the file now: a sidecar rebuild under a long-lived serve (measured
+    /// 12 Oct 2026 — a 23:25 serve on 0.36.0 outlived a 00:10 rebuild to
+    /// 0.37.0 and served all morning, while every run re-resolved the new
+    /// binary per spawn, so an old serve imported new runs' output) is
+    /// otherwise invisible to the same-path start guard. Nil until a spawn,
+    /// and for `.external`, which has no binary of ours.
+    var spawnedSidecarStamp: SidecarBinaryStamp?
+
     /// The MCP-scoped token this sidecar was spawned with — what the Connect
     /// Agent sheet hands out and what the handshake carries. Durable (Keychain,
     /// per project) normally; an *ephemeral process-lifetime scoped* token when

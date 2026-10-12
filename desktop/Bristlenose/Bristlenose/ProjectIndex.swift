@@ -411,6 +411,13 @@ final class ProjectIndex: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
+                // A folder renamed or moved while the app was in the background
+                // is healed here rather than at the next launch — the bookmark
+                // follows the folder, and `refreshAvailability` posts
+                // `.bristlenoseProjectPathChanged` for any path that moved so the
+                // serve follows too (12 Oct 2026: a serve left on the old path
+                // never imported the next run).
+                self.refreshAvailability()
                 for watcher in self.watchers.values { watcher.refresh() }
             }
         }
@@ -1127,6 +1134,7 @@ final class ProjectIndex: ObservableObject {
                     projects[i].location = Self.detectLocation(for: resolvedPath)
                     projects[i].bookmarkData = Self.createBookmark(for: resolvedPath)
                     changed = true
+                    Self.postPathChanged(id: project.id, path: resolvedPath)
                 }
                 // Lazy-capture resourceIdentifier on first successful resolution.
                 if projects[i].resourceIdentifier == nil,
@@ -1142,6 +1150,9 @@ final class ProjectIndex: ObservableObject {
                (location.type == .volume || location.type == .network),
                let relativePath = location.volumeRelativePath, !relativePath.isEmpty {
                 if let resolvedPath = Self.resolveVolumeRelativePath(relativePath) {
+                    if resolvedPath != project.path {
+                        Self.postPathChanged(id: project.id, path: resolvedPath)
+                    }
                     projects[i].path = resolvedPath
                     projects[i].lastSeenPath = resolvedPath
                     projects[i].location = Self.detectLocation(for: resolvedPath)
@@ -1187,7 +1198,12 @@ final class ProjectIndex: ObservableObject {
                     let watcher = ProjectFolderWatcher(
                         projectID: id,
                         lease: lease,
-                        initialKnownBasenames: []
+                        initialKnownBasenames: [],
+                        onMove: { [weak self] url in
+                            Task { @MainActor [weak self] in
+                                self?.projectFolderDidMove(id: id, to: url)
+                            }
+                        }
                     ) { [weak self] state in
                         Task { @MainActor [weak self] in
                             self?.handleWatcherUpdate(projectID: id, state: state)
@@ -1286,7 +1302,8 @@ final class ProjectIndex: ObservableObject {
                 // to offer Analyse on a never-analysed project, and what the
                 // detail pane counts in "6 files to analyse".
                 ingestableFileCount: state.ingestableFileCount,
-                discussionWanted: state.discussionWanted
+                discussionWanted: state.discussionWanted,
+                databaseForked: state.databaseForked
             )
         }
 
@@ -1305,9 +1322,34 @@ final class ProjectIndex: ObservableObject {
         return nil
     }
 
-    /// Relocate a project to a new path (after user selects via NSOpenPanel).
+    /// The folder watcher saw its folder renamed or moved (Finder, another
+    /// app). Same healing as a Locate, minus the panel: the bookmark already
+    /// follows the folder; what did not was `Project.path`, the lease URL, and
+    /// the serve — which went on polling the old path for a `run_completed`
+    /// that was being written at the new one.
+    func projectFolderDidMove(id: UUID, to url: URL) {
+        guard let project = projects.first(where: { $0.id == id }),
+              !AgentActivity.samePath(project.path, url.path) else { return }
+        log.notice("project folder moved; following it")
+        relocateProject(id: id, newPath: url.path)
+    }
+
+    /// Every path change the index makes is announced here, so the serve for
+    /// that project can be restarted at the new path by whichever window shows
+    /// it (`ContentView` listens). `userInfo`: `"id"` (UUID), `"path"` (String).
+    nonisolated static func postPathChanged(id: UUID, path: String) {
+        NotificationCenter.default.post(
+            name: .bristlenoseProjectPathChanged, object: nil,
+            userInfo: ["id": id, "path": path])
+    }
+
+    /// Relocate a project to a new path (after user selects via NSOpenPanel,
+    /// or the folder watcher reports a move).
     func relocateProject(id: UUID, newPath: String) {
         guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
+        if projects[index].path != newPath {
+            Self.postPathChanged(id: id, path: newPath)
+        }
         projects[index].path = newPath
         projects[index].lastSeenPath = newPath
         projects[index].location = Self.detectLocation(for: newPath)
@@ -1397,11 +1439,33 @@ final class ProjectIndex: ObservableObject {
 
             if needsSave { save() }
         } catch {
-            print("[ProjectIndex] Failed to load projects.json: \(error)")
+            // A file that will not decode is the researcher's whole sidebar.
+            // Until 12 Oct 2026 this left `projects = []` and the next `save()`
+            // — any add, rename or reorder — wrote the empty list over it. Set
+            // the damaged file aside under a name nothing overwrites, so the
+            // bytes survive for a repair; only if that fails is saving refused.
+            log.error("Failed to load projects.json: \(error.localizedDescription, privacy: .public)")
+            let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
+            let aside = fileURL.appendingPathExtension("damaged-\(stamp)")
+            do {
+                try FileManager.default.moveItem(at: fileURL, to: aside)
+                log.error("damaged projects.json set aside as \(aside.lastPathComponent, privacy: .public)")
+            } catch {
+                saveRefused = true
+                log.error("could not set the damaged file aside (\(error.localizedDescription, privacy: .public)); saves are refused so it is not overwritten")
+            }
         }
     }
 
+    /// True when `projects.json` failed to decode and could not be set aside:
+    /// `save()` must not write over the one copy that exists.
+    private var saveRefused = false
+
     private func save() {
+        guard !saveRefused else {
+            log.error("save refused: projects.json failed to decode and is still in place")
+            return
+        }
         let wrapper = ProjectsFile(version: "1.0", folders: folders, projects: projects)
         do {
             let data = try JSONEncoder.iso8601Fractional.encode(wrapper)
@@ -1467,4 +1531,11 @@ extension Notification.Name {
     /// re-syncs the MCP handshake file for the fronted project — turning
     /// access off deletes it (revocation is a file write, design §3.1).
     static let bristlenoseAgentAccessChanged = Notification.Name("bristlenoseAgentAccessChanged")
+}
+
+extension Notification.Name {
+    /// A project's folder path changed — Locate…, a Finder rename seen by the
+    /// folder watcher, or bookmark healing in `refreshAvailability`. Posted by
+    /// `ProjectIndex.postPathChanged`; `userInfo["id"]: UUID`, `["path"]: String`.
+    static let bristlenoseProjectPathChanged = Notification.Name("bristlenoseProjectPathChanged")
 }

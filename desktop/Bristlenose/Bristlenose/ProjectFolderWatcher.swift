@@ -58,6 +58,14 @@ struct UnanalysedState: Equatable {
     /// this state stay as they are.
     var discussionWanted: Bool = false
 
+    /// The analysis database holds more than one project row, so the report
+    /// (which reads row 1) and the sidebar counts (now also row 1) may be
+    /// describing less than the run produced. Always a defect upstream — a
+    /// serve that started while `bristlenose-output/` was moved aside (12 Oct
+    /// 2026) — and surfaced here because the sidebar is the one place that can
+    /// say so. Defaulted for the same reason as `discussionWanted`.
+    var databaseForked: Bool = false
+
     /// Whether the folder holds anything the pipeline would ingest. Derived, so
     /// the gate and the promised count cannot drift apart.
     var hasIngestableFiles: Bool { ingestableFileCount > 0 }
@@ -110,6 +118,9 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
     let projectID: UUID
     private let lease: ProjectBookmarkLease
     private let onChange: @Sendable (UnanalysedState) -> Void
+    /// Told, on the main actor, when the presented folder is renamed or moved
+    /// under us. Optional: tests of the scan path pass nothing.
+    private let onMove: (@Sendable (URL) -> Void)?
 
     /// Background queue used to serialise diff work and confine
     /// `knownBasenames`. All scan + mutation happens here.
@@ -169,7 +180,15 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
 
     // MARK: - NSFilePresenter contract
 
-    var presentedItemURL: URL? { lease.url }
+    /// The folder as the coordinator last told us it is. Starts as the lease's
+    /// URL and **follows a rename** via `presentedItemDidMove(to:)`. It was
+    /// `lease.url` verbatim until 12 Oct 2026, so a Finder rename left every
+    /// scan — and, through `onMove` not existing, the serve — on a path that
+    /// no longer had a folder behind it. Read from arbitrary queues (the
+    /// coordinator's, `scanQueue`), hence the lock.
+    var presentedItemURL: URL? { urlLock.withLock { currentURL } }
+    private let urlLock = NSLock()
+    private var currentURL: URL
     var presentedItemOperationQueue: OperationQueue { Self.sharedPresenterQueue }
 
     nonisolated(unsafe) private static let sharedPresenterQueue: OperationQueue = {
@@ -185,11 +204,14 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         projectID: UUID,
         lease: ProjectBookmarkLease,
         initialKnownBasenames: Set<String>,
+        onMove: (@Sendable (URL) -> Void)? = nil,
         onChange: @escaping @Sendable (UnanalysedState) -> Void
     ) {
         self.projectID = projectID
         self.lease = lease
+        self.currentURL = lease.url
         self.knownBasenames = initialKnownBasenames
+        self.onMove = onMove
         self.onChange = onChange
         self.scanQueue = DispatchQueue(
             label: "app.bristlenose.folder-watcher.scan.\(projectID.uuidString)",
@@ -239,6 +261,17 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
     }
 
     // MARK: - NSFilePresenter callbacks
+
+    /// The folder itself was renamed or moved. Follow it, tell the owner, and
+    /// rescan — the recorded source paths are now all stale and
+    /// `missingIngestedFiles` resolves them against the live root.
+    func presentedItemDidMove(to newURL: URL) {
+        urlLock.withLock { currentURL = newURL }
+        if let onMove {
+            DispatchQueue.main.async { onMove(newURL) }
+        }
+        scheduleScan()
+    }
 
     func presentedSubitemDidAppear(at url: URL) {
         guard subitemIsTopLevel(url), isEligibleExtension(url) else { return }
@@ -321,7 +354,8 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
             totalDurationSeconds: snapshot.totalDurationSeconds,
             ingestableFileCount: ingestableCount,
             discussionWanted: (snapshot.sessionCount ?? 0) > 0
-                && Self.discussionWanted(projectRoot: projectURL)
+                && Self.discussionWanted(projectRoot: projectURL),
+            databaseForked: snapshot.isForked
         )
         guard Self.shouldPublish(state, lastPublished: lastPublished) else { return }
         lastPublished = state

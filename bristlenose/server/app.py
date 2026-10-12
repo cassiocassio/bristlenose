@@ -807,8 +807,9 @@ def _maybe_status_response(app: FastAPI, output_dir: Path) -> HTMLResponse | Non
         policy=policy_from_env(),
         importing=overlay.get("importing") is not None,
         has_data=bool(getattr(app.state, "last_run", None)),
-        # Inert until Phase 1 sets the progress overlay (lens_readiness.Progress).
-        sessions_imported=bool(getattr(getattr(app.state, "progress", None), "readable", None)),
+        # A server fact, not the manifest's: a session can be readable on disk
+        # before its rows are in the database. Phase 1's per-session import sets it.
+        sessions_imported=bool(getattr(app.state, "sessions_imported", False)),
     )
     if status is None:
         return None
@@ -1167,7 +1168,6 @@ def _make_run_completed_handler(
             "outcome": ev.outcome.value,
             "completed_at": ev.ended_at,
         }
-        app.state.data_version = getattr(app.state, "data_version", 0) + 1
         # New sessions want scene strips; a running pass is asked to go round again.
         job = getattr(app.state, "scene_strips", None)
         if job is not None:
@@ -1225,11 +1225,13 @@ def _install_event_watcher(
     # Facts only the server knows, layered over the condition.
     app.state.import_overlay = {"importing": None, "failed_run_id": None}
 
-    # The SPA's refresh key while a run is in progress: bumped after every
-    # successful import into the database (docs/design-progressive-lenses.md
-    # §3.2). ``/last-run`` is pinned and moves only on a completed run, so it
-    # cannot carry the per-session imports that Phase 1 adds.
+    # The SPA's refresh key while a run is in progress: bumped after each
+    # per-session import (docs/design-progressive-lenses.md §3.2), never at run
+    # end, where ``/last-run`` already moves and the SPA would refetch twice.
+    # Nothing bumps it until Phase 1 adds the per-session import.
     app.state.data_version = 0
+    # Whether that import has put any session in the database yet (page_for).
+    app.state.sessions_imported = False
     # The per-session overlay for a progressive run (§3.1); None until Phase 1
     # reads it from the manifest, and None means every lens is available.
     app.state.progress = None

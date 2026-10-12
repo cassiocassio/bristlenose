@@ -37,26 +37,17 @@ def test_a_fresh_serve_reports_version_zero_and_every_lens(tmp_path: Path) -> No
     assert body["lenses"] == dict.fromkeys(LENSES, True)
 
 
-def test_a_successful_import_moves_the_version_and_a_failed_one_does_not(
-    tmp_path: Path, monkeypatch,
-) -> None:
+def test_run_end_does_not_move_the_version(tmp_path: Path, monkeypatch) -> None:
+    """At run end ``/last-run`` already moves and the SPA refetches on it; moving
+    ``data_version`` too made every lens refetch twice (review, 12 Oct 2026).
+    Only Phase 1's per-session import moves it."""
     project, app = _app(tmp_path)
-    outcomes = iter([None, RuntimeError("disk full")])
-
-    def _import(_db, _dir):
-        result = next(outcomes)
-        if isinstance(result, Exception):
-            raise result
-
-    monkeypatch.setattr("bristlenose.server.importer.import_project", _import)
+    monkeypatch.setattr("bristlenose.server.importer.import_project", lambda _db, _dir: None)
     handler = _make_run_completed_handler(app, app.state.db_factory, project)
     with AuthTestClient(app) as client:
         asyncio.run(handler(_completed(new_run_id())))
-        assert client.get("/api/projects/1/condition").json()["data_version"] == 1
-        asyncio.run(handler(_completed(new_run_id())))
-        assert client.get("/api/projects/1/condition").json()["data_version"] == 1, (
-            "a failed import claimed a new data version; the SPA would refetch into stale data"
-        )
+        assert client.get("/api/projects/1/last-run").json() is not None
+        assert client.get("/api/projects/1/condition").json()["data_version"] == 0
 
 
 def test_lenses_follow_the_progress_overlay(tmp_path: Path) -> None:

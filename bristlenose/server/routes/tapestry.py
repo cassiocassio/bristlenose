@@ -5,10 +5,11 @@ same-speaker transcript segments, with the pipeline's scene colour for each), se
 (each section's first quote in the session — the anchor the row's User journey chain links to),
 and the quotes with sentiment, intensity and their section or theme.
 
-Built from the database, so hidden quotes, quote edits and heading renames apply. Scene colours are
-the one exception: they are pipeline output (``bristlenose/utils/scene_colour.py``) read from
-``.bristlenose/intermediate/scene-colours/`` and matched to turns by time, so a speaker edit made
-in serve does not orphan them.
+Built from the database, so hidden quotes, quote edits and heading renames apply. Two things are
+read from files instead: scene colours, pipeline output (``bristlenose/utils/scene_colour.py``) in
+``.bristlenose/intermediate/scene-colours/``, matched to turns by time so a speaker edit made in
+serve does not orphan them; and scene strips, serve's own background output
+(``server/scene_strips.py``) in ``.bristlenose/intermediate/scene-strips/``.
 """
 
 from __future__ import annotations

@@ -852,12 +852,27 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResizeNotification)) { _ in
             bridgeHandler.syncToolbarInset()
         }
-        .onChange(of: selection) { _, newSelection in
+        .onChange(of: selection) { oldSelection, newSelection in
             // Switching the viewed project never cancels a background run — the
             // pipeline runs as an independent subprocess. (The cancel-on-switch
             // confirm modal was removed in A1; serialization of the async serve
             // switch lives in applySelectionChange via `switchTask`.)
-            applySelectionChange(newSelection)
+            applySelectionChange(newSelection, outgoing: Self.soleProject(in: oldSelection))
+        }
+        // The project's folder moved (Finder rename seen by the watcher, Locate…,
+        // or bookmark healing on activation). If this window shows it, the serve
+        // follows: `start` on a different path tears the old one down and
+        // respawns, so the serve stops polling a path with no folder behind it.
+        .onReceive(NotificationCenter.default.publisher(for: .bristlenoseProjectPathChanged)) { note in
+            guard let id = note.userInfo?["id"] as? UUID,
+                  let path = note.userInfo?["path"] as? String,
+                  selection.contains(.project(id)) else { return }
+            bridgeHandler.selectedProjectPath = path
+            bridgeHandler.selectedProjectRevealablePath = path
+            rescanAfterRelocate(id)
+            if hasConsent, windowIsKey {
+                serveFleet.manager(for: id).start(projectPath: path)
+            }
         }
         // When consent is granted (version updated), start serve for the
         // already-selected project if one exists.
@@ -1286,7 +1301,8 @@ struct ContentView: View {
     /// `.onChange(of: selection)`. Switching the viewed project never blocks on
     /// or cancels a background pipeline run — the run is an independent
     /// subprocess (the cancel-on-switch confirm modal was removed in A1).
-    private func applySelectionChange(_ newSelection: Set<SidebarSelection>) {
+    private func applySelectionChange(_ newSelection: Set<SidebarSelection>,
+                                      outgoing: UUID? = nil) {
         bridgeHandler.reset()
 
         let sole = newSelection.count == 1 ? newSelection.first : nil
@@ -1392,7 +1408,7 @@ struct ContentView: View {
                     // consent-gated (never running pre-consent), and granting
                     // consent (re)starts via the .onChange(of: consentVersion) →
                     // start() path, not this one.
-                    stopServeIfLastProjectWindow()
+                    stopServeIfLastProjectWindow(outgoing: outgoing)
                 }
             }
         case .folder(let id):
@@ -1405,7 +1421,7 @@ struct ContentView: View {
             bridgeHandler.hasSelectedProject = false
             bridgeHandler.selectedFolderName =
                 projectIndex.folders.first { $0.id == id }?.name ?? ""
-            stopServeIfLastProjectWindow()
+            stopServeIfLastProjectWindow(outgoing: outgoing)
         default:
             // Multi-select or empty — stop serve, clear state.
             pendingStart = nil
@@ -1416,8 +1432,16 @@ struct ContentView: View {
             bridgeHandler.selectedProjectIsAnalysed = false
             bridgeHandler.hasSelectedProject = false
             bridgeHandler.selectedFolderName = ""
-            stopServeIfLastProjectWindow()
+            stopServeIfLastProjectWindow(outgoing: outgoing)
         }
+    }
+
+    /// The one project a selection shows, or nil for a folder, several items,
+    /// or nothing — the shape `applySelectionChange` switches on, extracted so
+    /// the outgoing selection can be read the same way.
+    private static func soleProject(in selection: Set<SidebarSelection>) -> UUID? {
+        guard selection.count == 1, case .project(let id)? = selection.first else { return nil }
+        return id
     }
 
     /// Stop the sidecar — but only if this window is the last one that needed it.
@@ -1436,10 +1460,17 @@ struct ContentView: View {
     /// first real multi-window run, 16 Aug 2026.
     ///
     /// The cancel stays unconditional: `switchTask` is this window's own.
-    private func stopServeIfLastProjectWindow() {
+    ///
+    /// `outgoing` is the project the selection just LEFT. It used to read
+    /// `serveManager`, which derives from the *new* selection — nil for a
+    /// folder, several items or nothing, and the new project's own (idle)
+    /// manager when the new project could not be served — so the prior serve
+    /// was never the one stopped here; only the 90 s reaper ever got it.
+    private func stopServeIfLastProjectWindow(outgoing: UUID?) {
         switchTask?.cancel()
         guard !windowRoster.anyProjectShown(excluding: windowID) else { return }
-        serveManager?.stop()
+        guard let outgoing else { return }
+        serveFleet.managers[outgoing]?.stop()
     }
 
     // MARK: - Notification receivers (extracted to reduce body complexity)
@@ -1501,9 +1532,11 @@ struct ContentView: View {
         case .stopProject:
             if let project = selectedProject { pipelineRunner.cancel(project: project) }
         case .reAnalyseProject:
-            // Ask, always. `--clean` is `shutil.rmtree(output_dir)` — the whole
-            // directory, database included — so this discards the analysis and
-            // every edit made on top of it. The ellipsis on the menu item
+            // Ask, always. `--clean` moves `bristlenose-output/` aside — the whole
+            // directory, database included — and discards it once the new run
+            // succeeds (since 30 Aug 2026; an `rmtree` before that), so this
+            // discards the analysis and every edit made on top of it. The
+            // ellipsis on the menu item
             // promises a question; skipping it on a project that happens to
             // carry no curation would make the ellipsis a lie and would still
             // be throwing away finished work and re-spending on the provider.
@@ -1609,20 +1642,26 @@ struct ContentView: View {
     /// read is a handful of `COUNT(*)`s over an already-open-and-closed
     /// connection, and it happens once per menu click.
     private func askToReAnalyse(_ project: Project) {
-        let counts = CurationCountsReader.read(
-            projectRoot: URL(fileURLWithPath: project.path))
-        guard !counts.isEmpty else {
-            // Nothing curated: the analysis is derived output the researcher
-            // just asked to have rebuilt, so there is nothing to weigh and a
-            // modal would be a speed bump.
-            pipelineRunner.start(project: project, clean: true)
-            return
+        // Off the main actor: the read opens the database file, and on an
+        // iCloud-evicted or sleeping-volume project that is a materialisation
+        // the menu click would beachball for. Nothing here is time-critical —
+        // the sheet appears when the count does.
+        let root = URL(fileURLWithPath: project.path)
+        Task { @MainActor in
+            let counts = await Task.detached { CurationCountsReader.read(projectRoot: root) }.value
+            guard !counts.isEmpty else {
+                // Nothing curated: the analysis is derived output the researcher
+                // just asked to have rebuilt, so there is nothing to weigh and a
+                // modal would be a speed bump.
+                pipelineRunner.start(project: project, clean: true)
+                return
+            }
+            reAnalyseConfirm = PendingReAnalyse(
+                project: project,
+                sessionCount: projectIndex.unanalysed[project.id]?.sessionCount ?? 0,
+                counts: counts
+            )
         }
-        reAnalyseConfirm = PendingReAnalyse(
-            project: project,
-            sessionCount: projectIndex.unanalysed[project.id]?.sessionCount ?? 0,
-            counts: counts
-        )
     }
 
     /// The sheet's primary action, or `nil` when **Analyse** is not on offer

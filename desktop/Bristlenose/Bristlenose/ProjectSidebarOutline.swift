@@ -1851,7 +1851,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             importBatch: importBatchDisplay(for: project),
             lastRunAt: project.lastPipelineRunAt,
             missingCount: projectIndex?.unanalysed[id]?.missingFiles.count ?? 0,
-            unanalysedCount: projectIndex?.unanalysed[id]?.newFiles.count ?? 0
+            unanalysedCount: projectIndex?.unanalysed[id]?.newFiles.count ?? 0,
+            databaseForked: projectIndex?.unanalysed[id]?.databaseForked ?? false
         )
     }
 
@@ -1971,7 +1972,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // The variant was resolved at render time and this reads the watcher
         // again at click time; a rescan in between could have cleared the drift.
         // An empty popover is worse than none.
-        guard !data.newFiles.isEmpty || !data.missingFiles.isEmpty else { return }
+        guard !data.newFiles.isEmpty || !data.missingFiles.isEmpty || data.databaseForked else { return }
         let offered = Self.analyseIsOffered(
             isFolderShaped: project.inputFiles == nil,
             hasPath: !project.path.isEmpty,
@@ -1985,6 +1986,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             : nil
         let content = ProjectFilesPopover(newFiles: data.newFiles,
                                           missingFiles: data.missingFiles,
+                                          databaseForked: data.databaseForked,
                                           onAnalyse: analyse)
             .environmentObject(i18n)
         let host = NSHostingController(rootView: content)
@@ -2409,8 +2411,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     }
 
     /// Re-analyse is destructive, so this asks the *window* rather than
-    /// starting anything: `--clean` is `rmtree(output_dir)`, and the
-    /// confirmation lives with the window that can present a sheet.
+    /// starting anything: `--clean` moves `bristlenose-output/` aside and
+    /// discards it once the new run succeeds (an `rmtree` before 30 Aug 2026),
+    /// and the confirmation lives with the window that can present a sheet.
     @objc private func menuReAnalyse(_ sender: NSMenuItem) {
         if let id = menuClickedNodeID { onReAnalyse(id) }
     }

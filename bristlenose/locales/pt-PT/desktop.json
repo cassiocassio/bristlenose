@@ -390,7 +390,8 @@
         "no_audio": "Sem som neste ficheiro — não há nada para transcrever.",
         "no_speech": "Nenhuma fala encontrada — nada foi dito nesta gravação.",
         "unreadable_folder": "Não foi possível abrir esta pasta.",
-        "unreadable": "Não foi possível ler o ficheiro."
+        "unreadable": "Não foi possível ler o ficheiro.",
+        "duplicate_recording": "Uma segunda gravação para esta sessão — foi usada a outra."
       }
     }
   },

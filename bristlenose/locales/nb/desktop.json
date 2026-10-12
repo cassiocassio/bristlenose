@@ -390,7 +390,8 @@
         "no_audio": "Ingen lyd i denne filen – det er ingenting å transkribere.",
         "no_speech": "Ingen tale funnet – ingenting ble sagt i dette opptaket.",
         "unreadable_folder": "Denne mappen kunne ikke åpnes.",
-        "unreadable": "Filen kunne ikke leses."
+        "unreadable": "Filen kunne ikke leses.",
+        "duplicate_recording": "Et annet opptak for denne økten – det andre ble brukt."
       }
     }
   },

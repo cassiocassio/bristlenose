@@ -64,6 +64,9 @@ MESSAGES: dict[UnusableReason, str] = {
     UnusableReason.NO_SPEECH: "No speech found — nothing was said in this recording.",
     UnusableReason.UNREADABLE_FOLDER: "This folder couldn't be opened.",
     UnusableReason.UNREADABLE: "The file couldn't be read.",
+    UnusableReason.DUPLICATE_RECORDING: (
+        "A second recording for this session — the other one was used."
+    ),
 }
 
 #: Leading bytes that identify a media container. Enough to answer the only

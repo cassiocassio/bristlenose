@@ -390,7 +390,8 @@
         "no_audio": "Inget ljud i den här filen – det finns inget att transkribera.",
         "no_speech": "Inget tal hittades – inget sades i den här inspelningen.",
         "unreadable_folder": "Det gick inte att öppna mappen.",
-        "unreadable": "Det gick inte att läsa filen."
+        "unreadable": "Det gick inte att läsa filen.",
+        "duplicate_recording": "En andra inspelning för den här sessionen – den andra användes."
       }
     }
   },

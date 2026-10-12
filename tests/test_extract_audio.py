@@ -174,3 +174,52 @@ async def test_genuine_no_audio_stream_skips_without_aborting(tmp_path: Path) ->
     ):
         result = await extract_audio_for_sessions([session], tmp_path)
     assert result[0].audio_path is None
+
+
+@pytest.mark.asyncio
+async def test_a_second_recording_in_one_session_is_stated_not_dropped(tmp_path: Path) -> None:
+    """``interview.mp4`` beside ``interview.mov``: one is transcribed, and the
+    other used to vanish with no row anywhere (12 Oct 2026). Now it carries
+    the reason token the ingest outcome turns into a diagnostic row."""
+    from bristlenose.refusals import UnusableReason
+
+    session = _session()
+    session.files.append(
+        InputFile(
+            path=Path("/input/recording.mov"),
+            file_type=FileType.VIDEO,
+            created_at=datetime(2026, 1, 15, 14, 0, 0, tzinfo=timezone.utc),
+            size_bytes=90_000_000,
+        )
+    )
+    extracted = tmp_path / "s1_extracted.wav"
+    with (
+        patch("bristlenose.stages.s02_extract_audio.has_audio_stream", return_value=True),
+        patch(
+            "bristlenose.stages.s02_extract_audio.extract_audio_from_video",
+            return_value=extracted,
+        ),
+    ):
+        await extract_audio_for_sessions([session], tmp_path)
+
+    assert session.audio_path == extracted
+    assert session.files[0].error is None
+    assert session.files[1].error == UnusableReason.DUPLICATE_RECORDING.value
+
+
+@pytest.mark.asyncio
+async def test_a_video_beside_the_audio_file_is_not_a_duplicate(tmp_path: Path) -> None:
+    """The everyday pair — the recording for playback, a standalone audio
+    export for transcription — is the design, not a collision."""
+    session = _session()
+    session.files.append(
+        InputFile(
+            path=Path("/input/recording.m4a"),
+            file_type=FileType.AUDIO,
+            created_at=datetime(2026, 1, 15, 14, 0, 0, tzinfo=timezone.utc),
+            size_bytes=9_000_000,
+        )
+    )
+    await extract_audio_for_sessions([session], tmp_path)
+    assert session.audio_path == Path("/input/recording.m4a")
+    assert [f.error for f in session.files] == [None, None]

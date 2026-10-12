@@ -390,7 +390,8 @@
         "no_audio": "Geen geluid in dit bestand — er valt niets te transcriberen.",
         "no_speech": "Geen spraak gevonden — er is niets gezegd in deze opname.",
         "unreadable_folder": "Deze map kon niet worden geopend.",
-        "unreadable": "Het bestand kon niet worden gelezen."
+        "unreadable": "Het bestand kon niet worden gelezen.",
+        "duplicate_recording": "Een tweede opname voor deze sessie — de andere is gebruikt."
       }
     }
   },

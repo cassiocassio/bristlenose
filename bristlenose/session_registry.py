@@ -208,9 +208,17 @@ class SessionRegistry:
 
         used = {_number(sid) for sid in self.sessions.values()}
         next_n = max(used, default=0) + 1
+        keys = [
+            session_key(s.files) if s.files else f"sid:{s.session_id}" for s in sessions
+        ]
+        # The same stem in two subfolders is two sessions (ingest keeps them
+        # apart); their keys collide, so those — and only those — carry the
+        # folder name. The plain key stays what every other project has.
+        collisions = {k for k in keys if keys.count(k) > 1}
         seen: set[str] = set()
-        for session in sessions:
-            key = session_key(session.files) if session.files else f"sid:{session.session_id}"
+        for session, key in zip(sessions, keys, strict=True):
+            if key in collisions and session.files:
+                key = session_key(session.files, qualified=True)
             if key in seen:
                 # Grouping makes keys unique; if that ever breaks, keep the two
                 # sessions apart rather than give them one number.

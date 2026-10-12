@@ -390,7 +390,8 @@
         "no_audio": "Aquest fitxer no té so — no hi ha res a transcriure.",
         "no_speech": "No s'hi ha trobat parla — ningú no hi ha dit res en aquest enregistrament.",
         "unreadable_folder": "No s'ha pogut obrir aquesta carpeta.",
-        "unreadable": "No s'ha pogut llegir el fitxer."
+        "unreadable": "No s'ha pogut llegir el fitxer.",
+        "duplicate_recording": "Una segona gravació per a aquesta sessió — s'ha fet servir l'altra."
       }
     }
   },

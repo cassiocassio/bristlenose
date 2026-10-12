@@ -490,7 +490,35 @@ def _group_by_stem(files: list[InputFile]) -> list[list[InputFile]]:
     return groups
 
 
-def session_key(files: list[InputFile]) -> str:
+_MEDIA_TYPES = (FileType.AUDIO, FileType.VIDEO)
+_TRANSCRIPT_TYPES = (FileType.SUBTITLE_SRT, FileType.SUBTITLE_VTT, FileType.DOCX)
+
+
+def _split_by_folder_if_colliding(group: list[InputFile]) -> list[list[InputFile]]:
+    """One session per folder when two folders both hold a recording (or both
+    a transcript) under the same name.
+
+    ``alice/interview.mp4`` and ``bob/interview.mp4`` are two participants, not
+    one session with two videos — until 12 Oct 2026 they merged, only the first
+    was transcribed, and the second vanished with nothing said. A recording in
+    one folder and its transcript in another is still one session: the split
+    happens only when a *role* is duplicated across folders.
+    """
+    media_parents = {f.path.parent for f in group if f.file_type in _MEDIA_TYPES}
+    transcript_parents = {f.path.parent for f in group if f.file_type in _TRANSCRIPT_TYPES}
+    if len(media_parents) < 2 and len(transcript_parents) < 2:
+        return [group]
+    by_parent: dict[Path, list[InputFile]] = {}
+    for f in group:
+        by_parent.setdefault(f.path.parent, []).append(f)
+    logger.warning(
+        "%d files named %r in %d folders — one session per folder",
+        len(group), group[0].path.stem, len(by_parent),
+    )
+    return list(by_parent.values())
+
+
+def session_key(files: list[InputFile], *, qualified: bool = False) -> str:
     """The stable identity of a session's file group — what the grouping keys on.
 
     Derived from the files rather than from the sid, so the same interview gets
@@ -500,6 +528,11 @@ def session_key(files: list[InputFile]) -> str:
     an unstamped file only ever joins such a group; anything else is keyed by
     its normalised stem. A later transcript joining an existing recording does
     not change the key, which is the point — the session keeps its number.
+
+    ``qualified`` appends the folder name, for the one case where two sessions
+    in a run would otherwise share a key — the same stem in two subfolders
+    (``_split_by_folder_if_colliding``). Only the registry asks for it, and only
+    on a collision, so every other project's keys are untouched.
     """
     for f in files:
         parent = f.path.parent.name
@@ -510,6 +543,8 @@ def session_key(files: list[InputFile]) -> str:
         if stamp is not None:
             return f"stamp:{stamp}|{key}"
     _stamp, key = _stamp_and_title(files[0].path.stem.lower())
+    if qualified:
+        return f"stem:{key}@{files[0].path.parent.name}"
     return f"stem:{key}"
 
 
@@ -542,7 +577,10 @@ def group_into_sessions(
             remaining.append(f)
 
     # -- Pass 2: normalised stem matching on remaining files ---------------------
-    stem_groups = _group_by_stem(remaining)
+    stem_groups = [
+        split for group in _group_by_stem(remaining)
+        for split in _split_by_folder_if_colliding(group)
+    ]
 
     # -- Merge both grouping passes into raw sessions --------------------------
     # Each session's start comes from `utils.session_start` (when it started,

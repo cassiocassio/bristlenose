@@ -158,6 +158,11 @@ class UnusableReason(str, Enum):
     NO_SPEECH = "no_speech"
     #: Couldn't be read and we can't say more than that.
     UNREADABLE = "unreadable"
+    #: A second audio or video file in one session — ``interview.mp4`` beside
+    #: ``interview.mov``. One is transcribed; this one is set aside, and
+    #: stated rather than dropped (12 Oct 2026). A video beside an audio
+    #: file is the everyday pair, not this.
+    DUPLICATE_RECORDING = "duplicate_recording"
 
 
 class EventTypeEnum(str, Enum):

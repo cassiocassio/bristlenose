@@ -577,3 +577,66 @@ class TestRecurringMeetings:
             _file("2026-08-12 1400 — P07 Interview (2).mp4", FileType.VIDEO),
         ]
         assert len(group_into_sessions(files)) == 2
+
+
+# ---------------------------------------------------------------------------
+# Same stem in different subfolders (12 Oct 2026, lifecycle handoff P6)
+# ---------------------------------------------------------------------------
+
+
+class TestSameStemInSubfolders:
+    """Two participants' recordings both called ``interview.mp4``, one folder
+    each, used to merge into one session and the second was never transcribed
+    — with nothing said. A recording in one folder and its transcript in
+    another is still one session."""
+
+    def test_two_recordings_with_one_name_are_two_sessions(self) -> None:
+        files = [
+            _file("interview.mp4", FileType.VIDEO, parent=Path("/input/alice")),
+            _file("interview.mp4", FileType.VIDEO, parent=Path("/input/bob")),
+        ]
+        sessions = group_into_sessions(files)
+        assert len(sessions) == 2
+        assert sorted(len(s.files) for s in sessions) == [1, 1]
+
+    def test_a_transcript_in_another_folder_still_joins_its_recording(self) -> None:
+        files = [
+            _file("interview.mp4", FileType.VIDEO, parent=Path("/input/recordings")),
+            _file("interview.vtt", FileType.SUBTITLE_VTT, parent=Path("/input/transcripts")),
+        ]
+        sessions = group_into_sessions(files)
+        assert len(sessions) == 1
+        assert sessions[0].has_existing_transcript is True
+
+    def test_each_folder_keeps_its_own_transcript_in_a_split(self) -> None:
+        files = [
+            _file("interview.mp4", FileType.VIDEO, parent=Path("/input/alice")),
+            _file("interview.vtt", FileType.SUBTITLE_VTT, parent=Path("/input/alice")),
+            _file("interview.mp4", FileType.VIDEO, parent=Path("/input/bob")),
+        ]
+        sessions = group_into_sessions(files)
+        by_parent = {s.files[0].path.parent.name: s for s in sessions}
+        assert set(by_parent) == {"alice", "bob"}
+        assert by_parent["alice"].has_existing_transcript is True
+        assert len(by_parent["bob"].files) == 1
+
+    def test_the_split_sessions_get_distinct_stable_registry_keys(self, tmp_path: Path) -> None:
+        """The registry keys a session on its files; two sessions that key
+        alike would share one number. Qualified by folder only when they
+        collide, so every other project's keys are untouched."""
+        from bristlenose.session_registry import SessionRegistry
+
+        files = [
+            _file("interview.mp4", FileType.VIDEO, parent=Path("/input/alice")),
+            _file("interview.mp4", FileType.VIDEO, parent=Path("/input/bob")),
+        ]
+        registry = SessionRegistry.load(tmp_path)
+        registry.apply(group_into_sessions(files))
+        keys = sorted(registry.sessions)
+        assert len(keys) == 2
+        assert all("#" not in k for k in keys), f"unstable fallback key used: {keys}"
+        assert all("stem:" in k for k in keys)
+        # A single session with that stem keeps the plain key other projects have.
+        plain = SessionRegistry.load(tmp_path / "other")
+        plain.apply(group_into_sessions(files[:1]))
+        assert list(plain.sessions) == ["stem:interview"]

@@ -425,7 +425,8 @@
         "no_audio": "V tomto souboru není zvuk — není co přepsat.",
         "no_speech": "Nebyla nalezena řeč — v této nahrávce nikdo nemluví.",
         "unreadable_folder": "Tuto složku se nepodařilo otevřít.",
-        "unreadable": "Soubor se nepodařilo přečíst."
+        "unreadable": "Soubor se nepodařilo přečíst.",
+        "duplicate_recording": "Druhá nahrávka pro toto sezení — použita byla ta druhá."
       }
     }
   },

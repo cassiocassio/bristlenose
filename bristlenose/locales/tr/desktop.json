@@ -390,7 +390,8 @@
         "no_audio": "Bu dosyada ses yok — yazıya dökülecek bir şey yok.",
         "no_speech": "Konuşma bulunamadı — bu kayıtta hiçbir şey söylenmemiş.",
         "unreadable_folder": "Bu klasör açılamadı.",
-        "unreadable": "Dosya okunamadı."
+        "unreadable": "Dosya okunamadı.",
+        "duplicate_recording": "Bu oturum için ikinci bir kayıt — diğeri kullanıldı."
       }
     }
   },

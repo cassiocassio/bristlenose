@@ -391,7 +391,8 @@
         "no_audio": "No sound in this file — there is nothing to transcribe.",
         "no_speech": "No speech found — nothing was said in this recording.",
         "unreadable_folder": "This folder couldn't be opened.",
-        "unreadable": "The file couldn't be read."
+        "unreadable": "The file couldn't be read.",
+        "duplicate_recording": "A second recording for this session — the other one was used."
       }
     }
   },

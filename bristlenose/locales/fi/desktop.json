@@ -390,7 +390,8 @@
         "no_audio": "Tässä tiedostossa ei ole ääntä — litteroitavaa ei ole.",
         "no_speech": "Puhetta ei löytynyt — tässä tallenteessa ei sanota mitään.",
         "unreadable_folder": "Tätä kansiota ei voitu avata.",
-        "unreadable": "Tiedostoa ei voitu lukea."
+        "unreadable": "Tiedostoa ei voitu lukea.",
+        "duplicate_recording": "Toinen tallenne tälle istunnolle — toista käytettiin."
       }
     }
   },

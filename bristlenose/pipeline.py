@@ -45,6 +45,7 @@ from bristlenose.manifest import (
     carry_forward_sessions,
     create_manifest,
     fresh_session_ids,
+    get_completed_session_ids,
     load_manifest,
     mark_session_complete,
     mark_session_failed,
@@ -1260,6 +1261,7 @@ class Pipeline:
         )
         from bristlenose.stages.s06_merge_transcript import (
             merge_transcripts,
+            sentence_paragraph_sessions,
             write_raw_transcripts,
             write_raw_transcripts_md,
         )
@@ -2118,13 +2120,27 @@ class Pipeline:
             # this run; their language is in the header the previous run
             # wrote, which this stage is about to overwrite.
             self._recover_languages(raw_dir, session_segments)
+            # Before the files are rewritten: a session keeps the paragraphs
+            # its splits and joins were made against.
+            sentence_paragraphs = sentence_paragraph_sessions(
+                raw_dir, [s.session_id for s in sessions],
+                analysed=(
+                    get_completed_session_ids(_prev_manifest, STAGE_TOPIC_SEGMENTATION)
+                    | get_completed_session_ids(_prev_manifest, STAGE_QUOTE_EXTRACTION)
+                ),
+            )
             transcripts = merge_transcripts(
                 sessions, session_segments, input_dir,
                 session_languages=self._detected_languages,
                 pinned_languages=self._pinned_languages,
+                sentence_paragraphs=sentence_paragraphs,
             )
-            write_raw_transcripts(transcripts, raw_dir)
-            write_raw_transcripts_md(transcripts, raw_dir)
+            write_raw_transcripts(
+                transcripts, raw_dir, sentence_paragraphs=sentence_paragraphs,
+            )
+            write_raw_transcripts_md(
+                transcripts, raw_dir, sentence_paragraphs=sentence_paragraphs,
+            )
             # Feed the desktop shoal animation a sample of real transcript words.
             shoal_feed.emit_words(
                 output_dir, (seg.text for t in transcripts for seg in t.segments)
@@ -2939,6 +2955,7 @@ class Pipeline:
         from bristlenose.stages.s05b_identify_speakers import identify_speaker_roles_heuristic
         from bristlenose.stages.s06_merge_transcript import (
             merge_transcripts,
+            sentence_paragraph_sessions,
             write_raw_transcripts,
             write_raw_transcripts_md,
         )
@@ -3094,14 +3111,28 @@ class Pipeline:
             # ── Merge and write transcripts ──
             status.update("[dim]Merging transcripts...[/dim]")
             t0 = time.perf_counter()
+            raw_dir = output_dir / "transcripts-raw"
+            # An earlier full run's analysis says which sessions are not new.
+            _prev = load_manifest(output_dir) if output_dir.exists() else None
+            sentence_paragraphs = sentence_paragraph_sessions(
+                raw_dir, [s.session_id for s in sessions],
+                analysed=(
+                    get_completed_session_ids(_prev, STAGE_TOPIC_SEGMENTATION)
+                    | get_completed_session_ids(_prev, STAGE_QUOTE_EXTRACTION)
+                ),
+            )
             transcripts = merge_transcripts(
                 sessions, session_segments, input_dir,
                 session_languages=self._detected_languages,
                 pinned_languages=self._pinned_languages,
+                sentence_paragraphs=sentence_paragraphs,
             )
-            raw_dir = output_dir / "transcripts-raw"
-            write_raw_transcripts(transcripts, raw_dir)
-            write_raw_transcripts_md(transcripts, raw_dir)
+            write_raw_transcripts(
+                transcripts, raw_dir, sentence_paragraphs=sentence_paragraphs,
+            )
+            write_raw_transcripts_md(
+                transcripts, raw_dir, sentence_paragraphs=sentence_paragraphs,
+            )
             _print_step("Merged transcripts", time.perf_counter() - t0)
 
         # People file (stats only, no rendering)

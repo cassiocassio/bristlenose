@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 
 from bristlenose.models import (
@@ -34,6 +35,63 @@ def _language_header(transcript: FullTranscript) -> dict[str, str] | None:
     return None
 
 
+#: The header line that marks a transcript paragraphed by the reading rule.
+PARAGRAPHS_HEADER = ("Paragraphs", "sentences")
+_PARAGRAPHS_LINE_RE = re.compile(r"^#\s*Paragraphs:\s*sentences$")
+
+
+def sentence_paragraph_sessions(
+    raw_dir: Path,
+    session_ids: list[str],
+    analysed: set[str] | frozenset[str] = frozenset(),
+) -> set[str]:
+    """Which sessions get the reading rule (`PARAGRAPH_LENGTH`) this run.
+
+    A session's paragraphs are what a researcher's splits, joins and speaker
+    moves are keyed to (by position and first words), and this stage re-runs
+    on every pipeline run. So a session keeps the paragraphing it was first
+    written with: one whose transcript exists without the ``# Paragraphs:
+    sentences`` line stays on the gap rule; one already carrying the line, or a
+    new one, gets the reading rule.
+
+    "New" means no transcript file AND no analysis on record (``analysed``:
+    sessions the manifest already has topics or quotes for). A deleted ``.txt``
+    in an analysed project is not a new session. A file that exists but cannot
+    be read (an evicted cloud file, a permission error) keeps the gap rule.
+
+    The marker lives in the file, not on `FullTranscript`: the topic and quote
+    caches fingerprint the whole model, so a new field would change every
+    session's fingerprint and re-run paid analysis across every project.
+    """
+    chosen: set[str] = set()
+    for sid in session_ids:
+        path = raw_dir / f"{sid}.txt"
+        if not path.exists():
+            if sid not in analysed:
+                chosen.add(sid)
+            continue
+        try:
+            with path.open(encoding="utf-8") as fh:
+                for line in fh:  # the header block, however long its lines
+                    if _PARAGRAPHS_LINE_RE.match(line.strip()):
+                        chosen.add(sid)
+                        break
+                    if line.strip() and not line.startswith("#"):
+                        break
+        except (OSError, UnicodeDecodeError):
+            continue
+    return chosen
+
+
+def _headers(
+    transcript: FullTranscript, sentence_paragraphs: set[str] | None,
+) -> dict[str, str] | None:
+    headers = dict(_language_header(transcript) or {})
+    if sentence_paragraphs and transcript.session_id in sentence_paragraphs:
+        headers[PARAGRAPHS_HEADER[0]] = PARAGRAPHS_HEADER[1]
+    return headers or None
+
+
 def merge_transcripts(
     sessions: list[InputSession],
     session_segments: dict[str, list[TranscriptSegment]],
@@ -41,6 +99,7 @@ def merge_transcripts(
     *,
     session_languages: dict[str, str] | None = None,
     pinned_languages: dict[str, str] | None = None,
+    sentence_paragraphs: set[str] | None = None,
 ) -> list[FullTranscript]:
     """Merge all transcript sources into unified FullTranscript objects.
 
@@ -71,7 +130,10 @@ def merge_transcripts(
         segments.sort(key=lambda s: s.start_time)
 
         # Merge overlapping same-speaker segments
-        merged = _merge_same_speaker(segments)
+        merged = _merge_same_speaker(
+            segments,
+            sentence_paragraphs=session.session_id in (sentence_paragraphs or set()),
+        )
 
         # Assign canonical segment ordinals (see design-quote-sequences.md)
         for i, seg in enumerate(merged):
@@ -119,6 +181,8 @@ def merge_transcripts(
 def write_raw_transcripts(
     transcripts: list[FullTranscript],
     output_dir: Path,
+    *,
+    sentence_paragraphs: set[str] | None = None,
 ) -> list[Path]:
     """Write raw transcript text files.
 
@@ -150,7 +214,7 @@ def write_raw_transcripts(
             source_file=transcript.source_file,
             session_date=transcript.session_date.isoformat(),
             duration=format_timecode(transcript.duration_seconds),
-            extra_headers=_language_header(transcript),
+            extra_headers=_headers(transcript, sentence_paragraphs),
         )
 
         lines: list[str] = [header, ""]
@@ -173,6 +237,8 @@ def write_raw_transcripts(
 def write_raw_transcripts_md(
     transcripts: list[FullTranscript],
     output_dir: Path,
+    *,
+    sentence_paragraphs: set[str] | None = None,
 ) -> list[Path]:
     """Write raw transcript Markdown files alongside the .txt files.
 
@@ -205,7 +271,7 @@ def write_raw_transcripts_md(
             source_file=transcript.source_file,
             session_date=transcript.session_date.isoformat(),
             duration=format_timecode(transcript.duration_seconds),
-            extra_headers=_language_header(transcript),
+            extra_headers=_headers(transcript, sentence_paragraphs),
         )
 
         lines: list[str] = [header, ""]
@@ -225,15 +291,61 @@ def write_raw_transcripts_md(
     return paths
 
 
+#: A paragraph this long ends at the next sentence end (the reading rule; see
+#: `_merge_same_speaker`). About four sentences of conversational English; people
+#: paragraphing TED talks by hand averaged 4.4 sentences (docs/design-transcript-
+#: readability.md §3.1). Measured on an 18-minute interview: no paragraph over
+#: 150 words, against 73% of all words in such paragraphs under the gap rule alone.
+PARAGRAPH_LENGTH = 60
+
+#: Sentence-final punctuation, with an optional closing quote or bracket after it.
+_SENTENCE_END = re.compile(r"[.?!…。？！؟۔][\"'”’)\]」』]*$")
+
+#: Scripts written without spaces between words (kana, Han, Thai). Hangul is
+#: spaced, so it counts in words like everything else.
+_NO_SPACE_CHAR = re.compile(
+    "[\u0e00-\u0e7f\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff"
+    "\U00020000-\U0003134f]"
+)
+
+
+def reading_length(text: str) -> float:
+    """Length in words, counting a no-space character as 0.4 of a word.
+
+    So 60 is about 60 English words or about 150 Japanese characters.
+    Punctuation alone is not a word.
+    """
+    chars = len(_NO_SPACE_CHAR.findall(text))
+    rest = _NO_SPACE_CHAR.sub(" ", text)
+    return sum(1 for tok in rest.split() if re.search(r"\w", tok)) + 0.4 * chars
+
+
+def ends_sentence(text: str) -> bool:
+    return bool(_SENTENCE_END.search(text.rstrip()))
+
+
 def _merge_same_speaker(
     segments: list[TranscriptSegment],
     max_gap: float = 2.0,
+    *,
+    sentence_paragraphs: bool = False,
 ) -> list[TranscriptSegment]:
-    """Merge consecutive segments from the same speaker within max_gap."""
+    """Merge consecutive segments from the same speaker within max_gap.
+
+    With ``sentence_paragraphs`` a paragraph that has reached
+    `PARAGRAPH_LENGTH` also ends at the next sentence end, so a long answer
+    reads as several paragraphs instead of one. Breaks fall only between
+    segments, never inside one, and never where the text has no sentence end.
+    """
     if not segments:
         return []
 
     merged: list[TranscriptSegment] = [segments[0].model_copy()]
+    # Running length of the last paragraph, and whether its newest piece ends a
+    # sentence: recomputing either over the whole paragraph made a long
+    # unpunctuated monologue quadratic (3,000 segments: 15.9 s against 0.02 s).
+    length = reading_length(segments[0].text) if sentence_paragraphs else 0.0
+    last_ends = ends_sentence(segments[0].text)
 
     for seg in segments[1:]:
         prev = merged[-1]
@@ -242,12 +354,17 @@ def _merge_same_speaker(
             and prev.speaker_label == seg.speaker_label
         )
         close = (seg.start_time - prev.end_time) <= max_gap
+        full = sentence_paragraphs and length >= PARAGRAPH_LENGTH and last_ends
 
-        if same_speaker and close:
+        if same_speaker and close and not full:
             prev.end_time = max(prev.end_time, seg.end_time)
             prev.text = f"{prev.text} {seg.text}"
             prev.words.extend(seg.words)
+            if sentence_paragraphs:
+                length += reading_length(seg.text)
         else:
             merged.append(seg.model_copy())
+            length = reading_length(seg.text) if sentence_paragraphs else 0.0
+        last_ends = ends_sentence(seg.text)
 
     return merged

@@ -15,7 +15,8 @@ presentation the way quotes already do.
 every Whisper window, on both backends, for English and Japanese. Sentence-start capitals
 (recommendation #3's second part, the capitalisation mockup's option C) shipped as
 display-only CSS in `512f0846`, recorded in `design-transcript-editing.md`.
-Recommendation #2 and the rest of #3 are not built. The side-by-side comparison of today's transcript against
+Recommendation #2 is built too (§9), for sessions transcribed from 12 Oct 2026 on.
+The rest of #3 is not built. The side-by-side comparison of today's transcript against
 five candidate versions is `docs/mockups/transcript-readability-versions.html`; the
 scripts behind it and behind every measurement here are in
 `experiments/transcript-readability/`.
@@ -574,4 +575,43 @@ lower-case "I". Its Japanese was already punctuated (26 。) and stayed so (25).
 **Not done:** speaker identification was not re-run on the new output (its LLM pass may
 cost money), so the expected fix to the edge disagreements (§1.1) is still inferred.
 Recommendation #2 follows.
+
+---
+
+## 9. Recommendation #2 as built (12 Oct 2026)
+
+`bristlenose/stages/s06_merge_transcript.py`: `PARAGRAPH_LENGTH`, `_merge_same_speaker`,
+`sentence_paragraph_sessions`.
+
+- **Rule (§3.3, unchanged in substance):** speaker change or a gap over 2 s starts a
+  paragraph, as before; a paragraph that has reached 60 words also ends at the next
+  sentence end (`. ? ! …` and `。 ？ ！ ؟ ۔`, a closing quote or bracket allowed after).
+  No-space characters (kana, Han, Thai) count 0.4 of a word. Breaks fall only between
+  segments. There is no hard ceiling.
+- **Gate (§3.4):** a session gets the rule only if its transcript has never been written,
+  or was written under the rule (`# Paragraphs: sentences` in its `.txt` header). A
+  session with an existing transcript and no topics or quotes on record counts as
+  existing. An unreadable transcript keeps the old rule. Existing projects are unchanged
+  byte for byte (pinned by a test).
+- **Measured** with the real function, speakers borrowed by time (as §3.2):
+
+  | | Paragraphs | Words p50 / p90 / max | Share of words in > 150-word paragraphs |
+  |---|---|---|---|
+  | s1, new Whisper output, gap rule | 32 | 46 / 291 / 478 | 67% |
+  | s1, new Whisper output, reading rule | 50 | 59 / 106 / 181 | 12% |
+  | fossda (existing output), gap rule | 482 | 50 / 323 / 3,799 | 75% |
+  | fossda (existing output), reading rule | 972 | 63 / 115 / 607 | 27% |
+
+  What stays over 150 words is one Whisper segment holding several sentences; cutting
+  inside a segment would need the word timings to time the cut, and was left out.
+- **Reviews changed:** a deleted `.txt` in an analysed project is not a new session (both
+  the full run and `bristlenose transcribe` read the manifest); the header is found
+  however long the lines above it; the length is a running total (a 3,000-segment
+  unpunctuated monologue went from 15.9 s to 0.02 s).
+- **Known and accepted:** a segment ending in "Dr." or "e.g." counts as a sentence end
+  once a paragraph is past 60 words. Thai has no sentence punctuation, so it never
+  breaks. One 0.4 weight serves Japanese and Chinese.
+- **Open, for the owner:** old projects keep the gap rule for good unless re-run with
+  `--clean`, which also wipes their edits. Offering the new paragraphing to a session
+  with no splits, joins or moves would need the importer's word on that, and is not built.
 

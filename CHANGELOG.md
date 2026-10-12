@@ -9,6 +9,10 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 - **The session timeline shows what was on screen.** Inside each speaker clip, a strip of colour follows the recording moment by moment, so the call becoming a screen share, or a browser becoming a terminal, shows as a change in the bar, and a small notch above the lane marks where it happened. The strip is computed in the background after the report opens and appears on its own; a project analysed earlier gets it the next time it is opened. Serve only, and only for sessions with video.
 - **Long answers are broken into paragraphs.** In recordings transcribed from now on, a speaker's paragraph ends at a sentence end once it passes about 60 words. Existing transcripts keep their paragraphs, and the splits and joins made on them.
 
+**Improved**
+
+- **`serve --dev` restarts only for changes to Bristlenose's own Python.** It used to watch the whole working directory, so a sidecar rebuild under `desktop/` restarted the dev server dozens of times.
+
 **0.37.0** — _12 Oct 2026_
 
 Transcripts come out punctuated, Word tables are read, PII redaction works on the Snap and Fedora packages, and the Sessions Start column shows when a session began.

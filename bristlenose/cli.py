@@ -2111,6 +2111,11 @@ def serve(
             host="127.0.0.1",
             port=port,
             reload=True,
+            # Watch the package, not the working directory: from the repo root the default
+            # watches everything, and a sidecar rebuild under desktop/Bristlenose/Resources/
+            # restarted the server dozens of times (12 Oct 2026). CSS and templates under
+            # bristlenose/theme/ are served live in dev mode and need no restart.
+            reload_dirs=[str(Path(__file__).resolve().parent)],
             factory=True,
             log_level="info" if verbose else "warning",
         )

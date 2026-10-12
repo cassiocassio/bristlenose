@@ -1,13 +1,14 @@
 ---
 status: partial
-last-trued: 2026-10-11
-trued-against: HEAD@main on 2026-10-11
+last-trued: 2026-10-12
+trued-against: HEAD@main on 2026-10-12
 ---
 
 > **Truing status:** Partial by design. § 5.1 landed 12 Sep 2026; **§ 5.4's resolver, a § 5.2 writer table, a never-downgrade store standing in for § 5.3, and the T1 wire fix landed 11 Oct 2026** — what was built, and where it departs from the plan below, is § 5.9. § 5.3's schema, § 5.6's markers and the § 4 decision are still open and listed in § 5.10. § 1 and § 2 carry ✅ markers where a defect closed. See changelog.
 
 ## Changelog
 
+- _2026-10-12_ — trued after the recorder pass (commits "session start: gopro, zoom field recorders, voice memos" and "session start: voice memos keep their tags when shared — measured"): § 5.8 marks the second-writer `Z` check answered (Teams honest, GoPro not); the judgement-calls paragraph names what is still owed. The § 5.9 tables and § 5.10 item 7 already carried the new rows. Research notes: `docs/research/research-gopro.md`, `research-zoom-recorders.md`, `research-voicememos.md`.
 - _2026-10-11_ — **the start time is resolved, not read off the file.** New § 5.9 records what was built (`utils/session_start.py`, the registry's `starts`, `iso_utc`, the importer refresh, the renderer's conversion) and its four departures from § 5.4; § 5.2's table gains the 11 Oct measurements (Teams downloads and ReplayKit measured, iPhone inferred, a Mac-made capture date); § 5.10 lists what is still owed. T1, T3 and T4 marked. Anchors: `git log -S resolve_session_start`.
 - _2026-09-12_ — trued up after § 5.1 landed: § 1 scoped to "persist"; T2/T5 marked fixed; § 2·5's "we read none of it" heading and body rewritten to "we read it since § 5.1"; § 5.1's plan bullets labelled as the plan with an accurate what-shipped (Pydantic model, tuple return, eight fields, one corpus test); (f) records the GPS allowlist as shipped code; new § 5.1a listing what the capture does not do; anchors re-pointed (`s01_ingest.py:467/470/393`, `pipeline.py:2904`); `timecode` count 15→21. Anchors: commits "ingest captures container time metadata", "time: review fixes — one probe…".
 
@@ -417,7 +418,8 @@ The preconditions § 5.4's resolver reads (since 11 Oct 2026), in one place:
 _**Judgement calls left for the maintainer, in order — none is a mechanical
 step:** § 5.2's table has three owed measurements that need files not on this
 machine (iPhone start-vs-end, Zoom local transcode, a real OBS/browser
-capture); § 5.3 is a schema migration with a compatibility decision on
+capture) — _still owed on 12 Oct 2026; GoPro, Zoom field recorders, Voice Memos
+and ⇧⌘5 window capture were measured instead, § 5.9_; § 5.3 is a schema migration with a compatibility decision on
 `session_date`; § 5.4's tolerance and precedence are product calls the
 consent-delay sign test only informs; § 5.5 depends on § 5.3; § 5.6 is gated on
 § 4, which is the one that decides whose time is "the" time._
@@ -548,7 +550,10 @@ catalogued divergence and stays.
 - A real OBS/browser `.webm`: is `DateUTC` populated? (read path proven;
   write side not.)
 - A second BST-era file from a different writer, to confirm the `Z` is honest
-  beyond Apple's own tools.
+  beyond Apple's own tools. _✅ Answered 11–12 Oct 2026: a Teams download's `Z`
+  is honest (18:07:38Z against a name stamped 20:07 CEST); a GoPro's is **not**
+  (the camera's local clock with a false `Z`, six models measured against their
+  own GPS) — § 5.9._
 
 ### 5.9 ✅ LANDED 11 Oct 2026 — the resolver, as built
 

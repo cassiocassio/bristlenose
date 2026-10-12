@@ -1,8 +1,18 @@
 ---
 status: current
-last-trued: 2026-10-11
-trued-against: HEAD@main on 2026-10-11 (4bf5299a)
+last-trued: 2026-10-12
+trued-against: HEAD@main on 2026-10-12
 ---
+
+## Changelog
+
+- _2026-10-12_ — trued up: restamped the status heading (winget is a follower channel,
+  still no Windows release step); added the current-directory lookup family as fixed
+  item 11 with its gate; pointed the Windows skip count at `docs/testing/ratchet.json`
+  instead of a number, and added the open-database skip; the Hugging Face silencing is
+  shipped in 0.37.0; open item 5 gained the 12 Oct winget state. Anchors: "winget and
+  nvidia-smi on windows: never run one from the current directory", "ci: the
+  stash-cycle tests poll through the reattach…", `scripts/project.conf` `CHANNELS_FOLLOW`.
 
 # Windows port
 
@@ -12,8 +22,17 @@ trued-against: HEAD@main on 2026-10-11 (4bf5299a)
 > passed validation and waits for a moderator. Client Windows 10 22H2 and Windows 11
 > 26H2 ran that installer in VirtualBox VMs on an Intel Mac (`docs/release-winget.md`
 > § Client Windows in VMs). The pipx/uv route below is unchanged.
+>
+> **Trued again 12 Oct 2026.** #449372 is still open (verify reads it `overdue`), and
+> 0.37.0's installer is attached with its submission held behind it (open item 5).
 
-## Status — 5 Oct 2026: the CLI installs and runs; not a channel
+## Status — the CLI installs and runs; winget is a follower channel, with no release step
+
+> *Restamped 12 Oct 2026. The heading read "Status — 5 Oct 2026: the CLI installs and
+> runs; not a channel".* winget is now a follower channel in `release.sh verify`
+> (`CHANNELS_FOLLOW` in `scripts/project.conf`), but there is still no Windows release
+> step: `release.sh` does not dispatch `windows-installer.yml`, and `release.yml` has no
+> Windows job. The installer is built and attached by hand (`docs/release-winget.md`).
 
 **What holds, and how we know.** The command-line tool installs through pipx or uv
 on **x64 Python** and runs on Windows. Proved three ways on 5 Oct 2026:
@@ -73,13 +92,24 @@ item 1 crashes every `transcribe`. 0.34.0 is the first release that works there.
     Homebrew row; "stores it securely" for a plain `.env`; `~/` glued to backslashes;
     the exact winget id for FFmpeg; a voice hint that cannot work on Windows +
     Python 3.14 (`afa99a8a`, `2bc5e23e`, `ad6936bf`, `a2f8d774`, `fb360f4a`).
+11. **A planted `.exe` in a researcher's folder could run in place of a tool**
+    (fixed 8–11 Oct 2026): `CreateProcess` searches the current directory first, so a
+    bare-name launch of `ollama`, `ffmpeg`, `winget` or `nvidia-smi` could pick up a file
+    sitting in the project folder. One cause, three fixes, all now resolving through
+    `safe_which` (`5f3d5ac8` ollama, `47ee59af` ffmpeg, `d7bd25b7` winget and
+    nvidia-smi). Still owed: a VM check that `safe_which('winget')` finds winget's App
+    Execution Alias (`docs/design-winget.md` § Reviews).
 
 **Gates that keep these closed** (all run on every OS): every text-mode subprocess
 call names an encoding; every text file read/write names one; every `https` `urlopen`
 passes `context=https_context()`; no module names `os.O_NOFOLLOW`; install specs are
-double-quoted. Thirteen tests skip on Windows where it has no equivalent (POSIX mode
-bits, signals by `os.kill`, `O_NOFOLLOW`, the exec bit, replacing a file serve holds
-open); `docs/testing/ratchet.json` names each.
+double-quoted; no Windows tool is launched by bare name, so the current directory is
+never searched (`tests/test_windows_cwd_binaries.py`). Tests skip on Windows where it has
+no equivalent (POSIX mode bits, signals by `os.kill`, `O_NOFOLLOW`, the exec bit,
+replacing a file serve holds open, and since 12 Oct moving a folder whose database serve
+holds open: the stash-cycle tests); the count and each reason are in
+`docs/testing/ratchet.json` (`pytest_skip_sites` and its note). *Until 12 Oct this said
+"Thirteen tests skip"; the number lives in that file.*
 
 ### Learnings
 
@@ -159,7 +189,8 @@ open); `docs/testing/ratchet.json` names each.
    port "parked" and points at Scoop.
 4. **Every platform, seen first on Windows**: warning log lines interleave with the
    run UI (including a developer note); Hugging Face warnings print twice (*silenced
-   11 Oct 2026, unreleased: `HF_HUB_VERBOSITY` in `bristlenose/__init__.py`*) and the
+   11 Oct 2026, unreleased: `HF_HUB_VERBOSITY` in `bristlenose/__init__.py`; shipped in
+   0.37.0, VM re-check of the first transcription still owed*) and the
    1.6 GB Whisper download shows no progress; the player does not seek when an
    already-open window has ended; the MCP hint says `pip` to pipx users; session
    times render UTC as local (H9 in `docs/time-defects.md`); the transcript header
@@ -170,6 +201,10 @@ open); `docs/testing/ratchet.json` names each.
    passed (6 and 8 Oct), `windows-installer.yml` builds it in CI (dispatched by hand,
    not a `release.yml` job), and 0.36.0 is submitted as microsoft/winget-pkgs#449372,
    validated and waiting for a moderator; procedure in `docs/release-winget.md`.
+   *As of 12 Oct:* #449372 is still open about 86 h on, and `release.sh verify 0.36.0`
+   reads it `overdue` (past the 72 h budget). 0.37.0's installer was built on the tag,
+   attached to the GitHub Release and its public hash checked against the manifest;
+   its submission is held until #449372 merges (`docs/release-winget.md` step 4a).
    Signing: the first submission went unsigned; Certum's open-source certificate is
    bought in November 2026 (Microsoft's signing service takes UK organisations, not
    UK individuals). Scoop and an MSI were set aside: researchers

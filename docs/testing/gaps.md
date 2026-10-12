@@ -115,9 +115,12 @@ it, are in G4.
 
 ### G4. Nothing in the tree says "this number must not increase" — ⚙️ **shipped 3 Sep 2026**
 
-Measured candidates, all currently ungated in this direction:
+The candidates as measured on 3 Sep 2026, when none was gated in this direction.
+All are held now: the first four by `check-ratchet.py` (below), ESLint by its own
+`--max-warnings`. The numbers are as measured then (ESLint's on 9 Oct), not today's;
+current ceilings live in `docs/testing/ratchet.json`.
 
-| number | today | why it matters |
+| number | 3 Sep 2026 | why it matters |
 |---|---|---|
 | mypy errors | 238 | G3 |
 | skip sites in `tests/` | 25 (3 skip, 3 skipif, 19 runtime) | a skip reads as a pass |
@@ -137,8 +140,9 @@ install resolves whatever is newest. Such metrics now carry `authority: ci`: enf
 there, advisory locally, and `--tighten` refuses to lower one from a local run. Pinning
 mypy exactly would be the better fix, but that is a dependency-policy decision.
 
-`scripts/check-ratchet.py` now holds all four in CI, ceilings in
-`docs/testing/ratchet.json`. `--tighten` only ever lowers them; raising one is a
+`scripts/check-ratchet.py` holds them in CI. It began with these four; the set has
+grown since, so read `docs/testing/ratchet.json` for which metrics and ceilings it
+holds today rather than a count here. `--tighten` only ever lowers them; raising one is a
 deliberate human edit in a commit that has to say why, because a ratchet the
 tooling can loosen is not a ratchet. Its own red was proven against a **real**
 added `@pytest.mark.slow`, per G8, not against an edited ceiling.

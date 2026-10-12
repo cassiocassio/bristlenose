@@ -266,7 +266,7 @@ safe to hand a stranger”, so there's no second implementation to drift.
 | `generate-build-info.sh` | Writes `GeneratedBuildInfo.swift` (gitignored) from git state. |
 | `check-bundle-manifest.sh [root]` | Every runtime-data dir under `bristlenose/` is covered by a `datas` entry in the spec — catches "in source, missing from bundle" before the 3-min build. |
 | `check-sidecar-freshness.sh` | Fails the Xcode build if the bundle predates a Python/frontend/locale edit. |
-| `check-sidecar-appstore-strings.sh` | Decompresses the PYZ and scans code-object constants for App Store §2.5.2 blockers (`itms-services`, frozen in by CPython). Invisible to `grep`/`strings`. |
+| `check-sidecar-appstore-strings.sh` | Decompresses the PYZ and scans code-object constants for App Store §2.5.2 blockers: the `NEEDLES` tuple in `check-sidecar-appstore-strings.py` (CPython's `itms-services` and spaCy's model-download URLs). The spec's `_strip_literals` calls (`desktop/bristlenose-sidecar.spec`) rewrite them at freeze time; this is the backstop. Invisible to `grep`/`strings`. |
 
 ### App Store / TestFlight only
 

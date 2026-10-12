@@ -1,8 +1,17 @@
 ---
-status: current — first run 8–9 Oct 2026 (0.36.0, microsoft/winget-pkgs#449372)
-last-trued: 2026-10-11
-trued-against: HEAD@main on 2026-10-11 (follower verify, after-winget holds incl. landed)
+status: current — first run 8–9 Oct 2026 (0.36.0, microsoft/winget-pkgs#449372); second run 0.37.0, steps 1–3 done 12 Oct 2026, step 4 held behind #449372
+last-trued: 2026-10-12
+trued-against: HEAD@main on 2026-10-12
 ---
+
+## Changelog
+
+- _2026-10-12_ — trued up: recorded the 0.37.0 run (steps 1–3 on 12 Oct, submit held
+  behind the still-open #449372) as the precedent in step 4a; added how `bad` and `?`
+  read while a version is held, the artefact's 90-day retention, the hf note as shipped
+  in 0.37.0, and the benbecula VMs as the client-Windows machines. Anchors: windows-installer.yml
+  run 38286075052, `scripts/verify-channels.sh` `verdict_follower`, "silence
+  huggingface_hub's first-download warnings, and bundle hf_xet on windows".
 
 # Shipping a version to winget
 
@@ -16,7 +25,12 @@ heading (*following*) as `ok`, `pending` (an open PR for the version, inside
 `WINGET_BUDGET_HOURS`), `overdue`, `superseded` (a newer version is in flight),
 `bad` (nothing merged, nothing submitted) or `unreachable`. It never counts
 toward verify's exit code: the moderator queue takes days, and holding the
-release open that long would be wrong. Design:
+release open that long would be wrong. `bad` is also what a version reads while it
+is deliberately held behind an older version's open first PR (0.37.0 on 12 Oct,
+step 4a), so it is not always a call to act. In the holds block, an
+`after-winget/<v>` hold for an older version reads `?` under a bare `verify`, which
+means "run `verify <v>` for this hold"; under `verify <v>` it reads `wait` or
+`land`. Design:
 `docs/design-channel-version-lag.md` §5.2. Automating the submission
 (`winget-releaser`) is still step 5 of the plan, after one or two accepted
 versions.
@@ -58,6 +72,12 @@ vendored winget schemas. Read the log's last lines. "All smoke checks passed." a
 gh run download <run-id> -n bristlenose-windows-installer -D <scratch-dir>
 ```
 
+The artefact is kept for GitHub's default 90 days (0.37.0's run, 38286075052,
+expires 10 Jan 2027). That matters when step 4 is held: `komac submit` needs the
+manifest directory from this artefact, so download it now and keep it, or submit
+before it expires. A rebuild is not a substitute (see Gotchas: never rebuild a
+published version's installer).
+
 The installer lands at `<scratch-dir>/build/windows/bristlenose-X.Y.Z-setup-x64.exe`,
 and the manifests at `<scratch-dir>/build/windows/winget/Bristlenose.Bristlenose/X.Y.Z/`.
 Compare the installer's `shasum -a 256` with the `InstallerSha256` in
@@ -95,6 +115,16 @@ GITHUB_TOKEN=$(gh auth token) komac submit --yes <manifest-dir> > komac-submit.l
 Read the whole log; it names the PR. Komac commits the three files to
 `manifests/b/Bristlenose/Bristlenose/X.Y.Z/` on a branch of the fork and opens the PR.
 One version per PR.
+
+**4a. If the previous version's first PR is still open.** This is what was done for
+0.37.0 on 12 Oct 2026, with the owner's approval; it is the precedent, not a settled
+rule. #449372 (0.36.0, the package's first PR) was still open and validated, so
+steps 1–3 ran (installer built on the tag, attached, public hash matched the
+manifest), and `komac submit` was held. Once #449372 merges, 0.37.0 goes in as an
+ordinary version update, from the manifest directory kept in step 2. Until then
+`verify 0.37.0` reads winget `bad` ("no open PR for 0.37.0") and `verify 0.36.0`
+reads `overdue`. A weekly scheduled task, `winget-pr-watch` (Mondays, on the Mac),
+checks #449372 and lists what is owed when it moves.
 
 **5. The CLA (first PR only), signed by Martin himself.** Martin posts this comment on
 the PR, as an individual with no company:
@@ -173,6 +203,8 @@ needs Safari, by hand. The Windows 11 evaluation ISO is a direct fwlink.
   and `HF_HUB_DISABLE_SYMLINKS_WARNING=1` (`tests/test_hf_hub_quiet.py`), and the Windows
   spec now bundles `hf_xet` with its metadata, so downloads use Xet instead of plain
   HTTP. Re-check the first transcription in the VMs on the next installer.*
+  *(12 Oct 2026: shipped in 0.37.0. Re-check the first transcription in the VMs on the
+  0.37.0 installer; still owed.)*
 
 **Harness gotchas, all paid for on the first run:**
 
@@ -242,7 +274,10 @@ Each of these cost a cycle at least once.
   manifest against winget's JSON schemas, vendored at
   `packaging/windows/winget/schemas/1.12.0/`, using `validate_manifest.py`. That covers
   the structure, not the download or the hash. `winget validate` and
-  `winget install --manifest` need a real Windows machine (an aella box or the UTM VM).
+  `winget install --manifest` need a real Windows machine: the benbecula VirtualBox
+  VMs (§ Client Windows in VMs; `packaging/windows/vbox-test.sh` itself runs no winget
+  command), or an aella Server box. *(Until 12 Oct this read "an aella box or the UTM
+  VM"; client Windows moved off UTM on 9 Oct.)*
 - **`winget install` of an unsigned installer shows SmartScreen.** winget applies the
   Mark of the Web itself. A headless `winget install --manifest` over SSH therefore
   waits forever on a dialog nobody can see. Test from a desktop session (`aella rdp`),

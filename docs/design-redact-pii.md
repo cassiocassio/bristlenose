@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-09-20
-trued-against: HEAD@main 835cde98 on 2026-09-20 — s07_pii_removal.py's score_bar/resolve_spacy_model seam, PIIModelPack.swift as handoff-only, empty PII_PACK_URL in project.conf, group.app.bristlenose in Bristlenose.entitlements, presidio bundled in bristlenose-sidecar.spec
+last-trued: 2026-10-12
+trued-against: HEAD@main on 2026-10-12 — s07_pii_removal.py's fetch_spacy_model and _SPACY_MODEL_WHEEL_URL, bristlenose-sidecar.spec's _strip_literals for s07, NEEDLES in check-sidecar-appstore-strings.py
 ---
 
 > **Truing status:** Partial — trued 2026-09-20. The engineering sections
@@ -16,6 +16,14 @@ trued-against: HEAD@main 835cde98 on 2026-09-20 — s07_pii_removal.py's score_b
 
 ## Changelog
 
+- _2026-10-12_ — trued up: added a dated status line for the snap/RPM
+  model fetch (11 Oct) and named it in the CLI-live sentence; promoted the
+  invariant that any download URL in a sidecar-bundled module must be stripped
+  by the spec, to §"Delivery architecture". Anchors: `s07_pii_removal.py:51-58,93`;
+  `bristlenose-sidecar.spec` `_strip_literals` for `bristlenose.stages.s07_pii_removal`;
+  `check-sidecar-appstore-strings.py` `NEEDLES`; commits "pii on snap and rpm: fetch
+  the model into the user cache", "sidecar spec: strip our own spacy-models URL, as
+  spaCy's already is".
 - _2026-09-20_ — trued up: corrected the status banner (claimed three live
   channels; one is live, two are code-complete and unreachable) and four TL;DR
   bullets (acquirers that do not exist, a Privacy toggle that exists in no
@@ -41,6 +49,11 @@ trued-against: HEAD@main 835cde98 on 2026-09-20 — s07_pii_removal.py's score_b
 
 # PII Redaction — exploration, decisions & forward plan
 
+> **12 Oct 2026:** unchanged in shape — the CLI is still the one live channel —
+> but the CLI now covers the snap and the RPM too (11 Oct): their prefixes are
+> read-only, so the model is fetched into the user's cache instead of by
+> `spacy download`. See the channel table in §"Delivery architecture".
+>
 > **Status (20 Sep 2026): ONE channel live, two code-complete and not
 > reachable.** Engine choice CLOSED, Mac delivery UN-PARKED — both 12 Sep 2026.
 > **The engine is Presidio** — "roll our own" is REJECTED, see that section.
@@ -49,7 +62,9 @@ trued-against: HEAD@main 835cde98 on 2026-09-20 — s07_pii_removal.py's score_b
 >
 > **This header said "SHIPPING PRESIDIO ON ALL THREE CHANNELS" until 20 Sep,
 > and the body has never agreed with it.** Precisely, today: the **CLI** channel
-> is live and measured (`--redact-pii`, `spacy download`). The **Mac** channels
+> is live and measured (`--redact-pii`, `spacy download`; on the snap and the RPM,
+> since 11 Oct, a pinned-SHA-256 fetch of the same model wheel into the user's
+> model cache, `fetch_spacy_model`). The **Mac** channels
 > are built but unreachable — `PIIModelPack.swift` is the handoff half and says
 > so itself (*"it deliberately does not acquire anything"*), **no acquirer
 > exists** on either Mac channel, **nothing writes `piiEnabled`** so there is no
@@ -478,6 +493,18 @@ path, and not two spec configurations.
 Developer-ID BA download completes for a real end user — **never has to be
 answered**, because the `.dmg` channel does not use Background Assets. We route
 around the unproven thing instead of betting on it.
+
+**Invariant: a gated URL in a bundled module stops the build (12 Oct 2026).**
+§2.5.2's scan reads strings, not call paths, so any constant in a `bristlenose/`
+module the sidecar includes that carries one of the gate's needles (today the
+spaCy model-download URLs) must be rewritten by the spec, or build-all stops at
+step 2c. The snap/RPM fetch put such a constant in s07
+(`_SPACY_MODEL_WHEEL_URL`), and it stopped the 0.37.0 build: the fix is the
+`_strip_literals(a, "bristlenose.stages.s07_pii_removal", …, required=True)` call
+in `desktop/bristlenose-sidecar.spec` (commit "sidecar spec: strip our own
+spacy-models URL, as spaCy's already is"). The rewrite is inert on the Mac — the
+frozen sidecar never takes the snap/RPM path — and the needles the gate looks
+for are the `NEEDLES` tuple in `desktop/scripts/check-sidecar-appstore-strings.py`.
 
 #### The macOS 26 gate (decided 12 Sep 2026)
 

@@ -1,3 +1,22 @@
+---
+status: partial
+last-trued: 2026-10-12
+trued-against: HEAD@main on 2026-10-12
+---
+
+## Changelog
+
+- _2026-10-12_ — trued up (spaCy only): added an as-built note above §"spaCy
+  `en_core_web_sm`" (the model is `en_core_web_lg`, about 400 MB; pip/Homebrew vs
+  snap/RPM acquisition; the fetch is framed and stepped aside), kept the sm/12 MB
+  spec beneath as the original plan; noted the side-by-side sample is the sm-era
+  one; marked three claims that the sidecar bundles the spaCy model as not so (it
+  bundles the code, not the weights) and corrected the Snap line. Anchors:
+  `s07_pii_removal.py:33,51-58,93`; `utils/package_install.py` `ensure_spacy_model`;
+  commits "bundle presidio and spaCy; the weights still download", "pii: the
+  first-run model fetch gets the terminal to itself", "pii on snap and rpm: fetch
+  the model into the user cache".
+
 # Design: CLI / desktop "just works" defaults
 
 **Status:** post-implementation (Mon 11 May 2026). Initially drafted during A1 brew-formula closeout after a 2-hour first-run call with a friendly CTO. Slices A–H shipped on the `cli-just-works` branch; deferred items called out below per section. _Trued 4 Sep 2026 (--topic keychain): §Detection order and §Branch (1) described a persistence path that never shipped — `keyring`, Credential Manager, a `keys` file, `--persist=shell` — see the banner and the rewritten paragraph there._
@@ -275,6 +294,30 @@ Bristlenose's posture matches HF CLI / Ollama / brew, not apt. User-scope, named
 **Default tier:** locked at `large-v3-turbo` (~1.5 GB). Settled in a prior conversation: turbo is *good enough* that the quality win justifies the size hit, the size is surfaced in the framed banner so the user isn't ambushed, and eviction is one command (`bristlenose doctor --evict-models` once it exists). Don't reopen — the cost of revisiting the model choice repeatedly is higher than the cost of carrying 1.5 GB on disk.
 
 ### spaCy `en_core_web_sm` (Shape 1, A1 sidebar)
+
+> **As built (12 Oct 2026) — this section's spec is the original plan, kept below.**
+> The model is **`en_core_web_lg`**, about 400 MB, not `en_core_web_sm` at 12 MB
+> (`SPACY_MODEL`, `bristlenose/stages/s07_pii_removal.py:33`) — Presidio's bare
+> `AnalyzerEngine()` loads lg, so lg is what has to be fetched. That moves it out of
+> the inline tier of the size table below and into the framed one, and the fetch
+> is framed and stepped aside like Whisper's (commit "pii: the first-run model
+> fetch gets the terminal to itself"). Acquisition by channel:
+>
+> - **pip / Homebrew:** `package_install.ensure_spacy_model`, i.e. `spacy download`.
+> - **snap / RPM:** the package prefix is read-only, so `fetch_spacy_model` downloads
+>   the `en_core_web_lg-3.8.0` wheel, checks it against a pinned SHA-256 and byte
+>   count, and unpacks only its model directory into the user's model cache, with
+>   its own progress bar (commit "pii on snap and rpm: fetch the model into the
+>   user cache").
+> - **Mac sidecar:** bundles spaCy and Presidio *code*, not the weights (commit
+>   "bundle presidio and spaCy; the weights still download"). The host is meant to
+>   hand over a model directory via `BRISTLENOSE_PII_MODEL_DIR`; no acquirer exists
+>   yet, and the sidecar refuses a fetch with `FrozenSidecarError`. The **Desktop**
+>   paragraph at the end of this section is therefore wrong about bundling the model.
+>
+> The s07 docstring that says the framed treatment "is still owed"
+> (`s07_pii_removal.py:244-245`) predates the commit that built it. The Mac
+> delivery design lives in `docs/design-redact-pii.md` §"Delivery architecture".
 
 **Current state:** `bristlenose/stages/s07_pii_removal.py:_init_presidio()` calls `AnalyzerEngine()` which internally calls `spacy.load("en_core_web_sm")`; missing model raises `OSError`. The current brew formula no longer downloads it (autobump overwrote the spaCy `post_install` line), and `--redact-pii` errors out.
 
@@ -577,6 +620,12 @@ Move all Shape-1 fetches out of the pipeline entirely. `bristlenose doctor --fet
 
 #### Side-by-side: Whisper vs spaCy native progress (Option B output)
 
+> **As built (12 Oct 2026):** the spaCy column and sample below are the `en_core_web_sm`
+> era. The shipped model is `en_core_web_lg` (about 400 MB); on the snap and the RPM it
+> is fetched in-process into the user's model cache, not pip-installed; and the
+> desktop row is wrong — the sidecar ships spaCy's code, not the model. See the
+> as-built note under §"spaCy `en_core_web_sm`".
+
 The asymmetry is worth seeing before deciding — Option B accepts that these two look noticeably different mid-banner.
 
 |  | Whisper (HF Hub) | spaCy (pip wheel) |
@@ -769,9 +818,9 @@ The "i-in-a-blue-circle" affordance familiar from GUIs is doing work that plain 
 
 **CLI:** the surfaces above are the primary target. Most preflights are interactive; `--yes` is the CI bypass.
 
-**Desktop (macOS):** shares the *philosophy* with this doc, not the implementation. The equivalent surfaces are first-run sheets (Beats 1–3, shipped in v0.15.1), the pipeline diagnostic popover ([`docs/design-pipeline-diagnostic-popover.md`](design-pipeline-diagnostic-popover.md)), and the Settings panel. Same vocabulary, different chrome. Where the CLI fetches at runtime, desktop generally **bundles at build time** — spaCy ships in the sidecar, ffmpeg/ffprobe ship in Resources, etc. The one runtime-download case that survives on desktop is the Whisper model (lives in the user's HF cache, sandbox-safe) — the only place where this doc's primitives carry over more or less verbatim. Sidecar packaging mechanics, sandbox entitlements, and build-time bundling decisions all live in the sidecar / Track C docs, not here.
+**Desktop (macOS):** shares the *philosophy* with this doc, not the implementation. The equivalent surfaces are first-run sheets (Beats 1–3, shipped in v0.15.1), the pipeline diagnostic popover ([`docs/design-pipeline-diagnostic-popover.md`](design-pipeline-diagnostic-popover.md)), and the Settings panel. Same vocabulary, different chrome. Where the CLI fetches at runtime, desktop generally **bundles at build time** — spaCy ships in the sidecar (_12 Oct 2026: its code does; the model weights do not — see the as-built note under §"spaCy `en_core_web_sm`"_), ffmpeg/ffprobe ship in Resources, etc. The one runtime-download case that survives on desktop is the Whisper model (lives in the user's HF cache, sandbox-safe) — the only place where this doc's primitives carry over more or less verbatim. Sidecar packaging mechanics, sandbox entitlements, and build-time bundling decisions all live in the sidecar / Track C docs, not here.
 
-**Snap / Linux:** snap bundles ffmpeg and most deps; the missing-ffmpeg flow is dormant. spaCy and Whisper flows behave like CLI. Worth one cohort run on Linux before assuming parity.
+**Snap / Linux:** snap bundles ffmpeg and most deps; the missing-ffmpeg flow is dormant. ~~spaCy and Whisper flows behave like CLI.~~ _12 Oct 2026: not so for spaCy._ The snap's prefix (and the RPM's) is read-only, so `spacy download` cannot install there; `fetch_spacy_model` fetches the pinned `en_core_web_lg` wheel into the user's model cache instead (commit "pii on snap and rpm: fetch the model into the user cache"). Worth one cohort run on Linux before assuming parity.
 
 ---
 
@@ -791,7 +840,9 @@ existing fallback path until a translator copies and adapts each section.
 - `closing.*` — "No more questions" line with/without estimate
 
 **Channel-fork inventory** — all preflight strings are CLI-only. The
-desktop sidecar bundles spaCy + Whisper + ffmpeg at build time and uses a
+desktop sidecar bundles spaCy + Whisper + ffmpeg at build time (_12 Oct 2026:
+not so for the spaCy model — the sidecar bundles spaCy's code, not its weights,
+commit "bundle presidio and spaCy; the weights still download"_) and uses a
 Swift-side Keychain flow, so none of `preflight.whisper.*`,
 `preflight.ffmpeg.*`, or `preflight.api_key.*` fire under the desktop
 runtime. The `dt()`/`ct()` channel-fork helpers in `frontend/` don't
@@ -841,7 +892,7 @@ See **Design debates** above for the two big ones (rendering ownership and insta
 - **Pre-warm during `doctor`:** should `bristlenose doctor` offer "fetch the Whisper model now? [Y/n]" so the first real run never blocks? Cheap to add once the preflight registry exists; reuses the same primitives. Lands under Debate-1 Option D as the *main* path; under A/B/C as a *backup* path.
 - ~~**API-key persistence path:** writing to `~/.zshrc` is one option, but a `~/.config/bristlenose/keys` file readable only by user, with `bristlenose doctor` documenting where it lives, may be cleaner than mutating the shell rc.~~ Settled: `~/.config/bristlenose/.env`, mode 0600, written by `FileCredentialStore` when there is no keyring; `bristlenose doctor` reports the source. Kept as strikethrough.
 - **Cancellation semantics during model download:** Ctrl+C should leave the cache resumable, not corrupt. HF Hub handles this by default — confirm under load. Same question for uv if Debate-2 / Option β wins.
-- ~~Sandbox + spaCy — runtime download path under App Sandbox.~~ Resolved: desktop bundles the spaCy model into the sidecar at build time (standard packaging), so there is no runtime download on desktop. Lives with sidecar bundle work, not here. Kept as strikethrough so future-Claude doesn't re-derive it.
+- ~~Sandbox + spaCy — runtime download path under App Sandbox.~~ Resolved: desktop bundles the spaCy model into the sidecar at build time (standard packaging), so there is no runtime download on desktop. Lives with sidecar bundle work, not here. Kept as strikethrough so future-Claude doesn't re-derive it. _12 Oct 2026: not so. The sidecar bundles spaCy and Presidio code but not the ~400 MB weights (commit "bundle presidio and spaCy; the weights still download"); the host is to hand over a directory via `BRISTLENOSE_PII_MODEL_DIR`, no acquirer exists yet, and the sidecar refuses a fetch with `FrozenSidecarError`. Still open, and owned by `docs/design-redact-pii.md` §"Delivery architecture", not this doc._
 - **Telemetry hooks:** the alpha telemetry system (Phase 1 plumbing on main) could measure how often each preflight fires and how often users abort. Worth wiring once the registry is in place.
 - **Channel-mix telemetry (one-evening slice).** Cheapest single ping that would unlock multiple prioritisation decisions: a one-off, opt-out, anonymised first-launch marker carrying channel only — `brew` / `pip-macos` / `pip-linux` / `snap` / `desktop-mac`. Never repeated. Lets every subsequent call (Debate 2 weight, ffmpeg-preflight scope, snap-fix urgency, where to invest first-run polish) be made with data instead of guessing 85 % brew. Currently *guessing* is fine; once there's a cohort, this is one of the highest-ROI telemetry items to wire. Skips ahead of full Phase 2 telemetry — single-purpose ping.
 - **Does uv expose a tqdm-compatible progress hook?** Direct input into Debate 1 Option A's cost estimate. Spike-able in 15 min.

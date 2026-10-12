@@ -1,7 +1,7 @@
 ---
-status: plan v2 — steps 1 and 2 done; step 3 submitted 9 Oct 2026 (microsoft/winget-pkgs#449372), validation passed the same morning, awaiting a moderator; step 5's verify half (follower channel, after-winget holds) built, its submission half not
-last-trued: 2026-10-11
-trued-against: HEAD@main on 2026-10-11 (after 9e4fd687)
+status: plan v2 — steps 1 and 2 done; step 3 submitted 9 Oct 2026 (microsoft/winget-pkgs#449372), validation passed the same morning, still awaiting a moderator on 12 Oct (verify reads it overdue, past the 72 h budget); 0.37.0's installer built on the tag and attached 12 Oct, its submission held behind #449372; step 5's verify half (follower channel, after-winget holds) built, its submission half not
+last-trued: 2026-10-12
+trued-against: HEAD@main on 2026-10-12
 ---
 
 > **Trued 9 Oct 2026.** "What exists" is shipped with 0.36.0, not unreleased; the
@@ -10,10 +10,24 @@ trued-against: HEAD@main on 2026-10-11 (after 9e4fd687)
 > moved to VirtualBox VMs on an Intel Mac (`docs/release-winget.md` § Client Windows
 > in VMs), and Azure was decided against for it (9 Oct, cost). The per-release
 > procedure is `docs/release-winget.md`.
+>
+> **Trued again 12 Oct 2026.** 0.37.0's installer is built and attached, its submission
+> held behind #449372 (step 3); the bare-name `winget` and `nvidia-smi` launches from
+> the third review are fixed (§ Reviews); the spec bundles `hf_xet`.
+
+## Changelog
+
+- _2026-10-12_ — trued up: step 3 and the front matter record 0.37.0 (installer built on
+  the tag and attached, hash matched, submission held behind #449372, which verify reads
+  overdue); marked the third review's bare-name finding fixed, with the `safe_which`
+  app-alias VM check as its follow-up; added `hf_xet` to "What exists"; the Goal uses the
+  runbook's `--id … -e` form. Anchors: "winget and nvidia-smi on windows: never run one
+  from the current directory", "silence huggingface_hub's first-download warnings, and
+  bundle hf_xet on windows", windows-installer.yml run 38286075052.
 
 # Bristlenose on winget
 
-**Goal.** `winget install Bristlenose` on a Windows machine with no Python gives a
+**Goal.** `winget install --id Bristlenose.Bristlenose -e` on a Windows machine with no Python gives a
 working `bristlenose` in a new terminal; `winget upgrade` replaces it in place;
 `winget uninstall` leaves nothing but the user's own data.
 
@@ -104,7 +118,8 @@ over from the first release after the certificate arrives.
 
 - `packaging/windows/bristlenose-win.spec` — the PyInstaller spec (fork of the Mac
   sidecar spec, with ctranslate2's DLLs and faster-whisper's VAD model collected
-  explicitly, since no hook does).
+  explicitly, since no hook does). Since 0.37.0 it also bundles `hf_xet` with its
+  metadata, so model downloads use Xet rather than plain HTTP (`3af480bb`).
 - `packaging/windows/entry.py` — the whole CLI as the entry point, with
   `multiprocessing.freeze_support()`.
 - `packaging/windows/build.ps1` — wheel → build venv (uv, Python 3.12) → PyInstaller →
@@ -193,6 +208,16 @@ still launched by bare name (`ollama.py`'s `winget install` argv and
 and `doctor_fixes.py` only names winget as an install method). The current-directory lookup for Ollama and
 FFmpeg was fixed separately (`5f3d5ac8`, `47ee59af`).
 
+*Fixed 11 Oct 2026 (`d7bd25b7`, "winget and nvidia-smi on windows: never run one from
+the current directory"):* the last two bare-name launches now resolve through
+`safe_which`. With the Ollama and FFmpeg fixes it is one family with one cause:
+`CreateProcess` searches the current directory first, so a planted `.exe` in a
+researcher's folder would run. Gate: `tests/test_windows_cwd_binaries.py`. **Still open:**
+a check on a real Windows VM that `safe_which` finds winget's App Execution Alias.
+`python -c "from bristlenose.utils.safe_which import safe_which; print(safe_which('winget'))"`
+must print the `WindowsApps\winget.exe` path; if it prints `None`, `configure local`
+falls back to the download page instead of installing Ollama with winget.
+
 ## The road
 
 1. **Land the work** (detailed below). ~1 day.
@@ -226,7 +251,11 @@ FFmpeg was fixed separately (`5f3d5ac8`, `47ee59af`).
    `ReleaseNotesUrl`, then passed all ten checks by 08:30 BST on 9 Oct, the
    installer scan and a real install included: the unsigned PyInstaller build drew no
    antivirus flag, and the Inno 7 installer raised nothing. Labelled `New-Package`;
-   waiting for a volunteer moderator.* With Komac or `wingetcreate`: one version per PR, sign
+   waiting for a volunteer moderator.* *12 Oct 2026: still unmerged, and `release.sh
+   verify 0.36.0` reads it `overdue` (past the 72 h budget). 0.37.0's installer was
+   built on the tag (run 38286075052), attached to the release, and its public hash
+   matched the manifest; its submission is held until #449372 merges, then goes in as
+   a version update (`docs/release-winget.md` step 4a).* With Komac or `wingetcreate`: one version per PR, sign
    Microsoft's CLA on the PR (a click-through, no country restriction), days in the
    new-package moderator queue. The plan expected a Defender false-positive cycle
    (microsoft.com/wdsi/filesubmission, then `@wingetbot run`); 0.36.0 drew none.

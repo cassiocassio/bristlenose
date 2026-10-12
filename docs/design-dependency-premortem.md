@@ -1,3 +1,13 @@
+---
+status: current
+last-trued: 2026-10-12
+trued-against: HEAD@main on 2026-10-12
+---
+
+## Changelog
+
+- _2026-10-12_ — trued up: added the tokenizers → huggingface-hub cap widening to the HF transformer stack row, pointing at the pinning register. Anchors: `pyproject.toml`, commit "deps: cap huggingface-hub below 2".
+
 # Dependency-bump pre-mortem (Cassandra)
 
 How Bristlenose decides what's safe to upgrade — before it upgrades.
@@ -205,7 +215,7 @@ Most breakage is *cluster* breakage. The agent starts from this map
 | **numpy ABI** | numpy, numba, llvmlite (+ scipy, ctranslate2, mlx) | **The binding cap is no longer numba.** Measured 20 Sep 2026 in `.venv-sidecar` (the venv the bundle is built from, per the two-venv rule): `numba 0.67.0` floats to `numpy<2.6`, while **`presidio-analyzer 2.2.364` pins `numpy<2.5.0`** and is therefore the ceiling. `.venv` disagrees — numba 0.66.0 there caps at `<2.5` — so ask the sidecar venv, not this one. numpy-first is still the classic *silent* break: numba throws at import. Move atomically. |
 | **LLM SDKs** | anthropic, openai, google-genai | Scary major gaps, but breaks usually live in *unused beta surfaces*. Verify against `bristlenose/llm/client.py`'s actual calls before crying doom. |
 | **FastAPI / starlette** | fastapi, starlette | **No longer true — there is no cap.** `fastapi 0.141.1` requires `starlette>=0.46.0`, open-ended (measured 20 Sep 2026); the cap went at 0.136.3 and the ledger graduated this row on **9 Jun 2026**. Kept as a cluster because the two still move together in practice, but a lone starlette bump is now an ordinary bump, not a resolver non-event. |
-| **HF transformer stack** | torch, tokenizers, huggingface_hub | ~~tokenizers↔transformers mismatch~~ — **`transformers` is not a dependency of this project.** Installed in neither venv, absent from `pyproject.toml` and `bristlenose-sidecar.spec`, and nothing under `bristlenose/` imports it (measured 20 Sep 2026; the ledger said so on 3 Sep). The remaining three do move together. Do not reason about a transformers/tokenizers pairing here — there is no transformers to pair with. |
+| **HF transformer stack** | torch, tokenizers, huggingface_hub | ~~tokenizers↔transformers mismatch~~ — **`transformers` is not a dependency of this project.** Installed in neither venv, absent from `pyproject.toml` and `bristlenose-sidecar.spec`, and nothing under `bristlenose/` imports it (measured 20 Sep 2026; the ledger said so on 3 Sep). The remaining three do move together. Do not reason about a transformers/tokenizers pairing here — there is no transformers to pair with. **The coupling that fired (11 Oct 2026):** tokenizers 0.23.3 widened its `huggingface-hub` cap from `<2` to `<3`, so hub 2.2.0, an untested major, began resolving through a tokenizers bump; `pyproject.toml` now caps `huggingface-hub<2` (commit "deps: cap huggingface-hub below 2", `5dc1df4c`). The hold and its release predicate live in the pinning register, `docs/design-platform-policy.md`. |
 | **Node-gated frontend/e2e** | vite, vitest, jsdom, eslint family, typescript / lighthouse, @playwright/test | Move with the **Node major** (`.tool-versions`). A tool whose `engines` outruns CI's Node is a red install (or a silent warning if `engine-strict` is unset). Confirm CI Node from `.tool-versions`, not a register line that may be stale. |
 | **Python-ceiling (PII)** | presidio-analyzer, presidio-anonymizer, spacy, thinc | The only cluster that caps the interpreter from *above*: presidio's `requires-python <3.15` sets the ceiling, while the floor is set by compiled wheels (numba, llvmlite, ctranslate2, mlx). A Python bump is a cluster move in both directions; `scripts/check-python-band.py` measures the band. **Members corrected 20 Sep 2026** — this row listed `presidio-analyzer, presidio-anonymizer, spacy, thinc`, which omits the three packages whose caps the Held register actually attributes to presidio: **`cryptography`, `numpy` and `pydantic`**. The cluster existed to carry those caps and did not name them. |
 | **Sibling-action chains** | github/codeql-action (init, autobuild, analyze); canonical/action-build + action-publish | Actions cut from one repo must share one SHA — Dependabot fans them into separate PRs, and a chain-within-a-fan merged piecemeal runs two versions in one job. Dereference annotated tags (`git rev-parse <tag>^{}`) or the pin is the tag object, not the commit. |

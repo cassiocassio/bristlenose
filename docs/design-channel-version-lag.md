@@ -1,9 +1,19 @@
 ---
 status: mixed — the docs half (§4–§5.1, Options A/B/C) is a proposal awaiting the maintainer's decision; the release-machine half (§5.2) is built, recorded in §8, and reviewed by fault injection in §7
-last-trued: 2026-10-11
-trued-against: HEAD@main on 2026-10-11 (after 9e4fd687 "holds: a hold already on main reads landed…")
+last-trued: 2026-10-12
+trued-against: HEAD@main on 2026-10-12
 measured-against: PyPI JSON (upload times), `gh run list` for release.yml / snap.yml / windows-installer.yml, the GitHub Releases API, the homebrew-bristlenose tap's commit log, Copr's build API, the Snap Store info API, microsoft/winget-pkgs#449372, docs/release-log.md 0.27.0–0.36.0
 ---
+
+## Changelog
+
+- _2026-10-12_ — trued up: added 0.37.0 as a second point for the Windows installer
+  (about 18 h, nothing dispatches it at the tag) and the 12 Oct winget reading (#449372
+  open about 86 h, past the 72 h guess); marked "superseded" as not what happened, since
+  0.37.0 was held and reads `bad`; noted the README `.dmg` link fixed; corrected how the
+  held drafts read under a bare verify; added "N+1 held behind N's open first PR" to §7's
+  unreached worlds as a question for the maintainer. Anchors: `scripts/verify-channels.sh`
+  `verdict_follower`, windows-installer.yml run 38286075052, microsoft/winget-pkgs#449372.
 
 # Channel version lag — what the public docs can honestly say
 
@@ -59,8 +69,8 @@ commit dates and say nothing about when they were pushed.
 | **Snap edge** | `snap.yml` dispatched `--ref main` at the tag | 0.36.0 released to edge at 23:03:28Z, **PyPI +2 min** (17 min after dispatch). 0.30.0: "published but not yet in the store map" 15 min after the tag, present 10 min later | MEASURED (Snap Store `released-at`, one point; release-log 0.30.0) | — |
 | **Snap stable** | `snap.yml --ref vX.Y.Z` | **never.** The store's channel map holds `latest/edge` only, and no release has dispatched a tag ref | MEASURED (Snap Store info API, 9 Oct) | Every version so far |
 | **Website** | `deploy.sh`, by hand, after PyPI answers | Minutes normally: 0.30.0 deployed ~2 min after PyPI's 200. **Ran two days ahead** for 0.31.3, when a deploy carried a changelog for a version that had stopped before its tag | MEASURED (release-log 0.30.0, 0.31.3) | n/a: it renders whatever `CHANGELOG.md` says |
-| **Windows installer** on the GitHub Release | built on the tag by `windows-installer.yml` (dispatched 22:47Z), attached by hand | 0.36.0 asset uploaded **06:51:54Z, ~8 h** after the tag | MEASURED (one point; the gap was a human sleeping, not a machine) | Yes. It is a manual step |
-| **winget** | a PR on microsoft/winget-pkgs → bot validation → moderator → merge | 0.36.0 PR opened 07:09Z, **~8 h 20 m** after the tag. **Not merged** at 07:22Z on 9 Oct. The new-package moderator queue is "days" | MEASURED (PR open time); the merge lag is unmeasured | Yes. A PR still open when N+1 ships is superseded |
+| **Windows installer** on the GitHub Release | built on the tag by `windows-installer.yml` (dispatched 22:47Z), attached by hand | 0.36.0 asset uploaded **06:51:54Z, ~8 h** after the tag. 0.37.0 (tag pushed 23:54Z 11 Oct): built on the tag on 12 Oct (run 38286075052, ~6 min) and attached at 17:51Z, **~18 h** after the tag, because nothing dispatches the build at the tag | MEASURED (two points; in both the gap was a human, not a machine) | Yes. It is a manual step |
+| **winget** | a PR on microsoft/winget-pkgs → bot validation → moderator → merge | 0.36.0 PR opened 07:09Z, **~8 h 20 m** after the tag. **Not merged** at 07:22Z on 9 Oct. The new-package moderator queue is "days". *12 Oct:* still open and validated about 86 h after it opened, past the 72 h budget (`verify 0.36.0` reads `overdue`); a lower bound on the new-package wait | MEASURED (PR open time; 12 Oct reading); the merge lag is unmeasured | Yes. ~~A PR still open when N+1 ships is superseded~~ *Not what happened (12 Oct):* 0.37.0 shipped with #449372 still open and its submission was held behind it, so `verify` reads 0.36.0 `overdue` and 0.37.0 `bad`, never `superseded` (`verdict_follower` says `superseded` only when the in-flight version is ≥ the wanted one) |
 | **Mac App Store** | App Review, then optionally a phased release | not live | INFERRED: review typically 1–2 days, plus up to 7 days of phased automatic updates if that is switched on | Yes. A version still in review when N+1 is ready gets withdrawn or skipped |
 
 **What the table says in one line:** inside the release machine the spread is
@@ -111,7 +121,8 @@ winget, and it is the larger effect.
   has no `.dmg` asset.** The 0.36.0 release carries the man page, two SBOMs and
   the Windows installer. The `.dmg` is served from `bristlenose.app/dmg/`. This
   is the version-availability problem in its simplest form: a link that names a
-  channel but does not point at the channel's own artefact.
+  channel but does not point at the channel's own artefact. *Fixed, see §5.3:
+  README.md now links `https://bristlenose.app/dmg/Bristlenose.dmg`.*
 
 ---
 
@@ -127,7 +138,7 @@ winget, and it is the larger effect.
 | Website homepage (`content/index.html:492`) | The Mac button's version | **Fetched at view time from `/dmg/latest.json`**, which `upload-dmg.sh` writes in the same step that repoints the download | That this is the `.dmg`'s version, and it is. **This is the one surface already built the right way:** the channel reports its own version, and the typed `0.31.2` is only a fallback |
 | Website footer (`site.js` `VERSION`) | `v0.36.0` on every page | `build.py` stamps the package version at deploy; `deploy.sh` refuses a mismatch | That the deploy happens after PyPI, which it normally does. 0.31.3 shows what happens when it doesn't |
 | `docs-src/*.md` (install, windows, cli, feature pages) | No version numbers. A grep for `since/from/new in X.Y` finds none | Hand-written | That the reader runs the newest version. Feature pages describe current behaviour with no "added in" markers |
-| Held drafts: `after-winget/0.36.0`, in this repo and the website's | No version, but they make **winget the lead Windows route** | Waiting branches | That winget serves a version as soon as the docs say so. When this was measured they were `after-winget/first-version` and a bare `after-winget`, and `release.sh verify` saw neither. Renamed 9 Oct; `verify` now lists both as `wait` until winget serves 0.36.0 (§8) |
+| Held drafts: `after-winget/0.36.0`, in this repo and the website's | No version, but they make **winget the lead Windows route** | Waiting branches | That winget serves a version as soon as the docs say so. When this was measured they were `after-winget/first-version` and a bare `after-winget`, and `release.sh verify` saw neither. Renamed 9 Oct; `verify` now lists both as `wait` until winget serves 0.36.0 (§8). *12 Oct: that holds only under `verify 0.36.0`. A bare verify checks the tree's version, 0.37.0, and lists both holds as `?` ("run verify 0.36.0 for this hold")* |
 
 **So the version-bearing claims are few, and two of them are already solved.**
 The man page is solved because it ships with what it describes. The homepage
@@ -311,6 +322,11 @@ CHANNELS_FOLLOW="winget"            # later: mas. Reported, never in the exit co
 FOLLOW_BUDGET_winget=72h            # first value is a guess; re-measured per version
 ```
 
+*12 Oct 2026:* the guess was short for a first version. #449372, the package's first
+PR, was still open past 72 h (about 86 h), so `verify 0.36.0` reads `overdue`. The
+budget in `project.conf` is unchanged; whether 72 h is right for later versions is
+still the measurement §5.3 item 2 waits on.
+
 A follower's probe reports one of five states:
 
 | State | Meaning |
@@ -371,6 +387,8 @@ for them.
 - **The new-package wait is the only winget number we have, and it is not
   measured yet.** #449372 had only just cleared its own URL error when this
   was written (§1.3). The update lag after that is borrowed from gh/uv/Ollama.
+  *12 Oct 2026:* still unmeasured, but bounded below: #449372 was open and
+  validated about 86 h after it opened, with no moderator yet.
 - **Snap stable.** Every version so far has skipped the stable channel. That is
   a standing gap `INSTALL.md` already states, not a lag. Whether to start
   releasing to stable is a separate decision.
@@ -440,7 +458,12 @@ as blocks when they matter:
 - two verify runs writing one sink at once;
 - a website repo that is a worktree with a detached HEAD;
 - a Mac App Store follower whose review is rejected and resubmitted under the
-  same version.
+  same version;
+- **N+1 deliberately held behind N's open new-package PR** (added 12 Oct 2026; this
+  is 0.37.0 now). `verify` reads N `overdue` and N+1 `bad`, and `bad` here is
+  correct but reads like a call to act. Open question for the maintainer: does this
+  want its own follower state, or a documented reading of `bad`
+  (`docs/release-winget.md` step 4a documents it for now)? Nothing is built.
 
 ### 7.1 Fixed the same day: the "deletes" set, then a review of the fixes
 

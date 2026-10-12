@@ -102,6 +102,11 @@
     }
   },
   "quotes": {
+    "groupBy": {
+      "label": "Grupuj cytaty",
+      "session": "Wed\u0142ug sesji",
+      "sectionsAndThemes": "Sekcje i tematy"
+    },
     "hiddenCount_one": "{{count}} ukryty cytat",
     "hiddenCount_few": "{{count}} ukryte cytaty",
     "hiddenCount_many": "{{count}} ukrytych cytat\u00f3w",

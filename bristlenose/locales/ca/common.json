@@ -90,6 +90,11 @@
     }
   },
   "quotes": {
+    "groupBy": {
+      "label": "Agrupa les cites",
+      "session": "Per sessi\u00f3",
+      "sectionsAndThemes": "Seccions i temes"
+    },
     "hiddenCount_one": "{{count}} cita oculta",
     "hiddenCount_other": "{{count}} cites ocultes",
     "unhideHeader": "Torna a mostrar:",

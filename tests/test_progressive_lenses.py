@@ -8,6 +8,7 @@ still going must survive session 2 arriving.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -602,11 +603,11 @@ class TestFollowerEdges:
         real = importer.import_readable_sessions
         asked: list[str] = []
 
-        def _flaky(db, project_dir, sids):
+        def _flaky(db, project_dir, sids, **kw):
             asked.extend(sorted(sids))
             if "s2" in sids:
                 raise ValueError("a header the importer chokes on")
-            return real(db, project_dir, sids)
+            return real(db, project_dir, sids, **kw)
 
         monkeypatch.setattr(importer, "import_readable_sessions", _flaky)
         _record_readable(out, "s1", "s2", "s3")
@@ -664,3 +665,49 @@ class TestFollowerEdges:
             ("s1", "readable"), ("s2", "processing"),
         ]
         assert rows[0]["speakers"], "the full row, not a stub"
+
+
+def test_each_session_s_quotes_are_on_disk_before_the_manifest_says_so(tmp_path: Path) -> None:
+    """Phase 2, through ``Pipeline.run``: stage 9 writes a session's quotes to
+    ``extracted_quotes.json`` and only then records the session done, while
+    the other sessions are still being extracted."""
+    from bristlenose.events import StageOutcome
+    from bristlenose.models import ExtractedQuote, QuoteType, SessionTopicMap
+    from bristlenose.server.lens_readiness import quoted_in_manifest
+    from bristlenose.stages.s05_transcribe import SessionTranscription
+
+    def _iter(_needs, _settings, **_kw):
+        yield SessionTranscription("s1", _two_speakers())
+        yield SessionTranscription("s2", _two_speakers())
+
+    async def _roles(_segments, _client, **_kw):
+        return []
+
+    async def _topics(ts, _client, **_kw):
+        maps = [SessionTopicMap(session_id=t.session_id, participant_id=t.participant_id,
+                                boundaries=[]) for t in ts]
+        return maps, StageOutcome(attempted=len(ts), succeeded=len(ts))
+
+    seen: dict[str, object] = {}
+
+    async def _quotes(ts, _maps, _client, **kw):
+        done = kw["on_session_done"]
+        q = ExtractedQuote(session_id="s1", participant_id="p1", start_timecode=5.0,
+                           end_timecode=9.0, text="It was fine, honestly.",
+                           topic_label="", quote_type=QuoteType.GENERAL_CONTEXT)
+        done("s1", [q])
+        seen["quoted"] = quoted_in_manifest(load_manifest(out_dir))
+        seen["file"] = json.loads((out_dir / ".bristlenose" / "intermediate"
+                                   / "extracted_quotes.json").read_text())
+        raise RuntimeError("stop after the first session's quotes")
+
+    out_dir = tmp_path / "in" / "bristlenose-output"
+    _run(
+        tmp_path, iter_fn=_iter, roles=_roles, match="stop after the first session",
+        extra=(
+            ("bristlenose.stages.s08_topic_segmentation.segment_topics", {"new": _topics}),
+            ("bristlenose.stages.s09_quote_extraction.extract_quotes", {"new": _quotes}),
+        ),
+    )
+    assert seen["quoted"] == frozenset({"s1"})
+    assert [q["session_id"] for q in seen["file"]] == ["s1"]  # type: ignore[union-attr]

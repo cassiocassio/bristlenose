@@ -178,6 +178,10 @@ export interface QuotesListResponse {
   total_starred: number;
   /** Top-level count of the uncategorised floor (mirrors total_starred). */
   total_uncategorised?: number;
+  /** Quotes in no section or theme and not on the floor: a first analysis's quotes
+   *  before sections exist (docs/design-progressive-lenses.md, Phase 2). A finished
+   *  report has none. */
+  unjoined?: QuoteResponse[];
   has_moderator: boolean;
   /** ISO token of the latest import that added an interview; keys "New"-badge
    *  dismissal so a genuinely-fresh import re-shows a dismissed badge. */

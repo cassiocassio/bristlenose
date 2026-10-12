@@ -460,6 +460,7 @@ def import_project(db: Session, project_dir: Path) -> Project:
 
 def import_readable_sessions(
     db: Session, project_dir: Path, session_ids: set[str],
+    *, run_stamp: datetime | None = None,
 ) -> tuple[Project, set[str]]:
     """Import the sessions a run in progress has made readable. Never deletes.
 
@@ -484,7 +485,10 @@ def import_readable_sessions(
     present = {
         sid for (sid,) in db.query(SessionModel.session_id).filter_by(project_id=project.id)
     }
-    now = datetime.now(timezone.utc)
+    # One stamp for every session a run delivers: `first_imported_at` drives
+    # the "New" flag (`_new_session_ids`), and sessions of one first analysis
+    # imported a minute apart are not new relative to each other.
+    now = run_stamp or datetime.now(timezone.utc)
     session_map: dict[str, SessionModel] = {}
     for sid in sorted(session_ids - present):
         meta = meta_all.get(sid)
@@ -526,6 +530,42 @@ def import_readable_sessions(
         len(session_map), project.id, ", ".join(sorted(session_map)),
     )
     return project, set(session_map)
+
+
+def import_session_quotes(
+    db: Session, project_dir: Path, session_ids: set[str],
+) -> tuple[Project, dict[str, int]]:
+    """Import the quotes a run in progress has extracted for these sessions.
+
+    Progressive lenses, Phase 2. Reads the sessions' quotes from
+    ``extracted_quotes.json`` (the pipeline rewrites it as each session
+    finishes) through ``_get_or_create_quote``, so a quote keeps its stable key
+    and whatever the researcher does to it before sections and themes exist
+    survives the whole-project import at ``run_completed``. Never deletes, and
+    imports quotes only for sessions already in the database.
+
+    Returns the project row and, per session, how many quotes it now holds.
+    """
+    project, _project_dir, output_dir = _find_or_create_project(db, project_dir)
+    path = output_dir / ".bristlenose" / "intermediate" / "extracted_quotes.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    present = {
+        sid for (sid,) in db.query(SessionModel.session_id).filter_by(project_id=project.id)
+    }
+    wanted = session_ids & present
+    now = datetime.now(timezone.utc)
+    counts: dict[str, int] = dict.fromkeys(wanted, 0)
+    for quote in data if isinstance(data, list) else []:
+        sid = quote.get("session_id", "") if isinstance(quote, dict) else ""
+        if sid in wanted:
+            _get_or_create_quote(db, project, quote, now)
+            counts[sid] += 1
+    if any(counts.values()):
+        _auto_import_sentiment_framework(db, project)
+        _auto_tag_from_sentiment_field(db, project)
+    db.commit()
+    _checkpoint_wal(db)
+    return project, counts
 
 
 # ---------------------------------------------------------------------------

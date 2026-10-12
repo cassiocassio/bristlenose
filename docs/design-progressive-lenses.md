@@ -1,5 +1,5 @@
 ---
-status: Phase 0 built 12 Oct 2026 (inert apart from the project-row fix); Phases 1–5 designed, not built
+status: Phases 0–2 built 12 Oct 2026 (unreleased); Phase 3 deferred; Phase 4 designed; Phase 5 blocked on the Project lens call
 last-trued: 2026-10-12
 trued-against: HEAD@main on 2026-10-12 (df8128c6, scene strips)
 owner: run progress across the pipeline, the report server, the SPA and the Mac app
@@ -8,6 +8,12 @@ mockup: docs/mockups/progressive-lenses-replay.html
 
 ## Changelog
 
+- _2026-10-12, late_ — Phase 2 built: as-built note replaces its build plan. Phase 3
+  deferred behind §7 item 17, with the reason (the backend blocks the event loop, so
+  chained quote calls would slow the run). §7: the duplicated item 6 renumbered (the second 6 and
+  everything after it go up by one, to 7–17); items 1, 9, 15 and 16 carry what was built provisionally. §2
+  and Phase 4 item 5: scene colours arrive at the barrier today, not after the turns.
+  Front matter says what is built.
 - _2026-10-12_ — trued up against the scene strips that shipped the same afternoon
   (`df8128c6`): §2 lists the fifth tapestry layer and the fact that it waits for the
   whole run; §1.2 no longer says the mockup inlines the CSS verbatim; Phase 4 names the
@@ -133,7 +139,9 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
 - The disclosure appears once a row is readable, and the tapestry arrives in
   layers: **turns** with the transcript; **scene colours** about 1.5 s per hour of
   video later; **sentiment marks** with that session's quotes; **section flags and
-  theme spans** at the barrier. These are real turns, not a skeleton.
+  theme spans** at the barrier. These are real turns, not a skeleton. (Scene colours
+  are computed today just before render, so until Phase 4 item 5 they arrive at the
+  barrier, not after the turns.)
 - A fifth layer shipped on 12 Oct 2026 and is the one later-arriving layer the app
   has: **scene strips and notches** (`utils/scene_strip.py`, every frame at 4 fps),
   computed by serve on a background thread (`server/scene_strips.py`) and **deferred
@@ -460,6 +468,90 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 7. The rail's Quotes turns normal at the first session with quotes.
 8. The sparkline fills per session.
 
+> **As built, 12 Oct 2026.**
+> - **Pipeline.** `extract_quotes` takes `on_session_done(sid, quotes)`
+>   (`s09_quote_extraction.py`), called once per session that succeeded, zero quotes
+>   included, never for a failed one; a callback that raises is logged and the
+>   extraction goes on. Stage 9's fresh branch (`pipeline.py`, `_deliver_quotes`)
+>   rewrites `extracted_quotes.json` (cached sessions plus those delivered so far),
+>   then records the session complete and writes the manifest: file before record.
+>   It runs on every run, not only a first analysis, so a crash mid-stage resumes
+>   from the sessions already recorded. `write_intermediate_json` is now atomic
+>   (temp file, then replace), so a reader never sees half a file; on Windows,
+>   where a replace fails while the server has the file open, it retries briefly
+>   and then writes in place as before.
+> - **Redacted runs.** Stage 7 records each session it redacted (`pii_removal`, per
+>   session). While that stage record exists, readable means redacted
+>   (`lens_readiness.readable_in_manifest`), so a redacted run's sessions arrive
+>   together at the end of redaction, then quotes per session. Unredacted text is
+>   never imported.
+> - **Server.** `ProgressiveImport` follows `quote_extraction` too
+>   (`lens_readiness.quoted_in_manifest`). For a session recorded there whose
+>   session row is already in the database, `import_session_quotes` (`importer.py`)
+>   reads its quotes through `_get_or_create_quote` — the stable key, so curation
+>   survives the whole import — and never deletes. A quote for a session not yet
+>   imported waits. One session per transaction; a session that fails is not asked
+>   again during the run. `Progress.quoted` is the sessions with at least one
+>   imported quote, so a session with none does not light the Quotes lens.
+>   Every session a run delivers takes one `first_imported_at` (`run_stamp`), so
+>   the sessions of one first analysis are not "New" to each other. A manifest
+>   created before the run started is the previous run's (the pipeline first
+>   writes its own after ingest) and reads as nothing yet, so a re-run of a failed
+>   first analysis does not import its predecessor's sessions or quotes, which may
+>   be unredacted or at old timecodes.
+> - **The barrier.** `joined` stays false until `run_completed`: the whole import
+>   then builds sections and themes, and the overlay ends. The overlay is kept until
+>   that import finishes, so the lens never shows sections before they exist.
+>   Signals, and with it the grouping control, waits for that import even once
+>   the cluster files exist (§2: Signals at the barrier).
+> - **Route.** `GET /quotes` returns `unjoined`: quotes in no section or theme and
+>   not on the floor, ordered by session and time. A whole import retires
+>   join-less quotes, so a finished report has none; a first analysis that fails
+>   or is stopped after extraction keeps them, and the researcher reading By
+>   session keeps reading them. (Gating on the overlay, as first built, made
+>   them vanish the moment such a run ended.)
+> - **Quotes lens.** `islands/QuoteSessions.tsx` groups every quote the route
+>   returns — sections, themes, `unjoined`, the floor — by session, each quote once,
+>   one `QuoteGroup` per session with `itemType="session"`: the heading is the
+>   dashboard's `Session N`, not editable, no description. While Signals is not
+>   ready (`lenses.signals`) the lens shows only this grouping and no control. After
+>   it, `islands/QuoteGroupingToggle.tsx` — two `toolbar-btn toolbar-btn-toggle`
+>   buttons in `.section-heading-action` — switches between *By session* and
+>   *Sections & themes*, remembered per project in `localStorage`. Default: Sections
+>   & themes. A researcher reading during the run stays By session when sections
+>   arrive, until they pick (§2: themes arriving never move them); that is the
+>   visit's state, and only a click on the control is remembered. By session holds
+>   the floor's quotes in their sessions (exclusivity in this grouping), so the
+>   floor's "needs a home" heading is a Sections & themes view only. Three new keys
+>   (`quotes.groupBy.{label, session, sectionsAndThemes}`) in 21 locales.
+> - **Floor quotes seed the store** (`QuotesContext.initFromQuotes`). Every write is a
+>   full-map PUT, so a floor quote missing from the maps lost its star, hide, tags
+>   or edit on the first gesture anywhere. Latent before Phase 2; reachable once a
+>   lens other than Sections drew the floor's quotes.
+> - **Group actions (§7 item 9, provisional):** none per session group. Moving and
+>   heading edits do not exist in this grouping. Freezing and pinning are neither
+>   created nor shown.
+> - **Not built:** the counts-only `run_progress` from s09 (step 1) — the server
+>   reads the manifest, and nothing on the Mac reads a quote count during the run;
+>   the sparkline (step 8) fills from the quotes as they arrive with no change.
+> - **Accepted for v1:** every per-session import refetches the lens (replace, not
+>   merge), as the Sessions grid does; a Signals deep link into By session lands
+>   on the lens without scrolling; quotes stage 10 drops are silent, as before.
+> - **Gate tests.** `tests/test_progressive_quotes.py`: the manifest reads under
+>   redaction; a quoted session lights the lens and moves `data_version` once;
+>   zero quotes do not light it; quotes wait for their session; a star and a tag
+>   made during the run survive the whole import; `on_session_done` fires only for
+>   succeeded sessions; one run's sessions are not New to each other; quotes stay
+>   served when a run ends without the whole import; the previous run's manifest
+>   is not this run's; an intermediate write survives a refused replace.
+>   `test_progressive_lenses.py`: each session's quotes are on disk before the
+>   manifest records them. Vitest: `QuoteSessions.test.tsx` (grouping, headings,
+>   control, persistence), `QuotesTab.test.tsx` (forced during the run, kept after,
+>   not remembered),
+>   `QuotesContext.test.tsx` (floor quotes seed the maps). The floor seeding, the run
+>   stamp, file-before-record, the route without the overlay gate, the manifest age
+>   check and the unremembered grouping were each proved red on a mutant of the fix.
+
 ### Phase 3 — Pipelining topics and quotes per session (speed)
 
 Topic segmentation and quote extraction join the per-session chain, so a session's
@@ -467,6 +559,21 @@ LLM calls run while the next session is in Whisper. Whisper is local GPU and the
 quote calls are network: they do not compete. FOSSDA's projection: barrier at 38:56
 instead of 51:22. This is the "per-participant chaining" `design-perf-fossda-baseline.md`
 already anticipates. Independent of the UX; can land before or after phase 2.
+
+> **Deferred, 12 Oct 2026, behind §7 item 17.** The projection assumes the quote calls
+> run *while* Whisper decodes the next file. They cannot today: `transcribe_sessions`
+> calls the backend synchronously on the event loop (`s05_transcribe.py`, the
+> `transcribe_fn(...)` call in its session loop), so a coroutine started between files
+> makes no progress until the next file is decoded. Putting topics and quotes in the
+> readable chain as it stands would add their latency between Whisper files — the
+> run gets *slower*, the opposite of the phase's point. The owner chose to keep
+> Whisper serial for now (item 17), which is the change this phase needs. When that
+> is revisited, Phase 3 is: the backend in a worker thread, the chain's speaker pass
+> followed by `segment_topics` and `extract_quotes` for the one session (both
+> already take a session list), and the per-session records Phase 2 writes, so the
+> stage-9 batch skips what the chain already did. Phase 2 already delivers quotes per
+> session as stage 9 finishes each one, so the visible half is in; only the wall
+> time is left.
 
 ### Phase 4 — Session tapestry in layers
 
@@ -488,6 +595,12 @@ already anticipates. Independent of the UX; can land before or after phase 2.
    replace every object and close the popover under the reader §1 is for, once per
    session import. Extend the merge to turns, quotes and sections, and gate it: an
    open quote popover survives a per-session import.
+5. **Scene colours per session.** `extract_scene_colours` runs in `Pipeline.run`
+   just before render, after clustering (`pipeline.py`, "Scene colour per speaker
+   turn"), so under progressive the colour layer arrives at the barrier with the
+   sections. §2's order needs it in the readable chain: it is keyed by video and
+   turn boundaries, about 1.5 s per hour of video, and both are known once a
+   session is readable.
 
 #### 4.6 The opening scale
 
@@ -587,7 +700,9 @@ Disabled until the run ends.
 1. **Row treatment A or B.** A: rows that cannot open take `--bn-colour-muted` (AA in
    both palettes). B: normal text. Recommendation A. Caveat: in Edo light, muted
    `#4a698a` and accent `#0f5c9e` are close in hue (1.21:1), so A's waiting rows can
-   read as links; Edo dark and Default are distinct.
+   read as links; Edo dark and Default are distinct. **Built provisionally as A**
+   (Phase 1, `organisms/sessions-grid.css`, `.bn-sessions-row[aria-disabled]`);
+   one rule to change if B wins.
 2. **Project lens during the run** — and with it whether the split-flap has a home.
 3. **Thumbnail frame:** the 60 s fallback for good, or swap in the transcript-chosen
    frame at readable.
@@ -602,31 +717,38 @@ Disabled until the run ends.
    video; the cost of allowing it alongside Whisper is CPU, not correctness. Either
    "strips arrive at the barrier" or "the job runs per readable session" needs
    deciding with the §3 state model.
-6. **Transcription failure** as a fourth row state, and the failed-session message
+7. **Transcription failure** as a fourth row state, and the failed-session message
    (M4).
-7. **Messages Q1–Q6:** how chatty (each arrival, milestones, or the count only);
+8. **Messages Q1–Q6:** how chatty (each arrival, milestones, or the count only);
    anything when the app is not frontmost; mixed-project hold vs show; partial
    export; where a failed session's message lives; whether to say that an edit made
    before extraction will not steer it.
-8. **Bulk actions per session group** in By session.
-9. **Tick steps under a minute** (30 s, 15 s) for short sessions at wide widths.
-10. **Platform-transcript durations at ingest** (§4.6): read from the last cue, or accept
+9. **Bulk actions per session group** in By session. **Built provisionally as
+   none** (Phase 2): a session group has no star-all or hide-all; quotes are acted on
+   one at a time or through a selection, as everywhere else.
+10. **Tick steps under a minute** (30 s, 15 s) for short sessions at wide widths.
+11. **Platform-transcript durations at ingest** (§4.6): read from the last cue, or accept
     one scale move.
-11. **A reader on a lens that becomes withheld** (project switch, Re-analyse): no
+12. **A reader on a lens that becomes withheld** (project switch, Re-analyse): no
     tab reads active, and the route stays. Phase 1 needs a rule.
-12. **The disabled web nav tab's look.** It keeps the inactive tab's muted text
+13. **The disabled web nav tab's look.** It keeps the inactive tab's muted text
     (there is no disabled tier in the theme); only hover and pointer differ.
-13. **The motion spec's status-line shimmer.** §4.7.1 names the pipeline status line
+14. **The motion spec's status-line shimmer.** §4.7.1 names the pipeline status line
     as a shimmer target; this design makes it static. Amend §4.7.1. (Nothing ships
     the native status shimmer yet: `SidebarShimmerText` is used only in the tuner.)
-14. **Stopping a progressive run.** §5.2 says stopping keeps every readable session
+15. **Stopping a progressive run.** §5.2 says stopping keeps every readable session
     readable; step 11 keeps the cancelled status page, which covers them. Phase 1
-    built step 11. Which wins?
-15. **Progressive on resume.** A crash at session 6 of 10 turns the chain off for
+    built step 11. Which wins? **Built provisionally as the cancelled page**, so
+    the rule is today's: a stopped run shows the cancelled status page, and the
+    sessions already imported are in the database for the next run to keep.
+16. **Progressive on resume.** A crash at session 6 of 10 turns the chain off for
     the rest (codes fold across the study). The registry already holds the first
     five sessions' codes, so a chain starting at the first uncached session would
-    fold correctly. Simplification, or decision?
-16. ~~**Serial Whisper.**~~ **Decided 12 Oct 2026: live with it for now.** The chain's
+    fold correctly. Simplification, or decision? **Built provisionally as off on
+    resume** (Phase 1): a resumed run delivers nothing early, which is today's
+    behaviour, and the per-session quote records Phase 2 writes make the resume
+    itself cheaper.
+17. ~~**Serial Whisper.**~~ **Decided 12 Oct 2026: live with it for now.** The chain's
     LLM latency is added between Whisper files (transcription is a blocking call on
     the event loop). Running Whisper in a thread so the next decode overlaps would
     reopen Ctrl-C and the GIL; revisit if the added time is felt on real runs.

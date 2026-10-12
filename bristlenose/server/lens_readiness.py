@@ -62,9 +62,29 @@ def readable_in_manifest(manifest: PipelineManifest | None) -> frozenset[str]:
     whole (``readable_chain.py``, and stage 6 for the rest), so the server can
     import exactly these.
     """
-    from bristlenose.manifest import STAGE_MERGE_TRANSCRIPT, get_completed_session_ids
+    from bristlenose.manifest import (
+        STAGE_MERGE_TRANSCRIPT,
+        STAGE_PII_REMOVAL,
+        get_completed_session_ids,
+    )
 
+    # Under redaction a transcript is readable once it is redacted: the run
+    # records no per-session merge then (those files are the unredacted ones),
+    # and the redaction stage records each session it wrote.
+    if manifest is not None and STAGE_PII_REMOVAL in manifest.stages:
+        return frozenset(get_completed_session_ids(manifest, STAGE_PII_REMOVAL))
     return frozenset(get_completed_session_ids(manifest, STAGE_MERGE_TRANSCRIPT))
+
+
+def quoted_in_manifest(manifest: PipelineManifest | None) -> frozenset[str]:
+    """Sessions whose quote extraction is recorded done, quotes on disk.
+
+    Zero-quote sessions are included; the server lights the Quotes lens from
+    the quotes it actually imported, not from this set.
+    """
+    from bristlenose.manifest import STAGE_QUOTE_EXTRACTION, get_completed_session_ids
+
+    return frozenset(get_completed_session_ids(manifest, STAGE_QUOTE_EXTRACTION))
 
 
 #: A row in the Sessions grid during a run (§2): open it, it is being worked

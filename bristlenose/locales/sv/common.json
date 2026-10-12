@@ -90,6 +90,11 @@
     }
   },
   "quotes": {
+    "groupBy": {
+      "label": "Gruppera citat",
+      "session": "Per session",
+      "sectionsAndThemes": "Avsnitt och teman"
+    },
     "hiddenCount_one": "{{count}} dolt citat",
     "hiddenCount_other": "{{count}} dolda citat",
     "unhideHeader": "Visa igen:",

@@ -90,6 +90,11 @@
     }
   },
   "quotes": {
+    "groupBy": {
+      "label": "Group quotes",
+      "session": "By session",
+      "sectionsAndThemes": "Sections & themes"
+    },
     "hiddenCount_one": "{{count}} hidden quote",
     "hiddenCount_other": "{{count}} hidden quotes",
     "unhideHeader": "Unhide:",

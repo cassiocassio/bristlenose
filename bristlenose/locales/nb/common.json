@@ -90,6 +90,11 @@
     }
   },
   "quotes": {
+    "groupBy": {
+      "label": "Grupper sitater",
+      "session": "Etter \u00f8kt",
+      "sectionsAndThemes": "Seksjoner og temaer"
+    },
     "hiddenCount_one": "{{count}} skjult sitat",
     "hiddenCount_other": "{{count}} skjulte sitater",
     "unhideHeader": "Vis igjen:",

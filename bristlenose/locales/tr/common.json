@@ -90,6 +90,11 @@
     }
   },
   "quotes": {
+    "groupBy": {
+      "label": "Al\u0131nt\u0131lar\u0131 grupla",
+      "session": "Oturuma g\u00f6re",
+      "sectionsAndThemes": "B\u00f6l\u00fcmler ve temalar"
+    },
     "hiddenCount_one": "{{count}} gizli al\u0131nt\u0131",
     "hiddenCount_other": "{{count}} gizli al\u0131nt\u0131",
     "unhideHeader": "Göster:",

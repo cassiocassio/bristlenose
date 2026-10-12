@@ -2325,6 +2325,11 @@ class Pipeline:
                     elapsed=_pii_elapsed, input_size=_n_sessions,
                 )
                 self._emit_remaining(STAGE_PII, _pii_elapsed)
+                # Per session, so the server can import the redacted transcripts
+                # of a first analysis (docs/design-progressive-lenses.md,
+                # Phase 2): while this stage record exists, readable means redacted.
+                for t in clean_transcripts:
+                    mark_session_complete(manifest, STAGE_PII_REMOVAL, t.session_id)
                 mark_stage_complete(manifest, STAGE_PII_REMOVAL)
                 write_manifest(manifest, output_dir)
             else:
@@ -2645,6 +2650,28 @@ class Pipeline:
                 if _remaining_transcripts_q:
                     if llm_client is None:
                         llm_client = LLMClient(self.settings)
+                    _delivered_quotes: list[ExtractedQuote] = []
+
+                    def _deliver_quotes(sid: str, quotes: list[ExtractedQuote]) -> None:
+                        # Each session's quotes as it finishes: the file first,
+                        # then the record that says they are there. The server
+                        # imports them during a first analysis (Phase 2), and a
+                        # run that stops here resumes from them.
+                        if not self.settings.write_intermediate:
+                            return
+                        _delivered_quotes.extend(quotes)
+                        write_intermediate_json(
+                            _cached_quotes + _delivered_quotes, "extracted_quotes.json",
+                            output_dir, self.settings.project_name,
+                        )
+                        mark_session_complete(
+                            manifest, STAGE_QUOTE_EXTRACTION, sid,
+                            provider=self.settings.llm_provider,
+                            model=self.settings.llm_model,
+                            input_hash=_quote_session_fps.get(sid),
+                        )
+                        write_manifest(manifest, output_dir)
+
                     with _llm_telemetry.stage("s09_quote_extraction"):
                         _fresh_quotes, _fresh_quote_outcome = await extract_quotes(
                             _remaining_transcripts_q,
@@ -2658,6 +2685,7 @@ class Pipeline:
                                 remaining=len(_remaining_transcripts_q),
                                 cached=len(_cached_quote_sids),
                             ),
+                            on_session_done=_deliver_quotes,
                         )
                     # Record per-session completion only for sessions that
                     # actually produced quotes — same rule as s08 above, and

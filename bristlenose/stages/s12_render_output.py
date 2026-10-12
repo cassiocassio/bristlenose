@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from pathlib import Path
 
 from bristlenose.models import (
@@ -258,10 +259,24 @@ def write_intermediate_json(
     else:
         json_data = data
 
-    path.write_text(
-        json.dumps(json_data, indent=2, ensure_ascii=False, default=str),
-        encoding="utf-8",
-    )
+    # Atomic: the report server reads some of these while a run is still
+    # writing them (extracted_quotes.json, per session, during a first analysis).
+    text = json.dumps(json_data, indent=2, ensure_ascii=False, default=str)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    for attempt in range(5):
+        try:
+            tmp.replace(path)
+            break
+        except PermissionError:
+            # Windows refuses to replace a file another process has open (the
+            # server mid-read). Brief retries, then the old in-place write: a
+            # reader may then see a partial file, which it already survives.
+            if attempt < 4:
+                time.sleep(0.05)
+    else:
+        path.write_text(text, encoding="utf-8")
+        tmp.unlink(missing_ok=True)
     logger.info("Wrote intermediate: %s", path)
     return path
 

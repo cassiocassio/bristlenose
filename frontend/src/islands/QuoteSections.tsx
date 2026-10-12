@@ -36,9 +36,12 @@ interface QuoteSectionsProps {
    * Optional so non-SPA mounts (legacy island mode) continue to work.
    */
   refreshKey?: number;
+  /** The grouping control (By session / Sections & themes), shown in the
+   *  heading's action slot once sections exist. */
+  headingAction?: React.ReactNode;
 }
 
-export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps) {
+export function QuoteSections({ projectId, refreshKey = 0, headingAction }: QuoteSectionsProps) {
   const { t } = useTranslation();
   const [data, setData] = useState<QuotesListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +59,9 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
           ...json.sections.flatMap((s) => s.quotes),
           ...json.themes.flatMap((t) => t.quotes),
         ];
-        initFromQuotes(allQuotes, replace, json.uncategorised);
+        // Unjoined quotes too (Phase 2), so a star made before the sections
+        // existed shows wherever the quote is drawn.
+        initFromQuotes([...allQuotes, ...(json.unjoined ?? [])], replace, json.uncategorised);
         initHeadingEdits(json.sections, json.themes);
       })
       .catch((err: Error) => setError(err.message))
@@ -212,7 +217,7 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
 
   return (
     <section {...refetchOverlayProps(isRefetching)}>
-      <SectionHeading id="sections">{t("quotes.sections")}</SectionHeading>
+      <SectionHeading id="sections" action={headingAction}>{t("quotes.sections")}</SectionHeading>
       {filteredSections.map((section) => {
         // Scroll anchor tracks the *displayed* label (rename if present).
         const displayLabel = section.edited_label ?? section.screen_label;

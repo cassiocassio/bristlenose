@@ -104,6 +104,7 @@ async def extract_quotes(
     errors: list[str] | None = None,
     *,
     on_progress: Callable[[int, int], None] | None = None,
+    on_session_done: Callable[[str, list[ExtractedQuote]], None] | None = None,
 ) -> tuple[list[ExtractedQuote], StageOutcome]:
     """Extract verbatim quotes from all transcripts.
 
@@ -119,6 +120,11 @@ async def extract_quotes(
             ``remove_pii`` use. **Completions, not position:** this stage runs
             ``concurrency`` sessions at once and they finish out of order, so
             ``completed`` counts how many are done and never identifies which.
+        on_session_done: Optional ``callback(session_id, quotes)`` fired when a
+            session's extraction **succeeds** (zero quotes included), before
+            the stage ends — so a caller can deliver each session's quotes as
+            they come (docs/design-progressive-lenses.md, Phase 2). Not fired
+            for a failed or early-stopped session.
 
     Returns:
         Tuple of (quotes, outcome). ``outcome`` records per-session
@@ -173,6 +179,16 @@ async def extract_quotes(
                     transcript.session_id,
                     len(quotes),
                 )
+                if on_session_done is not None:
+                    try:
+                        on_session_done(transcript.session_id, quotes)
+                    except Exception:  # noqa: BLE001 — delivery must not un-succeed extraction
+                        # The quotes are still returned and written with the
+                        # stage; only their early delivery is lost.
+                        logger.warning(
+                            "%s: quotes extracted but not delivered early",
+                            transcript.session_id, exc_info=True,
+                        )
                 return quotes
             except Exception as exc:
                 logger.debug(

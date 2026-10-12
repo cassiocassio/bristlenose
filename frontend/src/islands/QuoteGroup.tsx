@@ -161,8 +161,10 @@ interface QuoteGroupProps {
   isNew?: boolean;
   /** Server token of the latest new-material import (for badge dismissal). */
   newSince?: string | null;
-  /** Heading edit key prefix. Narrow: the aria-label keys are looked up per case. */
-  itemType: "section" | "theme";
+  /** Heading edit key prefix. Narrow: the aria-label keys are looked up per case.
+   *  `session` is the By session grouping (progressive lenses, Phase 2): its
+   *  heading names the session and is not the researcher's to rename. */
+  itemType: "section" | "theme" | "session";
   /** Visible (filtered) quotes in this group. */
   quotes: QuoteResponse[];
   /** All quotes in this group (including hidden) — for the hidden counter. */
@@ -857,6 +859,7 @@ export function QuoteGroup({
     <>
       <div className="bn-group-header" ref={headerRef}>
         <h3 id={anchor}>
+          {itemType === "session" ? label : (<>
           <EditableText
             value={headingText}
             originalValue={label}
@@ -886,6 +889,7 @@ export function QuoteGroup({
             </button>
           )}
           <NewBadge isNew={isNew} dismissKey={editKeyBase} newSince={newSince} />
+          </>)}
         </h3>
         <Counter
           count={hiddenQuotes.length}
@@ -897,7 +901,7 @@ export function QuoteGroup({
           data-testid={`bn-counter-${anchor}`}
         />
       </div>
-      {(description || editedDescription) && (
+      {itemType !== "session" && (description || editedDescription) && (
         <p className="description">
           <EditableText
             value={descText}

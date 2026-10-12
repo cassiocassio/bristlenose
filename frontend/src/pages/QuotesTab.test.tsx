@@ -142,6 +142,21 @@ vi.mock("../islands/Toolbar", () => ({
   Toolbar: () => null,
 }));
 
+const sessionsRenders: { action: boolean }[] = [];
+vi.mock("../islands/QuoteSessions", () => ({
+  QuoteSessions: ({ headingAction }: { headingAction?: unknown }) => {
+    sessionsRenders.push({ action: headingAction != null });
+    return null;
+  },
+}));
+
+// The lens readiness the server reports; every lens unless a test says otherwise.
+const lensesNow = { value: { project: true, sessions: true, quotes: true, codebook: true, signals: true, discussion: true } };
+vi.mock("../contexts/ConditionStore", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("../contexts/ConditionStore");
+  return { ...actual, useLenses: () => lensesNow.value };
+});
+
 describe("QuotesTab — cross-island refetch contract", () => {
   beforeEach(() => {
     sectionsKeys.length = 0;
@@ -189,5 +204,63 @@ describe("QuotesTab — cross-island refetch contract", () => {
     // island's observed-key list and fails the assertion.
     expect(Math.max(...sectionsKeys)).toBeGreaterThan(sectionsMaxBefore);
     expect(Math.max(...themesKeys)).toBeGreaterThan(themesMaxBefore);
+  });
+});
+
+describe("QuotesTab — during a first analysis (progressive lenses, Phase 2)", () => {
+  beforeEach(() => {
+    sectionsKeys.length = 0;
+    sessionsRenders.length = 0;
+  });
+  afterEach(() => {
+    lensesNow.value = { ...lensesNow.value, signals: true };
+    try {
+      localStorage.clear();
+    } catch {
+      /* no storage */
+    }
+  });
+
+  it("shows quotes by session, with no grouping control, until sections exist", async () => {
+    lensesNow.value = { ...lensesNow.value, signals: false };
+    renderQuotesTab();
+    await waitFor(() => expect(sessionsRenders.length).toBeGreaterThan(0));
+    expect(sessionsRenders.every((r) => !r.action)).toBe(true);
+    expect(sectionsKeys).toEqual([]);
+  });
+
+  it("keeps a researcher who read By session during the run on it when sections arrive", async () => {
+    lensesNow.value = { ...lensesNow.value, signals: false };
+    const { rerender } = renderQuotesTab();
+    await waitFor(() => expect(sessionsRenders.length).toBeGreaterThan(0));
+    lensesNow.value = { ...lensesNow.value, signals: true };
+    sessionsRenders.length = 0;
+    rerender(
+      <MemoryRouter initialEntries={["/report/quotes"]}>
+        <FocusProvider>
+          <QuotesTab />
+        </FocusProvider>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(sessionsRenders.length).toBeGreaterThan(0));
+    expect(sessionsRenders[sessionsRenders.length - 1]?.action).toBe(true);
+  });
+
+  it("does not remember By session as a choice nobody made", async () => {
+    lensesNow.value = { ...lensesNow.value, signals: false };
+    const first = renderQuotesTab();
+    await waitFor(() => expect(sessionsRenders.length).toBeGreaterThan(0));
+    first.unmount();
+    lensesNow.value = { ...lensesNow.value, signals: true };
+    sessionsRenders.length = 0;
+    renderQuotesTab(); // a later visit, after the run
+    await waitFor(() => expect(sectionsKeys.length).toBeGreaterThan(0));
+    expect(sessionsRenders).toEqual([]);
+  });
+
+  it("shows sections and themes after the run, with the control", async () => {
+    renderQuotesTab();
+    await waitFor(() => expect(sectionsKeys.length).toBeGreaterThan(0));
+    expect(sessionsRenders).toEqual([]);
   });
 });

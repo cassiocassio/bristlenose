@@ -134,6 +134,11 @@ class QuotesListResponse(BaseModel):
     # sidebar subtitle or the "need a home" chip) doesn't have to walk the
     # array.  Mirrors total_hidden/total_starred.
     total_uncategorised: int = 0
+    # Quotes in no section or theme and not on the floor: a first analysis's
+    # quotes before sections exist (docs/design-progressive-lenses.md, Phase 2),
+    # and the ones a run that failed after extraction leaves behind. A whole
+    # import retires join-less quotes, so a finished report has none.
+    unjoined: list[QuoteResponse] = []
     has_moderator: bool
     # ISO timestamp of the latest import that added an interview, or null if
     # none has ever been added past the first.  The frontend keys "New"-badge
@@ -517,6 +522,16 @@ def get_quotes(
             )
             for q in uncat_quotes
         ]
+        floor = {q.id for q in uncat_quotes}
+        loose = [q for q in all_quotes if q.id not in grouped_ids and q.id not in floor]
+        loose.sort(key=lambda q: (q.session_id, q.start_timecode))
+        unjoined = [
+            _build_quote_response(
+                q, state_map, edit_map, tags_map, badges_map,
+                proposed_map, speaker_map,
+            )
+            for q in loose
+        ]
 
         # Summary counts
         total_hidden = sum(
@@ -549,6 +564,7 @@ def get_quotes(
             total_hidden=total_hidden,
             total_starred=total_starred,
             total_uncategorised=len(uncategorised),
+            unjoined=unjoined,
             has_moderator=has_moderator,
             new_since=new_since,
         )

@@ -63,3 +63,10 @@
 .toolbar-btn-toggle:not(.active) {
     color: var(--bn-colour-muted);
 }
+
+/* A pair of toolbar toggles chosen together — the Quotes lens's grouping
+   control (By session / Sections & themes, progressive lenses Phase 2). */
+.bn-quote-grouping {
+    display: inline-flex;
+    gap: var(--bn-space-xs);
+}

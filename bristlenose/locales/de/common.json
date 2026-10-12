@@ -80,6 +80,11 @@
     }
   },
   "quotes": {
+    "groupBy": {
+      "label": "Zitate gruppieren",
+      "session": "Nach Interview",
+      "sectionsAndThemes": "Abschnitte und Themen"
+    },
     "hiddenCount_one": "{{count}} ausgeblendetes Zitat",
     "hiddenCount_other": "{{count}} ausgeblendete Zitate",
     "unhideHeader": "Einblenden:",

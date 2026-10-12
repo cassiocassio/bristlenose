@@ -90,6 +90,11 @@
     }
   },
   "quotes": {
+    "groupBy": {
+      "label": "Citaten groeperen",
+      "session": "Per sessie",
+      "sectionsAndThemes": "Secties en thema's"
+    },
     "hiddenCount_one": "{{count}} verborgen citaat",
     "hiddenCount_other": "{{count}} verborgen citaten",
     "unhideHeader": "Tonen:",

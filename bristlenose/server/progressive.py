@@ -22,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Callable
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -31,6 +32,16 @@ if TYPE_CHECKING:
     from bristlenose.run_condition import Condition
 
 logger = logging.getLogger(__name__)
+
+
+def _predates(created_at: str, run_started_at: str | None) -> bool:
+    """True when a manifest was created before the run started. Unparseable → False."""
+    if not run_started_at:
+        return False
+    try:
+        return datetime.fromisoformat(created_at) < datetime.fromisoformat(run_started_at)
+    except (TypeError, ValueError):
+        return False
 
 
 def is_progressive(condition: Condition) -> bool:
@@ -60,7 +71,13 @@ class ProgressiveImport:
         self._imported: set[str] = set()
         #: Sessions that would not import this run: said once, not retried.
         self._refused: set[str] = set()
+        #: Sessions whose quotes are imported (Phase 2), and those with at least one.
+        self._quotes_done: set[str] = set()
+        self._quoted: set[str] = set()
+        self._quotes_refused: set[str] = set()
         self._manifest_error: str | None = None
+        #: The run's one import stamp (see ``import_readable_sessions``).
+        self._run_stamp: datetime | None = None
 
     async def follow(self, condition: Condition) -> None:
         from bristlenose.run_condition import RunStateEnum
@@ -84,26 +101,50 @@ class ProgressiveImport:
         if condition.latest.run_id != self._run_id:
             self._run_id = condition.latest.run_id
             self._imported, self._refused = set(), set()
+            self._quotes_done, self._quoted, self._quotes_refused = set(), set(), set()
+            self._run_stamp = datetime.now(timezone.utc)
             state.sessions_imported = False
-        readable = self._readable()
-        if readable is None:
+        sets = self._manifest_sets(condition.latest.started_at)
+        if sets is None:
             return  # unreadable manifest: keep saying what we said
+        readable, quoted = sets
+        moved = False
         new = set(readable) - self._imported - self._refused
         if new:
             added, present = await asyncio.to_thread(self._import, new)
             self._imported |= present
-            if added:
-                state.data_version = getattr(state, "data_version", 0) + 1
+            moved = bool(added)
+        # Quotes for sessions already in the database (Phase 2).
+        new_q = (set(quoted) & self._imported) - self._quotes_done - self._quotes_refused
+        if new_q:
+            counts = await asyncio.to_thread(self._import_quotes, new_q)
+            self._quotes_done |= set(counts)
+            self._quoted |= {sid for sid, n in counts.items() if n}
+            moved = moved or any(counts.values())
+        if moved:
+            state.data_version = getattr(state, "data_version", 0) + 1
         if self._imported:
             # From what the database holds, not from what this call added: a
             # serve restarted mid-run finds session 1 imported at startup.
             state.sessions_imported = True
-        state.progress = Progress(readable=frozenset(self._imported))
+        state.progress = Progress(
+            readable=frozenset(self._imported), quoted=frozenset(self._quoted),
+        )
 
-    def _readable(self) -> frozenset[str] | None:
+    def _manifest_sets(
+        self, run_started_at: str | None,
+    ) -> tuple[frozenset[str], frozenset[str]] | None:
+        """``(readable, quoted)`` from the manifest, or None when it will not read.
+
+        A manifest created before this run started is the previous run's: the
+        pipeline builds the new one in memory and first writes it after ingest, so a
+        re-run of a first analysis that failed reads its predecessor's records until
+        then. Those sessions and quotes are not this run's (they may be unredacted,
+        or re-transcribed to new timecodes), so they read as nothing yet.
+        """
         from bristlenose.manifest import load_manifest
         from bristlenose.output_paths import project_output_dir
-        from bristlenose.server.lens_readiness import readable_in_manifest
+        from bristlenose.server.lens_readiness import quoted_in_manifest, readable_in_manifest
 
         try:
             manifest = load_manifest(project_output_dir(self._project_dir))
@@ -115,7 +156,38 @@ class ProgressiveImport:
                                "sessions are imported when it reads again", said)
             return None
         self._manifest_error = None
-        return readable_in_manifest(manifest)
+        if manifest is None or _predates(manifest.created_at, run_started_at):
+            return frozenset(), frozenset()
+        return readable_in_manifest(manifest), quoted_in_manifest(manifest)
+
+    def _import_quotes(self, sids: set[str]) -> dict[str, int]:
+        """Per session imported, how many quotes it holds. A session that will
+        not import is said once and left to the whole import."""
+        from bristlenose.server.importer import import_session_quotes
+
+        counts: dict[str, int] = {}
+        for sid in sorted(sids):
+            db = self._session_factory()
+            try:
+                project, got = import_session_quotes(db, self._project_dir, {sid})
+                if project.id != 1:
+                    logger.error(
+                        "progressive quote import of %s landed in project row %s, not 1",
+                        sid, project.id,
+                    )
+                    self._quotes_refused.add(sid)
+                    continue
+                counts[sid] = got.get(sid, 0)
+            except Exception:
+                logger.warning(
+                    "progressive | %s's quotes did not import during the run; they "
+                    "arrive with the whole report", sid, exc_info=True,
+                )
+                db.rollback()
+                self._quotes_refused.add(sid)
+            finally:
+                db.close()
+        return counts
 
     def _import(self, sids: set[str]) -> tuple[set[str], set[str]]:
         """``(added, now in the database)`` for the requested sessions."""
@@ -138,7 +210,9 @@ class ProgressiveImport:
 
         db = self._session_factory()
         try:
-            project, added = import_readable_sessions(db, self._project_dir, {sid})
+            project, added = import_readable_sessions(
+                db, self._project_dir, {sid}, run_stamp=self._run_stamp,
+            )
             if project.id != 1:
                 # The SPA reads row 1: a session imported elsewhere is invisible,
                 # and calling it done would leave it "waiting" for good.

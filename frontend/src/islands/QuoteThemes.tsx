@@ -49,7 +49,9 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
           ...json.sections.flatMap((s) => s.quotes),
           ...json.themes.flatMap((t) => t.quotes),
         ];
-        initFromQuotes(allQuotes, replace, json.uncategorised);
+        // Unjoined quotes too (Phase 2), so a star made before the sections
+        // existed shows wherever the quote is drawn.
+        initFromQuotes([...allQuotes, ...(json.unjoined ?? [])], replace, json.uncategorised);
         initHeadingEdits(json.sections, json.themes);
       })
       .catch((err: Error) => setError(err.message))

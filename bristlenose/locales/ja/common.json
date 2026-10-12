@@ -86,6 +86,11 @@
     }
   },
   "quotes": {
+    "groupBy": {
+      "label": "\u767a\u8a00\u306e\u30b0\u30eb\u30fc\u30d7\u5316",
+      "session": "\u30bb\u30c3\u30b7\u30e7\u30f3\u5225",
+      "sectionsAndThemes": "\u30bb\u30af\u30b7\u30e7\u30f3\u3068\u30c6\u30fc\u30de"
+    },
     "hiddenCount_other": "\u975e\u8868\u793a\u306e\u5f15\u7528 {{count}} \u4ef6",
     "unhideHeader": "再表示:",
     "unhideAll": "すべて再表示",

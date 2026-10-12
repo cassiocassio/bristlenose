@@ -80,6 +80,11 @@
     }
   },
   "quotes": {
+    "groupBy": {
+      "label": "Agrupar citas",
+      "session": "Por sesi\u00f3n",
+      "sectionsAndThemes": "Secciones y temas"
+    },
     "hiddenCount_one": "{{count}} cita oculta",
     "hiddenCount_other": "{{count}} citas ocultas",
     "unhideHeader": "Mostrar:",

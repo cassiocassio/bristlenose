@@ -90,6 +90,11 @@
     }
   },
   "quotes": {
+    "groupBy": {
+      "label": "Grupp\u00e9r citater",
+      "session": "Efter session",
+      "sectionsAndThemes": "Afsnit og temaer"
+    },
     "hiddenCount_one": "{{count}} skjult citat",
     "hiddenCount_other": "{{count}} skjulte citater",
     "unhideHeader": "Vis igen:",

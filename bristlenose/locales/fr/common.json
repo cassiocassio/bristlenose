@@ -80,6 +80,11 @@
     }
   },
   "quotes": {
+    "groupBy": {
+      "label": "Regrouper les verbatim",
+      "session": "Par entretien",
+      "sectionsAndThemes": "Sections et th\u00e8mes"
+    },
     "hiddenCount_one": "{{count}} citation masqu\u00e9e",
     "hiddenCount_other": "{{count}} citations masqu\u00e9es",
     "unhideHeader": "Afficher :",

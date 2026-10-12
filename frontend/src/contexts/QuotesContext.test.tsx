@@ -169,6 +169,16 @@ describe("QuotesStore", () => {
       expect(result.current.proposedTags["q-P1-120"]).toHaveLength(1);
     });
 
+    it("seeds state from the floor's quotes too, so a full-map PUT keeps them", () => {
+      // put_starred sets is_starred = (qid in map) for every quote, so a floor
+      // quote missing from the map would lose its star on the next gesture.
+      const floor = makeQuote({ dom_id: "q-P3-300", is_starred: true, tags: [TAG_FRUSTRATION] });
+      initFromQuotes([makeQuote({ dom_id: "q-P1-100" })], true, [floor]);
+      const { result } = renderHook(() => useQuotesStore());
+      expect(result.current.starred).toEqual({ "q-P3-300": true });
+      expect(result.current.tags["q-P3-300"]).toHaveLength(1);
+    });
+
     it("merges non-overlapping quotes from two calls (default merge mode)", () => {
       const q1 = makeQuote({ dom_id: "q-P1-100", is_starred: true });
       const q2 = makeQuote({ dom_id: "q-P2-200", is_hidden: true });

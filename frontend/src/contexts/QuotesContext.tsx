@@ -232,7 +232,11 @@ export function initFromQuotes(
     const deletedBadges = { ...base.deletedBadges };
     const proposedTags = { ...base.proposedTags };
 
-    for (const q of quotes) {
+    // The floor's quotes seed the state maps too. Every write is a full-map
+    // PUT (`put_starred` sets `is_starred = qid in map` for every quote), so a
+    // floor quote missing from these maps lost its star, hide, tags or edit on
+    // the first gesture anywhere, and with them the pin that keeps it.
+    for (const q of [...quotes, ...(uncategorised ?? [])]) {
       if (q.is_hidden) hidden[q.dom_id] = true;
       if (q.is_starred) starred[q.dom_id] = true;
       if (q.edited_text) edits[q.dom_id] = q.edited_text;

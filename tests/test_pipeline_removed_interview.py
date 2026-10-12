@@ -9,6 +9,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+from bristlenose.logging import release_log_file
 from bristlenose.pipeline import prune_stale_session_files
 from tests.test_pipeline_platform_transcripts import audio_session, run_pipeline
 
@@ -48,6 +49,9 @@ class TestRemovedInterview:
         h = run_pipeline(tmp_path, _two_then_one, runs=2)
         project = tmp_path / "project"
         project.mkdir()
+        # The run's log handler holds bristlenose.log open, and Windows will
+        # not move a folder with an open file in it (WinError 32).
+        release_log_file()
         shutil.move(str(h.output_dir), str(project / "bristlenose-output"))
 
         engine = get_engine("sqlite://")
@@ -84,7 +88,7 @@ class TestPruneHelper:
 
         removed = prune_stale_session_files(tmp_path, ["s1", "s12"])
 
-        assert sorted(str(p.relative_to(tmp_path)) for p in removed) == [
+        assert sorted(p.relative_to(tmp_path).as_posix() for p in removed) == [
             ".bristlenose/intermediate/scene-colours/s2.json",
             ".bristlenose/intermediate/speaker-info/s2.json",
             ".bristlenose/temp/s2_extracted.wav",
@@ -93,7 +97,9 @@ class TestPruneHelper:
             "transcripts-cooked/s2.txt",
             "transcripts-raw/s2.md", "transcripts-raw/s2.txt",
         ]
-        kept = sorted(str(p.relative_to(tmp_path)) for p in tmp_path.rglob("*") if p.is_file())
+        kept = sorted(
+            p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*") if p.is_file()
+        )
         assert kept == [
             ".bristlenose/intermediate/session_segments.json",
             ".bristlenose/sessions.json",

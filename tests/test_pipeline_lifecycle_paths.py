@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 
 from bristlenose.hashing import hash_bytes, hash_file_metadata
+from bristlenose.logging import release_log_file
 from tests.test_pipeline_platform_transcripts import audio_session, run_pipeline
 
 
@@ -36,6 +37,9 @@ class TestMovedProject:
         assert h1.transcribed == [["s1"]]
 
         moved = tmp_path / "study (renamed)"
+        # The run's log handler holds bristlenose.log open inside the folder,
+        # and Windows will not rename it while it does (WinError 5).
+        release_log_file()
         os.rename(first, moved)
         h2 = run_pipeline(moved, _one)
         assert h2.transcribed == [], "a moved folder re-paid Whisper for its session"

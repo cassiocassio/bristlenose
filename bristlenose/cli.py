@@ -1170,7 +1170,7 @@ def run(
     ] = False,
     clean: Annotated[
         bool,
-        typer.Option("--clean", help="Delete output directory before running."),
+        typer.Option("--clean", help="Start afresh. The previous output is kept aside and removed once the run succeeds."),
     ] = False,
     dev: Annotated[
         bool,

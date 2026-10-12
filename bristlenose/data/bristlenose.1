@@ -264,7 +264,9 @@ Skip audio transcription (use existing transcripts).
 Path to a \fIbristlenose.toml\fR config file.
 .TP
 .BR \-\-clean
-Delete the output directory before running.
+Start afresh. The previous output is moved to
+.I .bristlenose\-output\-previous/
+and removed once the run succeeds; if the run fails it is put back.
 .TP
 .BR \-\-no\-serve
 Suppress the auto-serve step at the end of the pipeline. By default, \fBrun\fR

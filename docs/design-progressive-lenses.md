@@ -626,6 +626,7 @@ Disabled until the run ends.
     the rest (codes fold across the study). The registry already holds the first
     five sessions' codes, so a chain starting at the first uncached session would
     fold correctly. Simplification, or decision?
-16. **Serial Whisper.** The chain's LLM latency is added between Whisper files
-    (transcription is a blocking call on the event loop). Accept, or run Whisper in
-    a thread so the next decode overlaps — which reopens Ctrl-C and the GIL.
+16. ~~**Serial Whisper.**~~ **Decided 12 Oct 2026: live with it for now.** The chain's
+    LLM latency is added between Whisper files (transcription is a blocking call on
+    the event loop). Running Whisper in a thread so the next decode overlaps would
+    reopen Ctrl-C and the GIL; revisit if the added time is felt on real runs.

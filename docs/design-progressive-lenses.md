@@ -880,7 +880,10 @@ the overlay and moves `data_version`, so the SPA refetches.
 2. **Project lens during the run** — and with it whether the split-flap has a home.
    **Counts decided 13 Oct 2026:** no new surface; the sidebar status line and the
    window subtitle carry them (Phase 5). The Project lens's own place during a run
-   is still open.
+   is still open. **Deferred to the dashboard redesign** (owner, 13 Oct 2026):
+   progressive data on the Project lens belongs to a future dashboard, whose ideas
+   and mockups are not yet good enough to build. The Sessions lens is where the
+   during-run effort goes; until then the Project lens stays withheld.
 3. **Thumbnail frame:** the 60 s fallback for good, or swap in the transcript-chosen
    frame at readable.
 4. **Playback before readable.** The media exists from the first second, and the

@@ -158,7 +158,9 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
   theme spans** at the barrier. These are real turns, not a skeleton. (Under
   redaction there is no per-session chain, so scene colours arrive at the barrier.)
 - A fifth layer shipped on 12 Oct 2026 and is the one later-arriving layer the app
-  has: **scene strips and notches** (`utils/scene_strip.py`, every frame at 4 fps),
+  has: **scene strips** (`utils/scene_strip.py`, every frame at 4 fps; the notches
+  parked behind `featureFlags.sceneNotches` since 13 Oct), with the **hover thumbnail's
+  frames** taken by the same job since 13 Oct (`utils/turn_frames.py`), both
   computed by serve on a background thread (`server/scene_strips.py`) and **deferred
   for the whole run** — the job will not start while the project's latest run is in
   progress, so under progressive a readable row has no strip until the barrier. The

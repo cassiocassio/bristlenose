@@ -359,8 +359,36 @@ finished transcript. The reference description is `bristlenose/stages/CLAUDE.md`
 net; batches 2–4; and the diagnostics row and opt-in telemetry
 (`docs/design-transcription-quality.md`).
 
+## Waves 1 and 2: Catalan, Dutch, Swedish, Danish, Norwegian (13 Oct 2026)
+
+Fifteen recordings, three per language, from Wikimedia Commons, archive.org and the
+University of Barcelona's COC corpus (a 1990s conversation on a sofa with the TV on, the
+one with a transcript). Each was run three ways, all with the nets on as shipped: no
+prompt (how the language transcribes today), v1 and v2. Prompts were written from each
+language's corpus conventions (COC for Catalan, CGN for Dutch, the Göteborg MSO6 guide
+for Swedish, LANCHART for Danish, NB Samtale for Norwegian) and, after batch 1, none of
+them carries a lone assent word.
+
+| Language | Longest unpunctuated run, today → shipped prompt | Decision |
+|---|---|---|
+| Catalan | 135 → 24, 137 → 31, 58 → 19 | **v2**. v1 swallowed a 15 s passage in ca-2 and handed back its own "No ho sé, depèn." |
+| Dutch | 24, 51, 32 already | **No prompt.** Whisper already punctuates Dutch; v1 made nl-1 worse (24 → 36) and both cut sentence ends |
+| Swedish | 133 → 25, 47 → 40, 25 → 25 | **v1**. v2 made sv-2 worse (47 → 52) |
+| Danish | 114 → 30, 114 → 83, 200 → 14 | **v1**. v2 lost a block of da-3 |
+| Norwegian | 144 → 24, 84 → 19, 86 → 15 | **v1**, keyed `no` (Whisper's Bokmål code; `nb` reaches it, Nynorsk `nn` does not) |
+
+Checks that did not show up in the totals: every "lost" 30-second block was read. The one
+in nb-1 is a song the prompted run left out, which is right; sv-2's moved 5 s earlier and
+is intact; ca-2's was real speech lost under v1 and, less of it, under v2. The inaudible
+marker fired three times, all next to music and Whisper's stock hallucinations
+("Welcome.", a subtitle credit); one Norwegian gap sits before a "Hva da?" that may be a
+prompt fragment. Whole prompt clauses reappearing as text: Catalan v1 12 against 3 with no
+prompt, the rest 0–3.
+
 ## Status
 
+- 13 Oct 2026: waves 1 and 2 shipped: ca, sv, da, no; Dutch measured and left without a
+  prompt.
 - 13 Oct 2026: batch 1 shipped for es, fr, it and de, then pt once the nets were in. The net, the inaudible
   marker and loop removal shipped with it (§ Batch 1 as shipped).
 - 12 Oct 2026: brief written; batch 1 researched, downloaded (12 files, approved), trialled with v1 and v2 (above). Awaiting the owner's reading of the comparison page.

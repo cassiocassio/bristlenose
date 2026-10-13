@@ -253,6 +253,16 @@ STYLE_PROMPTS: dict[str, str] = {
     "it": "Ehm, allora, mh, in realtà sì, no? Eh, più o meno, perché, ehm, dipende.",
     "de": "Ähm, ja. Also, ich denke schon, äh, und dann? Genau.",
     "pt": "Ahn, então, hum, na verdade é isso, né? Eh, mais ou menos, porque, ahn, depende.",
+    # Waves 1 and 2 (13 Oct 2026), fifteen recordings: the longest unpunctuated
+    # run fell from 114-200 words to 14-33 in Catalan, Danish, Norwegian and
+    # Swedish. Catalan takes v2: v1 swallowed a 15 s passage and handed back its
+    # own "No ho sé, depèn." Dutch gets none on purpose: it came back punctuated
+    # without a prompt, and both prompts made some recordings worse.
+    # Norwegian is Whisper's "no" (Bokmål); Nynorsk ("nn") is left out.
+    "ca": "Eh, doncs, mm, la veritat és que sí, no? Eh, més o menys, perquè, em, depèn.",
+    "sv": "Ehm, alltså, jag tänker väl så, eh, och sen då? Det beror lite på, liksom.",
+    "da": "Øh, altså, jeg tror nok det, øh, og hvad så? Det kommer lidt an på.",
+    "no": "Ehm, altså, jeg tror vel det, eh, og hva da? Det kommer litt an på, liksom.",
 }
 
 
@@ -261,6 +271,8 @@ STYLE_PROMPTS: dict[str, str] = {
 _LANGUAGE_NAMES: dict[str, str] = {
     "english": "en", "japanese": "ja", "spanish": "es", "castilian": "es",
     "french": "fr", "italian": "it", "german": "de", "portuguese": "pt",
+    "catalan": "ca", "valencian": "ca", "swedish": "sv", "danish": "da",
+    "norwegian": "no", "nb": "no",
 }
 
 

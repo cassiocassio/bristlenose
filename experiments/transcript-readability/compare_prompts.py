@@ -22,9 +22,13 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 CSS_SOURCE = REPO / "docs/mockups/transcript-paragraph-capitalisation.html"
 LANG_NAMES = {"es": "Spanish", "fr": "French", "de": "German", "it": "Italian",
-              "pt": "Portuguese"}
+              "pt": "Portuguese", "ca": "Catalan", "nl": "Dutch", "sv": "Swedish",
+              "da": "Danish", "no": "Norwegian", "pl": "Polish", "cs": "Czech",
+              "ru": "Russian", "uk": "Ukrainian", "fi": "Finnish", "tr": "Turkish",
+              "ko": "Korean"}
 #: Trial conditions, in order, with the label the page shows.
 CONDITIONS = {"none": "No prompt (today)", "none+net": "No prompt + net",
+              "none+net+inaudible": "No prompt + nets (today)",
               "prompt": "Prompt v1", "prompt+net": "Prompt v1 + net", "prompt-v2": "Prompt v2",
               "prompt-v2+net": "Prompt v2 + net",
               "prompt+net+inaudible": "Prompt v1 + net + inaudible",
@@ -65,6 +69,12 @@ def main(root: str) -> int:
                 r = json.loads(path.read_text(encoding="utf-8"))
                 conds[cond] = {"prompt": r.get("prompt"), "detected": r["detected"],
                                "metrics": r["metrics"], "segs": r["segments"]}
+        if "none" not in conds:
+            # Waves after batch 1 run the baseline with the nets on, as shipped.
+            for alt in ("none+net+inaudible", "none+net"):
+                if alt in conds:
+                    conds = {"none": conds.pop(alt), **conds}
+                    break
         if "none" in conds and len(conds) > 1:
             samples.append({
                 "id": sid, "lang": item["lang"], "licence": item["licence"],

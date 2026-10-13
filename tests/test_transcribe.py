@@ -708,14 +708,17 @@ class TestStylePromptLanguage:
         assert style_prompt_for("Japanese") == STYLE_PROMPTS["ja"]
         for code, name in (
             ("es", "Spanish"), ("fr", "French"), ("it", "Italian"), ("de", "German"),
-            ("pt", "Portuguese"),
+            ("pt", "Portuguese"), ("ca", "Catalan"), ("sv", "Swedish"), ("da", "Danish"),
+            ("no", "Norwegian"),
         ):
             assert style_prompt_for(code) == STYLE_PROMPTS[code] == style_prompt_for(name), code
+        # Bokmål is Whisper's "no"; our interface code for it is "nb".
+        assert style_prompt_for("nb") == STYLE_PROMPTS["no"]
 
     def test_a_language_without_a_measured_prompt_gets_none(self) -> None:
         from bristlenose.stages.s05_transcribe import style_prompt_for
 
-        for given in ("zh", "yue", "", None):
+        for given in ("zh", "yue", "nl", "nn", "", None):
             assert style_prompt_for(given) is None, given
 
 

@@ -56,7 +56,8 @@ MAX_RETRY_WAIT_S = 300
 
 MAGIC = (
     (0, b"ID3", "mp3"), (0, b"\xff\xfb", "mp3"), (0, b"\xff\xf3", "mp3"),
-    (0, b"\xff\xf2", "mp3"), (0, b"OggS", "ogg"), (0, b"fLaC", "flac"),
+    # \xff\xe3: MPEG 2.5 Layer III, low-bitrate speech (the COC corpus, 13 Oct 2026).
+    (0, b"\xff\xf2", "mp3"), (0, b"\xff\xe3", "mp3"), (0, b"OggS", "ogg"), (0, b"fLaC", "flac"),
     (0, b"RIFF", "wav"), (4, b"ftyp", "mp4"), (0, b"\x1a\x45\xdf\xa3", "mkv"),
 )
 

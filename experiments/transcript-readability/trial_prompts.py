@@ -24,6 +24,22 @@ CANDIDATES: dict[str, str] = {
     "de": "Ähm, ja. Also, ich denke schon, äh, und dann? Genau.",
     "it": "Ehm, sì. Allora, penso di sì, eh, e poi? Esatto.",
     "pt": "Ahn, é. Então, acho que sim, né, e depois? Certo.",
+    # Waves 1 and 2 (13 Oct 2026): v1 already without a lone assent word, the
+    # lesson of es/pt v1; fillers from each language's corpus conventions.
+    "ca": "Eh, doncs, jo crec que sí, mm, saps? No ho sé, depèn.",
+    "nl": "Uhm, nou, ik denk het wel, uh, en dan? Dat weet ik niet precies.",
+    "sv": "Ehm, alltså, jag tänker väl så, eh, och sen då? Det beror lite på, liksom.",
+    "da": "Øh, altså, jeg tror nok det, øh, og hvad så? Det kommer lidt an på.",
+    "no": "Ehm, altså, jeg tror vel det, eh, og hva da? Det kommer litt an på, liksom.",
+    # Waves 3 and 4: each shows the comma its language requires before a
+    # subordinate clause; Ukrainian uses і and ї so it cannot read as Russian.
+    "pl": "Yyy, no, wydaje mi się, że tak, eee, ale nie wiem. Mmm, trochę zależy, jak na to patrzeć.",
+    "cs": "Eee, no, myslím si, že jo, mmm, ale nevím. Eee, záleží na tom, jak se to vezme.",
+    "ru": "Э-э, ну, мне кажется, что да, м-м, но не знаю. Э, тут зависит от того, как посмотреть.",
+    "uk": "Е-е, ну, мені здається, що так, м-м, але не знаю. Е, тут залежить від того, як подивитися.",
+    "fi": "Öö, no, mä luulen, että se on ihan hyvä. Mutta, mm, en ole ihan varma, koska se riippuu vähän.",
+    "tr": "Eee, şey, bence öyle, yani. Ama ııı, tam emin değilim, çünkü biraz duruma bağlı.",
+    "ko": "음, 그러니까, 저는 그렇게 생각해요. 근데 어, 잘 모르겠어요, 좀 상황에 따라 다른 것 같아요.",
 }
 
 #: v2 (12 Oct 2026): v1's Spanish and Portuguese prompts skipped whole stretches of
@@ -39,6 +55,18 @@ VARIANTS: dict[str, dict[str, str]] = {
         # v1 French nearly doubled commas and barely moved full stops (comma-heavy
         # prompt); v2 has more full stops and still no lone assent word.
         "fr": "Euh, bon, je pense que oui. Mais ça dépend, hein. Et alors ? Je ne sais pas trop.",
+        "ca": "Eh, doncs, mm, la veritat és que sí, no? Eh, més o menys, perquè, em, depèn.",
+        "nl": "Uhm, nou, uh, eigenlijk wel, toch? Uh, min of meer, want, uhm, dat ligt eraan.",
+        "sv": "Öh, alltså, mm, det är väl så, eller hur? Eh, mer eller mindre, för att, mm, det beror på.",
+        "da": "Øh, altså, mm, det er vel sådan set rigtigt, ikke? Øh, mere eller mindre, fordi, mm, det kommer an på.",
+        "no": "Eh, altså, mm, det er vel egentlig sånn, ikke sant? Eh, mer eller mindre, fordi, mm, det kommer an på.",
+        "pl": "Yyy, no, mmm, szczerze mówiąc, to chyba tak, nie? Eee, mniej więcej, bo, yyy, to zależy.",
+        "cs": "Eee, no, mmm, popravdě asi jo, ne? Eee, víceméně, protože, mmm, to záleží.",
+        "ru": "Э-э, ну, м-м, честно говоря, вроде да, вот. Э, более-менее, потому что, м-м, смотря как.",
+        "uk": "Е-е, ну, м-м, чесно кажучи, начебто так, от. Е, більш-менш, тому що, м-м, буває по-різному.",
+        "fi": "Öö, tota, niinku, kyl mä sitä mieltä oon, eiks nii? Mm, no, en tiiä, koska se vähän riippuu.",
+        "tr": "Eee, yani, ııı, aslında öyle, değil mi? Şey, bilmiyorum, ııı, biraz duruma bağlı.",
+        "ko": "음, 그, 사실 좀 그런 것 같아요, 그렇죠? 어, 뭐, 잘 모르겠는데, 음, 좀 다를 수도 있고요.",
     },
 }
 
@@ -50,6 +78,18 @@ FILLERS: dict[str, set[str]] = {
     "de": {"äh", "ähm", "öh", "hm", "ehm", "äm"},
     "it": {"ehm", "eh", "mh", "uhm", "mm"},
     "pt": {"ahn", "hum", "né", "eh", "uhn"},
+    "ca": {"eh", "em", "mm", "ah"},
+    "nl": {"uh", "uhm", "eh", "ehm"},
+    "sv": {"eh", "öh", "ehm", "mm", "äh"},
+    "da": {"øh", "øhm", "mm", "eh"},
+    "no": {"eh", "ehm", "mm", "eee", "emm"},
+    "pl": {"yyy", "eee", "mmm", "yy", "ee"},
+    "cs": {"eee", "mmm", "ehm", "ee"},
+    "ru": {"э", "ээ", "эээ", "м", "мм", "э-э", "м-м"},
+    "uk": {"е", "ее", "м", "мм", "е-е", "м-м"},
+    "fi": {"öö", "mm", "aa", "tota"},
+    "tr": {"eee", "ııı", "şey", "ee"},
+    "ko": {"음", "어", "그", "아"},
 }
 
 _END = re.compile(r"[.?!…]+[\"'”»)]*$")

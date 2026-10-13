@@ -90,14 +90,14 @@ a test proved red on its mutant (`a4140b48`, `75a56841`).
 |---|---|---|---|
 | 27 | After a crash, the previous report stays hidden until the next run starts | the server never reclaims a stash itself | serve calls `output_backup.reclaim_stale` when no run owns the project |
 | 28 | A CLI `serve` does not follow its folder to a new name | by design; it says so (row 6), and the Mac app restarts it | restart the server; or re-derive the root from the open database's path |
-| 29 | A folder moved with the app closed forks the project; the report shows the stale first row | project identity is the absolute path | an id the output folder carries (handoff WS4) |
-| 30 | A copied folder forks the same way, and the copy's writes reach the original | same | same, plus a product decision on what a copy *is* |
+| 29 | A folder moved with the app closed forks the project; the report shows the stale first row | project identity is the absolute path | the study marker, [design-project-identity.md](design-project-identity.md) §3–4 and §10; decided 13 Oct 2026, phase 2 |
+| 30 | A copied folder forks the same way, and the copy's writes reach the original | same | same; a copy is an independent duplicate, re-minted on arrival ([design-project-identity.md](design-project-identity.md) §9) |
 
 ### Open, not engineered
 
 | # | Failure mode | Why there is no scenario yet |
 |---|---|---|
-| 31 | A renamed interview gets a new session id, so its stars, tags and edits are deleted | the session key is the file stem by design; a stable key needs content identity |
+| 31 | A renamed interview gets a new session id, so its stars, tags and edits are deleted | the session key is the file stem by design; a stable key needs content identity — the recording fingerprint and registry v3 in [design-project-identity.md](design-project-identity.md) §5–6 (decided 13 Oct 2026, phase 2) |
 | 32 | Two servers, or two app windows on two machines, on one folder at once | no lock exists to test; SQLite serialises writes but imports can still race |
 | 33 | Network shares, ExFAT, iCloud-evicted databases | WAL is unsupported on network filesystems; needs real volumes, not a temp dir |
 | 34 | More than 50 projects: the 51st gets no folder lease, so no sandbox scope | rare; a Swift-side cap |
@@ -139,7 +139,8 @@ In order of likely cost:
    gives a report showing the last state before the move, and new analysis
    landing where the report cannot see it. The sidebar now names the fork
    (row 19), so it is loud rather than silent, which is the main reason it is
-   not worse. WS4 is the fix.
+   not worse. [design-project-identity.md](design-project-identity.md) is the fix,
+   decided 13 Oct 2026.
 2. **The Mac app has no end-to-end lifecycle test.** Rows 19–25 are proven by
    unit tests of each piece; nothing drives the built app through
    add → analyse → re-analyse → quit mid-run → relaunch → rename. The 12 Oct

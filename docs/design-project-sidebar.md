@@ -210,7 +210,7 @@ When files/folders are dragged from Finder:
 - **Drag multiple folders** → one project, `path` = first folder, `inputFiles` = all folder paths
 - **Drag file(s)** → one project, `path` = first file's parent dir, `inputFiles` = exactly the dropped files (never siblings)
 - **Drag mix of files + folders** → one project, `path` = first item's dir, `inputFiles` = all paths
-- No dedup — dropping the same folder twice creates two projects (user may tag/analyse differently). Duplicate warning is a future enhancement (see 100days.md)
+- ~~No dedup — dropping the same folder twice creates two projects (user may tag/analyse differently).~~ **Retired 13 Oct 2026.** Dead in the shipped app since `754f0658` (8 Jun 2026): a re-drop of a tracked folder selects its row (or runs it if never analysed), with no prompt. Two rows on one folder could never work — they would share one database and one output. The dedupe key moves from the path string to the study marker ([design-project-identity.md](design-project-identity.md) §9); "analyse the same interviews differently" is a Finder duplicate of the folder, which is an independent study
 - The `name` field is display-only. It must never be used to construct filesystem paths. The `path` field is set at creation and only changed by relocate
 - `inputFiles` (optional `[String]?` in `projects.json` as `input_files`): when nil, the pipeline scans the entire `path` directory. When populated, only those files/directories are processed. This is how single-file projects and multi-source projects coexist with the legacy folder-scan model
 
@@ -465,7 +465,7 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
   - Multiple folders → one project, `inputFiles` lists all folder paths
   - Single/multiple files → one project, `inputFiles` = exactly the dropped files (never siblings)
   - Mixed files + folders → one project, all paths in `inputFiles`
-  - No dedup — same folder dropped twice creates two projects (user may analyse differently)
+  - ~~No dedup — same folder dropped twice creates two projects (user may analyse differently)~~ — retired 13 Oct 2026; see the drop rules above
   - Project named after first item (folder name or filename stem) — drag-create adopts it with no inline rename (New Project from the `+⌄` or ⌘N still opens for rename; commit `09f8625`)
 - `Project.inputFiles` (`input_files` in JSON) — optional `[String]?`. nil = scan whole directory (backward compatible). Populated = process only listed files/directories. Follows Logic Pro / Final Cut precedent: project is a logical container, files are references
 - Right-click context menu on project rows: Show in Finder, Rename, Delete (destructive role)

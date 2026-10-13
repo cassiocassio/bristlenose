@@ -55,6 +55,7 @@ This doc exists because the question recurs in several disguises (iCloud sync, a
 | **YES** | Never blind-`copyItem` a user-supplied file | Blocks forever on a dataless source and can't be cancelled |
 | **YES** | Stay fully useful when source media is absent | Analysis is the product; playback is the only thing that should degrade |
 | **YES** | Reconnect silently when media returns | BN follows, never fights — renames/moves/re-downloads resolve without UI |
+| **YES** | Identity from content, never from a path (decided 13 Oct 2026) | A study is its database plus a marker id in `bristlenose-output/.bristlenose/`; a recording is a fingerprint of its bytes; a path is a hint that heals. Moving, renaming or copying a folder, or renaming an interview, changes nothing — [design-project-identity.md](design-project-identity.md) |
 | **YES** | Cut quote clips at analysis time | Keeps a project browsable and playable without its source files |
 | **NO** | BN-managed iCloud library / ubiquity container | Apple-only, needs an entitlement, and cannot deliver its own promise (§3) |
 | **NO** | BN ships a File Provider extension | Only coherent with a backend; that is a different company |

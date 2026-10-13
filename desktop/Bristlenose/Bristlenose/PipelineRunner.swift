@@ -165,6 +165,11 @@ struct PipelineProgress: Equatable {
     /// doesn't keep clicking Stop while SIGINT/SIGTERM/SIGKILL play
     /// out (can take 1–8s on a wedged subprocess).
     var isStopping: Bool = false
+    /// Sessions a first analysis has made readable so far (progressive lenses):
+    /// the newest `sessions_readable` the run reported, never moving back. Nil
+    /// on a run that delivers nothing early. The subtitle says it while
+    /// sessions are still arriving.
+    var sessionsReadable: Int?
 }
 
 // MARK: - Lifecycle state
@@ -750,7 +755,7 @@ final class PipelineRunner: ObservableObject {
         if let readable = event.sessionsReadable, readable > (sessionsReadable[projectID] ?? 0) {
             sessionsReadable[projectID] = readable
         }
-        let updated = RunProgressMath.apply(
+        var updated = RunProgressMath.apply(
             stage: event.stage,
             sessionsComplete: event.sessionsComplete,
             sessionsTotal: event.sessionsTotal,
@@ -761,6 +766,7 @@ final class PipelineRunner: ObservableObject {
             startedAt: current.startedAt,
             now: Date()
         )
+        updated.sessionsReadable = sessionsReadable[projectID]
         // Only publish on a real change — avoids waking every observing sidebar
         // row at 1 Hz when nothing moved (Finding 10).
         if updated != current {

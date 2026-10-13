@@ -1,13 +1,18 @@
 ---
-status: Phases 0–2 and 4 built 12 Oct 2026 (unreleased), whole-feature review fixed 13 Oct (§5.7); Phase 3 deferred behind §7 item 17; Phase 5 blocked on the Project lens call
+status: Phases 0–5 built 12–13 Oct 2026 (unreleased); whole-feature review fixed 13 Oct (§5.7)
 last-trued: 2026-10-13
-trued-against: HEAD@main on 2026-10-13 (c6b9890d plus the review's fixes)
+trued-against: HEAD@main on 2026-10-13 (17259fcb plus Phases 3 and 5)
 owner: run progress across the pipeline, the report server, the SPA and the Mac app
 mockup: docs/mockups/progressive-lenses-replay.html
 ---
 
 ## Changelog
 
+- _2026-10-13, later_ — Phases 3 and 5 built, on two owner decisions taken that
+  night: Whisper moves to a worker thread (§7 item 17 reversed), and run messages
+  stay on the surfaces that already carry them, the sidebar status line and the
+  window subtitle, with no new surface (§7 item 2, for counts). As-built notes
+  replace the deferral and the block.
 - _2026-10-13_ — Whole-feature review (correctness, privacy, silent failures) and
   its fixes: §5.7 is the as-built record. §5.1, §5.2, §5.4–§5.6 point at it. §7:
   items 12 and 15 carry what was built; item 18 (a Mac Re-analyse is a first
@@ -565,20 +570,44 @@ quote calls are network: they do not compete. FOSSDA's projection: barrier at 38
 instead of 51:22. This is the "per-participant chaining" `design-perf-fossda-baseline.md`
 already anticipates. Independent of the UX; can land before or after phase 2.
 
-> **Deferred, 12 Oct 2026, behind §7 item 17.** The projection assumes the quote calls
-> run *while* Whisper decodes the next file. They cannot today: `transcribe_sessions`
-> calls the backend synchronously on the event loop (`s05_transcribe.py`, the
-> `transcribe_fn(...)` call in its session loop), so a coroutine started between files
-> makes no progress until the next file is decoded. Putting topics and quotes in the
-> readable chain as it stands would add their latency between Whisper files — the
-> run gets *slower*, the opposite of the phase's point. The owner chose to keep
-> Whisper serial for now (item 17), which is the change this phase needs. When that
-> is revisited, Phase 3 is: the backend in a worker thread, the chain's speaker pass
-> followed by `segment_topics` and `extract_quotes` for the one session (both
-> already take a session list), and the per-session records Phase 2 writes, so the
-> stage-9 batch skips what the chain already did. Phase 2 already delivers quotes per
-> session as stage 9 finishes each one, so the visible half is in; only the wall
-> time is left.
+> **Built 13 Oct 2026**, after the owner reversed §7 item 17. Deferred the day before
+> because the backend ran on the event loop, so chained LLM calls would have waited for
+> the next file to finish decoding.
+>
+> - **Whisper on its own thread.** `s05_transcribe.aiter_transcribe_sessions` runs
+>   `iter_transcribe_sessions` on one daemon thread, only on a chained run (a first
+>   analysis without redaction); every other run is unchanged. One thread for the
+>   run, so the backend is loaded and used on the same thread (MLX keeps
+>   per-thread streams: an array made on one thread raises on another, measured on
+>   mlx 0.32; a real tiny-model transcription on worker threads worked). The
+>   backend's callbacks hop to the loop, so a progress line never comes from two
+>   threads. A consumer that goes away (Ctrl-C cancels it) stops the thread at the
+>   next file; the file in hand finishes, and the daemon thread does not hold up exit.
+> - **Topics and quotes per session** (`readable_chain.ChainAnalysis`). Once a session
+>   is readable its `segment_topics` and `extract_quotes` start, concurrently with the
+>   next delivery, behind `llm_concurrency`. Its quotes are written to
+>   `extracted_quotes.json` and recorded in the manifest as stage 9 records them, so
+>   the server imports them while transcription goes on.
+> - **Stages 8 and 9 take the chain's work** for a session only while their own
+>   fingerprint matches the one the chain computed from (the per-session resume's
+>   rule, `_transcript_fingerprint`, over `_passthrough_clean`, the one spelling of
+>   the pass-through transcript), and record those sessions as this run's. The rest
+>   they compute as before. A session whose analysis failed in the chain is theirs.
+> - **Timings.** Transcription is charged only the time the chain held it up: the
+>   parsed transcripts' hand-over before Whisper starts, and what was left after
+>   Whisper finished. The chain's speaker, topic and quote time goes to those stages.
+>   Their progress reports the chain's sessions as finished this run (`done_early`),
+>   so the Mac's row does not keep the previous stage's count.
+> - **Tests.** `test_transcribe_thread.py` (order, callbacks on the loop, a backend
+>   error raised on the loop, the loop working during a decode, the stop at the next
+>   file); the end-to-end test that session 1's quotes are recorded while session 2
+>   decodes and that stages 8 and 9 pay for nothing twice. Each part was proved red on
+>   a mutant: no thread, no analysis, no stage 8 take-up, no stage 9 take-up, no stop.
+>   The platform-transcript harness now counts extraction per run, not per call.
+> - **Known.** A session whose transcript changes after the chain analysed it (a
+>   placeholder participant stage 5b assigns, say) is analysed twice. Topic maps are
+>   not persisted until stage 8, so a crash between the chain and stage 8 recomputes
+>   topics on resume, and with them quotes.
 
 ### Phase 4 — Session tapestry in layers
 
@@ -685,7 +714,24 @@ Gate tests: the table above, as `tapestryScale` cases.
 
 The split-flap (`N4` in the mockup) needs a visible count during the run. With the
 Project lens disabled during the run, there is none until the end (the window
-subtitle is a native string and cannot animate). Blocked on §7's Project lens call.
+subtitle is a native string and cannot animate).
+
+> **Built 13 Oct 2026, on the owner's call:** run messages live in the sidebar status
+> line and the window subtitle; no new surface. The Sessions lens's own arrivals are
+> the sense of activity there. No split-flap.
+>
+> - The line gains how many sessions can be read, while they are still arriving
+>   (transcription and speaker identification): "Transcribing · 4 of 8 · 3 readable ·
+>   ~12 min left". Its own count, not "N of M": the transcription count leaves out
+>   platform transcripts, which never go through Whisper. Gone after speakers, when
+>   every session is readable, and absent on a run that delivers nothing early.
+> - `RunProgressSubtitle.compose` (`sessionsReadable`, `arrivalStages`), fed by
+>   `PipelineProgress.sessionsReadable`; the sidebar row (both builders) and the window
+>   subtitle pass it. `desktop.chrome.pipeline.sessionsReadable_*` in the 21 full
+>   locales (machine-seeded where the language is; worded without number agreement
+>   where it allows).
+> - The redaction stage now reports `sessions_readable` too (§5.7), so the count and
+>   the shoal's hand-over work under redaction.
 
 ## 5. Scope edges
 
@@ -789,6 +835,8 @@ the overlay and moves `data_version`, so the SPA refetches.
   same number skips one refetch.
 - On a resumed run (the chain off, §7 item 16) the server still imports at stage 6,
   so a browser sees sessions before the end while the Mac's shoal covers them.
+- Since Phase 3, the readable chain's "seconds" is work that overlapped Whisper, not
+  time it held transcription up; the speakers stage still counts it as its own.
 
 ## 6. Failure
 
@@ -807,6 +855,9 @@ the overlay and moves `data_version`, so the SPA refetches.
    (Phase 1, `organisms/sessions-grid.css`, `.bn-sessions-row[aria-disabled]`);
    one rule to change if B wins.
 2. **Project lens during the run** — and with it whether the split-flap has a home.
+   **Counts decided 13 Oct 2026:** no new surface; the sidebar status line and the
+   window subtitle carry them (Phase 5). The Project lens's own place during a run
+   is still open.
 3. **Thumbnail frame:** the 60 s fallback for good, or swap in the transcript-chosen
    frame at readable.
 4. **Playback before readable.** The media exists from the first second, and the
@@ -858,10 +909,11 @@ the overlay and moves `data_version`, so the SPA refetches.
     resume** (Phase 1): a resumed run delivers nothing early, which is today's
     behaviour, and the per-session quote records Phase 2 writes make the resume
     itself cheaper.
-17. ~~**Serial Whisper.**~~ **Decided 12 Oct 2026: live with it for now.** The chain's
-    LLM latency is added between Whisper files (transcription is a blocking call on
-    the event loop). Running Whisper in a thread so the next decode overlaps would
-    reopen Ctrl-C and the GIL; revisit if the added time is felt on real runs.
+17. ~~**Serial Whisper.**~~ **Decided 12 Oct 2026: live with it for now. Reversed 13
+    Oct 2026:** Whisper runs on a worker thread during a chained run, and Phase 3 is
+    built on it. Ctrl-C ends the run without waiting for the file in hand (daemon
+    thread). What real runs should still confirm: the GIL share the loop gets while
+    MLX decodes, and that no file is lost at a stop.
 18. **A Mac Re-analyse is a first analysis.** It passes `--clean`, which stashes the
     output folder and its report, so the pipeline turns the chain on and the server
     follows the run (§5.1 said a re-analyse behaves as today). Sessions arrive one by

@@ -278,6 +278,8 @@
       "partialRun": "Osittainen ajo",
       "stopped": "Pysäytetty",
       "sessionsCount": "{{complete}} / {{total}}",
+      "sessionsReadable_one": "{{count}} luettavissa",
+      "sessionsReadable_other": "{{count}} luettavissa",
       "etaMinutes": "~{{count}} min jäljellä",
       "etaUnderMinute": "<1 min jäljellä",
       "importBatch": "{{done}} / {{total}}",

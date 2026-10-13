@@ -278,6 +278,8 @@
       "partialRun": "Teildurchlauf",
       "stopped": "Angehalten",
       "sessionsCount": "{{complete}} von {{total}}",
+      "sessionsReadable_one": "{{count}} lesbar",
+      "sessionsReadable_other": "{{count}} lesbar",
       "etaMinutes": "noch ~{{count}} Min",
       "etaUnderMinute": "noch <1 Min",
       "importBatch": "{{done}} von {{total}}",

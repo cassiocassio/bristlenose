@@ -18,14 +18,20 @@ is an early delivery, never a second source of truth.
 (``assign_speaker_codes`` threads the next participant number), so session N
 waits for N−1 even when N's transcript was parsed first.
 
-**On the event loop, between Whisper files.** Transcription is a blocking
-call; the chain's LLM calls run while it is between files. No thread, so
-Ctrl-C and the GIL behave as before; the cost is that session N's speaker pass
-delays Whisper on N+1 by its own latency. Each session's speaker pass starts as
-soon as its transcript is handed over and runs concurrently with the others
-behind the pass's own semaphores — a project of platform transcripts, all
-parsed before Whisper starts, is not made slower than the batch — and only the
-delivery waits its turn.
+**Alongside Whisper.** Transcription runs on its own thread during a chained
+run (``Pipeline._gather_all_segments``), so the chain's LLM calls for session N
+run while Whisper decodes N+1 (Phase 3, decided 12 Oct 2026, §7 item 17). Each
+session's speaker pass starts as soon as its transcript is handed over and runs
+concurrently with the others behind the pass's own semaphores — a project of
+platform transcripts, all parsed before Whisper starts, is not made slower than
+the batch — and only the delivery waits its turn.
+
+**Then topics and quotes** (:class:`ChainAnalysis`, Phase 3): once a session is
+readable its topic segmentation and quote extraction start, concurrently with
+the next delivery, and its quotes are written and recorded as stage 9 records
+them, so the server imports them while transcription goes on. Stages 8 and 9
+take a session's result only while the transcript they see is the one it was
+computed from (the same fingerprints their resume uses), and compute the rest.
 
 **A failure stops the chain.** A session the chain could not deliver is left
 to stage 5b, and so is every session after it: delivering session N+1 past a
@@ -49,6 +55,7 @@ from typing import TYPE_CHECKING
 from bristlenose.manifest import (
     STAGE_IDENTIFY_SPEAKERS,
     STAGE_MERGE_TRANSCRIPT,
+    STAGE_QUOTE_EXTRACTION,
     STAGE_TRANSCRIBE,
     PipelineManifest,
     mark_session_complete,
@@ -57,7 +64,15 @@ from bristlenose.manifest import (
 
 if TYPE_CHECKING:
     from bristlenose.config import BristlenoseSettings
-    from bristlenose.models import InputSession, TranscriptSegment
+    from bristlenose.llm.client import LLMClient
+    from bristlenose.models import (
+        ExtractedQuote,
+        FullTranscript,
+        InputSession,
+        PiiCleanTranscript,
+        SessionTopicMap,
+        TranscriptSegment,
+    )
     from bristlenose.session_registry import SessionRegistry
     from bristlenose.speaker_pass import SpeakerPass
     from bristlenose.stages.s05b_identify_speakers import SpeakerInfo
@@ -81,6 +96,119 @@ def speaker_cache_bytes(
     return json.dumps(data, indent=2).encode("utf-8")
 
 
+class ChainAnalysis:
+    """Topics and quotes for each session the chain makes readable (Phase 3).
+
+    Results are kept with the fingerprint of the transcript they were computed
+    from; stages 8 and 9 take a result only while their own fingerprint for the
+    session matches, and recompute otherwise. A session whose analysis fails is
+    simply left to them. Never fatal to the run or the chain.
+    """
+
+    def __init__(
+        self,
+        *,
+        settings: BristlenoseSettings,
+        llm_client: LLMClient,
+        manifest: PipelineManifest,
+        output_dir: Path,
+        clean: Callable[[FullTranscript], PiiCleanTranscript],
+        topic_fingerprint: Callable[[PiiCleanTranscript], str],
+        quote_fingerprint: Callable[[PiiCleanTranscript, SessionTopicMap], str],
+        concurrency: int,
+    ) -> None:
+        self.settings = settings
+        self._client = llm_client
+        self._manifest = manifest
+        self._output_dir = output_dir
+        self._clean = clean
+        self._topic_fp = topic_fingerprint
+        self._quote_fp = quote_fingerprint
+        self._sem = asyncio.Semaphore(max(1, concurrency))
+        #: Session → (topic map, fingerprint of the transcript it came from).
+        self.topic_maps: dict[str, tuple[SessionTopicMap, str]] = {}
+        #: Session → (quotes, fingerprint of transcript and topic map).
+        self.quotes: dict[str, tuple[list[ExtractedQuote], str]] = {}
+        #: LLM wall time per stage, which the run's timings give back to it.
+        self.topic_seconds = 0.0
+        self.quote_seconds = 0.0
+        self._tasks: dict[str, asyncio.Task[None]] = {}
+
+    def start(self, transcript: FullTranscript) -> None:
+        """Begin the session's topics and quotes; returns at once."""
+        sid = transcript.session_id
+        if sid not in self._tasks:
+            self._tasks[sid] = asyncio.create_task(self._run(transcript))
+
+    async def finish(self) -> None:
+        """Wait for every analysis started. Failures were logged where they happened."""
+        if self._tasks:
+            await asyncio.gather(*self._tasks.values(), return_exceptions=True)
+
+    def cancel(self) -> None:
+        for task in self._tasks.values():
+            task.cancel()
+
+    async def _run(self, transcript: FullTranscript) -> None:
+        from bristlenose.llm import telemetry
+        from bristlenose.stages.s08_topic_segmentation import segment_topics
+        from bristlenose.stages.s09_quote_extraction import extract_quotes
+
+        sid = transcript.session_id
+        try:
+            async with self._sem:
+                clean = self._clean(transcript)
+                topic_fp = self._topic_fp(clean)
+                t0 = time.perf_counter()
+                with telemetry.stage("s08_topic_segmentation"):
+                    maps, outcome = await segment_topics(
+                        [clean], self._client, concurrency=1, errors=[],
+                    )
+                self.topic_seconds += time.perf_counter() - t0
+                if outcome.failed or not maps:
+                    logger.info("readable_chain | %s's topics are left to stage 8", sid)
+                    return
+                topic_map = maps[0]
+                self.topic_maps[sid] = (topic_map, topic_fp)
+                quote_fp = self._quote_fp(clean, topic_map)
+                t0 = time.perf_counter()
+                with telemetry.stage("s09_quote_extraction"):
+                    quotes, q_outcome = await extract_quotes(
+                        [clean], [topic_map], self._client,
+                        min_quote_words=self.settings.min_quote_words,
+                        concurrency=1, errors=[],
+                    )
+                self.quote_seconds += time.perf_counter() - t0
+                if q_outcome.failed:
+                    logger.info("readable_chain | %s's quotes are left to stage 9", sid)
+                    return
+                self.quotes[sid] = (quotes, quote_fp)
+                self._deliver_quotes(sid, quote_fp)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.warning(
+                "readable_chain | %s's topics and quotes are left to stages 8 and 9",
+                sid, exc_info=True,
+            )
+
+    def _deliver_quotes(self, sid: str, quote_fp: str) -> None:
+        """The quotes so far on disk, then the record that says this session's are
+        there — as stage 9 delivers them, so the server imports them now."""
+        from bristlenose.stages.s12_render_output import write_intermediate_json
+
+        write_intermediate_json(
+            [q for quotes, _ in self.quotes.values() for q in quotes],
+            "extracted_quotes.json", self._output_dir, self.settings.project_name,
+        )
+        mark_session_complete(
+            self._manifest, STAGE_QUOTE_EXTRACTION, sid,
+            provider=self.settings.llm_provider, model=self.settings.llm_model,
+            input_hash=quote_fp,
+        )
+        write_manifest(self._manifest, self._output_dir)
+
+
 class ReadableChain:
     """Ordered, per-session delivery of readable transcripts during transcription."""
 
@@ -101,8 +229,11 @@ class ReadableChain:
         tx_fingerprints: dict[str, str],
         segments_path: Path,
         emit: Callable[[int], None],
+        analysis: ChainAnalysis | None = None,
     ) -> None:
         self._order = order
+        #: Topics and quotes per readable session (Phase 3); None to stop at readable.
+        self.analysis = analysis
         self._next = 0
         self._pending: dict[str, list[TranscriptSegment] | None] = {}
         self.settings = settings
@@ -258,6 +389,8 @@ class ReadableChain:
             self._emit(len(self.readable))
         except Exception:  # noqa: BLE001 — the session is delivered; a lost count is not a lost session
             logger.warning("readable_chain | progress line for %s not written", sid, exc_info=True)
+        if self.analysis is not None:
+            self.analysis.start(transcripts[0])
 
     def _write_segments(self) -> None:
         """``session_segments.json`` for the sessions transcribed so far."""

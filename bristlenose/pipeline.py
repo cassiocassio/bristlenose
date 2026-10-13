@@ -77,13 +77,17 @@ from bristlenose.utils.fs import is_os_metadata
 from bristlenose.utils.text import count_noun
 
 if TYPE_CHECKING:  # annotation only — s01 stays a lazy import
-    from collections.abc import Awaitable
+    from collections.abc import AsyncIterator, Awaitable
 
     from bristlenose.discussion.models import DiscussionRecord
     from bristlenose.llm.client import LLMClient
     from bristlenose.readable_chain import ReadableChain
     from bristlenose.stages.s01_ingest import SkippedFile
-    from bristlenose.stages.s05_transcribe import ProgressCallback, SegmentCallback
+    from bristlenose.stages.s05_transcribe import (
+        ProgressCallback,
+        SegmentCallback,
+        SessionTranscription,
+    )
     from bristlenose.timing import PipelineEvent, TimingEstimator
 
     #: ``(session_id, segments or None)`` — one session's transcript, handed on.
@@ -673,6 +677,23 @@ def apply_role_pins(
     return dropped
 
 
+def _passthrough_clean(t: FullTranscript) -> PiiCleanTranscript:
+    """A transcript as stages 8 and 9 see it when redaction is off.
+
+    One spelling for the stage 7 pass-through and the readable chain's topics
+    and quotes (Phase 3): the fingerprints that decide whether stage 8 may take
+    the chain's result are computed over this, so the two must build it alike.
+    """
+    return PiiCleanTranscript(
+        session_id=t.session_id,
+        participant_id=t.participant_id,
+        source_file=t.source_file,
+        session_date=t.session_date,
+        duration_seconds=t.duration_seconds,
+        segments=t.segments,
+    )
+
+
 def _transcript_fingerprint(transcript: FullTranscript, *extra: str) -> str:
     """What topics (and, with the topic map, quotes) of a session depend on:
     the transcript as the stage sees it — text, roles and codes — plus any
@@ -1017,6 +1038,7 @@ class Pipeline:
         self._progress_sink: object | None = None
         #: Sessions the readable chain has delivered this run (a count only).
         self._sessions_readable = 0
+        self._transcription_held = 0.0
         # perf_counter at run() entry, for elapsed/predicted-total emit.
         self._run_start_perf: float | None = None
         # Last-known ETA, carried onto estimator-independent stage-entry
@@ -1129,7 +1151,8 @@ class Pipeline:
         self._progress_sink(**fields)  # type: ignore[operator]
 
     def _on_session_progress(
-        self, stage: str, status: Any, label: str, *, remaining: int, cached: int = 0
+        self, stage: str, status: Any, label: str, *, remaining: int, cached: int = 0,
+        done_early: int = 0,
     ) -> Callable[[int, int], None]:
         """Build the per-session progress callback three stages share.
 
@@ -1157,9 +1180,14 @@ class Pipeline:
         `remaining` at every call site today. Both are emitted rather than one:
         if they ever disagree, the stage and the orchestrator disagree about how
         much work there is, and that is worth being able to see.
+
+        **`done_early`: this run's sessions the readable chain already did**
+        (progressive lenses, Phase 3). They are this run's work, so they count
+        as finished and new, not cached; the stage counts on from them.
         """
 
         def _cb(completed: int, total: int) -> None:
+            completed, total = done_early + completed, done_early + total
             status.update(
                 f"[dim]{label}..."
                 f" ({completed}/{count_noun(total, 'session')})[/dim]"
@@ -1168,7 +1196,7 @@ class Pipeline:
                 stage=stage,
                 sessions_complete=completed,
                 sessions_total=total,
-                sessions_new=remaining,
+                sessions_new=done_early + remaining,
                 sessions_cached=cached,
                 stage_fraction=(completed / total if total else None),
             )
@@ -1816,7 +1844,7 @@ class Pipeline:
                 # that time is the speakers stage's, for the line and for the
                 # estimates the next run is timed by.
                 _transcribe_elapsed = time.perf_counter() - t0 - (
-                    _chain.seconds if _chain is not None else 0.0
+                    self._transcription_held if _chain is not None else 0.0
                 )
                 _print_step(msg, _transcribe_elapsed)
                 _stage_actuals[STAGE_TRANSCRIBE] = StageActual(
@@ -2373,19 +2401,15 @@ class Pipeline:
                 _discard_stale_redaction(output_dir)
 
                 # Pass through without PII removal
-                clean_transcripts = [
-                    PiiCleanTranscript(
-                        session_id=t.session_id,
-                        participant_id=t.participant_id,
-                        source_file=t.source_file,
-                        session_date=t.session_date,
-                        duration_seconds=t.duration_seconds,
-                        segments=t.segments,
-                    )
-                    for t in transcripts
-                ]
+                clean_transcripts = [_passthrough_clean(t) for t in transcripts]
 
             # ── Stage 8: Topic segmentation ──────────────────────────
+            # The chain's topics and quotes (Phase 3) for the sessions it made
+            # readable: wait for the ones still running, then take each whose
+            # transcript is the one stage 8 sees, as the per-session resume does.
+            _analysis = _chain.analysis if _chain is not None else None
+            if _analysis is not None:
+                await _analysis.finish()
             _seg_errors: list[str] = []
             _tb_path = intermediate / "topic_boundaries.json"
             # Outer-scope defaults — both branches below populate. Cache-hit
@@ -2447,6 +2471,17 @@ class Pipeline:
                             if obj.get("session_id") in _cached_topic_sids
                         ]
 
+                _chain_topic_fps = {
+                    sid: fp for sid, (_tm, fp) in (
+                        _analysis.topic_maps.items() if _analysis is not None else ()
+                    )
+                    if sid not in _cached_topic_sids and _topic_session_fps.get(sid) == fp
+                }
+                _cached_topic_maps += [
+                    _analysis.topic_maps[t.session_id][0] for t in clean_transcripts
+                    if _analysis is not None and t.session_id in _chain_topic_fps
+                ]
+                _cached_topic_sids = set(_cached_topic_sids) | set(_chain_topic_fps)
                 _cached_topic_count = len(_cached_topic_maps)
                 _remaining_transcripts = [
                     t for t in clean_transcripts
@@ -2457,11 +2492,28 @@ class Pipeline:
                 # Carry forward the still-fresh session records only.
                 carry_forward_sessions(
                     manifest, _prev_manifest, STAGE_TOPIC_SEGMENTATION,
-                    _cached_topic_sids, _topic_session_fps,
+                    _cached_topic_sids - set(_chain_topic_fps), _topic_session_fps,
                 )
+                # The chain's sessions are this run's work, done earlier.
+                for sid, fp in _chain_topic_fps.items():
+                    mark_session_complete(
+                        manifest, STAGE_TOPIC_SEGMENTATION, sid,
+                        provider=self.settings.llm_provider,
+                        model=self.settings.llm_model, input_hash=fp,
+                    )
 
                 status.update("[dim]Segmenting topics...[/dim]")
                 t0 = time.perf_counter()
+                _topics_progress = self._on_session_progress(
+                    STAGE_TOPICS, status, "Segmenting topics",
+                    remaining=len(_remaining_transcripts),
+                    cached=_cached_topic_count - len(_chain_topic_fps),
+                    done_early=len(_chain_topic_fps),
+                )
+                if _chain_topic_fps:
+                    # Say what the chain finished, or the row keeps the previous
+                    # stage's count until the first remaining session is done.
+                    _topics_progress(0, len(_remaining_transcripts))
                 if _remaining_transcripts:
                     if llm_client is None:
                         llm_client = LLMClient(self.settings)
@@ -2469,11 +2521,7 @@ class Pipeline:
                         _fresh_topic_maps, _seg_outcome = await segment_topics(
                             _remaining_transcripts, llm_client,
                             concurrency=concurrency, errors=_seg_errors,
-                            on_progress=self._on_session_progress(
-                                STAGE_TOPICS, status, "Segmenting topics",
-                                remaining=len(_remaining_transcripts),
-                                cached=_cached_topic_count,
-                            ),
+                            on_progress=_topics_progress,
                         )
                     # Record per-session completion only for sessions whose
                     # boundaries were actually produced — a skip-after-failure
@@ -2503,7 +2551,10 @@ class Pipeline:
                         self.settings.project_name,
                     )
                 total_boundaries = sum(len(m.boundaries) for m in topic_maps)
-                _topics_elapsed = time.perf_counter() - t0
+                # The chain's topic calls are this stage's time, spent earlier.
+                _topics_elapsed = time.perf_counter() - t0 + (
+                    _analysis.topic_seconds if _analysis is not None else 0.0
+                )
 
                 _n_new = len(_remaining_transcripts)
                 if _cached_topic_maps and _n_new:
@@ -2637,6 +2688,17 @@ class Pipeline:
                             for obj in _eq_raw
                             if obj.get("session_id") in _cached_quote_sids
                         ]
+                _chain_quote_fps = {
+                    sid: fp for sid, (_qs, fp) in (
+                        _analysis.quotes.items() if _analysis is not None else ()
+                    )
+                    if sid not in _cached_quote_sids and _quote_session_fps.get(sid) == fp
+                }
+                _cached_quotes += [
+                    q for t in clean_transcripts if t.session_id in _chain_quote_fps
+                    for q in (_analysis.quotes[t.session_id][0] if _analysis else [])
+                ]
+                _cached_quote_sids = set(_cached_quote_sids) | set(_chain_quote_fps)
                 _cached_q_count = len(_cached_quote_sids)
 
                 _remaining_transcripts_q = [
@@ -2652,11 +2714,25 @@ class Pipeline:
                 # Carry forward the still-fresh session records only.
                 carry_forward_sessions(
                     manifest, _prev_manifest, STAGE_QUOTE_EXTRACTION,
-                    _cached_quote_sids, _quote_session_fps,
+                    _cached_quote_sids - set(_chain_quote_fps), _quote_session_fps,
                 )
+                for sid, fp in _chain_quote_fps.items():
+                    mark_session_complete(
+                        manifest, STAGE_QUOTE_EXTRACTION, sid,
+                        provider=self.settings.llm_provider,
+                        model=self.settings.llm_model, input_hash=fp,
+                    )
 
                 status.update("[dim]Extracting quotes...[/dim]")
                 t0 = time.perf_counter()
+                _quotes_progress = self._on_session_progress(
+                    STAGE_QUOTES, status, "Extracting quotes",
+                    remaining=len(_remaining_transcripts_q),
+                    cached=len(_cached_quote_sids) - len(_chain_quote_fps),
+                    done_early=len(_chain_quote_fps),
+                )
+                if _chain_quote_fps:
+                    _quotes_progress(0, len(_remaining_transcripts_q))
 
                 if _remaining_transcripts_q:
                     if llm_client is None:
@@ -2691,11 +2767,7 @@ class Pipeline:
                             min_quote_words=self.settings.min_quote_words,
                             concurrency=concurrency,
                             errors=_quote_errors,
-                            on_progress=self._on_session_progress(
-                                STAGE_QUOTES, status, "Extracting quotes",
-                                remaining=len(_remaining_transcripts_q),
-                                cached=len(_cached_quote_sids),
-                            ),
+                            on_progress=_quotes_progress,
                             on_session_done=_deliver_quotes,
                         )
                     # Record per-session completion only for sessions that
@@ -2726,7 +2798,9 @@ class Pipeline:
                         all_quotes, "extracted_quotes.json", output_dir,
                         self.settings.project_name,
                     )
-                _quotes_elapsed = time.perf_counter() - t0
+                _quotes_elapsed = time.perf_counter() - t0 + (
+                    _analysis.quote_seconds if _analysis is not None else 0.0
+                )
 
                 _n_new_q = len(_remaining_transcripts_q)
                 if _cached_quotes and _n_new_q:
@@ -3726,7 +3800,7 @@ class Pipeline:
         reuses the chain's work through its speaker cache).
         """
         from bristlenose.llm.client import LLMClient
-        from bristlenose.readable_chain import ReadableChain
+        from bristlenose.readable_chain import ChainAnalysis, ReadableChain
         from bristlenose.speaker_pass import SpeakerPass
         from bristlenose.stages.s06_merge_transcript import sentence_paragraph_sessions
 
@@ -3735,10 +3809,24 @@ class Pipeline:
         rendered = prev_manifest.stages.get(_M_STAGE_RENDER) if prev_manifest else None
         if rendered is not None and rendered.status == StageStatus.COMPLETE:
             return None
+        client = LLMClient(self.settings)
         speaker_pass = SpeakerPass(
-            self.settings, LLMClient(self.settings),
+            self.settings, client,
             {s.session_id: s.audio_path for s in order},
             warn=_print_warn, status=status.update,
+        )
+        analysis = ChainAnalysis(
+            settings=self.settings,
+            llm_client=client,
+            manifest=manifest,
+            output_dir=output_dir,
+            clean=_passthrough_clean,
+            # The fingerprints stages 8 and 9 compute for their per-session resume.
+            topic_fingerprint=_transcript_fingerprint,
+            quote_fingerprint=lambda t, tm: _transcript_fingerprint(
+                t, _json_dumps_sorted(tm.model_dump(mode="json")),
+            ),
+            concurrency=self.settings.llm_concurrency,
         )
 
         def _emit(readable: int) -> None:
@@ -3769,6 +3857,7 @@ class Pipeline:
             tx_fingerprints=tx_fingerprints,
             segments_path=segments_path,
             emit=_emit,
+            analysis=analysis,
         )
 
     async def _gather_all_segments(
@@ -3795,6 +3884,8 @@ class Pipeline:
             that produced segments); Whisper failures come from
             ``iter_transcribe_sessions``, one per session.
         """
+        import time
+
         from bristlenose.stages.s03_parse_subtitles import parse_subtitle_file
         from bristlenose.stages.s04_parse_docx import DocxParseRefusedError, parse_docx_file
         from bristlenose.stages.transcript_choice import (
@@ -3904,29 +3995,55 @@ class Pipeline:
             s for s in sessions
             if s.session_id not in session_segments and s.audio_path is not None
         ]
+        #: How long the chain held transcription up: the parsed transcripts'
+        #: hand-over before Whisper starts, and whatever it still had to do after
+        #: Whisper finished. The rest of its work overlapped Whisper (Phase 3).
+        self._transcription_held = 0.0
         if on_session is not None:
             # Everything that will not wait for Whisper is known now. Handed
             # over together, so their speaker passes run concurrently; the
             # chain delivers them in session order.
             whisper_ids = {s.session_id for s in needs_transcription}
+            t_held = time.perf_counter()
             await asyncio.gather(*(
                 on_session(s.session_id, session_segments.get(s.session_id))
                 for s in sessions if s.session_id not in whisper_ids
             ))
+            self._transcription_held += time.perf_counter() - t_held
         if needs_transcription:
-            from bristlenose.stages.s05_transcribe import iter_transcribe_sessions
+            from bristlenose.stages.s05_transcribe import (
+                aiter_transcribe_sessions,
+                iter_transcribe_sessions,
+            )
 
             pinned = (self.settings.whisper_language or "").strip().lower()
+            finished: list[float] = []
+
+            async def _each() -> AsyncIterator[SessionTranscription]:
+                # With a chain, Whisper runs on its own thread so the chain's
+                # LLM calls for session N run while N+1 decodes. Without one
+                # nothing waits on a session, and the run stays as it was.
+                if on_session is None:
+                    for done in iter_transcribe_sessions(
+                        needs_transcription, self.settings,
+                        on_progress=on_progress, on_segment=on_segment,
+                    ):
+                        yield done
+                    return
+                async for done in aiter_transcribe_sessions(
+                    needs_transcription, self.settings,
+                    on_progress=on_progress, on_segment=on_segment,
+                    on_finished=finished.append,
+                ):
+                    yield done
+
             # One session at a time, so each can be handed on (``on_session``)
-            # before the next is decoded. Languages are instance state rather
+            # as soon as it is decoded. Languages are instance state rather
             # than a third return value: `_gather_all_segments` has two callers
             # and `merge_transcripts` two more; widening all four to carry an
             # optional map would cost more than it explains. Per-run derived
             # data on a per-run object, read at the `merge_transcripts` sites.
-            for done in iter_transcribe_sessions(
-                needs_transcription, self.settings,
-                on_progress=on_progress, on_segment=on_segment,
-            ):
+            async for done in _each():
                 transcript_outcome.attempted += 1
                 session_segments[done.session_id] = done.segments
                 if done.detected_language:
@@ -3945,6 +4062,8 @@ class Pipeline:
                 for s in needs_transcription:
                     if s.session_id not in session_segments:
                         await on_session(s.session_id, None)
+            if finished:
+                self._transcription_held += max(0.0, time.perf_counter() - finished[0])
 
         return session_segments, transcript_outcome
 

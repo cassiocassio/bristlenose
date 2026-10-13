@@ -278,6 +278,8 @@
       "partialRun": "Kısmi çalıştırma",
       "stopped": "Durduruldu",
       "sessionsCount": "{{total}} içinden {{complete}}",
+      "sessionsReadable_one": "{{count}} okunabilir",
+      "sessionsReadable_other": "{{count}} okunabilir",
       "etaMinutes": "~{{count}} dk kaldı",
       "etaUnderMinute": "<1 dk kaldı",
       "importBatch": "{{total}} \u00f6\u011feden {{done}}",

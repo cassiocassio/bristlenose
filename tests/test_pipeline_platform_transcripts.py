@@ -134,10 +134,17 @@ class Harness:
     split_calls: list[str] = field(default_factory=list)
     #: Per role-pass call, the labels it saw.
     role_calls: list[set[str]] = field(default_factory=list)
-    #: Per run, the session ids the (stubbed) quote extractor was given.
-    quoted: list[list[str]] = field(default_factory=list)
+    #: Per run, the session ids the (stubbed) quote extractor was given — in one
+    #: call or several: a first analysis extracts each session as it becomes
+    #: readable (progressive lenses, Phase 3). A run that extracted nothing has
+    #: no entry.
+    quoted_by_run: dict[int, set[str]] = field(default_factory=dict)
     #: Per run, the session ids handed to (stubbed) stage 2 audio extraction.
     extracted: list[list[str]] = field(default_factory=list)
+
+    @property
+    def quoted(self) -> list[list[str]]:
+        return [sorted(ids) for _run, ids in sorted(self.quoted_by_run.items()) if ids]
 
     @property
     def intermediate(self) -> Path:
@@ -263,7 +270,7 @@ def run_pipeline(
 
     async def _fake_extract_quotes(transcripts, *_a, **_kw):
         assert all(isinstance(t, PiiCleanTranscript) for t in transcripts)
-        h.quoted.append([t.session_id for t in transcripts])
+        h.quoted_by_run.setdefault(run_index["n"], set()).update(t.session_id for t in transcripts)
         quotes = [
             _quote(t.session_id, t.participant_id, n) for t in transcripts for n in range(3)
         ]

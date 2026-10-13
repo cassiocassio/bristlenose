@@ -886,6 +886,11 @@ def test_the_llm_stages_report_how_many_sessions_they_have_finished(
     number counts COMPLETIONS and never identifies a session. Asserted as a set
     per stage: the order sessions finish in is genuinely not determined, and a
     test that pinned a sequence would be pinning the scheduler.
+
+    The batch path: the readable chain is off, as on any run with a report.
+    With it on, topics and quotes are done session by session during
+    transcription (`test_progressive_lenses.py`, the Phase 3 test, pins the pair
+    the stages then report).
     """
     from bristlenose.models import SessionTopicMap
 
@@ -933,6 +938,7 @@ def test_the_llm_stages_report_how_many_sessions_they_have_finished(
               new=_fake_topics),
         patch("bristlenose.stages.s09_quote_extraction.extract_quotes",
               new=_fake_quotes),
+        patch.object(Pipeline, "_readable_chain", return_value=None),
     ):
         with pytest.raises(RuntimeError, match="stop after stage 9"):
             asyncio.run(pipeline.run(input_dir, output_dir))

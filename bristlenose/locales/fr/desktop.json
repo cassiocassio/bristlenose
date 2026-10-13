@@ -278,6 +278,8 @@
       "partialRun": "Ex\u00e9cution partielle",
       "stopped": "Arr\u00eat\u00e9",
       "sessionsCount": "{{complete}} sur {{total}}",
+      "sessionsReadable_one": "{{count}} \u00e0 lire",
+      "sessionsReadable_other": "{{count}} \u00e0 lire",
       "etaMinutes": "~{{count}} min restantes",
       "etaUnderMinute": "<1 min restante",
       "importBatch": "{{done}} sur {{total}}",

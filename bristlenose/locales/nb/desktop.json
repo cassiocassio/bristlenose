@@ -278,6 +278,8 @@
       "partialRun": "Delvis kjøring",
       "stopped": "Stoppet",
       "sessionsCount": "{{complete}} av {{total}}",
+      "sessionsReadable_one": "{{count}} klar til lesing",
+      "sessionsReadable_other": "{{count}} klare til lesing",
       "etaMinutes": "~{{count}} min igjen",
       "etaUnderMinute": "<1 min igjen",
       "importBatch": "{{done}} av {{total}}",

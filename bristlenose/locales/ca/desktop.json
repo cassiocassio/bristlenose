@@ -278,6 +278,8 @@
       "partialRun": "Execució parcial",
       "stopped": "Aturat",
       "sessionsCount": "{{complete}} de {{total}}",
+      "sessionsReadable_one": "{{count}} per llegir",
+      "sessionsReadable_other": "{{count}} per llegir",
       "etaMinutes": "~{{count}} min restants",
       "etaUnderMinute": "<1 min restant",
       "importBatch": "{{done}} de {{total}}",

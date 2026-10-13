@@ -261,6 +261,7 @@
       "partialRun": "\ubd80\ubd84 \uc2e4\ud589",
       "stopped": "\uc911\uc9c0\ub428",
       "sessionsCount": "{{total}}\uac1c \uc911 {{complete}}\uac1c",
+      "sessionsReadable_other": "{{count}}\uac1c \uc77d\uae30 \uac00\ub2a5",
       "etaMinutes": "~{{count}}\ubd84 \ub0a8\uc74c",
       "etaUnderMinute": "1\ubd84 \ubbf8\ub9cc \ub0a8\uc74c",
       "importBatch": "{{total}}\uac1c \uc911 {{done}}\uac1c",

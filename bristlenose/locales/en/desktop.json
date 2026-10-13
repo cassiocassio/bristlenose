@@ -279,6 +279,8 @@
       "partialRun": "Partial run",
       "stopped": "Stopped",
       "sessionsCount": "{{complete}} of {{total}}",
+      "sessionsReadable_one": "{{count}} readable",
+      "sessionsReadable_other": "{{count}} readable",
       "etaMinutes": "~{{count}} min left",
       "etaUnderMinute": "<1 min left",
       "importBatch": "{{done}} of {{total}}",

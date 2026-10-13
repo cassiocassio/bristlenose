@@ -278,6 +278,8 @@
       "partialRun": "Delvis kørsel",
       "stopped": "Stoppet",
       "sessionsCount": "{{complete}} af {{total}}",
+      "sessionsReadable_one": "{{count}} klar til l\u00e6sning",
+      "sessionsReadable_other": "{{count}} klar til l\u00e6sning",
       "etaMinutes": "~{{count}} min. tilbage",
       "etaUnderMinute": "<1 min. tilbage",
       "importBatch": "{{done}} af {{total}}",

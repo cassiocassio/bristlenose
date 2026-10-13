@@ -538,8 +538,10 @@ struct ProjectRow: View {
             sessionsTotal: p?.sessionsTotal,
             etaRemainingSeconds: p?.etaRemainingSeconds,
             resuming: p?.attachedFromOrphan ?? false,
+            sessionsReadable: p?.sessionsReadable,
             separator: separator,
-            localize: { i18n.t($0, $1) }
+            localize: { i18n.t($0, $1) },
+            pluralize: { i18n.plural($0, count: $1) }
         )
     }
 

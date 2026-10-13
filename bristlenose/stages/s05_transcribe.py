@@ -10,11 +10,14 @@ The backend can be overridden via settings.whisper_backend.
 
 from __future__ import annotations
 
+import asyncio
 import contextvars
 import importlib
 import logging
 import re
-from collections.abc import Callable, Iterator
+import threading
+import time
+from collections.abc import AsyncIterator, Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -610,6 +613,85 @@ def iter_transcribe_sessions(
         # After the progress callback, so the stage's own count has moved
         # before the caller does anything with this session.
         yield done
+
+
+async def aiter_transcribe_sessions(
+    sessions: list[InputSession],
+    settings: BristlenoseSettings,
+    *,
+    on_progress: ProgressCallback | None = None,
+    on_segment: SegmentCallback | None = None,
+    on_finished: Callable[[float], None] | None = None,
+) -> AsyncIterator[SessionTranscription]:
+    """:func:`iter_transcribe_sessions` on its own thread, as an async iterator.
+
+    Progressive lenses, Phase 3 (decided 12 Oct 2026). The backend is a blocking
+    call; run on the event loop, a coroutine started between files (the readable
+    chain's speaker pass, topics and quotes for the session just finished) made no
+    progress until the next file was decoded. Here Whisper decodes session N+1
+    while the loop works on N.
+
+    - **One thread for the whole run**, so the backend is initialised and used on
+      the same thread (MLX keeps per-thread streams).
+    - **Daemon**, so Ctrl-C ends the run without waiting for the file in hand; the
+      thread stops at the next file boundary when the consumer goes away.
+    - **The callbacks run on the loop**, in the order the backend made them
+      (``call_soon_threadsafe`` is first in, first out), so a progress line never
+      comes from two threads at once.
+    - ``on_finished`` is told the ``perf_counter`` time the backend finished, so
+      the caller can say how long the work after it held transcription up.
+    """
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue[tuple[str, object]] = asyncio.Queue()
+    stop = threading.Event()
+
+    def _post(kind: str, value: object) -> None:
+        try:
+            loop.call_soon_threadsafe(queue.put_nowait, (kind, value))
+        except RuntimeError:  # the loop has closed: the run is over
+            stop.set()
+
+    def _on_loop(fn: Callable[..., None] | None) -> Callable[..., None] | None:
+        if fn is None:
+            return None
+
+        def hop(*args: object) -> None:
+            try:
+                loop.call_soon_threadsafe(lambda: fn(*args))
+            except RuntimeError:
+                stop.set()
+        return hop
+
+    def _work() -> None:
+        try:
+            for done in iter_transcribe_sessions(
+                sessions, settings,
+                on_progress=_on_loop(on_progress), on_segment=_on_loop(on_segment),
+            ):
+                _post("item", done)
+                if stop.is_set():
+                    return
+            if on_finished is not None:
+                on_finished(time.perf_counter())
+            _post("done", None)
+        except BaseException as exc:  # noqa: BLE001 — re-raised on the loop
+            _post("error", exc)
+
+    ctx = contextvars.copy_context()
+    threading.Thread(
+        target=ctx.run, args=(_work,), name="bristlenose-transcribe", daemon=True,
+    ).start()
+    try:
+        while True:
+            kind, value = await queue.get()
+            if kind == "item":
+                yield value  # type: ignore[misc]
+            elif kind == "error":
+                raise value  # type: ignore[misc]
+            else:
+                return
+    finally:
+        stop.set()
 
 
 def transcribe_sessions(

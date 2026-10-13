@@ -422,9 +422,17 @@ def _run(
 
 
 def test_session_one_is_readable_before_session_two_is_transcribed(tmp_path: Path) -> None:
-    """The outcome in §1, end to end through ``Pipeline.run``: when Whisper starts
-    on session 2, session 1's transcript file is written and the manifest calls
-    it merged — and stage 5b does not pay for its speakers a second time."""
+    """The outcome in §1, end to end through ``Pipeline.run``: while Whisper is
+    still on session 2, session 1's transcript file is written and the manifest
+    calls it merged — and stage 5b does not pay for its speakers a second time.
+
+    Whisper runs on its own thread (Phase 3), so "still on session 2" is the stub
+    holding session 2 back until session 1 is readable. Run serially, on the event
+    loop, nothing could deliver session 1 while the stub waits, and it times out.
+    """
+    import threading
+    import time
+
     from bristlenose.stages.s05_transcribe import SessionTranscription
 
     seen_at_s2: dict[str, object] = {}
@@ -433,7 +441,16 @@ def test_session_one_is_readable_before_session_two_is_transcribed(tmp_path: Pat
     def _iter(needs, _settings, **_kw):
         out = needs[0].audio_path.parent / "bristlenose-output"
         out_box.append(out)
+        seen_at_s2["thread"] = threading.current_thread() is not threading.main_thread()
         yield SessionTranscription("s1", _two_speakers())
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            try:
+                if readable_in_manifest(load_manifest(out)):
+                    break
+            except Exception:  # noqa: BLE001 — a manifest mid-write; look again
+                pass
+            time.sleep(0.01)
         seen_at_s2["file"] = (out / "transcripts-raw" / "s1.txt").exists()
         seen_at_s2["readable"] = readable_in_manifest(load_manifest(out))
         yield SessionTranscription("s2", _two_speakers())
@@ -446,12 +463,103 @@ def test_session_one_is_readable_before_session_two_is_transcribed(tmp_path: Pat
 
     out, progress = _run(tmp_path, iter_fn=_iter, roles=_roles, match="stop after the speakers")
 
-    assert seen_at_s2 == {"file": True, "readable": frozenset({"s1"})}
+    assert seen_at_s2 == {"thread": True, "file": True, "readable": frozenset({"s1"})}
     assert role_calls == [2, 2], "each session's speakers are paid for once"
     readable = [f["sessions_readable"] for f in progress if "sessions_readable" in f]
     assert readable[:1] == [1] and max(readable) == 2
     assert readable_in_manifest(load_manifest(out)) == {"s1", "s2"}
     assert sorted(p.name for p in (out / "transcripts-raw").glob("*.txt")) == ["s1.txt", "s2.txt"]
+
+
+def test_each_sessions_quotes_are_extracted_while_the_next_is_transcribed(
+    tmp_path: Path,
+) -> None:
+    """Phase 3: once session 1 is readable, its topics and quotes run alongside
+    Whisper on session 2, and its quotes are recorded for the server while session 2
+    is still decoding. Stages 8 and 9 then take the chain's work and pay for nothing
+    a second time."""
+    import time
+
+    from bristlenose.events import StageOutcome
+    from bristlenose.manifest import load_manifest as _load
+    from bristlenose.models import (
+        ExtractedQuote,
+        QuoteType,
+        SessionTopicMap,
+        TopicBoundary,
+        TransitionType,
+    )
+    from bristlenose.server.lens_readiness import quoted_in_manifest
+    from bristlenose.stages.s05_transcribe import SessionTranscription
+
+    seen: dict[str, object] = {}
+
+    def _iter(needs, _settings, **_kw):
+        out = needs[0].audio_path.parent / "bristlenose-output"
+        yield SessionTranscription("s1", _two_speakers())
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            try:
+                if quoted_in_manifest(_load(out)):
+                    break
+            except Exception:  # noqa: BLE001 — a manifest mid-write; look again
+                pass
+            time.sleep(0.01)
+        seen["quoted_while_s2_decodes"] = quoted_in_manifest(_load(out))
+        yield SessionTranscription("s2", _two_speakers())
+
+    async def _roles(_segments, _client, **_kw):
+        return []
+
+    topic_calls: list[list[str]] = []
+    quote_calls: list[list[str]] = []
+
+    async def _topics(transcripts, _client, **_kw):
+        topic_calls.append([t.session_id for t in transcripts])
+        maps = [
+            SessionTopicMap(session_id=t.session_id, participant_id=t.participant_id,
+                            boundaries=[TopicBoundary(timecode_seconds=0.0, topic_label="Welcome",
+                                                      transition_type=TransitionType.TOPIC_SHIFT)])
+            for t in transcripts
+        ]
+        return maps, StageOutcome(attempted=len(maps), succeeded=len(maps))
+
+    async def _quotes(transcripts, _maps, _client, **kw):
+        quote_calls.append([t.session_id for t in transcripts])
+        got = [
+            ExtractedQuote(session_id=t.session_id, participant_id=t.participant_id,
+                           start_timecode=1.0, end_timecode=2.0, text="a quote of some length",
+                           topic_label="Welcome", quote_type=QuoteType.GENERAL_CONTEXT)
+            for t in transcripts
+        ]
+        done = kw.get("on_session_done")
+        for q in got:
+            if done is not None:
+                done(q.session_id, [q])
+        return got, StageOutcome(attempted=len(got), succeeded=len(got))
+
+    async def _stop(*_a, **_kw):
+        raise RuntimeError("stop at clustering")
+
+    _out, progress = _run(
+        tmp_path, iter_fn=_iter, roles=_roles, match="stop at clustering",
+        extra=(
+            ("bristlenose.stages.s08_topic_segmentation.segment_topics", {"new": _topics}),
+            ("bristlenose.stages.s09_quote_extraction.extract_quotes", {"new": _quotes}),
+            ("bristlenose.stages.s10_quote_clustering.cluster_by_screen", {"new": _stop}),
+            ("bristlenose.stages.s11_thematic_grouping.group_by_theme", {"new": _stop}),
+        ),
+    )
+    assert seen == {"quoted_while_s2_decodes": frozenset({"s1"})}
+    assert sorted(topic_calls) == [["s1"], ["s2"]], "one call per session, by the chain"
+    assert sorted(quote_calls) == [["s1"], ["s2"]], "stage 9 took the chain's quotes"
+    # The stages say what the chain finished, or the Mac's row keeps the previous
+    # stage's count: this run's work, so new, not cached.
+    for stage in ("topics", "quotes"):
+        pairs = [f for f in progress if f.get("stage") == stage and f.get("sessions_total")]
+        assert pairs, f"{stage} reported nothing"
+        assert (pairs[-1]["sessions_complete"], pairs[-1]["sessions_total"],
+                pairs[-1]["sessions_new"], pairs[-1]["sessions_cached"]) == (2, 2, 2, 0)
 
 
 def test_a_failed_delivery_stops_the_chain_and_codes_stay_in_session_order(

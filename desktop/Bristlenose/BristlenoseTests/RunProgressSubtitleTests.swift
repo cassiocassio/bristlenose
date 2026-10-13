@@ -194,4 +194,41 @@ import Testing
         #expect(RunProgressSubtitle.etaText(.infinity, localize: localize) == nil)
         #expect(RunProgressSubtitle.etaText(.nan, localize: localize) == nil)
     }
+
+    // MARK: - Readable sessions (progressive lenses, Phase 5)
+
+    private func pluralize(_ base: String, _ count: Int) -> String {
+        base == "desktop.chrome.pipeline.sessionsReadable"
+            ? (count == 1 ? "1 readable" : "\(count) readable")
+            : base
+    }
+
+    private func composeReadable(stage: String?, readable: Int?) -> String {
+        RunProgressSubtitle.compose(
+            stage: stage, sessionsComplete: 4, sessionsTotal: 8,
+            etaRemainingSeconds: 720, sessionsReadable: readable, separator: " · ",
+            localize: localize, pluralize: pluralize
+        )
+    }
+
+    @Test func saysHowManyCanBeReadWhileTheyArrive() {
+        #expect(composeReadable(stage: "transcribe", readable: 3)
+            == "Transcribing · 4 of 8 · 3 readable · ~12 min left")
+        #expect(composeReadable(stage: "transcribe", readable: 1)
+            == "Transcribing · 4 of 8 · 1 readable · ~12 min left")
+    }
+
+    @Test func saysNothingBeforeTheFirstOrOnARunThatDeliversNothingEarly() {
+        #expect(composeReadable(stage: "transcribe", readable: 0)
+            == "Transcribing · 4 of 8 · ~12 min left")
+        #expect(composeReadable(stage: "transcribe", readable: nil)
+            == "Transcribing · 4 of 8 · ~12 min left")
+    }
+
+    @Test func stopsOnceEverySessionIsReadable() {
+        // After speaker identification every session is readable; the count
+        // would only repeat the total.
+        #expect(composeReadable(stage: "topics", readable: 8)
+            == "Finding topics · 4 of 8 · ~12 min left")
+    }
 }

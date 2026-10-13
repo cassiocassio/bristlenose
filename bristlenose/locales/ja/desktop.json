@@ -261,6 +261,7 @@
       "partialRun": "\u90e8\u5206\u5b9f\u884c",
       "stopped": "\u505c\u6b62\u6e08\u307f",
       "sessionsCount": "{{total}} \u4ef6\u4e2d {{complete}} \u4ef6",
+      "sessionsReadable_other": "{{count}} \u4ef6\u95b2\u89a7\u53ef\u80fd",
       "etaMinutes": "\u6b8b\u308a\u7d04 {{count}} \u5206",
       "etaUnderMinute": "\u6b8b\u308a1\u5206\u672a\u6e80",
       "importBatch": "{{total}} \u4ef6\u4e2d {{done}} \u4ef6",

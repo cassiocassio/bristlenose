@@ -278,6 +278,8 @@
       "partialRun": "Gedeeltelijke run",
       "stopped": "Gestopt",
       "sessionsCount": "{{complete}} van {{total}}",
+      "sessionsReadable_one": "{{count}} leesbaar",
+      "sessionsReadable_other": "{{count}} leesbaar",
       "etaMinutes": "~{{count}} min resterend",
       "etaUnderMinute": "<1 min resterend",
       "importBatch": "{{done}} van {{total}}",

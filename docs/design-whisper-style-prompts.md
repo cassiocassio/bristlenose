@@ -363,8 +363,9 @@ finished transcript. The reference description is `bristlenose/stages/CLAUDE.md`
 
 **What the trials left open.** A European Portuguese variant; Chinese (a product call
 on script); running the trials on faster-whisper; a clean whole-file timing of the
-net; and the diagnostics row and opt-in telemetry
-(`docs/design-transcription-quality.md`).
+net; and opt-in telemetry (`docs/design-transcription-quality.md`; the per-session
+diagnostics record and the Sessions-grid block behind the diagnostics preference were
+built on 13 Oct 2026).
 
 ## Waves 1 and 2: Catalan, Dutch, Swedish, Danish, Norwegian (13 Oct 2026)
 

@@ -50,6 +50,7 @@ from bristlenose.server.routes.quotes import router as quotes_router
 from bristlenose.server.routes.quotes_export import router as quotes_export_router
 from bristlenose.server.routes.reanalyse import router as reanalyse_router
 from bristlenose.server.routes.runs import router as runs_router
+from bristlenose.server.routes.screens import router as screens_router
 from bristlenose.server.routes.sessions import router as sessions_router
 from bristlenose.server.routes.signals import router as analysis_router
 from bristlenose.server.routes.tapestry import router as tapestry_router
@@ -247,6 +248,7 @@ def create_app(
     app.include_router(runs_router)
     app.include_router(sessions_router)
     app.include_router(tapestry_router)
+    app.include_router(screens_router)
     app.include_router(reanalyse_router)
     app.include_router(discussion_router)
     app.include_router(quotes_router)
@@ -1209,6 +1211,9 @@ def _make_run_completed_handler(
         job = getattr(app.state, "scene_strips", None)
         if job is not None:
             job.start()
+        st_job = getattr(app.state, "screen_text", None)
+        if st_job is not None:
+            st_job.start()
         # After the new sessions import + publish, re-apply already-applied
         # codebooks to the newly-added quotes — delta only, at each job's stored
         # cutoff, no review. A safe no-op when nothing was applied or nothing is
@@ -1353,6 +1358,9 @@ def _install_event_watcher(
         job = getattr(app.state, "scene_strips", None)
         if job is not None:
             job.start()
+        st_job = getattr(app.state, "screen_text", None)
+        if st_job is not None:
+            st_job.start()
 
     _on_run_completed = _make_run_completed_handler(
         app, session_factory, project_dir, engine=engine,
@@ -1371,10 +1379,19 @@ def _install_event_watcher(
     app.state.scene_strips = SceneStripJob(
         session_factory, lambda: project_output_dir(project_dir), _run_in_progress,
     )
+    # Screen text (diagnostics, off unless asked for): the same shape of job, after the strips'.
+    from bristlenose import screen_text as _screen_text
+    from bristlenose.server.screen_text_job import ScreenTextJob
+
+    app.state.screen_text = ScreenTextJob(
+        session_factory, lambda: project_output_dir(project_dir), _run_in_progress,
+        enabled=lambda: _screen_text.enabled() or bool(getattr(app.state, "dev", False)),
+    )
 
     @asynccontextmanager
     async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         app.state.scene_strips.start()
+        app.state.screen_text.start()
         task = asyncio.create_task(
             run_event_watcher(
                 _events_file, _on_run_completed, on_change=_on_change,

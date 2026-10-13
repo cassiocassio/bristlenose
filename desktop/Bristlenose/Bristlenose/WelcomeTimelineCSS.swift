@@ -1215,7 +1215,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     outline-offset: 1px;
 }
 
-/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–329 ════ */
+/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–364 ════ */
 /* Session tapestry — the timeline slice under a row of the Sessions grid
    (frontend/src/components/SessionTapestry.tsx). Lanes: section flags, speaker
    clips, sentiment bars, theme spans. Every colour and size is a shipped token
@@ -1545,5 +1545,40 @@ body.hide-ai-tags .badge-ai { display: none; }
     .bn-tapestry-toggle,
     .bn-tp-zoom { display: none; }
 }
+
+/* ── Hover thumbnail: a still of the participant's screen below the speaker lane ──
+   (utils/tapestryThumb.ts). Fixed on document.body, so the slice's scroll cannot clip it;
+   the popover's ground and shadow; never takes the pointer. */
+.bn-tp-thumb {
+    position: fixed;
+    z-index: 20;
+    padding: 3px;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: var(--bn-focus-shadow);
+    pointer-events: none;
+    animation: bn-tp-thumb-in 0.12s ease;
+}
+.bn-tp-thumb img {
+    display: block;
+    width: var(--bn-tp-thumb-w, 160px);
+    height: auto;
+    border-radius: calc(var(--bn-radius-md) - 2px);
+}
+.bn-tp-thumb-tc {
+    display: block;
+    padding: 3px 3px 0;
+    font: var(--bn-text-micro) var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+}
+@keyframes bn-tp-thumb-in {
+    from { opacity: 0; transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .bn-tp-thumb { animation: none; }
+}
+/* The stretch of the participant track the frame stands for. */
+.bn-tp-thumb-src { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1.5; pointer-events: none; }
 """#
 }

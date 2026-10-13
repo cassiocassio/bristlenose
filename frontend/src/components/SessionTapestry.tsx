@@ -5,7 +5,9 @@
  * moderator and a participant track, sentiment bars (positive above the line,
  * negative below, surprise on it), and theme spans (bottom border). Hovering
  * the speaker lane raises that stretch's section flag in full; clicking the
- * lane, a flag or the quote popover jumps to the transcript.
+ * lane, a flag or the quote popover jumps to the transcript. Resting on the
+ * speaker lane shows a still of the participant's screen below it (the hover
+ * thumbnail, utils/tapestryThumb.ts).
  *
  * Data: GET /api/projects/{id}/tapestry (server/routes/tapestry.py). Clip
  * colour is the pipeline's per-turn scene colour (utils/scene_colour.py) —
@@ -26,6 +28,9 @@ import { formatTimecode } from "../utils/format";
 import { type Step, type TapestryTuning, useTapestryTuning } from "../utils/tapestryTuning";
 import { announce } from "../utils/announce";
 import { featureFlags } from "../utils/featureFlags";
+import { isExportMode } from "../utils/exportData";
+import { framesFor, tapestryThumb } from "../utils/tapestryThumb";
+import { ThumbOutline, ThumbPreview } from "./TapestryThumb";
 
 /** Clips are drawn as rounded clips at or below this many seconds per pixel, as slivers above it. */
 const CLIP_THRESHOLD = 2.5;
@@ -182,6 +187,10 @@ export default function SessionTapestry({
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
   const s = session;
+  // The hover thumbnail, when serve has taken this session's frames (never in an export).
+  const thumbs = !!s.frames_key && !isExportMode();
+  const laneRef = useRef<SVGRectElement>(null);
+  useEffect(() => () => tapestryThumb.forget(s.session_id), [s.session_id]);
   // The server's per-turn answer wins (it reads the slot's role); otherwise the displayed code.
   const teamTurn = (tn: TapestrySession["turns"][number]) =>
     typeof tn.team === "boolean" ? tn.team : isTeam(codeOf(tn.speaker));
@@ -469,9 +478,15 @@ export default function SessionTapestry({
             );
           })}
 
+          {thumbs && <ThumbOutline sessionId={s.session_id} x={x} y={PT.y} h={PT.h} />}
           {/* Hit area over the speaker lane: hover raises a flag, click jumps to exactly that moment */}
-          <rect className="bn-tp-hit" x={TAPESTRY_GUTTER} y={MT.y - 1} width={Math.max(0, xEnd - TAPESTRY_GUTTER)}
+          <rect ref={laneRef} className="bn-tp-hit" x={TAPESTRY_GUTTER} y={MT.y - 1} width={Math.max(0, xEnd - TAPESTRY_GUTTER)}
             height={PT.y + PT.h - MT.y + 2} fill="transparent"
+            onMouseEnter={() => {
+              if (!thumbs) return;
+              framesFor(s.session_id, s.frames_key); // starts the fetch inside the open delay
+              tapestryThumb.enter();
+            }}
             onMouseMove={(e) => {
               pendingX.current = e.clientX;
               if (frame.current) return;
@@ -481,14 +496,21 @@ export default function SessionTapestry({
                 const sec = secAt(pendingX.current);
                 setRaised(sectionAt(sec));
                 setPlayhead(sec);
+                if (thumbs) tapestryThumb.move(s.session_id, framesFor(s.session_id, s.frames_key), sec, pendingX.current);
               });
             }}
             onMouseLeave={() => {
               pendingX.current = null;
               setRaised(-1);
               setPlayhead(null);
+              if (thumbs) tapestryThumb.leave();
             }}
-            onClick={(e) => onJump(secAt(e.clientX))} />
+            onClick={(e) => {
+              // A preview showing a colour change sends the click to just before the change:
+              // the moment the researcher was looking for, not wherever the pointer rested.
+              const change = thumbs ? tapestryThumb.changeAt(s.session_id) : null;
+              onJump(change !== null ? Math.max(0, change - 1) : secAt(e.clientX));
+            }} />
           {playhead !== null && (
             <line className="bn-tp-playhead" x1={x(playhead)} x2={x(playhead)} y1={MT.y - 1} y2={SE.mid + SE.amp} />
           )}
@@ -588,6 +610,7 @@ export default function SessionTapestry({
           ))}
         </svg>
       </div>
+      {thumbs && <ThumbPreview sessionId={s.session_id} laneRef={laneRef} scrollRef={scrollRef} width={tune.thumb.width} />}
 
       {sel && (
         // The whole popover opens the transcript at the quote; the faint hover tint says so.

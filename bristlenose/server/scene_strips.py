@@ -9,6 +9,11 @@ progress, stops between sessions when one starts, and the run's completion start
 ``start`` while a pass is running asks for another pass, so sessions a run added while the job
 was busy are not missed.
 
+After each session's strip, the same pass takes the hover thumbnail's frames
+(``utils/turn_frames.py``): one per participant turn and one per colour change inside a turn,
+from the strip's finer changes. The tapestry route starts a pass when the turns it draws would
+call for frames other than those on disk (a paragraph split, joined or moved, a speaker recoded).
+
 Kill switch: ``BRISTLENOSE_SCENE_STRIPS=0`` before launching serve.
 """
 
@@ -25,7 +30,9 @@ from sqlalchemy.orm import Session
 from bristlenose.models import VIDEO_EXTENSIONS
 from bristlenose.server.models import Session as SessionModel
 from bristlenose.server.models import SourceFile
+from bristlenose.server.tapestry_turns import all_participant_turns, frames_dir, wanted_frames
 from bristlenose.utils.scene_strip import extract_scene_strips
+from bristlenose.utils.turn_frames import Frame, extract_turn_frames
 
 logger = logging.getLogger(__name__)
 
@@ -62,11 +69,13 @@ class SceneStripJob:
         output_dir: Callable[[], Path],
         run_in_progress: Callable[[], bool] = lambda: False,
         extractor: Callable[[dict[str, Path], Path], dict[str, Path]] = extract_scene_strips,
+        framer: Callable[[str, Path, list[Frame], Path], Path | None] = extract_turn_frames,
     ) -> None:
         self._session_factory = session_factory
         self._output_dir = output_dir
         self._run_in_progress = run_in_progress
         self._extractor = extractor
+        self._framer = framer
         self._lock = threading.Lock()
         #: Guards ``running`` and ``_rerun`` across the start/finish race: a ``start`` that finds
         #: the pass finishing must either get the lock or be seen by the finishing pass.
@@ -117,11 +126,19 @@ class SceneStripJob:
         db = self._session_factory()
         try:
             videos = video_sessions(db)
+            turns = all_participant_turns(db) if videos else {}
         finally:
             db.close()
-        out = strips_dir(self._output_dir())
+        output_dir = self._output_dir()
+        out = strips_dir(output_dir)
         for session_id, video in videos.items():
             if self._run_in_progress():
                 self._rerun = False  # the run's completion starts a fresh pass
                 return
             self._extractor({session_id: video}, out)
+            try:
+                wanted = wanted_frames(output_dir, session_id, turns.get(session_id, []))
+                if wanted is not None:
+                    self._framer(session_id, video, wanted, frames_dir(output_dir))
+            except Exception:  # noqa: BLE001 — the frames are cosmetic; the next strip is not
+                logger.warning("Turn frames skipped for %s", session_id, exc_info=True)

@@ -40,6 +40,14 @@ export interface TapestryTuning {
     hitExtra: number; // how much wider than the mark its invisible click target is (px)
     popover: Space; // popover padding
   };
+  /** The hover thumbnail (experiments/session-tapestry/thumb-mockup.html, 13 Oct 2026). */
+  thumb: {
+    width: number; // drawn width (px); frames are taken at twice this
+    openMs: number; // pointer at rest on the participant track before it opens
+    warmMs: number; // reopen at once if it closed less than this ago
+    restMs: number; // rest on another turn or stretch before the frame changes
+    graceMs: number; // after leaving the track, before it closes
+  };
 }
 
 export const DEFAULTS: TapestryTuning = {
@@ -48,6 +56,8 @@ export const DEFAULTS: TapestryTuning = {
   // Sentiment bars 4 → 6px wide, the same day.
   type: { lane: "caption", flag: "label", clip: "badge", theme: "label", tick: "micro", popMeta: "caption", popQuote: "body" },
   pad: { flagX: 3, flagH: 18, clipX: 4, clipH: 16, themeX: 4, themeH: 18, themeGap: 4, barW: 6, hitExtra: 2, popover: "md" },
+  // Chosen in the thumbnail mockup, 13 Oct 2026: 160 wide (small, medium and large were tried).
+  thumb: { width: 160, openMs: 700, warmMs: 1000, restMs: 100, graceMs: 300 },
 };
 
 /** Snapped choices for the raw-pixel paddings — the only values the playground offers. */
@@ -61,6 +71,15 @@ export const PAD_STEPS: Record<Exclude<keyof TapestryTuning["pad"], "popover">, 
   themeGap: [1, 2, 3, 4, 6],
   barW: [4, 5, 6, 7, 8],
   hitExtra: [0, 2, 4, 6],
+};
+
+/** Snapped choices for the hover thumbnail: the sizes and timings the mockup offered. */
+export const THUMB_STEPS: Record<keyof TapestryTuning["thumb"], number[]> = {
+  width: [128, 160, 192, 288],
+  openMs: [0, 300, 500, 700, 1000, 1500],
+  warmMs: [0, 500, 1000, 2000, 3000],
+  restMs: [0, 50, 100, 200, 400],
+  graceMs: [0, 150, 300, 500, 800],
 };
 
 let state: TapestryTuning = DEFAULTS;
@@ -103,6 +122,10 @@ export function tuningChanges(t: TapestryTuning): string[] {
         ? `pad.popover: --bn-space-${DEFAULTS.pad.popover} → --bn-space-${t.pad.popover}`
         : `pad.${k}: ${DEFAULTS.pad[k]}px → ${t.pad[k]}px`);
     }
+  }
+  for (const k of Object.keys(t.thumb) as (keyof TapestryTuning["thumb"])[]) {
+    const unit = k === "width" ? "px" : " ms";
+    if (t.thumb[k] !== DEFAULTS.thumb[k]) out.push(`thumb.${k}: ${DEFAULTS.thumb[k]}${unit} → ${t.thumb[k]}${unit}`);
   }
   return out;
 }

@@ -13,8 +13,8 @@
 
 import type { TapestrySession } from "./types";
 
-type Layers = Pick<TapestrySession, "turns" | "sections" | "quotes" | "strip">;
-const LAYERS: (keyof Layers)[] = ["turns", "sections", "quotes", "strip"];
+type Layers = Pick<TapestrySession, "turns" | "sections" | "quotes" | "strip" | "frames_key">;
+const LAYERS: (keyof Layers)[] = ["turns", "sections", "quotes", "strip", "frames_key"];
 
 // A held layer is compared on every poll and never changes, so its serialisation is
 // kept: a strip carries a data-URL image, and idle polls should cost next to nothing.

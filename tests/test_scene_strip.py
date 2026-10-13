@@ -186,3 +186,11 @@ def test_real_video_round_trip(tmp_path):
     # lightness is the fill colour's own, not three quarters of it.
     assert abs(means[0][0] - rgb_to_oklab(0x28, 0x50, 0xD0)[0]) < 0.05
     assert ss.scene_edges(means) == [2.0]
+    # The record carries the finer changes the hover thumbnail frames from (ΔE 8): the same cut.
+    assert ss.strip_record(means, t0=t0)["changes"] == [2.0]
+    # And a frame can be taken from either side of it (utils/turn_frames.py), past the end nothing.
+    from bristlenose.utils.turn_frames import grab
+
+    jpg = grab(video, 3.0)
+    assert jpg is not None and jpg[:2] == b"\xff\xd8"
+    assert grab(video, 99.0) is None

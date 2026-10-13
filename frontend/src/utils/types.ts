@@ -656,6 +656,27 @@ export interface TapestrySession {
   quotes: TapestryQuote[];
   /** Null until serve's background job has computed it, or without video. Absent from older servers. */
   strip?: TapestryStrip | null;
+  /** Names the hover thumbnail's frames when they are ready and current; null otherwise. A new
+   *  key means new frames (the turns moved). Fetch them from `/sessions/{id}/turn-frames`. */
+  frames_key?: string | null;
+}
+
+/** One frame of the participant's screen, for the tapestry's hover thumbnail
+ *  (GET /api/projects/{id}/sessions/{sid}/turn-frames; utils/turn_frames.py). */
+export interface TurnFrame {
+  t: number;
+  /** The stretch of the participant turn the frame stands for. */
+  a: number;
+  b: number;
+  /** The stretch begins at a colour change: a click lands 1 s before it. */
+  change: boolean;
+  /** A data URL. */
+  src: string;
+}
+
+export interface TurnFramesResponse {
+  key: string;
+  frames: TurnFrame[];
 }
 
 export interface TapestryResponse {

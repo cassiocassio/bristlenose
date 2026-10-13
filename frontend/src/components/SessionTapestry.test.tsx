@@ -5,6 +5,10 @@ import { fitScale, zoomScale } from "../utils/tapestryScale";
 import { DEFAULTS, resetTapestryTuning, setTapestryTuning } from "../utils/tapestryTuning";
 import type { TapestrySession } from "../utils/types";
 import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
+import { resetTapestryThumb } from "../utils/tapestryThumb";
+
+vi.mock("../utils/api", () => ({ apiGet: vi.fn() }));
+import { apiGet } from "../utils/api";
 
 const session: TapestrySession = {
   session_id: "s1",
@@ -154,6 +158,82 @@ describe("SessionTapestry — hover", () => {
     );
     fireEvent.mouseLeave(lane);
     expect(document.querySelectorAll(".bn-tp-tick.near")).toHaveLength(0);
+  });
+});
+
+describe("SessionTapestry — the hover thumbnail", () => {
+  const frames = [
+    { t: 72.5, a: 30, b: 200, change: false, src: "data:image/jpeg;base64,AA" },
+    { t: 202, a: 200, b: 400, change: true, src: "data:image/jpeg;base64,BB" },
+  ];
+  afterEach(() => {
+    resetTapestryThumb();
+    vi.useRealTimers();
+    vi.mocked(apiGet).mockReset();
+  });
+  const at = (sec: number) => ({ clientX: 82 + sec }); // 1 s/px from the gutter
+
+  it("shows the participant's screen below the lane after a rest, and a click on a change lands 1 s before it", async () => {
+    vi.mocked(apiGet).mockResolvedValue({ key: "k1", frames });
+    const { onJump } = (() => {
+      const onJump = vi.fn();
+      render(<SessionTapestry session={{ ...session, frames_key: "k1" }} sPerPx={1} nameOf={(c) => c} onJump={onJump} />);
+      return { onJump };
+    })();
+    vi.useFakeTimers();
+    const lane = document.querySelector(".bn-tp-hit")!;
+    fireEvent.mouseEnter(lane);
+    expect(apiGet).toHaveBeenCalledWith("/sessions/s1/turn-frames");
+    await act(async () => {
+      await Promise.resolve(); // the frames arrive inside the open delay
+    });
+    fireEvent.mouseMove(lane, at(250));
+    await act(async () => {
+      vi.advanceTimersByTime(16); // the mousemove's animation frame
+      vi.advanceTimersByTime(700);
+    });
+    const thumb = screen.getByTestId("bn-tp-thumb");
+    expect(thumb.getAttribute("aria-hidden")).toBe("true");
+    expect(thumb.querySelector("img")!.getAttribute("src")).toBe(frames[1].src);
+    expect(thumb.textContent).toBe("03:22");
+    const outline = document.querySelector(".bn-tp-thumb-src")!;
+    expect([outline.getAttribute("x"), outline.getAttribute("width")]).toEqual(["282", "200"]);
+    fireEvent.click(lane, at(250));
+    expect(onJump).toHaveBeenCalledWith(199);
+  });
+
+  it("jumps to the pointer while the frame shown is a turn's own", async () => {
+    vi.mocked(apiGet).mockResolvedValue({ key: "k1", frames });
+    const onJump = vi.fn();
+    render(<SessionTapestry session={{ ...session, frames_key: "k1" }} sPerPx={1} nameOf={(c) => c} onJump={onJump} />);
+    vi.useFakeTimers();
+    const lane = document.querySelector(".bn-tp-hit")!;
+    fireEvent.mouseEnter(lane);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    fireEvent.mouseMove(lane, at(100));
+    await act(async () => {
+      vi.advanceTimersByTime(716);
+    });
+    expect(screen.getByTestId("bn-tp-thumb")).toBeInTheDocument();
+    fireEvent.click(lane, at(100));
+    expect(onJump).toHaveBeenCalledWith(100);
+  });
+
+  it("asks for nothing and shows nothing when serve has no frames for the session", async () => {
+    const { onJump } = setup();
+    vi.useFakeTimers();
+    const lane = document.querySelector(".bn-tp-hit")!;
+    fireEvent.mouseEnter(lane);
+    fireEvent.mouseMove(lane, at(250));
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(apiGet).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("bn-tp-thumb")).toBeNull();
+    fireEvent.click(lane, at(250));
+    expect(onJump).toHaveBeenCalledWith(250);
   });
 });
 

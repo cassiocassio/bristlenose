@@ -10,6 +10,12 @@ read from files instead: scene colours, pipeline output (``bristlenose/utils/sce
 ``.bristlenose/intermediate/scene-colours/``, matched to turns by time so a speaker edit made in
 serve does not orphan them; and scene strips, serve's own background output
 (``server/scene_strips.py``) in ``.bristlenose/intermediate/scene-strips/``.
+
+The hover thumbnail's frames (``utils/turn_frames.py``, serve's too, in ``turn-frames/``) are not
+in this response: they are a megabyte an hour of video, and the grid polls this route. Each session
+says only ``frames_key``; the grid fetches ``/sessions/{id}/turn-frames`` the first time the
+pointer rests on that timeline. The frames are participants' screens, so that route is behind the
+bearer token and the HTML export leaves it out.
 """
 
 from __future__ import annotations
@@ -34,9 +40,16 @@ from bristlenose.server.models import (
     ScreenCluster,
     ThemeGroup,
     ThemeQuote,
-    TranscriptSegment,
 )
 from bristlenose.server.models import Session as SessionModel
+from bristlenose.server.scene_strips import video_sessions
+from bristlenose.server.tapestry_turns import (
+    frames_dir,
+    frames_state,
+    participant_turns,
+    session_turns,
+)
+from bristlenose.utils.turn_frames import read_record
 
 logger = logging.getLogger(__name__)
 
@@ -95,12 +108,30 @@ class TapestrySession(BaseModel):
     quotes: list[TapestryQuote]
     #: Null until serve's background job has computed it, or when the session has no video.
     strip: TapestryStrip | None = None
+    #: Identifies the hover thumbnail's frames when they are ready and current; null otherwise.
+    #: A new key means new frames (the turns moved), so the grid caches by it.
+    frames_key: str | None = None
 
 
 class TapestryResponse(BaseModel):
     sessions: list[TapestrySession]
-    #: True while serve is computing strips; the grid refetches until it is false.
+    #: True while serve is computing strips or frames; the grid refetches until it is false.
     strips_pending: bool = False
+
+
+class TurnFrame(BaseModel):
+    t: float
+    #: The stretch of the participant turn this frame stands for.
+    a: float
+    b: float
+    #: The stretch begins at a colour change; a click then lands 1 s before it.
+    change: bool
+    src: str  # data URL
+
+
+class TurnFramesResponse(BaseModel):
+    key: str
+    frames: list[TurnFrame]
 
 
 def _clip(text: str) -> str:
@@ -161,22 +192,6 @@ def _colour_at(colours: list[dict[str, object]], t0: float, t1: float) -> str | 
     return best[1] if best else None
 
 
-def _turns(segments: list[TranscriptSegment], duration: float) -> list[tuple[float, float, str]]:
-    turns: list[tuple[float, float, str]] = []
-    for seg in sorted(segments, key=lambda s: s.start_time):
-        if turns and turns[-1][2] == seg.speaker_code:
-            a, b, code = turns[-1]
-            turns[-1] = (a, max(b, seg.end_time), code)
-        else:
-            turns.append((seg.start_time, seg.end_time, seg.speaker_code))
-    # A turn lasts until the next starts; the last runs to the end of the recording.
-    out = []
-    for i, (a, b, code) in enumerate(turns):
-        end = turns[i + 1][0] if i + 1 < len(turns) else max(b, duration)
-        out.append((a, max(b, end), code))
-    return out
-
-
 @router.get("/projects/{project_id}/tapestry", response_model=TapestryResponse)
 def get_tapestry(
     project_id: int,
@@ -221,17 +236,19 @@ def get_tapestry(
         # "not pending" while a strip it just wrote is missing from this response.
         job = getattr(request.app.state, "scene_strips", None)
         strips_pending = bool(job is not None and job.running)
+        frames_owed = False
+        # Only a session the job can reach is owed a pass: a strip left from a recording that has
+        # since gone would otherwise ask for one on every poll, and the pass could never answer.
+        with_video = set(video_sessions(db)) if job is not None else set()
         result = []
         for sess in sessions:
             colours = _scene_colours(out_dir, sess.session_id)
-            turns = [
-                TapestryTurn(
-                    t0=a, t1=b, speaker=code, colour=_colour_at(colours, a, b),
-                    team=speaker_slots.is_team(slots[(sess.session_id, code)].row)
-                    if (sess.session_id, code) in slots else code[:1] in ("m", "o"),
-                )
-                for a, b, code in _turns(sess.transcript_segments, sess.duration_seconds)
-            ]
+            spans = session_turns(sess, slots)
+            turns = [TapestryTurn(t0=a, t1=b, speaker=code, colour=_colour_at(colours, a, b), team=team)
+                     for a, b, code, team in spans]
+            frames_key, owed = (frames_state(out_dir, sess.session_id, participant_turns(spans))
+                                if out_dir is not None else (None, False))
+            frames_owed = frames_owed or (owed and sess.session_id in with_video)
             sq = sorted(by_session.get(sess.session_id, []), key=lambda q: q.start_timecode)
             firsts: dict[str, float] = {}
             for q in sq:
@@ -243,6 +260,7 @@ def get_tapestry(
                 duration_seconds=sess.duration_seconds,
                 turns=turns,
                 strip=_scene_strip(out_dir, sess.session_id),
+                frames_key=frames_key,
                 sections=[TapestrySection(t0=t, label=lab) for lab, t in sorted(firsts.items(), key=lambda kv: kv[1])],
                 quotes=[TapestryQuote(
                     t0=q.start_timecode, t1=q.end_timecode,
@@ -251,6 +269,42 @@ def get_tapestry(
                     section=section_of.get(q.id), theme=theme_of.get(q.id),
                 ) for q in sq],
             ))
+        # Frames taken for other turns (a paragraph split or moved, a speaker recoded since):
+        # ask the job for a pass. It defers during a run and goes round again if busy.
+        if frames_owed and job is not None and not strips_pending:
+            job.start()
+            strips_pending = bool(job.running)
         return TapestryResponse(sessions=result, strips_pending=strips_pending)
     finally:
         db.close()
+
+
+@router.get("/projects/{project_id}/sessions/{session_id}/turn-frames", response_model=TurnFramesResponse)
+def get_turn_frames(
+    project_id: int,
+    session_id: str,
+    request: Request,
+    db: Session = Depends(_get_db),
+) -> TurnFramesResponse:
+    """The hover thumbnail's frames for one session: what was on the participant's screen."""
+    try:
+        if not db.get(Project, project_id):
+            raise HTTPException(status_code=404, detail="Project not found")
+        if not db.query(SessionModel).filter_by(project_id=project_id, session_id=session_id).first():
+            raise HTTPException(status_code=404, detail="Session not found")
+    finally:
+        db.close()
+    out_dir = _output_dir(request)
+    rec = read_record(frames_dir(out_dir) / f"{session_id}.json") if out_dir is not None else None
+    frames = rec.get("frames") if rec else None
+    if not rec or not isinstance(frames, list) or not frames:
+        raise HTTPException(status_code=404, detail="No frames")
+    try:
+        return TurnFramesResponse(key=str(rec.get("key")), frames=[
+            TurnFrame(t=f["t"], a=f["a"], b=f["b"], change=bool(f["change"]),
+                      src="data:image/jpeg;base64," + str(f["jpg"]))
+            for f in frames
+        ])
+    except (KeyError, TypeError, ValueError) as exc:
+        logger.warning("Unreadable turn frames for %s: %s", session_id, exc)
+        raise HTTPException(status_code=404, detail="No frames") from exc

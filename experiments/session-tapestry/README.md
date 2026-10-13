@@ -15,7 +15,7 @@ The design mockups are `docs/mockups/session-tapestry.html` (first sketch) and `
 | `build.py` + `template.html` | Builds the tapestry from a real output folder, drawn in the real Sessions-grid markup with the shipped theme inlined |
 | `colour_lab.py` + `colour-lab.html` | Samples frames from every distinct recording under a folder, so the clip-colour algorithm can be tuned live |
 | `strip_lab.py` + `strip-lab.html` | Samples every recording at 4 fps as well as by keyframe, and draws scene stripes inside the tapestry's clips, so their opacity, floor and smoothing can be tuned live (see § Scene stripes) |
-| `thumb_mockup.py` + `thumb-mockup.html` | The per-turn hover thumbnail, proposed 13 Oct 2026: the timeline with one real frame 25% into each participant turn, stepped not scrubbed, with handles for open delay, warm reopen, swap rest, close grace, width, position and moderator-turn behaviour. Write to `trial-runs/_tapestry/` — it carries participants' screens. **One frame per colour scene was tried and rejected on 13 Oct 2026** (the per-scene commit and its revert carry the measurements): per-turn granularity, with the section flags above the lane naming where a frame sits, read better |
+| `thumb_mockup.py` + `thumb-mockup.html` | The per-turn hover thumbnail, proposed 13 Oct 2026 and shipped the same day (§ Hover thumbnail): the timeline with one real frame 25% into each participant turn, stepped not scrubbed, with handles for open delay, warm reopen, swap rest, close grace, width, position and moderator-turn behaviour. Write to `trial-runs/_tapestry/` — it carries participants' screens. **One frame per colour scene was tried and rejected on 13 Oct 2026** (the per-scene commit and its revert carry the measurements): per-turn granularity, with the section flags above the lane naming where a frame sits, read better |
 
 Both pages carry participant content, so write them to a gitignored, private folder:
 
@@ -186,56 +186,52 @@ alternation stands in. One thing the keyframe view exposes: a recording's first 
 splash or transition frame, which the per-turn colour already survives (it clusters the whole turn)
 but a stripe shows.
 
-## Hover thumbnail (decided 13 Oct 2026, build next)
+## Hover thumbnail (shipped in serve, 13 Oct 2026)
 
-**Decided in the mockup** (`thumb-mockup.html`; its handles stay for retuning):
+**Decided in the mockup** (`thumb-mockup.html`; its handles stay for retuning, and the shipped values
+are the `thumb` group in `frontend/src/utils/tapestryTuning.ts`, movable in the dev playground):
 
 - **Frames.** One per participant turn, 25% in. Plus one at each colour change inside a participant
-  turn: changes at ΔE 8 on the untoned 4 fps means (`scene_edges(means, fps, 8)`), a change within
-  2 s of the turn's start ignored, each later stretch framed 2 s after its change, or halfway through
-  a stretch shorter than 4 s. Measured: 86–112 frames an hour; a seek costs 0.06 s.
-- **Size: 160 px wide**, the size it was drawn at (the originals). Small, medium and large were tried
-  on 13 Oct; the size handle stays in the mockup in case it is reopened. Assets at 2×, 320 px.
-- **Position:** below the tracks, so the section flags stay visible above.
-- **Timing:** open after 700 ms at rest, reopen within 1 s of a close, swap after 100 ms at rest
-  (stepped, never scrubbed), close after a 300 ms grace.
-- **Over a moderator turn** the last participant frame holds. The turn or stretch the frame belongs
-  to is outlined. The caption is the timecode only.
-- **Click:** the transcript jump as today; while a change frame shows, the jump lands 1 s before
-  the change.
+  turn: changes at ΔE 8 on the untoned 4 fps means (`scene_strip.CHANGE_DE`, carried in the strip
+  record as `changes`), a change within 2 s of the turn's start ignored, each later stretch framed
+  2 s after its change, or halfway through a stretch shorter than 4 s. Measured: 86–112 frames an
+  hour; on the Ikea project 5, 21 and 13 frames, taken in 2–5 s a session.
+- **Size: 160 px wide**, the size it was drawn at. Small, medium and large were tried on 13 Oct; the
+  size handle stays in the mockup in case it is reopened. Frames are taken 320 px wide.
+- **Position:** below the tracks, so the section flags stay visible above. It follows the pointer,
+  kept within the slice's sides.
+- **Timing:** open after 700 ms at rest, reopen at once within 1 s of a close, swap after 100 ms at
+  rest (stepped, never scrubbed), close after a 300 ms grace. A lane crossed without the preview
+  opening does not count as a close.
+- **Over a moderator turn** the last participant frame holds. The stretch the frame stands for is
+  outlined. The caption is the timecode only.
+- **Click:** the transcript jump as before; while a change frame shows, the jump lands 1 s before
+  the change. That includes a change frame held over a moderator turn, as in the mockup: the frame
+  on screen decides, not where the pointer is.
 - Mouse-only and `aria-hidden`: the transcript and the strip carry the same information.
 
-**Build plan.**
+**As built.** `bristlenose/utils/turn_frames.py` selects the frames (`select_frames`) and takes them
+with ffmpeg; serve's strip job (`server/scene_strips.py`) takes them after each session's strip, from
+the turns `server/tapestry_turns.py` derives (the one definition the route draws from too). Each
+session's frames are one JSON record, `.bristlenose/intermediate/turn-frames/<session>.json`, holding
+base64 JPEGs, cached by the recording's identity and the selection, written whole and renamed into
+place. **Every failure is written down:** an unreadable recording, a download that timed out, ffmpeg
+missing or some frames not taken all leave a record of the selection with `complete: false`. The
+route asks for a pass only when the selection on disk differs from the turns it draws (a paragraph
+split, joined or moved, a speaker recoded), and only for a session whose recording the job can
+reach, so no failure can make it ask on every poll; an incomplete record is never a cache hit, so the
+job's next ordinary pass (serve starting, a run completing) tries again. The tapestry route sends
+only `frames_key`; the grid fetches `GET /api/projects/{id}/sessions/{sid}/turn-frames` the first
+time the pointer enters that slice, inside the open delay, behind the bearer token — frames of
+participants' screens are never under the unauthenticated `/report/assets/`. A failed fetch is not
+retried until the key changes. The HTML export classifies the route server-only and the SPA never
+fetches it in an export. Frontend: `utils/tapestryThumb.ts` (one controller for the page, so the
+warm-up and the grace span sessions), `components/TapestryThumb.tsx` (the outline in the SVG, the
+preview as a fixed layer on `document.body`).
 
-1. **Selection, pure.** `bristlenose/utils/turn_frames.py`: `select_frames(turns, edges) ->
-   [{t, a, b, change}]` from participant turns and ΔE 8 edges, with the constants above. Unit-tested
-   with no video.
-2. **Extraction, in serve.** It extends the scene-strip job (`server/scene_strips.py`), not a second
-   thread: the same deferral, rerun and stop-between-sessions rules, after the strip for that
-   session. Needs the 4 fps means (keep them in the strip record, or recompute the ΔE 8 edges in the
-   same pass) and the turns (the route's `_turns` over transcript segments; factor it out so the
-   job and the route agree). It writes 320 px JPEGs (`-q:v 6`, about 7 KB each) plus an index to
-   `.bristlenose/intermediate/turn-frames/<session>/`, cached by video identity plus turn bounds,
-   written whole and renamed into place. A speaker edit that moves turn bounds invalidates the
-   cache, and the job's re-arm on the events log does not cover that, so the route reports the
-   frames stale and the job starts again.
-3. **Serving, authenticated.** `GET /api/projects/{id}/sessions/{sid}/turn-frames` returns
-   `{frames: [{t, a, b, change, src}]}` with data URLs, about 0.8 MB an hour. The grid fetches it
-   through `api.ts` the first time a row is hovered, inside the 700 ms open delay, and keeps it per
-   session. Not under `/report/assets/`: those are unauthenticated, and frames of participants'
-   screens should not be one GET away for any local process. Not in the polled tapestry payload,
-   which would carry megabytes on every poll. The tapestry route gains only `frames: bool` per
-   session, so the grid knows whether to hover-fetch.
-4. **Export:** classify the route `SERVER_ONLY_PATH_TEMPLATES`. An exported report carries no
-   participant screens, as it carries no video.
-5. **Frontend.** A controller hook (timers, target, step) plus a fixed-position layer outside the
-   slice's overflow, anchored below the tracks. Constants go in `tapestryTuning.ts`
-   (`thumb: {openMs, warmMs, restMs, graceMs, width}`), so the playground can move them. No new
-   strings, so no i18n.
-6. **Tests.** pytest: selection, the job (fake extractor), the route (auth, 404 for a session
-   without video, the stale-cache case) and the export classification (the coverage test fails
-   until it is classified). vitest with fake timers: open, warm reopen, swap at rest, grace,
-   moderator hold, and the click target (−1 s on a change frame).
+**Not tested:** that a frames failure leaves the next session's strip alone (the job wraps the
+frames step per session; the smoke fixture has one session, so no test can tell the wrap from the
+job's own catch-all).
 
 **Later:** the screen-text session (`docs/design-screen-text-search.md`) found that a text diff
 every 4 s catches what colour changes miss. If OCR ships, the thumbnails could take their frames

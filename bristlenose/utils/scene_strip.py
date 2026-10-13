@@ -49,7 +49,7 @@ from bristlenose.utils.scene_colour import (
 
 logger = logging.getLogger(__name__)
 
-VERSION = 1
+VERSION = 2
 FPS = 4
 #: Tone for the stripes: lighter than the clip's band (0.42–0.88), since they sit over it.
 STRIP_L_MIN, STRIP_L_MAX = 0.64, 1.0
@@ -61,6 +61,10 @@ STRIP_CHROMA_GAIN = 1.4
 #: session with page switches one every couple of minutes.
 EDGE_DE = 14.0
 EDGE_WINDOW_S = 2.0
+#: Finer changes for the hover thumbnail's frames (``turn_frames.py``): at ΔE 8 a scene is
+#: colour-stable inside (p90 spread 0.4 or less on the mockup sessions, 13 Oct 2026), which
+#: the notches' ΔE 14 is not (8.5). Kept in the record so serve need not decode twice.
+CHANGE_DE = 8.0
 #: Decode budget per recording: the 4K worst case is about 7 minutes per hour of video.
 DECODE_TIMEOUT_S = 3600
 
@@ -75,6 +79,7 @@ class StripRecord(TypedDict):
     t0: float  # seconds of the first sample: the stream's start, not always zero
     png: str  # base64 of a 1×n RGB PNG
     edges: list[float]
+    changes: list[float]  # finer scene changes (CHANGE_DE), for the hover thumbnail's frames
 
 
 # ── Sampling ─────────────────────────────────────────────────────────────
@@ -206,7 +211,8 @@ def strip_record(means: list[Lab], fps: int = FPS, t0: float = 0.0) -> StripReco
     png = encode_png_row([lab_to_rgb(lab) for lab in toned])
     return {"version": VERSION, "fps": fps, "n": len(means), "t0": round(t0, 3),
             "png": base64.b64encode(png).decode("ascii"),
-            "edges": [round(t0 + e, 2) for e in scene_edges(means, fps)]}
+            "edges": [round(t0 + e, 2) for e in scene_edges(means, fps)],
+            "changes": [round(t0 + e, 2) for e in scene_edges(means, fps, CHANGE_DE)]}
 
 
 def is_current(path: Path, video: Path) -> bool:

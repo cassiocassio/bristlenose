@@ -5,6 +5,7 @@
  *
  * Deliberately cannot invent a size: type moves only between `--bn-text-*` steps, the popover
  * only between `--bn-space-*` steps, and pixel paddings only between the values in PAD_STEPS.
+ * The hover thumbnail's size and timings move only between the values in THUMB_STEPS.
  * Reuses the Responsive Playground's dark panel classes (playground.css).
  */
 
@@ -15,6 +16,7 @@ import {
   LADDER,
   PAD_STEPS,
   SPACE,
+  THUMB_STEPS,
   type Step,
   type TapestryTuning,
   getTapestryTuning,
@@ -46,6 +48,14 @@ const PAD_ROWS: [Exclude<keyof TapestryTuning["pad"], "popover">, string][] = [
   ["hitExtra", "Bar click margin"],
 ];
 
+const THUMB_ROWS: [keyof TapestryTuning["thumb"], string][] = [
+  ["width", "Width"],
+  ["openMs", "Open after"],
+  ["warmMs", "Reopen within"],
+  ["restMs", "Swap after rest"],
+  ["graceMs", "Close grace"],
+];
+
 function tokenPx(step: Step): string {
   const raw = getComputedStyle(document.documentElement).getPropertyValue(`--bn-text-${step}`).trim();
   const n = raw.endsWith("rem") ? parseFloat(raw) * 16 : parseFloat(raw);
@@ -69,6 +79,10 @@ export function TapestryPlayground({ onClose }: { onClose: () => void }) {
   const setPad = (k: Exclude<keyof TapestryTuning["pad"], "popover">, d: number) => {
     const cur = getTapestryTuning();
     setTapestryTuning({ ...cur, pad: { ...cur.pad, [k]: move(PAD_STEPS[k], cur.pad[k], d) } });
+  };
+  const setThumb = (k: keyof TapestryTuning["thumb"], d: number) => {
+    const cur = getTapestryTuning();
+    setTapestryTuning({ ...cur, thumb: { ...cur.thumb, [k]: move(THUMB_STEPS[k], cur.thumb[k], d) } });
   };
   const setPopover = (d: number) => {
     const cur = getTapestryTuning();
@@ -112,6 +126,14 @@ export function TapestryPlayground({ onClose }: { onClose: () => void }) {
           {stepper("Popover padding", `space-${t.pad.popover}`, t.pad.popover !== DEFAULTS.pad.popover,
             setPopover,
             () => setTapestryTuning({ ...getTapestryTuning(), pad: { ...getTapestryTuning().pad, popover: DEFAULTS.pad.popover } }))}
+        </div>
+        <div className="pg-section">
+          <div className="pg-section-title">Hover thumbnail — snapped steps only</div>
+          {THUMB_ROWS.map(([k, label]) =>
+            stepper(label, `${t.thumb[k]}${k === "width" ? "px" : " ms"}`, t.thumb[k] !== DEFAULTS.thumb[k],
+              (d) => setThumb(k, d),
+              () => setTapestryTuning({ ...getTapestryTuning(), thumb: { ...getTapestryTuning().thumb, [k]: DEFAULTS.thumb[k] } })),
+          )}
         </div>
         <div className="pg-section">
           <div className="pg-section-title">Changes to commit ({changes.length})</div>

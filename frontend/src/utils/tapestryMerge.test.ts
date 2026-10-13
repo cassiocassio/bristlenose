@@ -36,6 +36,16 @@ describe("mergeTapestry", () => {
     expect(got.s1.strip).toEqual(next.s1.strip);
   });
 
+  it("takes new hover frames, keeping every other layer (the grid caches frames by key)", () => {
+    const prev = { s1: { ...session("s1"), frames_key: "k1" } };
+    const next = clone(prev);
+    next.s1.frames_key = "k2";
+    const got = mergeTapestry(prev, next);
+    expect(got.s1).not.toBe(prev.s1);
+    expect(got.s1.frames_key).toBe("k2");
+    expect(got.s1.quotes).toBe(prev.s1.quotes);
+  });
+
   it("takes a changed quote layer, and follows the answer for which sessions exist", () => {
     const prev = { s1: session("s1"), s2: session("s2") };
     const got = mergeTapestry(prev, { s1: session("s1", "edited"), s3: session("s3") });

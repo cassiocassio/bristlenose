@@ -25,6 +25,11 @@ from bristlenose.screen_text.screens import (
     visits_of,
 )
 
+# One marker, as test_format_ingest_coverage.py does: CI's Linux cells install ffmpeg, so these run
+# there; a cell without it skips them all, for the one reason.
+_needs_ffmpeg = pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"),
+                                   reason="needs ffmpeg")
+
 # ── Keys ─────────────────────────────────────────────────────────────────
 
 
@@ -109,7 +114,7 @@ def test_the_vision_engine_explains_itself_where_it_cannot_run(monkeypatch: pyte
     assert VisionEngine().available() == "Vision is macOS only"
 
 
-@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="needs ffmpeg")
+@_needs_ffmpeg
 def test_a_real_recording_is_sampled_and_indexed(tmp_path: Path) -> None:
     video = tmp_path / "share.mp4"
     subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i",
@@ -133,7 +138,7 @@ def test_a_real_recording_is_sampled_and_indexed(tmp_path: Path) -> None:
     assert sti.build_index(video, eng, out) and len(times) == calls  # cached: not read again
 
 
-@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="needs ffmpeg")
+@_needs_ffmpeg
 def test_a_stopped_pass_writes_nothing(tmp_path: Path) -> None:
     video = tmp_path / "share.mp4"
     subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i",
@@ -149,7 +154,7 @@ def test_a_stopped_pass_writes_nothing(tmp_path: Path) -> None:
     assert not out.exists()
 
 
-@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="needs ffmpeg")
+@_needs_ffmpeg
 def test_a_cut_off_recording_is_an_error_not_a_short_index(tmp_path: Path) -> None:
     video = tmp_path / "share.mp4"
     subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i",
@@ -163,7 +168,7 @@ def test_a_cut_off_recording_is_an_error_not_a_short_index(tmp_path: Path) -> No
     assert not out.exists()
 
 
-@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="needs ffmpeg")
+@_needs_ffmpeg
 def test_a_recording_with_no_picture_says_so(tmp_path: Path) -> None:
     audio = tmp_path / "call.mp4"
     subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i", "sine=duration=3",
@@ -172,7 +177,7 @@ def test_a_recording_with_no_picture_says_so(tmp_path: Path) -> None:
         sti.build_index(audio, FakeEngine(lambda t: []), tmp_path / "s1.json")
 
 
-@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="needs ffmpeg")
+@_needs_ffmpeg
 def test_a_video_track_that_starts_late_keeps_frames_and_times_in_step(tmp_path: Path) -> None:
     video = tmp_path / "share.mp4"
     subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error",

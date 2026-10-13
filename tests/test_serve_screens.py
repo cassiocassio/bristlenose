@@ -23,6 +23,8 @@ from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 _HAS_FFMPEG = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
+# One marker, as test_format_ingest_coverage.py does: CI's Linux cells install ffmpeg.
+_needs_ffmpeg = pytest.mark.skipif(not _HAS_FFMPEG, reason="needs ffmpeg")
 
 
 @pytest.fixture
@@ -113,7 +115,7 @@ def test_the_still_route_refuses_a_bad_crop(project: Path, monkeypatch: pytest.M
     assert r.status_code == 404
 
 
-@pytest.mark.skipif(not _HAS_FFMPEG, reason="needs ffmpeg")
+@_needs_ffmpeg
 def test_a_still_is_a_cropped_jpeg_and_is_cached(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("BRISTLENOSE_SCREEN_TEXT", "1")
     app = create_app(project_dir=project, dev=False, db_url="sqlite://")
@@ -126,7 +128,7 @@ def test_a_still_is_a_cropped_jpeg_and_is_cached(project: Path, monkeypatch: pyt
     assert client.get("/api/projects/1/screens/still", params=params).json()["src"] == src
 
 
-@pytest.mark.skipif(not _HAS_FFMPEG, reason="needs ffmpeg")
+@_needs_ffmpeg
 def test_the_job_indexes_each_recording_with_the_engine(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("BRISTLENOSE_SCREEN_TEXT", raising=False)
     app = create_app(project_dir=project, dev=False, db_url="sqlite://")
@@ -186,7 +188,7 @@ def test_a_changed_recording_is_pending_and_a_textless_one_is_blank(project: Pat
     assert body["indexed"] == 0 and body["blank"] == []
 
 
-@pytest.mark.skipif(not _HAS_FFMPEG, reason="needs ffmpeg")
+@_needs_ffmpeg
 def test_one_unreadable_recording_does_not_stop_the_others(project: Path,
                                                            monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("BRISTLENOSE_SCREEN_TEXT", "1")
@@ -215,7 +217,7 @@ def test_one_unreadable_recording_does_not_stop_the_others(project: Path,
     assert body["pending"] is False and "s0" in body["failed"] and body["indexed"] == 1
 
 
-@pytest.mark.skipif(not _HAS_FFMPEG, reason="needs ffmpeg")
+@_needs_ffmpeg
 def test_stills_are_named_for_their_session(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("BRISTLENOSE_SCREEN_TEXT", "1")
     app = create_app(project_dir=project, dev=False, db_url="sqlite://")

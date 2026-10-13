@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useLenses, type LensId } from "../contexts/ConditionStore";
 import { ExportDropdown } from "./ExportDropdown";
 import { RefreshButton } from "./RefreshButton";
+import { diagnosticsEnabled } from "../utils/diagnostics";
 
 interface NavBarProps {
   onExportReport?: () => void;
@@ -81,6 +82,12 @@ export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: Nav
         // precedent as the responsive playground).
         <NavLink to="/report/specimen" className={tabClassName}>
           Specimen
+        </NavLink>
+      )}
+      {diagnosticsEnabled() && (
+        // Screens lens — diagnostics only, English only while it is rough (Specimen precedent).
+        <NavLink to="/report/screens/" className={tabClassName}>
+          Screens
         </NavLink>
       )}
       <div className="bn-tab-spacer" />

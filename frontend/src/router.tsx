@@ -19,6 +19,7 @@ import { SignalsTab } from "./pages/SignalsTab";
 import { SpecimenTab } from "./pages/SpecimenTab";
 import { PickerSpecimenTab } from "./pages/PickerSpecimenTab";
 import { DiscussionTab } from "./pages/DiscussionTab";
+import { ScreensTab } from "./pages/ScreensTab";
 import { isExportMode } from "./utils/exportData";
 
 export const routes = [
@@ -59,6 +60,9 @@ export const routes = [
       // Discussion lens — the researcher's guide merged with what was asked
       // (docs/design-discussion-lens-plan.md). Lazy-loaded when visited.
       { path: "discussion", element: <DiscussionTab /> },
+      // Screens lens (diagnostics; docs/design-screens.md S5). Same terms as Specimen: always
+      // registered, lazy, reachable from the Diagnostics menu or the nav with diagnostics on.
+      { path: "screens", element: <ScreensTab /> },
       { path: "about", element: <Navigate to="/report/" replace /> },
       // Catch-all: unknown sub-paths redirect to project tab
       { path: "*", element: <Navigate to="/report/" replace /> },

@@ -1,0 +1,166 @@
+/* The Screens lens (diagnostics). docs/design-screens.md S5; the prototype it was built from is
+   experiments/screen-text/screens_lens.html. No new tokens: every colour is a palette token or an
+   accent tint at a percentage the theme already mixes (6%, 15%, 30%); lift is --bn-colour-shadow at
+   rest and the shipped .bn-focused treatment when a card is brought forward. */
+
+.screens-lens-status {
+  padding: var(--bn-space-xl);
+  color: var(--bn-colour-muted);
+  font-size: var(--bn-text-label);
+}
+
+.screens-lens { display: grid; grid-template-columns: 280px minmax(0, 1fr); align-items: start; }
+
+/* ── Navigation: every screen, with its thumbnail, title and address ── */
+.screens-nav {
+  position: sticky; top: 0; max-height: 100vh; overflow-y: auto;
+  padding: var(--bn-space-md) var(--bn-space-sm) var(--bn-space-xl);
+  border-right: 1px solid var(--bn-colour-border);
+  background: var(--bn-colour-inspector-bg, var(--bn-colour-bg));
+}
+.screens-nav-head { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); padding: 0 var(--bn-space-sm) var(--bn-space-sm); }
+.screens-nav ol { list-style: none; margin: 0; padding: 0; }
+.screens-nav a {
+  display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: var(--bn-space-sm) var(--bn-space-md);
+  align-items: start; padding: var(--bn-space-sm); border-radius: var(--bn-radius-md);
+  color: inherit; text-decoration: none; border: 1px solid transparent;
+}
+.screens-nav a:hover { background: var(--bn-colour-hover); }
+.screens-nav a[aria-current="true"] { background: var(--bn-selection-bg); border-color: var(--bn-selection-border); }
+.screens-thumb { position: relative; width: 92px; height: 58px; display: block; }
+.screens-thumb img, .screens-thumb .screens-thumb-empty {
+  position: absolute; left: 0; top: 0; width: 92px; height: 58px; object-fit: cover; object-position: top left;
+  border-radius: var(--bn-radius-sm); border: 1px solid var(--bn-colour-border);
+  background: var(--bn-colour-quote-bg); box-shadow: 0 1px 2px var(--bn-colour-shadow);
+}
+.screens-thumb.stacked img { width: 84px; height: 52px; }
+.screens-thumb.stacked img:nth-child(2) { left: 4px; top: 3px; }
+.screens-thumb.stacked img:nth-child(3) { left: 8px; top: 6px; }
+.screens-nav-title {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); font-weight: var(--bn-weight-emphasis);
+}
+.screens-nav-path { display: block; font-family: var(--bn-font-mono); font-size: var(--bn-text-micro); color: var(--bn-colour-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.screens-nav-meta { display: flex; gap: var(--bn-space-xs); align-items: baseline; margin-top: var(--bn-space-xs); font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
+.screens-nav-meta .screens-count { flex: none; min-width: 1.5em; font-variant-numeric: tabular-nums; }
+.screens-codes { display: flex; flex-wrap: wrap; gap: 2px; min-width: 0; }
+.screens-codes .bn-speaker-badge-code, .screens-more {
+  font-family: var(--bn-font-mono); font-size: var(--bn-text-micro); line-height: var(--bn-text-micro-lh);
+  padding: 0 0.25rem; border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-sm);
+  background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text);
+}
+.screens-more { background: none; color: var(--bn-colour-muted); }
+
+/* ── The screen ── */
+.screens-main { min-width: 0; padding: 0 var(--bn-space-xl) var(--bn-space-xl); }
+.screens-controls {
+  display: flex; flex-wrap: wrap; gap: var(--bn-space-sm) var(--bn-space-lg); align-items: center;
+  padding: var(--bn-space-sm) 0; font-size: var(--bn-text-caption); color: var(--bn-colour-muted);
+}
+.screens-controls select { font: inherit; }
+.screens-main > .section-heading { margin-top: var(--bn-space-sm); }
+.screens-who { display: flex; gap: var(--bn-space-xs); }
+.screens-who button {
+  border: 1px solid transparent; background: none; padding: 3px 4px; border-radius: var(--bn-radius-md);
+  cursor: pointer; font: inherit; color: inherit; opacity: 0.55;
+}
+.screens-who button:hover { opacity: 1; background: var(--bn-colour-hover); }
+.screens-who button[aria-pressed="true"] { opacity: 1; background: var(--bn-selection-bg); border-color: var(--bn-selection-border); }
+.screens-sub {
+  display: flex; flex-wrap: wrap; gap: var(--bn-space-xs) var(--bn-space-md); align-items: baseline;
+  font-size: var(--bn-text-label); color: var(--bn-colour-muted); margin: calc(-1 * var(--bn-space-sm)) 0 var(--bn-space-lg);
+  max-width: none;
+}
+.screens-sub code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); }
+.screens-sub .timecode { font-family: var(--bn-font-mono); color: var(--bn-colour-accent); }
+.screens-hidden-slot { margin-left: auto; }
+.screens-putback { font: inherit; font-size: var(--bn-text-label); background: none; border: 0; color: var(--bn-colour-accent); cursor: pointer; padding: 0; }
+.screens-putback:hover { text-decoration: underline; }
+
+/* Narrow: screengrab, quotes right only. Wide (1100px of stage, --bn-breakpoint-content): either
+   side. Both overlap the screengrab's edge a little; from 1700px they sit beside it. */
+.screens-stage { container-type: inline-size; }
+.screens-board { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 300px; }
+.screens-col { position: relative; z-index: 2; }
+.screens-col-l { display: none; margin-right: -24px; }
+.screens-col-r { margin-left: -24px; }
+@container (min-width: 1100px) {
+  .screens-board { grid-template-columns: 270px minmax(0, 1fr) 270px; }
+  .screens-col-l { display: block; }
+}
+@container (min-width: 1700px) {
+  .screens-board { grid-template-columns: 300px minmax(0, 1fr) 300px; column-gap: var(--bn-space-lg); }
+  .screens-col-l { margin-right: 0; }
+  .screens-col-r { margin-left: 0; }
+}
+.screens-shot { position: relative; z-index: 1; align-self: start; }
+.screens-shot img { display: block; width: 100%; border-radius: var(--bn-radius-md); border: 1px solid var(--bn-colour-border); }
+.screens-shot-wait { aspect-ratio: 16 / 10; border-radius: var(--bn-radius-md); background: var(--bn-colour-quote-bg); }
+.screens-hl {
+  position: absolute; pointer-events: none; border-radius: var(--bn-radius-sm);
+  border: 1.5px solid var(--bn-colour-accent);
+  background: color-mix(in srgb, var(--bn-colour-accent) 6%, transparent);
+  transition: background var(--bn-transition-fast), opacity var(--bn-transition-fast);
+}
+.screens-hl.on { background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent); }
+
+/* ── Every quote on this lens is the same card: pinned, carried or not pinned ── */
+.screens-stage blockquote.quote-card {
+  padding: var(--bn-space-sm) 2rem var(--bn-space-sm) var(--bn-space-md);
+  box-shadow: 0 4px 16px var(--bn-colour-shadow), 0 1px 4px var(--bn-colour-shadow);
+  transition: opacity var(--bn-transition-fast), box-shadow var(--bn-transition-fast), color var(--bn-transition-fast);
+  cursor: default;
+}
+.screens-stage blockquote.quote-card .quote-body { font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); }
+.screens-stage blockquote.quote-card .quote-row { gap: 0.4rem; }
+.screens-stage blockquote.quote-card .timecode { font-size: var(--bn-text-caption); }
+.screens-stage blockquote.quote-card .badges { margin-top: 0.3rem; gap: var(--bn-space-xs); }
+.screens-stage blockquote.quote-card .star-btn { top: 0.4rem; right: 0.4rem; }
+.screens-stage blockquote.quote-card .hide-btn { top: 1.55rem; right: 0.4rem; }
+.screens-stage blockquote.quote-card.bn-focused { box-shadow: var(--bn-focus-shadow), 0 8px 24px var(--bn-colour-shadow); }
+/* A long quote is a tall sticky; every card shows seven lines and the whole quote when brought
+   forward, pinned or not, so no card reads as more important for being longer. */
+.screens-stage blockquote.quote-card .quote-text-wrapper {
+  display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden;
+}
+.screens-stage blockquote.quote-card.bn-focused .quote-text-wrapper { display: inline; -webkit-line-clamp: unset; overflow: visible; }
+
+.screens-col blockquote.quote-card { position: absolute; left: 0; right: 0; margin: 0; z-index: var(--stack, 2); }
+.screens-col.stacked.diagonal blockquote.quote-card { left: var(--slide, 0px); right: calc(-1 * var(--slide, 0px)); }
+.screens-col.stacked blockquote.quote-card:not(.bn-focused) {
+  box-shadow: 0 -2px 6px var(--bn-colour-shadow), 0 4px 16px var(--bn-colour-shadow), 0 1px 4px var(--bn-colour-shadow);
+}
+.screens-stage blockquote.quote-card.bn-focused { z-index: 999 !important; }
+.screens-loose blockquote.quote-card.bn-focused { position: relative; }
+
+.screens-free { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.screens-free blockquote.quote-card { position: absolute; margin: 0; pointer-events: auto; }
+
+/* Bringing one forward dims the others by colour, not opacity: a stack must stay opaque. */
+.screens-stage.focus .quote-card:not(.bn-focused) { color: var(--bn-colour-muted); }
+.screens-stage.focus .quote-card:not(.bn-focused) mark.screens-read { background: none; }
+.screens-stage.focus .screens-hl:not(.on),
+.screens-stage.focus .screens-leaders g:not(.on) { opacity: 0.25; }
+
+/* The read-aloud highlight: words said that are also on the screen. */
+mark.screens-read { background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
+.screens-stage blockquote.bn-focused mark.screens-read { background: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent); }
+
+svg.screens-leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 3; }
+svg.screens-leaders path { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1; opacity: 0.6; }
+svg.screens-leaders circle { fill: var(--bn-colour-accent); }
+
+/* Rearranging: the top edge and the margin under the timecode are grips. */
+.screens-grip { position: absolute; z-index: 1; cursor: grab; }
+.screens-grip-top { left: 0; right: 2rem; top: 0; height: var(--bn-space-sm); }
+.screens-grip-side { left: 0; top: 0; bottom: 0; width: 3.6rem; }
+.screens-stage.dragging, .screens-stage.dragging * { cursor: grabbing !important; user-select: none; }
+.screens-stage blockquote.quote-card.is-dragging { box-shadow: var(--bn-focus-shadow), 0 12px 32px var(--bn-colour-shadow); transition: none; }
+
+/* Everything else said on this screen: the same card, the same gutter. */
+.screens-loose { columns: 260px; column-gap: var(--bn-space-md); margin-top: var(--bn-space-md); }
+.screens-loose blockquote.quote-card { position: relative; break-inside: avoid; margin: 0 0 var(--bn-space-md); }
+
+@media (prefers-reduced-motion: reduce) {
+  .screens-hl, .screens-stage blockquote.quote-card { transition: none; }
+}

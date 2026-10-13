@@ -226,3 +226,18 @@ def test_the_crop_leaves_out_the_browser_and_the_call_tiles() -> None:
     eps += [_episode("Martin Storey", [0.9, 0.3, 0.08, 0.02], [[0, 10]], sticky=True)]
     x0, y0, x1, y1 = content_crop({"every": 4.0, "episodes": eps})
     assert y0 > 0.07 and x1 < 0.9 and x0 < 0.05
+
+
+def test_the_still_is_a_moment_the_page_is_drawn_not_a_loading_frame() -> None:
+    # A line the quote reads is on screen only while the page loads (0–16 s); the page is drawn
+    # from 20 s. Measured on a real planner page: the loading frame won on pins and the board
+    # showed a pin over a blank screengrab. A drawn page with the quote unpinned is the better
+    # still: the quote is still on the screen, under it.
+    eps = [_episode("ikea.com/gb/en/planner", [0.2, 0.05, 0.4, 0.02], [[0, 60]]),
+           _episode("Personalise your wardrobe", [0.3, 0.4, 0.3, 0.04], [[0, 16]])]
+    eps += [_episode(f"planner control {i}", [0.05, 0.2 + i * 0.05, 0.4, 0.02], [[20, 60]]) for i in range(12)]
+    q = {"dom_id": "q-p1-5", "start": 5, "end": 9, "text": "I can personalise your wardrobe here"}
+    [screen] = derive_screens([SessionInput("s1", "p1", {"every": 4.0, "episodes": eps}, [q])])
+    [tab] = screen["tabs"]
+    assert tab["t"] >= 20
+    assert tab["pins"] == [] and tab["loose"] == ["q-p1-5"]

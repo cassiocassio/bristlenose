@@ -665,6 +665,10 @@ function AppShell() {
           // has no native sidebar row, so the menu navigates the SPA directly.
           navigate("/report/specimen");
           break;
+        case "openScreensLens":
+          // Diagnostics ▸ Screens Lens: no native sidebar row while it is rough.
+          navigate("/report/screens/");
+          break;
       }
     };
     window.addEventListener("bn:menu-action", handler);

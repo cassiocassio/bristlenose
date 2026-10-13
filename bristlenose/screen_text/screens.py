@@ -264,7 +264,8 @@ def _session_tabs(s: SessionInput, visits: list[Visit]) -> dict[str, dict[str, A
     rare = {w for w, c in freq.items() if c <= 3}
 
     def lines_at(t: float) -> list[dict]:
-        return [e for e in content if _on(e, t, every / 2)]
+        # Exactly what the still shows: a line seen up to a sample before is not on it.
+        return [e for e in content if _on(e, t, 0.05)]
 
     def screen_of(q: dict) -> str | None:
         best, score = None, 0.0
@@ -299,7 +300,11 @@ def _session_tabs(s: SessionInput, visits: list[Visit]) -> dict[str, dict[str, A
             continue
         if len(cands) > 24:
             cands = [cands[round(i * (len(cands) - 1) / 23)] for i in range(24)]
-        still = max(cands, key=lambda t, qs=qs: (len(pins_at(t, qs)), len(lines_at(t))))
+        # A still is a moment the page is drawn: among moments showing at least 60% of the most
+        # lines seen on this screen (a loading page has few), the one pinning the most quotes.
+        most = max(len(lines_at(t)) for t in cands)
+        drawn = [t for t in cands if len(lines_at(t)) >= 0.6 * most]
+        still = max(drawn, key=lambda t, qs=qs: (len(pins_at(t, qs)), len(lines_at(t))))
         pins = pins_at(still, qs)
         pinned = {q["dom_id"] for q, _ in pins}
         tabs[key] = {

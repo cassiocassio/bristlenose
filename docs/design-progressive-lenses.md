@@ -8,6 +8,9 @@ mockup: docs/mockups/progressive-lenses-replay.html
 
 ## Changelog
 
+- _2026-10-13, latest_ — §7 item 18 accepted by the owner (a Mac Re-analyse is a
+  first analysis, and delivers progressively); item 19 built (the Mac's lens rail
+  leaves a withheld lens for Sessions). §5.1 trued.
 - _2026-10-13, later_ — Phases 3 and 5 built, on two owner decisions taken that
   night: Whisper moves to a worker thread (§7 item 17 reversed), and run messages
   stay on the surfaces that already carry them, the sidebar status line and the
@@ -762,7 +765,7 @@ import would replace it session by session. **v1: progressive applies only to a
 project with no report yet** (first analysis). A re-analyse behaves as today. An
 incremental run (new files) is a later question. **But** the Mac's Re-analyse passes
 `--clean`, which stashes the report: to the pipeline and the server that run is a
-first analysis, so it is progressive (§7 item 18).
+first analysis, so it is progressive. Accepted as such (§7 item 18, 13 Oct 2026).
 
 ### 5.2 Stop
 
@@ -940,8 +943,12 @@ the overlay and moves `data_version`, so the SPA refetches.
     one where the status page used to cover the run. Two costs: the Mac skips its
     completion reload, so a transcript route remembered from the old numbering stays
     live; and a run that fails restores the stash. The server lifts the overlay and
-    moves `data_version` then (§5.7), but nothing on the Mac reacts. Accept (a clean
-    re-analyse is a first analysis), or have the pipeline record "progressive" in
-    `ingest-facts.json` and gate both sides on it?
-19. **The Mac on a withheld lens.** The web nav goes to Sessions (item 12); the Mac's
-    lens rail does not. Activate `.sessions` on the same condition?
+    moves `data_version` then (§5.7), but nothing on the Mac reacts. **Accepted 13 Oct
+    2026:** a clean re-analyse is a first analysis. The remembered-route hazard is
+    covered by item 19, which leaves a withheld lens for the Sessions *root*, not the
+    remembered transcript.
+19. ~~**The Mac on a withheld lens.**~~ **Built 13 Oct 2026:** when the document's
+    readiness arrives or the route changes onto a withheld lens, the Mac switches to
+    Sessions (`LensReadiness.redirect(from:)`, `BridgeHandler.leaveWithheldLens`), to its
+    root rather than through the route memory, which could name the old numbering
+    after a clean re-analyse. Pinned by `LensReadinessTests`.

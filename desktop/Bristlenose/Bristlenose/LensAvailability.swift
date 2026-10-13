@@ -137,5 +137,16 @@ struct LensReadiness: Equatable {
     }
 
     func allows(_ tab: Tab) -> Bool { !unavailable.contains(tab) }
+
+    /// Where a reader on a withheld lens goes: Sessions, the lens a run makes
+    /// usable first (docs/design-progressive-lenses.md §7 item 19, the native
+    /// twin of the web nav's rule). Nil when the lens is there, when there is no
+    /// lens (a non-report path), or when Sessions is withheld too.
+    func redirect(from active: Tab?) -> Tab? {
+        guard let active, !allows(active), active != .sessions, allows(.sessions) else {
+            return nil
+        }
+        return .sessions
+    }
 }
 

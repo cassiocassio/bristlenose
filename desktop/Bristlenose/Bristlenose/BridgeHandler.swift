@@ -531,6 +531,21 @@ final class BridgeHandler: ObservableObject {
     /// `switchToTab` itself stays pure — "go to the tab root" — which is what
     /// lets the popover's All Sessions row reach the grid without the memory
     /// bouncing it back.
+    /// The withheld lens the last redirect left, for the log and the tests:
+    /// the outbound JS call itself is not observable without a page.
+    private(set) var lastWithheldLensLeft: Tab?
+
+    /// A reader on a lens the document withholds goes to Sessions — the status
+    /// page hands over to `/report/`, the Project lens, which a first analysis
+    /// withholds. To the Sessions root, not through its route memory: after a
+    /// clean re-analyse a remembered transcript can name the old numbering.
+    private func leaveWithheldLens() {
+        guard let target = lensReadiness.redirect(from: activeTab) else { return }
+        Self.log.notice("leaving withheld lens \(self.activeTab?.rawValue ?? "-", privacy: .public) for \(target.rawValue, privacy: .public)")
+        lastWithheldLensLeft = activeTab
+        switchToTab(target)
+    }
+
     func activateLens(_ tab: Tab) {
         // A lens the document withholds during a run has nothing to show; every
         // caller (rail, outline, ⌘-number, menu) already dims it, this is the floor.
@@ -869,6 +884,7 @@ final class BridgeHandler: ObservableObject {
             if let url = body["url"] as? String {
                 currentPath = url
                 sessionsRouteMemory.observe(path: url)
+                leaveWithheldLens()
             }
 
         case "anchor-change":
@@ -979,6 +995,7 @@ final class BridgeHandler: ObservableObject {
             // on every change, and the rail and View menu rebuild on any assign.
             let readiness = LensReadiness(message: body["lenses"] as? [String: Any] ?? [:])
             if readiness != lensReadiness { lensReadiness = readiness }
+            leaveWithheldLens()
 
         case "panel-state":
             // Sole writer of the three panel mirrors. Equality-guarded like

@@ -68,4 +68,34 @@ struct LensReadinessTests {
         bridge.activateLens(.sessions)
         #expect(bridge.pendingLensIntent == .sessions)
     }
+
+    // MARK: - A reader on a withheld lens (§7 item 19)
+
+    @Test func aWithheldLensSendsTheReaderToSessions() {
+        let readiness = LensReadiness(message: ["project": false, "quotes": false, "sessions": true])
+        #expect(readiness.redirect(from: .project) == .sessions)
+        #expect(readiness.redirect(from: .quotes) == .sessions)
+        #expect(readiness.redirect(from: .sessions) == nil, "already there")
+        #expect(readiness.redirect(from: nil) == nil, "a path no lens owns")
+        #expect(LensReadiness.all.redirect(from: .project) == nil, "nothing withheld")
+        let noSessions = LensReadiness(message: ["project": false, "sessions": false])
+        #expect(noSessions.redirect(from: .project) == nil, "nowhere better to go")
+    }
+
+    @Test func theBridgeLeavesAWithheldLensWhenReadinessOrTheRouteSaysSo() {
+        let bridge = BridgeHandler()
+        // The status page handed over at the report root: the Project lens.
+        bridge.handleMessage(["type": "route-change", "url": "/report/"])
+        #expect(bridge.lastWithheldLensLeft == nil, "nothing is withheld yet")
+        bridge.handleMessage(["type": "lens-availability",
+                              "lenses": ["project": false, "sessions": true]])
+        #expect(bridge.lastWithheldLensLeft == .project)
+
+        // A route into a withheld lens while readiness stays the same.
+        let later = BridgeHandler()
+        later.handleMessage(["type": "lens-availability",
+                             "lenses": ["quotes": false, "sessions": true]])
+        later.handleMessage(["type": "route-change", "url": "/report/quotes/"])
+        #expect(later.lastWithheldLensLeft == .quotes)
+    }
 }

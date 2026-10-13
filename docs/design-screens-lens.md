@@ -5,6 +5,11 @@ updated: 13 Oct 2026
 
 # Screens lens
 
+> **Part of one project, 13 Oct 2026.** The Screens lens and screen text are planned together in
+> [`design-screens.md`](design-screens.md), which owns the UX (this lens is its surface S5),
+> architecture, privacy model and phases (Mac first, engine pluggable). This doc is the **evidence
+> record** for deriving screens; where its §9 or §10 disagree with the plan, the plan wins.
+
 **Status: exploratory proposal, 13 Oct 2026. Nothing here is built and nothing is decided; the owner
 decides whether it is.** It builds on the screen-text proposal
 ([`design-screen-text-search.md`](design-screen-text-search.md)), which is also unbuilt: this lens

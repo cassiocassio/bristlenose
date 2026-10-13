@@ -5,6 +5,11 @@ updated: 13 Oct 2026
 
 # Searchable screen text
 
+> **Part of one project, 13 Oct 2026.** Screen text and the Screens lens are planned together in
+> [`design-screens.md`](design-screens.md), which owns the UX, architecture, privacy model and
+> phases (Mac first, engine pluggable). This doc is the **evidence record** for reading the shared
+> screen; where its §3.4, §4 or §6 disagree with the plan, the plan wins.
+
 **Status: exploratory proposal, 13 Oct 2026. Nothing here is built and nothing is decided; the owner
 decides whether it is.** Method and every number below:
 [`experiments/screen-text/README.md`](../experiments/screen-text/README.md). A second pass the same day
@@ -320,7 +325,7 @@ two IKEA sessions; a session that stays on one page for most of its length would
 
 1. **Build it at all?** The measurements say it works well on the Mac and cheaply. Is "find the moment
    by what was on screen" worth a new feature surface now?
-2. **Mac only, or every channel?** Vision on the Mac adds ~2 MB to the app and about ten minutes for a
+2. **Decided 13 Oct 2026: Mac first, engine pluggable** (`design-screens.md`). Kept for the record: **Mac only, or every channel?** Vision on the Mac adds ~2 MB to the app and about ten minutes for a
    5-hour project. Everywhere else the honest choice is RapidOCR at ~75 MB of wheels and about an hour
    of background CPU for the same project, or nothing. A Mac-only feature is a parity break
    (`docs/design-modularity.md`); an optional extra on the CLI keeps parity in principle.

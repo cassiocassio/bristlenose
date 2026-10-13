@@ -140,7 +140,7 @@ body { margin: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text);
   <label>swap after rest <input type="range" id="h-rest" min="0" max="400" step="10" value="100"><output></output></label>
   <label>close grace <input type="range" id="h-grace" min="0" max="800" step="50" value="300"><output></output></label>
   <label>width <select id="h-w"><option>120</option><option selected>160</option><option>200</option><option>240</option></select></label>
-  <label>position <select id="h-pos"><option value="above" selected>above the tracks</option><option value="below">below the tracks</option></select></label>
+  <label>position <select id="h-pos"><option value="below" selected>below the tracks</option><option value="above">above the tracks</option></select></label>
   <label>x <select id="h-x"><option value="pointer" selected>follows the pointer</option><option value="frame">at the frame's moment</option></select></label>
   <label>over moderator <select id="h-mod"><option value="hold" selected>hold last participant frame</option><option value="hide">hide</option></select></label>
   <label>caption <select id="h-cap"><option value="tc" selected>timecode</option><option value="none">none</option></select></label>
@@ -191,9 +191,10 @@ crossing would churn images on a fast sweep.</li>
 <li><b>Close grace 300 ms.</b> Crossing from one session's lane to the next keeps the preview armed instead of blinking.</li>
 <li><b>Moderator turns hold the last participant frame.</b> The picture does not change when the moderator speaks (the colour
 lab measured this across 25 recordings), so holding is truthful and stops the preview strobing through every exchange.</li>
-<li><b>160 px wide, above the tracks.</b> Large enough to tell a call from a web page from a terminal, too small to read
-text. Above, it covers the section flags, which are not being used while the pointer is on the lane; below would cover the
-sentiment marks.</li>
+<li><b>160 px wide, below the tracks</b> (the owner's call, 13 Oct 2026). Large enough to tell a call from a web page from
+a terminal, too small to read text. Below, the section flags stay in view, so the frame and the section name it falls in
+read together; it covers the sentiment marks instead, which are not being used while the pointer is on the lane. Above,
+it also spilled over the row above when that row was open.</li>
 <li><b>Outline on the source turn.</b> Says which turn the frame came from, which matters while the moderator turns hold.</li>
 </ul>
 

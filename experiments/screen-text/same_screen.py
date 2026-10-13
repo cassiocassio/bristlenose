@@ -95,6 +95,19 @@ def content_lines(s: Session, v: dict) -> list[dict]:
             and any(r[0] <= v["t1"] + s.every and r[1] >= v["t0"] for r in e["runs"])]
 
 
+def heading_of(s: Session, lines: list[dict]) -> str:
+    """The page's own heading: the tallest line of words in the top half of the page, where only the
+    line seen longest among near-equal heights wins (a heading stays on screen; a carousel does not)."""
+    x0, y0, x1, y1 = s.crop
+    c = [e for e in lines if sum(ch.isalpha() for ch in e["text"]) >= 4 and len(e["text"]) <= 40
+         and not re.search(r"[$£€]|\d", e["text"]) and e["box"][1] <= y0 + 0.55 * (y1 - y0)]
+    if not c:
+        return ""
+    tallest = max(e["box"][3] for e in c)
+    top = [e for e in c if e["box"][3] >= 0.9 * tallest]
+    return fold(max(top, key=lambda e: sum(r[1] - r[0] for r in e["runs"]))["text"])
+
+
 def layout(s: Session, lines: list[dict]) -> np.ndarray:
     x0, y0, x1, y1 = s.crop
     g = np.zeros(GRID[::-1], bool)
@@ -132,7 +145,7 @@ def main() -> None:
         for v in vs:
             lines = content_lines(s, v)
             texts = sorted({fold(e["text"]) for e in lines if len(fold(e["text"])) >= 4})
-            v.update(s=s, lines=set(texts),
+            v.update(s=s, lines=set(texts), heading=heading_of(s, lines),
                      words={w for t in texts for w in t.split() if len(w) >= 3 and not w.isdigit() and w not in chrome},
                      grid=layout(s, lines), pic=picture(s, (v["t0"] + v["t1"]) / 2),
                      emb=model.encode(texts[:80], normalize_embeddings=True) if texts else None)
@@ -161,6 +174,7 @@ def main() -> None:
             "words": len(wa & wb) / max(1, min(len(wa), len(wb))),
             "rare": rare_overlap(wa, wb),
             "idkey": a["idk"] == b["idk"],
+            "heading": bool(a["heading"]) and a["heading"] == b["heading"],
             "lines": len(a["lines"] & b["lines"]) / max(1, min(len(a["lines"]), len(b["lines"]))),
             "layout": float((ga & gb).sum() / max(1, (ga | gb).sum())),
             "picture": float(np.mean(a["pic"] * b["pic"])),
@@ -191,6 +205,13 @@ def main() -> None:
             cells.append(f"{m} {np.median(xs):.2f} [{np.percentile(xs, 10):.2f}–{np.percentile(xs, 90):.2f}]")
         print(f"  {label:<10} n={len(rs):<4} " + "  ".join(cells))
 
+    print("\nThe page heading as a key, within one session (no address used):")
+    for label in ("same page", "same kind", "different"):
+        rs = [r for r in rows if r["label"] == label]
+        print(f"  {label:<10} headings equal on {sum(r['heading'] for r in rs)}/{len(rs)}")
+    xs = [r for r in rows if r["label"].startswith("cross")]
+    print(f"  across sessions: headings equal on {sum(r['heading'] for r in xs)}/{len(xs)} pairs"
+          + ("".join(f"\n    {r['a']}×{r['b']} {r['ka']} | {r['kb']}" for r in xs if r["heading"]) if args.show else ""))
     print("\nAcross sessions, pairs on one template (the cases the board stacked):")
     for r in sorted((r for r in rows if r["label"] == "cross: same template"), key=lambda r: (r["ka"], -r["words"])):
         tail = f"  {r['ka']} | {r['kb']}" if args.show else ""

@@ -88,6 +88,7 @@ body { margin: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text);
 .tp-thumb .tc:empty { display: none; }
 .tp-src { stroke: var(--bn-colour-accent); stroke-width: 1.5; }
 .tp-frame-tick { stroke: var(--bn-colour-accent); stroke-width: 1; pointer-events: none; }
+.tp-scene-span { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1.5; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .tp-thumb { transition: none; transform: none; } }
 
 /* Mockup handles (not product) */
@@ -135,6 +136,9 @@ body { margin: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text);
   <span class="dest" id="dest" aria-live="polite"></span>
 </div>
 <div class="mock-handles" aria-label="Thumbnail behaviour">
+  <label>frames <select id="h-mode"><option value="scene" selected>one per scene</option><option value="turn">one per participant turn</option></select></label>
+  <label>scene change at <select id="h-th"><option value="8" selected>ΔE 8</option><option value="11">ΔE 11</option><option value="14">ΔE 14 (the notches)</option></select></label>
+  <label>scene frame <select id="h-at"><option value="in" selected>2 s in</option><option value="change">at the change</option></select></label>
   <label>open after <input type="range" id="h-open" min="0" max="1500" step="50" value="700"><output></output></label>
   <label>reopen within <input type="range" id="h-warm" min="0" max="3000" step="100" value="1000"><output></output></label>
   <label>swap after rest <input type="range" id="h-rest" min="0" max="400" step="10" value="100"><output></output></label>
@@ -144,7 +148,7 @@ body { margin: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text);
   <label>x <select id="h-x"><option value="pointer" selected>follows the pointer</option><option value="frame">at the frame's moment</option></select></label>
   <label>over moderator <select id="h-mod"><option value="hold" selected>hold last participant frame</option><option value="hide">hide</option></select></label>
   <label>caption <select id="h-cap"><option value="tc" selected>timecode</option><option value="none">none</option></select></label>
-  <label><input type="checkbox" id="h-src" checked> outline the source turn</label>
+  <label><input type="checkbox" id="h-src" checked> outline the source turn or scene</label>
   <label><input type="checkbox" id="h-tick"> tick at the frame's moment</label>
 </div>
 <div class="mock-key"><b>Key</b> · hatched bars: mockup controls · dashed frame: the artefact (what would ship) · hatched block below: commentary</div>
@@ -196,6 +200,21 @@ a terminal, too small to read text. Below, the section flags stay in view, so th
 read together; it covers the sentiment marks instead, which are not being used while the pointer is on the lane. Above,
 it also spilled over the row above when that row was open.</li>
 <li><b>Outline on the source turn.</b> Says which turn the frame came from, which matters while the moderator turns hold.</li>
+</ul>
+
+<h3>One frame per scene (the default here, 13 Oct 2026)</h3>
+<p>A scene is a stretch between two colour changes in the strip, whoever is speaking: the preview steps when the
+screen changed, not when the speaker did. Measured on these two sessions before choosing the defaults:</p>
+<ul>
+<li><b>Scenes at ΔE 8, not the notches' 14.</b> At 14 a scene is not colour-stable inside (p90 spread 8.5 in the usability
+session), so one frame does not stand for it. At 8 the spread is under 0.5. That gives 31 scenes against 45 participant
+turns in the usability session, and 18 against 7 in the Teams call.</li>
+<li><b>2 s in, capped at half the scene.</b> A frame at the change itself is mid-transition in 13–22% of scenes (more than
+ΔE 5 from the scene's own colour); 1–2 s in, 0–6%; 5 s in it gets worse again, because some scenes last 6 s and the next
+transition arrives.</li>
+<li><b>Flickers under 2 s get no frame</b>; the preview holds the scene before.</li>
+<li><b>The limit is colour.</b> Two web pages with the same palette are one scene to this measure. Per turn catches those
+only when the speaker changes too. Switch the mode and the threshold to compare.</li>
 </ul>
 
 <h3>What building it implies</h3>
@@ -349,6 +368,7 @@ function slice(s) {
     }
   });
   s._tick = el("line", { y1: MT.y - 3, y2: PT.y + PT.h + 2, class: "tp-frame-tick", visibility: "hidden" }, svg);
+  s._span = el("rect", { y: MT.y - 2, height: PT.y + PT.h - MT.y + 4, rx: 4, class: "tp-scene-span", visibility: "hidden" }, svg);
   s._x = x;
 
   // Section flags: truncated at rest; raised in full (with a faint shadow) while the pointer is in that stretch
@@ -456,13 +476,17 @@ function readOpts() {
   opt.open = +H_("h-open").value; opt.warm = +H_("h-warm").value; opt.rest = +H_("h-rest").value; opt.grace = +H_("h-grace").value;
   opt.w = +H_("h-w").value; opt.pos = H_("h-pos").value; opt.x = H_("h-x").value; opt.mod = H_("h-mod").value;
   opt.cap = H_("h-cap").value; opt.src = H_("h-src").checked; opt.tick = H_("h-tick").checked;
+  opt.mode = H_("h-mode").value; opt.th = +H_("h-th").value; opt.at = H_("h-at").value;
+  H_("h-th").disabled = H_("h-at").disabled = opt.mode !== "scene"; H_("h-mod").disabled = opt.mode === "scene";
   document.querySelectorAll(".mock-handles input[type=range]").forEach(r => r.nextElementSibling.textContent = `${r.value} ms`);
 }
 const pop = h("div", "tp-thumb"); pop.setAttribute("aria-hidden", "true");
 const popImg = h("img"); popImg.alt = ""; const popTc = h("span", "tc"); pop.append(popImg, popTc); document.body.append(pop);
 const thumb = (() => {
   let armed = false, cur = null, shown = null, lastClose = -1e9, tOpen = 0, tSwap = 0, tClose = 0;
-  const frameIndex = (s, sec) => {
+  // Per turn: the participant turn under the pointer; over a moderator turn, the last participant turn
+  // (or nothing). Per scene: the scene under the pointer, whoever is speaking — a scene is the screen.
+  const turnIndex = (s, sec) => {
     let k = s.turns.findIndex(t => sec < t.t1); if (k < 0) k = s.turns.length - 1;
     if (!isMod(s.turns[k].code)) return s.turns[k].frame ? k : -1;
     if (opt.mod === "hide") return -1;
@@ -470,11 +494,22 @@ const thumb = (() => {
     for (let j = k + 1; j < s.turns.length; j++) if (!isMod(s.turns[j].code) && s.turns[j].frame) return j;
     return -1;
   };
-  const unmark = () => { if (!shown) return; const e = shown.s._edge[shown.k]; if (e) e.classList.remove("tp-src");
-    shown.s._tick.setAttribute("visibility", "hidden"); };
+  const target = (s, sec) => {
+    if (opt.mode === "scene") {
+      const sc = (s.scenes || []).filter(c => c.d === null || c.d >= opt.th);
+      let j = -1; sc.forEach((c, k) => { if (c.t <= sec) j = k; });
+      if (j < 0) return null;
+      return { key: `s${sc[j].t}`, f: opt.at === "change" ? sc[j].f0 : sc[j].f2, span: [sc[j].t, j + 1 < sc.length ? sc[j + 1].t : s.duration] };
+    }
+    const k = turnIndex(s, sec);
+    return k < 0 ? null : { key: `t${k}`, f: s.turns[k].frame, k };
+  };
+  const unmark = () => { if (!shown) return; const s = shown.s;
+    if (shown.k != null && s._edge[shown.k]) s._edge[shown.k].classList.remove("tp-src");
+    s._span.setAttribute("visibility", "hidden"); s._tick.setAttribute("visibility", "hidden"); };
   const place = () => {
     if (!shown || !cur) return;
-    const s = shown.s, f = s.turns[shown.k].frame, w = opt.w, hh = Math.round(w * (s.aspect || 0.5625));
+    const s = shown.s, f = shown.f, w = opt.w, hh = Math.round(w * (s.aspect || 0.5625));
     pop.style.setProperty("--tp-thumb-w", `${w}px`); pop.style.setProperty("--tp-thumb-h", `${hh}px`);
     const lane = s._lane.getBoundingClientRect(), wrap = s._svg.closest(".bn-tapestry-scroll").getBoundingClientRect();
     const ph = pop.offsetHeight || hh + 8, pw = pop.offsetWidth || w + 8;
@@ -486,20 +521,24 @@ const thumb = (() => {
   };
   const show = () => {
     if (!armed || !cur) return;
-    const k = frameIndex(cur.s, cur.sec);
+    const t = target(cur.s, cur.sec);
     unmark();
-    if (k < 0) { shown = null; pop.classList.remove("show"); return; }
-    shown = { s: cur.s, k };
-    const f = cur.s.turns[k].frame;
-    if (popImg.getAttribute("src") !== f.src) popImg.src = f.src;
-    popTc.textContent = opt.cap === "tc" ? fmt(f.t) : "";
-    if (opt.src && cur.s._edge[k]) cur.s._edge[k].classList.add("tp-src");
-    if (opt.tick) { const tx = cur.s._x(f.t); cur.s._tick.setAttribute("x1", tx); cur.s._tick.setAttribute("x2", tx); cur.s._tick.setAttribute("visibility", "visible"); }
+    if (!t) { shown = null; pop.classList.remove("show"); return; }
+    shown = { s: cur.s, ...t };
+    if (popImg.getAttribute("src") !== t.f.src) popImg.src = t.f.src;
+    popTc.textContent = opt.cap === "tc" ? fmt(t.f.t) : "";
+    const s = cur.s;
+    if (opt.src) {
+      if (t.span) { const x0 = s._x(t.span[0]), x1 = s._x(t.span[1]);
+        s._span.setAttribute("x", x0 - 1); s._span.setAttribute("width", Math.max(2, x1 - x0 + 2)); s._span.setAttribute("visibility", "visible"); }
+      else if (s._edge[t.k]) s._edge[t.k].classList.add("tp-src");
+    }
+    if (opt.tick) { const tx = s._x(t.f.t); s._tick.setAttribute("x1", tx); s._tick.setAttribute("x2", tx); s._tick.setAttribute("visibility", "visible"); }
     place();
     pop.classList.add("show");
   };
   return {
-    enter(s) {
+    enter() {
       clearTimeout(tClose);
       if (armed) return;
       clearTimeout(tOpen);
@@ -507,22 +546,22 @@ const thumb = (() => {
       tOpen = setTimeout(() => { armed = true; show(); }, warm ? 0 : opt.open);
     },
     move(s, sec, cx) {
-      const before = cur && cur.s === s ? frameIndex(cur.s, cur.sec) : null;
+      const before = cur && cur.s === s ? (target(cur.s, cur.sec) || {}).key : null;
       cur = { s, sec, cx };
       if (!armed) return;
-      const k = frameIndex(s, sec);
-      const same = shown && shown.s === s && shown.k === k;
-      if (same) { clearTimeout(tSwap); place(); return; }
-      if (before !== k) { clearTimeout(tSwap); tSwap = setTimeout(show, opt.rest); }
+      const key = (target(s, sec) || {}).key;
+      if (shown && shown.s === s && shown.key === key) { clearTimeout(tSwap); place(); return; }
+      if (before !== key) { clearTimeout(tSwap); tSwap = setTimeout(show, opt.rest); }
       place();
     },
+    refresh() { if (armed) show(); },
     leave() {
       clearTimeout(tOpen); clearTimeout(tSwap);
       tClose = setTimeout(() => { armed = false; unmark(); shown = null; pop.classList.remove("show"); lastClose = performance.now(); }, opt.grace);
     },
   };
 })();
-document.querySelectorAll(".mock-handles input, .mock-handles select").forEach(n => n.addEventListener("input", readOpts));
+document.querySelectorAll(".mock-handles input, .mock-handles select").forEach(n => n.addEventListener("input", () => { readOpts(); thumb.refresh(); }));
 readOpts();
 
 // ── Rows: SessionRow's real DOM (frontend/src/islands/SessionsTable.tsx), plus the disclosure in the ID cell

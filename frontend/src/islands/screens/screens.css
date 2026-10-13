@@ -28,14 +28,16 @@
 .screens-nav a:hover { background: var(--bn-colour-hover); }
 .screens-nav a[aria-current="true"] { background: var(--bn-selection-bg); border-color: var(--bn-selection-border); }
 .screens-thumb { position: relative; width: 92px; height: 58px; display: block; }
-.screens-thumb img, .screens-thumb .screens-thumb-empty {
-  position: absolute; left: 0; top: 0; width: 92px; height: 58px; object-fit: cover; object-position: top left;
+/* Each thumbnail sits in a slot (the slot is what scrolls into view and starts the fetch). */
+.screens-thumb-slot { position: absolute; left: 0; top: 0; width: 92px; height: 58px; }
+.screens-thumb.stacked .screens-thumb-slot { width: 84px; height: 52px; }
+.screens-thumb.stacked .screens-thumb-slot:nth-child(2) { left: 4px; top: 3px; }
+.screens-thumb.stacked .screens-thumb-slot:nth-child(3) { left: 8px; top: 6px; }
+.screens-thumb-slot img, .screens-thumb-slot .screens-thumb-empty {
+  display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left;
   border-radius: var(--bn-radius-sm); border: 1px solid var(--bn-colour-border);
   background: var(--bn-colour-quote-bg); box-shadow: 0 1px 2px var(--bn-colour-shadow);
 }
-.screens-thumb.stacked img { width: 84px; height: 52px; }
-.screens-thumb.stacked img:nth-child(2) { left: 4px; top: 3px; }
-.screens-thumb.stacked img:nth-child(3) { left: 8px; top: 6px; }
 .screens-nav-title {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); font-weight: var(--bn-weight-emphasis);

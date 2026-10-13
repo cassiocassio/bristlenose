@@ -103,7 +103,10 @@ def sample_frames(video: Path, every: float = EVERY, should_stop: Callable[[], b
     size = w * h * 4
     proc = subprocess.Popen(
         [binary_command("ffmpeg"), "-nostdin", "-hide_banner", "-loglevel", "info", "-i", str(video), "-an",
-         "-vf", f"fps=1/{every},scale={w}:{h}:flags=area,showinfo", "-f", "rawvideo", "-pix_fmt", "bgra", "-"],
+         "-vf", f"fps=1/{every},scale={w}:{h}:flags=area,showinfo",
+         # passthrough: the rawvideo muxer is CFR by default and duplicates a leading frame when
+         # the video track starts late, a frame showinfo never saw, so times and frames drift.
+         "-fps_mode", "passthrough", "-f", "rawvideo", "-pix_fmt", "bgra", "-"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     times: list[float] = []
     tail: deque[str] = deque(maxlen=12)

@@ -349,8 +349,9 @@ function ScreenCard({ register, ...p }: CardProps) {
 export function ScreensLens() {
   const [data, setData] = useState<ScreensResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cur, setCur] = useState(0);
-  const [tab, setTab] = useState(0);
+  // Held by key and session, not by position: the list re-sorts as recordings are read.
+  const [curKey, setCurKey] = useState<string | null>(null);
+  const [tabSid, setTabSid] = useState<string | null>(null);
   const [front, setFront] = useState<Front>(() => readPref("bristlenose-screens-front", ["hover", "click"] as const, "hover"));
   const [stack, setStack] = useState<StackStyle>(() =>
     readPref("bristlenose-screens-stack", ["straight", "diagonal"] as const, "straight"),
@@ -418,17 +419,19 @@ export function ScreensLens() {
     return m;
   }, [store.quotes, store.uncategorised]);
 
-  const screens = data?.screens ?? [];
-  const screen = screens[Math.min(cur, Math.max(0, screens.length - 1))];
-  const tabIdx = screen ? Math.min(tab, screen.tabs.length - 1) : 0;
+  const screens = useMemo(() => data?.screens ?? [], [data]);
+  const cur = Math.max(0, screens.findIndex((sc) => sc.key === curKey));
+  const screen = screens[cur];
+  const tabIdx = screen ? Math.max(0, screen.tabs.findIndex((t) => t.session_id === tabSid)) : 0;
 
   const go = useCallback(
     (i: number, j = 0) => {
       if (!screens.length) return;
-      setCur(((i % screens.length) + screens.length) % screens.length);
-      setTab(j);
+      const next = screens[((i % screens.length) + screens.length) % screens.length];
+      setCurKey(next.key);
+      setTabSid(next.tabs[Math.min(j, next.tabs.length - 1)]?.session_id ?? null);
     },
-    [screens.length],
+    [screens],
   );
 
   useEffect(() => {
@@ -506,7 +509,7 @@ export function ScreensLens() {
         </div>
         {screen && (
           <ScreenBoard
-            key={`${screen.key}|${tabIdx}`}
+            key={`${screen.key}|${screen.tabs[tabIdx]?.session_id}|${screen.tabs[tabIdx]?.t}`}
             screen={screen}
             tabIdx={tabIdx}
             onTab={(j) => go(cur, j)}
@@ -526,9 +529,31 @@ export function ScreensLens() {
 
 // ── Navigation ───────────────────────────────────────────────────────────
 
+/** True once the element has scrolled into view (at once where there is no IntersectionObserver). */
+function useSeen<T extends Element>(): [React.RefObject<T | null>, boolean] {
+  const ref = useRef<T | null>(null);
+  const [seen, setSeen] = useState(() => typeof IntersectionObserver === "undefined");
+  useEffect(() => {
+    if (seen || !ref.current) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) setSeen(true);
+    }, { rootMargin: "200px" });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, [seen]);
+  return [ref, seen];
+}
+
 function NavThumb({ tab }: { tab: ScreenTab }) {
-  const { src, error } = useStill(tab, 240);
-  return src ? <img alt="" src={src} /> : <span className="screens-thumb-empty" title={error ?? undefined} />;
+  // A study has dozens of screens: fetch a thumbnail only when its row is near the view, so the
+  // board's own screengrab is not queued behind every one of them.
+  const [ref, seen] = useSeen<HTMLSpanElement>();
+  const { src, error } = useStill(seen ? tab : undefined, 240);
+  return (
+    <span ref={ref} className="screens-thumb-slot">
+      {src ? <img alt="" src={src} /> : <span className="screens-thumb-empty" title={error ?? undefined} />}
+    </span>
+  );
 }
 
 function screenTitle(screen: Screen, tab?: ScreenTab): string {
@@ -659,7 +684,8 @@ function ScreenBoard(props: BoardProps) {
   const [hiddenOpen, setHiddenOpen] = useState(false);
 
   const visible = (dom: string) => byId.has(dom) && !store.hidden[dom];
-  const pins = tab.pins.filter((p) => visible(p.dom_id));
+  // No screengrab to pin to: the pinned quotes join the others rather than waiting, hidden, for it.
+  const pins = stillError ? [] : tab.pins.filter((p) => visible(p.dom_id));
   const pinByDom = new Map(pins.map((p) => [p.dom_id, p]));
   // Everything else said on this screen, by every participant on it.
   const shownPins = new Set(pins.map((p) => p.dom_id));
@@ -767,23 +793,23 @@ function ScreenBoard(props: BoardProps) {
     const start = { x: e.clientX, y: e.clientY, left: r.left - bb.left, top: r.top - bb.top };
     setFocused(null);
     setDrag({ dom, left: start.left, top: start.top, width: r.width, z });
-    const target = e.currentTarget as HTMLElement;
-    target.setPointerCapture(e.pointerId);
+    // Listen on the window, not the grip: starting the drag moves the card into the free layer,
+    // which remounts it, and a detached grip receives no more pointer events.
     const move = (ev: PointerEvent) =>
       setDrag({ dom, left: start.left + ev.clientX - start.x, top: Math.max(0, start.top + ev.clientY - start.y), width: r.width, z });
     const up = (ev: PointerEvent) => {
-      target.removeEventListener("pointermove", move);
-      target.removeEventListener("pointerup", up);
-      target.removeEventListener("pointercancel", up);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
       const left = start.left + ev.clientX - start.x;
       const top = Math.max(0, start.top + ev.clientY - start.y);
       putSpot(still, dom, { x: (left - geo.sx) / geo.W, y: (top - geo.sy) / geo.H, z });
       setSpots(spotsFor(still));
       setDrag(null);
     };
-    target.addEventListener("pointermove", move);
-    target.addEventListener("pointerup", up);
-    target.addEventListener("pointercancel", up);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
   };
 
   const cardFor = (dom: string, style: React.CSSProperties, pin?: Pin) => {

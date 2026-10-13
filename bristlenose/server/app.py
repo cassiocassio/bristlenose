@@ -1386,6 +1386,7 @@ def _install_event_watcher(
     app.state.screen_text = ScreenTextJob(
         session_factory, lambda: project_output_dir(project_dir), _run_in_progress,
         enabled=lambda: _screen_text.enabled() or bool(getattr(app.state, "dev", False)),
+        busy=lambda: app.state.scene_strips.running,
     )
 
     @asynccontextmanager

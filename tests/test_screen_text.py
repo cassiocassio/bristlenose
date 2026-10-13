@@ -172,6 +172,20 @@ def test_a_recording_with_no_picture_says_so(tmp_path: Path) -> None:
         sti.build_index(audio, FakeEngine(lambda t: []), tmp_path / "s1.json")
 
 
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="needs ffmpeg")
+def test_a_video_track_that_starts_late_keeps_frames_and_times_in_step(tmp_path: Path) -> None:
+    video = tmp_path / "share.mp4"
+    subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error",
+                    "-f", "lavfi", "-i", "sine=duration=14",
+                    "-itsoffset", "2.3", "-f", "lavfi", "-i", "testsrc=size=160x90:rate=5:duration=11",
+                    "-map", "0:a", "-map", "1:v", "-c:a", "aac", "-pix_fmt", "yuv420p", str(video)], check=True)
+    times: list[float] = []
+    out = tmp_path / "s1.json"
+    assert sti.build_index(video, FakeEngine(lambda t: times.append(t) or []), out)
+    assert times == sorted(times) and len(times) == json.loads(out.read_text())["samples"] >= 2
+    assert times[0] >= 2.0  # the first frame is where the picture starts, not a duplicate at 0
+
+
 def test_an_index_missing_its_parts_is_not_read(tmp_path: Path) -> None:
     path = tmp_path / "s1.json"
     path.write_text(json.dumps({"version": sti.INDEX_VERSION, "key": "k", "samples": 1, "moments": []}))

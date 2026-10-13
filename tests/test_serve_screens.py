@@ -223,3 +223,46 @@ def test_stills_are_named_for_their_session(project: Path, monkeypatch: pytest.M
     AuthTestClient(app).get("/api/projects/1/screens/still", params={"session_id": "s1", "t": 2, "w": 120})
     [still] = (index_dir(_out(project)) / "stills").glob("*.jpg")
     assert still.name.startswith("s1_")  # so the per-session prune removes a withdrawn participant's
+
+
+def test_a_recording_that_failed_is_not_read_again_until_it_changes(project: Path,
+                                                                   monkeypatch: pytest.MonkeyPatch) -> None:
+    app = create_app(project_dir=project, dev=False, db_url="sqlite://")
+    video = _give_s1_a_video(app, project)
+    calls: list[str] = []
+
+    def fail(v, *a, **k):
+        calls.append(v.name)
+        raise RuntimeError("decoder said no")
+    monkeypatch.setattr("bristlenose.server.screen_text_job.build_index", fail)
+    job = ScreenTextJob(app.state.db_factory, lambda: _out(project), enabled=lambda: True,
+                        engine=FakeEngine(lambda t: []))
+    job._pass()
+    job._pass()
+    assert calls == ["s1.mp4"] and "decoder said no" in job.failed["s1"]
+    video.write_bytes(b"replaced")
+    job._pass()
+    assert calls == ["s1.mp4", "s1.mp4"]
+
+
+def test_the_job_waits_for_the_scene_strips(project: Path) -> None:
+    app = create_app(project_dir=project, dev=False, db_url="sqlite://")
+    strips_busy = threading.Event()
+    strips_busy.set()
+    passes: list[float] = []
+
+    class Counting(ScreenTextJob):
+        def _pass(self) -> None:
+            super()._pass()
+            passes.append(time.time())
+
+    job = Counting(app.state.db_factory, lambda: _out(project), enabled=lambda: True,
+                   engine=FakeEngine(lambda t: []), busy=strips_busy.is_set)
+    assert job.start()
+    time.sleep(1.5)
+    assert passes == []  # still waiting
+    strips_busy.clear()
+    deadline = time.time() + 5
+    while job.running and time.time() < deadline:
+        time.sleep(0.05)
+    assert len(passes) == 1

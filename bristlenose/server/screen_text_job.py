@@ -1,10 +1,11 @@
 """Screen text in serve: a background job that reads each recording's shared screen.
 
-Shaped like the scene-strip job (``server/scene_strips.py``): a daemon thread after the report is
-readable, at startup and after each run; one session at a time; deferred while a run is in
+Shaped like the scene-strip job (``server/scene_strips.py``), and waits for it to finish, since both
+decode every recording: a daemon thread after the report is readable, at startup and after each run; one session at a time; deferred while a run is in
 progress and stopped between sessions (and between frames) when one starts; a ``start`` while a
 pass runs asks for another pass. An index is cached by the recording's identity and the engine, so
-a pass over indexed sessions costs a stat per session.
+a pass over indexed sessions costs a stat per session, and a recording that failed is not read again
+until it changes.
 
 Off unless asked for: ``BRISTLENOSE_SCREEN_TEXT=1`` (the Mac app sets it when the Diagnostics
 preference is on) or ``serve --dev``. Where no engine can run (anything but macOS with
@@ -16,13 +17,14 @@ from __future__ import annotations
 import logging
 import subprocess
 import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
 from bristlenose.screen_text.engine import ScreenTextEngine, VisionEngine
-from bristlenose.screen_text.index import build_index, index_dir
+from bristlenose.screen_text.index import build_index, cache_key, index_dir
 from bristlenose.server.scene_strips import video_sessions
 from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
@@ -37,11 +39,14 @@ class ScreenTextJob:
         run_in_progress: Callable[[], bool] = lambda: False,
         enabled: Callable[[], bool] = lambda: False,
         engine: ScreenTextEngine | None = None,
+        busy: Callable[[], bool] = lambda: False,
     ) -> None:
         self._session_factory = session_factory
         self._output_dir = output_dir
         self._run_in_progress = run_in_progress
         self._enabled = enabled
+        #: Another media job to let finish first (the scene strips): both decode every recording.
+        self._busy = busy
         self.engine: ScreenTextEngine = engine or VisionEngine()
         self._lock = threading.Lock()
         self._flag = threading.Lock()
@@ -52,6 +57,8 @@ class ScreenTextJob:
         #: Why a session has no index, by session id, so the lens can say so instead of "reading".
         #: Cleared for a session when it next indexes; lives as long as the server.
         self.failed: dict[str, str] = {}
+        #: The recording identity each failure was for: an unchanged recording is not read again.
+        self._failed_keys: dict[str, str] = {}
 
     def unavailable(self) -> str | None:
         """None when the engine can run on this machine, else why not."""
@@ -94,6 +101,8 @@ class ScreenTextJob:
                 self._finish()
 
     def _pass(self) -> None:
+        while self._busy() and not self._run_in_progress():
+            time.sleep(1)
         db = self._session_factory()
         try:
             videos = video_sessions(db)
@@ -106,16 +115,26 @@ class ScreenTextJob:
                 return
             self.current = session_id
             try:
+                key = cache_key(video, self.engine)
+            except OSError as exc:
+                self.failed[session_id] = f"the recording can't be read ({type(exc).__name__})"
+                continue
+            if self._failed_keys.get(session_id) == key:
+                continue  # it failed as it is; reading it again would fail again
+            try:
                 ensure_materialised(video)
                 if build_index(video, self.engine, out / f"{session_id}.json", should_stop=self._run_in_progress):
                     self.failed.pop(session_id, None)
+                    self._failed_keys.pop(session_id, None)
             except CloudFetchTimeoutError:
                 self.failed[session_id] = "the recording is still downloading from the cloud"
                 logger.warning("No screen text for %s: cloud download timed out", session_id)
             except subprocess.CalledProcessError as exc:
                 err = (exc.stderr or "")[-300:] if isinstance(exc.stderr, str) else ""
                 self.failed[session_id] = f"ffprobe could not read the recording (exit {exc.returncode})"
+                self._failed_keys[session_id] = key
                 logger.warning("No screen text for %s: exit %s %s", session_id, exc.returncode, err)
             except Exception as exc:  # noqa: BLE001 — one recording must not stop the rest
                 self.failed[session_id] = f"{type(exc).__name__}: {exc}"[:300]
+                self._failed_keys[session_id] = key
                 logger.warning("No screen text for %s", session_id, exc_info=True)

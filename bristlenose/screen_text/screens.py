@@ -193,14 +193,18 @@ def _good(phrase: str) -> bool:
     return True
 
 
-def match(spoken: str, lines: list[dict], rare: set[str]) -> tuple[str, dict] | None:
+def match(spoken: str, lines: list[dict], rare: set[str],
+          tokens: dict[int, list[str]] | None = None) -> tuple[str, dict] | None:
     """The best on-screen line for *spoken*: the longest shared run of words (2+, one a content
-    word), else one rare 6+ letter word; ties go to the larger line. None when nothing matches."""
+    word), else one rare 6+ letter word; ties go to the larger line. None when nothing matches.
+
+    *tokens* maps ``id(line)`` to its folded words, so a caller matching many quotes against the
+    same lines folds each line once."""
     s = fold(spoken).split()
     best: tuple[str, dict] | None = None
     best_rank = (0, 0.0)
     for ln in lines:
-        t = fold(ln["text"]).split()
+        t = tokens[id(ln)] if tokens is not None and id(ln) in tokens else fold(ln["text"]).split()
         phrase = ""
         for i in range(len(s)):
             for j in range(len(t)):
@@ -260,12 +264,18 @@ def _session_tabs(s: SessionInput, visits: list[Visit]) -> dict[str, dict[str, A
 
     content = [e for e in idx["episodes"] if not url_norm(e["text"]) and inside(e["box"])
                and fold(e["text"]) not in furniture and len(fold(e["text"])) >= 2]
-    freq = Counter(w for e in content for w in set(fold(e["text"]).split()))
+    tokens = {id(e): fold(e["text"]).split() for e in content}
+    freq = Counter(w for e in content for w in set(tokens[id(e)]))
     rare = {w for w, c in freq.items() if c <= 3}
+    # Memoised: a still is chosen by asking what is on screen at each candidate several times, and
+    # an hour of browsing has thousands of lines (measured 3 s a session unmemoised, 14 Oct 2026).
+    on_at: dict[float, list[dict]] = {}
 
     def lines_at(t: float) -> list[dict]:
         # Exactly what the still shows: a line seen up to a sample before is not on it.
-        return [e for e in content if _on(e, t, 0.05)]
+        if t not in on_at:
+            on_at[t] = [e for e in content if _on(e, t, 0.05)]
+        return on_at[t]
 
     def screen_of(q: dict) -> str | None:
         best, score = None, 0.0
@@ -275,9 +285,13 @@ def _session_tabs(s: SessionInput, visits: list[Visit]) -> dict[str, dict[str, A
                 best, score = v.key, ov
         return best
 
-    def pins_at(t: float, qs: list[dict]) -> list[tuple[dict, tuple[str, dict]]]:
-        ls = lines_at(t)
-        return [(q, m) for q in qs if (m := match(q["text"], ls, rare))]
+    pinned_at: dict[tuple[str, float], list[tuple[dict, tuple[str, dict]]]] = {}
+
+    def pins_at(t: float, qs: list[dict], key: str) -> list[tuple[dict, tuple[str, dict]]]:
+        if (key, t) not in pinned_at:
+            ls = lines_at(t)
+            pinned_at[(key, t)] = [(q, m) for q in qs if (m := match(q["text"], ls, rare, tokens))]
+        return pinned_at[(key, t)]
 
     w, h = crop[2] - crop[0], crop[3] - crop[1]
 
@@ -304,8 +318,8 @@ def _session_tabs(s: SessionInput, visits: list[Visit]) -> dict[str, dict[str, A
         # lines seen on this screen (a loading page has few), the one pinning the most quotes.
         most = max(len(lines_at(t)) for t in cands)
         drawn = [t for t in cands if len(lines_at(t)) >= 0.6 * most]
-        still = max(drawn, key=lambda t, qs=qs: (len(pins_at(t, qs)), len(lines_at(t))))
-        pins = pins_at(still, qs)
+        still = max(drawn, key=lambda t, qs=qs, k=key: (len(pins_at(t, qs, k)), len(lines_at(t))))
+        pins = pins_at(still, qs, key)
         pinned = {q["dom_id"] for q, _ in pins}
         tabs[key] = {
             "session_id": s.session_id, "code": s.code, "t": still, "crop": crop,

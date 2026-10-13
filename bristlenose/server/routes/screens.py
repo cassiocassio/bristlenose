@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 _CACHE: dict[tuple, list[dict[str, Any]]] = {}
+_DERIVE_LOCK = threading.Lock()
 _STILL_MAX_W = 1600
 
 
@@ -117,13 +118,18 @@ def get_screens(project_id: int, request: Request, db: Session = Depends(_get_db
         key = (project_id, tuple(sorted((sid, m) for sid, (m, _) in indexes.items())),
                len(quotes), max((q.id for q in quotes), default=0),
                max((str(q.last_imported_at) for q in quotes), default=""))
-        if key not in _CACHE:
-            _CACHE.clear()  # one project per server; the latest derivation is all that is wanted
-            sessions = [SessionInput(sid, codes[sid].most_common(1)[0][0] if sid in codes else sid,
-                                     rec, by_session.get(sid, []))
-                        for sid, (_, rec) in indexes.items()]
-            _CACHE[key] = derive_screens(sessions)
-        base["screens"] = _CACHE[key]
+        screens = _CACHE.get(key)
+        if screens is None:
+            with _DERIVE_LOCK:  # one derivation at a time: a second request waits for the first's
+                screens = _CACHE.get(key)
+                if screens is None:
+                    sessions = [SessionInput(sid, codes[sid].most_common(1)[0][0] if sid in codes else sid,
+                                             rec, by_session.get(sid, []))
+                                for sid, (_, rec) in indexes.items()]
+                    screens = derive_screens(sessions)
+                    _CACHE.clear()  # one project per server; the latest derivation is all that is wanted
+                    _CACHE[key] = screens
+        base["screens"] = screens
         return base
     finally:
         db.close()

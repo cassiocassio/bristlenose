@@ -444,9 +444,9 @@ THEME = HERE.parent.parent / "bristlenose" / "theme"
 # The shipped stylesheets the lens page is drawn with, in index.css order. Inlined at generation time
 # so the page cannot drift from the tree: each block is headed by its path.
 THEME_FILES = ["tokens.css", "tokens-typography.css", "colors/palette-default.css", "colors/palette-edo.css",
-               "atoms/badge.css", "atoms/timecode.css", "atoms/section-heading.css",
+               "atoms/badge.css", "atoms/timecode.css", "atoms/interactive.css", "atoms/section-heading.css",
                "molecules/person-badge.css", "organisms/blockquote.css"]
-REPORT_RULES = ["html {", "body {", "h1, h2, h3, .description {", "h1 {", "h2 {"]
+REPORT_RULES = ["html {", "body {", "h1, h2, h3, .description {", "h1 {", "h2 {", "h3 {"]
 
 
 def rule(path: Path, start: str) -> str:
@@ -468,6 +468,26 @@ def theme_css() -> str:
     return "\n\n".join(parts)
 
 
+HEADING_NOISE = re.compile(r"^(?:[^\w\s]+|\w(?=\s))\s*")  # a bullet, an asterisk, an icon read as one letter
+
+
+def page_heading(s: Session, lines: list[dict]) -> str:
+    """The page's own heading on a still: the tallest line of words in the top half of the page
+    (the topmost of near-equal heights). Prices, counts and single letters are not headings."""
+    x0, y0, x1, y1 = s.crop
+    cands = []
+    for ln in lines:
+        t = HEADING_NOISE.sub("", ln["text"].strip()).strip()
+        letters = sum(c.isalpha() for c in t)
+        if (len(t) <= 40 and letters >= 4 and letters >= 0.6 * len(t.replace(" ", ""))
+                and not re.search(r"[$£€]|\d", t) and ln["box"][1] <= y0 + 0.55 * (y1 - y0)):
+            cands.append((t, ln["box"]))
+    if not cands:
+        return ""
+    tallest = max(b[3] for _, b in cands)
+    return min(((t, b) for t, b in cands if b[3] >= 0.95 * tallest), key=lambda c: c[1][1])[0]
+
+
 def write_lens(out: Path, boards: list, stats: Counter) -> None:
     data = []
     for b in boards:
@@ -484,6 +504,7 @@ def write_lens(out: Path, boards: list, stats: Counter) -> None:
                              "elsewhere": {k: {**v, "box": next(o["s"] for o in b["tabs"] if o["s"].tag == k)
                                                .to_crop(v["box"])} for k, v in p.get("elsewhere", {}).items()}})
             tabs.append({"tag": s.tag, "code": s.code, "name": s.name, "t": int(tab["t"]),
+                         "heading": page_heading(s, tab["lines"]),
                          "src": s.frame_b64(tab["t"], 1600, cropped=True),
                          "thumb": s.frame_b64(tab["t"], 240, cropped=True), "pins": pins,
                          "loose": [quote(q) for q in tab["qs"] if not any(p["q"] is q for p in tab["pins"])]})

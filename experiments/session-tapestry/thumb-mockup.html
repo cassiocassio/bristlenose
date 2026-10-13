@@ -516,13 +516,14 @@ const thumb = (() => {
       if (before !== k) { clearTimeout(tSwap); tSwap = setTimeout(show, opt.rest); }
       place();
     },
+    refresh() { if (armed) show(); },
     leave() {
       clearTimeout(tOpen); clearTimeout(tSwap);
       tClose = setTimeout(() => { armed = false; unmark(); shown = null; pop.classList.remove("show"); lastClose = performance.now(); }, opt.grace);
     },
   };
 })();
-document.querySelectorAll(".mock-handles input, .mock-handles select").forEach(n => n.addEventListener("input", readOpts));
+document.querySelectorAll(".mock-handles input, .mock-handles select").forEach(n => n.addEventListener("input", () => { readOpts(); thumb.refresh(); }));
 readOpts();
 
 // ── Rows: SessionRow's real DOM (frontend/src/islands/SessionsTable.tsx), plus the disclosure in the ID cell

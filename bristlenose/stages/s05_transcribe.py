@@ -230,15 +230,33 @@ def segment_has_signal(start: float, end: float, levels: object) -> bool:
 # language not listed gets no prompt, which is how every language ran before.
 # Chinese is deliberately absent: the prompt's script would decide whether the
 # transcript comes out Simplified or Traditional, and that is a product call.
+#
+# Spanish, French, Italian and German (13 Oct 2026) were measured on mlx over
+# sixteen public recordings, interviews and covert conversations
+# (docs/design-whisper-style-prompts.md). The first prompts for Spanish and
+# Portuguese ended on lone assent words ("Vale.", "Certo.") and Whisper handed
+# them back over speech it skipped; these keep the fillers, carry no standalone
+# assent word, and end on a hedging clause. On the two Spanish conversations
+# with reference transcripts, word error rate fell 42.7% -> 35.7% and 58.4% ->
+# 42.0% with the skipped-window net. Portuguese is left out: it still leaks
+# pieces of its prompt on noisy speech. On faster-whisper these go in as
+# `hotwords` like English, unmeasured for these four languages.
 STYLE_PROMPTS: dict[str, str] = {
     "en": "Hmm, okay. Well, yes, I suppose so, um, and then? Right.",
     "ja": "えーと、はい。そうですね、なるほど。",
+    "es": "Eeh, pues, mm, la verdad es que sí, ¿no? Eh, más o menos, porque, mm, depende.",
+    "fr": "Euh, bon, je pense que oui. Mais ça dépend, hein. Et alors ? Je ne sais pas trop.",
+    "it": "Ehm, allora, mh, in realtà sì, no? Eh, più o meno, perché, ehm, dipende.",
+    "de": "Ähm, ja. Also, ich denke schon, äh, und dann? Genau.",
 }
 
 
 #: Whisper also accepts a language by name; a pinned ``--whisper-language
 #: English`` must reach the same prompt as ``en``.
-_LANGUAGE_NAMES: dict[str, str] = {"english": "en", "japanese": "ja"}
+_LANGUAGE_NAMES: dict[str, str] = {
+    "english": "en", "japanese": "ja", "spanish": "es", "castilian": "es",
+    "french": "fr", "italian": "it", "german": "de",
+}
 
 
 def style_prompt_for(language: str | None) -> str | None:

@@ -561,12 +561,12 @@ class TestStylePromptReachesEveryWindow:
         try:
             en = module.DecodingOptions(language="en", prompt=[], temperature=0.0)
             ja = module.DecodingOptions(language="ja", prompt=[], temperature=0.4)
-            fr = module.DecodingOptions(language="fr", prompt=[], temperature=0.0)
+            pt = module.DecodingOptions(language="pt", prompt=[], temperature=0.0)
         finally:
             s05._STYLE_PROMPT_ON.reset(token)
         assert en.prompt == s05.STYLE_PROMPTS["en"]
         assert ja.prompt == s05.STYLE_PROMPTS["ja"]
-        assert not fr.prompt
+        assert not pt.prompt
 
     def test_a_prompt_already_there_is_left_alone(self) -> None:
         module, s05 = self._module()
@@ -706,11 +706,13 @@ class TestStylePromptLanguage:
         for given in ("en", "EN", " en ", "English", "english"):
             assert style_prompt_for(given) == STYLE_PROMPTS["en"], given
         assert style_prompt_for("Japanese") == STYLE_PROMPTS["ja"]
+        for code, name in (("es", "Spanish"), ("fr", "French"), ("it", "Italian"), ("de", "German")):
+            assert style_prompt_for(code) == STYLE_PROMPTS[code] == style_prompt_for(name), code
 
     def test_a_language_without_a_measured_prompt_gets_none(self) -> None:
         from bristlenose.stages.s05_transcribe import style_prompt_for
 
-        for given in ("fr", "zh", "", None):
+        for given in ("pt", "zh", "", None):
             assert style_prompt_for(given) is None, given
 
 
@@ -843,7 +845,7 @@ class TestFasterWhisperGetsTheStylePrompt:
         assert language == "en"
 
     def test_a_language_without_a_prompt_gets_none(self, monkeypatch, tmp_path) -> None:
-        s05, hw, calls = self._backend(monkeypatch, detected="fr")
+        s05, hw, calls = self._backend(monkeypatch, detected="pt")
         settings = self._settings("auto")
 
         fn = s05._init_faster_whisper_backend(settings, hw)

@@ -243,8 +243,8 @@ def segment_has_signal(start: float, end: float, levels: object) -> bool:
 # Angola) it loses no more speech than Spanish, and the recording that had held
 # it back was a street recording Whisper hears 73 words of in 17 minutes. Its
 # fillers sound Brazilian ("né", "ahn"), and Whisper has one code for both
-# varieties; European Portuguese gains least. On faster-whisper these go in as
-# `hotwords` like English, unmeasured for these five languages.
+# varieties; European Portuguese gains least. faster-whisper sends none of these
+# (`FASTER_WHISPER_PROMPT_LANGUAGES` below).
 STYLE_PROMPTS: dict[str, str] = {
     "en": "Hmm, okay. Well, yes, I suppose so, um, and then? Right.",
     "ja": "えーと、はい。そうですね、なるほど。",
@@ -253,9 +253,9 @@ STYLE_PROMPTS: dict[str, str] = {
     "it": "Ehm, allora, mh, in realtà sì, no? Eh, più o meno, perché, ehm, dipende.",
     "de": "Ähm, ja. Also, ich denke schon, äh, und dann? Genau.",
     "pt": "Ahn, então, hum, na verdade é isso, né? Eh, mais ou menos, porque, ahn, depende.",
-    # Waves 1 and 2 (13 Oct 2026), fifteen recordings: the longest unpunctuated
-    # run fell from 114-200 words to 14-33 in Catalan, Danish, Norwegian and
-    # Swedish. Catalan takes v2: v1 swallowed a 15 s passage and handed back its
+    # Waves 1 and 2 (13 Oct 2026), fifteen recordings: in Catalan, Danish,
+    # Norwegian and Swedish the longest unpunctuated run fell on every
+    # recording that had one to fix (sv-1 133 -> 25, da-3 200 -> 14). Catalan takes v2: v1 swallowed a 15 s passage and handed back its
     # own "No ho sé, depèn." Dutch gets none on purpose: it came back punctuated
     # without a prompt, and both prompts made some recordings worse.
     # Norwegian is Whisper's "no" (Bokmål); Nynorsk ("nn") is left out.

@@ -14,8 +14,9 @@ paragraph text at the edges; and whether the raw transcript should get a readabl
 presentation the way quotes already do.
 
 **Status, 11 Oct 2026.** Recommendation #1 is built (§8): a punctuated style prompt on
-every Whisper window, on both backends, for English and Japanese (and since 13 Oct 2026
-for Spanish, French, Italian and German too: `design-whisper-style-prompts.md`, which also
+every Whisper window, on both backends, for English and Japanese (and since 13 Oct 2026, on Apple silicon only, for Spanish,
+French, Italian, German, Portuguese, Catalan, Swedish, Danish, Norwegian, Turkish and
+Korean: `design-whisper-style-prompts.md`, which also
 records the stage-5 nets built on top of the prompt). Sentence-start capitals
 (recommendation #3's second part, the capitalisation mockup's option C) shipped as
 display-only CSS in `512f0846`, recorded in `design-transcript-editing.md`.
@@ -563,8 +564,8 @@ lower-case "I". Its Japanese was already punctuated (26 。) and stayed so (25).
 
 - **Two languages only.** No recordings in other languages exist to measure on. A
   language without a prompt runs exactly as before. Chinese is left out on purpose.
-  _Post-script, 13 Oct 2026:_ public recordings were found and measured, and Spanish,
-  French, Italian and German now have prompts (`design-whisper-style-prompts.md`
+  _Post-script, 13 Oct 2026:_ public recordings were found and measured in seventeen
+  languages; eleven now have prompts and six were left without one on purpose (`design-whisper-style-prompts.md`
   § Batch 1 as shipped). Three later stage-5 nets depend on the prompt: the inaudible
   marker reads the prompt's words, the skipped-window net re-decodes without it, and
   loop removal sits between them (`bristlenose/stages/CLAUDE.md` § Stage 5).

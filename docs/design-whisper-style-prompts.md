@@ -9,6 +9,10 @@ trued-against: HEAD@main on 2026-10-13
 
 ## Changelog
 
+- _2026-10-13 (later)_ — trued up: waves 1–4 (eleven languages shipped, six measured
+  without), the review fixes (faster-whisper en/ja only, Japanese reading length, loops
+  of guesses become gaps), batch 1 re-measured on the shipped code, seed noise, and the
+  method's limits.
 - _2026-10-13_ — trued up: batch 1 shipped (es, fr, it, de; pt held), the
   skipped-window net, the inaudible marker and loop removal recorded with the
   batch 1b evidence the code cites; pre-net reading kept below as the baseline.
@@ -24,8 +28,10 @@ Since `f1ad0a4b` (0.37.0) every Whisper window gets a short punctuated "style pr
 which stops Whisper slipping into lower-case, unpunctuated text on conversational speech
 (`docs/design-transcript-readability.md` §8). It shipped for **English and Japanese**
 only, because those were the only recordings we could measure on. Since 13 Oct 2026
-Spanish, French, Italian and German have one too (§ Batch 1 as shipped); every other
-language transcribes as before, unmeasured.
+eleven more have one (Spanish, French, Italian, German, Portuguese, Catalan, Swedish,
+Danish, Norwegian, Turkish, Korean); Dutch, Polish, Czech, Russian, Ukrainian and Finnish
+were measured and left without one; Chinese is a product call on script. On
+faster-whisper only English and Japanese are sent (§ Method and its limits).
 
 A prompt cannot be added blind. Two failures were seen in testing: an English prompt on
 Japanese audio produced English loops, and a prompt containing an interview phrase
@@ -303,14 +309,14 @@ score counts what crosstalk loses; numbers in digits cost every condition alike)
 **What shipped** (`STYLE_PROMPTS` in `bristlenose/stages/s05_transcribe.py`): v2 for
 Spanish, French and Italian, v1 for German, measured over the sixteen recordings in those
 four languages. Language names (`--whisper-language French`) reach the same prompt as the
-code. Measured on mlx only; faster-whisper gets the same prompts as `hotwords`, unmeasured
-for these languages.
+code. Measured on mlx only; faster-whisper sends only the English and Japanese prompts
+(§ Method and its limits).
 
 **Portuguese followed the same day.** It was held at first because pieces of its prompt
 came back over speech, but nearly all of that came from pt-pt-2, a street recording
 Whisper hears 73 words of in 17 minutes without any prompt, and the inaudible marker
 now handles exactly that echo. On the three interviews, with the prompt and every net:
-sentences 142 → 180 (pt-br-1), 188 → 202 (pt-pt-1), 94 → 96 (pt-ao-1); longest
+sentences 142 → 180 (pt-br-1), 200 → 202 (pt-pt-1), 94 → 96 (pt-ao-1); longest
 unpunctuated run 80 → 22, 58 → 47, 37 → 30; speech blocks lost 1, 0, 0 (es-1, shipped,
 loses 9). Its fillers sound Brazilian ("né", "ahn") and Whisper has one code for both
 varieties, so European Portuguese gains least; a variant is worth trying if a
@@ -356,8 +362,8 @@ a line the net replaced is judged on its new text; then one more loop check on t
 finished transcript. The reference description is `bristlenose/stages/CLAUDE.md` § Stage 5.
 
 **What the trials left open.** A European Portuguese variant; Chinese (a product call
-on script); a clean whole-file timing of the
-net; batches 2–4; and the diagnostics row and opt-in telemetry
+on script); running the trials on faster-whisper; a clean whole-file timing of the
+net; and the diagnostics row and opt-in telemetry
 (`docs/design-transcription-quality.md`).
 
 ## Waves 1 and 2: Catalan, Dutch, Swedish, Danish, Norwegian (13 Oct 2026)
@@ -376,11 +382,12 @@ them carries a lone assent word.
 | Dutch | 24, 51, 32 already | **No prompt.** Whisper already punctuates Dutch; v1 made nl-1 worse (24 → 36) and both cut sentence ends |
 | Swedish | 133 → 25, 47 → 40, 25 → 25 | **v1**. v2 made sv-2 worse (47 → 52) |
 | Danish | 114 → 30, 114 → 83, 200 → 14 | **v1**. v2 lost a block of da-3 |
-| Norwegian | 144 → 24, 84 → 19, 86 → 15 | **v1**, keyed `no` (Whisper's Bokmål code; `nb` reaches it, Nynorsk `nn` does not) |
+| Norwegian | 144 → 24, 84 → 19, 86 → 15 | **v1**, keyed `no` (Whisper's Bokmål code; Nynorsk `nn` gets none) |
 
 Checks that did not show up in the totals: every "lost" 30-second block was read. The one
 in nb-1 is a song the prompted run left out, which is right; sv-2's moved 5 s earlier and
-is intact; ca-2's was real speech lost under v1 and, less of it, under v2. The inaudible
+is intact; ca-2's was real speech lost under v1 and, less of it, under v2; ca-1 also lost
+one block under v2, the shipped Catalan prompt. Under the shipped prompts the inaudible
 marker fired three times, all next to music and Whisper's stock hallucinations
 ("Welcome.", a subtitle credit); one Norwegian gap sits before a "Hva da?" that may be a
 prompt fragment. Whole prompt clauses reappearing as text: Catalan v1 12 against 3 with no
@@ -405,7 +412,7 @@ appear here; forcing the language remains the fix if it does.
 | Russian | 22, 20, 53 | **No prompt.** v1 made ru-2 worse (20 → 47); v2 lost 8 blocks of it |
 | Ukrainian | 17, 21, 19 | **No prompt.** v2 lost 13 blocks of uk-3; v1 lost 2–3 |
 | Finnish | 26, 22, 21 | **No prompt.** No gain; v2 cut sentence ends and lost 3 blocks |
-| Turkish | 40, 37, 63 | **v2**: 23, 32, 21, nothing lost (the one "lost" block is an English song) |
+| Turkish | 40, 37, 63 | **v2**: 23, 32, 21, nothing lost (v1's one "lost" block, in tr-3, is an English song) |
 | Korean | 74, 54, 55 | **v1**: 14, 32, 26, sentence ends 183 → 325 on ko-1; one block of the press Q&A reads differently |
 
 **What the four waves describe** (a description of three recordings a language, not a
@@ -434,8 +441,8 @@ per-stretch net decisions, so that is unmeasured.
 - **The thresholds were calibrated on the recordings they were then judged on.** The
   inaudible marker's cut-off sits in a thin margin: "Sí, sí." at 0.044 and "Oui, mais…"
   at 0.136 are marked, "Sí, sí, sí." at 0.185 and "Sì, sì, sì." at 0.255 are kept, and
-  the first may well be a real backchannel. Out of sample (waves 1–4) it fired three
-  times, all beside music, never on the partial echoes it was built for. The loop
+  the first may well be a real backchannel. Out of sample (waves 1–4), under the
+  shipped prompts, it fired three times, all beside music, never on the partial echoes it was built for. The loop
   thresholds were tuned on es-1, es-4 and pt-pt-2. Expect to revisit both on real
   projects.
 - **The acceptance criteria above were not all met, and were waived knowingly.** German

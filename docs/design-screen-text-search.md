@@ -9,7 +9,8 @@ updated: 13 Oct 2026
 decides whether it is.** Method and every number below:
 [`experiments/screen-text/README.md`](../experiments/screen-text/README.md). A second pass the same day
 spiked the open risks (§4): the end-to-end pipeline, Vision under the App Sandbox, the search result
-model, a better privacy filter, and cheaper settings for the non-Mac channels.
+model, a better privacy filter, and cheaper settings for the non-Mac channels. A third pass ran Vision
+inside the real sidecar, as the sandboxed app launches it (§3.3).
 
 ## 1. The problem
 
@@ -39,7 +40,7 @@ on 11 frames; a dense OCR sweep every 2 s as the oracle for coverage.
 | Is a frame at each colour change enough? | **No.** The thumbnail plan's frames capture 44–61% of text that stays on screen 4 s or more. 55–62% of text changes have no colour change within ±3 s (white page to white page). |
 | What is enough? | OCR every 4 s and keep what changed: 84–87% of ≥ 4 s episodes. |
 | What does the whole pipeline cost on a Mac? | **Measured end to end: 1.9–2.0 minutes per hour of 1080p call recording**, ~200 MB, one decode pass on a pipe, nothing written but the index. 5.5 min/h for a 4K, 120 fps screen capture (decode-bound). |
-| Does Vision work inside the App Sandbox? | **Yes, from frozen Python.** A PyInstaller-built probe in a sandboxed `.app` read a frame with Vision through pyobjc, which adds ~2 MB to the bundle. Not yet tried as the sidecar's inherited-sandbox child. |
+| Does Vision work inside the App Sandbox? | **Yes, in the real sidecar, with one environment variable.** Run by the sandboxed Debug app as its inherited-sandbox child, Vision failed until `CFFIXED_USER_HOME` pointed Foundation at the container; with it, 8 of 8 frames read, 0.15–0.22 s each warm. pyobjc adds ~2 MB to the bundle. |
 | Keep the full-resolution frames? | **No.** 73–555 KB each, and the recording already holds every one of them: any frame comes back in 0.11 s. Keep text, boxes and times: ~200–230 KB an hour (45 KB gzipped). |
 | Does the PII stage protect it? | **Poorly.** Presidio catches 16 of 26 personal targets (15/17 names, 1/6 bookmark titles, 0/3 postcodes) and damages 27 of 202 ordinary UI strings. |
 | Is there a better privacy tool? | **Word-position stickiness.** A word that sits in the same place on half the share frames is chrome. Removes 16 of 19 personal targets and **no page content**; the 5 other strings it removes are browser chrome. |
@@ -97,11 +98,32 @@ Notes that matter for the choice:
   with the App Sandbox entitlement ran in its container (its home resolved to
   `~/Library/Containers/<id>/Data`) and read a frame with Vision accurate, no extra entitlement.
   pyobjc's frozen footprint is ~2 MB (`objc` 0.9 MB, `Quartz` 0.7 MB, the rest small), because
-  PyInstaller keeps only the compiled extensions. **Not yet proven:** the same call from the real
-  sidecar, which runs as an inherited-sandbox child of the Swift host, and the privacy manifest's
-  required-reason coverage for pyobjc's binaries. A Swift helper executable (like
+  PyInstaller keeps only the compiled extensions. **Spiked in the real sidecar** (third pass, below).
+  **Still unproven:** a TestFlight-shaped build (Apple Distribution signing, Hardened Runtime on the
+  host) and the privacy manifest's required-reason coverage for pyobjc's binaries. A Swift helper executable (like
   `desktop/mcp-helper/`) would also work but adds a fifth signed executable and leaves the Mac CLI
   without OCR. The host app doing OCR itself is ruled out: it forks the code path.
+- **Vision in the real sidecar needs `CFFIXED_USER_HOME`, measured.** The sidecar was built by
+  `ensure-sidecar.sh` with pyobjc added, signed with its shipped entitlements (`app-sandbox`,
+  `inherit`, the JIT exceptions) and launched by the sandboxed Debug app, which reported
+  `sandbox=on`; a read of an ordinary file outside the grant was refused with `EPERM`. The first
+  `VNRecognizeTextRequest` then returned failure with no error object. The log said
+  `E5RT Error: e5rt_e5_compiler_create call failed (Code: 11)` and `Underlying detector load error`.
+  **Cause:** Vision compiles its text model once and caches it at
+  `<NSHomeDirectory()>/Library/Caches/<id>/com.apple.e5rt.e5bundlecache`. A sandboxed *app* resolves
+  that inside its container, and so did the standalone probe. An *inherited* child resolves
+  `NSHomeDirectory()` to the real home even though the host passes `HOME` as the container. The cache
+  write is refused, and the compile fails. **Fix:** set `CFFIXED_USER_HOME` to the container before
+  anything initialises Foundation. With it, 8 of 8 frames of a 3456×2234 screen recording read 74–97
+  lines each at peak RSS ~408 MB for the whole serve. **First use compiles the model:** 41 s on the
+  first frame of the cold run, then 0.15–0.20 s. A relaunch read its first frame in 0.63 s, so the
+  cache persists in the container. The cache folder is named for the OS build, so expect one compile
+  after each macOS update. The variable belongs in `BristlenoseShared.childEnvironment` (the spike set
+  it in `sidecar_entry.py`), and it likely matters beyond Vision: any system framework that caches
+  under the home directory will be refused writes in the inherited child. Patch:
+  `experiments/screen-text/sidecar-vision-spike.patch`.
+- **The sandbox refuses POSIX semaphores**, so `multiprocessing.Queue`/`Lock` fail with `EPERM` inside
+  the sidecar. The screen-text job must stay in one process, which the spike's design already is.
 - **Two things a long-running Vision loop needs, both measured.** Build each frame's `CGImage` from an
   `NSData` copy of the bytes, and wrap each call in `objc.autorelease_pool()`. With
   `CGDataProviderCreateWithData` over the Python buffer, memory grew by one whole frame per call
@@ -268,9 +290,12 @@ sampler (`pipeline_spike.py`), Vision under the App Sandbox from frozen Python (
    ticks on the timeline from their own route. *Unproven:* the row's on-demand 320 px frame with the
    box drawn on it (cheap by measurement, 0.11 s a seek, but not built).
 5. **Packaging, Mac**: pyobjc (`pyobjc-core`, `-Cocoa`, `-Quartz`, `-Vision`) in the `apple` extra
-   and the sidecar spec. *Unproven and first to do:* Vision from the real sidecar as an
-   inherited-sandbox child, in a TestFlight-shaped build, and the privacy manifest's coverage of
-   pyobjc's binaries. The standalone sandboxed probe passing makes this likely, not certain.
+   and the sidecar spec (PyInstaller picked all four up from the imports; no spec change was needed in
+   the spike), and `CFFIXED_USER_HOME` = the container in `BristlenoseShared.childEnvironment` (§3.3).
+   The job should expect a one-time model compile of tens of seconds on its first frame after each
+   macOS update and say nothing about it: it runs in the background. *Unproven:* a TestFlight-shaped
+   build (Apple Distribution, Hardened Runtime on the host), and the privacy manifest's coverage of
+   pyobjc's binaries; route both through the app-store-police agent.
 6. **Packaging, elsewhere**, only if §6 says so: RapidOCR as an optional extra with pinned, hashed,
    self-hosted models, the 960 px detection cap, 2 threads, and the unchanged-frame gate.
 7. **Tests**: synthetic frames with known text (rendered, never participant frames) for the sampler
@@ -283,7 +308,7 @@ sampler (`pipeline_spike.py`), Vision under the App Sandbox from frozen Python (
 ## 5. What this did not measure
 
 CJK, Windows desktops, a real terminal session (the terminal frames were synthetic), Zoom's and
-Meet's layouts (only Teams), mobile screen shares, the sidecar's own inherited sandbox, and the CPU
+Meet's layouts (only Teams), mobile screen shares, a TestFlight-signed sidecar, and the CPU
 and thermal cost of the job on a fan-less laptop during a call. Two sessions and one reader's targets:
 directionally firm, not a benchmark. The stickiness rule's 0-content-lost result is on 146 targets in
 two IKEA sessions; a session that stays on one page for most of its length would test it harder.

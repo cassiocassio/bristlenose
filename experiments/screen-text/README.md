@@ -23,6 +23,7 @@ data. This README holds aggregates only.
 | `sticky_eval.py` | Second pass: compares four chrome-removal rules (whole line, text anywhere, line at a place, word at a place) against the truth targets |
 | `search_spike.py` | Second pass: searches an index with the shipped matching rule, groups hits into result rows, attaches the transcript paragraph at each, and times the scan |
 | `rapid_levers.py` | Second pass: RapidOCR variants at 2 threads (default, detection capped at 960 px, PP-OCRv5 Latin mobile, both) for speed and accuracy |
+| `sidecar-vision-spike.patch` | Third pass: the throwaway changes that put Vision in the real sidecar — pyobjc in the `apple` extra, a probe started by `sidecar_entry.py` when serving, and the `CFFIXED_USER_HOME` fix. Apply to a scratch worktree, never to `main`. Its `_variants`/`_worker` helpers are dead: the sandbox refuses the semaphores they need |
 
 ## Material
 
@@ -220,6 +221,36 @@ A folded scan of 495–930 episodes takes 0.0–0.3 ms per query. Rows per query
 An unchanged-frame gate (edge-map diff against the previous 4 s sample, OCR only above the threshold)
 at 0.1: OCR on 63% (p3) and 69% (Teams) of samples, keeping 95–96% of distinct lines. Non-default
 models download at first use from modelscope.cn.
+
+## Third pass: Vision in the real sidecar
+
+The second pass ran Vision in a sandboxed `.app` of its own. The shipped shape is different: the
+sidecar is a child of the sandboxed host that **inherits** its sandbox. The third pass built that
+shape in a throwaway worktree. pyobjc went into the `apple` extra, and a probe in the sidecar read
+8 frames (one every 4 s, from 60% in) of the served project's first recording through the bundled
+ffmpeg. `ensure-sidecar.sh` built and signed the sidecar with its shipped entitlements, and the
+sandboxed Debug app launched it as its child. Results:
+
+| | without the fix | with `CFFIXED_USER_HOME` = container |
+|---|---|---|
+| sandbox on (a read of a plain file outside the grant) | refused, `EPERM` | refused, `EPERM` |
+| `NSHomeDirectory()` in the sidecar | the real home (the host's `HOME` env is the container) | the container |
+| Vision | fails on the first frame: `e5rt_e5_compiler_create … (Code: 11)`, detector load error, no `NSError` | 8 of 8 frames, 74–97 lines each (3456×2234 screen recording) |
+| first frame, cold | — | 41 s (the one-time model compile) |
+| first frame, after relaunch | — | 0.63 s |
+| later frames | — | 0.15–0.22 s |
+| peak RSS, whole serve | — | ~400 MB |
+| bundle size | 561 MB against main's 559 MB | |
+
+**The cause:** Vision caches its compiled model under
+`<NSHomeDirectory()>/Library/Caches/<id>/com.apple.e5rt.e5bundlecache`. The standalone sandboxed
+probe's cache was in its container, and unsandboxed processes keep theirs under the real
+`~/Library/Caches/`. The inherited child computed the real-home path, and the sandbox refused the
+write. The sandbox also refused POSIX semaphores (`multiprocessing.Queue` raised `EPERM`).
+
+Not tested: a TestFlight-signed build (Apple Distribution, Hardened Runtime on the host). The probe
+wrote its result file into the served project's hidden `.bristlenose/` folder; both result files were
+deleted afterwards, and the worktree and its DerivedData were removed.
 
 ## Caveats
 

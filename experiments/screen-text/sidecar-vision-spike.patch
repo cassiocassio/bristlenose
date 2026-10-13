@@ -1,0 +1,238 @@
+diff --git a/bristlenose/_vision_probe_spike.py b/bristlenose/_vision_probe_spike.py
+new file mode 100644
+index 00000000..03e582a2
+--- /dev/null
++++ b/bristlenose/_vision_probe_spike.py
+@@ -0,0 +1,193 @@
++"""SPIKE, never committed: does Apple Vision work inside the real, sandboxed, inherited sidecar?
++
++Started by desktop/sidecar_entry.py when serving. After a short delay, finds the first video in the
++served project, pipes 30 full-resolution frames through the bundled ffmpeg into Vision (accurate),
++and writes <project>/bristlenose-output/.bristlenose/vision-probe-7c2e.json.
++"""
++
++from __future__ import annotations
++
++import json
++import os
++import resource
++import subprocess
++import sys
++import threading
++import time
++import traceback
++from pathlib import Path
++
++TOKEN = "7c2e"
++N_FRAMES = 30
++
++
++def _project(argv: list[str]) -> Path | None:
++    for a in reversed(argv):
++        if not a.startswith("-") and Path(a).is_dir():
++            return Path(a)
++    return None
++
++
++def _video(project: Path) -> Path | None:
++    from bristlenose.models import VIDEO_EXTENSIONS
++    from bristlenose.utils.fs import is_dataless, is_os_metadata
++    for p in sorted(project.rglob("*")):
++        if "bristlenose-output" in p.parts or is_os_metadata(p) or not p.is_file():
++            continue
++        if p.suffix.lower() in VIDEO_EXTENSIONS and not is_dataless(p):
++            return p
++    return None
++
++
++def _ocr(buf: bytes, w: int, h: int) -> list[str]:
++    import Foundation
++    import Quartz
++    import Vision
++    provider = Quartz.CGDataProviderCreateWithCFData(Foundation.NSData.dataWithBytes_length_(buf, len(buf)))
++    img = Quartz.CGImageCreate(w, h, 8, 32, w * 4, Quartz.CGColorSpaceCreateDeviceRGB(),
++                               Quartz.kCGBitmapByteOrder32Little | Quartz.kCGImageAlphaPremultipliedFirst,
++                               provider, None, False, Quartz.kCGRenderingIntentDefault)
++    handler = Vision.VNImageRequestHandler.alloc().initWithCGImage_options_(img, None)
++    req = Vision.VNRecognizeTextRequest.alloc().init()
++    req.setRecognitionLevel_(0)
++    req.setUsesLanguageCorrection_(True)
++    ok, err = handler.performRequests_error_([req], None)
++    if not ok:
++        raise RuntimeError(str(err))
++    return [str(o.topCandidates_(1)[0].string()) for o in (req.results() or [])]
++
++
++def _worker(video: str, ffmpeg: str, w: int, h: int, at: float, q) -> None:
++    res: dict = {}
++    try:
++        import Foundation
++        import objc
++        res["nshome"] = str(Foundation.NSHomeDirectory())
++        for name in ("CS_DARWIN_USER_CACHE_DIR", "CS_DARWIN_USER_TEMP_DIR"):
++            try:
++                res[name] = os.confstr(name)
++            except (ValueError, OSError) as e:
++                res[name] = f"? {e}"
++        buf = subprocess.run([ffmpeg, "-nostdin", "-loglevel", "error", "-ss", f"{at:.1f}", "-i", video, "-an",
++                              "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "bgra", "-"], capture_output=True).stdout
++        t = time.perf_counter()
++        with objc.autorelease_pool():
++            lines = _ocr(buf, w, h)
++        res.update({"ok": True, "n_lines": len(lines), "s": round(time.perf_counter() - t, 2)})
++    except BaseException as e:  # noqa: BLE001
++        res.update({"ok": False, "error": f"{type(e).__name__}: {e}"})
++    q.put(res)
++
++
++def _variants(video: Path, ffmpeg: str, w: int, h: int, at: float) -> dict:
++    import multiprocessing as mp
++    ctx = mp.get_context("spawn")
++    container = os.environ.get("HOME", "")
++    variants = {"as_is": {}, "cffixed_home": {"CFFIXED_USER_HOME": container},
++                "dirhelper_suffix": {"DIRHELPER_USER_DIR_SUFFIX": "app.bristlenose"},
++                "both": {"CFFIXED_USER_HOME": container, "DIRHELPER_USER_DIR_SUFFIX": "app.bristlenose"}}
++    out = {}
++    for name, extra in variants.items():
++        saved = {k: os.environ.get(k) for k in extra}
++        os.environ.update(extra)
++        q = ctx.Queue()
++        pr = ctx.Process(target=_worker, args=(str(video), ffmpeg, w, h, at, q))
++        pr.start()
++        try:
++            out[name] = q.get(timeout=120)
++        except Exception as e:  # noqa: BLE001
++            out[name] = {"ok": False, "error": f"no result: {e}", "exitcode": pr.exitcode}
++        pr.join(timeout=10)
++        for k, v in saved.items():
++            if v is None:
++                os.environ.pop(k, None)
++            else:
++                os.environ[k] = v
++    return out
++
++
++def _run(argv: list[str]) -> None:
++    out: dict = {"token": TOKEN, "started": time.strftime("%Y-%m-%dT%H:%M:%S"), "argv_tail": argv[-3:]}
++    dest = None
++    try:
++        import Foundation
++        import objc
++        out["home"] = str(Foundation.NSHomeDirectory())
++        out["sandboxed"] = "/Library/Containers/" in out["home"]
++        out["ppid"] = os.getppid()
++        out["hosted_by_desktop"] = os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP")
++        out["frozen"] = bool(getattr(sys, "frozen", False))
++        out["pyobjc"] = objc.__version__
++        project = _project(argv)
++        out["project_found"] = project is not None
++        if project is None:
++            return
++        dest = project / "bristlenose-output" / ".bristlenose" / f"vision-probe-{TOKEN}.json"
++        video = _video(project)
++        out["video"] = video.name if video else None
++        if video is None:
++            return
++        from bristlenose.utils.bundled_binary import binary_command
++        ffmpeg, ffprobe = binary_command("ffmpeg"), binary_command("ffprobe")
++        out["ffmpeg"] = ffmpeg
++        probe = subprocess.run([ffprobe, "-v", "error", "-select_streams", "v:0", "-show_entries",
++                                "stream=width,height:format=duration", "-of", "csv=p=0", str(video)],
++                               capture_output=True, text=True)
++        vals = [v for v in probe.stdout.replace("\n", ",").split(",") if v]
++        w, h, dur = int(vals[0]), int(vals[1]), float(vals[2])
++        out["size"], out["duration_s"] = [w, h], round(dur, 1)
++        start = dur * 0.6
++        out["env_home"], out["env_tmpdir"] = os.environ.get("HOME"), os.environ.get("TMPDIR")
++        for name in ("CS_DARWIN_USER_CACHE_DIR", "CS_DARWIN_USER_TEMP_DIR"):
++            try:
++                out[name] = os.confstr(name)
++            except (ValueError, OSError) as e:
++                out[name] = f"? {e}"
++        try:
++            import pwd
++            open(os.path.join(pwd.getpwuid(os.getuid()).pw_dir, ".zshrc")).read(1)
++            out["read_outside_grant"] = "allowed"
++        except OSError as e:
++            out["read_outside_grant"] = f"denied ({type(e).__name__} {e.errno})"
++        out["cffixed_user_home"] = os.environ.get("CFFIXED_USER_HOME")
++        t0 = time.perf_counter()
++        proc = subprocess.Popen([ffmpeg, "-nostdin", "-loglevel", "error", "-ss", f"{start:.1f}", "-i", str(video),
++                                 "-an", "-vf", "fps=1/4", "-frames:v", str(N_FRAMES), "-f", "rawvideo",
++                                 "-pix_fmt", "bgra", "-"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
++        size = w * h * 4
++        counts, secs, rss, samples = [], [], [], []
++        while True:
++            buf = proc.stdout.read(size)
++            if len(buf) < size:
++                break
++            t = time.perf_counter()
++            with objc.autorelease_pool():
++                lines = _ocr(buf, w, h)
++            secs.append(round(time.perf_counter() - t, 3))
++            counts.append(len(lines))
++            if len(counts) in (10, 20, 30):
++                samples.append(lines[:4])
++            rss.append(round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 2**20))
++        proc.wait()
++        out["ffmpeg_rc"] = proc.returncode
++        out["ffmpeg_err"] = proc.stderr.read().decode("utf-8", "replace")[-300:]
++        out.update({"frames": len(counts), "lines_per_frame": counts, "ocr_s": secs,
++                    "wall_s": round(time.perf_counter() - t0, 1), "peak_rss_mb_trace": rss, "samples": samples})
++    except BaseException:
++        out["error"] = traceback.format_exc()[-2000:]
++    finally:
++        out["finished"] = time.strftime("%Y-%m-%dT%H:%M:%S")
++        try:
++            if dest is not None:
++                dest.parent.mkdir(parents=True, exist_ok=True)
++                dest.write_text(json.dumps(out, ensure_ascii=False, indent=1))
++            sys.stderr.write(f"[vision-probe-{TOKEN}] {json.dumps({k: out.get(k) for k in ('sandboxed', 'frames', 'error')})}\n")
++        except BaseException:
++            pass
++
++
++def start(argv: list[str]) -> None:
++    def later() -> None:
++        time.sleep(8)
++        _run(argv)
++    threading.Thread(target=later, daemon=True, name="vision-probe").start()
+diff --git a/desktop/sidecar_entry.py b/desktop/sidecar_entry.py
+index 3073e97b..3d9894a9 100644
+--- a/desktop/sidecar_entry.py
++++ b/desktop/sidecar_entry.py
+@@ -55,6 +55,11 @@ def main() -> None:
+     # surfacing as `resource_tracker: process died unexpectedly`. freeze_support()
+     # detects the bootstrap, runs the worker, and exits; it's a no-op for a normal
+     # invocation. Must run before any argv manipulation.
++    # SPIKE (screen text): Foundation in an inherited-sandbox child resolves NSHomeDirectory() to the
++    # REAL home, so system frameworks put caches where the sandbox refuses writes (Vision's e5rt
++    # model cache). Point Foundation at the container the host already gave us as HOME.
++    if "/Library/Containers/" in os.environ.get("HOME", ""):
++        os.environ.setdefault("CFFIXED_USER_HOME", os.environ["HOME"])
+     import multiprocessing
+ 
+     multiprocessing.freeze_support()
+@@ -76,6 +81,9 @@ def main() -> None:
+         sys.argv = [sys.argv[0], "serve", *sys.argv[1:]]
+     elif sys.argv[1] != "serve":
+         sys.argv = [sys.argv[0], "serve", *sys.argv[1:]]
++    if sys.argv[1] == "serve":  # SPIKE (screen text): Vision inside the sandboxed sidecar
++        from bristlenose import _vision_probe_spike
++        _vision_probe_spike.start(sys.argv[2:])
+     app()
+ 
+ 
+diff --git a/pyproject.toml b/pyproject.toml
+index 1ffb0a6a..71b36933 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -92,6 +92,8 @@ dependencies = [
+ apple = [
+     "mlx>=0.16",
+     "mlx-whisper>=0.4",
++    "pyobjc-framework-Vision>=10",
++    "pyobjc-framework-Quartz>=10",
+ ]
+ 
+ # Contributor dev environment — tests, lint, types. Adds Mac-only MLX

@@ -263,6 +263,15 @@ STYLE_PROMPTS: dict[str, str] = {
     "sv": "Ehm, alltså, jag tänker väl så, eh, och sen då? Det beror lite på, liksom.",
     "da": "Øh, altså, jeg tror nok det, øh, og hvad så? Det kommer lidt an på.",
     "no": "Ehm, altså, jeg tror vel det, eh, og hva da? Det kommer litt an på, liksom.",
+    # Waves 3 and 4 (13 Oct 2026), 21 recordings. Turkish (v2) and Korean (v1)
+    # gain: longest unpunctuated run 63 -> 21 and 74 -> 14, nothing real lost.
+    # Polish, Czech, Russian, Ukrainian and Finnish get none ON PURPOSE: Whisper
+    # already punctuates them (longest runs 17-53 words with no prompt), and the
+    # prompts only lost speech (Ukrainian v2 13 blocks, Russian v2 8, Czech v1 4).
+    # The rule that held across all four waves: a prompt helps only where the
+    # unprompted output runs on for 50+ words.
+    "tr": "Eee, yani, ııı, aslında öyle, değil mi? Şey, bilmiyorum, ııı, biraz duruma bağlı.",
+    "ko": "음, 그러니까, 저는 그렇게 생각해요. 근데 어, 잘 모르겠어요, 좀 상황에 따라 다른 것 같아요.",
 }
 
 
@@ -272,7 +281,7 @@ _LANGUAGE_NAMES: dict[str, str] = {
     "english": "en", "japanese": "ja", "spanish": "es", "castilian": "es",
     "french": "fr", "italian": "it", "german": "de", "portuguese": "pt",
     "catalan": "ca", "valencian": "ca", "swedish": "sv", "danish": "da",
-    "norwegian": "no", "nb": "no",
+    "norwegian": "no", "nb": "no", "turkish": "tr", "korean": "ko",
 }
 
 

@@ -355,7 +355,8 @@ drops loops from its own re-decodes before judging them; then the inaudible mark
 a line the net replaced is judged on its new text; then one more loop check on the
 finished transcript. The reference description is `bristlenose/stages/CLAUDE.md` § Stage 5.
 
-**What the trials left open.** A European Portuguese variant; a clean whole-file timing of the
+**What the trials left open.** A European Portuguese variant; Chinese (a product call
+on script); a clean whole-file timing of the
 net; batches 2–4; and the diagnostics row and opt-in telemetry
 (`docs/design-transcription-quality.md`).
 
@@ -385,8 +386,42 @@ marker fired three times, all next to music and Whisper's stock hallucinations
 prompt fragment. Whole prompt clauses reappearing as text: Catalan v1 12 against 3 with no
 prompt, the rest 0–3.
 
+## Waves 3 and 4: Polish, Czech, Russian, Ukrainian, Finnish, Turkish, Korean (13 Oct 2026)
+
+Twenty-one recordings from Wikimedia Commons and archive.org: radio talk and museum
+conversations (pl), a podcast and two live festival talks (cs, 53 and 67 min), Oral
+History Foundation interviews on 1970s tape and 2015 video (ru), amateur and studio
+interviews (uk), podcasts (fi), Açık Radyo talk shows (tr), a players' group chat, a
+student interview and a press Q&A (ko). Same three runs per recording. The Slavic
+prompts each show the comma their language requires before a subordinate clause, and
+the Ukrainian ones use і and ї so they cannot read as Russian. Whisper detected
+Ukrainian correctly on every run, so the feared Ukrainian-as-Russian misdetection did not
+appear here; forcing the language remains the fix if it does.
+
+| Language | Longest run without a prompt | Decision |
+|---|---|---|
+| Polish | 19, 25, 27 | **No prompt.** No gain; both prompts lost blocks (2, 2) and cut sentence ends |
+| Czech | 36, 19, 28 | **No prompt.** v1 helped cs-1 (36 → 20) but lost 4 blocks of cs-3 |
+| Russian | 22, 20, 53 | **No prompt.** v1 made ru-2 worse (20 → 47); v2 lost 8 blocks of it |
+| Ukrainian | 17, 21, 19 | **No prompt.** v2 lost 13 blocks of uk-3; v1 lost 2–3 |
+| Finnish | 26, 22, 21 | **No prompt.** No gain; v2 cut sentence ends and lost 3 blocks |
+| Turkish | 40, 37, 63 | **v2**: 23, 32, 21, nothing lost (the one "lost" block is an English song) |
+| Korean | 74, 54, 55 | **v1**: 14, 32, 26, sentence ends 183 → 325 on ko-1; one block of the press Q&A reads differently |
+
+**The rule that held across all four waves.** A prompt helps where Whisper's own output
+runs on: every language that shipped one had unprompted runs of 50 words or more
+(Spanish, French, Italian, German, Portuguese, Catalan, Swedish, Danish, Norwegian,
+Turkish, Korean). Where Whisper already punctuates (Dutch and the five above, runs under
+about 50), a prompt has nothing to fix and its only measurable effect is lost speech.
+So "no prompt" is a measured result for six languages, not a gap. Korean and Finnish
+count fewer "words" per second (eojeol and long compounds), so the skipped-window net's
+0.3 and 1.0 words-a-second cut-offs may be miscalibrated for them; the trials record no
+per-stretch net decisions, so that is unmeasured.
+
 ## Status
 
+- 13 Oct 2026: waves 3 and 4 shipped tr and ko; pl, cs, ru, uk and fi measured and left
+  without a prompt.
 - 13 Oct 2026: waves 1 and 2 shipped: ca, sv, da, no; Dutch measured and left without a
   prompt.
 - 13 Oct 2026: batch 1 shipped for es, fr, it and de, then pt once the nets were in. The net, the inaudible

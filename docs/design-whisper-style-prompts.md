@@ -303,9 +303,18 @@ score counts what crosstalk loses; numbers in digits cost every condition alike)
 **What shipped** (`STYLE_PROMPTS` in `bristlenose/stages/s05_transcribe.py`): v2 for
 Spanish, French and Italian, v1 for German, measured over the sixteen recordings in those
 four languages. Language names (`--whisper-language French`) reach the same prompt as the
-code. **Portuguese is held**: on noisy speech it still hands back pieces of its prompt.
-Measured on mlx only; faster-whisper gets the same prompts as `hotwords`, unmeasured for
-these four languages.
+code. Measured on mlx only; faster-whisper gets the same prompts as `hotwords`, unmeasured
+for these languages.
+
+**Portuguese followed the same day.** It was held at first because pieces of its prompt
+came back over speech, but nearly all of that came from pt-pt-2, a street recording
+Whisper hears 73 words of in 17 minutes without any prompt, and the inaudible marker
+now handles exactly that echo. On the three interviews, with the prompt and every net:
+sentences 142 → 181 (pt-br-1), 188 → 202 (pt-pt-1), 94 → 96 (pt-ao-1); longest
+unpunctuated run 80 → 22, 58 → 47, 37 → 30; speech blocks lost 1, 0, 0 (es-1, shipped,
+loses 9). Its fillers sound Brazilian ("né", "ahn") and Whisper has one code for both
+varieties, so European Portuguese gains least; a variant is worth trying if a
+Portugal-based user turns up.
 
 **The skipped-window net, as built** (not as planned above). A stretch of at least 8 s
 with fewer than 0.3 words a second, where at least 40% of the 100 ms windows sit 15 dB
@@ -346,12 +355,12 @@ drops loops from its own re-decodes before judging them; then the inaudible mark
 a line the net replaced is judged on its new text; then one more loop check on the
 finished transcript. The reference description is `bristlenose/stages/CLAUDE.md` § Stage 5.
 
-**What the trials left open.** The Portuguese prompt; a clean whole-file timing of the
+**What the trials left open.** A European Portuguese variant; a clean whole-file timing of the
 net; batches 2–4; and the diagnostics row and opt-in telemetry
 (`docs/design-transcription-quality.md`).
 
 ## Status
 
-- 13 Oct 2026: batch 1 shipped for es, fr, it and de; pt held. The net, the inaudible
+- 13 Oct 2026: batch 1 shipped for es, fr, it and de, then pt once the nets were in. The net, the inaudible
   marker and loop removal shipped with it (§ Batch 1 as shipped).
 - 12 Oct 2026: brief written; batch 1 researched, downloaded (12 files, approved), trialled with v1 and v2 (above). Awaiting the owner's reading of the comparison page.

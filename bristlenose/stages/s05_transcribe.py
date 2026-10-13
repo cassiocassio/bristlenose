@@ -238,9 +238,13 @@ def segment_has_signal(start: float, end: float, levels: object) -> bool:
 # them back over speech it skipped; these keep the fillers, carry no standalone
 # assent word, and end on a hedging clause. On the two Spanish conversations
 # with reference transcripts, word error rate fell 42.7% -> 35.7% and 58.4% ->
-# 42.0% with the skipped-window net. Portuguese is left out: it still leaks
-# pieces of its prompt on noisy speech. On faster-whisper these go in as
-# `hotwords` like English, unmeasured for these four languages.
+# 42.0% with the skipped-window net. Portuguese followed once the inaudible
+# marker and loop removal were in: on three interviews (Brazil, Portugal,
+# Angola) it loses no more speech than Spanish, and the recording that had held
+# it back was a street recording Whisper hears 73 words of in 17 minutes. Its
+# fillers sound Brazilian ("né", "ahn"), and Whisper has one code for both
+# varieties; European Portuguese gains least. On faster-whisper these go in as
+# `hotwords` like English, unmeasured for these five languages.
 STYLE_PROMPTS: dict[str, str] = {
     "en": "Hmm, okay. Well, yes, I suppose so, um, and then? Right.",
     "ja": "えーと、はい。そうですね、なるほど。",
@@ -248,6 +252,7 @@ STYLE_PROMPTS: dict[str, str] = {
     "fr": "Euh, bon, je pense que oui. Mais ça dépend, hein. Et alors ? Je ne sais pas trop.",
     "it": "Ehm, allora, mh, in realtà sì, no? Eh, più o meno, perché, ehm, dipende.",
     "de": "Ähm, ja. Also, ich denke schon, äh, und dann? Genau.",
+    "pt": "Ahn, então, hum, na verdade é isso, né? Eh, mais ou menos, porque, ahn, depende.",
 }
 
 
@@ -255,7 +260,7 @@ STYLE_PROMPTS: dict[str, str] = {
 #: English`` must reach the same prompt as ``en``.
 _LANGUAGE_NAMES: dict[str, str] = {
     "english": "en", "japanese": "ja", "spanish": "es", "castilian": "es",
-    "french": "fr", "italian": "it", "german": "de",
+    "french": "fr", "italian": "it", "german": "de", "portuguese": "pt",
 }
 
 

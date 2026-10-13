@@ -56,7 +56,7 @@ def main() -> None:
     ap.add_argument("output_dirs", type=Path, nargs="+")
     ap.add_argument("-o", "--out", type=Path, required=True)
     ap.add_argument("--min-turns", type=int, default=5)
-    ap.add_argument("--frame-width", type=int, default=480, help="asset width; 2× the 240 px largest option")
+    ap.add_argument("--frame-width", type=int, default=576, help="asset width; 2× the 288 px large size")
     args = ap.parse_args()
 
     sessions = []

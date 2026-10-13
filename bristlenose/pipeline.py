@@ -742,6 +742,7 @@ _PER_SESSION_DIRS = (
     "assets/thumbnails",
     ".bristlenose/intermediate/speaker-info",
     ".bristlenose/intermediate/scene-colours",
+    ".bristlenose/intermediate/transcription-quality",
     ".bristlenose/temp",
 )
 _PER_SESSION_FILE_RE = re.compile(r"^(?:transcript_)?(s\d+)(?:[._]|$)")
@@ -1789,6 +1790,7 @@ class Pipeline:
                             on_progress=_on_transcribe_progress,
                             on_segment=_on_transcribe_segment,
                             on_session=_chain.offer if _chain is not None else None,
+                            quality_output_dir=output_dir,
                         )
                     )
                     if _chain is not None:
@@ -3238,7 +3240,7 @@ class Pipeline:
                 status.update(f"[dim]Transcribing... ({current}/{total} {word})[/dim]")
 
             session_segments, _transcript_outcome_t = await self._gather_all_segments(
-                sessions, on_progress=_on_transcribe_progress
+                sessions, on_progress=_on_transcribe_progress, quality_output_dir=output_dir,
             )
             # Mirror the run() rollup — and it must be the *post-6497711a*
             # shape, not the one this comment used to describe. Counting
@@ -3885,12 +3887,16 @@ class Pipeline:
         on_progress: ProgressCallback | None = None,
         on_segment: SegmentCallback | None = None,
         on_session: SessionCallback | None = None,
+        quality_output_dir: Path | None = None,
     ) -> tuple[dict[str, list[TranscriptSegment]], StageOutcome]:
         """Gather transcript segments from all sources (subtitle, docx, whisper).
 
         Args:
             sessions: Input sessions.
             on_progress: Optional callback(current, total) for transcription progress.
+            quality_output_dir: The run's output folder. When given, each recording
+                Whisper transcribes leaves its transcription-quality record
+                there (``bristlenose/transcription_quality.py``).
             on_session: Optional coroutine called once per session, with its
                 segments (None when it produced none) as soon as they are known:
                 parsed transcripts before Whisper starts, each recording as
@@ -4013,6 +4019,13 @@ class Pipeline:
             s for s in sessions
             if s.session_id not in session_segments and s.audio_path is not None
         ]
+        if quality_output_dir is not None:
+            # A session read from a platform transcript has no Whisper numbers,
+            # and an older record would describe a transcript it no longer has.
+            from bristlenose.transcription_quality import remove_record
+
+            for sid in session_segments:
+                remove_record(quality_output_dir, sid)
         #: How long the chain held transcription up: the parsed transcripts'
         #: hand-over before Whisper starts, and whatever it still had to do after
         #: Whisper finished. The rest of its work overlapped Whisper (Phase 3).
@@ -4066,6 +4079,14 @@ class Pipeline:
                 session_segments[done.session_id] = done.segments
                 if done.detected_language:
                     self._detected_languages[done.session_id] = done.detected_language
+                if quality_output_dir is not None:
+                    from bristlenose.transcription_quality import remove_record, write_record
+
+                    if done.quality is not None:
+                        write_record(quality_output_dir, done.session_id, done.quality)
+                    else:
+                        # Failed, or measured nothing: no numbers beat old ones.
+                        remove_record(quality_output_dir, done.session_id)
                 if pinned and pinned != "auto":
                     self._pinned_languages[done.session_id] = pinned
                 if done.failure is None:

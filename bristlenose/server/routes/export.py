@@ -81,6 +81,9 @@ SERVER_ONLY_PATH_TEMPLATES: frozenset[str] = frozenset(
         # report carries no participant screens, as it carries no video; the SPA does not
         # fetch them under isExportMode().
         "/projects/{project_id}/sessions/{session_id}/turn-frames",
+        # Transcription diagnostics (numbers about how Whisper heard each recording),
+        # shown only with the diagnostics preference on. Not part of a deliverable.
+        "/projects/{project_id}/transcription-quality",
         "/projects/{project_id}/signals/tags",  # no SPA callers; server-compute
         # Progressive delivery of findings while the lens is open. An exported
         # report has no server to stream from, and does not need one: the

@@ -63,6 +63,8 @@ import type {
 } from "../utils/types";
 import { fitScale, loadTapestryView, saveTapestryView, zoomScale } from "../utils/tapestryScale";
 import { mergeTapestry } from "../utils/tapestryMerge";
+import { diagnosticsEnabled } from "../utils/diagnostics";
+import type { TranscriptionQuality } from "../components/TranscriptionDiagnostics";
 import { refetchOverlayProps } from "../hooks/useRefetching";
 
 // The picker's code is loaded when someone first opens it: the grid is part of
@@ -71,6 +73,7 @@ import { refetchOverlayProps } from "../hooks/useRefetching";
 // The timeline slice: lazy, because this island is on the first-paint path and
 // a slice is only drawn once a row is opened.
 const SessionTapestry = lazy(() => import("../components/SessionTapestry"));
+const TranscriptionDiagnostics = lazy(() => import("../components/TranscriptionDiagnostics"));
 /** Scene strips arrive after the report: while serve says they are pending, poll /tapestry from
  *  5 s apart, backing off to 30 s, for a few hours (a 4K capture decodes at minutes per hour). */
 const stripPollDelay = (attempt: number) => Math.min(30_000, 5_000 * 1.5 ** attempt);
@@ -216,6 +219,8 @@ export function SessionsTable({
   const [isRefetching, setIsRefetching] = useState(false);
   // The timeline slice under each row (GET /tapestry). Absent → no disclosure.
   const [tapestry, setTapestry] = useState<Record<string, TapestrySession> | null>(null);
+  // How Whisper heard each recording, under its timeline — only with diagnostics on.
+  const [quality, setQuality] = useState<Record<string, TranscriptionQuality>>({});
   // Restored, so a visit to a transcript and Back shows the same page.
   const [openTapestries, setOpenTapestries] = useState<Set<string>>(
     () => new Set(loadTapestryView(projectId).open),
@@ -283,6 +288,12 @@ export function SessionsTable({
         .catch((err) => console.warn("SessionsTable: /tapestry failed; no timelines", err));
     };
     fetchTapestry(0);
+
+    if (diagnosticsEnabled()) {
+      apiGet<{ sessions: Record<string, TranscriptionQuality> }>("/transcription-quality")
+        .then((json) => { if (!cancelled) setQuality(json.sessions ?? {}); })
+        .catch((err) => console.warn("SessionsTable: /transcription-quality failed", err));
+    }
 
     getPeople()
       .then(setPeopleMap)
@@ -745,7 +756,22 @@ export function SessionsTable({
                     onJump={(sec) =>
                       navigate({ pathname: `/report/sessions/${sess.session_id}`, hash: `#t-${Math.floor(sec)}` })
                     }
-                  />
+                  >
+                    {quality[sess.session_id] && (
+                      // Its own boundary: the records arrive on a separate fetch, and a lazy
+                      // chunk loading late must not blank a timeline already on screen.
+                      <Suspense fallback={null}>
+                      <TranscriptionDiagnostics
+                        record={quality[sess.session_id]}
+                        durationSeconds={ts.duration_seconds}
+                        sPerPx={sPerPx}
+                        onJump={(sec) =>
+                          navigate({ pathname: `/report/sessions/${sess.session_id}`, hash: `#t-${Math.floor(sec)}` })
+                        }
+                      />
+                      </Suspense>
+                    )}
+                  </SessionTapestry>
                 </Suspense>
               </div>
             </div>

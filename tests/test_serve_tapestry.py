@@ -118,3 +118,24 @@ def test_an_unreadable_strip_file_degrades_to_none(tmp_path: Path) -> None:
 
 def test_unknown_project_is_404(client: TestClient) -> None:
     assert client.get("/api/projects/99/tapestry").status_code == 404
+
+
+def test_transcription_quality_serves_records_for_known_sessions(tmp_path: Path) -> None:
+    from bristlenose import transcription_quality as tq
+
+    project = tmp_path / "input"
+    shutil.copytree(_FIXTURE_DIR, project)
+    output = project / "bristlenose-output"
+    rec = {"version": tq.RECORD_VERSION, "session_id": "s1", "duration_s": 60.0}
+    tq.write_record(output, "s1", rec)
+    # A record for a session the project no longer has is not served.
+    tq.write_record(output, "s9", {**rec, "session_id": "s9"})
+    client = AuthTestClient(create_app(project_dir=project, dev=True, db_url="sqlite://"))
+    body = client.get("/api/projects/1/transcription-quality").json()
+    assert set(body["sessions"]) == {"s1"}
+    assert body["sessions"]["s1"]["duration_s"] == 60.0
+
+
+def test_transcription_quality_with_no_records_is_empty(client: TestClient) -> None:
+    body = client.get("/api/projects/1/transcription-quality").json()
+    assert body == {"sessions": {}}

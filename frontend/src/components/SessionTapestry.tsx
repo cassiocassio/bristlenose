@@ -123,10 +123,13 @@ interface Props {
   onJump: (seconds: number) => void;
   /** This timeline's sideways scroll, restored on mount. */
   initialScrollLeft?: number;
+  /** Drawn inside the timeline's scroll container, under the timeline: the transcription
+   *  diagnostics, whose lanes share this time scale and scroll with it. */
+  children?: React.ReactNode;
 }
 
 export default function SessionTapestry({
-  session, sPerPx, nameOf, codeOf = (slot) => slot, onJump, initialScrollLeft = 0,
+  session, sPerPx, nameOf, codeOf = (slot) => slot, onJump, initialScrollLeft = 0, children,
 }: Props) {
   const { t } = useTranslation();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -609,6 +612,7 @@ export default function SessionTapestry({
             </text>
           ))}
         </svg>
+        {children}
       </div>
       {thumbs && <ThumbPreview sessionId={s.session_id} laneRef={laneRef} scrollRef={scrollRef} width={tune.thumb.width} />}
 

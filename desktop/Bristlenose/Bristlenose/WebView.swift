@@ -127,6 +127,19 @@ struct WebView: NSViewRepresentable {
             forMainFrameOnly: true
         ))
 
+        // The diagnostics preference reaches the report too: the Sessions grid
+        // shows each recording's transcription numbers under its timeline only
+        // when it is on (docs/design-transcription-quality.md). Read when the
+        // view is built, like `isInspectable` below, so a change applies to the
+        // next report the app opens.
+        if DiagnosticsPreference.isEnabled() {
+            userContentController.addUserScript(WKUserScript(
+                source: "window.__BRISTLENOSE_DIAGNOSTICS__ = true;",
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            ))
+        }
+
         // Seed the saved subtitle preferences into this partition's (ephemeral)
         // localStorage before the SPA reads them. See BridgeHandler.
         userContentController.addUserScript(WKUserScript(

@@ -1,5 +1,5 @@
 ---
-status: pending
+status: partial
 date: 12 Oct 2026
 last-trued: 2026-10-13
 trued-against: HEAD@main on 2026-10-13
@@ -7,20 +7,32 @@ trued-against: HEAD@main on 2026-10-13
 
 # Transcription quality: per-session numbers, a diagnostics row, opt-in telemetry
 
-Proposal, not built. It comes out of the style-prompt and skipped-window work
+Steps 1 and 2 of the order below are built (13 Oct 2026); flags and telemetry are
+not. It comes out of the style-prompt and skipped-window work
 (`docs/design-whisper-style-prompts.md`, `docs/design-transcript-readability.md`):
 stage 5 now knows several things about how well a recording transcribed, and
 throws them away after logging them. The diagnostics row is mocked up in
 `docs/mockups/transcription-diagnostics.html` (numbers only, no transcript text).
 
-_Trued 13 Oct 2026: still unbuilt. Since this was written, stage 5 also removes
-repetition loops and marks inaudible gaps, and logs a count of each; the Repair rows
-below now include them._
+_13 Oct 2026, as built:_ the record is `bristlenose/transcription_quality.py`
+(`RECORD_VERSION = 1`). Stage 5's backends leave what they measured in a context
+variable (`s05_transcribe._QUALITY_SINK`), so their signatures and every stub of them
+are unchanged; `iter_transcribe_sessions` builds the record and the pipeline writes it
+as each session finishes. Serve reads it at `GET /api/projects/{id}/transcription-quality`
+(bearer-only, `SERVER_ONLY` in the export). The block is
+`frontend/src/components/TranscriptionDiagnostics.tsx`, drawn inside the timeline's own
+scroll container through a `children` slot on `SessionTapestry`, so its lanes keep the
+timeline's scale. Not yet measured: fillers, repeats collapsed inside a segment,
+speaker separation, overlap. On faster-whisper the record has no audio levels and no
+repair counts, because that backend has no signal gate or nets.
 
 ## One record per session, numbers only
 
 Stage 5 writes `.bristlenose/intermediate/transcription-quality/<sid>.json`.
-It holds **no words, names or timestamps of speech**, only counts and levels.
+It holds **no words and no names**. Two parts carry times: the stretches where speech
+may be missing (so the grid can say where to listen) and a 10-second series of level,
+pace and doubt. Both stay on this machine; a telemetry payload would carry only the
+counts and levels (`transcription_quality.summary`, which drops both).
 
 | Group | Measure | Source today |
 |---|---|---|
@@ -45,8 +57,10 @@ piece of work.
 ## A diagnostics row in the Sessions grid
 
 **Who sees it.** Off by default; on when the user's diagnostics preference is on
-(on the Mac, `showDiagnosticsMenu`, Tier U in `docs/design-feature-flags.md`; the
-web needs the same preference in Settings). It is for the researcher who wants to
+(on the Mac, `showDiagnosticsMenu`, Tier U in `docs/design-feature-flags.md`, injected
+into the report as `window.__BRISTLENOSE_DIAGNOSTICS__`; in the browser, `serve --dev`).
+A browser Settings switch is still owed. It is diagnostic chrome, so it is English
+(`docs/design-i18n.md`, "Which surfaces are targets"). It is for the researcher who wants to
 know why a transcript looks thin, and for us during the TestFlight period. It is
 not a quality score in everyone's face.
 
@@ -84,8 +98,10 @@ first cohort.
 
 ## Order
 
-1. Write the record locally (stage 5 already has every number except fillers and
-   text measures). No UI. Useful immediately for our own trials.
-2. The diagnostics row, gated by the preference, with no flag sentences yet.
+1. ~~Write the record locally.~~ Built 13 Oct 2026, without fillers.
+2. ~~The diagnostics row, gated by the preference, with no flag sentences yet.~~ Built
+   13 Oct 2026: a closed line with two headline numbers (windows retried, time with
+   sound but no words), opening to four lanes and four panels, with the stretches
+   that are still empty listed as timecodes to listen at.
 3. Calibrate the flags on real projects, then show them.
 4. Telemetry, under consent, when the alpha telemetry work resumes.

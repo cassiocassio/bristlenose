@@ -1418,6 +1418,58 @@ describe("SessionsTable — session tapestry", () => {
     expect(screen.queryByRole("slider", { name: "Timeline zoom" })).not.toBeInTheDocument();
     warn.mockRestore();
   });
+
+  describe("transcription diagnostics", () => {
+    const quality = {
+      sessions: {
+        s1: {
+          version: 1, session_id: "s1", duration_s: 1800, audio: null,
+          recognition: { backend: "mlx", decode_windows: 10, fallback_windows: 1,
+            mean_confidence: 0.9, low_confidence_share: 0.05 },
+          repair: { inaudible_gaps: 0, inaudible_seconds: 0, still_empty: [] },
+          text: { words: 3000, wpm: 100, sentence_ends_per_100: 8, longest_unpunctuated: 20 },
+          series: { bin_s: 10, level_p90: [], wpm: [], low_conf: [] },
+        },
+      },
+    };
+    const urls: string[] = [];
+
+    function mockWithQuality() {
+      urls.length = 0;
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+        urls.push(url);
+        if (url.includes("/transcription-quality")) return Promise.resolve({ ok: true, json: async () => quality });
+        if (url.includes("/tapestry")) return Promise.resolve({ ok: true, json: async () => tapestryResponse });
+        if (url.includes("/sessions")) return Promise.resolve({ ok: true, json: async () => sessionsResponse });
+        if (url.includes("/people")) return Promise.resolve({ ok: true, json: async () => peopleResponse });
+        return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+      });
+    }
+
+    afterEach(() => {
+      delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_DIAGNOSTICS__;
+    });
+
+    it("are neither fetched nor shown with the diagnostics preference off", async () => {
+      mockWithQuality();
+      render(<SessionsTable projectId="1" />);
+      fireEvent.click(await screen.findByRole("button", { name: "Timeline for session 1" }));
+      await waitFor(() => expect(document.querySelector(".bn-tapestry-scroll")).not.toBeNull());
+      expect(urls.some((u) => u.includes("/transcription-quality"))).toBe(false);
+      expect(screen.queryByRole("button", { name: /Diagnostics/ })).not.toBeInTheDocument();
+    });
+
+    it("sit under the timeline with the preference on", async () => {
+      (window as unknown as Record<string, unknown>).__BRISTLENOSE_DIAGNOSTICS__ = true;
+      mockWithQuality();
+      render(<SessionsTable projectId="1" />);
+      fireEvent.click(await screen.findByRole("button", { name: "Timeline for session 1" }));
+      const toggle = await screen.findByRole("button", { name: /Diagnostics/ });
+      // Inside the timeline's scroll container, so its lanes scroll with the timeline.
+      expect(toggle.closest(".bn-tapestry-scroll")).not.toBeNull();
+      expect(screen.getByText("10% of windows retried · no stretch with sound and no words found")).toBeInTheDocument();
+    });
+  });
 });
 
 describe("SessionsTable — re-analyse after a recode (§J7 R3)", () => {

@@ -63,6 +63,10 @@ _DEV_ONLY = frozenset({
     "islands/PickerSpecimen.tsx",
     "components/TapestryPlayground.tsx",
     "components/TapestryPlaygroundToggle.tsx",
+    # Transcription diagnostics render only behind the Diagnostics preference
+    # (or serve --dev): diagnostic chrome, English by decision, row "Developer /
+    # diagnostic chrome" of the same table.
+    "components/TranscriptionDiagnostics.tsx",
 })
 
 # Shipping components that carry the defect today. Named so the debt is

@@ -547,12 +547,59 @@ def find_skipped_stretches(
     return found
 
 
+def _report_quality(
+    audio: Any,
+    levels: Any,
+    *,
+    recognition: dict[str, Any],
+    repair: dict[str, Any] | None = None,
+    measure_audio: bool = True,
+    name: str = "",
+) -> None:
+    """Leave this file's measurements in `_QUALITY_SINK`, if a caller asked.
+
+    Never raises: a diagnostic must not cost a transcript. A measurement that
+    fails leaves the sink empty, so the session gets no record rather than one
+    whose missing audio reads like a backend that measures none.
+    """
+    sink = _QUALITY_SINK.get()
+    if sink is None:
+        return
+    try:
+        from bristlenose.transcription_quality import audio_measures, noise_floor_dbfs
+
+        sink["duration_s"] = len(audio) / _SAMPLE_RATE
+        sink["recognition"] = recognition
+        sink["repair"] = repair
+        sink["levels"] = levels
+        if measure_audio and levels is not None:
+            floor = noise_floor_dbfs(levels)
+            gate = (
+                min(floor, _SKIP_FLOOR_CAP_DBFS) + _SKIP_OVER_FLOOR_DB
+                if floor is not None else _SIGNAL_FLOOR_DBFS
+            )
+            sink["audio"] = audio_measures(audio, levels, active_over_dbfs=gate)
+    except Exception:  # noqa: BLE001 — diagnostics only
+        sink.clear()
+        logger.warning("%s: transcription quality not measured", name, exc_info=True)
+
+
 #: ``(files_done, files_total)``, called after each file.
 ProgressCallback = Callable[[int, int], None]
 #: ``(file_index, file_total, seconds_done, file_seconds)``, called within a file.
 SegmentCallback = Callable[[int, int, float, float], None]
 #: ``(seconds_done, file_seconds)``: the per-file heartbeat a backend calls.
 FileSegmentCallback = Callable[[float, float], None]
+
+
+#: Where a backend leaves what it measured about the file it just decoded, for
+#: the session's transcription-quality record (``bristlenose/transcription_quality.py``).
+#: The caller sets a fresh dict before each call and reads it after; a backend
+#: that finds no dict here measures nothing. A side channel rather than a third
+#: return value, so the backend's signature, and every stub of it, stays as it is.
+_QUALITY_SINK: contextvars.ContextVar[dict[str, Any] | None] = contextvars.ContextVar(
+    "bristlenose_transcription_quality", default=None,
+)
 
 
 class TranscribeFn(Protocol):
@@ -583,6 +630,32 @@ class SessionTranscription:
     #: The language the backend DETECTED; None when the language was pinned.
     detected_language: str | None = None
     failure: StageFailure | None = None
+    #: The session's transcription-quality record (numbers only), or None when
+    #: the backend measured nothing. ``bristlenose/transcription_quality.py``.
+    quality: dict[str, Any] | None = None
+
+
+def _quality_record(
+    session_id: str, segments: list[TranscriptSegment], sink: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Build the record from what the backend left in the sink. Never raises."""
+    if "recognition" not in sink:
+        return None
+    try:
+        from bristlenose.transcription_quality import build_record
+
+        return build_record(
+            session_id=session_id,
+            duration_s=float(sink.get("duration_s") or 0.0),
+            segments=segments,
+            recognition=sink["recognition"],
+            repair=sink.get("repair"),
+            audio=sink.get("audio"),
+            levels=sink.get("levels"),
+        )
+    except Exception:  # noqa: BLE001 — diagnostics only
+        logger.warning("%s: transcription quality record not built", session_id, exc_info=True)
+        return None
 
 
 def iter_transcribe_sessions(
@@ -638,6 +711,8 @@ def iter_transcribe_sessions(
             def seg_cb(seconds_done: float, file_seconds: float, _i: int = i) -> None:
                 on_segment(_i, total, seconds_done, file_seconds)
 
+        sink: dict[str, Any] = {}
+        sink_token = _QUALITY_SINK.set(sink)
         try:
             # Only pass on_segment when a caller actually wants the within-file
             # heartbeat — keeps backward-compat with transcribe_fn callables
@@ -657,6 +732,7 @@ def iter_transcribe_sessions(
             # it would be our own input wearing the clothes of evidence.
             done = SessionTranscription(
                 session.session_id, segments, detected if pinned is None and detected else None,
+                quality=_quality_record(session.session_id, segments, sink),
             )
             logger.info(
                 "%s: Transcribed %d segments",
@@ -688,6 +764,8 @@ def iter_transcribe_sessions(
                 session.session_id, [], None,
                 StageFailure(session_id=session.session_id, cause=cause),
             )
+        finally:
+            _QUALITY_SINK.reset(sink_token)
 
         if on_progress:
             on_progress(i, total)
@@ -920,10 +998,13 @@ def _init_mlx_backend(
         decode_kwargs: dict[str, object],
         language: str | None,
         name: str,
+        stats: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """Re-decode stretches Whisper skipped; see the note above `find_skipped_stretches`.
 
         Runs outside the style-prompt block, so the re-decode has no prompt.
+        ``stats``, when given, is filled with what was found and recovered, for
+        the session's transcription-quality record.
         """
         # Lengths as the paragraph rule counts them: a Japanese line is one
         # "word" to str.split(), which made every Japanese stretch look skipped
@@ -943,6 +1024,7 @@ def _init_mlx_backend(
         kept = list(segs)
         recovered = 0
         words = 0.0
+        still_empty: list[tuple[float, float]] = []
         for a, b in stretches:
             chunk = audio[int(a * _SAMPLE_RATE):int(b * _SAMPLE_RATE)]
             r = mlx_whisper.transcribe(chunk, language=language, **decode_kwargs)
@@ -973,7 +1055,18 @@ def _init_mlx_backend(
                 ] + new
                 recovered += 1
                 words += n
+            else:
+                still_empty.append((a, b))
         kept.sort(key=lambda x: float(x.get("start", 0.0)))
+        if stats is not None:
+            stats.update(
+                skipped_found=len(stretches),
+                skipped_seconds=round(sum(b - a for a, b in stretches), 1),
+                skipped_recovered=recovered,
+                recovered_words=round(words),
+                found=[[round(a, 1), round(b, 1)] for a, b in stretches],
+                still_empty=[[round(a, 1), round(b, 1)] for a, b in still_empty],
+            )
         if stretches:
             logger.info(
                 "%s: %d skipped stretch(es) found, %d recovered (%d words, %.0f s)",
@@ -1005,6 +1098,12 @@ def _init_mlx_backend(
             logger.info(
                 "%s: no signal above %.0f dBFS — not transcribed",
                 audio_path.name, _SIGNAL_FLOOR_DBFS,
+            )
+            _report_quality(
+                audio, levels,
+                recognition={"backend": "mlx", "model": settings.whisper_model,
+                             "transcribed": False},
+                name=audio_path.name,
             )
             return [], None
 
@@ -1094,9 +1193,11 @@ def _init_mlx_backend(
         # it covered then reads as the gap it is, and is re-decoded.
         kept, looped = drop_segment_loops(kept, prompt)
 
+        net_stats: dict[str, Any] = {}
         if SKIP_NET_ENABLED:
             kept = _recover_skipped(
                 kept, audio, levels, decode_kwargs, result.get("language"), audio_path.name,
+                net_stats,
             )
 
         segments: list[TranscriptSegment] = []
@@ -1173,6 +1274,55 @@ def _init_mlx_backend(
                 audio_path.name, guesses,
             )
 
+        first_pass = result.get("segments", [])
+        # A window is one 30 s decode; its segments share its `seek`. A window
+        # Whisper had to retry at a higher temperature failed its own
+        # compression or log-probability test the first time.
+        windows = {x.get("seek") for x in first_pass}
+        # Unknown, not zero, if mlx stops reporting a window's temperature.
+        retried: set[Any] | None = (
+            {x.get("seek") for x in first_pass if float(x["temperature"]) > 0}
+            if all("temperature" in x for x in first_pass) else None
+        )
+        if net_stats:
+            # Judged on the finished transcript, after the last loop pass: a
+            # stretch that pass emptied has sound and no words too. A marked
+            # inaudible gap is already shown as one, so it counts as covered.
+            from bristlenose.stages.s06_merge_transcript import reading_length
+
+            final_spans = [
+                (s_.start_time, s_.end_time,
+                 1e6 if s_.inaudible else reading_length(s_.text))
+                for s_ in segments
+            ]
+            empty = find_skipped_stretches(final_spans, levels, len(audio) / _SAMPLE_RATE)
+            net_stats["still_empty"] = [[round(a, 1), round(b, 1)] for a, b in empty]
+        _report_quality(
+            audio, levels,
+            recognition={
+                "backend": "mlx",
+                "model": settings.whisper_model,
+                "transcribed": True,
+                "language": result.get("language"),
+                "language_set": settings.whisper_language != "auto",
+                # On only if it reached the decoder; the hook can be installed
+                # and bypassed by an mlx upgrade (the WARNING above).
+                "prompt": bool(prompt) and hook_ready and _hook_counts["filled"] > 0,
+                "prompt_steps": (
+                    [_hook_counts["filled"], _hook_counts["built"]] if hook_ready else None
+                ),
+                # Windows that returned any text; a silent window returns none.
+                "decode_windows": len(windows),
+                "fallback_windows": None if retried is None else len(retried),
+            },
+            repair={
+                "silent_dropped": in_silence,
+                "echoes_dropped": echoes,
+                "loop_segments_removed": looped,
+                **net_stats,
+            },
+            name=audio_path.name,
+        )
         return segments, result.get("language")
 
     return transcribe_mlx
@@ -1337,6 +1487,19 @@ def _init_faster_whisper_backend(
             if on_segment is not None and info.duration:
                 on_segment(segment.end, info.duration)
 
+        _report_quality(
+            audio, None,
+            recognition={
+                "backend": "faster-whisper",
+                "model": settings.whisper_model,
+                "transcribed": True,
+                "language": info.language,
+                "language_set": settings.whisper_language != "auto",
+                "prompt": bool(prompt),
+            },
+            measure_audio=False,
+            name=audio_path.name,
+        )
         return transcript_segments, info.language
 
     return transcribe_faster_whisper

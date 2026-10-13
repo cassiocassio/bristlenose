@@ -308,3 +308,31 @@ def get_turn_frames(
     except (KeyError, TypeError, ValueError) as exc:
         logger.warning("Unreadable turn frames for %s: %s", session_id, exc)
         raise HTTPException(status_code=404, detail="No frames") from exc
+
+
+@router.get("/projects/{project_id}/transcription-quality")
+def get_transcription_quality(
+    project_id: int,
+    request: Request,
+    db: Session = Depends(_get_db),
+) -> dict[str, dict[str, object]]:
+    """Each session's transcription-quality record, for the diagnostics block in its slice.
+
+    Numbers only (``bristlenose/transcription_quality.py``). Fetched only when the
+    researcher's diagnostics preference is on, and left out of the HTML export: it
+    describes how this machine's Whisper heard the recording, not the findings.
+    A session transcribed from a platform file, or before this record existed, is absent.
+    """
+    from bristlenose.transcription_quality import read_records
+
+    try:
+        if not db.get(Project, project_id):
+            raise HTTPException(status_code=404, detail="Project not found")
+        out_dir = _output_dir(request)
+        if out_dir is None:
+            return {"sessions": {}}
+        known = {s.session_id for s in db.query(SessionModel).filter_by(project_id=project_id)}
+        records = read_records(out_dir)
+        return {"sessions": {sid: rec for sid, rec in records.items() if sid in known}}
+    finally:
+        db.close()

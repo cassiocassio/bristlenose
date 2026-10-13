@@ -1,0 +1,128 @@
+/* ── Transcription diagnostics (only with the diagnostics preference on) ──
+   Inside the timeline's scroll container: the lanes scroll with the timeline, the header
+   and panels stay put. Muted and colourless on purpose — content owns colour, and these
+   numbers say where to listen, not how good the transcript is. */
+.bn-dx {
+    font: var(--bn-weight-normal) var(--bn-text-caption) var(--bn-font-body);
+    color: var(--bn-colour-muted);
+}
+/* .bn-dx is as wide as the lanes (set inline), so these have room to stay put; the
+   scroller is a size container, so 100cqi is its visible width, not its scroll width. */
+.bn-tapestry-scroll:has(> .bn-dx) {
+    container-type: inline-size;
+}
+.bn-dx-head,
+.bn-dx-panels {
+    position: sticky;
+    left: 0;
+    box-sizing: border-box;
+    width: 100cqi;
+}
+.bn-dx-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--bn-space-sm);
+    padding: var(--bn-space-xs) 0 var(--bn-space-xs) 12px;
+}
+.bn-dx-toggle {
+    font: var(--bn-weight-emphasis) var(--bn-text-caption) var(--bn-font-body);
+    color: var(--bn-colour-text);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+.bn-dx-toggle:focus-visible,
+.bn-dx-time:focus-visible {
+    outline: none;
+    box-shadow: var(--bn-focus-shadow);
+    border-radius: var(--bn-radius-sm);
+}
+.bn-dx-chevron {
+    display: inline-block;
+    width: 1em;
+}
+.bn-dx-headline {
+    font-variant-numeric: tabular-nums;
+}
+.bn-dx-lanes {
+    display: block;
+}
+.bn-dx-track {
+    fill: var(--bn-colour-quote-bg);
+}
+.bn-dx-floor {
+    stroke: var(--bn-colour-muted);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    opacity: 0.6;
+}
+.bn-dx-sound {
+    fill: none;
+    stroke: var(--bn-colour-text);
+    stroke-width: 1;
+    opacity: 0.7;
+}
+.bn-dx-pace {
+    fill: var(--bn-colour-muted);
+    opacity: 0.55;
+}
+.bn-dx-doubt {
+    fill: var(--bn-colour-text);
+}
+.bn-dx-gap-found {
+    fill: none;
+    stroke: var(--bn-colour-muted);
+    stroke-width: 1;
+}
+.bn-dx-gap-empty {
+    fill: var(--bn-colour-text);
+    opacity: 0.55;
+    cursor: pointer;
+}
+.bn-dx-panels {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    gap: var(--bn-space-sm) var(--bn-space-lg);
+    padding: var(--bn-space-sm) 0 var(--bn-space-md) 12px;
+}
+.bn-dx-panel-title {
+    margin: 0 0 var(--bn-space-xs);
+    font: var(--bn-weight-emphasis) var(--bn-text-caption) var(--bn-font-body);
+    color: var(--bn-colour-text);
+}
+.bn-dx-kv {
+    margin: 0;
+}
+.bn-dx-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--bn-space-sm);
+}
+.bn-dx-row dt,
+.bn-dx-row dd {
+    margin: 0;
+}
+.bn-dx-row dt {
+    white-space: nowrap;
+}
+.bn-dx-row dd {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--bn-colour-text);
+}
+.bn-dx-note {
+    color: var(--bn-colour-muted);
+}
+.bn-dx-listen {
+    margin: var(--bn-space-xs) 0 0;
+}
+.bn-dx-time {
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    color: var(--bn-colour-accent);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}

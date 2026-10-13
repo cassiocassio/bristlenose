@@ -89,6 +89,26 @@ body.mk-evidence .screens-why {
 }
 .screens-more { background: none; color: var(--bn-colour-muted); }
 
+/* Saying which pages are one screen: drag a thumbnail onto another, or right-click. */
+.screens-nav li.drop-target a { background: var(--bn-selection-bg); border-color: var(--bn-selection-border); border-style: dashed; }
+.screens-nav a[draggable="true"] { cursor: grab; }
+.screens-menu {
+  position: fixed; z-index: 1000; min-width: 14rem; padding: var(--bn-space-xs);
+  background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md);
+  box-shadow: 0 4px 12px var(--bn-colour-shadow); font-size: var(--bn-text-label);
+}
+.screens-menu button {
+  display: block; width: 100%; text-align: left; font: inherit; color: var(--bn-colour-text);
+  background: none; border: 0; border-radius: var(--bn-radius-sm); padding: var(--bn-space-xs) var(--bn-space-sm); cursor: pointer;
+}
+.screens-menu button:hover:not(:disabled) { background: var(--bn-colour-hover); }
+.screens-menu button:disabled { color: var(--bn-colour-muted); cursor: default; }
+.screens-notsame {
+  background: none; border: 0; padding: var(--bn-space-xs) var(--bn-space-sm); font: inherit;
+  font-size: var(--bn-text-label); color: var(--bn-colour-accent); cursor: pointer; white-space: nowrap;
+}
+.screens-notsame:hover { text-decoration: underline; }
+
 /* The screen: a page heading, who saw it, then the screengrab with its quotes. */
 .screens-main { min-width: 0; padding: 0 var(--bn-space-xl) var(--bn-space-xl); }
 .screens-main > .section-heading:first-child { margin-top: var(--bn-space-lg); }
@@ -205,6 +225,7 @@ svg.screens-leaders circle { fill: var(--bn-colour-accent); }
   <label>bring a quote to the front on <select id="mk-front"><option value="hover">hover</option><option value="click">click</option></select></label>
   <label>stacks <select id="mk-stack"><option value="straight">straight</option><option value="diagonal">diagonal</option></select></label>
   <label><button type="button" id="mk-reset">put this screen's quotes back</button></label>
+  <label><button type="button" id="mk-ungroup">forget my screen merges</button></label>
   <label><input type="checkbox" id="mk-crowd"> nav stress test: fake codes up to p16</label>
   <label><input type="checkbox" id="mk-evidence"> why each quote is pinned</label>
   <label><select id="mk-palette"><option value="default">default palette</option><option value="edo">Edo palette</option></select></label>
@@ -284,8 +305,44 @@ function count(b) { return b.tabs.reduce((n, t) => n + t.pins.length + t.loose.l
 
 let cur = 0, tab = 0;
 const nav = document.getElementById("nav"), main = document.getElementById("main");
-document.getElementById("nav-head").textContent = plural(D.boards.length, "screen", "screens") + " · " +
-  plural(new Set(D.boards.flatMap(b => b.tabs.map(t => t.code))).size, "participant", "participants");
+
+// ---------- Which pages are one screen. The machine's grouping is the starting point (same address,
+// IDs kept); the researcher overrides it by merging two screens or by saying a participant's page is
+// "not the same screen". An override is per participant's page, so it works for any number of
+// participants: peel one page off at a time, or drop one screen onto another.
+const ORIG = D.boards;
+ORIG.forEach(b => b.tabs.forEach(t => { t.id = b.name + "|" + t.tag + "|" + t.t; t.home = b.name; }));
+let grouping = {};
+try { grouping = JSON.parse(localStorage.getItem("screens-grouping") || "{}"); } catch (e) {}
+const saveGrouping = () => { try { localStorage.setItem("screens-grouping", JSON.stringify(grouping)); } catch (e) {} };
+function regroup() {
+  const groups = new Map();
+  for (const b of ORIG) for (const t of b.tabs) {
+    const g = grouping[t.id] || b.name;
+    if (!groups.has(g)) groups.set(g, { key: g, name: g.startsWith("solo:") ? t.home : g, tabs: [] });
+    groups.get(g).tabs.push(t);
+  }
+  D.boards = [...groups.values()];
+  D.boards.forEach(b => b.tabs.sort((x, y) => x.code.localeCompare(y.code) || x.t - y.t));
+  D.boards.sort((a, c) => count(c) - count(a));
+}
+regroup();
+const indexOfKey = k => Math.max(0, D.boards.findIndex(b => b.key === k));
+function mergeScreens(src, dst) {
+  if (src === dst) return;
+  const into = D.boards[dst].key;
+  for (const t of D.boards[src].tabs) grouping[t.id] = into;
+  saveGrouping(); regroup(); renderNav(); go(indexOfKey(into), 0);
+}
+function notSameScreen() {
+  const b = D.boards[cur], t = b.tabs[tab];
+  grouping[t.id] = "solo:" + t.id;
+  saveGrouping(); regroup(); renderNav(); go(indexOfKey(b.key), 0);
+}
+function splitScreen(i) {
+  for (const t of D.boards[i].tabs) grouping[t.id] = "solo:" + t.id;
+  saveGrouping(); regroup(); renderNav(); go(Math.min(i, D.boards.length - 1), 0);
+}
 
 const MAX_CODES = 12;
 let crowd = false;
@@ -303,10 +360,23 @@ function codeList(codes) {
     (codes.length > shown.length ? '<span class="screens-more">+' + (codes.length - shown.length) + "</span>" : "") + "</span>";
 }
 function renderNav() {
+document.getElementById("nav-head").textContent = plural(D.boards.length, "screen", "screens") + " · " +
+  plural(new Set(D.boards.flatMap(b => b.tabs.map(t => t.code))).size, "participant", "participants");
 nav.innerHTML = "";
 D.boards.forEach((b, i) => {
   const li = document.createElement("li"), a = document.createElement("a");
   a.href = "#screen-" + i + "-0";
+  a.draggable = true;
+  a.title = "Drag onto another screen to say they are the same screen";
+  a.addEventListener("dragstart", e => { e.dataTransfer.setData("text/x-screen", String(i)); e.dataTransfer.effectAllowed = "move"; });
+  li.addEventListener("dragover", e => { if (e.dataTransfer.types.includes("text/x-screen")) { e.preventDefault(); li.classList.add("drop-target"); } });
+  li.addEventListener("dragleave", () => li.classList.remove("drop-target"));
+  li.addEventListener("drop", e => {
+    e.preventDefault(); li.classList.remove("drop-target");
+    const src = +e.dataTransfer.getData("text/x-screen");
+    if (!Number.isNaN(src)) mergeScreens(src, i);
+  });
+  a.addEventListener("contextmenu", e => { e.preventDefault(); screenMenu(e.clientX, e.clientY, i); });
   const ts = titles(b), n = b.tabs.length;
   a.innerHTML = '<span class="screens-thumb">' + b.tabs.map((t, j) =>
       '<img alt="" src="' + t.thumb + '" style="left:' + (j * 8 / Math.max(1, n - 1)) + "px;top:" + (j * 6 / Math.max(1, n - 1)) + 'px">').join("") + "</span>" +
@@ -319,6 +389,26 @@ D.boards.forEach((b, i) => {
 }
 renderNav();
 
+function screenMenu(x, y, i) {
+  closeMenu();
+  const b = D.boards[i], here = D.boards[cur], m = document.createElement("div");
+  m.className = "screens-menu"; m.setAttribute("role", "menu");
+  const title = bb => titles(bb)[0] || bb.name;
+  m.innerHTML =
+    '<button role="menuitem" data-act="merge"' + (i === cur ? " disabled" : "") + ">Same screen as “" + esc(title(here)) + "”</button>" +
+    '<button role="menuitem" data-act="split"' + (b.tabs.length < 2 ? " disabled" : "") + ">Not the same screen: separate them</button>";
+  m.style.left = x + "px"; m.style.top = y + "px";
+  m.onclick = e => {
+    const act = e.target.closest("button:not(:disabled)")?.dataset.act;
+    if (!act) return;
+    closeMenu();
+    if (act === "merge") mergeScreens(i, cur); else splitScreen(i);
+  };
+  document.body.appendChild(m);
+}
+function closeMenu() { document.querySelectorAll(".screens-menu").forEach(m => m.remove()); }
+addEventListener("click", e => { if (!e.target.closest(".screens-menu")) closeMenu(); });
+
 function go(i, j) { hiddenOpen = false; goTo(i, j); }
 function goTo(i, j) { location.hash = "#screen-" + ((i + D.boards.length) % D.boards.length) + "-" + j; }
 
@@ -328,14 +418,17 @@ function render() {
   const b = D.boards[cur], t = b.tabs[tab], ts = titles(b), n = count(b);
   main.innerHTML =
     '<div class="section-heading"><h1>' + esc(heading(b, t)) + '</h1><div class="section-heading-action screens-who">' +
-    (b.tabs.length > 1 ? b.tabs.map((x, j) => '<button aria-pressed="' + (j === tab) + '" data-j="' + j + '" title="' + esc(x.heading) + '">' + badge(x.code, x.name) + "</button>").join("") : badge(t.code, t.name)) +
+    (b.tabs.length > 1 ? b.tabs.map((x, j) => '<button aria-pressed="' + (j === tab) + '" data-j="' + j + '" title="' + esc(x.heading) + '">' + badge(x.code, x.name) + "</button>").join("") +
+      '<button class="screens-notsame" title="' + esc(t.name) + "’s page is a different screen: show it on its own" + '">Not the same screen</button>' : badge(t.code, t.name)) +
     "</div></div>" +
     '<p class="screens-sub">' + (byTitle(b) ? "" : "<code>" + esc(b.name) + "</code>") + "<span>" + esc(t.name) + "’s screen at <span class=timecode>" + tc(t.t) + "</span></span><span>" +
     plural(n, "quote", "quotes") + (b.tabs.length > 1 ? " from " + plural(b.tabs.length, "participant", "participants") : "") + '</span><span class="screens-hidden-slot"></span></p>' +
     '<div class="screens-stage"><div class="screens-board"><div class="screens-col screens-col-l"></div><div class="screens-shot"><img alt="" src="' + t.src + '"></div>' +
     '<div class="screens-col screens-col-r"></div><svg class="screens-leaders"></svg><div class="screens-free"></div></div></div>' +
     '<div class="screens-loose"></div>';
-  main.querySelectorAll(".screens-who button").forEach(bt => bt.onclick = () => go(cur, +bt.dataset.j));
+  main.querySelectorAll(".screens-who button[data-j]").forEach(bt => bt.onclick = () => go(cur, +bt.dataset.j));
+  const ns = main.querySelector(".screens-notsame");
+  if (ns) ns.onclick = notSameScreen;
   const img = main.querySelector(".screens-shot img");
   (img.complete ? Promise.resolve() : new Promise(r => img.onload = r)).then(() => layout(b, t));
 }
@@ -446,7 +539,7 @@ function fitGrips() {
 let arrangement = {};
 try { arrangement = JSON.parse(localStorage.getItem("screens-arrangement") || "{}"); } catch (e) {}
 const saveArrangement = () => { try { localStorage.setItem("screens-arrangement", JSON.stringify(arrangement)); } catch (e) {} };
-const placeKey = q => cur + "/" + tab + "/" + q;
+const placeKey = q => D.boards[cur].tabs[tab].id + "/" + q;
 let zTop = Object.values(arrangement).reduce((m, a) => Math.max(m, a.z || 0), 30);
 
 function boardGeometry() {
@@ -646,9 +739,10 @@ const stackSel = document.getElementById("mk-stack");
 stackSel.value = stack;
 stackSel.onchange = e => { stack = e.target.value; try { localStorage.setItem("screens-stack", stack); } catch (err) {} render(); };
 document.getElementById("mk-reset").onclick = () => {
-  for (const k of Object.keys(arrangement)) if (k.startsWith(cur + "/" + tab + "/")) delete arrangement[k];
+  for (const k of Object.keys(arrangement)) if (k.startsWith(D.boards[cur].tabs[tab].id + "/")) delete arrangement[k];
   saveArrangement(); render();
 };
+document.getElementById("mk-ungroup").onclick = () => { grouping = {}; saveGrouping(); regroup(); renderNav(); go(0, 0); };
 document.getElementById("mk-crowd").onchange = e => { crowd = e.target.checked; renderNav(); };
 document.getElementById("mk-evidence").onchange = e => document.body.classList.toggle("mk-evidence", e.target.checked);
 document.getElementById("mk-palette").onchange = e => { document.documentElement.dataset.colorTheme = e.target.value; };

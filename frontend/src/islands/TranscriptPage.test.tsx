@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { bumpRefreshKey, resetLastRunStore } from "../contexts/LastRunStore";
 import { TranscriptPage } from "./TranscriptPage";
 import type { TranscriptPageResponse } from "../utils/types";
 
@@ -148,10 +149,22 @@ import { getTranscript, getSessionList, postParagraphJoin, postParagraphSplit } 
 const mockedGetTranscript = vi.mocked(getTranscript);
 const mockedGetSessionList = vi.mocked(getSessionList);
 
+// jsdom has no scrollIntoView; the journey chain centres its active label with it.
+const realScrollIntoView = Element.prototype.scrollIntoView;
+const scrolledInto: string[] = [];
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockEmbedded = false;
   mockedGetSessionList.mockResolvedValue([]);
+  scrolledInto.length = 0;
+  Element.prototype.scrollIntoView = function (this: Element) {
+    scrolledInto.push(this.id);
+  };
+});
+
+afterAll(() => {
+  Element.prototype.scrollIntoView = realScrollIntoView;
 });
 
 // ---------------------------------------------------------------------------
@@ -861,5 +874,210 @@ describe("TranscriptPage copy", () => {
     });
     expect(data.get("text/plain")).toMatch(/^\*\*`\[00:02\]` m1\*\* Thanks for joining me today\.\n\n\*\*`\[/);
     expect(data.get("text/html")).toMatch(/font-family:Menlo,Consolas,monospace[^>]*color:#007aff">.*00:02.*<\/span> <b>m1<\/b> Thanks/);
+  });
+});
+
+describe("TranscriptPage — new data while it is open (progressive lenses)", () => {
+  // Before the session's quotes: no highlights, no margin, no journey.
+  const beforeQuotes: TranscriptPageResponse = {
+    ...mockData,
+    journey_labels: [],
+    annotations: {},
+    segments: mockData.segments.map((s) => ({
+      ...s, is_quoted: false, quote_ids: [], html_text: null,
+    })),
+  };
+
+  beforeEach(() => {
+    resetLastRunStore();
+    window.location.hash = "";
+    // `addRange` does nothing while a range exists, and an earlier test leaves one.
+    window.getSelection()?.removeAllRanges();
+  });
+
+  async function openThenBump(after: TranscriptPageResponse) {
+    mockedGetTranscript.mockResolvedValueOnce(beforeQuotes).mockResolvedValue(after);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    act(() => bumpRefreshKey());
+  }
+
+  it("re-reads when the report moves on, and shows the quotes that arrived", async () => {
+    await openThenBump(mockData);
+    expect(screen.queryByTestId("transcript-loading")).toBeNull();
+    await waitFor(() => expect(mockedGetTranscript).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByTestId("transcript-body").querySelector(".segment-quoted")).not.toBeNull(),
+    );
+    const chain = screen.getByTestId("transcript-journey-chain");
+    // The highlight is placed when the sections arrive, not at the next scroll.
+    await waitFor(() => expect(chain.querySelector(".bn-journey-label--active")).not.toBeNull());
+    expect(mockedGetSessionList).toHaveBeenCalledTimes(2);
+  });
+
+  it("waits while the reader has text selected, then re-reads", async () => {
+    mockedGetTranscript.mockResolvedValueOnce(beforeQuotes).mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    const para = screen.getByTestId("transcript-body").querySelector(".segment-body")!;
+    const range = document.createRange();
+    range.selectNodeContents(para);
+    window.getSelection()!.addRange(range);
+
+    act(() => bumpRefreshKey());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mockedGetTranscript).toHaveBeenCalledTimes(1);
+
+    window.getSelection()!.removeAllRanges();
+    act(() => {
+      document.dispatchEvent(new Event("selectionchange"));
+    });
+    await waitFor(() => expect(mockedGetTranscript).toHaveBeenCalledTimes(2));
+  });
+
+  it("keeps the reader's place when highlights move the lines above it", async () => {
+    // Paragraphs 100px tall from y = -250; once any paragraph is quoted, a
+    // highlight above the reader adds 40px (jsdom has no layout of its own).
+    const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        const starts = ["2", "10", "19", "26", "46"];
+        const i = starts.indexOf(this.dataset.startSeconds ?? "");
+        if (i < 0) return { top: 0, bottom: 0 } as DOMRect;
+        const shift = document.querySelector(".segment-quoted") ? 40 : 0;
+        const top = -250 + i * 100 + shift;
+        return { top, bottom: top + 100 } as DOMRect;
+      },
+    );
+    const scroll = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    await openThenBump(mockData);
+    await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 40));
+    rect.mockRestore();
+    scroll.mockRestore();
+  });
+
+  it("does not pull the reader back to the link they arrived by", async () => {
+    window.location.hash = "#t-26";
+    await openThenBump(mockData);
+    await waitFor(() => expect(mockedGetTranscript).toHaveBeenCalledTimes(2));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(scrolledInto.filter((id) => id === "t-26")).toHaveLength(1);
+  });
+
+  it("scrolls to the link again on a later visit by it", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    window.location.hash = "#t-26";
+    const view = render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(scrolledInto).toContain("t-26"));
+    window.location.hash = "";
+    view.rerender(<TranscriptPage projectId="1" sessionId="s2" />);
+    await waitFor(() => expect(mockedGetTranscript).toHaveBeenCalledTimes(2));
+    await new Promise((r) => setTimeout(r, 20));
+    window.location.hash = "#t-26";
+    view.rerender(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(scrolledInto.filter((id) => id === "t-26")).toHaveLength(2));
+  });
+
+  it("never lets another session's late re-read land", async () => {
+    let releaseOld: (r: TranscriptPageResponse) => void = () => {};
+    mockedGetTranscript
+      .mockResolvedValueOnce(beforeQuotes) // s1, first read
+      .mockReturnValueOnce(new Promise((r) => { releaseOld = r; })) // s1 re-read, held
+      .mockResolvedValueOnce({ ...beforeQuotes, session_id: "s2",
+        segments: [{ ...beforeQuotes.segments[0], text: "Session two speaking." }] });
+    const view = render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    act(() => bumpRefreshKey());
+    view.rerender(<TranscriptPage projectId="1" sessionId="s2" />);
+    await waitFor(() => expect(screen.getByText("Session two speaking.")).toBeTruthy());
+    await act(async () => {
+      releaseOld(mockData);
+    });
+    expect(screen.getByText("Session two speaking.")).toBeTruthy();
+    expect(screen.queryByText("Thanks for joining me today.")).toBeNull();
+  });
+
+  it("re-reads after a first read the bump overtook", async () => {
+    let releaseFirst: (r: TranscriptPageResponse) => void = () => {};
+    mockedGetTranscript
+      .mockReturnValueOnce(new Promise((r) => { releaseFirst = r; }))
+      .mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    act(() => bumpRefreshKey()); // the quotes landed while the first read was out
+    await act(async () => {
+      releaseFirst(beforeQuotes);
+    });
+    await waitFor(() => expect(mockedGetTranscript).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByTestId("transcript-body").querySelector(".segment-quoted")).not.toBeNull(),
+    );
+  });
+
+  it("holds a re-read that lands while the reader has started selecting", async () => {
+    let release: (r: TranscriptPageResponse) => void = () => {};
+    mockedGetTranscript
+      .mockResolvedValueOnce(beforeQuotes)
+      .mockReturnValueOnce(new Promise((r) => { release = r; }))
+      .mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    act(() => bumpRefreshKey());
+    const para = screen.getByTestId("transcript-body").querySelector(".segment-body")!;
+    const range = document.createRange();
+    range.selectNodeContents(para);
+    window.getSelection()!.addRange(range); // they start selecting meanwhile
+    await act(async () => {
+      release(mockData);
+    });
+    expect(screen.getByTestId("transcript-body").querySelector(".segment-quoted")).toBeNull();
+    window.getSelection()!.removeAllRanges();
+    act(() => {
+      document.dispatchEvent(new Event("selectionchange"));
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("transcript-body").querySelector(".segment-quoted")).not.toBeNull(),
+    );
+  });
+
+  it("waits while a text field has focus, then re-reads when it loses it", async () => {
+    mockedGetTranscript.mockResolvedValueOnce(beforeQuotes).mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("transcript-body")).toBeTruthy());
+    const field = document.createElement("input"); // the speaker picker's name, say
+    document.body.appendChild(field);
+    field.focus();
+    act(() => bumpRefreshKey());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mockedGetTranscript).toHaveBeenCalledTimes(1);
+    // Focus leaves without a selection change (only `focusout` says so).
+    field.remove();
+    act(() => {
+      document.dispatchEvent(new FocusEvent("focusout"));
+    });
+    await waitFor(() => expect(mockedGetTranscript).toHaveBeenCalledTimes(2));
+  });
+
+  it("does not bring back a badge deleted while a re-read was in flight", async () => {
+    let releaseReread: (r: TranscriptPageResponse) => void = () => {};
+    mockedGetTranscript
+      .mockResolvedValueOnce(mockData)
+      .mockReturnValueOnce(new Promise((r) => { releaseReread = r; }))
+      .mockResolvedValue({
+        ...mockData,
+        annotations: {
+          ...mockData.annotations,
+          "q-p1-10": { ...mockData.annotations["q-p1-10"], deleted_badges: ["confusion"] },
+        },
+      });
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    const badge = await screen.findByTestId("annotation-q-p1-10-sentiment");
+    act(() => bumpRefreshKey());
+    fireEvent.click(badge); // deleted while the re-read is out
+    expect(screen.queryByTestId("annotation-q-p1-10-sentiment")).toBeNull();
+    await act(async () => {
+      releaseReread(mockData); // from before the delete: the badge is in it
+    });
+    expect(screen.queryByTestId("annotation-q-p1-10-sentiment")).toBeNull();
+    await waitFor(() => expect(mockedGetTranscript).toHaveBeenCalledTimes(3), { timeout: 2000 });
+    expect(screen.queryByTestId("annotation-q-p1-10-sentiment")).toBeNull();
   });
 });

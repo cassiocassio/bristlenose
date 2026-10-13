@@ -8,6 +8,8 @@ mockup: docs/mockups/progressive-lenses-replay.html
 
 ## Changelog
 
+- _2026-10-13, transcript_ — §5.8: an open transcript follows the run, keeping the
+  reader's place. The design had no rule for the transcript page during a run.
 - _2026-10-13, latest_ — §7 item 18 accepted by the owner (a Mac Re-analyse is a
   first analysis, and delivers progressively); item 19 built (the Mac's lens rail
   leaves a withheld lens for Sessions). §5.1 trued.
@@ -871,6 +873,38 @@ the overlay and moves `data_version`, so the SPA refetches.
   so a browser sees sessions before the end while the Mac's shoal covers them.
 - Since Phase 3, the readable chain's "seconds" is work that overlapped Whisper, not
   time it held transcription up; the speakers stage still counts it as its own.
+
+### 5.8 The transcript page during a run (built 13 Oct 2026)
+
+The design had no rule for it, and the page read once when opened. During a first
+analysis a session's quotes arrive a minute after its transcript (Phase 3), other
+sessions become readable, and the whole report lands at the end, so an open
+transcript stayed on what it first read.
+
+- **It re-reads on the report's refresh key** (`useLastRun().refreshKey`, moved by
+  each import and by the run's end), without the loading screen, together with the
+  session switcher's list. `TranscriptTab` starts the polling.
+- **The reader keeps their place** (`utils/readingAnchor.ts`): the first paragraph
+  under the sticky header, by start time (and which half of a split), is captured
+  before the re-read and scrolled back to where it was after, less any scrolling the
+  reader did meanwhile. A paragraph the re-read rebuilt falls back to the one before
+  it. Speaker changes and paragraph edits re-read the same way.
+- **Not while the reader is busy**: text selected in the transcript (copying), or a
+  text field focused (the speaker picker's name). The re-read waits for
+  `selectionchange` or `focusout`. A caret alone is not busy.
+- **Only the newest read lands** (a ticket per read): the page stays mounted across
+  sessions, so a late response for the previous session, or one sent before a
+  split's own re-read, is dropped. A re-read sent before a deleted badge or tag is
+  dropped too, and read again half a second later.
+- A refresh that overtakes the first read is owed until it lands; a page that failed
+  to load recovers on the next one. The deep-link scroll (`#t-…`) runs once per
+  session and link, not on every re-read. The section journey is rebuilt from each
+  read and its highlight placed at once.
+- **Known.** In an untimed transcript (every paragraph at 0:00), a split or join
+  above the reader can land the restore a paragraph off. A re-read that turns a
+  paragraph's text into highlighted spans can drop a caret inside it; Return then
+  does nothing (the split's verify refuses), it does not split the wrong place. The
+  arrival highlight of a deep link can be lost if quotes arrive in its first seconds.
 
 ## 6. Failure
 

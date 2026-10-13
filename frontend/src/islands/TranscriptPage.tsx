@@ -12,13 +12,20 @@
  * so player.js glow index works without modification.
  */
 
-import { useEffect, useState, useRef, useLayoutEffect, useCallback } from "react";
+import { useEffect, useState, useRef, useLayoutEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import i18n from "../i18n";
 import { JourneyChain, PersonBadge, TimecodeLink } from "../components";
 import { SpeakerPickerTrigger } from "../components/SpeakerPickerTrigger";
 import { useSpeakersChanged } from "../hooks/useSpeakersChanged";
+import { useLastRun } from "../contexts/LastRunStore";
+import {
+  captureReadingAnchor,
+  readerIsBusy,
+  restoreReadingAnchor,
+  type ReadingAnchor,
+} from "../utils/readingAnchor";
 import { Annotation } from "../components/Annotation";
 import type { AnnotationTag } from "../components/Annotation";
 import { Selector } from "../components/Selector";
@@ -127,12 +134,13 @@ function useJourneyScrollSync(
   annotations: Record<string, QuoteAnnotationResponse>,
   headerRef: React.RefObject<HTMLElement | null>,
 ) {
-  // Build waypoints once from data (full sequence including revisits)
-  const waypointsRef = useRef<JourneyWaypoint[] | null>(null);
-  if (!waypointsRef.current && segments.length > 0) {
-    waypointsRef.current = buildWaypoints(segments, annotations);
-  }
-  const waypoints = waypointsRef.current ?? [];
+  // The full sequence including revisits, rebuilt when the transcript is
+  // re-read: during a first analysis a session's quotes, and so its sections,
+  // arrive after its transcript (docs/design-progressive-lenses.md).
+  const waypoints = useMemo(
+    () => (segments.length > 0 ? buildWaypoints(segments, annotations) : []),
+    [segments, annotations],
+  );
 
   const [activeIndex, setActiveIndex] = useState<number | null>(
     waypoints.length > 0 ? 0 : null,
@@ -149,31 +157,36 @@ function useJourneyScrollSync(
 
     let rafId = 0;
 
+    function locate() {
+      const header = headerRef.current;
+      const threshold = header
+        ? header.getBoundingClientRect().bottom + 8
+        : 60;
+
+      let currentIndex = 0;
+      for (let i = 0; i < waypoints.length; i++) {
+        const el = document.getElementById(waypoints[i].anchorId);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= threshold) {
+          currentIndex = i;
+        } else {
+          break;
+        }
+      }
+
+      setActiveIndex(currentIndex);
+    }
+
     function onScroll() {
       if (!isUserScrolling.current) return;
       cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const header = headerRef.current;
-        const threshold = header
-          ? header.getBoundingClientRect().bottom + 8
-          : 60;
-
-        let currentIndex = 0;
-        for (let i = 0; i < waypoints.length; i++) {
-          const el = document.getElementById(waypoints[i].anchorId);
-          if (!el) continue;
-          const rect = el.getBoundingClientRect();
-          if (rect.top <= threshold) {
-            currentIndex = i;
-          } else {
-            break;
-          }
-        }
-
-        setActiveIndex(currentIndex);
-      });
+      rafId = requestAnimationFrame(locate);
     }
 
+    // Waypoints rebuilt by a re-read (sections arriving): place the
+    // highlight now, not at the next scroll.
+    locate();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
@@ -204,7 +217,8 @@ function useJourneyScrollSync(
     [waypoints],
   );
 
-  return { activeIndex, handleIndexClick, journeyLabels };
+  // No sections, no highlight (a re-read can take them away).
+  return { activeIndex: waypoints.length > 0 ? activeIndex : null, handleIndexClick, journeyLabels };
 }
 
 // ---------------------------------------------------------------------------
@@ -316,24 +330,59 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   const bodyRef = useRef<HTMLElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
 
+  // Every read of the transcript takes a ticket; only the newest is applied.
+  // The page stays mounted across sessions, and during a run re-reads come
+  // every few seconds, so an older response (another session's, or one sent
+  // before a split's own re-read) must never land over a newer one.
+  const readTicket = useRef(0);
+  //: Local writes this page made (a deleted badge or tag): a re-read sent
+  //: before one may return the state before it.
+  const localWrites = useRef(0);
+
   // Fetch transcript data
   useEffect(() => {
+    const ticket = ++readTicket.current;
     setLoading(true);
     getTranscript(sessionId)
       .then((resp) => {
+        if (ticket !== readTicket.current) return;
         setData(resp);
         setError(null);
       })
       .catch((err) => {
+        if (ticket !== readTicket.current) return;
         setError(err.message || i18n.t("transcript.failedToLoad"));
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (ticket === readTicket.current) setLoading(false);
+      });
   }, [sessionId]);
+
+  // Every re-read keeps the reader's place: the first paragraph under the
+  // sticky header stays where it is however much moves above it.
+  const pendingAnchor = useRef<ReadingAnchor | null>(null);
+  const applyReread = useCallback((resp: TranscriptPageResponse) => {
+    const body = bodyRef.current;
+    const threshold = headerRef.current?.getBoundingClientRect().bottom ?? 0;
+    pendingAnchor.current = body ? captureReadingAnchor(body, threshold) : null;
+    setData(resp);
+    setError(null);
+  }, []);
+  useLayoutEffect(() => {
+    const anchor = pendingAnchor.current;
+    pendingAnchor.current = null;
+    if (anchor && bodyRef.current) restoreReadingAnchor(bodyRef.current, anchor);
+  }, [data]);
 
   // Re-read after a speaker is named, picked or cleared — here or by undo.
   const reloadTranscript = useCallback(() => {
-    getTranscript(sessionId).then(setData).catch(() => undefined);
-  }, [sessionId]);
+    const ticket = ++readTicket.current;
+    getTranscript(sessionId)
+      .then((resp) => {
+        if (ticket === readTicket.current) applyReread(resp);
+      })
+      .catch(() => undefined);
+  }, [sessionId, applyReread]);
   useSpeakersChanged(reloadTranscript);
   // …and after a paragraph split or join, or its undo.
   useEffect(() => {
@@ -408,11 +457,94 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       .catch(() => {}); // Non-critical — dropdown just won't show
   }, []);
 
-  // Anchor highlight after render
+  // New data while the transcript is open: during a first analysis this
+  // session's quotes arrive after its transcript, other sessions become
+  // readable, and the whole report lands at the end
+  // (docs/design-progressive-lenses.md). The report's refresh key moves for
+  // each; the transcript re-reads without its loading screen. Not while the
+  // reader is selecting text or typing in a field: the re-read waits until
+  // they stop.
+  const { refreshKey } = useLastRun();
+  const seenRefreshKey = useRef(refreshKey);
+  const rereadOwed = useRef(false);
+  const loaded = !loading && !!data;
+  // The latest rereadNow, for the retry its own closure schedules.
+  const rereadRef = useRef<() => void>(() => {});
+  const rereadNow = useCallback(() => {
+    rereadOwed.current = false;
+    const ticket = ++readTicket.current;
+    const writesBefore = localWrites.current;
+    getTranscript(sessionId)
+      .then((resp) => {
+        if (ticket !== readTicket.current) return;
+        if (localWrites.current !== writesBefore) {
+          // A badge or tag was deleted while this was in flight, and the
+          // response may predate it: read again once the write has gone.
+          setTimeout(() => rereadRef.current(), 500);
+          return;
+        }
+        if (bodyRef.current && readerIsBusy(bodyRef.current)) {
+          rereadOwed.current = true; // they started meanwhile: later
+          return;
+        }
+        applyReread(resp);
+      })
+      .catch(() => undefined);
+    getSessionList().then(setSessionList).catch(() => {});
+  }, [sessionId, applyReread]);
+  useEffect(() => {
+    rereadRef.current = rereadNow;
+  }, [rereadNow]);
+  useEffect(() => {
+    if (refreshKey === seenRefreshKey.current) return;
+    seenRefreshKey.current = refreshKey;
+    // The first read was sent before this bump and may predate what it
+    // announces: owe a re-read for when it lands.
+    if (loading) {
+      rereadOwed.current = true;
+      return;
+    }
+    if (bodyRef.current && readerIsBusy(bodyRef.current)) {
+      rereadOwed.current = true;
+      return;
+    }
+    rereadNow(); // also recovers a page that failed to load
+  }, [refreshKey, loading, rereadNow]);
+  useEffect(() => {
+    if (loaded && rereadOwed.current && !(bodyRef.current && readerIsBusy(bodyRef.current))) {
+      rereadNow();
+    }
+  }, [loaded, rereadNow]);
+  useEffect(() => {
+    const settle = () => {
+      if (!rereadOwed.current) return;
+      // After the event: focus has not moved yet during `focusout`.
+      setTimeout(() => {
+        if (rereadOwed.current && bodyRef.current && !readerIsBusy(bodyRef.current)) {
+          rereadNow();
+        }
+      }, 0);
+    };
+    document.addEventListener("selectionchange", settle);
+    document.addEventListener("focusout", settle);
+    return () => {
+      document.removeEventListener("selectionchange", settle);
+      document.removeEventListener("focusout", settle);
+    };
+  }, [rereadNow]);
+
+  // Anchor highlight after render — once per session and link: a re-read
+  // must not pull the reader back to the anchor they arrived at.
+  const anchoredFor = useRef<string | null>(null);
   useEffect(() => {
     if (!data || loading) return;
     const hash = window.location.hash;
-    if (!hash) return;
+    if (!hash) {
+      anchoredFor.current = null; // a later visit by the same link scrolls again
+      return;
+    }
+    if (anchoredFor.current === `${sessionId}${hash}`) return;
+    anchoredFor.current = `${sessionId}${hash}`;
     const targetId = hash.slice(1); // strip #
     // Defer to next frame so DOM is ready
     requestAnimationFrame(() => {
@@ -434,7 +566,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         el.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     });
-  }, [data, loading]);
+  }, [data, loading, sessionId]);
 
   // Journey scroll sync (derives full label sequence from waypoints)
   const { activeIndex, handleIndexClick, journeyLabels } = useJourneyScrollSync(
@@ -463,6 +595,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       const ann = data.annotations[quoteId];
       if (!ann) return;
       const updated = [...ann.deleted_badges, sentiment];
+      localWrites.current += 1;
       setData({
         ...data,
         annotations: {
@@ -481,6 +614,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       const ann = data.annotations[quoteId];
       if (!ann) return;
       const updated = ann.tags.filter((t) => t.name !== tagName);
+      localWrites.current += 1;
       setData({
         ...data,
         annotations: {

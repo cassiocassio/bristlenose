@@ -64,7 +64,7 @@ class VisionEngine:
             import Quartz  # noqa: F401
             import Vision  # noqa: F401
         except ImportError:
-            return "pyobjc-framework-Vision is not installed (pip install 'bristlenose[apple]')"
+            return 'pyobjc-framework-Vision is not installed (pip install "bristlenose[apple]")'
         return None
 
     def recognize(self, frame: Frame) -> list[Line]:

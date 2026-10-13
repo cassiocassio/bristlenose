@@ -67,6 +67,10 @@ _DEV_ONLY = frozenset({
     # (or serve --dev): diagnostic chrome, English by decision, row "Developer /
     # diagnostic chrome" of the same table.
     "components/TranscriptionDiagnostics.tsx",
+    # The Screens lens likewise (docs/design-screens.md, the 14 Oct 2026 build): reached only
+    # with Diagnostics on, English until it earns a place outside them. Its quote-card controls
+    # already use the shipped keys; leave this entry when the lens is localised.
+    "islands/screens/ScreensLens.tsx",
 })
 
 # Shipping components that carry the defect today. Named so the debt is

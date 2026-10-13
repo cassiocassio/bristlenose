@@ -64,7 +64,7 @@ def probe_size(video: Path) -> tuple[int, int]:
     out = subprocess.run(
         [binary_command("ffprobe"), "-v", "error", "-select_streams", "v:0",
          "-show_entries", "stream=width,height:stream_side_data=rotation",
-         "-of", "json", str(video)], capture_output=True, text=True, timeout=60, check=True).stdout
+         "-of", "json", str(video)], capture_output=True, text=True, encoding="utf-8", timeout=60, check=True).stdout
     streams = json.loads(out).get("streams") or []
     if not streams or not streams[0].get("width") or not streams[0].get("height"):
         raise ValueError(f"{video.name} has no video stream")
@@ -81,7 +81,7 @@ def probe_duration(video: Path) -> float | None:
     """The container's duration in seconds, or None when it does not say."""
     out = subprocess.run(
         [binary_command("ffprobe"), "-v", "error", "-show_entries", "format=duration", "-of", "json", str(video)],
-        capture_output=True, text=True, timeout=60, check=True).stdout
+        capture_output=True, text=True, encoding="utf-8", timeout=60, check=True).stdout
     try:
         return float(json.loads(out)["format"]["duration"])
     except (KeyError, TypeError, ValueError):

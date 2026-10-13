@@ -310,7 +310,7 @@ for these languages.
 came back over speech, but nearly all of that came from pt-pt-2, a street recording
 Whisper hears 73 words of in 17 minutes without any prompt, and the inaudible marker
 now handles exactly that echo. On the three interviews, with the prompt and every net:
-sentences 142 → 181 (pt-br-1), 188 → 202 (pt-pt-1), 94 → 96 (pt-ao-1); longest
+sentences 142 → 180 (pt-br-1), 188 → 202 (pt-pt-1), 94 → 96 (pt-ao-1); longest
 unpunctuated run 80 → 22, 58 → 47, 37 → 30; speech blocks lost 1, 0, 0 (es-1, shipped,
 loses 9). Its fillers sound Brazilian ("né", "ahn") and Whisper has one code for both
 varieties, so European Portuguese gains least; a variant is worth trying if a
@@ -343,7 +343,7 @@ filter never sees, and which the net read as speech. A run of consecutive segmen
 the same text (compared after repeats collapse) is removed when it is 8 or more long, or
 3 or more spanning at least 15 s. Pairs are left alone (202 in the trials, many real),
 and tight bursts of real backchannel ("Sim." four times in 2.4 s, "¡No!" six times in
-6 s) stay. On the twenty recordings it fired on es-1, es-4 and pt-pt-2 only. It took
+6 s) stay. Checked against the outputs from before it existed, it would have fired on es-1, es-4 and pt-pt-2 only; the trials do not record removals, so later runs are not counted. It took
 four rounds on es-1, because the loop survived three ways: inside the net's own
 re-decode, as lines that differ only in doubled words, and split by a line a later gate
 drops.
@@ -408,18 +408,59 @@ appear here; forcing the language remains the fix if it does.
 | Turkish | 40, 37, 63 | **v2**: 23, 32, 21, nothing lost (the one "lost" block is an English song) |
 | Korean | 74, 54, 55 | **v1**: 14, 32, 26, sentence ends 183 → 325 on ko-1; one block of the press Q&A reads differently |
 
-**The rule that held across all four waves.** A prompt helps where Whisper's own output
-runs on: every language that shipped one had unprompted runs of 50 words or more
-(Spanish, French, Italian, German, Portuguese, Catalan, Swedish, Danish, Norwegian,
-Turkish, Korean). Where Whisper already punctuates (Dutch and the five above, runs under
-about 50), a prompt has nothing to fix and its only measurable effect is lost speech.
+**What the four waves describe** (a description of three recordings a language, not a
+rule). The languages that gained were the ones whose unprompted output ran on for long
+stretches; where Whisper already punctuates (Dutch and the five above), a prompt had
+little to fix and its clearest effect was lost speech. The line is not clean: Dutch and
+Russian each had one recording past 50 words and still gained nothing reliable, Turkish
+gained on a recording at 40, and German de-1 (run 24) gained nothing but lost nothing.
 So "no prompt" is a measured result for six languages, not a gap. Korean and Finnish
 count fewer "words" per second (eojeol and long compounds), so the skipped-window net's
 0.3 and 1.0 words-a-second cut-offs may be miscalibrated for them; the trials record no
 per-stretch net decisions, so that is unmeasured.
 
+## Method and its limits (13 Oct 2026, after an independent review)
+
+- **Every quoted number comes from the shipped code.** Seventeen batch-1 trial files had
+  been written before loop removal, so they were re-run, together with same-basis
+  baselines (no prompt, nets on) for all twenty batch-1 recordings. The decisions held:
+  every shipped prompt still shortens the longest run and adds sentence ends, and
+  Portuguese loses 1, 0, 0 and 0 blocks.
+- **Chance.** Each run is seeded; six recordings re-run without a prompt at a second seed
+  lost **no** block by chance in either direction, so a "lost" count of 1 or more under a
+  prompt is real. Run lengths and sentence counts do move with the seed (es-3's longest
+  run 56 vs 32, nl-2's sentence ends 389 vs 424), so a decision resting on a small run
+  difference alone is weak; none of the shipped ones does.
+- **The thresholds were calibrated on the recordings they were then judged on.** The
+  inaudible marker's cut-off sits in a thin margin: "Sí, sí." at 0.044 and "Oui, mais…"
+  at 0.136 are marked, "Sí, sí, sí." at 0.185 and "Sì, sì, sì." at 0.255 are kept, and
+  the first may well be a real backchannel. Out of sample (waves 1–4) it fired three
+  times, all beside music, never on the partial echoes it was built for. The loop
+  thresholds were tuned on es-1, es-4 and pt-pt-2. Expect to revisit both on real
+  projects.
+- **The acceptance criteria above were not all met, and were waived knowingly.** German
+  de-1 gained nothing (it was already punctuated) and lost nothing; Turkish tr-1 under v2
+  has slightly fewer sentence ends with a much shorter run; word counts fell a little on
+  the stress recordings (es-1 −4%, es-4 −4%). The waiver in each case: no speech lost
+  beyond chance, and a clear gain on the language's other recordings.
+- **Japanese.** The skipped-window net now counts length as the paragraph rule does
+  (it had re-decoded about 40% of a Japanese file for nothing). The inaudible marker is
+  inert for Japanese, because it splits words on spaces; that needs calibration on real
+  Japanese echoes before it can be switched on.
+- **faster-whisper (Linux, Windows) gets prompts only for English and Japanese**, the two
+  measured on it. The others were measured on mlx with nets faster-whisper does not have,
+  and it keeps `condition_on_previous_text` on. Bounding that properly means running the
+  trials on faster-whisper; until then it stays restricted.
+- **The net's own contribution on out-of-sample audio is small.** On the two Spanish
+  recordings with reference transcripts, word error rate fell with the prompt
+  (42.7 → 35.7%, 58.4 → 42.9%) and the net added 0 and 0.9 points. Its 1,073-word
+  recovery figure is from es-1, which it was tuned on.
+
 ## Status
 
+- 13 Oct 2026: review fixes: faster-whisper restricted to en and ja, Japanese counted by
+  reading length, loops of prompt guesses become gaps; batch 1 re-measured on the shipped
+  code; seed noise measured.
 - 13 Oct 2026: waves 3 and 4 shipped tr and ko; pl, cs, ru, uk and fi measured and left
   without a prompt.
 - 13 Oct 2026: waves 1 and 2 shipped: ca, sv, da, no; Dutch measured and left without a

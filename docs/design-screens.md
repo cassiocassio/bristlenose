@@ -1,6 +1,6 @@
 ---
 status: proposal
-updated: 13 Oct 2026
+updated: 14 Oct 2026
 ---
 
 # Screens: where they went, what they said, what was on screen
@@ -9,6 +9,13 @@ updated: 13 Oct 2026
 owner today: **(1) screen text and the Screens lens are one project with one plan; (2) Mac first;
 (3) the OCR engine is pluggable, so other platforms can join with another engine later.** Everything
 else here is a proposal.
+
+**14 Oct 2026: tested on real sessions.** Three IKEA sessions (UK site in a Teams call, German site
+in Chrome, UK site on an iPad) were run end to end through a private prototype: screens derived,
+quotes placed and pinned to elements, the board drawn with the shipped design system. What that
+settled is in §3.5 (pinning a quote to an element), §3.6 (is it the same screen?) and §2's S5 (the
+board). The owner's principle from that test: **the machine makes its best guess and the researcher
+fixes it in one gesture**, rather than asking AI to be right about everything.
 
 This doc owns the plan. The evidence lives in two records, which it does not repeat:
 
@@ -42,7 +49,9 @@ Ordered by value for effort and by dependency; Phase 0 (§5) decides which earn 
 order. Each line names the facts it joins.
 
 **S1. A quote knows its screen** (*said × screen*). Every quote card gains a quiet line, *On: Checkout
-· Delivery*, with the screen's still on hover. It works wherever quote cards already appear (Quotes,
+· Delivery*, with the screen's still on hover. The owner's layering, in order: first confirm the
+screen, then where it sits in the journey (*step 2 of 5*), then what on it was salient — a line of
+the screen's own text the quote is pinned to (§3.5), such as a safety warning in the basket. It works wherever quote cards already appear (Quotes,
 Signals drill-downs, Codebook, the transcript), it asks nothing of the researcher, and it is the
 cheapest thing here once screens exist. Measured: report sections are mostly said on one page (14 of
 17, 12 of 15), so the line usually confirms and sometimes contradicts the section, which is the
@@ -66,20 +75,60 @@ exists, with the grammar it already has (typed words, plus tokens with a meaning
 Search stays quick find: no meaning, no AI (search doc, 4 Oct 2026). Screen text is searched on the
 server, in a POST body, never shipped to the page wholesale.
 
-**S3. The transcript reads with its screens** (*said × screen × shown*). The transcript margin marks
-each screen change with the screen's name and a still on hover; a paragraph can show what was on
-screen as it was spoken, folded by default. From any quote, *show the moment* opens this.
+**S3. The transcript reads with its screens** (*said × screen × shown*). The transcript margin carries
+a thumbnail of the screen at the moment the participant arrives on it, with the screen's name; a
+paragraph can show what was on screen as it was spoken, folded by default. From any quote, *show
+the moment* opens this. **Read-aloud highlights:** words a participant says that are also on the
+screen at that moment get a gentle blue wash (the accent at 15%, a tint the theme already mixes).
+Participants read out what their attention is on, so the wash shows where the talk is about the
+page. Measured: 57% of participant paragraphs during a share contain a run of 2+ words that is on
+screen at that moment (§3.5).
 
 **S4. The session timeline gains a screens lane** (*screen*). Under the tapestry tracks, each visit a
 named bar; search matches as ticks.
 
-**S5. The Screens lens** (*screen × said*). Step-column flow, paths, grid
-(`design-screens-lens.md` §5): select a screen to see every quote said there by every participant,
-everything said there, and the tag sidebar scoped to it. Friction as evidence (counts, back-steps,
-time on screen), never a score. Corrections (rename, merge, split, hide) are part of the design.
+**S5. The Screens lens** (*screen × said*). After the real-data test the owner's preferred shape is a
+**board**: a large screengrab with every quote said on that screen around it, the quotes pinned to
+the elements they are about, like a research wall with stickies on a printout. Prototype template:
+[`experiments/screen-text/screens_lens.html`](../experiments/screen-text/screens_lens.html), drawn by
+`screens_board.py` from real indexes into a private page (real screengrabs and quotes never enter
+the tree). What the prototype settled:
+
+- **Navigation** is a list of every screen: a thumbnail (stacked when several participants saw it),
+  the page's own title (its tallest heading; for a session keyed by tab title, the title), the
+  address, the quote count, and micro participant codes that wrap and stop at twelve with *+N*.
+- **A screen with several participants** is a stack of their screengrabs, flipped with the person
+  badges top right (← →). Quotes from a participant whose element was matched on another's page are
+  carried onto it, dashed.
+- **Every quote is the shipped quote card** at the label size, with the star, tag and hide controls,
+  the hidden counter ranged right on the sub line as on the Quotes lens. Quotes not pinned to an
+  element sit under the screengrab with **no heading and no different treatment**: same size,
+  shadow, gutter and behaviour. They are not lesser, only unmatched.
+- **Placement follows width.** Below 1100px of stage (`--bn-breakpoint-content`) quotes go right
+  only; from 1100px either side, by which half of the page their element is in; both overlap the
+  screengrab's edge by 24px. From 1700px (a 5K display) they sit beside it. A real drop shadow (the
+  house tooltip's shape, in the palette's own shadow colour) keeps a card from merging into a white
+  page.
+- **A column that would run past the screengrab stacks**, each card showing its timecode and first
+  line, straight or diagonally offset like a pad of stickies (both prototyped). A card comes to the
+  front on hover or on click (both prototyped); others dim by colour, not opacity, so a stack stays
+  opaque.
+- **The researcher can rearrange.** A hand cursor on a card's top edge and the margin under its
+  timecode; drag it anywhere on the board, including from the list onto the screengrab. It stays
+  where it is put, on top of everything placed before (the order of placing is the z-order), and
+  the leader line follows.
+- **The researcher says which pages are one screen** (§3.6): drag one screen's thumbnail onto
+  another, or right-click; *Not the same screen*, beside the participant badges, peels the showing
+  participant's page off into a screen of its own, one at a time, which works for any number of
+  participants. Prototyped, not designed: needs real prototyping before it is built.
+- **No new tokens.** Every colour is a palette token (default and Edo) or an accent tint at a
+  percentage the theme already mixes (6%, 15%, 30%); lift is the shipped `.bn-focused` treatment.
+
+Friction as evidence (counts, back-steps, time on screen), never a score. The earlier flow and grid
+shapes (`design-screens-lens.md` §5) remain the overview; the board is what opens from them.
 
 **S6. Sections grounded in screens** (*said × screen*). The report's speech-derived sections show
-where they were said, and flag the quotes said on a different page from their section. The smaller
+where they were said, with the screen's thumbnail in the section head, and flag the quotes said on a different page from their section. The smaller
 alternative to S5 (`design-screens-lens.md` §10.1); both need the same data.
 
 Not in this plan: screen text in the chat lens or MCP, and screen text sent to the LLM (§4).
@@ -160,6 +209,57 @@ per session, deferring while a run is in progress. Never on the pipeline's path.
 - **Two loop rules:** copy each frame into `NSData` and read it inside `objc.autorelease_pool()`, or
   memory grows a frame per call. **One process:** the sandbox refuses POSIX semaphores.
 
+### 3.5 Pinning a quote to an element
+
+A quote is placed on a screen by its timecode. It is pinned to one line of on-screen text when it
+shares a run of words with it (two or more, with a content word, or one rare word), or failing that
+when a multilingual sentence model (LaBSE) says they mean the same thing. Measured on the three
+sessions (`experiments/screen-text/README.md`, fourth pass):
+
+- **Positions are per moment.** A line's box moves as the page scrolls, so a pin is matched on the
+  still it is drawn on, re-read at that moment, not on the episode index.
+- **47 quotes placed on a screen; 15 pinned by shared words, 8 by meaning, 24 left unpinned.**
+- **Precision 17 of 23** against hand labels, once lines are limited to the web page (no call tiles,
+  no browser bars) and page furniture is dropped (a line flagged sticky, or seen on 5+ screens of a
+  session). A 3-screen bar for furniture also dropped real controls such as *Continue to checkout*.
+- **Still wrong:** a cookie banner, a one-word button whose word happened to be said, a site welcome
+  line matched by meaning, a heading chosen over the line actually discussed. Consent banners are
+  the one place a small list of phrases would earn its keep; browser and call chrome is better
+  removed by position (the crop) than by word lists.
+- **Pins carry across languages:** a UK quote about the shopping bag lands on the German
+  *Warenkorb* heading, matched by meaning and position.
+
+### 3.6 Is it the same screen?
+
+Stacking two participants' pages and combining their quotes is only right when it is the same page.
+The first key, the URL template with product and category slugs masked (`/cat/*`), was wrong: it
+stacked a UK jars category page with a German storage-furniture category page.
+`experiments/screen-text/same_screen.py` measured the alternatives on labelled pairs (within one
+session, the exact address is the label: 165 pairs, 12 the same page):
+
+| key or signal | result |
+|---|---|
+| **Address with the slug cut to its ID** (`/cat/15950` ≠ `/cat/st001`) | exact where visible: same for home, cart and delivery across UK and German, different for both category pairs and the product pair |
+| Tab or window title | works where shown; the only key on Safari's default (host-only) address bar |
+| Page text, rare words in common | AUC 0.89; at a threshold of 0.35–0.50 finds 8 of 12 same-page pairs and wrongly joins 6–13 of 153 others |
+| Whole lines in common, meaning | AUC 0.91 each |
+| Layout of text, a 32×20 picture | AUC 0.78 each; the picture is wrecked by scrolling |
+| The page heading | equal on 5 of 12 same-page pairs and on 12 of 149 different ones |
+| Rare words + picture + layout or + meaning | AUC 0.92 |
+
+A 90% text match does not work: OCR sees only the visible part of a page, and two views of the same
+page in one session share a median 74% of their words. Across languages text shares nothing (the UK
+and German carts share 1% of words), so there the address is the only key — a bonus, not the bar
+for v1.
+
+**The ladder for v1:** (1) the address with IDs, where the address bar shows a path; (2) the tab or
+window title; (3) otherwise a combined score of words, lines, picture and layout as the machine's
+best guess; and always (4) **the researcher fixes the guess** in one gesture (S5: merge by dragging
+a thumbnail, *Not the same screen* to peel one off). Full-screen browsing, mobile Safari (host
+only), native apps and prototypes all fall to rung 3. The next spikes there: a picture match that
+tolerates scrolling, and the top of the screen alone (headers and app bars sit still), measured on
+real mobile recordings, of which there is one.
+
 ## 4. Privacy, merged
 
 One model for the whole project, combining both evidence docs:
@@ -197,8 +297,10 @@ moments, episodes, URL capture, chrome filter and index writer, from the spike s
 and the `doctor` row; pyobjc in the `apple` extra and the sidecar spec. **Exit:** the media job
 writes an index for a real project on the Mac; Linux CI is green on the fake engine.
 
-**Phase 2 — screens and routes.** `utils/screens.py` (visits, page keys, cross-session screens,
-quote join, section link) as pure functions; the overrides table; the routes; export classification.
+**Phase 2 — screens and routes.** `utils/screens.py` (visits, page keys by the §3.6 ladder,
+cross-session screens, quote join, element pins per §3.5, section link) as pure functions; the
+overrides table (merge, peel, rename, hide, and the researcher's arrangement of a board); the
+routes; export classification.
 **Exit:** `GET …/screens` answers for the two measured sessions as the evidence doc predicts.
 
 **Phase 3 — the first surfaces**, as Phase 0 ordered them. The likely first three: S1 (the quote's
@@ -210,13 +312,19 @@ bridge contract (`tests/fixtures/search-bridge-contract.json`; an older build ig
 kind); the switch and its sentence in Settings; a TestFlight-signed build, the privacy manifest's
 coverage of pyobjc, and an app-store-police pass.
 
-**Phase 5 — the Screens lens** (S5) and sections grounding (S6), with corrections, and the labelled
+**Phase 5 — the Screens lens** (S5, the board) and sections grounding (S6), with corrections, and the labelled
 set that dialog-level states need before any detector (`design-screens-lens.md` §4.2, §9).
 
 **Phase 6 — other platforms.** A RapidOCR engine as an optional extra: pinned, hashed, self-hosted
 models; the 960 px detection cap, 2 threads, the unchanged-frame gate; measured first on real amd64
 Linux and Windows machines, since every number so far is from one Mac. It passes the conformance
 suite and the surfaces appear: nothing above the seam changes.
+
+**Not every study is screen-based.** The owner's rule: the lens should not appear for a study that
+is plainly not a screen-based interview, even when there is video. The signal is unmeasured; the
+candidate is the share of sampled frames that are text-dense with a browser or app frame present,
+measured on talking-head interviews against these sessions. It belongs in Phase 1, since the index
+can answer it cheaply, and decides whether S1–S6 appear at all.
 
 ## 6. Open questions for the owner
 
@@ -229,3 +337,7 @@ suite and the surfaces appear: nothing above the seam changes.
 6. **Ever in the export?** v1 keeps it all out; a screen map without stills is plausible later.
 7. **Should the hover thumbnails share the sampling?** The text-diff moments are where the screen
    changed in a way a person reads.
+8. **On the board, hover or click to bring a quote to the front, and straight or diagonal stacks?**
+   Both are in the prototype to try.
+9. **Whose arrangement is it?** A rearranged board is a researcher edit; is it saved per project like
+   other edits, and does it reach the export one day?

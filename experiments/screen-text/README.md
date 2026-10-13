@@ -27,6 +27,7 @@ data. This README holds aggregates only.
 | `anchor_spike.py` | Fourth pass: how often a transcript paragraph or a quote shares a run of words (or one rare word) with a line on screen within ±4 s. The basis of the read-aloud highlight and of pinning |
 | `board_spike.py` | Fourth pass: one session as a board — a still per screen, quotes pinned to lines on it. Superseded by `screens_board.py` |
 | `screens_board.py` | Fourth pass: three sessions as one set of screens. Screen keys from the address bar (tab title where the bar shows only the host), screens linked across sessions, quotes placed by timecode and pinned by words or by meaning (LaBSE), pins carried across participants. Writes a private page; `--labels` scores pins against hand judgements |
+| `same_screen.py` | Fourth pass: what tells two views of a screen apart. Per view (a run of one exact address or tab title): words, rarity-weighted words, lines, layout, a 32×20 picture, sentence-model meaning, the page heading, and the address with its slug cut to an ID. Scores labelled pairs within a session and prints cross-session pairs |
 | `screens_board.html`, `screens_lens.html` | The page templates: a rough one, and one drawn with the shipped theme CSS and quote card (`--style lens`, the default). Neither holds data |
 
 ## Material
@@ -290,6 +291,15 @@ its screen by timecode and pinned to the element it is about.
 - **Carrying a pin to another participant's still works across languages:** a UK quote about the
   shopping bag lands on the German *Warenkorb* heading; a German quote about delivery costs lands on
   the UK "Shipping costs are calculated at checkout". 3 carried pins on the shared screens.
+- **The URL template is the wrong screen key; the address with the slug cut to its ID is right**
+  (`same_screen.py`). The template stacked a UK category page with a different German one, and two
+  different products. The ID key keeps home, cart and delivery the same across UK and German and
+  splits those, with no errors. Without an address, signals separate same page from different page
+  only partly: within one session (165 pairs, 12 same page) the AUC is 0.78 for layout and for a
+  32×20 picture, 0.89 for rare words in common, 0.91 for lines and for meaning, and 0.92 combined.
+  A 90% text match cannot work: two views of one page share a median 74% of their words, because
+  OCR sees only the visible part. The page heading is not a key (equal on 5 of 12 same-page pairs,
+  and on 12 of 149 different ones).
 - **The still chosen per screen moves pins.** It is the moment that pins the most quotes; a filter
   change can pick another moment, on which a pin finds a different line.
 

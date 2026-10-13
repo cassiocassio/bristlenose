@@ -289,6 +289,20 @@ struct ServeManagerEnvTests {
         }
     }
 
+    /// Screen text (the Screens lens) is diagnostics-only: the sidecar reads shared screens
+    /// only when the Diagnostics preference is on, and never by default.
+    @Test func overlayPreferences_turns_screen_text_on_only_with_diagnostics() {
+        withIsolatedDefaults { defaults in
+            var env: [String: String] = [:]
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_SCREEN_TEXT"] == nil)
+
+            defaults.set(true, forKey: DiagnosticsPreference.key)
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_SCREEN_TEXT"] == "1")
+        }
+    }
+
     /// The TRANSCRIPTION language rides overlayPreferences, and only when the
     /// picker is set: unset means "let Whisper detect", which is a real third
     /// state rather than a default.

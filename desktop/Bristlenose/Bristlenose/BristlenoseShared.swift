@@ -324,6 +324,12 @@ enum BristlenoseShared {
         if let typography = defaults.string(forKey: "typography"), typography != "sf" {
             env["BRISTLENOSE_TYPOGRAPHY"] = typography
         }
+        // Screen text (diagnostics): the serve reads participants' shared screens for the Screens
+        // lens (docs/design-screens.md). Rough, so only with the Diagnostics preference on; the
+        // toggle posts .bristlenosePrefsChanged, since this makes it an env var.
+        if DiagnosticsPreference.isEnabled(defaults) {
+            env["BRISTLENOSE_SCREEN_TEXT"] = "1"
+        }
         // Anonymise for MCP agents (Settings ▸ MCP Agents) — the v1 GLOBAL
         // switch, off by default. ALWAYS injected: when this env var is
         // present, `grounding.resolve_speaker_names` uses it and ignores the

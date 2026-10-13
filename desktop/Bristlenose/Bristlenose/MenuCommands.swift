@@ -161,6 +161,11 @@ private struct DiagnosticsMenuContent: View {
         }
         Button("Shoal Screensaver") { openWindow(id: "shoal-view") }
 
+        // Screens lens (docs/design-screens.md S5): rough, so diagnostics-only and English-only.
+        // No native sidebar row yet; the menu routes the report to /report/screens/.
+        Button("Screens Lens") { bridgeHandler.menuAction("openScreensLens") }
+            .disabled(!bridgeHandler.canDispatch)
+
         if DistributionChannel.current.exposesDebugTools {
             Divider()
             // Section 2 — developer tools (.dmg beta + local DEBUG only).

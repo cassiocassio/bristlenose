@@ -255,7 +255,8 @@ STYLE_PROMPTS: dict[str, str] = {
     "pt": "Ahn, então, hum, na verdade é isso, né? Eh, mais ou menos, porque, ahn, depende.",
     # Waves 1 and 2 (13 Oct 2026), fifteen recordings: in Catalan, Danish,
     # Norwegian and Swedish the longest unpunctuated run fell on every
-    # recording that had one to fix (sv-1 133 -> 25, da-3 200 -> 14). Catalan takes v2: v1 swallowed a 15 s passage and handed back its
+    # recording that had one to fix (sv-1 133 -> 25, da-3 200 -> 14).
+    # Catalan takes v2: v1 swallowed a 15 s passage and handed back its
     # own "No ho sé, depèn." Dutch gets none on purpose: it came back punctuated
     # without a prompt, and both prompts made some recordings worse.
     # Norwegian is Whisper's "no" (Bokmål); Nynorsk ("nn") is left out.

@@ -134,20 +134,28 @@ body.mk-evidence .screens-why {
 .screens-hl.on { background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent); }
 
 /* Stickies: the shipped quote card, compacted, floating a hair off the page. */
-.screens-col blockquote.quote-card {
-  position: absolute; left: 0; right: 0; margin: 0;
-  padding: var(--bn-space-sm) var(--bn-space-md);
+.screens-main blockquote.quote-card {
   /* A real drop shadow, or a card over a white page merges into it. The house tooltip's shape
      (0 4px 16px + 0 1px 4px), coloured by the palette's own --bn-colour-shadow, so Edo warms it
      and dark deepens it. Lifting a card adds the shipped --bn-focus-shadow on top. */
   box-shadow: 0 4px 16px var(--bn-colour-shadow), 0 1px 4px var(--bn-colour-shadow);
-  transition: opacity var(--bn-transition-fast), box-shadow var(--bn-transition-fast);
+  transition: opacity var(--bn-transition-fast), box-shadow var(--bn-transition-fast), color var(--bn-transition-fast);
   cursor: default;
 }
-body[data-front="click"] .screens-col blockquote.quote-card { cursor: pointer; }
-.screens-col blockquote.quote-card .quote-body { font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); }
-.screens-col blockquote.quote-card .quote-row { gap: 0.4rem; }
-.screens-col blockquote.quote-card .timecode { font-size: var(--bn-text-caption); }
+.screens-col blockquote.quote-card { position: absolute; left: 0; right: 0; margin: 0; }
+body[data-front="click"] .screens-main blockquote.quote-card { cursor: pointer; }
+/* One card size for the whole lens: a quote in the list below is not more important than one in
+   the margin, it is only one whose element we could not find. The star and hide buttons stack in
+   the right gutter (the shipped card sets them side by side in a 4.5rem gutter; a 270px card
+   cannot spare it). */
+.screens-main blockquote.quote-card { padding: var(--bn-space-sm) 2rem var(--bn-space-sm) var(--bn-space-md); }
+.screens-main blockquote.quote-card .star-btn { top: 0.4rem; right: 0.4rem; }
+.screens-main blockquote.quote-card .hide-btn { top: 1.55rem; right: 0.4rem; }
+.screens-main blockquote.quote-card .badges { margin-top: 0.3rem; gap: var(--bn-space-xs); }
+.screens-main blockquote.quote-card .quote-body { font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); }
+.screens-main blockquote.quote-card .quote-row { gap: 0.4rem; }
+.screens-main blockquote.quote-card .timecode { font-size: var(--bn-text-caption); }
+.screens-hidden-slot { margin-left: auto; }
 .screens-col blockquote.quote-card.carried { border-left-style: dashed; }
 .screens-col blockquote.quote-card { z-index: var(--stack, 2); }
 .screens-col blockquote.quote-card.bn-focused { z-index: 40; }
@@ -155,25 +163,26 @@ body[data-front="click"] .screens-col blockquote.quote-card { cursor: pointer; }
    several cards at a glance, like a pad of stickies. */
 .screens-col.stacked.diagonal blockquote.quote-card { left: var(--slide, 0px); right: calc(-1 * var(--slide, 0px)); }
 .screens-col.stacked blockquote.quote-card:not(.bn-focused) { box-shadow: 0 -2px 6px var(--bn-colour-shadow), 0 4px 16px var(--bn-colour-shadow), 0 1px 4px var(--bn-colour-shadow); }
-.screens-col blockquote.quote-card.bn-focused { box-shadow: var(--bn-focus-shadow), 0 8px 24px var(--bn-colour-shadow); }
+.screens-main blockquote.quote-card.bn-focused { box-shadow: var(--bn-focus-shadow), 0 8px 24px var(--bn-colour-shadow); }
 /* Dim the others by colour, not opacity: stacked cards must stay opaque or they show through. */
-.screens-board.focus .quote-card:not(.bn-focused) { color: var(--bn-colour-muted); }
-.screens-board.focus .quote-card:not(.bn-focused) mark.screens-read { background: none; }
-.screens-board.focus .screens-hl:not(.on),
-.screens-board.focus .screens-leaders :not(.on) { opacity: 0.25; }
+.screens-main.focus .quote-card:not(.bn-focused) { color: var(--bn-colour-muted); }
+.screens-main.focus .quote-card:not(.bn-focused) mark.screens-read { background: none; }
+.screens-main.focus .screens-hl:not(.on),
+.screens-main.focus .screens-leaders :not(.on) { opacity: 0.25; }
 
 /* The read-aloud highlight: words said that are also on the screen. */
 mark.screens-read { background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
-.screens-col blockquote.bn-focused mark.screens-read { background: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent); }
+.screens-main blockquote.bn-focused mark.screens-read { background: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent); }
 
 svg.screens-leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 3; }
 svg.screens-leaders path { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1; opacity: 0.6; }
 svg.screens-leaders path.carried { stroke-dasharray: 3 3; }
 svg.screens-leaders circle { fill: var(--bn-colour-accent); }
 
-.screens-main > h3 { margin-top: var(--bn-space-xl); }
-.screens-loose { columns: 340px; column-gap: var(--bn-space-lg); }
-.screens-loose blockquote.quote-card { break-inside: avoid; margin: 0 0 var(--bn-space-md); }
+.screens-loose { columns: 260px; column-gap: var(--bn-space-md); margin-top: var(--bn-space-md); }
+/* position: relative so the star and hide buttons anchor to their own card (the shipped card gets
+   this from .quote-group, which this list is not). */
+.screens-loose blockquote.quote-card { position: relative; break-inside: avoid; margin: 0 0 var(--bn-space-md); }
 .screens-empty { color: var(--bn-colour-muted); font-size: var(--bn-text-label); }
 @media (prefers-reduced-motion: reduce) { .screens-hl, .screens-col blockquote.quote-card { transition: none; } }
 </style>
@@ -188,7 +197,7 @@ svg.screens-leaders circle { fill: var(--bn-colour-accent); }
   <label><input type="checkbox" id="mk-evidence"> why each quote is pinned</label>
   <label><select id="mk-palette"><option value="default">default palette</option><option value="edo">Edo palette</option></select></label>
   <label><select id="mk-scheme"><option value="">system appearance</option><option value="light">light</option><option value="dark">dark</option></select></label>
-  <span class="mk-flag">owner-written strings: “Screens”, “More on this screen” / “On this screen”, the sub line · new CSS: .screens-* · no new tokens</span>
+  <span class="mk-flag">owner-written strings: “Screens”, the sub line · new CSS: .screens-* · no new tokens</span>
 </div>
 
 <div class="screens-lens">
@@ -201,7 +210,7 @@ svg.screens-leaders circle { fill: var(--bn-colour-accent); }
   <p>Generated by <code>experiments/screen-text/screens_board.py</code> from three real sessions (one on the UK site, one on the German site, one on an iPad). A quote is placed on a screen by its timecode, then pinned to one line of text on that screen when it shares a run of words with it, or failing that when a multilingual sentence model says they mean the same thing. The heading is the page's own tallest line of text near the top; the address under it is the screen's key.</p>
   <p id="mk-counts"></p>
   <p>Stickies are the shipped quote card (<code>blockquote.quote-card</code>, person badge, sentiment badge) at label size. At rest they float on <code>--bn-colour-shadow</code>; hovering one gives it the shipped <code>.bn-focused</code> treatment and dims the rest. When a column's cards would run past the bottom of the screengrab they stack, each showing its timecode and first line, so every quote stays on the screen it was said about. The blue on words is an accent tint at 15%, 30% when the card is focused; the boxes on the screen are 6% and 15%. All three percentages are ones the theme already mixes.</p>
-  <p><b>More on this screen</b> is everything said while this screen was up that has no pin on this screengrab: quotes that matched no element by words or meaning, and, on a shared screen, the other participants' pinned quotes whose element could not be found on this participant's page. Every quote placed on the screen appears exactly once, either as a sticky or there. When nothing on the screen is pinned it reads <b>On this screen</b>, since there is nothing above for it to be more than.</p>
+  <p>Below the screengrab is everything else said while this screen was up: quotes that matched no element by words or meaning, and, on a shared screen, the other participants' pinned quotes whose element could not be found on this participant's page. They have no heading and no different treatment: same card, same size, same shadow, same gutter, same way of coming to the front. Every quote placed on the screen appears exactly once, pinned or below.</p>
   <p>Resize the window: from 1100px of stage (<code>--bn-breakpoint-content</code>) quotes sit either side, by which half of the page their element is in; below it they all go right. ← → flips participant on a shared screen, ↑ ↓ moves between screens. Dashed means another participant's quote carried onto this screengrab because its element was matched on both pages.</p>
 </section>
 
@@ -224,14 +233,30 @@ function marked(text, phrase, cap) {
   return t.replace(re, m => '<mark class="screens-read">' + m + "</mark>");
 }
 
+// What the researcher does to a quote on this page: star it, tag it. Kept per quote for the life of
+// the page so flipping screens or resizing keeps them; nothing is saved.
+const marks = new Map();   // key -> { starred, hidden, tags: [] }
+const keyOf = (owner, q) => owner.code + "@" + q.tc;
+const markOf = k => { if (!marks.has(k)) marks.set(k, { starred: false, hidden: false, tags: [] }); return marks.get(k); };
+
+const HIDE_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
+  '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>' +
+  '<path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
 function card(q, owner, opts) {
   const why = opts.why ? '<span class="screens-why">' + esc(opts.why) + "</span>" : "";
-  return '<blockquote class="quote-card' + (opts.carried ? " carried" : "") + '"><div class="quote-row"><span class="timecode">[' + tc(q.tc) + "]</span>" +
+  const k = keyOf(owner, q), m = markOf(k);
+  const tags = m.tags.map(t => '<span class="badge badge-user">' + esc(t) + "</span>").join("");
+  return '<blockquote class="quote-card' + (opts.carried ? " carried" : "") + (m.starred ? " starred" : "") + '" data-q="' + esc(k) + '">' +
+    '<div class="quote-row"><span class="timecode">[' + tc(q.tc) + "]</span>" +
     '<div class="quote-body"><span class="quote-text-wrapper"><span class="smart-quote">“</span>' +
     marked(q.text, opts.phrase, opts.cap || 9999) + '<span class="smart-quote">”</span></span> <span class="speaker">' +
     badge(owner.code, owner.name) + "</span>" +
-    (q.sent ? '<div class="badges"><span class="badge badge-ai badge-' + esc(q.sent) + '">' + esc(q.sent) + "</span></div>" : "") +
-    why + "</div></div></blockquote>";
+    '<div class="badges">' + (q.sent ? '<span class="badge badge-ai badge-' + esc(q.sent) + '">' + esc(q.sent) + "</span>" : "") + tags +
+    '<span class="badge badge-add" role="button" tabindex="0" aria-label="Add tag">+</span></div>' +
+    why + "</div></div>" +
+    '<button class="hide-btn" aria-pressed="false" aria-label="Hide this quote">' + HIDE_ICON + "</button>" +
+    '<button class="star-btn" aria-pressed="' + m.starred + '" aria-label="Star this quote">&#9733;</button></blockquote>';
 }
 
 // A screen's title: the page's own heading (first participant's, then others' if they differ —
@@ -281,7 +306,8 @@ D.boards.forEach((b, i) => {
 }
 renderNav();
 
-function go(i, j) { location.hash = "#screen-" + ((i + D.boards.length) % D.boards.length) + "-" + j; }
+function go(i, j) { hiddenOpen = false; goTo(i, j); }
+function goTo(i, j) { location.hash = "#screen-" + ((i + D.boards.length) % D.boards.length) + "-" + j; }
 
 function render() {
   [...nav.querySelectorAll("a")].forEach((a, i) => a.setAttribute("aria-current", i === cur ? "true" : "false"));
@@ -292,10 +318,10 @@ function render() {
     (b.tabs.length > 1 ? b.tabs.map((x, j) => '<button aria-pressed="' + (j === tab) + '" data-j="' + j + '" title="' + esc(x.heading) + '">' + badge(x.code, x.name) + "</button>").join("") : badge(t.code, t.name)) +
     "</div></div>" +
     '<p class="screens-sub">' + (byTitle(b) ? "" : "<code>" + esc(b.name) + "</code>") + "<span>" + esc(t.name) + "’s screen at <span class=timecode>" + tc(t.t) + "</span></span><span>" +
-    plural(n, "quote", "quotes") + (b.tabs.length > 1 ? " from " + plural(b.tabs.length, "participant", "participants") : "") + "</span></p>" +
+    plural(n, "quote", "quotes") + (b.tabs.length > 1 ? " from " + plural(b.tabs.length, "participant", "participants") : "") + '</span><span class="screens-hidden-slot"></span></p>' +
     '<div class="screens-stage"><div class="screens-board"><div class="screens-col screens-col-l"></div><div class="screens-shot"><img alt="" src="' + t.src + '"></div>' +
     '<div class="screens-col screens-col-r"></div><svg class="screens-leaders"></svg></div></div>' +
-    '<h3 class="screens-more-head"></h3><div class="screens-loose"></div>';
+    '<div class="screens-loose"></div>';
   main.querySelectorAll(".screens-who button").forEach(bt => bt.onclick = () => go(cur, +bt.dataset.j));
   const img = main.querySelector(".screens-shot img");
   (img.complete ? Promise.resolve() : new Promise(r => img.onload = r)).then(() => layout(b, t));
@@ -305,7 +331,7 @@ function render() {
 // of the screengrab, stack them: evenly stepped, each showing its timecode and first line, the
 // later card lying over the earlier one's tail. Hover lifts a card out of the stack.
 function place(col, cards, H) {
-  const GAP = 10, MIN_STEP = 46;
+  const GAP = parseFloat(getComputedStyle(document.documentElement).fontSize) * 0.75, MIN_STEP = 46;   // --bn-space-md, the list's gutter
   let y = 0;
   const tops = cards.map(c => { const t = Math.max(c.want, y); y = t + c.el.offsetHeight + GAP; return t; });
   const limit = Math.max(H, 320);
@@ -329,11 +355,12 @@ function layout(b, t) {
   const [L, R] = board.querySelectorAll(".screens-col");
   const both = getComputedStyle(L).display !== "none";
   const W = img.clientWidth, H = img.clientHeight;
-  const items = t.pins.map(p => ({ p, box: p.box, owner: t, carried: false }));
+  const visible = (o, q) => !markOf(keyOf(o, q)).hidden;
+  const items = t.pins.filter(p => visible(t, p)).map(p => ({ p, box: p.box, owner: t, carried: false }));
   const shown = new Set(t.pins);
   for (const o of b.tabs) {
     if (o === t) continue;
-    for (const p of o.pins) { const e = p.elsewhere && p.elsewhere[t.tag]; if (e) { items.push({ p, box: e.box, owner: o, carried: true, via: e }); shown.add(p); } }
+    for (const p of o.pins) { const e = p.elsewhere && p.elsewhere[t.tag]; if (e && visible(o, p)) { items.push({ p, box: e.box, owner: o, carried: true, via: e }); shown.add(p); } }
   }
   items.sort((a, c) => a.box[1] - c.box[1]);
   const cols = { L: [], R: [] };
@@ -361,25 +388,19 @@ function layout(b, t) {
     const mx = (nx + hx) / 2;
     svg.insertAdjacentHTML("beforeend", '<path data-pin="' + c.id + '" class="' + (c.it.carried ? "carried" : "") + '" d="M' + nx + "," + ny +
       " C" + mx + "," + ny + " " + mx + "," + hy + " " + hx + "," + hy + '"/><circle data-pin="' + c.id + '" cx="' + hx + '" cy="' + hy + '" r="2.5"/>');
-    c.el.onmouseenter = () => { if (front === "hover") lift(board, c); };
-    c.el.onmouseleave = () => { if (front === "hover") drop(board); };
-    c.el.onclick = e => {
-      if (front !== "click") return;
-      e.stopPropagation();
-      if (c.el.classList.contains("bn-focused")) drop(board); else lift(board, c);
-    };
+    c.el.dataset.pin = c.id;
   }
-  board.onclick = () => { if (front === "click") drop(board); };
+  wireLift();
   // Everything else said on this screen, by every participant: their unpinned quotes, and their
   // pinned ones whose element could not be found on this screengrab.
   const rest = b.tabs.flatMap(o => [
     ...o.pins.filter(p => !shown.has(p)).map(q => ({ q, o, phrase: q.phrase })),
     ...o.loose.map(q => ({ q, o, phrase: "" })),
-  ]).sort((a, c) => a.o.code.localeCompare(c.o.code) || a.q.tc - c.q.tc);
-  // "More" only when there are stickies above to be more than; otherwise this list is the screen.
-  main.querySelector(".screens-more-head").textContent = items.length ? "More on this screen" : "On this screen";
+  ]).filter(r => visible(r.o, r.q)).sort((a, c) => a.o.code.localeCompare(c.o.code) || a.q.tc - c.q.tc);
+  hiddenCounter(b);
   main.querySelector(".screens-loose").innerHTML = rest.length ?
-    rest.map(({ q, o, phrase }) => card(q, o, { phrase })).join("") : '<p class="screens-empty">—</p>';
+    rest.map(({ q, o, phrase }) => card(q, o, { phrase })).join("") : "";
+  wireLift();
 }
 
 // Two ways to bring a card out of a stack, to try side by side: hover (transient, nothing to
@@ -387,16 +408,117 @@ function layout(b, t) {
 let front = "hover", stack = "straight";
 try { stack = localStorage.getItem("screens-stack") || "straight"; } catch (e) {}
 try { front = localStorage.getItem("screens-front") || "hover"; } catch (e) {}
-function lift(board, c) {
-  drop(board);
-  board.classList.add("focus"); c.el.classList.add("bn-focused");
-  board.querySelectorAll('[data-pin="' + c.id + '"]').forEach(e => e.classList.add("on"));
+// Every card on the page lifts the same way, pinned or not: nothing marks the list below as
+// lesser than the margin.
+function lift(el) {
+  drop();
+  main.classList.add("focus"); el.classList.add("bn-focused");
+  if (el.dataset.pin) main.querySelectorAll('[data-pin="' + el.dataset.pin + '"]').forEach(e => e.classList.add("on"));
 }
-function drop(board) {
-  board.classList.remove("focus");
-  board.querySelectorAll(".bn-focused").forEach(e => e.classList.remove("bn-focused"));
-  board.querySelectorAll(".on").forEach(e => e.classList.remove("on"));
+function drop() {
+  main.classList.remove("focus");
+  main.querySelectorAll(".bn-focused").forEach(e => e.classList.remove("bn-focused"));
+  main.querySelectorAll(".on").forEach(e => e.classList.remove("on"));
 }
+function wireLift() {
+  for (const el of main.querySelectorAll("blockquote.quote-card")) {
+    el.onmouseenter = () => { if (front === "hover") lift(el); };
+    el.onmouseleave = () => { if (front === "hover") drop(); };
+    el.onclick = e => {
+      if (front !== "click" || e.target.closest(".star-btn, .hide-btn, .badge-add, .tag-input-wrap")) return;
+      e.stopPropagation();
+      if (el.classList.contains("bn-focused")) drop(); else lift(el);
+    };
+  }
+}
+main.addEventListener("click", e => { if (front === "click" && !e.target.closest("blockquote, .bn-hidden-badge")) drop(); });
+
+// Star and tag, delegated: a card may be re-rendered at any time, so state lives in `marks`.
+function cardsFor(k) { return [...main.querySelectorAll('blockquote[data-q="' + CSS.escape(k) + '"]')]; }
+function openTagInput(add) {
+  const bq = add.closest("blockquote"), k = bq.dataset.q;
+  const wrap = document.createElement("span");
+  wrap.className = "tag-input-wrap";
+  wrap.innerHTML = '<span class="tag-input-box"><input class="tag-input" aria-label="Tag" placeholder="tag"></span>';
+  add.replaceWith(wrap);
+  const input = wrap.querySelector("input");
+  input.focus();
+  let done = false;
+  const close = commit => {
+    if (done) return;
+    done = true;
+    const v = input.value.trim();
+    if (commit && v && !markOf(k).tags.some(t => t.toLowerCase() === v.toLowerCase())) markOf(k).tags.push(v);
+    wrap.remove();
+    redrawBadges(k);
+  };
+  input.addEventListener("keydown", e => {
+    e.stopPropagation();
+    if (e.key === "Enter") close(true);
+    if (e.key === "Escape") close(false);
+  });
+  input.addEventListener("blur", () => { if (wrap.isConnected) close(true); });
+}
+function redrawBadges(k) {
+  const m = markOf(k);
+  for (const bq of cardsFor(k)) {
+    const row = bq.querySelector(".badges");
+    row.querySelectorAll(".badge-user, .badge-add, .tag-input-wrap").forEach(e => e.remove());
+    row.insertAdjacentHTML("beforeend", m.tags.map(t => '<span class="badge badge-user">' + esc(t) + "</span>").join("") +
+      '<span class="badge badge-add" role="button" tabindex="0" aria-label="Add tag">+</span>');
+  }
+}
+// The shipped counter (components/Counter.tsx): "N hidden quotes ▾", a dropdown listing them,
+// click one to unhide it, "Unhide all" when there is more than one.
+let hiddenOpen = false;
+function hiddenCounter(b) {
+  const slot = main.querySelector(".screens-hidden-slot");
+  const all = b.tabs.flatMap(o => [...o.pins, ...o.loose].map(q => ({ q, o })))
+    .filter(r => markOf(keyOf(r.o, r.q)).hidden).sort((x, y) => x.q.tc - y.q.tc);
+  if (!all.length) { slot.innerHTML = ""; hiddenOpen = false; return; }
+  slot.innerHTML = '<div class="bn-hidden-badge"><button class="bn-hidden-toggle" aria-expanded="' + hiddenOpen + '">' +
+    plural(all.length, "hidden quote", "hidden quotes") + ' <span class="bn-hidden-chevron">&#x25BE;</span></button>' +
+    (hiddenOpen ? '<div class="bn-hidden-dropdown"><div class="bn-hidden-header"><span>Unhide:</span>' +
+      (all.length > 1 ? '<a href="#" class="bn-unhide-all" role="button" tabindex="0">Unhide all</a>' : "") + '</div><div class="bn-hidden-list">' +
+      all.map(r => '<div class="bn-hidden-item"><span class="timecode">[' + tc(r.q.tc) + ']</span><span class="bn-hidden-preview" role="button" tabindex="0" data-q="' +
+        esc(keyOf(r.o, r.q)) + '">' + esc(r.q.text.length > 50 ? r.q.text.slice(0, 49) + "…" : r.q.text) + '</span><span class="speaker-link">' + esc(r.o.code) + "</span></div>").join("") +
+      "</div></div>" : "") + "</div>";
+}
+function keepScroll(fn) { const y = scrollY; fn(); requestAnimationFrame(() => scrollTo(0, y)); }
+
+main.addEventListener("click", e => {
+  const hide = e.target.closest(".hide-btn");
+  if (hide) {
+    e.stopPropagation();
+    markOf(hide.closest("blockquote").dataset.q).hidden = true;
+    keepScroll(render);
+    return;
+  }
+  const toggle = e.target.closest(".bn-hidden-toggle");
+  if (toggle) { e.stopPropagation(); hiddenOpen = !hiddenOpen; hiddenCounter(D.boards[cur]); return; }
+  const one = e.target.closest(".bn-hidden-preview");
+  if (one) { e.stopPropagation(); markOf(one.dataset.q).hidden = false; keepScroll(render); return; }
+  if (e.target.closest(".bn-unhide-all")) {
+    e.preventDefault(); e.stopPropagation(); hiddenOpen = false;
+    const b = D.boards[cur];
+    b.tabs.forEach(o => [...o.pins, ...o.loose].forEach(q => { markOf(keyOf(o, q)).hidden = false; }));
+    keepScroll(render); return;
+  }
+  const star = e.target.closest(".star-btn");
+  if (star) {
+    e.stopPropagation();
+    const k = star.closest("blockquote").dataset.q, m = markOf(k);
+    m.starred = !m.starred;
+    for (const bq of cardsFor(k)) { bq.classList.toggle("starred", m.starred); bq.querySelector(".star-btn").setAttribute("aria-pressed", m.starred); }
+    return;
+  }
+  const add = e.target.closest(".badge-add");
+  if (add) { e.stopPropagation(); openTagInput(add); }
+}, true);
+main.addEventListener("keydown", e => {
+  const add = e.target.closest && e.target.closest(".badge-add");
+  if (add && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openTagInput(add); }
+});
 
 function fromHash() {
   const m = /^#screen-(\d+)-(\d+)$/.exec(location.hash);
@@ -406,8 +528,8 @@ function fromHash() {
 }
 addEventListener("hashchange", fromHash);
 addEventListener("keydown", e => {
-  if (e.target.closest("input, select")) return;
-  if (e.key === "Escape") { const b = main.querySelector(".screens-board"); if (b) drop(b); return; }
+  if (e.target.closest("input, select, button, [role=button]")) return;
+  if (e.key === "Escape") { drop(); return; }
   const n = D.boards[cur].tabs.length;
   const k = { ArrowRight: [cur, (tab + 1) % n], ArrowLeft: [cur, (tab - 1 + n) % n], ArrowDown: [cur + 1, 0], ArrowUp: [cur - 1, 0] }[e.key];
   if (k) { e.preventDefault(); go(k[0], k[1]); }
@@ -419,7 +541,7 @@ frontSel.onchange = e => {
   front = e.target.value;
   try { localStorage.setItem("screens-front", front); } catch (err) {}
   document.body.dataset.front = front;
-  const b = main.querySelector(".screens-board"); if (b) drop(b);
+  drop();
 };
 document.body.dataset.front = front;
 const stackSel = document.getElementById("mk-stack");

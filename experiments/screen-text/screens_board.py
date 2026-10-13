@@ -444,8 +444,10 @@ THEME = HERE.parent.parent / "bristlenose" / "theme"
 # The shipped stylesheets the lens page is drawn with, in index.css order. Inlined at generation time
 # so the page cannot drift from the tree: each block is headed by its path.
 THEME_FILES = ["tokens.css", "tokens-typography.css", "colors/palette-default.css", "colors/palette-edo.css",
-               "atoms/badge.css", "atoms/timecode.css", "atoms/interactive.css", "atoms/section-heading.css",
-               "molecules/person-badge.css", "organisms/blockquote.css"]
+               "atoms/badge.css", "atoms/timecode.css", "atoms/toggle.css", "atoms/interactive.css",
+               "atoms/section-heading.css", "molecules/person-badge.css", "molecules/badge-row.css",
+               "molecules/quote-actions.css", "molecules/tag-input.css", "molecules/hidden-quotes.css",
+               "organisms/blockquote.css"]
 REPORT_RULES = ["html {", "body {", "h1, h2, h3, .description {", "h1 {", "h2 {", "h3 {"]
 
 

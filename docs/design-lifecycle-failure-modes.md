@@ -106,6 +106,18 @@ a test proved red on its mutant (`a4140b48`, `75a56841`).
 `clean: true` (`ContentView.swift`, the confirmation sheet and the no-curation
 path); every other start, Retry included, resumes.
 
+**Proven on macOS and Linux only: rows 3, 4, 6 and 26, and the scenario
+`reanalyse-succeeds-live-serve`.** Each scenario moves
+`bristlenose-output/`, or the project around it, while a server holds
+`.bristlenose/bristlenose.db` and its log open, and Windows refuses to move a
+folder with an open file in it (WinError 5 / 32). The scenarios skip there
+(`_MOVES_AN_OPEN_DATABASE`, 13 Oct 2026, after they turned the Windows CI cell
+red). What a Windows CLI user gets instead is a refusal, not a loss: `run
+--clean` under a live `serve` cannot set the report aside, says *"this run will
+write over it"*, and resumes in place; a restore or reclaim under one leaves the
+previous report in `.bristlenose-output-previous` and logs where. Listed as an
+open item in `docs/design-windows-port.md`.
+
 **Accepted consequence, not a defect.** Selecting a project that has never been
 analysed now creates an empty `bristlenose-output/` beside the interviews
 straight away (the database is created eagerly so the first run and the server

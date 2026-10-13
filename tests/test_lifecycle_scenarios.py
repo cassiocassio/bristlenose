@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -284,16 +285,33 @@ _WS4 = (
     "copy should mean is the owner's call."
 )
 
+# Windows will not rename or move a folder while a file inside it is open, and a
+# live server holds bristlenose-output/.bristlenose/bristlenose.db (and its log)
+# open. Each scenario below moves that folder, or the project around it, under a
+# live server, so on Windows the move itself is refused before the code under
+# test runs. Same class as TestTheStashCycle (test_serve_lifecycle_robustness)
+# and the test_serve_condition guards. What the refusal costs a Windows user is
+# recorded as an open item in docs/design-windows-port.md, not hidden here.
+_MOVES_AN_OPEN_DATABASE = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="moves a folder whose database a live server holds open; Windows refuses the move",
+)
+
 SCENARIOS = [
     pytest.param(first_analysis_serve_before_output, id="first-analysis-serve-before-output"),
-    pytest.param(reanalyse_succeeds_under_a_live_serve, id="reanalyse-succeeds-live-serve"),
-    pytest.param(reanalyse_fails_and_curation_survives, id="reanalyse-fails-curation-survives"),
+    pytest.param(reanalyse_succeeds_under_a_live_serve, id="reanalyse-succeeds-live-serve",
+                 marks=_MOVES_AN_OPEN_DATABASE),
+    pytest.param(reanalyse_fails_and_curation_survives, id="reanalyse-fails-curation-survives",
+                 marks=_MOVES_AN_OPEN_DATABASE),
     pytest.param(server_restarted_mid_reanalyse, id="server-restarted-mid-reanalyse"),
     pytest.param(server_restarted_mid_reanalyse_then_the_run_fails,
-                 id="server-restarted-mid-reanalyse-run-fails"),
-    pytest.param(crash_leaves_a_stash_and_the_next_run_reclaims_it, id="crash-then-next-run-reclaims"),
+                 id="server-restarted-mid-reanalyse-run-fails",
+                 marks=_MOVES_AN_OPEN_DATABASE),
+    pytest.param(crash_leaves_a_stash_and_the_next_run_reclaims_it, id="crash-then-next-run-reclaims",
+                 marks=_MOVES_AN_OPEN_DATABASE),
     pytest.param(served_from_the_output_folder_then_the_project, id="output-entry-then-root-entry"),
-    pytest.param(renamed_under_a_live_serve_is_said, id="rename-under-live-serve-is-said"),
+    pytest.param(renamed_under_a_live_serve_is_said, id="rename-under-live-serve-is-said",
+                 marks=_MOVES_AN_OPEN_DATABASE),
     pytest.param(
         crash_report_visible_before_any_rerun, id="crash-report-visible-before-rerun",
         marks=pytest.mark.xfail(strict=True, reason=(

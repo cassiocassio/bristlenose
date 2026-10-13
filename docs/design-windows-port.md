@@ -148,6 +148,21 @@ holds open: the stash-cycle tests); the count and each reason are in
 
 ### Open, in order
 
+**First: re-analyse under a live `serve` cannot set the old report aside.** The server
+holds `bristlenose-output/.bristlenose/bristlenose.db` and its log open, and
+Windows will not move a folder with an open file in it, so `run --clean` in one
+terminal while `serve` runs in another says *"Could not set … aside — this run
+will write over it"* and resumes in place; a failed run's restore, or a crash
+reclaim, under a live server leaves the previous report in
+`.bristlenose-output-previous`. No data is lost, but the safety net is off.
+Found 13 Oct 2026 when five lifecycle scenarios turned the Windows CI cell red;
+they now skip on Windows (`tests/test_lifecycle_scenarios.py`,
+`_MOVES_AN_OPEN_DATABASE`; register: `docs/design-lifecycle-failure-modes.md`).
+A fix would have the server let go of the database while a run owns the project
+(a `NullPool`, or a dispose on `run_started`) and reattach after, which the
+watcher's `_reattach_if_moved` already does on the way back. Unmeasured on a
+real Windows machine.
+
 1. **The one-line installer is the primary Windows route** (shipped in 0.34.0;
    `scripts/windows/install.ps1`). It is advertised everywhere as
    `irm https://bristlenose.app/install.ps1 | iex` (owner's decision, 5 Oct 2026): the

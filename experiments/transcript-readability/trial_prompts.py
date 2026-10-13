@@ -149,7 +149,7 @@ def run(wav: Path, lang: str, prompt: str | None) -> dict[str, object]:
 
 
 def main(root: str, only: list[str], variant: str = "prompt", net: bool = False,
-         include_none: bool = True, inaudible: bool = False) -> int:
+         include_none: bool = True, inaudible: bool = False, seed: int = 0) -> int:
     # The skipped-window and inaudible nets are off unless asked for, so runs
     # made before they existed stay comparable; a run with them is stored as
     # "<condition>+net" and "<condition>+net+inaudible".
@@ -157,6 +157,13 @@ def main(root: str, only: list[str], variant: str = "prompt", net: bool = False,
     if not inaudible:
         s05.is_prompt_guess = lambda *_a, **_k: False  # type: ignore[assignment]
     suffix = ("+net" if net else "") + ("+inaudible" if inaudible else "")
+    if seed:
+        # Stage 5 seeds every file with 0; a different seed shows how much of a
+        # difference between two runs is chance (the sampling fallback windows).
+        import mlx.core as mx
+        real_seed = mx.random.seed
+        mx.random.seed = lambda _s: real_seed(seed)  # type: ignore[assignment]
+        suffix += f"+seed{seed}"
     base = Path(root)
     manifest = json.loads((base / "manifest.json").read_text(encoding="utf-8"))
     out_dir = base / "trials"
@@ -191,7 +198,7 @@ def main(root: str, only: list[str], variant: str = "prompt", net: bool = False,
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    variant, net, include_none, inaudible = "prompt", False, True, False
+    variant, net, include_none, inaudible, seed = "prompt", False, True, False, 0
     while args and args[0].startswith("--"):
         flag = args.pop(0)
         if flag.startswith("--variant="):
@@ -202,4 +209,6 @@ if __name__ == "__main__":
             include_none = False
         elif flag == "--inaudible":
             inaudible = True
-    sys.exit(main(args[0], args[1:], variant, net, include_none, inaudible))
+        elif flag.startswith("--seed="):
+            seed = int(flag.split("=", 1)[1])
+    sys.exit(main(args[0], args[1:], variant, net, include_none, inaudible, seed))

@@ -712,8 +712,6 @@ class TestStylePromptLanguage:
             ("no", "Norwegian"), ("tr", "Turkish"), ("ko", "Korean"),
         ):
             assert style_prompt_for(code) == STYLE_PROMPTS[code] == style_prompt_for(name), code
-        # Bokmål is Whisper's "no"; our interface code for it is "nb".
-        assert style_prompt_for("nb") == STYLE_PROMPTS["no"]
 
     def test_a_language_without_a_measured_prompt_gets_none(self) -> None:
         from bristlenose.stages.s05_transcribe import style_prompt_for
@@ -856,6 +854,17 @@ class TestFasterWhisperGetsTheStylePrompt:
 
         fn = s05._init_faster_whisper_backend(settings, hw)
         fn(tmp_path / "p1.wav", settings)
+
+        assert calls["transcribe"]["hotwords"] is None
+
+    def test_a_language_measured_only_on_mlx_gets_none(self, monkeypatch, tmp_path) -> None:
+        """Spanish has a prompt, measured on mlx with the nets around it; on
+        faster-whisper, which has none of those nets, it is not sent."""
+        s05, hw, calls = self._backend(monkeypatch, detected="es")
+        assert s05.STYLE_PROMPTS["es"]
+
+        fn = s05._init_faster_whisper_backend(self._settings("auto"), hw)
+        fn(tmp_path / "p1.wav", self._settings("auto"))
 
         assert calls["transcribe"]["hotwords"] is None
 
@@ -1074,6 +1083,71 @@ class TestMlxBackendRemovesLoops:
         segments, _ = s05_transcribe._init_mlx_backend(settings)(tmp_path / "p1.wav", settings)
 
         assert "nada" not in " ".join(s.text for s in segments)
+
+
+class TestNetsInScriptsWithoutSpaces:
+    def test_japanese_at_a_normal_pace_is_not_re_decoded(self, monkeypatch, tmp_path) -> None:
+        """A Japanese line is one "word" to str.split(); counted that way every
+        stretch looked skipped and was re-decoded for nothing."""
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        calls: list[int] = []
+        line = "今日はお時間をいただきありがとうございます。最近の買い物について伺います。"
+
+        def _fake(audio_in, **_kw):
+            calls.append(len(audio_in))
+            return {"language": "ja", "segments": [
+                # Distinct lines: identical ones are a loop, and rightly removed.
+                {"start": float(t), "end": float(t + 5), "text": f"{line}（{t}）"}
+                for t in range(0, 40, 5)
+            ]}
+
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: _tone(40, -20))
+        monkeypatch.setattr(mlx_whisper, "transcribe", _fake)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "auto"})()
+        s05_transcribe._init_mlx_backend(settings)(tmp_path / "p1.wav", settings)
+
+        assert calls == [40 * 16000]
+
+
+class TestLoopOfGuessesBecomesAGap:
+    def test_a_loop_of_prompt_guesses_is_marked_not_dropped(self, monkeypatch, tmp_path) -> None:
+        """The same partial echo three times over 15 s is a loop and a guess;
+        dropped as a loop, the stretch vanished when the net could not recover
+        it. Left in, the inaudible marker turns it into a gap."""
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+
+        echo = "Ahn, então, hum, depende."
+
+        def _seg(start: float) -> dict[str, object]:
+            return {"start": start, "end": start + 4.0, "text": " " + echo, "words": [
+                {"word": " " + w, "start": start + i, "end": start + i + 0.5, "probability": 0.02}
+                for i, w in enumerate(echo.split())
+            ]}
+
+        def _fake(_audio, **_kw):
+            return {"language": "pt", "segments": [_seg(0.0), _seg(8.0), _seg(16.0)]}
+
+        monkeypatch.setattr(s05_transcribe, "SKIP_NET_ENABLED", False)
+        monkeypatch.setattr(mlx_whisper.audio, "load_audio", lambda _p: _tone(24, -20))
+        monkeypatch.setattr(mlx_whisper, "transcribe", _fake)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "pt"})()
+        segments, _ = s05_transcribe._init_mlx_backend(settings)(tmp_path / "p1.wav", settings)
+
+        assert segments and all(s.inaudible for s in segments)
+        assert "então" not in " ".join(s.text for s in segments)
 
 
 class TestMlxBackendRecoversSkippedSpeech:

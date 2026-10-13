@@ -238,7 +238,7 @@ def segment_has_signal(start: float, end: float, levels: object) -> bool:
 # them back over speech it skipped; these keep the fillers, carry no standalone
 # assent word, and end on a hedging clause. On the two Spanish conversations
 # with reference transcripts, word error rate fell 42.7% -> 35.7% and 58.4% ->
-# 42.0% with the skipped-window net. Portuguese followed once the inaudible
+# 42.9% with the prompt (42.0% once the skipped-window net was added). Portuguese followed once the inaudible
 # marker and loop removal were in: on three interviews (Brazil, Portugal,
 # Angola) it loses no more speech than Spanish, and the recording that had held
 # it back was a street recording Whisper hears 73 words of in 17 minutes. Its
@@ -268,8 +268,10 @@ STYLE_PROMPTS: dict[str, str] = {
     # Polish, Czech, Russian, Ukrainian and Finnish get none ON PURPOSE: Whisper
     # already punctuates them (longest runs 17-53 words with no prompt), and the
     # prompts only lost speech (Ukrainian v2 13 blocks, Russian v2 8, Czech v1 4).
-    # The rule that held across all four waves: a prompt helps only where the
-    # unprompted output runs on for 50+ words.
+    # In these trials the languages that gained were the ones whose unprompted
+    # output ran on for long stretches; that is a description of three
+    # recordings a language, not a rule (Dutch and Russian each had one
+    # recording past 50 words and still got nothing reliable from a prompt).
     "tr": "Eee, yani, ııı, aslında öyle, değil mi? Şey, bilmiyorum, ııı, biraz duruma bağlı.",
     "ko": "음, 그러니까, 저는 그렇게 생각해요. 근데 어, 잘 모르겠어요, 좀 상황에 따라 다른 것 같아요.",
 }
@@ -281,14 +283,26 @@ _LANGUAGE_NAMES: dict[str, str] = {
     "english": "en", "japanese": "ja", "spanish": "es", "castilian": "es",
     "french": "fr", "italian": "it", "german": "de", "portuguese": "pt",
     "catalan": "ca", "valencian": "ca", "swedish": "sv", "danish": "da",
-    "norwegian": "no", "nb": "no", "turkish": "tr", "korean": "ko",
+    "norwegian": "no", "turkish": "tr", "korean": "ko",
 }
+
+
+def _language_code(language: str | None) -> str:
+    code = (language or "").strip().lower()
+    return _LANGUAGE_NAMES.get(code, code)
 
 
 def style_prompt_for(language: str | None) -> str | None:
     """The style prompt for a Whisper language code or name, or None."""
-    code = (language or "").strip().lower()
-    return STYLE_PROMPTS.get(_LANGUAGE_NAMES.get(code, code))
+    return STYLE_PROMPTS.get(_language_code(language))
+
+
+#: faster-whisper (Linux, Windows) gets a prompt only where one was measured ON
+#: faster-whisper. Every other prompt was measured on mlx, with nets around it
+#: that faster-whisper does not have (echo filter, inaudible marker, loop
+#: removal, skipped-window net), and it keeps `condition_on_previous_text` on,
+#: so a leaked fragment would become context for the windows after it.
+FASTER_WHISPER_PROMPT_LANGUAGES = frozenset({"en", "ja"})
 
 
 def _prompt_core(text: str) -> str:
@@ -323,6 +337,9 @@ def _word_keys(text: str) -> list[str]:
 
 
 def is_prompt_guess(text: str, prompt: str, confidences: list[float]) -> bool:
+    # Words are split on spaces, so in Japanese (a whole line is one "word")
+    # this never fires: inert there, by measurement rather than design, until
+    # a character-level version is calibrated on real Japanese echoes.
     """True when ``text`` is a partial echo of the prompt Whisper barely believed.
 
     `is_prompt_echo` catches the whole prompt handed back. This catches the
@@ -376,13 +393,30 @@ def find_segment_loops(segs: list[tuple[float, float, str]]) -> list[tuple[int, 
     return runs
 
 
-def drop_segment_loops(segs: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+def _is_guess_segment(seg: dict[str, Any], prompt: str) -> bool:
+    text = collapse_adjacent_repeats(str(seg.get("text", "")).strip())
+    probs = [float(w.get("probability", 1.0)) for w in seg.get("words", [])]
+    return is_prompt_guess(text, prompt, probs)
+
+
+def drop_segment_loops(
+    segs: list[dict[str, Any]], prompt: str | None = None,
+) -> tuple[list[dict[str, Any]], int]:
     """Whisper segments without the loops `find_segment_loops` finds, and how
-    many segments went."""
-    loops = find_segment_loops([
-        (float(x.get("start", 0.0)), float(x.get("end", 0.0)), str(x.get("text", "")))
-        for x in segs
-    ])
+    many segments went.
+
+    With ``prompt``, a loop made entirely of prompt guesses ("Ainda, hum, na
+    verdade." three times at 0.02) is left in place: the inaudible marker turns
+    it into a gap, where dropping it would leave the stretch silently empty when
+    the skipped-window net cannot recover it.
+    """
+    loops = [
+        (i, j) for i, j in find_segment_loops([
+            (float(x.get("start", 0.0)), float(x.get("end", 0.0)), str(x.get("text", "")))
+            for x in segs
+        ])
+        if not (prompt and all(_is_guess_segment(segs[k], prompt) for k in range(i, j)))
+    ]
     looped = {k for i, j in loops for k in range(i, j)}
     return [x for k, x in enumerate(segs) if k not in looped], len(looped)
 
@@ -478,7 +512,7 @@ _SKIP_FLOOR_CAP_DBFS = -45.0
 
 
 def find_skipped_stretches(
-    spans: list[tuple[float, float, int]],
+    spans: list[tuple[float, float, float]],
     levels: object,
     total_s: float,
 ) -> list[tuple[float, float]]:
@@ -888,18 +922,24 @@ def _init_mlx_backend(
 
         Runs outside the style-prompt block, so the re-decode has no prompt.
         """
+        # Lengths as the paragraph rule counts them: a Japanese line is one
+        # "word" to str.split(), which made every Japanese stretch look skipped
+        # and re-decoded about 40% of a file to no effect.
+        from bristlenose.stages.s06_merge_transcript import reading_length
+
         total_s = len(audio) / _SAMPLE_RATE
         # Words as the transcript will show them: after the repeat filter, a
         # "nada nada nada..." loop is one word, so the stretch it covers reads
         # as what it is (speech lost to a loop) and is re-decoded.
         spans = [
             (float(x.get("start", 0.0)), float(x.get("end", 0.0)),
-             len(collapse_adjacent_repeats(str(x.get("text", "")).strip()).split()))
+             reading_length(collapse_adjacent_repeats(str(x.get("text", "")).strip())))
             for x in segs
         ]
         stretches = find_skipped_stretches(spans, levels, total_s)
         kept = list(segs)
-        recovered = words = 0
+        recovered = 0
+        words = 0.0
         for a, b in stretches:
             chunk = audio[int(a * _SAMPLE_RATE):int(b * _SAMPLE_RATE)]
             r = mlx_whisper.transcribe(chunk, language=language, **decode_kwargs)
@@ -920,7 +960,7 @@ def _init_mlx_backend(
             # reader would get it: loops out, repeats collapsed.
             new, _ = drop_segment_loops(new)
             n = sum(
-                len(collapse_adjacent_repeats(str(x.get("text", "")).strip()).split())
+                reading_length(collapse_adjacent_repeats(str(x.get("text", "")).strip()))
                 for x in new
             )
             if n / max(b - a, 0.01) >= _RECOVER_MIN_WPS:
@@ -1049,7 +1089,7 @@ def _init_mlx_backend(
 
         # A loop is never what was said, so it goes before the net: the stretch
         # it covered then reads as the gap it is, and is re-decoded.
-        kept, looped = drop_segment_loops(kept)
+        kept, looped = drop_segment_loops(kept, prompt)
 
         if SKIP_NET_ENABLED:
             kept = _recover_skipped(
@@ -1237,7 +1277,10 @@ def _init_faster_whisper_backend(
         if language is None:
             # The same detection transcribe runs (speech only, via VAD).
             language, detected_prob, _all = model.detect_language(audio, vad_filter=True)
-        prompt = style_prompt_for(language)
+        prompt = (
+            style_prompt_for(language)
+            if _language_code(language) in FASTER_WHISPER_PROMPT_LANGUAGES else None
+        )
         segments_iter, info = model.transcribe(
             audio,
             language=language,

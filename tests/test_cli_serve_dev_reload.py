@@ -65,3 +65,30 @@ def test_dev_reloader_watches_the_package_only(project: Path, monkeypatch: pytes
     assert kw["reload_dirs"] == [str(package_dir)]
     # The repo root (and so desktop/, trial-runs/, frontend/) is not watched.
     assert str(package_dir.parent) not in kw["reload_dirs"]
+
+
+def test_a_mac_build_does_not_restart_the_dev_server(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The sidecar build writes bristlenose/_build_info.py at the start of every Xcode
+    build; uvicorn's own file filter, configured as serve --dev configures it, must
+    ignore that file and still see the code (13 Oct 2026)."""
+    from uvicorn.config import Config
+    from uvicorn.supervisors.watchfilesreload import FileFilter
+
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(cli, "_auto_render", lambda p: None)
+    monkeypatch.setattr(cli, "_print_mcp_connect", lambda port: None)
+    monkeypatch.setattr(subprocess, "Popen", _NoProc)
+    import uvicorn
+
+    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: calls.append(k))
+    result = CliRunner().invoke(cli.app, ["serve", str(project), "--dev", "--no-open", "--port", "8199"])
+    assert result.exit_code == 0, result.output
+    kw = calls[0]
+    watched = FileFilter(Config(
+        "bristlenose.server.app:create_app", reload=True, factory=True,
+        reload_dirs=kw["reload_dirs"], reload_excludes=kw.get("reload_excludes"),
+    ))
+    package_dir = Path(bristlenose.__file__).resolve().parent
+    assert not watched(package_dir / "_build_info.py")
+    assert watched(package_dir / "cli.py")
+

@@ -2149,6 +2149,9 @@ def serve(
             # restarted the server dozens of times (12 Oct 2026). CSS and templates under
             # bristlenose/theme/ are served live in dev mode and need no restart.
             reload_dirs=[str(Path(__file__).resolve().parent)],
+            # The one generated file in the package: the sidecar build writes it at the
+            # start of every Xcode build, so a Mac build restarted the dev server (13 Oct).
+            reload_excludes=["_build_info.py"],
             factory=True,
             log_level="info" if verbose else "warning",
         )

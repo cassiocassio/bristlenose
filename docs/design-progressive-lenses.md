@@ -615,7 +615,8 @@ already anticipates. Independent of the UX; can land before or after phase 2.
 >   Phase 1's shape, Whisper on the loop (`Pipeline._whisper_overlaps`). Decided, not
 >   provisional (owner, 13 Oct 2026): the overlap could only pay on a 64 GB+ Max or
 >   Ultra Mac, and even there the two share one GPU; that is not the budget of the
->   researchers Bristlenose is for.
+>   researchers Bristlenose is for. Not a v1 feature; worth a look after beta as a
+>   flagship for researchers on top-end hardware.
 > - **Timings** count wall time with a call in flight, not the sum of calls, which ran
 >   up to `llm_concurrency` at once. The step lines count the chain's sessions as new,
 >   and the stage entry for topics comes before the wait for the chain's last calls.

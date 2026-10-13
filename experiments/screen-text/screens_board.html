@@ -1,0 +1,91 @@
+<!doctype html><meta charset=utf-8><title>Screens (private prototype)</title>
+<!-- Template for screens_board.py. Rough on purpose: it exists to judge whether the right stickies
+     land beside the right elements, across participants. Data is injected at /*DATA*/null. -->
+<style>
+:root{--blue:#3b82f6;--ink:#1f2328;--muted:#6b7280;--bg:#f4f5f7;--line:#e3e5e8}
+*{box-sizing:border-box}
+body{margin:0;font:13px/1.35 -apple-system,system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+header{padding:12px 20px 4px;color:var(--muted)} header b{color:var(--ink)}
+nav{display:flex;gap:12px;padding:8px 20px 12px;overflow-x:auto;position:sticky;top:0;background:var(--bg);z-index:9;border-bottom:1px solid var(--line)}
+nav a{flex:0 0 auto;width:170px;text-decoration:none;color:var(--muted);font-size:11px;cursor:pointer}
+nav a.on .stack{outline:2px solid var(--blue);outline-offset:2px}
+.stack{position:relative;height:96px}
+.stack img{position:absolute;width:150px;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.25);border:1px solid #fff}
+nav .tp{display:block;margin-top:4px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px;vertical-align:middle}
+main{padding:10px 20px 40px}
+.bh{display:flex;align-items:baseline;gap:14px;margin:6px 0 10px}
+.bh h2{margin:0;font-size:15px} .bh .sub{color:var(--muted)}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:14px;padding:3px 10px;cursor:pointer}
+.tabs button.on{border-color:var(--ink);font-weight:600}
+.board{position:relative;display:grid;grid-template-columns:280px minmax(0,1fr) 280px;gap:0 18px}
+.col{position:relative}
+.shot{position:relative} .shot img{width:100%;display:block;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.hl{position:absolute;border:2px solid var(--blue);border-radius:4px;background:rgba(59,130,246,.10)}
+.hl.other{border-style:dashed}
+.note{position:absolute;left:0;right:0;border-radius:4px;padding:6px 8px;box-shadow:0 1px 3px rgba(0,0,0,.15);font-size:12px;background:#fff}
+.note .meta{color:var(--muted);font-size:11px;margin-bottom:2px}
+.note .why{color:var(--muted);font-size:10.5px;margin-top:3px;font-style:italic}
+.note mark{background:rgba(59,130,246,.22);color:inherit;border-radius:2px;padding:0 1px}
+.note.other{opacity:.92;border-style:dashed}
+svg.lines{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.loose{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.loose .note{position:static}
+.loose h3{grid-column:1/-1;margin:6px 0 0;font-size:12px;color:var(--muted);font-weight:600}
+</style>
+<header><b>Screens</b> — private prototype · each screen a stack of the participants' own screengrabs (flip with the tabs or ← →) · stickies pinned to the element they read or mean · dashed = another participant's quote carried onto this screengrab</header>
+<nav id=nav></nav>
+<main id=main></main>
+<script>
+const D=/*DATA*/null;
+const COLORS={};const PALETTE=['#fde68a','#fbcfe8','#bbf7d0','#bfdbfe'];const EDGE=['#d4a106','#db2777','#16a34a','#2563eb'];
+let ci=0;for(const b of D.boards)for(const t of b.tabs)if(!(t.tag in COLORS)){COLORS[t.tag]=ci++%PALETTE.length}
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const mmss=t=>Math.floor(t/60)+':'+String(t%60).padStart(2,'0');
+function markup(text,phrase){const t=esc(text.length>240?text.slice(0,237)+'…':text);const w=(phrase||'').split(' ').filter(Boolean);if(!w.length)return t;
+ const re=new RegExp(w.map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('[^\\w]+'),'i');return t.replace(re,m=>'<mark>'+m+'</mark>')}
+let cur=0,tab=0;
+const nav=document.getElementById('nav'),main=document.getElementById('main');
+D.boards.forEach((b,i)=>{const a=document.createElement('a');const n=b.tabs.reduce((s,t)=>s+t.pins.length+t.loose.length,0);
+ a.innerHTML='<div class=stack>'+b.tabs.map((t,j)=>'<img src="'+t.thumb+'" style="left:'+(j*8)+'px;top:'+(j*6)+'px">').join('')+'</div><span class=tp>'+esc(b.tp)+'</span>'+
+  b.tabs.map(t=>'<span class=dot style="background:'+EDGE[COLORS[t.tag]]+'"></span>').join('')+' '+n+' quote'+(n===1?'':'s');
+ a.onclick=()=>{cur=i;tab=0;render()};nav.appendChild(a)});
+function render(){
+ [...nav.children].forEach((a,i)=>a.classList.toggle('on',i===cur));
+ const b=D.boards[cur],t=b.tabs[tab];
+ main.innerHTML='<div class=bh><h2>'+esc(b.tp)+'</h2><span class=sub>'+b.tabs.map(x=>esc(x.label)).join(' · ')+'</span></div>'+
+  '<div class=tabs>'+b.tabs.map((x,j)=>'<button class="'+(j===tab?'on':'')+'" data-j='+j+'><span class=dot style="background:'+EDGE[COLORS[x.tag]]+'"></span>'+esc(x.label)+' · '+mmss(x.t)+'</button>').join('')+'</div>'+
+  '<div class=board><div class=col></div><div class=shot><img src="'+t.src+'"></div><div class=col></div><svg class=lines></svg></div><div class=loose></div>';
+ main.querySelectorAll('.tabs button').forEach(bt=>bt.onclick=()=>{tab=+bt.dataset.j;render()});
+ const img=main.querySelector('.shot img');(img.complete?Promise.resolve():new Promise(r=>img.onload=r)).then(()=>layout(b,t));
+}
+function layout(b,t){
+ const board=main.querySelector('.board'),S=main.querySelector('.shot'),img=S.querySelector('img'),svg=main.querySelector('svg');
+ const [Lc,Rc]=board.querySelectorAll('.col');const W=img.clientWidth,H=img.clientHeight;
+ const bb=board.getBoundingClientRect(),sb=S.getBoundingClientRect();const used={left:[],right:[]};
+ // own pins, then other participants' pins carried onto this screengrab
+ const items=t.pins.map(p=>({p,box:p.box,tag:t.tag,other:false}));
+ for(const o of b.tabs){if(o===t)continue;for(const p of o.pins){const e=p.elsewhere&&p.elsewhere[t.tag];if(e)items.push({p,box:e.box,tag:o.tag,other:true,via:e})}}
+ items.sort((a,c)=>a.box[1]-c.box[1]);
+ for(const it of items){const [x,y,w,h]=it.box,c=COLORS[it.tag];
+  const hl=document.createElement('div');hl.className='hl'+(it.other?' other':'');Object.assign(hl.style,{left:(x*W-3)+'px',top:(y*H-3)+'px',width:(w*W+6)+'px',height:(h*H+6)+'px',borderColor:EDGE[c]});S.appendChild(hl);
+  const side=x+w/2<0.5?'left':'right',col=side==='left'?Lc:Rc;const n=document.createElement('div');n.className='note'+(it.other?' other':'');
+  n.style.background=PALETTE[c];n.style.borderLeft='3px '+(it.other?'dashed ':'solid ')+EDGE[c];
+  const p=it.p;n.innerHTML='<div class=meta>'+esc(p.who)+' · '+mmss(p.tc)+(p.sent?' · '+esc(p.sent):'')+'</div>'+markup(p.text,p.phrase)+
+   '<div class=why>'+(p.how==='words'?'same words':'by meaning '+p.score)+' → “'+esc((it.other?it.via.text:p.line).slice(0,60))+'”'+(it.other?' (carried over, '+it.via.score+')':'')+'</div>';
+  col.appendChild(n);let top=Math.max(0,y*H+h*H/2-26);for(const [a,e] of used[side]){if(top<e&&top+10>a-10)top=e+6}
+  n.style.top=top+'px';used[side].push([top,top+n.offsetHeight]);const cb=col.getBoundingClientRect();
+  const nx=side==='left'?cb.right-bb.left:cb.left-bb.left,ny=top+16+(cb.top-bb.top);
+  const hx=sb.left-bb.left+(side==='left'?x*W:(x+w)*W),hy=sb.top-bb.top+(y+h/2)*H;
+  svg.insertAdjacentHTML('beforeend','<path d="M'+nx+','+ny+' C'+(nx+(hx-nx)/2)+','+ny+' '+(nx+(hx-nx)/2)+','+hy+' '+hx+','+hy+'" stroke="'+EDGE[c]+'" stroke-width="1.5" fill="none" opacity=".8"'+(it.other?' stroke-dasharray="4 3"':'')+'/><circle cx="'+hx+'" cy="'+hy+'" r="3" fill="'+EDGE[c]+'"/>')}
+ const m=Math.max(H,...used.left.map(u=>u[1]),...used.right.map(u=>u[1]));Lc.style.height=Rc.style.height=m+'px';
+ const loose=main.querySelector('.loose');const all=b.tabs.flatMap(o=>o.loose.map(q=>({q,tag:o.tag})));
+ loose.innerHTML=all.length?'<h3>Said on this screen, not pinned to an element ('+all.length+')</h3>':'';
+ for(const {q,tag} of all){const n=document.createElement('div');n.className='note';n.style.background=PALETTE[COLORS[tag]];n.style.borderLeft='3px solid '+EDGE[COLORS[tag]];
+  n.innerHTML='<div class=meta>'+esc(q.who)+' · '+mmss(q.tc)+(q.sent?' · '+esc(q.sent):'')+'</div>'+markup(q.text,'');loose.appendChild(n)}
+}
+addEventListener('keydown',e=>{const b=D.boards[cur];if(e.key==='ArrowRight'){tab=(tab+1)%b.tabs.length;render()}if(e.key==='ArrowLeft'){tab=(tab-1+b.tabs.length)%b.tabs.length;render()}});
+addEventListener('resize',()=>render());
+render();
+</script>

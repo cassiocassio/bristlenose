@@ -24,6 +24,10 @@ data. This README holds aggregates only.
 | `search_spike.py` | Second pass: searches an index with the shipped matching rule, groups hits into result rows, attaches the transcript paragraph at each, and times the scan |
 | `rapid_levers.py` | Second pass: RapidOCR variants at 2 threads (default, detection capped at 960 px, PP-OCRv5 Latin mobile, both) for speed and accuracy |
 | `sidecar-vision-spike.patch` | Third pass: the throwaway changes that put Vision in the real sidecar — pyobjc in the `apple` extra, a probe started by `sidecar_entry.py` when serving, and the `CFFIXED_USER_HOME` fix. Apply to a scratch worktree, never to `main`. Its `_variants`/`_worker` helpers are dead: the sandbox refuses the semaphores they need |
+| `anchor_spike.py` | Fourth pass: how often a transcript paragraph or a quote shares a run of words (or one rare word) with a line on screen within ±4 s. The basis of the read-aloud highlight and of pinning |
+| `board_spike.py` | Fourth pass: one session as a board — a still per screen, quotes pinned to lines on it. Superseded by `screens_board.py` |
+| `screens_board.py` | Fourth pass: three sessions as one set of screens. Screen keys from the address bar (tab title where the bar shows only the host), screens linked across sessions, quotes placed by timecode and pinned by words or by meaning (LaBSE), pins carried across participants. Writes a private page; `--labels` scores pins against hand judgements |
+| `screens_board.html`, `screens_lens.html` | The page templates: a rough one, and one drawn with the shipped theme CSS and quote card (`--style lens`, the default). Neither holds data |
 
 ## Material
 
@@ -258,6 +262,36 @@ was not reused, so the compile appears to be once per build.
 Not tested: a TestFlight-signed build (Apple Distribution, Hardened Runtime on the host). The probe
 wrote its result file into the served project's hidden `.bristlenose/` folder; both result files were
 deleted afterwards, and the worktree and its DerivedData were removed.
+
+## Fourth pass: one set of screens, three participants
+
+The owner's test of `docs/design-screens.md` §S5: three IKEA sessions (UK site on a Mac in a Teams
+call, German site in Chrome, UK site on an iPad in Safari), cut into screens, every quote placed on
+its screen by timecode and pinned to the element it is about.
+
+- **Read-aloud is common.** In the UK session, 57% of participant paragraphs during the share contain
+  a run of 2+ words that is on screen at that moment. Participants read out what they are looking at.
+- **Screens: 21 across the three sessions, 5 visited by two of them, none by all three.** The address
+  bar is the key where it shows a path. Safari's default shows only the host, so the iPad session is
+  keyed by tab title, and nothing in the other sessions shares a title with it unambiguously. A title
+  seen with two or more URLs in one session is a bookmark, not a title: one bookmark otherwise
+  chained every page of a session into one screen.
+- **Across languages the same screen aligns by URL template** (locale prefix dropped, product and
+  category slugs masked): the UK and German carts, delivery pages and category pages line up.
+- **Positions are per moment.** A line's box moves as the page scrolls, so a pin is matched on the
+  still it is drawn on (re-read by Vision), not on the episode index.
+- **Pinning: 47 quotes placed on a screen; 15 pinned by shared words, 8 by meaning, 24 left unpinned.**
+  Against 27 hand-labelled pins, precision went from 18 of 27 to 17 of 23 when lines were limited to
+  the web page (no call tiles, no browser bars) and page furniture was dropped (a line flagged sticky,
+  or seen on 5+ screens of a session). Dropping lines seen on 3+ screens instead lost four right
+  pins, among them "Continue to checkout", which sits on every cart page.
+- **What is still wrong:** a cookie banner, a one-word button whose word the participant happened to
+  say, a site welcome line matched by meaning, a heading chosen over the line actually discussed.
+- **Carrying a pin to another participant's still works across languages:** a UK quote about the
+  shopping bag lands on the German *Warenkorb* heading; a German quote about delivery costs lands on
+  the UK "Shipping costs are calculated at checkout". 3 carried pins on the shared screens.
+- **The still chosen per screen moves pins.** It is the moment that pins the most quotes; a filter
+  change can pick another moment, on which a pin finds a different line.
 
 ## Caveats
 

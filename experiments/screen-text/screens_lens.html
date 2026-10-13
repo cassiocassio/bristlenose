@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screens lens — prototype</title>
+<!-- Template for screens_board.py --style lens. Holds no data: the generator inlines the shipped
+     theme CSS at /*THEME*/ and the boards at /*DATA*/null, and writes the page somewhere private,
+     because it then carries real screengrabs and real quotes. -->
+<style>
+/*THEME*/
+</style>
+<style>
+/* ════ Mockup shell — the key, the frame, the commentary. Not product. ════ */
+:root { color-scheme: light dark; }
+body { margin: 0; background: var(--bn-colour-bg); }
+.mk-key {
+  display: flex; gap: var(--bn-space-lg); align-items: center;
+  padding: var(--bn-space-sm) var(--bn-space-lg);
+  font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); color: var(--bn-colour-muted);
+  border-bottom: 1px solid var(--bn-colour-border);
+}
+.mk-key label { display: inline-flex; gap: var(--bn-space-xs); align-items: center; cursor: pointer; }
+.mk-key .mk-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 4px; }
+.mk-key .mk-art { border: 1px solid var(--bn-colour-border); background: var(--bn-colour-bg); }
+.mk-key .mk-com { background: repeating-linear-gradient(45deg, var(--bn-colour-badge-bg) 0 3px, transparent 3px 6px); border: 1px solid var(--bn-colour-border); }
+.mk-key .mk-flag { margin-left: auto; }
+.mk-commentary {
+  margin: var(--bn-space-xl) var(--bn-space-lg); padding: var(--bn-space-md) var(--bn-space-lg);
+  border-left: 3px solid var(--bn-colour-border-hover);
+  background: repeating-linear-gradient(45deg, var(--bn-colour-quote-bg) 0 6px, transparent 6px 12px);
+  font-size: var(--bn-text-label); color: var(--bn-colour-text); max-width: 60rem;
+}
+.mk-commentary > b:first-child { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); color: var(--bn-colour-muted); display: block; margin-bottom: var(--bn-space-sm); font-weight: var(--bn-weight-normal); }
+.mk-commentary p { margin: 0 0 var(--bn-space-sm); max-width: none; }
+.screens-why { display: none; }
+body.mk-evidence .screens-why {
+  display: block; margin-top: var(--bn-space-xs);
+  font-family: var(--bn-font-mono); font-size: var(--bn-text-micro); color: var(--bn-colour-muted);
+}
+
+/* ════ Proposed — the Screens lens. New CSS, flagged in the key. ════ */
+.screens-lens { display: grid; grid-template-columns: 236px minmax(0, 1fr); align-items: start; }
+.screens-nav {
+  position: sticky; top: 0; max-height: 100vh; overflow-y: auto;
+  padding: var(--bn-space-md) var(--bn-space-sm) var(--bn-space-xl);
+  border-right: 1px solid var(--bn-colour-border);
+}
+.screens-nav a {
+  display: block; padding: var(--bn-space-sm) var(--bn-space-sm) var(--bn-space-md);
+  border-radius: var(--bn-radius-md); color: inherit; text-decoration: none;
+}
+.screens-nav a:hover { background: var(--bn-colour-hover); }
+.screens-nav a[aria-current="true"] { background: var(--bn-colour-hover); }
+.screens-nav a[aria-current="true"] .screens-stack img:last-child { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.screens-stack { position: relative; height: 118px; margin-bottom: var(--bn-space-sm); }
+.screens-stack img {
+  position: absolute; width: 184px; aspect-ratio: 16 / 10; object-fit: cover; object-position: top;
+  border-radius: var(--bn-radius-sm); border: 1px solid var(--bn-colour-border);
+  box-shadow: 0 1px 2px var(--bn-colour-shadow); background: var(--bn-colour-bg);
+}
+.screens-nav-name {
+  display: block; font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.screens-nav-meta { display: flex; gap: var(--bn-space-xs); align-items: center; margin-top: var(--bn-space-xs); font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
+.screens-nav-meta .bn-speaker-badge-code { border-right: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-sm); }
+.screens-nav-meta .screens-count { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.screens-main { min-width: 0; padding: 0 var(--bn-space-xl) var(--bn-space-xl); }
+.screens-main > .section-heading:first-child { margin-top: var(--bn-space-lg); }
+.screens-who { display: flex; gap: var(--bn-space-sm); }
+.screens-who button {
+  border: 0; background: none; padding: 3px; border-radius: var(--bn-radius-md); cursor: pointer;
+  opacity: 0.5; font: inherit; color: inherit;
+}
+.screens-who button[aria-pressed="true"] { opacity: 1; box-shadow: 0 0 0 1.5px var(--bn-colour-accent); }
+.screens-who button:hover { opacity: 1; }
+.screens-sub { font-size: var(--bn-text-label); color: var(--bn-colour-muted); margin: calc(-1 * var(--bn-space-sm)) 0 var(--bn-space-md); }
+.screens-sub .timecode { font-family: var(--bn-font-mono); color: var(--bn-colour-accent); }
+
+.screens-board {
+  position: relative; display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(220px, 280px); gap: 0 28px;
+}
+.screens-col { position: relative; }
+.screens-shot { position: relative; align-self: start; }
+.screens-shot img { display: block; width: 100%; border-radius: var(--bn-radius-md); border: 1px solid var(--bn-colour-border); }
+.screens-hl {
+  position: absolute; pointer-events: none; border-radius: var(--bn-radius-sm);
+  border: 1.5px solid var(--bn-colour-accent);
+  background: color-mix(in srgb, var(--bn-colour-accent) 7%, transparent);
+  transition: background var(--bn-transition-fast), opacity var(--bn-transition-fast);
+}
+.screens-hl.carried { border-style: dashed; }
+.screens-col blockquote.quote-card {
+  position: absolute; left: 0; right: 0; margin: 0;
+  padding: var(--bn-space-sm) var(--bn-space-md);
+  box-shadow: 0 1px 2px var(--bn-colour-shadow);
+  transition: opacity var(--bn-transition-fast);
+}
+.screens-col blockquote.quote-card .quote-body { font-size: var(--bn-text-label); line-height: 1.45; }
+.screens-col blockquote.quote-card.carried { border-left-style: dashed; }
+.screens-board.focus .quote-card:not(.on), .screens-board.focus .screens-hl:not(.on), .screens-board.focus path:not(.on), .screens-board.focus circle:not(.on) { opacity: 0.25; }
+.screens-hl.on { background: color-mix(in srgb, var(--bn-colour-accent) 16%, transparent); }
+mark.screens-read { background: var(--bn-colour-hover); color: inherit; border-radius: 2px; padding: 0 1px; box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--bn-colour-accent) 45%, transparent); }
+svg.screens-leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+svg.screens-leaders path { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1; opacity: 0.7; }
+svg.screens-leaders path.carried { stroke-dasharray: 3 3; }
+svg.screens-leaders circle { fill: var(--bn-colour-accent); }
+.screens-loose { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0 var(--bn-space-lg); }
+.screens-loose blockquote.quote-card { margin: var(--bn-space-sm) 0; }
+.screens-empty { color: var(--bn-colour-muted); font-size: var(--bn-text-label); }
+@media (prefers-reduced-motion: reduce) { .screens-hl, .screens-col blockquote.quote-card { transition: none; } }
+</style>
+</head>
+<body>
+<div class="mk-key">
+  <span><span class="mk-swatch mk-art"></span>artefact</span>
+  <span><span class="mk-swatch mk-com"></span>commentary</span>
+  <label><input type="checkbox" id="mk-evidence"> show why each quote is pinned</label>
+  <label><select id="mk-palette"><option value="default">default palette</option><option value="edo">Edo palette</option></select></label>
+  <span class="mk-flag">owner-written strings: “Screens”, “Said on this screen”, the visit line · new CSS: .screens-*</span>
+</div>
+
+<div class="screens-lens">
+  <nav class="screens-nav" id="nav" aria-label="Screens"></nav>
+  <main class="screens-main" id="main"></main>
+</div>
+
+<section class="mk-commentary" id="commentary">
+  <b>Commentary</b>
+  <p>Generated by <code>experiments/screen-text/screens_board.py</code> from three real sessions. Every quote is placed on a screen by its timecode; a placed quote is pinned to one line of on-screen text when it shares a run of words with it, or, failing that, when a multilingual sentence model says they mean the same thing. Each participant's screengrab is the moment on that screen whose text pins the most of their quotes.</p>
+  <p id="mk-counts"></p>
+  <p>Stickies are the shipped quote card (<code>blockquote.quote-card</code>, the person badge, the sentiment badge), compacted. The blue wash on words is the read-aloud highlight: the words the participant said that are also on the screen. Dashed means another participant's quote carried onto this screengrab, because its element was matched across the two pages (same meaning across languages, same place on the page).</p>
+  <p>← → flips between participants on a shared screen; ↑ ↓ moves between screens. Hovering a sticky isolates it and its element.</p>
+</section>
+
+<script>
+const D = /*DATA*/null;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// House timecode: minutes padded, hours never (05:30, 1:12:45).
+const tc = t => { const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60;
+  return (h ? h + ":" + String(m).padStart(2, "0") : String(m).padStart(2, "0")) + ":" + String(s).padStart(2, "0"); };
+const badge = (code, name) => '<span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">' +
+  esc(code) + "</span>" + (name ? '<span class="bn-speaker-badge-name">' + esc(name) + "</span>" : "") + "</span></span>";
+
+function marked(text, phrase, cap) {
+  let t = text.length > cap ? text.slice(0, cap - 1).replace(/\s+\S*$/, "") + "…" : text;
+  t = esc(t);
+  const w = (phrase || "").split(" ").filter(Boolean);
+  if (!w.length) return t;
+  const re = new RegExp(w.map(x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^\\p{L}\\p{N}]+"), "iu");
+  return t.replace(re, m => '<mark class="screens-read">' + m + "</mark>");
+}
+
+function card(q, tab, opts) {
+  const cls = "quote-card" + (opts.carried ? " carried" : "");
+  const why = opts.why ? '<span class="screens-why">' + esc(opts.why) + "</span>" : "";
+  return '<blockquote class="' + cls + '"><div class="quote-row"><span class="timecode">[' + tc(q.tc) + "]</span>" +
+    '<div class="quote-body"><span class="quote-text-wrapper"><span class="smart-quote">“</span>' +
+    marked(q.text, opts.phrase, opts.cap || 9999) + '<span class="smart-quote">”</span></span> <span class="speaker">' +
+    badge(tab.code, tab.name) + "</span>" +
+    (q.sent ? '<div class="badges"><span class="badge badge-ai badge-' + esc(q.sent) + '">' + esc(q.sent) + "</span></div>" : "") +
+    why + "</div></div></blockquote>";
+}
+
+let cur = 0, tab = 0;
+const nav = document.getElementById("nav"), main = document.getElementById("main");
+
+function count(b) { return b.tabs.reduce((n, t) => n + t.pins.length + t.loose.length, 0); }
+
+D.boards.forEach((b, i) => {
+  const a = document.createElement("a");
+  a.href = "#screen-" + i;
+  const n = b.tabs.length;
+  a.innerHTML = '<div class="screens-stack">' + b.tabs.map((t, j) =>
+      '<img alt="" src="' + t.thumb + '" style="left:' + ((n - 1 - j) * 0 + j * 10) + "px;top:" + (j * 8) + 'px">').join("") + "</div>" +
+    '<span class="screens-nav-name">' + esc(b.name) + "</span>" +
+    '<span class="screens-nav-meta">' + b.tabs.map(t => badge(t.code)).join("") +
+    '<span class="screens-count">' + count(b) + "</span></span>";
+  a.onclick = e => { e.preventDefault(); go(i, 0); };
+  nav.appendChild(a);
+});
+
+function go(i, j) {
+  cur = (i + D.boards.length) % D.boards.length; tab = j;
+  history.replaceState(null, "", "#screen-" + cur + "-" + tab);
+  render();
+}
+
+function render() {
+  [...nav.children].forEach((a, i) => a.setAttribute("aria-current", i === cur ? "true" : "false"));
+  nav.children[cur].scrollIntoView({ block: "nearest" });
+  const b = D.boards[cur], t = b.tabs[tab];
+  const n = count(b);
+  main.innerHTML =
+    '<div class="section-heading"><h1>' + esc(b.name) + '</h1><div class="section-heading-action screens-who">' +
+    (b.tabs.length > 1 ? b.tabs.map((x, j) => '<button aria-pressed="' + (j === tab) + '" data-j="' + j + '">' + badge(x.code, x.name) + "</button>").join("") : "") +
+    "</div></div>" +
+    '<p class="screens-sub">' + esc(t.name) + " here at <span class=timecode>" + tc(t.t) + "</span> · " + n + (n === 1 ? " quote" : " quotes") +
+    (b.tabs.length > 1 ? " from " + b.tabs.length + " participants" : "") + "</p>" +
+    '<div class="screens-board"><div class="screens-col"></div><div class="screens-shot"><img alt="" src="' + t.src + '"></div>' +
+    '<div class="screens-col"></div><svg class="screens-leaders"></svg></div>' +
+    '<div class="section-heading"><h2>Said on this screen</h2></div><div class="screens-loose"></div>';
+  main.querySelectorAll(".screens-who button").forEach(bt => bt.onclick = () => go(cur, +bt.dataset.j));
+  const img = main.querySelector(".screens-shot img");
+  (img.complete ? Promise.resolve() : new Promise(r => img.onload = r)).then(() => layout(b, t));
+}
+
+function layout(b, t) {
+  const board = main.querySelector(".screens-board"), shot = main.querySelector(".screens-shot");
+  const img = shot.querySelector("img"), svg = main.querySelector("svg");
+  const [L, R] = board.querySelectorAll(".screens-col");
+  const W = img.clientWidth, H = img.clientHeight;
+  const bb = board.getBoundingClientRect(), sb = shot.getBoundingClientRect();
+  const used = { L: [], R: [] };
+  const items = t.pins.map(p => ({ p, box: p.box, owner: t, carried: false }));
+  for (const o of b.tabs) {
+    if (o === t) continue;
+    for (const p of o.pins) { const e = p.elsewhere && p.elsewhere[t.tag]; if (e) items.push({ p, box: e.box, owner: o, carried: true, via: e }); }
+  }
+  items.sort((a, c) => a.box[1] - c.box[1]);
+  let k = 0;
+  for (const it of items) {
+    const [x, y, w, h] = it.box, id = "pin" + (k++);
+    const hl = document.createElement("div");
+    hl.className = "screens-hl" + (it.carried ? " carried" : ""); hl.dataset.pin = id;
+    Object.assign(hl.style, { left: (x * W - 3) + "px", top: (y * H - 3) + "px", width: (w * W + 6) + "px", height: (h * H + 6) + "px" });
+    shot.appendChild(hl);
+    const side = x + w / 2 < 0.5 ? "L" : "R", col = side === "L" ? L : R;
+    const why = (it.p.how === "words" ? "same words" : "by meaning " + it.p.score.toFixed(2)) + " → " +
+      (it.carried ? it.via.text : it.p.line) + (it.carried ? " (carried over, " + it.via.score.toFixed(2) + ")" : "");
+    col.insertAdjacentHTML("beforeend", card(it.p, it.owner, { phrase: it.p.phrase, cap: 200, carried: it.carried, why }));
+    const n = col.lastElementChild; n.dataset.pin = id;
+    let top = Math.max(0, (y + h / 2) * H - 22);
+    for (const [a, e] of used[side].sort((m, z) => m[0] - z[0])) { if (top < e + 8 && top + n.offsetHeight > a - 8) top = e + 8; }
+    n.style.top = top + "px"; used[side].push([top, top + n.offsetHeight]);
+    const cb = col.getBoundingClientRect();
+    const nx = side === "L" ? cb.right - bb.left : cb.left - bb.left, ny = top + 18 + (cb.top - bb.top);
+    const hx = sb.left - bb.left + (side === "L" ? x * W - 3 : (x + w) * W + 3), hy = sb.top - bb.top + (y + h / 2) * H;
+    const mx = (nx + hx) / 2;
+    svg.insertAdjacentHTML("beforeend", '<path data-pin="' + id + '" class="' + (it.carried ? "carried" : "") + '" d="M' + nx + "," + ny +
+      " C" + mx + "," + ny + " " + mx + "," + hy + " " + hx + "," + hy + '"/><circle data-pin="' + id + '" cx="' + hx + '" cy="' + hy + '" r="2.5"/>');
+    n.onmouseenter = () => { board.classList.add("focus"); board.querySelectorAll('[data-pin="' + id + '"]').forEach(e => e.classList.add("on")); };
+    n.onmouseleave = () => { board.classList.remove("focus"); board.querySelectorAll(".on").forEach(e => e.classList.remove("on")); };
+  }
+  const tall = Math.max(H, ...used.L.map(u => u[1]), ...used.R.map(u => u[1]));
+  L.style.height = R.style.height = tall + "px";
+  const loose = main.querySelector(".screens-loose");
+  const all = b.tabs.flatMap(o => o.loose.map(q => ({ q, o })));
+  loose.innerHTML = all.length ? all.map(({ q, o }) => card(q, o, {})).join("") : '<p class="screens-empty">—</p>';
+}
+
+addEventListener("keydown", e => {
+  if (e.target.closest("input, select")) return;
+  const b = D.boards[cur];
+  if (e.key === "ArrowRight") { go(cur, (tab + 1) % b.tabs.length); e.preventDefault(); }
+  if (e.key === "ArrowLeft") { go(cur, (tab - 1 + b.tabs.length) % b.tabs.length); e.preventDefault(); }
+  if (e.key === "ArrowDown") { go(cur + 1, 0); e.preventDefault(); }
+  if (e.key === "ArrowUp") { go(cur - 1, 0); e.preventDefault(); }
+});
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 120); });
+document.getElementById("mk-evidence").onchange = e => document.body.classList.toggle("mk-evidence", e.target.checked);
+document.getElementById("mk-palette").onchange = e => document.documentElement.dataset.colorTheme = e.target.value;
+document.getElementById("mk-counts").textContent = "Here: " + D.meta.placed + " quotes placed on a screen; " + D.meta.words +
+  " pinned by shared words, " + D.meta.meaning + " by meaning, " + (D.meta.placed - D.meta.words - D.meta.meaning) + " said on the screen without a pin.";
+function fromHash() { const m = /^#screen-(\d+)-(\d+)$/.exec(location.hash); go(m ? +m[1] : 0, m ? +m[2] : 0); }
+addEventListener("hashchange", fromHash);
+fromHash();
+</script>
+</body>
+</html>

@@ -243,6 +243,36 @@ struct ServeManagerEnvTests {
         #expect(env["BRISTLENOSE_PALETTE"] == "default")
     }
 
+    /// The sandboxed bundled sidecar is told its Foundation home is the
+    /// container. Without it, an inherited child resolves `NSHomeDirectory()` to
+    /// the real home and a framework caching there (Apple Vision's model cache)
+    /// is refused, failing with no error (`foundationHomeEnvironment`'s doc).
+    @Test func foundationHome_is_the_container_for_the_bundled_sidecar_only() {
+        let container = "/Users/someone/Library/Containers/app.bristlenose/Data"
+        let bundled = SidecarMode.bundled(path: URL(fileURLWithPath: "/Applications/B.app/Contents/Resources/bristlenose-sidecar/bristlenose-sidecar"))
+
+        #expect(BristlenoseShared.foundationHomeEnvironment(for: bundled, hostHome: container)
+                == ["CFFIXED_USER_HOME": container])
+        // An unsandboxed host already hands the child the real home: nothing to fix.
+        #expect(BristlenoseShared.foundationHomeEnvironment(for: bundled, hostHome: "/Users/someone").isEmpty)
+        // A dev sidecar is the developer's own interpreter, not our inherited child.
+        let dev = SidecarMode.devSidecar(path: URL(fileURLWithPath: "/tmp/fake-bristlenose"))
+        #expect(BristlenoseShared.foundationHomeEnvironment(for: dev, hostHome: container).isEmpty)
+        #expect(BristlenoseShared.foundationHomeEnvironment(for: .external(port: 8150), hostHome: container).isEmpty)
+    }
+
+    /// Wired through `childEnvironment`, so both spawn sites (serve and run) get
+    /// it. The host home is injected, so this bites on CI too, whose unsigned
+    /// test host is not sandboxed.
+    @Test func childEnvironment_points_foundation_home_at_the_container() {
+        let bundled = SidecarMode.bundled(path: URL(fileURLWithPath: "/Applications/B.app/Contents/Resources/bristlenose-sidecar/bristlenose-sidecar"))
+        let container = "/Users/someone/Library/Containers/app.bristlenose/Data"
+        let env = BristlenoseShared.childEnvironment(for: bundled, store: InMemoryKeychain(), hostHome: container)
+        #expect(env["CFFIXED_USER_HOME"] == container)
+        let unsandboxed = BristlenoseShared.childEnvironment(for: bundled, store: InMemoryKeychain(), hostHome: "/Users/someone")
+        #expect(unsandboxed["CFFIXED_USER_HOME"] == nil)
+    }
+
     /// Typography opt-out rides overlayPreferences: default "sf" injects nothing
     /// (the server's implicit default is SF Pro), "inter" injects the var so
     /// app.py emits data-typography="inter" and the desktop app shows Inter.

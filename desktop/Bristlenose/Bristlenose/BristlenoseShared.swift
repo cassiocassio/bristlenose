@@ -94,6 +94,31 @@ enum BristlenoseShared {
         ]
     }
 
+    /// Foundation's home for the sandboxed sidecar: the host's container.
+    ///
+    /// The sidecar inherits this app's sandbox, but Foundation inside an
+    /// inherited child resolves `NSHomeDirectory()` to the REAL home, even
+    /// though `HOME` (passed by `buildChildEnvironment`) is the container. A
+    /// system framework that caches under the home then writes where the
+    /// sandbox refuses, and can fail with no error at all: Apple Vision's text
+    /// model compiles into `<home>/Library/Caches/<id>/com.apple.e5rt.e5bundlecache`,
+    /// and a refused write made `VNRecognizeTextRequest` fail on the first
+    /// frame, the only trace an `e5rt_e5_compiler_create … (Code: 11)` line in
+    /// the unified log. `CFFIXED_USER_HOME` is the variable Foundation honours
+    /// for its home; pointing it at the container fixed that, measured
+    /// 13 Oct 2026 (`experiments/screen-text/README.md` § Third pass).
+    ///
+    /// Only for the bundled sidecar under a sandboxed host, recognised by the
+    /// host's own home being a container. Unsandboxed, the child already sees
+    /// the real home, which is then the right answer.
+    static func foundationHomeEnvironment(
+        for mode: SidecarMode,
+        hostHome: String = NSHomeDirectory()
+    ) -> [String: String] {
+        guard case .bundled = mode, hostHome.contains("/Library/Containers/") else { return [:] }
+        return ["CFFIXED_USER_HOME": hostHome]
+    }
+
     /// Build the minimal base environment for a `bristlenose` subprocess.
     /// Inherits only the handful of vars the CLI needs; avoids leaking
     /// DYLD_* vars, Xcode debug vars, etc. Applies UserDefaults preferences.
@@ -120,18 +145,23 @@ enum BristlenoseShared {
     ///   3. TLS cert paths for the bundled OpenSSL (sslEnvironment)
     ///   4. bundled FFmpeg/ffprobe paths (bundledBinaryEnvironment)
     ///   5. the active provider's API key (overlayAPIKeys)
+    ///   6. Foundation's home for the sandboxed sidecar (foundationHomeEnvironment)
+    ///   plus the language, platform, palette and PII settings set inline below
     ///
     /// Both `ServeManager.start` and `PipelineRunner.start` route through here.
     /// The run path previously hand-rolled this block and forgot step 5, which
     /// broke `bristlenose run` under App Sandbox (Python can't read Keychain
-    /// itself). Adding a spawn site = one call here, not five lines to remember.
+    /// itself). Adding a spawn site = one call here, not a block of lines to remember.
     ///
     /// - Parameter mode: resolved sidecar mode (bundled / dev-sidecar).
     /// - Parameter store: Keychain-abstracted store (`KeychainHelper.liveStore`
     ///   in production, `InMemoryKeychain` in tests).
+    /// - Parameter hostHome: this process's Foundation home, injectable so the
+    ///   sandboxed case is testable on an unsandboxed CI host.
     static func childEnvironment(
         for mode: SidecarMode,
-        store: any KeychainStore = KeychainHelper.liveStore
+        store: any KeychainStore = KeychainHelper.liveStore,
+        hostHome: String = NSHomeDirectory()
     ) -> [String: String] {
         var env = buildChildEnvironment()
         // Tells the sidecar to install the parent-death watcher (so it
@@ -177,6 +207,7 @@ enum BristlenoseShared {
         }
         for (key, value) in sslEnvironment(for: mode) { env[key] = value }
         for (key, value) in bundledBinaryEnvironment(for: mode) { env[key] = value }
+        for (key, value) in foundationHomeEnvironment(for: mode, hostHome: hostHome) { env[key] = value }
         // PII redaction. Yields nothing at all unless the researcher switched it
         // on, and the model-directory half only once a pack has actually
         // arrived — see PIIModelPack for why those two are deliberately not

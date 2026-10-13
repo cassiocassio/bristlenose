@@ -19,6 +19,10 @@ data. This README holds aggregates only.
 | `coverage.py` | Treats Vision OCR every 2 s as the oracle and asks which frame-selection strategies capture each text "episode" (a line continuously on screen) |
 | `pixel_diff.py` | A cheap text-change detector (edge maps of 480 px greyscale frames), for comparison |
 | `pii_on_ocr.py` | Runs stage 7's own redactor (`_redact_text`, Presidio + `en_core_web_lg`, shipped thresholds) over the OCR text and counts personal data caught and UI text damaged |
+| `pipeline_spike.py` | Second pass: the build plan's step 1 end to end. One ffmpeg pass on a pipe (1 frame per 4 s, full res, `showinfo` times) into Vision via `CGImage`, folded lines, episodes, text-diff moments; writes only the index. Reports wall, CPU, peak RSS and RSS every 100 frames |
+| `sticky_eval.py` | Second pass: compares four chrome-removal rules (whole line, text anywhere, line at a place, word at a place) against the truth targets |
+| `search_spike.py` | Second pass: searches an index with the shipped matching rule, groups hits into result rows, attaches the transcript paragraph at each, and times the scan |
+| `rapid_levers.py` | Second pass: RapidOCR variants at 2 threads (default, detection capped at 960 px, PP-OCRv5 Latin mobile, both) for speed and accuracy |
 
 ## Material
 
@@ -149,9 +153,77 @@ Dropping lines that sit on at least half of a session's share frames removes 17 
 and 11 of 137 content targets, against Presidio's 16 of 26 and 27 of 202. What it cannot remove is
 personal data typed into the page itself (the postcode), which behaves like content.
 
+## Second pass, same day: spiking the build plan
+
+### The pipeline end to end (`pipeline_spike.py`)
+
+| recording | video | frames | wall | per hour of video | OCR per frame | ffmpeg CPU | peak RSS | index |
+|---|---|---|---|---|---|---|---|---|
+| p3, 1080p call | 37.8 min | 568 | 70.6 s | **1.9 min** | 0.122 s | 43 s | 209 MB | 129 KB |
+| Teams, 1080p call | 18.1 min | 273 | 35.5 s | **2.0 min** | 0.127 s | 21 s | 188 MB | 67 KB |
+| macOS screen recording, 3456×2234 at 120 fps | 4.3 min | 66 | 23.9 s | 5.5 min | 0.268 s | 109 s | 288 MB | 79 KB |
+
+- **Decode overlaps OCR** on the pipe, so it adds no wall time at 1080p; at 4K the job is decode-bound.
+- **Vision keeps about one core busy**: Python's CPU time matched OCR time (69 s each on p3). The first
+  pass's reading that it ran "mostly on the Neural Engine" was wrong.
+- **Memory needs two things.** A `CGImage` built with `CGDataProviderCreateWithData` over the Python
+  buffer leaked one frame per call (~8 MB at 1080p), pool or no pool: RSS 927 → 4,154 MB over 500
+  frames. Copying into `NSData` fixed the provider; without a per-frame `objc.autorelease_pool()` it
+  still leaked at the same rate (941 → 2,586 MB over 300 frames). With both, RSS stayed at 163–197 MB.
+
+### Vision under the App Sandbox
+
+The spike froze a 40-line Vision probe with PyInstaller into a `.app`, signed it ad hoc with
+`com.apple.security.app-sandbox`, and ran it. It ran in its container (`NSHomeDirectory()` resolved to
+`~/Library/Containers/<bundle id>/Data`), checked its own bundle id before reporting, and read a
+synthetic frame with Vision accurate: 27 lines, no error, no extra entitlement. Vision listed 33
+recognition languages, covering every Bristlenose locale but Catalan (Portugal's Portuguese is under
+`pt-BR`). pyobjc's frozen footprint: `objc` 0.9 MB, `Quartz` 0.7 MB, `Foundation` and `CoreFoundation`
+0.15 MB each, `Vision` 56 KB; the whole probe app, Python included, 23 MB. **Not tested:** the shipped
+sidecar's shape, an inherited-sandbox child of the Swift host.
+
+### Chrome removal, four rules (`sticky_eval.py`)
+
+| rule | personal targets removed (19) | content targets removed (146) |
+|---|---|---|
+| whole line on ≥ 50% of dense frames | 12 | 5 |
+| text anywhere on ≥ 50% | 13 | 13 |
+| whole line at the same place | 12 | 4 |
+| **word at the same place (2% buckets, ±1)** | **16** | **5, all browser chrome** |
+
+Whole-line rules fail on the bookmark bar because Vision reads bookmark icons as stray letters and
+regroups the bar into different lines from frame to frame. The word rule's five "content" removals are
+the browser's restore banner, the URL, an assistant button and two Safari bookmarks: no page content.
+What it leaves is one bookmark title and the two values the participant typed (a postcode and a
+delivery address).
+
+### Search rows (`search_spike.py`)
+
+A folded scan of 495–930 episodes takes 0.0–0.3 ms per query. Rows per query on the two sessions
+(13 queries, IKEA UI text):
+
+| grouping | specific phrases (dialog titles, buttons) | common words |
+|---|---|---|
+| one row per episode run | 1–2 | 6–28 |
+| overlapping intervals merged | 1–2 | 1–3, but one row spanned eight minutes of different screens |
+| **by the screen a match appeared on, same text within 60 s rejoining, leading 1–2-character token ignored** | **1, at the right moment** | **1–7** |
+
+### RapidOCR at 2 threads (`rapid_levers.py`)
+
+| variant | found (206) | s / frame | CPU s / frame |
+|---|---|---|---|
+| default, PP-OCRv6 small | 96% | 2.16 | 4.64 |
+| detection capped at 960 px | 95% | 1.55 | 3.28 |
+| PP-OCRv5 mobile, Latin recogniser | 96% | 1.71 | 3.88 |
+| both | 86% | 1.40 | 2.77 |
+
+An unchanged-frame gate (edge-map diff against the previous 4 s sample, OCR only above the threshold)
+at 0.1: OCR on 63% (p3) and 69% (Teams) of samples, keeping 95–96% of distinct lines. Non-default
+models download at first use from modelscope.cn.
+
 ## Caveats
 
 Two sessions, both IKEA shopping flows on Teams, both 1080p. One dark-mode frame, a synthetic terminal,
-no CJK, no Windows desktop, no 4K share. One reader wrote the targets. The coverage oracle is itself
+no CJK, no Windows desktop, no 4K share inside a call. One reader wrote the targets. The coverage oracle is itself
 OCR, so text Vision misses is missing from both sides. Tesseract was installed with Homebrew on the
 measuring Mac for this comparison.

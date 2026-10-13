@@ -617,6 +617,14 @@ already anticipates. Independent of the UX; can land before or after phase 2.
 >   Ultra Mac, and even there the two share one GPU; that is not the budget of the
 >   researchers Bristlenose is for. Not a v1 feature; worth a look after beta as a
 >   flagship for researchers on top-end hardware.
+>   *Background.* The switch is one line (`_whisper_overlaps`), but flipping the
+>   default would land on every Local user, most on 16–24 GB Macs where Whisper and
+>   the model compete for memory: a slower run, swapping, or a process killed
+>   mid-run. Nothing has been measured, even on a big Mac, and Ollama's own
+>   concurrency limit may simply queue the calls. The safe first step, when it is
+>   revisited, is an opt-in switch (a hidden environment variable, default serial)
+>   to measure serial against overlapped on a 64 GB+ Mac, wall time and memory
+>   pressure, and decide from that which machines, if any, get it.
 > - **Timings** count wall time with a call in flight, not the sum of calls, which ran
 >   up to `llm_concurrency` at once. The step lines count the chain's sessions as new,
 >   and the stage entry for topics comes before the wait for the chain's last calls.

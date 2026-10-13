@@ -185,3 +185,58 @@ capture. Transcript turns are used where a recording has one; otherwise a fixed 
 alternation stands in. One thing the keyframe view exposes: a recording's first keyframe can be a
 splash or transition frame, which the per-turn colour already survives (it clusters the whole turn)
 but a stripe shows.
+
+## Hover thumbnail (decided 13 Oct 2026, build next)
+
+**Decided in the mockup** (`thumb-mockup.html`; its handles stay for retuning):
+
+- **Frames.** One per participant turn, 25% in. Plus one at each colour change inside a participant
+  turn: changes at ΔE 8 on the untoned 4 fps means (`scene_edges(means, fps, 8)`), a change within
+  2 s of the turn's start ignored, each later stretch framed 2 s after its change, or halfway through
+  a stretch shorter than 4 s. Measured: 86–112 frames an hour; a seek costs 0.06 s.
+- **Size: 160 px wide**, the size it was drawn at (the originals). Small, medium and large were tried
+  on 13 Oct; the size handle stays in the mockup in case it is reopened. Assets at 2×, 320 px.
+- **Position:** below the tracks, so the section flags stay visible above.
+- **Timing:** open after 700 ms at rest, reopen within 1 s of a close, swap after 100 ms at rest
+  (stepped, never scrubbed), close after a 300 ms grace.
+- **Over a moderator turn** the last participant frame holds. The turn or stretch the frame belongs
+  to is outlined. The caption is the timecode only.
+- **Click:** the transcript jump as today; while a change frame shows, the jump lands 1 s before
+  the change.
+- Mouse-only and `aria-hidden`: the transcript and the strip carry the same information.
+
+**Build plan.**
+
+1. **Selection, pure.** `bristlenose/utils/turn_frames.py`: `select_frames(turns, edges) ->
+   [{t, a, b, change}]` from participant turns and ΔE 8 edges, with the constants above. Unit-tested
+   with no video.
+2. **Extraction, in serve.** It extends the scene-strip job (`server/scene_strips.py`), not a second
+   thread: the same deferral, rerun and stop-between-sessions rules, after the strip for that
+   session. Needs the 4 fps means (keep them in the strip record, or recompute the ΔE 8 edges in the
+   same pass) and the turns (the route's `_turns` over transcript segments; factor it out so the
+   job and the route agree). It writes 320 px JPEGs (`-q:v 6`, about 7 KB each) plus an index to
+   `.bristlenose/intermediate/turn-frames/<session>/`, cached by video identity plus turn bounds,
+   written whole and renamed into place. A speaker edit that moves turn bounds invalidates the
+   cache, and the job's re-arm on the events log does not cover that, so the route reports the
+   frames stale and the job starts again.
+3. **Serving, authenticated.** `GET /api/projects/{id}/sessions/{sid}/turn-frames` returns
+   `{frames: [{t, a, b, change, src}]}` with data URLs, about 0.8 MB an hour. The grid fetches it
+   through `api.ts` the first time a row is hovered, inside the 700 ms open delay, and keeps it per
+   session. Not under `/report/assets/`: those are unauthenticated, and frames of participants'
+   screens should not be one GET away for any local process. Not in the polled tapestry payload,
+   which would carry megabytes on every poll. The tapestry route gains only `frames: bool` per
+   session, so the grid knows whether to hover-fetch.
+4. **Export:** classify the route `SERVER_ONLY_PATH_TEMPLATES`. An exported report carries no
+   participant screens, as it carries no video.
+5. **Frontend.** A controller hook (timers, target, step) plus a fixed-position layer outside the
+   slice's overflow, anchored below the tracks. Constants go in `tapestryTuning.ts`
+   (`thumb: {openMs, warmMs, restMs, graceMs, width}`), so the playground can move them. No new
+   strings, so no i18n.
+6. **Tests.** pytest: selection, the job (fake extractor), the route (auth, 404 for a session
+   without video, the stale-cache case) and the export classification (the coverage test fails
+   until it is classified). vitest with fake timers: open, warm reopen, swap at rest, grace,
+   moderator hold, and the click target (−1 s on a change frame).
+
+**Later:** the screen-text session (`docs/design-screen-text-search.md`) found that a text diff
+every 4 s catches what colour changes miss. If OCR ships, the thumbnails could take their frames
+from those moments.

@@ -1,6 +1,8 @@
 ---
-status: research
+status: partial
 date: 6 Oct 2026
+last-trued: 2026-10-13
+trued-against: HEAD@main on 2026-10-13
 ---
 
 # Transcript readability: better Whisper text, shorter paragraphs, a readable layer
@@ -12,7 +14,9 @@ paragraph text at the edges; and whether the raw transcript should get a readabl
 presentation the way quotes already do.
 
 **Status, 11 Oct 2026.** Recommendation #1 is built (§8): a punctuated style prompt on
-every Whisper window, on both backends, for English and Japanese. Sentence-start capitals
+every Whisper window, on both backends, for English and Japanese (and since 13 Oct 2026
+for Spanish, French, Italian and German too: `design-whisper-style-prompts.md`, which also
+records the stage-5 nets built on top of the prompt). Sentence-start capitals
 (recommendation #3's second part, the capitalisation mockup's option C) shipped as
 display-only CSS in `512f0846`, recorded in `design-transcript-editing.md`.
 Recommendation #2 is built too (§9), for sessions transcribed from 12 Oct 2026 on.
@@ -87,7 +91,7 @@ segment, with the moderator's "okay what is it" at the end of the participant's
 line. Speaker identification labels whole segments, so the question's first words
 go to the participant's paragraph. That is the edge disagreement the owner saw.
 
-### 1.2 The current settings are not reproducible (MEASURED)
+### 1.2 The current settings are not reproducible (MEASURED; fixed by seeding in §8)
 
 The same 5-minute excerpt of s1 (1:00–6:00), the current stage-5 settings, three
 separate processes: 838, 1,051 and 831 words; 17, 14 and 20 sentences; 33–40 of
@@ -488,12 +492,13 @@ All of these leave `transcript_segments.text` and the word timings untouched.
   measured through speaker identification.
 - faster-whisper was not run; the `hotwords` route is read from source only.
 - large-v3 (non-turbo) and Chinese audio were not tested.
-- The Japanese prompt was one run on one file.
+- The Japanese prompt was one run on one file. (Resolved in §8: three seeds, 20–25 。.)
 - Whether the `(Speaker X)` prefix in stored text is drawn on the page when a
   paragraph has no word timings was not checked.
 - Owner decisions: whether to offer a hide-fillers mode at all (§4.3); the stage-6
   threshold (60 words is grounded on two projects); which languages get a reviewed
-  prompt first.
+  prompt first. (That last one was settled on 12–13 Oct 2026: batch 1 was es, fr, it,
+  de and pt; four shipped and Portuguese is held, `design-whisper-style-prompts.md`.)
 
 ## 7. Reproducing the measurements
 
@@ -558,6 +563,11 @@ lower-case "I". Its Japanese was already punctuated (26 。) and stayed so (25).
 
 - **Two languages only.** No recordings in other languages exist to measure on. A
   language without a prompt runs exactly as before. Chinese is left out on purpose.
+  _Post-script, 13 Oct 2026:_ public recordings were found and measured, and Spanish,
+  French, Italian and German now have prompts (`design-whisper-style-prompts.md`
+  § Batch 1 as shipped). Three later stage-5 nets depend on the prompt: the inaudible
+  marker reads the prompt's words, the skipped-window net re-decodes without it, and
+  loop removal sits between them (`bristlenose/stages/CLAUDE.md` § Stage 5).
 - **The Japanese prompt was changed after review** from one ending in a moderator's line
   ("それでは始めましょう", let's begin) to filler and assent only:
   "えーと、はい。そうですね、なるほど。" Re-measured: 23 。.

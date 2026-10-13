@@ -1,17 +1,31 @@
 ---
-status: in progress
+status: partial
 date: 12 Oct 2026
+last-trued: 2026-10-13
+trued-against: HEAD@main on 2026-10-13
 ---
 
 # Whisper style prompts for every language: brief
+
+## Changelog
+
+- _2026-10-13_ — trued up: batch 1 shipped (es, fr, it, de; pt held), the
+  skipped-window net, the inaudible marker and loop removal recorded with the
+  batch 1b evidence the code cites; pre-net reading kept below as the baseline.
+  Anchors: `transcribe: style prompts for spanish, french, italian and german`,
+  `transcribe: re-decode speech whisper skipped`, `inaudible segments: a gap where
+  nothing was heard is data, not text`, `transcribe: remove whisper repetition loops
+  spread across segments`.
+- _2026-10-12_ — initial brief, batch 1 research and trials.
 
 ## Why
 
 Since `f1ad0a4b` (0.37.0) every Whisper window gets a short punctuated "style prompt",
 which stops Whisper slipping into lower-case, unpunctuated text on conversational speech
-(`docs/design-transcript-readability.md` §8). Only **English and Japanese** have one,
-because those were the only recordings we could measure on. Every other language
-transcribes as before, so it may have the same problem, and that is unmeasured.
+(`docs/design-transcript-readability.md` §8). It shipped for **English and Japanese**
+only, because those were the only recordings we could measure on. Since 13 Oct 2026
+Spanish, French, Italian and German have one too (§ Batch 1 as shipped); every other
+language transcribes as before, unmeasured.
 
 A prompt cannot be added blind. Two failures were seen in testing: an English prompt on
 Japanese audio produced English loops, and a prompt containing an interview phrase
@@ -222,7 +236,8 @@ lives in the trial folder's approved list, not here.
 space, straight double quotes, `<<`, `>>` and a word-initial hyphen. So French spacing
 before `: ;` cannot be prompted into the output. If wanted, it would be a display
 transformation. `? ! « » ¿ ¡ —` are not suppressed. Whether Whisper writes the opening
-`¿ ¡` is unmeasured; the trial will show.
+`¿ ¡` was measured in the trial: Whisper writes them with or without a prompt (55 in
+es-1 with none).
 
 ## Batch 1 trial results (12 Oct 2026)
 
@@ -245,6 +260,9 @@ loops that were removed.
 | Portuguese | v1 `Ahn, é. Então, acho que sim, né, e depois? Certo.` | 278 words at 8:00 in pt-br-1 came back as "Certo." | 5, 1, 0 |
 | Portuguese | v2 `Ahn, então, hum, na verdade é isso, né? Eh, mais ou menos, porque, ahn, depende.` | Fewer skips | 3, 2, 0 |
 
+> **Superseded on 13 Oct 2026** by § Batch 1 as shipped. The reading and the net
+> paragraph below are the 12 Oct baseline, kept as the record of why the net was built.
+
 **Reading.** German, French v2 and Italian v2 lose no speech and are candidates to ship,
 subject to the owner's reading of the comparison page. Spanish and Portuguese skip
 windows with either prompt. One example: a clear 71-word passage at the start of es-3
@@ -261,6 +279,79 @@ measurement.
 The comparison page (`trial-runs/whisper-prompt-samples/compare.html`, built by
 `compare_prompts.py`) stays out of the repo because it holds interview transcripts.
 
+## Batch 1 as shipped (12–13 Oct 2026)
+
+**Batch 1b.** Eight harder recordings were added to the twelve, chosen for informal
+talk, crosstalk, background noise and accents: an Austrian community-radio interview
+(de-3), a Portuguese street recording (pt-pt-2), an Italian field recording (it-3), two
+French corpus recordings, a family meal and a conversation (fr-3, fr-4, ESLO and OFROM,
+CC BY-NC-SA), a Spanish soundscape (es-4), and two covertly recorded Spanish
+conversations from the Ameresco corpus (es-5, es-6, CC BY-NC-SA), which come with
+reference transcripts. The owner judged the spoken Spanish ones extreme, at the far edge
+of what research recordings look like, and they are used as stress tests, not as the
+yardstick.
+
+**Word error rate against the Ameresco references** (`experiments/transcript-readability/score_wer.py`;
+the references' conversation-analysis markup stripped, overlapping speech kept, so the
+score counts what crosstalk loses; numbers in digits cost every condition alike):
+
+| Recording | No prompt | Prompt v2 | v2 + net |
+|---|---|---|---|
+| es-5 (25 min) | 42.7% | 35.7% | 35.7% |
+| es-6 (24 min) | 58.4% | 42.9% | 42.0% |
+
+**What shipped** (`STYLE_PROMPTS` in `bristlenose/stages/s05_transcribe.py`): v2 for
+Spanish, French and Italian, v1 for German, measured over the sixteen recordings in those
+four languages. Language names (`--whisper-language French`) reach the same prompt as the
+code. **Portuguese is held**: on noisy speech it still hands back pieces of its prompt.
+Measured on mlx only; faster-whisper gets the same prompts as `hotwords`, unmeasured for
+these four languages.
+
+**The skipped-window net, as built** (not as planned above). A stretch of at least 8 s
+with fewer than 0.3 words a second, where at least 40% of the 100 ms windows sit 15 dB
+above the recording's noise floor (its quietest tenth, capped at -45 dBFS so a file loud
+throughout is not blind), is re-decoded on its own without the prompt, and the new text
+replaces the old only at 1 word a second or more, so the net can only add speech. It
+fires with no prompt too: a Portugal meeting, an Italian and a German interview and a
+Mexican podcast each lost a stretch that another run heard. On es-1 it recovered 1,073
+words; sound with no words went from 8:09 to 2:47.
+
+**The inaudible marker.** Whisper also hands back *pieces* of its prompt over speech it
+cannot make out ("Ainda, hum, na verdade.", "Ehm, allora, mh, in realtà sì, no?"). A line
+of two or more words, at least 60% of them prompt words, with a mean word confidence
+under 0.15 becomes an inaudible gap: empty text, Whisper's guess discarded, drawn in the
+report as a muted "Inaudible", never as words. Calibrated on seven recordings in six
+languages (pt-pt-2, it-3, es-1, es-6, fr-3, de-3 and an English interview): every line
+under 0.15 was a partial echo, and real speech made of the same words sat far above it
+("Ähm, genau." at 0.75, "Okay. Uh, right." at 0.97). On the twenty trial recordings it
+marked 13 gaps (146 s) in pt-pt-2, 4 (46 s) in it-3 and one short line each in es-1 and
+fr-3; nothing else. Prompt words alone, or low confidence alone, are ordinary speech, so
+both are required.
+
+**Repetition loops.** Whisper can loop across many separate one-line segments ("nada" 39
+times in 28 s, "Gracias." every 30 s for a minute), which the within-segment repeat
+filter never sees, and which the net read as speech. A run of consecutive segments with
+the same text (compared after repeats collapse) is removed when it is 8 or more long, or
+3 or more spanning at least 15 s. Pairs are left alone (202 in the trials, many real),
+and tight bursts of real backchannel ("Sim." four times in 2.4 s, "¡No!" six times in
+6 s) stay. On the twenty recordings it fired on es-1, es-4 and pt-pt-2 only. It took
+four rounds on es-1, because the loop survived three ways: inside the net's own
+re-decode, as lines that differ only in doubled words, and split by a line a later gate
+drops.
+
+**Order of the gates in stage 5**, and why: signal gate, then whole-prompt echoes, then
+loops, so that what the net sees is the transcript the reader will get (a removed echo
+or loop reads as the gap it is and is re-decoded); then the skipped-window net, which
+drops loops from its own re-decodes before judging them; then the inaudible marker, so
+a line the net replaced is judged on its new text; then one more loop check on the
+finished transcript. The reference description is `bristlenose/stages/CLAUDE.md` § Stage 5.
+
+**What the trials left open.** The Portuguese prompt; a clean whole-file timing of the
+net; batches 2–4; and the diagnostics row and opt-in telemetry
+(`docs/design-transcription-quality.md`).
+
 ## Status
 
+- 13 Oct 2026: batch 1 shipped for es, fr, it and de; pt held. The net, the inaudible
+  marker and loop removal shipped with it (§ Batch 1 as shipped).
 - 12 Oct 2026: brief written; batch 1 researched, downloaded (12 files, approved), trialled with v1 and v2 (above). Awaiting the owner's reading of the comparison page.

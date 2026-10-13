@@ -1,6 +1,8 @@
 ---
-status: proposal
+status: pending
 date: 12 Oct 2026
+last-trued: 2026-10-13
+trued-against: HEAD@main on 2026-10-13
 ---
 
 # Transcription quality: per-session numbers, a diagnostics row, opt-in telemetry
@@ -8,7 +10,12 @@ date: 12 Oct 2026
 Proposal, not built. It comes out of the style-prompt and skipped-window work
 (`docs/design-whisper-style-prompts.md`, `docs/design-transcript-readability.md`):
 stage 5 now knows several things about how well a recording transcribed, and
-throws them away after logging them.
+throws them away after logging them. The diagnostics row is mocked up in
+`docs/mockups/transcription-diagnostics.html` (numbers only, no transcript text).
+
+_Trued 13 Oct 2026: still unbuilt. Since this was written, stage 5 also removes
+repetition loops and marks inaudible gaps, and logs a count of each; the Repair rows
+below now include them._
 
 ## One record per session, numbers only
 
@@ -21,11 +28,12 @@ It holds **no words, names or timestamps of speech**, only counts and levels.
 | Recognition | backend and model; language detected or set; style prompt on or off; decode steps the prompt reached | logged per file |
 | Recognition | windows that fell back to sampling (Whisper's temperature fallback) | in mlx's segments, not kept |
 | Recognition | mean word confidence; share of words under 0.5 | in the word timings, not summarised |
-| Repair | silent-stretch segments dropped; prompt echoes dropped; repeats collapsed | logged as counts, or not counted |
+| Repair | silent-stretch segments dropped; prompt echoes dropped; repetition-loop segments removed; inaudible gaps marked | logged as counts |
+| Repair | repeats collapsed inside a segment | not counted |
 | Repair | skipped stretches found and recovered (count, seconds, words) | logged per file |
 | Text | words; words a minute; sentence ends per 100 words; longest unpunctuated run; fillers per 100 words | not computed |
 | Speakers | how speakers were separated (voice and text, text only, platform labels); voice centroid distance | already cached in `speaker-info/<sid>.json` |
-| Later | `[inaudible]` marks; overlapping speech, once the voice pass can see it | not built |
+| Later | overlapping speech, once the voice pass can see it | not built |
 
 **Overlap is the measure that matters most, and the one we can't count yet.**
 People talking over each other is the first cause of lost speech in real

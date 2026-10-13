@@ -22,10 +22,17 @@ from build import build, read_transcript
 
 from bristlenose.stages.s12_render.theme_assets import load_default_css
 from bristlenose.utils.fs import is_dataless
-from bristlenose.utils.scene_strip import sample_dense, strip_record
+from bristlenose.utils.scene_strip import sample_dense, scene_edges, strip_record
 
 HERE = Path(__file__).parent
 FRAME_AT = 0.25  # how far into a participant turn its frame is taken
+# Frames at colour changes inside a participant turn (13 Oct 2026). Measured on the two mockup sessions:
+# scenes at ΔE 8 are colour-stable inside (the notches' ΔE 14 are not); a frame at the change itself is
+# mid-transition in 13–22% of cases, 1–2 s in in 0–6%. So: changes at ΔE 8, frame 2 s in, or halfway
+# through a stretch shorter than 4 s. A turn with no change inside it is one stretch, framed as before.
+CHANGE_DE = 8.0
+CHANGE_IN = 2.0
+EDGE_MARGIN = 2.0  # a change within this of the turn's start belongs to the handover, not the turn
 
 
 def frame(video: Path, t: float, width: int) -> str | None:
@@ -66,11 +73,22 @@ def main() -> None:
             s["strip"] = {"fps": rec["fps"], "n": rec["n"], "t0": rec["t0"],
                           "png": "data:image/png;base64," + rec["png"]}
             s["aspect"] = aspect(video)
+            edges = scene_edges(means, rec["fps"], CHANGE_DE)
             for t in ppt:
                 ft = t["t0"] + FRAME_AT * (t["t1"] - t["t0"])
                 src = frame(video, ft, args.frame_width)
                 if src:
                     t["frame"] = {"t": round(ft, 1), "src": src}
+                # Stretches inside the turn, split at its colour changes.
+                cuts = [e for e in edges if t["t0"] + EDGE_MARGIN < e < t["t1"]]
+                bounds = [t["t0"]] + cuts + [t["t1"]]
+                frames = []
+                for j, (a, b) in enumerate(zip(bounds, bounds[1:])):
+                    at = a + FRAME_AT * (b - a) if j == 0 else a + min(CHANGE_IN, (b - a) / 2)
+                    fsrc = src if j == 0 and not cuts else frame(video, at, args.frame_width)
+                    if fsrc:
+                        frames.append({"t": round(at, 1), "a": round(a, 2), "b": round(b, 2), "change": j > 0, "src": fsrc})
+                t["frames"] = frames
             if s.get("thumb"):
                 small = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-i", s["thumb"], "-vf", "scale=192:-2",
                                         "-q:v", "6", "-f", "mjpeg", "-"], capture_output=True).stdout
@@ -78,7 +96,8 @@ def main() -> None:
             s["id"] = f"p{k}{s['id']}"  # distinct across projects
             s["number"] = len(sessions) + 1
             sessions.append(s)
-            print(f"{out_dir.parent.name} {s['id']}: {len(ppt)} participant turns, {rec['n']} strip samples")
+            n_frames = sum(len(t.get("frames", [])) for t in ppt)
+            print(f"{out_dir.parent.name} {s['id']}: {len(ppt)} participant turns, {n_frames} frames with changes inside turns, {rec['n']} strip samples")
 
     theme = re.sub(r"\s+", " ", re.sub(r"/\*.*?\*/", "", load_default_css(), flags=re.S))
     blob = (json.dumps({"sessions": sessions}, ensure_ascii=True)

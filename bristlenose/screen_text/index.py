@@ -24,6 +24,7 @@ import re
 import subprocess
 import threading
 import unicodedata
+from collections import deque
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
@@ -64,13 +65,27 @@ def probe_size(video: Path) -> tuple[int, int]:
         [binary_command("ffprobe"), "-v", "error", "-select_streams", "v:0",
          "-show_entries", "stream=width,height:stream_side_data=rotation",
          "-of", "json", str(video)], capture_output=True, text=True, timeout=60, check=True).stdout
-    stream = json.loads(out)["streams"][0]
+    streams = json.loads(out).get("streams") or []
+    if not streams or not streams[0].get("width") or not streams[0].get("height"):
+        raise ValueError(f"{video.name} has no video stream")
+    stream = streams[0]
     w, h = int(stream["width"]), int(stream["height"])
     rot = 0
     for sd in stream.get("side_data_list", []) or []:
         if "rotation" in sd:
             rot = abs(int(sd["rotation"])) % 360
     return (h, w) if rot in (90, 270) else (w, h)
+
+
+def probe_duration(video: Path) -> float | None:
+    """The container's duration in seconds, or None when it does not say."""
+    out = subprocess.run(
+        [binary_command("ffprobe"), "-v", "error", "-show_entries", "format=duration", "-of", "json", str(video)],
+        capture_output=True, text=True, timeout=60, check=True).stdout
+    try:
+        return float(json.loads(out)["format"]["duration"])
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def scaled_size(w: int, h: int, max_width: int = MAX_WIDTH) -> tuple[int, int]:
@@ -84,12 +99,14 @@ def sample_frames(video: Path, every: float = EVERY, should_stop: Callable[[], b
                   ) -> Iterator[Frame]:
     """Yield a frame every *every* seconds, streamed (an hour of 1080p never sits in memory)."""
     w, h = scaled_size(*probe_size(video))
+    duration = probe_duration(video)
     size = w * h * 4
     proc = subprocess.Popen(
         [binary_command("ffmpeg"), "-nostdin", "-hide_banner", "-loglevel", "info", "-i", str(video), "-an",
          "-vf", f"fps=1/{every},scale={w}:{h}:flags=area,showinfo", "-f", "rawvideo", "-pix_fmt", "bgra", "-"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     times: list[float] = []
+    tail: deque[str] = deque(maxlen=12)
     got_time = threading.Condition()
 
     def read_err() -> None:
@@ -100,6 +117,8 @@ def sample_frames(video: Path, every: float = EVERY, should_stop: Callable[[], b
                 with got_time:
                     times.append(float(m.group(1)))
                     got_time.notify_all()
+            elif line.strip():
+                tail.append(line.decode("utf-8", "replace").strip())
         with got_time:
             got_time.notify_all()
 
@@ -123,6 +142,16 @@ def sample_frames(video: Path, every: float = EVERY, should_stop: Callable[[], b
                 t = times[n]
             n += 1
             yield Frame(width=w, height=h, bgra=buf, t=round(t, 2))
+        # A decode that ends early is not an index: a cut-off file or a decoder error would
+        # otherwise be cached as a recording with fewer screens than it has.
+        rc = proc.wait(timeout=60)
+        reader.join(timeout=5)
+        if rc != 0:
+            raise RuntimeError(f"ffmpeg exited {rc}: {' | '.join(tail)[-400:]}")
+        last = times[n - 1] if n else None
+        if duration and duration > every and (last is None or last < duration - 2 * every):
+            got = f"{last:.0f}" if last is not None else "0"
+            raise RuntimeError(f"decoded only {got} s of {duration:.0f} s")
     finally:
         if proc.poll() is None:
             proc.kill()
@@ -141,10 +170,13 @@ def index_frames(frames: Iterator[Frame], engine: ScreenTextEngine, every: float
     """Read every frame and build the index record (without its cache key)."""
     samples: list[tuple[float, dict[str, dict]]] = []
     size = [0, 0]
+    raw = 0
     for fr in frames:
         size = [fr.width, fr.height]
         keep: dict[str, dict] = {}
-        for ln in engine.recognize(fr):
+        lines = engine.recognize(fr)
+        raw += len(lines)
+        for ln in lines:
             f = fold(ln["text"])
             if ln["conf"] >= MIN_CONF and len(f) >= 2 and f not in keep:
                 keep[f] = dict(ln)
@@ -172,7 +204,7 @@ def index_frames(frames: Iterator[Frame], engine: ScreenTextEngine, every: float
             moments.append(t)
             last = body
     return {"version": INDEX_VERSION, "engine": engine.name, "engine_version": engine.version,
-            "every": every, "size": size, "samples": len(samples), "moments": moments,
+            "every": every, "size": size, "samples": len(samples), "raw_lines": raw, "moments": moments,
             "episodes": list(episodes.values())}
 
 
@@ -194,7 +226,11 @@ def read_index(path: Path) -> dict[str, Any] | None:
         rec = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    return rec if isinstance(rec, dict) and rec.get("version") == INDEX_VERSION else None
+    if not (isinstance(rec, dict) and rec.get("version") == INDEX_VERSION
+            and isinstance(rec.get("episodes"), list) and isinstance(rec.get("moments"), list)
+            and isinstance(rec.get("samples"), int) and isinstance(rec.get("key"), str)):
+        return None
+    return rec
 
 
 def is_current(path: Path, video: Path, engine: ScreenTextEngine) -> bool:

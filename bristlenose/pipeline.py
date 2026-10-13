@@ -743,6 +743,8 @@ _PER_SESSION_DIRS = (
     ".bristlenose/intermediate/speaker-info",
     ".bristlenose/intermediate/scene-colours",
     ".bristlenose/intermediate/transcription-quality",
+    ".bristlenose/intermediate/screen-text",
+    ".bristlenose/intermediate/screen-text/stills",
     ".bristlenose/temp",
 )
 _PER_SESSION_FILE_RE = re.compile(r"^(?:transcript_)?(s\d+)(?:[._]|$)")

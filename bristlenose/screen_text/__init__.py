@@ -27,7 +27,7 @@ from __future__ import annotations
 import os
 
 #: Bump when anything changes what an index holds: it is in every index's cache key.
-INDEX_VERSION = 1
+INDEX_VERSION = 2
 
 
 def enabled() -> bool:

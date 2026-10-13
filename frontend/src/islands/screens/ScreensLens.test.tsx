@@ -132,4 +132,24 @@ describe("ScreensLens", () => {
     render(<ScreensLens />);
     await waitFor(() => expect(screen.getByText(/No screens found/)).toBeInTheDocument());
   });
+
+  it("names a recording it could not read, and one with no text, instead of reading for ever", async () => {
+    mockApi(screensResponse({ screens: [], indexed: 1, videos: 2, failed: { s2: "ValueError: no video stream" },
+                              blank: ["s1"] }));
+    render(<ScreensLens />);
+    await waitFor(() => expect(screen.getByText(/Couldn’t read s2: ValueError: no video stream/)).toBeInTheDocument());
+    expect(screen.getByText(/No text found in s1’s recording/)).toBeInTheDocument();
+    expect(screen.queryByText(/Reading screens/)).toBeNull();
+    expect(screen.queryByText(/No screens found/)).toBeNull();  // the one indexed recording had no text
+  });
+
+  it("says the quotes failed to load rather than showing every screen empty", async () => {
+    vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens") return Promise.resolve(screensResponse());
+      if (path === "/quotes") return Promise.reject(new Error("401"));
+      return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+    }) as typeof apiGet);
+    render(<ScreensLens />);
+    await waitFor(() => expect(screen.getByText(/couldn’t load the quotes \(401\)/)).toBeInTheDocument());
+  });
 });

@@ -96,6 +96,8 @@
 .screens-shot { position: relative; z-index: 1; align-self: start; }
 .screens-shot img { display: block; width: 100%; border-radius: var(--bn-radius-md); border: 1px solid var(--bn-colour-border); }
 .screens-shot-wait { aspect-ratio: 16 / 10; border-radius: var(--bn-radius-md); background: var(--bn-colour-quote-bg); }
+.screens-shot-error { display: block; padding: var(--bn-space-lg); font-size: var(--bn-text-label); color: var(--bn-colour-muted); }
+.screens-lens-status p { margin: 0 0 var(--bn-space-xs); }
 .screens-hl {
   position: absolute; pointer-events: none; border-radius: var(--bn-radius-sm);
   border: 1.5px solid var(--bn-colour-accent);

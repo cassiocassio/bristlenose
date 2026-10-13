@@ -79,7 +79,31 @@ interface ScreensResponse {
   reading: string | null;
   videos: number;
   indexed: number;
+  /** Why a recording has no index, by session id (older servers omit it). */
+  failed?: Record<string, string>;
+  /** Recordings the engine read and found no text in. */
+  blank?: string[];
   screens: Screen[];
+}
+
+/** Still reading: the job is running, or recordings remain that have neither an index nor a failure. */
+function stillReading(r: ScreensResponse): boolean {
+  return r.pending || r.indexed + Object.keys(r.failed ?? {}).length < r.videos;
+}
+
+/** What the lens says about recordings it could not, or has not yet, read. */
+function readingNote(r: ScreensResponse): string[] {
+  const out: string[] = [];
+  if (stillReading(r)) {
+    out.push(
+      r.pending
+        ? `Reading screens… ${r.indexed} of ${r.videos} recordings${r.reading ? ` (now ${r.reading})` : ""}.`
+        : `Waiting to read ${r.videos - r.indexed} of ${r.videos} recordings (after the current analysis).`,
+    );
+  }
+  for (const [sid, why] of Object.entries(r.failed ?? {})) out.push(`Couldn’t read ${sid}: ${why}.`);
+  for (const sid of r.blank ?? []) out.push(`No text found in ${sid}’s recording.`);
+  return out;
 }
 
 type Front = "hover" | "click";
@@ -88,6 +112,7 @@ type StackStyle = "straight" | "diagonal";
 // ── Stills ───────────────────────────────────────────────────────────────
 
 const stills = new Map<string, string>();
+const stillErrors = new Map<string, string>();
 const stillWaiters = new Map<string, Promise<string | null>>();
 
 function stillUrl(tab: ScreenTab, w: number): string {
@@ -95,7 +120,8 @@ function stillUrl(tab: ScreenTab, w: number): string {
   return `/screens/still?session_id=${encodeURIComponent(tab.session_id)}&t=${tab.t}&w=${w}&crop=${crop}`;
 }
 
-function useStill(tab: ScreenTab | undefined, w: number): string | null {
+/** The still's data URI, or why there is none (null while it loads). */
+function useStill(tab: ScreenTab | undefined, w: number): { src: string | null; error: string | null } {
   const url = tab ? stillUrl(tab, w) : "";
   const [fetched, setFetched] = useState<{ url: string; src: string | null } | null>(null);
   useEffect(() => {
@@ -108,7 +134,12 @@ function useStill(tab: ScreenTab | undefined, w: number): string | null {
           stills.set(url, r.src);
           return r.src;
         })
-        .catch(() => null)
+        .catch((e: Error) => {
+          // Shown in place of the screengrab: a missing still must not look like one still loading.
+          stillErrors.set(url, e.message || "no still");
+          console.warn("Screens: no still for", url, e);
+          return null;
+        })
         .finally(() => stillWaiters.delete(url));
       stillWaiters.set(url, p);
     }
@@ -119,8 +150,9 @@ function useStill(tab: ScreenTab | undefined, w: number): string | null {
       live = false;
     };
   }, [url]);
-  if (!url) return null;
-  return stills.get(url) ?? (fetched?.url === url ? fetched.src : null);
+  if (!url) return { src: null, error: null };
+  const src = stills.get(url) ?? (fetched?.url === url ? fetched.src : null);
+  return { src, error: src ? null : (stillErrors.get(url) ?? null) };
 }
 
 // ── Preferences (try both, the prototype's question) ─────────────────────
@@ -337,7 +369,7 @@ export function ScreensLens() {
         .then((r) => {
           if (!live) return;
           setData(r);
-          if (r.enabled && !r.unavailable && (r.pending || r.indexed < r.videos)) timer = setTimeout(load, 5000);
+          if (r.enabled && !r.unavailable && stillReading(r)) timer = setTimeout(load, 5000);
         })
         .catch((e: Error) => live && setError(e.message));
     };
@@ -359,7 +391,8 @@ export function ScreensLens() {
         ];
         initFromQuotes(all, false, json.uncategorised);
       })
-      .catch(() => {});
+      // Without the quotes every screen would read "0 quotes": say so instead.
+      .catch((e: Error) => setError(`couldn’t load the quotes (${e.message})`));
     getCodebook()
       .then((cb) => {
         setVocabulary(cb.all_tag_names);
@@ -376,7 +409,7 @@ export function ScreensLens() {
         setTagInfo(info);
         setGroupedVocabulary(groups);
       })
-      .catch(() => {});
+      .catch((e: Error) => console.warn("Screens: no codebook, so no tag vocabulary", e));
   }, []);
 
   const byId = useMemo(() => {
@@ -425,9 +458,12 @@ export function ScreensLens() {
   if (!screens.length) {
     return (
       <div className="screens-lens-status">
-        {data.pending || data.indexed < data.videos
-          ? `Reading screens… ${data.indexed} of ${data.videos} recordings${data.reading ? ` (now ${data.reading})` : ""}.`
-          : "No screens found: these recordings show no web page with an address or tab title."}
+        {readingNote(data).map((line) => (
+          <p key={line}>{line}</p>
+        ))}
+        {!stillReading(data) && data.indexed > (data.blank ?? []).length && (
+          <p>No screens found: these recordings show no web page with an address or tab title.</p>
+        )}
       </div>
     );
   }
@@ -464,11 +500,9 @@ export function ScreensLens() {
               <option value="diagonal">diagonal</option>
             </select>
           </label>
-          {(data.pending || data.indexed < data.videos) && (
-            <span>
-              Reading screens… {data.indexed} of {data.videos}
-            </span>
-          )}
+          {readingNote(data).map((line) => (
+            <span key={line}>{line}</span>
+          ))}
         </div>
         {screen && (
           <ScreenBoard
@@ -493,8 +527,8 @@ export function ScreensLens() {
 // ── Navigation ───────────────────────────────────────────────────────────
 
 function NavThumb({ tab }: { tab: ScreenTab }) {
-  const src = useStill(tab, 240);
-  return src ? <img alt="" src={src} /> : <span className="screens-thumb-empty" />;
+  const { src, error } = useStill(tab, 240);
+  return src ? <img alt="" src={src} /> : <span className="screens-thumb-empty" title={error ?? undefined} />;
 }
 
 function screenTitle(screen: Screen, tab?: ScreenTab): string {
@@ -609,7 +643,7 @@ function ScreenBoard(props: BoardProps) {
   const { screen, tabIdx, byId, store } = props;
   const tab = screen.tabs[tabIdx];
   const still = stillKey(tab.session_id, tab.t);
-  const src = useStill(tab, 1600);
+  const { src, error: stillError } = useStill(tab, 1600);
   const stageRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const shotRef = useRef<HTMLDivElement>(null);
@@ -873,7 +907,13 @@ function ScreenBoard(props: BoardProps) {
             {columnPins.filter((p) => sideOf(p) === "L" && p.dom_id !== dragOutOfColumn).map((p) => cardFor(p.dom_id, placed(p.dom_id), p))}
           </div>
           <div className="screens-shot" ref={shotRef}>
-            {src ? <img alt="" src={src} /> : <div className="screens-shot-wait" />}
+            {src ? (
+              <img alt="" src={src} />
+            ) : (
+              <div className="screens-shot-wait">
+                {stillError && <span className="screens-shot-error">Screengrab unavailable: {stillError}</span>}
+              </div>
+            )}
             {geo &&
               pins.map((p) => (
                 <div

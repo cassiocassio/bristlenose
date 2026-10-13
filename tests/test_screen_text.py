@@ -123,7 +123,10 @@ def test_a_real_recording_is_sampled_and_indexed(tmp_path: Path) -> None:
     eng = FakeEngine(lines)
     assert sti.build_index(video, eng, out)
     rec = json.loads(out.read_text())
-    assert rec["size"] == [320, 180] and rec["samples"] == len(times) >= 3
+    # ffmpeg's fps filter gives 0, 4, 8 for 13 s (it drops the last part-interval): exactly three,
+    # so a decode that stopped early cannot pass.
+    assert rec["size"] == [320, 180] and rec["samples"] == len(times) == 3
+    assert rec["raw_lines"] == 3
     assert times == sorted(times) and times[0] < 1.0  # real times from showinfo, in order
     assert sti.is_current(out, video, eng)
     calls = len(times)
@@ -144,6 +147,35 @@ def test_a_stopped_pass_writes_nothing(tmp_path: Path) -> None:
     out = tmp_path / "s1.json"
     assert not sti.build_index(video, FakeEngine(lambda t: []), out, should_stop=stop)
     assert not out.exists()
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="needs ffmpeg")
+def test_a_cut_off_recording_is_an_error_not_a_short_index(tmp_path: Path) -> None:
+    video = tmp_path / "share.mp4"
+    subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i",
+                    "testsrc=size=160x90:rate=5:duration=40", "-pix_fmt", "yuv420p",
+                    "-movflags", "+faststart", str(video)], check=True)  # header first, as a cut file keeps it
+    data = video.read_bytes()
+    video.write_bytes(data[: len(data) // 3])  # the header still says 40 s
+    out = tmp_path / "s1.json"
+    with pytest.raises(RuntimeError, match="decoded only|ffmpeg exited"):
+        sti.build_index(video, FakeEngine(lambda t: []), out)
+    assert not out.exists()
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="needs ffmpeg")
+def test_a_recording_with_no_picture_says_so(tmp_path: Path) -> None:
+    audio = tmp_path / "call.mp4"
+    subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i", "sine=duration=3",
+                    "-c:a", "aac", str(audio)], check=True)
+    with pytest.raises(ValueError, match="no video stream"):
+        sti.build_index(audio, FakeEngine(lambda t: []), tmp_path / "s1.json")
+
+
+def test_an_index_missing_its_parts_is_not_read(tmp_path: Path) -> None:
+    path = tmp_path / "s1.json"
+    path.write_text(json.dumps({"version": sti.INDEX_VERSION, "key": "k", "samples": 1, "moments": []}))
+    assert sti.read_index(path) is None
 
 
 # ── Screens ──────────────────────────────────────────────────────────────

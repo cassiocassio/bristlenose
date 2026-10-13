@@ -5,7 +5,7 @@ updated: 14 Oct 2026
 
 # Screens: where they went, what they said, what was on screen
 
-**Status: the plan, 13 Oct 2026. Nothing is built except one enabling fix (§3.4).** Decided by the
+**Status: the plan, 13 Oct 2026; a rough diagnostics build since 14 Oct (below).** Decided by the
 owner today: **(1) screen text and the Screens lens are one project with one plan; (2) Mac first;
 (3) the OCR engine is pluggable, so other platforms can join with another engine later.** Everything
 else here is a proposal.
@@ -16,6 +16,31 @@ quotes placed and pinned to elements, the board drawn with the shipped design sy
 settled is in §3.5 (pinning a quote to an element), §3.6 (is it the same screen?) and §2's S5 (the
 board). The owner's principle from that test: **the machine makes its best guess and the researcher
 fixes it in one gesture**, rather than asking AI to be right about everything.
+
+**14 Oct 2026, evening: a rough first build, behind Diagnostics.** Built for one trusted tester to
+try on real studies and say what is wrong. It is not Phase 1–5 done; it is the shortest path to the
+board on real data.
+
+- **Where it is.** `bristlenose/screen_text/` (engine seam with Vision and a fake engine; the
+  sampler and index; `screens.py`, which derives screens, places quotes and pins them by shared
+  words), a serve job that indexes each recording after the scene strips
+  (`server/screen_text_job.py`), two routes (`GET …/screens`, `GET …/screens/still`, both
+  server-only in an export), and the lens at `/report/screens/` (`frontend/src/islands/screens/`).
+- **How to turn it on.** Mac app: Settings ▸ Appearance ▸ Diagnostics, then Diagnostics ▸ Screens
+  Lens (the toggle restarts the server with `BRISTLENOSE_SCREEN_TEXT=1`). Browser: `serve --dev`,
+  or `BRISTLENOSE_SCREEN_TEXT=1` plus the diagnostics flag. Off, the job never runs and the routes
+  answer 404.
+- **What it does not do yet.** Pins are words only, so a German page with English quotes pins
+  little (the prototype's meaning match is not shipped). No merge or peel: one key per screen by
+  the §3.6 ladder, and a page with neither address nor title is not a screen. No not-screen-based
+  gate. The rearranged board lives in the browser's storage, not the project. English only; no
+  locale keys. Vision only, so the lens reports "unavailable" off the Mac.
+- **Owed before it leaves Diagnostics** (security review, 14 Oct). The Diagnostics switch does not
+  yet say it reads shared screens (§4.7's sentence; the help text is a 21-locale change). The index
+  stores every line as read, chrome and full addresses included, where §4.3 drops chrome and
+  query strings at rest; off-task screens (§4.5) are not hidden. Stills are cached on disk under
+  the session's id, so the pipeline's per-session prune removes a withdrawn participant's, but
+  turning Diagnostics off does not delete them.
 
 This doc owns the plan. The evidence lives in two records, which it does not repeat:
 

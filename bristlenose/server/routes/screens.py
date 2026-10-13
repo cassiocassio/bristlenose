@@ -15,8 +15,10 @@ from __future__ import annotations
 import base64
 import hashlib
 import logging
+import os
 import re
 import subprocess
+import threading
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -26,7 +28,7 @@ from sqlalchemy.orm import Session
 
 from bristlenose import screen_text
 from bristlenose.output_paths import project_output_dir
-from bristlenose.screen_text.index import index_dir, read_index
+from bristlenose.screen_text.index import cache_key, index_dir, read_index
 from bristlenose.screen_text.screens import SessionInput, derive_screens
 from bristlenose.server import speaker_slots
 from bristlenose.server.models import Project
@@ -67,10 +69,13 @@ def get_screens(project_id: int, request: Request, db: Session = Depends(_get_db
         unavailable = job.unavailable() if job is not None else "no screen-text job"
         out_dir = _output_dir(request)
         videos = video_sessions(db)
+        failed = dict(getattr(job, "failed", {}) or {}) if job is not None else {}
         base = {"enabled": enabled, "unavailable": unavailable,
                 "pending": bool(job is not None and job.running),
                 "reading": job.current if job is not None else None,
-                "videos": len(videos), "indexed": 0, "screens": []}
+                "videos": len(videos), "indexed": 0,
+                "failed": {sid: why for sid, why in failed.items() if sid in videos},
+                "blank": [], "screens": []}
         if not enabled or out_dir is None:
             return base
         idir = index_dir(out_dir)
@@ -82,8 +87,19 @@ def get_screens(project_id: int, request: Request, db: Session = Depends(_get_db
             except OSError:
                 continue
             rec = read_index(path)
-            if rec is not None:
-                indexes[sid] = (mtime, rec)
+            if rec is None:
+                continue
+            if job is not None:
+                # An index of a recording that has since changed is not this recording's: the
+                # job will read it again, and until then it is pending, not indexed.
+                try:
+                    if rec["key"] != cache_key(videos[sid], job.engine):
+                        continue
+                except OSError:
+                    continue
+            indexes[sid] = (mtime, rec)
+            if not rec.get("raw_lines") and rec.get("samples"):
+                base["blank"].append(sid)  # the engine read frames and found no text in any
         base["indexed"] = len(indexes)
         if not indexes:
             return base
@@ -143,8 +159,16 @@ def get_still(
             raise HTTPException(status_code=404, detail="No recording")
     finally:
         db.close()
-    tag = hashlib.sha256(f"{video.name}|{t:.2f}|{w}|{crop}".encode()).hexdigest()[:16]
-    cache = index_dir(out_dir) / "stills" / f"{tag}.jpg"
+    try:
+        st = video.stat()
+    except OSError as exc:
+        raise HTTPException(status_code=404, detail="No recording") from exc
+    # Keyed on the session and the file's identity, not its name: two sessions' recordings are
+    # often both called zoom_0.mp4, and a trimmed re-drop keeps its name. Named for the session so
+    # the pipeline's per-session prune removes a withdrawn participant's stills.
+    ident = f"{session_id}|{video}|{st.st_size}|{int(st.st_mtime)}|{t:.2f}|{w}|{crop}"
+    tag = hashlib.sha256(ident.encode()).hexdigest()[:16]
+    cache = index_dir(out_dir) / "stills" / f"{session_id}_{tag}.jpg"
     if not cache.exists():
         try:
             ensure_materialised(video)
@@ -153,14 +177,20 @@ def get_still(
                 [binary_command("ffmpeg"), "-nostdin", "-loglevel", "error", "-ss", f"{t:.2f}", "-i", str(video),
                  "-frames:v", "1", "-vf", vf, "-q:v", "3", "-f", "mjpeg", "-"],
                 capture_output=True, check=True, timeout=60).stdout
-        except (CloudFetchTimeoutError, OSError, subprocess.SubprocessError) as exc:
-            logger.warning("No still for %s at %.1f: %s", session_id, t, exc)
+        except CloudFetchTimeoutError as exc:
+            raise HTTPException(status_code=404, detail="The recording is still downloading") from exc
+        except subprocess.CalledProcessError as exc:
+            err = exc.stderr.decode("utf-8", "replace")[-300:] if isinstance(exc.stderr, bytes) else ""
+            logger.warning("No still for %s at %.1f: ffmpeg exit %s %s", session_id, t, exc.returncode, err)
+            raise HTTPException(status_code=404, detail="ffmpeg could not read that frame") from exc
+        except (OSError, subprocess.SubprocessError) as exc:
+            logger.warning("No still for %s at %.1f: %s", session_id, t, type(exc).__name__)
             raise HTTPException(status_code=404, detail="No still") from exc
         if not jpg:
             raise HTTPException(status_code=404, detail="No still")
         try:
             cache.parent.mkdir(parents=True, exist_ok=True)
-            tmp = cache.with_suffix(".tmp")
+            tmp = cache.with_name(f"{cache.name}.{os.getpid()}.{threading.get_ident()}.tmp")
             tmp.write_bytes(jpg)
             tmp.replace(cache)
         except OSError:

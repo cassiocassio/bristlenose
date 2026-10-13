@@ -49,6 +49,9 @@ class ScreenTextJob:
         self._rerun = False
         #: The session being read, for the lens's "reading s3…" line.
         self.current: str | None = None
+        #: Why a session has no index, by session id, so the lens can say so instead of "reading".
+        #: Cleared for a session when it next indexes; lives as long as the server.
+        self.failed: dict[str, str] = {}
 
     def unavailable(self) -> str | None:
         """None when the engine can run on this machine, else why not."""
@@ -104,6 +107,15 @@ class ScreenTextJob:
             self.current = session_id
             try:
                 ensure_materialised(video)
-                build_index(video, self.engine, out / f"{session_id}.json", should_stop=self._run_in_progress)
-            except (CloudFetchTimeoutError, OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:
-                logger.warning("No screen text for %s: %s", session_id, exc)
+                if build_index(video, self.engine, out / f"{session_id}.json", should_stop=self._run_in_progress):
+                    self.failed.pop(session_id, None)
+            except CloudFetchTimeoutError:
+                self.failed[session_id] = "the recording is still downloading from the cloud"
+                logger.warning("No screen text for %s: cloud download timed out", session_id)
+            except subprocess.CalledProcessError as exc:
+                err = (exc.stderr or "")[-300:] if isinstance(exc.stderr, str) else ""
+                self.failed[session_id] = f"ffprobe could not read the recording (exit {exc.returncode})"
+                logger.warning("No screen text for %s: exit %s %s", session_id, exc.returncode, err)
+            except Exception as exc:  # noqa: BLE001 — one recording must not stop the rest
+                self.failed[session_id] = f"{type(exc).__name__}: {exc}"[:300]
+                logger.warning("No screen text for %s", session_id, exc_info=True)

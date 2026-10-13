@@ -86,7 +86,10 @@ class VisionEngine:
             req.setUsesLanguageCorrection_(True)
             ok, err = handler.performRequests_error_([req], None)
             if not ok:
-                raise RuntimeError(f"Vision failed: {err}")
+                # Vision can refuse with no error at all: in the sandboxed sidecar that has meant a
+                # text model it could not compile into the cache (desktop/CLAUDE.md, CFFIXED_USER_HOME).
+                raise RuntimeError(f"Vision failed: {err}" if err is not None else
+                                   "Vision failed with no error (model cache unwritable? see e5rt in the system log)")
             out: list[Line] = []
             for obs in req.results() or []:
                 cands = obs.topCandidates_(1)

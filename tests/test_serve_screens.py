@@ -11,11 +11,13 @@ from pathlib import Path
 
 import pytest
 
+from bristlenose.screen_text import INDEX_VERSION
 from bristlenose.screen_text.engine import FakeEngine
-from bristlenose.screen_text.index import index_dir
+from bristlenose.screen_text.index import cache_key, index_dir
 from bristlenose.server.app import create_app
 from bristlenose.server.models import Quote, SourceFile
 from bristlenose.server.models import Session as SessionModel
+from bristlenose.server.scene_strips import video_sessions
 from bristlenose.server.screen_text_job import ScreenTextJob
 from tests.conftest import AuthTestClient
 
@@ -59,7 +61,7 @@ def _first_quote(app) -> Quote:
         db.close()
 
 
-def _write_index(project: Path, lines: list[dict], t0: float, t1: float) -> None:
+def _write_index(app, project: Path, lines: list[dict], t0: float, t1: float, raw_lines: int = 20) -> None:
     eps = [{"text": "example.com/gb/en/checkout", "box": [0.2, 0.03, 0.4, 0.02], "sticky": False, "runs": [[t0, t1]]}]
     eps += [{"text": ln["text"], "box": ln["box"], "sticky": False, "runs": [[t0, t1]]} for ln in lines]
     eps += [{"text": f"filler line {i}", "box": [0.05, 0.3 + i * 0.05, 0.7, 0.02], "sticky": False,
@@ -67,8 +69,9 @@ def _write_index(project: Path, lines: list[dict], t0: float, t1: float) -> None
     d = index_dir(_out(project))
     d.mkdir(parents=True, exist_ok=True)
     d.joinpath("s1.json").write_text(json.dumps(
-        {"version": 1, "engine": "fake", "engine_version": "1", "every": 4.0, "size": [320, 180],
-         "samples": 3, "moments": [t0], "episodes": eps, "key": "k"}))
+        {"version": INDEX_VERSION, "engine": "fake", "engine_version": "1", "every": 4.0, "size": [320, 180],
+         "samples": 3, "raw_lines": raw_lines, "moments": [t0], "episodes": eps,
+         "key": cache_key(project / "s1.mp4", app.state.screen_text.engine)}))
 
 
 def test_screens_are_off_unless_asked_for(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -88,7 +91,7 @@ def test_a_quote_said_on_a_screen_is_pinned_to_the_line_it_shares(project: Path,
     q = _first_quote(app)
     words = [w for w in (q.verbatim_excerpt or q.text).split() if len(w) >= 5][:3]
     assert len(words) >= 2, "the smoke fixture's first quote needs two long words"
-    _write_index(project, [{"text": " ".join(words), "box": [0.4, 0.5, 0.3, 0.04]}],
+    _write_index(app, project, [{"text": " ".join(words), "box": [0.4, 0.5, 0.3, 0.04]}],
                  q.start_timecode - 4, q.end_timecode + 4)
     body = AuthTestClient(app).get("/api/projects/1/screens").json()
     assert body["enabled"] is True and body["indexed"] == 1
@@ -136,7 +139,9 @@ def test_the_job_indexes_each_recording_with_the_engine(project: Path, monkeypat
     while job.running and time.time() < deadline:
         time.sleep(0.05)
     rec = json.loads((index_dir(_out(project)) / "s1.json").read_text())
-    assert rec["engine"] == "fake" and rec["samples"] == len(seen) >= 2
+    # ffmpeg's fps filter gives 0 and 4 for 9 s: exactly two.
+    assert rec["engine"] == "fake" and rec["samples"] == len(seen) == 2
+    assert job.failed == {}
 
 
 def test_the_job_does_nothing_when_off_or_while_a_run_is_in_progress(project: Path) -> None:
@@ -166,3 +171,55 @@ def test_a_start_while_a_pass_runs_asks_for_another_pass(project: Path) -> None:
     while job.running and time.time() < deadline:
         time.sleep(0.02)
     assert len(passes) == 2
+
+
+def test_a_changed_recording_is_pending_and_a_textless_one_is_blank(project: Path,
+                                                                     monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BRISTLENOSE_SCREEN_TEXT", "1")
+    app = create_app(project_dir=project, dev=False, db_url="sqlite://")
+    video = _give_s1_a_video(app, project)
+    _write_index(app, project, [], 0, 8, raw_lines=0)
+    body = AuthTestClient(app).get("/api/projects/1/screens").json()
+    assert body["indexed"] == 1 and body["blank"] == ["s1"]
+    video.write_bytes(b"a different recording")  # the index no longer describes it
+    body = AuthTestClient(app).get("/api/projects/1/screens").json()
+    assert body["indexed"] == 0 and body["blank"] == []
+
+
+@pytest.mark.skipif(not _HAS_FFMPEG, reason="needs ffmpeg")
+def test_one_unreadable_recording_does_not_stop_the_others(project: Path,
+                                                           monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BRISTLENOSE_SCREEN_TEXT", "1")
+    app = create_app(project_dir=project, dev=False, db_url="sqlite://")
+    _give_s1_a_video(app, project, real=True)
+    # A second session whose "video" has no picture, read first.
+    audio = project / "s0.mp4"
+    subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i", "sine=duration=3",
+                    "-c:a", "aac", str(audio)], check=True)
+    real = video_sessions
+
+    def two(db):
+        return {"s0": audio, **real(db)}
+    monkeypatch.setattr("bristlenose.server.screen_text_job.video_sessions", two)
+    monkeypatch.setattr("bristlenose.server.routes.screens.video_sessions", two)
+    engine = FakeEngine(lambda t: [{"text": "Checkout", "conf": 0.9, "box": [0.1, 0.4, 0.2, 0.03]}])
+    job = ScreenTextJob(app.state.db_factory, lambda: _out(project), enabled=lambda: True, engine=engine)
+    app.state.screen_text = job
+    assert job.start()
+    deadline = time.time() + 30
+    while job.running and time.time() < deadline:
+        time.sleep(0.05)
+    assert (index_dir(_out(project)) / "s1.json").exists()
+    assert "no video stream" in job.failed["s0"]
+    body = AuthTestClient(app).get("/api/projects/1/screens").json()
+    assert body["pending"] is False and "s0" in body["failed"] and body["indexed"] == 1
+
+
+@pytest.mark.skipif(not _HAS_FFMPEG, reason="needs ffmpeg")
+def test_stills_are_named_for_their_session(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BRISTLENOSE_SCREEN_TEXT", "1")
+    app = create_app(project_dir=project, dev=False, db_url="sqlite://")
+    _give_s1_a_video(app, project, real=True)
+    AuthTestClient(app).get("/api/projects/1/screens/still", params={"session_id": "s1", "t": 2, "w": 120})
+    [still] = (index_dir(_out(project)) / "stills").glob("*.jpg")
+    assert still.name.startswith("s1_")  # so the per-session prune removes a withdrawn participant's

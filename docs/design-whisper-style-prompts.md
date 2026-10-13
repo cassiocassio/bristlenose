@@ -317,8 +317,8 @@ came back over speech, but nearly all of that came from pt-pt-2, a street record
 Whisper hears 73 words of in 17 minutes without any prompt, and the inaudible marker
 now handles exactly that echo. On the three interviews, with the prompt and every net:
 sentences 142 → 180 (pt-br-1), 200 → 202 (pt-pt-1), 94 → 96 (pt-ao-1); longest
-unpunctuated run 80 → 22, 58 → 47, 37 → 30; speech blocks lost 1, 0, 0 (es-1, shipped,
-loses 9). Its fillers sound Brazilian ("né", "ahn") and Whisper has one code for both
+unpunctuated run 80 → 22, 58 → 47, 37 → 30; speech blocks lost 0, 0, 0 (es-1, shipped,
+loses 6). Its fillers sound Brazilian ("né", "ahn") and Whisper has one code for both
 varieties, so European Portuguese gains least; a variant is worth trying if a
 Portugal-based user turns up.
 
@@ -381,13 +381,14 @@ them carries a lone assent word.
 | Catalan | 135 → 24, 137 → 31, 58 → 19 | **v2**. v1 swallowed a 15 s passage in ca-2 and handed back its own "No ho sé, depèn." |
 | Dutch | 24, 51, 32 already | **No prompt.** Whisper already punctuates Dutch; v1 made nl-1 worse (24 → 36) and both cut sentence ends |
 | Swedish | 133 → 25, 47 → 40, 25 → 25 | **v1**. v2 made sv-2 worse (47 → 52) |
-| Danish | 114 → 30, 114 → 83, 200 → 14 | **v1**. v2 lost a block of da-3 |
+| Danish | 114 → 30, 114 → 83, 200 → 14 | **v1**. v2 did less for da-2 (114 → 101) |
 | Norwegian | 144 → 24, 84 → 19, 86 → 15 | **v1**, keyed `no` (Whisper's Bokmål code; Nynorsk `nn` gets none) |
 
 Checks that did not show up in the totals: every "lost" 30-second block was read. The one
 in nb-1 is a song the prompted run left out, which is right; sv-2's moved 5 s earlier and
-is intact; ca-2's was real speech lost under v1 and, less of it, under v2; ca-1 also lost
-one block under v2, the shipped Catalan prompt. Under the shipped prompts the inaudible
+is intact; ca-2's was real speech lost under v1 and, less of it, under v2. Under the
+corrected count (below) the shipped Catalan v2 loses one block, in ca-3, the 1990s sofa
+conversation with the TV on. Under the shipped prompts the inaudible
 marker fired three times, all next to music and Whisper's stock hallucinations
 ("Welcome.", a subtitle credit); one Norwegian gap sits before a "Hva da?" that may be a
 prompt fragment. Whole prompt clauses reappearing as text: Catalan v1 12 against 3 with no
@@ -407,13 +408,22 @@ appear here; forcing the language remains the fix if it does.
 
 | Language | Longest run without a prompt | Decision |
 |---|---|---|
-| Polish | 19, 25, 27 | **No prompt.** No gain; both prompts lost blocks (2, 2) and cut sentence ends |
-| Czech | 36, 19, 28 | **No prompt.** v1 helped cs-1 (36 → 20) but lost 4 blocks of cs-3 |
-| Russian | 22, 20, 53 | **No prompt.** v1 made ru-2 worse (20 → 47); v2 lost 8 blocks of it |
-| Ukrainian | 17, 21, 19 | **No prompt.** v2 lost 13 blocks of uk-3; v1 lost 2–3 |
-| Finnish | 26, 22, 21 | **No prompt.** No gain; v2 cut sentence ends and lost 3 blocks |
-| Turkish | 40, 37, 63 | **v2**: 23, 32, 21, nothing lost (v1's one "lost" block, in tr-3, is an English song) |
-| Korean | 74, 54, 55 | **v1**: 14, 32, 26, sentence ends 183 → 325 on ko-1; one block of the press Q&A reads differently |
+| Polish | 19, 25, 27 | **No prompt.** No gain: runs unchanged, fewer sentence ends; nothing lost |
+| Czech | 36, 19, 28 | **No prompt.** v1 helped only cs-1 (36 → 20), cut cs-3's sentence ends (747 → 687) and turned a clearly read 15 s of cs-2 into an inaudible gap |
+| Russian | 22, 20, 53 | **No prompt.** v1 won on ru-3 (sentence ends 244 → 352) but lost speech on ru-1 (2 blocks) and made ru-2 worse (run 20 → 47); v2 lost 9 blocks of ru-2 |
+| Ukrainian | 17, 21, 19 | **No prompt.** Real losses: v1 2 blocks of uk-2 and 5 of uk-3, v2 6 and 13 |
+| Finnish | 26, 22, 21 | **No prompt.** No gain; v2 cut sentence ends; nothing lost |
+| Turkish | 40, 37, 63 | **v2**: 23, 32, 21, nothing lost, the same at a second seed |
+| Korean | 74, 54, 55 | **v1**: 14, 32, 26 (ko-1 46 at a second seed), sentence ends 183 → 325 on ko-1. One loss: a quiet off-mic reporter's question in ko-3 (about 20 s, about −39 dBFS against −22 for the answers) is dropped, unmarked, below the skipped-window net's level gate |
+
+**How "lost" is counted** (corrected after review, 13 Oct 2026). A 30-second block counts
+as lost when the no-prompt run heard 20 or more words there and the prompted run kept
+under a quarter of them. The first version gave all of a segment's words to the block
+it started in, and prompted runs come back as fewer, longer segments, so it reported
+losses in Polish, Czech, Finnish and Danish that were not there and undercounted
+Ukrainian's. `wave_summary.py` now spreads each segment's words over the time it covers;
+every table on this page from waves 1–4 and the Portuguese paragraph use it. The batch-1
+table under the superseded banner keeps the old counts as written.
 
 **What the four waves describe** (a description of three recordings a language, not a
 rule). The languages that gained were the ones whose unprompted output ran on for long
@@ -433,11 +443,14 @@ per-stretch net decisions, so that is unmeasured.
   baselines (no prompt, nets on) for all twenty batch-1 recordings. The decisions held:
   every shipped prompt still shortens the longest run and adds sentence ends, and
   Portuguese loses 1, 0, 0 and 0 blocks.
-- **Chance.** Each run is seeded; six recordings re-run without a prompt at a second seed
-  lost **no** block by chance in either direction, so a "lost" count of 1 or more under a
-  prompt is real. Run lengths and sentence counts do move with the seed (es-3's longest
-  run 56 vs 32, nl-2's sentence ends 389 vs 424), so a decision resting on a small run
-  difference alone is weak; none of the shipped ones does.
+- **Chance.** Each run is seeded. Six recordings re-run without a prompt at a second seed
+  lost no block either way, but three of them came back word for word identical, which
+  measures nothing, and a prompted run can vary: nl-2 under v1 collapsed half a minute
+  into one 13-word line at seed 0 and kept it at seed 1. So a single prompted run's loss
+  is one sample. The shipped Turkish and Korean prompts were re-run at a second seed:
+  Turkish identical within 1%, Korean ko-1's longest run 14 vs 46 (no prompt: 74), no
+  loss at either seed. Run lengths and sentence counts move with the seed (es-3's
+  longest run 56 vs 32), so a decision on a small run difference alone is weak.
 - **The thresholds were calibrated on the recordings they were then judged on.** The
   inaudible marker's cut-off sits in a thin margin: "Sí, sí." at 0.044 and "Oui, mais…"
   at 0.136 are marked, "Sí, sí, sí." at 0.185 and "Sì, sì, sì." at 0.255 are kept, and
@@ -458,6 +471,10 @@ per-stretch net decisions, so that is unmeasured.
   measured on it. The others were measured on mlx with nets faster-whisper does not have,
   and it keeps `condition_on_previous_text` on. Bounding that properly means running the
   trials on faster-whisper; until then it stays restricted.
+- **The net cannot see quiet speech.** It only looks at stretches 15 dB above the
+  recording's floor, so an off-mic question at about −39 dBFS against answers at −22
+  (Korean ko-3) is dropped with nothing to show for it. In an interview that is usually
+  the moderator. Not fixed; a lower gate risks re-decoding room noise.
 - **The net's own contribution on out-of-sample audio is small.** On the two Spanish
   recordings with reference transcripts, word error rate fell with the prompt
   (42.7 → 35.7%, 58.4 → 42.9%) and the net added 0 and 0.9 points. Its 1,073-word

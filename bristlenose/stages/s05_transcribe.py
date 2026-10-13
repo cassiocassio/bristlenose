@@ -265,10 +265,12 @@ STYLE_PROMPTS: dict[str, str] = {
     "da": "Øh, altså, jeg tror nok det, øh, og hvad så? Det kommer lidt an på.",
     "no": "Ehm, altså, jeg tror vel det, eh, og hva da? Det kommer litt an på, liksom.",
     # Waves 3 and 4 (13 Oct 2026), 21 recordings. Turkish (v2) and Korean (v1)
-    # gain: longest unpunctuated run 63 -> 21 and 74 -> 14, nothing real lost.
-    # Polish, Czech, Russian, Ukrainian and Finnish get none ON PURPOSE: Whisper
-    # already punctuates them (longest runs 17-53 words with no prompt), and the
-    # prompts only lost speech (Ukrainian v2 13 blocks, Russian v2 8, Czech v1 4).
+    # gain: longest unpunctuated run 63 -> 21 and 74 -> 14, at two seeds. Korean
+    # drops one quiet off-mic question in a press Q&A, unmarked: it sits below
+    # the skipped-window net's level gate. Polish, Czech, Russian, Ukrainian and
+    # Finnish get none ON PURPOSE: Whisper already punctuates them (longest runs
+    # 17-53 words with no prompt); Polish, Czech and Finnish gained nothing, and
+    # Russian and Ukrainian lost real speech (Ukrainian v1 5 blocks of uk-3).
     # In these trials the languages that gained were the ones whose unprompted
     # output ran on for long stretches; that is a description of three
     # recordings a language, not a rule (Dutch and Russian each had one

@@ -24,13 +24,22 @@ def _words(text: str) -> list[str]:
     return [w for w in re.sub(r"[^\w\s']", " ", text.casefold()).split() if w]
 
 
-def _blocks(segs: list[dict]) -> dict[int, int]:
-    out: dict[int, int] = {}
+def _blocks(segs: list[dict]) -> dict[int, float]:
+    """Words per 30-second block, each segment's words spread over the time it
+    covers. Giving them all to the block a segment starts in made prompted runs,
+    which come back as fewer, longer segments, look as if they lost the blocks
+    after (found in review, 13 Oct 2026)."""
+    out: dict[int, float] = {}
     for s in segs:
         if s.get("inaudible"):
             continue
-        b = int(s["start"] // 30)
-        out[b] = out.get(b, 0) + len(s["text"].split())
+        n = len(s["text"].split())
+        a, b = float(s["start"]), max(float(s["end"]), float(s["start"]) + 0.01)
+        k = int(a // 30)
+        while k * 30 < b:
+            share = (min(b, (k + 1) * 30) - max(a, k * 30)) / (b - a)
+            out[k] = out.get(k, 0.0) + n * share
+            k += 1
     return out
 
 

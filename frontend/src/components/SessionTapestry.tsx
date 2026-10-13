@@ -25,6 +25,7 @@ import { TAPESTRY_GUTTER, TAPESTRY_RIGHT as RIGHT } from "../utils/tapestryScale
 import { formatTimecode } from "../utils/format";
 import { type Step, type TapestryTuning, useTapestryTuning } from "../utils/tapestryTuning";
 import { announce } from "../utils/announce";
+import { featureFlags } from "../utils/featureFlags";
 
 /** Clips are drawn as rounded clips at or below this many seconds per pixel, as slivers above it. */
 const CLIP_THRESHOLD = 2.5;
@@ -431,7 +432,7 @@ export default function SessionTapestry({
             );
           })}
           {/* Notches: where the scene changed, just above the tracks. Half-pixel like the flag staffs. */}
-          {s.strip?.edges.filter((t) => t <= s.duration_seconds).map((t) => (
+          {featureFlags.sceneNotches && s.strip?.edges.filter((t) => t <= s.duration_seconds).map((t) => (
             <line key={t} className="bn-tp-notch" x1={Math.round(x(t)) + 0.5} x2={Math.round(x(t)) + 0.5}
               y1={MT.y - 6} y2={MT.y - 2} />
           ))}

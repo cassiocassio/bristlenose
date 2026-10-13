@@ -85,6 +85,19 @@ export interface FeatureFlags {
    * `docs/design-people.md` §J8 point 23.
    */
   speakerSwap: boolean;
+
+  /**
+   * Scene-change notches: a short hairline above the speaker tracks at each
+   * moment the screen's colour changed (`edges` on the tapestry strip).
+   *
+   * Parked 13 Oct 2026 by the owner — once the scene strip runs inside the
+   * clips, the change is already visible as a change in the band, and a
+   * second mark for the same event may be complexity without value. The
+   * server still computes the edges (cheap, a few per session) and they stay
+   * on the wire. Design doc: `experiments/session-tapestry/README.md`
+   * § Scene stripes.
+   */
+  sceneNotches: boolean;
 }
 
 /** The shipped state. Change these to flip a feature back on. */
@@ -93,6 +106,7 @@ const DEFAULTS: FeatureFlags = {
   moderatorQuestionPill: false,
   proposalRationaleTooltip: false,
   speakerSwap: false,
+  sceneNotches: false,
 };
 
 export const featureFlags: FeatureFlags = { ...DEFAULTS };

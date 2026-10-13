@@ -58,7 +58,7 @@ header states the three rules and they are the whole contract:
    concludes the feature isn't worth finishing, delete the feature and the
    flag together in one commit.
 
-**The four flags as of 8 Oct 2026:**
+**The five flags as of 13 Oct 2026:**
 
 | Flag | Parked | Design doc | Why |
 |---|---|---|---|
@@ -66,6 +66,7 @@ header states the three rules and they are the whole contract:
 | `moderatorQuestionPill` | 5 Aug 2026 | `design-moderator-question-pill.md` | hover target is an unmarked zone |
 | `proposalRationaleTooltip` | 20 Sep 2026 | `design-autocode.md` § Parked | lands over the next row and is z-index-clipped; the rationale text is verbose and restates the tag |
 | `speakerSwap` | 6 Oct 2026 | `design-people.md` §J8 point 23 | the swap row does two things at once; the real need is one paragraph credited to the wrong speaker, answered by §K6's Paragraph scope |
+| `sceneNotches` | 13 Oct 2026 | `experiments/session-tapestry/README.md` § Scene stripes | with the scene strip inside the clips the change is already visible; a second mark for it may not earn its complexity |
 
 **Test discipline — this is what keeps a parked feature from rotting.** Two
 shapes are in use; both are required, in the same file:

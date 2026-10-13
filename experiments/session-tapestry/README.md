@@ -96,7 +96,9 @@ Not wired yet:
 
 The clip keeps its one scene colour, and over it, at an opacity, run stripes of what was on screen
 moment by moment, so a change of environment (call → share → terminal) shows inside the bar without
-the bar losing its track identity. A notch above the lane marks each change.
+the bar losing its track identity. A notch above the lane marks each change. **Notches parked 13 Oct
+2026** (`featureFlags.sceneNotches`, off): with the strip in the clips the change is already visible,
+and the owner is unsure the second mark adds value. The edges are still computed and served.
 
 **What ships.** `bristlenose/utils/scene_strip.py` samples every frame at 4 fps (one sample per
 pixel at the maximum zoom), takes the mean OKLab of each frame's kept pixels, tones it into a light

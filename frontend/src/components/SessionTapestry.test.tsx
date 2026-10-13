@@ -4,6 +4,7 @@ import SessionTapestry from "./SessionTapestry";
 import { fitScale, zoomScale } from "../utils/tapestryScale";
 import { DEFAULTS, resetTapestryTuning, setTapestryTuning } from "../utils/tapestryTuning";
 import type { TapestrySession } from "../utils/types";
+import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
 
 const session: TapestrySession = {
   session_id: "s1",
@@ -55,9 +56,18 @@ describe("SessionTapestry", () => {
     expect(document.querySelectorAll(".bn-tp-clip-edge")).toHaveLength(0);
   });
 
-  it("draws the scene strip inside each track's clips, and a notch per scene change", () => {
+  it("parks the scene-change notches: a strip with edges draws none at the shipped flag", () => {
+    const strip = { fps: 4, n: 2400, t0: 0, png: "data:image/png;base64,AA==", edges: [120, 450] };
+    render(<SessionTapestry session={{ ...session, strip }} sPerPx={1} nameOf={(c) => c} onJump={vi.fn()} />);
+    expect(document.querySelectorAll(".bn-tp-strip")).toHaveLength(2);
+    expect(document.querySelectorAll(".bn-tp-notch")).toHaveLength(0);
+  });
+
+  it("draws the scene strip inside each track's clips, and a notch per scene change (notches flag on)", () => {
+    featureFlags.sceneNotches = true;
     // One notch past the recording's end (a stale strip from a longer recording) is not drawn.
     const strip = { fps: 4, n: 2400, t0: 0, png: "data:image/png;base64,AA==", edges: [120, 450, 700] };
+    try {
     render(<SessionTapestry session={{ ...session, strip }} sPerPx={1} nameOf={(c) => c} onJump={vi.fn()} />);
     const images = Array.from(document.querySelectorAll<SVGImageElement>(".bn-tp-strip"));
     expect(images.map((i) => i.getAttribute("class"))).toEqual(["bn-tp-strip bn-tp-strip-team", "bn-tp-strip bn-tp-strip-ppt"]);
@@ -80,6 +90,9 @@ describe("SessionTapestry", () => {
     expect(document.querySelectorAll(".bn-tp-clip-edge")).toHaveLength(1);
     // The clip itself is still painted, under the strip.
     expect(document.querySelector<SVGRectElement>(".bn-tp-clip-ppt")!.style.fill).toMatch(/^(#9fceef|rgb\(159, 206, 239\))$/);
+    } finally {
+      resetFeatureFlags();
+    }
   });
 
   it("starts the strip at the stream's own first sample", () => {

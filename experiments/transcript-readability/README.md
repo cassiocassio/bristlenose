@@ -32,3 +32,13 @@ Whisper runs are local mlx-whisper.
 `gen_html.py` copies the shipped CSS out of
 `docs/mockups/transcript-paragraph-capitalisation.html`, which was generated from the
 tree; regenerate that file first if the theme has moved.
+
+## Trial outputs are cached by filename
+
+`trial_prompts.py` reuses `trials/<id>.<condition>.json` when it exists, so after a change
+to stage 5 the old outputs are still quoted as if they were the new code's. On 13 Oct 2026
+seventeen batch-1 files predated loop removal and had to be moved aside and re-run. After
+changing `bristlenose/stages/s05_transcribe.py`, move the affected files out of `trials/`
+before re-running. `wave_summary.py` prints the per-recording numbers the decisions in
+`docs/design-whisper-style-prompts.md` were read from; `--seed=N` re-runs at another seed
+to measure chance.

@@ -22,17 +22,10 @@ from build import build, read_transcript
 
 from bristlenose.stages.s12_render.theme_assets import load_default_css
 from bristlenose.utils.fs import is_dataless
-from bristlenose.utils.scene_strip import _de, sample_dense, scene_edges, strip_record
+from bristlenose.utils.scene_strip import sample_dense, strip_record
 
 HERE = Path(__file__).parent
 FRAME_AT = 0.25  # how far into a participant turn its frame is taken
-# Per-scene frames, measured 13 Oct 2026 on the two mockup sessions: at the notch threshold (ΔE 14)
-# scenes are not colour-stable inside (p90 spread 8.5), at ΔE 8 they are (≤ 0.4); a frame at the
-# change itself is mid-transition in 13–22% of scenes, 1–2 s in in 0–6%, 5 s in worse again because
-# some scenes last 6 s. So: scenes at ΔE 8, frame 2 s in, capped at half the scene.
-SCENE_DE = 8.0
-SCENE_IN = 2.0
-MIN_SCENE = 2.0  # a flicker shorter than this gets no frame of its own
 
 
 def frame(video: Path, t: float, width: int) -> str | None:
@@ -78,31 +71,6 @@ def main() -> None:
                 src = frame(video, ft, args.frame_width)
                 if src:
                     t["frame"] = {"t": round(ft, 1), "src": src}
-            # Scenes: each change carries the strength of its change (the before/after window ΔE), so the
-            # page can show the scenes a coarser threshold would keep. Frames at the change and 2 s in.
-            fps = rec["fps"]
-            edges = scene_edges(means, fps, SCENE_DE)
-            w = round(2.0 * fps)
-            def strength(e: float) -> float:
-                i = round((e - t0) * fps)
-                a, b = means[max(0, i - w):i], means[i:i + w]
-                if not a or not b:
-                    return 0.0
-                m = lambda xs: tuple(sum(x[c] for x in xs) / len(xs) for c in range(3))
-                return round(_de(m(a), m(b)), 1)
-            end = t0 + rec["n"] / fps
-            starts = [t0] + edges
-            scenes = []
-            for j, a in enumerate(starts):
-                b = starts[j + 1] if j + 1 < len(starts) else end
-                if b - a < MIN_SCENE:
-                    continue
-                at, inn = a, a + min(SCENE_IN, (b - a) / 2)
-                f0, f2 = frame(video, at, args.frame_width), frame(video, inn, args.frame_width)
-                if f0 and f2:
-                    scenes.append({"t": round(a, 2), "d": None if j == 0 else strength(a),
-                                   "f0": {"t": round(at, 1), "src": f0}, "f2": {"t": round(inn, 1), "src": f2}})
-            s["scenes"] = scenes
             if s.get("thumb"):
                 small = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-i", s["thumb"], "-vf", "scale=192:-2",
                                         "-q:v", "6", "-f", "mjpeg", "-"], capture_output=True).stdout
@@ -110,7 +78,7 @@ def main() -> None:
             s["id"] = f"p{k}{s['id']}"  # distinct across projects
             s["number"] = len(sessions) + 1
             sessions.append(s)
-            print(f"{out_dir.parent.name} {s['id']}: {len(ppt)} participant turns, {len(scenes)} scenes at ΔE {SCENE_DE:g}, {rec['n']} strip samples")
+            print(f"{out_dir.parent.name} {s['id']}: {len(ppt)} participant turns, {rec['n']} strip samples")
 
     theme = re.sub(r"\s+", " ", re.sub(r"/\*.*?\*/", "", load_default_css(), flags=re.S))
     blob = (json.dumps({"sessions": sessions}, ensure_ascii=True)

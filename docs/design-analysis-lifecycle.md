@@ -104,6 +104,30 @@ The failure mode to design against is *collapsing them*. If "re-analyse" and
 researcher's edits become collateral. They share a pipeline; they are not the
 same offer.
 
+**Decided 13 Oct 2026: Re-analyse has two jobs and only two.** It is (1) a
+deliberate reset — the researcher wants to throw away what they did and start
+from the recordings — and (2) first aid, when something built on the recordings
+is broken and the report will not open. Its premise is that the raw recordings
+are good. It is **not** the route for anything else, and each of these has used
+it at some point:
+
+| Need | Route instead | State |
+|---|---|---|
+| Add an interview | Analyse (incremental) | Folder-shaped: shipped. File-subset: still Re-analyse only (§4.1) — a gap |
+| Get a new feature on an old project | Analyse builds what is missing | Shipped for the Discussion lens (`a9f04089`) |
+| Apply or remove PII redaction | A display layer; v1 a plain Analyse (the toggle is in the cache key) | Needs redaction applied to curated text first — `design-redact-pii.md` |
+| Pick up a schema change | A real migration | Reprocessing is the beta stopgap (codebook v2 D28), not a user path after GA |
+| Undo some tagging | Undo, or removing that codebook's tags | — |
+
+The maintainer runs it often, as a development convenience while the schema
+and the interface move. A researcher should seldom need it, and the
+reliability work (`design-lifecycle-failure-modes.md`) is aimed at making job 2
+rare. The counted confirmation (§6.1) stays as it is. What it carries across is
+limited to facts about the recordings that cannot be read from them again (a
+start time learned from a filename since renamed) — never the session registry
+file, never anything identifying, because first aid must not carry the damage
+forward. That carry-over is not built yet.
+
 ### 1.1 Two project shapes, and why it changes every answer
 
 `wasFolderShaped = (project.inputFiles == nil)` (`ContentView.swift:1705`) splits

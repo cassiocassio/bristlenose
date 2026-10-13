@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-08-21
-trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
+last-trued: 2026-10-13
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 ---
 
 > **Built — the implementation plan is complete and the family question is
@@ -70,6 +70,7 @@ trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
 
 ## Changelog
 
+- _2026-10-13_ — trued up: loose end 1 annotated with the 12 Oct correction; the two new serve restart triggers (binary freshness, path change) recorded. Anchors: `4ecf1437`, `9c0b2778`, `eb8509e1`.
 - _2026-08-21b_ — **The header drifted a fifth time, and the family call is recorded as closed.** The 21 Aug pass named the pattern precisely — *"a doc trued four times in section scope, whose header drifted further each pass"* — and then the header drifted again, for a reason worth stating: that pass was trued against `ae05b1c0`, which **predates Stage 3b landing on the 20th**. So the banner said "Stage 3b is next and unblocked" while the changelog two lines below said it was built, and §"Effectively decided vs genuinely open" still argued *presumed A, decide late* with a paragraph on what would reopen the call and another on the spike that would settle it — all three answered days earlier, in this file. **Truing against a commit is not the same as truing against the doc's own changelog**, and this is the second time the gap between those two has produced the identical failure. The banner now says so and asks the next reader to true the header first. Substantively: Family A is recorded as **decided by construction** (`ServeFleet`, one sidecar per project), with both measured axes (32 windows → one sidecar, 144.7 MB; three studies → ~416 MB) discharging the two caveats the 16 Aug estimate carried, and constraint 7 recorded as answered by `HandshakeExposure` — exposure derived from the window roster, never stored, and deliberately decoupled from the 90-second reaping grace so that closing a window stops an agent reading immediately rather than eventually. New §"What is still open": two loose ends Stage 3b left on top of Stage 3a (a redundant serve-teardown guard of mine, and the unreachable `switchProject`/parking machinery), M1/M2 retired rather than outstanding, and Phase B as the only genuinely unstarted item.
 - _2026-08-21_ — **Trued against `ae05b1c0`: the header was arguing a question its own changelog had closed two days earlier.** Five summaries were stale in the same direction — every one of them said less was built than is. (1) The banner's last paragraph called the master/child-versus-peer choice "live rather than settled" and told the reader to build nothing further on the child; peer had shipped on 19 Aug (`348b5122`) and the entry recording it sat forty lines below. (2) "Owed before it ships … chiefly whether SwiftUI's per-value window dedup defeats ⌥⌘N" — it did, was found by using the app on 20 Aug, and was fixed the same day. (3) §"Window-scoping the menu commands" opened "Stage 1 is built, Stages 2–3 are not" while the §Stages list four lines down marked 2 and 3a ✅ on 16 Aug. (4) The three blockers were all cleared and none was annotated, though constraint 6 beside them had been. (5) Stage 3b carried no ✅ and still read "blocked on the family choice". §"What a child window is" (170 lines) now carries a superseded banner rather than an edit — it is the argument peer was chosen against, and deleting it would lose why. **The pattern worth naming: a doc trued four times in section scope, whose header drifted further each pass.** That is the failure this doc's own 18 Aug banner describes happening to `design-cloud-import.md`, recurring here while the sentence describing it was on screen.
 - _2026-08-17b_ — **Two more from the six-window run, both "harmless at N=1, total at N=2".** (1) **Going to the welcome screen put every window on Welcome.** `SidebarDeselectMonitor` uses `NSEvent.addLocalMonitorForEvents`, which is **app**-wide: each window installs one, each sees every click anywhere in the app, and each then called its *own* `deselect`. One click in one window's empty sidebar area deselected all six. Now scoped — the monitor compares `event.window` against its own host view's window. Worth noting the shape, since it is the second instance today: a per-window callback hung off an app-wide channel. The first was the menu-bar broadcasts. (2) **The ordinal's group key was the wrong key.** It was keyed on the *lens*, on the stated assumption that "different lenses already read differently, because the subtitle carries the per-lens count" — which is **false**, and the Window menu proved it: `countSubtitle` returns the session count for Project, for Sessions *and* for a window with no lens yet, so three windows drew `IKEA with uxfriends (1 Session · 18m)` and none of them was numbered, while a fourth carried a "2". Keyed on the rendered subtitle now, so the collision test is the thing the reader is actually looking at rather than a proxy for it. The run narration is deliberately excluded from the key — its stage and ETA change every second and would reshuffle numbers throughout a run.
@@ -427,7 +428,18 @@ one list instead of inferring it from five section statuses.
   over a refcount ("a missed `.onDisappear` delays an answer by one sweep instead
   of stranding a sidecar forever"). The guard is not wrong, just coarser and
   redundant. Two things deciding one lifetime is how drift starts; delete it and
-  let the reaper own the question.
+  let the reaper own the question. _12 Oct 2026: not deleted, but corrected —
+  `applySelectionChange` now hands it the **outgoing** manager (`stopServeIfLastProjectWindow(outgoing:)`),
+  because after the selection moved it was asking the new project's manager to
+  stop; the deletion recommendation stands (`4ecf1437`)._
+- _(12 Oct 2026)_ **The serve has two more restart triggers than this doc knew.**
+  `ServeFleet.front` restarts a serve whose sidecar binary on disk no longer
+  matches the one it spawned (`SidecarBinaryStamp`, size + mtime — a rebuilt
+  sidecar used to be served stale all day), and a window showing a project
+  restarts its serve when `ProjectIndex` posts `.bristlenoseProjectPathChanged`
+  after a Finder rename or a Locate…; a window that is not key queues the start
+  (`pendingStart`) until it is. Canonical: `design-project-sidebar.md`
+  §Resolution strategy.
 - **`switchProject`, `detachFronted`, `adoptFronted`, `tearDownEntry` and
   `ParkedSidecar` are unreachable.** Stage 3b removed the last caller. The A2
   warm-pool design they implement is history (`docs/archive/design-desktop-switch-performance.md`);

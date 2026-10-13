@@ -1,7 +1,7 @@
 ---
 status: mixed
-last-trued: 2026-08-21
-trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
+last-trued: 2026-10-13
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 split-candidate: true
 ---
 
@@ -9,6 +9,7 @@ split-candidate: true
 
 ## Changelog
 
+- _2026-10-13_ — trued up: §1 as-built note rewritten to the 13 Oct state (watcher follow, Bin rule, the fork it causes) and pointed at the sidebar doc; §3 unavailable-projects note; archived link repointed. Anchors: `eb8509e1`, register row 29.
 - 2026-06-21 — added a `design-workspace.md` cross-reference (the post-TF genuine multi-project + multi-window doc now owns the forward architecture for the single-project-per-process constraint named in §Context). Light touch only — the Phase-1 body was not re-verified this pass; the 2026-05-16 truing still holds, so front-matter `last-trued` is unchanged. The `/api/projects/1/` hardcoded-ID inventory now also appears in `design-workspace.md`; reconciling the two into one canonical count is deferred (self-flagged stale snapshot, §4).
 - 2026-05-16 — §"Lifecycle states" remount path: pre-fix, a re-inserted volume race-regressed the row's `CantFindReason` from `.unmountedVolume` to `.moved`, losing the volume-name subtitle. Layer 1 (bounded backoff ladder on `didMountNotification`) + Layer 2 (sticky `.unmountedVolume` in `Project.availability` while `lastSeenPath` carries the volume prefix) on `cantfind-remount-recovery` close the gap so the documented "resumes normally on remount" behaviour now holds in practice. Anchors: `VolumeWatcher.swift` `runRemountLadder`, `ProjectAvailability.swift` `.volume` arm.
 - 2026-05-01 — §"Status" updated: the detail-pane welcome placeholder from commit `4772c3a` was replaced by `WelcomeView` (commit `816ab65` on `first-run`) with `.firstRun` and `.noSelection` variants. The "parked for full design post-alpha" framing carried over from the placeholder is no longer accurate — a minimum-viable home view has shipped; what remains parked is the recents / community-codebooks expansion and window-frame restoration.
@@ -35,7 +36,7 @@ split-candidate: true
 
 **Cross-references:**
 - [`design-project-sidebar.md`](design-project-sidebar.md) — sidebar UX + phasing (this doc owns data-model + policy)
-- [`design-desktop-app.md`](design-desktop-app.md) — `BootView` + `WelcomeView` empty-state composition
+- [`design-desktop-app.md`](archive/design-desktop-app.md) — `BootView` + `WelcomeView` empty-state composition
 - [`design-workspace.md`](design-workspace.md) — post-TestFlight genuine multi-project + multi-window (concurrency, window, serve architecture); the forward home for the single-project-per-process constraint this doc names in §Context
 - `desktop/Bristlenose/Bristlenose/{ProjectIndex,VolumeWatcher,FolderRow,WelcomeView}.swift` — shipped surface
 
@@ -118,7 +119,7 @@ Over time, the CLI gains commands:
 
 The index stores only pointers (path, name, timestamps, location hints). All project data stays in its own directory. This means:
 - Projects on unmounted volumes appear greyed out, not broken — the index remembers where they live (see §3: Unavailable projects)
-- Moving a folder on a mounted volume breaks the pointer — the desktop app detects this (volume mounted but path gone) and prompts to relocate. _As built (checked 12 Oct 2026):_ only when the security-scoped bookmark fails. When it resolves, `ProjectIndex.refreshAvailability` (`ProjectIndex.swift:1115-1135`) follows the move and rewrites the stored path silently, at launch and on volume mount — no prompt, which is what `docs/design-project-storage.md` ("renames/moves … resolve without UI") describes. The serve then imports at the new path, where `import_project` matches no row and forks a second project (`bristlenose/server/CLAUDE.md`, "Project identity is the resolved path")
+- Moving a folder on a mounted volume breaks the pointer — the desktop app detects this (volume mounted but path gone) and prompts to relocate. _As built (13 Oct 2026):_ the app follows without a prompt — at launch and volume mount through the bookmark, and while it runs through the folder watcher (`ProjectFolderWatcher.presentedItemDidMove` → `ProjectIndex.relocateProject`), after which the serve restarts at the new path; a move into the Bin is not followed, and activation is deliberately not a trigger. Following is what forks the server's project row (`design-lifecycle-failure-modes.md` row 29; the sidebar shows *Report out of date*) until the study marker of `design-project-identity.md` lands. Measured on a sandboxed Debug build: the security-scoped extension follows a same-volume rename. Canonical detail: `design-project-sidebar.md` §Resolution strategy.
 - Two users can share a project folder (Dropbox, git) without sharing an index
 - Deleting the index loses the project list but not the data — `bristlenose serve <folder>` still works
 
@@ -351,7 +352,7 @@ The project index stores enough information to tell the researcher *where* the p
 - **Unavailable projects**: greyed out, with the `display_hint` shown as a subtitle (e.g. "External drive — Samsung T7"). Not hidden, not alarming — just obviously not accessible right now. Clicking shows a message: "Connect [volume name] to open this project"
 - **Relocated projects**: if the path doesn't exist but the volume is mounted, the project was moved or deleted. This is the actual error case — show a "Locate…" button to re-point the index entry
 
-This means the home screen naturally reflects the researcher's storage reality: local projects are always there, client SharePoint projects appear when connected to the VPN, the NAS projects appear when at home. No manual state management needed — the desktop app checks path existence on launch and on volume mount/unmount events (macOS `NSWorkspace.didMountNotification`).
+This means the home screen naturally reflects the researcher's storage reality: local projects are always there, client SharePoint projects appear when connected to the VPN, the NAS projects appear when at home. No manual state management needed — the desktop app checks path existence on launch and on volume mount/unmount, and while it runs follows Finder renames through the folder watcher (12 Oct 2026; not on activation, by decision) events (macOS `NSWorkspace.didMountNotification`).
 
 **Cloud storage nuance (SharePoint, OneDrive, Dropbox, iCloud):** macOS creates placeholder directories for cloud-synced folders even when the actual files are evicted (not downloaded locally). A project path may *exist* while the content is cloud-only. For `location.type = "cloud"`, do not rely solely on path existence — check whether at least one file inside the project directory is actually available (not a placeholder). macOS extended attributes (`com.apple.ubiquity.isEvicted`) or a simple "can I read `metadata.json`?" check prevents false positives. Display "Syncing…" rather than "Available" when the directory exists but content is not yet local.
 

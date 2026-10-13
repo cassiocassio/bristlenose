@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-09-12
-trued-against: HEAD@main on 2026-09-12 (status block, Cloud section, Phase 0b banner; body otherwise as trued 21 Jun 2026)
+last-trued: 2026-10-13
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 ---
 
 > **Truing status:** Partial — trued 12 Sep 2026: the status block, the Cloud section
@@ -10,6 +10,7 @@ trued-against: HEAD@main on 2026-09-12 (status block, Cloud section, Phase 0b ba
 
 ## Changelog
 
+- _2026-10-13_ — trued up: multi-window struck from the aspirational list with the as-built shape; data-state glyph row added; Re-analyse marked live; per-window serve corrected to per-project; the rename edge case extended. Anchors: `ServeFleet`, `SubtitleDelta`, register row 37.
 - _2026-09-12_ — trued up: front-matter re-stamped (the 4 Sep note had landed under a June
   stamp); the pre-TestFlight "TestFlight scope = visual layer only" framing dated; "neither
   has been implemented" narrowed to the label (the sidecar's detection shipped 29 Jul 2026,
@@ -33,8 +34,10 @@ trued-against: HEAD@main on 2026-09-12 (status block, Cloud section, Phase 0b ba
 > described 0a's spinner-only state and banner-marked the ring + events-channel as "0b,
 > unbuilt"; **those banners are flipped to shipped reality below.** The 0b *plan* prose is
 > preserved (it's still the design rationale) — what changed is "built", not the design.
-> **Still aspirational:** Phases 1–3 (concurrent execution, multi-window, global-concern
-> unification) and the collapsed-folder aggregate.
+> **Still aspirational:** Phases 1–3 (concurrent execution, ~~multi-window~~, global-concern
+> unification) and the collapsed-folder aggregate. _13 Oct 2026: multi-window shipped 16–20 Aug
+> 2026 as peer windows over a per-project `ServeFleet` (`design-workspace.md`), not the
+> per-window `ServeManager` this doc assumed; concurrent runs and the aggregate remain unbuilt._
 >
 > **Update 2026-06-21:** copy progress also moved **onto the row** on 19 Jun (determinate ring +
 > `"Copying · N%"` + hover-cancel; the standalone `CopyProgressPill` was deleted) — the rows below
@@ -143,6 +146,7 @@ Shipped 0a, or 0b where marked _(0b, now built)_:
 | failed | red `xmark.circle.fill`, clickable → diagnostic popover | `MessageKind.error` | `MessageKind.swift`, `ProjectRow.swift` |
 | finished with failures (`.completedPartial`) | orange `exclamationmark.triangle.fill`, clickable → diagnostic popover | `MessageKind.warning` | `MessageKind.swift`, `ProjectRow.swift` |
 | failure glyph clicked | selects row + opens `ProjectDiagnosticPopover` anchored to glyph (`arrowEdge: .trailing`) | `Button(.plain)` + `.popover` | `ProjectRow.swift`, `ProjectDiagnosticPopover.swift` |
+| data-state glyph (files missing ⚠, unanalysed, database forked ✗) | opens `ProjectFilesPopover`; the forked body is one sentence with no Analyse _(12 Oct 2026)_ | `SubtitleDelta` via `pickDelta` | `ProjectRow.swift`, `ProjectFilesPopover.swift` |
 | queued / stopped | subtitle text only, no glyph | `subtitleVariant.pipelineText` | `ProjectRow.swift` |
 | idle / ready | nothing (date + session count) | existing | `ProjectRow.swift` |
 | project identity | chosen SF Symbol in leading slot | `project.icon` | `ProjectRow.swift` |
@@ -349,8 +353,9 @@ chrome on the row body:
 - **Diagnose a failure:** click the failure glyph (selects the row + opens `ProjectDiagnosticPopover`
   anchored to the glyph), or **right-click row → "Show Diagnostics…"**. The popover carries the
   per-stage breakdown, Copy, and a "Show Log" button gated on a real log file existing.
-- **Retry / Re-analyse is NOT a row affordance** — "Re-analyse…" is a Project-menu item (currently
-  `.disabled`, future Phase 2+); it is not in the row context menu. _(The original plan listed "Retry"
+- **Retry / Re-analyse is NOT a row affordance** — "Re-analyse…" is a Project-menu item (~~currently
+  `.disabled`, future Phase 2+~~ _live since 19 Aug 2026 (`a1de4e51`) with a real predicate and a confirmation,
+  `design-analysis-lifecycle.md`_); it is not in the row context menu. _(The original plan listed "Retry"
   in the row context menu — that did not ship.)_
 
 Future: **selecting** a project may route an explain-and-act surface to the main content window (room
@@ -361,7 +366,8 @@ for a status banner etc.) — not built; the glyph popover is the shipped failur
 - **Address state by `project.id`, never "selected"/"current."** The indicator is a pure function of
   one project's `state[id]`; Phase 1 (N runs) and Phase 2 (N windows) just read more of the same dict.
 - **Keep execution/display state owners App-level singletons** (`PipelineRunner`, `CopyMachinery`,
-  `OllamaDownloadModel`, `ProjectIndex`); only `ServeManager` becomes per-window in Phase 2.
+  `OllamaDownloadModel`, `ProjectIndex`); only `ServeManager` becomes per-window in Phase 2. _(As
+  built: per-**project**, not per-window — `ServeFleet`, 20 Aug 2026.)_
 - **`IndicatorKind` is a pure exhaustive `switch`** — adding a case later is compiler-forced.
 - **Controls via row context menu**, not a selection-scoped toolbar popover only (Phase 2 "selected" is
   per-window).
@@ -388,7 +394,7 @@ for a status banner etc.) — not built; the glyph popover is the shipped failur
 ## Edge cases (stress-test set)
 
 First-run no-calibration (coarse ring vs spinner); estimate overrun (asymptote / escalate text);
-cancel mid-run (context-menu Stop; ring freeze vs clear); rename mid-run (live name); whole-sidebar
+cancel mid-run (context-menu Stop; ring freeze vs clear); rename mid-run (live name — and since 12 Oct 2026 the watcher follows the folder and the serve restarts at the new path while Python still holds the old one, register row 37); whole-sidebar
 collapse (no compensation); cloud fetch stall (availability failure ≠ pipeline failure); copy +
 pipeline on the same project (precedence); many concurrent runs (cap visible motion, Phase 1);
 indeterminate-within-determinate stages; queue depth + reorder; Reduce Motion (spinner → static);

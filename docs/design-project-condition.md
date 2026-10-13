@@ -1,8 +1,13 @@
 ---
 status: in progress — phases A and B shipped in 0.31.5 (the POC code was production code); D, C, E, F designed, not built
-last-trued: 2026-10-06
+last-trued: 2026-10-13
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 owner: project status across Python, the report server, the SPA and the Mac app
 ---
+
+## Changelog
+
+- _2026-10-13_ — trued up: §4.4 sandbox liveness marked measured; §5.1 orphan-probe line marked built with the three-valued verdict; §6.2 points at the identity decision. Anchors: `ac1415fc`, `eb8509e1`, `PipelineRunner.ownedRunVerdict`.
 
 # Project condition — one answer to "what state is this project in?"
 
@@ -355,11 +360,13 @@ version (it now reads the condition). All fixed, each with a test.
   honest page needs copy ("this project's history can't be read") — phase E.
 - **The self-refresh script cannot say it lost contact** with a stopped server;
   it keeps its last state. Needs copy — phase E.
-- **Liveness under the Mac sandbox is unmeasured.** The serve now judges whether
-  the pipeline process is alive from `run.pid` (`proc_pidinfo`). If the sandbox
-  denies that for a sibling process, every live first run reads as stranded on
-  the Mac. The Mac covers a running project natively, which would mask it —
-  needs one measurement on a sandboxed build before phase C relies on it.
+- ~~**Liveness under the Mac sandbox is unmeasured.**~~ _Measured 12 Oct 2026 from the
+  sandboxed Debug test host: `proc_pidinfo(PROC_PIDTBSDINFO)` and `proc_pidpath` answer for
+  a sibling process; what the sandbox refuses is `Process()` exec of `/bin/ps`
+  (`Operation not permitted`). So the serve's `run.pid` liveness holds on the Mac,
+  and the orphan-attach probe that did exec `/bin/ps` was the one reading every run as
+  not ours (`ac1415fc`)._ The serve judges whether
+  the pipeline process is alive from `run.pid` (`proc_pidinfo`).
 
 ### 4.5 What generalises
 
@@ -404,8 +411,11 @@ Three things the Swift reader changes, each forced by a fixture case:
 | manifest consulted first; a damaged manifest masks a healthy log | log first; manifest only as legacy evidence | `legacy-project-without-log`, `legacy-evidence-never-overrides-the-log` |
 
 Liveness moves to libproc (`proc_pidinfo`), which `EventLogReader` already
-uses. The orphan probe's two `/bin/ps` execs (`PipelineRunner.swift:637`,
-`:648`) go too — under the sandbox they fail and delete the PID file.
+uses. ~~The orphan probe's two `/bin/ps` execs (`PipelineRunner.swift:637`,
+`:648`) go too — under the sandbox they fail and delete the PID file.~~ _Built 12 Oct
+2026 (`ac1415fc`, `eb8509e1`): the probe reads the same `tvsec.tvusec` start token,
+and its verdict is `alive` / `stale` / `indeterminate` — only a definite stale
+deletes the file (`PipelineRunner.ownedRunVerdict`, `PipelineRunnerOrphanTests`)._
 
 ### 5.2 One aggregate, one resolver
 
@@ -528,6 +538,11 @@ native cover (`runCover` needs `.statusPage`). Keying the cover on the overlay
    option below is already true, and the decision is narrower than it looked:
    whether the serve creates the DB eagerly at `bristlenose-output/.bristlenose/`
    (what `--clean` then stashes with the rest) or lazily on first import.
+   _13 Oct 2026: the larger question — what a project **is**, so that a renamed
+   folder does not fork its row — is decided in `design-project-identity.md`
+   (a study is its database plus a marker id; the path is a hint). Until it is
+   built, a rename with the app open forks the row and the sidebar says *Report
+   out of date* (`design-lifecycle-failure-modes.md` row 29, measured)._
    **Settled by implementation, 12 Oct 2026 (`3f1bd013`): eagerly.** The
    serve creates the database at `bristlenose-output/.bristlenose/` before
    the first run, so the run and the serve share one database and one

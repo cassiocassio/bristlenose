@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-09-12
-trued-against: HEAD@main (64acf55d) on 2026-09-12 (the fetch-state rows; the inCloud cell)
+last-trued: 2026-10-13
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 ---
 
 > **Trued 27 Aug 2026.** Three line anchors into `ProjectSubtitle.swift` had
@@ -16,6 +16,7 @@ trued-against: HEAD@main (64acf55d) on 2026-09-12 (the fetch-state rows; the inC
 
 ## Changelog
 
+- _2026-10-13_ — trued up: the forked delta added to the shipped vocabulary, the severity table, the glyph rule, both precedence chains and the Swift-over-Python note; readers scoped to row 1. Anchors: `ProjectSubtitle.swift` `pickDelta`, `SourceFilesReader.reportProjectID`, `c3b887cb`, `eb8509e1`.
 - _2026-09-12_ — **Truing pass (session docs).** Two corrections, one set of owners. (1) The availability table's **iCloud-evicted → `inCloud`** cell is the *intended* state, not the measured one: with the folder present, availability resolves `.ready` and `.inCloud` is unreachable for evicted media (`design-project-storage.md` §3, measured 29 Jul 2026) — the cell now says so. (2) The fetch rows in the severity table gained their owners: severity and glyph are ruled **here**; copy and keys are the 1 Aug mockup (`docs/mockups/cloud-fetch-states.html`); scope (iCloud Drive / Google Drive / OneDrive only), policy and build state are `design-cloud-wait-label.md`. The 30-minute "never completed" row is confirmed against `MATERIALISE_TIMEOUT_SECONDS` in `bristlenose/utils/fs.py`. (3) Which half is built, so the rows don't read as shipped: the sidecar's bounded fetch is; the `cloud_fetch` failure category is declared and mirrored but has no producer; the fetching / still-fetching states have no channel (measured 12 Sep 2026 — the first version of this bullet, the same day, called the failure category built).
 - _2026-08-18_ — **Truing pass (`--topic cloud-import`).** Three corrections, one addition. (1) **The 29 Jul "two shipped branches are unreachable" finding has half-expired** — `lastPipelineRunAt` gained a write site on **30 Jul**, *one day after* it was written up (`ProjectIndex.recordPipelineRun`, `ProjectIndex.swift:586`, called from `ContentView.swift:591`; commit *"desktop: Connect Agent sheet + menu item, and /api/health advertises the mount"*). So `+N unanalysed` **does** render now, and the TRAP below is closed rather than pending. `.ready(date:)` is still never drawn — but by Schema E's design, not by accident, which is the opposite kind of fact. Left as the clearest example in this doc of why a dated counterfactual needs re-checking before it's cited. (2) **The precedence chain named 9–10 states against an enum that has 17** — completed, with the idle tier's real order read off `resolveIdle`. (3) **Schema E's "the collapse rule is exactly one state" is now two.** (4) **Cloud import added to §4's catalogue** — a per-project transfer whose window can be closed, carrying three rulings that were only in code comments. Also fixed §4's "File import / copy" row, stale since 19 Jun and self-flagged as unaddressed in the 15 Jul entry.
 - _2026-07-29_ — **Schema E: the clean row is silent** (new subsection below, after Precedence). A `.ready` row with no delta now renders **no subtitle at all** and collapses to a single line; only exceptions get a line. Supersedes the June "every row shows a date" deferral **on its merits** — the deferral's trigger (concurrent multi-project execution) has *not* fired. Three further corrections from the same walk. (1) **The "never composed" hard rule is now overridden for `.completedPartial`** — see the new subsection; the rule survives everywhere else. (2) **Two shipped branches are unreachable and were never noticed**: `lastPipelineRunAt` has no write site in any build, so `.ready(date:)` never rendered *and* `ProjectIndex.swift:892` gates the `+N unanalysed` delta on it, so that never rendered either. (3) **Cloud fetch/eviction is an extension of this model, not a separate feature** — new rulings folded into the kinds table; spec in `docs/mockups/cloud-fetch-states.html` + the cloud-fetch handoff.
@@ -74,7 +75,7 @@ pane already shows the BootView (always-redundant; the table's "open" hedge reso
 download affordance was rejected (F49); the `Progress?` field stays vestigial. **Mid-run health** is
 **deferred** — it needs cross-layer plumbing (retry signal → pipeline emit) plus a render the brief
 defers to empirical play. So the shipped row vocabulary is: cantFind › failed › running ›
-stopped/partial › **copying** › missing › unanalysed › ready.
+stopped/partial › **copying** › missing › unanalysed › ready. _13 Oct 2026: a third delta, **forked** (`SubtitleDelta.databaseForked`, 12 Oct), sits first among the deltas — see §Precedence and the glyph rule._
 
 **Shipped (23 Jun 2026, `mac-app-layout-reorg`).** A **third** per-project status surface
 landed — the **native window title + subtitle** (Mail/Notes pattern), distinct from the row
@@ -137,6 +138,7 @@ Worked rulings (the precedents):
 | partial completion | warning | something didn't go right |
 | drive unplugged / volume ejected | warning | project not usable |
 | analysed files missing from disk | warning | "beyond neutral" — files gone |
+| report database holds a second project row | error | the report is reading a different row from the one the last run wrote; nothing self-resolves, the database has to be rebuilt (`SubtitleDelta.databaseForked`, 12 Oct 2026) |
 
 The four fetch rows are ruled here for **severity**. Their copy and keys are the 1 Aug 2026 mockup
 (`docs/mockups/cloud-fetch-states.html` — "Fetching from {{provider}} · n of m", "Still fetching…",
@@ -189,6 +191,7 @@ no target at all.
 | `failed` · `failedDiagnostic` · `completedPartial` | ✗ / ⚠ | diagnostics — a list of per-session failures |
 | `unreachable` | ⚠ / ✗ by reason | diagnostics — the reason and the folder path, which appear nowhere else. For `.unreadable` (a lost folder permission) the popover also carries **Locate…**, the only act that grants access again (since `a54c4dec`, 28 Sep 2026) |
 | `cantFind` | ⚠, reason-specific symbol | **none** — Locate is a project verb; right-click owns it |
+| `deltaOnly(.databaseForked)` | ✗ | files — one sentence (*Report out of date*, `filesPopover.databaseForkedFooter`), **no Analyse** (12 Oct 2026, `eb8509e1`) |
 | `deltaOnly(.missing)` | ⚠ | files — which recordings have vanished |
 | `deltaOnly(.unanalysed)` | ⓘ | files — which files are waiting, plus **Analyse** |
 | everything else | none | none |
@@ -205,7 +208,7 @@ When several conditions are true, the row shows one winner (never composed), mos
 
 `drive-unplugged (cantFind) › failed › running` *(the verb ladder; retries ride it as info)* `›
 stopped / partial › adding-interviews › importing-batch › copying › downloading-from-iCloud ›
-files-missing › unanalysed › starting › ready`
+database-forked › files-missing › unanalysed › starting › ready`
 
 **`SubtitleVariant` is the single source of truth and currently has 17 cases**
 (`ProjectSubtitle.swift:11-96`) — more than this chain names. The chain is the *architecture*, and
@@ -213,7 +216,7 @@ deliberately skips the mechanical companions (`.copyCancelling`, `.stopping`, `.
 `.failedDiagnostic`, `.unreachable`, `.deltaOnly`, `.placeholder`), each of which sits immediately
 beside the state it qualifies. Read the enum for the full list; read this for the ordering argument.
 The **idle tier**'s real order is settled in `resolveIdle` (`ProjectSubtitle.resolveIdle`, `ProjectSubtitle.swift:347`):
-`.addingInterviews` › `.importingBatch` › `.copying` / `.copyCancelling` › delta › `.ready`.
+`.addingInterviews` › `.importingBatch` › `.copying` / `.copyCancelling` › delta (forked › missing › unanalysed, `pickDelta`) › `.ready`.
 
 Baked-in rulings (user, 18 Jun 2026): **`cantFind` / drive-unplugged outranks ALL activity states**
 (failed, running, copying) — you can't open the report if the folder's gone, `copying` ⊥ `cantFind` by
@@ -366,8 +369,9 @@ Not a clean "Swift vs Python" line; it's *who detects/owns the state*:
    lifecycle, file copy.
 2. **Swift detects *over* Python data.** Session count + unanalysed/missing delta —
    `ProjectFolderWatcher` diffs the live folder against `bristlenose.db` (Python-written) via
-   `SourceFilesReader` (read-only `?immutable=1`). Python owns the baseline; Swift owns the live
-   observation **and the diff** ("there are 2 new files since the last run" is Swift's conclusion;
+   `SourceFilesReader` (read-only `?immutable=1`; scoped to project row 1 since 12 Oct 2026, the row
+   the report reads, with a second row surfaced as the forked delta — `projectRowCount`). Python owns
+   the baseline; Swift owns the live observation **and the diff** ("there are 2 new files since the last run" is Swift's conclusion;
    Python never makes that comparison).
 3. **Python's verdict, Swift renders it — and, since Jul 2026, may act on it.** Run outcome
    (ready / failed / partial) + the failure category — read from `pipeline-events.jsonl`
@@ -470,7 +474,7 @@ One subtitle line, one trailing slot — but several conditions can be true at o
 compose. Three tiers, in order:
 
 1. **Severity** — most severe wins, and an unreachable project tops it. The order:
-   `cantFind → failed → running / stopped / partial → ready+missing → ready+unanalysed → ready`.
+   `cantFind → failed → running / stopped / partial → ready+forked → ready+missing → ready+unanalysed → ready`.
    (Ruling, user 18 Jun 2026: `cantFind` / availability beats ALL activity — you can't open the report,
    can't copy into a folder you can't find, and a run against a vanished folder is doomed. Matches the
    shipped `subtitleVariant` early-return.)

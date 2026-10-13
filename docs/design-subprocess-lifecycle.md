@@ -1,15 +1,16 @@
 ---
 status: partial
-last-trued: 2026-04-24
-trued-against: HEAD@port-v01-ingestion on 2026-04-24 (post Stop fixes)
+last-trued: 2026-10-13
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 ---
 
-> **Truing status:** Partial — Stop-is-a-lie alpha blocker now fully closed (4 commits, 24 Apr 2026); attached-orphan visibility gap closed (log tail in popover); Stop click acknowledged instantly across pill / popover / sidebar (`isStopping` flag). Sandbox-clean probes (`proc_pidinfo`/`proc_pidpath`), `stopAll()`, and unified serve-side reconcile remain design-intent only.
+> **Truing status:** Partial — Stop-is-a-lie alpha blocker now fully closed (4 commits, 24 Apr 2026); attached-orphan visibility gap closed (log tail in popover); Stop click acknowledged instantly across pill / popover / sidebar (`isStopping` flag). Sandbox-clean probes (`proc_pidinfo`/`proc_pidpath`) — **run side shipped 12 Oct 2026 on libproc with a start-time token (`ac1415fc`, `eb8509e1`); see the PID-file note** — `stopAll()`, and unified serve-side reconcile remain design-intent only.
 >
 > **Serve-side reconcile superseded (May 2026, A6 redesign):** the §"sandbox-incompatible" lsof exec in `ServeManager.killOrphanedServeProcesses()` was deleted, not migrated to libproc. Sidecar self-terminates on parent-death via `bristlenose/server/lifecycle.py`; host uses `bind(0)`. The PID-file-scan-and-reconcile design described later in this doc still applies to the **run** subprocess (`PipelineRunner`), but no longer to **serve**. References to `ServeManager.killOrphanedServeProcesses()` below are historical.
 
 ## Changelog
 
+- _2026-10-13_ — trued up: run-side orphan attach as shipped: the PID-file format, the three-valued verdict, the 14 Jul → 12 Oct window in which it was unreachable; implementation-plan steps 3–5 annotated. Anchors: `PipelineRunner.ownedRunVerdict`, `PipelineRunnerOrphanTests`, register row 21.
 - _2026-06-21_ — repointed the "user-task progress surfaces" reference off the deleted `PipelineActivityItem` onto the shipped sidebar-row surfaces (`ProjectRowActivityIndicator` / `ProjectRow`); per-project progress now lives on the row.
 - _2026-04-24 (evening)_ — Stop-is-a-lie + stale-pill alpha blockers fixed and documented. Bug banners replaced with "Fixed" content citing commits `896c074` (kill fix), `c0eb709` (escalation), `2b5475f` (`.running` transition), `da5cc45` (log tail + `isStopping`). Inline body updated with new flags (`attachedFromOrphan`, `isStopping`) and helpers (`logFileURL`, `readLogTail`, `scheduleOrphanCancelEscalation`, `orphanLogOffsets`).
 - _2026-04-24 (afternoon)_ — Tier 2 truing follow-up: cite commit `49930e4` for the owned-process cancel-flag fix (was "this branch, working-tree"); add corner-case notes for the `projectIndex`-lookup PID-file leak (`PipelineRunner.swift:776-778`) and the spawn-vs-`writePIDFile` race (`:737-742`).
@@ -70,6 +71,7 @@ Force-quit / SIGKILL leaves the file behind — that's the signal the orphan-rec
 > - Shipped file name is `<project.id.uuidString>.pid` (no `<role>-` prefix). Swift-side writer is `PipelineRunner.writePIDFile` at `PipelineRunner.swift:442`. When `serve` gets a PID file too (planned), the flat directory needs either a `<role>-` prefix (reviving the original spec) or two subdirectories (`pids/run/`, `pids/serve/`) to avoid collision.
 > - **PID file is Swift-owned**, not Python-owned. Swift writes after `proc.run()` in `spawn`, and removes in `handleTermination` / `handleOrphanExit`. Python has no `atexit` handler touching these files — the App Support directory is in Swift's sandbox, not Python's. The "subprocess removes its own PID file" claim above is inverted; correct behaviour is "Mac side removes the PID file when the termination handler or orphan poller confirms exit."
 > - File contains **PID only** (`String(pid)`), not start timestamp or project path. Verification of ownership goes via `/bin/ps -o uid=` and `-o args=` (shipped), or `proc_pidinfo`/`proc_pidpath` (planned, sandbox-clean).
+>   **Since 12 Oct 2026 (`ac1415fc`, `eb8509e1`):** the file is `"<pid>\n<start-token>"`, the token being the libproc `"<tvsec>.<tvusec>"` string `EventLogReader.procStartTime` yields; a pid-only file is *stale*; a spawn whose libproc query failed writes the non-empty sentinel `PipelineRunner.noStartToken`, read as *indeterminate*. Ownership is `kill(pid, 0)` + `proc_pidinfo` uid + the token — no `proc_pidpath`, no argv.
 
 ### Mac side: scan-and-reconcile at app init, sandbox-clean
 
@@ -82,7 +84,11 @@ For each PID file:
 
 This replaces the `lsof`/`kill` approach. All probes (`kill(pid, 0)`, `proc_pidinfo`, `proc_pidpath`) are sandbox-clean — they work entirely through the kernel via `libproc.h`. No subprocess exec required.
 
+> **As shipped, 12 Oct 2026:** the verdict is three-valued — `alive` / `stale` / `indeterminate` (`PipelineRunner.ownedRunVerdict`, a pure table with every probe injected). Only `stale` removes the file; `indeterminate` keeps it, because a verifier that cannot verify must never upgrade a pid to *ours* and must never delete the evidence. The caller's unconditional sweep that undid that keep one frame up was the first finding of the 12 Oct review (`eb8509e1`). A scan also refuses to attach to this process's own live run (`applyScan`), since rescans now fire on rename and bookmark heal.
+
 > **Superseded 2026-04-23.** The bullet above is **design-intent**. Shipped `aliveOwnedRunPID` (`PipelineRunner.swift:326-358`) uses `kill(pid, 0)` + TWO `/bin/ps` execs (`-o uid=`, then `-o args=`). Same outcome as the libproc path, but not sandbox-clean today — migrating is a separate slice before TestFlight. The target state ("all probes through `libproc.h`") is the planned endpoint, not a shipped capability.
+>
+> **14 Jul → 12 Oct 2026:** with the sandbox on in both configurations, those two execs failed on every launch (`Operation not permitted`, measured 12 Oct from the sandboxed Debug test host); the failure read as *not ours*, the file was deleted, and orphan attach was unreachable in every sandboxed build — a relaunch mid-run showed Analysing with an inert Stop while Analyse could start a second run (`design-lifecycle-failure-modes.md` row 21). Closed by `ac1415fc` + `eb8509e1`.
 
 The orphan-attach UX surface is **the project's normal status indicators** — the sidebar row says "Analysing…", the toolbar pill shows the stage. The user has no way to tell whether the subprocess was just spawned by this Bristlenose instance or attached from a previous instance. That's the design's whole point.
 
@@ -146,9 +152,9 @@ The only sandbox-incompatible piece in today's code is `ServeManager.killOrphane
 
 1. CLI: add PID file write + atexit cleanup to `bristlenose serve` (mirror what `bristlenose run` already does in this branch). Path: `<App Support>/Bristlenose/pids/serve-<projectID>.pid`.
 2. Swift: rewrite `ServeManager.killOrphanedServeProcesses()` to use the PID-file-scan-and-reconcile pattern instead of `lsof`. Method renames to `reconcileServeProcesses()`. Same interface from caller's perspective.
-3. Swift: rename `PipelineRunner.aliveOwnedRunPID()`'s `/bin/ps` exec to use `proc_pidinfo` / `proc_pidpath`. Sandbox-clean. Existing logic unchanged.
-4. Swift: extend `.onReceive(willTerminateNotification)` to call `pipelineRunner.stopAll()` in addition to `serveManager.stop()`.
-5. Tests: same as port-v01-ingestion alpha — manual matrix only, no automated. Force-quit + relaunch + observe attachment is the gate.
+3. ~~Swift: rename `PipelineRunner.aliveOwnedRunPID()`'s `/bin/ps` exec to use `proc_pidinfo` / `proc_pidpath`. Sandbox-clean. Existing logic unchanged.~~ _Shipped 12 Oct 2026 — as a start-time token, not an argv match (see the PID-file note above)._
+4. Swift: extend `.onReceive(willTerminateNotification)` to call `pipelineRunner.stopAll()` in addition to `serveManager.stop()`. _Still unshipped (13 Oct 2026): no `stopAll` in the tree._
+5. ~~Tests: same as port-v01-ingestion alpha — manual matrix only, no automated. Force-quit + relaunch + observe attachment is the gate.~~ _`PipelineRunnerOrphanTests` (12 Oct 2026) pins the verdict table and the keep-the-file rule; the relaunch itself is still a hand test._
 
 Estimated scope: ~2 days. Smaller than port-v01-ingestion. Can land any time before TestFlight; required before sandbox flips on.
 

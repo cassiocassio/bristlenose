@@ -1,7 +1,12 @@
 ---
 status: current
-last-trued: 2026-10-12
+last-trued: 2026-10-13
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 ---
+
+## Changelog
+
+- _2026-10-13_ — trued up: rows 19–25 anchored to the tests and commits that closed them; rows 28–29 reworded for the live-rename fork measured 13 Oct; six Open rows (35–40) from the Mac-half review; score recomputed. Anchors: `eb8509e1`, TODO.md 13 Oct entry, `desktop/CLAUDE.md` renamed-folder entry.
 
 # Lifecycle failure modes: what is designed out, what is proven, what is left
 
@@ -75,13 +80,13 @@ a test proved red on its mutant (`a4140b48`, `75a56841`).
 | 16 | Renaming the folder left a report per name | `tests/test_pipeline_report_name.py` | red-first |
 | 17 | Every run re-decoded every video (iCloud: re-downloaded); thumbnails never updated | `tests/test_pipeline_stage2_cache.py`, `tests/test_video_thumbnails.py` | red-first |
 | 18 | `analyze` on a project's own transcripts named it `transcripts-raw` — and, with 16, would have deleted the real report | `TestAnalyzeProjectName` | red-first, mutant |
-| 19 | Mac sidebar counted sessions across every project row, so it agreed with a forked database | `ProjectDBReadersTests`, `ProjectSubtitleForkTests` | red-first |
-| 20 | Mac app kept a report server from before a sidecar rebuild all day | `ServeFleetLifecycleTests` | red-first |
-| 21 | Relaunch mid-analysis: Analysing with an inert Stop, and Analyse could start a second run | `PipelineRunnerOrphanTests` | red-first (sandbox measured) |
-| 22 | Finder rename while open: the app served the old path | `ProjectFolderWatcherMoveTests`, `ProjectIndexPathChangedTests` | red-first |
+| 19 | Mac sidebar counted sessions across every project row, so it agreed with a forked database | `ProjectDBReadersTests`, `ProjectSubtitleForkTests`; measured live 13 Oct 2026 (row 29) | red-first — the `immutable=1` read lags the WAL, row 35 |
+| 20 | Mac app kept a report server from before a sidecar rebuild all day | `ServeManagerFreshnessTests` (in `ServeFleetLifecycleTests.swift`) | mutation-proved |
+| 21 | Relaunch mid-analysis: Analysing with an inert Stop, and Analyse could start a second run | `PipelineRunnerOrphanTests` (`ac1415fc`; closed in `eb8509e1` — the caller's sweep had undone the callee's keep) | red-first; `/bin/ps` refusal measured 12 Oct |
+| 22 | Finder rename while open: the app served the old path | `ProjectFolderWatcherMoveTests`, `ProjectIndexPathChangedTests`; the window's restart (`pendingStart` when no window is key, `eb8509e1`) has no unit seam | red-first; the serve following measured 13 Oct on the Debug build — and following leads into row 29 |
 | 23 | The server for a project left behind was never stopped on a selection change | `ContentView` change, `4ecf1437` | review |
-| 24 | A folder moved to the Bin was followed and served from there | `ProjectFolderWatcherMoveTests` (`eb8509e1`) | review |
-| 25 | A `projects.json` that failed to decode was overwritten with an empty list | `ProjectIndexDamagedFileTests` | red-first |
+| 24 | A folder moved to the Bin was followed and served from there | `ProjectIndexPathChangedTests` (`eb8509e1`) | review; mutation-proved |
+| 25 | A `projects.json` that failed to decode was overwritten with an empty list | `ProjectIndexDamagedFileTests` | red-first — the set-aside is silent, row 36 |
 | 26 | A failed re-analysis lost the researcher's curation under a live server | scenario `reanalyse-fails-curation-survives` | held before; regression guard |
 
 ### Open, engineered (strict xfail in the scenario table)
@@ -89,8 +94,8 @@ a test proved red on its mutant (`a4140b48`, `75a56841`).
 | # | Failure mode | Why it is open | What fixes it |
 |---|---|---|---|
 | 27 | After a crash, the previous report stays hidden until the next run starts | the server never reclaims a stash itself | serve calls `output_backup.reclaim_stale` when no run owns the project |
-| 28 | A CLI `serve` does not follow its folder to a new name | by design; it says so (row 6), and the Mac app restarts it | restart the server; or re-derive the root from the open database's path |
-| 29 | A folder moved with the app closed forks the project; the report shows the stale first row | project identity is the absolute path | the study marker, [design-project-identity.md](design-project-identity.md) §3–4 and §10; decided 13 Oct 2026, phase 2 |
+| 28 | A CLI `serve` does not follow its folder to a new name | by design; it says so (row 6), and the Mac app restarts it at the new path — which is what forks row 29 | restart the server; or re-derive the root from the open database's path |
+| 29 | A folder moved or renamed forks the project — with the app closed, or open: the app follows (row 22) and the restarted server re-imports under the new path. The report shows the stale first row. **Measured 13 Oct 2026** on a sandboxed Debug build: a Finder rename with the app open gave two rows, one session each, and the sidebar said *Report out of date* (row 19) | project identity is the absolute path | the study marker, [design-project-identity.md](design-project-identity.md) §3–4 and §10; decided 13 Oct 2026, phase 2 |
 | 30 | A copied folder forks the same way, and the copy's writes reach the original | same | same; a copy is an independent duplicate, re-minted on arrival ([design-project-identity.md](design-project-identity.md) §9) |
 
 ### Open, not engineered
@@ -101,6 +106,12 @@ a test proved red on its mutant (`a4140b48`, `75a56841`).
 | 32 | Two servers, or two app windows on two machines, on one folder at once | no lock exists to test; SQLite serialises writes but imports can still race |
 | 33 | Network shares, ExFAT, iCloud-evicted databases | WAL is unsupported on network filesystems; needs real volumes, not a temp dir |
 | 34 | More than 50 projects: the 51st gets no folder lease, so no sandbox scope | rare; a Swift-side cap |
+| 35 | The Mac readers open the database with `?immutable=1`, which ignores the WAL: after a fork is repaired the *Report out of date* row stays until a checkpoint, and curation made this session can count as zero, so **Re-analyse…** skips its confirmation | a committed-but-uncheckpointed row is invisible to that open (measured against sqlite 3.53); needs a read without `immutable` falling back on `CANTOPEN`, or a Python-side checkpoint after curation writes — review finding, parked 12 Oct 2026 |
+| 36 | A damaged `projects.json` is set aside (row 25) and the next launch is an empty Welcome with nothing on screen; valid JSON from a newer build is treated as damage | no surfacing yet; an older `.dmg` opening a TestFlight-written file strands the sidebar in every build — parked 12 Oct 2026 |
+| 37 | A rename during a live run: Python holds the old path while the app follows and restarts the serve at the new one | product call: follow at once (report honest) or defer until no run (run honest) — open question 12 Oct 2026 |
+| 38 | A serve restart on a path change while the researcher is mid-edit in the report | rare and correct until shown otherwise — open question 12 Oct 2026 |
+| 39 | `ProjectIndex.resolveBookmark` starts a security scope it never stops, at launch and on volume mount | pre-existing; the per-activation multiplier was removed in `eb8509e1`; a leaked extension per project per event, bounded by relaunch |
+| 40 | A cross-volume rename or move: whether the security-scoped extension follows | a same-volume rename is measured to follow (13 Oct 2026); cross-volume is not, and Finder does it as copy + delete |
 
 **Checked and not a failure mode:** only the two **Re-analyse…** call sites pass
 `clean: true` (`ContentView.swift`, the confirmation sheet and the no-curation
@@ -126,9 +137,11 @@ folder instead.
 
 ## The score
 
-**By count:** of 34 failure modes, 26 are designed out and proven (25 fixed on
-12 Oct 2026, one that already held and is now guarded) — **76%**. Eight are
-open: four engineered, four not.
+**By count:** of 40 failure modes, 26 are designed out and proven (25 fixed on
+12 Oct 2026, one that already held and is now guarded) — **65%**. Fourteen are
+open: four engineered, ten not. _(13 Oct 2026: rows 35–40 added from the review
+of the Mac half and its measurement; the proven count did not move, the
+denominator did.)_
 
 **By how often a researcher would meet them**, which is the number that
 matters, it is higher. Rows 1–4 sat on the path every Mac user takes: a first
@@ -157,7 +170,10 @@ In order of likely cost:
    unit tests of each piece; nothing drives the built app through
    add → analyse → re-analyse → quit mid-run → relaunch → rename. The 12 Oct
    incident was exactly an interaction between pieces. One scripted pass with the
-   Debug build against a copy of the smoke fixture would close most of this.
+   Debug build against a copy of the smoke fixture would close most of this. A
+   partial pass was done by hand on 13 Oct 2026 (sandboxed Debug build, a real
+   drop, a Finder rename, a cold relaunch): it found row 29 live. Still not
+   scripted.
 3. **Storage we do not control (33).** A study on SMB, or a database iCloud has
    evicted, has not been run. The likely failures are slow or locked rather than
    lost, but that is a prediction.

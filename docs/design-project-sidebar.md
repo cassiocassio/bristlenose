@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-10-03
-trued-against: HEAD@main on 2026-10-03 (new-item slice: +⌄, grey row removed, rename-on-create)
+last-trued: 2026-10-13
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 ---
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`):** the per-project run glance **moved onto the
@@ -26,11 +26,13 @@ trued-against: HEAD@main on 2026-10-03 (new-item slice: +⌄, grey row removed, 
 > `CopyProgressPill` was deleted). See "Row anatomy" below + `design-desktop-project-status.md` §4 (the
 > placement axis). (2) Switching *back* to the previous project now re-points to a parked warm sidecar
 > instead of teardown+restart — "Click behaviour" updated; see `design-desktop-switch-performance.md`.
+> _Superseded 20 Aug 2026: the warm pool and `switchProject` are unreachable since `ServeFleet` (one serve per project, reaped 90 s after its last window); that doc is now `docs/archive/design-desktop-switch-performance.md`._
 
 > **Truing status:** Trued. Phases 1–3 shipped; remaining drift carries inline banners. Project-menu and context-menu ASCII art trued (phantom Add Interviews / Analyse / Get Info removed). Drop matrix duplicate row clarified. Phase 2 "not shipped" list updated with strikethrough on items that did ship. Pipeline-state × run-trigger matrix at end of doc.
 
 ## Changelog
 
+- _2026-10-13_ — trued up: Resolution strategy is now the canonical relocation story (watcher route, Bin rule, the 13 Oct measurement); session count scoped to row 1; damaged-file rule; Phase 4 verify items and the concurrent-serve Future item marked shipped; warm-pool banner marked superseded. Anchors: `ProjectIndex.swift` `projectFolderDidMove`/`isInTrash`, `988a60d8`, `eb8509e1`.
 - _2026-10-03_ — **new-item slice** (`/true-the-docs --topic toolbar`): New Project / New Folder moved to a `+⌄` menu on the sidebar column (shown only while the sidebar is visible), the grey in-list `+ New Project…` row and the `folder.badge.plus` toolbar button are gone, New Project lost its ellipsis, and New Project now opens for inline rename on the AppKit path as New Folder did. Trued §"New Project placement", §"Rename interaction", Phase 2 and Phase 3 lines.
 - _2026-07-28_ — **rename slice trued against the shipped AppKit path** (`/true-the-docs --topic sidebar-rename`). Three reversals: §"Rename interaction" L224 *"Enter key does NOT trigger rename"* — **reversed**, Return now begins rename, because selection already opens in this sidebar so Return has no "open" job to collide with (the 14-app survey that produced the original conclusion is preserved, with the reasoning for why it doesn't govern here); §Phase 2 "not shipped" slow-double-click bullet and its 2026-04-23 override banner — **both flipped**, the "needs NSEvent monitor or AppKit subclass" remedy they prescribed is exactly what shipped (`SidebarOutlineView` + `doubleClickInterval`-deferred arm). Mechanism deliberately **not** mirrored here — `design-desktop-sidebar-appkit.md` §2.6 is canonical; this doc keeps design intent + survey. Re-anchored rename from `ProjectRow.swift`/`FolderRow.swift` (being-deleted SwiftUI path) to `ProjectSidebarOutline.swift`. Anchors are `file:line`, not SHAs — the work was uncommitted at truing time.
 - _2026-06-22_ — added a **"Substrate + ownership"** banner after §Context delineating this doc (sidebar behaviour/content) from the two newer docs that now own slices of the surface: `design-desktop-nav-toolbar-rearrangement.md` (the relocated lens rail) and `design-desktop-sidebar-appkit.md` (the SwiftUI `List` → AppKit `NSOutlineView` migration, alpha default at cutover). Cross-ref'd §"Row anatomy" to the appkit §2.4 cell port. **No behaviour claims changed** — the SwiftUI content here is accurate for the flag-OFF default build; the banner closes the cross-doc drift risk (those mechanics are deleted at cutover). Anchors: `ProjectSidebarOutline.swift`, `OutlineNode.swift`, `LensRail.swift`, `BristlenoseFlags.swift`.
@@ -123,7 +125,7 @@ The canonical spec is the `ProjectRow.swift` doc-comment; this is its design hom
 - **Subtitle line** — status text · *(right)* storage/activity qualifier (iCloud arrow, or the activity indicator while a run is in flight). During a run the subtitle shows the **live progress ladder** — stage · N of M · ETA (e.g. "Transcribing · 2 of 3 · <1 min left"), degrading to "Analysing · <1 min left" then "Analysing…" — composed by the pure `RunProgressSubtitle` helper (stage vocabulary = `timing.py ALL_STAGES`, six coarse ids, **not** `manifest.STAGE_ORDER`). Ring / spinner / Stop-× / failure-glyph details: `docs/design-sidebar-activity-indicators.md`.
 - **Copy progress on the row** — when files are being copied into a project (drag-drop import), the trailing slot shows a determinate ring (byte fraction) with the subtitle `"Copying · N%"` / `"Cancelling…"`, hover-to-cancel on the ring, and a "Cancel copy" context-menu item. Copy is a per-project op so it lives on the row, **not** a toolbar pill — the standalone `CopyProgressPill` was deleted (19 Jun 2026; the placement axis, `design-desktop-project-status.md` §4). Byte-% not "N of M" (no file-item source exists). Source: `CopyMachinery.inFlight` matched by `projectID`; `ProjectSubtitle.swift` (`.copying` / `.copyCancelling`); `ProjectRow.swift`.
 
-**The session count refreshes on run completion** (it used to go stale until relaunch). It's read from the project's analysis DB (`SELECT COUNT(*) FROM sessions`) via a sandbox-mandated `immutable=1` open that can't see WAL-resident rows — and the count is written by the *serve importer*, not the pipeline run, so a finished run wouldn't refresh it on its own. Two-part fix: the importer PASSIVE-checkpoints the WAL after import, and the desktop rescans the watcher on the analysing→terminal transition (`ContentView.scheduleCountRescan`). The cross-process WAL trap + mechanics live in `bristlenose/server/CLAUDE.md` and `desktop/CLAUDE.md` (immutable-read gotcha) — not duplicated here.
+**The session count refreshes on run completion** (it used to go stale until relaunch). It's read from the project's analysis DB (`SELECT COUNT(*) FROM sessions WHERE project_id = 1` — scoped to the row the report reads since 12 Oct 2026; a second row is surfaced as *Report out of date*) via a sandbox-mandated `immutable=1` open that can't see WAL-resident rows — and the count is written by the *serve importer*, not the pipeline run, so a finished run wouldn't refresh it on its own. Two-part fix: the importer PASSIVE-checkpoints the WAL after import, and the desktop rescans the watcher on the analysing→terminal transition (`ContentView.scheduleCountRescan`). The cross-process WAL trap + mechanics live in `bristlenose/server/CLAUDE.md` and `desktop/CLAUDE.md` (immutable-read gotcha) — not duplicated here.
 
 ### "New Project" placement
 
@@ -161,6 +163,7 @@ Show "(empty)" or "(2 archived)" so an empty disclosed folder doesn't look broke
 - Not synced by iCloud by default
 - Create empty `{ "version": "1.0", "folders": [], "projects": [] }` on first launch if missing
 - No iCloud sync — bookmarks are machine-specific, Bristlenose is local-first
+- _(12 Oct 2026)_ A file that fails to decode is set aside as `projects.json.damaged-<timestamp>` and the index continues empty; saves are refused only if the move fails. The set-aside is not yet surfaced to the researcher (`design-lifecycle-failure-modes.md` rows 25, 36)
 
 ### File references (hybrid path + bookmark)
 
@@ -194,8 +197,10 @@ Show "(empty)" or "(2 archived)" so an empty disclosed folder doesn't look broke
 1. Try resolving bookmark first (fastest if volume is mounted)
 2. If bookmark fails (stale), try resolving `volume_relative_path` by scanning mounted volumes
 3. If both fail, mark project as unavailable (grey, show `display_hint`)
+4. _(12 Oct 2026)_ While the app runs, `ProjectFolderWatcher.presentedItemDidMove` reports a Finder rename or move; `ProjectIndex.projectFolderDidMove` relocates exactly as Locate… does and posts `.bristlenoseProjectPathChanged` after the save and the new lease, so the window showing the project restarts its serve at the new path (or queues the start until it is key). Activation is deliberately not a trigger (`eb8509e1`).
+5. _(12 Oct 2026)_ A destination in the Bin (`.Trash`, `.Trashes`) is not followed: the row goes to Can't find with Locate…. **Measured 13 Oct 2026** on a sandboxed Debug build: the security-scoped extension follows a same-volume rename, the bookmark minted at the new path resolves from cold, and the serve respawns there (`desktop/CLAUDE.md`, the renamed-folder entry); cross-volume is untested. Following is also what forks the server's project row until the study marker lands (`design-lifecycle-failure-modes.md` row 29).
 
-Phase 1 ships with plain paths only. Bookmark data added in Phase 2.
+~~Phase 1 ships with plain paths only. Bookmark data added in Phase 2.~~ _Both shipped (26 Apr 2026)._
 
 ### Ownership
 
@@ -211,7 +216,7 @@ When files/folders are dragged from Finder:
 - **Drag file(s)** → one project, `path` = first file's parent dir, `inputFiles` = exactly the dropped files (never siblings)
 - **Drag mix of files + folders** → one project, `path` = first item's dir, `inputFiles` = all paths
 - ~~No dedup — dropping the same folder twice creates two projects (user may tag/analyse differently).~~ **Retired 13 Oct 2026.** Dead in the shipped app since `754f0658` (8 Jun 2026): a re-drop of a tracked folder selects its row (or runs it if never analysed), with no prompt. Two rows on one folder could never work — they would share one database and one output. The dedupe key moves from the path string to the study marker ([design-project-identity.md](design-project-identity.md) §9); "analyse the same interviews differently" is a Finder duplicate of the folder, which is an independent study
-- The `name` field is display-only. It must never be used to construct filesystem paths. The `path` field is set at creation and only changed by relocate
+- The `name` field is display-only. It must never be used to construct filesystem paths. The `path` field is set at creation and changed only by relocate (Locate…, or a watcher-reported move) and by bookmark healing at launch and volume mount
 - `inputFiles` (optional `[String]?` in `projects.json` as `input_files`): when nil, the pipeline scans the entire `path` directory. When populated, only those files/directories are processed. This is how single-file projects and multi-source projects coexist with the legacy folder-scan model
 
 ## Rename interaction
@@ -525,15 +530,15 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 
 - `location` field auto-populated on project creation (local/volume/network/cloud detection) — `Location` struct in `ProjectIndex.swift:14-22`
 - Grey treatment for unavailable projects with `display_hint` secondary line — `Project.availability` enum in `ProjectIndex.swift:132-145`
-- Bookmark data stored alongside paths (hybrid resolution) — `bookmarkData: Data?` accepted in init; resolution-on-access still to verify under sandbox (Track A territory)
+- Bookmark data stored alongside paths (hybrid resolution) — `bookmarkData: Data?` accepted in init; resolution-on-access verified under the sandbox (13 Oct 2026: a renamed, granted folder resolves from a cold relaunch)
 - `NSWorkspace.didMountNotification` / `didUnmountNotification` to update availability — `VolumeWatcher.swift:21-44`
 - Volume-relative path fallback for remounted drives — shipped
-- "Locate…" action for moved/deleted projects (re-select via NSOpenPanel) — verify
+- "Locate…" action for moved/deleted projects (re-select via NSOpenPanel) — shipped; the context menu offers it for Can't find and Can't be read rows
 - `VolumeWatcher.swift` — separate observer, not on ContentView ✅
 
 **Files**: `ProjectIndex.swift` (availability, bookmarks), `VolumeWatcher.swift`, `ProjectRow.swift` (grey state, secondary line)
 
-**Outstanding under Phase 4:** confirm security-scoped bookmark resolution under the macOS sandbox once Track A (`sandbox-debug` worktree) lands its inventory; also confirm the "Locate…" action is wired.
+~~**Outstanding under Phase 4:** confirm security-scoped bookmark resolution under the macOS sandbox once Track A (`sandbox-debug` worktree) lands its inventory; also confirm the "Locate…" action is wired.~~ _Both confirmed by 13 Oct 2026 (see Resolution strategy, step 5)._
 
 ### Phase 5 — Archive + status bar + Get Info
 
@@ -552,7 +557,7 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 - Undo for all sidebar mutations (add, delete, move, rename)
 - Accessibility: keyboard reorder, drop announcements
 - Presentation/focus mode (hide other client folders during screen-share)
-- Concurrent serve sessions (multiple projects open simultaneously)
+- ~~Concurrent serve sessions (multiple projects open simultaneously)~~ _shipped 20 Aug 2026 (`ServeFleet`, one serve per project; `design-workspace.md`)_
 - Project index encryption (pre-v1.0)
 - `bristlenose projects` CLI command reading same index
 - Cross-project search scoped to folders

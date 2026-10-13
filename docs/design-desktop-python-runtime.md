@@ -1,8 +1,8 @@
 ---
 status: current
-last-trued: 2026-09-20
+last-trued: 2026-10-13
 previous-trued: 2026-09-04
-trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 ---
 
 # Desktop Python Runtime — sidecar mechanics
@@ -13,6 +13,7 @@ _Written 18 Apr 2026 as Track C C0 spike output; updated through C3 (21 Apr 2026
 
 ## Changelog
 
+- _2026-10-13_ — trued up: the 28 Apr "entire supervisor path survives the sandbox" claim corrected (orphan attach exec'd `/bin/ps` until 12 Oct 2026); the untested-under-sandbox list and the first open question marked answered; the renamed-folder measurement recorded. Anchors: `ac1415fc`, `desktop/CLAUDE.md` renamed-folder entry.
 - _2026-09-20_ — corrected the §shipped-state bullet that listed presidio / spaCy among the sidecar's PyInstaller excludes. They have been bundled since 12 Sep 2026 (commit "bundle presidio and spaCy; the weights still download"); only `en_core_web_lg` is excluded, as data. Anchors: `desktop/bristlenose-sidecar.spec:248-258`.
 - _2026-09-04_ — trued for the two-keychain change (`--topic keychain`): §Credential flow step 2 writes **both** the data-protection keychain and a login-keychain copy the CLI reads, both read back; the resource-resolution bullet says so; the sidecar still needs no keychain entitlement but is no longer the only consumer. Two "deferred" claims about credential-bearing scripts were false: the Developer ID `.dmg` has been a live channel since August (`build-dmg.sh`, notarised, stapled) and TestFlight uploads authenticate with the App Store Connect API key, not an app-specific password — both marked with dated post-scripts, bodies kept. `fetch-ffmpeg.sh` downloads from `ffmpeg.martin-riedl.de`, not evermeet.cx. Two commits on 3 Sep had edited the body without a changelog line; recorded here.
 - _2026-06-21_ — trued against `main` (warm-sidecar-pool merge `78b2d40`): added a "Warm-sidecar pool (Phase A2)" lifecycle addendum to the SidecarMode contract (park-on-switch + synchronous re-point; spawn / port / credential mechanics unchanged and still accurate). Cross-refs `design-desktop-switch-performance.md` rather than duplicating the perf model. Anchors: `ServeManager.swift`, `ParkedSidecar.swift`.
@@ -44,7 +45,7 @@ It is **not** the implementation plan — per-checkpoint work was tracked in `do
 - ✅ **Bundle-data coverage** — BUG-3/4/5 fixed in C3 (React SPA `static/`, codebook YAMLs, llm/prompts all now hard-required in the spec). `check-bundle-manifest.sh` regression gate (BUG-6) added as `build-all.sh` pre-flight. `bristlenose doctor --self-test` gives the sidecar a runtime self-check path.
 - ✅ **Fail-loud on missing React bundle** — `_mount_prod_report` returns HTTP 500 with a clear error page rather than silently falling back to the deprecated static-render HTML (which masked BUG-3 in the C3 smoke test).
 - ✅ **SECURITY #5 + #8 unblocked** (26 Apr 2026, commits `823f9be` `fdf90dc` `92a1d36` `38808fe`). Both `SecurityChecklist.swift` `#error` directives gone; Release archives compile.
-- ✅ **Zombie cleanup is libproc-only** (`5471b35`, 28 Apr 2026). `proc_listpids` + `proc_pidfdinfo(PROC_PIDFDSOCKETINFO)` replace the `lsof` exec; combined with the earlier `proc_pidpath` replacement for `/bin/ps` (`38808fe`), the entire supervisor path survives the Track A sandbox flip with no further changes.
+- ✅ **Zombie cleanup is libproc-only** (`5471b35`, 28 Apr 2026). `proc_listpids` + `proc_pidfdinfo(PROC_PIDFDSOCKETINFO)` replace the `lsof` exec; combined with the earlier `proc_pidpath` replacement for `/bin/ps` (`38808fe`), the entire supervisor path survives the Track A sandbox flip with no further changes. _Corrected 13 Oct 2026: not the entire path. The orphan-attach probe (`PipelineRunner.aliveOwnedRunPID`) kept two `/bin/ps` execs, which the sandbox refused on every launch from 14 Jul (`Operation not permitted`, measured 12 Oct 2026 from the sandboxed Debug test host); the refusal read as "not ours" and deleted the PID file, so a relaunch mid-run never re-attached. Libproc with a start-time token since `ac1415fc`; `design-subprocess-lifecycle.md` carries the as-shipped format._
 - 🟡 **C3 smoke test (manual, Step 6)** parked for human — Xcode Cmd+R with a throwaway Anthropic key; procedure in `~/.claude/plans/c3-closeout.md`.
 - ✅ Bundle size 425 MB (S3 torch eviction landed 4 May 2026 — torch + onnxruntime + the four upstream torch importers excluded; mlx packaging fixed via `collect_all`). See §"Bundle-size findings".
 - ✅ **`com.apple.security.inherit`** verified end-to-end through Track A — A1 added the key (`cd4a5c6` on `sandbox-debug`), A1c confirmed the bundled sidecar spawns under inherited sandbox, A2 (`49cb600` on `track-a-a2-network-server`) confirmed FastAPI `bind()` on 127.0.0.1:9131 succeeds with the parent's `network.server` reaching the child via `inherit`. Sidecar requests no sandbox keys of its own.
@@ -107,7 +108,7 @@ Implications:
 
 ### What wasn't tested
 
-- **App Sandbox.** ~~Hardened Runtime fires without the sandbox; the sandbox only engages when the parent `.app` opts in. Track A will re-exercise the MVP flow with sandbox on and enumerate file/network/bookmark entitlements from Console `deny(1) …` entries.~~ **Updated 1 May 2026:** Track A has now exercised the MVP flow with sandbox on for Debug builds — A1 (29 Apr) added the `app-sandbox` + `inherit` baseline and cleared the bookmark XPC deny via `files.user-selected.read-write`; A1c (30 Apr) verified bundled-sidecar spawn under inherited sandbox and surfaced the `network-bind` deny on 9131; A2 (1 May, this branch) granted `network.server` and verified `bind()` succeeds. Beats 1 + 3 reachable end-to-end under sandbox-on Debug. **Still not tested under sandbox-on:** beats 6+ (pipeline run — gated by an unrelated stale code path in `PipelineRunner.findBristlenoseBinary()` that wasn't migrated to `SidecarMode.resolve()` when C1 landed); FFmpeg subprocess; Whisper model download; LLM call telemetry path; Release config sandbox flip.
+- **App Sandbox.** ~~Hardened Runtime fires without the sandbox; the sandbox only engages when the parent `.app` opts in. Track A will re-exercise the MVP flow with sandbox on and enumerate file/network/bookmark entitlements from Console `deny(1) …` entries.~~ **Updated 1 May 2026:** Track A has now exercised the MVP flow with sandbox on for Debug builds — A1 (29 Apr) added the `app-sandbox` + `inherit` baseline and cleared the bookmark XPC deny via `files.user-selected.read-write`; A1c (30 Apr) verified bundled-sidecar spawn under inherited sandbox and surfaced the `network-bind` deny on 9131; A2 (1 May, this branch) granted `network.server` and verified `bind()` succeeds. Beats 1 + 3 reachable end-to-end under sandbox-on Debug. ~~**Still not tested under sandbox-on:** beats 6+ (pipeline run — gated by an unrelated stale code path in `PipelineRunner.findBristlenoseBinary()` that wasn't migrated to `SidecarMode.resolve()` when C1 landed); FFmpeg subprocess; Whisper model download; LLM call telemetry path; Release config sandbox flip.~~ _All exercised since: Release sandbox flipped 2 Jul 2026 (entitlement table above), and every TestFlight build from 0.20.0 runs the full pipeline sandboxed. Two things the sandbox was found to refuse that nothing here predicted: `Process()` exec of `/bin/ps` (orphan attach, fixed 12 Oct 2026) and `/usr/bin/security` (the CLI keychain path, `design-keychain.md`). Measured 13 Oct 2026: a security-scoped extension follows a same-volume Finder rename of the granted folder, and the bookmark minted at the new path resolves from a cold relaunch._
 - **Grandchildren.** FFmpeg launched by Python launched by Swift — signed separately per C2; their entitlement requirements will be audited when the trimmed FFmpeg build lands.
 - **Actual transcription.** The spike exercised `bristlenose serve` only — DB init, static routing, auth middleware. MLX inference was not run. If mlx-whisper turns out to need an extra key at model-load time, it'll surface in C1 when the integration test harness runs a real 10 s clip through.
 
@@ -539,7 +540,7 @@ Lesson from the smoke test: treat "the pipeline produced an artefact" as weak ev
 
 ## Open questions (C2 onwards)
 
-- **What extra entitlements does App Sandbox need?** Track A's violation log will tell us. The sidecar itself only needs `inherit`; all user-facing entitlements (files, network, bookmarks) go on the parent `.app`.
+- ~~**What extra entitlements does App Sandbox need?** Track A's violation log will tell us.~~ _Answered — the entitlement table above is the set, both configs sandboxed since 2 Jul 2026._ The sidecar itself only needs `inherit`; all user-facing entitlements (files, network, bookmarks) go on the parent `.app`.
 - **Does mlx_whisper need any runtime-allow keys?** Not observed in C0 (no inference run). Surface in C2 integration test.
 - **What happens when the user's Mac has no Metal GPU support** (e.g. x86_64 Mac running Rosetta on the arm64 sidecar)? The sidecar is `target_arch="arm64"`; Rosetta shouldn't apply. Still worth a compatibility matrix.
 

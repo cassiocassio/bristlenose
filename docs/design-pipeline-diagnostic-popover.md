@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-09-28
-trued-against: HEAD@main (7916e109) on 2026-09-28 (NO_SPEECH definition only; the glyph rule + files popover last trued 2026-08-27 at 2ac83f6d)
+last-trued: 2026-10-13
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 ---
 
 > **Trued 27 Aug 2026.** Two rows in the state table below had drifted in
@@ -19,7 +19,10 @@ trued-against: HEAD@main (7916e109) on 2026-09-28 (NO_SPEECH definition only; th
 > stopped is not news. The rule, and the table of which states earn a glyph and
 > which earn a door, is in `docs/design-desktop-project-status.md` §"The glyph
 > rule". A second popover — `ProjectFilesPopover` — now shares this surface for
-> data drift; same shell, same anchoring, different body.
+> data drift; same shell, same anchoring, different body. _Since 12 Oct 2026 it
+> also carries the one **error**-kind data state, `databaseForked` (the report
+> database holds a second project row): one sentence, no file rows, and no
+> Analyse button, because the only way out is Re-analyse… (`eb8509e1`)._
 
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`) — the toolbar pill was deleted.**
@@ -79,6 +82,7 @@ trued-against: HEAD@main (7916e109) on 2026-09-28 (NO_SPEECH definition only; th
 
 ## Changelog
 
+- _2026-10-13_ — trued up: the shared-surface banner names the forked-database state; the flowchart gains the data-state route. Anchors: `SubtitleDelta.databaseForked`, `ProjectFilesPopover.databaseForked`, `eb8509e1`.
 - _2026-09-28_ — **`.unreachable(.unreadable)` offers Locate… in Show Log's place.** The folder exists but the sandbox denies every read — a lost folder permission — and the log lives in that folder, so Show Log failed with a Finder permission alert. Locate… is the only remedy (a fresh security-scoped bookmark), and it was offered only to `.cantFind`, because availability asks whether the path *exists* and the sandbox answers that without a grant. Same verb added to both sidebars' context menus and the menu bar; when the folder is still at its path, Locate… opens the panel on it rather than trying Spotlight, whose URL carries no grant. A Locate re-scans the project so the row clears without a relaunch, and a failed bookmark is now logged (`project-index`) rather than stored as nil in silence. Gate: `PipelineState.needsFolderAccess`; pinned by `FolderAccessStateTests.swift`. (`a54c4dec`)
 - _2026-08-22_ — **The reason column started speaking the reader's language.** The pane was half-translated and had been since it shipped: header, count line, bucket labels and Show Log all resolved through `i18n.t`, while the sentence that actually says *why a participant is missing from the findings* rendered English in all 21 non-en locales. Not an oversight — there was nothing to translate **from**. All eight refusals share one `category`, and the discriminator lived only in the English prose of `Cause.message`, so the pane had no key to look up. `refusals.py` had promised the opposite in a comment since Aug 2026 — *"the user-facing surfaces localise from the reason, not from this text"* — describing a field that did not exist. It does now: `Cause.reason` carries `UnusableReason` on the wire (Python `events.py`, Swift `PipelineSummary.swift`, contract fixture **v7** with `run_completed_partial_refusals`, the first scenario to pin a refusal at all — the ingest bucket had shipped uncovered by that contract). `message` stays English on purpose: the events log is a forensic record, so a run analysed while the UI was German must not read as German forever, and `formatDiagnosticPlaintext` keeps the raw English so a pasted bug report reads the same whatever the reporter's language. **Three blind spots made this invisible.** `check-locales.py` diffs each locale against English and so cannot report a key English lacks; `test_pipeline_diagnostic_locale_keys.py` checks hardcoded allow-lists; and `test_swift_contract_parity.py` compares only the *intersection* of fields, so adding `reason` to Python alone would have passed every gate in the repo. The new locale test parametrises over `UnusableReason` itself, which closes the first two for this family — a ninth reason cannot ship without 21 translations. Anchors: `events.py::Cause.reason`, `ProjectDiagnosticPopover.reasonKey` / `.localisedReason`, `IngestOutcomeTests::ReasonLocalisationTests` (21 locales × 8 reasons, plus zh-Hant-HK inheriting rather than dropping to English). Does **not** touch the adjacent open defect in the banner above — a refusal-only run still collapses to `.unknown` and the pill still reads "Run had failures". Find it: `git log -S'localisedReason' --`.
 - _2026-08-22_ — **The popover envelope stopped being fixed, and this doc stopped saying it was.** Height now follows content, 360 stays nailed, 320 becomes a ceiling with a scroller only past it. Two sections here asserted the opposite and both are rewritten: the cross-surface conventions list (which also cited `PipelineActivityItem.swift` ≈ 59–63, a file deleted with the pill) and the Resizeability paragraph under Future direction — which had *already predicted* this outcome, listing "a capped height with internal scroll" as the mitigation, so the rewrite reads as that option being taken rather than a reversal. The livelock provenance is preserved in both, as history: the fixed frame was mitigating an NSPopover resize-animation livelock in the live pill's `ProgressView`, and both the pill and the `ProgressView` are gone, leaving a mitigation with nothing to defend. Reasoning, the behaviour ladder, six failure modes and the mockup: [`design-pipeline-popover-sizing.md`](design-pipeline-popover-sizing.md). Commit `5a380eab`.
@@ -498,6 +502,14 @@ rendered as "Rate limited", telling a bankrupt account to wait.
 The same string is the popover's `.headline` line. Don't drift them.
 
 ## Adding a new message — flowchart
+
+> _13 Oct 2026: a new **data-state** delta — something the watcher or the readers
+> observe about the project, not something a run reported — takes a different
+> route from the steps below: a `SubtitleDelta` case, its place in `pickDelta`'s
+> precedence, an `UnanalysedState` field the watcher fills, a `ProjectFilesPopover`
+> body, and two locale keys (`chrome.<name>`, `chrome.filesPopover.<name>Footer`).
+> The forked-database delta of 12 Oct 2026 is the worked example; the severity
+> and glyph rules live in `design-desktop-project-status.md`._
 
 When you find yourself wanting to surface a new error, status, or note,
 **read these questions before writing copy**:

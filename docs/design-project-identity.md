@@ -1,7 +1,12 @@
 ---
 status: decided
 last-trued: 2026-10-13
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 ---
+
+## Changelog
+
+- _2026-10-13_ — trued up: §2 carries the live S9 reproduction and the watcher route; §7 the Bin rule; §10 the WAL lag on the fork signal. Anchors: register rows 29, 35; `eb8509e1`.
 
 # Project identity without paths
 
@@ -44,7 +49,7 @@ failure.
 
 | Surface | Today | Fails when |
 |---|---|---|
-| Server project row | `importer._find_or_create_project` matches `input_dir` and `output_dir` by resolved path | folder moved with the app closed (row 29), copied (row 30) |
+| Server project row | `importer._find_or_create_project` matches `input_dir` and `output_dir` by resolved path | folder moved with the app closed, or renamed with it open — the app follows and the restarted serve re-imports under the new path (row 29; measured 13 Oct 2026: two rows, one session each, sidebar *Report out of date*), copied (row 30) |
 | Recording on disk | `SourceFile.path`, absolute; `/media/` rooted at the interview folder | folder moved, file renamed, file moved into a subfolder |
 | Session number | `sessions.json` keys on the filename stem (`s01_ingest.session_key`) | file renamed: new session id, stars and tags orphaned (row 31) |
 | Transcription cache | manifest `input_hash` = (path inside the folder, size, mtime) since 12 Oct 2026; absolute path before | file renamed or moved within the folder: Whisper paid again |
@@ -54,10 +59,13 @@ failure.
 | Re-drop | `findByPath`, exact string | any other spelling of the same folder |
 
 What already points the right way: the Mac's bookmark resolution rewrites
-`path` when the folder moved on the same volume, the pipeline's transcription
-fingerprint no longer carries the absolute path, and the importer heals a
-legacy row's spelling. Each is a patch on a path. This note replaces the
-foundation under them.
+`path` when the folder moved on the same volume, the folder watcher follows a
+rename while the app runs (`presentedItemDidMove` → `relocateProject`, and the
+security-scoped extension follows the folder — measured 13 Oct 2026, same
+volume; cross-volume untested), the pipeline's transcription fingerprint no
+longer carries the absolute path, and the importer heals a legacy row's
+spelling. Each is a patch on a path, and the Mac's following is what makes
+row 29 routine rather than rare. This note replaces the foundation under them.
 
 ## 3. The study marker
 
@@ -223,7 +231,9 @@ location, never the stored `input_dir`.
 
 On the Mac, the order is bookmark first (free, and it already follows a
 same-volume move), then the marker to confirm, then phase 6's search across
-volumes. `Project.resourceIdentifier` keeps its one job, cheap dedupe of a
+volumes — and never into the Bin: a destination under `.Trash` or `.Trashes`
+is a deletion, not a move (`ProjectIndex.isInTrash`, 12 Oct 2026), so marker
+healing refuses it as the watcher already does. `Project.resourceIdentifier` keeps its one job, cheap dedupe of a
 drop, and stops being treated as identity.
 
 ## 8. What Re-analyse carries over
@@ -303,6 +313,8 @@ every step is a no-op when already done.
    a tie goes to the latest `imported_at`. The deleted rows' sessions are
    re-imported from the output on the next run, which is where their data
    came from. The kept row's id is whatever it is; §4's resolver reads it.
+   The Mac's fork signal reads the row count with `?immutable=1`, so after a
+   collapse it stays on until the WAL is checkpointed (register row 35).
 3. **Registry v2 to v3** as §6 describes, as far as the bytes on disk allow.
 4. **Manifest fingerprints** are accepted in their old form once and
    rewritten (`fresh_session_ids(accept=…)`, already built).

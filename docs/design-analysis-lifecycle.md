@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-09-12
-trued-against: HEAD@main (42bf545f) on 2026-09-12 (per-session resume; outcome 3c)
+last-trued: 2026-10-13
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 ---
 
 > **Trued 27 Aug 2026.** The affordance inventory below named *the sheet* as the
@@ -14,6 +14,7 @@ trued-against: HEAD@main (42bf545f) on 2026-09-12 (per-session resume; outcome 3
 
 ## Changelog
 
+- _2026-10-13_ — trued up: §2 names the `SubtitleDelta` cases including the forked state and adds the Forked transition; the Re-analyse sequence says stash, not delete. Anchors: `ProjectSubtitle.swift` `SubtitleDelta`, register row 29.
 - _2026-10-04_ — **Analyse** gained a fourth reason to appear: an analysed project
   whose Discussion lens has no record, or whose guide folder changed after the
   record was written (`UnanalysedState.discussionWanted`, measured by
@@ -176,7 +177,10 @@ Saying it would let the researcher choose.
 States are the project row's, as the researcher sees it. The Swift types behind
 them are `ProjectAvailability` (`ready` / `cantFind` / `inCloud`) and
 `SubtitleVariant` (`ready` / `failed` / `failedDiagnostic` / `completedPartial`
-/ `stopping` / `deltaOnly` / `placeholder`).
+/ `stopping` / `deltaOnly` / `placeholder`); `deltaOnly` carries a `SubtitleDelta`
+(`unanalysed` / `missing` / `databaseForked` — the last since 12 Oct 2026, an
+**error**-kind state: the report database holds a second project row, so the
+report is reading a row the last run did not write).
 
 ```mermaid
 stateDiagram-v2
@@ -213,6 +217,8 @@ stateDiagram-v2
 
     Analysed --> Unreachable: volume unmounted / moved / evicted
     Unreachable --> Analysed: Locate… or remount
+    Analysed --> Forked: folder renamed while serving — the restarted serve re-imports under the new path (register row 29)
+    Forked --> Running: Re-analyse (Analyse is hidden)
 
     Failed --> [*]: Remove from Sidebar
     Analysed --> [*]: Remove from Sidebar
@@ -297,7 +303,7 @@ sequenceDiagram
     end
     C->>PR: run(project, clean: true)
     PR->>SC: run <path> --no-serve --clean
-    SC->>SC: delete output, full pipeline
+    SC->>SC: set output aside (stash), full pipeline
     SC-->>UI: run_completed
 ```
 

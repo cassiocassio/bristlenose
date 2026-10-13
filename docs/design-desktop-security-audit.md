@@ -1,14 +1,20 @@
 ---
 status: partial
-last-trued: 2026-09-28
-trued-against: HEAD@main on 2026-09-28 (d314e3b7)
+last-trued: 2026-10-13
+trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 ---
+
+## Changelog
+
+- _2026-10-13_ — trued up: a dated banner records the PID-file trust model, the damaged-file copy, the bookmark scope leak and the measured rename-following; no finding renumbered. Anchors: `ac1415fc`, `eb8509e1`, register rows 21–25, 35–40.
 
 # Desktop App Security Audit — March 2026
 
 > **Trued 28 Sep 2026 (--topic serve file routes)** — Attack Surface item 10 said the server middleware was confirmed clean; four exposures were found and fixed behind the same guards on 28 Sep, recorded as a postscript under the item with the original verdict kept. The "Bearer token auth" row now names the `Host` check and the recordings-only `/media/` guard. **Known stale, not trued this pass (different topic):** Blocker #2 and Constraint #16 / Opportunity O still describe App Sandbox as in progress (it has shipped since 0.20.0); #13 / Opportunity M's `CFBundleVersion = 1`; Opportunity I (consent dialog — shipped, see #4); the Swift file and call-site counts in Attack Surface items 1–2.
 
 > **Trued 4 Sep 2026 (--topic keychain)** — the Keychain row records the login-keychain copy the app now keeps of each CLI-shared key (a deliberate widening: readable past macOS's ACL dialog, which the data-protection item never was), the environment-scrubbing row stops saying "no cloud tokens" (the Miro token is injected), and the Settings row's "prompt-free" is scoped to the app's own items. Attack-surface item 3 now points at the row rather than restating it. Front-matter added; this audit had none.
+
+> **Trued 13 Oct 2026 (--topic lifecycle, Mac half)** — four observations from the 12 Oct lifecycle work and its review, none a new finding number: **(a)** the orphan-attach PID file (`<App Support>/Bristlenose/pids/<uuid>.pid`) is now `"<pid>\n<start-token>"` and its verdict is three-valued; an *indeterminate* read (libproc refused, or the `noStartToken` sentinel) never upgrades a pid to "ours" and never deletes the file — a verifier that cannot verify must not act (`PipelineRunner.ownedRunVerdict`, `ac1415fc`, `eb8509e1`). Finding #7's "sandbox blocks process enumeration" is still true for `proc_listpids`; `proc_pidinfo` on a known pid works under the sandbox, measured. **(b)** A `projects.json` that fails to decode is kept beside the original as `projects.json.damaged-<timestamp>` — it holds the same folder paths and display names as the live file, in the same Application Support directory, so no change of sensitivity, but a second copy. **(c)** `ProjectIndex.resolveBookmark` starts a security scope it never stops, at launch and on volume mount; the per-activation multiplier was removed (`eb8509e1`), the base leak remains, bounded by relaunch (register row 39). **(d)** Measured 13 Oct 2026: a security-scoped extension follows a same-volume Finder rename of the granted folder, so following a rename needs no new grant; a move into the Bin is deliberately not followed (`ProjectIndex.isInTrash`). Register: `design-lifecycle-failure-modes.md` rows 21–25, 35–40.
 
 > **Trued 7 Jun 2026** — reconciled the desktop credential surface to the data-protection keychain migration (`8b2ef51`, 2 Jun): the Keychain rows below now reflect `kSecAttrAccessibleAfterFirstUnlock` + `kSecUseDataProtectionKeychain` + team-scoped `keychain-access-groups` + **deliberate iCloud Keychain sync** (which *reverses* Opportunity S). The LLM Settings tab's new eager all-providers Keychain read (provider-resolution slice, `1fe904e`) is enumerated as a cleared item, and the verdict cache now also holds a sticky `.outOfCredit`. Opportunity B (PID-before-zombie-kill) marked obviated by Finding #7. See `design-keychain.md` for the storage-model detail.
 

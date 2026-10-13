@@ -12,6 +12,8 @@ needs that index and adds almost no cost on top of it. Method and every number:
 [`experiments/screens-lens/README.md`](../experiments/screens-lens/README.md). Prior-art survey with
 citations: [`experiments/screens-lens/prior-art.md`](../experiments/screens-lens/prior-art.md).
 Mockup: [`docs/mockups/screens-lens.html`](mockups/screens-lens.html).
+Speculative series, eleven further ideas each marked grounded, plausible or speculative:
+[`docs/mockups/screens-lens-speculative.html`](mockups/screens-lens-speculative.html).
 
 ## 1. The idea
 

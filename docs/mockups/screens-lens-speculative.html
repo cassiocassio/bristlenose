@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screens lens — speculative series</title>
+<style>
+/* Shipped tokens inlined verbatim from docs/mockups/codebook-library-states.html
+   (itself copied from bristlenose/theme/tokens.css + colors/palette-*.css). */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* group tints (tokens.css) — shared across palettes */
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+:root {
+  --bn-sentiment-frustration: light-dark(#ea580c, #fb923c);
+  --bn-sentiment-confusion:   light-dark(#dc2626, #f87171);
+  --bn-sentiment-doubt:       light-dark(#7c3aed, #a78bfa);
+  --bn-sentiment-satisfaction:light-dark(#16a34a, #4ade80);
+  --bn-sentiment-delight:     light-dark(#059669, #34d399);
+  --mock-hatch: light-dark(#f6f3ea, #1d1b16);
+  --mock-hatch-line: light-dark(#e9e2cf, #2a261d);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text); font-family:var(--bn-font-body);
+  font-size:var(--bn-text-body); line-height:1.5; -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1180px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { color:var(--bn-colour-muted); max-width:72ch; margin:.4rem 0; }
+.controls { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; margin:1rem 0 0; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.key { display:flex; gap:1.2rem; flex-wrap:wrap; font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:1rem; }
+.key span::before { content:""; display:inline-block; width:14px; height:10px; margin-right:.4rem; vertical-align:-1px; border:1px solid var(--bn-colour-border); }
+.key .k-art::before { background:var(--bn-colour-bg); }
+.key .k-com::before { background:repeating-linear-gradient(45deg,var(--mock-hatch),var(--mock-hatch) 4px,var(--mock-hatch-line) 4px,var(--mock-hatch-line) 5px); }
+
+.bench { margin:3rem 0; }
+.bench h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .25rem; }
+.bench .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1rem; max-width:78ch; }
+/* artefact frame */
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden; box-shadow:0 1px 3px var(--bn-colour-shadow); }
+.chrome { display:flex; align-items:center; gap:.5rem; padding:.45rem .8rem; background:var(--bn-colour-quote-bg);
+  border-bottom:1px solid var(--bn-colour-border); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-family:var(--bn-font-mono); }
+.chrome i { width:9px; height:9px; border-radius:50%; background:var(--bn-off-track); display:inline-block; }
+.chrome .flag { margin-left:auto; font-family:var(--bn-font-body); }
+.chrome .flag b { font-weight:490; color:var(--bn-sentiment-frustration); }
+.artefact { padding:1.5rem 1.75rem 2rem; background:var(--bn-colour-bg); color:var(--bn-colour-text); }
+/* commentary */
+.commentary { margin-top:1rem; padding:1rem 1.25rem; border-left:3px solid var(--bn-colour-border-hover);
+  background:repeating-linear-gradient(45deg,var(--mock-hatch),var(--mock-hatch) 6px,var(--mock-hatch-line) 6px,var(--mock-hatch-line) 7px);
+  font-size:var(--bn-text-label); line-height:1.55; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+.commentary::before { content:"Commentary — not the product"; display:block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); margin-bottom:.5rem; }
+.commentary p { margin:.35rem 0; max-width:86ch; }
+.commentary ul { margin:.35rem 0; padding-left:1.2rem; max-width:86ch; }
+
+/* ── lens chrome ─────────────────────────────────────────────── */
+.section-heading { display:flex; flex-wrap:wrap; align-items:baseline; gap:1rem; border-bottom:1px solid var(--bn-colour-border); padding-bottom:.5rem; margin-bottom:1rem; }
+.section-heading h1 { font-size:var(--bn-text-title); font-weight:490; margin:0; }
+.section-heading .meta { font-size:var(--bn-text-label); color:var(--bn-colour-muted); }
+.section-heading .seg { margin-left:auto; display:flex; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); overflow:hidden; }
+.section-heading .seg button { font:inherit; font-size:var(--bn-text-label); padding:.2rem .65rem; border:0; background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.section-heading .seg button + button { border-left:1px solid var(--bn-colour-border); }
+.section-heading .seg button.on { background:var(--bn-colour-hover); color:var(--bn-colour-accent); font-weight:490; }
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) .45rem;
+  border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+.muted { color:var(--bn-colour-muted); }
+.small { font-size:var(--bn-text-label); }
+.cap { font-size:var(--bn-text-caption); }
+
+/* ── flow board (step columns) ───────────────────────────────── */
+.board { position:relative; display:grid; grid-auto-flow:column; grid-auto-columns:minmax(150px,1fr); gap:1.6rem; padding:.25rem 0 .5rem; overflow-x:auto; }
+.board svg.edges { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+.col { display:flex; flex-direction:column; gap:1rem; position:relative; z-index:1; }
+.col-h { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:490; height:1rem; }
+.card { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); background:var(--bn-colour-bg); padding:.45rem; cursor:pointer;
+  transition:border-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast); text-align:left; font:inherit; color:inherit; width:100%; }
+.card:hover { border-color:var(--bn-colour-border-hover); }
+.card.sel { border-color:var(--bn-colour-accent); box-shadow:0 0 0 2px light-dark(rgba(0,122,255,.18), rgba(10,132,255,.35)); }
+.card:focus-visible { outline:2px solid var(--bn-colour-accent); outline-offset:2px; }
+.card .name { font-size:var(--bn-text-label); font-weight:490; margin:.4rem .1rem 0; line-height:1.3; }
+.card .url { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); margin:.1rem .1rem 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.card .stats { display:flex; justify-content:space-between; align-items:center; margin:.35rem .1rem 0; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.card .q { color:var(--bn-colour-text); }
+.dots { display:flex; gap:3px; }
+.dots b { width:6px; height:6px; border-radius:50%; background:var(--bn-off-track); }
+.dots b.on { background:var(--bn-colour-accent); }
+.card.dim { opacity:.45; }
+
+/* thumbnail: a wireframe stand-in for the real still (served on demand, never stored) */
+.thumb { aspect-ratio:16/10; border-radius:var(--bn-radius-sm); background:light-dark(#fff,#1b1b1b); border:1px solid var(--bn-colour-border);
+  position:relative; overflow:hidden; }
+.thumb > div { position:absolute; border-radius:1px; }
+.thumb .bar { left:0; right:0; top:0; height:12%; background:var(--bn-colour-badge-bg); }
+.thumb .ln { height:4%; background:light-dark(#d9dde3,#3a3a3a); }
+.thumb .blk { background:light-dark(#e7ebf0,#2a2a2a); }
+.thumb .btn { background:var(--bn-colour-accent); opacity:.75; height:8%; border-radius:2px; }
+.thumb .scrim { inset:0; background:rgba(0,0,0,.28); }
+.thumb .dlg { background:light-dark(#fff,#262626); border:1px solid var(--bn-colour-border); box-shadow:0 2px 6px rgba(0,0,0,.25); }
+
+/* ── detail ──────────────────────────────────────────────────── */
+.detail { display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:1.75rem; margin-top:1.75rem; border-top:1px solid var(--bn-colour-border); padding-top:1.4rem; }
+.dhead { display:grid; grid-template-columns:200px minmax(0,1fr); gap:1.1rem; align-items:start; }
+.dhead h2 { font-size:var(--bn-text-heading); font-weight:490; margin:0; }
+.dhead .facts { display:flex; flex-wrap:wrap; gap:.35rem 1.1rem; font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.35rem; }
+.dhead .facts b { color:var(--bn-colour-text); font-weight:490; }
+.states { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.7rem; }
+.state { font:inherit; font-size:var(--bn-text-label); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); padding:.15rem .7rem; cursor:pointer; }
+.state.on { border-color:var(--bn-colour-accent); color:var(--bn-colour-accent); background:var(--bn-colour-hover); }
+.state .n { color:var(--bn-colour-muted); margin-left:.3rem; font-size:var(--bn-text-caption); }
+.ptrack { margin-top:.8rem; display:grid; grid-template-columns:2.3rem 1fr; gap:.25rem .5rem; align-items:center; font-size:var(--bn-text-caption); }
+.ptrack .lane { position:relative; height:10px; background:var(--bn-colour-quote-bg); border-radius:2px; }
+.ptrack .lane i { position:absolute; top:0; bottom:0; background:var(--bn-colour-accent); opacity:.65; border-radius:2px; }
+.ptrack .lane i.dlg { background:var(--bn-sentiment-frustration); opacity:.8; }
+blockquote.quote-card { background:var(--bn-colour-quote-bg); border-left:1px solid var(--bn-colour-border); margin:.8rem 0; padding:.75rem 1rem;
+  border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+.quote-row { display:flex; gap:.6rem; align-items:baseline; }
+.timecode { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-accent); flex-shrink:0; }
+.timecode .br { color:var(--bn-colour-muted); }
+.quote-body { flex:1; min-width:0; }
+.quote-meta { display:flex; flex-wrap:wrap; gap:.35rem; align-items:center; margin-top:.45rem; }
+.over { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-left:auto; }
+.over::before { content:"▣ "; }
+.sent { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm); }
+.subh { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); font-weight:490; margin:1.4rem 0 .2rem; display:flex; gap:.6rem; align-items:baseline; }
+.subh .seg2 { margin-left:auto; text-transform:none; letter-spacing:0; font-weight:420; }
+.subh .seg2 a { color:var(--bn-colour-muted); text-decoration:none; margin-left:.6rem; cursor:pointer; }
+.subh .seg2 a.on { color:var(--bn-colour-accent); font-weight:490; }
+.said { font-size:var(--bn-text-label); border-left:2px solid var(--bn-colour-border); padding:.15rem 0 .15rem .7rem; margin:.5rem 0; color:var(--bn-colour-text); }
+.said .who { color:var(--bn-colour-muted); font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); margin-right:.5rem; }
+
+/* tag sidebar (stand-in for organisms/sidebar-tags.css) */
+.mock-sidebar { background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.7rem .8rem; align-self:start; position:sticky; top:1rem; }
+.mock-sidebar h3 { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); font-weight:490; margin:0 0 .5rem; }
+.trow { display:flex; align-items:center; gap:.5rem; padding:.2rem .1rem; cursor:pointer; font-size:var(--bn-text-label); }
+.trow .badge { flex-shrink:1; overflow:hidden; text-overflow:ellipsis; }
+.trow .ct { margin-left:auto; color:var(--bn-colour-muted); font-size:var(--bn-text-caption); font-variant-numeric:tabular-nums; }
+.trow.on .badge { outline:1.5px solid var(--bn-colour-accent); }
+.grp { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:.7rem 0 .2rem; }
+
+/* ── paths frame ─────────────────────────────────────────────── */
+.paths { display:grid; grid-template-columns:2.6rem 1fr 4.5rem; gap:.55rem .8rem; align-items:center; }
+.chain { display:flex; flex-wrap:wrap; gap:3px; align-items:center; }
+.chip { font-size:var(--bn-text-caption); padding:.1rem .5rem; border-radius:var(--bn-radius-sm); white-space:nowrap; border:1px solid transparent; }
+.chip.back { border-color:var(--bn-sentiment-frustration); }
+.chain .arr { color:var(--bn-colour-muted); font-size:var(--bn-text-caption); }
+.legend { display:flex; flex-wrap:wrap; gap:.4rem .9rem; margin-top:1rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+
+/* ── grid frame ──────────────────────────────────────────────── */
+.sgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:1rem; }
+
+/* ── corrections frame ───────────────────────────────────────── */
+.menu { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); box-shadow:0 8px 24px var(--bn-colour-shadow);
+  padding:.3rem 0; width:230px; font-size:var(--bn-text-label); }
+.menu div { padding:.25rem .9rem; }
+.menu div:hover { background:var(--bn-colour-accent); color:#fff; }
+.menu hr { border:0; border-top:1px solid var(--bn-colour-border); margin:.3rem 0; }
+.row2 { display:flex; gap:2rem; flex-wrap:wrap; align-items:flex-start; }
+.empty { border:1px dashed var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:2rem; text-align:center; color:var(--bn-colour-muted); max-width:520px; }
+.empty h3 { font-size:var(--bn-text-body); font-weight:490; color:var(--bn-colour-text); margin:0 0 .4rem; }
+
+@media (max-width:820px) { .artefact { padding:1rem; } .chrome .flag { display:none; } .detail { grid-template-columns:1fr; } .dhead { grid-template-columns:1fr; } .mock-sidebar { position:static; } }
+@media (prefers-reduced-motion:reduce) { .card { transition:none; } }
+/* ── speculative series additions ─────────────────────────────── */
+.toc { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:.4rem 1.2rem; margin:1.2rem 0 0; padding:0; list-style:none; font-size:var(--bn-text-label); }
+.toc a { color:var(--bn-colour-text); text-decoration:none; }
+.toc a:hover { color:var(--bn-colour-accent); }
+.toc .num { font-family:var(--bn-font-mono); color:var(--bn-colour-muted); margin-right:.4rem; }
+.lvl { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:.05rem .45rem; border-radius:var(--bn-radius-pill); border:1px solid currentColor; margin-left:.4rem; white-space:nowrap; }
+.lvl.g { color:var(--bn-sentiment-satisfaction); }
+.lvl.p { color:var(--bn-colour-accent); }
+.lvl.s { color:var(--bn-sentiment-doubt); }
+.chrome .lvl { margin-left:auto; }
+.bench h2 .n { font-family:var(--bn-font-mono); color:var(--bn-colour-muted); font-weight:420; margin-right:.5rem; }
+
+/* 1 grounded sections */
+.qsec { border-top:1px solid var(--bn-colour-border); padding-top:1rem; margin-top:1rem; }
+.qsec:first-child { border-top:0; margin-top:0; padding-top:0; }
+.qsec-h { display:flex; gap:1rem; align-items:flex-start; }
+.qsec-h h3 { font-size:var(--bn-text-heading); font-weight:490; margin:0; }
+.qsec-h .desc { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:.15rem 0 .4rem; }
+.strip { display:flex; gap:6px; margin-left:auto; flex-shrink:0; }
+.strip .thumb { width:84px; }
+.strip figure { margin:0; text-align:center; }
+.strip figcaption { font-size:var(--bn-text-micro); color:var(--bn-colour-muted); margin-top:2px; }
+.said-on { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-left:auto; white-space:nowrap; }
+.said-on.elsewhere { color:var(--bn-sentiment-frustration); }
+
+/* 2 swimlanes */
+.swim svg { width:100%; height:auto; display:block; }
+.swim text { font-family:var(--bn-font-body); fill:var(--bn-colour-muted); font-size:11px; }
+.swim .qdot { cursor:pointer; }
+.swim-legend { display:flex; flex-wrap:wrap; gap:.3rem .9rem; margin-top:.6rem; font-size:var(--bn-text-caption); }
+.swim-legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:.35rem; vertical-align:-1px; background:var(--c); }
+.tip { font-size:var(--bn-text-label); min-height:3.2em; margin-top:.6rem; padding:.5rem .8rem; background:var(--bn-colour-quote-bg); border-left:1px solid var(--bn-colour-border); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+
+/* 3 tree */
+.tree, #a2, #a7 { overflow-x:auto; }
+.tree svg { width:100%; min-width:760px; height:auto; display:block; }
+#a2 svg, #a7 svg { min-width:640px; }
+.tree text { font-family:var(--bn-font-body); font-size:11.5px; fill:var(--bn-colour-text); }
+.tree .k { fill:var(--bn-colour-muted); font-size:10.5px; }
+
+/* 4 matrix */
+#a4 { overflow-x:auto; }
+.mx { border-collapse:collapse; font-size:var(--bn-text-label); }
+.mx th { font-weight:490; color:var(--bn-colour-muted); font-size:var(--bn-text-caption); padding:.25rem .4rem; text-align:left; white-space:nowrap; }
+.mx thead th { writing-mode:vertical-rl; transform:rotate(180deg); text-align:left; height:7.5rem; vertical-align:bottom; }
+.mx td { width:2.6rem; height:2.1rem; text-align:center; border:1px solid var(--bn-colour-bg); font-variant-numeric:tabular-nums; cursor:default; }
+.mx td.back { box-shadow:inset 0 0 0 1.5px var(--bn-sentiment-frustration); }
+
+/* 5 expected path */
+.task { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.9rem 1rem; margin-bottom:1rem; }
+.task-h { display:flex; gap:.8rem; align-items:baseline; flex-wrap:wrap; }
+.task-h b { font-weight:490; }
+.exp { display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin:.5rem 0 .8rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.outcomes { display:grid; grid-template-columns:2.4rem minmax(0,1fr) 6.5rem 4.5rem; gap:.35rem .7rem; align-items:center; }
+.oc { font-size:var(--bn-text-caption); }
+.oc.direct { color:var(--bn-sentiment-satisfaction); }
+.oc.indirect { color:var(--bn-sentiment-surprise, #d97706); }
+.oc.unfinished { color:var(--bn-colour-muted); }
+.lost { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); text-align:right; }
+.lost.hi { color:var(--bn-sentiment-frustration); }
+.explain { grid-column:2 / -1; font-size:var(--bn-text-label); border-left:2px solid var(--bn-colour-border); padding-left:.7rem; margin:-.1rem 0 .3rem; }
+
+/* 6 arrival-aligned */
+.arrv { display:grid; grid-template-columns:2.4rem minmax(0,1fr); gap:.45rem .6rem; align-items:center; }
+.arrv .lane { position:relative; height:26px; background:var(--bn-colour-quote-bg); border-radius:3px; }
+.arrv .lane .stay { position:absolute; top:0; bottom:0; left:0; background:light-dark(oklch(93% .04 340), oklch(38% .07 340)); border-radius:3px; }
+.arrv .lane .dlg { position:absolute; top:3px; bottom:3px; background:var(--bn-sentiment-frustration); opacity:.55; border-radius:2px; }
+.arrv .lane .q { position:absolute; top:50%; width:10px; height:10px; margin:-5px 0 0 -5px; border-radius:50%; border:2px solid var(--bn-colour-bg); cursor:pointer; }
+.axis { display:flex; justify-content:space-between; font-size:var(--bn-text-micro); color:var(--bn-colour-muted); grid-column:2; }
+.band { grid-column:2; display:flex; gap:0; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+
+/* 7 reconciliation */
+.recon svg { width:100%; height:auto; display:block; }
+.recon text { font-family:var(--bn-font-body); font-size:11px; fill:var(--bn-colour-text); }
+.recon .lbl2 { fill:var(--bn-colour-muted); font-size:10.5px; }
+
+/* 8 mark a dialog */
+.markwrap { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:1.4rem; }
+.big .thumb { aspect-ratio:16/10; }
+.sel-box { position:absolute; border:2px dashed var(--bn-colour-accent); background:light-dark(rgba(0,122,255,.06),rgba(10,132,255,.12)); border-radius:3px; }
+.popover { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); box-shadow:0 8px 24px var(--bn-colour-shadow); padding:.8rem .9rem; font-size:var(--bn-text-label); }
+.popover label { display:block; color:var(--bn-colour-muted); font-size:var(--bn-text-caption); margin:.4rem 0 .15rem; }
+.popover input { font:inherit; width:100%; padding:.3rem .5rem; border:1px solid var(--bn-colour-accent); border-radius:var(--bn-radius-sm); background:var(--bn-colour-bg); color:var(--bn-colour-text); }
+.recur { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; margin-top:.6rem; }
+.recur figure { margin:0; font-size:var(--bn-text-micro); color:var(--bn-colour-muted); text-align:center; }
+.recur .thumb { outline:2px solid transparent; }
+.recur .ok .thumb { outline-color:var(--bn-colour-accent); }
+.btnrow { display:flex; gap:.5rem; margin-top:.7rem; justify-content:flex-end; }
+.btn { font:inherit; font-size:var(--bn-text-label); padding:.3rem .8rem; border-radius:var(--bn-radius-md); border:1px solid var(--bn-colour-border); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.btn.primary { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* 9 sessions lane */
+.srow { display:grid; grid-template-columns:2.4rem 6rem minmax(0,1fr); gap:.3rem .7rem; align-items:center; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.trk { position:relative; height:12px; border-radius:2px; background:var(--bn-colour-quote-bg); }
+.trk i { position:absolute; top:0; bottom:0; border-radius:2px; }
+.trk.screens { height:16px; }
+.trk.screens i { cursor:pointer; outline:1px solid var(--bn-colour-bg); }
+.trk.screens i { overflow:hidden; }
+.trk.screens i span { display:block; font-size:var(--bn-text-micro); line-height:16px; padding-left:3px; white-space:nowrap; color:var(--bn-colour-text); }
+.trk.screens i:hover { outline:2px solid var(--bn-colour-accent); z-index:1; }
+
+/* 10 corrections */
+.sugg { display:grid; grid-template-columns:150px 2rem 150px minmax(0,1fr) auto; gap:.8rem; align-items:center; padding:.7rem 0; border-bottom:1px solid var(--bn-colour-border); font-size:var(--bn-text-label); }
+.sugg:last-child { border-bottom:0; }
+.sugg .why { color:var(--bn-colour-muted); font-size:var(--bn-text-caption); }
+.hidden-row { display:flex; gap:.8rem; align-items:center; padding:.6rem .8rem; border:1px dashed var(--bn-colour-border); border-radius:var(--bn-radius-md); margin-top:1rem; font-size:var(--bn-text-label); }
+.blur .thumb { filter:blur(4px); }
+
+/* 11 compare */
+#a11 { overflow-x:auto; }
+.cmp { min-width:640px; display:grid; grid-template-columns:7rem repeat(var(--cols),minmax(0,1fr)); gap:.4rem; align-items:center; font-size:var(--bn-text-caption); }
+.cmp .hdr { font-family:var(--bn-font-mono); color:var(--bn-colour-muted); font-size:var(--bn-text-micro); text-align:center; }
+.cmp .cell { min-height:44px; border-radius:var(--bn-radius-sm); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 .2rem; line-height:1.15; }
+.cmp .none { background:transparent; border:1px dashed var(--bn-colour-border); color:var(--bn-colour-muted); }
+@media (max-width:820px) { .markwrap { grid-template-columns:1fr; } .sugg { grid-template-columns:1fr 1fr; } .sugg > span:nth-child(2) { display:none; } .sugg .why, .sugg > span:last-child { grid-column:1 / -1; } .outcomes { grid-template-columns:2.4rem minmax(0,1fr); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow">Speculative mockups · 13 Oct 2026 · a series, not a plan</div>
+    <h1>Screens — eleven ways to show what was on the shared screen</h1>
+    <p>Companion to <code>docs/design-screens-lens.md</code> and <code>docs/mockups/screens-lens.html</code>. Each frame is one idea, marked by how much evidence is under it: <span class="lvl g">grounded</span> measured on real sessions or shipped elsewhere, <span class="lvl p">plausible</span> follows from the prior art, <span class="lvl s">speculative</span> needs something nobody has measured. Everything shown is invented: a kettle shop, six sessions, participant codes only, wireframe stand-ins for stills.</p>
+    <div class="controls">
+      <span class="lbl">Palette</span><button class="pbtn on" data-pal="default">Default</button><button class="pbtn" data-pal="edo">Edo</button>
+      <span class="lbl" style="margin-left:1rem">Appearance</span><button class="pbtn on" data-cs="light dark">Auto</button><button class="pbtn" data-cs="light">Light</button><button class="pbtn" data-cs="dark">Dark</button>
+    </div>
+    <div class="key"><span class="k-art">Artefact: what would ship</span><span class="k-com">Commentary: why, and what it rests on</span></div>
+    <ol class="toc" id="toc"></ol>
+  </header>
+
+  <section class="bench" id="c1" data-lvl="g" data-t="Grounded sections: the screen beside the section">
+    <h2><span class="n">1</span>Grounded sections: the screen beside the section</h2>
+    <p class="sub">Not a new lens. The Quotes lens's sections, which the pipeline already infers from speech, each gain the screens they were said on, and a quote said somewhere else says so.</p>
+    <div class="frame"><div class="chrome"><i></i><i></i><i></i>&nbsp;/report/quotes/ · Sections<span class="lvl g">grounded</span></div>
+      <div class="artefact" id="a1"></div></div>
+    <div class="commentary">
+      <p>The smallest step that uses the data, and the answer to open question 1 in the design doc. Measured on two real sessions: 14 of 17 and 12 of 15 section quotes were said on the section's most common page, so the strip is right most of the time; the orange "said on" marks the rest, which were usually a remark about the previous page made on the next one. Nothing new to learn: a section already exists, a quote card already exists.</p>
+    </div>
+  </section>
+
+  <section class="bench" id="c2" data-lvl="g" data-t="Swimlanes: every session's screens on one axis">
+    <h2><span class="n">2</span>Swimlanes: every session's screens on one axis</h2>
+    <p class="sub">One row per participant, one colour per screen, quotes as dots above the row. Click a dot.</p>
+    <div class="frame"><div class="chrome"><i></i><i></i><i></i>&nbsp;/report/screens/?layout=lanes<span class="lvl g">grounded</span></div>
+      <div class="artefact swim">
+        <div class="section-heading"><h1>Screens</h1><span class="meta">time from the start of each share</span>
+          <div class="seg"><button class="on" data-scale="abs">Minutes</button><button data-scale="norm">Share length</button></div></div>
+        <div id="a2"></div><div class="swim-legend" id="a2-leg"></div><div class="tip" id="a2-tip">Click a dot to read the quote.</div>
+      </div></div>
+    <div class="commentary">
+      <p>The prior-art survey's recommended small-sample form (swimlanes; Fluxicon's milestone view; CoreFlow's raw-sequence access) and the Sessions timeline's own idiom. It shows what a flow diagram cannot: how long, in what rhythm, and where the talking happened. "Share length" stretches each row to the same width, which lines up the ends of tasks rather than the clock.</p>
+    </div>
+  </section>
+
+  <section class="bench" id="c3" data-lvl="p" data-t="Participant tree: where people diverged">
+    <h2><span class="n">3</span>Participant tree: where people diverged</h2>
+    <p class="sub">Every path from the first screen, merged where it is shared, forked where it is not. Nodes count participants. A screen seen again appears again, further along.</p>
+    <div class="frame"><div class="chrome"><i></i><i></i><i></i>&nbsp;/report/screens/?layout=tree<span class="lvl p">plausible</span></div>
+      <div class="artefact tree"><div id="a3"></div></div></div>
+    <div class="commentary">
+      <p>LifeFlow/CoreFlow prefix trees and Treejack's pietree, both counting people. Unlike a flow graph it cannot invent a loop: a return to the basket is a second basket node on that branch, not an arrow back (van der Aalst's warning about directly-follows graphs). At n = 6 it has at most six leaves. It grows wide with long sessions; folding branches after the first divergence is the obvious control.</p>
+    </div>
+  </section>
+
+  <section class="bench" id="c4" data-lvl="p" data-t="Transition matrix: from here, people went to…">
+    <h2><span class="n">4</span>Transition matrix: from here, people went to…</h2>
+    <p class="sub">Rows are where people were, columns where they went next. Each cell counts participants. Outlined cells go backwards.</p>
+    <div class="frame"><div class="chrome"><i></i><i></i><i></i>&nbsp;/report/screens/?layout=matrix<span class="lvl p">plausible</span></div>
+      <div class="artefact"><div id="a4"></div></div></div>
+    <div class="commentary">
+      <p>MatrixWave's finding: people made fewer errors reading transitions from a matrix than from a Sankey, and preferred it. It scales to twenty screens without edges crossing. It is the least friendly for a first look, and the best for "who went from Delivery back to Basket?" — click-through to those participants' moments would be the point of it.</p>
+    </div>
+  </section>
+
+  <section class="bench" id="c5" data-lvl="p" data-t="Expected path: direct, indirect, unfinished — and lost or exploring?">
+    <h2><span class="n">5</span>Expected path: direct, indirect, unfinished — and lost or exploring?</h2>
+    <p class="sub">The discussion guide's tasks supply the route the researcher expected. Each participant's actual route is scored, and where the score says "lost", what they said decides it.</p>
+    <div class="frame"><div class="chrome"><i></i><i></i><i></i>&nbsp;/report/screens/?view=tasks<span class="lvl p">plausible</span></div>
+      <div class="artefact" id="a5"></div></div>
+    <div class="commentary">
+      <p>Maze's direct / indirect / unfinished, and Smith's lostness (1996): <code>√((N/S − 1)² + (R/N − 1)²)</code> over screens visited S, unique screens N and the minimum R; above 0.5 reads as lost. Smith's own follow-up found a participant above 0.5 who was exploring, not lost — which is exactly what the quote under each flagged row is for. Needs the guide's tasks mapped to screens, which the Discussion lens's guide could supply; the mapping itself is the unbuilt part.</p>
+    </div>
+  </section>
+
+  <section class="bench" id="c6" data-lvl="s" data-t="First seconds: every arrival on one screen, lined up">
+    <h2><span class="n">6</span>First seconds: every arrival on one screen, lined up</h2>
+    <p class="sub">Each participant's first visit to the Basket, aligned at the moment they arrived. Dialogs are orange; quotes are dots, placed by seconds since arrival.</p>
+    <div class="frame"><div class="chrome"><i></i><i></i><i></i>&nbsp;/report/screens/basket/?align=arrival<span class="lvl s">speculative</span></div>
+      <div class="artefact" id="a6"></div></div>
+    <div class="commentary">
+      <p>Nothing in the survey does this; it comes from first-click testing and the "five-second test", turned into a view of real sessions. It answers "what happened in the first moments on this screen", which is when a dialog, a missing price or a misleading label bites. It needs dialog states to be known (the spike could not detect them; see #8) and arrival times good to about the 4-second sampling interval.</p>
+    </div>
+  </section>
+
+  <section class="bench" id="c7" data-lvl="g" data-t="Speech against screen, for one session">
+    <h2><span class="n">7</span>Speech against screen, for one session</h2>
+    <p class="sub">Above the line, the sections the transcript was split into. Below, the screens actually shown. Where they disagree is marked.</p>
+    <div class="frame"><div class="chrome"><i></i><i></i><i></i>&nbsp;/report/sessions/s2/ · Screen and speech<span class="lvl g">grounded</span></div>
+      <div class="artefact recon"><div id="a7"></div><div class="tip" id="a7-tip">Click an orange quote.</div></div></div>
+    <div class="commentary">
+      <p>The measured gap, made visible: speech-detected screen changes caught 2 of 8 page transitions in one real session, and a fifth of section quotes were said on a different page. Ticks under the screens track are screen changes the transcript never marked. This belongs on a session, not the Screens lens: it is a check on the analysis, and the place a researcher would correct a misfiled quote.</p>
+    </div>
+  </section>
+
+  <section class="bench" id="c8" data-lvl="s" data-t="Mark a dialog once, find it everywhere">
+    <h2><span class="n">8</span>Mark a dialog once, find it everywhere</h2>
+    <p class="sub">The researcher draws round a dialog on one still and names it. Bristlenose finds the other times the same text appeared in the same place.</p>
+    <div class="frame"><div class="chrome"><i></i><i></i><i></i>&nbsp;/report/screens/basket/ · Mark a state<span class="lvl s">speculative</span></div>
+      <div class="artefact" id="a8"></div></div>
+    <div class="commentary">
+      <p>The spike's automatic dialog detection found 9 of 21 and 4 of 14. But dialogs recur (one came back five times in a session), and a template of words at fixed places — UiPath's method — is good at finding <i>this</i> dialog again once someone has said what it is. Human-seeded, machine-propagated, every match confirmed: the near-miss (another dialog in the same place) is offered unchecked. Unmeasured: how often the template finds the right ones.</p>
+    </div>
+  </section>
+
+  <section class="bench" id="c9" data-lvl="p" data-t="A screens lane in the Sessions timeline">
+    <h2><span class="n">9</span>A screens lane in the Sessions timeline</h2>
+    <p class="sub">The timeline under each Sessions row gains one lane: which screen was up. Hover names it; click opens Screens at that screen.</p>
+    <div class="frame"><div class="chrome"><i></i><i></i><i></i>&nbsp;/report/sessions/ · timeline<span class="lvl p">plausible</span></div>
+      <div class="artefact" id="a9"></div></div>
+    <div class="commentary">
+      <p>The scene colours already on that timeline say "the screen changed", not "to what". A named lane does both and ties the two lenses together. Cheap once screens exist. The catch is the export: the timeline is embedded in the HTML export and screen names are screen text, so this lane would have to be dropped from the exported copy (it would ride its own server-only route).</p>
+    </div>
+  </section>
+
+  <section class="bench" id="c10" data-lvl="g" data-t="Corrections as suggestions, and the screen you shouldn't see">
+    <h2><span class="n">10</span>Corrections as suggestions, and the screen you shouldn't see</h2>
+    <p class="sub">The derivation proposes merges it was unsure about. A screen seen once, on another site, is hidden and counted.</p>
+    <div class="frame"><div class="chrome"><i></i><i></i><i></i>&nbsp;/report/screens/ · Review screens<span class="lvl g">grounded</span></div>
+      <div class="artefact" id="a10"></div></div>
+    <div class="commentary">
+      <p>Every method mis-merges or over-splits; thresholds don't transfer between products (ICSE 2020). So the uncertain cases become a short review list rather than a silent decision. All three suggestions here are cases the spike met: loading frames, a URL changing before the page, product pages that are one template. The hidden screen is the privacy default from §7 of the design doc: the participant's own inbox should not be a card with a thumbnail.</p>
+    </div>
+  </section>
+
+  <section class="bench" id="c11" data-lvl="s" data-t="Two locales of one site, aligned by address">
+    <h2><span class="n">11</span>Two locales of one site, aligned by address</h2>
+    <p class="sub">Sessions run on the German and UK sites, matched by the shape of the URL rather than the words on the page.</p>
+    <div class="frame"><div class="chrome"><i></i><i></i><i></i>&nbsp;/report/screens/?compare=locale<span class="lvl s">speculative</span></div>
+      <div class="artefact" id="a11"></div></div>
+    <div class="commentary">
+      <p>Measured on two real sessions in two languages: with the locale prefix dropped, six page types and four transitions lined up, where on-screen text shares almost nothing. A multi-market study is the case a researcher can least do by hand. Speculative because two sessions prove the alignment, not that the comparison is useful; and screens a locale has that the other lacks (a planner, a search page) must read as absent, not as zero.</p>
+    </div>
+  </section>
+</div>
+<script>
+// ════ Synthetic study: a fictional kettle shop, six sessions, codes only ════
+const SCREENS = {
+  home:{name:"Home",url:"/",kind:"home",hue:225,sec:"Finding a kettle"},
+  search:{name:"Search results",url:"/search",kind:"list",hue:75,sec:"Finding a kettle"},
+  cat:{name:"Kettles",url:"/c/kettles",kind:"list",hue:130,sec:"Finding a kettle"},
+  pdp:{name:"Product page",url:"/p/*",kind:"pdp",hue:300,sec:"Product details"},
+  basket:{name:"Basket",url:"/basket",kind:"basket",hue:340,sec:"Basket and postcode"},
+  delivery:{name:"Delivery",url:"/checkout/delivery",kind:"form",hue:30,sec:"Delivery slot"},
+  payment:{name:"Payment",url:"/checkout/payment",kind:"form",hue:170,sec:"Paying"},
+};
+const ORDER = ["home","search","cat","pdp","basket","delivery","payment"];
+// visits: [screen, seconds, dialog?] — dialog = [name, from, length] within the visit
+const V = {
+  p1:[["home",40],["cat",70],["pdp",150],["basket",110,["Enter postcode",50,20]],["delivery",160],["payment",70]],
+  p2:[["home",30],["search",25],["home",15],["cat",80],["pdp",120],["basket",140,["Enter postcode",10,30]],["delivery",90,["Choose a date",20,30]],["basket",40],["delivery",120],["payment",60]],
+  p3:[["home",50],["cat",60],["pdp",90],["cat",70],["pdp",130],["basket",150]],
+  p4:[["home",35],["search",40],["pdp",160],["basket",120,["Enter postcode",5,30]],["delivery",100,["Choose a date",30,30]],["basket",30],["delivery",140],["payment",80]],
+  p5:[["home",60],["cat",110],["pdp",200],["basket",170,["Enter postcode",30,30]],["delivery",210,["Choose a date",60,40]]],
+  p6:[["home",45],["search",30],["pdp",110],["basket",100,["Sign in or continue as guest",5,25]],["delivery",130,["Choose a date",40,30]],["basket",50],["delivery",150]],
+};
+const PS = Object.keys(V), N = PS.length;
+// quotes: participant, visit index, seconds into the visit, text, sentiment, section the transcript filed it under
+const Q = [
+  ["p1",1,30,"There are so many kettles. I’d want to filter by size.","doubt","Finding a kettle"],
+  ["p1",2,60,"The reviews are right there, that’s nice.","satisfaction","Product details"],
+  ["p1",3,20,"Two of them is fine. The minus button is tiny, though.","doubt","Basket and postcode"],
+  ["p2",1,10,"Search gives me toasters as well. Odd.","confusion","Finding a kettle"],
+  ["p2",5,25,"I’d expect it to tell me what delivery costs before it asks for my postcode.","frustration","Basket and postcode"],
+  ["p2",7,10,"It went back to the basket? I only wanted to change the date.","frustration","Delivery slot"],
+  ["p3",2,40,"I can’t tell if this is the 1.7 litre one or the small one.","confusion","Product details"],
+  ["p3",3,20,"Going back to compare… they all look the same in the list.","frustration","Product details"],
+  ["p3",5,90,"I’ll stop here. I wouldn’t buy without knowing the delivery.","doubt","Basket and postcode"],
+  ["p4",2,50,"Found it from search straight away.","satisfaction","Finding a kettle"],
+  ["p4",3,15,"Why does it want a postcode? I haven’t decided if I’m buying it yet.","confusion","Basket and postcode"],
+  ["p4",6,40,"Saturday’s there now. Good.","satisfaction","Delivery slot"],
+  ["p5",2,120,"I always read the one-star reviews first.","satisfaction","Product details"],
+  ["p5",3,40,"A postcode, now? Fine.","doubt","Basket and postcode"],
+  ["p5",4,150,"I’m looking for where it says when it’ll actually arrive.","confusion","Delivery slot"],
+  ["p6",3,12,"Oh, continue as guest — good, I really don’t want another account.","satisfaction","Basket and postcode"],
+  ["p6",4,60,"Next-day is three pounds more, fine.","satisfaction","Delivery slot"],
+  ["p6",5,20,"Hang on, I’ve lost my delivery choice.","frustration","Delivery slot"],
+].map(([p,vi,off,text,sent,sec]) => ({p,vi,off,text,sent,sec}));
+const SECTIONS = ["Finding a kettle","Product details","Basket and postcode","Delivery slot","Paying"];
+const SHARE0 = {p1:420,p2:380,p3:510,p4:300,p5:460,p6:350};
+
+// derived
+const starts = p => { let t=0; return V[p].map(([,d]) => { const s=t; t+=d; return s; }); };
+const total = p => V[p].reduce((a,[,d]) => a+d, 0);
+for (const q of Q) { q.screen = V[q.p][q.vi][0]; q.t = starts(q.p)[q.vi] + q.off; q.dialog = (() => { const dl = V[q.p][q.vi][2]; return dl && q.off >= dl[1] && q.off <= dl[1]+dl[2] ? dl[0] : null; })(); }
+const seq = p => V[p].map(v => v[0]).filter((s,i,a) => i===0 || a[i-1]!==s);
+const fill = (h, d=false) => d ? `light-dark(oklch(70% .12 ${h}), oklch(62% .12 ${h}))` : `light-dark(oklch(88% .07 ${h}), oklch(45% .09 ${h}))`;
+const SENT = s => `var(--bn-sentiment-${s})`;
+const mmss = t => `${Math.floor(t/60)}:${String(Math.round(t%60)).padStart(2,"0")}`;
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const tc = t => `<span class="timecode"><span class="br">[</span>${mmss(t)}<span class="br">]</span></span>`;
+const sentBadge = s => `<span class="sent" style="color:${SENT(s)};background:color-mix(in oklch, ${SENT(s)} 12%, transparent)">${s}</span>`;
+function thumb(kind, dialog) {
+  const L = (x,y,w,c="ln") => `<div class="${c}" style="left:${x}%;top:${y}%;width:${w}%"></div>`;
+  let h = `<div class="bar"></div>`;
+  if (kind==="home") h += `<div class="blk" style="left:6%;top:18%;width:88%;height:40%"></div>`+L(6,64,50)+L(6,72,36)+`<div class="blk" style="left:6%;top:80%;width:26%;height:16%"></div><div class="blk" style="left:37%;top:80%;width:26%;height:16%"></div><div class="blk" style="left:68%;top:80%;width:26%;height:16%"></div>`;
+  if (kind==="list") for (let r=0;r<2;r++) for (let c=0;c<4;c++) h += `<div class="blk" style="left:${6+c*23}%;top:${20+r*40}%;width:19%;height:24%"></div>`+L(6+c*23,46+r*40,15);
+  if (kind==="pdp") h += `<div class="blk" style="left:6%;top:18%;width:48%;height:72%"></div>`+L(60,22,30)+L(60,30,20)+L(60,40,32)+L(60,46,28)+`<div class="btn" style="left:60%;top:62%;width:32%"></div>`;
+  if (kind==="basket") h += `<div class="blk" style="left:6%;top:20%;width:14%;height:18%"></div>`+L(24,22,30)+L(24,30,18)+`<div class="blk" style="left:62%;top:18%;width:32%;height:60%"></div><div class="btn" style="left:64%;top:66%;width:28%"></div>`;
+  if (kind==="form") h += L(6,20,30)+`<div class="blk" style="left:6%;top:28%;width:50%;height:9%"></div><div class="blk" style="left:6%;top:42%;width:50%;height:9%"></div><div class="blk" style="left:6%;top:56%;width:50%;height:9%"></div><div class="btn" style="left:6%;top:72%;width:50%"></div><div class="blk" style="left:62%;top:18%;width:32%;height:46%"></div>`;
+  if (kind==="blank") h += `<div class="ln" style="left:40%;top:52%;width:20%;opacity:.5"></div>`;
+  if (kind==="inbox") { h += `<div class="blk" style="left:0;top:12%;width:22%;height:88%"></div>`; for (let i=0;i<7;i++) h += L(26,18+i*11,64); }
+  if (dialog) h += `<div class="scrim"></div><div class="dlg" style="left:${dialog==="alt"?52:28}%;top:24%;width:44%;height:52%"></div>` + (dialog==="alt" ? "" : L(33,32,24)+L(33,40,30)+`<div class="btn" style="left:33%;top:62%;width:34%"></div>`);
+  return h;
+}
+const T = (kind, d, style="") => `<div class="thumb" style="${style}">${thumb(kind,d)}</div>`;
+
+// ════ 1 grounded sections ════
+(function(){
+  const out = [];
+  for (const sec of SECTIONS.slice(1,4)) {
+    const qs = Q.filter(q => q.sec===sec);
+    const on = {}; qs.forEach(q => on[q.screen]=(on[q.screen]||0)+1);
+    const top = Object.entries(on).sort((a,b)=>b[1]-a[1]);
+    const strip = top.map(([s,n]) => `<figure>${T(SCREENS[s].kind)}<figcaption>${SCREENS[s].name} · ${n}</figcaption></figure>`).join("");
+    out.push(`<div class="qsec"><div class="qsec-h"><div><h3>${sec}</h3><div class="desc">${qs.length} quotes from ${new Set(qs.map(q=>q.p)).size} participants</div></div><div class="strip">${strip}</div></div>` +
+      qs.map(q => { const away = q.screen!==top[0][0];
+        return `<blockquote class="quote-card"><div class="quote-row">${tc(SHARE0[q.p]+q.t)}<div class="quote-body">“${esc(q.text)}” <span class="muted small">— ${q.p}</span>
+        <div class="quote-meta">${sentBadge(q.sent)}<span class="said-on ${away?"elsewhere":""}">${away?"said on":"on"} ${SCREENS[q.screen].name}${q.dialog?` · ${q.dialog}`:""}</span></div></div></div></blockquote>`; }).join("") + `</div>`);
+  }
+  document.getElementById("a1").innerHTML = `<div class="section-heading"><h1>Quotes</h1><span class="meta">Sections · ${SECTIONS.length}</span></div>` + out.join("");
+})();
+
+// ════ 2 swimlanes ════
+let scale = "abs";
+function drawSwim() {
+  const W=900, L=46, R=50, rowH=34, top=18, maxT=Math.max(...PS.map(total));
+  let s = `<svg viewBox="0 0 ${W} ${top+PS.length*rowH+24}" role="img" aria-label="Screens over time per participant">`;
+  const x = (p,t) => L + (W-L-R) * (scale==="abs" ? t/maxT : t/total(p));
+  PS.forEach((p,i) => {
+    const y = top + i*rowH; const st = starts(p);
+    s += `<text x="0" y="${y+17}">${p}</text>`;
+    V[p].forEach(([sc,d,dl],k) => {
+      s += `<rect x="${x(p,st[k])}" y="${y+8}" width="${Math.max(1,x(p,st[k]+d)-x(p,st[k])-1)}" height="14" rx="2" style="fill:${fill(SCREENS[sc].hue)}"><title>${SCREENS[sc].name} · ${mmss(d)}</title></rect>`;
+      if (dl) s += `<rect x="${x(p,st[k]+dl[1])}" y="${y+19}" width="${x(p,st[k]+dl[1]+dl[2])-x(p,st[k]+dl[1])}" height="3" style="fill:var(--bn-sentiment-frustration)"><title>${dl[0]}</title></rect>`;
+    });
+    if (V[p].at(-1)[0]!=="payment") s += `<text x="${x(p,total(p))+4}" y="${y+19}" style="font-size:10px">stopped</text>`;
+    Q.filter(q=>q.p===p).forEach(q => { s += `<circle class="qdot" data-q="${Q.indexOf(q)}" cx="${x(p,q.t)}" cy="${y+4}" r="4" style="fill:${SENT(q.sent)};stroke:var(--bn-colour-bg);stroke-width:1.5"/>`; });
+  });
+  if (scale==="abs") for (let m=0;m<=maxT/60;m+=2) s += `<text x="${L+(W-L-R)*m*60/maxT}" y="${top+PS.length*rowH+14}" text-anchor="middle">${m} min</text>`;
+  else ["start","end of share"].forEach((t,k) => s += `<text x="${k?W-R:L}" y="${top+PS.length*rowH+14}" text-anchor="${k?"end":"start"}">${t}</text>`);
+  document.getElementById("a2").innerHTML = s + `</svg>`;
+  document.querySelectorAll("#a2 .qdot").forEach(c => c.addEventListener("click", () => { const q = Q[c.dataset.q];
+    document.getElementById("a2-tip").innerHTML = `${tc(SHARE0[q.p]+q.t)} “${esc(q.text)}” <span class="muted">— ${q.p}, on ${SCREENS[q.screen].name}${q.dialog?` with ${q.dialog}`:""}</span> ${sentBadge(q.sent)}`; }));
+}
+document.getElementById("a2-leg").innerHTML = ORDER.map(s => `<span style="--c:${fill(SCREENS[s].hue)}">${SCREENS[s].name}</span>`).join("") + `<span style="--c:var(--bn-sentiment-frustration)">a dialog over the page</span>`;
+document.querySelectorAll("[data-scale]").forEach(b => b.addEventListener("click", () => { scale=b.dataset.scale; document.querySelectorAll("[data-scale]").forEach(x=>x.classList.toggle("on",x===b)); drawSwim(); }));
+
+// ════ 3 participant tree ════
+(function(){
+  const root = {s:null, ps:[], kids:[]};
+  for (const p of PS) { let n = root; const seen = new Set();
+    for (const s of seq(p)) { let k = n.kids.find(c => c.s===s); if (!k) { k = {s, ps:[], kids:[], again:seen.has(s)}; n.kids.push(k); } k.ps.push(p); seen.add(s); n = k; }
+    n.end = (n.end||[]).concat(p); }
+  const nodes = []; let leaf = 0;
+  (function lay(n, d) { if (n.s) n.d = d; if (!n.kids.length) { n.y = leaf++; } else { n.kids.forEach(k => lay(k, d+1)); n.y = n.kids.reduce((a,k)=>a+k.y,0)/n.kids.length; } if (n.s) nodes.push(n); })(root, -1);
+  const cw = 92, rh = 52, W = Math.max(...nodes.map(n=>n.d))*cw + 120, H = leaf*rh + 10;
+  const X = n => 10 + n.d*cw, Y = n => 14 + n.y*rh;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Paths as a tree">`;
+  (function edges(n) { for (const k of n.kids) { if (n.s) s += `<path d="M${X(n)+78},${Y(n)+12} C${X(n)+86},${Y(n)+12} ${X(k)-8},${Y(k)+12} ${X(k)},${Y(k)+12}" fill="none" style="stroke:var(--bn-colour-accent);stroke-opacity:.35" stroke-width="${1+k.ps.length*1.6}"/>`; edges(k); } })(root);
+  for (const n of nodes) {
+    s += `<rect x="${X(n)}" y="${Y(n)}" width="78" height="24" rx="5" style="fill:${fill(SCREENS[n.s].hue)};${n.again?"stroke:var(--bn-sentiment-frustration);stroke-width:1.5;stroke-dasharray:3 2":""}"><title>${SCREENS[n.s].name}: ${n.ps.join(", ")}</title></rect>`;
+    const endTxt = n.end ? `${n.end.join(" ")} ${n.s==="payment"?"✓":"stopped"}` : "";
+    s += `<text x="${X(n)+5}" y="${Y(n)+15}">${SCREENS[n.s].name.replace("Search results","Search").replace("Product page","Product")}</text><text class="k" x="${X(n)+4}" y="${Y(n)+36}">${n.ps.length} of ${N}${n.again?" · again":""}</text>`;
+    // a path that ends here: beside a leaf, under an inner node (a continuing branch sits to the right)
+    if (n.end) s += n.kids.length ? `<text class="k" x="${X(n)+4}" y="${Y(n)+47}" style="fill:var(--bn-sentiment-frustration)">${endTxt}</text>` : `<text class="k" x="${X(n)+84}" y="${Y(n)+15}">${endTxt}</text>`;
+  }
+  document.getElementById("a3").innerHTML = s + `</svg>`;
+})();
+
+// ════ 4 matrix ════
+(function(){
+  const m = {}; for (const p of PS) { const q = seq(p); for (let i=1;i<q.length;i++) { const k=q[i-1]+">"+q[i]; (m[k] ||= new Set()).add(p); } }
+  let h = `<table class="mx"><thead><tr><th></th>${ORDER.map(s=>`<th>${SCREENS[s].name}</th>`).join("")}</tr></thead><tbody>`;
+  for (const a of ORDER) { h += `<tr><th>${SCREENS[a].name}</th>`;
+    for (const b of ORDER) { const ps = m[a+">"+b]; const k = ps ? ps.size : 0; const back = k && ORDER.indexOf(b) < ORDER.indexOf(a);
+      h += `<td class="${back?"back":""}" style="background:${k?`color-mix(in oklch, var(--bn-colour-accent) ${18+k*13}%, var(--bn-colour-bg))`:"var(--bn-colour-quote-bg)"};color:${k>3?"#fff":"var(--bn-colour-text)"}" title="${k?`${SCREENS[a].name} → ${SCREENS[b].name}: ${[...ps].join(", ")}`:""}">${k||""}</td>`; }
+    h += `</tr>`; }
+  document.getElementById("a4").innerHTML = h + `</tbody></table><p class="cap muted" style="margin-top:.6rem">Participants who made each move, repeats merged · outlined: back to an earlier screen</p>`;
+})();
+
+// ════ 5 expected path ════
+(function(){
+  const TASKS = [
+    {name:"Find a 1.7 litre kettle", exp:["home","cat","pdp"], seg:p => { const q=seq(p); return q.slice(0, q.indexOf("pdp")+1); }, end:"pdp"},
+    {name:"Buy it for delivery on Saturday", exp:["pdp","basket","delivery","payment"], seg:p => { const q=seq(p); return q.slice(q.indexOf("pdp")); }, end:"payment"},
+  ];
+  const chip = s => `<span class="chip" style="background:${fill(SCREENS[s].hue)}">${SCREENS[s].name}</span>`;
+  let h = "";
+  for (const t of TASKS) {
+    h += `<div class="task"><div class="task-h"><b>${t.name}</b><span class="cap muted">from the discussion guide</span></div><div class="exp">Expected ${t.exp.map(chip).join('<span class="arr">›</span>')}</div><div class="outcomes">`;
+    for (const p of PS) {
+      const sg = t.seg(p), S = sg.length, Nn = new Set(sg).size, R = t.exp.length;
+      const L = Math.sqrt((Nn/S-1)**2 + (R/Nn-1)**2);
+      const done = sg.at(-1)===t.end, direct = done && sg.join()===t.exp.join();
+      const oc = direct ? "direct" : done ? "indirect" : "unfinished";
+      const seen = new Set();
+      h += `<span class="badge">${p}</span><div class="chain">${sg.map((s,i)=>{const b=seen.has(s);seen.add(s);return (i?'<span class="arr">›</span>':"")+`<span class="chip ${b?"back":""}" style="background:${fill(SCREENS[s].hue)}">${SCREENS[s].name}</span>`;}).join("")}</div><span class="oc ${oc}">${oc}</span><span class="lost ${L>.5?"hi":""}" title="lostness">${L.toFixed(2)}</span>`;
+      if (L > .4 || (oc==="indirect" && L===0)) {
+        const backQ = Q.filter(q => q.p===p && t.exp.includes(q.screen) || (q.p===p && sg.includes(q.screen))).filter(q => { const before = V[p].slice(0,q.vi).map(v=>v[0]); return before.includes(q.screen) || (L===0 && q.screen===t.end); });
+        const q = backQ[0];
+        const verdict = L > .5 ? "Scores as lost. What they said:" : L > .4 ? "Near the line. What they said:" : "Indirect, not lost:";
+        if (q) h += `<div class="explain"><span class="muted">${verdict}</span> “${esc(q.text)}” ${sentBadge(q.sent)}</div>`;
+      }
+    }
+    h += `</div></div>`;
+  }
+  document.getElementById("a5").innerHTML = `<div class="section-heading"><h1>Tasks</h1><span class="meta">2 tasks · lostness above 0.5 reads as lost</span></div>` + h;
+})();
+
+// ════ 6 arrival-aligned ════
+(function(){
+  const span = 180; let h = `<div class="arrv">`; let within = 0, met = 0, spoke = 0;
+  for (const p of PS) {
+    const vi = V[p].findIndex(v => v[0]==="basket"); if (vi<0) continue;
+    const [, d, dl] = V[p][vi];
+    if (dl) { met++; if (dl[1] <= 10) within++; }
+    const qs = Q.filter(q => q.p===p && q.vi===vi); if (qs.some(q=>q.off<=30)) spoke++;
+    h += `<span class="badge">${p}</span><div class="lane"><div class="stay" style="width:${Math.min(d,span)/span*100}%"></div>` +
+      (dl ? `<div class="dlg" style="left:${dl[1]/span*100}%;width:${dl[2]/span*100}%" title="${dl[0]}"></div>` : "") +
+      qs.map(q => `<div class="q" style="left:${q.off/span*100}%;background:${SENT(q.sent)}" title="${esc(q.text)}"></div>`).join("") + `</div>`;
+  }
+  h += `<span></span><div class="axis"><span>arrived</span><span>0:30</span><span>1:00</span><span>1:30</span><span>2:00</span><span>2:30</span><span>3:00</span></div></div>`;
+  const qs = Q.filter(q => q.screen==="basket" && V[q.p].findIndex(v=>v[0]==="basket")===q.vi).sort((a,b)=>a.off-b.off);
+  document.getElementById("a6").innerHTML = `<div class="section-heading"><h1>Basket</h1><span class="meta">first visit of each participant, aligned at arrival</span></div>
+    <div class="dhead" style="grid-template-columns:150px minmax(0,1fr);margin-bottom:1rem">${T("basket","dlg")}<div class="facts" style="margin:0">
+    <span><b>${met} of ${N}</b> met a dialog here</span><span><b>${within} of ${met}</b> within 10 s of arriving</span><span><b>${spoke} of ${N}</b> spoke in the first 30 s</span></div></div>` + h +
+    `<div class="subh">In order of seconds after arriving</div>` + qs.map(q => `<div class="said"><span class="who">${q.p} +${q.off}s</span>“${esc(q.text)}” ${sentBadge(q.sent)}${q.dialog?` <span class="cap muted">over ${q.dialog}</span>`:""}</div>`).join("");
+})();
+
+// ════ 7 speech vs screen, p2 ════
+(function(){
+  const p = "p2", st = starts(p), tot = total(p), W=900, L=10, R=10;
+  const x = t => L + (W-L-R)*t/tot;
+  const secSpans = [["Finding a kettle",0,150],["Product details",150,270],["Basket and postcode",270,410],["Delivery slot",410,580],["Paying",580,tot]];
+  const secHue = {"Finding a kettle":225,"Product details":300,"Basket and postcode":340,"Delivery slot":30,"Paying":170};
+  let s = `<svg viewBox="0 0 ${W} 150" role="img" aria-label="Transcript sections against observed screens">`;
+  s += `<text class="lbl2" x="${L}" y="12">Sections the transcript was split into</text>`;
+  secSpans.forEach(([n,a,b]) => s += `<rect x="${x(a)}" y="18" width="${x(b)-x(a)-1}" height="22" rx="3" style="fill:${fill(secHue[n])}"/><text x="${x(a)+5}" y="33">${n}</text>`);
+  s += `<text class="lbl2" x="${L}" y="96">Screens shown</text>`;
+  V[p].forEach(([sc,d],k) => s += `<rect x="${x(st[k])}" y="102" width="${x(st[k]+d)-x(st[k])-1}" height="22" rx="3" style="fill:${fill(SCREENS[sc].hue)}"/>` + (d>=40?`<text x="${x(st[k])+4}" y="117">${SCREENS[sc].name.replace("Search results","Search")}</text>`:""));
+  const bounds = secSpans.map(z=>z[1]).slice(1);
+  st.slice(1).forEach((t,k) => { if (!bounds.some(b => Math.abs(b-t) <= 30)) s += `<path d="M${x(t)},128 l-4,8 h8 z" style="fill:var(--bn-sentiment-frustration)"><title>Screen changed to ${SCREENS[V[p][k+1][0]].name}; no section boundary within 30 s</title></path>`; });
+  Q.filter(q=>q.p===p).forEach(q => { const bad = SCREENS[q.screen].sec !== q.sec;
+    s += `<line x1="${x(q.t)}" y1="40" x2="${x(q.t)}" y2="102" style="stroke:${bad?"var(--bn-sentiment-frustration)":"var(--bn-colour-border-hover)"};stroke-width:${bad?2:1}"/><circle class="qdot" data-q="${Q.indexOf(q)}" cx="${x(q.t)}" cy="71" r="${bad?6:4}" style="fill:${bad?"var(--bn-sentiment-frustration)":"var(--bn-colour-muted)"};cursor:pointer;stroke:var(--bn-colour-bg);stroke-width:1.5"/>`; });
+  s += `<text class="lbl2" x="${W-R}" y="146" text-anchor="end">▲ screen changes with no section boundary within 30 s</text>`;
+  document.getElementById("a7").innerHTML = `<div class="section-heading"><h1>Session 2</h1><span class="meta">p2 · share ${mmss(tot)}</span></div>` + s + `</svg>`;
+  document.querySelectorAll("#a7 .qdot").forEach(c => c.addEventListener("click", () => { const q = Q[c.dataset.q]; const bad = SCREENS[q.screen].sec !== q.sec;
+    document.getElementById("a7-tip").innerHTML = `${tc(SHARE0[q.p]+q.t)} “${esc(q.text)}” <span class="muted">— filed under <b>${q.sec}</b>, said on <b>${SCREENS[q.screen].name}</b>.</span>` + (bad ? ` <button class="btn" style="margin-left:.4rem">Move to ${SCREENS[q.screen].sec}</button>` : ""); }));
+})();
+
+// ════ 8 mark a dialog ════
+document.getElementById("a8").innerHTML = `<div class="markwrap"><div><div class="big" style="position:relative">${T("basket","dlg")}<div class="sel-box" style="left:27%;top:23%;width:46%;height:54%"></div></div>
+  <p class="cap muted">p2 · Basket · 11:00 · drag round the part of the screen that is a dialog</p></div>
+  <div><div class="popover"><b>Mark a state of Basket</b><label for="nm">Name</label><input id="nm" value="Enter postcode">
+  <label>Found the same words in the same place</label>
+  <div class="recur">${["p1 +0:50","p4 +0:05","p5 +0:30"].map(c=>`<figure class="ok">${T("basket","dlg")}<figcaption>✓ ${c}</figcaption></figure>`).join("")}</div>
+  <label>Same place, different words</label>
+  <div class="recur"><figure>${T("basket","dlg")}<figcaption>☐ p6 +0:05 · “Sign in or continue as guest”</figcaption></figure></div>
+  <div class="btnrow"><button class="btn">Cancel</button><button class="btn primary">Mark 4 visits</button></div></div></div></div>`;
+
+// ════ 9 sessions lane ════
+(function(){
+  let h = "";
+  for (const p of PS) {
+    const tot = total(p), st = starts(p);
+    h += `<div class="srow"><span class="badge">${p}</span><span>speech</span><div class="trk">${V[p].map(([,d],k)=>`<i style="left:${(st[k]+4)/tot*100}%;width:${(d*.55)/tot*100}%;background:var(--bn-off-track)"></i>`).join("")}</div>
+      <span></span><span>screens</span><div class="trk screens">${V[p].map(([sc,d],k)=>`<i style="left:${st[k]/tot*100}%;width:${d/tot*100}%;background:${fill(SCREENS[sc].hue)}" title="${SCREENS[sc].name} · ${mmss(d)} — open in Screens"><span>${SCREENS[sc].name}</span></i>`).join("")}</div></div><div style="height:.6rem"></div>`;
+  }
+  document.getElementById("a9").innerHTML = `<div class="section-heading"><h1>Sessions</h1><span class="meta">timeline lanes, share only</span></div>` + h;
+})();
+
+// ════ 10 corrections ════
+document.getElementById("a10").innerHTML = `<div class="section-heading"><h1>Review screens</h1><span class="meta">3 suggestions · 1 hidden</span></div>
+  ${[["basket","Basket","blank","Basket (loading)","Blank page with the basket's address, 2 s, then the basket"],
+     ["pdp","Product page · 1.7 l","pdp","Product page · 1.2 l","Same address shape (/p/*), different product. You separated product pages; these two are variants of one kettle"],
+     ["home","Home","list","Kettles","The address changed to /c/kettles 2 s before the page did"]]
+    .map(([a,an,b,bn,why])=>`<div class="sugg"><figure style="margin:0">${T(SCREENS[a]?.kind||a)}<figcaption class="cap">${an}</figcaption></figure><span class="muted" style="text-align:center">⇄</span><figure style="margin:0">${T(SCREENS[b]?.kind||b)}<figcaption class="cap">${bn}</figcaption></figure><span class="why">${why}</span><span style="display:flex;gap:.4rem"><button class="btn">Keep apart</button><button class="btn primary">Merge</button></span></div>`).join("")}
+  <div class="hidden-row"><span class="blur" style="width:90px">${T("inbox")}</span><span><b>1 screen hidden.</b> <span class="muted">Seen by p5 only, for 0:20, on another site. It may be personal.</span></span><button class="btn" style="margin-left:auto">Show</button></div>`;
+
+// ════ 11 compare locales ════
+(function(){
+  const cols = ["/","/c/*","/search","/p/*","/planner","/basket","/checkout/delivery"];
+  const rows = {"de-de · 4 sessions":{"/":["Startseite","0:48"],"/c/*":["Wasserkocher","2:10"],"/p/*":["Produktseite","3:30"],"/planner":["Planer","4:15"],"/basket":["Warenkorb","3:05"],"/checkout/delivery":["Lieferung","4:40"]},
+                "en-gb · 4 sessions":{"/":["Home","0:52"],"/c/*":["Kettles","1:48"],"/search":["Search results","0:41"],"/p/*":["Product page","3:05"],"/basket":["Basket","2:41"],"/checkout/delivery":["Delivery","3:32"]}};
+  const hueOf = {"/":225,"/c/*":130,"/search":75,"/p/*":300,"/planner":260,"/basket":340,"/checkout/delivery":30};
+  let h = `<div class="cmp" style="--cols:${cols.length}"><span></span>${cols.map(c=>`<span class="hdr">${c}</span>`).join("")}`;
+  for (const [r, m] of Object.entries(rows)) h += `<span class="cap">${r}</span>` + cols.map(c => m[c] ? `<span class="cell" style="background:${fill(hueOf[c])}">${m[c][0]}<span class="muted" style="font-size:var(--bn-text-micro)">median ${m[c][1]}</span></span>` : `<span class="cell none">not on this site</span>`).join("");
+  document.getElementById("a11").innerHTML = `<div class="section-heading"><h1>Screens</h1><span class="meta">matched by address, locale prefix dropped</span></div>` + h + `</div>`;
+})();
+
+// ════ toc + controls ════
+document.getElementById("toc").innerHTML = [...document.querySelectorAll(".bench[id]")].map((b,i) =>
+  `<li><a href="#${b.id}"><span class="num">${i+1}</span>${b.dataset.t}</a> <span class="lvl ${b.dataset.lvl}">${{g:"grounded",p:"plausible",s:"speculative"}[b.dataset.lvl]}</span></li>`).join("");
+document.querySelectorAll("[data-pal]").forEach(b => b.addEventListener("click", () => { document.documentElement.dataset.colorTheme=b.dataset.pal; document.querySelectorAll("[data-pal]").forEach(x=>x.classList.toggle("on",x===b)); }));
+document.querySelectorAll("[data-cs]").forEach(b => b.addEventListener("click", () => { document.documentElement.style.colorScheme=b.dataset.cs; document.querySelectorAll("[data-cs]").forEach(x=>x.classList.toggle("on",x===b)); }));
+drawSwim();
+</script>
+</body>
+</html>

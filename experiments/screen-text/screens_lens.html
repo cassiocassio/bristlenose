@@ -170,6 +170,17 @@ body[data-front="click"] .screens-main blockquote.quote-card { cursor: pointer; 
 .screens-main.focus .screens-hl:not(.on),
 .screens-main.focus .screens-leaders :not(.on) { opacity: 0.25; }
 
+/* Rearranging: a card can be picked up by its top edge or by the margin under its timecode (the
+   hand cursor says where), and put anywhere on the board. Where it is put, it stays, on top. */
+.screens-grip { position: absolute; z-index: 1; cursor: grab; }
+.screens-grip-top { left: 0; right: 2rem; top: 0; height: var(--bn-space-sm); }
+.screens-grip-side { left: 0; top: 0; bottom: 0; width: 3.4rem; }
+.screens-free { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.screens-free blockquote.quote-card { position: absolute; margin: 0; pointer-events: auto; }
+.screens-free blockquote.quote-card.bn-focused { z-index: 999 !important; }
+.screens-main.dragging, .screens-main.dragging * { cursor: grabbing !important; user-select: none; }
+.screens-main blockquote.quote-card.is-dragging { box-shadow: var(--bn-focus-shadow), 0 12px 32px var(--bn-colour-shadow); transition: none; }
+
 /* The read-aloud highlight: words said that are also on the screen. */
 mark.screens-read { background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
 .screens-main blockquote.bn-focused mark.screens-read { background: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent); }
@@ -193,6 +204,7 @@ svg.screens-leaders circle { fill: var(--bn-colour-accent); }
   <span><span class="mk-swatch mk-com"></span>commentary</span>
   <label>bring a quote to the front on <select id="mk-front"><option value="hover">hover</option><option value="click">click</option></select></label>
   <label>stacks <select id="mk-stack"><option value="straight">straight</option><option value="diagonal">diagonal</option></select></label>
+  <label><button type="button" id="mk-reset">put this screen's quotes back</button></label>
   <label><input type="checkbox" id="mk-crowd"> nav stress test: fake codes up to p16</label>
   <label><input type="checkbox" id="mk-evidence"> why each quote is pinned</label>
   <label><select id="mk-palette"><option value="default">default palette</option><option value="edo">Edo palette</option></select></label>
@@ -255,6 +267,7 @@ function card(q, owner, opts) {
     '<div class="badges">' + (q.sent ? '<span class="badge badge-ai badge-' + esc(q.sent) + '">' + esc(q.sent) + "</span>" : "") + tags +
     '<span class="badge badge-add" role="button" tabindex="0" aria-label="Add tag">+</span></div>' +
     why + "</div></div>" +
+    '<span class="screens-grip screens-grip-top" aria-hidden="true"></span><span class="screens-grip screens-grip-side" aria-hidden="true"></span>' +
     '<button class="hide-btn" aria-pressed="false" aria-label="Hide this quote">' + HIDE_ICON + "</button>" +
     '<button class="star-btn" aria-pressed="' + m.starred + '" aria-label="Star this quote">&#9733;</button></blockquote>';
 }
@@ -320,7 +333,7 @@ function render() {
     '<p class="screens-sub">' + (byTitle(b) ? "" : "<code>" + esc(b.name) + "</code>") + "<span>" + esc(t.name) + "’s screen at <span class=timecode>" + tc(t.t) + "</span></span><span>" +
     plural(n, "quote", "quotes") + (b.tabs.length > 1 ? " from " + plural(b.tabs.length, "participant", "participants") : "") + '</span><span class="screens-hidden-slot"></span></p>' +
     '<div class="screens-stage"><div class="screens-board"><div class="screens-col screens-col-l"></div><div class="screens-shot"><img alt="" src="' + t.src + '"></div>' +
-    '<div class="screens-col screens-col-r"></div><svg class="screens-leaders"></svg></div></div>' +
+    '<div class="screens-col screens-col-r"></div><svg class="screens-leaders"></svg><div class="screens-free"></div></div></div>' +
     '<div class="screens-loose"></div>';
   main.querySelectorAll(".screens-who button").forEach(bt => bt.onclick = () => go(cur, +bt.dataset.j));
   const img = main.querySelector(".screens-shot img");
@@ -364,6 +377,7 @@ function layout(b, t) {
   }
   items.sort((a, c) => a.box[1] - c.box[1]);
   const cols = { L: [], R: [] };
+  pinInfo = {};
   items.forEach((it, k) => {
     const [x, y, w, h] = it.box, id = "pin" + k;
     const hl = document.createElement("div");
@@ -375,21 +389,11 @@ function layout(b, t) {
       (it.carried ? it.via.text : it.p.line) + (it.carried ? " (carried over, " + it.via.score.toFixed(2) + ")" : "");
     col.insertAdjacentHTML("beforeend", card(it.p, it.owner, { phrase: it.p.phrase, cap: 220, carried: it.carried, why }));
     const el = col.lastElementChild; el.dataset.pin = id;
+    pinInfo[id] = { box: it.box, carried: it.carried };
     cols[side].push({ el, it, id, side, want: Math.max(0, (y + h / 2) * H - 20) });
   });
   const tall = Math.max(H, place(L, cols.L, H), place(R, cols.R, H));
   L.style.height = R.style.height = tall + "px";
-  // Leaders, drawn once the cards have settled.
-  const bb = board.getBoundingClientRect(), sb = shot.getBoundingClientRect();
-  for (const c of [...cols.L, ...cols.R]) {
-    const [x, y, w, h] = c.it.box, eb = c.el.getBoundingClientRect();
-    const nx = c.side === "L" ? eb.right - bb.left : eb.left - bb.left, ny = eb.top - bb.top + 16;
-    const hx = sb.left - bb.left + (c.side === "L" ? x * W - 3 : (x + w) * W + 3), hy = sb.top - bb.top + (y + h / 2) * H;
-    const mx = (nx + hx) / 2;
-    svg.insertAdjacentHTML("beforeend", '<path data-pin="' + c.id + '" class="' + (c.it.carried ? "carried" : "") + '" d="M' + nx + "," + ny +
-      " C" + mx + "," + ny + " " + mx + "," + hy + " " + hx + "," + hy + '"/><circle data-pin="' + c.id + '" cx="' + hx + '" cy="' + hy + '" r="2.5"/>');
-    c.el.dataset.pin = c.id;
-  }
   wireLift();
   // Everything else said on this screen, by every participant: their unpinned quotes, and their
   // pinned ones whose element could not be found on this screengrab.
@@ -400,8 +404,102 @@ function layout(b, t) {
   hiddenCounter(b);
   main.querySelector(".screens-loose").innerHTML = rest.length ?
     rest.map(({ q, o, phrase }) => card(q, o, { phrase })).join("") : "";
+  applyArrangement();
+  fitGrips();
+  drawLeaders();
   wireLift();
 }
+
+// ---------- Leaders: from whichever edge of the card faces its element, wherever the card is.
+let pinInfo = {};
+function drawLeaders() {
+  const board = main.querySelector(".screens-board"), shot = main.querySelector(".screens-shot");
+  if (!board) return;
+  const svg = board.querySelector("svg"), img = shot.querySelector("img");
+  const W = img.clientWidth, H = img.clientHeight;
+  const bb = board.getBoundingClientRect(), sb = shot.getBoundingClientRect();
+  svg.innerHTML = "";
+  for (const el of main.querySelectorAll("blockquote.quote-card[data-pin]")) {
+    const info = pinInfo[el.dataset.pin];
+    if (!info) continue;
+    const [x, y, w, h] = info.box, eb = el.getBoundingClientRect();
+    const bx0 = sb.left - bb.left + x * W - 3, bx1 = sb.left - bb.left + (x + w) * W + 3, hy = sb.top - bb.top + (y + h / 2) * H;
+    const fromRight = (eb.left + eb.right) / 2 - bb.left < (bx0 + bx1) / 2;
+    const nx = fromRight ? eb.right - bb.left : eb.left - bb.left, ny = eb.top - bb.top + 16;
+    const hx = fromRight ? bx0 : bx1, mx = (nx + hx) / 2;
+    const on = el.classList.contains("bn-focused") ? " on" : "";
+    svg.insertAdjacentHTML("beforeend", '<path data-pin="' + el.dataset.pin + '" class="' + (info.carried ? "carried" : "") + on + '" d="M' + nx + "," + ny +
+      " C" + mx + "," + ny + " " + mx + "," + hy + " " + hx + "," + hy + '"/><circle data-pin="' + el.dataset.pin + '" class="' + on.trim() + '" cx="' + hx + '" cy="' + hy + '" r="2.5"/>');
+  }
+}
+
+// ---------- The side grip covers the margin under the timecode, however wide the timecode is.
+function fitGrips() {
+  for (const bq of main.querySelectorAll("blockquote.quote-card")) {
+    const body = bq.querySelector(".quote-body"), grip = bq.querySelector(".screens-grip-side");
+    if (body && grip) grip.style.width = Math.max(24, body.getBoundingClientRect().left - bq.getBoundingClientRect().left - 2) + "px";
+  }
+}
+
+// ---------- Arrangement: where the researcher has put each quote on each screengrab. Positions are
+// fractions of the screengrab, so they survive a resize; the stacking order is the order of placing.
+let arrangement = {};
+try { arrangement = JSON.parse(localStorage.getItem("screens-arrangement") || "{}"); } catch (e) {}
+const saveArrangement = () => { try { localStorage.setItem("screens-arrangement", JSON.stringify(arrangement)); } catch (e) {} };
+const placeKey = q => cur + "/" + tab + "/" + q;
+let zTop = Object.values(arrangement).reduce((m, a) => Math.max(m, a.z || 0), 30);
+
+function boardGeometry() {
+  const board = main.querySelector(".screens-board"), shot = main.querySelector(".screens-shot"), img = shot.querySelector("img");
+  return { board, free: board.querySelector(".screens-free"), sx: shot.offsetLeft, sy: shot.offsetTop, W: img.clientWidth, H: img.clientHeight };
+}
+function applyArrangement() {
+  const g = boardGeometry();
+  let bottom = 0;
+  for (const bq of [...main.querySelectorAll("blockquote.quote-card[data-q]")]) {
+    const a = arrangement[placeKey(bq.dataset.q)];
+    if (!a) continue;
+    const w = bq.getBoundingClientRect().width || 270;
+    g.free.appendChild(bq);
+    Object.assign(bq.style, { left: (g.sx + a.x * g.W) + "px", top: (g.sy + a.y * g.H) + "px", right: "auto", width: w + "px", zIndex: a.z });
+    bottom = Math.max(bottom, g.sy + a.y * g.H + bq.offsetHeight);
+  }
+  g.board.style.minHeight = bottom ? bottom + "px" : "";
+}
+
+main.addEventListener("pointerdown", e => {
+  const grip = e.target.closest(".screens-grip");
+  if (!grip || e.button !== 0) return;
+  e.preventDefault(); e.stopPropagation();
+  const bq = grip.closest("blockquote"), g = boardGeometry(), bb = g.board.getBoundingClientRect(), r = bq.getBoundingClientRect();
+  drop();
+  if (bq.parentElement !== g.free) {
+    g.free.appendChild(bq);
+    Object.assign(bq.style, { left: (r.left - bb.left) + "px", top: (r.top - bb.top) + "px", right: "auto", width: r.width + "px" });
+  }
+  const z = ++zTop;
+  bq.style.zIndex = z;
+  bq.classList.add("is-dragging"); main.classList.add("dragging");
+  const x0 = e.clientX, y0 = e.clientY, l0 = parseFloat(bq.style.left), t0 = parseFloat(bq.style.top);
+  grip.setPointerCapture(e.pointerId);
+  const move = ev => {
+    bq.style.left = (l0 + ev.clientX - x0) + "px";
+    bq.style.top = Math.max(0, t0 + ev.clientY - y0) + "px";
+    drawLeaders();
+  };
+  const up = ev => {
+    grip.removeEventListener("pointermove", move); grip.removeEventListener("pointerup", up); grip.removeEventListener("pointercancel", up);
+    bq.classList.remove("is-dragging"); main.classList.remove("dragging");
+    arrangement[placeKey(bq.dataset.q)] = { x: (parseFloat(bq.style.left) - g.sx) / g.W, y: (parseFloat(bq.style.top) - g.sy) / g.H, z };
+    saveArrangement();
+    const bottom = Math.max(...[...g.free.children].map(c => c.offsetTop + c.offsetHeight), 0);
+    g.board.style.minHeight = bottom + "px";
+    drawLeaders();
+    justDragged = true; setTimeout(() => { justDragged = false; }, 0);
+  };
+  grip.addEventListener("pointermove", move); grip.addEventListener("pointerup", up); grip.addEventListener("pointercancel", up);
+}, true);
+let justDragged = false;
 
 // Two ways to bring a card out of a stack, to try side by side: hover (transient, nothing to
 // undo) or click (it stays up until you click it again, click the screengrab, or press Escape).
@@ -422,10 +520,10 @@ function drop() {
 }
 function wireLift() {
   for (const el of main.querySelectorAll("blockquote.quote-card")) {
-    el.onmouseenter = () => { if (front === "hover") lift(el); };
-    el.onmouseleave = () => { if (front === "hover") drop(); };
+    el.onmouseenter = () => { if (front === "hover" && !main.classList.contains("dragging")) { lift(el); drawLeaders(); } };
+    el.onmouseleave = () => { if (front === "hover" && !main.classList.contains("dragging")) { drop(); drawLeaders(); } };
     el.onclick = e => {
-      if (front !== "click" || e.target.closest(".star-btn, .hide-btn, .badge-add, .tag-input-wrap")) return;
+      if (front !== "click" || justDragged || e.target.closest(".star-btn, .hide-btn, .badge-add, .tag-input-wrap, .screens-grip")) return;
       e.stopPropagation();
       if (el.classList.contains("bn-focused")) drop(); else lift(el);
     };
@@ -547,6 +645,10 @@ document.body.dataset.front = front;
 const stackSel = document.getElementById("mk-stack");
 stackSel.value = stack;
 stackSel.onchange = e => { stack = e.target.value; try { localStorage.setItem("screens-stack", stack); } catch (err) {} render(); };
+document.getElementById("mk-reset").onclick = () => {
+  for (const k of Object.keys(arrangement)) if (k.startsWith(cur + "/" + tab + "/")) delete arrangement[k];
+  saveArrangement(); render();
+};
 document.getElementById("mk-crowd").onchange = e => { crowd = e.target.checked; renderNav(); };
 document.getElementById("mk-evidence").onchange = e => document.body.classList.toggle("mk-evidence", e.target.checked);
 document.getElementById("mk-palette").onchange = e => { document.documentElement.dataset.colorTheme = e.target.value; };

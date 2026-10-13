@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import math
 import re
 import subprocess
 import sys
@@ -78,6 +79,26 @@ def template(path: str, frag: str) -> str:
     p = re.sub(r"/addon-app/.*", "/planner-app", p)
     p = re.sub(r"\d{4,}", "#", p)
     return (p or "/") + (("#" + re.sub(r"/[#\d]+$", "", frag)) if frag else "")
+
+
+ID = re.compile(r"(?:^|-)((?:[a-z]{1,3})?\d{3,})$")
+
+
+def id_key(path: str, frag: str) -> str:
+    """A screen's address, keyed to survive translation: the locale prefix dropped and each slug cut
+    to the ID at its end, if it has one (`/gb/en/cat/jars-tins-15950` -> `/cat/15950`). Shops put a
+    language-independent ID at the end of a slug; the slug's words are the translated part.
+    Measured (same_screen.py): on the UK and German sessions this key marks home, cart and delivery
+    the same and two category pairs and a product pair different, with no errors, where `template`
+    stacked all of them. Fragments are kept as `template` keeps them (single-page apps route there)."""
+    p = re.sub(r"^/[a-z]{2}/[a-z]{2}(?=/|$)", "", path)
+    segs = []
+    for seg in p.strip("/").split("/"):
+        m = ID.search(seg)
+        segs.append(m.group(1) if m else seg)
+    p = "/" + "/".join(x for x in segs if x)
+    p = re.sub(r"/addon-app/.*", "/planner-app", p)
+    return p + (("#" + re.sub(r"/[#\d]+$", "", re.sub(r"\d{4,}", "#", frag))) if frag else "")
 
 
 def title_norm(text: str) -> str | None:
@@ -148,7 +169,7 @@ class Session:
                 continue
             u = url_norm(e["text"])
             if u and y <= 0.15:
-                urls.append((e, template(u["path"], u["frag"]) if u["path"] != "/" or u["frag"] else None))
+                urls.append((e, id_key(u["path"], u["frag"]) if u["path"] != "/" or u["frag"] else None))
             elif not e["sticky"] and (tt := title_norm(e["text"])):
                 titles.append((e, tt, title_suffix(e["text"])))
         # Only titles carrying the session's dominant site suffix ("IKEA UK"): a bookmark such as
@@ -164,6 +185,7 @@ class Session:
         # paths exist they are the key, and titles only link screens across sessions.
         path_samples = sum(1 for _, tp in urls if tp)
         titles_key = path_samples < 0.2 * max(len(urls), 1)
+        self.titles_key = titles_key
         samples = sorted({r[0] + k * self.every for e, _ in urls + titles for r in e["runs"]
                           for k in range(int((r[1] - r[0]) / self.every) + 1)})
         visits: list[dict] = []
@@ -268,6 +290,45 @@ def main() -> None:
             al = sorted(v["aliases"])
             for a in al[1:]:
                 parent[find(a)] = find(al[0])
+    # A session whose address bar shows no path (Safari's default) can only be linked to another's
+    # screens by what is on the page. Rare-word overlap (idf over every screen of every session, words
+    # on a quarter or more of all screens dropped as site template), linked only on a MUTUAL best
+    # match of 0.35 or more. Measured (same_screen.py): the true pair (an iPad home page against the
+    # UK home page) scored 0.39; the next pairs down, a category page against a search page, 0.27.
+    # Text cannot link across languages: there the address is the only key.
+    def key_words(s: Session) -> dict[str, set]:
+        by: dict[str, set] = defaultdict(set)
+        for v in s.visits:
+            for e in s.eps:
+                if (not e["sticky"] and not is_url(e["text"]) and s.inside(e["box"])
+                        and any(r[0] <= v["t1"] + s.every and r[1] >= v["t0"] for r in e["runs"])):
+                    by[v["tp"]] |= {w for w in fold(e["text"]).split() if len(w) >= 3 and not w.isdigit()}
+        df = Counter(w for ws in by.values() for w in ws)
+        chrome = {w for w, c in df.items() if c >= 0.5 * len(by)}
+        return {k: ws - chrome for k, ws in by.items()}
+    kw = {s.tag: key_words(s) for s in sessions}
+    allk = [(t, k) for t, d in kw.items() for k in d]
+    vdf = Counter(w for t, k in allk for w in kw[t][k])
+    idf = {w: math.log(len(allk) / c) for w, c in vdf.items() if c <= 0.25 * len(allk)}
+
+    def rare(a: set, b: set) -> float:
+        a, b = {w for w in a if w in idf}, {w for w in b if w in idf}
+        small = min(sum(idf[w] for w in a), sum(idf[w] for w in b))
+        return sum(idf[w] for w in a & b) / max(1e-9, small)
+    linked_by_text = 0
+    for s in sessions:
+        if not s.titles_key:
+            continue
+        for ka, wa in kw[s.tag].items():
+            cands = [(rare(wa, wb), t, kb) for t, d in kw.items() if t != s.tag for kb, wb in d.items()]
+            if not cands:
+                continue
+            sc, t, kb = max(cands)
+            back = max(kw[s.tag], key=lambda k: rare(kw[t][kb], kw[s.tag][k]))
+            if sc >= 0.35 and back == ka:
+                parent[find(ka)] = find(kb)
+                linked_by_text += 1
+    print(f"== linked by page text (sessions with no paths in the address bar): {linked_by_text}")
     names: dict[str, Counter] = defaultdict(Counter)
     for s in sessions:
         for v in s.visits:

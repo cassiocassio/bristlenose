@@ -15,6 +15,7 @@ The design mockups are `docs/mockups/session-tapestry.html` (first sketch) and `
 | `build.py` + `template.html` | Builds the tapestry from a real output folder, drawn in the real Sessions-grid markup with the shipped theme inlined |
 | `colour_lab.py` + `colour-lab.html` | Samples frames from every distinct recording under a folder, so the clip-colour algorithm can be tuned live |
 | `strip_lab.py` + `strip-lab.html` | Samples every recording at 4 fps as well as by keyframe, and draws scene stripes inside the tapestry's clips, so their opacity, floor and smoothing can be tuned live (see § Scene stripes) |
+| `thumb_mockup.py` + `thumb-mockup.html` | The per-turn hover thumbnail, proposed 13 Oct 2026: the timeline with one real frame 25% into each participant turn, stepped not scrubbed, with handles for open delay, warm reopen, swap rest, close grace, width, position and moderator-turn behaviour. Write to `trial-runs/_tapestry/` — it carries participants' screens |
 
 Both pages carry participant content, so write them to a gitignored, private folder:
 

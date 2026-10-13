@@ -380,7 +380,7 @@ async def _passthrough(first, *_a, **_kw):
 
 def _run(
     tmp_path: Path, *, iter_fn, roles, pii: bool = False, extra=(), match="stop",
-    raises: type[BaseException] = RuntimeError,
+    raises: type[BaseException] = RuntimeError, **settings_kw,
 ) -> tuple:
     """Drive ``Pipeline.run`` on two recordings until the stub stops it."""
     from contextlib import ExitStack
@@ -399,6 +399,7 @@ def _run(
     progress: list[dict[str, object]] = []
     pipeline = Pipeline(BristlenoseSettings(
         output_dir=out, pii_enabled=pii, anthropic_api_key="sk-test", voice_pass=False,
+        **settings_kw,
     ))
     pipeline.set_progress_sink(lambda **f: progress.append(f))
     with ExitStack() as stack:
@@ -553,6 +554,11 @@ def test_each_sessions_quotes_are_extracted_while_the_next_is_transcribed(
     assert seen == {"quoted_while_s2_decodes": frozenset({"s1"})}
     assert sorted(topic_calls) == [["s1"], ["s2"]], "one call per session, by the chain"
     assert sorted(quote_calls) == [["s1"], ["s2"]], "stage 9 took the chain's quotes"
+    # …and kept them: stage 9's file, which clustering reads, holds every session's.
+    written = json.loads(
+        (_out / ".bristlenose" / "intermediate" / "extracted_quotes.json").read_text(),
+    )
+    assert sorted(q["session_id"] for q in written) == ["s1", "s2"]
     # The stages say what the chain finished, or the Mac's row keeps the previous
     # stage's count: this run's work, so new, not cached.
     for stage in ("topics", "quotes"):
@@ -560,6 +566,58 @@ def test_each_sessions_quotes_are_extracted_while_the_next_is_transcribed(
         assert pairs, f"{stage} reported nothing"
         assert (pairs[-1]["sessions_complete"], pairs[-1]["sessions_total"],
                 pairs[-1]["sessions_new"], pairs[-1]["sessions_cached"]) == (2, 2, 2, 0)
+
+
+def test_the_chains_analysis_runs_on_a_true_first_analysis_alone(tmp_path: Path) -> None:
+    """A previous run's topic or quote records may still be fresh, and stage 9 reads
+    extracted_quotes.json as that cache; the chain would rewrite it with its own
+    quotes. And with a local model, Whisper and the model would compete for the GPU."""
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.manifest import STAGE_QUOTE_EXTRACTION
+    from bristlenose.pipeline import Pipeline
+    from bristlenose.session_registry import SessionRegistry
+
+    sessions = _audio_sessions(tmp_path, 2)
+    out = tmp_path / "out"
+    out.mkdir()
+
+    def _chain(prev, **settings_kw):
+        settings = BristlenoseSettings(
+            output_dir=out, anthropic_api_key="sk-test", voice_pass=False, **settings_kw,
+        )
+        status = type("S", (), {"update": lambda *_a, **_k: None})()
+        return Pipeline(settings)._readable_chain(
+            sessions, prev_manifest=prev, manifest=create_manifest("p", "0"),
+            output_dir=out, input_dir=tmp_path, registry=SessionRegistry(out),
+            tx_fingerprints={}, segments_path=out / "ss.json", status=status,
+        )
+
+    assert _chain(None).analysis is not None
+    analysed = create_manifest("p", "0")
+    mark_session_complete(analysed, STAGE_QUOTE_EXTRACTION, "s1")
+    assert _chain(analysed).analysis is None, "an earlier run's quotes are a cache"
+    assert _chain(None, llm_provider="local").analysis is None
+
+
+def test_with_a_local_model_whisper_stays_on_the_loop(tmp_path: Path) -> None:
+    """Phase 1's shape: a local model and MLX Whisper share the GPU."""
+    import threading
+
+    from bristlenose.stages.s05_transcribe import SessionTranscription
+
+    on_thread: list[bool] = []
+
+    def _iter(_needs, _settings, **_kw):
+        on_thread.append(threading.current_thread() is not threading.main_thread())
+        yield SessionTranscription("s1", _two_speakers())
+        yield SessionTranscription("s2", _two_speakers())
+
+    async def _roles(_segments, _client, **_kw):
+        return []
+
+    _run(tmp_path, iter_fn=_iter, roles=_roles, match="stop after the speakers",
+         llm_provider="local")
+    assert on_thread == [False]
 
 
 def test_a_failed_delivery_stops_the_chain_and_codes_stay_in_session_order(

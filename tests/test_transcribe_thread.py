@@ -56,9 +56,12 @@ def test_the_loop_works_while_a_file_decodes() -> None:
     """The point of the thread: a coroutine makes progress during a decode."""
     release = threading.Event()
     ticks: list[int] = []
+    released: list[bool] = []
 
     def _gen(_sessions, _settings, *, on_progress=None, on_segment=None):
-        release.wait(5)  # "decoding" until the loop has ticked
+        # "Decoding" until the loop has ticked: on the loop's own thread the
+        # ticker could never run, and this would time out.
+        released.append(release.wait(5))
         yield SessionTranscription("s1", [])
 
     async def main():
@@ -75,6 +78,7 @@ def test_the_loop_works_while_a_file_decodes() -> None:
 
     with patch.object(s05_transcribe, "iter_transcribe_sessions", _gen):
         assert asyncio.run(main()) == ["s1"]
+    assert released == [True], "the loop ran while the file decoded"
     assert ticks == [0, 1, 2]
 
 
@@ -115,3 +119,19 @@ def test_a_consumer_that_leaves_stops_the_thread_at_the_next_file() -> None:
     with patch.object(s05_transcribe, "iter_transcribe_sessions", _gen):
         asyncio.run(main())
     assert len(decoded) <= 3, f"went on decoding after the consumer left: {decoded}"
+
+
+def test_the_chains_topic_time_is_wall_time_not_the_sum_of_its_calls() -> None:
+    """Up to ``llm_concurrency`` sessions' calls run at once: two that overlap from
+    t=0 to t=3 took three seconds, not four."""
+    from bristlenose.readable_chain import ChainAnalysis
+
+    analysis = ChainAnalysis.__new__(ChainAnalysis)
+    analysis.topic_seconds = analysis.quote_seconds = 0.0
+    analysis._busy = {"topics": (0, 0.0), "quotes": (0, 0.0)}
+    with patch("bristlenose.readable_chain.time.perf_counter", side_effect=[0.0, 3.0]):
+        analysis._enter("topics")   # t=0, first call starts
+        analysis._enter("topics")   # t=1, second starts (no clock read)
+        analysis._leave("topics")   # t=2, one still in flight (no clock read)
+        analysis._leave("topics")   # t=3
+    assert analysis.topic_seconds == 3.0

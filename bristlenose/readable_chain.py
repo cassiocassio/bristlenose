@@ -129,9 +129,13 @@ class ChainAnalysis:
         self.topic_maps: dict[str, tuple[SessionTopicMap, str]] = {}
         #: Session → (quotes, fingerprint of transcript and topic map).
         self.quotes: dict[str, tuple[list[ExtractedQuote], str]] = {}
-        #: LLM wall time per stage, which the run's timings give back to it.
+        #: Wall time with at least one of the stage's calls in flight, which the
+        #: run's timings give back to it. Not the sum of the calls: up to
+        #: ``concurrency`` run at once, and summing them would tell the
+        #: estimator a stage took several times as long as it did.
         self.topic_seconds = 0.0
         self.quote_seconds = 0.0
+        self._busy: dict[str, tuple[int, float]] = {"topics": (0, 0.0), "quotes": (0, 0.0)}
         self._tasks: dict[str, asyncio.Task[None]] = {}
 
     def start(self, transcript: FullTranscript) -> None:
@@ -145,9 +149,19 @@ class ChainAnalysis:
         if self._tasks:
             await asyncio.gather(*self._tasks.values(), return_exceptions=True)
 
-    def cancel(self) -> None:
-        for task in self._tasks.values():
-            task.cancel()
+    def _enter(self, stage: str) -> None:
+        active, since = self._busy[stage]
+        self._busy[stage] = (active + 1, time.perf_counter() if active == 0 else since)
+
+    def _leave(self, stage: str) -> None:
+        active, since = self._busy[stage]
+        self._busy[stage] = (active - 1, since)
+        if active == 1:
+            elapsed = time.perf_counter() - since
+            if stage == "topics":
+                self.topic_seconds += elapsed
+            else:
+                self.quote_seconds += elapsed
 
     async def _run(self, transcript: FullTranscript) -> None:
         from bristlenose.llm import telemetry
@@ -159,26 +173,30 @@ class ChainAnalysis:
             async with self._sem:
                 clean = self._clean(transcript)
                 topic_fp = self._topic_fp(clean)
-                t0 = time.perf_counter()
-                with telemetry.stage("s08_topic_segmentation"):
-                    maps, outcome = await segment_topics(
-                        [clean], self._client, concurrency=1, errors=[],
-                    )
-                self.topic_seconds += time.perf_counter() - t0
+                self._enter("topics")
+                try:
+                    with telemetry.stage("s08_topic_segmentation"):
+                        maps, outcome = await segment_topics(
+                            [clean], self._client, concurrency=1, errors=[],
+                        )
+                finally:
+                    self._leave("topics")
                 if outcome.failed or not maps:
                     logger.info("readable_chain | %s's topics are left to stage 8", sid)
                     return
                 topic_map = maps[0]
                 self.topic_maps[sid] = (topic_map, topic_fp)
                 quote_fp = self._quote_fp(clean, topic_map)
-                t0 = time.perf_counter()
-                with telemetry.stage("s09_quote_extraction"):
-                    quotes, q_outcome = await extract_quotes(
-                        [clean], [topic_map], self._client,
-                        min_quote_words=self.settings.min_quote_words,
-                        concurrency=1, errors=[],
-                    )
-                self.quote_seconds += time.perf_counter() - t0
+                self._enter("quotes")
+                try:
+                    with telemetry.stage("s09_quote_extraction"):
+                        quotes, q_outcome = await extract_quotes(
+                            [clean], [topic_map], self._client,
+                            min_quote_words=self.settings.min_quote_words,
+                            concurrency=1, errors=[],
+                        )
+                finally:
+                    self._leave("quotes")
                 if q_outcome.failed:
                     logger.info("readable_chain | %s's quotes are left to stage 9", sid)
                     return
@@ -259,9 +277,10 @@ class ReadableChain:
         self.identified: dict[str, str] = {}
         #: Sessions whose transcript files are written and recorded.
         self.readable: list[str] = []
-        #: Wall time the chain held the transcription stage up — mostly
-        #: speaker identification, which the run's timings move from
-        #: transcription back to the speakers stage.
+        #: Wall time of the chain's deliveries — mostly speaker identification,
+        #: which the run's timings give to the speakers stage. It overlaps
+        #: Whisper (its own thread), so transcription is not charged for it;
+        #: ``Pipeline._transcription_held`` is what it held transcription up.
         self.seconds = 0.0
         #: Speaker passes started on hand-over, by session (strong references:
         #: the loop holds tasks weakly).

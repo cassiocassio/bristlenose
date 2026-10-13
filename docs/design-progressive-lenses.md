@@ -604,10 +604,30 @@ already anticipates. Independent of the UX; can land before or after phase 2.
 >   decodes and that stages 8 and 9 pay for nothing twice. Each part was proved red on
 >   a mutant: no thread, no analysis, no stage 8 take-up, no stage 9 take-up, no stop.
 >   The platform-transcript harness now counts extraction per run, not per call.
-> - **Known.** A session whose transcript changes after the chain analysed it (a
->   placeholder participant stage 5b assigns, say) is analysed twice. Topic maps are
->   not persisted until stage 8, so a crash between the chain and stage 8 recomputes
->   topics on resume, and with them quotes.
+> - **Gates** (after the phase's own review, 13 Oct 2026). The chain's analysis runs
+>   only on a true first analysis: when a previous run left topic or quote records,
+>   stage 9 reads `extracted_quotes.json` as their cache, and the chain would have
+>   rewritten it with its own quotes alone. And not with the local provider, where a
+>   local model and MLX Whisper share the GPU and unified memory: there the run keeps
+>   Phase 1's shape, Whisper on the loop (`Pipeline._whisper_overlaps`). Provisional
+>   and one line to change if a capable Mac wants it.
+> - **Timings** count wall time with a call in flight, not the sum of calls, which ran
+>   up to `llm_concurrency` at once. The step lines count the chain's sessions as new,
+>   and the stage entry for topics comes before the wait for the chain's last calls.
+> - **Exit with a decode in flight**, measured: a daemon thread inside a real MLX
+>   decode (tiny model, 120 s of audio) and SIGINT 1.5 s in, three runs: exit 130,
+>   no crash report.
+> - **Known.**
+>   - A session whose transcript changes after the chain analysed it (a placeholder
+>     participant stage 5b assigns, say) is analysed twice. The server imported the
+>     chain's quotes for it and does not re-import during the run, so a star made on
+>     one of them is lost at the whole import, where the participant in its key
+>     changes.
+>   - Topic maps are not persisted until stage 8, so a crash between the chain and
+>     stage 8 recomputes topics on resume, and with them quotes.
+>   - During a platform-transcript hand-over one client runs the split, role and
+>     analysis passes at once, each behind `llm_concurrency`; a low API tier may
+>     retry on 429s.
 
 ### Phase 4 — Session tapestry in layers
 

@@ -1840,9 +1840,9 @@ class Pipeline:
                     if audio_str:
                         msg += f", {audio_str} audio"
                     msg += ")"
-                # The readable chain identified speakers inside this window;
-                # that time is the speakers stage's, for the line and for the
-                # estimates the next run is timed by.
+                # The readable chain worked inside this window, mostly alongside
+                # Whisper; only the time it held transcription up comes off, and
+                # its speaker time is the speakers stage's (line and estimates).
                 _transcribe_elapsed = time.perf_counter() - t0 - (
                     self._transcription_held if _chain is not None else 0.0
                 )
@@ -2408,8 +2408,6 @@ class Pipeline:
             # readable: wait for the ones still running, then take each whose
             # transcript is the one stage 8 sees, as the per-session resume does.
             _analysis = _chain.analysis if _chain is not None else None
-            if _analysis is not None:
-                await _analysis.finish()
             _seg_errors: list[str] = []
             _tb_path = intermediate / "topic_boundaries.json"
             # Outer-scope defaults — both branches below populate. Cache-hit
@@ -2431,6 +2429,10 @@ class Pipeline:
                 t.session_id: _transcript_fingerprint(t) for t in clean_transcripts
             }
             self._emit_stage_entry(STAGE_TOPICS)
+            if _analysis is not None:
+                # After the entry, so the row says topics while the last
+                # sessions' calls finish.
+                await _analysis.finish()
             if _is_stage_verified(
                 _prev_manifest, STAGE_TOPIC_SEGMENTATION, [_tb_path],
                 current_input_hashes=_topic_input_hashes,
@@ -2556,8 +2558,9 @@ class Pipeline:
                     _analysis.topic_seconds if _analysis is not None else 0.0
                 )
 
-                _n_new = len(_remaining_transcripts)
-                if _cached_topic_maps and _n_new:
+                # The chain's sessions are this run's work, not cached.
+                _n_new = len(_remaining_transcripts) + len(_chain_topic_fps)
+                if _cached_topic_count - len(_chain_topic_fps) and _n_new:
                     _msg_8 = (
                         f"Segmented {count_noun(total_boundaries, 'topic boundary')}"
                         f" ({count_noun(_n_new, 'new session')})"
@@ -2802,8 +2805,8 @@ class Pipeline:
                     _analysis.quote_seconds if _analysis is not None else 0.0
                 )
 
-                _n_new_q = len(_remaining_transcripts_q)
-                if _cached_quotes and _n_new_q:
+                _n_new_q = len(_remaining_transcripts_q) + len(_chain_quote_fps)
+                if len(_cached_quote_sids) - len(_chain_quote_fps) and _n_new_q:
                     _msg_9 = (
                         f"Extracted {count_noun(len(all_quotes), 'quote')}"
                         f" ({count_noun(_n_new_q, 'new session')})"
@@ -3810,12 +3813,20 @@ class Pipeline:
         if rendered is not None and rendered.status == StageStatus.COMPLETE:
             return None
         client = LLMClient(self.settings)
+        # Sessions a previous run analysed: their topic and quote records may
+        # still be fresh, and stages 8 and 9 read extracted_quotes.json as that
+        # cache. The chain's analysis rewrites the file with its own quotes
+        # only, so it runs on a true first analysis alone.
+        analysed_before = (
+            get_completed_session_ids(prev_manifest, STAGE_TOPIC_SEGMENTATION)
+            | get_completed_session_ids(prev_manifest, STAGE_QUOTE_EXTRACTION)
+        )
         speaker_pass = SpeakerPass(
             self.settings, client,
             {s.session_id: s.audio_path for s in order},
             warn=_print_warn, status=status.update,
         )
-        analysis = ChainAnalysis(
+        analysis = None if analysed_before or not self._whisper_overlaps() else ChainAnalysis(
             settings=self.settings,
             llm_client=client,
             manifest=manifest,
@@ -3846,10 +3857,7 @@ class Pipeline:
             sentence_paragraphs=sentence_paragraph_sessions(
                 output_dir / "transcripts-raw",
                 [s.session_id for s in order],
-                analysed=(
-                    get_completed_session_ids(prev_manifest, STAGE_TOPIC_SEGMENTATION)
-                    | get_completed_session_ids(prev_manifest, STAGE_QUOTE_EXTRACTION)
-                ),
+                analysed=analysed_before,
             ),
             languages=lambda: (self._detected_languages, self._pinned_languages),
             fingerprint=_segments_fingerprint,
@@ -3859,6 +3867,16 @@ class Pipeline:
             emit=_emit,
             analysis=analysis,
         )
+
+    def _whisper_overlaps(self) -> bool:
+        """Whether a chained run decodes on its own thread, overlapping the LLM.
+
+        Not with the local provider: a local model and MLX Whisper compete for
+        the same GPU and unified memory, so the run keeps Phase 1's shape there —
+        Whisper on the loop, the chain's speaker pass between files, topics and
+        quotes in stages 8 and 9 (docs/design-progressive-lenses.md, Phase 3).
+        """
+        return self.settings.llm_provider != "local"
 
     async def _gather_all_segments(
         self,
@@ -4023,7 +4041,7 @@ class Pipeline:
                 # With a chain, Whisper runs on its own thread so the chain's
                 # LLM calls for session N run while N+1 decodes. Without one
                 # nothing waits on a session, and the run stays as it was.
-                if on_session is None:
+                if on_session is None or not self._whisper_overlaps():
                     for done in iter_transcribe_sessions(
                         needs_transcription, self.settings,
                         on_progress=on_progress, on_segment=on_segment,

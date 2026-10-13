@@ -217,8 +217,13 @@ function render() {
         const a = s.conds.none.metrics[m], b = s.conds[k].metrics[m];
         return `<td class="num ${k !== "none" && better(m, a, b) ? "m-better" : ""}">${b}</td>`;
       }).join("") + `<td class="m-note">${hint}</td></tr>`).join("");
-    const perBlock = segs => segs.reduce((acc, x) => { const b = Math.floor(x.start / 30);
-      acc.set(b, (acc.get(b) || 0) + x.text.split(/\s+/).filter(Boolean).length); return acc; }, new Map());
+    // Each segment's words spread over the time it covers (as wave_summary.py);
+    // giving them all to the block a segment starts in invented losses.
+    const perBlock = segs => segs.reduce((acc, x) => { if (x.inaudible) return acc;
+      const n = x.text.split(/\s+/).filter(Boolean).length, a = x.start, e = Math.max(x.end, x.start + 0.01);
+      for (let k = Math.floor(a / 30); k * 30 < e; k++)
+        acc.set(k, (acc.get(k) || 0) + n * (Math.min(e, (k + 1) * 30) - Math.max(a, k * 30)) / (e - a));
+      return acc; }, new Map());
     const base = perBlock(s.conds.none.segs);
     const lostOf = k => { const pb = perBlock(s.conds[k].segs);
       return [...base].filter(([b, n]) => n >= 20 && (pb.get(b) || 0) < n / 4).map(([b]) => tc(b * 30)); };

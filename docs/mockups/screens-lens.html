@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screens lens — exploratory mockup</title>
+<style>
+/* Shipped tokens inlined verbatim from docs/mockups/codebook-library-states.html
+   (itself copied from bristlenose/theme/tokens.css + colors/palette-*.css). */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* group tints (tokens.css) — shared across palettes */
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+:root {
+  --bn-sentiment-frustration: light-dark(#ea580c, #fb923c);
+  --bn-sentiment-confusion:   light-dark(#dc2626, #f87171);
+  --bn-sentiment-doubt:       light-dark(#7c3aed, #a78bfa);
+  --bn-sentiment-satisfaction:light-dark(#16a34a, #4ade80);
+  --bn-sentiment-delight:     light-dark(#059669, #34d399);
+  --mock-hatch: light-dark(#f6f3ea, #1d1b16);
+  --mock-hatch-line: light-dark(#e9e2cf, #2a261d);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text); font-family:var(--bn-font-body);
+  font-size:var(--bn-text-body); line-height:1.5; -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1180px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { color:var(--bn-colour-muted); max-width:72ch; margin:.4rem 0; }
+.controls { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; margin:1rem 0 0; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.key { display:flex; gap:1.2rem; flex-wrap:wrap; font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:1rem; }
+.key span::before { content:""; display:inline-block; width:14px; height:10px; margin-right:.4rem; vertical-align:-1px; border:1px solid var(--bn-colour-border); }
+.key .k-art::before { background:var(--bn-colour-bg); }
+.key .k-com::before { background:repeating-linear-gradient(45deg,var(--mock-hatch),var(--mock-hatch) 4px,var(--mock-hatch-line) 4px,var(--mock-hatch-line) 5px); }
+
+.bench { margin:3rem 0; }
+.bench h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .25rem; }
+.bench .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1rem; max-width:78ch; }
+/* artefact frame */
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden; box-shadow:0 1px 3px var(--bn-colour-shadow); }
+.chrome { display:flex; align-items:center; gap:.5rem; padding:.45rem .8rem; background:var(--bn-colour-quote-bg);
+  border-bottom:1px solid var(--bn-colour-border); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-family:var(--bn-font-mono); }
+.chrome i { width:9px; height:9px; border-radius:50%; background:var(--bn-off-track); display:inline-block; }
+.chrome .flag { margin-left:auto; font-family:var(--bn-font-body); }
+.chrome .flag b { font-weight:490; color:var(--bn-sentiment-frustration); }
+.artefact { padding:1.5rem 1.75rem 2rem; background:var(--bn-colour-bg); color:var(--bn-colour-text); }
+/* commentary */
+.commentary { margin-top:1rem; padding:1rem 1.25rem; border-left:3px solid var(--bn-colour-border-hover);
+  background:repeating-linear-gradient(45deg,var(--mock-hatch),var(--mock-hatch) 6px,var(--mock-hatch-line) 6px,var(--mock-hatch-line) 7px);
+  font-size:var(--bn-text-label); line-height:1.55; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+.commentary::before { content:"Commentary — not the product"; display:block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); margin-bottom:.5rem; }
+.commentary p { margin:.35rem 0; max-width:86ch; }
+.commentary ul { margin:.35rem 0; padding-left:1.2rem; max-width:86ch; }
+
+/* ── lens chrome ─────────────────────────────────────────────── */
+.section-heading { display:flex; flex-wrap:wrap; align-items:baseline; gap:1rem; border-bottom:1px solid var(--bn-colour-border); padding-bottom:.5rem; margin-bottom:1rem; }
+.section-heading h1 { font-size:var(--bn-text-title); font-weight:490; margin:0; }
+.section-heading .meta { font-size:var(--bn-text-label); color:var(--bn-colour-muted); }
+.section-heading .seg { margin-left:auto; display:flex; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); overflow:hidden; }
+.section-heading .seg button { font:inherit; font-size:var(--bn-text-label); padding:.2rem .65rem; border:0; background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.section-heading .seg button + button { border-left:1px solid var(--bn-colour-border); }
+.section-heading .seg button.on { background:var(--bn-colour-hover); color:var(--bn-colour-accent); font-weight:490; }
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) .45rem;
+  border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+.muted { color:var(--bn-colour-muted); }
+.small { font-size:var(--bn-text-label); }
+.cap { font-size:var(--bn-text-caption); }
+
+/* ── flow board (step columns) ───────────────────────────────── */
+.board { position:relative; display:grid; grid-auto-flow:column; grid-auto-columns:minmax(150px,1fr); gap:1.6rem; padding:.25rem 0 .5rem; overflow-x:auto; }
+.board svg.edges { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+.col { display:flex; flex-direction:column; gap:1rem; position:relative; z-index:1; }
+.col-h { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:490; height:1rem; }
+.card { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); background:var(--bn-colour-bg); padding:.45rem; cursor:pointer;
+  transition:border-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast); text-align:left; font:inherit; color:inherit; width:100%; }
+.card:hover { border-color:var(--bn-colour-border-hover); }
+.card.sel { border-color:var(--bn-colour-accent); box-shadow:0 0 0 2px light-dark(rgba(0,122,255,.18), rgba(10,132,255,.35)); }
+.card:focus-visible { outline:2px solid var(--bn-colour-accent); outline-offset:2px; }
+.card .name { font-size:var(--bn-text-label); font-weight:490; margin:.4rem .1rem 0; line-height:1.3; }
+.card .url { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); margin:.1rem .1rem 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.card .stats { display:flex; justify-content:space-between; align-items:center; margin:.35rem .1rem 0; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.card .q { color:var(--bn-colour-text); }
+.dots { display:flex; gap:3px; }
+.dots b { width:6px; height:6px; border-radius:50%; background:var(--bn-off-track); }
+.dots b.on { background:var(--bn-colour-accent); }
+.card.dim { opacity:.45; }
+
+/* thumbnail: a wireframe stand-in for the real still (served on demand, never stored) */
+.thumb { aspect-ratio:16/10; border-radius:var(--bn-radius-sm); background:light-dark(#fff,#1b1b1b); border:1px solid var(--bn-colour-border);
+  position:relative; overflow:hidden; }
+.thumb > div { position:absolute; border-radius:1px; }
+.thumb .bar { left:0; right:0; top:0; height:12%; background:var(--bn-colour-badge-bg); }
+.thumb .ln { height:4%; background:light-dark(#d9dde3,#3a3a3a); }
+.thumb .blk { background:light-dark(#e7ebf0,#2a2a2a); }
+.thumb .btn { background:var(--bn-colour-accent); opacity:.75; height:8%; border-radius:2px; }
+.thumb .scrim { inset:0; background:rgba(0,0,0,.28); }
+.thumb .dlg { background:light-dark(#fff,#262626); border:1px solid var(--bn-colour-border); box-shadow:0 2px 6px rgba(0,0,0,.25); }
+
+/* ── detail ──────────────────────────────────────────────────── */
+.detail { display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:1.75rem; margin-top:1.75rem; border-top:1px solid var(--bn-colour-border); padding-top:1.4rem; }
+.dhead { display:grid; grid-template-columns:200px minmax(0,1fr); gap:1.1rem; align-items:start; }
+.dhead h2 { font-size:var(--bn-text-heading); font-weight:490; margin:0; }
+.dhead .facts { display:flex; flex-wrap:wrap; gap:.35rem 1.1rem; font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.35rem; }
+.dhead .facts b { color:var(--bn-colour-text); font-weight:490; }
+.states { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.7rem; }
+.state { font:inherit; font-size:var(--bn-text-label); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); padding:.15rem .7rem; cursor:pointer; }
+.state.on { border-color:var(--bn-colour-accent); color:var(--bn-colour-accent); background:var(--bn-colour-hover); }
+.state .n { color:var(--bn-colour-muted); margin-left:.3rem; font-size:var(--bn-text-caption); }
+.ptrack { margin-top:.8rem; display:grid; grid-template-columns:2.3rem 1fr; gap:.25rem .5rem; align-items:center; font-size:var(--bn-text-caption); }
+.ptrack .lane { position:relative; height:10px; background:var(--bn-colour-quote-bg); border-radius:2px; }
+.ptrack .lane i { position:absolute; top:0; bottom:0; background:var(--bn-colour-accent); opacity:.65; border-radius:2px; }
+.ptrack .lane i.dlg { background:var(--bn-sentiment-frustration); opacity:.8; }
+blockquote.quote-card { background:var(--bn-colour-quote-bg); border-left:1px solid var(--bn-colour-border); margin:.8rem 0; padding:.75rem 1rem;
+  border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+.quote-row { display:flex; gap:.6rem; align-items:baseline; }
+.timecode { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-accent); flex-shrink:0; }
+.timecode .br { color:var(--bn-colour-muted); }
+.quote-body { flex:1; min-width:0; }
+.quote-meta { display:flex; flex-wrap:wrap; gap:.35rem; align-items:center; margin-top:.45rem; }
+.over { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-left:auto; }
+.over::before { content:"▣ "; }
+.sent { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm); }
+.subh { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); font-weight:490; margin:1.4rem 0 .2rem; display:flex; gap:.6rem; align-items:baseline; }
+.subh .seg2 { margin-left:auto; text-transform:none; letter-spacing:0; font-weight:420; }
+.subh .seg2 a { color:var(--bn-colour-muted); text-decoration:none; margin-left:.6rem; cursor:pointer; }
+.subh .seg2 a.on { color:var(--bn-colour-accent); font-weight:490; }
+.said { font-size:var(--bn-text-label); border-left:2px solid var(--bn-colour-border); padding:.15rem 0 .15rem .7rem; margin:.5rem 0; color:var(--bn-colour-text); }
+.said .who { color:var(--bn-colour-muted); font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); margin-right:.5rem; }
+
+/* tag sidebar (stand-in for organisms/sidebar-tags.css) */
+.mock-sidebar { background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.7rem .8rem; align-self:start; position:sticky; top:1rem; }
+.mock-sidebar h3 { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); font-weight:490; margin:0 0 .5rem; }
+.trow { display:flex; align-items:center; gap:.5rem; padding:.2rem .1rem; cursor:pointer; font-size:var(--bn-text-label); }
+.trow .badge { flex-shrink:1; overflow:hidden; text-overflow:ellipsis; }
+.trow .ct { margin-left:auto; color:var(--bn-colour-muted); font-size:var(--bn-text-caption); font-variant-numeric:tabular-nums; }
+.trow.on .badge { outline:1.5px solid var(--bn-colour-accent); }
+.grp { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:.7rem 0 .2rem; }
+
+/* ── paths frame ─────────────────────────────────────────────── */
+.paths { display:grid; grid-template-columns:2.6rem 1fr 4.5rem; gap:.55rem .8rem; align-items:center; }
+.chain { display:flex; flex-wrap:wrap; gap:3px; align-items:center; }
+.chip { font-size:var(--bn-text-caption); padding:.1rem .5rem; border-radius:var(--bn-radius-sm); white-space:nowrap; border:1px solid transparent; }
+.chip.back { border-color:var(--bn-sentiment-frustration); }
+.chain .arr { color:var(--bn-colour-muted); font-size:var(--bn-text-caption); }
+.legend { display:flex; flex-wrap:wrap; gap:.4rem .9rem; margin-top:1rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+
+/* ── grid frame ──────────────────────────────────────────────── */
+.sgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:1rem; }
+
+/* ── corrections frame ───────────────────────────────────────── */
+.menu { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); box-shadow:0 8px 24px var(--bn-colour-shadow);
+  padding:.3rem 0; width:230px; font-size:var(--bn-text-label); }
+.menu div { padding:.25rem .9rem; }
+.menu div:hover { background:var(--bn-colour-accent); color:#fff; }
+.menu hr { border:0; border-top:1px solid var(--bn-colour-border); margin:.3rem 0; }
+.row2 { display:flex; gap:2rem; flex-wrap:wrap; align-items:flex-start; }
+.empty { border:1px dashed var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:2rem; text-align:center; color:var(--bn-colour-muted); max-width:520px; }
+.empty h3 { font-size:var(--bn-text-body); font-weight:490; color:var(--bn-colour-text); margin:0 0 .4rem; }
+
+@media (max-width:820px) { .artefact { padding:1rem; } .chrome .flag { display:none; } .detail { grid-template-columns:1fr; } .dhead { grid-template-columns:1fr; } .mock-sidebar { position:static; } }
+@media (prefers-reduced-motion:reduce) { .card { transition:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow">Exploratory mockup · 13 Oct 2026 · not decided, not built</div>
+    <h1>Screens — a lens built from what was on the shared screen</h1>
+    <p>Spec: <code>docs/design-screens-lens.md</code>. Every name, quote, URL and participant on this page is invented: a fictional kettle shop, six sessions, codes only. The thumbnails are wireframe stand-ins; in the product they would be stills taken from the recording on demand and never stored or exported.</p>
+    <div class="controls">
+      <span class="lbl">Palette</span><button class="pbtn on" data-pal="default">Default</button><button class="pbtn" data-pal="edo">Edo</button>
+      <span class="lbl" style="margin-left:1rem">Appearance</span><button class="pbtn on" data-cs="light dark">Auto</button><button class="pbtn" data-cs="light">Light</button><button class="pbtn" data-cs="dark">Dark</button>
+    </div>
+    <div class="key"><span class="k-art">Artefact: what would ship</span><span class="k-com">Commentary: why, and what the measurements say</span></div>
+  </header>
+
+  <!-- ═══ A: recommended ═══ -->
+  <section class="bench">
+    <h2>A · Step columns with a screen detail (recommended)</h2>
+    <p class="sub">Screens are placed in columns by the step at which participants typically first reach them; lines are transitions, as thick as the number of participants who made them. Click a screen to see what was said while it was up.</p>
+    <div class="frame">
+      <div class="chrome"><i></i><i></i><i></i>&nbsp;/report/screens/<span class="flag">new copy on this frame is <b>owner-written</b>, not shipped keys</span></div>
+      <div class="artefact">
+        <div class="section-heading"><h1>Screens</h1><span class="meta" id="a-meta"></span>
+          <div class="seg" role="group" aria-label="Layout"><button class="on">Flow</button><button>Paths</button><button>Grid</button></div></div>
+        <div class="board" id="board"><svg class="edges" id="edges" aria-hidden="true"></svg></div>
+        <div class="detail">
+          <div>
+            <div class="dhead">
+              <div class="thumb" id="d-thumb"></div>
+              <div>
+                <h2 id="d-name"></h2>
+                <div class="cap muted" style="font-family:var(--bn-font-mono)" id="d-url"></div>
+                <div class="facts" id="d-facts"></div>
+                <div class="states" id="d-states"></div>
+              </div>
+            </div>
+            <div class="subh">When it was on screen <span class="seg2 cap">each bar is a visit · orange is a dialog over the page</span></div>
+            <div class="ptrack" id="d-track"></div>
+            <div class="subh"><span id="d-qh"></span><span class="seg2"><a class="on" data-mode="q">Quotes</a><a data-mode="s">Everything said here</a></span></div>
+            <div id="d-quotes"></div>
+          </div>
+          <aside class="mock-sidebar" aria-label="Tags on this screen">
+            <h3>Tags on this screen</h3>
+            <div id="d-tags"></div>
+          </aside>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <p><b>Why columns, not a free graph.</b> Process-mining graphs invent loops and hide rare edges in ways that stop the counts adding up (van der Aalst 2019); free-layout graphs re-shuffle whenever a session is added. Columns by typical step keep a fixed reading order and still show the back-steps (the thin line from Delivery back to Basket). With 5–12 sessions, every count reads as <i>k of n participants</i>, never a percentage, and nothing is pruned into an "Other" bucket.</p>
+      <p><b>What a screen is.</b> The page a participant was on, keyed by the browser's address bar when it is visible (precision 0.99–1.00, recall 0.85–0.95 on page pairs in the spike) and by the text on the screen when it is not (adjusted Rand 0.72–0.86 against hand labels). Dialogs and panels are <i>states of a screen</i>, shown as the pills under the name — and the honest caveat is that detecting them automatically did not work in the spike (§ measurements). The pills here assume either a better detector or the researcher marking them.</p>
+      <p><b>The join is time, not interpretation.</b> A quote belongs to a screen when it was said while the screen was up. On the two real sessions, 14 of 17 and 12 of 15 quotes in the report's existing sections were said on that section's most common page; the rest were said elsewhere, often a remark about the previous page. The "Everything said here" tab shows the transcript paragraphs, because extracted quotes are sparse (1–4 per page measured).</p>
+      <p><b>New elements</b> (flagged, not in the design system): the screen card, the edge layer, the state pill, the visit track. Reused: section heading, badge, quote card, timecode, tag sidebar pattern.</p>
+    </div>
+  </section>
+
+  <!-- ═══ B: paths ═══ -->
+  <section class="bench">
+    <h2>B · Each participant's path</h2>
+    <p class="sub">One row per session, screens in the order visited, repeats merged. The answer to "where did people diverge" and "who went back".</p>
+    <div class="frame">
+      <div class="chrome"><i></i><i></i><i></i>&nbsp;/report/screens/?layout=paths</div>
+      <div class="artefact"><div class="paths" id="paths"></div><div class="legend" id="legend"></div></div>
+    </div>
+    <div class="commentary">
+      <p>Every flow tool pairs its diagram with a ranked list of whole paths, because a diagram cannot show which complete routes people took. At this sample size the list <i>is</i> the data: the two real sessions had 9 steps with no revisits, and 18 steps with 7 revisits and 5 immediate back-steps. A flow diagram flattens that difference; these rows keep it. Outlined chips are returns to a screen already seen. This is the layout to open first if the study had a task with an expected path (Maze's direct/indirect, Treejack's directness), which a later version could mark.</p>
+    </div>
+  </section>
+
+  <!-- ═══ C: grid ═══ -->
+  <section class="bench">
+    <h2>C · Grid, in typical order</h2>
+    <p class="sub">The simplest layout: every screen as a card, ordered by typical step. No edges.</p>
+    <div class="frame">
+      <div class="chrome"><i></i><i></i><i></i>&nbsp;/report/screens/?layout=grid</div>
+      <div class="artefact"><div class="sgrid" id="sgrid"></div></div>
+    </div>
+    <div class="commentary">
+      <p>The fallback when the flow is not a flow: a study where participants were shown screens in a fixed order by the moderator (a prototype walkthrough), or a desktop app with no navigation to speak of. It is also the layout that survives a narrow window without horizontal scrolling. A tree (sitemap) was considered and rejected for the first build: the URL hierarchy is available, but it describes how the site is filed, not how people moved through it, and every product page sits under a different parent.</p>
+    </div>
+  </section>
+
+  <!-- ═══ D: corrections and empty ═══ -->
+  <section class="bench">
+    <h2>D · When the guess is wrong, and when there is nothing to show</h2>
+    <p class="sub">The researcher can rename, merge, split, and hide a screen. A session with no shared screen is listed, not hidden.</p>
+    <div class="frame">
+      <div class="chrome"><i></i><i></i><i></i>&nbsp;states</div>
+      <div class="artefact">
+        <div class="row2">
+          <div style="width:190px">
+            <div class="card sel" id="d-card"></div>
+          </div>
+          <div class="menu" role="menu">
+            <div>Rename…</div><div>Merge with…</div><div>Split by dialog…</div><div>Separate product pages</div><hr><div>Hide from Screens</div><div>Show in transcript</div>
+          </div>
+          <div class="empty">
+            <h3>No shared screen in 2 sessions</h3>
+            <div class="small">p7 and p8 were interviews without a screen share, so they are not on this map. Their quotes are in Quotes and Sessions as usual.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <p><b>Corrections are the product, not an apology.</b> Every published method mis-merges or over-splits somewhere: the best of ten near-duplicate detectors scored F1 0.60 (Yandrapally et al., ICSE 2020); the definition of "the same screen" changed one app from 5 screens to 55 (Baek &amp; Bae, ASE 2016). Whether two product pages are one screen is a product decision, not a threshold (Rico framed it the same way). UiPath's task-mining product lets users rename and discard steps for the same reason. "Separate product pages" toggles between the URL template (<code>/p/*</code>) and the instance.</p>
+      <p><b>Empty is information.</b> Sessions without a share are counted out loud, never silently dropped, so a map built from three of eight sessions cannot pass for the study.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+// ── Synthetic study: a fictional kettle shop, six sessions ──────────────
+const SCREENS = {
+  home:     { name:"Home",            url:"/",                   kind:"home" },
+  cat:      { name:"Kettles",         url:"/c/kettles",          kind:"list" },
+  search:   { name:"Search results",  url:"/search",             kind:"list" },
+  pdp:      { name:"Product page",    url:"/p/*",                kind:"pdp" },
+  basket:   { name:"Basket",          url:"/basket",             kind:"basket",
+              states:[["Enter postcode",5],["Sign in or continue as guest",4]] },
+  delivery: { name:"Delivery",        url:"/checkout/delivery",  kind:"form", states:[["Choose a date",4]] },
+  payment:  { name:"Payment",         url:"/checkout/payment",   kind:"form" },
+};
+const PATHS = {
+  p1:["home","cat","pdp","basket","delivery","payment"],
+  p2:["home","search","home","cat","pdp","basket","delivery","basket","delivery","payment"],
+  p3:["home","cat","pdp","cat","pdp","basket"],
+  p4:["home","search","pdp","basket","delivery","basket","delivery","payment"],
+  p5:["home","cat","pdp","basket","delivery"],
+  p6:["home","search","pdp","basket","delivery","basket","delivery"],
+};
+const DWELL = { home:"0:52", cat:"1:48", search:"0:41", pdp:"3:05", basket:"2:41", delivery:"3:32", payment:"1:10" };
+const N = Object.keys(PATHS).length;
+const QUOTES = {
+  basket: [
+    { p:"p2", tc:"12:41", text:"I’d expect it to tell me what delivery costs before it asks for my postcode.", sent:"frustration", tags:["delivery cost","expectation"], over:"Enter postcode" },
+    { p:"p4", tc:"18:03", text:"Why does it want a postcode? I haven’t even decided if I’m buying it yet.", sent:"confusion", tags:["postcode dialog"], over:"Enter postcode" },
+    { p:"p6", tc:"09:12", text:"Oh, continue as guest — good, I really don’t want another account.", sent:"satisfaction", tags:["guest checkout"], over:"Sign in or continue as guest" },
+    { p:"p1", tc:"07:55", text:"Two of them is fine. The minus button is tiny, though.", sent:"doubt", tags:["quantity control"] },
+    { p:"p5", tc:"14:20", text:"I’m looking for where it says when it’ll actually arrive.", sent:"confusion", tags:["delivery date","expectation"] },
+  ],
+  pdp: [
+    { p:"p3", tc:"10:02", text:"I can’t tell if this is the 1.7 litre one or the small one.", sent:"confusion", tags:["product variants"] },
+    { p:"p1", tc:"05:30", text:"The reviews are right there, that’s nice.", sent:"satisfaction", tags:["reviews"] },
+  ],
+  delivery: [
+    { p:"p2", tc:"16:10", text:"It went back to the basket? I only wanted to change the date.", sent:"frustration", tags:["navigation","delivery date"], over:"Choose a date" },
+    { p:"p6", tc:"19:44", text:"Next-day is three pounds more, fine.", sent:"satisfaction", tags:["delivery cost"] },
+  ],
+};
+const SAID = {
+  basket: [["p2","12:20","Okay so it’s in the basket now and it’s asking me… for a postcode, I suppose that’s for delivery."],
+           ["p4","17:40","Right, basket. Let me just… there’s a box come up."],
+           ["p6","08:58","I’ll press checkout and see what happens."]],
+};
+// visit tracks for the selected screen (fractions of session length), synthetic
+const TRACKS = {
+  basket: { p1:[[.55,.62]], p2:[[.40,.47,"d"],[.47,.52],[.70,.74]], p3:[[.88,.98]], p4:[[.50,.55,"d"],[.55,.60],[.72,.75]], p5:[[.62,.71]], p6:[[.30,.36,"d"],[.60,.63]] },
+};
+
+function firstStep() {           // typical step = median index of first arrival
+  const idx = {};
+  for (const path of Object.values(PATHS)) {
+    const seen = new Set();
+    path.forEach((s,i) => { if (!seen.has(s)) { seen.add(s); (idx[s] ||= []).push(i); } });
+  }
+  const step = {};
+  for (const [s, xs] of Object.entries(idx)) { xs.sort((a,b)=>a-b); step[s] = xs[Math.floor(xs.length/2)]; }
+  // dense rank, so a long detour by one participant does not open empty columns
+  const ranks = [...new Set(Object.values(step))].sort((a,b)=>a-b);
+  for (const s in step) step[s] = ranks.indexOf(step[s]);
+  return step;
+}
+function stats() {
+  const k = {}, visits = {}, edges = {};
+  for (const [p, path] of Object.entries(PATHS)) {
+    new Set(path).forEach(s => (k[s] ||= new Set()).add(p));
+    path.forEach((s,i) => { visits[s] = (visits[s]||0)+1; if (i) { const e = path[i-1]+">"+s; (edges[e] ||= new Set()).add(p); } });
+  }
+  return { k, visits, edges };
+}
+const STEP = firstStep(), ST = stats();
+const QN = s => (QUOTES[s]||[]).length;
+
+function thumb(kind, dialog) {
+  const L = (x,y,w,c="ln") => `<div class="${c}" style="left:${x}%;top:${y}%;width:${w}%"></div>`;
+  let h = `<div class="bar"></div>`;
+  if (kind==="home") h += `<div class="blk" style="left:6%;top:18%;width:88%;height:40%"></div>` + L(6,64,50) + L(6,72,36) + `<div class="blk" style="left:6%;top:80%;width:26%;height:16%"></div><div class="blk" style="left:37%;top:80%;width:26%;height:16%"></div><div class="blk" style="left:68%;top:80%;width:26%;height:16%"></div>`;
+  if (kind==="list") for (let r=0;r<2;r++) for (let c=0;c<4;c++) h += `<div class="blk" style="left:${6+c*23}%;top:${20+r*40}%;width:19%;height:24%"></div>` + L(6+c*23,46+r*40,15);
+  if (kind==="pdp") h += `<div class="blk" style="left:6%;top:18%;width:48%;height:72%"></div>` + L(60,22,30) + L(60,30,20) + L(60,40,32) + L(60,46,28) + `<div class="btn" style="left:60%;top:62%;width:32%"></div>`;
+  if (kind==="basket") h += `<div class="blk" style="left:6%;top:20%;width:14%;height:18%"></div>` + L(24,22,30) + L(24,30,18) + `<div class="blk" style="left:62%;top:18%;width:32%;height:60%"></div><div class="btn" style="left:64%;top:66%;width:28%"></div>`;
+  if (kind==="form") h += L(6,20,30) + `<div class="blk" style="left:6%;top:28%;width:50%;height:9%"></div><div class="blk" style="left:6%;top:42%;width:50%;height:9%"></div><div class="blk" style="left:6%;top:56%;width:50%;height:9%"></div><div class="btn" style="left:6%;top:72%;width:50%"></div><div class="blk" style="left:62%;top:18%;width:32%;height:46%"></div>`;
+  if (dialog) h += `<div class="scrim"></div><div class="dlg" style="left:28%;top:24%;width:44%;height:52%"></div>`;
+  return h;
+}
+function dots(s) { return Object.keys(PATHS).map(p => `<b class="${ST.k[s].has(p)?"on":""}"></b>`).join(""); }
+function cardHTML(s) {
+  const sc = SCREENS[s];
+  return `<div class="thumb">${thumb(sc.kind)}</div><div class="name">${sc.name}</div><div class="url">${sc.url}</div>
+    <div class="stats"><span class="dots" title="${ST.k[s].size} of ${N} participants">${dots(s)}</span><span>${ST.k[s].size} of ${N} · ${DWELL[s]}</span></div>
+    <div class="stats"><span>${ST.visits[s]} visits</span><span class="q">${QN(s)} ${QN(s)===1?"quote":"quotes"}</span></div>`;
+}
+
+// ── A: board ─────────────────────────────────────────────────────────────
+let selected = "basket", stateFilter = null, tagFilter = null, mode = "q";
+const board = document.getElementById("board");
+const cols = [];
+const maxStep = Math.max(...Object.values(STEP));
+for (let i=0;i<=maxStep;i++) {
+  const c = document.createElement("div"); c.className = "col";
+  c.innerHTML = `<div class="col-h">Step ${i+1}</div>`; board.appendChild(c); cols.push(c);
+}
+for (const s of Object.keys(SCREENS)) {
+  const b = document.createElement("button"); b.className = "card"; b.dataset.s = s; b.innerHTML = cardHTML(s);
+  b.addEventListener("click", () => { selected = s; stateFilter = null; tagFilter = null; render(); });
+  cols[STEP[s]].appendChild(b);
+}
+document.getElementById("a-meta").textContent = `${Object.keys(SCREENS).length} screens · ${N} of 8 sessions shared a screen`;
+
+function drawEdges() {
+  const svg = document.getElementById("edges"), box = board.getBoundingClientRect();
+  const pos = s => { const r = board.querySelector(`.card[data-s="${s}"] .thumb`).getBoundingClientRect();
+    return { l:r.left-box.left+board.scrollLeft, r:r.right-box.left+board.scrollLeft, y:r.top-box.top+r.height/2 }; };
+  const css = getComputedStyle(document.body);
+  let h = "";
+  for (const [e, ps] of Object.entries(ST.edges)) {
+    const [a,b] = e.split(">"); if (a===b) continue;
+    const A = pos(a), B = pos(b), back = STEP[b] <= STEP[a];
+    const x1 = back ? A.l : A.r, x2 = back ? B.r : B.l;
+    const mx = (x1+x2)/2, w = 1 + ps.size*1.3;
+    const hot = a===selected || b===selected;
+    const d = back ? `M${x1},${A.y+8} C${x1-40},${A.y+60} ${x2+40},${B.y+60} ${x2},${B.y+8}` : `M${x1},${A.y} C${mx},${A.y} ${mx},${B.y} ${x2},${B.y}`;
+    h += `<path d="${d}" fill="none" stroke="${back ? "var(--bn-sentiment-frustration)" : "var(--bn-colour-accent)"}" stroke-opacity="${hot?.75:.22}" stroke-width="${w}" stroke-linecap="round" ${back?'stroke-dasharray="4 4"':""}><title>${SCREENS[a].name} → ${SCREENS[b].name}: ${ps.size} of ${N}</title></path>`;
+  }
+  svg.innerHTML = h;
+}
+
+function render() {
+  board.querySelectorAll(".card").forEach(c => c.classList.toggle("sel", c.dataset.s===selected));
+  drawEdges();
+  const sc = SCREENS[selected];
+  document.getElementById("d-thumb").innerHTML = thumb(sc.kind, !!stateFilter);
+  document.getElementById("d-name").textContent = sc.name;
+  document.getElementById("d-url").textContent = sc.url;
+  document.getElementById("d-facts").innerHTML =
+    `<span><b>${ST.k[selected].size} of ${N}</b> participants</span><span><b>${ST.visits[selected]}</b> visits</span><span>median <b>${DWELL[selected]}</b> on screen</span><span>typically step <b>${STEP[selected]+1}</b></span>`;
+  const st = sc.states || [];
+  document.getElementById("d-states").innerHTML = st.length ? [["The page", null]].concat(st).map(([n,k]) =>
+    `<button class="state ${stateFilter===n || (!stateFilter && !k) ? "on":""}" data-st="${k?n:""}">${n}${k?`<span class="n">${k} of ${N}</span>`:""}</button>`).join("") : "";
+  document.querySelectorAll("#d-states .state").forEach(b => b.addEventListener("click", () => { stateFilter = b.dataset.st || null; render(); }));
+  const tr = TRACKS[selected] || {};
+  document.getElementById("d-track").innerHTML = Object.keys(PATHS).map(p =>
+    `<span class="badge">${p}</span><div class="lane">${(tr[p]|| (ST.k[selected].has(p)?[[0.1+0.1*Number(p[1]),0.18+0.1*Number(p[1])]]:[])).map(([a,b,d]) =>
+      `<i class="${d?"dlg":""}" style="left:${a*100}%;width:${(b-a)*100}%"></i>`).join("")}</div>`).join("");
+  let qs = (QUOTES[selected]||[]).filter(q => (!stateFilter || q.over===stateFilter) && (!tagFilter || q.tags.includes(tagFilter)));
+  document.getElementById("d-qh").textContent = mode==="q" ? `${qs.length} ${qs.length===1?"quote":"quotes"}` : "What was said while it was up";
+  const SC = s => `color:var(--bn-sentiment-${s});background:color-mix(in oklch, var(--bn-sentiment-${s}) 12%, transparent)`;
+  document.getElementById("d-quotes").innerHTML = mode==="q"
+    ? (qs.length ? qs.map(q => `<blockquote class="quote-card"><div class="quote-row"><span class="timecode"><span class="br">[</span>${q.tc}<span class="br">]</span></span>
+        <div class="quote-body">“${q.text}” <span class="muted small">— ${q.p}</span>
+        <div class="quote-meta"><span class="sent" style="${SC(q.sent)}">${q.sent}</span>${q.tags.map(t=>`<span class="badge">${t}</span>`).join("")}${q.over?`<span class="over">${q.over}</span>`:""}</div></div></div></blockquote>`).join("")
+      : `<p class="muted small">No quotes were extracted while this screen was up.</p>`)
+    : (SAID[selected]||[]).map(([p,tc,t]) => `<div class="said"><span class="who">${p} ${tc}</span>${t}</div>`).join("") || `<p class="muted small">Transcript paragraphs would list here.</p>`;
+  const tags = {};
+  (QUOTES[selected]||[]).forEach(q => q.tags.forEach(t => tags[t]=(tags[t]||0)+1));
+  document.getElementById("d-tags").innerHTML = Object.keys(tags).length
+    ? `<div class="grp">Your tags</div>` + Object.entries(tags).sort((a,b)=>b[1]-a[1]).map(([t,n]) => `<div class="trow ${tagFilter===t?"on":""}" data-t="${t}"><span class="badge">${t}</span><span class="ct">${n}</span></div>`).join("")
+      + `<div class="grp">Sentiment</div>` + Object.entries((QUOTES[selected]||[]).reduce((a,q)=>(a[q.sent]=(a[q.sent]||0)+1,a),{})).map(([s,n]) => `<div class="trow"><span class="sent" style="${SC(s)}">${s}</span><span class="ct">${n}</span></div>`).join("")
+    : `<p class="muted small">No tags yet.</p>`;
+  document.querySelectorAll("#d-tags .trow[data-t]").forEach(r => r.addEventListener("click", () => { tagFilter = tagFilter===r.dataset.t ? null : r.dataset.t; render(); }));
+}
+document.querySelectorAll(".subh .seg2 a").forEach(a => a.addEventListener("click", () => {
+  mode = a.dataset.mode; document.querySelectorAll(".subh .seg2 a").forEach(x => x.classList.toggle("on", x===a)); render(); }));
+
+// ── B: paths ─────────────────────────────────────────────────────────────
+const HUES = { home:225, cat:130, search:75, pdp:300, basket:340, delivery:30, payment:170 };
+const chipStyle = s => `background:light-dark(oklch(93% 0.04 ${HUES[s]}), oklch(40% 0.08 ${HUES[s]}))`;
+document.getElementById("paths").innerHTML = Object.entries(PATHS).map(([p, path]) => {
+  const seen = new Set();
+  const chain = path.map((s,i) => { const back = seen.has(s); seen.add(s);
+    return (i?`<span class="arr">›</span>`:"") + `<span class="chip ${back?"back":""}" style="${chipStyle(s)}">${SCREENS[s].name}</span>`; }).join("");
+  const done = path.at(-1)==="payment";
+  return `<span class="badge">${p}</span><div class="chain">${chain}</div><span class="cap ${done?"":"muted"}">${done?"reached payment":"stopped"}</span>`;
+}).join("");
+document.getElementById("legend").innerHTML = `<span><span class="chip back" style="background:transparent">outlined</span> a return to a screen already seen</span><span>${Object.keys(PATHS).length} of 8 sessions; 2 had no screen share</span>`;
+
+// ── C: grid ──────────────────────────────────────────────────────────────
+document.getElementById("sgrid").innerHTML = Object.keys(SCREENS).sort((a,b)=>STEP[a]-STEP[b])
+  .map(s => `<div class="card">${cardHTML(s)}</div>`).join("");
+
+// ── D: corrected card ────────────────────────────────────────────────────
+document.getElementById("d-card").innerHTML = `<div class="thumb">${thumb("list")}</div><div class="name">Kettles</div><div class="url">no address bar · named from the heading</div>
+  <div class="stats"><span class="dots">${dots("cat")}</span><span>${ST.k.cat.size} of ${N}</span></div>`;
+
+// ── controls ─────────────────────────────────────────────────────────────
+document.querySelectorAll("[data-pal]").forEach(b => b.addEventListener("click", () => {
+  document.documentElement.dataset.colorTheme = b.dataset.pal;
+  document.querySelectorAll("[data-pal]").forEach(x => x.classList.toggle("on", x===b)); render(); }));
+document.querySelectorAll("[data-cs]").forEach(b => b.addEventListener("click", () => {
+  document.documentElement.style.colorScheme = b.dataset.cs;
+  document.querySelectorAll("[data-cs]").forEach(x => x.classList.toggle("on", x===b)); render(); }));
+render();
+window.addEventListener("resize", drawEdges);
+board.addEventListener("scroll", drawEdges);
+</script>
+</body>
+</html>

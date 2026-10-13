@@ -248,6 +248,13 @@ probe's cache was in its container, and unsandboxed processes keep theirs under 
 `~/Library/Caches/`. The inherited child computed the real-home path, and the sandbox refused the
 write. The sandbox also refused POSIX semaphores (`multiprocessing.Queue` raised `EPERM`).
 
+**Wired and re-measured.** `childEnvironment` now sets the variable on the host side (`32e9d2b3`). A
+second rebuild applied the patch *without* its `sidecar_entry.py` lines, so only the Swift wiring
+supplied it. The sidecar's environment carried `CFFIXED_USER_HOME`, `NSHomeDirectory()` in the sidecar
+was the container, the outside read was still refused, and Vision read 8 of 8 frames (same line
+counts). Its first frame took 41.5 s again: the cache from the earlier build in the same container
+was not reused, so the compile appears to be once per build.
+
 Not tested: a TestFlight-signed build (Apple Distribution, Hardened Runtime on the host). The probe
 wrote its result file into the served project's hidden `.bristlenose/` folder; both result files were
 deleted afterwards, and the worktree and its DerivedData were removed.

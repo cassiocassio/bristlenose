@@ -118,10 +118,13 @@ Notes that matter for the choice:
   lines each at peak RSS ~408 MB for the whole serve. **First use compiles the model:** 41 s on the
   first frame of the cold run, then 0.15–0.20 s. A relaunch read its first frame in 0.63 s, so the
   cache persists in the container. The cache folder is named for the OS build, so expect one compile
-  after each macOS update. The variable belongs in `BristlenoseShared.childEnvironment` (the spike set
-  it in `sidecar_entry.py`), and it likely matters beyond Vision: any system framework that caches
-  under the home directory will be refused writes in the inherited child. Patch:
-  `experiments/screen-text/sidecar-vision-spike.patch`.
+  after each macOS update, and a newly built sidecar compiled again (41.5 s) despite a cache from an
+  earlier build in the same container, so expect it once per app version too. **Wired** into
+  `BristlenoseShared.childEnvironment` on 13 Oct 2026 (`foundationHomeEnvironment`, `32e9d2b3`); the
+  spike first set it in `sidecar_entry.py`, and an end-to-end rebuild with only the Swift wiring read
+  8 of 8 frames. It matters beyond Vision: any system framework that caches under the home directory
+  would be refused writes in the inherited child. Patch:
+  `experiments/screen-text/sidecar-vision-spike.patch` (its `sidecar_entry.py` hunk is now redundant).
 - **The sandbox refuses POSIX semaphores**, so `multiprocessing.Queue`/`Lock` fail with `EPERM` inside
   the sidecar. The screen-text job must stay in one process, which the spike's design already is.
 - **Two things a long-running Vision loop needs, both measured.** Build each frame's `CGImage` from an
@@ -291,9 +294,9 @@ sampler (`pipeline_spike.py`), Vision under the App Sandbox from frozen Python (
    box drawn on it (cheap by measurement, 0.11 s a seek, but not built).
 5. **Packaging, Mac**: pyobjc (`pyobjc-core`, `-Cocoa`, `-Quartz`, `-Vision`) in the `apple` extra
    and the sidecar spec (PyInstaller picked all four up from the imports; no spec change was needed in
-   the spike), and `CFFIXED_USER_HOME` = the container in `BristlenoseShared.childEnvironment` (§3.3).
-   The job should expect a one-time model compile of tens of seconds on its first frame after each
-   macOS update and say nothing about it: it runs in the background. *Unproven:* a TestFlight-shaped
+   the spike). `CFFIXED_USER_HOME` is already wired (§3.3). The job should expect a one-time model
+   compile of tens of seconds on its first frame after each macOS update or app update and say
+   nothing about it: it runs in the background. *Unproven:* a TestFlight-shaped
    build (Apple Distribution, Hardened Runtime on the host), and the privacy manifest's coverage of
    pyobjc's binaries; route both through the app-store-police agent.
 6. **Packaging, elsewhere**, only if §6 says so: RapidOCR as an optional extra with pinned, hashed,

@@ -49,7 +49,14 @@ struct ProjectFolderWatcherMoveTests {
     /// the test acts on, not a proxy that merely precedes it.
     final class Ready: @unchecked Sendable { var published = false }
 
-    private func waitUntil(_ deadline: Duration = .seconds(5),
+    /// Thirty seconds, not five. Both callbacks under test reach the owner through
+    /// `DispatchQueue.main.async`, and on CI's macos-26 runner the main queue is
+    /// slow to service under the parallel suite: with a 5 s deadline the test
+    /// failed on every post-registration run (12–13 Oct 2026, 9–11 s total, so
+    /// the setup half alone took 4–6 s there) while its sibling, which reads the
+    /// presenter's URL with no main hop, passed. Locally both take well under a
+    /// second; the deadline is a ceiling for a slow machine, not the expected wait.
+    private func waitUntil(_ deadline: Duration = .seconds(30),
                            _ condition: @escaping () -> Bool) async -> Bool {
         let clock = ContinuousClock()
         let end = clock.now + deadline

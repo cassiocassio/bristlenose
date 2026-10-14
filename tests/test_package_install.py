@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -117,3 +118,60 @@ def test_ensure_spacy_model_refuses_on_a_read_only_package(method: str) -> None:
         with pytest.raises(PackageInstallError, match="read-only"):
             ensure_spacy_model("en_core_web_lg")
     run.assert_not_called()
+
+
+class TestEnsureHfModelCtrlC:
+    """Measured 14 Oct 2026: one Ctrl+C during a 1.6 GB Whisper download had no
+    effect for 50 s — the whole file finished first. ``snapshot_download``
+    downloads on worker threads and parks the main thread in a wait with no
+    timeout, so the interrupt cannot land until every file is done, and
+    huggingface_hub's own abort sits in the worker, which never sees it."""
+
+    def _fake_hf(self, stop: threading.Event) -> MagicMock:
+        def snapshot_download(repo_id, **kwargs):
+            done = threading.Event()
+
+            def download():
+                stop.wait(5.0)  # the transfer, until finished or aborted
+                done.set()
+
+            threading.Thread(target=download, daemon=True).start()
+            done.wait()  # like hf_thread_map: no timeout
+            return "/cache/snapshot"
+
+        fake_hf = MagicMock()
+        fake_hf.snapshot_download.side_effect = snapshot_download
+        return fake_hf
+
+    def test_ctrl_c_stops_the_download_promptly(self):
+        import _thread
+        import time
+
+        stop = threading.Event()
+        timer = threading.Timer(0.3, _thread.interrupt_main)
+        with patch.dict(sys.modules, {"huggingface_hub": self._fake_hf(stop)}), \
+                patch(
+                    "bristlenose.utils.package_install._abort_hf_transfers",
+                    side_effect=stop.set,
+                ) as abort:
+            t0 = time.monotonic()
+            timer.start()
+            with pytest.raises(KeyboardInterrupt):
+                ensure_hf_model("mlx-community/whisper-large-v3-turbo")
+            elapsed = time.monotonic() - t0
+        abort.assert_called_once()
+        assert elapsed < 2.0, f"Ctrl+C took {elapsed:.1f}s to land"
+
+    def test_a_finished_download_returns_its_path(self):
+        stop = threading.Event()
+        stop.set()
+        with patch.dict(sys.modules, {"huggingface_hub": self._fake_hf(stop)}):
+            assert ensure_hf_model("x/y") == "/cache/snapshot"
+
+
+def test_huggingface_hub_still_exposes_the_abort_we_call():
+    """``_abort_hf_transfers`` calls a private huggingface_hub function. If an
+    upgrade moves it, Ctrl+C silently goes back to waiting for the whole file."""
+    from huggingface_hub.utils._xet import abort_xet_session
+
+    assert callable(abort_xet_session)

@@ -16,10 +16,13 @@ was speculative — the migration touches whichever function exists when it land
 
 from __future__ import annotations
 
+import importlib
 import logging
 import os
 import subprocess
 import sys
+import threading
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -101,8 +104,8 @@ def ensure_spacy_model(model_name: str) -> None:
 def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     """Ensure a Hugging Face model repo is present in the local cache; fetch if not.
 
-    Idempotent, and safe to interrupt: a Ctrl+C leaves a ``.incomplete`` file
-    and nothing a later run trips on. It does not resume — through hf_xet
+    Idempotent, and safe to interrupt: Ctrl+C stops the transfer at once and
+    hf_xet removes its partial file. It does not resume — through hf_xet
     (huggingface_hub 1.x) a re-run downloads the file again from the start,
     measured 14 Oct 2026. Safe inside the desktop sidecar — the cache lives
     under the user's HF home, not site-packages.
@@ -121,13 +124,52 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     from huggingface_hub import snapshot_download
 
     logger.info("ensure_hf_model: snapshot_download %s", repo_id)
+    paths: list[str] = []
+    errors: list[BaseException] = []
+
+    def fetch() -> None:
+        try:
+            if tqdm_class is None:
+                paths.append(snapshot_download(repo_id))
+            else:
+                paths.append(snapshot_download(repo_id, tqdm_class=tqdm_class))
+        except BaseException as exc:  # handed back to the main thread below
+            errors.append(exc)
+
+    # On its own thread, waited for in short slices, so Ctrl+C lands at once.
+    # ``snapshot_download`` downloads on worker threads and parks its caller in
+    # a wait with no timeout, so called directly, one Ctrl+C did nothing until
+    # every file had finished — 50 s on a 1.6 GB model, measured 14 Oct 2026.
+    worker = threading.Thread(target=fetch, name="hf-model-fetch", daemon=True)
+    worker.start()
     try:
-        if tqdm_class is None:
-            return snapshot_download(repo_id)
-        return snapshot_download(repo_id, tqdm_class=tqdm_class)
+        while worker.is_alive():
+            worker.join(0.2)
     except KeyboardInterrupt:
+        _abort_hf_transfers()
+        worker.join(5.0)
         raise
-    except Exception as exc:
-        raise PackageInstallError(
-            f"huggingface_hub snapshot_download {repo_id!r} failed: {exc}"
-        ) from exc
+
+    if errors:
+        error = errors[0]
+        if isinstance(error, Exception):
+            raise PackageInstallError(
+                f"huggingface_hub snapshot_download {repo_id!r} failed: {error}"
+            ) from error
+        raise error  # KeyboardInterrupt, SystemExit: unchanged
+    return paths[0]
+
+
+def _abort_hf_transfers() -> None:
+    """Stop huggingface_hub's in-flight hf_xet downloads.
+
+    The same call huggingface_hub makes when a ``KeyboardInterrupt`` reaches
+    the thread doing the download, which in ``snapshot_download`` it never
+    does. A private module, so ``tests/test_package_install.py`` pins it: if an
+    upgrade moves it, Ctrl+C goes back to waiting for the whole file.
+    """
+    try:
+        xet: Any = importlib.import_module("huggingface_hub.utils._xet")
+    except ImportError:
+        return
+    xet.abort_xet_session()

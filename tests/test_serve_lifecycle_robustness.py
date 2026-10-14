@@ -116,6 +116,30 @@ class TestTheStashCycle:
             )
         assert len(_rows(out / ".bristlenose" / "bristlenose.db")) == 1
 
+    def test_the_serve_log_follows_the_output_folder(self, tmp_path: Path, fast_watcher) -> None:
+        """``run --clean`` under a live serve: the serve's log went on into the
+        set-aside copy, which a successful run deletes, so its whole log for the
+        run — a refused speaker pick included — was gone (14 Oct 2026)."""
+        proj = _project(tmp_path)
+        out = proj / "bristlenose-output"
+        with _polling_client(_app(proj, tmp_path)) as client:
+            assert _sessions(client)
+            backup = output_backup.stash(out)
+            assert backup is not None
+            # The new run's tree: its events log, no database yet.
+            _started(out, "NEW")
+            log = out / ".bristlenose" / "bristlenose.log"
+            assert _wait(lambda: log.exists() and "reattaching" in log.read_text()), (
+                "the serve's reattach was not written to the output folder now on disk"
+            )
+            logging.getLogger("bristlenose.server.app").warning("a line after the stash")
+            for handler in logging.getLogger().handlers:
+                handler.flush()
+            assert "a line after the stash" in log.read_text()
+            assert "a line after the stash" not in (
+                backup / ".bristlenose" / "bristlenose.log"
+            ).read_text()
+
 
 # ---------------------------------------------------------------------------
 # WS2.2 — a project folder that goes away is said once, not silently

@@ -151,6 +151,50 @@ class TestSetupLogging:
         assert logging.getLogger("faster_whisper").level == logging.WARNING
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Windows will not move a folder holding an open log")
+class TestFollowTheLogFile:
+    """``run --clean`` moves the output folder aside under a live serve. The
+    serve's handler kept writing into the moved copy, which the run deletes when
+    it succeeds, so the serve's whole log for that run was lost (14 Oct 2026)."""
+
+    def test_a_moved_log_is_reopened_where_the_output_is_now(self, tmp_path: Path) -> None:
+        from bristlenose.logging import reopen_log_file, setup_logging
+
+        out = tmp_path / "bristlenose-output"
+        setup_logging(output_dir=out)
+        log = logging.getLogger("bristlenose.test")
+        log.info("before the stash")
+        stash = tmp_path / ".bristlenose-output-previous"
+        out.rename(stash)
+        (out / ".bristlenose").mkdir(parents=True)
+
+        assert reopen_log_file(out) is True
+        log.info("after the stash")
+        for h in logging.getLogger().handlers:
+            h.flush()
+        here = (out / ".bristlenose" / "bristlenose.log").read_text()
+        moved = (stash / ".bristlenose" / "bristlenose.log").read_text()
+        assert "after the stash" in here
+        assert "after the stash" not in moved
+        assert "before the stash" in moved
+
+    def test_a_log_still_in_place_is_left_alone(self, tmp_path: Path) -> None:
+        from bristlenose.logging import reopen_log_file, setup_logging
+
+        setup_logging(output_dir=tmp_path)
+        before = [h for h in logging.getLogger().handlers if isinstance(h, logging.FileHandler)]
+        assert reopen_log_file(tmp_path) is False
+        after = [h for h in logging.getLogger().handlers if isinstance(h, logging.FileHandler)]
+        assert after == before
+
+    def test_no_log_file_means_nothing_to_reopen(self, tmp_path: Path) -> None:
+        from bristlenose.logging import reopen_log_file, setup_logging
+
+        setup_logging(output_dir=None)
+        assert reopen_log_file(tmp_path) is False
+        assert not (tmp_path / ".bristlenose").exists()
+
+
 class TestParseLogLevel:
     """Tests for _parse_log_level."""
 

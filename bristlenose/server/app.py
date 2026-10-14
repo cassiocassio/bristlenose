@@ -1296,6 +1296,11 @@ def _install_event_watcher(
             # (the run creating its tree) comes back here.
             attached["files"] = now
             return
+        # The log first, so what follows lands in the folder that will survive:
+        # the moved copy is deleted when the run succeeds.
+        from bristlenose.logging import reopen_log_file
+
+        reopen_log_file(project_output_dir(project_dir))
         logger.warning(
             "output folder replaced under the running server (database %s, events log %s) "
             "— reattaching to what is on disk now",

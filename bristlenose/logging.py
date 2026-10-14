@@ -92,33 +92,69 @@ def setup_logging(
 
     # ── Log file handler ───────────────────────────────────────────
     if output_dir is not None:
-        log_dir = output_dir / ".bristlenose"
-        log_dir.mkdir(parents=True, exist_ok=True)
-        log_path = log_dir / _LOG_FILENAME
-
-        from logging.handlers import RotatingFileHandler
-
-        file_level_str = os.environ.get("BRISTLENOSE_LOG_LEVEL", "INFO")
-        file_level = _parse_log_level(file_level_str)
-
-        file_handler = RotatingFileHandler(
-            log_path,
-            maxBytes=_MAX_BYTES,
-            backupCount=_BACKUP_COUNT,
-            encoding="utf-8",
-        )
-        file_handler.setLevel(file_level)
-        file_handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S",
-            )
-        )
-        root.addHandler(file_handler)
+        root.addHandler(_file_handler(output_dir))
 
     # ── Suppress noisy third-party loggers ─────────────────────────
     for name in _NOISY_LOGGERS:
         logging.getLogger(name).setLevel(logging.WARNING)
+
+
+def _file_handler(output_dir: Path) -> logging.Handler:
+    """The rotating log file at ``<output_dir>/.bristlenose/bristlenose.log``."""
+    from logging.handlers import RotatingFileHandler
+
+    log_dir = output_dir / ".bristlenose"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    handler = RotatingFileHandler(
+        log_dir / _LOG_FILENAME,
+        maxBytes=_MAX_BYTES,
+        backupCount=_BACKUP_COUNT,
+        encoding="utf-8",
+    )
+    handler.setLevel(_parse_log_level(os.environ.get("BRISTLENOSE_LOG_LEVEL", "INFO")))
+    handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+    )
+    return handler
+
+
+def reopen_log_file(output_dir: Path) -> bool:
+    """Point the log file handler at the file on disk, if the folder moved.
+
+    An open handler follows its file, not its path: when ``run --clean`` moves
+    the output folder aside, a serve goes on writing into the moved copy, which
+    the run deletes once it succeeds. The serve calls this when it reattaches to
+    the output folder now on disk. True when it reopened; False when the file
+    in place is the one already open, or there is no log file to follow.
+    """
+    root = logging.getLogger()
+    handlers = [h for h in root.handlers if isinstance(h, logging.FileHandler)]
+    if not handlers:
+        return False
+    target = output_dir / ".bristlenose" / _LOG_FILENAME
+    try:
+        on_disk = os.stat(target)
+    except OSError:
+        on_disk = None
+    moved = False
+    for handler in handlers:
+        stream = handler.stream
+        if on_disk is not None and stream is not None:
+            try:
+                held = os.fstat(stream.fileno())
+            except (OSError, ValueError):
+                held = None
+            if held is not None and (held.st_dev, held.st_ino) == (on_disk.st_dev, on_disk.st_ino):
+                continue
+        root.removeHandler(handler)
+        handler.close()
+        moved = True
+    if moved:
+        root.addHandler(_file_handler(output_dir))
+    return moved
 
 
 def release_log_file() -> None:

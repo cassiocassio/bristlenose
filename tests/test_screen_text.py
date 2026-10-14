@@ -296,3 +296,29 @@ def test_the_still_is_a_moment_the_page_is_drawn_not_a_loading_frame() -> None:
     [tab] = screen["tabs"]
     assert tab["t"] >= 20
     assert tab["pins"] == [] and tab["loose"] == ["q-p1-5"]
+
+
+def test_each_version_links_every_participants_quote_and_the_default_is_the_best_linked() -> None:
+    """A screen is one place: p2's still links p1's quote when its words are on it, and the
+    version that links the most is shown first."""
+    from bristlenose.screen_text.screens import SessionInput, derive_screens
+
+    def ln(text: str, x: float, y: float, w: float = 0.3, h: float = 0.04) -> dict:
+        return {"text": text, "box": [x, y, w, h], "sticky": False, "runs": [[0, 60]]}
+
+    def index(extra: list[dict]) -> dict:
+        eps = [ln("ikea.com/gb/en/shoppingcart", 0.2, 0.05, 0.4, 0.02), ln("Shopping Bag", 0.1, 0.2)]
+        eps += [{"text": f"filler {i}", "box": [0.1, 0.3 + i * 0.05, 0.6, 0.02], "sticky": False,
+                 "runs": [[0, 1000]]} for i in range(10)]
+        return {"every": 4.0, "episodes": eps + extra, "moments": []}
+
+    p1 = SessionInput("s1", "p1", index([]),
+                      [{"dom_id": "q-p1-10", "start": 10, "end": 18, "text": "where is continue to checkout"}])
+    p2 = SessionInput("s2", "p2", index([ln("Continue to checkout", 0.5, 0.6)]),
+                      [{"dom_id": "q-p2-20", "start": 20, "end": 24, "text": "nice colours"}])
+    [screen] = derive_screens([p1, p2])
+    tabs = {t["code"]: t for t in screen["tabs"]}
+    assert [p["dom_id"] for p in tabs["p2"]["pins"]] == ["q-p1-10"]
+    assert tabs["p1"]["pins"] == []
+    assert screen["tabs"][screen["default_tab"]]["code"] == "p2"
+    assert screen["quotes"] == 2

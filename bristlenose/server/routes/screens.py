@@ -118,6 +118,8 @@ class Screen(BaseModel):
     key: str
     name: str
     tabs: list[ScreenTab]
+    #: The version shown first: the one on which the most quotes, anyone's, find their line.
+    default_tab: int
     quotes: int
 
 

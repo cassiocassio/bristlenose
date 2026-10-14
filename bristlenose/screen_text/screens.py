@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter, defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -226,8 +226,14 @@ def _heading(lines: list[dict], top: float, bottom: float) -> str:
     return min(((t, b) for t, b in cands if b[3] >= 0.95 * tallest), key=lambda c: c[1][1])[0]
 
 
-def _session_tabs(s: SessionInput, visits: list[Visit]) -> dict[str, dict[str, Any]]:
-    """One session's still, pins and unpinned quotes for each screen it visited."""
+Linker = Callable[[list[dict[str, Any]]], list[dict[str, Any]]]
+
+
+def _session_tabs(
+    s: SessionInput, visits: list[Visit],
+) -> tuple[dict[str, dict[str, Any]], dict[str, tuple[list[dict[str, Any]], Linker]]]:
+    """One session's still, pins and unpinned quotes for each screen it visited, and for each
+    screen its quotes and a linker: which of any quotes (anyone's) find their line on this still."""
     idx = s.index
     every = float(idx.get("every", 4.0))
     crop = content_crop(idx)
@@ -288,6 +294,12 @@ def _session_tabs(s: SessionInput, visits: list[Visit]) -> dict[str, dict[str, A
         if k:
             by_screen[k].append(q)
     tabs: dict[str, dict[str, Any]] = {}
+    extra: dict[str, tuple[list[dict[str, Any]], Linker]] = {}
+
+    def pin_dicts(found: list[tuple[dict, tuple[str, dict]]]) -> list[dict[str, Any]]:
+        return [{"dom_id": q["dom_id"], "box": to_crop(m[1]["box"]), "phrase": m[0], "line": m[1]["text"]}
+                for q, m in found]
+
     for key in sorted({v.key for v in visits}):
         qs = sorted(by_screen.get(key, []), key=lambda q: q["start"])
         vs = [v for v in visits if v.key == key]
@@ -308,11 +320,16 @@ def _session_tabs(s: SessionInput, visits: list[Visit]) -> dict[str, dict[str, A
             "session_id": s.session_id, "code": s.code, "t": still, "crop": crop,
             "heading": _heading(lines_at(still), top, crop[3]),
             "visits": [[v.t0, v.t1] for v in vs],
-            "pins": [{"dom_id": q["dom_id"], "box": to_crop(m[1]["box"]), "phrase": m[0], "line": m[1]["text"]}
-                     for q, m in pins],
+            "pins": pin_dicts(pins),
             "loose": [q["dom_id"] for q in qs if q["dom_id"] not in pinned],
         }
-    return tabs
+
+        def link(others: list[dict[str, Any]], t: float = still) -> list[dict[str, Any]]:
+            ls = lines_at(t)
+            return pin_dicts([(q, m) for q in others if (m := match(q["text"], ls, rare, tokens))])
+
+        extra[key] = (qs, link)
+    return tabs, extra
 
 
 def derive_screens(sessions: Iterable[SessionInput]) -> list[dict[str, Any]]:
@@ -362,19 +379,33 @@ def derive_screens(sessions: Iterable[SessionInput]) -> list[dict[str, Any]]:
 
     out: dict[str, dict[str, Any]] = {}
     order: list[str] = []
+    said: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    linkers: dict[str, list[tuple[dict[str, Any], Linker]]] = defaultdict(list)
     for d in per.values():
         visits: list[Visit] = d["visits"]
         for v in visits:
             v.key = find(sorted(v.aliases)[0])
-        for key, tab in _session_tabs(d["s"], visits).items():
+        tabs, extra = _session_tabs(d["s"], visits)
+        for key, tab in tabs.items():
             if key not in out:
                 out[key] = {"key": key, "name": display(key), "tabs": []}
                 order.append(key)
             out[key]["tabs"].append(tab)
+            qs, link = extra[key]
+            said[key].extend(qs)
+            linkers[key].append((tab, link))
+    # A screen is one place for everything said about it: each version's still links every
+    # participant's quote whose words it shows, not only its own participant's.
+    for key, pairs in linkers.items():
+        for tab, link in pairs:
+            own = {p["dom_id"] for p in tab["pins"]}
+            tab["pins"] += [p for p in link([q for q in said[key] if q["dom_id"] not in own])]
     screens = [out[k] for k in order]
     for sc in screens:
         sc["tabs"].sort(key=lambda t: (t["code"], t["t"]))
-        sc["quotes"] = sum(len(t["pins"]) + len(t["loose"]) for t in sc["tabs"])
+        # The version shown first: the one on which the most quotes find their line.
+        sc["default_tab"] = max(range(len(sc["tabs"])), key=lambda j: (len(sc["tabs"][j]["pins"]), -j))
+        sc["quotes"] = len(said[sc["key"]])
     # Most-said-about first; a screen nobody spoke on still appears, last, so the map is whole.
     screens.sort(key=lambda sc: (-sc["quotes"], -len(sc["tabs"]), min(t["visits"][0][0] for t in sc["tabs"])))
     return screens

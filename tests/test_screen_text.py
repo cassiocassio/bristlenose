@@ -111,7 +111,7 @@ def test_moments_are_where_the_screen_text_changes() -> None:
 
 def test_the_vision_engine_explains_itself_where_it_cannot_run(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("platform.system", lambda: "Linux")
-    assert VisionEngine().available() == "Vision is macOS only"
+    assert VisionEngine().available() == "not_macos"
 
 
 @_needs_ffmpeg

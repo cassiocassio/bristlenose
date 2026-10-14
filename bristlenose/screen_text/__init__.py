@@ -25,9 +25,22 @@ in an export, never sent to an LLM, never through MCP or the chat lens.
 from __future__ import annotations
 
 import os
+from typing import Literal
 
 #: Bump when anything changes what an index holds: it is in every index's cache key.
 INDEX_VERSION = 2
+
+# Why something cannot be read, as a case, never a sentence: the SPA and the Mac app say it in the
+# researcher's language, and the raw detail (an exception, ffmpeg's stderr) goes to the log only.
+
+#: Why the engine cannot run on this machine (``ScreenTextEngine.available()``).
+EngineUnavailable = Literal["not_macos", "vision_missing"]
+#: Why the screens routes cannot read anything: the engine's reason, or serve has no job at all.
+Unavailable = Literal["not_macos", "vision_missing", "no_job"]
+#: Why one recording has no index. ``not_read`` is the only one that is not a failure: the job is
+#: idle and did not read it (a run started mid-pass, or it never got that far), and the next pass
+#: will — after a run, or when serve restarts.
+ReadFailure = Literal["unreadable", "cloud_downloading", "ffprobe_failed", "read_failed", "not_read"]
 
 
 def enabled() -> bool:

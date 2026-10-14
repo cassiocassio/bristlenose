@@ -212,7 +212,7 @@ def test_one_unreadable_recording_does_not_stop_the_others(project: Path,
     while job.running and time.time() < deadline:
         time.sleep(0.05)
     assert (index_dir(_out(project)) / "s1.json").exists()
-    assert "no video stream" in job.failed["s0"]
+    assert job.failed["s0"] == "read_failed"  # a case, not ValueError's sentence
     body = AuthTestClient(app).get("/api/projects/1/screens").json()
     assert body["pending"] is False and "s0" in body["failed"] and body["indexed"] == 1
 
@@ -241,7 +241,7 @@ def test_a_recording_that_failed_is_not_read_again_until_it_changes(project: Pat
                         engine=FakeEngine(lambda t: []))
     job._pass()
     job._pass()
-    assert calls == ["s1.mp4"] and "decoder said no" in job.failed["s1"]
+    assert calls == ["s1.mp4"] and job.failed["s1"] == "read_failed"
     video.write_bytes(b"replaced")
     job._pass()
     assert calls == ["s1.mp4", "s1.mp4"]

@@ -18,10 +18,15 @@ a ~40 s model compile, once.
 
 from __future__ import annotations
 
+import logging
 import platform
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol, TypedDict
+
+from bristlenose.screen_text import EngineUnavailable
+
+logger = logging.getLogger(__name__)
 
 
 class Line(TypedDict):
@@ -42,8 +47,9 @@ class ScreenTextEngine(Protocol):
     name: str
     version: str
 
-    def available(self) -> str | None:
-        """None when the engine can run here; otherwise a reason a person can act on."""
+    def available(self) -> EngineUnavailable | None:
+        """None when the engine can run here; otherwise a reason code (never a sentence: the
+        reader says it in the researcher's language; any detail goes to the log)."""
         ...
 
     def recognize(self, frame: Frame) -> list[Line]: ...
@@ -55,16 +61,30 @@ class VisionEngine:
     name = "vision"
     version = "accurate-1"
 
-    def available(self) -> str | None:
+    def __init__(self) -> None:
+        self._checked = False
+        self._why: EngineUnavailable | None = None
+
+    def available(self) -> EngineUnavailable | None:
+        # Asked on every screens request: worked out once (neither the platform nor the installed
+        # packages change under a running process), and the detail logged once.
+        if not self._checked:
+            self._why = self._check()
+            self._checked = True
+        return self._why
+
+    def _check(self) -> EngineUnavailable | None:
         if platform.system() != "Darwin":
-            return "Vision is macOS only"
+            logger.info("Screen text off: Vision is macOS only (%s)", platform.system())
+            return "not_macos"
         try:
             import Foundation  # noqa: F401
             import objc  # noqa: F401
             import Quartz  # noqa: F401
             import Vision  # noqa: F401
-        except ImportError:
-            return 'pyobjc-framework-Vision is not installed (pip install "bristlenose[apple]")'
+        except ImportError as exc:
+            logger.info('Screen text off: %s (pip install "bristlenose[apple]")', exc)
+            return "vision_missing"
         return None
 
     def recognize(self, frame: Frame) -> list[Line]:
@@ -114,7 +134,7 @@ class FakeEngine:
     def __init__(self, lines_at: Callable[[float], list[Line]]) -> None:
         self._lines_at = lines_at
 
-    def available(self) -> str | None:
+    def available(self) -> EngineUnavailable | None:
         return None
 
     def recognize(self, frame: Frame) -> list[Line]:

@@ -236,6 +236,29 @@ def read_index(path: Path) -> dict[str, Any] | None:
     return rec
 
 
+_STORED_KEYS: dict[str, tuple[int, int, int, str | None]] = {}
+
+
+def stored_key(path: Path) -> str | None:
+    """The cache key the index at *path* was written for, or None when there is no readable index.
+
+    Memoised on the file's inode, mtime and size (an index is replaced whole, never edited), so a
+    caller that asks often (the job on every pass, the status route on every poll) pays a stat, and
+    parses an index only when it has been rewritten."""
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    hit = _STORED_KEYS.get(str(path))
+    stamp = (st.st_ino, st.st_mtime_ns, st.st_size)
+    if hit is not None and hit[:3] == stamp:
+        return hit[3]
+    rec = read_index(path)
+    key = rec["key"] if rec is not None else None
+    _STORED_KEYS[str(path)] = (*stamp, key)
+    return key
+
+
 def is_current(path: Path, video: Path, engine: ScreenTextEngine) -> bool:
     rec = read_index(path)
     try:

@@ -4,10 +4,18 @@
 still on it (time and crop), the quotes pinned to on-screen lines and the quotes said there with no
 pin. Quotes travel as DOM ids; the SPA joins them to the quotes store, so star, hide and tags are
 the report's own. ``GET …/screens/still`` returns one cropped frame as a data URI, cached on disk.
+``GET …/screens/status`` is the Mac app's progress row: counts, recording seconds and the reading
+rate, from the database and a stat per recording — it never derives screens or decodes anything.
 
-Both are participants' screens: behind the bearer, never under ``/report/assets/``, server-only in
-an export (``routes/export.py``). Diagnostics-only for now: the lens asks only with the Diagnostics
-preference on, and the job that writes the indexes runs only when switched on.
+Why something cannot be read travels as a reason code (``bristlenose.screen_text.Unavailable`` /
+``ReadFailure``), never a sentence; the SPA and the Mac app say it in the researcher's language.
+A recording with no index, no failure and an idle job is ``not_read``, so a poller always stops.
+
+All three are about participants' screens: behind the bearer, never under ``/report/assets/``,
+server-only in an export (``routes/export.py``). Diagnostics-only for now: the job that writes the
+indexes runs only when switched on. Switched off, ``/screens`` and ``/screens/status`` answer 200
+with ``enabled: false`` (the lens and the progress row must be able to see "off"), and
+``/screens/still`` answers 404.
 """
 
 from __future__ import annotations
@@ -24,15 +32,18 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose import screen_text
 from bristlenose.output_paths import project_output_dir
-from bristlenose.screen_text.index import cache_key, index_dir, read_index
+from bristlenose.screen_text import ReadFailure, Unavailable
+from bristlenose.screen_text.index import cache_key, index_dir, read_index, stored_key
 from bristlenose.screen_text.screens import SessionInput, derive_screens
 from bristlenose.server import speaker_slots
 from bristlenose.server.models import Project
 from bristlenose.server.scene_strips import video_sessions
+from bristlenose.server.screen_text_job import session_durations
 from bristlenose.utils.bundled_binary import binary_command
 from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
@@ -59,7 +70,76 @@ def screens_enabled(request: Request) -> bool:
     return screen_text.enabled() or bool(getattr(request.app.state, "dev", False))
 
 
-@router.get("/projects/{project_id}/screens")
+# The shape ``screen_text/screens.py``'s ``derive_screens`` returns, field for field.
+# ``tests/test_screens_status.py::test_the_models_carry_every_field_derive_screens_returns`` pins
+# the two against each other.
+
+
+class ScreenPin(BaseModel):
+    dom_id: str
+    #: x, y, w, h in the still's crop coordinates (0–1 of the cropped page).
+    box: list[float]
+    phrase: str
+    line: str
+
+
+class ScreenTab(BaseModel):
+    """One session's view of one screen."""
+
+    session_id: str
+    code: str
+    #: The still's time in the recording, seconds.
+    t: float
+    #: x0, y0, x1, y1 of the page within the frame, 0–1.
+    crop: list[float]
+    heading: str
+    #: [t0, t1] for each time the session was on this screen.
+    visits: list[list[float]]
+    pins: list[ScreenPin]
+    #: DOM ids of the quotes said on this screen that are pinned to no line.
+    loose: list[str]
+
+
+class Screen(BaseModel):
+    key: str
+    name: str
+    tabs: list[ScreenTab]
+    quotes: int
+
+
+class ScreensResponse(BaseModel):
+    enabled: bool
+    unavailable: Unavailable | None
+    pending: bool
+    reading: str | None
+    videos: int
+    indexed: int
+    failed: dict[str, ReadFailure]
+    blank: list[str]
+    screens: list[Screen]
+
+
+class StillResponse(BaseModel):
+    src: str
+
+
+class ScreensStatusResponse(BaseModel):
+    enabled: bool
+    unavailable: Unavailable | None
+    running: bool
+    #: Recordings not waiting to be read: a current index, or a reason why there is none.
+    done: int
+    #: Sessions with a video recording.
+    total: int
+    #: Recording seconds, from the database's session durations (unknown counts 0).
+    seconds_done: float
+    seconds_total: float
+    #: Recording seconds read per wall-clock second by the current (or last) pass; null until
+    #: that pass has read one recording.
+    rate: float | None
+
+
+@router.get("/projects/{project_id}/screens", response_model=ScreensResponse)
 def get_screens(project_id: int, request: Request, db: Session = Depends(_get_db)) -> dict[str, Any]:
     """Every screen the recordings show, with each session's still, pins and unpinned quotes."""
     try:
@@ -67,11 +147,13 @@ def get_screens(project_id: int, request: Request, db: Session = Depends(_get_db
             raise HTTPException(status_code=404, detail="Project not found")
         job = getattr(request.app.state, "screen_text", None)
         enabled = screens_enabled(request)
-        unavailable = job.unavailable() if job is not None else "no screen-text job"
+        # Off is its own answer, as on /screens/status: why it could not run is moot.
+        unavailable: Unavailable | None = (None if not enabled
+                                           else job.unavailable() if job is not None else "no_job")
         out_dir = _output_dir(request)
         videos = video_sessions(db)
         failed = dict(getattr(job, "failed", {}) or {}) if job is not None else {}
-        base = {"enabled": enabled, "unavailable": unavailable,
+        base: dict[str, Any] = {"enabled": enabled, "unavailable": unavailable,
                 "pending": bool(job is not None and job.running),
                 "reading": job.current if job is not None else None,
                 "videos": len(videos), "indexed": 0,
@@ -102,6 +184,13 @@ def get_screens(project_id: int, request: Request, db: Session = Depends(_get_db
             if not rec.get("raw_lines") and rec.get("samples"):
                 base["blank"].append(sid)  # the engine read frames and found no text in any
         base["indexed"] = len(indexes)
+        if job is not None:
+            in_run = job.run_in_progress()
+            for sid in videos:
+                if sid not in indexes:
+                    why = job.why_unread(sid, in_run)
+                    if why is not None:
+                        base["failed"][sid] = why
         if not indexes:
             return base
 
@@ -138,7 +227,7 @@ def get_screens(project_id: int, request: Request, db: Session = Depends(_get_db
 _CROP = re.compile(r"^(0(\.\d+)?|1(\.0+)?),(0(\.\d+)?|1(\.0+)?),(0(\.\d+)?|1(\.0+)?),(0(\.\d+)?|1(\.0+)?)$")
 
 
-@router.get("/projects/{project_id}/screens/still")
+@router.get("/projects/{project_id}/screens/still", response_model=StillResponse)
 def get_still(
     project_id: int,
     request: Request,
@@ -204,3 +293,46 @@ def get_still(
     else:
         jpg = cache.read_bytes()
     return {"src": "data:image/jpeg;base64," + base64.b64encode(jpg).decode("ascii")}
+
+
+@router.get("/projects/{project_id}/screens/status", response_model=ScreensStatusResponse)
+def get_screens_status(project_id: int, request: Request,
+                       db: Session = Depends(_get_db)) -> dict[str, Any]:
+    """How far the screen-text job has got, for the Mac app's progress row. Cheap by design: the
+    database and a stat per recording (and an index parsed only when it has been rewritten). It
+    never derives screens, decodes a frame, or reads a recording's bytes."""
+    try:
+        if not db.get(Project, project_id):
+            raise HTTPException(status_code=404, detail="Project not found")
+        job = getattr(request.app.state, "screen_text", None)
+        out: dict[str, Any] = {"enabled": screens_enabled(request),
+               "unavailable": job.unavailable() if job is not None else "no_job",
+               "running": False, "done": 0, "total": 0, "seconds_done": 0.0, "seconds_total": 0.0,
+               "rate": None}
+        out_dir = _output_dir(request)
+        if not out["enabled"]:
+            out["unavailable"] = None  # off is its own answer; why it could not run is moot
+            return out
+        videos = video_sessions(db)
+        # Not filtered by project, like video_sessions: the two must agree on which sessions
+        # count, or a database holding a forked second row reads a total with no durations.
+        durations = session_durations(db)
+    finally:
+        db.close()
+    out["total"] = len(videos)
+    out["seconds_total"] = sum(durations.get(sid, 0.0) for sid in videos)
+    if job is None or out_dir is None:
+        return out
+    out["running"] = bool(job.running)
+    out["rate"] = job.rate
+    idir = index_dir(out_dir)
+    in_run = job.run_in_progress()
+    for sid, video in videos.items():
+        try:
+            current = stored_key(idir / f"{sid}.json") == cache_key(video, job.engine)
+        except OSError:
+            current = False
+        if current or job.why_unread(sid, in_run) is not None:
+            out["done"] += 1
+            out["seconds_done"] += durations.get(sid, 0.0)
+    return out

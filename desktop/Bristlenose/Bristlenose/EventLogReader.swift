@@ -122,6 +122,25 @@ enum EventLogReader {
         tailMatching(at: url) { $0.event == "run_progress" }
     }
 
+    /// The newest `run_progress` line, if it belongs to the run under way.
+    ///
+    /// The log is append-only, so the newest progress line can be the previous
+    /// run's. Matching it against the newest `run_started` catches that once
+    /// the new run has written its start — but a spawned run takes seconds to
+    /// get there, and until it does, both lines are the previous run's and
+    /// agree. `priorRunId` is the run that was newest on disk when we spawned
+    /// (nil when attaching to a run already live): its lines are never this
+    /// run's. Without it a re-analyse read the previous run's "8 sessions
+    /// readable" and handed the pane from the shoal to a report the new run
+    /// had not started (14 Oct 2026).
+    static func currentRunProgress(at url: URL, priorRunId: String?) -> Event? {
+        guard let event = latestProgress(at: url),
+              let current = tailEvent(at: url)?.runId,
+              event.runId == current,
+              current != priorRunId else { return nil }
+        return event
+    }
+
     /// Read from the tail and return the newest decodable event satisfying
     /// `predicate`. Bounded 64 KB read; drops a chopped first slice.
     private static func tailMatching(

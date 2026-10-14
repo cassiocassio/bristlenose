@@ -361,6 +361,12 @@ final class PipelineRunner: ObservableObject {
     /// session, not once a second, and the window's pane reads it.
     @Published private(set) var sessionsReadable: [UUID: Int] = [:]
 
+    /// Per project, the run that was newest in the events log when we spawned
+    /// one: its progress lines are never the new run's
+    /// (`EventLogReader.currentRunProgress`). Absent for an attached orphan,
+    /// whose own `run_started` is already the newest.
+    private var priorRunIds: [UUID: String] = [:]
+
     /// Show the "Adding N interviews…" ack for `projectID` and clear it no sooner
     /// than `floor` seconds from now (the visibility floor — the timer only bounds
     /// the *minimum* on-screen time; a run reaching `.running` overrides the
@@ -738,20 +744,18 @@ final class PipelineRunner: ObservableObject {
     /// first progress line lands (→ the indicator keeps the spinner). Shared by
     /// the spawned-run poll and the orphan poll.
     private func applyEventProgress(from eventsURL: URL, for projectID: UUID) async {
-        // Read the newest progress AND the current run's id (the newest
-        // run_started) in one detached hop. The events file is append-only —
-        // NOT truncated on resume — so the newest progress line could belong to
-        // the *previous* run (e.g. during the new run's 30–60s model load before
-        // it emits anything). Gate on run_id so a stale prior-run line can't
-        // drive the ring (it would otherwise jump it to ~97%). Works for both
-        // spawned and orphan-attach paths — the current run's run_started is
-        // always the newest lifecycle event while the run is live.
-        let (event, currentRunId) = await Task.detached {
-            (EventLogReader.latestProgress(at: eventsURL),
-             EventLogReader.tailEvent(at: eventsURL)?.runId)
+        // The events file is append-only — NOT truncated on resume — so the
+        // newest progress line can be the *previous* run's, which would jump
+        // the ring to ~97% and hand the pane to the report. Matching the
+        // newest run_started is not enough on its own: a spawned run takes
+        // seconds to write its start, and until then both are the previous
+        // run's. `currentRunProgress` also excludes the run that was newest
+        // at spawn.
+        let prior = priorRunIds[projectID]
+        let event = await Task.detached {
+            EventLogReader.currentRunProgress(at: eventsURL, priorRunId: prior)
         }.value
-        guard let event, event.runId == currentRunId,
-              let current = liveData.progress[projectID] else { return }
+        guard let event, let current = liveData.progress[projectID] else { return }
         if let readable = event.sessionsReadable, readable > (sessionsReadable[projectID] ?? 0) {
             sessionsReadable[projectID] = readable
         }
@@ -782,6 +786,7 @@ final class PipelineRunner: ObservableObject {
         attachedOrphanPIDs[project.id] = pid
         state[project.id] = .running
         sessionsReadable[project.id] = nil
+        priorRunIds[project.id] = nil
         var initial = PipelineProgress(startedAt: Date())
         initial.attachedFromOrphan = true
         liveData.setProgress(initial, for: project.id)
@@ -1416,6 +1421,9 @@ final class PipelineRunner: ObservableObject {
         cancellationRequested = false
         state[project.id] = .running
         sessionsReadable[project.id] = nil
+        // Before the spawn, so the new run cannot have written its start yet:
+        // a bounded tail read, once per Analyse.
+        priorRunIds[project.id] = EventLogReader.tailEvent(at: Self.eventsURL(for: project))?.runId
         liveData.setProgress(PipelineProgress(startedAt: Date()), for: project.id)
         liveData.clearOutput(for: project.id)
         startProgressPoll(for: project, generation: gen)

@@ -56,6 +56,37 @@ import Testing
             .sessionsReadable == nil)
     }
 
+    /// A re-analyse, before the new run has written its start: the log holds
+    /// only the previous run, whose last line said every session was readable.
+    /// That must not read as this run's progress (14 Oct 2026 — the shoal gave
+    /// way to a status page five seconds into a re-analyse).
+    @Test func thePreviousRunsProgressIsNotTheNewRuns() throws {
+        let readable = runProgress.replacingOccurrences(
+            of: #""elapsed_seconds":40.0"#, with: #""elapsed_seconds":40.0,"sessions_readable":8"#
+        )
+        let previousOnly = try writeEvents([runStarted, readable])
+        #expect(EventLogReader.currentRunProgress(at: previousOnly, priorRunId: "RUN1") == nil)
+
+        // The new run has started and said nothing yet: still nothing.
+        let newStart = runStarted.replacingOccurrences(of: "RUN1", with: "RUN2")
+        let started = try writeEvents([runStarted, readable, newStart])
+        #expect(EventLogReader.currentRunProgress(at: started, priorRunId: "RUN1") == nil)
+
+        // Its own first line is its progress.
+        let newProgress = runProgress.replacingOccurrences(of: "RUN1", with: "RUN2")
+        let going = try writeEvents([runStarted, readable, newStart, newProgress])
+        let ev = EventLogReader.currentRunProgress(at: going, priorRunId: "RUN1")
+        #expect(ev?.runId == "RUN2")
+        #expect(ev?.sessionsReadable == nil)
+    }
+
+    /// Attached to a run already live, there is no prior run to exclude: its
+    /// own start is the newest, and its progress is read as before.
+    @Test func anAttachedRunReadsItsOwnProgress() throws {
+        let url = try writeEvents([runStarted, runProgress])
+        #expect(EventLogReader.currentRunProgress(at: url, priorRunId: nil)?.runId == "RUN1")
+    }
+
     @Test func tailEventSkipsTrailingProgress() throws {
         // run_started then a trailing run_progress: the lifecycle read returns
         // the run_started, not the progress line — so a live run isn't read as

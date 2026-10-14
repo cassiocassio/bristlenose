@@ -3221,6 +3221,20 @@ class Pipeline:
         with console.status("", spinner="dots") as status:
             status.renderable.frames = [" " + f for f in status.renderable.frames]
 
+            # ── Whisper preflight ──
+            # As in run(): fetch the model here, with its banner and HF's own
+            # progress bars, so a first `transcribe` does not download ~1.6 GB
+            # silently inside the "Transcribing..." spinner.
+            _needs_whisper = any(not s.has_existing_transcript for s in sessions)
+            if _needs_whisper:
+                from bristlenose.preflight.whisper import preflight_whisper
+                preflight_whisper(
+                    settings=self.settings,
+                    console=console,
+                    status=status,
+                    allow_fetch=not self.settings.no_fetch,
+                )
+
             # ── Stage 2: Extract audio ──
             status.update("[dim]Extracting audio...[/dim]")
             t0 = time.perf_counter()

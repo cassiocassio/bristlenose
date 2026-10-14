@@ -198,6 +198,36 @@ class TestWritesRefusedWhileARunOwnsTheProject:
         resp = client.put("/api/projects/1/sessions/s1/speakers/m1", json={"full_name": "Martin S"})
         assert resp.status_code == 200, resp.text
 
+    def test_naming_yourself_the_moderator_is_allowed(self, tmp_path: Path) -> None:
+        """"That's Me" on a moderator, as the SPA sends it: someone new, with the
+        slot's role as ``kind`` even though the role is unchanged. It is the first
+        thing a researcher does while a first analysis runs, and it was refused
+        as a recode (14 Oct 2026)."""
+        project = _with_quotes(tmp_path)
+        client = _client(project)
+        _lock(project / "bristlenose-output")
+        resp = client.put(
+            "/api/projects/1/sessions/s1/speakers/m1",
+            json={"person": "8f0c2a1e-0000-4000-8000-000000000001", "create": True,
+                  "kind": "moderator", "full_name": "Martin", "short_name": "Martin",
+                  "confirmed": True},
+        )
+        assert resp.status_code == 200, resp.text
+        assert _slots(client)[("s1", "m1")]["name"] == "Martin"
+
+    def test_a_recode_is_still_refused(self, tmp_path: Path) -> None:
+        """The ``kind`` that changes the role is the write a run would overwrite."""
+        project = _with_quotes(tmp_path)
+        client = _client(project)
+        _lock(project / "bristlenose-output")
+        resp = client.put(
+            "/api/projects/1/sessions/s1/speakers/m1",
+            json={"person": "8f0c2a1e-0000-4000-8000-000000000002", "create": True,
+                  "kind": "observer", "full_name": "Kim", "short_name": "Kim",
+                  "confirmed": True},
+        )
+        assert resp.status_code == 409, resp.text
+
     def test_the_importer_does_not_carry_picks_under_a_live_run(self, tmp_path: Path) -> None:
         """The run loaded the registry at its start and saves over it at its
         end, so a carry written now is lost — and a half-carried registry is

@@ -441,6 +441,10 @@ def put_people(
         db.close()
 
 
+#: The role a picker ``kind`` stores: a moderator is a ``researcher`` on disk.
+_ROLE_FOR_KIND = {"moderator": "researcher", "observer": "observer", "participant": "participant"}
+
+
 @router.put("/projects/{project_id}/sessions/{session_id}/speakers/{speaker_code}")
 def put_session_speaker(
     project_id: int,
@@ -477,14 +481,6 @@ def put_session_speaker(
     db = _get_db(request)
     try:
         project = _check_project(db, project_id)
-        if (data.kind is not None or data.swap_with is not None) and run_in_progress(
-            Path(project.output_dir)
-        ):
-            # A recode writes the session registry (its re-analysis pins), which
-            # the running analysis loaded at its start and saves over at its end.
-            # A name lives in the database, which the run never touches, so a
-            # rename or a pick goes through.
-            raise HTTPException(status_code=409, detail="An analysis is running")
         if (
             db.query(SessionModel)
             .filter_by(project_id=project_id, session_id=session_id)
@@ -499,6 +495,16 @@ def put_session_speaker(
         if slot is None:
             raise HTTPException(status_code=404, detail="Speaker not found")
         sp = slot.row
+        recodes = data.kind is not None and _ROLE_FOR_KIND[data.kind] != sp.speaker_role
+        if (recodes or data.swap_with is not None) and run_in_progress(
+            Path(project.output_dir)
+        ):
+            # A recode writes the session registry (its re-analysis pins), which
+            # the running analysis loaded at its start and saves over at its end.
+            # A name lives in the database, which the run never touches, so a
+            # rename or a pick goes through — including one that carries the
+            # slot's role unchanged as ``kind``, which every SPA pick does.
+            raise HTTPException(status_code=409, detail="An analysis is running")
         if data.swap_with is not None:
             _swap(db, project_id, session_id, sp, data.swap_with)
             drop_withdrawn_pins(db, project_id, session_id)
@@ -510,9 +516,7 @@ def put_session_speaker(
 
         was_team = speaker_slots.is_team(sp)
         if data.kind is not None:
-            sp.speaker_role = {
-                "moderator": "researcher", "observer": "observer", "participant": "participant",
-            }[data.kind]
+            sp.speaker_role = _ROLE_FOR_KIND[data.kind]
         # A moderator or observer *now*: the role, which a recode just set,
         # not the tag's letter.
         team = speaker_slots.is_team(sp)

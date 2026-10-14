@@ -1,7 +1,11 @@
 # Domain: progress, activity, waiting
 
-**Status: drafted.** Smoke-tested only (14 Oct 2026: three held-out questions, fresh agents, one
-of them contaminated and rerun; no control arm). Claims trued against the tree the same day.
+**Status: drafted.** Claims trued against the tree 14 Oct 2026. Tested the same night with a
+control arm (three questions, three runs with this file and three without, frozen tree at
+`0035fdd8`, graded blind against a rubric fixed in advance): **no measurable benefit** — mean 12.3/17
+with the file, 13.0 without; the file produced both the best answer and the two worst. Cause found:
+rule 1 then carried an invented clause ("a view's own content → that view") falsely cited to §4,
+which pulled two runs off the row. Removed; re-test before trusting this file.
 
 How Bristlenose tells someone that work is in flight. Inventoried 14 Oct 2026 across the CLI, build
 scripts, server, SPA and Mac app (fourteen mechanisms). The governing docs:
@@ -32,9 +36,9 @@ subprocess, serve, Swift, browser).
 
 ## Rules that come with the siblings
 
-1. **Status lives where its subject lives.** One project → its row (and, for the key window, the
-   window subtitle). The whole app → a toolbar pill. A view's own content → that view.
-   (`design-desktop-project-status.md` §4.)
+1. **Status lives where its subject lives** (`design-desktop-project-status.md` §4, "the placement
+   axis", settled 19 Jun 2026): what is scoped to one project goes on that project's row (and, for
+   the key window, the window subtitle); app-global work goes in the toolbar `.status` zone.
 2. **One winner per line**: severity › causation › recency; a run beats activities; activities beat
    deltas ("+N new", missing, forked); a clean row is silent (Schema E). Never compose two states
    (sole exception `completedPartial`).

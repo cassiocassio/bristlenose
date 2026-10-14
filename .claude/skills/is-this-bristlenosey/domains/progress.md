@@ -5,7 +5,10 @@ control arm (three questions, three runs with this file and three without, froze
 `0035fdd8`, graded blind against a rubric fixed in advance): **no measurable benefit** — mean 12.3/17
 with the file, 13.0 without; the file produced both the best answer and the two worst. Cause found:
 rule 1 then carried an invented clause ("a view's own content → that view") falsely cited to §4,
-which pulled two runs off the row. Removed; re-test before trusting this file.
+which pulled two runs off the row. Removed and re-tested the same night (three runs, same tree,
+same grader and rubric): 16, 10, 17 (mean 14.3/17, no false claims) against the control's 13.0
+(one). Better, not proven: n=3, one oracle, and one run still chose the lens, citing the
+scene-strip job as the nearer sibling (correctly listing the row as an open call).
 
 How Bristlenose tells someone that work is in flight. Inventoried 14 Oct 2026 across the CLI, build
 scripts, server, SPA and Mac app (fourteen mechanisms). The governing docs:

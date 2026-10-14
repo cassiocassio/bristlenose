@@ -47,6 +47,11 @@ describe("tabFromPath — longest prefix first", () => {
     expect(tabFromPath("/report/signals")).toBe("signals");
     expect(tabFromPath("/report/sessions")).toBe("sessions");
   });
+
+  it("resolves the Screens lens to its own tab, not Project", () => {
+    // A wrong tag renders NO subtitle: Swift discards it (see the block above).
+    expect(tabFromPath("/report/screens/")).toBe("screens");
+  });
 });
 
 describe("the Quotes subtitle counts what the filters leave", () => {

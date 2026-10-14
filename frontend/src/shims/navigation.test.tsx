@@ -53,6 +53,14 @@ describe("installNavigationShims", () => {
     expect(navigateSpy).toHaveBeenCalledWith("/report/");
   });
 
+  it("switchToTab('screens') reaches the Screens lens, not the Project fallback", () => {
+    // Tab.screens on the Mac (Diagnostics ▸ Screens Lens); pinned against Tab.swift by
+    // tests/test_tab_route_parity.py.
+    const { navigateSpy } = setupShims();
+    window.switchToTab!("screens");
+    expect(navigateSpy).toHaveBeenCalledWith("/report/screens/");
+  });
+
   it("switchToTab with unknown tab defaults to /report/", () => {
     const { navigateSpy } = setupShims();
     window.switchToTab!("nonexistent");

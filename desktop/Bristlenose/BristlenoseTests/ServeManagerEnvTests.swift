@@ -296,10 +296,14 @@ struct ServeManagerEnvTests {
             var env: [String: String] = [:]
             BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
             #expect(env["BRISTLENOSE_SCREEN_TEXT"] == nil)
+            #expect(ServeManager.readsScreens(env) == false)
 
             defaults.set(true, forKey: DiagnosticsPreference.key)
             BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
             #expect(env["BRISTLENOSE_SCREEN_TEXT"] == "1")
+            // What a spawn records is read off the env it was given — the same
+            // answer, so the restart fan-out keys on what the serve really got.
+            #expect(ServeManager.readsScreens(env))
         }
     }
 

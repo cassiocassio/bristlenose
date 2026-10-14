@@ -26,21 +26,64 @@ board on real data.
   words), a serve job that indexes each recording after the scene strips
   (`server/screen_text_job.py`), two routes (`GET …/screens`, `GET …/screens/still`, both
   server-only in an export), and the lens at `/report/screens/` (`frontend/src/islands/screens/`).
-- **How to turn it on.** Mac app: Settings ▸ Appearance ▸ Diagnostics, then Diagnostics ▸ Screens
-  Lens (the toggle restarts the server with `BRISTLENOSE_SCREEN_TEXT=1`). Browser: `serve --dev`,
-  or `BRISTLENOSE_SCREEN_TEXT=1` plus the diagnostics flag. Off, the job never runs and the routes
-  answer 404.
+- **How to turn it on.** Mac app: Settings ▸ Appearance ▸ Diagnostics. Switching it on restarts
+  the server with `BRISTLENOSE_SCREEN_TEXT=1` and adds Screens to the lens rail (⌘7); the
+  Diagnostics ▸ Screens Lens menu item that did this before is gone (14 Oct 2026). Switching it
+  off restarts every running server that was reading screens, not only the one on screen.
+  Browser: `serve --dev`, or `BRISTLENOSE_SCREEN_TEXT=1` plus the diagnostics flag. Off, the job
+  never runs, `/screens` and `/screens/status` answer `enabled: false`, and the still route 404s.
 - **What it does not do yet.** Pins are words only, so a German page with English quotes pins
   little (the prototype's meaning match is not shipped). No merge or peel: one key per screen by
   the §3.6 ladder, and a page with neither address nor title is not a screen. No not-screen-based
   gate. The rearranged board lives in the browser's storage, not the project. English only; no
   locale keys. Vision only, so the lens reports "unavailable" off the Mac.
+- **Brought in line with its sibling, the Discussion lens** (15 Oct). It is a lens where lenses are
+  counted (`LENS_IDS`, the nav, the shim's `TAB_ROUTES`, the bridge's active tab, the subtitle, the
+  navigation announcement); its zone title sits on the shared datum (gated in
+  `e2e/tests/lens-datum.spec.ts`); quotes are drawn by the Quotes lens's own `QuoteCard`, so the
+  timecode plays and editing, focus and the tag path (un-hiding an eye-hidden group) are shared;
+  the arrow keys carry Discussion's guards; the navigator is shown and hidden like Discussion's
+  guide (`[`, ⌥⌘L, the rail button; `navPanel.ts`); failures arrive as reason codes rendered by
+  one English map; the poll is capped and stops on `not_read`, and a run's completion re-reads.
+  §6.8 is answered for now by the defaults: hover brings a quote forward, stacks are straight —
+  the pickers are gone. §6.9 is still open: the arrangement is kept in this browser's storage, keyed by
+  the page's project id — which is always "1" today, so in practice it separates by origin (the
+  port) only, and two projects served on one port share arrangements. Where arrangements live is
+  the owner's call.
 - **Owed before it leaves Diagnostics** (security review, 14 Oct). The Diagnostics switch does not
   yet say it reads shared screens (§4.7's sentence; the help text is a 21-locale change). The index
   stores every line as read, chrome and full addresses included, where §4.3 drops chrome and
   query strings at rest; off-task screens (§4.5) are not hidden. Stills are cached on disk under
   the session's id, so the pipeline's per-session prune removes a withdrawn participant's, but
   turning Diagnostics off does not delete them.
+- **14 Oct 2026, later: reasons are codes, and a progress route.** Why something cannot be read is a code,
+  never a sentence: `unavailable` is `not_macos` · `vision_missing` · `no_job`, and `failed[sid]` is
+  `unreadable` · `cloud_downloading` · `ffprobe_failed` · `read_failed` · `not_read` (Literals in
+  `bristlenose/screen_text/__init__.py`; detail goes to the log). `not_read` means the job is idle,
+  no analysis is in progress, and nothing is about to read that recording, so the lens's poll
+  always ends; during an analysis the answer is "waiting", because the run's completion starts the
+  next pass (a review caught the first version saying `not_read` through every first analysis).
+  `GET …/screens/status` is the Mac sidebar's row (counts, seconds from the database, this pass's
+  reading rate; never derives). Off, `/screens` and `/screens/status` answer 200 with
+  `enabled: false`; only `/screens/still` answers 404.
+- **14 Oct 2026, later: a lens where lenses are counted.** Screens is a lens on both sides, beside
+  Discussion: the SPA's lens lists, route shims, bridge and announce; the Mac's `Tab`, rail row (⌘7)
+  and remembered-lens handling, all gated on the Diagnostics preference. Its cards are the shipped
+  `QuoteCard`, so timecodes play and tags, stars and hides take the report's own paths. The Mac
+  sidebar's status line reads *Screens · N of M* while the job reads (21 locales; time left only
+  in the tooltip, and only once this pass has measured its rate). Turning Diagnostics off restarts
+  every server that was reading screens, not just the one on screen.
+- **Owed before it leaves Diagnostics** (accessibility review, 14 Oct). Below AA as built: the
+  board is laid out for a pointer. Each is a blocker for shipping, none for a diagnostics build:
+  focus is lost to the page when ↑/↓ or ←/→ changes the board under it; cards cannot be rearranged
+  from the keyboard (only reset); the line a pinned quote is about exists only as a drawing (needs
+  "On screen: …" text per pinned card, which also covers the leaders' 1.4.11 contrast); the
+  reading and failure notes share one live region inside the remounting board; the navigator's
+  links read a bare number; no narrow-width layout (1.4.10); and the shared quote card's hide and
+  revert buttons stay invisible under keyboard focus, which bites harder here because `h` and `s`
+  are gated to the Quotes lens. Landed now: a card rises when focused, alt text on the screengrab,
+  screen and participant changes announced, ↑/↓ left alone with one screen, contrast of the
+  participant buttons and the current navigator row.
 
 This doc owns the plan. The evidence lives in two records, which it does not repeat:
 

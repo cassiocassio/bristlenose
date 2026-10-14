@@ -13,11 +13,36 @@ import Testing
 @Suite("Lens memory")
 struct LensMemoryTests {
 
+    /// Every lens on the rail (Diagnostics on), so the rules below are about
+    /// memory, not about which lenses are showing.
+    static let fullRail = LensItem.lenses(screens: true)
+
+    /// A remembered Screens lens, with Diagnostics off, lands on the dashboard:
+    /// its rail row and ⌘7 are gone and the server says it is switched off.
+    @Test("a lens off the rail is not restored")
+    func aLensOffTheRailIsNotRestored() {
+        let shipping = LensItem.lenses(screens: false)
+        #expect(LensMemory.restore("screens", rail: shipping) == nil)
+        #expect(LensMemory.restore("screens", rail: Self.fullRail) == .screens)
+        #expect(LensMemory.restore("quotes", rail: shipping) == .quotes)
+    }
+
+    /// Switching Diagnostics off moves a window off Screens, to the dashboard,
+    /// and leaves every other window where it is.
+    @Test("a window on a lens that left the rail moves to the dashboard")
+    func landingAfterTheRailChanges() {
+        let shipping = LensItem.lenses(screens: false)
+        #expect(LensMemory.landing(active: .screens, rail: shipping) == .project)
+        #expect(LensMemory.landing(active: .quotes, rail: shipping) == nil)
+        #expect(LensMemory.landing(active: .screens, rail: Self.fullRail) == nil)
+        #expect(LensMemory.landing(active: nil, rail: shipping) == nil)
+    }
+
     @Test("a remembered lens is restored")
     func remembersALens() {
-        #expect(LensMemory.restore("quotes") == .quotes)
-        #expect(LensMemory.restore("codebook") == .codebook)
-        #expect(LensMemory.restore("sessions") == .sessions)
+        #expect(LensMemory.restore("quotes", rail: Self.fullRail) == .quotes)
+        #expect(LensMemory.restore("codebook", rail: Self.fullRail) == .codebook)
+        #expect(LensMemory.restore("sessions", rail: Self.fullRail) == .sessions)
     }
 
     @Test("a never-opened project lands on the dashboard")
@@ -25,7 +50,7 @@ struct LensMemoryTests {
         // nil is "let the report load where it loads", which is the Project
         // dashboard — and that is exactly the case the dashboard is right for,
         // so it needs no special rule.
-        #expect(LensMemory.restore(nil) == nil)
+        #expect(LensMemory.restore(nil, rail: Self.fullRail) == nil)
     }
 
     @Test("a lens that no longer exists degrades to the dashboard")
@@ -33,8 +58,8 @@ struct LensMemoryTests {
         // A `Tab` case renamed or removed between versions. Landing on the
         // dashboard beats both crashing and honouring a string nothing can
         // interpret.
-        #expect(LensMemory.restore("moodboard") == nil)
-        #expect(LensMemory.restore("") == nil)
+        #expect(LensMemory.restore("moodboard", rail: Self.fullRail) == nil)
+        #expect(LensMemory.restore("", rail: Self.fullRail) == nil)
     }
 
     @Test("round-trips every lens")
@@ -43,7 +68,7 @@ struct LensMemoryTests {
         // writing what `restore` reads, every project silently reverts to the
         // dashboard and nothing else fails.
         for tab in Tab.allCases {
-            #expect(LensMemory.restore(LensMemory.remember(tab)) == tab)
+            #expect(LensMemory.restore(LensMemory.remember(tab), rail: Self.fullRail) == tab)
         }
     }
 

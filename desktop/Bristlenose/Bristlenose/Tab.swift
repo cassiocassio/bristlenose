@@ -1,11 +1,13 @@
 import Foundation
 
-/// The top-level lenses, in rail order (`LensItem.all`).
+/// The top-level lenses, in rail order (`LensItem.all`). `.screens` is a
+/// diagnostics lens: its rail row appears only with the Diagnostics preference
+/// on (`LensItem.lenses(screens:)`), the way `.discussion` once rode a flag.
 ///
 /// Raw values match the keys expected by `window.switchToTab(tab)` in
 /// `frontend/src/shims/navigation.ts`.
 enum Tab: String, CaseIterable, Identifiable {
-    case project, sessions, quotes, codebook, signals, discussion
+    case project, sessions, quotes, codebook, signals, discussion, screens
 
     var id: String { rawValue }
 
@@ -18,6 +20,9 @@ enum Tab: String, CaseIterable, Identifiable {
         case .codebook:  "Codebooks"
         case .signals:   "Signals"
         case .discussion: "Discussion"
+        // English-only while it is a diagnostics lens (docs/design-screens.md):
+        // no `common.nav.screens` key, so both label helpers land here.
+        case .screens:   "Screens"
         }
     }
 
@@ -52,6 +57,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .codebook:  "/report/codebook/"
         case .signals:   "/report/signals/"
         case .discussion: "/report/discussion/"
+        case .screens:   "/report/screens/"
         }
     }
 
@@ -69,7 +75,9 @@ enum Tab: String, CaseIterable, Identifiable {
         // Discussion's guide is its own column inside the page (it widens to
         // 60% of the lens) with its own remembered setting, but it is toggled
         // like the others: toolbar button, View menu, ⌘⌥L (4 Oct 2026).
-        case .quotes, .codebook, .signals, .discussion: true
+        // The Screens lens's list of screens is wired the same way as the
+        // Discussion guide (`frontend/src/islands/screens/navPanel.ts`).
+        case .quotes, .codebook, .signals, .discussion, .screens: true
         case .project, .sessions: false
         }
     }
@@ -82,6 +90,7 @@ enum Tab: String, CaseIterable, Identifiable {
     static func from(path: String) -> Tab? {
         if path.hasPrefix("/report/signals")  { return .signals }
         if path.hasPrefix("/report/discussion") { return .discussion }
+        if path.hasPrefix("/report/screens") { return .screens }
         // The lens was renamed on 20 Sep 2026; a bookmarked or embedded
         // old path still has to land somewhere real.
         if path.hasPrefix("/report/analysis") { return .signals }

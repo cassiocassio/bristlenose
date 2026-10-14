@@ -43,9 +43,26 @@ enum LensMemory {
     /// that no longer names a lens — a `Tab` case removed or renamed between
     /// versions. Silently landing on the dashboard beats both crashing and
     /// honouring a string nobody can interpret.
-    static func restore(_ remembered: String?) -> Tab? {
-        guard let remembered, let tab = Tab(rawValue: remembered) else { return nil }
+    ///
+    /// And nil for a lens that is not on the window's rail right now — the
+    /// diagnostics Screens lens with Diagnostics switched off. Its route would
+    /// load a lens with no rail row, no ⌘-number and a server that answers
+    /// "switched off"; the dashboard is the honest landing. `rail` is the
+    /// caller's `LensItem.lenses(screens:)`, passed rather than read here so
+    /// both states are testable without touching anyone's defaults.
+    static func restore(_ remembered: String?, rail: [LensItem]) -> Tab? {
+        guard let remembered, let tab = Tab(rawValue: remembered),
+              rail.contains(where: { $0.tab == tab }) else { return nil }
         return tab
+    }
+
+    /// Where a window showing `active` should go when the rail changes under
+    /// it — Diagnostics switched off while the Screens lens is in front. Nil
+    /// means stay put. The dashboard, because it is where a window with no
+    /// memory lands, and it is always on the rail.
+    static func landing(active: Tab?, rail: [LensItem]) -> Tab? {
+        guard let active, !rail.contains(where: { $0.tab == active }) else { return nil }
+        return .project
     }
 
     /// What to remember, given the lens the window is on now.

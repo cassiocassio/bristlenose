@@ -20,6 +20,7 @@ function renderNavBar(initialEntry = "/report/") {
           { path: "quotes", element: <div>quotes</div> },
           { path: "codebook", element: <div>codebook</div> },
           { path: "signals", element: <div>signals</div> },
+          { path: "screens", element: <div>screens</div> },
           { path: "settings", element: <div>settings</div> },
           { path: "about", element: <div>about</div> },
         ],
@@ -171,5 +172,25 @@ describe("NavBar — lenses with nothing to show yet", () => {
     act(() => startConditionPolling("1"));
     await screen.findByText("Project", { selector: "span" });
     expect(router.state.location.pathname).toBe("/report/quotes/");
+  });
+});
+
+describe("NavBar — the Screens lens (diagnostics only)", () => {
+  const w = window as unknown as Record<string, unknown>;
+  afterEach(() => {
+    delete w.__BRISTLENOSE_DIAGNOSTICS__;
+  });
+
+  it("is a lens link with diagnostics on, active on its route", () => {
+    w.__BRISTLENOSE_DIAGNOSTICS__ = true;
+    renderNavBar("/report/screens/");
+    const link = screen.getByRole("link", { name: "Screens" });
+    expect(link).toHaveAttribute("href", "/report/screens/");
+    expect(link.className).toContain("active");
+  });
+
+  it("is absent with diagnostics off", () => {
+    renderNavBar();
+    expect(screen.queryByText("Screens")).toBeNull();
   });
 });

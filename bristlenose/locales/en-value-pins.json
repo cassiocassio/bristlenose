@@ -729,6 +729,7 @@
  "desktop.chrome.pipeline.partialRun": "9ccc71",
  "desktop.chrome.pipeline.queuedPosition": "78c4e8",
  "desktop.chrome.pipeline.resuming": "c494e3",
+ "desktop.chrome.pipeline.screens": "0c4e90",
  "desktop.chrome.pipeline.sessionsCount": "98a39d",
  "desktop.chrome.pipeline.sessionsReadable_one": "33fd08",
  "desktop.chrome.pipeline.sessionsReadable_other": "33fd08",

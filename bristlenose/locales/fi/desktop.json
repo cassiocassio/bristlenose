@@ -279,6 +279,7 @@
       "etaMinutes": "~{{count}} min jäljellä",
       "etaUnderMinute": "<1 min jäljellä",
       "importBatch": "{{done}} / {{total}}",
+      "screens": "N\u00e4yt\u00f6t \u00b7 {{done}} / {{total}}",
       "copying": "Kopioidaan · {{percent}} %",
       "stage": {
         "transcribe": "Litteroidaan",

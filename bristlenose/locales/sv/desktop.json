@@ -279,6 +279,7 @@
       "etaMinutes": "~{{count}} min kvar",
       "etaUnderMinute": "<1 min kvar",
       "importBatch": "{{done}} av {{total}}",
+      "screens": "Sk\u00e4rmar \u00b7 {{done}} av {{total}}",
       "copying": "Kopierar · {{percent}} %",
       "stage": {
         "transcribe": "Transkriberar",

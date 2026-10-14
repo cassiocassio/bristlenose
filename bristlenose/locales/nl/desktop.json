@@ -279,6 +279,7 @@
       "etaMinutes": "~{{count}} min resterend",
       "etaUnderMinute": "<1 min resterend",
       "importBatch": "{{done}} van {{total}}",
+      "screens": "Schermen \u00b7 {{done}} van {{total}}",
       "copying": "Kopiëren · {{percent}}%",
       "stage": {
         "transcribe": "Transcriberen",

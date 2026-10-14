@@ -76,6 +76,14 @@ enum SubtitleVariant: Equatable {
     /// `done` counts rows that have *settled*, whatever the outcome. A ring
     /// stalled at 3 because the fourth failed is a ring saying nothing.
     case importingBatch(done: Int, total: Int)
+    /// The serve is reading the shared screens in THIS project's recordings
+    /// (the diagnostics Screens lens, `docs/design-screens.md`). Renders
+    /// "Screens · N of M", **no ring** — it cannot be stopped, and a ring with
+    /// no hover-× would promise an act that does not exist. No ETA on the row:
+    /// the time left, once the server has measured a rate, goes in the tooltip.
+    ///
+    /// `done` counts recordings read; the warm-up reads "0 of M".
+    case readingScreens(done: Int, total: Int)
     /// A copy into THIS project is being cancelled (rollback in flight). Renders
     /// "Cancelling…" + an indeterminate spinner — the immediate ack for the
     /// row's hover-cancel, mirroring what the removed toolbar pill showed.
@@ -167,7 +175,7 @@ extension SubtitleVariant {
             // delta is the same disagreement with a date in front of it.
             return delta == nil ? .none : .files
         case .stopping, .running, .queued, .stopped, .partial,
-             .addingInterviews, .copying, .importingBatch,
+             .addingInterviews, .copying, .importingBatch, .readingScreens,
              .copyCancelling, .placeholder:
             return .none
         }
@@ -221,7 +229,7 @@ extension SubtitleVariant {
             // picture and how it amends the `info` ruling.
             return .info
         case .stopping, .running, .queued, .stopped, .partial,
-             .addingInterviews, .copying, .importingBatch,
+             .addingInterviews, .copying, .importingBatch, .readingScreens,
              .copyCancelling, .ready, .placeholder:
             // Progress, and states the researcher caused. `.stopped` and
             // `.partial` have an available act — resume, analyse — and still get
@@ -281,7 +289,9 @@ enum ProjectSubtitle {
     /// **Order (settled 18 Jun 2026 — `docs/design-desktop-project-status.md`
     /// §Precedence, §5):**
     /// `cantFind (availability) › failed › running › stopped / partial ›
-    /// (idle: copying › missing › unanalysed › silence)`.
+    /// (idle: copying › missing › unanalysed › silence)`. Screen reading
+    /// (14 Oct 2026) joins the idle tier after copying and the distress
+    /// deltas (forked, missing), above the quiet `unanalysed` one.
     ///
     /// The idle tier's terminus is **silence, not a date** — Schema E, 29 Jul
     /// 2026. See `resolveIdle`.
@@ -301,6 +311,7 @@ enum ProjectSubtitle {
         addingCount: Int?,
         copy: CopyDisplay?,
         importBatch: (done: Int, total: Int)?,
+        screens: (done: Int, total: Int)? = nil,
         lastRunAt: Date?,
         missingCount: Int,
         unanalysedCount: Int,
@@ -341,6 +352,7 @@ enum ProjectSubtitle {
                 addingCount: addingCount,
                 copy: copy,
                 importBatch: importBatch,
+                screens: screens,
                 lastRunAt: lastRunAt,
                 missingCount: missingCount,
                 unanalysedCount: unanalysedCount,
@@ -349,8 +361,9 @@ enum ProjectSubtitle {
         }
     }
 
-    /// The idle / ready tier: an active copy, then a data-drift delta, then
-    /// **nothing at all**.
+    /// The idle / ready tier: the activities (adding › cloud batch › copy),
+    /// then a distress delta (forked, missing), then screen reading, then the
+    /// quiet `unanalysed` delta, then **nothing at all**.
     ///
     /// `lastRunAt` is accepted but **not read** (Schema E — the bare date it
     /// used to produce is retired). It stays in the signature because the
@@ -363,6 +376,7 @@ enum ProjectSubtitle {
         addingCount: Int?,
         copy: CopyDisplay?,
         importBatch: (done: Int, total: Int)?,
+        screens: (done: Int, total: Int)?,
         lastRunAt: Date?,
         missingCount: Int,
         unanalysedCount: Int,
@@ -393,6 +407,25 @@ enum ProjectSubtitle {
         }
         let delta = pickDelta(missingCount: missingCount, unanalysedCount: unanalysedCount,
                               databaseForked: databaseForked)
+        // Screen reading is the quietest activity: a background job the
+        // researcher did not start by a gesture and cannot stop, so every act
+        // they did start (an add, a batch, a copy) keeps the line over it, and
+        // so does any delta that carries a glyph (a forked database, missing
+        // files). A read can run for hours; hiding "the database has to be
+        // rebuilt" behind a progress count for that long would be the row
+        // lying by omission. It does outrank the quiet `+N unanalysed` delta —
+        // something is happening in this project now. And it yields to a run
+        // without asking: the main switch returns `.running` before the idle
+        // tier is reached.
+        if let screens {
+            // Read off the delta's own glyph classification, so the two cannot
+            // disagree about which deltas are distress.
+            let kind = delta.flatMap { SubtitleVariant.deltaOnly($0).glyphKind }
+            let deltaNeedsAttention = kind == .warning || kind == .error
+            if !deltaNeedsAttention {
+                return .readingScreens(done: screens.done, total: screens.total)
+            }
+        }
         // **Schema E (settled 29 Jul 2026) — a clean row is silent.** A delta is
         // an exception and earns a line; a project that is simply analysed and
         // fine says nothing, and `ProjectCellSpec` collapses `.placeholder` to a

@@ -52,6 +52,35 @@ struct ServeEnvStalenessTests {
         #expect(action == .restartOnNextFront)
     }
 
+    /// Diagnostics off withdraws screen reading. A background serve still
+    /// reading shared screens restarts now: the harm (a job OCR'ing
+    /// participants' screens) runs whether or not anyone is looking, which is
+    /// the same reason the exposed instance goes now under Anonymise.
+    @Test func aBackgroundInstanceReadingWithdrawnScreensRestartsNow() {
+        #expect(ServeEnvStaleness.action(
+            project: Self.background, isRunning: true, isFronted: false,
+            isExposed: false, readsWithdrawnScreens: true) == .restartNow)
+    }
+
+    /// …and only that. Not running is still nothing to do.
+    @Test func aStoppedInstanceThatReadScreensNeedsNothing() {
+        #expect(ServeEnvStaleness.action(
+            project: Self.background, isRunning: false, isFronted: false,
+            isExposed: false, readsWithdrawnScreens: true) == .nothing)
+    }
+
+    /// A booting serve was spawned seconds ago with the old env. Spawned
+    /// reading screens, it restarts now rather than boot and read; otherwise a
+    /// booting serve keeps the old answer for every other preference.
+    @Test func aStartingInstanceReadingWithdrawnScreensRestartsNow() {
+        #expect(ServeEnvStaleness.action(
+            project: Self.background, isRunning: false, isFronted: false,
+            isExposed: false, readsWithdrawnScreens: true, isStarting: true) == .restartNow)
+        #expect(ServeEnvStaleness.action(
+            project: Self.background, isRunning: false, isFronted: true,
+            isExposed: true, readsWithdrawnScreens: false, isStarting: true) == .nothing)
+    }
+
     @Test func frontedAndExposedIsStillJustOneRestart() {
         #expect(ServeEnvStaleness.action(
             project: Self.exposed, isRunning: true, isFronted: true,

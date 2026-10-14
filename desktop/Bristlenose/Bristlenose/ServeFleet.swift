@@ -91,6 +91,22 @@ final class ServeFleet: ObservableObject {
     /// one level up, and pinned by the same style of test.
     private var observations: [UUID: AnyCancellable] = [:]
 
+    /// Where each manager's screen-reading poll writes — the sidebar observes
+    /// this directly, never the fleet, so a progress tick republishes nothing
+    /// a window or the menu bar is subscribed to.
+    let screenReading: ScreenReadingStore
+
+    /// How a manager is made. Production takes the default; a test passes one
+    /// resolved to `.external`, so a restart runs to completion without
+    /// spawning the bundle's real sidecar from the test host.
+    private let makeManager: @MainActor () -> ServeManager
+
+    init(screenReading: ScreenReadingStore = .shared,
+         makeManager: @escaping @MainActor () -> ServeManager = { ServeManager() }) {
+        self.screenReading = screenReading
+        self.makeManager = makeManager
+    }
+
     /// The manager for `project`, creating one on first use.
     ///
     /// Creating is deliberately cheap and does **not** spawn: a manager with no
@@ -99,10 +115,13 @@ final class ServeFleet: ObservableObject {
     @discardableResult
     func manager(for project: UUID) -> ServeManager {
         if let existing = managers[project] { return existing }
-        let created = ServeManager()
+        let created = makeManager()
         created.agentAccessResolver = agentAccessResolver
         managers[project] = created
         created.onHandshakeDirty = { [weak self] in self?.syncHandshake() }
+        created.onScreensProgress = { [weak self] progress in
+            self?.screenReading.set(progress, for: project)
+        }
         observations[project] = created.objectWillChange.sink { [weak self] _ in
             guard let self else { return }
             self.objectWillChange.send()
@@ -131,6 +150,7 @@ final class ServeFleet: ObservableObject {
         // goes with it — unlike a reap, which keeps it (see the merge in
         // `refreshAppLevelFacts`). A removed project has no row to render it.
         lastAgentCallAt[project] = nil
+        screenReading.set(nil, for: project)
         readableProjects.remove(project)
         if frontedProject == project { frontedProject = nil }
         // Through `setExposed`, not a bare assignment: the project is being
@@ -251,14 +271,26 @@ final class ServeFleet: ObservableObject {
     /// Restarting all N would be N cold report remounts in windows nobody is
     /// looking at; restarting only the fronted one would leave the rest serving
     /// under a consent the researcher just changed. So: lazy, except the
-    /// exposed instance, which an agent can read while unattended.
-    func applyEnvChange() {
+    /// exposed instances, which an agent can read while unattended, and any
+    /// serve still reading shared screens after Diagnostics went off — a
+    /// starting one included, since it was spawned with the old env and would
+    /// otherwise boot and go on reading.
+    func applyEnvChange(defaults: UserDefaults = .standard) {
+        // Read once, from the same source `overlayPreferences` builds the env
+        // from, so "the new env would not read screens" is the env's own rule.
+        var nextEnv: [String: String] = [:]
+        BristlenoseShared.overlayPreferences(into: &nextEnv, defaults: defaults)
+        let screensAllowed = nextEnv["BRISTLENOSE_SCREEN_TEXT"] == "1"
         for (id, manager) in managers {
+            let starting = manager.state == .starting
             switch ServeEnvStaleness.action(project: id,
                                             isRunning: manager.runningPort != nil,
                                             isFronted: id == frontedProject,
-                                            isExposed: isExposed(id)) {
-            case .restartNow:          manager.restartIfRunning()
+                                            isExposed: isExposed(id),
+                                            readsWithdrawnScreens: manager.spawnedReadsScreens
+                                                && !screensAllowed,
+                                            isStarting: starting) {
+            case .restartNow:          manager.restartIfRunning(orStarting: starting)
             case .restartOnNextFront:  staleProjects.insert(id)
             case .nothing:             break
             }

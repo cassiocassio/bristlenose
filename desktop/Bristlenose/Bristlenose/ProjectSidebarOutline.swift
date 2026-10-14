@@ -128,6 +128,11 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// window that started it is closed. Plain ref for the same reason as
     /// `copyMachinery` — the batch is read live, not observed for transitions.
     let cloudImport: CloudImportCoordinator
+    /// Per-project screen-reading progress (the diagnostics Screens lens).
+    /// `@ObservedObject` so a change re-runs `updateNSViewController` → reload.
+    /// It publishes only on change (`ScreenReadingStore.set`), so an unchanged
+    /// poll tick costs the sidebar nothing.
+    @ObservedObject var screenReading: ScreenReadingStore
     /// Path of the project the MCP handshake currently names, or nil. The
     /// antenna badge's solid tier: exposed NOW means an agent can reach this
     /// project, which is exactly "a handshake exists naming it" (§5a-bis:
@@ -171,6 +176,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.liveData = liveData
         controller.copyMachinery = copyMachinery
         controller.cloudImport = cloudImport
+        controller.screenReading = screenReading
         // Refresh the callbacks each update so they capture the live binding —
         // the AppKit delegate does not fire for programmatic selection, so the
         // funnel is the SwiftUI binding itself (§2.5).
@@ -255,6 +261,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     weak var liveData: PipelineLiveData?
     weak var copyMachinery: CopyMachinery?
     weak var cloudImport: CloudImportCoordinator?
+    weak var screenReading: ScreenReadingStore?
     var lensItems: [LensItem] = LensItem.all
     var onSelectionChange: (Set<SidebarSelection>) -> Void = { _ in }
     var onActivateLens: (Tab) -> Void = { _ in }
@@ -1478,7 +1485,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             // and it is a legitimate tooltip case (session count with no delta).
             let tip = i18n.flatMap {
                 SidebarSubtitleText.tooltip(for: variant, data: projectIndex?.unanalysed[id],
-                                            progress: liveData?.progress[id], i18n: $0)
+                                            progress: liveData?.progress[id],
+                                            screens: screenReading?.progress[id], i18n: $0)
             }
             // No subtitle (Schema E's clean row — the DEFAULT since 29 Jul —
             // or a defensive nil) → single-line collapse (ProjectCellSpec).
@@ -1849,6 +1857,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             addingCount: pipelineRunner?.addingInterviews[id],
             copy: copyDisplay(for: project),
             importBatch: importBatchDisplay(for: project),
+            screens: screenReading?.progress[id].map { (done: $0.done, total: $0.total) },
             lastRunAt: project.lastPipelineRunAt,
             missingCount: projectIndex?.unanalysed[id]?.missingFiles.count ?? 0,
             unanalysedCount: projectIndex?.unanalysed[id]?.newFiles.count ?? 0,

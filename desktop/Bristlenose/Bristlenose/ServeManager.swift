@@ -145,6 +145,22 @@ final class ServeManager: ObservableObject {
     /// question fired six calls inside one second.
     static let agentPulseInterval = Duration.milliseconds(1500)
 
+    /// Poll for the Screens lens's background reading — diagnostics only.
+    /// Same one-owner loop shape as `agentPulseTask`, and the same "nobody is
+    /// looking, so don't ask" guard.
+    private var screensPollTask: Task<Void, Never>?
+
+    /// Cadence of the screens poll. A recording takes minutes to read, so a
+    /// count that moves every few seconds at most needs no faster poll.
+    static let screensPollInterval = Duration.seconds(3)
+
+    /// Where screen-reading progress goes — set by `ServeFleet` to a write into
+    /// `ScreenReadingStore` for this manager's project. **Never through
+    /// `instance`**: a per-tick publish via `ServeInstance` → `ServeManager` →
+    /// `ServeFleet` reaches every window and collapsed an open Window menu
+    /// once (20 Sep 2026). `nil` clears the row.
+    var onScreensProgress: ((ScreenReadingProgress?) -> Void)?
+
     /// Bearer token for localhost API access control.
     /// Parsed from stdout line: `[bristlenose] auth-token: <token>`
     /// Injected into WKWebView via WKUserScript.
@@ -335,12 +351,24 @@ final class ServeManager: ObservableObject {
             }
         }
 
+        // The Screens lens's reading progress, beside the pulse and shaped
+        // like it. Asks nothing unless Diagnostics is on (the only state in
+        // which a serve reads screens at all).
+        screensPollTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.screensPollInterval)
+                await self?.pollScreens()
+            }
+        }
+
         // NO per-instance prefs observer. One existed here while there was one
         // manager; with one per project it becomes "restart all N" — N cold
         // report remounts in windows nobody is looking at, which is precisely
         // the arm `ServeEnvStaleness` declines. The fan-out is the fleet's
         // (`ServeFleet.applyEnvChange`), which restarts the fronted and exposed
-        // instances now and marks the rest to restart when someone looks at them.
+        // instances now, and any serve still reading shared screens after
+        // Diagnostics went off, and marks the rest to restart when someone
+        // looks at them.
 
         agentAccessObserver = NotificationCenter.default.addObserver(
             forName: .bristlenoseAgentAccessChanged,
@@ -424,6 +452,16 @@ final class ServeManager: ObservableObject {
     /// to rebuild; production reads the file.
     var sidecarStampReader: (URL) -> SidecarBinaryStamp? = { SidecarBinaryStamp.read(at: $0) }
 
+    /// Was this serve spawned reading shared screens? See
+    /// `ServeInstance.spawnedReadsScreens`.
+    var spawnedReadsScreens: Bool { instance.spawnedReadsScreens }
+
+    /// Does a spawn environment read shared screens? The one place that
+    /// answers it, so `start()` records exactly what `overlayPreferences` wrote.
+    nonisolated static func readsScreens(_ env: [String: String]) -> Bool {
+        env["BRISTLENOSE_SCREEN_TEXT"] == "1"
+    }
+
     /// Is the sidecar binary on disk no longer the one this serve was spawned
     /// from? False when nothing was spawned, for `.external`, or when the
     /// binary cannot be read (an absent file is not a newer one).
@@ -451,6 +489,7 @@ final class ServeManager: ObservableObject {
         // outlive its owner if that ever changes.
         agentPollTask?.cancel()
         agentPulseTask?.cancel()
+        screensPollTask?.cancel()
     }
 
     /// Start serving a project. Callers must call `stop()` or
@@ -541,6 +580,9 @@ final class ServeManager: ObservableObject {
         // sets authToken directly via adoptFronted and never reaches here.
         authToken = nil
         serverVersion = nil
+        // Nothing spawned yet; the spawn below records what it is given. An
+        // external server was not spawned by us, so it stays false.
+        instance.spawnedReadsScreens = false
         // The old sidecar's handshake names an instance that is going away;
         // remove it now so the proxy reports honestly during the boot gap.
         // The new one is written when this serve reaches .running and its
@@ -601,6 +643,7 @@ final class ServeManager: ObservableObject {
             ?? MCPTokenStore.mintEphemeral()
         env["_BRISTLENOSE_MCP_TOKEN"] = mcpToken
         proc.environment = env
+        instance.spawnedReadsScreens = Self.readsScreens(env)
 
         let pipe = Pipe()
         proc.standardOutput = pipe
@@ -722,14 +765,23 @@ final class ServeManager: ObservableObject {
     /// Called when user preferences change (provider, model, API key, etc.).
     /// Uses the same escalating teardown as `switchProject(to:)` so a Whisper-wedged
     /// sidecar doesn't survive a prefs save (William's parsimony pass, Finding 32).
-    func restartIfRunning() {
+    /// - Parameter orStarting: also restart a serve that is still booting. Only
+    ///   the withdrawn-screens fan-out passes it (`ServeEnvStaleness`): a serve
+    ///   spawned with screen text seconds ago must not reach `.running` and read.
+    func restartIfRunning(orStarting: Bool = false) {
         // A parked sidecar baked its provider/model/API-key/prefs env at spawn
         // time (BristlenoseShared.childEnvironment). A prefs OR consent change
         // (both post .bristlenosePrefsChanged) makes that env stale, so the
         // warm slot must be invalidated — otherwise switching back would
         // re-point to a sidecar serving with the old config (review F6/F7).
         drainParked()
-        guard case .running = state, let path = currentProjectPath else { return }
+        let live: Bool
+        switch state {
+        case .running:  live = true
+        case .starting: live = orStarting
+        case .idle, .failed: live = false
+        }
+        guard live, let path = currentProjectPath else { return }
         log.info("preferences changed — restarting serve")
         Task { @MainActor in
             await shutdown(timeout: .seconds(2))
@@ -973,7 +1025,8 @@ final class ServeManager: ObservableObject {
             let entry = ParkedSidecar(
                 projectPath: path, port: port, authToken: authToken,
                 mcpToken: mcpToken,
-                serverVersion: serverVersion, process: proc, readTask: readTask, buffer: outputLines
+                serverVersion: serverVersion, process: proc, readTask: readTask, buffer: outputLines,
+                readsScreens: instance.spawnedReadsScreens
             )
             log.info("sidecar_parked project=\(path, privacy: .public) port=\(port, privacy: .public)")
             process = nil
@@ -1015,6 +1068,7 @@ final class ServeManager: ObservableObject {
         readTask = entry.readTask
         authToken = entry.authToken
         serverVersion = entry.serverVersion
+        instance.spawnedReadsScreens = entry.readsScreens  // unreachable path, see ParkedSidecar
         currentProjectPath = path
         outputLines = entry.buffer
         state = .running(port: entry.port)
@@ -1218,6 +1272,43 @@ final class ServeManager: ObservableObject {
         // Merged, not replaced, for the same sticky-within-a-serve reason.
         let merged = agentProxyVersions.merging(AgentActivity.proxyVersions(json)) { _, new in new }
         if merged != agentProxyVersions { agentProxyVersions = merged }
+    }
+
+    /// Read the screen-reading job's progress and hand it to the sidebar store.
+    ///
+    /// Guards in the pulse's order, plus one: Diagnostics off or no running
+    /// serve clears the row (there is nothing reading, and a row left over
+    /// from before would lie); no visible window skips the request but keeps
+    /// the last value, since nobody can see the row and the next visible tick
+    /// corrects it. A failed request also keeps the last value — a flicker
+    /// is worse than a count one tick old. Screen text off, the route answers
+    /// 200 with `enabled: false`, which `parse` turns into nil — so it clears;
+    /// a non-200 (no such project, an older serve) clears it too.
+    @MainActor
+    func pollScreens(defaults: UserDefaults = .standard) async {
+        guard DiagnosticsPreference.isEnabled(defaults),
+              case .running(let port) = state,
+              let token = authToken,
+              let url = URL(string: "http://127.0.0.1:\(port)/api/projects/1/screens/status")
+        else {
+            onScreensProgress?(nil)
+            return
+        }
+        guard Self.anyWindowVisible() else { return }
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        guard let (data, response) = try? await URLSession.shared.data(for: request) else { return }
+        // Same ownership check as the pulse: a completion that lands after the
+        // serve restarted must not report the old one's progress.
+        guard case .running(let current) = state, current == port else { return }
+        guard (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            onScreensProgress?(nil)
+            return
+        }
+        onScreensProgress?(ScreenReadingProgress.parse(json))
     }
 
     /// Fetch the Bristlenose version (and MCP availability) from the serve

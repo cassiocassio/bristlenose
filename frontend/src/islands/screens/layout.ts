@@ -8,8 +8,8 @@
  *   their element is in; below it, all on the right.
  * - A card wants to sit level with its element. Cards keep a gutter of --bn-space-md (12px).
  * - A column that would run past the screengrab stacks: evenly stepped, each card showing its
- *   timecode and first line, the later card over the earlier one's tail. Diagonal stacks slide each
- *   card a few pixels right, like a pad of stickies.
+ *   timecode and first line, the later card over the earlier one's tail. Stacks are straight: the
+ *   prototype's diagonal variant (each card slid a few pixels right) was dropped with its picker.
  */
 
 export const WIDE_STAGE = 1100;
@@ -32,7 +32,6 @@ export function sideFor(box: Box, wide: boolean): Side {
 
 export interface Placed {
   top: number;
-  slide: number;
 }
 
 /**
@@ -43,14 +42,13 @@ export interface Placed {
 export function placeColumn(
   cards: { want: number; height: number }[],
   limit: number,
-  diagonal = false,
 ): { placed: Placed[]; stacked: boolean; bottom: number } {
   if (cards.length === 0) return { placed: [], stacked: false, bottom: 0 };
   const placed: Placed[] = [];
   let y = 0;
   for (const c of cards) {
     const top = Math.max(c.want, y);
-    placed.push({ top, slide: 0 });
+    placed.push({ top });
     y = top + c.height + GUTTER;
   }
   const last = cards[cards.length - 1];
@@ -61,8 +59,7 @@ export function placeColumn(
   }
   const start = Math.max(0, Math.min(cards[0].want, budget - last.height - MIN_STEP * (cards.length - 1)));
   const step = Math.max(MIN_STEP, (budget - start - last.height) / (cards.length - 1));
-  const dx = diagonal ? Math.min(8, 40 / (cards.length - 1)) : 0;
-  const stackedPlaced = cards.map((_, i) => ({ top: start + i * step, slide: i * dx }));
+  const stackedPlaced = cards.map((_, i) => ({ top: start + i * step }));
   return {
     placed: stackedPlaced,
     stacked: true,
@@ -104,7 +101,15 @@ export interface Spot {
   z: number;
 }
 
-const STORE_KEY = "bristlenose-screens-arrangement";
+/**
+ * Kept in this browser's storage, keyed by the page's project id. Today that id is always "1"
+ * (`data-project-id` is hard-coded in server/app.py and routes/export.py), so the key separates
+ * arrangements by origin — the port the report is served on — and nothing finer: two projects
+ * served on one port share them. The id is in the key so it becomes real with multi-project. Where
+ * arrangements should live (a saved researcher edit, per project, perhaps in the export) is the
+ * owner's call, docs/design-screens.md §6.9.
+ */
+const storeKey = (projectId: string) => `bristlenose-screens-arrangement-${projectId}`;
 
 type Arrangement = Record<string, Spot>;
 
@@ -112,9 +117,9 @@ export function stillKey(sessionId: string, t: number): string {
   return `${sessionId}@${t}`;
 }
 
-function read(): Arrangement {
+function read(projectId: string): Arrangement {
   try {
-    const raw = localStorage.getItem(STORE_KEY);
+    const raw = localStorage.getItem(storeKey(projectId));
     const v = raw ? (JSON.parse(raw) as unknown) : {};
     return v && typeof v === "object" ? (v as Arrangement) : {};
   } catch {
@@ -122,42 +127,49 @@ function read(): Arrangement {
   }
 }
 
-function write(a: Arrangement): void {
+function write(projectId: string, a: Arrangement): void {
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(a));
+    localStorage.setItem(storeKey(projectId), JSON.stringify(a));
   } catch {
     /* private window or full storage: the arrangement lasts the page */
   }
 }
 
-let memory: Arrangement | null = null;
-const all = (): Arrangement => (memory ??= read());
+const memory = new Map<string, Arrangement>();
+function all(projectId: string): Arrangement {
+  let a = memory.get(projectId);
+  if (!a) {
+    a = read(projectId);
+    memory.set(projectId, a);
+  }
+  return a;
+}
 
-export function spotsFor(still: string): Record<string, Spot> {
+export function spotsFor(projectId: string, still: string): Record<string, Spot> {
   const out: Record<string, Spot> = {};
   const prefix = `${still}/`;
-  for (const [k, v] of Object.entries(all())) if (k.startsWith(prefix)) out[k.slice(prefix.length)] = v;
+  for (const [k, v] of Object.entries(all(projectId))) if (k.startsWith(prefix)) out[k.slice(prefix.length)] = v;
   return out;
 }
 
-export function topZ(): number {
-  return Object.values(all()).reduce((m, s) => Math.max(m, s.z), 30);
+export function topZ(projectId: string): number {
+  return Object.values(all(projectId)).reduce((m, s) => Math.max(m, s.z), 30);
 }
 
-export function putSpot(still: string, domId: string, spot: Spot): void {
-  const a = { ...all(), [`${still}/${domId}`]: spot };
-  memory = a;
-  write(a);
+export function putSpot(projectId: string, still: string, domId: string, spot: Spot): void {
+  const a = { ...all(projectId), [`${still}/${domId}`]: spot };
+  memory.set(projectId, a);
+  write(projectId, a);
 }
 
-export function clearSpots(still: string): void {
-  const a = { ...all() };
+export function clearSpots(projectId: string, still: string): void {
+  const a = { ...all(projectId) };
   for (const k of Object.keys(a)) if (k.startsWith(`${still}/`)) delete a[k];
-  memory = a;
-  write(a);
+  memory.set(projectId, a);
+  write(projectId, a);
 }
 
 /** Tests only. */
 export function resetArrangementMemory(): void {
-  memory = null;
+  memory.clear();
 }

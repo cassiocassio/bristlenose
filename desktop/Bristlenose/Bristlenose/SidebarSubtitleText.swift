@@ -46,7 +46,7 @@ enum SidebarSubtitleText {
         case .completedPartial:
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")  // :252-254
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
-             .addingInterviews, .copying, .importingBatch, .copyCancelling:
+             .addingInterviews, .copying, .importingBatch, .readingScreens, .copyCancelling:
             return activityText(variant, progress: progress, separator: " · ", i18n: i18n)  // :255-259
         case .ready(let date, let delta):
             return readyText(date: date, delta: delta, i18n: i18n)           // :260-267
@@ -73,6 +73,13 @@ enum SidebarSubtitleText {
             // count is the question a closed window leaves: not how fast, not
             // which file, but how many are still to wait for.
             return i18n.t("desktop.chrome.pipeline.importBatch",
+                          ["done": String(done), "total": String(total)])
+        case .readingScreens(let done, let total):
+            // A count, like the cloud batch, behind the one word that says
+            // what is being counted — "3 of 10" alone would read as the
+            // batch's sentence. No ETA here: it goes in the tooltip, and only
+            // once the server has measured a rate (`screensTooltip`).
+            return i18n.t("desktop.chrome.pipeline.screens",
                           ["done": String(done), "total": String(total)])
         case .stopping:
             return i18n.t("desktop.chrome.pipeline.stopping")
@@ -166,8 +173,15 @@ enum SidebarSubtitleText {
     static func tooltip(for variant: SubtitleVariant,
                         data: UnanalysedState?,
                         progress: PipelineProgress?,
+                        screens: ScreenReadingProgress? = nil,
                         i18n: I18n) -> String? {
         var parts: [String] = []
+        // Screen reading leads the same way a run's ladder does — it is the
+        // row's own line, plus the time left when there is one to give.
+        if case .readingScreens = variant,
+           let line = screensTooltip(variant, progress: screens, i18n: i18n) {
+            parts.append(line)
+        }
         // Lead with the FULL progress ladder while a run is in flight: the
         // visible subtitle truncates it on a narrow column, so hover is also
         // where the untruncated form lives. `.stopping` is excluded — it
@@ -191,6 +205,23 @@ enum SidebarSubtitleText {
             }
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// The screen-reading line with its time left: "Screens · 3 of 10 · ~4 min
+    /// left". The time appears only once the server has measured a rate —
+    /// never from a constant, so the warm-up says "0 of 10" and nothing about
+    /// time. Reuses the run's minute-granular ETA wording (`etaText`), not its
+    /// estimator. Nil for any other variant.
+    static func screensTooltip(_ variant: SubtitleVariant,
+                               progress: ScreenReadingProgress?,
+                               i18n: I18n) -> String? {
+        guard case .readingScreens = variant,
+              let line = activityText(variant, progress: nil, separator: " · ", i18n: i18n)
+        else { return nil }
+        guard let eta = RunProgressSubtitle.etaText(progress?.etaSeconds,
+                                                    localize: { i18n.t($0, $1) })
+        else { return line }
+        return line + " · " + eta
     }
 
     /// Bare progressive-coarsen date. Verbatim `ProjectRow.formatBareDate`

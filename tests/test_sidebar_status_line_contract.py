@@ -53,6 +53,7 @@ STATUS_LINE_KEYS = [
     "copying",
     "queuedPosition",
     "importBatch",
+    "screens",
 ]
 
 # `ProjectRow.swift`: "budget is ~22 EN chars before DE/ES/FR swell truncates".

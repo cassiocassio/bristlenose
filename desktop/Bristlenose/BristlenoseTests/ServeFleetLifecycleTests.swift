@@ -94,6 +94,138 @@ struct ServeFleetLifecycleTests {
         #expect(fleet.staleProjects.contains(Self.b))
     }
 
+    /// Turning Diagnostics OFF must reach every serve still reading shared
+    /// screens, not only the fronted one. Before this, `b` — a background serve
+    /// spawned with `BRISTLENOSE_SCREEN_TEXT=1` — was merely marked stale and
+    /// went on reading participants' screens until someone fronted its window.
+    /// The restart is asserted by its effect, not by the absence of a stale
+    /// mark: each manager is resolved to an external server on `restartPort`,
+    /// so a real restart (shutdown, then start) lands on that port without
+    /// spawning anything, and a serve left alone keeps its fake one.
+    private static let restartPort = 9_999
+
+    private static func externalFleet(_ store: ScreenReadingStore? = nil) -> ServeFleet {
+        ServeFleet(screenReading: store ?? ScreenReadingStore(), makeManager: {
+            ServeManager(resolvedMode: .success(.external(port: restartPort)))
+        })
+    }
+
+    /// Wait (by suspending, so the restart's Task can run) for a state.
+    private func settle(_ m: ServeManager, to state: ServeState) async {
+        for _ in 0..<100 where m.state != state {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
+    @Test func diagnosticsOffRestartsEveryServeStillReadingScreens() async throws {
+        let suite = "ServeFleetLifecycleTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(false, forKey: DiagnosticsPreference.key)
+
+        let fleet = Self.externalFleet()
+        for (id, port, reads) in [(Self.a, 5000, false), (Self.b, 5001, true)] {
+            let m = fleet.manager(for: id)
+            m.instance.state = .running(port: port)
+            m.instance.currentProjectPath = "/p/\(id)"
+            m.instance.spawnedReadsScreens = reads
+        }
+        fleet.frontedProject = nil
+
+        fleet.applyEnvChange(defaults: defaults)
+        let b = fleet.manager(for: Self.b)
+        await settle(b, to: .running(port: Self.restartPort))
+
+        #expect(b.state == .running(port: Self.restartPort),
+                "a background serve kept reading screens after Diagnostics went off")
+        #expect(fleet.staleProjects.contains(Self.b) == false)
+        #expect(b.spawnedReadsScreens == false, "the restarted serve still claims to read screens")
+        // Narrow: a serve that never read screens keeps the lazy restart.
+        #expect(fleet.manager(for: Self.a).state == .running(port: 5000))
+        #expect(fleet.staleProjects.contains(Self.a))
+    }
+
+    /// The boot gap: `spawnedReadsScreens` is set at spawn, seconds before
+    /// `.running`. A serve still starting when Diagnostics goes off was spawned
+    /// with screen text and must be restarted too, not left to boot and read.
+    @Test func diagnosticsOffRestartsAServeStillStarting() async throws {
+        let suite = "ServeFleetLifecycleTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(false, forKey: DiagnosticsPreference.key)
+
+        let fleet = Self.externalFleet()
+        let b = fleet.manager(for: Self.b)
+        b.instance.state = .starting
+        b.instance.currentProjectPath = "/p/b"
+        b.instance.spawnedReadsScreens = true
+        fleet.frontedProject = nil
+
+        fleet.applyEnvChange(defaults: defaults)
+        await settle(b, to: .running(port: Self.restartPort))
+
+        #expect(b.state == .running(port: Self.restartPort),
+                "a serve booting with screen text was left to finish booting and read")
+        // The restart's own start records what it spawned: nothing reads now.
+        #expect(b.spawnedReadsScreens == false)
+    }
+
+    /// …and a starting serve that never read screens is left alone, as it
+    /// always was for every other preference.
+    @Test func aStartingServeThatReadsNothingIsLeftAlone() throws {
+        let suite = "ServeFleetLifecycleTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(false, forKey: DiagnosticsPreference.key)
+
+        let fleet = Self.externalFleet()
+        let a = fleet.manager(for: Self.a)
+        a.instance.state = .starting
+        a.instance.currentProjectPath = "/p/a"
+        fleet.frontedProject = nil
+
+        fleet.applyEnvChange(defaults: defaults)
+
+        #expect(a.state == .starting)
+        #expect(fleet.staleProjects.contains(Self.a) == false)
+    }
+
+    /// The wiring from a manager's poll to the sidebar's store: a manager's
+    /// progress lands under ITS project and nobody else's.
+    @Test func aManagersScreenProgressLandsUnderItsOwnProject() {
+        let store = ScreenReadingStore()
+        let fleet = Self.externalFleet(store)
+        let p = ScreenReadingProgress(done: 1, total: 3, secondsDone: 0,
+                                      secondsTotal: 30, rate: nil)
+        _ = fleet.manager(for: Self.b)
+        fleet.manager(for: Self.a).onScreensProgress?(p)
+        #expect(store.progress[Self.a] == p)
+        #expect(store.progress[Self.b] == nil)
+
+        fleet.discard(Self.a)
+        #expect(store.progress[Self.a] == nil, "a discarded project kept its row")
+    }
+
+    /// Turning Diagnostics ON withdraws nothing, so it stays lazy everywhere —
+    /// the restart-all harm `ServeEnvStaleness` declines.
+    @Test func diagnosticsOnStaysLazyForBackgroundServes() throws {
+        let suite = "ServeFleetLifecycleTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(true, forKey: DiagnosticsPreference.key)
+
+        let fleet = ServeFleet()
+        let m = fleet.manager(for: Self.b)
+        m.instance.state = .running(port: 5001)
+        m.instance.currentProjectPath = "/p/b"
+        m.instance.spawnedReadsScreens = true
+        fleet.frontedProject = nil
+
+        fleet.applyEnvChange(defaults: defaults)
+
+        #expect(fleet.staleProjects.contains(Self.b))
+    }
+
     /// The other half: a deferred instance must actually be restarted when
     /// someone looks at it, or "lazy" is just "never".
     @Test func frontingAStaleStudyClearsItsStaleness() {

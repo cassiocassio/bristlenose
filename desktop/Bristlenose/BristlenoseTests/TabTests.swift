@@ -63,8 +63,16 @@ struct TabTests {
     /// keep now they agree.
     @Test func allCases_areTheKnownRoster() {
         #expect(Tab.allCases == [
-            .project, .sessions, .quotes, .codebook, .signals, .discussion,
+            .project, .sessions, .quotes, .codebook, .signals, .discussion, .screens,
         ])
+    }
+
+    /// The diagnostics Screens lens resolves from its route, so the rail lights
+    /// its row when the SPA navigates there.
+    @Test func fromPath_screens() {
+        #expect(Tab.from(path: "/report/screens/") == .screens)
+        #expect(Tab.from(path: "/report/screens") == .screens)
+        #expect(Tab.screens.label == "Screens")
     }
 
     /// The parked Discussion lens resolves from its route like any other, so the
@@ -106,6 +114,7 @@ struct TabTests {
         #expect(Tab.codebook.rawValue == "codebook")
         #expect(Tab.signals.rawValue == "signals")
         #expect(Tab.discussion.rawValue == "discussion")
+        #expect(Tab.screens.rawValue == "screens")
     }
 }
 
@@ -127,6 +136,8 @@ struct TabTests {
         // (4 Oct 2026): before, the button was missing and a folded guide
         // could not be brought back.
         #expect(Tab.discussion.hasLeftPanel)
+        // The list of screens, wired like the Discussion guide (14 Oct 2026).
+        #expect(Tab.screens.hasLeftPanel)
     }
 
     @Test func theTwoWithoutOneDoNot() {
@@ -145,9 +156,10 @@ struct TabTests {
             _ = tab.hasLeftPanel
         }
         // Five since `codebookV2` was folded into `codebook` (baa1aa0e); six
-        // with the parked `.discussion` (3 Oct 2026). The number is the
-        // tripwire, so move it deliberately — it went stale once and the suite
-        // was red on main until 31 Aug 2026.
-        #expect(Tab.allCases.count == 6)
+        // with the parked `.discussion` (3 Oct 2026); seven with the diagnostics
+        // `.screens` (14 Oct 2026). The number is the tripwire, so move it
+        // deliberately — it went stale once and the suite was red on main until
+        // 31 Aug 2026.
+        #expect(Tab.allCases.count == 7)
     }
 }

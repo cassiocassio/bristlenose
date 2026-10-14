@@ -40,6 +40,17 @@ import Foundation
 /// `037b371e`; only this paragraph was, for a day, which is long enough for a
 /// reader to act on it. Trued 22 Aug 2026; the premise is the thing to check
 /// if the exposure model changes again.
+///
+/// **A second exception, of the same kind: a revoked read.** With Diagnostics
+/// on, every serve spawns with `BRISTLENOSE_SCREEN_TEXT=1` and reads
+/// participants' shared screens in a background job (`docs/design-screens.md`).
+/// Turning Diagnostics off is the researcher withdrawing that, and a lazy
+/// restart would leave every background serve reading screens — OCR'ing them,
+/// caching stills — until someone fronts its window. Nobody has to be looking
+/// for that to matter, so a serve still reading screens after the switch
+/// restarts now, like an exposed one under Anonymise. Narrow on purpose: it
+/// keys on the serve's own spawn-time env (`ServeManager.spawnedReadsScreens`),
+/// so turning Diagnostics ON stays lazy, and so does every other preference.
 enum ServeEnvStaleness {
 
     enum Action: Equatable {
@@ -63,13 +74,24 @@ enum ServeEnvStaleness {
     ///     on, unattended, until someone fronts its window. Previously this
     ///     any. This is `ServeManager.handshakeProjectPath`'s project — the one
     ///     an external agent can read without anyone watching.
+    ///   - readsWithdrawnScreens: was this serve spawned reading shared screens
+    ///     that the new environment no longer allows? Eager for the same reason
+    ///     as `isExposed`: the harm runs whether or not anyone is looking.
+    ///   - isStarting: spawned but not yet `.running`. Only the withdrawn-screens
+    ///     case acts on it: such a serve was spawned with the old env seconds
+    ///     ago and would otherwise reach `.running` and read. Every other
+    ///     preference keeps the old answer for a booting serve (nothing).
     static func action(project: UUID,
                        isRunning: Bool,
                        isFronted: Bool,
-                       isExposed: Bool) -> Action {
+                       isExposed: Bool,
+                       readsWithdrawnScreens: Bool = false,
+                       isStarting: Bool = false) -> Action {
+        if isStarting && readsWithdrawnScreens { return .restartNow }
         guard isRunning else { return .nothing }
         if isFronted { return .restartNow }
         if isExposed { return .restartNow }
+        if readsWithdrawnScreens { return .restartNow }
         return .restartOnNextFront
     }
 }

@@ -315,6 +315,7 @@
       "etaMinutes": "залишилося ~{{count}} хв",
       "etaUnderMinute": "залишилося <1 хв",
       "importBatch": "{{done}} \u0437 {{total}}",
+      "screens": "\u0415\u043a\u0440\u0430\u043d\u0438 \u00b7 {{done}} \u0437 {{total}}",
       "copying": "Копіювання · {{percent}}%",
       "stage": {
         "transcribe": "Транскрибування",

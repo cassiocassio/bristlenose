@@ -261,6 +261,7 @@
       "etaMinutes": "~{{count}}\ubd84 \ub0a8\uc74c",
       "etaUnderMinute": "1\ubd84 \ubbf8\ub9cc \ub0a8\uc74c",
       "importBatch": "{{total}}\uac1c \uc911 {{done}}\uac1c",
+      "screens": "\ud654\uba74 \u00b7 {{total}}\uac1c \uc911 {{done}}\uac1c",
       "copying": "\ubcf5\uc0ac \uc911 \u00b7 {{percent}}%",
       "stage": {
         "transcribe": "\uc804\uc0ac \uc911",

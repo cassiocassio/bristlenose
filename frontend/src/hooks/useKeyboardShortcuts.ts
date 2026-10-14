@@ -41,6 +41,7 @@ import { isEmbedded } from "../utils/embedded";
 import { postEditingStarted, postEditingEnded } from "../shims/bridge";
 import { type Direction } from "../utils/spatialNav";
 import { toggleDiscussionGuide } from "../islands/discussion/guidePanel";
+import { toggleScreensNav } from "../islands/screens/navPanel";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -481,6 +482,12 @@ export function useKeyboardShortcuts({
         if (pathMatches(loc, "/report/discussion")) {
           e.preventDefault();
           toggleDiscussionGuide();
+          return;
+        }
+        // So does the Screens lens's navigator (navPanel.ts).
+        if (pathMatches(loc, "/report/screens")) {
+          e.preventDefault();
+          toggleScreensNav();
           return;
         }
         const onSessions = loc.startsWith("/report/sessions");

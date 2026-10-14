@@ -3,13 +3,19 @@
    accent tint at a percentage the theme already mixes (6%, 15%, 30%); lift is --bn-colour-shadow at
    rest and the shipped .bn-focused treatment when a card is brought forward. */
 
-.screens-lens-status {
-  padding: var(--bn-space-xl);
-  color: var(--bn-colour-muted);
-  font-size: var(--bn-text-label);
+/* The lens is one <section>, the direct child of <main>, so its zone title sits on the shared datum
+   (`.center > main > section:first-of-type > .section-heading`, report.css) with no rule of its
+   own. The navigator is a column inside it, as the Discussion lens's guide is; everything else
+   flows down the second column. The last row is flexible so the sticky navigator's height never
+   opens gaps between the heading, the line under it and the board. */
+.screens-lens {
+  /* --screens-nav-w is set on the element from NAV_W (ScreensLens.tsx), the one source. */
+  display: grid; grid-template-columns: var(--screens-nav-w) minmax(0, 1fr); grid-template-rows: auto auto auto 1fr;
+  column-gap: var(--bn-space-xl); align-items: start;
 }
-
-.screens-lens { display: grid; grid-template-columns: 280px minmax(0, 1fr); align-items: start; }
+.screens-lens > .screens-nav { grid-column: 1; grid-row: 1 / -1; align-self: start; }
+.screens-lens > :not(.screens-nav) { grid-column: -2 / -1; min-width: 0; }
+.screens-lens.nav-hidden { grid-template-columns: minmax(0, 1fr); }
 
 /* ── Navigation: every screen, with its thumbnail, title and address ── */
 .screens-nav {
@@ -45,6 +51,9 @@
 .screens-nav-path { display: block; font-family: var(--bn-font-mono); font-size: var(--bn-text-micro); color: var(--bn-colour-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .screens-nav-meta { display: flex; gap: var(--bn-space-xs); align-items: baseline; margin-top: var(--bn-space-xs); font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
 .screens-nav-meta .screens-count { flex: none; min-width: 1.5em; font-variant-numeric: tabular-nums; }
+/* On the current row's selection fill, muted text falls under 4.5:1 in the default light palette. */
+.screens-nav a[aria-current="true"] .screens-nav-path,
+.screens-nav a[aria-current="true"] .screens-nav-meta { color: var(--bn-colour-text); }
 .screens-codes { display: flex; flex-wrap: wrap; gap: 2px; min-width: 0; }
 .screens-codes .bn-speaker-badge-code, .screens-more {
   font-family: var(--bn-font-mono); font-size: var(--bn-text-micro); line-height: var(--bn-text-micro-lh);
@@ -54,20 +63,15 @@
 .screens-more { background: none; color: var(--bn-colour-muted); }
 
 /* ── The screen ── */
-.screens-main { min-width: 0; padding: 0 var(--bn-space-xl) var(--bn-space-xl); }
-.screens-controls {
-  display: flex; flex-wrap: wrap; gap: var(--bn-space-sm) var(--bn-space-lg); align-items: center;
-  padding: var(--bn-space-sm) 0; font-size: var(--bn-text-caption); color: var(--bn-colour-muted);
-}
-.screens-controls select { font: inherit; }
-.screens-main > .section-heading { margin-top: var(--bn-space-sm); }
 .screens-who { display: flex; gap: var(--bn-space-xs); }
 .screens-who button {
   border: 1px solid transparent; background: none; padding: 3px 4px; border-radius: var(--bn-radius-md);
-  cursor: pointer; font: inherit; color: inherit; opacity: 0.55;
+  cursor: pointer; font: inherit; color: inherit;
 }
-.screens-who button:hover { opacity: 1; background: var(--bn-colour-hover); }
-.screens-who button[aria-pressed="true"] { opacity: 1; background: var(--bn-selection-bg); border-color: var(--bn-selection-border); }
+/* No dimming of the unpressed ones: opacity took their text below 4.5:1 (1.4.3) in every palette.
+   The pressed one is marked by its fill, its border and aria-pressed. */
+.screens-who button:hover { background: var(--bn-colour-hover); }
+.screens-who button[aria-pressed="true"] { background: var(--bn-selection-bg); border-color: var(--bn-selection-border); }
 .screens-sub {
   display: flex; flex-wrap: wrap; gap: var(--bn-space-xs) var(--bn-space-md); align-items: baseline;
   font-size: var(--bn-text-label); color: var(--bn-colour-muted); margin: calc(-1 * var(--bn-space-sm)) 0 var(--bn-space-lg);
@@ -90,6 +94,9 @@
   .screens-board { grid-template-columns: 270px minmax(0, 1fr) 270px; }
   .screens-col-l { display: block; }
 }
+/* 1700px is the prototype's measured width, not a token (experiments/screen-text/screens_lens.html;
+   docs/design-screens.md §2, "From 1700px (a 5K display) they sit beside it"): from there two 300px
+   columns fit beside a screengrab still wide enough to read, so they stop overlapping its edge. */
 @container (min-width: 1700px) {
   .screens-board { grid-template-columns: 300px minmax(0, 1fr) 300px; column-gap: var(--bn-space-lg); }
   .screens-col-l { margin-right: 0; }
@@ -99,7 +106,8 @@
 .screens-shot img { display: block; width: 100%; border-radius: var(--bn-radius-md); border: 1px solid var(--bn-colour-border); }
 .screens-shot-wait { aspect-ratio: 16 / 10; border-radius: var(--bn-radius-md); background: var(--bn-colour-quote-bg); }
 .screens-shot-error { display: block; padding: var(--bn-space-lg); font-size: var(--bn-text-label); color: var(--bn-colour-muted); }
-.screens-lens-status p { margin: 0 0 var(--bn-space-xs); }
+.screens-notes { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); margin: 0 0 var(--bn-space-md); }
+.screens-notes p { margin: 0 0 var(--bn-space-xs); }
 .screens-hl {
   position: absolute; pointer-events: none; border-radius: var(--bn-radius-sm);
   border: 1.5px solid var(--bn-colour-accent);
@@ -108,63 +116,71 @@
 }
 .screens-hl.on { background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent); }
 
-/* ── Every quote on this lens is the same card: pinned, carried or not pinned ── */
-.screens-stage blockquote.quote-card {
+/* ── Every quote on this lens is the Quotes lens's card (QuoteCard), in a wrapper the board places,
+   lifts and drags: pinned, carried or not pinned ── */
+.screens-card { position: relative; }
+.screens-stage .screens-card > blockquote.quote-card {
+  margin: 0;
   padding: var(--bn-space-sm) 2rem var(--bn-space-sm) var(--bn-space-md);
   box-shadow: 0 4px 16px var(--bn-colour-shadow), 0 1px 4px var(--bn-colour-shadow);
   transition: opacity var(--bn-transition-fast), box-shadow var(--bn-transition-fast), color var(--bn-transition-fast);
-  cursor: default;
 }
-.screens-stage blockquote.quote-card .quote-body { font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); }
-.screens-stage blockquote.quote-card .quote-row { gap: 0.4rem; }
-.screens-stage blockquote.quote-card .timecode { font-size: var(--bn-text-caption); }
-.screens-stage blockquote.quote-card .badges { margin-top: 0.3rem; gap: var(--bn-space-xs); }
-.screens-stage blockquote.quote-card .star-btn { top: 0.4rem; right: 0.4rem; }
-.screens-stage blockquote.quote-card .hide-btn { top: 1.55rem; right: 0.4rem; }
-.screens-stage blockquote.quote-card.bn-focused { box-shadow: var(--bn-focus-shadow), 0 8px 24px var(--bn-colour-shadow); }
+.screens-stage .screens-card .quote-body { font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); }
+.screens-stage .screens-card .quote-row { gap: 0.4rem; }
+.screens-stage .screens-card .timecode { font-size: var(--bn-text-caption); }
+.screens-stage .screens-card .badges { margin-top: 0.3rem; gap: var(--bn-space-xs); }
+.screens-stage .screens-card .star-btn { top: 0.4rem; right: 0.4rem; }
+.screens-stage .screens-card .hide-btn { top: 1.55rem; right: 0.4rem; }
+.screens-stage .screens-card.is-lifted > .quote-card { box-shadow: var(--bn-focus-shadow), 0 8px 24px var(--bn-colour-shadow); }
 /* A long quote is a tall sticky; every card shows seven lines and the whole quote when brought
-   forward, pinned or not, so no card reads as more important for being longer. */
-.screens-stage blockquote.quote-card .quote-text-wrapper {
+   forward or edited, pinned or not, so no card reads as more important for being longer. */
+.screens-stage .screens-card .quote-text-wrapper {
   display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden;
 }
-.screens-stage blockquote.quote-card.bn-focused .quote-text-wrapper { display: inline; -webkit-line-clamp: unset; overflow: visible; }
+.screens-stage .screens-card.is-lifted .quote-text-wrapper,
+.screens-stage .screens-card .quote-card.editing .quote-text-wrapper { display: inline; -webkit-line-clamp: unset; overflow: visible; }
 
-.screens-col blockquote.quote-card { position: absolute; left: 0; right: 0; margin: 0; z-index: var(--stack, 2); }
-.screens-col.stacked.diagonal blockquote.quote-card { left: var(--slide, 0px); right: calc(-1 * var(--slide, 0px)); }
-.screens-col.stacked blockquote.quote-card:not(.bn-focused) {
+.screens-col .screens-card { position: absolute; left: 0; right: 0; z-index: var(--stack, 2); }
+.screens-col.stacked .screens-card:not(.is-lifted) > .quote-card {
   box-shadow: 0 -2px 6px var(--bn-colour-shadow), 0 4px 16px var(--bn-colour-shadow), 0 1px 4px var(--bn-colour-shadow);
 }
-.screens-stage blockquote.quote-card.bn-focused { z-index: 999 !important; }
-.screens-loose blockquote.quote-card.bn-focused { position: relative; }
+/* A card focused or being edited comes up out of a stack, as one brought forward does. */
+.screens-stage .screens-card:has(> .quote-card.bn-focused, > .quote-card.editing),
+.screens-stage .screens-card:focus-within { z-index: 998 !important; }
+/* A column is its own stacking context (z-index 2), under the free layer (5): lift the whole column
+   while one of its cards is forward or holds focus, or that card can never rise over a moved one. */
+.screens-col:has(.is-lifted, :focus-within) { z-index: 6; }
+.screens-stage .screens-card.is-lifted { z-index: 999 !important; }
 
 .screens-free { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
-.screens-free blockquote.quote-card { position: absolute; margin: 0; pointer-events: auto; }
+.screens-free .screens-card { position: absolute; pointer-events: auto; }
 
 /* Bringing one forward dims the others by colour, not opacity: a stack must stay opaque. */
-.screens-stage.focus .quote-card:not(.bn-focused) { color: var(--bn-colour-muted); }
-.screens-stage.focus .quote-card:not(.bn-focused) mark.screens-read { background: none; }
+.screens-stage.focus .screens-card:not(.is-lifted) .quote-card { color: var(--bn-colour-muted); }
+.screens-stage.focus .screens-card:not(.is-lifted) mark.search-mark { background: none; }
 .screens-stage.focus .screens-hl:not(.on),
 .screens-stage.focus .screens-leaders g:not(.on) { opacity: 0.25; }
 
-/* The read-aloud highlight: words said that are also on the screen. */
-mark.screens-read { background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
-.screens-stage blockquote.bn-focused mark.screens-read { background: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent); }
+/* The read-aloud highlight: words said that are also on the screen (the card's own search mark). */
+.screens-stage mark.search-mark { background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
+.screens-stage .screens-card.is-lifted mark.search-mark { background: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent); }
 
 svg.screens-leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 3; }
 svg.screens-leaders path { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1; opacity: 0.6; }
 svg.screens-leaders circle { fill: var(--bn-colour-accent); }
 
-/* Rearranging: the top edge and the margin under the timecode are grips. */
+/* Rearranging: the top edge and the margin under the timecode are grips. The side grip starts
+   below the timecode's line, so the timecode stays a link that plays the clip. */
 .screens-grip { position: absolute; z-index: 1; cursor: grab; }
 .screens-grip-top { left: 0; right: 2rem; top: 0; height: var(--bn-space-sm); }
-.screens-grip-side { left: 0; top: 0; bottom: 0; width: 3.6rem; }
+.screens-grip-side { left: 0; top: 2.2rem; bottom: 0; width: 3.6rem; }
 .screens-stage.dragging, .screens-stage.dragging * { cursor: grabbing !important; user-select: none; }
-.screens-stage blockquote.quote-card.is-dragging { box-shadow: var(--bn-focus-shadow), 0 12px 32px var(--bn-colour-shadow); transition: none; }
+.screens-stage .screens-card.is-dragging > .quote-card { box-shadow: var(--bn-focus-shadow), 0 12px 32px var(--bn-colour-shadow); transition: none; }
 
 /* Everything else said on this screen: the same card, the same gutter. */
 .screens-loose { columns: 260px; column-gap: var(--bn-space-md); margin-top: var(--bn-space-md); }
-.screens-loose blockquote.quote-card { position: relative; break-inside: avoid; margin: 0 0 var(--bn-space-md); }
+.screens-loose .screens-card { break-inside: avoid; margin: 0 0 var(--bn-space-md); }
 
 @media (prefers-reduced-motion: reduce) {
-  .screens-hl, .screens-stage blockquote.quote-card { transition: none; }
+  .screens-hl, .screens-stage .screens-card > blockquote.quote-card { transition: none; }
 }

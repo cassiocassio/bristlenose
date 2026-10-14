@@ -279,6 +279,7 @@
       "etaMinutes": "noch ~{{count}} Min",
       "etaUnderMinute": "noch <1 Min",
       "importBatch": "{{done}} von {{total}}",
+      "screens": "Bildschirme \u00b7 {{done}} von {{total}}",
       "copying": "Wird kopiert \u00b7 {{percent}} %",
       "stage": {
         "transcribe": "Wird transkribiert",

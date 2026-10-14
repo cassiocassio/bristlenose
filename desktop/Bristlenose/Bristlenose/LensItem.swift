@@ -29,24 +29,54 @@ struct LensItem: Identifiable {
     /// became the only Codebook lens on 31 Aug 2026 and took `tag` back from
     /// the temporary `tag.square` that distinguished the two.
     ///
-    /// Discussion goes last, after Signals, so the five older lenses keep
-    /// ⌘1–⌘5 and it takes ⌘6 (`questionmark.bubble`, chosen 3 Oct 2026). It was
-    /// a flagged preview row until it shipped for beta the same day.
-    static let all: [LensItem] = [
-        LensItem(tab: .project,    systemImage: "target"),
-        LensItem(tab: .sessions,   systemImage: "person.2"),
-        LensItem(tab: .quotes,     systemImage: "text.quote"),
-        LensItem(tab: .codebook,   systemImage: "tag"),
-        LensItem(tab: .signals,    systemImage: "square.grid.3x3"),
-        LensItem(tab: .discussion, systemImage: "questionmark.bubble"),
-    ]
+    /// Discussion goes last of the shipping lenses, after Signals, so the five
+    /// older lenses keep ⌘1–⌘5 and it takes ⌘6 (`questionmark.bubble`, chosen
+    /// 3 Oct 2026). It was a flagged preview row until it shipped for beta the
+    /// same day.
+    ///
+    /// Computed, not stored: the Screens row follows the Diagnostics
+    /// preference (`docs/design-screens.md` — a rough lens for one trusted
+    /// tester). Views that iterate this observe
+    /// `@AppStorage(DiagnosticsPreference.key)` so they redraw on the switch —
+    /// the shape the Discussion preview used while it rode its flag.
+    static var all: [LensItem] {
+        rail(.standard)
+    }
+
+    /// The rail a given defaults domain asks for — `all`, with the domain
+    /// injectable so a test can read both states without writing the
+    /// researcher's own preference.
+    static func rail(_ defaults: UserDefaults) -> [LensItem] {
+        lenses(screens: DiagnosticsPreference.isEnabled(defaults))
+    }
+
+    /// The rail for a given Diagnostics state — pure, so both states are
+    /// testable. Screens goes after Discussion, so every shipping lens keeps its
+    /// number and it takes ⌘7 (`macwindow.on.rectangle`: the windows and pages
+    /// a participant shared).
+    static func lenses(screens: Bool) -> [LensItem] {
+        var lenses: [LensItem] = [
+            LensItem(tab: .project,    systemImage: "target"),
+            LensItem(tab: .sessions,   systemImage: "person.2"),
+            LensItem(tab: .quotes,     systemImage: "text.quote"),
+            LensItem(tab: .codebook,   systemImage: "tag"),
+            LensItem(tab: .signals,    systemImage: "square.grid.3x3"),
+            LensItem(tab: .discussion, systemImage: "questionmark.bubble"),
+        ]
+        if screens {
+            lenses.append(LensItem(tab: .screens, systemImage: "macwindow.on.rectangle"))
+        }
+        return lenses
+    }
 
     /// Icon for `tab`, resolved from `all` so every surface that shows a lens
     /// glyph reads the *same* settled set — the sidebar rail and the View menu's
-    /// ⌘1–⌘5 items can't drift apart. `all` covers every `Tab` case (pinned by
+    /// ⌘-number items can't drift apart. Read with Screens on, so a remembered
+    /// Screens lens never draws a placeholder circle on a machine where
+    /// Diagnostics is off. That set covers every `Tab` case (pinned by
     /// `LensItemTests`), so the fallback is unreachable; it exists only to keep
     /// the return non-optional at call sites.
     static func systemImage(for tab: Tab) -> String {
-        all.first { $0.tab == tab }?.systemImage ?? "circle"
+        lenses(screens: true).first { $0.tab == tab }?.systemImage ?? "circle"
     }
 }

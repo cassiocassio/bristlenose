@@ -53,6 +53,10 @@ const TITLED_LENSES = [
   { name: 'quotes', route: '/report/quotes/' },
   { name: 'codebook', route: '/report/codebook/' },
   { name: 'signals', route: '/report/signals/' },
+  // Diagnostics-only. Every state it renders — Diagnostics off (the smoke fixture), screens off,
+  // loading, the board — opens with its zone title as the first child of a <section> under
+  // <main>; it once opened under a picker bar inside a nested <main> (14 Oct 2026).
+  { name: 'screens', route: '/report/screens/' },
 ];
 
 function authToken(): string {

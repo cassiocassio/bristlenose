@@ -656,6 +656,17 @@ describe("useKeyboardShortcuts", () => {
       unmount();
     });
 
+    it("[ on the Screens lens toggles its own navigator, not the shared contents", async () => {
+      const nav = await import("../islands/screens/navPanel");
+      nav.resetScreensNav();
+      nav.reportScreensNav(true, 0); // the lens is showing it
+      const { unmount } = renderWithProviders(undefined, "/report/screens/");
+      expect(dispatchKey("[")).toBe(true);
+      expect(nav.screensNavState().wish).toBe(false);
+      nav.resetScreensNav();
+      unmount();
+    });
+
     it("] is handled on quotes page (toggles tags)", () => {
       const { unmount } = renderWithProviders();
       const handled = dispatchKey("]");

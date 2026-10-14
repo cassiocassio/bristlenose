@@ -161,10 +161,9 @@ private struct DiagnosticsMenuContent: View {
         }
         Button("Shoal Screensaver") { openWindow(id: "shoal-view") }
 
-        // Screens lens (docs/design-screens.md S5): rough, so diagnostics-only and English-only.
-        // No native sidebar row yet; the menu routes the report to /report/screens/.
-        Button("Screens Lens") { bridgeHandler.menuAction("openScreensLens") }
-            .disabled(!bridgeHandler.canDispatch)
+        // No "Screens Lens" item: the Screens lens is a rail row and ⌘7 whenever this
+        // menu exists (`LensItem.lenses(screens:)`), so a second way to reach it from
+        // here would be a fork of the one lens list (docs/design-screens.md).
 
         if DistributionChannel.current.exposesDebugTools {
             Divider()
@@ -856,6 +855,10 @@ private struct ViewMenuContent: View {
     /// `useKeyboardShortcuts.ts` lists the same lenses, and the two must agree.
     static let focusModeTabs: Set<Tab> = [.quotes, .signals]
 
+    /// Observed so ⌘7 (Screens) appears and disappears with Diagnostics.
+    @AppStorage(DiagnosticsPreference.key)
+    private var showDiagnostics: Bool = DiagnosticsPreference.defaultValue
+
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
     @FocusedValue(\.windowCommands) private var windowCommands
@@ -917,14 +920,14 @@ private struct ViewMenuContent: View {
     }
 
     var body: some View {
-        // Tab shortcuts Cmd+1 through Cmd+5. `activateLens`, not `switchToTab`:
+        // Lens shortcuts ⌘1 onwards — ⌘1–⌘6 for the six shipping lenses, ⌘7 for
+        // Screens while Diagnostics is on. `activateLens`, not `switchToTab`:
         // the Sessions lens restores the view the user left (route memory).
         // Iterates the RAIL, not Tab.allCases. The comment above LensItem.all
         // says the rail and these shortcuts "can't drift apart"; reading the
-        // same array is what makes that structural rather than a promise. It
-        // also means the DEBUG-only v2 lens gets its number automatically and
-        // Release keeps five.
-        ForEach(Array(LensItem.all.enumerated()), id: \.element.id) { index, lens in
+        // same array is what makes that structural rather than a promise, and
+        // is why a lens that joins the rail gets its number automatically.
+        ForEach(Array(LensItem.lenses(screens: showDiagnostics).enumerated()), id: \.element.id) { index, lens in
             let tab = lens.tab
             Button(tab.localizedLabel(i18n), systemImage: lens.systemImage) {
                 bridgeHandler.activateLens(tab)
@@ -988,11 +991,14 @@ private struct ViewMenuContent: View {
             .disabled(!WindowCommand.showSessionsSwitcher
                 .isEnabled(hasKeyWindow: windowCommands != nil))
         } else {
-            Button(i18n.t(PanelToggle.labelKey(
-                panel: leftPanelKey ?? "Contents",
-                isOpen: bridgeHandler.leftPanelOpen,
-                isAvailable: hasLeftPanel
-            )), systemImage: "list.bullet") {
+            Button(bridgeHandler.activeTab == .screens
+                   ? PanelToggle.screensLabel(isOpen: bridgeHandler.leftPanelOpen,
+                                              isAvailable: hasLeftPanel)
+                   : i18n.t(PanelToggle.labelKey(
+                       panel: leftPanelKey ?? "Contents",
+                       isOpen: bridgeHandler.leftPanelOpen,
+                       isAvailable: hasLeftPanel
+                   )), systemImage: "list.bullet") {
                 bridgeHandler.menuAction("toggleLeftPanel")
             }
             .keyboardShortcut("l", modifiers: [.command, .option])

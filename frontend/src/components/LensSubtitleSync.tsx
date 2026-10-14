@@ -13,8 +13,10 @@ import {
   codebookCounts,
   codebookSubtitle,
   quotesSubtitle,
+  screensSubtitle,
   signalsSubtitle,
 } from "../utils/lensSubtitle";
+import { useScreensCount } from "../islands/screens/screensCount";
 import type { CodebookResponse } from "../utils/types";
 
 export function tabFromPath(pathname: string): string {
@@ -31,6 +33,7 @@ export function tabFromPath(pathname: string): string {
   if (pathname.startsWith("/report/codebook")) return "codebook";
   if (pathname.startsWith("/report/signals")) return "signals";
   if (pathname.startsWith("/report/sessions")) return "sessions";
+  if (pathname.startsWith("/report/screens")) return "screens";
   return "project";
 }
 
@@ -51,6 +54,7 @@ export function LensSubtitleSync(): null {
   // The subtitle and the token labels are i18n strings: re-post on a language change.
   const { locale } = useLocaleStore();
   const signals = useSignalStore();
+  const screensCount = useScreensCount();
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
 
   // Codebook is fetched, not a reactive store — load on mount and refetch when
@@ -83,6 +87,8 @@ export function LensSubtitleSync(): null {
     } else if ((tab === "codebook" || tab === "codebookV2") && codebook) {
       const { codebooks, tags } = codebookCounts(codebook);
       subtitle = codebookSubtitle(codebooks, tags);
+    } else if (tab === "screens") {
+      subtitle = screensSubtitle(screensCount);
     }
 
     document.title = subtitle || "Bristlenose";
@@ -96,7 +102,7 @@ export function LensSubtitleSync(): null {
         postQuotesFilter(store.searchQuery, store.viewMode, tokensToWire(store.searchTokens));
       }
     }
-  }, [tab, store, signals, codebook, locale]);
+  }, [tab, store, signals, codebook, locale, screensCount]);
 
   return null;
 }

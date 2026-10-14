@@ -69,6 +69,8 @@ import {
   toggleDiscussionGuide,
   useDiscussionGuide,
 } from "../islands/discussion/guidePanel";
+import { SCREENS_NAV_TOGGLE_LABEL, setScreensNavOpen, toggleScreensNav, useScreensNav } from "../islands/screens/navPanel";
+import { activeTabForPath, navigationLabel } from "../utils/lensPath";
 import {
   setSearchQuery,
   clearSearchTokens,
@@ -246,6 +248,11 @@ function AppShell() {
   // the Mac's panel state reach it here instead of the shared store.
   const isDiscussion = !!(_isDiscussion || _isDiscussionSlash);
   const discussionGuide = useDiscussionGuide();
+  // The Screens lens's navigator is wired the same way (islands/screens/navPanel.ts).
+  const _isScreens = useMatch("/report/screens");
+  const _isScreensSlash = useMatch("/report/screens/");
+  const isScreens = !!(_isScreens || _isScreensSlash);
+  const screensNav = useScreensNav();
   const isSessionsRoute = !!(isSessions || isTranscript);
   // Embedded (macOS) removes the Sessions lens's left panel — the native
   // session-switcher popover replaces it (design-sessions-popover-navigation.md).
@@ -352,7 +359,7 @@ function AppShell() {
   // detail column so the projects sidebar collapses before the panels do.
   const fit = panelFit(sidebar);
   const tagsOpen = fit.tagsOpen;
-  const minWidth = isDiscussion ? discussionGuide.wanted : wantedWidth(sidebar);
+  const minWidth = isDiscussion ? discussionGuide.wanted : isScreens ? screensNav.wanted : wantedWidth(sidebar);
   const { open: inspectorOpen } = useInspectorStore();
   // "overlay" is the transient hover-peek, and it can't occur embedded (the
   // rails that trigger it are hidden) — but it is open when it does, so treat
@@ -362,6 +369,8 @@ function AppShell() {
   // View menu confidently offers "Hide Sessions" for a panel not on screen.
   const leftPanelOpen = isDiscussion
     ? discussionGuide.shown
+    : isScreens
+    ? screensNav.shown
     : (tocMode === "overlay" || fit.tocOpen) && !embeddedSessionsPanelRemoved;
   useEffect(() => {
     if (!embedded) return;
@@ -399,15 +408,7 @@ function AppShell() {
   useEffect(() => {
     if (!embedded) return;
     installBridge({
-      getActiveTab: () => {
-        const path = locationBridgeRef.current.pathname;
-        if (path.startsWith("/report/quotes")) return "quotes";
-        if (path.startsWith("/report/sessions")) return "sessions";
-        if (path.startsWith("/report/codebook")) return "codebook";
-        if (path.startsWith("/report/signals")) return "signals";
-        if (path.startsWith("/report/discussion")) return "discussion";
-        return "project";
-      },
+      getActiveTab: () => activeTabForPath(locationBridgeRef.current.pathname),
       getFocusedQuoteId: () => focusedIdBridgeRef.current,
       getSelectedIds: () => Array.from(selectedIdsBridgeRef.current),
       getIsEditing: () => isEditing(),
@@ -436,19 +437,8 @@ function AppShell() {
       isFirstRender.current = false;
       return;
     }
-    const path = location.pathname;
-    let key = "nav.project";
-    if (path.startsWith("/report/quotes")) key = "nav.quotes";
-    else if (path.startsWith("/report/sessions/s")) key = "announce.transcript";
-    else if (path.startsWith("/report/sessions")) key = "nav.sessions";
-    // v2 deliberately shares `nav.codebook`: it IS the codebook lens, so the
-    // announcement is accurate, and a dedicated key would oblige a translation
-    // in all 21 locales for a screen-reader string on an experimental surface.
-    // Revisit if v2 replaces v1 under its own name.
-    else if (path.startsWith("/report/codebook")) key = "nav.codebook";
-    else if (path.startsWith("/report/signals")) key = "nav.signals";
-    else if (path.startsWith("/report/discussion")) key = "nav.discussion";
-    announce(i18n.t("announce.navigatedTo", { label: i18n.t(key) }));
+    const label = navigationLabel(location.pathname);
+    announce(i18n.t("announce.navigatedTo", { label }));
   }, [location.pathname]);
 
   // Handle menu actions from native toolbar/menu (embedded mode).
@@ -467,6 +457,7 @@ function AppShell() {
     };
 
     const onDiscussion = () => locationBridgeRef.current.pathname.startsWith("/report/discussion");
+    const onScreens = () => locationBridgeRef.current.pathname.startsWith("/report/screens");
     const handler = (e: Event) => {
       const { action, payload } = (e as CustomEvent).detail;
       // The native search field's menu and tokens (docs/design-search.md §7).
@@ -474,6 +465,7 @@ function AppShell() {
       switch (action) {
         case "toggleLeftPanel":
           if (onDiscussion()) toggleDiscussionGuide();
+          else if (onScreens()) toggleScreensNav();
           else sidebarAnimations.toggleToc();
           break;
         case "toggleRightPanel":
@@ -484,10 +476,12 @@ function AppShell() {
         // whenever the column and the web panels were in different states.
         case "hideAllSidebars":
           if (onDiscussion()) setDiscussionGuideOpen(false);
+          else if (onScreens()) setScreensNavOpen(false);
           else sidebarAnimations.hideAll();
           break;
         case "showAllSidebars":
           if (onDiscussion()) setDiscussionGuideOpen(true);
+          else if (onScreens()) setScreensNavOpen(true);
           else sidebarAnimations.showAll();
           break;
         case "discussionGuidePending":
@@ -665,10 +659,6 @@ function AppShell() {
           // has no native sidebar row, so the menu navigates the SPA directly.
           navigate("/report/specimen");
           break;
-        case "openScreensLens":
-          // Diagnostics ▸ Screens Lens: no native sidebar row while it is rough.
-          navigate("/report/screens/");
-          break;
       }
     };
     window.addEventListener("bn:menu-action", handler);
@@ -809,6 +799,14 @@ function AppShell() {
           <Tooltip content={i18n.t("discussion.navigator")} shortcut={{ key: "[" }}>
             <button className="rail-btn" onClick={toggleDiscussionGuide}
               aria-label={i18n.t("discussion.toggleGuide")} aria-pressed={discussionGuide.shown}>
+              <ListIcon />
+            </button>
+          </Tooltip>
+        ) : isScreens && !embedded ? (
+          // The Screens navigator's, the same way. English while the lens is diagnostics-only.
+          <Tooltip content="Screens" shortcut={{ key: "[" }}>
+            <button className="rail-btn" onClick={toggleScreensNav}
+              aria-label={SCREENS_NAV_TOGGLE_LABEL} aria-pressed={screensNav.shown}>
               <ListIcon />
             </button>
           </Tooltip>

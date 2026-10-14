@@ -1041,10 +1041,21 @@ struct ContentView: View {
             // The seed's lens wins over the study's remembered one: it is a
             // deliberate "open THIS lens over there", and it is what makes the
             // lens row's Open in New Window one gesture rather than two.
-            guard let tab = LensMemory.restore(seed?.lens)
-                    ?? LensMemory.restore(project.lastLens) else { return }
+            let rail = LensItem.lenses(screens: showDiagnostics)
+            guard let tab = LensMemory.restore(seed?.lens, rail: rail)
+                    ?? LensMemory.restore(project.lastLens, rail: rail) else { return }
             bridgeHandler.activateLens(tab)
             restoreAnchor(project.lastAnchor, on: tab)
+        }
+        // Diagnostics switched off with the Screens lens in front: the lens has
+        // just left the rail and ⌘7, and its serve is restarting without screen
+        // text, so move this window to the dashboard rather than leave it on a
+        // lens it can no longer reach. Every window observes the preference, so
+        // every window showing Screens moves.
+        .onChange(of: showDiagnostics) { _, on in
+            guard let tab = LensMemory.landing(active: bridgeHandler.activeTab,
+                                               rail: LensItem.lenses(screens: on)) else { return }
+            bridgeHandler.activateLens(tab)
         }
         .onChange(of: bridgeHandler.chooseGuideRequests) { _, _ in chooseDiscussionGuide() }
         .onChange(of: bridgeHandler.reanalyseSessionRequests) { _, _ in reanalyseSession() }
@@ -2472,6 +2483,8 @@ struct ContentView: View {
         case .codebook: return i18n.t("desktop.toolbar.codes")
         case .signals: return i18n.t("desktop.toolbar.signals")
         case .discussion: return i18n.t("desktop.toolbar.discussionGuide")
+        // English while the lens is diagnostics-only (`Tab.label`).
+        case .screens:  return "Screens"
         default:        return i18n.t("desktop.toolbar.contents")
         }
     }
@@ -2483,6 +2496,7 @@ struct ContentView: View {
         case .codebook: return i18n.t("desktop.toolbar.showCodes")
         case .signals: return i18n.t("desktop.toolbar.showSignals")
         case .discussion: return i18n.t("desktop.toolbar.showDiscussionGuide")
+        case .screens:  return "Show Screens (⌘⌥L)"
         default:        return i18n.t("desktop.toolbar.showContents")
         }
     }
@@ -2784,7 +2798,9 @@ struct ContentView: View {
                 projectIndex: projectIndex,
                 i18n: i18n,
                 selection: $selection,
-                lenses: LensItem.all,
+                // Not `LensItem.all`: reading the observed `showDiagnostics`
+                // is what makes the Screens row follow the preference live.
+                lenses: LensItem.lenses(screens: showDiagnostics),
                 activeTab: bridgeHandler.activeTab,
                 lensesEnabled: lensAvailability.isAvailable,
                 disabledLenses: bridgeHandler.lensReadiness.unavailable,
@@ -2845,6 +2861,7 @@ struct ContentView: View {
                 liveData: pipelineRunner.liveData,
                 copyMachinery: copyMachinery,
                 cloudImport: cloudImport,
+                screenReading: serveFleet.screenReading,
                 // Exposure, not activity (§5a-bis). Read the handshake
                 // writer's own answer rather than re-deriving it: "serve is
                 // up" is that predicate minus mcpInstanceID and mcpToken,

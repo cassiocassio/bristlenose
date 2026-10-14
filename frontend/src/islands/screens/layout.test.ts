@@ -46,12 +46,6 @@ describe("placeColumn", () => {
     for (const s of steps) expect(s).toBeGreaterThanOrEqual(MIN_STEP - 1e-9);
     expect(new Set(steps.map((s) => s.toFixed(3))).size).toBe(1); // evenly stepped
   });
-
-  it("slides a diagonal stack right a few pixels per card, and a straight one not at all", () => {
-    const cards = Array.from({ length: 4 }, () => ({ want: 0, height: 200 }));
-    expect(placeColumn(cards, 300, true).placed.map((p) => p.slide)).toEqual([0, 8, 16, 24]);
-    expect(placeColumn(cards, 300, false).placed.every((p) => p.slide === 0)).toBe(true);
-  });
 });
 
 describe("leaderPath", () => {
@@ -73,18 +67,29 @@ describe("arrangement", () => {
   });
 
   it("keeps a researcher's placement per screengrab, and survives a reload", () => {
-    putSpot("s1@100", "q-p1-10", { x: 0.2, y: 0.3, z: 31 });
+    putSpot("1", "s1@100", "q-p1-10", { x: 0.2, y: 0.3, z: 31 });
     resetArrangementMemory();
-    expect(spotsFor("s1@100")).toEqual({ "q-p1-10": { x: 0.2, y: 0.3, z: 31 } });
-    expect(spotsFor("s1@104")).toEqual({});
-    expect(topZ()).toBe(31);
+    expect(spotsFor("1", "s1@100")).toEqual({ "q-p1-10": { x: 0.2, y: 0.3, z: 31 } });
+    expect(spotsFor("1", "s1@104")).toEqual({});
+    expect(topZ("1")).toBe(31);
   });
 
   it("puts one screengrab's quotes back without touching another's", () => {
-    putSpot("s1@100", "a", { x: 0, y: 0, z: 31 });
-    putSpot("s2@50", "b", { x: 0, y: 0, z: 32 });
-    clearSpots("s1@100");
-    expect(spotsFor("s1@100")).toEqual({});
-    expect(spotsFor("s2@50")).toEqual({ b: { x: 0, y: 0, z: 32 } });
+    putSpot("1", "s1@100", "a", { x: 0, y: 0, z: 31 });
+    putSpot("1", "s2@50", "b", { x: 0, y: 0, z: 32 });
+    clearSpots("1", "s1@100");
+    expect(spotsFor("1", "s1@100")).toEqual({});
+    expect(spotsFor("1", "s2@50")).toEqual({ b: { x: 0, y: 0, z: 32 } });
+  });
+
+  // Keyed by the page's project id. That id is always "1" today, so in practice this separates
+  // arrangements by origin only; the test pins the key's shape for when multi-project makes it real.
+  it("keys the arrangement by the project id it is given", () => {
+    putSpot("1", "s1@100", "q-p1-10", { x: 0.2, y: 0.3, z: 31 });
+    resetArrangementMemory(); // what a reload, or opening the other project, starts from
+    expect(spotsFor("2", "s1@100")).toEqual({});
+    expect(topZ("2")).toBe(30);
+    clearSpots("2", "s1@100");
+    expect(spotsFor("1", "s1@100")).toEqual({ "q-p1-10": { x: 0.2, y: 0.3, z: 31 } });
   });
 });

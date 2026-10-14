@@ -21,13 +21,24 @@ interface NavBarProps {
   onHelp?: () => void;
 }
 
-const TAB_ROUTES: readonly { to: string; key: string; lens: LensId; end?: boolean }[] = [
+/** A lens's name: a locale key, or — for a lens whose copy has not settled — an English label. */
+type TabName = { key: string; label?: never } | { label: string; key?: never };
+
+const TAB_ROUTES: readonly ({
+  to: string;
+  lens: LensId;
+  end?: boolean;
+  /** Shown only with diagnostics on. */
+  diagnostics?: boolean;
+} & TabName)[] = [
   { to: "/report/", key: "nav.project", lens: "project", end: true },
   { to: "/report/sessions/", key: "nav.sessions", lens: "sessions" },
   { to: "/report/quotes/", key: "nav.quotes", lens: "quotes" },
   { to: "/report/codebook/", key: "nav.codebook", lens: "codebook" },
   { to: "/report/signals/", key: "nav.signals", lens: "signals" },
   { to: "/report/discussion/", key: "nav.discussion", lens: "discussion" },
+  // Screens lens — diagnostics only, English only while it is rough (Specimen precedent).
+  { to: "/report/screens/", lens: "screens", label: "Screens", diagnostics: true },
 ];
 
 /** The lens a report path belongs to; null for a path no lens owns (the specimen). */
@@ -64,16 +75,16 @@ export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: Nav
   }, [withheld, navigate]);
   return (
     <nav className="bn-global-nav">
-      {TAB_ROUTES.map(({ to, key, lens, end }) =>
+      {TAB_ROUTES.filter((r) => !r.diagnostics || diagnosticsEnabled()).map(({ to, key, lens, end, label }) =>
         lenses[lens] ? (
           <NavLink key={to} to={to} className={tabClassName} end={end}>
-            {t(key)}
+            {label ?? t(key!)}
           </NavLink>
         ) : (
           // A lens with nothing to show yet, during a run: visible, not a link
           // (docs/design-progressive-lenses.md §2 — disabled, never hidden).
           <span key={to} className="bn-tab" role="link" aria-disabled="true" data-lens={lens}>
-            {t(key)}
+            {label ?? t(key!)}
           </span>
         ),
       )}
@@ -82,12 +93,6 @@ export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: Nav
         // precedent as the responsive playground).
         <NavLink to="/report/specimen" className={tabClassName}>
           Specimen
-        </NavLink>
-      )}
-      {diagnosticsEnabled() && (
-        // Screens lens — diagnostics only, English only while it is rough (Specimen precedent).
-        <NavLink to="/report/screens/" className={tabClassName}>
-          Screens
         </NavLink>
       )}
       <div className="bn-tab-spacer" />

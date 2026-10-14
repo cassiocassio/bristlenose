@@ -178,6 +178,14 @@ import Testing
         }
     }
 
+    /// The Screens row is English (a diagnostics lens) but follows the same
+    /// verb rule: a dimmed row never offers a hide.
+    @Test func screensLabel_followsTheVerbRule() {
+        #expect(PanelToggle.screensLabel(isOpen: true, isAvailable: true) == "Hide Screens")
+        #expect(PanelToggle.screensLabel(isOpen: false, isAvailable: true) == "Show Screens")
+        #expect(PanelToggle.screensLabel(isOpen: true, isAvailable: false) == "Show Screens")
+    }
+
     /// The two verbs never collide — the property that makes the row a toggle
     /// rather than a relabelling.
     @Test func labelKey_verbsDiffer() {

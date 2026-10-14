@@ -69,7 +69,9 @@ _DEV_ONLY = frozenset({
     "components/TranscriptionDiagnostics.tsx",
     # The Screens lens likewise (docs/design-screens.md, the 14 Oct 2026 build): reached only
     # with Diagnostics on, English until it earns a place outside them. Its quote-card controls
-    # already use the shipped keys; leave this entry when the lens is localised.
+    # already use the shipped keys; leave this entry when the lens is localised. The navigator's
+    # rail button lives in the shared AppLayout and takes its English name from
+    # islands/screens/navPanel.ts (SCREENS_NAV_TOGGLE_LABEL), so localising the lens means that too.
     "islands/screens/ScreensLens.tsx",
 })
 

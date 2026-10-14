@@ -46,6 +46,11 @@ struct ParkedSidecar {
     /// be restored on re-point. Parked lines are buffered here and NEVER run
     /// the fronted token-capture/state logic (token-isolation, review F10).
     var buffer: [String]
+    /// Whether this sidecar was spawned reading shared screens. Unreachable
+    /// today, like the rest of the parking path (Stage 3b deleted
+    /// `switchProject`; `desktop/CLAUDE.md`) — carried only so the struct stays
+    /// honest about the process it holds if parking ever returns.
+    var readsScreens = false
 
     /// Whether the parked process is still alive at the OS level. Necessary
     /// but not sufficient — a wedged-but-alive process passes this, so the

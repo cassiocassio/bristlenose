@@ -100,6 +100,14 @@ final class ServeInstance: ObservableObject {
     /// and for `.external`, which has no binary of ours.
     var spawnedSidecarStamp: SidecarBinaryStamp?
 
+    /// Whether this sidecar was spawned reading participants' shared screens
+    /// (`BRISTLENOSE_SCREEN_TEXT=1`, the Diagnostics preference). Spawn-time,
+    /// like `spawnedSidecarStamp`, because the env is baked then: it is what
+    /// lets `ServeFleet.applyEnvChange` restart every serve still reading
+    /// screens when Diagnostics is turned off, not only the fronted one. Not
+    /// `@Published` — nothing renders it.
+    var spawnedReadsScreens = false
+
     /// The MCP-scoped token this sidecar was spawned with — what the Connect
     /// Agent sheet hands out and what the handshake carries. Durable (Keychain,
     /// per project) normally; an *ephemeral process-lifetime scoped* token when

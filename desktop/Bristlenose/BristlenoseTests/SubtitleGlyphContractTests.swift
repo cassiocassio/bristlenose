@@ -36,7 +36,7 @@ import Testing
     enum VariantTag: CaseIterable {
         case cantFind, failed, failedDiagnostic, completedPartial, stopping
         case running, queued, stopped, partial, unreachable, addingInterviews
-        case copying, importingBatch, copyCancelling, ready, deltaOnly, placeholder
+        case copying, importingBatch, readingScreens, copyCancelling, ready, deltaOnly, placeholder
     }
 
     /// Every case, once, with a representative payload.
@@ -54,6 +54,7 @@ import Testing
         .addingInterviews(count: 3),
         .copying(fraction: 0.5),
         .importingBatch(done: 3, total: 4),
+        .readingScreens(done: 0, total: 4),
         .copyCancelling,
         .ready(date: Date(timeIntervalSince1970: 1_000_000), delta: nil),
         .deltaOnly(.unanalysed(count: 2)),
@@ -133,6 +134,7 @@ import Testing
             .stopping, .running, .queued(position: 1), .stopped,
             .partial(transcribeOnly: true), .addingInterviews(count: 1),
             .copying(fraction: 0.5), .importingBatch(done: 1, total: 2),
+            .readingScreens(done: 1, total: 2),
             .copyCancelling, .placeholder,
         ]
         for variant in progress {
@@ -183,6 +185,7 @@ import Testing
     func progressHasNoGlyph() {
         for variant in [SubtitleVariant.running, .stopping, .queued(position: 1),
                         .copying(fraction: 0.4), .importingBatch(done: 1, total: 2),
+                        .readingScreens(done: 1, total: 2),
                         .addingInterviews(count: 2), .copyCancelling, .placeholder] {
             #expect(variant.glyphKind == nil, "\(variant.tag) is progress, not news")
         }
@@ -263,6 +266,7 @@ private extension SubtitleVariant {
         case .addingInterviews: return .addingInterviews
         case .copying:          return .copying
         case .importingBatch:   return .importingBatch
+        case .readingScreens:   return .readingScreens
         case .copyCancelling:   return .copyCancelling
         case .ready:            return .ready
         case .deltaOnly:        return .deltaOnly

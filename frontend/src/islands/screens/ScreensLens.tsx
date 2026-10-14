@@ -4,32 +4,50 @@
  *
  * docs/design-screens.md S5. Data from GET /screens (server/routes/screens.py), stills from
  * GET /screens/still. Quotes are the report's own: the lens joins the screens' DOM ids to the
- * quotes store, so star, hide and tags here are the same gestures as on the Quotes lens.
+ * quotes store, and every quote is drawn by the Quotes lens's own card (islands/QuoteCard.tsx),
+ * so star, hide, tags, editing, the playable timecode and focus are the same gestures there and
+ * here. The board only positions the cards: it wraps each one to place, lift and drag it.
+ *
+ * Structured like its nearest sibling, the Discussion lens: a navigator column of its own (shown
+ * and hidden like the guide, navPanel.ts), the zone title on the shared datum
+ * (`.center > main > section:first-of-type > .section-heading`), the same key guards.
  *
  * Diagnostics-only and English-only while it is rough (the Specimen precedent): reached from the
  * Diagnostics menu on the Mac and from a nav link with diagnostics on in the browser.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Badge } from "../../components/Badge";
 import { Counter, type CounterItem } from "../../components/Counter";
 import { PersonBadge } from "../../components/PersonBadge";
-import { TagInput, type TagVocabularyGroup } from "../../components/TagInput";
-import { Toggle } from "../../components/Toggle";
+import { SectionHeading } from "../../components/SectionHeading";
+import type { TagVocabularyGroup } from "../../components/TagInput";
+import { useFocus } from "../../contexts/FocusContext";
+import { useLastRun } from "../../contexts/LastRunStore";
 import {
+  acceptProposedTag,
   addTagToQuotes,
+  commitEdit,
+  deleteBadge,
+  denyProposedTag,
   hideQuotes,
   initFromQuotes,
   removeTag,
+  restoreBadges,
+  setStarred,
+  starActionIsUnstar,
   toggleStar,
   unhideQuotes,
   useQuotesStore,
 } from "../../contexts/QuotesContext";
+import { CONTENT_FLOOR_PX, toggleTagGroupHidden, useSidebarStore } from "../../contexts/SidebarStore";
+import { useProjectId } from "../../hooks/useProjectId";
+import { announce } from "../../utils/announce";
 import { apiGet, getCodebook } from "../../utils/api";
-import { getTagBg } from "../../utils/colours";
 import { formatTimecode } from "../../utils/format";
-import type { QuoteResponse, QuotesListResponse, TagResponse } from "../../utils/types";
+import { wholeWordsTerm, type SearchTerm } from "../../utils/searchMatch";
+import { deriveTagVisibility, type TagGroupMeta } from "../../utils/tagVisibility";
+import type { QuoteResponse, QuotesListResponse } from "../../utils/types";
+import { QuoteCard } from "../QuoteCard";
 import {
   clearSpots,
   leaderPath,
@@ -43,6 +61,8 @@ import {
   type Side,
   type Spot,
 } from "./layout";
+import { reportScreensNav, useScreensNav } from "./navPanel";
+import { setScreensCount } from "./screensCount";
 import "./screens.css";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -72,23 +92,75 @@ interface Screen {
   tabs: ScreenTab[];
 }
 
-interface ScreensResponse {
+/** Why the lens cannot read screens at all (server/routes/screens.py). */
+export type UnavailableReason = "not_macos" | "vision_missing" | "no_job";
+/** Why one recording has no index. */
+export type FailedReason = "unreadable" | "cloud_downloading" | "ffprobe_failed" | "read_failed" | "not_read";
+
+export interface ScreensResponse {
   enabled: boolean;
-  unavailable: string | null;
+  /** A code, never prose: the lens says it in its own words (UNAVAILABLE). */
+  unavailable: UnavailableReason | null;
   pending: boolean;
   reading: string | null;
   videos: number;
   indexed: number;
-  /** Why a recording has no index, by session id (older servers omit it). */
-  failed?: Record<string, string>;
+  /** Why a recording has no index, by session id, as a code (FAILED). Older servers omit it. */
+  failed?: Record<string, FailedReason>;
   /** Recordings the engine read and found no text in. */
   blank?: string[];
   screens: Screen[];
 }
 
+// ── What the lens says ───────────────────────────────────────────────────
+
+const TITLE = "Screens";
+
+// One English map per field, and a generic sentence for a code this build does not know: the
+// server's own text never reaches the page (a reason code may be added before the lens learns it).
+const UNAVAILABLE: Record<UnavailableReason, string> = {
+  not_macos: "Screens are read on a Mac only for now, so there are none to show here.",
+  vision_missing: "This Mac can’t read text on screen: its text recognition isn’t available.",
+  no_job: "Screen reading isn’t running for this project, so no recordings have been read.",
+};
+const UNAVAILABLE_OTHER = "Screens can’t be read here.";
+
+const FAILED: Record<FailedReason, string> = {
+  unreadable: "the recording couldn’t be opened",
+  cloud_downloading: "the recording is still downloading from cloud storage",
+  ffprobe_failed: "its video couldn’t be inspected",
+  read_failed: "reading its screen failed",
+  // Only when nothing is about to read it: during an analysis the server answers "waiting" instead.
+  not_read: "it hasn’t been read yet; it will be when the report next updates",
+};
+const FAILED_OTHER = "something went wrong reading it";
+
+const has = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
+
+export function unavailableText(code: string): string {
+  return has(UNAVAILABLE, code) ? UNAVAILABLE[code as UnavailableReason] : UNAVAILABLE_OTHER;
+}
+
+export function failedText(code: string): string {
+  return has(FAILED, code) ? FAILED[code as FailedReason] : FAILED_OTHER;
+}
+
 /** Still reading: the job is running, or recordings remain that have neither an index nor a failure. */
 function stillReading(r: ScreensResponse): boolean {
   return r.pending || r.indexed + Object.keys(r.failed ?? {}).length < r.videos;
+}
+
+/**
+ * Whether another look at /screens can show anything new. Not when reading is off or impossible,
+ * and not once the job has said it will not read a recording (`not_read`): it has stopped, and
+ * asking again every few seconds would only ask the same question.
+ */
+export function shouldPoll(r: ScreensResponse): boolean {
+  if (!r.enabled || r.unavailable) return false;
+  if (r.pending) return true;
+  const failed = Object.values(r.failed ?? {});
+  if (failed.includes("not_read")) return false;
+  return r.indexed + failed.length < r.videos;
 }
 
 /** What the lens says about recordings it could not, or has not yet, read. */
@@ -101,18 +173,42 @@ function readingNote(r: ScreensResponse): string[] {
         : `Waiting to read ${r.videos - r.indexed} of ${r.videos} recordings (after the current analysis).`,
     );
   }
-  for (const [sid, why] of Object.entries(r.failed ?? {})) out.push(`Couldn’t read ${sid}: ${why}.`);
+  for (const [sid, why] of Object.entries(r.failed ?? {})) out.push(`Couldn’t read ${sid}: ${failedText(why)}.`);
   for (const sid of r.blank ?? []) out.push(`No text found in ${sid}’s recording.`);
   return out;
 }
 
-type Front = "hover" | "click";
-type StackStyle = "straight" | "diagonal";
+// ── Polling ──────────────────────────────────────────────────────────────
+
+/** 5 s apart, backing off to 30 s, for a few hours — SessionsTable's strip poll. A response that
+ *  shows progress starts the back-off again, so a study being read keeps its count current. */
+const pollDelay = (attempt: number) => Math.min(30_000, 5_000 * 1.5 ** attempt);
+export const SCREENS_POLL_LIMIT = 400;
+
+/** How far a grip must travel before a press becomes a drag (useVerticalDragResize's threshold). */
+const DRAG_THRESHOLD = 3;
+
+// ── Keys ─────────────────────────────────────────────────────────────────
+
+/** True when a dialog owns the keyboard: the app root goes inert under a modal (DiscussionLens). */
+function modalOpen(target: EventTarget | null): boolean {
+  if (document.getElementById("bn-app-root")?.hasAttribute("inert")) return true;
+  return target instanceof Element && !!target.closest('[aria-modal="true"], [role="dialog"]');
+}
+
+/** The Discussion lens's guard: never claim a key someone else handled, a chord, a key typed into a
+ *  field, or one pressed while a dialog owns the keyboard. */
+function keyIsOurs(e: KeyboardEvent): boolean {
+  if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || modalOpen(e.target)) return false;
+  const t = e.target;
+  return !(t instanceof Element && (t.closest("input, textarea, select, [contenteditable='true']") ||
+    (t instanceof HTMLElement && t.isContentEditable)));
+}
 
 // ── Stills ───────────────────────────────────────────────────────────────
 
 const stills = new Map<string, string>();
-const stillErrors = new Map<string, string>();
+const stillFailed = new Set<string>();
 const stillWaiters = new Map<string, Promise<string | null>>();
 
 function stillUrl(tab: ScreenTab, w: number): string {
@@ -120,8 +216,8 @@ function stillUrl(tab: ScreenTab, w: number): string {
   return `/screens/still?session_id=${encodeURIComponent(tab.session_id)}&t=${tab.t}&w=${w}&crop=${crop}`;
 }
 
-/** The still's data URI, or why there is none (null while it loads). */
-function useStill(tab: ScreenTab | undefined, w: number): { src: string | null; error: string | null } {
+/** The still's data URI, or whether there is none (src null while it loads). */
+function useStill(tab: ScreenTab | undefined, w: number): { src: string | null; failed: boolean } {
   const url = tab ? stillUrl(tab, w) : "";
   const [fetched, setFetched] = useState<{ url: string; src: string | null } | null>(null);
   useEffect(() => {
@@ -136,7 +232,7 @@ function useStill(tab: ScreenTab | undefined, w: number): { src: string | null; 
         })
         .catch((e: Error) => {
           // Shown in place of the screengrab: a missing still must not look like one still loading.
-          stillErrors.set(url, e.message || "no still");
+          stillFailed.add(url);
           console.warn("Screens: no still for", url, e);
           return null;
         })
@@ -150,239 +246,86 @@ function useStill(tab: ScreenTab | undefined, w: number): { src: string | null; 
       live = false;
     };
   }, [url]);
-  if (!url) return { src: null, error: null };
+  if (!url) return { src: null, failed: false };
   const src = stills.get(url) ?? (fetched?.url === url ? fetched.src : null);
-  return { src, error: src ? null : (stillErrors.get(url) ?? null) };
-}
-
-// ── Preferences (try both, the prototype's question) ─────────────────────
-
-function readPref<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
-  try {
-    const v = localStorage.getItem(key);
-    return v && (allowed as readonly string[]).includes(v) ? (v as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writePref(key: string, v: string): void {
-  try {
-    localStorage.setItem(key, v);
-  } catch {
-    /* the choice lasts the page */
-  }
-}
-
-// ── Text ─────────────────────────────────────────────────────────────────
-
-/** The words read aloud, marked where they appear in the quote. */
-function marked(text: string, phrase: string): React.ReactNode {
-  const words = phrase.split(" ").filter(Boolean);
-  if (!words.length) return text;
-  const esc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(words.map(esc).join("[^\\p{L}\\p{N}]+"), "iu");
-  const m = re.exec(text);
-  if (!m) return text;
-  return (
-    <>
-      {text.slice(0, m.index)}
-      <mark className="screens-read">{m[0]}</mark>
-      {text.slice(m.index + m[0].length)}
-    </>
-  );
-}
-
-const HIDE_ICON = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-    <line x1="1" y1="1" x2="23" y2="23" />
-  </svg>
-);
-
-// ── A card ───────────────────────────────────────────────────────────────
-
-interface TagInfo {
-  group: string;
-  colour_set: string;
-  colour_index: number;
-}
-
-interface CardProps {
-  quote: QuoteResponse;
-  phrase: string;
-  text: string;
-  starred: boolean;
-  tags: TagResponse[];
-  focused: boolean;
-  dragging: boolean;
-  vocabulary: string[];
-  groupedVocabulary: TagVocabularyGroup[];
-  tagInfo: Record<string, TagInfo>;
-  style?: React.CSSProperties;
-  pin?: string;
-  register?: (el: HTMLElement | null) => void;
-  onEnter: () => void;
-  onLeave: () => void;
-  onClick: (e: React.MouseEvent) => void;
-  onGrip: (e: React.PointerEvent) => void;
-}
-
-function ScreenCard({ register, ...p }: CardProps) {
-  const { t } = useTranslation();
-  const [tagging, setTagging] = useState(false);
-  const q = p.quote;
-  const commitTag = (name: string) => {
-    const info = p.tagInfo[name.toLowerCase()];
-    addTagToQuotes([q.dom_id], {
-      name,
-      codebook_group: info?.group ?? "Uncategorised",
-      colour_set: info?.colour_set ?? "",
-      colour_index: info?.colour_index ?? 0,
-      source: "human",
-    });
-  };
-  const cls = ["quote-card", p.starred && "starred", p.focused && "bn-focused", p.dragging && "is-dragging"]
-    .filter(Boolean)
-    .join(" ");
-  return (
-    // Bringing a card forward is a pointer affordance (hover, or click in click mode); every
-    // control inside the card — star, hide, tag — is a real button reachable by keyboard.
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
-    <blockquote
-      ref={register}
-      className={cls}
-      style={p.style}
-      data-dom={q.dom_id}
-      data-pin={p.pin}
-      onMouseEnter={p.onEnter}
-      onMouseLeave={p.onLeave}
-      onClick={p.onClick}
-    >
-      <span className="screens-grip screens-grip-top" aria-hidden="true" onPointerDown={p.onGrip} />
-      <span className="screens-grip screens-grip-side" aria-hidden="true" onPointerDown={p.onGrip} />
-      <div className="quote-row">
-        <span className="timecode">[{formatTimecode(q.start_timecode)}]</span>
-        <div className="quote-body">
-          <span className="quote-text-wrapper">
-            <span className="smart-quote">{"“"}</span>
-            {marked(p.text, p.phrase)}
-            <span className="smart-quote">{"”"}</span>
-          </span>{" "}
-          <span className="speaker">
-            <PersonBadge
-              code={q.participant_id}
-              role="participant"
-              name={q.speaker_name !== q.participant_id ? q.speaker_name : undefined}
-            />
-          </span>
-          <div className="badges">
-            {q.sentiment && <Badge text={q.sentiment} variant="ai" sentiment={q.sentiment} />}
-            {p.tags.map((tag) => (
-              <Badge
-                key={tag.name}
-                text={tag.name}
-                variant="user"
-                colour={tag.colour_set ? getTagBg(tag.colour_set, tag.colour_index) : undefined}
-                onDelete={() => removeTag(q.dom_id, tag.name)}
-              />
-            ))}
-            {tagging ? (
-              <TagInput
-                vocabulary={p.vocabulary}
-                groupedVocabulary={p.groupedVocabulary}
-                exclude={p.tags.map((tg) => tg.name)}
-                onCommit={(name) => {
-                  commitTag(name);
-                  setTagging(false);
-                }}
-                onCommitAndReopen={(name) => commitTag(name)}
-                onCancel={() => setTagging(false)}
-              />
-            ) : (
-              <span
-                className="badge badge-add"
-                role="button"
-                tabIndex={0}
-                aria-label={t("quotes.addTag")}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setTagging(true);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setTagging(true);
-                  }
-                }}
-              >
-                +
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-      <Toggle
-        active={false}
-        onToggle={() => hideQuotes([q.dom_id])}
-        className="hide-btn"
-        aria-label={t("quotes.hideQuote")}
-      >
-        {HIDE_ICON}
-      </Toggle>
-      <Toggle
-        active={p.starred}
-        onToggle={(on) => toggleStar(q.dom_id, on)}
-        className="star-btn"
-        activeClassName="starred"
-        aria-label={t("quotes.starQuote")}
-      >
-        &#9733;
-      </Toggle>
-    </blockquote>
-  );
+  return { src, failed: !src && stillFailed.has(url) };
 }
 
 // ── The lens ─────────────────────────────────────────────────────────────
 
+/** The navigator's width: the one source, set on the lens as `--screens-nav-w` for screens.css's
+ *  grid, and reported to the Mac as part of the width the lens wants. */
+export const NAV_W = 280;
+
+interface TagInfo extends TagGroupMeta {
+  colour_set: string;
+  colour_index: number;
+}
+
+/** Draws one quote with the Quotes lens's card, wired to the report's store. */
+type RenderQuote = (q: QuoteResponse, phrase: string) => React.ReactNode;
+
+const NO_FLASH = new Set<string>();
+const noop = () => {};
+
 export function ScreensLens() {
+  const projectId = useProjectId();
+  const { refreshKey } = useLastRun();
+  const navPanel = useScreensNav();
   const [data, setData] = useState<ScreensResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Each load's own failure, cleared by its next success: a 401 while the sidecar restarts must not
+  // leave the lens saying "couldn't load" after a refresh has loaded it.
+  const [screensError, setScreensError] = useState(false);
+  const [quotesError, setQuotesError] = useState(false);
   // Held by key and session, not by position: the list re-sorts as recordings are read.
   const [curKey, setCurKey] = useState<string | null>(null);
   const [tabSid, setTabSid] = useState<string | null>(null);
-  const [front, setFront] = useState<Front>(() => readPref("bristlenose-screens-front", ["hover", "click"] as const, "hover"));
-  const [stack, setStack] = useState<StackStyle>(() =>
-    readPref("bristlenose-screens-stack", ["straight", "diagonal"] as const, "straight"),
-  );
   const [vocabulary, setVocabulary] = useState<string[]>([]);
   const [groupedVocabulary, setGroupedVocabulary] = useState<TagVocabularyGroup[]>([]);
   const [tagInfo, setTagInfo] = useState<Record<string, TagInfo>>({});
+  const [hasModerator, setHasModerator] = useState(false);
   const store = useQuotesStore();
+  const { selectedIds, clearSelection, registerVisibleQuoteIds } = useFocus();
+  const { hiddenTagGroups, disabledFrameworks } = useSidebarStore();
 
-  // Screens: poll while the job is still reading recordings.
+  // Screens: polled while the job is still reading, capped, and re-read when the data moves.
   useEffect(() => {
     let live = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const load = () => {
+    let lastIndexed = -1;
+    const load = (attempt: number) => {
       apiGet<ScreensResponse>("/screens")
         .then((r) => {
           if (!live) return;
           setData(r);
-          if (r.enabled && !r.unavailable && stillReading(r)) timer = setTimeout(load, 5000);
+          setScreensError(false);
+          const next = r.indexed !== lastIndexed && lastIndexed >= 0 ? 0 : attempt + 1;
+          lastIndexed = r.indexed;
+          if (shouldPoll(r) && next < SCREENS_POLL_LIMIT) timer = setTimeout(() => load(next), pollDelay(next));
         })
-        .catch((e: Error) => live && setError(e.message));
+        .catch((e: unknown) => {
+          // The cause reaches the console; the page says what happened, not the server's words.
+          console.error("Screens: /screens failed", e);
+          if (!live) return;
+          setScreensError(true);
+          // A failure is usually transient (the sidecar restarting): look again, on the same
+          // back-off and within the same cap as the poll, rather than stop for good.
+          const next = attempt + 1;
+          if (next < SCREENS_POLL_LIMIT) timer = setTimeout(() => load(next), pollDelay(next));
+        });
     };
-    load();
+    load(0);
     return () => {
       live = false;
       if (timer) clearTimeout(timer);
     };
-  }, []);
+  }, [refreshKey]);
 
-  // Quotes: the report's own store, hydrated as the Quotes lens hydrates it.
+  // Quotes: the report's own store, hydrated as the Quotes lens hydrates it, again on a refresh.
+  const loadedOnce = useRef(false);
   useEffect(() => {
+    const replace = loadedOnce.current;
+    loadedOnce.current = true;
     apiGet<QuotesListResponse>("/quotes")
       .then((json) => {
         const all = [
@@ -390,10 +333,15 @@ export function ScreensLens() {
           ...json.themes.flatMap((th) => th.quotes),
           ...(json.unjoined ?? []),
         ];
-        initFromQuotes(all, false, json.uncategorised);
+        initFromQuotes(all, replace, json.uncategorised);
+        setHasModerator(!!json.has_moderator);
+        setQuotesError(false);
       })
       // Without the quotes every screen would read "0 quotes": say so instead.
-      .catch((e: Error) => setError(`couldn’t load the quotes (${e.message})`));
+      .catch((e: unknown) => {
+        console.error("Screens: /quotes failed", e);
+        setQuotesError(true);
+      });
     getCodebook()
       .then((cb) => {
         setVocabulary(cb.all_tag_names);
@@ -402,7 +350,9 @@ export function ScreensLens() {
         for (const g of cb.groups) {
           const tags: { name: string; colourIndex: number }[] = [];
           for (const tg of g.tags) {
-            info[tg.name.toLowerCase()] = { group: g.name, colour_set: g.colour_set, colour_index: tg.colour_index };
+            info[tg.name.toLowerCase()] = {
+              group: g.name, frameworkId: g.framework_id, colour_set: g.colour_set, colour_index: tg.colour_index,
+            };
             tags.push({ name: tg.name, colourIndex: tg.colour_index });
           }
           groups.push({ groupName: g.name, colourSet: g.colour_set, tags });
@@ -410,8 +360,8 @@ export function ScreensLens() {
         setTagInfo(info);
         setGroupedVocabulary(groups);
       })
-      .catch((e: Error) => console.warn("Screens: no codebook, so no tag vocabulary", e));
-  }, []);
+      .catch((e: unknown) => console.warn("Screens: no codebook, so no tag vocabulary", e));
+  }, [refreshKey]);
 
   const byId = useMemo(() => {
     const m = new Map<string, QuoteResponse>();
@@ -424,106 +374,231 @@ export function ScreensLens() {
   const screen = screens[cur];
   const tabIdx = screen ? Math.max(0, screen.tabs.findIndex((t) => t.session_id === tabSid)) : 0;
 
+  // The quotes on this board, in its reading order: the pinned ones down the screengrab, then the
+  // rest by time (as ScreenBoard lays them out). It is what a shift-click range runs over, and the
+  // only quotes a gesture on a selection may reach: a selection made on the Quotes lens survives
+  // the route change, and starring one card must not star twenty quotes nobody can see here.
+  const boardOrder = useMemo(() => {
+    if (!screen) return [];
+    const tab = screen.tabs[tabIdx];
+    const shown = (d: string) => byId.has(d) && !store.hidden[d];
+    const pinned = tab.pins.filter((p) => shown(p.dom_id)).sort((a, b) => a.box[1] - b.box[1]).map((p) => p.dom_id);
+    const seen = new Set(pinned);
+    const rest = screen.tabs
+      .flatMap((t) => [...t.pins.map((p) => p.dom_id), ...t.loose])
+      .filter((d, i, a) => a.indexOf(d) === i && !seen.has(d) && shown(d))
+      .sort((a, b) => byId.get(a)!.start_timecode - byId.get(b)!.start_timecode);
+    return [...pinned, ...rest];
+  }, [screen, tabIdx, byId, store.hidden]);
+  useEffect(() => {
+    registerVisibleQuoteIds("screens", boardOrder);
+    // Registers empty rather than deleting, as QuoteSections does, so the slot outlives a remount.
+    return () => registerVisibleQuoteIds("screens", []);
+  }, [registerVisibleQuoteIds, boardOrder]);
+
+  // The window subtitle's count, and what the Mac reads for its View menu and column fit.
+  useEffect(() => {
+    setScreensCount(screens.length);
+    return () => setScreensCount(0);
+  }, [screens.length]);
+  const boardShown = !quotesError && !!data?.enabled && !data.unavailable && screens.length > 0;
+  const navShown = navPanel.wish && boardShown;
+  useEffect(() => {
+    reportScreensNav(navShown, (navPanel.wish ? NAV_W : 0) + CONTENT_FLOOR_PX);
+  }, [navShown, navPanel.wish]);
+
+  // Moving to another screen, or to another participant's view of this one, is announced: the
+  // board changes under a screen reader with nothing else to say so.
   const go = useCallback(
     (i: number, j = 0) => {
       if (!screens.length) return;
-      const next = screens[((i % screens.length) + screens.length) % screens.length];
+      const n = screens.length;
+      const at = ((i % n) + n) % n;
+      const next = screens[at];
+      const tab = next.tabs[Math.min(j, next.tabs.length - 1)];
       setCurKey(next.key);
-      setTabSid(next.tabs[Math.min(j, next.tabs.length - 1)]?.session_id ?? null);
+      setTabSid(tab?.session_id ?? null);
+      if (next.key === screen?.key) {
+        if (tab) announce(`${tab.code}’s screen`);
+      } else {
+        announce(`${screenTitle(next, tab)}, screen ${at + 1} of ${n}`);
+      }
     },
-    [screens],
+    [screens, screen],
   );
 
+  // ↑/↓ change screen, ←/→ change whose screen it is.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const el = e.target;
-      if (el instanceof HTMLElement && (el.closest("input, textarea, select, [contenteditable='true']") || el.isContentEditable)) return;
-      if (!screen) return;
-      if (e.key === "ArrowDown") go(cur + 1);
-      else if (e.key === "ArrowUp") go(cur - 1);
+      if (!screen || !keyIsOurs(e)) return;
+      // With one screen there is nowhere to go: leave ↑/↓ to scroll the page.
+      if (e.key === "ArrowDown" && screens.length > 1) go(cur + 1);
+      else if (e.key === "ArrowUp" && screens.length > 1) go(cur - 1);
       else if (e.key === "ArrowRight" && screen.tabs.length > 1) go(cur, (tabIdx + 1) % screen.tabs.length);
       else if (e.key === "ArrowLeft" && screen.tabs.length > 1)
         go(cur, (tabIdx - 1 + screen.tabs.length) % screen.tabs.length);
       else return;
       e.preventDefault();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [go, cur, tabIdx, screen]);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [go, cur, tabIdx, screen, screens.length]);
 
-  if (error) return <div className="screens-lens-status">Screens: {error}</div>;
-  if (!data) return <div className="screens-lens-status">Reading screens…</div>;
-  if (!data.enabled) {
-    return <div className="screens-lens-status">Screens are off. Turn on Diagnostics to read shared screens.</div>;
-  }
-  if (data.unavailable) return <div className="screens-lens-status">Screens can’t be read here: {data.unavailable}</div>;
-  if (!data.videos) return <div className="screens-lens-status">No recordings with video in this project.</div>;
-  if (!screens.length) {
+  // ── The card's gestures: QuoteGroup's, so a selection acts as one ──
+  const vis = useMemo(
+    () => deriveTagVisibility(tagInfo, hiddenTagGroups, disabledFrameworks),
+    [tagInfo, hiddenTagGroups, disabledFrameworks],
+  );
+  /** The selection the clicked card belongs to, narrowed to this board; else the card alone. */
+  const targets = useCallback(
+    (domId: string) => (selectedIds.has(domId) ? boardOrder.filter((d) => selectedIds.has(d)) : [domId]),
+    [selectedIds, boardOrder],
+  );
+  const onToggleStar = useCallback(
+    (domId: string, on: boolean) => {
+      const ids = targets(domId);
+      if (ids.length > 1) setStarred(ids, !starActionIsUnstar(new Set(ids), null, store.starred));
+      else toggleStar(domId, on);
+    },
+    [targets, store.starred],
+  );
+  const onToggleHide = useCallback(
+    (domId: string) => {
+      hideQuotes(targets(domId));
+      if (selectedIds.has(domId)) clearSelection();
+    },
+    [targets, selectedIds, clearSelection],
+  );
+  const onTagAdd = useCallback(
+    (domId: string, name: string) => {
+      const info = tagInfo[name.toLowerCase()];
+      const group = info?.group ?? "Uncategorised";
+      addTagToQuotes(targets(domId), {
+        name,
+        codebook_group: group,
+        colour_set: info?.colour_set ?? "",
+        colour_index: info?.colour_index ?? 0,
+        source: "human",
+      });
+      // As on the Quotes lens: a tag picked from an eye-hidden group un-hides the group, or the
+      // badge would vanish the moment it was added (QuoteGroup.handleTagAdd).
+      if (hiddenTagGroups.has(group)) toggleTagGroupHidden(group);
+    },
+    [tagInfo, targets, hiddenTagGroups],
+  );
+  const onProposedAccept = useCallback(
+    (domId: string, proposalId: number, name: string) => {
+      const pt = (store.proposedTags[domId] || []).find((p) => p.id === proposalId);
+      acceptProposedTag(domId, proposalId, {
+        name,
+        codebook_group: pt?.group_name ?? "Uncategorised",
+        colour_set: pt?.colour_set ?? "",
+        colour_index: pt?.colour_index ?? 0,
+        source: "autocode",
+      });
+    },
+    [store.proposedTags],
+  );
+
+  const renderQuote: RenderQuote = (q, phrase) => {
+    const id = q.dom_id;
+    const allTags = store.tags[id] ?? [];
+    const edited = store.edits[id] ?? null;
+    const proposed = store.proposedTags[id] ?? [];
+    const term: SearchTerm | null = phrase ? wholeWordsTerm(phrase) : null;
     return (
-      <div className="screens-lens-status">
+      <QuoteCard
+        quote={q}
+        displayText={edited ?? q.text}
+        isStarred={!!store.starred[id]}
+        isHidden={false}
+        userTags={allTags.filter((t) => !vis.hiddenGroups.has(t.codebook_group))}
+        allTagNames={allTags.map((t) => t.name)}
+        hiddenTagNames={vis.decoratedTagNames}
+        disabledTagNames={vis.suppressedTagNames}
+        deletedBadges={store.deletedBadges[id] ?? []}
+        isEdited={edited != null && edited !== q.text}
+        tagVocabulary={vocabulary}
+        groupedVocabulary={groupedVocabulary}
+        sessionId={q.session_id}
+        hasMedia
+        hasModerator={hasModerator}
+        proposedTags={proposed.filter((p) => !vis.hiddenGroups.has(p.group_name))}
+        flashingTags={NO_FLASH}
+        moderatorQuestion={null}
+        isQuestionOpen={false}
+        isPillVisible={false}
+        onToggleStar={onToggleStar}
+        onToggleHide={onToggleHide}
+        onEditCommit={commitEdit}
+        onTagAdd={onTagAdd}
+        onTagRemove={removeTag}
+        onBadgeDelete={deleteBadge}
+        onBadgeRestore={restoreBadges}
+        onProposedAccept={(pid, name) => onProposedAccept(id, pid, name)}
+        onProposedDeny={(pid) => denyProposedTag(id, pid)}
+        onToggleQuestion={noop}
+        onQuoteHoverEnter={noop}
+        onQuoteHoverLeave={noop}
+        onPillHoverEnter={noop}
+        onPillHoverLeave={noop}
+        highlight={term ? [term] : undefined}
+      />
+    );
+  };
+
+  // Every state carries the zone title, as Discussion's do, so the lens opens at the same height
+  // loading, failed or empty as it does with data (lens template).
+  const shell = (body: React.ReactNode) => (
+    <section>
+      <SectionHeading>{TITLE}</SectionHeading>
+      {body}
+    </section>
+  );
+  // A failed look with screens already on the page keeps them, and looks again (the poll's retry).
+  if (screensError && !data) return shell(<p className="bn-empty-state" role="alert">Couldn’t load the screens.</p>);
+  if (quotesError) {
+    return shell(<p className="bn-empty-state" role="alert">Couldn’t load the quotes, so the screens can’t show what was said.</p>);
+  }
+  if (!data) return shell(<p className="bn-empty-state" aria-busy="true">Reading screens…</p>);
+  if (!data.enabled) {
+    return shell(<p className="bn-empty-state">Screens are off. Turn on Diagnostics to read shared screens.</p>);
+  }
+  if (data.unavailable) return shell(<p className="bn-empty-state">{unavailableText(data.unavailable)}</p>);
+  if (!data.videos) return shell(<p className="bn-empty-state">No recordings with video in this project.</p>);
+  if (!screens.length) {
+    return shell(
+      <div className="bn-empty-state screens-notes" role="status">
         {readingNote(data).map((line) => (
           <p key={line}>{line}</p>
         ))}
         {!stillReading(data) && data.indexed > (data.blank ?? []).length && (
           <p>No screens found: these recordings show no web page with an address or tab title.</p>
         )}
-      </div>
+      </div>,
     );
   }
   return (
-    <div className="screens-lens">
-      <ScreenNav screens={screens} cur={cur} onPick={(i) => go(i)} byId={byId} />
-      <main className="screens-main">
-        <div className="screens-controls">
-          <label>
-            Bring a quote forward on{" "}
-            <select
-              value={front}
-              onChange={(e) => {
-                const v = e.target.value as Front;
-                setFront(v);
-                writePref("bristlenose-screens-front", v);
-              }}
-            >
-              <option value="hover">hover</option>
-              <option value="click">click</option>
-            </select>
-          </label>
-          <label>
-            Stacks{" "}
-            <select
-              value={stack}
-              onChange={(e) => {
-                const v = e.target.value as StackStyle;
-                setStack(v);
-                writePref("bristlenose-screens-stack", v);
-              }}
-            >
-              <option value="straight">straight</option>
-              <option value="diagonal">diagonal</option>
-            </select>
-          </label>
-          {readingNote(data).map((line) => (
-            <span key={line}>{line}</span>
-          ))}
-        </div>
-        {screen && (
-          <ScreenBoard
-            key={`${screen.key}|${screen.tabs[tabIdx]?.session_id}|${screen.tabs[tabIdx]?.t}`}
-            screen={screen}
-            tabIdx={tabIdx}
-            onTab={(j) => go(cur, j)}
-            byId={byId}
-            store={store}
-            front={front}
-            stack={stack}
-            vocabulary={vocabulary}
-            groupedVocabulary={groupedVocabulary}
-            tagInfo={tagInfo}
-          />
-        )}
-      </main>
-    </div>
+    <section
+      className={`screens-lens${navShown ? "" : " nav-hidden"}`}
+      style={{ "--screens-nav-w": `${NAV_W}px` } as React.CSSProperties}
+      data-testid="screens-lens"
+    >
+      {navShown && <ScreenNav screens={screens} cur={cur} onPick={(i) => go(i)} byId={byId} hidden={store.hidden} />}
+      {screen && (
+        <ScreenBoard
+          key={`${screen.key}|${screen.tabs[tabIdx]?.session_id}|${screen.tabs[tabIdx]?.t}`}
+          projectId={projectId}
+          screen={screen}
+          tabIdx={tabIdx}
+          onTab={(j) => go(cur, j)}
+          byId={byId}
+          store={store}
+          notes={readingNote(data)}
+          renderQuote={renderQuote}
+        />
+      )}
+    </section>
   );
 }
 
@@ -548,10 +623,10 @@ function NavThumb({ tab }: { tab: ScreenTab }) {
   // A study has dozens of screens: fetch a thumbnail only when its row is near the view, so the
   // board's own screengrab is not queued behind every one of them.
   const [ref, seen] = useSeen<HTMLSpanElement>();
-  const { src, error } = useStill(seen ? tab : undefined, 240);
+  const { src } = useStill(seen ? tab : undefined, 240);
   return (
     <span ref={ref} className="screens-thumb-slot">
-      {src ? <img alt="" src={src} /> : <span className="screens-thumb-empty" title={error ?? undefined} />}
+      {src ? <img alt="" src={src} /> : <span className="screens-thumb-empty" />}
     </span>
   );
 }
@@ -568,11 +643,13 @@ function ScreenNav({
   cur,
   onPick,
   byId,
+  hidden,
 }: {
   screens: Screen[];
   cur: number;
   onPick: (i: number) => void;
   byId: Map<string, QuoteResponse>;
+  hidden: Record<string, boolean>;
 }) {
   const listRef = useRef<HTMLOListElement>(null);
   useEffect(() => {
@@ -589,10 +666,10 @@ function ScreenNav({
       <ol ref={listRef}>
         {screens.map((s, i) => {
           const codes = [...new Set(s.tabs.map((t) => t.code))];
-          const said = s.tabs.reduce(
-            (n, t) => n + [...t.pins.map((p) => p.dom_id), ...t.loose].filter((d) => byId.has(d)).length,
-            0,
-          );
+          // What the board would show: each quote once, hidden ones not counted (its "N quotes").
+          const said = new Set(
+            s.tabs.flatMap((t) => [...t.pins.map((p) => p.dom_id), ...t.loose]).filter((d) => byId.has(d) && !hidden[d]),
+          ).size;
           return (
             <li key={s.key}>
               <a
@@ -635,16 +712,14 @@ function ScreenNav({
 // ── The board ────────────────────────────────────────────────────────────
 
 interface BoardProps {
+  projectId: string;
   screen: Screen;
   tabIdx: number;
   onTab: (j: number) => void;
   byId: Map<string, QuoteResponse>;
   store: ReturnType<typeof useQuotesStore>;
-  front: Front;
-  stack: StackStyle;
-  vocabulary: string[];
-  groupedVocabulary: TagVocabularyGroup[];
-  tagInfo: Record<string, TagInfo>;
+  notes: string[];
+  renderQuote: RenderQuote;
 }
 
 interface Geometry {
@@ -665,27 +740,29 @@ interface Drag {
 }
 
 function ScreenBoard(props: BoardProps) {
-  const { screen, tabIdx, byId, store } = props;
+  const { projectId, screen, tabIdx, byId, store } = props;
   const tab = screen.tabs[tabIdx];
   const still = stillKey(tab.session_id, tab.t);
-  const { src, error: stillError } = useStill(tab, 1600);
+  const { src, failed: stillFailed } = useStill(tab, 1600);
   const stageRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const shotRef = useRef<HTMLDivElement>(null);
   const cardEls = useRef(new Map<string, HTMLElement>());
   const [geo, setGeo] = useState<Geometry | null>(null);
-  const [tops, setTops] = useState<Record<string, { top: number; slide: number; z: number }>>({});
+  const [tops, setTops] = useState<Record<string, { top: number; z: number }>>({});
   const [stacked, setStacked] = useState<Record<Side, boolean>>({ L: false, R: false });
   const [colH, setColH] = useState(0);
   const [leaders, setLeaders] = useState<{ id: string; d: string; end: [number, number] }[]>([]);
-  const [focused, setFocused] = useState<string | null>(null);
+  // The card brought forward: on hover (the prototype's other choice, click, was dropped with its
+  // picker; docs/design-screens.md §6.8).
+  const [lifted, setLifted] = useState<string | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
-  const [spots, setSpots] = useState<Record<string, Spot>>(() => spotsFor(still));
+  const [spots, setSpots] = useState<Record<string, Spot>>(() => spotsFor(projectId, still));
   const [hiddenOpen, setHiddenOpen] = useState(false);
 
   const visible = (dom: string) => byId.has(dom) && !store.hidden[dom];
   // No screengrab to pin to: the pinned quotes join the others rather than waiting, hidden, for it.
-  const pins = stillError ? [] : tab.pins.filter((p) => visible(p.dom_id));
+  const pins = stillFailed ? [] : tab.pins.filter((p) => visible(p.dom_id));
   const pinByDom = new Map(pins.map((p) => [p.dom_id, p]));
   // Everything else said on this screen, by every participant on it.
   const shownPins = new Set(pins.map((p) => p.dom_id));
@@ -726,7 +803,7 @@ function ScreenBoard(props: BoardProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     if (!geo || !geo.H) return;
-    const next: Record<string, { top: number; slide: number; z: number }> = {};
+    const next: Record<string, { top: number; z: number }> = {};
     const nextStacked: Record<Side, boolean> = { L: false, R: false };
     let bottom = geo.H;
     for (const side of ["L", "R"] as Side[]) {
@@ -735,8 +812,8 @@ function ScreenBoard(props: BoardProps) {
         want: Math.max(0, (p.box[1] + p.box[3] / 2) * geo.H - 20),
         height: cardEls.current.get(p.dom_id)?.offsetHeight ?? 120,
       }));
-      const { placed, stacked: st, bottom: b } = placeColumn(cards, geo.H, props.stack === "diagonal");
-      col.forEach((p, i) => (next[p.dom_id] = { top: placed[i].top, slide: placed[i].slide, z: 2 + i }));
+      const { placed, stacked: st, bottom: b } = placeColumn(cards, geo.H);
+      col.forEach((p, i) => (next[p.dom_id] = { top: placed[i].top, z: 2 + i }));
       nextStacked[side] = st;
       bottom = Math.max(bottom, b);
     }
@@ -772,86 +849,103 @@ function ScreenBoard(props: BoardProps) {
     setLeaders((old) => (JSON.stringify(old) === JSON.stringify(next) ? old : next));
   });
 
-  // Bring forward.
-  const lift = (dom: string | null) => setFocused(dom);
+  // Escape puts a brought-forward card back, under the same guards as the arrow keys.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setFocused(null);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && keyIsOurs(e)) setLifted(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  // Drag to rearrange: the card's top edge and the margin under its timecode are the grips.
+  // Drag to rearrange: the card's top edge and the margin under its timecode are the grips. Nothing
+  // moves, and nothing is saved, until the pointer has travelled DRAG_THRESHOLD: a click on a grip
+  // is not a drag (useVerticalDragResize's 3px). The window listeners belong to this board: if it
+  // remounts or changes screengrab mid-drag they are removed, so a release cannot write a spot
+  // against the previous screengrab.
+  const endDrag = useRef<(() => void) | null>(null);
+  useEffect(() => () => endDrag.current?.(), []);
   const startDrag = (dom: string) => (e: React.PointerEvent) => {
     if (e.button !== 0 || !geo || !boardRef.current) return;
     e.preventDefault();
     e.stopPropagation();
     const el = cardEls.current.get(dom);
     if (!el) return;
+    endDrag.current?.();
     const bb = boardRef.current.getBoundingClientRect();
     const r = el.getBoundingClientRect();
-    const z = topZ() + 1;
+    const z = topZ(projectId) + 1;
     const start = { x: e.clientX, y: e.clientY, left: r.left - bb.left, top: r.top - bb.top };
-    setFocused(null);
-    setDrag({ dom, left: start.left, top: start.top, width: r.width, z });
+    let moved = false;
+    const at = (ev: PointerEvent) => ({
+      left: start.left + ev.clientX - start.x,
+      top: Math.max(0, start.top + ev.clientY - start.y),
+    });
     // Listen on the window, not the grip: starting the drag moves the card into the free layer,
     // which remounts it, and a detached grip receives no more pointer events.
-    const move = (ev: PointerEvent) =>
-      setDrag({ dom, left: start.left + ev.clientX - start.x, top: Math.max(0, start.top + ev.clientY - start.y), width: r.width, z });
-    const up = (ev: PointerEvent) => {
+    const move = (ev: PointerEvent) => {
+      if (!moved && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < DRAG_THRESHOLD) return;
+      if (!moved) setLifted(null);
+      moved = true;
+      setDrag({ dom, ...at(ev), width: r.width, z });
+    };
+    const detach = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
-      const left = start.left + ev.clientX - start.x;
-      const top = Math.max(0, start.top + ev.clientY - start.y);
-      putSpot(still, dom, { x: (left - geo.sx) / geo.W, y: (top - geo.sy) / geo.H, z });
-      setSpots(spotsFor(still));
-      setDrag(null);
+      endDrag.current = null;
     };
+    function up(ev: PointerEvent) {
+      detach();
+      if (!moved) return;
+      const { left, top } = at(ev);
+      putSpot(projectId, still, dom, { x: (left - geo!.sx) / geo!.W, y: (top - geo!.sy) / geo!.H, z });
+      setSpots(spotsFor(projectId, still));
+      setDrag(null);
+    }
+    endDrag.current = detach;
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
   };
 
+  // The board's wrapper places, lifts and drags a card; the card itself is the Quotes lens's.
   const cardFor = (dom: string, style: React.CSSProperties, pin?: Pin) => {
     const q = byId.get(dom);
     if (!q) return null;
+    const cls = ["screens-card", lifted === dom && "is-lifted", drag?.dom === dom && "is-dragging"]
+      .filter(Boolean)
+      .join(" ");
     return (
-      <ScreenCard
+      // A card comes forward on hover and when keyboard focus enters it, so Tab never lands on a
+      // control hidden under the next card in a stack. Rearranging is pointer-only for now.
+      <div
         key={dom}
-        quote={q}
-        phrase={pin?.phrase ?? ""}
-        text={store.edits[dom] ?? q.text}
-        starred={!!store.starred[dom]}
-        tags={store.tags[dom] ?? []}
-        focused={focused === dom}
-        dragging={drag?.dom === dom}
-        vocabulary={props.vocabulary}
-        groupedVocabulary={props.groupedVocabulary}
-        tagInfo={props.tagInfo}
-        style={style}
-        pin={pin ? dom : undefined}
-        register={(el) => {
+        ref={(el) => {
           if (el) cardEls.current.set(dom, el);
           else cardEls.current.delete(dom);
         }}
-        onEnter={() => props.front === "hover" && !drag && lift(dom)}
-        onLeave={() => props.front === "hover" && !drag && lift(null)}
-        onClick={(e) => {
-          if (props.front !== "click") return;
-          if ((e.target as HTMLElement).closest("button, input, [role=button], .screens-grip, .tag-input-wrap")) return;
-          e.stopPropagation();
-          lift(focused === dom ? null : dom);
+        className={cls}
+        style={style}
+        data-dom={dom}
+        data-pin={pin ? dom : undefined}
+        onMouseEnter={() => !drag && setLifted(dom)}
+        onMouseLeave={() => !drag && setLifted(null)}
+        onFocus={() => !drag && setLifted(dom)}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setLifted((l) => (l === dom ? null : l));
         }}
-        onGrip={startDrag(dom)}
-      />
+      >
+        <span className="screens-grip screens-grip-top" aria-hidden="true" onPointerDown={startDrag(dom)} />
+        <span className="screens-grip screens-grip-side" aria-hidden="true" onPointerDown={startDrag(dom)} />
+        {props.renderQuote(q, pin?.phrase ?? "")}
+      </div>
     );
   };
 
   const placed = (dom: string): React.CSSProperties => {
     const p = tops[dom];
-    return p
-      ? ({ top: p.top, "--slide": `${p.slide}px`, "--stack": p.z } as React.CSSProperties)
-      : { top: 0, visibility: "hidden" };
+    return p ? ({ top: p.top, "--stack": p.z } as React.CSSProperties) : { top: 0, visibility: "hidden" };
   };
   const freeStyle = (dom: string): React.CSSProperties => {
     if (drag?.dom === dom) return { left: drag.left, top: drag.top, width: drag.width, zIndex: drag.z };
@@ -871,22 +965,23 @@ function ScreenBoard(props: BoardProps) {
 
   const said = pins.length + rest.length;
   const people = screen.tabs.length;
+  const who =
+    screen.tabs.length > 1 ? (
+      <span className="screens-who">
+        {screen.tabs.map((t, j) => (
+          <button key={`${t.session_id}@${t.t}`} aria-pressed={j === tabIdx} title={t.heading} onClick={() => props.onTab(j)}>
+            <PersonBadge code={t.code} role="participant" />
+          </button>
+        ))}
+      </span>
+    ) : (
+      <span className="screens-who">
+        <PersonBadge code={tab.code} role="participant" />
+      </span>
+    );
   return (
     <>
-      <div className="section-heading">
-        <h1>{screenTitle(screen, tab)}</h1>
-        <div className="section-heading-action screens-who">
-          {screen.tabs.length > 1 ? (
-            screen.tabs.map((t, j) => (
-              <button key={`${t.session_id}@${t.t}`} aria-pressed={j === tabIdx} title={t.heading} onClick={() => props.onTab(j)}>
-                <PersonBadge code={t.code} role="participant" />
-              </button>
-            ))
-          ) : (
-            <PersonBadge code={tab.code} role="participant" />
-          )}
-        </div>
-      </div>
+      <SectionHeading action={who}>{screenTitle(screen, tab)}</SectionHeading>
       <p className="screens-sub">
         {screen.name.startsWith("/") && <code>{screen.name}</code>}
         <span>
@@ -913,7 +1008,7 @@ function ScreenBoard(props: BoardProps) {
           <button
             className="screens-putback"
             onClick={() => {
-              clearSpots(still);
+              clearSpots(projectId, still);
               setSpots({});
             }}
           >
@@ -921,30 +1016,31 @@ function ScreenBoard(props: BoardProps) {
           </button>
         )}
       </p>
-      {/* A click on empty board puts a click-mode card back: pointer only, Escape does it from the keyboard. */}
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-      <div
-        className={`screens-stage${focused ? " focus" : ""}${drag ? " dragging" : ""}`}
-        ref={stageRef}
-        onClick={() => props.front === "click" && lift(null)}
-      >
+      {props.notes.length > 0 && (
+        <div className="screens-notes" role="status">
+          {props.notes.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      )}
+      <div className={`screens-stage${lifted ? " focus" : ""}${drag ? " dragging" : ""}`} ref={stageRef}>
         <div className="screens-board" ref={boardRef} style={{ minHeight: colH || undefined }}>
-          <div className={`screens-col screens-col-l${stacked.L ? " stacked" : ""}${props.stack === "diagonal" ? " diagonal" : ""}`} style={{ height: colH || undefined }}>
+          <div className={`screens-col screens-col-l${stacked.L ? " stacked" : ""}`} style={{ height: colH || undefined }}>
             {columnPins.filter((p) => sideOf(p) === "L" && p.dom_id !== dragOutOfColumn).map((p) => cardFor(p.dom_id, placed(p.dom_id), p))}
           </div>
           <div className="screens-shot" ref={shotRef}>
             {src ? (
-              <img alt="" src={src} />
+              <img alt={`${tab.code}’s screen: ${screenTitle(screen, tab)}, at ${formatTimecode(tab.t)}`} src={src} />
             ) : (
               <div className="screens-shot-wait">
-                {stillError && <span className="screens-shot-error">Screengrab unavailable: {stillError}</span>}
+                {stillFailed && <span className="screens-shot-error">Screengrab unavailable.</span>}
               </div>
             )}
             {geo &&
               pins.map((p) => (
                 <div
                   key={p.dom_id}
-                  className={`screens-hl${focused === p.dom_id ? " on" : ""}`}
+                  className={`screens-hl${lifted === p.dom_id ? " on" : ""}`}
                   style={{
                     left: p.box[0] * geo.W - 3, top: p.box[1] * geo.H - 3,
                     width: p.box[2] * geo.W + 6, height: p.box[3] * geo.H + 6,
@@ -952,12 +1048,12 @@ function ScreenBoard(props: BoardProps) {
                 />
               ))}
           </div>
-          <div className={`screens-col screens-col-r${stacked.R ? " stacked" : ""}${props.stack === "diagonal" ? " diagonal" : ""}`} style={{ height: colH || undefined }}>
+          <div className={`screens-col screens-col-r${stacked.R ? " stacked" : ""}`} style={{ height: colH || undefined }}>
             {columnPins.filter((p) => sideOf(p) === "R" && p.dom_id !== dragOutOfColumn).map((p) => cardFor(p.dom_id, placed(p.dom_id), p))}
           </div>
           <svg className="screens-leaders" aria-hidden="true">
             {leaders.map((l) => (
-              <g key={l.id} className={focused === l.id ? "on" : undefined}>
+              <g key={l.id} className={lifted === l.id ? "on" : undefined}>
                 <path d={l.d} />
                 <circle cx={l.end[0]} cy={l.end[1]} r={2.5} />
               </g>

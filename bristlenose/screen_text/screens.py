@@ -399,7 +399,7 @@ def derive_screens(sessions: Iterable[SessionInput]) -> list[dict[str, Any]]:
     for key, pairs in linkers.items():
         for tab, link in pairs:
             own = {p["dom_id"] for p in tab["pins"]}
-            tab["pins"] += [p for p in link([q for q in said[key] if q["dom_id"] not in own])]
+            tab["pins"] += link([q for q in said[key] if q["dom_id"] not in own])
     screens = [out[k] for k in order]
     for sc in screens:
         sc["tabs"].sort(key=lambda t: (t["code"], t["t"]))

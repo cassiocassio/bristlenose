@@ -249,7 +249,7 @@ export function sendPut(path: string, body: unknown): Promise<void> {
  * connection, so a speaker pick refused during an analysis sent the researcher
  * to check their network (14 Oct 2026).
  */
-function toastSaveFailed(err: unknown): void {
+export function toastSaveFailed(err: unknown): void {
   const { reason, status } = (err ?? {}) as ApiError;
   const message =
     reason === "run_in_progress"

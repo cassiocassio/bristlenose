@@ -1288,6 +1288,15 @@ def _install_event_watcher(
     attached = {"files": _attached_files()}
 
     async def _reattach_if_moved() -> None:
+        # The log first, and on every change: the moved copy is deleted when the
+        # run succeeds, the run creates its own log a moment after the stash,
+        # and a reopen that failed is retried here rather than lost for good.
+        from bristlenose.logging import reopen_log_file
+
+        try:
+            reopen_log_file(project_output_dir(project_dir))
+        except OSError:
+            logger.warning("could not reopen the log in the output folder", exc_info=True)
         now = _attached_files()
         if now == attached["files"]:
             return
@@ -1296,11 +1305,6 @@ def _install_event_watcher(
             # (the run creating its tree) comes back here.
             attached["files"] = now
             return
-        # The log first, so what follows lands in the folder that will survive:
-        # the moved copy is deleted when the run succeeds.
-        from bristlenose.logging import reopen_log_file
-
-        reopen_log_file(project_output_dir(project_dir))
         logger.warning(
             "output folder replaced under the running server (database %s, events log %s) "
             "— reattaching to what is on disk now",

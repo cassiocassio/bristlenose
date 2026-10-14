@@ -128,33 +128,48 @@ def reopen_log_file(output_dir: Path) -> bool:
     the output folder aside, a serve goes on writing into the moved copy, which
     the run deletes once it succeeds. The serve calls this when it reattaches to
     the output folder now on disk. True when it reopened; False when the file
-    in place is the one already open, or there is no log file to follow.
+    in place is the one already open, there is no log file to follow, or the
+    output folder is not there (it never creates it).
+
+    The new handler is opened before the old one is closed, so a failure to open
+    it (a permission, the folder moving again) leaves logging where it was and
+    raises; the next call tries again, rather than finding no handler and
+    giving up for the life of the process.
     """
     root = logging.getLogger()
     handlers = [h for h in root.handlers if isinstance(h, logging.FileHandler)]
     if not handlers:
         return False
     target = output_dir / ".bristlenose" / _LOG_FILENAME
+    if not target.parent.is_dir():
+        # Mid-stash, or mid-restore: creating the folder here would put a new
+        # output folder where the restore is about to move the old one back.
+        return False
     try:
         on_disk = os.stat(target)
     except OSError:
         on_disk = None
-    moved = False
-    for handler in handlers:
-        stream = handler.stream
-        if on_disk is not None and stream is not None:
-            try:
-                held = os.fstat(stream.fileno())
-            except (OSError, ValueError):
-                held = None
-            if held is not None and (held.st_dev, held.st_ino) == (on_disk.st_dev, on_disk.st_ino):
-                continue
+    stale = [h for h in handlers if not _holds(h, on_disk)]
+    if not stale:
+        return False
+    fresh = _file_handler(output_dir)
+    root.addHandler(fresh)
+    for handler in stale:
         root.removeHandler(handler)
         handler.close()
-        moved = True
-    if moved:
-        root.addHandler(_file_handler(output_dir))
-    return moved
+    return True
+
+
+def _holds(handler: logging.FileHandler, on_disk: os.stat_result | None) -> bool:
+    """Whether ``handler`` has the file now on disk open."""
+    stream = handler.stream
+    if on_disk is None or stream is None:
+        return False
+    try:
+        held = os.fstat(stream.fileno())
+    except (OSError, ValueError):
+        return False
+    return (held.st_dev, held.st_ino) == (on_disk.st_dev, on_disk.st_ino)
 
 
 def release_log_file() -> None:

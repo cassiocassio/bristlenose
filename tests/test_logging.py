@@ -166,7 +166,10 @@ class TestFollowTheLogFile:
         log.info("before the stash")
         stash = tmp_path / ".bristlenose-output-previous"
         out.rename(stash)
+        # What the run does straight after its stash: its own log, before the
+        # serve notices. The serve must tell it from the one it holds open.
         (out / ".bristlenose").mkdir(parents=True)
+        (out / ".bristlenose" / "bristlenose.log").write_text("the run's first line\n")
 
         assert reopen_log_file(out) is True
         log.info("after the stash")
@@ -175,8 +178,44 @@ class TestFollowTheLogFile:
         here = (out / ".bristlenose" / "bristlenose.log").read_text()
         moved = (stash / ".bristlenose" / "bristlenose.log").read_text()
         assert "after the stash" in here
+        assert "the run's first line" in here, "the run's own lines were overwritten"
         assert "after the stash" not in moved
         assert "before the stash" in moved
+        assert reopen_log_file(out) is False, "a second look finds the file it now holds"
+
+    def test_a_reopen_that_fails_keeps_logging_and_is_retried(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import bristlenose.logging as bn_logging
+
+        out = tmp_path / "bristlenose-output"
+        bn_logging.setup_logging(output_dir=out)
+        out.rename(tmp_path / "set-aside")
+        (out / ".bristlenose").mkdir(parents=True)
+        (out / ".bristlenose" / "bristlenose.log").write_text("")
+        real = bn_logging._file_handler
+
+        def refuse(_output_dir: Path) -> logging.Handler:
+            raise PermissionError("no")
+
+        monkeypatch.setattr(bn_logging, "_file_handler", refuse)
+        with pytest.raises(PermissionError):
+            bn_logging.reopen_log_file(out)
+        files = [h for h in logging.getLogger().handlers if isinstance(h, logging.FileHandler)]
+        assert len(files) == 1, "a failed reopen took the only log file away"
+
+        monkeypatch.setattr(bn_logging, "_file_handler", real)
+        assert bn_logging.reopen_log_file(out) is True
+
+    def test_it_never_creates_the_output_folder(self, tmp_path: Path) -> None:
+        """Mid-restore, a new output folder would block the old one moving back."""
+        from bristlenose.logging import reopen_log_file, setup_logging
+
+        out = tmp_path / "bristlenose-output"
+        setup_logging(output_dir=out)
+        out.rename(tmp_path / "set-aside")
+        assert reopen_log_file(out) is False
+        assert not out.exists()
 
     def test_a_log_still_in_place_is_left_alone(self, tmp_path: Path) -> None:
         from bristlenose.logging import reopen_log_file, setup_logging

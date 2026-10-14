@@ -683,8 +683,8 @@
     }
   },
   "sync": {
-    "saveFailed": "無法儲存您的變更。請檢查您的網路連線。",
-    "saveRefused": "無法儲存您的變更。",
+    "saveFailed": "無法儲存變更。請檢查網路連線。",
+    "saveRefused": "無法儲存變更。",
     "runInProgress": "分析正在執行。請在完成後再試一次。"
   }
 }

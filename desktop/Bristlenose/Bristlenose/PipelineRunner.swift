@@ -726,6 +726,18 @@ final class PipelineRunner: ObservableObject {
     /// the newest `run_progress` off-main every ~1s and folds it into the ring
     /// via `RunProgressMath`. Guarded by `generation` so a superseded run's
     /// poll exits; cancelled in `handleTermination`.
+    /// A run we spawn begins: fresh progress, and the run newest in the events
+    /// log recorded so its lines are never read as this run's. Called before
+    /// the process starts, so the new run cannot have written its own start
+    /// yet. A bounded tail read, once per Analyse.
+    func beginSpawnedRun(_ project: Project) {
+        state[project.id] = .running
+        sessionsReadable[project.id] = nil
+        priorRunIds[project.id] = EventLogReader.tailEvent(at: Self.eventsURL(for: project))?.runId
+        liveData.setProgress(PipelineProgress(startedAt: Date()), for: project.id)
+        liveData.clearOutput(for: project.id)
+    }
+
     private func startProgressPoll(for project: Project, generation gen: Int) {
         let projectID = project.id
         let eventsURL = Self.eventsURL(for: project)
@@ -743,7 +755,7 @@ final class PipelineRunner: ObservableObject {
     /// project's `PipelineProgress` (ring fill + counts + ETA). No-op until the
     /// first progress line lands (→ the indicator keeps the spinner). Shared by
     /// the spawned-run poll and the orphan poll.
-    private func applyEventProgress(from eventsURL: URL, for projectID: UUID) async {
+    func applyEventProgress(from eventsURL: URL, for projectID: UUID) async {
         // The events file is append-only — NOT truncated on resume — so the
         // newest progress line can be the *previous* run's, which would jump
         // the ring to ~97% and hand the pane to the report. Matching the
@@ -1419,13 +1431,7 @@ final class PipelineRunner: ObservableObject {
         currentProject = project
         currentParser = StdoutProgressParser()
         cancellationRequested = false
-        state[project.id] = .running
-        sessionsReadable[project.id] = nil
-        // Before the spawn, so the new run cannot have written its start yet:
-        // a bounded tail read, once per Analyse.
-        priorRunIds[project.id] = EventLogReader.tailEvent(at: Self.eventsURL(for: project))?.runId
-        liveData.setProgress(PipelineProgress(startedAt: Date()), for: project.id)
-        liveData.clearOutput(for: project.id)
+        beginSpawnedRun(project)
         startProgressPoll(for: project, generation: gen)
 
         let proc = Process()

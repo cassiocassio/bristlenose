@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getUndoState, redo, resetUndoStore, undo } from "../contexts/UndoStore";
-import { deleteParagraphEdit, postParagraphJoin, postParagraphSplit } from "./api";
+import { deleteParagraphEdit, postParagraphJoin, postParagraphSplit, toastSaveFailed } from "./api";
 import {
   TRANSCRIPT_WRITTEN_EVENT,
   caretAtStart,
@@ -19,13 +19,21 @@ import {
 
 vi.mock("./api", async (importOriginal) => {
   const real = await importOriginal<typeof import("./api")>();
-  return { ...real, postParagraphSplit: vi.fn(), postParagraphJoin: vi.fn(), deleteParagraphEdit: vi.fn() };
+  return {
+    ...real,
+    postParagraphSplit: vi.fn(),
+    postParagraphJoin: vi.fn(),
+    postParagraphReassign: vi.fn(),
+    deleteParagraphEdit: vi.fn(),
+    toastSaveFailed: vi.fn(),
+  };
 });
 
 beforeEach(() => {
   vi.mocked(postParagraphSplit).mockReset().mockResolvedValue({ id: 7 });
   vi.mocked(postParagraphJoin).mockReset().mockResolvedValue({ id: 8 });
   vi.mocked(deleteParagraphEdit).mockReset().mockResolvedValue(undefined);
+  vi.mocked(toastSaveFailed).mockReset();
 });
 
 afterEach(() => {
@@ -133,5 +141,26 @@ describe("splitParagraph and joinParagraphs", () => {
     expect(getUndoState().undoAction).toBe("joinParagraphs");
     await undo();
     expect(deleteParagraphEdit).toHaveBeenCalledWith("s1", 8);
+  });
+});
+
+describe("a paragraph edit that does not land says why", () => {
+  it("names a running analysis on a refused move to a new moderator", async () => {
+    const { postParagraphReassign, toastSaveFailed } = await import("./api");
+    const { reassignParagraph } = await import("./paragraphEdits");
+    const refused = Object.assign(new Error("POST 409"), { status: 409, reason: "run_in_progress" });
+    vi.mocked(postParagraphReassign).mockRejectedValueOnce(refused);
+    await expect(reassignParagraph("s1", 2, "a b c", { new: "moderator" })).rejects.toBe(refused);
+    expect(vi.mocked(toastSaveFailed)).toHaveBeenCalledWith(refused);
+    expect(getUndoState().canUndo).toBe(false);
+  });
+
+  it("says so for a split and a join too", async () => {
+    const { toastSaveFailed } = await import("./api");
+    vi.mocked(postParagraphSplit).mockRejectedValueOnce(new TypeError("Load failed"));
+    vi.mocked(postParagraphJoin).mockRejectedValueOnce(new TypeError("Load failed"));
+    await expect(splitParagraph("s1", 1, 2, "x")).rejects.toThrow();
+    await expect(joinParagraphs("s1", 1, "x")).rejects.toThrow();
+    expect(vi.mocked(toastSaveFailed)).toHaveBeenCalledTimes(2);
   });
 });

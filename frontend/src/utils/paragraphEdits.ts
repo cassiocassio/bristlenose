@@ -13,7 +13,13 @@
 
 import { pushUndo } from "../contexts/UndoStore";
 import type { ParagraphTarget } from "./personPicker";
-import { deleteParagraphEdit, postParagraphJoin, postParagraphReassign, postParagraphSplit } from "./api";
+import {
+  deleteParagraphEdit,
+  postParagraphJoin,
+  postParagraphReassign,
+  postParagraphSplit,
+  toastSaveFailed,
+} from "./api";
 
 /** Fired when a split, a join or its undo has landed, so the transcript re-reads. */
 export const TRANSCRIPT_WRITTEN_EVENT = "bn:transcript-written";
@@ -71,12 +77,24 @@ function written(): void {
   window.dispatchEvent(new CustomEvent(TRANSCRIPT_WRITTEN_EVENT));
 }
 
+/** The edit's first write, saying why when it does not land: a move to a new
+ *  moderator is refused while an analysis runs, and the callers' `.catch`
+ *  used to make that refusal silent — the paragraph just stayed put. */
+async function said<T>(write: Promise<T>): Promise<T> {
+  try {
+    return await write;
+  } catch (err) {
+    toastSaveFailed(err);
+    throw err;
+  }
+}
+
 /** Split paragraph ``position`` after ``token`` words. Undo forgets the split;
  *  redo makes it again. Resolves once the split has landed. */
 export async function splitParagraph(
   sessionId: string, position: number, token: number, verify: string,
 ): Promise<void> {
-  let id = (await postParagraphSplit(sessionId, position, token, verify)).id;
+  let id = (await said(postParagraphSplit(sessionId, position, token, verify))).id;
   written();
   pushUndo({
     action: "splitParagraph",
@@ -90,7 +108,7 @@ export async function splitParagraph(
 
 /** Join paragraph ``position`` onto the one above it. */
 export async function joinParagraphs(sessionId: string, position: number, verify: string): Promise<void> {
-  let id = (await postParagraphJoin(sessionId, position, verify)).id;
+  let id = (await said(postParagraphJoin(sessionId, position, verify))).id;
   written();
   pushUndo({
     action: "joinParagraphs",
@@ -108,7 +126,7 @@ export async function joinParagraphs(sessionId: string, position: number, verify
 export async function reassignParagraph(
   sessionId: string, position: number, verify: string, to: ParagraphTarget,
 ): Promise<void> {
-  let id = (await postParagraphReassign(sessionId, position, verify, to)).id;
+  let id = (await said(postParagraphReassign(sessionId, position, verify, to))).id;
   written();
   pushUndo({
     action: "reassignParagraph",

@@ -126,9 +126,12 @@ class TestTheStashCycle:
             assert _sessions(client)
             backup = output_backup.stash(out)
             assert backup is not None
-            # The new run's tree: its events log, no database yet.
-            _started(out, "NEW")
+            # The new run's tree: its own log (the run opens it straight after the
+            # stash), its events log, no database yet.
             log = out / ".bristlenose" / "bristlenose.log"
+            log.parent.mkdir(parents=True)
+            log.write_text("the run's first line\n")
+            _started(out, "NEW")
             assert _wait(lambda: log.exists() and "reattaching" in log.read_text()), (
                 "the serve's reattach was not written to the output folder now on disk"
             )
@@ -215,6 +218,15 @@ class TestWritesRefusedWhileARunOwnsTheProject:
         # The reason is what the SPA localises from; the English stays for logs.
         assert resp.json() == {"detail": "An analysis is running", "reason": "run_in_progress"}
         assert _slots(client)[("s1", "p1")]["speaker_code"] == "p1"
+
+    def test_a_reanalyse_is_refused_by_name(self, tmp_path: Path) -> None:
+        """Its pins are registry writes the run would save over."""
+        project = _with_quotes(tmp_path)
+        client = _client(project)
+        _lock(project / "bristlenose-output")
+        resp = client.post("/api/projects/1/sessions/s1/reanalyse")
+        assert resp.status_code == 409, resp.text
+        assert resp.json() == {"detail": "An analysis is running", "reason": "run_in_progress"}
 
     def test_a_rename_is_still_allowed(self, tmp_path: Path) -> None:
         """Only the writes a run would overwrite are refused; a name lives in

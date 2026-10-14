@@ -315,18 +315,24 @@ class TestStartAutoCodeJob:
     def test_every_refusal_reason_is_reachable(self) -> None:
         """No orphan reasons: each value is raised somewhere in the server.
 
-        Across the package, not only this route: ``RUN_IN_PROGRESS`` is raised
-        through ``refusal.analysis_running`` by three other routes.
+        Across the package, not only this route, but never ``refusal.py`` itself,
+        whose own helpers name every reason they build. ``RUN_IN_PROGRESS`` is
+        raised through ``refusal.analysis_running()``, so a call to that counts.
         """
         from pathlib import Path
 
         from bristlenose.server.refusal import RefusalReason
 
         src = "\n".join(
-            f.read_text(encoding="utf-8") for f in Path("bristlenose/server").rglob("*.py")
+            f.read_text(encoding="utf-8")
+            for f in Path("bristlenose/server").rglob("*.py")
+            if f.name != "refusal.py"
         )
+        raised_via = {"RUN_IN_PROGRESS": "analysis_running()"}
         unused = [
-            r.name for r in RefusalReason if f"RefusalReason.{r.name}" not in src
+            r.name for r in RefusalReason
+            if f"RefusalReason.{r.name}" not in src
+            and raised_via.get(r.name, "\0") not in src
         ]
         assert not unused, f"declared but never raised: {unused}"
 

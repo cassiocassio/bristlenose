@@ -502,9 +502,13 @@ def put_session_speaker(
         ):
             # A recode writes the session registry (its re-analysis pins), which
             # the running analysis loaded at its start and saves over at its end.
-            # A name lives in the database, which the run never touches, so a
+            # A name lives in the database, which the run does not write, so a
             # rename or a pick goes through — including one that carries the
             # slot's role unchanged as ``kind``, which every SPA pick does.
+            # (Under ``--clean`` the run moves the database aside with its
+            # folder; the serve reattaches within a poll, and a pick in that
+            # second lands in the copy set aside — row 44 of
+            # docs/design-lifecycle-failure-modes.md.)
             raise analysis_running()
         if data.swap_with is not None:
             _swap(db, project_id, session_id, sp, data.swap_with)

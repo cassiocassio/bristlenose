@@ -520,6 +520,39 @@ describe("a selection made on another lens", () => {
   });
 });
 
+describe("bringing a card forward", () => {
+  // Click, never hover (the owner, 14 Oct 2026): a lifted card unclamps and grows, the column
+  // re-stacks, and under hover a different card was then under the pointer — flicker.
+  it("brings a card forward on click, not on hover, and puts it back on a press elsewhere", async () => {
+    mockApi(screensResponse());
+    const { container } = render(<ScreensLens />);
+    await waitFor(() => expect(container.querySelector(".screens-col .screens-card")).not.toBeNull());
+    const card = container.querySelector<HTMLElement>(".screens-col .screens-card")!;
+    fireEvent.mouseEnter(card);
+    fireEvent.mouseOver(card);
+    expect(card.className).not.toContain("is-lifted");
+    fireEvent.pointerDown(card.querySelector(".quote-body") ?? card);
+    expect(card.className).toContain("is-lifted");
+    fireEvent.mouseLeave(card);
+    expect(card.className).toContain("is-lifted");
+    fireEvent.pointerDown(card); // a press on the card itself keeps it forward
+    expect(card.className).toContain("is-lifted");
+    fireEvent.pointerDown(document.body);
+    expect(card.className).not.toContain("is-lifted");
+  });
+
+  it("brings a card forward from a press on its grip that is not a drag", async () => {
+    mockApi(screensResponse());
+    const { container } = render(<ScreensLens />);
+    await waitFor(() => expect(container.querySelector(".screens-col .screens-card")).not.toBeNull());
+    const card = container.querySelector<HTMLElement>(".screens-col .screens-card")!;
+    const grip = card.querySelector<HTMLElement>(".screens-grip-side")!;
+    fireEvent.pointerDown(grip, { button: 0, clientX: 10, clientY: 10 });
+    window.dispatchEvent(new PointerEvent("pointerup", { clientX: 10, clientY: 10 }));
+    await waitFor(() => expect(card.className).toContain("is-lifted"));
+  });
+});
+
 describe("for a keyboard and a screen reader", () => {
   it("brings a card forward when focus enters it, and keeps it forward while focus stays inside", async () => {
     mockApi(screensResponse());

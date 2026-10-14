@@ -753,8 +753,9 @@ function ScreenBoard(props: BoardProps) {
   const [stacked, setStacked] = useState<Record<Side, boolean>>({ L: false, R: false });
   const [colH, setColH] = useState(0);
   const [leaders, setLeaders] = useState<{ id: string; d: string; end: [number, number] }[]>([]);
-  // The card brought forward: on hover (the prototype's other choice, click, was dropped with its
-  // picker; docs/design-screens.md §6.8).
+  // The card brought forward: on click, never on hover (the owner, 14 Oct 2026, docs/design-screens.md
+  // §6.8). Hover flickered: bringing a card forward unclamps its text, the card grows, the column
+  // re-stacks around it, a different card is then under the pointer, and hover moves again.
   const [lifted, setLifted] = useState<string | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [spots, setSpots] = useState<Record<string, Spot>>(() => spotsFor(projectId, still));
@@ -849,13 +850,25 @@ function ScreenBoard(props: BoardProps) {
     setLeaders((old) => (JSON.stringify(old) === JSON.stringify(next) ? old : next));
   });
 
-  // Escape puts a brought-forward card back, under the same guards as the arrow keys.
+  // A press on a card brings it forward; Escape, or a press anywhere that is not a card, puts it back.
+  // One listener for the board rather than a click handler per card: the keyboard's way in is focus
+  // (below), so the cards stay plain wrappers. A press on a drag grip never arrives here (the grip
+  // stops it) and lifts its card on release instead, when it was not a drag. Escape is under the
+  // same guards as the arrow keys.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && keyIsOurs(e)) setLifted(null);
     };
+    const onDown = (e: PointerEvent) => {
+      const card = e.target instanceof Element ? e.target.closest<HTMLElement>(".screens-card[data-dom]") : null;
+      setLifted(card ? card.dataset.dom ?? null : null);
+    };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown);
+    };
   }, []);
 
   // Drag to rearrange: the card's top edge and the margin under its timecode are the grips. Nothing
@@ -897,7 +910,10 @@ function ScreenBoard(props: BoardProps) {
     };
     function up(ev: PointerEvent) {
       detach();
-      if (!moved) return;
+      if (!moved) {
+        setLifted(dom); // a press on the grip that never became a drag is a press on the card
+        return;
+      }
       const { left, top } = at(ev);
       putSpot(projectId, still, dom, { x: (left - geo!.sx) / geo!.W, y: (top - geo!.sy) / geo!.H, z });
       setSpots(spotsFor(projectId, still));
@@ -917,8 +933,10 @@ function ScreenBoard(props: BoardProps) {
       .filter(Boolean)
       .join(" ");
     return (
-      // A card comes forward on hover and when keyboard focus enters it, so Tab never lands on a
-      // control hidden under the next card in a stack. Rearranging is pointer-only for now.
+      // A card comes forward on a press (the board's listener above), and when keyboard focus
+      // enters it so Tab never lands on a
+      // control hidden under the next card in a stack. Never on hover. Rearranging is pointer-only
+      // for now.
       <div
         key={dom}
         ref={(el) => {
@@ -929,8 +947,6 @@ function ScreenBoard(props: BoardProps) {
         style={style}
         data-dom={dom}
         data-pin={pin ? dom : undefined}
-        onMouseEnter={() => !drag && setLifted(dom)}
-        onMouseLeave={() => !drag && setLifted(null)}
         onFocus={() => !drag && setLifted(dom)}
         onBlur={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setLifted((l) => (l === dom ? null : l));

@@ -42,7 +42,7 @@
 .screens-thumb-slot img, .screens-thumb-slot .screens-thumb-empty {
   display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left;
   border-radius: var(--bn-radius-sm); border: 1px solid var(--bn-colour-border);
-  background: var(--bn-colour-quote-bg); box-shadow: 0 1px 2px var(--bn-colour-shadow);
+  background: var(--bn-colour-quote-bg);
 }
 .screens-nav-title {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -122,8 +122,14 @@
 .screens-stage .screens-card > blockquote.quote-card {
   margin: 0;
   padding: var(--bn-space-sm) 2rem var(--bn-space-sm) var(--bn-space-md);
-  box-shadow: 0 4px 16px var(--bn-colour-shadow), 0 1px 4px var(--bn-colour-shadow);
   transition: opacity var(--bn-transition-fast), box-shadow var(--bn-transition-fast), color var(--bn-transition-fast);
+}
+/* Lift only where a card floats: over or beside the screengrab (a column) or moved by hand (the free
+   layer). Everything said here that is not pinned sits in the page's flow and reads as the Quotes
+   lens's card does, with no shadow (the owner, 14 Oct 2026: shadows in spurious places). */
+.screens-col .screens-card > blockquote.quote-card,
+.screens-free .screens-card > blockquote.quote-card {
+  box-shadow: 0 4px 16px var(--bn-colour-shadow), 0 1px 4px var(--bn-colour-shadow);
 }
 .screens-stage .screens-card .quote-body { font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); }
 .screens-stage .screens-card .quote-row { gap: 0.4rem; }
@@ -131,7 +137,8 @@
 .screens-stage .screens-card .badges { margin-top: 0.3rem; gap: var(--bn-space-xs); }
 .screens-stage .screens-card .star-btn { top: 0.4rem; right: 0.4rem; }
 .screens-stage .screens-card .hide-btn { top: 1.55rem; right: 0.4rem; }
-.screens-stage .screens-card.is-lifted > .quote-card { box-shadow: var(--bn-focus-shadow), 0 8px 24px var(--bn-colour-shadow); }
+.screens-col .screens-card.is-lifted > .quote-card,
+.screens-free .screens-card.is-lifted > .quote-card { box-shadow: var(--bn-focus-shadow), 0 8px 24px var(--bn-colour-shadow); }
 /* A long quote is a tall sticky; every card shows seven lines and the whole quote when brought
    forward or edited, pinned or not, so no card reads as more important for being longer. */
 .screens-stage .screens-card .quote-text-wrapper {

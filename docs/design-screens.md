@@ -176,11 +176,18 @@ the tree). What the prototype settled:
   only; from 1100px either side, by which half of the page their element is in; both overlap the
   screengrab's edge by 24px. From 1700px (a 5K display) they sit beside it. A real drop shadow (the
   house tooltip's shape, in the palette's own shadow colour) keeps a card from merging into a white
-  page.
+  page. **Only a card that floats has one** — a pinned card beside or over the screengrab, or one
+  moved by hand; the quotes in the page's flow under it, and the navigator's thumbnails, read as the
+  Quotes lens's do (the owner, 14 Oct 2026: shadows in spurious places).
 - **A column that would run past the screengrab stacks**, each card showing its timecode and first
-  line, straight or diagonally offset like a pad of stickies (both prototyped). A card comes to the
-  front on hover or on click (both prototyped); others dim by colour, not opacity, so a stack stays
-  opaque.
+  line, straight (the diagonal offset was prototyped and dropped). A card comes to the front **on
+  click, never on hover** (the owner, 14 Oct 2026), and goes back on Escape or a press anywhere
+  else; keyboard focus also brings one forward. Hover flickered, two ways. A card brought forward
+  unclamps its text and grows, its column re-places around it, and in a stack a different card is
+  then under the pointer (confirmed by reading the placement code; the two sessions measured never
+  pin two cards to one column, so it was not reproduced). And every card on the board dimmed and
+  undimmed as the pointer crossed them (measured on a real session: 11 times sweeping across 6
+  cards, 0 with click). Others dim by colour, not opacity, so a stack stays opaque.
 - **The researcher can rearrange.** A hand cursor on a card's top edge and the margin under its
   timecode; drag it anywhere on the board, including from the list onto the screengrab. It stays
   where it is put, on top of everything placed before (the order of placing is the z-order), and
@@ -405,7 +412,7 @@ can answer it cheaply, and decides whether S1–S6 appear at all.
 6. **Ever in the export?** v1 keeps it all out; a screen map without stills is plausible later.
 7. **Should the hover thumbnails share the sampling?** The text-diff moments are where the screen
    changed in a way a person reads.
-8. **On the board, hover or click to bring a quote to the front, and straight or diagonal stacks?**
-   Both are in the prototype to try.
+8. ~~**On the board, hover or click to bring a quote to the front, and straight or diagonal stacks?**~~
+   Settled 14 Oct 2026: click, and straight (§2, S5).
 9. **Whose arrangement is it?** A rearranged board is a researcher edit; is it saved per project like
    other edits, and does it reach the export one day?

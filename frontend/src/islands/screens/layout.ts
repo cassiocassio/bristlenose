@@ -3,16 +3,29 @@
  * stacks, and the leader line from a card to its element. Pure functions, unit-tested; the lens
  * only measures and draws.
  *
- * Measured rules from the prototype (docs/design-screens.md S5):
- * - From 1100px of stage (--bn-breakpoint-content) quotes go either side, by which half of the page
- *   their element is in; below it, all on the right.
- * - A card wants to sit level with its element. Cards keep a gutter of --bn-space-md (12px).
+ * Rules (docs/design-screens.md S5):
+ * - Automatic placement never puts a card over the screengrab (the owner, 14 Oct 2026, reversing
+ *   the prototype's overlapping edge): a card column sits beside it across a COLUMN_GUTTER the
+ *   leader visibly crosses. Cards and gutter keep their size; the screengrab is what shrinks.
+ * - Two columns when the stage fits both beside a screengrab of at least MIN_SHOT_W, either side
+ *   by which half of the page each element is in; one column, on the right, when it fits one; below
+ *   that, none: the screengrab takes the full width and its pinned cards lead the list under it. A
+ *   column with no cards takes no room. A card the researcher drags goes wherever they put it.
+ * - A card wants to sit level with its element. Cards in a column keep a gap of --bn-space-md (12px).
  * - A column that would run past the screengrab stacks: evenly stepped, each card showing its
  *   timecode and first line, the later card over the earlier one's tail. Stacks are straight: the
  *   prototype's diagonal variant (each card slid a few pixels right) was dropped with its picker.
  */
 
-export const WIDE_STAGE = 1100;
+/** A card column's width: the cards keep this size whatever the stage. */
+export const CARD_W = 270;
+/** Between a card column and the screengrab: --bn-space-xl (2rem), in px at the default zoom. */
+export const COLUMN_GUTTER = 32;
+/** Below this width the screengrab stops being legible, so no column takes room from it. */
+export const MIN_SHOT_W = 480;
+/** Stage widths that fit two columns, and one, beside a legible screengrab. */
+export const WIDE_STAGE = MIN_SHOT_W + 2 * (CARD_W + COLUMN_GUTTER); // 1084
+export const ONE_COLUMN_STAGE = MIN_SHOT_W + CARD_W + COLUMN_GUTTER; // 782
 export const GUTTER = 12;
 export const MIN_STEP = 46;
 
@@ -28,6 +41,21 @@ export interface Box {
 
 export function sideFor(box: Box, wide: boolean): Side {
   return wide && box.x + box.w / 2 < 0.5 ? "L" : "R";
+}
+
+/**
+ * Which card columns the board draws: "lr", "l" or "r" beside the screengrab, or "none" when the
+ * stage is too narrow for any (the pinned cards then join the list under it). `sides` is which
+ * sides have a card to place. A stage of width 0 has not been measured (jsdom, the first layout):
+ * it gets columns, never the narrow fallback.
+ */
+export type Columns = "lr" | "l" | "r" | "none";
+export function boardColumns(stageW: number, sides: { L: boolean; R: boolean }): Columns {
+  if (stageW > 0 && stageW < ONE_COLUMN_STAGE) return "none";
+  if (sides.L && sides.R) return "lr";
+  if (sides.L) return "l";
+  if (sides.R) return "r";
+  return "none";
 }
 
 export interface Placed {

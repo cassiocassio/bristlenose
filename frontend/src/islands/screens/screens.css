@@ -83,25 +83,21 @@
 .screens-putback { font: inherit; font-size: var(--bn-text-label); background: none; border: 0; color: var(--bn-colour-accent); cursor: pointer; padding: 0; }
 .screens-putback:hover { text-decoration: underline; }
 
-/* Narrow: screengrab, quotes right only. Wide (1100px of stage, --bn-breakpoint-content): either
-   side. Both overlap the screengrab's edge a little; from 1700px they sit beside it. */
+/* Cards sit BESIDE the screengrab, never over it (the owner, 14 Oct 2026: the screen is the artefact
+   being discussed, and stickies laid over a printout hide the design they are about). A card column
+   is CARD_W (270px) and the gutter --bn-space-xl, which the leader visibly crosses; the screengrab
+   takes what is left. Which columns appear is decided in layout.ts (boardColumns) from the stage's
+   width and which sides have cards, so these classes and those numbers move together: two from
+   1084px of stage, one (right) from 782px, none below — the screengrab then takes the full width
+   (MIN_SHOT_W, 480px, is the floor for legibility). A column with no cards takes no room. */
 .screens-stage { container-type: inline-size; }
-.screens-board { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 300px; }
-.screens-col { position: relative; z-index: 2; }
-.screens-col-l { display: none; margin-right: -24px; }
-.screens-col-r { margin-left: -24px; }
-@container (min-width: 1100px) {
-  .screens-board { grid-template-columns: 270px minmax(0, 1fr) 270px; }
-  .screens-col-l { display: block; }
-}
-/* 1700px is the prototype's measured width, not a token (experiments/screen-text/screens_lens.html;
-   docs/design-screens.md §2, "From 1700px (a 5K display) they sit beside it"): from there two 300px
-   columns fit beside a screengrab still wide enough to read, so they stop overlapping its edge. */
-@container (min-width: 1700px) {
-  .screens-board { grid-template-columns: 300px minmax(0, 1fr) 300px; column-gap: var(--bn-space-lg); }
-  .screens-col-l { margin-right: 0; }
-  .screens-col-r { margin-left: 0; }
-}
+.screens-board { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); column-gap: var(--bn-space-xl); }
+.screens-board.cols-r { grid-template-columns: minmax(0, 1fr) 270px; }
+.screens-board.cols-l { grid-template-columns: 270px minmax(0, 1fr); }
+.screens-board.cols-lr { grid-template-columns: 270px minmax(0, 1fr) 270px; }
+.screens-col { position: relative; z-index: 2; display: none; }
+.screens-board.cols-l .screens-col-l, .screens-board.cols-lr .screens-col-l,
+.screens-board.cols-r .screens-col-r, .screens-board.cols-lr .screens-col-r { display: block; }
 .screens-shot { position: relative; z-index: 1; align-self: start; }
 .screens-shot img { display: block; width: 100%; border-radius: var(--bn-radius-md); border: 1px solid var(--bn-colour-border); }
 .screens-shot-wait { aspect-ratio: 16 / 10; border-radius: var(--bn-radius-md); background: var(--bn-colour-quote-bg); }

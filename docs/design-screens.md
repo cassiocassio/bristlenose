@@ -172,13 +172,28 @@ the tree). What the prototype settled:
   the hidden counter ranged right on the sub line as on the Quotes lens. Quotes not pinned to an
   element sit under the screengrab with **no heading and no different treatment**: same size,
   shadow, gutter and behaviour. They are not lesser, only unmatched.
-- **Placement follows width.** Below 1100px of stage (`--bn-breakpoint-content`) quotes go right
-  only; from 1100px either side, by which half of the page their element is in; both overlap the
-  screengrab's edge by 24px. From 1700px (a 5K display) they sit beside it. A real drop shadow (the
-  house tooltip's shape, in the palette's own shadow colour) keeps a card from merging into a white
-  page. **Only a card that floats has one** — a pinned card beside or over the screengrab, or one
-  moved by hand; the quotes in the page's flow under it, and the navigator's thumbnails, read as the
-  Quotes lens's do (the owner, 14 Oct 2026: shadows in spurious places).
+- **Cards sit beside the screengrab, never over it.** This reverses the prototype, whose cards
+  overlapped the screengrab's edge by 24px. The owner, 14 Oct 2026: the screengrab is the artefact
+  the comments are about, and *"if you got real stickies and put them over a printout of the screen
+  so you couldn't see the actual design being discussed, that's a bit weird"* — overlaid, the screen
+  feels cramped and disrespected. So automatic placement never covers it: a card column (270px)
+  sits across a gutter of `--bn-space-xl` that the leader visibly crosses, and when the stage
+  narrows **the screengrab shrinks; the cards and the gutter keep their size.** Two columns from
+  1084px of stage, either side by which half of the page each element is in; one column, on the
+  right, from 782px; below that, none — the screengrab takes the full width with its highlights, and
+  its pinned quotes lead the list under it. Those thresholds keep the screengrab at least 480px wide
+  (`MIN_SHOT_W`, the floor for legibility, in `frontend/src/islands/screens/layout.ts`). A column
+  with no cards takes no room, so one card does not leave a wide empty margin opposite it. A card
+  the researcher drags may go anywhere, over the screengrab included: that is their arrangement.
+  Measured on both real sessions at 1800, 1280 and 900px windows: every column card 32px clear of
+  the screengrab (24px over it before); at 900px the screengrab is full width where it was 104px
+  wide behind the cards. Numbered markers on the screengrab, for the narrow case, belong to the
+  coming composition work.
+- **A real drop shadow** (the house tooltip's shape, in the palette's own shadow colour) keeps a
+  card from merging into a white page. **Only a card that floats has one** — a pinned card in a
+  column beside the screengrab, or one moved by hand; the quotes in the page's flow under it, and
+  the navigator's thumbnails, read as the Quotes lens's do (the owner, 14 Oct 2026: shadows in
+  spurious places).
 - **A column that would run past the screengrab stacks**, each card showing its timecode and first
   line, straight (the diagonal offset was prototyped and dropped). A card comes to the front **on
   click, never on hover** (the owner, 14 Oct 2026), and goes back on Escape or a press anywhere

@@ -520,6 +520,35 @@ describe("a selection made on another lens", () => {
   });
 });
 
+describe("where the cards go", () => {
+  it("puts the pinned cards first in the list under the screengrab when the stage is too narrow for a column", async () => {
+    const spy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(600);
+    try {
+      mockApi(screensResponse());
+      const { container } = render(<ScreensLens />);
+      await waitFor(() => expect(container.querySelector(".screens-loose .screens-card")).not.toBeNull());
+      expect(container.querySelector(".screens-board")!.className).toContain("cols-none");
+      expect(container.querySelector(".screens-col .screens-card")).toBeNull();
+      const first = container.querySelector<HTMLElement>(".screens-loose .screens-card")!;
+      expect(first.dataset.dom).toBe("q-p1-10"); // the pinned quote leads the list
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("gives the pinned card a column beside the screengrab when there is room", async () => {
+    const spy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(900);
+    try {
+      mockApi(screensResponse());
+      const { container } = render(<ScreensLens />);
+      await waitFor(() => expect(container.querySelector(".screens-col-r .screens-card")).not.toBeNull());
+      expect(container.querySelector(".screens-board")!.className).toContain("cols-r");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
 describe("bringing a card forward", () => {
   // Click, never hover (the owner, 14 Oct 2026): a lifted card unclamps and grows, the column
   // re-stacks, and under hover a different card was then under the pointer — flicker.

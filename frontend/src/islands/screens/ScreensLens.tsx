@@ -49,6 +49,8 @@ import { deriveTagVisibility, type TagGroupMeta } from "../../utils/tagVisibilit
 import type { QuoteResponse, QuotesListResponse } from "../../utils/types";
 import { QuoteCard } from "../QuoteCard";
 import {
+  boardColumns,
+  CARD_W,
   clearSpots,
   leaderPath,
   placeColumn,
@@ -784,8 +786,7 @@ function ScreenBoard(props: BoardProps) {
       const img = shot.querySelector("img");
       const W = img?.clientWidth ?? shot.clientWidth;
       const H = img?.clientHeight ?? 0;
-      const col = board.querySelector<HTMLElement>(".screens-col-r");
-      const g = { stageW: stage.clientWidth, W, H, sx: shot.offsetLeft, sy: shot.offsetTop, colW: col?.clientWidth ?? 270 };
+      const g = { stageW: stage.clientWidth, W, H, sx: shot.offsetLeft, sy: shot.offsetTop, colW: CARD_W };
       setGeo((old) => (old && JSON.stringify(old) === JSON.stringify(g) ? old : g));
     };
     measure();
@@ -797,7 +798,16 @@ function ScreenBoard(props: BoardProps) {
 
   const wide = (geo?.stageW ?? 0) >= WIDE_STAGE;
   const sideOf = (p: Pin): Side => sideFor({ x: p.box[0], y: p.box[1], w: p.box[2], h: p.box[3] }, wide);
-  const columnPins = pins.filter((p) => !free.has(p.dom_id)).sort((a, b) => a.box[1] - b.box[1]);
+  // Automatic placement: beside the screengrab in up to two columns, never over it; on a stage too
+  // narrow for a column beside a legible screengrab, the pinned cards lead the list under it.
+  const unfree = pins.filter((p) => !free.has(p.dom_id)).sort((a, b) => a.box[1] - b.box[1]);
+  const columns = boardColumns(geo?.stageW ?? 0, {
+    L: unfree.some((p) => sideOf(p) === "L"),
+    R: unfree.some((p) => sideOf(p) === "R"),
+  });
+  const besides = columns !== "none";
+  const columnPins = besides ? unfree : [];
+  const listed = besides ? rest : [...unfree.map((p) => p.dom_id), ...rest];
 
   // Place the columns once the cards have heights. Deliberately runs after every render (a card's
   // height changes with tags, edits and width) and sets state only when the placement changes.
@@ -836,6 +846,7 @@ function ScreenBoard(props: BoardProps) {
     const bb = board.getBoundingClientRect();
     const next: { id: string; d: string; end: [number, number] }[] = [];
     for (const p of pins) {
+      if (!besides && !free.has(p.dom_id)) continue; // listed under the screengrab: no leader
       const el = cardEls.current.get(p.dom_id);
       if (!el) continue;
       const r = el.getBoundingClientRect();
@@ -1040,7 +1051,7 @@ function ScreenBoard(props: BoardProps) {
         </div>
       )}
       <div className={`screens-stage${lifted ? " focus" : ""}${drag ? " dragging" : ""}`} ref={stageRef}>
-        <div className="screens-board" ref={boardRef} style={{ minHeight: colH || undefined }}>
+        <div className={`screens-board cols-${columns}`} ref={boardRef} style={{ minHeight: colH || undefined }}>
           <div className={`screens-col screens-col-l${stacked.L ? " stacked" : ""}`} style={{ height: colH || undefined }}>
             {columnPins.filter((p) => sideOf(p) === "L" && p.dom_id !== dragOutOfColumn).map((p) => cardFor(p.dom_id, placed(p.dom_id), p))}
           </div>
@@ -1082,7 +1093,7 @@ function ScreenBoard(props: BoardProps) {
           </div>
         </div>
         <div className="screens-loose">
-          {rest.filter((d) => !free.has(d) && d !== dragOutOfColumn).map((d) => cardFor(d, {}))}
+          {listed.filter((d) => !free.has(d) && d !== dragOutOfColumn).map((d) => cardFor(d, {}, pinByDom.get(d)))}
         </div>
       </div>
     </>

@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  boardColumns,
   clearSpots,
+  ONE_COLUMN_STAGE,
+  WIDE_STAGE,
   GUTTER,
   leaderPath,
   MIN_STEP,
@@ -19,6 +22,27 @@ describe("sideFor", () => {
     expect(sideFor(left, true)).toBe("L");
     expect(sideFor(right, true)).toBe("R");
     expect(sideFor(left, false)).toBe("R");
+  });
+});
+
+describe("boardColumns", () => {
+  // Cards sit beside the screengrab, never over it; the screengrab shrinks, the cards do not.
+  it("gives each side with cards a column, and a side without cards none", () => {
+    expect(boardColumns(1600, { L: true, R: true })).toBe("lr");
+    expect(boardColumns(1600, { L: false, R: true })).toBe("r");
+    expect(boardColumns(1600, { L: true, R: false })).toBe("l");
+    expect(boardColumns(1600, { L: false, R: false })).toBe("none");
+  });
+  it("stops putting cards beside the screengrab below the width that keeps it legible", () => {
+    expect(boardColumns(ONE_COLUMN_STAGE, { L: false, R: true })).toBe("r");
+    expect(boardColumns(ONE_COLUMN_STAGE - 1, { L: false, R: true })).toBe("none");
+  });
+  it("leaves the first, unmeasured layout its columns", () => {
+    expect(boardColumns(0, { L: false, R: true })).toBe("r");
+  });
+  it("keeps a legible screengrab between two columns and their gutters", () => {
+    expect(WIDE_STAGE - 2 * (270 + 32)).toBe(480);
+    expect(ONE_COLUMN_STAGE - (270 + 32)).toBe(480);
   });
 });
 

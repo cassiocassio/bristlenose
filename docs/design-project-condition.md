@@ -1,12 +1,13 @@
 ---
 status: in progress — phases A and B shipped in 0.31.5 (the POC code was production code); D, C, E, F designed, not built
-last-trued: 2026-10-13
-trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
+last-trued: 2026-10-14
+trued-against: HEAD@main (6562c7be) on 2026-10-14
 owner: project status across Python, the report server, the SPA and the Mac app
 ---
 
 ## Changelog
 
+- _2026-10-14_ — trued up: the intercept table's "latest in progress, no report" row gives way once a first analysis has imported a session (progressive lenses Phase 0 step 5 changed it; the row still said intercept). Anchors: `server/status_page.py` (`sessions_imported`), [design-progressive-lenses.md](design-progressive-lenses.md) Phase 0 step 5.
 - _2026-10-13_ — trued up: §4.4 sandbox liveness marked measured; §5.1 orphan-probe line marked built with the three-valued verdict; §6.2 points at the identity decision. Anchors: `ac1415fc`, `eb8509e1`, `PipelineRunner.ownedRunVerdict`.
 
 # Project condition — one answer to "what state is this project in?"
@@ -224,7 +225,7 @@ is `should_intercept(condition, overlay, policy)`:
 |---|---|---|
 | no runs, no legacy report | intercept: no-run | intercept: no-run |
 | no runs, legacy report (manifest) | SPA | SPA |
-| latest in progress, no report | intercept: in-progress | intercept: in-progress |
+| latest in progress, no report | intercept: in-progress — *revised 13 Oct 2026: SPA once a first analysis has imported a session (`sessions_imported`), [design-progressive-lenses.md](design-progressive-lenses.md) Phase 0 step 5* | same |
 | latest in progress, report exists | SPA (+ banner) — *revised by the POC: a re-run never hides the report it will replace, in either policy* | SPA (+ banner) |
 | latest stranded, report exists | SPA — *revised after review: a stranded run did not touch the report, and liveness can be wrong in the "can't tell" direction* | SPA |
 | latest completed, import in flight, no data version yet | intercept: in-progress — *added after review* | intercept: in-progress |

@@ -74,8 +74,10 @@ class ConditionResponse(BaseModel):
     import_failed_run_id: str | None = None
     policy: str
     #: Bumped after each per-session import during a run; the SPA refetches
-    #: when it moves (docs/design-progressive-lenses.md §3.2). Not at run end —
-    #: ``/last-run`` moves then. Not a run id, not a time.
+    #: when it moves (docs/design-progressive-lenses.md §3.2). Also when a run
+    #: ends without a whole report or a restored stash lifts the overlay
+    #: (``server/progressive.py``); not at a whole import — ``/last-run`` moves
+    #: then. Not a run id, not a time.
     data_version: int = 0
     #: Lens id → selectable now (``server/lens_readiness.py``).
     lenses: dict[str, bool] = Field(default_factory=dict)

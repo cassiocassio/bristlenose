@@ -1,10 +1,20 @@
+---
+status: partial
+last-trued: 2026-10-14
+trued-against: HEAD@main (6562c7be) on 2026-10-14
+---
+
+## Changelog
+
+- _2026-10-14_ — trued up: per-session chaining shipped 13 Oct 2026, so the comparison advice, the re-run trigger and the problem statement now say what a chained run's stage lines mean; two progressive milestones added to the measure table; the procedure says which run shape a re-run gets. The re-run itself is owed, not done. Anchors: `bristlenose/readable_chain.py` (`topic_seconds`/`quote_seconds`), the Transcribe and Topics `✓` lines in `bristlenose/pipeline.py`, commit "progressive lenses phase 3 review: the chain analyses only a true first analysis, and stage times are wall time".
+
 # Design: FOSSDA Pipeline Throughput Baseline
 
 **Status (17 Apr 2026):** First baseline captured — [`trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md`](../trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md). Summary: 36m 48s wall-clock for 10 interviews (490 min audio), 238 quotes, $3.11. One LLM truncation on session s5 at default `max_tokens=32768` — see [`design-perf-scale-and-tokens.md`](design-perf-scale-and-tokens.md). This doc is the procedure for re-runs.
 
 ## Problem
 
-We don't know how long the full pipeline takes on a real dataset of meaningful size. Stage timing is printed to the terminal during a run, but we've never recorded a baseline against a consistent corpus. When we optimise pipeline stages (S2: per-participant chaining, LLM response cache), we need before/after numbers.
+We don't know how long the full pipeline takes on a real dataset of meaningful size. Stage timing is printed to the terminal during a run, but we've never recorded a baseline against a consistent corpus. When we optimise pipeline stages (S2: per-participant chaining — shipped 13 Oct 2026 as the progressive-lenses chain, see below — and the LLM response cache), we need before/after numbers.
 
 ## Goal
 
@@ -23,8 +33,12 @@ Already downloaded and processed: `trial-runs/fossda-opensource/` (10 MP4 interv
 | LLM token usage | Provider billing / `bristlenose.log` | Cost per run |
 | Peak memory (RSS) | `/usr/bin/time -l` on macOS | Memory pressure on 8GB machines |
 | Output sizes | `du -sh` on output subdirectories | Transcripts, JSON intermediates, HTML |
+| First transcript readable | `bristlenose.log` (each session's Whisper finish) | What the progressive chain optimises; measured as in [`design-progressive-lenses.md`](design-progressive-lenses.md) §1.1 |
+| First quotes | `.bristlenose/llm-calls.jsonl` (first quote-extraction completion) | Same |
 
 ## Procedure (manual)
+
+**Record which run shape you got (since 13 Oct 2026).** A fresh run with a cloud provider and PII redaction off runs the per-session chain: topics and quotes overlap transcription. With `--redact-pii` or `--llm local` it does not. Before/after numbers from different shapes are not comparable, so note the shape beside the numbers.
 
 Before starting: machine should be idle for 10+ minutes (thermal stabilisation). Lid open, connected to power if on a laptop. Sustained Whisper workloads trigger thermal throttling on Apple Silicon after 10–20 minutes — a warm re-run can be 15–30% slower than a cold one.
 
@@ -165,11 +179,13 @@ No scripts to create — this is a manual procedure. The pipeline already prints
 
 When per-participant chaining ships, stages 8 (topic segmentation) and 9 (quote extraction) will overlap via chained coroutines. The individual stage `✓` lines will mean something different — compare **combined topics + quotes wall-clock time**, not individual stage lines.
 
-`stage-times.txt` captures **actual elapsed wall-clock** per stage, not the Welford-based ETA estimates that `timing.py` displays during a run. The ETA history in `~/.config/bristlenose/` is independent of this procedure and can be ignored for baselining.
+**As built (13 Oct 2026) the overlap is wider than that, and the advice above no longer holds.** On a chained first analysis the chain's topic and quote calls run *during transcription*. The Topics and Quotes `✓` lines add the chain's busy time (wall time with at least one call in flight) to whatever stages 8 and 9 still did; the Transcribe line subtracts only the time the chain held Whisper up. So the stage lines overlap and their sum is larger than the run. Compare **total wall-clock** (`/usr/bin/time`) and the two progressive milestones above; read stage lines only against a run of the same shape.
+
+`stage-times.txt` captures **actual elapsed wall-clock** per stage (on a chained run, overlapping wall-clock, as above), not the Welford-based ETA estimates that `timing.py` displays during a run. The ETA history in `~/.config/bristlenose/` is independent of this procedure and can be ignored for baselining.
 
 ## When to re-run
 
-- After per-participant chaining ships (S2)
+- After per-participant chaining ships (S2) — **due**: it shipped 13 Oct 2026 and no re-run is recorded (every file in `perf-baselines/` is dated 17 Apr 2026). The 51:27 "today" figure in [`design-progressive-lenses.md`](design-progressive-lenses.md) §1.1 is from a later run on the same corpus than the 36m 48s above; neither doc names the run behind its number, so record it when re-running
 - After LLM response cache ships
 - After any stage logic change that affects throughput
 - Before launch (final baseline on release hardware)

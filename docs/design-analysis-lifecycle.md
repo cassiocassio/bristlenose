@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-10-13
-trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
+last-trued: 2026-10-14
+trued-against: HEAD@main (6562c7be) on 2026-10-14
 ---
 
 > **Trued 27 Aug 2026.** The affordance inventory below named *the sheet* as the
@@ -14,6 +14,7 @@ trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 
 ## Changelog
 
+- _2026-10-14_ — trued up against progressive lenses (12–13 Oct): a first analysis — and so every Mac Re-analyse — now delivers each session as it is readable, which no section said. Pointers added in the owners table, §1.1, §2, §3.1–§3.3 and §5.4; the progressive doc owns the detail. Anchors: `bristlenose/readable_chain.py`, `server/progressive.py`, `server/status_page.py` (`sessions_imported`), commits "progressive lenses phase 1: a first analysis delivers each session's transcript as whisper finishes it" and "progressive lenses: the Mac's lens rail leaves a withheld lens for Sessions; a clean re-analyse is a first analysis".
 - _2026-10-13_ — trued up: §2 names the `SubtitleDelta` cases including the forked state and adds the Forked transition; the Re-analyse sequence says stash, not delete. Anchors: `ProjectSubtitle.swift` `SubtitleDelta`, register row 29.
 - _2026-10-04_ — **Analyse** gained a fourth reason to appear: an analysed project
   whose Discussion lens has no record, or whose guide folder changed after the
@@ -85,6 +86,7 @@ a slice and none of them owns the whole:
 | [design-sidebar-activity-indicators.md](design-sidebar-activity-indicators.md) | In-flight visual vocabulary (spinner, ring, Stop) |
 | [design-pipeline-diagnostic-popover.md](design-pipeline-diagnostic-popover.md) | The failure taxonomy, `MessageKind`, the two-mirror trap |
 | [design-pipeline-resilience.md](design-pipeline-resilience.md) | Manifest, event sourcing, resume, provenance |
+| [design-progressive-lenses.md](design-progressive-lenses.md) | What the report shows *during* a first analysis (and a clean Re-analyse): sessions delivered one by one, per-lens readiness, a run that ends without a report |
 
 **What this doc is not.** It does not redefine the row grammar, the message
 taxonomy, or the incremental rules. Where it needs one, it cites it. If this
@@ -162,7 +164,13 @@ reconciling it. Cached stages don't regenerate quotes, so keys don't move and
 state reattaches. If a stage cache were ever invalidated, quotes could return
 under different keys and their curation would be orphaned — silently, because
 the import would still report success. Any change that can invalidate a stage
-cache must be read against that sentence.
+cache must be read against that sentence. Two live instances since 13 Oct 2026,
+both recorded in [design-progressive-lenses.md](design-progressive-lenses.md): a star on a session whose transcript changes after the
+progressive chain analysed it (Phase 3, Known), and curation made *during* a
+progressive Re-analyse that then fails — the failed tree, database included, is set
+aside and the next run clears it (inferred from `utils/output_backup.py`, not
+measured; [design-lifecycle-failure-modes.md](design-lifecycle-failure-modes.md),
+open).
 
 **For a file-subset project the honest offer is Re-analyse.** The toast that
 used to say "isn't supported yet" is gone (§4.2), so nothing misleads any more
@@ -224,6 +232,12 @@ stateDiagram-v2
     Analysed --> [*]: Remove from Sidebar
 ```
 
+**Stop after sessions were delivered.** The only Stop edge drawn is "nothing
+produced yet". Since 13 Oct a first analysis stopped or failed after delivering
+sessions keeps them in the database: the cancelled or failed page covers them, an
+open report keeps them, export is refused. Not a new state here — [design-progressive-lenses.md](design-progressive-lenses.md) §5.2, §5.7
+and §7 item 15.
+
 **Why `Stranded` is a state and not an accident.** A run whose process dies
 without writing a terminus event is indistinguishable, on disk, from one still
 in flight. The reconciliation on next start is what converts it to `Failed`.
@@ -263,6 +277,12 @@ sequenceDiagram
     UI->>UI: session count + date
 ```
 
+_Since 13 Oct 2026 a first analysis is progressive:_ each session's transcript, and
+on a cloud provider its quotes, reach the report while the run continues, and the
+status page and the Mac's shoal give way at the first readable session
+(`status_page.py`, `DetailPaneKind.swift`). With the local provider transcripts
+still arrive one by one; only the quotes wait for stages 8 and 9. [design-progressive-lenses.md](design-progressive-lenses.md).
+
 ### 3.2 Incremental — new files fold in
 
 ```mermaid
@@ -282,6 +302,10 @@ sequenceDiagram
     SC-->>UI: run_completed
     UI->>R: count grows, no edits lost
 ```
+
+_Incremental runs are not progressive:_ the chain is off when the previous run
+rendered a report (`Pipeline._readable_chain`), so serve keeps showing that report
+and the new sessions appear at `run_completed`.
 
 ### 3.3 Re-analyse — the destructive one
 
@@ -306,6 +330,12 @@ sequenceDiagram
     SC->>SC: set output aside (stash), full pipeline
     SC-->>UI: run_completed
 ```
+
+_Since 13 Oct 2026 this is a progressive first analysis_ ([design-progressive-lenses.md](design-progressive-lenses.md) §7 item 18): sessions
+arrive one by one where the status page used to cover the run, the completion
+reload is skipped, and a reader on a lens that becomes withheld is moved to the
+Sessions root. If the run fails, the stash is restored and the server refetches;
+the Mac does nothing further (same item).
 
 ---
 
@@ -590,6 +620,8 @@ Two items, both measured, both owned by
 | Drop onto an analysed **file-subset** project | say it needs a full re-run, and offer it | the `+N unanalysed` delta, and no offer. The misleading toast was removed (§4.2); the gap it named is still open |
 | Files added in **Finder** | detect, report, **and offer the action** | detects and reports; offers nothing |
 | Zero sessions found | say so, don't render an empty report | ✅ "No usable content" |
+| First analysis stopped or failed **after sessions were delivered** | keep what was delivered, say the run ended | ✅ 13 Oct 2026 — the overlay is marked ended; [design-progressive-lenses.md](design-progressive-lenses.md) §5.7 |
+| Crash mid first analysis, then resume | deliver the rest | chain off on resume; serve imports at stage 6 while the Mac's shoal covers it — [design-progressive-lenses.md](design-progressive-lenses.md) §7 item 16 |
 
 ---
 

@@ -1,3 +1,13 @@
+---
+status: partial
+last-trued: 2026-10-14
+trued-against: HEAD@main (6562c7be) on 2026-10-14
+---
+
+## Changelog
+
+- _2026-10-14_ — trued up: per-session chaining (was #32) moved to Done with the conditions it runs under; Whisper's thread recorded under "Not worth optimising"; the issues heading no longer sends readers to closed issues. Anchors: `bristlenose/readable_chain.py`, `Pipeline._readable_chain` in `bristlenose/pipeline.py`, commits "progressive lenses phases 3 and 5: quotes found while the next session transcribes…" and "progressive lenses phase 3 review: the chain analyses only a true first analysis, and stage times are wall time".
+
 # Performance Audit
 
 Audited Feb 2026, re-confirmed against captured baselines Apr 2026. Stage concurrency shipped. Remaining items ranked by impact.
@@ -13,10 +23,13 @@ Audited Feb 2026, re-confirmed against captured baselines Apr 2026. Stage concur
 - **FFmpeg VideoToolbox hardware decode** — `utils/audio.py` passes `-hwaccel videotoolbox` on macOS, offloading H.264/HEVC video decode to the Apple Silicon media engine. No-op for audio-only inputs and non-macOS platforms
 - **Concurrent FFmpeg audio extraction** — `extract_audio_for_sessions()` is async with `asyncio.Semaphore(4)` + `asyncio.gather()`. Blocking `subprocess.run` calls wrapped in `asyncio.to_thread()`. Up to 4 FFmpeg processes in parallel. Default of 4 is optimal across all Apple Silicon (M1–M4 Ultra) — bottleneck is the shared media engine, not CPU cores
 - **Cache `system_profiler` results** (#30) — `detect_hardware()` caches static hardware properties (chip_name, gpu_cores, memory_gb) to `~/.config/bristlenose/.hardware-cache.json` with 24h TTL. Dynamic properties (mlx_available, cuda_available) are always re-checked. Saves ~2–4s on macOS startup
+- **Per-session chaining on a first analysis** (13 Oct 2026, was #32) — each session runs speakers → merge → topics → quotes as soon as Whisper finishes it, while the next session decodes (`bristlenose/readable_chain.py`). Whisper runs on its own thread so the chain's LLM calls overlap it. The chain's topic and quote calls run one session at a time per call, behind the `llm_concurrency` semaphore, and stages 8 and 9 take up its results by transcript fingerprint. **It runs only when all of these hold** (`Pipeline._readable_chain`, `_whisper_overlaps` in `pipeline.py`): no previous report rendered, no earlier topic or quote records, PII redaction off, intermediate files on, and a cloud provider. With the local provider the transcripts are still delivered session by session, but Whisper stays on the event loop and topics and quotes run as stages 8 and 9. On a re-analyse stages 8 and 9 run as batches, as before. Design and measurements: [`design-progressive-lenses.md`](design-progressive-lenses.md) Phase 3
 
 ---
 
-## Open items (tracked in GitHub issues)
+## Open items
+
+_The `#NN` numbers are GitHub issues #31–#35, all closed as not planned on 27 Sep 2026 with a pointer back here: this list is the tracker now._
 
 ### Quick wins
 
@@ -24,7 +37,7 @@ Audited Feb 2026, re-confirmed against captured baselines Apr 2026. Stage concur
 
 ### Medium effort
 
-- **Pipeline stages 8→9 per-participant chaining** (#32) — instead of "all stage 8 then all stage 9", run `_segment_single(p) → _extract_single(p)` as a chained coroutine per participant. Lets participant B's topic segmentation overlap with participant A's quote extraction
+- ~~**Pipeline stages 8→9 per-participant chaining** (#32)~~ — _shipped in a different shape, see Done (13 Oct 2026). The plan as written:_ instead of "all stage 8 then all stage 9", run `_segment_single(p) → _extract_single(p)` as a chained coroutine per participant. Lets participant B's topic segmentation overlap with participant A's quote extraction
 - **Pass transcript data to renderer** — `render_transcript_pages()` re-reads `.txt` files from disk even though the pipeline had all transcript data in memory. Thread `clean_transcripts` through to avoid redundant I/O
 - **Temp WAV cleanup** (#33) — extracted WAV files in `output/temp/` are never cleaned up. ~115 MB per hour per participant; **FOSSDA baseline measured 944 MB left behind** on a 10-interview run ([pipeline-baseline.md](../trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md)). Add `shutil.rmtree(temp_dir)` after `_gather_all_segments`, guarded by config flag
 
@@ -38,7 +51,7 @@ Audited Feb 2026, re-confirmed against captured baselines Apr 2026. Stage concur
 
 ## Not worth optimising (documented for posterity)
 
-- **Whisper transcription is sequential**: GPU is already saturated by a single transcription. Parallelising wouldn't help on single-GPU machines. On CPU-only builds, `asyncio.to_thread()` could help but the speedup is marginal vs total transcription time
+- **Whisper transcription is sequential**: GPU is already saturated by a single transcription. Parallelising wouldn't help on single-GPU machines. On CPU-only builds, `asyncio.to_thread()` could help but the speedup is marginal vs total transcription time. _Still true of decoding (13 Oct 2026): on a chained first analysis Whisper does run on a thread, but one thread, so that the LLM calls overlap it, not to decode files in parallel._
 - **CSS/JS reads (32 small files)**: already lazy-cached in module-level globals. Only read once per process. Not a bottleneck
 - **Intermediate JSON `indent=2` on disk**: adds ~15% file size vs compact JSON, but these files are for human debugging. Keep pretty-printed
 - **Pydantic `model_dump()` serialisation cost**: called for every model when writing intermediate JSON. Profiling shows <100ms even for large quote lists

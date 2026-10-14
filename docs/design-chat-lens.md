@@ -1,7 +1,7 @@
 ---
 status: parked
-last-trued: 2026-10-04
-trued-against: HEAD@main on 2026-10-04
+last-trued: 2026-10-14
+trued-against: HEAD@main (6562c7be) on 2026-10-14
 ---
 
 # Chat lens — a cited question box inside Bristlenose
@@ -28,6 +28,13 @@ _Design note; the §6 prototype is built to the §5a corrections (flag-gated lab
 
 ## Changelog
 
+- _14 Oct 2026_ — trued up (progressive lenses): the prototype answers mid-run.
+  While a first analysis is partial it puts `grounding.coverage_sentence()` beside
+  `INVARIANTS`, and a seventh invariant tells the model to state coverage ("based
+  on 6 of 10 sessions"). §7's invariant list now points at `grounding.INVARIANTS`
+  as the source of truth. Body otherwise untouched (parked). Anchors:
+  `server/grounding.py` (`delivery_coverage`, `coverage_sentence`),
+  `server/chat_lens.py`, [design-progressive-lenses.md](design-progressive-lenses.md) §5.5 and §5.7.
 - _4 Oct 2026_ — **parked**: MCP is the chat lens for the foreseeable future;
   no in-app question box until Bristlenose adds more value than "Claude,
   inside" (owner's call; recorded in `design-mcp-server.md` §Positioning). §4
@@ -536,7 +543,9 @@ created `grounding.py` (corpus assembly, `resolve_quote_indices`,
 `resolve_quote_ids` (the stable-id sibling, for surfaces that cite report
 DOM ids), `load_signals` (curated report-view signal detection), and two
 `INVARIANTS` statements (denominators, the honesty rule) that both surfaces
-now speak. No parallel sibling was created. The rule going forward: **what a
+now speak. _(Since then, two more: moderator and observer numbering (3 Oct 2026)
+and the coverage note for a partial analysis (13 Oct 2026). `grounding.INVARIANTS`
+is the list; don't count it from prose.)_ No parallel sibling was created. The rule going forward: **what a
 surface ADDS to grounding gets grounding-level tests; what it CONSUMES is
 already covered.**
 

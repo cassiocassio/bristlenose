@@ -1,13 +1,27 @@
 ---
 status: Phases 0–5 built 12–13 Oct 2026 (unreleased); whole-feature review fixed 13 Oct (§5.7)
-last-trued: 2026-10-13
-trued-against: HEAD@main on 2026-10-13 (17259fcb plus Phases 3 and 5)
+last-trued: 2026-10-14
+trued-against: HEAD@main (6562c7be) on 2026-10-14
 owner: run progress across the pipeline, the report server, the SPA and the Mac app
 mockup: docs/mockups/progressive-lenses-replay.html
 ---
 
 ## Changelog
 
+- _2026-10-14_ — trued up (cross-doc pass): §1 re-tensed as the problem that was;
+  §2's lens-rail, thumbnail, progress-text and split-flap decisions point at what was
+  built or superseded; §3 says which overlay fields are set and when `data_version`
+  moves; phase notes point forward where a later phase changed them (scene colours,
+  stage timings, `LensReadiness`, the shoal rule); stale line anchors dropped; the
+  hover thumbnail's `frames_key`, its share of the deferred strip job, the
+  transcription-quality block and the diagnostics-only Screens tab recorded; §7 gains
+  an index of what is still open. Also logs, late, the 13 Oct doc commits this
+  changelog missed: the Project lens waits for the dashboard redesign (§7 item 2),
+  local-model overlap decided serial and post-beta (Phase 3), the strip job takes the
+  hover frames and notches are parked (§2). Anchors: `server/lens_readiness.py`
+  (`Progress`), `server/progressive.py` (`mark_ended`, `follow`),
+  `DetailPaneKind.swift`, `LensAvailability.swift`, `utils/tapestryMerge.ts`,
+  `server/scene_strips.py`, `server/screen_text_job.py`.
 - _2026-10-13, transcript_ — §5.8: an open transcript follows the run, keeping the
   reader's place. The design had no rule for the transcript page during a run.
 - _2026-10-13, latest_ — §7 item 18 accepted by the owner (a Mac Re-analyse is a
@@ -43,12 +57,12 @@ mockup: docs/mockups/progressive-lenses-replay.html
 
 ## 1. What and why
 
-Today a run shows nothing until it ends. Serve intercepts every `/report/*` route
-with the status page until a terminus event arrives (`server/status_page.py`,
-`page_for`), the database is filled once, on `run_completed`
-(`server/app.py`, `_on_run_completed`), and the Mac shows the shoal for the whole
-run (`DetailPaneKind.resolve`, `.shoal`). On an 8-hour corpus that is 51 minutes of
-nothing.
+Before this work (12 Oct 2026) a run showed nothing until it ended. Serve
+intercepted every `/report/*` route with the status page until a terminus event
+arrived (`server/status_page.py`, `page_for`), the database was filled once, on
+`run_completed` (`server/app.py`, `_on_run_completed`), and the Mac showed the shoal
+for the whole run (`DetailPaneKind.resolve`, `.shoal`). On an 8-hour corpus that was
+51 minutes of nothing. (§4 records what each phase changed.)
 
 Every transcript is finished long before that. Whisper runs one session at a time,
 and session 1 is done in under two minutes; it then waits for every other session
@@ -57,7 +71,8 @@ then for the whole analysis, because the SPA cannot mount without a finished run
 
 **The single highest-value outcome:** the researcher reads session 1, for five or
 ten minutes, while the rest are processed. The Sessions lens is usable from the
-first second, each row opens as soon as its transcript is readable, and the other
+first second _(as built, from the first readable session — 1:45 on FOSSDA; until then
+the status page and the Mac's shoal stay, see Phase 0 step 5 and Phase 1)_, each row opens as soon as its transcript is readable, and the other
 lenses light when they have something true to show.
 
 ### 1.1 Measured
@@ -108,7 +123,10 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
 - **Codebooks is disabled during the run** in v1 (expected to be browsable at all
   times later; too big for this brief).
 - The flocking (shoal) shows only when nothing at all is selectable, which with
-  Sessions available at ingest is the first second or so.
+  Sessions available at ingest is the first second or so. _As built the rule is
+  `sessionsReadable == 0` (`DetailPaneKind.swift`): the shoal stays until the first
+  session is readable, because the status page stays until then too
+  (`status_page.py`, `sessions_imported`)._
 
 **Sessions grid: three row states**
 
@@ -131,13 +149,18 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
   back.
 - **Thumbnails:** a very subtle placeholder (the empty `.bn-video-thumb` box) only
   for files the probe confirms are video, then the frame (0.14 s per grab, measured
-  on a 1.25 GB file; all ten FOSSDA frames in about 1.5 s after ingest).
+  on a 1.25 GB file; all ten FOSSDA frames in about 1.5 s after ingest). _Not built:
+  thumbnails still come at render, and a waiting row shows no placeholder (Phase 1
+  note); §7 item 3 is the open frame question._
 
 **Progress text**
 - Only in the window subtitle and the project's status line, from the shipped
   strings (`desktop.chrome.pipeline.stage.*` + `sessionsCount`), **static** — a
   count is a real fraction, so the motion spec (`design-motion.md` §4.7.1) makes it
-  static text. No new in-progress messages.
+  static text. No new in-progress messages. _Superseded 13 Oct 2026 by the owner's
+  Phase 5 call: one new string, the readable count
+  (`desktop.chrome.pipeline.sessionsReadable_*`, `RunProgressSubtitle.swift`), on the
+  same two surfaces._
 
 **Quotes**
 - Grouped **by session** until sections and themes exist. Then a permanent choice
@@ -149,7 +172,8 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
 **Counts**
 - A split-flap on pipeline increments of counts, coalescing bursts (one move to the
   latest value when updates land inside the window). Only pipeline increments, never
-  a researcher's own edit.
+  a researcher's own edit. _Superseded 13 Oct 2026: no split-flap; counts ride the
+  sidebar status line and the window subtitle (§7 item 2, Phase 5)._
 
 **Session tapestry**
 - The disclosure appears once a row is readable, and the tapestry arrives in
@@ -167,6 +191,11 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
   route says `strips_pending` and the grid polls it (§7 item 6 on whether to allow
   the job alongside Whisper). Record: `experiments/session-tapestry/README.md`
   § Scene stripes.
+- **Transcription diagnostics** (diagnostics preference only, 13 Oct 2026,
+  `10430d7f`): each recording's transcription-quality record is written as Whisper
+  finishes it (`_gather_all_segments`, `transcription_quality.write_record`), and the
+  block under each timeline is fetched with the grid. Not a layer the design planned;
+  noted so a reader knows it can appear mid-run.
 - **Option-click** on a disclosure opens or closes every *readable* row. A row that
   becomes readable later arrives closed.
 - **Scale: no animated zoom.** One shared scale, fixed at ingest from every
@@ -198,7 +227,7 @@ reasons not to:
 
 - **Every reader of the log treats a line that is not `run_started` or
   `run_progress` as the run's terminus.** `run_condition.reduce_lines` assigns it to
-  `run.terminus` (`run_condition.py:209`), `events.tail_run_state` does the same, and
+  `run.terminus` (`run_condition.py`), `events.tail_run_state` does the same, and
   Swift's `EventLogReader` takes the newest non-`run_progress` line as the lifecycle
   event. A `session_readable` line would make a running analysis read as ended, on
   both sides.
@@ -218,7 +247,10 @@ So:
    layering (§2.1), facts only one host knows are overlays, beside `importing`.
    Per-session readiness is one: `progress: {readable, quoted, quote_failed, joined}`,
    computed from the manifest by a pure function with its own tests. The reducer is
-   unchanged.
+   unchanged. _As built (`server/lens_readiness.py`, `Progress`): `follow` sets
+   `readable` and `quoted`, and `mark_ended` sets `ended` (§5.7). `quote_failed`,
+   `joined` and `discussion_done` are declared and never set, so the lenses that read
+   them wait for the overlay to lift at the whole import (§3.3)._
 
 If a future change does add event types to the log, the three readers must first move
 from "anything but progress is lifecycle" to an allowlist of lifecycle types, with a
@@ -231,7 +263,9 @@ fixture case (`session-events-are-not-lifecycle`).
 - `lenses: {sessions, quotes, signals, project, codebook, discussion}`: booleans,
   derived (§3.3).
 - `data_version`: a counter bumped after each per-session import. **This is the SPA's
-  refresh key during a run.** `/last-run` stays as it is: it is pinned "do not extend",
+  refresh key during a run.** _As built it also moves when a run ends without a whole
+  report (`progressive.mark_ended`) and when a restored stash lifts the overlay
+  (§5.7); not at a run's whole import, where `/last-run` moves._ `/last-run` stays as it is: it is pinned "do not extend",
   the SPA refetches only when its `run_id` changes (`LastRunStore.ts`), and every change
   announces "Pipeline completed".
 
@@ -241,10 +275,14 @@ fixture case (`session-events-are-not-lifecycle`).
 |---|---|
 | Sessions | at ingest (sessions known) |
 | Quotes | `quoted` holds a session with quotes |
-| Signals | `joined` |
+| Signals | `joined` — _never set mid-run as built: waits for the overlay to lift_ |
 | Project | **open** (§7) |
 | Codebooks | run ended (v1) |
-| Discussion | its own stage done (not in either measured run) |
+| Discussion | its own stage done (not in either measured run) — _as built, `discussion_done` is never set: waits for the overlay to lift_ |
+
+_Not a lens here:_ the diagnostics-only **Screens** tab (`NavBar.tsx`, 13 Oct 2026)
+is not in `LENSES`, so it is never withheld during a run; its screen-text job defers
+for the whole run like the strip job (`server/screen_text_job.py`).
 
 ## 4. Implementation, by phase
 
@@ -281,7 +319,9 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 > - **`data_version` moves only on a per-session import, never at run end.** The
 >   first build bumped it after every import, so at run end `/last-run` and
 >   `data_version` both moved and every lens refetched twice (review). With no
->   per-session import until Phase 1, nothing moves it today.
+>   per-session import until Phase 1, nothing moves it today. _(Since 13 Oct it
+>   also moves when a run ends without a report, or a restored stash lifts the
+>   overlay: §3.2, §5.7.)_
 > - **A visible side effect of step 1:** selecting a never-analysed project now
 >   creates an empty `bristlenose-output/` in the interview folder, where the old
 >   (forking) behaviour left a hidden `.bristlenose/`. Nothing misreads it (the
@@ -295,7 +335,7 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 
 1. **Fix the project-row fork first.** A serve started before `bristlenose-output/`
    exists stores `output_dir == input_dir`; the run then creates the output dir,
-   `import_project` matches rows on `(input_dir, output_dir)` (`importer.py:246-264`),
+   `import_project` matches rows on `(input_dir, output_dir)` (`importer.py`, `import_project`; fixed by `3f1bd013`),
    creates row 2, and the SPA, hardcoded to project 1, reads an empty row
    (`server/CLAUDE.md`, measured 12 Oct 2026; the fix is in `TODO.md`, 12 Oct). A first
    analysis under a live Mac serve is exactly Phase 1's scenario. Add
@@ -311,7 +351,7 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
    once.
 4. **No cold reload at the end of the run.** *(Moved to Phase 1, narrowed to first
    analyses: see the note above.)* `scheduleReportReloadOnCompletion`
-   (`ContentView.swift:3062`) reloads the report on analysing → settled. With the SPA
+   (`ContentView.swift`) reloads the report on analysing → settled. With the SPA
    mounted from the first second, that would remount it under someone reading session 1.
    Gate it on `documentState != .spa`; the `data_version` refetch replaces it.
 5. **`page_for` gets a new server fact**, `sessions_imported` (it has only `importing` and
@@ -349,7 +389,9 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 >   `ingest-facts.json` records `has_video` by extension, not by the probed stream,
 >   and the waiting row shows no thumbnail placeholder. Timing: the chain's wall
 >   time is moved from transcription to speakers in the CLI lines and the Welford
->   actuals.
+>   actuals. _(Both changed later: Phase 4 computes scene colours per session in the
+>   chain, and Phase 3 charges transcription only the time the chain held it up,
+>   `_transcription_held`.)_
 > - **Server:** `server/progressive.py` follows the manifest from the watcher's
 >   `on_change`; one session per transaction, a session that will not import is
 >   said once at WARNING and left to the whole import; `sessions_imported` comes
@@ -389,9 +431,9 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
    at the 60 s fallback frame (§7: whether to swap in the transcript-chosen frame at
    readable). Today `extract_thumbnails` runs at render.
 5. **Scene colours per session** after its turns exist (`utils/scene_colour.py`,
-   ~1.5 s per hour of video). Today computed just before render.
+   ~1.5 s per hour of video). Today computed just before render. _(Built in Phase 4.)_
 6. **Manifest, per session.** Today `write_manifest` runs at stage boundaries,
-   `session_segments.json` is written once after all sessions (`pipeline.py:1620`), and
+   `session_segments.json` is written once after all sessions (`pipeline.py`; made incremental by Phase 1), and
    merge and PII have no per-session records. Write the manifest after each session;
    write `session_segments.json` incrementally; add per-session records for merge and
    PII. Failures as `FAILED` (§3 principle 2). Then resume and progressive agree.
@@ -435,8 +477,8 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 17. The web nav's lens tabs follow `lenses` from the condition endpoint.
 
 **Mac**
-18. `DetailPaneKind.resolve`: `.shoal` only while no lens is ready; then `.report`.
-19. `LensAvailability.derive` becomes per lens, reading `lenses` from the bridge (Phase 0 step 3). The rail's rows
+18. `DetailPaneKind.resolve`: `.shoal` only while no lens is ready; then `.report`. _As built: `.shoal` while `sessionsReadable == 0`._
+19. `LensAvailability.derive` becomes per lens, reading `lenses` from the bridge (Phase 0 step 3). _As built: a separate `LensReadiness` filter beneath the unchanged Bool `LensAvailability` (`LensAvailability.swift`), fed by the `lens-availability` bridge message._ The rail's rows
     (`LensRail.swift`, `LensItem.swift`) take the disabled state per lens; ⌘1–⌘5 in
     the View menu follow the same derivation (it is already the single source for
     them).
@@ -453,7 +495,7 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
   one quote failure, joined, cancelled with three readable (they stay readable).
 - `run_progress` per session does not change the condition's `latest` (it is already
   skipped by every reader; pin it).
-- `DetailPaneKindTests`, `LensAvailabilityTests`: shoal → report at the first
+- `DetailPaneKindTests`, `LensAvailabilityTests` (the per-lens table is in `LensReadinessTests`): shoal → report at the first
   readable session; per-lens truth table.
 - vitest: the three row states, by markup (`data-session`, `aria-disabled`, the
   shimmer class on exactly one element).
@@ -649,12 +691,13 @@ already anticipates. Independent of the UX; can land before or after phase 2.
 
 ### Phase 4 — Session tapestry in layers
 
-1. `toggleTapestry(sid, all)` (`SessionsTable.tsx:607`): the open-all set is the
+1. `toggleTapestry(sid, all)` (`SessionsTable.tsx`): the open-all set is the
    readable sessions, not every session.
 2. The tapestry route (`server/routes/tapestry.py`) returns what exists. Its shape
    already allows a missing layer: `colour` null, `strip` null, `sections` empty, a
    quote's `section` and `theme` null; `strips_pending` says the strip job is still
-   running. No schema change. The component is pinned with `colour` null and `strip`
+   running. No schema change. _(13 Oct: the hover thumbnail added `frames_key` per
+   session, `4b1316c1`, and the merge treats it as a fifth layer, `tapestryMerge.ts`.)_ The component is pinned with `colour` null and `strip`
    null (`SessionTapestry.test.tsx`, and the route without either file in
    `test_serve_tapestry.py`); empty `sections`, empty `quotes` and a quote with both
    `section` and `theme` null are still untried in either test file.
@@ -707,7 +750,7 @@ already anticipates. Independent of the UX; can land before or after phase 2.
 
 #### 4.6 The opening scale
 
-Today: `fitScale(longest, width) = clamp(longest / (width − 96), 1, 4)` s/px, from
+Before Phase 4: `fitScale(longest, width) = clamp(longest / (width − 96), 1, 4)` s/px, from
 the longest *loaded* session, so an open timeline shrinks when a longer one arrives
 (FOSSDA at 1280 px: s1's timeline goes from 1000 to 691 px when s2 arrives). The
 new rule, fixed at ingest so it never moves:
@@ -803,8 +846,8 @@ manifest only after it. The server's three locks on the same door are in §5.7.
 ### 5.5 The chat lens and MCP
 
 Both ground in `server/grounding.py`. Before `joined`, an answer must state coverage
-("based on 6 of 10 sessions"), in `INVARIANTS`. Not in phase 1 (neither surface is
-usable before the run ends today); required before either is reachable mid-run.
+("based on 6 of 10 sessions"), in `INVARIANTS`. Not in phase 1 (neither surface was
+usable before the run ended then); required before either is reachable mid-run.
 Built 13 Oct 2026, once Phase 2 made quotes reachable mid-run (§5.7).
 
 ### 5.6 The HTML export
@@ -918,6 +961,9 @@ transcript stayed on what it first read.
 
 ## 7. Open
 
+_Index (14 Oct 2026): still open — 3, 4, 5, 6, 7, 8, 10, 13, 14. Built provisionally,
+awaiting a call — 1, 9, 12, 15, 16. Decided — 2 (counts), 18. Built — 11, 17, 19._
+
 1. **Row treatment A or B.** A: rows that cannot open take `--bn-colour-muted` (AA in
    both palettes). B: normal text. Recommendation A. Caveat: in Edo light, muted
    `#4a698a` and accent `#0f5c9e` are close in hue (1.21:1), so A's waiting rows can
@@ -941,7 +987,10 @@ transcript stayed on what it first read.
    project's latest run ends (`SceneStripJob.start` and the between-sessions check in
    `server/scene_strips.py`), which under progressive means a readable row waits the
    whole run for its strip — 51 minutes on FOSSDA. The decode is about 8 s per hour of
-   video; the cost of allowing it alongside Whisper is CPU, not correctness. Either
+   video; the cost of allowing it alongside Whisper is CPU, not correctness. Since
+   13 Oct the same deferred pass also takes the hover thumbnail's frames
+   (`utils/turn_frames.py`, `server/scene_strips.py`), so a readable row waits the run
+   for those too, and whichever is decided applies to both. Either
    "strips arrive at the barrier" or "the job runs per readable session" needs
    deciding with the §3 state model.
 7. **Transcription failure** as a fourth row state, and the failed-session message

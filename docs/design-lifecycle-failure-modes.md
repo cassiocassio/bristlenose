@@ -1,11 +1,12 @@
 ---
 status: current
-last-trued: 2026-10-13
-trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
+last-trued: 2026-10-14
+trued-against: HEAD@main (6562c7be) on 2026-10-14
 ---
 
 ## Changelog
 
+- _2026-10-14_ — trued up against progressive lenses (12–13 Oct): a proof-scope caveat (no scenario delivers a session mid-run, and every Mac Re-analyse now does); row 41 indexes the progressive lifecycle fixes by pointer; rows 42–43 open (curation made during a failed progressive Re-analyse; the progressive doc's known gaps); score recomputed. Anchors: `tests/test_progressive_lenses.py`, `tests/test_progressive_quotes.py`, `utils/output_backup.py`, commit "progressive lenses review: nothing unredacted is readable mid-run, and a run that ends without a report keeps what it delivered".
 - _2026-10-13_ — trued up: rows 19–25 anchored to the tests and commits that closed them; rows 28–29 reworded for the live-rename fork measured 13 Oct; six Open rows (35–40) from the Mac-half review; score recomputed. Anchors: `eb8509e1`, TODO.md 13 Oct entry, `desktop/CLAUDE.md` renamed-folder entry.
 
 # Lifecycle failure modes: what is designed out, what is proven, what is left
@@ -56,6 +57,13 @@ guards rather than proof. Separately, each fix was reverted on its own against
 the full set of lifecycle tests; four guards survived that pass and each now has
 a test proved red on its mutant (`a4140b48`, `75a56841`).
 
+**Proof scope since 13 Oct 2026.** No scenario in the table writes a manifest, so
+none delivers a session mid-run. Since progressive lenses every Mac **Re-analyse…**
+is a first analysis that does ([design-progressive-lenses.md](design-progressive-lenses.md) §7 item 18). Rows 2, 3 and 26 are therefore
+proven for a re-analysis that delivers nothing before it ends; the delivering case
+is covered by the progressive tests row 41 names, and the gap between the two is
+row 42.
+
 ## The register
 
 ### Designed out and proven
@@ -88,6 +96,7 @@ a test proved red on its mutant (`a4140b48`, `75a56841`).
 | 24 | A folder moved to the Bin was followed and served from there | `ProjectIndexPathChangedTests` (`eb8509e1`) | review; mutation-proved |
 | 25 | A `projects.json` that failed to decode was overwritten with an empty list | `ProjectIndexDamagedFileTests` | red-first — the set-aside is silent, row 36 |
 | 26 | A failed re-analysis lost the researcher's curation under a live server | scenario `reanalyse-fails-curation-survives` | held before; regression guard |
+| 41 | Progressive first analysis (13 Oct 2026): a serve started or restarted mid-run imported unredacted rows or forgot what it had; a run that ended without a report showed "processing" for ever; a restored stash left the report holding a partial delivery; the previous run's manifest read as this run's | `test_progressive_lenses.py`: `…serve_started_during_a_first_analysis_imports_nothing_at_startup`, `…serve_restarted_mid_run_shows_what_it_already_imported`, `…stopped_first_analysis_keeps_what_it_delivered_as_it_was`, `…whole_import_that_fails_ends_the_overlay_without_lifting_it`, `…report_put_back_under_the_partial_delivery_is_refetched`, `…event_timestamp_in_z_form_compares`; `test_progressive_quotes.py`: `…previous_runs_manifest_is_not_this_runs`, `…serve_restarted_mid_run_does_not_make_the_run_new_to_itself`. Detail: [design-progressive-lenses.md](design-progressive-lenses.md) §5.7 | review of 17259fcb; mutation-proved |
 
 ### Open, engineered (strict xfail in the scenario table)
 
@@ -112,10 +121,13 @@ a test proved red on its mutant (`a4140b48`, `75a56841`).
 | 38 | A serve restart on a path change while the researcher is mid-edit in the report | rare and correct until shown otherwise — open question 12 Oct 2026 |
 | 39 | `ProjectIndex.resolveBookmark` starts a security scope it never stops, at launch and on volume mount | pre-existing; the per-activation multiplier was removed in `eb8509e1`; a leaked extension per project per event, bounded by relaunch |
 | 40 | A cross-volume rename or move: whether the security-scoped extension follows | a same-volume rename is measured to follow (13 Oct 2026); cross-volume is not, and Finder does it as copy + delete |
+| 42 | Curation made **during** a progressive Re-analyse that then fails is lost: the restore sets the failed tree, its database included, aside to `.bristlenose-output-failed`, and the next run's stash clears it (`utils/output_backup.py`) | inferred from code, not measured; and a product call before a fix — carry it into the restored report, or accept the loss (open question 14 Oct 2026). Row 26 covers curation made *before* the run only |
+| 43 | The progressive doc's known gaps: `data_version` restarts at 0 with the server (one refetch skipped); a resumed run imports at stage 6 while the Mac's shoal covers it; the chain can count a session the server refused, and the shoal then drops to an empty status page; a failed Re-analyse's restore reaches the server but not the Mac | indexed by pointer, not copied: [design-progressive-lenses.md](design-progressive-lenses.md) §5.7 "Known, not fixed" and §7 items 16 and 18 |
 
 **Checked and not a failure mode:** only the two **Re-analyse…** call sites pass
 `clean: true` (`ContentView.swift`, the confirmation sheet and the no-curation
-path); every other start, Retry included, resumes.
+path); every other start, Retry included, resumes. Since 13 Oct 2026 those two
+sites start a progressive first analysis (row 42's context).
 
 **Proven on macOS and Linux only: rows 3, 4, 6 and 26, and the scenario
 `reanalyse-succeeds-live-serve`.** Each scenario moves
@@ -137,11 +149,11 @@ folder instead.
 
 ## The score
 
-**By count:** of 40 failure modes, 26 are designed out and proven (25 fixed on
-12 Oct 2026, one that already held and is now guarded) — **65%**. Fourteen are
-open: four engineered, ten not. _(13 Oct 2026: rows 35–40 added from the review
-of the Mac half and its measurement; the proven count did not move, the
-denominator did.)_
+**By count:** of 43 failure modes, 27 are designed out and proven (25 fixed on
+12 Oct 2026, one that already held and is now guarded, and row 41's progressive
+fixes of 13 Oct counted as one) — **63%**. Sixteen are open: four engineered,
+twelve not. _(13 Oct 2026: rows 35–40 added from the review of the Mac half; 14 Oct:
+rows 41–43 from the progressive-lenses truing. The denominator moved both times.)_
 
 **By how often a researcher would meet them**, which is the number that
 matters, it is higher. Rows 1–4 sat on the path every Mac user takes: a first

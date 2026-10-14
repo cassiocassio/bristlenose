@@ -1,7 +1,7 @@
 ---
 status: mixed
-last-trued: 2026-08-21
-trued-against: HEAD@main on 2026-08-21 (faaab2a4)
+last-trued: 2026-10-14
+trued-against: HEAD@main (6562c7be) on 2026-10-14
 split-candidate: true
 ---
 
@@ -21,7 +21,8 @@ _The §9a spike is built and accepted (30 Jul 2026) — see §9a-results. Phase 
 > [`design-mcp-extension.md`](design-mcp-extension.md).
 
 > **Truing status:** Partial — §1–§5, §7 and §9a are current (trued
-> 2026-08-21). §4's tool table, §6a's parked warm-pool question and §8's
+> 2026-08-21), with §3's invariant list, §4's mid-run behaviour and §9a's Q2
+> amended on 14 Oct 2026 for progressive lenses (see changelog). §4's tool table, §6a's parked warm-pool question and §8's
 > build gate carry inline banners: each describes something that either
 > shipped differently or was never built. See changelog. **§Positioning
 > offering 1(b), the in-app chat lens, is parked as of 4 Oct 2026: MCP is the
@@ -29,6 +30,13 @@ _The §9a spike is built and accepted (30 Jul 2026) — see §9a-results. Phase 
 
 ## Changelog
 
+- _14 Oct 2026_ — trued up (progressive lenses): the tools answer during a first
+  analysis, and every result then carries a `coverage` dict; §4 says so and gives
+  its shape. §3's invariant list points at `grounding.INVARIANTS` (seven now, sent
+  whole by `build_instructions`). §9a Q2 notes that `coverage` is the one thing
+  that moved into tool responses. Anchors: `server/mcp_server.py`
+  (`build_instructions`, the `coverage` attachments), `server/grounding.py`
+  (`delivery_coverage`), `tests/test_mcp_server.py`, [design-progressive-lenses.md](design-progressive-lenses.md) §5.5, §5.7.
 - _4 Oct 2026_ — §Positioning: offering 1(b) parked — for the foreseeable
   future MCP is the chat lens; no in-app question box until Bristlenose adds
   more value than "Claude, inside" (owner's call). Pointers added in §6b, §9a,
@@ -404,6 +412,11 @@ on the fly.
 
 ### Invariants belong in the server `instructions`
 
+_As built, `build_instructions()` (`mcp_server.py`) sends every statement in
+`grounding.INVARIANTS` — seven on 14 Oct 2026, the three below plus moderator and
+observer numbering, denominators, the honesty rule, and the coverage note. That
+tuple is the list; the three below are the reasoning for the first three._
+
 Without these the assistant will get the arithmetic wrong:
 
 - **Quote exclusivity** — every quote appears in exactly one report section
@@ -594,6 +607,13 @@ as design; the split below is still the intended one:
   user-authored, with `preamble` and full per-tag boundaries (§5a)
 - `bristlenose://people` — participants and roles, per project
 - `bristlenose://projects` — the inventory in scope, with session counts
+
+**Answering mid-run (13 Oct 2026).** The tools answer during a first analysis,
+from what has been delivered. While the analysis is partial every result carries
+`coverage: {analysis: "running" | "stopped", sessions_readable, sessions_total,
+sessions_with_quotes}` (`grounding.delivery_coverage`), and the coverage
+invariant tells the model to say how much the answer covers. Once the whole
+report is imported the field is absent. [design-progressive-lenses.md](design-progressive-lenses.md) §5.5, §5.7.
 
 **Tools** (parameterised, potentially large — all summarise-first, all with hard
 limits):
@@ -1226,7 +1246,9 @@ accidentally correct. Needs a corpus where quotes carry both. Recorded as
 untested, not passed.
 
 **Consequence: the invariants stay in `instructions`; nothing moves into tool
-responses.** The doc's predicted fallback was not needed.
+responses.** The doc's predicted fallback was not needed. _(Still true of the
+invariants. Since 13 Oct 2026 one fact does ride in tool responses: the `coverage`
+dict while a first analysis is partial, §4.)_
 
 **Caveat on method:** the agent received payloads in one shot rather than
 choosing tool calls live, and it was a Sonnet-class model. Instruction

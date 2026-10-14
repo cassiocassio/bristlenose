@@ -1,3 +1,13 @@
+---
+status: current
+last-trued: 2026-10-14
+trued-against: HEAD@main (6562c7be) on 2026-10-14
+---
+
+## Changelog
+
+- _2026-10-14_ — trued up: per-session chaining (S2) shipped 13 Oct 2026; the FOSSDA after-run is owed. Anchors: [`design-progressive-lenses.md`](design-progressive-lenses.md) Phase 3, commit "progressive lenses phases 3 and 5: quotes found while the next session transcribes…".
+
 # Performance Monitoring — Index
 
 How we measure performance in Bristlenose, what each measurement caught, and where to look next. This doc is the top of the tree; every perf sub-doc is reachable from here.
@@ -57,7 +67,7 @@ From FOSSDA baseline + cross-trial analysis ([scale-and-tokens](design-perf-scal
 From the FOSSDA baseline ([results](../trial-runs/fossda-opensource/perf-baselines/pipeline-baseline.md)):
 
 - 10 interviews / 490 min of audio → 36m 48s wall-clock, $3.11.
-- Transcribe and Quote Extraction each take ~17 min — those are the two stages that matter for S2 optimisation.
+- Transcribe and Quote Extraction each take ~17 min — those are the two stages that matter for S2 optimisation. _(13 Oct 2026: S2's chaining shipped — on a first analysis with a cloud provider, quote extraction now overlaps transcription; [`design-progressive-lenses.md`](design-progressive-lenses.md) Phase 3.)_
 - Peak RSS 3.27 GB; peak macOS memory footprint 24.88 GB (dominated by MLX model weights).
 - Temp WAVs (944 MB) are **not cleaned up at end of run** — known optimisation item on [`design-performance.md`](design-performance.md).
 
@@ -89,7 +99,7 @@ Before the dedicated `perf-gate` job, the spec ran inside the `e2e` job but fail
 
 - Stress findings → confirm regression gate thresholds (no recalibration needed as of Apr 2026).
 - Scale and tokens → informs LLM-layer work (per-model max-tokens clamp; quote atomicity).
-- FOSSDA before → compare against after S2 ships (per-participant chaining, LLM response cache).
+- FOSSDA before → compare against after S2 ships (per-participant chaining, LLM response cache). Chaining shipped 13 Oct 2026; the after-run is owed — see [`design-perf-fossda-baseline.md`](design-perf-fossda-baseline.md) § When to re-run for what to record.
 
 ## Backlog
 

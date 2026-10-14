@@ -214,11 +214,21 @@ def _repo_cache_dir(repo_id: str) -> Path:
 
 
 def _has_partial_blobs(repo_id: str) -> bool:
-    """True if HF Hub left ``.incomplete`` blob files from an interrupted download."""
+    """True if HF Hub left ``.incomplete`` blob files from an interrupted download.
+
+    A partial whose blob has since finished does not count. With hf_xet a
+    re-run does not pick up the old partial: it downloads into a new
+    ``<sha>.<random>.incomplete``, finishes as ``<sha>``, and leaves the first
+    one behind for good (measured 14 Oct 2026, huggingface_hub 1.33). Counting
+    it put the download banner on every later run.
+    """
     blobs = _repo_cache_dir(repo_id) / "blobs"
     if not blobs.exists():
         return False
-    return any(blobs.glob("*.incomplete"))
+    return any(
+        not (blobs / partial.name.split(".", 1)[0]).exists()
+        for partial in blobs.glob("*.incomplete")
+    )
 
 
 def _heavy_blob_candidates(repo_id: str) -> tuple[str, ...]:

@@ -314,6 +314,36 @@ class TestCacheState:
         with patch.dict(sys.modules, {"huggingface_hub": fake_hf}):
             assert cache_state("openai/whisper-large-v3-turbo") == "partial"
 
+    def test_a_leftover_partial_of_a_finished_blob_is_not_partial(self, monkeypatch, tmp_path):
+        """Measured 14 Oct 2026 with hf_xet: Ctrl+C left ``<sha>.dba8ab64.incomplete``,
+        the next run downloaded afresh into ``<sha>.891eb77f.incomplete`` and
+        finished as ``<sha>``, and the first partial stayed behind for good. Every
+        later run then printed the download banner and "Resuming download" for a
+        model that was all there."""
+        monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
+        blobs = tmp_path / "models--mlx-community--whisper-large-v3-turbo" / "blobs"
+        blobs.mkdir(parents=True)
+        (blobs / "951ed3fc").write_text("weights", encoding="utf-8")
+        (blobs / "951ed3fc.dba8ab64.incomplete").write_text("partial", encoding="utf-8")
+        fake_hf = MagicMock()
+        fake_hf.try_to_load_from_cache.side_effect = lambda repo_id, filename: (
+            "/cache/weights.safetensors" if filename == "weights.safetensors" else None
+        )
+        with patch.dict(sys.modules, {"huggingface_hub": fake_hf}):
+            assert cache_state("mlx-community/whisper-large-v3-turbo") == "cached"
+
+    def test_a_partial_of_an_unfinished_blob_still_counts(self, monkeypatch, tmp_path):
+        """The heavy file is there but another blob is mid-download: not done."""
+        monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
+        blobs = tmp_path / "models--mlx-community--whisper-large-v3-turbo" / "blobs"
+        blobs.mkdir(parents=True)
+        (blobs / "951ed3fc").write_text("weights", encoding="utf-8")
+        (blobs / "6ac9a52a.incomplete").write_text("partial", encoding="utf-8")
+        fake_hf = MagicMock()
+        fake_hf.try_to_load_from_cache.return_value = "/cache/weights.safetensors"
+        with patch.dict(sys.modules, {"huggingface_hub": fake_hf}):
+            assert cache_state("mlx-community/whisper-large-v3-turbo") == "partial"
+
     def test_missing_when_neither(self, monkeypatch, tmp_path):
         monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
         fake_hf = MagicMock()

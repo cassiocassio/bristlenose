@@ -86,12 +86,14 @@ when a language isn't handled explicitly — correct for it/es/de, and ja/ko/zh 
   `check-locales.py`'s `flatten()` drops `_comment_*` so a note lives in `en` alone — but
   there are currently **no instances in the tree**: the last one, `_comment_temperatureLabel`,
   went with the temperature slider it annotated.
-- **`preflight.json` is English-only in alpha.** The Python CLI preflight surface
-  (`bristlenose/locales/preflight.json`) has no CLDR-plural support yet and is English-only
-  for alpha; every locale's `preflight.json` is a byte-identical mirror of `en`. **Decision
-  owed:** add a `_comment_` marker to each so audits stop re-flagging it — *unless* these
-  strings surface in the desktop/GUI first-run flow, in which case they need translating
-  (only de's reviewer judged this a genuine GUI-facing gap).
+- **`preflight` is English-only — decided 14 Oct 2026.** The note that stood here
+  ("English-only in alpha", every locale a mirror of `en`, decision owed) had already gone
+  stale: the namespace was translated into 20 locales in Aug 2026. The decision is now
+  taken the other way, as a property of the surface rather than a stage: the strings are
+  terminal chrome whose text also becomes `Cause.message` and Mac-classified stdout, so they
+  are English on every channel. Only `en/preflight.json` exists; `ENGLISH_ONLY_NAMESPACES`
+  in `bristlenose/i18n.py` enforces it and `check-locales.py` refuses a copy
+  (`docs/design-i18n.md` §"Which surfaces are targets").
 
 ---
 

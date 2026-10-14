@@ -279,6 +279,8 @@ Bristlenose's posture matches HF CLI / Ollama / brew, not apt. User-scope, named
 
 **Why Ctrl+C is genuinely safe** (and worth the banner reassurance): HF Hub's `snapshot_download` writes `.incomplete` files during download. On Ctrl+C, the partial files stay in cache. Next invocation detects them and resumes from the byte where the previous run stopped — no corruption, no manual cleanup, no `.tmp` hunt. Same for pip wheels via PEP 658 metadata. The banner says this explicitly so a user who wants to interrupt knows it's safe.
 
+> **Measured 14 Oct 2026: safe, but it does not resume.** huggingface_hub 1.x downloads through hf_xet, a hard dependency on every architecture we ship. A 1.6 GB `large-v3-turbo` fetch stopped at 577 MB re-downloaded the full 1.60 GB on the next run, into a fresh `<sha>.<random>.incomplete`, and left the first partial behind permanently. Nothing was corrupted. The banner now says "the next run starts the download again", and the partial state's verb is "Restarting download". Two more findings from the same run: the **first** Ctrl+C was ignored for ~15 s (hf_xet installs its own SIGINT handler; a second one stopped it), and the leftover partial made `cache_state()` report `partial` on every later run, so the banner appeared for a complete model — fixed in `_has_partial_blobs`. The orphaned partial still costs its disk space.
+
 **Implementation:**
 
 1. New helper `bristlenose/utils/hf_cache.py:model_is_cached(repo_id) -> bool` using `huggingface_hub.try_to_load_from_cache` (returns sentinel `_CACHED_NO_EXIST` if not found, a path if found, `None` if uncached).
@@ -602,7 +604,7 @@ Detect the cache miss, print one labelled banner ("First-run setup: downloading 
 - **Pros:** zero shim, zero maintenance. HF Hub's stacked-per-file bars are a familiar idiom to anyone who's ever pulled a model. pip's single aggregate bar is the universal Python idiom. We don't fight upstream changes. Code cost drops from "tqdm shim + Progress + non-TTY fork" to "five lines of banner + ✓".
 - **Cons:** we lose pixel-control on those one-off fetches. Style is inconsistent across blockers — HF stacked file bars look nothing like pip's aggregate bar look nothing like Ollama's. Brand voice ("Bristlenose is fetching X") only at the banner edges; the middle is upstream voice.
 
-> **As built (14 Oct 2026):** Option B for Whisper, with HF's bars switched on only around the fetch — they are off process-wide everywhere else (`bristlenose/__init__.py`, and `docs/design-pipeline-resilience.md` §"Progress Bar Dead Ends", which records why this one call is the exception and the two HF behaviours it had to work around). Until then Option B was written but the bars never drew: the env var outranks `enable_progress_bars()`. The banner carries the Ctrl+C line always and the cache-path line above 500 MB (or for an unmeasured repo); the ✓ line follows the closed bars.
+> **As built (14 Oct 2026):** Option B for Whisper, with HF's bars switched on only around the fetch — they are off process-wide everywhere else (`bristlenose/__init__.py`, and `docs/design-pipeline-resilience.md` §"Progress Bar Dead Ends", which records why this one call is the exception and the two HF behaviours it had to work around). Until then Option B was written but the bars never drew: the env var outranks `enable_progress_bars()`. The banner carries the Ctrl+C line always and the cache-path line above 500 MB (or for an unmeasured repo); the ✓ line follows the closed bars. A real interrupted 1.6 GB fetch showed the download does not resume — see §"Why Ctrl+C is genuinely safe".
 
 **Working call (from the prior session):** Option B, because *it's a one-off per machine*. On every run we'd insist on control; once-per-machine the cost/benefit flips. Recording it here so future-Claude doesn't re-open the debate from scratch.
 
@@ -828,6 +830,16 @@ The "i-in-a-blue-circle" affordance familiar from GUIs is doing work that plain 
 
 ## i18n implications
 
+> **14 Oct 2026: English-only, by decision.** The section below planned a
+> translated namespace, and from Aug to Oct 2026 it was translated into 20
+> locales. It is now English on every channel: `ENGLISH_ONLY_NAMESPACES` in
+> `bristlenose/i18n.py` resolves it in English whatever the locale, and
+> `check-locales.py` refuses a non-English copy. Reason and evidence:
+> `docs/design-i18n.md` §"Which surfaces are targets". The "Channel-fork
+> inventory" claim below that none of these strings fire on desktop was also
+> wrong: the Mac runs the sidecar's `run`, which reaches every preflight, with
+> `BRISTLENOSE_LANG` set.
+
 All preflight strings live in the `preflight` namespace under
 `bristlenose/locales/<locale>/preflight.json` and route through
 `bristlenose.i18n.t()`. English is the source of truth; the five other
@@ -836,7 +848,7 @@ existing fallback path until a translator copies and adapts each section.
 
 **Namespace shape** (`bristlenose/locales/en/preflight.json`):
 
-- `whisper.*` — banner intro, reassurance line, verb (`Downloading` / `Resuming download`), fetching template, ready line, `--no-fetch` abort copy
+- `whisper.*` — banner intro, cache-path line (`downloads_to`), Ctrl+C line (`ctrl_c_safe`), verb (`Downloading` / `Restarting download`), fetching template, ready line, `--no-fetch` abort copy
 - `ffmpeg.*` — banner, brew prompt, ready line, abort copy, five install-table rows (one per distro)
 - `api_key.*` — source attribution, four error-class messages (`invalid_key`, `billing_empty`, `model_unavailable`, `rate_limit`), generic fall-through
 - `closing.*` — "No more questions" line with/without estimate

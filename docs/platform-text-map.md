@@ -98,7 +98,7 @@ Text that only appears in terminal output. Never rendered in the web UI or deskt
 | `pipeline.json` | 4 | Pipeline stage display names | 21 locales |
 | `cli.py` help strings | ~30 | Typer `--help` flag descriptions | English only |
 | `bristlenose.1` man page | 517 lines | Full man page | English only |
-| `preflight.json` | 33 | First-run preflight banners, prompts, error recovery (Whisper download, ffmpeg install table, API-key validation, closing line) | 21 locales (en source; machine-seeded locales pending native review). Reachable in a non-English locale via `bristlenose --lang=<code>` — `cli.py:_lang_callback`. de/es/fr/ja/ko carried raw English here until 21 Aug 2026 |
+| `preflight.json` | 34 | First-run preflight banners, prompts, error recovery (Whisper download, ffmpeg install table, API-key validation, closing line) | English only, enforced: `en/preflight.json` alone, resolved in English whatever `--lang` or `BRISTLENOSE_LANG` says (`ENGLISH_ONLY_NAMESPACES`, `bristlenose/i18n.py`). The 20 translations were deleted 14 Oct 2026 — see `docs/design-i18n.md` §"Which surfaces are targets" |
 
 **Settled, not a gap** (corrected 21 Sep 2026): CLI `--help` strings and the man page are English **by design** — terminal chrome and public-facing docs respectively, both English rows in `docs/design-i18n.md` §"Which surfaces are targets". This line previously booked them as "a future task (low priority)", which is the same stage-shaped framing that let three other English-only policies read as temporary. There is no future task here.
 
@@ -142,12 +142,12 @@ Keys where `common.json` or `settings.json` has the CLI version and `desktop.jso
 |---|---|---|---|
 | Shared | 745 | 21 locales (+ HK override) | `t()` |
 | Desktop-only | 638 | 21 locales (+ HK override) | `desktop.json` namespace |
-| CLI-only (translated) | 62 | 21 locales | `cli.json` / `doctor.json` / `pipeline.json` / `preflight.json` |
-| CLI-only (untranslated) | ~30 + man page | English only | Typer help strings / `bristlenose.1` |
+| CLI-only (translated) | 0 | — | `cli` / `doctor` / `pipeline` deleted 22 Sep 2026; `preflight` made English-only 14 Oct 2026 |
+| CLI-only (untranslated) | ~30 + man page + `preflight` 34 | English only | Typer help strings / `bristlenose.1` / `en/preflight.json` |
 | Forked | 4 declared / **1 live** | 21 locales (+ HK override) | `dt()` + `desktop.json` override |
 | CLI-hideable | 1 active | 21 locales | `ct()` |
 
-**Total translated keys: 1,445** across the nine namespaces (measured 21 Aug 2026). Shared = `common` 539 + `settings` 179 + `enums` 11 + `server` 16. CLI-only translated = `cli` 19 + `doctor` 6 + `pipeline` 4 + `preflight` 33.
+**Total translated keys: 1,445** across the nine namespaces (measured 21 Aug 2026). Shared = `common` 539 + `settings` 179 + `enums` 11 + `server` 16. CLI-only translated = `cli` 19 + `doctor` 6 + `pipeline` 4 + `preflight` 33 — all four since made English (`docs/design-i18n.md` §"Which surfaces are targets"), so these 62 are no longer translated.
 
 ---
 

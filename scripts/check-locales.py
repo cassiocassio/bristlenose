@@ -51,6 +51,11 @@ PLACEHOLDER_RE = re.compile(r"\{\{.*?\}\}")
 # its base before English; keep in lockstep with i18next/Python/Swift.
 FALLBACK_BASE = {"zh-Hant-HK": "zh-Hant"}
 
+# Namespaces that are English on every channel and ship as en/<ns>.json alone.
+# Mirrors ENGLISH_ONLY_NAMESPACES in bristlenose/i18n.py (this script runs in CI
+# without the package installed); tests/test_i18n.py asserts they agree.
+ENGLISH_ONLY_NAMESPACES = frozenset({"preflight"})
+
 # Locales whose CLDR `one` category recurs at 21/31/101 (rule n%10==1 ∧ n%100!=11).
 # A count-driven `_one` in these MUST interpolate {{count}} — hardcoding "1" would
 # render "1 …" for count 21. Polish is deliberately NOT here (pl `one` = n==1 only,
@@ -332,6 +337,16 @@ def main() -> int:
         en_path = LOCALES_DIR / SOURCE_LANG / f"{ns}.json"
         with open(en_path, encoding="utf-8") as fh:
             errors.extend(check_divergence_markers(json.load(fh), ns))
+
+        if ns in ENGLISH_ONLY_NAMESPACES:
+            # A copy would never be read: the resolver answers in English.
+            for lang in languages:
+                if (LOCALES_DIR / lang / f"{ns}.json").exists():
+                    errors.append(
+                        f"{lang}/{ns}.json: `{ns}` is English-only "
+                        "(ENGLISH_ONLY_NAMESPACES); delete this file"
+                    )
+            continue
 
         for lang in languages:
             tr_keys = load_locale(lang, ns)

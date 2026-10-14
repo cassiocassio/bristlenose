@@ -63,7 +63,7 @@ from bristlenose.events import (
     new_run_id,
     read_events,
 )
-from bristlenose.i18n import t
+from bristlenose.i18n import t_in
 from bristlenose.llm import telemetry
 from bristlenose.llm.failure_classifier import LLMFailureKind as _LLMFailureKind
 from bristlenose.utils.fs import open_private
@@ -875,7 +875,8 @@ def run_lifecycle(
                     ended_at=ended,
                     cause=Cause(
                         category=CauseCategoryEnum.UNKNOWN,
-                        message=t("server.statusPage.cliExitedWithCode", code=code),
+                        # A forensic record: English whatever the CLI locale.
+                        message=t_in("en", "server.statusPage.cliExitedWithCode", code=code),
                         exit_code=code,
                     ),
                     **_terminus_kwargs(),

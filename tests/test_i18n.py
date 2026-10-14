@@ -6,7 +6,15 @@ import json
 
 import pytest
 
-from bristlenose.i18n import _LOCALE_DIR, SUPPORTED_LOCALES, get_locale, set_locale, t
+from bristlenose.i18n import (
+    _LOCALE_DIR,
+    ENGLISH_ONLY_NAMESPACES,
+    SUPPORTED_LOCALES,
+    get_locale,
+    set_locale,
+    t,
+    t_in,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -83,6 +91,45 @@ class TestTranslation:
         # If kwargs has extra keys, format_map just ignores them
         result = t("server.statusPage.cliExitedWithCode", code="2", extra="unused")
         assert result == "CLI exited with code 2"
+
+
+class TestEnglishOnlyNamespaces:
+    """``preflight`` is terminal chrome, and its text also becomes exception
+    messages that land in ``Cause.message`` and in the stdout the Mac app
+    classifies by English pattern. English whatever ``--lang`` says
+    (docs/design-i18n.md, "Which surfaces are targets")."""
+
+    def test_preflight_is_english_under_another_cli_language(self):
+        set_locale("de")
+        assert t("preflight.whisper.ready") == "Whisper model ready"
+
+    @pytest.mark.parametrize("locale", sorted(SUPPORTED_LOCALES))
+    def test_t_in_answers_english_for_every_locale(self, locale: str):
+        assert t_in(locale, "preflight.whisper.ready") == "Whisper model ready"
+
+    def test_other_namespaces_still_translate(self):
+        assert t_in("de", "enums.speakerRole.participant") != "Participant"
+
+    def test_check_locales_names_the_same_namespaces(self):
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "check_locales", _LOCALE_DIR.parents[1] / "scripts" / "check-locales.py"
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        assert module.ENGLISH_ONLY_NAMESPACES == ENGLISH_ONLY_NAMESPACES
+
+    def test_no_locale_ships_a_copy(self):
+        """A copy would be read by no one and reviewed by no one."""
+        copies = sorted(
+            str(path.relative_to(_LOCALE_DIR))
+            for ns in ENGLISH_ONLY_NAMESPACES
+            for path in _LOCALE_DIR.glob(f"*/{ns}.json")
+            if path.parent.name != "en"
+        )
+        assert copies == []
 
 
 class TestEnumTranslations:

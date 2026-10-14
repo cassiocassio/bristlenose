@@ -80,6 +80,18 @@ def canonical_locale(code: str) -> str:
 #: from this one, so there is a single copy.
 FALLBACK_ONLY_LOCALES: frozenset[str] = frozenset({"zh-Hant-HK"})
 
+#: Namespaces that resolve in English whatever the locale, and ship as
+#: ``en/<ns>.json`` alone. ``preflight`` is terminal chrome (the setup banners
+#: and refusals before a run), and its text also leaves the terminal: it becomes
+#: exception messages that reach ``Cause.message``, a forensic record that is
+#: English on every channel, and stdout that the Mac app classifies by English
+#: pattern (``PipelineRunner.swift``). The Mac runs the sidecar with
+#: ``BRISTLENOSE_LANG`` set, so a translated banner was not hypothetical. The
+#: 22 Sep 2026 sweep removed ``cli``, ``doctor`` and ``pipeline`` for the same
+#: reason and missed this one (docs/design-i18n.md, "Which surfaces are
+#: targets"). ``scripts/check-locales.py`` refuses a non-English copy.
+ENGLISH_ONLY_NAMESPACES: frozenset[str] = frozenset({"preflight"})
+
 _current_locale = "en"
 
 
@@ -183,6 +195,8 @@ def t_in(locale: str, key: str, **kwargs: object) -> str:
         return key  # No namespace separator — return raw key
 
     parts = dotted.split(".")
+    if namespace in ENGLISH_ONLY_NAMESPACES:
+        locale = "en"
 
     # Resolve through the locale's fallback chain: requested → base(s) → en.
     value = None

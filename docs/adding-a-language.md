@@ -168,8 +168,10 @@ bristlenose/locales/<code>/
   settings.json        ~183 keys
   enums.json           ~11 keys
   server.json          ~11 keys
-bristlenose/locales/<code>/preflight.json   ~34 keys (root namespace, not under desktop)
 ```
+
+`preflight` is English-only (`ENGLISH_ONLY_NAMESPACES` in `bristlenose/i18n.py`):
+do **not** create `<code>/preflight.json` — `check-locales.py --strict` refuses one.
 
 Mirror an existing locale (`es/` is a good "average" baseline; `cs/` is a
 good plural reference). Empty values are fine — `check-locales.py` will tell
@@ -412,7 +414,7 @@ verify.
 ## Step 12 — Done criteria
 
 - [ ] Code registered in 3 SUPPORTED_LOCALES sites + `LANGUAGE_NAMES` (English name, not autonym)
-- [ ] Locale dir + 8 namespace files + preflight.json populated
+- [ ] Locale dir + namespace files populated (no `preflight.json` — English-only)
 - [ ] Plural selector case added (if not one/other-shaped) + Swift @Test
 - [ ] Glossary rows added (Apple HIG + Bristlenose QDA)
 - [ ] 3 picker labels updated (native name)
@@ -446,7 +448,7 @@ the dir name, so an underscore dir silently fails to load. Fix once at the
 a separator" — the *plain* one, NOT "…including country code", which would
 rename `cs`→`cs-CZ` and break every existing locale). Set it BEFORE adding the
 languages; if files were already created underscored, delete + re-add. Note
-`preflight` is not a Weblate component — hand-seed it in-branch.
+`preflight` is not a Weblate component, and is not translated at all.
 
 **Parity drift — a seed is a snapshot.** `main` keeps moving; keys added to `en`
 after you branch fall back to `en` in your locale → English in a build that
@@ -469,7 +471,7 @@ Three locales in one night. What the playbook above didn't yet capture:
 
 **Fan-out seeding is fast and reliable.** Per language, spawn **4 parallel translator
 agents** — one each for the big files (`common` ~522 keys, `desktop` ~390, `settings`
-~160) and one for the six small files (`cli/doctor/enums/pipeline/preflight/server`).
+~160) and one for the small files (`enums/server`; `cli`, `doctor`, `pipeline` and `preflight` are English-only).
 Give each agent the exact en path, the exact target path, and one shared brief:
 keep keys byte-identical, preserve every `{{placeholder}}`, don't translate product
 names, literal UTF-8 (no `\u`), the register (see below), and the **plural rule as a

@@ -17,11 +17,12 @@ Cache detection is deliberately filesystem-based:
 - ``try_to_load_from_cache(repo_id, "config.json")`` — canonical "fully cached" probe
 - ``blobs/*.incomplete`` scan — distinguishes "never started" from "partially done"
 
-This is finding 21 in ``docs/private/reviews/cli-just-works.md``: HF Hub's
-``snapshot_download`` already handles resume correctly; we just need to detect
-the in-progress state so the banner says "Resuming download…" instead of
-"Downloading…" (the difference is the difference between "this will take a
-while" and "this might be done in seconds").
+Finding 21 in the cli-just-works review assumed ``snapshot_download`` resumes
+an interrupted download, so the banner said "Resuming download…". Measured 14
+Oct 2026, it does not: huggingface_hub 1.x fetches through hf_xet (a hard
+dependency on every architecture we ship), and a re-run after Ctrl+C downloads
+the whole file again into a fresh ``.incomplete``. The partial state therefore
+says "Restarting download…", and the banner promises only that Ctrl+C is safe.
 """
 
 from __future__ import annotations
@@ -379,7 +380,7 @@ def _print_banner(
         console.print(
             "  " + t("preflight.whisper.downloads_to", path=escape(_cache_root_display()))
         )
-    console.print("  " + t("preflight.whisper.ctrl_c_resumes"))
+    console.print("  " + t("preflight.whisper.ctrl_c_safe"))
     console.print()
     console.print(
         "  " + t(

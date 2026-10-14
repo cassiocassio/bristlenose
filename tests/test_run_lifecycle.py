@@ -519,6 +519,23 @@ def test_lifecycle_systemexit_nonzero_writes_failed(tmp_path: Path):
     assert events[-1].cause.exit_code == 2
 
 
+def test_lifecycle_exit_cause_is_english_whatever_the_cli_language(tmp_path: Path):
+    """``Cause.message`` is a forensic record, English on every channel
+    (docs/design-i18n.md, "Forensic / wire records"). The Mac app runs the
+    sidecar with ``BRISTLENOSE_LANG`` set, so the CLI locale is often not ``en``."""
+    from bristlenose.i18n import set_locale
+
+    set_locale("de")
+    try:
+        with pytest.raises(SystemExit):
+            with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
+                raise SystemExit(2)
+    finally:
+        set_locale("en")
+    events = read_events(events_path(tmp_path))
+    assert events[-1].cause.message == "CLI exited with code 2"
+
+
 def test_lifecycle_pid_file_removed_even_on_exception(tmp_path: Path):
     with pytest.raises(RuntimeError):
         with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):

@@ -403,7 +403,7 @@ class TestPreflightWhisper:
         assert "Resuming" not in out
         assert "Whisper model ready" in out
 
-    def test_partial_says_resuming_not_downloading(self, capsys):
+    def test_partial_says_restarting_not_downloading(self, capsys):
         console = Console(force_terminal=False, no_color=True, width=80)
         with patch("bristlenose.preflight.whisper.cache_state", return_value="partial"):
             with patch(
@@ -421,7 +421,8 @@ class TestPreflightWhisper:
                         allow_fetch=True,
                     )
         out = capsys.readouterr().out
-        assert "Resuming download" in out
+        # Not "Resuming": through hf_xet a re-run starts the file again.
+        assert "Restarting download" in out
 
     def test_no_fetch_with_missing_model_aborts(self):
         console = Console(force_terminal=False, no_color=True)

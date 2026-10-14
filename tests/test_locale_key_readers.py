@@ -691,8 +691,8 @@ def test_a_key_read_only_by_the_spa_is_not_an_orphan() -> None:
 
 
 def test_a_key_read_only_by_python_is_not_an_orphan() -> None:
-    """The `preflight` namespace is reached by `bristlenose --lang=de run …`
-    and by nothing else — 34 keys that a Swift-only or SPA-only sweep loses."""
+    """The `preflight` namespace is read by the CLI and the Mac sidecar, in
+    English whatever the locale — keys that a Swift-only or SPA-only sweep loses."""
     orphaned = [key for key in orphans() if key.startswith("preflight.")]
     assert not orphaned, f"preflight is a live Python surface: {orphaned}"
 

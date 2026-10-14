@@ -101,10 +101,11 @@ def ensure_spacy_model(model_name: str) -> None:
 def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     """Ensure a Hugging Face model repo is present in the local cache; fetch if not.
 
-    Idempotent and resumable: ``huggingface_hub.snapshot_download`` writes
-    ``.incomplete`` files during download and resumes from the last byte on a
-    subsequent run after Ctrl+C or a dropped connection. Safe inside the desktop
-    sidecar — the cache lives under the user's HF home, not site-packages.
+    Idempotent, and safe to interrupt: a Ctrl+C leaves a ``.incomplete`` file
+    and nothing a later run trips on. It does not resume — through hf_xet
+    (huggingface_hub 1.x) a re-run downloads the file again from the start,
+    measured 14 Oct 2026. Safe inside the desktop sidecar — the cache lives
+    under the user's HF home, not site-packages.
 
     ``tqdm_class`` is handed to ``snapshot_download`` for every progress bar it
     draws (the Whisper preflight passes one that it can close afterwards).

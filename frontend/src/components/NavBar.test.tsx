@@ -1,8 +1,17 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+
+// The Screens entry asks GET …/screens/status; everything else in the bar keeps the real helpers.
+vi.mock("../utils/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../utils/api")>()),
+  apiGet: vi.fn(() => Promise.reject(new Error("no status"))),
+}));
+
 import { NavBar } from "./NavBar";
 import { resetConditionStore, startConditionPolling } from "../contexts/ConditionStore";
+import { apiGet } from "../utils/api";
+import { resetScreensAvailability } from "../islands/screens/availability";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -175,22 +184,50 @@ describe("NavBar — lenses with nothing to show yet", () => {
   });
 });
 
-describe("NavBar — the Screens lens (diagnostics only)", () => {
-  const w = window as unknown as Record<string, unknown>;
+describe("NavBar — the Screens lens", () => {
+  const status = (over: Record<string, unknown>) => ({
+    enabled: true, unavailable: null, running: false, done: 2, total: 2,
+    seconds_done: 0, seconds_total: 0, rate: null, has_screens: false, ...over,
+  });
+  beforeEach(() => {
+    resetScreensAvailability();
+  });
   afterEach(() => {
-    delete w.__BRISTLENOSE_DIAGNOSTICS__;
+    vi.mocked(apiGet).mockImplementation(() => Promise.reject(new Error("no status")));
   });
 
-  it("is a lens link with diagnostics on, active on its route", () => {
-    w.__BRISTLENOSE_DIAGNOSTICS__ = true;
+  it("is a lens link when the project has screens, active on its route", async () => {
+    vi.mocked(apiGet).mockResolvedValue(status({ has_screens: true }));
     renderNavBar("/report/screens/");
-    const link = screen.getByRole("link", { name: "Screens" });
+    const link = await screen.findByRole("link", { name: "Screens" });
     expect(link).toHaveAttribute("href", "/report/screens/");
     expect(link.className).toContain("active");
+    expect(apiGet).toHaveBeenCalledWith("/screens/status");
   });
 
-  it("is absent with diagnostics off", () => {
+  it("is a lens link while recordings are still being read", async () => {
+    vi.mocked(apiGet).mockResolvedValue(status({ running: true, done: 0 }));
     renderNavBar();
+    expect(await screen.findByRole("link", { name: "Screens" })).toBeInTheDocument();
+  });
+
+  it("is absent when nothing was found and nothing is left to read, Diagnostics or not", async () => {
+    const w = window as unknown as Record<string, unknown>;
+    w.__BRISTLENOSE_DIAGNOSTICS__ = true;
+    try {
+      vi.mocked(apiGet).mockResolvedValue(status({}));
+      renderNavBar();
+      await act(async () => {});
+      expect(screen.queryByText("Screens")).toBeNull();
+    } finally {
+      delete w.__BRISTLENOSE_DIAGNOSTICS__;
+    }
+  });
+
+  it("is absent when screens cannot be read here", async () => {
+    vi.mocked(apiGet).mockResolvedValue(status({ has_screens: true, unavailable: "not_macos" }));
+    renderNavBar();
+    await act(async () => {});
     expect(screen.queryByText("Screens")).toBeNull();
   });
 });

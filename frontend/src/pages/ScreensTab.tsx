@@ -1,20 +1,24 @@
 import { lazy } from "react";
+import { useTranslation } from "react-i18next";
 import { SectionHeading } from "../components/SectionHeading";
-import { diagnosticsEnabled } from "../utils/diagnostics";
+import { isExportMode } from "../utils/exportData";
 
-// The Screens lens (diagnostics; docs/design-screens.md S5). Lazy-loaded so it code-splits into
-// its own chunk, with its CSS. The AppLayout Outlet provides Suspense.
+// The Screens lens (docs/design-screens.md S5). Lazy-loaded so it code-splits into its own chunk,
+// with its CSS. The AppLayout Outlet provides Suspense. The nav offers it only when the project has
+// screens (islands/screens/availability.ts); reached any other way, the lens says why it is empty.
 const ScreensLens = lazy(() =>
   import("../islands/screens/ScreensLens").then((m) => ({ default: m.ScreensLens })),
 );
 
 export function ScreensTab() {
-  if (!diagnosticsEnabled()) {
-    // Titled like every other state of the lens, so it opens on the shared datum.
+  const { t } = useTranslation();
+  if (isExportMode()) {
+    // Participants' screens are server-only: an exported report carries none. Titled like every
+    // other state of the lens, so it opens on the shared datum.
     return (
       <section>
-        <SectionHeading>Screens</SectionHeading>
-        <p className="bn-empty-state">Screens are a diagnostics view. Turn on Diagnostics to see them.</p>
+        <SectionHeading>{t("screens.title")}</SectionHeading>
+        <p className="bn-empty-state">{t("screens.notInExport")}</p>
       </section>
     );
   }

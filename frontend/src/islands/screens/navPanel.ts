@@ -7,16 +7,12 @@
  * reach it through the same actions (AppLayout, useKeyboardShortcuts).
  *
  * Unlike the guide it is not fitted to the window: it is shown whenever it is
- * wished (diagnostics build, docs/design-screens.md). The lens reports what it
+ * wished (docs/design-screens.md). The lens reports what it
  * shows and the width it wants; AppLayout mirrors both to the Mac
  * (`panel-state`), so the View menu reads Show or Hide correctly.
  */
 
 import { useSyncExternalStore } from "react";
-
-/** The rail button's accessible name. English while the lens is diagnostics-only, like the rest
- *  of the lens (tests/test_aria_label_enrolment.py, _DEV_ONLY); a `t()` key when it is localised. */
-export const SCREENS_NAV_TOGGLE_LABEL = "Show or hide the screens";
 
 const OPEN_KEY = "bn-screens-nav-open";
 

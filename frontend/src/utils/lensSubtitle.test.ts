@@ -4,6 +4,7 @@ import {
   codebookCounts,
   codebookSubtitle,
   quotesSubtitle,
+  screensSubtitle,
   signalsSubtitle,
 } from "./lensSubtitle";
 import type { CodebookResponse } from "./types";
@@ -105,6 +106,13 @@ describe("zero counts produce no subtitle", () => {
   it("signals: empty at zero, present above it", () => {
     expect(signalsSubtitle(0)).toBe("");
     expect(signalsSubtitle(1)).not.toBe("");
+  });
+
+  it("screens: empty at zero, a locale plural above it", () => {
+    expect(screensSubtitle(0)).toBe("");
+    // From `screens.subtitle_*`, not built in English (it was, while the lens was diagnostics-only).
+    expect(screensSubtitle(1)).toBe("1\u00a0Screen");
+    expect(screensSubtitle(12)).toBe("12\u00a0Screens");
   });
 
   it("codebook: empty only when there is nothing at all", () => {

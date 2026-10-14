@@ -29,8 +29,9 @@ import { isExportMode } from "../utils/exportData";
 import { postLensAvailability } from "../shims/bridge";
 import { bumpRefreshKey } from "./LastRunStore";
 
-// `screens` is the diagnostics-only Screens lens. The server's readiness derivation does not name
-// it, so it is always selectable here (absence is never a refusal); it is listed so the nav, the
+// `screens` is the Screens lens. The server's readiness derivation does not name it, so it is
+// always selectable here (absence is never a refusal; whether it is OFFERED is
+// islands/screens/availability.ts); it is listed so the nav, the
 // Mac's lens rail and the route helpers count it as a lens like the others.
 export const LENS_IDS = ["project", "sessions", "quotes", "codebook", "signals", "discussion", "screens"] as const;
 export type LensId = (typeof LENS_IDS)[number];

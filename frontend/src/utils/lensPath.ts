@@ -23,10 +23,9 @@ export function activeTabForPath(path: string): string {
 
 /** What "Navigated to …" names for a path. */
 export function navigationLabel(path: string): string {
-  // The Screens lens is English until its copy settles (diagnostics only): no `nav.screens` key.
-  if (path.startsWith("/report/screens")) return "Screens";
   let key = "nav.project";
-  if (path.startsWith("/report/quotes")) key = "nav.quotes";
+  if (path.startsWith("/report/screens")) key = "nav.screens";
+  else if (path.startsWith("/report/quotes")) key = "nav.quotes";
   else if (path.startsWith("/report/sessions/s")) key = "announce.transcript";
   else if (path.startsWith("/report/sessions")) key = "nav.sessions";
   // The codebook lens shares `nav.codebook` across its routes: it IS the

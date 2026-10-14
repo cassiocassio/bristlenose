@@ -516,6 +516,42 @@ describe("Tidy", () => {
     expect(container.querySelector('.screens-card[data-dom="q-p1-10"]')!.className).not.toContain("is-placed");
     expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
   });
+
+  // Tidy removes its own button; focus used to fall to the page (accessibility review, 14 Oct 2026).
+  it("moves focus to the lens's title when Tidy removes its own button", async () => {
+    mockApi(screensResponse());
+    render(<ScreensLens />);
+    const control = await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" });
+    control.focus();
+    fireEvent.click(control);
+    const h1 = screen.getByRole("heading", { level: 1 });
+    await waitFor(() => expect(document.activeElement).toBe(h1));
+  });
+
+  it("gives focus back to where it was when the menu closes, and its items are not tab stops", async () => {
+    mockApi(screensResponse());
+    const { container } = render(<ScreensLens />);
+    await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" });
+    const star = container.querySelector<HTMLElement>('.screens-card[data-dom="q-p1-10"] .star-btn')!;
+    star.focus();
+    fireEvent.contextMenu(star);
+    const items = await screen.findAllByRole("menuitem");
+    expect(items.every((i) => i.tabIndex === -1)).toBe(true);
+    expect(document.activeElement).toBe(items[0]);
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    expect(document.activeElement).toBe(star);
+  });
+
+  it("closes the menu when focus moves out of it", async () => {
+    mockApi(screensResponse());
+    render(<ScreensLens />);
+    const control = await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" });
+    fireEvent.contextMenu(screen.getByRole("heading", { level: 1 }).closest("section")!.querySelector(".screens-stage")!);
+    const items = await screen.findAllByRole("menuitem");
+    fireEvent.focusOut(items[0], { relatedTarget: control });
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  });
 });
 
 describe("a selection made on another lens", () => {
@@ -699,6 +735,182 @@ describe("for a keyboard and a screen reader", () => {
       document.dispatchEvent(down);
     });
     expect(down.defaultPrevented).toBe(false);
+  });
+});
+
+describe("focus when the board changes under it", () => {
+  // The board remounts on every move; focus inside it used to fall to the page (accessibility
+  // review, 14 Oct 2026).
+  it("moves focus from a card to the new board's title when ↓ changes screen", async () => {
+    mockApi(screensResponse());
+    const { container } = render(<ScreensLens />);
+    await waitFor(() => expect(container.querySelector(".screens-loose .star-btn")).not.toBeNull());
+    const star = container.querySelector<HTMLElement>(".screens-loose .star-btn")!;
+    star.focus();
+    expect(document.activeElement).toBe(star);
+    vi.mocked(announce).mockClear();
+    fireEvent.keyDown(star, { key: "ArrowDown" });
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1).toHaveTextContent("Delivery or collect");
+    expect(document.activeElement).toBe(h1);
+    expect(h1.tabIndex).toBe(-1); // a target, not a tab stop
+    // The focused title says where we are; an announcement as well would say it twice.
+    expect(announce).not.toHaveBeenCalled();
+  });
+
+  it("leaves the arrow keys to a dropdown open under focus", async () => {
+    mockApi(screensResponse());
+    const { container } = render(<ScreensLens />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Shopping Bag"));
+    const dropdown = document.createElement("div");
+    dropdown.className = "bn-hidden-dropdown";
+    const item = document.createElement("span");
+    item.setAttribute("role", "button");
+    item.tabIndex = 0;
+    dropdown.appendChild(item);
+    container.querySelector("section")!.appendChild(dropdown);
+    item.focus();
+    fireEvent.keyDown(item, { key: "ArrowDown" });
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Shopping Bag");
+  });
+
+  it("keeps focus in the navigator, on the link that is now current", async () => {
+    mockApi(screensResponse());
+    await opened();
+    const links = screen.getByRole("navigation", { name: "Screens" }).querySelectorAll<HTMLElement>("a");
+    links[0].focus();
+    fireEvent.keyDown(links[0], { key: "ArrowDown" });
+    expect(document.activeElement).toBe(links[1]);
+    expect(links[1]).toHaveAttribute("aria-current", "true");
+  });
+
+  it("keeps focus on the participant buttons, on the one now pressed", async () => {
+    const two = screensResponse();
+    (two.screens as { tabs: unknown[] }[])[0].tabs.push({ ...TAB, session_id: "s2", code: "p2", t: 40 });
+    mockApi(two);
+    await opened();
+    const first = screen.getAllByRole("button", { pressed: true })[0];
+    first.focus();
+    fireEvent.keyDown(first, { key: "ArrowRight" });
+    const pressed = screen.getAllByRole("button", { pressed: true })[0];
+    expect(pressed).not.toBe(first);
+    expect(pressed).toHaveTextContent("p2");
+    expect(document.activeElement).toBe(pressed);
+  });
+
+  it("leaves focus alone when it was not in the lens", async () => {
+    mockApi(screensResponse());
+    await opened();
+    const outside = document.createElement("button");
+    document.body.appendChild(outside);
+    try {
+      outside.focus();
+      fireEvent.keyDown(document, { key: "ArrowDown" });
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Delivery or collect");
+      expect(document.activeElement).toBe(outside);
+    } finally {
+      outside.remove();
+    }
+  });
+});
+
+describe("a keyboard route to every card", () => {
+  /** Focusable, and not hidden from the keyboard by an ancestor. */
+  function tabbable(el: HTMLElement): boolean {
+    if (el.tabIndex < 0 || (el as HTMLButtonElement).disabled) return false;
+    for (let n: HTMLElement | null = el; n; n = n.parentElement) {
+      if (n.hasAttribute("inert") || n.getAttribute("aria-hidden") === "true") return false;
+      if (n.style.visibility === "hidden" || n.style.display === "none") return false;
+    }
+    return true;
+  }
+
+  it("reaches a control in every card, a stacked column's included", async () => {
+    // A stage wide enough for one column, a screengrab, and cards tall enough that three pinned
+    // close together must stack.
+    const w = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(900);
+    const h = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(300);
+    const oh = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(200);
+    try {
+      const stack = {
+        ...TAB, loose: [],
+        pins: [
+          { dom_id: "q-p1-10", box: [0.6, 0.2, 0.3, 0.04], phrase: "continue", line: "Continue" },
+          { dom_id: "q-p1-30", box: [0.6, 0.25, 0.3, 0.04], phrase: "expensive", line: "Expensive" },
+          { dom_id: "q-p1-50", box: [0.6, 0.3, 0.3, 0.04], phrase: "somewhere", line: "Somewhere" },
+        ],
+      };
+      mockApi(screensResponse({ screens: [{ key: "url:/x", name: "/x", quotes: 3, tabs: [stack] }] }));
+      const { container } = render(<ScreensLens />);
+      await waitFor(() => expect(container.querySelectorAll(".screens-card")).toHaveLength(3));
+      await waitFor(() => expect(container.querySelector(".screens-col-r.stacked")).not.toBeNull());
+      const cards = [...container.querySelectorAll<HTMLElement>(".screens-card")];
+      for (const card of cards) {
+        const reach = [...card.querySelectorAll<HTMLElement>("button, a[href]")].filter(tabbable);
+        expect(reach.length, card.dataset.dom).toBeGreaterThan(0);
+      }
+    } finally {
+      w.mockRestore();
+      h.mockRestore();
+      oh.mockRestore();
+    }
+  });
+
+  it("reaches the arrangement control, which is Tidy's keyboard route", async () => {
+    localStorage.setItem("bristlenose-screens-placements-1",
+      JSON.stringify({ "s1@12/q-p1-10": { kind: "edge", side: "R", frac: 0.5, z: 31 } }));
+    mockApi(screensResponse());
+    render(<ScreensLens />);
+    const tidy = await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" });
+    expect(tabbable(tidy)).toBe(true);
+  });
+});
+
+describe("one live region", () => {
+  const reading = (over: Record<string, unknown> = {}) =>
+    screensResponse({ pending: true, videos: 3, indexed: 1, reading: "s2", failed: { s3: "read_failed" }, ...over });
+
+  it("carries only how far reading has got, never what could not be read", async () => {
+    mockApi(reading());
+    const { container } = render(<ScreensLens />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Shopping Bag"));
+    const live = container.querySelectorAll('[role="status"], [aria-live]');
+    expect(live).toHaveLength(1);
+    expect(live[0]).toHaveTextContent("Reading screens… 1 of 3 recordings. Now reading s2.");
+    // The failure is said, in a plain list, outside any live region.
+    const failure = screen.getByText("Couldn’t read s3: reading its screen failed.");
+    expect(failure.closest('[role="status"], [aria-live], [role="alert"]')).toBeNull();
+    expect(failure.closest("ul")).not.toBeNull();
+  });
+
+  it("is the same element from the first render, across a change of screen", async () => {
+    vi.useFakeTimers();
+    let resolve: (v: unknown) => void = () => {};
+    vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens") return new Promise<unknown>((r) => (resolve = r));
+      if (path === "/quotes") return Promise.resolve(QUOTES);
+      return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+    }) as typeof apiGet);
+    const { container } = render(<ScreensLens />);
+    const region = container.querySelector('[role="status"]');
+    expect(region).not.toBeNull();
+    await act(async () => {
+      resolve(reading());
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Shopping Bag");
+    expect(container.querySelector('[role="status"]')).toBe(region);
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Delivery or collect");
+    expect(container.querySelector('[role="status"]')).toBe(region);
+    expect(region).toHaveTextContent(/Reading screens… 1 of 3 recordings/);
+  });
+
+  it("says nothing once reading is done", async () => {
+    mockApi(screensResponse());
+    const { container } = render(<ScreensLens />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Shopping Bag"));
+    expect(container.querySelector('[role="status"]')!.textContent).toBe("");
   });
 });
 

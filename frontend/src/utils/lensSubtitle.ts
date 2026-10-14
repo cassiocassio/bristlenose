@@ -37,11 +37,10 @@ export function quotesSubtitle(visibleCount: number, starred = false): string {
   return i18n.t("titlebar.quotes", { count: visibleCount });
 }
 
-/** "12 Screens" — the diagnostics-only Screens lens. English, like the lens, until its copy
- *  settles (docs/design-screens.md); no locale key yet. */
+/** "12 Screens" — the count of screens the Screens lens is showing. */
 export function screensSubtitle(count: number): string {
   if (count === 0) return "";
-  return `${count} ${count === 1 ? "Screen" : "Screens"}`;
+  return i18n.t("screens.subtitle", { count });
 }
 
 /** "13 Signals" — the count of currently-shown signals (dismissed excluded). */

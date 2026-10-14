@@ -69,7 +69,7 @@ import {
   toggleDiscussionGuide,
   useDiscussionGuide,
 } from "../islands/discussion/guidePanel";
-import { SCREENS_NAV_TOGGLE_LABEL, setScreensNavOpen, toggleScreensNav, useScreensNav } from "../islands/screens/navPanel";
+import { setScreensNavOpen, toggleScreensNav, useScreensNav } from "../islands/screens/navPanel";
 import { activeTabForPath, navigationLabel } from "../utils/lensPath";
 import {
   setSearchQuery,
@@ -803,10 +803,10 @@ function AppShell() {
             </button>
           </Tooltip>
         ) : isScreens && !embedded ? (
-          // The Screens navigator's, the same way. English while the lens is diagnostics-only.
-          <Tooltip content="Screens" shortcut={{ key: "[" }}>
+          // The Screens navigator's, the same way.
+          <Tooltip content={i18n.t("screens.title")} shortcut={{ key: "[" }}>
             <button className="rail-btn" onClick={toggleScreensNav}
-              aria-label={SCREENS_NAV_TOGGLE_LABEL} aria-pressed={screensNav.shown}>
+              aria-label={i18n.t("screens.toggleNavigator")} aria-pressed={screensNav.shown}>
               <ListIcon />
             </button>
           </Tooltip>

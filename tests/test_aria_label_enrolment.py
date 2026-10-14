@@ -67,13 +67,9 @@ _DEV_ONLY = frozenset({
     # (or serve --dev): diagnostic chrome, English by decision, row "Developer /
     # diagnostic chrome" of the same table.
     "components/TranscriptionDiagnostics.tsx",
-    # The Screens lens likewise (docs/design-screens.md, the 14 Oct 2026 build): reached only
-    # with Diagnostics on, English until it earns a place outside them. Its quote-card controls
-    # already use the shipped keys; leave this entry when the lens is localised. The navigator's
-    # rail button lives in the shared AppLayout and takes its English name from
-    # islands/screens/navPanel.ts (SCREENS_NAV_TOGGLE_LABEL), so localising the lens means that too.
-    "islands/screens/ScreensLens.tsx",
 })
+# The Screens lens left this set on 14 Oct 2026, when it left Diagnostics for the main app: its
+# labels, and its navigator's rail button in AppLayout, are `screens.*` keys now.
 
 # Shipping components that carry the defect today. Named so the debt is
 # visible and can only shrink: a new one fails as an unexpected finding, and a

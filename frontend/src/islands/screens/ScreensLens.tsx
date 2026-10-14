@@ -1,5 +1,5 @@
 /**
- * The Screens lens (diagnostics): every screen the participants were on, a large screengrab of
+ * The Screens lens: every screen the participants were on, a large screengrab of
  * each, and the quotes said there floating beside it, pinned to the on-screen line they read.
  *
  * docs/design-screens.md S5. Data from GET /screens (server/routes/screens.py), stills from
@@ -12,11 +12,13 @@
  * and hidden like the guide, navPanel.ts), the zone title on the shared datum
  * (`.center > main > section:first-of-type > .section-heading`), the same key guards.
  *
- * Diagnostics-only and English-only while it is rough (the Specimen precedent): reached from the
- * Diagnostics menu on the Mac and from a nav link with diagnostics on in the browser.
+ * Offered when the project has screens, or recordings still being read (availability.ts, the one
+ * rule the nav and the Mac's lens rail follow). Every sentence is a `screens.*` locale key.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "../../i18n";
 import { Counter, type CounterItem } from "../../components/Counter";
 import { PersonBadge } from "../../components/PersonBadge";
 import { SectionHeading } from "../../components/SectionHeading";
@@ -68,6 +70,7 @@ import {
   type Side,
   type Placement,
 } from "./layout";
+import { markScreensFound } from "./availability";
 import { reportScreensNav, useScreensNav } from "./navPanel";
 import { setScreensCount } from "./screensCount";
 import "./screens.css";
@@ -121,35 +124,33 @@ export interface ScreensResponse {
 
 // ── What the lens says ───────────────────────────────────────────────────
 
-const TITLE = "Screens";
-
-// One English map per field, and a generic sentence for a code this build does not know: the
+// One locale key per code, and a generic sentence for a code this build does not know: the
 // server's own text never reaches the page (a reason code may be added before the lens learns it).
 const UNAVAILABLE: Record<UnavailableReason, string> = {
-  not_macos: "Screens are read on a Mac only for now, so there are none to show here.",
-  vision_missing: "This Mac can’t read text on screen: its text recognition isn’t available.",
-  no_job: "Screen reading isn’t running for this project, so no recordings have been read.",
+  not_macos: "screens.unavailable.notMacos",
+  vision_missing: "screens.unavailable.visionMissing",
+  no_job: "screens.unavailable.noJob",
 };
-const UNAVAILABLE_OTHER = "Screens can’t be read here.";
 
+// Whole sentences, one per code, so each language words "Couldn't read s2: …" its own way.
 const FAILED: Record<FailedReason, string> = {
-  unreadable: "the recording couldn’t be opened",
-  cloud_downloading: "the recording is still downloading from cloud storage",
-  ffprobe_failed: "its video couldn’t be inspected",
-  read_failed: "reading its screen failed",
+  unreadable: "screens.couldNotRead.unreadable",
+  cloud_downloading: "screens.couldNotRead.cloudDownloading",
+  ffprobe_failed: "screens.couldNotRead.ffprobeFailed",
+  read_failed: "screens.couldNotRead.readFailed",
   // Only when nothing is about to read it: during an analysis the server answers "waiting" instead.
-  not_read: "it hasn’t been read yet; it will be when the report next updates",
+  not_read: "screens.couldNotRead.notRead",
 };
-const FAILED_OTHER = "something went wrong reading it";
 
 const has = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
 
 export function unavailableText(code: string): string {
-  return has(UNAVAILABLE, code) ? UNAVAILABLE[code as UnavailableReason] : UNAVAILABLE_OTHER;
+  return i18n.t(has(UNAVAILABLE, code) ? UNAVAILABLE[code as UnavailableReason] : "screens.unavailable.other");
 }
 
-export function failedText(code: string): string {
-  return has(FAILED, code) ? FAILED[code as FailedReason] : FAILED_OTHER;
+/** Why recording `session` has no index, as a sentence that names it. */
+export function failedText(code: string, session = ""): string {
+  return i18n.t(has(FAILED, code) ? FAILED[code as FailedReason] : "screens.couldNotRead.other", { session });
 }
 
 /** Still reading: the job is running, or recordings remain that have neither an index nor a failure. */
@@ -170,19 +171,31 @@ export function shouldPoll(r: ScreensResponse): boolean {
   return r.indexed + failed.length < r.videos;
 }
 
-/** What the lens says about recordings it could not, or has not yet, read. */
-function readingNote(r: ScreensResponse): string[] {
+/** How far reading has got — the one sentence the lens's live region carries. Empty when done. */
+export function progressText(r: ScreensResponse | null): string {
+  if (!r || !r.enabled || r.unavailable || !stillReading(r)) return "";
+  if (!r.pending) return i18n.t("screens.waiting", { count: r.videos, waiting: r.videos - r.indexed });
+  const line = i18n.t("screens.reading", { count: r.videos, indexed: r.indexed });
+  return r.reading ? `${line} ${i18n.t("screens.readingSession", { session: r.reading })}` : line;
+}
+
+/** Recordings that could not be read, or were read and held no text: a plain list, never live. */
+function problemNotes(r: ScreensResponse): string[] {
   const out: string[] = [];
-  if (stillReading(r)) {
-    out.push(
-      r.pending
-        ? `Reading screens… ${r.indexed} of ${r.videos} recordings${r.reading ? ` (now ${r.reading})` : ""}.`
-        : `Waiting to read ${r.videos - r.indexed} of ${r.videos} recordings (after the current analysis).`,
-    );
-  }
-  for (const [sid, why] of Object.entries(r.failed ?? {})) out.push(`Couldn’t read ${sid}: ${failedText(why)}.`);
-  for (const sid of r.blank ?? []) out.push(`No text found in ${sid}’s recording.`);
+  for (const [sid, why] of Object.entries(r.failed ?? {})) out.push(failedText(why, sid));
+  for (const sid of r.blank ?? []) out.push(i18n.t("screens.blank", { session: sid }));
   return out;
+}
+
+function NotesList({ lines, className = "screens-notes" }: { lines: string[]; className?: string }) {
+  if (!lines.length) return null;
+  return (
+    <ul className={className}>
+      {lines.map((line) => (
+        <li key={line}>{line}</li>
+      ))}
+    </ul>
+  );
 }
 
 // ── Polling ──────────────────────────────────────────────────────────────
@@ -209,7 +222,19 @@ function keyIsOurs(e: KeyboardEvent): boolean {
   if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || modalOpen(e.target)) return false;
   const t = e.target;
   return !(t instanceof Element && (t.closest("input, textarea, select, [contenteditable='true']") ||
+    // A dropdown or menu open under focus owns its own arrow keys (the hidden-quotes list's items
+    // have none, so ↓ there would change screen and close it mid-use).
+    t.closest(".bn-hidden-dropdown, [role='menu'], [role='listbox']") ||
     (t instanceof HTMLElement && t.isContentEditable)));
+}
+
+/** Focus the lens's title — a focus target, not a tab stop — where the control that held focus is
+ *  going away (Tidy removes its own button; a closed menu may leave nothing to return to). */
+function focusLensHeading(lens: Element | null | undefined): void {
+  const h1 = lens?.querySelector<HTMLElement>(":scope > .section-heading h1");
+  if (!h1) return;
+  h1.tabIndex = -1;
+  h1.focus({ preventScroll: true });
 }
 
 // ── Stills ───────────────────────────────────────────────────────────────
@@ -276,6 +301,7 @@ const NO_FLASH = new Set<string>();
 const noop = () => {};
 
 export function ScreensLens() {
+  const { t } = useTranslation();
   const projectId = useProjectId();
   const { refreshKey } = useLastRun();
   const navPanel = useScreensNav();
@@ -306,6 +332,8 @@ export function ScreensLens() {
           if (!live) return;
           setData(r);
           setScreensError(false);
+          // The nav follows what the lens can show, not only the last status read.
+          if (r.enabled && !r.unavailable && r.screens.length > 0) markScreensFound();
           const next = r.indexed !== lastIndexed && lastIndexed >= 0 ? 0 : attempt + 1;
           lastIndexed = r.indexed;
           if (shouldPoll(r) && next < SCREENS_POLL_LIMIT) timer = setTimeout(() => load(next), pollDelay(next));
@@ -379,7 +407,7 @@ export function ScreensLens() {
   const screens = useMemo(() => data?.screens ?? [], [data]);
   const cur = Math.max(0, screens.findIndex((sc) => sc.key === curKey));
   const screen = screens[cur];
-  const tabIdx = screen ? Math.max(0, screen.tabs.findIndex((t) => t.session_id === tabSid)) : 0;
+  const tabIdx = screen ? Math.max(0, screen.tabs.findIndex((tb) => tb.session_id === tabSid)) : 0;
 
   // The quotes on this board, in its reading order: the pinned ones down the screengrab, then the
   // rest by time (as ScreenBoard lays them out). It is what a shift-click range runs over, and the
@@ -392,7 +420,7 @@ export function ScreensLens() {
     const pinned = tab.pins.filter((p) => shown(p.dom_id)).sort((a, b) => a.box[1] - b.box[1]).map((p) => p.dom_id);
     const seen = new Set(pinned);
     const rest = screen.tabs
-      .flatMap((t) => [...t.pins.map((p) => p.dom_id), ...t.loose])
+      .flatMap((tb) => [...tb.pins.map((p) => p.dom_id), ...tb.loose])
       .filter((d, i, a) => a.indexOf(d) === i && !seen.has(d) && shown(d))
       .sort((a, b) => byId.get(a)!.start_timecode - byId.get(b)!.start_timecode);
     return [...pinned, ...rest];
@@ -414,6 +442,34 @@ export function ScreensLens() {
     reportScreensNav(navShown, (navPanel.wish ? NAV_W : 0) + CONTENT_FLOOR_PX);
   }, [navShown, navPanel.wish]);
 
+  // Changing the board remounts it, and focus inside it would fall to the page. Where focus was
+  // decides where it goes: on a navigator link it moves to the link that is now current; on a
+  // participant button, to the one now pressed; anywhere else on the board, to the new board's
+  // title. Focus outside the lens is left alone.
+  const lensRef = useRef<HTMLElement>(null);
+  const refocus = useRef<"nav" | "who" | "heading" | null>(null);
+  const boardKey = screen ? `${screen.key}|${screen.tabs[tabIdx]?.session_id}|${screen.tabs[tabIdx]?.t}` : "";
+  useLayoutEffect(() => {
+    const want = refocus.current;
+    refocus.current = null;
+    const lens = lensRef.current;
+    if (!want || !lens) return;
+    if (want === "nav") {
+      lens.querySelector<HTMLElement>('.screens-nav a[aria-current="true"]')?.focus({ preventScroll: true });
+      return;
+    }
+    const pressed = want === "who" ? lens.querySelector<HTMLElement>('.screens-who button[aria-pressed="true"]') : null;
+    if (pressed) {
+      pressed.focus({ preventScroll: true });
+      return;
+    }
+    const h1 = lens.querySelector<HTMLElement>(":scope > .section-heading h1");
+    if (h1) {
+      h1.tabIndex = -1; // a focus target, not a tab stop
+      h1.focus();
+    }
+  }, [boardKey]);
+
   // Moving to another screen, or to another participant's view of this one, is announced: the
   // board changes under a screen reader with nothing else to say so.
   const go = useCallback(
@@ -423,15 +479,25 @@ export function ScreensLens() {
       const at = ((i % n) + n) % n;
       const next = screens[at];
       const tab = next.tabs[Math.min(j, next.tabs.length - 1)];
+      const active = document.activeElement;
+      const lens = lensRef.current;
+      const moving = `${next.key}|${tab?.session_id}|${tab?.t}` !== boardKey;
+      refocus.current =
+        moving && active instanceof Element && lens?.contains(active)
+          ? active.closest(".screens-nav") ? "nav" : active.closest(".screens-who") ? "who" : "heading"
+          : null;
       setCurKey(next.key);
       setTabSid(tab?.session_id ?? null);
+      // Where focus moves, the newly focused title, link or button says where we are; announcing
+      // as well would say it twice.
+      if (refocus.current) return;
       if (next.key === screen?.key) {
-        if (tab) announce(`${tab.code}’s screen`);
+        if (tab) announce(i18n.t("screens.announceParticipant", { code: tab.code }));
       } else {
-        announce(`${screenTitle(next, tab)}, screen ${at + 1} of ${n}`);
+        announce(i18n.t("screens.announceScreen", { title: screenTitle(next, tab), n: at + 1, total: n }));
       }
     },
-    [screens, screen],
+    [screens, screen, boardKey],
   );
 
   // ↑/↓ change screen, ←/→ change whose screen it is.
@@ -519,8 +585,8 @@ export function ScreensLens() {
         displayText={edited ?? q.text}
         isStarred={!!store.starred[id]}
         isHidden={false}
-        userTags={allTags.filter((t) => !vis.hiddenGroups.has(t.codebook_group))}
-        allTagNames={allTags.map((t) => t.name)}
+        userTags={allTags.filter((tb) => !vis.hiddenGroups.has(tb.codebook_group))}
+        allTagNames={allTags.map((tb) => tb.name)}
         hiddenTagNames={vis.decoratedTagNames}
         disabledTagNames={vis.suppressedTagNames}
         deletedBadges={store.deletedBadges[id] ?? []}
@@ -555,38 +621,37 @@ export function ScreensLens() {
   };
 
   // Every state carries the zone title, as Discussion's do, so the lens opens at the same height
-  // loading, failed or empty as it does with data (lens template).
+  // loading, failed or empty as it does with data (lens template). Every state also carries the one
+  // live region, last and keyed, so it is the same element from the first render to the board and
+  // across every board change: it says only how far reading has got. What could not be read is a
+  // plain list (problemNotes), never live — a remounting region re-announced it on every move.
+  const progress = (
+    <p key="screens-progress" className={`screens-progress${boardShown ? "" : " bn-empty-state"}`} role="status">
+      {progressText(data)}
+    </p>
+  );
   const shell = (body: React.ReactNode) => (
-    <section>
-      <SectionHeading>{TITLE}</SectionHeading>
+    <section ref={lensRef}>
+      <SectionHeading key="screens-heading">{t("screens.title")}</SectionHeading>
       {body}
+      {progress}
     </section>
   );
   // A failed look with screens already on the page keeps them, and looks again (the poll's retry).
-  if (screensError && !data) return shell(<p className="bn-empty-state" role="alert">Couldn’t load the screens.</p>);
-  if (quotesError) {
-    return shell(<p className="bn-empty-state" role="alert">Couldn’t load the quotes, so the screens can’t show what was said.</p>);
-  }
-  if (!data) return shell(<p className="bn-empty-state" aria-busy="true">Reading screens…</p>);
-  if (!data.enabled) {
-    return shell(<p className="bn-empty-state">Screens are off. Turn on Diagnostics to read shared screens.</p>);
-  }
+  if (screensError && !data) return shell(<p className="bn-empty-state" role="alert">{t("screens.loadFailed")}</p>);
+  if (quotesError) return shell(<p className="bn-empty-state" role="alert">{t("screens.quotesFailed")}</p>);
+  if (!data) return shell(<p className="bn-empty-state" aria-busy="true">{t("screens.loading")}</p>);
+  if (!data.enabled) return shell(<p className="bn-empty-state">{t("screens.off")}</p>);
   if (data.unavailable) return shell(<p className="bn-empty-state">{unavailableText(data.unavailable)}</p>);
-  if (!data.videos) return shell(<p className="bn-empty-state">No recordings with video in this project.</p>);
+  if (!data.videos) return shell(<p className="bn-empty-state">{t("screens.noVideo")}</p>);
   if (!screens.length) {
-    return shell(
-      <div className="bn-empty-state screens-notes" role="status">
-        {readingNote(data).map((line) => (
-          <p key={line}>{line}</p>
-        ))}
-        {!stillReading(data) && data.indexed > (data.blank ?? []).length && (
-          <p>No screens found: these recordings show no web page with an address or tab title.</p>
-        )}
-      </div>,
-    );
+    const lines = problemNotes(data);
+    if (!stillReading(data) && data.indexed > (data.blank ?? []).length) lines.push(t("screens.noneFound"));
+    return shell(<NotesList lines={lines} className="bn-empty-state screens-notes" />);
   }
   return (
     <section
+      ref={lensRef}
       className={`screens-lens${navShown ? "" : " nav-hidden"}`}
       style={{ "--screens-nav-w": `${NAV_W}px` } as React.CSSProperties}
       data-testid="screens-lens"
@@ -594,17 +659,18 @@ export function ScreensLens() {
       {navShown && <ScreenNav screens={screens} cur={cur} onPick={(i) => go(i)} byId={byId} hidden={store.hidden} />}
       {screen && (
         <ScreenBoard
-          key={`${screen.key}|${screen.tabs[tabIdx]?.session_id}|${screen.tabs[tabIdx]?.t}`}
+          key={boardKey}
           projectId={projectId}
           screen={screen}
           tabIdx={tabIdx}
           onTab={(j) => go(cur, j)}
           byId={byId}
           store={store}
-          notes={readingNote(data)}
+          problems={problemNotes(data)}
           renderQuote={renderQuote}
         />
       )}
+      {progress}
     </section>
   );
 }
@@ -645,6 +711,20 @@ function screenTitle(screen: Screen, tab?: ScreenTab): string {
   return hs.join(" · ") || screen.name;
 }
 
+/** "p1's screen at 00:12" with the time set as a timecode: the sentence is the locale's, split on its
+ *  own {{time}} slot, so the word order is each language's (MiroExportPanel's approach, no <Trans>). */
+function screenAt(template: string, time: string): React.ReactNode {
+  const slot = template.indexOf("{{time}}");
+  if (slot < 0) return template;
+  return (
+    <>
+      {template.slice(0, slot)}
+      <span className="timecode">{time}</span>
+      {template.slice(slot + "{{time}}".length)}
+    </>
+  );
+}
+
 function ScreenNav({
   screens,
   cur,
@@ -663,19 +743,22 @@ function ScreenNav({
     const el = listRef.current?.querySelector<HTMLElement>('[aria-current="true"]');
     if (el && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "nearest" });
   }, [cur]);
-  const participants = new Set(screens.flatMap((s) => s.tabs.map((t) => t.code))).size;
+  const { t } = useTranslation();
+  const participants = new Set(screens.flatMap((s) => s.tabs.map((tb) => tb.code))).size;
   return (
-    <nav className="screens-nav" aria-label="Screens">
+    <nav className="screens-nav" aria-label={t("screens.title")}>
       <div className="screens-nav-head">
-        {screens.length} {screens.length === 1 ? "screen" : "screens"} · {participants}{" "}
-        {participants === 1 ? "participant" : "participants"}
+        {t("screens.navSummary", {
+          screens: t("screens.screenCount", { count: screens.length }),
+          participants: t("screens.participantCount", { count: participants }),
+        })}
       </div>
       <ol ref={listRef}>
         {screens.map((s, i) => {
-          const codes = [...new Set(s.tabs.map((t) => t.code))];
+          const codes = [...new Set(s.tabs.map((tb) => tb.code))];
           // What the board would show: each quote once, hidden ones not counted (its "N quotes").
           const said = new Set(
-            s.tabs.flatMap((t) => [...t.pins.map((p) => p.dom_id), ...t.loose]).filter((d) => byId.has(d) && !hidden[d]),
+            s.tabs.flatMap((tb) => [...tb.pins.map((p) => p.dom_id), ...tb.loose]).filter((d) => byId.has(d) && !hidden[d]),
           ).size;
           return (
             <li key={s.key}>
@@ -688,8 +771,8 @@ function ScreenNav({
                 }}
               >
                 <span className={`screens-thumb${s.tabs.length > 1 ? " stacked" : ""}`}>
-                  {s.tabs.slice(0, 3).map((t) => (
-                    <NavThumb key={`${t.session_id}@${t.t}`} tab={t} />
+                  {s.tabs.slice(0, 3).map((tb) => (
+                    <NavThumb key={`${tb.session_id}@${tb.t}`} tab={tb} />
                   ))}
                 </span>
                 <span>
@@ -725,7 +808,8 @@ interface BoardProps {
   onTab: (j: number) => void;
   byId: Map<string, QuoteResponse>;
   store: ReturnType<typeof useQuotesStore>;
-  notes: string[];
+  /** Recordings that could not be read or held no text: a plain list, never live. */
+  problems: string[];
   renderQuote: RenderQuote;
 }
 
@@ -747,6 +831,7 @@ interface Drag {
 }
 
 function ScreenBoard(props: BoardProps) {
+  const { t } = useTranslation();
   const { projectId, screen, tabIdx, byId, store } = props;
   const { setFocus } = useFocus();
   const tab = screen.tabs[tabIdx];
@@ -774,6 +859,9 @@ function ScreenBoard(props: BoardProps) {
     [projectId, still, arrangeVersion],
   );
   const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; run: () => void }[] } | null>(null);
+  // Stable, so the menu's effect (which focuses its first item, and returns focus on close) runs
+  // once per opening rather than on every render of the board.
+  const closeMenu = useCallback(() => setMenu(null), []);
   const [hiddenOpen, setHiddenOpen] = useState(false);
 
   const visible = (dom: string) => byId.has(dom) && !store.hidden[dom];
@@ -783,7 +871,7 @@ function ScreenBoard(props: BoardProps) {
   // Everything else said on this screen, by every participant on it.
   const shownPins = new Set(pins.map((p) => p.dom_id));
   const rest = screen.tabs
-    .flatMap((t) => [...t.pins.map((p) => p.dom_id), ...t.loose])
+    .flatMap((tb) => [...tb.pins.map((p) => p.dom_id), ...tb.loose])
     .filter((d, i, a) => a.indexOf(d) === i && !shownPins.has(d) && visible(d))
     .sort((a, b) => (byId.get(a)!.start_timecode - byId.get(b)!.start_timecode));
   const mine = Object.fromEntries(Object.entries(placements).filter(([d]) => visible(d))) as Record<string, Placement>;
@@ -794,7 +882,7 @@ function ScreenBoard(props: BoardProps) {
   // A card being dragged leaves its column (or the list) for the free layer until it is dropped.
   const dragOutOfColumn = drag && !over.has(drag.dom) ? drag.dom : null;
   const hiddenHere = screen.tabs
-    .flatMap((t) => [...t.pins.map((p) => p.dom_id), ...t.loose])
+    .flatMap((tb) => [...tb.pins.map((p) => p.dom_id), ...tb.loose])
     .filter((d, i, a) => a.indexOf(d) === i && byId.has(d) && store.hidden[d]);
 
   // Measure the stage and the screengrab.
@@ -1036,13 +1124,19 @@ function ScreenBoard(props: BoardProps) {
   const tidy = () => {
     const before = placementsFor(projectId, still);
     if (Object.keys(before).length === 0) return;
+    // Tidy removes its own button (and the menu that offered it closes), so focus goes to the
+    // lens's title rather than to the page.
+    const active = document.activeElement;
+    const lens = stageRef.current?.closest(".screens-lens");
+    const keepFocus = active instanceof Element && !!active.closest(".screens-arrangement, .screens-menu");
     setPlacements(projectId, still, {});
+    if (keepFocus) requestAnimationFrame(() => focusLensHeading(lens));
     pushUndo({
       action: "tidy",
       undo: () => setPlacements(projectId, still, before),
       redo: () => setPlacements(projectId, still, {}),
     });
-    announce("Arrangement: automatic");
+    announce(i18n.t("screens.arrangementAutomatic"));
   };
 
   // Right-click: "Return to automatic" on a card the researcher placed, "Tidy" anywhere on the board
@@ -1055,9 +1149,9 @@ function ScreenBoard(props: BoardProps) {
       const card = e.target.closest<HTMLElement>(".screens-card[data-dom]")?.dataset.dom;
       const items: { label: string; run: () => void }[] = [];
       if (card && card in placementsFor(projectId, still)) {
-        items.push({ label: "Return to automatic", run: () => clearPlacement(projectId, still, card) });
+        items.push({ label: i18n.t("screens.returnToAutomatic"), run: () => clearPlacement(projectId, still, card) });
       }
-      if (Object.keys(placementsFor(projectId, still)).length > 0) items.push({ label: "Tidy", run: tidy });
+      if (Object.keys(placementsFor(projectId, still)).length > 0) items.push({ label: i18n.t("screens.tidy"), run: tidy });
       if (items.length === 0) return;
       e.preventDefault();
       const r = stage.getBoundingClientRect();
@@ -1080,9 +1174,9 @@ function ScreenBoard(props: BoardProps) {
   const who =
     screen.tabs.length > 1 ? (
       <span className="screens-who">
-        {screen.tabs.map((t, j) => (
-          <button key={`${t.session_id}@${t.t}`} aria-pressed={j === tabIdx} title={t.heading} onClick={() => props.onTab(j)}>
-            <PersonBadge code={t.code} role="participant" />
+        {screen.tabs.map((tb, j) => (
+          <button key={`${tb.session_id}@${tb.t}`} aria-pressed={j === tabIdx} title={tb.heading} onClick={() => props.onTab(j)}>
+            <PersonBadge code={tb.code} role="participant" />
           </button>
         ))}
       </span>
@@ -1096,12 +1190,11 @@ function ScreenBoard(props: BoardProps) {
       <SectionHeading action={who}>{screenTitle(screen, tab)}</SectionHeading>
       <p className="screens-sub">
         {screen.name.startsWith("/") && <code>{screen.name}</code>}
+        <span>{screenAt(t("screens.screenAt", { code: tab.code }), formatTimecode(tab.t))}</span>
         <span>
-          {tab.code}’s screen at <span className="timecode">{formatTimecode(tab.t)}</span>
-        </span>
-        <span>
-          {said} {said === 1 ? "quote" : "quotes"}
-          {people > 1 ? ` from ${people} participants` : ""}
+          {people > 1
+            ? t("screens.quoteCountFrom", { count: said, people })
+            : t("screens.quoteCount", { count: said })}
         </span>
         <span className="screens-hidden-slot">
           <Counter
@@ -1120,19 +1213,13 @@ function ScreenBoard(props: BoardProps) {
           // At rest it says what the arrangement is; on hover and on keyboard focus, what pressing it
           // does. Both words share one fixed cell, so nothing moves when they swap, and the
           // accessible name says both, once.
-          <button className="screens-arrangement" aria-label="Arrangement: Custom. Tidy" onClick={tidy}>
-            <span className="screens-arrangement-state" aria-hidden="true">Arrangement: Custom</span>
-            <span className="screens-arrangement-act" aria-hidden="true">Tidy</span>
+          <button className="screens-arrangement" aria-label={t("screens.arrangementCustomTidy")} onClick={tidy}>
+            <span className="screens-arrangement-state" aria-hidden="true">{t("screens.arrangementCustom")}</span>
+            <span className="screens-arrangement-act" aria-hidden="true">{t("screens.tidy")}</span>
           </button>
         )}
       </p>
-      {props.notes.length > 0 && (
-        <div className="screens-notes" role="status">
-          {props.notes.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
-        </div>
-      )}
+      <NotesList lines={props.problems} />
       <div className={`screens-stage${lifted ? " focus" : ""}${drag ? " dragging" : ""}`} ref={stageRef}>
         <div className={`screens-board cols-${columns}`} ref={boardRef} style={{ minHeight: colH || undefined }}>
           <div className={`screens-col screens-col-l${stacked.L ? " stacked" : ""}`} style={{ height: colH || undefined }}>
@@ -1140,10 +1227,13 @@ function ScreenBoard(props: BoardProps) {
           </div>
           <div className="screens-shot" ref={shotRef}>
             {src ? (
-              <img alt={`${tab.code}’s screen: ${screenTitle(screen, tab)}, at ${formatTimecode(tab.t)}`} src={src} />
+              <img
+                alt={t("screens.stillAlt", { code: tab.code, title: screenTitle(screen, tab), time: formatTimecode(tab.t) })}
+                src={src}
+              />
             ) : (
               <div className="screens-shot-wait">
-                {stillFailed && <span className="screens-shot-error">Screengrab unavailable.</span>}
+                {stillFailed && <span className="screens-shot-error">{t("screens.stillUnavailable")}</span>}
               </div>
             )}
             {geo &&
@@ -1178,7 +1268,7 @@ function ScreenBoard(props: BoardProps) {
         <div className="screens-loose">
           {listed.filter((d) => !over.has(d) && d !== dragOutOfColumn).map((d) => cardFor(d, {}, pinByDom.get(d)))}
         </div>
-        {menu && <BoardMenu {...menu} onClose={() => setMenu(null)} />}
+        {menu && <BoardMenu {...menu} onClose={closeMenu} />}
       </div>
     </>
   );
@@ -1198,7 +1288,17 @@ function BoardMenu(props: {
   const { x, y, items, onClose } = props;
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    ref.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const el = ref.current;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const lens = el?.closest(".screens-lens");
+    el?.querySelector<HTMLButtonElement>("button")?.focus();
+    // Focus moving to something outside the menu (Tab) closes it. A focusout with no new target is
+    // left to the pointerdown check below: WebKit does not focus a clicked button, so a click on an
+    // item would otherwise close the menu before the click lands.
+    const onFocusOut = (e: FocusEvent) => {
+      if (e.relatedTarget instanceof Node && !el?.contains(e.relatedTarget)) onClose();
+    };
+    el?.addEventListener("focusout", onFocusOut);
     const onDown = (e: PointerEvent) => {
       if (!(e.target instanceof Node && ref.current?.contains(e.target))) onClose();
     };
@@ -1212,8 +1312,16 @@ function BoardMenu(props: {
     document.addEventListener("pointerdown", onDown, true);
     document.addEventListener("keydown", onKey, true);
     return () => {
+      el?.removeEventListener("focusout", onFocusOut);
       document.removeEventListener("pointerdown", onDown, true);
       document.removeEventListener("keydown", onKey, true);
+      // Closed with focus still in it (or dropped to the page): give it back to where it was, or
+      // to the lens's title if that has gone.
+      const now = document.activeElement;
+      if (now === null || now === document.body || (el && el.contains(now))) {
+        if (opener && opener !== document.body && opener.isConnected) opener.focus({ preventScroll: true });
+        else focusLensHeading(lens);
+      }
     };
   }, [onClose]);
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -1231,6 +1339,7 @@ function BoardMenu(props: {
         <button
           key={it.label}
           role="menuitem"
+          tabIndex={-1}
           className="screens-menu-item"
           onClick={() => {
             onClose();

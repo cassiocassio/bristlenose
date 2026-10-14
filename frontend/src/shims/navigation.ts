@@ -30,8 +30,8 @@ const TAB_ROUTES: Record<string, string> = {
   signals: "/report/signals/",
   // Parked preview lens: reached from the Mac rail only when its flag is on.
   discussion: "/report/discussion/",
-  // Diagnostics-only lens (docs/design-screens.md): the Mac's lens rail row and ⌘7, both shown
-  // only with the Diagnostics preference on.
+  // The Screens lens (docs/design-screens.md): the Mac's lens rail row and ⌘7, shown when the
+  // project has screens.
   screens: "/report/screens/",
   settings: "/report/settings/",
   about: "/report/about/",

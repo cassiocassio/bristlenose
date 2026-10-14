@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useLenses, type LensId } from "../contexts/ConditionStore";
 import { ExportDropdown } from "./ExportDropdown";
 import { RefreshButton } from "./RefreshButton";
-import { diagnosticsEnabled } from "../utils/diagnostics";
+import { useScreensAvailable } from "../islands/screens/availability";
 
 interface NavBarProps {
   onExportReport?: () => void;
@@ -21,24 +21,21 @@ interface NavBarProps {
   onHelp?: () => void;
 }
 
-/** A lens's name: a locale key, or — for a lens whose copy has not settled — an English label. */
-type TabName = { key: string; label?: never } | { label: string; key?: never };
-
-const TAB_ROUTES: readonly ({
+const TAB_ROUTES: readonly {
   to: string;
+  key: string;
   lens: LensId;
   end?: boolean;
-  /** Shown only with diagnostics on. */
-  diagnostics?: boolean;
-} & TabName)[] = [
+}[] = [
   { to: "/report/", key: "nav.project", lens: "project", end: true },
   { to: "/report/sessions/", key: "nav.sessions", lens: "sessions" },
   { to: "/report/quotes/", key: "nav.quotes", lens: "quotes" },
   { to: "/report/codebook/", key: "nav.codebook", lens: "codebook" },
   { to: "/report/signals/", key: "nav.signals", lens: "signals" },
   { to: "/report/discussion/", key: "nav.discussion", lens: "discussion" },
-  // Screens lens — diagnostics only, English only while it is rough (Specimen precedent).
-  { to: "/report/screens/", lens: "screens", label: "Screens", diagnostics: true },
+  // Shown only when the project has screens, or recordings still being read
+  // (islands/screens/availability.ts).
+  { to: "/report/screens/", key: "nav.screens", lens: "screens" },
 ];
 
 /** The lens a report path belongs to; null for a path no lens owns (the specimen). */
@@ -65,6 +62,7 @@ export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: Nav
   const lenses = useLenses();
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const screens = useScreensAvailable();
   // The status page hands over to the SPA where the reader was, usually
   // `/report/` — the Project lens, which a first analysis withholds. Don't draw
   // a lens under a nav that says it is not there yet: go to Sessions.
@@ -75,16 +73,16 @@ export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: Nav
   }, [withheld, navigate]);
   return (
     <nav className="bn-global-nav">
-      {TAB_ROUTES.filter((r) => !r.diagnostics || diagnosticsEnabled()).map(({ to, key, lens, end, label }) =>
+      {TAB_ROUTES.filter((r) => r.lens !== "screens" || screens).map(({ to, key, lens, end }) =>
         lenses[lens] ? (
           <NavLink key={to} to={to} className={tabClassName} end={end}>
-            {label ?? t(key!)}
+            {t(key)}
           </NavLink>
         ) : (
           // A lens with nothing to show yet, during a run: visible, not a link
           // (docs/design-progressive-lenses.md §2 — disabled, never hidden).
           <span key={to} className="bn-tab" role="link" aria-disabled="true" data-lens={lens}>
-            {label ?? t(key!)}
+            {t(key)}
           </span>
         ),
       )}

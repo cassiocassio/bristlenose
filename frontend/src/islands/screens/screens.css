@@ -1,4 +1,4 @@
-/* The Screens lens (diagnostics). docs/design-screens.md S5; the prototype it was built from is
+/* The Screens lens. docs/design-screens.md S5; the prototype it was built from is
    experiments/screen-text/screens_lens.html. No new tokens: every colour is a palette token or an
    accent tint at a percentage the theme already mixes (6%, 15%, 30%); lift is --bn-colour-shadow at
    rest and the shipped .bn-focused treatment when a card is selected. */
@@ -6,16 +6,19 @@
 /* The lens is one <section>, the direct child of <main>, so its zone title sits on the shared datum
    (`.center > main > section:first-of-type > .section-heading`, report.css) with no rule of its
    own. The navigator is a column inside it, as the Discussion lens's guide is; everything else
-   flows down the second column. The last row is flexible so the sticky navigator's height never
-   opens gaps between the heading, the line under it and the board. */
+   flows down the second column: the title, the line under it, the reading progress (row 3, placed
+   there because it is the lens's last child — the one live region, kept outside the board that
+   remounts), what could not be read, and the board. The last row is flexible so the sticky
+   navigator's height never opens gaps between them. */
 .screens-lens {
   /* --screens-nav-w is set on the element from NAV_W (ScreensLens.tsx), the one source. */
-  display: grid; grid-template-columns: var(--screens-nav-w) minmax(0, 1fr); grid-template-rows: auto auto auto 1fr;
+  display: grid; grid-template-columns: var(--screens-nav-w) minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr;
   column-gap: var(--bn-space-xl); align-items: start;
 }
 .screens-lens > .screens-nav { grid-column: 1; grid-row: 1 / -1; align-self: start; }
 .screens-lens > :not(.screens-nav) { grid-column: -2 / -1; min-width: 0; }
 .screens-lens.nav-hidden { grid-template-columns: minmax(0, 1fr); }
+.screens-lens > .screens-progress { grid-row: 3; }
 
 /* ── Navigation: every screen, with its thumbnail, title and address ── */
 .screens-nav {
@@ -111,7 +114,10 @@
   display: block; width: 100%; text-align: left; font: inherit; font-size: var(--bn-text-label);
   background: none; border: 0; padding: var(--bn-space-xs) var(--bn-space-md); color: var(--bn-colour-text); cursor: default;
 }
-.screens-menu-item:hover, .screens-menu-item:focus-visible { background: var(--bn-colour-accent); color: #fff; outline: none; }
+.screens-menu-item:hover, .screens-menu-item:focus { background: var(--bn-colour-hover); color: var(--bn-colour-text); outline: none; }
+/* White on the accent measured 4.02:1 light and 3.65:1 dark; the hover fill keeps the text's own
+   colour, and keyboard focus adds the accent ring the rest of the report uses. */
+.screens-menu-item:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: -2px; }
 
 /* Cards sit BESIDE the screengrab, never over it (the owner, 14 Oct 2026: the screen is the artefact
    being discussed, and stickies laid over a printout hide the design they are about). A card column
@@ -132,8 +138,13 @@
 .screens-shot img { display: block; width: 100%; border-radius: var(--bn-radius-md); border: 1px solid var(--bn-colour-border); }
 .screens-shot-wait { aspect-ratio: 16 / 10; border-radius: var(--bn-radius-md); background: var(--bn-colour-quote-bg); }
 .screens-shot-error { display: block; padding: var(--bn-space-lg); font-size: var(--bn-text-label); color: var(--bn-colour-muted); }
-.screens-notes { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); margin: 0 0 var(--bn-space-md); }
-.screens-notes p { margin: 0 0 var(--bn-space-xs); }
+.screens-notes, .screens-progress { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); margin: 0 0 var(--bn-space-md); }
+.screens-notes { list-style: none; padding-inline-start: 0; }
+.screens-notes li { margin: 0 0 var(--bn-space-xs); }
+/* With nothing to say the live region takes no room, on the board and in the empty states. */
+.screens-progress:empty { margin: 0; padding: 0; }
+/* In an empty state they read as the empty state does. */
+.bn-empty-state.screens-notes, .bn-empty-state.screens-progress { font-size: var(--bn-text-body); padding-inline: 1rem; }
 .screens-hl {
   position: absolute; pointer-events: none; border-radius: var(--bn-radius-sm);
   border: 1.5px solid var(--bn-colour-accent);
@@ -187,7 +198,7 @@
 .screens-free .screens-card { position: absolute; pointer-events: auto; }
 
 /* Bringing one forward dims the others by colour, not opacity: a stack must stay opaque. */
-.screens-stage.focus .screens-card:not(.is-lifted) .quote-card { color: var(--bn-colour-muted); }
+.screens-stage.focus .screens-card:not(.is-lifted) .quote-card:not(.bn-selected) { color: var(--bn-colour-muted); }
 .screens-stage.focus .screens-card:not(.is-lifted) mark.search-mark { background: none; }
 .screens-stage.focus .screens-hl:not(.on),
 .screens-stage.focus .screens-leaders g:not(.on) { opacity: 0.25; }
@@ -197,7 +208,9 @@
 .screens-stage .screens-card.is-lifted mark.search-mark { background: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent); }
 
 svg.screens-leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 3; }
-svg.screens-leaders path { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1; opacity: 0.6; }
+/* Full strength: a leader is the only line from a card to its place on the screen (WCAG 1.4.11;
+   0.6 measured 2.3:1). */
+svg.screens-leaders path { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1; }
 svg.screens-leaders circle { fill: var(--bn-colour-accent); }
 
 /* Rearranging: the top edge and the margin under the timecode are grips. The side grip starts

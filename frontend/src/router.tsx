@@ -60,8 +60,8 @@ export const routes = [
       // Discussion lens — the researcher's guide merged with what was asked
       // (docs/design-discussion-lens-plan.md). Lazy-loaded when visited.
       { path: "discussion", element: <DiscussionTab /> },
-      // Screens lens (diagnostics; docs/design-screens.md S5). Same terms as Specimen: always
-      // registered, lazy, reachable from the Diagnostics menu or the nav with diagnostics on.
+      // Screens lens (docs/design-screens.md S5). Always registered, lazy; the nav offers it when
+      // the project has screens (islands/screens/availability.ts).
       { path: "screens", element: <ScreensTab /> },
       { path: "about", element: <Navigate to="/report/" replace /> },
       // Catch-all: unknown sub-paths redirect to project tab

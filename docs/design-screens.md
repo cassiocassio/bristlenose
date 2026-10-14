@@ -5,7 +5,8 @@ updated: 14 Oct 2026
 
 # Screens: where they went, what they said, what was on screen
 
-**Status: the plan, 13 Oct 2026; a rough diagnostics build since 14 Oct (below).** Decided by the
+**Status: the plan, 13 Oct 2026; built since 14 Oct, and out of Diagnostics since the night of
+14 Oct (below).** Decided by the
 owner today: **(1) screen text and the Screens lens are one project with one plan; (2) Mac first;
 (3) the OCR engine is pluggable, so other platforms can join with another engine later.** Everything
 else here is a proposal.
@@ -26,12 +27,10 @@ board on real data.
   words), a serve job that indexes each recording after the scene strips
   (`server/screen_text_job.py`), two routes (`GET …/screens`, `GET …/screens/still`, both
   server-only in an export), and the lens at `/report/screens/` (`frontend/src/islands/screens/`).
-- **How to turn it on.** Mac app: Settings ▸ Appearance ▸ Diagnostics. Switching it on restarts
-  the server with `BRISTLENOSE_SCREEN_TEXT=1` and adds Screens to the lens rail (⌘7); the
-  Diagnostics ▸ Screens Lens menu item that did this before is gone (14 Oct 2026). Switching it
-  off restarts every running server that was reading screens, not only the one on screen.
-  Browser: `serve --dev`, or `BRISTLENOSE_SCREEN_TEXT=1` plus the diagnostics flag. Off, the job
-  never runs, `/screens` and `/screens/status` answer `enabled: false`, and the still route 404s.
+- **How to turn it on.** _Superseded the night of 14 Oct — see "Out of Diagnostics" below._ Mac
+  app: Settings ▸ Transcription ▸ **Read shared screens**, on by default. CLI: `serve --dev`, or
+  `BRISTLENOSE_SCREEN_TEXT=1`. Off, the job never runs, `/screens` and `/screens/status` answer
+  `enabled: false`, and the still route 404s.
 - **What it does not do yet.** Pins are words only, so a German page with English quotes pins
   little (the prototype's meaning match is not shipped). No merge or peel: one key per screen by
   the §3.6 ladder, and a page with neither address nor title is not a screen. No not-screen-based
@@ -50,12 +49,22 @@ board on real data.
   the page's project id — which is always "1" today, so in practice it separates by origin (the
   port) only, and two projects served on one port share arrangements. Where arrangements live is
   the owner's call.
-- **Owed before it leaves Diagnostics** (security review, 14 Oct). The Diagnostics switch does not
+- **Owed before it leaves Diagnostics** (security review, 14 Oct). _Paid the night of 14 Oct except where "Out of Diagnostics" below lists it as still owed._ The Diagnostics switch does not
   yet say it reads shared screens (§4.7's sentence; the help text is a 21-locale change). The index
   stores every line as read, chrome and full addresses included, where §4.3 drops chrome and
   query strings at rest; off-task screens (§4.5) are not hidden. Stills are cached on disk under
   the session's id, so the pipeline's per-session prune removes a withdrawn participant's, but
   turning Diagnostics off does not delete them.
+- **14 Oct 2026, late: the data half of that list is paid.** At rest the index keeps no query
+  strings, no fragments but an app's routes, and no chrome (§4.3, as now written); `INDEX_VERSION`
+  is 3, so every older index is read again and replaced. Turning reading off deletes (§4.8): the
+  Mac app passes `BRISTLENOSE_SCREEN_TEXT=0`, and a serve started with exactly that deletes the
+  project's `intermediate/screen-text/` (indexes and stills) before anything can read it; unset,
+  the CLI's default, deletes nothing, and `--dev` does not turn an explicit off back on.
+  `GET …/screens/status` now says `has_screens`, so the lens is shown only where there is
+  something to show; the rule is in the route's docstring. Still owed: the switch's one sentence
+  (§4.7), off-task screens (§4.5), and a URL's **path** is kept whole, because product and
+  category IDs in it key screens — a token in a path is stored.
 - **14 Oct 2026, later: reasons are codes, and a progress route.** Why something cannot be read is a code,
   never a sentence: `unavailable` is `not_macos` · `vision_missing` · `no_job`, and `failed[sid]` is
   `unreadable` · `cloud_downloading` · `ffprobe_failed` · `read_failed` · `not_read` (Literals in
@@ -73,7 +82,7 @@ board on real data.
   sidebar's status line reads *Screens · N of M* while the job reads (21 locales; time left only
   in the tooltip, and only once this pass has measured its rate). Turning Diagnostics off restarts
   every server that was reading screens, not just the one on screen.
-- **Owed before it leaves Diagnostics** (accessibility review, 14 Oct). Below AA as built: the
+- **Owed before it leaves Diagnostics** (accessibility review, 14 Oct). _Paid the night of 14 Oct except where "Out of Diagnostics" below lists it as still owed._ Below AA as built: the
   board is laid out for a pointer. Each is a blocker for shipping, none for a diagnostics build:
   focus is lost to the page when ↑/↓ or ←/→ changes the board under it; cards cannot be rearranged
   from the keyboard (only reset); the line a pinned quote is about exists only as a drawing (needs
@@ -84,6 +93,42 @@ board on real data.
   are gated to the Quotes lens. Landed now: a card rises when focused, alt text on the screengrab,
   screen and participant changes announced, ↑/↓ left alone with one screen, contrast of the
   participant buttons and the current navigator row.
+
+- **14 Oct 2026, night: out of Diagnostics.** Diagnostics gates Screens nowhere, on either side.
+  - **The switch** is Settings ▸ Transcription ▸ *Read shared screens*, on by default, with §4.7's
+    sentence under it (21 locales). Every serve gets `BRISTLENOSE_SCREEN_TEXT` from it (`1`/`0`),
+    and turning it off restarts every serve that was reading and deletes what each had read (§4.8).
+  - **When the lens appears:** reading is on, an engine is available, and the study has screens
+    or a first read is under way — `enabled && unavailable == null && (has_screens || (total > 0
+    && (running || done < total)))` from `GET …/screens/status`. Three copies of that rule
+    (`routes/screens.py`'s docstring, `frontend/src/islands/screens/availability.ts`,
+    `ScreenReading.isAvailable`) each carry their own tests; a talking-head study reads, finds
+    nothing, and the lens never shows. On the Mac a window on Screens moves to Project when the
+    lens goes, and only a 404 from the status route counts as "gone" (a 5xx during a re-analyse
+    keeps it).
+  - **Localised:** `common.json` `screens.*` and `nav.screens`, the Mac's toolbar and View-menu
+    rows (`desktop.toolbar.screens`, `menu.view.show/hideScreens`), glossary rows; every reason
+    code a whole sentence per language.
+  - **Accessibility, landed:** focus survives a board change (to the current navigator link, the
+    pressed participant, or the board's title), and Tidy and the right-click menu return focus
+    rather than drop it; every card and Tidy are on the keyboard; one live region, outside the
+    board, carries only reading progress; the arrow keys leave an open dropdown or menu alone; a
+    move is said once, not twice; leaders at full strength (1.4.11) and the menu's highlight no
+    longer white on accent (1.4.3).
+  - **At rest:** addresses lose query strings (localhost, IPs, intranet hosts and any slashed
+    path included) and every fragment but an app route without a percent-encoded value; chrome
+    is not stored where there are dense frames to find it (§4.3); `INDEX_VERSION` 3, and an index
+    from an older version is deleted with its stills at serve start and at each pass, as are
+    stills from before they were named by session.
+  - **Still owed** (none blocks release; each is recorded where it belongs): navigator links read
+    a bare number; no "On screen: …" text per pinned card; no narrow-width layout (1.4.10); cards
+    cannot be rearranged from the keyboard; off-task screens (§4.5); typed values (§4.4); a
+    global delete when reading is turned off (per project today, at that project's next serve);
+    the visibility rule served by the route rather than copied three times. Before the release
+    that ships it: a signed build with pyobjc through the `.pkg` gates and `altool --validate-app`
+    (no signed build has carried pyobjc yet), a Team-ID sweep over the sidecar's `.so` files, and
+    a line in the App Review notes that *Read shared screens* reads recordings and asks for no
+    screen-recording permission.
 
 This doc owns the plan. The evidence lives in two records, which it does not repeat:
 
@@ -385,6 +430,18 @@ real mobile recordings, of which there is one.
 
 ## 4. Privacy, merged
 
+**The owner's position, 14 Oct 2026.** Reading the text on a shared screen does not cross a line:
+the researcher already holds the video, watched that screen live on the call, and the participant
+consented to the recording. OCR makes searchable what they can already read; it reveals nothing
+new to them. The ethical relationship is **between the researcher and their participant** —
+Bristlenose is the researcher's tool, and its part is to tell the researcher plainly what it does
+(the sentence in Settings, item 7) so they can be honest with participants in their own consent
+material. It is not a declaration to Apple: nothing leaves the Mac or reaches us, so the App Store
+privacy label is unchanged ("Data Not Collected" holds); the only Apple-facing item is the
+technical one of whether pyobjc's bundled libraries need privacy-manifest entries. **The line that
+matters is onward flow**, and it stays closed (item 2). Consequently typed values (item 4) and
+off-task screens (item 5) are follow-ups, not release blockers: they stay on the researcher's Mac.
+
 One model for the whole project, combining both evidence docs:
 
 1. **Everything stays in the project**, like `transcripts-raw/`: the index, the screens, the stills.
@@ -392,16 +449,40 @@ One model for the whole project, combining both evidence docs:
    chat lens, support bundles, **and never sent to the LLM**. The analysis is a cloud call; screens
    carry bookmarks, colleagues' names and typed addresses. Screen names borrow the report's
    LLM-made section names (made from the transcript) rather than sending screens to name them.
-3. **Chrome is dropped by position** (a word in the same place on half the share frames): 16 of 19
-   personal targets removed, no page content lost. **URLs are read before that filter**, for screen
-   keys, with queries dropped and digit runs masked.
-4. **Typed values** (postcodes, addresses) are the residual risk the filter cannot see.
-5. **Off-task screens** (an inbox, a bank) seen by one participant on another host are hidden but
-   counted, and can be revealed.
+3. **Chrome is not stored** (a line on at least half of a recording's text-dense frames, 25 lines
+   or more: names under call tiles, bookmarks). The filter can only see chrome where there are
+   dense frames to count from: a recording with none (a talking head, a sparse app) has nothing
+   flagged, so its call-tile names are stored. That stays on the Mac, like the video that shows
+   them; it is not a gap in onward flow. **An address is read before
+   that filter** and stored, because it keys the screen — but never whole: every address in a line,
+   the address bar's or one shown on the page, loses its query string, and its fragment unless the
+   fragment is a single-page app's route (`#/planner` and `#/summary` are how such an app's screens
+   are told apart), which is kept with digit runs of four or more and long opaque tokens masked.
+   An OAuth `#access_token=…` or an in-page anchor is never kept (`screen_text/address.py`).
+4. **What the filters cannot see stays in the local index**: typed values (postcodes, addresses,
+   an email or phone typed into a form), a token in an address's **path** (kept whole, because
+   product and category IDs in it key screens), a search engine's terms where they show in the
+   page rather than the query, toasts and notifications, and the chrome of sparse recordings
+   (item 3). PII redaction (stage 7) works on the transcript and does not touch screen text.
+   None of it leaves (item 2); masking is a follow-up, and needed before any onward use.
+5. **Off-task screens** (an inbox, a bank) seen by one participant on another host should be hidden
+   but counted, and revealable. **Not built yet**; a follow-up, since they never leave the Mac.
 6. **No cloud vision**, for naming or merging screens. A local model, or a new consent decision.
-7. **One sentence where it is switched on**: Bristlenose reads text on shared screens and maps the
-   screens participants visited, so you can search them; it stays in this project, is not sent to the
-   AI provider and is not included in exports.
+7. **One sentence where it is switched on** (Settings ▸ Transcription ▸ *Read shared screens*,
+   `desktop.transcriptionSettings.readScreensHint`): *"Reads the text on screens shared in
+   recordings, on this Mac, and keeps it with small pictures of each screen in the project’s
+   folder. Never sent to the AI, and not included in exports."* It says where the data lives
+   rather than "never leaves your Mac", because the project folder may be synced, and it does not
+   mention that turning it off deletes: what was read can be read again (owner's call, 14 Oct).
+8. **On by default on the Mac; off deletes.** The Mac app reads shared screens unless the researcher
+   turns that off. Off, it starts each serve with `BRISTLENOSE_SCREEN_TEXT=0`, and the serve deletes
+   what was read for that project — indexes and cached stills — before anything else runs; a project
+   not opened again keeps its data until it is. The screens themselves are derived in memory and
+   never written. The CLI reads nothing unless asked (`=1` or `serve --dev`), and leaving the
+   variable unset deletes nothing: a CLI serve of a project the Mac app read leaves it alone.
+   An index written by an older `INDEX_VERSION` is deleted, with its session's stills, at the
+   start of each pass (`index.purge_stale`), so a recording that can no longer be read again does
+   not keep an index that held more than the current rules allow.
 
 ## 5. Phases, Mac first
 
@@ -452,11 +533,13 @@ can answer it cheaply, and decides whether S1–S6 appear at all.
 ## 6. Open questions for the owner
 
 1. **After Phase 0: build it, and which surfaces first?**
-2. **On by default on the Mac,** or switched on per project?
+2. ~~**On by default on the Mac,** or switched on per project?~~ Settled 14 Oct 2026: on by
+   default on the Mac, one app-wide setting; off deletes (§4.8).
 3. **Sections and screens:** keep both concepts when screens exist, ground one in the other (S6), or
    let screens replace speech-derived sections where they are observed?
 4. **Page-level screens for v1,** with dialogs as researcher-marked states, or wait for a detector?
-5. **Typed values:** mask postcode and address patterns in the local index now, or leave them?
+5. ~~**Typed values:** mask postcode and address patterns in the local index now, or leave them?~~
+   Settled 14 Oct 2026: leave them for now; they stay on the Mac (§4, item 4). A follow-up.
 6. **Ever in the export?** v1 keeps it all out; a screen map without stills is plausible later.
 7. **Should the hover thumbnails share the sampling?** The text-diff moments are where the screen
    changed in a way a person reads.

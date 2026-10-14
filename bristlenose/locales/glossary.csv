@@ -772,3 +772,23 @@ beta,베타,ko,"Release stage after the version number (""0.32.0 beta""); Apple'
 beta,бета-версия,ru,"Release stage after the version number (""0.32.0 beta""); Apple's own BETA badge form"
 beta,бета-версія,uk,"Release stage after the version number (""0.32.0 beta""); Apple's own BETA badge form"
 beta,Beta版,zh-Hant,"Release stage after the version number (""0.32.0 beta""); Apple's own BETA badge form"
+Screens,Pantalles,ca,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Obrazovky,cs,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Skærme,da,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Bildschirme,de,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Pantallas,es,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Näytöt,fi,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Écrans,fr,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Schermate,it,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,画面,ja,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,화면,ko,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Skjermer,nb,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Schermen,nl,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Ekrany,pl,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Telas,pt-BR,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Ecrãs,pt-PT,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Экраны,ru,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Skärmar,sv,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Ekranlar,tr,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,Екрани,uk,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded
+Screens,畫面,zh-Hant,Lens name and nav label since 14 Oct 2026: the screens shared in recordings (not the device). Matches desktop chrome.pipeline.screens; machine-seeded

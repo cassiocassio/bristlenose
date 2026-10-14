@@ -365,7 +365,7 @@ class TestPreflightWhisper:
                         status=None,
                         allow_fetch=True,
                     )
-        fetch.assert_called_once_with("mlx-community/whisper-large-v3-turbo")
+        fetch.assert_called_once_with("mlx-community/whisper-large-v3-turbo", tqdm_class=None)
         out = capsys.readouterr().out
         assert "Bristlenose needs the Whisper transcription model" in out
         assert "(~1.6 GB)" in out  # turbo on MLX: 1614 MB
@@ -524,3 +524,118 @@ class TestProgressBarSuppression:
             )
         finally:
             bar.close()
+
+
+# ---------------------------------------------------------------------------
+# The one place HF's bars are allowed: the first-run download itself.
+# ---------------------------------------------------------------------------
+
+
+class _FakeTTY:
+    """A stream tqdm treats as a terminal, so ``disable=None`` resolves to drawing."""
+
+    def isatty(self) -> bool:
+        return True
+
+    def write(self, s: str) -> int:
+        return len(s)
+
+    def flush(self) -> None:
+        pass
+
+
+def _bar_state_during_fetch(*, tty: bool, fetch_raises: bool = False) -> dict:
+    """Run the preflight's fetch path; record HF's bar state from inside the fetch."""
+    import importlib
+
+    from huggingface_hub.utils import are_progress_bars_disabled
+    from huggingface_hub.utils import tqdm as hf_tqdm
+
+    hf_tqdm_module = importlib.import_module("huggingface_hub.utils.tqdm")
+    seen: dict = {}
+
+    def fetch(repo_id: str, *, tqdm_class: type | None) -> str:
+        seen["disabled"] = are_progress_bars_disabled()
+        # Built the way snapshot_download builds its byte bars: through the
+        # class it was handed, ``disable=None`` passed explicitly (which is
+        # what beats TQDM_DISABLE=1), and never closed.
+        bar = (tqdm_class or hf_tqdm)(total=1, file=_FakeTTY(), disable=None)
+        seen["bar"] = bar
+        seen["bar_disabled"] = bool(bar.disable)
+        if fetch_raises:
+            raise KeyboardInterrupt
+        return "/cache/path"
+
+    console = Console(force_terminal=False, no_color=True)
+    with patch("bristlenose.preflight.whisper.cache_state", return_value="missing"), \
+            patch(
+                "bristlenose.preflight.whisper._resolve_repo_id",
+                return_value="mlx-community/whisper-large-v3-turbo",
+            ), \
+            patch("bristlenose.preflight.whisper._stderr_is_tty", return_value=tty), \
+            patch("bristlenose.utils.package_install.ensure_hf_model", side_effect=fetch):
+        try:
+            preflight_whisper(
+                settings=_settings(), console=console, status=None, allow_fetch=True,
+            )
+        except KeyboardInterrupt:
+            seen["raised"] = True
+    seen["disabled_after"] = are_progress_bars_disabled()
+    # tqdm marks a closed bar disabled; an open one would redraw at exit.
+    seen["bar_closed_after"] = bool(seen["bar"].disable)
+    seen["frozen_after"] = hf_tqdm_module.HF_HUB_DISABLE_PROGRESS_BARS
+    return seen
+
+
+class TestNativeDownloadProgress:
+    def test_bars_draw_during_the_fetch_and_are_off_after(self):
+        seen = _bar_state_during_fetch(tty=True)
+        assert seen["disabled"] is False
+        assert seen["bar_disabled"] is False, "an HF bar on a terminal must draw"
+        assert seen["disabled_after"] is True
+        assert seen["frozen_after"] is True
+        assert seen["bar_closed_after"] is True, "a bar left open redraws after the run"
+
+    def test_off_a_terminal_the_bars_stay_off(self):
+        seen = _bar_state_during_fetch(tty=False)
+        assert seen["disabled"] is True
+        assert seen["bar_disabled"] is True
+        assert seen["disabled_after"] is True
+
+    def test_ctrl_c_mid_download_still_turns_them_off(self):
+        seen = _bar_state_during_fetch(tty=True, fetch_raises=True)
+        assert seen["raised"] is True
+        assert seen["disabled"] is False
+        assert seen["disabled_after"] is True
+        assert seen["frozen_after"] is True
+        assert seen["bar_closed_after"] is True
+
+
+class TestBannerContext:
+    def _banner(self, capsys, repo_id: str) -> str:
+        console = Console(force_terminal=False, no_color=True, width=200)
+        with patch("bristlenose.preflight.whisper.cache_state", return_value="missing"), \
+                patch("bristlenose.preflight.whisper._resolve_repo_id", return_value=repo_id), \
+                patch("bristlenose.utils.package_install.ensure_hf_model"):
+            preflight_whisper(
+                settings=_settings(), console=console, status=None, allow_fetch=True,
+            )
+        return capsys.readouterr().out
+
+    def test_large_download_names_the_cache_and_ctrl_c(self, capsys, tmp_path, monkeypatch):
+        monkeypatch.delenv("HF_HUB_CACHE", raising=False)
+        monkeypatch.setenv("HF_HOME", str(tmp_path / "hf"))
+        out = self._banner(capsys, "mlx-community/whisper-large-v3-turbo")
+        assert f"It downloads once, to {tmp_path / 'hf' / 'hub'}." in out
+        assert "Ctrl+C is safe" in out
+
+    def test_cache_under_home_is_shown_with_a_tilde(self, capsys, monkeypatch):
+        monkeypatch.delenv("HF_HUB_CACHE", raising=False)
+        monkeypatch.delenv("HF_HOME", raising=False)
+        out = self._banner(capsys, "mlx-community/whisper-large-v3-turbo")
+        assert "to ~/.cache/huggingface/hub." in out.replace("\\", "/")
+
+    def test_small_download_skips_the_cache_line_but_keeps_ctrl_c(self, capsys):
+        out = self._banner(capsys, "mlx-community/whisper-tiny-mlx")
+        assert "It downloads once" not in out
+        assert "Ctrl+C is safe" in out

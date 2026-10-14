@@ -1,6 +1,8 @@
 {
   "whisper": {
     "banner_intro": "Bristlenose necesita el modelo de transcripci\u00f3n Whisper ({size}).",
+    "downloads_to": "Se descarga una sola vez, en {path}.",
+    "ctrl_c_resumes": "Ctrl+C es seguro: la pr\u00f3xima ejecuci\u00f3n reanuda la descarga.",
     "verb_downloading": "Descargando",
     "verb_resuming": "Reanudando la descarga",
     "fetching": "{verb} {repo_id}...",

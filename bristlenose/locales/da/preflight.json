@@ -1,6 +1,8 @@
 {
   "whisper": {
     "banner_intro": "Bristlenose skal bruge Whisper-transskriptionsmodellen ({size}).",
+    "downloads_to": "Den hentes \u00e9n gang, til {path}.",
+    "ctrl_c_resumes": "Ctrl+C er sikkert \u2013 n\u00e6ste k\u00f8rsel genoptager downloaden.",
     "verb_downloading": "Downloader",
     "verb_resuming": "Genoptager download",
     "fetching": "{verb} {repo_id}...",

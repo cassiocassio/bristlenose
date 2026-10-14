@@ -1,6 +1,8 @@
 {
   "whisper": {
     "banner_intro": "Bristlenose behöver transkriptionsmodellen Whisper ({size}).",
+    "downloads_to": "Den laddas ned en g\u00e5ng, till {path}.",
+    "ctrl_c_resumes": "Ctrl+C \u00e4r s\u00e4kert \u2013 n\u00e4sta k\u00f6rning \u00e5terupptar nedladdningen.",
     "verb_downloading": "Laddar ner",
     "verb_resuming": "Återupptar nedladdning",
     "fetching": "{verb} {repo_id}...",

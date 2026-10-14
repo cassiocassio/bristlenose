@@ -1,6 +1,8 @@
 {
   "whisper": {
     "banner_intro": "Bristlenose tarvitsee Whisper-litterointimallin ({size}).",
+    "downloads_to": "Se ladataan vain kerran, kohteeseen {path}.",
+    "ctrl_c_resumes": "Ctrl+C on turvallinen \u2013 seuraava ajo jatkaa latausta.",
     "verb_downloading": "Ladataan",
     "verb_resuming": "Jatketaan latausta",
     "fetching": "{verb} {repo_id}...",

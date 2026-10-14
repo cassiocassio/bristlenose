@@ -27,6 +27,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 # right before the HF call. Either suppression alone is sufficient; both
 # protect against dep updates that introduce a new env-var bypass.
 #
+# One deliberate exception: the first-run Whisper download, on a terminal,
+# lifts both for that one call so the researcher sees bytes moving
+# (`_native_download_progress` in preflight/whisper.py).
+#
 # See `docs/design-pipeline-resilience.md` ("Progress Bar Dead Ends").
 import os as _os
 

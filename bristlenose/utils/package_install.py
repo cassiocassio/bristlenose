@@ -98,13 +98,16 @@ def ensure_spacy_model(model_name: str) -> None:
         ) from exc
 
 
-def ensure_hf_model(repo_id: str) -> str:
+def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     """Ensure a Hugging Face model repo is present in the local cache; fetch if not.
 
     Idempotent and resumable: ``huggingface_hub.snapshot_download`` writes
     ``.incomplete`` files during download and resumes from the last byte on a
     subsequent run after Ctrl+C or a dropped connection. Safe inside the desktop
     sidecar — the cache lives under the user's HF home, not site-packages.
+
+    ``tqdm_class`` is handed to ``snapshot_download`` for every progress bar it
+    draws (the Whisper preflight passes one that it can close afterwards).
 
     Returns:
         Absolute path to the snapshot directory in the local cache.
@@ -118,7 +121,9 @@ def ensure_hf_model(repo_id: str) -> str:
 
     logger.info("ensure_hf_model: snapshot_download %s", repo_id)
     try:
-        return snapshot_download(repo_id)
+        if tqdm_class is None:
+            return snapshot_download(repo_id)
+        return snapshot_download(repo_id, tqdm_class=tqdm_class)
     except KeyboardInterrupt:
         raise
     except Exception as exc:

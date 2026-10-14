@@ -1,6 +1,8 @@
 {
   "whisper": {
     "banner_intro": "Bristlenose, Whisper deşifre modeline ihtiyaç duyuyor ({size}).",
+    "downloads_to": "Yaln\u0131zca bir kez, {path} konumuna indirilir.",
+    "ctrl_c_resumes": "Ctrl+C g\u00fcvenlidir; sonraki \u00e7al\u0131\u015ft\u0131rma indirmeyi s\u00fcrd\u00fcr\u00fcr.",
     "verb_downloading": "İndiriliyor",
     "verb_resuming": "İndirmeye devam ediliyor",
     "fetching": "{repo_id} {verb}...",

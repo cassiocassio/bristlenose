@@ -1,6 +1,8 @@
 {
   "whisper": {
     "banner_intro": "Bristlenose potřebuje přepisovací model Whisper ({size}).",
+    "downloads_to": "St\u00e1hne se jen jednou, do {path}.",
+    "ctrl_c_resumes": "Ctrl+C je bezpe\u010dn\u00e9 \u2013 p\u0159\u00ed\u0161t\u00ed spu\u0161t\u011bn\u00ed stahov\u00e1n\u00ed obnov\u00ed.",
     "verb_downloading": "Stahování",
     "verb_resuming": "Pokračování ve stahování",
     "fetching": "{verb} {repo_id}...",

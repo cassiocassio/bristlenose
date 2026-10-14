@@ -10,6 +10,8 @@ explains what's happening and that Ctrl+C is safe.
 Per ``docs/design-cli-just-works.md`` Debate 1 / Option B: we don't try to
 re-render HF Hub's progress bar inside Rich. We stop the spinner, let HF Hub
 print natively (tqdm to stderr), then restart the spinner with a ✓ done line.
+HF's bars are off everywhere else in the process (``bristlenose/__init__.py``),
+so :func:`_native_download_progress` turns them on for this one call only.
 
 Cache detection is deliberately filesystem-based:
 - ``try_to_load_from_cache(repo_id, "config.json")`` — canonical "fully cached" probe
@@ -24,11 +26,15 @@ while" and "this might be done in seconds").
 
 from __future__ import annotations
 
+import importlib
 import logging
 import os
+import sys
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from bristlenose.i18n import t
 from bristlenose.preflight import PreflightAbortedError
@@ -263,9 +269,90 @@ def cache_state(repo_id: str) -> str:
     return "missing"
 
 
+# Above this, the banner also says where the download lands — the "> 500 MB"
+# row of the fetch-size table in ``docs/design-cli-just-works.md``. A repo we
+# never measured (a custom ``org/repo``) gets the line too: its size is unknown,
+# not small.
+_CACHE_PATH_CALLOUT_MB = 500
+
+
+def _cache_root_display() -> str:
+    """The HF cache root as a researcher would type it: ``~/.cache/huggingface/hub``."""
+    root = _hf_cache_root()
+    try:
+        return os.path.join("~", root.relative_to(Path.home()))
+    except ValueError:
+        return str(root)
+
+
+def _stderr_is_tty() -> bool:
+    """True when stderr is a terminal — where tqdm draws, and the only place a bar reads."""
+    try:
+        return sys.stderr.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
+@contextmanager
+def _native_download_progress() -> Iterator[type | None]:
+    """Let Hugging Face draw its own download bars for the duration of the block.
+
+    Yields the ``tqdm_class`` to hand to ``snapshot_download``, or ``None`` when
+    the bars should stay off.
+
+    ``bristlenose/__init__.py`` sets ``HF_HUB_DISABLE_PROGRESS_BARS=1`` so that
+    stray ``Fetching N files:`` bars stay out of every other code path, and
+    huggingface_hub freezes that into ``huggingface_hub.utils.tqdm`` at import.
+    The frozen value outranks ``enable_progress_bars()``, which refuses with a
+    warning and leaves the bars off — that is how a ~1.6 GB first download went
+    silent for minutes. So the block lifts the frozen value, enables, and puts
+    both back in ``finally``.
+
+    ``snapshot_download`` leaves its two byte bars open, with the cursor parked
+    on the first, and tqdm redraws open bars when they are collected — at exit,
+    after the whole run. So the block also closes every bar it opened before
+    the caller restarts its spinner: a bar redrawn under a live Rich status
+    scrolls rather than overwrites (``docs/design-pipeline-resilience.md``,
+    "Progress Bar Dead Ends").
+
+    Only on a terminal: off one, a bar is a log of carriage returns.
+    """
+    if not _stderr_is_tty():
+        yield None
+        return
+    try:
+        # By module path: ``huggingface_hub.utils.tqdm`` as an attribute is the
+        # re-exported class, not the module that holds the frozen flag.
+        hf_tqdm: Any = importlib.import_module("huggingface_hub.utils.tqdm")
+    except ImportError:
+        yield None
+        return
+
+    opened: list[Any] = []
+
+    # A subclass of HF's own bar, so HF still applies its TTY detection and
+    # group switches to it; the only addition is remembering it to close.
+    class _ClosableBar(hf_tqdm.tqdm):  # type: ignore[misc]
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            opened.append(self)
+
+    frozen = hf_tqdm.HF_HUB_DISABLE_PROGRESS_BARS
+    hf_tqdm.HF_HUB_DISABLE_PROGRESS_BARS = None
+    hf_tqdm.enable_progress_bars()
+    try:
+        yield _ClosableBar
+    finally:
+        for bar in opened:
+            bar.close()
+        hf_tqdm.HF_HUB_DISABLE_PROGRESS_BARS = frozen
+        hf_tqdm.disable_progress_bars()
+
+
 def _print_banner(
     console: Console, repo_id: str, state: str
 ) -> None:
+    from rich.markup import escape
 
     verb = (
         t("preflight.whisper.verb_resuming")
@@ -277,6 +364,12 @@ def _print_banner(
     # guessing a size.
     size = download_size_human(repo_id) or repo_id
     console.print("  " + t("preflight.whisper.banner_intro", size=size))
+    mb = _DOWNLOAD_MB.get(repo_id)
+    if mb is None or mb > _CACHE_PATH_CALLOUT_MB:
+        console.print(
+            "  " + t("preflight.whisper.downloads_to", path=escape(_cache_root_display()))
+        )
+    console.print("  " + t("preflight.whisper.ctrl_c_resumes"))
     console.print()
     console.print(
         "  " + t(
@@ -303,8 +396,9 @@ def preflight_whisper(
     - **Fully cached**: silent, return immediately.
     - **Missing or partial**: print the framed banner; if ``allow_fetch`` is
       False raise :class:`WhisperPreflightAbortedError`; otherwise stop the Rich
-      spinner, call ``snapshot_download`` (HF Hub prints natively), restart
-      the spinner, print the ✓ done line.
+      spinner, call ``snapshot_download`` with HF Hub's own progress bars on
+      (on a terminal only — :func:`_native_download_progress`), restart the
+      spinner, print the ✓ done line.
 
     Callers gate on ``needs_transcription`` themselves (finding 39) — a folder
     of all-platform-transcripts should never trigger this code path.
@@ -356,7 +450,8 @@ def preflight_whisper(
         status.stop()
     t0 = time.perf_counter()
     try:
-        ensure_hf_model(repo_id)
+        with _native_download_progress() as bar_class:
+            ensure_hf_model(repo_id, tqdm_class=bar_class)
     finally:
         if status is not None:
             status.start()

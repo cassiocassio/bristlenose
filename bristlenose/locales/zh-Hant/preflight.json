@@ -1,6 +1,8 @@
 {
   "whisper": {
     "banner_intro": "Bristlenose 需要 Whisper 轉錄模型（{size}）。",
+    "downloads_to": "\u53ea\u9700\u4e0b\u8f09\u4e00\u6b21\uff0c\u5b58\u653e\u65bc {path}\u3002",
+    "ctrl_c_resumes": "\u53ef\u653e\u5fc3\u6309 Ctrl+C \u4e2d\u6b62\uff0c\u4e0b\u6b21\u57f7\u884c\u6642\u6703\u7e7c\u7e8c\u4e0b\u8f09\u3002",
     "verb_downloading": "正在下載",
     "verb_resuming": "正在繼續下載",
     "fetching": "{verb} {repo_id}⋯",

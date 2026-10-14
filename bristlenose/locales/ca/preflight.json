@@ -1,6 +1,8 @@
 {
   "whisper": {
     "banner_intro": "El Bristlenose necessita el model de transcripció Whisper ({size}).",
+    "downloads_to": "Es baixa un sol cop, a {path}.",
+    "ctrl_c_resumes": "Ctrl+C \u00e9s segur: la propera execuci\u00f3 repr\u00e8n la baixada.",
     "verb_downloading": "S'està baixant",
     "verb_resuming": "S'està reprenent la baixada de",
     "fetching": "{verb} {repo_id}...",

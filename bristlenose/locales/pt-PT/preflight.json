@@ -1,6 +1,8 @@
 {
   "whisper": {
     "banner_intro": "O Bristlenose precisa do modelo de transcrição Whisper ({size}).",
+    "downloads_to": "\u00c9 transferido uma \u00fanica vez, para {path}.",
+    "ctrl_c_resumes": "Ctrl+C \u00e9 seguro: a pr\u00f3xima execu\u00e7\u00e3o retoma a transfer\u00eancia.",
     "verb_downloading": "A transferir",
     "verb_resuming": "A retomar a transferência",
     "fetching": "{verb} {repo_id}...",

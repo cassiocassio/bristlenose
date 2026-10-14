@@ -1,6 +1,8 @@
 {
   "whisper": {
     "banner_intro": "Bristlenose heeft het Whisper-transcriptiemodel nodig ({size}).",
+    "downloads_to": "Het wordt één keer gedownload, naar {path}.",
+    "ctrl_c_resumes": "Ctrl+C is veilig: bij de volgende keer gaat de download verder.",
     "verb_downloading": "Bezig met downloaden",
     "verb_resuming": "Download hervatten",
     "fetching": "{verb} {repo_id}...",

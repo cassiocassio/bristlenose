@@ -1,6 +1,8 @@
 {
   "whisper": {
     "banner_intro": "Bristlenose ben\u00f6tigt das Whisper-Transkriptionsmodell ({size}).",
+    "downloads_to": "Es wird einmalig nach {path} geladen.",
+    "ctrl_c_resumes": "Ctrl+C ist sicher \u2013 der n\u00e4chste Lauf setzt den Download fort.",
     "verb_downloading": "Wird geladen",
     "verb_resuming": "Download wird fortgesetzt",
     "fetching": "{verb} {repo_id}...",

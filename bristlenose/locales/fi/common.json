@@ -687,7 +687,8 @@
       "swapRoles": "Peru roolien vaihtaminen kesken\u00e4\u00e4n",
       "reassignParagraph": "Peru kappaleen uudelleenm\u00e4\u00e4ritt\u00e4minen",
       "splitParagraph": "Peru kappaleen jakaminen",
-      "joinParagraphs": "Peru kappaleiden yhdist\u00e4minen"
+      "joinParagraphs": "Peru kappaleiden yhdist\u00e4minen",
+      "tidy": "Peru siivous"
     },
     "redo": {
       "renameModerator": "Nimeä moderaattori sittenkin uudelleen",
@@ -709,7 +710,8 @@
       "swapRoles": "Vaihda roolit kesken\u00e4\u00e4n sittenkin",
       "reassignParagraph": "M\u00e4\u00e4rit\u00e4 kappale uudelleen sittenkin",
       "splitParagraph": "Jaa kappale sittenkin",
-      "joinParagraphs": "Yhdist\u00e4 kappaleet sittenkin"
+      "joinParagraphs": "Yhdist\u00e4 kappaleet sittenkin",
+      "tidy": "Siivoa sittenkin"
     }
   },
   "sync": {

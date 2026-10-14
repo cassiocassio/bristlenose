@@ -23,6 +23,8 @@ STATES = re.compile(r"is-lifted|bn-focused|focus-within|:hover|:focus|\.editing|
 SAFE = {
     "z-index", "box-shadow", "color", "background", "background-color", "opacity", "outline",
     "outline-offset", "border-color", "text-decoration", "cursor", "transition", "fill", "stroke",
+    # Takes the same space visible or not: the arrangement control swaps its words this way.
+    "visibility",
 }
 
 

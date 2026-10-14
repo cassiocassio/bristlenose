@@ -657,7 +657,8 @@
       "swapRoles": "\u9084\u539f\u4e92\u63db\u89d2\u8272",
       "reassignParagraph": "\u9084\u539f\u91cd\u65b0\u6307\u6d3e\u6bb5\u843d",
       "splitParagraph": "\u9084\u539f\u5206\u5272\u6bb5\u843d",
-      "joinParagraphs": "\u9084\u539f\u5408\u4f75\u6bb5\u843d"
+      "joinParagraphs": "\u9084\u539f\u5408\u4f75\u6bb5\u843d",
+      "tidy": "\u9084\u539f\u6574\u7406"
     },
     "redo": {
       "renameModerator": "重做重新命名主持人",
@@ -679,7 +680,8 @@
       "swapRoles": "\u91cd\u505a\u4e92\u63db\u89d2\u8272",
       "reassignParagraph": "\u91cd\u505a\u91cd\u65b0\u6307\u6d3e\u6bb5\u843d",
       "splitParagraph": "\u91cd\u505a\u5206\u5272\u6bb5\u843d",
-      "joinParagraphs": "\u91cd\u505a\u5408\u4f75\u6bb5\u843d"
+      "joinParagraphs": "\u91cd\u505a\u5408\u4f75\u6bb5\u843d",
+      "tidy": "\u91cd\u505a\u6574\u7406"
     }
   },
   "sync": {

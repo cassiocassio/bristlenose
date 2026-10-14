@@ -750,7 +750,8 @@
       "swapRoles": "Odvolat akci Prohodit role",
       "reassignParagraph": "Odvolat akci P\u0159e\u0159adit odstavec",
       "splitParagraph": "Odvolat akci Rozdělit odstavec",
-      "joinParagraphs": "Odvolat akci Spojit odstavce"
+      "joinParagraphs": "Odvolat akci Spojit odstavce",
+      "tidy": "Odvolat akci Uklidit"
     },
     "redo": {
       "renameModerator": "Opakovat akci Přejmenovat moderátora",
@@ -772,7 +773,8 @@
       "swapRoles": "Opakovat akci Prohodit role",
       "reassignParagraph": "Opakovat akci P\u0159e\u0159adit odstavec",
       "splitParagraph": "Opakovat akci Rozdělit odstavec",
-      "joinParagraphs": "Opakovat akci Spojit odstavce"
+      "joinParagraphs": "Opakovat akci Spojit odstavce",
+      "tidy": "Opakovat akci Uklidit"
     }
   },
   "sync": {

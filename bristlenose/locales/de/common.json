@@ -687,7 +687,8 @@
       "swapRoles": "Rollen tauschen widerrufen",
       "reassignParagraph": "Absatz neu zuweisen widerrufen",
       "splitParagraph": "Absatz teilen widerrufen",
-      "joinParagraphs": "Absätze verbinden widerrufen"
+      "joinParagraphs": "Absätze verbinden widerrufen",
+      "tidy": "Aufr\u00e4umen widerrufen"
     },
     "redo": {
       "renameModerator": "Moderator umbenennen wiederholen",
@@ -709,7 +710,8 @@
       "swapRoles": "Rollen tauschen wiederholen",
       "reassignParagraph": "Absatz neu zuweisen wiederholen",
       "splitParagraph": "Absatz teilen wiederholen",
-      "joinParagraphs": "Absätze verbinden wiederholen"
+      "joinParagraphs": "Absätze verbinden wiederholen",
+      "tidy": "Aufr\u00e4umen wiederholen"
     }
   },
   "sync": {

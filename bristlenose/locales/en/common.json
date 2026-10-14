@@ -689,7 +689,8 @@
       "swapRoles": "Undo Swap Roles",
       "reassignParagraph": "Undo Reassign Paragraph",
       "splitParagraph": "Undo Split Paragraph",
-      "joinParagraphs": "Undo Join Paragraphs"
+      "joinParagraphs": "Undo Join Paragraphs",
+      "tidy": "Undo Tidy"
     },
     "redo": {
       "renameModerator": "Redo Rename Moderator",
@@ -711,7 +712,8 @@
       "swapRoles": "Redo Swap Roles",
       "reassignParagraph": "Redo Reassign Paragraph",
       "splitParagraph": "Redo Split Paragraph",
-      "joinParagraphs": "Redo Join Paragraphs"
+      "joinParagraphs": "Redo Join Paragraphs",
+      "tidy": "Redo Tidy"
     }
   },
   "sync": {

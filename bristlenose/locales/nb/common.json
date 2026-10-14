@@ -687,7 +687,8 @@
       "swapRoles": "Angre rollebytte",
       "reassignParagraph": "Angre ny tildeling av avsnitt",
       "splitParagraph": "Angre deling av avsnitt",
-      "joinParagraphs": "Angre sammenslåing av avsnitt"
+      "joinParagraphs": "Angre sammenslåing av avsnitt",
+      "tidy": "Angre opprydding"
     },
     "redo": {
       "renameModerator": "Utfør navneendring for moderator likevel",
@@ -709,7 +710,8 @@
       "swapRoles": "Utf\u00f8r rollebytte likevel",
       "reassignParagraph": "Utf\u00f8r ny tildeling av avsnitt likevel",
       "splitParagraph": "Utfør deling av avsnitt likevel",
-      "joinParagraphs": "Utfør sammenslåing av avsnitt likevel"
+      "joinParagraphs": "Utfør sammenslåing av avsnitt likevel",
+      "tidy": "Utf\u00f8r opprydding likevel"
     }
   },
   "sync": {

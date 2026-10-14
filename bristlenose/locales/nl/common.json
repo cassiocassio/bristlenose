@@ -687,7 +687,8 @@
       "swapRoles": "Herstel rollen wisselen",
       "reassignParagraph": "Herstel alinea toewijzen",
       "splitParagraph": "Herstel alinea splitsen",
-      "joinParagraphs": "Herstel alinea’s samenvoegen"
+      "joinParagraphs": "Herstel alinea’s samenvoegen",
+      "tidy": "Herstel opruimen"
     },
     "redo": {
       "renameModerator": "Opnieuw naam moderator wijzigen",
@@ -709,7 +710,8 @@
       "swapRoles": "Opnieuw rollen wisselen",
       "reassignParagraph": "Opnieuw alinea toewijzen",
       "splitParagraph": "Opnieuw alinea splitsen",
-      "joinParagraphs": "Opnieuw alinea’s samenvoegen"
+      "joinParagraphs": "Opnieuw alinea’s samenvoegen",
+      "tidy": "Opnieuw opruimen"
     }
   },
   "sync": {

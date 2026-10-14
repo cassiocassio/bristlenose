@@ -16,7 +16,7 @@
  * Diagnostics menu on the Mac and from a nav link with diagnostics on in the browser.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Counter, type CounterItem } from "../../components/Counter";
 import { PersonBadge } from "../../components/PersonBadge";
 import { SectionHeading } from "../../components/SectionHeading";
@@ -42,6 +42,7 @@ import {
 import { CONTENT_FLOOR_PX, toggleTagGroupHidden, useSidebarStore } from "../../contexts/SidebarStore";
 import { useProjectId } from "../../hooks/useProjectId";
 import { announce } from "../../utils/announce";
+import { pushUndo } from "../../contexts/UndoStore";
 import { apiGet, getCodebook } from "../../utils/api";
 import { formatTimecode } from "../../utils/format";
 import { wholeWordsTerm, type SearchTerm } from "../../utils/searchMatch";
@@ -49,19 +50,23 @@ import { deriveTagVisibility, type TagGroupMeta } from "../../utils/tagVisibilit
 import type { QuoteResponse, QuotesListResponse } from "../../utils/types";
 import { QuoteCard } from "../QuoteCard";
 import {
+  arrangeColumn,
+  arrangementVersion,
   boardColumns,
   CARD_W,
-  clearSpots,
+  clearPlacement,
   leaderPath,
-  placeColumn,
-  putSpot,
+  placementFromDrop,
+  placementsFor,
+  putPlacement,
+  setPlacements,
   sideFor,
-  spotsFor,
+  subscribeArrangement,
   stillKey,
   topZ,
   WIDE_STAGE,
   type Side,
-  type Spot,
+  type Placement,
 } from "./layout";
 import { reportScreensNav, useScreensNav } from "./navPanel";
 import { setScreensCount } from "./screensCount";
@@ -760,7 +765,15 @@ function ScreenBoard(props: BoardProps) {
   // docs/design-screens.md §6.8). Selecting raises it and nothing else: a card keeps one size.
   const [lifted, setLifted] = useState<string | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
-  const [spots, setSpots] = useState<Record<string, Spot>>(() => spotsFor(projectId, still));
+  // The researcher's arrangement of this screengrab, as intent (layout.ts): re-read on every write,
+  // including an undo of Tidy made after the board has moved on.
+  const arrangeVersion = useSyncExternalStore(subscribeArrangement, arrangementVersion, arrangementVersion);
+  const placements = useMemo(
+    () => placementsFor(projectId, still),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [projectId, still, arrangeVersion],
+  );
+  const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; run: () => void }[] } | null>(null);
   const [hiddenOpen, setHiddenOpen] = useState(false);
 
   const visible = (dom: string) => byId.has(dom) && !store.hidden[dom];
@@ -773,7 +786,13 @@ function ScreenBoard(props: BoardProps) {
     .flatMap((t) => [...t.pins.map((p) => p.dom_id), ...t.loose])
     .filter((d, i, a) => a.indexOf(d) === i && !shownPins.has(d) && visible(d))
     .sort((a, b) => (byId.get(a)!.start_timecode - byId.get(b)!.start_timecode));
-  const free = new Set(Object.keys(spots).filter((d) => visible(d)));
+  const mine = Object.fromEntries(Object.entries(placements).filter(([d]) => visible(d))) as Record<string, Placement>;
+  const custom = Object.keys(mine).length > 0;
+  // Over the screengrab: where the researcher dropped it. Beside it: a placed card's intent.
+  const over = new Set(Object.keys(mine).filter((d) => mine[d].kind === "over"));
+  const edge = Object.keys(mine).filter((d) => mine[d].kind === "edge");
+  // A card being dragged leaves its column (or the list) for the free layer until it is dropped.
+  const dragOutOfColumn = drag && !over.has(drag.dom) ? drag.dom : null;
   const hiddenHere = screen.tabs
     .flatMap((t) => [...t.pins.map((p) => p.dom_id), ...t.loose])
     .filter((d, i, a) => a.indexOf(d) === i && byId.has(d) && store.hidden[d]);
@@ -799,15 +818,28 @@ function ScreenBoard(props: BoardProps) {
   const wide = (geo?.stageW ?? 0) >= WIDE_STAGE;
   const sideOf = (p: Pin): Side => sideFor({ x: p.box[0], y: p.box[1], w: p.box[2], h: p.box[3] }, wide);
   // Automatic placement: beside the screengrab in up to two columns, never over it; on a stage too
-  // narrow for a column beside a legible screengrab, the pinned cards lead the list under it.
-  const unfree = pins.filter((p) => !free.has(p.dom_id)).sort((a, b) => a.box[1] - b.box[1]);
+  // narrow for a column beside a legible screengrab, the pinned cards lead the list under it. A card
+  // the researcher placed keeps its side and its place down the edge; where its side has no column
+  // (one column, on the right) it goes to the right, and with no columns it leads the list.
+  const unfree = pins.filter((p) => !(p.dom_id in mine)).sort((a, b) => a.box[1] - b.box[1]);
+  const edgeSide = (d: string): Side => {
+    const p = mine[d];
+    return p.kind === "edge" && p.side === "L" && wide ? "L" : "R";
+  };
+  const fracOf = (d: string) => {
+    const p = mine[d];
+    return p.kind === "edge" ? p.frac : 0;
+  };
   const columns = boardColumns(geo?.stageW ?? 0, {
-    L: unfree.some((p) => sideOf(p) === "L"),
-    R: unfree.some((p) => sideOf(p) === "R"),
+    L: unfree.some((p) => sideOf(p) === "L") || edge.some((d) => edgeSide(d) === "L"),
+    R: unfree.some((p) => sideOf(p) === "R") || edge.some((d) => edgeSide(d) === "R"),
   });
   const besides = columns !== "none";
-  const columnPins = besides ? unfree : [];
-  const listed = besides ? rest : [...unfree.map((p) => p.dom_id), ...rest];
+  const sideOfCard = (d: string): Side => (d in mine ? edgeSide(d) : sideOf(pinByDom.get(d)!));
+  const columnIds = besides ? [...edge, ...unfree.map((p) => p.dom_id)] : [];
+  const edgeInOrder = [...edge].sort((a, b) => fracOf(a) - fracOf(b) || mine[a].z - mine[b].z);
+  const unplacedRest = rest.filter((d) => !(d in mine));
+  const listed = besides ? unplacedRest : [...edgeInOrder, ...unfree.map((p) => p.dom_id), ...unplacedRest];
 
   // Place the columns once the cards have heights. Deliberately runs after every render (a card's
   // height changes with tags, edits and width) and sets state only when the placement changes.
@@ -818,18 +850,28 @@ function ScreenBoard(props: BoardProps) {
     const nextStacked: Record<Side, boolean> = { L: false, R: false };
     let bottom = geo.H;
     for (const side of ["L", "R"] as Side[]) {
-      const col = columnPins.filter((p) => sideOf(p) === side);
-      const cards = col.map((p) => ({
-        want: Math.max(0, (p.box[1] + p.box[3] / 2) * geo.H - 20),
-        height: cardEls.current.get(p.dom_id)?.offsetHeight ?? 120,
-      }));
-      const { placed, stacked: st, bottom: b } = placeColumn(cards, geo.H);
-      col.forEach((p, i) => (next[p.dom_id] = { top: placed[i].top, z: 2 + i }));
+      const ids = columnIds.filter((d) => sideOfCard(d) === side && d !== dragOutOfColumn);
+      const cards = ids.map((d) => {
+        const pin = pinByDom.get(d);
+        const placedHere = d in mine;
+        return {
+          id: d,
+          height: cardEls.current.get(d)?.offsetHeight ?? 120,
+          want: placedHere
+            ? Math.max(0, fracOf(d) * geo.H)
+            : Math.max(0, (pin!.box[1] + pin!.box[3] / 2) * geo.H - 20),
+          placed: placedHere,
+          z: placedHere ? mine[d].z : 0,
+        };
+      });
+      const { tops: t, stacked: st, bottom: b } = arrangeColumn(cards, geo.H);
+      [...ids].sort((a, b2) => t[a] - t[b2]).forEach((d, i) => (next[d] = { top: t[d], z: 2 + i }));
       nextStacked[side] = st;
       bottom = Math.max(bottom, b);
     }
-    for (const d of free) {
-      const s = spots[d];
+    for (const d of over) {
+      const s = mine[d];
+      if (s.kind !== "over") continue;
       const h = cardEls.current.get(d)?.offsetHeight ?? 120;
       bottom = Math.max(bottom, geo.sy + s.y * geo.H + h);
     }
@@ -846,7 +888,7 @@ function ScreenBoard(props: BoardProps) {
     const bb = board.getBoundingClientRect();
     const next: { id: string; d: string; end: [number, number] }[] = [];
     for (const p of pins) {
-      if (!besides && !free.has(p.dom_id)) continue; // listed under the screengrab: no leader
+      if (!besides && !over.has(p.dom_id)) continue; // listed under the screengrab: no leader
       const el = cardEls.current.get(p.dom_id);
       if (!el) continue;
       const r = el.getBoundingClientRect();
@@ -931,8 +973,11 @@ function ScreenBoard(props: BoardProps) {
         return;
       }
       const { left, top } = at(ev);
-      putSpot(projectId, still, dom, { x: (left - geo!.sx) / geo!.W, y: (top - geo!.sy) / geo!.H, z });
-      setSpots(spotsFor(projectId, still));
+      // Stored as intent: beside the screengrab on the side its centre fell, and how far down that
+      // edge; or over it, where the researcher put it.
+      putPlacement(projectId, still, dom, placementFromDrop(
+        { left, top, width: r.width },
+        { left: geo!.sx, top: geo!.sy, width: geo!.W, height: geo!.H }, z));
       setDrag(null);
     }
     endDrag.current = detach;
@@ -945,7 +990,7 @@ function ScreenBoard(props: BoardProps) {
   const cardFor = (dom: string, style: React.CSSProperties, pin?: Pin) => {
     const q = byId.get(dom);
     if (!q) return null;
-    const cls = ["screens-card", lifted === dom && "is-lifted", drag?.dom === dom && "is-dragging"]
+    const cls = ["screens-card", lifted === dom && "is-lifted", drag?.dom === dom && "is-dragging", dom in mine && "is-placed"]
       .filter(Boolean)
       .join(" ");
     return (
@@ -981,11 +1026,46 @@ function ScreenBoard(props: BoardProps) {
   };
   const freeStyle = (dom: string): React.CSSProperties => {
     if (drag?.dom === dom) return { left: drag.left, top: drag.top, width: drag.width, zIndex: drag.z };
-    const s = spots[dom];
-    if (!geo || !s) return { visibility: "hidden" };
+    const s = mine[dom];
+    if (!geo || !s || s.kind !== "over") return { visibility: "hidden" };
     return { left: geo.sx + s.x * geo.W, top: geo.sy + s.y * geo.H, width: geo.colW, zIndex: s.z };
   };
-  const dragOutOfColumn = drag && !free.has(drag.dom) ? drag.dom : null;
+
+  // Tidy: every card on this screengrab back to automatic. Undoable with ⌘Z through the report's
+  // one undo stack, so it needs no confirm.
+  const tidy = () => {
+    const before = placementsFor(projectId, still);
+    if (Object.keys(before).length === 0) return;
+    setPlacements(projectId, still, {});
+    pushUndo({
+      action: "tidy",
+      undo: () => setPlacements(projectId, still, before),
+      redo: () => setPlacements(projectId, still, {}),
+    });
+    announce("Arrangement: automatic");
+  };
+
+  // Right-click: "Return to automatic" on a card the researcher placed, "Tidy" anywhere on the board
+  // once something is placed. The keyboard's context-menu key raises the same event. Elsewhere, and
+  // with nothing to offer, the browser's own menu shows.
+  useEffect(() => {
+    const onMenu = (e: MouseEvent) => {
+      const stage = stageRef.current;
+      if (!stage || !(e.target instanceof Element) || !stage.contains(e.target)) return;
+      const card = e.target.closest<HTMLElement>(".screens-card[data-dom]")?.dataset.dom;
+      const items: { label: string; run: () => void }[] = [];
+      if (card && card in placementsFor(projectId, still)) {
+        items.push({ label: "Return to automatic", run: () => clearPlacement(projectId, still, card) });
+      }
+      if (Object.keys(placementsFor(projectId, still)).length > 0) items.push({ label: "Tidy", run: tidy });
+      if (items.length === 0) return;
+      e.preventDefault();
+      const r = stage.getBoundingClientRect();
+      setMenu({ x: e.clientX - r.left, y: e.clientY - r.top, items });
+    };
+    document.addEventListener("contextmenu", onMenu);
+    return () => document.removeEventListener("contextmenu", onMenu);
+  });
 
   const counterItems: CounterItem[] = hiddenHere.map((d) => {
     const q = byId.get(d)!;
@@ -1036,15 +1116,13 @@ function ScreenBoard(props: BoardProps) {
             }}
           />
         </span>
-        {Object.keys(spots).length > 0 && (
-          <button
-            className="screens-putback"
-            onClick={() => {
-              clearSpots(projectId, still);
-              setSpots({});
-            }}
-          >
-            Put the quotes back
+        {custom && (
+          // At rest it says what the arrangement is; on hover and on keyboard focus, what pressing it
+          // does. Both words share one fixed cell, so nothing moves when they swap, and the
+          // accessible name says both, once.
+          <button className="screens-arrangement" aria-label="Arrangement: Custom. Tidy" onClick={tidy}>
+            <span className="screens-arrangement-state" aria-hidden="true">Arrangement: Custom</span>
+            <span className="screens-arrangement-act" aria-hidden="true">Tidy</span>
           </button>
         )}
       </p>
@@ -1058,7 +1136,7 @@ function ScreenBoard(props: BoardProps) {
       <div className={`screens-stage${lifted ? " focus" : ""}${drag ? " dragging" : ""}`} ref={stageRef}>
         <div className={`screens-board cols-${columns}`} ref={boardRef} style={{ minHeight: colH || undefined }}>
           <div className={`screens-col screens-col-l${stacked.L ? " stacked" : ""}`} style={{ height: colH || undefined }}>
-            {columnPins.filter((p) => sideOf(p) === "L" && p.dom_id !== dragOutOfColumn).map((p) => cardFor(p.dom_id, placed(p.dom_id), p))}
+            {columnIds.filter((d) => sideOfCard(d) === "L" && d !== dragOutOfColumn).map((d) => cardFor(d, placed(d), pinByDom.get(d)))}
           </div>
           <div className="screens-shot" ref={shotRef}>
             {src ? (
@@ -1081,7 +1159,7 @@ function ScreenBoard(props: BoardProps) {
               ))}
           </div>
           <div className={`screens-col screens-col-r${stacked.R ? " stacked" : ""}`} style={{ height: colH || undefined }}>
-            {columnPins.filter((p) => sideOf(p) === "R" && p.dom_id !== dragOutOfColumn).map((p) => cardFor(p.dom_id, placed(p.dom_id), p))}
+            {columnIds.filter((d) => sideOfCard(d) === "R" && d !== dragOutOfColumn).map((d) => cardFor(d, placed(d), pinByDom.get(d)))}
           </div>
           <svg className="screens-leaders" aria-hidden="true">
             {leaders.map((l) => (
@@ -1092,15 +1170,76 @@ function ScreenBoard(props: BoardProps) {
             ))}
           </svg>
           <div className="screens-free">
-            {[...free, ...(dragOutOfColumn ? [dragOutOfColumn] : [])]
+            {[...over, ...(dragOutOfColumn ? [dragOutOfColumn] : [])]
               .filter((d, i, a) => a.indexOf(d) === i)
               .map((d) => cardFor(d, freeStyle(d), pinByDom.get(d)))}
           </div>
         </div>
         <div className="screens-loose">
-          {listed.filter((d) => !free.has(d) && d !== dragOutOfColumn).map((d) => cardFor(d, {}, pinByDom.get(d)))}
+          {listed.filter((d) => !over.has(d) && d !== dragOutOfColumn).map((d) => cardFor(d, {}, pinByDom.get(d)))}
         </div>
+        {menu && <BoardMenu {...menu} onClose={() => setMenu(null)} />}
       </div>
     </>
+  );
+}
+
+/**
+ * The board's right-click menu: "Return to automatic" on a placed card, "Tidy" once anything is
+ * placed. A small menu of the lens's own (no shared context menu exists in the SPA): focus goes to
+ * its first item, ↑/↓ move, Enter or a click runs, Escape or a press outside closes.
+ */
+function BoardMenu(props: {
+  x: number;
+  y: number;
+  items: { label: string; run: () => void }[];
+  onClose: () => void;
+}) {
+  const { x, y, items, onClose } = props;
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const onDown = (e: PointerEvent) => {
+      if (!(e.target instanceof Node && ref.current?.contains(e.target))) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("pointerdown", onDown, true);
+      document.removeEventListener("keydown", onKey, true);
+    };
+  }, [onClose]);
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    e.stopPropagation();
+    const buttons = [...(ref.current?.querySelectorAll<HTMLButtonElement>("button") ?? [])];
+    const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const next = (at + (e.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
+    buttons[next]?.focus();
+  };
+  return (
+    <div ref={ref} className="screens-menu" role="menu" tabIndex={-1} style={{ left: x, top: y }} onKeyDown={onKeyDown}>
+      {items.map((it) => (
+        <button
+          key={it.label}
+          role="menuitem"
+          className="screens-menu-item"
+          onClick={() => {
+            onClose();
+            it.run();
+          }}
+        >
+          {it.label}
+        </button>
+      ))}
+    </div>
   );
 }

@@ -687,7 +687,8 @@
       "swapRoles": "Rolleri Takas Etmeyi Geri Al",
       "reassignParagraph": "Paragraf\u0131 Yeniden Atamay\u0131 Geri Al",
       "splitParagraph": "Paragrafı Bölmeyi Geri Al",
-      "joinParagraphs": "Paragrafları Birleştirmeyi Geri Al"
+      "joinParagraphs": "Paragrafları Birleştirmeyi Geri Al",
+      "tidy": "D\u00fczenlemeyi Geri Al"
     },
     "redo": {
       "renameModerator": "Moderatörün Adını Değiştirmeyi Yinele",
@@ -709,7 +710,8 @@
       "swapRoles": "Rolleri Takas Etmeyi Yinele",
       "reassignParagraph": "Paragraf\u0131 Yeniden Atamay\u0131 Yinele",
       "splitParagraph": "Paragrafı Bölmeyi Yinele",
-      "joinParagraphs": "Paragrafları Birleştirmeyi Yinele"
+      "joinParagraphs": "Paragrafları Birleştirmeyi Yinele",
+      "tidy": "D\u00fczenlemeyi Yinele"
     }
   },
   "sync": {

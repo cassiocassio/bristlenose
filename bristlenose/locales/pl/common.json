@@ -761,7 +761,8 @@
       "swapRoles": "Cofnij zamian\u0119 r\u00f3l",
       "reassignParagraph": "Cofnij ponowne przypisanie akapitu",
       "splitParagraph": "Cofnij podzia\u0142 akapitu",
-      "joinParagraphs": "Cofnij scalenie akapit\u00f3w"
+      "joinParagraphs": "Cofnij scalenie akapit\u00f3w",
+      "tidy": "Cofnij porz\u0105dkowanie"
     },
     "redo": {
       "renameModerator": "Przywróć zmianę imienia moderatora",
@@ -783,7 +784,8 @@
       "swapRoles": "Przywr\u00f3\u0107 zamian\u0119 r\u00f3l",
       "reassignParagraph": "Przywr\u00f3\u0107 ponowne przypisanie akapitu",
       "splitParagraph": "Przywr\u00f3\u0107 podzia\u0142 akapitu",
-      "joinParagraphs": "Przywr\u00f3\u0107 scalenie akapit\u00f3w"
+      "joinParagraphs": "Przywr\u00f3\u0107 scalenie akapit\u00f3w",
+      "tidy": "Przywr\u00f3\u0107 porz\u0105dkowanie"
     }
   },
   "sync": {

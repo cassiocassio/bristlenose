@@ -687,7 +687,8 @@
       "swapRoles": "Fortryd Byt roller",
       "reassignParagraph": "Fortryd Tildel afsnit igen",
       "splitParagraph": "Fortryd Opdel afsnit",
-      "joinParagraphs": "Fortryd Sammenføj afsnit"
+      "joinParagraphs": "Fortryd Sammenføj afsnit",
+      "tidy": "Fortryd Ryd op"
     },
     "redo": {
       "renameModerator": "Gentag Omdøb moderator",
@@ -709,7 +710,8 @@
       "swapRoles": "Gentag Byt roller",
       "reassignParagraph": "Gentag Tildel afsnit igen",
       "splitParagraph": "Gentag Opdel afsnit",
-      "joinParagraphs": "Gentag Sammenføj afsnit"
+      "joinParagraphs": "Gentag Sammenføj afsnit",
+      "tidy": "Gentag Ryd op"
     }
   },
   "sync": {

@@ -687,7 +687,8 @@
       "swapRoles": "Deshacer intercambio de roles",
       "reassignParagraph": "Deshacer reasignaci\u00f3n de p\u00e1rrafo",
       "splitParagraph": "Deshacer división de párrafo",
-      "joinParagraphs": "Deshacer unión de párrafos"
+      "joinParagraphs": "Deshacer unión de párrafos",
+      "tidy": "Deshacer Ordenar"
     },
     "redo": {
       "renameModerator": "Rehacer cambio de nombre del moderador",
@@ -709,7 +710,8 @@
       "swapRoles": "Rehacer intercambio de roles",
       "reassignParagraph": "Rehacer reasignaci\u00f3n de p\u00e1rrafo",
       "splitParagraph": "Rehacer división de párrafo",
-      "joinParagraphs": "Rehacer unión de párrafos"
+      "joinParagraphs": "Rehacer unión de párrafos",
+      "tidy": "Rehacer Ordenar"
     }
   },
   "sync": {

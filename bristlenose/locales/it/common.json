@@ -687,7 +687,8 @@
       "swapRoles": "Annulla Scambia ruoli",
       "reassignParagraph": "Annulla Riassegna paragrafo",
       "splitParagraph": "Annulla Dividi paragrafo",
-      "joinParagraphs": "Annulla Unisci paragrafi"
+      "joinParagraphs": "Annulla Unisci paragrafi",
+      "tidy": "Annulla Riordina"
     },
     "redo": {
       "renameModerator": "Ripristina Rinomina moderatore",
@@ -709,7 +710,8 @@
       "swapRoles": "Ripristina Scambia ruoli",
       "reassignParagraph": "Ripristina Riassegna paragrafo",
       "splitParagraph": "Ripristina Dividi paragrafo",
-      "joinParagraphs": "Ripristina Unisci paragrafi"
+      "joinParagraphs": "Ripristina Unisci paragrafi",
+      "tidy": "Ripristina Riordina"
     }
   },
   "sync": {

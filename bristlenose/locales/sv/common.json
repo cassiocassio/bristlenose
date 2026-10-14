@@ -687,7 +687,8 @@
       "swapRoles": "\u00c5ngra Byt roller",
       "reassignParagraph": "\u00c5ngra Tilldela stycke",
       "splitParagraph": "\u00c5ngra Dela stycke",
-      "joinParagraphs": "\u00c5ngra Sammanfoga stycken"
+      "joinParagraphs": "\u00c5ngra Sammanfoga stycken",
+      "tidy": "\u00c5ngra St\u00e4da upp"
     },
     "redo": {
       "renameModerator": "Gör om Byt namn på moderator",
@@ -709,7 +710,8 @@
       "swapRoles": "G\u00f6r om Byt roller",
       "reassignParagraph": "G\u00f6r om Tilldela stycke",
       "splitParagraph": "G\u00f6r om Dela stycke",
-      "joinParagraphs": "G\u00f6r om Sammanfoga stycken"
+      "joinParagraphs": "G\u00f6r om Sammanfoga stycken",
+      "tidy": "G\u00f6r om St\u00e4da upp"
     }
   },
   "sync": {

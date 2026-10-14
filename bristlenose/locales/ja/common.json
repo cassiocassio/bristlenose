@@ -677,7 +677,8 @@
       "swapRoles": "\u53d6\u308a\u6d88\u3059 - \u5f79\u5272\u306e\u5165\u308c\u66ff\u3048",
       "reassignParagraph": "\u53d6\u308a\u6d88\u3059 - \u6bb5\u843d\u306e\u518d\u5272\u308a\u5f53\u3066",
       "splitParagraph": "\u53d6\u308a\u6d88\u3059 - \u6bb5\u843d\u306e\u5206\u5272",
-      "joinParagraphs": "\u53d6\u308a\u6d88\u3059 - \u6bb5\u843d\u306e\u7d50\u5408"
+      "joinParagraphs": "\u53d6\u308a\u6d88\u3059 - \u6bb5\u843d\u306e\u7d50\u5408",
+      "tidy": "\u53d6\u308a\u6d88\u3059 - \u6574\u9813"
     },
     "redo": {
       "renameModerator": "やり直す - モデレーターの名称変更",
@@ -699,7 +700,8 @@
       "swapRoles": "\u3084\u308a\u76f4\u3059 - \u5f79\u5272\u306e\u5165\u308c\u66ff\u3048",
       "reassignParagraph": "\u3084\u308a\u76f4\u3059 - \u6bb5\u843d\u306e\u518d\u5272\u308a\u5f53\u3066",
       "splitParagraph": "\u3084\u308a\u76f4\u3059 - \u6bb5\u843d\u306e\u5206\u5272",
-      "joinParagraphs": "\u3084\u308a\u76f4\u3059 - \u6bb5\u843d\u306e\u7d50\u5408"
+      "joinParagraphs": "\u3084\u308a\u76f4\u3059 - \u6bb5\u843d\u306e\u7d50\u5408",
+      "tidy": "\u3084\u308a\u76f4\u3059 - \u6574\u9813"
     }
   },
   "sync": {

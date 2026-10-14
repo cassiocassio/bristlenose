@@ -212,10 +212,34 @@ the tree). What the prototype settled:
 - **A column that would run past the screengrab stacks**, evenly stepped, straight (the diagonal
   offset was prototyped and dropped), the later card over the earlier one's tail; selecting one
   brings it to the front of its stack.
-- **The researcher can rearrange.** A hand cursor on a card's top edge and the margin under its
-  timecode; drag it anywhere on the board, including from the list onto the screengrab. It stays
-  where it is put, on top of everything placed before (the order of placing is the z-order), and
-  the leader line follows.
+- **The researcher can rearrange, and the board respects it** (the owner, 14 Oct 2026: *"if the
+  user does nothing but resize, re-order automagically; if they reposition some or all cards,
+  respect that work and intention but still re-organise the cards they didn't touch"*). A hand
+  cursor on a card's top edge and the margin under its timecode; drag it anywhere on the board.
+  A placed card is stored as **intent, not coordinates**: which side of the screengrab its centre
+  fell on and how far down that edge, as a fraction of the screengrab's height — so it moves with
+  the image as the stage resizes, and the researcher's order among their placed cards holds. In a
+  column, **placed cards win**: each keeps its spot, and the untouched cards re-flow around them,
+  each into the free slot nearest its own line, in the lines' order. Where a placed card's side has
+  no column (one column, on the right), it goes to the right; with no columns it leads the list
+  under the screengrab; it returns to its side when the width allows. A card dropped with its centre
+  over the screengrab stays over it, where it was put (the researcher's choice; automatic placement
+  never covers it). A placed card carries a faint mark at its corner, and right-click offers
+  *Return to automatic* for that card. Kept in the browser's storage per screengrab
+  (`layout.ts`); the first build's coordinates are converted once, then dropped. Measured on both
+  real sessions: a card placed at the top left pushed the untouched one below it, the right column
+  then took no room (the screengrab widened from 700 to 1002px), and resizing to 1280, 900 and back
+  sent it to the right column, the head of the list, and back to its spot.
+- **Arrangement and Tidy.** Nothing shows while the layout is automatic. Once any card is placed by
+  hand, *Arrangement: Custom* sits ranged right on the sub line; on hover and on keyboard focus the
+  same fixed-width slot reads **Tidy**, so nothing moves when the words swap, and its accessible name
+  is one sentence, *Arrangement: Custom. Tidy*. Pressing it returns every card on this screengrab to
+  automatic, with no confirm: it is undoable with ⌘Z (Edit ▸ Undo Tidy) through the report's one
+  undo stack. Right-click on the board offers *Tidy* too, and the keyboard reaches it as the slot's
+  own button. *Tidy* is the owner's word (one short action word; *Clean Up* sounded like toys going
+  back in the box) and here means **return to automatic**; a gentler Tidy that keeps your sides and
+  order and only evens out the spacing, like the Finder's, is a possible later variant. A View-menu
+  row on the Mac belongs to the menu work.
 - **The researcher says which pages are one screen** (§3.6): drag one screen's thumbnail onto
   another, or right-click; *Not the same screen*, beside the participant badges, peels the showing
   participant's page off into a screen of its own, one at a time, which works for any number of

@@ -687,7 +687,8 @@
       "swapRoles": "Annuler l\u2019\u00e9change des r\u00f4les",
       "reassignParagraph": "Annuler la r\u00e9attribution du paragraphe",
       "splitParagraph": "Annuler la division du paragraphe",
-      "joinParagraphs": "Annuler la fusion des paragraphes"
+      "joinParagraphs": "Annuler la fusion des paragraphes",
+      "tidy": "Annuler le rangement"
     },
     "redo": {
       "renameModerator": "Rétablir le changement de nom de l’animateur",
@@ -709,7 +710,8 @@
       "swapRoles": "R\u00e9tablir l\u2019\u00e9change des r\u00f4les",
       "reassignParagraph": "R\u00e9tablir la r\u00e9attribution du paragraphe",
       "splitParagraph": "R\u00e9tablir la division du paragraphe",
-      "joinParagraphs": "R\u00e9tablir la fusion des paragraphes"
+      "joinParagraphs": "R\u00e9tablir la fusion des paragraphes",
+      "tidy": "R\u00e9tablir le rangement"
     }
   },
   "sync": {

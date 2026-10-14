@@ -687,7 +687,8 @@
       "swapRoles": "Desfazer Trocar pap\u00e9is",
       "reassignParagraph": "Desfazer Reatribuir par\u00e1grafo",
       "splitParagraph": "Desfazer Dividir par\u00e1grafo",
-      "joinParagraphs": "Desfazer Juntar par\u00e1grafos"
+      "joinParagraphs": "Desfazer Juntar par\u00e1grafos",
+      "tidy": "Desfazer Arrumar"
     },
     "redo": {
       "renameModerator": "Refazer Renomear moderador",
@@ -709,7 +710,8 @@
       "swapRoles": "Refazer Trocar pap\u00e9is",
       "reassignParagraph": "Refazer Reatribuir par\u00e1grafo",
       "splitParagraph": "Refazer Dividir par\u00e1grafo",
-      "joinParagraphs": "Refazer Juntar par\u00e1grafos"
+      "joinParagraphs": "Refazer Juntar par\u00e1grafos",
+      "tidy": "Refazer Arrumar"
     }
   },
   "sync": {

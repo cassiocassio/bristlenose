@@ -289,22 +289,22 @@ describe("ScreensLens", () => {
   // The page's project id is always "1" today (server/app.py), so this separates by origin only;
   // it pins that the key carries the id, for when multi-project makes it real.
   it("keys a rearranged board by the page's project id", async () => {
-    const spot = JSON.stringify({ "s1@12/q-p1-10": { x: 0.1, y: 0.1, z: 31 } });
+    const spot = JSON.stringify({ "s1@12/q-p1-10": { kind: "edge", side: "R", frac: 0.1, z: 31 } });
     const root = document.createElement("div");
     root.id = "bn-app-root";
     root.setAttribute("data-project-id", "2");
     document.body.appendChild(root);
     // Stored under another id: not this page's.
-    localStorage.setItem("bristlenose-screens-arrangement-1", spot);
+    localStorage.setItem("bristlenose-screens-placements-1", spot);
     mockApi(screensResponse());
     const first = render(<ScreensLens />);
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Shopping Bag"));
-    expect(screen.queryByText("Put the quotes back")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
     first.unmount();
     resetArrangementMemory();
-    localStorage.setItem("bristlenose-screens-arrangement-2", spot);
+    localStorage.setItem("bristlenose-screens-placements-2", spot);
     render(<ScreensLens />);
-    await waitFor(() => expect(screen.getByText("Put the quotes back")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument());
   });
 
   it("reports its navigator to the shell, and hides it when asked", async () => {
@@ -426,7 +426,7 @@ describe("ScreensLens", () => {
 });
 
 describe("rearranging the board", () => {
-  const key = "bristlenose-screens-arrangement-1";
+  const key = "bristlenose-screens-placements-1";
   const pointer = (type: string, x: number, y: number) =>
     act(() => {
       window.dispatchEvent(new MouseEvent(type, { clientX: x, clientY: y }));
@@ -445,7 +445,7 @@ describe("rearranging the board", () => {
     pointer("pointermove", 101, 101);
     pointer("pointerup", 101, 101);
     expect(localStorage.getItem(key)).toBeNull();
-    expect(screen.queryByText("Put the quotes back")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
   });
 
   it("moves a card once the pointer has travelled, and remembers where", async () => {
@@ -454,7 +454,7 @@ describe("rearranging the board", () => {
     pointer("pointermove", 140, 160);
     pointer("pointerup", 140, 160);
     expect(localStorage.getItem(key)).toContain("s1@12/q-p1-10");
-    expect(screen.getByText("Put the quotes back")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
   });
 
   it("drops a drag in progress when the board changes, rather than saving it to the screen left", async () => {
@@ -465,6 +465,56 @@ describe("rearranging the board", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Delivery or collect");
     pointer("pointerup", 140, 160);
     expect(localStorage.getItem(key) ?? "").not.toContain("s1@12/");
+  });
+});
+
+describe("Tidy", () => {
+  const key = "bristlenose-screens-placements-1";
+  const placed = JSON.stringify({ "s1@12/q-p1-10": { kind: "edge", side: "R", frac: 0.4, z: 31 } });
+  beforeEach(async () => {
+    const { resetUndoStore } = await import("../../contexts/UndoStore");
+    resetUndoStore();
+    localStorage.setItem(key, placed);
+  });
+
+  it("says nothing while the layout is automatic", async () => {
+    localStorage.removeItem(key);
+    mockApi(screensResponse());
+    render(<ScreensLens />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Shopping Bag"));
+    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
+  });
+
+  it("marks a placed card, returns every card to automatic, and is undone by the report's undo", async () => {
+    const { undo, getUndoState } = await import("../../contexts/UndoStore");
+    mockApi(screensResponse());
+    const { container } = render(<ScreensLens />);
+    const control = await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" });
+    expect(container.querySelector('.screens-card[data-dom="q-p1-10"]')!.className).toContain("is-placed");
+    fireEvent.click(control);
+    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
+    expect(container.querySelector('.screens-card[data-dom="q-p1-10"]')!.className).not.toContain("is-placed");
+    expect(localStorage.getItem(key)).not.toContain("q-p1-10");
+    expect(getUndoState().undoAction).toBe("tidy");
+    await act(async () => {
+      await undo();
+    });
+    expect(await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
+    expect(localStorage.getItem(key)).toContain("q-p1-10");
+  });
+
+  it("offers Return to automatic for a placed card, and Tidy, on right-click", async () => {
+    mockApi(screensResponse());
+    const { container } = render(<ScreensLens />);
+    await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" });
+    const card = container.querySelector<HTMLElement>('.screens-card[data-dom="q-p1-10"]')!;
+    fireEvent.contextMenu(card.querySelector(".quote-body") ?? card);
+    const items = await screen.findAllByRole("menuitem");
+    expect(items.map((i) => i.textContent)).toEqual(["Return to automatic", "Tidy"]);
+    fireEvent.click(items[0]);
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(container.querySelector('.screens-card[data-dom="q-p1-10"]')!.className).not.toContain("is-placed");
+    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
   });
 });
 

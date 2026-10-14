@@ -80,8 +80,38 @@
 .screens-sub code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); }
 .screens-sub .timecode { font-family: var(--bn-font-mono); color: var(--bn-colour-accent); }
 .screens-hidden-slot { margin-left: auto; }
-.screens-putback { font: inherit; font-size: var(--bn-text-label); background: none; border: 0; color: var(--bn-colour-accent); cursor: pointer; padding: 0; }
-.screens-putback:hover { text-decoration: underline; }
+/* Arrangement: nothing while automatic; "Arrangement: Custom" once any card is placed by hand, and
+   "Tidy" — what pressing it does — on hover and on keyboard focus. Both words share one grid cell,
+   right-aligned, so the cell is as wide as the longer and nothing moves when they swap. */
+.screens-arrangement {
+  display: inline-grid; justify-items: end; font: inherit; font-size: var(--bn-text-label);
+  background: none; border: 0; padding: 0; color: var(--bn-colour-muted); cursor: pointer;
+}
+.screens-arrangement > span { grid-area: 1 / 1; }
+.screens-arrangement-act { visibility: hidden; color: var(--bn-colour-accent); }
+.screens-arrangement:hover .screens-arrangement-state,
+.screens-arrangement:focus-visible .screens-arrangement-state { visibility: hidden; }
+.screens-arrangement:hover .screens-arrangement-act,
+.screens-arrangement:focus-visible .screens-arrangement-act { visibility: visible; }
+
+/* A card the researcher placed by hand: a faint mark at its corner. */
+.screens-card.is-placed::before {
+  content: ""; position: absolute; z-index: 2; top: 6px; left: 6px; width: 5px; height: 5px;
+  border-radius: 50%; background: color-mix(in srgb, var(--bn-colour-accent) 45%, transparent);
+  pointer-events: none;
+}
+
+/* The board's right-click menu. */
+.screens-menu {
+  position: absolute; z-index: 1000; min-width: 12rem; padding: var(--bn-space-xs) 0;
+  background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md);
+  box-shadow: 0 4px 16px var(--bn-colour-shadow), 0 1px 4px var(--bn-colour-shadow);
+}
+.screens-menu-item {
+  display: block; width: 100%; text-align: left; font: inherit; font-size: var(--bn-text-label);
+  background: none; border: 0; padding: var(--bn-space-xs) var(--bn-space-md); color: var(--bn-colour-text); cursor: default;
+}
+.screens-menu-item:hover, .screens-menu-item:focus-visible { background: var(--bn-colour-accent); color: #fff; outline: none; }
 
 /* Cards sit BESIDE the screengrab, never over it (the owner, 14 Oct 2026: the screen is the artefact
    being discussed, and stickies laid over a printout hide the design they are about). A card column
@@ -90,7 +120,7 @@
    width and which sides have cards, so these classes and those numbers move together: two from
    1084px of stage, one (right) from 782px, none below — the screengrab then takes the full width
    (MIN_SHOT_W, 480px, is the floor for legibility). A column with no cards takes no room. */
-.screens-stage { container-type: inline-size; }
+.screens-stage { container-type: inline-size; position: relative; }
 .screens-board { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); column-gap: var(--bn-space-xl); }
 .screens-board.cols-r { grid-template-columns: minmax(0, 1fr) 270px; }
 .screens-board.cols-l { grid-template-columns: 270px minmax(0, 1fr); }

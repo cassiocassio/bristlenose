@@ -115,7 +115,11 @@ A domain file is *drafted* until it has been tested properly, and the evidence i
 
 - Anchor to symbols and docs, never line numbers; say which surface a symbol belongs to when there
   are two (the AppKit and SwiftUI sidebars differ).
-- Every rule cites where it is ruled (doc, code comment) or the incident that made it.
+- Every rule **quotes** its source verbatim, as `«quote» — path/to/file`, rather than paraphrasing
+  it; `tests/test_skill_bristlenosey.py` fails when a quote is no longer in the file it cites, when
+  a cited path is gone, or when a rule cites nothing. A rule with no source in the tree is labelled
+  `**Inference:**` and is an argument, not precedent. (Paraphrase is how a clause the source never
+  said got into the progress domain on 14 Oct 2026 and steered two test runs wrong.)
 - Record disagreements between siblings as open calls in that domain's file; resolve them only when
   the owner does.
 - Keep some known answers out, to test with.

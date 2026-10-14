@@ -39,37 +39,48 @@ subprocess, serve, Swift, browser).
 
 ## Rules that come with the siblings
 
-1. **Status lives where its subject lives** (`design-desktop-project-status.md` §4, "the placement
-   axis", settled 19 Jun 2026): what is scoped to one project goes on that project's row (and, for
-   the key window, the window subtitle); app-global work goes in the toolbar `.status` zone.
-2. **One winner per line**: severity › causation › recency; a run beats activities; activities beat
-   deltas ("+N new", missing, forked); a clean row is silent (Schema E). Never compose two states
-   (sole exception `completedPartial`).
-3. **The ring means hover-to-stop.** The run and copy rings swap to ✕ on hover on both sidebars; the
-   cloud-batch ring and its stop exist only on the AppKit sidebar (`ProjectSidebarOutline.cellRightSlot`,
-   behind `BristlenoseFlags.appKitSidebar`; the SwiftUI `ProjectRowActivityIndicator` has run and copy
-   only). Exception: while a copy is cancelling, a spinner with no ✕. Otherwise, work that cannot be
-   stopped from the row gets no ring.
-4. **Never fake a fraction.** No fraction → spinner or no bar; a bar only with a real count or byte
-   total (ring, build report, Ollama-style pills all follow this).
-5. **No estimate until it is earned.** The pipeline: ≥4 prior runs for an ETA, ≥8 for a range, none
-   under 10 s. A constant is not an estimate.
-6. **A count is the question a closed window leaves.** "3 of 4" (cloud batch: the count *is* the
-   sentence, no verb). Counts over percentages for discrete work.
-7. **Terse.** Row line: `EN_LABEL_MAX = 24` in `tests/test_sidebar_status_line_contract.py` (which
-   cites `ProjectRow.swift`'s "~22"); measured width 163 pt at a 220 pt sidebar
-   (`design-desktop-project-status.md`, which says measurement superseded the character estimate).
-   Pill ~28; toast ~60 (`design-pipeline-diagnostic-popover.md`); CLI 80 columns; build report 92
-   (`REPORT-STYLE.md`).
-8. **Stopping is acknowledged at once** (`isStopping`) and outranks progress everywhere.
-9. **Progress is a status, not a message kind** (`ui_kinds.py`): no glyph.
-10. **Privacy**: persisted progress (events, logs, telemetry) carries counts and timings, never
-    names, ids, filenames or transcript text (`RunProgressEvent` docstring). On-screen rows may name
-    what is being worked on (the progressive Sessions grid shows the filename being processed,
-    `design-progressive-lenses.md`).
-11. **Strings**: the row and titlebar are localised (21 locales, value pins); the CLI and
-    App-Store-hidden diagnostics are English by decision (`design-i18n.md`).
-12. **Motion**: shimmer means "thinking, no ETA", honours the animation preference and Reduce Motion.
+Every rule quotes its source, `«verbatim» — path`, and `tests/test_skill_bristlenosey.py` fails if a
+quote no longer appears in the file it cites (markdown emphasis, backticks, comment markers and
+line wraps are ignored). A rule with no source in the tree is labelled **Inference**: weigh it as
+an argument, never as precedent.
+
+1. **Status lives where its subject lives.** One project's work goes on its row; app-wide work in
+   the toolbar `.status` zone.
+   «What surfaces on a project's row is what's *scoped to that project*» — docs/design-desktop-project-status.md
+   «The placement axis — per-project on the row, app-global in the title-bar pill» — docs/design-desktop-project-status.md
+2. **One winner per line, and a clean row is silent.** Activities outrank the resting deltas.
+   «Precedence picks a winner» — docs/design-desktop-project-status.md
+   «Schema E — the clean row is silent» — docs/design-desktop-project-status.md
+   «An active local copy (or its cancellation) outranks the resting date/delta.» — desktop/Bristlenose/Bristlenose/ProjectSubtitle.swift
+3. **The ring is a stop control.**
+   «hovering the running indicator swaps the spinner for a grey» — docs/design-sidebar-activity-indicators.md
+   **Inference:** work that cannot be stopped from the row therefore gets no ring.
+4. **Never fake a fraction.**
+   «Never fake a fraction we don't have.» — desktop/scripts/REPORT-STYLE.md
+5. **No estimate until it is earned.**
+   «_MIN_N_ESTIMATE = 4» — bristlenose/timing.py
+   «_MIN_N_RANGE = 8» — bristlenose/timing.py
+   «if remaining_total < 10.0:» — bristlenose/timing.py
+   **Inference:** a constant (a fixed minutes-per-hour figure) is not an estimate.
+6. **A count is the question a closed window leaves.**
+   «A count rather than a percentage or an ETA, because a count is the question a closed window leaves» — desktop/Bristlenose/Bristlenose/SidebarSubtitleText.swift
+7. **Terse.**
+   «EN_LABEL_MAX = 24» — tests/test_sidebar_status_line_contract.py
+   «| Pill label (toolbar) | ~28 |» — docs/design-pipeline-diagnostic-popover.md
+   «| Toast message | ~60 |» — docs/design-pipeline-diagnostic-popover.md
+   «console = Console(width=min(80, Console().width))» — docs/design-cli-formatting.md
+   «Width — target 92 cols» — desktop/scripts/REPORT-STYLE.md
+8. **Stopping is acknowledged at once.**
+   «PipelineProgress.isStopping is the immediate-ack contract.» — desktop/CLAUDE.md
+9. **Progress is a status, not a message kind.**
+   «pending/running → status, not a kind» — bristlenose/ui_kinds.py
+10. **Persisted progress carries counts and timings, never identities.** (On-screen rows may name
+    what is being worked on, as the progressive Sessions grid does.)
+    «never an id, filename, speaker label» — bristlenose/events.py
+11. **The terminal is English; the report and the Mac app are localised.**
+    «CLI terminal chrome — `--help`, Rich output, checkmark lines, `man` page | **English**» — docs/design-i18n.md
+12. **Shimmer means work with no estimate.**
+    «indeterminate work in progress, no ETA» — docs/design-motion.md
 
 ## Open calls (siblings disagree — name them, do not choose)
 

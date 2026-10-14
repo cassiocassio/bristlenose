@@ -9,6 +9,11 @@ Lines on at least half of the text-dense samples are flagged **sticky** (chrome:
 tiles, bookmarks). **Moments** are the samples whose non-sticky lines differ from the last kept
 moment by Jaccard < 0.6.
 
+What is stored is less than what was read (``docs/design-screens.md`` §4.3). Every address loses
+its query string, and its fragment unless that is an app's route (``address.minimise``). Sticky
+lines are not stored at all, except an address, which is what a screen is keyed on: the screens
+are derived from the rest, and chrome is where the call's names and the bookmarks are.
+
 Measured (``experiments/screen-text/README.md``): about 2 minutes per hour of 1080p video with
 Vision on an M2 Max, ~200 MB. Frames wider than ``MAX_WIDTH`` are scaled down first, which bounds
 memory for 4K screen captures without costing legibility at 1920.
@@ -21,6 +26,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 import threading
 import unicodedata
@@ -30,6 +36,7 @@ from pathlib import Path
 from typing import Any
 
 from bristlenose.screen_text import INDEX_VERSION
+from bristlenose.screen_text.address import minimise, url_norm
 from bristlenose.screen_text.engine import Frame, ScreenTextEngine
 from bristlenose.utils.bundled_binary import binary_command
 
@@ -180,9 +187,10 @@ def index_frames(frames: Iterator[Frame], engine: ScreenTextEngine, every: float
         lines = engine.recognize(fr)
         raw += len(lines)
         for ln in lines:
-            f = fold(ln["text"])
+            text = minimise(ln["text"])
+            f = fold(text)
             if ln["conf"] >= MIN_CONF and len(f) >= 2 and f not in keep:
-                keep[f] = dict(ln)
+                keep[f] = {**ln, "text": text}
         samples.append((fr.t, keep))
     dense = [k for _, k in samples if len(k) >= DENSE_LINES]
     freq: dict[str, int] = {}
@@ -193,6 +201,8 @@ def index_frames(frames: Iterator[Frame], engine: ScreenTextEngine, every: float
     episodes: dict[tuple[str, tuple[int, int]], dict] = {}
     for t, k in samples:
         for f, ln in k.items():
+            if f in sticky and url_norm(ln["text"]) is None:
+                continue  # chrome is not stored; an address is, minimised, for the screen key
             key = (f, _place(ln["box"]))
             e = episodes.setdefault(key, {"text": ln["text"], "box": ln["box"], "sticky": f in sticky, "runs": []})
             if e["runs"] and t - e["runs"][-1][1] <= 2 * every + 0.01:
@@ -215,7 +225,67 @@ def index_frames(frames: Iterator[Frame], engine: ScreenTextEngine, every: float
 
 
 def index_dir(output_dir: Path) -> Path:
+    """Everything screen text keeps for a project: the indexes, and the stills under ``stills/``.
+    The screens themselves are derived in memory and never written."""
     return output_dir / ".bristlenose" / "intermediate" / "screen-text"
+
+
+def delete_at_rest(output_dir: Path) -> int:
+    """Delete everything screen text keeps for this project; the number of files deleted.
+
+    For an explicit off (``screen_text.explicitly_off()``): the researcher turned reading shared
+    screens off, so what was read goes too. A symlink in its place is refused, not followed."""
+    d = index_dir(output_dir)
+    if not d.exists() and not d.is_symlink():
+        return 0
+    n = sum(1 for p in d.rglob("*") if p.is_file()) if not d.is_symlink() else 0
+    try:
+        shutil.rmtree(d)
+    except OSError as exc:
+        logger.warning("Screen text: switched off, but could not delete what it had read: %s",
+                       type(exc).__name__)
+        return 0
+    logger.info("Screen text: switched off; deleted this project's screen text (%d files)", n)
+    return n
+
+
+def purge_stale(output_dir: Path) -> int:
+    """Delete indexes written by an older ``INDEX_VERSION``, and their sessions' stills; the
+    number of indexes deleted.
+
+    A newer version keeps less (addresses minimised, chrome not stored), so an older index must
+    not outlive the change merely because its recording can no longer be read again."""
+    d = index_dir(output_dir)
+    if d.is_symlink() or not d.is_dir():
+        return 0
+    n = 0
+    for path in d.glob("*.json"):
+        try:
+            rec = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            rec = None
+        version = rec.get("version") if isinstance(rec, dict) else None
+        if isinstance(version, int) and version >= INDEX_VERSION:
+            continue  # current, or written by a newer Bristlenose sharing this project
+        try:
+            path.unlink()
+        except OSError:
+            continue
+        n += 1
+        stills = d / "stills"
+        if stills.is_dir() and not stills.is_symlink():
+            for still in stills.glob(f"{path.stem}_*.jpg"):
+                still.unlink(missing_ok=True)
+    # Stills from before they were named by session (``<sid>_<tag>.jpg``) are never served again,
+    # so nothing else would ever delete them, and a withdrawn participant's prune cannot find them.
+    stills = d / "stills"
+    if stills.is_dir() and not stills.is_symlink():
+        for still in stills.glob("*.jpg"):
+            if "_" not in still.stem:
+                still.unlink(missing_ok=True)
+    if n:
+        logger.info("Screen text: deleted %d index(es) from an older version", n)
+    return n
 
 
 def cache_key(video: Path, engine: ScreenTextEngine) -> str:

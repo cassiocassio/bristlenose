@@ -26,10 +26,10 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
+from bristlenose.screen_text.address import url_norm
 from bristlenose.screen_text.index import fold
 
 WINDOW = 4.0
-HOST = re.compile(r"((?:[a-z0-9-]+\.)+(?:com|co\.uk|de|org|net|io|app|uk|eu|fr|es|it|nl|se|dk|no|fi|pl|cz|jp|kr|br|pt|ca|au|gov|edu)(?:/[^\s]*)?)", re.I)
 ID = re.compile(r"(?:^|-)((?:[a-z]{1,3})?\d{3,})$")
 STOP = set("""a an and are as at be but by for from has have i if in into is it its just like me my no not of on
 or our so that the their them then there they this to was we what when where which who will with you your
@@ -39,23 +39,6 @@ FURNITURE_SCREENS = 5
 
 
 # ── Addresses and titles ─────────────────────────────────────────────────
-
-
-def url_norm(text: str) -> dict[str, str] | None:
-    """An address bar's text as host, path and fragment; None when it is not an address."""
-    t = re.sub(r"^[^a-z0-9]+", "", text.strip().lower())
-    t = re.sub(r"^https?://", "", t).rstrip("|/ ") + "/"
-    t = re.sub(r"^(?:[^\s]{1,2}\s+)", "", t) if " " in t else t
-    if " " in t.strip():
-        return None
-    m = HOST.search(t)
-    if not m or m.start() > 0:
-        return None
-    u = re.sub(r"^www\.", "", m.group(1).lower())
-    path, _, frag = u.partition("#")
-    path = path.partition("?")[0]
-    host, _, p = path.partition("/")
-    return {"host": host, "path": "/" + p.rstrip("/"), "frag": re.sub(r"\d{4,}", "#", frag.split("?")[0].rstrip("/"))}
 
 
 def id_key(path: str, frag: str) -> str:

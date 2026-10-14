@@ -84,11 +84,11 @@ SERVER_ONLY_PATH_TEMPLATES: frozenset[str] = frozenset(
         # Transcription diagnostics (numbers about how Whisper heard each recording),
         # shown only with the diagnostics preference on. Not part of a deliverable.
         "/projects/{project_id}/transcription-quality",
-        # The Screens lens (diagnostics): participants' screens and what was on them, read by
-        # OCR. Never in a deliverable, as the hover frames are not.
+        # The Screens lens: participants' screens and what was on them, read from the
+        # recordings. Never in a deliverable, as the hover frames are not.
         "/projects/{project_id}/screens",
         "/projects/{project_id}/screens/still",
-        "/projects/{project_id}/screens/status",  # the Mac app's progress row; no SPA reader
+        "/projects/{project_id}/screens/status",  # whether the lens shows; never in an export
         "/projects/{project_id}/signals/tags",  # no SPA callers; server-compute
         # Progressive delivery of findings while the lens is open. An exported
         # report has no server to stream from, and does not need one: the

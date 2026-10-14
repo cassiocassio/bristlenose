@@ -13,11 +13,13 @@ recording it has not read while idle is reported ``not_read`` by the routes, so 
 reaches an answer. Each pass also measures its own reading rate (recording seconds per wall-clock
 second, from the sessions it actually read) for the Mac app's progress row.
 
-Off unless asked for: ``BRISTLENOSE_SCREEN_TEXT=1`` (the Mac app sets it when the Diagnostics
-preference is on) or ``serve --dev``. The switch is read from the environment the serve was spawned
-with, so turning Diagnostics off reaches a running serve only by restarting it. Where no engine can
-run (anything but macOS with ``pyobjc-framework-Vision``), the job does nothing and the screens
-routes say why.
+On when asked for (``screen_text.wanted``): ``BRISTLENOSE_SCREEN_TEXT=1``, which the Mac app sets
+by default, or ``serve --dev``. Unset — the CLI's default — it does not run. ``0`` is the
+researcher's off: the serve deletes what was read for the project before this job is made
+(``index.delete_at_rest``), and ``--dev`` does not override it. The switch is read from the
+environment the serve was spawned with, so turning it off reaches a running serve only by
+restarting it. Where no engine can run (anything but macOS with ``pyobjc-framework-Vision``), the
+job does nothing and the screens routes say why.
 """
 
 from __future__ import annotations
@@ -33,7 +35,13 @@ from sqlalchemy.orm import Session
 
 from bristlenose.screen_text import ReadFailure, Unavailable
 from bristlenose.screen_text.engine import ScreenTextEngine, VisionEngine
-from bristlenose.screen_text.index import build_index, cache_key, index_dir, stored_key
+from bristlenose.screen_text.index import (
+    build_index,
+    cache_key,
+    index_dir,
+    purge_stale,
+    stored_key,
+)
 from bristlenose.server.models import Session as SessionModel
 from bristlenose.server.scene_strips import video_sessions
 from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
@@ -122,7 +130,7 @@ class ScreenTextJob:
                     if not self._rerun:
                         self._finish()
                         return
-        except Exception:  # noqa: BLE001 — diagnostic; must never take the server with it
+        except Exception:  # noqa: BLE001 — a side job; must never take the server with it
             logger.warning("Screen text skipped", exc_info=True)
             with self._flag:
                 self._finish()
@@ -164,6 +172,7 @@ class ScreenTextJob:
             durations = session_durations(db)
         finally:
             db.close()
+        purge_stale(self._output_dir())
         out = index_dir(self._output_dir())
         for session_id, video in videos.items():
             if self._run_in_progress():

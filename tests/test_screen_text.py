@@ -88,12 +88,16 @@ def test_a_line_that_moves_is_a_new_episode_at_its_new_place() -> None:
 
 
 def test_lines_on_most_dense_frames_are_sticky() -> None:
+    # Sticky lines are chrome and are not stored (tests/test_screens_at_rest.py), except an address,
+    # which keys the screen: so the flag is seen on the address, and the name is simply gone.
     def lines(t: float) -> list[dict]:
         page = [_ln(f"line {int(t)} {i}", 0.1, 0.1 + i * 0.02) for i in range(30)]
-        return page + [_ln("Martin Storey", 0.9, 0.2)]
+        return page + [_ln("Martin Storey", 0.9, 0.2), _ln("ikea.com/gb/en/planner", 0.2, 0.03)]
     rec = sti.index_frames(iter(_frames([0.0, 4.0, 8.0])), FakeEngine(lines))
     sticky = {e["text"] for e in rec["episodes"] if e["sticky"]}
-    assert sticky == {"Martin Storey"}
+    assert sticky == {"ikea.com/gb/en/planner"}
+    assert "Martin Storey" not in {e["text"] for e in rec["episodes"]}
+    assert len(rec["episodes"]) == 3 * 30 + 1
 
 
 def test_low_confidence_lines_are_dropped() -> None:

@@ -1388,13 +1388,20 @@ def _install_event_watcher(
     app.state.scene_strips = SceneStripJob(
         session_factory, lambda: project_output_dir(project_dir), _run_in_progress,
     )
-    # Screen text (diagnostics, off unless asked for): the same shape of job, after the strips'.
+    # Screen text (on when asked for, which the Mac app does by default): the same shape of job,
+    # after the strips'. Explicitly off (BRISTLENOSE_SCREEN_TEXT=0, the researcher's switch) deletes
+    # what was read for this project before anything else can read it; unset deletes nothing.
     from bristlenose import screen_text as _screen_text
+    from bristlenose.screen_text.index import delete_at_rest, purge_stale
     from bristlenose.server.screen_text_job import ScreenTextJob
 
+    if _screen_text.explicitly_off():
+        delete_at_rest(project_output_dir(project_dir))
+    else:  # an older index keeps more than the current rules; never left for the next pass
+        purge_stale(project_output_dir(project_dir))
     app.state.screen_text = ScreenTextJob(
         session_factory, lambda: project_output_dir(project_dir), _run_in_progress,
-        enabled=lambda: _screen_text.enabled() or bool(getattr(app.state, "dev", False)),
+        enabled=lambda: _screen_text.wanted(bool(getattr(app.state, "dev", False))),
         busy=lambda: app.state.scene_strips.running,
     )
 

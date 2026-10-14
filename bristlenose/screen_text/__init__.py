@@ -16,10 +16,14 @@ Three layers, each usable without the next:
 
 Runs in serve, in the background, after the report is readable (``server/screen_text_job.py``),
 never on the pipeline's path. Switched on by ``BRISTLENOSE_SCREEN_TEXT=1``, which the Mac app sets
-when the Diagnostics preference is on, and by ``serve --dev``. Rough and diagnostics-only for now.
+unless the researcher turns "Read shared screens" off, and by ``serve --dev``. Unset — the CLI's
+default — it does not run. The Mac app says ``0`` when the researcher has turned it off, and that is
+the one value that deletes: serve starts by deleting what was read for the project
+(``index.delete_at_rest``), and ``--dev`` does not turn it back on.
 
 Privacy (``docs/design-screens.md`` §4): everything stays in the project's ``.bristlenose/``; never
-in an export, never sent to an LLM, never through MCP or the chat lens.
+in an export, never sent to an LLM, never through MCP or the chat lens. At rest the index keeps no
+query strings, no fragments but an app's routes (``address.minimise``), and no chrome.
 """
 
 from __future__ import annotations
@@ -28,7 +32,7 @@ import os
 from typing import Literal
 
 #: Bump when anything changes what an index holds: it is in every index's cache key.
-INDEX_VERSION = 2
+INDEX_VERSION = 3
 
 # Why something cannot be read, as a case, never a sentence: the SPA and the Mac app say it in the
 # researcher's language, and the raw detail (an exception, ffmpeg's stderr) goes to the log only.
@@ -44,5 +48,17 @@ ReadFailure = Literal["unreadable", "cloud_downloading", "ffprobe_failed", "read
 
 
 def enabled() -> bool:
-    """Whether serve should read screens at all. Off unless asked for."""
+    """Whether serve was asked to read screens: ``BRISTLENOSE_SCREEN_TEXT=1``."""
     return os.environ.get("BRISTLENOSE_SCREEN_TEXT", "0") == "1"
+
+
+def explicitly_off() -> bool:
+    """Whether the researcher turned reading screens off: ``BRISTLENOSE_SCREEN_TEXT`` is exactly
+    ``0``. Unset is not off in this sense — it is the CLI's default — and deletes nothing."""
+    return os.environ.get("BRISTLENOSE_SCREEN_TEXT") == "0"
+
+
+def wanted(dev: bool) -> bool:
+    """Whether serve reads screens: asked for, or ``serve --dev``; never when explicitly off, which
+    is the researcher's decision and outranks a developer flag."""
+    return not explicitly_off() and (enabled() or dev)

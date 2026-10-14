@@ -4,18 +4,19 @@
 still on it (time and crop), the quotes pinned to on-screen lines and the quotes said there with no
 pin. Quotes travel as DOM ids; the SPA joins them to the quotes store, so star, hide and tags are
 the report's own. ``GET …/screens/still`` returns one cropped frame as a data URI, cached on disk.
-``GET …/screens/status`` is the Mac app's progress row: counts, recording seconds and the reading
-rate, from the database and a stat per recording — it never derives screens or decodes anything.
+``GET …/screens/status`` is the Mac app's progress row and the lens's switch: counts, recording
+seconds, the reading rate and whether any screen was found, from the database and a stat per
+recording. It decodes nothing, and derives screens only when the indexes change.
 
 Why something cannot be read travels as a reason code (``bristlenose.screen_text.Unavailable`` /
 ``ReadFailure``), never a sentence; the SPA and the Mac app say it in the researcher's language.
 A recording with no index, no failure and an idle job is ``not_read``, so a poller always stops.
 
 All three are about participants' screens: behind the bearer, never under ``/report/assets/``,
-server-only in an export (``routes/export.py``). Diagnostics-only for now: the job that writes the
-indexes runs only when switched on. Switched off, ``/screens`` and ``/screens/status`` answer 200
-with ``enabled: false`` (the lens and the progress row must be able to see "off"), and
-``/screens/still`` answers 404.
+server-only in an export (``routes/export.py``). The job that writes the indexes runs only when
+switched on (``screen_text.wanted``: the Mac app's default, or ``serve --dev``). Switched off,
+``/screens`` and ``/screens/status`` answer 200 with ``enabled: false`` (the lens and the progress
+row must be able to see "off"), and ``/screens/still`` answers 404.
 """
 
 from __future__ import annotations
@@ -52,6 +53,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 _CACHE: dict[tuple, list[dict[str, Any]]] = {}
+#: Whether the indexes show any screen, by their identity (the first part of ``_CACHE``'s key). Not
+#: keyed on the quotes: they place and pin on screens, they never make or remove one.
+_HAS_SCREENS: dict[tuple[Any, ...], bool] = {}
 _DERIVE_LOCK = threading.Lock()
 _STILL_MAX_W = 1600
 
@@ -67,7 +71,17 @@ def _output_dir(request: Request) -> Path | None:
 
 
 def screens_enabled(request: Request) -> bool:
-    return screen_text.enabled() or bool(getattr(request.app.state, "dev", False))
+    return screen_text.wanted(bool(getattr(request.app.state, "dev", False)))
+
+
+def _ident(project_id: int, mtimes: dict[str, int]) -> tuple[Any, ...]:
+    """The indexes' identity: which sessions have a current one, and when each was written."""
+    return (project_id, tuple(sorted(mtimes.items())))
+
+
+def _remember_has_screens(ident: tuple[Any, ...], screens: list[dict[str, Any]]) -> None:
+    _HAS_SCREENS.clear()  # one project per server; the latest identity is all that is wanted
+    _HAS_SCREENS[ident] = bool(screens)
 
 
 # The shape ``screen_text/screens.py``'s ``derive_screens`` returns, field for field.
@@ -137,6 +151,9 @@ class ScreensStatusResponse(BaseModel):
     #: Recording seconds read per wall-clock second by the current (or last) pass; null until
     #: that pass has read one recording.
     rate: float | None
+    #: At least one screen derived from this study's indexes. False with nothing indexed, and for
+    #: recordings that are all talking heads (text, but no address or title to key a screen on).
+    has_screens: bool
 
 
 @router.get("/projects/{project_id}/screens", response_model=ScreensResponse)
@@ -204,8 +221,8 @@ def get_screens(project_id: int, request: Request, db: Session = Depends(_get_db
                 "text": q.verbatim_excerpt or q.text,
             })
             codes.setdefault(q.session_id, Counter())[q.participant_id] += 1
-        key = (project_id, tuple(sorted((sid, m) for sid, (m, _) in indexes.items())),
-               len(quotes), max((q.id for q in quotes), default=0),
+        ident = _ident(project_id, {sid: m for sid, (m, _) in indexes.items()})
+        key = (*ident, len(quotes), max((q.id for q in quotes), default=0),
                max((str(q.last_imported_at) for q in quotes), default=""))
         screens = _CACHE.get(key)
         if screens is None:
@@ -218,6 +235,7 @@ def get_screens(project_id: int, request: Request, db: Session = Depends(_get_db
                     screens = derive_screens(sessions)
                     _CACHE.clear()  # one project per server; the latest derivation is all that is wanted
                     _CACHE[key] = screens
+                    _remember_has_screens(ident, screens)
         base["screens"] = screens
         return base
     finally:
@@ -298,9 +316,17 @@ def get_still(
 @router.get("/projects/{project_id}/screens/status", response_model=ScreensStatusResponse)
 def get_screens_status(project_id: int, request: Request,
                        db: Session = Depends(_get_db)) -> dict[str, Any]:
-    """How far the screen-text job has got, for the Mac app's progress row. Cheap by design: the
-    database and a stat per recording (and an index parsed only when it has been rewritten). It
-    never derives screens, decodes a frame, or reads a recording's bytes."""
+    """How far the screen-text job has got, for the Mac app's progress row, and whether the lens
+    has anything to show. Polled every 3 s, so cheap by design: the database and a stat per
+    recording (an index parsed only when it has been rewritten). It never decodes a frame or reads
+    a recording's bytes, and derives screens only when the indexes' identity changes — once per
+    index the job writes, never per poll; with nothing indexed, ``has_screens`` is false without
+    deriving.
+
+    The SPA and the Mac app show the Screens lens iff
+    ``enabled and unavailable is None and (has_screens or (total > 0 and (running or done < total)))``:
+    a study with screens, or one still being read. A study read to the end with no screen in it
+    (talking heads, or no recordings) has no lens."""
     try:
         if not db.get(Project, project_id):
             raise HTTPException(status_code=404, detail="Project not found")
@@ -308,7 +334,7 @@ def get_screens_status(project_id: int, request: Request,
         out: dict[str, Any] = {"enabled": screens_enabled(request),
                "unavailable": job.unavailable() if job is not None else "no_job",
                "running": False, "done": 0, "total": 0, "seconds_done": 0.0, "seconds_total": 0.0,
-               "rate": None}
+               "rate": None, "has_screens": False}
         out_dir = _output_dir(request)
         if not out["enabled"]:
             out["unavailable"] = None  # off is its own answer; why it could not run is moot
@@ -327,12 +353,42 @@ def get_screens_status(project_id: int, request: Request,
     out["rate"] = job.rate
     idir = index_dir(out_dir)
     in_run = job.run_in_progress()
+    mtimes: dict[str, int] = {}
     for sid, video in videos.items():
+        path = idir / f"{sid}.json"
         try:
-            current = stored_key(idir / f"{sid}.json") == cache_key(video, job.engine)
+            current = stored_key(path) == cache_key(video, job.engine)
+            if current:
+                mtimes[sid] = path.stat().st_mtime_ns
         except OSError:
             current = False
         if current or job.why_unread(sid, in_run) is not None:
             out["done"] += 1
             out["seconds_done"] += durations.get(sid, 0.0)
+    out["has_screens"] = _has_screens(project_id, idir, mtimes)
     return out
+
+
+def _has_screens(project_id: int, idir: Path, mtimes: dict[str, int]) -> bool:
+    """Whether the current indexes show any screen: cached on their identity, which ``/screens``
+    shares, so a poll costs a lookup and a derivation runs once per change to the indexes."""
+    if not mtimes:
+        return False
+    ident = _ident(project_id, mtimes)
+    hit = _HAS_SCREENS.get(ident)
+    if hit is not None:
+        return hit
+    with _DERIVE_LOCK:
+        hit = _HAS_SCREENS.get(ident)
+        if hit is not None:
+            return hit
+        sessions = []
+        for sid in mtimes:
+            rec = read_index(idir / f"{sid}.json")
+            if rec is None:
+                return False  # replaced as we read; the next poll has a new identity
+            sessions.append(SessionInput(sid, sid, rec, []))
+        # Without quotes: they decide where a quote goes, never whether a screen exists.
+        screens = derive_screens(sessions)
+        _remember_has_screens(ident, screens)
+        return bool(screens)

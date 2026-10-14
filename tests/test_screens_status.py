@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
 import sys
 import threading
@@ -76,14 +77,25 @@ def _give_s1_a_video(app, project: Path, duration: float = 600.0) -> Path:
     return video
 
 
-def _write_index(project: Path, video: Path, engine, sid: str = "s1") -> Path:
+def _write_index(project: Path, video: Path, engine, sid: str = "s1", episodes: list | None = None) -> Path:
     d = index_dir(_out(project))
     d.mkdir(parents=True, exist_ok=True)
     path = d / f"{sid}.json"
     path.write_text(json.dumps(
         {"version": INDEX_VERSION, "engine": "fake", "engine_version": "1", "every": 4.0, "size": [320, 180],
-         "samples": 3, "raw_lines": 0, "moments": [], "episodes": [], "key": cache_key(video, engine)}))
+         "samples": 3, "raw_lines": len(episodes or []), "moments": [], "episodes": episodes or [],
+         "key": cache_key(video, engine)}))
     return path
+
+
+def _line(text: str, y: float) -> dict:
+    return {"text": text, "box": [0.1, y, 0.5, 0.03], "sticky": False, "runs": [[0, 60]]}
+
+
+#: A talking head: plenty of text (a slide, captions), no address bar and no tab title to key on.
+_TALKING_HEAD = [_line(f"we talked about the onboarding flow {i}", 0.3 + i * 0.05) for i in range(12)]
+#: A browser on one page: an address to key on, and the page's own lines.
+_ONE_PAGE = [_line("example.com/gb/en/checkout", 0.03)] + _TALKING_HEAD
 
 
 class _Captured(logging.Handler):
@@ -261,17 +273,16 @@ def test_status_when_off_is_200_and_says_off(project: Path, monkeypatch: pytest.
     r = AuthTestClient(app).get("/api/projects/1/screens/status")
     assert r.status_code == 200
     assert r.json() == {"enabled": False, "unavailable": None, "running": False, "done": 0, "total": 0,
-                        "seconds_done": 0.0, "seconds_total": 0.0, "rate": None}
+                        "seconds_done": 0.0, "seconds_total": 0.0, "rate": None, "has_screens": False}
 
 
-def test_status_counts_from_the_database_and_never_derives(project: Path,
-                                                           monkeypatch: pytest.MonkeyPatch) -> None:
+def test_status_counts_from_the_database_and_never_decodes(project: Path,
+                                                            monkeypatch: pytest.MonkeyPatch) -> None:
     app = _app(project, monkeypatch)
     video = _give_s1_a_video(app, project, duration=600.0)
 
     def no(*a, **k):
         raise AssertionError("the status route must stay cheap")
-    monkeypatch.setattr("bristlenose.server.routes.screens.derive_screens", no)
     monkeypatch.setattr("bristlenose.server.routes.screens.ensure_materialised", no)
     monkeypatch.setattr("bristlenose.screen_text.index.probe_duration", no)
     client = AuthTestClient(app)
@@ -281,7 +292,7 @@ def test_status_counts_from_the_database_and_never_derives(project: Path,
     job.rate = 40.5
     assert client.get("/api/projects/1/screens/status").json() == {
         "enabled": True, "unavailable": None, "running": True, "done": 0, "total": 1,
-        "seconds_done": 0.0, "seconds_total": 600.0, "rate": 40.5}
+        "seconds_done": 0.0, "seconds_total": 600.0, "rate": 40.5, "has_screens": False}
 
     _write_index(project, video, job.engine)  # s1 read
     body = client.get("/api/projects/1/screens/status").json()
@@ -326,4 +337,86 @@ def test_a_pass_measures_its_own_rate_from_what_it_read(project: Path,
 
 def test_the_status_response_model_is_the_mac_contract() -> None:
     assert list(ScreensStatusResponse.model_fields) == [
-        "enabled", "unavailable", "running", "done", "total", "seconds_done", "seconds_total", "rate"]
+        "enabled", "unavailable", "running", "done", "total", "seconds_done", "seconds_total", "rate",
+        "has_screens"]
+
+
+# ── Whether there is anything to show ────────────────────────────────────
+
+
+@pytest.fixture
+def derives(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    """Count the route module's derivations, each by how many sessions it was given."""
+    from bristlenose.server.routes import screens as routes
+
+    routes._HAS_SCREENS.clear()
+    routes._CACHE.clear()
+    calls: list[int] = []
+
+    def counted(sessions):
+        sessions = list(sessions)
+        calls.append(len(sessions))
+        return derive_screens(sessions)
+    monkeypatch.setattr("bristlenose.server.routes.screens.derive_screens", counted)
+    return calls
+
+
+def test_nothing_indexed_has_no_screens_and_derives_nothing(project: Path, monkeypatch: pytest.MonkeyPatch,
+                                                            derives: list[int]) -> None:
+    app = _app(project, monkeypatch)
+    _give_s1_a_video(app, project)
+    client = AuthTestClient(app)
+    assert client.get("/api/projects/1/screens/status").json()["has_screens"] is False
+    assert derives == []
+
+
+def test_a_talking_head_has_no_screens_and_two_polls_derive_once(project: Path, monkeypatch: pytest.MonkeyPatch,
+                                                                 derives: list[int]) -> None:
+    app = _app(project, monkeypatch)
+    video = _give_s1_a_video(app, project)
+    _write_index(project, video, app.state.screen_text.engine, episodes=_TALKING_HEAD)
+    client = AuthTestClient(app)
+    for _ in range(2):
+        body = client.get("/api/projects/1/screens/status").json()
+        assert (body["done"], body["has_screens"]) == (1, False)
+    assert derives == [1]
+
+
+def test_a_derived_screen_has_screens_and_a_new_index_derives_again(project: Path, monkeypatch: pytest.MonkeyPatch,
+                                                                    derives: list[int]) -> None:
+    app = _app(project, monkeypatch)
+    video = _give_s1_a_video(app, project)
+    path = _write_index(project, video, app.state.screen_text.engine, episodes=_ONE_PAGE)
+    client = AuthTestClient(app)
+    assert client.get("/api/projects/1/screens/status").json()["has_screens"] is True
+    assert client.get("/api/projects/1/screens/status").json()["has_screens"] is True
+    assert derives == [1]
+    # The job rewrote the index (a re-read): a new identity, one more derivation, then cached again.
+    _write_index(project, video, app.state.screen_text.engine, episodes=_TALKING_HEAD)
+    st = path.stat()
+    os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 1_000_000_000))
+    assert client.get("/api/projects/1/screens/status").json()["has_screens"] is False
+    assert client.get("/api/projects/1/screens/status").json()["has_screens"] is False
+    assert derives == [1, 1]
+
+
+def test_the_lens_derivation_answers_the_status_poll(project: Path, monkeypatch: pytest.MonkeyPatch,
+                                                     derives: list[int]) -> None:
+    """``/screens`` and ``/screens/status`` share the indexes' identity: what the lens derived, the
+    poll does not derive again."""
+    app = _app(project, monkeypatch)
+    video = _give_s1_a_video(app, project)
+    _write_index(project, video, app.state.screen_text.engine, episodes=_ONE_PAGE)
+    client = AuthTestClient(app)
+    assert client.get("/api/projects/1/screens").json()["screens"]
+    assert client.get("/api/projects/1/screens/status").json()["has_screens"] is True
+    assert derives == [1]
+
+
+def test_quotes_never_make_or_remove_a_screen() -> None:
+    """Why ``has_screens`` is derived without the quotes, and cached without them in its key."""
+    rec = {"every": 4.0, "episodes": _ONE_PAGE, "moments": []}
+    quotes = [{"dom_id": "q-p1-10", "start": 10, "end": 14, "text": "the onboarding flow was fine"}]
+    with_quotes = derive_screens([SessionInput("s1", "p1", rec, quotes)])
+    without = derive_screens([SessionInput("s1", "s1", rec, [])])
+    assert with_quotes and {s["key"] for s in with_quotes} == {s["key"] for s in without}

@@ -711,5 +711,10 @@
       "splitParagraph": "R\u00e9tablir la division du paragraphe",
       "joinParagraphs": "R\u00e9tablir la fusion des paragraphes"
     }
+  },
+  "sync": {
+    "saveFailed": "Impossible d\u2019enregistrer votre modification. V\u00e9rifiez votre connexion.",
+    "saveRefused": "Impossible d\u2019enregistrer votre modification.",
+    "runInProgress": "Une analyse est en cours. R\u00e9essayez quand elle sera termin\u00e9e."
   }
 }

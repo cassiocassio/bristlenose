@@ -711,5 +711,10 @@
       "splitParagraph": "Ripristina Dividi paragrafo",
       "joinParagraphs": "Ripristina Unisci paragrafi"
     }
+  },
+  "sync": {
+    "saveFailed": "Impossibile salvare la modifica. Controlla la connessione.",
+    "saveRefused": "Impossibile salvare la modifica.",
+    "runInProgress": "È in corso un’analisi. Riprova quando è terminata."
   }
 }

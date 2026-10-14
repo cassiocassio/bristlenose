@@ -711,5 +711,10 @@
       "splitParagraph": "Refazer Dividir par\u00e1grafo",
       "joinParagraphs": "Refazer Juntar par\u00e1grafos"
     }
+  },
+  "sync": {
+    "saveFailed": "Não foi possível guardar a alteração. Verifique a ligação.",
+    "saveRefused": "Não foi possível guardar a alteração.",
+    "runInProgress": "Está a decorrer uma análise. Tente novamente quando terminar."
   }
 }

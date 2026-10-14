@@ -711,5 +711,10 @@
       "splitParagraph": "Jaa kappale sittenkin",
       "joinParagraphs": "Yhdist\u00e4 kappaleet sittenkin"
     }
+  },
+  "sync": {
+    "saveFailed": "Muutosta ei voitu tallentaa. Tarkista verkkoyhteys.",
+    "saveRefused": "Muutosta ei voitu tallentaa.",
+    "runInProgress": "Analyysi on käynnissä. Yritä uudelleen, kun se on valmis."
   }
 }

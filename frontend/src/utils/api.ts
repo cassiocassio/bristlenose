@@ -223,28 +223,41 @@ export function sendPut(path: string, body: unknown): Promise<void> {
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   })
-    .then((resp) => {
+    .then(async (resp) => {
       // fetch only rejects on a network-layer failure — a 401/403/5xx *resolves*
       // with ok=false. Without this check the catch never fires and a failed
       // background sync is fully silent (DB never written, UI diverges on reload —
       // the dropped-auth-token masquerade). Surface it so it's at least greppable.
-      if (!resp.ok) throw new Error(`PUT ${path} ${resp.status}`);
+      if (!resp.ok) throw await httpError("PUT", path, resp);
     })
     .catch((err) => {
       console.error(`PUT ${path} failed:`, err);
       // A failed background sync is otherwise invisible until reload silently
-      // reverts the change. One generic toast covers every view-toggle consumer
+      // reverts the change. One toast covers every view-toggle consumer
       // (star/hide/tags/hidden-groups/framework-states/…); toast() is
       // one-at-a-time, so a burst during an outage collapses to a single message.
-      // i18n key is deferred to the propagation pass — defaultValue renders now.
-      toast(
-        i18n.t("sync.saveFailed", {
-          defaultValue: "Couldn't save your change — check your connection.",
-        }),
-        4000,
-      );
+      toastSaveFailed(err);
       throw err;
     });
+}
+
+/**
+ * What a write that did not land says. The connection only when the request
+ * never reached the server, which is the one failure `fetch` rejects on;
+ * anything the server answered is its refusal, named by `reason` when it sent
+ * one (`bristlenose/server/refusal.py`). Every failure used to blame the
+ * connection, so a speaker pick refused during an analysis sent the researcher
+ * to check their network (14 Oct 2026).
+ */
+function toastSaveFailed(err: unknown): void {
+  const { reason, status } = (err ?? {}) as ApiError;
+  const message =
+    reason === "run_in_progress"
+      ? i18n.t("sync.runInProgress")
+      : typeof status === "number"
+        ? i18n.t("sync.saveRefused")
+        : i18n.t("sync.saveFailed");
+  toast(message, 4000);
 }
 
 // ---------------------------------------------------------------------------
@@ -314,18 +327,13 @@ export function putFrameworkStates(
     body: JSON.stringify(states),
   })
     .then(async (resp) => {
-      if (!resp.ok) throw new Error(`PUT /framework-states ${resp.status}`);
+      if (!resp.ok) throw await httpError("PUT", "/framework-states", resp);
       const body = (await resp.json()) as Partial<FrameworkStatesPutResult>;
       return { status: body.status ?? "ok", catchUp: body.catchUp ?? [] };
     })
     .catch((err) => {
       console.error("PUT /framework-states failed:", err);
-      toast(
-        i18n.t("sync.saveFailed", {
-          defaultValue: "Couldn't save your change — check your connection.",
-        }),
-        4000,
-      );
+      toastSaveFailed(err);
       return { status: "error", catchUp: [] };
     });
 }

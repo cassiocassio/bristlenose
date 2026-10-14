@@ -701,5 +701,10 @@
       "splitParagraph": "\u3084\u308a\u76f4\u3059 - \u6bb5\u843d\u306e\u5206\u5272",
       "joinParagraphs": "\u3084\u308a\u76f4\u3059 - \u6bb5\u843d\u306e\u7d50\u5408"
     }
+  },
+  "sync": {
+    "saveFailed": "変更を保存できませんでした。接続を確認してください。",
+    "saveRefused": "変更を保存できませんでした。",
+    "runInProgress": "分析が実行中です。終了してからもう一度お試しください。"
   }
 }

@@ -33,6 +33,10 @@ class RefusalReason(str, Enum):
     PROVIDER_LOCAL = "provider_local"
     NO_API_KEY = "no_api_key"
 
+    # A write the running analysis would overwrite when it finishes (a recode,
+    # a swap, a new speaker code, a re-analyse pin).
+    RUN_IN_PROGRESS = "run_in_progress"
+
 
 class RefusalError(Exception):
     """A refusal that names itself.
@@ -47,6 +51,11 @@ class RefusalError(Exception):
         self.status_code = status_code
         self.reason = reason
         self.message = message
+
+
+def analysis_running() -> RefusalError:
+    """409: a run owns the project, and this write would be lost under it."""
+    return RefusalError(409, RefusalReason.RUN_IN_PROGRESS, "An analysis is running")
 
 
 async def refusal_handler(_request: Request, exc: Exception) -> JSONResponse:

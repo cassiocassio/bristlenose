@@ -711,5 +711,10 @@
       "splitParagraph": "Ref\u00e9s la divisi\u00f3 del par\u00e0graf",
       "joinParagraphs": "Ref\u00e9s la uni\u00f3 dels par\u00e0grafs"
     }
+  },
+  "sync": {
+    "saveFailed": "No s’ha pogut desar el canvi. Comprova la connexió.",
+    "saveRefused": "No s’ha pogut desar el canvi.",
+    "runInProgress": "S’està fent una anàlisi. Torna-ho a provar quan acabi."
   }
 }

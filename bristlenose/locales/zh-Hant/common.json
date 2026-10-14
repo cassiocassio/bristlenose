@@ -681,5 +681,10 @@
       "splitParagraph": "\u91cd\u505a\u5206\u5272\u6bb5\u843d",
       "joinParagraphs": "\u91cd\u505a\u5408\u4f75\u6bb5\u843d"
     }
+  },
+  "sync": {
+    "saveFailed": "無法儲存您的變更。請檢查您的網路連線。",
+    "saveRefused": "無法儲存您的變更。",
+    "runInProgress": "分析正在執行。請在完成後再試一次。"
   }
 }

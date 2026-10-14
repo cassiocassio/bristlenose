@@ -313,13 +313,17 @@ class TestStartAutoCodeJob:
         assert body["failure_kind"] != "rate_limited"
 
     def test_every_refusal_reason_is_reachable(self) -> None:
-        """No orphan reasons: each value is raised somewhere in the route."""
+        """No orphan reasons: each value is raised somewhere in the server.
+
+        Across the package, not only this route: ``RUN_IN_PROGRESS`` is raised
+        through ``refusal.analysis_running`` by three other routes.
+        """
         from pathlib import Path
 
         from bristlenose.server.refusal import RefusalReason
 
-        src = Path("bristlenose/server/routes/autocode.py").read_text(
-            encoding="utf-8"
+        src = "\n".join(
+            f.read_text(encoding="utf-8") for f in Path("bristlenose/server").rglob("*.py")
         )
         unused = [
             r.name for r in RefusalReason if f"RefusalReason.{r.name}" not in src

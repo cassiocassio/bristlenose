@@ -785,5 +785,10 @@
       "splitParagraph": "Przywr\u00f3\u0107 podzia\u0142 akapitu",
       "joinParagraphs": "Przywr\u00f3\u0107 scalenie akapit\u00f3w"
     }
+  },
+  "sync": {
+    "saveFailed": "Nie można zapisać zmiany. Sprawdź połączenie.",
+    "saveRefused": "Nie można zapisać zmiany.",
+    "runInProgress": "Trwa analiza. Spróbuj ponownie, gdy się zakończy."
   }
 }

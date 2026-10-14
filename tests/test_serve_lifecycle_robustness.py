@@ -203,6 +203,7 @@ class TestWritesRefusedWhileARunOwnsTheProject:
             json={"position": 1, "verify": "Thanks for having me, it is", "new": "moderator"},
         )
         assert resp.status_code == 409, resp.text
+        assert resp.json() == {"detail": "An analysis is running", "reason": "run_in_progress"}
         assert not (project / "bristlenose-output" / ".bristlenose" / "sessions.json").exists()
 
     def test_a_swap_is_refused(self, tmp_path: Path) -> None:
@@ -211,6 +212,8 @@ class TestWritesRefusedWhileARunOwnsTheProject:
         _lock(project / "bristlenose-output")
         resp = client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
         assert resp.status_code == 409, resp.text
+        # The reason is what the SPA localises from; the English stays for logs.
+        assert resp.json() == {"detail": "An analysis is running", "reason": "run_in_progress"}
         assert _slots(client)[("s1", "p1")]["speaker_code"] == "p1"
 
     def test_a_rename_is_still_allowed(self, tmp_path: Path) -> None:
@@ -251,6 +254,7 @@ class TestWritesRefusedWhileARunOwnsTheProject:
                   "confirmed": True},
         )
         assert resp.status_code == 409, resp.text
+        assert resp.json()["reason"] == "run_in_progress"
 
     def test_the_importer_does_not_carry_picks_under_a_live_run(self, tmp_path: Path) -> None:
         """The run loaded the registry at its start and saves over it at its

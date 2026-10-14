@@ -526,10 +526,11 @@ def reassign_paragraph(project_id: int, session_id: str, body: ReassignBody,
             # analysis loaded at its start and saves over at its end — the
             # reservation would be lost, and the code reissued to another voice.
             from bristlenose.run_lifecycle import run_in_progress
+            from bristlenose.server.refusal import analysis_running
 
             project = db.get(Project, project_id)
             if project is not None and run_in_progress(Path(project.output_dir)):
-                raise HTTPException(status_code=409, detail="An analysis is running")
+                raise analysis_running()
         result = _record(db, TranscriptLayoutEdit(
             session_id=sess.id, kind="speaker", position=body.position, verify=body.verify,
             speaker_code=slot, token=creates,

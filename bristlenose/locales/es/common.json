@@ -711,5 +711,10 @@
       "splitParagraph": "Rehacer división de párrafo",
       "joinParagraphs": "Rehacer unión de párrafos"
     }
+  },
+  "sync": {
+    "saveFailed": "No se ha podido guardar el cambio. Comprueba tu conexión.",
+    "saveRefused": "No se ha podido guardar el cambio.",
+    "runInProgress": "Hay un análisis en curso. Vuelve a intentarlo cuando termine."
   }
 }

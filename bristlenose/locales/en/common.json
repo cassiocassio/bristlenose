@@ -713,5 +713,10 @@
       "splitParagraph": "Redo Split Paragraph",
       "joinParagraphs": "Redo Join Paragraphs"
     }
+  },
+  "sync": {
+    "saveFailed": "Couldn’t save your change — check your connection.",
+    "saveRefused": "Couldn’t save your change.",
+    "runInProgress": "An analysis is running. Try again when it finishes."
   }
 }

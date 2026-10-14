@@ -711,5 +711,10 @@
       "splitParagraph": "Absatz teilen wiederholen",
       "joinParagraphs": "Absätze verbinden wiederholen"
     }
+  },
+  "sync": {
+    "saveFailed": "Ihre Änderung konnte nicht gesichert werden. Prüfen Sie Ihre Verbindung.",
+    "saveRefused": "Ihre Änderung konnte nicht gesichert werden.",
+    "runInProgress": "Es läuft eine Analyse. Versuchen Sie es erneut, wenn sie fertig ist."
   }
 }

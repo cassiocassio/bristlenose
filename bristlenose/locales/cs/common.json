@@ -774,5 +774,10 @@
       "splitParagraph": "Opakovat akci Rozdělit odstavec",
       "joinParagraphs": "Opakovat akci Spojit odstavce"
     }
+  },
+  "sync": {
+    "saveFailed": "Změnu se nepodařilo uložit. Zkontrolujte připojení.",
+    "saveRefused": "Změnu se nepodařilo uložit.",
+    "runInProgress": "Probíhá analýza. Zkuste to znovu, až skončí."
   }
 }

@@ -711,5 +711,10 @@
       "splitParagraph": "Utfør deling av avsnitt likevel",
       "joinParagraphs": "Utfør sammenslåing av avsnitt likevel"
     }
+  },
+  "sync": {
+    "saveFailed": "Kunne ikke lagre endringen. Sjekk tilkoblingen din.",
+    "saveRefused": "Kunne ikke lagre endringen.",
+    "runInProgress": "En analyse kjører. Prøv igjen når den er ferdig."
   }
 }

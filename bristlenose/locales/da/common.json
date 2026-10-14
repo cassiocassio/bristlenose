@@ -711,5 +711,10 @@
       "splitParagraph": "Gentag Opdel afsnit",
       "joinParagraphs": "Gentag Sammenføj afsnit"
     }
+  },
+  "sync": {
+    "saveFailed": "Kunne ikke gemme din ændring. Tjek din forbindelse.",
+    "saveRefused": "Kunne ikke gemme din ændring.",
+    "runInProgress": "En analyse kører. Prøv igen, når den er færdig."
   }
 }

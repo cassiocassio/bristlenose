@@ -711,5 +711,10 @@
       "splitParagraph": "G\u00f6r om Dela stycke",
       "joinParagraphs": "G\u00f6r om Sammanfoga stycken"
     }
+  },
+  "sync": {
+    "saveFailed": "Det gick inte att spara ändringen. Kontrollera din anslutning.",
+    "saveRefused": "Det gick inte att spara ändringen.",
+    "runInProgress": "En analys körs. Försök igen när den är klar."
   }
 }

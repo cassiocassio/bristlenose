@@ -711,5 +711,10 @@
       "splitParagraph": "Paragrafı Bölmeyi Yinele",
       "joinParagraphs": "Paragrafları Birleştirmeyi Yinele"
     }
+  },
+  "sync": {
+    "saveFailed": "Değişiklik kaydedilemedi. Bağlantınızı kontrol edin.",
+    "saveRefused": "Değişiklik kaydedilemedi.",
+    "runInProgress": "Bir analiz çalışıyor. Bittiğinde yeniden deneyin."
   }
 }

@@ -711,5 +711,10 @@
       "splitParagraph": "Opnieuw alinea splitsen",
       "joinParagraphs": "Opnieuw alinea’s samenvoegen"
     }
+  },
+  "sync": {
+    "saveFailed": "Je wijziging kon niet worden bewaard. Controleer je verbinding.",
+    "saveRefused": "Je wijziging kon niet worden bewaard.",
+    "runInProgress": "Er loopt een analyse. Probeer het opnieuw als die klaar is."
   }
 }

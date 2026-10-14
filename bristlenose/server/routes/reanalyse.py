@@ -113,6 +113,7 @@ def post_reanalyse(project_id: int, session_id: str, request: Request) -> Reanal
     """
     from bristlenose.run_lifecycle import run_in_progress
     from bristlenose.server.importer import turn_starts
+    from bristlenose.server.refusal import analysis_running
     from bristlenose.session_registry import RolePin, SessionRegistry, pin_starts
 
     db: Session = request.app.state.db_factory()
@@ -120,7 +121,7 @@ def post_reanalyse(project_id: int, session_id: str, request: Request) -> Reanal
         project = _project(db, project_id)
         output_dir = Path(project.output_dir)
         if run_in_progress(output_dir):
-            raise HTTPException(status_code=409, detail="An analysis is running")
+            raise analysis_running()
         session = (
             db.query(SessionModel).filter_by(project_id=project_id, session_id=session_id).first()
         )

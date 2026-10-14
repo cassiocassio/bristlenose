@@ -477,6 +477,7 @@ def put_session_speaker(
     """
     from bristlenose.run_lifecycle import run_in_progress
     from bristlenose.server import speaker_slots
+    from bristlenose.server.refusal import analysis_running
 
     db = _get_db(request)
     try:
@@ -504,7 +505,7 @@ def put_session_speaker(
             # A name lives in the database, which the run never touches, so a
             # rename or a pick goes through — including one that carries the
             # slot's role unchanged as ``kind``, which every SPA pick does.
-            raise HTTPException(status_code=409, detail="An analysis is running")
+            raise analysis_running()
         if data.swap_with is not None:
             _swap(db, project_id, session_id, sp, data.swap_with)
             drop_withdrawn_pins(db, project_id, session_id)

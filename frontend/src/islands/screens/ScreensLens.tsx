@@ -743,6 +743,7 @@ interface Drag {
 
 function ScreenBoard(props: BoardProps) {
   const { projectId, screen, tabIdx, byId, store } = props;
+  const { setFocus } = useFocus();
   const tab = screen.tabs[tabIdx];
   const still = stillKey(tab.session_id, tab.t);
   const { src, failed: stillFailed } = useStill(tab, 1600);
@@ -755,9 +756,8 @@ function ScreenBoard(props: BoardProps) {
   const [stacked, setStacked] = useState<Record<Side, boolean>>({ L: false, R: false });
   const [colH, setColH] = useState(0);
   const [leaders, setLeaders] = useState<{ id: string; d: string; end: [number, number] }[]>([]);
-  // The card brought forward: on click, never on hover (the owner, 14 Oct 2026, docs/design-screens.md
-  // §6.8). Hover flickered: bringing a card forward unclamps its text, the card grows, the column
-  // re-stacks around it, a different card is then under the pointer, and hover moves again.
+  // The selected card: a press or keyboard focus selects it, never hover (the owner, 14 Oct 2026,
+  // docs/design-screens.md §6.8). Selecting raises it and nothing else: a card keeps one size.
   const [lifted, setLifted] = useState<string | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [spots, setSpots] = useState<Record<string, Spot>>(() => spotsFor(projectId, still));
@@ -868,7 +868,12 @@ function ScreenBoard(props: BoardProps) {
   // same guards as the arrow keys.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && keyIsOurs(e)) setLifted(null);
+      if (e.key !== "Escape" || !keyIsOurs(e)) return;
+      // Deselect in both places. The shared quote card keeps its own focus (.bn-focused), and a
+      // focused card is raised: clearing only ours left the "deselected" card on top of its
+      // neighbour in a stack (measured, 14 Oct 2026).
+      setLifted(null);
+      setFocus(null, { scroll: false });
     };
     const onDown = (e: PointerEvent) => {
       const card = e.target instanceof Element ? e.target.closest<HTMLElement>(".screens-card[data-dom]") : null;
@@ -880,7 +885,7 @@ function ScreenBoard(props: BoardProps) {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onDown);
     };
-  }, []);
+  }, [setFocus]);
 
   // Drag to rearrange: the card's top edge and the margin under its timecode are the grips. Nothing
   // moves, and nothing is saved, until the pointer has travelled DRAG_THRESHOLD: a click on a grip

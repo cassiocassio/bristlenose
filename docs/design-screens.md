@@ -194,15 +194,24 @@ the tree). What the prototype settled:
   column beside the screengrab, or one moved by hand; the quotes in the page's flow under it, and
   the navigator's thumbnails, read as the Quotes lens's do (the owner, 14 Oct 2026: shadows in
   spurious places).
-- **A column that would run past the screengrab stacks**, each card showing its timecode and first
-  line, straight (the diagonal offset was prototyped and dropped). A card comes to the front **on
-  click, never on hover** (the owner, 14 Oct 2026), and goes back on Escape or a press anywhere
-  else; keyboard focus also brings one forward. Hover flickered, two ways. A card brought forward
-  unclamps its text and grows, its column re-places around it, and in a stack a different card is
-  then under the pointer (confirmed by reading the placement code; the two sessions measured never
-  pin two cards to one column, so it was not reproduced). And every card on the board dimmed and
-  undimmed as the pointer crossed them (measured on a real session: 11 times sweeping across 6
-  cards, 0 with click). Others dim by colour, not opacity, so a stack stays opaque.
+- **A card is what it is: one size, always.** Every card shows its whole quote, as the Quotes lens's
+  cards do; a long quote is a taller card. Nothing changes a card's size or the board's layout —
+  not selecting it, not focusing it, not pointing at it (the owner, 14 Oct 2026: *"they should be
+  what they are — we are allowing repositioning, and z-index re-ordering — selection brings to the
+  front"*). The first build clamped every card to seven lines and unclamped the selected one; that
+  is gone. **Selecting** a card (a press on it, or keyboard focus) raises it and shows the shipped
+  focus treatment, and the others dim by colour, not opacity, so a stack stays opaque; Escape or a
+  press anywhere else deselects. Never on hover: hover flickered, two ways — the unclamped card grew,
+  its column re-placed, and in a stack a different card was then under the pointer (read in the
+  placement code, not reproduced: the sessions measured never stacked); and every card on the board
+  dimmed and undimmed as the pointer crossed them (11 times sweeping across 6 cards on a real
+  session, 0 now). Measured on both real sessions at 1800 and 1280px windows, every card selected in
+  turn (64 selections): no card on the board moved or changed size by a pixel. Gated by
+  `tests/test_screens_css.py`: a selected, focused, hovered or edited state may set only properties
+  that cannot move anything, and no quote is clamped.
+- **A column that would run past the screengrab stacks**, evenly stepped, straight (the diagonal
+  offset was prototyped and dropped), the later card over the earlier one's tail; selecting one
+  brings it to the front of its stack.
 - **The researcher can rearrange.** A hand cursor on a card's top edge and the margin under its
   timecode; drag it anywhere on the board, including from the list onto the screengrab. It stays
   where it is put, on top of everything placed before (the order of placing is the z-order), and

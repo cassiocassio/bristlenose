@@ -582,6 +582,29 @@ describe("bringing a card forward", () => {
   });
 });
 
+describe("deselecting", () => {
+  // The shared quote card keeps its own focus (.bn-focused), and a focused card is raised. Escape
+  // once cleared only the board's selection, so the "deselected" card stayed on top of its stack.
+  it("clears the card's own focus as well as the board's selection on Escape", async () => {
+    mockApi(screensResponse());
+    const { container } = render(
+      <FocusProvider>
+        <ScreensLens />
+      </FocusProvider>,
+    );
+    await waitFor(() => expect(container.querySelector(".screens-col .screens-card")).not.toBeNull());
+    const card = container.querySelector<HTMLElement>(".screens-col .screens-card")!;
+    const body = card.querySelector<HTMLElement>(".quote-body") ?? card;
+    fireEvent.pointerDown(body);
+    fireEvent.click(body);
+    await waitFor(() => expect(card.querySelector(".quote-card.bn-focused")).not.toBeNull());
+    expect(card.className).toContain("is-lifted");
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(card.querySelector(".quote-card.bn-focused")).toBeNull());
+    expect(card.className).not.toContain("is-lifted");
+  });
+});
+
 describe("for a keyboard and a screen reader", () => {
   it("brings a card forward when focus enters it, and keeps it forward while focus stays inside", async () => {
     mockApi(screensResponse());

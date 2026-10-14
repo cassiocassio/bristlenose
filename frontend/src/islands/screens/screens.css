@@ -1,7 +1,7 @@
 /* The Screens lens (diagnostics). docs/design-screens.md S5; the prototype it was built from is
    experiments/screen-text/screens_lens.html. No new tokens: every colour is a palette token or an
    accent tint at a percentage the theme already mixes (6%, 15%, 30%); lift is --bn-colour-shadow at
-   rest and the shipped .bn-focused treatment when a card is brought forward. */
+   rest and the shipped .bn-focused treatment when a card is selected. */
 
 /* The lens is one <section>, the direct child of <main>, so its zone title sits on the shared datum
    (`.center > main > section:first-of-type > .section-heading`, report.css) with no rule of its
@@ -135,13 +135,11 @@
 .screens-stage .screens-card .hide-btn { top: 1.55rem; right: 0.4rem; }
 .screens-col .screens-card.is-lifted > .quote-card,
 .screens-free .screens-card.is-lifted > .quote-card { box-shadow: var(--bn-focus-shadow), 0 8px 24px var(--bn-colour-shadow); }
-/* A long quote is a tall sticky; every card shows seven lines and the whole quote when brought
-   forward or edited, pinned or not, so no card reads as more important for being longer. */
-.screens-stage .screens-card .quote-text-wrapper {
-  display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden;
-}
-.screens-stage .screens-card.is-lifted .quote-text-wrapper,
-.screens-stage .screens-card .quote-card.editing .quote-text-wrapper { display: inline; -webkit-line-clamp: unset; overflow: visible; }
+/* A card is what it is: the whole quote, at one size, as on the Quotes lens. Selecting one (a press,
+   or keyboard focus) only raises it and shows the shipped focus treatment; nothing about a card's
+   size or the board's layout changes (the owner, 14 Oct 2026). A long quote is a taller card, and a
+   column that runs past the screengrab stacks. tests/test_screens_css.py holds every selected, focused or
+   hovered state in this file to properties that cannot move anything. */
 
 .screens-col .screens-card { position: absolute; left: 0; right: 0; z-index: var(--stack, 2); }
 .screens-col.stacked .screens-card:not(.is-lifted) > .quote-card {

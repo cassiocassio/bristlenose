@@ -1,13 +1,17 @@
 ---
 status: Phases 0–5 built 12–13 Oct 2026 (unreleased); whole-feature review fixed 13 Oct (§5.7)
 last-trued: 2026-10-14
-trued-against: HEAD@main (6562c7be) on 2026-10-14
+trued-against: HEAD@main (03e55462) on 2026-10-14, evening
 owner: run progress across the pipeline, the report server, the SPA and the Mac app
 mockup: docs/mockups/progressive-lenses-replay.html
 ---
 
 ## Changelog
 
+- _2026-10-14, evening_ — the shoal rule now says whose count it reads (a Re-analyse
+  had read the previous run's); "Known, not fixed" gains the report mounted between
+  the pipeline's count and the server's import. Anchors: `EventLogReader.currentRunProgress`,
+  `PipelineRunnerProgressTests`, lifecycle register rows 45 and 48.
 - _2026-10-14_ — trued up (cross-doc pass): §1 re-tensed as the problem that was;
   §2's lens-rail, thumbnail, progress-text and split-flap decisions point at what was
   built or superseded; §3 says which overlay fields are set and when `data_version`
@@ -126,7 +130,11 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
   Sessions available at ingest is the first second or so. _As built the rule is
   `sessionsReadable == 0` (`DetailPaneKind.swift`): the shoal stays until the first
   session is readable, because the status page stays until then too
-  (`status_page.py`, `sessions_imported`)._
+  (`status_page.py`, `sessions_imported`). The count must be **this** run's: until
+  14 Oct 2026 a Re-analyse read the previous run's last line ("8 readable") in the
+  seconds before the new run wrote its start, and the shoal gave way at once. The
+  runner records the run newest at spawn and never reads its lines
+  (`EventLogReader.currentRunProgress`, `PipelineRunner.beginSpawnedRun`)._
 
 **Sessions grid: three row states**
 
@@ -910,6 +918,11 @@ the overlay and moves `data_version`, so the SPA refetches.
   until stage 6, while Whisper is further on.
 - If the chain counts a session the server refused, the Mac drops the shoal for a
   status page that has nothing to say.
+- The Mac lifts the shoal on the pipeline's count and the server imports a moment
+  later, so a report mounted in between gets the "in progress" status page until
+  the page's own 3 s poll sees the report. Observed once taking 74 s (14 Oct 2026);
+  the server's log for that window was lost, so it is unexplained
+  ([design-lifecycle-failure-modes.md](design-lifecycle-failure-modes.md) row 48).
 - A progressive run's completion is not announced (`LastRunStore` reads its first id
   as a seed).
 - `data_version` restarts at 0 when the serve restarts, so an SPA that last saw the

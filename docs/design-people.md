@@ -3379,7 +3379,7 @@ people as unique and roles as per-session is the People lens's long-term goal.
     this section once proposed). Confirming `POST`s `…/sessions/{sid}/reanalyse`, which writes a
     **role pin** per recoded speaker into `sessions.json` (`REGISTRY_VERSION = 2`; version 1
     still reads): the label, the role, the start times of its turns as evidence, the code it
-    had and the person the researcher picked. Refused (409) while a run owns the project — the
+    had and the person the researcher picked. Refused (409, reason `run_in_progress`) while a run owns the project — the
     registry is load–mutate–save on both sides. The Mac then starts its ordinary resume run
     (bridge `project-action` `reanalyse-session`); a browser shows `bristlenose run <folder>`.
     **The run** applies the pins before codes are assigned (`apply_role_pins`), so codes follow

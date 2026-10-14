@@ -1,11 +1,12 @@
 ---
 status: current
 last-trued: 2026-10-14
-trued-against: HEAD@main (6562c7be) on 2026-10-14
+trued-against: HEAD@main (03e55462) on 2026-10-14, evening
 ---
 
 ## Changelog
 
+- _2026-10-14, evening_ — four defects from one `--clean` Re-analyse in the Mac app: rows 45–47 designed out (the shoal lifted on the previous run's count; the serve's log lost with the set-aside folder; a mid-run pick refused as a recode), rows 44 and 48 open (a pick in the second before the serve reattaches; a 74 s status page the lost log could not explain). Row 8 recounted. Score recomputed. Anchors: `PipelineRunnerProgressTests`, `logging.reopen_log_file`, `refusal.analysis_running`, commit "review fixes: tests that could not fail, a log reopen that could lose the log, a silent paragraph move".
 - _2026-10-14_ — trued up against progressive lenses (12–13 Oct): a proof-scope caveat (no scenario delivers a session mid-run, and every Mac Re-analyse now does); row 41 indexes the progressive lifecycle fixes by pointer; rows 42–43 open (curation made during a failed progressive Re-analyse; the progressive doc's known gaps); score recomputed. Anchors: `tests/test_progressive_lenses.py`, `tests/test_progressive_quotes.py`, `utils/output_backup.py`, commit "progressive lenses review: nothing unredacted is readable mid-run, and a run that ends without a report keeps what it delivered".
 - _2026-10-13_ — trued up: rows 19–25 anchored to the tests and commits that closed them; rows 28–29 reworded for the live-rename fork measured 13 Oct; six Open rows (35–40) from the Mac-half review; score recomputed. Anchors: `eb8509e1`, TODO.md 13 Oct entry, `desktop/CLAUDE.md` renamed-folder entry.
 
@@ -77,7 +78,7 @@ row 42.
 | 5 | `serve <p>/bristlenose-output` then `serve <p>`: two projects; recordings 404 from the first | scenario `output-entry-then-root-entry`; `test_media_is_rooted_at_the_interview_folder_from_either_entry` | 41237cae |
 | 6 | Folder renamed under a live server: nothing said, later runs never reach the report | scenario `rename-under-live-serve-is-said` (now a WARNING) | 41237cae |
 | 7 | An import landing in a second project row reported as healthy | `test_a_forked_import_is_logged_and_published_under_its_own_row` | mutant |
-| 8 | Speaker swaps, recodes, reassigns, pin withdrawals and the importer's pick carry written under a live run, then overwritten by it | `TestWritesRefusedWhileARunOwnsTheProject` (5 tests) | mutant |
+| 8 | Speaker swaps, recodes, reassigns, pin withdrawals and the importer's pick carry written under a live run, then overwritten by it | `TestWritesRefusedWhileARunOwnsTheProject` (8 tests: six refusals, each now named `run_in_progress`, and the two writes that must still go through — a rename, and a pick whose `kind` is the slot's own role, row 47) | mutant |
 | 9 | `run --clean` moved a live run's output out from under it | `test_stash_refuses_to_move_a_live_runs_output` | mutant |
 | 10 | `status` reported litter instead of the report, and offered `rm -rf` for the only copy of it | `tests/test_cli_project_paths.py` | red-first |
 | 11 | `serve` on an `-o` output folder re-ingested its parent, crashing on the home folder | `test_an_output_folder_elsewhere_is_not_rendered_from_its_parent` | red-first |
@@ -97,6 +98,9 @@ row 42.
 | 25 | A `projects.json` that failed to decode was overwritten with an empty list | `ProjectIndexDamagedFileTests` | red-first — the set-aside is silent, row 36 |
 | 26 | A failed re-analysis lost the researcher's curation under a live server | scenario `reanalyse-fails-curation-survives` | held before; regression guard |
 | 41 | Progressive first analysis (13 Oct 2026): a serve started or restarted mid-run imported unredacted rows or forgot what it had; a run that ended without a report showed "processing" for ever; a restored stash left the report holding a partial delivery; the previous run's manifest read as this run's | `test_progressive_lenses.py`: `…serve_started_during_a_first_analysis_imports_nothing_at_startup`, `…serve_restarted_mid_run_shows_what_it_already_imported`, `…stopped_first_analysis_keeps_what_it_delivered_as_it_was`, `…whole_import_that_fails_ends_the_overlay_without_lifting_it`, `…report_put_back_under_the_partial_delivery_is_refetched`, `…event_timestamp_in_z_form_compares`; `test_progressive_quotes.py`: `…previous_runs_manifest_is_not_this_runs`, `…serve_restarted_mid_run_does_not_make_the_run_new_to_itself`. Detail: [design-progressive-lenses.md](design-progressive-lenses.md) §5.7 | review of 17259fcb; mutation-proved |
+| 45 | A Re-analyse in the Mac app: the shoal gave way within seconds, to an "Analysing…" cover over the serve's status page. The runner read the **previous** run's last progress line ("8 sessions readable") before the new run wrote its start, and the run-id gate compared it with a `run_started` that was still the previous run's (14 Oct 2026) | `PipelineRunnerProgressTests` (the runner's capture at spawn, `beginSpawnedRun`); `RunProgressReaderTests.thePreviousRunsProgressIsNotTheNewRuns` (`EventLogReader.currentRunProgress`) | red-first; mutant (both halves) |
+| 46 | `run --clean` under a live serve: the serve went on logging into the set-aside folder, which the run deletes when it succeeds — the serve's whole log for the run was lost | `test_the_serve_log_follows_the_output_folder`; `TestFollowTheLogFile` (`logging.reopen_log_file`: a failed reopen keeps the old handler and is retried; it never creates the folder) | red-first; mutant |
+| 47 | "That's Me" on a moderator during a run failed as "check your connection": every SPA pick sends the slot's role as `kind`, and the run guard refused any `kind` as a recode. The toast blamed the connection for every failure | `test_naming_yourself_the_moderator_is_allowed`, `test_a_recode_is_still_refused`; `frontend/src/utils/api.test.ts` (the toast names a running analysis, a refusal, or the connection); `paragraphEdits.test.ts` (a refused paragraph move is no longer silent) | red-first; mutant |
 
 ### Open, engineered (strict xfail in the scenario table)
 
@@ -123,6 +127,8 @@ row 42.
 | 40 | A cross-volume rename or move: whether the security-scoped extension follows | a same-volume rename is measured to follow (13 Oct 2026); cross-volume is not, and Finder does it as copy + delete |
 | 42 | Curation made **during** a progressive Re-analyse that then fails is lost: the restore sets the failed tree, its database included, aside to `.bristlenose-output-failed`, and the next run's stash clears it (`utils/output_backup.py`) | inferred from code, not measured; and a product call before a fix — carry it into the restored report, or accept the loss (open question 14 Oct 2026). Row 26 covers curation made *before* the run only |
 | 43 | The progressive doc's known gaps: `data_version` restarts at 0 with the server (one refetch skipped); a resumed run imports at stage 6 while the Mac's shoal covers it; the chain can count a session the server refused, and the shoal then drops to an empty status page; a failed Re-analyse's restore reaches the server but not the Mac | indexed by pointer, not copied: [design-progressive-lenses.md](design-progressive-lenses.md) §5.7 "Known, not fixed" and §7 items 16 and 18 |
+| 44 | A pick or rename made in the second after `run --clean` moves the output folder, before the serve's next poll reattaches, returns 200 and lands in the set-aside database, which a successful run deletes | inferred from code (review of `4f6f71d0`), not measured; a run-owned window of about one poll. Fix would be to refuse every curation write until the reattach, or to reattach on the stash itself |
+| 48 | A report mounted while the serve is importing the first sessions showed the "in progress" status page for 74 s, not the ≤3 s its own poll allows (14 Oct 2026, 22:09:22 → 22:10:36). The serve's log for that window was lost (row 46), so the cause is unexplained | not reproduced; re-measure with the log now following the folder |
 
 **Checked and not a failure mode:** only the two **Re-analyse…** call sites pass
 `clean: true` (`ContentView.swift`, the confirmation sheet and the no-curation
@@ -149,11 +155,12 @@ folder instead.
 
 ## The score
 
-**By count:** of 43 failure modes, 27 are designed out and proven (25 fixed on
-12 Oct 2026, one that already held and is now guarded, and row 41's progressive
-fixes of 13 Oct counted as one) — **63%**. Sixteen are open: four engineered,
-twelve not. _(13 Oct 2026: rows 35–40 added from the review of the Mac half; 14 Oct:
-rows 41–43 from the progressive-lenses truing. The denominator moved both times.)_
+**By count:** of 48 failure modes, 30 are designed out and proven (25 fixed on
+12 Oct 2026, one that already held and is now guarded, row 41's progressive
+fixes of 13 Oct counted as one, and rows 45–47 of 14 Oct) — **63%**. Eighteen are
+open: four engineered, fourteen not. _(13 Oct 2026: rows 35–40 added from the review
+of the Mac half; 14 Oct: rows 41–43 from the progressive-lenses truing, then 44–48
+from a `--clean` Re-analyse in the app. The denominator moved each time.)_
 
 **By how often a researcher would meet them**, which is the number that
 matters, it is higher. Rows 1–4 sat on the path every Mac user takes: a first

@@ -87,6 +87,8 @@ cd frontend/src && for d in components islands pages layouts hooks shims context
 
 ### Store writes
 
+**A failed write says why, and only a request that never reached the server blames the connection.** `sendPut`, `putFrameworkStates` and the paragraph edits (`paragraphEdits.ts` `said`) toast through `toastSaveFailed` (`utils/api.ts`): `sync.runInProgress` when the server's refusal carries `reason: "run_in_progress"` (`server/refusal.py` `analysis_running()`), `sync.saveRefused` for any other answer, `sync.saveFailed` ("check your connection") only when `fetch` rejected. Every failure used to say "check your connection", so a speaker pick refused during an analysis sent the researcher to check their Wi-Fi (14 Oct 2026). **A new refusal the researcher should understand is a `RefusalError` with a reason, plus a branch here** — not a new English `detail`, which the client must never show. And a caller's `.catch(() => undefined)` is only acceptable once the write it wraps has already said why it failed.
+
 **Every `putX` helper replaces the WHOLE map, so a per-item store call inside a
 bulk gesture is O(n) racing writes.** `putHidden`, `putStarred`, `putTags`,
 `putEdits`, `putDeletedBadges` all send the complete map, fire-and-forget, with

@@ -49,6 +49,8 @@
       "hideSignals": "Ocultar Sinais",
       "showDiscussionGuide": "Mostrar Guião de Entrevista",
       "hideDiscussionGuide": "Ocultar Guião de Entrevista",
+      "showScreens": "Mostrar Ecrãs",
+      "hideScreens": "Ocultar Ecrãs",
       "showSessions": "Mostrar Sess\u00f5es",
       "hideSessions": "Ocultar Sess\u00f5es",
       "showTags": "Mostrar Etiquetas",
@@ -751,6 +753,8 @@
     "showSignals": "Mostrar sinais (⌘⌥L)",
     "discussionGuide": "Guião de entrevista",
     "showDiscussionGuide": "Mostrar guião de entrevista (⌘⌥L)",
+    "screens": "Ecrãs",
+    "showScreens": "Mostrar ecrãs (⌘⌥L)",
     "showSessions": "Mostrar sess\u00f5es (\u2318\u2325L)",
     "tags": "Etiquetas",
     "showTags": "Mostrar etiquetas (⌘⌥T)",
@@ -869,7 +873,9 @@
     "modelLabel": "Modelo",
     "backendAuto": "Automático",
     "backendHint": "O modo automático deteta o melhor motor para o seu Mac.",
-    "modelRecommended": "{{model}} (recomendado)"
+    "modelRecommended": "{{model}} (recomendado)",
+    "readScreensLabel": "Ler ecr\u00e3s partilhados",
+    "readScreensHint": "L\u00ea o texto dos ecr\u00e3s partilhados nas grava\u00e7\u00f5es, neste Mac, e guarda-o com pequenas imagens de cada ecr\u00e3 na pasta do projeto. Nunca \u00e9 enviado para a IA nem inclu\u00eddo nas exporta\u00e7\u00f5es."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configurar IA no dispositivo",

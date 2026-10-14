@@ -49,6 +49,8 @@
       "hideSignals": "Skrýt signály",
       "showDiscussionGuide": "Zobrazit scénář rozhovoru",
       "hideDiscussionGuide": "Skrýt scénář rozhovoru",
+      "showScreens": "Zobrazit obrazovky",
+      "hideScreens": "Skrýt obrazovky",
       "showSessions": "Zobrazit sezen\u00ed",
       "hideSessions": "Skr\u00fdt sezen\u00ed",
       "showTags": "Zobrazit štítky",
@@ -788,6 +790,8 @@
     "showSignals": "Zobrazit signály (⌘⌥L)",
     "discussionGuide": "Scénář rozhovoru",
     "showDiscussionGuide": "Zobrazit scénář rozhovoru (⌘⌥L)",
+    "screens": "Obrazovky",
+    "showScreens": "Zobrazit obrazovky (⌘⌥L)",
     "showSessions": "Zobrazit sezen\u00ed (\u2318\u2325L)",
     "tags": "Štítky",
     "showTags": "Zobrazit štítky (⌘⌥T)",
@@ -906,7 +910,9 @@
     "modelLabel": "Model",
     "backendAuto": "Automaticky",
     "backendHint": "Automatika zjistí nejlepší engine pro váš Mac.",
-    "modelRecommended": "{{model}} (doporučeno)"
+    "modelRecommended": "{{model}} (doporučeno)",
+    "readScreensLabel": "\u010c\u00edst sd\u00edlen\u00e9 obrazovky",
+    "readScreensHint": "\u010cte text na obrazovk\u00e1ch sd\u00edlen\u00fdch v nahr\u00e1vk\u00e1ch, p\u0159\u00edmo na tomto Macu, a ukl\u00e1d\u00e1 ho spolu s mal\u00fdmi n\u00e1hledy ka\u017ed\u00e9 obrazovky do slo\u017eky projektu. Nikdy se neodes\u00edl\u00e1 AI a nen\u00ed sou\u010d\u00e1st\u00ed export\u016f."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Nastavit AI v zařízení",

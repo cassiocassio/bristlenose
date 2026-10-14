@@ -52,7 +52,7 @@ struct ServeEnvStalenessTests {
         #expect(action == .restartOnNextFront)
     }
 
-    /// Diagnostics off withdraws screen reading. A background serve still
+    /// Read shared screens off withdraws screen reading. A background serve still
     /// reading shared screens restarts now: the harm (a job OCR'ing
     /// participants' screens) runs whether or not anyone is looking, which is
     /// the same reason the exposed instance goes now under Anonymise.

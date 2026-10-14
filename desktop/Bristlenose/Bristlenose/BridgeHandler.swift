@@ -60,6 +60,12 @@ final class BridgeHandler: ObservableObject {
     /// pattern as `hasSelectedProject` below. `.unattached` leaves it false,
     /// so the menu dims when no window is frontmost.
     @Published var lensesAvailable = false
+    /// Whether this window's rail carries the Screens lens — Read shared
+    /// screens on, and the window's project has shared screens to show
+    /// (`ScreenReadingStore.available`). Mirrored here by `ContentView` for the
+    /// same reason as `lensesAvailable`: the View menu's ⌘7 row reads it and
+    /// cannot see the store. `.unattached` leaves it false.
+    @Published var screensLensAvailable = false
     /// Which lenses the document withholds while a run is in progress
     /// (`lens-availability`); `.all` otherwise. See `LensReadiness`.
     @Published var lensReadiness: LensReadiness = .all

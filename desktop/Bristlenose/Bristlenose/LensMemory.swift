@@ -45,9 +45,9 @@ enum LensMemory {
     /// honouring a string nobody can interpret.
     ///
     /// And nil for a lens that is not on the window's rail right now — the
-    /// diagnostics Screens lens with Diagnostics switched off. Its route would
-    /// load a lens with no rail row, no ⌘-number and a server that answers
-    /// "switched off"; the dashboard is the honest landing. `rail` is the
+    /// Screens lens with Read shared screens off, or on a project with no
+    /// shared screens. Its route would load a lens with no rail row, no
+    /// ⌘-number and nothing to show; the dashboard is the honest landing. `rail` is the
     /// caller's `LensItem.lenses(screens:)`, passed rather than read here so
     /// both states are testable without touching anyone's defaults.
     static func restore(_ remembered: String?, rail: [LensItem]) -> Tab? {
@@ -57,9 +57,9 @@ enum LensMemory {
     }
 
     /// Where a window showing `active` should go when the rail changes under
-    /// it — Diagnostics switched off while the Screens lens is in front. Nil
-    /// means stay put. The dashboard, because it is where a window with no
-    /// memory lands, and it is always on the rail.
+    /// it — Read shared screens switched off while the Screens lens is in
+    /// front. Nil means stay put. The dashboard, because it is where a window
+    /// with no memory lands, and it is always on the rail.
     static func landing(active: Tab?, rail: [LensItem]) -> Tab? {
         guard let active, !rail.contains(where: { $0.tab == active }) else { return nil }
         return .project

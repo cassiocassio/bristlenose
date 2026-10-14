@@ -18,8 +18,11 @@ standard cache and stat operations on files inside the app container):
   35F9.1 — SystemBootTime: mach_absolute_time for monotonic elapsed-time
            (e.g. time.monotonic). Not absolute boot-instant.
 
-NSUserDefaults / CFPreferences: not used by the sidecar (verified by symbol
-sweep of the bundle). Active keyboards: Obj-C only API, not applicable.
+NSUserDefaults / CFPreferences: not called by the sidecar. No bundled binary
+imports either (symbol sweep of the bundle, re-checked 14 Oct 2026 after
+pyobjc-framework-Vision/Quartz joined for reading shared screens). pyobjc's
+Foundation bridge can reach NSUserDefaults by name at runtime; nothing in
+Bristlenose asks it to. Active keyboards: Obj-C only API, not applicable.
 
 Reason-code reference:
 https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_use_of_required_reason_api

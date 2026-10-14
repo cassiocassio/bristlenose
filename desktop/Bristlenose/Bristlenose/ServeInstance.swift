@@ -101,10 +101,11 @@ final class ServeInstance: ObservableObject {
     var spawnedSidecarStamp: SidecarBinaryStamp?
 
     /// Whether this sidecar was spawned reading participants' shared screens
-    /// (`BRISTLENOSE_SCREEN_TEXT=1`, the Diagnostics preference). Spawn-time,
-    /// like `spawnedSidecarStamp`, because the env is baked then: it is what
-    /// lets `ServeFleet.applyEnvChange` restart every serve still reading
-    /// screens when Diagnostics is turned off, not only the fronted one. Not
+    /// (`BRISTLENOSE_SCREEN_TEXT=1`, the Read shared screens preference).
+    /// Spawn-time, like `spawnedSidecarStamp`, because the env is baked then: it
+    /// is what lets `ServeFleet.applyEnvChange` restart every serve still
+    /// reading screens when the preference is turned off, not only the fronted
+    /// one. Not
     /// `@Published` — nothing renders it.
     var spawnedReadsScreens = false
 

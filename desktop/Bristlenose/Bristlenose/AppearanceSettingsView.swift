@@ -170,11 +170,11 @@ struct AppearanceSettingsView: View {
         // (route, scroll, panels, focus all lost) on every light↔dark switch.
         // The control experiment: on "auto", flipping the SYSTEM theme posts
         // nothing, restarts nothing, and re-themes the report anyway.
-        .onChange(of: showDiagnosticsMenu) { _, _ in
-            // Diagnostics now reaches the sidecar as BRISTLENOSE_SCREEN_TEXT (the Screens lens
-            // reads shared screens only with it on), so a change needs the env-staleness restart.
-            NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
-        }
+        // NB: Diagnostics has NO .onChange post either. It reached the sidecar
+        // as BRISTLENOSE_SCREEN_TEXT while the Screens lens was diagnostics-only;
+        // that is now its own preference (Settings ▸ Transcription ▸ Read shared
+        // screens), so Diagnostics drives no env var and a restart would cold-
+        // remount the report for nothing.
         .onChange(of: typography) { _, _ in
             // The server renders data-typography onto <html> from
             // BRISTLENOSE_TYPOGRAPHY at sidecar start, so the change lands on

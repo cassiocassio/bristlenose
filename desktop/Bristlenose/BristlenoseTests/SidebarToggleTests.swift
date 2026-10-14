@@ -159,7 +159,7 @@ import Testing
     // MARK: - Key composition
 
     /// Every panel the View menu can name, in both verbs. `leftPanelKey` picks
-    /// one of Contents/Sessions/Codes/Signals/DiscussionGuide per lens; Projects, Tags and
+    /// one of Contents/Sessions/Codes/Signals/DiscussionGuide/Screens per lens; Projects, Tags and
     /// Heatmap are fixed rows.
     @Test func labelKey_composesEveryRowInTheViewMenu() {
         let expected: [String: (show: String, hide: String)] = [
@@ -169,6 +169,7 @@ import Testing
             "Codes":    ("desktop.menu.view.showCodes",    "desktop.menu.view.hideCodes"),
             "Signals":  ("desktop.menu.view.showSignals",  "desktop.menu.view.hideSignals"),
             "DiscussionGuide": ("desktop.menu.view.showDiscussionGuide", "desktop.menu.view.hideDiscussionGuide"),
+            "Screens":  ("desktop.menu.view.showScreens",  "desktop.menu.view.hideScreens"),
             "Tags":     ("desktop.menu.view.showTags",     "desktop.menu.view.hideTags"),
             "Heatmap":  ("desktop.menu.view.showHeatmap",  "desktop.menu.view.hideHeatmap"),
         ]
@@ -178,18 +179,10 @@ import Testing
         }
     }
 
-    /// The Screens row is English (a diagnostics lens) but follows the same
-    /// verb rule: a dimmed row never offers a hide.
-    @Test func screensLabel_followsTheVerbRule() {
-        #expect(PanelToggle.screensLabel(isOpen: true, isAvailable: true) == "Hide Screens")
-        #expect(PanelToggle.screensLabel(isOpen: false, isAvailable: true) == "Show Screens")
-        #expect(PanelToggle.screensLabel(isOpen: true, isAvailable: false) == "Show Screens")
-    }
-
     /// The two verbs never collide — the property that makes the row a toggle
     /// rather than a relabelling.
     @Test func labelKey_verbsDiffer() {
-        for panel in ["Projects", "Contents", "Sessions", "Codes", "Signals", "DiscussionGuide", "Tags", "Heatmap"] {
+        for panel in ["Projects", "Contents", "Sessions", "Codes", "Signals", "DiscussionGuide", "Screens", "Tags", "Heatmap"] {
             #expect(PanelToggle.labelKey(panel: panel, isOpen: true, isAvailable: true)
                     != PanelToggle.labelKey(panel: panel, isOpen: false, isAvailable: true))
         }

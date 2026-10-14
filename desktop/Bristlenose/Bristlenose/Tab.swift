@@ -1,8 +1,8 @@
 import Foundation
 
-/// The top-level lenses, in rail order (`LensItem.all`). `.screens` is a
-/// diagnostics lens: its rail row appears only with the Diagnostics preference
-/// on (`LensItem.lenses(screens:)`), the way `.discussion` once rode a flag.
+/// The top-level lenses, in rail order (`LensItem.lenses(screens:)`).
+/// `.screens` joins the rail only for a project that has shared screens to
+/// show, with Read shared screens on (`LensItem.rail(screenText:screensAvailable:)`).
 ///
 /// Raw values match the keys expected by `window.switchToTab(tab)` in
 /// `frontend/src/shims/navigation.ts`.
@@ -20,8 +20,6 @@ enum Tab: String, CaseIterable, Identifiable {
         case .codebook:  "Codebooks"
         case .signals:   "Signals"
         case .discussion: "Discussion"
-        // English-only while it is a diagnostics lens (docs/design-screens.md):
-        // no `common.nav.screens` key, so both label helpers land here.
         case .screens:   "Screens"
         }
     }

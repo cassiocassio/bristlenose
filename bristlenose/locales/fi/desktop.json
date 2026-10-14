@@ -49,6 +49,8 @@
       "hideSignals": "Kätke signaalit",
       "showDiscussionGuide": "Näytä haastattelurunko",
       "hideDiscussionGuide": "Kätke haastattelurunko",
+      "showScreens": "Näytä näytöt",
+      "hideScreens": "Kätke näytöt",
       "showSessions": "N\u00e4yt\u00e4 istunnot",
       "hideSessions": "K\u00e4tke istunnot",
       "showTags": "Näytä tunnisteet",
@@ -751,6 +753,8 @@
     "showSignals": "Näytä signaalit (⌘⌥L)",
     "discussionGuide": "Haastattelurunko",
     "showDiscussionGuide": "Näytä haastattelurunko (⌘⌥L)",
+    "screens": "Näytöt",
+    "showScreens": "Näytä näytöt (⌘⌥L)",
     "showSessions": "N\u00e4yt\u00e4 istunnot (\u2318\u2325L)",
     "tags": "Tunnisteet",
     "showTags": "Näytä tunnisteet (⌘⌥T)",
@@ -869,7 +873,9 @@
     "modelLabel": "Malli",
     "backendAuto": "Automaattinen",
     "backendHint": "Automaattinen tunnistaa parhaan moottorin Macillesi.",
-    "modelRecommended": "{{model}} (suositeltu)"
+    "modelRecommended": "{{model}} (suositeltu)",
+    "readScreensLabel": "Lue jaetut n\u00e4yt\u00f6t",
+    "readScreensHint": "Lukee tallenteissa jaettujen n\u00e4ytt\u00f6jen tekstin t\u00e4ll\u00e4 Macilla ja tallentaa sen pienten n\u00e4ytt\u00f6kuvien kanssa projektin kansioon. Teksti\u00e4 ei koskaan l\u00e4hetet\u00e4 teko\u00e4lylle, eik\u00e4 se sis\u00e4lly vientiin."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Määritä laitteella toimiva tekoäly",

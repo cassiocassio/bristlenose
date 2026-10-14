@@ -94,8 +94,8 @@ struct ServeFleetLifecycleTests {
         #expect(fleet.staleProjects.contains(Self.b))
     }
 
-    /// Turning Diagnostics OFF must reach every serve still reading shared
-    /// screens, not only the fronted one. Before this, `b` — a background serve
+    /// Turning Read shared screens OFF must reach every serve still reading
+    /// shared screens, not only the fronted one. Before this, `b` — a background serve
     /// spawned with `BRISTLENOSE_SCREEN_TEXT=1` — was merely marked stale and
     /// went on reading participants' screens until someone fronted its window.
     /// The restart is asserted by its effect, not by the absence of a stale
@@ -117,11 +117,11 @@ struct ServeFleetLifecycleTests {
         }
     }
 
-    @Test func diagnosticsOffRestartsEveryServeStillReadingScreens() async throws {
+    @Test func screenTextOffRestartsEveryServeStillReadingScreens() async throws {
         let suite = "ServeFleetLifecycleTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set(false, forKey: DiagnosticsPreference.key)
+        defaults.set(false, forKey: ScreenTextPreference.key)
 
         let fleet = Self.externalFleet()
         for (id, port, reads) in [(Self.a, 5000, false), (Self.b, 5001, true)] {
@@ -137,7 +137,7 @@ struct ServeFleetLifecycleTests {
         await settle(b, to: .running(port: Self.restartPort))
 
         #expect(b.state == .running(port: Self.restartPort),
-                "a background serve kept reading screens after Diagnostics went off")
+                "a background serve kept reading screens after Read shared screens went off")
         #expect(fleet.staleProjects.contains(Self.b) == false)
         #expect(b.spawnedReadsScreens == false, "the restarted serve still claims to read screens")
         // Narrow: a serve that never read screens keeps the lazy restart.
@@ -146,13 +146,13 @@ struct ServeFleetLifecycleTests {
     }
 
     /// The boot gap: `spawnedReadsScreens` is set at spawn, seconds before
-    /// `.running`. A serve still starting when Diagnostics goes off was spawned
+    /// `.running`. A serve still starting when Read shared screens goes off was spawned
     /// with screen text and must be restarted too, not left to boot and read.
-    @Test func diagnosticsOffRestartsAServeStillStarting() async throws {
+    @Test func screenTextOffRestartsAServeStillStarting() async throws {
         let suite = "ServeFleetLifecycleTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set(false, forKey: DiagnosticsPreference.key)
+        defaults.set(false, forKey: ScreenTextPreference.key)
 
         let fleet = Self.externalFleet()
         let b = fleet.manager(for: Self.b)
@@ -176,7 +176,7 @@ struct ServeFleetLifecycleTests {
         let suite = "ServeFleetLifecycleTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set(false, forKey: DiagnosticsPreference.key)
+        defaults.set(false, forKey: ScreenTextPreference.key)
 
         let fleet = Self.externalFleet()
         let a = fleet.manager(for: Self.a)
@@ -206,13 +206,26 @@ struct ServeFleetLifecycleTests {
         #expect(store.progress[Self.a] == nil, "a discarded project kept its row")
     }
 
-    /// Turning Diagnostics ON withdraws nothing, so it stays lazy everywhere —
+    /// …and so does its availability: the Screens lens is offered for the
+    /// project whose serve answered, and goes when the project is discarded.
+    @Test func aManagersScreenAvailabilityLandsUnderItsOwnProject() {
+        let store = ScreenReadingStore()
+        let fleet = Self.externalFleet(store)
+        _ = fleet.manager(for: Self.b)
+        fleet.manager(for: Self.a).onScreensAvailability?(true)
+        #expect(store.available == [Self.a])
+
+        fleet.discard(Self.a)
+        #expect(store.available.isEmpty, "a discarded project kept its Screens lens")
+    }
+
+    /// Turning Read shared screens ON withdraws nothing, so it stays lazy everywhere —
     /// the restart-all harm `ServeEnvStaleness` declines.
-    @Test func diagnosticsOnStaysLazyForBackgroundServes() throws {
+    @Test func screenTextOnStaysLazyForBackgroundServes() throws {
         let suite = "ServeFleetLifecycleTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set(true, forKey: DiagnosticsPreference.key)
+        defaults.set(true, forKey: ScreenTextPreference.key)
 
         let fleet = ServeFleet()
         let m = fleet.manager(for: Self.b)

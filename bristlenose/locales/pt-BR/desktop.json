@@ -49,6 +49,8 @@
       "hideSignals": "Ocultar Sinais",
       "showDiscussionGuide": "Mostrar Roteiro de Entrevista",
       "hideDiscussionGuide": "Ocultar Roteiro de Entrevista",
+      "showScreens": "Mostrar Telas",
+      "hideScreens": "Ocultar Telas",
       "showSessions": "Mostrar Sess\u00f5es",
       "hideSessions": "Ocultar Sess\u00f5es",
       "showTags": "Mostrar Etiquetas",
@@ -751,6 +753,8 @@
     "showSignals": "Mostrar sinais (⌘⌥L)",
     "discussionGuide": "Roteiro de entrevista",
     "showDiscussionGuide": "Mostrar roteiro de entrevista (⌘⌥L)",
+    "screens": "Telas",
+    "showScreens": "Mostrar telas (⌘⌥L)",
     "showSessions": "Mostrar sess\u00f5es (\u2318\u2325L)",
     "tags": "Etiquetas",
     "showTags": "Mostrar etiquetas (⌘⌥T)",
@@ -869,7 +873,9 @@
     "modelLabel": "Modelo",
     "backendAuto": "Automático",
     "backendHint": "Automático detecta o melhor motor para o seu Mac.",
-    "modelRecommended": "{{model}} (recomendado)"
+    "modelRecommended": "{{model}} (recomendado)",
+    "readScreensLabel": "Ler telas compartilhadas",
+    "readScreensHint": "L\u00ea o texto das telas compartilhadas nas grava\u00e7\u00f5es, neste Mac, e o guarda com pequenas imagens de cada tela na pasta do projeto. Nunca \u00e9 enviado \u00e0 IA nem inclu\u00eddo nas exporta\u00e7\u00f5es."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configurar IA no dispositivo",

@@ -49,6 +49,8 @@
       "hideSignals": "Verberg signalen",
       "showDiscussionGuide": "Toon gespreksgids",
       "hideDiscussionGuide": "Verberg gespreksgids",
+      "showScreens": "Toon schermen",
+      "hideScreens": "Verberg schermen",
       "showSessions": "Toon sessies",
       "hideSessions": "Verberg sessies",
       "showTags": "Toon tags",
@@ -751,6 +753,8 @@
     "showSignals": "Toon signalen (⌘⌥L)",
     "discussionGuide": "Gespreksgids",
     "showDiscussionGuide": "Toon gespreksgids (⌘⌥L)",
+    "screens": "Schermen",
+    "showScreens": "Toon schermen (⌘⌥L)",
     "showSessions": "Toon sessies (\u2318\u2325L)",
     "tags": "Tags",
     "showTags": "Toon tags (⌘⌥T)",
@@ -869,7 +873,9 @@
     "modelLabel": "Model",
     "backendAuto": "Automatisch",
     "backendHint": "Automatisch detecteert de beste engine voor je Mac.",
-    "modelRecommended": "{{model}} (aanbevolen)"
+    "modelRecommended": "{{model}} (aanbevolen)",
+    "readScreensLabel": "Lees gedeelde schermen",
+    "readScreensHint": "Leest de tekst op schermen die in opnamen worden gedeeld, op deze Mac, en bewaart die met kleine afbeeldingen van elk scherm in de projectmap. Wordt nooit naar de AI gestuurd en zit niet in exports."
   },
   "ollamaSetup": {
     "pillChoosingModel": "AI op apparaat instellen",

@@ -13,12 +13,12 @@ import Testing
 @Suite("Lens memory")
 struct LensMemoryTests {
 
-    /// Every lens on the rail (Diagnostics on), so the rules below are about
+    /// Every lens on the rail (Screens on), so the rules below are about
     /// memory, not about which lenses are showing.
     static let fullRail = LensItem.lenses(screens: true)
 
-    /// A remembered Screens lens, with Diagnostics off, lands on the dashboard:
-    /// its rail row and ⌘7 are gone and the server says it is switched off.
+    /// A remembered Screens lens, off the rail (the preference off, or no shared
+    /// screens), lands on the dashboard: its rail row and ⌘7 are gone.
     @Test("a lens off the rail is not restored")
     func aLensOffTheRailIsNotRestored() {
         let shipping = LensItem.lenses(screens: false)
@@ -27,7 +27,7 @@ struct LensMemoryTests {
         #expect(LensMemory.restore("quotes", rail: shipping) == .quotes)
     }
 
-    /// Switching Diagnostics off moves a window off Screens, to the dashboard,
+    /// Switching Read shared screens off moves a window off Screens, to the dashboard,
     /// and leaves every other window where it is.
     @Test("a window on a lens that left the rail moves to the dashboard")
     func landingAfterTheRailChanges() {

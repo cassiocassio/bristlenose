@@ -1,5 +1,26 @@
 import Foundation
 
+/// The "Read shared screens" preference (Settings ▸ Transcription) — whether the
+/// serve reads the text on screens participants shared in their recordings, for
+/// the Screens lens (`docs/design-screens.md`). Its own key, **on by default**,
+/// and nothing to do with Diagnostics: the lens left that menu's company when
+/// it shipped in the main app.
+///
+/// It reaches the sidecar as `BRISTLENOSE_SCREEN_TEXT` (`overlayPreferences`),
+/// always stated: "1" on, "0" off. The explicit "0" matters — the server deletes
+/// what it read when it sees it, while an unset variable means the CLI default
+/// and deletes nothing.
+enum ScreenTextPreference {
+    static let key = "readSharedScreens"
+
+    static let defaultValue = true
+
+    /// The stored preference, or the default when it has never been touched.
+    static func isEnabled(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: key) as? Bool ?? defaultValue
+    }
+}
+
 /// How far the serve's screen-reading job has got through a project's
 /// recordings — the Screens lens's background work (`docs/design-screens.md`),
 /// shown as one more activity on the sidebar status line, like a copy or a
@@ -38,7 +59,7 @@ struct ScreenReadingProgress: Equatable {
     /// Response shape (server-owned): `{"enabled": bool, "unavailable":
     /// null|"not_macos"|"vision_missing"|"no_job", "running": bool, "done":
     /// int, "total": int, "seconds_done": float, "seconds_total": float,
-    /// "rate": float|null}`.
+    /// "rate": float|null, "has_screens": bool}`.
     static func parse(_ json: [String: Any]) -> ScreenReadingProgress? {
         guard json["enabled"] as? Bool == true,
               json["running"] as? Bool == true,
@@ -53,6 +74,22 @@ struct ScreenReadingProgress: Equatable {
             secondsTotal: (json["seconds_total"] as? NSNumber)?.doubleValue ?? 0,
             rate: (json["rate"] as? NSNumber)?.doubleValue
         )
+    }
+
+    /// Does this project have a Screens lens to offer? The rail row, ⌘7 and the
+    /// View menu row follow this: reading is on and possible here, and either
+    /// something has been read (`has_screens`) or a read is still to come — a
+    /// job running, or recordings not yet read. An empty project, a finished
+    /// read that found no shared screens, or an older serve without the field
+    /// and with nothing pending all answer no.
+    static func isAvailable(_ json: [String: Any]) -> Bool {
+        guard json["enabled"] as? Bool == true else { return false }
+        if let reason = json["unavailable"], !(reason is NSNull) { return false }
+        if json["has_screens"] as? Bool == true { return true }
+        let total = (json["total"] as? NSNumber)?.intValue ?? 0
+        let done = (json["done"] as? NSNumber)?.intValue ?? 0
+        let running = json["running"] as? Bool == true
+        return total > 0 && (running || done < total)
     }
 }
 
@@ -70,10 +107,23 @@ final class ScreenReadingStore: ObservableObject {
 
     @Published private(set) var progress: [UUID: ScreenReadingProgress] = [:]
 
+    /// The projects that have a Screens lens to offer
+    /// (`ScreenReadingProgress.isAvailable`). Windows mirror their own
+    /// project's membership onto the bridge, which is what puts the Screens
+    /// row on the rail and ⌘7 in the View menu.
+    @Published private(set) var available: Set<UUID> = []
+
     /// Write `value` for `project` — and publish only if it differs. `nil`
     /// clears the row.
     func set(_ value: ScreenReadingProgress?, for project: UUID) {
         guard progress[project] != value else { return }
         progress[project] = value
+    }
+
+    /// Record whether `project` has a Screens lens — publishing only on change,
+    /// for the same reason as `set`.
+    func setAvailable(_ isAvailable: Bool, for project: UUID) {
+        guard available.contains(project) != isAvailable else { return }
+        if isAvailable { available.insert(project) } else { available.remove(project) }
     }
 }

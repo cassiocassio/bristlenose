@@ -49,6 +49,8 @@
       "hideSignals": "隱藏訊號",
       "showDiscussionGuide": "顯示訪談大綱",
       "hideDiscussionGuide": "隱藏訪談大綱",
+      "showScreens": "顯示畫面",
+      "hideScreens": "隱藏畫面",
       "showSessions": "\u986f\u793a\u5834\u6b21",
       "hideSessions": "\u96b1\u85cf\u5834\u6b21",
       "showTags": "顯示標籤",
@@ -732,6 +734,8 @@
     "showSignals": "顯示訊號（⌘⌥L）",
     "discussionGuide": "訪談大綱",
     "showDiscussionGuide": "顯示訪談大綱（⌘⌥L）",
+    "screens": "畫面",
+    "showScreens": "顯示畫面（⌘⌥L）",
     "showSessions": "\u986f\u793a\u5834\u6b21\uff08\u2318\u2325L\uff09",
     "tags": "標籤",
     "showTags": "顯示標籤（⌘⌥T）",
@@ -850,7 +854,9 @@
     "modelLabel": "模型",
     "backendAuto": "自動",
     "backendHint": "自動偵測最適合你 Mac 的引擎。",
-    "modelRecommended": "{{model}}（建議）"
+    "modelRecommended": "{{model}}（建議）",
+    "readScreensLabel": "\u8b80\u53d6\u5171\u4eab\u7684\u756b\u9762",
+    "readScreensHint": "\u5728\u9019\u53f0 Mac \u4e0a\u8b80\u53d6\u9304\u5f71\u4e2d\u5171\u4eab\u756b\u9762\u7684\u6587\u5b57\uff0c\u4e26\u8207\u6bcf\u500b\u756b\u9762\u7684\u5c0f\u5716\u4e00\u8d77\u4fdd\u5b58\u5728\u5c08\u6848\u6a94\u6848\u593e\u4e2d\u3002\u7d55\u4e0d\u6703\u50b3\u9001\u7d66 AI\uff0c\u4e5f\u4e0d\u6703\u5305\u542b\u5728\u8f38\u51fa\u5167\u5bb9\u4e2d\u3002"
   },
   "ollamaSetup": {
     "pillChoosingModel": "設定裝置端 AI",

@@ -49,6 +49,8 @@
       "hideSignals": "Signale ausblenden",
       "showDiscussionGuide": "Gesprächsleitfaden einblenden",
       "hideDiscussionGuide": "Gesprächsleitfaden ausblenden",
+      "showScreens": "Bildschirme einblenden",
+      "hideScreens": "Bildschirme ausblenden",
       "showSessions": "Interviews einblenden",
       "hideSessions": "Interviews ausblenden",
       "showTags": "Tags einblenden",
@@ -751,6 +753,8 @@
     "showSignals": "Signale einblenden (⌘⌥L)",
     "discussionGuide": "Gesprächsleitfaden",
     "showDiscussionGuide": "Gesprächsleitfaden einblenden (⌘⌥L)",
+    "screens": "Bildschirme",
+    "showScreens": "Bildschirme einblenden (⌘⌥L)",
     "showSessions": "Interviews einblenden (\u2318\u2325L)",
     "tags": "Tags",
     "showTags": "Tags einblenden (⌘⌥T)",
@@ -869,7 +873,9 @@
     "modelLabel": "Modell",
     "backendAuto": "Auto",
     "backendHint": "Auto erkennt die beste Engine für Ihren Mac.",
-    "modelRecommended": "{{model}} (empfohlen)"
+    "modelRecommended": "{{model}} (empfohlen)",
+    "readScreensLabel": "Geteilte Bildschirme lesen",
+    "readScreensHint": "Liest den Text auf Bildschirmen, die in Aufnahmen geteilt wurden, auf diesem Mac und speichert ihn mit kleinen Bildern jedes Bildschirms im Projektordner. Wird nie an die KI gesendet und ist nicht in Exporten enthalten."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Lokale KI einrichten",

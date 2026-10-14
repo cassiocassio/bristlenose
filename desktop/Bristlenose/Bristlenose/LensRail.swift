@@ -17,14 +17,13 @@ struct LensRail: View {
     /// `.disabled(selectedProject == nil || !bridgeHandler.isReady)`. The dimming
     /// *is* the "pick a project first" teaching (spec §3.1).
     let isEnabled: Bool
-    /// Observed so the rail redraws when Diagnostics (and with it the Screens
-    /// lens) is switched on or off; `LensItem.all` reads the same key.
-    @AppStorage(DiagnosticsPreference.key)
-    private var showDiagnostics: Bool = DiagnosticsPreference.defaultValue
 
     var body: some View {
         VStack(spacing: 1) {
-            ForEach(LensItem.lenses(screens: showDiagnostics)) { item in
+            // The bridge carries whether this window's rail has Screens
+            // (`ContentView` mirrors it from the project's availability), and is
+            // observed, so the row comes and goes with it.
+            ForEach(LensItem.lenses(screens: bridgeHandler.screensLensAvailable)) { item in
                 LensRow(bridgeHandler: bridgeHandler, i18n: i18n, item: item)
             }
         }

@@ -49,6 +49,8 @@
       "hideSignals": "Ukryj sygnały",
       "showDiscussionGuide": "Pokaż scenariusz wywiadu",
       "hideDiscussionGuide": "Ukryj scenariusz wywiadu",
+      "showScreens": "Poka\u017c ekrany",
+      "hideScreens": "Ukryj ekrany",
       "showSessions": "Poka\u017c sesje",
       "hideSessions": "Ukryj sesje",
       "showTags": "Pokaż etykiety",
@@ -789,6 +791,8 @@
     "showSignals": "Pokaż sygnały (⌘⌥L)",
     "discussionGuide": "Scenariusz wywiadu",
     "showDiscussionGuide": "Pokaż scenariusz wywiadu (⌘⌥L)",
+    "screens": "Ekrany",
+    "showScreens": "Pokaż ekrany (⌘⌥L)",
     "showSessions": "Poka\u017c sesje (\u2318\u2325L)",
     "tags": "Etykiety",
     "showTags": "Pokaż etykiety (⌘⌥T)",
@@ -907,7 +911,9 @@
     "modelLabel": "Model",
     "backendAuto": "Automatycznie",
     "backendHint": "Automatycznie wykrywa najlepszy silnik dla Twojego Maca.",
-    "modelRecommended": "{{model}} (zalecany)"
+    "modelRecommended": "{{model}} (zalecany)",
+    "readScreensLabel": "Odczytuj udost\u0119pnione ekrany",
+    "readScreensHint": "Odczytuje tekst z ekran\u00f3w udost\u0119pnionych w nagraniach, na tym Macu, i przechowuje go wraz z ma\u0142ymi obrazami ka\u017cdego ekranu w folderze projektu. Nigdy nie jest wysy\u0142any do AI ani do\u0142\u0105czany do eksport\u00f3w."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Skonfiguruj AI na urządzeniu",

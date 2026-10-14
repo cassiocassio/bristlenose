@@ -145,7 +145,7 @@ final class ServeManager: ObservableObject {
     /// question fired six calls inside one second.
     static let agentPulseInterval = Duration.milliseconds(1500)
 
-    /// Poll for the Screens lens's background reading — diagnostics only.
+    /// Poll for the Screens lens's background reading, while Read shared screens is on.
     /// Same one-owner loop shape as `agentPulseTask`, and the same "nobody is
     /// looking, so don't ask" guard.
     private var screensPollTask: Task<Void, Never>?
@@ -160,6 +160,14 @@ final class ServeManager: ObservableObject {
     /// `ServeFleet` reaches every window and collapsed an open Window menu
     /// once (20 Sep 2026). `nil` clears the row.
     var onScreensProgress: ((ScreenReadingProgress?) -> Void)?
+
+    /// Where "does this project have a Screens lens?" goes — set by
+    /// `ServeFleet` to a write into `ScreenReadingStore.available`, by the same
+    /// route and for the same reason as `onScreensProgress`. Called only with
+    /// an answer: the preference off, or what the serve said. A serve that is
+    /// not running (a restart, a boot) says nothing, so a window on the Screens
+    /// lens is not moved off it by an Anonymise restart.
+    var onScreensAvailability: ((Bool) -> Void)?
 
     /// Bearer token for localhost API access control.
     /// Parsed from stdout line: `[bristlenose] auth-token: <token>`
@@ -351,9 +359,9 @@ final class ServeManager: ObservableObject {
             }
         }
 
-        // The Screens lens's reading progress, beside the pulse and shaped
-        // like it. Asks nothing unless Diagnostics is on (the only state in
-        // which a serve reads screens at all).
+        // The Screens lens's reading progress and availability, beside the
+        // pulse and shaped like it. Asks nothing unless Read shared screens is
+        // on (the only state in which a serve reads screens at all).
         screensPollTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: Self.screensPollInterval)
@@ -367,7 +375,7 @@ final class ServeManager: ObservableObject {
         // the arm `ServeEnvStaleness` declines. The fan-out is the fleet's
         // (`ServeFleet.applyEnvChange`), which restarts the fronted and exposed
         // instances now, and any serve still reading shared screens after
-        // Diagnostics went off, and marks the rest to restart when someone
+        // Read shared screens went off, and marks the rest to restart when someone
         // looks at them.
 
         agentAccessObserver = NotificationCenter.default.addObserver(
@@ -1274,20 +1282,30 @@ final class ServeManager: ObservableObject {
         if merged != agentProxyVersions { agentProxyVersions = merged }
     }
 
-    /// Read the screen-reading job's progress and hand it to the sidebar store.
+    /// Read the screen-reading job's progress and the lens's availability,
+    /// and hand both to the sidebar store.
     ///
-    /// Guards in the pulse's order, plus one: Diagnostics off or no running
-    /// serve clears the row (there is nothing reading, and a row left over
-    /// from before would lie); no visible window skips the request but keeps
-    /// the last value, since nobody can see the row and the next visible tick
-    /// corrects it. A failed request also keeps the last value — a flicker
-    /// is worse than a count one tick old. Screen text off, the route answers
-    /// 200 with `enabled: false`, which `parse` turns into nil — so it clears;
-    /// a non-200 (no such project, an older serve) clears it too.
+    /// Guards in the pulse's order, plus one: Read shared screens off clears
+    /// the row and the lens (there is nothing reading, and either left over
+    /// from before would lie). No running serve clears the row but leaves the
+    /// lens alone: a serve between spawns — any preference restart — has not
+    /// changed whether its project has screens, and moving a window off the
+    /// lens for it would be the app second-guessing a restart. No visible
+    /// window skips the request but keeps both, since nobody can see them and
+    /// the next visible tick corrects them. A failed request also keeps both —
+    /// a flicker is worse than a count one tick old — and so does any status
+    /// but 200 or 404 (a 5xx while a re-analyse reattaches the database). Screen
+    /// text off, the route answers 200 with `enabled: false`, which `parse` and
+    /// `isAvailable` turn into nil and false — so both clear; a 404 (no such
+    /// project, an older serve) clears both too.
     @MainActor
     func pollScreens(defaults: UserDefaults = .standard) async {
-        guard DiagnosticsPreference.isEnabled(defaults),
-              case .running(let port) = state,
+        guard ScreenTextPreference.isEnabled(defaults) else {
+            onScreensProgress?(nil)
+            onScreensAvailability?(false)
+            return
+        }
+        guard case .running(let port) = state,
               let token = authToken,
               let url = URL(string: "http://127.0.0.1:\(port)/api/projects/1/screens/status")
         else {
@@ -1302,13 +1320,21 @@ final class ServeManager: ObservableObject {
         // Same ownership check as the pulse: a completion that lands after the
         // serve restarted must not report the old one's progress.
         guard case .running(let current) = state, current == port else { return }
-        guard (response as? HTTPURLResponse)?.statusCode == 200,
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else {
+        let status = (response as? HTTPURLResponse)?.statusCode
+        // Only a 404 (no such route or project: an older serve) says there is
+        // nothing here. Anything else — a 5xx while a --clean re-analyse
+        // reattaches the database — keeps both, or a window on the lens is
+        // moved off it mid-run.
+        if status == 404 {
             onScreensProgress?(nil)
+            onScreensAvailability?(false)
             return
         }
+        guard status == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
         onScreensProgress?(ScreenReadingProgress.parse(json))
+        onScreensAvailability?(ScreenReadingProgress.isAvailable(json))
     }
 
     /// Fetch the Bristlenose version (and MCP availability) from the serve

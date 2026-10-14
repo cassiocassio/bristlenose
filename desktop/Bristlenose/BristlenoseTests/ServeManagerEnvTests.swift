@@ -289,21 +289,32 @@ struct ServeManagerEnvTests {
         }
     }
 
-    /// Screen text (the Screens lens) is diagnostics-only: the sidecar reads shared screens
-    /// only when the Diagnostics preference is on, and never by default.
-    @Test func overlayPreferences_turns_screen_text_on_only_with_diagnostics() {
+    /// Screen text (the Screens lens) follows Read shared screens, which is on by
+    /// default — and is ALWAYS stated: off is an explicit "0", because that is
+    /// what tells the server to delete what it read (unset means the CLI default
+    /// and deletes nothing). Diagnostics has nothing to do with it any more.
+    @Test func overlayPreferences_states_screen_text_from_its_own_preference() {
         withIsolatedDefaults { defaults in
             var env: [String: String] = [:]
             BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
-            #expect(env["BRISTLENOSE_SCREEN_TEXT"] == nil)
-            #expect(ServeManager.readsScreens(env) == false)
-
-            defaults.set(true, forKey: DiagnosticsPreference.key)
-            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
-            #expect(env["BRISTLENOSE_SCREEN_TEXT"] == "1")
+            #expect(env["BRISTLENOSE_SCREEN_TEXT"] == "1", "on by default")
             // What a spawn records is read off the env it was given — the same
             // answer, so the restart fan-out keys on what the serve really got.
             #expect(ServeManager.readsScreens(env))
+
+            defaults.set(false, forKey: ScreenTextPreference.key)
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_SCREEN_TEXT"] == "0", "off must be said, not left unset")
+            #expect(ServeManager.readsScreens(env) == false)
+
+            // Diagnostics no longer reaches the sidecar this way, in either direction.
+            defaults.set(true, forKey: DiagnosticsPreference.key)
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_SCREEN_TEXT"] == "0")
+            defaults.set(true, forKey: ScreenTextPreference.key)
+            defaults.set(false, forKey: DiagnosticsPreference.key)
+            BristlenoseShared.overlayPreferences(into: &env, defaults: defaults)
+            #expect(env["BRISTLENOSE_SCREEN_TEXT"] == "1")
         }
     }
 

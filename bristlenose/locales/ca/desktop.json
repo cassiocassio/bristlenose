@@ -49,6 +49,8 @@
       "hideSignals": "Oculta els senyals",
       "showDiscussionGuide": "Mostra la guia de discussió",
       "hideDiscussionGuide": "Oculta la guia de discussió",
+      "showScreens": "Mostra les pantalles",
+      "hideScreens": "Oculta les pantalles",
       "showSessions": "Mostra les sessions",
       "hideSessions": "Oculta les sessions",
       "showTags": "Mostra les etiquetes",
@@ -751,6 +753,8 @@
     "showSignals": "Mostra els senyals (⌘⌥L)",
     "discussionGuide": "Guia de discussió",
     "showDiscussionGuide": "Mostra la guia de discussió (⌘⌥L)",
+    "screens": "Pantalles",
+    "showScreens": "Mostra les pantalles (⌘⌥L)",
     "showSessions": "Mostra les sessions (⌘⌥L)",
     "tags": "Etiquetes",
     "showTags": "Mostra les etiquetes (⌘⌥T)",
@@ -869,7 +873,9 @@
     "modelLabel": "Model",
     "backendAuto": "Automàtic",
     "backendHint": "L'opció automàtica detecta el millor motor per al teu Mac.",
-    "modelRecommended": "{{model}} (recomanat)"
+    "modelRecommended": "{{model}} (recomanat)",
+    "readScreensLabel": "Llegeix les pantalles compartides",
+    "readScreensHint": "Llegeix el text de les pantalles compartides a les gravacions, en aquest Mac, i el desa amb petites imatges de cada pantalla a la carpeta del projecte. No s\u2019envia mai a la IA ni s\u2019inclou a les exportacions."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configura la IA al dispositiu",

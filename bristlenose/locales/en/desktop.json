@@ -49,6 +49,8 @@
       "hideSignals": "Hide Signals",
       "showDiscussionGuide": "Show Discussion Guide",
       "hideDiscussionGuide": "Hide Discussion Guide",
+      "showScreens": "Show Screens",
+      "hideScreens": "Hide Screens",
       "showSessions": "Show Sessions",
       "hideSessions": "Hide Sessions",
       "showTags": "Show Tags",
@@ -756,6 +758,8 @@
     "showSignals": "Show Signals (⌘⌥L)",
     "discussionGuide": "Discussion Guide",
     "showDiscussionGuide": "Show Discussion Guide (⌘⌥L)",
+    "screens": "Screens",
+    "showScreens": "Show Screens (⌘⌥L)",
     "showSessions": "Show Sessions (\u2318\u2325L)",
     "tags": "Tags",
     "showTags": "Show Tags (⌘⌥T)",
@@ -874,7 +878,9 @@
     "modelLabel": "Model",
     "backendAuto": "Auto",
     "backendHint": "Auto detects the best engine for your Mac.",
-    "modelRecommended": "{{model}} (recommended)"
+    "modelRecommended": "{{model}} (recommended)",
+    "readScreensLabel": "Read shared screens",
+    "readScreensHint": "Reads the text on screens shared in recordings, on this Mac, and keeps it with small pictures of each screen in the project\u2019s folder. Never sent to the AI, and not included in exports."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Set up on-device AI",

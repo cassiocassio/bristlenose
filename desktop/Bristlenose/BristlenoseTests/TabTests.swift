@@ -67,7 +67,7 @@ struct TabTests {
         ])
     }
 
-    /// The diagnostics Screens lens resolves from its route, so the rail lights
+    /// The Screens lens resolves from its route, so the rail lights
     /// its row when the SPA navigates there.
     @Test func fromPath_screens() {
         #expect(Tab.from(path: "/report/screens/") == .screens)

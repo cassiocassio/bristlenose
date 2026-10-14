@@ -5,7 +5,7 @@ import Testing
 
 /// The Screens lens's reading progress as one more activity on the sidebar
 /// status line: where it sits in the precedence chain, when it shows at all,
-/// and what it says. Diagnostics-only, so nothing else in the suite reaches it.
+/// and what it says.
 @Suite struct ScreenReadingSubtitleTests {
 
     private func resolve(
@@ -108,6 +108,56 @@ import Testing
     }
 }
 
+/// Whether a project has a Screens lens at all — the rail row, ⌘7 and the View
+/// menu row follow it. On and possible, and either something read or a read
+/// still to come.
+@Suite struct ScreenReadingAvailabilityTests {
+
+    private func body(enabled: Bool = true, unavailable: Any = NSNull(),
+                      running: Bool = false, done: Int = 0, total: Int = 0,
+                      hasScreens: Any? = false) -> [String: Any] {
+        var json: [String: Any] = [
+            "enabled": enabled, "unavailable": unavailable, "running": running,
+            "done": done, "total": total, "seconds_done": 0.0,
+            "seconds_total": 0.0, "rate": NSNull()]
+        if let hasScreens { json["has_screens"] = hasScreens }
+        return json
+    }
+
+    @Test func screensFoundMakeTheLensAvailable() {
+        #expect(ScreenReadingProgress.isAvailable(body(done: 4, total: 4, hasScreens: true)))
+    }
+
+    /// A read still to come counts before anything is found: a job running, or
+    /// recordings not yet read.
+    @Test func aReadStillToComeMakesItAvailable() {
+        #expect(ScreenReadingProgress.isAvailable(body(running: true, done: 0, total: 3)))
+        #expect(ScreenReadingProgress.isAvailable(body(running: false, done: 1, total: 3)))
+    }
+
+    /// A finished read that found nothing, and an empty project, have no lens.
+    @Test func nothingFoundAndNothingPendingIsNotAvailable() {
+        #expect(!ScreenReadingProgress.isAvailable(body(done: 3, total: 3)))
+        #expect(!ScreenReadingProgress.isAvailable(body(done: 0, total: 0)))
+        #expect(!ScreenReadingProgress.isAvailable(body(running: true, done: 0, total: 0)))
+    }
+
+    /// Off or impossible here wins over anything the counts say.
+    @Test func offOrUnavailableIsNeverAvailable() {
+        #expect(!ScreenReadingProgress.isAvailable(body(enabled: false, done: 4, total: 4, hasScreens: true)))
+        #expect(!ScreenReadingProgress.isAvailable(
+            body(unavailable: "vision_missing", running: true, done: 0, total: 3, hasScreens: true)))
+        #expect(!ScreenReadingProgress.isAvailable(
+            body(unavailable: "not_macos", done: 4, total: 4, hasScreens: true)))
+    }
+
+    /// An older serve without `has_screens` falls back to "a read still to come".
+    @Test func anOlderServeWithoutTheFieldUsesTheCounts() {
+        #expect(ScreenReadingProgress.isAvailable(body(running: true, done: 1, total: 3, hasScreens: nil)))
+        #expect(!ScreenReadingProgress.isAvailable(body(done: 3, total: 3, hasScreens: nil)))
+    }
+}
+
 /// What the row and its tooltip say. Configured on a throwaway locale folder
 /// with the real English values, and pinned to `en` — a bare `I18n()` returns
 /// raw keys, and an unpinned one follows the app's own language.
@@ -194,6 +244,25 @@ import Testing
         #expect(publishes == 2)
         #expect(store.progress[id] == nil)
     }
+
+    /// Availability publishes only on change too — it is polled every tick and
+    /// changes almost never.
+    @Test func availabilityPublishesOnlyOnChange() {
+        let store = ScreenReadingStore()
+        let a = UUID(), b = UUID()
+        var publishes = 0
+        let sub = store.objectWillChange.sink { publishes += 1 }
+        defer { sub.cancel() }
+
+        store.setAvailable(true, for: a)
+        store.setAvailable(true, for: a)
+        store.setAvailable(false, for: b)
+        store.setAvailable(false, for: a)
+        store.setAvailable(false, for: a)
+
+        #expect(publishes == 2)
+        #expect(store.available.isEmpty)
+    }
 }
 
 /// The poll's clearing guards — the part that decides the row goes away. Both
@@ -206,37 +275,46 @@ import Testing
         ServeManager(resolvedMode: .success(.external(port: 9)))
     }
 
-    @Test func diagnosticsOffClearsTheRowWithoutAsking() async throws {
+    @Test func preferenceOffClearsTheRowAndTheLensWithoutAsking() async throws {
         let suite = "ScreenReadingPollTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set(false, forKey: DiagnosticsPreference.key)
+        defaults.set(false, forKey: ScreenTextPreference.key)
+        // Diagnostics on must not keep it alive: the lens left that switch.
+        defaults.set(true, forKey: DiagnosticsPreference.key)
 
         let m = manager()
         m.instance.state = .running(port: 9)
         m.authToken = "token"
         var calls: [ScreenReadingProgress?] = []
+        var availability: [Bool] = []
         m.onScreensProgress = { calls.append($0) }
+        m.onScreensAvailability = { availability.append($0) }
 
         await m.pollScreens(defaults: defaults)
 
         #expect(calls.count == 1)
-        #expect(calls.first.map { $0 == nil } == true, "a leftover row survived Diagnostics off")
+        #expect(calls.first.map { $0 == nil } == true, "a leftover row survived Read shared screens off")
+        #expect(availability == [false], "the Screens lens survived Read shared screens off")
     }
 
-    @Test func noRunningServeClearsTheRow() async throws {
+    /// A serve between spawns — any preference restart — clears the row but
+    /// says nothing about the lens, so a window on Screens is not moved off it.
+    @Test func noRunningServeClearsTheRowButKeepsTheLens() async throws {
         let suite = "ScreenReadingPollTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set(true, forKey: DiagnosticsPreference.key)
 
-        let m = manager()   // idle: never started
+        let m = manager()   // idle: never started; preference at its default (on)
         var calls: [ScreenReadingProgress?] = []
+        var availability: [Bool] = []
         m.onScreensProgress = { calls.append($0) }
+        m.onScreensAvailability = { availability.append($0) }
 
         await m.pollScreens(defaults: defaults)
 
         #expect(calls.count == 1)
         #expect(calls.first.map { $0 == nil } == true)
+        #expect(availability.isEmpty, "a restart moved the lens off the rail")
     }
 }

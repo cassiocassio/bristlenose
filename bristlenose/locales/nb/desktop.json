@@ -49,6 +49,8 @@
       "hideSignals": "Skjul signaler",
       "showDiscussionGuide": "Vis intervjuguide",
       "hideDiscussionGuide": "Skjul intervjuguide",
+      "showScreens": "Vis skjermer",
+      "hideScreens": "Skjul skjermer",
       "showSessions": "Vis \u00f8kter",
       "hideSessions": "Skjul \u00f8kter",
       "showTags": "Vis tagger",
@@ -751,6 +753,8 @@
     "showSignals": "Vis signaler (⌘⌥L)",
     "discussionGuide": "Intervjuguide",
     "showDiscussionGuide": "Vis intervjuguide (⌘⌥L)",
+    "screens": "Skjermer",
+    "showScreens": "Vis skjermer (⌘⌥L)",
     "showSessions": "Vis \u00f8kter (\u2318\u2325L)",
     "tags": "Tagger",
     "showTags": "Vis tagger (⌘⌥T)",
@@ -869,7 +873,9 @@
     "modelLabel": "Modell",
     "backendAuto": "Automatisk",
     "backendHint": "Automatisk finner den beste motoren for Macen din.",
-    "modelRecommended": "{{model}} (anbefalt)"
+    "modelRecommended": "{{model}} (anbefalt)",
+    "readScreensLabel": "Les delte skjermer",
+    "readScreensHint": "Leser teksten p\u00e5 skjermer som deles i opptak, p\u00e5 denne Mac-en, og lagrer den med sm\u00e5 bilder av hver skjerm i prosjektmappen. Sendes aldri til KI-en og tas ikke med i eksporter."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Konfigurer KI på enheten",

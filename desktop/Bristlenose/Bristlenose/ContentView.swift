@@ -88,6 +88,14 @@ private struct SidebarDeselectMonitor: NSViewRepresentable {
     }
 }
 
+/// Whether a window's rail carries the Screens lens, and for which project —
+/// the key `ContentView` watches, so a project switch is not mistaken for the
+/// lens leaving the rail under the same project.
+struct ScreensRailState: Equatable {
+    let project: UUID?
+    let available: Bool
+}
+
 /// State for the disk-space precheck alert thrown by `CopyMachinery`.
 struct CopyDiskSpaceAlertState: Identifiable {
     let id = UUID()
@@ -334,6 +342,23 @@ struct ContentView: View {
     /// memory with `project` and then dutifully restore that.
     @State private var lensRestoredFor: UUID?
 
+    /// Read shared screens (Settings ▸ Transcription). Observed so the Screens
+    /// row leaves the rail the moment it is switched off, without waiting for
+    /// the next poll to say so.
+    @AppStorage(ScreenTextPreference.key)
+    private var readSharedScreens: Bool = ScreenTextPreference.defaultValue
+
+    /// The projects with a Screens lens to offer, copied from
+    /// `ScreenReadingStore.available` by `.onReceive` rather than observing the
+    /// store, so a progress tick does not re-render the window.
+    @State private var screensAvailableProjects: Set<UUID> = []
+
+    /// A project whose remembered lens is Screens, opened before its serve had
+    /// said it has screens. Availability arrives on the poll, seconds after the
+    /// report is ready, so the restore waits for it instead of losing the lens
+    /// to the dashboard. Cleared once spent, and by any other lens choice.
+    @State private var pendingScreensRestore: UUID?
+
     /// Handle to the in-flight project-switch Task. Switching is async (serve
     /// sidecar teardown + respawn); a background pipeline run makes rapid
     /// switching routine, so we cancel the prior switch before starting the
@@ -541,6 +566,20 @@ struct ContentView: View {
     private var selectedProjectID: UUID? {
         guard case .project(let id) = soleSelection else { return nil }
         return id
+    }
+
+    /// This window's lens rail: the shipping lenses, plus Screens while Read
+    /// shared screens is on and this project has shared screens to show.
+    private var lensRail: [LensItem] {
+        LensItem.rail(screenText: readSharedScreens,
+                      screensAvailable: selectedProjectID.map { screensAvailableProjects.contains($0) } ?? false)
+    }
+
+    /// The Screens half of `lensRail`, keyed by project, so a change of project
+    /// is told apart from the lens leaving the rail under the same project.
+    private var screensRail: ScreensRailState {
+        ScreensRailState(project: selectedProjectID,
+                         available: lensRail.contains { $0.tab == .screens })
     }
 
     /// How many items are currently selected.
@@ -1031,6 +1070,7 @@ struct ContentView: View {
         .onChange(of: bridgeHandler.isReady) { _, ready in
             guard ready, let id = selectedProjectID, lensRestoredFor != id else { return }
             lensRestoredFor = id
+            pendingScreensRestore = nil
             // A lens the user clicked during boot outranks the remembered
             // one — the bridge replayed that intent on `ready` (P3), and
             // restoring on top of it would navigate away from the user's
@@ -1041,20 +1081,37 @@ struct ContentView: View {
             // The seed's lens wins over the study's remembered one: it is a
             // deliberate "open THIS lens over there", and it is what makes the
             // lens row's Open in New Window one gesture rather than two.
-            let rail = LensItem.lenses(screens: showDiagnostics)
+            let rail = lensRail
             guard let tab = LensMemory.restore(seed?.lens, rail: rail)
-                    ?? LensMemory.restore(project.lastLens, rail: rail) else { return }
+                    ?? LensMemory.restore(project.lastLens, rail: rail) else {
+                // Screens remembered, but this serve has not yet said it has
+                // screens to show: wait for the poll rather than lose the lens.
+                if readSharedScreens, (seed?.lens ?? project.lastLens) == Tab.screens.rawValue {
+                    pendingScreensRestore = id
+                }
+                return
+            }
             bridgeHandler.activateLens(tab)
             restoreAnchor(project.lastAnchor, on: tab)
         }
-        // Diagnostics switched off with the Screens lens in front: the lens has
-        // just left the rail and ⌘7, and its serve is restarting without screen
-        // text, so move this window to the dashboard rather than leave it on a
-        // lens it can no longer reach. Every window observes the preference, so
-        // every window showing Screens moves.
-        .onChange(of: showDiagnostics) { _, on in
+        .onReceive(serveFleet.screenReading.$available) { screensAvailableProjects = $0 }
+        // The Screens row follows this project's availability. Mirrored onto
+        // the bridge for the View menu's ⌘7. When it leaves the rail under the
+        // same project — Read shared screens switched off, whose serve is
+        // restarting without screen text — a window showing Screens moves to
+        // the dashboard rather than stay on a lens it can no longer reach.
+        .onChange(of: screensRail, initial: true) { old, new in
+            bridgeHandler.screensLensAvailable = new.available
+            guard old.project == new.project else { return }
+            if new.available, let pending = pendingScreensRestore, pending == new.project {
+                pendingScreensRestore = nil
+                if (bridgeHandler.activeTab ?? .project) == .project {
+                    bridgeHandler.activateLens(.screens)
+                }
+                return
+            }
             guard let tab = LensMemory.landing(active: bridgeHandler.activeTab,
-                                               rail: LensItem.lenses(screens: on)) else { return }
+                                               rail: lensRail) else { return }
             bridgeHandler.activateLens(tab)
         }
         .onChange(of: bridgeHandler.chooseGuideRequests) { _, _ in chooseDiscussionGuide() }
@@ -1062,6 +1119,9 @@ struct ContentView: View {
         // Remember where they leave it. Gated on having restored first — see
         // `lensRestoredFor`.
         .onChange(of: bridgeHandler.activeTab) { _, tab in
+            // A lens the researcher chose outranks a Screens restore still
+            // waiting on the poll.
+            if let tab, tab != .project { pendingScreensRestore = nil }
             guard let id = selectedProjectID, lensRestoredFor == id,
                   let lens = LensMemory.remember(tab) else { return }
             projectIndex.setLastLens(id: id, lens: lens)
@@ -2483,8 +2543,7 @@ struct ContentView: View {
         case .codebook: return i18n.t("desktop.toolbar.codes")
         case .signals: return i18n.t("desktop.toolbar.signals")
         case .discussion: return i18n.t("desktop.toolbar.discussionGuide")
-        // English while the lens is diagnostics-only (`Tab.label`).
-        case .screens:  return "Screens"
+        case .screens:  return i18n.t("desktop.toolbar.screens")
         default:        return i18n.t("desktop.toolbar.contents")
         }
     }
@@ -2496,7 +2555,7 @@ struct ContentView: View {
         case .codebook: return i18n.t("desktop.toolbar.showCodes")
         case .signals: return i18n.t("desktop.toolbar.showSignals")
         case .discussion: return i18n.t("desktop.toolbar.showDiscussionGuide")
-        case .screens:  return "Show Screens (⌘⌥L)"
+        case .screens:  return i18n.t("desktop.toolbar.showScreens")
         default:        return i18n.t("desktop.toolbar.showContents")
         }
     }
@@ -2798,9 +2857,9 @@ struct ContentView: View {
                 projectIndex: projectIndex,
                 i18n: i18n,
                 selection: $selection,
-                // Not `LensItem.all`: reading the observed `showDiagnostics`
-                // is what makes the Screens row follow the preference live.
-                lenses: LensItem.lenses(screens: showDiagnostics),
+                // Not `LensItem.all`: this window's rail, which carries Screens
+                // while its project has shared screens to show.
+                lenses: lensRail,
                 activeTab: bridgeHandler.activeTab,
                 lensesEnabled: lensAvailability.isAvailable,
                 disabledLenses: bridgeHandler.lensReadiness.unavailable,

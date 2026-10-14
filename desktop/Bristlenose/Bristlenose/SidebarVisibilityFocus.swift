@@ -134,12 +134,4 @@ enum PanelToggle {
         let verb = (isAvailable && isOpen) ? "hide" : "show"
         return "desktop.menu.view.\(verb)\(panel)"
     }
-
-    /// The Screens lens's row, in English: the lens is a diagnostics lens whose
-    /// copy has not settled (`Tab.label`, `docs/design-screens.md`), so it has
-    /// no `menu.view` keys and its row does not pretend to. Same verb rule as
-    /// `labelKey`.
-    static func screensLabel(isOpen: Bool, isAvailable: Bool) -> String {
-        (isAvailable && isOpen) ? "Hide Screens" : "Show Screens"
-    }
 }

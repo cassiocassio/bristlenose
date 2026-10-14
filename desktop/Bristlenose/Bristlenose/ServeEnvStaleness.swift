@@ -41,16 +41,16 @@ import Foundation
 /// reader to act on it. Trued 22 Aug 2026; the premise is the thing to check
 /// if the exposure model changes again.
 ///
-/// **A second exception, of the same kind: a revoked read.** With Diagnostics
-/// on, every serve spawns with `BRISTLENOSE_SCREEN_TEXT=1` and reads
-/// participants' shared screens in a background job (`docs/design-screens.md`).
-/// Turning Diagnostics off is the researcher withdrawing that, and a lazy
-/// restart would leave every background serve reading screens — OCR'ing them,
-/// caching stills — until someone fronts its window. Nobody has to be looking
+/// **A second exception, of the same kind: a revoked read.** With Read shared
+/// screens on (the default), every serve spawns with `BRISTLENOSE_SCREEN_TEXT=1`
+/// and reads participants' shared screens in a background job
+/// (`docs/design-screens.md`). Turning it off is the researcher withdrawing
+/// that, and a lazy restart would leave every background serve reading screens
+/// — OCR'ing them, caching stills — until someone fronts its window. Nobody has to be looking
 /// for that to matter, so a serve still reading screens after the switch
 /// restarts now, like an exposed one under Anonymise. Narrow on purpose: it
 /// keys on the serve's own spawn-time env (`ServeManager.spawnedReadsScreens`),
-/// so turning Diagnostics ON stays lazy, and so does every other preference.
+/// so turning the preference ON stays lazy, and so does every other preference.
 enum ServeEnvStaleness {
 
     enum Action: Equatable {

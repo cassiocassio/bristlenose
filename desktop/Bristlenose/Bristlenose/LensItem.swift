@@ -34,23 +34,24 @@ struct LensItem: Identifiable {
     /// 3 Oct 2026). It was a flagged preview row until it shipped for beta the
     /// same day.
     ///
-    /// Computed, not stored: the Screens row follows the Diagnostics
-    /// preference (`docs/design-screens.md` — a rough lens for one trusted
-    /// tester). Views that iterate this observe
-    /// `@AppStorage(DiagnosticsPreference.key)` so they redraw on the switch —
-    /// the shape the Discussion preview used while it rode its flag.
+    /// The rail with no project to ask about — the shipping lenses, without
+    /// Screens. Whether Screens joins is a fact about a window's project
+    /// (`rail(screenText:screensAvailable:)`), so a caller with a project reads
+    /// that instead.
     static var all: [LensItem] {
-        rail(.standard)
+        lenses(screens: false)
     }
 
-    /// The rail a given defaults domain asks for — `all`, with the domain
-    /// injectable so a test can read both states without writing the
-    /// researcher's own preference.
-    static func rail(_ defaults: UserDefaults) -> [LensItem] {
-        lenses(screens: DiagnosticsPreference.isEnabled(defaults))
+    /// The rail for one window: Screens is on it only while the Read shared
+    /// screens preference is on AND the window's project has something to show
+    /// there (`ScreenReadingProgress.isAvailable`, mirrored per window onto
+    /// `BridgeHandler.screensLensAvailable`). Pure, so both inputs are testable
+    /// without writing anyone's defaults.
+    static func rail(screenText: Bool, screensAvailable: Bool) -> [LensItem] {
+        lenses(screens: screenText && screensAvailable)
     }
 
-    /// The rail for a given Diagnostics state — pure, so both states are
+    /// The rail with or without the Screens row — pure, so both states are
     /// testable. Screens goes after Discussion, so every shipping lens keeps its
     /// number and it takes ⌘7 (`macwindow.on.rectangle`: the windows and pages
     /// a participant shared).
@@ -72,8 +73,8 @@ struct LensItem: Identifiable {
     /// Icon for `tab`, resolved from `all` so every surface that shows a lens
     /// glyph reads the *same* settled set — the sidebar rail and the View menu's
     /// ⌘-number items can't drift apart. Read with Screens on, so a remembered
-    /// Screens lens never draws a placeholder circle on a machine where
-    /// Diagnostics is off. That set covers every `Tab` case (pinned by
+    /// Screens lens never draws a placeholder circle on a project where it is
+    /// not on the rail. That set covers every `Tab` case (pinned by
     /// `LensItemTests`), so the fallback is unreachable; it exists only to keep
     /// the return non-optional at call sites.
     static func systemImage(for tab: Tab) -> String {

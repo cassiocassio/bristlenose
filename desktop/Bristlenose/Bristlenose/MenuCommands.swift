@@ -161,9 +161,10 @@ private struct DiagnosticsMenuContent: View {
         }
         Button("Shoal Screensaver") { openWindow(id: "shoal-view") }
 
-        // No "Screens Lens" item: the Screens lens is a rail row and ⌘7 whenever this
-        // menu exists (`LensItem.lenses(screens:)`), so a second way to reach it from
-        // here would be a fork of the one lens list (docs/design-screens.md).
+        // No "Screens Lens" item: the Screens lens is a rail row and ⌘7 whenever the
+        // front project has shared screens (`LensItem.rail(screenText:screensAvailable:)`),
+        // so a second way to reach it from here would be a fork of the one lens list
+        // (docs/design-screens.md).
 
         if DistributionChannel.current.exposesDebugTools {
             Divider()
@@ -855,10 +856,6 @@ private struct ViewMenuContent: View {
     /// `useKeyboardShortcuts.ts` lists the same lenses, and the two must agree.
     static let focusModeTabs: Set<Tab> = [.quotes, .signals]
 
-    /// Observed so ⌘7 (Screens) appears and disappears with Diagnostics.
-    @AppStorage(DiagnosticsPreference.key)
-    private var showDiagnostics: Bool = DiagnosticsPreference.defaultValue
-
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
     @FocusedValue(\.windowCommands) private var windowCommands
@@ -880,6 +877,7 @@ private struct ViewMenuContent: View {
         case .codebook: return "Codes"
         case .signals: return "Signals"
         case .discussion: return "DiscussionGuide"
+        case .screens:  return "Screens"
         default:        return nil
         }
     }
@@ -921,13 +919,14 @@ private struct ViewMenuContent: View {
 
     var body: some View {
         // Lens shortcuts ⌘1 onwards — ⌘1–⌘6 for the six shipping lenses, ⌘7 for
-        // Screens while Diagnostics is on. `activateLens`, not `switchToTab`:
+        // Screens while the front window's project has shared screens to show
+        // (`screensLensAvailable`, mirrored by its ContentView). `activateLens`, not `switchToTab`:
         // the Sessions lens restores the view the user left (route memory).
         // Iterates the RAIL, not Tab.allCases. The comment above LensItem.all
         // says the rail and these shortcuts "can't drift apart"; reading the
         // same array is what makes that structural rather than a promise, and
         // is why a lens that joins the rail gets its number automatically.
-        ForEach(Array(LensItem.lenses(screens: showDiagnostics).enumerated()), id: \.element.id) { index, lens in
+        ForEach(Array(LensItem.lenses(screens: bridgeHandler.screensLensAvailable).enumerated()), id: \.element.id) { index, lens in
             let tab = lens.tab
             Button(tab.localizedLabel(i18n), systemImage: lens.systemImage) {
                 bridgeHandler.activateLens(tab)
@@ -991,10 +990,7 @@ private struct ViewMenuContent: View {
             .disabled(!WindowCommand.showSessionsSwitcher
                 .isEnabled(hasKeyWindow: windowCommands != nil))
         } else {
-            Button(bridgeHandler.activeTab == .screens
-                   ? PanelToggle.screensLabel(isOpen: bridgeHandler.leftPanelOpen,
-                                              isAvailable: hasLeftPanel)
-                   : i18n.t(PanelToggle.labelKey(
+            Button(i18n.t(PanelToggle.labelKey(
                        panel: leftPanelKey ?? "Contents",
                        isOpen: bridgeHandler.leftPanelOpen,
                        isAvailable: hasLeftPanel

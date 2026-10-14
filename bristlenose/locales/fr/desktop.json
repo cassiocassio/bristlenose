@@ -49,6 +49,8 @@
       "hideSignals": "Masquer les signaux",
       "showDiscussionGuide": "Afficher le guide d’entretien",
       "hideDiscussionGuide": "Masquer le guide d’entretien",
+      "showScreens": "Afficher les écrans",
+      "hideScreens": "Masquer les écrans",
       "showSessions": "Afficher les entretiens",
       "hideSessions": "Masquer les entretiens",
       "showTags": "Afficher les tags",
@@ -751,6 +753,8 @@
     "showSignals": "Afficher les signaux (⌘⌥L)",
     "discussionGuide": "Guide d’entretien",
     "showDiscussionGuide": "Afficher le guide d’entretien (⌘⌥L)",
+    "screens": "Écrans",
+    "showScreens": "Afficher les écrans (⌘⌥L)",
     "showSessions": "Afficher les entretiens (\u2318\u2325L)",
     "tags": "Tags",
     "showTags": "Afficher les tags (⌘⌥T)",
@@ -869,7 +873,9 @@
     "modelLabel": "Modèle",
     "backendAuto": "Auto",
     "backendHint": "Auto détecte le meilleur moteur pour votre Mac.",
-    "modelRecommended": "{{model}} (recommandé)"
+    "modelRecommended": "{{model}} (recommandé)",
+    "readScreensLabel": "Lire les \u00e9crans partag\u00e9s",
+    "readScreensHint": "Lit le texte des \u00e9crans partag\u00e9s dans les enregistrements, sur ce Mac, et le conserve avec de petites images de chaque \u00e9cran dans le dossier du projet. Il n\u2019est jamais envoy\u00e9 \u00e0 l\u2019IA ni inclus dans les exportations."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configurer l’IA locale",

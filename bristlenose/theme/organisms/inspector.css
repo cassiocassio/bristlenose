@@ -379,7 +379,10 @@ body.dragging-v .inspector-body {
 
 .dimension-btn.active {
     background: var(--bn-colour-hover);
-    color: var(--bn-colour-accent);
+    /* Body ink, not accent: accent on the hover tint measures 3.51:1 (light)
+       and 4.01:1 (dark) in the default palette, under AA's 4.5:1 for 12px
+       text. The tint and the weight carry "selected". */
+    color: var(--bn-colour-text);
     font-weight: var(--bn-weight-emphasis);
 }
 

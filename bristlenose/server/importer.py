@@ -1026,7 +1026,9 @@ def _not_this_sessions_recording(
     if current is None:
         return False
     other = recorded.owner.get(current)
-    if other is not None and other != sid:
+    # Only for a session keyed by its own bytes: an unkeyed duplicate of
+    # another session's recording legitimately holds that session's bytes.
+    if other is not None and other != sid and sid in recorded.owner.values():
         return True
     mine = recorded.at_place.get(sid)
     return mine is not None and mine[1] == place and mine[0] != current

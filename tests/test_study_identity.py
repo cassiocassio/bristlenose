@@ -388,6 +388,29 @@ def test_a_re_export_keyed_by_an_interrupted_run_is_still_refused(tmp_path: Path
     assert not _s1_has_media(proj), "s1 plays the re-export, which is s2's"
 
 
+def test_an_unkeyed_duplicate_keeps_its_media(tmp_path: Path) -> None:
+    """Two identical recordings are two sessions with one content key; the
+    unkeyed one holds the keyed one's bytes and must still play (Fable review,
+    15 Oct 2026)."""
+    from bristlenose.session_registry import FP_PREFIX, SessionRegistry
+    from bristlenose.utils.fingerprint import content_fingerprint
+
+    proj = _project(tmp_path)
+    out = proj / "bristlenose-output"
+    raw = out / "transcripts-raw" / "s1.txt"
+    raw.write_text(raw.read_text(encoding="utf-8").replace(
+        "# Source: Session 1.vtt", "# Source: Copy of Session 1.mp4"), encoding="utf-8")
+    for name in ("Session 1.mp4", "Copy of Session 1.mp4"):
+        (proj / name).write_bytes(b"one recording, two files")
+    reg = SessionRegistry.load(out)
+    key = FP_PREFIX + content_fingerprint(proj / "Session 1.mp4")
+    reg.sessions[key] = "s9"
+    reg.hints[key] = "Session 1.mp4"
+    reg.sessions["copy of session 1"] = "s1"
+    reg.save()
+    assert _s1_has_media(proj), "an identical copy was taken for a re-export"
+
+
 def test_a_placeholder_is_checked_once_it_downloads(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

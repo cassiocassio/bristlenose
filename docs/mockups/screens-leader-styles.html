@@ -200,9 +200,11 @@ body {
 .st-shotacc .lead .ish-ends circle { fill:var(--shot-accent); }
 .st-shotacc .hl { border-color:var(--shot-accent); background:color-mix(in srgb, var(--shot-accent) 6%, transparent); }
 .st-shotacc .hl.on { background:color-mix(in srgb, var(--shot-accent) 15%, transparent); }
-/* R3 · a soft halo rather than a hard casing */
-.st-soft .lead .ish-casing path { stroke-width:calc(var(--core, 1px) + 3px); stroke-opacity:.85; }
-.st-soft .lead .ish-casing { filter:blur(.7px); }
+/* R3 · a soft halo rather than a hard casing: fully opaque, softened only at its outer edge by an
+   SVG feGaussianBlur (σ 0.7) set on .ish-casing in JS — the SVG filter, not CSS blur(), so WebKit
+   renders it. ~98% paper survives next to the core, so the 3:1 guarantee holds (≈3.9:1 worst). */
+.st-soft .lead .ish-casing path { stroke-width:calc(var(--core, 1px) + 3px); }
+.st-soft .lead .ish-casing path.on { stroke-width:calc(var(--hot, var(--core, 1px)) + 3px); }
 /* R4 · just lighter: board casing at half strength, half width */
 .st-thin .lead .casing path { stroke:var(--bn-colour-bg); stroke-width:calc(var(--core, 1px) + 1px); stroke-opacity:.5; }
 .st-thin .lead .ends circle { stroke:var(--bn-colour-bg); stroke-width:1px; stroke-opacity:.5; paint-order:stroke; }
@@ -409,20 +411,20 @@ body {
 </section>
 
 <section class="bench" id="s-rec">
-  <div class="bench-head"><span class="letter">B′</span><h2>Casing that follows the screengrab</h2><span class="rank">rank 1, revised</span></div>
+  <div class="bench-head"><span class="letter">B′</span><h2>Casing that follows the screengrab</h2><span class="rank">rank 1: R3, chosen</span></div>
   <div class="matrix-ctl" role="group" aria-label="Casing variant" data-ctl="variant"><span class="lbl">Variant</span>
-    <button class="pbtn" data-v="R0" aria-pressed="false">R0 · board casing (B)</button><button class="pbtn" data-v="R4" aria-pressed="false">R4 · board casing, half</button><button class="pbtn" data-v="R1" aria-pressed="false">R1 · paper casing</button><button class="pbtn" data-v="R2" aria-pressed="true">R2 · paper casing + paper accent</button><button class="pbtn" data-v="R3" aria-pressed="false">R3 · soft paper halo</button></div>
-  <figure class="frame" style="color-scheme:light"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>board light · light site</div><div class="viewport"><div class="board" data-style="R2" data-site="light" data-matrix></div></div></figure>
-  <figure class="frame" style="color-scheme:dark"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>board dark · light site</div><div class="viewport"><div class="board" data-style="R2" data-site="light" data-matrix></div></div></figure>
-  <figure class="frame" style="color-scheme:light"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>board light · dark site</div><div class="viewport"><div class="board" data-style="R2" data-site="night" data-matrix></div></div></figure>
-  <figure class="frame" style="color-scheme:dark"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>board dark · dark site</div><div class="viewport"><div class="board" data-style="R2" data-site="night" data-matrix></div></div></figure>
+    <button class="pbtn" data-v="R0" aria-pressed="false">R0 · board casing (B)</button><button class="pbtn" data-v="R4" aria-pressed="false">R4 · board casing, half</button><button class="pbtn" data-v="R1" aria-pressed="false">R1 · paper casing</button><button class="pbtn" data-v="R2" aria-pressed="false">R2 · paper casing + paper accent</button><button class="pbtn" data-v="R3" aria-pressed="true">R3 · soft paper halo (chosen)</button></div>
+  <figure class="frame" style="color-scheme:light"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>board light · light site</div><div class="viewport"><div class="board" data-style="R3" data-site="light" data-matrix></div></div></figure>
+  <figure class="frame" style="color-scheme:dark"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>board dark · light site</div><div class="viewport"><div class="board" data-style="R3" data-site="light" data-matrix></div></div></figure>
+  <figure class="frame" style="color-scheme:light"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>board light · dark site</div><div class="viewport"><div class="board" data-style="R3" data-site="night" data-matrix></div></div></figure>
+  <figure class="frame" style="color-scheme:dark"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>board dark · dark site</div><div class="viewport"><div class="board" data-style="R3" data-site="night" data-matrix></div></div></figure>
   <aside class="commentary"><div class="clabel">Commentary</div><ul>
     <li><b>Why B failed in dark.</b> B's casing took the <i>board's</i> background. In dark mode that is near-black, drawn over a screengrab that is almost always white, so every leader gained two dark tracks: heavy, and visibly not part of either surface. The mirror case is a light board over a dark-mode site, where the casing becomes white tracks on a dark page. Pick <b>R0</b> to see both.</li>
     <li><b>R4</b>, the same casing at half strength and half width, only softens the tracks. It also loses the guarantee: half a casing is not an adjacent colour you can measure.</li>
     <li><b>R1, casing in the screengrab's own paper colour, clipped to the screengrab.</b> This is the print cartographer's mask rather than a halo. On paper the casing <i>is</i> the paper and cannot be seen; it appears only where the line crosses ink (the button, the photo, text). In the gutter there is no casing at all. So the line looks like a bare Discussion wire everywhere it can, in all four combinations.</li>
     <li><b>R1 is enough for the default palette, not for Edo.</b> The core keeps the board's accent. Edo light <code>#0f5c9e</code> on a dark site's paper is 2.7:1, and Edo dark <code>#4d9fe0</code> on a white page is 2.9:1. Switch the palette to Edo to see it.</li>
     <li><b>R2 adds one rule: over the screengrab the line takes the accent of the screengrab's scheme.</b> A dark site gets the dark-mode accent, a light site the light-mode one, whatever the board is doing. Against the paper: default 4.0:1 (light) and 5.1:1 (dark); Edo 6.9:1 and 6.6:1. In the default palette the two blues barely differ. In Edo the line shifts tone where it enters the screengrab, which reads as crossing onto another surface. The target box and the end dot follow the same rule.</li>
-    <li><b>R3</b> blurs the paper casing into a soft halo, the restrained halo cartographers prefer to a hard one. It is a little gentler on the photo and a little less crisp. Choosing between R2 and R3 is a taste call best made on a real session.</li>
+    <li><b>R3, chosen (15 Oct 2026).</b> R2 with the paper casing softened at its outer edge, the restrained halo cartographers prefer to a hard one. The casing stays fully opaque and only its edge is blurred (σ 0.7px), so about 98% paper survives next to the line, at worst ≈3.9:1. A halo that was partly transparent as well would fall to 3.0:1 at 85% opacity, the 3:1 limit, and 2.4:1 at 75%. The softness must come from the blur, never from opacity.</li>
     <li>The selection spotlight (F) now dims <b>towards the paper</b> as well: a white page fades towards white, a dark page towards dark. That is the cartographers' direction for an area of disinterest, and it no longer greys a white page in dark mode.</li>
   </ul></aside>
 </section>
@@ -435,7 +437,8 @@ body {
       <tbody>
         <tr><td>A · Today</td><td>○ 1.0–1.6:1 on blue</td><td>●</td><td>○ fails on blue; Edo dark fails on white</td><td>●</td><td>—</td></tr>
         <tr><td>B · Cased (board colour)</td><td>●</td><td>○ dark tracks in dark mode; white tracks on a dark site</td><td>● 4.0–6.7:1</td><td>◐ only on a board-matching page</td><td>S CSS + one path each</td></tr>
-        <tr><td><b>B′ · R2 paper casing + paper accent</b></td><td>●</td><td>● casing shows only over ink</td><td>● 4.0–6.9:1 on light and dark sites, both palettes</td><td>● bare wire in the gutter and over paper</td><td><b>S–M</b> paper sample + clipped layer</td></tr>
+        <tr><td>B′ · R2 paper casing + paper accent</td><td>●</td><td>● casing shows only over ink</td><td>● 4.0–6.9:1 on light and dark sites, both palettes</td><td>● bare wire in the gutter and over paper</td><td>S–M paper sample + clipped layer</td></tr>
+        <tr><td><b>B′ · R3 soft paper halo (chosen)</b></td><td>●</td><td>● gentlest over ink</td><td>● ≈3.9:1 worst with an opaque halo</td><td>● as R2</td><td><b>S–M</b> R2 + one SVG filter</td></tr>
         <tr><td>C · Cased + lifted</td><td>●</td><td>◐ heavier</td><td>●</td><td>◐</td><td>S</td></tr>
         <tr><td>D · Gutter-run</td><td>●</td><td>● least ink on the page</td><td>●</td><td>◐</td><td>M <code>leaderPath</code> + tracks + tests</td></tr>
         <tr><td>E · Edge port</td><td>●</td><td>● cleanest</td><td>◐ join by badge at rest</td><td>○</td><td>M</td></tr>
@@ -445,7 +448,7 @@ body {
       </tbody>
     </table></div>
     <ol>
-      <li><b>B′ (R2): casing in the screengrab's paper colour, clipped to the screengrab, with the line taking the screengrab's accent over it.</b> Holds 3:1 on light and dark sites in both palettes, is invisible wherever the line crosses paper or gutter, and adds no tracks in either theme. Replaces B, whose board-coloured casing failed in dark mode.</li>
+      <li><b>B′ (R3, chosen): a soft halo in the screengrab's paper colour, clipped to the screengrab, with the line taking the screengrab's accent over it.</b> Holds 3:1 on light and dark sites in both palettes, is invisible wherever the line crosses paper or gutter, and adds no tracks in either theme. Replaces B, whose board-coloured casing failed in dark mode.</li>
       <li><b>F, the spotlight on selection</b>, on top of B. Answers "which line is mine" on a crowded screen without changing the board at rest.</li>
       <li><b>D, gutter-run</b> for long leaders only, after measuring how many there are.</li>
     </ol>
@@ -612,10 +615,13 @@ body {
     const id = "shotclip-" + clipN++;
     const defs = svgEl("defs", {}), cp = svgEl("clipPath", { id });
     cp.append(svgEl("rect", { x: SHOT_L, y: PAD, width: SHOT_W, height: SHOT_H }));
-    defs.append(cp); svg.prepend(defs);
+    const soft = svgEl("filter", { id: id + "-soft", filterUnits: "userSpaceOnUse", x: 0, y: 0, width: BW, height: 4000 });
+    soft.append(svgEl("feGaussianBlur", { stdDeviation: 0.7 }));
+    defs.append(cp, soft); svg.prepend(defs);
     const ish = svgEl("g", { class: "ish", "clip-path": `url(#${id})` });
     for (const g of ["ish-casing", "ish-core", "ish-ends"]) ish.append(svgEl("g", { class: g }));
     svg.append(ish);
+    board._softId = id + "-soft";
     board.append(svg);
     board._parts = { shot, hls, svg, cards, page: wrap.querySelector(".page") };
   }
@@ -665,6 +671,7 @@ body {
     const [gc, gk, ge, gm] = [...svg.children].filter((n) => n.matches("g:not(.ish)"));
     const [ic, ik, ie] = svg.querySelector(".ish").children;
     for (const g of [gc, gk, ge, gm, ic, ik, ie]) g.replaceChildren();
+    if ((style.cls || []).includes("st-soft")) ic.setAttribute("filter", `url(#${board._softId})`); else ic.removeAttribute("filter");
     paper(board);
     hls.replaceChildren();
     const selQ = QUOTES.find((q) => q.id === state.sel);

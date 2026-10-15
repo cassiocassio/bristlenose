@@ -326,8 +326,8 @@ So over the screengrab the line takes the accent of the **screengrab's** scheme,
 | R0 | B as was: casing in the board's colour | Dark tracks on a dark board; white tracks over a dark site. |
 | R4 | R0 at half width and half opacity | Softer tracks, still tracks. Also loses the measurable contrast guarantee. |
 | R1 | Paper casing, clipped; board's accent | Clean in the default palette. Edo fails (2.7 and 2.9:1). |
-| **R2** | **R1 + the screengrab's accent over the screengrab** | **Clean in all four frames and both palettes. Recommended.** |
-| R3 | R2 with the casing blurred into a soft halo | A little gentler over the photo and a little less crisp. A taste call against R2, best made on a real session. |
+| R2 | R1 + the screengrab's accent over the screengrab | Clean in all four frames and both palettes. The hard-edged form of R3. |
+| **R3** | **R2 with the casing softened into a halo** | **Chosen by the owner, 15 Oct 2026.** Gentler over the photo. Built opaque, blurred only at its edge (below). |
 
 **Paper is one colour per slide, and the assumption has limits.**
 - **One colour per slide.** Carousel versions can differ: one participant browses in dark mode,
@@ -339,11 +339,19 @@ So over the screengrab the line takes the accent of the **screengrab's** scheme,
   frame shows it.
 - **Untested:** sampling under each segment rather than once per slide.
 
-**Recommendation, revised.** #1 is now **B′ (R2)**: paper-coloured casing, dot ring and box ring,
-clipped to the screengrab, with the screengrab's accent over it. #2 (the spotlight, now dimming
-towards the paper) and #3 (gutter-run) stand.
+**Chosen: R3** (the owner, 15 Oct 2026). A soft halo in the paper colour around the line, dot and box,
+clipped to the screengrab, with the screengrab's accent over it.
 
-## 7. What implementing #1 (B′, R2) and #2 would touch (not done)
+**The softness must come from blur, never from opacity.** With σ 0.7px on a 4px casing, about 98% of
+the paper colour survives in the pixels next to the line, so the worst pairing (default light accent,
+white site, over dark text) holds at about 3.9:1. Partial opacity lets the ink show through right next
+to the core: the same pairing is 3.0:1 at 85% opacity, the 3:1 limit, and 2.4:1 at 75%. The first R3
+mock used 85% and has been corrected.
+
+The rest of the ranking stands: #2 is the spotlight, now dimming towards the paper, and #3 is
+gutter-run.
+
+## 7. What implementing #1 (B′, R3) and #2 would touch (not done)
 
 - **`layout.ts leaderPath`: no change.** It has the same optional tweak as before (end the dot
   inside the box edge) and the same seven `layout.test.ts` strings if so.
@@ -371,14 +379,22 @@ towards the paper) and #3 (gutter-run) stand.
   current slide), so `.screens-hl` reads the screengrab's accent and rings in `--paper`.
 - **`screens.css` (~line 217 and ~284), about 8 lines:**
   ```css
-  svg.screens-leaders .ish-casing path { stroke: var(--paper); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  svg.screens-leaders .ish-casing path { stroke: var(--paper); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; } /* opaque: never stroke-opacity */
   svg.screens-leaders .ish-core path { stroke: var(--bn-colour-accent); stroke-width: 1; }
   svg.screens-leaders path.on { stroke-width: 1.5; }
-  svg.screens-leaders .ish-casing path.on { stroke-width: 3.5; }
+  svg.screens-leaders .ish-casing path.on { stroke-width: 4.5; }
   svg.screens-leaders circle { stroke: var(--paper); stroke-width: 2; paint-order: stroke; }
   .screens-hl { box-shadow: 0 0 0 1px var(--paper); }
   .screens-stage.focus .screens-hl.on { box-shadow: 0 0 0 1px var(--paper), 0 0 0 100vmax color-mix(in srgb, var(--paper) 55%, transparent); }
   ```
+  **The softening is an SVG filter, not CSS.** Put `<filter id=… filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="0.7"/></filter>`
+  in the leaders `<svg>`'s `<defs>` and `filter="url(#…)"` on the clipped casing group.
+  - **Why not CSS `blur()`:** support for it on SVG elements has historically been patchy in WebKit.
+  - **Why user-space units:** the default bounding-box filter region collapses to nothing for a
+    group of perfectly horizontal paths, whose box has zero height.
+  - **Scope:** the filter covers one group, so the cost is one blur per redraw. Leaders are already
+    re-measured only when a glide ends.
+
   The scrim still needs clipping to the slide (`overflow: clip`) and one scrim for a shared line.
   Everything on a selected selector is `stroke` or `box-shadow`, which `tests/test_screens_css.py`
   allows; the 1.5px weight sits on `path.on`.

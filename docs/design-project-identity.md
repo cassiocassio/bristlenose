@@ -461,7 +461,11 @@ not the folder, and are unchanged.
   becoming a new session (it would have finished downloading during
   transcription and been paid for twice). After the agent token is carried
   from a path to a study, the path gets a fresh token (an update, never a
-  delete), so a different study later made at that path does not share it. §5 called a duplicate one
+  delete), so a different study later made at that path does not share it.
+  A whole-body review at that point found nothing important remaining.
+  **Still open, presentational:** on the command line the fetch timeout ends
+  with Python's traceback rather than a plain sentence (the Mac app shows a
+  failed run with the reason), and the up-to-30-minute wait prints nothing. §5 called a duplicate one
   recording with an alias; the build keeps two sessions, one keyed. Making
   the duplicate a key-less alias would close this class, and is the owner's
   call.

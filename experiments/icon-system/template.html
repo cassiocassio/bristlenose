@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Icon system — today vs Lucide vs SF Symbols · Bristlenose mockups</title>
+<!-- The same Inter the SPA loads (frontend/index.html:39), so 420 and 490 render
+     as the product renders them. The copy installed on this Mac is static-weight. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet">
+<style>
+/* ════ shipped tokens, as inlined in docs/mockups/codebook-library-states.html ════ */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+}
+
+{{BUTTON_CSS}}
+
+/* ════ bristlenose/theme/atoms/icon.css ════ */
+{{ICON_CSS}}
+
+/* ════ the two type worlds ════
+   web: Inter (tokens.css). mac: the SPA inside the app, SF Pro (tokens-desktop.css). */
+.fr-web { font-family: var(--bn-font-body); }
+.fr-mac { font-family: -apple-system, "SF Pro Text", "SF Pro", system-ui, sans-serif; }
+
+/* ════ the proposal: Lucide, stroke from one token per platform ════ */
+:root { --sw-web: 1.4px; --sw-mac: 1.4px; --lu-size-web: 1em; --lu-size-mac: 1em;
+        --lu-va-web: -0.125em; --lu-va-mac: -0.125em; }
+.lu { display:inline-block; flex:none; }
+.fr-web .lu { width:var(--lu-size-web); height:var(--lu-size-web); vertical-align:var(--lu-va-web); stroke-width:var(--sw, var(--sw-web)); }
+.fr-mac .lu { width:var(--lu-size-mac); height:var(--lu-size-mac); vertical-align:var(--lu-va-mac); stroke-width:var(--sw, var(--sw-mac)); }
+img.sf { vertical-align: -0.16em; }
+.sf-missing { font: 600 9px var(--bn-font-mono); color: #c00; }
+.today-ic svg { vertical-align: -0.125em; }
+.today-ic svg:not([width]) { width: 1em; height: 1em; }
+
+/* ════ page ════ */
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bn-colour-bg); color:var(--bn-colour-text);
+       font: var(--bn-weight-normal) var(--bn-text-body)/1.5 var(--bn-font-body); }
+main { max-width: 1480px; margin: 0 auto; padding: 24px 16px 80px; }
+h1 { font-size: var(--bn-text-title); font-weight: var(--bn-weight-emphasis); margin: 0 0 4px; }
+h2 { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 40px 0 8px; }
+.sub { color: var(--bn-colour-muted); font-size: var(--bn-text-label); margin: 0 0 16px; }
+
+/* commentary: visibly not-the-product */
+.commentary { border-left: 3px solid var(--bn-colour-muted); padding: 8px 12px; margin: 12px 0;
+  font-size: var(--bn-text-label); color: var(--bn-colour-muted);
+  background: repeating-linear-gradient(135deg, transparent 0 6px, light-dark(#f4f4f5,#18181b) 6px 12px); }
+.commentary b { color: var(--bn-colour-text); font-weight: var(--bn-weight-emphasis); }
+.commentary::before { content:"Commentary"; display:block; font: 600 10px var(--bn-font-mono);
+  letter-spacing:.06em; text-transform:uppercase; margin-bottom:4px; }
+.key { display:flex; gap:16px; font-size: var(--bn-text-caption); color: var(--bn-colour-muted); margin-bottom: 12px; }
+.key span { display:inline-flex; align-items:center; gap:6px; }
+.sw-art { width:14px; height:10px; border:1px solid var(--bn-colour-border); background:var(--bn-colour-bg); }
+.sw-com { width:14px; height:10px; border-left:3px solid var(--bn-colour-muted);
+  background: repeating-linear-gradient(135deg, transparent 0 3px, light-dark(#e4e4e7,#27272a) 3px 6px); }
+
+/* controls */
+.controls { position: sticky; top: 0; z-index: 5; background: var(--bn-colour-bg);
+  border-bottom: 1px solid var(--bn-colour-border); padding: 8px 0; display:flex; flex-wrap:wrap; gap: 8px 20px;
+  font: 12px var(--bn-font-mono); color: var(--bn-colour-muted); align-items:center; }
+.controls fieldset { border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); padding: 4px 8px; margin:0;
+  display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.controls legend { padding: 0 4px; }
+.controls label { display:inline-flex; gap:4px; align-items:center; }
+.controls input[type=range] { width: 90px; }
+.controls output { min-width: 4.5ch; color: var(--bn-colour-text); }
+.controls button { font: inherit; padding: 3px 8px; border-radius: var(--bn-radius-sm);
+  border:1px solid var(--bn-colour-border); background: var(--bn-colour-badge-bg); color: var(--bn-colour-text); cursor:pointer; }
+
+/* frames */
+.frame { border:1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg); margin: 12px 0; overflow:auto;
+  color: var(--bn-colour-text); background: var(--bn-colour-bg); }
+.chrome { font: 11px var(--bn-font-mono); color: var(--bn-colour-muted); padding: 4px 10px;
+  border-bottom:1px solid var(--bn-colour-border); background: var(--bn-colour-quote-bg); }
+.strip { border-collapse: collapse; width: 100%; }
+.strip th { font: 10px var(--bn-font-mono); color: var(--bn-colour-muted); text-align: right; white-space: nowrap;
+  padding: 3px 10px; width: 1%; font-weight: 400; }
+.strip td { padding: 3px 10px; }
+.strip tr.ref th { color: light-dark(#7c3aed,#a78bfa); }
+.strip tr.on { background: var(--bn-colour-hover); }
+.strip tr.stem th { color: light-dark(#047857,#34d399); font-weight: 600; }
+.strip tr.stem { background: light-dark(#ecfdf5,#052e1c); }
+.strip-line { display:flex; flex-wrap: wrap; gap: 4px 18px; white-space: nowrap; }
+.tok { display:inline-flex; align-items: baseline; gap: .35em; }
+.tok > svg, .tok > span.today-ic, .tok > img { align-self: center; }
+
+/* review sheet */
+table.sheet { border-collapse: collapse; width: 100%; font-size: var(--bn-text-label); }
+.sheet thead th { position: sticky; top: 44px; background: var(--bn-colour-bg); z-index: 2; text-align:left;
+  font: 10px var(--bn-font-mono); text-transform: uppercase; letter-spacing:.05em; color: var(--bn-colour-muted);
+  padding: 6px 8px; border-bottom: 1px solid var(--bn-colour-border); }
+.sheet tbody tr { border-bottom: 1px solid var(--bn-colour-border); vertical-align: top; }
+.sheet tbody tr:target { background: var(--bn-colour-hover); }
+.sheet tbody th { text-align:left; padding: 10px 8px; width: 150px; font-weight: 400; }
+.sheet tbody th a { font: 11px var(--bn-font-mono); color: var(--bn-colour-accent); text-decoration: none; }
+.concept { margin-top: 2px; }
+.pickflag { display:inline-block; margin-top:4px; font: 600 9px var(--bn-font-mono); text-transform: uppercase;
+  padding: 1px 5px; border-radius: var(--bn-radius-pill); background: light-dark(#fef3c7,#422006); color: light-dark(#92400e,#fcd34d); }
+.sheet td { padding: 10px 8px; }
+.cand { display:inline-flex; flex-direction: column; gap: 3px; margin: 0 14px 8px 0; vertical-align: top; }
+.art { display:flex; align-items:center; gap: 14px; padding: 6px 10px; min-height: 64px;
+  border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); background: var(--bn-colour-bg);
+  color: var(--bn-colour-text); font-size: 14px; }
+.art .rs { display:inline-flex; align-items:center; }
+.art .rs .lu, .art .rs .glyph { width: 1em; height: 1em; }
+.art .x3 { zoom: 3; display:inline-flex; align-items:center; }
+.art .x3 .lu { width: 1em; height: 1em; }
+.col-lu .art { font-family: var(--bn-font-body); }
+.where { font: 10px/1.3 var(--bn-font-mono); color: var(--bn-colour-muted); max-width: 190px; }
+.pick { font: 11px var(--bn-font-mono); display:inline-flex; gap:4px; align-items:center; cursor:pointer; }
+.cand.kept .art { outline: 2px solid light-dark(#16a34a,#4ade80); outline-offset: -2px; }
+.ctx { display:flex; align-items:center; gap: 6px; margin-bottom: 6px; color: var(--bn-colour-text); }
+.ctx-k { font: 9px var(--bn-font-mono); color: var(--bn-colour-muted); width: 26px; }
+.ctx .toolbar-btn { gap: .4em; }
+.ctx.fr-mac .toolbar-btn { font-family: inherit; }
+.toolbar-btn.native { border-style: dashed; }
+.col-note textarea { width: 180px; min-height: 64px; font: 12px var(--bn-font-body); padding: 4px 6px;
+  border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-sm); background: var(--bn-colour-bg); color: var(--bn-colour-text); }
+dialog { max-width: 720px; width: 90vw; border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg);
+  background: var(--bn-colour-bg); color: var(--bn-colour-text); }
+dialog textarea { width: 100%; height: 50vh; font: 12px var(--bn-font-mono); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<!-- Lucide {{LUCIDE_VERSION}} (lucide-static), ISC licence, https://lucide.dev — paths verbatim -->
+{{SYMBOLS}}
+</svg>
+<main>
+<h1>Icon system — today, Lucide, SF Symbols</h1>
+<p class="sub">docs/design-icon-system.md · 15 Oct 2026 · built by experiments/icon-system/build_mockup.py</p>
+<div class="key"><span><i class="sw-art"></i>Artefact — real pixels, product type and CSS</span>
+<span><i class="sw-com"></i>Commentary — not the product</span></div>
+
+<div class="controls" id="controls">
+  <fieldset><legend>web · Inter</legend>
+    <label title="stroke = the stem of the text beside it (0.092 em at 420)"><input type="checkbox" id="stem-web" checked> stem</label>
+    <label>stroke <input type="range" id="sw-web" min="0.8" max="2.4" step="0.05" value="1.4"><output for="sw-web"></output></label>
+    <label>box <input type="range" id="lu-size-web" min="0.8" max="1.4" step="0.025" value="1"><output for="lu-size-web"></output></label>
+    <label>baseline <input type="range" id="lu-va-web" min="-0.3" max="0.05" step="0.005" value="-0.125"><output for="lu-va-web"></output></label>
+  </fieldset>
+  <fieldset><legend>mac · SF Pro</legend>
+    <label title="stroke = the stem of the text beside it (0.092 em at 420)"><input type="checkbox" id="stem-mac" checked> stem</label>
+    <label>stroke <input type="range" id="sw-mac" min="0.8" max="2.4" step="0.05" value="1.4"><output for="sw-mac"></output></label>
+    <label>box <input type="range" id="lu-size-mac" min="0.8" max="1.4" step="0.025" value="1"><output for="lu-size-mac"></output></label>
+    <label>baseline <input type="range" id="lu-va-mac" min="-0.3" max="0.05" step="0.005" value="-0.125"><output for="lu-va-mac"></output></label>
+  </fieldset>
+  <label>palette <select id="palette"><option>default</option><option>edo</option></select></label>
+  <label>scheme <select id="scheme"><option value="light dark">system</option><option value="light">light</option><option value="dark">dark</option></select></label>
+  <button type="button" id="copy">Copy my decisions</button>
+  <button type="button" id="reset">Reset</button>
+</div>
+
+<div class="commentary">
+<b>How to read this.</b> Section 1 judges <b>ink</b>: the same line of eight icons and words at every candidate stroke,
+beside Inter (browser) and SF Pro (the SPA inside the Mac app), with real SF Symbols at four weights as the Mac
+reference. The <b>green row is the rule</b>: stroke = the stem of the text beside it (Inter and SF Pro measure
+within 2%, so one table serves both). ★ marks today's house stroke (Icon.tsx, 1.4 px); ·L marks Lucide's default at 14 px (2 × 14/24 ≈ 1.17 px).
+Section 2 is <b>one row per concept</b>: today's drawings lifted from the source (real size, then 3×), the Lucide
+candidates, the SF Symbol the Mac uses, and each in a real <code>.toolbar-btn</code>. The sliders drive section 2
+and the sheet's context buttons; section 1 rows carry fixed strokes. Choices and notes save in this browser;
+<b>Copy my decisions</b> gives Markdown to paste back. Judge at real size; for pixels use macOS zoom
+(⌃-scroll), not the 3× column, which redraws vectors. Labels in the buttons are illustrative, not locale keys.
+SF Symbol PNGs are rendered locally and gitignored — rerun the build if they are missing.
+</div>
+
+<h2>1 · Ink: Lucide stroke against the text</h2>
+{{STRIP}}
+
+<h2>2 · The icons, one row per concept</h2>
+<table class="sheet">
+<thead><tr><th>concept</th><th>today (lifted)</th><th>Lucide</th><th>SF Symbol · 13 / 15 pt</th><th>in context</th><th>note</th></tr></thead>
+<tbody>
+{{SHEET}}
+</tbody>
+</table>
+</main>
+
+<dialog id="out"><p>Paste this back into the conversation.</p><textarea readonly></textarea>
+<form method="dialog"><button>Close</button></form></dialog>
+
+<script>
+(() => {
+  const ROWS = {{ROWS_JSON}};
+  const KEY = "bn-icon-review-v1";
+  const root = document.documentElement;
+  const units = { "sw-web": "px", "sw-mac": "px", "lu-size-web": "em", "lu-size-mac": "em", "lu-va-web": "em", "lu-va-mac": "em" };
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { state = {}; }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+
+  for (const id of Object.keys(units)) {
+    const el = document.getElementById(id), out = document.querySelector(`output[for="${id}"]`);
+    if (state[id] != null) el.value = state[id];
+    const apply = () => {
+      const plat = id.endsWith("mac") ? "mac" : "web";
+      const stemOn = id.startsWith("sw-") && document.getElementById("stem-" + plat).checked;
+      el.disabled = stemOn;
+      root.style.setProperty(`--${id}`, stemOn ? "max(1px, calc(0.092 * 1em))" : el.value + units[id]);
+      out.textContent = (+el.value).toFixed(units[id] === "px" ? 2 : 3);
+      state[id] = el.value;
+      if (id === "sw-web" || id === "sw-mac") highlight();
+    };
+    el.addEventListener("input", () => { apply(); save(); });
+    apply();
+  }
+  function highlight() {
+    // mark the fixed-stroke row in section 1 nearest each slider
+    document.querySelectorAll(".frame").forEach(fr => {
+      const plat = fr.classList.contains("fr-mac") ? "sw-mac" : "sw-web";
+      const v = +document.getElementById(plat).value;
+      let best = null, d = 9;
+      fr.querySelectorAll("tr[data-sw]").forEach(tr => { tr.classList.remove("on");
+        const dd = Math.abs(+tr.dataset.sw - v); if (dd < d) { d = dd; best = tr; } });
+      if (best) best.classList.add("on");
+    });
+  }
+  highlight();
+  for (const plat of ["web", "mac"]) {
+    const cb = document.getElementById("stem-" + plat), sl = document.getElementById("sw-" + plat);
+    if (state["stem-" + plat] != null) cb.checked = state["stem-" + plat];
+    cb.addEventListener("change", () => { state["stem-" + plat] = cb.checked; save(); sl.dispatchEvent(new Event("input")); });
+    sl.dispatchEvent(new Event("input"));
+  }
+
+  const pal = document.getElementById("palette"), sch = document.getElementById("scheme");
+  if (state.palette) pal.value = state.palette;
+  if (state.scheme) sch.value = state.scheme;
+  const applyTheme = () => { root.dataset.colorTheme = pal.value; root.style.colorScheme = sch.value;
+    state.palette = pal.value; state.scheme = sch.value; save(); };
+  pal.addEventListener("change", applyTheme); sch.addEventListener("change", applyTheme); applyTheme();
+
+  document.querySelectorAll("textarea[data-note]").forEach(t => {
+    const k = "note:" + t.dataset.note; if (state[k]) t.value = state[k];
+    t.addEventListener("input", () => { state[k] = t.value; save(); });
+  });
+  document.querySelectorAll("input[type=radio][name^=pick-]").forEach(r => {
+    const k = r.name; if (state[k]) r.checked = r.value === state[k];
+    r.addEventListener("change", () => { state[k] = r.value; save(); });
+  });
+
+  document.getElementById("copy").addEventListener("click", () => {
+    const g = id => document.getElementById(id).value;
+    const lines = ["## Icon review — decisions", "",
+      `- web: stroke ${document.getElementById("stem-web").checked ? "stem-matched" : g("sw-web") + " px"}, box ${g("lu-size-web")} em, baseline ${g("lu-va-web")} em`,
+      `- mac: stroke ${document.getElementById("stem-mac").checked ? "stem-matched" : g("sw-mac") + " px"}, box ${g("lu-size-mac")} em, baseline ${g("lu-va-mac")} em`, ""];
+    for (const id of ROWS) {
+      const pick = document.querySelector(`input[name="pick-${id}"]:checked`);
+      const note = (state["note:" + id] || "").trim();
+      if (pick || note) lines.push(`- icon-${id}:${pick ? " pick `" + pick.value + "`" : ""}${note ? " — " + note : ""}`);
+    }
+    const text = lines.join("\n");
+    const dlg = document.getElementById("out"); dlg.querySelector("textarea").value = text; dlg.showModal();
+    try { navigator.clipboard.writeText(text); } catch (e) {}
+  });
+  document.getElementById("reset").addEventListener("click", () => {
+    if (!confirm("Clear all notes, picks and slider values?")) return;
+    try { localStorage.removeItem(KEY); } catch (e) {} location.reload();
+  });
+})();
+</script>
+</body>
+</html>

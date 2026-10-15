@@ -209,3 +209,10 @@ docs/mockups/signal-card-playground.html
 
 # Hypothesis example database (property-based tests)
 .hypothesis/
+
+# SF Symbols renders for docs/mockups/icon-system-side-by-side.html: Apple-licensed artwork,
+# regenerated locally (experiments/icon-system/render_sf.swift), never committed to the public repo.
+docs/mockups/icon-system-sf/
+
+# Icon catalogue screenshots of a real project (participant text): local only.
+docs/mockups/icon-catalogue/

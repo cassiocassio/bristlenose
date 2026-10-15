@@ -1,0 +1,152 @@
+{
+ "svg": [
+  {
+   "needle": "x1=\"2\" y1=\"2\" x2=\"10\" y2=\"10\"",
+   "row": "close",
+   "lucide": "x"
+  },
+  {
+   "needle": "M3 3L11 11M11 3L3 11",
+   "row": "close",
+   "lucide": "x"
+  },
+  {
+   "needle": "M3 3l6 6M9 3l-6 6",
+   "row": "close",
+   "lucide": "x"
+  },
+  {
+   "needle": "M3 1.5 L7 5 L3 8.5",
+   "row": "disclose",
+   "lucide": "chevron-right"
+  },
+  {
+   "needle": "M5 2.5l5 4.5-5 4.5z",
+   "row": "disclose",
+   "lucide": "chevron-right"
+  },
+  {
+   "needle": "M2.5 3.75 5 6.25 7.5 3.75",
+   "row": "caret",
+   "lucide": "chevron-down"
+  },
+  {
+   "needle": "M1.5 3 4 5.5 6.5 3",
+   "row": "caret",
+   "lucide": "chevron-down"
+  },
+  {
+   "needle": "M7.5 2.5 4 6l3.5 3.5",
+   "row": "prev-next",
+   "lucide": "chevron-left"
+  },
+  {
+   "needle": "M4.5 2.5 8 6l-3.5 3.5",
+   "row": "prev-next",
+   "lucide": "chevron-right"
+  },
+  {
+   "needle": "cx=\"8\" cy=\"8\" r=\"2\"",
+   "row": "show-hide",
+   "lucide": "eye"
+  },
+  {
+   "needle": "x1=\"2\" y1=\"2\" x2=\"14\" y2=\"14\"",
+   "row": "show-hide",
+   "lucide": "eye-off"
+  },
+  {
+   "needle": "M17.94 17.94A10.07",
+   "row": "show-hide",
+   "lucide": "eye-off"
+  },
+  {
+   "needle": "M17.94 17.94A10.07",
+   "row": "show-hide",
+   "lucide": "eye-off"
+  },
+  {
+   "needle": "cx=\"6.5\" cy=\"6.5\" r=\"5.5\"",
+   "row": "search",
+   "lucide": "search"
+  },
+  {
+   "needle": "M4.5 6.5h4M6.5 4.5v4",
+   "row": "zoom",
+   "lucide": "zoom-in"
+  },
+  {
+   "needle": "M10 10l3.5 3.5M4.5 6.5h4\"",
+   "row": "zoom",
+   "lucide": "zoom-out"
+  },
+  {
+   "needle": "M11.5 1.5 14.5 4.5 5.5 13.5",
+   "row": "edit",
+   "lucide": "pencil"
+  },
+  {
+   "needle": "M14 8a6 6 0 1 1-1.76-4.24",
+   "row": "refresh",
+   "lucide": "rotate-cw"
+  },
+  {
+   "needle": "M2 10v3.5h12V10",
+   "row": "export",
+   "lucide": "download"
+  },
+  {
+   "needle": "M1.5 2.5a1 1 0 0 1 1-1h2.6",
+   "row": "folder",
+   "lucide": "folder"
+  },
+  {
+   "needle": "M2.5 3.5h5l7 7-5 5-7-7z",
+   "row": "tag",
+   "lucide": "tag"
+  },
+  {
+   "needle": "x1=\"5.5\" y1=\"4.5\" x2=\"14\" y2=\"4.5\"",
+   "row": "contents",
+   "lucide": "list"
+  },
+  {
+   "needle": "x=\"1.25\" y=\"1.25\" width=\"5.75\"",
+   "row": "heatmap",
+   "lucide": "layout-grid"
+  },
+  {
+   "needle": "M2.5 4.5h2v2l-1 2",
+   "row": "quotes-lens",
+   "lucide": "text-quote"
+  },
+  {
+   "needle": "M12 3a6 6 0 0 0 9 9",
+   "row": "focus",
+   "lucide": "moon"
+  },
+  {
+   "needle": "M8 1.5v1.2M8 13.3v1.2",
+   "row": "settings",
+   "lucide": "settings"
+  },
+  {
+   "needle": "cx=\"8\" cy=\"8\" r=\"6.5\"",
+   "row": "help",
+   "lucide": "circle-help"
+  },
+  {
+   "needle": "M3 4h10M3 8h10M3 12h10",
+   "row": "playground",
+   "lucide": "sliders-horizontal"
+  }
+ ],
+ "stems": {
+  "370": 0.088,
+  "420": 0.092,
+  "490": 0.106,
+  "520": 0.111,
+  "600": 0.127,
+  "700": 0.146
+ }
+}

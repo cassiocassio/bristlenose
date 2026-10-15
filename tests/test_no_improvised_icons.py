@@ -30,7 +30,7 @@ def _svg_counts() -> dict[str, int]:
         if ".test." in f.name:
             continue
         # count drawn elements, not prose about them: strip comments first
-        code = re.sub(r"/\*.*?\*/|//[^\n]*", "", f.read_text(), flags=re.S)
+        code = re.sub(r"/\*.*?\*/|//[^\n]*", "", f.read_text(encoding="utf-8"), flags=re.S)
         n = len(re.findall(r"<svg\b", code))
         if n:
             counts[str(f.relative_to(SRC))] = n
@@ -59,7 +59,7 @@ def test_lucide_is_reached_only_through_icon_tsx() -> None:
     direct = sorted(
         str(f.relative_to(SRC)) for f in SRC.rglob("*.ts*")
         if f.name not in ("Icon.tsx",) and ".test." not in f.name
-        and re.search(r"""from\s+["']lucide-react""", f.read_text())
+        and re.search(r"""from\s+["']lucide-react""", f.read_text(encoding="utf-8"))
     )
     assert not direct, f"import icons through components/Icon.tsx, not lucide-react: {direct}"
 
@@ -79,7 +79,7 @@ def test_no_unicode_glyph_stands_in_for_an_icon() -> None:
     for f in SRC.rglob("*.tsx"):
         if ".test." in f.name:
             continue
-        for n, line in enumerate(f.read_text().split("\n"), 1):
+        for n, line in enumerate(f.read_text(encoding="utf-8").split("\n"), 1):
             if _CHROME_GLYPH_LINE.match(line):
                 hits.append(f"{f.relative_to(SRC)}:{n}: {line.strip()}")
     assert not hits, "a character standing in for an icon — use <Icon name=…>: " + "; ".join(hits)
@@ -102,6 +102,6 @@ def test_no_quoted_glyph_stands_in_for_an_icon() -> None:
         rel = str(f.relative_to(SRC))
         if ".test." in f.name or rel in _QUOTED_GLYPH_KEPT:
             continue
-        code = re.sub(r"/\*.*?\*/|//[^\n]*", "", f.read_text(), flags=re.S)
+        code = re.sub(r"/\*.*?\*/|//[^\n]*", "", f.read_text(encoding="utf-8"), flags=re.S)
         hits += [f"{rel}: {m.group(0)}" for m in _QUOTED_GLYPH.finditer(code)]
     assert not hits, "a quoted glyph standing in for an icon — use <Icon name=…>: " + "; ".join(hits)

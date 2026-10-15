@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screens right-click menus</title>
+<!--
+  SCREENS LENS — THE RIGHT-CLICK, MAC APP vs BROWSER  (15 Oct 2026)
+
+  The owner: everything native in the Mac app, everything HTML/CSS in the browser SPA. Tidy, the
+  board's way out of rearranging, is the only item the page adds, at the top with a separator; Back
+  and Reload stay (a separate UX decision). "Return to automatic" on one card is gone.
+
+  Each row is a place you can right-click; each column is what appears. Mac menus are drawn as an
+  approximation of the macOS 26 menu (material, 13px system font, 22px rows, rounded highlight).
+  WebKit's own items are what the app shows today where observed (Back, Reload on page background);
+  on a selection or a link they are WebKit's usual items and need confirming in the app.
+  Browser columns show Chrome's menu where the browser's own appears. Synthetic content throughout.
+-->
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#ffffff, #111111);
+  --panel: light-dark(#f4f4f5, #18181b);
+  --text: light-dark(#1a1a1a, #e5e7eb);
+  --muted: light-dark(#6b7280, #9ca3af);
+  --border: light-dark(#e5e7eb, #2d2d2d);
+  --accent: light-dark(#007aff, #0a84ff);
+  --quote-bg: light-dark(#f9fafb, #1a1a1a);
+  --font: -apple-system, "SF Pro Text", system-ui, "Inter", "Segoe UI", sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, monospace;
+  --hatch: repeating-linear-gradient(135deg, light-dark(#fafafa, #151515) 0 8px, light-dark(#f2f2f3, #1b1b1d) 8px 16px);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--panel); color: var(--text); font: 14px/1.5 var(--font); }
+main { max-width: 1240px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+.lede { color: var(--muted); margin: 0 0 16px; max-width: 70ch; }
+.key { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin: 0 0 20px; }
+.key span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; border: 1px solid var(--border); }
+.key .k-art::before { background: var(--bg); }
+.key .k-com::before { background: var(--hatch); }
+
+.grid { display: grid; grid-template-columns: 200px 1fr 1fr; gap: 12px 16px; align-items: start; }
+.colhead { font: 600 12px var(--font); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 0 0 2px; }
+.scen h2 { font-size: 14px; margin: 6px 0 4px; }
+.scen p { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+/* the artefact: a framed slice of the board */
+.frame { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.chrome { height: 22px; border-bottom: 1px solid var(--border); background: light-dark(#ececec, #2a2a2c); font: 11px var(--font); color: var(--muted); display: flex; align-items: center; padding: 0 10px; gap: 6px; }
+.chrome i { width: 8px; height: 8px; border-radius: 50%; background: #c7c9ce; display: block; }
+.stage { position: relative; height: 370px; padding: 14px; }
+.shot { position: absolute; left: 14px; top: 14px; width: 250px; height: 160px; border: 1px solid var(--border); border-radius: 4px; background: #fff; overflow: hidden; }
+.shot .bar { height: 14px; background: #1f2937; }
+.shot .nav { height: 20px; border-bottom: 1px solid #eee; display: flex; gap: 8px; align-items: center; padding: 0 8px; }
+.shot .nav b { width: 46px; height: 10px; background: #2563eb; border-radius: 2px; }
+.shot .nav s { width: 26px; height: 5px; background: #d1d5db; border-radius: 2px; }
+.shot .hero { margin: 8px; height: 56px; border-radius: 4px; background: linear-gradient(120deg, #d1d5db, #e5e7eb); }
+.shot .row { display: flex; gap: 6px; margin: 0 8px; }
+.shot .row div { flex: 1; height: 40px; border-radius: 3px; background: #eef2f7; }
+.target { position: absolute; left: 70px; top: 46px; width: 80px; height: 14px; border: 1.5px solid #007aff; border-radius: 3px; }
+.lead { position: absolute; left: 150px; top: 53px; width: 128px; height: 1px; background: var(--accent); }
+.card { position: absolute; left: 278px; top: 22px; width: 170px; padding: 8px 10px; background: var(--quote-bg); border-left: 1px solid var(--border); border-radius: 0 6px 6px 0; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.05); font: 11.5px/1.4 var(--font); }
+.card .tc { font: 10.5px var(--mono); color: var(--accent); text-decoration: none; }
+.card .tc.hot { text-decoration: underline; }
+.card mark.sel { background: light-dark(#b3d7ff, #3f638b); color: inherit; }
+.arr { position: absolute; right: 14px; top: 186px; font: 11px var(--font); color: var(--muted); }
+.other { position: absolute; inset: 14px; }
+.other .h { font: 600 15px var(--font); margin: 2px 0 8px; }
+.other .p { height: 8px; border-radius: 3px; background: light-dark(#e5e7eb, #2a2a2d); margin: 0 0 7px; }
+.other .p.s { width: 70%; }
+
+.ptr { position: absolute; z-index: 6; width: 12px; height: 18px; pointer-events: none; }
+
+/* macOS 26 menu (approximation) */
+.mac { position: absolute; z-index: 5; min-width: 196px; padding: 5px; border-radius: 10px; font: 13px/1 var(--font);
+  background: light-dark(rgba(246,246,246,.86), rgba(40,40,42,.86)); backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow: 0 0 0 .5px light-dark(rgba(0,0,0,.18), rgba(255,255,255,.18)), 0 10px 30px rgba(0,0,0,.22); color: light-dark(#1d1d1f, #f2f2f2); }
+.mac div { height: 22px; display: flex; align-items: center; padding: 0 10px; border-radius: 5px; white-space: nowrap; }
+.mac div.hl { background: var(--accent); color: #fff; }
+.mac div.sub::after { content: "\203A"; margin-left: auto; padding-left: 16px; font-size: 15px; }
+.mac div.dim { color: light-dark(#a1a1a6, #6e6e73); }
+.mac hr { border: 0; height: 1px; margin: 5px 10px; background: light-dark(rgba(0,0,0,.12), rgba(255,255,255,.14)); }
+.mac .ours { font-weight: 400; }
+
+/* Chrome's own menu (approximation) */
+.chr { position: absolute; z-index: 5; min-width: 200px; padding: 6px 0; border-radius: 8px; font: 13px/1 var(--font);
+  background: light-dark(#fff, #292a2d); box-shadow: 0 2px 6px rgba(0,0,0,.2), 0 8px 24px rgba(0,0,0,.18); color: light-dark(#1f1f1f, #e8eaed); }
+.chr div { height: 28px; display: flex; align-items: center; padding: 0 16px; white-space: nowrap; }
+.chr div.hl { background: light-dark(#e8eaed, #3c4043); }
+.chr hr { border: 0; height: 1px; margin: 5px 0; background: light-dark(#e3e3e3, #3c4043); }
+
+/* our HTML menu, the house .screens-menu */
+.ourmenu { position: absolute; z-index: 5; min-width: 120px; padding: 4px; border-radius: 6px; font: 13px/1 var(--font);
+  background: var(--bg); border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.04); }
+.ourmenu div { padding: 7px 12px; border-radius: 4px; }
+.ourmenu div.hl { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.none { position: absolute; z-index: 5; font: 12px var(--font); color: var(--muted); background: var(--bg); border: 1px dashed var(--border); border-radius: 6px; padding: 6px 10px; }
+
+.note { background: var(--hatch); border-left: 3px solid var(--muted); border-radius: 0 6px 6px 0; padding: 8px 12px; font-size: 12.5px; margin-top: 8px; }
+.note b { font-weight: 600; }
+.note .lbl { font: 600 10.5px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: block; margin-bottom: 2px; }
+.flag { color: #b45309; }
+.sumtab { width: 100%; border-collapse: collapse; margin: 28px 0 0; font-size: 13px; background: var(--hatch); }
+.sumtab th, .sumtab td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .colhead { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Screens: the right-click, Mac app and browser</h1>
+  <p class="lede">Tidy is the only thing the page adds: the board's way out of rearranging, on a custom board, wherever you click on it. On the Mac it sits at the top of the native menu, over WebKit's own items. In the browser the page draws it. Back and Reload stay.</p>
+  <div class="key"><span class="k-art">What appears (approximations of the platform menus)</span><span class="k-com">Commentary</span></div>
+
+  <div class="grid" id="grid">
+    <div></div><div class="colhead">Mac app — native menu</div><div class="colhead">Browser (CLI) — HTML</div>
+  </div>
+
+  <table class="sumtab">
+    <tr><th>Question for you</th><th>Options</th></tr>
+    <tr><td>Browser, with text selected or on a link, on a custom board</td><td><b>A</b> our menu (Tidy) replaces the browser's, so Copy and Open Link are lost there (rows 3–4, left as built today). <b>B</b> the browser's own menu wins when there is a selection or a link under the pointer; Tidy stays one click away on the Arrangement control. B is the recommendation.</td></tr>
+    <tr><td>Mac, with text selected or on a link</td><td>Tidy still on top, above WebKit's text or link items (rows 3–4). Or leave those two cases to WebKit alone, as in browser option B, so both platforms behave the same.</td></tr>
+  </table>
+</main>
+
+<script>
+"use strict";
+const shot = `<div class="shot"><div class="bar"></div><div class="nav"><b></b><s></s><s></s><s></s></div><div class="hero"></div><div class="row"><div></div><div></div><div></div></div></div><div class="target"></div><div class="lead"></div>`;
+const card = (opts = {}) => `<div class="card"><a class="tc${opts.hotTc ? " hot" : ""}">[12:40]</a> “I expected the ${opts.sel ? '<mark class="sel">delivery cost</mark>' : "delivery cost"} to show here before I pay.”</div>`;
+const arr = (custom) => `<div class="arr">${custom ? "Arrangement: Custom" : ""}</div>`;
+const board = (o) => shot + card(o) + arr(o.custom !== false);
+const page = `<div class="other"><div class="h">Quotes</div><div class="p"></div><div class="p s"></div><div class="p"></div><div class="p s"></div></div>`;
+const ptr = (x, y) => `<svg class="ptr" style="left:${x}px;top:${y}px" viewBox="0 0 12 18"><path d="M1 1 L1 15 L4.5 11.5 L7 17 L9 16 L6.5 10.5 L11 10.5 Z" fill="#111" stroke="#fff" stroke-width="1"/></svg>`;
+const mac = (x, y, items) => `<div class="mac" style="left:${x}px;top:${y}px">${items.map((i) => i === "-" ? "<hr>" : `<div class="${i.c || ""}">${i.t}</div>`).join("")}</div>`;
+const chr = (x, y, items) => `<div class="chr" style="left:${x}px;top:${y}px">${items.map((i) => i === "-" ? "<hr>" : `<div class="${i.c || ""}">${i.t}</div>`).join("")}</div>`;
+const ours = (x, y) => `<div class="ourmenu" style="left:${x}px;top:${y}px"><div class="hl">Tidy</div></div>`;
+const T = (t, c) => ({ t, c });
+const tidy = [T("Tidy", "hl"), "-"];
+const webkitPage = [T("Back"), T("Reload")];
+const webkitSel = [T("Look Up “delivery cost”"), T("Translate “delivery cost”"), "-", T("Search with Google"), "-", T("Copy"), "-", T("Share…", "sub"), "-", T("Speech", "sub"), T("Services", "sub")];
+const webkitLink = [T("Open Link"), T("Open Link in New Window"), T("Download Linked File"), T("Copy Link"), "-", T("Share…", "sub"), "-", T("Services", "sub")];
+const chromePage = [T("Back"), T("Forward", "dim"), T("Reload"), "-", T("Save As…"), T("Print…"), T("Cast…"), "-", T("View Page Source"), T("Inspect")];
+const chromeSel = [T("Copy"), T("Search Google for “delivery cost”"), T("Print…"), "-", T("Inspect")];
+const chromeLink = [T("Open Link in New Tab"), T("Open Link in New Window"), T("Open Link in Incognito Window"), "-", T("Save Link As…"), T("Copy Link Address"), "-", T("Inspect")];
+
+const rows = [
+  { h: "1. Custom board, on the screengrab or empty board", p: "The common case: you have rearranged and want out.",
+    mac: board({}) + ptr(150, 120) + mac(152, 122, [...tidy, ...webkitPage]),
+    web: board({}) + ptr(150, 120) + ours(152, 122),
+    note: "Mac: Tidy, separator, then WebKit's Back and Reload, as the app shows them today. Browser: our menu replaces the browser's here, which is right: there is nothing else to do on a picture." },
+  { h: "2. Custom board, on a card", p: "No text selected, not on the timecode.",
+    mac: board({}) + ptr(330, 80) + mac(134, 82, [...tidy, ...webkitPage]),
+    web: board({}) + ptr(330, 80) + ours(332, 82),
+    note: "The same as anywhere on the board: Tidy is a board action, never a card's. No “Return to automatic”." },
+  { h: "3. Custom board, with text selected in a card", p: "Selecting to copy a phrase from a quote.",
+    mac: board({ sel: true }) + ptr(366, 52) + mac(170, 54, [...tidy, ...webkitSel]),
+    web: board({ sel: true }) + ptr(366, 52) + ours(368, 54),
+    webAlt: board({ sel: true }) + ptr(366, 52) + chr(196, 54, chromeSel),
+    note: "<span class=flag>Decision.</span> Mac: WebKit drops Back and Reload when text is selected and offers its text items; Tidy stays on top. Browser A (left as built): our menu hides Copy. Browser B, recommended: the browser's own menu, shown below." },
+  { h: "4. Custom board, on the timecode link", p: "The [12:40] that plays the clip.",
+    mac: board({ hotTc: true }) + ptr(296, 33) + mac(150, 35, [...tidy, ...webkitLink]),
+    web: board({ hotTc: true }) + ptr(296, 33) + ours(298, 35),
+    webAlt: board({ hotTc: true }) + ptr(296, 33) + chr(150, 35, chromeLink),
+    note: "<span class=flag>Decision.</span> Same question as row 3: WebKit's link items under Tidy on the Mac. In the browser, A hides Copy Link Address; B gives the browser's link menu. The link items are WebKit's usual set and want confirming in the app." },
+  { h: "5. Automatic board, anywhere", p: "Nothing has been moved, so there is nothing to tidy.",
+    mac: board({ custom: false }) + ptr(150, 60) + mac(152, 62, webkitPage),
+    web: board({ custom: false }) + ptr(150, 60) + chr(152, 62, chromePage),
+    note: "The page adds nothing: WebKit's own menu on the Mac, the browser's own in the browser. Tidy does not appear dimmed; it is absent, because there is no arrangement to leave." },
+  { h: "6. Elsewhere in the report", p: "Any other lens, or the Screens navigator.",
+    mac: page + ptr(200, 40) + mac(202, 42, webkitPage),
+    web: page + ptr(200, 40) + chr(202, 42, chromePage),
+    note: "Unchanged everywhere else: the platform's own menu. Removing Back and Reload in the app is a separate decision, not part of this." },
+];
+
+const grid = document.getElementById("grid");
+for (const r of rows) {
+  const cell = (html, label) => `<div><div class="frame"><div class="chrome"><i></i><i></i><i></i><span>${label}</span></div><div class="stage">${html}</div></div></div>`;
+  grid.insertAdjacentHTML("beforeend", `<div class="scen"><h2>${r.h}</h2><p>${r.p}</p></div>` +
+    cell(r.mac, "Bristlenose.app") +
+    cell(r.web, r.webAlt ? "Browser — A, as built" : "Browser"));
+  if (r.webAlt) grid.insertAdjacentHTML("beforeend", `<div></div><div></div>` + cell(r.webAlt, "Browser — B, recommended"));
+  grid.insertAdjacentHTML("beforeend", `<div></div><div class="note" style="grid-column: 2 / -1"><span class="lbl">Commentary</span>${r.note}</div>`);
+}
+</script>
+</body>
+</html>

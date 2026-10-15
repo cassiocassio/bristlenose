@@ -469,11 +469,14 @@
 .tag-add-row:hover {
     color: var(--bn-colour-accent);
 }
+/* The same size and padding as the tags above it and the TagInput that replaces it on click;
+   Regular, because it is a control, not a tag (docs/design-monospace-roles.md §4). */
 .tag-add-badge {
     display: inline-block;
     font-family: var(--bn-font-mono);
-    font-size: var(--bn-text-label);
-    padding: 0.2rem 0.5rem;
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-mono);
+    padding: var(--bn-space-xs) 0.45rem;
     border-radius: var(--bn-radius-sm);
     border: 1px dashed var(--bn-colour-border);
     background: transparent;
@@ -538,9 +541,9 @@
     position: fixed;
     pointer-events: none;
     z-index: 200;
+    /* No size or padding here: the ghost is a clone of the dragged .badge and keeps its metrics,
+       so the tag you carry is the tag you picked up. */
     font-family: var(--bn-font-mono);
-    font-size: var(--bn-text-label);
-    padding: 0.2rem 0.5rem;
     border-radius: var(--bn-radius-sm);
     color: var(--bn-colour-text);
     box-shadow: 0 2px 8px var(--bn-colour-shadow);

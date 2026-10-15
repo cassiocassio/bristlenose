@@ -9,7 +9,7 @@ probes: experiments/monospace-audit/
 
 # Monospace roles: audit, proposal, and what shipped
 
-> **Truing status (15 Oct 2026).** Audited and proposed earlier the same day, then **shipped in 64a2b36a** ("monospace: one stack on both scales, tags 460 in light, the screen's path at 560"): the one stack, the three mono weight tokens and their dark scope, one weight for every tag, the Screens path at 560, footer keycaps, the player page and the Welcome copies. **Durations decided** the same evening: they are timecodes, 400, which is what the sessions list already draws. **Figures left mono** later still: values, counts and scores are in the body face with tabular numerals. **Still open, owner undecided:** the codebook add-tag chips at label size, the Welcome HTML keycaps at 500 and badges without a weight (§3), the native Welcome chip, the dev surfaces, and Linux. §1 and §2 describe the tree **before** the change and are kept as the baseline it was measured against; §3 and §4 are current; §6 is the ground truth.
+> **Truing status (15 Oct 2026).** Audited and proposed earlier the same day, then **shipped in 64a2b36a** ("monospace: one stack on both scales, tags 460 in light, the screen's path at 560"): the one stack, the three mono weight tokens and their dark scope, one weight for every tag, the Screens path at 560, footer keycaps, the player page and the Welcome copies. **Durations decided** the same evening: they are timecodes, 400, which is what the sessions list already draws. **Figures left mono** later still: values, counts and scores are in the body face with tabular numerals. The codebook add-tag chip and drag ghost moved to badge size too. **Still open, owner undecided:** the Welcome HTML keycaps at 500 and badges without a weight (§3), the native Welcome chip, the dev surfaces, and Linux. §1 and §2 describe the tree **before** the change and are kept as the baseline it was measured against; §3 and §4 are current; §6 is the ground truth.
 
 An audit of every monospace face in Bristlenose (web report, desktop webview, native Swift), the measured rendering of each one on both type scales, and the four roles they were corralled into.
 
@@ -126,7 +126,7 @@ What each pair renders comes straight from the table above. For example, `.badge
 - `molecules/person-badge.css:32`: speaker code; `screens.css:94` (speaker code at micro); `signals.css:257` (participant boxes); `signals.css:598` (tooltip speaker)
 - `atoms/bar.css:17`: sentiment bar label
 - `atoms/input.css:6` and `:64`, and `molecules/tag-input.css:69`: tag input, sizer and suggestions at badge
-- `organisms/codebook-panel.css:380`, `:474`, `:491`, `:541` and `:554`: inline edit (inherit); add-tag field, input and drag ghost **at label**; preview at badge, `--bn-weight-mono-tag` (was 420). The add-tag chips are the same chips at two sizes; still open.
+- `organisms/codebook-panel.css:380`, `:474`, `:491`, `:541` and `:554`: inline edit (inherit); add-tag field, input and drag ghost **at label**; preview at badge, `--bn-weight-mono-tag` (was 420). The add-tag chip and drag ghost were the same chips at a second size; both at badge size since 15 Oct 2026.
 - `organisms/codebook-v2.css:415`: `.picker-card-version` at badge, `--bn-weight-mono` (was 420)
 - `organisms/signals.css:727`: `.pattern-label` at badge, 520, uppercase
 - `atoms/moderator-question.css:23` and `:128`: moderator pill (parked feature) and "more"
@@ -243,7 +243,7 @@ Who sees which: the Mac app and Safari get SF Mono. Chrome, Edge, Arc and probab
 | `WelcomeTimelineCSS.swift` | regenerated from the theme | shipped |
 | heatmap cells, metric values, hero score (490), threshold axis, slider values, counters and confidence, pending count, tooltip metrics and footer | figures: body face with tabular figures, weights unchanged | shipped (participant codes and tooltip speaker codes stay mono, as codes) |
 | session durations ("42 min", `.session-entry-duration`) | timecode role, 400: a duration is a time | decided 15 Oct 2026; already drawn so, no change |
-| codebook add-tag field, input and drag ghost at label | code at badge: the same chips at one size | **open**, owner undecided |
+| codebook "+ add tag" chip and drag ghost at label (Codebooks lens, editable groups) | the chip at badge size and padding, 400, matching the `TagInput` that replaces it; the ghost keeps the cloned `.badge`'s size, padding and weight (its height follows `body` line-height, 2.5px shorter than in a quote card). `.tag-add-input` is emitted only by the sealed static renderer | shipped |
 | Welcome HTML `.badge` copies with no weight; `.cap` at 500 | 460 in light to match the report; keycaps 400 or kept at 500 (Mac-only) | **open** |
 | native Welcome chip (`WelcomeIllustrations.swift:136`, 11 regular) | match the report's light 460 | **open** |
 | `.pattern-label` 520 | rendered only by the dev `GridSpecimen` route; code at 400 when next touched | **open**, dev-only |

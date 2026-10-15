@@ -769,6 +769,15 @@
     "arrangementCustomTidy": "Disposition\u00a0: personnalis\u00e9e. Ranger",
     "arrangementAutomatic": "Disposition\u00a0: automatique",
     "returnToAutomatic": "Revenir \u00e0 la disposition automatique",
+    "slideCaption": "\u00c9cran de {{code}} \u00e0 {{time}} \u00b7 {{n}} sur {{total}}",
+    "previousScreengrab": "Capture d\u2019\u00e9cran pr\u00e9c\u00e9dente",
+    "nextScreengrab": "Capture d\u2019\u00e9cran suivante",
+    "whoseQuotes": "Verbatim par personne",
+    "onScreen": "Sur l\u2019\u00e9cran de {{code}}",
+    "sequence": "{{code}}, verbatim {{n}} sur {{total}}",
+    "versionsLabel": "Versions de cet \u00e9cran",
+    "carouselRole": "carrousel",
+    "versionsKeys": "\u2190 et \u2192 passent d\u2019une version \u00e0 l\u2019autre",
     "subtitle_one": "{{count}}\u00a0\u00c9cran",
     "subtitle_other": "{{count}}\u00a0\u00c9crans"
   }

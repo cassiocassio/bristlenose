@@ -769,6 +769,15 @@
     "arrangementCustomTidy": "Indeling: aangepast. Opruimen",
     "arrangementAutomatic": "Indeling: automatisch",
     "returnToAutomatic": "Terug naar automatische indeling",
+    "slideCaption": "Scherm van {{code}} op {{time}} · {{n}} van {{total}}",
+    "previousScreengrab": "Vorige schermafbeelding",
+    "nextScreengrab": "Volgende schermafbeelding",
+    "whoseQuotes": "Wiens citaten",
+    "onScreen": "Op het scherm van {{code}}",
+    "sequence": "{{code}}, citaat {{n}} van {{total}}",
+    "versionsLabel": "Versies van dit scherm",
+    "carouselRole": "carrousel",
+    "versionsKeys": "← en → wisselen tussen versies",
     "subtitle_one": "{{count}}\u00a0scherm",
     "subtitle_other": "{{count}}\u00a0schermen"
   }

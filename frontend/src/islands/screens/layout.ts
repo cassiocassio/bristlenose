@@ -1,20 +1,28 @@
 /**
- * Board geometry for the Screens lens: where each sticky sits beside the screengrab, when a column
- * stacks, and the leader line from a card to its element. Pure functions, unit-tested; the lens
- * only measures and draws.
+ * Board geometry for the Screens lens: which edge of the screengrab each card annotates, where it
+ * sits along that edge, when a column stacks, and the leader from a card to its line. Pure
+ * functions, unit-tested; the lens only measures and draws.
  *
- * Rules (docs/design-screens.md S5):
- * - Automatic placement never puts a card over the screengrab (the owner, 14 Oct 2026, reversing
- *   the prototype's overlapping edge): a card column sits beside it across a COLUMN_GUTTER the
- *   leader visibly crosses. Cards and gutter keep their size; the screengrab is what shrinks.
- * - Two columns when the stage fits both beside a screengrab of at least MIN_SHOT_W, either side
- *   by which half of the page each element is in; one column, on the right, when it fits one; below
- *   that, none: the screengrab takes the full width and its pinned cards lead the list under it. A
- *   column with no cards takes no room. A card the researcher drags goes wherever they put it.
- * - A card wants to sit level with its element. Cards in a column keep a gap of --bn-space-md (12px).
+ * Rules (docs/design-screens.md S5, "Placement"):
+ * - Boundary labelling, as on an architect's drawing or a UX redline: annotations all around the
+ *   artefact, never over it (the owner, 14 Oct 2026, reversing the prototype's overlapping edge).
+ *   Automatic placement puts a card in a column beside the screengrab or a band above or below it,
+ *   across a gutter the leader visibly crosses. Cards and gutter keep their size; the screengrab is
+ *   what shrinks. A card the researcher drags goes wherever they put it.
+ * - Four edges. A linked card goes to the band nearest its line: left or right by which half of the
+ *   page the line is in, top for a line in the top BAND_Y of the page and away from the side edges
+ *   (a header, a search box), bottom likewise (a footer). The top and bottom bands are for those
+ *   clear cases only, so most cards still go to the sides.
+ * - Along a band, cards keep the order of their lines along that edge, so automatic leaders do not
+ *   cross; a card wants to sit level with (or above, or below) its line.
+ * - Widths, by mode: two side columns when the stage fits both beside a screengrab of at least
+ *   MIN_SHOT_W ("lr"); one, on the right, when it fits one ("r"); below that ("rows") the side
+ *   bands become rows above and below the screengrab, in order, with short vertical leaders. A
+ *   column with no cards takes no room. The mode changes only at a threshold, with HYSTERESIS.
  * - A column that would run past the screengrab stacks: evenly stepped, each card showing its
- *   timecode and first line, the later card over the earlier one's tail. Stacks are straight: the
- *   prototype's diagonal variant (each card slid a few pixels right) was dropped with its picker.
+ *   timecode and first line, the later card over the earlier one's tail. Stacks are straight.
+ * - Leaders are short, straight or single-elbow: a drafting leader's shoulder off the card, then
+ *   one straight run to the line. Cards about one line share its anchor, so their leaders fan in.
  */
 
 /** A card column's width: the cards keep this size whatever the stage. */
@@ -30,6 +38,10 @@ export const GUTTER = 12;
 export const MIN_STEP = 46;
 
 export type Side = "L" | "R";
+/** The four edges of the screengrab a card can annotate. */
+export type Edge = "L" | "R" | "T" | "B";
+/** The board's arrangement for a stage width: two side columns, one (right), or rows. */
+export type Mode = "lr" | "r" | "rows";
 
 export interface Box {
   /** x, y, w, h in 0–1 of the (cropped) screengrab. */
@@ -39,19 +51,52 @@ export interface Box {
   h: number;
 }
 
-export function sideFor(box: Box, wide: boolean): Side {
-  return wide && box.x + box.w / 2 < 0.5 ? "L" : "R";
+/** A line in the top or bottom BAND_Y of the page, and in the middle of it (BAND_X in from either
+ *  side), goes to the band above or below; anything else to a side. */
+export const BAND_Y = 0.15;
+export const BAND_X = 0.2;
+/** How far past a threshold the stage must widen before the layout widens back (px). Without it a
+ *  stage resting on a threshold flips back and forth: the layout's own height change brings a page
+ *  scrollbar in or out, which moves the stage's width across the line again. */
+export const HYSTERESIS = 24;
+
+const RANK: Record<Mode, number> = { rows: 0, r: 1, lr: 2 };
+const rawMode = (w: number, lift = 0): Mode =>
+  w >= WIDE_STAGE + lift ? "lr" : w >= ONE_COLUMN_STAGE + lift ? "r" : "rows";
+
+/**
+ * The mode for a stage width, given the mode it is in now. Narrowing switches at the threshold, so
+ * the screengrab never falls under MIN_SHOT_W; widening waits until the stage is HYSTERESIS past
+ * it. A stage of width 0 has not been measured (jsdom, the first layout): it keeps its mode, or
+ * starts with one column, never the rows.
+ */
+export function stageMode(stageW: number, prev?: Mode | null): Mode {
+  if (stageW <= 0) return prev ?? "r";
+  const raw = rawMode(stageW);
+  if (!prev || RANK[raw] <= RANK[prev]) return raw;
+  const up = rawMode(stageW, HYSTERESIS);
+  return RANK[up] > RANK[prev] ? up : prev;
+}
+
+/** Which edge an automatic card about the line `box` annotates, in `mode`. */
+export function edgeFor(box: Box, mode: Mode): Edge {
+  const cx = box.x + box.w / 2;
+  const cy = box.y + box.h / 2;
+  if (mode === "rows") return cy < 0.5 ? "T" : "B";
+  if (cx >= BAND_X && cx <= 1 - BAND_X) {
+    if (cy < BAND_Y) return "T";
+    if (cy > 1 - BAND_Y) return "B";
+  }
+  return mode === "lr" && cx < 0.5 ? "L" : "R";
 }
 
 /**
- * Which card columns the board draws: "lr", "l" or "r" beside the screengrab, or "none" when the
- * stage is too narrow for any (the pinned cards then join the list under it). `sides` is which
- * sides have a card to place. A stage of width 0 has not been measured (jsdom, the first layout):
- * it gets columns, never the narrow fallback.
+ * Which card columns the board draws: "lr", "l" or "r" beside the screengrab, or "none" (rows
+ * mode, or no card for a side). `sides` is which sides have a card to place.
  */
 export type Columns = "lr" | "l" | "r" | "none";
-export function boardColumns(stageW: number, sides: { L: boolean; R: boolean }): Columns {
-  if (stageW > 0 && stageW < ONE_COLUMN_STAGE) return "none";
+export function boardColumns(mode: Mode, sides: { L: boolean; R: boolean }): Columns {
+  if (mode === "rows") return "none";
   if (sides.L && sides.R) return "lr";
   if (sides.L) return "l";
   if (sides.R) return "r";
@@ -102,21 +147,45 @@ export interface Rect {
   height: number;
 }
 
+/** A drafting leader's shoulder: how far the leader leaves the card straight before it turns. */
+export const SHOULDER = 12;
+/** How far inside a card's edge a straight leader may start. */
+const LEADER_INSET = 12;
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
 /**
- * The leader from a card to its element: from whichever edge of the card faces the element, a
- * horizontal-in, horizontal-out curve, ending on the element's near edge. Coordinates are in the
- * board's space.
+ * The leader from a card to its line, in the board's space: a drafting leader. Where the line is
+ * level with the card (beside it) or under it (above or below it), one straight run from the card's
+ * facing edge; otherwise a short shoulder straight out of the card, then one straight run to the
+ * line — a single elbow. It ends on the line's near edge, so every card about one line ends on the
+ * same point and their leaders fan into it. `edge` is the edge of the screengrab the card annotates;
+ * without one (a card dropped over the screengrab) the side facing the line is used.
  */
-export function leaderPath(card: Rect, element: Rect): { d: string; end: [number, number] } {
-  const cardMid = card.left + card.width / 2;
-  const elMid = element.left + element.width / 2;
-  const fromRight = cardMid < elMid;
+export function leaderPath(card: Rect, element: Rect, edge?: Edge): { d: string; end: [number, number] } {
+  const vertical = edge === "T" || edge === "B";
+  if (vertical) {
+    const down = edge === "T";
+    const ny = down ? card.top + card.height : card.top;
+    const hx = element.left + element.width / 2;
+    const hy = down ? element.top - 3 : element.top + element.height + 3;
+    const lo = card.left + LEADER_INSET;
+    const hi = card.left + card.width - LEADER_INSET;
+    if (hx >= lo && hx <= hi) return { d: `M${hx},${ny} L${hx},${hy}`, end: [hx, hy] };
+    const nx = clamp(hx, lo, hi);
+    const sy = ny + (down ? SHOULDER : -SHOULDER);
+    return { d: `M${nx},${ny} L${nx},${sy} L${hx},${hy}`, end: [hx, hy] };
+  }
+  const fromRight = edge ? edge === "L" : card.left + card.width / 2 < element.left + element.width / 2;
   const nx = fromRight ? card.left + card.width : card.left;
-  const ny = card.top + 16;
   const hx = fromRight ? element.left - 3 : element.left + element.width + 3;
   const hy = element.top + element.height / 2;
-  const mx = (nx + hx) / 2;
-  return { d: `M${nx},${ny} C${mx},${ny} ${mx},${hy} ${hx},${hy}`, end: [hx, hy] };
+  if (hy >= card.top + LEADER_INSET && hy <= card.top + card.height - LEADER_INSET) {
+    return { d: `M${nx},${hy} L${hx},${hy}`, end: [hx, hy] };
+  }
+  const ny = card.top + 16;
+  const sx = nx + (fromRight ? SHOULDER : -SHOULDER);
+  return { d: `M${nx},${ny} L${sx},${ny} L${hx},${hy}`, end: [hx, hy] };
 }
 
 // ── Arrangement: where the researcher put each card, per screengrab ─────────
@@ -319,6 +388,139 @@ export function arrangeColumn(
   }
   const bottom = Math.max(0, ...cards.map((c) => tops[c.id] + c.height));
   return { tops, stacked: false, bottom };
+}
+
+// ── A band above or below the screengrab ───────────────────────────────────
+
+/**
+ * Lefts for a band of cards, in the order given (the order of their lines along the edge): each as
+ * near its `want` as the cards before it allow, a GUTTER apart, inside `limit`. A band that runs out
+ * of width carries on on a further line under the first. `height` is the band's whole height, which
+ * the board reserves above or below the screengrab: the band never runs onto it.
+ */
+export function placeRow(
+  cards: { want: number; width: number; height: number }[],
+  limit: number,
+): { lefts: number[]; tops: number[]; height: number } {
+  const lefts: number[] = [];
+  const tops: number[] = [];
+  let x = 0;
+  let lineTop = 0;
+  let lineH = 0;
+  for (const c of cards) {
+    let left = Math.min(Math.max(c.want, x), Math.max(x, limit - c.width));
+    if (left + c.width > limit && x > 0) {
+      lineTop += lineH + GUTTER;
+      lineH = 0;
+      x = 0;
+      left = Math.min(Math.max(0, c.want), Math.max(0, limit - c.width));
+    }
+    left = Math.max(0, left);
+    lefts.push(left);
+    tops.push(lineTop);
+    lineH = Math.max(lineH, c.height);
+    x = left + c.width + GUTTER;
+  }
+  return { lefts, tops, height: cards.length ? lineTop + lineH : 0 };
+}
+
+// ── The whole board ─────────────────────────────────────────────────────────
+
+/** A card the board places on an edge: a linked card (its line on the visible screengrab), or one
+ *  the researcher placed beside it. Cards dropped over the screengrab are not placed here. */
+export interface BoardCard {
+  id: string;
+  height: number;
+  /** The line it is about on the visible screengrab: an automatic card. */
+  anchor?: Box;
+  /** Where the researcher put it beside the screengrab: a placed card, which wins. */
+  placed?: { side: Side; frac: number; z: number };
+}
+
+export interface Spot {
+  edge: Edge;
+  /** In the edge's own box: a column's top, or a band's top and left. */
+  top: number;
+  left: number;
+  /** Stacking order within a column, the lowest card on top of the one above it. */
+  z: number;
+}
+
+export interface Composition {
+  at: Record<string, Spot>;
+  stacked: Record<Side, boolean>;
+  /** How far the side columns run down from the screengrab's top. */
+  colBottom: number;
+  /** The height each band takes above (T) and below (B) the screengrab. */
+  band: Record<"T" | "B", number>;
+}
+
+/**
+ * The edge a card goes to. A placed card keeps its side; where its side has no column (one column,
+ * on the right) it goes to the right; in rows mode, where the side columns have become rows, it goes
+ * to the row above for the top half of the screengrab and below for the rest, at the head of the row
+ * (placed cards lead, as they led the list under the screengrab before rows).
+ */
+export function cardEdge(c: Pick<BoardCard, "anchor" | "placed">, mode: Mode): Edge {
+  if (c.placed) {
+    if (mode === "rows") return c.placed.frac < 0.5 ? "T" : "B";
+    return mode === "lr" ? c.placed.side : "R";
+  }
+  return edgeFor(c.anchor ?? { x: 1, y: 0.5, w: 0, h: 0 }, mode);
+}
+
+const centreX = (b?: Box) => (b ? b.x + b.w / 2 : 0);
+const centreY = (b?: Box) => (b ? b.y + b.h / 2 : 0);
+
+/**
+ * Where every edge card goes, for a screengrab of `shot` px in `mode`. Side columns are
+ * `arrangeColumn` (placed cards win; the rest re-flow by their lines' heights); bands are
+ * `placeRow` in the order of the lines left to right, placed cards first.
+ */
+export function composeBoard(cards: BoardCard[], mode: Mode, shot: { W: number; H: number }): Composition {
+  const at: Record<string, Spot> = {};
+  const stacked: Record<Side, boolean> = { L: false, R: false };
+  const band: Record<"T" | "B", number> = { T: 0, B: 0 };
+  let colBottom = 0;
+  for (const side of ["L", "R"] as Side[]) {
+    const col = cards.filter((c) => cardEdge(c, mode) === side);
+    if (!col.length) continue;
+    const { tops, stacked: st, bottom } = arrangeColumn(
+      col.map((c) => ({
+        id: c.id,
+        height: c.height,
+        want: c.placed ? Math.max(0, c.placed.frac * shot.H) : Math.max(0, centreY(c.anchor) * shot.H - 20),
+        placed: !!c.placed,
+        z: c.placed?.z ?? 0,
+      })),
+      shot.H,
+    );
+    [...col].sort((a, b) => tops[a.id] - tops[b.id]).forEach((c, i) => (at[c.id] = { edge: side, top: tops[c.id], left: 0, z: 2 + i }));
+    stacked[side] = st;
+    colBottom = Math.max(colBottom, bottom);
+  }
+  for (const edge of ["T", "B"] as const) {
+    const row = cards.filter((c) => cardEdge(c, mode) === edge);
+    if (!row.length) continue;
+    const placed = row
+      .filter((c) => c.placed)
+      .sort((a, b) => a.placed!.frac - b.placed!.frac || a.placed!.z - b.placed!.z);
+    const auto = row
+      .filter((c) => !c.placed)
+      .sort((a, b) => centreX(a.anchor) - centreX(b.anchor) || centreY(a.anchor) - centreY(b.anchor));
+    const order = [...placed, ...auto];
+    const { lefts, tops, height } = placeRow(
+      order.map((c) => ({
+        want: c.placed ? 0 : centreX(c.anchor) * shot.W - CARD_W / 2,
+        width: CARD_W,
+        height: c.height,
+      })),
+      shot.W,
+    );
+    order.forEach((c, i) => (at[c.id] = { edge, top: tops[i], left: lefts[i], z: 2 }));
+    band[edge] = height;
+  }
+  return { at, stacked, colBottom, band };
 }
 
 /**

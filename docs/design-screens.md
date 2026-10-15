@@ -1,6 +1,6 @@
 ---
 status: proposal
-updated: 14 Oct 2026
+updated: 15 Oct 2026
 ---
 
 # Screens: where they went, what they said, what was on screen
@@ -121,7 +121,9 @@ board on real data.
     from an older version is deleted with its stills at serve start and at each pass, as are
     stills from before they were named by session.
   - **Still owed** (none blocks release; each is recorded where it belongs): navigator links read
-    a bare number; no "On screen: …" text per pinned card; no narrow-width layout (1.4.10); cards
+    a bare number; no "On screen: …" text per pinned card; no narrow-width layout (1.4.10) —
+    _15 Oct: below one column the linked cards now sit in rows with their leaders (S5, "Rows"); not
+    yet measured at 320px_; cards
     cannot be rearranged from the keyboard; off-task screens (§4.5); typed values (§4.4); a
     global delete when reading is turned off (per project today, at that project's next serve);
     the visibility rule served by the route rather than copied three times. Before the release
@@ -210,9 +212,37 @@ the tree). What the prototype settled:
 - **Navigation** is a list of every screen: a thumbnail (stacked when several participants saw it),
   the page's own title (its tallest heading; for a session keyed by tab title, the title), the
   address, the quote count, and micro participant codes that wrap and stop at twelve with *+N*.
-- **A screen with several participants** is a stack of their screengrabs, flipped with the person
-  badges top right (← →). Quotes from a participant whose element was matched on another's page are
-  carried onto it, dashed.
+- **A screen is one place for everything about it** (the owner, 15 Oct 2026). Every quote believed
+  to be about the screen, from every participant's version of it (X, X′, X″), is on its board, and
+  the set does not change with the backdrop. _Reverses the prototype's stack flipped by person
+  badges, where each participant's view carried only its own quotes and others' were dashed._
+  - **The backdrop is a carousel.** The screengrab shows one participant's version at a time; the
+    versions are slides, and it opens on the one that links the most quotes (`default_tab` from
+    `GET …/screens`, `screens.py`). It is the house carousel's web form — the session tapestry's
+    `.bn-tp-nav` disks under the Welcome window's SlotRotator rules (`design-welcome-screen.md` §3a):
+    edge chevrons revealed on hover only, never latched on by focus; the disk is the whole hit area;
+    page dots windowed past ten, the inactive ones in the muted text colour (3:1, 1.4.11); one slide
+    per horizontal swipe, with a lock; a frame that cross-fades. Only the showing slide and its
+    neighbours either side are fetched and mounted, and stills are held in a small LRU (24 board
+    stills, 96 thumbnails), so a study with a dozen versions of a page does not hold a dozen 1600px
+    images. The caption names whose screenshot it is, *p2's screen at 00:40 · 2 of 3*. The carousel
+    is a keyboard stop with a fixed name (*Versions of this screen*, role described as a carousel,
+    `aria-keyshortcuts` ← →, and a visible ← → hint while it has keyboard focus); each turn is
+    announced once, "… 2 of 3", by the shared live region — a name that changed with the slide was
+    read a second time. `frontend/src/islands/screens/carousel.ts`.
+  - **Person chips** (p1 · p2 · p3) are toggle buttons that dim the other people's cards (by colour,
+    as a selection does; nothing moves). They never swap the backdrop: *the carousel answers "whose
+    screenshot", the chips "whose quotes".* A chip is emphasis, not a filter: a dimmed card still
+    takes a click and the report's per-quote keys, and ⌘A selects it (decided 15 Oct 2026, in
+    review).
+  - **Linked means on the visible screengrab.** A quote is linked — highlight and leader — only when
+    its words are on the slide showing (that version's pins, which link every participant's quote
+    whose words are on it). An unlinked quote still shows, in the list, and when another version
+    links it the card offers *On p2's screen*, which turns the carousel there so the card becomes
+    linked.
+  - **Where they go.** Every linked quote, whoever said it, goes in the margins; the rest go in the
+    list under the screengrab, in time order. Several quotes about one line share one highlight and
+    one anchor; their cards sit together at it and their leaders fan into the point.
 - **Every quote is the shipped quote card** at the label size, with the star, tag and hide controls,
   the hidden counter ranged right on the sub line as on the Quotes lens. Quotes not pinned to an
   element sit under the screengrab with **no heading and no different treatment**: same size,
@@ -225,15 +255,83 @@ the tree). What the prototype settled:
   sits across a gutter of `--bn-space-xl` that the leader visibly crosses, and when the stage
   narrows **the screengrab shrinks; the cards and the gutter keep their size.** Two columns from
   1084px of stage, either side by which half of the page each element is in; one column, on the
-  right, from 782px; below that, none — the screengrab takes the full width with its highlights, and
-  its pinned quotes lead the list under it. Those thresholds keep the screengrab at least 480px wide
-  (`MIN_SHOT_W`, the floor for legibility, in `frontend/src/islands/screens/layout.ts`). A column
+  right, from 782px; below that, rows (below). Those thresholds keep the screengrab at least 480px
+  wide (`MIN_SHOT_W`, the floor for legibility, in `frontend/src/islands/screens/layout.ts`). A column
   with no cards takes no room, so one card does not leave a wide empty margin opposite it. A card
   the researcher drags may go anywhere, over the screengrab included: that is their arrangement.
   Measured on both real sessions at 1800, 1280 and 900px windows: every column card 32px clear of
   the screengrab (24px over it before); at 900px the screengrab is full width where it was 104px
-  wide behind the cards. Numbered markers on the screengrab, for the narrow case, belong to the
-  coming composition work.
+  wide behind the cards. Numbered markers on the screengrab, for the narrow case, are not built:
+  rows do that job (below).
+- **Placement is boundary labelling** (the owner, 15 Oct 2026): annotations all around the artefact,
+  as on an architect's drawing or a UX redline. `layout.ts` (`edgeFor`, `composeBoard`).
+  - **Four edges.** A linked card goes to the band nearest its line: left for a line in the left
+    half (a left nav), right for the right, top for a header or search box, bottom for a footer.
+    The top and bottom bands are kept to clear cases — a line in the top or bottom 15% of the page
+    and in its middle 60% — so most cards still go to the sides.
+  - **Order along a band follows the lines' order along that edge**, so automatic leaders never
+    cross. **Leaders are short, straight or single-elbow**: straight where the line is level with
+    (or under) the card, otherwise a drafting leader's shoulder off the card and one straight run.
+  - **A card is never over the screengrab**: columns and bands are their own grid tracks, each a
+    gutter (`COLUMN_GUTTER`) from it, and a band reserves its whole height. What gates it, exactly:
+    `layout.test.ts` checks the composition against a model of the grid in every mode — it catches a
+    band that under-reserves its height, but places the side columns by construction (the model is
+    the grid's, so it cannot see the grid itself go wrong); the lens test checks, at four widths
+    with a stubbed measurement, that every linked card gets a spot in a column or band track and
+    never in the screengrab's or the free layer (jsdom lays nothing out, so not the pixels); and the
+    pixels were measured on two real studies at 1440, 1100 and 800px windows: 0 cards over the
+    screengrab, every leader starting outside it.
+  - **Rows.** Below the side-column threshold the side bands become rows above and below the
+    screengrab (a line in the top half above, the rest below), in order along the edge, with short
+    vertical leaders; the unlinked list stays below everything. _Replaces "the pinned cards lead the
+    list under the screengrab", which cut every narrow-width card off from its line._ A placed card
+    keeps the arrangement model's rule for a band that disappears: it goes to the row on its side of
+    the screengrab's middle (by how far down the edge it was put), at the head of the row — placed
+    cards still win.
+  - **The layout changes only at a threshold, with hysteresis**: narrowing switches at the line
+    (the screengrab's floor is never breached), widening waits until the stage is 24px past it, so
+    a stage resting on a threshold — where the layout's own height change brings the page scrollbar
+    in and out — does not flip back and forth. At a change each card glides from its old place to
+    its new one (FLIP); under reduced motion it moves at once. The leaders are measured again when
+    the glide ends, so they do not stay where the cards set off. A placed card with no screengrab to
+    place it against (it failed to load) is listed with the rest, still marked as placed.
+- **Narrative** (the owner, 15 Oct 2026). `frontend/src/islands/screens/narrative.ts`.
+  - **Sequence numbers are per person, in time order**: each card's badge shows its person and that
+    person's place among their own quotes on this screen (p1 ①②③, p2 ①②), with a sentence for a
+    screen reader (*p1, quote 2 of 3*). There is no global sequence: a researcher follows one
+    participant's path through a page, not an interleaving of several.
+  - **Keys.** ↑/↓ change screen; ←/→ turn the carousel (replacing the participant toggle); **J/K**
+    step through this screen's quotes in time order — only the chosen people's while a chip is on —
+    bringing each card forward (selected, so in front, never resized; a card pressed earlier steps
+    back) and lighting its line. The lens owns these: on Screens the report's global handler
+    (`useKeyboardShortcuts`) returns early for the arrows and j/k and leaves Next/Previous Quote to
+    the lens. The global handler handles only the per-quote keys here — s/h/t/r/x/Enter — scoped to
+    the cards the lens registers, which is every card the board shows. The lens claims each of its
+    keys with `preventDefault` under the same guards as its arrows. The Mac's View menu reaches the
+    same steps by name (`bn:menu-action`: `nextScreen`, `previousScreen`, `nextScreenshot`,
+    `previousScreenshot`, `tidy`, `nextQuote`, `previousQuote`). View ▸ Tidy, the arrangement
+    control and the right-click menu count the same thing: spots kept for cards on the board.
+- **Menus and quote actions** (the owner, 15 Oct 2026: *"we also have the Quotes menu, and I would
+  expect star and hide and tag to work the same"*).
+  - **Quote actions work on Screens.** Quotes ▸ Star, Hide, Add Tag, Apply Last Tag, Reveal in
+    Transcript, Play, Next/Previous Quote and Toggle Selection enable on Screens as on Quotes
+    (`MenuCommands.swift` `onCardLens`), and so do the bare `s`, `h`, `t`, `r`, `x` and Enter. They
+    act only on a card this lens renders (`useKeyboardShortcuts` `scopedFocus`/`scopedSelection`,
+    against the order the lens registers), never on a selection or cursor carried over from Quotes —
+    the guarantee the old Quotes-only gate existed for. On Screens the lens keeps its arrows and
+    J/K; selection-extend and export stay on Quotes. Next/Previous Quote is one action and one
+    menu item, answered by the lens in time order.
+  - **Discussion is not a card lens**: it renders transcript turns with its own focus, not the
+    shared QuoteCard under FocusContext, so the quote actions stay off there (verified, not assumed).
+  - **View menu**: one Next/Previous pair that follows the lens — *Next/Previous Screen* on
+    Screens, *Next/Previous Question* on Discussion (which steps the navigator through the asked
+    questions, wrapping), dimmed elsewhere and reading Screen (`LensStep`); *Next/Previous
+    Screenshot* (the backdrop) on Screens; and **Tidy**, enabled only while the arrangement is
+    custom (`screens-arrangement` bridge message) — the route to Tidy that needs no hover. No
+    bare-key equivalents: a bare menu key steals typing, the page keys still work, and `?` lists
+    them. Modifier shortcuts can come later, checked against macOS's own. Labels are
+    `desktop.menu.view.*` in 21 locales. A person-filter submenu is deferred (Quotes uses search
+    tokens for people). Catalogue: `docs/design-desktop-menu-actions.md`.
 - **A real drop shadow** (the house tooltip's shape, in the palette's own shadow colour) keeps a
   card from merging into a white page. **Only a card that floats has one** — a pinned card in a
   column beside the screengrab, or one moved by hand; the quotes in the page's flow under it, and

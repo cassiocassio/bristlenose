@@ -733,6 +733,15 @@
     "arrangementCustomTidy": "\u6392\u5217\u65b9\u5f0f\uff1a\u81ea\u8a02\u3002\u6574\u7406",
     "arrangementAutomatic": "\u6392\u5217\u65b9\u5f0f\uff1a\u81ea\u52d5",
     "returnToAutomatic": "\u56de\u5fa9\u70ba\u81ea\u52d5\u6392\u5217",
+    "slideCaption": "{{code}} \u5728 {{time}} \u7684\u756b\u9762 \u00b7 \u7b2c {{n}} \u500b\uff0c\u5171 {{total}} \u500b",
+    "previousScreengrab": "\u4e0a\u4e00\u5f35\u87a2\u5e55\u622a\u5716",
+    "nextScreengrab": "\u4e0b\u4e00\u5f35\u87a2\u5e55\u622a\u5716",
+    "whoseQuotes": "\u8ab0\u7684\u5f15\u8ff0",
+    "onScreen": "\u5728 {{code}} \u7684\u756b\u9762\u4e0a",
+    "sequence": "{{code}}\uff0c\u7b2c {{n}} \u5247\u5f15\u8ff0\uff0c\u5171 {{total}} \u5247",
+    "versionsLabel": "\u6b64\u756b\u9762\u7684\u7248\u672c",
+    "carouselRole": "\u8f2a\u64ad",
+    "versionsKeys": "\u4f7f\u7528 \u2190 \u548c \u2192 \u5207\u63db\u7248\u672c",
     "subtitle_other": "{{count}} \u500b\u756b\u9762"
   }
 }

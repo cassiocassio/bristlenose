@@ -769,6 +769,15 @@
     "arrangementCustomTidy": "Disposici\u00f3: personalitzada. Endre\u00e7a",
     "arrangementAutomatic": "Disposici\u00f3: autom\u00e0tica",
     "returnToAutomatic": "Torna a la disposici\u00f3 autom\u00e0tica",
+    "slideCaption": "Pantalla de {{code}} a {{time}} · {{n}} de {{total}}",
+    "previousScreengrab": "Captura de pantalla anterior",
+    "nextScreengrab": "Captura de pantalla següent",
+    "whoseQuotes": "De qui són les cites",
+    "onScreen": "A la pantalla de {{code}}",
+    "sequence": "{{code}}, cita {{n}} de {{total}}",
+    "versionsLabel": "Versions d’aquesta pantalla",
+    "carouselRole": "carrusel",
+    "versionsKeys": "← i → passen d’una versió a l’altra",
     "subtitle_one": "{{count}}\u00a0pantalla",
     "subtitle_other": "{{count}}\u00a0pantalles"
   }

@@ -769,6 +769,15 @@
     "arrangementCustomTidy": "Disposici\u00f3n: personalizada. Ordenar",
     "arrangementAutomatic": "Disposici\u00f3n: autom\u00e1tica",
     "returnToAutomatic": "Volver a la disposici\u00f3n autom\u00e1tica",
+    "slideCaption": "Pantalla de {{code}} en {{time}} · {{n}} de {{total}}",
+    "previousScreengrab": "Captura de pantalla anterior",
+    "nextScreengrab": "Captura de pantalla siguiente",
+    "whoseQuotes": "De quién son las citas",
+    "onScreen": "En la pantalla de {{code}}",
+    "sequence": "{{code}}, cita {{n}} de {{total}}",
+    "versionsLabel": "Versiones de esta pantalla",
+    "carouselRole": "carrusel",
+    "versionsKeys": "← y → pasan de una versión a otra",
     "subtitle_one": "{{count}}\u00a0Pantalla",
     "subtitle_other": "{{count}}\u00a0Pantallas"
   }

@@ -769,6 +769,15 @@
     "arrangementCustomTidy": "J\u00e4rjestys: Mukautettu. Siivoa",
     "arrangementAutomatic": "J\u00e4rjestys: Automaattinen",
     "returnToAutomatic": "Palauta automaattinen j\u00e4rjestys",
+    "slideCaption": "{{code}}:n n\u00e4ytt\u00f6 kohdassa {{time}} \u00b7 {{n}} / {{total}}",
+    "previousScreengrab": "Edellinen kuvakaappaus",
+    "nextScreengrab": "Seuraava kuvakaappaus",
+    "whoseQuotes": "Kenen sitaatit",
+    "onScreen": "{{code}}:n n\u00e4yt\u00f6ll\u00e4",
+    "sequence": "{{code}}, sitaatti {{n}} / {{total}}",
+    "versionsLabel": "T\u00e4m\u00e4n n\u00e4yt\u00f6n versiot",
+    "carouselRole": "karuselli",
+    "versionsKeys": "\u2190 ja \u2192 vaihtavat versiota",
     "subtitle_one": "{{count}}\u00a0n\u00e4ytt\u00f6",
     "subtitle_other": "{{count}}\u00a0n\u00e4ytt\u00f6\u00e4"
   }

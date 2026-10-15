@@ -769,6 +769,15 @@
     "arrangementCustomTidy": "Disposizione: personalizzata. Riordina",
     "arrangementAutomatic": "Disposizione: automatica",
     "returnToAutomatic": "Torna alla disposizione automatica",
+    "slideCaption": "Schermata di {{code}} a {{time}} · {{n}} di {{total}}",
+    "previousScreengrab": "Immagine della schermata precedente",
+    "nextScreengrab": "Immagine della schermata successiva",
+    "whoseQuotes": "Di chi sono le citazioni",
+    "onScreen": "Nella schermata di {{code}}",
+    "sequence": "{{code}}, citazione {{n}} di {{total}}",
+    "versionsLabel": "Versioni di questa schermata",
+    "carouselRole": "carosello",
+    "versionsKeys": "← e → passano da una versione all’altra",
     "subtitle_one": "{{count}}\u00a0schermata",
     "subtitle_other": "{{count}}\u00a0schermate"
   }

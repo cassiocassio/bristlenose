@@ -769,6 +769,15 @@
     "arrangementCustomTidy": "Ordning: Tilpasset. Ryd op",
     "arrangementAutomatic": "Ordning: Automatisk",
     "returnToAutomatic": "Tilbage til automatisk ordning",
+    "slideCaption": "Sk\u00e6rm for {{code}} ved {{time}} \u00b7 {{n}} af {{total}}",
+    "previousScreengrab": "Forrige sk\u00e6rmbillede",
+    "nextScreengrab": "N\u00e6ste sk\u00e6rmbillede",
+    "whoseQuotes": "Hvis citater",
+    "onScreen": "P\u00e5 sk\u00e6rmen for {{code}}",
+    "sequence": "{{code}}, citat {{n}} af {{total}}",
+    "versionsLabel": "Versioner af denne sk\u00e6rm",
+    "carouselRole": "karrusel",
+    "versionsKeys": "\u2190 og \u2192 skifter mellem versioner",
     "subtitle_one": "{{count}}\u00a0sk\u00e6rm",
     "subtitle_other": "{{count}}\u00a0sk\u00e6rme"
   }

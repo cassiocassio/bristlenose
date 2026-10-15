@@ -769,6 +769,15 @@
     "arrangementCustomTidy": "Anordnung: Eigene. Aufr\u00e4umen",
     "arrangementAutomatic": "Anordnung: Automatisch",
     "returnToAutomatic": "Zur automatischen Anordnung zur\u00fcckkehren",
+    "slideCaption": "Bildschirm von {{code}} bei {{time}} · {{n}} von {{total}}",
+    "previousScreengrab": "Vorheriges Bildschirmfoto",
+    "nextScreengrab": "Nächstes Bildschirmfoto",
+    "whoseQuotes": "Wessen Zitate",
+    "onScreen": "Auf dem Bildschirm von {{code}}",
+    "sequence": "{{code}}, Zitat {{n}} von {{total}}",
+    "versionsLabel": "Versionen dieses Bildschirms",
+    "carouselRole": "Karussell",
+    "versionsKeys": "Mit ← und → zwischen Versionen wechseln",
     "subtitle_one": "{{count}}\u00a0Bildschirm",
     "subtitle_other": "{{count}}\u00a0Bildschirme"
   }

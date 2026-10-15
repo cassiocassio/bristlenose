@@ -769,6 +769,15 @@
     "arrangementCustomTidy": "Ordning: Anpassad. St\u00e4da upp",
     "arrangementAutomatic": "Ordning: Automatisk",
     "returnToAutomatic": "\u00c5terg\u00e5 till automatisk ordning",
+    "slideCaption": "{{code}}:s sk\u00e4rm vid {{time}} \u00b7 {{n}} av {{total}}",
+    "previousScreengrab": "F\u00f6reg\u00e5ende sk\u00e4rmbild",
+    "nextScreengrab": "N\u00e4sta sk\u00e4rmbild",
+    "whoseQuotes": "Vems citat",
+    "onScreen": "P\u00e5 {{code}}:s sk\u00e4rm",
+    "sequence": "{{code}}, citat {{n}} av {{total}}",
+    "versionsLabel": "Versioner av den h\u00e4r sk\u00e4rmen",
+    "carouselRole": "karusell",
+    "versionsKeys": "\u2190 och \u2192 v\u00e4xlar mellan versioner",
     "subtitle_one": "{{count}}\u00a0sk\u00e4rm",
     "subtitle_other": "{{count}}\u00a0sk\u00e4rmar"
   }

@@ -66,6 +66,8 @@
 .screens-more { background: none; color: var(--bn-colour-muted); }
 
 /* ── The screen ── */
+/* The person chips (toggle buttons, aria-pressed): whose quotes are in front. They never turn the
+   carousel. */
 .screens-who { display: flex; gap: var(--bn-space-xs); }
 .screens-who button {
   border: 1px solid transparent; background: none; padding: 3px 4px; border-radius: var(--bn-radius-md);
@@ -119,23 +121,90 @@
    colour, and keyboard focus adds the accent ring the rest of the report uses. */
 .screens-menu-item:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: -2px; }
 
-/* Cards sit BESIDE the screengrab, never over it (the owner, 14 Oct 2026: the screen is the artefact
-   being discussed, and stickies laid over a printout hide the design they are about). A card column
-   is CARD_W (270px) and the gutter --bn-space-xl, which the leader visibly crosses; the screengrab
-   takes what is left. Which columns appear is decided in layout.ts (boardColumns) from the stage's
-   width and which sides have cards, so these classes and those numbers move together: two from
-   1084px of stage, one (right) from 782px, none below — the screengrab then takes the full width
-   (MIN_SHOT_W, 480px, is the floor for legibility). A column with no cards takes no room. */
+/* Cards sit AROUND the screengrab, never over it (the owner, 14 Oct 2026: the screen is the artefact
+   being discussed, and stickies laid over a printout hide the design they are about). Four edges: a
+   column either side and a band above and below, each in its own grid track, so no automatic card
+   can sit over it; layout.ts places the cards along each edge. A card column is CARD_W (270px) and
+   the gutter --bn-space-xl, which the leader visibly crosses; the screengrab takes what is left.
+   Which columns appear is decided in layout.ts (stageMode, boardColumns) from the stage's width and
+   which sides have cards, so these classes and those numbers move together: two from 1084px of
+   stage, one (right) from 782px, and below that rows — cols-none, the bands above and below carry
+   every linked card, and the screengrab takes the full width (MIN_SHOT_W, 480px, is the floor for
+   legibility). A column or band with no cards takes no room. */
 .screens-stage { container-type: inline-size; position: relative; }
-.screens-board { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); column-gap: var(--bn-space-xl); }
-.screens-board.cols-r { grid-template-columns: minmax(0, 1fr) 270px; }
-.screens-board.cols-l { grid-template-columns: 270px minmax(0, 1fr); }
-.screens-board.cols-lr { grid-template-columns: 270px minmax(0, 1fr) 270px; }
+.screens-board {
+  position: relative; display: grid; column-gap: var(--bn-space-xl);
+  grid-template-columns: minmax(0, 1fr); grid-template-areas: "t" "shot" "b";
+}
+.screens-board.cols-r { grid-template-columns: minmax(0, 1fr) 270px; grid-template-areas: "t ." "shot r" "b ."; }
+.screens-board.cols-l { grid-template-columns: 270px minmax(0, 1fr); grid-template-areas: ". t" "l shot" ". b"; }
+.screens-board.cols-lr { grid-template-columns: 270px minmax(0, 1fr) 270px; grid-template-areas: ". t ." "l shot r" ". b ."; }
+.screens-band-t { grid-area: t; }
+.screens-band-b { grid-area: b; }
+.screens-col-l { grid-area: l; }
+.screens-col-r { grid-area: r; }
 .screens-col { position: relative; z-index: 2; display: none; }
 .screens-board.cols-l .screens-col-l, .screens-board.cols-lr .screens-col-l,
 .screens-board.cols-r .screens-col-r, .screens-board.cols-lr .screens-col-r { display: block; }
-.screens-shot { position: relative; z-index: 1; align-self: start; }
+/* A band holds its cards' whole height (layout.ts placeRow), and the leader crosses the same gutter
+   as beside the screengrab. An empty band takes no room. */
+.screens-band { position: relative; z-index: 2; min-width: 0; }
+.screens-band-t.has-cards { margin-bottom: var(--bn-space-xl); }
+.screens-band-b.has-cards { margin-top: var(--bn-space-xl); }
+.screens-band .screens-card { position: absolute; }
+.screens-shot { grid-area: shot; position: relative; z-index: 1; align-self: start; min-width: 0; }
 .screens-shot img { display: block; width: 100%; border-radius: var(--bn-radius-md); border: 1px solid var(--bn-colour-border); }
+
+/* ── The carousel: one participant's version at a time ──
+   The web form of the house carousel (the session tapestry's .bn-tp-nav disks, under the Welcome
+   window's SlotRotator rules): the showing version and its neighbours are stacked in one grid cell,
+   so the frame is as tall as the tallest of them and a turn to a neighbour moves nothing — and the
+   versions cross-fade.
+   Edge chevrons are revealed on hover only, never by focus (a focus-revealed chevron stayed on);
+   the disk is the whole hit area. Dots and the caption sit on one line under the frame. */
+.screens-carousel { position: relative; border-radius: var(--bn-radius-md); }
+.screens-carousel.is-multi:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 2px; }
+.screens-slides { position: relative; display: grid; }
+.screens-slides > .screens-slide, .screens-slides > .screens-shot-wait { grid-area: 1 / 1; align-self: start; }
+.screens-slide { opacity: 0; pointer-events: none; transition: opacity var(--bn-transition-slow); }
+.screens-slide.is-current { opacity: 1; pointer-events: auto; z-index: 1; }
+.screens-slides > .screens-hl { z-index: 2; }
+.screens-chev {
+  all: unset; position: absolute; z-index: 3; top: 50%; translate: 0 -50%;
+  width: 26px; height: 26px; display: grid; place-items: center; cursor: pointer;
+  opacity: 0; transition: opacity var(--bn-transition-fast); color: var(--bn-colour-text);
+}
+.screens-chev-prev { left: var(--bn-space-sm); }
+.screens-chev-next { right: var(--bn-space-sm); }
+.screens-chev > span {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid var(--bn-colour-border);
+  background: color-mix(in srgb, var(--bn-colour-bg) 72%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5); backdrop-filter: blur(12px) saturate(1.5);
+  box-shadow: 0 0.5px 1px var(--bn-colour-shadow);
+}
+.screens-chev svg { width: 9px; height: 9px; }
+.screens-chev path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.screens-carousel:hover .screens-chev { opacity: 1; }
+.screens-carousel-line {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--bn-space-xs) var(--bn-space-md);
+  margin-top: var(--bn-space-sm); font-size: var(--bn-text-caption); color: var(--bn-colour-muted);
+}
+.screens-caption .timecode { font-family: var(--bn-font-mono); color: var(--bn-colour-accent); }
+/* Indicator first: small, the current one twice as wide and in the accent; a 17px hit slop, but
+   swipe, the chevrons and ←/→ are the real navigation. Past MAX_DOTS the window's end dots shrink.
+   The others are the muted text colour at full strength: a dot is a graphical object that conveys
+   state, so it needs 3:1 against the page (1.4.11), and a 30% tint measured 1.47–1.73:1. */
+.screens-dots { display: flex; align-items: center; }
+.screens-dot { all: unset; width: 17px; height: 17px; display: grid; place-items: center; cursor: pointer; }
+.screens-dot::before { content: ""; width: 6px; height: 6px; border-radius: 3px; background: var(--bn-colour-muted); }
+.screens-dot.is-current::before { width: 12px; background: var(--bn-colour-accent); }
+.screens-dot.is-edge::before { width: 4px; height: 4px; }
+.screens-dot:hover::before { background: var(--bn-colour-text); }
+/* The keys that turn the carousel, shown to a sighted keyboard user while it has keyboard focus
+   (the hover title says the same to a pointer). Takes its room always, so nothing moves. */
+.screens-keys { visibility: hidden; font-family: var(--bn-font-mono); color: var(--bn-colour-muted); }
+.screens-shot:has(.screens-carousel:focus-visible) .screens-keys { visibility: visible; }
 .screens-shot-wait { aspect-ratio: 16 / 10; border-radius: var(--bn-radius-md); background: var(--bn-colour-quote-bg); }
 .screens-shot-error { display: block; padding: var(--bn-space-lg); font-size: var(--bn-text-label); color: var(--bn-colour-muted); }
 .screens-notes, .screens-progress { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); margin: 0 0 var(--bn-space-md); }
@@ -201,7 +270,12 @@
 .screens-stage.focus .screens-card:not(.is-lifted) .quote-card:not(.bn-selected) { color: var(--bn-colour-muted); }
 .screens-stage.focus .screens-card:not(.is-lifted) mark.search-mark { background: none; }
 .screens-stage.focus .screens-hl:not(.on),
-.screens-stage.focus .screens-leaders g:not(.on) { opacity: 0.25; }
+.screens-stage.focus .screens-leaders :not(.on) { opacity: 0.25; }
+/* A person chip on: the other people's cards step back the same way, by colour, and their lines
+   and leaders fade. A card brought forward is never stepped back. */
+.screens-stage.chosen .screens-card.is-muted:not(.is-lifted) .quote-card:not(.bn-selected) { color: var(--bn-colour-muted); }
+.screens-stage.chosen .screens-card.is-muted:not(.is-lifted) mark.search-mark { background: none; }
+.screens-hl.is-muted, svg.screens-leaders .is-muted { opacity: 0.25; }
 
 /* The read-aloud highlight: words said that are also on the screen (the card's own search mark). */
 .screens-stage mark.search-mark { background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
@@ -221,10 +295,33 @@ svg.screens-leaders circle { fill: var(--bn-colour-accent); }
 .screens-stage.dragging, .screens-stage.dragging * { cursor: grabbing !important; user-select: none; }
 .screens-stage .screens-card.is-dragging > .quote-card { box-shadow: var(--bn-focus-shadow), 0 12px 32px var(--bn-colour-shadow); transition: none; }
 
+/* Each card's person and place among that person's quotes here (p1 ①②③, p2 ①②): a badge on the
+   card's top edge, clear of its text and its grips (it takes no pointer). Heard as a sentence
+   (.bn-sr-only beside it). */
+.screens-seq {
+  position: absolute; z-index: 2; top: 0; left: var(--bn-space-lg); translate: 0 -50%;
+  display: inline-flex; align-items: center; gap: 3px; padding: 0 2px 0 0.3rem; pointer-events: none;
+  border: 1px solid var(--bn-colour-border); border-radius: 999px;
+  background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text);
+  font-family: var(--bn-font-mono); font-size: var(--bn-text-micro); line-height: var(--bn-text-micro-lh);
+}
+.screens-seq-n {
+  min-width: 1.15em; padding: 0 2px; border-radius: 999px; text-align: center; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--bn-colour-accent); background: var(--bn-colour-bg); color: var(--bn-colour-text);
+}
+/* "On p2's screen": a quote listed here because its words are on another version, which this turns
+   the carousel to. */
+.screens-elsewhere {
+  all: unset; display: inline-block; margin: var(--bn-space-xs) 0 0 var(--bn-space-md);
+  font-size: var(--bn-text-caption); color: var(--bn-colour-accent); cursor: pointer;
+}
+.screens-elsewhere:hover { text-decoration: underline; }
+.screens-elsewhere:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+
 /* Everything else said on this screen: the same card, the same gutter. */
 .screens-loose { columns: 260px; column-gap: var(--bn-space-md); margin-top: var(--bn-space-md); }
 .screens-loose .screens-card { break-inside: avoid; margin: 0 0 var(--bn-space-md); }
 
 @media (prefers-reduced-motion: reduce) {
-  .screens-hl, .screens-stage .screens-card > blockquote.quote-card { transition: none; }
+  .screens-hl, .screens-stage .screens-card > blockquote.quote-card, .screens-slide, .screens-chev { transition: none; }
 }

@@ -733,6 +733,15 @@
     "arrangementCustomTidy": "\ubc30\uce58: \uc0ac\uc6a9\uc790 \uc9c0\uc815. \uc815\ub9ac",
     "arrangementAutomatic": "\ubc30\uce58: \uc790\ub3d9",
     "returnToAutomatic": "\uc790\ub3d9 \ubc30\uce58\ub85c \ub418\ub3cc\ub9ac\uae30",
+    "slideCaption": "{{time}} \uc2dc\uc810\uc758 {{code}} \ud654\uba74 \u00b7 {{n}}/{{total}}",
+    "previousScreengrab": "\uc774\uc804 \uc2a4\ud06c\ub9b0\uc0f7",
+    "nextScreengrab": "\ub2e4\uc74c \uc2a4\ud06c\ub9b0\uc0f7",
+    "whoseQuotes": "\ub204\uad6c\uc758 \uc778\uc6a9\ubb38",
+    "onScreen": "{{code}} \ud654\uba74\uc5d0\uc11c \ubcf4\uae30",
+    "sequence": "{{code}}, \uc778\uc6a9\ubb38 {{n}}/{{total}}",
+    "versionsLabel": "\uc774 \ud654\uba74\uc758 \ubc84\uc804",
+    "carouselRole": "\uce90\ub7ec\uc140",
+    "versionsKeys": "\u2190 \ubc0f \u2192\ub85c \ubc84\uc804 \uc804\ud658",
     "subtitle_other": "{{count}}\uac1c\u00a0\ud654\uba74"
   }
 }

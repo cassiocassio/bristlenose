@@ -769,6 +769,15 @@
     "arrangementCustomTidy": "Disposi\u00e7\u00e3o: personalizada. Arrumar",
     "arrangementAutomatic": "Disposi\u00e7\u00e3o: autom\u00e1tica",
     "returnToAutomatic": "Voltar \u00e0 disposi\u00e7\u00e3o autom\u00e1tica",
+    "slideCaption": "Ecr\u00e3 de {{code}} em {{time}} \u00b7 {{n}} de {{total}}",
+    "previousScreengrab": "Captura de ecr\u00e3 anterior",
+    "nextScreengrab": "Captura de ecr\u00e3 seguinte",
+    "whoseQuotes": "De quem s\u00e3o as cita\u00e7\u00f5es",
+    "onScreen": "No ecr\u00e3 de {{code}}",
+    "sequence": "{{code}}, cita\u00e7\u00e3o {{n}} de {{total}}",
+    "versionsLabel": "Vers\u00f5es deste ecr\u00e3",
+    "carouselRole": "carrossel",
+    "versionsKeys": "\u2190 e \u2192 alternam entre as vers\u00f5es",
     "subtitle_one": "{{count}}\u00a0Ecr\u00e3",
     "subtitle_other": "{{count}}\u00a0Ecr\u00e3s"
   }

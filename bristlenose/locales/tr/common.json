@@ -769,6 +769,15 @@
     "arrangementCustomTidy": "D\u00fczen: \u00d6zel. D\u00fczenle",
     "arrangementAutomatic": "D\u00fczen: Otomatik",
     "returnToAutomatic": "Otomatik d\u00fczene d\u00f6n",
+    "slideCaption": "{{time}} an\u0131nda {{code}} ekran\u0131 \u00b7 {{n}}/{{total}}",
+    "previousScreengrab": "\u00d6nceki ekran g\u00f6r\u00fcnt\u00fcs\u00fc",
+    "nextScreengrab": "Sonraki ekran g\u00f6r\u00fcnt\u00fcs\u00fc",
+    "whoseQuotes": "Kimin al\u0131nt\u0131lar\u0131",
+    "onScreen": "{{code}} ekran\u0131nda",
+    "sequence": "{{code}}, al\u0131nt\u0131 {{n}}/{{total}}",
+    "versionsLabel": "Bu ekran\u0131n s\u00fcr\u00fcmleri",
+    "carouselRole": "karusel",
+    "versionsKeys": "\u2190 ve \u2192 s\u00fcr\u00fcmler aras\u0131nda ge\u00e7i\u015f yapar",
     "subtitle_one": "{{count}}\u00a0Ekran",
     "subtitle_other": "{{count}}\u00a0Ekran"
   }

@@ -769,6 +769,15 @@
     "arrangementCustomTidy": "Ordning: Tilpasset. Rydd opp",
     "arrangementAutomatic": "Ordning: Automatisk",
     "returnToAutomatic": "Tilbake til automatisk ordning",
+    "slideCaption": "Skjermen til {{code}} ved {{time}} · {{n}} av {{total}}",
+    "previousScreengrab": "Forrige skjermbilde",
+    "nextScreengrab": "Neste skjermbilde",
+    "whoseQuotes": "Hvem sine sitater",
+    "onScreen": "På skjermen til {{code}}",
+    "sequence": "{{code}}, sitat {{n}} av {{total}}",
+    "versionsLabel": "Versjoner av denne skjermen",
+    "carouselRole": "karusell",
+    "versionsKeys": "← og → bytter mellom versjoner",
     "subtitle_one": "{{count}}\u00a0skjerm",
     "subtitle_other": "{{count}}\u00a0skjermer"
   }

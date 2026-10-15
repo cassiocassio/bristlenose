@@ -26,11 +26,28 @@ import { announce } from "../../utils/announce";
 import { apiGet, getCodebook } from "../../utils/api";
 import { failedText, NAV_W, ScreensLens, SCREENS_POLL_LIMIT, shouldPoll, unavailableText, type ScreensResponse } from "./ScreensLens";
 
+/** The board's ResizeObserver callbacks, so a test can resize the stage. */
+const observers = new Set<() => void>();
+const resized = () =>
+  act(() => {
+    observers.forEach((cb) => cb());
+  });
+
 beforeAll(() => {
+  // J/K bring a card forward through FocusContext, which scrolls it into view; jsdom has no
+  // scrollIntoView, so without this each step throws in a requestAnimationFrame after the test.
+  Element.prototype.scrollIntoView ??= () => {};
   // jsdom has no ResizeObserver; the board measures through one.
   (globalThis as unknown as Record<string, unknown>).ResizeObserver = class {
+    cb: () => void;
+    constructor(cb: () => void) {
+      this.cb = cb;
+      observers.add(cb);
+    }
     observe() {}
-    disconnect() {}
+    disconnect() {
+      observers.delete(this.cb);
+    }
   };
 });
 
@@ -518,6 +535,23 @@ describe("Tidy", () => {
   });
 
   // Tidy removes its own button; focus used to fall to the page (accessibility review, 14 Oct 2026).
+  it("tells the Mac whether the arrangement is custom, so View ▸ Tidy enables only then", async () => {
+    const post = vi.fn();
+    (window as unknown as { webkit: unknown }).webkit = { messageHandlers: { navigation: { postMessage: post } } };
+    try {
+      mockApi(screensResponse());
+      const { unmount } = render(<ScreensLens />);
+      const control = await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" });
+      const said = () => post.mock.calls.map((c) => c[0]).filter((m) => m.type === "screens-arrangement");
+      expect(said().slice(-1)[0]).toEqual({ type: "screens-arrangement", custom: true });
+      fireEvent.click(control);
+      await waitFor(() => expect(said().slice(-1)[0]).toEqual({ type: "screens-arrangement", custom: false }));
+      unmount();
+    } finally {
+      delete (window as unknown as { webkit?: unknown }).webkit;
+    }
+  });
+
   it("moves focus to the lens's title when Tidy removes its own button", async () => {
     mockApi(screensResponse());
     render(<ScreensLens />);
@@ -607,16 +641,21 @@ describe("a selection made on another lens", () => {
 });
 
 describe("where the cards go", () => {
-  it("puts the pinned cards first in the list under the screengrab when the stage is too narrow for a column", async () => {
+  // Rows replace "the pinned cards lead the list" (the owner, 15 Oct 2026): below the side-column
+  // threshold the side bands become rows above and below the screengrab; the list stays below.
+  it("puts linked cards in rows above and below the screengrab when the stage is too narrow for a column", async () => {
     const spy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(600);
     try {
       mockApi(screensResponse());
       const { container } = render(<ScreensLens />);
-      await waitFor(() => expect(container.querySelector(".screens-loose .screens-card")).not.toBeNull());
+      await waitFor(() => expect(container.querySelector(".screens-band .screens-card")).not.toBeNull());
       expect(container.querySelector(".screens-board")!.className).toContain("cols-none");
       expect(container.querySelector(".screens-col .screens-card")).toBeNull();
-      const first = container.querySelector<HTMLElement>(".screens-loose .screens-card")!;
-      expect(first.dataset.dom).toBe("q-p1-10"); // the pinned quote leads the list
+      // The linked quote's line is in the lower half: the row below.
+      expect(container.querySelector<HTMLElement>(".screens-band-b .screens-card")!.dataset.dom).toBe("q-p1-10");
+      // The unlinked one stays in the list, under everything.
+      const listed = [...container.querySelectorAll<HTMLElement>(".screens-loose .screens-card")].map((c) => c.dataset.dom);
+      expect(listed).toEqual(["q-p1-30"]);
     } finally {
       spy.mockRestore();
     }
@@ -720,7 +759,7 @@ describe("for a keyboard and a screen reader", () => {
     await opened();
     vi.mocked(announce).mockClear();
     fireEvent.keyDown(document, { key: "ArrowRight" });
-    expect(announce).toHaveBeenLastCalledWith("p2’s screen");
+    expect(announce).toHaveBeenLastCalledWith("p2’s screen at 00:40 · 2 of 2");
     fireEvent.keyDown(document, { key: "ArrowDown" });
     expect(announce).toHaveBeenLastCalledWith("Delivery or collect, screen 2 of 2");
   });
@@ -784,18 +823,27 @@ describe("focus when the board changes under it", () => {
     expect(links[1]).toHaveAttribute("aria-current", "true");
   });
 
-  it("keeps focus on the participant buttons, on the one now pressed", async () => {
+  it("keeps focus on the carousel as it turns, and says which slide once", async () => {
     const two = screensResponse();
     (two.screens as { tabs: unknown[] }[])[0].tabs.push({ ...TAB, session_id: "s2", code: "p2", t: 40 });
     mockApi(two);
     await opened();
-    const first = screen.getAllByRole("button", { pressed: true })[0];
-    first.focus();
-    fireEvent.keyDown(first, { key: "ArrowRight" });
-    const pressed = screen.getAllByRole("button", { pressed: true })[0];
-    expect(pressed).not.toBe(first);
-    expect(pressed).toHaveTextContent("p2");
-    expect(document.activeElement).toBe(pressed);
+    const carousel = screen.getByRole("group", { name: "Versions of this screen" });
+    expect(carousel.tabIndex).toBe(0); // the keyboard's stop
+    expect(carousel).toHaveAttribute("aria-roledescription", "carousel");
+    expect(carousel).toHaveAttribute("aria-keyshortcuts", "ArrowLeft ArrowRight");
+    expect(carousel).toHaveAttribute("title", "← and → turn between versions");
+    carousel.focus();
+    vi.mocked(announce).mockClear();
+    fireEvent.keyDown(carousel, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(carousel);
+    // The name stays put, so only the announcement says the slide: once, not twice.
+    expect(carousel).toHaveAccessibleName("Versions of this screen");
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenLastCalledWith("p2’s screen at 00:40 · 2 of 2");
+    // ↓ to another screen: a new board; focus goes to its title, which says where we are.
+    fireEvent.keyDown(carousel, { key: "ArrowDown" });
+    expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1 }));
   });
 
   it("leaves focus alone when it was not in the lens", async () => {
@@ -970,5 +1018,541 @@ describe("polling /screens", () => {
       await vi.advanceTimersByTimeAsync(20_000);
     });
     expect(screensCalls()).toBeGreaterThan(2);
+  });
+});
+
+// ── Composition (docs/design-screens.md S5, 15 Oct 2026) ─────────────────
+
+/** A second participant's quote. */
+function quoteBy(person: string, start: number, text: string): QuoteResponse {
+  return { ...quote(start, text), dom_id: `q-${person}-${start}`, participant_id: person, speaker_name: person,
+           session_id: person === "p1" ? "s1" : "s2" } as QuoteResponse;
+}
+
+const TWO_QUOTES: QuotesListResponse = {
+  ...QUOTES,
+  unjoined: [...(QUOTES.unjoined ?? []), quoteBy("p2", 20, "the basket total looks wrong"),
+             quoteBy("p2", 60, "where is the basket total")],
+} as QuotesListResponse;
+
+const SEARCH: [number, number, number, number] = [0.4, 0.03, 0.2, 0.04]; // top middle: the band above
+const SIDE: [number, number, number, number] = [0.7, 0.5, 0.2, 0.04];
+
+/** One screen, two versions. p2's version (the default) links three quotes, two of them on one
+ *  line; p1's links one, which p2's does not. */
+function versions(over: Record<string, unknown> = {}) {
+  return screensResponse({
+    videos: 2, indexed: 2,
+    screens: [{
+      key: "url:/basket", name: "/basket", quotes: 4, default_tab: 1,
+      tabs: [
+        { ...TAB, heading: "Basket" },
+        { ...TAB, session_id: "s2", code: "p2", t: 40, heading: "Basket", loose: [],
+          pins: [
+            { dom_id: "q-p2-20", box: SEARCH, phrase: "basket total", line: "Basket total" },
+            { dom_id: "q-p2-60", box: SEARCH, phrase: "basket total", line: "Basket total" },
+            { dom_id: "q-p1-30", box: SIDE, phrase: "expensive", line: "Expensive" },
+          ] },
+      ],
+    }, { key: "url:/order/delivery", name: "/order/delivery", quotes: 0,
+         tabs: [{ ...TAB, heading: "Delivery or collect", pins: [], loose: [], t: 80 }] }],
+    ...over,
+  });
+}
+
+function mockVersions(screens: unknown = versions()) {
+  vi.mocked(apiGet).mockImplementation(((path: string) => {
+    if (path === "/screens") return Promise.resolve(screens);
+    if (path === "/quotes") return Promise.resolve(TWO_QUOTES);
+    if (path.startsWith("/screens/still")) return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+    return Promise.reject(new Error(path));
+  }) as typeof apiGet);
+}
+
+const where = (c: HTMLElement, dom: string) => {
+  const card = [...c.querySelectorAll<HTMLElement>(".screens-card")].find((el) => el.dataset.dom === dom);
+  if (!card) return "absent";
+  if (card.closest(".screens-loose")) return "list";
+  if (card.closest(".screens-free")) return "free";
+  if (card.closest(".screens-shot")) return "shot";
+  return "margin";
+};
+
+async function openVersions(ui: React.ReactElement = <ScreensLens />) {
+  const r = render(ui);
+  await waitFor(() => expect(r.container.querySelectorAll(".screens-card")).toHaveLength(4));
+  return r.container;
+}
+
+describe("a screen is one place for everything about it", () => {
+  it("opens on the version that links the most quotes, and names whose screenshot it is", async () => {
+    mockVersions();
+    const c = await openVersions();
+    expect(screen.getByAltText("p2’s screen: Basket, at 00:40")).toBeInTheDocument();
+    expect(c.querySelector(".screens-caption")).toHaveTextContent("p2’s screen at 00:40 · 2 of 2");
+    // A carousel, not a row of participant buttons.
+    expect(screen.getByRole("group", { name: "Versions of this screen" })).toBeInTheDocument();
+  });
+
+  it("links only the quotes whose words are on the showing screengrab; the set never changes", async () => {
+    mockVersions();
+    const c = await openVersions();
+    // p2's version: its three, whoever said them, in the margins; p1's line is not on it.
+    expect(["q-p2-20", "q-p2-60", "q-p1-30"].map((d) => where(c, d))).toEqual(["margin", "margin", "margin"]);
+    expect(where(c, "q-p1-10")).toBe("list");
+    fireEvent.keyDown(document, { key: "ArrowLeft" });
+    expect(screen.getByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
+    expect(where(c, "q-p1-10")).toBe("margin");
+    expect(["q-p2-20", "q-p2-60", "q-p1-30"].map((d) => where(c, d))).toEqual(["list", "list", "list"]);
+    expect(c.querySelectorAll(".screens-card")).toHaveLength(4);
+  });
+
+  it("lists the rest in time order", async () => {
+    mockVersions();
+    const c = await openVersions();
+    fireEvent.keyDown(document, { key: "ArrowLeft" });
+    const listed = [...c.querySelectorAll<HTMLElement>(".screens-loose .screens-card")].map((el) => el.dataset.dom);
+    expect(listed).toEqual(["q-p2-20", "q-p1-30", "q-p2-60"]);
+  });
+
+  it("offers the version an unlinked card is on, and turns to it", async () => {
+    mockVersions();
+    const c = await openVersions();
+    const offer = screen.getByRole("button", { name: "On p1’s screen" });
+    expect(offer.closest<HTMLElement>(".screens-card")!.dataset.dom).toBe("q-p1-10");
+    fireEvent.click(offer);
+    expect(screen.getByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
+    expect(where(c, "q-p1-10")).toBe("margin");
+    expect(announce).toHaveBeenLastCalledWith("p1’s screen at 00:12 · 1 of 2");
+  });
+
+  it("gives quotes about one line one highlight", async () => {
+    mockVersions();
+    const c = await openVersions();
+    expect(c.querySelectorAll(".screens-hl")).toHaveLength(2); // three linked quotes, two lines
+  });
+
+  it("puts a header line's cards in the band above the screengrab, and a side line's in a column", async () => {
+    const spy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1200);
+    try {
+      mockVersions();
+      const c = await openVersions();
+      const band = [...c.querySelectorAll<HTMLElement>(".screens-band-t .screens-card")].map((el) => el.dataset.dom);
+      expect(band).toEqual(["q-p2-20", "q-p2-60"]);
+      expect(c.querySelector<HTMLElement>(".screens-col-r .screens-card")!.dataset.dom).toBe("q-p1-30");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  // What this gates, and no more: with a measured screengrab, every linked card is placed (has a
+  // spot) in a column or band track — never in the screengrab's own track or the free layer. jsdom
+  // lays nothing out, so whether the tracks overlap is not seen here: that is the model in
+  // layout.test.ts and the measurement on real data (docs/design-screens.md S5).
+  it("places every linked card in a column or band, never the screengrab's track, at any width", async () => {
+    for (const w of [1440, 1100, 900, 600]) {
+      const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(w);
+      const height = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(300);
+      const oh = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(100);
+      try {
+        mockVersions();
+        const { container, unmount } = render(<ScreensLens />);
+        await waitFor(() => expect(container.querySelectorAll(".screens-card")).toHaveLength(4));
+        const linked = () => [...container.querySelectorAll<HTMLElement>(".screens-card[data-pin]")];
+        await waitFor(() => expect(linked().every((c) => c.style.visibility !== "hidden")).toBe(true));
+        expect(linked()).toHaveLength(3);
+        for (const card of linked()) {
+          expect(card.closest(".screens-col, .screens-band"), `${w}px ${card.dataset.dom}`).not.toBeNull();
+          expect(card.closest(".screens-shot, .screens-free")).toBeNull();
+        }
+        unmount();
+      } finally {
+        width.mockRestore();
+        height.mockRestore();
+        oh.mockRestore();
+      }
+    }
+  });
+});
+
+describe("the carousel", () => {
+  it("turns one slide per horizontal swipe", async () => {
+    mockVersions();
+    const c = await openVersions();
+    const carousel = c.querySelector<HTMLElement>(".screens-carousel")!;
+    fireEvent.wheel(carousel, { deltaX: -40, deltaY: 0 });
+    expect(screen.getByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
+    // The same swipe's momentum does not turn it again (with two slides it would come back).
+    fireEvent.wheel(carousel, { deltaX: -30, deltaY: 0 });
+    fireEvent.wheel(carousel, { deltaX: -20, deltaY: 0 });
+    expect(screen.getByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
+  });
+
+  it("turns from its chevrons and dots, which are the pointer's and not tab stops", async () => {
+    mockVersions();
+    await openVersions();
+    const next = screen.getByRole("button", { name: "Next screengrab" });
+    expect(next.tabIndex).toBe(-1);
+    fireEvent.click(next);
+    expect(screen.getByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
+    const dot = screen.getByRole("button", { name: "p2’s screen" });
+    expect(dot.tabIndex).toBe(-1);
+    fireEvent.click(dot);
+    expect(screen.getByAltText("p2’s screen: Basket, at 00:40")).toBeInTheDocument();
+  });
+
+  it("cross-fades in one frame: the neighbouring versions are in it, one showing", async () => {
+    mockVersions();
+    const c = await openVersions();
+    await waitFor(() => expect(c.querySelectorAll(".screens-slide")).toHaveLength(2));
+    expect(c.querySelectorAll(".screens-slide.is-current")).toHaveLength(1);
+    expect(c.querySelector(".screens-slide:not(.is-current)")).toHaveAttribute("aria-hidden", "true");
+  });
+});
+
+describe("whose quotes", () => {
+  it("dims the others' cards with toggle chips, and never turns the carousel", async () => {
+    mockVersions();
+    const c = await openVersions();
+    const chips = screen.getByRole("group", { name: "Whose quotes" });
+    const p1 = [...chips.querySelectorAll("button")].find((b) => b.textContent === "p1")!;
+    expect(p1).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(p1);
+    expect(p1).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByAltText("p2’s screen: Basket, at 00:40")).toBeInTheDocument(); // still p2's
+    const muted = [...c.querySelectorAll<HTMLElement>(".screens-card.is-muted")].map((el) => el.dataset.dom).sort();
+    expect(muted).toEqual(["q-p2-20", "q-p2-60"]);
+    fireEvent.click(p1);
+    expect(c.querySelector(".screens-card.is-muted")).toBeNull();
+  });
+});
+
+describe("the narrative", () => {
+  it("numbers each person's quotes among their own, in time order, and says so", async () => {
+    mockVersions();
+    const c = await openVersions();
+    const mark = (dom: string) => {
+      const card = [...c.querySelectorAll<HTMLElement>(".screens-card")].find((el) => el.dataset.dom === dom)!;
+      return [card.querySelector(".screens-seq")!.textContent, card.querySelector(".bn-sr-only")!.textContent];
+    };
+    expect(mark("q-p1-10")).toEqual(["p11", "p1, quote 1 of 2"]);
+    expect(mark("q-p1-30")).toEqual(["p12", "p1, quote 2 of 2"]);
+    expect(mark("q-p2-20")).toEqual(["p21", "p2, quote 1 of 2"]);
+    expect(mark("q-p2-60")).toEqual(["p22", "p2, quote 2 of 2"]);
+  });
+
+  async function focused() {
+    mockVersions();
+    const c = await openVersions(
+      <FocusProvider>
+        <ScreensLens />
+      </FocusProvider>,
+    );
+    const now = () => c.querySelector<HTMLElement>(".quote-card.bn-focused")?.id ?? null;
+    return { c, now };
+  }
+
+  it("steps through the screen's quotes in time order with J and K, bringing each forward", async () => {
+    const { c, now } = await focused();
+    const press = (key: string) => fireEvent.keyDown(document, { key });
+    press("j");
+    await waitFor(() => expect(now()).toBe("q-p1-10"));
+    press("j");
+    await waitFor(() => expect(now()).toBe("q-p2-20"));
+    // Brought forward, and its line lit.
+    const card = [...c.querySelectorAll<HTMLElement>(".screens-card")].find((el) => el.dataset.dom === "q-p2-20")!;
+    expect(card.className).toContain("is-lifted");
+    expect(c.querySelector(".screens-hl.on")).not.toBeNull();
+    press("j");
+    await waitFor(() => expect(now()).toBe("q-p1-30"));
+    press("k");
+    await waitFor(() => expect(now()).toBe("q-p2-20"));
+  });
+
+  it("steps through only the chosen people's quotes when a chip is on", async () => {
+    const { now } = await focused();
+    const chips = screen.getByRole("group", { name: "Whose quotes" });
+    fireEvent.click([...chips.querySelectorAll("button")].find((b) => b.textContent === "p2")!);
+    fireEvent.keyDown(document, { key: "j" });
+    await waitFor(() => expect(now()).toBe("q-p2-20"));
+    fireEvent.keyDown(document, { key: "j" });
+    await waitFor(() => expect(now()).toBe("q-p2-60"));
+    fireEvent.keyDown(document, { key: "j" });
+    await waitFor(() => expect(now()).toBe("q-p2-60")); // clamped, as moveFocus is
+  });
+
+  it("leaves J and K to a field, a chord, or a key someone else took", async () => {
+    const { now } = await focused();
+    fireEvent.keyDown(document, { key: "j", metaKey: true });
+    fireEvent.keyDown(document, { key: "j", shiftKey: true });
+    const handled = new KeyboardEvent("keydown", { key: "j", bubbles: true, cancelable: true });
+    handled.preventDefault();
+    act(() => {
+      document.dispatchEvent(handled);
+    });
+    expect(now()).toBeNull();
+    const taken = new KeyboardEvent("keydown", { key: "j", bubbles: true, cancelable: true });
+    act(() => {
+      document.dispatchEvent(taken);
+    });
+    expect(taken.defaultPrevented).toBe(true); // the lens claimed it
+  });
+});
+
+describe("the Mac's View menu", () => {
+  const menu = (action: string) =>
+    act(() => {
+      window.dispatchEvent(new CustomEvent("bn:menu-action", { detail: { action } }));
+    });
+
+  it("turns the carousel, changes screen and steps the quotes by name", async () => {
+    mockVersions();
+    const c = await openVersions(
+      <FocusProvider>
+        <ScreensLens />
+      </FocusProvider>,
+    );
+    menu("nextScreenshot");
+    expect(screen.getByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
+    menu("previousScreenshot");
+    expect(screen.getByAltText("p2’s screen: Basket, at 00:40")).toBeInTheDocument();
+    menu("nextQuote");
+    await waitFor(() => expect(c.querySelector(".quote-card.bn-focused")?.id).toBe("q-p1-10"));
+    menu("previousQuote");
+    menu("nextScreen");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Delivery or collect");
+    menu("previousScreen");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Basket");
+  });
+
+  it("tidies the showing screengrab", async () => {
+    localStorage.setItem("bristlenose-screens-placements-1",
+      JSON.stringify({ "s2@40/q-p2-20": { kind: "edge", side: "R", frac: 0.5, z: 31 } }));
+    mockVersions();
+    await openVersions();
+    expect(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
+    menu("tidy");
+    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
+  });
+});
+
+describe("a change of layout", () => {
+  // Each card glides from its old place to its new one when the layout changes mode (FLIP), and
+  // switches at once under reduced motion.
+  async function resize(reduce: boolean) {
+    const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(900);
+    const height = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(300);
+    const oh = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(100);
+    const rect = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      const x = this.closest(".screens-col") ? 900 : 0;
+      return { left: x, top: 0, right: x + 270, bottom: 100, width: 270, height: 100, x, y: 0, toJSON: () => ({}) } as DOMRect;
+    });
+    const animate = vi.fn();
+    (HTMLElement.prototype as unknown as Record<string, unknown>).animate = animate;
+    const mm = window.matchMedia;
+    window.matchMedia = ((q: string) => ({ matches: reduce && q.includes("reduce") })) as unknown as typeof window.matchMedia;
+    try {
+      mockApi(screensResponse());
+      const { container } = render(<ScreensLens />);
+      await waitFor(() => expect(container.querySelector(".screens-col-r .screens-card")).not.toBeNull());
+      resized();
+      expect(animate).not.toHaveBeenCalled(); // a resize within a mode: the cards follow it
+      width.mockReturnValue(600);
+      resized();
+      await waitFor(() => expect(container.querySelector(".screens-band .screens-card")).not.toBeNull());
+      return animate;
+    } finally {
+      width.mockRestore();
+      height.mockRestore();
+      oh.mockRestore();
+      rect.mockRestore();
+      delete (HTMLElement.prototype as unknown as Record<string, unknown>).animate;
+      window.matchMedia = mm;
+    }
+  }
+
+  it("glides each card from where it was", async () => {
+    const animate = await resize(false);
+    expect(animate).toHaveBeenCalled();
+    const [frames] = animate.mock.calls[0] as [Keyframe[]];
+    expect(frames[0].transform).toBe("translate(900px, 0px)");
+  });
+
+  it("moves at once under reduced motion", async () => {
+    const animate = await resize(true);
+    expect(animate).not.toHaveBeenCalled();
+  });
+});
+
+// ── Review fixes (15 Oct 2026) ───────────────────────────────────────────
+
+const cardOf = (c: HTMLElement, dom: string) =>
+  [...c.querySelectorAll<HTMLElement>(".screens-card")].find((el) => el.dataset.dom === dom)!;
+
+/** A measured board: jsdom lays nothing out, so give every element a width and the screengrab a
+ *  height, which is what lets placement give each card a spot. */
+function measured(w = 900) {
+  const spies = [
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(w),
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(300),
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(100),
+  ];
+  return { width: spies[0], restore: () => spies.forEach((s) => s.mockRestore()) };
+}
+
+describe("the report's per-quote keys on Screens", () => {
+  // The report's s/h/t/r/x/Enter act only on the quotes this lens registers. A chip dims cards, it
+  // does not remove them: a dimmed card takes a click, so it must take a key — and ⌘A selects it.
+  it("are scoped to every card the board shows, a chip-dimmed one included", async () => {
+    const ctx: { current: ReturnType<typeof useFocus> | null } = { current: null };
+    function Probe() {
+      const f = useFocus();
+      useEffect(() => {
+        ctx.current = f;
+      });
+      return null;
+    }
+    mockVersions();
+    await openVersions(
+      <FocusProvider>
+        <Probe />
+        <ScreensLens />
+      </FocusProvider>,
+    );
+    const chips = screen.getByRole("group", { name: "Whose quotes" });
+    fireEvent.click([...chips.querySelectorAll("button")].find((b) => b.textContent === "p2")!);
+    expect(new Set(ctx.current!.getVisibleQuoteIds())).toEqual(new Set(["q-p1-10", "q-p2-20", "q-p1-30", "q-p2-60"]));
+    act(() => ctx.current!.selectAll());
+    expect(ctx.current!.selectedIds.has("q-p1-10")).toBe(true);
+  });
+});
+
+describe("bringing forward with J/K after a press", () => {
+  it("raises the card J lands on, not the one pressed before", async () => {
+    mockVersions();
+    const c = await openVersions(
+      <FocusProvider>
+        <ScreensLens />
+      </FocusProvider>,
+    );
+    fireEvent.pointerDown(cardOf(c, "q-p1-30").querySelector(".quote-body")!);
+    expect(cardOf(c, "q-p1-30").className).toContain("is-lifted");
+    fireEvent.keyDown(document, { key: "j" });
+    await waitFor(() => expect(c.querySelector(".quote-card.bn-focused")?.id).toBe("q-p1-10"));
+    expect(cardOf(c, "q-p1-10").className).toContain("is-lifted");
+    expect(cardOf(c, "q-p1-30").className).not.toContain("is-lifted");
+  });
+});
+
+describe("a placed card with no screengrab to place it against", () => {
+  it("is listed with the rest rather than held hidden", async () => {
+    // Stills are cached for the page's life: a time no other test asks for, so this one fails.
+    const failing = versions();
+    (failing.screens as { tabs: { t: number }[] }[])[0].tabs[1].t = 41;
+    localStorage.setItem("bristlenose-screens-placements-1",
+      JSON.stringify({ "s2@41/q-p1-10": { kind: "edge", side: "L", frac: 0.2, z: 31 } }));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens") return Promise.resolve(failing);
+      if (path === "/quotes") return Promise.resolve(TWO_QUOTES);
+      if (path.includes("session_id=s2&t=41&w=1600")) return Promise.reject(new Error("404"));
+      if (path.startsWith("/screens/still")) return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+      return Promise.reject(new Error(path));
+    }) as typeof apiGet);
+    const c = await openVersions();
+    await waitFor(() => expect(screen.getByText("Screengrab unavailable.")).toBeInTheDocument());
+    const card = cardOf(c, "q-p1-10");
+    expect(card.closest(".screens-loose")).not.toBeNull();
+    expect(card.style.visibility).not.toBe("hidden");
+    expect(card.className).toContain("is-placed"); // still the researcher's
+  });
+});
+
+describe("Tidy, counted once", () => {
+  // A spot kept for a quote that is not on the board (hidden, or gone) is not an arrangement anyone
+  // can see: the arrangement control, the right-click menu and View ▸ Tidy all leave it alone.
+  it("offers nothing for a spot kept for a quote not on the board", async () => {
+    localStorage.setItem("bristlenose-screens-placements-1",
+      JSON.stringify({ "s1@12/q-gone": { kind: "edge", side: "R", frac: 0.4, z: 31 } }));
+    mockApi(screensResponse());
+    const { container } = render(<ScreensLens />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Shopping Bag"));
+    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
+    fireEvent.contextMenu(container.querySelector(".screens-stage")!);
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+});
+
+describe("focus after On p1's screen", () => {
+  it("lands in the card once it has a place in the margin", async () => {
+    const m = measured(900);
+    // As a browser does: an element under visibility:hidden takes no focus, silently.
+    const real = HTMLElement.prototype.focus;
+    const focus = vi.spyOn(HTMLElement.prototype, "focus").mockImplementation(function (this: HTMLElement, o?: FocusOptions) {
+      if (this.closest('[style*="visibility: hidden"]')) return;
+      real.call(this, o);
+    });
+    try {
+      mockVersions();
+      const c = await openVersions();
+      fireEvent.click(screen.getByRole("button", { name: "On p1’s screen" }));
+      await waitFor(() => expect(cardOf(c, "q-p1-10").contains(document.activeElement)).toBe(true));
+      expect(cardOf(c, "q-p1-10").closest(".screens-col")).not.toBeNull();
+    } finally {
+      focus.mockRestore();
+      m.restore();
+    }
+  });
+});
+
+describe("leaders after a glide", () => {
+  it("are measured again where the cards came to rest", async () => {
+    const m = measured(900);
+    let gliding = false;
+    const rect = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      const x = this.closest(".screens-col") ? 900 : this.closest(".screens-band") && gliding ? 500 : 0;
+      return { left: x, top: 0, right: x + 270, bottom: 100, width: 270, height: 100, x, y: 0, toJSON: () => ({}) } as DOMRect;
+    });
+    let land: () => void = () => {};
+    const finished = new Promise<void>((r) => (land = r));
+    (HTMLElement.prototype as unknown as Record<string, unknown>).animate = vi.fn(() => ({ finished }));
+    try {
+      mockApi(screensResponse());
+      const { container } = render(<ScreensLens />);
+      await waitFor(() => expect(container.querySelector(".screens-col-r .screens-card")).not.toBeNull());
+      gliding = true;
+      m.width.mockReturnValue(600);
+      resized();
+      const leader = () => container.querySelector("svg.screens-leaders path")?.getAttribute("d") ?? "";
+      await waitFor(() => expect(leader().startsWith("M512,")).toBe(true)); // measured mid-glide
+      gliding = false;
+      await act(async () => {
+        land();
+        await finished;
+      });
+      await waitFor(() => expect(leader().startsWith("M258,")).toBe(true));
+    } finally {
+      rect.mockRestore();
+      m.restore();
+      delete (HTMLElement.prototype as unknown as Record<string, unknown>).animate;
+    }
+  });
+});
+
+describe("stills", () => {
+  it("fetches and mounts only the showing slide and its neighbours", async () => {
+    const five = screensResponse({
+      screens: [{ key: "url:/x", name: "/x", quotes: 2, default_tab: 0,
+        tabs: [1, 2, 3, 4, 5].map((k) => ({ ...TAB, session_id: `s${k}`, code: `p${k}`, t: 10 * k })) }],
+    });
+    mockApi(five);
+    const { container } = render(<ScreensLens />);
+    await waitFor(() => expect(container.querySelectorAll(".screens-slide")).toHaveLength(3));
+    const asked = () => new Set(vi.mocked(apiGet).mock.calls.map(([p]) => String(p))
+      .filter((p) => p.includes("&w=1600&")).map((p) => /session_id=(s\d)/.exec(p)![1]));
+    expect(asked()).toEqual(new Set(["s1", "s2", "s5"]));
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    await waitFor(() => expect(asked()).toEqual(new Set(["s1", "s2", "s3", "s5"])));
+    expect(container.querySelectorAll(".screens-slide")).toHaveLength(3);
   });
 });

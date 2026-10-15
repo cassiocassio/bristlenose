@@ -771,6 +771,15 @@
     "arrangementCustomTidy": "Arrangement: Custom. Tidy",
     "arrangementAutomatic": "Arrangement: Automatic",
     "returnToAutomatic": "Return to automatic",
+    "slideCaption": "{{code}}\u2019s screen at {{time}} \u00b7 {{n}} of {{total}}",
+    "previousScreengrab": "Previous screengrab",
+    "nextScreengrab": "Next screengrab",
+    "whoseQuotes": "Whose quotes",
+    "onScreen": "On {{code}}\u2019s screen",
+    "sequence": "{{code}}, quote {{n}} of {{total}}",
+    "versionsLabel": "Versions of this screen",
+    "carouselRole": "carousel",
+    "versionsKeys": "\u2190 and \u2192 turn between versions",
     "subtitle_one": "{{count}}\u00a0Screen",
     "subtitle_other": "{{count}}\u00a0Screens"
   }

@@ -753,6 +753,15 @@
     "arrangementCustomTidy": "\u914d\u7f6e: \u30ab\u30b9\u30bf\u30e0\u3002\u6574\u9813",
     "arrangementAutomatic": "\u914d\u7f6e: \u81ea\u52d5",
     "returnToAutomatic": "\u81ea\u52d5\u914d\u7f6e\u306b\u623b\u3059",
+    "slideCaption": "{{time}} \u6642\u70b9\u306e {{code}} \u306e\u753b\u9762 \u00b7 {{n}}/{{total}}",
+    "previousScreengrab": "\u524d\u306e\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8",
+    "nextScreengrab": "\u6b21\u306e\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8",
+    "whoseQuotes": "\u8ab0\u306e\u767a\u8a00\u304b",
+    "onScreen": "{{code}} \u306e\u753b\u9762\u306b\u8868\u793a",
+    "sequence": "{{code}}\u3001\u767a\u8a00 {{n}}/{{total}}",
+    "versionsLabel": "\u3053\u306e\u753b\u9762\u306e\u30d0\u30fc\u30b8\u30e7\u30f3",
+    "carouselRole": "\u30ab\u30eb\u30fc\u30bb\u30eb",
+    "versionsKeys": "\u2190 \u3068 \u2192 \u3067\u30d0\u30fc\u30b8\u30e7\u30f3\u3092\u5207\u308a\u66ff\u3048",
     "subtitle_other": "{{count}}\u00a0\u753b\u9762"
   }
 }

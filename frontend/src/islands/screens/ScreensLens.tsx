@@ -1,6 +1,7 @@
 /**
- * The Screens lens: every screen the participants were on, a large screengrab of
- * each, and the quotes said there floating beside it, pinned to the on-screen line they read.
+ * The Screens lens: every screen the participants were on, a large screengrab of each, and every
+ * quote said there around it — the ones whose words are on the screengrab in its margins, joined to
+ * the line they read by a leader, the rest in a list under it.
  *
  * docs/design-screens.md S5. Data from GET /screens (server/routes/screens.py), stills from
  * GET /screens/still. Quotes are the report's own: the lens joins the screens' DOM ids to the
@@ -12,11 +13,17 @@
  * and hidden like the guide, navPanel.ts), the zone title on the shared datum
  * (`.center > main > section:first-of-type > .section-heading`), the same key guards.
  *
+ * A screen is one place for everything about it: every participant's version of it is a slide in
+ * the backdrop carousel (carousel.ts), and the quote set is the same whichever slide shows. The
+ * slide decides only which quotes are LINKED — on its screengrab, so in a margin with a leader —
+ * and the person chips decide only whose quotes are in front. Placement is layout.ts; per-person
+ * sequence and the J/K step are narrative.ts.
+ *
  * Offered when the project has screens, or recordings still being read (availability.ts, the one
  * rule the nav and the Mac's lens rail follow). Every sentence is a `screens.*` locale key.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import { Counter, type CounterItem } from "../../components/Counter";
@@ -52,25 +59,31 @@ import { deriveTagVisibility, type TagGroupMeta } from "../../utils/tagVisibilit
 import type { QuoteResponse, QuotesListResponse } from "../../utils/types";
 import { QuoteCard } from "../QuoteCard";
 import {
-  arrangeColumn,
   arrangementVersion,
   boardColumns,
   CARD_W,
+  cardEdge,
   clearPlacement,
+  composeBoard,
   leaderPath,
   placementFromDrop,
   placementsFor,
   putPlacement,
   setPlacements,
-  sideFor,
+  stageMode,
   subscribeArrangement,
   stillKey,
   topZ,
-  WIDE_STAGE,
-  type Side,
+  type BoardCard,
+  type Composition,
+  type Edge,
+  type Mode,
   type Placement,
 } from "./layout";
+import { dotWindow, Lru, makeSwipe, slideWindow } from "./carousel";
+import { peopleOf, sequenceByPerson, stepFrom, type Said, type Sequence } from "./narrative";
 import { markScreensFound } from "./availability";
+import { postScreensArrangement } from "../../shims/bridge";
 import { reportScreensNav, useScreensNav } from "./navPanel";
 import { setScreensCount } from "./screensCount";
 import "./screens.css";
@@ -100,6 +113,14 @@ interface Screen {
   name: string;
   quotes: number;
   tabs: ScreenTab[];
+  /** The slide to open on: the version that links the most quotes. Older servers omit it. */
+  default_tab?: number;
+}
+
+/** The slide a screen opens on. */
+function defaultTab(sc: Screen): number {
+  const d = sc.default_tab ?? 0;
+  return Number.isInteger(d) && d >= 0 && d < sc.tabs.length ? d : 0;
 }
 
 /** Why the lens cannot read screens at all (server/routes/screens.py). */
@@ -239,13 +260,44 @@ function focusLensHeading(lens: Element | null | undefined): void {
 
 // ── Stills ───────────────────────────────────────────────────────────────
 
-const stills = new Map<string, string>();
+// Data URIs, under an LRU: a board's screengrabs (1600px, the showing slide and its neighbours)
+// and the navigator's thumbnails (240px, three per row) in caches of their own, so scrolling the
+// navigator never evicts the board's stills.
+const boardStills = new Lru<string>(24);
+const thumbStills = new Lru<string>(96);
+const cacheFor = (url: string) => (url.includes("&w=240&") ? thumbStills : boardStills);
+const stills = {
+  get: (url: string) => cacheFor(url).get(url),
+  has: (url: string) => cacheFor(url).has(url),
+  set: (url: string, src: string) => cacheFor(url).set(url, src),
+};
 const stillFailed = new Set<string>();
 const stillWaiters = new Map<string, Promise<string | null>>();
 
 function stillUrl(tab: ScreenTab, w: number): string {
   const crop = tab.crop.map((v) => v.toFixed(4)).join(",");
   return `/screens/still?session_id=${encodeURIComponent(tab.session_id)}&t=${tab.t}&w=${w}&crop=${crop}`;
+}
+
+/** Fetch a still once, however many ask for it; null when there is none. */
+function fetchStill(url: string): Promise<string | null> {
+  let p = stillWaiters.get(url);
+  if (!p) {
+    p = apiGet<{ src: string }>(url)
+      .then((r) => {
+        stills.set(url, r.src);
+        return r.src;
+      })
+      .catch((e: Error) => {
+        // Shown in place of the screengrab: a missing still must not look like one still loading.
+        stillFailed.add(url);
+        console.warn("Screens: no still for", url, e);
+        return null;
+      })
+      .finally(() => stillWaiters.delete(url));
+    stillWaiters.set(url, p);
+  }
+  return p;
 }
 
 /** The still's data URI, or whether there is none (src null while it loads). */
@@ -255,23 +307,7 @@ function useStill(tab: ScreenTab | undefined, w: number): { src: string | null; 
   useEffect(() => {
     if (!url || stills.has(url)) return;
     let live = true;
-    let p = stillWaiters.get(url);
-    if (!p) {
-      p = apiGet<{ src: string }>(url)
-        .then((r) => {
-          stills.set(url, r.src);
-          return r.src;
-        })
-        .catch((e: Error) => {
-          // Shown in place of the screengrab: a missing still must not look like one still loading.
-          stillFailed.add(url);
-          console.warn("Screens: no still for", url, e);
-          return null;
-        })
-        .finally(() => stillWaiters.delete(url));
-      stillWaiters.set(url, p);
-    }
-    p.then((s) => {
+    fetchStill(url).then((s) => {
       if (live) setFetched({ url, src: s });
     });
     return () => {
@@ -281,6 +317,32 @@ function useStill(tab: ScreenTab | undefined, w: number): { src: string | null; 
   if (!url) return { src: null, failed: false };
   const src = stills.get(url) ?? (fetched?.url === url ? fetched.src : null);
   return { src, failed: !src && stillFailed.has(url) };
+}
+
+/** The showing slide and its neighbours (carousel.ts slideWindow), the showing one asked for
+ *  first; the others are neither fetched nor mounted. A turn shows a screengrab already loaded. */
+function useStills(tabs: ScreenTab[], cur: number, w: number): { src: string | null; failed: boolean; near: boolean }[] {
+  const near = new Set(slideWindow(tabs.length, cur));
+  const urls = tabs.map((tb) => stillUrl(tb, w));
+  const want = [cur, ...[...near].filter((j) => j !== cur)].map((j) => urls[j]).join("\n");
+  const [, loaded] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    let live = true;
+    for (const url of want.split("\n")) {
+      if (!url || stills.has(url) || stillFailed.has(url)) continue;
+      fetchStill(url).then(() => {
+        if (live) loaded();
+      });
+    }
+    return () => {
+      live = false;
+    };
+  }, [want]);
+  return urls.map((u, j) => {
+    if (!near.has(j)) return { src: null, failed: false, near: false };
+    const src = stills.get(u) ?? null;
+    return { src, failed: !src && stillFailed.has(u), near: true };
+  });
 }
 
 // ── The lens ─────────────────────────────────────────────────────────────
@@ -300,6 +362,28 @@ type RenderQuote = (q: QuoteResponse, phrase: string) => React.ReactNode;
 const NO_FLASH = new Set<string>();
 const noop = () => {};
 
+/** Which slide shows for `sid` on this screen: that session's version, else the screen's default. */
+function tabIndexOf(sc: Screen, sid: string | null): number {
+  const i = sc.tabs.findIndex((tb) => tb.session_id === sid);
+  return i >= 0 ? i : defaultTab(sc);
+}
+
+/** "p2's screen at 00:40 · 2 of 3", as plain text: what a turn of the carousel announces. */
+function slideCaptionText(tab: ScreenTab, j: number, total: number): string {
+  return i18n.t("screens.slideCaption", { code: tab.code, time: formatTimecode(tab.t), n: j + 1, total });
+}
+
+const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
+/** A card to focus once it can take focus; `seq` makes a second request for one card new. */
+interface FocusRequest {
+  dom: string;
+  seq: number;
+}
+
+/** Where focus goes when the board changes under it (see ScreensLens's layout effect). */
+type Refocus = "nav" | "carousel" | "lost";
+
 export function ScreensLens() {
   const { t } = useTranslation();
   const projectId = useProjectId();
@@ -318,7 +402,7 @@ export function ScreensLens() {
   const [tagInfo, setTagInfo] = useState<Record<string, TagInfo>>({});
   const [hasModerator, setHasModerator] = useState(false);
   const store = useQuotesStore();
-  const { selectedIds, clearSelection, registerVisibleQuoteIds } = useFocus();
+  const { selectedIds, clearSelection, registerVisibleQuoteIds, focusedId, setFocus } = useFocus();
   const { hiddenTagGroups, disabledFrameworks } = useSidebarStore();
 
   // Screens: polled while the job is still reading, capped, and re-read when the data moves.
@@ -407,29 +491,61 @@ export function ScreensLens() {
   const screens = useMemo(() => data?.screens ?? [], [data]);
   const cur = Math.max(0, screens.findIndex((sc) => sc.key === curKey));
   const screen = screens[cur];
-  const tabIdx = screen ? Math.max(0, screen.tabs.findIndex((tb) => tb.session_id === tabSid)) : 0;
+  const tabIdx = screen ? tabIndexOf(screen, tabSid) : 0;
+  const tab = screen?.tabs[tabIdx];
 
-  // The quotes on this board, in its reading order: the pinned ones down the screengrab, then the
-  // rest by time (as ScreenBoard lays them out). It is what a shift-click range runs over, and the
-  // only quotes a gesture on a selection may reach: a selection made on the Quotes lens survives
-  // the route change, and starring one card must not star twenty quotes nobody can see here.
-  const boardOrder = useMemo(() => {
+  // Everything said on this screen, by every participant on it, once each, in time order: the same
+  // set whichever slide is showing (a screen is one place for everything about it). Hidden quotes
+  // are not on the board. It is also the only set a gesture on a selection may reach: a selection
+  // made on the Quotes lens survives the route change, and starring one card must not star twenty
+  // quotes nobody can see here.
+  const said = useMemo(() => {
     if (!screen) return [];
-    const tab = screen.tabs[tabIdx];
-    const shown = (d: string) => byId.has(d) && !store.hidden[d];
-    const pinned = tab.pins.filter((p) => shown(p.dom_id)).sort((a, b) => a.box[1] - b.box[1]).map((p) => p.dom_id);
-    const seen = new Set(pinned);
-    const rest = screen.tabs
+    return screen.tabs
       .flatMap((tb) => [...tb.pins.map((p) => p.dom_id), ...tb.loose])
-      .filter((d, i, a) => a.indexOf(d) === i && !seen.has(d) && shown(d))
+      .filter((d, i, a) => a.indexOf(d) === i && byId.has(d) && !store.hidden[d])
       .sort((a, b) => byId.get(a)!.start_timecode - byId.get(b)!.start_timecode);
-    return [...pinned, ...rest];
-  }, [screen, tabIdx, byId, store.hidden]);
+  }, [screen, byId, store.hidden]);
+  const saidBy = useMemo<Said[]>(
+    () => said.map((d) => ({ id: d, person: byId.get(d)!.participant_id, t: byId.get(d)!.start_timecode })),
+    [said, byId],
+  );
+  const people = useMemo(() => peopleOf(saidBy), [saidBy]);
+  const sequence = useMemo(() => sequenceByPerson(saidBy), [saidBy]);
+
+  // The person chips: whose quotes are in front. They never turn the carousel — the carousel says
+  // whose screenshot, the chips whose quotes. Kept per screen; a screen opens with everyone's.
+  const [chips, setChips] = useState<{ key: string; on: string[] }>({ key: "", on: [] });
+  const chosen = useMemo(
+    () => new Set(chips.key === screen?.key ? chips.on.filter((p) => people.includes(p)) : []),
+    [chips, screen, people],
+  );
+  const toggleChip = useCallback(
+    (person: string) => {
+      if (!screen) return;
+      setChips((c) => {
+        const on = c.key === screen.key ? c.on : [];
+        return { key: screen.key, on: on.includes(person) ? on.filter((p) => p !== person) : [...on, person] };
+      });
+    },
+    [screen],
+  );
+
+  // The narrative: this screen's quotes in time order, only the chosen people's while a chip is on.
+  // It is J/K's list and nothing else's.
+  const stepOrder = useMemo(
+    () => (chosen.size ? said.filter((d) => chosen.has(byId.get(d)!.participant_id)) : said),
+    [said, chosen, byId],
+  );
+  // The visible quotes, for the report's per-quote keys (s/h/t/r/x/Enter scope to them on this lens),
+  // a shift-click range and ⌘A: every card the board shows, dimmed ones included. A chip says whose
+  // quotes are in front, not which exist — a dimmed card still takes a click, so it takes a key, and
+  // ⌘A selects it.
   useEffect(() => {
-    registerVisibleQuoteIds("screens", boardOrder);
+    registerVisibleQuoteIds("screens", said);
     // Registers empty rather than deleting, as QuoteSections does, so the slot outlives a remount.
     return () => registerVisibleQuoteIds("screens", []);
-  }, [registerVisibleQuoteIds, boardOrder]);
+  }, [registerVisibleQuoteIds, said]);
 
   // The window subtitle's count, and what the Mac reads for its View menu and column fit.
   useEffect(() => {
@@ -442,27 +558,30 @@ export function ScreensLens() {
     reportScreensNav(navShown, (navPanel.wish ? NAV_W : 0) + CONTENT_FLOOR_PX);
   }, [navShown, navPanel.wish]);
 
-  // Changing the board remounts it, and focus inside it would fall to the page. Where focus was
-  // decides where it goes: on a navigator link it moves to the link that is now current; on a
-  // participant button, to the one now pressed; anywhere else on the board, to the new board's
-  // title. Focus outside the lens is left alone.
+  // Changing screen remounts the board, and focus inside it would fall to the page; turning the
+  // carousel keeps the board but can move a card from a margin to the list (a remount of that card).
+  // Where focus was decides where it goes: on a navigator link, to the link that is now current; in
+  // the carousel, to the carousel; anywhere else on the board, nowhere if it survived, else the
+  // board's title. Focus outside the lens is left alone. "On p2's screen" is the board's to settle
+  // (`focusRequest`): the card it moves is hidden until placement gives it a spot.
   const lensRef = useRef<HTMLElement>(null);
-  const refocus = useRef<"nav" | "who" | "heading" | null>(null);
-  const boardKey = screen ? `${screen.key}|${screen.tabs[tabIdx]?.session_id}|${screen.tabs[tabIdx]?.t}` : "";
+  const refocus = useRef<{ want: Refocus; from: Element | null } | null>(null);
+  const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
+  const boardKey = screen && tab ? `${screen.key}|${tab.session_id}|${tab.t}` : "";
   useLayoutEffect(() => {
-    const want = refocus.current;
+    const r = refocus.current;
     refocus.current = null;
     const lens = lensRef.current;
-    if (!want || !lens) return;
-    if (want === "nav") {
-      lens.querySelector<HTMLElement>('.screens-nav a[aria-current="true"]')?.focus({ preventScroll: true });
-      return;
-    }
-    const pressed = want === "who" ? lens.querySelector<HTMLElement>('.screens-who button[aria-pressed="true"]') : null;
-    if (pressed) {
-      pressed.focus({ preventScroll: true });
-      return;
-    }
+    if (!r || !lens) return;
+    const at = (el: HTMLElement | null | undefined) => {
+      if (!el) return false;
+      el.focus({ preventScroll: true });
+      return true;
+    };
+    if (r.want === "nav" && at(lens.querySelector<HTMLElement>('.screens-nav a[aria-current="true"]'))) return;
+    if (r.want === "carousel" && at(lens.querySelector<HTMLElement>('.screens-carousel[tabindex="0"]'))) return;
+    const now = document.activeElement;
+    if (now && now !== document.body && lens.contains(now)) return; // it survived
     const h1 = lens.querySelector<HTMLElement>(":scope > .section-heading h1");
     if (h1) {
       h1.tabIndex = -1; // a focus target, not a tab stop
@@ -470,52 +589,118 @@ export function ScreensLens() {
     }
   }, [boardKey]);
 
-  // Moving to another screen, or to another participant's view of this one, is announced: the
-  // board changes under a screen reader with nothing else to say so.
+  // Moving to another screen, or turning the carousel, is announced: the board changes under a
+  // screen reader with nothing else to say so.
   const go = useCallback(
-    (i: number, j = 0) => {
+    (i: number, j?: number, focusCard?: string) => {
       if (!screens.length) return;
       const n = screens.length;
       const at = ((i % n) + n) % n;
       const next = screens[at];
-      const tab = next.tabs[Math.min(j, next.tabs.length - 1)];
+      const same = next.key === screen?.key;
+      const jj = Math.min(Math.max(0, j ?? (same ? tabIdx : defaultTab(next))), next.tabs.length - 1);
+      const nextTab = next.tabs[jj];
       const active = document.activeElement;
       const lens = lensRef.current;
-      const moving = `${next.key}|${tab?.session_id}|${tab?.t}` !== boardKey;
-      refocus.current =
-        moving && active instanceof Element && lens?.contains(active)
-          ? active.closest(".screens-nav") ? "nav" : active.closest(".screens-who") ? "who" : "heading"
-          : null;
+      const moving = `${next.key}|${nextTab?.session_id}|${nextTab?.t}` !== boardKey;
+      let want: Refocus | null = null;
+      if (focusCard) setFocusRequest((r) => ({ dom: focusCard, seq: (r?.seq ?? 0) + 1 }));
+      else if (moving && active instanceof Element && lens?.contains(active)) {
+        want = active.closest(".screens-nav") ? "nav" : active.closest(".screens-carousel") ? "carousel" : "lost";
+      }
+      refocus.current = want ? { want, from: active } : null;
       setCurKey(next.key);
-      setTabSid(tab?.session_id ?? null);
-      // Where focus moves, the newly focused title, link or button says where we are; announcing
+      setTabSid(nextTab?.session_id ?? null);
+      if (!moving || !nextTab) return;
+      if (same) {
+        // A turn of the carousel: say which slide ("2 of 3"), wherever focus is — it mostly stays.
+        announce(slideCaptionText(nextTab, jj, next.tabs.length));
+        // The card that asked for this slide is now linked: bring it forward and light its line.
+        if (focusCard) setFocus(focusCard, { scroll: false });
+        return;
+      }
+      // Where focus moves, the newly focused title, link or carousel says where we are; announcing
       // as well would say it twice.
       if (refocus.current) return;
-      if (next.key === screen?.key) {
-        if (tab) announce(i18n.t("screens.announceParticipant", { code: tab.code }));
-      } else {
-        announce(i18n.t("screens.announceScreen", { title: screenTitle(next, tab), n: at + 1, total: n }));
-      }
+      announce(i18n.t("screens.announceScreen", { title: screenTitle(next, nextTab), n: at + 1, total: n }));
     },
-    [screens, screen, boardKey],
+    [screens, screen, tabIdx, boardKey, setFocus],
+  );
+  const flip = useCallback(
+    (dir: 1 | -1) => {
+      if (!screen || screen.tabs.length < 2) return;
+      go(cur, (tabIdx + dir + screen.tabs.length) % screen.tabs.length);
+    },
+    [go, cur, tabIdx, screen],
+  );
+  // J/K: the next quote in the narrative, brought forward (FocusContext's focus: the card rises and
+  // its line lights) and scrolled into view. It moves as moveFocus does (narrative.ts stepFrom), but
+  // over `stepOrder`, not the registered visible quotes.
+  const step = useCallback(
+    (dir: 1 | -1) => {
+      const next = stepFrom(stepOrder, focusedId, dir);
+      if (next && next !== focusedId) setFocus(next);
+    },
+    [stepOrder, focusedId, setFocus],
   );
 
-  // ↑/↓ change screen, ←/→ change whose screen it is.
+  // Keys: ↑/↓ change screen, ←/→ turn the carousel, J/K step through the quotes.
+  //
+  // How these meet the report's global handler (hooks/useKeyboardShortcuts.ts): on Screens it
+  // returns early for the arrows and j/k, so this lens owns them, and it ignores Next/Previous
+  // Quote from the menu here (the lens answers those below). What the global handler does handle
+  // on Screens is the per-quote keys — s/h/t/r/x/Enter — scoped to the cards this lens registers
+  // (`said`). Every key here is still under keyIsOurs, whose first test is `defaultPrevented`, and
+  // every key taken is preventDefault()ed.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!screen || !keyIsOurs(e)) return;
-      // With one screen there is nowhere to go: leave ↑/↓ to scroll the page.
-      if (e.key === "ArrowDown" && screens.length > 1) go(cur + 1);
-      else if (e.key === "ArrowUp" && screens.length > 1) go(cur - 1);
-      else if (e.key === "ArrowRight" && screen.tabs.length > 1) go(cur, (tabIdx + 1) % screen.tabs.length);
-      else if (e.key === "ArrowLeft" && screen.tabs.length > 1)
-        go(cur, (tabIdx - 1 + screen.tabs.length) % screen.tabs.length);
+      const k = e.key;
+      // With one screen there is nowhere to go: leave ↑/↓ to scroll the page. Likewise ←/→ with one
+      // version of the screen.
+      if (k === "ArrowDown" && screens.length > 1) go(cur + 1);
+      else if (k === "ArrowUp" && screens.length > 1) go(cur - 1);
+      else if (k === "ArrowRight" && screen.tabs.length > 1) flip(1);
+      else if (k === "ArrowLeft" && screen.tabs.length > 1) flip(-1);
+      else if ((k === "j" || k === "k") && !e.shiftKey && stepOrder.length) step(k === "j" ? 1 : -1);
       else return;
       e.preventDefault();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [go, cur, tabIdx, screen, screens.length]);
+  }, [go, flip, step, cur, screen, screens.length, stepOrder.length]);
+
+  // The Mac's View menu (and anything else on the bridge) drives the same steps by name
+  // (shims/bridge.ts dispatches `bn:menu-action`). Tidy is the board's own (ScreenBoard).
+  useEffect(() => {
+    const onMenu = (e: Event) => {
+      if (!screen) return;
+      switch ((e as CustomEvent<{ action?: string }>).detail?.action) {
+        case "nextScreen":
+          if (screens.length > 1) go(cur + 1);
+          break;
+        case "previousScreen":
+          if (screens.length > 1) go(cur - 1);
+          break;
+        case "nextScreenshot":
+          flip(1);
+          break;
+        case "previousScreenshot":
+          flip(-1);
+          break;
+        case "nextQuote":
+          step(1);
+          break;
+        case "previousQuote":
+          step(-1);
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener("bn:menu-action", onMenu);
+    return () => window.removeEventListener("bn:menu-action", onMenu);
+  }, [go, flip, step, cur, screen, screens.length]);
 
   // ── The card's gestures: QuoteGroup's, so a selection acts as one ──
   const vis = useMemo(
@@ -524,8 +709,8 @@ export function ScreensLens() {
   );
   /** The selection the clicked card belongs to, narrowed to this board; else the card alone. */
   const targets = useCallback(
-    (domId: string) => (selectedIds.has(domId) ? boardOrder.filter((d) => selectedIds.has(d)) : [domId]),
-    [selectedIds, boardOrder],
+    (domId: string) => (selectedIds.has(domId) ? said.filter((d) => selectedIds.has(d)) : [domId]),
+    [selectedIds, said],
   );
   const onToggleStar = useCallback(
     (domId: string, on: boolean) => {
@@ -658,14 +843,24 @@ export function ScreensLens() {
     >
       {navShown && <ScreenNav screens={screens} cur={cur} onPick={(i) => go(i)} byId={byId} hidden={store.hidden} />}
       {screen && (
+        // Keyed by the screen alone: turning the carousel keeps the board (and its cross-fade, its
+        // swipe lock, a selected card); another screen is another board.
         <ScreenBoard
-          key={boardKey}
+          key={screen.key}
           projectId={projectId}
           screen={screen}
           tabIdx={tabIdx}
-          onTab={(j) => go(cur, j)}
+          onFlip={(j) => go(cur, j)}
+          onShowOn={(dom, j) => go(cur, j, dom)}
           byId={byId}
           store={store}
+          said={said}
+          sequence={sequence}
+          people={people}
+          chosen={chosen}
+          onChip={toggleChip}
+          focusedId={focusedId}
+          focusRequest={focusRequest}
           problems={problemNotes(data)}
           renderQuote={renderQuote}
         />
@@ -805,9 +1000,22 @@ interface BoardProps {
   projectId: string;
   screen: Screen;
   tabIdx: number;
-  onTab: (j: number) => void;
+  /** Turn the carousel to slide `j`. */
+  onFlip: (j: number) => void;
+  /** Turn to slide `j`, where card `dom` is linked, and bring it forward. */
+  onShowOn: (dom: string, j: number) => void;
   byId: Map<string, QuoteResponse>;
   store: ReturnType<typeof useQuotesStore>;
+  /** Every quote on this screen, once each, in time order (hidden ones not). */
+  said: string[];
+  sequence: Record<string, Sequence>;
+  people: string[];
+  /** The people whose quotes are in front; empty is everyone's. */
+  chosen: Set<string>;
+  onChip: (person: string) => void;
+  focusedId: string | null;
+  /** Move keyboard focus into this card once it has a place (after "On p2's screen"). */
+  focusRequest: FocusRequest | null;
   /** Recordings that could not be read or held no text: a plain list, never live. */
   problems: string[];
   renderQuote: RenderQuote;
@@ -815,12 +1023,17 @@ interface BoardProps {
 
 interface Geometry {
   stageW: number;
+  /** The showing screengrab's size, and where it sits in the board. */
   W: number;
   H: number;
   sx: number;
   sy: number;
-  colW: number;
+  /** Two columns, one, or rows: changes only at a threshold, with hysteresis (layout.ts). */
+  mode: Mode;
 }
+
+const sameGeometry = (a: Geometry, b: Geometry) =>
+  a.stageW === b.stageW && a.W === b.W && a.H === b.H && a.sx === b.sx && a.sy === b.sy && a.mode === b.mode;
 
 interface Drag {
   dom: string;
@@ -830,25 +1043,74 @@ interface Drag {
   z: number;
 }
 
+interface Laid {
+  comp: Composition;
+  /** The side columns' height: the screengrab's, or more where a column runs past it. */
+  colH: number;
+  /** The board's least height, so a card dropped low over the screengrab is not cut off. */
+  boardMin: number;
+}
+
+/** How long a card glides from its old place to its new one when the layout changes mode (ms). */
+const GLIDE_MS = 260;
+
+const boxOf = (p: Pin) => ({ x: p.box[0], y: p.box[1], w: p.box[2], h: p.box[3] });
+
+/** A card's person and place among that person's quotes here: seen as a badge, heard as a sentence. */
+function SequenceMark({ seq }: { seq: Sequence }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <span className="screens-seq" aria-hidden="true">
+        <span className="screens-seq-code">{seq.person}</span>
+        <span className="screens-seq-n">{seq.n}</span>
+      </span>
+      <span className="bn-sr-only">{t("screens.sequence", { code: seq.person, n: seq.n, total: seq.total })}</span>
+    </>
+  );
+}
+
 function ScreenBoard(props: BoardProps) {
   const { t } = useTranslation();
-  const { projectId, screen, tabIdx, byId, store } = props;
+  const { projectId, screen, tabIdx, byId, store, said, sequence, people, chosen } = props;
   const { setFocus } = useFocus();
   const tab = screen.tabs[tabIdx];
+  const total = screen.tabs.length;
+  const multi = total > 1;
   const still = stillKey(tab.session_id, tab.t);
-  const { src, failed: stillFailed } = useStill(tab, 1600);
+  const slides = useStills(screen.tabs, tabIdx, 1600);
+  const { src, failed: stillFailed } = slides[tabIdx];
   const stageRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const shotRef = useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
   const cardEls = useRef(new Map<string, HTMLElement>());
   const [geo, setGeo] = useState<Geometry | null>(null);
-  const [tops, setTops] = useState<Record<string, { top: number; z: number }>>({});
-  const [stacked, setStacked] = useState<Record<Side, boolean>>({ L: false, R: false });
-  const [colH, setColH] = useState(0);
-  const [leaders, setLeaders] = useState<{ id: string; d: string; end: [number, number] }[]>([]);
+  const [laid, setLaid] = useState<Laid | null>(null);
+  const settled = useRef(false);
+  const [leaders, setLeaders] = useState<{ id: string; d: string; end: [number, number]; muted: boolean }[]>([]);
+  // Bumped when a glide ends, so the leaders are measured again where the cards came to rest.
+  const [, setGlides] = useState(0);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
   // The selected card: a press or keyboard focus selects it, never hover (the owner, 14 Oct 2026,
-  // docs/design-screens.md §6.8). Selecting raises it and nothing else: a card keeps one size.
-  const [lifted, setLifted] = useState<string | null>(null);
+  // docs/design-screens.md §6.8). Selecting raises it and nothing else: a card keeps one size. A
+  // press is remembered with the report's focus at that moment: once focus moves (J/K, Next Quote,
+  // Escape through the report's own cascade, which takes Escape before the board can), the press
+  // is stale and the focused card is the one in front.
+  const [pressed, setPressed] = useState<{ id: string; focus: string | null } | null>(null);
+  const focusNow = useRef(props.focusedId);
+  useLayoutEffect(() => {
+    focusNow.current = props.focusedId;
+  });
+  const lift = useCallback((id: string | null) => setPressed(id ? { id, focus: focusNow.current } : null), []);
+  const unlift = useCallback((id: string) => setPressed((p) => (p?.id === id ? null : p)), []);
+  const lifted = pressed && pressed.focus === props.focusedId ? pressed.id : null;
   const [drag, setDrag] = useState<Drag | null>(null);
   // The researcher's arrangement of this screengrab, as intent (layout.ts): re-read on every write,
   // including an undo of Tidy made after the board has moved on.
@@ -865,118 +1127,130 @@ function ScreenBoard(props: BoardProps) {
   const [hiddenOpen, setHiddenOpen] = useState(false);
 
   const visible = (dom: string) => byId.has(dom) && !store.hidden[dom];
-  // No screengrab to pin to: the pinned quotes join the others rather than waiting, hidden, for it.
-  const pins = stillFailed ? [] : tab.pins.filter((p) => visible(p.dom_id));
-  const pinByDom = new Map(pins.map((p) => [p.dom_id, p]));
-  // Everything else said on this screen, by every participant on it.
-  const shownPins = new Set(pins.map((p) => p.dom_id));
-  const rest = screen.tabs
-    .flatMap((tb) => [...tb.pins.map((p) => p.dom_id), ...tb.loose])
-    .filter((d, i, a) => a.indexOf(d) === i && !shownPins.has(d) && visible(d))
-    .sort((a, b) => (byId.get(a)!.start_timecode - byId.get(b)!.start_timecode));
-  const mine = Object.fromEntries(Object.entries(placements).filter(([d]) => visible(d))) as Record<string, Placement>;
-  const custom = Object.keys(mine).length > 0;
+  const onScreen = useMemo(() => new Set(said), [said]);
+  // LINKED: the quotes whose words are on the screengrab showing — this slide's pins, and only
+  // these. A quote linked on another participant's version is listed under it, offering that
+  // version ("On p2's screen"). No screengrab to pin to: nothing is linked.
+  const pins = useMemo(() => {
+    if (stillFailed) return [];
+    const seen = new Set<string>();
+    return tab.pins.filter((p) => {
+      if (seen.has(p.dom_id) || !byId.has(p.dom_id) || store.hidden[p.dom_id]) return false;
+      seen.add(p.dom_id);
+      return true;
+    });
+  }, [tab, stillFailed, byId, store.hidden]);
+  const pinByDom = useMemo(() => new Map(pins.map((p) => [p.dom_id, p])), [pins]);
+  // For an unlinked card: the first other version whose screengrab links it.
+  const linkedOn = useMemo(() => {
+    const m = new Map<string, number>();
+    screen.tabs.forEach((tb, j) => {
+      if (j !== tabIdx) for (const p of tb.pins) if (!m.has(p.dom_id)) m.set(p.dom_id, j);
+    });
+    return m;
+  }, [screen, tabIdx]);
+  const personOf = (d: string) => byId.get(d)?.participant_id ?? "";
+  // A person chip on: the other people's cards step back (by colour, as a selection's do).
+  const muted = (d: string) => chosen.size > 0 && !chosen.has(personOf(d));
+  // The researcher's arrangement of the cards on the board: what the arrangement control, the
+  // right-click menu and the Mac's View ▸ Tidy all count, so the three agree.
+  const arranged = Object.fromEntries(Object.entries(placements).filter(([d]) => visible(d))) as Record<string, Placement>;
+  const custom = Object.keys(arranged).length > 0;
+  // A placed card is placed against the screengrab. Without one to measure (it failed to load, or
+  // has no size yet) a placed card is listed with the rest, not held hidden for a spot that never
+  // comes.
+  const placeable = !!geo && geo.H > 0;
+  const mine: Record<string, Placement> = placeable ? arranged : {};
   // Over the screengrab: where the researcher dropped it. Beside it: a placed card's intent.
   const over = new Set(Object.keys(mine).filter((d) => mine[d].kind === "over"));
-  const edge = Object.keys(mine).filter((d) => mine[d].kind === "edge");
-  // A card being dragged leaves its column (or the list) for the free layer until it is dropped.
-  const dragOutOfColumn = drag && !over.has(drag.dom) ? drag.dom : null;
-  const hiddenHere = screen.tabs
-    .flatMap((tb) => [...tb.pins.map((p) => p.dom_id), ...tb.loose])
-    .filter((d, i, a) => a.indexOf(d) === i && byId.has(d) && store.hidden[d]);
+  // A card being dragged leaves its edge (or the list) for the free layer until it is dropped.
+  const dragOut = drag && !over.has(drag.dom) ? drag.dom : null;
+  const hiddenHere = useMemo(() => {
+    const seen = new Set<string>();
+    for (const tb of screen.tabs) {
+      for (const d of [...tb.pins.map((p) => p.dom_id), ...tb.loose]) if (byId.has(d) && store.hidden[d]) seen.add(d);
+    }
+    return [...seen];
+  }, [screen, byId, store.hidden]);
+  // The selected card: pressed or focused here, else the report's focused quote if it is on this
+  // board (J/K, Next Quote) — it comes forward and its line lights.
+  const lit = lifted ?? (props.focusedId && onScreen.has(props.focusedId) ? props.focusedId : null);
 
-  // Measure the stage and the screengrab.
+  const mode: Mode = geo?.mode ?? "r";
+  // The cards on the edges: every card the researcher placed beside the screengrab, and every linked
+  // card they did not place. Placed cards win their spot; the rest are automatic (layout.ts).
+  const edgeCards: BoardCard[] = [
+    ...Object.keys(mine).flatMap((d): BoardCard[] => {
+      const p = mine[d];
+      return p.kind === "edge" && d !== dragOut ? [{ id: d, height: 0, placed: { side: p.side, frac: p.frac, z: p.z } }] : [];
+    }),
+    ...pins.filter((p) => !(p.dom_id in mine) && p.dom_id !== dragOut).map((p) => ({ id: p.dom_id, height: 0, anchor: boxOf(p) })),
+  ];
+  const edgeOf = new Map(edgeCards.map((c) => [c.id, cardEdge(c, mode)]));
+  const onEdge = (e: Edge) => edgeCards.filter((c) => edgeOf.get(c.id) === e).map((c) => c.id);
+  const columns = boardColumns(mode, { L: onEdge("L").length > 0, R: onEdge("R").length > 0 });
+  // Everything else said here: under the screengrab, in time order.
+  const listed = said.filter((d) => !pinByDom.has(d) && !(d in mine) && d !== dragOut);
+
+  // Measure the stage and the showing screengrab, and pick the mode (with hysteresis: the previous
+  // mode is part of the answer).
+  const measure = useCallback(() => {
+    const stage = stageRef.current, shot = shotRef.current;
+    if (!stage || !shot) return;
+    const img = shot.querySelector<HTMLImageElement>("img.is-current");
+    const stageW = stage.clientWidth;
+    const W = img?.clientWidth ?? shot.clientWidth;
+    const H = img?.clientHeight ?? 0;
+    setGeo((old) => {
+      const g = { stageW, W, H, sx: shot.offsetLeft, sy: shot.offsetTop, mode: stageMode(stageW, old?.mode) };
+      return old && sameGeometry(old, g) ? old : g;
+    });
+  }, []);
   useLayoutEffect(() => {
-    const measure = () => {
-      const stage = stageRef.current, shot = shotRef.current, board = boardRef.current;
-      if (!stage || !shot || !board) return;
-      const img = shot.querySelector("img");
-      const W = img?.clientWidth ?? shot.clientWidth;
-      const H = img?.clientHeight ?? 0;
-      const g = { stageW: stage.clientWidth, W, H, sx: shot.offsetLeft, sy: shot.offsetTop, colW: CARD_W };
-      setGeo((old) => (old && JSON.stringify(old) === JSON.stringify(g) ? old : g));
-    };
     measure();
     const ro = new ResizeObserver(measure);
     if (stageRef.current) ro.observe(stageRef.current);
     if (shotRef.current) ro.observe(shotRef.current);
     return () => ro.disconnect();
-  }, [src]);
+  }, [measure, src]);
 
-  const wide = (geo?.stageW ?? 0) >= WIDE_STAGE;
-  const sideOf = (p: Pin): Side => sideFor({ x: p.box[0], y: p.box[1], w: p.box[2], h: p.box[3] }, wide);
-  // Automatic placement: beside the screengrab in up to two columns, never over it; on a stage too
-  // narrow for a column beside a legible screengrab, the pinned cards lead the list under it. A card
-  // the researcher placed keeps its side and its place down the edge; where its side has no column
-  // (one column, on the right) it goes to the right, and with no columns it leads the list.
-  const unfree = pins.filter((p) => !(p.dom_id in mine)).sort((a, b) => a.box[1] - b.box[1]);
-  const edgeSide = (d: string): Side => {
-    const p = mine[d];
-    return p.kind === "edge" && p.side === "L" && wide ? "L" : "R";
-  };
-  const fracOf = (d: string) => {
-    const p = mine[d];
-    return p.kind === "edge" ? p.frac : 0;
-  };
-  const columns = boardColumns(geo?.stageW ?? 0, {
-    L: unfree.some((p) => sideOf(p) === "L") || edge.some((d) => edgeSide(d) === "L"),
-    R: unfree.some((p) => sideOf(p) === "R") || edge.some((d) => edgeSide(d) === "R"),
-  });
-  const besides = columns !== "none";
-  const sideOfCard = (d: string): Side => (d in mine ? edgeSide(d) : sideOf(pinByDom.get(d)!));
-  const columnIds = besides ? [...edge, ...unfree.map((p) => p.dom_id)] : [];
-  const edgeInOrder = [...edge].sort((a, b) => fracOf(a) - fracOf(b) || mine[a].z - mine[b].z);
-  const unplacedRest = rest.filter((d) => !(d in mine));
-  const listed = besides ? unplacedRest : [...edgeInOrder, ...unfree.map((p) => p.dom_id), ...unplacedRest];
-
-  // Place the columns once the cards have heights. Deliberately runs after every render (a card's
-  // height changes with tags, edits and width) and sets state only when the placement changes.
+  // Place the edges once the cards have heights. Deliberately runs after every render (a card's
+  // height changes with tags, edits and width; a band's height moves the screengrab down) and sets
+  // state only when the placement changes. `settled` says this commit's placement held, which is
+  // when the glide below may measure where everything went.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
-    if (!geo || !geo.H) return;
-    const next: Record<string, { top: number; z: number }> = {};
-    const nextStacked: Record<Side, boolean> = { L: false, R: false };
-    let bottom = geo.H;
-    for (const side of ["L", "R"] as Side[]) {
-      const ids = columnIds.filter((d) => sideOfCard(d) === side && d !== dragOutOfColumn);
-      const cards = ids.map((d) => {
-        const pin = pinByDom.get(d);
-        const placedHere = d in mine;
-        return {
-          id: d,
-          height: cardEls.current.get(d)?.offsetHeight ?? 120,
-          want: placedHere
-            ? Math.max(0, fracOf(d) * geo.H)
-            : Math.max(0, (pin!.box[1] + pin!.box[3] / 2) * geo.H - 20),
-          placed: placedHere,
-          z: placedHere ? mine[d].z : 0,
-        };
-      });
-      const { tops: t, stacked: st, bottom: b } = arrangeColumn(cards, geo.H);
-      [...ids].sort((a, b2) => t[a] - t[b2]).forEach((d, i) => (next[d] = { top: t[d], z: 2 + i }));
-      nextStacked[side] = st;
-      bottom = Math.max(bottom, b);
+    measure();
+    if (!geo || !geo.H) {
+      settled.current = false;
+      return;
     }
+    const cards = edgeCards.map((c) => ({ ...c, height: cardEls.current.get(c.id)?.offsetHeight ?? 120 }));
+    const comp = composeBoard(cards, geo.mode, { W: geo.W, H: geo.H });
+    let boardMin = 0;
     for (const d of over) {
       const s = mine[d];
       if (s.kind !== "over") continue;
       const h = cardEls.current.get(d)?.offsetHeight ?? 120;
-      bottom = Math.max(bottom, geo.sy + s.y * geo.H + h);
+      boardMin = Math.max(boardMin, geo.sy + s.y * geo.H + h);
     }
-    setTops((old) => (JSON.stringify(old) === JSON.stringify(next) ? old : next));
-    setStacked((old) => (old.L === nextStacked.L && old.R === nextStacked.R ? old : nextStacked));
-    setColH((old) => (old === bottom ? old : bottom));
+    const next: Laid = { comp, colH: Math.max(geo.H, comp.colBottom), boardMin };
+    const same = laid !== null && JSON.stringify(laid) === JSON.stringify(next);
+    settled.current = same;
+    if (!same) setLaid(next);
   });
 
   // Leaders, once everything has settled; after every render for the same reason, set on change.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     const board = boardRef.current;
-    if (!geo || !geo.H || !board) return;
+    if (!geo || !geo.H || !board || !laid) return;
     const bb = board.getBoundingClientRect();
-    const next: { id: string; d: string; end: [number, number] }[] = [];
+    const next: { id: string; d: string; end: [number, number]; muted: boolean }[] = [];
     for (const p of pins) {
-      if (!besides && !over.has(p.dom_id)) continue; // listed under the screengrab: no leader
+      const free = over.has(p.dom_id) || drag?.dom === p.dom_id;
+      const edge = free ? undefined : laid.comp.at[p.dom_id]?.edge;
+      if (!free && !edge) continue;
       const el = cardEls.current.get(p.dom_id);
       if (!el) continue;
       const r = el.getBoundingClientRect();
@@ -985,10 +1259,63 @@ function ScreenBoard(props: BoardProps) {
         left: geo.sx + p.box[0] * geo.W, top: geo.sy + p.box[1] * geo.H,
         width: p.box[2] * geo.W, height: p.box[3] * geo.H,
       };
-      const { d, end } = leaderPath(card, elem);
-      next.push({ id: p.dom_id, d, end });
+      next.push({ id: p.dom_id, ...leaderPath(card, elem, edge), muted: muted(p.dom_id) });
     }
     setLeaders((old) => (JSON.stringify(old) === JSON.stringify(next) ? old : next));
+  });
+
+  // When the layout changes mode (two columns, one, rows), each card glides from where it was to
+  // where it now is (FLIP): measured once placement has settled, against the last settled places.
+  // Instant under reduced motion. Only at a mode change: within a mode the cards follow the resize.
+  // The leaders are measured from the cards' rectangles, which include the glide's transform, so
+  // they are measured again when the glide ends — or they would stay where the cards set off.
+  const flipFrom = useRef<{ mode: Mode; at: Map<string, [number, number]> } | null>(null);
+  useLayoutEffect(() => {
+    const board = boardRef.current;
+    if (!geo || !board || !settled.current) return;
+    const bb = board.getBoundingClientRect();
+    const now = new Map<string, [number, number]>();
+    for (const [id, el] of cardEls.current) {
+      const r = el.getBoundingClientRect();
+      now.set(id, [r.left - bb.left, r.top - bb.top]);
+    }
+    const from = flipFrom.current;
+    flipFrom.current = { mode: geo.mode, at: now };
+    if (!from || from.mode === geo.mode || reducedMotion()) return;
+    const ends: Promise<unknown>[] = [];
+    for (const [id, el] of cardEls.current) {
+      const a = from.at.get(id), b = now.get(id);
+      if (!a || !b || (a[0] === b[0] && a[1] === b[1]) || typeof el.animate !== "function") continue;
+      const glide = el.animate(
+        [{ transform: `translate(${a[0] - b[0]}px, ${a[1] - b[1]}px)` }, { transform: "translate(0, 0)" }],
+        { duration: GLIDE_MS, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
+      ) as Animation | undefined;
+      if (glide?.finished) ends.push(glide.finished);
+    }
+    // A cancelled glide rejects its `finished`: the cards have still come to rest.
+    if (ends.length) {
+      Promise.allSettled(ends).then(() => {
+        if (alive.current) setGlides((g) => g + 1);
+      });
+    }
+  });
+
+  // "On p2's screen": once the carousel has turned, keyboard focus goes into that card. The card has
+  // just moved from the list to a margin, where it is hidden (visibility) until placement gives it a
+  // spot, and a hidden element cannot take focus — focus() fails without a word and focus falls to
+  // the page. So wait for the spot; and check focus really landed, else the board's title.
+  // A request made before this board existed (on another screen) is not this board's.
+  const focusDone = useRef(props.focusRequest?.seq ?? 0);
+  useLayoutEffect(() => {
+    const req = props.focusRequest;
+    if (!req || req.seq <= focusDone.current) return;
+    const el = cardEls.current.get(req.dom);
+    const waiting = el?.style.visibility === "hidden" && !stillFailed && (!src || (!!geo && geo.H > 0));
+    if (waiting) return;
+    focusDone.current = req.seq;
+    const target = el?.querySelector<HTMLElement>("a[href], button:not(.screens-elsewhere)") ?? null;
+    target?.focus({ preventScroll: true });
+    if (!target || document.activeElement !== target) focusLensHeading(stageRef.current?.closest(".screens-lens"));
   });
 
   // A press on a card brings it forward; Escape, or a press anywhere that is not a card, puts it back.
@@ -1002,12 +1329,12 @@ function ScreenBoard(props: BoardProps) {
       // Deselect in both places. The shared quote card keeps its own focus (.bn-focused), and a
       // focused card is raised: clearing only ours left the "deselected" card on top of its
       // neighbour in a stack (measured, 14 Oct 2026).
-      setLifted(null);
+      lift(null);
       setFocus(null, { scroll: false });
     };
     const onDown = (e: PointerEvent) => {
       const card = e.target instanceof Element ? e.target.closest<HTMLElement>(".screens-card[data-dom]") : null;
-      setLifted(card ? card.dataset.dom ?? null : null);
+      lift(card ? card.dataset.dom ?? null : null);
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onDown);
@@ -1015,15 +1342,39 @@ function ScreenBoard(props: BoardProps) {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onDown);
     };
-  }, [setFocus]);
+  }, [setFocus, lift]);
+
+  // One slide per horizontal swipe, over the carousel. Not passive: a horizontal swipe here is the
+  // carousel's, and must not also scroll the page sideways or send the browser Back. A vertical one
+  // is left alone. The lock lives as long as the board, so a turn does not reset it mid-swipe.
+  const flipBy = useRef<(dir: 1 | -1) => void>(() => {});
+  useEffect(() => {
+    flipBy.current = (dir) => props.onFlip((tabIdx + dir + total) % total);
+  });
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el || !multi) return;
+    const swipe = makeSwipe((dir) => flipBy.current(dir));
+    const onWheel = (e: WheelEvent) => {
+      if (swipe(e.deltaX, e.deltaY)) e.preventDefault();
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [multi]);
 
   // Drag to rearrange: the card's top edge and the margin under its timecode are the grips. Nothing
   // moves, and nothing is saved, until the pointer has travelled DRAG_THRESHOLD: a click on a grip
-  // is not a drag (useVerticalDragResize's 3px). The window listeners belong to this board: if it
-  // remounts or changes screengrab mid-drag they are removed, so a release cannot write a spot
-  // against the previous screengrab.
+  // is not a drag (useVerticalDragResize's 3px). The window listeners belong to this screengrab: if
+  // the board remounts or the carousel turns mid-drag they are removed, so a release cannot write a
+  // spot against the previous screengrab.
   const endDrag = useRef<(() => void) | null>(null);
-  useEffect(() => () => endDrag.current?.(), []);
+  useEffect(
+    () => () => {
+      endDrag.current?.();
+      setDrag(null);
+    },
+    [still],
+  );
   const startDrag = (dom: string) => (e: React.PointerEvent) => {
     if (e.button !== 0 || !geo || !boardRef.current) return;
     e.preventDefault();
@@ -1041,14 +1392,25 @@ function ScreenBoard(props: BoardProps) {
       top: Math.max(0, start.top + ev.clientY - start.y),
     });
     // Listen on the window, not the grip: starting the drag moves the card into the free layer,
-    // which remounts it, and a detached grip receives no more pointer events.
+    // which remounts it, and a detached grip receives no more pointer events. The card follows the
+    // pointer at most once a frame: a pointermove can fire several times a frame, and each
+    // setDrag re-renders the whole board.
+    let frame = 0;
+    let latest: PointerEvent | null = null;
     const move = (ev: PointerEvent) => {
       if (!moved && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < DRAG_THRESHOLD) return;
-      if (!moved) setLifted(null);
+      if (!moved) lift(null);
       moved = true;
-      setDrag({ dom, ...at(ev), width: r.width, z });
+      latest = ev;
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (latest) setDrag({ dom, ...at(latest), width: r.width, z });
+      });
     };
     const detach = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
@@ -1057,7 +1419,7 @@ function ScreenBoard(props: BoardProps) {
     function up(ev: PointerEvent) {
       detach();
       if (!moved) {
-        setLifted(dom); // a press on the grip that never became a drag is a press on the card
+        lift(dom); // a press on the grip that never became a drag is a press on the card
         return;
       }
       const { left, top } = at(ev);
@@ -1075,17 +1437,23 @@ function ScreenBoard(props: BoardProps) {
   };
 
   // The board's wrapper places, lifts and drags a card; the card itself is the Quotes lens's.
-  const cardFor = (dom: string, style: React.CSSProperties, pin?: Pin) => {
+  const cardFor = (dom: string, style: React.CSSProperties) => {
     const q = byId.get(dom);
     if (!q) return null;
-    const cls = ["screens-card", lifted === dom && "is-lifted", drag?.dom === dom && "is-dragging", dom in mine && "is-placed"]
+    const pin = pinByDom.get(dom);
+    const seq = sequence[dom];
+    // Unlinked here, linked on another participant's version: offer that version.
+    const elsewhere = pin ? -1 : linkedOn.get(dom) ?? -1;
+    const cls = [
+      "screens-card", lit === dom && "is-lifted", drag?.dom === dom && "is-dragging", dom in arranged && "is-placed",
+      muted(dom) && "is-muted",
+    ]
       .filter(Boolean)
       .join(" ");
     return (
       // A card comes forward on a press (the board's listener above), and when keyboard focus
-      // enters it so Tab never lands on a
-      // control hidden under the next card in a stack. Never on hover. Rearranging is pointer-only
-      // for now.
+      // enters it so Tab never lands on a control hidden under the next card in a stack. Never on
+      // hover. Rearranging is pointer-only for now.
       <div
         key={dom}
         ref={(el) => {
@@ -1096,34 +1464,47 @@ function ScreenBoard(props: BoardProps) {
         style={style}
         data-dom={dom}
         data-pin={pin ? dom : undefined}
-        onFocus={() => !drag && setLifted(dom)}
+        onFocus={() => !drag && lift(dom)}
         onBlur={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setLifted((l) => (l === dom ? null : l));
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) unlift(dom);
         }}
       >
         <span className="screens-grip screens-grip-top" aria-hidden="true" onPointerDown={startDrag(dom)} />
         <span className="screens-grip screens-grip-side" aria-hidden="true" onPointerDown={startDrag(dom)} />
+        {seq && <SequenceMark seq={seq} />}
         {props.renderQuote(q, pin?.phrase ?? "")}
+        {elsewhere >= 0 && (
+          <button type="button" className="screens-elsewhere" onClick={() => props.onShowOn(dom, elsewhere)}>
+            {t("screens.onScreen", { code: screen.tabs[elsewhere].code })}
+          </button>
+        )}
       </div>
     );
   };
 
-  const placed = (dom: string): React.CSSProperties => {
-    const p = tops[dom];
-    return p ? ({ top: p.top, "--stack": p.z } as React.CSSProperties) : { top: 0, visibility: "hidden" };
+  const spot = (dom: string) => laid?.comp.at[dom];
+  const inColumn = (dom: string): React.CSSProperties => {
+    const s = spot(dom);
+    return s ? ({ top: s.top, "--stack": s.z } as React.CSSProperties) : { top: 0, visibility: "hidden" };
+  };
+  const inBand = (dom: string): React.CSSProperties => {
+    const s = spot(dom);
+    return s ? { left: s.left, top: s.top, width: CARD_W } : { left: 0, top: 0, width: CARD_W, visibility: "hidden" };
   };
   const freeStyle = (dom: string): React.CSSProperties => {
     if (drag?.dom === dom) return { left: drag.left, top: drag.top, width: drag.width, zIndex: drag.z };
     const s = mine[dom];
     if (!geo || !s || s.kind !== "over") return { visibility: "hidden" };
-    return { left: geo.sx + s.x * geo.W, top: geo.sy + s.y * geo.H, width: geo.colW, zIndex: s.z };
+    return { left: geo.sx + s.x * geo.W, top: geo.sy + s.y * geo.H, width: CARD_W, zIndex: s.z };
   };
 
   // Tidy: every card on this screengrab back to automatic. Undoable with ⌘Z through the report's
   // one undo stack, so it needs no confirm.
   const tidy = () => {
+    // Offered while the arrangement is custom (`custom`, the one count); it clears everything kept
+    // for this screengrab, a hidden quote's spot included, and undo puts all of it back.
+    if (!custom) return;
     const before = placementsFor(projectId, still);
-    if (Object.keys(before).length === 0) return;
     // Tidy removes its own button (and the menu that offered it closes), so focus goes to the
     // lens's title rather than to the page.
     const active = document.activeElement;
@@ -1138,6 +1519,25 @@ function ScreenBoard(props: BoardProps) {
     });
     announce(i18n.t("screens.arrangementAutomatic"));
   };
+  // View ▸ Tidy on the Mac enables only while this board's arrangement is custom: say so on mount
+  // and on every change, and say "not custom" when the board goes (the Mac's mirror would
+  // otherwise keep the last board's answer).
+  useEffect(() => {
+    postScreensArrangement(custom);
+  }, [custom]);
+  useEffect(() => () => postScreensArrangement(false), []);
+  // View ▸ Tidy on the Mac (bn:menu-action), for whichever screengrab is showing.
+  const tidyNow = useRef(tidy);
+  useEffect(() => {
+    tidyNow.current = tidy;
+  });
+  useEffect(() => {
+    const onMenu = (e: Event) => {
+      if ((e as CustomEvent<{ action?: string }>).detail?.action === "tidy") tidyNow.current();
+    };
+    window.addEventListener("bn:menu-action", onMenu);
+    return () => window.removeEventListener("bn:menu-action", onMenu);
+  }, []);
 
   // Right-click: "Return to automatic" on a card the researcher placed, "Tidy" anywhere on the board
   // once something is placed. The keyboard's context-menu key raises the same event. Elsewhere, and
@@ -1148,10 +1548,11 @@ function ScreenBoard(props: BoardProps) {
       if (!stage || !(e.target instanceof Element) || !stage.contains(e.target)) return;
       const card = e.target.closest<HTMLElement>(".screens-card[data-dom]")?.dataset.dom;
       const items: { label: string; run: () => void }[] = [];
-      if (card && card in placementsFor(projectId, still)) {
+      // The same count as the arrangement control and View ▸ Tidy: the cards on the board.
+      if (card && card in arranged) {
         items.push({ label: i18n.t("screens.returnToAutomatic"), run: () => clearPlacement(projectId, still, card) });
       }
-      if (Object.keys(placementsFor(projectId, still)).length > 0) items.push({ label: i18n.t("screens.tidy"), run: tidy });
+      if (custom) items.push({ label: i18n.t("screens.tidy"), run: tidy });
       if (items.length === 0) return;
       e.preventDefault();
       const r = stage.getBoundingClientRect();
@@ -1169,32 +1570,54 @@ function ScreenBoard(props: BoardProps) {
     };
   });
 
-  const said = pins.length + rest.length;
-  const people = screen.tabs.length;
+  // The person chips: toggle buttons, whose quotes are in front. They never turn the carousel.
   const who =
-    screen.tabs.length > 1 ? (
-      <span className="screens-who">
-        {screen.tabs.map((tb, j) => (
-          <button key={`${tb.session_id}@${tb.t}`} aria-pressed={j === tabIdx} title={tb.heading} onClick={() => props.onTab(j)}>
-            <PersonBadge code={tb.code} role="participant" />
+    people.length > 1 ? (
+      <span className="screens-who" role="group" aria-label={t("screens.whoseQuotes")}>
+        {people.map((p) => (
+          <button key={p} type="button" aria-pressed={chosen.has(p)} onClick={() => props.onChip(p)}>
+            <PersonBadge code={p} role="participant" />
           </button>
         ))}
       </span>
-    ) : (
+    ) : people.length === 1 ? (
       <span className="screens-who">
-        <PersonBadge code={tab.code} role="participant" />
+        <PersonBadge code={people[0]} role="participant" />
       </span>
-    );
+    ) : null;
+
+  // One highlight per line on the screengrab, however many quotes are about it: they share it, and
+  // its anchor, and their leaders fan into one point.
+  const lines = new Map<string, { box: Pin["box"]; ids: string[] }>();
+  for (const p of pins) {
+    const k = p.box.join(",");
+    const line = lines.get(k) ?? { box: p.box, ids: [] };
+    line.ids.push(p.dom_id);
+    lines.set(k, line);
+  }
+  const ends = new Map<string, { end: [number, number]; on: boolean; muted: boolean }>();
+  for (const l of leaders) {
+    const k = l.end.join(",");
+    const e = ends.get(k);
+    ends.set(k, { end: l.end, on: (e?.on ?? false) || lit === l.id, muted: (e?.muted ?? true) && l.muted });
+  }
+
+  const captionTemplate = t("screens.slideCaption", { code: tab.code, n: tabIdx + 1, total });
+  const [dot0, dot1] = dotWindow(total, tabIdx);
+  const flipTo = (dir: 1 | -1) => props.onFlip((tabIdx + dir + total) % total);
+  const bandT = onEdge("T"), bandB = onEdge("B");
+  const quoteCount = said.length;
   return (
     <>
       <SectionHeading action={who}>{screenTitle(screen, tab)}</SectionHeading>
       <p className="screens-sub">
         {screen.name.startsWith("/") && <code>{screen.name}</code>}
-        <span>{screenAt(t("screens.screenAt", { code: tab.code }), formatTimecode(tab.t))}</span>
+        {/* With several versions the carousel's caption says whose screen, and when. */}
+        {!multi && <span>{screenAt(t("screens.screenAt", { code: tab.code }), formatTimecode(tab.t))}</span>}
         <span>
-          {people > 1
-            ? t("screens.quoteCountFrom", { count: said, people })
-            : t("screens.quoteCount", { count: said })}
+          {people.length > 1
+            ? t("screens.quoteCountFrom", { count: quoteCount, people: people.length })
+            : t("screens.quoteCount", { count: quoteCount })}
         </span>
         <span className="screens-hidden-slot">
           <Counter
@@ -1220,53 +1643,122 @@ function ScreenBoard(props: BoardProps) {
         )}
       </p>
       <NotesList lines={props.problems} />
-      <div className={`screens-stage${lifted ? " focus" : ""}${drag ? " dragging" : ""}`} ref={stageRef}>
-        <div className={`screens-board cols-${columns}`} ref={boardRef} style={{ minHeight: colH || undefined }}>
-          <div className={`screens-col screens-col-l${stacked.L ? " stacked" : ""}`} style={{ height: colH || undefined }}>
-            {columnIds.filter((d) => sideOfCard(d) === "L" && d !== dragOutOfColumn).map((d) => cardFor(d, placed(d), pinByDom.get(d)))}
+      <div className={`screens-stage${lit ? " focus" : ""}${drag ? " dragging" : ""}${chosen.size ? " chosen" : ""}`} ref={stageRef}>
+        <div
+          className={`screens-board cols-${columns} mode-${mode}`}
+          ref={boardRef}
+          style={{ minHeight: laid?.boardMin || undefined }}
+        >
+          <div className={`screens-band screens-band-t${bandT.length ? " has-cards" : ""}`} style={{ height: bandT.length ? laid?.comp.band.T ?? 0 : 0 }}>
+            {bandT.map((d) => cardFor(d, inBand(d)))}
+          </div>
+          <div className={`screens-col screens-col-l${laid?.comp.stacked.L ? " stacked" : ""}`} style={{ height: laid?.colH || undefined }}>
+            {onEdge("L").map((d) => cardFor(d, inColumn(d)))}
           </div>
           <div className="screens-shot" ref={shotRef}>
-            {src ? (
-              <img
-                alt={t("screens.stillAlt", { code: tab.code, title: screenTitle(screen, tab), time: formatTimecode(tab.t) })}
-                src={src}
-              />
-            ) : (
-              <div className="screens-shot-wait">
-                {stillFailed && <span className="screens-shot-error">{t("screens.stillUnavailable")}</span>}
+            {/* The carousel: one participant's version at a time, in a frame that cross-fades.
+                Keyboard: Tab reaches it, ←/→ turn it (the lens's keys), and each turn is announced
+                ("2 of 3"). The chevrons and dots are the pointer's: revealed on hover, never by
+                focus, and not tab stops. */}
+            <div
+              ref={carouselRef}
+              className={`screens-carousel${multi ? " is-multi" : ""}`}
+              role={multi ? "group" : undefined}
+              // A fixed name: the slide is said by announce() as the carousel turns, so a name that
+              // changed with it would be read a second time.
+              aria-label={multi ? t("screens.versionsLabel") : undefined}
+              aria-roledescription={multi ? t("screens.carouselRole") : undefined}
+              aria-keyshortcuts={multi ? "ArrowLeft ArrowRight" : undefined}
+              title={multi ? t("screens.versionsKeys") : undefined}
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a carousel's keyboard stop (APG): ←/→ turn it
+              tabIndex={multi ? 0 : undefined}
+            >
+              <div className="screens-slides">
+                {slides.map((sl, j) =>
+                  sl.src ? (
+                    <img
+                      key={`${screen.tabs[j].session_id}@${screen.tabs[j].t}`}
+                      className={`screens-slide${j === tabIdx ? " is-current" : ""}`}
+                      alt={j === tabIdx ? t("screens.stillAlt", { code: tab.code, title: screenTitle(screen, tab), time: formatTimecode(tab.t) }) : ""}
+                      aria-hidden={j === tabIdx ? undefined : true}
+                      src={sl.src}
+                    />
+                  ) : null,
+                )}
+                {!src && (
+                  <div className="screens-shot-wait">
+                    {stillFailed && <span className="screens-shot-error">{t("screens.stillUnavailable")}</span>}
+                  </div>
+                )}
+                {geo &&
+                  [...lines.entries()].map(([k, l]) => (
+                    <div
+                      key={k}
+                      className={`screens-hl${lit && l.ids.includes(lit) ? " on" : ""}${l.ids.every(muted) ? " is-muted" : ""}`}
+                      style={{
+                        left: l.box[0] * geo.W - 3, top: l.box[1] * geo.H - 3,
+                        width: l.box[2] * geo.W + 6, height: l.box[3] * geo.H + 6,
+                      }}
+                    />
+                  ))}
+              </div>
+              {multi && (
+                <>
+                  <button type="button" tabIndex={-1} className="screens-chev screens-chev-prev"
+                    aria-label={t("screens.previousScreengrab")} onClick={() => flipTo(-1)}>
+                    <span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5 4 6l3.5 3.5" /></svg></span>
+                  </button>
+                  <button type="button" tabIndex={-1} className="screens-chev screens-chev-next"
+                    aria-label={t("screens.nextScreengrab")} onClick={() => flipTo(1)}>
+                    <span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" /></svg></span>
+                  </button>
+                </>
+              )}
+            </div>
+            {multi && (
+              <div className="screens-carousel-line">
+                <span className="screens-dots">
+                  {Array.from({ length: dot1 - dot0 }, (_, k) => dot0 + k).map((j) => (
+                    <button
+                      key={j}
+                      type="button"
+                      tabIndex={-1}
+                      aria-label={t("screens.announceParticipant", { code: screen.tabs[j].code })}
+                      aria-current={j === tabIdx ? "true" : undefined}
+                      className={`screens-dot${j === tabIdx ? " is-current" : ""}${(j === dot0 && dot0 > 0) || (j === dot1 - 1 && dot1 < total) ? " is-edge" : ""}`}
+                      onClick={() => props.onFlip(j)}
+                    />
+                  ))}
+                </span>
+                <span className="screens-caption">{screenAt(captionTemplate, formatTimecode(tab.t))}</span>
+                {/* For a sighted keyboard user: shown while the carousel has keyboard focus. */}
+                <span className="screens-keys" aria-hidden="true">← →</span>
               </div>
             )}
-            {geo &&
-              pins.map((p) => (
-                <div
-                  key={p.dom_id}
-                  className={`screens-hl${lifted === p.dom_id ? " on" : ""}`}
-                  style={{
-                    left: p.box[0] * geo.W - 3, top: p.box[1] * geo.H - 3,
-                    width: p.box[2] * geo.W + 6, height: p.box[3] * geo.H + 6,
-                  }}
-                />
-              ))}
           </div>
-          <div className={`screens-col screens-col-r${stacked.R ? " stacked" : ""}`} style={{ height: colH || undefined }}>
-            {columnIds.filter((d) => sideOfCard(d) === "R" && d !== dragOutOfColumn).map((d) => cardFor(d, placed(d), pinByDom.get(d)))}
+          <div className={`screens-col screens-col-r${laid?.comp.stacked.R ? " stacked" : ""}`} style={{ height: laid?.colH || undefined }}>
+            {onEdge("R").map((d) => cardFor(d, inColumn(d)))}
+          </div>
+          <div className={`screens-band screens-band-b${bandB.length ? " has-cards" : ""}`} style={{ height: bandB.length ? laid?.comp.band.B ?? 0 : 0 }}>
+            {bandB.map((d) => cardFor(d, inBand(d)))}
           </div>
           <svg className="screens-leaders" aria-hidden="true">
             {leaders.map((l) => (
-              <g key={l.id} className={lifted === l.id ? "on" : undefined}>
-                <path d={l.d} />
-                <circle cx={l.end[0]} cy={l.end[1]} r={2.5} />
-              </g>
+              <path key={l.id} d={l.d} className={[lit === l.id && "on", l.muted && "is-muted"].filter(Boolean).join(" ") || undefined} />
+            ))}
+            {[...ends.entries()].map(([k, e]) => (
+              <circle key={k} cx={e.end[0]} cy={e.end[1]} r={2.5}
+                className={[e.on && "on", e.muted && "is-muted"].filter(Boolean).join(" ") || undefined} />
             ))}
           </svg>
           <div className="screens-free">
-            {[...over, ...(dragOutOfColumn ? [dragOutOfColumn] : [])]
+            {[...over, ...(dragOut ? [dragOut] : [])]
               .filter((d, i, a) => a.indexOf(d) === i)
-              .map((d) => cardFor(d, freeStyle(d), pinByDom.get(d)))}
+              .map((d) => cardFor(d, freeStyle(d)))}
           </div>
         </div>
         <div className="screens-loose">
-          {listed.filter((d) => !over.has(d) && d !== dragOutOfColumn).map((d) => cardFor(d, {}, pinByDom.get(d)))}
+          {listed.map((d) => cardFor(d, {}))}
         </div>
         {menu && <BoardMenu {...menu} onClose={closeMenu} />}
       </div>

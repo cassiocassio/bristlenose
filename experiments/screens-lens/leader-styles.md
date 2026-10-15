@@ -199,9 +199,12 @@ spotlight that dims towards the paper. §6 gives the first ranking; §6a revises
 - **1.4.11.** Casing is what makes a defensible 3:1 claim possible. The meaning-bearing part (the
   core) is always adjacent to the casing. This is the same reading as the Understanding doc's
   example of an input border, where the adjacent colour is the one immediately beside the mark.
-- **Without colour.** The leader is `aria-hidden`; the join is also carried by the card's
-  person/sequence badge and the card's accessible text. The leader is redundant for a screen reader,
-  so it only needs to be visible.
+- **Meaning, and screen readers.** At rest the leader is the only visual join between a card and
+  its line: the badges give person and order, not position. So 1.4.11 applies, and `aria-hidden`
+  does not change that. _Corrected 15 Oct 2026, in review: this said the leader was "redundant for a
+  screen reader". It is not. Nothing tells a screen-reader user which line a quote points at: the
+  highlight boxes have no text, and the card doesn't name its target. That is a 1.3.1 follow-up
+  (e.g. "On screen: <line text>" on each linked card), separate from the leader style._
 - **Reduced motion.** A spotlight fade must snap under `prefers-reduced-motion`, as the board's other
   transitions already do.
 - **Dark mode.** The casing takes the *board's* bg (`--bn-colour-bg`), not the page's, so a dark board
@@ -342,65 +345,138 @@ So over the screengrab the line takes the accent of the **screengrab's** scheme,
 **Chosen: R3** (the owner, 15 Oct 2026). A soft halo in the paper colour around the line, dot and box,
 clipped to the screengrab, with the screengrab's accent over it.
 
-**The softness must come from blur, never from opacity.** With σ 0.7px on a 4px casing, about 98% of
-the paper colour survives in the pixels next to the line, so the worst pairing (default light accent,
-white site, over dark text) holds at about 3.9:1. Partial opacity lets the ink show through right next
-to the core: the same pairing is 3.0:1 at 85% opacity, the 3:1 limit, and 2.4:1 at 75%. The first R3
-mock used 85% and has been corrected.
+**The softness must come from blur, never from opacity.** With σ 0.7px on a 4px casing, the paper's
+share is 98% at the exact edge of the core but about 91% averaged over the first pixel beside it.
+The worst pairing (default light accent, white site, over dark text) therefore holds at about
+**3.3:1 at 1×** (3.7:1 at 2×). That passes, but costs about 18% against a hard casing's 4.0:1.
+_Corrected in review: the first figure here, 3.9:1, used the edge value._ Partial opacity is worse,
+because it lets ink through right next to the core: the same pairing is 3.0:1 at 85% opacity and
+2.4:1 at 75%. The first R3 mock used 85% and has been corrected. Because of the blur's cost, a paper
+counts as **midtone** below about **3.65:1** (3 ÷ 0.82), not 3:1. A light grey `#e0e0e0` passes a
+naive 3:1 test and fails under the blur.
 
 The rest of the ranking stands: #2 is the spotlight, now dimming towards the paper, and #3 is
 gutter-run.
 
-## 7. What implementing #1 (B′, R3) and #2 would touch (not done)
+## 7. Fold-in plan for R3 (reviewed 15 Oct 2026; handed to the session reworking the lens)
 
-- **`layout.ts leaderPath`: no change.** It has the same optional tweak as before (end the dot
-  inside the box edge) and the same seven `layout.test.ts` strings if so.
-- **A paper sample per slide (new, small).**
-  - When a slide's still decodes, draw it into a 24×16 canvas and take the median colour of the outer
-    ring of pixels. Return `{ rgb, dark: luminance < 0.5 }`. The still is served from the report's own
-    origin, so the canvas is not tainted; check this for the export, where stills are inlined.
-  - Cache it beside the still in the carousel's LRU (`carousel.ts`, 24 stills).
-  - About 25 lines in a helper plus a unit test on synthetic `ImageData`: white page, dark page,
-    full-bleed photo.
-- **`ScreensLens.tsx`, the leaders `<svg>` (~line 1745).**
-  - **Clip:** add a `<clipPath>` whose rect is the showing slide's screengrab rect (`geo.sx`,
-    `geo.sy`, `geo.W`, `geo.H`, already in scope where leaders are measured, ~line 1262).
-  - **Leaders:** keep today's path in the board layer. Add a clipped `<g>` holding a casing pass and
-    a core pass of the same paths, plus the end dots (moved into it).
-  - **Scheme and paper on the group:** the group carries
-    `style={{ colorScheme: paper.dark ? "dark" : "light", "--paper": paper.rgb }}`.
-    `color-scheme` is inherited, so `var(--bn-colour-accent)` inside the group resolves to the
-    screengrab's half of the palette's own `light-dark()`. **No new token**, as S5 requires.
-    Measured in Chromium: a `<g>` with `color-scheme: dark` resolves the default accent to
-    `#0a84ff`, against `#007aff` without it. **Not yet measured in WebKit**, which the Mac app
-    uses; prove it there first.
-  - About 15 changed lines.
-- **The slide's highlight boxes** take the same two properties on `.screens-slides` (or the
-  current slide), so `.screens-hl` reads the screengrab's accent and rings in `--paper`.
-- **`screens.css` (~line 217 and ~284), about 8 lines:**
-  ```css
-  svg.screens-leaders .ish-casing path { stroke: var(--paper); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; } /* opaque: never stroke-opacity */
-  svg.screens-leaders .ish-core path { stroke: var(--bn-colour-accent); stroke-width: 1; }
-  svg.screens-leaders path.on { stroke-width: 1.5; }
-  svg.screens-leaders .ish-casing path.on { stroke-width: 4.5; }
-  svg.screens-leaders circle { stroke: var(--paper); stroke-width: 2; paint-order: stroke; }
-  .screens-hl { box-shadow: 0 0 0 1px var(--paper); }
-  .screens-stage.focus .screens-hl.on { box-shadow: 0 0 0 1px var(--paper), 0 0 0 100vmax color-mix(in srgb, var(--paper) 55%, transparent); }
-  ```
-  **The softening is an SVG filter, not CSS.** Put `<filter id=… filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="0.7"/></filter>`
-  in the leaders `<svg>`'s `<defs>` and `filter="url(#…)"` on the clipped casing group.
-  - **Why not CSS `blur()`:** support for it on SVG elements has historically been patchy in WebKit.
-  - **Why user-space units:** the default bounding-box filter region collapses to nothing for a
-    group of perfectly horizontal paths, whose box has zero height.
-  - **Scope:** the filter covers one group, so the cost is one blur per redraw. Leaders are already
-    re-measured only when a glide ends.
+Three reviewers checked this plan against the lens at `46819910`: correctness, accessibility and
+performance. It has been revised to match. The mockup's section B′ shows R3.
 
-  The scrim still needs clipping to the slide (`overflow: clip`) and one scrim for a shared line.
-  Everything on a selected selector is `stroke` or `box-shadow`, which `tests/test_screens_css.py`
-  allows; the 1.5px weight sits on `path.on`.
-- **Mid-tone fallback** (§6a): if neither accent half clears 3:1 against the sampled paper, case the
-  line with whichever of white or the board background gives the higher ratio. This is a branch in
-  the paper helper, not in CSS.
-- **Tests.** Unit-test the paper helper. A lens test can check the clipped group exists and carries
-  `color-scheme`. Then look at a real light-site and dark-site session in both palettes and both
-  themes, in the app's WebKit as well as Chromium.
+### What R3 is
+
+- **The line itself is unchanged:** today's 1px accent core, with `leaderPath` untouched. It gains a
+  soft, **opaque** halo in the **screengrab's own paper colour**, **clipped to the screengrab**.
+  - Over plain page background the halo is the paper and can't be seen. It shows only where the line
+    crosses ink.
+  - In the gutter there is no halo, so the line is a bare Discussion wire.
+- **Over the screengrab the line uses the accent half that contrasts best with that paper,** whatever
+  the board's theme. The end dot and the target box follow the same rule.
+- **Why not the board-coloured casing:** it drew heavy dark tracks on a dark board over the usual
+  white screengrab, and white tracks over a dark-mode site.
+- **The softening is blur, never opacity.** The halo is core + 3px wide with an SVG `feGaussianBlur`
+  of σ 0.7.
+  - **What the blur costs:** about 91% paper survives across the first pixel beside the core, so the
+    worst pairing is about **3.3:1 at 1×** and 3.7:1 at 2×. That is roughly 18% less than a hard
+    casing gives (4.0:1).
+  - **What opacity would cost:** partial opacity lets ink through right beside the core, giving 3.0:1
+    at 85% and 2.4:1 at 75%.
+
+### Steps
+
+0. **Measure in WebKit first** (Safari, or the `.app`'s WKWebView).
+   - **(a)** Check that `<g style="color-scheme: dark">` resolves `var(--bn-colour-accent)` to the
+     dark half (`#0a84ff` in the default palette). This is measured in Chromium only.
+   - **(b)** Check that `feGaussianBlur` on a clipped group renders.
+   - **(c)** Time a card drag and a live resize with the filter on and off. WebKit rasterises SVG
+     filters on the CPU.
+   - **If the blur costs visibly, or can't be told from antialiasing,** ship it unblurred: that is
+     R2, at 4.0:1 worst. Tell the owner, since R3 was their pick.
+   - **If (a) fails,** use the explicit accent halves from step 1's probe as stroke values. That needs
+     no new token either.
+1. **Paper sample: `screens/paper.ts`, sampled off the DOM when a still arrives.**
+   - **Where:** in `fetchStill`'s `.then` (~line 299). Load the data URI into `new Image()`,
+     `await img.decode()`, draw it into a canvas, and read **thin strips at full resolution** along the
+     left, right and bottom edges, inset ~4px. **Skip the top edge,** which may be a browser tab bar
+     after the crop.
+     - Thin strips rather than a 24×16 downscale, because downscaling aliases.
+     - Stills are data URIs, so the canvas is never tainted. Screens is server-only and never in an
+       export.
+   - **Cache** the raw paper rgb per still URL in a module `Lru` sized like `boardStills` (24). Set it
+     **before** `stills.set(...)`, so the still and its paper arrive in one commit.
+   - **Every** fetched still is sampled, so neighbour slides have their paper before a turn. That
+     prevents a flicker where the halo vanishes and the accent jumps tone on a turn, which is visible
+     in Edo.
+   - **Force alpha to 1.**
+   - **The decision is a pure function, unit-tested:**
+     `choosePaper(paperRgb, accents: { light, dark }) → { casing, scheme, midtone }`.
+     - `accents` is read once from a probe element under forced `color-scheme: light` and `dark`, then
+       re-read when the palette changes.
+     - Take the accent half with the higher ratio against the paper. If that ratio is **≥ 3.65:1**
+       (3:1 ÷ the blur's 0.82), use `casing = paper` and that half's scheme.
+     - Otherwise it is a **midtone**: try the 4 pairs (each accent half × a white or `#111111`
+       casing), pick the best, and take `scheme` from the chosen accent half, never from the paper.
+     - Return the casing as a **literal** rgb. Inside a forced-scheme group, `--bn-colour-bg` would
+       resolve to the paper's own scheme and stop being a choice.
+     - Test cases: a white page, `#121212`, `#e0e0e0` (which passes a naive 3:1 test but fails under
+       the blur), and a mid-grey photo, in both palettes.
+2. **`ScreensLens.tsx`, the leaders `<svg className="screens-leaders">` (~line 2086).**
+   - **`<defs>`**, with ids from `useId()`:
+     - A `<clipPath>` rect = the showing still's picture in board space, **padded 3px** so an end dot
+       at the image edge is not halved: `geo.sx + geo.ix`, `geo.sy + geo.iy`, `geo.iw`, `geo.ih`
+       (the same terms as `elem` at ~line 1551).
+     - A `<filter filterUnits="userSpaceOnUse">` whose region is **that same rect plus ~3px**, not the
+       whole board. A board-sized region forces a full-board raster on every drag, glide and resize.
+   - **Paths:** keep today's paths in the board layer. Add a clipped `<g class="lead-shot">` holding:
+     - a casing pass `<g class="lead-casing" filter=url(#…)>`, with no `opacity` attribute;
+     - a core pass of the same `d`s;
+     - the end dots, which move into it.
+   - **Styling the group:** it carries the current slide's choice (`tabIdx`, ~line 531):
+     `style={{ colorScheme: choice.scheme, "--screens-paper": choice.casing } as React.CSSProperties}`.
+     Memoise it. The name follows the local `--screens-*` pattern.
+   - **Do not put the scheme on `.screens-slides`.** That would recolour the image's border and the
+     wait and error states. Put the same two properties on **each `.screens-hl`** instead.
+   - **No paper yet** (still loading or failed): no clipped group, so today's line stands.
+   - **Accepted:** while the slow cross-fade runs on a turn, the halo can briefly sit over the outgoing
+     still. Reduced motion already stops the fade (`screens.css` ~310).
+3. **`screens.css` (~line 271).** Keep your `path.on { stroke-width: 2 }`.
+   ```css
+   svg.screens-leaders .lead-casing path { stroke: var(--screens-paper); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+   svg.screens-leaders .lead-casing path.on { stroke-width: 5; }
+   svg.screens-leaders .lead-shot circle { stroke: var(--screens-paper); stroke-width: 2; paint-order: stroke; }
+   .screens-hl { box-shadow: 0 0 0 1px var(--screens-paper, transparent); }
+   @media (forced-colors: active) {
+     svg.screens-leaders .lead-casing { display: none; }
+     svg.screens-leaders path { stroke: CanvasText; }
+     svg.screens-leaders circle { fill: CanvasText; }
+     .screens-hl { border-color: Highlight; }
+   }
+   ```
+   - Core and dot fills keep `var(--bn-colour-accent)`, which resolves in the group's scheme.
+   - **No new tokens** (S5).
+   - **Optional:** under `prefers-contrast: more`, a 1.5px core and casing + 4px.
+4. **Gates.**
+   - **`tests/test_screens_css.py`:** fail if any selector naming `lead-casing` sets `opacity`,
+     `stroke-opacity`, `fill-opacity` or `filter: opacity(…)`.
+   - **Lens test**, with a stubbed paper because jsdom has no canvas: the clipped group renders with
+     `color-scheme` and both passes, and **no `opacity` attribute** on the casing. The CSS gate can't
+     see an attribute in the TSX.
+   - **Prove each new test fails** against a reverted fix.
+5. **Look at it in the `.app`.** Use a light site and a dark-mode site, in both palettes, both
+   themes, at rest and selected. Do a drag and a resize, which also covers step 0(c). Nothing earlier
+   sees the pixels.
+6. **`docs/design-screens.md` S5:** one bullet. The leaders' halo and accent follow the screengrab's
+   paper, with the reason. "No new tokens" still holds.
+
+### Not in this change, but named
+
+- **Screen readers learn nothing about where a quote points.** The highlight boxes have no text, and
+  a card doesn't name its target line. A follow-up would give each linked card a description such as
+  "On screen: <line text>" (WCAG 1.3.1). The leader itself does carry meaning (1.4.11 applies, and
+  `aria-hidden` doesn't change that).
+- **The selection spotlight (#2)** and **gutter-run routing (#3)**, as in the note.
+- **Considered and not chosen: the server returning `{src, paper}`.**
+  - For: it would be testable in pytest, with nothing to stub.
+  - Against: the server has no image library (no Pillow), so it would take a second ffmpeg rawvideo
+    pass and a change to the still cache.
+  - Revisit if the client sampler proves fragile.

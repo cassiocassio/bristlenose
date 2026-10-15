@@ -124,6 +124,59 @@ struct StudyMarkerTests {
         #expect(LocateFlow.verdict(url: bare, expectedStudyID: mine) == .notAnalysed)
     }
 
+    @Test func locateCannotPassAMarkerItMayNotRead() throws {
+        let dir = try folder()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try analysed(dir)
+        try writePythonMarker(dir, id: "not-a-uuid")  // exists, unreadable as an id
+        #expect(LocateFlow.verdict(url: dir, expectedStudyID: "x", granted: false) == .unverified)
+        #expect(LocateFlow.verdict(url: dir, expectedStudyID: "x", granted: true) == .thisStudy)
+    }
+
+    @Test func anotherSpellingOfAHeldFolderIsTheSameFolder() throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let real = root.appendingPathComponent("Talismanic")
+        let copy = root.appendingPathComponent("Talismanic copy")
+        let link = root.appendingPathComponent("Shortcut")
+        for dir in [real, copy] {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
+        let index = ProjectIndex(fileURL: root.appendingPathComponent("projects.json"))
+        let project = index.addProject(name: "Talismanic", path: real.path)
+        #expect(index.findSameFolder(link)?.id == project.id)
+        #expect(index.findSameFolder(copy) == nil, "a copy is not the same folder")
+    }
+
+    /// Two rows created in the same second (projects.json keeps whole seconds):
+    /// whichever is captured first, the same folder keeps the original id.
+    @Test func aCopyTieBreaksTheSameWayWhicheverIsSeenFirst() throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let one = root.appendingPathComponent("One"), two = root.appendingPathComponent("Two")
+        for dir in [one, two] {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        let id = UUID().uuidString.lowercased()
+        let same = Date(timeIntervalSince1970: 1_800_000_000)
+        let fixedA = UUID(), fixedB = UUID()
+
+        func keeperAfter(capturingOneFirst: Bool) throws -> String {
+            try writePythonMarker(one, id: id)
+            try writePythonMarker(two, id: id)
+            let index = ProjectIndex(fileURL: root.appendingPathComponent(UUID().uuidString + ".json"))
+            index.projects = [
+                Project(id: fixedA, name: "One", path: one.path, createdAt: same),
+                Project(id: fixedB, name: "Two", path: two.path, createdAt: same),
+            ]
+            let order = capturingOneFirst ? [(fixedA, one), (fixedB, two)] : [(fixedB, two), (fixedA, one)]
+            for (pid, dir) in order { index.captureStudyID(id: pid, folder: dir) }
+            return StudyMarker.read(folder: one) == id ? "One" : "Two"
+        }
+        #expect(try keeperAfter(capturingOneFirst: true) == keeperAfter(capturingOneFirst: false))
+    }
+
     // ── The index ───────────────────────────────────────────────────────────
 
     /// The upgrade order: the original was served (marker minted) but its

@@ -729,6 +729,25 @@ final class ProjectIndex: ObservableObject {
         projects.first { $0.path == path }
     }
 
+    /// The project already holding this folder under another spelling: a
+    /// symlink, `/Volumes/Macintosh HD/…`, a case change. The same folder is a
+    /// re-drop, not a copy, and must never be re-minted (second review).
+    func findSameFolder(_ folder: URL) -> Project? {
+        guard let mine = Self.fileIdentity(folder) else { return nil }
+        return projects.first { project in
+            Self.fileIdentity(URL(fileURLWithPath: project.path))?.isEqual(mine) == true
+        }
+    }
+
+    /// The file system's identity for a folder (`fileResourceIdentifier`): equal
+    /// for every spelling of one folder, different for a copy.
+    /// Links are resolved first: a symlink's own identity is the link's, not
+    /// its folder's (measured, 15 Oct 2026).
+    private static func fileIdentity(_ url: URL) -> NSObject? {
+        (try? url.resolvingSymlinksInPath().resourceValues(forKeys: [.fileResourceIdentifierKey]))?
+            .fileResourceIdentifier as? NSObject
+    }
+
     /// Every project as the drop decision sees it (`StudyDropMatch`).
     func studyCandidates() -> [StudyDropMatch.Candidate] {
         projects.map { .init(id: $0.id, studyID: $0.studyID, path: $0.path) }
@@ -753,7 +772,11 @@ final class ProjectIndex: ObservableObject {
             $0.id != id && $0.studyID == studyID && $0.path != folder.path
                 && FileManager.default.fileExists(atPath: $0.path)
         }) {
-            if projects[other].createdAt > projects[index].createdAt {
+            // Ties (projects.json keeps whole seconds) break on id, so the
+            // choice is the same whichever row is touched first.
+            let otherIsLater = (projects[other].createdAt, projects[other].id.uuidString)
+                > (projects[index].createdAt, projects[index].id.uuidString)
+            if otherIsLater {
                 let copyFolder = leaseURL(projectID: projects[other].id)
                     ?? URL(fileURLWithPath: projects[other].path)
                 if let fresh = try? StudyMarker.remint(folder: copyFolder, copiedFrom: studyID) {

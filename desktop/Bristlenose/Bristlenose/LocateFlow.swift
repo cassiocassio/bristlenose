@@ -30,21 +30,31 @@ final class LocateFlow {
         /// (its marker carries another id). Relocating onto it would show
         /// someone else's analysis under this row (design-project-identity §7).
         case differentStudy(picked: URL)
+        /// The folder carries a study marker this process may not read yet: a
+        /// Spotlight hit has no sandbox grant. The caller opens the panel at
+        /// it, which grants, and checks again (second review, 15 Oct 2026).
+        case needsGrant(picked: URL)
         case cancelled
     }
 
     /// What a picked folder is, for this project. Pure but for the reads.
-    enum Verdict: Equatable { case thisStudy, notAnalysed, differentStudy }
+    enum Verdict: Equatable { case thisStudy, notAnalysed, differentStudy, unverified }
 
     /// A folder is this project's when it is analysed and, if both carry a
-    /// study id, the ids agree. An unread or absent id on either side cannot
-    /// disagree: projects from before the marker locate as they always did.
-    static func verdict(url: URL, expectedStudyID: String?) -> Verdict {
+    /// study id, the ids agree. An absent id on either side cannot disagree:
+    /// projects from before the marker locate as they always did.
+    ///
+    /// `granted` says whether this process may read the folder (a panel pick
+    /// or a drop). Without it a marker that exists cannot be read, and an
+    /// unread id must not pass as agreement — that is `.unverified`.
+    static func verdict(url: URL, expectedStudyID: String?, granted: Bool = true) -> Verdict {
         guard folderLooksAnalysed(url: url) else { return .notAnalysed }
-        if let expectedStudyID, let found = StudyMarker.read(folder: url), found != expectedStudyID {
-            return .differentStudy
+        guard let expectedStudyID else { return .thisStudy }
+        if let found = StudyMarker.read(folder: url) {
+            return found == expectedStudyID ? .thisStudy : .differentStudy
         }
-        return .thisStudy
+        let markerExists = FileManager.default.fileExists(atPath: StudyMarker.url(forFolder: url).path)
+        return markerExists && !granted ? .unverified : .thisStudy
     }
 
     /// Name of the marker subdirectory that identifies a Bristlenose project root.
@@ -104,7 +114,7 @@ final class LocateFlow {
                 let choice = await confirm(candidate)
                 switch choice {
                 case .useThisFolder:
-                    completion(self.validate(url: candidate))
+                    completion(self.validate(url: candidate, granted: false))
                     return
                 case .chooseDifferent:
                     break  // fall through to NSOpenPanel
@@ -126,7 +136,7 @@ final class LocateFlow {
             panel.begin { response in
                 Task { @MainActor in
                     if response == .OK, let url = panel.url {
-                        completion(self.validate(url: url))
+                        completion(self.validate(url: url, granted: true))
                     } else {
                         completion(.cancelled)
                     }
@@ -137,11 +147,13 @@ final class LocateFlow {
 
     /// Inspect the picked directory for the `bristlenose-output/` marker plus
     /// at least one canonical artefact. One honest message either way.
-    private func validate(url: URL) -> Result {
-        switch Self.verdict(url: url, expectedStudyID: project.studyID) {
+    private func validate(url: URL, granted: Bool) -> Result {
+        // A Spotlight hit carries no grant; a panel pick does.
+        switch Self.verdict(url: url, expectedStudyID: project.studyID, granted: granted) {
         case .thisStudy: return .located(url)
         case .notAnalysed: return .invalidFolder(picked: url)
         case .differentStudy: return .differentStudy(picked: url)
+        case .unverified: return .needsGrant(picked: url)
         }
     }
 }

@@ -1291,7 +1291,9 @@ struct ContentView: View {
         panel.begin { response in
             Task { @MainActor in
                 guard response == .OK, let url = panel.url else { return }
-                let verdict = LocateFlow.verdict(url: url, expectedStudyID: project.studyID)
+                let verdict = LocateFlow.verdict(
+                    url: url, expectedStudyID: project.studyID, granted: true
+                )
                 if verdict == .thisStudy {
                     projectIndex.relocateProject(id: project.id, newPath: url.path)
                     rescanAfterRelocate(project.id)
@@ -1855,6 +1857,11 @@ struct ContentView: View {
                     locateError = LocateErrorState(
                         project: project, pickedURL: pickedURL, differentStudy: true
                     )
+                case .needsGrant(let pickedURL):
+                    // Spotlight found it but this process may not read its study
+                    // id yet: the panel at that folder is the grant, and its pick
+                    // is checked again with the id readable.
+                    chooseDifferentFolder(for: project, startingAt: pickedURL)
                 case .cancelled:
                     break
                 }
@@ -2045,6 +2052,7 @@ struct ContentView: View {
         if directories.count == 1 && files.isEmpty {
             let folder = directories[0]
             let existing = projectIndex.findByPath(folder.path)
+                ?? projectIndex.findSameFolder(folder)
             switch DroppedFolderState.classify(
                 isTracked: existing != nil,
                 folderLooksAnalysed: LocateFlow.folderLooksAnalysed(url: folder)

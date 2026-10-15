@@ -382,7 +382,11 @@ In the order worth doing.
 6. **Phase 4**, the welcome illustrations.
 7. **Mac consistency** (§ below), its own TODO item, plus the cheap test that every SF
    Symbol name resolves.
-8. **Type, found on the way:** `--bn-weight-light: 370` never renders in a browser (Inter
+8. **Not built from § Weight:** the Mac colour nativisation (icons on
+   `-apple-system-secondary-label` / `-apple-system-control-accent` under
+   `[data-platform="desktop"]`) and the baseline token (`.bn-icon` still uses a fixed
+   `vertical-align: -0.125em`). Both are tuning passes for after the owner has looked.
+9. **Type, found on the way:** `--bn-weight-light: 370` never renders in a browser (Inter
    is served `wght@400..700`); and the frozen static report's `quote_card.html:4` writes
    `class=”speaker”` with curly quotes, so `.speaker` never matches.
 

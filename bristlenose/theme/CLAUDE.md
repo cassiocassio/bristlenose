@@ -1,5 +1,14 @@
 # Theme / Design System Context
 
+## A theme CSS edit is also a desktop edit
+
+`desktop/Bristlenose/Bristlenose/WelcomeTimelineCSS.swift` embeds a generated copy of
+the theme CSS for the Mac welcome screen. After changing anything under
+`bristlenose/theme/`, run `.venv/bin/python scripts/gen-welcome-timeline.py` and commit
+the regenerated Swift file with the CSS. `tests/test_welcome_timeline.py` catches a
+stale copy, but only in the full suite: on 15 Oct 2026 an icon commit that ran only the
+theme-named tests turned `main` red until another session regenerated it (`235a7751`).
+
 ## Atomic CSS architecture
 
 Tokens → Atoms → Molecules → Organisms → Templates. All visual values via `--bn-*` custom properties in `tokens.css`, never hard-coded. `render/theme_assets.py` concatenates files in order defined by `_THEME_FILES`.

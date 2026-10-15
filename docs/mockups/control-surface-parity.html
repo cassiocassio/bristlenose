@@ -34,7 +34,7 @@
   .surface .cap .loc { color:var(--prop); font-weight:600; text-transform:none; letter-spacing:0; }
 
   /* terminal look for CLI + env */
-  .term { background:var(--term-bg); color:var(--term-ink); border-radius:7px; padding:9px 10px; font:12px/1.5 "SF Mono",ui-monospace,monospace; flex:1; display:flex; align-items:center; overflow-x:auto; }
+  .term { background:var(--term-bg); color:var(--term-ink); border-radius:7px; padding:9px 10px; font:12px/1.5 ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace; flex:1; display:flex; align-items:center; overflow-x:auto; }
   .term .flag { color:var(--term-flag); }
   .term .val { color:var(--term-val); }
   .term .dim { color:#8a8a92; }
@@ -59,7 +59,7 @@
   table.loc { width:100%; border-collapse:collapse; font-size:12px; margin-top:4px; }
   table.loc th, table.loc td { text-align:left; padding:5px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
   table.loc th { color:var(--muted); font-size:11px; font-weight:600; }
-  table.loc .code { color:var(--muted); font:11px "SF Mono",ui-monospace,monospace; }
+  table.loc .code { color:var(--muted); font:11px ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace; }
   table.loc .label { font-weight:600; }
   table.loc .opts { color:#333; }
   table.loc .clash { color:var(--warn); }

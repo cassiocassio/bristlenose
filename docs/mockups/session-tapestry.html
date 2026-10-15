@@ -27,7 +27,7 @@
   --ppt: light-dark(#48484a, #c7c7cc);
   --slice-bg: light-dark(#fafafa, #232325);
   --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --mono: ui-monospace, ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text); font: 420 14px/1.45 var(--font); }
@@ -254,7 +254,7 @@ function fit(text, avail, font) {
   return t.length > 1 ? t + "…" : "";
 }
 const FLAG_FONT = "490 11px Inter, -apple-system, sans-serif";
-const TAG_FONT = "10px ui-monospace, 'SF Mono', Menlo, monospace";
+const TAG_FONT = "10px ui-monospace, ui-monospace, Menlo, 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', monospace";
 
 function slice(s, W) {
   const L = 74, R = 14;                       // px; L = lane-label gutter

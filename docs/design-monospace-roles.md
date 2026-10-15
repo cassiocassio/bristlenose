@@ -9,7 +9,7 @@ probes: experiments/monospace-audit/
 
 # Monospace roles: audit, proposal, and what shipped
 
-> **Truing status (15 Oct 2026).** Audited and proposed earlier the same day, then **shipped in 64a2b36a** ("monospace: one stack on both scales, tags 460 in light, the screen's path at 560"): the one stack, the three mono weight tokens and their dark scope, one weight for every tag, the Screens path at 560, footer keycaps, the player page and the Welcome copies. **Still open, owner undecided:** figures leaving mono (§4), durations, the codebook add-tag chips at label size, the Welcome HTML keycaps at 500 and badges without a weight (§3), the native Welcome chip, the dev surfaces, and Linux. §1 and §2 describe the tree **before** the change and are kept as the baseline it was measured against; §3 and §4 are current; §6 is the ground truth.
+> **Truing status (15 Oct 2026).** Audited and proposed earlier the same day, then **shipped in 64a2b36a** ("monospace: one stack on both scales, tags 460 in light, the screen's path at 560"): the one stack, the three mono weight tokens and their dark scope, one weight for every tag, the Screens path at 560, footer keycaps, the player page and the Welcome copies. **Durations decided** the same evening: they are timecodes, 400, which is what the sessions list already draws. **Still open, owner undecided:** figures leaving mono (§4), the codebook add-tag chips at label size, the Welcome HTML keycaps at 500 and badges without a weight (§3), the native Welcome chip, the dev surfaces, and Linux. §1 and §2 describe the tree **before** the change and are kept as the baseline it was measured against; §3 and §4 are current; §6 is the ground truth.
 
 An audit of every monospace face in Bristlenose (web report, desktop webview, native Swift), the measured rendering of each one on both type scales, and the four roles they were corralled into.
 
@@ -221,7 +221,7 @@ Who sees which: the Mac app and Safari get SF Mono. Chrome, Edge, Arc and probab
 
 | role | size | weight | why |
 |---|---|---|---|
-| **timecode** | `--bn-text-label` inline beside a quote; `--bn-text-caption` in a metadata row; `--bn-text-micro` on an axis | 400 | A pointer into the recording. Fixed advances keep a column of times aligned. The accent colour, not weight, says it is a link. |
+| **timecode** | `--bn-text-label` inline beside a quote; `--bn-text-caption` in a metadata row, durations included; `--bn-text-micro` on an axis | 400 | A pointer into the recording. Fixed advances keep a column of times aligned. The accent colour, not weight, says it is a link. |
 | **code** | `--bn-text-badge`; `--bn-text-micro` in a dense list | 400; tags 460 in light | A vocabulary marker beside the finding, never the finding. Size and the chip carry its subordinate rank. |
 | **path** | `--bn-text-caption`; `--bn-text-micro` in a nav list | 400; 560 when the path names the subject | Literal text the researcher may need to type or find on disk. |
 | **keycap** | `--bn-text-micro` | 400 | Regular, so the browser never shows Bold keycaps. The native `Keycap.swift` is `.medium`, a small departure kept for fewer weights. |
@@ -242,7 +242,7 @@ Who sees which: the Mac app and Safari get SF Mono. Chrome, Edge, Arc and probab
 | `WelcomeIllustrations.swift` stacks | `ui-monospace,Menlo,monospace` in all six (Mac-only webviews); not generated | shipped |
 | `WelcomeTimelineCSS.swift` | regenerated from the theme | shipped |
 | heatmap cells, metric values, hero score (490), threshold counters and confidence, pending count, tooltip metrics | figures: body face with tabular figures | **open**, owner undecided |
-| session durations ("42 min") | timecode or figures? | **open**, owner undecided |
+| session durations ("42 min", `.session-entry-duration`) | timecode role, 400: a duration is a time | decided 15 Oct 2026; already drawn so, no change |
 | codebook add-tag field, input and drag ghost at label | code at badge: the same chips at one size | **open**, owner undecided |
 | Welcome HTML `.badge` copies with no weight; `.cap` at 500 | 460 in light to match the report; keycaps 400 or kept at 500 (Mac-only) | **open** |
 | native Welcome chip (`WelcomeIllustrations.swift:136`, 11 regular) | match the report's light 460 | **open** |

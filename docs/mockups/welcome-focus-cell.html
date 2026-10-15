@@ -99,7 +99,7 @@
   }
 
   :root{
-    --bn-font-mono:"SF Mono",ui-monospace,Menlo,monospace;
+    --bn-font-mono:ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
     --bn-font-body:-apple-system,"SF Pro Text",system-ui,sans-serif;
     --bn-radius-sm:3px; --bn-radius-md:6px;
 
@@ -244,7 +244,8 @@
     box-shadow:inset 0 0.5px 0 var(--bn-cap-highlight), 0 1px 1.5px rgba(0,0,0,.14);
     /* §1 font gotcha: modifier glyphs render in the mono/system stack, NEVER Inter —
        Inter's ⌘⌥⇧⌃ coverage is incomplete and falls back per-glyph, so caps in one
-       combo end up mismatched faces. SF Mono and SF Pro both carry the full set. */
+       combo end up mismatched faces. Measured 15 Oct 2026: SF Mono lacks return, escape and tab, SF Pro return, tab and space
+       (docs/design-keycaps.md, font gotcha). */
     font:11px/1 var(--bn-font-body); color:var(--ink);
     transition:transform 90ms ease, box-shadow 90ms ease, filter 90ms ease; }
   .cap.mod{ font-family:var(--bn-font-mono); }

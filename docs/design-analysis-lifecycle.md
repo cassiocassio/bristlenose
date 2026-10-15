@@ -129,7 +129,9 @@ rare. The counted confirmation (§6.1) stays as it is. What it carries across is
 limited to facts about the recordings that cannot be read from them again (a
 start time learned from a filename since renamed) — never the session registry
 file, never anything identifying, because first aid must not carry the damage
-forward. That carry-over is not built yet.
+forward. Built 15 Oct 2026: the start times cross by recording content
+(`session_registry.starts_by_content`, `carried-starts.json`), and the study's
+id crosses with them (`study_marker.py`).
 
 ### 1.1 Two project shapes, and why it changes every answer
 

@@ -2062,8 +2062,9 @@ real tokens (the pill overhang below was the first proof).
 > `people.yaml` need not survive. So Phase 1's "a legacy `people.yaml` is read once … then ignored"
 > and Phase 5's "upgrade path proved on a 0.31.x project folder" are **withdrawn**, along with the
 > transcripts plan's "migrate by seeding from the `# Source:` headers". Phase 0 shipped as a
-> pipeline-side registry, `.bristlenose/sessions.json`: session grouping key → sid, and per sid
-> speaker label → code. A known key keeps its sid; a new one takes the next number ever issued; a
+> pipeline-side registry, `.bristlenose/sessions.json`: session grouping key → sid (since 15 Oct
+> 2026, version 3, the recording's content fingerprint first — `design-project-identity.md` §11a),
+> and per sid speaker label → code. A known key keeps its sid; a new one takes the next number ever issued; a
 > label keeps its code while its role matches; participant numbers are never reused. A project
 > without the file numbers exactly as before. The serve DB needs no change for it — its `sessions`
 > rows were always keyed by the sid string, which is now stable — so the row's "existing
@@ -3377,8 +3378,8 @@ people as unique and roles as per-session is the People lens's long-term goal.
     from the pipeline's own estimator, about what it costs; Cancel leads and the act takes the
     default (the house rule from the re-analyse and uninstall sheets, not the Cancel-default
     this section once proposed). Confirming `POST`s `…/sessions/{sid}/reanalyse`, which writes a
-    **role pin** per recoded speaker into `sessions.json` (`REGISTRY_VERSION = 2`; version 1
-    still reads): the label, the role, the start times of its turns as evidence, the code it
+    **role pin** per recoded speaker into `sessions.json` (pins arrived in version 2; the file is
+    version 3 since 15 Oct 2026, and versions 1 and 2 still read): the label, the role, the start times of its turns as evidence, the code it
     had and the person the researcher picked. Refused (409, reason `run_in_progress`) while a run owns the project — the
     registry is load–mutate–save on both sides. The Mac then starts its ordinary resume run
     (bridge `project-action` `reanalyse-session`); a browser shows `bristlenose run <folder>`.

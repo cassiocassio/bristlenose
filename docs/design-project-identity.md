@@ -1,17 +1,19 @@
 ---
-status: decided
-last-trued: 2026-10-13
-trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
+status: decided; phase 2 (Python) built
+last-trued: 2026-10-15
+trued-against: HEAD@main on 2026-10-15
 ---
 
 ## Changelog
+
+- _2026-10-15_ — phase 2 built (the Python half): the marker, one study per database with fork collapse, content fingerprints and registry version 3, transcription keyed by content, the Re-analyse carry. §11a records where the build departed from this note and why. Phases 3–6 (file-subset output folders, the Mac sidebar, agent access, Locate…) are not built.
 
 - _2026-10-13_ — trued up: §2 carries the live S9 reproduction and the watcher route; §7 the Bin rule; §10 the WAL lag on the fork signal. Anchors: register rows 29, 35; `eb8509e1`.
 
 # Project identity without paths
 
-**Status: decided 13 Oct 2026, with the owner. Design for phases 2 to 6 of the
-lifecycle plan; nothing here is built yet.** Rows 29, 30 and 31 of
+**Status: decided 13 Oct 2026, with the owner. Phase 2 (the Python half) built
+15 Oct 2026; phases 3–6 (the Mac side, agent access, Locate…) are not.** Rows 29, 30 and 31 of
 [design-lifecycle-failure-modes.md](design-lifecycle-failure-modes.md) are the
 failures this closes.
 
@@ -51,7 +53,7 @@ failure.
 |---|---|---|
 | Server project row | `importer._find_or_create_project` matches `input_dir` and `output_dir` by resolved path | folder moved with the app closed, or renamed with it open — the app follows and the restarted serve re-imports under the new path (row 29; measured 13 Oct 2026: two rows, one session each, sidebar *Report out of date*), copied (row 30) |
 | Recording on disk | `SourceFile.path`, absolute; `/media/` rooted at the interview folder | folder moved, file renamed, file moved into a subfolder |
-| Session number | `sessions.json` keys on the filename stem (`s01_ingest.session_key`) | file renamed: new session id, stars and tags orphaned (row 31) |
+| Session number | `sessions.json` keyed on the filename stem (`s01_ingest.session_key`) until 15 Oct 2026; now content first (§11a) | file renamed: new session id, stars and tags orphaned (row 31, closed) |
 | Transcription cache | manifest `input_hash` = (path inside the folder, size, mtime) since 12 Oct 2026; absolute path before | file renamed or moved within the folder: Whisper paid again |
 | Scene colours | cache key = name, size, mtime | file renamed |
 | Agent access | handshake `key` and `mcp_server._project_key` = SHA-256 of the resolved input path | folder moved: a configured agent loses the project |
@@ -338,6 +340,31 @@ delete the old.
 
 The report title and the export filename already come from the row's name,
 not the folder, and are unchanged.
+
+## 11a. As built, 15 Oct 2026 — where phase 2 departed from this note
+
+- **Identical files stay two sessions** (§5 said one recording, the second an
+  alias). Ingest finds two, and register row 15 is "never drop a recording
+  silently"; the registry keys only the first by content and the second by
+  name. A re-drop of copies is stopped earlier on the Mac.
+- **A session keeps a name key beside its content key** (§6 said fingerprint →
+  sid). Content first, then the last known place, then the name, and a sid a
+  stronger key claimed is never handed on by a weaker one. The name key is
+  what keeps an *edited* transcript file (new bytes, same name) its session;
+  a sid holds one name key, so a new recording given an old name is new.
+- **Starts stay keyed by sid inside the registry** (§6 said by fingerprint).
+  Within a study the sid is stable now; across a Re-analyse the starts cross
+  as a separate hand-over keyed by content (`carried-starts.json`, §8), which
+  is the only place a renumbering could lose them.
+- **No `single_project_id` resolver** (§4). The importer never creates a
+  second row in a study's own database and collapses old forks onto the
+  lowest id, which is row 1, so the literal `1` the SPA reads stays right.
+- **No ingest-facts path heal** (§7). Every run rewrites the transcript header
+  with the recording's current place; the importer heals the source-file row
+  whose file moved instead of adding one beside it. A heal from ingest facts
+  was built, survived its mutant, and was removed.
+- **Fork collapse runs at every import** (§10 said once). It is cheap, and a
+  database copied in from an older release gets it whenever it arrives.
 
 ## 12. What this does not do
 

@@ -1359,13 +1359,18 @@ def run(
         # folder carries crosses into the new output (design-project-identity.md §8).
         from bristlenose import study_marker
 
+        from bristlenose.session_registry import starts_by_content, write_carried_starts
+
         study_id = study_marker.read(output_dir)
+        carried_starts = starts_by_content(output_dir)
         output_stash = output_backup.stash(
             output_dir, previous_backup_is_spent=_reclaim.report_is_back
         )
         setup_logging(output_dir=output_dir, verbose=verbose)
-        if output_stash is not None and study_id is not None:
-            study_marker.write(output_dir, study_id, minted_by="run")
+        if output_stash is not None:
+            if study_id is not None:
+                study_marker.write(output_dir, study_id, minted_by="run")
+            write_carried_starts(output_dir, carried_starts)
         if output_stash is not None:
             console.print(f"\n[dim]Cleaned {output_dir}[/dim]")
         else:

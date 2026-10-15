@@ -99,6 +99,47 @@ def registry_path(output_dir: Path) -> Path:
     return output_dir / ".bristlenose" / REGISTRY_FILENAME
 
 
+#: What a Re-analyse hands the new run: each recording's best start, keyed by
+#: content. Read once by the next registry load, then folded in and deleted.
+CARRIED_STARTS_FILENAME = "carried-starts.json"
+
+
+def carried_starts_path(output_dir: Path) -> Path:
+    return output_dir / ".bristlenose" / CARRIED_STARTS_FILENAME
+
+
+def starts_by_content(output_dir: Path) -> dict[str, dict[str, str]]:
+    """The study's resolved starts keyed by recording content, for a Re-analyse.
+
+    ``run --clean`` resets numbering and speakers, which is the point of it, but
+    a start read from a recording's own clock or a filename may not be readable
+    again: iCloud may have evicted the recording, or the researcher renamed it.
+    So the starts cross the reset as a validated extract — fingerprint, UTC
+    instant and source, nothing identifying, never the registry file
+    (docs/design-project-identity.md §8). Empty on any problem: a carry is an
+    improvement, never a reason to stop a run.
+    """
+    try:
+        registry = SessionRegistry.load(output_dir)
+    except ValueError:
+        return {}
+    by_sid = {
+        sid: key[len(FP_PREFIX):] for key, sid in registry.sessions.items()
+        if key.startswith(FP_PREFIX)
+    }
+    return {
+        by_sid[sid]: dict(entry) for sid, entry in registry.starts.items() if sid in by_sid
+    }
+
+
+def write_carried_starts(output_dir: Path, starts: dict[str, dict[str, str]]) -> None:
+    if not starts:
+        return
+    path = carried_starts_path(output_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"version": 1, "starts": starts}, indent=2), encoding="utf-8")
+
+
 @dataclass
 class RolePin:
     """A person's word on what one session's speaker is (§J7 R3)."""
@@ -133,6 +174,9 @@ class SessionRegistry:
     #: Content key (``fp:v1:…``) → the recording's last known place, relative
     #: to the interview folder.
     hints: dict[str, str] = field(default_factory=dict)
+    #: Starts a Re-analyse carried over, by fingerprint; used for a session the
+    #: new run would otherwise start worse, and dropped once the registry saves.
+    carried: dict[str, dict[str, str]] = field(default_factory=dict)
 
     # ── persistence ──────────────────────────────────────────────────────
 
@@ -145,8 +189,9 @@ class SessionRegistry:
         the file exists to prevent.
         """
         path = registry_path(output_dir)
+        carried = _read_carried(output_dir)
         if not path.exists():
-            return cls(path=path)
+            return cls(path=path, carried=carried)
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
@@ -184,6 +229,7 @@ class SessionRegistry:
             },
             starts=_readable_starts(data.get("starts")),
             hints=_readable_hints(data.get("hints")),
+            carried=carried,
         )
 
     def save(self) -> None:
@@ -214,6 +260,10 @@ class SessionRegistry:
         except BaseException:
             Path(tmp).unlink(missing_ok=True)
             raise
+        if self.carried:
+            # Folded into ``starts`` by settle_starts; its job is done.
+            carried_starts_path(self.path.parent.parent).unlink(missing_ok=True)
+            self.carried = {}
 
     # ── sessions ─────────────────────────────────────────────────────────
 
@@ -337,6 +387,11 @@ class SessionRegistry:
         for session in sessions:
             new_rank = source_rank(session.session_start_source or "")
             stored = self.starts.get(session.session_id)
+            carried = False
+            if stored is None and self.carried:
+                fp = _fingerprint(_primary_file(session))
+                stored = self.carried.get(fp) if fp is not None else None
+                carried = stored is not None
             stored_rank = source_rank(stored["source"]) if stored else None
             if stored and stored_rank is not None and (
                 new_rank is None or stored_rank <= new_rank
@@ -351,6 +406,8 @@ class SessionRegistry:
                         )
                     session.session_date = at
                     session.session_start_source = stored["source"]
+                    if carried:
+                        self.starts[session.session_id] = dict(stored)
                     continue
             if new_rank is not None:
                 self.starts[session.session_id] = {
@@ -496,6 +553,31 @@ def _readable_starts(raw: Any) -> dict[str, dict[str, str]]:
         else:
             logger.warning("sessions.json: ignoring an unreadable start for %r", sid)
     return out
+
+
+def _read_carried(output_dir: Path) -> dict[str, dict[str, str]]:
+    """A Re-analyse's carried starts, validated; anything else is ignored."""
+    from bristlenose.utils.fingerprint import is_fingerprint
+
+    path = carried_starts_path(output_dir)
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        logger.warning("ignoring an unreadable %s", path)
+        return {}
+    raw = data.get("starts") if isinstance(data, dict) and data.get("version") == 1 else None
+    if not isinstance(raw, dict):
+        return {}
+    from bristlenose.utils.session_start import source_rank
+
+    return {
+        fp: {"utc": e["utc"], "source": e["source"]} for fp, e in raw.items()
+        if is_fingerprint(fp) and isinstance(e, dict)
+        and isinstance(e.get("utc"), str) and parse_iso_utc(e["utc"]) is not None
+        and isinstance(e.get("source"), str) and source_rank(e["source"]) is not None
+    }
 
 
 def _primary_file(session: InputSession) -> Path | None:

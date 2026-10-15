@@ -546,3 +546,64 @@ class TestContentKeys:
         data = json.loads(path.read_text())
         assert data["version"] == 3
         assert any(k.startswith("fp:v1:") and v == "s7" for k, v in data["sessions"].items())
+
+
+class TestCarriedStarts:
+    """A Re-analyse resets numbering, not when an interview happened (§8)."""
+
+    def _first_run(self, tmp_path: Path, source: str) -> tuple[Path, InputFile]:
+        out = tmp_path / "out"
+        a = _file(tmp_path, "rec.wav", 0)
+        reg = SessionRegistry.load(out)
+        sessions = reg.apply(_ingest([a]), tmp_path)
+        sessions[0].session_start_source = source
+        sessions[0].session_date = datetime(2026, 10, 2, 13, 33, tzinfo=timezone.utc)
+        reg.settle_starts(sessions)
+        reg.save()
+        return out, a
+
+    def test_a_better_start_survives_a_reset_the_new_run_can_only_read_worse(
+        self, tmp_path: Path,
+    ) -> None:
+        from bristlenose.session_registry import starts_by_content, write_carried_starts
+
+        out, a = self._first_run(tmp_path, "filename_zoned")
+        carried = starts_by_content(out)
+        assert len(carried) == 1
+        fresh = tmp_path / "fresh-out"
+        write_carried_starts(fresh, carried)
+
+        reg = SessionRegistry.load(fresh)
+        sessions = reg.apply(_ingest([a]), tmp_path)
+        sessions[0].session_start_source = "birthtime"  # evicted: only the file date
+        sessions[0].session_date = datetime(2026, 10, 9, 9, 0, tzinfo=timezone.utc)
+        reg.settle_starts(sessions)
+        reg.save()
+        assert sessions[0].session_start_source == "filename_zoned"
+        assert sessions[0].session_date == datetime(2026, 10, 2, 13, 33, tzinfo=timezone.utc)
+        again = SessionRegistry.load(fresh)
+        assert again.starts["s1"]["source"] == "filename_zoned"
+        from bristlenose.session_registry import carried_starts_path
+
+        assert not carried_starts_path(fresh).exists(), "the carry outlived its run"
+
+    def test_the_carry_is_content_only_and_never_identifying(self, tmp_path: Path) -> None:
+        from bristlenose.session_registry import starts_by_content
+
+        out, _a = self._first_run(tmp_path, "filename_local")
+        carried = starts_by_content(out)
+        (fp, entry), = carried.items()
+        assert fp.startswith("v1:")
+        assert set(entry) == {"utc", "source"}
+
+    def test_a_carried_start_never_beats_a_better_new_one(self, tmp_path: Path) -> None:
+        from bristlenose.session_registry import starts_by_content, write_carried_starts
+
+        out, a = self._first_run(tmp_path, "birthtime")
+        fresh = tmp_path / "fresh-out"
+        write_carried_starts(fresh, starts_by_content(out))
+        reg = SessionRegistry.load(fresh)
+        sessions = reg.apply(_ingest([a]), tmp_path)
+        sessions[0].session_start_source = "container"
+        reg.settle_starts(sessions)
+        assert sessions[0].session_start_source == "container"

@@ -149,3 +149,20 @@ def test_interviews_filed_into_a_subfolder_keep_everything(tmp_path: Path, fast_
         paths = {f["path"] for s in sessions for f in s.get("source_files", [])}
         assert any("Round 1" in p for p in paths), f"the report still points at the old place: {paths}"
     assert study.transcribed[1] == ["Interview 3.wav"]
+
+
+def test_re_analyse_after_a_rename_keeps_when_the_interview_happened(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    """Zoom names a recording with its own clock; the researcher renames it,
+    then re-analyses. The new name carries no date, so the re-run alone could
+    only read the file's save time. The start crosses the reset by content."""
+    study = new_study(tmp_path, "GMT20261002-133312_Recording.wav", "Interview 2.wav")
+    with study.serve() as client:
+        study.run()
+        before = {s["session_id"]: s["session_date"] for s in study.sessions(client, expect=2)}
+        (study.folder / "GMT20261002-133312_Recording.wav").rename(study.folder / "p1 sarah.wav")
+        study.run(clean=True)
+        after = {s["session_id"]: s["session_date"] for s in study.sessions(client, expect=2)}
+    assert before["s1"].startswith("2026-10-02T13:33:12"), before
+    assert after["s1"] == before["s1"], "a Re-analyse after a rename lost the interview's date"

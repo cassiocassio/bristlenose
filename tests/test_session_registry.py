@@ -498,6 +498,9 @@ class TestContentKeys:
         (study / "ann.mp4").symlink_to(elsewhere / "ann.mp4")
         assert _place(study / "ann.mp4", study) == "ann.mp4"
         assert _place(elsewhere / "ann.mp4", study) is None
+        # However the folder was spelled on the command line.
+        dotted = study / ".." / "study"
+        assert _place(dotted / "ann.mp4", dotted) == "ann.mp4"
 
     def test_a_recording_with_no_known_place_returns_to_its_session(
         self, tmp_path: Path,

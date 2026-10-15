@@ -38,29 +38,61 @@ enum MCPTokenStore {
 
     /// Return this project's token, minting and storing one on first use.
     ///
-    /// Keyed by the project's **resolved path**, which is how `ServeManager`
-    /// identifies a project — and how the Python importer does too (it matches
-    /// via `os.path.samefile`, per `bristlenose/server/CLAUDE.md`). Consequence
-    /// worth knowing: moving a project folder mints a new token, so agent
-    /// configs pasted before the move stop working. That is the honest
-    /// behaviour — the alternative is a token that follows a folder the
-    /// researcher may have moved deliberately.
+    /// Keyed by the project's **study** when its folder carries a study id,
+    /// and by its resolved path until then (`resolve` below). Until 15 Oct
+    /// 2026 it was always the path, so moving a project folder minted a new
+    /// token and agent configs pasted before the move stopped working.
     ///
     /// Returns `nil` only if the Keychain refuses to store — in which case
     /// the caller mints an ephemeral scoped token via `mintEphemeral()`
     /// (NEVER the sidecar's unscoped rotating token — that one opens
     /// `/api/*` and the handshake file publishes whatever the caller
     /// holds). MCP still works; only durability across restarts is lost.
-    static func token(forProjectPath path: String) -> String? {
-        let account = accountKey(for: path)
-        if let existing = read(account: account) { return existing }
-        let minted = mint()
-        guard write(account: account, value: minted) else {
-            log.error("could not persist the MCP token — falling back to the sidecar's rotating token")
+    static func token(forProjectPath path: String, studyID: String? = nil) -> String? {
+        resolve(path: path, studyID: studyID, read: read(account:),
+                write: write(account:value:), mint: mint)
+    }
+
+    /// The token choice, with the Keychain injected so it has a test.
+    ///
+    /// Keyed by the **study** once the folder carries a study id
+    /// (`StudyMarker`, `docs/design-project-identity.md` §11): the token then
+    /// follows the study through a move or a rename, so a config pasted into
+    /// an agent keeps working, and a copy — re-minted on arrival — gets its own.
+    /// The first time a study is keyed, the token its path held is carried
+    /// across, so the upgrade breaks nothing; the path item is left in place
+    /// (write new, never delete old). Without a study id, the old path key.
+    static func resolve(
+        path: String, studyID: String?,
+        read: (String) -> String?, write: (String, String) -> Bool, mint: () -> String
+    ) -> String? {
+        let pathAccount = accountKey(for: path)
+        guard let studyID else {
+            if let existing = read(pathAccount) { return existing }
+            let minted = mint()
+            guard write(pathAccount, minted) else {
+                log.error("could not persist the MCP token — falling back to an ephemeral one")
+                return nil
+            }
+            log.info("minted a stable MCP token for this project")
+            return minted
+        }
+        let account = studyAccountKey(studyID)
+        if let existing = read(account) { return existing }
+        let value = read(pathAccount) ?? mint()
+        guard write(account, value) else {
+            log.error("could not persist the MCP token — falling back to an ephemeral one")
             return nil
         }
-        log.info("minted a stable MCP token for this project")
-        return minted
+        log.info("keyed this project's MCP token by its study")
+        return value
+    }
+
+    /// The account for a study's token: hashed like the path key, and
+    /// prefixed so the two can never collide.
+    static func studyAccountKey(_ studyID: String) -> String {
+        let digest = SHA256.hash(data: Data("study:\(studyID)".utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 
     /// A process-lifetime scoped token for when the Keychain refuses to

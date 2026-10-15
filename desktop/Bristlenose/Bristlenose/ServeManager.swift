@@ -647,8 +647,10 @@ final class ServeManager: ObservableObject {
         // unscoped token would open /api/* on every local QA build
         // (design §3.1, review Finding 3). Cost of the ephemeral path is
         // durability only.
-        mcpToken = MCPTokenStore.token(forProjectPath: projectPath)
-            ?? MCPTokenStore.mintEphemeral()
+        mcpToken = MCPTokenStore.token(
+            forProjectPath: projectPath,
+            studyID: StudyMarker.read(folder: URL(fileURLWithPath: projectPath))
+        ) ?? MCPTokenStore.mintEphemeral()
         env["_BRISTLENOSE_MCP_TOKEN"] = mcpToken
         proc.environment = env
         instance.spawnedReadsScreens = Self.readsScreens(env)

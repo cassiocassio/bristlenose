@@ -1242,6 +1242,23 @@ class TestProjectIdentityInEveryPayload:
         assert _project_key(_P("/clients/acme/interviews")) != \
             _project_key(_P("/clients/zeta/interviews"))
 
+    def test_a_study_keeps_its_key_across_a_move_and_a_copy_does_not(self, db) -> None:
+        """Keyed by the study id when the row carries one
+        (docs/design-project-identity.md §11): a moved study is the same
+        project to an agent, a re-minted copy is another."""
+        from bristlenose.server.mcp_server import _project_key
+
+        class _P:
+            def __init__(self, d, sid=None):
+                self.input_dir, self.study_id = d, sid
+
+        study, copy = "6f1c2b9e-1111-4000-8000-000000000001", "6f1c2b9e-1111-4000-8000-000000000002"
+        assert _project_key(_P("/Studies/Talismanic", study)) == \
+            _project_key(_P("/Archive/2026/Talismanic", study))
+        assert _project_key(_P("/Studies/Talismanic", study)) != \
+            _project_key(_P("/Studies/Talismanic copy", copy))
+        assert _project_key(_P("/Studies/Talismanic")) != _project_key(_P("/Studies/Talismanic", study))
+
     def test_a_project_with_no_input_dir_has_no_key(self, db) -> None:
         # realpath("") is the CWD — a well-formed, stable, WRONG key that every
         # such project collides on. Refuse rather than mint it.

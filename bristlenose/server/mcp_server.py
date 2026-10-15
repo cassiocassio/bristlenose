@@ -328,7 +328,15 @@ def _project_key(project: Any) -> str:
     and ``/var`` spell the same folder two ways and would otherwise key one
     project twice (the same standardisation ``AgentActivity.samePath`` makes on
     the desktop side).
+
+    Since 15 Oct 2026 a project that carries a study id (``projects.study_id``,
+    from the output folder's marker) is keyed by that instead, so an agent
+    keeps its project across a move or a rename, and a copy, which the app
+    re-mints, is a different project (docs/design-project-identity.md §11).
     """
+    study_id = getattr(project, "study_id", None)
+    if study_id:
+        return hashlib.sha256(f"study:{study_id}".encode()).hexdigest()[:8]
     raw = project.input_dir
     if not raw:
         # `os.path.realpath("")` returns the CWD, which mints a perfectly

@@ -101,12 +101,12 @@ row 42.
 | 45 | A Re-analyse in the Mac app: the shoal gave way within seconds, to an "Analysing…" cover over the serve's status page. The runner read the **previous** run's last progress line ("8 sessions readable") before the new run wrote its start, and the run-id gate compared it with a `run_started` that was still the previous run's (14 Oct 2026) | `PipelineRunnerProgressTests` (the runner's capture at spawn, `beginSpawnedRun`); `RunProgressReaderTests.thePreviousRunsProgressIsNotTheNewRuns` (`EventLogReader.currentRunProgress`) | red-first; mutant (both halves) |
 | 46 | `run --clean` under a live serve: the serve went on logging into the set-aside folder, which the run deletes when it succeeds — the serve's whole log for the run was lost | `test_the_serve_log_follows_the_output_folder`; `TestFollowTheLogFile` (`logging.reopen_log_file`: a failed reopen keeps the old handler and is retried; it never creates the folder) | red-first; mutant |
 | 47 | "That's Me" on a moderator during a run failed as "check your connection": every SPA pick sends the slot's role as `kind`, and the run guard refused any `kind` as a recode. The toast blamed the connection for every failure | `test_naming_yourself_the_moderator_is_allowed`, `test_a_recode_is_still_refused`; `frontend/src/utils/api.test.ts` (the toast names a running analysis, a refusal, or the connection); `paragraphEdits.test.ts` (a refused paragraph move is no longer silent) | red-first; mutant |
+| 27 | After a crash, the previous report stayed hidden until the next run started. The server now puts it back on start, but only over a **stranded** run (started, no terminus, no live owner): an absent output folder or one holding only a log is also a run's own start-up, and reclaiming there would put the old report back under it (15 Oct 2026, `output_backup.reclaim_after_crash`) | scenarios `crash-report-visible-before-rerun`, `server-in-run-start-up-leaves-backup`, `server-under-live-run-leaves-backup`; `server-restarted-mid-reanalyse` is the absent-folder guard | red-first; mutant (each guard alone) |
 
 ### Open, engineered (strict xfail in the scenario table)
 
 | # | Failure mode | Why it is open | What fixes it |
 |---|---|---|---|
-| 27 | After a crash, the previous report stays hidden until the next run starts | the server never reclaims a stash itself | serve calls `output_backup.reclaim_stale` when no run owns the project |
 | 28 | A CLI `serve` does not follow its folder to a new name | by design; it says so (row 6), and the Mac app restarts it at the new path — which is what forks row 29 | restart the server; or re-derive the root from the open database's path |
 | 29 | A folder moved or renamed forks the project — with the app closed, or open: the app follows (row 22) and the restarted server re-imports under the new path. The report shows the stale first row. **Measured 13 Oct 2026** on a sandboxed Debug build: a Finder rename with the app open gave two rows, one session each, and the sidebar said *Report out of date* (row 19) | project identity is the absolute path | the study marker, [design-project-identity.md](design-project-identity.md) §3–4 and §10; decided 13 Oct 2026, phase 2 |
 | 30 | A copied folder forks the same way, and the copy's writes reach the original | same | same; a copy is an independent duplicate, re-minted on arrival ([design-project-identity.md](design-project-identity.md) §9) |
@@ -155,10 +155,10 @@ folder instead.
 
 ## The score
 
-**By count:** of 48 failure modes, 30 are designed out and proven (25 fixed on
+**By count:** of 48 failure modes, 31 are designed out and proven (25 fixed on
 12 Oct 2026, one that already held and is now guarded, row 41's progressive
-fixes of 13 Oct counted as one, and rows 45–47 of 14 Oct) — **63%**. Eighteen are
-open: four engineered, fourteen not. _(13 Oct 2026: rows 35–40 added from the review
+fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, and row 27 of 15 Oct) — **65%**. Seventeen are
+open: three engineered, fourteen not. _(13 Oct 2026: rows 35–40 added from the review
 of the Mac half; 14 Oct: rows 41–43 from the progressive-lenses truing, then 44–48
 from a `--clean` Re-analyse in the app. The denominator moved each time.)_
 

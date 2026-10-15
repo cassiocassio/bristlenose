@@ -346,3 +346,43 @@ def reclaim_stale(output_dir: Path) -> RestoreOutcome:
 
     logger.warning("output_backup: recovering a previous report from %s", backup)
     return restore(backup, output_dir)
+
+
+def reclaim_after_crash(output_dir: Path) -> RestoreOutcome:
+    """The report server's reclaim: put a crashed run's backup back on start.
+
+    `reclaim_stale` runs at the top of the next `run`, so after a crash the
+    previous report stayed hidden until the researcher analysed again. The
+    server can do it sooner, but only when the evidence says *crash* and never
+    when it might be a run's own start-up. `run --clean` stashes, then sets up
+    its log, imports the pipeline and only then writes `run_started` and its
+    PID file — a window of a second or more in which the backup exists and
+    nothing yet owns the folder. A server started inside that window that
+    reclaimed would put the old report back under a run that is about to
+    write into it.
+
+    So it reclaims in one shape only: the output folder's latest run is
+    **stranded** — it started, wrote no terminus, and its PID file names no
+    live process. That is what a SIGKILL mid-run leaves.
+
+    An **absent** output folder is not that shape, though it looks like a
+    crash: it is also a run's first instant, between its rename and its first
+    write, and on 12 Oct 2026 the app started a run and a server within the
+    same second (``tests/test_lifecycle_scenarios.py``,
+    ``server-restarted-mid-reanalyse``). A folder holding a log and no
+    `run_started` is the rest of the start-up window. A failed run's in-process
+    restore already had its chance. All three are left for the next `run`.
+    """
+    backup = backup_path_for(output_dir)
+    if not backup.exists() or project_is_locked(output_dir):
+        return RestoreOutcome.NOTHING_TO_DO
+    from bristlenose.run_condition import RunStateEnum, read_condition
+
+    latest = read_condition(output_dir).latest if output_dir.exists() else None
+    if latest is None or latest.state is not RunStateEnum.STRANDED:
+        logger.info(
+            "output_backup: %s has a backup but no crashed run — leaving it for the "
+            "next run to reclaim", output_dir,
+        )
+        return RestoreOutcome.NOTHING_TO_DO
+    return reclaim_stale(output_dir)

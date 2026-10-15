@@ -208,12 +208,49 @@ def crash_leaves_a_stash_and_the_next_run_reclaims_it(proj: Path, tmp: Path) -> 
 
 
 def crash_report_visible_before_any_rerun(proj: Path, tmp: Path) -> None:
-    """After a crash, the previous report should be readable as soon as the app
-    reopens, without the researcher having to start another run."""
+    """After a crash, the previous report is readable as soon as the app reopens,
+    without the researcher starting another run. The crash is a re-analysis
+    that stashed the report, began its own output, and was killed: the server
+    reopens on a stranded run (a start, no terminus, no live owner)."""
     out = proj / "bristlenose-output"
     assert output_backup.stash(out) is not None
+    _started(out, "KILLED")  # the run's first event, then SIGKILL
     with _client(_app(proj, tmp)) as client:
         assert_healthy(proj, client)
+    assert not output_backup.backup_path_for(out).exists(), "the backup was not reclaimed"
+
+
+def server_starting_inside_a_runs_start_up_is_left_alone(proj: Path, tmp: Path) -> None:
+    """``run --clean`` stashes, opens its log, and only then writes its first
+    event and PID file. A server started in that window must not mistake the
+    backup for a crash and put the old report back under the run."""
+    out = proj / "bristlenose-output"
+    assert output_backup.stash(out) is not None
+    (out / ".bristlenose").mkdir(parents=True)
+    (out / ".bristlenose" / "bristlenose.log").write_text("run starting\n")
+    with _client(_app(proj, tmp)):
+        pass
+    assert output_backup.backup_path_for(out).exists(), (
+        "the server reclaimed a backup during a run's start-up"
+    )
+
+
+def server_starting_under_a_live_run_is_left_alone(proj: Path, tmp: Path) -> None:
+    """A run that owns the folder (its PID file names a live process) is never
+    second-guessed, whatever the events log says."""
+    from bristlenose.run_lifecycle import _ps_start_time, _write_pid_file
+
+    out = proj / "bristlenose-output"
+    assert output_backup.stash(out) is not None
+    _started(out, "LIVE")
+    start = _ps_start_time(__import__("os").getpid())
+    assert start is not None
+    _write_pid_file(out, "LIVE", start)
+    with _client(_app(proj, tmp)):
+        pass
+    assert output_backup.backup_path_for(out).exists(), (
+        "the server reclaimed a backup from under a live run"
+    )
 
 
 def served_from_the_output_folder_then_the_project(proj: Path, tmp: Path) -> None:
@@ -314,12 +351,12 @@ SCENARIOS = [
                  marks=_MOVES_AN_OPEN_DATABASE),
     pytest.param(
         crash_report_visible_before_any_rerun, id="crash-report-visible-before-rerun",
-        marks=pytest.mark.xfail(strict=True, reason=(
-            "the server does not reclaim a stash itself; the previous report comes back "
-            "when the next run starts. Fix: serve calls output_backup.reclaim_stale when no "
-            "run owns the project (handoff P2)."
-        )),
+        marks=_MOVES_AN_OPEN_DATABASE,
     ),
+    pytest.param(server_starting_inside_a_runs_start_up_is_left_alone,
+                 id="server-in-run-start-up-leaves-backup"),
+    pytest.param(server_starting_under_a_live_run_is_left_alone,
+                 id="server-under-live-run-leaves-backup"),
     pytest.param(
         renamed_under_a_live_serve_is_followed, id="rename-under-live-serve-is-followed",
         marks=pytest.mark.xfail(strict=True, reason=(

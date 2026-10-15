@@ -11,6 +11,9 @@ overrides only `performKeyEquivalent`. Nothing edits WebKit's context menu, so e
 gets WebKit's default menu. This audit maps that menu across every lens and page, and proposes
 what the app should offer instead.
 
+**Mockup:** [`docs/mockups/webview-context-menu-proposal.html`](mockups/webview-context-menu-proposal.html)
+shows today against proposed in each context, plus the window each one opens.
+
 **The owner's position, which the proposal follows.** People coming from Safari expect *Open Link
 in New Window* to open a new window. Bristlenose offers it only where it can open the right
 Bristlenose window reliably: the right project, the right lens and the right place within it (a

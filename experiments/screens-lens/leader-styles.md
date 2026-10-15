@@ -360,6 +360,34 @@ gutter-run.
 
 ## 7. Fold-in plan for R3 (reviewed 15 Oct 2026; handed to the session reworking the lens)
 
+**As built: `72f80bd1` (15 Oct 2026), with one measured departure.**
+
+- **Where the build differs from the plan below:** the blur applies only at
+  `(min-resolution: 2dppx)` (`ScreensLens.tsx`, `HIDPI`). At 1× the halo is the hard casing: R2,
+  4.0:1.
+- **Why, measured by the lens session in Playwright WebKit and Chromium:**
+  - **WebKit at 1×:** σ 0.35 and σ 0.7 render identically, as a 3px smear whose brightest row is
+    214/255 over `#222` ink. That is about 81% paper, under the 3:1 floor, not the 91% this plan
+    assumed.
+  - **WebKit at 2×:** the device rows beside the core stay 96–100% paper, better than assumed.
+  - **Chromium at 1×:** no blur is drawn at all for σ < 1.
+  - **The lesson:** the 91% here came from a continuous Gaussian, and the renderers quantise blur
+    to device pixels. Measure the rendered pixels, not the formula.
+- **Step 0(a) holds in WebKit:** `color-scheme` on the `<g>` resolves the accent to its dark half.
+- **Step 0(c):** drag and resize frame times in headless WebKit showed no measurable difference with
+  the filter on or off (p95 17–19 ms either way).
+- **On real data:** the IKEA board's paper samples as `rgb(247,247,247)`, and the light half is
+  chosen on both board themes.
+- **Not done:**
+  - Step 5, the `.app` look, which needs a sidecar rebuild and the owner's eyes.
+  - The screen-reader follow-up.
+- **A probe trap for anyone re-measuring:** a page loaded with `page.setContent` (`about:blank`) does
+  not resolve `url(#id)` for `clip-path` or `filter`, so a clip probe draws nothing. Serve the probe
+  from a real http origin.
+
+_The plan below is as handed over. Its blur figures (91%, 3.3:1 at 1×) are superseded by the
+measurements above._
+
 Three reviewers checked this plan against the lens at `46819910`: correctness, accessibility and
 performance. It has been revised to match. The mockup's section B′ shows R3.
 

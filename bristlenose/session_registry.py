@@ -273,7 +273,9 @@ class SessionRegistry:
                 # an empty file, whose remedy renumbers the study.
                 fh.flush()
                 os.fsync(fh.fileno())
-            os.replace(tmp, self.path)
+            from bristlenose.utils.fs import replace_retrying
+
+            replace_retrying(tmp, self.path)
         except BaseException:
             Path(tmp).unlink(missing_ok=True)
             raise

@@ -36,6 +36,8 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from bristlenose.utils.fs import replace_retrying
+
 logger = logging.getLogger(__name__)
 
 SCHEMA = 1
@@ -132,7 +134,7 @@ def write(
             fh.write("\n")
             fh.flush()
             os.fsync(fh.fileno())
-        os.replace(tmp, path)
+        replace_retrying(tmp, path)
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise
@@ -148,7 +150,7 @@ def _write_beacon(output_dir: Path, study_id: str) -> None:
         fd, tmp = tempfile.mkstemp(dir=output_dir, prefix=".study-beacon.", suffix=".tmp")
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(beacon_text(study_id))
-        os.replace(tmp, beacon_path(output_dir))
+        replace_retrying(tmp, beacon_path(output_dir))
         tmp = None
     except OSError as exc:  # a search aid; the marker is what counts
         logger.warning("could not write the study's search beacon: %s", exc)

@@ -1053,3 +1053,46 @@ class _Capture:
 
     def __exit__(self, *exc: object) -> None:
         self.logger.removeHandler(self.handler)
+
+
+class TestSaveOnWindows:
+    """Windows refuses a rename onto a file a reader holds open; the report
+    server reads the registry on every import (CI, 16 Oct 2026)."""
+
+    def _held_then_free(self, monkeypatch: pytest.MonkeyPatch, held: int) -> list[int]:
+        import bristlenose.utils.fs as fs_mod
+
+        calls: list[int] = []
+        real = fs_mod.os.replace
+
+        def replace(src, dst):  # type: ignore[no-untyped-def]
+            calls.append(1)
+            if len(calls) <= held:
+                raise PermissionError(5, "Access is denied")
+            real(src, dst)
+
+        monkeypatch.setattr(fs_mod.os, "replace", replace)
+        monkeypatch.setattr(fs_mod.time, "sleep", lambda _s: None)
+        return calls
+
+    def test_a_save_waits_out_a_reader(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        out = tmp_path / "out"
+        reg = SessionRegistry.load(out)
+        reg.apply(_ingest([_file(tmp_path, "a.wav", 0)]), tmp_path)
+        calls = self._held_then_free(monkeypatch, held=3)
+        reg.save()
+        assert len(calls) == 4
+        assert SessionRegistry.load(out).sessions, "the registry was not written"
+        assert not list((out / ".bristlenose").glob(".sessions.*.tmp")), "a temp file was left"
+
+    def test_a_save_still_fails_when_the_lock_never_lifts(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        out = tmp_path / "out"
+        reg = SessionRegistry.load(out)
+        reg.apply(_ingest([_file(tmp_path, "a.wav", 0)]), tmp_path)
+        self._held_then_free(monkeypatch, held=10_000)
+        with pytest.raises(PermissionError):
+            reg.save()
+        assert not list((out / ".bristlenose").glob(".sessions.*.tmp")), "a temp file was left"
+

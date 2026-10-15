@@ -542,11 +542,14 @@ def test_a_fork_made_by_a_real_import_is_removed(tmp_path: Path, monkeypatch) ->
     db = factory()
     import_project(db, proj)
     db.commit()
+    # Closed before the move: Windows will not move a folder holding an open
+    # database (CI, 16 Oct 2026).
+    db.close()
+    engine.dispose()
     # An older release: matched by path, and a moved folder's path is new.
     moved = tmp_path / "moved" / proj.name
     moved.parent.mkdir()
     shutil.move(str(proj), str(moved))
-    engine.dispose()
     engine, factory = _own_db(moved)
     db = factory()
     monkeypatch.setattr(imp, "_is_the_studys_own_database", lambda *_a: False)

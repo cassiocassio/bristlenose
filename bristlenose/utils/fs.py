@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -223,3 +224,24 @@ def ensure_materialised(
 
     logger.info("cloud_fetch_done | file=%s | provider=%s", path.name, provider or "unknown")
     return True
+
+
+def replace_retrying(src: str | os.PathLike[str], dst: str | os.PathLike[str],
+                     attempts: int = 20, delay: float = 0.05) -> None:
+    """``os.replace``, retried briefly when the target is momentarily held.
+
+    On Windows a rename onto a file another thread has open for reading fails
+    with "access denied" until that reader closes it. The report server reads
+    ``sessions.json`` and ``study.json`` on every import, so a run writing them
+    while a server is live can meet one (measured on CI, 16 Oct 2026). On macOS
+    and Linux the rename never waits for a reader, so the retry never runs.
+    """
+    for attempt in range(attempts):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(delay)
+

@@ -8,7 +8,10 @@ path on 15 Oct 2026 (``docs/design-project-identity.md``, phase 2).
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+import pytest
 
 from bristlenose import study_marker
 from tests.lifecycle_rig import new_study
@@ -42,6 +45,12 @@ def test_an_added_interview_keeps_curation_and_transcribes_only_itself(
     assert study.transcribed[1] == ["Interview 3.wav"]
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Re-analyse under a live server moves the output folder the server holds open; "
+    "Windows refuses the move, so the run reuses the folder and curation stays (the same "
+    "limit test_lifecycle_scenarios skips for reanalyse-succeeds-live-serve)",
+)
 def test_re_analyse_is_a_deliberate_reset_and_the_report_comes_back(
     tmp_path: Path, fast_watcher,
 ) -> None:

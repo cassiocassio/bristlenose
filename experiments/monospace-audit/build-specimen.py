@@ -103,10 +103,9 @@ proposal_css = f"""
     --bn-font-mono: {PROPOSED_STACK};
     --bn-weight-mono: 400;            /* Regular  — every mono role at rest */
     --bn-weight-mono-emphasis: 520;   /* first weight above 500: Bold where the face has only Regular and Bold */
-    --bn-weight-mono-refine: 500;     /* Medium on SF Mono; Regular in Menlo and Consolas: app-only refinements */
 }}
 .prop .badge, .prop .badge-user, .prop .bn-speaker-badge-code {{ font-weight: var(--bn-weight-mono); }}
-.prop .footer-keyboard-hint kbd {{ font-size: var(--bn-text-micro); font-weight: var(--bn-weight-mono-refine); }}
+.prop .footer-keyboard-hint kbd {{ font-size: var(--bn-text-micro); font-weight: var(--bn-weight-mono); }}
 .prop .tc-compact {{ font-size: var(--bn-text-caption); }}
 .prop .path.is-subject {{ font-weight: var(--bn-weight-mono-emphasis); }}
 .prop .figs {{ font-family: var(--bn-font-body); font-variant-numeric: tabular-nums; font-weight: var(--bn-weight-emphasis); }}
@@ -143,8 +142,8 @@ ROWS = [
    "SF Mono +21% (about Medium) · Menlo, Consolas: Bold", '<span class="path is-subject" style="font-weight:var(--bn-weight-emphasis)">checkout-flow/Basket summary.png</span>', '<span class="path is-subject">checkout-flow/Basket summary.png</span>'),
   ("Path", "plain", "caption", "400", "400",
    "Regular everywhere", '<span class="path" style="color:var(--bn-colour-muted)">interviews/session-04/screens/Basket summary.png</span>', None),
-  ("Keycap", "footer hints", "0.85em → micro", "400", "500",
-   "SF Mono Medium (+18%) · Menlo, Consolas: Regular", KBD, None),
+  ("Keycap", "footer hints", "0.85em → micro", "400", "400",
+   "Regular everywhere", KBD, None),
   ("Figures", "heatmap, metrics", "label", "490 mono", "490 body",
    "body face, tabular figures: the body ladder", FIGS.format(w=' style="font-weight:var(--bn-weight-emphasis)"'), FIGS.format(w='')),
 ]
@@ -208,8 +207,8 @@ body = f"""
   {roles_frame('data-platform="desktop"', 'Desktop · SF Pro scale', 'nodl-desk', 'a Mac without the download')}
   <div class="commentary"><span class="lbl">Commentary</span>
     <p><b>Regular (400) is the resting weight of every monospace role.</b> Monospace marks <i>kind</i>, not importance: the face says "this is a time, a code, a path", and colour, size and the chip carry everything else.</p>
-    <p><b>Tags are one weight.</b> Today sentiment chips are 370 and codebook tags 420 (490 in dark mode). On this Mac that is Light against Medium, a visible two-step gap; on a researcher's Mac in the app it is −5% against +4%; in Chrome both are Regular. Colour already separates the two families. If light chips are the intent, 300 for both draws Light on every Mac.</p>
-    <p><b>Two emphasis values, by job.</b> 520 is the first weight above 500: about Medium on SF Mono (+21%), Bold wherever the face has only Regular and Bold (Menlo, Consolas, DejaVu). It is for emphasis that must survive in a browser, today only the Screens path that names the screen. 500 is Medium on SF Mono and plain Regular in Menlo: for refinements that can be app-only, such as keycaps, which in Chrome would be too heavy in Bold. No mono role is Semibold or Bold.</p>
+    <p><b>Tags are one weight: 400</b> (decided 15 Oct 2026). Today sentiment chips are 370 and codebook tags 420 (490 in dark mode). On this Mac that is Light against Medium; on a researcher's Mac in the app, −5% against +4%; in Chrome both Regular. Colour separates the two families, and the dark-mode bump goes.</p>
+    <p><b>Two weights in all: 400 and 520</b> (decided 15 Oct 2026). 520 is the first weight above 500: about Medium on SF Mono (+21%), Bold wherever the face has only Regular and Bold (Menlo, Consolas, DejaVu). It is for emphasis that must survive in a browser; today that is only the Screens path that names the screen. Keycaps stay Regular. No mono role is Semibold or Bold.</p>
     <p><b>Figures</b> leave monospace for the body face with tabular figures, keeping 490, where the body ladder works.</p>
     <p>Proposed stack: <code>{html.escape(PROPOSED_STACK)}</code>. WebKit draws the system SF Mono on every Mac, download or not; Chromium on a Mac draws Menlo (it has no <code>ui-monospace</code>) instead of today's Courier; Windows Consolas; Linux DejaVu Sans Mono. Menlo and Consolas carry only Regular and Bold.</p>
   </div>

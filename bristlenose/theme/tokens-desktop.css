@@ -38,7 +38,7 @@
     --bn-font-body: -apple-system, "SF Pro Text", "SF Pro", system-ui,
         "Hiragino Kaku Gothic ProN", "Hiragino Sans",
         sans-serif;
-    --bn-font-mono: "SF Mono", ui-monospace, monospace;
+    /* No --bn-font-mono override: the :root stack reaches the system SF Mono via ui-monospace. */
 
     --bn-text-micro:       0.625rem;    /* 10px  — macOS caption2 */
     --bn-text-micro-lh:    1.300;

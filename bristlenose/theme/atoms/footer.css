@@ -52,7 +52,8 @@
     display: inline-block;
     padding: 0.1em 0.35em;
     font-family: var(--bn-font-mono);
-    font-size: 0.85em;
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-mono);
     line-height: 1;
     color: var(--bn-colour-muted);
     background: var(--bn-colour-badge-bg);

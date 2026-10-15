@@ -1,14 +1,14 @@
 /* Atom: badge — base badge, sentiment variants, AI and user variants */
 
-/* The weight is DECLARED. It never was, so every chip in the product rendered
-   at the user agent's 400 — a value in nobody's ladder. `light` is the rung the
-   system reserves for subordinate text, and that is what a chip is: the row's
-   words carry the finding, the chip says which vocabulary they came from. */
+/* Every tag is one weight, separated from its kind by colour, not weight:
+   --bn-weight-mono-tag, 460 in the light appearance and 400 in dark. It was 370
+   (Light), which drew Light only on a Mac with Apple's SF Mono download and
+   Regular almost everywhere else (docs/design-monospace-roles.md §6). */
 .badge {
     display: inline-block;
     font-family: var(--bn-font-mono);
     font-size: var(--bn-text-badge);
-    font-weight: var(--bn-weight-light);
+    font-weight: var(--bn-weight-mono-tag);
     padding: var(--bn-space-xs) 0.45rem;
     border-radius: var(--bn-radius-sm);
     background: var(--bn-colour-badge-bg);
@@ -85,7 +85,6 @@
 .badge-user {
     background: var(--bn-colour-user-tag-bg);
     color: var(--bn-colour-text);
-    font-weight: var(--bn-weight-normal);
     cursor: default;
     position: relative;
 }
@@ -94,12 +93,10 @@
 @supports (color: light-dark(#000, #fff)) {
     [data-theme="dark"] .badge-user {
         color: #ffffff;
-        font-weight: var(--bn-weight-emphasis);
     }
     @media (prefers-color-scheme: dark) {
         :root:not([data-theme="light"]) .badge-user {
             color: #ffffff;
-            font-weight: var(--bn-weight-emphasis);
         }
     }
 }

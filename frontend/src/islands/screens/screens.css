@@ -131,9 +131,10 @@
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .screens-sub > .screens-hidden-slot, .screens-sub > .screens-arrangement { flex: none; }
-/* The path one weight up from the line around it: it names the screen. SF Mono steps 420→490 in
-   WebKit (the app, Safari; +11% ink, measured 15 Oct 2026); Chromium renders the two alike. */
-.screens-sub code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); font-weight: var(--bn-weight-emphasis); }
+/* The path one step up from the line around it: it names the screen. Mono emphasis (560) is
+   SF Mono +24% and Bold in Menlo and Consolas, so it shows in Chrome and on Windows as well as in the
+   app (docs/design-monospace-roles.md §6). */
+.screens-sub code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); font-weight: var(--bn-weight-mono-emphasis); }
 /* Path on the left; the hidden counter and the Arrangement control ranged right, at the top right of
    the board under the heading's keyline (the owner, 15 Oct 2026). The first of them takes the slack,
    so the pair sits right whether or not anything is hidden. */

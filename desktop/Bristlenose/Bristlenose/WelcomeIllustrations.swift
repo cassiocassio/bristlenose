@@ -1511,7 +1511,7 @@ enum WelcomeIllustrationHTML {
           :root{
             --ink:#1a1a1a; --faint:#6b7280; --line:#e5e7eb; --paper:#fff; --card:#f9f9fa;
             --accent:\(accent);
-            --mono:"SF Mono",ui-monospace,Menlo,monospace;
+            --mono:ui-monospace,Menlo,monospace;
             --badge-bg:#f3f4f6; --badge-text:#374151;
             --bn-sentiment-frustration:#ea580c; --bn-sentiment-frustration-bg:#fff7ed;
             --bn-sentiment-confusion:#dc2626;   --bn-sentiment-confusion-bg:#fef2f2;
@@ -1817,7 +1817,7 @@ enum WelcomeIllustrationHTML {
             --bn-colour-user-tag-bg:#f3f4f6; --bn-colour-success:#16a34a; --bn-colour-danger:#dc2626;
             --bn-sentiment-satisfaction:#16a34a; --bn-sentiment-satisfaction-bg:#f0fdf4;
             --code-blue-bg:#dbeafe; --code-violet-bg:#ede9fe;
-            --bn-font-mono:"SF Mono",ui-monospace,Menlo,monospace;
+            --bn-font-mono:ui-monospace,Menlo,monospace;
             --bn-font-body:-apple-system,"SF Pro Text",system-ui,sans-serif;
             --bn-radius-sm:3px; --bn-radius-md:6px;
             --bn-space-xs:0.15rem; --bn-space-sm:0.35rem; --bn-space-md:0.75rem;
@@ -1983,7 +1983,7 @@ enum WelcomeIllustrationHTML {
             --bn-colour-quote-bg:#f9fafb; --bn-colour-border:#e5e7eb; --bn-colour-muted:#6b7280; --bn-colour-accent:#007aff;
             --bn-colour-text:#1a1a1a; --bn-colour-bg:#ffffff; --bn-colour-badge-bg:#f3f4f6; --bn-colour-badge-text:#374151;
             --bn-colour-user-tag-bg:#f3f4f6;
-            --bn-font-mono:"SF Mono",ui-monospace,Menlo,monospace;
+            --bn-font-mono:ui-monospace,Menlo,monospace;
             --bn-font-body:-apple-system,"SF Pro Text",system-ui,sans-serif;
             --bn-radius-sm:3px; --bn-space-xs:0.15rem;
             --bn-text-label:0.8125rem; --bn-text-badge:0.72rem;
@@ -2118,7 +2118,7 @@ enum WelcomeIllustrationHTML {
             --bn-focus-shadow:0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
             --bn-colour-border-hover:#d1d5db;
             --bn-cap-face:#fbfbfc; --bn-cap-face-lo:#f0f1f3; --bn-cap-highlight:rgba(255,255,255,.9); --bn-cap-edge:#cfd2d7;
-            --bn-font-mono:"SF Mono",ui-monospace,Menlo,monospace;
+            --bn-font-mono:ui-monospace,Menlo,monospace;
             --bn-font-body:-apple-system,"SF Pro Text",system-ui,sans-serif;
             --bn-radius-sm:3px; --bn-radius-md:6px;
             --bn-space-xs:0.15rem; --bn-space-sm:0.35rem;
@@ -2287,7 +2287,7 @@ enum WelcomeIllustrationHTML {
             --bn-focus-shadow:0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
             --bn-colour-starred:#999; --bn-colour-icon-idle:#c9ccd1; --bn-colour-border-hover:#d1d5db;
             --bn-cap-face:#fbfbfc; --bn-cap-face-lo:#f0f1f3; --bn-cap-highlight:rgba(255,255,255,.9); --bn-cap-edge:#cfd2d7;
-            --bn-font-mono:"SF Mono",ui-monospace,Menlo,monospace;
+            --bn-font-mono:ui-monospace,Menlo,monospace;
             --bn-font-body:-apple-system,"SF Pro Text",system-ui,sans-serif;
             --bn-radius-sm:3px; --bn-radius-md:6px;
             --bn-space-xs:0.15rem; --bn-space-sm:0.35rem;
@@ -2485,7 +2485,7 @@ enum WelcomeIllustrationHTML {
           :root{
             --term-bg:#ffffff; --term-border:#e0ddd4; --term-ink:#1a1a1a; --term-muted:#767676;
             --term-accent:#007aff; --term-tool:#2c7a39; --term-spin:#c96442;
-            --bn-font-mono:"SF Mono",ui-monospace,Menlo,monospace;
+            --bn-font-mono:ui-monospace,Menlo,monospace;
           }
           html[data-appearance="dark"]{
             --term-bg:#262624; --term-border:#3e3e38; --term-ink:#e8e6e3; --term-muted:#98978f;

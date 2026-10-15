@@ -404,7 +404,7 @@ enum WelcomeTimelineCSS {
     [data-theme="dark"]:root  { color-scheme: dark; }
 }
 
-/* ════ bristlenose/theme/tokens-typography.css — lines 1–51 ════ */
+/* ════ bristlenose/theme/tokens-typography.css — lines 1–77 ════ */
 /* Typography tokens — web defaults (Inter Variable from Google Fonts).
    Desktop overrides are in tokens-desktop.css.
 
@@ -425,7 +425,13 @@ enum WelcomeTimelineCSS {
         "Apple SD Gothic Neo",                           /* macOS Korean */
         "Noto Sans CJK JP", "Noto Sans CJK KR",         /* Linux CJK */
         sans-serif;
-    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+    /* One mono stack for both scales (docs/design-monospace-roles.md §4, §6). No "SF Mono" by
+       name: it resolves only on Macs with Apple's developer download, so it made the developer's
+       view differ from every researcher's. WebKit reaches the system SF Mono via ui-monospace;
+       Chromium on a Mac has no ui-monospace and takes Menlo; Windows 11 Cascadia Mono, Windows 10
+       Consolas; Linux DejaVu. The generic is last and reached nowhere measured: it is Courier in
+       Chromium on a Mac and Courier New in Windows 10's Edge. */
+    --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
 
     /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
        On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
@@ -435,6 +441,14 @@ enum WelcomeTimelineCSS {
     --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
     --bn-weight-semibold: 600;   /* a chosen word in a text-only switch (picker scope) */
     --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
+
+    /* Monospace weights — three values, chosen against measured rendering on every face the
+       stack reaches (docs/design-monospace-roles.md §6). 400–490 is Regular in Menlo, Consolas
+       and Cascadia Mono and varies only in SF Mono; Windows matches the nearest weight, so
+       Consolas turns Bold at 550 and Cascadia SemiBold at 500. */
+    --bn-weight-mono: 400;          /* every mono role at rest */
+    --bn-weight-mono-tag: 460;      /* tags, light appearance: SF Mono +9%, Regular elsewhere; 400 in dark (below) */
+    --bn-weight-mono-emphasis: 560; /* the one step up (a path that names the screen): Bold in Menlo and Consolas */
 
     /* Typography scale — 8 stops, size + line-height pairs.
        Line-height decreases as size increases (Bringhurst principle:
@@ -455,6 +469,18 @@ enum WelcomeTimelineCSS {
     --bn-text-title-lh:    1.25;
     --bn-text-display:     1.75rem;     /* 28px   — report h1 */
     --bn-text-display-lh:  1.2;
+}
+
+/* Tags drop to Regular in the dark appearance: light text on a dark tint already reads heavier,
+   and dark tags measure 6.2–9.3:1 against light's 3.1–5.2:1 (docs/design-monospace-roles.md).
+   font-weight cannot follow light-dark(), so the token follows the two scopes the palettes use. */
+[data-theme="dark"] {
+    --bn-weight-mono-tag: var(--bn-weight-mono);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bn-weight-mono-tag: var(--bn-weight-mono);
+    }
 }
 
 /* ════ bristlenose/theme/tokens-desktop.css — lines 1–70 ════ */
@@ -498,7 +524,7 @@ enum WelcomeTimelineCSS {
     --bn-font-body: -apple-system, "SF Pro Text", "SF Pro", system-ui,
         "Hiragino Kaku Gothic ProN", "Hiragino Sans",
         sans-serif;
-    --bn-font-mono: "SF Mono", ui-monospace, monospace;
+    /* No --bn-font-mono override: the :root stack reaches the system SF Mono via ui-monospace. */
 
     --bn-text-micro:       0.625rem;    /* 10px  — macOS caption2 */
     --bn-text-micro-lh:    1.300;
@@ -886,18 +912,18 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/atoms/badge.css — lines 1–327 ════ */
+/* ════ bristlenose/theme/atoms/badge.css — lines 1–324 ════ */
 /* Atom: badge — base badge, sentiment variants, AI and user variants */
 
-/* The weight is DECLARED. It never was, so every chip in the product rendered
-   at the user agent's 400 — a value in nobody's ladder. `light` is the rung the
-   system reserves for subordinate text, and that is what a chip is: the row's
-   words carry the finding, the chip says which vocabulary they came from. */
+/* Every tag is one weight, separated from its kind by colour, not weight:
+   --bn-weight-mono-tag, 460 in the light appearance and 400 in dark. It was 370
+   (Light), which drew Light only on a Mac with Apple's SF Mono download and
+   Regular almost everywhere else (docs/design-monospace-roles.md §6). */
 .badge {
     display: inline-block;
     font-family: var(--bn-font-mono);
     font-size: var(--bn-text-badge);
-    font-weight: var(--bn-weight-light);
+    font-weight: var(--bn-weight-mono-tag);
     padding: var(--bn-space-xs) 0.45rem;
     border-radius: var(--bn-radius-sm);
     background: var(--bn-colour-badge-bg);
@@ -974,7 +1000,6 @@ enum WelcomeTimelineCSS {
 .badge-user {
     background: var(--bn-colour-user-tag-bg);
     color: var(--bn-colour-text);
-    font-weight: var(--bn-weight-normal);
     cursor: default;
     position: relative;
 }
@@ -983,12 +1008,10 @@ enum WelcomeTimelineCSS {
 @supports (color: light-dark(#000, #fff)) {
     [data-theme="dark"] .badge-user {
         color: #ffffff;
-        font-weight: var(--bn-weight-emphasis);
     }
     @media (prefers-color-scheme: dark) {
         :root:not([data-theme="light"]) .badge-user {
             color: #ffffff;
-            font-weight: var(--bn-weight-emphasis);
         }
     }
 }

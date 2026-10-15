@@ -555,7 +555,7 @@
     font-size: var(--bn-text-badge);
     padding: var(--bn-space-xs) 0.45rem;
     border-radius: var(--bn-radius-sm);
-    font-weight: var(--bn-weight-normal);
+    font-weight: var(--bn-weight-mono-tag);
 }
 
 /* ── Codebook page layout ──────────────────────────────────────────────── */

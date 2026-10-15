@@ -344,6 +344,70 @@ def test_a_recording_re_exported_in_place_is_not_the_old_sessions_media(
     assert media_rows() == [], "the old session plays the re-export's bytes"
 
 
+def _re_export_setup(tmp_path: Path):
+    from bristlenose.session_registry import FP_PREFIX
+    from bristlenose.utils.fingerprint import content_fingerprint
+
+    proj = _project(tmp_path)
+    out = proj / "bristlenose-output"
+    raw = out / "transcripts-raw" / "s1.txt"
+    raw.write_text(raw.read_text(encoding="utf-8").replace(
+        "# Source: Session 1.vtt", "# Source: Session 1.mp4"), encoding="utf-8")
+    media = proj / "Session 1.mp4"
+    media.write_bytes(b"the recording this session was made from")
+    original = FP_PREFIX + content_fingerprint(media)
+    media.write_bytes(b"a trimmed re-export saved over it")
+    return proj, out, media, original, FP_PREFIX + content_fingerprint(media)
+
+
+def _s1_has_media(proj: Path) -> bool:
+    from bristlenose.server.models import Session as SessionModel
+
+    engine, factory = _own_db(proj)
+    db = factory()
+    import_project(db, proj)
+    db.commit()
+    has = db.query(SessionModel).filter_by(session_id="s1").one().has_media
+    db.close()
+    engine.dispose()
+    return has
+
+
+def test_a_re_export_keyed_by_an_interrupted_run_is_still_refused(tmp_path: Path) -> None:
+    """A run keyed the re-export as s2 and took the place's hint, then stopped
+    before removing s1's old transcript: the re-export's bytes are s2's, so
+    s1 must not play them (Fable review, 15 Oct 2026)."""
+    from bristlenose.session_registry import SessionRegistry
+
+    proj, out, _media, original, re_export = _re_export_setup(tmp_path)
+    reg = SessionRegistry.load(out)
+    reg.sessions[original] = "s1"
+    reg.sessions[re_export] = "s2"
+    reg.hints[re_export] = "Session 1.mp4"
+    reg.save()
+    assert not _s1_has_media(proj), "s1 plays the re-export, which is s2's"
+
+
+def test_a_placeholder_is_checked_once_it_downloads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """While evicted the file gets the benefit of the doubt; once its bytes
+    arrive (same size and date) it is checked, not served from a cached
+    'unknown' (Fable review, 15 Oct 2026)."""
+    import bristlenose.utils.fingerprint as fingerprint_mod
+    from bristlenose.session_registry import SessionRegistry
+
+    proj, out, _media, original, _re_export = _re_export_setup(tmp_path)
+    reg = SessionRegistry.load(out)
+    reg.sessions[original] = "s1"
+    reg.hints[original] = "Session 1.mp4"
+    reg.save()
+    monkeypatch.setattr(fingerprint_mod, "is_dataless", lambda p: True)
+    assert _s1_has_media(proj), "an evicted recording was judged without its bytes"
+    monkeypatch.setattr(fingerprint_mod, "is_dataless", lambda p: False)
+    assert not _s1_has_media(proj), "the downloaded re-export was never checked"
+
+
 def test_a_session_with_video_and_audio_keeps_its_media(tmp_path: Path) -> None:
     """The header names one file and the fingerprint was taken from the other:
     their bytes differ by nature, and that is not a re-export (Fable review,

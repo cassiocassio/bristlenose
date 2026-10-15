@@ -19,6 +19,7 @@ import logging
 import os
 import re
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -941,13 +942,8 @@ def _import_source_files(
                     break
         file_type = _guess_file_type(source_name)
 
-        # Only the file the fingerprint was taken from: a session with a video
-        # and an audio file names one in its header and was fingerprinted by
-        # the other, and their bytes always differ (Fable review).
-        fp_place = recorded.get(sid)
-        if (file_type in ("video", "audio") and fp_place is not None
-                and Path(source_name).as_posix() == fp_place[1]
-                and _holds_other_bytes(source_path, fp_place[0])):
+        if file_type in ("video", "audio") and _not_this_sessions_recording(
+                sid, Path(source_name).as_posix(), source_path, recorded):
             logger.warning(
                 "%s: %s holds different bytes from the recording this session was "
                 "made from (re-exported?); it is not played as this session's media",
@@ -984,43 +980,79 @@ def _import_source_files(
         sf.verified_at = datetime.now(timezone.utc) if present else None
 
 
-def _recorded_fingerprints(output_dir: Path | None) -> dict[str, tuple[str, str]]:
-    """Each session's recording fingerprint and the place (relative to the
-    interview folder) it was taken at, from the session registry. A session
-    with no known place is left out: there is nothing to compare safely."""
+@dataclass(frozen=True)
+class _Recorded:
+    """What the session registry knows about recordings' bytes."""
+
+    owner: dict[str, str]  # fingerprint → the session it is
+    at_place: dict[str, tuple[str, str]]  # sid → (fingerprint, place it was taken at)
+
+
+def _recorded_fingerprints(output_dir: Path | None) -> _Recorded:
+    """The registry's content keys: which session each fingerprint is, and
+    where each session's fingerprint was taken (relative to the interview
+    folder)."""
+    empty = _Recorded({}, {})
     if output_dir is None:
-        return {}
+        return empty
     from bristlenose.session_registry import FP_PREFIX, SessionRegistry
 
     try:
         registry = SessionRegistry.load(output_dir)
     except (OSError, ValueError):
-        return {}
-    return {sid: (key[len(FP_PREFIX):], registry.hints[key])
-            for key, sid in registry.sessions.items()
-            if key.startswith(FP_PREFIX) and key in registry.hints}
+        return empty
+    owner: dict[str, str] = {}
+    at_place: dict[str, tuple[str, str]] = {}
+    for key, sid in registry.sessions.items():
+        if key.startswith(FP_PREFIX):
+            owner[key[len(FP_PREFIX):]] = sid
+            if key in registry.hints:
+                at_place[sid] = (key[len(FP_PREFIX):], registry.hints[key])
+    return _Recorded(owner, at_place)
+
+
+def _not_this_sessions_recording(
+    sid: str, place: str, path: Path, recorded: _Recorded,
+) -> bool:
+    """True when the file's bytes are known and are not this session's: they
+    are another session's recording (a re-export the registry has since keyed
+    as its own session), or they differ from what this session recorded at
+    this same place (a re-export not yet re-run). A session with a video and
+    an audio file names one and was fingerprinted by the other: neither rule
+    fires for that (Fable reviews, 15 Oct 2026)."""
+    if not recorded.owner:
+        return False
+    current = _current_fingerprint(path)
+    if current is None:
+        return False
+    other = recorded.owner.get(current)
+    if other is not None and other != sid:
+        return True
+    mine = recorded.at_place.get(sid)
+    return mine is not None and mine[1] == place and mine[0] != current
 
 
 _FINGERPRINT_CACHE: dict[tuple[str, int, int], str] = {}
 
 
-def _holds_other_bytes(path: Path, recorded: str) -> bool:
-    """True only when the file's bytes are known and differ. A placeholder or
-    an unreadable file is given the benefit of the doubt. Cached by size and
-    modification time, so a recording is read once, not at every import."""
+def _current_fingerprint(path: Path) -> str | None:
+    """The file's fingerprint, or ``None`` for a placeholder or an unreadable
+    file (given the benefit of the doubt). Cached by size and modification
+    time so a recording is read once, not at every import; a placeholder is
+    not cached, so it is asked again once it downloads."""
     from bristlenose.utils.fingerprint import content_fingerprint
 
     try:
         st = path.stat()
     except OSError:
-        return False
+        return None
     key = (str(path), st.st_size, st.st_mtime_ns)
     current = _FINGERPRINT_CACHE.get(key)
     if current is None:
         current = content_fingerprint(path)
-        if current is not None:  # a placeholder is asked again once downloaded
+        if current is not None:
             _FINGERPRINT_CACHE[key] = current
-    return current is not None and current != recorded
+    return current
 
 
 def _import_thumbnails(

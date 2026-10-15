@@ -81,7 +81,9 @@ class TestEnsureHfModel:
         with patch.dict(sys.modules, {"huggingface_hub": fake_hf}):
             path = ensure_hf_model("openai/whisper-large-v3-turbo")
         assert path == "/cache/models/openai-whisper-large-v3-turbo"
-        fake_hf.snapshot_download.assert_called_once_with("openai/whisper-large-v3-turbo")
+        # Positional repo only; a ``tqdm_class`` kwarg rides along whenever HF's
+        # bar module is importable (the Ctrl+C cancel), which depends on order.
+        assert fake_hf.snapshot_download.call_args.args == ("openai/whisper-large-v3-turbo",)
 
     def test_keyboard_interrupt_propagates(self):
         # User Ctrl+C during download must propagate so the caller can exit cleanly.
@@ -191,7 +193,93 @@ class TestEnsureHfModelCtrlC:
         bar_class = type("Bar", (), {})
         with patch.dict(sys.modules, {"huggingface_hub": fake_hf}):
             ensure_hf_model("x/y", tqdm_class=bar_class)
-        fake_hf.snapshot_download.assert_called_once_with("x/y", tqdm_class=bar_class)
+        # A subclass, so the cancel can ride on it; still the preflight's class.
+        sent = fake_hf.snapshot_download.call_args.kwargs["tqdm_class"]
+        assert issubclass(sent, bar_class)
+
+
+class TestEnsureHfModelCtrlCPlainHttp:
+    """Without hf_xet, huggingface_hub downloads over plain HTTP, and nothing in
+    it can be aborted: one Ctrl+C waited for the file in flight. Its download
+    loop calls the progress bar's ``update()`` on every chunk, though, through
+    the bar class we hand it, so that is where the cancel lands."""
+
+    def test_ctrl_c_stops_a_download_that_has_no_abort(self):
+        import importlib
+        from concurrent.futures import ThreadPoolExecutor
+
+        # The real bar module, kept importable under the MagicMock package.
+        hf_tqdm_module = importlib.import_module("huggingface_hub.utils.tqdm")
+
+        chunks_after_cancel = []
+        cancelled_at: list[float] = []
+
+        def snapshot_download(repo_id, *, tqdm_class=None, **kwargs):
+            def download():
+                # Like http_get: the class it was handed, or HF's own.
+                bar = (tqdm_class or hf_tqdm_module.tqdm)(total=100, disable=True)
+                for _ in range(100):  # 100 chunks, 5 s
+                    time.sleep(0.05)
+                    if cancelled_at:
+                        chunks_after_cancel.append(1)
+                    bar.update(1)
+
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                pool.submit(download).result()
+            return "/cache/snapshot"
+
+        fake_hf = MagicMock()
+        fake_hf.snapshot_download.side_effect = snapshot_download
+        main = threading.main_thread().ident
+
+        def interrupt():
+            cancelled_at.append(time.monotonic())
+            signal.pthread_kill(main, signal.SIGINT)
+
+        modules = {"huggingface_hub": fake_hf, "huggingface_hub.utils.tqdm": hf_tqdm_module}
+        with patch.dict(sys.modules, modules), \
+                patch("bristlenose.utils.package_install._abort_hf_transfers", return_value=True):
+            t0 = time.monotonic()
+            threading.Timer(0.2, interrupt).start()
+            with pytest.raises(KeyboardInterrupt):
+                ensure_hf_model("mobiuslabsgmbh/faster-whisper-large-v3-turbo")
+            elapsed = time.monotonic() - t0
+        assert elapsed < 1.5, f"Ctrl+C took {elapsed:.1f}s to land"
+        assert len(chunks_after_cancel) <= 3, "the download kept going after Ctrl+C"
+
+
+def test_a_cancelled_bar_stays_quiet_on_a_thread_python_did_not_start():
+    """hf_xet calls the bar from its own Rust threads, where a raise is printed
+    as a stray traceback instead of stopping anything. ``_thread.start_new_thread``
+    makes the same kind of thread: one ``threading`` did not create."""
+    import _thread
+
+    from bristlenose.utils.package_install import _cancellable_bar_class
+
+    cancelled = threading.Event()
+    cancelled.set()
+    bar_class = _cancellable_bar_class(None, cancelled)
+    assert bar_class is not None
+    outcomes: dict[str, str] = {}
+    done = threading.Event()
+
+    def call(label: str) -> None:
+        bar = bar_class(total=10, disable=True)
+        try:
+            bar.update(1)
+            outcomes[label] = "quiet"
+        except BaseException as exc:  # noqa: BLE001 — recording which one it was
+            outcomes[label] = type(exc).__name__
+        finally:
+            if label == "foreign":
+                done.set()
+
+    worker = threading.Thread(target=call, args=("python",))
+    worker.start()
+    worker.join()
+    _thread.start_new_thread(call, ("foreign",))
+    done.wait(5)
+    assert outcomes == {"python": "_DownloadCancelled", "foreign": "quiet"}
 
 
 class TestAbortHfTransfers:

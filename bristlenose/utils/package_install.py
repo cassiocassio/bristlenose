@@ -106,8 +106,8 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
 
     Idempotent, and safe to interrupt: Ctrl+C stops an hf_xet transfer within
     about 2 s and hf_xet removes its partial file (measured 15 Oct 2026). A
-    plain-HTTP fallback (no hf_xet) has no abort, so there Ctrl+C waits for the
-    file in flight. It does not resume — through hf_xet (huggingface_hub 1.x) a
+    plain-HTTP download (no hf_xet) stops at its next chunk instead, through
+    the bar class, and its partial file is gone afterwards too (measured). It does not resume — through hf_xet (huggingface_hub 1.x) a
     re-run downloads the file again from the start, measured 14 Oct 2026. Safe
     inside the desktop sidecar — the cache lives under the user's HF home, not
     site-packages.
@@ -129,13 +129,15 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     paths: list[str] = []
     errors: list[BaseException] = []
     finished = threading.Event()
+    cancelled = threading.Event()
+    bar_class = _cancellable_bar_class(tqdm_class, cancelled)
 
     def fetch() -> None:
         try:
-            if tqdm_class is None:
+            if bar_class is None:
                 paths.append(snapshot_download(repo_id))
             else:
-                paths.append(snapshot_download(repo_id, tqdm_class=tqdm_class))
+                paths.append(snapshot_download(repo_id, tqdm_class=bar_class))
         except BaseException as exc:  # handed back to the main thread below
             errors.append(exc)
         finally:
@@ -150,6 +152,10 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     # until the download has stopped, because an abort sent before the hf_xet
     # session exists (repo info, HEAD requests) stops nothing.
     #
+    # A plain-HTTP download (no hf_xet) has no abort at all. It does call the
+    # bar's ``update()`` on every chunk, so ``cancelled`` makes the bar class
+    # raise there, and each download thread stops at its next chunk.
+    #
     # ``finished``, not ``is_alive()``: once a Ctrl+C has interrupted a
     # ``join``, CPython 3.12 can report the thread stopped while it still runs.
     worker = threading.Thread(target=fetch, name="hf-model-fetch", daemon=True)
@@ -157,6 +163,7 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     try:
         finished.wait()
     except KeyboardInterrupt:
+        cancelled.set()
         can_abort = True
         while not finished.wait(0.2):
             if can_abort:
@@ -171,6 +178,50 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
             ) from error
         raise error  # KeyboardInterrupt, SystemExit: unchanged
     return paths[0]
+
+
+class _DownloadCancelled(BaseException):
+    """Raised from a progress bar's ``update()`` to stop a download thread.
+
+    A ``BaseException`` so that no ``except Exception`` on the way out — a
+    retry wrapper, a cleanup handler — can swallow it and carry on downloading.
+    """
+
+
+def _cancellable_bar_class(base: type | None, cancelled: threading.Event) -> type | None:
+    """``base`` (or huggingface_hub's own bar), raising once ``cancelled`` is set.
+
+    Subclassing keeps everything the bar class decides — HF's TTY detection and
+    its global switches, the preflight's bar closing. Returns ``base`` unchanged
+    if HF's bar class cannot be imported, which loses only the cancel.
+    """
+    if base is None:
+        try:
+            base = importlib.import_module("huggingface_hub.utils.tqdm").tqdm
+        except (ImportError, AttributeError):
+            return None
+
+    class _CancellableBar(base):  # type: ignore[misc, valid-type]
+        def update(self, n: float | None = 1) -> bool | None:
+            if cancelled.is_set() and _on_python_worker_thread():
+                raise _DownloadCancelled
+            return super().update(n)  # type: ignore[no-any-return]
+
+    return _CancellableBar
+
+
+# Python's stand-in for a thread it did not start. hf_xet calls the progress
+# callback from its own Rust threads, and an exception raised there is printed
+# as a traceback rather than stopping anything (measured 15 Oct 2026: 29 of 39
+# updates on the hf_xet path, none on plain HTTP). hf_xet has its own abort, so
+# the bar only raises on the download threads Python started. If the private
+# name ever goes, this degrades to that stray traceback, never to a hang.
+_FOREIGN_THREAD = getattr(threading, "_DummyThread", ())
+
+
+def _on_python_worker_thread() -> bool:
+    thread = threading.current_thread()
+    return thread is not threading.main_thread() and not isinstance(thread, _FOREIGN_THREAD)
 
 
 def _abort_hf_transfers() -> bool:

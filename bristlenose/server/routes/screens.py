@@ -35,6 +35,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, ValidationError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from bristlenose import screen_text
@@ -455,12 +456,16 @@ class ArrangementsResponse(BaseModel):
 
 
 @router.get("/projects/{project_id}/screens/arrangements", response_model=ArrangementsResponse)
-def get_arrangements(project_id: int, db: Session = Depends(_get_db)) -> dict[str, Any]:
-    """Every custom arrangement in this project. A row that no longer reads as an arrangement
-    (hand-edited, or from a newer build) is skipped and logged, never served half-parsed."""
+def get_arrangements(project_id: int, request: Request,
+                     db: Session = Depends(_get_db)) -> dict[str, Any]:
+    """Every custom arrangement in this project; none while the lens is off. A row that no longer
+    reads as an arrangement (hand-edited, or from a newer build) is skipped and logged, never
+    served half-parsed."""
     try:
         if not db.get(Project, project_id):
             raise HTTPException(status_code=404, detail="Project not found")
+        if not screens_enabled(request):
+            return {"versions": []}
         versions = []
         for row in db.query(ScreenArrangement).filter_by(project_id=project_id).all():
             try:
@@ -475,26 +480,40 @@ def get_arrangements(project_id: int, db: Session = Depends(_get_db)) -> dict[st
 
 
 @router.put("/projects/{project_id}/screens/arrangement")
-def put_arrangement(project_id: int, body: ArrangementVersion,
+def put_arrangement(project_id: int, body: ArrangementVersion, request: Request,
                     db: Session = Depends(_get_db)) -> dict[str, str]:
-    """Replace one version's arrangement; null cards return it to automatic."""
+    """Replace one version's arrangement; null cards return it to automatic. Refused while the lens
+    is off, as /screens/still is: an explicit off deleted what screen text kept, arrangements
+    included, and nothing may write it back."""
     try:
         if not db.get(Project, project_id):
             raise HTTPException(status_code=404, detail="Project not found")
-        row = (db.query(ScreenArrangement)
-               .filter_by(project_id=project_id, screen_key=body.screen_key, session_id=body.session_id)
-               .one_or_none())
-        if body.cards is None:
-            if row is not None:
-                db.delete(row)
-        else:
-            cards = json.dumps({d: p.model_dump() for d, p in body.cards.items()})
-            if row is None:
+        if not screens_enabled(request):
+            raise HTTPException(status_code=404, detail="Screens are off")
+        cards = None if body.cards is None else json.dumps(
+            {d: p.model_dump() for d, p in body.cards.items()})
+        # Two windows freezing the same new version at once both find no row; the second insert
+        # meets the unique constraint, and is retried as the update it should have been.
+        for attempt in (1, 2):
+            row = (db.query(ScreenArrangement)
+                   .filter_by(project_id=project_id, screen_key=body.screen_key,
+                              session_id=body.session_id)
+                   .one_or_none())
+            if cards is None:
+                if row is not None:
+                    db.delete(row)
+            elif row is None:
                 db.add(ScreenArrangement(project_id=project_id, screen_key=body.screen_key,
                                          session_id=body.session_id, cards=cards))
             else:
                 row.cards = cards
-        db.commit()
+            try:
+                db.commit()
+                break
+            except IntegrityError:
+                db.rollback()
+                if attempt == 2:
+                    raise
         return {"status": "ok"}
     finally:
         db.close()

@@ -438,7 +438,11 @@ reverses. Earlier wording is kept where it explains why._
     lens. Turning reading off deletes them with the rest of screen text (§4.8): a screen key is a
     page's path read from a participant's screen. _Replaces the browser's localStorage, which in the
     Mac app is an in-memory store per serve session: quitting the app lost every arrangement._ This
-    browser's 15 Oct copy is sent up on first load and forgotten once the server holds it.
+    browser's 15 Oct copy is sent up on first load and forgotten once the server holds it. While
+    the lens is off the route serves none and refuses a write, and the lens does not read or send
+    up at all, so an explicit off cannot be undone by a browser's old copy. A failed read keeps the
+    board waiting and asks again: a board drawn automatic over an arrangement the server still
+    holds would be overwritten by its first drag (review, 15 Oct).
   - **An undo out of sight shows its board first.** Undoing or redoing a *Move Quote* or a *Tidy*
     whose screen or version is not showing switches to that screen and version, then applies, so the
     change is seen (15 Oct, review).

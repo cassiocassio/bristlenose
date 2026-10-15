@@ -441,15 +441,24 @@ describe("arrangement storage", () => {
     expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
   });
 
-  it("leaves every board automatic when the read fails, and reads again the next time", async () => {
+  // A board drawn automatic over an arrangement the server still holds would be overwritten by its
+  // first drag (review, 15 Oct 2026): a failed read loads nothing, and says so.
+  it("loads nothing when the read fails, and reads again when asked", async () => {
     vi.mocked(apiGet).mockRejectedValueOnce(new Error("401"));
-    await loadArrangements("1");
-    expect(arrangementsLoaded("1")).toBe(true);
-    expect(arrangementFor("1", "url:/x", "s1")).toBeNull();
+    expect(await loadArrangements("1")).toBe(false);
+    expect(arrangementsLoaded("1")).toBe(false);
     server([{ screen_key: "url:/x", session_id: "s1", cards: { a: edge("L", 0.3) } }]);
-    await loadArrangements("1");
+    expect(await loadArrangements("1")).toBe(true);
     expect(apiGet).toHaveBeenCalledTimes(2);
     expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
+  });
+
+  it("splits a version key at its last bar, so a screen key may hold one", async () => {
+    localStorage.setItem("bristlenose-screens-arrangements-1", JSON.stringify({ "title:A | B|s3": { a: edge("L", 0.3) } }));
+    server([]);
+    await loadArrangements("1");
+    await flush();
+    expect(sent().map((c) => c.body)).toEqual([{ screen_key: "title:A | B", session_id: "s3", cards: { a: edge("L", 0.3) } }]);
   });
 
   it("moves this browser's arrangements to the server once; the server's copy wins", async () => {

@@ -491,7 +491,7 @@ function readOld(projectId: string): Record<string, OldPlacement> {
 }
 
 const memory = new Map<string, Record<string, Arrangement>>();
-const loading = new Map<string, Promise<void>>();
+const loading = new Map<string, Promise<boolean>>();
 // Rises on every change, so a board — or an undo after the board has moved on — re-reads.
 let version = 0;
 const listeners = new Set<() => void>();
@@ -517,7 +517,7 @@ function cardsOf(v: unknown): Arrangement {
   return cards;
 }
 
-/** Whether this project's arrangements have been read (or the read has failed). */
+/** Whether this project's arrangements have been read. */
 export function arrangementsLoaded(projectId: string): boolean {
   return memory.has(projectId);
 }
@@ -525,10 +525,12 @@ export function arrangementsLoaded(projectId: string): boolean {
 /**
  * Read this project's arrangements, once, before its board shows: a board that showed automatic
  * and then jumped to custom would be the wrong board for a moment. A version this browser kept
- * before the server held them, and the server lacks, is sent up and then forgotten here. A failed
- * read leaves every board automatic and is tried again the next time the lens opens.
+ * before the server held them, and the server lacks, is sent up and then forgotten here. Resolves
+ * whether the read succeeded. A failed read loads nothing: a board drawn automatic over a custom
+ * arrangement the server still holds would be overwritten by its first drag, so the lens waits and
+ * asks again instead.
  */
-export function loadArrangements(projectId: string): Promise<void> {
+export function loadArrangements(projectId: string): Promise<boolean> {
   const pending = loading.get(projectId);
   if (pending) return pending;
   const p = apiGet<{ versions: { screen_key: string; session_id: string; cards: unknown }[] }>(
@@ -552,12 +554,12 @@ export function loadArrangements(projectId: string): Promise<void> {
         if (ok.every(Boolean)) save(storeKey(projectId), null);
       });
       changed();
+      return true;
     })
     .catch((e: unknown) => {
-      console.error("Screens: the arrangements could not be read; every board shows automatic", e);
+      console.error("Screens: the arrangements could not be read", e);
       loading.delete(projectId);
-      if (!memory.has(projectId)) memory.set(projectId, {});
-      changed();
+      return false;
     });
   loading.set(projectId, p);
   return p;

@@ -341,6 +341,7 @@ describe("ScreensLens", () => {
 
   it("says the quotes failed to load rather than showing every screen empty", async () => {
     vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens/arrangements") return Promise.resolve({ versions: serverArrangements });
       if (path === "/screens") return Promise.resolve(screensResponse());
       if (path === "/quotes") return Promise.reject(new Error("401 Unauthorized"));
       return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
@@ -409,6 +410,7 @@ describe("ScreensLens", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     let n = 0;
     vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens/arrangements") return Promise.resolve({ versions: serverArrangements });
       if (path === "/screens") {
         n += 1;
         // Still reading, so it polls; the second look fails (the sidecar restarting).
@@ -438,6 +440,7 @@ describe("ScreensLens", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     let n = 0;
     vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens/arrangements") return Promise.resolve({ versions: serverArrangements });
       if (path === "/screens") {
         n += 1;
         return n === 1 ? Promise.reject(new Error("401")) : Promise.resolve(screensResponse());
@@ -462,6 +465,7 @@ describe("ScreensLens", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     let n = 0;
     vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens/arrangements") return Promise.resolve({ versions: serverArrangements });
       if (path === "/screens") return Promise.resolve(screensResponse());
       if (path === "/quotes") {
         n += 1;
@@ -803,6 +807,7 @@ describe("one live region", () => {
     vi.useFakeTimers();
     let resolve: (v: unknown) => void = () => {};
     vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens/arrangements") return Promise.resolve({ versions: serverArrangements });
       if (path === "/screens") return new Promise<unknown>((r) => (resolve = r));
       if (path === "/quotes") return Promise.resolve(QUOTES);
       return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
@@ -1698,6 +1703,7 @@ describe("cards", () => {
   it("leave out the [When asked…] line on this lens", async () => {
     const asked = { ...QUOTES, unjoined: QUOTES.unjoined!.map((q) => ({ ...q, researcher_context: "When asked about price" })) };
     vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens/arrangements") return Promise.resolve({ versions: serverArrangements });
       if (path === "/screens") return Promise.resolve(screensResponse());
       if (path === "/quotes") return Promise.resolve(asked);
       return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
@@ -2226,6 +2232,50 @@ describe("leaders over the screengrab follow its paper (R3, 15 Oct 2026)", () =>
 });
 
 describe("arrangements come from the project's database (15 Oct 2026)", () => {
+  it("reads nothing and sends nothing up while the lens is off, so an explicit off holds", async () => {
+    localStorage.setItem("bristlenose-screens-arrangements-1", JSON.stringify({
+      "url:/shoppingcart|s1": { "q-p1-10": { kind: "edge", edge: "L", along: 0.3, out: 32, z: 31 } },
+    }));
+    mockApi(screensResponse({ enabled: false, screens: [] }));
+    render(<ScreensLens />);
+    await waitFor(() => expect(screen.getByText(/Screens are off/)).toBeInTheDocument());
+    await act(async () => {});
+    expect(apiGet).not.toHaveBeenCalledWith("/screens/arrangements");
+    expect(vi.mocked(sendPut)).not.toHaveBeenCalled();
+  });
+
+  it("keeps the board waiting when the read fails, writes nothing, and shows it once a look succeeds", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    // A 14 Oct placement the board would migrate (and write) the moment it drew.
+    localStorage.setItem("bristlenose-screens-placements-1", JSON.stringify({
+      "s1@12/q-p1-10": { kind: "edge", side: "R", frac: 0.4, z: 31 },
+    }));
+    seed("url:/shoppingcart", "s1", { "q-p1-30": { kind: "edge", edge: "L", along: 0.3, out: 32, z: 31 } });
+    let fail = true;
+    vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens") return Promise.resolve(screensResponse());
+      if (path === "/quotes") return Promise.resolve(QUOTES);
+      if (path.startsWith("/screens/still")) return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+      if (path === "/screens/arrangements") {
+        return fail ? Promise.reject(new Error("401")) : Promise.resolve({ versions: serverArrangements });
+      }
+      return Promise.reject(new Error(path));
+    }) as typeof apiGet);
+    const { container } = render(<ScreensLens />);
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(container.querySelector(".screens-stage")).toBeNull();
+    expect(vi.mocked(sendPut)).not.toHaveBeenCalled();
+    fail = false;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
+    // The server's arrangement stands: the 14 Oct entry did not replace it.
+    expect(vi.mocked(sendPut)).not.toHaveBeenCalled();
+    expect(stored("url:/shoppingcart|s1")).toEqual({ "q-p1-30": { kind: "edge", edge: "L", along: 0.3, out: 32, z: 31 } });
+  });
+
   it("draws no board until they are read, so a custom board never shows automatic first", async () => {
     seed("url:/shoppingcart", "s1", { "q-p1-10": { kind: "edge", edge: "L", along: 0.3, out: 32, z: 31 } });
     let release!: () => void;

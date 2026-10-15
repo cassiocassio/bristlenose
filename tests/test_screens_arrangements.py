@@ -123,3 +123,57 @@ def test_a_row_that_does_not_parse_is_skipped_not_served(client) -> None:
     finally:
         db.close()
     assert set(_versions(client)) == {("url:/cart", "s2")}
+
+
+@pytest.mark.parametrize("env", ["0", None])
+def test_nothing_is_written_or_served_while_the_lens_is_off(db_file: str, env, monkeypatch: pytest.MonkeyPatch) -> None:
+    """An explicit off deleted them; nothing may write one back (a browser's copy would, on open).
+    Unset without --dev, the lens is off too."""
+    if env is None:
+        monkeypatch.delenv("BRISTLENOSE_SCREEN_TEXT", raising=False)
+    else:
+        monkeypatch.setenv("BRISTLENOSE_SCREEN_TEXT", env)
+    off = AuthTestClient(create_app(project_dir=_FIXTURE_DIR, dev=False, db_url=db_file))
+    assert _put(off, "url:/cart", "s1", {"q-p1-10": _edge()}).status_code == 404
+    assert off.get(f"{URL}/arrangements").json() == {"versions": []}
+    db = off.app.state.db_factory()
+    try:
+        assert db.query(ScreenArrangement).count() == 0
+    finally:
+        db.close()
+
+
+def test_two_windows_creating_one_version_at_once_both_succeed(client, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Both find no row; the second insert meets the unique constraint and becomes an update."""
+    db = client.app.state.db_factory()
+    try:
+        db.add(ScreenArrangement(project_id=1, screen_key="url:/cart", session_id="s1", cards="{}"))
+        db.commit()
+    finally:
+        db.close()
+    from sqlalchemy.orm import Query
+
+    real = Query.one_or_none
+    calls = {"n": 0}
+
+    def stale_first(self):  # the other window's insert landed after this one looked
+        calls["n"] += 1
+        return None if calls["n"] == 1 else real(self)
+    monkeypatch.setattr(Query, "one_or_none", stale_first)
+    assert _put(client, "url:/cart", "s1", {"q-p1-10": _edge()}).status_code == 200
+    monkeypatch.setattr(Query, "one_or_none", real)
+    assert _versions(client) == {("url:/cart", "s1"): {"q-p1-10": _edge()}}
+
+
+def test_only_this_projects_rows_are_served(client) -> None:
+    from bristlenose.server.models import Project
+
+    db = client.app.state.db_factory()
+    try:
+        db.add(Project(id=2, name="Other", slug="other", input_dir="/x", output_dir="/x/out"))
+        db.add(ScreenArrangement(project_id=2, screen_key="url:/elsewhere", session_id="s1",
+                                 cards='{"q-p1-10": {"kind": "over", "x": 0.1, "y": 0.1, "z": 31}}'))
+        db.commit()
+    finally:
+        db.close()
+    assert _versions(client) == {}

@@ -452,17 +452,31 @@ export function ScreensLens() {
   useEffect(() => installLiveResizeWatch(), []);
 
   // The researcher's arrangements, from the project's database, read before any board shows: a
-  // custom board drawn automatic first would jump (layout.ts `loadArrangements`; never rejects).
+  // custom board drawn automatic first would jump, and one drawn automatic over an arrangement the
+  // server holds would be overwritten by its first drag. So a failed read keeps the board waiting
+  // and asks again, on the screens poll's back-off. Read only once /screens says the lens is on:
+  // the read also sends up this browser's old copy, which an explicit off must not bring back.
   const [arrangementsReady, setArrangementsReady] = useState(() => arrangementsLoaded(projectId));
+  const [arrangementsError, setArrangementsError] = useState(false);
+  const lensOn = !!data?.enabled && !data.unavailable;
   useEffect(() => {
+    if (!lensOn || arrangementsLoaded(projectId)) return;
     let live = true;
-    void loadArrangements(projectId).then(() => {
-      if (live) setArrangementsReady(true);
-    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const read = (attempt: number) => {
+      void loadArrangements(projectId).then((ok) => {
+        if (!live) return;
+        setArrangementsReady(ok);
+        setArrangementsError(!ok);
+        if (!ok && attempt + 1 < SCREENS_POLL_LIMIT) timer = setTimeout(() => read(attempt + 1), pollDelay(attempt + 1));
+      });
+    };
+    read(0);
     return () => {
       live = false;
+      if (timer) clearTimeout(timer);
     };
-  }, [projectId]);
+  }, [projectId, lensOn]);
 
   // Screens: polled while the job is still reading, capped, and re-read when the data moves.
   useEffect(() => {
@@ -907,7 +921,11 @@ export function ScreensLens() {
     return shell(<NotesList lines={lines} className="bn-empty-state screens-notes" />);
   }
   // Only a board needs the arrangements; the states above never wait for them.
-  if (!arrangementsReady) return shell(<p className="bn-empty-state" aria-busy="true">{t("screens.loading")}</p>);
+  if (!arrangementsReady) {
+    return shell(arrangementsError
+      ? <p className="bn-empty-state" role="alert">{t("screens.loadFailed")}</p>
+      : <p className="bn-empty-state" aria-busy="true">{t("screens.loading")}</p>);
+  }
   return (
     <section
       ref={lensRef}

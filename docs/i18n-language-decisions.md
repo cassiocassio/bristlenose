@@ -21,7 +21,9 @@ memory, not here — this doc is the shareable engineering + linguistic record.
 ## Using this when you add UI surface
 
 1. **Every new `t()` key ships in all locale files** (en, es, fr, de, ko, ja, cs, it,
-   pt-BR, pt-PT, zh-Hant, and zh-Hant-HK *only if* the term diverges for HK — see below).
+   pt-BR, pt-PT, zh-Hant, and zh-Hant-HK *only if* the term diverges for HK — see below) —
+   except a `preflight` key, which lives in `en` alone (decided 14 Oct 2026, below). _The
+   list here is not the full set; root `CLAUDE.md` §i18n names all 21 full locales._
 2. **If the string contains a taxonomy term** (Quote, Session, Codebook, Code, Signal,
    Tag, Theme, Participant, Speaker, Friction, sentiment names…), look it up in
    `glossary.csv` and use the agreed target. Do not invent a synonym — synonym drift is

@@ -1,11 +1,23 @@
 ---
 status: partial
-last-trued: 2026-10-12
-trued-against: HEAD@main on 2026-10-12
+last-trued: 2026-10-15
+trued-against: HEAD@main on 2026-10-15
 ---
 
 ## Changelog
 
+- _2026-10-15_ — trued up (Whisper download, Ctrl+C, preflight i18n): status rows,
+  goals 4 and 6, the Shape-1 table, the Whisper spec, Debate 1, primitives,
+  sequencing, open questions and the i18n section now say what shipped 14–15 Oct —
+  HF's bars drawn for the first download (they never drew before), the cache-path
+  and Ctrl+C lines, no resume under hf_xet, a Ctrl+C that stops within 2 s, and the
+  namespace made English-only. Pre-build mockups and beliefs are kept beside the
+  as-built notes. Anchors: `preflight/whisper.py` (`_native_download_progress`,
+  `_has_partial_blobs`), `utils/package_install.py` (`ensure_hf_model`),
+  `i18n.py` (`ENGLISH_ONLY_NAMESPACES`); commits "show hugging face's progress bar
+  during the first whisper download", "make the preflight namespace english-only,
+  and stop promising a resume", "make an early ctrl+c stop a model download too,
+  and true the reason".
 - _2026-10-12_ — trued up (spaCy only): added an as-built note above §"spaCy
   `en_core_web_sm`" (the model is `en_core_web_lg`, about 400 MB; pip/Homebrew vs
   snap/RPM acquisition; the fetch is framed and stepped aside), kept the sm/12 MB
@@ -31,12 +43,12 @@ The handoff's eight sequenced slices all landed in one branch; the friendly-CTO 
 |---|---|---|
 | Three install helpers (`ensure_wheel`, `ensure_spacy_model`, `ensure_hf_model`) | ✅ shipped (two of three — `ensure_wheel` deleted as unused, see Slice A note) | `bristlenose/utils/package_install.py` |
 | spaCy lazy fetch wired into Presidio | ✅ shipped | `bristlenose/stages/s07_pii_removal.py` `_ensure_spacy_model` |
-| Whisper preflight (banner, native HF Hub progress, `--no-fetch`, `doctor --fetch`) | ✅ shipped | `bristlenose/preflight/whisper.py` |
+| Whisper preflight (banner, native HF Hub progress, `--no-fetch`, `doctor --fetch`) | ✅ shipped — _but HF's bars never drew until 14 Oct 2026_: the frozen `HF_HUB_DISABLE_PROGRESS_BARS` outranked `enable_progress_bars()`, so the first download was silent after the banner. `transcribe` gained the preflight the same day (it is Whisper-only there: no ffmpeg preflight, no closing line) | `bristlenose/preflight/whisper.py`; `pipeline.py` `run` and `run_transcription_only` |
 | ffmpeg preflight (distro table, brew auto-install on macOS) | ✅ shipped (consent default flipped to N) | `bristlenose/preflight/ffmpeg.py` |
 | API-key preflight + `billing_hints.py` (all 5 providers rich: Anthropic, OpenAI, Azure, Gemini, Local/Ollama; structured `error.code` reads where SDK exposes them) | ✅ shipped (validate-existing-key; extended to Azure / Gemini / Local on `llm-error-distinguishability-all-providers`, 30 May 2026) | `bristlenose/preflight/api_key.py`, `bristlenose/llm/billing_hints.py` |
 | Front-loaded preflight block + closing line | ✅ shipped (inlined — Rule of Three did not fire) | `bristlenose/pipeline.py` (block runs after ingest, before stage 2) |
 | Quarterly drift cron on `billing_hints.py` | ✅ armed (`trig_01BtVXKG5hBnhPF4bGwR78CR`) | external |
-| i18n namespace (`preflight.*` in all 6 locales) | ✅ shipped (es/fr/de/ko/ja mirror en for the translation review pass) | `bristlenose/locales/<loc>/preflight.json` |
+| i18n namespace (`preflight.*`) | ✅ shipped, then **made English-only on 14 Oct 2026** — `ENGLISH_ONLY_NAMESPACES` in `bristlenose/i18n.py`; see §i18n implications | `bristlenose/locales/en/preflight.json` |
 | No-account-yet flow (numbered URL + getpass + Keychain persist) | 🟡 deferred | see Decisions block in `.claude/plans/cli-just-works.md` |
 | `pipeline-events.jsonl` Cause entries on preflight abort | 🟡 deferred | aborts go through `typer.Exit(2)` for now |
 | Whitelist enforcement for read-only commands | 🟡 deferred | preflight is only wired into LLM-touching commands so no leak today |
@@ -79,8 +91,8 @@ A1 (brew formula fix; branch pushed, verification + merge pending at time of wri
 
 Untouched by A1 — all design surface ahead in this doc:
 
-- ❌ **Call-blocker #2** (Whisper silent download) — needs the preflight + banner + native progress (sequencing item 4).
-- ❌ **Call-blocker #3** (Ctrl+C resumption opacity) — falls out of the Whisper fix; same work as #2.
+- ❌ **Call-blocker #2** (Whisper silent download) — needs the preflight + banner + native progress (sequencing item 4). _Banner shipped 11 May; the progress itself only from 14 Oct 2026 (see the status table)._
+- ❌ **Call-blocker #3** (Ctrl+C resumption opacity) — falls out of the Whisper fix; same work as #2. _Settled differently, 14–15 Oct 2026: Ctrl+C is safe and stops within 2 s, but the download does **not** resume, and the banner now says so (§"Why Ctrl+C is genuinely safe")._
 - ❌ **Call-blocker #4** (`--redact-pii` fails without `en_core_web_sm`) — A1 explicitly chose *not* to re-add a brew `post_install` spaCy line, in favour of the lazy-fetch-through-helper approach in sequencing items 2 + 5.
 
 Plus the preflight registry, ffmpeg detection, API-key paste flow, default-tier auto-select, channel-mix telemetry, and the two debates — none touched. A1 is 1/4 of the call's symptoms; this doc is the other 3/4 plus the structural fixes that prevent the next equivalent call.
@@ -94,9 +106,9 @@ The first-run experience must:
 1. **Never go silent for more than ~5 seconds without surfacing why.** Either it's working (spinner + stage name) or it's downloading (progress bar + size + ETA) or it's waiting for the user (prompt with default).
 2. **Pre-empt foreseeable blockers** before the long-running stages start, so the user isn't 8 minutes into transcription before discovering the model isn't on disk.
 3. **Translate machine truths into human framing.** "First run on this machine — Bristlenose needs to download the Whisper transcription model (~1.5 GB, one-off)" beats "model not found in HF cache at ~/.cache/huggingface/hub/models--…".
-4. **Make Ctrl+C safe and resumption obvious.** Pipeline resume is already in place (Phase 1c/1d — see [`docs/design-pipeline-resilience.md`](design-pipeline-resilience.md) for the manifest + per-session cache mechanics this builds on); the same must hold for model downloads (HF Hub's built-in resume is fine; the UX must say "resuming download").
+4. **Make Ctrl+C safe and resumption obvious.** Pipeline resume is already in place (Phase 1c/1d — see [`docs/design-pipeline-resilience.md`](design-pipeline-resilience.md) for the manifest + per-session cache mechanics this builds on); the same must hold for model downloads (HF Hub's built-in resume is fine; the UX must say "resuming download"). _14 Oct 2026: measured, it does not resume (hf_xet downloads the file again), so the UX says "Restarting download" and the banner promises only that Ctrl+C is safe._
 5. **Be the same shape across CLI and desktop — each authentic to its medium.** A user moving between channels shouldn't relearn the vocabulary, defaults, or recovery semantics. Glyphs and colours come from one taxonomy (`MessageKind`); copy stays consistent; defaults match. But the *chrome* is channel-appropriate by design — CLI is authentically CLI (terminal text, `[Y/n]`, "re-run with"); desktop is authentically Mac-native (SwiftUI sheets, buttons, modal flow). The same *question* may surface as a paste prompt in one channel and a sheet with a text field in the other; that's correct, not a failure to harmonise.
-6. **Tell the user where bytes went and how to evict them.** Disk-conscious users are owed a one-line "cached at `<path>` — delete with `bristlenose doctor --evict-models`."
+6. **Tell the user where bytes went and how to evict them.** Disk-conscious users are owed a one-line "cached at `<path>` — delete with `bristlenose doctor --evict-models`." _As built (14 Oct 2026): the banner says "It downloads once, to `<path>`." above 500 MB; `--evict-models` does not exist._
 7. **Never require reading the manual to complete a first run.** The man page and `--help` are reference, not curriculum.
 
 ---
@@ -147,6 +159,8 @@ No more questions. ~25 min to your report. Ctrl+C anytime.
 ...
 ```
 
+_As built: the Whisper fetch runs inside the preflight block, **before** the closing line, not after it (`pipeline.py`, the `_needs_whisper` branch precedes `preflight.closing.no_more_questions`)._
+
 The closing line is the consent boundary. Plain, honest, terse:
 
 > **No more questions. ~25 min to your report. Ctrl+C anytime.**
@@ -178,11 +192,12 @@ Every "just works" blocker we have or will have fits one of five shapes. Knowing
 
 A model, a vocab file, a binary. Knowable to be missing before the long stage starts. Fetchable from a known URL with known size and resumable transfer.
 
-**Pattern:** preflight check → human-framed pre-message → resumable download with real progress → continue. Default `[Y/n]` answer is `Y` for "yes, download." Skip the prompt entirely when total size is under a threshold (say, 50 MB) — just do it with a progress bar.
+**Pattern:** preflight check → human-framed pre-message → resumable download with real progress → continue. Default `[Y/n]` answer is `Y` for "yes, download." Skip the prompt entirely when total size is under a threshold (say, 50 MB) — just do it with a progress bar. _As built: no prompt at any size — the command is the consent (§Whisper spec, "No `[Y/n]` prompt")._
 
 **Instances:**
-- Whisper model (mlx-whisper or faster-whisper, ~150 MB to ~1.5 GB depending on tier)
-- spaCy `en_core_web_sm` (~12 MB) for PII redaction
+- Whisper model (mlx-whisper or faster-whisper, ~150 MB to ~1.5 GB depending on tier) — _measured: 74 MB (tiny) to ~3.1 GB (large-v2/v3); the default turbo is ~1.6 GB (`_DOWNLOAD_MB`, `preflight/whisper.py`)_
+- spaCy `en_core_web_sm` (~12 MB) for PII redaction — _shipped as `en_core_web_lg`, ~400 MB (see the spaCy section)_
+- _Voice model for the speaker pass (~40 MB), fetched at run time; added after this list was written_
 - Ollama model pulls (variable, 1–30 GB)
 
 ### Shape 2: missing system binary, installable via package manager
@@ -229,9 +244,9 @@ The actual exception is meaningful to a Python dev and inert to a researcher. `K
 
 ### Whisper model first-fetch (Shape 1, current pain point)
 
-**Current state:** `_init_mlx_backend()` and `_init_faster_whisper_backend()` in [`bristlenose/stages/s05_transcribe.py`](../bristlenose/stages/s05_transcribe.py) log "MLX backend initialised (model will be loaded on first use)" and then let HuggingFace Hub download on the first `mlx_whisper.transcribe()` call. HF progress bars are explicitly disabled ([line 209-212](../bristlenose/stages/s05_transcribe.py#L209)) because they conflict with the Rich spinner. Net effect: 5–30 minutes of silence, then transcription starts.
+**Pre-ship state (May 2026):** `_init_mlx_backend()` and `_init_faster_whisper_backend()` in [`bristlenose/stages/s05_transcribe.py`](../bristlenose/stages/s05_transcribe.py) log "MLX backend initialised (model will be loaded on first use)" and then let HuggingFace Hub download on the first `mlx_whisper.transcribe()` call. HF progress bars are explicitly disabled ([line 209-212](../bristlenose/stages/s05_transcribe.py#L209)) because they conflict with the Rich spinner. Net effect: 5–30 minutes of silence, then transcription starts.
 
-**Default model:** `large-v3-turbo` (`config.py:74`). Roughly 1.5 GB for mlx-community's quantised version.
+**Default model:** `large-v3-turbo` (`config.py:177`; ~1.6 GB measured, see `_DOWNLOAD_MB`). Roughly 1.5 GB for mlx-community's quantised version.
 
 **Spec:**
 
@@ -254,6 +269,22 @@ The actual exception is meaningful to a Python dev and inert to a researcher. `K
 ⠋ Transcribing (1/5)...
 ```
 
+**As built (14–15 Oct 2026)** — the mockup above is the pre-build spec. What a terminal shows, right after ingest and before stage 2:
+
+```
+  Bristlenose needs the Whisper transcription model (~1.6 GB).
+  It downloads once, to ~/.cache/huggingface/hub.
+  Ctrl+C is safe — the next run starts the download again.
+
+  Downloading mlx-community/whisper-large-v3-turbo...
+
+Download complete: ████████████████████████████████████████| 1.60GB, 27.0MB/s
+Reconstruction complete: 100%|█████████████████████████████| 1.61GB / 1.61GB
+  ✓ Whisper model ready [59s]
+```
+
+Strings from `bristlenose/locales/en/preflight.json`; the cache line shows above 500 MB or for an unmeasured repo; HF 1.x draws two aggregate byte bars, not per-file ones, on a terminal only; a partial download says "Restarting download".
+
 **No `[Y/n]` prompt.** The walk-away-make-coffee case *is* the intended use case for a 1.5 GB download. A prompt requires the user to be present to type Y; coming back 5 minutes later to find the terminal sitting at a prompt with nothing done is the worst outcome we could ship. The command itself (`bristlenose interviews/`) is the consent.
 
 **Peer-tool convention** — Bristlenose's neighbours in the LLM-tools space all auto-proceed:
@@ -272,16 +303,18 @@ Bristlenose's posture matches HF CLI / Ollama / brew, not apt. User-scope, named
 
 **Escape hatches for CI / air-gapped / explicit-prep:**
 
-- `--no-fetch` flag — refuses any auto-download. Prints what *would* have been fetched, exits cleanly. For CI smoke runs, air-gapped machines, debugging.
-- `bristlenose doctor --fetch` — explicit pre-download path. Researcher pre-loads everything before a flight / conference / known offline period. Same machinery as the runtime preflight, just invoked deliberately.
+- `--no-fetch` flag — refuses any auto-download. Prints what *would* have been fetched, exits cleanly. _As built: refuses before the banner, names the repo, exits 2 (`preflight.whisper.aborted_no_fetch`); also blocks the brew ffmpeg install and the voice-model fetch._ For CI smoke runs, air-gapped machines, debugging.
+- `bristlenose doctor --fetch` — explicit pre-download path. Researcher pre-loads everything before a flight / conference / known offline period. _As built: fetches the Whisper model and the voice model, **not** the spaCy model (`cli.py`, the `if fetch:` block in `doctor`)._ Same machinery as the runtime preflight, just invoked deliberately.
 
 **Not designed for: metered connections.** Researchers using Bristlenose at a hotel know hotel wifi varies and tether or wait — it's a cost of doing work, not Bristlenose's problem to solve. Anyone running a work tool that does LLM inference and transcription has decided their connection is good enough for the task. Cancellability (Ctrl+C, resumable next run) is sufficient. Don't add metered-wifi-aware branches; they obscure the common case to protect an edge that the user already manages.
 
-**Why Ctrl+C is genuinely safe** (and worth the banner reassurance): HF Hub's `snapshot_download` writes `.incomplete` files during download. On Ctrl+C, the partial files stay in cache. Next invocation detects them and resumes from the byte where the previous run stopped — no corruption, no manual cleanup, no `.tmp` hunt. Same for pip wheels via PEP 658 metadata. The banner says this explicitly so a user who wants to interrupt knows it's safe.
+**Why Ctrl+C is genuinely safe** (and worth the banner reassurance) — _pre-measurement belief, May 2026; the note below overturns the resume half_: HF Hub's `snapshot_download` writes `.incomplete` files during download. On Ctrl+C, the partial files stay in cache. Next invocation detects them and resumes from the byte where the previous run stopped — no corruption, no manual cleanup, no `.tmp` hunt. ~~Same for pip wheels via PEP 658 metadata.~~ _(PEP 658 is about serving metadata, not resuming downloads.)_ The banner says this explicitly so a user who wants to interrupt knows it's safe.
 
 > **Measured 14 Oct 2026: safe, but it does not resume.** huggingface_hub 1.x downloads through hf_xet, a hard dependency on every architecture we ship. A 1.6 GB `large-v3-turbo` fetch stopped at 577 MB re-downloaded the full 1.60 GB on the next run, into a fresh `<sha>.<random>.incomplete`, and left the first partial behind permanently. Nothing was corrupted. The banner now says "the next run starts the download again", and the partial state's verb is "Restarting download". Two more findings from the same run, both fixed. **One Ctrl+C did nothing until the whole file had finished** — measured again in isolation, 50 s on 1.6 GB. Not hf_xet's signal handler, as first guessed, and not a wait the interrupt cannot break, as guessed second (a review measured a real SIGINT breaking that wait in 0.3 s). The interrupt lands; then `hf_thread_map`'s `with ThreadPoolExecutor` waits on exit for the worker still downloading, and huggingface_hub's own `abort_xet_session()` sits in that worker, which never sees the interrupt. `ensure_hf_model` now runs the fetch on its own thread and, on Ctrl+C, calls that abort from the main thread on every 0.2 s slice until the download has stopped — repeated because an abort sent before the hf_xet session exists (repo info, HEAD requests) stops nothing. Measured mid-transfer: the process exits within 2 s. A plain-HTTP fallback (no hf_xet) has no abort, so there Ctrl+C still waits for the file in flight. The abort also removes the partial file, so the orphan above came from the broken interrupt path, not from Ctrl+C as such. And the leftover partial made `cache_state()` report `partial` on every later run, so the banner appeared for a complete model — fixed in `_has_partial_blobs`.
 
 **Implementation:**
+
+> **As built, items 1, 3–5 differ:** no `hf_cache.py`; `cache_state()` in `preflight/whisper.py` probes the heavy payload (`model.bin`, or `weights.safetensors`/`weights.npz`) and rejects `config.json`, and ignores a partial whose blob has finished. There is no prompt and no `--yes` here; the fetch goes through `ensure_hf_model` with `_native_download_progress`'s bar class (a subclass of HF's own tqdm, TTY only), and a partial says "Restarting download" because nothing resumes.
 
 1. New helper `bristlenose/utils/hf_cache.py:model_is_cached(repo_id) -> bool` using `huggingface_hub.try_to_load_from_cache` (returns sentinel `_CACHED_NO_EXIST` if not found, a path if found, `None` if uncached).
 2. Call it from `_init_mlx_backend` / `_init_faster_whisper_backend` *before* the Rich `console.status()` spinner opens — these are called inside `transcribe_sessions()`, so the preflight has to lift into `pipeline.py`. **Shipped placement:** the call lives in the front-loaded preflight block immediately after ingest (Slice F), not between stages 4 and 5 as originally sketched. Same effect, surfaced earlier.
@@ -289,9 +322,9 @@ Bristlenose's posture matches HF CLI / Ollama / brew, not apt. User-scope, named
 4. `--yes` / `-y` already exists (session-count guard). Re-use it to skip the prompt for CI / scripts.
 5. **Resume:** HF Hub handles partial downloads automatically. The pre-message should say "Resuming download" instead of "Downloading" when `~/.cache/huggingface/hub/models--…/blobs/` contains partial files.
 
-**Rich-bridge tqdm class:** there's a `rich.progress.Progress` adapter pattern in the Rich docs — a small wrapper class that implements tqdm's interface and forwards to a Rich progress bar. We need this in `bristlenose/utils/rich_tqdm.py`; potentially also useful for faster-whisper's internal progress bars and any future HF download.
+**Rich-bridge tqdm class:** _superseded — Option B won and this was never built (status table)._ There's a `rich.progress.Progress` adapter pattern in the Rich docs — a small wrapper class that implements tqdm's interface and forwards to a Rich progress bar. We need this in `bristlenose/utils/rich_tqdm.py`; potentially also useful for faster-whisper's internal progress bars and any future HF download.
 
-**Estimating size before download:** tempting to use `huggingface_hub.HfApi().model_info(repo_id).siblings` to make the "~1.5 GB" number data-driven. **Don't.** It's a network call that runs *before* the banner — on slow / captive-portal connections, 2–10 s of silent stall recreates the exact problem this section is solving. Hardcode `~1.5 GB` in the banner; staleness is fine over model releases. Updating the constant when the default model changes is a one-line maintenance step (and the quarterly drift-audit cron can verify the published size matches our constant).
+**Estimating size before download:** tempting to use `huggingface_hub.HfApi().model_info(repo_id).siblings` to make the "~1.5 GB" number data-driven. **Don't.** It's a network call that runs *before* the banner — on slow / captive-portal connections, 2–10 s of silent stall recreates the exact problem this section is solving. Hardcode `~1.5 GB` in the banner; staleness is fine over model releases. _As built: a per-repo table, `_DOWNLOAD_MB` in `preflight/whisper.py`, measured from the Hub API on 4 Oct 2026, still with no network call; an unmeasured repo shows its id instead of a size. No drift audit of that table is known to exist._ Updating the constant when the default model changes is a one-line maintenance step (and the quarterly drift-audit cron can verify the published size matches our constant).
 
 **Default tier:** locked at `large-v3-turbo` (~1.5 GB). Settled in a prior conversation: turbo is *good enough* that the quality win justifies the size hit, the size is surfaced in the framed banner so the user isn't ambushed, and eviction is one command (`bristlenose doctor --evict-models` once it exists). Don't reopen — the cost of revisiting the model choice repeatedly is higher than the cost of carrying 1.5 GB on disk.
 
@@ -638,7 +671,7 @@ The asymmetry is worth seeing before deciding — Option B accepts that these tw
 | Progress style | Stacked per-file bars | Single aggregate bar |
 | Cache visibility | Shows `~/.cache/huggingface/hub` | None (lives inside the venv) |
 | Extra noise | Clean | `Collecting…` / `Installing…` / `Successfully installed` + spaCy's own ✔ line |
-| Desktop-channel approach | Same runtime fetch, writes to `~/Library/Caches` | **Different — bundled into sidecar at build time, no runtime fetch.** Out of scope here |
+| Desktop-channel approach | Same runtime fetch, writes to `~/Library/Caches` _(as built: nothing sets `HF_HOME`, so `~/.cache/huggingface/hub` under the sandbox container's home)_ | **Different — bundled into sidecar at build time, no runtime fetch.** Out of scope here |
 
 Whisper output under Option B:
 
@@ -666,7 +699,7 @@ spaCy output under Option B *as the library prints by default* (this is **not** 
 
 That's eight lines of pip chrome for a four-second download. **Tiny things should feel tiny** — see the cutoff table in the spaCy spec below. The bet Option B makes is that the framing carries the consistency even when the bytes don't — *for big enough downloads to justify the chrome*. spaCy isn't one. Whisper is.
 
-**Spike to run before locking:**
+**Spike to run before locking:** _overtaken by the build, 14 Oct 2026 — Option B shipped for Whisper (TTY-gated, bars closed before the spinner restarts); the Rich-bridge spike was never run and is moot. See the as-built note above._
 - 30 min: implement Option B for Whisper-only on a fresh machine; capture screenshots in light/dark, narrow window (80 cols), and a log file (no TTY). Does it read?
 - 30 min: same for spaCy. Does pip's "Successfully installed" line break the framing, or sit cleanly inside the banner?
 - 1 hour: try Option A's Rich-bridge against HF Hub's `tqdm_class=` and faster-whisper. Is the shim 50 lines or 250? That number determines whether Option C is viable.
@@ -758,7 +791,7 @@ Net sequence: first-run UX now (with the abstracted helper), uv spike + migratio
 
 ## Implementation primitives
 
-Things to build once, reuse across blockers. **Note:** primitive (2) — the Rich-bridge tqdm class — only exists under Debate 1 / Option A or C. If Option B wins the spike, delete that line item and pocket the savings.
+Things to build once, reuse across blockers. **Note:** primitive (2) — the Rich-bridge tqdm class — only exists under Debate 1 / Option A or C. If Option B wins the spike, delete that line item and pocket the savings. _Option B won; primitive 2 was never built, and is kept below as the rejected path._
 
 ### 1. Preflight registry (`bristlenose/preflight.py`)
 
@@ -780,7 +813,7 @@ We have `--yes` / `-y` for the session-count guard. Generalise to a `prompt_yes_
 
 ### 5. Resumable download wrapper
 
-Wrap `snapshot_download` to: detect partial cache, render "Resuming download…" vs "Downloading…", show byte-level progress, handle Ctrl+C without corrupting cache (HF Hub already handles this; just don't undo it).
+_As built: `ensure_hf_model` is not resumable — nothing is, under hf_xet — but it is interruptible: the fetch runs on its own thread and a Ctrl+C aborts the transfer from the main thread every 0.2 s until it stops (§"Why Ctrl+C is genuinely safe")._ Wrap `snapshot_download` to: detect partial cache, render "Resuming download…" vs "Downloading…", show byte-level progress, handle Ctrl+C without corrupting cache (HF Hub already handles this; just don't undo it).
 
 ### 6. Provider-key paste flow (CLI)
 
@@ -814,7 +847,7 @@ The "i-in-a-blue-circle" affordance familiar from GUIs is doing work that plain 
 - **Asking questions with no good default.** Every prompt has a pre-selected answer that works for the median user. If you don't know the median, don't ship the prompt.
 - **Five-question first-run wizards.** Aim for zero prompts ideal, one prompt typical, two prompts max. More than two means you haven't picked enough defaults.
 - **Different vocabulary on CLI and desktop.** The first-run user is one person across both surfaces; the tool isn't two products.
-- **Surfacing model paths, cache paths, or env vars in the main flow.** Those belong in `doctor`, in `--verbose`, and in the man page — not in the path to the report.
+- **Surfacing model paths, cache paths, or env vars in the main flow.** Those belong in `doctor`, in `--verbose`, and in the man page — not in the path to the report. _One exception, by goal 6 and the fetch-size table: the >500 MB first-download banner names the cache once._
 
 ---
 
@@ -840,7 +873,7 @@ The "i-in-a-blue-circle" affordance familiar from GUIs is doing work that plain 
 > wrong: the Mac runs the sidecar's `run`, which reaches every preflight, with
 > `BRISTLENOSE_LANG` set.
 
-All preflight strings live in the `preflight` namespace under
+_Pre-14-Oct plan, kept as written:_ All preflight strings live in the `preflight` namespace under
 `bristlenose/locales/<locale>/preflight.json` and route through
 `bristlenose.i18n.t()`. English is the source of truth; the five other
 locales (`es`, `fr`, `de`, `ko`, `ja`) fall through to English via the
@@ -848,12 +881,13 @@ existing fallback path until a translator copies and adapts each section.
 
 **Namespace shape** (`bristlenose/locales/en/preflight.json`):
 
-- `whisper.*` — banner intro, cache-path line (`downloads_to`), Ctrl+C line (`ctrl_c_safe`), verb (`Downloading` / `Restarting download`), fetching template, ready line, `--no-fetch` abort copy
+- `whisper.*` — banner intro, cache-path line (`downloads_to`), Ctrl+C line (`ctrl_c_safe`), verb (`Downloading` / `Restarting download`), fetching template, ready line, `--no-fetch` abort copy, unknown-model refusal (`unknown_model`, `did_you_mean`, `choose_model`)
 - `ffmpeg.*` — banner, brew prompt, ready line, abort copy, five install-table rows (one per distro)
-- `api_key.*` — source attribution, four error-class messages (`invalid_key`, `billing_empty`, `model_unavailable`, `rate_limit`), generic fall-through
+- `api_key.*` — source attribution, error-class messages (`rejected_invalid_key`, `no_credit`, `model_unavailable`, `rate_limit`, `network`, `azure_deployment_unavailable`, `google_model_unavailable`, `local_server_down`, `local_model_not_pulled`), generic fall-through (`generic`)
+- `pii.*` — `--no-fetch` abort and the spaCy-model download line
 - `closing.*` — "No more questions" line with/without estimate
 
-**Channel-fork inventory** — all preflight strings are CLI-only. The
+**Channel-fork inventory** — ~~all preflight strings are CLI-only.~~ _Wrong: the Mac runs the sidecar's `run`, which reaches every preflight (banner above)._ The
 desktop sidecar bundles spaCy + Whisper + ffmpeg at build time (_12 Oct 2026:
 not so for the spaCy model — the sidecar bundles spaCy's code, not its weights,
 commit "bundle presidio and spaCy; the weights still download"_) and uses a
@@ -890,7 +924,7 @@ here.
   treated as code spans and shouldn't be translated even when nested
   inside translated prose.
 
-**Translator workflow:** copy `en/preflight.json` to each target locale,
+**Translator workflow:** _superseded 14 Oct 2026 — `check-locales.py --strict` refuses a non-English copy._ Copy `en/preflight.json` to each target locale,
 translate prose around the `{placeholder}` markers, keep the JSON
 structure identical. See CLAUDE.md → "i18n — single source of truth" for
 the JSON round-trip gotcha (don't re-dump existing locale files; this
@@ -903,9 +937,9 @@ namespace is fresh so it's a non-issue for the first translation pass).
 See **Design debates** above for the two big ones (rendering ownership and install backend). The rest:
 
 - ~~First-run default tier — settled, `large-v3-turbo`.~~ Kept as a strikethrough so future-Claude doesn't re-derive the question. The only adjacent live question is whether to auto-downshift on machines that can't handle turbo cleanly — and even that's "fallback if it bites us," not a default-tier question.
-- **Pre-warm during `doctor`:** should `bristlenose doctor` offer "fetch the Whisper model now? [Y/n]" so the first real run never blocks? Cheap to add once the preflight registry exists; reuses the same primitives. Lands under Debate-1 Option D as the *main* path; under A/B/C as a *backup* path.
+- ~~**Pre-warm during `doctor`:** should `bristlenose doctor` offer "fetch the Whisper model now? [Y/n]" so the first real run never blocks? Cheap to add once the preflight registry exists; reuses the same primitives. Lands under Debate-1 Option D as the *main* path; under A/B/C as a *backup* path.~~ Shipped as `bristlenose doctor --fetch`, no prompt.
 - ~~**API-key persistence path:** writing to `~/.zshrc` is one option, but a `~/.config/bristlenose/keys` file readable only by user, with `bristlenose doctor` documenting where it lives, may be cleaner than mutating the shell rc.~~ Settled: `~/.config/bristlenose/.env`, mode 0600, written by `FileCredentialStore` when there is no keyring; `bristlenose doctor` reports the source. Kept as strikethrough.
-- **Cancellation semantics during model download:** Ctrl+C should leave the cache resumable, not corrupt. HF Hub handles this by default — confirm under load. Same question for uv if Debate-2 / Option β wins.
+- ~~**Cancellation semantics during model download:** Ctrl+C should leave the cache resumable, not corrupt. HF Hub handles this by default — confirm under load.~~ Answered 14–15 Oct 2026: not corrupt, not resumable, and Ctrl+C needed its own abort (§"Why Ctrl+C is genuinely safe"). Same question for uv if Debate-2 / Option β wins.
 - ~~Sandbox + spaCy — runtime download path under App Sandbox.~~ Resolved: desktop bundles the spaCy model into the sidecar at build time (standard packaging), so there is no runtime download on desktop. Lives with sidecar bundle work, not here. Kept as strikethrough so future-Claude doesn't re-derive it. _12 Oct 2026: not so. The sidecar bundles spaCy and Presidio code but not the ~400 MB weights (commit "bundle presidio and spaCy; the weights still download"); the host is to hand over a directory via `BRISTLENOSE_PII_MODEL_DIR`, no acquirer exists yet, and the sidecar refuses a fetch with `FrozenSidecarError`. Still open, and owned by `docs/design-redact-pii.md` §"Delivery architecture", not this doc._
 - **Telemetry hooks:** the alpha telemetry system (Phase 1 plumbing on main) could measure how often each preflight fires and how often users abort. Worth wiring once the registry is in place.
 - **Channel-mix telemetry (one-evening slice).** Cheapest single ping that would unlock multiple prioritisation decisions: a one-off, opt-out, anonymised first-launch marker carrying channel only — `brew` / `pip-macos` / `pip-linux` / `snap` / `desktop-mac`. Never repeated. Lets every subsequent call (Debate 2 weight, ffmpeg-preflight scope, snap-fix urgency, where to invest first-run polish) be made with data instead of guessing 85 % brew. Currently *guessing* is fine; once there's a cohort, this is one of the highest-ROI telemetry items to wire. Skips ahead of full Phase 2 telemetry — single-purpose ping.
@@ -917,7 +951,7 @@ See **Design debates** above for the two big ones (rendering ownership and insta
 
 Two spikes first; they reshape everything below them.
 
-0a. **Spike Debate 1.** Implement Option B for Whisper-only on a fresh machine. Capture screenshots in light/dark, narrow window, log file. ~1 hour. Output: a one-paragraph "B works / B doesn't / try C" call appended to this doc.
+0a. **Spike Debate 1.** Implement Option B for Whisper-only on a fresh machine. Capture screenshots in light/dark, narrow window, log file. ~1 hour. Output: a one-paragraph "B works / B doesn't / try C" call appended to this doc. _Done in effect: the as-built note under Debate 1, Option B (14 Oct 2026)._
 
 0b. **Spike Debate 2.** Replace `python -m venv` + `pip install` with `uv venv` + `uv pip install` on a throwaway brew-formula branch and in CI. Measure install time. ~1 hour. Output: a one-paragraph "switch / stay / stay-for-now-revisit" call appended to this doc.
 
@@ -934,7 +968,7 @@ Then, smallest-useful-first (helper-first per Debate-2 / finding 36 design call;
 7. **Quarterly drift audit on `billing_hints.py`.** Recurring scheduled task. Walks provider URLs, verifies minimums + subscription-confusion claims still hold. Already scheduled (cron `0 9 1 1,4,7,10 *`, routine `trig_01BtVXKG5hBnhPF4bGwR78CR`). ~30 min to land the code once `billing_hints.py` exists; cron is already armed.
 8. **Machine-capability fallback for Whisper.** Only if `large-v3-turbo` is shown to OOM / thrash on real low-RAM cohort machines. Likely a no-op; park until a real signal arrives. *(The default tier itself is settled — turbo. This item is fallback-only.)*
 
-9. **Rich-bridge tqdm class.** *Only if* Debate 1 / Option A or C wins post-spike. Skip under Option B. ~half-day if needed; default expectation is "skip."
+9. **Rich-bridge tqdm class.** _Skipped — Option B won._ *Only if* Debate 1 / Option A or C wins post-spike. Skip under Option B. ~half-day if needed; default expectation is "skip."
 
 Total: roughly a week of focused work, all of which is "lift first-run completion rate from `<50 %` to `>90 %`." The CTO call was the lower bound; the upper bound is what shipped.
 
@@ -947,6 +981,6 @@ Total: roughly a week of focused work, all of which is "lift first-run completio
 - [`docs/design-doctor-and-snap.md`](design-doctor-and-snap.md) — doctor command and Snap packaging context.
 - [`docs/design-pipeline-resilience.md`](design-pipeline-resilience.md) — resume / manifest / `Cause` plumbing this builds on.
 - [`docs/design-modularity.md`](design-modularity.md) — cross-channel component strategy (CLI ≡ macOS code path).
-- `bristlenose/stages/s05_transcribe.py` — current Whisper-fetch silence.
+- `bristlenose/stages/s05_transcribe.py` — the Whisper-fetch silence this doc set out to end (now fetched by the preflight, before stage 5).
 - `bristlenose/stages/s07_pii_removal.py` — current spaCy hard-fail.
 - `bristlenose/utils/bundled_binary.py` — already-shipped ffmpeg discovery for the desktop bundle.

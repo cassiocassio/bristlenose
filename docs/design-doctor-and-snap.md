@@ -1,7 +1,7 @@
 ---
 status: partial
 last-trued: 2026-08-27
-trued-against: HEAD on 2026-08-27 — Part 2 (snap) and the fix table only; Part 1 (doctor) is trued to 2026-04-21
+trued-against: HEAD on 2026-08-27 — Part 2 (snap) and the fix table only; Part 1 (doctor) is trued to 2026-04-21, except its Whisper-download claims, trued 2026-10-15
 ---
 
 > **Truing status: PARTIAL, and read this before trusting Part 1.** The header
@@ -31,7 +31,8 @@ spaCy model now, and stage 7 fetches `en_core_web_lg` into the user cache there
 > `rpm` now, and consults a marker file *before* the path sniffs), the
 > command-to-check matrix (no `serve` column; still carries `render`, a command
 > that no longer exists), and the `bristlenose transcribe-only --prefetch-model`
-> examples, which name neither a real command nor a real flag.
+> examples, which name neither a real command nor a real flag — what shipped is
+> `bristlenose doctor --fetch` (§"Future: `--prefetch-model` flag", now marked).
 >
 > Part 3 (`--self-test`) is shipped, but note the corrected invocation site: it
 > runs **pre-sign** in `ensure-sidecar.sh`, not post-sign in `build-all.sh` — a
@@ -42,6 +43,7 @@ spaCy model now, and stage 7 fetches `en_core_web_lg` into the user cache there
 
 ## Changelog
 
+- _2026-10-15_ — narrow pass (topic: first-run Whisper download): an as-built note over the sample dialogs (shipped doctor and banner wording, ~1.6 GB, `transcribe` not `transcribe-only`); the download-failure mockup kept, with what happens now (no resume under hf_xet); §"Future: `--prefetch-model`" marked shipped as `doctor --fetch`; the HF-warning note past-tensed; Phase 3 items 1–3 marked. Anchors: `doctor.py` `check_whisper_model`, `cli.py` `doctor --fetch`, `locales/en/preflight.json`; commits "silence huggingface_hub's first-download warnings, and bundle hf_xet on windows", "show hugging face's progress bar during the first whisper download", "make an early ctrl+c stop a model download too, and true the reason".
 - _2026-10-11_ — narrow pass: the banner withdraws "fix table trued to HEAD" and names what drifted; the matrix gains a dated `serve_deps` note (live since `fd6286ee`). The rest of the 11 Oct audit (snap size, brew formula, `--prefetch-model`, the spaCy model the snap and RPM bundle) is listed in the maintainer's private truing note, not applied. Anchor: commit "doctor: serve_deps ran in no preflight, so serve checked nothing".
 - _2026-08-27_ — trued up against `snap/snapcraft.yaml` and the live store API. **Decision reversal recorded:** "Decision: classic confinement" is superseded — `snapcraft.yaml:3` is `confinement: strict` and the published snap reports strict. Kept the original four-point argument and mapped each objection to how it actually resolved (dotfiles: partly real, lived with; paths outside `$HOME`: `removable-media` plug, the one that needs a manual `snap connect`; CUDA: accepted limitation; HF cache: solved via `HF_HOME`/`XDG_CACHE_HOME` → `$SNAP_USER_COMMON`). Corrected six install commands that would fail as written (`--classic` on a strict snap) and added `--edge`, since `latest/edge` is the only channel ever published — deliberately did NOT touch `snap install snapcraft --classic` or `snap install lxd`, which are other snaps and correct. Corrected the yaml sketch's `confinement:`, the pre-launch checklist (classic approval was never requested and blocks nothing; name registration is done, `snap-id` `xzQ4aizlSc3NA6shGdFVmcLTKbPqvPI5`), and Phase 2 steps 3 and 7. Flagged the classic-only rpath linter note as possibly no longer applicable. Sibling fixes in the same pass: `INSTALL.md` §Snap (was "coming soon" + `--classic`) and the website's `docs-src/install.md` (Snap section added). Also corrected a false claim carried on both the website and the homepage — the snap does **not** bundle the transcription model; `snapcraft.yaml` points the Whisper cache at `$SNAP_USER_COMMON`, so models download on first run. Only the spaCy model is bundled.
 - _2026-04-21_ — trued up: added new sub-section "Bundle-integrity checks (`--self-test`)" covering the six `check_bundle_*` functions shipped for desktop sidecar bundle validation; added `--self-test` to the command-to-check matrix; noted `check-bundle-manifest.sh` as sibling gate; promoted docstring invariant (catch BUG-3/4/5 class at build time, not first runtime); corrected Phase 2 snap status (store publication pending, not ✅; CI workflow shipped-but-failing since 2026-04-17; snap-name registration blocked on identity recovery). Anchors: `bristlenose/doctor.py:690-942`, `desktop/scripts/check-bundle-manifest.sh`, commits "bristlenose doctor --self-test for bundle integrity (P2)", "check-bundle-manifest.sh — source→spec coverage gate", "serve fail-loud when React bundle missing (P1)", "bundle React SPA static/ into the sidecar (BUG-3 fix)". Preserved: original doctor seven-checks design and snap build/testing sections (both shipped as described — only store publication status corrected).
@@ -242,6 +244,16 @@ bristlenose/cli.py              # Wiring
 
 ### Sample dialogs
 
+> **As built (15 Oct 2026), the Whisper lines in these v0.8.1 mockups read differently.**
+> Doctor prints `large-v3-turbo not cached (~1.6 GB download on first run)` (measured
+> sizes, `_DOWNLOAD_MB` in `preflight/whisper.py`), and the transcribe-only command is
+> `bristlenose transcribe`. A first run then shows the preflight banner from
+> `bristlenose/locales/en/preflight.json` ("Bristlenose needs the Whisper transcription
+> model (~1.6 GB).", the cache path above 500 MB, "Ctrl+C is safe — the next run starts
+> the download again.") and HF's own progress bars on a terminal. The "1 note" block
+> below cannot print: a not-cached model is a SKIP with no fix. Canonical account:
+> `docs/design-cli-just-works.md` §Whisper model first-fetch.
+
 #### First run, no API key (most common first-run scenario)
 
 ```
@@ -422,7 +434,9 @@ and working files. Free up space or use a smaller model:
   bristlenose run ./interviews/ -w small     (500 MB model)
 ```
 
-#### Model download fails mid-stream (can't be pre-flighted)
+#### Model download fails mid-stream (the fetch is pre-flighted; a dropped connection mid-stream is not)
+
+_Pre-build mockup. As built: there is no resume — hf_xet downloads the file again on the next run — and a dropped connection surfaces as `PackageInstallError` (`utils/package_install.py`). Ctrl+C stops it within 2 s._
 
 ```
 Downloading Whisper model large-v3-turbo...
@@ -574,7 +588,9 @@ The Homebrew formula should be updated to:
    end
    ```
 
-### Future: `--prefetch-model` flag
+### ~~Future:~~ `--prefetch-model` flag — shipped as `bristlenose doctor --fetch`
+
+_Shipped 11 May 2026 (`cli.py`, the `if fetch:` block in `doctor`): fetches the Whisper model and the voice model, not the spaCy model; paired with `--no-fetch` on `run`, `transcribe` and `analyze`, whose refusal points here. The rationale below is the original._
 
 A flag on `transcribe-only` (or a standalone command) that downloads the Whisper
 model and exits. Useful for:
@@ -926,7 +942,7 @@ Pi, etc.), ctranslate2's ONNX Runtime prints: `onnxruntime cpuid_info warning:
 Unknown CPU vendor. cpuinfo_vendor value: 0`. This is harmless — ONNX Runtime's
 CPU detection doesn't recognise ARM vendor strings. Transcription works normally.
 
-**HuggingFace model download warning (cosmetic).** First run triggers:
+**HuggingFace model download warning (cosmetic).** _Silenced since 11 Oct 2026 (`HF_HUB_VERBOSITY=error` in `bristlenose/__init__.py`); kept as the record._ First run triggered:
 `Warning: You are sending unauthenticated requests to the HF Hub.` This is
 expected — the Whisper model (~1.5 GB) downloads from HuggingFace Hub without
 a token. Rate limits are lower but adequate. Setting `HF_TOKEN` is optional.
@@ -1038,7 +1054,7 @@ export BRISTLENOSE_ANTHROPIC_API_KEY="sk-ant-..."
 bristlenose run ~/test-interviews/
 ```
 
-First run downloads the Whisper model (~1.5 GB). Expect ~2 min on arm64 CPU,
+First run downloads the Whisper model (~1.6 GB). Expect ~2 min on arm64 CPU,
 ~1 min on amd64 CPU for transcription of the 2m40s clip.
 
 **Level 3: Serve mode**
@@ -1175,8 +1191,8 @@ These two workstreams are mostly independent but doctor landed first:
 
 ### Phase 3: Polish
 
-1. `--prefetch-model` flag for pre-downloading Whisper models
-2. Improve mid-pipeline error messages for non-pre-flightable failures
-   (download interruptions, transient API errors)
-3. Consider progress bar improvements for model downloads (currently delegated
-   to huggingface_hub's default progress)
+1. ✅ `--prefetch-model` flag for pre-downloading Whisper models — shipped as `bristlenose doctor --fetch`
+2. 🟡 Improve mid-pipeline error messages for non-pre-flightable failures
+   (download interruptions, transient API errors) — the banner now says Ctrl+C is safe and that the next run starts again; a dropped connection still surfaces as a raw `PackageInstallError`
+3. ✅ Consider progress bar improvements for model downloads (currently delegated
+   to huggingface_hub's default progress) — they never drew until 14 Oct 2026; now HF's bars show for the first download on a terminal, closed before the spinner restarts (`design-pipeline-resilience.md` §"Progress Bar Dead Ends")

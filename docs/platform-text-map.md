@@ -2,7 +2,7 @@
 
 Inventory of all user-facing text in Bristlenose, categorised by which platform sees it. Used by the user-documentation-review agent to verify platform correctness, by translators to know which keys need desktop variants, and by contributors to decide whether new text needs `dt()` or `ct()` wrapping.
 
-**Last updated**: 21 Aug 2026 — **counts regenerated from `bristlenose/locales/en/*.json`**, which is what the previous note asked for and nobody had done. Every number below is measured, not estimated; the Desktop-only table is now the full 22-section inventory rather than an 8-row sample. Regenerate the same way after any locale change (`scripts/check-locales.py` will not tell you these have drifted — it diffs locale key sets against en, and a stale count in a doc is invisible to it).
+**Last updated**: 15 Oct 2026 for the CLI-only rows below (`preflight` English-only, its count re-measured); the rest as of 21 Aug 2026 — **counts regenerated from `bristlenose/locales/en/*.json`**, which is what the previous note asked for and nobody had done. Every number below is measured, not estimated; the Desktop-only table is now the full 22-section inventory rather than an 8-row sample. Regenerate the same way after any locale change (`scripts/check-locales.py` will not tell you these have drifted — it diffs locale key sets against en, and a stale count in a doc is invisible to it).
 
 ---
 
@@ -93,12 +93,12 @@ Text that only appears in terminal output. Never rendered in the web UI or deskt
 
 | Source | Key count | Content | i18n? |
 |---|---|---|---|
-| `cli.json` | 19 | CLI stage names, progress output, error messages | 21 locales |
-| `doctor.json` | 6 | `bristlenose doctor` health check output | 21 locales |
-| `pipeline.json` | 4 | Pipeline stage display names | 21 locales |
+| ~~`cli.json`~~ | 19 | CLI stage names, progress output, error messages | _deleted in every locale 22 Sep 2026_ |
+| ~~`doctor.json`~~ | 6 | `bristlenose doctor` health check output | _deleted in every locale 22 Sep 2026_ |
+| ~~`pipeline.json`~~ | 4 | Pipeline stage display names | _deleted in every locale 22 Sep 2026_ |
 | `cli.py` help strings | ~30 | Typer `--help` flag descriptions | English only |
 | `bristlenose.1` man page | 517 lines | Full man page | English only |
-| `preflight.json` | 34 | First-run preflight banners, prompts, error recovery (Whisper download, ffmpeg install table, API-key validation, closing line) | English only, enforced: `en/preflight.json` alone, resolved in English whatever `--lang` or `BRISTLENOSE_LANG` says (`ENGLISH_ONLY_NAMESPACES`, `bristlenose/i18n.py`). The 20 translations were deleted 14 Oct 2026 — see `docs/design-i18n.md` §"Which surfaces are targets" |
+| `preflight.json` | 39 (measured 15 Oct 2026) | First-run preflight banners, prompts, error recovery (Whisper download, ffmpeg install table, API-key validation, closing line) | English only, enforced: `en/preflight.json` alone, resolved in English whatever `--lang` or `BRISTLENOSE_LANG` says (`ENGLISH_ONLY_NAMESPACES`, `bristlenose/i18n.py`). The 20 translations were deleted 14 Oct 2026 — see `docs/design-i18n.md` §"Which surfaces are targets" |
 
 **Settled, not a gap** (corrected 21 Sep 2026): CLI `--help` strings and the man page are English **by design** — terminal chrome and public-facing docs respectively, both English rows in `docs/design-i18n.md` §"Which surfaces are targets". This line previously booked them as "a future task (low priority)", which is the same stage-shaped framing that let three other English-only policies read as temporary. There is no future task here.
 
@@ -143,7 +143,7 @@ Keys where `common.json` or `settings.json` has the CLI version and `desktop.jso
 | Shared | 745 | 21 locales (+ HK override) | `t()` |
 | Desktop-only | 638 | 21 locales (+ HK override) | `desktop.json` namespace |
 | CLI-only (translated) | 0 | — | `cli` / `doctor` / `pipeline` deleted 22 Sep 2026; `preflight` made English-only 14 Oct 2026 |
-| CLI-only (untranslated) | ~30 + man page + `preflight` 34 | English only | Typer help strings / `bristlenose.1` / `en/preflight.json` |
+| CLI-only (untranslated) | ~30 + man page + `preflight` 39 | English only | Typer help strings / `bristlenose.1` / `en/preflight.json` |
 | Forked | 4 declared / **1 live** | 21 locales (+ HK override) | `dt()` + `desktop.json` override |
 | CLI-hideable | 1 active | 21 locales | `ct()` |
 

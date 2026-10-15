@@ -150,8 +150,9 @@ loudly on missing key files, which is what you want for the next steps.
 
 ## Step 2 — Make the locale directory + namespace files
 
-> **Six files, not nine.** `cli.json`, `doctor.json` and `pipeline.json` were
-> deleted in every locale on 22 Sep 2026. They described surfaces that are
+> **Five files, not nine.** `cli.json`, `doctor.json` and `pipeline.json` were
+> deleted in every locale on 22 Sep 2026, and `preflight.json` became English-only
+> on 14 Oct 2026. They described surfaces that are
 > **English by decision** — terminal chrome and Diagnostics
 > (`docs/design-i18n.md` §"Which surfaces are targets") — so their translations
 > could never be read, and `git log -S` found no commit that had ever written
@@ -471,7 +472,7 @@ Three locales in one night. What the playbook above didn't yet capture:
 
 **Fan-out seeding is fast and reliable.** Per language, spawn **4 parallel translator
 agents** — one each for the big files (`common` ~522 keys, `desktop` ~390, `settings`
-~160) and one for the small files (`enums/server`; `cli`, `doctor`, `pipeline` and `preflight` are English-only).
+~160) and one for the small files (`enums/server`; `cli`, `doctor` and `pipeline` were deleted, and `preflight` is English-only).
 Give each agent the exact en path, the exact target path, and one shared brief:
 keep keys byte-identical, preserve every `{{placeholder}}`, don't translate product
 names, literal UTF-8 (no `\u`), the register (see below), and the **plural rule as a

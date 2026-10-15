@@ -160,6 +160,27 @@ disagree** — and note the component's own test file is the cheapest disproof:
 `Counter.test.tsx` reads those ids with `getByTestId` in sixteen green
 assertions.
 
+### A contrast figure for a blurred edge is a claim about the renderer, not about the formula
+
+The Screens leaders' soft halo (R3) was sized from a continuous Gaussian: σ 0.7 leaves about 91%
+paper beside the line, so it holds above 3:1. The browsers measured differently (15 Oct 2026,
+Playwright):
+
+- **WebKit at 1×** draws σ 0.35 and σ 0.7 identically, as a 3px smear that leaves about 81% paper.
+  That is under the 3:1 floor.
+- **Chromium at 1×** draws no blur at all below σ 1.
+- **At 2×** both are better than the formula.
+
+The shipped rule follows the measurement: blur only at `(min-resolution: 2dppx)`
+(`islands/screens/ScreensLens.tsx` `HIDPI`). For any halo, glow, shadow or antialiased edge that a
+WCAG 1.4.11 claim rests on, **sample the rendered pixels at 1× and at 2× in WebKit**, which the Mac
+app runs, before writing the number down.
+
+**The probe trap:** a page loaded with Playwright's `page.setContent` (`about:blank`) does not
+resolve `url(#id)` for `clip-path` or `filter`, so a clip or filter probe draws nothing and reads as
+a renderer that ignores it. Serve the probe from a real http origin. Record:
+`experiments/screens-lens/leader-styles.md` §7, "As built".
+
 ### Testing
 
 - **The search performance test only WARNS — read its line after any matcher change.** `searchFuzz.test.ts` "10k quotes, 200 keystroke-prefix queries" prints `search perf: … p50 … p95 …` to stderr and only `console.warn`s above the 50 ms keystroke budget; it fails solely by hitting vitest's 5 s timeout, which happens under full-suite load and not when run alone. On 4 Oct 2026 a joined-forms pre-check that tested for commas and full stops (in nearly every quote) took p95 from ~8 ms to 57 ms and passed when run on its own. Run it with `--reporter=verbose -t "10k quotes"` before and after the change and compare the numbers; a pre-check is only cheap if its trigger is rare in real text.

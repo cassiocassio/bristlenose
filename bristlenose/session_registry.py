@@ -771,15 +771,22 @@ def _is_dataless(path: Path | None) -> bool:
 
 
 def _fingerprint_after_download(path: Path | None) -> str | None:
-    """Fault a cloud placeholder in and fingerprint it; ``None`` if the bytes
-    do not arrive. Never raises: identity can wait for the next run."""
+    """Fault a cloud placeholder in and fingerprint it; ``None`` if the
+    provider refuses. Raises ``CloudFetchTimeoutError`` when the bytes are
+    still on their way after the full wait."""
     if path is None:
         return None
-    from bristlenose.utils.fs import ensure_materialised
+    from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
     try:
         ensure_materialised(path)
-    except Exception as exc:  # a timeout, or the provider refusing
+    except CloudFetchTimeoutError:
+        # Still downloading after the full wait: stop with that reason rather
+        # than guess. Called a new session, it would finish downloading during
+        # transcription and be analysed and paid for twice (Fable review,
+        # 16 Oct 2026). The next run picks it up once it is here.
+        raise
+    except Exception as exc:  # the provider refusing, an unreadable file
         logger.info("could not fetch %s to identify it: %s", path.name, exc)
         return None
     return _fingerprint(path)

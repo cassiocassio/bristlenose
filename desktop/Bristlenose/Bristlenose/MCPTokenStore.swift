@@ -60,8 +60,9 @@ enum MCPTokenStore {
     /// follows the study through a move or a rename, so a config pasted into
     /// an agent keeps working, and a copy — re-minted on arrival — gets its own.
     /// The first time a study is keyed, the token its path held is carried
-    /// across, so the upgrade breaks nothing; the path item is left in place
-    /// (write new, never delete old). Without a study id, the old path key.
+    /// across, so the upgrade breaks nothing; the path item is then given a
+    /// fresh token (updated, never deleted), so a different study later made at
+    /// that path does not inherit it. Without a study id, the old path key.
     static func resolve(
         path: String, studyID: String?,
         read: (String) -> String?, write: (String, String) -> Bool, mint: () -> String
@@ -79,10 +80,18 @@ enum MCPTokenStore {
         }
         let account = studyAccountKey(studyID)
         if let existing = read(account) { return existing }
-        let value = read(pathAccount) ?? mint()
+        let carried = read(pathAccount)
+        let value = carried ?? mint()
         guard write(account, value) else {
             log.error("could not persist the MCP token — falling back to an ephemeral one")
             return nil
+        }
+        // The path's token now belongs to this study. Give the path a fresh
+        // one (an update, never a delete), or a different study later made at
+        // the same path would inherit this study's token (Fable review,
+        // 16 Oct 2026).
+        if carried != nil, !write(pathAccount, mint()) {
+            log.error("could not refresh the path's MCP token after keying it by study")
         }
         log.info("keyed this project's MCP token by its study")
         return value

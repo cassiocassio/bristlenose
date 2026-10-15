@@ -455,7 +455,13 @@ not the folder, and are unchanged.
   session renamed and given its recording in the same run is a new session;
   nothing tests that `ServeManager` passes the study id when it resolves the
   agent token; and a marker this release cannot parse, read under a grant,
-  is treated as no marker (Locate accepts the folder). §5 called a duplicate one
+  is treated as no marker (Locate accepts the folder).
+- **Review at the final HEAD, 16 Oct 2026.** A renamed placeholder still
+  downloading after the full wait stops the run with that reason instead of
+  becoming a new session (it would have finished downloading during
+  transcription and been paid for twice). After the agent token is carried
+  from a path to a study, the path gets a fresh token (an update, never a
+  delete), so a different study later made at that path does not share it. §5 called a duplicate one
   recording with an alias; the build keeps two sessions, one keyed. Making
   the duplicate a key-less alias would close this class, and is the owner's
   call.

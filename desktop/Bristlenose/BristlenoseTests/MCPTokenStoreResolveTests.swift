@@ -34,14 +34,26 @@ struct MCPTokenStoreResolveTests {
         #expect(original != copy)
     }
 
-    @Test func theFirstStudyKeyCarriesThePathTokenAndLeavesItInPlace() {
+    @Test func theFirstStudyKeyCarriesThePathTokenAndRefreshesThePath() {
         let box = Box()
         let path = "/Studies/Talismanic"
         let pathToken = resolve(box, path: path, study: nil)
         let studyToken = resolve(box, path: path, study: "6f1c2b9e-1111-4000-8000-000000000001")
         #expect(studyToken == pathToken, "the upgrade broke an agent config pasted before it")
-        #expect(box.items[MCPTokenStore.accountKey(for: path)] == pathToken, "the old item was removed")
-        #expect(box.minted == 1)
+        let pathItem = box.items[MCPTokenStore.accountKey(for: path)]
+        #expect(pathItem != nil, "the path item was removed, not updated")
+        #expect(pathItem != pathToken, "the path still holds the study's token")
+    }
+
+    /// A study moved away, and a different study made at its old path, must
+    /// not share the first study's token (Fable review, 16 Oct 2026).
+    @Test func aNewStudyAtAReusedPathGetsItsOwnToken() {
+        let box = Box()
+        let path = "/Studies/Acme"
+        _ = resolve(box, path: path, study: nil)
+        let first = resolve(box, path: path, study: "6f1c2b9e-1111-4000-8000-000000000001")
+        let second = resolve(box, path: path, study: "6f1c2b9e-2222-4000-8000-000000000002")
+        #expect(first != second, "a new study inherited another study's agent token")
     }
 
     @Test func theTwoAccountsNeverCollide() {

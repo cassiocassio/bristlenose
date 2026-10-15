@@ -701,6 +701,35 @@ class TestContentKeys:
                 for s in SessionRegistry.load(out).apply(_ingest(files), tmp_path)}
         assert back == first
 
+    def test_a_fetch_that_times_out_stops_the_run_rather_than_guess(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A renamed placeholder still downloading after the full wait is
+        neither the missing session nor a new one: the run stops and says so
+        (Fable review, 16 Oct 2026)."""
+        import bristlenose.utils.fingerprint as fingerprint_mod
+        import bristlenose.utils.fs as fs_mod
+        from bristlenose.utils.fs import CloudFetchTimeoutError
+
+        out = tmp_path / "out"
+        a, b = _file(tmp_path, "rec-1433.wav", 0), _file(tmp_path, "b.wav", 1)
+        reg = SessionRegistry.load(out)
+        reg.apply(_ingest([a, b]), tmp_path)
+        reg.save()
+        renamed = tmp_path / "p1 sarah.wav"
+        a.path.rename(renamed)
+
+        def slow(path: Path, *args: object, **kwargs: object) -> bool:
+            raise CloudFetchTimeoutError("still downloading")
+
+        monkeypatch.setattr(fingerprint_mod, "is_dataless", lambda p: p == renamed)
+        monkeypatch.setattr(fs_mod, "is_dataless", lambda p: p == renamed)
+        monkeypatch.setattr(fs_mod, "ensure_materialised", slow)
+        a2 = InputFile(path=renamed, file_type=FileType.AUDIO, created_at=a.created_at,
+                       size_bytes=a.size_bytes)
+        with pytest.raises(CloudFetchTimeoutError):
+            SessionRegistry.load(out).apply(_ingest([a2, b]), tmp_path, fetch=True)
+
     def test_a_first_analysis_does_not_fetch_placeholders_early(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     ) -> None:

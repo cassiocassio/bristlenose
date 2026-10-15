@@ -65,6 +65,7 @@ import { QuoteCard } from "../QuoteCard";
 import { MIN_WIDTH, RESIZE_STEP } from "../discussion/split";
 import {
   arrangementFor,
+  arrangementsLoaded,
   arrangementVersion,
   autoIntent,
   boardColumns,
@@ -76,6 +77,7 @@ import {
   edgeFor,
   intentFromRect,
   leaderPath,
+  loadArrangements,
   migrateArrangement,
   rectFromIntent,
   MOVE_STEP,
@@ -448,6 +450,19 @@ export function ScreensLens() {
 
   // The board holds still during a live window resize and settles once when it ends (E).
   useEffect(() => installLiveResizeWatch(), []);
+
+  // The researcher's arrangements, from the project's database, read before any board shows: a
+  // custom board drawn automatic first would jump (layout.ts `loadArrangements`; never rejects).
+  const [arrangementsReady, setArrangementsReady] = useState(() => arrangementsLoaded(projectId));
+  useEffect(() => {
+    let live = true;
+    void loadArrangements(projectId).then(() => {
+      if (live) setArrangementsReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [projectId]);
 
   // Screens: polled while the job is still reading, capped, and re-read when the data moves.
   useEffect(() => {
@@ -891,6 +906,8 @@ export function ScreensLens() {
     if (!stillReading(data) && data.indexed > (data.blank ?? []).length) lines.push(t("screens.noneFound"));
     return shell(<NotesList lines={lines} className="bn-empty-state screens-notes" />);
   }
+  // Only a board needs the arrangements; the states above never wait for them.
+  if (!arrangementsReady) return shell(<p className="bn-empty-state" aria-busy="true">{t("screens.loading")}</p>);
   return (
     <section
       ref={lensRef}

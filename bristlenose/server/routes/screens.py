@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import logging
 import os
 import re
@@ -30,10 +31,10 @@ import subprocess
 import threading
 from collections import Counter
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
 
 from bristlenose import screen_text
@@ -42,7 +43,7 @@ from bristlenose.screen_text import ReadFailure, Unavailable
 from bristlenose.screen_text.index import cache_key, index_dir, read_index, stored_key
 from bristlenose.screen_text.screens import SessionInput, derive_screens
 from bristlenose.server import speaker_slots
-from bristlenose.server.models import Project
+from bristlenose.server.models import Project, ScreenArrangement
 from bristlenose.server.scene_strips import video_sessions
 from bristlenose.server.screen_text_job import session_durations
 from bristlenose.utils.bundled_binary import binary_command
@@ -408,3 +409,105 @@ def _has_screens(project_id: int, idir: Path, mtimes: dict[str, int]) -> bool:
         screens = derive_screens(sessions)
         _remember_has_screens(ident, screens)
         return bool(screens)
+
+
+# ── Arrangements: the researcher's layout of a board, per version ──────────────────────────
+#
+# A researcher edit, stored like the report's other edits (data.py) but scoped to one version of
+# one screen per write: the whole arrangement of that version replaces what was there, and no
+# other version is touched, so a partial body can never wipe a neighbour (the full-map PUT is how
+# the codebook switches once wiped each other). models.ScreenArrangement has the shape.
+
+_Fraction = Annotated[float, Field(allow_inf_nan=False)]
+
+
+class EdgeIntent(BaseModel):
+    kind: Literal["edge"]
+    edge: Literal["L", "R", "T", "B"]
+    along: _Fraction
+    out: _Fraction
+    z: _Fraction
+
+
+class OverIntent(BaseModel):
+    kind: Literal["over"]
+    x: _Fraction
+    y: _Fraction
+    z: _Fraction
+
+
+Intent = Annotated[EdgeIntent | OverIntent, Field(discriminator="kind")]
+#: Quote dom ids are short (`q-p1-123`); a board holds tens of cards. Generous bounds that refuse
+#: a body no board could have written.
+_MAX_CARDS = 2000
+
+
+class ArrangementVersion(BaseModel):
+    screen_key: str = Field(min_length=1, max_length=2000)
+    session_id: str = Field(min_length=1, max_length=64)
+    #: Null returns the version to automatic (Tidy): its row goes.
+    cards: dict[Annotated[str, Field(min_length=1, max_length=128)], Intent] | None = Field(
+        max_length=_MAX_CARDS)
+
+
+class ArrangementsResponse(BaseModel):
+    versions: list[ArrangementVersion]
+
+
+@router.get("/projects/{project_id}/screens/arrangements", response_model=ArrangementsResponse)
+def get_arrangements(project_id: int, db: Session = Depends(_get_db)) -> dict[str, Any]:
+    """Every custom arrangement in this project. A row that no longer reads as an arrangement
+    (hand-edited, or from a newer build) is skipped and logged, never served half-parsed."""
+    try:
+        if not db.get(Project, project_id):
+            raise HTTPException(status_code=404, detail="Project not found")
+        versions = []
+        for row in db.query(ScreenArrangement).filter_by(project_id=project_id).all():
+            try:
+                versions.append(ArrangementVersion(
+                    screen_key=row.screen_key, session_id=row.session_id, cards=json.loads(row.cards),
+                ).model_dump())
+            except (ValueError, ValidationError):
+                logger.warning("Screens: an arrangement that does not parse was skipped (row %d)", row.id)
+        return {"versions": versions}
+    finally:
+        db.close()
+
+
+@router.put("/projects/{project_id}/screens/arrangement")
+def put_arrangement(project_id: int, body: ArrangementVersion,
+                    db: Session = Depends(_get_db)) -> dict[str, str]:
+    """Replace one version's arrangement; null cards return it to automatic."""
+    try:
+        if not db.get(Project, project_id):
+            raise HTTPException(status_code=404, detail="Project not found")
+        row = (db.query(ScreenArrangement)
+               .filter_by(project_id=project_id, screen_key=body.screen_key, session_id=body.session_id)
+               .one_or_none())
+        if body.cards is None:
+            if row is not None:
+                db.delete(row)
+        else:
+            cards = json.dumps({d: p.model_dump() for d, p in body.cards.items()})
+            if row is None:
+                db.add(ScreenArrangement(project_id=project_id, screen_key=body.screen_key,
+                                         session_id=body.session_id, cards=cards))
+            else:
+                row.cards = cards
+        db.commit()
+        return {"status": "ok"}
+    finally:
+        db.close()
+
+
+def delete_arrangements(db: Session) -> int:
+    """Delete every arrangement in this database; the number deleted. For the researcher's explicit
+    off: a screen key is a page's path read from a participant's screen, so it goes with the rest
+    of what screen text kept."""
+    try:
+        n = db.query(ScreenArrangement).delete(synchronize_session=False)
+        db.commit()
+        return int(n)
+    finally:
+        db.close()
+

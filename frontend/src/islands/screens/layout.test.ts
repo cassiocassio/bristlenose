@@ -1,6 +1,11 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../utils/api", () => ({ apiGet: vi.fn(), sendPut: vi.fn(() => Promise.resolve()) }));
+
+import { apiGet, sendPut } from "../../utils/api";
 import {
   arrangementFor,
+  arrangementsLoaded,
   autoIntent,
   boardColumns,
   CARD_W,
@@ -12,6 +17,7 @@ import {
   HYSTERESIS,
   intentFromRect,
   MAX_STAGGER,
+  loadArrangements,
   migrateArrangement,
   MIN_SHOT_W,
   placeRow,
@@ -375,20 +381,100 @@ describe("arrangement storage", () => {
   beforeEach(() => {
     localStorage.clear();
     resetArrangementMemory();
+    vi.mocked(apiGet).mockReset();
+    vi.mocked(sendPut).mockReset().mockResolvedValue(undefined);
   });
   const edge = (e: "L" | "R" | "T" | "B", along: number, z = 31): Intent => ({ kind: "edge", edge: e, along, out: COLUMN_GUTTER, z });
+  const server = (versions: { screen_key: string; session_id: string; cards: unknown }[]) =>
+    vi.mocked(apiGet).mockResolvedValue({ versions });
+  const sent = () => vi.mocked(sendPut).mock.calls.map(([path, body]) => ({ path, body }));
+  const flush = async () => {
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+  };
 
-  it("is automatic until set, and keeps each version's arrangement through a reload", () => {
-    expect(arrangementFor("1", "url:/x", "s1")).toBeNull();
-    setArrangement("1", "url:/x", "s1", { a: edge("L", 0.3) });
-    setArrangement("1", "url:/x", "s2", { a: edge("R", 0.6) });
-    resetArrangementMemory();
+  it("reads every version from the project's database, once per project", async () => {
+    server([
+      { screen_key: "url:/x", session_id: "s1", cards: { a: edge("L", 0.3) } },
+      { screen_key: "url:/x", session_id: "s2", cards: { b: edge("R", 0.6, 34) } },
+    ]);
+    expect(arrangementsLoaded("1")).toBe(false);
+    await Promise.all([loadArrangements("1"), loadArrangements("1")]);
+    expect(apiGet).toHaveBeenCalledTimes(1);
+    expect(apiGet).toHaveBeenCalledWith("/screens/arrangements");
+    expect(arrangementsLoaded("1")).toBe(true);
     expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
-    expect(arrangementFor("1", "url:/x", "s2")).toEqual({ a: edge("R", 0.6) });
-    expect(topZ("1")).toBe(31);
+    expect(arrangementFor("1", "url:/x", "s2")).toEqual({ b: edge("R", 0.6, 34) });
+    expect(topZ("1")).toBe(34);
+  });
+
+  it("sends each change for its own version alone, and Tidy as null", async () => {
+    server([{ screen_key: "url:/x", session_id: "s2", cards: { b: edge("R", 0.6) } }]);
+    await loadArrangements("1");
+    setArrangement("1", "url:/x", "s1", { a: edge("L", 0.3) });
     setArrangement("1", "url:/x", "s1", null);
+    await flush();
+    expect(sent()).toEqual([
+      { path: "/screens/arrangement", body: { screen_key: "url:/x", session_id: "s1", cards: { a: edge("L", 0.3) } } },
+      { path: "/screens/arrangement", body: { screen_key: "url:/x", session_id: "s1", cards: null } },
+    ]);
     expect(arrangementFor("1", "url:/x", "s1")).toBeNull();
-    expect(arrangementFor("1", "url:/x", "s2")).not.toBeNull();
+    expect(arrangementFor("1", "url:/x", "s2")).toEqual({ b: edge("R", 0.6) });
+  });
+
+  it("sends writes in the order they were made, so an undo lands after its act", async () => {
+    server([]);
+    await loadArrangements("1");
+    let release!: () => void;
+    vi.mocked(sendPut).mockImplementationOnce(() => new Promise<void>((r) => (release = r)));
+    setArrangement("1", "url:/x", "s1", { a: edge("L", 0.3) });
+    setArrangement("1", "url:/x", "s1", null);
+    await flush();
+    expect(sendPut).toHaveBeenCalledTimes(1);
+    release();
+    await flush();
+    expect(sent().map((c) => (c.body as { cards: unknown }).cards)).toEqual([{ a: edge("L", 0.3) }, null]);
+  });
+
+  it("drops a card that does not read as a placement", async () => {
+    server([{ screen_key: "url:/x", session_id: "s1", cards: { a: edge("L", 0.3), b: { kind: "edge", edge: "Q" } } }]);
+    await loadArrangements("1");
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
+  });
+
+  it("leaves every board automatic when the read fails, and reads again the next time", async () => {
+    vi.mocked(apiGet).mockRejectedValueOnce(new Error("401"));
+    await loadArrangements("1");
+    expect(arrangementsLoaded("1")).toBe(true);
+    expect(arrangementFor("1", "url:/x", "s1")).toBeNull();
+    server([{ screen_key: "url:/x", session_id: "s1", cards: { a: edge("L", 0.3) } }]);
+    await loadArrangements("1");
+    expect(apiGet).toHaveBeenCalledTimes(2);
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
+  });
+
+  it("moves this browser's arrangements to the server once; the server's copy wins", async () => {
+    localStorage.setItem("bristlenose-screens-arrangements-1", JSON.stringify({
+      "url:/x|s1": { a: edge("L", 0.3) },
+      "url:/y|s2": { b: edge("R", 0.1) },
+    }));
+    server([{ screen_key: "url:/y", session_id: "s2", cards: { c: edge("T", 0.5) } }]);
+    await loadArrangements("1");
+    await flush();
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
+    expect(arrangementFor("1", "url:/y", "s2")).toEqual({ c: edge("T", 0.5) });
+    expect(sent()).toEqual([
+      { path: "/screens/arrangement", body: { screen_key: "url:/x", session_id: "s1", cards: { a: edge("L", 0.3) } } },
+    ]);
+    expect(localStorage.getItem("bristlenose-screens-arrangements-1")).toBeNull();
+  });
+
+  it("keeps this browser's copy while the server will not take it", async () => {
+    localStorage.setItem("bristlenose-screens-arrangements-1", JSON.stringify({ "url:/x|s1": { a: edge("L", 0.3) } }));
+    vi.mocked(sendPut).mockRejectedValue(new Error("500"));
+    server([]);
+    await loadArrangements("1");
+    await flush();
+    expect(localStorage.getItem("bristlenose-screens-arrangements-1")).not.toBeNull();
   });
 
   // A re-read can pick a different still moment for a session: the arrangement must not care.
@@ -399,32 +485,30 @@ describe("arrangement storage", () => {
     expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
   });
 
-  it("migrates a version's 14 Oct placements once, and the first build's coordinates with them", () => {
+  it("migrates a version's 14 Oct placements once, and the first build's coordinates with them", async () => {
     localStorage.setItem("bristlenose-screens-placements-1", JSON.stringify({
       "s1@100/a": { kind: "edge", side: "R", frac: 0.4, z: 32 },
       "s2@50/b": { kind: "edge", side: "L", frac: 0.1, z: 33 },
     }));
     localStorage.setItem("bristlenose-screens-arrangement-1", JSON.stringify({ "s1@100/c": { x: 0.4, y: 0.4, z: 34 } }));
     expect(migrateArrangement("1", "url:/x", "s1", 100)).toBe(true);
-    expect(arrangementFor("1", "url:/x", "s1")).toEqual({
+    const migrated = {
       a: { kind: "edge", edge: "R", along: 0.4, out: COLUMN_GUTTER, z: 32 },
       c: { kind: "over", x: 0.4, y: 0.4, z: 34 },
-    });
+    };
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual(migrated);
+    await flush();
+    expect(sent()).toEqual([{ path: "/screens/arrangement", body: { screen_key: "url:/x", session_id: "s1", cards: migrated } }]);
     expect(localStorage.getItem("bristlenose-screens-arrangement-1")).toBeNull();
     // The other version's entry waits for its own board.
     expect(JSON.parse(localStorage.getItem("bristlenose-screens-placements-1")!)).toEqual({
       "s2@50/b": { kind: "edge", side: "L", frac: 0.1, z: 33 },
     });
-    resetArrangementMemory();
     expect(migrateArrangement("1", "url:/x", "s1", 100)).toBe(false);
-    expect(Object.keys(arrangementFor("1", "url:/x", "s1")!)).toEqual(["a", "c"]);
   });
 
-  // Keyed by the page's project id. That id is always "1" today, so in practice this separates
-  // arrangements by origin only; the test pins the key's shape for when multi-project makes it real.
   it("keys arrangements by the project id it is given", () => {
     setArrangement("1", "url:/x", "s1", { a: edge("L", 0.3) });
-    resetArrangementMemory();
     expect(arrangementFor("2", "url:/x", "s1")).toBeNull();
     expect(topZ("2")).toBe(30);
   });

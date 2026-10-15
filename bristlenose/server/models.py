@@ -705,6 +705,36 @@ class HiddenTagGroup(Base):
     )
 
 
+class ScreenArrangement(Base):
+    """The researcher's arrangement of one version of a screen on the Screens lens board.
+
+    A version is the screen's key and the participant's session (``screen_key``, ``session_id``),
+    never the still's moment, which a re-read may pick differently. ``cards`` is JSON, the whole
+    arrangement of that version as one value: ``{quote dom id: intent}``, where an intent is
+    ``{"kind": "edge", "edge": L|R|T|B, "along", "out", "z"}`` or ``{"kind": "over", "x", "y", "z"}``
+    (frontend/src/islands/screens/layout.ts). A row exists only while the version is custom; Tidy
+    deletes it. Read and written whole, one version per write, so a write can never touch another
+    version's arrangement.
+
+    ``screen_key`` is derived from what was on a participant's screen (a page's path), so the rows
+    go when the researcher turns reading shared screens off, with the rest of screen text
+    (docs/design-screens.md §4.8). Never in an export: the Screens lens is server-only.
+    """
+
+    __tablename__ = "screen_arrangements"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    screen_key: Mapped[str] = mapped_column(Text)
+    session_id: Mapped[str] = mapped_column(String(64))
+    cards: Mapped[str] = mapped_column(Text, default="{}")
+    updated_at: Mapped[datetime] = mapped_column(default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "screen_key", "session_id", name="uq_screen_arrangement"),
+    )
+
+
 class ProjectFrameworkState(Base):
     """Per-project enable/disable state for an applied codebook framework.
 

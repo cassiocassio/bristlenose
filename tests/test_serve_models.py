@@ -93,6 +93,7 @@ class TestTableCreation:
         "deleted_badges",
         "dismissed_signals",
         "hidden_tag_groups",
+        "screen_arrangements",
         "elaboration_caches",
         "import_conflicts",
         "autocode_jobs",

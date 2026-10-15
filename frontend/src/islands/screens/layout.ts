@@ -1,7 +1,8 @@
 /**
  * Board geometry for the Screens lens: which edge of the screengrab each card annotates, where it
  * sits along that edge, when a column stacks, the leader from a card to its line, and the
- * researcher's arrangement. Pure functions, unit-tested; the lens only measures and draws.
+ * researcher's arrangement. Pure functions, unit-tested; the lens only measures and draws. The one
+ * exception is the arrangement store at the end, which reads and writes the project's database.
  *
  * Rules (docs/design-screens.md S5, "Placement" and "Arrangement"):
  * - Boundary labelling, as on an architect's drawing or a UX redline: annotations all around the
@@ -20,6 +21,8 @@
  * - Arrangement: automatic until the researcher drags a card; then the whole board is custom, every
  *   card frozen where it was as INTENT relative to the screengrab, and nothing re-flows until Tidy.
  */
+
+import { apiGet, sendPut } from "../../utils/api";
 
 /** Every card's width, in the margins and in the list alike: one kind of card. */
 export const CARD_W = 340;
@@ -394,12 +397,15 @@ export function customFrame(cards: { intent: Intent; height: number }[]): { L: b
 // ── Storage ────────────────────────────────────────────────────────────────
 
 /**
- * Kept in this browser's storage, keyed by the page's project id (always "1" today, so in practice
- * by origin; docs/design-screens.md §6.9), and within it by VERSION: the screen's key and the
- * participant's session — not the still's moment, which a re-read may pick differently. Where
- * arrangements should live (a saved researcher edit, per project, perhaps in the export) is still
- * the owner's call.
+ * Arrangements are a researcher edit, kept in the project's database
+ * (`GET …/screens/arrangements`, `PUT …/screens/arrangement`; server/routes/screens.py): one row
+ * per VERSION — the screen's key and the participant's session, not the still's moment, which a
+ * re-read may pick differently. Loaded once per project (`loadArrangements`) before the board
+ * shows; each change is sent for its own version alone, in order. Until 15 Oct 2026 they lived in
+ * this browser's localStorage, which in the Mac app is an in-memory store per serve session, so
+ * quitting the app lost them; the three keys below are read once and removed.
  */
+/** The 15 Oct store (`version → cards`): moved to the server on first load, then removed. */
 const storeKey = (projectId: string) => `bristlenose-screens-arrangements-${projectId}`;
 /** The 14 Oct store: one placement per card, keyed by still (`session@t/dom`). Read once per
  *  version, converted, then removed. */
@@ -485,7 +491,8 @@ function readOld(projectId: string): Record<string, OldPlacement> {
 }
 
 const memory = new Map<string, Record<string, Arrangement>>();
-// Rises on every write, so a board — or an undo after the board has moved on — re-reads.
+const loading = new Map<string, Promise<void>>();
+// Rises on every change, so a board — or an undo after the board has moved on — re-reads.
 let version = 0;
 const listeners = new Set<() => void>();
 export function subscribeArrangement(listener: () => void): () => void {
@@ -495,27 +502,89 @@ export function subscribeArrangement(listener: () => void): () => void {
 export function arrangementVersion(): number {
   return version;
 }
-
-function all(projectId: string): Record<string, Arrangement> {
-  let a = memory.get(projectId);
-  if (!a) {
-    a = {};
-    for (const [k, v] of Object.entries(load<Record<string, unknown>>(storeKey(projectId)))) {
-      if (!v || typeof v !== "object") continue;
-      const cards: Arrangement = {};
-      for (const [d, p] of Object.entries(v)) if (isIntent(p)) cards[d] = p;
-      a[k] = cards;
-    }
-    memory.set(projectId, a);
-  }
-  return a;
-}
-
-function commit(projectId: string, a: Record<string, Arrangement>): void {
-  memory.set(projectId, a);
-  save(storeKey(projectId), a);
+function changed(): void {
   version++;
   for (const l of listeners) l();
+}
+
+function all(projectId: string): Record<string, Arrangement> {
+  return memory.get(projectId) ?? {};
+}
+
+function cardsOf(v: unknown): Arrangement {
+  const cards: Arrangement = {};
+  if (v && typeof v === "object") for (const [d, p] of Object.entries(v)) if (isIntent(p)) cards[d] = p;
+  return cards;
+}
+
+/** Whether this project's arrangements have been read (or the read has failed). */
+export function arrangementsLoaded(projectId: string): boolean {
+  return memory.has(projectId);
+}
+
+/**
+ * Read this project's arrangements, once, before its board shows: a board that showed automatic
+ * and then jumped to custom would be the wrong board for a moment. A version this browser kept
+ * before the server held them, and the server lacks, is sent up and then forgotten here. A failed
+ * read leaves every board automatic and is tried again the next time the lens opens.
+ */
+export function loadArrangements(projectId: string): Promise<void> {
+  const pending = loading.get(projectId);
+  if (pending) return pending;
+  const p = apiGet<{ versions: { screen_key: string; session_id: string; cards: unknown }[] }>(
+    "/screens/arrangements",
+  )
+    .then((r) => {
+      const a: Record<string, Arrangement> = {};
+      for (const v of r.versions) a[versionKey(v.screen_key, v.session_id)] = cardsOf(v.cards);
+      memory.set(projectId, a);
+      // This browser's copy is forgotten only once the server holds every version it carried.
+      const sent: Promise<boolean>[] = [];
+      for (const [k, cards] of Object.entries(load<unknown>(storeKey(projectId)))) {
+        const cut = k.lastIndexOf("|");
+        if (cut <= 0 || k in a) continue;
+        const kept = cardsOf(cards);
+        if (!Object.keys(kept).length) continue;
+        a[k] = kept;
+        sent.push(persist(projectId, k.slice(0, cut), k.slice(cut + 1), kept));
+      }
+      void Promise.all(sent).then((ok) => {
+        if (ok.every(Boolean)) save(storeKey(projectId), null);
+      });
+      changed();
+    })
+    .catch((e: unknown) => {
+      console.error("Screens: the arrangements could not be read; every board shows automatic", e);
+      loading.delete(projectId);
+      if (!memory.has(projectId)) memory.set(projectId, {});
+      changed();
+    });
+  loading.set(projectId, p);
+  return p;
+}
+
+// One queue per project: writes reach the server in the order they were made, so an undo lands
+// after the act it reverses. Resolves whether the server took it (sendPut toasts a failure itself).
+const queues = new Map<string, Promise<unknown>>();
+function persist(projectId: string, screenKey: string, sessionId: string, cards: Arrangement | null): Promise<boolean> {
+  const last = queues.get(projectId) ?? Promise.resolve();
+  const next = last.then(() =>
+    sendPut("/screens/arrangement", { screen_key: screenKey, session_id: sessionId, cards })
+      .then(() => true)
+      .catch(() => false),
+  );
+  queues.set(projectId, next);
+  return next;
+}
+
+function commit(projectId: string, screenKey: string, sessionId: string, cards: Arrangement | null): void {
+  const a = { ...all(projectId) };
+  const key = versionKey(screenKey, sessionId);
+  if (cards === null) delete a[key];
+  else a[key] = cards;
+  memory.set(projectId, a);
+  changed();
+  persist(projectId, screenKey, sessionId, cards);
 }
 
 /** The arrangement of one version, or null while it is automatic. A pure read. */
@@ -542,18 +611,14 @@ export function migrateArrangement(projectId: string, screenKey: string, session
     delete old[k];
   }
   save(oldKey(projectId), Object.keys(old).length ? old : null);
-  commit(projectId, { ...a, [key]: cards });
+  commit(projectId, screenKey, sessionId, cards);
   return true;
 }
 
 /** Replace one version's arrangement: null returns it to automatic (Tidy); a saved copy puts it
  *  back (undo). */
 export function setArrangement(projectId: string, screenKey: string, sessionId: string, cards: Arrangement | null): void {
-  const key = versionKey(screenKey, sessionId);
-  const a = { ...all(projectId) };
-  if (cards === null) delete a[key];
-  else a[key] = cards;
-  commit(projectId, a);
+  commit(projectId, screenKey, sessionId, cards);
 }
 
 /** The highest stacking order of any placed card, so a card moved by hand comes out on top. */
@@ -566,5 +631,7 @@ export function topZ(projectId: string): number {
 /** Tests only. */
 export function resetArrangementMemory(): void {
   memory.clear();
+  loading.clear();
+  queues.clear();
   version++;
 }

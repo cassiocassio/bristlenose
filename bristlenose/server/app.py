@@ -1397,6 +1397,8 @@ def _install_event_watcher(
 
     if _screen_text.explicitly_off():
         delete_at_rest(project_output_dir(project_dir))
+        from bristlenose.server.routes.screens import delete_arrangements
+        delete_arrangements(session_factory())
     else:  # an older index keeps more than the current rules; never left for the next pass
         purge_stale(project_output_dir(project_dir))
     app.state.screen_text = ScreenTextJob(

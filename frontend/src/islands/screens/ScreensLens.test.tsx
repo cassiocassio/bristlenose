@@ -8,7 +8,7 @@ import { resetLiveResize, setLiveResize } from "../../utils/liveResize";
 import { resetSidebarStore, toggleTagGroupHidden, useSidebarStore } from "../../contexts/SidebarStore";
 import type { QuoteResponse, QuotesListResponse } from "../../utils/types";
 import { FocusProvider, useFocus } from "../../contexts/FocusContext";
-import { CARD_W, COLUMN_GUTTER, MOVE_STEP, resetArrangementMemory, setArrangement } from "./layout";
+import { arrangementFor, CARD_W, COLUMN_GUTTER, MOVE_STEP, resetArrangementMemory, type Arrangement } from "./layout";
 import { resetScreensNav, screensNavState, toggleScreensNav } from "./navPanel";
 
 vi.mock("../../utils/announce", () => ({ announce: vi.fn(), setAnnounceElement: vi.fn() }));
@@ -34,12 +34,13 @@ vi.mock("../../utils/api", () => ({
   putHiddenTagGroups: vi.fn(),
   putFrameworkStates: vi.fn(),
   getFrameworkStates: vi.fn(),
+  sendPut: vi.fn(() => Promise.resolve()),
 }));
 
 import { announce } from "../../utils/announce";
 import { papers } from "./paper";
 import { featureFlags, resetFeatureFlags } from "../../utils/featureFlags";
-import { apiGet, getCodebook } from "../../utils/api";
+import { apiGet, getCodebook, sendPut } from "../../utils/api";
 import { failedText, NAV_W, quotesOnScreen, ScreensLens, SCREENS_POLL_LIMIT, shouldPoll, unavailableText, type ScreensResponse } from "./ScreensLens";
 
 /** The board's ResizeObserver callbacks, so a test can resize the stage. */
@@ -102,11 +103,17 @@ function screensResponse(over: Record<string, unknown> = {}) {
   };
 }
 
+// What the server holds for /screens/arrangements: seeded per test, read when the lens opens.
+let serverArrangements: { screen_key: string; session_id: string; cards: Arrangement }[] = [];
+const seed = (screenKey: string, sessionId: string, cards: Arrangement) =>
+  serverArrangements.push({ screen_key: screenKey, session_id: sessionId, cards });
+
 function mockApi(screens: unknown) {
   vi.mocked(apiGet).mockImplementation(((path: string) => {
     if (path === "/screens") return Promise.resolve(screens);
     if (path === "/quotes") return Promise.resolve(QUOTES);
     if (path.startsWith("/screens/still")) return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+    if (path === "/screens/arrangements") return Promise.resolve({ versions: serverArrangements });
     return Promise.reject(new Error(path));
   }) as typeof apiGet);
 }
@@ -127,6 +134,7 @@ beforeEach(() => {
   resetLiveResize();
   resetUndoStore();
   vi.mocked(getCodebook).mockResolvedValue({ all_tag_names: [], groups: [], ungrouped: [] } as never);
+  serverArrangements = [];
   paperStub.sample = null;
   paperStub.accents = null;
   papers.clear();
@@ -925,6 +933,7 @@ function mockVersions(screens: unknown = versions()) {
     if (path === "/screens") return Promise.resolve(screens);
     if (path === "/quotes") return Promise.resolve(TWO_QUOTES);
     if (path.startsWith("/screens/still")) return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+    if (path === "/screens/arrangements") return Promise.resolve({ versions: serverArrangements });
     return Promise.reject(new Error(path));
   }) as typeof apiGet);
 }
@@ -1149,6 +1158,7 @@ describe("a placed card with no screengrab to place it against", () => {
       if (path === "/quotes") return Promise.resolve(TWO_QUOTES);
       if (path.includes("session_id=s2&t=41&w=1600")) return Promise.reject(new Error("404"));
       if (path.startsWith("/screens/still")) return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+      if (path === "/screens/arrangements") return Promise.resolve({ versions: serverArrangements });
       return Promise.reject(new Error(path));
     }) as typeof apiGet);
     const c = await openVersions();
@@ -1236,8 +1246,12 @@ describe("stills", () => {
 
 // ── The owner's feedback round, 15 Oct 2026 (docs/design-screens.md S5) ────
 
-const STORE = "bristlenose-screens-arrangements-1";
-const stored = (version: string) => (JSON.parse(localStorage.getItem(STORE) ?? "{}") as Record<string, Record<string, unknown>>)[version];
+// What the board keeps for a version (`screen key|session`): the store the server is fed from.
+const stored = (version: string) => {
+  const cut = version.lastIndexOf("|");
+  // Undefined while the version is automatic; typed as present, as the tests read it once it is.
+  return (arrangementFor("1", version.slice(0, cut), version.slice(cut + 1)) ?? undefined) as Arrangement;
+};
 
 const px = (v: string) => Number.parseFloat(v || "0") || 0;
 /** The fixture's screengrab: where `.screens-shot` sits in the board, and the image's 1px border
@@ -1468,7 +1482,7 @@ describe("the arrangement: automatic, or the researcher's", () => {
   });
 
   it("keeps each version's arrangement, through a change of version and back", async () => {
-    setArrangement("1", "url:/basket", "s2", { "q-p2-20": { kind: "edge", edge: "R", along: 0.2, out: 32, z: 31 } });
+    seed("url:/basket", "s2", { "q-p2-20": { kind: "edge", edge: "R", along: 0.2, out: 32, z: 31 } });
     mockVersions();
     await openVersions();
     expect(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
@@ -1534,7 +1548,7 @@ describe("the arrangement: automatic, or the researcher's", () => {
         window.dispatchEvent(new MouseEvent("pointermove", { clientX: 101, clientY: 101 }));
         window.dispatchEvent(new MouseEvent("pointerup", { clientX: 101, clientY: 101 }));
       });
-      expect(localStorage.getItem(STORE)).toBeNull();
+      expect(stored("url:/shoppingcart|s1")).toBeUndefined();
       await waitFor(() => expect(cardOf(container, "q-p1-10").querySelector(".quote-card.bn-focused")).not.toBeNull());
     } finally {
       g.restore();
@@ -1926,7 +1940,7 @@ describe("a change of version", () => {
     const animate = vi.fn();
     (HTMLElement.prototype as unknown as Record<string, unknown>).animate = animate;
     try {
-      setArrangement("1", "url:/basket", "s2", { "q-p1-30": { kind: "edge", edge: "R", along: 0.5, out: 32, z: 31 } });
+      seed("url:/basket", "s2", { "q-p1-30": { kind: "edge", edge: "R", along: 0.5, out: 32, z: 31 } });
       mockVersions();
       const c = await openVersions();
       await waitFor(() => expect(cardOf(c, "q-p1-30").closest(".screens-free")).not.toBeNull());
@@ -1948,7 +1962,7 @@ describe("a change of version", () => {
     const animate = vi.fn();
     (HTMLElement.prototype as unknown as Record<string, unknown>).animate = animate;
     try {
-      setArrangement("1", "url:/basket", "s1", { "q-p1-10": { kind: "edge", edge: "R", along: 0.9, out: 32, z: 31 } });
+      seed("url:/basket", "s1", { "q-p1-10": { kind: "edge", edge: "R", along: 0.9, out: 32, z: 31 } });
       mockVersions();
       const c = await openVersions(); // p2's version, automatic
       const grip = cardOf(c, "q-p1-30").querySelector<HTMLElement>(".screens-grip-top")!;
@@ -2208,6 +2222,44 @@ describe("leaders over the screengrab follow its paper (R3, 15 Oct 2026)", () =>
     render(<ScreensLens />);
     await waitFor(() => expect(document.querySelector("img.screens-slide.is-current")).not.toBeNull());
     expect(papers.get(boardStill(77))).toEqual([255, 255, 255]);
+  });
+});
+
+describe("arrangements come from the project's database (15 Oct 2026)", () => {
+  it("draws no board until they are read, so a custom board never shows automatic first", async () => {
+    seed("url:/shoppingcart", "s1", { "q-p1-10": { kind: "edge", edge: "L", along: 0.3, out: 32, z: 31 } });
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens") return Promise.resolve(screensResponse());
+      if (path === "/quotes") return Promise.resolve(QUOTES);
+      if (path.startsWith("/screens/still")) return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+      if (path === "/screens/arrangements") return gate.then(() => ({ versions: serverArrangements }));
+      return Promise.reject(new Error(path));
+    }) as typeof apiGet);
+    const { container } = render(<ScreensLens />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith("/screens/arrangements"));
+    await act(async () => {});
+    expect(container.querySelector(".screens-stage")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
+    await act(async () => release());
+    expect(await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
+  });
+
+  it("sends a drag to the server, for that version alone", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      drag(cardOf(c, "q-p1-30"), 60, -150);
+      await waitFor(() => expect(vi.mocked(sendPut)).toHaveBeenCalled());
+      const calls = vi.mocked(sendPut).mock.calls;
+      const [path, body] = calls[calls.length - 1];
+      expect(path).toBe("/screens/arrangement");
+      expect(body).toMatchObject({ screen_key: "url:/shoppingcart", session_id: "s1" });
+      expect(Object.keys((body as { cards: object }).cards).sort()).toEqual(["q-p1-10", "q-p1-30"]);
+    } finally {
+      g.restore();
+    }
   });
 });
 

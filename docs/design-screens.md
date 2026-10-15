@@ -45,10 +45,8 @@ board on real data.
   guide (`[`, ⌥⌘L, the rail button; `navPanel.ts`); failures arrive as reason codes rendered by
   one English map; the poll is capped and stops on `not_read`, and a run's completion re-reads.
   §6.8 is answered for now by the defaults: hover brings a quote forward, stacks are straight —
-  the pickers are gone. §6.9 is still open: the arrangement is kept in this browser's storage, keyed by
-  the page's project id — which is always "1" today, so in practice it separates by origin (the
-  port) only, and two projects served on one port share arrangements. Where arrangements live is
-  the owner's call.
+  the pickers are gone. §6.9 was settled on 15 Oct 2026: the arrangement is kept in the project's
+  own database (S5, "Saved in the project's database"), so it follows the project, not the port.
 - **Owed before it leaves Diagnostics** (security review, 14 Oct). _Paid the night of 14 Oct except where "Out of Diagnostics" below lists it as still owed._ The Diagnostics switch does not
   yet say it reads shared screens (§4.7's sentence; the help text is a 21-locale change). The index
   stores every line as read, chrome and full addresses included, where §4.3 drops chrome and
@@ -431,7 +429,16 @@ reverses. Earlier wording is kept where it explains why._
     it**, as a first drag freezes it — or the linked cards it never placed would drop into the list
     and read as "my cards disappeared" (15 Oct, review). Entries for a `session@t` no version now
     shows (a still moment a re-read replaced) are orphans: left in the old store, never read and
-    never deleted. Kept in this browser's storage (§6.9 is still open).
+    never deleted.
+  - **Saved in the project's database** (the owner, 15 Oct 2026: a researcher edit, persisted the
+    Bristlenose way). One row per version (`screen_arrangements`, migration 018), read once per
+    project before any board shows, so a custom board never draws automatic first; each change is
+    sent for its own version alone (`PUT …/screens/arrangement`), in order, so a partial body can
+    never touch another version and an undo lands after its act. Server-only, like the rest of the
+    lens. Turning reading off deletes them with the rest of screen text (§4.8): a screen key is a
+    page's path read from a participant's screen. _Replaces the browser's localStorage, which in the
+    Mac app is an in-memory store per serve session: quitting the app lost every arrangement._ This
+    browser's 15 Oct copy is sent up on first load and forgotten once the server holds it.
   - **An undo out of sight shows its board first.** Undoing or redoing a *Move Quote* or a *Tidy*
     whose screen or version is not showing switches to that screen and version, then applies, so the
     change is seen (15 Oct, review).
@@ -709,5 +716,6 @@ can answer it cheaply, and decides whether S1–S6 appear at all.
    changed in a way a person reads.
 8. ~~**On the board, hover or click to bring a quote to the front, and straight or diagonal stacks?**~~
    Settled 14 Oct 2026: click, and straight (§2, S5).
-9. **Whose arrangement is it?** A rearranged board is a researcher edit; is it saved per project like
-   other edits, and does it reach the export one day?
+9. ~~**Whose arrangement is it?** A rearranged board is a researcher edit; is it saved per project like
+   other edits, and does it reach the export one day?~~ Settled 15 Oct 2026: per project, in its
+   database, like the other edits (S5). The export question stays open with question 6.

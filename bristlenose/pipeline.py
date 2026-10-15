@@ -514,16 +514,37 @@ def _transcript_parser_version() -> str:
 
 
 def _session_input_fingerprint(session: InputSession, input_dir: Path | None) -> str:
-    """What transcription of *session* depends on: its files (path inside the
-    project folder, size, mtime) and, when any of them is a transcript file,
-    the parser that reads it. A Whisper-only session's fingerprint does not
-    move on a parser bump, and no session's moves when the folder does.
+    """What transcription of *session* depends on: its files' content
+    (``utils.fingerprint``) and, when any of them is a transcript file, the
+    parser that reads it. Renaming, moving or copying a recording leaves it;
+    re-exporting or trimming one moves it (docs/design-project-identity.md §5).
+    A Whisper-only session's fingerprint does not move on a parser bump.
 
-    ``input_dir=None`` is the form every manifest carried before 12 Oct 2026
-    — the resolved absolute path — kept so a run can recognise its own older
-    records (``fresh_session_ids(accept=…)``) and rewrite them, instead of
-    re-paying Whisper once per project on upgrade.
+    When any file has no bytes on disk (a cloud placeholder) this falls back to
+    the file-metadata form, ``_session_metadata_fingerprint``, which is also what
+    a manifest written between 12 and 15 Oct 2026 carries. ``input_dir=None`` is
+    the absolute-path metadata form manifests carried before 12 Oct 2026. Both
+    older forms are accepted once (``fresh_session_ids(accept=…)``) and the
+    record rewritten, so no project re-pays Whisper on upgrade.
     """
+    if input_dir is None:
+        return _session_metadata_fingerprint(session, None)
+    from bristlenose.utils.fingerprint import content_fingerprint
+
+    fps = [content_fingerprint(f.path) for f in session.files]
+    if not fps or any(fp is None for fp in fps):
+        return _session_metadata_fingerprint(session, input_dir)
+    parts = "content=" + "|".join(sorted(fp for fp in fps if fp is not None))
+    if session.has_existing_transcript:
+        parts += f"|parser={_transcript_parser_version()}"
+    return hash_bytes(parts.encode("utf-8"))
+
+
+def _session_metadata_fingerprint(session: InputSession, input_dir: Path | None) -> str:
+    """The file-metadata form: path inside the project folder (or absolute,
+    with ``input_dir=None``), size and mtime, plus the parser for transcript
+    files. The transcription key from 12 to 15 Oct 2026, and the fallback for
+    a session whose bytes are not on disk."""
     parts = hash_file_metadata([f.path for f in session.files], relative_to=input_dir)
     if session.has_existing_transcript:
         parts += f"|parser={_transcript_parser_version()}"
@@ -1448,7 +1469,7 @@ class Pipeline:
         # Sticky ids: a session keeps its number across runs, so a recording
         # older than the ones already analysed cannot renumber them.
         session_registry = SessionRegistry.load(output_dir)
-        sessions = session_registry.apply(sessions)
+        sessions = session_registry.apply(sessions, input_dir)
         session_registry.settle_starts(sessions)
         session_registry.save()
         # What the Sessions lens shows from the first second of a first
@@ -1586,11 +1607,13 @@ class Pipeline:
             _tx_session_fps = {
                 s.session_id: _session_input_fingerprint(s, input_dir) for s in sessions
             }
-            # The pre-12-Oct-2026 spelling of the same thing, for a manifest
-            # written before fingerprints stopped carrying the absolute path.
-            _tx_session_fps_legacy = {
-                s.session_id: _session_input_fingerprint(s, None) for s in sessions
-            }
+            # The older spellings of the same thing, for a manifest written
+            # before transcription was keyed by content: the relative-path form
+            # (12–15 Oct 2026) and the absolute-path form before it.
+            _tx_session_fps_legacy = [
+                {s.session_id: _session_metadata_fingerprint(s, input_dir) for s in sessions},
+                {s.session_id: _session_metadata_fingerprint(s, None) for s in sessions},
+            ]
             # A session the transcription cache will serve is not decoded: on
             # iCloud a decode is a download, and until 12 Oct 2026 every run
             # re-decoded every video whatever the cache held. Anything the
@@ -3199,7 +3222,7 @@ class Pipeline:
                 summary=self._summary,
             )
         session_registry = SessionRegistry.load(output_dir)
-        sessions = session_registry.apply(sessions)
+        sessions = session_registry.apply(sessions, input_dir)
         session_registry.settle_starts(sessions)
         session_registry.save()
 
@@ -4211,7 +4234,7 @@ class Pipeline:
         sessions = ingest(input_dir, order_by_start=_may_order_by_start(output_dir))
         # Read-only: the ids and starts the run gave these sessions.
         _registry = SessionRegistry.load(output_dir)
-        sessions = _registry.apply(sessions)
+        sessions = _registry.apply(sessions, input_dir)
         _registry.settle_starts(sessions)
 
         # --- Load existing people file for display names ---

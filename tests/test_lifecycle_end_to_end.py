@@ -1,9 +1,9 @@
 """A study's life, end to end: the real ``run`` and the real server, in the
 order the Mac app drives them. The rig is ``tests/lifecycle_rig.py``.
 
-Each test is one sequence a researcher actually performs. Strict xfails are
-the identity-without-paths work still to land
-(``docs/design-project-identity.md``); a fix flips them and fails the run.
+Each test is one sequence a researcher actually performs. The move, rename,
+re-filing and copy sequences were strict xfails until identity stopped being a
+path on 15 Oct 2026 (``docs/design-project-identity.md``, phase 2).
 """
 
 from __future__ import annotations
@@ -24,13 +24,6 @@ def test_first_analysis_with_the_server_started_first(tmp_path: Path, fast_watch
         study.assert_healthy()
     assert sorted(study.transcribed[0]) == ["Interview 1.wav", "Interview 2.wav"]
 
-
-import pytest  # noqa: E402
-
-_IDENTITY = (
-    "identity is a path today: the study's row and each session's key. "
-    "docs/design-project-identity.md, phase 2, flips this."
-)
 
 
 def test_an_added_interview_keeps_curation_and_transcribes_only_itself(
@@ -96,7 +89,6 @@ def test_a_folder_moved_while_closed_keeps_its_curation(tmp_path: Path, fast_wat
         assert star in study.starred(client), "the move orphaned the researcher's star"
 
 
-@pytest.mark.xfail(strict=True, reason=_IDENTITY)
 def test_a_renamed_interview_keeps_its_curation_and_is_not_transcribed_again(
     tmp_path: Path, fast_watcher,
 ) -> None:
@@ -109,9 +101,12 @@ def test_a_renamed_interview_keeps_its_curation_and_is_not_transcribed_again(
             study.star(client, q)
         (study.folder / "Recording 2026-10-02 1433.wav").rename(study.folder / "p1 sarah.wav")
         study.run()
-        study.sessions(client, expect=2)
+        sessions = study.sessions(client, expect=2)
         study.assert_healthy()
         assert set(stars) <= study.starred(client), "a renamed interview lost its stars"
+        files = {f["filename"] for s in sessions for f in s.get("source_files", [])}
+        assert "p1 sarah.wav" in files, f"the report still points at the old name: {files}"
+        assert "Recording 2026-10-02 1433.wav" not in files, f"a stale row survived: {files}"
     assert study.transcribed[1] == [], "a renamed interview was transcribed again"
 
 
@@ -133,3 +128,24 @@ def test_a_copy_is_an_independent_duplicate(tmp_path: Path, fast_watcher) -> Non
         study.sessions(client, expect=2)
         study.assert_healthy()
         assert study.starred(client) == {first}, "the copy's star reached the original"
+
+
+def test_interviews_filed_into_a_subfolder_keep_everything(tmp_path: Path, fast_watcher) -> None:
+    """A researcher tidies Round 1 into its own folder before Round 2 arrives."""
+    study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav")
+    with study.serve() as client:
+        study.run()
+        stars = study.quote_ids(client)[:2]
+        for q in stars:
+            study.star(client, q)
+        (study.folder / "Round 1").mkdir()
+        for name in ("Interview 1.wav", "Interview 2.wav"):
+            (study.folder / name).rename(study.folder / "Round 1" / name)
+        study.add_recording("Interview 3.wav")
+        study.run()
+        sessions = study.sessions(client, expect=3)
+        study.assert_healthy()
+        assert set(stars) <= study.starred(client), "filing interviews into a folder lost stars"
+        paths = {f["path"] for s in sessions for f in s.get("source_files", [])}
+        assert any("Round 1" in p for p in paths), f"the report still points at the old place: {paths}"
+    assert study.transcribed[1] == ["Interview 3.wav"]

@@ -838,6 +838,12 @@ def _import_source_files(
     run names it as the source. Until 12 Oct 2026 the first row was the only
     row: ``has_media`` stayed false for good, and a moved project's rows kept
     pointing at the old location.
+
+    Every run rewrites the transcript header with the recording's current
+    place, so a recording renamed or filed into a folder arrives here under its
+    new name, and its old row — whose file is no longer where it was — is that
+    row, healed rather than left beside a new one
+    (docs/design-project-identity.md §7).
     """
     for sid, meta in session_meta.items():
         sess = session_map.get(sid)
@@ -869,13 +875,15 @@ def _import_source_files(
                 sess.has_video = True
 
         present = source_path.exists()
-        sf = next(
-            (
-                f for f in db.query(SourceFile).filter_by(session_id=sess.id)
-                if Path(f.path).name == source_path.name
-            ),
-            None,
-        )
+        rows = db.query(SourceFile).filter_by(session_id=sess.id).all()
+        sf = next((f for f in rows if Path(f.path).name == source_path.name), None)
+        if sf is None and present:
+            # The same recording under a new name or folder: the row whose file
+            # is no longer where it was is this one. Its path is a hint, healed.
+            sf = next(
+                (f for f in rows if f.file_type == file_type and not Path(f.path).exists()),
+                None,
+            )
         if sf is None:
             sf = SourceFile(session_id=sess.id, file_type=file_type, path=str(source_path))
             db.add(sf)

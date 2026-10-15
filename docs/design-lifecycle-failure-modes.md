@@ -105,6 +105,7 @@ row 42.
 | 34 | More than 50 projects: the 51st got no folder lease, so anything borrowing its folder got a bare path with no sandbox scope. The 50 watchers now go to the most recently opened projects, and opening a project or asking for its folder takes a lease on demand, the least recently opened giving way (15 Oct 2026, `ProjectIndex.ensureLease`). Masked in practice by row 39's leaked scope, which is why the cap never showed | `ProjectLeaseOnDemandTests` (4 tests, cap lowered to 1) | mutant (each of order, on-demand and eviction alone) |
 | 29 | A folder moved or renamed forked the project, with the app closed or open; the report showed the stale first row. A study's own database now holds one study, found by its marker (`<output>/.bristlenose/study.json`, minted by the first run or serve, kept across Re-analyse), never matched by path; stored paths are healed; a fork left by an older release is removed at the next import unless curation hangs off it (15 Oct 2026, [design-project-identity.md](design-project-identity.md) §3–4, §10) | scenario `moved-while-closed`; `test_lifecycle_end_to_end.py` (`…moved_while_closed_keeps_its_curation`); `tests/test_study_identity.py` | strict xfail flipped; mutant (six changes, each alone) |
 | 30 | A copied folder forked the same way. A copy now opens as the study it was copied from, with its curation, in its own database, so nothing written in one reaches the other; the app re-mints its id on arrival (phase 4) | scenario `copied-elsewhere`; `…a_copy_is_an_independent_duplicate` | strict xfail flipped |
+| 31 | A renamed interview got a new session id, so its stars, tags and edits were deleted, and it was transcribed again. A session is now found by its recording's content first (`utils/fingerprint.py`, registry version 3), then by its last known place (a cloud placeholder), then by name; transcription is keyed by content, and the stored file path is healed. Filing interviews into a subfolder is the same case (15 Oct 2026, [design-project-identity.md](design-project-identity.md) §5–7) | `…renamed_interview_keeps_its_curation…`, `…filed_into_a_subfolder…` (`test_lifecycle_end_to_end.py`); `TestContentKeys`; `test_fingerprint.py`; the 12-Oct manifest migration test | strict xfail flipped; mutant (six of seven changes; the seventh was redundant and removed) |
 
 ### Open, engineered (strict xfail in the scenario table)
 
@@ -116,7 +117,6 @@ row 42.
 
 | # | Failure mode | Why there is no scenario yet |
 |---|---|---|
-| 31 | A renamed interview gets a new session id, so its stars, tags and edits are deleted | the session key is the file stem by design; a stable key needs content identity — the recording fingerprint and registry v3 in [design-project-identity.md](design-project-identity.md) §5–6 (decided 13 Oct 2026, phase 2) |
 | 32 | Two servers, or two app windows on two machines, on one folder at once | no lock exists to test; SQLite serialises writes but imports can still race |
 | 33 | Network shares, ExFAT, iCloud-evicted databases | WAL is unsupported on network filesystems; needs real volumes, not a temp dir |
 | 35 | The Mac readers open the database with `?immutable=1`, which ignores the WAL: after a fork is repaired the *Report out of date* row stays until a checkpoint, and curation made this session can count as zero, so **Re-analyse…** skips its confirmation | a committed-but-uncheckpointed row is invisible to that open (measured against sqlite 3.53); needs a read without `immutable` falling back on `CANTOPEN`, or a Python-side checkpoint after curation writes — review finding, parked 12 Oct 2026 |
@@ -155,10 +155,10 @@ folder instead.
 
 ## The score
 
-**By count:** of 48 failure modes, 34 are designed out and proven (25 fixed on
+**By count:** of 48 failure modes, 35 are designed out and proven (25 fixed on
 12 Oct 2026, one that already held and is now guarded, row 41's progressive
-fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, and rows 27, 29, 30 and 34 of 15 Oct) — **71%**. Fourteen are
-open: one engineered, thirteen not. _(13 Oct 2026: rows 35–40 added from the review
+fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, and rows 27, 29, 30, 31 and 34 of 15 Oct) — **73%**. Thirteen are
+open: one engineered, twelve not. _(13 Oct 2026: rows 35–40 added from the review
 of the Mac half; 14 Oct: rows 41–43 from the progressive-lenses truing, then 44–48
 from a `--clean` Re-analyse in the app. The denominator moved each time.)_
 

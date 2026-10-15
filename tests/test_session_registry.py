@@ -24,9 +24,12 @@ _T0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
 def _file(tmp_path: Path, name: str, day: int, kind: FileType = FileType.AUDIO) -> InputFile:
     path = tmp_path / name
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(b"x")
+    # Each file its own bytes: a session is found by its recording's content
+    # first (registry version 3), and real recordings never share bytes.
+    data = name.encode("utf-8")
+    path.write_bytes(data)
     return InputFile(
-        path=path, file_type=kind, created_at=_T0 + timedelta(days=day), size_bytes=1,
+        path=path, file_type=kind, created_at=_T0 + timedelta(days=day), size_bytes=len(data),
     )
 
 
@@ -107,8 +110,8 @@ class TestSessionIds:
         out = tmp_path / "out"
         path = registry_path(out)
         path.parent.mkdir(parents=True)
-        path.write_text(json.dumps({"version": 3, "sessions": {}}), encoding="utf-8")
-        with pytest.raises(ValueError, match="version 3"):
+        path.write_text(json.dumps({"version": 4, "sessions": {}}), encoding="utf-8")
+        with pytest.raises(ValueError, match="version 4"):
             SessionRegistry.load(out)
 
     def test_save_round_trips(self, tmp_path: Path) -> None:
@@ -360,7 +363,7 @@ class TestRolePins:
                                    person="id-a"))
         reg.save()
         data = json.loads(path.read_text(encoding="utf-8"))
-        assert data["version"] == 2
+        assert data["version"] == 3
         again = SessionRegistry.load(tmp_path)
         assert again.pins["s1"]["A"].role == "researcher"
         assert again.pins["s1"]["A"].person == "id-a"
@@ -454,3 +457,92 @@ class TestRolePins:
         for tc, code, _ in _SEGMENT_RE.findall(path.read_text(encoding="utf-8")):
             heard.setdefault(code, []).append(_parse_timecode_to_seconds(tc))
         assert heard == {"p1": expected["Me"], "m1": expected["Wylie"]}
+
+
+class TestContentKeys:
+    """Registry version 3: a session is its recording's bytes first."""
+
+    def test_a_renamed_recording_keeps_its_session(self, tmp_path: Path) -> None:
+        out = tmp_path / "out"
+        a, b = _file(tmp_path, "rec-1433.wav", 0), _file(tmp_path, "b.wav", 1)
+        reg = SessionRegistry.load(out)
+        reg.apply(_ingest([a, b]), tmp_path)
+        reg.save()
+        renamed = tmp_path / "p1 sarah.wav"
+        a.path.rename(renamed)
+        a2 = InputFile(path=renamed, file_type=FileType.AUDIO, created_at=a.created_at,
+                       size_bytes=a.size_bytes)
+        sessions = SessionRegistry.load(out).apply(_ingest([a2, b]), tmp_path)
+        assert {s.files[0].path.name: s.session_id for s in sessions} == {
+            "p1 sarah.wav": "s1", "b.wav": "s2",
+        }
+
+    def test_a_new_recording_given_an_old_name_is_a_new_session(self, tmp_path: Path) -> None:
+        """Once a recording has turned up under a new name, its old name is
+        free: a different recording given it must not inherit the session."""
+        out = tmp_path / "out"
+        a = _file(tmp_path, "interview.wav", 0)
+        reg = SessionRegistry.load(out)
+        reg.apply(_ingest([a]), tmp_path)
+        reg.save()
+        moved = tmp_path / "interview-ann.wav"
+        a.path.rename(moved)
+        a2 = InputFile(path=moved, file_type=FileType.AUDIO, created_at=a.created_at,
+                       size_bytes=a.size_bytes)
+        reg = SessionRegistry.load(out)
+        reg.apply(_ingest([a2]), tmp_path)
+        reg.save()
+        stranger = tmp_path / "interview.wav"
+        stranger.write_bytes(b"a different interview entirely")
+        s = InputFile(path=stranger, file_type=FileType.AUDIO, created_at=a.created_at,
+                      size_bytes=stranger.stat().st_size)
+        sessions = SessionRegistry.load(out).apply(_ingest([a2, s]), tmp_path)
+        assert {x.files[0].path.name: x.session_id for x in sessions} == {
+            "interview-ann.wav": "s1", "interview.wav": "s2",
+        }
+
+    def test_an_edited_transcript_keeps_its_session_by_name(self, tmp_path: Path) -> None:
+        """New bytes, same name: found by name, and its new content recorded."""
+        out = tmp_path / "out"
+        vtt = _file(tmp_path, "ann.vtt", 0, FileType.SUBTITLE_VTT)
+        reg = SessionRegistry.load(out)
+        reg.apply(_ingest([vtt]), tmp_path)
+        reg.save()
+        vtt.path.write_bytes(b"WEBVTT corrected name")
+        sessions = SessionRegistry.load(out).apply(_ingest([vtt]), tmp_path)
+        assert [x.session_id for x in sessions] == ["s1"]
+
+    def test_a_cloud_placeholder_keeps_its_session_by_its_place(
+        self, tmp_path: Path, monkeypatch,
+    ) -> None:
+        """No bytes on disk, so no fingerprint: the place it was last seen
+        finds it, even under a name the registry has never keyed."""
+        out = tmp_path / "out"
+        a = _file(tmp_path, "Round 1/ann.wav", 0)
+        reg = SessionRegistry.load(out)
+        reg.apply(_ingest([a]), tmp_path)
+        reg.save()
+        # Evicted, and its name key lost (as a v2 registry upgraded mid-way would).
+        data = json.loads(registry_path(out).read_text())
+        data["sessions"] = {k: v for k, v in data["sessions"].items() if k.startswith("fp:")}
+        registry_path(out).write_text(json.dumps(data))
+        import bristlenose.session_registry as sr
+
+        monkeypatch.setattr(sr, "_fingerprint", lambda _p: None)
+        sessions = SessionRegistry.load(out).apply(_ingest([a]), tmp_path)
+        assert [x.session_id for x in sessions] == ["s1"]
+
+    def test_version_2_upgrades_in_place(self, tmp_path: Path) -> None:
+        out = tmp_path / "out"
+        a = _file(tmp_path, "a.wav", 0)
+        path = registry_path(out)
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({"version": 2, "sessions": {"stem:a": "s7"},
+                                    "speakers": {}, "participants_issued": 0}))
+        reg = SessionRegistry.load(out)
+        sessions = reg.apply(_ingest([a]), tmp_path)
+        reg.save()
+        assert [x.session_id for x in sessions] == ["s7"]
+        data = json.loads(path.read_text())
+        assert data["version"] == 3
+        assert any(k.startswith("fp:v1:") and v == "s7" for k, v in data["sessions"].items())

@@ -313,7 +313,7 @@ def fresh_session_ids(
     stage: str,
     current: dict[str, str],
     *,
-    accept: dict[str, str] | None = None,
+    accept: dict[str, str] | list[dict[str, str]] | None = None,
 ) -> set[str]:
     """Session ids whose cached output can be reused: COMPLETE, and computed
     from exactly the inputs they would be computed from now.
@@ -324,13 +324,15 @@ def fresh_session_ids(
     recomputed. A session absent from ``current`` is not fresh either — it is
     no longer in the project.
 
-    ``accept`` is an older spelling of the same inputs, per session — the
-    absolute-path transcription fingerprint a manifest written before 12 Oct
-    2026 carries. A record matching it is fresh too; ``carry_forward_sessions``
+    ``accept`` is an older spelling of the same inputs, per session, or a list
+    of them — the transcription fingerprints manifests carried before content
+    keys (the relative-path form of 12–15 Oct 2026, the absolute-path form
+    before it). A record matching it is fresh too; ``carry_forward_sessions``
     then stamps the record with ``current``, which is the whole migration: the
     first run after the upgrade pays nothing and the project is move-safe
     from then on.
     """
+    olds = [accept] if isinstance(accept, dict) else (accept or [])
     fresh: set[str] = set()
     for sid in get_completed_session_ids(manifest, stage):
         record = manifest.stages[stage].sessions[sid]  # type: ignore[union-attr, index]
@@ -338,7 +340,7 @@ def fresh_session_ids(
             continue
         if current.get(sid) == record.input_hash:
             fresh.add(sid)
-        elif accept is not None and accept.get(sid) == record.input_hash:
+        elif any(old.get(sid) == record.input_hash for old in olds):
             fresh.add(sid)
     return fresh
 

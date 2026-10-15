@@ -37,6 +37,18 @@ The registry remembers two things across runs:
   that does not know it ignores it, and an entry this release cannot read is
   skipped, never a reason to refuse the file.
 
+- **content keys** (version 3, 15 Oct 2026): a session is found first by its
+  recording's content fingerprint (``utils.fingerprint``), stored as
+  ``fp:v1:…`` beside one name key (``stem:…``, ``zoom:…``, ``stamp:…``) for the
+  same sid. So renaming ``Recording 1433.mp4`` to ``p1 sarah.mp4`` keeps its
+  number, its speaker codes and everything keyed by them, while editing a
+  transcript file (new bytes, same name) still finds it by name. A sid has at
+  most one name key: when its recording turns up under another name, the old
+  name key goes, so a new recording given the old name is a new session.
+  ``hints`` remembers where each fingerprint was last seen, which is how a
+  cloud placeholder (no bytes, so no fingerprint) keeps its session.
+  ``docs/design-project-identity.md`` §5–6.
+
 A project with no file behaves exactly as before on its first run: sessions in
 date order, codes from 1. Entries for sessions that disappear are kept, so their
 numbers are never handed to someone else. This is the first package of
@@ -60,10 +72,12 @@ from bristlenose.models import InputSession
 
 logger = logging.getLogger(__name__)
 
-REGISTRY_VERSION = 2
-#: Versions this release reads. Version 1 has no pins; it is read as such and
-#: written back as 2.
-_READABLE_VERSIONS = (1, 2)
+REGISTRY_VERSION = 3
+#: Versions this release reads. Version 1 has no pins and version 2 no content
+#: keys; each is read as such and written back as 3.
+_READABLE_VERSIONS = (1, 2, 3)
+#: The prefix of a content key in ``sessions``.
+FP_PREFIX = "fp:"
 #: The roles a pin may hold — ``SpeakerRole`` values.
 PIN_ROLES = ("researcher", "participant", "observer")
 REGISTRY_FILENAME = "sessions.json"
@@ -116,6 +130,9 @@ class SessionRegistry:
     participants_issued: int = 0
     pins: dict[str, dict[str, RolePin]] = field(default_factory=dict)
     starts: dict[str, dict[str, str]] = field(default_factory=dict)
+    #: Content key (``fp:v1:…``) → the recording's last known place, relative
+    #: to the interview folder.
+    hints: dict[str, str] = field(default_factory=dict)
 
     # ── persistence ──────────────────────────────────────────────────────
 
@@ -166,6 +183,7 @@ class SessionRegistry:
                 for sid, labels in (data.get("pins") or {}).items()
             },
             starts=_readable_starts(data.get("starts")),
+            hints=_readable_hints(data.get("hints")),
         )
 
     def save(self) -> None:
@@ -181,6 +199,7 @@ class SessionRegistry:
                 for sid in sorted(self.pins) if self.pins[sid]
             },
             "starts": {sid: self.starts[sid] for sid in sorted(self.starts)},
+            "hints": dict(sorted(self.hints.items())),
         }
         fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".sessions.", suffix=".tmp")
         try:
@@ -198,11 +217,19 @@ class SessionRegistry:
 
     # ── sessions ─────────────────────────────────────────────────────────
 
-    def apply(self, sessions: list[InputSession]) -> list[InputSession]:
+    def apply(
+        self, sessions: list[InputSession], input_dir: Path | None = None,
+    ) -> list[InputSession]:
         """Give each session its remembered sid, or the next unused one.
 
         ``sessions`` arrive in ingest's order (recording date); new sessions
         are numbered in that order. Returns the sessions sorted by number.
+
+        A session is found by its recording's content first, then by its
+        place (a cloud placeholder's last known path), then by its name, and a
+        sid already claimed in this run is never handed to a second session by
+        a weaker key. ``input_dir`` lets the registry remember places relative
+        to the interview folder; without it nothing is remembered.
         """
         from bristlenose.stages.s01_ingest import session_key
 
@@ -216,6 +243,7 @@ class SessionRegistry:
         # folder name. The plain key stays what every other project has.
         collisions = {k for k in keys if keys.count(k) > 1}
         seen: set[str] = set()
+        named: list[str] = []
         for session, key in zip(sessions, keys, strict=True):
             if key in collisions and session.files:
                 key = session_key(session.files, qualified=True)
@@ -225,21 +253,74 @@ class SessionRegistry:
                 logger.warning("Two sessions share the key %r; numbering them apart", key)
                 key = f"{key}#{session.session_id}"
             seen.add(key)
+            named.append(key)
 
-            sid = self.sessions.get(key)
+        primaries = [_primary_file(s) for s in sessions]
+        fps = [_fingerprint(f) for f in primaries]
+        places = [_place(f, input_dir) for f in primaries]
+        # Two copies of one recording in a study are kept as two sessions, as
+        # ingest finds them; only the first is keyed by content.
+        first_with_fp: dict[str, int] = {}
+        for i, fp in enumerate(fps):
+            if fp is not None:
+                first_with_fp.setdefault(fp, i)
+
+        claimed: set[str] = set()
+        resolved: list[str | None] = [None] * len(sessions)
+
+        def claim(i: int, sid: str | None) -> bool:
+            if sid is None or sid in claimed:
+                return False
+            claimed.add(sid)
+            resolved[i] = sid
+            return True
+
+        # Content, then place, then name — each pass only takes what is free.
+        for i, fp in enumerate(fps):
+            if fp is not None and first_with_fp[fp] == i:
+                claim(i, self.sessions.get(FP_PREFIX + fp))
+        for i, fp in enumerate(fps):
+            if resolved[i] is None and fp is None and places[i] is not None:
+                hinted = next((k for k, h in self.hints.items() if h == places[i]), None)
+                if hinted is not None:
+                    claim(i, self.sessions.get(hinted))
+        for i in range(len(sessions)):
+            if resolved[i] is None:
+                claim(i, self.sessions.get(named[i]))
+
+        for i, session in enumerate(sessions):
+            sid = resolved[i]
             if sid is None:
                 sid = f"s{next_n}"
                 next_n += 1
-                self.sessions[key] = sid
+                claimed.add(sid)
             elif sid != session.session_id:
-                logger.info("Session %r keeps %s (by date it would be %s)", key,
+                logger.info("Session %r keeps %s (by date it would be %s)", named[i],
                             sid, session.session_id)
+            self._remember(sid, named[i], fps[i] if first_with_fp.get(fps[i] or "") == i else None,
+                           places[i])
             n = _number(sid)
             session.session_id = sid
             session.session_number = n
             session.participant_id = f"p{n}"  # provisional, as before — reassigned after 5b
             session.participant_number = n
         return sorted(sessions, key=lambda s: s.session_number)
+
+    def _remember(self, sid: str, name_key: str, fp: str | None, place: str | None) -> None:
+        """Key ``sid`` by this run's name and, when known, its content.
+
+        A sid keeps one name key: its old name goes when the recording turns up
+        under another, so a new recording given the old name is a new session.
+        """
+        for k in [k for k, v in self.sessions.items()
+                  if v == sid and not k.startswith(FP_PREFIX) and k != name_key]:
+            del self.sessions[k]
+        self.sessions[name_key] = sid
+        if fp is not None:
+            fp_key = FP_PREFIX + fp
+            self.sessions[fp_key] = sid
+            if place is not None:
+                self.hints[fp_key] = place
 
     # ── starts ───────────────────────────────────────────────────────────
 
@@ -356,8 +437,12 @@ def _problem(data: dict[str, Any]) -> str:
     sids = list(sessions.values())
     if not all(isinstance(sid, str) and _SID.fullmatch(sid) for sid in sids):
         return "a session id is not of the form s<n>"
-    if len(set(sids)) != len(sids):
-        return "two sessions share one session id"
+    # Version 3 keys a session twice, by content and by name; within each kind
+    # a sid appears once.
+    for content in (True, False):
+        kind = [sid for k, sid in sessions.items() if k.startswith(FP_PREFIX) == content]
+        if len(set(kind)) != len(kind):
+            return "two sessions share one session id"
     owner: dict[str, str] = {}
     for sid, labels in speakers.items():
         if not isinstance(labels, dict):
@@ -411,6 +496,48 @@ def _readable_starts(raw: Any) -> dict[str, dict[str, str]]:
         else:
             logger.warning("sessions.json: ignoring an unreadable start for %r", sid)
     return out
+
+
+def _primary_file(session: InputSession) -> Path | None:
+    """The file that IS the session: its video, else its audio, else the first
+    file (a transcript). Grouping decides what sits together; this decides
+    which bytes name it."""
+    from bristlenose.models import FileType
+
+    for kind in (FileType.VIDEO, FileType.AUDIO):
+        for f in session.files:
+            if f.file_type == kind:
+                return f.path
+    return session.files[0].path if session.files else None
+
+
+def _fingerprint(path: Path | None) -> str | None:
+    if path is None:
+        return None
+    from bristlenose.utils.fingerprint import content_fingerprint
+
+    return content_fingerprint(path)
+
+
+def _place(path: Path | None, input_dir: Path | None) -> str | None:
+    if path is None or input_dir is None:
+        return None
+    try:
+        return path.resolve().relative_to(input_dir.resolve()).as_posix()
+    except (OSError, ValueError):
+        return None
+
+
+def _readable_hints(raw: Any) -> dict[str, str]:
+    from bristlenose.utils.fingerprint import is_fingerprint
+
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        k: v for k, v in raw.items()
+        if isinstance(k, str) and k.startswith(FP_PREFIX)
+        and is_fingerprint(k[len(FP_PREFIX):]) and isinstance(v, str)
+    }
 
 
 def _number(code: str) -> int:

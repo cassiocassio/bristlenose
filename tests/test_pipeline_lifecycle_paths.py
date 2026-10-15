@@ -70,3 +70,26 @@ class TestMovedProject:
         assert h2.transcribed == [], "a legacy fingerprint was re-paid instead of migrated"
         m2 = json.loads(manifest_path.read_text(encoding="utf-8"))
         assert m2["stages"]["transcribe"]["sessions"]["s1"]["input_hash"] != legacy_session
+
+    def test_a_relative_path_fingerprint_is_migrated_to_content(self, tmp_path: Path) -> None:
+        """A manifest from 12–15 Oct 2026 carries the relative-path form; since
+        then transcription is keyed by content. The first run after upgrading
+        keeps the cache and rewrites the record, so a project pays nothing."""
+        h1 = run_pipeline(tmp_path, _one)
+        wav = h1.input_dir / "bare.wav"
+        relative = hash_bytes(hash_file_metadata([wav], relative_to=h1.input_dir).encode())
+
+        manifest_path = h1.output_dir / ".bristlenose" / "pipeline-manifest.json"
+        m = json.loads(manifest_path.read_text(encoding="utf-8"))
+        record = m["stages"]["transcribe"]
+        assert record["sessions"]["s1"]["input_hash"] != relative, (
+            "the content form must differ from the relative one, or this test proves nothing"
+        )
+        record["input_hashes"]["source_files"] = "stale"
+        record["sessions"]["s1"]["input_hash"] = relative
+        manifest_path.write_text(json.dumps(m), encoding="utf-8")
+
+        h2 = run_pipeline(tmp_path, _one)
+        assert h2.transcribed == [], "a 12-Oct fingerprint was re-paid instead of migrated"
+        m2 = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert m2["stages"]["transcribe"]["sessions"]["s1"]["input_hash"] != relative

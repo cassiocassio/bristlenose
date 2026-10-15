@@ -210,10 +210,19 @@ class Study:
     # ── what the researcher sees ────────────────────────────────────────────
 
     def sessions(self, client, expect: int | None = None) -> list:
-        """The report's sessions, once it shows ``expect`` of them (or any).
+        """The report's sessions, once the server has imported the latest run
+        and shows ``expect`` of them (or any).
 
-        Waits, because the server imports a finished run on its own poll."""
+        Waits, because the server imports a finished run on its own poll; and
+        waits for THAT run, because after a second run the first run's
+        sessions are already showing."""
+        latest = _latest_completed_run(self.folder)
+
         def ready() -> bool:
+            if latest is not None:
+                published = (client.app.state.last_run.get(1) or {}).get("run_id")
+                if published != latest:
+                    return False
             got = _sessions(client)
             return bool(got) and (expect is None or len(got) == expect)
 
@@ -260,9 +269,11 @@ class Study:
         assert _wait(lambda: bool(_read()), timeout=10.0), "the report shows no quotes"
         return _read()
 
-    @staticmethod
-    def star(client, quote_id: str) -> None:
-        resp = client.put("/api/projects/1/starred", json={quote_id: True})
+    def star(self, client, quote_id: str) -> None:
+        """Star one more quote. The endpoint replaces the whole map (as the
+        SPA's localStorage mirror does), so the PUT carries every star."""
+        stars = self.starred(client) | {quote_id}
+        resp = client.put("/api/projects/1/starred", json=dict.fromkeys(sorted(stars), True))
         assert resp.status_code == 200, resp.text
 
     @staticmethod
@@ -271,6 +282,14 @@ class Study:
         if resp.status_code != 200:
             return set()
         return {k for k, v in resp.json().items() if v}
+
+
+def _latest_completed_run(folder: Path) -> str | None:
+    from bristlenose.events import RunCompletedEvent, events_path, read_events
+
+    events = read_events(events_path(folder / "bristlenose-output"))
+    done = [e for e in events if isinstance(e, RunCompletedEvent)]
+    return done[-1].run_id if done else None
 
 
 def _cli_app():

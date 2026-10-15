@@ -22,6 +22,7 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 - **Whisper's repetition loops are taken out of new transcripts.** On a Mac with Apple silicon, a word or line repeated as many separate lines ("nada nada nada…", or "Gracias." every half minute over music) is removed, and where Whisper's first pass looped, the stretch is transcribed again in case speech was under it.
 - **`serve --dev` restarts only for changes to Bristlenose's own Python.** It used to watch the whole working directory, so a sidecar rebuild under `desktop/` restarted the dev server dozens of times.
 - **A re-run leaves the videos of sessions already transcribed alone.** Every run used to decode every video again, which for a project in iCloud meant downloading it again. A session's thumbnail is now re-cut when its video changes, where before it was kept for good.
+- **Timecodes, tags and codes no longer fall back to Courier.** They draw in the system's monospace face in the Mac app and Safari, Menlo in Chrome, and Cascadia Mono or Consolas on Windows. Every tag is now one weight, and numbers in the Signals lens use the report's body type with aligned digits.
 
 **Fixed**
 
@@ -41,6 +42,7 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 - **The Mac app follows a project folder you rename in Finder.** It kept the report on the old path, and a re-analysis run after the rename never reached the report. A folder moved to the Bin shows as Can't find, with Locate…, instead of being served from there.
 - **Reopening the Mac app during an analysis shows that analysis.** The row said Analysing with a Stop button that did nothing, and Analyse could start a second run on the same folder.
 - **The Mac app's sidebar says when a project's report database holds a second project**, the shape the empty-report bug above left behind, instead of showing a session count the report could not.
+- **In the Codebooks lens, the add-tag chip and a dragged tag are the same size as the tags beside them.**
 
 **0.37.0** — _12 Oct 2026_
 

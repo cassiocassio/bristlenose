@@ -10,6 +10,10 @@ updated: 13 Oct 2026
 > phases (Mac first, engine pluggable). This doc is the **evidence record** for reading the shared
 > screen; where its §3.4, §4 or §6 disagree with the plan, the plan wins.
 
+> _15 Oct 2026: this is the evidence record behind `design-screens.md`, kept as it was. The Screens
+> lens and the screen-text index it describes have since been built; `design-screens.md` says what
+> shipped and what is still the plan._
+
 **Status: exploratory proposal, 13 Oct 2026. Nothing here is built and nothing is decided; the owner
 decides whether it is.** Method and every number below:
 [`experiments/screen-text/README.md`](../experiments/screen-text/README.md). A second pass the same day

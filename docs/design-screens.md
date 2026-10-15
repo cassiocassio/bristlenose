@@ -1,15 +1,25 @@
 ---
-status: proposal
-updated: 15 Oct 2026
+status: mixed
+last-trued: 2026-10-15
+trued-against: HEAD@main on 2026-10-15
+split-candidate: true
 ---
+
+> **Trued 15 Oct 2026.** The Screens lens (S5) and the index it reads are built and out of
+> Diagnostics; S1–S4, S6, the engine setting and the non-Mac engine are still the plan. Corrected
+> against the code: the arrangement store (SQLite since 15 Oct), the routes (five, not two or four),
+> the lens's visibility rule (one copy, served by the route), the off state, the §3.3 data table,
+> §6's settled questions. The 14 Oct narrative below is kept as history and marked where it was
+> overtaken. A split into an as-built record and the pending plan would read better.
 
 # Screens: where they went, what they said, what was on screen
 
 **Status: the plan, 13 Oct 2026; built since 14 Oct, and out of Diagnostics since the night of
 14 Oct (below).** Decided by the
 owner today: **(1) screen text and the Screens lens are one project with one plan; (2) Mac first;
-(3) the OCR engine is pluggable, so other platforms can join with another engine later.** Everything
-else here is a proposal.
+(3) the OCR engine is pluggable, so other platforms can join with another engine later.** The Screens
+lens (S5) and the index under it are built (from "14 Oct 2026, evening" on); the other surfaces, the
+engine setting and the non-Mac engine are still a proposal.
 
 **14 Oct 2026: tested on real sessions.** Three IKEA sessions (UK site in a Teams call, German site
 in Chrome, UK site on an iPad) were run end to end through a private prototype: screens derived,
@@ -18,15 +28,17 @@ settled is in §3.5 (pinning a quote to an element), §3.6 (is it the same scree
 board). The owner's principle from that test: **the machine makes its best guess and the researcher
 fixes it in one gesture**, rather than asking AI to be right about everything.
 
-**14 Oct 2026, evening: a rough first build, behind Diagnostics.** Built for one trusted tester to
+**14 Oct 2026, evening: a rough first build, behind Diagnostics.** _History: overtaken the same night
+("Out of Diagnostics", below) and on 15 Oct; what follows is how it stood then._ Built for one trusted tester to
 try on real studies and say what is wrong. It is not Phase 1–5 done; it is the shortest path to the
 board on real data.
 
 - **Where it is.** `bristlenose/screen_text/` (engine seam with Vision and a fake engine; the
   sampler and index; `screens.py`, which derives screens, places quotes and pins them by shared
   words), a serve job that indexes each recording after the scene strips
-  (`server/screen_text_job.py`), two routes (`GET …/screens`, `GET …/screens/still`, both
-  server-only in an export), and the lens at `/report/screens/` (`frontend/src/islands/screens/`).
+  (`server/screen_text_job.py`), two routes then (`GET …/screens`, `GET …/screens/still`, both
+  server-only in an export; five since: `…/screens/status`, and `GET …/screens/arrangements` and
+  `PUT …/screens/arrangement` on 15 Oct), and the lens at `/report/screens/` (`frontend/src/islands/screens/`).
 - **How to turn it on.** _Superseded the night of 14 Oct — see "Out of Diagnostics" below._ Mac
   app: Settings ▸ Transcription ▸ **Read shared screens**, on by default. CLI: `serve --dev`, or
   `BRISTLENOSE_SCREEN_TEXT=1`. Off, the job never runs, `/screens` and `/screens/status` answer
@@ -34,18 +46,19 @@ board on real data.
 - **What it does not do yet.** Pins are words only, so a German page with English quotes pins
   little (the prototype's meaning match is not shipped). No merge or peel: one key per screen by
   the §3.6 ladder, and a page with neither address nor title is not a screen. No not-screen-based
-  gate. The rearranged board lives in the browser's storage, not the project. English only; no
-  locale keys. Vision only, so the lens reports "unavailable" off the Mac.
+  gate. The rearranged board lives in the browser's storage, not the project (_since 15 Oct, the
+  project's database_). English only; no locale keys (_localised the same night_). Vision only, so
+  the lens reports "unavailable" off the Mac.
 - **Brought in line with its sibling, the Discussion lens** (15 Oct). It is a lens where lenses are
   counted (`LENS_IDS`, the nav, the shim's `TAB_ROUTES`, the bridge's active tab, the subtitle, the
   navigation announcement); its zone title sits on the shared datum (gated in
   `e2e/tests/lens-datum.spec.ts`); quotes are drawn by the Quotes lens's own `QuoteCard`, so the
   timecode plays and editing, focus and the tag path (un-hiding an eye-hidden group) are shared;
   the arrow keys carry Discussion's guards; the navigator is shown and hidden like Discussion's
-  guide (`[`, ⌥⌘L, the rail button; `navPanel.ts`); failures arrive as reason codes rendered by
-  one English map; the poll is capped and stops on `not_read`, and a run's completion re-reads.
-  §6.8 is answered for now by the defaults: hover brings a quote forward, stacks are straight —
-  the pickers are gone. §6.9 was settled on 15 Oct 2026: the arrangement is kept in the project's
+  guide (`[`, ⌥⌘L, the rail button; `navPanel.ts`); failures arrive as reason codes (rendered by
+  one English map then; localised since, `ScreensLens.tsx` `failedText`); the poll is capped and
+  stops on `not_read`, and a run's completion re-reads. §6.8: a press brings a card to the front
+  (never hover), and stacks cascade (S5) — the pickers are gone. §6.9 was settled on 15 Oct 2026: the arrangement is kept in the project's
   own database (S5, "Saved in the project's database"), so it follows the project, not the port.
 - **Owed before it leaves Diagnostics** (security review, 14 Oct). _Paid the night of 14 Oct except where "Out of Diagnostics" below lists it as still owed._ The Diagnostics switch does not
   yet say it reads shared screens (§4.7's sentence; the help text is a 21-locale change). The index
@@ -72,10 +85,11 @@ board on real data.
   next pass (a review caught the first version saying `not_read` through every first analysis).
   `GET …/screens/status` is the Mac sidebar's row (counts, seconds from the database, this pass's
   reading rate; never derives). Off, `/screens` and `/screens/status` answer 200 with
-  `enabled: false`; only `/screens/still` answers 404.
+  `enabled: false`, `/screens/arrangements` answers an empty list, and `/screens/still` and the
+  arrangement PUT answer 404.
 - **14 Oct 2026, later: a lens where lenses are counted.** Screens is a lens on both sides, beside
   Discussion: the SPA's lens lists, route shims, bridge and announce; the Mac's `Tab`, rail row (⌘7)
-  and remembered-lens handling, all gated on the Diagnostics preference. Its cards are the shipped
+  and remembered-lens handling, all gated on the Diagnostics preference (_ungated the same night_). Its cards are the shipped
   `QuoteCard`, so timecodes play and tags, stars and hides take the report's own paths. The Mac
   sidebar's status line reads *Screens · N of M* while the job reads (21 locales; time left only
   in the tooltip, and only once this pass has measured its rate). Turning Diagnostics off restarts
@@ -98,10 +112,10 @@ board on real data.
     and turning it off restarts every serve that was reading and deletes what each had read (§4.8).
   - **When the lens appears:** reading is on, an engine is available, and the study has screens
     or a first read is under way — `enabled && unavailable == null && (has_screens || (total > 0
-    && (running || done < total)))` from `GET …/screens/status`. Three copies of that rule
-    (`routes/screens.py`'s docstring, `frontend/src/islands/screens/availability.ts`,
-    `ScreenReading.isAvailable`) each carry their own tests; a talking-head study reads, finds
-    nothing, and the lens never shows. On the Mac a window on Screens moves to Project when the
+    && (running || done < total)))`, served as `available` by `GET …/screens/status`
+    (`screens_available` in `routes/screens.py`, since 15 Oct the rule's one copy; the SPA's
+    `availability.ts` and the Mac's `ScreenReading.isAvailable` read it, where each had its own
+    copy before). A talking-head study reads, finds nothing, and the lens never shows. On the Mac a window on Screens moves to Project when the
     lens goes, and only a 404 from the status route counts as "gone" (a 5xx during a re-analyse
     keeps it).
   - **Localised:** `common.json` `screens.*` and `nav.screens`, the Mac's toolbar and View-menu
@@ -118,13 +132,15 @@ board on real data.
     is not stored where there are dense frames to find it (§4.3); `INDEX_VERSION` 3, and an index
     from an older version is deleted with its stills at serve start and at each pass, as are
     stills from before they were named by session.
-  - **Still owed** (none blocks release; each is recorded where it belongs): navigator links read
-    a bare number; no "On screen: …" text per pinned card; no narrow-width layout (1.4.10) —
+  - **Still owed** (none blocks release; each is recorded where it belongs): no "On screen: …"
+    text per pinned card (a screen-reader user cannot tell which line a quote is about); no narrow-width layout (1.4.10) —
     _15 Oct: below one column the linked cards now sit in rows with their leaders (S5, "Rows"); not
     yet measured at 320px_; off-task screens (§4.5); typed values (§4.4); a
     global delete when reading is turned off (per project today, at that project's next serve).
     _15 Oct: the visibility rule is now served by the route (`available`, `screens_available` in
-    `routes/screens.py`), and the SPA and the Mac read it._ Before the release
+    `routes/screens.py`), and the SPA and the Mac read it. Navigator links no longer read a bare
+    number: the count is not shown (`NAV_DETAILS`), so a link's name is the screen's title; showing
+    the count again would bring the old reading back._ Before the release
     that ships it: a signed build with pyobjc through the `.pkg` gates and `altool --validate-app`
     (no signed build has carried pyobjc yet), a Team-ID sweep over the sidecar's `.so` files, and
     a line in the App Review notes that *Read shared screens* reads recordings and asks for no
@@ -148,8 +164,8 @@ Every moment of a usability session has three facts, and Bristlenose knows only 
 | fact | source | today |
 |---|---|---|
 | **what they said** | transcript, quotes, tags, sentiment | built |
-| **what was on screen** | OCR of the shared screen, every 4 s | measured, not built |
-| **which screen they were on** | screens derived from what was on screen (address bar first, text second) | measured, not built |
+| **what was on screen** | OCR of the shared screen, every 4 s | built on the Mac (`screen_text/index.py`), 14 Oct |
+| **which screen they were on** | screens derived from what was on screen (address bar first, text second) | built (`screen_text/screens.py`), 14 Oct |
 
 All three share one clock, the session's timeline, so they join by time with no guessing. The
 product is the join: **what people said, on which screen, while looking at what.** Each fact alone
@@ -420,7 +436,8 @@ reverses. Earlier wording is kept where it explains why._
     automatic; Tidy is *Undo Tidy*. **Return to automatic**, on one card of a custom board (the
     right-click menu), means *back to where Tidy would put it*: a linked card to its automatic spot
     on its edge, frozen there so nothing else moves; any other card to the list. It is an undoable
-    *Move Quote* too.
+    *Move Quote* too. _The owner decided on 15 Oct to drop it: the right-click offers Tidy alone, a
+    board action. That change is being made separately; until it lands the code still has it._
   - **Never lost involuntarily.** Arrangements are kept per **version** — the screen's key and the
     participant's session, not the still's moment, which a re-read may pick differently — so a
     re-read, a change of version and back, or a card hidden and shown again all find the
@@ -442,7 +459,11 @@ reverses. Earlier wording is kept where it explains why._
     the lens is off the route serves none and refuses a write, and the lens does not read or send
     up at all, so an explicit off cannot be undone by a browser's old copy. A failed read keeps the
     board waiting and asks again: a board drawn automatic over an arrangement the server still
-    holds would be overwritten by its first drag (review, 15 Oct).
+    holds would be overwritten by its first drag (review, 15 Oct). A finished run reads them again,
+    as it reads the screens again, so another window's change shows; a write made while that read is
+    in flight wins over it. A re-analysis that moves a quote's start gives it a new id, so the
+    import drops placements naming no quote and leaves the rest of the board as it was; a version
+    left with none returns to automatic. Positions are bounded to what a board can write.
   - **An undo out of sight shows its board first.** Undoing or redoing a *Move Quote* or a *Tidy*
     whose screen or version is not showing switches to that screen and version, then applies, so the
     change is seen (15 Oct, review).
@@ -531,13 +552,15 @@ class ScreenTextEngine(Protocol):
 | what | where | written by |
 |---|---|---|
 | screen-text index (episodes, moments, engine) | `<output>/.bristlenose/intermediate/screen-text/<session>.json` | serve job |
-| screens (screens, visits, keys, names and their sources) | `<output>/.bristlenose/intermediate/screens/screens.json` | serve job |
-| researcher corrections (rename, merge, split, hide) | SQLite, like other researcher edits | the lens |
-| stills | never stored; extracted on demand (0.11 s a seek) | routes |
+| screens (screens, visits, keys, names and their sources) | derived in memory from the indexes, never written; `has_screens` cached on the indexes' identity | `routes/screens.py` |
+| researcher corrections | the board's arrangement only, so far: `screen_arrangements` in SQLite, one row per version (migration 018). Rename, merge, split and hide are not built | the lens |
+| stills | cached as JPEGs, `<output>/.bristlenose/intermediate/screen-text/stills/`, deleted with the index (`index.py`) | `routes/screens.py` |
 
-Routes: `POST …/screen-text/search`, `GET …/screens`, `GET …/screens/{id}/still`,
-`GET …/sessions/{id}/still?t=`. All classified `SERVER_ONLY_PATH_TEMPLATES`
-(`server/routes/export.py`; `tests/test_serve_export_coverage.py` forces the choice).
+Routes as built: `GET …/screens`, `GET …/screens/still`, `GET …/screens/status`,
+`GET …/screens/arrangements` and `PUT …/screens/arrangement`. All classified
+`SERVER_ONLY_PATH_TEMPLATES` (`server/routes/export.py`; `tests/test_serve_export_coverage.py`
+forces the choice). _Proposed and not built: `POST …/screen-text/search` (S2), and stills by screen
+id or by session and time._
 
 Everything runs in **serve, in the background, after the report is readable**, as one media job that
 already exists for scene strips (`server/scene_strips.py`): strips, then screen text, then screens,
@@ -663,6 +686,10 @@ One model for the whole project, combining both evidence docs:
 
 Each phase ends usable and green. No estimates until Phase 0 has run.
 
+_As built: Phase 0 was not run as written. The 14 Oct real-data test chose S5 first, and Phases 1, 2
+and 5 were built for it on 14–15 Oct, short of the engine setting, the `doctor` row and the
+overrides other than the arrangement. S1–S4 and S6 are not built._
+
 **Phase 0 — prove the value before building.** On the owner's own studies with screen shares, list
 ten questions from real research practice ("when did they first see the delivery cost?", "what did
 people say at checkout?", "did anyone hit the error?") and answer each three ways: today's report,
@@ -676,7 +703,7 @@ moments, episodes, URL capture, chrome filter and index writer, from the spike s
 and the `doctor` row; pyobjc in the `apple` extra and the sidecar spec. **Exit:** the media job
 writes an index for a real project on the Mac; Linux CI is green on the fake engine.
 
-**Phase 2 — screens and routes.** `utils/screens.py` (visits, page keys by the §3.6 ladder,
+**Phase 2 — screens and routes.** `screen_text/screens.py` as built (`utils/screens.py` in the plan) (visits, page keys by the §3.6 ladder,
 cross-session screens, quote join, element pins per §3.5, section link) as pure functions; the
 overrides table (merge, peel, rename, hide, and the researcher's arrangement of a board); the
 routes; export classification.
@@ -707,19 +734,22 @@ can answer it cheaply, and decides whether S1–S6 appear at all.
 
 ## 6. Open questions for the owner
 
-1. **After Phase 0: build it, and which surfaces first?**
+1. **After Phase 0: build it, and which surfaces first?** _Answered in practice on 14 Oct: S5 first,
+   and built. The order of the rest is open._
 2. ~~**On by default on the Mac,** or switched on per project?~~ Settled 14 Oct 2026: on by
    default on the Mac, one app-wide setting; off deletes (§4.8).
 3. **Sections and screens:** keep both concepts when screens exist, ground one in the other (S6), or
    let screens replace speech-derived sections where they are observed?
 4. **Page-level screens for v1,** with dialogs as researcher-marked states, or wait for a detector?
+   _Half answered: v1 is page-level (one key per screen by the §3.6 ladder). Dialogs are open._
 5. ~~**Typed values:** mask postcode and address patterns in the local index now, or leave them?~~
    Settled 14 Oct 2026: leave them for now; they stay on the Mac (§4, item 4). A follow-up.
 6. **Ever in the export?** v1 keeps it all out; a screen map without stills is plausible later.
 7. **Should the hover thumbnails share the sampling?** The text-diff moments are where the screen
    changed in a way a person reads.
 8. ~~**On the board, hover or click to bring a quote to the front, and straight or diagonal stacks?**~~
-   Settled 14 Oct 2026: click, and straight (§2, S5).
+   Settled 14 Oct 2026: click, and straight (§2, S5). _Stacks reversed on 15 Oct: they cascade
+   (S5); and any press on a card brings it to the front._
 9. ~~**Whose arrangement is it?** A rearranged board is a researcher edit; is it saved per project like
    other edits, and does it reach the export one day?~~ Settled 15 Oct 2026: per project, in its
    database, like the other edits (S5). The export question stays open with question 6.

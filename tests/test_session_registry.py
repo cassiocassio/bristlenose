@@ -485,6 +485,29 @@ class TestContentKeys:
                           size_bytes=mp4.path.stat().st_size)
         assert run([other, vtt]) != first, "a different recording inherited the session"
 
+    def test_a_recording_with_no_known_place_returns_to_its_session(
+        self, tmp_path: Path,
+    ) -> None:
+        """With no place recorded for its key (no input folder known), a
+        recording that is absent for one run and then returns unchanged keeps
+        its session (Fable review, 16 Oct 2026)."""
+        out = tmp_path / "out"
+        mp4 = _file(tmp_path, "ann.mp4", 0, FileType.VIDEO)
+        vtt = _file(tmp_path, "ann.vtt", 0, FileType.SUBTITLE_VTT)
+        held = mp4.path.read_bytes()
+
+        def run(files: list[InputFile]) -> str:
+            reg = SessionRegistry.load(out)
+            sid = reg.apply(_ingest(files), None)[0].session_id
+            reg.save()
+            return sid
+
+        first = run([mp4, vtt])
+        mp4.path.unlink()
+        assert run([vtt]) == first
+        mp4.path.write_bytes(held)
+        assert run([mp4, vtt]) == first, "an unchanged recording lost its session"
+
     def test_a_recording_arriving_for_a_transcript_only_session_joins_it(
         self, tmp_path: Path,
     ) -> None:

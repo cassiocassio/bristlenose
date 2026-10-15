@@ -459,9 +459,12 @@ class SessionRegistry:
 
     def _holds_media_key(self, sid: str) -> bool:
         """Whether ``sid`` holds a content key taken from a recording."""
+        # No place known counts as a recording, as in `_keyed_by_media`: the
+        # two must lean the same way, or an unchanged recording whose key had
+        # no hint loses its session after a transcript-only run.
         return any(
             owner == sid and key.startswith(FP_PREFIX)
-            and key in self.hints and _is_media(Path(self.hints[key]))
+            and (key not in self.hints or _is_media(Path(self.hints[key])))
             for key, owner in self.sessions.items()
         )
 

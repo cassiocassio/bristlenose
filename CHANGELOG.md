@@ -11,6 +11,8 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 - **Resting the pointer on a session's timeline shows the participant's screen at that moment.** A small still appears below the speaker clips, one for each participant turn and one more wherever the screen changes within a turn; it steps as you move along, and clicking while it shows a change opens the transcript just before that change. Taken in the background like the strip, and kept out of exported reports, which carry no participant screens.
 - **With diagnostics on, each session's timeline shows how well the recording transcribed.** Under the timeline, a closed Diagnostics line gives the share of windows Whisper had to retry and how long the recording has sound but no words; opened, it adds lanes for sound level, pace, doubtful words and gaps, and the numbers behind them, with links to the places worth a listen. In the Mac app it appears with Settings ▸ Appearance ▸ Show Diagnostics menu turned on, in the browser with `serve --dev`. Numbers only, never in an exported report, and for recordings transcribed from now on; on a Mac with Apple silicon it measures the most.
 - **Long answers are broken into paragraphs.** In recordings transcribed from now on, a speaker's paragraph ends at a sentence end once it passes about 60 words. Existing transcripts keep their paragraphs, and the splits and joins made on them.
+- **The Mac app's Locate… finds a moved project by itself, on any disk.** Each project's output folder now carries a small `bristlenose-study.txt` with the project's id, which Spotlight can search for; Locate… looks for it first, then asks you to confirm the folder it found. A project analysed before this version gets the file the next time it is opened.
+- **A copied project says where it came from.** Hovering its sidebar row reads "Copied from" and the original's name, so two rows with the same name can be told apart.
 
 **Improved**
 
@@ -43,6 +45,10 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 - **Reopening the Mac app during an analysis shows that analysis.** The row said Analysing with a Stop button that did nothing, and Analyse could start a second run on the same folder.
 - **The Mac app's sidebar says when a project's report database holds a second project**, the shape the empty-report bug above left behind, instead of showing a session count the report could not.
 - **In the Codebooks lens, the add-tag chip and a dragged tag are the same size as the tags beside them.**
+- **A moved, renamed or copied project stays one project.** The report's database matched its project by folder path, so a moved folder grew a second project and the stars, tags and edits stayed behind on the first. Each project now carries an id in its output folder and its report follows it. A copy gets its own id, its own report and its own agent access, and Re-analyse keeps the id.
+- **A renamed or re-filed interview keeps its session.** Recordings are now recognised by their content rather than their name, so renaming one, filing it into a subfolder, or moving the project keeps its session, its names and codes, and when it happened, and does not transcribe it again. A recording renamed while it is still in iCloud is downloaded and recognised before the run goes on. A recording re-exported or trimmed under its old name is a new session, and the old session's quotes no longer play against the new file.
+- **Agent access follows a moved project.** A config pasted into an agent keeps working after the project folder moves or is renamed.
+- **A report a crashed Re-analyse set aside is put back when the report server starts**, not only by the next run.
 
 **0.37.0** — _12 Oct 2026_
 

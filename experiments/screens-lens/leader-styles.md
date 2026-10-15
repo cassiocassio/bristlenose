@@ -7,11 +7,12 @@ Context: `docs/design-screens.md` §2 S5 (placement, the owner's decisions)._
 **The problem, in the owner's words:** the Discussion lens's connectors are "just right, but there
 they are over more clear space and here they have to compete with the visuals of the screen."
 
-**The short answer.** Keep the line and its geometry, and **case** it: draw the 1px accent core over a
-3px stroke in the board's own background colour, and case the end dot and the highlight box the same
-way. Over clear space the casing matches the board and is invisible, so a leader in the gutter looks
-exactly like a Discussion wire. Over the screengrab the casing separates the line from whatever is
-under it. Then, on selection only, add a quiet spotlight. Section 6 gives the ranking.
+**The short answer** (revised the same day, §6a). Keep the line and its geometry, and **case** it,
+in the *screengrab's* paper colour, clipped to the screengrab; over the screengrab the line takes the
+screengrab's accent. A casing in the board's colour, the first answer, drew heavy dark tracks in dark
+mode. There is no casing over the gutter, and over paper the casing is the paper, so a leader looks
+exactly like a Discussion wire except where it crosses ink. Then, on selection only, add a quiet
+spotlight that dims towards the paper. §6 gives the first ranking; §6a revises #1.
 
 ## 1. What we have, measured
 
@@ -257,7 +258,7 @@ Scores: ● good, ◐ mixed, ○ poor. Build cost is against today's `leaderPath
 | G. Neutral ink, cased | ● | ◐ reads heavier | ● | ○ loses the accent | S |
 | H. `mix-blend-mode: difference` | ◐ fails on midtones | ● | ○ unprovable | ○ | S |
 
-**Recommendation**
+**Recommendation** (first pass; #1 revised in §6a to B′, paper-coloured casing)
 
 1. **B. Cased leaders, dots and boxes.**
    - The direct fix for the failure the owner named, and the only option that makes 1.4.11 hold on
@@ -286,35 +287,104 @@ Scores: ● good, ◐ mixed, ○ poor. Build cost is against today's `leaderPath
 - **G, ink** (loses the accent's meaning), **H, difference blend** (fails on midtones), dashes, a
   foreign hue, hover-only.
 
-## 7. What implementing #1 and #2 would touch (not done)
+## 6a. Iteration: the casing follows the screengrab, not the board (15 Oct 2026)
 
-- **`layout.ts leaderPath`: no change** for #1 and #2. One optional tweak: end the leader *inside*
-  the box edge (`- 3` → `+ 1`), so the dot sits within the outline as ASME has it. That is a
-  two-character edit per branch, plus the expected strings in `layout.test.ts` (`describe("leaderPath")`,
-  about seven assertions).
-- **`ScreensLens.tsx`, the `<svg className="screens-leaders">` block (~line 1745).** Render each
-  leader twice: a `<g className="casing">` pass first, then the core pass, each path carrying the same
-  `on` / `is-muted` classes so fading and lighting apply to both. The end circles get the casing as
-  a stroke, so no second circle is needed. About 8 changed lines. No change to the measuring effect
-  (~line 1262).
-- **`screens.css`, `svg.screens-leaders` rules (~line 284).** Roughly:
+**What the owner saw.** B is right in light mode and wrong in dark: its casing takes the *board's*
+background, near-black in dark mode, and a screengrab is almost always a white page. Every leader
+gained two dark tracks, which read as heavy dark lines. The mirror case follows: a light board over
+a screengrab of a **dark-mode site** puts white tracks on a dark page.
+
+**The fix is the print cartographer's mask rather than a halo.** Paint the casing in the screengrab's
+own *paper* colour, and clip it to the screengrab. On paper the casing is the paper, so it can't be
+seen; it shows only where the line crosses ink (a button, a photo, text). In the gutter there is no
+casing at all. The line is then a bare Discussion wire everywhere except where the page needs it to
+be more.
+
+**The line's colour has to follow the screengrab too, at least in Edo.** Contrast of the accent
+against the paper:
+
+| Accent | White site | Dark site `#121212` | Dark site panel `#1e1f22` |
+|---|---|---|---|
+| default light `#007aff` | 4.0 | 4.7 | 4.1 |
+| default dark `#0a84ff` | 3.6 | 5.1 | 4.5 |
+| Edo light `#0f5c9e` | 6.9 | **2.7** | **2.4** |
+| Edo dark `#4d9fe0` | **2.9** | 6.6 | 5.8 |
+
+So over the screengrab the line takes the accent of the **screengrab's** scheme, not the board's:
+- **The rule:** light-mode accent on a light site, dark-mode accent on a dark site.
+- **Paper contrast** under that rule is 4.0 / 5.1:1 in the default palette and 6.9 / 6.6:1 in Edo.
+- **Where the change shows:** in the default palette the two halves barely differ. In Edo the line
+  changes tone where it enters the screengrab, which reads as crossing onto another surface.
+- **The rest of the annotation follows the same rule:** the target box, the end dot and the
+  selection spotlight. The spotlight now dims **towards the paper**, the cartographers' direction,
+  so it no longer greys a white page on a dark board.
+
+**Variants mocked** (B′ in the mockup, in four frames: board light/dark × site light/dark):
+
+| | What | Verdict |
+|---|---|---|
+| R0 | B as was: casing in the board's colour | Dark tracks on a dark board; white tracks over a dark site. |
+| R4 | R0 at half width and half opacity | Softer tracks, still tracks. Also loses the measurable contrast guarantee. |
+| R1 | Paper casing, clipped; board's accent | Clean in the default palette. Edo fails (2.7 and 2.9:1). |
+| **R2** | **R1 + the screengrab's accent over the screengrab** | **Clean in all four frames and both palettes. Recommended.** |
+| R3 | R2 with the casing blurred into a soft halo | A little gentler over the photo and a little less crisp. A taste call against R2, best made on a real session. |
+
+**Paper is one colour per slide, and the assumption has limits.**
+- **One colour per slide.** Carousel versions can differ: one participant browses in dark mode,
+  another doesn't. Paper is sampled from each still. The page's dominant background is what the
+  outer ring of the image mostly is, and a 24×16 downscale is enough to find it.
+- **Where one colour is wrong:** a full-bleed photo or a mid-grey page (#8a8a8a is 1.1–2.0:1
+  against every accent). There, fall back to whichever of the two accent halves, cased with the
+  paper or with the opposite, clears 3:1. That fallback is a rule the product has to own, and no
+  frame shows it.
+- **Untested:** sampling under each segment rather than once per slide.
+
+**Recommendation, revised.** #1 is now **B′ (R2)**: paper-coloured casing, dot ring and box ring,
+clipped to the screengrab, with the screengrab's accent over it. #2 (the spotlight, now dimming
+towards the paper) and #3 (gutter-run) stand.
+
+## 7. What implementing #1 (B′, R2) and #2 would touch (not done)
+
+- **`layout.ts leaderPath`: no change.** It has the same optional tweak as before (end the dot
+  inside the box edge) and the same seven `layout.test.ts` strings if so.
+- **A paper sample per slide (new, small).**
+  - When a slide's still decodes, draw it into a 24×16 canvas and take the median colour of the outer
+    ring of pixels. Return `{ rgb, dark: luminance < 0.5 }`. The still is served from the report's own
+    origin, so the canvas is not tainted; check this for the export, where stills are inlined.
+  - Cache it beside the still in the carousel's LRU (`carousel.ts`, 24 stills).
+  - About 25 lines in a helper plus a unit test on synthetic `ImageData`: white page, dark page,
+    full-bleed photo.
+- **`ScreensLens.tsx`, the leaders `<svg>` (~line 1745).**
+  - **Clip:** add a `<clipPath>` whose rect is the showing slide's screengrab rect (`geo.sx`,
+    `geo.sy`, `geo.W`, `geo.H`, already in scope where leaders are measured, ~line 1262).
+  - **Leaders:** keep today's path in the board layer. Add a clipped `<g>` holding a casing pass and
+    a core pass of the same paths, plus the end dots (moved into it).
+  - **Scheme and paper on the group:** the group carries
+    `style={{ colorScheme: paper.dark ? "dark" : "light", "--paper": paper.rgb }}`.
+    `color-scheme` is inherited, so `var(--bn-colour-accent)` inside the group resolves to the
+    screengrab's half of the palette's own `light-dark()`. **No new token**, as S5 requires.
+    Measured in Chromium: a `<g>` with `color-scheme: dark` resolves the default accent to
+    `#0a84ff`, against `#007aff` without it. **Not yet measured in WebKit**, which the Mac app
+    uses; prove it there first.
+  - About 15 changed lines.
+- **The slide's highlight boxes** take the same two properties on `.screens-slides` (or the
+  current slide), so `.screens-hl` reads the screengrab's accent and rings in `--paper`.
+- **`screens.css` (~line 217 and ~284), about 8 lines:**
   ```css
-  svg.screens-leaders .casing path { stroke: var(--bn-colour-bg); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-  svg.screens-leaders circle { stroke: var(--bn-colour-bg); stroke-width: 1.5; paint-order: stroke; }
+  svg.screens-leaders .ish-casing path { stroke: var(--paper); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  svg.screens-leaders .ish-core path { stroke: var(--bn-colour-accent); stroke-width: 1; }
   svg.screens-leaders path.on { stroke-width: 1.5; }
-  svg.screens-leaders .casing path.on { stroke-width: 3.5; }
-  .screens-hl { box-shadow: 0 0 0 1px var(--bn-colour-bg); }
+  svg.screens-leaders .ish-casing path.on { stroke-width: 3.5; }
+  svg.screens-leaders circle { stroke: var(--paper); stroke-width: 2; paint-order: stroke; }
+  .screens-hl { box-shadow: 0 0 0 1px var(--paper); }
+  .screens-stage.focus .screens-hl.on { box-shadow: 0 0 0 1px var(--paper), 0 0 0 100vmax color-mix(in srgb, var(--paper) 55%, transparent); }
   ```
-  For #2, add:
-  ```css
-  .screens-stage.focus .screens-hl.on { box-shadow: 0 0 0 1px var(--bn-colour-bg), 0 0 0 100vmax color-mix(in srgb, var(--bn-colour-bg) 40%, transparent); }
-  ```
-  The scrim must be clipped to the slide, so `.screens-slide` (or the `.screens-slides` grid) needs
-  `overflow: clip` — check that nothing there relies on overflow before adding it. And with two lit
-  boxes (a shared line), the second scrim doubles; use `:first-of-type` or a single scrim element.
-  About 6–8 lines in total. Everything new on a selected selector is `box-shadow` or `stroke`, which
-  `tests/test_screens_css.py` already allows. The 1.5px weight goes on `path.on`, outside the gate's
-  state pattern. Reduced motion: `.screens-hl` is already in the transition-off list.
-- **Tests.** The CSS gate needs nothing. A lens test could assert that each leader renders a casing
-  path (jsdom can count paths, not pixels). Prove the contrast claim once by eye in both palettes and
-  both themes over a real busy session, as the S5 measurements were.
+  The scrim still needs clipping to the slide (`overflow: clip`) and one scrim for a shared line.
+  Everything on a selected selector is `stroke` or `box-shadow`, which `tests/test_screens_css.py`
+  allows; the 1.5px weight sits on `path.on`.
+- **Mid-tone fallback** (§6a): if neither accent half clears 3:1 against the sampled paper, case the
+  line with whichever of white or the board background gives the higher ratio. This is a branch in
+  the paper helper, not in CSS.
+- **Tests.** Unit-test the paper helper. A lens test can check the clipped group exists and carries
+  `color-scheme`. Then look at a real light-site and dark-site session in both palettes and both
+  themes, in the app's WebKit as well as Chromium.

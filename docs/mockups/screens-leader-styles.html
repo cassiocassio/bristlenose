@@ -54,6 +54,8 @@
   --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
   --bn-focus-shadow: 0 3px 12px rgba(30,20,10,0.12), 0 0 0 1px rgba(30,20,10,0.06);
 }
+:root, [data-color-theme="default"] { --acc-l:#007aff; --acc-d:#0a84ff; }
+[data-color-theme="edo"] { --acc-l:#0f5c9e; --acc-d:#4d9fe0; }
 :root[data-scheme="light"] { color-scheme: light; }
 :root[data-scheme="dark"]  { color-scheme: dark; }
 
@@ -161,7 +163,7 @@ body {
 .lead .core path.on { stroke-width:var(--hot, var(--core, 1px)); }
 .lead .ends circle { fill:var(--bn-colour-accent); }
 .lead .marks path { stroke:var(--bn-colour-accent); stroke-width:1.25px; }
-.board.focus .lead g > :not(.on) { opacity:.25; }
+.board.focus .lead path:not(.on), .board.focus .lead circle:not(.on) { opacity:.25; }
 .tb { position:absolute; z-index:3; translate:0 -100%; margin-top:-3px; }
 .board.focus .tb:not(.on) { opacity:.25; }
 
@@ -183,6 +185,32 @@ body {
 /* F · spotlight on selection: the area of disinterest, clipped to the shot */
 .st-spot.focus .hl.on { box-shadow:0 0 0 1px var(--bn-colour-bg), 0 0 0 100vmax color-mix(in srgb, var(--bn-colour-bg) 45%, transparent); }
 
+/* R1–R3 · casing in the SCREENGRAB's paper colour, clipped to the screengrab (the print
+   cartographer's mask): invisible on paper, it shows only where the line crosses ink.
+   --paper is set per board from the page; in the product, sampled per slide. */
+.lead .ish-casing path { stroke:var(--paper); stroke-width:calc(var(--core, 1px) + 2px); }
+.lead .ish-casing path.on { stroke-width:calc(var(--hot, var(--core, 1px)) + 2px); }
+.lead .ish-core path { stroke:var(--bn-colour-accent); stroke-width:var(--core, 1px); }
+.lead .ish-core path.on { stroke-width:var(--hot, var(--core, 1px)); }
+.lead .ish-ends circle { fill:var(--bn-colour-accent); stroke:var(--paper); stroke-width:2px; paint-order:stroke; }
+.st-paper .hl { box-shadow:0 0 0 1px var(--paper); }
+.st-paper.st-spot.focus .hl.on { box-shadow:0 0 0 1px var(--paper), 0 0 0 100vmax color-mix(in srgb, var(--paper) 55%, transparent); }
+/* R2 · over the screengrab the line takes the accent of the SCREENGRAB's scheme, not the board's */
+.st-shotacc .lead .ish-core path { stroke:var(--shot-accent); }
+.st-shotacc .lead .ish-ends circle { fill:var(--shot-accent); }
+.st-shotacc .hl { border-color:var(--shot-accent); background:color-mix(in srgb, var(--shot-accent) 6%, transparent); }
+.st-shotacc .hl.on { background:color-mix(in srgb, var(--shot-accent) 15%, transparent); }
+/* R3 · a soft halo rather than a hard casing */
+.st-soft .lead .ish-casing path { stroke-width:calc(var(--core, 1px) + 3px); stroke-opacity:.85; }
+.st-soft .lead .ish-casing { filter:blur(.7px); }
+/* R4 · just lighter: board casing at half strength, half width */
+.st-thin .lead .casing path { stroke:var(--bn-colour-bg); stroke-width:calc(var(--core, 1px) + 1px); stroke-opacity:.5; }
+.st-thin .lead .ends circle { stroke:var(--bn-colour-bg); stroke-width:1px; stroke-opacity:.5; paint-order:stroke; }
+.st-thin .hl { box-shadow:0 0 0 .5px color-mix(in srgb, var(--bn-colour-bg) 50%, transparent); }
+.matrix-ctl { display:flex; flex-wrap:wrap; gap:.3rem; align-items:center; margin:0 0 .7rem; }
+.matrix-ctl .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.2rem; }
+.frame + .frame { margin-top:.8rem; }
+
 @media (prefers-reduced-motion: reduce) {
   .hl, .sc blockquote.quote-card { transition:none; }
 }
@@ -195,6 +223,22 @@ body {
 .page.calm { --pg-blue:#2b2b2b; --pg-link:#444; --pg-promo:#f3f4f6; --pg-promo-fg:#333; --pg-bag:#bfc5cc; --pg-bag-d:#8d949c;
   --pg-photo:#f6f6f6; --pg-yellow:#e5e5e5; --pg-tile1:#d6d9dd; --pg-tile2:#c9cdd1; --pg-tile3:#dfe2e5; --pg-tile4:#cfd3d7; }
 .page a { color:var(--pg-link); text-decoration:none; }
+/* A screengrab of a site in dark mode */
+.page.night { background:#121212; color:#e6e6e6; --pg-blue:#3d8bff; --pg-link:#6aa8ff; --pg-promo:#1e3a6e; --pg-promo-fg:#e6e6e6;
+  --pg-photo:#1b1f27; --pg-grey:#1e1f22; }
+.page.night .pg-logo { color:#6aa8ff; }
+.page.night .pg-head { border-color:#2c2c2c; }
+.page.night .pg-search { color:#999; }
+.page.night .pg-icons i { border-color:#ccc; }
+.page.night .pg-nav h6, .page.night .pg-crumb, .page.night .pg-fine, .page.night .pg-sub { color:#a3a3a3; }
+.page.night .pg-nav a, .page.night .pg-rating, .page.night .pg-rating .st { color:#e6e6e6; }
+.page.night .pg-nav a.cur { color:var(--pg-link); }
+.page.night .pg-desc { color:#c8c8c8; }
+.page.night .pg-thumbs i { border-color:#333; }
+.page.night .pg-thumbs i.on { border-color:#eee; }
+.page.night .pg-qty, .page.night .pg-heart { border-color:#555; }
+.page.night .pg-deliv .stock { color:#4ade80; }
+.page.night .pg-acc > div { border-color:#333; }
 .pg-promo { height:28px; display:flex; align-items:center; justify-content:center; background:var(--pg-promo); color:var(--pg-promo-fg); font-size:12px; }
 .pg-promo u { margin-left:6px; }
 .pg-head { height:58px; display:flex; align-items:center; gap:22px; padding:0 24px; border-bottom:1px solid #e3e3e3; }
@@ -271,7 +315,7 @@ body {
   <div class="cgroup" data-ctl="scheme"><span class="lbl">Theme</span>
     <button class="pbtn" data-v="system" aria-pressed="true">System</button><button class="pbtn" data-v="light" aria-pressed="false">Light</button><button class="pbtn" data-v="dark" aria-pressed="false">Dark</button></div>
   <div class="cgroup" data-ctl="page"><span class="lbl">Screengrab</span>
-    <button class="pbtn" data-v="busy" aria-pressed="true">Busy</button><button class="pbtn" data-v="calm" aria-pressed="false">Calm</button></div>
+    <button class="pbtn" data-v="busy" aria-pressed="true">Busy</button><button class="pbtn" data-v="calm" aria-pressed="false">Calm</button><button class="pbtn" data-v="night" aria-pressed="false">Dark site</button></div>
   <div class="cgroup" data-ctl="state"><span class="lbl">State</span>
     <button class="pbtn" data-v="rest" aria-pressed="true">At rest</button><button class="pbtn" data-v="sel" aria-pressed="false">One selected</button></div>
 </div>
@@ -279,7 +323,7 @@ body {
 <nav class="toc" aria-label="Candidates">
   <a href="#s-A">A · Today</a><a href="#s-B">B · Cased</a><a href="#s-C">C · Cased + lifted</a><a href="#s-D">D · Gutter-run</a>
   <a href="#s-E">E · Edge port</a><a href="#s-F">F · Spotlight on selection</a><a href="#s-G">G · Ink</a><a href="#s-H">H · Difference blend</a>
-  <a href="#s-rec">Light and dark, recommended</a><a href="#s-table">Comparison</a>
+  <a href="#s-rec">B′ · Casing that follows the screengrab</a><a href="#s-table">Comparison</a>
 </nav>
 
 <section class="bench" id="s-A">
@@ -301,6 +345,7 @@ body {
     <li>Precedents: cartographic casing (Esri), Richards's "thin white line beside" the leader in technical illustration, and Skitch's white outline, here without Skitch's weight.</li>
     <li>The selected leader goes to 1.5px, as the Discussion's hot wire does.</li>
     <li>Build: <code>leaderPath</code> unchanged; one extra path per leader; about five CSS lines.</li>
+    <li><b>Revised in B′:</b> the casing in the board's colour turns into heavy dark tracks in dark mode, and into white tracks over a dark-mode site. The casing should take the screengrab's paper colour instead. See <a href="#s-rec">B′</a>.</li>
   </ul></aside>
 </section>
 
@@ -364,12 +409,21 @@ body {
 </section>
 
 <section class="bench" id="s-rec">
-  <div class="bench-head"><span class="letter">B+F</span><h2>Recommended, light and dark side by side</h2><span class="rank">1 + 2</span></div>
-  <figure class="frame" style="color-scheme:light"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>B + F · light</div><div class="viewport"><div class="board" data-style="F"></div></div></figure>
-  <figure class="frame" style="color-scheme:dark;margin-top:.8rem"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>B + F · dark</div><div class="viewport"><div class="board" data-style="F"></div></div></figure>
+  <div class="bench-head"><span class="letter">B′</span><h2>Casing that follows the screengrab</h2><span class="rank">rank 1, revised</span></div>
+  <div class="matrix-ctl" role="group" aria-label="Casing variant" data-ctl="variant"><span class="lbl">Variant</span>
+    <button class="pbtn" data-v="R0" aria-pressed="false">R0 · board casing (B)</button><button class="pbtn" data-v="R4" aria-pressed="false">R4 · board casing, half</button><button class="pbtn" data-v="R1" aria-pressed="false">R1 · paper casing</button><button class="pbtn" data-v="R2" aria-pressed="true">R2 · paper casing + paper accent</button><button class="pbtn" data-v="R3" aria-pressed="false">R3 · soft paper halo</button></div>
+  <figure class="frame" style="color-scheme:light"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>board light · light site</div><div class="viewport"><div class="board" data-style="R2" data-site="light" data-matrix></div></div></figure>
+  <figure class="frame" style="color-scheme:dark"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>board dark · light site</div><div class="viewport"><div class="board" data-style="R2" data-site="light" data-matrix></div></div></figure>
+  <figure class="frame" style="color-scheme:light"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>board light · dark site</div><div class="viewport"><div class="board" data-style="R2" data-site="night" data-matrix></div></div></figure>
+  <figure class="frame" style="color-scheme:dark"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>board dark · dark site</div><div class="viewport"><div class="board" data-style="R2" data-site="night" data-matrix></div></div></figure>
   <aside class="commentary"><div class="clabel">Commentary</div><ul>
-    <li>In dark mode the casing takes the <b>board's</b> background, near-black, over a light screengrab, so the leader reads as a dark-edged blue line. A white casing in dark mode would glow and belong to the page, not the board.</li>
-    <li>The scrim in dark mode greys the page rather than whitening it, which is the right direction for a dark board.</li>
+    <li><b>Why B failed in dark.</b> B's casing took the <i>board's</i> background. In dark mode that is near-black, drawn over a screengrab that is almost always white, so every leader gained two dark tracks: heavy, and visibly not part of either surface. The mirror case is a light board over a dark-mode site, where the casing becomes white tracks on a dark page. Pick <b>R0</b> to see both.</li>
+    <li><b>R4</b>, the same casing at half strength and half width, only softens the tracks. It also loses the guarantee: half a casing is not an adjacent colour you can measure.</li>
+    <li><b>R1, casing in the screengrab's own paper colour, clipped to the screengrab.</b> This is the print cartographer's mask rather than a halo. On paper the casing <i>is</i> the paper and cannot be seen; it appears only where the line crosses ink (the button, the photo, text). In the gutter there is no casing at all. So the line looks like a bare Discussion wire everywhere it can, in all four combinations.</li>
+    <li><b>R1 is enough for the default palette, not for Edo.</b> The core keeps the board's accent. Edo light <code>#0f5c9e</code> on a dark site's paper is 2.7:1, and Edo dark <code>#4d9fe0</code> on a white page is 2.9:1. Switch the palette to Edo to see it.</li>
+    <li><b>R2 adds one rule: over the screengrab the line takes the accent of the screengrab's scheme.</b> A dark site gets the dark-mode accent, a light site the light-mode one, whatever the board is doing. Against the paper: default 4.0:1 (light) and 5.1:1 (dark); Edo 6.9:1 and 6.6:1. In the default palette the two blues barely differ. In Edo the line shifts tone where it enters the screengrab, which reads as crossing onto another surface. The target box and the end dot follow the same rule.</li>
+    <li><b>R3</b> blurs the paper casing into a soft halo, the restrained halo cartographers prefer to a hard one. It is a little gentler on the photo and a little less crisp. Choosing between R2 and R3 is a taste call best made on a real session.</li>
+    <li>The selection spotlight (F) now dims <b>towards the paper</b> as well: a white page fades towards white, a dark page towards dark. That is the cartographers' direction for an area of disinterest, and it no longer greys a white page in dark mode.</li>
   </ul></aside>
 </section>
 
@@ -380,7 +434,8 @@ body {
       <thead><tr><th></th><th>Busy-image legibility</th><th>Clutter on the screengrab</th><th>Accessibility (1.4.11, dark, motion)</th><th>Family with Discussion</th><th>Build cost</th></tr></thead>
       <tbody>
         <tr><td>A · Today</td><td>○ 1.0–1.6:1 on blue</td><td>●</td><td>○ fails on blue; Edo dark fails on white</td><td>●</td><td>—</td></tr>
-        <tr><td><b>B · Cased</b></td><td>●</td><td>● casing invisible off the page</td><td>● 4.0–6.7:1 everywhere</td><td>● identical over clear space</td><td><b>S</b> CSS + one path each</td></tr>
+        <tr><td>B · Cased (board colour)</td><td>●</td><td>○ dark tracks in dark mode; white tracks on a dark site</td><td>● 4.0–6.7:1</td><td>◐ only on a board-matching page</td><td>S CSS + one path each</td></tr>
+        <tr><td><b>B′ · R2 paper casing + paper accent</b></td><td>●</td><td>● casing shows only over ink</td><td>● 4.0–6.9:1 on light and dark sites, both palettes</td><td>● bare wire in the gutter and over paper</td><td><b>S–M</b> paper sample + clipped layer</td></tr>
         <tr><td>C · Cased + lifted</td><td>●</td><td>◐ heavier</td><td>●</td><td>◐</td><td>S</td></tr>
         <tr><td>D · Gutter-run</td><td>●</td><td>● least ink on the page</td><td>●</td><td>◐</td><td>M <code>leaderPath</code> + tracks + tests</td></tr>
         <tr><td>E · Edge port</td><td>●</td><td>● cleanest</td><td>◐ join by badge at rest</td><td>○</td><td>M</td></tr>
@@ -390,7 +445,7 @@ body {
       </tbody>
     </table></div>
     <ol>
-      <li><b>B, cased leaders, dots and boxes.</b> Fixes the failure named. It is the only option that holds 3:1 on any page in every palette, and it is invisible where the Discussion look already works.</li>
+      <li><b>B′ (R2): casing in the screengrab's paper colour, clipped to the screengrab, with the line taking the screengrab's accent over it.</b> Holds 3:1 on light and dark sites in both palettes, is invisible wherever the line crosses paper or gutter, and adds no tracks in either theme. Replaces B, whose board-coloured casing failed in dark mode.</li>
       <li><b>F, the spotlight on selection</b>, on top of B. Answers "which line is mine" on a crowded screen without changing the board at rest.</li>
       <li><b>D, gutter-run</b> for long leaders only, after measuring how many there are.</li>
     </ol>
@@ -465,7 +520,14 @@ body {
     F: { geo: "drafting", cls: ["st-casing", "st-spot"], hot: "1.5px" },
     G: { geo: "drafting", cls: ["st-casing", "st-ink"], hot: "1.5px" },
     H: { geo: "drafting", cls: ["st-blend"] },
+    // B′ iterations (all with the selection spotlight, F)
+    R0: { geo: "drafting", cls: ["st-casing", "st-spot"], hot: "1.5px" },
+    R4: { geo: "drafting", cls: ["st-thin", "st-spot"], hot: "1.5px" },
+    R1: { geo: "drafting", cls: ["st-paper", "st-spot"], hot: "1.5px", paper: true },
+    R2: { geo: "drafting", cls: ["st-paper", "st-shotacc", "st-spot"], hot: "1.5px", paper: true },
+    R3: { geo: "drafting", cls: ["st-paper", "st-shotacc", "st-soft", "st-spot"], hot: "1.5px", paper: true },
   };
+  let clipN = 0;
 
   const state = { sel: null, page: "busy" };
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -546,6 +608,14 @@ body {
     }
     const svg = svgEl("svg", { class: "lead", width: BW, "aria-hidden": "true" });
     for (const g of ["casing", "core", "ends", "marks"]) svg.append(svgEl("g", { class: g }));
+    // The in-screengrab layer, clipped to the screengrab: paper casing, core and ends over the core.
+    const id = "shotclip-" + clipN++;
+    const defs = svgEl("defs", {}), cp = svgEl("clipPath", { id });
+    cp.append(svgEl("rect", { x: SHOT_L, y: PAD, width: SHOT_W, height: SHOT_H }));
+    defs.append(cp); svg.prepend(defs);
+    const ish = svgEl("g", { class: "ish", "clip-path": `url(#${id})` });
+    for (const g of ["ish-casing", "ish-core", "ish-ends"]) ish.append(svgEl("g", { class: g }));
+    svg.append(ish);
     board.append(svg);
     board._parts = { shot, hls, svg, cards, page: wrap.querySelector(".page") };
   }
@@ -592,8 +662,10 @@ body {
     board.className = ["board", ...(style.cls || []), state.sel ? "focus" : ""].filter(Boolean).join(" ");
     board.style.setProperty("--core", style.core || "1px");
     if (style.hot) board.style.setProperty("--hot", style.hot);
-    const [gc, gk, ge, gm] = svg.querySelectorAll("g");
-    gc.replaceChildren(); gk.replaceChildren(); ge.replaceChildren(); gm.replaceChildren();
+    const [gc, gk, ge, gm] = [...svg.children].filter((n) => n.matches("g:not(.ish)"));
+    const [ic, ik, ie] = svg.querySelector(".ish").children;
+    for (const g of [gc, gk, ge, gm, ic, ik, ie]) g.replaceChildren();
+    paper(board);
     hls.replaceChildren();
     const selQ = QUOTES.find((q) => q.id === state.sel);
 
@@ -625,7 +697,8 @@ body {
         : style.geo === "port" ? port(c, t, q.side, on)
         : drafting(c, t, q.side);
       const cls = on ? "on" : "";
-      if (board.classList.contains("st-casing")) gc.append(svgEl("path", { d: L.d, class: cls }));
+      if (board.classList.contains("st-casing") || board.classList.contains("st-thin")) gc.append(svgEl("path", { d: L.d, class: cls }));
+      if (style.paper) { ic.append(svgEl("path", { d: L.d, class: cls })); ik.append(svgEl("path", { d: L.d, class: cls })); }
       gk.append(svgEl("path", { d: L.d, class: cls }));
       if (style.geo === "port") {
         if (!on) {
@@ -647,7 +720,7 @@ body {
         ends.set(k, { end: L.end, on: (e && e.on) || on });
       }
     }
-    for (const e of ends.values()) ge.append(svgEl("circle", { cx: e.end[0], cy: e.end[1], r: 2.5, class: e.on ? "on" : "" }));
+    for (const e of ends.values()) (style.paper ? ie : ge).append(svgEl("circle", { cx: e.end[0], cy: e.end[1], r: 2.5, class: e.on ? "on" : "" }));
 
     for (const q of QUOTES) {
       const c = cards[q.id], on = state.sel === q.id;
@@ -665,10 +738,26 @@ body {
   function setPressed(ctl, v) {
     document.querySelectorAll(`[data-ctl="${ctl}"] .pbtn`).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v)));
   }
+  // The screengrab's paper: here read from the page; in the product, sampled per slide from the image.
+  function paper(board) {
+    const pg = board._parts.page;
+    const site = board.dataset.site || state.page;
+    pg.classList.toggle("calm", site === "calm");
+    pg.classList.toggle("night", site === "night");
+    const rgb = getComputedStyle(pg).backgroundColor.match(/\d+/g).map(Number);
+    const lum = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+    board.style.setProperty("--paper", `rgb(${rgb.slice(0, 3).join(",")})`);
+    board.style.setProperty("--shot-accent", lum < 0.5 ? "var(--acc-d)" : "var(--acc-l)");
+  }
   function setPage(v) {
     state.page = v;
-    document.querySelectorAll(".page").forEach((p) => p.classList.toggle("calm", v === "calm"));
+    boards.forEach(render);
   }
+  document.querySelector('[data-ctl="variant"]').addEventListener("click", (e) => {
+    const b = e.target.closest(".pbtn"); if (!b) return;
+    setPressed("variant", b.dataset.v);
+    document.querySelectorAll(".board[data-matrix]").forEach((bd) => { bd.dataset.style = b.dataset.v; render(bd); });
+  });
 
   document.querySelectorAll(".controls .cgroup").forEach((g) => {
     g.addEventListener("click", (e) => {

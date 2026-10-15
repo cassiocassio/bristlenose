@@ -214,7 +214,7 @@ def _is_the_studys_own_database(db: Session, output_dir: Path) -> bool:
     carried by the folder. Anything else — an in-memory database, a file
     elsewhere — keeps the multi-project path match.
     """
-    database = db.get_bind().url.database
+    database = db.get_bind().engine.url.database
     if not database or database == ":memory:":
         return False
     own = output_dir / ".bristlenose" / "bristlenose.db"
@@ -311,7 +311,7 @@ def _rows_hanging_off_project(db: Session, project_id: int) -> dict[str, set[Any
     """
     from sqlalchemy import select
 
-    from bristlenose.server.models import Base
+    from bristlenose.server.db import Base
 
     doomed: dict[str, set[Any]] = {"projects": {project_id}}
     tables = {t.name: t for t in Base.metadata.sorted_tables}
@@ -368,7 +368,7 @@ def _row_holds_curation(db: Session, project_id: int) -> bool:
 
 def _delete_project_row(db: Session, project_id: int) -> None:
     """Delete a project row and everything that hangs off it, children first."""
-    from bristlenose.server.models import Base
+    from bristlenose.server.db import Base
 
     doomed = _rows_hanging_off_project(db, project_id)
     for table in reversed(Base.metadata.sorted_tables):

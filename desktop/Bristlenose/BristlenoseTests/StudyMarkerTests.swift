@@ -94,6 +94,34 @@ struct StudyMarkerTests {
 
     // ── The index ───────────────────────────────────────────────────────────
 
+    /// The upgrade order: the original was served (marker minted) but its
+    /// row never learned the id, then a Finder copy was dropped and captured
+    /// first. The original must keep its identity; the copy is re-minted.
+    /// Found by review, 15 Oct 2026.
+    @Test func theCopyIsReMintedEvenWhenItIsCapturedFirst() throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let original = root.appendingPathComponent("Talismanic")
+        let copy = root.appendingPathComponent("Talismanic copy")
+        for dir in [original, copy] {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        let id = UUID().uuidString.lowercased()
+        try writePythonMarker(original, id: id)
+        try writePythonMarker(copy, id: id)
+
+        let index = ProjectIndex(fileURL: root.appendingPathComponent("projects.json"))
+        let a = index.addProject(name: "Talismanic", path: original.path)
+        Thread.sleep(forTimeInterval: 0.01)  // the copy joins the sidebar later
+        let b = index.addProject(name: "Talismanic copy", path: copy.path)
+        #expect(index.captureStudyID(id: b.id, folder: copy) == id)  // nothing to compare yet
+        #expect(index.captureStudyID(id: a.id, folder: original) == id, "the original lost its id")
+        let copyID = index.projects.first(where: { $0.id == b.id })?.studyID
+        #expect(copyID != nil && copyID != id, "the copy kept the original's identity")
+        #expect(StudyMarker.read(folder: copy) == copyID)
+        #expect(StudyMarker.read(folder: original) == id)
+    }
+
     @Test func anAvailabilityRefreshLearnsTheStudyID() throws {
         let root = try folder()
         defer { try? FileManager.default.removeItem(at: root) }

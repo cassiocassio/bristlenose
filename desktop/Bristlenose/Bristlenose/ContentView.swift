@@ -2060,7 +2060,8 @@ struct ContentView: View {
                 case .copy:
                     // An independent duplicate: its own id before its own row.
                     // A folder that cannot be written keeps the id it carries;
-                    // the next availability refresh re-mints it.
+                    // the next availability refresh sees two rows sharing it and
+                    // re-mints the later one (`captureStudyID`).
                     if let droppedStudy {
                         _ = try? StudyMarker.remint(folder: folder, copiedFrom: droppedStudy)
                     }

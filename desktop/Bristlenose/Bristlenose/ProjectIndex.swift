@@ -735,23 +735,34 @@ final class ProjectIndex: ObservableObject {
     }
 
     /// Read the study id the project's folder carries and remember it. When
-    /// another project already holds that id and its folder is still there,
-    /// this folder is a copy made before the sidebar could tell, so it gets
-    /// its own id now — the second one touched is re-minted (§9). Returns the
-    /// id the project ends with, or nil when the folder carries none or cannot
-    /// be read.
+    /// another project's live folder carries the same id, one of them is a
+    /// copy made before the sidebar could tell, and the copy is the row that
+    /// joined the sidebar LATER — whichever of the two is touched first. It
+    /// gets its own id now (§9). Returns the id this project ends with, or nil
+    /// when its folder carries none or cannot be read.
+    ///
+    /// "Later" and not "touched second": after an upgrade the original's row
+    /// may never have read its marker, so a copy dropped since is captured
+    /// first; re-minting the second one touched would swap their identities,
+    /// and an agent configured against the original would follow the copy.
     @discardableResult
     func captureStudyID(id: UUID, folder: URL) -> String? {
         guard let index = projects.firstIndex(where: { $0.id == id }),
               var studyID = StudyMarker.read(folder: folder) else { return nil }
-        let heldElsewhere = projects.contains {
+        if let other = projects.firstIndex(where: {
             $0.id != id && $0.studyID == studyID && $0.path != folder.path
                 && FileManager.default.fileExists(atPath: $0.path)
+        }) {
+            if projects[other].createdAt > projects[index].createdAt {
+                let copyFolder = leaseURL(projectID: projects[other].id)
+                    ?? URL(fileURLWithPath: projects[other].path)
+                if let fresh = try? StudyMarker.remint(folder: copyFolder, copiedFrom: studyID) {
+                    projects[other].studyID = fresh
+                }
+            } else if let fresh = try? StudyMarker.remint(folder: folder, copiedFrom: studyID) {
+                studyID = fresh
+            }
         }
-        if heldElsewhere, let fresh = try? StudyMarker.remint(folder: folder, copiedFrom: studyID) {
-            studyID = fresh
-        }
-        guard projects[index].studyID != studyID else { return studyID }
         projects[index].studyID = studyID
         save()
         return studyID
@@ -1201,7 +1212,12 @@ final class ProjectIndex: ObservableObject {
                     projects[i].resourceIdentifier = id
                     changed = true
                 }
-                if projects[i].studyID == nil {
+                // Unknown, or shared with another row: a copy whose re-mint
+                // could not be written is retried here, not left sharing.
+                let known = projects[i].studyID
+                if known == nil || projects.contains(where: {
+                    $0.id != projects[i].id && $0.studyID == known
+                }) {
                     deferredStudyCaptures.append((projects[i].id, resolvedPath))
                 }
                 continue

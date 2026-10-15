@@ -242,6 +242,11 @@ class DismissedSignalAdmin(ModelView, model=DismissedSignal):
     category = "Researcher"
 
 
+# ScreenArrangement is deliberately not registered: its screen_key is a page's path read from a
+# participant's screen, and the dev browser would show it to whoever has the page open. The Screens
+# lens is the only reader (docs/design-screens.md §4).
+
+
 class HiddenTagGroupAdmin(ModelView, model=HiddenTagGroup):
     column_list = [HiddenTagGroup.id, HiddenTagGroup.project_id,
                    HiddenTagGroup.group_name]

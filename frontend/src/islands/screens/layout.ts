@@ -565,10 +565,37 @@ export function loadArrangements(projectId: string): Promise<boolean> {
   return p;
 }
 
+/**
+ * Read this project's arrangements again — when a run finishes, as the lens re-reads its screens —
+ * so another window's changes show. It waits for this page's own writes to land first, and a write
+ * made while the read is in flight discards the read: the page's newer copy stands, and the
+ * server already has it. A failed read keeps what is shown.
+ */
+export function reloadArrangements(projectId: string): Promise<boolean> {
+  if (!memory.has(projectId)) return loadArrangements(projectId);
+  const seq = writes.get(projectId) ?? 0;
+  return (queues.get(projectId) ?? Promise.resolve())
+    .then(() => apiGet<{ versions: { screen_key: string; session_id: string; cards: unknown }[] }>("/screens/arrangements"))
+    .then((r) => {
+      if ((writes.get(projectId) ?? 0) !== seq) return true;
+      const a: Record<string, Arrangement> = {};
+      for (const v of r.versions) a[versionKey(v.screen_key, v.session_id)] = cardsOf(v.cards);
+      memory.set(projectId, a);
+      changed();
+      return true;
+    })
+    .catch((e: unknown) => {
+      console.error("Screens: the arrangements could not be read again", e);
+      return false;
+    });
+}
+
 // One queue per project: writes reach the server in the order they were made, so an undo lands
 // after the act it reverses. Resolves whether the server took it (sendPut toasts a failure itself).
 const queues = new Map<string, Promise<unknown>>();
+const writes = new Map<string, number>();
 function persist(projectId: string, screenKey: string, sessionId: string, cards: Arrangement | null): Promise<boolean> {
+  writes.set(projectId, (writes.get(projectId) ?? 0) + 1);
   const last = queues.get(projectId) ?? Promise.resolve();
   const next = last.then(() =>
     sendPut("/screens/arrangement", { screen_key: screenKey, session_id: sessionId, cards })
@@ -635,5 +662,6 @@ export function resetArrangementMemory(): void {
   memory.clear();
   loading.clear();
   queues.clear();
+  writes.clear();
   version++;
 }

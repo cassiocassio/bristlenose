@@ -40,6 +40,7 @@ from bristlenose.server.models import (
     QuoteEdit,
     QuoteState,
     QuoteTag,
+    ScreenArrangement,
     ScreenCluster,
     SessionSpeaker,
     SourceFile,
@@ -2191,6 +2192,37 @@ def _delete_heading_edits(
     ).delete(synchronize_session="fetch")
 
 
+def _prune_arrangements(db: Session, project: Project) -> None:
+    """Drop the Screens lens's card placements for quotes that no longer exist.
+
+    A card is keyed by its quote's DOM id (``q-p1-123``, the start in whole seconds), so a
+    re-analysis that moves a quote's start makes it a new id: its card waits in the board's list,
+    and the old id would stay in the arrangement for ever. The board itself is left as the
+    researcher made it; only the placements that name no quote go, and a version left with none
+    returns to automatic. A row that does not parse is left for the route to skip.
+    """
+    live = {
+        f"q-{pid}-{int(start)}"
+        for pid, start in db.query(Quote.participant_id, Quote.start_timecode)
+        .filter(Quote.project_id == project.id)
+        .all()
+    }
+    for row in db.query(ScreenArrangement).filter_by(project_id=project.id).all():
+        try:
+            cards = json.loads(row.cards)
+        except ValueError:
+            continue
+        if not isinstance(cards, dict):
+            continue
+        kept = {dom: p for dom, p in cards.items() if dom in live}
+        if len(kept) == len(cards):
+            continue
+        if kept:
+            row.cards = json.dumps(kept)
+        else:
+            db.delete(row)
+
+
 def _cleanup_stale_data(
     db: Session,
     project: Project,
@@ -2291,6 +2323,8 @@ def _cleanup_stale_data(
         db.query(Quote).filter(
             Quote.id.in_(stale_quote_ids)
         ).delete(synchronize_session="fetch")
+
+    _prune_arrangements(db, project)
 
     # --- Stale pipeline-created clusters ---------------------------------
     # A *named* group is human-owned (the rename is a claim on the container, per

@@ -90,6 +90,10 @@ def test_turning_reading_off_deletes_them(db_file: str, monkeypatch: pytest.Monk
     {"q-p1-10": {"kind": "sideways", "x": 0.1, "y": 0.1, "z": 31}},
     {"": _edge()},
     {f"q-{i}": _edge() for i in range(2001)},
+    {"q-p1-10": _edge(along=1000)},  # a thousand screengrabs along: corrupt
+    {"q-p1-10": {**_edge(), "out": 1e6}},
+    {"q-p1-10": _edge(z=-1)},
+    {"q-p1-10": _edge(z=1e308)},  # would put every later card underneath it
 ])
 def test_refuses_a_body_no_board_could_write(client, cards) -> None:
     r = _put(client, "url:/cart", "s1", cards)
@@ -177,3 +181,20 @@ def test_only_this_projects_rows_are_served(client) -> None:
     finally:
         db.close()
     assert _versions(client) == {}
+
+
+def test_a_reimport_drops_placements_for_quotes_that_no_longer_exist(db_file: str,
+                                                                   monkeypatch: pytest.MonkeyPatch) -> None:
+    """A re-analysis that moves a quote's start makes it a new id: the old id's placement goes,
+    the board is otherwise left as it was, and a version left with none returns to automatic."""
+    monkeypatch.delenv("BRISTLENOSE_SCREEN_TEXT", raising=False)
+    first = AuthTestClient(create_app(project_dir=_FIXTURE_DIR, dev=True, db_url=db_file))
+    _put(first, "url:/cart", "s1", {"q-p1-10": _edge(), "q-p1-999": _edge("L", 0.2)})
+    _put(first, "url:/pay", "s1", {"q-p9-1": _edge()})
+    _put(first, "url:/ok", "s1", {"q-p1-46": _edge("T", 0.5)})
+    second = AuthTestClient(create_app(project_dir=_FIXTURE_DIR, dev=True, db_url=db_file))  # imports again
+    assert _versions(second) == {
+        ("url:/cart", "s1"): {"q-p1-10": _edge()},
+        ("url:/ok", "s1"): {"q-p1-46": _edge("T", 0.5)},
+    }
+

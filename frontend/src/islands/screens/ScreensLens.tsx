@@ -79,6 +79,7 @@ import {
   leaderPath,
   loadArrangements,
   migrateArrangement,
+  reloadArrangements,
   rectFromIntent,
   MOVE_STEP,
   setArrangement,
@@ -477,6 +478,13 @@ export function ScreensLens() {
       if (timer) clearTimeout(timer);
     };
   }, [projectId, lensOn]);
+  // A finished run re-reads them, as it re-reads the screens: another window's changes show.
+  const arrangementsRefresh = useRef(refreshKey);
+  useEffect(() => {
+    if (arrangementsRefresh.current === refreshKey) return;
+    arrangementsRefresh.current = refreshKey;
+    if (lensOn && arrangementsLoaded(projectId)) void reloadArrangements(projectId);
+  }, [refreshKey, lensOn, projectId]);
 
   // Screens: polled while the job is still reading, capped, and re-read when the data moves.
   useEffect(() => {

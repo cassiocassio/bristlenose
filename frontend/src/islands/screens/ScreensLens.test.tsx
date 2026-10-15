@@ -135,6 +135,15 @@ beforeEach(() => {
   resetUndoStore();
   vi.mocked(getCodebook).mockResolvedValue({ all_tag_names: [], groups: [], ungrouped: [] } as never);
   serverArrangements = [];
+  // The fake server keeps what is PUT to it, one version per write, as the route does.
+  vi.mocked(sendPut).mockImplementation(((path: string, body: unknown) => {
+    if (path === "/screens/arrangement") {
+      const b = body as { screen_key: string; session_id: string; cards: Arrangement | null };
+      serverArrangements = serverArrangements.filter((v) => !(v.screen_key === b.screen_key && v.session_id === b.session_id));
+      if (b.cards) serverArrangements.push({ screen_key: b.screen_key, session_id: b.session_id, cards: b.cards });
+    }
+    return Promise.resolve();
+  }) as typeof sendPut);
   paperStub.sample = null;
   paperStub.accents = null;
   papers.clear();
@@ -2293,6 +2302,17 @@ describe("arrangements come from the project's database (15 Oct 2026)", () => {
     expect(container.querySelector(".screens-stage")).toBeNull();
     expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
     await act(async () => release());
+    expect(await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
+  });
+
+  it("reads them again when a run finishes, so another window's change shows", async () => {
+    mockApi(screensResponse());
+    render(<ScreensLens />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Shopping Bag"));
+    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
+    seed("url:/shoppingcart", "s1", { "q-p1-10": { kind: "edge", edge: "L", along: 0.3, out: 32, z: 31 } });
+    const { bumpRefreshKey } = await import("../../contexts/LastRunStore");
+    await act(async () => bumpRefreshKey());
     expect(await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
   });
 

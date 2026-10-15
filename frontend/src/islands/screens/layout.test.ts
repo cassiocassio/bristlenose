@@ -19,6 +19,7 @@ import {
   MAX_STAGGER,
   loadArrangements,
   migrateArrangement,
+  reloadArrangements,
   MIN_SHOT_W,
   placeRow,
   rectFromIntent,
@@ -451,6 +452,35 @@ describe("arrangement storage", () => {
     expect(await loadArrangements("1")).toBe(true);
     expect(apiGet).toHaveBeenCalledTimes(2);
     expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
+  });
+
+  it("reads again to show another window's change", async () => {
+    server([{ screen_key: "url:/x", session_id: "s1", cards: { a: edge("L", 0.3) } }]);
+    await loadArrangements("1");
+    server([{ screen_key: "url:/x", session_id: "s1", cards: { a: edge("R", 0.8) } }]);
+    expect(await reloadArrangements("1")).toBe(true);
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("R", 0.8) });
+  });
+
+  it("waits for this page's writes before reading again, and a write made meanwhile wins", async () => {
+    server([]);
+    await loadArrangements("1");
+    let release!: () => void;
+    vi.mocked(sendPut).mockImplementationOnce(() => new Promise<void>((r) => (release = r)));
+    setArrangement("1", "url:/x", "s1", { a: edge("L", 0.3) });
+    const reading = reloadArrangements("1");
+    await flush();
+    expect(apiGet).toHaveBeenCalledTimes(1); // not yet: the write is still in flight
+    // The server answers with an older state, and another drag lands while it is on its way.
+    let answer!: (v: unknown) => void;
+    vi.mocked(apiGet).mockImplementationOnce(() => new Promise((r) => (answer = r)) as never);
+    release();
+    await flush();
+    expect(apiGet).toHaveBeenCalledTimes(2);
+    setArrangement("1", "url:/x", "s1", { a: edge("L", 0.5) });
+    answer({ versions: [] });
+    await reading;
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.5) });
   });
 
   it("splits a version key at its last bar, so a screen key may hold one", async () => {

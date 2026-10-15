@@ -6,17 +6,20 @@ pin. Quotes travel as DOM ids; the SPA joins them to the quotes store, so star, 
 the report's own. ``GET …/screens/still`` returns one cropped frame as a data URI, cached on disk.
 ``GET …/screens/status`` is the Mac app's progress row and the lens's switch: counts, recording
 seconds, the reading rate and whether any screen was found, from the database and a stat per
-recording. It decodes nothing, and derives screens only when the indexes change.
+recording. It decodes nothing, and derives screens only when the indexes change; its ``available``
+is the one copy of the rule for whether the lens shows. ``GET …/screens/arrangements`` and
+``PUT …/screens/arrangement`` hold the researcher's arrangement of each board, one version per write.
 
 Why something cannot be read travels as a reason code (``bristlenose.screen_text.Unavailable`` /
 ``ReadFailure``), never a sentence; the SPA and the Mac app say it in the researcher's language.
 A recording with no index, no failure and an idle job is ``not_read``, so a poller always stops.
 
-All three are about participants' screens: behind the bearer, never under ``/report/assets/``,
+All of them are about participants' screens: behind the bearer, never under ``/report/assets/``,
 server-only in an export (``routes/export.py``). The job that writes the indexes runs only when
 switched on (``screen_text.wanted``: the Mac app's default, or ``serve --dev``). Switched off,
 ``/screens`` and ``/screens/status`` answer 200 with ``enabled: false`` (the lens and the progress
-row must be able to see "off"), and ``/screens/still`` answers 404.
+row must be able to see "off"), ``/screens/arrangements`` answers an empty list, and
+``/screens/still`` and the arrangement PUT answer 404.
 """
 
 from __future__ import annotations
@@ -419,22 +422,27 @@ def _has_screens(project_id: int, idir: Path, mtimes: dict[str, int]) -> bool:
 # other version is touched, so a partial body can never wipe a neighbour (the full-map PUT is how
 # the codebook switches once wiped each other). models.ScreenArrangement has the shape.
 
-_Fraction = Annotated[float, Field(allow_inf_nan=False)]
+# Generous bounds on what a board can write. Positions are fractions of the screengrab, and a
+# card dragged well off it reaches a few widths; `out` is pixels from its edge; `z` rises by one
+# per move from 30. A value past these is corrupt, and is refused rather than stored.
+_Fraction = Annotated[float, Field(allow_inf_nan=False, ge=-100, le=100)]
+_Pixels = Annotated[float, Field(allow_inf_nan=False, ge=-100_000, le=100_000)]
+_Stack = Annotated[float, Field(allow_inf_nan=False, ge=0, le=1_000_000)]
 
 
 class EdgeIntent(BaseModel):
     kind: Literal["edge"]
     edge: Literal["L", "R", "T", "B"]
     along: _Fraction
-    out: _Fraction
-    z: _Fraction
+    out: _Pixels
+    z: _Stack
 
 
 class OverIntent(BaseModel):
     kind: Literal["over"]
     x: _Fraction
     y: _Fraction
-    z: _Fraction
+    z: _Stack
 
 
 Intent = Annotated[EdgeIntent | OverIntent, Field(discriminator="kind")]
@@ -522,7 +530,12 @@ def put_arrangement(project_id: int, body: ArrangementVersion, request: Request,
 def delete_arrangements(db: Session) -> int:
     """Delete every arrangement in this database; the number deleted. For the researcher's explicit
     off: a screen key is a page's path read from a participant's screen, so it goes with the rest
-    of what screen text kept."""
+    of what screen text kept.
+
+    Not filtered by project, on purpose: the database file is the project's (one per project
+    folder), so every row in it is this project's, whatever project rows a forked or moved folder
+    left. A filter by stored folder path would miss the rows of a moved folder, and leave a
+    participant's page paths behind after an explicit off."""
     try:
         n = db.query(ScreenArrangement).delete(synchronize_session=False)
         db.commit()

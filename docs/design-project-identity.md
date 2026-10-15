@@ -350,8 +350,18 @@ not the folder, and are unchanged.
 - **A session keeps a name key beside its content key** (§6 said fingerprint →
   sid). Content first, then the last known place, then the name, and a sid a
   stronger key claimed is never handed on by a weaker one. The name key is
-  what keeps an *edited* transcript file (new bytes, same name) its session;
-  a sid holds one name key, so a new recording given an old name is new.
+  what keeps an *edited* transcript file (new bytes, same name) its session.
+  A sid holds one name key and one content key, so the new bytes replace the
+  old (two content keys on one sid made the next run refuse the file — review,
+  15 Oct). For a **recording** the name never overrides known bytes: different
+  bytes under a known name are a new session, as §5 says of a re-export, so a
+  deleted interview's name reused does not inherit its participant.
+- **Transcription keeps a placeholder's last known fingerprint** (§5's rule,
+  applied to the cache as well as the registry): an evicted recording is
+  neither downloaded nor transcribed again when another interview is added.
+- **Curation, for fork collapse, includes a confirmed speaker pick and an
+  unreviewed AutoCode queue**, which live in tables the importer also writes,
+  so the check reads the slot's state, not only the table.
 - **Starts stay keyed by sid inside the registry** (§6 said by fingerprint).
   Within a study the sid is stable now; across a Re-analyse the starts cross
   as a separate hand-over keyed by content (`carried-starts.json`, §8), which

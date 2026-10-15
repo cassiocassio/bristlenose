@@ -95,7 +95,7 @@
    trailing edge (D16) and the badge never displaces it. */
 .v2-nav-pending {
     flex-shrink: 0;
-    font-family: var(--bn-font-mono);
+    font-family: var(--bn-font-body);   /* a count: figures, not mono (docs/design-monospace-roles.md §4) */
     font-size: var(--bn-text-micro);
     color: var(--bn-colour-badge-text);
     background: var(--bn-colour-badge-bg);

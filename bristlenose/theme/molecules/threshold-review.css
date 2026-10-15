@@ -47,7 +47,8 @@
     justify-content: space-between;
     font-size: var(--bn-text-micro);
     color: var(--bn-colour-muted);
-    font-family: var(--bn-font-mono);
+    font-family: var(--bn-font-body);
+    font-variant-numeric: tabular-nums;
     padding: 0.15rem 0 0;
     user-select: none;
 }
@@ -112,7 +113,8 @@
     left: 50%;
     transform: translateX(-50%);
     font-size: var(--bn-text-micro);
-    font-family: var(--bn-font-mono);
+    font-family: var(--bn-font-body);
+    font-variant-numeric: tabular-nums;
     color: var(--bn-colour-text);
     white-space: nowrap;
     pointer-events: none;
@@ -161,7 +163,8 @@
 }
 
 .threshold-zone-counter-count {
-    font-family: var(--bn-font-mono);
+    font-family: var(--bn-font-body);
+    font-variant-numeric: tabular-nums;
     font-weight: var(--bn-weight-emphasis);
 }
 
@@ -218,8 +221,10 @@
     border-collapse: collapse;
 }
 
+/* Figures throughout this molecule: body face, tabular numerals (docs/design-monospace-roles.md §4). */
 .threshold-confidence {
-    font-family: var(--bn-font-mono);
+    font-family: var(--bn-font-body);
+    font-variant-numeric: tabular-nums;
     font-size: var(--bn-text-caption);
     white-space: nowrap;
     width: 42px;

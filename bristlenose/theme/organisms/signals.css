@@ -157,8 +157,12 @@
     cursor: help;
 }
 
+/* Figures — values, counts and scores — set in the body face with tabular numerals, not mono:
+   alignment without a change of voice, as SwiftUI's .monospacedDigit() does natively
+   (docs/design-monospace-roles.md §4). Codes that happen to be digits stay mono. */
 .metric-value {
-    font-family: var(--bn-font-mono);
+    font-family: var(--bn-font-body);
+    font-variant-numeric: tabular-nums;
     font-size: var(--bn-text-label);
     color: var(--bn-colour-text);
     text-align: right;
@@ -370,7 +374,8 @@ button.signal-card-toggle {
 
 /* Cell colouring — inline oklch background set by JS */
 .heatmap-cell {
-    font-family: var(--bn-font-mono);
+    font-family: var(--bn-font-body);
+    font-variant-numeric: tabular-nums;
     font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
     border-radius: var(--bn-radius-sm);
@@ -528,7 +533,8 @@ button.signal-card-toggle {
     display: flex;
     gap: 0.6rem;
     align-items: center;
-    font-family: var(--bn-font-mono);
+    font-family: var(--bn-font-body);
+    font-variant-numeric: tabular-nums;
     font-size: var(--bn-text-micro);
     line-height: var(--bn-text-micro-lh);
     color: var(--bn-colour-muted);
@@ -604,7 +610,8 @@ button.signal-card-toggle {
 }
 
 .cell-tooltip-footer {
-    font-family: var(--bn-font-mono);
+    font-family: var(--bn-font-body);
+    font-variant-numeric: tabular-nums;
     font-size: var(--bn-text-micro);
     color: var(--bn-colour-muted);
     margin-top: 0.2rem;
@@ -687,6 +694,8 @@ button.signal-card-toggle {
 }
 
 .signal-card-hero-score {
+    font-family: var(--bn-font-body);
+    font-variant-numeric: tabular-nums;
     font-weight: var(--bn-weight-emphasis);
 }
 

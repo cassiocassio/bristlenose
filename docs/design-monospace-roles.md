@@ -9,7 +9,7 @@ probes: experiments/monospace-audit/
 
 # Monospace roles: audit, proposal, and what shipped
 
-> **Truing status (15 Oct 2026).** Audited and proposed earlier the same day, then **shipped in 64a2b36a** ("monospace: one stack on both scales, tags 460 in light, the screen's path at 560"): the one stack, the three mono weight tokens and their dark scope, one weight for every tag, the Screens path at 560, footer keycaps, the player page and the Welcome copies. **Durations decided** the same evening: they are timecodes, 400, which is what the sessions list already draws. **Still open, owner undecided:** figures leaving mono (§4), the codebook add-tag chips at label size, the Welcome HTML keycaps at 500 and badges without a weight (§3), the native Welcome chip, the dev surfaces, and Linux. §1 and §2 describe the tree **before** the change and are kept as the baseline it was measured against; §3 and §4 are current; §6 is the ground truth.
+> **Truing status (15 Oct 2026).** Audited and proposed earlier the same day, then **shipped in 64a2b36a** ("monospace: one stack on both scales, tags 460 in light, the screen's path at 560"): the one stack, the three mono weight tokens and their dark scope, one weight for every tag, the Screens path at 560, footer keycaps, the player page and the Welcome copies. **Durations decided** the same evening: they are timecodes, 400, which is what the sessions list already draws. **Figures left mono** later still: values, counts and scores are in the body face with tabular numerals. **Still open, owner undecided:** the codebook add-tag chips at label size, the Welcome HTML keycaps at 500 and badges without a weight (§3), the native Welcome chip, the dev surfaces, and Linux. §1 and §2 describe the tree **before** the change and are kept as the baseline it was measured against; §3 and §4 are current; §6 is the ground truth.
 
 An audit of every monospace face in Bristlenose (web report, desktop webview, native Swift), the measured rendering of each one on both type scales, and the four roles they were corralled into.
 
@@ -141,7 +141,7 @@ What each pair renders comes straight from the table above. For example, `.badge
 
 - `atoms/footer.css:54`: `.footer-keyboard-hint kbd` at `--bn-text-micro`, `--bn-weight-mono` (was 0.85em, inherited 400)
 
-**Figures** (numbers set in mono for alignment):
+**Figures** (numbers set in mono for alignment until 15 Oct 2026; now the body face with `font-variant-numeric: tabular-nums`, weights unchanged):
 
 - `signals.css:161`, `:373`, `:531` and `:607`: metric value at label, heatmap cell at label 490, tooltip metrics and footer at micro
 - `codebook-v2.css:98`: `.v2-nav-pending` at micro
@@ -241,7 +241,7 @@ Who sees which: the Mac app and Safari get SF Mono. Chrome, Edge, Arc and probab
 | `player.html` status line, a copy of the old stack | path; the shipped stack written out | shipped |
 | `WelcomeIllustrations.swift` stacks | `ui-monospace,Menlo,monospace` in all six (Mac-only webviews); not generated | shipped |
 | `WelcomeTimelineCSS.swift` | regenerated from the theme | shipped |
-| heatmap cells, metric values, hero score (490), threshold counters and confidence, pending count, tooltip metrics | figures: body face with tabular figures | **open**, owner undecided |
+| heatmap cells, metric values, hero score (490), threshold axis, slider values, counters and confidence, pending count, tooltip metrics and footer | figures: body face with tabular figures, weights unchanged | shipped (participant codes and tooltip speaker codes stay mono, as codes) |
 | session durations ("42 min", `.session-entry-duration`) | timecode role, 400: a duration is a time | decided 15 Oct 2026; already drawn so, no change |
 | codebook add-tag field, input and drag ghost at label | code at badge: the same chips at one size | **open**, owner undecided |
 | Welcome HTML `.badge` copies with no weight; `.cap` at 500 | 460 in light to match the report; keycaps 400 or kept at 500 (Mac-only) | **open** |

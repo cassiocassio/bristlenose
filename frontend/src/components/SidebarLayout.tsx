@@ -156,6 +156,11 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHead
     tagsWidth,
     rightColumn: showRightSidebar,
     available: sidebar.availableWidth ?? Infinity,
+    // The panel just opened stays (SidebarStore "Fit to width"). The store's
+    // own fit always honoured this; the grid did not, so a panel opened in a
+    // narrow window was reported open to the toggles and the Mac while the
+    // grid closed it — a press that showed nothing.
+    exempt: sidebar.lastOpened,
   });
   const tocPush = fit.tocOpen;
   const tagsOpen = fit.tagsOpen;

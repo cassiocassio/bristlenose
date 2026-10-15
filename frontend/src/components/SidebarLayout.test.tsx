@@ -547,3 +547,23 @@ describe("the left panel's header control (the Quotes lens's grouping)", () => {
     expect(screen.getByTestId("probe")).toHaveTextContent("false");
   });
 });
+
+describe("the panel just opened stays open in the grid", () => {
+  // 368 floor + 240 + 280 + 80 = 968 holds both; 700 holds the floor beside
+  // one panel. Without the exemption the cascade closes Contents first.
+  it("keeps Contents, just opened, and closes Tags instead", () => {
+    mockState = { ...mockState, tocMode: "push", tagsOpen: true, availableWidth: 700, lastOpened: "toc" } as typeof mockState;
+    const { container } = render(<SidebarLayout active={true}><div /></SidebarLayout>);
+    const layout = container.querySelector(".layout")!;
+    expect(layout.classList.contains("toc-open")).toBe(true);
+    expect(layout.classList.contains("tags-open")).toBe(false);
+  });
+
+  it("keeps Tags, just opened, and closes Contents instead", () => {
+    mockState = { ...mockState, tocMode: "push", tagsOpen: true, availableWidth: 700, lastOpened: "tags" } as typeof mockState;
+    const { container } = render(<SidebarLayout active={true}><div /></SidebarLayout>);
+    const layout = container.querySelector(".layout")!;
+    expect(layout.classList.contains("toc-open")).toBe(false);
+    expect(layout.classList.contains("tags-open")).toBe(true);
+  });
+});

@@ -94,3 +94,15 @@ def test_the_info_line_never_wraps() -> None:
     m = re.search(r"(?m)^\.screens-sub\s*\{([^}]*)\}", text)
     assert m, "the .screens-sub rule must exist"
     assert re.search(r"flex-wrap:\s*nowrap", m.group(1))
+
+
+def test_the_leader_halo_is_never_softened_by_opacity() -> None:
+    """R3's halo is blurred, never faded: opacity lets the ink under it through beside the line
+    (3.0:1 at 85%, 2.4:1 at 75%; experiments/screens-lens/leader-styles.md §7)."""
+    text = re.sub(r"/\*.*?\*/", "", CSS.read_text(), flags=re.S)
+    rules = re.findall(r"([^{}]+)\{([^{}]*)\}", text)
+    casing = [(sel.strip(), body) for sel, body in rules if "lead-casing" in sel]
+    assert casing, "no rule names lead-casing: the gate would pass on nothing"
+    for sel, body in casing:
+        assert not re.search(r"(^|[;\s])(stroke-|fill-)?opacity\s*:|filter\s*:\s*opacity", body), sel
+

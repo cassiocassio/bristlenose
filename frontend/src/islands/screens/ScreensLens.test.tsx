@@ -12,6 +12,17 @@ import { CARD_W, COLUMN_GUTTER, MOVE_STEP, resetArrangementMemory, setArrangemen
 import { resetScreensNav, screensNavState, toggleScreensNav } from "./navPanel";
 
 vi.mock("../../utils/announce", () => ({ announce: vi.fn(), setAnnounceElement: vi.fn() }));
+// jsdom has no canvas and resolves no CSS variable, so the paper sampler and the accent probe are
+// stubbed; both answer null by default, which is "no paper yet": today's line, unchanged.
+const paperStub = vi.hoisted(() => ({
+  sample: null as [number, number, number] | null,
+  accents: null as { light: [number, number, number]; dark: [number, number, number] } | null,
+}));
+vi.mock("./paper", async (orig) => ({
+  ...(await orig<typeof import("./paper")>()),
+  samplePaper: vi.fn(async () => paperStub.sample),
+  readAccents: () => paperStub.accents,
+}));
 
 vi.mock("../../utils/api", () => ({
   apiGet: vi.fn(),
@@ -26,6 +37,7 @@ vi.mock("../../utils/api", () => ({
 }));
 
 import { announce } from "../../utils/announce";
+import { papers } from "./paper";
 import { featureFlags, resetFeatureFlags } from "../../utils/featureFlags";
 import { apiGet, getCodebook } from "../../utils/api";
 import { failedText, NAV_W, quotesOnScreen, ScreensLens, SCREENS_POLL_LIMIT, shouldPoll, unavailableText, type ScreensResponse } from "./ScreensLens";
@@ -115,6 +127,9 @@ beforeEach(() => {
   resetLiveResize();
   resetUndoStore();
   vi.mocked(getCodebook).mockResolvedValue({ all_tag_names: [], groups: [], ungrouped: [] } as never);
+  paperStub.sample = null;
+  paperStub.accents = null;
+  papers.clear();
   try {
     localStorage.clear();
   } catch {
@@ -2141,3 +2156,58 @@ describe("the navigator's separator", () => {
     expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1 }));
   });
 });
+
+describe("leaders over the screengrab follow its paper (R3, 15 Oct 2026)", () => {
+  const DEFAULT = { light: [0, 122, 255] as [number, number, number], dark: [10, 132, 255] as [number, number, number] };
+  const boardStill = (t: number) => `/screens/still?session_id=s1&t=${t}&w=1600&crop=0.0000,0.1000,0.9000,1.0000`;
+
+  it("a dark-mode site: the line over it takes the dark accent and a halo in the site's own paper", async () => {
+    paperStub.accents = DEFAULT;
+    papers.set(boardStill(12), [18, 18, 18]);
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      const shot = await waitFor(() => {
+        const el = c.querySelector<SVGGElement>("svg.screens-leaders g.lead-shot");
+        expect(el).not.toBeNull();
+        return el!;
+      });
+      expect(shot.style.colorScheme).toBe("dark");
+      expect(shot.style.getPropertyValue("--screens-paper")).toBe("rgb(18, 18, 18)");
+      // Clipped to a clip path that exists, and the halo is drawn under the line, never faded.
+      const clip = shot.getAttribute("clip-path")!.match(/url\(#(.+)\)/)![1];
+      expect(c.querySelector(`clipPath[id="${clip}"]`)).not.toBeNull();
+      const casing = shot.querySelector("g.lead-casing")!;
+      expect(casing.getAttribute("opacity")).toBeNull();
+      expect(casing.querySelectorAll("path").length).toBe(c.querySelectorAll("svg.screens-leaders > path").length);
+      expect(shot.querySelectorAll(":scope > circle").length).toBeGreaterThan(0);
+      // The target box takes the same scheme and paper; the slides around it do not.
+      const hl = c.querySelector<HTMLElement>(".screens-hl")!;
+      expect(hl.style.colorScheme).toBe("dark");
+      expect(c.querySelector<HTMLElement>(".screens-slides")!.style.colorScheme).toBe("");
+    } finally {
+      g.restore();
+    }
+  });
+
+  it("no paper yet: no halo group, and the line and its end dot are today's", async () => {
+    paperStub.accents = DEFAULT;
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      await waitFor(() => expect(c.querySelector("svg.screens-leaders > circle")).not.toBeNull());
+      expect(c.querySelector("g.lead-shot")).toBeNull();
+    } finally {
+      g.restore();
+    }
+  });
+
+  it("samples a still's paper when it arrives, and caches it with the still", async () => {
+    paperStub.sample = [255, 255, 255];
+    mockApi(screensResponse({ screens: [{ key: "url:/fresh", name: "/fresh", quotes: 1, tabs: [{ ...TAB, t: 77 }] }] }));
+    render(<ScreensLens />);
+    await waitFor(() => expect(document.querySelector("img.screens-slide.is-current")).not.toBeNull());
+    expect(papers.get(boardStill(77))).toEqual([255, 255, 255]);
+  });
+});
+

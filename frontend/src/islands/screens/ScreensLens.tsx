@@ -25,7 +25,7 @@
  * rule the nav and the Mac's lens rail follow). Every sentence is a `screens.*` locale key.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import { Counter, type CounterItem } from "../../components/Counter";
@@ -99,6 +99,7 @@ import { postScreensArrangement } from "../../shims/bridge";
 import { reportScreensNav, useScreensNav } from "./navPanel";
 import { setScreensCount } from "./screensCount";
 import { featureFlags } from "../../utils/featureFlags";
+import { choosePaper, papers, readAccents, samplePaper, type Rgb } from "./paper";
 import "./screens.css";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -297,7 +298,13 @@ function fetchStill(url: string): Promise<string | null> {
   let p = stillWaiters.get(url);
   if (!p) {
     p = apiGet<{ src: string }>(url)
-      .then((r) => {
+      .then(async (r) => {
+        // A board still's paper is sampled now, off the DOM, and cached before the still itself, so
+        // the still and its paper arrive together and a turn never shows one without the other.
+        if (cacheFor(url) === boardStills) {
+          const paper = await samplePaper(r.src).catch(() => null);
+          if (paper) papers.set(url, paper);
+        }
         stills.set(url, r.src);
         return r.src;
       })
@@ -1202,6 +1209,34 @@ function Versions({ screen, tabIdx, onFlip }: { screen: Screen; tabIdx: number; 
   );
 }
 
+/** Both halves of the palette's accent, re-read when the palette or the theme attribute changes. */
+function usePaletteAccents(): { light: Rgb; dark: Rgb } | null {
+  const [accents, setAccents] = useState(readAccents);
+  useEffect(() => {
+    if (typeof MutationObserver === "undefined") return;
+    const mo = new MutationObserver(() => setAccents(readAccents()));
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-color-theme", "data-theme", "style", "class"] });
+    return () => mo.disconnect();
+  }, []);
+  return accents;
+}
+
+/** A Retina screen: the halo's blur is drawn only there. At 1× WebKit and Chromium both render a
+ *  σ 0.7 blur as a 3px smear whose brightest row is 81% paper, under the 3:1 floor beside the line
+ *  (measured 15 Oct 2026), so a 1× screen gets the hard casing instead. */
+const HIDPI = "(min-resolution: 2dppx)";
+function useHiDpi(): boolean {
+  const [hi, setHi] = useState(() => typeof matchMedia === "function" && matchMedia(HIDPI).matches);
+  useEffect(() => {
+    if (typeof matchMedia !== "function") return;
+    const mq = matchMedia(HIDPI);
+    const on = () => setHi(mq.matches);
+    mq.addEventListener?.("change", on);
+    return () => mq.removeEventListener?.("change", on);
+  }, []);
+  return hi;
+}
+
 function ScreenBoard(props: BoardProps) {
   const { t } = useTranslation();
   const { projectId, screen, tabIdx, byId, store, said } = props;
@@ -1210,6 +1245,22 @@ function ScreenBoard(props: BoardProps) {
   const multi = screen.tabs.length > 1;
   const slides = useStills(screen.tabs, tabIdx, 1600);
   const { src, failed: stillFailed } = slides[tabIdx];
+  // Over the screengrab the leaders follow its paper, not the board (paper.ts): the accent half that
+  // reads against it, and a halo in its own colour. No paper yet, no halo: today's line stands.
+  const accents = usePaletteAccents();
+  const blurred = useHiDpi();
+  const paperRgb = src ? papers.get(stillUrl(tab, 1600)) : undefined;
+  const paperKey = paperRgb?.join(",");
+  const choice = useMemo(
+    () => (paperRgb && accents ? choosePaper(paperRgb, accents, blurred) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paperKey is paperRgb's value
+    [paperKey, accents, blurred],
+  );
+  const paperStyle = useMemo(
+    () => (choice ? ({ colorScheme: choice.scheme, "--screens-paper": choice.casing } as React.CSSProperties) : undefined),
+    [choice],
+  );
+  const leadId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const stageRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const shotRef = useRef<HTMLDivElement>(null);
@@ -1992,6 +2043,8 @@ function ScreenBoard(props: BoardProps) {
   const hasB = showCustom ? bandB > 0 : onEdge("B").length > 0;
   const scale = live && liveBase > 0 ? liveW / liveBase : 1;
   const free = [...placed, ...(dragging ? [dragging] : [])];
+  // The picture in board space, padded 3px so an end dot on its edge is not halved.
+  const pic = choice && geo && src ? { x: geo.sx + geo.ix - 3, y: geo.sy + geo.iy - 3, w: geo.iw + 6, h: geo.ih + 6 } : null;
   return (
     <>
       <SectionHeading action={<Versions screen={screen} tabIdx={tabIdx} onFlip={props.onFlip} />}>
@@ -2072,6 +2125,7 @@ function ScreenBoard(props: BoardProps) {
                       style={{
                         left: geo.ix + l.box[0] * geo.iw - 3, top: geo.iy + l.box[1] * geo.ih - 3,
                         width: l.box[2] * geo.iw + 6, height: l.box[3] * geo.ih + 6,
+                        ...paperStyle,
                       }}
                     />
                   ))}
@@ -2087,9 +2141,40 @@ function ScreenBoard(props: BoardProps) {
               {leaders.map((l) => (
                 <path key={l.id} d={l.d} className={lit === l.id ? "on" : undefined} />
               ))}
-              {[...ends.entries()].map(([k, e]) => (
-                <circle key={k} cx={e.end[0]} cy={e.end[1]} r={2.5} className={e.on ? "on" : undefined} />
-              ))}
+              {pic ? (
+                // Over the screengrab: the same lines again, clipped to the picture, with a halo in
+                // its paper underneath and the accent half that reads on it. The filter's region is
+                // the picture, not the board, so a drag or a glide never rasterises the whole board.
+                <>
+                  <defs>
+                    <clipPath id={`${leadId}-clip`}>
+                      <rect x={pic.x} y={pic.y} width={pic.w} height={pic.h} />
+                    </clipPath>
+                    {blurred && (
+                      <filter id={`${leadId}-soft`} filterUnits="userSpaceOnUse" x={pic.x - 3} y={pic.y - 3} width={pic.w + 6} height={pic.h + 6}>
+                        <feGaussianBlur stdDeviation={0.7} />
+                      </filter>
+                    )}
+                  </defs>
+                  <g className="lead-shot" clipPath={`url(#${leadId}-clip)`} style={paperStyle}>
+                    <g className="lead-casing" filter={blurred ? `url(#${leadId}-soft)` : undefined}>
+                      {leaders.map((l) => (
+                        <path key={l.id} d={l.d} className={lit === l.id ? "on" : undefined} />
+                      ))}
+                    </g>
+                    {leaders.map((l) => (
+                      <path key={l.id} d={l.d} className={lit === l.id ? "on" : undefined} />
+                    ))}
+                    {[...ends.entries()].map(([k, e]) => (
+                      <circle key={k} cx={e.end[0]} cy={e.end[1]} r={2.5} className={e.on ? "on" : undefined} />
+                    ))}
+                  </g>
+                </>
+              ) : (
+                [...ends.entries()].map(([k, e]) => (
+                  <circle key={k} cx={e.end[0]} cy={e.end[1]} r={2.5} className={e.on ? "on" : undefined} />
+                ))
+              )}
             </svg>
             <div className="screens-free">
               {free.map((d) => cardFor(d, freeStyle(d)))}

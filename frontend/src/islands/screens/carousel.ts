@@ -70,4 +70,7 @@ export class Lru<V> {
   get size(): number {
     return this.map.size;
   }
+  clear(): void {
+    this.map.clear();
+  }
 }

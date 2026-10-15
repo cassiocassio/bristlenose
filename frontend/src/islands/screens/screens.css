@@ -274,6 +274,21 @@ svg.screens-leaders { position: absolute; inset: 0; width: 100%; height: 100%; p
 svg.screens-leaders path { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1; }
 svg.screens-leaders path.on { stroke-width: 2; }
 svg.screens-leaders circle { fill: var(--bn-colour-accent); }
+/* Over the screengrab (R3, experiments/screens-lens/leader-styles.md §7): the same line in the accent
+   half that reads on the screengrab's paper, over a halo in that paper — invisible over plain page,
+   seen only where the line crosses ink, and none in the gutter. The group carries the scheme and
+   --screens-paper (paper.ts). The halo is softened by blur on a Retina screen, never by opacity:
+   opacity lets ink through beside the line (3.0:1 at 85%), and tests/test_screens_css.py refuses it. */
+svg.screens-leaders .lead-casing path { stroke: var(--screens-paper); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+svg.screens-leaders .lead-casing path.on { stroke-width: 5; }
+svg.screens-leaders .lead-shot circle { stroke: var(--screens-paper); stroke-width: 2; paint-order: stroke; }
+.screens-hl { box-shadow: 0 0 0 1px var(--screens-paper, transparent); }
+@media (forced-colors: active) {
+  svg.screens-leaders .lead-casing { display: none; }
+  svg.screens-leaders path { stroke: CanvasText; }
+  svg.screens-leaders circle { fill: CanvasText; }
+  .screens-hl { border-color: Highlight; }
+}
 
 /* Rearranging: the top edge and the margin under the timecode are grips. The side grip starts
    below the timecode's line, so the timecode stays a link that plays the clip. */

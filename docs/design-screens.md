@@ -299,6 +299,18 @@ reverses. Earlier wording is kept where it explains why._
     with or under the card, else a shoulder and one straight run) keeps them short. The one place
     the first rule can fail is a band long enough to wrap onto a second line, where a first-line
     card's leader passes the second line's cards; rare by the band rule, and not yet solved.
+  - **Over the screengrab a leader follows its paper, not the board** (R3, the owner's pick, 15 Oct
+    2026; `experiments/screens-lens/leader-styles.md` §7). The line takes the half of the palette's
+    accent that reads on the screengrab's own paper — a white site on a dark board gets the light
+    half — over a halo in that paper, clipped to the picture: invisible over plain page, seen only
+    where the line crosses ink, none in the gutter. The end dot and the target box follow it. The
+    paper is sampled once when a still arrives (`screens/paper.ts`), from thin edge strips, never
+    the top. The halo is blurred (σ 0.7) only on a Retina screen and never faded: at 1× WebKit and
+    Chromium draw that blur as a 3px smear whose brightest row is 81% paper, under the 3:1 floor, so
+    1× gets the hard casing (4.0:1 worst); on Retina the rows beside the line stay 96–100% paper
+    (measured 15 Oct 2026). Opacity on the halo is refused by `tests/test_screens_css.py`. No new
+    tokens. _Reverses a halo in the board's background, which drew dark tracks over white sites on
+    a dark board._
   - **A card is never over the screengrab**: columns and bands are their own grid tracks, each a
     gutter (`COLUMN_GUTTER`) from it, and a band reserves its whole height; on a custom board an edge
     card is held its distance out from its edge, never less than none. What gates it, exactly:

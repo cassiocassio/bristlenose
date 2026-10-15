@@ -92,14 +92,6 @@ const QUOTE_SCOPED_MENU_ACTIONS = new Set([
   "revealInTranscript",
 ]);
 
-/** Quote-scoped menu actions the Screens lens answers itself (its time-order J/K). */
-const SCREENS_OWNS_MENU_ACTIONS = new Set([
-  "nextQuote",
-  "previousQuote",
-  "extendSelectionDown",
-  "extendSelectionUp",
-]);
-
 // ── Hook ─────────────────────────────────────────────────────────────────
 
 interface UseKeyboardShortcutsOptions {
@@ -312,7 +304,9 @@ export function useKeyboardShortcuts({
    */
   const extendTo = useCallback(
     (targetId: string | null) => {
-      const focused = focusedIdRef.current;
+      // Only a quote this lens shows: a cursor left over from another lens or screen must not
+      // join the selection (code review, 15 Oct 2026).
+      const focused = scopedFocus();
 
       // Select the current quote if not already selected
       if (focused) {
@@ -330,7 +324,7 @@ export function useKeyboardShortcuts({
         }
       }
     },
-    [toggleSelection, setAnchor, setFocus],
+    [toggleSelection, setAnchor, setFocus, scopedFocus],
   );
 
   /** Shift+j/k — extend along DOM order. */
@@ -465,7 +459,7 @@ export function useKeyboardShortcuts({
       if (helpModalOpenRef.current) return;
       if (settingsModalOpenRef.current) return;
 
-      // ⌘A / Ctrl+A — select all visible quotes (quotes tab only).
+      // ⌘A / Ctrl+A — select all visible quotes (the lenses of quote cards: Quotes and Screens).
       // Preempts the browser's native "select all text" so ⌘A acts on
       // quotes as objects (ready to star/hide/tag), not on page text. On
       // other tabs (e.g. transcripts) native text select-all is left intact.
@@ -473,10 +467,8 @@ export function useKeyboardShortcuts({
       // intercepts ⌘A in performKeyEquivalent and routes it via the menu
       // bridge instead (the main menu's Select All would otherwise win).
       if (key === "a" && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
-        if (
-          pathMatches(locationRef.current.pathname, "/report/quotes") &&
-          getVisibleQuoteIds().length > 0
-        ) {
+        // Every lens of quote cards: Quotes, and Screens over the cards its board shows.
+        if (onQuoteLens(locationRef.current.pathname) && getVisibleQuoteIds().length > 0) {
           e.preventDefault();
           selectAll();
           return;
@@ -619,12 +611,10 @@ export function useKeyboardShortcuts({
       // legitimately work off-lens (`/`, `?`, Escape, `[`, `]`, `\`, `m`, and
       // the ⌘A/⌘C traps) all sit above this line and carry their own routing.
       if (!onQuoteLens(locationRef.current.pathname)) return;
-      // The Screens lens owns its arrows and j/k — screens, the backdrop, and its quotes in time
-      // order (ScreensLens.tsx) — so only the per-quote actions below are shared with it.
-      if (
-        pathMatches(locationRef.current.pathname, "/report/screens") &&
-        (ARROW_DIRECTIONS[key] || key === "j" || key === "k" || key === "J" || key === "K")
-      ) {
+      // The Screens lens owns its arrow keys — ↑/↓ another screen, ←/→ another version
+      // (ScreensLens.tsx). Everything below, j/k and ⇧J/K included, works there as it does here,
+      // over the board's reading order, which the lens registers as its visible quotes.
+      if (pathMatches(locationRef.current.pathname, "/report/screens") && ARROW_DIRECTIONS[key]) {
         return;
       }
 
@@ -660,10 +650,12 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // Shift+j/k — extend selection along DOM order
-      if ((key === "j" || key === "k") && e.shiftKey && bare) {
+      // Shift+j/k — extend selection along DOM order. A real keyboard reports
+      // Shift+j as "J", so match the letter in either case: matching only "j"
+      // meant ⇧J/K never fired from a keyboard (only from synthetic events).
+      if ((key === "j" || key === "k" || key === "J" || key === "K") && e.shiftKey && bare) {
         e.preventDefault();
-        handleShiftMove(key === "j" ? 1 : -1);
+        handleShiftMove(key.toLowerCase() === "j" ? 1 : -1);
         return;
       }
 
@@ -747,14 +739,6 @@ export function useKeyboardShortcuts({
       const { action } = (e as CustomEvent).detail;
       // Mirror the keydown path's lens gate — see QUOTE_SCOPED_MENU_ACTIONS.
       if (QUOTE_SCOPED_MENU_ACTIONS.has(action) && !onQuoteLens(locationRef.current.pathname)) {
-        return;
-      }
-      // On Screens the lens steps its own quotes in time order and has no shift-extend
-      // (ScreensLens.tsx listens for nextQuote/previousQuote itself).
-      if (
-        pathMatches(locationRef.current.pathname, "/report/screens") &&
-        SCREENS_OWNS_MENU_ACTIONS.has(action)
-      ) {
         return;
       }
       switch (action) {

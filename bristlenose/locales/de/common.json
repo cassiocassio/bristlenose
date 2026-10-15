@@ -690,7 +690,8 @@
       "reassignParagraph": "Absatz neu zuweisen widerrufen",
       "splitParagraph": "Absatz teilen widerrufen",
       "joinParagraphs": "Absätze verbinden widerrufen",
-      "tidy": "Aufr\u00e4umen widerrufen"
+      "tidy": "Aufr\u00e4umen widerrufen",
+      "moveQuote": "Zitat bewegen widerrufen"
     },
     "redo": {
       "renameModerator": "Moderator umbenennen wiederholen",
@@ -713,7 +714,8 @@
       "reassignParagraph": "Absatz neu zuweisen wiederholen",
       "splitParagraph": "Absatz teilen wiederholen",
       "joinParagraphs": "Absätze verbinden wiederholen",
-      "tidy": "Aufr\u00e4umen wiederholen"
+      "tidy": "Aufr\u00e4umen wiederholen",
+      "moveQuote": "Zitat bewegen wiederholen"
     }
   },
   "sync": {
@@ -756,7 +758,6 @@
     "participantCount_one": "{{count}}\u00a0Teilnehmer",
     "participantCount_other": "{{count}}\u00a0Teilnehmer",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "Bildschirm von {{code}} bei {{time}}",
     "quoteCount_one": "{{count}} Zitat",
     "quoteCount_other": "{{count}} Zitate",
     "quoteCountFrom_one": "{{count}} Zitat von {{people}} Teilnehmern",
@@ -771,14 +772,16 @@
     "arrangementAutomatic": "Anordnung: Automatisch",
     "returnToAutomatic": "Zur automatischen Anordnung zur\u00fcckkehren",
     "slideCaption": "Bildschirm von {{code}} bei {{time}} · {{n}} von {{total}}",
-    "previousScreengrab": "Vorheriges Bildschirmfoto",
-    "nextScreengrab": "Nächstes Bildschirmfoto",
-    "whoseQuotes": "Wessen Zitate",
+    "previousVersion": "Vorherige Version",
+    "nextVersion": "Nächste Version",
     "onScreen": "Auf dem Bildschirm von {{code}}",
-    "sequence": "{{code}}, Zitat {{n}} von {{total}}",
     "versionsLabel": "Versionen dieses Bildschirms",
-    "carouselRole": "Karussell",
-    "versionsKeys": "Mit ← und → zwischen Versionen wechseln",
+    "versionOption": "Bildschirm von {{code}}, {{n}} von {{total}}",
+    "versionCount": "{{n}} von {{total}}",
+    "resizeNavigator": "Größe der Bildschirmliste ändern",
+    "quoteMoved": "Zitat verschoben",
+    "navWidthPixels_one": "{{count}} Pixel",
+    "navWidthPixels_other": "{{count}} Pixel",
     "subtitle_one": "{{count}}\u00a0Bildschirm",
     "subtitle_other": "{{count}}\u00a0Bildschirme"
   }

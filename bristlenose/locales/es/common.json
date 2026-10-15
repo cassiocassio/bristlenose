@@ -690,7 +690,8 @@
       "reassignParagraph": "Deshacer reasignaci\u00f3n de p\u00e1rrafo",
       "splitParagraph": "Deshacer división de párrafo",
       "joinParagraphs": "Deshacer unión de párrafos",
-      "tidy": "Deshacer Ordenar"
+      "tidy": "Deshacer Ordenar",
+      "moveQuote": "Deshacer movimiento de la cita"
     },
     "redo": {
       "renameModerator": "Rehacer cambio de nombre del moderador",
@@ -713,7 +714,8 @@
       "reassignParagraph": "Rehacer reasignaci\u00f3n de p\u00e1rrafo",
       "splitParagraph": "Rehacer división de párrafo",
       "joinParagraphs": "Rehacer unión de párrafos",
-      "tidy": "Rehacer Ordenar"
+      "tidy": "Rehacer Ordenar",
+      "moveQuote": "Rehacer movimiento de la cita"
     }
   },
   "sync": {
@@ -756,7 +758,6 @@
     "participantCount_one": "{{count}}\u00a0participante",
     "participantCount_other": "{{count}}\u00a0participantes",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "Pantalla de {{code}} en {{time}}",
     "quoteCount_one": "{{count}} cita",
     "quoteCount_other": "{{count}} citas",
     "quoteCountFrom_one": "{{count}} cita de {{people}} participantes",
@@ -771,14 +772,16 @@
     "arrangementAutomatic": "Disposici\u00f3n: autom\u00e1tica",
     "returnToAutomatic": "Volver a la disposici\u00f3n autom\u00e1tica",
     "slideCaption": "Pantalla de {{code}} en {{time}} · {{n}} de {{total}}",
-    "previousScreengrab": "Captura de pantalla anterior",
-    "nextScreengrab": "Captura de pantalla siguiente",
-    "whoseQuotes": "De quién son las citas",
+    "previousVersion": "Versión anterior",
+    "nextVersion": "Versión siguiente",
     "onScreen": "En la pantalla de {{code}}",
-    "sequence": "{{code}}, cita {{n}} de {{total}}",
     "versionsLabel": "Versiones de esta pantalla",
-    "carouselRole": "carrusel",
-    "versionsKeys": "← y → pasan de una versión a otra",
+    "versionOption": "Pantalla de {{code}}, {{n}} de {{total}}",
+    "versionCount": "{{n}} de {{total}}",
+    "resizeNavigator": "Cambiar el tamaño de la lista de pantallas",
+    "quoteMoved": "Cita movida",
+    "navWidthPixels_one": "{{count}} píxel",
+    "navWidthPixels_other": "{{count}} píxeles",
     "subtitle_one": "{{count}}\u00a0Pantalla",
     "subtitle_other": "{{count}}\u00a0Pantallas"
   }

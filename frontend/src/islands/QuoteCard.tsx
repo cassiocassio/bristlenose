@@ -136,6 +136,9 @@ interface QuoteCardProps {
   /** What to mark in the quote text: the typed words plus what a "mentions" or
    *  "text contains" token found (`highlightTermsOf`, utils/filter.ts). */
   highlight?: SearchTerm[];
+  /** Whether to show the "[When asked…]" researcher-context line. Default true. The Screens lens
+   *  passes false: the owner, 15 Oct 2026, "interesting but new… hide here for the moment". */
+  showResearcherContext?: boolean;
 }
 
 export function QuoteCard({
@@ -182,6 +185,7 @@ export function QuoteCard({
   contextAbove,
   contextBelow,
   highlight,
+  showResearcherContext = true,
 }: QuoteCardProps) {
   const { t } = useTranslation();
   const [isTagInputOpen, setIsTagInputOpen] = useState(false);
@@ -632,7 +636,7 @@ export function QuoteCard({
           data-testid={`bn-quote-${domId}-ctx-above-${i}`}
         />
       ))}
-      {quote.researcher_context && !hasModeratorContext && (
+      {showResearcherContext && quote.researcher_context && !hasModeratorContext && (
         <span className="context">[{quote.researcher_context}]</span>
       )}
       {/* Gated as well as the pill: a researcher who pinned questions open

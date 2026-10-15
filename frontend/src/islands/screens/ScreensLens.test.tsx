@@ -1,11 +1,14 @@
 import { useEffect, useRef } from "react";
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { getQuotesSnapshot, resetStore } from "../../contexts/QuotesContext";
+import { getQuotesSnapshot, hideQuotes, resetStore, unhideQuotes } from "../../contexts/QuotesContext";
+import { getUndoState, redo, resetUndoStore, undo } from "../../contexts/UndoStore";
+import { resetLiveResize, setLiveResize } from "../../utils/liveResize";
 import { resetSidebarStore, toggleTagGroupHidden, useSidebarStore } from "../../contexts/SidebarStore";
 import type { QuoteResponse, QuotesListResponse } from "../../utils/types";
 import { FocusProvider, useFocus } from "../../contexts/FocusContext";
-import { resetArrangementMemory } from "./layout";
+import { CARD_W, COLUMN_GUTTER, MOVE_STEP, resetArrangementMemory, setArrangement } from "./layout";
 import { resetScreensNav, screensNavState, toggleScreensNav } from "./navPanel";
 
 vi.mock("../../utils/announce", () => ({ announce: vi.fn(), setAnnounceElement: vi.fn() }));
@@ -24,7 +27,7 @@ vi.mock("../../utils/api", () => ({
 
 import { announce } from "../../utils/announce";
 import { apiGet, getCodebook } from "../../utils/api";
-import { failedText, NAV_W, ScreensLens, SCREENS_POLL_LIMIT, shouldPoll, unavailableText, type ScreensResponse } from "./ScreensLens";
+import { failedText, NAV_W, quotesOnScreen, ScreensLens, SCREENS_POLL_LIMIT, shouldPoll, unavailableText, type ScreensResponse } from "./ScreensLens";
 
 /** The board's ResizeObserver callbacks, so a test can resize the stage. */
 const observers = new Set<() => void>();
@@ -108,6 +111,8 @@ beforeEach(() => {
   resetSidebarStore();
   resetArrangementMemory();
   resetScreensNav();
+  resetLiveResize();
+  resetUndoStore();
   vi.mocked(getCodebook).mockResolvedValue({ all_tag_names: [], groups: [], ungrouped: [] } as never);
   try {
     localStorage.clear();
@@ -122,12 +127,13 @@ afterEach(() => {
 });
 
 describe("ScreensLens", () => {
-  it("lists every screen by its page title and address, most said-about first", async () => {
+  it("lists every screen by its page title", async () => {
     mockApi(screensResponse());
     await opened();
     const nav = screen.getByRole("navigation", { name: "Screens" });
     expect(nav).toHaveTextContent("2 screens · 1 participant");
-    expect(nav).toHaveTextContent("/shoppingcart");
+    // The address, codes and count are kept and not shown for now (NAV_DETAILS).
+    expect(nav).not.toHaveTextContent("/shoppingcart");
     expect(nav).toHaveTextContent("Delivery or collect");
   });
 
@@ -356,19 +362,6 @@ describe("ScreensLens", () => {
     expect(lens.style.getPropertyValue("--screens-nav-w")).toBe(`${NAV_W}px`);
   });
 
-  it("counts in the navigator only what the board shows: hidden quotes are not counted", async () => {
-    mockApi(screensResponse());
-    const { container } = render(<ScreensLens />);
-    await waitFor(() => expect(container.querySelector(".screens-loose blockquote")).not.toBeNull());
-    const count = () => container.querySelector(".screens-nav .screens-count")!.textContent;
-    expect(count()).toBe("2");
-    act(() => {
-      fireEvent.click(container.querySelector(".screens-loose blockquote .hide-btn")!);
-    });
-    await waitFor(() => expect(getQuotesSnapshot().hidden["q-p1-30"]).toBe(true));
-    await waitFor(() => expect(count()).toBe("1"));
-  });
-
   it("keeps showing the board when one look fails, and looks again", async () => {
     vi.useFakeTimers();
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -442,48 +435,6 @@ describe("ScreensLens", () => {
   });
 });
 
-describe("rearranging the board", () => {
-  const key = "bristlenose-screens-placements-1";
-  const pointer = (type: string, x: number, y: number) =>
-    act(() => {
-      window.dispatchEvent(new MouseEvent(type, { clientX: x, clientY: y }));
-    });
-
-  async function grip() {
-    mockApi(screensResponse());
-    const { container } = render(<ScreensLens />);
-    await waitFor(() => expect(container.querySelector(".screens-col .screens-grip-top")).not.toBeNull());
-    return container.querySelector<HTMLElement>(".screens-col .screens-grip-top")!;
-  }
-
-  it("does not move a card on a click: a grip pressed and released in place saves nothing", async () => {
-    const g = await grip();
-    fireEvent.pointerDown(g, { button: 0, clientX: 100, clientY: 100 });
-    pointer("pointermove", 101, 101);
-    pointer("pointerup", 101, 101);
-    expect(localStorage.getItem(key)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
-  });
-
-  it("moves a card once the pointer has travelled, and remembers where", async () => {
-    const g = await grip();
-    fireEvent.pointerDown(g, { button: 0, clientX: 100, clientY: 100 });
-    pointer("pointermove", 140, 160);
-    pointer("pointerup", 140, 160);
-    expect(localStorage.getItem(key)).toContain("s1@12/q-p1-10");
-    expect(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
-  });
-
-  it("drops a drag in progress when the board changes, rather than saving it to the screen left", async () => {
-    const g = await grip();
-    fireEvent.pointerDown(g, { button: 0, clientX: 100, clientY: 100 });
-    pointer("pointermove", 140, 160);
-    fireEvent.keyDown(document, { key: "ArrowDown" });
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Delivery or collect");
-    pointer("pointerup", 140, 160);
-    expect(localStorage.getItem(key) ?? "").not.toContain("s1@12/");
-  });
-});
 
 describe("Tidy", () => {
   const key = "bristlenose-screens-placements-1";
@@ -502,39 +453,6 @@ describe("Tidy", () => {
     expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
   });
 
-  it("marks a placed card, returns every card to automatic, and is undone by the report's undo", async () => {
-    const { undo, getUndoState } = await import("../../contexts/UndoStore");
-    mockApi(screensResponse());
-    const { container } = render(<ScreensLens />);
-    const control = await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" });
-    expect(container.querySelector('.screens-card[data-dom="q-p1-10"]')!.className).toContain("is-placed");
-    fireEvent.click(control);
-    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
-    expect(container.querySelector('.screens-card[data-dom="q-p1-10"]')!.className).not.toContain("is-placed");
-    expect(localStorage.getItem(key)).not.toContain("q-p1-10");
-    expect(getUndoState().undoAction).toBe("tidy");
-    await act(async () => {
-      await undo();
-    });
-    expect(await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
-    expect(localStorage.getItem(key)).toContain("q-p1-10");
-  });
-
-  it("offers Return to automatic for a placed card, and Tidy, on right-click", async () => {
-    mockApi(screensResponse());
-    const { container } = render(<ScreensLens />);
-    await screen.findByRole("button", { name: "Arrangement: Custom. Tidy" });
-    const card = container.querySelector<HTMLElement>('.screens-card[data-dom="q-p1-10"]')!;
-    fireEvent.contextMenu(card.querySelector(".quote-body") ?? card);
-    const items = await screen.findAllByRole("menuitem");
-    expect(items.map((i) => i.textContent)).toEqual(["Return to automatic", "Tidy"]);
-    fireEvent.click(items[0]);
-    expect(screen.queryByRole("menu")).toBeNull();
-    expect(container.querySelector('.screens-card[data-dom="q-p1-10"]')!.className).not.toContain("is-placed");
-    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
-  });
-
-  // Tidy removes its own button; focus used to fall to the page (accessibility review, 14 Oct 2026).
   it("tells the Mac whether the arrangement is custom, so View ▸ Tidy enables only then", async () => {
     const post = vi.fn();
     (window as unknown as { webkit: unknown }).webkit = { messageHandlers: { navigation: { postMessage: post } } };
@@ -674,78 +592,9 @@ describe("where the cards go", () => {
   });
 });
 
-describe("bringing a card forward", () => {
-  // Click, never hover (the owner, 14 Oct 2026): a lifted card unclamps and grows, the column
-  // re-stacks, and under hover a different card was then under the pointer — flicker.
-  it("brings a card forward on click, not on hover, and puts it back on a press elsewhere", async () => {
-    mockApi(screensResponse());
-    const { container } = render(<ScreensLens />);
-    await waitFor(() => expect(container.querySelector(".screens-col .screens-card")).not.toBeNull());
-    const card = container.querySelector<HTMLElement>(".screens-col .screens-card")!;
-    fireEvent.mouseEnter(card);
-    fireEvent.mouseOver(card);
-    expect(card.className).not.toContain("is-lifted");
-    fireEvent.pointerDown(card.querySelector(".quote-body") ?? card);
-    expect(card.className).toContain("is-lifted");
-    fireEvent.mouseLeave(card);
-    expect(card.className).toContain("is-lifted");
-    fireEvent.pointerDown(card); // a press on the card itself keeps it forward
-    expect(card.className).toContain("is-lifted");
-    fireEvent.pointerDown(document.body);
-    expect(card.className).not.toContain("is-lifted");
-  });
 
-  it("brings a card forward from a press on its grip that is not a drag", async () => {
-    mockApi(screensResponse());
-    const { container } = render(<ScreensLens />);
-    await waitFor(() => expect(container.querySelector(".screens-col .screens-card")).not.toBeNull());
-    const card = container.querySelector<HTMLElement>(".screens-col .screens-card")!;
-    const grip = card.querySelector<HTMLElement>(".screens-grip-side")!;
-    fireEvent.pointerDown(grip, { button: 0, clientX: 10, clientY: 10 });
-    window.dispatchEvent(new PointerEvent("pointerup", { clientX: 10, clientY: 10 }));
-    await waitFor(() => expect(card.className).toContain("is-lifted"));
-  });
-});
-
-describe("deselecting", () => {
-  // The shared quote card keeps its own focus (.bn-focused), and a focused card is raised. Escape
-  // once cleared only the board's selection, so the "deselected" card stayed on top of its stack.
-  it("clears the card's own focus as well as the board's selection on Escape", async () => {
-    mockApi(screensResponse());
-    const { container } = render(
-      <FocusProvider>
-        <ScreensLens />
-      </FocusProvider>,
-    );
-    await waitFor(() => expect(container.querySelector(".screens-col .screens-card")).not.toBeNull());
-    const card = container.querySelector<HTMLElement>(".screens-col .screens-card")!;
-    const body = card.querySelector<HTMLElement>(".quote-body") ?? card;
-    fireEvent.pointerDown(body);
-    fireEvent.click(body);
-    await waitFor(() => expect(card.querySelector(".quote-card.bn-focused")).not.toBeNull());
-    expect(card.className).toContain("is-lifted");
-    fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() => expect(card.querySelector(".quote-card.bn-focused")).toBeNull());
-    expect(card.className).not.toContain("is-lifted");
-  });
-});
 
 describe("for a keyboard and a screen reader", () => {
-  it("brings a card forward when focus enters it, and keeps it forward while focus stays inside", async () => {
-    mockApi(screensResponse());
-    const { container } = render(<ScreensLens />);
-    await waitFor(() => expect(container.querySelector(".screens-col .screens-card")).not.toBeNull());
-    const card = container.querySelector<HTMLElement>(".screens-col .screens-card")!;
-    const star = card.querySelector<HTMLElement>(".star-btn")!;
-    const hide = card.querySelector<HTMLElement>(".hide-btn")!;
-    fireEvent.focus(star);
-    expect(card.className).toContain("is-lifted");
-    fireEvent.blur(star, { relatedTarget: hide }); // Tab within the card
-    expect(card.className).toContain("is-lifted");
-    fireEvent.blur(hide, { relatedTarget: document.body }); // Tab out of it
-    expect(card.className).not.toContain("is-lifted");
-  });
-
   it("describes the screengrab", async () => {
     mockApi(screensResponse());
     await opened();
@@ -821,29 +670,6 @@ describe("focus when the board changes under it", () => {
     fireEvent.keyDown(links[0], { key: "ArrowDown" });
     expect(document.activeElement).toBe(links[1]);
     expect(links[1]).toHaveAttribute("aria-current", "true");
-  });
-
-  it("keeps focus on the carousel as it turns, and says which slide once", async () => {
-    const two = screensResponse();
-    (two.screens as { tabs: unknown[] }[])[0].tabs.push({ ...TAB, session_id: "s2", code: "p2", t: 40 });
-    mockApi(two);
-    await opened();
-    const carousel = screen.getByRole("group", { name: "Versions of this screen" });
-    expect(carousel.tabIndex).toBe(0); // the keyboard's stop
-    expect(carousel).toHaveAttribute("aria-roledescription", "carousel");
-    expect(carousel).toHaveAttribute("aria-keyshortcuts", "ArrowLeft ArrowRight");
-    expect(carousel).toHaveAttribute("title", "← and → turn between versions");
-    carousel.focus();
-    vi.mocked(announce).mockClear();
-    fireEvent.keyDown(carousel, { key: "ArrowRight" });
-    expect(document.activeElement).toBe(carousel);
-    // The name stays put, so only the announcement says the slide: once, not twice.
-    expect(carousel).toHaveAccessibleName("Versions of this screen");
-    expect(announce).toHaveBeenCalledTimes(1);
-    expect(announce).toHaveBeenLastCalledWith("p2’s screen at 00:40 · 2 of 2");
-    // ↓ to another screen: a new board; focus goes to its title, which says where we are.
-    fireEvent.keyDown(carousel, { key: "ArrowDown" });
-    expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1 }));
   });
 
   it("leaves focus alone when it was not in the lens", async () => {
@@ -1085,15 +911,6 @@ async function openVersions(ui: React.ReactElement = <ScreensLens />) {
 }
 
 describe("a screen is one place for everything about it", () => {
-  it("opens on the version that links the most quotes, and names whose screenshot it is", async () => {
-    mockVersions();
-    const c = await openVersions();
-    expect(screen.getByAltText("p2’s screen: Basket, at 00:40")).toBeInTheDocument();
-    expect(c.querySelector(".screens-caption")).toHaveTextContent("p2’s screen at 00:40 · 2 of 2");
-    // A carousel, not a row of participant buttons.
-    expect(screen.getByRole("group", { name: "Versions of this screen" })).toBeInTheDocument();
-  });
-
   it("links only the quotes whose words are on the showing screengrab; the set never changes", async () => {
     mockVersions();
     const c = await openVersions();
@@ -1179,26 +996,13 @@ describe("the carousel", () => {
   it("turns one slide per horizontal swipe", async () => {
     mockVersions();
     const c = await openVersions();
-    const carousel = c.querySelector<HTMLElement>(".screens-carousel")!;
+    const carousel = c.querySelector<HTMLElement>(".screens-slides")!;
     fireEvent.wheel(carousel, { deltaX: -40, deltaY: 0 });
-    expect(screen.getByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
+    expect(await screen.findByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
     // The same swipe's momentum does not turn it again (with two slides it would come back).
     fireEvent.wheel(carousel, { deltaX: -30, deltaY: 0 });
     fireEvent.wheel(carousel, { deltaX: -20, deltaY: 0 });
     expect(screen.getByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
-  });
-
-  it("turns from its chevrons and dots, which are the pointer's and not tab stops", async () => {
-    mockVersions();
-    await openVersions();
-    const next = screen.getByRole("button", { name: "Next screengrab" });
-    expect(next.tabIndex).toBe(-1);
-    fireEvent.click(next);
-    expect(screen.getByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
-    const dot = screen.getByRole("button", { name: "p2’s screen" });
-    expect(dot.tabIndex).toBe(-1);
-    fireEvent.click(dot);
-    expect(screen.getByAltText("p2’s screen: Basket, at 00:40")).toBeInTheDocument();
   });
 
   it("cross-fades in one frame: the neighbouring versions are in it, one showing", async () => {
@@ -1210,120 +1014,13 @@ describe("the carousel", () => {
   });
 });
 
-describe("whose quotes", () => {
-  it("dims the others' cards with toggle chips, and never turns the carousel", async () => {
-    mockVersions();
-    const c = await openVersions();
-    const chips = screen.getByRole("group", { name: "Whose quotes" });
-    const p1 = [...chips.querySelectorAll("button")].find((b) => b.textContent === "p1")!;
-    expect(p1).toHaveAttribute("aria-pressed", "false");
-    fireEvent.click(p1);
-    expect(p1).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByAltText("p2’s screen: Basket, at 00:40")).toBeInTheDocument(); // still p2's
-    const muted = [...c.querySelectorAll<HTMLElement>(".screens-card.is-muted")].map((el) => el.dataset.dom).sort();
-    expect(muted).toEqual(["q-p2-20", "q-p2-60"]);
-    fireEvent.click(p1);
-    expect(c.querySelector(".screens-card.is-muted")).toBeNull();
-  });
-});
 
-describe("the narrative", () => {
-  it("numbers each person's quotes among their own, in time order, and says so", async () => {
-    mockVersions();
-    const c = await openVersions();
-    const mark = (dom: string) => {
-      const card = [...c.querySelectorAll<HTMLElement>(".screens-card")].find((el) => el.dataset.dom === dom)!;
-      return [card.querySelector(".screens-seq")!.textContent, card.querySelector(".bn-sr-only")!.textContent];
-    };
-    expect(mark("q-p1-10")).toEqual(["p11", "p1, quote 1 of 2"]);
-    expect(mark("q-p1-30")).toEqual(["p12", "p1, quote 2 of 2"]);
-    expect(mark("q-p2-20")).toEqual(["p21", "p2, quote 1 of 2"]);
-    expect(mark("q-p2-60")).toEqual(["p22", "p2, quote 2 of 2"]);
-  });
-
-  async function focused() {
-    mockVersions();
-    const c = await openVersions(
-      <FocusProvider>
-        <ScreensLens />
-      </FocusProvider>,
-    );
-    const now = () => c.querySelector<HTMLElement>(".quote-card.bn-focused")?.id ?? null;
-    return { c, now };
-  }
-
-  it("steps through the screen's quotes in time order with J and K, bringing each forward", async () => {
-    const { c, now } = await focused();
-    const press = (key: string) => fireEvent.keyDown(document, { key });
-    press("j");
-    await waitFor(() => expect(now()).toBe("q-p1-10"));
-    press("j");
-    await waitFor(() => expect(now()).toBe("q-p2-20"));
-    // Brought forward, and its line lit.
-    const card = [...c.querySelectorAll<HTMLElement>(".screens-card")].find((el) => el.dataset.dom === "q-p2-20")!;
-    expect(card.className).toContain("is-lifted");
-    expect(c.querySelector(".screens-hl.on")).not.toBeNull();
-    press("j");
-    await waitFor(() => expect(now()).toBe("q-p1-30"));
-    press("k");
-    await waitFor(() => expect(now()).toBe("q-p2-20"));
-  });
-
-  it("steps through only the chosen people's quotes when a chip is on", async () => {
-    const { now } = await focused();
-    const chips = screen.getByRole("group", { name: "Whose quotes" });
-    fireEvent.click([...chips.querySelectorAll("button")].find((b) => b.textContent === "p2")!);
-    fireEvent.keyDown(document, { key: "j" });
-    await waitFor(() => expect(now()).toBe("q-p2-20"));
-    fireEvent.keyDown(document, { key: "j" });
-    await waitFor(() => expect(now()).toBe("q-p2-60"));
-    fireEvent.keyDown(document, { key: "j" });
-    await waitFor(() => expect(now()).toBe("q-p2-60")); // clamped, as moveFocus is
-  });
-
-  it("leaves J and K to a field, a chord, or a key someone else took", async () => {
-    const { now } = await focused();
-    fireEvent.keyDown(document, { key: "j", metaKey: true });
-    fireEvent.keyDown(document, { key: "j", shiftKey: true });
-    const handled = new KeyboardEvent("keydown", { key: "j", bubbles: true, cancelable: true });
-    handled.preventDefault();
-    act(() => {
-      document.dispatchEvent(handled);
-    });
-    expect(now()).toBeNull();
-    const taken = new KeyboardEvent("keydown", { key: "j", bubbles: true, cancelable: true });
-    act(() => {
-      document.dispatchEvent(taken);
-    });
-    expect(taken.defaultPrevented).toBe(true); // the lens claimed it
-  });
-});
 
 describe("the Mac's View menu", () => {
   const menu = (action: string) =>
     act(() => {
       window.dispatchEvent(new CustomEvent("bn:menu-action", { detail: { action } }));
     });
-
-  it("turns the carousel, changes screen and steps the quotes by name", async () => {
-    mockVersions();
-    const c = await openVersions(
-      <FocusProvider>
-        <ScreensLens />
-      </FocusProvider>,
-    );
-    menu("nextScreenshot");
-    expect(screen.getByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
-    menu("previousScreenshot");
-    expect(screen.getByAltText("p2’s screen: Basket, at 00:40")).toBeInTheDocument();
-    menu("nextQuote");
-    await waitFor(() => expect(c.querySelector(".quote-card.bn-focused")?.id).toBe("q-p1-10"));
-    menu("previousQuote");
-    menu("nextScreen");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Delivery or collect");
-    menu("previousScreen");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Basket");
-  });
 
   it("tidies the showing screengrab", async () => {
     localStorage.setItem("bristlenose-screens-placements-1",
@@ -1396,53 +1093,14 @@ function measured(w = 900) {
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(w),
     vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(300),
     vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(100),
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+      return this.clientWidth;
+    }),
   ];
   return { width: spies[0], restore: () => spies.forEach((s) => s.mockRestore()) };
 }
 
-describe("the report's per-quote keys on Screens", () => {
-  // The report's s/h/t/r/x/Enter act only on the quotes this lens registers. A chip dims cards, it
-  // does not remove them: a dimmed card takes a click, so it must take a key — and ⌘A selects it.
-  it("are scoped to every card the board shows, a chip-dimmed one included", async () => {
-    const ctx: { current: ReturnType<typeof useFocus> | null } = { current: null };
-    function Probe() {
-      const f = useFocus();
-      useEffect(() => {
-        ctx.current = f;
-      });
-      return null;
-    }
-    mockVersions();
-    await openVersions(
-      <FocusProvider>
-        <Probe />
-        <ScreensLens />
-      </FocusProvider>,
-    );
-    const chips = screen.getByRole("group", { name: "Whose quotes" });
-    fireEvent.click([...chips.querySelectorAll("button")].find((b) => b.textContent === "p2")!);
-    expect(new Set(ctx.current!.getVisibleQuoteIds())).toEqual(new Set(["q-p1-10", "q-p2-20", "q-p1-30", "q-p2-60"]));
-    act(() => ctx.current!.selectAll());
-    expect(ctx.current!.selectedIds.has("q-p1-10")).toBe(true);
-  });
-});
 
-describe("bringing forward with J/K after a press", () => {
-  it("raises the card J lands on, not the one pressed before", async () => {
-    mockVersions();
-    const c = await openVersions(
-      <FocusProvider>
-        <ScreensLens />
-      </FocusProvider>,
-    );
-    fireEvent.pointerDown(cardOf(c, "q-p1-30").querySelector(".quote-body")!);
-    expect(cardOf(c, "q-p1-30").className).toContain("is-lifted");
-    fireEvent.keyDown(document, { key: "j" });
-    await waitFor(() => expect(c.querySelector(".quote-card.bn-focused")?.id).toBe("q-p1-10"));
-    expect(cardOf(c, "q-p1-10").className).toContain("is-lifted");
-    expect(cardOf(c, "q-p1-30").className).not.toContain("is-lifted");
-  });
-});
 
 describe("a placed card with no screengrab to place it against", () => {
   it("is listed with the rest rather than held hidden", async () => {
@@ -1464,24 +1122,9 @@ describe("a placed card with no screengrab to place it against", () => {
     const card = cardOf(c, "q-p1-10");
     expect(card.closest(".screens-loose")).not.toBeNull();
     expect(card.style.visibility).not.toBe("hidden");
-    expect(card.className).toContain("is-placed"); // still the researcher's
   });
 });
 
-describe("Tidy, counted once", () => {
-  // A spot kept for a quote that is not on the board (hidden, or gone) is not an arrangement anyone
-  // can see: the arrangement control, the right-click menu and View ▸ Tidy all leave it alone.
-  it("offers nothing for a spot kept for a quote not on the board", async () => {
-    localStorage.setItem("bristlenose-screens-placements-1",
-      JSON.stringify({ "s1@12/q-gone": { kind: "edge", side: "R", frac: 0.4, z: 31 } }));
-    mockApi(screensResponse());
-    const { container } = render(<ScreensLens />);
-    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Shopping Bag"));
-    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
-    fireEvent.contextMenu(container.querySelector(".screens-stage")!);
-    expect(screen.queryByRole("menu")).toBeNull();
-  });
-});
 
 describe("focus after On p1's screen", () => {
   it("lands in the card once it has a place in the margin", async () => {
@@ -1554,5 +1197,874 @@ describe("stills", () => {
     fireEvent.keyDown(document, { key: "ArrowRight" });
     await waitFor(() => expect(asked()).toEqual(new Set(["s1", "s2", "s3", "s5"])));
     expect(container.querySelectorAll(".screens-slide")).toHaveLength(3);
+  });
+});
+
+// ── The owner's feedback round, 15 Oct 2026 (docs/design-screens.md S5) ────
+
+const STORE = "bristlenose-screens-arrangements-1";
+const stored = (version: string) => (JSON.parse(localStorage.getItem(STORE) ?? "{}") as Record<string, Record<string, unknown>>)[version];
+
+const px = (v: string) => Number.parseFloat(v || "0") || 0;
+/** The fixture's screengrab: where `.screens-shot` sits in the board, and the image's 1px border
+ *  (its outer box is 2px wider and taller than its inner, client box) — so a test can see a
+ *  measurement taken the wrong way. */
+const GEO = { SX: 16, SY: 40, BORDER: 2 };
+/**
+ * A model of the board's layout for jsdom, which lays nothing out: the screengrab at (SX, SY),
+ * W × H inside a 1px border; a right column a gutter beyond its outer edge; the band below a gutter
+ * under it; the free layer absolute; the list below everything; the board itself at (0, -scroll)
+ * in the viewport. Every card CARD_W × 100. Mirrors screens.css closely enough that a card's
+ * rectangle follows its inline style, which is what the board writes.
+ */
+function geometry(start: { width?: number; height?: number } = {}) {
+  let W = start.width ?? 1200;
+  let H = start.height ?? 300;
+  let scroll = 0;
+  const rect = (left: number, top: number, width: number, height: number) =>
+    ({ left, top: top - scroll, width, height, right: left + width, bottom: top - scroll + height, x: left, y: top - scroll, toJSON: () => ({}) }) as DOMRect;
+  const offset = (el: HTMLElement, v: number) => (el.classList.contains("screens-shot") ? v : 0);
+  const spies = [
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => W),
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(() => H),
+    // The image's outer box is its inner box and a 1px border each side; every card is 100px tall.
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
+      return this.matches("img.is-current") ? H + GEO.BORDER : 100;
+    }),
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+      return this.matches("img.is-current") ? W + GEO.BORDER : 0;
+    }),
+    vi.spyOn(HTMLElement.prototype, "offsetLeft", "get").mockImplementation(function (this: HTMLElement) { return offset(this, GEO.SX); }),
+    vi.spyOn(HTMLElement.prototype, "offsetTop", "get").mockImplementation(function (this: HTMLElement) { return offset(this, GEO.SY); }),
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      const el = this as HTMLElement;
+      if (el.classList.contains("screens-board")) return rect(0, 0, 2000, 2000);
+      if (el.matches("img.is-current")) return rect(GEO.SX, GEO.SY, W + GEO.BORDER, H + GEO.BORDER);
+      if (!el.classList.contains("screens-card")) return rect(0, 0, 0, 0);
+      const l = px(el.style.left), t = px(el.style.top);
+      const right = GEO.SX + W + GEO.BORDER + 32, below = GEO.SY + H + GEO.BORDER + 32;
+      if (el.closest(".screens-col-r")) return rect(right + l, GEO.SY + t, CARD_W, 100);
+      if (el.closest(".screens-band-b")) return rect(GEO.SX + l, below + t, CARD_W, 100);
+      if (el.closest(".screens-band-t")) return rect(GEO.SX + l, t, CARD_W, 100);
+      if (el.closest(".screens-free")) return rect(l, t, CARD_W, 100);
+      const list = [...(el.parentElement?.children ?? [])].indexOf(el);
+      return rect(list * (CARD_W + 12), below + 200, CARD_W, 100);
+    }),
+  ];
+  return {
+    set(w: number, h = H) {
+      W = w;
+      H = h;
+    },
+    scrollTo(y: number) {
+      scroll = y;
+    },
+    restore: () => spies.forEach((s) => s.mockRestore()),
+  };
+}
+
+/** Drag a card by its top grip, past the threshold. */
+function drag(card: HTMLElement, dx: number, dy: number) {
+  const grip = card.querySelector<HTMLElement>(".screens-grip-top")!;
+  fireEvent.pointerDown(grip, { button: 0, clientX: 100, clientY: 100 });
+  act(() => {
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 100 + dx, clientY: 100 + dy }));
+  });
+  act(() => {
+    window.dispatchEvent(new MouseEvent("pointerup", { clientX: 100 + dx, clientY: 100 + dy }));
+  });
+}
+
+const box = (el: HTMLElement) => {
+  const r = el.getBoundingClientRect();
+  return { left: r.left, top: r.top };
+};
+
+/** Open the one-screen board, measured, with every card placed. */
+async function measuredBoard() {
+  mockApi(screensResponse());
+  const r = render(<ScreensLens />);
+  await waitFor(() => expect(cardOf(r.container, "q-p1-10").style.visibility).not.toBe("hidden"));
+  return r.container;
+}
+
+describe("the arrangement: automatic, or the researcher's", () => {
+  // The owner: "when I drag a card I'm saying leave all the other cards where they are and move
+  // this one."
+  it("the first drag switches the whole board to custom, freezing every other card where it was", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
+      const linked = box(cardOf(c, "q-p1-10"));
+      drag(cardOf(c, "q-p1-30"), 60, -150);
+      expect(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
+      // Every card the board showed has a spot; the one not dragged has not moved.
+      expect(Object.keys(stored("url:/shoppingcart|s1")).sort()).toEqual(["q-p1-10", "q-p1-30"]);
+      await waitFor(() => expect(box(cardOf(c, "q-p1-10"))).toEqual(linked));
+      expect(cardOf(c, "q-p1-10").closest(".screens-free")).not.toBeNull();
+    } finally {
+      g.restore();
+    }
+  });
+
+  it("in custom, nothing re-flows: a narrower window keeps each card on its edge, and a drag moves only its card", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      drag(cardOf(c, "q-p1-30"), 60, -150);
+      const listedSpot = stored("url:/shoppingcart|s1")["q-p1-30"];
+      g.set(900); // narrower, still above the rows threshold: the card holds its intent, not a column
+      resized();
+      await waitFor(() => expect(box(cardOf(c, "q-p1-10")).left).toBe(GEO.SX + 900 + GEO.BORDER + 32));
+      expect(cardOf(c, "q-p1-10").closest(".screens-col")).toBeNull();
+      expect(cardOf(c, "q-p1-10").closest(".screens-free")).not.toBeNull();
+      drag(cardOf(c, "q-p1-10"), -40, 20);
+      expect(stored("url:/shoppingcart|s1")["q-p1-30"]).toEqual(listedSpot);
+    } finally {
+      g.restore();
+    }
+  });
+
+  it("in custom, a resize scales the arrangement with the screengrab", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      drag(cardOf(c, "q-p1-30"), 60, -150);
+      const at = box(cardOf(c, "q-p1-10"));
+      // Along the edge as a fraction of the screengrab's height (its laid-out box, border included).
+      const along = (at.top - GEO.SY) / (300 + GEO.BORDER);
+      g.set(900, 150);
+      resized();
+      await waitFor(() => expect(box(cardOf(c, "q-p1-10")).left).toBe(GEO.SX + 900 + GEO.BORDER + 32));
+      expect(box(cardOf(c, "q-p1-10")).top).toBeCloseTo(GEO.SY + along * (150 + GEO.BORDER), 6);
+    } finally {
+      g.restore();
+    }
+  });
+
+  it("Tidy is the way back: every card returns to automatic, with one glide, and it undoes", async () => {
+    const g = geometry();
+    const animate = vi.fn();
+    (HTMLElement.prototype as unknown as Record<string, unknown>).animate = animate;
+    try {
+      const c = await measuredBoard();
+      drag(cardOf(c, "q-p1-10"), -300, 0);
+      await waitFor(() => expect(cardOf(c, "q-p1-10").closest(".screens-free")).not.toBeNull());
+      animate.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" }));
+      expect(stored("url:/shoppingcart|s1")).toBeUndefined();
+      await waitFor(() => expect(cardOf(c, "q-p1-10").closest(".screens-col-r")).not.toBeNull());
+      expect(cardOf(c, "q-p1-30").closest(".screens-loose")).not.toBeNull();
+      await waitFor(() => expect(animate).toHaveBeenCalled());
+      expect(getUndoState().undoAction).toBe("tidy");
+      await act(async () => {
+        await undo();
+      });
+      expect(Object.keys(stored("url:/shoppingcart|s1"))).toContain("q-p1-10");
+    } finally {
+      g.restore();
+      delete (HTMLElement.prototype as unknown as Record<string, unknown>).animate;
+    }
+  });
+
+  it("each drag is one undo, and undoing the drag that went custom returns the board to automatic", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      drag(cardOf(c, "q-p1-30"), 60, -150);
+      expect(getUndoState().undoAction).toBe("moveQuote");
+      drag(cardOf(c, "q-p1-30"), 10, 10);
+      await act(async () => {
+        await undo(); // the second move
+      });
+      expect(stored("url:/shoppingcart|s1")).toBeDefined();
+      await act(async () => {
+        await undo(); // the move that switched the board
+      });
+      expect(stored("url:/shoppingcart|s1")).toBeUndefined();
+      expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull();
+      await waitFor(() => expect(cardOf(c, "q-p1-10").closest(".screens-col-r")).not.toBeNull());
+      await act(async () => {
+        await redo();
+      });
+      expect(stored("url:/shoppingcart|s1")).toBeDefined();
+    } finally {
+      g.restore();
+    }
+  });
+
+  it("Return to automatic puts one card where Tidy would, and nothing else moves", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      const home = box(cardOf(c, "q-p1-10"));
+      drag(cardOf(c, "q-p1-10"), -400, 40);
+      const list = box(cardOf(c, "q-p1-30"));
+      fireEvent.contextMenu(cardOf(c, "q-p1-10").querySelector(".quote-body")!);
+      const items = await screen.findAllByRole("menuitem");
+      expect(items.map((i) => i.textContent)).toEqual(["Return to automatic", "Tidy"]);
+      fireEvent.click(items[0]);
+      await waitFor(() => expect(box(cardOf(c, "q-p1-10"))).toEqual(home));
+      expect(box(cardOf(c, "q-p1-30"))).toEqual(list);
+      expect(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument(); // still custom
+      expect(getUndoState().undoAction).toBe("moveQuote");
+    } finally {
+      g.restore();
+    }
+  });
+
+  it("is never lost by a re-read that picks another still moment", async () => {
+    const g = geometry();
+    const { bumpRefreshKey } = await import("../../contexts/LastRunStore");
+    try {
+      const c = await measuredBoard();
+      drag(cardOf(c, "q-p1-30"), 60, -150);
+      const moved = screensResponse({
+        screens: [{ key: "url:/shoppingcart", name: "/shoppingcart", quotes: 2, tabs: [{ ...TAB, t: 13 }] }],
+      });
+      mockApi(moved);
+      act(() => bumpRefreshKey());
+      expect(await screen.findByAltText("p1’s screen: Shopping Bag, at 00:13")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
+      expect(cardOf(c, "q-p1-30").closest(".screens-free")).not.toBeNull();
+    } finally {
+      g.restore();
+    }
+  });
+
+  it("keeps each version's arrangement, through a change of version and back", async () => {
+    setArrangement("1", "url:/basket", "s2", { "q-p2-20": { kind: "edge", edge: "R", along: 0.2, out: 32, z: 31 } });
+    mockVersions();
+    await openVersions();
+    expect(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "ArrowLeft" });
+    expect(screen.queryByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeNull(); // p1's is automatic
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    expect(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
+  });
+
+  it("returns a hidden card to its spot when it is shown again", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      drag(cardOf(c, "q-p1-10"), -300, 40);
+      await waitFor(() => expect(cardOf(c, "q-p1-10").closest(".screens-free")).not.toBeNull());
+      const spot = box(cardOf(c, "q-p1-10"));
+      act(() => hideQuotes(["q-p1-10"]));
+      await waitFor(() => expect(getQuotesSnapshot().hidden["q-p1-10"]).toBe(true));
+      await waitFor(() => expect(c.querySelector('[data-dom="q-p1-10"]')).toBeNull());
+      act(() => unhideQuotes(["q-p1-10"]));
+      await waitFor(() => expect(cardOf(c, "q-p1-10")?.closest(".screens-free")).toBeTruthy());
+      await waitFor(() => expect(box(cardOf(c, "q-p1-10"))).toEqual(spot));
+    } finally {
+      g.restore();
+    }
+  });
+
+  it("abandons a drag when the board changes, putting back the arrangement it froze", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      const grip = cardOf(c, "q-p1-30").querySelector<HTMLElement>(".screens-grip-top")!;
+      fireEvent.pointerDown(grip, { button: 0, clientX: 100, clientY: 100 });
+      act(() => {
+        window.dispatchEvent(new MouseEvent("pointermove", { clientX: 160, clientY: 40 }));
+      });
+      expect(stored("url:/shoppingcart|s1")).toBeDefined(); // frozen at the drag's start
+      fireEvent.keyDown(document, { key: "ArrowDown" });
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Delivery or collect");
+      expect(stored("url:/shoppingcart|s1")).toBeUndefined();
+      act(() => {
+        window.dispatchEvent(new MouseEvent("pointerup", { clientX: 160, clientY: 40 }));
+      });
+      expect(stored("url:/shoppingcart|s1")).toBeUndefined();
+    } finally {
+      g.restore();
+    }
+  });
+
+  it("does not switch on a click: a grip pressed and released in place focuses the card and saves nothing", async () => {
+    const g = geometry();
+    try {
+      mockApi(screensResponse());
+      const { container } = render(
+        <FocusProvider>
+          <ScreensLens />
+        </FocusProvider>,
+      );
+      await waitFor(() => expect(cardOf(container, "q-p1-10").style.visibility).not.toBe("hidden"));
+      const grip = cardOf(container, "q-p1-10").querySelector<HTMLElement>(".screens-grip-top")!;
+      fireEvent.pointerDown(grip, { button: 0, clientX: 100, clientY: 100 });
+      act(() => {
+        window.dispatchEvent(new MouseEvent("pointermove", { clientX: 101, clientY: 101 }));
+        window.dispatchEvent(new MouseEvent("pointerup", { clientX: 101, clientY: 101 }));
+      });
+      expect(localStorage.getItem(STORE)).toBeNull();
+      await waitFor(() => expect(cardOf(container, "q-p1-10").querySelector(".quote-card.bn-focused")).not.toBeNull());
+    } finally {
+      g.restore();
+    }
+  });
+});
+
+describe("a live window resize", () => {
+  async function resizeLive(reduce: boolean) {
+    const g = geometry({ width: 1200 });
+    const animate = vi.fn();
+    (HTMLElement.prototype as unknown as Record<string, unknown>).animate = animate;
+    const mm = window.matchMedia;
+    window.matchMedia = ((q: string) => ({ matches: reduce && q.includes("reduce") })) as unknown as typeof window.matchMedia;
+    try {
+      const c = await measuredBoard();
+      const board = () => c.querySelector<HTMLElement>(".screens-board")!;
+      act(() => setLiveResize(true));
+      g.set(800);
+      resized();
+      // Held: not recomposed (still one column, the card still in it), the whole board scaled.
+      expect(board().className).toContain("mode-r");
+      expect(cardOf(c, "q-p1-10").closest(".screens-col-r")).not.toBeNull();
+      expect(c.querySelector<HTMLElement>(".screens-scale")!.style.transform).toBe(`scale(${800 / 1200})`);
+      animate.mockClear();
+      act(() => setLiveResize(false));
+      await waitFor(() => expect(board().className).toContain("mode-rows"));
+      await waitFor(() => expect(cardOf(c, "q-p1-10").closest(".screens-band-b")).not.toBeNull());
+      expect(c.querySelector<HTMLElement>(".screens-scale")!.style.transform).toBe("");
+      return animate;
+    } finally {
+      g.restore();
+      delete (HTMLElement.prototype as unknown as Record<string, unknown>).animate;
+      window.matchMedia = mm;
+    }
+  }
+
+  it("holds the board still, scaled as one, and settles once with a glide when it ends", async () => {
+    const animate = await resizeLive(false);
+    await waitFor(() => expect(animate).toHaveBeenCalled());
+  });
+
+  it("settles at once under reduced motion", async () => {
+    const animate = await resizeLive(true);
+    expect(animate).not.toHaveBeenCalled();
+  });
+});
+
+describe("which version: one unit on the heading line", () => {
+  it("opens on the version that links the most quotes, with its moment's timecode and its badge checked", async () => {
+    mockVersions();
+    const c = await openVersions();
+    expect(await screen.findByAltText("p2’s screen: Basket, at 00:40")).toBeInTheDocument();
+    const unit = c.querySelector<HTMLElement>(".section-heading .screens-versions")!;
+    expect(unit.querySelector("a.timecode")).toHaveTextContent("00:40");
+    const group = screen.getByRole("radiogroup", { name: "Versions of this screen" });
+    const radios = [...group.querySelectorAll<HTMLElement>('[role="radio"]')];
+    // A radio says its own position; its name is whose screen.
+    expect(radios.map((r) => r.getAttribute("aria-label"))).toEqual(["p1’s screen", "p2’s screen"]);
+    expect(radios.map((r) => r.getAttribute("aria-checked"))).toEqual(["false", "true"]);
+    expect(radios.map((r) => r.tabIndex)).toEqual([-1, 0]); // one tab stop
+    expect(radios[1].className).toContain("bn-person-badge-here");
+    // Nothing for choosing a version sits on the screengrab.
+    expect(c.querySelector(".screens-shot button, .screens-dot, .screens-chev, .screens-caption")).toBeNull();
+  });
+
+  it("moves the checked badge with ←/→ inside the group, focus going with it", async () => {
+    mockVersions();
+    await openVersions();
+    const checked = () => screen.getByRole("radio", { checked: true });
+    checked().focus();
+    vi.mocked(announce).mockClear();
+    fireEvent.keyDown(checked(), { key: "ArrowLeft" });
+    expect(await screen.findByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
+    expect(checked()).toHaveAccessibleName("p1’s screen");
+    expect(document.activeElement).toBe(checked());
+    expect(announce).not.toHaveBeenCalled(); // the focused badge says it
+  });
+
+  it("steps with ‹ › and the arrow keys anywhere, and says which version", async () => {
+    mockVersions();
+    await openVersions();
+    fireEvent.click(screen.getByRole("button", { name: "Next version" }));
+    expect(await screen.findByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
+    vi.mocked(announce).mockClear();
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    expect(await screen.findByAltText("p2’s screen: Basket, at 00:40")).toBeInTheDocument();
+    expect(announce).toHaveBeenLastCalledWith("p2’s screen at 00:40 · 2 of 2");
+  });
+
+  it("collapses past five versions to one badge that opens a menu of them", async () => {
+    const many = screensResponse({
+      screens: [{ key: "url:/x", name: "/x", quotes: 2, default_tab: 2,
+        tabs: [1, 2, 3, 4, 5, 6, 7].map((k) => ({ ...TAB, session_id: `s${k}`, code: `p${k}`, t: 10 * k })) }],
+    });
+    mockApi(many);
+    await opened();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    const pick = screen.getByRole("button", { name: "p3’s screen, 3 of 7" });
+    expect(pick).toHaveTextContent("3 of 7");
+    fireEvent.click(pick);
+    const items = await screen.findAllByRole("menuitemradio");
+    expect(items).toHaveLength(7);
+    // It opens on the checked version, and Home/End reach the ends.
+    expect(items[2]).toHaveAttribute("aria-checked", "true");
+    expect(document.activeElement).toBe(items[2]);
+    fireEvent.keyDown(items[2], { key: "End" });
+    expect(document.activeElement).toBe(items[6]);
+    fireEvent.keyDown(items[6], { key: "Home" });
+    expect(document.activeElement).toBe(items[0]);
+    fireEvent.click(items[5]);
+    expect(await screen.findByAltText("p6’s screen: Shopping Bag, at 01:00")).toBeInTheDocument();
+  });
+
+  it("shows the moment and the one badge when there is one version, with nothing to step", async () => {
+    mockApi(screensResponse());
+    const c = await (async () => {
+      const r = render(<ScreensLens />);
+      await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Shopping Bag"));
+      return r.container;
+    })();
+    expect(c.querySelector(".screens-versions a.timecode")).toHaveTextContent("00:12");
+    expect(c.querySelector(".screens-versions .bn-person-badge-here")).toHaveTextContent("p1");
+    expect(screen.queryByRole("button", { name: "Next version" })).toBeNull();
+  });
+});
+
+describe("cards", () => {
+  it("carry no per-person sequence badge: the timecode already says the order", async () => {
+    mockVersions();
+    const c = await openVersions();
+    expect(c.querySelector(".screens-seq")).toBeNull();
+  });
+
+  it("are one width everywhere, the margins and the list alike", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      expect(cardOf(c, "q-p1-10").style.width).toBe(`${CARD_W}px`);
+      expect(c.querySelector<HTMLElement>(".screens-lens")!.style.getPropertyValue("--screens-card-w")).toBe(`${CARD_W}px`);
+    } finally {
+      g.restore();
+    }
+  });
+
+  // The owner, 15 Oct 2026: "interesting but new… hide here for the moment". Only here.
+  it("leave out the [When asked…] line on this lens", async () => {
+    const asked = { ...QUOTES, unjoined: QUOTES.unjoined!.map((q) => ({ ...q, researcher_context: "When asked about price" })) };
+    vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens") return Promise.resolve(screensResponse());
+      if (path === "/quotes") return Promise.resolve(asked);
+      return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+    }) as typeof apiGet);
+    const { container } = render(<ScreensLens />);
+    await waitFor(() => expect(container.querySelector(".screens-loose blockquote")).not.toBeNull());
+    expect(container.textContent).not.toContain("When asked about price");
+  });
+});
+
+describe("the shared keys", () => {
+  function Probe({ out }: { out: { current: ReturnType<typeof useFocus> | null } }) {
+    const f = useFocus();
+    useEffect(() => {
+      out.current = f;
+    });
+    return null;
+  }
+
+  // J/K, ⇧J/K, ⇧-click and ⌘A are the report's handler, as on Quotes, over this order.
+  it("registers the board's reading order: the margins as they sit, then the list in time order", async () => {
+    const ctx: { current: ReturnType<typeof useFocus> | null } = { current: null };
+    mockVersions();
+    await openVersions(
+      <FocusProvider>
+        <Probe out={ctx} />
+        <ScreensLens />
+      </FocusProvider>,
+    );
+    // Unmeasured, the margins go in their lines' time order; the unlinked card comes last.
+    expect(ctx.current!.getVisibleQuoteIds()).toEqual(["q-p2-20", "q-p1-30", "q-p2-60", "q-p1-10"]);
+  });
+
+  it("orders the margins by where they sit once measured", async () => {
+    const g = geometry();
+    const ctx: { current: ReturnType<typeof useFocus> | null } = { current: null };
+    try {
+      mockApi(screensResponse());
+      const { container } = render(
+        <FocusProvider>
+          <Probe out={ctx} />
+          <ScreensLens />
+        </FocusProvider>,
+      );
+      await waitFor(() => expect(cardOf(container, "q-p1-10").style.visibility).not.toBe("hidden"));
+      expect(ctx.current!.getVisibleQuoteIds()).toEqual(["q-p1-10", "q-p1-30"]);
+    } finally {
+      g.restore();
+    }
+  });
+
+  it("leaves J and K to the shared handler, and a focused card's line lights", async () => {
+    const ctx: { current: ReturnType<typeof useFocus> | null } = { current: null };
+    mockVersions();
+    const c = await openVersions(
+      <FocusProvider>
+        <Probe out={ctx} />
+        <ScreensLens />
+      </FocusProvider>,
+    );
+    const j = new KeyboardEvent("keydown", { key: "j", bubbles: true, cancelable: true });
+    act(() => {
+      document.dispatchEvent(j);
+    });
+    expect(j.defaultPrevented).toBe(false);
+    act(() => ctx.current!.setFocus("q-p1-30", { scroll: false }));
+    await waitFor(() => expect(cardOf(c, "q-p1-30").querySelector(".quote-card.bn-focused")).not.toBeNull());
+    expect(c.querySelector(".screens-hl.on")).not.toBeNull();
+  });
+});
+
+describe("the navigator", () => {
+  it("is a keyboard-operable separator that remembers its width, as Discussion's guide is", async () => {
+    mockApi(screensResponse());
+    const { container } = render(<ScreensLens />);
+    const split = await screen.findByRole("separator", { name: "Resize the list of screens" });
+    const lens = container.querySelector<HTMLElement>(".screens-lens")!;
+    fireEvent.keyDown(split, { key: "Home" });
+    expect(split).toHaveAttribute("aria-valuenow", "200");
+    fireEvent.keyDown(split, { key: "ArrowRight" });
+    expect(split).toHaveAttribute("aria-valuenow", "210");
+    expect(lens.style.getPropertyValue("--screens-nav-w")).toBe("210px");
+    expect(localStorage.getItem("bn-screens-nav-width")).toBe("210");
+    fireEvent.keyDown(split, { key: "End" });
+    expect(split).toHaveAttribute("aria-valuenow", "480");
+  });
+
+  it("counts a screen's quotes as its board does, though the count is not shown for now", () => {
+    const byId = new Map([["a", {} as QuoteResponse], ["b", {} as QuoteResponse]]);
+    const s = { key: "k", name: "/k", quotes: 0, tabs: [{ ...TAB, pins: [{ ...TAB.pins[0], dom_id: "a" }], loose: ["a", "b", "gone"] }] };
+    expect(quotesOnScreen(s as never, byId, {})).toBe(2);
+    expect(quotesOnScreen(s as never, byId, { b: true })).toBe(1);
+  });
+});
+
+describe("the Mac's View menu, by name", () => {
+  const menu = (action: string) =>
+    act(() => {
+      window.dispatchEvent(new CustomEvent("bn:menu-action", { detail: { action } }));
+    });
+
+  it("changes version and screen", async () => {
+    mockVersions();
+    await openVersions();
+    menu("nextScreenshot");
+    expect(await screen.findByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
+    menu("previousScreenshot");
+    expect(await screen.findByAltText("p2’s screen: Basket, at 00:40")).toBeInTheDocument();
+    menu("nextScreen");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Delivery or collect");
+    menu("previousScreen");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Basket");
+  });
+});
+
+// ── Review fixes, 15 Oct 2026 (night) ────────────────────────────────────
+
+const intents = (version: string) => stored(version) as Record<string, { kind: string; edge?: string; along?: number; out?: number }>;
+
+describe("the arrangement, measured one way", () => {
+  // Item 1: the freeze and the placement must measure the screengrab the same way, or the first
+  // drag nudges every right- and bottom-edge card by the image's border.
+  it("leaves a right-edge card exactly where it was through the first drag, with a bordered, offset screengrab", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      const before = box(cardOf(c, "q-p1-10"));
+      expect(before.left).toBe(GEO.SX + 1200 + GEO.BORDER + COLUMN_GUTTER);
+      drag(cardOf(c, "q-p1-30"), 60, -150);
+      await waitFor(() => expect(cardOf(c, "q-p1-10").closest(".screens-free")).not.toBeNull());
+      expect(box(cardOf(c, "q-p1-10"))).toEqual(before);
+    } finally {
+      g.restore();
+    }
+  });
+
+  // Item 3: a page that scrolls mid-drag keeps the card under the pointer.
+  it("keeps a dragged card under the pointer when the page scrolls during the drag", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      const card = cardOf(c, "q-p1-10");
+      const start = box(card);
+      fireEvent.pointerDown(card.querySelector(".screens-grip-top")!, { button: 0, clientX: start.left + 10, clientY: start.top + 4 });
+      act(() => {
+        window.dispatchEvent(new MouseEvent("pointermove", { clientX: start.left + 10, clientY: start.top + 14 }));
+      });
+      g.scrollTo(50); // the page scrolls 50px; the pointer stays where it is on the screen
+      act(() => {
+        window.dispatchEvent(new MouseEvent("pointerup", { clientX: start.left + 10, clientY: start.top + 14 }));
+      });
+      const spot = intents("url:/shoppingcart|s1")["q-p1-10"];
+      // 10px down the screen plus the 50px the board moved up: 60px down the board, still beside it.
+      expect(spot.edge).toBe("R");
+      expect(spot.along! * (300 + GEO.BORDER)).toBeCloseTo(start.top + 60 - GEO.SY, 6);
+    } finally {
+      g.restore();
+    }
+  });
+});
+
+describe("a board that mounts during a live resize", () => {
+  // Item 4.
+  it("lays itself out, and does not glide its cards in from the origin when the resize ends", async () => {
+    const g = geometry();
+    const animate = vi.fn();
+    (HTMLElement.prototype as unknown as Record<string, unknown>).animate = animate;
+    try {
+      setLiveResize(true);
+      const c = await measuredBoard(); // placed though the resize is live
+      act(() => setLiveResize(false));
+      await waitFor(() => expect(cardOf(c, "q-p1-10").style.visibility).not.toBe("hidden"));
+      expect(animate).not.toHaveBeenCalled();
+    } finally {
+      g.restore();
+      delete (HTMLElement.prototype as unknown as Record<string, unknown>).animate;
+    }
+  });
+});
+
+describe("a change of version", () => {
+  // Item 6: a change of version cross-fades; the cards do not glide from one version's spots to
+  // the other's.
+  it("does not glide the cards", async () => {
+    const g = geometry();
+    const animate = vi.fn();
+    (HTMLElement.prototype as unknown as Record<string, unknown>).animate = animate;
+    try {
+      setArrangement("1", "url:/basket", "s2", { "q-p1-30": { kind: "edge", edge: "R", along: 0.5, out: 32, z: 31 } });
+      mockVersions();
+      const c = await openVersions();
+      await waitFor(() => expect(cardOf(c, "q-p1-30").closest(".screens-free")).not.toBeNull());
+      animate.mockClear();
+      fireEvent.keyDown(document, { key: "ArrowLeft" }); // p1's version: automatic
+      expect(await screen.findByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
+      await waitFor(() => expect(cardOf(c, "q-p1-10").closest(".screens-col-r")).not.toBeNull());
+      expect(animate).not.toHaveBeenCalled();
+    } finally {
+      g.restore();
+      delete (HTMLElement.prototype as unknown as Record<string, unknown>).animate;
+    }
+  });
+
+  // Item 5: a drag abandoned by the change of version must not leave a stale "quiet" that swallows
+  // the next Tidy glide on the version now showing.
+  it("leaves the next Tidy's glide alone after a drag it abandoned", async () => {
+    const g = geometry();
+    const animate = vi.fn();
+    (HTMLElement.prototype as unknown as Record<string, unknown>).animate = animate;
+    try {
+      setArrangement("1", "url:/basket", "s1", { "q-p1-10": { kind: "edge", edge: "R", along: 0.9, out: 32, z: 31 } });
+      mockVersions();
+      const c = await openVersions(); // p2's version, automatic
+      const grip = cardOf(c, "q-p1-30").querySelector<HTMLElement>(".screens-grip-top")!;
+      fireEvent.pointerDown(grip, { button: 0, clientX: 100, clientY: 100 });
+      act(() => {
+        window.dispatchEvent(new MouseEvent("pointermove", { clientX: 160, clientY: 40 }));
+      });
+      fireEvent.keyDown(document, { key: "ArrowLeft" }); // to p1's version, which is custom
+      expect(await screen.findByAltText("p1’s screen: Basket, at 00:12")).toBeInTheDocument();
+      await waitFor(() => expect(cardOf(c, "q-p1-10").closest(".screens-free")).not.toBeNull());
+      animate.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" }));
+      await waitFor(() => expect(animate).toHaveBeenCalled());
+    } finally {
+      g.restore();
+      delete (HTMLElement.prototype as unknown as Record<string, unknown>).animate;
+    }
+  });
+});
+
+describe("a version migrated from the 14 Oct store", () => {
+  // Item 7: its first view freezes the rest of the board where automatic puts it, so its linked
+  // cards do not drop into the list.
+  it("freezes its linked cards where automatic puts them, not into the list", async () => {
+    localStorage.setItem("bristlenose-screens-placements-1",
+      JSON.stringify({ "s1@12/q-p1-30": { kind: "edge", side: "R", frac: 0.9, z: 31 } }));
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      await waitFor(() => expect(Object.keys(intents("url:/shoppingcart|s1") ?? {}).sort()).toEqual(["q-p1-10", "q-p1-30"]));
+      await waitFor(() => expect(cardOf(c, "q-p1-10").closest(".screens-free")).not.toBeNull());
+      expect(cardOf(c, "q-p1-10").closest(".screens-loose")).toBeNull();
+      expect(box(cardOf(c, "q-p1-10")).left).toBe(GEO.SX + 1200 + GEO.BORDER + COLUMN_GUTTER); // its automatic spot
+    } finally {
+      g.restore();
+    }
+  });
+});
+
+describe("an undo out of sight", () => {
+  // Item 8: undoing a move on a screen not showing shows it first.
+  it("shows the screen and version the undone move belongs to", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      drag(cardOf(c, "q-p1-30"), 60, -150);
+      fireEvent.keyDown(document, { key: "ArrowDown" });
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Delivery or collect");
+      await act(async () => {
+        await undo();
+      });
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Shopping Bag");
+      expect(stored("url:/shoppingcart|s1")).toBeUndefined();
+    } finally {
+      g.restore();
+    }
+  });
+});
+
+describe("the version steppers by keyboard", () => {
+  // Item 10: focus stays on ‹ › so they work again and again.
+  it("keep focus on the step button: Space works twice", async () => {
+    const many = screensResponse({
+      screens: [{ key: "url:/x", name: "/x", quotes: 2, default_tab: 0,
+        tabs: [1, 2, 3].map((k) => ({ ...TAB, session_id: `s${k}`, code: `p${k}`, t: 10 * k })) }],
+    });
+    mockApi(many);
+    await opened();
+    const user = userEvent.setup();
+    const next = screen.getByRole("button", { name: "Next version" });
+    next.focus();
+    await user.keyboard(" ");
+    expect(screen.getByRole("radio", { checked: true })).toHaveAccessibleName("p2’s screen");
+    expect(document.activeElement).toBe(next);
+    await user.keyboard(" ");
+    expect(screen.getByRole("radio", { checked: true })).toHaveAccessibleName("p3’s screen");
+    expect(document.activeElement).toBe(next);
+  });
+
+  // Item 11: where focus does not move to a new element, the change is announced.
+  it("announce the version they show, since focus stays put", async () => {
+    mockVersions();
+    await openVersions();
+    const prev = screen.getByRole("button", { name: "Previous version" });
+    prev.focus();
+    vi.mocked(announce).mockClear();
+    fireEvent.click(prev);
+    expect(announce).toHaveBeenLastCalledWith("p1’s screen");
+  });
+});
+
+describe("focus through a re-parenting", () => {
+  // Item 12: a card holding keyboard focus that moves to another parent gets focus back.
+  it("puts focus back into a card that moved from a column to a row", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      const star = cardOf(c, "q-p1-10").querySelector<HTMLElement>(".star-btn")!;
+      star.focus();
+      expect(cardOf(c, "q-p1-10").closest(".screens-col-r")).not.toBeNull();
+      g.set(600); // rows: the card moves to the band below
+      resized();
+      await waitFor(() => expect(cardOf(c, "q-p1-10").closest(".screens-band-b")).not.toBeNull());
+      await waitFor(() => expect(document.activeElement).toBe(cardOf(c, "q-p1-10").querySelector(".star-btn")));
+    } finally {
+      g.restore();
+    }
+  });
+});
+
+describe("a custom board at a narrow width", () => {
+  // Item 14 (1.4.10): below the rows threshold the board shows as the automatic rows, and the
+  // researcher's arrangement comes back once it is wide enough.
+  it("shows as rows below the threshold, keeping the arrangement for when it is wide again", async () => {
+    const g = geometry();
+    try {
+      const c = await measuredBoard();
+      drag(cardOf(c, "q-p1-30"), 60, -150);
+      const kept = stored("url:/shoppingcart|s1");
+      g.set(600);
+      resized();
+      await waitFor(() => expect(c.querySelector(".screens-board")!.className).toContain("cols-none"));
+      expect(cardOf(c, "q-p1-10").closest(".screens-band")).not.toBeNull();
+      expect(c.querySelector(".screens-free .screens-card")).toBeNull();
+      expect(stored("url:/shoppingcart|s1")).toEqual(kept);
+      expect(screen.getByRole("button", { name: "Arrangement: Custom. Tidy" })).toBeInTheDocument();
+      g.set(1200);
+      resized();
+      await waitFor(() => expect(cardOf(c, "q-p1-10").closest(".screens-free")).not.toBeNull());
+    } finally {
+      g.restore();
+    }
+  });
+});
+
+describe("moving a card from the keyboard", () => {
+  // Item 15 (2.1.1): ⌥ + an arrow moves the focused card, as a drag does.
+  function Probe({ out }: { out: { current: ReturnType<typeof useFocus> | null } }) {
+    const f = useFocus();
+    useEffect(() => {
+      out.current = f;
+    });
+    return null;
+  }
+  it("moves the focused card one step along its edge, then to the other side, each an undoable Move Quote", async () => {
+    const g = geometry();
+    const ctx: { current: ReturnType<typeof useFocus> | null } = { current: null };
+    try {
+      mockApi(screensResponse());
+      const { container } = render(
+        <FocusProvider>
+          <Probe out={ctx} />
+          <ScreensLens />
+        </FocusProvider>,
+      );
+      await waitFor(() => expect(cardOf(container, "q-p1-10").style.visibility).not.toBe("hidden"));
+      act(() => ctx.current!.setFocus("q-p1-10", { scroll: false }));
+      const before = box(cardOf(container, "q-p1-10"));
+      vi.mocked(announce).mockClear();
+      const press = (key: string) => {
+        const e = new KeyboardEvent("keydown", { key, altKey: true, bubbles: true, cancelable: true });
+        act(() => {
+          document.dispatchEvent(e);
+        });
+        return e;
+      };
+      expect(press("ArrowDown").defaultPrevented).toBe(true);
+      // The board went custom; the card moved one step down its edge, and nothing else.
+      await waitFor(() => expect(box(cardOf(container, "q-p1-10")).top).toBeCloseTo(before.top + MOVE_STEP, 6));
+      expect(box(cardOf(container, "q-p1-10")).left).toBe(before.left);
+      expect(announce).toHaveBeenLastCalledWith("Quote moved");
+      expect(getUndoState().undoAction).toBe("moveQuote");
+      press("ArrowLeft");
+      expect(intents("url:/shoppingcart|s1")["q-p1-10"].edge).toBe("L");
+      await act(async () => {
+        await undo();
+      });
+      expect(intents("url:/shoppingcart|s1")["q-p1-10"].edge).toBe("R");
+      await act(async () => {
+        await undo();
+      });
+      expect(stored("url:/shoppingcart|s1")).toBeUndefined(); // the first move's undo: automatic again
+    } finally {
+      g.restore();
+    }
+  });
+});
+
+describe("the navigator's separator", () => {
+  it("says its width in pixels", async () => {
+    mockApi(screensResponse());
+    render(<ScreensLens />);
+    const split = await screen.findByRole("separator", { name: "Resize the list of screens" });
+    fireEvent.keyDown(split, { key: "Home" });
+    expect(split).toHaveAttribute("aria-valuetext", "200 pixels");
+  });
+
+  it("gives focus to the board's title when [ hides the navigator under it", async () => {
+    mockApi(screensResponse());
+    render(<ScreensLens />);
+    const split = await screen.findByRole("separator", { name: "Resize the list of screens" });
+    split.focus();
+    act(() => toggleScreensNav());
+    expect(screen.queryByRole("separator")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1 }));
   });
 });

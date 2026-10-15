@@ -54,3 +54,43 @@ def test_a_selected_focused_or_hovered_card_never_changes_size_or_layout() -> No
 def test_no_quote_is_clamped_to_a_number_of_lines() -> None:
     clamped = [sel for sel, props in _rules() if "quote" in sel and any("line-clamp" in p for p in props)]
     assert clamped == []
+
+
+# The owner, 15 Oct 2026: focus and selection on the Screens lens look and work exactly as on the
+# Quotes lens, so a change to the focus model reaches both with nothing re-implemented. The shared
+# .bn-focused / .bn-selected (bristlenose/theme/atoms/interactive.css) are the only visuals; this
+# file may add stacking order and nothing else on any rule that names a focus or selection state.
+# Before this, an `.is-lifted` box-shadow overrode the shared dark-mode focus ring.
+# The gate is about CARDS. The board's own controls (menu items, "On p2's screen", the version
+# radios) still carry the house :focus-visible ring, as Discussion's do; a gate that caught them
+# sent them back to the browser's default ring (15 Oct 2026).
+CARD_STATES = re.compile(r"bn-focused|bn-selected|is-lifted|is-focused")
+CARD = re.compile(r"screens-card|quote-card")
+FOCUS = re.compile(r":focus|focus-within")
+# opacity, filter and transform too: dimming the other cards with `opacity: .5` is the same
+# recolour by another name, and would have passed a colour-only list (code review, 15 Oct 2026).
+VISUAL = re.compile(r"^(color|background(-.*)?|box-shadow|border(-.*)?|outline(-.*)?|opacity|filter|transform)$")
+
+
+def _card_focus_rule(sel: str) -> bool:
+    return bool(CARD_STATES.search(sel) or (FOCUS.search(sel) and CARD.search(sel)))
+
+
+def test_focus_and_selection_add_only_stacking_order() -> None:
+    offenders = [f"{sel} {{ {p} }}" for sel, props in _rules() if _card_focus_rule(sel)
+                 for p in props if VISUAL.match(p)]
+    assert offenders == []
+
+
+def test_the_focus_gate_reads_rules_it_could_refuse() -> None:
+    # A gate that matched no card focus rule would pass by reading nothing.
+    assert any(_card_focus_rule(sel) for sel, _ in _rules())
+
+
+def test_the_info_line_never_wraps() -> None:
+    """The Arrangement control appears on the first drag; a wrapping line pushed the whole board
+    down 21px at 800px — the one moment nothing may move (owner, 15 Oct 2026)."""
+    text = re.sub(r"/\*.*?\*/", "", CSS.read_text(), flags=re.S)
+    m = re.search(r"(?m)^\.screens-sub\s*\{([^}]*)\}", text)
+    assert m, "the .screens-sub rule must exist"
+    assert re.search(r"flex-wrap:\s*nowrap", m.group(1))

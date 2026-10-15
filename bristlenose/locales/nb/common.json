@@ -690,7 +690,8 @@
       "reassignParagraph": "Angre ny tildeling av avsnitt",
       "splitParagraph": "Angre deling av avsnitt",
       "joinParagraphs": "Angre sammenslåing av avsnitt",
-      "tidy": "Angre opprydding"
+      "tidy": "Angre opprydding",
+      "moveQuote": "Angre flytting av sitat"
     },
     "redo": {
       "renameModerator": "Utfør navneendring for moderator likevel",
@@ -713,7 +714,8 @@
       "reassignParagraph": "Utf\u00f8r ny tildeling av avsnitt likevel",
       "splitParagraph": "Utfør deling av avsnitt likevel",
       "joinParagraphs": "Utfør sammenslåing av avsnitt likevel",
-      "tidy": "Utf\u00f8r opprydding likevel"
+      "tidy": "Utf\u00f8r opprydding likevel",
+      "moveQuote": "Utfør flytting av sitat likevel"
     }
   },
   "sync": {
@@ -756,7 +758,6 @@
     "participantCount_one": "{{count}} deltaker",
     "participantCount_other": "{{count}} deltakere",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "Skjermen til {{code}} ved {{time}}",
     "quoteCount_one": "{{count}} sitat",
     "quoteCount_other": "{{count}} sitater",
     "quoteCountFrom_one": "{{count}} sitat fra {{people}} deltakere",
@@ -771,14 +772,16 @@
     "arrangementAutomatic": "Ordning: Automatisk",
     "returnToAutomatic": "Tilbake til automatisk ordning",
     "slideCaption": "Skjermen til {{code}} ved {{time}} · {{n}} av {{total}}",
-    "previousScreengrab": "Forrige skjermbilde",
-    "nextScreengrab": "Neste skjermbilde",
-    "whoseQuotes": "Hvem sine sitater",
+    "previousVersion": "Forrige versjon",
+    "nextVersion": "Neste versjon",
     "onScreen": "På skjermen til {{code}}",
-    "sequence": "{{code}}, sitat {{n}} av {{total}}",
     "versionsLabel": "Versjoner av denne skjermen",
-    "carouselRole": "karusell",
-    "versionsKeys": "← og → bytter mellom versjoner",
+    "versionOption": "Skjermen til {{code}}, {{n}} av {{total}}",
+    "versionCount": "{{n}} av {{total}}",
+    "resizeNavigator": "Endre størrelsen på listen over skjermer",
+    "quoteMoved": "Sitat flyttet",
+    "navWidthPixels_one": "{{count}} piksel",
+    "navWidthPixels_other": "{{count}} piksler",
     "subtitle_one": "{{count}}\u00a0skjerm",
     "subtitle_other": "{{count}}\u00a0skjermer"
   }

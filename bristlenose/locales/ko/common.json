@@ -660,7 +660,8 @@
       "reassignParagraph": "\ub2e8\ub77d \uc7ac\ud560\ub2f9 \uc2e4\ud589 \ucde8\uc18c",
       "splitParagraph": "\ub2e8\ub77d \ub098\ub204\uae30 \uc2e4\ud589 \ucde8\uc18c",
       "joinParagraphs": "\ub2e8\ub77d \ud569\uce58\uae30 \uc2e4\ud589 \ucde8\uc18c",
-      "tidy": "\uc815\ub9ac \uc2e4\ud589 \ucde8\uc18c"
+      "tidy": "\uc815\ub9ac \uc2e4\ud589 \ucde8\uc18c",
+      "moveQuote": "\uc778\uc6a9\ubb38 \uc774\ub3d9 \uc2e4\ud589 \ucde8\uc18c"
     },
     "redo": {
       "renameModerator": "진행자 이름 변경 복귀",
@@ -683,7 +684,8 @@
       "reassignParagraph": "\ub2e8\ub77d \uc7ac\ud560\ub2f9 \ubcf5\uadc0",
       "splitParagraph": "\ub2e8\ub77d \ub098\ub204\uae30 \ubcf5\uadc0",
       "joinParagraphs": "\ub2e8\ub77d \ud569\uce58\uae30 \ubcf5\uadc0",
-      "tidy": "\uc815\ub9ac \ubcf5\uadc0"
+      "tidy": "\uc815\ub9ac \ubcf5\uadc0",
+      "moveQuote": "\uc778\uc6a9\ubb38 \uc774\ub3d9 \ubcf5\uadc0"
     }
   },
   "sync": {
@@ -722,7 +724,6 @@
     "screenCount_other": "\ud654\uba74 {{count}}\uac1c",
     "participantCount_other": "{{count}}\uba85 \ucc38\uac00\uc790",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "{{time}} \uc2dc\uc810\uc758 {{code}} \ud654\uba74",
     "quoteCount_other": "\uc778\uc6a9\ubb38 {{count}}\uac1c",
     "quoteCountFrom_other": "\ucc38\uac00\uc790 {{people}}\uba85\uc758 \uc778\uc6a9\ubb38 {{count}}\uac1c",
     "stillAlt": "{{code}} \ud654\uba74: {{title}}, {{time}} \uc2dc\uc810",
@@ -735,14 +736,15 @@
     "arrangementAutomatic": "\ubc30\uce58: \uc790\ub3d9",
     "returnToAutomatic": "\uc790\ub3d9 \ubc30\uce58\ub85c \ub418\ub3cc\ub9ac\uae30",
     "slideCaption": "{{time}} \uc2dc\uc810\uc758 {{code}} \ud654\uba74 \u00b7 {{n}}/{{total}}",
-    "previousScreengrab": "\uc774\uc804 \uc2a4\ud06c\ub9b0\uc0f7",
-    "nextScreengrab": "\ub2e4\uc74c \uc2a4\ud06c\ub9b0\uc0f7",
-    "whoseQuotes": "\ub204\uad6c\uc758 \uc778\uc6a9\ubb38",
+    "previousVersion": "\uc774\uc804 \ubc84\uc804",
+    "nextVersion": "\ub2e4\uc74c \ubc84\uc804",
     "onScreen": "{{code}} \ud654\uba74\uc5d0\uc11c \ubcf4\uae30",
-    "sequence": "{{code}}, \uc778\uc6a9\ubb38 {{n}}/{{total}}",
     "versionsLabel": "\uc774 \ud654\uba74\uc758 \ubc84\uc804",
-    "carouselRole": "\uce90\ub7ec\uc140",
-    "versionsKeys": "\u2190 \ubc0f \u2192\ub85c \ubc84\uc804 \uc804\ud658",
+    "versionOption": "{{code}} \ud654\uba74, {{n}}/{{total}}",
+    "versionCount": "{{n}}/{{total}}",
+    "resizeNavigator": "\ud654\uba74 \ubaa9\ub85d \ud06c\uae30 \uc870\uc808",
+    "quoteMoved": "\uc778\uc6a9\ubb38\uc744 \uc774\ub3d9\ud588\uc2b5\ub2c8\ub2e4",
+    "navWidthPixels_other": "{{count}}\ud53d\uc140",
     "subtitle_other": "{{count}}\uac1c\u00a0\ud654\uba74"
   }
 }

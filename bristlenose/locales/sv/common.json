@@ -690,7 +690,8 @@
       "reassignParagraph": "\u00c5ngra Tilldela stycke",
       "splitParagraph": "\u00c5ngra Dela stycke",
       "joinParagraphs": "\u00c5ngra Sammanfoga stycken",
-      "tidy": "\u00c5ngra St\u00e4da upp"
+      "tidy": "\u00c5ngra St\u00e4da upp",
+      "moveQuote": "\u00c5ngra Flytta citat"
     },
     "redo": {
       "renameModerator": "Gör om Byt namn på moderator",
@@ -713,7 +714,8 @@
       "reassignParagraph": "G\u00f6r om Tilldela stycke",
       "splitParagraph": "G\u00f6r om Dela stycke",
       "joinParagraphs": "G\u00f6r om Sammanfoga stycken",
-      "tidy": "G\u00f6r om St\u00e4da upp"
+      "tidy": "G\u00f6r om St\u00e4da upp",
+      "moveQuote": "G\u00f6r om Flytta citat"
     }
   },
   "sync": {
@@ -756,7 +758,6 @@
     "participantCount_one": "{{count}} deltagare",
     "participantCount_other": "{{count}} deltagare",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "{{code}}:s sk\u00e4rm vid {{time}}",
     "quoteCount_one": "{{count}} citat",
     "quoteCount_other": "{{count}} citat",
     "quoteCountFrom_one": "{{count}} citat fr\u00e5n {{people}} deltagare",
@@ -771,14 +772,16 @@
     "arrangementAutomatic": "Ordning: Automatisk",
     "returnToAutomatic": "\u00c5terg\u00e5 till automatisk ordning",
     "slideCaption": "{{code}}:s sk\u00e4rm vid {{time}} \u00b7 {{n}} av {{total}}",
-    "previousScreengrab": "F\u00f6reg\u00e5ende sk\u00e4rmbild",
-    "nextScreengrab": "N\u00e4sta sk\u00e4rmbild",
-    "whoseQuotes": "Vems citat",
+    "previousVersion": "F\u00f6reg\u00e5ende version",
+    "nextVersion": "N\u00e4sta version",
     "onScreen": "P\u00e5 {{code}}:s sk\u00e4rm",
-    "sequence": "{{code}}, citat {{n}} av {{total}}",
     "versionsLabel": "Versioner av den h\u00e4r sk\u00e4rmen",
-    "carouselRole": "karusell",
-    "versionsKeys": "\u2190 och \u2192 v\u00e4xlar mellan versioner",
+    "versionOption": "{{code}}:s sk\u00e4rm, {{n}} av {{total}}",
+    "versionCount": "{{n}} av {{total}}",
+    "resizeNavigator": "\u00c4ndra storlek p\u00e5 listan \u00f6ver sk\u00e4rmar",
+    "quoteMoved": "Citat flyttat",
+    "navWidthPixels_one": "{{count}} pixel",
+    "navWidthPixels_other": "{{count}} pixlar",
     "subtitle_one": "{{count}}\u00a0sk\u00e4rm",
     "subtitle_other": "{{count}}\u00a0sk\u00e4rmar"
   }

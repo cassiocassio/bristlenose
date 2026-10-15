@@ -110,7 +110,7 @@ board on real data.
     rows (`desktop.toolbar.screens`, `menu.view.show/hideScreens`), glossary rows; every reason
     code a whole sentence per language.
   - **Accessibility, landed:** focus survives a board change (to the current navigator link, the
-    pressed participant, or the board's title), and Tidy and the right-click menu return focus
+    pressed participant — since 15 Oct the checked version badge — or the board's title), and Tidy and the right-click menu return focus
     rather than drop it; every card and Tidy are on the keyboard; one live region, outside the
     board, carries only reading progress; the arrow keys leave an open dropdown or menu alone; a
     move is said once, not twice; leaders at full strength (1.4.11) and the menu's highlight no
@@ -209,186 +209,231 @@ the elements they are about, like a research wall with stickies on a printout. P
 `screens_board.py` from real indexes into a private page (real screengrabs and quotes never enter
 the tree). What the prototype settled:
 
-- **Navigation** is a list of every screen: a thumbnail (stacked when several participants saw it),
-  the page's own title (its tallest heading; for a session keyed by tab title, the title), the
-  address, the quote count, and micro participant codes that wrap and stop at twelve with *+N*.
+_The owner's feedback round of 15 Oct 2026 (evening) changed several rules below; each says what it
+reverses. Earlier wording is kept where it explains why._
+
+- **The navigator** is a list of every screen: a thumbnail (stacked when several participants saw
+  it) and the page's own title (its tallest heading; for a session keyed by tab title, the title).
+  - **Built like Discussion's guide** (the owner: *"navigation grey bar visually appears to go all
+    the way to the top in Discussion lens (correct) but does not in Screens"*): a grey pane the
+    full height, to the left edge and, in the app, up to the toolbar seam, with no white gutter
+    above or beside it (`.dl-lens .dl-nav`'s construction). _Reverses the inset box._
+  - **Resizable**, by the guide's mechanism: the shipped `.drag-handle` on its edge, a
+    keyboard-operable `role="separator"` (←/→ by 10px, Home, End), Discussion's floor and step
+    (`discussion/split.ts`), the width remembered per viewer on release. Below 240px of width the
+    thumbnails drop and the names stay (a container query).
+  - **The address, the participants' codes and the quote count are kept and not shown**
+    (`NAV_DETAILS` in `ScreensLens.tsx`): the owner, *these may belong on the board, as context for
+    the screen showing, not in the list of screens.*
 - **A screen is one place for everything about it** (the owner, 15 Oct 2026). Every quote believed
   to be about the screen, from every participant's version of it (X, X′, X″), is on its board, and
-  the set does not change with the backdrop. _Reverses the prototype's stack flipped by person
-  badges, where each participant's view carried only its own quotes and others' were dashed._
-  - **The backdrop is a carousel.** The screengrab shows one participant's version at a time; the
-    versions are slides, and it opens on the one that links the most quotes (`default_tab` from
-    `GET …/screens`, `screens.py`). It is the house carousel's web form — the session tapestry's
-    `.bn-tp-nav` disks under the Welcome window's SlotRotator rules (`design-welcome-screen.md` §3a):
-    edge chevrons revealed on hover only, never latched on by focus; the disk is the whole hit area;
-    page dots windowed past ten, the inactive ones in the muted text colour (3:1, 1.4.11); one slide
-    per horizontal swipe, with a lock; a frame that cross-fades. Only the showing slide and its
-    neighbours either side are fetched and mounted, and stills are held in a small LRU (24 board
-    stills, 96 thumbnails), so a study with a dozen versions of a page does not hold a dozen 1600px
-    images. The caption names whose screenshot it is, *p2's screen at 00:40 · 2 of 3*. The carousel
-    is a keyboard stop with a fixed name (*Versions of this screen*, role described as a carousel,
-    `aria-keyshortcuts` ← →, and a visible ← → hint while it has keyboard focus); each turn is
-    announced once, "… 2 of 3", by the shared live region — a name that changed with the slide was
-    read a second time. `frontend/src/islands/screens/carousel.ts`.
-  - **Person chips** (p1 · p2 · p3) are toggle buttons that dim the other people's cards (by colour,
-    as a selection does; nothing moves). They never swap the backdrop: *the carousel answers "whose
-    screenshot", the chips "whose quotes".* A chip is emphasis, not a filter: a dimmed card still
-    takes a click and the report's per-quote keys, and ⌘A selects it (decided 15 Oct 2026, in
-    review).
+  the set does not change with the version showing. _Reverses the prototype's stack flipped by
+  person badges, where each participant's view carried only its own quotes and others' were dashed._
+  - **Which version: one unit on the heading line**, ranged right where the title's actions go:
+    `[15:04] ‹ [p1] [p3] ›` — the house timecode of the showing version's moment (it plays), ‹ ›
+    (*Previous/Next version*, 25px targets) to step, and the participants' badges as a single-choice
+    **radio group** (one tab stop, ←/→ within it, each radio named *"p3's screen"* — a radio says its
+    own position — the group *Versions of this screen*; the timecode is its own link). The checked
+    badge wears the shared "you are here" style, `.bn-person-badge-here` (moved from Discussion's
+    `.dl-here` into `theme/molecules/person-badge.css`; since the 15 Oct review it meets 4.5:1 and
+    carries the emphasis weight as a non-colour cue, in both lenses). Past five versions the badges
+    collapse to `‹ p3 · 2 of 8 ›` (that button's name does say the position), the badge opening a
+    menu of versions as `menuitemradio`s, opening on the checked one, with Home/End. It opens on the
+    version that links the most quotes (`default_tab`). Focus stays on ‹ › and on the collapsed
+    button, so they work again and again from the keyboard, and the new version's name is
+    announced; on a badge, focus follows the checked one, which says it; from anywhere else the
+    change is announced with where and when ("p2's screen at 00:40 · 2 of 3"). **Changing version is
+    a cross-fade only**: the cards take their places on the new version without gliding from the
+    old one's (15 Oct, review). **Nothing for choosing a version sits on the screengrab.** _Reverses the same morning's carousel: its caption, its page dots, its hover
+    chevrons over the screengrab, and its fixed name and key hint (the radio group carries them)._ A
+    horizontal swipe over the screengrab still changes version (nothing is drawn for it). Only the
+    showing version and its neighbours are fetched and mounted, the stills in a small LRU (24 board,
+    96 thumbnails), and they cross-fade in one frame. `frontend/src/islands/screens/carousel.ts`.
+  - **No person chips and no dimming by person.** _Reverses the morning's chips (p1 · p2 · p3, which
+    dimmed the others' cards)._ Whose quotes may come back as search tokens, as on Quotes; not built.
   - **Linked means on the visible screengrab.** A quote is linked — highlight and leader — only when
-    its words are on the slide showing (that version's pins, which link every participant's quote
+    its words are on the version showing (that version's pins, which link every participant's quote
     whose words are on it). An unlinked quote still shows, in the list, and when another version
-    links it the card offers *On p2's screen*, which turns the carousel there so the card becomes
-    linked.
+    links it the card offers *On p2's screen*, which shows that version and focuses the card there.
   - **Where they go.** Every linked quote, whoever said it, goes in the margins; the rest go in the
     list under the screengrab, in time order. Several quotes about one line share one highlight and
     one anchor; their cards sit together at it and their leaders fan into the point.
-- **Every quote is the shipped quote card** at the label size, with the star, tag and hide controls,
-  the hidden counter ranged right on the sub line as on the Quotes lens. Quotes not pinned to an
-  element sit under the screengrab with **no heading and no different treatment**: same size,
-  shadow, gutter and behaviour. They are not lesser, only unmatched.
-- **Cards sit beside the screengrab, never over it.** This reverses the prototype, whose cards
+- **Every quote is the shipped quote card**, with the star, tag and hide controls, the hidden counter
+  ranged right on the sub line as on the Quotes lens. Quotes not pinned to an element sit under the
+  screengrab with **no heading and no different treatment**: they are not lesser, only unmatched.
+  - **One card, one width** (the owner, 15 Oct 2026, preferring the list's wider measure):
+    `CARD_W` = 340px sets the margin cards and the list's alike, and the list is a grid of fixed
+    columns of that width from the left, not newspaper columns. _Reverses 270px columns beside a
+    260px-ish newspaper list._ A card-layout lab may change the number.
+  - **No "[When asked…]" line on this lens** — QuoteCard's `showResearcherContext={false}`; the
+    owner: *"interesting but new… hide here for the moment"*. The Quotes lens and the code keep it.
+  - **No sequence badge.** _Reverses the morning's per-person sequence (p1 ①②③): the timecode
+    already says the order._ Time order still breaks ties along an edge and is the list's order; it
+    is never drawn.
+- **Cards sit around the screengrab, never over it.** This reverses the prototype, whose cards
   overlapped the screengrab's edge by 24px. The owner, 14 Oct 2026: the screengrab is the artefact
   the comments are about, and *"if you got real stickies and put them over a printout of the screen
-  so you couldn't see the actual design being discussed, that's a bit weird"* — overlaid, the screen
-  feels cramped and disrespected. So automatic placement never covers it: a card column (270px)
-  sits across a gutter of `--bn-space-xl` that the leader visibly crosses, and when the stage
-  narrows **the screengrab shrinks; the cards and the gutter keep their size.** Two columns from
-  1084px of stage, either side by which half of the page each element is in; one column, on the
-  right, from 782px; below that, rows (below). Those thresholds keep the screengrab at least 480px
-  wide (`MIN_SHOT_W`, the floor for legibility, in `frontend/src/islands/screens/layout.ts`). A column
-  with no cards takes no room, so one card does not leave a wide empty margin opposite it. A card
-  the researcher drags may go anywhere, over the screengrab included: that is their arrangement.
-  Measured on both real sessions at 1800, 1280 and 900px windows: every column card 32px clear of
-  the screengrab (24px over it before); at 900px the screengrab is full width where it was 104px
-  wide behind the cards. Numbered markers on the screengrab, for the narrow case, are not built:
-  rows do that job (below).
+  so you couldn't see the actual design being discussed, that's a bit weird"*. So automatic
+  placement never covers it, and when the stage narrows **the screengrab shrinks; the cards and the
+  gutter keep their size.** A column is a card and its widest stagger (`COLUMN_W` = 364px) across a
+  gutter of `--bn-space-xl` that the leader visibly crosses. Two columns from 1272px of stage; one,
+  on the right, from 876px; below that, rows. Those thresholds keep the screengrab at least 480px
+  wide (`MIN_SHOT_W`, `layout.ts`); they follow from `CARD_W`. A column with no cards takes no room.
+  A card the researcher drags may go anywhere, over the screengrab included: that is their choice.
 - **Placement is boundary labelling** (the owner, 15 Oct 2026): annotations all around the artefact,
   as on an architect's drawing or a UX redline. `layout.ts` (`edgeFor`, `composeBoard`).
   - **Four edges.** A linked card goes to the band nearest its line: left for a line in the left
     half (a left nav), right for the right, top for a header or search box, bottom for a footer.
     The top and bottom bands are kept to clear cases — a line in the top or bottom 15% of the page
     and in its middle 60% — so most cards still go to the sides.
-  - **Order along a band follows the lines' order along that edge**, so automatic leaders never
-    cross. **Leaders are short, straight or single-elbow**: straight where the line is level with
-    (or under) the card, otherwise a drafting leader's shoulder off the card and one straight run.
+  - **Ordering**: linked cards take the prominent places, ordered along each edge by their lines'
+    positions, which breaks time order where it must; time order only breaks ties. Line priorities,
+    in order: **no leader over a card, then no crossings, then the shortest lines.** A leader leaves
+    its card's facing edge into the gutter, so it does not cross a card in its own column; ordering
+    by the lines keeps leaders from crossing; a drafting leader (straight where the line is level
+    with or under the card, else a shoulder and one straight run) keeps them short. The one place
+    the first rule can fail is a band long enough to wrap onto a second line, where a first-line
+    card's leader passes the second line's cards; rare by the band rule, and not yet solved.
   - **A card is never over the screengrab**: columns and bands are their own grid tracks, each a
-    gutter (`COLUMN_GUTTER`) from it, and a band reserves its whole height. What gates it, exactly:
+    gutter (`COLUMN_GUTTER`) from it, and a band reserves its whole height; on a custom board an edge
+    card is held its distance out from its edge, never less than none. What gates it, exactly:
     `layout.test.ts` checks the composition against a model of the grid in every mode — it catches a
     band that under-reserves its height, but places the side columns by construction (the model is
-    the grid's, so it cannot see the grid itself go wrong); the lens test checks, at four widths
-    with a stubbed measurement, that every linked card gets a spot in a column or band track and
-    never in the screengrab's or the free layer (jsdom lays nothing out, so not the pixels); and the
-    pixels were measured on two real studies at 1440, 1100 and 800px windows: 0 cards over the
+    the grid's, so it cannot see the grid itself go wrong) — and checks that a custom edge card never
+    covers the screengrab at any size; the lens test checks, at four widths with a stubbed
+    measurement, that every linked card gets a spot in a column or band track and never in the
+    screengrab's or the free layer (jsdom lays nothing out, so not the pixels); and the pixels were
+    measured on two real studies at 1440, 1100 and 800px windows: 0 automatic cards over the
     screengrab, every leader starting outside it.
   - **Rows.** Below the side-column threshold the side bands become rows above and below the
     screengrab (a line in the top half above, the rest below), in order along the edge, with short
     vertical leaders; the unlinked list stays below everything. _Replaces "the pinned cards lead the
-    list under the screengrab", which cut every narrow-width card off from its line._ A placed card
-    keeps the arrangement model's rule for a band that disappears: it goes to the row on its side of
-    the screengrab's middle (by how far down the edge it was put), at the head of the row — placed
-    cards still win.
+    list under the screengrab", which cut every narrow-width card off from its line._ **A custom
+    board is shown as these rows too** below the threshold (15 Oct, review: its side columns would
+    otherwise push the page sideways at 320px, WCAG 1.4.10). Its arrangement is kept, untouched, and
+    shows again once the stage is wide enough; while it is shown as rows nothing is moved by hand
+    (the grips and ⌥-arrows rest), and Tidy still offers the way back.
   - **The layout changes only at a threshold, with hysteresis**: narrowing switches at the line
     (the screengrab's floor is never breached), widening waits until the stage is 24px past it, so
     a stage resting on a threshold — where the layout's own height change brings the page scrollbar
     in and out — does not flip back and forth. At a change each card glides from its old place to
-    its new one (FLIP); under reduced motion it moves at once. The leaders are measured again when
-    the glide ends, so they do not stay where the cards set off. A placed card with no screengrab to
-    place it against (it failed to load) is listed with the rest, still marked as placed.
-- **Narrative** (the owner, 15 Oct 2026). `frontend/src/islands/screens/narrative.ts`.
-  - **Sequence numbers are per person, in time order**: each card's badge shows its person and that
-    person's place among their own quotes on this screen (p1 ①②③, p2 ①②), with a sentence for a
-    screen reader (*p1, quote 2 of 3*). There is no global sequence: a researcher follows one
-    participant's path through a page, not an interleaving of several.
-  - **Keys.** ↑/↓ change screen; ←/→ turn the carousel (replacing the participant toggle); **J/K**
-    step through this screen's quotes in time order — only the chosen people's while a chip is on —
-    bringing each card forward (selected, so in front, never resized; a card pressed earlier steps
-    back) and lighting its line. The lens owns these: on Screens the report's global handler
-    (`useKeyboardShortcuts`) returns early for the arrows and j/k and leaves Next/Previous Quote to
-    the lens. The global handler handles only the per-quote keys here — s/h/t/r/x/Enter — scoped to
-    the cards the lens registers, which is every card the board shows. The lens claims each of its
-    keys with `preventDefault` under the same guards as its arrows. The Mac's View menu reaches the
-    same steps by name (`bn:menu-action`: `nextScreen`, `previousScreen`, `nextScreenshot`,
-    `previousScreenshot`, `tidy`, `nextQuote`, `previousQuote`). View ▸ Tidy, the arrangement
-    control and the right-click menu count the same thing: spots kept for cards on the board.
+    its new one (FLIP); under reduced motion it moves at once; the leaders are measured again when
+    the glide ends.
+  - **Stacks are internal, and cascade** (the owner, 15 Oct 2026: *"as the original Mac windows did
+    in 1984"* — you can see how many there are, they read as separate elements, and each card's
+    left-edge grip stays exposed). When a column runs past the screengrab its cards overlap, evenly
+    stepped down, and each later card steps `STAGGER_STEP` (8px) away from the screengrab — the left
+    column leftward, the right rightward — cascading three steps and starting again; the column is
+    sized for the widest step, so no card enters the gutter. Bands wrap onto a further line rather
+    than overlap, so they never stagger. Nothing else marks a stack. _Reverses "stacks are straight"
+    (the diagonal was prototyped and dropped on 14 Oct) and every stack-only visual._
+- **Moving a card from the keyboard** (WCAG 2.1.1, 15 Oct, review): **⌥ + an arrow** moves the
+  focused card one step (`MOVE_STEP`, 24px): ↑/↓ along its edge beside the screengrab, ←/→ along a
+  band above or below it, ←/→ beside it to the other side; a card dropped over the screengrab moves
+  either way. The same model as a drag: the first move freezes the board into custom; each move is
+  undoable as *Move Quote* and announced (*Quote moved*). The lens's own ↑↓←→ and the report's
+  handler both leave ⌥ chords alone.
+- **One shadow for every floating card** — in a column, in a band, or placed by hand — on the
+  card's wrapper, softer and tighter than before (`0 1px 2px` plus a half-strength `0 2px 6px`, in
+  the palette's shadow colour) so two overlapping cards read as two clean edges. Cards in the list
+  carry none, as on the Quotes lens (the owner, 14 Oct 2026: shadows in spurious places). A first
+  value; a lab will tune it.
+- **Focus and selection are the Quotes lens's, exactly** (the owner, 15 Oct 2026: what is learnt on
+  one lens carries to the other, and a future change to the focus model reaches both with nothing
+  re-implemented). The only visuals are the shared `.bn-focused` / `.bn-selected`
+  (`theme/atoms/interactive.css`); the board adds stacking order — the focused card in front of
+  anything it overlaps, and its line lit — and nothing else. A click focuses a card, as on Quotes.
+  _Reverses the board's own "lifted" selection, its press-to-raise state, and the dimming by colour
+  of every other card; the old raised-card shadow also hid the shared dark-mode focus ring._ Gated by
+  `tests/test_screens_css.py`: no colour, background, shadow, border or outline on any rule naming a
+  focus or selection state in `screens.css`. **A card is what it is: one size, always** — nothing
+  changes its size or the board's layout (the owner, 14 Oct 2026: *"they should be what they are"*);
+  the same file holds every focused, selected, hovered or edited state to properties that cannot
+  move anything, and no quote is clamped.
+- **Keys: shared with Quotes** (the owner, 15 Oct 2026). The lens registers its **reading order** —
+  the margins as they sit (top to bottom, then left to right), then the list in time order
+  (`narrative.ts`) — and the report's shared handler does J/K, ⇧J/K, ⇧-click ranges and ⌘A over it,
+  exactly as on Quotes, with s/h/t/r/x/Enter scoped to the same cards. Focusing a card by J/K brings
+  it to the front and lights its line, as a click does. The lens keeps only **↑/↓ (another screen)
+  and ←/→ (another version)**: on Screens `useKeyboardShortcuts` returns early for the arrow keys
+  alone. _Reverses the morning's lens-owned J/K in time order, filtered by chip._ `?` opens the
+  shortcuts page on bristlenose.app, which lives in the website repo; the Screens pair belongs there.
 - **Menus and quote actions** (the owner, 15 Oct 2026: *"we also have the Quotes menu, and I would
   expect star and hide and tag to work the same"*).
   - **Quote actions work on Screens.** Quotes ▸ Star, Hide, Add Tag, Apply Last Tag, Reveal in
-    Transcript, Play, Next/Previous Quote and Toggle Selection enable on Screens as on Quotes
-    (`MenuCommands.swift` `onCardLens`), and so do the bare `s`, `h`, `t`, `r`, `x` and Enter. They
-    act only on a card this lens renders (`useKeyboardShortcuts` `scopedFocus`/`scopedSelection`,
-    against the order the lens registers), never on a selection or cursor carried over from Quotes —
-    the guarantee the old Quotes-only gate existed for. On Screens the lens keeps its arrows and
-    J/K; selection-extend and export stay on Quotes. Next/Previous Quote is one action and one
-    menu item, answered by the lens in time order.
+    Transcript, Play, Next/Previous Quote, Extend Selection and Toggle Selection enable on Screens as
+    on Quotes (`MenuCommands.swift` `onCardLens`), and so do the bare keys. They act only on a card
+    this lens renders (`useKeyboardShortcuts` `scopedFocus`/`scopedSelection`, against the order the
+    lens registers), never on a selection or cursor carried over from Quotes. Export stays on Quotes.
   - **Discussion is not a card lens**: it renders transcript turns with its own focus, not the
     shared QuoteCard under FocusContext, so the quote actions stay off there (verified, not assumed).
   - **View menu**: one Next/Previous pair that follows the lens — *Next/Previous Screen* on
     Screens, *Next/Previous Question* on Discussion (which steps the navigator through the asked
     questions, wrapping), dimmed elsewhere and reading Screen (`LensStep`); *Next/Previous
-    Screenshot* (the backdrop) on Screens; and **Tidy**, enabled only while the arrangement is
-    custom (`screens-arrangement` bridge message) — the route to Tidy that needs no hover. No
-    bare-key equivalents: a bare menu key steals typing, the page keys still work, and `?` lists
-    them. Modifier shortcuts can come later, checked against macOS's own. Labels are
-    `desktop.menu.view.*` in 21 locales. A person-filter submenu is deferred (Quotes uses search
-    tokens for people). Catalogue: `docs/design-desktop-menu-actions.md`.
-- **A real drop shadow** (the house tooltip's shape, in the palette's own shadow colour) keeps a
-  card from merging into a white page. **Only a card that floats has one** — a pinned card in a
-  column beside the screengrab, or one moved by hand; the quotes in the page's flow under it, and
-  the navigator's thumbnails, read as the Quotes lens's do (the owner, 14 Oct 2026: shadows in
-  spurious places).
-- **A card is what it is: one size, always.** Every card shows its whole quote, as the Quotes lens's
-  cards do; a long quote is a taller card. Nothing changes a card's size or the board's layout —
-  not selecting it, not focusing it, not pointing at it (the owner, 14 Oct 2026: *"they should be
-  what they are — we are allowing repositioning, and z-index re-ordering — selection brings to the
-  front"*). The first build clamped every card to seven lines and unclamped the selected one; that
-  is gone. **Selecting** a card (a press on it, or keyboard focus) raises it and shows the shipped
-  focus treatment, and the others dim by colour, not opacity, so a stack stays opaque; Escape or a
-  press anywhere else deselects. Never on hover: hover flickered, two ways — the unclamped card grew,
-  its column re-placed, and in a stack a different card was then under the pointer (read in the
-  placement code, not reproduced: the sessions measured never stacked); and every card on the board
-  dimmed and undimmed as the pointer crossed them (11 times sweeping across 6 cards on a real
-  session, 0 now). Measured on both real sessions at 1800 and 1280px windows, every card selected in
-  turn (64 selections): no card on the board moved or changed size by a pixel. Gated by
-  `tests/test_screens_css.py`: a selected, focused, hovered or edited state may set only properties
-  that cannot move anything, and no quote is clamped.
-- **A column that would run past the screengrab stacks**, evenly stepped, straight (the diagonal
-  offset was prototyped and dropped), the later card over the earlier one's tail; selecting one
-  brings it to the front of its stack.
-- **The researcher can rearrange, and the board respects it** (the owner, 14 Oct 2026: *"if the
-  user does nothing but resize, re-order automagically; if they reposition some or all cards,
-  respect that work and intention but still re-organise the cards they didn't touch"*). A hand
-  cursor on a card's top edge and the margin under its timecode; drag it anywhere on the board.
-  A placed card is stored as **intent, not coordinates**: which side of the screengrab its centre
-  fell on and how far down that edge, as a fraction of the screengrab's height — so it moves with
-  the image as the stage resizes, and the researcher's order among their placed cards holds. In a
-  column, **placed cards win**: each keeps its spot, and the untouched cards re-flow around them,
-  each into the free slot nearest its own line, in the lines' order. Where a placed card's side has
-  no column (one column, on the right), it goes to the right; with no columns it leads the list
-  under the screengrab; it returns to its side when the width allows. A card dropped with its centre
-  over the screengrab stays over it, where it was put (the researcher's choice; automatic placement
-  never covers it). A placed card carries a faint mark at its corner, and right-click offers
-  *Return to automatic* for that card. Kept in the browser's storage per screengrab
-  (`layout.ts`); the first build's coordinates are converted once, then dropped. Measured on both
-  real sessions: a card placed at the top left pushed the untouched one below it, the right column
-  then took no room (the screengrab widened from 700 to 1002px), and resizing to 1280, 900 and back
-  sent it to the right column, the head of the list, and back to its spot.
-- **Arrangement and Tidy.** Nothing shows while the layout is automatic. Once any card is placed by
-  hand, *Arrangement: Custom* sits ranged right on the sub line; on hover and on keyboard focus the
-  same fixed-width slot reads **Tidy**, so nothing moves when the words swap, and its accessible name
-  is one sentence, *Arrangement: Custom. Tidy*. Pressing it returns every card on this screengrab to
-  automatic, with no confirm: it is undoable with ⌘Z (Edit ▸ Undo Tidy) through the report's one
-  undo stack. Right-click on the board offers *Tidy* too, and the keyboard reaches it as the slot's
-  own button. *Tidy* is the owner's word (one short action word; *Clean Up* sounded like toys going
-  back in the box) and here means **return to automatic**; a gentler Tidy that keeps your sides and
-  order and only evens out the spacing, like the Finder's, is a possible later variant. A View-menu
-  row on the Mac belongs to the menu work.
+    Screenshot* (the version) on Screens; and **Tidy**, enabled only while the board is custom
+    (`screens-arrangement` bridge message). No bare-key equivalents: a bare menu key steals typing.
+    Labels are `desktop.menu.view.*` in 21 locales. Catalogue: `docs/design-desktop-menu-actions.md`.
+- **The arrangement: automatic, or the researcher's** (the owner, 15 Oct 2026: *"when I drag a card
+  I'm saying leave all the other cards where they are and move this one… Tidy is the
+  get-out-of-jail card… losing custom positioning is a choice"*). _Reverses the 14 Oct rule that the
+  cards the researcher did not touch re-flow round the placed ones (and its "placed cards win",
+  partial arrangements and corner mark)._ `layout.ts`.
+  - **Automatic** is the default: the layout places everything and re-flows on any change.
+  - **The first drag switches the whole board to custom.** At that moment every card on the board
+    is frozen where automatic layout had it, and only the dragged card moves; nothing else jumps.
+  - **In custom nothing ever re-flows.** A drag moves only its card. A card that arrives later (a
+    re-read, or one shown that had no spot) waits in the list under the board until Tidy.
+  - **Intent, relative to the screengrab**, so a window resize **scales** the arrangement: a card
+    beside, above or below it keeps which edge, how far along it (a fraction of the screengrab's
+    height or width) and how far out (px, the gutter and any stagger, which does not scale — so a
+    card frozen beside the screengrab never slides onto it); a card dropped over it keeps its
+    top-left as fractions. **A card that was in the list freezes as a bottom-edge card**: its left as
+    a fraction of the screengrab's width from the screengrab's left (negative where the list starts
+    left of it), its distance below the screengrab in px. Shrinking may make cards overlap one
+    another; that is accepted. A custom board holds its columns and bands open for the cards on each
+    edge, whatever the width.
+  - **Tidy is the only way back to automatic**, everything gliding home at once (instant under
+    reduced motion), from three places: the arrangement control on the sub line (*Arrangement:
+    Custom*, reading **Tidy** on hover and keyboard focus, one accessible sentence), the right-click
+    menu, and View ▸ Tidy on the Mac (`bn:menu-action` "tidy"). *Tidy* is the owner's word.
+  - **Undo**, through the report's one stack: every drag is *Undo/Redo Move Quote*
+    (`undo.undo.moveQuote`, 21 locales), and undoing the drag that switched the board returns it to
+    automatic; Tidy is *Undo Tidy*. **Return to automatic**, on one card of a custom board (the
+    right-click menu), means *back to where Tidy would put it*: a linked card to its automatic spot
+    on its edge, frozen there so nothing else moves; any other card to the list. It is an undoable
+    *Move Quote* too.
+  - **Never lost involuntarily.** Arrangements are kept per **version** — the screen's key and the
+    participant's session, not the still's moment, which a re-read may pick differently — so a
+    re-read, a change of version and back, or a card hidden and shown again all find the
+    arrangement as it was. The 14 Oct store (`session@t`) migrates once per version on first view,
+    its placed cards keeping their spots, **and the rest of the board frozen where automatic puts
+    it**, as a first drag freezes it — or the linked cards it never placed would drop into the list
+    and read as "my cards disappeared" (15 Oct, review). Entries for a `session@t` no version now
+    shows (a still moment a re-read replaced) are orphans: left in the old store, never read and
+    never deleted. Kept in this browser's storage (§6.9 is still open).
+  - **An undo out of sight shows its board first.** Undoing or redoing a *Move Quote* or a *Tidy*
+    whose screen or version is not showing switches to that screen and version, then applies, so the
+    change is seen (15 Oct, review).
+  - **Measured one way.** The screengrab is measured once — its box in the board, border included —
+    and that one measure places the cards, freezes them, reads a drop and computes Tidy's spots, so
+    a freeze moves nothing by a pixel (the build before measured the image's outer box in one place
+    and its inner box in another, so the first drag nudged right- and bottom-edge cards by the
+    border). Tidy's bottom-edge spots start under the taller of the screengrab and its side columns,
+    as the grid's band does.
+- **A live window resize** (utils/liveResize.ts: native's exact start and end on the Mac, a 200ms
+  settle in a browser): the board is not recomposed or re-measured while it lasts; it holds at its
+  last settled width and **scales as one unit** with a CSS transform, so no card can drift onto the
+  screengrab mid-resize. When it ends it recomposes once and every card glides to its new place
+  (instantly under reduced motion); a custom board rescales and does not re-flow. A board that
+  mounts mid-resize lays itself out first and scales from there; no card glides from a place it
+  was never drawn at. A card that held keyboard focus and moved to another parent (a mode change,
+  Tidy from the Mac's menu, ⌘Z of a move) gets focus back on the same control.
 - **The researcher says which pages are one screen** (§3.6): drag one screen's thumbnail onto
   another, or right-click; *Not the same screen*, beside the participant badges, peels the showing
   participant's page off into a screen of its own, one at a time, which works for any number of
   participants. Prototyped, not designed: needs real prototyping before it is built.
 - **No new tokens.** Every colour is a palette token (default and Edo) or an accent tint at a
-  percentage the theme already mixes (6%, 15%, 30%); lift is the shipped `.bn-focused` treatment.
+  percentage the theme already mixes (6%, 15%, 30%).
 
 Friction as evidence (counts, back-steps, time on screen), never a score. The earlier flow and grid
 shapes (`design-screens-lens.md` §5) remain the overview; the board is what opens from them.

@@ -690,7 +690,8 @@
       "reassignParagraph": "Annuler la r\u00e9attribution du paragraphe",
       "splitParagraph": "Annuler la division du paragraphe",
       "joinParagraphs": "Annuler la fusion des paragraphes",
-      "tidy": "Annuler le rangement"
+      "tidy": "Annuler le rangement",
+      "moveQuote": "Annuler le d\u00e9placement du verbatim"
     },
     "redo": {
       "renameModerator": "Rétablir le changement de nom de l’animateur",
@@ -713,7 +714,8 @@
       "reassignParagraph": "R\u00e9tablir la r\u00e9attribution du paragraphe",
       "splitParagraph": "R\u00e9tablir la division du paragraphe",
       "joinParagraphs": "R\u00e9tablir la fusion des paragraphes",
-      "tidy": "R\u00e9tablir le rangement"
+      "tidy": "R\u00e9tablir le rangement",
+      "moveQuote": "R\u00e9tablir le d\u00e9placement du verbatim"
     }
   },
   "sync": {
@@ -756,7 +758,6 @@
     "participantCount_one": "{{count}}\u00a0participant",
     "participantCount_other": "{{count}}\u00a0participants",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "\u00c9cran de {{code}} \u00e0 {{time}}",
     "quoteCount_one": "{{count}} verbatim",
     "quoteCount_other": "{{count}} verbatim",
     "quoteCountFrom_one": "{{count}} verbatim de {{people}} participants",
@@ -771,14 +772,16 @@
     "arrangementAutomatic": "Disposition\u00a0: automatique",
     "returnToAutomatic": "Revenir \u00e0 la disposition automatique",
     "slideCaption": "\u00c9cran de {{code}} \u00e0 {{time}} \u00b7 {{n}} sur {{total}}",
-    "previousScreengrab": "Capture d\u2019\u00e9cran pr\u00e9c\u00e9dente",
-    "nextScreengrab": "Capture d\u2019\u00e9cran suivante",
-    "whoseQuotes": "Verbatim par personne",
+    "previousVersion": "Version pr\u00e9c\u00e9dente",
+    "nextVersion": "Version suivante",
     "onScreen": "Sur l\u2019\u00e9cran de {{code}}",
-    "sequence": "{{code}}, verbatim {{n}} sur {{total}}",
     "versionsLabel": "Versions de cet \u00e9cran",
-    "carouselRole": "carrousel",
-    "versionsKeys": "\u2190 et \u2192 passent d\u2019une version \u00e0 l\u2019autre",
+    "versionOption": "\u00c9cran de {{code}}, {{n}} sur {{total}}",
+    "versionCount": "{{n}} sur {{total}}",
+    "resizeNavigator": "Redimensionner la liste des \u00e9crans",
+    "quoteMoved": "Verbatim d\u00e9plac\u00e9",
+    "navWidthPixels_one": "{{count}} pixel",
+    "navWidthPixels_other": "{{count}} pixels",
     "subtitle_one": "{{count}}\u00a0\u00c9cran",
     "subtitle_other": "{{count}}\u00a0\u00c9crans"
   }

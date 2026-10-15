@@ -753,7 +753,8 @@
       "reassignParagraph": "Odvolat akci P\u0159e\u0159adit odstavec",
       "splitParagraph": "Odvolat akci Rozdělit odstavec",
       "joinParagraphs": "Odvolat akci Spojit odstavce",
-      "tidy": "Odvolat akci Uklidit"
+      "tidy": "Odvolat akci Uklidit",
+      "moveQuote": "Odvolat akci P\u0159esunout cit\u00e1t"
     },
     "redo": {
       "renameModerator": "Opakovat akci Přejmenovat moderátora",
@@ -776,7 +777,8 @@
       "reassignParagraph": "Opakovat akci P\u0159e\u0159adit odstavec",
       "splitParagraph": "Opakovat akci Rozdělit odstavec",
       "joinParagraphs": "Opakovat akci Spojit odstavce",
-      "tidy": "Opakovat akci Uklidit"
+      "tidy": "Opakovat akci Uklidit",
+      "moveQuote": "Opakovat akci P\u0159esunout cit\u00e1t"
     }
   },
   "sync": {
@@ -827,7 +829,6 @@
     "participantCount_many": "{{count}}\u00a0\u00fa\u010dastn\u00edka",
     "participantCount_other": "{{count}}\u00a0\u00fa\u010dastn\u00edk\u016f",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "Obrazovka \u00fa\u010dastn\u00edka {{code}} v \u010dase {{time}}",
     "quoteCount_one": "{{count}} cit\u00e1t",
     "quoteCount_few": "{{count}} cit\u00e1ty",
     "quoteCount_many": "{{count}} cit\u00e1tu",
@@ -846,14 +847,18 @@
     "arrangementAutomatic": "Uspo\u0159\u00e1d\u00e1n\u00ed: Automatick\u00e9",
     "returnToAutomatic": "Vr\u00e1tit automatick\u00e9 uspo\u0159\u00e1d\u00e1n\u00ed",
     "slideCaption": "Obrazovka \u00fa\u010dastn\u00edka {{code}} v \u010dase {{time}} \u00b7 {{n}} z {{total}}",
-    "previousScreengrab": "P\u0159edchoz\u00ed sn\u00edmek obrazovky",
-    "nextScreengrab": "Dal\u0161\u00ed sn\u00edmek obrazovky",
-    "whoseQuotes": "\u010c\u00ed cit\u00e1ty",
+    "previousVersion": "P\u0159edchoz\u00ed verze",
+    "nextVersion": "Dal\u0161\u00ed verze",
     "onScreen": "Na obrazovce \u00fa\u010dastn\u00edka {{code}}",
-    "sequence": "{{code}}, cit\u00e1t {{n}} z {{total}}",
     "versionsLabel": "Verze t\u00e9to obrazovky",
-    "carouselRole": "karusel",
-    "versionsKeys": "\u0160ipkami \u2190 a \u2192 p\u0159epnete mezi verzemi",
+    "versionOption": "Obrazovka \u00fa\u010dastn\u00edka {{code}}, {{n}} z {{total}}",
+    "versionCount": "{{n}} z {{total}}",
+    "resizeNavigator": "Zm\u011bnit velikost seznamu obrazovek",
+    "quoteMoved": "Cit\u00e1t p\u0159esunut",
+    "navWidthPixels_one": "{{count}} pixel",
+    "navWidthPixels_few": "{{count}} pixely",
+    "navWidthPixels_many": "{{count}} pixelu",
+    "navWidthPixels_other": "{{count}} pixel\u016f",
     "subtitle_one": "{{count}}\u00a0Obrazovka",
     "subtitle_few": "{{count}}\u00a0Obrazovky",
     "subtitle_many": "{{count}}\u00a0Obrazovky",

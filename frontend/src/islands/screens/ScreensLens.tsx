@@ -5,19 +5,21 @@
  *
  * docs/design-screens.md S5. Data from GET /screens (server/routes/screens.py), stills from
  * GET /screens/still. Quotes are the report's own: the lens joins the screens' DOM ids to the
- * quotes store, and every quote is drawn by the Quotes lens's own card (islands/QuoteCard.tsx),
- * so star, hide, tags, editing, the playable timecode and focus are the same gestures there and
- * here. The board only positions the cards: it wraps each one to place, lift and drag it.
+ * quotes store, and every quote is drawn by the Quotes lens's own card (islands/QuoteCard.tsx).
+ * Focus and selection are the Quotes lens's too — FocusContext, the shared .bn-focused and
+ * .bn-selected, and the report's own keys (J/K, ⇧J/K, ⇧-click, ⌘A over the order this lens
+ * registers) — so what is learnt on one lens works on the other. The board only positions the
+ * cards: it wraps each one to place it, raise the focused one, and drag it.
  *
- * Structured like its nearest sibling, the Discussion lens: a navigator column of its own (shown
- * and hidden like the guide, navPanel.ts), the zone title on the shared datum
+ * Structured like its nearest sibling, the Discussion lens: a navigator column of its own that runs
+ * the full height and resizes like the guide (navPanel.ts), the zone title on the shared datum
  * (`.center > main > section:first-of-type > .section-heading`), the same key guards.
  *
- * A screen is one place for everything about it: every participant's version of it is a slide in
- * the backdrop carousel (carousel.ts), and the quote set is the same whichever slide shows. The
- * slide decides only which quotes are LINKED — on its screengrab, so in a margin with a leader —
- * and the person chips decide only whose quotes are in front. Placement is layout.ts; per-person
- * sequence and the J/K step are narrative.ts.
+ * A screen is one place for everything about it: every participant's version of it can show, one at
+ * a time, chosen from one unit on the heading line (carousel.ts), and the quote set is the same
+ * whichever version shows. The version decides only which quotes are LINKED — on its screengrab, so
+ * in a margin with a leader. Placement and the researcher's arrangement are layout.ts; the order
+ * the shared keys walk is narrative.ts.
  *
  * Offered when the project has screens, or recordings still being read (availability.ts, the one
  * rule the nav and the Mac's lens rail follow). Every sentence is a `screens.*` locale key.
@@ -30,6 +32,7 @@ import { Counter, type CounterItem } from "../../components/Counter";
 import { PersonBadge } from "../../components/PersonBadge";
 import { SectionHeading } from "../../components/SectionHeading";
 import type { TagVocabularyGroup } from "../../components/TagInput";
+import { TimecodeLink } from "../../components/TimecodeLink";
 import { useFocus } from "../../contexts/FocusContext";
 import { useLastRun } from "../../contexts/LastRunStore";
 import {
@@ -54,34 +57,43 @@ import { announce } from "../../utils/announce";
 import { pushUndo } from "../../contexts/UndoStore";
 import { apiGet, getCodebook } from "../../utils/api";
 import { formatTimecode } from "../../utils/format";
+import { installLiveResizeWatch, isLiveResizing, subscribeLiveResize } from "../../utils/liveResize";
 import { wholeWordsTerm, type SearchTerm } from "../../utils/searchMatch";
 import { deriveTagVisibility, type TagGroupMeta } from "../../utils/tagVisibility";
 import type { QuoteResponse, QuotesListResponse } from "../../utils/types";
 import { QuoteCard } from "../QuoteCard";
+import { MIN_WIDTH, RESIZE_STEP } from "../discussion/split";
 import {
+  arrangementFor,
   arrangementVersion,
+  autoIntent,
   boardColumns,
   CARD_W,
-  cardEdge,
-  clearPlacement,
+  COLUMN_GUTTER,
+  COLUMN_W,
   composeBoard,
+  customFrame,
+  edgeFor,
+  intentFromRect,
   leaderPath,
-  placementFromDrop,
-  placementsFor,
-  putPlacement,
-  setPlacements,
+  migrateArrangement,
+  rectFromIntent,
+  MOVE_STEP,
+  setArrangement,
   stageMode,
   subscribeArrangement,
-  stillKey,
   topZ,
+  versionKey,
+  type Arrangement,
   type BoardCard,
   type Composition,
   type Edge,
+  type Intent,
   type Mode,
-  type Placement,
+  type Rect,
 } from "./layout";
-import { dotWindow, Lru, makeSwipe, slideWindow } from "./carousel";
-import { peopleOf, sequenceByPerson, stepFrom, type Said, type Sequence } from "./narrative";
+import { Lru, makeSwipe, slideWindow, VERSION_BADGES_MAX } from "./carousel";
+import { readingOrder, type Seen } from "./narrative";
 import { markScreensFound } from "./availability";
 import { postScreensArrangement } from "../../shims/bridge";
 import { reportScreensNav, useScreensNav } from "./navPanel";
@@ -347,9 +359,30 @@ function useStills(tabs: ScreenTab[], cur: number, w: number): { src: string | n
 
 // ── The lens ─────────────────────────────────────────────────────────────
 
-/** The navigator's width: the one source, set on the lens as `--screens-nav-w` for screens.css's
- *  grid, and reported to the Mac as part of the width the lens wants. */
+/** The navigator's starting width, and the one set on the lens as `--screens-nav-w` for
+ *  screens.css's grid until the researcher drags the split. */
 export const NAV_W = 280;
+/** Its widest: past this the board is what the researcher came for. */
+const NAV_MAX = 480;
+/** The navigator's width, remembered per viewer (Discussion's guide keeps its own the same way). */
+const NAV_WIDTH_KEY = "bn-screens-nav-width";
+
+function readNavWidth(): number | null {
+  try {
+    const v = Number(localStorage.getItem(NAV_WIDTH_KEY));
+    return Number.isFinite(v) && v > 0 ? v : null;
+  } catch {
+    return null; // private window or blocked storage: the width just isn't remembered
+  }
+}
+
+function writeNavWidth(w: number): void {
+  try {
+    localStorage.setItem(NAV_WIDTH_KEY, String(Math.round(w)));
+  } catch {
+    // as above
+  }
+}
 
 interface TagInfo extends TagGroupMeta {
   colour_set: string;
@@ -362,13 +395,13 @@ type RenderQuote = (q: QuoteResponse, phrase: string) => React.ReactNode;
 const NO_FLASH = new Set<string>();
 const noop = () => {};
 
-/** Which slide shows for `sid` on this screen: that session's version, else the screen's default. */
+/** Which version shows for `sid` on this screen: that session's, else the screen's default. */
 function tabIndexOf(sc: Screen, sid: string | null): number {
   const i = sc.tabs.findIndex((tb) => tb.session_id === sid);
   return i >= 0 ? i : defaultTab(sc);
 }
 
-/** "p2's screen at 00:40 · 2 of 3", as plain text: what a turn of the carousel announces. */
+/** "p2's screen at 00:40 · 2 of 3", as plain text: what a change of version announces. */
 function slideCaptionText(tab: ScreenTab, j: number, total: number): string {
   return i18n.t("screens.slideCaption", { code: tab.code, time: formatTimecode(tab.t), n: j + 1, total });
 }
@@ -382,7 +415,7 @@ interface FocusRequest {
 }
 
 /** Where focus goes when the board changes under it (see ScreensLens's layout effect). */
-type Refocus = "nav" | "carousel" | "lost";
+type Refocus = "nav" | "versions" | "lost";
 
 export function ScreensLens() {
   const { t } = useTranslation();
@@ -402,8 +435,11 @@ export function ScreensLens() {
   const [tagInfo, setTagInfo] = useState<Record<string, TagInfo>>({});
   const [hasModerator, setHasModerator] = useState(false);
   const store = useQuotesStore();
-  const { selectedIds, clearSelection, registerVisibleQuoteIds, focusedId, setFocus } = useFocus();
+  const { selectedIds, clearSelection, focusedId, setFocus } = useFocus();
   const { hiddenTagGroups, disabledFrameworks } = useSidebarStore();
+
+  // The board holds still during a live window resize and settles once when it ends (E).
+  useEffect(() => installLiveResizeWatch(), []);
 
   // Screens: polled while the job is still reading, capped, and re-read when the data moves.
   useEffect(() => {
@@ -495,75 +531,91 @@ export function ScreensLens() {
   const tab = screen?.tabs[tabIdx];
 
   // Everything said on this screen, by every participant on it, once each, in time order: the same
-  // set whichever slide is showing (a screen is one place for everything about it). Hidden quotes
-  // are not on the board. It is also the only set a gesture on a selection may reach: a selection
-  // made on the Quotes lens survives the route change, and starring one card must not star twenty
+  // set whichever version shows (a screen is one place for everything about it). Hidden quotes are
+  // not on the board. It is also the only set a gesture on a selection may reach: a selection made
+  // on the Quotes lens survives the route change, and starring one card must not star twenty
   // quotes nobody can see here.
   const said = useMemo(() => {
     if (!screen) return [];
-    return screen.tabs
-      .flatMap((tb) => [...tb.pins.map((p) => p.dom_id), ...tb.loose])
-      .filter((d, i, a) => a.indexOf(d) === i && byId.has(d) && !store.hidden[d])
-      .sort((a, b) => byId.get(a)!.start_timecode - byId.get(b)!.start_timecode);
+    const seen = new Set<string>();
+    for (const tb of screen.tabs) {
+      for (const d of [...tb.pins.map((p) => p.dom_id), ...tb.loose]) if (byId.has(d) && !store.hidden[d]) seen.add(d);
+    }
+    return [...seen].sort((a, b) => byId.get(a)!.start_timecode - byId.get(b)!.start_timecode);
   }, [screen, byId, store.hidden]);
-  const saidBy = useMemo<Said[]>(
-    () => said.map((d) => ({ id: d, person: byId.get(d)!.participant_id, t: byId.get(d)!.start_timecode })),
-    [said, byId],
-  );
-  const people = useMemo(() => peopleOf(saidBy), [saidBy]);
-  const sequence = useMemo(() => sequenceByPerson(saidBy), [saidBy]);
-
-  // The person chips: whose quotes are in front. They never turn the carousel — the carousel says
-  // whose screenshot, the chips whose quotes. Kept per screen; a screen opens with everyone's.
-  const [chips, setChips] = useState<{ key: string; on: string[] }>({ key: "", on: [] });
-  const chosen = useMemo(
-    () => new Set(chips.key === screen?.key ? chips.on.filter((p) => people.includes(p)) : []),
-    [chips, screen, people],
-  );
-  const toggleChip = useCallback(
-    (person: string) => {
-      if (!screen) return;
-      setChips((c) => {
-        const on = c.key === screen.key ? c.on : [];
-        return { key: screen.key, on: on.includes(person) ? on.filter((p) => p !== person) : [...on, person] };
-      });
-    },
-    [screen],
-  );
-
-  // The narrative: this screen's quotes in time order, only the chosen people's while a chip is on.
-  // It is J/K's list and nothing else's.
-  const stepOrder = useMemo(
-    () => (chosen.size ? said.filter((d) => chosen.has(byId.get(d)!.participant_id)) : said),
-    [said, chosen, byId],
-  );
-  // The visible quotes, for the report's per-quote keys (s/h/t/r/x/Enter scope to them on this lens),
-  // a shift-click range and ⌘A: every card the board shows, dimmed ones included. A chip says whose
-  // quotes are in front, not which exist — a dimmed card still takes a click, so it takes a key, and
-  // ⌘A selects it.
-  useEffect(() => {
-    registerVisibleQuoteIds("screens", said);
-    // Registers empty rather than deleting, as QuoteSections does, so the slot outlives a remount.
-    return () => registerVisibleQuoteIds("screens", []);
-  }, [registerVisibleQuoteIds, said]);
 
   // The window subtitle's count, and what the Mac reads for its View menu and column fit.
   useEffect(() => {
     setScreensCount(screens.length);
     return () => setScreensCount(0);
   }, [screens.length]);
+
+  // The navigator: shown and hidden like Discussion's guide, and resized the same way — the
+  // shipped .drag-handle on its edge, a keyboard-operable separator (←/→ by RESIZE_STEP, Home,
+  // End), its width remembered on release (discussion/split.ts's floor and step).
+  const [navW, setNavW] = useState<number>(() => readNavWidth() ?? NAV_W);
+  const [splitting, setSplitting] = useState(false);
+  const [splitHover, setSplitHover] = useState(false);
+  const clampNav = (w: number) => Math.round(Math.min(NAV_MAX, Math.max(MIN_WIDTH, w)));
+  const navWidth = clampNav(navW);
   const boardShown = !quotesError && !!data?.enabled && !data.unavailable && screens.length > 0;
   const navShown = navPanel.wish && boardShown;
   useEffect(() => {
-    reportScreensNav(navShown, (navPanel.wish ? NAV_W : 0) + CONTENT_FLOOR_PX);
-  }, [navShown, navPanel.wish]);
+    reportScreensNav(navShown, (navPanel.wish ? navWidth : 0) + CONTENT_FLOOR_PX);
+  }, [navShown, navPanel.wish, navWidth]);
+  const navRef = useRef<HTMLDivElement>(null);
+  // `[` hides the navigator; if the split had keyboard focus, focus goes to the board's title
+  // rather than to the page.
+  const splitFocused = useRef(false);
+  useLayoutEffect(() => {
+    if (navShown || !splitFocused.current) return;
+    splitFocused.current = false;
+    focusLensHeading(lensRef.current);
+  }, [navShown]);
+  const onSplitDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    const startX = e.clientX;
+    const startW = navRef.current?.getBoundingClientRect().width || navWidth;
+    let last = navWidth;
+    setSplitting(true);
+    document.body.classList.add("dragging");
+    const move = (ev: PointerEvent) => {
+      last = clampNav(startW + ev.clientX - startX);
+      setNavW(last);
+    };
+    const end = () => {
+      setSplitting(false);
+      document.body.classList.remove("dragging");
+      writeNavWidth(last); // once, on release
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+  };
+  const onSplitKey = (e: React.KeyboardEvent) => {
+    const step: Record<string, number> = { ArrowLeft: -RESIZE_STEP, ArrowRight: RESIZE_STEP };
+    let next: number;
+    if (e.key in step) next = clampNav(navWidth + step[e.key]);
+    else if (e.key === "Home") next = MIN_WIDTH;
+    else if (e.key === "End") next = NAV_MAX;
+    else return;
+    e.preventDefault();
+    e.stopPropagation(); // the lens's own ←/→ change version; on the split they resize
+    setNavW(next);
+    writeNavWidth(next);
+  };
 
-  // Changing screen remounts the board, and focus inside it would fall to the page; turning the
-  // carousel keeps the board but can move a card from a margin to the list (a remount of that card).
+  // Changing screen remounts the board, and focus inside it would fall to the page; changing
+  // version keeps the board but can move a card from a margin to the list (a remount of that card).
   // Where focus was decides where it goes: on a navigator link, to the link that is now current; in
-  // the carousel, to the carousel; anywhere else on the board, nowhere if it survived, else the
-  // board's title. Focus outside the lens is left alone. "On p2's screen" is the board's to settle
-  // (`focusRequest`): the card it moves is hidden until placement gives it a spot.
+  // the versions unit, to its checked badge; anywhere else on the board, nowhere if it survived,
+  // else the board's title. Focus outside the lens is left alone. "On p2's screen" is the board's to
+  // settle (`focusRequest`): the card it moves is hidden until placement gives it a spot.
   const lensRef = useRef<HTMLElement>(null);
   const refocus = useRef<{ want: Refocus; from: Element | null } | null>(null);
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
@@ -579,7 +631,7 @@ export function ScreensLens() {
       return true;
     };
     if (r.want === "nav" && at(lens.querySelector<HTMLElement>('.screens-nav a[aria-current="true"]'))) return;
-    if (r.want === "carousel" && at(lens.querySelector<HTMLElement>('.screens-carousel[tabindex="0"]'))) return;
+    if (r.want === "versions" && at(lens.querySelector<HTMLElement>('.screens-versions [role="radio"][aria-checked="true"]'))) return;
     const now = document.activeElement;
     if (now && now !== document.body && lens.contains(now)) return; // it survived
     const h1 = lens.querySelector<HTMLElement>(":scope > .section-heading h1");
@@ -589,8 +641,8 @@ export function ScreensLens() {
     }
   }, [boardKey]);
 
-  // Moving to another screen, or turning the carousel, is announced: the board changes under a
-  // screen reader with nothing else to say so.
+  // Moving to another screen, or another version, is announced: the board changes under a screen
+  // reader with nothing else to say so — unless focus lands somewhere that says it.
   const go = useCallback(
     (i: number, j?: number, focusCard?: string) => {
       if (!screens.length) return;
@@ -603,29 +655,42 @@ export function ScreensLens() {
       const active = document.activeElement;
       const lens = lensRef.current;
       const moving = `${next.key}|${nextTab?.session_id}|${nextTab?.t}` !== boardKey;
+      // On a version badge, focus follows the checked one (a radio group). On ‹ › or the collapsed
+      // button, focus stays where it is, so they work again and again from the keyboard.
+      const onRadio = active instanceof Element && !!active.closest('.screens-versions [role="radio"]');
+      const onStepper = active instanceof Element && !!active.closest(".screens-step, .screens-version-menu");
       let want: Refocus | null = null;
       if (focusCard) setFocusRequest((r) => ({ dom: focusCard, seq: (r?.seq ?? 0) + 1 }));
-      else if (moving && active instanceof Element && lens?.contains(active)) {
-        want = active.closest(".screens-nav") ? "nav" : active.closest(".screens-carousel") ? "carousel" : "lost";
+      else if (moving && active instanceof Element && lens?.contains(active) && !(same && onStepper)) {
+        want = active.closest(".screens-nav") ? "nav" : onRadio ? "versions" : "lost";
       }
       refocus.current = want ? { want, from: active } : null;
       setCurKey(next.key);
       setTabSid(nextTab?.session_id ?? null);
       if (!moving || !nextTab) return;
       if (same) {
-        // A turn of the carousel: say which slide ("2 of 3"), wherever focus is — it mostly stays.
-        announce(slideCaptionText(nextTab, jj, next.tabs.length));
-        // The card that asked for this slide is now linked: bring it forward and light its line.
+        // A change of version. On a badge, focus moves to the newly checked one, which says it; on
+        // ‹ › or the collapsed button focus stays, so the new version's name is announced; from
+        // anywhere else, where and when as well.
+        if (onStepper) announce(i18n.t("screens.announceParticipant", { code: nextTab.code }));
+        else if (!onRadio) announce(slideCaptionText(nextTab, jj, next.tabs.length));
+        // The card that asked for this version is now linked: focus it, as a click would.
         if (focusCard) setFocus(focusCard, { scroll: false });
         return;
       }
-      // Where focus moves, the newly focused title, link or carousel says where we are; announcing
+      // Where focus moves, the newly focused title, link or badge says where we are; announcing
       // as well would say it twice.
       if (refocus.current) return;
       announce(i18n.t("screens.announceScreen", { title: screenTitle(next, nextTab), n: at + 1, total: n }));
     },
     [screens, screen, tabIdx, boardKey, setFocus],
   );
+  // An undo or redo of a move or a Tidy on a screen or version not showing shows it first, so the
+  // change is seen (the closure outlives the board that pushed it).
+  const reveal = useCallback((key: string, sid: string) => {
+    setCurKey(key);
+    setTabSid(sid);
+  }, []);
   const flip = useCallback(
     (dir: 1 | -1) => {
       if (!screen || screen.tabs.length < 2) return;
@@ -633,25 +698,12 @@ export function ScreensLens() {
     },
     [go, cur, tabIdx, screen],
   );
-  // J/K: the next quote in the narrative, brought forward (FocusContext's focus: the card rises and
-  // its line lights) and scrolled into view. It moves as moveFocus does (narrative.ts stepFrom), but
-  // over `stepOrder`, not the registered visible quotes.
-  const step = useCallback(
-    (dir: 1 | -1) => {
-      const next = stepFrom(stepOrder, focusedId, dir);
-      if (next && next !== focusedId) setFocus(next);
-    },
-    [stepOrder, focusedId, setFocus],
-  );
 
-  // Keys: ↑/↓ change screen, ←/→ turn the carousel, J/K step through the quotes.
-  //
-  // How these meet the report's global handler (hooks/useKeyboardShortcuts.ts): on Screens it
-  // returns early for the arrows and j/k, so this lens owns them, and it ignores Next/Previous
-  // Quote from the menu here (the lens answers those below). What the global handler does handle
-  // on Screens is the per-quote keys — s/h/t/r/x/Enter — scoped to the cards this lens registers
-  // (`said`). Every key here is still under keyIsOurs, whose first test is `defaultPrevented`, and
-  // every key taken is preventDefault()ed.
+  // The lens's own keys: ↑/↓ change screen, ←/→ change version. Everything else that moves
+  // through or acts on the quotes — J/K, ⇧J/K, ⌘A, s/h/t/r/x/Enter — is the report's shared
+  // handler (hooks/useKeyboardShortcuts.ts), as on the Quotes lens, over the order the board
+  // registers. That handler returns early on Screens for the arrow keys only, so these four are
+  // ours; each is under keyIsOurs (defaultPrevented first) and preventDefault()ed when taken.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!screen || !keyIsOurs(e)) return;
@@ -662,16 +714,16 @@ export function ScreensLens() {
       else if (k === "ArrowUp" && screens.length > 1) go(cur - 1);
       else if (k === "ArrowRight" && screen.tabs.length > 1) flip(1);
       else if (k === "ArrowLeft" && screen.tabs.length > 1) flip(-1);
-      else if ((k === "j" || k === "k") && !e.shiftKey && stepOrder.length) step(k === "j" ? 1 : -1);
       else return;
       e.preventDefault();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [go, flip, step, cur, screen, screens.length, stepOrder.length]);
+  }, [go, flip, cur, screen, screens.length]);
 
   // The Mac's View menu (and anything else on the bridge) drives the same steps by name
-  // (shims/bridge.ts dispatches `bn:menu-action`). Tidy is the board's own (ScreenBoard).
+  // (shims/bridge.ts dispatches `bn:menu-action`). Tidy is the board's own (ScreenBoard); Next and
+  // Previous Quote are the shared handler's.
   useEffect(() => {
     const onMenu = (e: Event) => {
       if (!screen) return;
@@ -688,19 +740,13 @@ export function ScreensLens() {
         case "previousScreenshot":
           flip(-1);
           break;
-        case "nextQuote":
-          step(1);
-          break;
-        case "previousQuote":
-          step(-1);
-          break;
         default:
           break;
       }
     };
     window.addEventListener("bn:menu-action", onMenu);
     return () => window.removeEventListener("bn:menu-action", onMenu);
-  }, [go, flip, step, cur, screen, screens.length]);
+  }, [go, flip, cur, screen, screens.length]);
 
   // ── The card's gestures: QuoteGroup's, so a selection acts as one ──
   const vis = useMemo(
@@ -786,6 +832,9 @@ export function ScreensLens() {
         moderatorQuestion={null}
         isQuestionOpen={false}
         isPillVisible={false}
+        // The owner, 15 Oct 2026: the "[When asked…]" line is "interesting but new… hide here for
+        // the moment". Only here; the Quotes lens keeps it, and so does the code.
+        showResearcherContext={false}
         onToggleStar={onToggleStar}
         onToggleHide={onToggleHide}
         onEditCommit={commitEdit}
@@ -838,13 +887,29 @@ export function ScreensLens() {
     <section
       ref={lensRef}
       className={`screens-lens${navShown ? "" : " nav-hidden"}`}
-      style={{ "--screens-nav-w": `${NAV_W}px` } as React.CSSProperties}
+      style={{ "--screens-nav-w": `${navWidth}px`, "--screens-card-w": `${CARD_W}px`, "--screens-col-w": `${COLUMN_W}px` } as React.CSSProperties}
       data-testid="screens-lens"
     >
-      {navShown && <ScreenNav screens={screens} cur={cur} onPick={(i) => go(i)} byId={byId} hidden={store.hidden} />}
+      {navShown && (
+        <div className="screens-nav-pane" ref={navRef}>
+          <ScreenNav screens={screens} cur={cur} onPick={(i) => go(i)} byId={byId} hidden={store.hidden} />
+          {/* The shipped .drag-handle on the navigator's edge, as Discussion's guide has. A
+              focusable separator is an interactive widget (ARIA window splitter). */}
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+          <div
+            className={`drag-handle screens-split${splitting ? " active" : ""}${splitHover ? " hover-intent" : ""}`}
+            role="separator" aria-orientation="vertical" aria-label={t("screens.resizeNavigator")} aria-controls="screens-nav"
+            tabIndex={0} aria-valuemin={MIN_WIDTH} aria-valuemax={NAV_MAX} aria-valuenow={navWidth}
+            aria-valuetext={t("screens.navWidthPixels", { count: navWidth })}
+            onFocus={() => (splitFocused.current = true)} onBlur={() => (splitFocused.current = false)}
+            onPointerDown={onSplitDown} onKeyDown={onSplitKey}
+            onPointerEnter={() => setSplitHover(true)} onPointerLeave={() => setSplitHover(false)}
+          />
+        </div>
+      )}
       {screen && (
-        // Keyed by the screen alone: turning the carousel keeps the board (and its cross-fade, its
-        // swipe lock, a selected card); another screen is another board.
+        // Keyed by the screen alone: changing version keeps the board (its cross-fade, its swipe
+        // lock); another screen is another board.
         <ScreenBoard
           key={screen.key}
           projectId={projectId}
@@ -855,12 +920,9 @@ export function ScreensLens() {
           byId={byId}
           store={store}
           said={said}
-          sequence={sequence}
-          people={people}
-          chosen={chosen}
-          onChip={toggleChip}
           focusedId={focusedId}
           focusRequest={focusRequest}
+          reveal={reveal}
           problems={problemNotes(data)}
           renderQuote={renderQuote}
         />
@@ -906,18 +968,18 @@ function screenTitle(screen: Screen, tab?: ScreenTab): string {
   return hs.join(" · ") || screen.name;
 }
 
-/** "p1's screen at 00:12" with the time set as a timecode: the sentence is the locale's, split on its
- *  own {{time}} slot, so the word order is each language's (MiroExportPanel's approach, no <Trans>). */
-function screenAt(template: string, time: string): React.ReactNode {
-  const slot = template.indexOf("{{time}}");
-  if (slot < 0) return template;
-  return (
-    <>
-      {template.slice(0, slot)}
-      <span className="timecode">{time}</span>
-      {template.slice(slot + "{{time}}".length)}
-    </>
-  );
+/**
+ * The navigator's per-screen detail — the address, the participants' codes and the quote count —
+ * is built and kept, and not shown for now. The owner, 15 Oct 2026: these may belong on the board,
+ * as context for the screen it shows, rather than in the list of screens. Turn on to show them.
+ */
+export const NAV_DETAILS = false;
+
+/** How many quotes a screen's board shows: each once, hidden ones not counted. */
+export function quotesOnScreen(s: Screen, byId: Map<string, QuoteResponse>, hidden: Record<string, boolean>): number {
+  const seen = new Set<string>();
+  for (const tb of s.tabs) for (const d of [...tb.pins.map((p) => p.dom_id), ...tb.loose]) if (byId.has(d) && !hidden[d]) seen.add(d);
+  return seen.size;
 }
 
 function ScreenNav({
@@ -941,7 +1003,7 @@ function ScreenNav({
   const { t } = useTranslation();
   const participants = new Set(screens.flatMap((s) => s.tabs.map((tb) => tb.code))).size;
   return (
-    <nav className="screens-nav" aria-label={t("screens.title")}>
+    <nav className="screens-nav" id="screens-nav" aria-label={t("screens.title")}>
       <div className="screens-nav-head">
         {t("screens.navSummary", {
           screens: t("screens.screenCount", { count: screens.length }),
@@ -951,10 +1013,6 @@ function ScreenNav({
       <ol ref={listRef}>
         {screens.map((s, i) => {
           const codes = [...new Set(s.tabs.map((tb) => tb.code))];
-          // What the board would show: each quote once, hidden ones not counted (its "N quotes").
-          const said = new Set(
-            s.tabs.flatMap((tb) => [...tb.pins.map((p) => p.dom_id), ...tb.loose]).filter((d) => byId.has(d) && !hidden[d]),
-          ).size;
           return (
             <li key={s.key}>
               <a
@@ -965,6 +1023,7 @@ function ScreenNav({
                   onPick(i);
                 }}
               >
+                {/* Dropped below the navigator's narrow width (screens.css container query). */}
                 <span className={`screens-thumb${s.tabs.length > 1 ? " stacked" : ""}`}>
                   {s.tabs.slice(0, 3).map((tb) => (
                     <NavThumb key={`${tb.session_id}@${tb.t}`} tab={tb} />
@@ -972,18 +1031,20 @@ function ScreenNav({
                 </span>
                 <span>
                   <span className="screens-nav-title">{screenTitle(s)}</span>
-                  {s.name.startsWith("/") && <span className="screens-nav-path">{s.name}</span>}
-                  <span className="screens-nav-meta">
-                    <span className="screens-count">{said}</span>
-                    <span className="screens-codes">
-                      {codes.slice(0, 12).map((c) => (
-                        <span key={c} className="bn-speaker-badge-code">
-                          {c}
-                        </span>
-                      ))}
-                      {codes.length > 12 && <span className="screens-more">+{codes.length - 12}</span>}
+                  {NAV_DETAILS && s.name.startsWith("/") && <span className="screens-nav-path">{s.name}</span>}
+                  {NAV_DETAILS && (
+                    <span className="screens-nav-meta">
+                      <span className="screens-count">{quotesOnScreen(s, byId, hidden)}</span>
+                      <span className="screens-codes">
+                        {codes.slice(0, 12).map((c) => (
+                          <span key={c} className="bn-speaker-badge-code">
+                            {c}
+                          </span>
+                        ))}
+                        {codes.length > 12 && <span className="screens-more">+{codes.length - 12}</span>}
+                      </span>
                     </span>
-                  </span>
+                  )}
                 </span>
               </a>
             </li>
@@ -1000,22 +1061,19 @@ interface BoardProps {
   projectId: string;
   screen: Screen;
   tabIdx: number;
-  /** Turn the carousel to slide `j`. */
+  /** Show version `j`. */
   onFlip: (j: number) => void;
-  /** Turn to slide `j`, where card `dom` is linked, and bring it forward. */
+  /** Show version `j`, where card `dom` is linked, and bring it forward. */
   onShowOn: (dom: string, j: number) => void;
   byId: Map<string, QuoteResponse>;
   store: ReturnType<typeof useQuotesStore>;
   /** Every quote on this screen, once each, in time order (hidden ones not). */
   said: string[];
-  sequence: Record<string, Sequence>;
-  people: string[];
-  /** The people whose quotes are in front; empty is everyone's. */
-  chosen: Set<string>;
-  onChip: (person: string) => void;
   focusedId: string | null;
   /** Move keyboard focus into this card once it has a place (after "On p2's screen"). */
   focusRequest: FocusRequest | null;
+  /** Show this screen and version (an undo reaching back to one not showing). */
+  reveal: (screenKey: string, sessionId: string) => void;
   /** Recordings that could not be read or held no text: a plain list, never live. */
   problems: string[];
   renderQuote: RenderQuote;
@@ -1023,17 +1081,25 @@ interface BoardProps {
 
 interface Geometry {
   stageW: number;
-  /** The showing screengrab's size, and where it sits in the board. */
+  /** The showing screengrab as the board lays it out: where its box sits in the board and its
+   *  size, border included — the one measure placement, a freeze, a drop and Tidy all use, so they
+   *  agree to the pixel with each other and with the grid. */
   W: number;
   H: number;
   sx: number;
   sy: number;
+  /** The picture inside that border, where a line's box is: its inset and size. */
+  ix: number;
+  iy: number;
+  iw: number;
+  ih: number;
   /** Two columns, one, or rows: changes only at a threshold, with hysteresis (layout.ts). */
   mode: Mode;
 }
 
 const sameGeometry = (a: Geometry, b: Geometry) =>
-  a.stageW === b.stageW && a.W === b.W && a.H === b.H && a.sx === b.sx && a.sy === b.sy && a.mode === b.mode;
+  a.stageW === b.stageW && a.W === b.W && a.H === b.H && a.sx === b.sx && a.sy === b.sy && a.mode === b.mode &&
+  a.ix === b.ix && a.iy === b.iy && a.iw === b.iw && a.ih === b.ih;
 
 interface Drag {
   dom: string;
@@ -1043,54 +1109,117 @@ interface Drag {
   z: number;
 }
 
+/** Where everything on the board is, once measured. */
 interface Laid {
-  comp: Composition;
+  /** Automatic: the composition of the linked cards. Custom: null. */
+  comp: Composition | null;
+  /** Custom: each placed card's top-left in the board. */
+  pos: Record<string, { left: number; top: number }>;
+  /** What the bands above and below the screengrab hold open. */
+  band: { T: number; B: number };
   /** The side columns' height: the screengrab's, or more where a column runs past it. */
   colH: number;
-  /** The board's least height, so a card dropped low over the screengrab is not cut off. */
+  /** The board's least height, so a card placed low is not cut off. */
   boardMin: number;
 }
 
-/** How long a card glides from its old place to its new one when the layout changes mode (ms). */
+/** How long a card glides from its old place to its new one (ms). */
 const GLIDE_MS = 260;
 
 const boxOf = (p: Pin) => ({ x: p.box[0], y: p.box[1], w: p.box[2], h: p.box[3] });
 
-/** A card's person and place among that person's quotes here: seen as a badge, heard as a sentence. */
-function SequenceMark({ seq }: { seq: Sequence }) {
+/**
+ * Which version shows: ONE unit, ranged right on the heading line (the owner, 15 Oct 2026). The
+ * moment's timecode (the house link: it plays), ‹ ›, and the participants' badges as a radio group
+ * — one tab stop, ←/→ within it, the checked badge in the shared "you are here" style. Past
+ * VERSION_BADGES_MAX the badges collapse to `‹ p3 · 2 of 8 ›`, the badge opening a menu of
+ * versions. Each radio is named for its version ("p3's screen, 2 of 3"); the timecode is its own
+ * link. Nothing for choosing a version sits on the screengrab.
+ */
+function Versions({ screen, tabIdx, onFlip }: { screen: Screen; tabIdx: number; onFlip: (j: number) => void }) {
   const { t } = useTranslation();
+  const total = screen.tabs.length;
+  const tab = screen.tabs[tabIdx];
+  const [menu, setMenu] = useState(false);
+  const closeMenu = useCallback(() => setMenu(false), []);
+  const step = (d: 1 | -1) => onFlip((tabIdx + d + total) % total);
+  // A radio says its own position ("2 of 3"), so its name is whose screen only; the collapsed
+  // button, which is no radio, says both.
+  const name = (j: number) => t("screens.announceParticipant", { code: screen.tabs[j].code });
+  // ←/→ move the checked badge, as in any radio group; ↑/↓ are left to the lens (screens).
+  const onRadioKey = (e: React.KeyboardEvent) => {
+    const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    if (e.key === "Home" || e.key === "End") {
+      e.preventDefault();
+      onFlip(e.key === "Home" ? 0 : total - 1);
+      return;
+    }
+    if (!d) return;
+    e.preventDefault();
+    step(d);
+  };
+  const arrow = (d: 1 | -1) => (
+    <button type="button" className="screens-step" onClick={() => step(d)}
+      aria-label={t(d < 0 ? "screens.previousVersion" : "screens.nextVersion")}>
+      <svg viewBox="0 0 12 12" aria-hidden="true"><path d={d < 0 ? "M7.5 2.5 4 6l3.5 3.5" : "M4.5 2.5 8 6l-3.5 3.5"} /></svg>
+    </button>
+  );
   return (
-    <>
-      <span className="screens-seq" aria-hidden="true">
-        <span className="screens-seq-code">{seq.person}</span>
-        <span className="screens-seq-n">{seq.n}</span>
-      </span>
-      <span className="bn-sr-only">{t("screens.sequence", { code: seq.person, n: seq.n, total: seq.total })}</span>
-    </>
+    <span className="screens-versions">
+      <TimecodeLink seconds={tab.t} participantId={tab.code} data-testid="screens-version-time" />
+      {total > 1 && arrow(-1)}
+      {total > VERSION_BADGES_MAX ? (
+        <span className="screens-version-pick">
+          <button type="button" className="screens-version-menu bn-person-badge-here" aria-haspopup="menu"
+            aria-expanded={menu} aria-label={t("screens.versionOption", { code: tab.code, n: tabIdx + 1, total })}
+            onClick={() => setMenu((m) => !m)}>
+            <PersonBadge code={tab.code} role="participant" />
+            <span className="screens-version-count" aria-hidden="true">{t("screens.versionCount", { n: tabIdx + 1, total })}</span>
+          </button>
+          {menu && (
+            <BoardMenu x={0} y={30} onClose={closeMenu}
+              items={screen.tabs.map((_, j) => ({ label: name(j), run: () => onFlip(j), checked: j === tabIdx }))} />
+          )}
+        </span>
+      ) : total > 1 ? (
+        <span role="radiogroup" aria-label={t("screens.versionsLabel")} className="screens-version-radios">
+          {screen.tabs.map((tb, j) => (
+            <button key={`${tb.session_id}@${tb.t}`} type="button" role="radio" aria-checked={j === tabIdx}
+              tabIndex={j === tabIdx ? 0 : -1} aria-label={name(j)}
+              className={j === tabIdx ? "bn-person-badge-here" : undefined} onClick={() => onFlip(j)} onKeyDown={onRadioKey}>
+              <PersonBadge code={tb.code} role="participant" />
+            </button>
+          ))}
+        </span>
+      ) : (
+        <span className="bn-person-badge-here">
+          <PersonBadge code={tab.code} role="participant" />
+        </span>
+      )}
+      {total > 1 && arrow(1)}
+    </span>
   );
 }
 
 function ScreenBoard(props: BoardProps) {
   const { t } = useTranslation();
-  const { projectId, screen, tabIdx, byId, store, said, sequence, people, chosen } = props;
-  const { setFocus } = useFocus();
+  const { projectId, screen, tabIdx, byId, store, said } = props;
+  const { setFocus, registerVisibleQuoteIds } = useFocus();
   const tab = screen.tabs[tabIdx];
-  const total = screen.tabs.length;
-  const multi = total > 1;
-  const still = stillKey(tab.session_id, tab.t);
+  const multi = screen.tabs.length > 1;
   const slides = useStills(screen.tabs, tabIdx, 1600);
   const { src, failed: stillFailed } = slides[tabIdx];
   const stageRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const shotRef = useRef<HTMLDivElement>(null);
-  const carouselRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const cardEls = useRef(new Map<string, HTMLElement>());
   const [geo, setGeo] = useState<Geometry | null>(null);
   const [laid, setLaid] = useState<Laid | null>(null);
   const settled = useRef(false);
-  const [leaders, setLeaders] = useState<{ id: string; d: string; end: [number, number]; muted: boolean }[]>([]);
-  // Bumped when a glide ends, so the leaders are measured again where the cards came to rest.
-  const [, setGlides] = useState(0);
+  const [leaders, setLeaders] = useState<{ id: string; d: string; end: [number, number] }[]>([]);
+  // Bumped to re-render: when a glide ends (re-measure the leaders), and after a live resize.
+  const [, bump] = useReducer((n: number) => n + 1, 0);
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
@@ -1098,47 +1227,104 @@ function ScreenBoard(props: BoardProps) {
       alive.current = false;
     };
   }, []);
-  // The selected card: a press or keyboard focus selects it, never hover (the owner, 14 Oct 2026,
-  // docs/design-screens.md §6.8). Selecting raises it and nothing else: a card keeps one size. A
-  // press is remembered with the report's focus at that moment: once focus moves (J/K, Next Quote,
-  // Escape through the report's own cascade, which takes Escape before the board can), the press
-  // is stale and the focused card is the one in front.
-  const [pressed, setPressed] = useState<{ id: string; focus: string | null } | null>(null);
-  const focusNow = useRef(props.focusedId);
-  useLayoutEffect(() => {
-    focusNow.current = props.focusedId;
-  });
-  const lift = useCallback((id: string | null) => setPressed(id ? { id, focus: focusNow.current } : null), []);
-  const unlift = useCallback((id: string) => setPressed((p) => (p?.id === id ? null : p)), []);
-  const lifted = pressed && pressed.focus === props.focusedId ? pressed.id : null;
   const [drag, setDrag] = useState<Drag | null>(null);
-  // The researcher's arrangement of this screengrab, as intent (layout.ts): re-read on every write,
-  // including an undo of Tidy made after the board has moved on.
-  const arrangeVersion = useSyncExternalStore(subscribeArrangement, arrangementVersion, arrangementVersion);
-  const placements = useMemo(
-    () => placementsFor(projectId, still),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [projectId, still, arrangeVersion],
-  );
   const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; run: () => void }[] } | null>(null);
   // Stable, so the menu's effect (which focuses its first item, and returns focus on close) runs
   // once per opening rather than on every render of the board.
   const closeMenu = useCallback(() => setMenu(null), []);
   const [hiddenOpen, setHiddenOpen] = useState(false);
 
-  const visible = (dom: string) => byId.has(dom) && !store.hidden[dom];
+  // ── The researcher's arrangement of this version: null while automatic (layout.ts) ──
+  const arrangeVersion = useSyncExternalStore(subscribeArrangement, arrangementVersion, arrangementVersion);
+  // A version migrated from the 14 Oct store has spots for the cards placed then, and none for the
+  // rest: on its first view the rest are frozen where automatic layout puts them, as a first drag
+  // does, or its linked cards would drop into the list ("my cards disappeared").
+  const fillPending = useRef(false);
+  useLayoutEffect(() => {
+    if (migrateArrangement(projectId, screen.key, tab.session_id, tab.t)) fillPending.current = true;
+  }, [projectId, screen.key, tab.session_id, tab.t]);
+  const arrangement = useMemo(
+    () => arrangementFor(projectId, screen.key, tab.session_id),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [projectId, screen.key, tab.session_id, arrangeVersion],
+  );
+  const custom = arrangement !== null;
+  const write = (cards: Arrangement | null) => setArrangement(projectId, screen.key, tab.session_id, cards);
+  const vkey = versionKey(screen.key, tab.session_id);
+  // One undoable change to this version's arrangement. Undone or redone while another screen or
+  // version is showing, it shows this one first, so the change is seen.
+  const undoable = (action: "moveQuote" | "tidy", before: Arrangement | null, after: Arrangement | null) => {
+    const key = screen.key, sid = tab.session_id, reveal = props.reveal;
+    const put = (a: Arrangement | null) => {
+      reveal(key, sid);
+      setArrangement(projectId, key, sid, a);
+    };
+    pushUndo({ action, undo: () => put(before), redo: () => put(after) });
+  };
+
+  // ── A live window resize: hold still, scale as one, settle once (utils/liveResize.ts) ──
+  const liveRef = useRef(isLiveResizing());
+  const [live, setLive] = useState(isLiveResizing);
+  const [liveW, setLiveW] = useState(0);
+  // The stage's width when the resize began: the board is held at it and scaled.
+  const [liveBase, setLiveBase] = useState(0);
+  const geoRef = useRef(geo);
+  useLayoutEffect(() => {
+    geoRef.current = geo;
+  });
+  // The glide's starting places, and whether the next settled layout glides to its new places
+  // (a mode change, Tidy, an undo, the end of a live resize) or simply arrives (a drop, a freeze).
+  const flipFrom = useRef<{ mode: Mode; at: Map<string, [number, number]> } | null>(null);
+  const glideNext = useRef(false);
+  const remeasure = useRef(false);
+  const where = () => {
+    const board = boardRef.current;
+    const at = new Map<string, [number, number]>();
+    if (!board) return at;
+    const bb = board.getBoundingClientRect();
+    for (const [id, el] of cardEls.current) {
+      // A card not yet placed sits hidden at the origin: never glide from there.
+      if (el.style.visibility === "hidden") continue;
+      const r = el.getBoundingClientRect();
+      at.set(id, [r.left - bb.left, r.top - bb.top]);
+    }
+    return at;
+  };
+  useEffect(
+    () =>
+      subscribeLiveResize(() => {
+        const now = isLiveResizing();
+        if (now === liveRef.current) return;
+        if (now) {
+          const base = geoRef.current?.stageW ?? stageRef.current?.clientWidth ?? 0;
+          setLiveBase(base);
+          setLiveW(base);
+        } else {
+          // Where the cards are now, scaled: the glide home starts here.
+          flipFrom.current = { mode: geoRef.current?.mode ?? "r", at: where() };
+          glideNext.current = true;
+          remeasure.current = true;
+        }
+        liveRef.current = now;
+        setLive(now);
+      }),
+    [],
+  );
+
   const onScreen = useMemo(() => new Set(said), [said]);
-  // LINKED: the quotes whose words are on the screengrab showing — this slide's pins, and only
-  // these. A quote linked on another participant's version is listed under it, offering that
-  // version ("On p2's screen"). No screengrab to pin to: nothing is linked.
+  // LINKED: the quotes whose words are on the screengrab showing — this version's pins, and only
+  // these, in time order (time breaks ties along an edge). A quote linked on another version is
+  // listed, offering that version ("On p2's screen"). No screengrab to pin to: nothing is linked.
   const pins = useMemo(() => {
     if (stillFailed) return [];
     const seen = new Set<string>();
-    return tab.pins.filter((p) => {
-      if (seen.has(p.dom_id) || !byId.has(p.dom_id) || store.hidden[p.dom_id]) return false;
-      seen.add(p.dom_id);
-      return true;
-    });
+    return tab.pins
+      .filter((p) => {
+        if (seen.has(p.dom_id) || !byId.has(p.dom_id) || store.hidden[p.dom_id]) return false;
+        seen.add(p.dom_id);
+        return true;
+      })
+      .sort((a, b) => byId.get(a.dom_id)!.start_timecode - byId.get(b.dom_id)!.start_timecode);
   }, [tab, stillFailed, byId, store.hidden]);
   const pinByDom = useMemo(() => new Map(pins.map((p) => [p.dom_id, p])), [pins]);
   // For an unlinked card: the first other version whose screengrab links it.
@@ -1149,22 +1335,6 @@ function ScreenBoard(props: BoardProps) {
     });
     return m;
   }, [screen, tabIdx]);
-  const personOf = (d: string) => byId.get(d)?.participant_id ?? "";
-  // A person chip on: the other people's cards step back (by colour, as a selection's do).
-  const muted = (d: string) => chosen.size > 0 && !chosen.has(personOf(d));
-  // The researcher's arrangement of the cards on the board: what the arrangement control, the
-  // right-click menu and the Mac's View ▸ Tidy all count, so the three agree.
-  const arranged = Object.fromEntries(Object.entries(placements).filter(([d]) => visible(d))) as Record<string, Placement>;
-  const custom = Object.keys(arranged).length > 0;
-  // A placed card is placed against the screengrab. Without one to measure (it failed to load, or
-  // has no size yet) a placed card is listed with the rest, not held hidden for a spot that never
-  // comes.
-  const placeable = !!geo && geo.H > 0;
-  const mine: Record<string, Placement> = placeable ? arranged : {};
-  // Over the screengrab: where the researcher dropped it. Beside it: a placed card's intent.
-  const over = new Set(Object.keys(mine).filter((d) => mine[d].kind === "over"));
-  // A card being dragged leaves its edge (or the list) for the free layer until it is dropped.
-  const dragOut = drag && !over.has(drag.dom) ? drag.dom : null;
   const hiddenHere = useMemo(() => {
     const seen = new Set<string>();
     for (const tb of screen.tabs) {
@@ -1172,37 +1342,59 @@ function ScreenBoard(props: BoardProps) {
     }
     return [...seen];
   }, [screen, byId, store.hidden]);
-  // The selected card: pressed or focused here, else the report's focused quote if it is on this
-  // board (J/K, Next Quote) — it comes forward and its line lights.
-  const lit = lifted ?? (props.focusedId && onScreen.has(props.focusedId) ? props.focusedId : null);
+  // The focused card comes forward and its line lights, as a click does (FocusContext).
+  const lit = props.focusedId && onScreen.has(props.focusedId) ? props.focusedId : null;
 
+  // A card is placed against the screengrab: without one to measure (it failed to load, or has no
+  // size yet) every card is listed, a custom board's included, not held hidden for a spot.
+  const placeable = !!geo && geo.H > 0;
   const mode: Mode = geo?.mode ?? "r";
-  // The cards on the edges: every card the researcher placed beside the screengrab, and every linked
-  // card they did not place. Placed cards win their spot; the rest are automatic (layout.ts).
-  const edgeCards: BoardCard[] = [
-    ...Object.keys(mine).flatMap((d): BoardCard[] => {
-      const p = mine[d];
-      return p.kind === "edge" && d !== dragOut ? [{ id: d, height: 0, placed: { side: p.side, frac: p.frac, z: p.z } }] : [];
-    }),
-    ...pins.filter((p) => !(p.dom_id in mine) && p.dom_id !== dragOut).map((p) => ({ id: p.dom_id, height: 0, anchor: boxOf(p) })),
-  ];
-  const edgeOf = new Map(edgeCards.map((c) => [c.id, cardEdge(c, mode)]));
+  const dragging = drag?.dom ?? null;
+  // Below the side-column threshold a custom board is SHOWN as the automatic rows — its side
+  // columns would push the page sideways at 320px (1.4.10) — and its arrangement is kept, to apply
+  // again once the stage is wide enough. Nothing is moved there by hand: the grips and ⌥-arrows
+  // rest until the arrangement shows.
+  const shown = arrangement !== null && mode !== "rows" ? arrangement : null;
+  const showCustom = shown !== null;
+  const handsOff = custom && !showCustom;
+  // Automatic: the linked cards on the edges, by their lines. Custom: every card with a spot, where
+  // the researcher's arrangement has it (layout.ts rectFromIntent); a card without one (it arrived
+  // after the board went custom) waits in the list until Tidy.
+  const placed = shown && placeable ? said.filter((d) => d in shown && d !== dragging) : [];
+  const edgeCards: BoardCard[] = showCustom ? [] : pins.map((p) => ({ id: p.dom_id, height: 0, anchor: boxOf(p) }));
+  const edgeOf = new Map<string, Edge>(edgeCards.map((c) => [c.id, edgeFor(c.anchor, mode)]));
   const onEdge = (e: Edge) => edgeCards.filter((c) => edgeOf.get(c.id) === e).map((c) => c.id);
-  const columns = boardColumns(mode, { L: onEdge("L").length > 0, R: onEdge("R").length > 0 });
+  const frameSides = shown ? customFrame(placed.map((d) => ({ intent: shown[d], height: 0 }))) : null;
+  const columns = frameSides
+    ? boardColumns("lr", frameSides)
+    : boardColumns(mode, { L: onEdge("L").length > 0, R: onEdge("R").length > 0 });
+  const inMargin = new Set(showCustom ? placed : edgeCards.map((c) => c.id));
   // Everything else said here: under the screengrab, in time order.
-  const listed = said.filter((d) => !pinByDom.has(d) && !(d in mine) && d !== dragOut);
+  const listed = said.filter((d) => !inMargin.has(d) && d !== dragging);
 
   // Measure the stage and the showing screengrab, and pick the mode (with hysteresis: the previous
-  // mode is part of the answer).
+  // mode is part of the answer). During a live resize only the stage, for the scale.
   const measure = useCallback(() => {
     const stage = stageRef.current, shot = shotRef.current;
     if (!stage || !shot) return;
+    // During a live resize only the stage, for the scale — once the board has been laid out at all.
+    // A board that mounts mid-resize lays itself out first, and that is the size it scales from.
+    if (liveRef.current && (geoRef.current?.H ?? 0) > 0) {
+      setLiveW(stage.clientWidth);
+      return;
+    }
     const img = shot.querySelector<HTMLImageElement>("img.is-current");
     const stageW = stage.clientWidth;
-    const W = img?.clientWidth ?? shot.clientWidth;
-    const H = img?.clientHeight ?? 0;
+    if (liveRef.current) {
+      setLiveBase((b) => b || stageW);
+      setLiveW((w) => w || stageW);
+    }
+    // (jsdom measures no box: there the client size stands in.)
+    const W = img ? img.offsetWidth || img.clientWidth : shot.clientWidth;
+    const H = img ? img.offsetHeight || img.clientHeight : 0;
+    const inner = { ix: img?.clientLeft ?? 0, iy: img?.clientTop ?? 0, iw: img?.clientWidth ?? W, ih: img?.clientHeight ?? H };
     setGeo((old) => {
-      const g = { stageW, W, H, sx: shot.offsetLeft, sy: shot.offsetTop, mode: stageMode(stageW, old?.mode) };
+      const g = { stageW, W, H, sx: shot.offsetLeft, sy: shot.offsetTop, ...inner, mode: stageMode(stageW, old?.mode) };
       return old && sameGeometry(old, g) ? old : g;
     });
   }, []);
@@ -1214,96 +1406,180 @@ function ScreenBoard(props: BoardProps) {
     return () => ro.disconnect();
   }, [measure, src]);
 
-  // Place the edges once the cards have heights. Deliberately runs after every render (a card's
-  // height changes with tags, edits and width; a band's height moves the screengrab down) and sets
-  // state only when the placement changes. `settled` says this commit's placement held, which is
-  // when the glide below may measure where everything went.
+  // An arrangement change the researcher did not make by dropping a card here (Tidy, an undo, a
+  // redo, Return to automatic) glides every card to its new place; a drop or a freeze just lands.
+  // A change of version is not such a change: the screengrab cross-fades and the cards simply take
+  // their places on the new version.
+  const quiet = useRef(false);
+  const lastArrangement = useRef({ key: vkey, arr: arrangement });
+  useLayoutEffect(() => {
+    const last = lastArrangement.current;
+    if (last.key === vkey && last.arr === arrangement) return;
+    lastArrangement.current = { key: vkey, arr: arrangement };
+    if (last.key !== vkey) {
+      quiet.current = false;
+      return;
+    }
+    if (quiet.current) quiet.current = false;
+    else glideNext.current = true;
+  });
+
+  // Place the cards once they have heights. Deliberately runs after every render (a card's height
+  // changes with tags, edits and width; a band's height moves the screengrab down) and sets state
+  // only when the placement changes. `settled` says this commit's placement held, which is when the
+  // glide below may measure where everything went. Never during a live resize: everything holds.
+  const height = (d: string) => cardEls.current.get(d)?.offsetHeight ?? 120;
+  // Where Tidy would put each linked card, as intent: the automatic composition, frozen. The band
+  // below starts under the taller of the screengrab and its side columns, as in the grid.
+  const autoSpots = () => {
+    const g = geo!;
+    const comp = composeBoard(pins.map((p) => ({ id: p.dom_id, height: height(p.dom_id), anchor: boxOf(p) })), g.mode, { W: g.W, H: g.H });
+    const below = Math.max(0, comp.colBottom - g.H);
+    return (d: string, z: number): Intent => autoIntent(comp.at[d], height(d), { W: g.W, H: g.H }, comp.band.T, z, below);
+  };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
+    if (liveRef.current && laid) return;
+    if (remeasure.current) {
+      // The resize has ended: measure afresh before anything settles, so the glide starts from
+      // where the cards were drawn, scaled, and ends where they now belong.
+      remeasure.current = false;
+      settled.current = false;
+      measure();
+      bump();
+      return;
+    }
     measure();
     if (!geo || !geo.H) {
       settled.current = false;
       return;
     }
-    const cards = edgeCards.map((c) => ({ ...c, height: cardEls.current.get(c.id)?.offsetHeight ?? 120 }));
-    const comp = composeBoard(cards, geo.mode, { W: geo.W, H: geo.H });
-    let boardMin = 0;
-    for (const d of over) {
-      const s = mine[d];
-      if (s.kind !== "over") continue;
-      const h = cardEls.current.get(d)?.offsetHeight ?? 120;
-      boardMin = Math.max(boardMin, geo.sy + s.y * geo.H + h);
+    if (fillPending.current && arrangement) {
+      fillPending.current = false;
+      const missing = pins.filter((p) => !(p.dom_id in arrangement));
+      if (missing.length) {
+        const auto = autoSpots();
+        const after: Arrangement = { ...arrangement };
+        for (const p of missing) after[p.dom_id] = auto(p.dom_id, 31);
+        quiet.current = true;
+        write(after);
+        return;
+      }
     }
-    const next: Laid = { comp, colH: Math.max(geo.H, comp.colBottom), boardMin };
+    let next: Laid;
+    if (!shown) {
+      const comp = composeBoard(pins.map((p) => ({ id: p.dom_id, height: height(p.dom_id), anchor: boxOf(p) })), geo.mode, { W: geo.W, H: geo.H });
+      next = { comp, pos: {}, band: comp.band, colH: Math.max(geo.H, comp.colBottom), boardMin: 0 };
+    } else {
+      const cards = placed.map((d) => ({ id: d, intent: shown[d], height: height(d) }));
+      const f = customFrame(cards);
+      const s: Rect = { left: geo.sx, top: geo.sy, width: geo.W, height: geo.H };
+      const pos: Laid["pos"] = {};
+      let boardMin = 0;
+      for (const c of cards) {
+        const r = rectFromIntent(c.intent, s, c.height);
+        pos[c.id] = { left: Math.max(0, r.left), top: Math.max(0, r.top) };
+        boardMin = Math.max(boardMin, pos[c.id].top + c.height);
+      }
+      next = { comp: null, pos, band: { T: f.T, B: f.B }, colH: geo.H, boardMin };
+    }
     const same = laid !== null && JSON.stringify(laid) === JSON.stringify(next);
     settled.current = same;
-    if (!same) setLaid(next);
+    // A measured layout: placement needs the cards' heights, which exist only after they render, so
+    // it is set from this effect, and only when it changed — which is what makes it settle.
+    setLaid((old) => (old && JSON.stringify(old) === JSON.stringify(next) ? old : next));
   });
+
+  // Where a card sits in the board, for the reading order.
+  const seenAt = (id: string): Seen | null => {
+    if (!laid || !geo) return null;
+    if (!laid.comp) return laid.pos[id] ? { id, ...laid.pos[id] } : null;
+    const sp = laid.comp.at[id];
+    if (!sp) return null;
+    if (sp.edge === "L") return { id, top: geo.sy + sp.top, left: sp.left };
+    if (sp.edge === "R") return { id, top: geo.sy + sp.top, left: geo.sx + geo.W + COLUMN_GUTTER + sp.left };
+    if (sp.edge === "T") return { id, top: sp.top, left: geo.sx + sp.left };
+    return { id, top: geo.sy + laid.colH + COLUMN_GUTTER + sp.top, left: geo.sx + sp.left };
+  };
+  // The board's reading order, for the report's shared keys (J/K, ⇧J/K, ⇧-click, ⌘A, and the
+  // per-quote keys' scope): the margins as they sit, then the list in time order (narrative.ts).
+  const margins = [...inMargin].map((d, i) => seenAt(d) ?? { id: d, top: i, left: 0 });
+  const order = readingOrder(margins, listed);
+  const orderKey = order.join("\n");
+  useEffect(() => {
+    registerVisibleQuoteIds("screens", orderKey ? orderKey.split("\n") : []);
+  }, [registerVisibleQuoteIds, orderKey]);
+  // Registers empty rather than deleting, as QuoteSections does, so the slot outlives a remount.
+  useEffect(() => () => registerVisibleQuoteIds("screens", []), [registerVisibleQuoteIds]);
 
   // Leaders, once everything has settled; after every render for the same reason, set on change.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
+    if (liveRef.current && leaders.length) return; // the board scales as one: its leaders with it
     const board = boardRef.current;
     if (!geo || !geo.H || !board || !laid) return;
     const bb = board.getBoundingClientRect();
-    const next: { id: string; d: string; end: [number, number]; muted: boolean }[] = [];
+    const next: { id: string; d: string; end: [number, number] }[] = [];
     for (const p of pins) {
-      const free = over.has(p.dom_id) || drag?.dom === p.dom_id;
-      const edge = free ? undefined : laid.comp.at[p.dom_id]?.edge;
-      if (!free && !edge) continue;
-      const el = cardEls.current.get(p.dom_id);
+      const d = p.dom_id;
+      let edge: Edge | undefined;
+      if (dragging === d) edge = undefined;
+      else if (laid.comp) {
+        edge = laid.comp.at[d]?.edge;
+        if (!edge) continue;
+      } else {
+        const it: Intent | undefined = shown?.[d];
+        if (!it || !(d in laid.pos)) continue;
+        edge = it.kind === "edge" ? it.edge : undefined;
+      }
+      const el = cardEls.current.get(d);
       if (!el) continue;
       const r = el.getBoundingClientRect();
       const card = { left: r.left - bb.left, top: r.top - bb.top, width: r.width, height: r.height };
       const elem = {
-        left: geo.sx + p.box[0] * geo.W, top: geo.sy + p.box[1] * geo.H,
-        width: p.box[2] * geo.W, height: p.box[3] * geo.H,
+        left: geo.sx + geo.ix + p.box[0] * geo.iw, top: geo.sy + geo.iy + p.box[1] * geo.ih,
+        width: p.box[2] * geo.iw, height: p.box[3] * geo.ih,
       };
-      next.push({ id: p.dom_id, ...leaderPath(card, elem, edge), muted: muted(p.dom_id) });
+      next.push({ id: d, ...leaderPath(card, elem, edge) });
     }
     setLeaders((old) => (JSON.stringify(old) === JSON.stringify(next) ? old : next));
   });
 
-  // When the layout changes mode (two columns, one, rows), each card glides from where it was to
-  // where it now is (FLIP): measured once placement has settled, against the last settled places.
-  // Instant under reduced motion. Only at a mode change: within a mode the cards follow the resize.
+  // Each card glides from where it was to where it now is (FLIP), measured once placement has
+  // settled, against the last settled places: at a mode change, at Tidy, an undo or a redo, and at
+  // the end of a live resize (from where the scaled board drew it). Instant under reduced motion.
   // The leaders are measured from the cards' rectangles, which include the glide's transform, so
-  // they are measured again when the glide ends — or they would stay where the cards set off.
-  const flipFrom = useRef<{ mode: Mode; at: Map<string, [number, number]> } | null>(null);
+  // they are measured again when the glide ends.
   useLayoutEffect(() => {
-    const board = boardRef.current;
-    if (!geo || !board || !settled.current) return;
-    const bb = board.getBoundingClientRect();
-    const now = new Map<string, [number, number]>();
-    for (const [id, el] of cardEls.current) {
-      const r = el.getBoundingClientRect();
-      now.set(id, [r.left - bb.left, r.top - bb.top]);
-    }
+    if (liveRef.current || !geo || !boardRef.current || !settled.current) return;
+    const now = where();
     const from = flipFrom.current;
     flipFrom.current = { mode: geo.mode, at: now };
-    if (!from || from.mode === geo.mode || reducedMotion()) return;
+    const glide = glideNext.current || (from !== null && from.mode !== geo.mode);
+    glideNext.current = false;
+    if (!from || !glide || reducedMotion()) return;
     const ends: Promise<unknown>[] = [];
     for (const [id, el] of cardEls.current) {
       const a = from.at.get(id), b = now.get(id);
       if (!a || !b || (a[0] === b[0] && a[1] === b[1]) || typeof el.animate !== "function") continue;
-      const glide = el.animate(
+      const g = el.animate(
         [{ transform: `translate(${a[0] - b[0]}px, ${a[1] - b[1]}px)` }, { transform: "translate(0, 0)" }],
         { duration: GLIDE_MS, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
       ) as Animation | undefined;
-      if (glide?.finished) ends.push(glide.finished);
+      if (g?.finished) ends.push(g.finished);
     }
     // A cancelled glide rejects its `finished`: the cards have still come to rest.
     if (ends.length) {
       Promise.allSettled(ends).then(() => {
-        if (alive.current) setGlides((g) => g + 1);
+        if (alive.current) bump();
       });
     }
   });
 
-  // "On p2's screen": once the carousel has turned, keyboard focus goes into that card. The card has
-  // just moved from the list to a margin, where it is hidden (visibility) until placement gives it a
-  // spot, and a hidden element cannot take focus — focus() fails without a word and focus falls to
-  // the page. So wait for the spot; and check focus really landed, else the board's title.
+  // "On p2's screen": once the version has changed, keyboard focus goes into that card. The card
+  // has just moved from the list to a margin, where it is hidden (visibility) until placement gives
+  // it a spot, and a hidden element cannot take focus — focus() fails without a word and focus
+  // falls to the page. So wait for the spot; and check focus really landed, else the board's title.
   // A request made before this board existed (on another screen) is not this board's.
   const focusDone = useRef(props.focusRequest?.seq ?? 0);
   useLayoutEffect(() => {
@@ -1318,41 +1594,15 @@ function ScreenBoard(props: BoardProps) {
     if (!target || document.activeElement !== target) focusLensHeading(stageRef.current?.closest(".screens-lens"));
   });
 
-  // A press on a card brings it forward; Escape, or a press anywhere that is not a card, puts it back.
-  // One listener for the board rather than a click handler per card: the keyboard's way in is focus
-  // (below), so the cards stay plain wrappers. A press on a drag grip never arrives here (the grip
-  // stops it) and lifts its card on release instead, when it was not a drag. Escape is under the
-  // same guards as the arrow keys.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || !keyIsOurs(e)) return;
-      // Deselect in both places. The shared quote card keeps its own focus (.bn-focused), and a
-      // focused card is raised: clearing only ours left the "deselected" card on top of its
-      // neighbour in a stack (measured, 14 Oct 2026).
-      lift(null);
-      setFocus(null, { scroll: false });
-    };
-    const onDown = (e: PointerEvent) => {
-      const card = e.target instanceof Element ? e.target.closest<HTMLElement>(".screens-card[data-dom]") : null;
-      lift(card ? card.dataset.dom ?? null : null);
-    };
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("pointerdown", onDown);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("pointerdown", onDown);
-    };
-  }, [setFocus, lift]);
-
-  // One slide per horizontal swipe, over the carousel. Not passive: a horizontal swipe here is the
-  // carousel's, and must not also scroll the page sideways or send the browser Back. A vertical one
-  // is left alone. The lock lives as long as the board, so a turn does not reset it mid-swipe.
+  // One version per horizontal swipe over the screengrab (the Mac's gesture; nothing is drawn for
+  // it). Not passive: a horizontal swipe here is ours, and must not also scroll the page sideways or
+  // send the browser Back. A vertical one is left alone. The lock lives as long as the board.
   const flipBy = useRef<(dir: 1 | -1) => void>(() => {});
   useEffect(() => {
-    flipBy.current = (dir) => props.onFlip((tabIdx + dir + total) % total);
+    flipBy.current = (dir) => props.onFlip((tabIdx + dir + screen.tabs.length) % screen.tabs.length);
   });
   useEffect(() => {
-    const el = carouselRef.current;
+    const el = frameRef.current;
     if (!el || !multi) return;
     const swipe = makeSwipe((dir) => flipBy.current(dir));
     const onWheel = (e: WheelEvent) => {
@@ -1362,21 +1612,138 @@ function ScreenBoard(props: BoardProps) {
     return () => el.removeEventListener("wheel", onWheel);
   }, [multi]);
 
+  // The screengrab's rectangle in the board, measured ONE way everywhere — the same geometry the
+  // placement and the leaders use (its offset in the board, its inner size) — so a freeze, a drop
+  // and a placement agree to the pixel. (The image's outer box, border included, did not: the first
+  // drag moved right- and bottom-edge cards by the border's width.)
+  const shotBox = (): Rect => ({ left: geo?.sx ?? 0, top: geo?.sy ?? 0, width: geo?.W || 1, height: geo?.H || 1 });
+  // Every card on the board as intent, where it is drawn now: the freeze of the first drag.
+  const freeze = (bb: DOMRect): Arrangement => {
+    const s = shotBox();
+    const out: Arrangement = {};
+    for (const d of said) {
+      const el = cardEls.current.get(d);
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      const z = 30 + (laid?.comp?.at[d]?.z ?? 1);
+      out[d] = intentFromRect({ left: r.left - bb.left, top: r.top - bb.top, width: r.width, height: r.height }, s, z);
+    }
+    return out;
+  };
+
+  // ⌥ + an arrow moves the focused card one MOVE_STEP (2.1.1: a keyboard route to every drag). Along
+  // its edge — ↑/↓ beside the screengrab, ←/→ above or below it — or, beside it, ←/→ to the other
+  // side; a card over the screengrab moves either way. The same model as a drag: the first move
+  // freezes the board into custom; each is undoable as Move Quote, and announced.
+  const moveCard = (dom: string, dx: number, dy: number): boolean => {
+    if (!placeable || handsOff || !boardRef.current || !geo) return false;
+    const bb = boardRef.current.getBoundingClientRect();
+    const before = arrangement;
+    const base = before ?? freeze(bb);
+    let p: Intent | undefined = base[dom];
+    if (!p) {
+      const el = cardEls.current.get(dom);
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      p = intentFromRect({ left: r.left - bb.left, top: r.top - bb.top, width: r.width, height: r.height }, shotBox(), topZ(projectId) + 1);
+    }
+    let q: Intent = p;
+    const alongY = (MOVE_STEP * dy) / geo.H, alongX = (MOVE_STEP * dx) / geo.W;
+    if (p.kind === "over") q = { ...p, x: p.x + alongX, y: p.y + alongY };
+    else if (p.edge === "L" || p.edge === "R") {
+      if (dy) q = { ...p, along: p.along + alongY };
+      else if (p.edge === "L" && dx > 0) q = { ...p, edge: "R", out: COLUMN_GUTTER };
+      else if (p.edge === "R" && dx < 0) q = { ...p, edge: "L", out: COLUMN_GUTTER };
+    } else if (dx) q = { ...p, along: p.along + alongX };
+    if (q === p) return false;
+    const after: Arrangement = { ...base, [dom]: q };
+    quiet.current = true;
+    write(after);
+    undoable("moveQuote", before, after);
+    announce(i18n.t("screens.quoteMoved"));
+    return true;
+  };
+  const moveNow = useRef(moveCard);
+  useEffect(() => {
+    moveNow.current = moveCard;
+  });
+  useEffect(() => {
+    const steps: Record<string, [number, number]> = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+    const onKey = (e: KeyboardEvent) => {
+      const d = steps[e.key];
+      if (!d || !e.altKey || e.metaKey || e.ctrlKey || e.defaultPrevented || modalOpen(e.target)) return;
+      const tg = e.target;
+      if (tg instanceof Element && tg.closest("input, textarea, select, [contenteditable='true'], [role='menu'], [role='radiogroup'], [role='separator']")) return;
+      const id = props.focusedId;
+      if (!id || !onScreen.has(id)) return;
+      if (moveNow.current(id, d[0], d[1])) e.preventDefault();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [props.focusedId, onScreen]);
+
+  // A card that held keyboard focus and was re-parented — a mode change, Tidy from the Mac's menu,
+  // ⌘Z of a move — remounts, and focus falls to the page. Once it has its new place, focus goes back
+  // into it.
+  const FOCUSABLE = "a[href], button, input, textarea, [tabindex]:not([tabindex='-1'])";
+  const focusInCard = useRef<{ dom: string; el: HTMLElement; i: number } | null>(null);
+  // Which card holds keyboard focus, and which of its controls: noted as focus arrives (the card is
+  // gone from the page by the time a re-parenting render's effects run).
+  const noteFocus = (a: Element | null) => {
+    const card = a instanceof Element ? a.closest<HTMLElement>(".screens-card[data-dom]") : null;
+    if (!card || !(a instanceof HTMLElement) || !stageRef.current?.contains(card)) return false;
+    focusInCard.current = { dom: card.dataset.dom ?? "", el: card, i: [...card.querySelectorAll(FOCUSABLE)].indexOf(a) };
+    return true;
+  };
+  useEffect(() => {
+    const onIn = (e: FocusEvent) => {
+      noteFocus(e.target as Element | null);
+    };
+    document.addEventListener("focusin", onIn);
+    return () => document.removeEventListener("focusin", onIn);
+  });
+  useLayoutEffect(() => {
+    const a = document.activeElement;
+    if (noteFocus(a)) return;
+    const lost = focusInCard.current;
+    if (!lost) return;
+    if (a !== null && a !== document.body) {
+      focusInCard.current = null; // focus went somewhere else on purpose
+      return;
+    }
+    const el = cardEls.current.get(lost.dom);
+    // Not re-parented (the same element still holds the card): someone else moved focus, and owns
+    // where it goes next (a closing menu gives it back to its opener).
+    if (el === lost.el) return;
+    if (!el) {
+      if (!onScreen.has(lost.dom)) focusInCard.current = null;
+      return;
+    }
+    if (el.style.visibility === "hidden") return; // wait for its place
+    const controls = [...el.querySelectorAll<HTMLElement>(FOCUSABLE)];
+    (controls[lost.i] ?? controls[0])?.focus({ preventScroll: true });
+  });
+
   // Drag to rearrange: the card's top edge and the margin under its timecode are the grips. Nothing
-  // moves, and nothing is saved, until the pointer has travelled DRAG_THRESHOLD: a click on a grip
-  // is not a drag (useVerticalDragResize's 3px). The window listeners belong to this screengrab: if
-  // the board remounts or the carousel turns mid-drag they are removed, so a release cannot write a
-  // spot against the previous screengrab.
+  // moves, and nothing is saved, until the pointer has travelled DRAG_THRESHOLD: a press on a grip
+  // that goes nowhere focuses the card, as a click on it does. THE FIRST DRAG SWITCHES THE WHOLE
+  // BOARD TO CUSTOM: at that moment every card is frozen where it is, so only the dragged one moves.
+  // In custom, a drag moves only its card. Each drag is one undo (Edit ▸ Undo Move Quote); undoing
+  // the drag that switched the board returns it to automatic. The window listeners belong to this
+  // version: if the board remounts or the version changes mid-drag, the drag is abandoned and an
+  // arrangement it froze is put back.
   const endDrag = useRef<(() => void) | null>(null);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    // A drag abandoned by the change of version wrote its version back quietly: that quiet is not
+    // this version's, and must not swallow the next Tidy or undo glide here.
+    quiet.current = false;
+    return () => {
       endDrag.current?.();
       setDrag(null);
-    },
-    [still],
-  );
+    };
+  }, [tab.session_id]);
   const startDrag = (dom: string) => (e: React.PointerEvent) => {
-    if (e.button !== 0 || !geo || !boardRef.current) return;
+    if (e.button !== 0 || !placeable || handsOff || !boardRef.current) return;
     e.preventDefault();
     e.stopPropagation();
     const el = cardEls.current.get(dom);
@@ -1385,22 +1752,31 @@ function ScreenBoard(props: BoardProps) {
     const bb = boardRef.current.getBoundingClientRect();
     const r = el.getBoundingClientRect();
     const z = topZ(projectId) + 1;
-    const start = { x: e.clientX, y: e.clientY, left: r.left - bb.left, top: r.top - bb.top };
+    const start = { x: e.clientX, y: e.clientY };
+    // Where on the card the pointer took hold. The card is placed from the board's rectangle as it
+    // is NOW, at every move, so a page that scrolls mid-drag keeps the card under the pointer.
+    const grab = { x: e.clientX - r.left, y: e.clientY - r.top };
+    const before = arrangement;
+    let frozen: Arrangement | null = null;
     let moved = false;
-    const at = (ev: PointerEvent) => ({
-      left: start.left + ev.clientX - start.x,
-      top: Math.max(0, start.top + ev.clientY - start.y),
-    });
-    // Listen on the window, not the grip: starting the drag moves the card into the free layer,
-    // which remounts it, and a detached grip receives no more pointer events. The card follows the
-    // pointer at most once a frame: a pointermove can fire several times a frame, and each
-    // setDrag re-renders the whole board.
     let frame = 0;
     let latest: PointerEvent | null = null;
+    const at = (ev: PointerEvent) => {
+      const b = boardRef.current?.getBoundingClientRect() ?? bb;
+      return { left: ev.clientX - grab.x - b.left, top: Math.max(0, ev.clientY - grab.y - b.top) };
+    };
+    // Listen on the window, not the grip: the drag moves the card into the free layer, which
+    // remounts it. The card follows the pointer at most once a frame (each setDrag re-renders).
     const move = (ev: PointerEvent) => {
       if (!moved && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < DRAG_THRESHOLD) return;
-      if (!moved) lift(null);
-      moved = true;
+      if (!moved) {
+        moved = true;
+        if (!before) {
+          frozen = freeze(bb);
+          quiet.current = true;
+          write(frozen);
+        }
+      }
       latest = ev;
       if (frame) return;
       frame = requestAnimationFrame(() => {
@@ -1413,65 +1789,65 @@ function ScreenBoard(props: BoardProps) {
       frame = 0;
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", up);
+      window.removeEventListener("pointercancel", cancel);
       endDrag.current = null;
     };
+    const abandon = () => {
+      detach();
+      if (moved && frozen) {
+        quiet.current = true;
+        write(before);
+      }
+      setDrag(null);
+    };
+    function cancel() {
+      abandon();
+    }
     function up(ev: PointerEvent) {
       detach();
       if (!moved) {
-        lift(dom); // a press on the grip that never became a drag is a press on the card
+        setFocus(dom, { scroll: false }); // a press on the grip that never became a drag is a press on the card
         return;
       }
       const { left, top } = at(ev);
-      // Stored as intent: beside the screengrab on the side its centre fell, and how far down that
-      // edge; or over it, where the researcher put it.
-      putPlacement(projectId, still, dom, placementFromDrop(
-        { left, top, width: r.width },
-        { left: geo!.sx, top: geo!.sy, width: geo!.W, height: geo!.H }, z));
+      const after: Arrangement = {
+        ...(frozen ?? before ?? {}),
+        [dom]: intentFromRect({ left, top, width: r.width, height: r.height }, shotBox(), z),
+      };
+      quiet.current = true;
+      write(after);
+      undoable("moveQuote", before, after);
       setDrag(null);
     }
-    endDrag.current = detach;
+    endDrag.current = abandon;
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", up);
+    window.addEventListener("pointercancel", cancel);
   };
 
-  // The board's wrapper places, lifts and drags a card; the card itself is the Quotes lens's.
+  // The board's wrapper places and drags a card; the card itself is the Quotes lens's, and so are
+  // its focus and selection (the shared .bn-focused and .bn-selected). The board adds only the
+  // stacking order: the focused card is in front (screens.css).
   const cardFor = (dom: string, style: React.CSSProperties) => {
     const q = byId.get(dom);
     if (!q) return null;
     const pin = pinByDom.get(dom);
-    const seq = sequence[dom];
     // Unlinked here, linked on another participant's version: offer that version.
     const elsewhere = pin ? -1 : linkedOn.get(dom) ?? -1;
-    const cls = [
-      "screens-card", lit === dom && "is-lifted", drag?.dom === dom && "is-dragging", dom in arranged && "is-placed",
-      muted(dom) && "is-muted",
-    ]
-      .filter(Boolean)
-      .join(" ");
     return (
-      // A card comes forward on a press (the board's listener above), and when keyboard focus
-      // enters it so Tab never lands on a control hidden under the next card in a stack. Never on
-      // hover. Rearranging is pointer-only for now.
       <div
         key={dom}
         ref={(el) => {
           if (el) cardEls.current.set(dom, el);
           else cardEls.current.delete(dom);
         }}
-        className={cls}
+        className={`screens-card${dragging === dom ? " is-dragging" : ""}`}
         style={style}
         data-dom={dom}
         data-pin={pin ? dom : undefined}
-        onFocus={() => !drag && lift(dom)}
-        onBlur={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) unlift(dom);
-        }}
       >
         <span className="screens-grip screens-grip-top" aria-hidden="true" onPointerDown={startDrag(dom)} />
         <span className="screens-grip screens-grip-side" aria-hidden="true" onPointerDown={startDrag(dom)} />
-        {seq && <SequenceMark seq={seq} />}
         {props.renderQuote(q, pin?.phrase ?? "")}
         {elsewhere >= 0 && (
           <button type="button" className="screens-elsewhere" onClick={() => props.onShowOn(dom, elsewhere)}>
@@ -1482,51 +1858,56 @@ function ScreenBoard(props: BoardProps) {
     );
   };
 
-  const spot = (dom: string) => laid?.comp.at[dom];
+  const hidden: React.CSSProperties = { left: 0, top: 0, width: CARD_W, visibility: "hidden" };
   const inColumn = (dom: string): React.CSSProperties => {
-    const s = spot(dom);
-    return s ? ({ top: s.top, "--stack": s.z } as React.CSSProperties) : { top: 0, visibility: "hidden" };
+    const s = laid?.comp?.at[dom];
+    return s ? ({ top: s.top, left: s.left, width: CARD_W, "--stack": s.z } as React.CSSProperties) : hidden;
   };
   const inBand = (dom: string): React.CSSProperties => {
-    const s = spot(dom);
-    return s ? { left: s.left, top: s.top, width: CARD_W } : { left: 0, top: 0, width: CARD_W, visibility: "hidden" };
+    const s = laid?.comp?.at[dom];
+    return s ? { left: s.left, top: s.top, width: CARD_W } : hidden;
   };
   const freeStyle = (dom: string): React.CSSProperties => {
     if (drag?.dom === dom) return { left: drag.left, top: drag.top, width: drag.width, zIndex: drag.z };
-    const s = mine[dom];
-    if (!geo || !s || s.kind !== "over") return { visibility: "hidden" };
-    return { left: geo.sx + s.x * geo.W, top: geo.sy + s.y * geo.H, width: CARD_W, zIndex: s.z };
+    const p = laid?.pos[dom];
+    return p ? { left: p.left, top: p.top, width: CARD_W, zIndex: shown?.[dom]?.z } : hidden;
   };
 
-  // Tidy: every card on this screengrab back to automatic. Undoable with ⌘Z through the report's
-  // one undo stack, so it needs no confirm.
+  // Tidy: the whole board back to automatic, every card gliding to its place. The one way back,
+  // undoable with ⌘Z (Edit ▸ Undo Tidy) through the report's one undo stack, so it needs no confirm.
   const tidy = () => {
-    // Offered while the arrangement is custom (`custom`, the one count); it clears everything kept
-    // for this screengrab, a hidden quote's spot included, and undo puts all of it back.
     if (!custom) return;
-    const before = placementsFor(projectId, still);
+    const before = arrangement;
     // Tidy removes its own button (and the menu that offered it closes), so focus goes to the
     // lens's title rather than to the page.
     const active = document.activeElement;
     const lens = stageRef.current?.closest(".screens-lens");
     const keepFocus = active instanceof Element && !!active.closest(".screens-arrangement, .screens-menu");
-    setPlacements(projectId, still, {});
+    write(null);
     if (keepFocus) requestAnimationFrame(() => focusLensHeading(lens));
-    pushUndo({
-      action: "tidy",
-      undo: () => setPlacements(projectId, still, before),
-      redo: () => setPlacements(projectId, still, {}),
-    });
+    undoable("tidy", before, null);
     announce(i18n.t("screens.arrangementAutomatic"));
   };
-  // View ▸ Tidy on the Mac enables only while this board's arrangement is custom: say so on mount
-  // and on every change, and say "not custom" when the board goes (the Mac's mirror would
-  // otherwise keep the last board's answer).
+  // Return to automatic, on one card of a custom board: back to where Tidy would put it — a linked
+  // card to its automatic spot on its edge (frozen there, so nothing else moves), any other card to
+  // the list. An undoable move like any other.
+  const returnToAutomatic = (dom: string) => {
+    if (!arrangement || !(dom in arrangement) || !geo || !geo.H) return;
+    const before = arrangement;
+    const after: Arrangement = { ...before };
+    if (pinByDom.has(dom)) after[dom] = autoSpots()(dom, before[dom].z);
+    else delete after[dom];
+    write(after);
+    undoable("moveQuote", before, after);
+  };
+  // View ▸ Tidy on the Mac enables only while this version is custom: say so on mount and on every
+  // change, and say "not custom" when the board goes (the Mac's mirror would otherwise keep the last
+  // board's answer).
   useEffect(() => {
     postScreensArrangement(custom);
   }, [custom]);
   useEffect(() => () => postScreensArrangement(false), []);
-  // View ▸ Tidy on the Mac (bn:menu-action), for whichever screengrab is showing.
+  // View ▸ Tidy on the Mac (bn:menu-action), for whichever version is showing.
   const tidyNow = useRef(tidy);
   useEffect(() => {
     tidyNow.current = tidy;
@@ -1539,21 +1920,19 @@ function ScreenBoard(props: BoardProps) {
     return () => window.removeEventListener("bn:menu-action", onMenu);
   }, []);
 
-  // Right-click: "Return to automatic" on a card the researcher placed, "Tidy" anywhere on the board
-  // once something is placed. The keyboard's context-menu key raises the same event. Elsewhere, and
-  // with nothing to offer, the browser's own menu shows.
+  // Right-click, on a custom board: "Return to automatic" on a card with a spot, and "Tidy". The
+  // keyboard's context-menu key raises the same event. On an automatic board, and elsewhere, the
+  // browser's own menu shows.
   useEffect(() => {
     const onMenu = (e: MouseEvent) => {
       const stage = stageRef.current;
-      if (!stage || !(e.target instanceof Element) || !stage.contains(e.target)) return;
+      if (!custom || !stage || !(e.target instanceof Element) || !stage.contains(e.target)) return;
       const card = e.target.closest<HTMLElement>(".screens-card[data-dom]")?.dataset.dom;
       const items: { label: string; run: () => void }[] = [];
-      // The same count as the arrangement control and View ▸ Tidy: the cards on the board.
-      if (card && card in arranged) {
-        items.push({ label: i18n.t("screens.returnToAutomatic"), run: () => clearPlacement(projectId, still, card) });
+      if (card && arrangement && card in arrangement && placeable) {
+        items.push({ label: i18n.t("screens.returnToAutomatic"), run: () => returnToAutomatic(card) });
       }
-      if (custom) items.push({ label: i18n.t("screens.tidy"), run: tidy });
-      if (items.length === 0) return;
+      items.push({ label: i18n.t("screens.tidy"), run: tidy });
       e.preventDefault();
       const r = stage.getBoundingClientRect();
       setMenu({ x: e.clientX - r.left, y: e.clientY - r.top, items });
@@ -1570,22 +1949,6 @@ function ScreenBoard(props: BoardProps) {
     };
   });
 
-  // The person chips: toggle buttons, whose quotes are in front. They never turn the carousel.
-  const who =
-    people.length > 1 ? (
-      <span className="screens-who" role="group" aria-label={t("screens.whoseQuotes")}>
-        {people.map((p) => (
-          <button key={p} type="button" aria-pressed={chosen.has(p)} onClick={() => props.onChip(p)}>
-            <PersonBadge code={p} role="participant" />
-          </button>
-        ))}
-      </span>
-    ) : people.length === 1 ? (
-      <span className="screens-who">
-        <PersonBadge code={people[0]} role="participant" />
-      </span>
-    ) : null;
-
   // One highlight per line on the screengrab, however many quotes are about it: they share it, and
   // its anchor, and their leaders fan into one point.
   const lines = new Map<string, { box: Pin["box"]; ids: string[] }>();
@@ -1595,29 +1958,29 @@ function ScreenBoard(props: BoardProps) {
     line.ids.push(p.dom_id);
     lines.set(k, line);
   }
-  const ends = new Map<string, { end: [number, number]; on: boolean; muted: boolean }>();
+  const ends = new Map<string, { end: [number, number]; on: boolean }>();
   for (const l of leaders) {
     const k = l.end.join(",");
-    const e = ends.get(k);
-    ends.set(k, { end: l.end, on: (e?.on ?? false) || lit === l.id, muted: (e?.muted ?? true) && l.muted });
+    ends.set(k, { end: l.end, on: (ends.get(k)?.on ?? false) || lit === l.id });
   }
 
-  const captionTemplate = t("screens.slideCaption", { code: tab.code, n: tabIdx + 1, total });
-  const [dot0, dot1] = dotWindow(total, tabIdx);
-  const flipTo = (dir: 1 | -1) => props.onFlip((tabIdx + dir + total) % total);
-  const bandT = onEdge("T"), bandB = onEdge("B");
+  const people = new Set(said.map((d) => byId.get(d)?.participant_id)).size;
   const quoteCount = said.length;
+  const bandT = showCustom ? (laid?.band.T ?? 0) : onEdge("T").length ? (laid?.comp?.band.T ?? 0) : 0;
+  const bandB = showCustom ? (laid?.band.B ?? 0) : onEdge("B").length ? (laid?.comp?.band.B ?? 0) : 0;
+  const hasT = showCustom ? bandT > 0 : onEdge("T").length > 0;
+  const hasB = showCustom ? bandB > 0 : onEdge("B").length > 0;
+  const scale = live && liveBase > 0 ? liveW / liveBase : 1;
+  const free = [...placed, ...(dragging ? [dragging] : [])];
   return (
     <>
-      <SectionHeading action={who}>{screenTitle(screen, tab)}</SectionHeading>
+      <SectionHeading action={<Versions screen={screen} tabIdx={tabIdx} onFlip={props.onFlip} />}>
+        {screenTitle(screen, tab)}
+      </SectionHeading>
       <p className="screens-sub">
         {screen.name.startsWith("/") && <code>{screen.name}</code>}
-        {/* With several versions the carousel's caption says whose screen, and when. */}
-        {!multi && <span>{screenAt(t("screens.screenAt", { code: tab.code }), formatTimecode(tab.t))}</span>}
         <span>
-          {people.length > 1
-            ? t("screens.quoteCountFrom", { count: quoteCount, people: people.length })
-            : t("screens.quoteCount", { count: quoteCount })}
+          {people > 1 ? t("screens.quoteCountFrom", { count: quoteCount, people }) : t("screens.quoteCount", { count: quoteCount })}
         </span>
         <span className="screens-hidden-slot">
           <Counter
@@ -1643,37 +2006,26 @@ function ScreenBoard(props: BoardProps) {
         )}
       </p>
       <NotesList lines={props.problems} />
-      <div className={`screens-stage${lit ? " focus" : ""}${drag ? " dragging" : ""}${chosen.size ? " chosen" : ""}`} ref={stageRef}>
+      <div className={`screens-stage${drag ? " dragging" : ""}`} ref={stageRef}>
+        {/* During a live resize the board and its list scale as one, from their last settled size,
+            and settle once when it ends (utils/liveResize.ts). */}
         <div
-          className={`screens-board cols-${columns} mode-${mode}`}
-          ref={boardRef}
-          style={{ minHeight: laid?.boardMin || undefined }}
+          className="screens-scale"
+          style={scale !== 1 || live ? { width: liveBase || undefined, transform: `scale(${scale})`, transformOrigin: "0 0" } : undefined}
         >
-          <div className={`screens-band screens-band-t${bandT.length ? " has-cards" : ""}`} style={{ height: bandT.length ? laid?.comp.band.T ?? 0 : 0 }}>
-            {bandT.map((d) => cardFor(d, inBand(d)))}
-          </div>
-          <div className={`screens-col screens-col-l${laid?.comp.stacked.L ? " stacked" : ""}`} style={{ height: laid?.colH || undefined }}>
-            {onEdge("L").map((d) => cardFor(d, inColumn(d)))}
-          </div>
-          <div className="screens-shot" ref={shotRef}>
-            {/* The carousel: one participant's version at a time, in a frame that cross-fades.
-                Keyboard: Tab reaches it, ←/→ turn it (the lens's keys), and each turn is announced
-                ("2 of 3"). The chevrons and dots are the pointer's: revealed on hover, never by
-                focus, and not tab stops. */}
-            <div
-              ref={carouselRef}
-              className={`screens-carousel${multi ? " is-multi" : ""}`}
-              role={multi ? "group" : undefined}
-              // A fixed name: the slide is said by announce() as the carousel turns, so a name that
-              // changed with it would be read a second time.
-              aria-label={multi ? t("screens.versionsLabel") : undefined}
-              aria-roledescription={multi ? t("screens.carouselRole") : undefined}
-              aria-keyshortcuts={multi ? "ArrowLeft ArrowRight" : undefined}
-              title={multi ? t("screens.versionsKeys") : undefined}
-              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a carousel's keyboard stop (APG): ←/→ turn it
-              tabIndex={multi ? 0 : undefined}
-            >
-              <div className="screens-slides">
+          <div
+            className={`screens-board cols-${columns} mode-${mode}${showCustom ? " is-custom" : ""}`}
+            ref={boardRef}
+            style={{ minHeight: laid?.boardMin || undefined }}
+          >
+            <div className={`screens-band screens-band-t${hasT ? " has-cards" : ""}`} style={{ height: bandT }}>
+              {!showCustom && onEdge("T").map((d) => cardFor(d, inBand(d)))}
+            </div>
+            <div className={`screens-col screens-col-l${laid?.comp?.stacked.L ? " stacked" : ""}`} style={{ height: laid?.colH || undefined }}>
+              {!showCustom && onEdge("L").map((d) => cardFor(d, inColumn(d)))}
+            </div>
+            <div className="screens-shot" ref={shotRef}>
+              <div className="screens-slides" ref={frameRef}>
                 {slides.map((sl, j) =>
                   sl.src ? (
                     <img
@@ -1694,71 +2046,36 @@ function ScreenBoard(props: BoardProps) {
                   [...lines.entries()].map(([k, l]) => (
                     <div
                       key={k}
-                      className={`screens-hl${lit && l.ids.includes(lit) ? " on" : ""}${l.ids.every(muted) ? " is-muted" : ""}`}
+                      className={`screens-hl${lit && l.ids.includes(lit) ? " on" : ""}`}
                       style={{
-                        left: l.box[0] * geo.W - 3, top: l.box[1] * geo.H - 3,
-                        width: l.box[2] * geo.W + 6, height: l.box[3] * geo.H + 6,
+                        left: geo.ix + l.box[0] * geo.iw - 3, top: geo.iy + l.box[1] * geo.ih - 3,
+                        width: l.box[2] * geo.iw + 6, height: l.box[3] * geo.ih + 6,
                       }}
                     />
                   ))}
               </div>
-              {multi && (
-                <>
-                  <button type="button" tabIndex={-1} className="screens-chev screens-chev-prev"
-                    aria-label={t("screens.previousScreengrab")} onClick={() => flipTo(-1)}>
-                    <span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5 4 6l3.5 3.5" /></svg></span>
-                  </button>
-                  <button type="button" tabIndex={-1} className="screens-chev screens-chev-next"
-                    aria-label={t("screens.nextScreengrab")} onClick={() => flipTo(1)}>
-                    <span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" /></svg></span>
-                  </button>
-                </>
-              )}
             </div>
-            {multi && (
-              <div className="screens-carousel-line">
-                <span className="screens-dots">
-                  {Array.from({ length: dot1 - dot0 }, (_, k) => dot0 + k).map((j) => (
-                    <button
-                      key={j}
-                      type="button"
-                      tabIndex={-1}
-                      aria-label={t("screens.announceParticipant", { code: screen.tabs[j].code })}
-                      aria-current={j === tabIdx ? "true" : undefined}
-                      className={`screens-dot${j === tabIdx ? " is-current" : ""}${(j === dot0 && dot0 > 0) || (j === dot1 - 1 && dot1 < total) ? " is-edge" : ""}`}
-                      onClick={() => props.onFlip(j)}
-                    />
-                  ))}
-                </span>
-                <span className="screens-caption">{screenAt(captionTemplate, formatTimecode(tab.t))}</span>
-                {/* For a sighted keyboard user: shown while the carousel has keyboard focus. */}
-                <span className="screens-keys" aria-hidden="true">← →</span>
-              </div>
-            )}
+            <div className={`screens-col screens-col-r${laid?.comp?.stacked.R ? " stacked" : ""}`} style={{ height: laid?.colH || undefined }}>
+              {!showCustom && onEdge("R").map((d) => cardFor(d, inColumn(d)))}
+            </div>
+            <div className={`screens-band screens-band-b${hasB ? " has-cards" : ""}`} style={{ height: bandB }}>
+              {!showCustom && onEdge("B").map((d) => cardFor(d, inBand(d)))}
+            </div>
+            <svg className="screens-leaders" aria-hidden="true">
+              {leaders.map((l) => (
+                <path key={l.id} d={l.d} className={lit === l.id ? "on" : undefined} />
+              ))}
+              {[...ends.entries()].map(([k, e]) => (
+                <circle key={k} cx={e.end[0]} cy={e.end[1]} r={2.5} className={e.on ? "on" : undefined} />
+              ))}
+            </svg>
+            <div className="screens-free">
+              {free.map((d) => cardFor(d, freeStyle(d)))}
+            </div>
           </div>
-          <div className={`screens-col screens-col-r${laid?.comp.stacked.R ? " stacked" : ""}`} style={{ height: laid?.colH || undefined }}>
-            {onEdge("R").map((d) => cardFor(d, inColumn(d)))}
+          <div className="screens-loose">
+            {listed.map((d) => cardFor(d, {}))}
           </div>
-          <div className={`screens-band screens-band-b${bandB.length ? " has-cards" : ""}`} style={{ height: bandB.length ? laid?.comp.band.B ?? 0 : 0 }}>
-            {bandB.map((d) => cardFor(d, inBand(d)))}
-          </div>
-          <svg className="screens-leaders" aria-hidden="true">
-            {leaders.map((l) => (
-              <path key={l.id} d={l.d} className={[lit === l.id && "on", l.muted && "is-muted"].filter(Boolean).join(" ") || undefined} />
-            ))}
-            {[...ends.entries()].map(([k, e]) => (
-              <circle key={k} cx={e.end[0]} cy={e.end[1]} r={2.5}
-                className={[e.on && "on", e.muted && "is-muted"].filter(Boolean).join(" ") || undefined} />
-            ))}
-          </svg>
-          <div className="screens-free">
-            {[...over, ...(dragOut ? [dragOut] : [])]
-              .filter((d, i, a) => a.indexOf(d) === i)
-              .map((d) => cardFor(d, freeStyle(d)))}
-          </div>
-        </div>
-        <div className="screens-loose">
-          {listed.map((d) => cardFor(d, {}))}
         </div>
         {menu && <BoardMenu {...menu} onClose={closeMenu} />}
       </div>
@@ -1771,19 +2088,22 @@ function ScreenBoard(props: BoardProps) {
  * placed. A small menu of the lens's own (no shared context menu exists in the SPA): focus goes to
  * its first item, ↑/↓ move, Enter or a click runs, Escape or a press outside closes.
  */
-function BoardMenu(props: {
-  x: number;
-  y: number;
-  items: { label: string; run: () => void }[];
-  onClose: () => void;
-}) {
+interface MenuItem {
+  label: string;
+  run: () => void;
+  /** A choice of one (menuitemradio): whether it is the current one. */
+  checked?: boolean;
+}
+
+function BoardMenu(props: { x: number; y: number; items: MenuItem[]; onClose: () => void }) {
   const { x, y, items, onClose } = props;
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const lens = el?.closest(".screens-lens");
-    el?.querySelector<HTMLButtonElement>("button")?.focus();
+    // Open on the checked choice, where there is one; else the first item.
+    (el?.querySelector<HTMLButtonElement>('button[aria-checked="true"]') ?? el?.querySelector<HTMLButtonElement>("button"))?.focus();
     // Focus moving to something outside the menu (Tab) closes it. A focusout with no new target is
     // left to the pointerdown check below: WebKit does not focus a clicked button, so a click on an
     // item would otherwise close the menu before the click lands.
@@ -1817,20 +2137,23 @@ function BoardMenu(props: {
     };
   }, [onClose]);
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
     e.preventDefault();
     e.stopPropagation();
     const buttons = [...(ref.current?.querySelectorAll<HTMLButtonElement>("button") ?? [])];
     const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
-    const next = (at + (e.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
+    const next =
+      e.key === "Home" ? 0 : e.key === "End" ? buttons.length - 1
+        : (at + (e.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
     buttons[next]?.focus();
   };
   return (
     <div ref={ref} className="screens-menu" role="menu" tabIndex={-1} style={{ left: x, top: y }} onKeyDown={onKeyDown}>
-      {items.map((it) => (
+      {items.map((it, i) => (
         <button
-          key={it.label}
-          role="menuitem"
+          key={i}
+          role={it.checked === undefined ? "menuitem" : "menuitemradio"}
+          aria-checked={it.checked}
           tabIndex={-1}
           className="screens-menu-item"
           onClick={() => {

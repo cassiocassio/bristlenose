@@ -690,7 +690,8 @@
       "reassignParagraph": "Annulla Riassegna paragrafo",
       "splitParagraph": "Annulla Dividi paragrafo",
       "joinParagraphs": "Annulla Unisci paragrafi",
-      "tidy": "Annulla Riordina"
+      "tidy": "Annulla Riordina",
+      "moveQuote": "Annulla Sposta citazione"
     },
     "redo": {
       "renameModerator": "Ripristina Rinomina moderatore",
@@ -713,7 +714,8 @@
       "reassignParagraph": "Ripristina Riassegna paragrafo",
       "splitParagraph": "Ripristina Dividi paragrafo",
       "joinParagraphs": "Ripristina Unisci paragrafi",
-      "tidy": "Ripristina Riordina"
+      "tidy": "Ripristina Riordina",
+      "moveQuote": "Ripristina Sposta citazione"
     }
   },
   "sync": {
@@ -756,7 +758,6 @@
     "participantCount_one": "{{count}} partecipante",
     "participantCount_other": "{{count}} partecipanti",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "Schermata di {{code}} a {{time}}",
     "quoteCount_one": "{{count}} citazione",
     "quoteCount_other": "{{count}} citazioni",
     "quoteCountFrom_one": "{{count}} citazione da {{people}} partecipanti",
@@ -771,14 +772,16 @@
     "arrangementAutomatic": "Disposizione: automatica",
     "returnToAutomatic": "Torna alla disposizione automatica",
     "slideCaption": "Schermata di {{code}} a {{time}} · {{n}} di {{total}}",
-    "previousScreengrab": "Immagine della schermata precedente",
-    "nextScreengrab": "Immagine della schermata successiva",
-    "whoseQuotes": "Di chi sono le citazioni",
+    "previousVersion": "Versione precedente",
+    "nextVersion": "Versione successiva",
     "onScreen": "Nella schermata di {{code}}",
-    "sequence": "{{code}}, citazione {{n}} di {{total}}",
     "versionsLabel": "Versioni di questa schermata",
-    "carouselRole": "carosello",
-    "versionsKeys": "← e → passano da una versione all’altra",
+    "versionOption": "Schermata di {{code}}, {{n}} di {{total}}",
+    "versionCount": "{{n}} di {{total}}",
+    "resizeNavigator": "Ridimensiona l’elenco delle schermate",
+    "quoteMoved": "Citazione spostata",
+    "navWidthPixels_one": "{{count}} pixel",
+    "navWidthPixels_other": "{{count}} pixel",
     "subtitle_one": "{{count}}\u00a0schermata",
     "subtitle_other": "{{count}}\u00a0schermate"
   }

@@ -690,7 +690,8 @@
       "reassignParagraph": "Herstel alinea toewijzen",
       "splitParagraph": "Herstel alinea splitsen",
       "joinParagraphs": "Herstel alinea’s samenvoegen",
-      "tidy": "Herstel opruimen"
+      "tidy": "Herstel opruimen",
+      "moveQuote": "Herstel citaat verplaatsen"
     },
     "redo": {
       "renameModerator": "Opnieuw naam moderator wijzigen",
@@ -713,7 +714,8 @@
       "reassignParagraph": "Opnieuw alinea toewijzen",
       "splitParagraph": "Opnieuw alinea splitsen",
       "joinParagraphs": "Opnieuw alinea’s samenvoegen",
-      "tidy": "Opnieuw opruimen"
+      "tidy": "Opnieuw opruimen",
+      "moveQuote": "Opnieuw citaat verplaatsen"
     }
   },
   "sync": {
@@ -756,7 +758,6 @@
     "participantCount_one": "{{count}} deelnemer",
     "participantCount_other": "{{count}} deelnemers",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "Scherm van {{code}} op {{time}}",
     "quoteCount_one": "{{count}} citaat",
     "quoteCount_other": "{{count}} citaten",
     "quoteCountFrom_one": "{{count}} citaat van {{people}} deelnemers",
@@ -771,14 +772,16 @@
     "arrangementAutomatic": "Indeling: automatisch",
     "returnToAutomatic": "Terug naar automatische indeling",
     "slideCaption": "Scherm van {{code}} op {{time}} · {{n}} van {{total}}",
-    "previousScreengrab": "Vorige schermafbeelding",
-    "nextScreengrab": "Volgende schermafbeelding",
-    "whoseQuotes": "Wiens citaten",
+    "previousVersion": "Vorige versie",
+    "nextVersion": "Volgende versie",
     "onScreen": "Op het scherm van {{code}}",
-    "sequence": "{{code}}, citaat {{n}} van {{total}}",
     "versionsLabel": "Versies van dit scherm",
-    "carouselRole": "carrousel",
-    "versionsKeys": "← en → wisselen tussen versies",
+    "versionOption": "Scherm van {{code}}, {{n}} van {{total}}",
+    "versionCount": "{{n}} van {{total}}",
+    "resizeNavigator": "Formaat van de lijst met schermen wijzigen",
+    "quoteMoved": "Citaat verplaatst",
+    "navWidthPixels_one": "{{count}} pixel",
+    "navWidthPixels_other": "{{count}} pixels",
     "subtitle_one": "{{count}}\u00a0scherm",
     "subtitle_other": "{{count}}\u00a0schermen"
   }

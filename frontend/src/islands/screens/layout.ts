@@ -1,39 +1,44 @@
 /**
  * Board geometry for the Screens lens: which edge of the screengrab each card annotates, where it
- * sits along that edge, when a column stacks, and the leader from a card to its line. Pure
- * functions, unit-tested; the lens only measures and draws.
+ * sits along that edge, when a column stacks, the leader from a card to its line, and the
+ * researcher's arrangement. Pure functions, unit-tested; the lens only measures and draws.
  *
- * Rules (docs/design-screens.md S5, "Placement"):
+ * Rules (docs/design-screens.md S5, "Placement" and "Arrangement"):
  * - Boundary labelling, as on an architect's drawing or a UX redline: annotations all around the
- *   artefact, never over it (the owner, 14 Oct 2026, reversing the prototype's overlapping edge).
- *   Automatic placement puts a card in a column beside the screengrab or a band above or below it,
- *   across a gutter the leader visibly crosses. Cards and gutter keep their size; the screengrab is
- *   what shrinks. A card the researcher drags goes wherever they put it.
+ *   artefact, never over it. Automatic placement puts a card in a column beside the screengrab or a
+ *   band above or below it, across a gutter the leader visibly crosses. Cards and gutter keep their
+ *   size; the screengrab is what shrinks.
  * - Four edges. A linked card goes to the band nearest its line: left or right by which half of the
- *   page the line is in, top for a line in the top BAND_Y of the page and away from the side edges
- *   (a header, a search box), bottom likewise (a footer). The top and bottom bands are for those
- *   clear cases only, so most cards still go to the sides.
- * - Along a band, cards keep the order of their lines along that edge, so automatic leaders do not
- *   cross; a card wants to sit level with (or above, or below) its line.
- * - Widths, by mode: two side columns when the stage fits both beside a screengrab of at least
- *   MIN_SHOT_W ("lr"); one, on the right, when it fits one ("r"); below that ("rows") the side
- *   bands become rows above and below the screengrab, in order, with short vertical leaders. A
- *   column with no cards takes no room. The mode changes only at a threshold, with HYSTERESIS.
- * - A column that would run past the screengrab stacks: evenly stepped, each card showing its
- *   timecode and first line, the later card over the earlier one's tail. Stacks are straight.
- * - Leaders are short, straight or single-elbow: a drafting leader's shoulder off the card, then
- *   one straight run to the line. Cards about one line share its anchor, so their leaders fan in.
+ *   page the line is in, top for a line in the top BAND_Y of the page and away from the side edges,
+ *   bottom likewise. Along a band, cards keep the order of their lines (time order breaks ties), so
+ *   automatic leaders do not cross.
+ * - Widths, by mode: two side columns ("lr"), one on the right ("r"), or rows above and below
+ *   ("rows"). The mode changes only at a threshold, with HYSTERESIS.
+ * - A column that would run past the screengrab stacks, and each later card in a stack steps
+ *   diagonally down and away from the screengrab (STAGGER_STEP), as the 1984 Mac cascaded windows:
+ *   you can count them, they read as separate cards, and each one's left-edge grip shows.
+ * - Arrangement: automatic until the researcher drags a card; then the whole board is custom, every
+ *   card frozen where it was as INTENT relative to the screengrab, and nothing re-flows until Tidy.
  */
 
-/** A card column's width: the cards keep this size whatever the stage. */
-export const CARD_W = 270;
+/** Every card's width, in the margins and in the list alike: one kind of card. */
+export const CARD_W = 340;
 /** Between a card column and the screengrab: --bn-space-xl (2rem), in px at the default zoom. */
 export const COLUMN_GUTTER = 32;
 /** Below this width the screengrab stops being legible, so no column takes room from it. */
 export const MIN_SHOT_W = 480;
+/** How far each later card in a stack steps away from the screengrab, and how many steps before
+ *  the cascade starts again. */
+export const STAGGER_STEP = 8;
+export const STAGGER_STEPS = 3;
+export const MAX_STAGGER = STAGGER_STEP * STAGGER_STEPS;
+/** A column holds a card and its widest stagger, so a staggered card never enters the gutter. */
+export const COLUMN_W = CARD_W + MAX_STAGGER;
 /** Stage widths that fit two columns, and one, beside a legible screengrab. */
-export const WIDE_STAGE = MIN_SHOT_W + 2 * (CARD_W + COLUMN_GUTTER); // 1084
-export const ONE_COLUMN_STAGE = MIN_SHOT_W + CARD_W + COLUMN_GUTTER; // 782
+export const WIDE_STAGE = MIN_SHOT_W + 2 * (COLUMN_W + COLUMN_GUTTER); // 1272
+export const ONE_COLUMN_STAGE = MIN_SHOT_W + COLUMN_W + COLUMN_GUTTER; // 876
+/** How far ⌥ + an arrow moves a card. */
+export const MOVE_STEP = 24;
 export const GUTTER = 12;
 export const MIN_STEP = 46;
 
@@ -188,208 +193,6 @@ export function leaderPath(card: Rect, element: Rect, edge?: Edge): { d: string;
   return { d: `M${nx},${ny} L${sx},${ny} L${hx},${hy}`, end: [hx, hy] };
 }
 
-// ── Arrangement: where the researcher put each card, per screengrab ─────────
-//
-// The owner, 14 Oct 2026: "if the user does nothing but resize, re-order automagically; if they
-// reposition some or all cards, respect that work and intention but still re-organise the cards
-// they didn't touch." So a placed card is stored as INTENT, not coordinates — which edge of the
-// screengrab it sits beside, and how far down that edge as a fraction of the screengrab's height —
-// and it moves with the image as the stage resizes. A card dropped over the screengrab keeps its
-// place there (the researcher's choice; automatic placement never covers it).
-
-export type Placement =
-  /** Beside the screengrab: which side, and its top as a fraction of the screengrab's height. */
-  | { kind: "edge"; side: Side; frac: number; z: number }
-  /** Over the screengrab: its top-left as fractions of the screengrab's width and height. */
-  | { kind: "over"; x: number; y: number; z: number };
-
-/**
- * Kept in this browser's storage, keyed by the page's project id. Today that id is always "1"
- * (`data-project-id` is hard-coded in server/app.py and routes/export.py), so the key separates
- * arrangements by origin — the port the report is served on — and nothing finer: two projects
- * served on one port share them. The id is in the key so it becomes real with multi-project. Where
- * arrangements should live (a saved researcher edit, per project, perhaps in the export) is the
- * owner's call, docs/design-screens.md §6.9.
- */
-const storeKey = (projectId: string) => `bristlenose-screens-placements-${projectId}`;
-/** The first build's store: coordinates. Read once, converted to intent, then removed. */
-const legacyKey = (projectId: string) => `bristlenose-screens-arrangement-${projectId}`;
-
-type Arrangement = Record<string, Placement>;
-
-export function stillKey(sessionId: string, t: number): string {
-  return `${sessionId}@${t}`;
-}
-
-function isPlacement(v: unknown): v is Placement {
-  if (!v || typeof v !== "object") return false;
-  const p = v as Record<string, unknown>;
-  if (p.kind === "edge") return (p.side === "L" || p.side === "R") && typeof p.frac === "number" && typeof p.z === "number";
-  if (p.kind === "over") return typeof p.x === "number" && typeof p.y === "number" && typeof p.z === "number";
-  return false;
-}
-
-/** A first-build spot {x, y, z} (top-left as fractions of the screengrab) as intent: left of the
- *  screengrab is the left edge, past its right edge the right, anything else was put over it. */
-export function fromLegacy(spot: { x: number; y: number; z: number }): Placement {
-  if (spot.x < 0) return { kind: "edge", side: "L", frac: spot.y, z: spot.z };
-  if (spot.x >= 0.95) return { kind: "edge", side: "R", frac: spot.y, z: spot.z };
-  return { kind: "over", x: spot.x, y: spot.y, z: spot.z };
-}
-
-function read(projectId: string): Arrangement {
-  const out: Arrangement = {};
-  try {
-    const raw = localStorage.getItem(storeKey(projectId));
-    const v = raw ? (JSON.parse(raw) as unknown) : {};
-    if (v && typeof v === "object") for (const [k, p] of Object.entries(v)) if (isPlacement(p)) out[k] = p;
-    const old = localStorage.getItem(legacyKey(projectId));
-    if (old) {
-      const legacy = JSON.parse(old) as Record<string, { x: number; y: number; z: number }>;
-      for (const [k, spot] of Object.entries(legacy ?? {})) {
-        if (!(k in out) && spot && typeof spot.x === "number" && typeof spot.y === "number") {
-          out[k] = fromLegacy({ x: spot.x, y: spot.y, z: typeof spot.z === "number" ? spot.z : 31 });
-        }
-      }
-      localStorage.setItem(storeKey(projectId), JSON.stringify(out));
-      localStorage.removeItem(legacyKey(projectId));
-    }
-  } catch {
-    /* unreadable or unavailable storage: start automatic */
-  }
-  return out;
-}
-
-function write(projectId: string, a: Arrangement): void {
-  try {
-    localStorage.setItem(storeKey(projectId), JSON.stringify(a));
-  } catch {
-    /* private window or full storage: the arrangement lasts the page */
-  }
-}
-
-const memory = new Map<string, Arrangement>();
-// A version that rises on every write, so a board — or an undo after the board has moved to another
-// screen — re-reads the arrangement through useSyncExternalStore.
-let version = 0;
-const listeners = new Set<() => void>();
-export function subscribeArrangement(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-export function arrangementVersion(): number {
-  return version;
-}
-function store(projectId: string, a: Arrangement): void {
-  memory.set(projectId, a);
-  write(projectId, a);
-  version++;
-  for (const l of listeners) l();
-}
-function all(projectId: string): Arrangement {
-  let a = memory.get(projectId);
-  if (!a) {
-    a = read(projectId);
-    memory.set(projectId, a);
-  }
-  return a;
-}
-
-export function placementsFor(projectId: string, still: string): Record<string, Placement> {
-  const out: Record<string, Placement> = {};
-  const prefix = `${still}/`;
-  for (const [k, v] of Object.entries(all(projectId))) if (k.startsWith(prefix)) out[k.slice(prefix.length)] = v;
-  return out;
-}
-
-export function topZ(projectId: string): number {
-  return Object.values(all(projectId)).reduce((m, s) => Math.max(m, s.z), 30);
-}
-
-export function putPlacement(projectId: string, still: string, domId: string, placement: Placement): void {
-  const a = { ...all(projectId), [`${still}/${domId}`]: placement };
-  store(projectId, a);
-}
-
-/** One card back to automatic placement. */
-export function clearPlacement(projectId: string, still: string, domId: string): void {
-  const a = { ...all(projectId) };
-  delete a[`${still}/${domId}`];
-  store(projectId, a);
-}
-
-/** A screengrab's whole arrangement, replaced: `{}` returns every card to automatic (Tidy); a
- *  saved copy puts it back (undo). */
-export function setPlacements(projectId: string, still: string, placements: Record<string, Placement>): void {
-  const a = { ...all(projectId) };
-  for (const k of Object.keys(a)) if (k.startsWith(`${still}/`)) delete a[k];
-  for (const [d, p] of Object.entries(placements)) a[`${still}/${d}`] = p;
-  store(projectId, a);
-}
-
-/** Tests only. */
-export function resetArrangementMemory(): void {
-  memory.clear();
-  version++;
-}
-
-// ── A column with hand-placed cards ─────────────────────────────────────────
-
-export interface ColumnCard {
-  id: string;
-  height: number;
-  /** Where its top would like to be: a placed card's spot, or level with an untouched card's element. */
-  want: number;
-  /** Placed by hand: it keeps its spot, and the untouched cards give way. */
-  placed: boolean;
-  /** Placing order, to keep the researcher's order between two placed cards at one height. */
-  z?: number;
-}
-
-/**
- * Tops for a column that may hold hand-placed cards. Placed cards win: each sits at its own spot,
- * in the researcher's order, pushed down only as far as it takes not to overlap another placed
- * card. Untouched cards then re-flow around them, each in turn by its element's height into the
- * free slot nearest its anchor. A column with no placed card is the automatic column
- * (`placeColumn`, which stacks when it runs long); one with placed cards grows rather than stack,
- * so nobody's card is hidden under another's.
- */
-export function arrangeColumn(
-  cards: ColumnCard[],
-  limit: number,
-): { tops: Record<string, number>; stacked: boolean; bottom: number } {
-  if (!cards.some((c) => c.placed)) {
-    const order = [...cards].sort((a, b) => a.want - b.want);
-    const { placed, stacked, bottom } = placeColumn(order, limit);
-    const tops: Record<string, number> = {};
-    order.forEach((c, i) => (tops[c.id] = placed[i].top));
-    return { tops, stacked, bottom };
-  }
-  const tops: Record<string, number> = {};
-  const taken: [number, number][] = [];
-  const free = (y: number, h: number) =>
-    y >= 0 && taken.every(([t, b]) => y + h + GUTTER <= t || y >= b + GUTTER);
-  const own = cards.filter((c) => c.placed).sort((a, b) => a.want - b.want || (a.z ?? 0) - (b.z ?? 0));
-  let floor = 0;
-  for (const c of own) {
-    const y = Math.max(c.want, floor);
-    tops[c.id] = y;
-    taken.push([y, y + c.height]);
-    floor = y + c.height + GUTTER;
-  }
-  for (const c of cards.filter((c) => !c.placed).sort((a, b) => a.want - b.want)) {
-    const candidates = [c.want, 0];
-    for (const [t, b] of taken) candidates.push(t - c.height - GUTTER, b + GUTTER);
-    const fits = candidates.filter((y) => free(y, c.height));
-    const y = fits.reduce((best, y) => (Math.abs(y - c.want) < Math.abs(best - c.want) ? y : best), Infinity);
-    const top = Number.isFinite(y) ? y : Math.max(0, ...taken.map(([, b]) => b + GUTTER));
-    tops[c.id] = top;
-    taken.push([top, top + c.height]);
-  }
-  const bottom = Math.max(0, ...cards.map((c) => tops[c.id] + c.height));
-  return { tops, stacked: false, bottom };
-}
-
 // ── A band above or below the screengrab ───────────────────────────────────
 
 /**
@@ -424,25 +227,24 @@ export function placeRow(
   return { lefts, tops, height: cards.length ? lineTop + lineH : 0 };
 }
 
-// ── The whole board ─────────────────────────────────────────────────────────
+// ── The whole board, automatic ──────────────────────────────────────────────
 
-/** A card the board places on an edge: a linked card (its line on the visible screengrab), or one
- *  the researcher placed beside it. Cards dropped over the screengrab are not placed here. */
+/** A linked card the automatic layout places on an edge. */
 export interface BoardCard {
   id: string;
   height: number;
-  /** The line it is about on the visible screengrab: an automatic card. */
-  anchor?: Box;
-  /** Where the researcher put it beside the screengrab: a placed card, which wins. */
-  placed?: { side: Side; frac: number; z: number };
+  /** The line it is about on the visible screengrab. */
+  anchor: Box;
 }
 
 export interface Spot {
   edge: Edge;
-  /** In the edge's own box: a column's top, or a band's top and left. */
+  /** In the edge's own box: a column's top, or a band's top and left. For a column, `left` is the
+   *  card's stagger within the COLUMN_W track (an unstacked left card sits at MAX_STAGGER, flush
+   *  to the gutter; a right one at 0). */
   top: number;
   left: number;
-  /** Stacking order within a column, the lowest card on top of the one above it. */
+  /** Stacking order within a column, the later card over the earlier. */
   z: number;
 }
 
@@ -455,27 +257,13 @@ export interface Composition {
   band: Record<"T" | "B", number>;
 }
 
-/**
- * The edge a card goes to. A placed card keeps its side; where its side has no column (one column,
- * on the right) it goes to the right; in rows mode, where the side columns have become rows, it goes
- * to the row above for the top half of the screengrab and below for the rest, at the head of the row
- * (placed cards lead, as they led the list under the screengrab before rows).
- */
-export function cardEdge(c: Pick<BoardCard, "anchor" | "placed">, mode: Mode): Edge {
-  if (c.placed) {
-    if (mode === "rows") return c.placed.frac < 0.5 ? "T" : "B";
-    return mode === "lr" ? c.placed.side : "R";
-  }
-  return edgeFor(c.anchor ?? { x: 1, y: 0.5, w: 0, h: 0 }, mode);
-}
-
-const centreX = (b?: Box) => (b ? b.x + b.w / 2 : 0);
-const centreY = (b?: Box) => (b ? b.y + b.h / 2 : 0);
+const centreX = (b: Box) => b.x + b.w / 2;
+const centreY = (b: Box) => b.y + b.h / 2;
 
 /**
- * Where every edge card goes, for a screengrab of `shot` px in `mode`. Side columns are
- * `arrangeColumn` (placed cards win; the rest re-flow by their lines' heights); bands are
- * `placeRow` in the order of the lines left to right, placed cards first.
+ * Where every linked card goes, for a screengrab of `shot` px in `mode`. Cards come in time order,
+ * which breaks ties; columns are ordered by their lines' heights and stack (with the diagonal
+ * stagger) when they run long; bands by their lines left to right.
  */
 export function composeBoard(cards: BoardCard[], mode: Mode, shot: { W: number; H: number }): Composition {
   const at: Record<string, Spot> = {};
@@ -483,57 +271,300 @@ export function composeBoard(cards: BoardCard[], mode: Mode, shot: { W: number; 
   const band: Record<"T" | "B", number> = { T: 0, B: 0 };
   let colBottom = 0;
   for (const side of ["L", "R"] as Side[]) {
-    const col = cards.filter((c) => cardEdge(c, mode) === side);
+    const col = cards
+      .filter((c) => edgeFor(c.anchor, mode) === side)
+      .map((c, i) => ({ c, i, want: Math.max(0, centreY(c.anchor) * shot.H - 20) }))
+      .sort((a, b) => a.want - b.want || a.i - b.i);
     if (!col.length) continue;
-    const { tops, stacked: st, bottom } = arrangeColumn(
-      col.map((c) => ({
-        id: c.id,
-        height: c.height,
-        want: c.placed ? Math.max(0, c.placed.frac * shot.H) : Math.max(0, centreY(c.anchor) * shot.H - 20),
-        placed: !!c.placed,
-        z: c.placed?.z ?? 0,
-      })),
-      shot.H,
-    );
-    [...col].sort((a, b) => tops[a.id] - tops[b.id]).forEach((c, i) => (at[c.id] = { edge: side, top: tops[c.id], left: 0, z: 2 + i }));
+    const { placed, stacked: st, bottom } = placeColumn(col.map((x) => ({ want: x.want, height: x.c.height })), shot.H);
+    col.forEach((x, i) => {
+      const k = st ? i % (STAGGER_STEPS + 1) : 0;
+      const left = side === "L" ? MAX_STAGGER - k * STAGGER_STEP : k * STAGGER_STEP;
+      at[x.c.id] = { edge: side, top: placed[i].top, left, z: 2 + i };
+    });
     stacked[side] = st;
     colBottom = Math.max(colBottom, bottom);
   }
   for (const edge of ["T", "B"] as const) {
-    const row = cards.filter((c) => cardEdge(c, mode) === edge);
+    const row = cards
+      .map((c, i) => ({ c, i }))
+      .filter((x) => edgeFor(x.c.anchor, mode) === edge)
+      .sort((a, b) => centreX(a.c.anchor) - centreX(b.c.anchor) || a.i - b.i);
     if (!row.length) continue;
-    const placed = row
-      .filter((c) => c.placed)
-      .sort((a, b) => a.placed!.frac - b.placed!.frac || a.placed!.z - b.placed!.z);
-    const auto = row
-      .filter((c) => !c.placed)
-      .sort((a, b) => centreX(a.anchor) - centreX(b.anchor) || centreY(a.anchor) - centreY(b.anchor));
-    const order = [...placed, ...auto];
     const { lefts, tops, height } = placeRow(
-      order.map((c) => ({
-        want: c.placed ? 0 : centreX(c.anchor) * shot.W - CARD_W / 2,
-        width: CARD_W,
-        height: c.height,
-      })),
+      row.map((x) => ({ want: centreX(x.c.anchor) * shot.W - CARD_W / 2, width: CARD_W, height: x.c.height })),
       shot.W,
     );
-    order.forEach((c, i) => (at[c.id] = { edge, top: tops[i], left: lefts[i], z: 2 }));
+    row.forEach((x, i) => (at[x.c.id] = { edge, top: tops[i], left: lefts[i], z: 2 }));
     band[edge] = height;
   }
   return { at, stacked, colBottom, band };
 }
 
+// ── Arrangement: automatic, or the researcher's ─────────────────────────────
+//
+// The owner, 15 Oct 2026, replacing the 14 Oct rule that untouched cards re-flow round placed ones:
+// "when I drag a card I'm saying leave all the other cards where they are and move this one… Tidy is
+// the get-out-of-jail card… losing custom positioning is a choice." So a version of a screen is
+// either automatic (no arrangement stored) or custom (an arrangement stored, holding every card the
+// board showed when the researcher first dragged). In custom nothing re-flows; a window resize
+// scales the arrangement with the screengrab; Tidy alone returns to automatic.
+//
+// A card's spot is INTENT relative to the screengrab, so it moves with the image:
+// - beside, above or below it ("edge"): which edge, how far along that edge as a fraction of the
+//   screengrab's height (L, R) or width (T, B), and how far out from it in px — the gutter and any
+//   stagger — which does not scale, so a card frozen beside the screengrab never slides onto it;
+// - over it ("over", only by hand): its top-left as fractions of the screengrab's width and height.
+// A card that was in the list under the screengrab freezes as a bottom-edge card: its left as a
+// fraction of the screengrab's width from the screengrab's left (negative where the list starts
+// left of it), and its distance below the screengrab in px.
+
+export type Intent =
+  | { kind: "edge"; edge: Edge; along: number; out: number; z: number }
+  | { kind: "over"; x: number; y: number; z: number };
+
+/** A custom version's arrangement: a spot per card. Absent = automatic. */
+export type Arrangement = Record<string, Intent>;
+
+/** The intent for a card at `r` (board coordinates), against the screengrab at `s`. Below or above
+ *  it first (the list, a band, a long column's tail), then beside it, else over it. */
+export function intentFromRect(r: Rect, s: Rect, z: number): Intent {
+  if (r.top >= s.top + s.height) {
+    return { kind: "edge", edge: "B", along: (r.left - s.left) / s.width, out: r.top - (s.top + s.height), z };
+  }
+  if (r.top + r.height <= s.top) {
+    return { kind: "edge", edge: "T", along: (r.left - s.left) / s.width, out: s.top - (r.top + r.height), z };
+  }
+  if (r.left + r.width <= s.left) {
+    return { kind: "edge", edge: "L", along: (r.top - s.top) / s.height, out: s.left - (r.left + r.width), z };
+  }
+  if (r.left >= s.left + s.width) {
+    return { kind: "edge", edge: "R", along: (r.top - s.top) / s.height, out: r.left - (s.left + s.width), z };
+  }
+  return { kind: "over", x: (r.left - s.left) / s.width, y: (r.top - s.top) / s.height, z };
+}
+
+/** Where a card with intent `p` and height `h` sits, against the screengrab at `s` (the inverse of
+ *  intentFromRect). An edge card's distance out never goes negative, so it never covers the
+ *  screengrab; only a card the researcher dropped over it does. */
+export function rectFromIntent(p: Intent, s: Rect, h: number): { left: number; top: number } {
+  if (p.kind === "over") return { left: s.left + p.x * s.width, top: s.top + p.y * s.height };
+  const out = Math.max(0, p.out);
+  switch (p.edge) {
+    case "L":
+      return { left: s.left - out - CARD_W, top: s.top + p.along * s.height };
+    case "R":
+      return { left: s.left + s.width + out, top: s.top + p.along * s.height };
+    case "T":
+      return { left: s.left + p.along * s.width, top: s.top - out - h };
+    default:
+      return { left: s.left + p.along * s.width, top: s.top + s.height + out };
+  }
+}
+
+/** Where Tidy would put a linked card, as intent: from its automatic spot. `bandT` is the height of
+ *  the band above the screengrab in that layout; `below` how far the side columns run past the
+ *  screengrab's foot, since the band below starts under the taller of the two (the grid's row). */
+export function autoIntent(spot: Spot, h: number, shot: { W: number; H: number }, bandT: number, z: number, below = 0): Intent {
+  switch (spot.edge) {
+    case "L":
+      return { kind: "edge", edge: "L", along: spot.top / shot.H, out: COLUMN_GUTTER + MAX_STAGGER - spot.left, z };
+    case "R":
+      return { kind: "edge", edge: "R", along: spot.top / shot.H, out: COLUMN_GUTTER + spot.left, z };
+    case "T":
+      return { kind: "edge", edge: "T", along: spot.left / shot.W, out: COLUMN_GUTTER + bandT - (spot.top + h), z };
+    default:
+      return { kind: "edge", edge: "B", along: spot.left / shot.W, out: COLUMN_GUTTER + below + spot.top, z };
+  }
+}
+
+/** What a custom board reserves round the screengrab: a column for each side that has a card, and
+ *  each band tall enough for the cards above and below it (less the gutter, which the band's
+ *  margin carries). */
+export function customFrame(cards: { intent: Intent; height: number }[]): { L: boolean; R: boolean; T: number; B: number } {
+  const f = { L: false, R: false, T: 0, B: 0 };
+  for (const { intent: p, height } of cards) {
+    if (p.kind !== "edge") continue;
+    if (p.edge === "L" || p.edge === "R") f[p.edge] = true;
+    else f[p.edge] = Math.max(f[p.edge], Math.max(0, p.out) + height - COLUMN_GUTTER, 1);
+  }
+  return f;
+}
+
+// ── Storage ────────────────────────────────────────────────────────────────
+
 /**
- * Where a card dropped at `card` (board coordinates) should live, as intent: beside the screengrab
- * on the side its centre fell, or over it. `shot` is the screengrab's rectangle in the same space.
+ * Kept in this browser's storage, keyed by the page's project id (always "1" today, so in practice
+ * by origin; docs/design-screens.md §6.9), and within it by VERSION: the screen's key and the
+ * participant's session — not the still's moment, which a re-read may pick differently. Where
+ * arrangements should live (a saved researcher edit, per project, perhaps in the export) is still
+ * the owner's call.
  */
-export function placementFromDrop(
-  card: { left: number; top: number; width: number },
-  shot: { left: number; top: number; width: number; height: number },
-  z: number,
-): Placement {
-  const cx = card.left + card.width / 2;
-  if (cx < shot.left) return { kind: "edge", side: "L", frac: (card.top - shot.top) / shot.height, z };
-  if (cx > shot.left + shot.width) return { kind: "edge", side: "R", frac: (card.top - shot.top) / shot.height, z };
-  return { kind: "over", x: (card.left - shot.left) / shot.width, y: (card.top - shot.top) / shot.height, z };
+const storeKey = (projectId: string) => `bristlenose-screens-arrangements-${projectId}`;
+/** The 14 Oct store: one placement per card, keyed by still (`session@t/dom`). Read once per
+ *  version, converted, then removed. */
+const oldKey = (projectId: string) => `bristlenose-screens-placements-${projectId}`;
+/** The first build's store: coordinates. Folded into the 14 Oct store on read, as it always was. */
+const legacyKey = (projectId: string) => `bristlenose-screens-arrangement-${projectId}`;
+
+export function versionKey(screenKey: string, sessionId: string): string {
+  return `${screenKey}|${sessionId}`;
+}
+
+/** A first-build spot {x, y, z} (top-left as fractions of the screengrab) as a 14 Oct placement. */
+export function fromLegacy(spot: { x: number; y: number; z: number }): OldPlacement {
+  if (spot.x < 0) return { kind: "edge", side: "L", frac: spot.y, z: spot.z };
+  if (spot.x >= 0.95) return { kind: "edge", side: "R", frac: spot.y, z: spot.z };
+  return { kind: "over", x: spot.x, y: spot.y, z: spot.z };
+}
+
+/** The 14 Oct placement: a side and a fraction down it, or over. */
+export type OldPlacement =
+  | { kind: "edge"; side: Side; frac: number; z: number }
+  | { kind: "over"; x: number; y: number; z: number };
+
+/** A 14 Oct placement as intent: beside its side at the gutter, or over where it was. */
+export function fromOld(p: OldPlacement): Intent {
+  return p.kind === "over"
+    ? { kind: "over", x: p.x, y: p.y, z: p.z }
+    : { kind: "edge", edge: p.side, along: p.frac, out: COLUMN_GUTTER, z: p.z };
+}
+
+function isOld(v: unknown): v is OldPlacement {
+  if (!v || typeof v !== "object") return false;
+  const p = v as Record<string, unknown>;
+  if (p.kind === "edge") return (p.side === "L" || p.side === "R") && typeof p.frac === "number" && typeof p.z === "number";
+  if (p.kind === "over") return typeof p.x === "number" && typeof p.y === "number" && typeof p.z === "number";
+  return false;
+}
+
+function isIntent(v: unknown): v is Intent {
+  if (!v || typeof v !== "object") return false;
+  const p = v as Record<string, unknown>;
+  if (p.kind === "edge") {
+    return ["L", "R", "T", "B"].includes(p.edge as string) && typeof p.along === "number" &&
+      typeof p.out === "number" && typeof p.z === "number";
+  }
+  return p.kind === "over" && typeof p.x === "number" && typeof p.y === "number" && typeof p.z === "number";
+}
+
+function load<T>(key: string): Record<string, T> {
+  try {
+    const raw = localStorage.getItem(key);
+    const v = raw ? (JSON.parse(raw) as unknown) : {};
+    return v && typeof v === "object" ? (v as Record<string, T>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function save(key: string, v: object | null): void {
+  try {
+    if (v === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(v));
+  } catch {
+    /* private window or full storage: the arrangement lasts the page */
+  }
+}
+
+/** The 14 Oct store, with the first build's folded in (and removed), as it was read before. */
+function readOld(projectId: string): Record<string, OldPlacement> {
+  const out: Record<string, OldPlacement> = {};
+  for (const [k, p] of Object.entries(load<unknown>(oldKey(projectId)))) if (isOld(p)) out[k] = p;
+  const legacy = load<{ x: number; y: number; z?: number }>(legacyKey(projectId));
+  if (Object.keys(legacy).length) {
+    for (const [k, spot] of Object.entries(legacy)) {
+      if (!(k in out) && spot && typeof spot.x === "number" && typeof spot.y === "number") {
+        out[k] = fromLegacy({ x: spot.x, y: spot.y, z: typeof spot.z === "number" ? spot.z : 31 });
+      }
+    }
+    save(legacyKey(projectId), null);
+    save(oldKey(projectId), out);
+  }
+  return out;
+}
+
+const memory = new Map<string, Record<string, Arrangement>>();
+// Rises on every write, so a board — or an undo after the board has moved on — re-reads.
+let version = 0;
+const listeners = new Set<() => void>();
+export function subscribeArrangement(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+export function arrangementVersion(): number {
+  return version;
+}
+
+function all(projectId: string): Record<string, Arrangement> {
+  let a = memory.get(projectId);
+  if (!a) {
+    a = {};
+    for (const [k, v] of Object.entries(load<Record<string, unknown>>(storeKey(projectId)))) {
+      if (!v || typeof v !== "object") continue;
+      const cards: Arrangement = {};
+      for (const [d, p] of Object.entries(v)) if (isIntent(p)) cards[d] = p;
+      a[k] = cards;
+    }
+    memory.set(projectId, a);
+  }
+  return a;
+}
+
+function commit(projectId: string, a: Record<string, Arrangement>): void {
+  memory.set(projectId, a);
+  save(storeKey(projectId), a);
+  version++;
+  for (const l of listeners) l();
+}
+
+/** The arrangement of one version, or null while it is automatic. A pure read. */
+export function arrangementFor(projectId: string, screenKey: string, sessionId: string): Arrangement | null {
+  return all(projectId)[versionKey(screenKey, sessionId)] ?? null;
+}
+
+/**
+ * Migrate one version from the 14 Oct store (keyed by `session@t`), once: its placed cards keep
+ * their spots, the version becomes custom, and the old entries are removed. Returns whether it
+ * moved anything. A version already in the new store is left alone.
+ */
+export function migrateArrangement(projectId: string, screenKey: string, sessionId: string, t: number): boolean {
+  const key = versionKey(screenKey, sessionId);
+  const a = all(projectId);
+  if (key in a) return false;
+  const old = readOld(projectId);
+  const prefix = `${sessionId}@${t}/`;
+  const mine = Object.keys(old).filter((k) => k.startsWith(prefix));
+  if (!mine.length) return false;
+  const cards: Arrangement = {};
+  for (const k of mine) {
+    cards[k.slice(prefix.length)] = fromOld(old[k]);
+    delete old[k];
+  }
+  save(oldKey(projectId), Object.keys(old).length ? old : null);
+  commit(projectId, { ...a, [key]: cards });
+  return true;
+}
+
+/** Replace one version's arrangement: null returns it to automatic (Tidy); a saved copy puts it
+ *  back (undo). */
+export function setArrangement(projectId: string, screenKey: string, sessionId: string, cards: Arrangement | null): void {
+  const key = versionKey(screenKey, sessionId);
+  const a = { ...all(projectId) };
+  if (cards === null) delete a[key];
+  else a[key] = cards;
+  commit(projectId, a);
+}
+
+/** The highest stacking order of any placed card, so a card moved by hand comes out on top. */
+export function topZ(projectId: string): number {
+  let z = 30;
+  for (const cards of Object.values(all(projectId))) for (const p of Object.values(cards)) z = Math.max(z, p.z);
+  return z;
+}
+
+/** Tests only. */
+export function resetArrangementMemory(): void {
+  memory.clear();
+  version++;
 }

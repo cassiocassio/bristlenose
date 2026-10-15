@@ -62,7 +62,7 @@ describe("DiscussionView", () => {
     expect(heading()).toBe(`Session ${s2.number}`);
     expect(btn).toHaveAttribute("aria-checked", "true");
     // option C: the navigator's selection vocabulary, no ring
-    expect(btn.querySelector(".dl-here .bn-person-badge")).not.toBeNull();
+    expect(btn.querySelector(".bn-person-badge-here .bn-person-badge")).not.toBeNull();
     expect(btn.querySelector(".bn-person-badge-highlighted")).toBeNull();
   });
 

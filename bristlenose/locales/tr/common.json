@@ -690,7 +690,8 @@
       "reassignParagraph": "Paragraf\u0131 Yeniden Atamay\u0131 Geri Al",
       "splitParagraph": "Paragrafı Bölmeyi Geri Al",
       "joinParagraphs": "Paragrafları Birleştirmeyi Geri Al",
-      "tidy": "D\u00fczenlemeyi Geri Al"
+      "tidy": "D\u00fczenlemeyi Geri Al",
+      "moveQuote": "Al\u0131nt\u0131y\u0131 Ta\u015f\u0131may\u0131 Geri Al"
     },
     "redo": {
       "renameModerator": "Moderatörün Adını Değiştirmeyi Yinele",
@@ -713,7 +714,8 @@
       "reassignParagraph": "Paragraf\u0131 Yeniden Atamay\u0131 Yinele",
       "splitParagraph": "Paragrafı Bölmeyi Yinele",
       "joinParagraphs": "Paragrafları Birleştirmeyi Yinele",
-      "tidy": "D\u00fczenlemeyi Yinele"
+      "tidy": "D\u00fczenlemeyi Yinele",
+      "moveQuote": "Al\u0131nt\u0131y\u0131 Ta\u015f\u0131may\u0131 Yinele"
     }
   },
   "sync": {
@@ -756,7 +758,6 @@
     "participantCount_one": "{{count}} kat\u0131l\u0131mc\u0131",
     "participantCount_other": "{{count}} kat\u0131l\u0131mc\u0131",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "{{time}} an\u0131nda {{code}} ekran\u0131",
     "quoteCount_one": "{{count}} al\u0131nt\u0131",
     "quoteCount_other": "{{count}} al\u0131nt\u0131",
     "quoteCountFrom_one": "{{people}} kat\u0131l\u0131mc\u0131dan {{count}} al\u0131nt\u0131",
@@ -771,14 +772,16 @@
     "arrangementAutomatic": "D\u00fczen: Otomatik",
     "returnToAutomatic": "Otomatik d\u00fczene d\u00f6n",
     "slideCaption": "{{time}} an\u0131nda {{code}} ekran\u0131 \u00b7 {{n}}/{{total}}",
-    "previousScreengrab": "\u00d6nceki ekran g\u00f6r\u00fcnt\u00fcs\u00fc",
-    "nextScreengrab": "Sonraki ekran g\u00f6r\u00fcnt\u00fcs\u00fc",
-    "whoseQuotes": "Kimin al\u0131nt\u0131lar\u0131",
+    "previousVersion": "\u00d6nceki s\u00fcr\u00fcm",
+    "nextVersion": "Sonraki s\u00fcr\u00fcm",
     "onScreen": "{{code}} ekran\u0131nda",
-    "sequence": "{{code}}, al\u0131nt\u0131 {{n}}/{{total}}",
     "versionsLabel": "Bu ekran\u0131n s\u00fcr\u00fcmleri",
-    "carouselRole": "karusel",
-    "versionsKeys": "\u2190 ve \u2192 s\u00fcr\u00fcmler aras\u0131nda ge\u00e7i\u015f yapar",
+    "versionOption": "{{code}} ekran\u0131, {{n}}/{{total}}",
+    "versionCount": "{{n}}/{{total}}",
+    "resizeNavigator": "Ekran listesini yeniden boyutland\u0131r",
+    "quoteMoved": "Al\u0131nt\u0131 ta\u015f\u0131nd\u0131",
+    "navWidthPixels_one": "{{count}} piksel",
+    "navWidthPixels_other": "{{count}} piksel",
     "subtitle_one": "{{count}}\u00a0Ekran",
     "subtitle_other": "{{count}}\u00a0Ekran"
   }

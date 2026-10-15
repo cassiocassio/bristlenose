@@ -83,6 +83,26 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
     border-right: 1px solid var(--bn-colour-border);
 }
 
+/* "You are here": the badge of the session or version showing, on an ancestor (a wrapper, or the
+   radio that holds the badge). The navigator's own selection vocabulary, as .toc-link.active has
+   it: the selection fill (--bn-nav-selection-bg), emphasis weight, and accent text, no ring. Chosen
+   for the Discussion lens's session bar (option C of the badge playground, 3 Oct 2026); shared
+   since 15 Oct 2026 by the Screens lens's versions.
+   Two things the plain accent did not do, both fixed here for both lenses (accessibility review,
+   15 Oct 2026): it was the only cue (colour alone, 1.4.1), so the code takes the emphasis weight as
+   the name half already has — the non-colour cue, and the active row's own; and the accent as text
+   was 3.65:1 on the badge grey in the default light palette (1.4.3). The text is the accent mixed a
+   quarter toward the palette's own text colour, which darkens it in light and lightens it in dark.
+   Measured (code / name half, on the selection fill): default light 5.12 / 5.12, default dark
+   5.01 / 5.01, Edo light 6.38 / 6.38, Edo dark 6.20 / 6.20 — every one past 4.5:1. No token held an
+   accent that passes as text; this mix is the theme's own idiom (color-mix of two tokens). */
+.bn-person-badge-here .bn-speaker-badge-code,
+.bn-person-badge-here .bn-speaker-badge-name {
+    background: var(--bn-nav-selection-bg);
+    color: color-mix(in srgb, var(--bn-colour-accent) 75%, var(--bn-colour-text));
+    font-weight: var(--bn-weight-emphasis);
+}
+
 /* Highlighted state */
 .bn-person-badge-highlighted .bn-speaker-badge-code {
     box-shadow: 0 0 0 2px var(--bn-colour-accent);

@@ -1,22 +1,14 @@
 /**
- * The Screens lens's backdrop carousel: one participant's version of a screen at a time, the
- * versions as slides (docs/design-screens.md S5). The web form of the house carousel — the session
- * tapestry's `.bn-tp-nav` disks, under the Welcome window's SlotRotator rules
- * (docs/design-welcome-screen.md §3a): edge chevrons revealed on hover only, never latched on by
- * focus; the disk is the whole hit area; page dots windowed past MAX_DOTS; one slide per horizontal
- * swipe, with a lock; a frame that cross-fades, holding only the showing slide and its
- * neighbours (slideWindow).
+ * The Screens lens's versions: one participant's version of a screen shows at a time
+ * (docs/design-screens.md S5, "Which version"). Chosen from one unit on the heading line —
+ * the moment's timecode, ‹ ›, and the participants' badges as a radio group, collapsing to
+ * `‹ p3 · 2 of 8 ›` past VERSION_BADGES_MAX — never from anything on the screengrab itself. A
+ * horizontal swipe over the screengrab still turns one version (the Mac's gesture; nothing drawn).
+ * The screengrab cross-fades, holding only the showing version and its neighbours (slideWindow).
  */
 
-/** More slides than this and the dots show a window of them around the current one. */
-export const MAX_DOTS = 10;
-
-/** The dots to draw, [start, end), for `n` slides with `cur` showing. */
-export function dotWindow(n: number, cur: number, max = MAX_DOTS): [number, number] {
-  if (n <= max) return [0, n];
-  const start = Math.min(Math.max(0, cur - Math.floor(max / 2)), n - max);
-  return [start, start + max];
-}
+/** More versions than this and the badges collapse to one button with a menu. */
+export const VERSION_BADGES_MAX = 5;
 
 /** A horizontal wheel movement smaller than this is a tremor, not a swipe (px). */
 export const SWIPE_MIN = 12;

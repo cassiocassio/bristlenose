@@ -545,24 +545,69 @@ describe("useKeyboardShortcuts", () => {
       unmount();
     });
 
-    it("leaves j/k and the arrows to the lens", () => {
+    it("leaves the arrows to the lens", () => {
       const { getCtx, unmount } = renderWithProviders(undefined, SCREENS);
       act(() => {
         getCtx().registerVisibleQuoteIds("screens", ["q-1", "q-2"]);
       });
-      let j!: KeyboardEvent;
       let down!: KeyboardEvent;
+      let right!: KeyboardEvent;
       act(() => {
-        j = pressKey("j");
         down = pressKey("ArrowDown");
+        right = pressKey("ArrowRight");
       });
       expect(getCtx().focusedId).toBeNull();
-      expect(j.defaultPrevented).toBe(false);
       expect(down.defaultPrevented).toBe(false);
+      expect(right.defaultPrevented).toBe(false);
       unmount();
     });
 
-    it("the Quotes menu's Star acts on the card, and Next Quote is left to the lens", () => {
+    // The owner, 15 Oct 2026: J/K work on Screens exactly as on Quotes, over the board's reading
+    // order (which the lens registers), so what is learnt on one lens works on the other.
+    it("j moves focus on Screens over the registered order, and k back", () => {
+      const { getCtx, unmount } = renderWithProviders(undefined, SCREENS);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("screens", ["q-2", "q-1"]);
+      });
+      let j!: KeyboardEvent;
+      act(() => {
+        j = pressKey("j");
+      });
+      expect(getCtx().focusedId).toBe("q-2");
+      expect(j.defaultPrevented).toBe(true);
+      act(() => pressKey("j"));
+      expect(getCtx().focusedId).toBe("q-1");
+      act(() => pressKey("k"));
+      expect(getCtx().focusedId).toBe("q-2");
+      unmount();
+    });
+
+    it("⇧J never adds a cursor left over from another lens to the selection", () => {
+      const { getCtx, unmount } = renderWithProviders(undefined, SCREENS);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("screens", ["q-2", "q-3"]);
+        getCtx().setFocus("q-1", { scroll: false }); // carried over, not on this board
+      });
+      act(() => pressKey("J", { shiftKey: true }));
+      expect(getCtx().selectedIds.has("q-1")).toBe(false);
+      unmount();
+    });
+
+    it("⇧J extends the selection on Screens, and ⌘A selects the board's cards", () => {
+      const { getCtx, unmount } = renderWithProviders(undefined, SCREENS);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("screens", ["q-1", "q-2"]);
+        getCtx().setFocus("q-1", { scroll: false });
+      });
+      act(() => pressKey("J", { shiftKey: true }));
+      expect([...getCtx().selectedIds].sort()).toEqual(["q-1", "q-2"]);
+      act(() => getCtx().clearSelection());
+      act(() => pressKey("a", { metaKey: true }));
+      expect([...getCtx().selectedIds].sort()).toEqual(["q-1", "q-2"]);
+      unmount();
+    });
+
+    it("the Quotes menu's Star and Next Quote act on the board's cards", () => {
       const { getCtx, storeResult, unmount } = renderWithProviders(undefined, SCREENS);
       act(() => {
         getCtx().registerVisibleQuoteIds("screens", ["q-1", "q-2"]);
@@ -573,7 +618,7 @@ describe("useKeyboardShortcuts", () => {
         window.dispatchEvent(new CustomEvent("bn:menu-action", { detail: { action: "nextQuote" } }));
       });
       expect(storeResult.result.current.starred["q-1"]).toBe(true);
-      expect(getCtx().focusedId).toBe("q-1");
+      expect(getCtx().focusedId).toBe("q-2");
       unmount();
     });
   });

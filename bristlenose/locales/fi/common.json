@@ -690,7 +690,8 @@
       "reassignParagraph": "Peru kappaleen uudelleenm\u00e4\u00e4ritt\u00e4minen",
       "splitParagraph": "Peru kappaleen jakaminen",
       "joinParagraphs": "Peru kappaleiden yhdist\u00e4minen",
-      "tidy": "Peru siivous"
+      "tidy": "Peru siivous",
+      "moveQuote": "Peru sitaatin siirto"
     },
     "redo": {
       "renameModerator": "Nimeä moderaattori sittenkin uudelleen",
@@ -713,7 +714,8 @@
       "reassignParagraph": "M\u00e4\u00e4rit\u00e4 kappale uudelleen sittenkin",
       "splitParagraph": "Jaa kappale sittenkin",
       "joinParagraphs": "Yhdist\u00e4 kappaleet sittenkin",
-      "tidy": "Siivoa sittenkin"
+      "tidy": "Siivoa sittenkin",
+      "moveQuote": "Siirr\u00e4 sitaatti sittenkin"
     }
   },
   "sync": {
@@ -756,7 +758,6 @@
     "participantCount_one": "{{count}} osallistuja",
     "participantCount_other": "{{count}} osallistujaa",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "{{code}}:n n\u00e4ytt\u00f6 kohdassa {{time}}",
     "quoteCount_one": "{{count}} sitaatti",
     "quoteCount_other": "{{count}} sitaattia",
     "quoteCountFrom_one": "{{count}} sitaatti {{people}} osallistujalta",
@@ -771,14 +772,16 @@
     "arrangementAutomatic": "J\u00e4rjestys: Automaattinen",
     "returnToAutomatic": "Palauta automaattinen j\u00e4rjestys",
     "slideCaption": "{{code}}:n n\u00e4ytt\u00f6 kohdassa {{time}} \u00b7 {{n}} / {{total}}",
-    "previousScreengrab": "Edellinen kuvakaappaus",
-    "nextScreengrab": "Seuraava kuvakaappaus",
-    "whoseQuotes": "Kenen sitaatit",
+    "previousVersion": "Edellinen versio",
+    "nextVersion": "Seuraava versio",
     "onScreen": "{{code}}:n n\u00e4yt\u00f6ll\u00e4",
-    "sequence": "{{code}}, sitaatti {{n}} / {{total}}",
     "versionsLabel": "T\u00e4m\u00e4n n\u00e4yt\u00f6n versiot",
-    "carouselRole": "karuselli",
-    "versionsKeys": "\u2190 ja \u2192 vaihtavat versiota",
+    "versionOption": "{{code}}:n n\u00e4ytt\u00f6, {{n}} / {{total}}",
+    "versionCount": "{{n}} / {{total}}",
+    "resizeNavigator": "Muuta n\u00e4ytt\u00f6luettelon kokoa",
+    "quoteMoved": "Sitaatti siirretty",
+    "navWidthPixels_one": "{{count}} pikseli",
+    "navWidthPixels_other": "{{count}} pikseli\u00e4",
     "subtitle_one": "{{count}}\u00a0n\u00e4ytt\u00f6",
     "subtitle_other": "{{count}}\u00a0n\u00e4ytt\u00f6\u00e4"
   }

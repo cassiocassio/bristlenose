@@ -764,7 +764,8 @@
       "reassignParagraph": "Cofnij ponowne przypisanie akapitu",
       "splitParagraph": "Cofnij podzia\u0142 akapitu",
       "joinParagraphs": "Cofnij scalenie akapit\u00f3w",
-      "tidy": "Cofnij porz\u0105dkowanie"
+      "tidy": "Cofnij porz\u0105dkowanie",
+      "moveQuote": "Cofnij przeniesienie cytatu"
     },
     "redo": {
       "renameModerator": "Przywróć zmianę imienia moderatora",
@@ -787,7 +788,8 @@
       "reassignParagraph": "Przywr\u00f3\u0107 ponowne przypisanie akapitu",
       "splitParagraph": "Przywr\u00f3\u0107 podzia\u0142 akapitu",
       "joinParagraphs": "Przywr\u00f3\u0107 scalenie akapit\u00f3w",
-      "tidy": "Przywr\u00f3\u0107 porz\u0105dkowanie"
+      "tidy": "Przywr\u00f3\u0107 porz\u0105dkowanie",
+      "moveQuote": "Przywróć przeniesienie cytatu"
     }
   },
   "sync": {
@@ -838,7 +840,6 @@
     "participantCount_many": "{{count}} uczestnik\u00f3w",
     "participantCount_other": "{{count}} uczestnik\u00f3w",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "Ekran uczestnika {{code}} w chwili {{time}}",
     "quoteCount_one": "{{count}} cytat",
     "quoteCount_few": "{{count}} cytaty",
     "quoteCount_many": "{{count}} cytat\u00f3w",
@@ -857,14 +858,18 @@
     "arrangementAutomatic": "Uk\u0142ad: automatyczny",
     "returnToAutomatic": "Przywr\u00f3\u0107 uk\u0142ad automatyczny",
     "slideCaption": "Ekran uczestnika {{code}} w chwili {{time}} · {{n}} z {{total}}",
-    "previousScreengrab": "Poprzedni zrzut ekranu",
-    "nextScreengrab": "Następny zrzut ekranu",
-    "whoseQuotes": "Czyje cytaty",
+    "previousVersion": "Poprzednia wersja",
+    "nextVersion": "Następna wersja",
     "onScreen": "Na ekranie uczestnika {{code}}",
-    "sequence": "{{code}}, cytat {{n}} z {{total}}",
     "versionsLabel": "Wersje tego ekranu",
-    "carouselRole": "karuzela",
-    "versionsKeys": "Strzałki ← i → przełączają wersje",
+    "versionOption": "Ekran uczestnika {{code}}, {{n}} z {{total}}",
+    "versionCount": "{{n}} z {{total}}",
+    "resizeNavigator": "Zmień rozmiar listy ekranów",
+    "quoteMoved": "Cytat przeniesiony",
+    "navWidthPixels_one": "{{count}} piksel",
+    "navWidthPixels_few": "{{count}} piksele",
+    "navWidthPixels_many": "{{count}} pikseli",
+    "navWidthPixels_other": "{{count}} piksela",
     "subtitle_one": "{{count}}\u00a0ekran",
     "subtitle_few": "{{count}}\u00a0ekrany",
     "subtitle_many": "{{count}}\u00a0ekran\u00f3w",

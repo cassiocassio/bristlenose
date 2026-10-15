@@ -1,19 +1,23 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  arrangeColumn,
+  arrangementFor,
+  autoIntent,
   boardColumns,
   CARD_W,
-  cardEdge,
-  clearPlacement,
   COLUMN_GUTTER,
+  COLUMN_W,
   composeBoard,
+  customFrame,
   edgeFor,
   HYSTERESIS,
-  placementFromDrop,
-  placementsFor,
+  intentFromRect,
+  MAX_STAGGER,
+  migrateArrangement,
+  MIN_SHOT_W,
   placeRow,
-  putPlacement,
-  setPlacements,
+  rectFromIntent,
+  setArrangement,
+  STAGGER_STEP,
   stageMode,
   ONE_COLUMN_STAGE,
   WIDE_STAGE,
@@ -25,6 +29,7 @@ import {
   topZ,
   type BoardCard,
   type Composition,
+  type Intent,
   type Mode,
   type Rect,
 } from "./layout";
@@ -74,8 +79,10 @@ describe("stageMode and boardColumns", () => {
     expect(stageMode(0, "rows")).toBe("rows");
   });
   it("keeps a legible screengrab between two columns and their gutters", () => {
-    expect(WIDE_STAGE - 2 * (270 + 32)).toBe(480);
-    expect(ONE_COLUMN_STAGE - (270 + 32)).toBe(480);
+    // A column is one card at CARD_W plus its widest stagger.
+    expect(COLUMN_W).toBe(CARD_W + MAX_STAGGER);
+    expect(WIDE_STAGE - 2 * (COLUMN_W + COLUMN_GUTTER)).toBe(MIN_SHOT_W);
+    expect(ONE_COLUMN_STAGE - (COLUMN_W + COLUMN_GUTTER)).toBe(MIN_SHOT_W);
   });
   // A stage resting on a threshold must not flip back and forth: the layout's own height change
   // brings the page's scrollbar in or out, which moves the stage across the line again.
@@ -189,25 +196,27 @@ describe("placeRow", () => {
   });
 });
 
-/** A model of the board's grid (screens.css): columns either side, bands above and below, each a
- *  gutter from the screengrab. Where every card of a composition lands, in board space. */
+/** A model of the board's grid (screens.css): a column of COLUMN_W either side, bands above and
+ *  below, each a gutter from the screengrab. Where every automatic card lands, in board space. */
 function boardRects(comp: Composition, cards: BoardCard[], mode: Mode, shot: { W: number; H: number }) {
   const sides = { L: false, R: false };
   for (const c of cards) {
-    const e = cardEdge(c, mode);
+    const e = edgeFor(c.anchor, mode);
     if (e === "L" || e === "R") sides[e] = true;
   }
   const cols = boardColumns(mode, sides);
-  const shotX = cols === "l" || cols === "lr" ? CARD_W + COLUMN_GUTTER : 0;
+  const shotX = cols === "l" || cols === "lr" ? COLUMN_W + COLUMN_GUTTER : 0;
   const shotY = comp.band.T ? comp.band.T + COLUMN_GUTTER : 0;
+  // The band below starts under the taller of the screengrab and its side columns (the grid's row).
+  const rowH = Math.max(shot.H, comp.colBottom);
   const out: Record<string, Rect> = {};
   for (const c of cards) {
     const s = comp.at[c.id];
     const r = { width: CARD_W, height: c.height };
-    if (s.edge === "L") out[c.id] = { ...r, left: 0, top: shotY + s.top };
-    else if (s.edge === "R") out[c.id] = { ...r, left: shotX + shot.W + COLUMN_GUTTER, top: shotY + s.top };
+    if (s.edge === "L") out[c.id] = { ...r, left: s.left, top: shotY + s.top };
+    else if (s.edge === "R") out[c.id] = { ...r, left: shotX + shot.W + COLUMN_GUTTER + s.left, top: shotY + s.top };
     else if (s.edge === "T") out[c.id] = { ...r, left: shotX + s.left, top: s.top };
-    else out[c.id] = { ...r, left: shotX + s.left, top: shotY + shot.H + COLUMN_GUTTER + s.top };
+    else out[c.id] = { ...r, left: shotX + s.left, top: shotY + rowH + COLUMN_GUTTER + s.top };
   }
   return { shot: { left: shotX, top: shotY, width: shot.W, height: shot.H }, cards: out };
 }
@@ -215,27 +224,27 @@ function boardRects(comp: Composition, cards: BoardCard[], mode: Mode, shot: { W
 const overlaps = (a: Rect, b: Rect) =>
   a.left < b.left + b.width && b.left < a.left + a.width && a.top < b.top + b.height && b.top < a.top + a.height;
 
-describe("composeBoard", () => {
-  // A small deterministic generator: lines all over the page, of every kind of height.
-  function lines(n: number, seed: number): BoardCard[] {
-    let x = seed;
-    const rnd = () => ((x = (x * 1103515245 + 12345) % 2147483648) / 2147483648);
-    return Array.from({ length: n }, (_, i) => ({
-      id: `q${i}`,
-      height: 60 + Math.floor(rnd() * 160),
-      anchor: { x: rnd() * 0.9, y: rnd() * 0.97, w: 0.05 + rnd() * 0.05, h: 0.02 },
-    }));
-  }
+// A small deterministic generator: lines all over the page, of every kind of height.
+function lines(n: number, seed: number): BoardCard[] {
+  let x = seed;
+  const rnd = () => ((x = (x * 1103515245 + 12345) % 2147483648) / 2147483648);
+  return Array.from({ length: n }, (_, i) => ({
+    id: `q${i}`,
+    height: 60 + Math.floor(rnd() * 160),
+    anchor: { x: rnd() * 0.9, y: rnd() * 0.97, w: 0.05 + rnd() * 0.05, h: 0.02 },
+  }));
+}
+const SIZES: Record<Mode, { W: number; H: number }> = {
+  lr: { W: 700, H: 500 }, r: { W: 500, H: 400 }, rows: { W: 560, H: 380 },
+};
 
+describe("composeBoard", () => {
   it("never puts an automatic card over the screengrab, on any edge, in any mode", () => {
-    const sizes: Record<Mode, { W: number; H: number }> = {
-      lr: { W: 700, H: 500 }, r: { W: 500, H: 400 }, rows: { W: 560, H: 380 },
-    };
     for (const mode of ["lr", "r", "rows"] as Mode[]) {
       for (let seed = 1; seed <= 25; seed++) {
         const cards = lines(1 + (seed % 9), seed);
-        const comp = composeBoard(cards, mode, sizes[mode]);
-        const { shot, cards: rects } = boardRects(comp, cards, mode, sizes[mode]);
+        const comp = composeBoard(cards, mode, SIZES[mode]);
+        const { shot, cards: rects } = boardRects(comp, cards, mode, SIZES[mode]);
         for (const c of cards) expect(overlaps(rects[c.id], shot), `${mode} seed ${seed} ${c.id}`).toBe(false);
       }
     }
@@ -256,130 +265,167 @@ describe("composeBoard", () => {
     expect(narrow.band.B).toBeGreaterThan(0);
   });
 
-  it("keeps the lines' order along a band, so the leaders do not cross", () => {
-    const cards: BoardCard[] = [0.8, 0.1, 0.45].map((x, i) => ({ id: `c${i}`, height: 60, anchor: { x, y: 0.3, w: 0.05, h: 0.02 } }));
+  it("keeps the lines' order along a band, so the leaders do not cross; time breaks a tie", () => {
+    const cards: BoardCard[] = [0.8, 0.1, 0.45, 0.1].map((x, i) => ({ id: `c${i}`, height: 60, anchor: { x, y: 0.3, w: 0.05, h: 0.02 } }));
     const { at } = composeBoard(cards, "rows", { W: 2000, H: 400 });
     const byLeft = [...cards].sort((a, b) => at[a.id].left - at[b.id].left).map((c) => c.id);
-    expect(byLeft).toEqual(["c1", "c2", "c0"]);
+    expect(byLeft).toEqual(["c1", "c3", "c2", "c0"]);
   });
 
-  // The owner: respect the cards the researcher moved, and re-organise the ones they didn't.
-  it("lets placed cards win: their spot in a column, and the head of the row when the columns become rows", () => {
-    // The untouched card's line wants it at 170, where automatic placement would put it first and
-    // push the placed card down to 282. Placed wins: the researcher's card keeps 190, and the
-    // untouched one takes the free slot nearest its line (78 above, not 302 below).
-    const cards: BoardCard[] = [
-      { id: "auto", height: 100, anchor: { x: 0.8, y: 0.37, w: 0.1, h: 0.02 } },
-      { id: "mine", height: 100, placed: { side: "R", frac: 0.38, z: 31 } },
-    ];
-    const col = composeBoard(cards, "r", { W: 500, H: 500 });
-    expect(col.at.mine.top).toBe(190);
-    expect(col.at.auto.top).toBe(190 - 100 - GUTTER);
-    const rows = composeBoard(cards, "rows", { W: 560, H: 500 });
-    expect(rows.at.mine).toMatchObject({ edge: "T", left: 0 });
-    expect(rows.at.auto.edge).toBe("T");
-    expect(rows.at.auto.left).toBeGreaterThan(0);
+  // The owner, 15 Oct 2026: as the 1984 Mac cascaded its windows — you can count them, they read as
+  // separate cards, and each one's left-edge grip shows.
+  it("steps each later card of a stack diagonally away from the screengrab, within its column", () => {
+    const tall = (side: number) => Array.from({ length: 6 }, (_, i) => ({
+      id: `s${i}`, height: 150, anchor: { x: side, y: 0.1 + i * 0.02, w: 0.05, h: 0.02 },
+    }));
+    const right = composeBoard(tall(0.8), "lr", { W: 700, H: 400 });
+    expect(right.stacked.R).toBe(true);
+    const r = [0, 1, 2, 3, 4].map((i) => right.at[`s${i}`]);
+    expect(r.map((s) => s.left)).toEqual([0, STAGGER_STEP, 2 * STAGGER_STEP, 3 * STAGGER_STEP, 0]); // away = right; the cascade restarts
+    for (let i = 1; i < 4; i++) expect(r[i].top).toBeGreaterThan(r[i - 1].top); // and down
+    const left = composeBoard(tall(0.05), "lr", { W: 700, H: 400 });
+    const l = [0, 1, 2].map((i) => left.at[`s${i}`].left);
+    expect(l).toEqual([MAX_STAGGER, MAX_STAGGER - STAGGER_STEP, MAX_STAGGER - 2 * STAGGER_STEP]); // away = left
+    for (const s of Object.values(left.at)) expect(s.left + CARD_W).toBeLessThanOrEqual(COLUMN_W); // never into the gutter
+    // And in board space: every staggered card stays outside the screengrab and its gutter.
+    for (const [comp, side] of [[left, 0.05], [right, 0.8]] as const) {
+      const cards = tall(side);
+      const { shot, cards: rects } = boardRects(comp, cards, "lr", { W: 700, H: 400 });
+      const guarded = { left: shot.left - COLUMN_GUTTER, top: shot.top, width: shot.width + 2 * COLUMN_GUTTER, height: shot.height };
+      for (const c of cards) expect(overlaps(rects[c.id], guarded), `${side} ${c.id}`).toBe(false);
+    }
+    // A column with room does not stagger: every card flush to the gutter.
+    const calm = composeBoard([tall(0.05)[0]], "lr", { W: 700, H: 400 });
+    expect(calm.at.s0.left).toBe(MAX_STAGGER);
   });
 });
 
-describe("arrangement", () => {
+describe("intent", () => {
+  const shot: Rect = { left: 400, top: 100, width: 600, height: 400 };
+  it("reads a card beside, above, below or over the screengrab, and puts it back where it was", () => {
+    const cases: [Rect, Intent["kind"], string?][] = [
+      [{ left: 30, top: 150, width: CARD_W, height: 90 }, "edge", "L"],
+      [{ left: 1040, top: 300, width: CARD_W, height: 90 }, "edge", "R"],
+      [{ left: 500, top: 0, width: CARD_W, height: 60 }, "edge", "T"],
+      [{ left: 0, top: 560, width: CARD_W, height: 120 }, "edge", "B"], // the list, starting left of it
+      [{ left: 500, top: 200, width: CARD_W, height: 90 }, "over"],
+    ];
+    for (const [r, kind, edge] of cases) {
+      const p = intentFromRect(r, shot, 40);
+      expect(p.kind).toBe(kind);
+      if (edge && p.kind === "edge") expect(p.edge).toBe(edge);
+      expect(rectFromIntent(p, shot, r.height)).toEqual({ left: r.left, top: r.top });
+    }
+  });
+
+  // A resize in custom scales the arrangement with the screengrab: along each edge in proportion,
+  // out from it by the same gutter, so a card frozen beside it never slides onto it.
+  it("scales with the screengrab, and an edge card never comes over it", () => {
+    const p = intentFromRect({ left: 30, top: 300, width: CARD_W, height: 90 }, shot, 40);
+    const smaller: Rect = { left: 400, top: 100, width: 300, height: 200 };
+    const r = rectFromIntent(p, smaller, 90);
+    expect(r.top).toBe(100 + 0.5 * 200);
+    expect(r.left + CARD_W).toBeLessThanOrEqual(smaller.left);
+    for (const edge of ["L", "R", "T", "B"] as const) {
+      const at = rectFromIntent({ kind: "edge", edge, along: 0.3, out: -50, z: 1 }, smaller, 90);
+      expect(overlaps({ ...at, width: CARD_W, height: 90 }, smaller), edge).toBe(false);
+    }
+  });
+
+  it("puts a card back where Tidy would: its automatic spot, as intent", () => {
+    const cards = lines(5, 7);
+    const s = { W: 700, H: 500 };
+    const comp = composeBoard(cards, "lr", s);
+    const { shot: sr, cards: rects } = boardRects(comp, cards, "lr", s);
+    for (const c of cards) {
+      const p = autoIntent(comp.at[c.id], c.height, s, comp.band.T, 31, Math.max(0, comp.colBottom - s.H));
+      const at = rectFromIntent(p, sr, c.height);
+      expect(at.left).toBeCloseTo(rects[c.id].left, 6);
+      expect(at.top).toBeCloseTo(rects[c.id].top, 6);
+    }
+  });
+
+  // A side column can run past the screengrab's foot (a short screengrab, tall cards): the band
+  // below then starts under the column, and so must a footer card put back by Return to automatic.
+  it("puts a bottom-edge card under a side column that runs past the screengrab, as the grid does", () => {
+    const s = { W: 700, H: 200 };
+    const cards: BoardCard[] = [
+      { id: "tall", height: 400, anchor: { x: 0.8, y: 0.5, w: 0.1, h: 0.02 } },
+      { id: "footer", height: 80, anchor: { x: 0.45, y: 0.95, w: 0.1, h: 0.02 } },
+    ];
+    const comp = composeBoard(cards, "r", s);
+    expect(comp.colBottom).toBeGreaterThan(s.H);
+    const { shot: sr, cards: rects } = boardRects(comp, cards, "r", s);
+    const p = autoIntent(comp.at.footer, 80, s, comp.band.T, 31, Math.max(0, comp.colBottom - s.H));
+    expect(rectFromIntent(p, sr, 80).top).toBeCloseTo(rects.footer.top, 6);
+    expect(rects.footer.top).toBeGreaterThanOrEqual(rects.tall.top + 400); // not on the column's cards
+  });
+
+  it("holds open a column for each side with a card, and each band tall enough for its cards", () => {
+    const f = customFrame([
+      { intent: { kind: "edge", edge: "L", along: 0.2, out: 32, z: 1 }, height: 90 },
+      { intent: { kind: "edge", edge: "B", along: 0, out: 200, z: 1 }, height: 100 },
+      { intent: { kind: "over", x: 0.2, y: 0.2, z: 1 }, height: 100 },
+    ]);
+    expect(f).toEqual({ L: true, R: false, T: 0, B: 200 + 100 - COLUMN_GUTTER });
+  });
+});
+
+describe("arrangement storage", () => {
   beforeEach(() => {
     localStorage.clear();
     resetArrangementMemory();
   });
-  const edge = (side: "L" | "R", frac: number, z = 31) => ({ kind: "edge" as const, side, frac, z });
+  const edge = (e: "L" | "R" | "T" | "B", along: number, z = 31): Intent => ({ kind: "edge", edge: e, along, out: COLUMN_GUTTER, z });
 
-  it("keeps a researcher's placement per screengrab as intent, and survives a reload", () => {
-    putPlacement("1", "s1@100", "q-p1-10", edge("L", 0.3));
+  it("is automatic until set, and keeps each version's arrangement through a reload", () => {
+    expect(arrangementFor("1", "url:/x", "s1")).toBeNull();
+    setArrangement("1", "url:/x", "s1", { a: edge("L", 0.3) });
+    setArrangement("1", "url:/x", "s2", { a: edge("R", 0.6) });
     resetArrangementMemory();
-    expect(placementsFor("1", "s1@100")).toEqual({ "q-p1-10": edge("L", 0.3) });
-    expect(placementsFor("1", "s1@104")).toEqual({});
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
+    expect(arrangementFor("1", "url:/x", "s2")).toEqual({ a: edge("R", 0.6) });
     expect(topZ("1")).toBe(31);
+    setArrangement("1", "url:/x", "s1", null);
+    expect(arrangementFor("1", "url:/x", "s1")).toBeNull();
+    expect(arrangementFor("1", "url:/x", "s2")).not.toBeNull();
   });
 
-  it("returns one card, or one screengrab's cards, to automatic without touching another's", () => {
-    putPlacement("1", "s1@100", "a", edge("L", 0));
-    putPlacement("1", "s1@100", "c", edge("R", 0.5, 33));
-    putPlacement("1", "s2@50", "b", edge("R", 0, 32));
-    clearPlacement("1", "s1@100", "a");
-    expect(placementsFor("1", "s1@100")).toEqual({ c: edge("R", 0.5, 33) });
-    setPlacements("1", "s1@100", {});
-    expect(placementsFor("1", "s1@100")).toEqual({});
-    expect(placementsFor("1", "s2@50")).toEqual({ b: edge("R", 0, 32) });
+  // A re-read can pick a different still moment for a session: the arrangement must not care.
+  it("is keyed by the screen and the session, not by the still's moment", () => {
+    setArrangement("1", "url:/x", "s1", { a: edge("L", 0.3) });
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
+    expect(migrateArrangement("1", "url:/x", "s1", 99)).toBe(false); // nothing to migrate, nothing lost
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
   });
 
-  it("converts the first build's coordinates to intent, once", () => {
-    localStorage.setItem("bristlenose-screens-arrangement-1", JSON.stringify({
-      "s1@100/a": { x: -0.3, y: 0.2, z: 31 }, // left of the screengrab
-      "s1@100/b": { x: 1.02, y: 0.5, z: 32 }, // past its right edge
-      "s1@100/c": { x: 0.4, y: 0.4, z: 33 }, // over it
+  it("migrates a version's 14 Oct placements once, and the first build's coordinates with them", () => {
+    localStorage.setItem("bristlenose-screens-placements-1", JSON.stringify({
+      "s1@100/a": { kind: "edge", side: "R", frac: 0.4, z: 32 },
+      "s2@50/b": { kind: "edge", side: "L", frac: 0.1, z: 33 },
     }));
-    expect(placementsFor("1", "s1@100")).toEqual({
-      a: edge("L", 0.2, 31),
-      b: edge("R", 0.5, 32),
-      c: { kind: "over", x: 0.4, y: 0.4, z: 33 },
+    localStorage.setItem("bristlenose-screens-arrangement-1", JSON.stringify({ "s1@100/c": { x: 0.4, y: 0.4, z: 34 } }));
+    expect(migrateArrangement("1", "url:/x", "s1", 100)).toBe(true);
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({
+      a: { kind: "edge", edge: "R", along: 0.4, out: COLUMN_GUTTER, z: 32 },
+      c: { kind: "over", x: 0.4, y: 0.4, z: 34 },
     });
     expect(localStorage.getItem("bristlenose-screens-arrangement-1")).toBeNull();
+    // The other version's entry waits for its own board.
+    expect(JSON.parse(localStorage.getItem("bristlenose-screens-placements-1")!)).toEqual({
+      "s2@50/b": { kind: "edge", side: "L", frac: 0.1, z: 33 },
+    });
     resetArrangementMemory();
-    expect(Object.keys(placementsFor("1", "s1@100"))).toEqual(["a", "b", "c"]);
+    expect(migrateArrangement("1", "url:/x", "s1", 100)).toBe(false);
+    expect(Object.keys(arrangementFor("1", "url:/x", "s1")!)).toEqual(["a", "c"]);
   });
 
   // Keyed by the page's project id. That id is always "1" today, so in practice this separates
   // arrangements by origin only; the test pins the key's shape for when multi-project makes it real.
-  it("keys the arrangement by the project id it is given", () => {
-    putPlacement("1", "s1@100", "q-p1-10", edge("L", 0.3));
-    resetArrangementMemory(); // what a reload, or opening the other project, starts from
-    expect(placementsFor("2", "s1@100")).toEqual({});
+  it("keys arrangements by the project id it is given", () => {
+    setArrangement("1", "url:/x", "s1", { a: edge("L", 0.3) });
+    resetArrangementMemory();
+    expect(arrangementFor("2", "url:/x", "s1")).toBeNull();
     expect(topZ("2")).toBe(30);
-    setPlacements("2", "s1@100", {});
-    expect(placementsFor("1", "s1@100")).toEqual({ "q-p1-10": edge("L", 0.3) });
-  });
-});
-
-describe("placementFromDrop", () => {
-  const shot = { left: 300, top: 0, width: 600, height: 400 };
-  it("reads a drop beside the screengrab as a side and a place down its edge", () => {
-    expect(placementFromDrop({ left: 10, top: 100, width: 270 }, shot, 40)).toEqual({ kind: "edge", side: "L", frac: 0.25, z: 40 });
-    expect(placementFromDrop({ left: 940, top: 200, width: 270 }, shot, 41)).toEqual({ kind: "edge", side: "R", frac: 0.5, z: 41 });
-  });
-  it("reads a drop with its centre over the screengrab as over it", () => {
-    expect(placementFromDrop({ left: 400, top: 40, width: 270 }, shot, 42)).toEqual({ kind: "over", x: 100 / 600, y: 0.1, z: 42 });
-  });
-});
-
-describe("arrangeColumn", () => {
-  const card = (id: string, want: number, placed = false, height = 100, z = 0) => ({ id, want, placed, height, z });
-
-  it("is the automatic column when nobody has placed a card", () => {
-    const { tops } = arrangeColumn([card("b", 300), card("a", 0)], 800);
-    expect(tops).toEqual({ a: 0, b: 300 });
-  });
-
-  // The owner: respect the cards the researcher moved, and re-organise the ones they didn't.
-  it("keeps placed cards where they were put, and moves untouched ones out of their way", () => {
-    // An untouched card wants 200; a placed card sits at 180. The placed card wins.
-    const { tops } = arrangeColumn([card("auto", 200), card("mine", 180, true)], 800);
-    expect(tops.mine).toBe(180);
-    expect(tops.auto + 100 + GUTTER <= 180 || tops.auto >= 180 + 100 + GUTTER).toBe(true);
-    // ...into the free slot nearest its anchor: just below the placed card (292) is 92 away, above
-    // it (68) is 132 away.
-    expect(tops.auto).toBe(180 + 100 + GUTTER);
-  });
-
-  it("keeps the researcher's order between placed cards, pushing a later one down rather than overlapping", () => {
-    const { tops } = arrangeColumn([card("second", 50, true, 100, 32), card("first", 40, true, 100, 31)], 800);
-    expect(tops.first).toBe(40);
-    expect(tops.second).toBe(40 + 100 + GUTTER);
-  });
-
-  it("re-flows untouched cards in anchor order around several placed ones", () => {
-    const { tops } = arrangeColumn(
-      [card("p1", 100, true), card("p2", 400, true), card("u1", 120), card("u2", 300)],
-      800,
-    );
-    expect(tops.p1).toBe(100);
-    expect(tops.p2).toBe(400);
-    const spans = Object.entries(tops).map(([id, t]) => [t, t + 100, id] as const).sort((a, b) => a[0] - b[0]);
-    for (let i = 1; i < spans.length; i++) expect(spans[i][0]).toBeGreaterThanOrEqual(spans[i - 1][1] + GUTTER);
   });
 });

@@ -1,32 +1,58 @@
 /* The Screens lens. docs/design-screens.md S5; the prototype it was built from is
    experiments/screen-text/screens_lens.html. No new tokens: every colour is a palette token or an
-   accent tint at a percentage the theme already mixes (6%, 15%, 30%); lift is --bn-colour-shadow at
-   rest and the shipped .bn-focused treatment when a card is selected. */
+   accent tint at a percentage the theme already mixes (6%, 15%, 30%).
+
+   Focus and selection are the Quotes lens's, exactly: the shared .bn-focused and .bn-selected
+   (bristlenose/theme/atoms/interactive.css) are the only visuals for them, and this file adds the
+   stacking order and nothing else — no colour, background, shadow, border or outline on any rule
+   that names a focus or selection state (gated by tests/test_screens_css.py). The owner, 15 Oct
+   2026: what is learnt on one lens carries to the other, and a change to the focus model reaches
+   both with nothing re-implemented. */
 
 /* The lens is one <section>, the direct child of <main>, so its zone title sits on the shared datum
    (`.center > main > section:first-of-type > .section-heading`, report.css) with no rule of its
-   own. The navigator is a column inside it, as the Discussion lens's guide is; everything else
-   flows down the second column: the title, the line under it, the reading progress (row 3, placed
-   there because it is the lens's last child — the one live region, kept outside the board that
-   remounts), what could not be read, and the board. The last row is flexible so the sticky
-   navigator's height never opens gaps between them. */
+   own. The navigator is a column inside it, built as the Discussion lens's guide is (discussion.css
+   .dl-lens .dl-nav): grey, full height, to the top under the toolbar and to the left edge, with no
+   white gutter above or beside it. Everything else flows down the second column: the title, the
+   line under it, the reading progress (row 3, placed there because it is the lens's last child —
+   the one live region, kept outside the board that remounts), what could not be read, and the
+   board. The last row is flexible so the sticky navigator's height never opens gaps. */
 .screens-lens {
-  /* --screens-nav-w is set on the element from NAV_W (ScreensLens.tsx), the one source. */
+  /* --screens-nav-w, --screens-card-w and --screens-col-w are set on the element from NAV_W (or the
+     researcher's split), CARD_W and COLUMN_W (ScreensLens.tsx, layout.ts), the one source each. */
   display: grid; grid-template-columns: var(--screens-nav-w) minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr;
   column-gap: var(--bn-space-xl); align-items: start;
+  /* Bleed out of .center's left padding, as .dl-lens does, so the navigator runs to the edge. */
+  margin-left: calc(-1 * var(--bn-center-pad-left, 0px));
 }
-.screens-lens > .screens-nav { grid-column: 1; grid-row: 1 / -1; align-self: start; }
-.screens-lens > :not(.screens-nav) { grid-column: -2 / -1; min-width: 0; }
-.screens-lens.nav-hidden { grid-template-columns: minmax(0, 1fr); }
+.screens-lens.nav-hidden { grid-template-columns: minmax(0, 1fr); margin-left: 0; }
+.screens-lens > .screens-nav-pane { grid-column: 1; grid-row: 1 / -1; align-self: start; }
+.screens-lens > :not(.screens-nav-pane) { grid-column: -2 / -1; min-width: 0; }
 .screens-lens > .screens-progress { grid-row: 3; }
-
-/* ── Navigation: every screen, with its thumbnail, title and address ── */
-.screens-nav {
-  position: sticky; top: 0; max-height: 100vh; overflow-y: auto;
-  padding: var(--bn-space-md) var(--bn-space-sm) var(--bn-space-xl);
-  border-right: 1px solid var(--bn-colour-border);
-  background: var(--bn-colour-inspector-bg, var(--bn-colour-bg));
+/* In the app the navigator starts at the toolbar seam: the lens cancels the body's top pad and its
+   content takes it back, so the zone title stays on the datum while the grey runs to the top
+   (discussion.css does the same for .dl-lens). The browser keeps its pad: the NavBar is above. */
+.layout.embedded .screens-lens:not(.nav-hidden) {
+  margin-top: calc(-1 * (var(--bn-toolbar-inset, 0px) + var(--bn-space-xl)));
+  padding-top: calc(var(--bn-toolbar-inset, 0px) + var(--bn-space-xl));
 }
+.layout.embedded .screens-lens:not(.nav-hidden) > .screens-nav-pane {
+  margin-top: calc(-1 * (var(--bn-toolbar-inset, 0px) + var(--bn-space-xl)));
+}
+
+/* ── Navigation: every screen, with its thumbnail and title ── */
+.screens-nav-pane {
+  position: sticky; top: 0; height: 100vh;
+  background: var(--bn-colour-inspector-bg, var(--bn-colour-bg));
+  border-right: 1px solid var(--bn-colour-border);
+}
+.screens-nav {
+  height: 100%; overflow-y: auto; box-sizing: border-box;
+  padding: var(--bn-space-md) var(--bn-space-sm) var(--bn-space-xl);
+  container-type: inline-size;
+}
+/* The shipped .drag-handle (sidebar.css) on the navigator's edge, as .dl-split is on the guide's. */
+.screens-split { right: -3px; }
 .screens-nav-head { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); padding: 0 var(--bn-space-sm) var(--bn-space-sm); }
 .screens-nav ol { list-style: none; margin: 0; padding: 0; }
 .screens-nav a {
@@ -36,6 +62,11 @@
 }
 .screens-nav a:hover { background: var(--bn-colour-hover); }
 .screens-nav a[aria-current="true"] { background: var(--bn-selection-bg); border-color: var(--bn-selection-border); }
+/* Narrow: the names only, no thumbnails. */
+@container (max-width: 240px) {
+  .screens-nav a { grid-template-columns: minmax(0, 1fr); }
+  .screens-nav .screens-thumb { display: none; }
+}
 .screens-thumb { position: relative; width: 92px; height: 58px; display: block; }
 /* Each thumbnail sits in a slot (the slot is what scrolls into view and starts the fetch). */
 .screens-thumb-slot { position: absolute; left: 0; top: 0; width: 92px; height: 58px; }
@@ -51,6 +82,7 @@
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); font-weight: var(--bn-weight-emphasis);
 }
+/* The per-screen detail below is kept, and not shown for now (NAV_DETAILS in ScreensLens.tsx). */
 .screens-nav-path { display: block; font-family: var(--bn-font-mono); font-size: var(--bn-text-micro); color: var(--bn-colour-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .screens-nav-meta { display: flex; gap: var(--bn-space-xs); align-items: baseline; margin-top: var(--bn-space-xs); font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
 .screens-nav-meta .screens-count { flex: none; min-width: 1.5em; font-variant-numeric: tabular-nums; }
@@ -65,27 +97,43 @@
 }
 .screens-more { background: none; color: var(--bn-colour-muted); }
 
-/* ── The screen ── */
-/* The person chips (toggle buttons, aria-pressed): whose quotes are in front. They never turn the
-   carousel. */
-.screens-who { display: flex; gap: var(--bn-space-xs); }
-.screens-who button {
-  border: 1px solid transparent; background: none; padding: 3px 4px; border-radius: var(--bn-radius-md);
-  cursor: pointer; font: inherit; color: inherit;
+/* ── Which version: one unit on the heading line ──
+   [15:04] ‹ [p1] [p3] › — the house timecode of the moment, the steppers, and the participants'
+   badges as a radio group; the checked one in the shared "you are here" style
+   (.bn-person-badge-here, person-badge.css). Nothing for choosing a version sits on the
+   screengrab. */
+.screens-versions { display: inline-flex; align-items: center; gap: var(--bn-space-xs); }
+.screens-versions .timecode { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); margin-right: var(--bn-space-xs); }
+.screens-version-radios { display: inline-flex; gap: 2px; }
+.screens-version-radios button, .screens-version-menu, .screens-step {
+  border: 1px solid transparent; background: none; padding: 2px 3px; border-radius: var(--bn-radius-md);
+  cursor: pointer; font: inherit; color: inherit; display: inline-flex; align-items: center; gap: var(--bn-space-xs);
 }
-/* No dimming of the unpressed ones: opacity took their text below 4.5:1 (1.4.3) in every palette.
-   The pressed one is marked by its fill, its border and aria-pressed. */
-.screens-who button:hover { background: var(--bn-colour-hover); }
-.screens-who button[aria-pressed="true"] { background: var(--bn-selection-bg); border-color: var(--bn-selection-border); }
+.screens-version-radios button:hover, .screens-version-menu:hover, .screens-step:hover { background: var(--bn-colour-hover); }
+/* The house keyboard ring, as on Discussion's session badges (.dl-sess:focus-visible). */
+.screens-version-radios button:focus-visible, .screens-version-menu:focus-visible, .screens-step:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.screens-step { color: var(--bn-colour-muted); padding: 7px; } /* 9px glyph + 7px padding + 1px border each side: a 25px target (2.5.8) */
+.screens-step svg { width: 9px; height: 9px; }
+.screens-step path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.screens-version-pick { position: relative; display: inline-flex; }
+.screens-version-count { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); font-variant-numeric: tabular-nums; }
+
+/* One line, always. The Arrangement control appears on the first drag, and a line that wrapped to
+   fit it pushed the whole board down (measured 21px at 800px, 15 Oct 2026) — the jump a researcher
+   who has just taken manual control must not see. So the leading text truncates and the controls
+   at the end keep their size. tests/test_screens_css.py holds the line to nowrap. */
 .screens-sub {
-  display: flex; flex-wrap: wrap; gap: var(--bn-space-xs) var(--bn-space-md); align-items: baseline;
+  display: flex; flex-wrap: nowrap; gap: var(--bn-space-xs) var(--bn-space-md); align-items: baseline;
   font-size: var(--bn-text-label); color: var(--bn-colour-muted); margin: calc(-1 * var(--bn-space-sm)) 0 var(--bn-space-lg);
-  max-width: none;
+  max-width: none; min-width: 0;
 }
+.screens-sub > code, .screens-sub > span:not(.screens-hidden-slot) {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.screens-sub > .screens-hidden-slot, .screens-sub > .screens-arrangement { flex: none; }
 .screens-sub code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); }
-.screens-sub .timecode { font-family: var(--bn-font-mono); color: var(--bn-colour-accent); }
 .screens-hidden-slot { margin-left: auto; }
-/* Arrangement: nothing while automatic; "Arrangement: Custom" once any card is placed by hand, and
+/* Arrangement: nothing while automatic; "Arrangement: Custom" once the board is custom, and
    "Tidy" — what pressing it does — on hover and on keyboard focus. Both words share one grid cell,
    right-aligned, so the cell is as wide as the longer and nothing moves when they swap. */
 .screens-arrangement {
@@ -99,14 +147,9 @@
 .screens-arrangement:hover .screens-arrangement-act,
 .screens-arrangement:focus-visible .screens-arrangement-act { visibility: visible; }
 
-/* A card the researcher placed by hand: a faint mark at its corner. */
-.screens-card.is-placed::before {
-  content: ""; position: absolute; z-index: 2; top: 6px; left: 6px; width: 5px; height: 5px;
-  border-radius: 50%; background: color-mix(in srgb, var(--bn-colour-accent) 45%, transparent);
-  pointer-events: none;
-}
-
-/* The board's right-click menu. */
+/* The board's menus (right-click; the versions past five). Keyboard focus on an item shows the
+   house ring, as Discussion's controls do (the card-focus gate in tests/test_screens_css.py is
+   about cards, not controls). */
 .screens-menu {
   position: absolute; z-index: 1000; min-width: 12rem; padding: var(--bn-space-xs) 0;
   background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md);
@@ -116,29 +159,28 @@
   display: block; width: 100%; text-align: left; font: inherit; font-size: var(--bn-text-label);
   background: none; border: 0; padding: var(--bn-space-xs) var(--bn-space-md); color: var(--bn-colour-text); cursor: default;
 }
-.screens-menu-item:hover, .screens-menu-item:focus { background: var(--bn-colour-hover); color: var(--bn-colour-text); outline: none; }
-/* White on the accent measured 4.02:1 light and 3.65:1 dark; the hover fill keeps the text's own
-   colour, and keyboard focus adds the accent ring the rest of the report uses. */
+.screens-menu-item:hover, .screens-menu-item:focus { background: var(--bn-colour-hover); outline: none; }
 .screens-menu-item:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: -2px; }
 
 /* Cards sit AROUND the screengrab, never over it (the owner, 14 Oct 2026: the screen is the artefact
    being discussed, and stickies laid over a printout hide the design they are about). Four edges: a
    column either side and a band above and below, each in its own grid track, so no automatic card
-   can sit over it; layout.ts places the cards along each edge. A card column is CARD_W (270px) and
-   the gutter --bn-space-xl, which the leader visibly crosses; the screengrab takes what is left.
-   Which columns appear is decided in layout.ts (stageMode, boardColumns) from the stage's width and
-   which sides have cards, so these classes and those numbers move together: two from 1084px of
-   stage, one (right) from 782px, and below that rows — cols-none, the bands above and below carry
-   every linked card, and the screengrab takes the full width (MIN_SHOT_W, 480px, is the floor for
-   legibility). A column or band with no cards takes no room. */
+   can sit over it; layout.ts places the cards along each edge. A column is a card and its widest
+   stagger (COLUMN_W), across the gutter --bn-space-xl, which the leader visibly crosses; the
+   screengrab takes what is left. Which columns appear is decided in layout.ts (stageMode,
+   boardColumns) from the stage's width and which sides have cards: two from 1272px of stage, one
+   (right) from 876px, and below that rows — cols-none, the bands carry every linked card, and the
+   screengrab takes the full width (MIN_SHOT_W, 480px, is the floor). A column or band with no cards
+   takes no room. On a custom board the same tracks are held open for the cards the researcher put
+   there, and the cards themselves sit in the free layer. */
 .screens-stage { container-type: inline-size; position: relative; }
 .screens-board {
   position: relative; display: grid; column-gap: var(--bn-space-xl);
   grid-template-columns: minmax(0, 1fr); grid-template-areas: "t" "shot" "b";
 }
-.screens-board.cols-r { grid-template-columns: minmax(0, 1fr) 270px; grid-template-areas: "t ." "shot r" "b ."; }
-.screens-board.cols-l { grid-template-columns: 270px minmax(0, 1fr); grid-template-areas: ". t" "l shot" ". b"; }
-.screens-board.cols-lr { grid-template-columns: 270px minmax(0, 1fr) 270px; grid-template-areas: ". t ." "l shot r" ". b ."; }
+.screens-board.cols-r { grid-template-columns: minmax(0, 1fr) var(--screens-col-w); grid-template-areas: "t ." "shot r" "b ."; }
+.screens-board.cols-l { grid-template-columns: var(--screens-col-w) minmax(0, 1fr); grid-template-areas: ". t" "l shot" ". b"; }
+.screens-board.cols-lr { grid-template-columns: var(--screens-col-w) minmax(0, 1fr) var(--screens-col-w); grid-template-areas: ". t ." "l shot r" ". b ."; }
 .screens-band-t { grid-area: t; }
 .screens-band-b { grid-area: b; }
 .screens-col-l { grid-area: l; }
@@ -151,60 +193,18 @@
 .screens-band { position: relative; z-index: 2; min-width: 0; }
 .screens-band-t.has-cards { margin-bottom: var(--bn-space-xl); }
 .screens-band-b.has-cards { margin-top: var(--bn-space-xl); }
-.screens-band .screens-card { position: absolute; }
+.screens-band .screens-card, .screens-col .screens-card { position: absolute; }
+.screens-col .screens-card { z-index: var(--stack, 2); }
 .screens-shot { grid-area: shot; position: relative; z-index: 1; align-self: start; min-width: 0; }
 .screens-shot img { display: block; width: 100%; border-radius: var(--bn-radius-md); border: 1px solid var(--bn-colour-border); }
 
-/* ── The carousel: one participant's version at a time ──
-   The web form of the house carousel (the session tapestry's .bn-tp-nav disks, under the Welcome
-   window's SlotRotator rules): the showing version and its neighbours are stacked in one grid cell,
-   so the frame is as tall as the tallest of them and a turn to a neighbour moves nothing — and the
-   versions cross-fade.
-   Edge chevrons are revealed on hover only, never by focus (a focus-revealed chevron stayed on);
-   the disk is the whole hit area. Dots and the caption sit on one line under the frame. */
-.screens-carousel { position: relative; border-radius: var(--bn-radius-md); }
-.screens-carousel.is-multi:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 2px; }
+/* The showing version and its neighbours are stacked in one grid cell, so the frame is as tall as
+   the tallest of them and a change to a neighbour moves nothing; the versions cross-fade. */
 .screens-slides { position: relative; display: grid; }
 .screens-slides > .screens-slide, .screens-slides > .screens-shot-wait { grid-area: 1 / 1; align-self: start; }
 .screens-slide { opacity: 0; pointer-events: none; transition: opacity var(--bn-transition-slow); }
 .screens-slide.is-current { opacity: 1; pointer-events: auto; z-index: 1; }
 .screens-slides > .screens-hl { z-index: 2; }
-.screens-chev {
-  all: unset; position: absolute; z-index: 3; top: 50%; translate: 0 -50%;
-  width: 26px; height: 26px; display: grid; place-items: center; cursor: pointer;
-  opacity: 0; transition: opacity var(--bn-transition-fast); color: var(--bn-colour-text);
-}
-.screens-chev-prev { left: var(--bn-space-sm); }
-.screens-chev-next { right: var(--bn-space-sm); }
-.screens-chev > span {
-  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
-  border: 1px solid var(--bn-colour-border);
-  background: color-mix(in srgb, var(--bn-colour-bg) 72%, transparent);
-  -webkit-backdrop-filter: blur(12px) saturate(1.5); backdrop-filter: blur(12px) saturate(1.5);
-  box-shadow: 0 0.5px 1px var(--bn-colour-shadow);
-}
-.screens-chev svg { width: 9px; height: 9px; }
-.screens-chev path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.screens-carousel:hover .screens-chev { opacity: 1; }
-.screens-carousel-line {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--bn-space-xs) var(--bn-space-md);
-  margin-top: var(--bn-space-sm); font-size: var(--bn-text-caption); color: var(--bn-colour-muted);
-}
-.screens-caption .timecode { font-family: var(--bn-font-mono); color: var(--bn-colour-accent); }
-/* Indicator first: small, the current one twice as wide and in the accent; a 17px hit slop, but
-   swipe, the chevrons and ←/→ are the real navigation. Past MAX_DOTS the window's end dots shrink.
-   The others are the muted text colour at full strength: a dot is a graphical object that conveys
-   state, so it needs 3:1 against the page (1.4.11), and a 30% tint measured 1.47–1.73:1. */
-.screens-dots { display: flex; align-items: center; }
-.screens-dot { all: unset; width: 17px; height: 17px; display: grid; place-items: center; cursor: pointer; }
-.screens-dot::before { content: ""; width: 6px; height: 6px; border-radius: 3px; background: var(--bn-colour-muted); }
-.screens-dot.is-current::before { width: 12px; background: var(--bn-colour-accent); }
-.screens-dot.is-edge::before { width: 4px; height: 4px; }
-.screens-dot:hover::before { background: var(--bn-colour-text); }
-/* The keys that turn the carousel, shown to a sighted keyboard user while it has keyboard focus
-   (the hover title says the same to a pointer). Takes its room always, so nothing moves. */
-.screens-keys { visibility: hidden; font-family: var(--bn-font-mono); color: var(--bn-colour-muted); }
-.screens-shot:has(.screens-carousel:focus-visible) .screens-keys { visibility: visible; }
 .screens-shot-wait { aspect-ratio: 16 / 10; border-radius: var(--bn-radius-md); background: var(--bn-colour-quote-bg); }
 .screens-shot-error { display: block; padding: var(--bn-space-lg); font-size: var(--bn-text-label); color: var(--bn-colour-muted); }
 .screens-notes, .screens-progress { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); margin: 0 0 var(--bn-space-md); }
@@ -218,24 +218,25 @@
   position: absolute; pointer-events: none; border-radius: var(--bn-radius-sm);
   border: 1.5px solid var(--bn-colour-accent);
   background: color-mix(in srgb, var(--bn-colour-accent) 6%, transparent);
-  transition: background var(--bn-transition-fast), opacity var(--bn-transition-fast);
+  transition: background var(--bn-transition-fast);
 }
+/* The focused card's line, lit. */
 .screens-hl.on { background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent); }
 
-/* ── Every quote on this lens is the Quotes lens's card (QuoteCard), in a wrapper the board places,
-   lifts and drags: pinned, carried or not pinned ── */
-.screens-card { position: relative; }
+/* ── Every quote on this lens is the Quotes lens's card (QuoteCard), in a wrapper the board places
+   and drags ── */
+.screens-card { position: relative; border-radius: var(--bn-radius-md); }
 .screens-stage .screens-card > blockquote.quote-card {
   margin: 0;
   padding: var(--bn-space-sm) 2rem var(--bn-space-sm) var(--bn-space-md);
-  transition: opacity var(--bn-transition-fast), box-shadow var(--bn-transition-fast), color var(--bn-transition-fast);
 }
-/* Lift only where a card floats: over or beside the screengrab (a column) or moved by hand (the free
-   layer). Everything said here that is not pinned sits in the page's flow and reads as the Quotes
-   lens's card does, with no shadow (the owner, 14 Oct 2026: shadows in spurious places). */
-.screens-col .screens-card > blockquote.quote-card,
-.screens-free .screens-card > blockquote.quote-card {
-  box-shadow: 0 4px 16px var(--bn-colour-shadow), 0 1px 4px var(--bn-colour-shadow);
+/* Every card that floats — in a column, in a band, or placed by hand — carries one shadow, the same
+   for all, on the wrapper (so the card's own .bn-focused shadow and dark-mode ring stay the shared
+   ones, drawn over it). Softer and tighter than a tooltip's, so two cards overlapping in a stack
+   read as two clean edges rather than a smudge. A first value; a lab will tune it. Cards in the list
+   under the screengrab sit in the page's flow and carry none, as on the Quotes lens. */
+.screens-col .screens-card, .screens-band .screens-card, .screens-free .screens-card {
+  box-shadow: 0 1px 2px var(--bn-colour-shadow), 0 2px 6px color-mix(in srgb, var(--bn-colour-shadow) 50%, transparent);
 }
 .screens-stage .screens-card .quote-body { font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); }
 .screens-stage .screens-card .quote-row { gap: 0.4rem; }
@@ -243,48 +244,27 @@
 .screens-stage .screens-card .badges { margin-top: 0.3rem; gap: var(--bn-space-xs); }
 .screens-stage .screens-card .star-btn { top: 0.4rem; right: 0.4rem; }
 .screens-stage .screens-card .hide-btn { top: 1.55rem; right: 0.4rem; }
-.screens-col .screens-card.is-lifted > .quote-card,
-.screens-free .screens-card.is-lifted > .quote-card { box-shadow: var(--bn-focus-shadow), 0 8px 24px var(--bn-colour-shadow); }
-/* A card is what it is: the whole quote, at one size, as on the Quotes lens. Selecting one (a press,
-   or keyboard focus) only raises it and shows the shipped focus treatment; nothing about a card's
-   size or the board's layout changes (the owner, 14 Oct 2026). A long quote is a taller card, and a
-   column that runs past the screengrab stacks. tests/test_screens_css.py holds every selected, focused or
-   hovered state in this file to properties that cannot move anything. */
-
-.screens-col .screens-card { position: absolute; left: 0; right: 0; z-index: var(--stack, 2); }
-.screens-col.stacked .screens-card:not(.is-lifted) > .quote-card {
-  box-shadow: 0 -2px 6px var(--bn-colour-shadow), 0 4px 16px var(--bn-colour-shadow), 0 1px 4px var(--bn-colour-shadow);
-}
-/* A card focused or being edited comes up out of a stack, as one brought forward does. */
+/* A card is what it is: the whole quote, at one size, as on the Quotes lens. Focus brings it to the
+   front of anything it overlaps — stacking order only, nothing else. tests/test_screens_css.py holds
+   every focused, selected or hovered state in this file to properties that cannot move anything,
+   and every focus or selection state to stacking alone. */
 .screens-stage .screens-card:has(> .quote-card.bn-focused, > .quote-card.editing),
 .screens-stage .screens-card:focus-within { z-index: 998 !important; }
 /* A column is its own stacking context (z-index 2), under the free layer (5): lift the whole column
-   while one of its cards is forward or holds focus, or that card can never rise over a moved one. */
-.screens-col:has(.is-lifted, :focus-within) { z-index: 6; }
-.screens-stage .screens-card.is-lifted { z-index: 999 !important; }
+   while one of its cards is focused, or that card can never rise over a moved one. */
+.screens-col:has(.bn-focused, :focus-within) { z-index: 6; }
 
 .screens-free { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
 .screens-free .screens-card { position: absolute; pointer-events: auto; }
 
-/* Bringing one forward dims the others by colour, not opacity: a stack must stay opaque. */
-.screens-stage.focus .screens-card:not(.is-lifted) .quote-card:not(.bn-selected) { color: var(--bn-colour-muted); }
-.screens-stage.focus .screens-card:not(.is-lifted) mark.search-mark { background: none; }
-.screens-stage.focus .screens-hl:not(.on),
-.screens-stage.focus .screens-leaders :not(.on) { opacity: 0.25; }
-/* A person chip on: the other people's cards step back the same way, by colour, and their lines
-   and leaders fade. A card brought forward is never stepped back. */
-.screens-stage.chosen .screens-card.is-muted:not(.is-lifted) .quote-card:not(.bn-selected) { color: var(--bn-colour-muted); }
-.screens-stage.chosen .screens-card.is-muted:not(.is-lifted) mark.search-mark { background: none; }
-.screens-hl.is-muted, svg.screens-leaders .is-muted { opacity: 0.25; }
-
 /* The read-aloud highlight: words said that are also on the screen (the card's own search mark). */
 .screens-stage mark.search-mark { background: color-mix(in srgb, var(--bn-colour-accent) 15%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
-.screens-stage .screens-card.is-lifted mark.search-mark { background: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent); }
 
 svg.screens-leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 3; }
 /* Full strength: a leader is the only line from a card to its place on the screen (WCAG 1.4.11;
-   0.6 measured 2.3:1). */
+   0.6 measured 2.3:1). The focused card's is drawn heavier. */
 svg.screens-leaders path { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1; }
+svg.screens-leaders path.on { stroke-width: 2; }
 svg.screens-leaders circle { fill: var(--bn-colour-accent); }
 
 /* Rearranging: the top edge and the margin under the timecode are grips. The side grip starts
@@ -293,35 +273,24 @@ svg.screens-leaders circle { fill: var(--bn-colour-accent); }
 .screens-grip-top { left: 0; right: 2rem; top: 0; height: var(--bn-space-sm); }
 .screens-grip-side { left: 0; top: 2.2rem; bottom: 0; width: 3.6rem; }
 .screens-stage.dragging, .screens-stage.dragging * { cursor: grabbing !important; user-select: none; }
-.screens-stage .screens-card.is-dragging > .quote-card { box-shadow: var(--bn-focus-shadow), 0 12px 32px var(--bn-colour-shadow); transition: none; }
 
-/* Each card's person and place among that person's quotes here (p1 ①②③, p2 ①②): a badge on the
-   card's top edge, clear of its text and its grips (it takes no pointer). Heard as a sentence
-   (.bn-sr-only beside it). */
-.screens-seq {
-  position: absolute; z-index: 2; top: 0; left: var(--bn-space-lg); translate: 0 -50%;
-  display: inline-flex; align-items: center; gap: 3px; padding: 0 2px 0 0.3rem; pointer-events: none;
-  border: 1px solid var(--bn-colour-border); border-radius: 999px;
-  background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text);
-  font-family: var(--bn-font-mono); font-size: var(--bn-text-micro); line-height: var(--bn-text-micro-lh);
-}
-.screens-seq-n {
-  min-width: 1.15em; padding: 0 2px; border-radius: 999px; text-align: center; font-variant-numeric: tabular-nums;
-  border: 1px solid var(--bn-colour-accent); background: var(--bn-colour-bg); color: var(--bn-colour-text);
-}
-/* "On p2's screen": a quote listed here because its words are on another version, which this turns
-   the carousel to. */
+/* "On p2's screen": a quote listed here because its words are on another version, which this
+   shows. Keyboard focus shows the house ring. */
 .screens-elsewhere {
-  all: unset; display: inline-block; margin: var(--bn-space-xs) 0 0 var(--bn-space-md);
-  font-size: var(--bn-text-caption); color: var(--bn-colour-accent); cursor: pointer;
+  display: inline-block; margin: var(--bn-space-xs) 0 0 var(--bn-space-md); padding: 0;
+  font: inherit; font-size: var(--bn-text-caption); color: var(--bn-colour-accent); cursor: pointer;
+  background: none; border: 0;
 }
 .screens-elsewhere:hover { text-decoration: underline; }
 .screens-elsewhere:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
 
-/* Everything else said on this screen: the same card, the same gutter. */
-.screens-loose { columns: 260px; column-gap: var(--bn-space-md); margin-top: var(--bn-space-md); }
-.screens-loose .screens-card { break-inside: avoid; margin: 0 0 var(--bn-space-md); }
+/* Everything else said on this screen: the same card at the same width as in the margins
+   (CARD_W), in a grid of fixed columns from the left, not newspaper columns. */
+.screens-loose {
+  display: grid; grid-template-columns: repeat(auto-fill, var(--screens-card-w)); justify-content: start;
+  gap: var(--bn-space-md); margin-top: var(--bn-space-md); align-items: start;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .screens-hl, .screens-stage .screens-card > blockquote.quote-card, .screens-slide, .screens-chev { transition: none; }
+  .screens-hl, .screens-slide { transition: none; }
 }

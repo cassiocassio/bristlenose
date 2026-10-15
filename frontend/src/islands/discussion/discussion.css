@@ -79,12 +79,10 @@
 .dl-sess:focus-visible, .dl-chip:focus-visible, .dl-row-btn:focus-visible, .dl-ask-btn:focus-visible {
     outline: 2px solid var(--bn-colour-accent); outline-offset: 1px;
 }
-/* "You are here" — option C of the badge playground (chosen 3 Oct 2026): the
-   navigator's own selection vocabulary (.toc-link.active), no ring. The #N in
-   accent; in the header, the name half on the selection fill in accent too.
-   Navigator rows carry #N only, so there the accent #N is the whole mark. */
-.dl-here .bn-speaker-badge-code { color: var(--bn-colour-accent); }
-.dl-here .bn-speaker-badge-name { background: var(--bn-nav-selection-bg); color: var(--bn-colour-accent); }
+/* "You are here" is the shared .bn-person-badge-here (theme/molecules/person-badge.css), chosen
+   here first (option C of the badge playground, 3 Oct 2026) and shared with the Screens lens's
+   versions since 15 Oct 2026. Navigator rows carry #N only, so there the accent #N is the whole
+   mark. */
 
 /* ── navigator ── */
 .dl-lens .dl-nav {

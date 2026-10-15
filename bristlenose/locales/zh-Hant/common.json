@@ -660,7 +660,8 @@
       "reassignParagraph": "\u9084\u539f\u91cd\u65b0\u6307\u6d3e\u6bb5\u843d",
       "splitParagraph": "\u9084\u539f\u5206\u5272\u6bb5\u843d",
       "joinParagraphs": "\u9084\u539f\u5408\u4f75\u6bb5\u843d",
-      "tidy": "\u9084\u539f\u6574\u7406"
+      "tidy": "\u9084\u539f\u6574\u7406",
+      "moveQuote": "\u9084\u539f\u79fb\u52d5\u5f15\u8ff0"
     },
     "redo": {
       "renameModerator": "重做重新命名主持人",
@@ -683,7 +684,8 @@
       "reassignParagraph": "\u91cd\u505a\u91cd\u65b0\u6307\u6d3e\u6bb5\u843d",
       "splitParagraph": "\u91cd\u505a\u5206\u5272\u6bb5\u843d",
       "joinParagraphs": "\u91cd\u505a\u5408\u4f75\u6bb5\u843d",
-      "tidy": "\u91cd\u505a\u6574\u7406"
+      "tidy": "\u91cd\u505a\u6574\u7406",
+      "moveQuote": "\u91cd\u505a\u79fb\u52d5\u5f15\u8ff0"
     }
   },
   "sync": {
@@ -722,7 +724,6 @@
     "screenCount_other": "{{count}} \u500b\u756b\u9762",
     "participantCount_other": "{{count}} \u4f4d\u53c3\u8207\u8005",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "{{code}} \u5728 {{time}} \u7684\u756b\u9762",
     "quoteCount_other": "{{count}} \u5247\u5f15\u8ff0",
     "quoteCountFrom_other": "\u4f86\u81ea {{people}} \u4f4d\u53c3\u8207\u8005\u7684 {{count}} \u5247\u5f15\u8ff0",
     "stillAlt": "{{code}} \u7684\u756b\u9762\uff1a{{title}}\uff0c\u65bc {{time}}",
@@ -735,14 +736,15 @@
     "arrangementAutomatic": "\u6392\u5217\u65b9\u5f0f\uff1a\u81ea\u52d5",
     "returnToAutomatic": "\u56de\u5fa9\u70ba\u81ea\u52d5\u6392\u5217",
     "slideCaption": "{{code}} \u5728 {{time}} \u7684\u756b\u9762 \u00b7 \u7b2c {{n}} \u500b\uff0c\u5171 {{total}} \u500b",
-    "previousScreengrab": "\u4e0a\u4e00\u5f35\u87a2\u5e55\u622a\u5716",
-    "nextScreengrab": "\u4e0b\u4e00\u5f35\u87a2\u5e55\u622a\u5716",
-    "whoseQuotes": "\u8ab0\u7684\u5f15\u8ff0",
+    "previousVersion": "\u4e0a\u4e00\u500b\u7248\u672c",
+    "nextVersion": "\u4e0b\u4e00\u500b\u7248\u672c",
     "onScreen": "\u5728 {{code}} \u7684\u756b\u9762\u4e0a",
-    "sequence": "{{code}}\uff0c\u7b2c {{n}} \u5247\u5f15\u8ff0\uff0c\u5171 {{total}} \u5247",
     "versionsLabel": "\u6b64\u756b\u9762\u7684\u7248\u672c",
-    "carouselRole": "\u8f2a\u64ad",
-    "versionsKeys": "\u4f7f\u7528 \u2190 \u548c \u2192 \u5207\u63db\u7248\u672c",
+    "versionOption": "{{code}} \u7684\u756b\u9762\uff0c\u7b2c {{n}} \u500b\uff0c\u5171 {{total}} \u500b",
+    "versionCount": "\u7b2c {{n}} \u500b\uff0c\u5171 {{total}} \u500b",
+    "resizeNavigator": "\u8abf\u6574\u756b\u9762\u6e05\u55ae\u5927\u5c0f",
+    "quoteMoved": "\u5df2\u79fb\u52d5\u5f15\u8ff0",
+    "navWidthPixels_other": "{{count}} \u50cf\u7d20",
     "subtitle_other": "{{count}} \u500b\u756b\u9762"
   }
 }

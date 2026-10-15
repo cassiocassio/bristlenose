@@ -690,7 +690,8 @@
       "reassignParagraph": "Desf\u00e9s la reassignaci\u00f3 del par\u00e0graf",
       "splitParagraph": "Desf\u00e9s la divisi\u00f3 del par\u00e0graf",
       "joinParagraphs": "Desf\u00e9s la uni\u00f3 dels par\u00e0grafs",
-      "tidy": "Desf\u00e9s endre\u00e7ar"
+      "tidy": "Desf\u00e9s endre\u00e7ar",
+      "moveQuote": "Desfés el moviment de la cita"
     },
     "redo": {
       "renameModerator": "Refés el canvi de nom del moderador",
@@ -713,7 +714,8 @@
       "reassignParagraph": "Ref\u00e9s la reassignaci\u00f3 del par\u00e0graf",
       "splitParagraph": "Ref\u00e9s la divisi\u00f3 del par\u00e0graf",
       "joinParagraphs": "Ref\u00e9s la uni\u00f3 dels par\u00e0grafs",
-      "tidy": "Ref\u00e9s endre\u00e7ar"
+      "tidy": "Ref\u00e9s endre\u00e7ar",
+      "moveQuote": "Refés el moviment de la cita"
     }
   },
   "sync": {
@@ -756,7 +758,6 @@
     "participantCount_one": "{{count}} participant",
     "participantCount_other": "{{count}} participants",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "Pantalla de {{code}} a {{time}}",
     "quoteCount_one": "{{count}} cita",
     "quoteCount_other": "{{count}} cites",
     "quoteCountFrom_one": "{{count}} cita de {{people}} participants",
@@ -771,14 +772,16 @@
     "arrangementAutomatic": "Disposici\u00f3: autom\u00e0tica",
     "returnToAutomatic": "Torna a la disposici\u00f3 autom\u00e0tica",
     "slideCaption": "Pantalla de {{code}} a {{time}} · {{n}} de {{total}}",
-    "previousScreengrab": "Captura de pantalla anterior",
-    "nextScreengrab": "Captura de pantalla següent",
-    "whoseQuotes": "De qui són les cites",
+    "previousVersion": "Versió anterior",
+    "nextVersion": "Versió següent",
     "onScreen": "A la pantalla de {{code}}",
-    "sequence": "{{code}}, cita {{n}} de {{total}}",
     "versionsLabel": "Versions d’aquesta pantalla",
-    "carouselRole": "carrusel",
-    "versionsKeys": "← i → passen d’una versió a l’altra",
+    "versionOption": "Pantalla de {{code}}, {{n}} de {{total}}",
+    "versionCount": "{{n}} de {{total}}",
+    "resizeNavigator": "Canvia la mida de la llista de pantalles",
+    "quoteMoved": "Cita moguda",
+    "navWidthPixels_one": "{{count}} píxel",
+    "navWidthPixels_other": "{{count}} píxels",
     "subtitle_one": "{{count}}\u00a0pantalla",
     "subtitle_other": "{{count}}\u00a0pantalles"
   }

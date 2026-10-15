@@ -692,7 +692,8 @@
       "reassignParagraph": "Undo Reassign Paragraph",
       "splitParagraph": "Undo Split Paragraph",
       "joinParagraphs": "Undo Join Paragraphs",
-      "tidy": "Undo Tidy"
+      "tidy": "Undo Tidy",
+      "moveQuote": "Undo Move Quote"
     },
     "redo": {
       "renameModerator": "Redo Rename Moderator",
@@ -715,7 +716,8 @@
       "reassignParagraph": "Redo Reassign Paragraph",
       "splitParagraph": "Redo Split Paragraph",
       "joinParagraphs": "Redo Join Paragraphs",
-      "tidy": "Redo Tidy"
+      "tidy": "Redo Tidy",
+      "moveQuote": "Redo Move Quote"
     }
   },
   "sync": {
@@ -758,7 +760,6 @@
     "participantCount_one": "{{count}}\u00a0participant",
     "participantCount_other": "{{count}}\u00a0participants",
     "navSummary": "{{screens}} \u00b7 {{participants}}",
-    "screenAt": "{{code}}\u2019s screen at {{time}}",
     "quoteCount_one": "{{count}} quote",
     "quoteCount_other": "{{count}} quotes",
     "quoteCountFrom_one": "{{count}} quote from {{people}} participants",
@@ -773,14 +774,16 @@
     "arrangementAutomatic": "Arrangement: Automatic",
     "returnToAutomatic": "Return to automatic",
     "slideCaption": "{{code}}\u2019s screen at {{time}} \u00b7 {{n}} of {{total}}",
-    "previousScreengrab": "Previous screengrab",
-    "nextScreengrab": "Next screengrab",
-    "whoseQuotes": "Whose quotes",
+    "previousVersion": "Previous version",
+    "nextVersion": "Next version",
     "onScreen": "On {{code}}\u2019s screen",
-    "sequence": "{{code}}, quote {{n}} of {{total}}",
     "versionsLabel": "Versions of this screen",
-    "carouselRole": "carousel",
-    "versionsKeys": "\u2190 and \u2192 turn between versions",
+    "versionOption": "{{code}}\u2019s screen, {{n}} of {{total}}",
+    "versionCount": "{{n}} of {{total}}",
+    "resizeNavigator": "Resize the list of screens",
+    "quoteMoved": "Quote moved",
+    "navWidthPixels_one": "{{count}} pixel",
+    "navWidthPixels_other": "{{count}} pixels",
     "subtitle_one": "{{count}}\u00a0Screen",
     "subtitle_other": "{{count}}\u00a0Screens"
   }

@@ -519,7 +519,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
 
   // ── render ──
   const sessionBadge = (sid: string, label?: string) => (
-    <span className={sid === session ? "dl-here" : undefined}>
+    <span className={sid === session ? "bn-person-badge-here" : undefined}>
       <PersonBadge code={`#${num(sid)}`} role="participant" name={label} />
     </span>
   );
@@ -575,7 +575,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
               ))}
             </span>
             <span className="dl-pick">
-              <span className={shown === session ? "dl-here" : undefined} aria-hidden="true">
+              <span className={shown === session ? "bn-person-badge-here" : undefined} aria-hidden="true">
                 <PersonBadge code={`#${num(shown)} ▾`} role="participant" />
               </span>
               <select aria-label={S.askedIn(r.sessions.length)} value={shown}

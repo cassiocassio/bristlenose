@@ -93,36 +93,37 @@ export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: Nav
           Specimen
         </NavLink>
       )}
-      <div className="bn-tab-spacer" />
-      <RefreshButton iconOnly data-testid="bn-navbar-refresh" />
-      {onExportReport && onSendToMiro && (
-        <ExportDropdown onExportReport={onExportReport} onSendToMiro={onSendToMiro} />
-      )}
-      <button
-        className="bn-tab bn-tab-icon"
-        aria-label={t("nav.settings")}
-        aria-haspopup="dialog"
-        title={t("nav.settings")}
-        onClick={onSettings}
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="8" cy="8" r="2.5"/>
-          <path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.4 3.4l.85.85M11.75 11.75l.85.85M3.4 12.6l.85-.85M11.75 4.25l.85-.85"/>
-        </svg>
-      </button>
-      <button
-        className="bn-tab bn-tab-icon"
-        aria-label={t("nav.help")}
-        aria-haspopup="dialog"
-        title={t("nav.help")}
-        onClick={onHelp}
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="8" cy="8" r="6.5"/>
-          <line x1="8" y1="7" x2="8" y2="11.5"/>
-          <circle cx="8" cy="4.5" r="0.01" fill="currentColor" strokeWidth="2"/>
-        </svg>
-      </button>
+      <div className="bn-tab-tools">
+        <RefreshButton iconOnly data-testid="bn-navbar-refresh" />
+        {onExportReport && onSendToMiro && (
+          <ExportDropdown onExportReport={onExportReport} onSendToMiro={onSendToMiro} />
+        )}
+        <button
+          className="bn-tab bn-tab-icon"
+          aria-label={t("nav.settings")}
+          aria-haspopup="dialog"
+          title={t("nav.settings")}
+          onClick={onSettings}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="8" cy="8" r="2.5"/>
+            <path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.4 3.4l.85.85M11.75 11.75l.85.85M3.4 12.6l.85-.85M11.75 4.25l.85-.85"/>
+          </svg>
+        </button>
+        <button
+          className="bn-tab bn-tab-icon"
+          aria-label={t("nav.help")}
+          aria-haspopup="dialog"
+          title={t("nav.help")}
+          onClick={onHelp}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="8" cy="8" r="6.5"/>
+            <line x1="8" y1="7" x2="8" y2="11.5"/>
+            <circle cx="8" cy="4.5" r="0.01" fill="currentColor" strokeWidth="2"/>
+          </svg>
+        </button>
+      </div>
     </nav>
   );
 }

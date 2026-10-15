@@ -2,6 +2,10 @@
 
 .bn-global-nav {
     display: flex;
+    /* Wraps to a second row rather than running under the minimap when the
+       centre column is narrower than the tabs (both sidebars open, a long
+       locale, an extra lens). An interim answer, chosen 15 Oct 2026. */
+    flex-wrap: wrap;
     align-items: stretch;
     gap: 0;
     border-bottom: 1px solid var(--bn-colour-border);
@@ -48,9 +52,17 @@
     border-bottom-color: var(--bn-colour-accent);
 }
 
-/* Spacer pushes icon tabs to the right */
+/* Spacer pushes icon tabs to the right (the sealed static report's nav). */
 .bn-tab-spacer {
     flex: 1;
+}
+
+/* The SPA's icon tabs, as one group: when the bar wraps they move to the next
+   row together, still right-aligned, rather than splitting across rows. */
+.bn-tab-tools {
+    display: flex;
+    align-items: stretch;
+    margin-left: auto;
 }
 
 /* Icon-only utility tabs (Settings, About) */

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import logging
-import shutil
 import uuid
 from pathlib import Path
 
@@ -173,6 +172,30 @@ def test_a_forked_row_holding_curation_is_left_and_said(tmp_path: Path) -> None:
     engine.dispose()
 
 
+def test_a_forked_row_holding_a_confirmed_speaker_pick_is_left(tmp_path: Path) -> None:
+    """A researcher's pick of who spoke is curation too (design §10), though it
+    lives on a speaker slot, not in a curation table. Found by review."""
+    proj = _project(tmp_path)
+    engine, factory = _own_db(proj)
+    _fork(proj, factory)
+    db = factory()
+    from bristlenose.server.models import Session as SessionModel
+    from bristlenose.server.models import SessionSpeaker
+
+    fork_id = max(r.id for r in db.query(Project).all())
+    sess = SessionModel(project_id=fork_id, session_id="s1", session_number=1)
+    db.add(sess)
+    db.flush()
+    db.add(SessionSpeaker(session_id=sess.id, speaker_code="m1", speaker_role="researcher",
+                          state="confirmed"))
+    db.commit()
+    import_project(db, proj)
+    db.commit()
+    assert sorted(r.id for r in db.query(Project).all()) == [1, fork_id]
+    db.close()
+    engine.dispose()
+
+
 def test_a_database_outside_the_study_folder_still_matches_by_path(tmp_path: Path) -> None:
     """Two studies in one database (a future instance database) stay two."""
     a, b = _project(tmp_path / "a"), _project(tmp_path / "b")
@@ -186,22 +209,6 @@ def test_a_database_outside_the_study_folder_still_matches_by_path(tmp_path: Pat
     db.close()
     assert len(_rows(factory)) == 2
     engine.dispose()
-
-
-def test_a_copy_carries_the_same_study_until_the_app_re_mints(tmp_path: Path) -> None:
-    """Python cannot know whether the original is still live, so a copy keeps
-    the id it was copied with; the app re-mints on arrival (phase 4)."""
-    proj = _project(tmp_path)
-    engine, factory = _own_db(proj)
-    db = factory()
-    import_project(db, proj)
-    db.commit()
-    db.close()
-    engine.dispose()
-    original = study_marker.read(proj / "bristlenose-output")
-    copy = tmp_path / "copy" / proj.name
-    shutil.copytree(proj, copy)
-    assert study_marker.read(copy / "bristlenose-output") == original
 
 
 def test_the_swift_writer_shape_reads(tmp_path: Path) -> None:

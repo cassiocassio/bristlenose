@@ -509,8 +509,30 @@ class TestContentKeys:
         reg.apply(_ingest([vtt]), tmp_path)
         reg.save()
         vtt.path.write_bytes(b"WEBVTT corrected name")
-        sessions = SessionRegistry.load(out).apply(_ingest([vtt]), tmp_path)
+        reg = SessionRegistry.load(out)
+        sessions = reg.apply(_ingest([vtt]), tmp_path)
+        reg.save()
         assert [x.session_id for x in sessions] == ["s1"]
+        # The NEXT run must still load the file: the old content key goes.
+        again = SessionRegistry.load(out).apply(_ingest([vtt]), tmp_path)
+        assert [x.session_id for x in again] == ["s1"]
+
+    def test_a_deleted_recording_does_not_hand_its_session_to_a_new_one_of_its_name(
+        self, tmp_path: Path,
+    ) -> None:
+        """Different bytes under an old name are a different recording (§5): the
+        new one must not inherit the old participant's session, codes and names."""
+        out = tmp_path / "out"
+        a = _file(tmp_path, "p1.wav", 0)
+        reg = SessionRegistry.load(out)
+        reg.apply(_ingest([a]), tmp_path)
+        reg.save()
+        a.path.unlink()
+        a.path.write_bytes(b"a different interview recorded later")
+        b = InputFile(path=a.path, file_type=FileType.AUDIO, created_at=a.created_at,
+                      size_bytes=a.path.stat().st_size)
+        sessions = SessionRegistry.load(out).apply(_ingest([b]), tmp_path)
+        assert [x.session_id for x in sessions] == ["s2"]
 
     def test_a_cloud_placeholder_keeps_its_session_by_its_place(
         self, tmp_path: Path, monkeypatch,

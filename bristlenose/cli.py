@@ -1367,9 +1367,19 @@ def run(
         )
         setup_logging(output_dir=output_dir, verbose=verbose)
         if output_stash is not None:
-            if study_id is not None:
-                study_marker.write(output_dir, study_id, minted_by="run")
-            write_carried_starts(output_dir, carried_starts)
+            # Outside the run's try/finally, so it must not raise: a failure
+            # here would end the run before it starts with the report set
+            # aside. A lost carry costs a re-minted id or a worse start.
+            try:
+                if study_id is not None:
+                    study_marker.write(output_dir, study_id, minted_by="run")
+                write_carried_starts(output_dir, carried_starts)
+            except OSError as exc:
+                import logging
+
+                logging.getLogger("bristlenose").warning(
+                    "could not carry the study id or start times into the new output: %s", exc
+                )
         if output_stash is not None:
             console.print(f"\n[dim]Cleaned {output_dir}[/dim]")
         else:

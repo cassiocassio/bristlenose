@@ -137,6 +137,38 @@ class TestTheReportSurvivesAFailedRun:
         assert (out_dir / _MARKER).read_text(encoding="utf-8") == "good"
 
 
+class TestTheCarryNeverStrandsTheReport:
+    def test_a_carry_that_cannot_be_written_does_not_kill_the_run(
+        self, cli_to_pipeline, tmp_path: Path, monkeypatch
+    ) -> None:
+        """The study id and the starts a Re-analyse carries are written after
+        the report is set aside. A write that fails there must not end the run
+        before it starts: nothing would put the report back but the next run.
+        Found by review, 15 Oct 2026."""
+        import uuid
+
+        from bristlenose import study_marker
+
+        input_dir = tmp_path / "interviews"
+        out_dir = input_dir / "bristlenose-output"
+        _seed_report(out_dir, "good")
+        study_marker.write(out_dir, str(uuid.uuid4()), minted_by="serve")
+
+        def _refuse(*a, **k):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(study_marker, "write", _refuse)
+
+        async def _boom(*a, **k):
+            raise RuntimeError("transcription died")
+
+        monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _boom)
+        _run(cli_to_pipeline, input_dir)
+        assert (out_dir / _MARKER).read_text(encoding="utf-8") == "good", (
+            "a failed carry stranded the report in the stash"
+        )
+
+
 class TestTheNewReportSurvivesASuccessfulRun:
     def test_a_successful_run_is_not_overwritten_by_the_backup(
         self, cli_to_pipeline, tmp_path: Path, monkeypatch

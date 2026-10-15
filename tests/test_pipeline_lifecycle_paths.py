@@ -93,3 +93,28 @@ class TestMovedProject:
         assert h2.transcribed == [], "a 12-Oct fingerprint was re-paid instead of migrated"
         m2 = json.loads(manifest_path.read_text(encoding="utf-8"))
         assert m2["stages"]["transcribe"]["sessions"]["s1"]["input_hash"] != relative
+
+
+class TestEvictedRecording:
+    def test_an_evicted_recording_is_not_transcribed_again(
+        self, tmp_path: Path, monkeypatch,
+    ) -> None:
+        """iCloud evicts an analysed recording, then the researcher adds one.
+        The evicted file has no bytes to fingerprint; the fingerprint last seen
+        at its place stands in (design-project-identity.md §5), so it is not
+        downloaded and transcribed again. Found by review, 15 Oct 2026."""
+        from tests.test_pipeline_platform_transcripts import audio_session
+
+        def one(d: Path, _i: int):
+            return [audio_session(d, 1, "kept")]
+
+        def two(d: Path, _i: int):
+            return [audio_session(d, 1, "kept"), audio_session(d, 2, "added")]
+
+        run_pipeline(tmp_path, one)
+        import bristlenose.utils.fingerprint as fpmod
+
+        real = fpmod.is_dataless
+        monkeypatch.setattr(fpmod, "is_dataless", lambda p: p.name == "kept.wav" or real(p))
+        h2 = run_pipeline(tmp_path, two)
+        assert h2.transcribed == [["s2"]], f"the evicted recording was transcribed again: {h2.transcribed}"

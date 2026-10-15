@@ -334,9 +334,19 @@ class SessionRegistry:
                 hinted = next((k for k, h in self.hints.items() if h == places[i]), None)
                 if hinted is not None:
                     claim(i, self.sessions.get(hinted))
+        content_owned = {sid for k, sid in self.sessions.items() if k.startswith(FP_PREFIX)}
         for i in range(len(sessions)):
             if resolved[i] is None:
-                claim(i, self.sessions.get(named[i]))
+                sid = self.sessions.get(named[i])
+                # A recording whose bytes are known and differ from the ones
+                # this sid was keyed by is a different recording (§5): a
+                # deleted interview's name reused, or a re-export. It must not
+                # inherit the session, its codes and its typed names. A
+                # transcript file is the exception: editing one is ordinary.
+                if (sid in content_owned and fps[i] is not None
+                        and _is_media(primaries[i])):
+                    continue
+                claim(i, sid)
 
         for i, session in enumerate(sessions):
             sid = resolved[i]
@@ -356,6 +366,15 @@ class SessionRegistry:
             session.participant_number = n
         return sorted(sessions, key=lambda s: s.session_number)
 
+    def last_known_fingerprint(self, path: Path, input_dir: Path | None) -> str | None:
+        """The fingerprint last seen at ``path``'s place, for a file whose
+        bytes are not on disk now (a cloud placeholder). ``None`` if unknown."""
+        place = _place(path, input_dir)
+        if place is None:
+            return None
+        key = next((k for k, h in self.hints.items() if h == place), None)
+        return key[len(FP_PREFIX):] if key is not None else None
+
     def _remember(self, sid: str, name_key: str, fp: str | None, place: str | None) -> None:
         """Key ``sid`` by this run's name and, when known, its content.
 
@@ -368,6 +387,13 @@ class SessionRegistry:
         self.sessions[name_key] = sid
         if fp is not None:
             fp_key = FP_PREFIX + fp
+            # One content key per sid, as with names: an edited transcript's
+            # old bytes are gone, and two keys on one sid make the file
+            # unreadable to the next run.
+            for k in [k for k, v in self.sessions.items()
+                      if v == sid and k.startswith(FP_PREFIX) and k != fp_key]:
+                del self.sessions[k]
+                self.hints.pop(k, None)
             self.sessions[fp_key] = sid
             if place is not None:
                 self.hints[fp_key] = place
@@ -591,6 +617,12 @@ def _primary_file(session: InputSession) -> Path | None:
             if f.file_type == kind:
                 return f.path
     return session.files[0].path if session.files else None
+
+
+def _is_media(path: Path | None) -> bool:
+    from bristlenose.models import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
+
+    return path is not None and path.suffix.lower() in (AUDIO_EXTENSIONS | VIDEO_EXTENSIONS)
 
 
 def _fingerprint(path: Path | None) -> str | None:

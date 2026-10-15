@@ -307,7 +307,21 @@ def _rows_hanging_off_project(db: Session, project_id: int) -> dict[str, set[Any
 
 def _row_holds_curation(db: Session, project_id: int) -> bool:
     doomed = _rows_hanging_off_project(db, project_id)
-    return any(doomed.get(name) for name in _CURATION_TABLES)
+    if any(doomed.get(name) for name in _CURATION_TABLES):
+        return True
+    # Two kinds of a person's work live in tables the importer also writes, so
+    # the table alone cannot say: a speaker slot a researcher CONFIRMED (a pick
+    # or a recode; the importer writes ``proposed``), and AutoCode proposals,
+    # a paid queue waiting for review (design-project-identity.md §10).
+    from bristlenose.server.models import ProposedTag, SessionSpeaker
+    from bristlenose.server.speaker_slots import CONFIRMED
+
+    slots = doomed.get("session_speakers")
+    if slots and db.query(SessionSpeaker).filter(
+        SessionSpeaker.id.in_(list(slots)), SessionSpeaker.state == CONFIRMED,
+    ).first() is not None:
+        return True
+    return bool(doomed.get(ProposedTag.__tablename__))
 
 
 def _delete_project_row(db: Session, project_id: int) -> None:

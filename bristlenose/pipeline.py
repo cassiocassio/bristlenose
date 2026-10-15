@@ -513,15 +513,21 @@ def _transcript_parser_version() -> str:
     )
 
 
-def _session_input_fingerprint(session: InputSession, input_dir: Path | None) -> str:
+def _session_input_fingerprint(
+    session: InputSession, input_dir: Path | None,
+    last_known: Callable[[Path], str | None] | None = None,
+) -> str:
     """What transcription of *session* depends on: its files' content
     (``utils.fingerprint``) and, when any of them is a transcript file, the
     parser that reads it. Renaming, moving or copying a recording leaves it;
     re-exporting or trimming one moves it (docs/design-project-identity.md §5).
     A Whisper-only session's fingerprint does not move on a parser bump.
 
-    When any file has no bytes on disk (a cloud placeholder) this falls back to
-    the file-metadata form, ``_session_metadata_fingerprint``, which is also what
+    A file with no bytes on disk (a cloud placeholder) takes the fingerprint
+    last seen at its place (``last_known``, the session registry's hints), so an
+    evicted recording is neither downloaded nor transcribed again. Only when
+    that is unknown too does this fall back to the file-metadata form,
+    ``_session_metadata_fingerprint``, which is also what
     a manifest written between 12 and 15 Oct 2026 carries. ``input_dir=None`` is
     the absolute-path metadata form manifests carried before 12 Oct 2026. Both
     older forms are accepted once (``fresh_session_ids(accept=…)``) and the
@@ -531,7 +537,10 @@ def _session_input_fingerprint(session: InputSession, input_dir: Path | None) ->
         return _session_metadata_fingerprint(session, None)
     from bristlenose.utils.fingerprint import content_fingerprint
 
-    fps = [content_fingerprint(f.path) for f in session.files]
+    fps = [
+        content_fingerprint(f.path) or (last_known(f.path) if last_known else None)
+        for f in session.files
+    ]
     if not fps or any(fp is None for fp in fps):
         return _session_metadata_fingerprint(session, input_dir)
     parts = "content=" + "|".join(sorted(fp for fp in fps if fp is not None))
@@ -1605,7 +1614,11 @@ class Pipeline:
             # not change and redo only the ones whose did — a transcript
             # dropped beside an analysed video, a parser bump.
             _tx_session_fps = {
-                s.session_id: _session_input_fingerprint(s, input_dir) for s in sessions
+                s.session_id: _session_input_fingerprint(
+                    s, input_dir,
+                    lambda f: session_registry.last_known_fingerprint(f, input_dir),
+                )
+                for s in sessions
             }
             # The older spellings of the same thing, for a manifest written
             # before transcription was keyed by content: the relative-path form

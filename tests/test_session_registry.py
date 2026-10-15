@@ -531,8 +531,10 @@ class TestContentKeys:
         a.path.write_bytes(b"a different interview recorded later")
         b = InputFile(path=a.path, file_type=FileType.AUDIO, created_at=a.created_at,
                       size_bytes=a.path.stat().st_size)
-        sessions = SessionRegistry.load(out).apply(_ingest([b]), tmp_path)
+        with _Capture("bristlenose.session_registry") as said:
+            sessions = SessionRegistry.load(out).apply(_ingest([b]), tmp_path)
         assert [x.session_id for x in sessions] == ["s2"]
+        assert any("new content under a name s1 held" in m for m in said), said
 
     def test_a_cloud_placeholder_keeps_its_session_by_its_place(
         self, tmp_path: Path, monkeypatch,
@@ -553,6 +555,32 @@ class TestContentKeys:
         monkeypatch.setattr(sr, "_fingerprint", lambda _p: None)
         sessions = SessionRegistry.load(out).apply(_ingest([a]), tmp_path)
         assert [x.session_id for x in sessions] == ["s1"]
+
+    def test_a_place_remembers_only_its_latest_recording(
+        self, tmp_path: Path, monkeypatch,
+    ) -> None:
+        """A deleted recording's place reused by a new one, which is then
+        evicted: the placeholder must find the NEW recording's session, not the
+        withdrawn participant's (second review, 15 Oct 2026)."""
+        out = tmp_path / "out"
+        a = _file(tmp_path, "p1.wav", 0)
+        reg = SessionRegistry.load(out)
+        reg.apply(_ingest([a]), tmp_path)
+        reg.save()
+        a.path.write_bytes(b"a different interview recorded later, same name")
+        b = InputFile(path=a.path, file_type=FileType.AUDIO, created_at=a.created_at,
+                      size_bytes=a.path.stat().st_size)
+        reg = SessionRegistry.load(out)
+        new_sid = reg.apply(_ingest([b]), tmp_path)[0].session_id
+        reg.save()
+        assert new_sid != "s1"
+        import bristlenose.session_registry as sr
+
+        monkeypatch.setattr(sr, "_fingerprint", lambda _p: None)  # evicted
+        reg = SessionRegistry.load(out)
+        assert [x.session_id for x in reg.apply(_ingest([b]), tmp_path)] == [new_sid]
+        assert reg.last_known_fingerprint(b.path, tmp_path) is not None
+        assert list(reg.hints.values()).count("p1.wav") == 1
 
     def test_version_2_upgrades_in_place(self, tmp_path: Path) -> None:
         out = tmp_path / "out"
@@ -629,3 +657,27 @@ class TestCarriedStarts:
         sessions[0].session_start_source = "container"
         reg.settle_starts(sessions)
         assert sessions[0].session_start_source == "container"
+
+
+class _Capture:
+    """Collect one logger's messages (caplog is fine here, but this matches the
+    server tests' habit and needs no fixture)."""
+
+    def __init__(self, name: str) -> None:
+        import logging
+
+        self.logger, self.seen = logging.getLogger(name), []
+        outer = self
+
+        class _H(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:
+                outer.seen.append(record.getMessage())
+
+        self.handler = _H(level=logging.WARNING)
+
+    def __enter__(self) -> list:
+        self.logger.addHandler(self.handler)
+        return self.seen
+
+    def __exit__(self, *exc: object) -> None:
+        self.logger.removeHandler(self.handler)

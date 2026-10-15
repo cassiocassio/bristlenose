@@ -341,19 +341,25 @@ def _rows_hanging_off_project(db: Session, project_id: int) -> dict[str, set[Any
 
 
 def _row_holds_curation(db: Session, project_id: int) -> bool:
-    doomed = _rows_hanging_off_project(db, project_id)
-    if any(doomed.get(name) for name in _CURATION_TABLES):
-        return True
-    # Two kinds of a person's work live in tables the importer also writes, so
-    # the table alone cannot say: a speaker slot a researcher CONFIRMED (a pick
-    # or a recode; the importer writes ``proposed``), and AutoCode proposals,
-    # a paid queue waiting for review (design-project-identity.md §10).
-    from bristlenose.server.models import ProposedTag, SessionSpeaker
-    from bristlenose.server.speaker_slots import CONFIRMED
+    """Does a person's work hang off this row? Then an import never deletes it.
 
-    slots = doomed.get("session_speakers")
-    if slots and db.query(SessionSpeaker).filter(
-        SessionSpeaker.id.in_(list(slots)), SessionSpeaker.state == CONFIRMED,
+    Measured, not assumed (second review, 15 Oct 2026): the importer itself
+    writes ``quote_tags`` (sentiment, ``source="pipeline"``) and confirms
+    speaker slots it carries from the session registry's pins, so neither the
+    table nor a slot's state says "a person". A tag from any other source is a
+    person's (or one a person accepted), and an AutoCode proposal is a paid
+    queue waiting for one. Speaker picks are not counted: the report writes
+    them to row 1 only, and a fork's copies come from the registry, which
+    row 1 shares.
+    """
+    from bristlenose.server.models import ProposedTag, QuoteTag
+
+    doomed = _rows_hanging_off_project(db, project_id)
+    if any(doomed.get(name) for name in _CURATION_TABLES - {"quote_tags"}):
+        return True
+    tags = doomed.get("quote_tags")
+    if tags and db.query(QuoteTag).filter(
+        QuoteTag.id.in_(list(tags)), QuoteTag.source != "pipeline",
     ).first() is not None:
         return True
     return bool(doomed.get(ProposedTag.__tablename__))

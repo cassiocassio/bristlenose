@@ -345,6 +345,12 @@ class SessionRegistry:
                 # transcript file is the exception: editing one is ordinary.
                 if (sid in content_owned and fps[i] is not None
                         and _is_media(primaries[i])):
+                    logger.warning(
+                        "%r has new content under a name %s held: a new session. "
+                        "A re-exported or trimmed recording is a different recording; "
+                        "%s keeps its curation while its recording is missing.",
+                        named[i], sid, sid,
+                    )
                     continue
                 claim(i, sid)
 
@@ -396,6 +402,10 @@ class SessionRegistry:
                 self.hints.pop(k, None)
             self.sessions[fp_key] = sid
             if place is not None:
+                # One recording per place: a deleted recording's place reused
+                # by another must not answer for the newcomer when it is evicted.
+                for k in [k for k, h in self.hints.items() if h == place and k != fp_key]:
+                    del self.hints[k]
                 self.hints[fp_key] = place
 
     # ── starts ───────────────────────────────────────────────────────────

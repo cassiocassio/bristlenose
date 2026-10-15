@@ -121,12 +121,20 @@ def create_app(
         # a run's start-up and the reclaim declines (output_backup docstring).
         reclaimed = reclaim_after_crash(project_output_dir(project_dir))
         setup_logging(output_dir=project_output_dir(project_dir), verbose=verbose)
-        if reclaimed is not RestoreOutcome.NOTHING_TO_DO:
-            # The reclaim ran before the log file existed, so its own line went
-            # to stderr only, which nobody reads in the Mac app. Say it again
-            # where the project's log is (review, 15 Oct 2026).
+        # The reclaim ran before the log file existed, so its own lines went to
+        # stderr only, which nobody reads in the Mac app. Say it again where
+        # the project's log is (review, 15 Oct 2026) — and never reassuringly
+        # when it failed.
+        if reclaimed.report_is_back:
             logging.getLogger(__name__).warning(
                 "put back the report a crashed run had set aside: %s", reclaimed.value,
+            )
+        elif reclaimed is RestoreOutcome.FAILED:
+            from bristlenose.utils.output_backup import backup_path_for
+
+            logging.getLogger(__name__).error(
+                "could not put back the report a crashed run had set aside; it is at %s",
+                backup_path_for(project_output_dir(project_dir)),
             )
 
     app = FastAPI(title="Bristlenose", docs_url="/api/docs", redoc_url=None)

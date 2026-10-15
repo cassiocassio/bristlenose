@@ -173,22 +173,24 @@ def test_a_forked_row_holding_curation_is_left_and_said(tmp_path: Path) -> None:
     engine.dispose()
 
 
-def test_a_forked_row_holding_a_confirmed_speaker_pick_is_left(tmp_path: Path) -> None:
-    """A researcher's pick of who spoke is curation too (design §10), though it
-    lives on a speaker slot, not in a curation table. Found by review."""
+def test_a_forked_row_holding_a_persons_tag_is_left(tmp_path: Path) -> None:
+    """A tag a person applied keeps the fork; the importer's own sentiment tags
+    (``source="pipeline"``) do not (``test_a_fork_made_by_a_real_import_is_removed``)."""
     proj = _project(tmp_path)
     engine, factory = _own_db(proj)
     _fork(proj, factory)
     db = factory()
-    from bristlenose.server.models import Session as SessionModel
-    from bristlenose.server.models import SessionSpeaker
+    from bristlenose.server.models import Quote, QuoteTag
 
     fork_id = max(r.id for r in db.query(Project).all())
-    sess = SessionModel(project_id=fork_id, session_id="s1", session_number=1)
-    db.add(sess)
+    quote = db.query(Quote).first()
+    clone = Quote(**{c.name: getattr(quote, c.name) for c in Quote.__table__.columns
+                     if c.name != "id"})
+    clone.project_id = fork_id
+    db.add(clone)
     db.flush()
-    db.add(SessionSpeaker(session_id=sess.id, speaker_code="m1", speaker_role="researcher",
-                          state="confirmed"))
+    tag_def = db.query(QuoteTag).first().tag_definition_id
+    db.add(QuoteTag(quote_id=clone.id, tag_definition_id=tag_def, source="human"))
     db.commit()
     import_project(db, proj)
     db.commit()
@@ -279,3 +281,34 @@ def test_a_copy_opened_from_the_cli_gets_its_own_id(tmp_path: Path) -> None:
     db.close()
     engine.dispose()
     assert study_marker.read(moved / "bristlenose-output") == original, "a move was re-minted"
+
+
+def test_a_fork_made_by_a_real_import_is_removed(tmp_path: Path, monkeypatch) -> None:
+    """The fork an older release left was a full import: sessions, speakers and
+    the importer's own sentiment tags (``source="pipeline"``). None of that is a
+    person's work, so it must not keep the fork alive. The bare-row forks above
+    could not show this; found by the second review, 15 Oct 2026."""
+    import bristlenose.server.importer as imp
+
+    proj = _project(tmp_path)
+    engine, factory = _own_db(proj)
+    db = factory()
+    import_project(db, proj)
+    db.commit()
+    # An older release: matched by path, and a moved folder's path is new.
+    moved = tmp_path / "moved" / proj.name
+    moved.parent.mkdir()
+    shutil.move(str(proj), str(moved))
+    engine.dispose()
+    engine, factory = _own_db(moved)
+    db = factory()
+    monkeypatch.setattr(imp, "_is_the_studys_own_database", lambda *_a: False)
+    import_project(db, moved)
+    db.commit()
+    assert len(db.query(Project).all()) == 2, "the old release's fork was not made"
+    monkeypatch.undo()
+    import_project(db, moved)
+    db.commit()
+    assert [r.id for r in db.query(Project).all()] == [1], "a real fork outlived the import"
+    db.close()
+    engine.dispose()

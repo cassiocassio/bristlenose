@@ -366,7 +366,7 @@ def _print_banner(
     from rich.markup import escape
 
     verb = (
-        t("preflight.whisper.verb_resuming")
+        t("preflight.whisper.verb_restarting")
         if state == "partial"
         else t("preflight.whisper.verb_downloading")
     )

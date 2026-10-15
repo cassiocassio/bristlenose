@@ -4,7 +4,7 @@
     "downloads_to": "It downloads once, to {path}.",
     "ctrl_c_safe": "Ctrl+C is safe \u2014 the next run starts the download again.",
     "verb_downloading": "Downloading",
-    "verb_resuming": "Restarting download",
+    "verb_restarting": "Restarting download",
     "fetching": "{verb} {repo_id}...",
     "ready": "Whisper model ready",
     "aborted_no_fetch": "Whisper model {repo_id} is not in cache and --no-fetch is set. Run `bristlenose doctor --fetch` to fetch it ahead of time, or re-run without --no-fetch.",

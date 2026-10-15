@@ -1709,7 +1709,7 @@
  "preflight.whisper.ready": "208ea9",
  "preflight.whisper.unknown_model": "04f2c6",
  "preflight.whisper.verb_downloading": "37b345",
- "preflight.whisper.verb_resuming": "c05fa2",
+ "preflight.whisper.verb_restarting": "c05fa2",
  "server.statusPage.cancelledLong": "09dade",
  "server.statusPage.cancelledShort": "303617",
  "server.statusPage.cliExitedWithCode": "d2cd6d",

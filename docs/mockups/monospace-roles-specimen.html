@@ -1,0 +1,1581 @@
+<!doctype html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monospace roles</title>
+<!-- Generated from the shipped theme files; each inlined block names its source and lines.
+     Synthetic content only. Companion doc: docs/design-monospace-roles.md -->
+<style>
+/* ════ bristlenose/theme/tokens.css — lines 1–394 ════ */
+/* Design tokens — the single source of truth for all visual decisions.
+
+   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
+   ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap), and
+   SEMANTIC ALIASES that name a decision rather than a value (the inline
+   edit-field set below). An alias points at a palette token, so it costs no
+   per-palette maintenance and cannot drift from the palette it borrows from.
+
+   TYPOGRAPHY tokens are in tokens-typography.css (web) / tokens-desktop.css (macOS).
+   COLOUR PALETTE tokens are in colors/palette-default.css and colors/palette-edo.css.
+
+   Override palette tokens with data-color-theme="<name>" on <html>.
+   Override platform tokens with data-platform="desktop" on <html>. */
+
+:root {
+    /* Sentiment colours (v0.7+ taxonomy) — analytical, NOT theme-overridable.
+       See docs/academic-sources.html for theoretical foundations. */
+
+    /* Negative sentiments */
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    /* Error text — sentiment-frustration (#ea580c) is a fill hue, only 3.56:1
+       on white as body text; this darker shade clears WCAG AA (4.5:1). */
+    --bn-colour-error-text: #c2410c;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+
+    /* Neutral (investigation flag) */
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+
+    /* Positive sentiments */
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* Analysis heatmap — OKLCH colour ramp tokens */
+    --bn-heat-frustration-h: 55;
+    --bn-heat-confusion-h: 30;
+    --bn-heat-doubt-h: 295;
+    --bn-heat-surprise-h: 75;
+    --bn-heat-satisfaction-h: 155;
+    --bn-heat-delight-h: 170;
+    --bn-heat-confidence-h: 260;
+    --bn-heat-chroma: 0.12;
+    --bn-heat-l-min: 95%;
+    --bn-heat-l-max: 45%;
+    --bn-heat-depleted-h: 75;
+    --bn-heat-depleted-chroma: 0.08;
+
+    /* Codebook user-tag colours — OKLCH v5 pentadic palette.
+       5 sets at ~72° hue anchors, ±25° per set, ~12° steps.
+       Light mode: washed (pale bg, dark text).
+       Dark mode: saturated (mid-dark bg, white text).
+       See immutable-chasing-patterson plan for rationale. */
+
+    /* UX set (blue, H=225-275, anchor 250) */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+
+    /* Emotion set (red-pink, H=340-40, anchor 10) */
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+
+    /* Task set (green-teal, H=130-180, anchor 155) */
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+
+    /* Trust set (purple, H=275-325, anchor 300) */
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+
+    /* Opportunity set (amber, H=50-100, anchor 75) */
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+
+    /* Sentiment set — numeric aliases for the codebook colour system.
+       Maps index-based getTagBg() to the existing named sentiment vars. */
+    --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+    --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+    --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+    --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+    --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+    --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+    --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+
+    /* Custom / ungrouped */
+    --bn-custom-bg: oklch(94% 0.005 260);
+
+    /* Group card background tints (very subtle set tint for codebook panel) */
+    --bn-group-ux:        oklch(97% 0.015 250);
+    --bn-group-emo:       oklch(97% 0.015 10);
+    --bn-group-task:      oklch(97% 0.015 155);
+    --bn-group-trust:     oklch(97% 0.015 300);
+    --bn-group-opp:       oklch(97% 0.015 75);
+    --bn-group-sentiment: oklch(97% 0.010 200);
+
+    /* Micro histogram bar colours (slightly more saturated than badge bg) */
+    --bn-bar-ux:        oklch(70% 0.08 250);
+    --bn-bar-emo:       oklch(70% 0.08 10);
+    --bn-bar-task:      oklch(70% 0.06 155);
+    --bn-bar-trust:     oklch(70% 0.07 300);
+    --bn-bar-opp:       oklch(72% 0.07 75);
+    --bn-bar-sentiment: oklch(65% 0.06 200);
+
+    /* Set indicator dots (saturated anchors for codebook panel) */
+    --bn-set-ux-dot: oklch(50% 0.12 250);
+    --bn-set-emo-dot: oklch(50% 0.12 10);
+    --bn-set-task-dot: oklch(50% 0.10 155);
+    --bn-set-trust-dot: oklch(50% 0.11 300);
+    --bn-set-opp-dot: oklch(52% 0.11 75);
+
+    /* Legacy sentiment colours (deprecated — kept for backward compat) */
+    --bn-colour-confusion: var(--bn-sentiment-confusion);
+    --bn-colour-confusion-bg: var(--bn-sentiment-confusion-bg);
+    --bn-colour-frustration: var(--bn-sentiment-frustration);
+    --bn-colour-frustration-bg: var(--bn-sentiment-frustration-bg);
+    --bn-colour-delight: var(--bn-sentiment-delight);
+    --bn-colour-delight-bg: var(--bn-sentiment-delight-bg);
+
+    /* Layout */
+    --bn-max-width: 52rem;
+    --bn-quote-max-width: 23rem;   /* card reading measure — ~5 words/line */
+    --bn-grid-gap: 1.25rem;        /* gap between grid columns */
+    --bn-flow-tolerance: 5em;      /* grid-lanes masonry: how much height imbalance
+                                      to tolerate before breaking reading order.
+                                      Safari 26.4+ only. Provisional — tuned on the
+                                      Phase-1 mockup, pending real-corpus validation. */
+    --bn-toolbar-height: 3rem;
+
+    /* Sidebar layout (serve-mode dual-sidebar with resizable panels) */
+    --bn-sidebar-width: 280px;   /* default panel width */
+    --bn-sidebar-min: 200px;     /* minimum resize bound */
+    --bn-sidebar-max: 480px;     /* maximum resize bound */
+    --bn-rail-width: 36px;       /* collapsed icon rail width */
+    --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
+    --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
+    --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
+    --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
+
+    /* (--bn-first-baseline retired 25 Jul 2026. It was a cross-seam datum
+       aligning webview baselines to the native sidebar's "Project" row — an
+       alignment the red-background test proved unrealisable (the webview's
+       layout viewport starts at the toolbar seam, below that native baseline).
+       With the toolbar-inset residual now 0, content and the flanking inspector
+       share one web-internal datum of --bn-space-xl below the seam; the base
+       .tag-sidebar bleed and the body top-pad already agree. See
+       organisms/sidebar.css § "First-baseline datum".) */
+
+    /* Breakpoints — reference values for @media queries across the system.
+       CSS @media can't consume var(), so use these values directly in
+       media queries and reference the token name in a comment.
+       When adding a new media query, pick from this list or add a new entry. */
+    --bn-breakpoint-compact:  500px;   /* help overlay, single-column fallback */
+    --bn-breakpoint-toolbar:  600px;   /* toolbar collapse (planned) */
+    --bn-breakpoint-content:  1100px;  /* transcript annotation margin layout */
+    --bn-breakpoint-wide:     1400px;  /* 16"+ / wide displays — dashboard featured quotes go to 5 across */
+
+    /* Spacing scale */
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
+       the same in light and dark; the dark text reads on it in both modes. */
+    --bn-colour-new-highlight: #75fb4c;
+    --bn-colour-new-highlight-text: #0f2b08;
+
+    /* Radii */
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    /* ── Inline edit fields — READ THIS BEFORE STYLING A NEW ONE ──────────
+     *
+     * An inline edit field is a piece of text the researcher can click into
+     * and retype: a theme heading, a session name, a code group's title, a
+     * code. There are exactly TWO treatments and the choice is mechanical,
+     * decided by the GROUND the field sits on, not by which lens you are in:
+     *
+     *   field on page background  →  --bn-field-edit-fill-on-page  (tints up)
+     *   field on a tinted surface →  --bn-field-edit-fill-on-tint  (blanks to
+     *                                                               neutral)
+     *
+     * Both carry --bn-field-edit-edge at 1px. The fill inverts because the
+     * ground does; the edge never changes, so the signal is one signal.
+     * Border or outline is yours to pick — outline for a span in running
+     * prose (it costs no layout and will not reflow the line), border for
+     * something that already has a box. That is a mechanism, not a meaning.
+     *
+     * DO NOT invent a third fill. Two surfaces got one each before these
+     * tokens existed (a quote-bg tint, a page-bg blank) and two more got
+     * nothing at all, which is how "is this field live?" came to have four
+     * answers on one screen.
+     *
+     * THE ONE EXEMPTION is quote cropping — `.crop-editable` and the bracket
+     * handles in molecules/editable-text.css. That is not "edit this text",
+     * it is "move this boundary", it was designed as a single signal with the
+     * burnt-amber brackets, and it keeps --bn-colour-crop-bg. Do not reach
+     * for that yellow for anything else, and do not restyle crop to match
+     * these: a different verb is allowed a different look. The token was
+     * called --bn-colour-editing-bg until 20 Sep 2026; it was renamed
+     * because a token named for a state it must not be used in is how the
+     * four-answers-on-one-screen problem started. */
+    --bn-field-edit-edge: var(--bn-colour-accent);
+    --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+    --bn-field-edit-fill-on-tint: var(--bn-colour-bg);
+    --bn-field-edit-radius: var(--bn-radius-sm);
+    --bn-field-edit-offset: 1px;
+
+    /* Section-divider keyline — the colour of the h2 / .section-heading /
+       .framework-section-header bottom rules and the header <hr>. Aliases
+       --bn-colour-border by default (visible); set to `transparent`
+       (globally here, or per-surface) to hide every section divider WITHOUT
+       moving anything — the 1px box still lays out, it just stops painting.
+       The reversible borders-off experiment. Table-header (th) rules keep
+       --bn-colour-border (data-grid chrome, not a section divider).
+       See docs/design-lens-template.md § Keylines. */
+    --bn-colour-keyline: var(--bn-colour-border);
+
+    /* Transitions */
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-transition-slow: 0.3s ease;
+
+    /* Focus Mode — the distraction-free reading state (templates/focus-mode.css,
+       docs/design-focus-mode.md). Structural, NOT palette-overridable: the whole
+       transform is colour-free by design, which is what lets it compose with
+       every palette × appearance with zero per-palette overrides. Deliberately
+       here and not in colors/_contract.css — a Focus token in the contract would
+       oblige every future palette author to answer a question the feature
+       doesn't ask. "Dusk, not a light-switch": no overshoot, no bounce — the
+       wrong register for reading evidence. */
+    --bn-focus-ghost-opacity: 0.14;
+    --bn-focus-heading-opacity: 0.4;
+    --bn-focus-dur: 320ms;
+    --bn-focus-ease: ease-in-out;
+    /* How much of a receded card's outline survives — the border is mixed
+       toward transparent by the remainder. One number for both lenses (the
+       quote card's left edge, the signal card's box and fused seam); it was a
+       literal 40% in two places until the Signals lens made it three. */
+    --bn-focus-outline-mix: 40%;
+
+    /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
+       Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md
+       §4.7.1). Consuming surfaces set --bn-shimmer-base (resting text colour)
+       and --bn-shimmer-peak (the pole the band moves toward: white where text
+       is dark, the surface background where text is light) so the sheen has
+       headroom in every theme. See atoms/shimmer.css. */
+    --bn-shimmer-contrast: 5%;    /* band peak = 5% from base toward the peak pole */
+    --bn-shimmer-band: 34%;       /* feathered band width, as % of the gradient */
+    --bn-shimmer-angle: 100deg;   /* slight off-horizontal tilt */
+    --bn-shimmer-sweep: 1800ms;   /* travel time (documentation; keyframe encodes the split) */
+    --bn-shimmer-gap: 900ms;      /* dark hold between sweeps (documentation) */
+    --bn-shimmer-period: 2700ms;  /* sweep + gap — the animation duration */
+    --bn-shimmer-easing: ease-in-out;
+
+    /* Legacy aliases — used by inline styles in generated HTML.
+       Theme authors: override the --bn-* versions above;
+       these aliases follow automatically. */
+    --font-body: var(--bn-font-body);
+    --font-mono: var(--bn-font-mono);
+    --colour-bg: var(--bn-colour-bg);
+    --colour-text: var(--bn-colour-text);
+    --colour-muted: var(--bn-colour-muted);
+    --colour-border: var(--bn-colour-border);
+    --colour-accent: var(--bn-colour-accent);
+    --colour-quote-bg: var(--bn-colour-quote-bg);
+    --colour-badge-bg: var(--bn-colour-badge-bg);
+    --colour-badge-text: var(--bn-colour-badge-text);
+    --colour-confusion: var(--bn-colour-confusion);
+    --colour-frustration: var(--bn-colour-frustration);
+    --colour-delight: var(--bn-colour-delight);
+    --colour-suggestion: var(--bn-colour-suggestion);
+    --max-width: var(--bn-max-width);
+}
+
+/* Dark mode overrides for analytical tokens.
+   Palette colours are handled in their own palette-*.css files. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+
+        /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
+        --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg:   light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-confusion:        light-dark(#dc2626, #f87171);
+        --bn-colour-error-text:          light-dark(#c2410c, #fb923c);
+        --bn-sentiment-confusion-bg:     light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt:            light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:         light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise:         light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg:      light-dark(#fffbeb, #2d2305);
+        --bn-sentiment-satisfaction:     light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg:  light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-delight:          light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
+
+        /* Analysis heatmap — dark mode overrides */
+        --bn-heat-chroma: light-dark(0.12, 0.10);
+        --bn-heat-l-min: light-dark(95%, 30%);
+        --bn-heat-l-max: light-dark(45%, 75%);
+        --bn-heat-depleted-chroma: light-dark(0.08, 0.06);
+
+        /* Codebook user-tag colours — dark mode: saturated bg, white text */
+        --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+        --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+        --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+        --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+        --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+        --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+        --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+        --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+        --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+        --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+        --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+        --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+        --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+        --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+        --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+        --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+        --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+        --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+        --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+        --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+        --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+        --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+        --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+        --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+        --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+        --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+        --bn-custom-bg: light-dark(oklch(94% 0.005 260), oklch(52% 0.02 260));
+        /* Group card background tints */
+        --bn-group-ux:        light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+        --bn-group-emo:       light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+        --bn-group-task:      light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+        --bn-group-trust:     light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+        --bn-group-opp:       light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+        --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+
+        /* Micro histogram bar colours */
+        --bn-bar-ux:        light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
+        --bn-bar-emo:       light-dark(oklch(70% 0.08 10),  oklch(55% 0.08 10));
+        --bn-bar-task:      light-dark(oklch(70% 0.06 155), oklch(55% 0.06 155));
+        --bn-bar-trust:     light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
+        --bn-bar-opp:       light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
+        --bn-bar-sentiment: light-dark(oklch(65% 0.06 200), oklch(50% 0.06 200));
+
+        --bn-set-ux-dot: light-dark(oklch(50% 0.12 250), oklch(60% 0.10 250));
+        --bn-set-emo-dot: light-dark(oklch(50% 0.12 10), oklch(60% 0.10 10));
+        --bn-set-task-dot: light-dark(oklch(50% 0.10 155), oklch(60% 0.08 155));
+        --bn-set-trust-dot: light-dark(oklch(50% 0.11 300), oklch(60% 0.09 300));
+        --bn-set-opp-dot: light-dark(oklch(52% 0.11 75), oklch(62% 0.09 75));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-confusion:        var(--bn-sentiment-confusion);
+        --bn-colour-confusion-bg:     var(--bn-sentiment-confusion-bg);
+        --bn-colour-frustration:      var(--bn-sentiment-frustration);
+        --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
+        --bn-colour-delight:          var(--bn-sentiment-delight);
+        --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
+    }
+
+    /* Explicit overrides — lock theme regardless of OS preference */
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ════ bristlenose/theme/tokens-typography.css — lines 1–51 ════ */
+/* Typography tokens — web defaults (Inter Variable from Google Fonts).
+   Desktop overrides are in tokens-desktop.css.
+
+   Scale D — 8 stops. Semantic intent:
+   - label (13px) = app's voice (chrome, UI labels, navigation, context)
+   - body  (15px) = participant's voice (quote text, transcript segments)
+
+   Archive of previous scale: tokens-typography-v1.css */
+
+:root {
+    /* Font family — Inter Variable loaded from Google Fonts (see index.html).
+       Fallback chain: Segoe UI Variable (Win 11), Segoe UI (Win 10),
+       system-ui, SF Pro (macOS), CJK families. */
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",   /* macOS Japanese */
+        "Yu Gothic UI",                                  /* Windows Japanese */
+        "Malgun Gothic",                                 /* Windows Korean */
+        "Apple SD Gothic Neo",                           /* macOS Korean */
+        "Noto Sans CJK JP", "Noto Sans CJK KR",         /* Linux CJK */
+        sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
+       On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
+    --bn-weight-light: 370;      /* subordinate text (sidebar nav links, secondary lists) */
+    --bn-weight-normal: 420;     /* body text, descriptions, quote content */
+    --bn-weight-emphasis: 490;   /* headings, labels, section titles */
+    --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
+    --bn-weight-semibold: 600;   /* a chosen word in a text-only switch (picker scope) */
+    --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
+
+    /* Typography scale — 8 stops, size + line-height pairs.
+       Line-height decreases as size increases (Bringhurst principle:
+       large letterforms provide visual anchoring, need less leading). */
+    --bn-text-micro:       0.6rem;      /* 9.6px  — delete ×, confidence badges */
+    --bn-text-micro-lh:    1.2;
+    --bn-text-badge:       0.72rem;     /* 11.5px — badges, group headers, tag counts */
+    --bn-text-badge-lh:    1.3;
+    --bn-text-caption:     0.75rem;     /* 12px   — footnotes, footer, modal footer, kbd */
+    --bn-text-caption-lh:  1.4;
+    --bn-text-label:       0.8125rem;   /* 13px   — toolbar, filters, context, timecodes (app voice) */
+    --bn-text-label-lh:    1.45;
+    --bn-text-body:        0.9375rem;   /* 15px   — quote text, transcript segments (participant voice) */
+    --bn-text-body-lh:     1.5;
+    --bn-text-heading:     1.125rem;    /* 18px   — section headings, h3, modal titles */
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title:       1.375rem;    /* 22px   — page titles, h2, logotype */
+    --bn-text-title-lh:    1.25;
+    --bn-text-display:     1.75rem;     /* 28px   — report h1 */
+    --bn-text-display-lh:  1.2;
+}
+
+/* ════ bristlenose/theme/tokens-desktop.css — lines 1–70 ════ */
+/* Desktop typography overrides — SF Pro for macOS native feel.
+   Active when data-platform="desktop" is set on <html> AND the user hasn't
+   opted back to Inter. The macOS app sets data-platform via
+   BRISTLENOSE_PLATFORM=desktop; the Appearance ▸ Typography setting writes
+   BRISTLENOSE_TYPOGRAPHY, and "inter" makes the server emit
+   data-typography="inter" — which this block's :not() excludes, so the cascade
+   falls back to :root (Inter). On web/CLI neither var is set, so this never
+   matches: SF Pro is licensed for Apple platforms only, Inter ships everywhere.
+
+   SF Pro is a system font on macOS — no download needed.
+   SF Pro Text is optimised for body sizes (<20pt), SF Pro Display for headings (≥20pt).
+   -apple-system resolves to SF Pro automatically on macOS.
+
+   Scale — calibrated against the live macOS AppKit ladder via the Type Parity
+   Inspector (Debug ▸ Type Parity Inspector), macOS 26.4.1 @2x, Color LCD. Each
+   bn stop is width-matched to its measured native style (Δ ≈ 0px), so the labels
+   below are the *real* macOS styles (the old "Apple callout = 15px" label was
+   wrong — callout is 12pt):
+   - micro:   caption2     (10px)
+   - badge:   subheadline  (11px)
+   - caption: callout      (12px)
+   - label:   body         (13px)  — app voice
+   - body:    title3       (15px)  — participant voice (quotes + transcript)
+   - heading: title2       (17px)
+   - title:   title1       (22px)
+   - display: largeTitle   (26px)
+
+   Line-heights are Apple's absolute leadings expressed as size-relative ratios,
+   except body — loosened slightly by eye (1.4) for reading comfort. --bn-track-* carries Apple's per-size
+   tracking — empirically ≈0 across this range (only micro is non-zero), and
+   currently unconsumed (no letter-spacing wired yet). Sizes are kept in rem so
+   they still honour the user's root font-size; the px in each comment is the
+   value at the default 16px root (the condition this was calibrated under).
+   Re-true on a different scale/colour profile. Archive: tokens-desktop-v1.css */
+
+[data-platform="desktop"]:not([data-typography="inter"]) {
+    /* Font family — SF Pro via -apple-system, no Google Fonts needed */
+    --bn-font-body: -apple-system, "SF Pro Text", "SF Pro", system-ui,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+        sans-serif;
+    --bn-font-mono: "SF Mono", ui-monospace, monospace;
+
+    --bn-text-micro:       0.625rem;    /* 10px  — macOS caption2 */
+    --bn-text-micro-lh:    1.300;
+    --bn-track-micro:      0.013em;
+    --bn-text-badge:       0.6875rem;   /* 11px  — macOS subheadline */
+    --bn-text-badge-lh:    1.273;
+    --bn-track-badge:      0;
+    --bn-text-caption:     0.75rem;     /* 12px  — macOS callout */
+    --bn-text-caption-lh:  1.250;
+    --bn-track-caption:    0;
+    --bn-text-label:       0.8125rem;   /* 13px  — macOS body */
+    --bn-text-label-lh:    1.231;
+    --bn-track-label:      0;
+    --bn-text-body:        0.9375rem;   /* 15px  — macOS title3 */
+    --bn-text-body-lh:     1.4;         /* looser than title3's 1.333 — tuned by eye in the stress-bench for reading comfort (participant voice) */
+    --bn-track-body:       0;
+    --bn-text-heading:     1.0625rem;   /* 17px  — macOS title2 */
+    --bn-text-heading-lh:  1.294;
+    --bn-track-heading:    0;
+    --bn-text-title:       1.375rem;    /* 22px  — macOS title1 */
+    --bn-text-title-lh:    1.182;
+    --bn-track-title:      0;
+    --bn-text-display:     1.625rem;    /* 26px  — macOS largeTitle */
+    --bn-text-display-lh:  1.231;
+    --bn-track-display:    0;
+
+    /* Weight scale — SF Pro optical weights at same numeric values.
+       No change needed — Inter and SF Pro share the weight axis range. */
+}
+
+/* ════ bristlenose/theme/colors/palette-default.css — lines 1–170 ════ */
+/* palette-default — Bristlenose's standard blue/grey colour theme.
+   This is the web-mode default palette, loaded as :root fallback.
+   Tokens defined here are overridden by any active [data-color-theme] palette.
+
+   To create a new theme: copy this file, change the selector to
+   [data-color-theme="your-theme"], and remap every token.
+   See _contract.css for the full list of required tokens. */
+
+:root,
+[data-color-theme="default"] {
+    /* Colour palette */
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #007aff;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-inspector-bg: #f9f9fa;          /* Inspector chrome — Xcode Tahoe's flat inspector tint (~2% off white) */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-crop-bg: #fffbe6;
+    --bn-crop-handle-colour: #c4850a;
+    --bn-crop-handle-hover: #a06d08;
+    --bn-colour-active-bg: #f0fdf4;
+    --bn-colour-highlight: #fef08a;
+
+    /* Destructive action */
+    --bn-colour-negative: #dc2626;
+
+    /* Success and caution — the other two semantic kinds */
+    --bn-colour-positive: #16a34a;
+    --bn-colour-warning: #f59e0b;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(0, 122, 255, 0.06);
+    --bn-glow-colour-strong: rgba(0, 122, 255, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #e5e7eb;
+    --bn-minimap-heading: #b0b5bd;
+    --bn-minimap-viewport-bg: rgba(0, 122, 255, 0.15);
+    --bn-minimap-viewport-border: rgba(0, 122, 255, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #93b4f4;
+    --bn-coverage-moderator: #d97706;
+    --bn-coverage-omitted: #d1d5db;
+
+    /* Group card background tints */
+    --bn-group-none: #f9fafb;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #d1d5db;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+    --bn-focus-ring: 0 0 0 2px rgba(0, 122, 255, 0.12);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(0, 0, 0, 0.04);
+    --bn-hover-bg-subtle: rgba(0, 0, 0, 0.03);
+
+    /* Selection state */
+    --bn-selection-bg: #eef4fc;
+    --bn-selection-border: #007aff;
+    --bn-selection-bg-inactive: #e5e7eb;
+    --bn-selection-border-inactive: #9ca3af;
+    /* Sidebar nav selected-row capsule — NSColor unemphasizedSelectedContentBackgroundColor,
+       sampled (no canonical Apple hex; dynamic + vibrant composite). Re-sample at OS bumps. */
+    --bn-nav-selection-bg: #efefef;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #007aff;
+    --bn-colour-suggestion-bg: #eff6ff;
+}
+
+/* Dark mode — uses light-dark() with the color-scheme property.
+   Browsers without light-dark() support (~13%) fall back to the
+   plain light values above. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root,
+    [data-color-theme="default"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#ffffff, #111111);
+        --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:           light-dark(#007aff, #0a84ff);
+        --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
+        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #1c1c1e);   /* Inspector chrome — one step up from the #111 editor (Apple systemGray6 dark) */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
+        --bn-colour-user-tag-bg:      light-dark(#f3f4f6, #252525);
+        --bn-colour-user-tag-text:    light-dark(#4b5563, #d1d5db);
+        --bn-colour-crop-bg:          light-dark(#fffbe6, #2a2614);
+        --bn-crop-handle-colour:      light-dark(#c4850a, #f0b830);
+        --bn-crop-handle-hover:       light-dark(#a06d08, #f5cc60);
+        --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
+        --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
+        --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(0, 122, 255, 0.06), rgba(10, 132, 255, 0.12));
+        --bn-glow-colour-strong:      light-dark(rgba(0, 122, 255, 0.11), rgba(10, 132, 255, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#e5e7eb, #333333);
+        --bn-minimap-heading:         light-dark(#b0b5bd, #555555);
+        --bn-minimap-viewport-bg:     light-dark(rgba(0, 122, 255, 0.15), rgba(10, 132, 255, 0.2));
+        --bn-minimap-viewport-border: light-dark(rgba(0, 122, 255, 0.3), rgba(10, 132, 255, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#93b4f4, #4a7ecf);
+        --bn-coverage-moderator: light-dark(#d97706, #fbbf24);
+        --bn-coverage-omitted:   light-dark(#d1d5db, #4b5563);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f9fafb, #1e1e1e);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#d1d5db, #4b5563);
+
+        /* Destructive action */
+        --bn-colour-negative:         light-dark(#dc2626, #ef4444);
+
+        /* Success and caution */
+        --bn-colour-positive:         light-dark(#16a34a, #22c55e);
+        --bn-colour-warning:          light-dark(#f59e0b, #fbbf24);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
+        --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
+        --bn-colour-starred:          light-dark(#999, #ccc);
+        --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              light-dark(0 0 0 2px rgba(0, 122, 255, 0.12), 0 0 0 2px rgba(10, 132, 255, 0.2));
+        --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
+        --bn-selection-border:        light-dark(#007aff, #0a84ff);
+        --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
+        --bn-selection-border-inactive: light-dark(#9ca3af, #4b5563);
+        --bn-nav-selection-bg:          light-dark(#efefef, #2b2b2b);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.04));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-suggestion:       light-dark(#007aff, #0a84ff);
+        --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
+    }
+}
+
+/* ════ bristlenose/theme/atoms/badge.css — lines 1–327 ════ */
+/* Atom: badge — base badge, sentiment variants, AI and user variants */
+
+/* The weight is DECLARED. It never was, so every chip in the product rendered
+   at the user agent's 400 — a value in nobody's ladder. `light` is the rung the
+   system reserves for subordinate text, and that is what a chip is: the row's
+   words carry the finding, the chip says which vocabulary they came from. */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-light);
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+
+/* Sentiment variants (v0.7+ taxonomy) — see docs/academic-sources.html */
+.badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-confusion { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-doubt { background: var(--bn-sentiment-doubt-bg); color: var(--bn-sentiment-doubt); }
+.badge-surprise { background: var(--bn-sentiment-surprise-bg); color: var(--bn-sentiment-surprise); }
+.badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+.badge-delight { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-confidence { background: var(--bn-sentiment-confidence-bg); color: var(--bn-sentiment-confidence); }
+
+/* Legacy variants (deprecated — kept for backward compat with old intermediate JSON) */
+.badge-suggestion { background: var(--bn-colour-suggestion-bg); color: var(--bn-colour-suggestion); }
+.badge-frustrated { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-delighted { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-confused { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-amused { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-critical { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-sarcastic { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-judgment { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-narration { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-task_management { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+
+/* AI badge — deletable on hover */
+.badge-ai {
+    cursor: pointer;
+    position: relative;
+    transition: opacity var(--bn-transition-fast);
+}
+
+.badge-ai:hover {
+    opacity: 0.8;
+}
+
+/* Delete circle — white floating chip with grey ×.
+   Pure flexbox centering (10c-fix2 approach).
+   TODO: replace × character with SVG icon for cross-platform consistency. */
+.badge-ai::after {
+    content: "\00d7";
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-negative);
+    border-radius: 50%;
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-strong);
+    line-height: 1;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.badge-ai:hover::after {
+    opacity: 1;
+}
+
+/* User tag — mode-dependent treatment.
+   Light mode: dark text on washed codebook bg (pale tint).
+   Dark mode: white text on saturated codebook bg.
+   Background colour set via inline style from codebook.js.
+   Falls back to --bn-colour-user-tag-bg when no codebook colour assigned. */
+.badge-user {
+    background: var(--bn-colour-user-tag-bg);
+    color: var(--bn-colour-text);
+    font-weight: var(--bn-weight-normal);
+    cursor: default;
+    position: relative;
+}
+
+/* Dark mode: user tags switch to white-on-saturated */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .badge-user {
+        color: #ffffff;
+        font-weight: var(--bn-weight-emphasis);
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .badge-user {
+            color: #ffffff;
+            font-weight: var(--bn-weight-emphasis);
+        }
+    }
+}
+
+/* AI tag visibility toggle */
+body.hide-ai-tags .badge-ai { display: none; }
+
+.badge-user .badge-delete {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    border: none;
+    border-radius: 50%;
+    color: var(--bn-colour-negative);
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-strong);
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.badge-user:hover .badge-delete {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Add-tag ghost button */
+.badge-add {
+    border: 1px dashed var(--bn-colour-border);
+    background: transparent;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    transition: border-color var(--bn-transition-fast), color var(--bn-transition-fast);
+    user-select: none;
+}
+
+.badge-add:hover {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+}
+
+/* Proposed badge — pulsating dashed border (AutoCode) */
+@keyframes bn-proposed-pulse {
+    0%   { opacity: 0.50; }
+    50%  { opacity: 0.78; }
+    100% { opacity: 0.50; }
+}
+
+.badge-proposed {
+    animation: bn-proposed-pulse 3s ease-in-out infinite;
+    border: 1px dashed currentColor;
+    cursor: pointer;
+    position: relative;
+}
+
+.badge-proposed:hover {
+    animation: none;
+    opacity: 1 !important;
+}
+
+/* Action pill — floating [✗ | ✓] bar at badge top-right.
+   ✗ (deny) anchored at delete-circle position, ✓ (accept) hangs right.
+   16px compartments, pill-shaped, appears on hover. */
+.badge-action-pill {
+    position: absolute;
+    top: calc(-0.3rem - 1px);              /* same vertical as delete × */
+    right: calc(-0.3rem - 1px - 1rem);     /* ✗ aligns with delete × position,
+                                              ✓ extends past badge right edge */
+    display: flex;
+    gap: 0;
+    background: var(--bn-colour-bg);
+    border-radius: var(--bn-radius-pill);   /* clamps to half-height; survives a height change */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;                              /* sit above adjacent badges */
+}
+
+.badge-proposed:hover .badge-action-pill,
+.badge-proposed:focus-within .badge-action-pill {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.badge-action-deny,
+.badge-action-accept {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;       /* 16px */
+    height: 1rem;
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-strong);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    padding: 0;
+    transition: background var(--bn-transition-fast);
+}
+
+.badge-action-deny {
+    color: var(--bn-colour-negative);
+}
+
+.badge-action-accept {
+    color: var(--bn-colour-positive);
+    border-left: 1px solid var(--bn-colour-border);
+}
+
+.badge-action-deny:hover { background: #fef2f2; }
+.badge-action-accept:hover { background: #dcfce7; }
+
+/* Keyboard focus ring — inset (outline-offset negative) because the pill has
+   overflow:hidden, which would clip an outset ring on these 16px buttons. */
+.badge-action-deny:focus-visible,
+.badge-action-accept:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+/* Dark mode: pill and action compartments */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .badge-action-pill {
+        background: var(--bn-colour-bg);
+    }
+    [data-theme="dark"] .badge-action-deny:hover {
+        background: rgba(220, 38, 38, 0.25);
+        color: #f87171;
+    }
+    [data-theme="dark"] .badge-action-accept:hover {
+        background: rgba(22, 163, 74, 0.25);
+        color: #4ade80;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .badge-action-pill {
+            background: var(--bn-colour-bg);
+        }
+        :root:not([data-theme="light"]) .badge-action-deny:hover {
+            background: rgba(220, 38, 38, 0.25);
+            color: #f87171;
+        }
+        :root:not([data-theme="light"]) .badge-action-accept:hover {
+            background: rgba(22, 163, 74, 0.25);
+            color: #4ade80;
+        }
+    }
+}
+
+/* Accept flash — brief brightness burst when a proposed tag is accepted.
+   Applied by React (QuoteCard) on the new user badge for ~400ms. */
+@keyframes badge-accept-flash {
+    0%   { filter: brightness(1.35); }
+    100% { filter: brightness(1); }
+}
+
+.badge-accept-flash {
+    animation: badge-accept-flash 0.4s ease-out;
+}
+
+/* Badge animations */
+@keyframes badge-fade-out {
+    to { opacity: 0; transform: scale(0.8); }
+}
+
+.badge-removing {
+    animation: badge-fade-out 0.15s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes badge-fade-in {
+    from { opacity: 0; transform: scale(0.8); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.badge-appearing {
+    animation: badge-fade-in 0.15s ease-out;
+}
+
+/* Bulk-tag flash — asymmetric highlight (0.2s in, 0.6s hold+out).
+   Uses box-shadow spread to avoid overriding codebook background colour. */
+@keyframes badge-bulk-flash {
+    0%   { box-shadow: 0 0 0 0 var(--bn-selection-border); }
+    25%  { box-shadow: 0 0 0 3px var(--bn-selection-border); }
+    100% { box-shadow: 0 0 0 0 var(--bn-selection-border); }
+}
+
+.badge-bulk-flash {
+    animation: badge-bulk-flash 0.8s ease-out;
+}
+
+/* "New" material marker — a body-sized highlighter shown inline after a
+   section/theme title (Phase 3, 3c).  Placeholder styling; click to dismiss
+   (it evaporates, no undo — it has served its purpose once noticed). */
+.bn-new-badge {
+    display: inline;
+    margin-left: 0.4rem;
+    padding: 0.05em 0.3em;
+    border: none;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-new-highlight);
+    color: var(--bn-colour-new-highlight-text);
+    font-family: inherit;
+    font-size: var(--bn-text-body);
+    font-weight: var(--bn-weight-emphasis);
+    line-height: 1;
+    cursor: pointer;
+    vertical-align: baseline;
+}
+.bn-new-badge:hover { filter: brightness(0.95); }
+.bn-new-badge:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 1px;
+}
+
+/* ════ bristlenose/theme/atoms/timecode.css — lines 1–97 ════ */
+/* Atom: timecode — clickable and plain timecode links */
+
+a.timecode,
+a.timecode:visited {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-label);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+span.timecode {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-label);
+}
+
+a.timecode:hover {
+    text-decoration: underline;
+}
+
+.timecode-bracket {
+    color: var(--bn-colour-muted);
+}
+
+/* --- Glow states: synced playback highlight (driven by player.js) --- */
+
+.bn-timecode-glow {
+    box-shadow: 0 0 8px 2px var(--bn-glow-colour);
+    border-left-color: var(--bn-colour-accent);
+    background-color: var(--bn-glow-colour);
+    border-radius: var(--bn-radius-sm);
+    transition: box-shadow var(--bn-transition-normal),
+                background-color var(--bn-transition-normal);
+}
+
+@keyframes bn-glow-pulse {
+    0%, 100% { box-shadow: 0 0 8px 2px var(--bn-glow-colour); }
+    50%      { box-shadow: 0 0 12px 4px var(--bn-glow-colour-strong); }
+}
+
+.bn-timecode-glow.bn-timecode-playing {
+    animation: bn-glow-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-timecode-glow.bn-timecode-playing {
+        animation: none;
+    }
+}
+
+/* --- Progress fill: left border grows top-to-bottom during playback ---
+   Driven by --bn-segment-progress (0–1) set in PlayerContext.tsx.
+   Only appears on transcript segments (not report blockquotes). */
+
+.transcript-segment.bn-timecode-glow {
+    position: relative;
+}
+
+.transcript-segment.bn-timecode-glow::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: calc(var(--bn-segment-progress, 0) * 100%);
+    background: var(--bn-colour-accent);
+    border-radius: 0 0 1px 1px;
+    transition: height 0.25s linear;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .transcript-segment.bn-timecode-glow::before {
+        transition: none;
+    }
+}
+
+/* --- Word-level highlight: karaoke-style during playback ---
+   Driven by .bn-word-active toggled in PlayerContext.tsx.
+   Only appears when word timing data is available (Whisper sessions). */
+
+.transcript-word.bn-word-active {
+    background: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent);
+    border-radius: 2px;
+    transition: background 0.1s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .transcript-word.bn-word-active {
+        text-decoration: underline;
+        text-decoration-color: var(--bn-colour-accent);
+        background: none;
+        transition: none;
+    }
+}
+
+/* ════ bristlenose/theme/molecules/person-badge.css — lines 1–205 ════ */
+/* Molecule: person-badge — two-tone split speaker badge
+ *
+ * Structure:  .bn-person-badge > .bn-speaker-badge--split
+ *               > .bn-speaker-badge-code + .bn-speaker-badge-name
+ *
+ * Display mode: data-person-display="code" on <html> hides the name half.
+ * Hover: linked badges increase contrast (name bg lightens, code text darkens).
+ */
+
+/* Wrapper — keeps backward compat with existing selectors */
+.bn-person-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    white-space: nowrap;
+}
+
+/* Split badge container */
+.bn-speaker-badge--split {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+    background: none;
+    vertical-align: baseline;
+}
+
+/* Left half: code lozenge */
+.bn-speaker-badge--split .bn-speaker-badge-code {
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    padding: var(--bn-space-xs) 0.4rem;
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    border: 1px solid var(--bn-colour-border);
+    border-right: none;
+    border-radius: var(--bn-radius-sm) 0 0 var(--bn-radius-sm);
+    transition: color var(--bn-transition-fast);
+}
+
+/* Right half: name */
+.bn-speaker-badge--split .bn-speaker-badge-name {
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-emphasis);
+    padding: var(--bn-space-xs) 0.45rem var(--bn-space-xs) 0.35rem;
+    background: var(--bn-colour-quote-bg);
+    color: var(--bn-colour-text);
+    border: 1px solid var(--bn-colour-border);
+    border-left: none;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    transition: background var(--bn-transition-fast);
+}
+
+/* No name available — code gets full radius */
+.bn-speaker-badge--split .bn-speaker-badge-code:last-child {
+    border-radius: var(--bn-radius-sm);
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+/* --- Hover states (linked badges only) --- */
+
+/* Code-and-name: name bg lightens towards white */
+a:hover .bn-speaker-badge--split .bn-speaker-badge-name {
+    background: var(--bn-colour-bg);
+}
+
+/* Code-only / code-and-name: code text darkens towards black */
+a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
+    color: var(--bn-colour-text);
+}
+
+/* --- Display mode toggle via data-person-display on <html> --- */
+
+[data-person-display="code"] .bn-speaker-badge-name {
+    display: none;
+}
+
+[data-person-display="code"] .bn-speaker-badge--split .bn-speaker-badge-code {
+    border-radius: var(--bn-radius-sm);
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+/* "You are here": the badge of the session or version showing, on an ancestor (a wrapper, or the
+   radio that holds the badge). The navigator's own selection vocabulary, as .toc-link.active has
+   it: the selection fill (--bn-nav-selection-bg), emphasis weight, and accent text, no ring. Chosen
+   for the Discussion lens's session bar (option C of the badge playground, 3 Oct 2026); shared
+   since 15 Oct 2026 by the Screens lens's versions.
+   Two things the plain accent did not do, both fixed here for both lenses (accessibility review,
+   15 Oct 2026): it was the only cue (colour alone, 1.4.1), so the code takes the emphasis weight as
+   the name half already has — the non-colour cue, and the active row's own; and the accent as text
+   was 3.65:1 on the badge grey in the default light palette (1.4.3). The text is the accent mixed a
+   quarter toward the palette's own text colour, which darkens it in light and lightens it in dark.
+   Measured (code / name half, on the selection fill): default light 5.12 / 5.12, default dark
+   5.01 / 5.01, Edo light 6.38 / 6.38, Edo dark 6.20 / 6.20 — every one past 4.5:1. No token held an
+   accent that passes as text; this mix is the theme's own idiom (color-mix of two tokens). */
+.bn-person-badge-here .bn-speaker-badge-code,
+.bn-person-badge-here .bn-speaker-badge-name {
+    background: var(--bn-nav-selection-bg);
+    color: color-mix(in srgb, var(--bn-colour-accent) 75%, var(--bn-colour-text));
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* Highlighted state */
+.bn-person-badge-highlighted .bn-speaker-badge-code {
+    box-shadow: 0 0 0 2px var(--bn-colour-accent);
+}
+
+/* --- Sessions grid: decomposed badge + editable name --- */
+
+.bn-session-speaker-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.bn-speaker-editable-name {
+    font-family: var(--bn-font-body);
+    font-size: inherit;
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    cursor: text;
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-xs) 0.2rem;
+    min-width: 2rem;
+}
+
+.bn-speaker-editable-name:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+/* The editing state lives in `molecules/editable-text.css`, which names this
+   class alongside `.editable-text` — one rule for "a name, title or
+   description on neutral ground", so the speakers grid and the quotes lens
+   cannot drift apart. Only the metrics above are local to the speaker name.
+   An edited name carries no committed mark: italic is reserved for the
+   unidentified placeholder below (grey italic = unknown), and since migration
+   012 the confirmed state says what "you edited this" used to (owner,
+   6 Oct 2026; design-people.md §J8.8). */
+
+/* Unidentified speaker: role word shown as a muted-italic placeholder
+   (PowerPoint-title convention) to read as editable, not as a real name. */
+.bn-speaker-editable-name.unnamed {
+    font-weight: var(--bn-weight-normal);
+    font-style: italic;
+    color: var(--bn-colour-muted);
+}
+
+/* Same placeholder on the narrow-width rung, where the short form is shown
+   instead. Rehomed from `molecules/name-edit.css` when that file was deleted
+   on 20 Sep 2026: it was a bare `.unnamed` in the global sheet, and the two
+   classes above and below are its only consumers. Deliberately NOT merged
+   into one selector — the full name also drops to normal weight, the short
+   one never carried emphasis to drop. */
+.bn-speaker-name-short.unnamed {
+    font-style: italic;
+    color: var(--bn-colour-muted);
+}
+
+.bn-name-pencil {
+    all: unset;
+    cursor: pointer;
+    font-size: var(--bn-text-micro);
+    opacity: 0;
+    color: var(--bn-colour-muted);
+    transition: opacity var(--bn-transition-fast);
+    padding: 0 0.1rem;
+}
+
+.bn-session-speaker-entry:hover .bn-name-pencil {
+    opacity: 0.4;
+}
+
+.bn-name-pencil:hover {
+    opacity: 0.8 !important;
+}
+
+/* --- A proposed name (design-people.md § UX iteration 3) ---
+   A name the pipeline found, not yet a person's yes
+   (`session_speakers.name_confirmed`): one dotted ring round the whole split
+   badge, and the name in grey that darkens on hover. Saying yes in the picker
+   makes both solid. The halves lose their own borders so the ring is the only
+   line — the `--split` qualifier matches the specificity of the
+   `.bn-speaker-badge-code:last-child` rule above, and later in the file wins,
+   so a code-only badge keeps no solid edge inside the dashes. */
+.bn-person-proposed .bn-speaker-badge--split {
+    border: 1px dashed currentColor;
+}
+
+.bn-person-proposed .bn-speaker-badge--split .bn-speaker-badge-code,
+.bn-person-proposed .bn-speaker-badge--split .bn-speaker-badge-name {
+    border: none;
+}
+
+.bn-speaker-editable-name.proposed {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+.bn-session-speaker-entry:hover .bn-speaker-editable-name.proposed {
+    color: var(--bn-colour-text);
+}
+
+/* ════ bristlenose/theme/atoms/footer.css — lines 51–63 ════ */
+.footer-keyboard-hint kbd {
+    display: inline-block;
+    padding: 0.1em 0.35em;
+    font-family: var(--bn-font-mono);
+    font-size: 0.85em;
+    line-height: 1;
+    color: var(--bn-colour-muted);
+    background: var(--bn-colour-badge-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    box-shadow: 0 1px 0 var(--bn-colour-border);
+    margin-right: 0.25em;
+}
+</style>
+<style>
+
+/* ════ specimen chrome — this page only, not a proposal ════ */
+:root { color-scheme: light dark; }
+body { margin: 0; padding: 32px 24px 64px; background: var(--bn-colour-bg); color: var(--bn-colour-text);
+       font-family: var(--bn-font-body); font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); }
+.page { max-width: 1240px; margin: 0 auto; }
+h1 { font-size: var(--bn-text-title); line-height: var(--bn-text-title-lh); font-weight: var(--bn-weight-strong); margin: 0 0 4px; }
+h2 { font-size: var(--bn-text-heading); line-height: var(--bn-text-heading-lh); font-weight: var(--bn-weight-emphasis); margin: 40px 0 12px; }
+.lede { color: var(--bn-colour-muted); max-width: 70ch; margin: 0 0 16px; }
+.key { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0 8px; font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
+.key span::before { content: ""; display: inline-block; width: 14px; height: 10px; margin-right: 6px; vertical-align: -1px; border-radius: 2px; }
+.key .k-art::before { border: 1px solid var(--bn-colour-border); background: var(--bn-colour-bg); }
+.key .k-com::before { background: repeating-linear-gradient(135deg, var(--bn-colour-hover) 0 3px, transparent 3px 6px); border: 1px solid var(--bn-colour-border); }
+
+.frame { border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); overflow: hidden; margin: 0 0 16px; background: var(--bn-colour-bg); color: var(--bn-colour-text); }
+.bar { display: flex; justify-content: space-between; gap: 12px; padding: 6px 12px; border-bottom: 1px solid var(--bn-colour-border);
+       background: var(--bn-colour-hover); font-size: var(--bn-text-micro); line-height: var(--bn-text-micro-lh); color: var(--bn-colour-muted); font-family: var(--bn-font-body); }
+.cols { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); }
+.col { padding: 14px 16px 16px; min-width: 0; }
+.col + .col { border-left: 1px solid var(--bn-colour-border); }
+.colhead { font-family: var(--bn-font-body); font-size: var(--bn-text-micro); line-height: var(--bn-text-micro-lh); color: var(--bn-colour-muted); margin: 0 0 10px; }
+.colhead b { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-text); }
+.face { font-family: var(--bn-font-body); font-size: var(--bn-text-micro); color: var(--bn-colour-muted); }
+.face output { color: var(--bn-colour-text); font-weight: var(--bn-weight-emphasis); }
+.line { margin: 0 0 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.mono { font-family: var(--bn-font-mono); }
+.prose { font-family: var(--bn-font-body); font-size: var(--bn-text-body); line-height: var(--bn-text-body-lh); font-weight: var(--bn-weight-normal); }
+.meta { font-family: var(--bn-font-body); font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
+.strip { margin-top: 10px; display: grid; grid-template-columns: max-content 1fr; column-gap: 10px; row-gap: 2px; align-items: baseline; }
+.strip .w { font-family: var(--bn-font-body); font-size: var(--bn-text-micro); color: var(--bn-colour-muted); text-align: right; }
+.strip .s { font-family: var(--bn-font-mono); font-size: var(--bn-text-label); white-space: nowrap; overflow: hidden; text-overflow: clip; }
+.path { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.figs { font-family: var(--bn-font-mono); font-size: var(--bn-text-label); display: inline-grid; grid-template-columns: repeat(3, 4ch); gap: 2px 8px; text-align: right; }
+.figs span { padding: 2px 4px; border-radius: var(--bn-radius-sm); background: var(--bn-colour-hover); }
+
+/* The two "today, without the download" columns: the shipped stacks with "SF Mono" removed,
+   which is what a Mac without Apple's developer font package resolves them to. */
+.nodl-web  { --bn-font-mono: "Fira Code", "Consolas", monospace; }
+.nodl-desk { --bn-font-mono: ui-monospace, monospace; }
+
+.commentary { margin: 0 0 24px; padding: 12px 16px; border-left: 3px solid var(--bn-colour-border-hover);
+  background: repeating-linear-gradient(135deg, var(--bn-colour-hover) 0 3px, transparent 3px 9px);
+  font-size: var(--bn-text-caption); line-height: var(--bn-text-caption-lh); color: var(--bn-colour-text); }
+.commentary .lbl { font-family: var(--bn-font-mono); font-size: var(--bn-text-micro); color: var(--bn-colour-muted); letter-spacing: .04em; text-transform: uppercase; display: block; margin-bottom: 4px; }
+.commentary p { margin: 0 0 6px; max-width: 90ch; }
+.commentary table { border-collapse: collapse; margin: 8px 0; font-variant-numeric: tabular-nums; background: var(--bn-colour-bg); }
+.commentary th, .commentary td { border: 1px solid var(--bn-colour-border); padding: 3px 8px; text-align: right; font-size: var(--bn-text-micro); }
+.commentary th:first-child, .commentary td:first-child { text-align: left; }
+.commentary code { font-size: 0.95em; }
+.commentary .tbl { overflow-x: auto; }
+@media (max-width: 760px) {
+  body { padding: 20px 16px 48px; }
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .col + .col { border-left: 0; border-top: 1px solid var(--bn-colour-border); }
+  .bar { flex-direction: column; gap: 2px; }
+}
+
+</style>
+<style>
+
+/* ════ PROPOSAL — mockup-local; what the audit proposes, nothing here ships ════ */
+.prop {
+    --bn-font-mono: ui-monospace, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+    --bn-weight-mono: 400;            /* Regular  — every mono role at rest */
+    --bn-weight-mono-emphasis: 500;   /* Medium   — the one step up (a path that names the screen) */
+}
+.prop .badge, .prop .badge-user, .prop .bn-speaker-badge-code { font-weight: var(--bn-weight-mono); }
+.prop .footer-keyboard-hint kbd { font-size: var(--bn-text-micro); font-weight: var(--bn-weight-mono-emphasis); }
+.prop .tc-compact { font-size: var(--bn-text-caption); }
+.prop .path.is-subject { font-weight: var(--bn-weight-mono-emphasis); }
+.prop .figs { font-family: var(--bn-font-body); font-variant-numeric: tabular-nums; font-weight: var(--bn-weight-emphasis); }
+
+</style>
+</head>
+<body>
+
+<div class="page">
+  <h1>Monospace roles</h1>
+  <p class="lede">Every monospace face in the report, on both type scales, as it renders today and as the audit proposes.
+  Open it in the Mac app's webview or Safari and in Chrome. Today's columns differ by browser and by whether the Mac has Apple's SF Mono download; the proposed column differs only by browser (system SF Mono in WebKit, Menlo in Chrome).
+  Reasoning and measurements: <code>docs/design-monospace-roles.md</code>.</p>
+  <div class="key"><span class="k-art">Artefact — real tokens and real component CSS</span><span class="k-com">Commentary — not the product</span></div>
+
+  <h2>1 · Which face draws the mono</h2>
+  
+  <div class="frame" >
+    <div class="bar"><span>Web · Inter scale (browser, HTML export, the Mac app with Typography ▸ Inter)</span><span>weights 300–700 in each column's face · synthetic content</span></div>
+    <div class="cols" style="--n:3">
+      <div class="col"><p class="colhead"><b>Today</b> — the shipped token, on this Mac</p><p class="face">drawn in <output data-face></output></p><div class="strip"><span class="w">300</span><span class="s" style="font-weight:300">p03 [00:14:32] Login.tsx</span><span class="w">370</span><span class="s" style="font-weight:370">p03 [00:14:32] Login.tsx</span><span class="w">400</span><span class="s" style="font-weight:400">p03 [00:14:32] Login.tsx</span><span class="w">420</span><span class="s" style="font-weight:420">p03 [00:14:32] Login.tsx</span><span class="w">490</span><span class="s" style="font-weight:490">p03 [00:14:32] Login.tsx</span><span class="w">500</span><span class="s" style="font-weight:500">p03 [00:14:32] Login.tsx</span><span class="w">520</span><span class="s" style="font-weight:520">p03 [00:14:32] Login.tsx</span><span class="w">600</span><span class="s" style="font-weight:600">p03 [00:14:32] Login.tsx</span><span class="w">700</span><span class="s" style="font-weight:700">p03 [00:14:32] Login.tsx</span></div></div>
+      <div class="col nodl-web"><p class="colhead"><b>Today</b> — a Mac without the SF Mono download</p><p class="face">drawn in <output data-face></output></p><div class="strip"><span class="w">300</span><span class="s" style="font-weight:300">p03 [00:14:32] Login.tsx</span><span class="w">370</span><span class="s" style="font-weight:370">p03 [00:14:32] Login.tsx</span><span class="w">400</span><span class="s" style="font-weight:400">p03 [00:14:32] Login.tsx</span><span class="w">420</span><span class="s" style="font-weight:420">p03 [00:14:32] Login.tsx</span><span class="w">490</span><span class="s" style="font-weight:490">p03 [00:14:32] Login.tsx</span><span class="w">500</span><span class="s" style="font-weight:500">p03 [00:14:32] Login.tsx</span><span class="w">520</span><span class="s" style="font-weight:520">p03 [00:14:32] Login.tsx</span><span class="w">600</span><span class="s" style="font-weight:600">p03 [00:14:32] Login.tsx</span><span class="w">700</span><span class="s" style="font-weight:700">p03 [00:14:32] Login.tsx</span></div></div>
+      <div class="col prop"><p class="colhead"><b>Proposed</b> — one stack for both scales</p><p class="face">drawn in <output data-face></output></p><div class="strip"><span class="w">300</span><span class="s" style="font-weight:300">p03 [00:14:32] Login.tsx</span><span class="w">370</span><span class="s" style="font-weight:370">p03 [00:14:32] Login.tsx</span><span class="w">400</span><span class="s" style="font-weight:400">p03 [00:14:32] Login.tsx</span><span class="w">420</span><span class="s" style="font-weight:420">p03 [00:14:32] Login.tsx</span><span class="w">490</span><span class="s" style="font-weight:490">p03 [00:14:32] Login.tsx</span><span class="w">500</span><span class="s" style="font-weight:500">p03 [00:14:32] Login.tsx</span><span class="w">520</span><span class="s" style="font-weight:520">p03 [00:14:32] Login.tsx</span><span class="w">600</span><span class="s" style="font-weight:600">p03 [00:14:32] Login.tsx</span><span class="w">700</span><span class="s" style="font-weight:700">p03 [00:14:32] Login.tsx</span></div></div>
+    </div>
+  </div>
+  
+  <div class="frame" data-platform="desktop">
+    <div class="bar"><span>Desktop · SF Pro scale (the Mac app default)</span><span>weights 300–700 in each column's face · synthetic content</span></div>
+    <div class="cols" style="--n:3">
+      <div class="col"><p class="colhead"><b>Today</b> — the shipped token, on this Mac</p><p class="face">drawn in <output data-face></output></p><div class="strip"><span class="w">300</span><span class="s" style="font-weight:300">p03 [00:14:32] Login.tsx</span><span class="w">370</span><span class="s" style="font-weight:370">p03 [00:14:32] Login.tsx</span><span class="w">400</span><span class="s" style="font-weight:400">p03 [00:14:32] Login.tsx</span><span class="w">420</span><span class="s" style="font-weight:420">p03 [00:14:32] Login.tsx</span><span class="w">490</span><span class="s" style="font-weight:490">p03 [00:14:32] Login.tsx</span><span class="w">500</span><span class="s" style="font-weight:500">p03 [00:14:32] Login.tsx</span><span class="w">520</span><span class="s" style="font-weight:520">p03 [00:14:32] Login.tsx</span><span class="w">600</span><span class="s" style="font-weight:600">p03 [00:14:32] Login.tsx</span><span class="w">700</span><span class="s" style="font-weight:700">p03 [00:14:32] Login.tsx</span></div></div>
+      <div class="col nodl-desk"><p class="colhead"><b>Today</b> — a Mac without the SF Mono download</p><p class="face">drawn in <output data-face></output></p><div class="strip"><span class="w">300</span><span class="s" style="font-weight:300">p03 [00:14:32] Login.tsx</span><span class="w">370</span><span class="s" style="font-weight:370">p03 [00:14:32] Login.tsx</span><span class="w">400</span><span class="s" style="font-weight:400">p03 [00:14:32] Login.tsx</span><span class="w">420</span><span class="s" style="font-weight:420">p03 [00:14:32] Login.tsx</span><span class="w">490</span><span class="s" style="font-weight:490">p03 [00:14:32] Login.tsx</span><span class="w">500</span><span class="s" style="font-weight:500">p03 [00:14:32] Login.tsx</span><span class="w">520</span><span class="s" style="font-weight:520">p03 [00:14:32] Login.tsx</span><span class="w">600</span><span class="s" style="font-weight:600">p03 [00:14:32] Login.tsx</span><span class="w">700</span><span class="s" style="font-weight:700">p03 [00:14:32] Login.tsx</span></div></div>
+      <div class="col prop"><p class="colhead"><b>Proposed</b> — one stack for both scales</p><p class="face">drawn in <output data-face></output></p><div class="strip"><span class="w">300</span><span class="s" style="font-weight:300">p03 [00:14:32] Login.tsx</span><span class="w">370</span><span class="s" style="font-weight:370">p03 [00:14:32] Login.tsx</span><span class="w">400</span><span class="s" style="font-weight:400">p03 [00:14:32] Login.tsx</span><span class="w">420</span><span class="s" style="font-weight:420">p03 [00:14:32] Login.tsx</span><span class="w">490</span><span class="s" style="font-weight:490">p03 [00:14:32] Login.tsx</span><span class="w">500</span><span class="s" style="font-weight:500">p03 [00:14:32] Login.tsx</span><span class="w">520</span><span class="s" style="font-weight:520">p03 [00:14:32] Login.tsx</span><span class="w">600</span><span class="s" style="font-weight:600">p03 [00:14:32] Login.tsx</span><span class="w">700</span><span class="s" style="font-weight:700">p03 [00:14:32] Login.tsx</span></div></div>
+    </div>
+  </div>
+  <div class="commentary"><span class="lbl">Commentary</span>
+    <p><b>“SF Mono” by name exists only on Macs with Apple's developer font package</b> (<code>com.apple.pkg.SFMonoFonts</code>, installed here). The system's own mono is the hidden <code>.SF NS Mono</code>, reachable from CSS only as <code>ui-monospace</code>, and only in WebKit. So the left column is the developer's view, and the middle column is what a researcher's Mac shows.</p>
+    <p>Ink relative to 400, measured 15 Oct 2026 from DOM screenshots at 2×, in a <code>lang="en"</code> page like the report (the language matters: without it WebKit's generic <code>monospace</code> is Courier, with it Menlo). WebKit means Playwright WebKit and a sandboxed WKWebView, which agree to the pixel; each figure holds within ±0.5 points from 9.6 to 15 px.</p>
+    <div class="tbl"><table>
+      <tr><th>face (how it is reached)</th><th>300</th><th>370</th><th>420</th><th>490</th><th>500</th><th>520</th><th>600</th><th>700</th></tr>
+      <tr><td>SF Mono download, static — both engines, by name</td><td>−21%</td><td>−21%</td><td>+15%</td><td>+15%</td><td>+15%</td><td>+30%</td><td>+30%</td><td>+50%</td></tr>
+      <tr><td>system SF Mono — WebKit, via <code>ui-monospace</code></td><td>−20%</td><td>−5%</td><td>+4%</td><td>+16%</td><td>+18%</td><td>+21%</td><td>+35%</td><td>+53%</td></tr>
+      <tr><td>Menlo — WebKit's generic <code>monospace</code>; Chromium by name</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td colspan="3">Bold, +33 to +39% (varies with the string)</td></tr>
+      <tr><td>Courier — Chromium's generic <code>monospace</code> (its own font API says so)</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td colspan="3">Bold, +37 to +38%</td></tr>
+    </table></div>
+    <p>Given the same face, WebKit and Chromium draw the same ink at every weight. They differ only in which face they find. At the named instances (400, 500, 600, 700), the download and the system font agree within 2–5% and have identical advances. The off-instance weights (370, 420, 490, 520) are where the developer's Mac and a researcher's Mac part company. <b>600 is the one emphasis weight that reads about the same on every path</b> (+30–39%). 500 is Medium in WebKit and Regular wherever the face has only Regular and Bold.</p>
+  </div>
+
+  <h2>2 · The roles</h2>
+  
+  <div class="frame" >
+    <div class="bar"><span>Web · Inter scale</span><span>timecode · code · path · keycap · figures</span></div>
+    <div class="cols" style="--n:3">
+      <div class="col"><p class="colhead"><b>Today</b> — as shipped, on this Mac</p>
+      <p class="line"><a class="timecode" href="#"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></a> <span class="prose">“I couldn’t find where the basket total went.”</span></p>
+      <p class="line"><span class="meta">Session 4 ·</span> <span class="meta">42 min</span> <span class="timecode" style="font-size:var(--bn-text-caption)"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></span></p>
+      <p class="line"><span class="badge badge-frustration">frustration</span> <span class="badge badge-user" style="background:var(--bn-emo-1-bg, var(--bn-colour-user-tag-bg))">basket total</span> <span class="badge">findability</span></p>
+      <p class="line"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p03</span><span class="bn-speaker-badge-name">Ana</span></span></span> <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></p>
+      <p class="line" style="flex-wrap:nowrap"><span class="path is-subject" style="font-weight:var(--bn-weight-emphasis)">checkout-flow/Basket summary.png</span></p>
+      <p class="line" style="flex-wrap:nowrap"><span class="path" style="color:var(--bn-colour-muted)">interviews/session-04/screens/Basket summary.png</span></p>
+      <p class="line"><span class="footer-keyboard-hint" style="font-size:var(--bn-text-badge)"><kbd>j</kbd><kbd>k</kbd><kbd>⌘F</kbd></span></p>
+      <p class="line"><span class="figs" style="font-weight:var(--bn-weight-emphasis)"><span>0.42</span><span>1.07</span><span>12</span><span>3.9</span><span>0.08</span><span>140</span></span></p>
+    </div>
+      <div class="col nodl-web"><p class="colhead"><b>Today</b> — a Mac without the download</p>
+      <p class="line"><a class="timecode" href="#"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></a> <span class="prose">“I couldn’t find where the basket total went.”</span></p>
+      <p class="line"><span class="meta">Session 4 ·</span> <span class="meta">42 min</span> <span class="timecode" style="font-size:var(--bn-text-caption)"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></span></p>
+      <p class="line"><span class="badge badge-frustration">frustration</span> <span class="badge badge-user" style="background:var(--bn-emo-1-bg, var(--bn-colour-user-tag-bg))">basket total</span> <span class="badge">findability</span></p>
+      <p class="line"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p03</span><span class="bn-speaker-badge-name">Ana</span></span></span> <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></p>
+      <p class="line" style="flex-wrap:nowrap"><span class="path is-subject" style="font-weight:var(--bn-weight-emphasis)">checkout-flow/Basket summary.png</span></p>
+      <p class="line" style="flex-wrap:nowrap"><span class="path" style="color:var(--bn-colour-muted)">interviews/session-04/screens/Basket summary.png</span></p>
+      <p class="line"><span class="footer-keyboard-hint" style="font-size:var(--bn-text-badge)"><kbd>j</kbd><kbd>k</kbd><kbd>⌘F</kbd></span></p>
+      <p class="line"><span class="figs" style="font-weight:var(--bn-weight-emphasis)"><span>0.42</span><span>1.07</span><span>12</span><span>3.9</span><span>0.08</span><span>140</span></span></p>
+    </div>
+      <div class="col prop"><p class="colhead"><b>Proposed</b> — the five roles</p>
+      <p class="line"><a class="timecode" href="#"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></a> <span class="prose">“I couldn’t find where the basket total went.”</span></p>
+      <p class="line"><span class="meta">Session 4 ·</span> <span class="meta">42 min</span> <a class="timecode tc-compact" href="#"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></a></p>
+      <p class="line"><span class="badge badge-frustration">frustration</span> <span class="badge badge-user" style="background:var(--bn-emo-1-bg, var(--bn-colour-user-tag-bg))">basket total</span> <span class="badge">findability</span></p>
+      <p class="line"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p03</span><span class="bn-speaker-badge-name">Ana</span></span></span> <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></p>
+      <p class="line" style="flex-wrap:nowrap"><span class="path is-subject">checkout-flow/Basket summary.png</span></p>
+      <p class="line" style="flex-wrap:nowrap"><span class="path" style="color:var(--bn-colour-muted)">interviews/session-04/screens/Basket summary.png</span></p>
+      <p class="line"><span class="footer-keyboard-hint" style="font-size:var(--bn-text-badge)"><kbd>j</kbd><kbd>k</kbd><kbd>⌘F</kbd></span></p>
+      <p class="line"><span class="figs"><span>0.42</span><span>1.07</span><span>12</span><span>3.9</span><span>0.08</span><span>140</span></span></p>
+    </div>
+    </div>
+  </div>
+  
+  <div class="frame" data-platform="desktop">
+    <div class="bar"><span>Desktop · SF Pro scale</span><span>timecode · code · path · keycap · figures</span></div>
+    <div class="cols" style="--n:3">
+      <div class="col"><p class="colhead"><b>Today</b> — as shipped, on this Mac</p>
+      <p class="line"><a class="timecode" href="#"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></a> <span class="prose">“I couldn’t find where the basket total went.”</span></p>
+      <p class="line"><span class="meta">Session 4 ·</span> <span class="meta">42 min</span> <span class="timecode" style="font-size:var(--bn-text-caption)"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></span></p>
+      <p class="line"><span class="badge badge-frustration">frustration</span> <span class="badge badge-user" style="background:var(--bn-emo-1-bg, var(--bn-colour-user-tag-bg))">basket total</span> <span class="badge">findability</span></p>
+      <p class="line"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p03</span><span class="bn-speaker-badge-name">Ana</span></span></span> <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></p>
+      <p class="line" style="flex-wrap:nowrap"><span class="path is-subject" style="font-weight:var(--bn-weight-emphasis)">checkout-flow/Basket summary.png</span></p>
+      <p class="line" style="flex-wrap:nowrap"><span class="path" style="color:var(--bn-colour-muted)">interviews/session-04/screens/Basket summary.png</span></p>
+      <p class="line"><span class="footer-keyboard-hint" style="font-size:var(--bn-text-badge)"><kbd>j</kbd><kbd>k</kbd><kbd>⌘F</kbd></span></p>
+      <p class="line"><span class="figs" style="font-weight:var(--bn-weight-emphasis)"><span>0.42</span><span>1.07</span><span>12</span><span>3.9</span><span>0.08</span><span>140</span></span></p>
+    </div>
+      <div class="col nodl-desk"><p class="colhead"><b>Today</b> — a Mac without the download</p>
+      <p class="line"><a class="timecode" href="#"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></a> <span class="prose">“I couldn’t find where the basket total went.”</span></p>
+      <p class="line"><span class="meta">Session 4 ·</span> <span class="meta">42 min</span> <span class="timecode" style="font-size:var(--bn-text-caption)"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></span></p>
+      <p class="line"><span class="badge badge-frustration">frustration</span> <span class="badge badge-user" style="background:var(--bn-emo-1-bg, var(--bn-colour-user-tag-bg))">basket total</span> <span class="badge">findability</span></p>
+      <p class="line"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p03</span><span class="bn-speaker-badge-name">Ana</span></span></span> <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></p>
+      <p class="line" style="flex-wrap:nowrap"><span class="path is-subject" style="font-weight:var(--bn-weight-emphasis)">checkout-flow/Basket summary.png</span></p>
+      <p class="line" style="flex-wrap:nowrap"><span class="path" style="color:var(--bn-colour-muted)">interviews/session-04/screens/Basket summary.png</span></p>
+      <p class="line"><span class="footer-keyboard-hint" style="font-size:var(--bn-text-badge)"><kbd>j</kbd><kbd>k</kbd><kbd>⌘F</kbd></span></p>
+      <p class="line"><span class="figs" style="font-weight:var(--bn-weight-emphasis)"><span>0.42</span><span>1.07</span><span>12</span><span>3.9</span><span>0.08</span><span>140</span></span></p>
+    </div>
+      <div class="col prop"><p class="colhead"><b>Proposed</b> — the five roles</p>
+      <p class="line"><a class="timecode" href="#"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></a> <span class="prose">“I couldn’t find where the basket total went.”</span></p>
+      <p class="line"><span class="meta">Session 4 ·</span> <span class="meta">42 min</span> <a class="timecode tc-compact" href="#"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></a></p>
+      <p class="line"><span class="badge badge-frustration">frustration</span> <span class="badge badge-user" style="background:var(--bn-emo-1-bg, var(--bn-colour-user-tag-bg))">basket total</span> <span class="badge">findability</span></p>
+      <p class="line"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p03</span><span class="bn-speaker-badge-name">Ana</span></span></span> <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></p>
+      <p class="line" style="flex-wrap:nowrap"><span class="path is-subject">checkout-flow/Basket summary.png</span></p>
+      <p class="line" style="flex-wrap:nowrap"><span class="path" style="color:var(--bn-colour-muted)">interviews/session-04/screens/Basket summary.png</span></p>
+      <p class="line"><span class="footer-keyboard-hint" style="font-size:var(--bn-text-badge)"><kbd>j</kbd><kbd>k</kbd><kbd>⌘F</kbd></span></p>
+      <p class="line"><span class="figs"><span>0.42</span><span>1.07</span><span>12</span><span>3.9</span><span>0.08</span><span>140</span></span></p>
+    </div>
+    </div>
+  </div>
+  <div class="commentary"><span class="lbl">Commentary</span>
+    <p><b>Timecode</b> — <code>--bn-text-label</code> inline beside a quote, <code>--bn-text-caption</code> in a metadata row; Regular. A pointer into the recording; fixed advances keep a column of times aligned, and the accent colour, not weight, says it is a link.</p>
+    <p><b>Code</b> — tag badges, sentiment chips, speaker codes; <code>--bn-text-badge</code>; Regular. A vocabulary marker, not the finding. Today's light chip (370) is Light only from the download; a researcher sees −5% in the app and Regular in Chrome. To keep the light chip deliberately, use 300 (Light on every Mac path); otherwise 400.</p>
+    <p><b>Path</b> — file paths, filenames, URLs, commands; <code>--bn-text-caption</code>; Regular, one step up when the path names the subject (the Screens info line). Drawn here at 500: Medium in WebKit on every Mac (+18%), close to what 490 gave there, and plain Regular in Chrome. If the step must survive in Chrome, 600 is the value, at about twice the ink everywhere (the weight strips above show both).</p>
+    <p><b>Keycap</b> — <code>--bn-text-micro</code>, Medium, matching the native <code>Keycap.swift</code> (<code>.medium</code>, monospaced).</p>
+    <p><b>Figures</b> fold <i>out</i> of mono: heatmap values, metric values and scores move to the body font with <code>font-variant-numeric: tabular-nums</code>, which is what SwiftUI's <code>.monospacedDigit()</code> already does natively. Alignment without a change of voice, and the body weight ladder (490) works there.</p>
+    <p>Proposed stack: <code>ui-monospace, Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace</code>. WebKit draws the system SF Mono on every Mac, download or not; Chromium on a Mac draws Menlo (it has no <code>ui-monospace</code>) instead of today's Courier; Windows Consolas; Linux DejaVu Sans Mono. Menlo and Consolas carry only Regular and Bold.</p>
+  </div>
+</div>
+
+<script>
+
+// Which face did this column get? Line-box height at line-height:normal differs between
+// SF Mono, Menlo, Courier and Consolas; compare against references. Same DOM path as the
+// specimen (not canvas, which in WebKit ignores user-installed fonts).
+(function () {
+  const refs = [["SF Mono", "'SF Mono'"], ["system SF Mono", "ui-monospace"], ["Menlo", "Menlo"], ["Courier", "Courier"],
+                ["Courier New", "'Courier New'"], ["Consolas", "Consolas"], ["DejaVu Sans Mono", "'DejaVu Sans Mono'"]];
+  function sig(family, host) {
+    const s = document.createElement("span");
+    s.textContent = "Hxgjp 0O1l";
+    s.style.cssText = "position:absolute;visibility:hidden;font-size:100px;line-height:normal;white-space:nowrap;font-weight:400;font-family:" + family;
+    (host || document.body).appendChild(s);
+    const r = s.getBoundingClientRect(); s.remove();
+    return r.height.toFixed(2) + "x" + r.width.toFixed(2);
+  }
+  const fallback = sig("'bn-no-such-font-7c2e'");
+  const table = refs.map(([name, fam]) => [name, sig(fam)]).filter(([, k]) => k !== fallback);
+  document.querySelectorAll("[data-face]").forEach((out) => {
+    const col = out.closest(".col");
+    const fam = getComputedStyle(col.querySelector(".strip .s")).fontFamily;
+    const k = sig(fam, col);
+    const hits = table.filter(([, kk]) => kk === k).map(([n]) => n);
+    out.textContent = hits.length ? hits.join(" / ") : "an unlisted face";
+  });
+})();
+
+</script>
+</body>
+</html>

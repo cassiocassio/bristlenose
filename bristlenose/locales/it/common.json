@@ -513,7 +513,8 @@
     "frameworks": "Libreria",
     "uncategorised": "Non categorizzati",
     "uncategorisedSubtitle": "Tag non ancora assegnati ad alcun gruppo",
-    "deleteGroupAriaLabel": "Elimina gruppo {{name}}"
+    "deleteGroupAriaLabel": "Elimina gruppo {{name}}",
+    "showTaggedQuotes": "Mostra le citazioni etichettate {{name}}"
   },
   "autocode": {
     "lowerThreshold": "Soglia inferiore",

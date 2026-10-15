@@ -485,7 +485,8 @@
     "frameworks": "라이브러리",
     "uncategorised": "미분류",
     "uncategorisedSubtitle": "아직 그룹에 할당되지 않은 태그",
-    "deleteGroupAriaLabel": "{{name}} 그룹 삭제"
+    "deleteGroupAriaLabel": "{{name}} 그룹 삭제",
+    "showTaggedQuotes": "{{name}} \ud0dc\uadf8\uac00 \uc9c0\uc815\ub41c \uc778\uc6a9\ubb38 \ubcf4\uae30"
   },
   "autocode": {
     "lowerThreshold": "하한 임계값",

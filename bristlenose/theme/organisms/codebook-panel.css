@@ -394,6 +394,22 @@
     min-width: 50px;
     justify-content: flex-end;
 }
+/* A code with quotes: the bar and count go to those quotes (Quotes lens,
+   tag sidebar soloed on the code) — the same element, and the same gesture,
+   as the tag sidebar's bar. A pointer, not the row's grab hand. */
+.tag-bar-area--link {
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+    padding: 1px 4px;
+    margin: -1px -4px;
+}
+.tag-bar-area--link:hover {
+    background: var(--bn-colour-hover);
+}
+.tag-bar-area--link:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
 .tag-micro-bar {
     height: 0.6rem;
     border-radius: var(--bn-radius-sm);

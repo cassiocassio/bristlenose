@@ -513,7 +513,8 @@
     "frameworks": "Bibliotek",
     "uncategorised": "Okategoriserat",
     "uncategorisedSubtitle": "Taggar som ännu inte tilldelats någon grupp",
-    "deleteGroupAriaLabel": "Radera grupp {{name}}"
+    "deleteGroupAriaLabel": "Radera grupp {{name}}",
+    "showTaggedQuotes": "Visa citat taggade {{name}}"
   },
   "autocode": {
     "lowerThreshold": "Nedre tröskel",

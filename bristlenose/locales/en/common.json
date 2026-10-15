@@ -514,7 +514,8 @@
     "frameworks": "Library",
     "uncategorised": "Uncategorised",
     "uncategorisedSubtitle": "Tags not yet assigned to any group",
-    "deleteGroupAriaLabel": "Delete group {{name}}"
+    "deleteGroupAriaLabel": "Delete group {{name}}",
+    "showTaggedQuotes": "Show quotes tagged {{name}}"
   },
   "autocode": {
     "lowerThreshold": "Lower threshold",

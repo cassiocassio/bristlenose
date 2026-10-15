@@ -513,7 +513,8 @@
     "frameworks": "Bibliothèque",
     "uncategorised": "Sans catégorie",
     "uncategorisedSubtitle": "Étiquettes pas encore assignées à un groupe",
-    "deleteGroupAriaLabel": "Supprimer le groupe {{name}}"
+    "deleteGroupAriaLabel": "Supprimer le groupe {{name}}",
+    "showTaggedQuotes": "Afficher les verbatim \u00e9tiquet\u00e9s {{name}}"
   },
   "autocode": {
     "lowerThreshold": "Seuil inférieur",

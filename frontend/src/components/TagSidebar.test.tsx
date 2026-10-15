@@ -19,8 +19,18 @@ import type {
   CodebookResponse,
   CodebookTagResponse,
 } from "../utils/types";
-import { initFromQuotes, resetStore } from "../contexts/QuotesContext";
-import { resetSidebarStore } from "../contexts/SidebarStore";
+import {
+  getQuotesSnapshot,
+  initFromQuotes,
+  resetStore,
+  setTagFilter,
+} from "../contexts/QuotesContext";
+import {
+  anySidebarOpen,
+  enterSoloMode,
+  requestSoloTag,
+  resetSidebarStore,
+} from "../contexts/SidebarStore";
 
 const t = (k: string) => k;
 
@@ -262,5 +272,38 @@ describe("TagSidebar", () => {
     // A word matches from its start: "ost" is inside "costs", not a word.
     fireEvent.change(box, { target: { value: "ost" } });
     expect(screen.queryByText("Hidden costs")).toBeNull();
+  });
+
+  // The codebook lens's histogram asks for a solo from outside the Quotes lens.
+  // It must land exactly where a click on this sidebar's own bar would.
+  it("acts on a solo requested from another lens as a click on its own bar would", async () => {
+    vi.mocked(getCodebook).mockResolvedValue(withDefaultGroup(["Trust", "Pricing"].map(tag)));
+    requestSoloTag("Trust");
+    expect(anySidebarOpen()).toBe(true);
+
+    const { container } = render(<TagSidebar />);
+
+    await waitFor(() => expect(container.querySelector(".tag-solo-active")).toBeTruthy());
+    const f = getQuotesSnapshot().tagFilter;
+    expect(f.unchecked).toContain("Pricing");
+    expect(f.unchecked).toContain("Sentiment-tag");
+    expect(f.unchecked).not.toContain("Trust");
+    expect(f.noTagsUnchecked).toBe(true);
+  });
+
+  it("keeps a solo on when it is requested again, rather than toggling it off", async () => {
+    const names = ["Trust", "Pricing"];
+    vi.mocked(getCodebook).mockResolvedValue(withDefaultGroup(names.map(tag)));
+    enterSoloMode("Trust", [...names, "Sentiment-tag"], getQuotesSnapshot().tagFilter, setTagFilter);
+    const soloed = getQuotesSnapshot().tagFilter;
+    requestSoloTag("Trust");
+
+    const { container } = render(<TagSidebar />);
+
+    // The request is acted on once the codebook is in; a toggle would have
+    // restored the empty pre-solo filter by then.
+    await waitFor(() => expect(screen.getByText("Pricing")).toBeTruthy());
+    expect(getQuotesSnapshot().tagFilter).toBe(soloed);
+    expect(container.querySelector(".tag-solo-active")).toBeTruthy();
   });
 });

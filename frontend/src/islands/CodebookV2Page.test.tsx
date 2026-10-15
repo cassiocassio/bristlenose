@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { anySidebarOpen, resetSidebarStore } from "../contexts/SidebarStore";
+import { resetCodebookFocus } from "../contexts/CodebookFocusStore";
 import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
 import type { CodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import type { CodebookGroupResponse } from "../utils/types";
@@ -311,4 +313,56 @@ describe("Q14 — export mode hides the doors it cannot honour", () => {
     );
     expect(screen.getAllByTestId("bn-v2-review").length).toBeGreaterThan(0);
   });
+});
+
+describe("a code's histogram goes to its quotes", () => {
+  // The same element as the tag sidebar's bar, so the same gesture: Quotes,
+  // with the tag sidebar open and soloed on the code (TagSidebar.test.tsx
+  // covers the solo landing; this covers the request leaving the codebook).
+  const switchToTab = vi.fn();
+  beforeEach(() => {
+    resetSidebarStore();
+    resetCodebookFocus();
+    switchToTab.mockClear();
+    window.switchToTab = switchToTab;
+  });
+  afterEach(() => {
+    delete window.switchToTab;
+  });
+
+  const withZero = (frameworkId: string | null): CodebookGroupResponse => {
+    const g = { ...group(2), framework_id: frameworkId };
+    g.tags[0] = { ...g.tags[0], count: 0, tentative_count: 0 };
+    return g;
+  };
+
+  // The two row kinds: a framework's read-only row, and the floor's authorable
+  // `TagRow`, whose own click focuses the code.
+  for (const [label, b, fw] of [
+    ["a framework", book(), "nielsen"],
+    ["the floor", book({ id: "", floor: true, title: "Your tags", provenance: "" }), null],
+  ] as const) {
+    it(`opens the Quotes lens soloed on the code, from ${label}`, () => {
+      const { container } = renderPage(b, [withZero(fw)]);
+      const bar = screen.getByRole("button", { name: "Show quotes tagged tag1" });
+      expect(bar).toHaveTextContent("2");
+
+      fireEvent.click(bar);
+
+      expect(switchToTab).toHaveBeenCalledWith("quotes");
+      expect(anySidebarOpen()).toBe(true);
+      // A different gesture from the row's: it does not take the code cursor.
+      expect(container.querySelector(".tag-row.bn-selected")).toBeNull();
+    });
+
+    it(`leaves a code with no quotes inert, from ${label}`, () => {
+      const { container } = renderPage(b, [withZero(fw)]);
+      const bars = container.querySelectorAll(".tag-bar-area");
+      expect(bars).toHaveLength(2);
+      expect(bars[0].getAttribute("role")).toBeNull();
+      expect(bars[0].classList.contains("tag-bar-area--link")).toBe(false);
+      fireEvent.click(bars[0]);
+      expect(switchToTab).not.toHaveBeenCalled();
+    });
+  }
 });

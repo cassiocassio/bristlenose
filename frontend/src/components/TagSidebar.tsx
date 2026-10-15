@@ -35,6 +35,7 @@ import { useFocus } from "../contexts/FocusContext";
 import {
   enterSoloMode,
   exitSoloMode,
+  clearPendingSoloTag,
   hydrateFrameworkStates,
   initHiddenTagGroups,
   setTagGroupsHidden,
@@ -283,7 +284,7 @@ export function TagSidebar() {
   const store = useQuotesStore();
   const tagFilter = store.tagFilter;
 
-  const { hiddenTagGroups, soloTag, disabledFrameworks } = useSidebarStore();
+  const { hiddenTagGroups, soloTag, pendingSoloTag, disabledFrameworks } = useSidebarStore();
   const { selectedIds, flashTag } = useFocus();
 
   const assignActive = selectedIds.size > 0;
@@ -547,6 +548,17 @@ export function TagSidebar() {
     },
     [soloTag, allTagNames, tagFilter],
   );
+
+  // Another lens asked for a solo (the codebook's histogram). Act once the
+  // codebook is in, so the filter hides every OTHER tag, and only ever enter:
+  // a second request for the tag already soloed must not toggle it off.
+  useEffect(() => {
+    if (pendingSoloTag === null || allTagNames.length === 0) return;
+    clearPendingSoloTag();
+    if (soloTag !== pendingSoloTag.toLowerCase()) {
+      enterSoloMode(pendingSoloTag, allTagNames, tagFilter, setTagFilter);
+    }
+  }, [pendingSoloTag, soloTag, allTagNames, tagFilter]);
 
   const handleToggleFrameworkEye = useCallback((fw: FrameworkGroup, e: React.MouseEvent) => {
     e.preventDefault();

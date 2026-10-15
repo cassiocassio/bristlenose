@@ -503,7 +503,8 @@
     "frameworks": "ライブラリ",
     "uncategorised": "未分類",
     "uncategorisedSubtitle": "まだグループに割り当てられていないタグ",
-    "deleteGroupAriaLabel": "グループ {{name}} を削除"
+    "deleteGroupAriaLabel": "グループ {{name}} を削除",
+    "showTaggedQuotes": "{{name}} \u304c\u30bf\u30b0\u4ed8\u3051\u3055\u308c\u305f\u767a\u8a00\u3092\u8868\u793a"
   },
   "autocode": {
     "lowerThreshold": "下限しきい値",

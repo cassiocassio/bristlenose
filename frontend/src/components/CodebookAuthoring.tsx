@@ -41,6 +41,7 @@ import { MicroBar } from "./MicroBar";
 import { TagInput } from "./TagInput";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { isExportMode } from "../utils/exportData";
+import { requestSoloTag } from "../contexts/SidebarStore";
 import {
   focusCodebookGroup,
   focusCodebookTag,
@@ -50,6 +51,77 @@ import {
 } from "../contexts/CodebookFocusStore";
 import type { TFunction } from "i18next";
 import type { CodebookGroupResponse, CodebookTagResponse } from "../utils/types";
+
+/**
+ * A code's histogram bar and count — the same element the tag sidebar draws,
+ * so it does the same thing: a click shows the Quotes lens with the tag
+ * sidebar open and soloed on this code. Discovery from the codebook to the
+ * quotes themselves. Inert at zero, where it would lead to an empty lens.
+ */
+function CodebookTagBar({
+  tag,
+  displayName,
+  maxCount,
+  colourSet,
+}: {
+  tag: CodebookTagResponse;
+  displayName: string;
+  maxCount: number;
+  colourSet: string;
+}) {
+  const { t } = useTranslation();
+  const barColour = getBarColour(colourSet);
+  const tentative = tag.tentative_count ?? 0;
+  const live = tag.count > 0;
+
+  const show = useCallback(
+    (e: React.SyntheticEvent) => {
+      // The row focuses the code on click; this is a different gesture.
+      e.stopPropagation();
+      requestSoloTag(tag.name);
+      window.switchToTab?.("quotes");
+    },
+    [tag.name],
+  );
+
+  return (
+    <span
+      className={`tag-bar-area${live ? " tag-bar-area--link" : ""}`}
+      role={live ? "button" : undefined}
+      // role + tabIndex are conditional; the rule can't statically prove
+      // role="button" makes this interactive.
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={live ? 0 : undefined}
+      aria-label={live ? t("codebook.showTaggedQuotes", { name: displayName }) : undefined}
+      onClick={live ? show : undefined}
+      onKeyDown={
+        live
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                show(e);
+              }
+            }
+          : undefined
+      }
+      // Starting a drag here would carry the row; this is a link, not a handle.
+      draggable={live ? true : undefined}
+      onDragStart={live ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
+    >
+      {tentative > 0 ? (
+        <MicroBar
+          value={maxCount > 0 ? tag.count / maxCount : 0}
+          tentativeValue={maxCount > 0 ? tentative / maxCount : 0}
+          colour={barColour}
+          title={`${tentative} tentative + ${tag.count} accepted`}
+        />
+      ) : live ? (
+        <MicroBar value={maxCount > 0 ? tag.count / maxCount : 0} colour={barColour} />
+      ) : null}
+      <span className="tag-count">{tag.count}</span>
+    </span>
+  );
+}
 
 interface TagRowProps {
   tag: CodebookTagResponse;
@@ -160,9 +232,6 @@ export function TagRow({
     [tag, onMergeDrop],
   );
 
-  const hasTentative = (tag.tentative_count ?? 0) > 0;
-  const barColour = getBarColour(colourSet);
-
   const classes = [
     "tag-row",
     isMergeTarget ? "merge-target" : null,
@@ -219,19 +288,7 @@ export function TagRow({
           />
         )}
       </div>
-      <div className="tag-bar-area">
-        {hasTentative ? (
-          <MicroBar
-            value={maxCount > 0 ? tag.count / maxCount : 0}
-            tentativeValue={maxCount > 0 ? (tag.tentative_count ?? 0) / maxCount : 0}
-            colour={barColour}
-            title={`${tag.tentative_count ?? 0} tentative + ${tag.count} accepted`}
-          />
-        ) : tag.count > 0 ? (
-          <MicroBar value={maxCount > 0 ? tag.count / maxCount : 0} colour={barColour} />
-        ) : null}
-        <span className="tag-count">{tag.count}</span>
-      </div>
+      <CodebookTagBar tag={tag} displayName={tag.name} maxCount={maxCount} colourSet={colourSet} />
     </div>
   );
 }
@@ -570,19 +627,12 @@ export function CodebookGroupColumn({
                   colour={getTagBg(group.colour_set, tag.colour_index)}
                 />
               </div>
-              <div className="tag-bar-area">
-                {(tag.tentative_count ?? 0) > 0 ? (
-                  <MicroBar
-                    value={maxCount > 0 ? tag.count / maxCount : 0}
-                    tentativeValue={maxCount > 0 ? (tag.tentative_count ?? 0) / maxCount : 0}
-                    colour={getBarColour(group.colour_set)}
-                    title={`${tag.tentative_count ?? 0} tentative + ${tag.count} accepted`}
-                  />
-                ) : tag.count > 0 ? (
-                  <MicroBar value={maxCount > 0 ? tag.count / maxCount : 0} colour={getBarColour(group.colour_set)} />
-                ) : null}
-                <span className="tag-count">{tag.count}</span>
-              </div>
+              <CodebookTagBar
+                tag={tag}
+                displayName={tagDisplayName}
+                maxCount={maxCount}
+                colourSet={group.colour_set}
+              />
             </div>
           ) : (
             <TagRow

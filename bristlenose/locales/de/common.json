@@ -513,7 +513,8 @@
     "frameworks": "Bibliothek",
     "uncategorised": "Ohne Kategorie",
     "uncategorisedSubtitle": "Tags, die noch keiner Gruppe zugeordnet sind",
-    "deleteGroupAriaLabel": "Gruppe {{name}} löschen"
+    "deleteGroupAriaLabel": "Gruppe {{name}} löschen",
+    "showTaggedQuotes": "Zitate mit dem Tag {{name}} anzeigen"
   },
   "autocode": {
     "lowerThreshold": "Untere Schwelle",

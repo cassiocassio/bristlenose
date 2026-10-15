@@ -513,7 +513,8 @@
     "frameworks": "Kirjasto",
     "uncategorised": "Luokittelemattomat",
     "uncategorisedSubtitle": "Tunnisteet, joita ei ole vielä liitetty mihinkään ryhmään",
-    "deleteGroupAriaLabel": "Poista ryhmä {{name}}"
+    "deleteGroupAriaLabel": "Poista ryhmä {{name}}",
+    "showTaggedQuotes": "N\u00e4yt\u00e4 sitaatit, joissa on tunniste {{name}}"
   },
   "autocode": {
     "lowerThreshold": "Alempi kynnys",

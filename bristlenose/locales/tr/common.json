@@ -513,7 +513,8 @@
     "frameworks": "Kitaplık",
     "uncategorised": "Sınıflandırılmamış",
     "uncategorisedSubtitle": "Henüz bir gruba atanmamış etiketler",
-    "deleteGroupAriaLabel": "{{name}} grubunu sil"
+    "deleteGroupAriaLabel": "{{name}} grubunu sil",
+    "showTaggedQuotes": "{{name}} etiketli al\u0131nt\u0131lar\u0131 g\u00f6ster"
   },
   "autocode": {
     "lowerThreshold": "Alt eşik",

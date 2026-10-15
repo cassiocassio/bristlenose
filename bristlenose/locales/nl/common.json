@@ -513,7 +513,8 @@
     "frameworks": "Bibliotheek",
     "uncategorised": "Niet-gecategoriseerd",
     "uncategorisedSubtitle": "Tags nog niet aan een groep toegewezen",
-    "deleteGroupAriaLabel": "Groep {{name}} verwijderen"
+    "deleteGroupAriaLabel": "Groep {{name}} verwijderen",
+    "showTaggedQuotes": "Citaten getagd met {{name}} tonen"
   },
   "autocode": {
     "lowerThreshold": "Ondergrens",

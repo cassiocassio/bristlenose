@@ -513,7 +513,8 @@
     "frameworks": "Biblioteca",
     "uncategorised": "Sense categoritzar",
     "uncategorisedSubtitle": "Etiquetes encara no assignades a cap grup",
-    "deleteGroupAriaLabel": "Elimina el grup {{name}}"
+    "deleteGroupAriaLabel": "Elimina el grup {{name}}",
+    "showTaggedQuotes": "Mostra les cites etiquetades amb {{name}}"
   },
   "autocode": {
     "lowerThreshold": "Llindar inferior",

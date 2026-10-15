@@ -575,7 +575,8 @@
     "frameworks": "Бібліотека",
     "uncategorised": "Без категорії",
     "uncategorisedSubtitle": "Теги, ще не призначені до жодної групи",
-    "deleteGroupAriaLabel": "Видалити групу {{name}}"
+    "deleteGroupAriaLabel": "Видалити групу {{name}}",
+    "showTaggedQuotes": "\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u0438 \u0446\u0438\u0442\u0430\u0442\u0438, \u043f\u043e\u0437\u043d\u0430\u0447\u0435\u043d\u0456 {{name}}"
   },
   "autocode": {
     "lowerThreshold": "Нижній поріг",

@@ -564,7 +564,8 @@
     "frameworks": "Knihovna",
     "uncategorised": "Nezařazené",
     "uncategorisedSubtitle": "Štítky dosud nepřiřazené k žádné skupině",
-    "deleteGroupAriaLabel": "Smazat skupinu {{name}}"
+    "deleteGroupAriaLabel": "Smazat skupinu {{name}}",
+    "showTaggedQuotes": "Zobrazit cit\u00e1ty ozna\u010den\u00e9 \u0161t\u00edtkem {{name}}"
   },
   "autocode": {
     "lowerThreshold": "Dolní práh",

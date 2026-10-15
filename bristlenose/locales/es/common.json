@@ -513,7 +513,8 @@
     "frameworks": "Biblioteca",
     "uncategorised": "Sin categoría",
     "uncategorisedSubtitle": "Etiquetas aún no asignadas a ningún grupo",
-    "deleteGroupAriaLabel": "Eliminar grupo {{name}}"
+    "deleteGroupAriaLabel": "Eliminar grupo {{name}}",
+    "showTaggedQuotes": "Mostrar citas etiquetadas con {{name}}"
   },
   "autocode": {
     "lowerThreshold": "Umbral inferior",

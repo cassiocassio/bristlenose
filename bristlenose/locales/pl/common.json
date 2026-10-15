@@ -575,7 +575,8 @@
     "frameworks": "Biblioteka",
     "uncategorised": "Nieskategoryzowane",
     "uncategorisedSubtitle": "Tagi jeszcze nieprzypisane do żadnej grupy",
-    "deleteGroupAriaLabel": "Usuń grupę {{name}}"
+    "deleteGroupAriaLabel": "Usuń grupę {{name}}",
+    "showTaggedQuotes": "Poka\u017c cytaty otagowane {{name}}"
   },
   "autocode": {
     "lowerThreshold": "Dolny próg",

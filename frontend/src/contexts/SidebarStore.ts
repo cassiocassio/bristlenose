@@ -88,6 +88,12 @@ export interface SidebarState {
   /** Snapshot of tagFilter from before entering solo mode. */
   savedTagFilter: TagFilterState | null;
   /**
+   * A tag another lens asked the tag sidebar to solo (the codebook's
+   * histogram). The sidebar owns solo — it alone knows the full tag list the
+   * filter needs — so it consumes this once it has one. Ephemeral.
+   */
+  pendingSoloTag: string | null;
+  /**
    * Width the layout has for panels + centre, reported by SidebarLayout's
    * ResizeObserver (rails already subtracted). `Infinity` until measured, so
    * nothing is ever auto-closed by a width nobody has read. Ephemeral.
@@ -161,6 +167,7 @@ function loadState(): SidebarState {
     disabledFrameworks: new Set(),
     soloTag: null,
     savedTagFilter: null,
+    pendingSoloTag: null,
     availableWidth: Infinity,
     rightColumn: false,
     lastOpened: null,
@@ -626,6 +633,21 @@ export function enterSoloMode(
   });
 }
 
+/**
+ * Solo `tagName` from outside the Quotes lens: open the tag sidebar and leave
+ * the request for `TagSidebar`, which enters solo exactly as a click on its own
+ * histogram does. The caller navigates to Quotes.
+ */
+export function requestSoloTag(tagName: string): void {
+  setState((prev) => ({ ...openTagsExempt(prev), pendingSoloTag: tagName }));
+}
+
+/** Drop a pending solo request once the tag sidebar has acted on it. */
+export function clearPendingSoloTag(): void {
+  if (state.pendingSoloTag === null) return;
+  setState((prev) => ({ ...prev, pendingSoloTag: null }));
+}
+
 /** Exit solo mode and restore the tag filter snapshot. */
 export function exitSoloMode(
   applyTagFilter: (f: TagFilterState) => void,
@@ -646,6 +668,7 @@ export function resetSidebarStore(): void {
     disabledFrameworks: new Set(),
     soloTag: null,
     savedTagFilter: null,
+    pendingSoloTag: null,
     availableWidth: Infinity,
     rightColumn: false,
     lastOpened: null,

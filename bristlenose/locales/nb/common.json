@@ -513,7 +513,8 @@
     "frameworks": "Bibliotek",
     "uncategorised": "Ukategorisert",
     "uncategorisedSubtitle": "Tagger som ennå ikke er tilordnet noen gruppe",
-    "deleteGroupAriaLabel": "Slett gruppe {{name}}"
+    "deleteGroupAriaLabel": "Slett gruppe {{name}}",
+    "showTaggedQuotes": "Vis sitater tagget {{name}}"
   },
   "autocode": {
     "lowerThreshold": "Nedre terskel",

@@ -136,7 +136,10 @@ enum StudyDropMatch: Equatable {
             // The holder's own folder, spelled differently (case, a symlink
             // resolved by the caller): a re-drop. The row follows the new
             // spelling; nothing is re-minted (Fable review, 15 Oct 2026).
-            if let droppedPath,
+            // Only on a network share, where folder identity was never read;
+            // elsewhere identity has already decided, and a case-sensitive
+            // volume can hold two folders that differ only by case.
+            if live.onNetwork, let droppedPath,
                live.path.lowercased() == droppedPath.lowercased() {
                 return .moved(live.id)
             }

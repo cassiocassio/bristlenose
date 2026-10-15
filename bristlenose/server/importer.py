@@ -941,8 +941,13 @@ def _import_source_files(
                     break
         file_type = _guess_file_type(source_name)
 
-        if (file_type in ("video", "audio") and sid in recorded
-                and _holds_other_bytes(source_path, recorded[sid])):
+        # Only the file the fingerprint was taken from: a session with a video
+        # and an audio file names one in its header and was fingerprinted by
+        # the other, and their bytes always differ (Fable review).
+        fp_place = recorded.get(sid)
+        if (file_type in ("video", "audio") and fp_place is not None
+                and Path(source_name).as_posix() == fp_place[1]
+                and _holds_other_bytes(source_path, fp_place[0])):
             logger.warning(
                 "%s: %s holds different bytes from the recording this session was "
                 "made from (re-exported?); it is not played as this session's media",
@@ -979,8 +984,10 @@ def _import_source_files(
         sf.verified_at = datetime.now(timezone.utc) if present else None
 
 
-def _recorded_fingerprints(output_dir: Path | None) -> dict[str, str]:
-    """Each session's recording fingerprint, from the session registry."""
+def _recorded_fingerprints(output_dir: Path | None) -> dict[str, tuple[str, str]]:
+    """Each session's recording fingerprint and the place (relative to the
+    interview folder) it was taken at, from the session registry. A session
+    with no known place is left out: there is nothing to compare safely."""
     if output_dir is None:
         return {}
     from bristlenose.session_registry import FP_PREFIX, SessionRegistry
@@ -989,11 +996,12 @@ def _recorded_fingerprints(output_dir: Path | None) -> dict[str, str]:
         registry = SessionRegistry.load(output_dir)
     except (OSError, ValueError):
         return {}
-    return {sid: key[len(FP_PREFIX):] for key, sid in registry.sessions.items()
-            if key.startswith(FP_PREFIX)}
+    return {sid: (key[len(FP_PREFIX):], registry.hints[key])
+            for key, sid in registry.sessions.items()
+            if key.startswith(FP_PREFIX) and key in registry.hints}
 
 
-_FINGERPRINT_CACHE: dict[tuple[str, int, int], str | None] = {}
+_FINGERPRINT_CACHE: dict[tuple[str, int, int], str] = {}
 
 
 def _holds_other_bytes(path: Path, recorded: str) -> bool:
@@ -1007,9 +1015,11 @@ def _holds_other_bytes(path: Path, recorded: str) -> bool:
     except OSError:
         return False
     key = (str(path), st.st_size, st.st_mtime_ns)
-    if key not in _FINGERPRINT_CACHE:
-        _FINGERPRINT_CACHE[key] = content_fingerprint(path)
-    current = _FINGERPRINT_CACHE[key]
+    current = _FINGERPRINT_CACHE.get(key)
+    if current is None:
+        current = content_fingerprint(path)
+        if current is not None:  # a placeholder is asked again once downloaded
+            _FINGERPRINT_CACHE[key] = current
     return current is not None and current != recorded
 
 

@@ -782,9 +782,18 @@ final class ProjectIndex: ObservableObject {
     /// review, 15 Oct 2026). Matters most for a row from before the marker,
     /// which has no id to disagree with.
     func otherProject(holding folder: URL, excluding id: UUID) -> Project? {
-        if let byPath = findByPath(folder.path), byPath.id != id { return byPath }
-        if let same = findSameFolder(folder), same.id != id { return same }
-        return nil
+        let mine = projects.first { $0.id == id }?.studyID
+        let holder: Project?
+        if let byPath = findByPath(folder.path), byPath.id != id {
+            holder = byPath
+        } else if let same = findSameFolder(folder), same.id != id {
+            holder = same
+        } else {
+            holder = nil
+        }
+        // A duplicate row of this same study is not another study.
+        if let holder, let mine, holder.studyID == mine { return nil }
+        return holder
     }
 
     /// Read the study id the project's folder carries and remember it. When

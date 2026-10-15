@@ -321,7 +321,9 @@ def test_a_recording_re_exported_in_place_is_not_the_old_sessions_media(
     media = proj / "Session 1.mp4"
     media.write_bytes(b"the recording this session was made from")
     reg = SessionRegistry.load(out)
-    reg.sessions[FP_PREFIX + content_fingerprint(media)] = "s1"
+    fp_key = FP_PREFIX + content_fingerprint(media)
+    reg.sessions[fp_key] = "s1"
+    reg.hints[fp_key] = "Session 1.mp4"
     reg.save()
 
     def media_rows() -> list[str]:
@@ -340,6 +342,37 @@ def test_a_recording_re_exported_in_place_is_not_the_old_sessions_media(
     assert media_rows() == ["Session 1.mp4"]
     media.write_bytes(b"a trimmed re-export saved over it")
     assert media_rows() == [], "the old session plays the re-export's bytes"
+
+
+def test_a_session_with_video_and_audio_keeps_its_media(tmp_path: Path) -> None:
+    """The header names one file and the fingerprint was taken from the other:
+    their bytes differ by nature, and that is not a re-export (Fable review,
+    15 Oct 2026)."""
+    from bristlenose.server.models import Session as SessionModel
+    from bristlenose.session_registry import FP_PREFIX, SessionRegistry
+    from bristlenose.utils.fingerprint import content_fingerprint
+
+    proj = _project(tmp_path)
+    out = proj / "bristlenose-output"
+    raw = out / "transcripts-raw" / "s1.txt"
+    raw.write_text(raw.read_text(encoding="utf-8").replace(
+        "# Source: Session 1.vtt", "# Source: Session 1.m4a"), encoding="utf-8")
+    (proj / "Session 1.m4a").write_bytes(b"the audio track")
+    video = proj / "Session 1.mp4"
+    video.write_bytes(b"the video, fingerprinted as the primary file")
+    reg = SessionRegistry.load(out)
+    fp_key = FP_PREFIX + content_fingerprint(video)
+    reg.sessions[fp_key] = "s1"
+    reg.hints[fp_key] = "Session 1.mp4"
+    reg.save()
+
+    engine, factory = _own_db(proj)
+    db = factory()
+    import_project(db, proj)
+    db.commit()
+    assert db.query(SessionModel).filter_by(session_id="s1").one().has_media
+    db.close()
+    engine.dispose()
 
 
 def test_a_copy_first_touched_mid_run_still_gets_its_own_id(tmp_path: Path) -> None:

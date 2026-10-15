@@ -322,12 +322,23 @@ struct StudyMarkerTests {
 
     // ── The drop decision when a disk is ejected ────────────────────────────
 
-    @Test func aReDropUnderAnotherCaseIsTheSameFolder() {
+    @Test func aNetworkReDropUnderAnotherCaseIsTheSameFolder() {
+        let id = UUID()
+        let row = StudyDropMatch.Candidate(id: id, studyID: study,
+                                           path: "/Volumes/Share/Talismanic", onNetwork: true)
+        #expect(StudyDropMatch.resolve(droppedStudyID: study, candidates: [row],
+                                       droppedPath: "/Volumes/share/talismanic",
+                                       folderExists: { _ in true }) == .moved(id))
+    }
+
+    /// Off a network share, folder identity has already said these are two
+    /// folders (a case-sensitive volume): a case-only match is a copy.
+    @Test func aLocalFolderDifferingOnlyByCaseIsACopy() {
         let id = UUID()
         let row = StudyDropMatch.Candidate(id: id, studyID: study, path: "/Users/r/Studies/Talismanic")
         #expect(StudyDropMatch.resolve(droppedStudyID: study, candidates: [row],
                                        droppedPath: "/Users/r/studies/talismanic",
-                                       folderExists: { _ in true }) == .moved(id))
+                                       folderExists: { _ in true }) == .copy(of: id))
     }
 
     /// A network holder's folder identity cannot be read without risking a
@@ -354,6 +365,13 @@ struct StudyMarkerTests {
         #expect(index.otherProject(holding: study, excluding: lost.id)?.id == holder.id)
         #expect(index.otherProject(holding: link, excluding: lost.id)?.id == holder.id)
         #expect(index.otherProject(holding: study, excluding: holder.id) == nil)
+        // A duplicate row of the same study is not another study.
+        if let i = index.projects.firstIndex(where: { $0.id == holder.id }),
+           let j = index.projects.firstIndex(where: { $0.id == lost.id }) {
+            index.projects[i].studyID = "6f1c2b9e-4444-4000-8000-000000000000"
+            index.projects[j].studyID = "6f1c2b9e-4444-4000-8000-000000000000"
+        }
+        #expect(index.otherProject(holding: study, excluding: lost.id) == nil)
     }
 
     @Test func aHolderOnAnEjectedDiskIsUnsure() {

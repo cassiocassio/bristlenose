@@ -732,6 +732,20 @@ def _reconcile_stranded_run(events_file: Path) -> None:
     )
 
 
+def _mint_study_marker(output_dir: Path) -> None:
+    """Give the study its id if the folder carries none (``study_marker.py``).
+
+    Never fails a run: an identity it could not write is minted by the next
+    run, or by the serve, and a run is worth more than its label.
+    """
+    from bristlenose import study_marker
+
+    try:
+        study_marker.read_or_mint(output_dir, minted_by="run")
+    except (OSError, ValueError) as exc:
+        log.warning("could not write the study marker in %s: %s", output_dir, exc)
+
+
 @contextmanager
 def run_lifecycle(
     output_dir: Path,
@@ -839,6 +853,7 @@ def run_lifecycle(
             append_event(events_file, started_event)
             _write_pid_file(output_dir, run_id, proc_start_time)
             log.info("run_started run_id=%s kind=%s", run_id, kind.value)
+            _mint_study_marker(output_dir)
             telemetry_tokens = telemetry.set_run_context(
                 run_id, output_dir / ".bristlenose",
             )

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from bristlenose import study_marker
 from tests.lifecycle_rig import new_study
 from tests.test_serve_project_root import fast_watcher as fast_watcher  # noqa: F401
 
@@ -57,10 +58,15 @@ def test_re_analyse_is_a_deliberate_reset_and_the_report_comes_back(
     with study.serve() as client:
         study.run()
         study.star(client, study.quote_ids(client)[0])
+        before = study_marker.read(study.folder / "bristlenose-output")
         study.run(clean=True)
         study.sessions(client, expect=2)
         study.assert_healthy()
         assert study.starred(client) == set()
+    assert before is not None
+    assert study_marker.read(study.folder / "bristlenose-output") == before, (
+        "a Re-analyse gave the study a new identity"
+    )
 
 
 def test_a_folder_moved_while_closed_is_not_transcribed_again(
@@ -68,12 +74,14 @@ def test_a_folder_moved_while_closed_is_not_transcribed_again(
 ) -> None:
     study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav")
     study.run()
+    minted = study_marker.read(study.folder / "bristlenose-output")
+    assert minted is not None, "a run with no server open minted no study marker"
     study.move_to(tmp_path / "Archive" / "2026" / "Talismanic")
     study.run()
     assert study.transcribed[1] == [], "a moved study paid for transcription again"
+    assert study_marker.read(study.folder / "bristlenose-output") == minted
 
 
-@pytest.mark.xfail(strict=True, reason=_IDENTITY)
 def test_a_folder_moved_while_closed_keeps_its_curation(tmp_path: Path, fast_watcher) -> None:
     study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav")
     with study.serve() as client:
@@ -107,7 +115,6 @@ def test_a_renamed_interview_keeps_its_curation_and_is_not_transcribed_again(
     assert study.transcribed[1] == [], "a renamed interview was transcribed again"
 
 
-@pytest.mark.xfail(strict=True, reason=_IDENTITY)
 def test_a_copy_is_an_independent_duplicate(tmp_path: Path, fast_watcher) -> None:
     """``design-project-identity.md`` §9: the copy opens with the curation it
     was copied with, and from then on the two are unrelated."""

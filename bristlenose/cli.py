@@ -1355,10 +1355,17 @@ def run(
         from bristlenose.logging import release_log_file
 
         release_log_file()
+        # A Re-analyse resets the analysis, not the study: the id the output
+        # folder carries crosses into the new output (design-project-identity.md §8).
+        from bristlenose import study_marker
+
+        study_id = study_marker.read(output_dir)
         output_stash = output_backup.stash(
             output_dir, previous_backup_is_spent=_reclaim.report_is_back
         )
         setup_logging(output_dir=output_dir, verbose=verbose)
+        if output_stash is not None and study_id is not None:
+            study_marker.write(output_dir, study_id, minted_by="run")
         if output_stash is not None:
             console.print(f"\n[dim]Cleaned {output_dir}[/dim]")
         else:

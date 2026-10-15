@@ -205,6 +205,125 @@ def _same_path(stored: str, target: Path) -> bool:
             return stored == str(target)
 
 
+def _is_the_studys_own_database(db: Session, output_dir: Path) -> bool:
+    """Is ``db`` the database inside this study's own output folder?
+
+    That is the production shape (``db_url_for_project``): one file per study,
+    carried by the folder. Anything else — an in-memory database, a file
+    elsewhere — keeps the multi-project path match.
+    """
+    database = db.get_bind().url.database
+    if not database or database == ":memory:":
+        return False
+    own = output_dir / ".bristlenose" / "bristlenose.db"
+    try:
+        return os.path.samefile(database, own)
+    except OSError:
+        return False
+
+
+def _the_study_row(db: Session, study_id: str | None) -> Project | None:
+    """The one project row of a study's own database, collapsing any forks.
+
+    Prefers the row whose ``study_id`` is the marker's; otherwise the lowest
+    id, which is row 1, the row the report reads and so the one every
+    researcher edit was written to. Any other row is a fork from before the
+    marker (a move, a copy, a serve started while the output was set aside):
+    it is deleted with everything that hangs off it, unless something a person
+    did is attached to it, in which case it is left in place and said at ERROR
+    (docs/design-project-identity.md §10).
+    """
+    rows = db.query(Project).order_by(Project.id).all()
+    if not rows:
+        return None
+    chosen = next((r for r in rows if study_id and r.study_id == study_id), rows[0])
+    for other in rows:
+        if other is chosen:
+            continue
+        if _row_holds_curation(db, other.id):
+            logger.error(
+                "study database holds a second project row (id=%d) with curation on it; "
+                "left in place for a person to look at. Imports go to row %d.",
+                other.id, chosen.id,
+            )
+            continue
+        _delete_project_row(db, other.id)
+        logger.warning(
+            "study database held a forked project row (id=%d, no curation); removed it. "
+            "Imports go to row %d.", other.id, chosen.id,
+        )
+    return chosen
+
+
+#: Tables a person writes to. A forked row reaching any of them is not ours to
+#: delete. Named rather than derived: "curation" is a product meaning, not a
+#: schema property.
+_CURATION_TABLES = frozenset({
+    "quote_states", "quote_tags", "quote_edits", "heading_edits", "deleted_badges",
+    "dismissed_signals", "hidden_tag_groups", "project_framework_states",
+    "screen_arrangements", "transcript_layout_edits", "tag_prompt_decisions",
+})
+
+
+def _rows_hanging_off_project(db: Session, project_id: int) -> dict[str, set[Any]]:
+    """Every row that references the project, directly or through a chain of
+    foreign keys, keyed by table name: the set a delete of the project needs.
+
+    Follows foreign keys from parent to child only, so instance-scoped tables
+    (people, codebook groups, tag definitions) a child row merely points at are
+    never collected.
+    """
+    from sqlalchemy import select
+
+    from bristlenose.server.models import Base
+
+    doomed: dict[str, set[Any]] = {"projects": {project_id}}
+    tables = {t.name: t for t in Base.metadata.sorted_tables}
+    changed = True
+    while changed:
+        changed = False
+        for table in tables.values():
+            if table.name == "projects":
+                continue
+            pk = next(iter(table.primary_key.columns), None)
+            if pk is None:
+                continue
+            for fk in table.foreign_keys:
+                parent = fk.column.table.name
+                ids = doomed.get(parent)
+                if not ids:
+                    continue
+                found = {
+                    row[0] for row in db.execute(
+                        select(pk).where(fk.parent.in_(list(ids)))
+                    )
+                }
+                new = found - doomed.get(table.name, set())
+                if new:
+                    doomed.setdefault(table.name, set()).update(new)
+                    changed = True
+    return doomed
+
+
+def _row_holds_curation(db: Session, project_id: int) -> bool:
+    doomed = _rows_hanging_off_project(db, project_id)
+    return any(doomed.get(name) for name in _CURATION_TABLES)
+
+
+def _delete_project_row(db: Session, project_id: int) -> None:
+    """Delete a project row and everything that hangs off it, children first."""
+    from bristlenose.server.models import Base
+
+    doomed = _rows_hanging_off_project(db, project_id)
+    for table in reversed(Base.metadata.sorted_tables):
+        ids = doomed.get(table.name)
+        if not ids:
+            continue
+        pk = next(iter(table.primary_key.columns))
+        db.execute(table.delete().where(pk.in_(list(ids))))
+    db.flush()
+
+
 def _find_or_create_project(db: Session, project_dir: Path) -> tuple[Project, Path, Path]:
     """The project row for *project_dir*, created if new: ``(row, input, output)``.
 
@@ -238,23 +357,39 @@ def _find_or_create_project(db: Session, project_dir: Path) -> tuple[Project, Pa
         project_name = meta.get("project_name", "Untitled")
 
     # --- Find or create project ------------------------------------------
-    # Match on the resolved path so a legacy row stored with a different
-    # spelling (relative vs absolute, symlinked, trailing slash) still matches.
-    project = next(
-        (
-            p
-            for p in db.query(Project).all()
-            if _same_path(p.output_dir, output_dir)
-            and (
-                _same_path(p.input_dir, project_dir)
-                # A row written by ``serve <p>/bristlenose-output`` before 12 Oct
-                # 2026 stored the output folder as its input folder too. It is
-                # this project; the heal below rewrites it to the interview folder.
-                or _same_path(p.input_dir, output_dir)
-            )
-        ),
-        None,
-    )
+    if _is_the_studys_own_database(db, output_dir):
+        # The database lives inside the study's own output folder, so it IS
+        # the study: one row, found by the study marker, never by path. A
+        # moved, renamed or copied folder brings the database with it, and its
+        # stored paths are hints, healed below (docs/design-project-identity.md
+        # §4). Matching by path here is what forked a row on every move.
+        from bristlenose import study_marker
+
+        study_id = study_marker.read_or_mint(output_dir, minted_by="serve")
+        project = _the_study_row(db, study_id)
+        if project is not None and study_id is not None:
+            project.study_id = study_id
+    else:
+        # A database that is not the study's own (a test's in-memory one, a
+        # future instance database) can hold several projects: match on the
+        # resolved path, so a legacy row stored with a different spelling
+        # (relative vs absolute, symlinked, trailing slash) still matches.
+        study_id = None
+        project = next(
+            (
+                p
+                for p in db.query(Project).all()
+                if _same_path(p.output_dir, output_dir)
+                and (
+                    _same_path(p.input_dir, project_dir)
+                    # A row written by ``serve <p>/bristlenose-output`` before 12 Oct
+                    # 2026 stored the output folder as its input folder too. It is
+                    # this project; the heal below rewrites it to the interview folder.
+                    or _same_path(p.input_dir, output_dir)
+                )
+            ),
+            None,
+        )
 
     if project is None:
         project = Project(
@@ -262,6 +397,7 @@ def _find_or_create_project(db: Session, project_dir: Path) -> tuple[Project, Pa
             slug=project_name.lower().replace(" ", "-")[:100],
             input_dir=str(project_dir),
             output_dir=str(output_dir),
+            study_id=study_id,
         )
         db.add(project)
         db.flush()  # get project.id

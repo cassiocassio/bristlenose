@@ -153,7 +153,12 @@ def test_a_forked_import_is_logged_and_published_under_its_own_row(
     Every path that forks today is fixed, so this test makes the fork by hand:
     the database already holds an unrelated row 1, and the project becomes row 2.
     Before 12 Oct 2026 the handler published ``last_run[1]`` whatever row was
-    written, which is why the incident read as healthy."""
+    written, which is why the incident read as healthy.
+
+    Since 15 Oct 2026 a study's OWN database cannot fork — it holds one study,
+    found by its marker (``test_a_study_database_adopts_its_one_row``) — so the
+    fork is made in a database outside the study folder, the shape a future
+    instance database would have, where projects are still matched by path."""
     import logging
 
     from bristlenose.events import KindEnum, RunCompletedEvent, append_event, events_path
@@ -162,7 +167,8 @@ def test_a_forked_import_is_logged_and_published_under_its_own_row(
 
     proj = _project(tmp_path)
     out = proj / "bristlenose-output"
-    db_file = out / ".bristlenose" / "bristlenose.db"
+    db_file = tmp_path / "instance" / "bristlenose.db"
+    db_file.parent.mkdir()
     engine = get_engine(f"sqlite:///{db_file}")
     init_db(engine)
     seed = create_session_factory(engine)()
@@ -187,7 +193,11 @@ def test_a_forked_import_is_logged_and_published_under_its_own_row(
     app_logger = logging.getLogger("bristlenose.server.app")
     app_logger.addHandler(keep)
     try:
-        app = _app(proj, tmp_path)
+        static = tmp_path / "static"
+        static.mkdir(exist_ok=True)
+        (static / "index.html").write_text(_VITE_INDEX_HTML, encoding="utf-8")
+        with patch("bristlenose.server.app._STATIC_DIR", static):
+            app = create_app(project_dir=proj, dev=False, db_url=f"sqlite:///{db_file}")
         with AuthTestClient(app):
             append_event(events_path(out), RunCompletedEvent(
                 ts="2026-10-12T23:00:00Z", run_id=run_id, kind=KindEnum.RUN,

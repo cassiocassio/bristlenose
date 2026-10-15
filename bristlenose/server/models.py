@@ -224,6 +224,12 @@ class Project(Base):
     # now. This records that personal detail was removed from the transcript
     # *text* before analysis, by a pipeline run, and cannot be changed here.
     pii_redacted: Mapped[bool] = mapped_column(default=False)
+    # The study this row is: the id the output folder's marker carries
+    # (``bristlenose/study_marker.py``). Written at every import of the study's
+    # own database; the marker wins when they disagree. ``None`` on a row that
+    # predates it, or in a database that is not a study's own (tests, a future
+    # instance database).
+    study_id: Mapped[str | None] = mapped_column(String(36), default=None)
 
     sessions: Mapped[list[Session]] = relationship(back_populates="project")
     quotes: Mapped[list[Quote]] = relationship(back_populates="project")

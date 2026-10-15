@@ -103,14 +103,14 @@ row 42.
 | 47 | "That's Me" on a moderator during a run failed as "check your connection": every SPA pick sends the slot's role as `kind`, and the run guard refused any `kind` as a recode. The toast blamed the connection for every failure | `test_naming_yourself_the_moderator_is_allowed`, `test_a_recode_is_still_refused`; `frontend/src/utils/api.test.ts` (the toast names a running analysis, a refusal, or the connection); `paragraphEdits.test.ts` (a refused paragraph move is no longer silent) | red-first; mutant |
 | 27 | After a crash, the previous report stayed hidden until the next run started. The server now puts it back on start, but only over a **stranded** run (started, no terminus, no live owner): an absent output folder or one holding only a log is also a run's own start-up, and reclaiming there would put the old report back under it (15 Oct 2026, `output_backup.reclaim_after_crash`) | scenarios `crash-report-visible-before-rerun`, `server-in-run-start-up-leaves-backup`, `server-under-live-run-leaves-backup`; `server-restarted-mid-reanalyse` is the absent-folder guard | red-first; mutant (each guard alone) |
 | 34 | More than 50 projects: the 51st got no folder lease, so anything borrowing its folder got a bare path with no sandbox scope. The 50 watchers now go to the most recently opened projects, and opening a project or asking for its folder takes a lease on demand, the least recently opened giving way (15 Oct 2026, `ProjectIndex.ensureLease`). Masked in practice by row 39's leaked scope, which is why the cap never showed | `ProjectLeaseOnDemandTests` (4 tests, cap lowered to 1) | mutant (each of order, on-demand and eviction alone) |
+| 29 | A folder moved or renamed forked the project, with the app closed or open; the report showed the stale first row. A study's own database now holds one study, found by its marker (`<output>/.bristlenose/study.json`, minted by the first run or serve, kept across Re-analyse), never matched by path; stored paths are healed; a fork left by an older release is removed at the next import unless curation hangs off it (15 Oct 2026, [design-project-identity.md](design-project-identity.md) §3–4, §10) | scenario `moved-while-closed`; `test_lifecycle_end_to_end.py` (`…moved_while_closed_keeps_its_curation`); `tests/test_study_identity.py` | strict xfail flipped; mutant (six changes, each alone) |
+| 30 | A copied folder forked the same way. A copy now opens as the study it was copied from, with its curation, in its own database, so nothing written in one reaches the other; the app re-mints its id on arrival (phase 4) | scenario `copied-elsewhere`; `…a_copy_is_an_independent_duplicate` | strict xfail flipped |
 
 ### Open, engineered (strict xfail in the scenario table)
 
 | # | Failure mode | Why it is open | What fixes it |
 |---|---|---|---|
 | 28 | A CLI `serve` does not follow its folder to a new name | by design; it says so (row 6), and the Mac app restarts it at the new path — which is what forks row 29 | restart the server; or re-derive the root from the open database's path |
-| 29 | A folder moved or renamed forks the project — with the app closed, or open: the app follows (row 22) and the restarted server re-imports under the new path. The report shows the stale first row. **Measured 13 Oct 2026** on a sandboxed Debug build: a Finder rename with the app open gave two rows, one session each, and the sidebar said *Report out of date* (row 19) | project identity is the absolute path | the study marker, [design-project-identity.md](design-project-identity.md) §3–4 and §10; decided 13 Oct 2026, phase 2 |
-| 30 | A copied folder forks the same way, and the copy's writes reach the original | same | same; a copy is an independent duplicate, re-minted on arrival ([design-project-identity.md](design-project-identity.md) §9) |
 
 ### Open, not engineered
 
@@ -155,10 +155,10 @@ folder instead.
 
 ## The score
 
-**By count:** of 48 failure modes, 32 are designed out and proven (25 fixed on
+**By count:** of 48 failure modes, 34 are designed out and proven (25 fixed on
 12 Oct 2026, one that already held and is now guarded, row 41's progressive
-fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, and rows 27 and 34 of 15 Oct) — **67%**. Sixteen are
-open: three engineered, thirteen not. _(13 Oct 2026: rows 35–40 added from the review
+fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, and rows 27, 29, 30 and 34 of 15 Oct) — **71%**. Fourteen are
+open: one engineered, thirteen not. _(13 Oct 2026: rows 35–40 added from the review
 of the Mac half; 14 Oct: rows 41–43 from the progressive-lenses truing, then 44–48
 from a `--clean` Re-analyse in the app. The denominator moved each time.)_
 

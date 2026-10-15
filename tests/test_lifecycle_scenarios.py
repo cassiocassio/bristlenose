@@ -315,13 +315,6 @@ def copied_to_another_place_is_one_project(proj: Path, tmp: Path) -> None:
 
 # ── The table ───────────────────────────────────────────────────────────────
 
-_WS4 = (
-    "identity is the absolute path, so a moved or copied project's stored row no "
-    "longer matches and the import forks a second row (the report reads the stale "
-    "first). Fix: an id the output folder carries (lifecycle handoff WS4); what a "
-    "copy should mean is the owner's call."
-)
-
 # Windows will not rename or move a folder while a file inside it is open, and a
 # live server holds bristlenose-output/.bristlenose/bristlenose.db (and its log)
 # open. Each scenario below moves that folder, or the project around it, under a
@@ -365,14 +358,9 @@ SCENARIOS = [
             "(988a60d8, eb8509e1); the CLI user restarts it by hand."
         )),
     ),
-    pytest.param(
-        moved_while_closed_keeps_its_curation, id="moved-while-closed",
-        marks=pytest.mark.xfail(strict=True, reason=_WS4),
-    ),
-    pytest.param(
-        copied_to_another_place_is_one_project, id="copied-elsewhere",
-        marks=pytest.mark.xfail(strict=True, reason=_WS4),
-    ),
+    pytest.param(moved_while_closed_keeps_its_curation, id="moved-while-closed",
+                 marks=_MOVES_AN_OPEN_DATABASE),
+    pytest.param(copied_to_another_place_is_one_project, id="copied-elsewhere"),
 ]
 
 

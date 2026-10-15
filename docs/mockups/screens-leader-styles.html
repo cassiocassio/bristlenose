@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Screens leader styles · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css), via the canonical
+   stylesheet in docs/mockups/codebook-library-states.html. Palette swap via
+   data-color-theme; dark via light-dark() + color-scheme. Research note:
+   experiments/screens-lens/leader-styles.md.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-text-micro-lh:1.2; --bn-text-label-lh:1.45; --bn-text-body-lh:1.5;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-focus-shadow: 0 3px 12px rgba(30,20,10,0.12), 0 0 0 1px rgba(30,20,10,0.06);
+}
+:root[data-scheme="light"] { color-scheme: light; }
+:root[data-scheme="dark"]  { color-scheme: dark; }
+
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── Mockup chrome (not the product) ─────────────────────────────────── */
+.wrap { max-width:1200px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) 16px 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { color:var(--bn-colour-muted); max-width:72ch; margin:.4rem 0; }
+.masthead code, .commentary code { font-family:var(--bn-font-mono); font-size:.85em; }
+.key { display:flex; flex-wrap:wrap; gap:1rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:var(--bn-space-md) 0 0; }
+.key span { display:inline-flex; align-items:center; gap:.4rem; }
+.key i { width:22px; height:14px; border-radius:3px; display:inline-block; }
+.key .k-art { border:1px solid var(--bn-colour-border); background:var(--bn-colour-bg); }
+.key .k-com { background:repeating-linear-gradient(135deg, var(--bn-colour-quote-bg) 0 4px, transparent 4px 8px); border-left:3px solid var(--bn-colour-muted); }
+.controls { position:sticky; top:0; z-index:50; display:flex; flex-wrap:wrap; gap:.5rem 1.2rem; align-items:center;
+  padding:.6rem 0; margin-bottom:var(--bn-space-lg); background:var(--bn-colour-bg); border-bottom:1px solid var(--bn-colour-border); }
+.cgroup { display:flex; gap:.3rem; align-items:center; }
+.cgroup .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.2rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.22rem .65rem; border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn[aria-pressed="true"] { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.pbtn:focus-visible { outline:2px solid var(--bn-colour-accent); outline-offset:2px; }
+.hint { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.toc { display:flex; flex-wrap:wrap; gap:.35rem .9rem; font-size:var(--bn-text-label); margin:0 0 var(--bn-space-lg); }
+.toc a { color:var(--bn-colour-accent); text-decoration:none; }
+.toc a:hover { text-decoration:underline; }
+
+.bench { margin:2.6rem 0; scroll-margin-top:4rem; }
+.bench-head { display:flex; align-items:baseline; gap:.7rem; margin-bottom:.6rem; }
+.bench-head .letter { font-family:var(--bn-font-mono); font-size:var(--bn-text-label); color:var(--bn-colour-accent); font-weight:490; }
+.bench-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0; }
+.bench-head .rank { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); padding:.05rem .45rem; border-radius:var(--bn-radius-pill);
+  border:1px solid var(--bn-colour-accent); color:var(--bn-colour-accent); }
+.bench-head .rank.no { border-color:var(--bn-colour-border); color:var(--bn-colour-muted); }
+
+/* Artefact zone: a clean "screenshot" frame. Nothing inside it explains anything. */
+/* color re-resolved here so a frame forced to one scheme does not inherit the page's text colour */
+.frame { margin:0; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden; background:var(--bn-colour-bg); color:var(--bn-colour-text); }
+.chrome { display:flex; align-items:center; gap:.5rem; padding:.35rem .7rem; border-bottom:1px solid var(--bn-colour-border);
+  background:var(--bn-colour-quote-bg); font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.chrome .dots { display:inline-flex; gap:4px; }
+.chrome .dots i { width:8px; height:8px; border-radius:50%; background:var(--bn-colour-border-hover); }
+.viewport { overflow-x:auto; padding:var(--bn-space-lg) var(--bn-space-lg) var(--bn-space-md); }
+
+/* Commentary zone: hatched, labelled, ruled — deliberately not the product. */
+.commentary { margin:.7rem 0 0; padding:.7rem 1rem .8rem; border-left:3px solid var(--bn-colour-muted);
+  background:repeating-linear-gradient(135deg, var(--bn-colour-quote-bg) 0 6px, transparent 6px 12px);
+  font-size:var(--bn-text-label); line-height:1.55; }
+.commentary .clabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.1em; text-transform:uppercase; color:var(--bn-colour-muted); margin-bottom:.3rem; }
+.commentary ul { margin:.2rem 0; padding-left:1.1rem; }
+.commentary li { margin:.15rem 0; }
+.commentary table { border-collapse:collapse; width:100%; font-size:var(--bn-text-label); margin:.4rem 0; }
+.commentary th, .commentary td { text-align:left; vertical-align:top; padding:.35rem .5rem; border-bottom:1px solid var(--bn-colour-border); }
+.commentary th { font-weight:490; color:var(--bn-colour-muted); font-size:var(--bn-text-caption); }
+.commentary .tbl { overflow-x:auto; }
+.commentary ol { margin:.3rem 0; padding-left:1.3rem; }
+
+/* ── The board (bn-accurate: the Screens lens's card, badge, highlight, leaders) ─ */
+.board { position:relative; margin:0 auto; }
+.shot { position:absolute; overflow:hidden; border-radius:var(--bn-radius-md); outline:1px solid var(--bn-colour-border); }
+.page-wrap { position:absolute; left:0; top:0; transform-origin:0 0; }
+.hls { position:absolute; inset:0; pointer-events:none; }
+
+/* Every quote is the shipped quote card at the label size (screens.css), floating beside the shot. */
+.sc { position:absolute; cursor:pointer; outline:none; }
+.sc blockquote.quote-card { margin:0; background:var(--bn-colour-quote-bg); border-left:1px solid var(--bn-colour-border);
+  border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; padding:var(--bn-space-sm) 2rem var(--bn-space-sm) var(--bn-space-md);
+  box-shadow:0 4px 16px var(--bn-colour-shadow), 0 1px 4px var(--bn-colour-shadow);
+  transition:color var(--bn-transition-fast), box-shadow var(--bn-transition-fast); }
+.sc .quote-row { display:flex; gap:.4rem; align-items:baseline; }
+.sc .timecode { flex-shrink:0; color:var(--bn-colour-accent); font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); }
+.sc .quote-body { flex:1; min-width:0; font-size:var(--bn-text-label); line-height:var(--bn-text-label-lh); }
+.sc.sel { z-index:10; }
+.sc.sel blockquote.quote-card { background:var(--bn-colour-bg);
+  box-shadow:var(--bn-focus-shadow), 0 8px 24px var(--bn-colour-shadow), 0 0 0 1px light-dark(transparent, var(--bn-colour-accent)); }
+.sc:focus-visible blockquote.quote-card { outline:2px solid var(--bn-colour-accent); outline-offset:1px; }
+.board.focus .sc:not(.sel) .quote-body { color:var(--bn-colour-muted); }
+.screens-seq { position:absolute; z-index:2; top:0; left:var(--bn-space-lg); translate:0 -50%;
+  display:inline-flex; align-items:center; gap:3px; padding:0 2px 0 .3rem;
+  border:1px solid var(--bn-colour-border); border-radius:999px; background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text);
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); line-height:var(--bn-text-micro-lh); }
+.screens-seq-n { min-width:1.15em; padding:0 2px; border-radius:999px; text-align:center; font-variant-numeric:tabular-nums;
+  border:1px solid var(--bn-colour-accent); background:var(--bn-colour-bg); color:var(--bn-colour-text); }
+
+/* Target highlight (screens.css .screens-hl) */
+.hl { position:absolute; border-radius:var(--bn-radius-sm); border:1.5px solid var(--bn-colour-accent);
+  background:color-mix(in srgb, var(--bn-colour-accent) 6%, transparent);
+  transition:background var(--bn-transition-fast), opacity var(--bn-transition-fast), box-shadow var(--bn-transition-fast); }
+.hl.on { z-index:2; background:color-mix(in srgb, var(--bn-colour-accent) 15%, transparent); }
+.board.focus .hl:not(.on) { opacity:.25; }
+
+/* Leaders (screens.css svg.screens-leaders) */
+.lead { position:absolute; left:0; top:0; overflow:visible; pointer-events:none; z-index:5; }
+.lead path { fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.lead .core path { stroke:var(--bn-colour-accent); stroke-width:var(--core, 1px); }
+.lead .core path.on { stroke-width:var(--hot, var(--core, 1px)); }
+.lead .ends circle { fill:var(--bn-colour-accent); }
+.lead .marks path { stroke:var(--bn-colour-accent); stroke-width:1.25px; }
+.board.focus .lead g > :not(.on) { opacity:.25; }
+.tb { position:absolute; z-index:3; translate:0 -100%; margin-top:-3px; }
+.board.focus .tb:not(.on) { opacity:.25; }
+
+/* B · cased: a stroke in the BOARD's bg colour under the core — invisible over the gutter */
+.st-casing .lead .casing path { stroke:var(--bn-colour-bg); stroke-width:calc(var(--core, 1px) + 2px); }
+.st-casing .lead .casing path.on { stroke-width:calc(var(--hot, var(--core, 1px)) + 2px); }
+.st-casing .lead .ends circle { stroke:var(--bn-colour-bg); stroke-width:2px; paint-order:stroke; }
+.st-casing .lead .marks .casing-m { stroke:var(--bn-colour-bg); stroke-width:3.25px; }
+.st-casing .hl { box-shadow:0 0 0 1px var(--bn-colour-bg); }
+/* C · lifted: the leader on the cards' plane */
+.st-lift .lead .casing { filter:drop-shadow(0 1px 1.5px var(--bn-colour-shadow)) drop-shadow(0 0 2px var(--bn-colour-shadow)); }
+/* G · ink */
+.st-ink .lead .core path { stroke:var(--bn-colour-text); }
+.st-ink .lead .ends circle { fill:var(--bn-colour-text); }
+/* H · difference blend */
+.st-blend .lead { mix-blend-mode:difference; }
+.st-blend .lead .core path { stroke:#fff; }
+.st-blend .lead .ends circle { fill:#fff; }
+/* F · spotlight on selection: the area of disinterest, clipped to the shot */
+.st-spot.focus .hl.on { box-shadow:0 0 0 1px var(--bn-colour-bg), 0 0 0 100vmax color-mix(in srgb, var(--bn-colour-bg) 45%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hl, .sc blockquote.quote-card { transition:none; }
+}
+
+/* ── The synthetic screengrab: an invented shop page. Not themed — a screengrab is what it is. ── */
+.page { color-scheme:light; width:960px; height:760px; overflow:hidden; background:#fff; color:#222;
+  font-family:"Helvetica Neue", Arial, sans-serif; font-size:12px; line-height:1.35;
+  --pg-blue:#1d5fd1; --pg-link:#0b63ce; --pg-promo:#2f6fe4; --pg-promo-fg:#fff; --pg-bag:#3b7dd8; --pg-bag-d:#1c3f7a;
+  --pg-photo:#e9eef5; --pg-grey:#f3f4f6; --pg-yellow:#ffcc00; --pg-tile1:#3b7dd8; --pg-tile2:#21a37a; --pg-tile3:#8a9bb0; --pg-tile4:#e2632f; }
+.page.calm { --pg-blue:#2b2b2b; --pg-link:#444; --pg-promo:#f3f4f6; --pg-promo-fg:#333; --pg-bag:#bfc5cc; --pg-bag-d:#8d949c;
+  --pg-photo:#f6f6f6; --pg-yellow:#e5e5e5; --pg-tile1:#d6d9dd; --pg-tile2:#c9cdd1; --pg-tile3:#dfe2e5; --pg-tile4:#cfd3d7; }
+.page a { color:var(--pg-link); text-decoration:none; }
+.pg-promo { height:28px; display:flex; align-items:center; justify-content:center; background:var(--pg-promo); color:var(--pg-promo-fg); font-size:12px; }
+.pg-promo u { margin-left:6px; }
+.pg-head { height:58px; display:flex; align-items:center; gap:22px; padding:0 24px; border-bottom:1px solid #e3e3e3; }
+.pg-logo { font-weight:800; letter-spacing:.14em; font-size:19px; color:var(--pg-blue); }
+.pg-search { flex:1; height:34px; border-radius:17px; background:var(--pg-grey); color:#777; display:flex; align-items:center; padding:0 16px; font-size:13px; }
+.pg-icons { display:flex; gap:16px; }
+.pg-icons i { width:22px; height:22px; border-radius:50%; border:2px solid #333; position:relative; }
+.pg-icons i b { position:absolute; right:-9px; top:-7px; background:var(--pg-yellow); color:#111; font-size:9px; border-radius:8px; padding:0 4px; font-style:normal; }
+.pg-body { display:flex; }
+.pg-nav { width:178px; padding:16px 0 0 24px; display:flex; flex-direction:column; gap:7px; font-size:12px; }
+.pg-nav h6 { margin:0 0 4px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#555; }
+.pg-nav a { color:#222; align-self:flex-start; }
+.pg-nav a.cur { color:var(--pg-link); font-weight:700; }
+.pg-main { flex:1; padding:14px 24px 0 6px; }
+.pg-crumb { font-size:11px; color:#666; margin-bottom:10px; }
+.pg-grid { display:flex; gap:28px; }
+.pg-media { width:352px; }
+.pg-photo { position:relative; height:300px; background:var(--pg-photo); border-radius:4px; overflow:hidden; }
+.pg-photo .bag { position:absolute; left:80px; right:80px; top:92px; bottom:40px; background:linear-gradient(160deg, var(--pg-bag), var(--pg-bag-d));
+  clip-path:polygon(6% 0, 94% 0, 100% 100%, 0 100%); }
+.pg-photo .hd { position:absolute; top:44px; width:46px; height:70px; border:7px solid var(--pg-bag-d); border-bottom:0; border-radius:26px 26px 0 0; }
+.pg-photo .hd.a { left:116px; } .pg-photo .hd.b { right:116px; }
+.pg-photo .tag { position:absolute; left:12px; top:12px; background:var(--pg-yellow); color:#111; font-weight:700; font-size:11px; padding:2px 7px; border-radius:2px; }
+.pg-photo .kg { position:absolute; left:150px; top:196px; background:rgba(10,20,40,.62); color:#fff; font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:11px; }
+.pg-photo .shadow { position:absolute; left:70px; right:70px; bottom:28px; height:16px; border-radius:50%; background:rgba(0,0,0,.12); filter:blur(4px); }
+.pg-thumbs { display:flex; gap:8px; margin:9px 0 10px; }
+.pg-thumbs i { width:56px; height:44px; border-radius:3px; background:var(--pg-photo); border:1px solid #ddd; position:relative; overflow:hidden; }
+.pg-thumbs i::after { content:""; position:absolute; left:14px; right:14px; top:12px; bottom:6px; background:var(--pg-bag); clip-path:polygon(8% 0,92% 0,100% 100%,0 100%); }
+.pg-thumbs i.on { border:2px solid #111; }
+.pg-colour { display:flex; align-items:center; gap:12px; font-size:12px; margin-bottom:8px; }
+.pg-colour .sw { display:flex; gap:6px; }
+.pg-colour .sw i { width:16px; height:16px; border-radius:50%; border:1px solid #bbb; }
+.pg-rating { font-size:12px; color:#222; margin-bottom:8px; }
+.pg-rating .st { color:#111; letter-spacing:1px; }
+.pg-rating a { margin-left:4px; }
+.pg-fine { font-size:10.5px; color:#555; margin:0; }
+.pg-info { flex:1; }
+.pg-info h1 { font-size:22px; margin:0 0 2px; font-weight:700; }
+.pg-sub { color:#555; margin:0 0 10px; font-size:12px; }
+.pg-desc { color:#333; margin:0 0 12px; font-size:11.5px; }
+.pg-price { display:flex; align-items:baseline; gap:12px; margin-bottom:12px; }
+.pg-price b { font-size:28px; }
+.pg-member { background:var(--pg-yellow); color:#111; padding:2px 8px; font-size:12px; font-weight:700; border-radius:2px; }
+.pg-buy { display:flex; gap:10px; align-items:center; margin-bottom:14px; }
+.pg-qty { border:1px solid #bbb; border-radius:22px; height:44px; display:flex; align-items:center; padding:0 14px; gap:14px; font-size:14px; }
+.pg-add { flex:1; height:44px; border-radius:22px; background:var(--pg-blue); color:#fff; font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; }
+.pg-heart { width:44px; height:44px; border-radius:50%; border:1px solid #bbb; display:flex; align-items:center; justify-content:center; font-size:18px; }
+.pg-deliv { background:var(--pg-grey); border-radius:4px; padding:10px 12px; display:flex; flex-direction:column; gap:5px; font-size:12px; margin-bottom:12px; }
+.pg-deliv .stock { color:#0a7d3a; }
+.pg-acc > div { display:flex; justify-content:space-between; padding:9px 0; border-top:1px solid #ddd; font-weight:700; font-size:12.5px; }
+.pg-acc > div:last-child { border-bottom:1px solid #ddd; }
+.pg-more { margin-top:14px; }
+.pg-more h5 { margin:0 0 8px; font-size:14px; }
+.pg-tiles { display:flex; gap:12px; }
+.pg-tiles > div { width:166px; font-size:11px; }
+.pg-tiles i { display:block; height:70px; border-radius:3px; margin-bottom:5px; }
+.pg-tiles b { display:block; font-size:11.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div class="eyebrow">Bristlenose mockups · Screens lens</div>
+  <h1>Leader styles over a busy screengrab</h1>
+  <p>The same synthetic board drawn eight ways. The shop page, quotes and participants are invented. Everything else uses the shipped tokens, the shipped quote card at the label size, the sequence badge and the highlight box. Card placement follows <code>docs/design-screens.md</code> S5: cards sit beside the screengrab in line order, and every card is joined by a leader to its line.</p>
+  <p>Research and ranking: <code>experiments/screens-lens/leader-styles.md</code>. Click any card to select it in every frame; press Esc to clear.</p>
+  <div class="key"><span><i class="k-art"></i>Artefact: what would ship</span><span><i class="k-com"></i>Commentary: why, not the product</span></div>
+</header>
+
+<div class="controls" role="toolbar" aria-label="Mockup controls">
+  <div class="cgroup" data-ctl="palette"><span class="lbl">Palette</span>
+    <button class="pbtn" data-v="default" aria-pressed="true">Default</button><button class="pbtn" data-v="edo" aria-pressed="false">Edo</button></div>
+  <div class="cgroup" data-ctl="scheme"><span class="lbl">Theme</span>
+    <button class="pbtn" data-v="system" aria-pressed="true">System</button><button class="pbtn" data-v="light" aria-pressed="false">Light</button><button class="pbtn" data-v="dark" aria-pressed="false">Dark</button></div>
+  <div class="cgroup" data-ctl="page"><span class="lbl">Screengrab</span>
+    <button class="pbtn" data-v="busy" aria-pressed="true">Busy</button><button class="pbtn" data-v="calm" aria-pressed="false">Calm</button></div>
+  <div class="cgroup" data-ctl="state"><span class="lbl">State</span>
+    <button class="pbtn" data-v="rest" aria-pressed="true">At rest</button><button class="pbtn" data-v="sel" aria-pressed="false">One selected</button></div>
+</div>
+
+<nav class="toc" aria-label="Candidates">
+  <a href="#s-A">A · Today</a><a href="#s-B">B · Cased</a><a href="#s-C">C · Cased + lifted</a><a href="#s-D">D · Gutter-run</a>
+  <a href="#s-E">E · Edge port</a><a href="#s-F">F · Spotlight on selection</a><a href="#s-G">G · Ink</a><a href="#s-H">H · Difference blend</a>
+  <a href="#s-rec">Light and dark, recommended</a><a href="#s-table">Comparison</a>
+</nav>
+
+<section class="bench" id="s-A">
+  <div class="bench-head"><span class="letter">A</span><h2>Today</h2><span class="rank no">baseline</span></div>
+  <figure class="frame"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>A · today: 1px accent, dot, 1.5px box</div><div class="viewport"><div class="board" data-style="A"></div></div></figure>
+  <aside class="commentary"><div class="clabel">Commentary</div><ul>
+    <li>Over the gutter it is the Discussion wire, and it works. Over the page, the 1px accent is <b>1.0–1.6:1</b> against the blue button, the link blue and the bag photo, so it reads as part of the page or disappears.</li>
+    <li>The <b>target box goes first</b>: its 1.5px accent border around <i>Add to bag</i> is 1.4:1 against the button. The leader then points at nothing visible.</li>
+    <li>Switch to Edo + Dark: the accent <code>#4d9fe0</code> is 2.9:1 even on the white page. In dark mode the screengrab stays light, so the line meets a light page.</li>
+  </ul></aside>
+</section>
+
+<section class="bench" id="s-B">
+  <div class="bench-head"><span class="letter">B</span><h2>Cased</h2><span class="rank">rank 1</span></div>
+  <figure class="frame"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>B · cased: 1px accent over 3px board-bg casing; cased dot and box</div><div class="viewport"><div class="board" data-style="B"></div></div></figure>
+  <aside class="commentary"><div class="clabel">Commentary</div><ul>
+    <li>A stroke in <code>--bn-colour-bg</code> under the core. <b>Over the gutter it matches the board and cannot be seen</b>, so off the page this is exactly A and exactly the Discussion wire. Over the page it gives the core a guaranteed neighbour: 4.0:1 default light, 5.2:1 default dark, 6.7:1 Edo light, 6.2:1 Edo dark.</li>
+    <li>The same 1px casing goes round the target box (<code>box-shadow</code>) and the end dot (<code>paint-order: stroke</code>), so the target survives the blue button too.</li>
+    <li>Precedents: cartographic casing (Esri), Richards's "thin white line beside" the leader in technical illustration, and Skitch's white outline, here without Skitch's weight.</li>
+    <li>The selected leader goes to 1.5px, as the Discussion's hot wire does.</li>
+    <li>Build: <code>leaderPath</code> unchanged; one extra path per leader; about five CSS lines.</li>
+  </ul></aside>
+</section>
+
+<section class="bench" id="s-C">
+  <div class="bench-head"><span class="letter">C</span><h2>Cased + lifted</h2><span class="rank no">variant of B</span></div>
+  <figure class="frame"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>C · cased, 1.25px, soft shadow: the leader on the cards' plane</div><div class="viewport"><div class="board" data-style="C"></div></div></figure>
+  <aside class="commentary"><div class="clabel">Commentary</div><ul>
+    <li>B plus the cards' own shadow on the leader. It says the leader belongs to the floating layer, not the page: in S5 terms, "only what floats has a shadow".</li>
+    <li>It reads more clearly over the photo, and heavier everywhere, including over clear space, where the Discussion look is lost. Discussion went from 1.3/2px to 1px because heavier strokes "read chunky at real size".</li>
+    <li>Worth an A/B against B on a real session; not the first move.</li>
+  </ul></aside>
+</section>
+
+<section class="bench" id="s-D">
+  <div class="bench-head"><span class="letter">D</span><h2>Gutter-run (cased)</h2><span class="rank">rank 3</span></div>
+  <figure class="frame"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>D · vertical travel in the gutter, one short slant into the page</div><div class="viewport"><div class="board" data-style="D"></div></div></figure>
+  <aside class="commentary"><div class="clabel">Commentary</div><ul>
+    <li>Where a card sits far from its line, the long travel happens in clear space and only a short slant crosses the page. That answers the owner's "long leaders run across the screenshot".</li>
+    <li>The final segment stays slanted on purpose: a web page is full of horizontal and vertical rules, and an orthogonal segment over it reads as an underline or a divider (the "floorplan" finding in Bekos et al.).</li>
+    <li>Cost: several leaders running down one 32px gutter need a track each, or they run alongside one another. Close parallel leaders are the opo failure mode, measured worst by Barth et al. Measure how many leaders are long on real sessions before building it.</li>
+  </ul></aside>
+</section>
+
+<section class="bench" id="s-E">
+  <div class="bench-head"><span class="letter">E</span><h2>Edge port + badge on the target</h2><span class="rank no">not as default</span></div>
+  <figure class="frame"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>E · at rest the leader stops at the screengrab's edge; the line continues on selection</div><div class="viewport"><div class="board" data-style="E"></div></div></figure>
+  <aside class="commentary"><div class="clabel">Commentary</div><ul>
+    <li>At rest no line crosses the page: the leader stops at the edge with a cased chevron, level with its line, and the target carries the card's own p1 ① badge. Selecting the card draws the rest of the line.</li>
+    <li>This gives the cleanest screengrab, but the join becomes a lookup: scan along the row to the badge. Figma's comment pins show that marks needing a second step get read less. It also breaks S5's "a linked quote has a visible leader".</li>
+    <li>The badges are themselves marks on the page. Two quotes about one line need two badges, and here they sit over the price above the button. So the screengrab is cleaner only in lines, not in marks.</li>
+    <li>Keep it as the mode for a dense screen (12+ links), not the default. Rows already cover the narrow case.</li>
+  </ul></aside>
+</section>
+
+<section class="bench" id="s-F">
+  <div class="bench-head"><span class="letter">F</span><h2>Spotlight on selection (with B)</h2><span class="rank">rank 2</span></div>
+  <figure class="frame"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>F · B at rest; selected: 1.5px leader and a board-bg scrim over the rest of the screengrab</div><div class="viewport"><div class="board" data-style="F"></div></div></figure>
+  <aside class="commentary"><div class="clabel">Commentary</div><ul>
+    <li>Set State to <i>One selected</i>, or click a card. The screengrab outside the lit line takes a 45% scrim of the board's background. This is the cartographer's <i>area of disinterest</i>: quieten the context rather than shout the subject.</li>
+    <li>Only while a card is selected (a press, focus, J/K), never at rest and never on hover. The artefact is unchanged until the researcher asks about one line, which keeps the owner's rule about respecting the screengrab.</li>
+    <li>Build: one <code>box-shadow</code> on <code>.screens-hl.on</code> under <code>.focus</code>, clipped to the slide. <code>box-shadow</code> is already allowed by the selected-state gate.</li>
+  </ul></aside>
+</section>
+
+<section class="bench" id="s-G">
+  <div class="bench-head"><span class="letter">G</span><h2>Ink (cased)</h2><span class="rank no">second best of the colours</span></div>
+  <figure class="frame"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>G · Richards: a dark line with a light line beside it; the box stays accent</div><div class="viewport"><div class="board" data-style="G"></div></div></figure>
+  <aside class="commentary"><div class="clabel">Commentary</div><ul>
+    <li>A neutral line separates itself from a blue page by hue <i>and</i> luminance (17:1 against its casing). It is the drafting tradition exactly.</li>
+    <li>It reads heavier than the accent, and it drops the meaning BN's accent carries (linked, interactive). Without the casing it would fail on dark regions (1.7:1 on the bag's shadow side).</li>
+  </ul></aside>
+</section>
+
+<section class="bench" id="s-H">
+  <div class="bench-head"><span class="letter">H</span><h2>Difference blend</h2><span class="rank no">rejected</span></div>
+  <figure class="frame"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>H · white line, mix-blend-mode: difference</div><div class="viewport"><div class="board" data-style="H"></div></div></figure>
+  <aside class="commentary"><div class="clabel">Commentary</div><ul>
+    <li>"Adapts to any background" until the background is a mid-tone: over the grey tile or the photo's shadow side the line becomes a mid-tone too, and over blue it turns orange. Its colour can't be themed, and its 1.4.11 contrast can't be stated.</li>
+    <li>Shown so the failure is visible, not as a candidate.</li>
+  </ul></aside>
+</section>
+
+<section class="bench" id="s-rec">
+  <div class="bench-head"><span class="letter">B+F</span><h2>Recommended, light and dark side by side</h2><span class="rank">1 + 2</span></div>
+  <figure class="frame" style="color-scheme:light"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>B + F · light</div><div class="viewport"><div class="board" data-style="F"></div></div></figure>
+  <figure class="frame" style="color-scheme:dark;margin-top:.8rem"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span>B + F · dark</div><div class="viewport"><div class="board" data-style="F"></div></div></figure>
+  <aside class="commentary"><div class="clabel">Commentary</div><ul>
+    <li>In dark mode the casing takes the <b>board's</b> background, near-black, over a light screengrab, so the leader reads as a dark-edged blue line. A white casing in dark mode would glow and belong to the page, not the board.</li>
+    <li>The scrim in dark mode greys the page rather than whitening it, which is the right direction for a dark board.</li>
+  </ul></aside>
+</section>
+
+<section class="bench" id="s-table">
+  <div class="bench-head"><span class="letter">≡</span><h2>Comparison</h2></div>
+  <aside class="commentary"><div class="clabel">Commentary</div>
+    <div class="tbl"><table>
+      <thead><tr><th></th><th>Busy-image legibility</th><th>Clutter on the screengrab</th><th>Accessibility (1.4.11, dark, motion)</th><th>Family with Discussion</th><th>Build cost</th></tr></thead>
+      <tbody>
+        <tr><td>A · Today</td><td>○ 1.0–1.6:1 on blue</td><td>●</td><td>○ fails on blue; Edo dark fails on white</td><td>●</td><td>—</td></tr>
+        <tr><td><b>B · Cased</b></td><td>●</td><td>● casing invisible off the page</td><td>● 4.0–6.7:1 everywhere</td><td>● identical over clear space</td><td><b>S</b> CSS + one path each</td></tr>
+        <tr><td>C · Cased + lifted</td><td>●</td><td>◐ heavier</td><td>●</td><td>◐</td><td>S</td></tr>
+        <tr><td>D · Gutter-run</td><td>●</td><td>● least ink on the page</td><td>●</td><td>◐</td><td>M <code>leaderPath</code> + tracks + tests</td></tr>
+        <tr><td>E · Edge port</td><td>●</td><td>● cleanest</td><td>◐ join by badge at rest</td><td>○</td><td>M</td></tr>
+        <tr><td><b>F · Spotlight (on B)</b></td><td>● when selected</td><td>● at rest</td><td>● snaps under reduced motion</td><td>● like the hot wire</td><td><b>S</b> CSS only</td></tr>
+        <tr><td>G · Ink</td><td>●</td><td>◐</td><td>●</td><td>○ loses the accent</td><td>S</td></tr>
+        <tr><td>H · Difference</td><td>◐ fails on midtones</td><td>●</td><td>○ unprovable</td><td>○</td><td>S</td></tr>
+      </tbody>
+    </table></div>
+    <ol>
+      <li><b>B, cased leaders, dots and boxes.</b> Fixes the failure named. It is the only option that holds 3:1 on any page in every palette, and it is invisible where the Discussion look already works.</li>
+      <li><b>F, the spotlight on selection</b>, on top of B. Answers "which line is mine" on a crowded screen without changing the board at rest.</li>
+      <li><b>D, gutter-run</b> for long leaders only, after measuring how many there are.</li>
+    </ol>
+  </aside>
+</section>
+
+</div>
+
+<template id="page-tpl">
+<div class="page">
+  <div class="pg-promo">Members save 10% on storage this week ·<u>Join free</u></div>
+  <div class="pg-head"><span class="pg-logo">LINDQVIST</span><span class="pg-search">What are you looking for?</span><span class="pg-icons"><i></i><i></i><i><b>2</b></i></span></div>
+  <div class="pg-body">
+    <nav class="pg-nav"><h6>Products</h6><a>Living room</a><a>Bedroom</a><a>Kitchen</a><a class="cur" data-t="t-nav">Storage &amp; organisation</a><a>Textiles</a><a>Lighting</a><a>Outdoor</a><a>Bags &amp; travel</a><a>Kids</a><a>Workspace</a><a>Bathroom</a><a>Rugs</a><a>Plants &amp; pots</a><a>Gift cards</a><a>Sale</a></nav>
+    <main class="pg-main">
+      <div class="pg-crumb"><a>Home</a> › <a>Storage</a> › <a>Bags &amp; boxes</a> › Tote bag</div>
+      <div class="pg-grid">
+        <div class="pg-media">
+          <div class="pg-photo"><span class="shadow"></span><span class="hd a"></span><span class="hd b"></span><span class="bag"></span><span class="tag">New</span><span class="kg" data-t="t-kg">Holds up to 25 kg</span></div>
+          <div class="pg-thumbs"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+          <div class="pg-colour"><span data-t="t-col">Colour: Fjord blue</span><span class="sw"><i style="background:var(--pg-bag)"></i><i style="background:#1e1e1e"></i><i style="background:#c9a35c"></i><i style="background:#d64545"></i><i style="background:#e8e2d6"></i></span></div>
+          <div class="pg-rating"><span data-t="t-rev"><span class="st">★★★★☆</span> 4.2 <a>(318 reviews)</a></span></div>
+          <p class="pg-fine">Polypropylene with at least 50% recycled content. Reinforced handles hold up to 25 kg. Folds flat to store. Wipe clean with a damp cloth. Designer: R. Ekholm. Made in Lithuania. Packaging: recyclable paper.</p>
+        </div>
+        <div class="pg-info">
+          <h1>Tote bag, large</h1>
+          <p class="pg-sub">71 l, Fjord blue · Art. no. 204.871.33</p>
+          <p class="pg-desc">A roomy, hard-wearing bag for shopping, laundry or the weekend. The wide base stands up on its own while you fill it, and the long handles go over your shoulder. <a>Read more</a></p>
+          <div class="pg-price"><b>£14.99</b><span class="pg-member" data-t="t-price">Member price £12.99</span></div>
+          <div class="pg-buy"><span class="pg-qty">−<span>1</span>+</span><span class="pg-add" data-t="t-add">Add to bag</span><span class="pg-heart">♡</span></div>
+          <div class="pg-deliv"><div><span data-t="t-del">Delivery from £4.95 · 3–5 working days</span></div><div><a>Click &amp; collect: free</a> · ready in 2 hours</div><div class="stock">● In stock at Croydon · 42 left</div></div>
+          <div class="pg-acc"><div>Product details <span>+</span></div><div>Measurements <span>+</span></div><div>Reviews (318) <span>+</span></div><div>Delivery and returns <span>+</span></div></div>
+        </div>
+      </div>
+      <div class="pg-more"><h5>You might also like</h5><div class="pg-tiles">
+        <div><i style="background:var(--pg-tile1)"></i><b>Storage box, 30 l</b>£6.00</div>
+        <div><i style="background:var(--pg-tile2)"></i><b>Shopping trolley bag</b>£19.99</div>
+        <div><i style="background:var(--pg-tile3)"></i><b>Laundry basket</b>£9.50</div>
+        <div><i style="background:var(--pg-tile4)"></i><b>Cool bag, 12 l</b>£8.00</div>
+      </div></div>
+    </main>
+  </div>
+</div>
+</template>
+
+<script>
+(() => {
+  // Geometry from docs/design-screens.md S5: card column 270px, gutter --bn-space-xl (32px).
+  const BW = 1120, COL = 270, GUT = 32, PAD = 16;
+  const SHOT_L = COL + GUT, SHOT_W = BW - 2 * (COL + GUT), SHOT_R = SHOT_L + SHOT_W;
+  const PAGE_W = 960, PAGE_H = 760, S = SHOT_W / PAGE_W, SHOT_H = Math.round(PAGE_H * S);
+  const SHOULDER = 12, INSET = 12;
+
+  // Invented quotes; p1–p3 are invented participants. Sequence numbers are per person, in time order.
+  const QUOTES = [
+    { id: "q1", side: "L", p: "p1", n: 1, tc: "00:41", t: "t-nav", text: "I went to Storage first, that’s where I’d expect bags to be. Not Kitchen." },
+    { id: "q8", side: "L", p: "p2", n: 1, tc: "00:52", t: "t-kg", text: "It says it holds 25 kilos. I’d never put that much in a bag I carry on my shoulder." },
+    { id: "q3", side: "L", p: "p2", n: 2, tc: "01:05", t: "t-col", text: "Fjord blue, is that the one in the photo? The swatches are tiny." },
+    { id: "q2", side: "L", p: "p3", n: 1, tc: "02:10", t: "t-rev", text: "Three hundred reviews is reassuring. I wouldn’t read them, I just look at the stars." },
+    { id: "q4", side: "R", p: "p1", n: 2, tc: "01:12", t: "t-price", text: "Is the member price the real price, or do I have to sign up for something first?" },
+    { id: "q5", side: "R", p: "p2", n: 3, tc: "01:48", t: "t-add", text: "I kept looking for the add button. It’s the same blue as everything else on the page." },
+    { id: "q6", side: "R", p: "p3", n: 2, tc: "02:55", t: "t-add", text: "Oh, there it is. I thought the banner at the top was the button." },
+    { id: "q7", side: "R", p: "p1", n: 3, tc: "03:20", t: "t-del", text: "Four ninety-five delivery on a bag that costs less than fifteen pounds? No." },
+  ];
+
+  const STYLES = {
+    A: { geo: "drafting" },
+    B: { geo: "drafting", cls: ["st-casing"], hot: "1.5px" },
+    C: { geo: "drafting", cls: ["st-casing", "st-lift"], core: "1.25px", hot: "1.75px" },
+    D: { geo: "gutter", cls: ["st-casing"], hot: "1.5px" },
+    E: { geo: "port", cls: ["st-casing"], hot: "1.5px", badges: true },
+    F: { geo: "drafting", cls: ["st-casing", "st-spot"], hot: "1.5px" },
+    G: { geo: "drafting", cls: ["st-casing", "st-ink"], hot: "1.5px" },
+    H: { geo: "drafting", cls: ["st-blend"] },
+  };
+
+  const state = { sel: null, page: "busy" };
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const NS = "http://www.w3.org/2000/svg";
+  const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+
+  // Today's leader: a port of layout.ts leaderPath (side columns only).
+  function drafting(card, el, side) {
+    const fromRight = side === "L";
+    const nx = fromRight ? card.left + card.width : card.left;
+    const hx = fromRight ? el.left - 3 : el.left + el.width + 3;
+    const hy = el.top + el.height / 2;
+    if (hy >= card.top + INSET && hy <= card.top + card.height - INSET) return { d: `M${nx},${hy} L${hx},${hy}`, end: [hx, hy] };
+    const ny = card.top + 16, sx = nx + (fromRight ? SHOULDER : -SHOULDER);
+    return { d: `M${nx},${ny} L${sx},${ny} L${hx},${hy}`, end: [hx, hy] };
+  }
+
+  // D: shoulder, vertical travel on its own gutter track, then one short slant into the page.
+  function gutterRun(card, el, side, track) {
+    const dir = side === "L" ? 1 : -1;
+    const nx = dir > 0 ? card.left + card.width : card.left;
+    const edge = dir > 0 ? SHOT_L : SHOT_R;
+    const hx = dir > 0 ? el.left - 3 : el.left + el.width + 3;
+    const hy = el.top + el.height / 2;
+    const sy = clamp(hy, card.top + INSET, card.top + card.height - INSET);
+    const dy = hy - sy;
+    if (Math.abs(dy) < 28) return drafting(card, el, side);
+    const tx = edge - dir * (7 + track * 5);
+    const run = Math.abs(hx - tx);
+    const entry = Math.sign(dy) * Math.min(Math.abs(dy), Math.max(12, run * 0.7));
+    const ey = hy - entry;
+    return { d: `M${nx},${sy} L${tx},${sy} L${tx},${ey} L${hx},${hy}`, end: [hx, hy] };
+  }
+
+  // E: a Discussion-style wire across the gutter to the edge, level with the line; inward only when lit.
+  function port(card, el, side, lit) {
+    const dir = side === "L" ? 1 : -1;
+    const nx = dir > 0 ? card.left + card.width : card.left;
+    const edge = dir > 0 ? SHOT_L : SHOT_R;
+    const hx = dir > 0 ? el.left - 3 : el.left + el.width + 3;
+    const hy = el.top + el.height / 2;
+    const sy = clamp(hy, card.top + INSET, card.top + card.height - INSET);
+    const head = sy === hy ? `M${nx},${hy} L${edge},${hy}` : `M${nx},${sy} L${nx + dir * 8},${sy} L${edge - dir * 6},${hy} L${edge},${hy}`;
+    return { d: lit ? `${head} L${hx},${hy}` : head, end: [hx, hy], port: [edge, hy], dir };
+  }
+
+  function build(board) {
+    board.style.width = BW + "px";
+    board.innerHTML = "";
+    const shot = document.createElement("div");
+    shot.className = "shot";
+    Object.assign(shot.style, { left: SHOT_L + "px", top: PAD + "px", width: SHOT_W + "px", height: SHOT_H + "px" });
+    const wrap = document.createElement("div");
+    wrap.className = "page-wrap";
+    wrap.style.transform = `scale(${S})`;
+    wrap.append(document.getElementById("page-tpl").content.cloneNode(true));
+    const hls = document.createElement("div");
+    hls.className = "hls";
+    shot.append(wrap, hls);
+    board.append(shot);
+
+    const cards = {};
+    for (const q of QUOTES) {
+      const c = document.createElement("div");
+      c.className = "sc";
+      c.dataset.id = q.id;
+      c.tabIndex = 0;
+      c.setAttribute("role", "button");
+      c.setAttribute("aria-pressed", "false");
+      c.style.width = COL + "px";
+      c.style.left = (q.side === "L" ? 0 : BW - COL) + "px";
+      c.innerHTML = `<span class="screens-seq" aria-hidden="true">${q.p}<span class="screens-seq-n">${q.n}</span></span>` +
+        `<blockquote class="quote-card"><div class="quote-row"><span class="timecode">[${q.tc}]</span><span class="quote-body">“${q.text}”</span></div></blockquote>`;
+      c.addEventListener("click", () => select(state.sel === q.id ? null : q.id));
+      c.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(state.sel === q.id ? null : q.id); } });
+      board.append(c);
+      cards[q.id] = c;
+    }
+    const svg = svgEl("svg", { class: "lead", width: BW, "aria-hidden": "true" });
+    for (const g of ["casing", "core", "ends", "marks"]) svg.append(svgEl("g", { class: g }));
+    board.append(svg);
+    board._parts = { shot, hls, svg, cards, page: wrap.querySelector(".page") };
+  }
+
+  function measure(board) {
+    const { cards, page, svg } = board._parts;
+    const bb = board.getBoundingClientRect();
+    const targets = {};
+    page.querySelectorAll("[data-t]").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      targets[el.dataset.t] = { left: r.left - bb.left - 2, top: r.top - bb.top - 1.5, width: r.width + 4, height: r.height + 3 };
+    });
+    // Place each side's cards in their lines' order, each as near its line as the stack allows.
+    let bottom = PAD + SHOT_H;
+    for (const side of ["L", "R"]) {
+      const qs = QUOTES.filter((q) => q.side === side)
+        .sort((a, b) => (targets[a.t].top - targets[b.t].top) || a.tc.localeCompare(b.tc));
+      let prev = PAD - 10;
+      const tops = [];
+      for (const q of qs) {
+        const h = cards[q.id].offsetHeight, t = targets[q.t];
+        const want = t.top + t.height / 2 - 22;
+        const top = Math.max(want, prev + 10, PAD);
+        tops.push(top);
+        prev = top + h;
+      }
+      qs.forEach((q, i) => { cards[q.id].style.top = tops[i] + "px"; });
+      bottom = Math.max(bottom, prev);
+    }
+    board.style.height = bottom + PAD + "px";
+    svg.setAttribute("height", bottom + PAD);
+    board._targets = targets;
+  }
+
+  function rect(board, id) {
+    const c = board._parts.cards[id];
+    return { left: c.offsetLeft, top: c.offsetTop, width: c.offsetWidth, height: c.offsetHeight };
+  }
+
+  function render(board) {
+    const style = STYLES[board.dataset.style];
+    const { hls, svg, cards } = board._parts;
+    const T = board._targets;
+    board.className = ["board", ...(style.cls || []), state.sel ? "focus" : ""].filter(Boolean).join(" ");
+    board.style.setProperty("--core", style.core || "1px");
+    if (style.hot) board.style.setProperty("--hot", style.hot);
+    const [gc, gk, ge, gm] = svg.querySelectorAll("g");
+    gc.replaceChildren(); gk.replaceChildren(); ge.replaceChildren(); gm.replaceChildren();
+    hls.replaceChildren();
+    const selQ = QUOTES.find((q) => q.id === state.sel);
+
+    for (const t of new Set(QUOTES.map((q) => q.t))) {
+      const r = T[t], d = document.createElement("div");
+      d.className = "hl" + (selQ && selQ.t === t ? " on" : "");
+      Object.assign(d.style, { left: r.left - SHOT_L + "px", top: r.top - PAD + "px", width: r.width + "px", height: r.height + "px" });
+      hls.append(d);
+    }
+
+    // Gutter tracks for D: per side and direction, nested so no shoulder crosses another's run.
+    const track = {};
+    if (style.geo === "gutter") {
+      for (const side of ["L", "R"]) {
+        const qs = QUOTES.filter((q) => q.side === side).map((q) => ({ q, c: rect(board, q.id), t: T[q.t] }));
+        const down = qs.filter((x) => x.t.top + x.t.height / 2 > x.c.top + x.c.height - INSET).sort((a, b) => a.c.top - b.c.top);
+        const up = qs.filter((x) => x.t.top + x.t.height / 2 < x.c.top + INSET).sort((a, b) => b.c.top - a.c.top);
+        down.forEach((x, i) => { track[x.q.id] = i; });
+        up.forEach((x, i) => { track[x.q.id] = i; });
+      }
+    }
+
+    const ends = new Map();
+    const badgeCount = {};
+    for (const q of QUOTES) {
+      const on = state.sel === q.id;
+      const c = rect(board, q.id), t = T[q.t];
+      const L = style.geo === "gutter" ? gutterRun(c, t, q.side, track[q.id] || 0)
+        : style.geo === "port" ? port(c, t, q.side, on)
+        : drafting(c, t, q.side);
+      const cls = on ? "on" : "";
+      if (board.classList.contains("st-casing")) gc.append(svgEl("path", { d: L.d, class: cls }));
+      gk.append(svgEl("path", { d: L.d, class: cls }));
+      if (style.geo === "port") {
+        if (!on) {
+          const [x, y] = L.port, k = L.dir;
+          const m = `M${x - k * 1},${y - 3.5} L${x + k * 3},${y} L${x - k * 1},${y + 3.5}`;
+          gm.append(svgEl("path", { d: m, class: "casing-m" }), svgEl("path", { d: m }));
+        }
+        const n = (badgeCount[q.t] = (badgeCount[q.t] || 0) + 1);
+        const b = document.createElement("span");
+        b.className = "screens-seq tb" + (on ? " on" : "");
+        b.style.position = "absolute";
+        b.style.left = t.left - SHOT_L + (n - 1) * 34 + "px";
+        b.style.top = t.top - PAD + "px";
+        b.style.translate = "0 -100%";
+        b.innerHTML = `${q.p}<span class="screens-seq-n">${q.n}</span>`;
+        hls.append(b);
+      } else {
+        const k = L.end.join(","), e = ends.get(k);
+        ends.set(k, { end: L.end, on: (e && e.on) || on });
+      }
+    }
+    for (const e of ends.values()) ge.append(svgEl("circle", { cx: e.end[0], cy: e.end[1], r: 2.5, class: e.on ? "on" : "" }));
+
+    for (const q of QUOTES) {
+      const c = cards[q.id], on = state.sel === q.id;
+      c.classList.toggle("sel", on);
+      c.setAttribute("aria-pressed", String(on));
+    }
+  }
+
+  const boards = [...document.querySelectorAll(".board")];
+  function select(id) {
+    state.sel = id;
+    setPressed("state", id ? "sel" : "rest");
+    boards.forEach(render);
+  }
+  function setPressed(ctl, v) {
+    document.querySelectorAll(`[data-ctl="${ctl}"] .pbtn`).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v)));
+  }
+  function setPage(v) {
+    state.page = v;
+    document.querySelectorAll(".page").forEach((p) => p.classList.toggle("calm", v === "calm"));
+  }
+
+  document.querySelectorAll(".controls .cgroup").forEach((g) => {
+    g.addEventListener("click", (e) => {
+      const b = e.target.closest(".pbtn"); if (!b) return;
+      const ctl = g.dataset.ctl, v = b.dataset.v;
+      setPressed(ctl, v);
+      if (ctl === "palette") document.documentElement.dataset.colorTheme = v;
+      if (ctl === "scheme") { if (v === "system") delete document.documentElement.dataset.scheme; else document.documentElement.dataset.scheme = v; }
+      if (ctl === "page") setPage(v);
+      if (ctl === "state") select(v === "sel" ? (state.sel || "q5") : null);
+    });
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.sel) select(null); });
+
+  boards.forEach(build);
+  requestAnimationFrame(() => { boards.forEach(measure); boards.forEach(render); });
+})();
+</script>
+</body>
+</html>

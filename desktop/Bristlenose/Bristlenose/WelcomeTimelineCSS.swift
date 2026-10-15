@@ -404,7 +404,7 @@ enum WelcomeTimelineCSS {
     [data-theme="dark"]:root  { color-scheme: dark; }
 }
 
-/* ════ bristlenose/theme/tokens-typography.css — lines 1–77 ════ */
+/* ════ bristlenose/theme/tokens-typography.css — lines 1–88 ════ */
 /* Typography tokens — web defaults (Inter Variable from Google Fonts).
    Desktop overrides are in tokens-desktop.css.
 
@@ -441,6 +441,17 @@ enum WelcomeTimelineCSS {
     --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
     --bn-weight-semibold: 600;   /* a chosen word in a text-only switch (picker scope) */
     --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
+
+    /* Icon stroke = the stem of the text beside it, as a fraction of the font size
+       (docs/design-icon-system.md § Weight; measured on Inter and SF Pro, which agree
+       to 2%). A context set in a heavier weight sets --bn-icon-stem beside its
+       font-weight. No light value: the SPA's Inter is served 400..700, so 370 renders 400. */
+    --bn-icon-stem-normal: 0.092;
+    --bn-icon-stem-emphasis: 0.106;
+    --bn-icon-stem-starred: 0.111;
+    --bn-icon-stem-semibold: 0.127;
+    --bn-icon-stem-strong: 0.146;
+    --bn-icon-stem: var(--bn-icon-stem-normal);
 
     /* Monospace weights — three values, chosen against measured rendering on every face the
        stack reaches (docs/design-monospace-roles.md §6). 400–490 is Regular in Menlo, Consolas
@@ -1238,7 +1249,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     outline-offset: 1px;
 }
 
-/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–364 ════ */
+/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–355 ════ */
 /* Session tapestry — the timeline slice under a row of the Sessions grid
    (frontend/src/components/SessionTapestry.tsx). Lanes: section flags, speaker
    clips, sentiment bars, theme spans. Every colour and size is a shipped token
@@ -1271,13 +1282,6 @@ body.hide-ai-tags .badge-ai { display: none; }
 }
 .bn-tapestry-toggle:hover { color: var(--bn-colour-text); }
 .bn-tapestry-toggle:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
-.bn-tapestry-toggle path {
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.6;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
 .bn-tapestry-toggle svg { transition: transform 0.15s ease; }
 .bn-tapestry-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
 
@@ -1471,7 +1475,6 @@ body.hide-ai-tags .badge-ai { display: none; }
 .bn-tp-close:hover { color: var(--bn-colour-text); }
 .bn-tp-close:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: -2px; }
 .bn-tp-close svg { width: 10px; height: 10px; }
-.bn-tp-close path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 
 /* Previous / next: bristlenose.app's homepage carousel buttons, at 12 px (from
    26) inside a 22 px hit area, revealed on hover or keyboard focus as there. */
@@ -1501,7 +1504,6 @@ body.hide-ai-tags .badge-ai { display: none; }
     place-items: center;
 }
 .bn-tp-nav svg { width: 6px; height: 6px; }
-.bn-tp-nav path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .bn-tp-nav button:disabled > span { opacity: 0.35; }
 .bn-tp-popover:hover .bn-tp-nav button,
 .bn-tp-popover:focus-within .bn-tp-nav button { opacity: 1; pointer-events: auto; }
@@ -1526,7 +1528,7 @@ body.hide-ai-tags .badge-ai { display: none; }
 .bn-tp-zoom-btn:hover { color: var(--bn-colour-text); }
 .bn-tp-zoom-btn:disabled { opacity: 0.4; cursor: default; }
 .bn-tp-zoom-btn:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
-.bn-tp-zoom-btn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+.bn-tp-zoom-btn svg { width: 12px; height: 12px; }
 .bn-tp-zoom-slider {
     -webkit-appearance: none;
     appearance: none;

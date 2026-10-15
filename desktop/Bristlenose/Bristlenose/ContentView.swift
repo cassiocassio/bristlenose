@@ -2036,7 +2036,38 @@ struct ContentView: View {
                 folderLooksAnalysed: LocateFlow.folderLooksAnalysed(url: folder)
             ) {
             case .untracked:
-                break  // fall through to createProjectFromURLs
+                // No row holds this path. Its study may still be in the
+                // sidebar: the same folder moved, or a copy of one
+                // (docs/design-project-identity.md §9). Identity is the
+                // marker the folder carries, never the path.
+                let droppedStudy = StudyMarker.read(folder: folder)
+                switch StudyDropMatch.resolve(
+                    droppedStudyID: droppedStudy,
+                    candidates: projectIndex.studyCandidates(),
+                    folderExists: { FileManager.default.fileExists(atPath: $0) }
+                ) {
+                case .moved(let id):
+                    // The study's own folder, somewhere new: its row follows,
+                    // with its curation, its lens memory and its agent access.
+                    projectIndex.relocateProject(id: id, newPath: folder.path)
+                    selection = [.project(id)]
+                    dropTargetProjectID = id
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 400_000_000)
+                        if dropTargetProjectID == id { dropTargetProjectID = nil }
+                    }
+                    return
+                case .copy:
+                    // An independent duplicate: its own id before its own row.
+                    // A folder that cannot be written keeps the id it carries;
+                    // the next availability refresh re-mints it.
+                    if let droppedStudy {
+                        _ = try? StudyMarker.remint(folder: folder, copiedFrom: droppedStudy)
+                    }
+                case .none:
+                    break
+                }
+                // fall through to createProjectFromURLs
             case .trackedUnanalysed:
                 if let existing {
                     selection = [.project(existing.id)]
@@ -2083,6 +2114,7 @@ struct ContentView: View {
             let project = projectIndex.addProject(
                 name: url.lastPathComponent, path: url.path, intoFolder: folderID
             )
+            projectIndex.captureStudyID(id: project.id, folder: url)
             selection = [.project(project.id)]
             if LocateFlow.folderLooksAnalysed(url: url) {
                 // Dropped folder already contains a Bristlenose project —
@@ -3275,6 +3307,12 @@ struct ContentView: View {
     /// late or duplicate rescan is a harmless idempotent no-op, never a
     /// stale-content write.
     private func scheduleCountRescan(projectID id: UUID) {
+        // A first run mints the study marker; read it while the run's end is
+        // fresh, so a move or copy of this folder is recognised from now on.
+        if let project = projectIndex.projects.first(where: { $0.id == id }), project.studyID == nil {
+            let folder = projectIndex.leaseURL(projectID: id) ?? URL(fileURLWithPath: project.path)
+            projectIndex.captureStudyID(id: id, folder: folder)
+        }
         Task { @MainActor in
             for _ in 0..<5 {
                 try? await Task.sleep(for: .seconds(1.5))

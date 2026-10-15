@@ -90,6 +90,13 @@ struct Project: Identifiable, Hashable, Codable {
     /// Sessions, nil elsewhere. Meaningless without `lastLens`, which is why
     /// `LensAnchor` interprets the pair rather than this alone.
     var lastAnchor: String?
+    /// The study id the project folder's marker carries
+    /// (`bristlenose-output/.bristlenose/study.json`, `StudyMarker`). How the
+    /// sidebar recognises a study after a move or a copy without comparing
+    /// paths (`docs/design-project-identity.md` §9). Nil until the folder has
+    /// been analysed or served once, and for a project whose folder is out of
+    /// reach.
+    var studyID: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name, path, icon, position
@@ -106,6 +113,7 @@ struct Project: Identifiable, Hashable, Codable {
         case agentAccess = "agent_access"
         case lastLens = "last_lens"
         case lastAnchor = "last_anchor"
+        case studyID = "study_id"
     }
 
     // Custom coding for bookmarkData (Base64 string in JSON instead of byte array).
@@ -144,6 +152,7 @@ struct Project: Identifiable, Hashable, Codable {
         // design says the dashboard is right for.
         lastLens = try container.decodeIfPresent(String.self, forKey: .lastLens)
         lastAnchor = try container.decodeIfPresent(String.self, forKey: .lastAnchor)
+        studyID = try container.decodeIfPresent(String.self, forKey: .studyID)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -166,6 +175,7 @@ struct Project: Identifiable, Hashable, Codable {
         try container.encode(agentAccess, forKey: .agentAccess)
         try container.encodeIfPresent(lastLens, forKey: .lastLens)
         try container.encodeIfPresent(lastAnchor, forKey: .lastAnchor)
+        try container.encodeIfPresent(studyID, forKey: .studyID)
     }
 
     init(id: UUID, name: String, path: String, inputFiles: [String]? = nil,
@@ -175,7 +185,7 @@ struct Project: Identifiable, Hashable, Codable {
          lastSeenPath: String? = nil, resourceIdentifier: String? = nil,
          schemaVersion: Int = Project.currentSchemaVersion,
          agentAccess: Bool = false, lastLens: String? = nil,
-         lastAnchor: String? = nil) {
+         lastAnchor: String? = nil, studyID: String? = nil) {
         self.id = id
         self.name = name
         self.path = path
@@ -194,6 +204,7 @@ struct Project: Identifiable, Hashable, Codable {
         self.agentAccess = agentAccess
         self.lastLens = lastLens
         self.lastAnchor = lastAnchor
+        self.studyID = studyID
     }
 
     /// Whether the project directory is currently accessible on disk.
@@ -718,6 +729,34 @@ final class ProjectIndex: ObservableObject {
         projects.first { $0.path == path }
     }
 
+    /// Every project as the drop decision sees it (`StudyDropMatch`).
+    func studyCandidates() -> [StudyDropMatch.Candidate] {
+        projects.map { .init(id: $0.id, studyID: $0.studyID, path: $0.path) }
+    }
+
+    /// Read the study id the project's folder carries and remember it. When
+    /// another project already holds that id and its folder is still there,
+    /// this folder is a copy made before the sidebar could tell, so it gets
+    /// its own id now — the second one touched is re-minted (§9). Returns the
+    /// id the project ends with, or nil when the folder carries none or cannot
+    /// be read.
+    @discardableResult
+    func captureStudyID(id: UUID, folder: URL) -> String? {
+        guard let index = projects.firstIndex(where: { $0.id == id }),
+              var studyID = StudyMarker.read(folder: folder) else { return nil }
+        let heldElsewhere = projects.contains {
+            $0.id != id && $0.studyID == studyID && $0.path != folder.path
+                && FileManager.default.fileExists(atPath: $0.path)
+        }
+        if heldElsewhere, let fresh = try? StudyMarker.remint(folder: folder, copiedFrom: studyID) {
+            studyID = fresh
+        }
+        guard projects[index].studyID != studyID else { return studyID }
+        projects[index].studyID = studyID
+        save()
+        return studyID
+    }
+
     // MARK: - Folder CRUD
 
     /// Create a new folder. Name is de-duplicated against other folder names.
@@ -1136,6 +1175,7 @@ final class ProjectIndex: ObservableObject {
         // project's lease — posting mid-loop made it scan the old path and
         // flip a healthy row to Can't find (review finding 3).
         var moved: [(UUID, String)] = []
+        var deferredStudyCaptures: [(UUID, String)] = []
         for i in projects.indices {
             let project = projects[i]
             guard !project.path.isEmpty else { continue }
@@ -1161,6 +1201,9 @@ final class ProjectIndex: ObservableObject {
                     projects[i].resourceIdentifier = id
                     changed = true
                 }
+                if projects[i].studyID == nil {
+                    deferredStudyCaptures.append((projects[i].id, resolvedPath))
+                }
                 continue
             }
 
@@ -1185,6 +1228,11 @@ final class ProjectIndex: ObservableObject {
             }
         }
         if changed { save() }
+        // After the loop: a capture can re-mint a copy's id and save, and the
+        // copy test reads every row's id, so all paths must be settled first.
+        for (id, path) in deferredStudyCaptures {
+            captureStudyID(id: id, folder: URL(fileURLWithPath: path))
+        }
         syncWatchers()
         objectWillChange.send()
         for (id, path) in moved { Self.postPathChanged(id: id, path: path) }

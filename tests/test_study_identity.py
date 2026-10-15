@@ -202,3 +202,18 @@ def test_a_copy_carries_the_same_study_until_the_app_re_mints(tmp_path: Path) ->
     copy = tmp_path / "copy" / proj.name
     shutil.copytree(proj, copy)
     assert study_marker.read(copy / "bristlenose-output") == original
+
+
+def test_the_swift_writer_shape_reads(tmp_path: Path) -> None:
+    """What ``StudyMarker.remint`` writes (sorted keys, minted_by app, a
+    copied_from id) is a marker Python reads. ``StudyMarkerTests`` pins the
+    other direction."""
+    out = tmp_path / "bristlenose-output"
+    path = study_marker.marker_path(out)
+    path.parent.mkdir(parents=True)
+    fresh, original = str(uuid.uuid4()), str(uuid.uuid4())
+    path.write_text(json.dumps({
+        "copied_from": original, "minted_at": "2026-10-15T10:00:00Z",
+        "minted_by": "app", "schema": 1, "study_id": fresh,
+    }, indent=2, sort_keys=True))
+    assert study_marker.read(out) == fresh

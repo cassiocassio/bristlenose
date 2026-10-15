@@ -501,6 +501,15 @@ class TestContentKeys:
         # However the folder was spelled on the command line.
         dotted = study / ".." / "study"
         assert _place(dotted / "ann.mp4", dotted) == "ann.mp4"
+        # A folder spelled through a link and back (`lk/..`): the place is
+        # the file's place in that folder, not one inside the link's target.
+        parent = tmp_path / "parent"
+        (parent / "real").mkdir(parents=True)
+        (parent / "study2").mkdir()
+        (parent / "study2" / "lk").symlink_to(parent / "real")
+        spelled = parent / "study2" / "lk" / ".."  # the OS reads this as `parent`
+        (parent / "q.mp4").symlink_to(elsewhere / "ann.mp4")
+        assert _place(spelled / "q.mp4", spelled) == "q.mp4"
 
     def test_a_recording_with_no_known_place_returns_to_its_session(
         self, tmp_path: Path,

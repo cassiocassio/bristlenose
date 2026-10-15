@@ -798,7 +798,9 @@ def _place(path: Path | None, input_dir: Path | None) -> str | None:
     def lexical(p: Path) -> Path:  # absolute and normalised, links kept
         return Path(os.path.normpath(p.absolute()))
 
-    for base in (input_dir.resolve(), lexical(input_dir)):
+    # The lexical folder first: a lexical path against a resolved base can
+    # collapse a `link/..` into the wrong tree (Fable review, 16 Oct 2026).
+    for base in (lexical(input_dir), input_dir.resolve()):
         try:
             return lexical(path).relative_to(base).as_posix()
         except (OSError, ValueError):

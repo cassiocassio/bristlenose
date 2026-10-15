@@ -218,6 +218,10 @@ def crash_report_visible_before_any_rerun(proj: Path, tmp: Path) -> None:
     with _client(_app(proj, tmp)) as client:
         assert_healthy(proj, client)
     assert not output_backup.backup_path_for(out).exists(), "the backup was not reclaimed"
+    log = (out / ".bristlenose" / "bristlenose.log").read_text(encoding="utf-8")
+    assert "put back the report a crashed run had set aside" in log, (
+        "the reclaim was said only on stderr, not in the project's log"
+    )
 
 
 def server_starting_inside_a_runs_start_up_is_left_alone(proj: Path, tmp: Path) -> None:

@@ -114,13 +114,20 @@ def create_app(
         # (possibly future) output folder — so the log is too.
         from bristlenose.logging import setup_logging
         from bristlenose.output_paths import project_output_dir
-        from bristlenose.utils.output_backup import reclaim_after_crash
+        from bristlenose.utils.output_backup import RestoreOutcome, reclaim_after_crash
 
         # A crashed run's backup goes back BEFORE anything creates the output
         # folder: once the log and database exist there, the folder looks like
         # a run's start-up and the reclaim declines (output_backup docstring).
-        reclaim_after_crash(project_output_dir(project_dir))
+        reclaimed = reclaim_after_crash(project_output_dir(project_dir))
         setup_logging(output_dir=project_output_dir(project_dir), verbose=verbose)
+        if reclaimed is not RestoreOutcome.NOTHING_TO_DO:
+            # The reclaim ran before the log file existed, so its own line went
+            # to stderr only, which nobody reads in the Mac app. Say it again
+            # where the project's log is (review, 15 Oct 2026).
+            logging.getLogger(__name__).warning(
+                "put back the report a crashed run had set aside: %s", reclaimed.value,
+            )
 
     app = FastAPI(title="Bristlenose", docs_url="/api/docs", redoc_url=None)
 

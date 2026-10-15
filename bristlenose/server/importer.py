@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import re
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -222,7 +223,9 @@ def _is_the_studys_own_database(db: Session, output_dir: Path) -> bool:
         return False
 
 
-def _the_study_row(db: Session, study_id: str | None) -> Project | None:
+def _the_study_row(
+    db: Session, study_id: str | None, *, collapse: bool = True,
+) -> Project | None:
     """The one project row of a study's own database, collapsing any forks.
 
     Prefers the row whose ``study_id`` is the marker's; otherwise the lowest
@@ -232,11 +235,17 @@ def _the_study_row(db: Session, study_id: str | None) -> Project | None:
     it is deleted with everything that hangs off it, unless something a person
     did is attached to it, in which case it is left in place and said at ERROR
     (docs/design-project-identity.md §10).
+
+    ``collapse=False`` chooses without deleting: the progressive imports a run
+    makes while the researcher may be reading leave cleanup to the
+    whole-project import.
     """
     rows = db.query(Project).order_by(Project.id).all()
     if not rows:
         return None
     chosen = next((r for r in rows if study_id and r.study_id == study_id), rows[0])
+    if not collapse:
+        return chosen
     for other in rows:
         if other is chosen:
             continue
@@ -263,6 +272,32 @@ _CURATION_TABLES = frozenset({
     "dismissed_signals", "hidden_tag_groups", "project_framework_states",
     "screen_arrangements", "transcript_layout_edits", "tag_prompt_decisions",
 })
+
+
+def _remint_if_a_copy(project: Project, study_id: str, output_dir: Path) -> str | None:
+    """Give a copy its own id, as the app does on arrival (design §9).
+
+    The row's stored output folder is where this database last was. If that is
+    another folder that still exists and carries the same id, this folder is a
+    copy of it: mint a new id here, recording where it came from. If it no
+    longer exists, the study moved, and keeps its id. Without this a study
+    copied on the CLI shared its id, and its agent key, with the original.
+    """
+    from bristlenose import study_marker
+
+    stored = Path(project.output_dir) if project.output_dir else None
+    if stored is None or _same_path(str(stored), output_dir):
+        return None
+    if study_marker.read(stored) != study_id:  # gone, or another study: a move
+        return None
+    fresh = str(uuid.uuid4())
+    try:
+        study_marker.write(output_dir, fresh, minted_by="serve", copied_from=study_id)
+    except OSError as exc:
+        logger.warning("could not give a copied study its own id: %s", exc)
+        return None
+    logger.info("a copy of another study: gave it its own id (copied from %s)", study_id)
+    return fresh
 
 
 def _rows_hanging_off_project(db: Session, project_id: int) -> dict[str, set[Any]]:
@@ -338,7 +373,9 @@ def _delete_project_row(db: Session, project_id: int) -> None:
     db.flush()
 
 
-def _find_or_create_project(db: Session, project_dir: Path) -> tuple[Project, Path, Path]:
+def _find_or_create_project(
+    db: Session, project_dir: Path, *, whole_import: bool = False,
+) -> tuple[Project, Path, Path]:
     """The project row for *project_dir*, created if new: ``(row, input, output)``.
 
     One function, because two importers need the same match: the whole-project
@@ -380,7 +417,9 @@ def _find_or_create_project(db: Session, project_dir: Path) -> tuple[Project, Pa
         from bristlenose import study_marker
 
         study_id = study_marker.read_or_mint(output_dir, minted_by="serve")
-        project = _the_study_row(db, study_id)
+        project = _the_study_row(db, study_id, collapse=whole_import)
+        if whole_import and project is not None and study_id is not None:
+            study_id = _remint_if_a_copy(project, study_id, output_dir) or study_id
         if project is not None and study_id is not None:
             project.study_id = study_id
     else:
@@ -448,7 +487,9 @@ def import_project(db: Session, project_dir: Path) -> Project:
     Returns:
         The Project row (created or existing).
     """
-    project, project_dir, output_dir = _find_or_create_project(db, project_dir)
+    project, project_dir, output_dir = _find_or_create_project(
+        db, project_dir, whole_import=True,
+    )
     intermediate = output_dir / ".bristlenose" / "intermediate"
 
     # --- Import timestamp ------------------------------------------------

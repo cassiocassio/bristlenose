@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 import uuid
 from pathlib import Path
 
@@ -224,3 +225,57 @@ def test_the_swift_writer_shape_reads(tmp_path: Path) -> None:
         "minted_by": "app", "schema": 1, "study_id": fresh,
     }, indent=2, sort_keys=True))
     assert study_marker.read(out) == fresh
+
+
+def test_a_mid_run_import_never_deletes_a_fork(tmp_path: Path) -> None:
+    """Fork cleanup belongs to the whole-project import, not to the progressive
+    imports a run makes while the researcher may be reading (review)."""
+    from bristlenose.server.importer import import_readable_sessions
+
+    proj = _project(tmp_path)
+    engine, factory = _own_db(proj)
+    _fork(proj, factory)
+    db = factory()
+    fork_id = max(r.id for r in db.query(Project).all())
+    import_readable_sessions(db, proj, {"s1"})
+    db.commit()
+    assert sorted(r.id for r in db.query(Project).all()) == [1, fork_id]
+    db.close()
+    engine.dispose()
+
+
+def test_a_copy_opened_from_the_cli_gets_its_own_id(tmp_path: Path) -> None:
+    """With no app to re-mint it, the serve does (design §9): the database's
+    row still names the original's folder, which is still there carrying the
+    same id, so this folder is a copy. A move (original gone) keeps the id."""
+    proj = _project(tmp_path / "a")
+    engine, factory = _own_db(proj)
+    db = factory()
+    import_project(db, proj)
+    db.commit()
+    db.close()
+    engine.dispose()
+    original = study_marker.read(proj / "bristlenose-output")
+
+    copy = tmp_path / "b" / proj.name
+    shutil.copytree(proj, copy)
+    engine, factory = _own_db(copy)
+    db = factory()
+    import_project(db, copy)
+    db.commit()
+    db.close()
+    engine.dispose()
+    reminted = study_marker.read(copy / "bristlenose-output")
+    assert reminted is not None and reminted != original, "the copy kept the original's id"
+    assert study_marker.read(proj / "bristlenose-output") == original
+
+    moved = tmp_path / "c" / proj.name
+    moved.parent.mkdir()
+    shutil.move(str(proj), str(moved))
+    engine, factory = _own_db(moved)
+    db = factory()
+    import_project(db, moved)
+    db.commit()
+    db.close()
+    engine.dispose()
+    assert study_marker.read(moved / "bristlenose-output") == original, "a move was re-minted"

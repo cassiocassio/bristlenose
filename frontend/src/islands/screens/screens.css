@@ -248,11 +248,14 @@
    front of anything it overlaps — stacking order only, nothing else. tests/test_screens_css.py holds
    every focused, selected or hovered state in this file to properties that cannot move anything,
    and every focus or selection state to stacking alone. */
-.screens-stage .screens-card:has(> .quote-card.bn-focused, > .quote-card.editing),
+/* In front: the card last touched — pressed anywhere, or focused (.is-front, ScreensLens) — and
+   one being edited or holding keyboard focus. */
+.screens-stage .screens-card.is-front,
+.screens-stage .screens-card:has(> .quote-card.editing),
 .screens-stage .screens-card:focus-within { z-index: 998 !important; }
 /* A column is its own stacking context (z-index 2), under the free layer (5): lift the whole column
-   while one of its cards is focused, or that card can never rise over a moved one. */
-.screens-col:has(.bn-focused, :focus-within) { z-index: 6; }
+   while one of its cards is in front, or that card can never rise over a moved one. */
+.screens-col:has(.is-front, :focus-within) { z-index: 6; }
 
 .screens-free { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
 .screens-free .screens-card { position: absolute; pointer-events: auto; }

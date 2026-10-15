@@ -98,6 +98,17 @@ export interface FeatureFlags {
    * § Scene stripes.
    */
   sceneNotches: boolean;
+
+  /**
+   * "10 quotes from 2 participants" on the Screens lens's info line, after the
+   * screen's path.
+   *
+   * Parked 15 Oct 2026 by the owner — it adds nothing the page does not
+   * already say: the participants are the badges at the top right, and the
+   * rough number of quotes is plain from the cards on arrival. The path stays.
+   * Design doc: `docs/design-screens.md` § S5.
+   */
+  screensQuoteCount: boolean;
 }
 
 /** The shipped state. Change these to flip a feature back on. */
@@ -107,6 +118,7 @@ const DEFAULTS: FeatureFlags = {
   proposalRationaleTooltip: false,
   speakerSwap: false,
   sceneNotches: false,
+  screensQuoteCount: false,
 };
 
 export const featureFlags: FeatureFlags = { ...DEFAULTS };

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { getQuotesSnapshot, hideQuotes, resetStore, unhideQuotes } from "../../contexts/QuotesContext";
 import { getUndoState, redo, resetUndoStore, undo } from "../../contexts/UndoStore";
 import { resetLiveResize, setLiveResize } from "../../utils/liveResize";
@@ -26,6 +26,7 @@ vi.mock("../../utils/api", () => ({
 }));
 
 import { announce } from "../../utils/announce";
+import { featureFlags, resetFeatureFlags } from "../../utils/featureFlags";
 import { apiGet, getCodebook } from "../../utils/api";
 import { failedText, NAV_W, quotesOnScreen, ScreensLens, SCREENS_POLL_LIMIT, shouldPoll, unavailableText, type ScreensResponse } from "./ScreensLens";
 
@@ -135,6 +136,24 @@ describe("ScreensLens", () => {
     // The address, codes and count are kept and not shown for now (NAV_DETAILS).
     expect(nav).not.toHaveTextContent("/shoppingcart");
     expect(nav).toHaveTextContent("Delivery or collect");
+  });
+
+  it("keeps the screen's path on the info line and parks the quote count (the owner, 15 Oct 2026)", async () => {
+    mockApi(screensResponse());
+    const { container } = render(<ScreensLens />);
+    await waitFor(() => expect(container.querySelector(".screens-sub")).not.toBeNull());
+    const sub = container.querySelector(".screens-sub")!;
+    expect(sub.querySelector("code")).toHaveTextContent("/");
+    expect(sub).not.toHaveTextContent(/\bquotes?\b/);
+  });
+
+  it("still says the count when the flag is on", async () => {
+    featureFlags.screensQuoteCount = true;
+    onTestFinished(resetFeatureFlags);
+    mockApi(screensResponse());
+    const { container } = render(<ScreensLens />);
+    await waitFor(() => expect(container.querySelector(".screens-sub")).not.toBeNull());
+    expect(container.querySelector(".screens-sub")).toHaveTextContent(/\d+ quotes?/);
   });
 
   it("puts its zone title where the shared datum rule reaches it", async () => {
@@ -1768,6 +1787,60 @@ describe("the Mac's View menu, by name", () => {
 // ── Review fixes, 15 Oct 2026 (night) ────────────────────────────────────
 
 const intents = (version: string) => stored(version) as Record<string, { kind: string; edge?: string; along?: number; out?: number }>;
+
+/** measuredBoard, under the FocusProvider, for tests that read focus and selection. */
+async function focusedBoard() {
+  mockApi(screensResponse());
+  const r = render(
+    <FocusProvider>
+      <ScreensLens />
+    </FocusProvider>,
+  );
+  await waitFor(() => expect(cardOf(r.container, "q-p1-10").style.visibility).not.toBe("hidden"));
+  return r.container;
+}
+
+describe("which card is in front (the owner, 15 Oct 2026)", () => {
+  it("a press anywhere on a card brings it to the front, its star included", async () => {
+    const g = geometry();
+    onTestFinished(() => g.restore());
+    const c = await measuredBoard();
+    const a = cardOf(c, "q-p1-10");
+    const b = cardOf(c, "q-p1-30");
+    fireEvent.pointerDown(a.querySelector(".quote-body") ?? a, { button: 0 });
+    expect(a.className).toContain("is-front");
+    fireEvent.pointerDown(b.querySelector(".star-btn")!, { button: 0 });
+    expect(b.className).toContain("is-front");
+    expect(a.className).not.toContain("is-front");
+  });
+
+  it("a click on the drag edge that never becomes a drag focuses and selects the card, as a click on its body does", async () => {
+    const g = geometry();
+    onTestFinished(() => g.restore());
+    const c = await focusedBoard();
+    const card = cardOf(c, "q-p1-30");
+    const grip = card.querySelector<HTMLElement>(".screens-grip-top")!;
+    fireEvent.pointerDown(grip, { button: 0, clientX: 100, clientY: 100 });
+    act(() => {
+      window.dispatchEvent(new MouseEvent("pointerup", { clientX: 100, clientY: 100 }));
+    });
+    await waitFor(() => expect(card.querySelector(".quote-card")!.className).toContain("bn-selected"));
+    expect(card.querySelector(".quote-card")!.className).toContain("bn-focused");
+  });
+
+  it("a card just put down is in front and focused", async () => {
+    const g = geometry();
+    try {
+      const c = await focusedBoard();
+      fireEvent.pointerDown(cardOf(c, "q-p1-10").querySelector(".quote-body") ?? cardOf(c, "q-p1-10"), { button: 0 });
+      drag(cardOf(c, "q-p1-30"), 40, 40);
+      await waitFor(() => expect(cardOf(c, "q-p1-30").className).toContain("is-front"));
+      expect(cardOf(c, "q-p1-30").querySelector(".quote-card")!.className).toContain("bn-focused");
+    } finally {
+      g.restore();
+    }
+  });
+});
 
 describe("the arrangement, measured one way", () => {
   // Item 1: the freeze and the placement must measure the screengrab the same way, or the first

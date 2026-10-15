@@ -98,6 +98,7 @@ import { markScreensFound } from "./availability";
 import { postScreensArrangement } from "../../shims/bridge";
 import { reportScreensNav, useScreensNav } from "./navPanel";
 import { setScreensCount } from "./screensCount";
+import { featureFlags } from "../../utils/featureFlags";
 import "./screens.css";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -1204,7 +1205,7 @@ function Versions({ screen, tabIdx, onFlip }: { screen: Screen; tabIdx: number; 
 function ScreenBoard(props: BoardProps) {
   const { t } = useTranslation();
   const { projectId, screen, tabIdx, byId, store, said } = props;
-  const { setFocus, registerVisibleQuoteIds } = useFocus();
+  const { setFocus, registerVisibleQuoteIds, clearSelection, toggleSelection, setAnchor } = useFocus();
   const tab = screen.tabs[tabIdx];
   const multi = screen.tabs.length > 1;
   const slides = useStills(screen.tabs, tabIdx, 1600);
@@ -1344,6 +1345,16 @@ function ScreenBoard(props: BoardProps) {
   }, [screen, byId, store.hidden]);
   // The focused card comes forward and its line lights, as a click does (FocusContext).
   const lit = props.focusedId && onScreen.has(props.focusedId) ? props.focusedId : null;
+  // The card in front: the last one touched, by a press anywhere on it (its star, eye, tag or
+  // timecode included) or by focus moving to it. Stacking order only; focus and selection stay the
+  // Quotes lens's own (the owner, 15 Oct 2026: "any press anywhere — yes").
+  const [touched, setTouched] = useState<string | null>(null);
+  const [seenFocus, setSeenFocus] = useState(props.focusedId);
+  if (props.focusedId !== seenFocus) {
+    // Adjusted during render, not in an effect: the new focus is in front on the same paint.
+    setSeenFocus(props.focusedId);
+    if (props.focusedId) setTouched(props.focusedId);
+  }
 
   // A card is placed against the screengrab: without one to measure (it failed to load, or has no
   // size yet) every card is listed, a custom board's included, not held hidden for a spot.
@@ -1806,7 +1817,12 @@ function ScreenBoard(props: BoardProps) {
     function up(ev: PointerEvent) {
       detach();
       if (!moved) {
-        setFocus(dom, { scroll: false }); // a press on the grip that never became a drag is a press on the card
+        // A press on the grip that never became a drag is a click on the card: focus and select it,
+        // exactly as a click on its body does (QuoteCard's handleCardClick).
+        clearSelection();
+        toggleSelection(dom);
+        setFocus(dom, { scroll: false });
+        setAnchor(dom);
         return;
       }
       const { left, top } = at(ev);
@@ -1818,6 +1834,9 @@ function ScreenBoard(props: BoardProps) {
       write(after);
       undoable("moveQuote", before, after);
       setDrag(null);
+      // The card just put down is the one in front, and focused.
+      setTouched(dom);
+      setFocus(dom, { scroll: false });
     }
     endDrag.current = abandon;
     window.addEventListener("pointermove", move);
@@ -1841,9 +1860,10 @@ function ScreenBoard(props: BoardProps) {
           if (el) cardEls.current.set(dom, el);
           else cardEls.current.delete(dom);
         }}
-        className={`screens-card${dragging === dom ? " is-dragging" : ""}`}
+        className={`screens-card${dragging === dom ? " is-dragging" : ""}${touched === dom ? " is-front" : ""}`}
         style={style}
         data-dom={dom}
+        onPointerDownCapture={() => setTouched(dom)}
         data-pin={pin ? dom : undefined}
       >
         <span className="screens-grip screens-grip-top" aria-hidden="true" onPointerDown={startDrag(dom)} />
@@ -1979,9 +1999,11 @@ function ScreenBoard(props: BoardProps) {
       </SectionHeading>
       <p className="screens-sub">
         {screen.name.startsWith("/") && <code>{screen.name}</code>}
-        <span>
-          {people > 1 ? t("screens.quoteCountFrom", { count: quoteCount, people }) : t("screens.quoteCount", { count: quoteCount })}
-        </span>
+        {featureFlags.screensQuoteCount && (
+          <span>
+            {people > 1 ? t("screens.quoteCountFrom", { count: quoteCount, people }) : t("screens.quoteCount", { count: quoteCount })}
+          </span>
+        )}
         <span className="screens-hidden-slot">
           <Counter
             count={hiddenHere.length}

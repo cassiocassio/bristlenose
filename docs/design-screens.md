@@ -225,6 +225,11 @@ reverses. Earlier wording is kept where it explains why._
   - **The address, the participants' codes and the quote count are kept and not shown**
     (`NAV_DETAILS` in `ScreensLens.tsx`): the owner, *these may belong on the board, as context for
     the screen showing, not in the list of screens.*
+  - **The board's info line carries the screen's path and nothing to count** (the owner, 15 Oct
+    2026): "10 quotes from 2 participants" added nothing — the participants are the badges at the
+    top right and the rough number of quotes is plain from the cards. Parked behind
+    `featureFlags.screensQuoteCount`, its strings kept. The hidden counter and the Arrangement
+    control stay on that line.
 - **A screen is one place for everything about it** (the owner, 15 Oct 2026). Every quote believed
   to be about the screen, from every participant's version of it (X, X′, X″), is on its board, and
   the set does not change with the version showing. _Reverses the prototype's stack flipped by
@@ -343,6 +348,10 @@ reverses. Earlier wording is kept where it explains why._
   re-implemented). The only visuals are the shared `.bn-focused` / `.bn-selected`
   (`theme/atoms/interactive.css`); the board adds stacking order — the focused card in front of
   anything it overlaps, and its line lit — and nothing else. A click focuses a card, as on Quotes.
+  **Any press anywhere on a card brings it to the front** — its body, star, eye, tag or timecode —
+  and it stays in front until another card is pressed or focused (the owner, 15 Oct 2026). A click
+  on the grip that does not become a drag selects that card alone and focuses it, as a click on a
+  Quotes card does; a dropped card is focused and in front. Stacking only, `is-front`.
   _Reverses the board's own "lifted" selection, its press-to-raise state, and the dimming by colour
   of every other card; the old raised-card shadow also hid the shared dark-mode focus ring._ Gated by
   `tests/test_screens_css.py`: no colour, background, shadow, border or outline on any rule naming a

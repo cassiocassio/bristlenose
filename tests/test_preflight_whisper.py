@@ -670,3 +670,49 @@ class TestBannerContext:
         out = self._banner(capsys, "mlx-community/whisper-tiny-mlx")
         assert "It downloads once" not in out
         assert "Ctrl+C is safe" in out
+
+
+# ---------------------------------------------------------------------------
+# The cache root must be the one huggingface_hub itself uses.
+# ---------------------------------------------------------------------------
+
+_HF_CACHE_VARS = ("HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE", "HF_HOME", "XDG_CACHE_HOME")
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        {},
+        {"XDG_CACHE_HOME": "{tmp}/xdg"},
+        {"XDG_CACHE_HOME": "{tmp}/xdg", "HF_HOME": "{tmp}/hfhome"},
+        {"HF_HOME": "~/hf-under-home"},
+        {"HF_HOME": "$BN_PROBE_DIR/expanded"},
+        {"HUGGINGFACE_HUB_CACHE": "{tmp}/legacy", "HF_HOME": "{tmp}/hfhome"},
+        {"HF_HUB_CACHE": "{tmp}/hub", "HUGGINGFACE_HUB_CACHE": "{tmp}/legacy"},
+    ],
+    ids=["default", "xdg", "hf-home-beats-xdg", "tilde", "dollar-var", "legacy", "hub-cache-wins"],
+)
+def test_cache_root_is_huggingface_hubs_own(env: dict[str, str], tmp_path):
+    """Measured 15 Oct 2026: with ``XDG_CACHE_HOME`` set, HF downloaded to
+    ``$XDG_CACHE_HOME/huggingface/hub`` while the banner named
+    ``~/.cache/huggingface/hub`` and the partial check looked there too. Each
+    case runs in a fresh interpreter, because huggingface_hub reads these
+    variables once, at import."""
+    import json
+    import os
+    import subprocess
+
+    child_env = {k: v for k, v in os.environ.items() if k not in _HF_CACHE_VARS}
+    child_env["HOME"] = str(tmp_path / "home")
+    child_env["BN_PROBE_DIR"] = str(tmp_path / "probe")
+    child_env.update({k: v.replace("{tmp}", str(tmp_path)) for k, v in env.items()})
+    probe = (
+        "import json, huggingface_hub.constants as c\n"
+        "from bristlenose.preflight.whisper import _hf_cache_root\n"
+        "print(json.dumps([c.HF_HUB_CACHE, str(_hf_cache_root())]))\n"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", probe], env=child_env, capture_output=True, text=True, check=True
+    )
+    theirs, ours = json.loads(out.stdout.strip().splitlines()[-1])
+    assert ours == theirs

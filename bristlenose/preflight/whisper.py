@@ -197,16 +197,26 @@ def unknown_model_message(settings: BristlenoseSettings) -> str | None:
 
 
 def _hf_cache_root() -> Path:
-    """Resolve the active HF Hub cache root.
+    """Resolve the active HF Hub cache root, exactly as huggingface_hub does.
 
-    Respects ``HF_HUB_CACHE`` > ``HF_HOME`` > ``~/.cache/huggingface``, matching
-    huggingface_hub's own precedence.
+    ``HF_HUB_CACHE`` > ``HUGGINGFACE_HUB_CACHE`` (legacy) > ``HF_HOME``/hub >
+    ``$XDG_CACHE_HOME``/huggingface/hub > ``~/.cache/huggingface/hub``, with
+    ``~`` and ``$VARS`` expanded (``huggingface_hub/constants.py``). Read from
+    the environment at call time rather than from ``huggingface_hub.constants``,
+    which freezes at import. Missing ``XDG_CACHE_HOME`` and the expansion until
+    15 Oct 2026 put the banner's path and the partial-download check in a
+    different directory from the one HF downloads into.
+    ``test_cache_root_is_huggingface_hubs_own`` asks the library itself.
     """
-    if (cache := os.environ.get("HF_HUB_CACHE")):
-        return Path(cache)
-    if (home := os.environ.get("HF_HOME")):
-        return Path(home) / "hub"
-    return Path.home() / ".cache" / "huggingface" / "hub"
+    def expand(value: str) -> str:
+        return os.path.expandvars(os.path.expanduser(value))
+
+    home = expand(os.environ.get(
+        "HF_HOME",
+        os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "huggingface"),
+    ))
+    legacy = os.environ.get("HUGGINGFACE_HUB_CACHE", os.path.join(home, "hub"))
+    return Path(expand(os.environ.get("HF_HUB_CACHE", legacy)))
 
 
 def _repo_cache_dir(repo_id: str) -> Path:

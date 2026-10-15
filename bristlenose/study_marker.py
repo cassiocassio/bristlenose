@@ -95,6 +95,18 @@ def read(output_dir: Path) -> str | None:
     return study_id
 
 
+def copied_from(output_dir: Path) -> str | None:
+    """The study this one was copied from, or ``None`` for an original and for
+    a marker this release cannot read. A Re-analyse carries it with the id."""
+    if read(output_dir) is None:
+        return None
+    try:
+        data = json.loads(marker_path(output_dir).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return _valid_id(data.get("copied_from"))
+
+
 def write(
     output_dir: Path, study_id: str, *, minted_by: str, copied_from: str | None = None,
 ) -> None:

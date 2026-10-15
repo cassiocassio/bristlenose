@@ -11,3 +11,8 @@ people.yaml
 
 # Log written by bristlenose serve when test/E2E runs use this fixture
 bristlenose.log
+
+# The study marker and its Spotlight beacon, minted by the first serve or run
+# that touches the fixture (bristlenose/study_marker.py)
+study.json
+bristlenose-study.txt

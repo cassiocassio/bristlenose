@@ -62,6 +62,23 @@ def test_re_analyse_is_a_deliberate_reset_and_the_report_comes_back(
     )
 
 
+def test_re_analyse_keeps_where_a_copy_came_from(tmp_path: Path) -> None:
+    """A copy the app re-minted records ``copied_from``; resetting its analysis
+    must not erase that, or its sidebar row stops saying it is a copy the next
+    time the marker is read (found by review, 15 Oct 2026)."""
+    import uuid
+
+    study = new_study(tmp_path, "Interview 1.wav")
+    study.run()
+    out = study.folder / "bristlenose-output"
+    original = str(uuid.uuid4())
+    study_marker.write(out, str(uuid.uuid4()), minted_by="app", copied_from=original)
+    copy_id = study_marker.read(out)
+    study.run(clean=True)
+    assert study_marker.read(out) == copy_id
+    assert study_marker.copied_from(out) == original, "a Re-analyse forgot the copy's original"
+
+
 def test_a_folder_moved_while_closed_is_not_transcribed_again(
     tmp_path: Path, fast_watcher,
 ) -> None:

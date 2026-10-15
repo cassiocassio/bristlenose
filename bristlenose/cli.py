@@ -1364,6 +1364,7 @@ def run(
         from bristlenose.session_registry import starts_by_content, write_carried_starts
 
         study_id = study_marker.read(output_dir)
+        study_copied_from = study_marker.copied_from(output_dir)
         carried_starts = starts_by_content(output_dir)
         output_stash = output_backup.stash(
             output_dir, previous_backup_is_spent=_reclaim.report_is_back
@@ -1375,7 +1376,9 @@ def run(
             # aside. A lost carry costs a re-minted id or a worse start.
             try:
                 if study_id is not None:
-                    study_marker.write(output_dir, study_id, minted_by="run")
+                    study_marker.write(
+                        output_dir, study_id, minted_by="run", copied_from=study_copied_from
+                    )
                 write_carried_starts(output_dir, carried_starts)
             except OSError as exc:
                 import logging

@@ -80,6 +80,8 @@ _ARTEFACT_NAMES = frozenset(
         "bristlenose.log",
         "bristlenose.db",
         "manifest.json",
+        "study.json",
+        "bristlenose-study.txt",
     }
 )
 

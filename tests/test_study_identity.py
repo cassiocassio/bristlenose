@@ -43,6 +43,18 @@ def test_the_marker_leaves_a_visible_beacon_for_spotlight(tmp_path: Path) -> Non
     assert beacon.read_text(encoding="utf-8") == f"bristlenose-study {study_id}\n"
 
 
+def test_ingest_knows_the_marker_and_beacon_as_its_own(tmp_path: Path) -> None:
+    """With ``--output`` inside the interview folder, or a beacon copied about by
+    hand, ingest must pass over them silently rather than call them a format
+    it cannot read."""
+    from bristlenose.utils.fs import is_bristlenose_artefact
+
+    out = tmp_path / "bristlenose-output"
+    study_marker.read_or_mint(out, minted_by="run")
+    assert is_bristlenose_artefact(study_marker.beacon_path(out))
+    assert is_bristlenose_artefact(study_marker.marker_path(out))
+
+
 def test_a_study_minted_before_the_beacon_gets_one(tmp_path: Path) -> None:
     """Markers minted before 15 Oct 2026 have no beacon, and a copy re-minted
     by the app may carry its original's; the next run or serve puts it right."""

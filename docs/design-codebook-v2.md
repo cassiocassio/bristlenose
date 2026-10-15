@@ -1,9 +1,29 @@
 ---
 status: partial
-last-trued: 2026-08-31
-trued-against: HEAD@main 8fee4ead on 2026-08-31
+last-trued: 2026-10-15
+trued-against: HEAD@main on 2026-10-15
 ---
 
+> **Trued 15 Oct 2026 — the inline sweep the banner below said was owed has now
+> been done.** Every decision and summary in the doc was read against HEAD.
+> What changed: the lead now says shipped code is the spec; the navigation
+> section is retitled as built; the consolidated questions and the status
+> rollup strike what has closed (the 29 Aug rollup is kept, marked superseded,
+> with a current table beneath it); D9 is marked superseded in part by D22 and
+> D13 is marked parked; each decision whose as-built differs carries a dated
+> note; the coverage audit, state-engine audit and build log keep their bodies
+> and gain dated post-scripts. Dated notes say "found 15 Oct, not fixed" where
+> a pass found a code defect.
+>
+> **What it left, and why.** Pre-cutover baselines (I1–I4's substrate, the
+> prior-art tables, the coverage audit's v1 columns, D29's body, the gap
+> analysis) still cite deleted v1 files on purpose; their anchors were not
+> touched. Three things in the doc still describe unbuilt intent: the
+> `version` field (Q6), a channel that carries a failed AutoCode job to the
+> Mac's sidebar row (Q17), and rendering the link host (External links). The
+> remaining questions for the owner are listed where they belong and marked
+> **Open, for the owner**.
+>
 > **Trued 31 Aug 2026.** The previous header read `last-trued: 2026-08-29`
 > against `3802f2af` — *"true the copr reference line…"*, a **28 Aug** commit
 > about Fedora packaging that predates every commit which built this lens. The
@@ -20,14 +40,48 @@ trued-against: HEAD@main 8fee4ead on 2026-08-31
 > mockup is the superseded artefact); and every section that audits "v1 has X, v2
 > has Y" — the Coverage audit, the Gap analysis, D29's body — is now a comparison
 > against deleted files. Those are kept as the pre-cutover baseline, which is the
-> delta a reader wants, but none of them is a live comparison. The inline sweep
-> for the rest is owed; the register (`codebook-defects.md`) is ahead of this doc.
+> delta a reader wants, but none of them is a live comparison. ~~The inline sweep
+> for the rest is owed; the register (`codebook-defects.md`) is ahead of this doc.~~
+> _Done 15 Oct 2026; see the banner above._
+
+## Changelog
+
+- _2026-10-15_ — trued up: retitled "Open — navigation" as built and flipped
+  Q12–Q14 and Copy link to resolved; struck closed rows in the consolidated
+  questions and marked the 29 Aug status rollup superseded, with a current table
+  rebuilt from `codebook-defects.md`; marked D9 superseded in part by D22 and D13
+  parked; struck the fidelity map's "still owed as drawings"; added as-built
+  notes to S1, S2, D1, D3–D6, D8, D10–D12, D14, D15, D17–D19, D21, D24, D27,
+  Q2/D20, Q17, the message inventory and the external links; added dated
+  post-scripts to the coverage audit, state-engine audit, build log and D28a;
+  moved live line anchors (D5, D9, the navigation table, the RAW section, D19,
+  D24, Q17, the external links);
+  recorded five open owner questions and six code defects found, not fixed.
+  Anchors: `frontend/src/islands/CodebookV2.tsx`, `CodebookV2Page.tsx`,
+  `CodebookV2Browse.tsx`, `frontend/src/components/CodebookV2Sidebar.tsx`,
+  `bristlenose/theme/organisms/codebook-v2.css`,
+  `bristlenose/server/routes/codebook.py`, `desktop/Bristlenose/Bristlenose/ContentView.swift`,
+  `MenuCommands.swift`, `BridgeHandler.swift`; commits "codebook: a focus cursor,
+  and the Codes menu it makes possible", "close the codebook-lab gate: default
+  off, and the switch inverts", "a job whose every batch failed is a failed job",
+  "1,020 more dead values, and the tests that were keeping them alive".
+- _2026-08-31_ — trued up against `994d822c`, then amended after the v1 deletion
+  (`baa1aa0e`); five decisions annotated with their 30–31 Aug revisions.
+- _2026-08-29_ — initial draft.
 
 # Codebook v2 — presentation, layout, flow
 
-**The mockup is the spec.** [`docs/mockups/codebook-v2.html`](mockups/codebook-v2.html)
-is the working surface; we iterate there and this file records what it settles.
-Read the mockup first. This doc is the record, not the driver.
+**Shipped code is the spec.** _Rewritten 15 Oct 2026._ The lens is production
+code (`frontend/src/islands/CodebookV2.tsx`, `CodebookV2Page.tsx`,
+`CodebookV2Browse.tsx`, `frontend/src/components/CodebookV2Sidebar.tsx`). This
+doc records why it has the shape it has. The mockup,
+[`docs/mockups/codebook-v2.html`](mockups/codebook-v2.html), is the superseded
+artefact: it was the working surface until the build, and where it and the code
+disagree, the code is right.
+
+_The lead read, until 15 Oct 2026:_ "**The mockup is the spec.** … is the working
+surface; we iterate there and this file records what it settles. Read the mockup
+first. This doc is the record, not the driver."
 
 > Naming collision, so nobody trips on it: `docs/mockups/mockup-codebook-panel.html`
 > is titled "CODEBOOK PANEL MOCKUP v2" but is the **Feb 2026 Phase-2 prototype**,
@@ -47,6 +101,13 @@ Agreed at the outset, and worth not re-litigating:
   dashes is a signal we over-invented.
 - **Migration is deferred** and is deliberately not being designed yet.
   Presentation-only scope should keep it cheap — no schema change, no data move.
+
+_As built, 15 Oct 2026._ Migration was settled on 30 Aug by **D28**: no migration
+for v2, trial projects are reprocessed. And the scope held with one exception:
+D20 option A changed server behaviour, not only presentation. Uninstall now
+deletes the framework's AutoCode jobs and proposals, and reinstall no longer has
+a restore branch (`bristlenose/server/routes/codebook.py`, `remove_framework`).
+There was no schema change.
 
 ## Issues
 
@@ -394,9 +455,13 @@ which.
    default, closable, and traversable by next/prev when closed. It cannot be
    un-hideable — `hideAllSidebars()` sets `tocMode: "closed"` and Focus Mode calls
    it, so the rail *will* be closed by shipped features.
-2. **What is the detail pane made of?** Reusing `.codebook-grid` scoped to one
+2. ~~**What is the detail pane made of?**~~ Reusing `.codebook-grid` scoped to one
    codebook inherits everything and invents nothing. A purpose-built pane would
    be the first thing in the mockup to wear `.is-new`.
+   **Answered by D14 and the build:** the pane is the codebook page,
+   `frontend/src/islands/CodebookV2Page.tsx`. The master list S1 describes is
+   `frontend/src/components/CodebookV2Sidebar.tsx`, mounted in the standard left
+   panel; the `CodebookSidebar` named above was deleted with v1.
 3. **What does it foreclose?** The cross-codebook overview — seeing every
    codebook's tags at once. Worth asking whether that is a real job; if it is, it
    already belongs to `TagSidebar` on Quotes, not here.
@@ -453,11 +518,18 @@ the codebook page, for installed and not-installed alike, varying only by state
 and by which controls it offers. That reading is what closes I4; the alternative
 (sidebar gets its own detail pane, separate from learn-more) would reopen it by
 reintroducing two descriptions. **Confirm before building.**
+_Built that way, 15 Oct 2026 check:_ one page serves both states, and
+`CodebookV2Page.tsx` swaps Install for Uninstall on `book.installed`. The browse
+page is not a route either: it is `?view=library` on the lens's own URL
+(`CodebookV2.tsx`, "the library is a URL, not component state"), so S2 needed no
+router change.
 
-**Open: does "no modals" reach the AutoCode Review?** The rule is stated over the
+**~~Open:~~ does "no modals" reach the AutoCode Review?** The rule is stated over the
 codebook browsing surfaces. The Review modal is a different kind of content —
 proposals across quotes, not codebook identity — and I have not assumed it is
 included. It is the last modal standing either way.
+**Decided 30 Aug by Q15: no.** The threshold review stays a modal
+(`ThresholdReviewModal`, opened from `CodebookV2.tsx`).
 
 <!-- S3 … append below as they land -->
 
@@ -473,6 +545,11 @@ included. It is the last modal standing either way.
 **I1, I3 and I4 are closed** — I1 by S1, I3 and I4 by S2. I2 is closed by the
 decisions rather than by a solution (D4 removed an axis, D7 established hide was
 never on this lens). The remaining opens are all newly raised, not carried over.
+
+_Clarified 15 Oct 2026._ S2 closes I3 for the browsing surfaces only. The
+AutoCode Review is still a modal, and that is closed by decision (Q15, 30 Aug)
+rather than by S2. The 29 Aug status rollup further down still lists I3 as
+partial; it predates Q15.
 
 
 ## Settled by iteration
@@ -501,6 +578,11 @@ every one of the four comparators uses.
 and §6's "Apply as scope, presented like permissions" is the live alternative.
 Nor does it settle where Uninstall goes — the Library tile already has one
 (shipped), so it may need no new home at all.
+
+_Settled since, 15 Oct 2026 check._ **D4** removed Apply: installing calls
+install and then `startAutoCode` (`CodebookV2.tsx`, `onInstall`). **D11**
+placed Uninstall: on the browse card, swapping verb with Install, and in the
+codebook page's title row (`CodebookV2Page.tsx`, `.pg-titleaction`).
 
 Frame: **V1** in [`mockups/codebook-v2.html`](mockups/codebook-v2.html).
 
@@ -539,7 +621,7 @@ row, the echo is duplication. Pure deletion — nothing invented.
 
 **Superseded in part by D11** — the page no longer carries a copy of this toggle; the rail owns it alone.
 
-**Open: switch or checkbox.** Both satisfy D1. `.sw` is 38&times;22 and already
+**~~Open:~~ switch or checkbox** _(answered by D15, as the line above says)_. Both satisfy D1. `.sw` is 38&times;22 and already
 the codebook's idiom; `.bn-checkbox` is 14&times;14, already shipped in
 `atoms/checkbox.css`, and is what Safari uses in a dense list — rows are the one
 place the switch's bulk actually costs something. Drawn both ways in the mockup
@@ -605,6 +687,11 @@ completion is the door to review. Nothing new is needed to expose any of it.
   `{{count}}`) does not get fixed on Apply — Apply is gone. The number moves to
   the install control, which is now the spending one. An install button that does
   not say what it will cost is worse than an Apply button that didn't.
+  _Not built, 15 Oct 2026 check._ Both Install buttons read plain "Install"
+  (`codebook.importCodebook`, rendered in `CodebookV2Page.tsx` and
+  `CodebookV2Browse.tsx`), and `codebook.autoCodeQuotes` no longer exists. This
+  obligation is unmet in production. Register row B1 still describes the
+  deleted Apply key.
 - **"Reinstall instantly" becomes actively false.** Register B2 already flagged
   that copy as wrong because uninstall deletes `QuoteTag` rows. Under D4 a
   reinstall also **re-spends**. The copy has to say so; the fix is now obvious
@@ -623,7 +710,7 @@ every `ProposedTag` and the `AutoCodeJob`; switching back on re-reveals them
 without re-spending.
 
 **This needs no code change — it is already true.** Verified 29 Aug:
-`set_framework_state` in `server/routes/data.py` touches `ProjectFrameworkState`
+`put_framework_states` in `server/routes/data.py` _(name corrected 15 Oct 2026)_ touches `ProjectFrameworkState`
 rows and nothing else; no path from the toggle deletes a tag or a proposal.
 D5 is therefore a **presentation obligation**, not a behaviour change, which
 keeps the presentation-only scope intact.
@@ -654,6 +741,8 @@ geography now agree, which is what the shipped design never managed.
 but a run can fail, be cancelled, or be mid-flight. D4 said the internal states
 become progress rather than homework — a **failed** run is neither. It is an error
 that needs a route back to retry, and that is the one exposure D4 leaves owed.
+_Closed 30 Aug by **D24**:_ installed is the state, and the run reports where
+runs already report. The Mac half is still partial; see Q17.
 
 ### D6 — no modals in the codebook browsing surfaces
 
@@ -663,6 +752,13 @@ page**. Not a modal, not a drawer, not a sheet.
 
 The rule earns its keep going forward: the next time something needs "just a
 quick overlay", this says no, and points at the page that already exists.
+
+_Qualified 30 Aug by Q15; noted 15 Oct 2026._ D6 governs the browsing surfaces:
+the rail, the browse page and the codebook page. Two things outside it are
+modal by decision: the threshold review (`ThresholdReviewModal`), and the
+uninstall confirmation, a sheet that states what will be lost
+(`frontend/src/components/CodebookV2UninstallSheet.tsx`). Neither presents a
+codebook; one is a task on its results, the other a confirmation.
 
 ### D7 — hide and enable are different axes, on different lenses
 
@@ -719,6 +815,11 @@ researcher never sees more than two of these at once.
 All three already exist and are already shipped: `EyeToggle`, `.framework-toggle`
 and `.bn-btn`. Nothing to invent.
 
+_As built, 15 Oct 2026._ The toggle is not `.framework-toggle`. Per **D15** it is
+the platform `<input type="checkbox" switch>` where the host has one, with a
+`.sw.mini` fallback (`CodebookV2Sidebar.tsx`; `bristlenose/theme/organisms/codebook-v2.css`).
+`.framework-toggle` survives only in the v1 stylesheet, `codebook-panel.css`.
+
 ### Open — sentiment does not fit the two-axis model
 
 Surfaced 29 Aug while confirming which codebooks are toggleable. Verified:
@@ -758,12 +859,23 @@ much lower priority now that nothing in the UI can reach it.
 
 ### D9 — the rail is open by default, closable, and traversable when closed
 
+> **Superseded in part by D22 (30 Aug); marked 15 Oct 2026.** D22 removed every
+> traversal affordance: "no next/previous, no arrow pair, no traversal
+> affordance of any kind". So three passages below no longer hold — "Arrow-key
+> traversal stays", the keyboard-traversal benefit, and the open question about
+> whether next/prev is always present. The code matches D22: the lens has no
+> codebook-to-codebook keys. Clauses 1 and 2 (open by default, closable) stand.
+> Not to be confused with the 12 Sep focus cursor (commit "codebook: a focus
+> cursor, and the Codes menu it makes possible"), which moves between groups and
+> codes within one codebook's page, not between codebooks. The body is kept as
+> the reasoning D22 replaced.
+
 Proposed 29 Aug as two competing stances: *always keep the sidebar open*, or
 *offer next/previous on a full-screen view*. **They are not alternatives.** One is
 the default, the other is what makes the default closable without stranding you.
 
 **"Always open" cannot be absolute, and the reason is shipped code.**
-`hideAllSidebars()` sets `tocMode: "closed"` (`SidebarStore.ts:205`), and the
+`hideAllSidebars()` sets `tocMode: "closed"` (`SidebarStore.ts:487`, _anchor moved 15 Oct 2026_), and the
 codebook sidebar occupies that toc slot. **Focus Mode calls it** — `z` /
 &#x2318;&#x2325;F, shipped 0.24.0, whose entire purpose is hiding chrome. So does
 &#x2318;&#x2325;L, the per-lens panel toggle. Making the rail un-hideable would
@@ -843,6 +955,13 @@ lens, and the other two are a now/later pair rather than alternatives.
 
 ### The collision, restated
 
+> **Resolved; noted 15 Oct 2026.** D20 option A shipped. `remove_framework` now
+> deletes the framework's `AutoCodeJob` and `ProposedTag` rows along with its
+> tags, and `import_template` has no restore branch, so the collision below
+> cannot occur. The quoted line at `codebook.py:887` survives only as history in
+> a comment inside `remove_framework`. The analysis is kept in the present tense
+> it was written in.
+
 `remove_framework` deletes `QuoteTag` rows but **preserves** groups, tag
 definitions, jobs and proposals — stated reason, `codebook.py:887`: *"enables
 instant restore on re-import without re-running the LLM."* `import_template`
@@ -879,6 +998,8 @@ the intended contract** — the state model says *"Remove = done, no preservatio
 promise"* and the Library doc's deferred Forget says *"uninstall keeps results by
 default; opt-in to purge"* — so the shipped delete contradicts both. It would
 also **fix A1**, since a delete that does not happen cannot cross projects.
+_(A1 was fixed on its own on 31 Aug: the delete is now project-scoped. Register
+row A1.)_
 
 **Disqualified today by the Quotes lens.** `TagSidebar` folds *"tag names that
 live on quotes but not yet in the fetched codebook"* into **the floor's default
@@ -905,6 +1026,9 @@ and D later reintroduces restore on a foundation where it can.
 you are not sure, you disable.** That is a clean thing to explain and a clean
 thing to confirm against — and it is the honest reading of what the code will do
 once A lands. The disable path is the one that preserves, and it already does.
+_A landed (commit "codebook: uninstall stops preserving — D20 option A"), and
+the uninstall sheet states what will be lost (commit "codebook v2 phase 5:
+install, and an uninstall that measures what it costs")._
 
 **D goes to the 100-day inventory**, not because it is optional but because the
 prize is real: restoring is computationally and financially free if we get it
@@ -915,6 +1039,13 @@ blocker is named and specific — `TagSidebar`'s pending-tag fold must learn abo
 ## Open questions — consolidated
 
 As of 30 Aug, after 23 decisions.
+
+> **Status at 15 Oct 2026** (the doc now runs to D31, plus D27a and D28a). Rows
+> that have closed are struck below, each with what closed it; the question text
+> is kept. **Still open:** Q4 (the graphic fill, and the slot itself is now
+> parked), Q6 (`version`), Q7 (a short-description field), Q9 (B7, the author on
+> the Quotes lens), Q10 (the lab button, now behind a default-off flag) and Q17
+> (the Mac channel, narrowed). Everything else is closed.
 
 **Closed since this list was written:** **Q1** by D20's prelude (sentiment is
 floor-like on install, framework-like on enable) &middot; **Q2** by **D20** (A now,
@@ -935,45 +1066,51 @@ shipping surface.
 
 | | Question | Why it blocks |
 |---|---|---|
-| **Q1** | **The sentiment shape.** Install is meaningless (the pipeline applies it), uninstall is purely destructive (**A4**), and it has one axis where frameworks have two. Floor-like? Framework with an odd install? Or off the codebook surface entirely as a report-wide display setting? | It is the only codebook that does not fit the model. Every surface has to special-case it until this is answered |
-| **Q2** | **D4 × the restore path — must be decided together.** If install-is-apply ships while `import_template`'s restore branch stays, a reinstall resurrects old proposals *and* fires a new job: two proposals per quote, and `UniqueConstraint(job_id, quote_id)` does not stop it | Shipping one without the other is a data defect, not a rough edge |
-| **Q3** | **Failed install.** D4 merges two failures into one act — *install succeeded, the run failed*. Today each has an obvious retry; coupled, the retry has to be invented | The only exposure D4 leaves owed |
-| **Q4** | **The graphic fill.** D13 reserved the slot and deferred the fill. Jacket for the two that have one, initials, headshot, or nothing — per codebook, no systematic obligation | Deferred deliberately; the slot ships without it |
-| **Q5** | **Browse Library: primary or neutral?** The shipped button is plain `.bn-btn`; the prototype promotes it to `.bn-btn-primary`. It is now the only accent-filled control on a page about a codebook you already have | Small, but it is an unmarked divergence either way |
+| ~~**Q1**~~ | ~~**The sentiment shape.** Install is meaningless (the pipeline applies it), uninstall is purely destructive (**A4**), and it has one axis where frameworks have two. Floor-like? Framework with an odd install? Or off the codebook surface entirely as a report-wide display setting?~~ | **CLOSED 29 Aug** — floor-like on install, framework-like on enable (§"Open — sentiment does not fit the two-axis model"). Shipped: no install control for sentiment on the page or the card. A4 stays open server-side |
+| ~~**Q2**~~ | ~~**D4 × the restore path — must be decided together.** If install-is-apply ships while `import_template`'s restore branch stays, a reinstall resurrects old proposals *and* fires a new job: two proposals per quote, and `UniqueConstraint(job_id, quote_id)` does not stop it~~ | **CLOSED by D20** — option A shipped (commit "codebook: uninstall stops preserving — D20 option A") |
+| ~~**Q3**~~ | ~~**Failed install.** D4 merges two failures into one act — *install succeeded, the run failed*. Today each has an obvious retry; coupled, the retry has to be invented~~ | **CLOSED by D24** — the run reports where runs already report. The Mac half is Q17 |
+| **Q4** | **The graphic fill.** D13 reserved the slot and deferred the fill. Jacket for the two that have one, initials, headshot, or nothing — per codebook, no systematic obligation | Deferred deliberately; the slot ships without it. _15 Oct 2026: the slot itself is parked too, as commented-out markup in `CodebookV2Page.tsx` (commit "codebook v2: the native switch was never sized, and the author sat at a glyph stop"). See D13_ |
+| ~~**Q5**~~ | ~~**Browse Library: primary or neutral?** The shipped button is plain `.bn-btn`; the prototype promotes it to `.bn-btn-primary`. It is now the only accent-filled control on a page about a codebook you already have~~ | **CLOSED by D21** — neutral and larger, `bn-btn-secondary bn-btn-lg` |
 
 ### Plumbing owed — decided in principle, needs a field or a string
 
 | | Owed | Size |
 |---|---|---|
-| **Q6** | `version` on `TemplateOut` — the YAML already parses it for three codebooks | one field |
-| **Q7** | A **short description** field. All nine descriptions run 44&ndash;75 words against a 9&ndash;18 budget; first-sentence-only fits just 5 of 9 | one field + nine hand-written lines |
-| **Q8** | **B6** — a framework-level *distinct* quote count. `summariseFramework` sums per-group distinct counts, so a quote tagged in two groups counts twice. D12's status line puts that number in front of the researcher | one query |
-| **Q9** | **B7** — the author's **fourth home**, `.codebook-author` in the Quotes tag sidebar. Any author treatment must reach it | one rule |
-| **Q10** | **G3** — the **Codebook lab** button is homeless. It lived in the `<project> tags` header action, which v2 does not have. It ships to the cohort behind a default-on flag | one placement |
+| **Q6** | `version` on `TemplateOut` — the YAML already parses it for three codebooks. _15 Oct 2026: now eight of nine (Plato has none; Norman is at 2.5). `TemplateOut` still has no `version` field (`bristlenose/server/routes/codebook.py`), and `CodebookV2Browse.tsx` already reads it optionally, so the chip is written but can never render. Found 15 Oct, not fixed._ | one field |
+| **Q7** | A **short description** field. All nine descriptions run 44&ndash;75 words against a 9&ndash;18 budget; first-sentence-only fits just 5 of 9. _15 Oct 2026: they now run 50&ndash;86 words (Morville 86, Yablonski 79, Garrett 78). An interim first-sentence fallback ships in `CodebookV2Browse.tsx` (`shortDescription`); the field is still owed._ | one field + nine hand-written lines |
+| ~~**Q8**~~ | ~~**B6** — a framework-level *distinct* quote count. `summariseFramework` sums per-group distinct counts, so a quote tagged in two groups counts twice. D12's status line puts that number in front of the researcher~~ | **CLOSED 31 Aug** — register B6: the count is computed server-side as distinct quotes per framework |
+| **Q9** | **B7** — the author's **fourth home**, `.codebook-author` in the Quotes tag sidebar. Any author treatment must reach it. _Still open at 15 Oct 2026; now `TagSidebar.tsx:632`._ | one rule |
+| **Q10** | **G3** — the **Codebook lab** button is homeless. It lived in the `<project> tags` header action, which v2 does not have. It ships to the cohort behind a default-on flag. _15 Oct 2026: the flag has been default-off since 20 Sep (commit "close the codebook-lab gate: default off, and the switch inverts"; `bristlenose/config.py`, `experimental_codebook_lab`). The SPA still has no entry point, but testers no longer see the lab, so this is lower priority._ | one placement |
 | ~~**Q11**~~ | ~~**G7** — `showHideCodeGroup` sits in the desktop **Codes** menu while D7 puts hide on the **Quotes** lens~~ | **CLOSED 12 Sep 2026 — neither.** Retired. The Quotes lens already carries the eye; the Codes menu command had no target the selection pin permits |
-| **Q17** | **A failed autocode job cannot reach the Mac.** `routes/autocode.py` returns `error_message` over HTTP — enough for the SPA toast — but nothing under `bristlenose/server/` writes to the events log, which is what feeds the sidebar glyph and popover. **Not one field:** the events log is per pipeline *run* and autocode is a job, so whether it appends there or needs a second channel is a design call | design + plumbing |
+| **Q17** | **A failed autocode job cannot reach the Mac.** `routes/autocode.py` returns `error_message` over HTTP — enough for the SPA toast — but nothing under `bristlenose/server/` writes to the events log, which is what feeds the sidebar glyph and popover. **Not one field:** the events log is per pipeline *run* and autocode is a job, so whether it appends there or needs a second channel is a design call. _Narrowed 15 Oct 2026: one failure kind does now reach the Mac. When a job fails out of credit, the activity chip posts an `llm-failure` bridge message (`ActivityChipStack.tsx` → `postLLMFailure` in `frontend/src/shims/bridge.ts` → `BridgeHandler.swift`), which lights the out-of-credit pill. It does not reach the row glyph or the popover, other failure kinds go nowhere, and it fires only while the SPA that started the job is open. Still nothing under `bristlenose/server/` calls `append_event`._ **Open, for the owner:** is that bridge the intended interim channel, or do option C or A still stand? (§"Q17 in detail") | design + plumbing |
 
 ### Navigation — sketched, not settled
 
 | | Question |
 |---|---|
-| **Q12** | **Breadcrumb or not.** With the rail as the hierarchy, only browse&rarr;page lacks a return. A single "Back to browse" that appears only when you arrived from there may be enough |
-| **Q13** | **One page, two provenances.** Reached from the rail (installed) and from a card (not installed). History-aware chrome is the usual answer and the usual source of bugs |
-| **Q14** | **Export mode's fourth state** — read-only, installed, offline. Browse must be stripped; the same `isExportMode()` gate already hides the Library button and the lab |
+| ~~**Q12**~~ | ~~**Breadcrumb or not.** With the rail as the hierarchy, only browse&rarr;page lacks a return. A single "Back to browse" that appears only when you arrived from there may be enough~~ **CLOSED by D22 and the library-as-URL change:** no breadcrumb and no in-page back button; history does the return (§"Navigation — as built") |
+| ~~**Q13**~~ | ~~**One page, two provenances.** Reached from the rail (installed) and from a card (not installed). History-aware chrome is the usual answer and the usual source of bugs~~ **CLOSED:** the same page and the same history; picking in the navigator replaces the history entry rather than pushing one |
+| ~~**Q14**~~ | ~~**Export mode's fourth state** — read-only, installed, offline. Browse must be stripped; the same `isExportMode()` gate already hides the Library button and the lab~~ **CLOSED, shipped:** `readOnly = isExportMode()` in `CodebookV2.tsx` hides Browse and the Review door. See External links for what an export still gets wrong |
 
 ### Answered in the prototype but never explicitly decided
 
 | | |
 |---|---|
-| **Q15** | **Does D6's no-modals rule reach the AutoCode Review?** The prototype builds it as a **route**, which answers the question by construction. Worth ratifying or reversing rather than leaving as an accident of implementation |
-| **Q16** | `.picker-card-actions` gains `align-items` and `gap` for the card footrow. That should be a **new class**, not an override on a shipped rule |
+| ~~**Q15**~~ | ~~**Does D6's no-modals rule reach the AutoCode Review?** The prototype builds it as a **route**, which answers the question by construction. Worth ratifying or reversing rather than leaving as an accident of implementation~~ **CLOSED 30 Aug — reversed:** the review stays a modal, as the preamble above records |
+| ~~**Q16**~~ | ~~`.picker-card-actions` gains `align-items` and `gap` for the card footrow. That should be a **new class**, not an override on a shipped rule~~ **CLOSED:** it is a new class, `.picker-card-footrow` (`codebook-v2.css`) |
 
 ### Closed since the coverage audit
 
 **G1** the review badge (D10, D18) &middot; **G2** tentative counts (the micro-bar stack now renders them) &middot;
-**G4** the instructional copy (floor page) &middot; **G5** cross-codebook drag (dissolved &mdash; one codebook at a time).
+**G4** the instructional copy ~~(floor page)~~ _(not placed: the string was deleted as dead on 22 Sep, commit "1,020 more dead values, and the tests that were keeping them alive"; corrected 15 Oct 2026)_ &middot; **G5** cross-codebook drag (dissolved &mdash; one codebook at a time).
 
 ## Status rollup — where each issue stands
+
+> **As of 29 Aug — superseded.** Marked 15 Oct 2026. Nearly every row below has
+> since closed; the tables are kept as the 29 Aug picture. The current status is
+> in [§"Current status — 15 Oct 2026"](#current-status--15-oct-2026) at the end
+> of this section, rebuilt from [`codebook-defects.md`](codebook-defects.md) and
+> checked against the code.
 
 Per **issue**, accounting for every decision and solution, not just the
 solution-by-solution matrix above. As of 29 Aug 2026.
@@ -1038,7 +1175,76 @@ These are *newly raised* rather than carried over — the work surfaced them.
 | **A4** sentiment uninstall is unrecoverable | **untouched**, newly found |
 | **D1 D2 D3** dead code, unreachable states, denied-is-terminal | **untouched** |
 
-## Open — navigation, across three contexts
+### Current status — 15 Oct 2026
+
+Rebuilt from `codebook-defects.md` (last trued 31 Aug) and checked against the
+code on 15 Oct. Where the code and the register disagree, the code wins and the
+row says so.
+
+**Issues**
+
+| | Status | Closed by |
+|---|---|---|
+| **I1** long scrolling page | closed | S1; one codebook on the page at a time |
+| **I2** too many on/off concepts | closed on this lens | D4, D7, D1/D8, D3; sentiment has no install control |
+| **I3** near-full-screen modals | closed | the Library modal was deleted with v1 (`baa1aa0e`); the review stays a modal by decision (Q15) |
+| **I4** described differently before and after install | closed, with one export gap | one page, `CodebookV2Page.tsx`, bio and links on it. In an HTML export the page has no template data, so the author card does not render (External links) |
+
+**What the 29 Aug "Not addressed" table listed**
+
+| | Now |
+|---|---|
+| Sentiment shape | settled 29 Aug and shipped; A4's endpoint is still unguarded |
+| AutoCode Review's fate | Q15: stays a modal |
+| D4 × the restore path | D20 option A shipped |
+| Failed-install retry | D24; the SPA half shipped, the Mac half is Q17 |
+| Navigation | D22, `?view=library`, Q14 shipped |
+| Slot aspect ratio | retired by D13; the slot is now parked |
+| `version` plumbing | **open** — Q6 |
+
+**Register rows** (`codebook-defects.md`)
+
+| Row | Register says | Checked 15 Oct |
+|---|---|---|
+| A1, A2 | fixed 31 Aug | — |
+| A3 | retired with D20 option A | — |
+| A4 | open, server-side only | still open: `remove_framework` has no sentiment guard |
+| A5 | fixed in 0.29.1 | — |
+| B1 | open | still open, and the row is stale: the Apply key it names is gone; the count was meant to move to Install (D4) and did not |
+| B2 | fixed 31 Aug | — |
+| B3 | open | the rule it names, `.picker-card.imported::after`, is now dead CSS: v2's card never sets `.imported` |
+| B4 | open | not checked this pass |
+| B5 | open | `.proposed-count` is no longer used by v2 (the rail badge is `.v2-nav-pending`), so the hardcoded tint sits on dead CSS |
+| B6 | fixed 31 Aug | — |
+| B7 | open | still open (Q9) |
+| C1, C3, C4, C5 | dissolved by the v1 deletion | the register's changelog says so; the table rows carry no mark |
+| C2 | open | not re-checked; the surface it describes was v1's |
+| D1 | open | still open: `AutoCodeReportModal` is exported from `components/index.ts` with no consumer |
+| D2 | open | still open: all nine YAMLs ship `enabled: true` |
+| D3 | open | still open: the review modal lists `pending` proposals only |
+| D5 | open (30 orphaned strings) | not re-counted this pass |
+| E1 | open (design question) | — |
+| E2 | dissolved | — |
+| E3 | fixed 31 Aug | — |
+
+## Navigation — as built (was: Open — navigation, across three contexts)
+
+> **Retitled 15 Oct 2026. Navigation has shipped.** The navigator is the
+> standard left panel: `CodebookV2Sidebar`, mounted by `AppLayout`. The Library
+> is URL state on the lens, `?view=library` (`CodebookV2.tsx`), so back and
+> forward work in the browser and through the Mac toolbar's Back button, and the
+> catalogue is deep-linkable. The Mac toolbar carries a Library button on this
+> lens (`ContentView.swift`, `desktop.toolbar.library`). Inside a page, the focus
+> cursor and the Codes menu move between groups and codes (commit "codebook: a
+> focus cursor, and the Codes menu it makes possible").
+>
+> **D10 to D21 below sit under this heading by accident of appending. They are
+> settled decisions, not open questions** (D21 sits under "Migration" for the
+> same reason). The section's own questions are answered in
+> §"What was still open before D22" below.
+>
+> The shipped button label is "Browse Codebooks" (`codebook.browseCodebooksButton`);
+> "Browse Library" in D22, D21 and D25 is the mockup's label.
 
 Raised 29 Aug from Claude's connector detail (a modal: breadcrumb
 *Connectors / Directory / Gmail*, Copy link, an X, a prominent CTA). Ours is a
@@ -1054,7 +1260,7 @@ Worth keeping that distinction, because the answer differs per context.
 | Context | Router | History back | Notes |
 |---|---|---|---|
 | **Browser** (`serve`) | `createBrowserRouter` | browser chrome | URL bar visible; Copy link is free once these are real routes |
-| **Desktop** (WKWebView) | same | **already native** | `ContentView.swift:2148` renders a toolbar Back button calling `bridgeHandler.goBack()`, enabled off `canGoBack`, observed by KVO in `WebView.swift:155` |
+| **Desktop** (WKWebView) | same | **already native** | `ContentView.swift:2694` renders a toolbar Back button calling `bridgeHandler.goBack()`, enabled off `canGoBack`, observed by KVO in `WebView.swift:214` _(anchors moved, 15 Oct 2026)_ |
 | **Export** (`file://`) | `createHashRouter` | browser back over hashes | browse cannot exist offline &mdash; no server to install from &mdash; so the only path is sidebar &rarr; codebook page |
 
 **The desktop finding settles most of it: do not add an in-page back button.** The
@@ -1063,6 +1269,18 @@ would duplicate native chrome &mdash; exactly the situation `ct()` already exist
 and exactly what it already does to the Codebook Library button, which is
 suppressed in-pane on desktop because the native toolbar carries it. Same
 mechanism, same reasoning, no new pattern.
+
+_Not true of v2, found 15 Oct 2026._ The `ct()` suppression lived in the deleted
+`CodebookPanel.tsx`; no v2 file calls `ct()` or `isEmbedded()`. So the desktop
+app shows Browse three times on this lens when the navigator is open: the toolbar Library button
+(`ContentView.swift`), the zone-title button (`CodebookV2.tsx`) and the
+navigator's button (`CodebookV2Sidebar.tsx`). The comment above the toolbar
+button in `ContentView.swift` still says `ct()` in `CodebookPanel.tsx` removes
+the in-pane copy. The in-page back button was not added, as this paragraph
+recommends.
+**Open, for the owner:** are three Browse buttons on the desktop intended, or
+should the in-pane ones step aside for the toolbar, as v1's did ("once per
+surface")?
 
 ### D22 — Browse Library *is* the navigation. Settled 30 Aug.
 
@@ -1108,6 +1326,30 @@ The build must simply not gate it on the rail.
 
 None of these blocks the mockup; all of them want deciding before the router work.
 
+**Resolved, recorded 15 Oct 2026.** The four questions above are kept as asked.
+
+1. **Breadcrumb — none.** No breadcrumb and no in-page back button. The
+   Library became URL state, and the commit that did it removed an in-page
+   "‹ Back" that had been doing history's job (commit "codebook v2: the library
+   becomes a URL, and the rail's second line is a person or nothing";
+   `CodebookV2.tsx`, "the library is a URL, not component state"). The browser's
+   Back and the Mac toolbar's Back return from the catalogue to the page.
+2. **Two provenances — one page, plain history.** Opening the catalogue pushes
+   a history entry; picking a codebook in the navigator closes it with
+   `replace`, so Back does not reopen a catalogue the researcher did not choose
+   to return to (`CodebookV2.tsx`, the `selectionSettled` effect).
+3. **Export mode — shipped.** `readOnly = isExportMode()` hides Browse on the
+   zone title and in the navigator, the Install button and the Review door. The
+   navigator lists installed frameworks from the codebook, not the template
+   list, so it still works offline. What the export still gets wrong is under
+   External links.
+4. **Copy link — half.** The Library is deep-linkable (`?view=library`). A
+   single codebook's page is not: the selection lives in a module store
+   (`frontend/src/contexts/CodebookV2Store.ts`), not the URL. No copy-link
+   control was built.
+
+There was no router work: the lens kept its one route, `/report/codebook`.
+
 ### D10 — the review count gets two homes: a rail badge and a page button
 
 Closes **G1**, settled 29 Aug. D4 fired the job on install and handed progress to
@@ -1140,6 +1382,14 @@ against `--bn-colour-accent` fixes it, exactly as island-doc decision 6 did for
 
 **Still open, deliberately:** whether Review opens a modal or a route. The door
 works either way; the last-modal-standing question is untouched.
+_Decided 30 Aug by Q15: a modal._
+
+_As built, 15 Oct 2026._ The rail badge is `.v2-nav-pending`
+(`CodebookV2Sidebar.tsx`; `codebook-v2.css`), not `.proposed-count`, which v2
+does not use; so register B5's hardcoded tint now sits on dead CSS. The page
+door is not an accent-filled "Review 12": per D18 it is a secondary, small
+"Review" button, and the count is the coverage line beside it, with "·
+N tentative" (`CodebookV2Page.tsx`). Uninstall is in the title row (D11).
 
 Frame: **V8** in [`mockups/codebook-v2.html`](mockups/codebook-v2.html).
 
@@ -1183,6 +1433,9 @@ or the page. That part stands.
 would undercut D1's gradient (irreversible act a level deeper). The cleaner split
 is **card owns lifecycle, page owns content**, which would leave Review as the
 page's only button. Not decided.
+_Decided by the build, recorded 15 Oct 2026: the page keeps Uninstall too_, in
+the title row beside the title (`CodebookV2Page.tsx`, `.pg-titleaction`), with
+Install in the same place when the codebook is not installed.
 
 **Future enhancement, noted not built:** a transition as Install becomes
 Uninstall. It is the one moment on this surface worth animating — the only
@@ -1245,9 +1498,23 @@ codebooks that change rarely. It would be noise pretending to be news.
    `foldedSummary` already overstates for the same reason — an existing bug, not
    one v2 introduces, but "on 34 quotes" makes it visible and wrong.
 
+_As built, 15 Oct 2026._ Item 2 is done: B6 was fixed server-side on 31 Aug.
+Item 1 is half done: a first-sentence fallback ships (`shortDescription` in
+`CodebookV2Browse.tsx`), the field does not (Q7). The version row is written
+but cannot render, because the API never sends `version` (Q6).
+
 Frame: **V10** in [`mockups/codebook-v2.html`](mockups/codebook-v2.html).
 
 ### D13 — the graphic is a fixed-width gutter, not a fixed box
+
+> **Parked; marked 15 Oct 2026.** The 44-pt gutter below was not built on
+> either surface. The page's side column, `.pg-side`, is a 240px gutter that
+> holds the author card (`codebook-v2.css`). The graphic placeholder is
+> commented out in `CodebookV2Page.tsx`, with its CSS kept so restoring it is
+> one uncomment (commit "codebook v2: the native switch was never sized, and
+> the author sat at a glyph stop"); its parked ratio is 3:4, not 2:3. The browse
+> card has no graphic slot. The reasoning below still decides the shape if the
+> graphic returns.
 
 Settled 29 Aug, and it **retires an objection I raised wrongly.** I had argued the
 aspect ratio could not be deferred with the fill: a 2:3 slot would strand a circle
@@ -1313,8 +1580,14 @@ master&ndash;detail at exactly the moment you are using the master list.
 **Where the rail does cost width:** below a window of **220 + 320 + 832 = 1372pt**
 the content column starts being squeezed (1352 at the sidebar's 200 minimum — 1332 at the 180 it was until 25 Sep 2026). A
 windowed-small app is a real case — and it is already handled, by the user. D9
-makes the rail closable and next/prev covers traversal once it is shut. **Closing
+makes the rail closable and ~~next/prev covers traversal once it is shut~~
+Browse covers the way to another codebook once it is shut (D22). **Closing
 it is the researcher's call, not something the page does to them.**
+
+_As built, 15 Oct 2026._ The arithmetic's −320 in-lens rail no longer exists.
+Navigation is the standard left panel, default 240 wide
+(`frontend/src/contexts/SidebarStore.ts`, `DEFAULT_TOC_WIDTH`), and the lens takes
+the full content width beside it. The argument holds with more slack.
 
 That is the whole argument against auto-snapping: an app that rearranges the
 window on navigation feels possessed, and here it would be rearranging it to gain
@@ -1349,6 +1622,9 @@ Chrome ships the attribute, we inherit it without touching this code.
 
 - **The mini toggle is deleted.** D3's open question ("switch or checkbox at rail
   size?") is answered by not needing an answer. Innovations drop from 8 to 7.
+  _Not as built, 15 Oct 2026:_ the fallback is a mini, `.sw.mini` at 26×15
+  (`CodebookV2Sidebar.tsx`; `codebook-v2.css`), not `.sw` unchanged as the table
+  above says. It matches the platform switch's rail size from D16.
 - **The fallback is not a downgrade** — `.sw` is the shipped, measured,
   macOS-matched control. It stays exactly as it is.
 - **This is the house pattern**, one layer down from where it usually operates:
@@ -1389,6 +1665,7 @@ different knob inset — whereas CSS `width`/`height` re-lays the *regular*
 drawing. The probe proves the geometry is clean; whether it reads as a proper
 small switch or as a shrunk large one is a judgement to make at 1× on a real
 display, which is exactly what the parity doc means by squinting at arm's length.
+_15 Oct 2026: nothing records that anyone has made that judgement._
 
 The prototype has a **Platform / Ours** toggle so both can be judged in place, and
 it disables the platform option with a note when the host cannot render it.
@@ -1467,6 +1744,23 @@ to the denial ledger. That is `design-codebook-state-model.md`'s open **Q-C**,
 arriving here as a UX consequence rather than a theoretical one. **A surface that
 re-opens the sliders after hand-editing needs that question answered first.**
 
+_As built, 15 Oct 2026._ Three differences from the above.
+
+- The coverage line is plain text, and the door is a separate verb button,
+  "Review" (`CodebookV2Page.tsx`).
+- "· 12 undecided" shipped as "tentative", the word the rest of the product
+  uses (commit `6a7f6771`, *the card says "tentative" — the word the rest of
+  the product already uses*).
+- The sliders are not read-only on re-entry. They reseed from the applied
+  thresholds and stay movable (`ThresholdReviewModal.tsx`). What keeps
+  re-applying from clobbering hand decisions is the server: accept-all and
+  deny-all act only on proposals still `pending`
+  (`bristlenose/server/routes/autocode.py`), and the modal lists only pending
+  proposals. So a hand-denied tag is not resurrected by moving a slider.
+
+**Open, for the owner:** does acting only on pending proposals count as the
+answer to Q-C for this surface, or is `decided_by` (below) still wanted here?
+
 **Sentiment has no door at all.** It is pipeline-applied: no `AutoCodeJob`, no
 proposals, no confidence distribution, so no histogram to open. Its coverage
 figure is real but its Review button would lead nowhere. Another instance of the
@@ -1497,8 +1791,8 @@ you must recompute the derived ones — but you cannot, because you cannot see
 which they are, so you either clobber the overrides or refuse to move.
 
 **`reviewed_at` does not rescue it.** All four write sites set it identically —
-single accept (`autocode.py:484`), single deny (`:519`), accept-all (`:597`),
-deny-all (`:664`). It records *when* a decision was made, never *by what*.
+single accept (`routes/autocode.py:500`), single deny (`:535`), accept-all (`:613`),
+deny-all (`:680`) _(anchors moved, 15 Oct 2026)_. It records *when* a decision was made, never *by what*.
 Timestamps could be inferred against the job's `completed_at`, but two hand
 decisions in the same second are indistinguishable from a batch, and a re-apply
 rewrites them. Inference, not fact.
@@ -1524,11 +1818,22 @@ at the negative, not re-developing it. That ships the Review door now with no
 clobber risk, and leaves the non-destructive re-cast as the v2-future work it was
 called.
 
+_15 Oct 2026:_ `decided_by` is not built. The sliders shipped movable rather than
+read-only; see the D18 note above. And "denied ones retained" holds only while
+the codebook is installed: since D20 option A, uninstall deletes its proposals.
+
 ### D19 — the author gets the person treatment the house already uses
 
 Settled 29 Aug. The byline moves from `--bn-colour-muted` at normal weight to
 **`--bn-weight-emphasis` in full text colour**, in all three places it appears:
 rail row, browse card, page header.
+
+_As built, 15 Oct 2026: two of the three._ The rail (`.v2-nav-provenance`) and
+the page (`.pg-author`) carry it (`codebook-v2.css`). The browse card's
+`.picker-card-author` is still muted at normal weight, from v1's
+`codebook-panel.css`, with no v2 override for a person.
+**Open, for the owner:** is the muted author on the browse card intended, or a
+missed D19 site?
 
 **This is not a new treatment — it is the one already in the codebase.** Three
 shipped rules render a person exactly this way:
@@ -1588,7 +1893,7 @@ mostly answering separate questions separately.
 
 | Rule | Surface | Treatment |
 |---|---|---|
-| `.codebook-author` | **Tag sidebar, Quotes lens** (`TagSidebar.tsx:619`) | badge, muted |
+| `.codebook-author` | **Tag sidebar, Quotes lens** (`TagSidebar.tsx:632`, _moved, 15 Oct 2026_) | badge, muted |
 | `.picker-card-author` | Library tile | label, muted |
 | `.framework-section-author` | codebook section header | label, muted |
 | `.preview-author-name` | preview author **card** | label, **emphasis** |
@@ -1621,6 +1926,12 @@ Corrected 29 Aug. The prototype had collapsed the rail to two sections — *Your
 codebook* / *Installed* — which is an **IA regression**: the shipped
 `CodebookSidebar` has **three**, split on `author === ""`
 (`CodebookSidebar.tsx:100`).
+
+_As built, 15 Oct 2026._ `CodebookSidebar` was deleted with v1. The navigator,
+`CodebookV2Sidebar.tsx`, keeps the three sections and derives built-in from an
+absent author (`builtIn: !author.trim()`). The Frameworks heading reads the key
+`codebook.frameworksSection` ("Frameworks"); `frameworksHeader`, cited below, no
+longer exists.
 
 | Section | Shipped string | Contains | v2 |
 |---|---|---|---|
@@ -1781,16 +2092,16 @@ removed; each is something v2 has simply not placed.**
 | `restoreCodebook` / `restoringCodebook` / `restoreHelp` / `previouslyImported` | **removed** | D4 makes reinstall re-spend, so "restore instantly" is no longer true |
 | The Library **modal** (`codebook-modal-*`, picker + preview) | **removed** | S2 + D6: browse page and codebook page, no modals |
 | The **status dot** | **removed** | D3: promoted into the toggle it used to echo |
-| Sidebar **`builtIn` / `frameworks`** headings, and not-installed rows | **removed** | Rail is installed-only; grouping is provenance |
+| Sidebar ~~**`builtIn` / `frameworks`** headings, and~~ not-installed rows | **removed** | Rail is installed-only; grouping is provenance. _Corrected 15 Oct 2026: the headings were kept, per D17 — Default and Frameworks render in `CodebookV2Sidebar.tsx`; only the not-installed rows went_ |
 | `comingSoon` | **unreachable today** (all nine ship `enabled: true`) | Browse page may keep the state; no user has seen it |
-| Desktop **Codes** menu: `renameCodeGroup`, `deleteCodeGroup`, `renameCode`, `deleteCode` | **retired 12 Sep 2026** | Not deferred — a category error inherited from v1. The 29 Aug pin makes selection **single**, living **in the master list**, with the detail pane "a pure function of it"; the master list selects a *codebook*, so a command naming one group or one tag has no target the model permits. Each is already a direct-manipulation affordance on the codebook page: click a name to rename, a per-chip delete, drag to merge |
+| Desktop **Codes** menu: `renameCodeGroup`, `deleteCodeGroup`, `renameCode`, `deleteCode` | **retired 12 Sep 2026**, _restored the same day behind the focus cursor — see the correction below the table (`MenuCommands.swift`; noted 15 Oct 2026)_ | Not deferred — a category error inherited from v1. The 29 Aug pin makes selection **single**, living **in the master list**, with the detail pane "a pure function of it"; the master list selects a *codebook*, so a command naming one group or one tag has no target the model permits. Each is already a direct-manipulation affordance on the codebook page: click a name to rename, a per-chip delete, drag to merge |
 | Desktop **Codes** menu: `showHideCodeGroup` | **retired 12 Sep 2026** | Never a codebook command at all. **D7** — hide and enable are different axes, on different lenses — puts the eye in `TagSidebar`/`TagGroupCard` on **Quotes**, and confirms hide "was never a third axis here". This is what closes **G7**/**Q11** |
 | Desktop **Codes** menu: `mergeCodes` | **withdrawn 28 Jul 2026, removed 12 Sep 2026** | Merging is drag-and-drop; with no multi-select of codes there is nothing for a menu command to act on. Commented out in July, deleted with the other five |
 
 **Restoring any of the six means reopening the 29 Aug pin, not adding a
 handler.** `createCodeGroup` and `createCode` stay — creation needs no target.
 
-**Reasoning corrected 12 Sep 2026 (same day):** the *no target can exist* argument was too strong for the four rename/delete commands — the 29 Aug pin governs **selection**, and a **focus** cursor inside the detail pane is a separate axis the app already ships twice (`FocusContext.focusedId`, `SignalStore.focusedKey`). See [`design-codebook-focus.md`](design-codebook-focus.md), proposed. `showHideCodeGroup` (D7) and `mergeCodes` (needs two targets) are untouched by that correction and stay retired.
+**Reasoning corrected 12 Sep 2026 (same day):** the *no target can exist* argument was too strong for the four rename/delete commands — the 29 Aug pin governs **selection**, and a **focus** cursor inside the detail pane is a separate axis the app already ships twice (`FocusContext.focusedId`, `SignalStore.focusedKey`). See [`design-codebook-focus.md`](design-codebook-focus.md), ~~proposed~~ shipped (commit "codebook: a focus cursor, and the Codes menu it makes possible", released in 0.30.0; noted 15 Oct 2026). The four commands are back in the Codes menu, acting on the focused group or code. `showHideCodeGroup` (D7) and `mergeCodes` (needs two targets) are untouched by that correction and stay retired.
 
 ### Mapped — same capability, new address
 
@@ -1802,7 +2113,7 @@ handler.** `createCodeGroup` and `createCode` stay — creation needs no target.
 | picker card title / author / desc / tags | browse card, density ladder V4–V5 |
 | `preview-author` / `-bio` / `-links` | codebook page — **and no longer lost on install** (I4) |
 | framework title / author / `foldedSummary` | codebook page header |
-| `framework-toggle` | rail row (mini) **and** page header (full) — D3 |
+| `framework-toggle` | ~~rail row (mini) **and** page header (full) — D3~~ rail row only (D11), as the platform switch or `.sw.mini` (D15) _— corrected 15 Oct 2026_ |
 | `removeFromCodebook` / `hideTitle` / `tagsRemovedFromQuotes` / `noQuotesTagged` / `loadingImpact` / `autoCodePreserved` / `restoreAnytime` | uninstall confirm, unchanged |
 | Group CRUD — title, `addSubtitle`, `group-close`, `addTag`, `newGroup`, `deleteGroupTitle`, `deleteTagTitle`, `tagOnQuotes`, `tagsWillMove`, `mergeTitle`/`mergeBody`/`merge` | the floor's codebook page, unchanged |
 | `total` / `group-total-row` | group card, unchanged |
@@ -1811,7 +2122,7 @@ handler.** `createCodeGroup` and `createCode` stay — creation needs no target.
 | `projectTagsHeading` / `yourTags` | rail row + page title |
 | anchor scroll `#codebook-fw-{id}` | replaced by selection |
 | `all_tag_names` duplicate guard | unchanged — still passed whole, so it still sees every tag |
-| Desktop Codes menu: `browseCodebooks`, `importFramework`, `removeFramework` | re-point from modal-open to route navigation |
+| Desktop Codes menu: `browseCodebooks`, `importFramework`, `removeFramework` | re-point from modal-open to route navigation. _Done, noted 15 Oct 2026: `browseCodebooks` opens `?view=library`; `importFramework` and `removeFramework` became one row whose verb swaps between Install and Uninstall (`MenuCommands.swift`)_ |
 
 ### One thing that quietly changes
 
@@ -1820,6 +2131,22 @@ grid, so Garrett-blue sits beside Norman-green and the palette does work as a
 distinguisher. One codebook at a time, colour only distinguishes groups *within*
 a codebook. Not a loss of function, and arguably a gain in focus — but the six
 colour sets do less work than they did.
+
+### Post-script, 15 Oct 2026 — where each gap stands now
+
+The audit above is the pre-cutover baseline and stays as written; G1 and G7 were
+struck in place before this rule was set, and are left struck. This table is
+the current answer.
+
+| # | Now | Evidence |
+|---|---|---|
+| **G1** | closed | D10: the rail badge `.v2-nav-pending`, the page's Review door |
+| **G2** | closed | the two-tone tentative bar is drawn on each code row (`CodebookAuthoring.tsx`, `CodebookTagBar`) |
+| **G3** | open, lower priority | the lab still has no entry point in the SPA; the flag has been default-off since 20 Sep (commit "close the codebook-lab gate: default off, and the switch inverts"), so testers do not see the lab. Q10 |
+| **G4** | dissolved | not placed: `codebook.description` was deleted as dead copy on 22 Sep (commit "1,020 more dead values, and the tests that were keeping them alive") |
+| **G5** | dissolved | one codebook on the page at a time |
+| **G6** | replaced | `autoCodeStartFailed` was deleted in the same commit; install refusals now raise the `autocodeRefusal` toast (`CodebookV2.tsx`) |
+| **G7** | closed | the command is retired (12 Sep); hide lives on the Quotes lens |
 
 ## State-engine audit — what v2 breaks, changes, or renders purposeless
 
@@ -1913,6 +2240,29 @@ Recommend the first until there is a reason for the second.
   per-codebook page). Router work, not state work. It also *deletes* code: the
   modal, and with it register **C4**.
 
+### Post-script, 15 Oct 2026
+
+The audit body above is kept as written on 29 Aug. What happened since:
+
+- **"What D4 renders purposeless" and "the one real collision" are resolved.**
+  D20 option A shipped (commit "codebook: uninstall stops preserving — D20
+  option A"). The restore branch is gone, and uninstall deletes the framework's
+  jobs and proposals with its tags, so a reinstall cannot meet old proposals.
+  The `routes/codebook.py:887` line quoted above survives only as history in a
+  comment inside `remove_framework`. Register A3 (`restorable` computed across
+  projects) was retired with it.
+- **"The one complexity increase" was closed by D24.** A refused install raises
+  a toast with the reason (`CodebookV2.tsx`, `autocodeRefusal`); a failed run
+  reports on the activity chip in the SPA. The Mac half is Q17.
+- **Scope: the presentation-only form shipped**, as recommended. Install calls
+  install, then `startAutoCode`; the install endpoint does not fire a job.
+- **S1 and S2 cost, as built.** The navigator is `CodebookV2Sidebar`, not a
+  changed `CodebookSidebar` (deleted with v1). S2 added **no routes**: the
+  Library is a search parameter on the lens's one route, and the selected
+  codebook lives in a module store (`CodebookV2Store.ts`). The modal and C4
+  went with v1 (`baa1aa0e`).
+- The six-engines table still holds.
+
 ## Grounding
 
 Already measured, so v2 does not re-derive it:
@@ -1920,6 +2270,8 @@ Already measured, so v2 does not re-derive it:
 - **[codebook-defects.md](codebook-defects.md)** — the eighteen spec-vs-shipped
   gaps. Several are layout-adjacent (C1 the un-morphed Apply, C3 the duplicated
   Uninstall) and may dissolve into v2 rather than needing separate fixes.
+  _15 Oct 2026: about two dozen rows now, and C1, C3, C4 and C5 did dissolve
+  with v1. See §"Current status — 15 Oct 2026"._
 - **The flow** — five FigJam diagrams, the routes between every element:
   [figma.com/board/2H7rrbqAP5J1ic5Zmkyo32](https://www.figma.com/board/2H7rrbqAP5J1ic5Zmkyo32)
   (access-controlled).
@@ -1955,7 +2307,8 @@ nothing. So it goes **up a size and stays neutral**: `.bn-btn .bn-btn-secondary
 unmarked; this replaces it rather than justifying it.
 
 **Install is the main call to action on the codebook page**, so on that page it
-takes the shipped primary fill at **normal size** — `.add-btn .bn-btn-primary`.
+takes the shipped primary fill at **normal size** — `.add-btn .bn-btn-primary`
+_(as built: `bn-btn bn-btn-primary`, no `.add-btn`; `CodebookV2Page.tsx`, noted 15 Oct 2026)_.
 Size does the work on the destination, fill does the work on the action, and
 neither borrows the other's device.
 
@@ -1986,6 +2339,13 @@ token, and `.add-btn.bn-btn-primary` restates the shipped primary's three
 declarations verbatim rather than inventing a fill. **This is a genuine gap in
 the atom, not a local workaround** — if v2 ships, the size axis belongs in
 `modal.css`, not in the mockup.
+
+_15 Oct 2026: v2 shipped and the axis was not promoted._ `.bn-btn-lg` and
+`.bn-btn-sm` stay scoped in `codebook-v2.css` (to `.v2-layout`,
+`.section-heading` and `.v2-nav`), and `.bn-btn-sm` has since spread to the
+Discussion lens's navigator (`.dl-nav`). Outside those scopes the classes do
+nothing. Whether to move the size axis into the atom is an open design-system
+decision; nobody has taken it.
 ## Fidelity map — what the prototype is, part by part
 
 Asked for on 30 Aug, and it is the thing a prototype most needs and least often
@@ -2017,7 +2377,7 @@ that disagrees with one of them is wrong, not different.
 | Part | Why it is only indicative |
 |---|---|
 | Button treatments | Changed **twice on 30 Aug**. The *hierarchy* is the direction — destination quiet and larger, page action primary, card action neutral. The classes are a proposal |
-| `.bn-btn-sm` / `.bn-btn-lg` | A **declared gap** in the atom, not an accepted addition. Per the fidelity contract a missing atom is a finding; this one is filed, not granted |
+| `.bn-btn-sm` / `.bn-btn-lg` | A **declared gap** in the atom, not an accepted addition. Per the fidelity contract a missing atom is a finding; this one is filed, not granted. _15 Oct 2026: both shipped, scoped to `codebook-v2.css` rather than added to the atom; see D21's note_ |
 | The Review door's split — verb button, counts on its baseline | Minutes old at the time of writing |
 | All interaction wiring | Tier 1 stubs — install flow, confirm dialog, drag gestures |
 | Fixture data | Throwaway, though shaped like the real payload |
@@ -2048,11 +2408,15 @@ they are not on this surface at all.
 ~~A codebook with no tags~~ — **settled by D26**: a bleak one-line statement,
 and no Review door.
 
-Still owed as drawings: **a codebook page whose counts are zero** (tags defined,
+~~Still owed as drawings: **a codebook page whose counts are zero** (tags defined,
 but the run failed or has not finished — D24 settles that this is a *zero* state
 and not an error, and D26 distinguishes it from a tagless codebook, but neither
 says what it looks like), and the uninstall confirmation at Tier 2 rather than as
-a stub. ~~The knocked-back disabled card~~ — **settled by D27**: identical to
+a stub.~~ **Both shipped in production code, so the drawings are no longer owed**
+_(struck 15 Oct 2026)_: the zero state says so (commit "zero says so; and band
+the mockups that can no longer be trusted"), and the uninstall confirmation is a
+sheet that counts what will be lost (commit "codebook v2 phase 5: install, and an
+uninstall that measures what it costs"; `CodebookV2UninstallSheet.tsx`). ~~The knocked-back disabled card~~ — **settled by D27**: identical to
 the page, with the uninstall control exempt on both.
 
 **Long-content overflow on titles, author names and group subtitles is
@@ -2147,6 +2511,9 @@ already true today and already has a home. It keeps that home:
   toast. Both already exist: `CodebookPanel` registers a running job in the
   activity store, and the failure paths already toast a real reason rather than
   swallowing it — 409 already-running, 503 no API key.
+  _As built, 15 Oct 2026: `CodebookPanel` is deleted. `CodebookV2.tsx` registers
+  the job (`addJob`) and toasts install refusals (`autocodeRefusal`); the chip
+  stack reports a failed run._
 
 **Nothing needs inventing, which is the point.** The retry the fidelity review
 said "has to be invented" does not, because the run's progress and failure never
@@ -2164,12 +2531,13 @@ is durable; the event stream stays where event streams live.
 2. **The completion toast already opens the review modal.** `CodebookPanel`
    dispatches `bn:autocode-report` from the toast's *View Report*, which opens
    `ThresholdReviewModal` — the same destination as the codebook page's Review
-   door. Today's call that the review stays a modal is not a constraint on this;
+   door. _(15 Oct 2026: the toast is deleted; `AppLayout.tsx` dispatches
+   `bn:autocode-report` and `CodebookV2.tsx` listens for it.)_ Today's call that the review stays a modal is not a constraint on this;
    the two doors already converge on it, and keeping the modal is what lets them.
 
 **The Mac half is not wired, and this is the one build-blocking finding in
 D24.** Measured 30 Aug: `routes/autocode.py` records `error_message` on the job
-and returns it over HTTP (`:122`), which is how the SPA toasts a real reason
+and returns it over HTTP (`:122`, now `:135`), which is how the SPA toasts a real reason
 today. But **no path under `bristlenose/server/` calls `append_event` at all**,
 and the Mac's sidebar glyph and popover read the events log
 (`PipelineRunner.swift`, `EventLogReader.swift`). So a failed autocode job
@@ -2181,6 +2549,14 @@ Note this is not merely a missing wire: the events log is written **per pipeline
 run**, and autocode is a server-side job rather than a run. Appending to it may
 be right, or may be a category error that wants a second channel. That is a
 design question and it is open — see Q17.
+
+_Partly addressed, 15 Oct 2026, through a channel this section did not list._
+Since 3 Sep (commit "a job whose every batch failed is a failed job") the
+activity chip posts an `llm-failure` message over the bridge when a job fails
+(`ActivityChipStack.tsx` → `postLLMFailure` → `BridgeHandler.swift`). The Mac
+acts only on `out_of_credit`, by lighting the out-of-credit pill. It does not
+reach the row glyph or the popover, so D24's requirement is still unmet, and it
+fires only while the SPA that started the job is open.
 
 **Platform fork, deliberate.** A status line on the Mac and a toast in the SPA is
 not an inconsistency — it is the house rule that a shared taxonomy renders native
@@ -2280,6 +2656,21 @@ opacity with its live hover.
 This is the same shape as the `.add-btn` and missing-`.bn-btn` findings earlier
 today: **the defect was never in the rule anyone was reading.**
 
+_Found 15 Oct 2026, not fixed — and it is this section's own shape again._ In
+production the two surfaces are **two rule sets** sharing a token, not one rule
+(`codebook-v2.css`: `.pageoff …` and `.v2-card-grid .picker-card.off2 …`). And
+neither exemption works as written:
+
+- **Card:** `.picker-card.off2 { opacity: var(--bn-opacity-off) }` sits on the
+  card, and `.picker-card.off2 .picker-card-toggle { opacity: 1 }` on the button
+  cannot undo a parent's opacity, because opacity multiplies down the tree. The
+  card's Uninstall renders at 0.5 on a switched-off codebook — the control D27
+  says must stay at full opacity.
+- **Page:** `.pageoff .pg-actions { opacity: 1 }` is dead. No element has
+  `pg-actions`; Uninstall moved to the title row (`.pg-titleaction`). The page
+  is right by accident: its opacity rule reaches only the groups and the
+  graphic, never the title row.
+
 #### D27a — and unifying two inventions is not the same as removing them
 
 Corrected within the hour, on the right question: *does the design system already
@@ -2317,6 +2708,21 @@ converge on one token. That is a theme-wide change with its own blast radius,
 and naming it is the deliverable — not doing it inside a codebook mockup.
 
 ## The message inventory — `docs/mockups/codebook-v2-messages.html`
+
+> **Post-script, 15 Oct 2026.** Two things below are retired. The shipped
+> `.autocode-toast` component was deleted on 12 Sep because nothing mounted it
+> (commit "autocode: delete the unmounted toast, port the coverage nothing else
+> had"); its stylesheet, `bristlenose/theme/atoms/autocode-toast.css`, is still
+> in the theme with all eleven classes unused (found 15 Oct, not fixed). And
+> finding 4's `CodebookPanel` went with v1. The fifteen strings are live
+> (`codebook.autocodeFailure.*`, `codebook.autocodeRefusal.*`,
+> `autocode.toast.donePartial`). One shipped message is missing from the
+> inventory: the catch-up chip that runs when a switched-off codebook is turned
+> back on (`AppLayout.tsx`). Its keys, `autocode.chip.recoding` and
+> `autocode.chip.recoded`, exist in **no** locale file; English renders only
+> through `defaultValue`, so it is untranslated in every other language and
+> `check-locales.py` cannot see it (found 15 Oct, not fixed). Finding 5 is
+> still open.
 
 Built 30 Aug. Every message the install-and-autotag path can produce, drawn in
 both renderings that carry it: the SPA toast and the macOS project-sidebar row
@@ -2426,7 +2832,35 @@ Fifteen strings across all 21 full locales; `check-locales.py` clean.
 sidebar glyph or popover), and a durable home for configuration refusals, which
 a four-second toast is not.
 
+**Post-script, 15 Oct 2026.** One correction to this log and two later changes.
+
+- **The partial-run fix reached no researcher when it landed.** "Both the toast
+  and the activity chip" overstates it: the toast was rendered by nothing, so
+  the WARNING lived in a component nobody saw. The live fix is commit
+  "autocode: the fix for partial runs landed in a component nothing renders",
+  released in 0.29.1; the dead toast was then deleted (commit "autocode: delete
+  the unmounted toast, port the coverage nothing else had").
+- **The partial rule was refined** (commit "a job whose every batch failed is a
+  failed job"): a job whose every batch failed is now `failed`, not a
+  zero-count partial, and a partial job carries its `failure_kind`.
+- **Both "still owed" items are still owed.** The Mac half is partly covered by
+  the `llm-failure` bridge message (see D24's note); configuration refusals still
+  go to a four-second toast.
+
 ## Q17 in detail — which channel carries a job's state to the Mac
+
+> **Status, 15 Oct 2026: still undecided, and the recommendation below has
+> moved.** Option C is marked RECOMMENDED here, but after Q17a–c dissolved two of
+> Option A's three objections the recommendation moved to the events log
+> ([`design-codebook-v2-plan.md`](design-codebook-v2-plan.md), "Judgement calls
+> owed" #2). Neither has been built: nothing under `bristlenose/server/` calls
+> `append_event`, there is no `/api/projects/{id}/activity` route, and `KindEnum`
+> is unchanged. Meanwhile a fourth channel shipped that this section does not
+> list: the SPA's activity chip posts an `llm-failure` bridge message, which the
+> Mac uses only for out-of-credit, and only while the SPA that started the job is
+> open (D24's note). **Open, for the owner:** is that bridge the intended
+> interim channel, or do C or A still stand? Line anchors below were corrected
+> on 15 Oct where the passage is still live.
 
 Measured 30 Aug. I had said the events log "isn't a missing wire, it's a
 decision". That is right, but I understated the log: **three of its four readers
@@ -2444,7 +2878,7 @@ not tail-based:
   *"Unknown event type — likely forward-compat"*.
 - `read_events` "skips malformed", so even an unparseable line is inert.
 
-**One real trap.** `tail_run_state` (`events.py:708`) walks the tail for the most
+**One real trap.** `tail_run_state` (`events.py:703`) walks the tail for the most
 recent *lifecycle* event, skipping only `RunProgressEvent`. A new type would
 become `last_event` and **mask the real terminus** — which is precisely the bug
 its own comment records as *"Finding 1"*. Adding to that skip list is one line;
@@ -2454,7 +2888,7 @@ noticing it is the whole problem, and this would be the second recurrence.
 
 1. **The schema would have to lie.** Every event carries a `run_id`. AutoCode has
    no run. Either mint a synthetic one — a lie every reader inherits, including
-   `PipelineRunner.swift:621`, which reads `tailEvent(at:)?.runId` — or make it
+   `PipelineRunner.swift:736`, which reads `tailEvent(at:)?.runId` — or make it
    nullable, weakening it for all five existing event types to serve a sixth.
 2. **Governance.** `pipeline-events.jsonl` is a **named re-identification
    surface**, in `.bristlenose/` beside `pii_summary.txt`, with retention
@@ -2479,7 +2913,7 @@ One authed `GET /api/projects/{id}/activity`: the jobs currently running or
 recently failed, each with its `failure_kind`. The Mac polls **one URL per
 project** and renders; the server owns the rollup.
 
-**Precedented, not invented.** `ServeManager.swift:1119` already polls
+**Precedented, not invented.** `ServeManager.swift:1263` already polls
 `http://127.0.0.1:<port>/api/agent-activity` behind the bearer and drives the
 sidebar antenna from it — same transport, same authentication, same surface,
 same "server computes, host renders" split. `health.py:146` even records *why*
@@ -2793,7 +3227,9 @@ AutoCode toast now renders in the SPA.
 
 **And the sentence templates already parameterise the subject.**
 `PipelineRunner.swift:1828` is `let subject = provider?.displayName ?? "LLM
-provider"`, feeding *"Your \(subject) key isn't working."* An extension that
+provider"`, feeding *"Your \(subject) key isn't working."* _(15 Oct 2026: that
+line is gone; the sentence is now a locale key that takes `{{provider}}`. The
+point stands.)_ An extension that
 authenticates against something other than the LLM provider — the corporate lens
 — supplies its own subject and the existing string renders correctly. That is
 the payoff of an extension naming itself in the data: the *rendering* needs no
@@ -2822,7 +3258,7 @@ arrives with the meal — you did not order it, and it exists to keep what you
 already have true.
 
 **The real UX problem is not granularity, it is that reapply is invisible.**
-`app.py:963` guards it — *"a re-apply failure never breaks the import/publish
+`app.py:1242` guards it — *"a re-apply failure never breaks the import/publish
 contract"* — so a failure is logged and nothing else. And a silent reapply
 failure is **worse than a failed install**, because a failed install is
 self-evident (the codebook has no tags at all) whereas a failed reapply leaves a
@@ -2987,6 +3423,15 @@ Across the nine migrations in `bristlenose/server/alembic/versions/`:
 So: **add, then move to it — and you do not get to move back.** The safety comes
 from additive-first, not from reversibility.
 
+_Post-script, 15 Oct 2026._ The table is the 30 Aug measurement of nine
+migrations. There are now nineteen (to `019_project_study_id.py`), and two of its
+rows no longer hold: `013_moderator_identities.py` drops a column
+(`name_confirmed`) inside `upgrade()`, and only 9 of 19 raise
+`NotImplementedError` in `downgrade()` — 008, 010–012 and 014–019 implement one. So
+"you do not get to move back" was the house practice at nine migrations and is
+not now. The guarded-additive and `batch_alter_table` advice below still
+stands.
+
 **"Guarded" has a specific cause, not general caution.** `init_db` runs
 `create_all()` **then** `run_migrations`, which stamps 001 and upgrades to head —
 so `upgrade()` *does* run on a brand-new database where the model has already
@@ -3043,7 +3488,8 @@ reading.
 ### B. What v2 shows that has no data yet
 
 - **`ver`** — the version chip. **Q6**, one field on `TemplateOut`; the YAML
-  already parses it.
+  already parses it. _Still not shipped at 15 Oct 2026; the browse card reads a
+  field the API never sends, so the chip cannot render._
 - **`jacket`** — the graphic. **Q4**, deferred by decision.
 - **The provenance line** — **D23**, new; `author_bio` / `author_links` already
   ship (`CodebookPanel.tsx:1518`), so only the built-in case is new.
@@ -3110,6 +3556,31 @@ focusable. Verified: **no element carries a `role` without a tab stop.**
 
 ## External links — author websites and book links
 
+> **Post-script, 15 Oct 2026.** The analysis below holds; several facts under it
+> moved.
+>
+> - **The links now render on the codebook page**, `CodebookV2Page.tsx`; every
+>   `CodebookPanel.tsx` line cited below is deleted.
+> - **The export still does not render them**, so the prediction under "Export
+>   mode" and in D30 ("v2 moves `author_links` into an exported file for the
+>   first time") is false at HEAD. The page reads the links from
+>   `/codebook/templates`, which is still server-only in
+>   `bristlenose/server/routes/export.py`, so offline the template data is
+>   absent and the author card does not render. Recommendation 4 is therefore
+>   moot unless templates are embedded.
+> - **Probably more is wrong offline, from reading the code; not verified in a
+>   running export.** With no template data the navigator titles each installed
+>   framework by its raw id and, finding no author, files it under **Default**
+>   (`CodebookV2Sidebar.tsx`, `builtIn: !author.trim()`); the page's provenance
+>   line would read "Available by default". Worth one human export check.
+> - **Open, for the owner:** should the HTML export embed the codebook
+>   templates, or a title-and-author subset, so the rail and the page are right
+>   offline?
+> - Recommendation 2 is superseded by **D30**: the loader drops a bad link and
+>   logs it, rather than raising. Recommendation 3's model was reversed: the
+>   Nielsen labels dropped the host on 20 Sep (commit "nielsen bio links fit one
+>   line each: the book title stays, the domain goes").
+
 Raised by the 30 Aug QA pass as the one control in the prototype whose real
 destination is undesigned. Drawn in parallel as
 [`docs/mockups/codebook-v2-external-links.html`](mockups/codebook-v2-external-links.html),
@@ -3128,7 +3599,7 @@ unsafe the moment the codebook corpus stops being maintainer-curated.
 
 | Context | Path | Verdict |
 |---|---|---|
-| **Desktop** (WKWebView) | `target="_blank"` → `createWebViewWith` (`WebView.swift:601`) → `isAllowedServeURL` fails → `openExternal(url)` → `NSWorkspace.shared.open` | **Already correct.** Opens the default browser; returns `nil`, so no popout window is created |
+| **Desktop** (WKWebView) | `target="_blank"` → `createWebViewWith` (`WebView.swift:773`, _moved, 15 Oct 2026_) → `isAllowedServeURL` fails → `openExternal(url)` → `NSWorkspace.shared.open` | **Already correct.** Opens the default browser; returns `nil`, so no popout window is created |
 | **Browser** (`serve`) | new tab, `rel="noopener noreferrer"` | Standard, matches 12 sibling sites |
 | **Export** (`file://`) | **the links never render** — see below | No decision to make today; one to make for D23 |
 
@@ -3137,12 +3608,12 @@ concern in the QA note — that an unhandled `_blank` silently does nothing in
 WKWebView unless `WKUIDelegate.createWebViewWith` is implemented — does not apply:
 it *is* implemented (`WebView.swift:599-614`), and it hands non-serve URLs to
 `openExternal`. The app is safe two ways, because a same-frame click without
-`target="_blank"` would hit `decidePolicyFor` (`WebView.swift:251`), fall past
+`target="_blank"` would hit `decidePolicyFor` (`WebView.swift:356`), fall past
 `isAllowedServeURL`, and take the same `openExternal` + `.cancel` pair. The web
 view cannot be navigated away from the report by an author link, with or without
 the `_blank`.
 
-`openExternal` (`WebView.swift:317`) is itself scheme-gated to `http` / `https` /
+`openExternal` (`WebView.swift:420`) is itself scheme-gated to `http` / `https` /
 `mailto`, and logs a warning otherwise. That gate was added because the
 pre-existing fallthrough called `NSWorkspace.shared.open` on anything — which
 happily launches `file://` and renders `data:`.
@@ -3172,8 +3643,11 @@ bare `rel="noreferrer"` (`ProposalZoneList.tsx:127`, `AutoCodeReportModal.tsx:22
 inconsistent. Two `window.open` calls pass no `noopener`
 (`Dashboard.tsx:389`, same-origin; `AppLayout.tsx:560`, the first-party blog);
 neither destination is data-driven.
+_15 Oct 2026: eight `target="_blank"` sites now, after v1's deletion; the two
+bare `rel="noreferrer"` sites are unchanged (`ProposalZoneList.tsx:128`,
+`AutoCodeReportModal.tsx:228`)._
 
-The About tab's citation links (`.bn-about-citation a`, `report.css:158`) use the
+The About tab's citation links (`.bn-about-citation a`, `report.css:177`) use the
 same anchor form with no glyph. **`author_links` already conforms to the house
 majority. No new pattern is needed, and none should be added.**
 
@@ -3188,6 +3662,13 @@ are `skip-worktree` (`git ls-files -v` → `S`), and the working copy matches HE
 today — nothing is riding. **No entitlement change, and no new row for
 `design-desktop-security-audit.md`:** row 6 (SECURITY #8) already closed this
 class.
+
+_15 Oct 2026: the entitlement facts in this paragraph have changed; the
+conclusion has not._ There are three entitlements files now (`Bristlenose`,
+`BristlenoseDebug`, `BristlenoseDeveloperID`), each carrying
+`com.apple.security.application-groups` as well as `keychain-access-groups`, and
+none is `skip-worktree` any longer (`git ls-files -v desktop | grep '^S'` prints
+nothing). Opening a link still needs no entitlement.
 
 ### Security — three gates today, one of them not ours
 
@@ -3232,6 +3713,8 @@ Two smaller things in the same function, worth fixing in the same pass: `_str()`
 coerces *any* YAML value to a string, so a nested dict arrives as
 `"{'a': 1}"`; and a missing `url` becomes `""`, which renders `<a href="">` — a
 page reload.
+_15 Oct 2026: the second is fixed by D30 (`safe_url_or_none` rejects the empty
+URL and the link is dropped); the first is still open._
 
 **The label/href mismatch has no validation answer**, and it is the one an
 attacker would actually use. `label: nngroup.com` with
@@ -3260,6 +3743,13 @@ inconsistent about this without anyone deciding it should be:
 The nielsen form is the one that satisfies the glossary. Truing the other eight
 files to it is a YAML pass, no code.
 
+_15 Oct 2026: the labels quoted above have changed, and the model was reversed._
+Nielsen's first link now reads `10 Usability Heuristics` — the host was dropped
+deliberately (commit "nielsen bio links fit one line each: the book title stays,
+the domain goes"). Garrett's reads `jessejamesgarrett.com`, Plato's
+`SEP — Plato`. Only five files besides Nielsen carry links (cli-ux, sentiment
+and uxr have none). The total is still 22, all `https`.
+
 **And that same change is the mitigation for the mismatch attack.** Rather than
 revealing the destination on hover — `title` is not keyboard-reachable and is
 read inconsistently by screen readers — render the **host** as part of the link,
@@ -3278,6 +3768,8 @@ pairs are a per-locale question, not a link-handling one.
 2. **Add the `https`-only allowlist to `_parse_template`**, with a test that a
    `javascript:` URL in a template file fails the load. No-op on the current
    corpus; the whole point is to add it while it is free.
+   **Superseded by D30:** the loader drops the bad link and logs it, rather than
+   failing the load _(noted 15 Oct 2026)_.
 3. **True the eight non-nielsen YAML files to the `host — destination` label
    form**, which satisfies the glossary and pre-empts the mismatch case.
 4. **When D23 lands, revisit the export.** It is the change that first puts these
@@ -3321,11 +3813,15 @@ both pytest and vitest.
    does ship offline. **v2 moves `author_links` into an exported file for the
    first time** — a new exposure created by a layout decision, which is exactly
    the kind of consequence a layout decision does not announce.
+   _Not true at 15 Oct 2026: the page still reads the links from the server-only
+   templates route, so the export carries none. See the post-script at the top
+   of "External links"._
 2. **The unmitigated vector is presentational, not schematic.** A well-formed
    `https` URL whose *label* names a different host — `nngroup.com` pointing at
    somewhere else — passes every allowlist there is. No scheme check touches it.
    The fix is to render the host rather than trust the label, and it is **open**:
-   the shipped labels are editorial (*"Original 1994 CHI paper (DOI)"*), so
+   the shipped labels are editorial (*"Original 1994 CHI paper (DOI)"*, now
+   *"1994 CHI paper (DOI)"*), so
    replacing them with bare hosts costs something real. Worth drawing before
    deciding.
 

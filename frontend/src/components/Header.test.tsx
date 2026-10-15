@@ -19,6 +19,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Header } from "./Header";
+import { NavBarModeContext } from "../contexts/TocShowing";
 
 vi.mock("../utils/api", () => ({ apiGet: vi.fn() }));
 vi.mock("../hooks/useProjectId", () => ({ useProjectId: () => 1 }));
@@ -87,5 +88,29 @@ describe("Header — redaction line", () => {
 
     await waitFor(() => expect(screen.getByText(/6 sessions/)).toBeTruthy());
     expect(screen.getByText(/5 participants/)).toBeTruthy();
+  });
+});
+
+describe("Header — the tab bar's icon tabs, when the fit moves them up", () => {
+  beforeEach(() => {
+    mockApiGet.mockReset();
+    mockApiGet.mockResolvedValue(info());
+  });
+
+  it("holds them under the title only in that mode", async () => {
+    const { container, rerender } = render(
+      <NavBarModeContext.Provider value="iconsUp">
+        <Header onSettings={() => {}} onHelp={() => {}} />
+      </NavBarModeContext.Provider>,
+    );
+    expect(container.querySelector(".header-right .bn-tab-tools")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+    rerender(
+      <NavBarModeContext.Provider value="condensed">
+        <Header onSettings={() => {}} onHelp={() => {}} />
+      </NavBarModeContext.Provider>,
+    );
+    expect(container.querySelector(".header-right .bn-tab-tools")).toBeNull();
+    await waitFor(() => expect(mockApiGet).toHaveBeenCalled());
   });
 });

@@ -77,6 +77,13 @@
     color: var(--bn-colour-muted);
 }
 
+/* The tab bar's icon tabs, moved up under the document title when the window
+   is too narrow for them beside the tabs (NavTools, the fit cascade's second
+   step). Right-aligned with the title; no auto margin needed in a column. */
+.header-right .bn-tab-tools {
+    margin-left: 0;
+}
+
 /* Tighten vertical spacing: header → rule → toolbar */
 .report-header + hr {
     margin-top: 0.75rem;

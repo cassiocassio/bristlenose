@@ -823,7 +823,7 @@ function AppShell() {
         ) : undefined
       }
     >
-      {!embedded && <Header />}
+      {!embedded && <Header onExportReport={toggleExport} onSendToMiro={toggleMiro} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />}
       {!embedded && <NavBar onExportReport={toggleExport} onSendToMiro={toggleMiro} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />}
       <main className="bn-main">
         <Suspense fallback={null}>

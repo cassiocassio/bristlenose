@@ -11,9 +11,21 @@
  */
 
 import { createContext, useContext } from "react";
+import type { BarMode } from "./SidebarStore";
 
 export const TocShowingContext = createContext(false);
 
 export function useTocShowing(): boolean {
   return useContext(TocShowingContext);
+}
+
+/**
+ * Where the browser tab bar sits in the same fit: full spacing, condensed, or
+ * condensed with its icons moved into the report header. SidebarLayout is the
+ * owner here too; NavBar and Header read it. Default "full" (no layout above).
+ */
+export const NavBarModeContext = createContext<BarMode>("full");
+
+export function useNavBarMode(): BarMode {
+  return useContext(NavBarModeContext);
 }

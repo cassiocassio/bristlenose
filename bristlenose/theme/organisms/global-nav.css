@@ -70,6 +70,29 @@
     padding: 0.6rem 0.75rem;
 }
 
+/* Condensed: the first step of the fit cascade (SidebarStore "Fit to width"),
+   taken before any panel closes. Both horizontal paddings drop to 0.6 of their
+   normal value. NavBar measures these from probes, so they live only here. */
+.bn-global-nav--condensed .bn-tab {
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+}
+.bn-global-nav--condensed .bn-tab-icon {
+    padding-left: 0.45rem;
+    padding-right: 0.45rem;
+}
+
+/* The tab bar's two measuring probes: empty tabs whose width is their padding.
+   Out of flow, out of sight, and no width of their own for the page to scroll. */
+.bn-nav-probe {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .bn-tab-icon svg {
     display: block;
 }

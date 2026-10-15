@@ -9,6 +9,8 @@ vi.mock("../utils/api", async (importOriginal) => ({
 }));
 
 import { NavBar } from "./NavBar";
+import { NavBarModeContext } from "../contexts/TocShowing";
+import type { BarMode } from "../contexts/SidebarStore";
 import { resetConditionStore, startConditionPolling } from "../contexts/ConditionStore";
 import { apiGet } from "../utils/api";
 import { resetScreensAvailability } from "../islands/screens/availability";
@@ -17,12 +19,16 @@ import { resetScreensAvailability } from "../islands/screens/availability";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function renderNavBar(initialEntry = "/report/") {
+function renderNavBar(initialEntry = "/report/", mode: BarMode = "full") {
   const router = createMemoryRouter(
     [
       {
         path: "/report",
-        element: <NavBar />,
+        element: (
+          <NavBarModeContext.Provider value={mode}>
+            <NavBar onSettings={() => {}} onHelp={() => {}} />
+          </NavBarModeContext.Provider>
+        ),
         children: [
           { index: true, element: <div>project</div> },
           { path: "sessions", element: <div>sessions</div> },
@@ -229,5 +235,39 @@ describe("NavBar — the Screens lens", () => {
     renderNavBar();
     await act(async () => {});
     expect(screen.queryByText("Screens")).toBeNull();
+  });
+});
+
+describe("the fit cascade's tab bar steps", () => {
+  // SidebarLayout decides the mode (SidebarStore "Fit to width"); the bar follows it.
+  it("draws its icon tabs at the end of the row, in full spacing", () => {
+    const { container } = renderNavBar("/report/", "full");
+    const nav = container.querySelector("nav.bn-global-nav")!;
+    expect(nav.classList.contains("bn-global-nav--condensed")).toBe(false);
+    expect(nav.querySelector(".bn-tab-tools")).not.toBeNull();
+  });
+
+  it("condenses, keeping its icon tabs", () => {
+    const { container } = renderNavBar("/report/", "condensed");
+    const nav = container.querySelector("nav.bn-global-nav")!;
+    expect(nav.classList.contains("bn-global-nav--condensed")).toBe(true);
+    expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+  });
+
+  it("gives up its icon tabs when they move into the header", () => {
+    const { container } = renderNavBar("/report/", "iconsUp");
+    expect(container.querySelector("nav .bn-tab-tools")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Settings" })).toBeNull();
+  });
+
+  it("measures its tabs without counting its probes", () => {
+    const { container } = renderNavBar("/report/", "full");
+    const probe = container.querySelector("nav > .bn-nav-probe")!;
+    expect(probe.querySelectorAll(".bn-tab")).toHaveLength(2);
+    // The probes are not tabs of the bar: aria-hidden, and not direct children.
+    expect(probe.getAttribute("aria-hidden")).toBe("true");
+    const tabs = container.querySelectorAll("nav > .bn-tab");
+    expect(tabs.length).toBeGreaterThan(0);
+    tabs.forEach((tab) => expect(tab.closest(".bn-nav-probe")).toBeNull());
   });
 });

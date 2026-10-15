@@ -11,6 +11,8 @@ import { useTranslation } from "react-i18next";
 import { apiGet } from "../utils/api";
 import { getExportData, isExportMode } from "../utils/exportData";
 import { useProjectId } from "../hooks/useProjectId";
+import { useNavBarMode } from "../contexts/TocShowing";
+import { NavTools, type NavToolsProps } from "./NavTools";
 
 interface ProjectInfo {
   project_name: string;
@@ -33,8 +35,10 @@ interface ProjectInfo {
   pii_redacted?: boolean;
 }
 
-export function Header() {
+/** The tab bar's icon tabs land here when the fit moves them up (NavTools). */
+export function Header(tools: NavToolsProps = {}) {
   const { t } = useTranslation();
+  const iconsUp = useNavBarMode() === "iconsUp";
   const projectId = useProjectId();
   const [info, setInfo] = useState<ProjectInfo | null>(null);
 
@@ -93,6 +97,7 @@ export function Header() {
               )}
             </span>
           )}
+          {iconsUp && <NavTools {...tools} />}
         </div>
       </div>
       <hr />

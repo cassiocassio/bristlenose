@@ -111,6 +111,21 @@ export interface SidebarState {
    * and the rest gives way in order. Ephemeral — a reload has no "just".
    */
   lastOpened: OpenedPanel | null;
+  /**
+   * The browser tab bar's one-row widths, as it measured itself (NavBar /
+   * NavTools), each in its normal and condensed spacing; null where there is
+   * no tab bar (the Mac app) or before fonts have loaded. Ephemeral.
+   */
+  navTabs: BarWidths | null;
+  navTools: BarWidths | null;
+  /** The centre column's horizontal padding, as SidebarLayout last read it. */
+  centrePad: number;
+}
+
+/** A width in the tab bar's two spacings. */
+export interface BarWidths {
+  full: number;
+  condensed: number;
 }
 
 // ── localStorage helpers ──────────────────────────────────────────────────
@@ -169,6 +184,9 @@ function loadState(): SidebarState {
     savedTagFilter: null,
     pendingSoloTag: null,
     availableWidth: Infinity,
+    navTabs: null,
+    navTools: null,
+    centrePad: 0,
     rightColumn: false,
     lastOpened: null,
   };
@@ -225,11 +243,18 @@ function setState(updater: (prev: SidebarState) => SidebarState): void {
 // ── Fit to width ──────────────────────────────────────────────────────────
 //
 // The panels are wishes (persisted); what the layout shows is the wish fitted
-// to the width it has. When the centre column would drop below
-// CONTENT_FLOOR_PX the cascade closes, in this order, the left panel, then the
-// tag sidebar, then the minimap — and because the fit is derived from the wish
-// rather than written over it, widening the window brings each back in the
-// reverse order with nothing to remember.
+// to the width it has. When the centre column would drop below what it needs,
+// things give way in one order: the tab bar's spacing, then where its icons
+// sit (both browser only), then the minimap, then the left panel, then the tag
+// sidebar. The cascade takes the SHORTEST run of that list that fits, so it is
+// one-way: a step stays taken while any later one is in effect, and widening
+// the window undoes them in reverse with nothing to remember. (Taking each step
+// on its own made the icons go up, down and up again as a window narrowed —
+// docs/mockups/fit-cascade-lab.html.)
+//
+// What the centre needs: one quote card (CONTENT_FLOOR_PX), or, in the browser,
+// the tab bar on one row if that is wider — so the reader's panels close before
+// the tabs stack, and the tabs wrap only when nothing else is left to give.
 //
 // The panel the researcher opened most recently is exempt: what you just
 // opened, you get, and the rest gives way in order. Without that, opening the
@@ -242,8 +267,14 @@ function setState(updater: (prev: SidebarState) => SidebarState): void {
 // the Mac's projects column collapses on window resize only (the Mail
 // behaviour, `SidebarAutoCollapse` in DetailFloor.swift), against the width
 // the wish needs — which is why `requiredWidth` is the wish, never the fit.
+// It still counts the minimap, so on the Mac the projects column folds first
+// and the minimap goes after it: the web cannot see the fold, and a minimap
+// hidden before it would come back when the column folded and the detail grew.
 //
 // Overlay never counts: it floats above the centre and takes no column.
+
+/** Where the tab bar is: full spacing, condensed, or condensed with its icons in the header. */
+export type BarMode = "full" | "condensed" | "iconsUp";
 
 export interface PanelFitInput {
   tocWanted: boolean;
@@ -255,12 +286,15 @@ export interface PanelFitInput {
   available: number;
   /** The panel opened most recently, which the cascade never closes. */
   exempt?: OpenedPanel | null;
+  /** The centre width the tab bar needs on one row in each mode (browser only). */
+  bar?: { full: number; condensed: number; iconsUp: number };
 }
 
 export interface PanelFit {
   tocOpen: boolean;
   tagsOpen: boolean;
   minimapVisible: boolean;
+  barMode: BarMode;
 }
 
 /** Width the wished arrangement needs: floor + wanted panels + minimap. */
@@ -273,22 +307,49 @@ export function requiredWidth(input: PanelFitInput): number {
   );
 }
 
-/** The wish fitted to the width: close left, then tags, then minimap, until the centre keeps its floor. */
+type Step = "condense" | "iconsUp" | "minimap" | "toc" | "tags";
+
+/** The wish fitted to the width: the shortest run of steps, in order, that keeps the centre's need. */
 export function fitPanels(input: PanelFitInput): PanelFit {
-  const fit: PanelFit = {
-    tocOpen: input.tocWanted,
-    tagsOpen: input.rightColumn && input.tagsWanted,
-    minimapVisible: input.rightColumn,
+  const { bar } = input;
+  const steps: Step[] = [];
+  if (bar) steps.push("condense", "iconsUp");
+  if (input.rightColumn) steps.push("minimap");
+  if (input.tocWanted && input.exempt !== "toc") steps.push("toc");
+  if (input.rightColumn && input.tagsWanted && input.exempt !== "tags") steps.push("tags");
+
+  const at = (k: number): PanelFit & { fits: boolean } => {
+    const taken = new Set(steps.slice(0, k));
+    const tocOpen = input.tocWanted && !taken.has("toc");
+    const tagsOpen = input.rightColumn && input.tagsWanted && !taken.has("tags");
+    const minimapVisible = input.rightColumn && !taken.has("minimap");
+    const barMode: BarMode = taken.has("iconsUp") ? "iconsUp" : taken.has("condense") ? "condensed" : "full";
+    const barNeed = bar ? bar[barMode] : 0;
+    const centre =
+      input.available -
+      (tocOpen ? input.tocWidth : 0) -
+      (tagsOpen ? input.tagsWidth : 0) -
+      (minimapVisible ? MINIMAP_WIDTH_PX : 0);
+    return { tocOpen, tagsOpen, minimapVisible, barMode, fits: centre >= Math.max(CONTENT_FLOOR_PX, barNeed) };
   };
-  const need = () =>
-    CONTENT_FLOOR_PX +
-    (fit.tocOpen ? input.tocWidth : 0) +
-    (fit.tagsOpen ? input.tagsWidth : 0) +
-    (fit.minimapVisible ? MINIMAP_WIDTH_PX : 0);
-  if (need() > input.available && fit.tocOpen && input.exempt !== "toc") fit.tocOpen = false;
-  if (need() > input.available && fit.tagsOpen && input.exempt !== "tags") fit.tagsOpen = false;
-  if (need() > input.available && fit.minimapVisible) fit.minimapVisible = false;
-  return fit;
+
+  for (let k = 0; k < steps.length; k++) {
+    const fit = at(k);
+    if (fit.fits) return { tocOpen: fit.tocOpen, tagsOpen: fit.tagsOpen, minimapVisible: fit.minimapVisible, barMode: fit.barMode };
+  }
+  const all = at(steps.length);
+  return { tocOpen: all.tocOpen, tagsOpen: all.tagsOpen, minimapVisible: all.minimapVisible, barMode: all.barMode };
+}
+
+/** The tab bar's needs as the centre sees them, from what it measured; undefined without a bar. */
+export function navBarNeeds(s: SidebarState): PanelFitInput["bar"] {
+  if (!s.navTabs) return undefined;
+  const tools = s.navTools ?? { full: 0, condensed: 0 };
+  return {
+    full: s.navTabs.full + tools.full + s.centrePad,
+    condensed: s.navTabs.condensed + tools.condensed + s.centrePad,
+    iconsUp: s.navTabs.condensed + s.centrePad,
+  };
 }
 
 function fitInput(s: SidebarState, overrides: Partial<PanelFitInput> = {}): PanelFitInput {
@@ -300,13 +361,14 @@ function fitInput(s: SidebarState, overrides: Partial<PanelFitInput> = {}): Pane
     rightColumn: s.rightColumn,
     available: s.availableWidth,
     exempt: s.lastOpened,
+    bar: navBarNeeds(s),
     ...overrides,
   };
 }
 
-/** What the layout shows now. */
-export function panelFit(s: SidebarState = state): PanelFit {
-  return fitPanels(fitInput(s));
+/** What the layout shows now. The grid passes its own right column (the store's lags one effect). */
+export function panelFit(s: SidebarState = state, overrides: Partial<PanelFitInput> = {}): PanelFit {
+  return fitPanels(fitInput(s, overrides));
 }
 
 /** What the wished arrangement needs — the figure native declares on the detail column. */
@@ -314,10 +376,27 @@ export function wantedWidth(s: SidebarState = state): number {
   return requiredWidth(fitInput(s));
 }
 
+/** Report the tab bar's tab widths (NavBar), or null where there is none. Rounded and equality-guarded. */
+export function setNavTabs(widths: BarWidths | null): void {
+  const next = widths && { full: Math.ceil(widths.full), condensed: Math.ceil(widths.condensed) };
+  const prev = state.navTabs;
+  if (prev === next || (prev && next && prev.full === next.full && prev.condensed === next.condensed)) return;
+  setState((p) => ({ ...p, navTabs: next }));
+}
+
+/** Report the tab bar's icon tabs' widths (NavTools). Rounded and equality-guarded. */
+export function setNavTools(widths: BarWidths | null): void {
+  const next = widths && { full: Math.ceil(widths.full), condensed: Math.ceil(widths.condensed) };
+  const prev = state.navTools;
+  if (prev === next || (prev && next && prev.full === next.full && prev.condensed === next.condensed)) return;
+  setState((p) => ({ ...p, navTools: next }));
+}
+
 /** Report the layout's width and whether the lens has a right column. Equality-guarded: fires on every resize frame. */
-export function setLayoutContext(availableWidth: number, rightColumn: boolean): void {
-  if (state.availableWidth === availableWidth && state.rightColumn === rightColumn) return;
-  setState((prev) => ({ ...prev, availableWidth, rightColumn }));
+export function setLayoutContext(availableWidth: number, rightColumn: boolean, centrePad = state.centrePad): void {
+  const pad = Math.ceil(centrePad);
+  if (state.availableWidth === availableWidth && state.rightColumn === rightColumn && state.centrePad === pad) return;
+  setState((prev) => ({ ...prev, availableWidth, rightColumn, centrePad: pad }));
 }
 
 /** Open the left panel in push mode and make it the exempt panel. */
@@ -670,6 +749,9 @@ export function resetSidebarStore(): void {
     savedTagFilter: null,
     pendingSoloTag: null,
     availableWidth: Infinity,
+    navTabs: null,
+    navTools: null,
+    centrePad: 0,
     rightColumn: false,
     lastOpened: null,
   };

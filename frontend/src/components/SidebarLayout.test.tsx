@@ -86,6 +86,7 @@ vi.mock("../contexts/SidebarStore", async (importOriginal) => ({
   // grid classes that follow, and an unmeasured width (no availableWidth on
   // mockState) fits everything — see "an unmeasured width closes nothing".
   fitPanels: (await importOriginal<typeof import("../contexts/SidebarStore")>()).fitPanels,
+  navBarNeeds: (await importOriginal<typeof import("../contexts/SidebarStore")>()).navBarNeeds,
   setLayoutContext: vi.fn(),
   useSidebarStore: () => mockState,
   toggleTags: (...args: unknown[]) => mockToggleTags(...args),

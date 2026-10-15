@@ -22,7 +22,7 @@
  * @module SidebarLayout
  */
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useSidebarStore,
@@ -35,6 +35,7 @@ import {
   closeToc,
   closeTags,
   fitPanels,
+  navBarNeeds,
   setLayoutContext,
 } from "../contexts/SidebarStore";
 import { useSidebarTuning } from "../contexts/sidebarTuning";
@@ -45,7 +46,7 @@ import { useDragResize, MIN_WIDTH, MAX_WIDTH } from "../hooks/useDragResize";
 import { useTocOverlay } from "../hooks/useTocOverlay";
 import { Tooltip } from "./Tooltip";
 import { isEmbedded } from "../utils/embedded";
-import { TocShowingContext } from "../contexts/TocShowing";
+import { NavBarModeContext, TocShowingContext } from "../contexts/TocShowing";
 
 // ── SVG icons (inline, 18×18) ─────────────────────────────────────────────
 
@@ -161,6 +162,19 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHead
     // narrow window was reported open to the toggles and the Mac while the
     // grid closed it — a press that showed nothing.
     exempt: sidebar.lastOpened,
+    // The browser tab bar's needs (NavBar measures them); absent on the Mac.
+    bar: navBarNeeds(sidebar),
+  });
+  // A lens with no shared panels still has the tab bar, so it gets the same
+  // tab-bar steps from the same function, with nothing else to give way.
+  const inertFit = fitPanels({
+    tocWanted: false,
+    tagsWanted: false,
+    tocWidth,
+    tagsWidth,
+    rightColumn: false,
+    available: sidebar.availableWidth ?? Infinity,
+    bar: navBarNeeds(sidebar),
   });
   const tocPush = fit.tocOpen;
   const tagsOpen = fit.tagsOpen;
@@ -185,12 +199,20 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHead
   // wish to it. Rails are subtracted (they are chrome outside the fit;
   // `.embedded` zeroes them). ResizeObserver is absent under jsdom, in which
   // case the width stays `Infinity` and nothing is ever auto-closed there.
-  useEffect(() => {
+  // A layout effect, so the first report lands before the first paint: as a
+  // passive effect the first frame was drawn as if the window were infinitely
+  // wide — every panel open, the tab bar full — and corrected a frame later.
+  useLayoutEffect(() => {
     const el = layoutRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
     const report = () => {
       const rail = parseFloat(getComputedStyle(el).getPropertyValue("--bn-rail-width")) || 0;
-      setLayoutContext(el.clientWidth - 2 * rail, showRightSidebar);
+      // The centre's padding is part of what the tab bar needs. Read here, not
+      // once: it differs with the right column and the embedded layout.
+      const centre = centerRef.current;
+      const cs = centre ? getComputedStyle(centre) : null;
+      const pad = cs ? (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) : 0;
+      setLayoutContext(el.clientWidth - 2 * rail, active && showRightSidebar, pad);
     };
     report();
     const ro = new ResizeObserver(report);
@@ -373,9 +395,11 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHead
 
   if (!active) {
     return (
-      <div className={`layout layout-inert${embedded ? " embedded" : ""}`}>
+      <div ref={layoutRef} className={`layout layout-inert${embedded ? " embedded" : ""}`}>
         <div className="toc-rail toc-rail-inert">{inertRail}</div>
-        <div className="center">{children}</div>
+        <div ref={centerRef} className="center">
+          <NavBarModeContext.Provider value={inertFit.barMode}>{children}</NavBarModeContext.Provider>
+        </div>
       </div>
     );
   }
@@ -491,7 +515,9 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHead
 
       {/* Column 3: Center — header, nav, content, footer */}
       <div ref={centerRef} className="center" tabIndex={embedded ? -1 : undefined}>
-        <TocShowingContext.Provider value={tocPush}>{children}</TocShowingContext.Provider>
+        <TocShowingContext.Provider value={tocPush}>
+          <NavBarModeContext.Provider value={fit.barMode}>{children}</NavBarModeContext.Provider>
+        </TocShowingContext.Provider>
       </div>
 
       {showRightSidebar && (

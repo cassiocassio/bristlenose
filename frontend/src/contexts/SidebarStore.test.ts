@@ -30,6 +30,8 @@ import {
   fitPanels,
   requiredWidth,
   setLayoutContext,
+  setNavTabs,
+  setNavTools,
   panelFit,
   wantedWidth,
   CONTENT_FLOOR_PX,
@@ -633,7 +635,7 @@ describe("solo mode", () => {
 // node types for a file read and Vite refuses a `?raw` import from outside
 // frontend/ (the same reason safeUrl.test.ts imports its fixture).
 
-describe("fitPanels — closes left, then tags, then minimap", () => {
+describe("fitPanels — the minimap, then the left panel, then the tag sidebar", () => {
   const wish = {
     tocWanted: true,
     tagsWanted: true,
@@ -643,54 +645,93 @@ describe("fitPanels — closes left, then tags, then minimap", () => {
   };
   // floor 368 + 240 + 280 + 80
   const all = CONTENT_FLOOR_PX + 240 + 280 + MINIMAP_WIDTH_PX;
+  const shown = (tocOpen: boolean, tagsOpen: boolean, minimapVisible: boolean) =>
+    ({ tocOpen, tagsOpen, minimapVisible, barMode: "full" });
 
   it("shows everything when it fits", () => {
-    expect(fitPanels({ ...wish, available: all })).toEqual({
-      tocOpen: true,
-      tagsOpen: true,
-      minimapVisible: true,
-    });
+    expect(fitPanels({ ...wish, available: all })).toEqual(shown(true, true, true));
   });
 
-  it("drops the left panel first", () => {
-    expect(fitPanels({ ...wish, available: all - 1 })).toEqual({
-      tocOpen: false,
-      tagsOpen: true,
-      minimapVisible: true,
-    });
+  it("drops the minimap first: it is drawn for you, the panels you opened", () => {
+    expect(fitPanels({ ...wish, available: all - 1 })).toEqual(shown(true, true, false));
   });
 
-  it("then the tag sidebar", () => {
-    expect(fitPanels({ ...wish, available: all - 240 - 1 })).toEqual({
-      tocOpen: false,
-      tagsOpen: false,
-      minimapVisible: true,
-    });
+  it("then the left panel", () => {
+    expect(fitPanels({ ...wish, available: all - MINIMAP_WIDTH_PX - 1 })).toEqual(shown(false, true, false));
   });
 
-  it("then the minimap, and never the centre", () => {
-    expect(fitPanels({ ...wish, available: CONTENT_FLOOR_PX })).toEqual({
-      tocOpen: false,
-      tagsOpen: false,
-      minimapVisible: false,
-    });
+  it("then the tag sidebar, and never the centre", () => {
+    expect(fitPanels({ ...wish, available: CONTENT_FLOOR_PX + 280 - 1 })).toEqual(shown(false, false, false));
     // Below the floor there is nothing left to close: the fit is the same.
-    expect(fitPanels({ ...wish, available: 100 }).minimapVisible).toBe(false);
+    expect(fitPanels({ ...wish, available: 100 })).toEqual(shown(false, false, false));
   });
 
   it("closes only what is needed — a left panel alone survives where both would not", () => {
-    const one = fitPanels({ ...wish, tagsWanted: false, available: CONTENT_FLOOR_PX + 240 + MINIMAP_WIDTH_PX });
+    const one = fitPanels({ ...wish, tagsWanted: false, available: CONTENT_FLOOR_PX + 240 });
     expect(one.tocOpen).toBe(true);
+    expect(one.minimapVisible).toBe(false);
   });
 
   it("a lens without the right column counts neither tags nor minimap", () => {
     // tagsOpen is a persisted wish that outlives the Quotes lens.
     const fit = fitPanels({ ...wish, rightColumn: false, available: CONTENT_FLOOR_PX + 240 });
-    expect(fit).toEqual({ tocOpen: true, tagsOpen: false, minimapVisible: false });
+    expect(fit).toEqual(shown(true, false, false));
   });
 
   it("an unmeasured width (Infinity) closes nothing", () => {
-    expect(fitPanels({ ...wish, available: Infinity }).tocOpen).toBe(true);
+    expect(fitPanels({ ...wish, available: Infinity })).toEqual(shown(true, true, true));
+  });
+});
+
+describe("fitPanels — the browser tab bar gives way before anything else", () => {
+  // A bar that needs 700 on one row, 600 condensed, 500 with its icons up.
+  const bar = { full: 700, condensed: 600, iconsUp: 500 };
+  const wish = { tocWanted: true, tagsWanted: true, tocWidth: 240, tagsWidth: 280, rightColumn: true, bar };
+  const panels = 240 + 280 + MINIMAP_WIDTH_PX;
+
+  it("keeps the full bar while it fits beside every panel", () => {
+    expect(fitPanels({ ...wish, available: panels + 700 }).barMode).toBe("full");
+  });
+
+  it("condenses, then moves its icons up, before the minimap goes", () => {
+    const a = fitPanels({ ...wish, available: panels + 699 });
+    expect([a.barMode, a.minimapVisible]).toEqual(["condensed", true]);
+    const b = fitPanels({ ...wish, available: panels + 599 });
+    expect([b.barMode, b.minimapVisible]).toEqual(["iconsUp", true]);
+    const c = fitPanels({ ...wish, available: panels + 499 });
+    expect([c.barMode, c.minimapVisible, c.tocOpen]).toEqual(["iconsUp", false, true]);
+  });
+
+  it("closes the reader's panels before the tabs would wrap, Contents first", () => {
+    const toc = fitPanels({ ...wish, available: 240 + 280 + 499 });
+    expect([toc.tocOpen, toc.tagsOpen]).toEqual([false, true]);
+    const tags = fitPanels({ ...wish, available: 280 + 499 });
+    expect([tags.tocOpen, tags.tagsOpen]).toEqual([false, false]);
+  });
+
+  it("needs at least the quote floor even when the bar is narrower", () => {
+    const narrow = { full: 200, condensed: 150, iconsUp: 100 };
+    const fit = fitPanels({ ...wish, bar: narrow, available: 240 + 280 + CONTENT_FLOOR_PX });
+    expect([fit.barMode, fit.minimapVisible, fit.tocOpen, fit.tagsOpen]).toEqual(["iconsUp", false, true, true]);
+  });
+
+  it("is one-way: as the width falls, no step it took is undone", () => {
+    const order = (f: ReturnType<typeof fitPanels>) => [
+      f.barMode !== "full", f.barMode === "iconsUp", !f.minimapVisible, !f.tocOpen, !f.tagsOpen,
+    ];
+    let prev: boolean[] | null = null;
+    for (let available = 2000; available >= 0; available -= 1) {
+      const now = order(fitPanels({ ...wish, available }));
+      if (prev) now.forEach((taken, i) => expect(prev![i] && !taken).toBe(false));
+      // and the steps are taken in order: a later one never without the earlier
+      now.forEach((taken, i) => { if (taken && i > 0) expect(now[i - 1]).toBe(true); });
+      prev = now;
+    }
+  });
+
+  it("an exempt panel is skipped, and the other gives way in its place", () => {
+    const fit = fitPanels({ ...wish, exempt: "toc", available: 240 + 280 + 499 });
+    expect([fit.tocOpen, fit.tagsOpen]).toEqual([true, false]);
   });
 });
 
@@ -705,38 +746,32 @@ describe("requiredWidth — the wish, not the fit", () => {
 
 describe("fitPanels — the panel just opened is exempt", () => {
   const wish = { tocWanted: true, tagsWanted: true, tocWidth: 240, tagsWidth: 280, rightColumn: true };
-  const both = CONTENT_FLOOR_PX + 240 + 280 + MINIMAP_WIDTH_PX;
+  // Both panels beside the floor, no minimap: a pixel less and a panel must go.
+  const both = CONTENT_FLOOR_PX + 240 + 280;
+  const shown = (tocOpen: boolean, tagsOpen: boolean, minimapVisible: boolean) =>
+    ({ tocOpen, tagsOpen, minimapVisible, barMode: "full" });
 
-  it("tags just opened: the left panel gives way, tags stays", () => {
-    expect(fitPanels({ ...wish, available: both - 1, exempt: "tags" })).toEqual({
-      tocOpen: false,
-      tagsOpen: true,
-      minimapVisible: true,
-    });
+  it("tags just opened: the minimap goes, then the left panel, tags stays", () => {
+    expect(fitPanels({ ...wish, available: both - 1, exempt: "tags" })).toEqual(shown(false, true, false));
   });
 
-  it("left panel just opened: tags gives way, then the minimap, the left panel stays", () => {
-    // 680 holds floor + toc (608) but not + minimap (688): tags AND minimap go.
-    expect(fitPanels({ ...wish, available: 680, exempt: "toc" })).toEqual({
-      tocOpen: true,
-      tagsOpen: false,
-      minimapVisible: false,
-    });
+  it("left panel just opened: the minimap goes, then tags, the left panel stays", () => {
+    // 680 holds floor + toc (608) but not + tags: the minimap AND tags go.
+    expect(fitPanels({ ...wish, available: 680, exempt: "toc" })).toEqual(shown(true, false, false));
   });
 
   it("the exempt panel is never closed, even when the centre must squeeze", () => {
     // 480 cannot hold floor + tags (648): the centre squeezes rather than the
     // press opening nothing.
-    expect(fitPanels({ ...wish, available: 480, exempt: "tags" })).toEqual({
-      tocOpen: false,
-      tagsOpen: true,
-      minimapVisible: false,
-    });
+    expect(fitPanels({ ...wish, available: 480, exempt: "tags" })).toEqual(shown(false, true, false));
   });
 });
 
 describe("store fit — toggles act on what is showing", () => {
-  const both = CONTENT_FLOOR_PX + 240 + 280 + MINIMAP_WIDTH_PX;
+  // Both panels beside the floor, no minimap: a pixel less and a panel must go.
+  const both = CONTENT_FLOOR_PX + 240 + 280;
+  const shown = (tocOpen: boolean, tagsOpen: boolean, minimapVisible: boolean) =>
+    ({ tocOpen, tagsOpen, minimapVisible, barMode: "full" });
 
   it("a narrow window auto-closes the left panel without touching the wish", () => {
     act(() => {
@@ -745,12 +780,15 @@ describe("store fit — toggles act on what is showing", () => {
       setLayoutContext(both - 1, true);
     });
     // tags was opened last, so it is exempt and the left panel gives way.
-    expect(panelFit()).toEqual({ tocOpen: false, tagsOpen: true, minimapVisible: true });
+    expect(panelFit()).toEqual(shown(false, true, false));
     expect(snapshot().tocMode).toBe("push");
-    expect(wantedWidth()).toBe(both);
-    // Widening brings it back with nothing to remember.
+    // The Mac folds its projects column against the whole wish, minimap included.
+    expect(wantedWidth()).toBe(both + MINIMAP_WIDTH_PX);
+    // Widening brings it back with nothing to remember, the minimap last.
     act(() => setLayoutContext(both, true));
-    expect(panelFit().tocOpen).toBe(true);
+    expect(panelFit()).toEqual(shown(true, true, false));
+    act(() => setLayoutContext(both + MINIMAP_WIDTH_PX, true));
+    expect(panelFit()).toEqual(shown(true, true, true));
   });
 
   it("`[` on an auto-closed left panel OPENS it — the tag sidebar gives way, its wish untouched", () => {
@@ -761,12 +799,12 @@ describe("store fit — toggles act on what is showing", () => {
     });
     expect(panelFit().tocOpen).toBe(false);
     act(() => toggleToc());
-    expect(panelFit()).toEqual({ tocOpen: true, tagsOpen: false, minimapVisible: true });
+    expect(panelFit()).toEqual(shown(true, false, false));
     expect(snapshot().tagsOpen).toBe(true);
     expect(localStorage.getItem("bn-tags-open")).toBe("true");
     // …and widening shows both again.
     act(() => setLayoutContext(both, true));
-    expect(panelFit()).toEqual({ tocOpen: true, tagsOpen: true, minimapVisible: true });
+    expect(panelFit()).toEqual(shown(true, true, false));
   });
 
   it("`]` on an auto-closed tag sidebar OPENS it — the left panel gives way", () => {
@@ -775,9 +813,9 @@ describe("store fit — toggles act on what is showing", () => {
       openTocPush();
       setLayoutContext(both - 1, true);
     });
-    expect(panelFit()).toEqual({ tocOpen: true, tagsOpen: false, minimapVisible: true });
+    expect(panelFit()).toEqual(shown(true, false, false));
     act(() => toggleTags());
-    expect(panelFit()).toEqual({ tocOpen: false, tagsOpen: true, minimapVisible: true });
+    expect(panelFit()).toEqual(shown(false, true, false));
     expect(snapshot().tocMode).toBe("push");
   });
 
@@ -791,8 +829,8 @@ describe("store fit — toggles act on what is showing", () => {
       setLayoutContext(both - 1, true);
     });
     expect(snapshot().lastOpened).toBeNull();
-    // Only the left panel is wished; it fits.
-    expect(panelFit()).toEqual({ tocOpen: true, tagsOpen: false, minimapVisible: true });
+    // Only the left panel is wished; it fits, minimap and all.
+    expect(panelFit()).toEqual(shown(true, false, true));
   });
 
   it("`]` on a showing tag sidebar closes it, and the left panel returns", () => {
@@ -815,7 +853,23 @@ describe("store fit — toggles act on what is showing", () => {
       setLayoutContext(both - 1, true);
     });
     expect(snapshot().lastOpened).toBeNull();
-    expect(panelFit()).toEqual({ tocOpen: false, tagsOpen: true, minimapVisible: true });
+    expect(panelFit()).toEqual(shown(false, true, false));
+  });
+
+  it("the toggles see the tab bar too: a panel the bar closed reads as closed", () => {
+    // NavBar reports a bar that needs more than the floor; with both panels
+    // wished, the left panel closes for it, and `[` must open it, not close it.
+    act(() => {
+      openTocPush();
+      openTags();
+      setNavTabs({ full: 500, condensed: 450 });
+      setNavTools({ full: 100, condensed: 90 });
+      setLayoutContext(240 + 280 + 449, true, 0);
+    });
+    expect(panelFit()).toEqual({ tocOpen: false, tagsOpen: true, minimapVisible: false, barMode: "iconsUp" });
+    act(() => toggleToc());
+    expect(panelFit().tocOpen).toBe(true);
+    act(() => { setNavTabs(null); setNavTools(null); });
   });
 
   it("setLayoutContext is equality-guarded", () => {

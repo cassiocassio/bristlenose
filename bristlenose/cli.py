@@ -1358,7 +1358,6 @@ def run(
         # A Re-analyse resets the analysis, not the study: the id the output
         # folder carries crosses into the new output (design-project-identity.md §8).
         from bristlenose import study_marker
-
         from bristlenose.session_registry import starts_by_content, write_carried_starts
 
         study_id = study_marker.read(output_dir)

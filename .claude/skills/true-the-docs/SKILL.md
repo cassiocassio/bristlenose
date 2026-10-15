@@ -385,6 +385,12 @@ new section authoritative.
   phrasing before believing you are done** — and prefer correcting a summary
   *in place* over adding a fresh dated entry beside it, which manufactures the
   second copy the next pass will miss.
+- **An audit whose edits are deferred must still leave its findings in the plan
+  note.** On 15 Oct 2026 an audit ran, the edits were recorded in `TODO.md` as
+  owed, and the agent reports lived only in the conversation; no Phase 3 note was
+  written. Applying them the same evening meant recovering the reports from the
+  session transcript, and a later session would have had to re-audit. Write the
+  note whenever you stop after Phase 2, and point the `TODO.md` entry at it.
 - **Leak-scan trap when updating orphan refs.** Public-doc Edit/Write
   operations that touch a leak-pattern stem (`100days`, `qa-backlog`,
   `succession-plan`, etc.) are blocked by the PreToolUse hook. When

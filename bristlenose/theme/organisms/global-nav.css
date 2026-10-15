@@ -24,6 +24,7 @@
     font-family: var(--bn-font-body);
     font-size: var(--bn-text-label);
     font-weight: var(--bn-weight-emphasis);
+    --bn-icon-stem: var(--bn-icon-stem-emphasis);  /* icons follow the tab's text weight */
     color: var(--bn-colour-muted);
     cursor: pointer;
     text-decoration: none;

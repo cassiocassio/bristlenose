@@ -422,19 +422,7 @@ export function SearchBox({
           aria-expanded={expanded}
           data-testid={testId ? `${testId}-toggle` : undefined}
         >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="6.5" cy="6.5" r="5.5" />
-            <line x1="10.5" y1="10.5" x2="15" y2="15" />
-          </svg>
+          <Icon name="search" px={15} decorative />
         </button>
       </Tooltip>
       <div className="search-field">
@@ -471,20 +459,7 @@ export function SearchBox({
                   >
                     {current?.word && <span className="search-token-word">{current.word}</span>}
                     {tokenBadge(token, wire)}
-                    <svg
-                      className="search-token-disclosure"
-                      width="8"
-                      height="8"
-                      viewBox="0 0 8 8"
-                      aria-hidden="true"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M1.5 3 4 5.5 6.5 3" />
-                    </svg>
+                    <Icon name="caret" px={11} decorative className="search-token-disclosure" />
                   </button>
                   {open && (
                     <ul
@@ -591,18 +566,7 @@ export function SearchBox({
           aria-label={t("search.clearAriaLabel")}
           data-testid={testId ? `${testId}-clear` : undefined}
         >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 12 12"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          >
-            <line x1="2" y1="2" x2="10" y2="10" />
-            <line x1="10" y1="2" x2="2" y2="10" />
-          </svg>
+          <Icon name="close" px={14} decorative />
         </button>
         {listOpen && (
           <ul
@@ -643,26 +607,10 @@ function labelWithTyped(label: string, typed: Array<[number, number]>) {
   return out;
 }
 
-/** The Quotes lens's glyph, drawn to match its SF Symbol (`text.quote`): SF
- *  Symbols may not ship in a web page (§4). */
+/** The Quotes lens's glyph: Lucide's `text-quote`, the web's twin of the Mac's
+ *  SF Symbol `text.quote` (SF Symbols may not ship in a web page, §4). */
 function QuotesLensGlyph() {
   return (
-    <svg
-      className="search-option-glyph"
-      width="15"
-      height="15"
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-    >
-      <path d="M2.5 4.5h2v2l-1 2" />
-      <path d="M6 4.5h2v2l-1 2" />
-      <line x1="10" y1="5" x2="14" y2="5" />
-      <line x1="10" y1="8" x2="14" y2="8" />
-      <line x1="2.5" y1="11.5" x2="14" y2="11.5" />
-    </svg>
+    <Icon name="quotes" px={15} decorative className="search-option-glyph" />
   );
 }

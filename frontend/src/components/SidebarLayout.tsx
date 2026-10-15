@@ -49,30 +49,21 @@ import { useTocOverlay } from "../hooks/useTocOverlay";
 import { Tooltip } from "./Tooltip";
 import { isEmbedded } from "../utils/embedded";
 import { NavBarModeContext, TocShowingContext } from "../contexts/TocShowing";
+import { Icon } from "./Icon";
 
-// ── SVG icons (inline, 18×18) ─────────────────────────────────────────────
+// ── Rail icons (Lucide through Icon, an 18px box) ────────────────────────────
 
 /** List icon — for TOC rail button (and the Discussion guide's, via AppLayout) */
 export function ListIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true" focusable="false">
-      <line x1="5.5" y1="4.5" x2="14" y2="4.5" />
-      <line x1="5.5" y1="9" x2="14" y2="9" />
-      <line x1="5.5" y1="13.5" x2="14" y2="13.5" />
-      <circle cx="3" cy="4.5" r="0.75" fill="currentColor" stroke="none" />
-      <circle cx="3" cy="9" r="0.75" fill="currentColor" stroke="none" />
-      <circle cx="3" cy="13.5" r="0.75" fill="currentColor" stroke="none" />
-    </svg>
+    <Icon name="contents" px={18} decorative />
   );
 }
 
 /** Tag icon — for tag rail button */
 function TagIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-      <path d="M2.5 3.5h5l7 7-5 5-7-7z" />
-      <circle cx="6" cy="7" r="0.75" fill="currentColor" stroke="none" />
-    </svg>
+    <Icon name="tag" px={18} decorative />
   );
 }
 

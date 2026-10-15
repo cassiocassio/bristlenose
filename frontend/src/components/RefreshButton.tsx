@@ -10,6 +10,7 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLastRun, triggerManualRefresh } from "../contexts/LastRunStore";
+import { Icon } from "./Icon";
 
 interface RefreshButtonProps {
   className?: string;
@@ -24,21 +25,7 @@ interface RefreshButtonProps {
 
 function RefreshIcon({ spinning }: { spinning: boolean }) {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={spinning ? "bn-refresh-icon-spin" : undefined}
-      aria-hidden="true"
-    >
-      <path d="M14 8a6 6 0 1 1-1.76-4.24" />
-      <polyline points="14 2 14 5 11 5" />
-    </svg>
+    <Icon name="refresh" px={14} decorative className={spinning ? "bn-refresh-icon-spin" : undefined} />
   );
 }
 

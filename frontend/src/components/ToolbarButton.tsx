@@ -7,6 +7,7 @@
  */
 
 import type { ReactNode, ButtonHTMLAttributes } from "react";
+import { Icon } from "./Icon";
 
 export interface ToolbarButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
@@ -44,20 +45,7 @@ export function ToolbarButton({
       {icon && <span className="toolbar-icon-svg">{icon}</span>}
       {label}
       {arrow && (
-        <svg
-          className="toolbar-arrow"
-          width="10"
-          height="10"
-          viewBox="0 0 10 10"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M2.5 3.75 5 6.25 7.5 3.75" />
-        </svg>
+        <Icon name="caret" px={10} decorative className="toolbar-arrow" />
       )}
     </button>
   );

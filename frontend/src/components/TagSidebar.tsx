@@ -44,6 +44,7 @@ import {
 } from "../contexts/SidebarStore";
 import { EyeToggle } from "./EyeToggle";
 import { TagGroupCard } from "./TagGroupCard";
+import { Icon } from "./Icon";
 
 // ── Framework metadata (from codebook YAML files) ────────────────────────
 // The codebook API returns framework_id on groups but no framework-level
@@ -226,9 +227,7 @@ export function mergePendingTags(
 
 function ChevronIcon() {
   return (
-    <svg className="codebook-disclosure" width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-      <path d="M5 2.5l5 4.5-5 4.5z" />
-    </svg>
+    <Icon name="disclose" px={14} decorative className="codebook-disclosure" />
   );
 }
 

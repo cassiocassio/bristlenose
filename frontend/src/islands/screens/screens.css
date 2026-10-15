@@ -114,7 +114,6 @@
 .screens-version-radios button:focus-visible, .screens-version-menu:focus-visible, .screens-step:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
 .screens-step { color: var(--bn-colour-muted); padding: 7px; } /* 9px glyph + 7px padding + 1px border each side: a 25px target (2.5.8) */
 .screens-step svg { width: 9px; height: 9px; }
-.screens-step path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .screens-version-pick { position: relative; display: inline-flex; }
 .screens-version-count { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); font-variant-numeric: tabular-nums; }
 

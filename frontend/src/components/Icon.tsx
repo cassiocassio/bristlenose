@@ -23,13 +23,48 @@
  *
  * Add a concept here rather than inlining another <svg> in a component.
  */
-import { Check, X, type LucideIcon } from "lucide-react";
+import {
+  Check, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Download, Eye, EyeOff,
+  Folder, LayoutGrid, List, Moon, Pencil, RotateCw, Search, Settings, SlidersHorizontal,
+  Tag, TextQuote, X, ZoomIn, ZoomOut, type LucideIcon,
+} from "lucide-react";
 
 const ICONS = {
   /** A menu's current answer; accept. */
   check: Check,
   /** Close, dismiss, delete a chip; "not this person" in the person picker. */
   close: X,
+  /** A disclosure, closed; CSS rotates it 90° when open. Was a filled triangle in
+   *  the tag sidebar — the chevron is what the macOS sidebar draws. */
+  disclose: ChevronRight,
+  /** The caret on a button that opens a menu. */
+  caret: ChevronDown,
+  previous: ChevronLeft,
+  next: ChevronRight,
+  show: Eye,
+  hide: EyeOff,
+  search: Search,
+  zoomIn: ZoomIn,
+  zoomOut: ZoomOut,
+  edit: Pencil,
+  refresh: RotateCw,
+  /** Export (pick, 15 Oct 2026: download over share). */
+  export: Download,
+  folder: Folder,
+  tag: Tag,
+  /** The contents rail: a bulleted list. */
+  contents: List,
+  heatmap: LayoutGrid,
+  /** The Quotes lens; matches the Mac's SF Symbol `text.quote`. */
+  quotes: TextQuote,
+  /** Focus mode: the moon, as Mail's View menu. */
+  focus: Moon,
+  /** Settings (pick: the gear, over settings-2's sliders). */
+  settings: Settings,
+  /** Help (pick: circle-help, over info). */
+  help: CircleHelp,
+  /** Dev-only playground toggles. */
+  playground: SlidersHorizontal,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;
@@ -44,18 +79,22 @@ export type IconProps = IconA11y & {
   name: IconName;
   /** `menu` sizes the glyph for a menu's check gutter (atoms/icon.css). */
   size?: "menu";
+  /** A fixed box in CSS px, where the control was built around one. Without
+   *  it the box is 1em, unless a contextual rule sizes the svg. The stroke
+   *  follows the text either way. */
+  px?: number;
   className?: string;
 };
 
 /** Roughly the stem of 13 px normal text; only seen where the CSS is stale. */
 const FALLBACK_STROKE = 1.25;
 
-export function Icon({ name, size, className, label, decorative }: IconProps) {
+export function Icon({ name, size, px, className, label, decorative }: IconProps) {
   const Glyph = ICONS[name];
   if (import.meta.env.DEV && !decorative && !label?.trim()) {
     console.error(`Icon "${name}": an empty label names nothing — pass a label or \`decorative\``);
   }
-  const classes = ["bn-icon", `bn-icon-${name}`, size && `bn-icon--${size}`, className]
+  const classes = ["bn-icon", `bn-icon-${name}`, size && `bn-icon--${size}`, px && "bn-icon--px", className]
     .filter(Boolean)
     .join(" ");
   return (
@@ -63,6 +102,7 @@ export function Icon({ name, size, className, label, decorative }: IconProps) {
       className={classes}
       nonScalingStroke
       strokeWidth={FALLBACK_STROKE}
+      {...(px ? { size: px } : {})}
       focusable="false"
       {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": label })}
     />

@@ -104,6 +104,7 @@ import { setScreensCount } from "./screensCount";
 import { featureFlags } from "../../utils/featureFlags";
 import { choosePaper, papers, readAccents, samplePaper, type Rgb } from "./paper";
 import "./screens.css";
+import { Icon } from "../../components/Icon";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -1212,7 +1213,7 @@ function Versions({ screen, tabIdx, onFlip }: { screen: Screen; tabIdx: number; 
   const arrow = (d: 1 | -1) => (
     <button type="button" className="screens-step" onClick={() => step(d)}
       aria-label={t(d < 0 ? "screens.previousVersion" : "screens.nextVersion")}>
-      <svg viewBox="0 0 12 12" aria-hidden="true"><path d={d < 0 ? "M7.5 2.5 4 6l3.5 3.5" : "M4.5 2.5 8 6l-3.5 3.5"} /></svg>
+      <Icon name={d < 0 ? "previous" : "next"} decorative />
     </button>
   );
   return (

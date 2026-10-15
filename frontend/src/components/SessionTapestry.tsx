@@ -31,6 +31,7 @@ import { featureFlags } from "../utils/featureFlags";
 import { isExportMode } from "../utils/exportData";
 import { framesFor, tapestryThumb } from "../utils/tapestryThumb";
 import { ThumbOutline, ThumbPreview } from "./TapestryThumb";
+import { Icon } from "./Icon";
 
 /** Clips are drawn as rounded clips at or below this many seconds per pixel, as slivers above it. */
 const CLIP_THRESHOLD = 2.5;
@@ -640,14 +641,14 @@ export default function SessionTapestry({
                   e.stopPropagation();
                   choose(Math.max(0, selected - 1));
                 }}>
-                <span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5 4 6l3.5 3.5" /></svg></span>
+                <span><Icon name="previous" decorative /></span>
               </button>
               <button type="button" aria-label={t("sessions.tapestry.nextQuote")} disabled={selected >= s.quotes.length - 1}
                 onClick={(e) => {
                   e.stopPropagation();
                   choose(Math.min(s.quotes.length - 1, selected + 1));
                 }}>
-                <span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" /></svg></span>
+                <span><Icon name="next" decorative /></span>
               </button>
             </div>
             <button type="button" className="bn-tp-close" aria-label={t("buttons.close")}
@@ -655,7 +656,7 @@ export default function SessionTapestry({
                 e.stopPropagation();
                 closeQuote();
               }}>
-              <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6" /></svg>
+              <Icon name="close" decorative />
             </button>
           </div>
           <div className="bn-tp-meta">

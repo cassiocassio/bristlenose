@@ -9,11 +9,19 @@
 
 .bn-icon {
     display: inline-block;
-    width: 1em;
-    height: 1em;
-    vertical-align: -0.125em;
     flex: none;
     stroke-width: max(1px, calc(var(--bn-icon-stem) * 1em));
+}
+
+/* The default box, at zero specificity: a control that sizes its own icon
+   (`.bn-tp-nav svg { width: 6px }`) wins, and an icon given `px` keeps the
+   width/height attributes it was drawn with. */
+:where(.bn-icon:not(.bn-icon--px)) {
+    width: 1em;
+    height: 1em;
+}
+:where(.bn-icon) {
+    vertical-align: -0.125em;
 }
 
 /* A menu's check gutter: the tick sized to the row's text, about 9 px of

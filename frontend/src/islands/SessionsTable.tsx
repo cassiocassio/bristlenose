@@ -79,6 +79,7 @@ const TranscriptionDiagnostics = lazy(() => import("../components/TranscriptionD
 const stripPollDelay = (attempt: number) => Math.min(30_000, 5_000 * 1.5 ** attempt);
 const STRIP_POLL_LIMIT = 400;
 import { TapestryPlaygroundToggle } from "../components/TapestryPlaygroundToggle";
+import { Icon } from "../components/Icon";
 // Dev-only (`serve --dev`): nudge the tapestry's type and padding along the existing ladders.
 const TapestryPlayground = lazy(() =>
   import("../components/TapestryPlayground").then((m) => ({ default: m.TapestryPlayground })),
@@ -172,19 +173,7 @@ function ObserverHeader({
 
 function FolderIcon() {
   return (
-    <svg
-      className="bn-folder-icon"
-      width="14"
-      height="12"
-      viewBox="0 0 14 12"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M1.5 2.5a1 1 0 0 1 1-1h2.6l1.4 1.5h5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z" />
-    </svg>
+    <Icon name="folder" px={14} decorative className="bn-folder-icon" />
   );
 }
 
@@ -633,7 +622,7 @@ export function SessionsTable({
     <div className="bn-tp-zoom">
       <button type="button" className="bn-tp-zoom-btn" aria-label={t("sessions.tapestry.zoomOut")}
         title={t("sessions.tapestry.zoomOut")} disabled={zoom <= 0} onClick={() => setZoom((z) => Math.max(0, z - 20))}>
-        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" /><path d="M10 10l3.5 3.5M4.5 6.5h4" /></svg>
+        <Icon name="zoomOut" decorative />
       </button>
       <input type="range" className="bn-tp-zoom-slider" min={0} max={100} value={zoom}
         aria-valuetext={zoom === 0 ? "1×" : `${(fit / sPerPx).toFixed(1)}×`}
@@ -641,7 +630,7 @@ export function SessionsTable({
         onDoubleClick={() => setZoom(0)} />
       <button type="button" className="bn-tp-zoom-btn" aria-label={t("sessions.tapestry.zoomIn")}
         title={t("sessions.tapestry.zoomIn")} disabled={zoom >= 100} onClick={() => setZoom((z) => Math.min(100, z + 20))}>
-        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" /><path d="M10 10l3.5 3.5M4.5 6.5h4M6.5 4.5v4" /></svg>
+        <Icon name="zoomIn" decorative />
       </button>
       {IS_DEV && <TapestryPlaygroundToggle onToggle={() => setTuning((v) => !v)} />}
       {IS_DEV && tuning && (
@@ -946,9 +935,7 @@ function SessionRow({
               onToggleTapestry?.(e.altKey);
             }}
           >
-            <svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true">
-              <path d="M3 1.5 L7 5 L3 8.5" />
-            </svg>
+            <Icon name="disclose" px={12} decorative />
           </button>
         )}
         {readable ? (

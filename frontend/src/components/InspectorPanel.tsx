@@ -29,6 +29,7 @@ import {
 } from "../contexts/InspectorStore";
 import { useVerticalDragResize } from "../hooks/useVerticalDragResize";
 import { useTranslation } from "react-i18next";
+import { Icon } from "./Icon";
 
 /** Custom property the pane's live height is published under, on <html>;
  *  read by `.signals-center * { scroll-margin-bottom }` in inspector.css. */
@@ -110,28 +111,17 @@ const SHIMMER_MAX = 3;
 
 // ── Grid icon SVGs ───────────────────────────────────────────────────────
 
-/**
- * Four outlined, well-rounded squares — our own drawing, proportioned to sit
- * beside the Mac toolbar's `square.grid.2x2` (the same Heatmap toggle), not a
- * trace of Apple's glyph. Gap ≈ 0.45 of a square, corner ≈ 0.27, as measured
- * off the toolbar at 2x.
- */
+/** Lucide's `layout-grid`: the web's twin of the Mac toolbar's `square.grid.2x2`
+ *  (the same Heatmap toggle). The proportions are Lucide's, not Apple's. */
 function GridIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="1.25" y="1.25" width="5.75" height="5.75" rx="1.6" stroke="currentColor" strokeWidth="1.3" />
-      <rect x="9" y="1.25" width="5.75" height="5.75" rx="1.6" stroke="currentColor" strokeWidth="1.3" />
-      <rect x="1.25" y="9" width="5.75" height="5.75" rx="1.6" stroke="currentColor" strokeWidth="1.3" />
-      <rect x="9" y="9" width="5.75" height="5.75" rx="1.6" stroke="currentColor" strokeWidth="1.3" />
-    </svg>
+    <Icon name="heatmap" px={16} decorative />
   );
 }
 
 function CloseIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <path d="M3 3L11 11M11 3L3 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
+    <Icon name="close" px={14} decorative />
   );
 }
 

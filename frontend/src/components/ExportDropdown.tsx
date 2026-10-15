@@ -31,21 +31,7 @@ import { toggleSubtitlePref, useSubtitlePrefs } from "../utils/subtitlePrefs";
 
 function DownloadIcon() {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M2 10v3.5h12V10" />
-      <path d="M8 2v8" />
-      <path d="M4.5 6.5L8 10l3.5-3.5" />
-    </svg>
+    <Icon name="export" px={16} decorative />
   );
 }
 

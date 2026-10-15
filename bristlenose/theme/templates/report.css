@@ -333,6 +333,7 @@ td a:hover {
 }
 
 .bn-interviews-link {
+    --bn-icon-stem: var(--bn-icon-stem-emphasis);  /* the folder sits beside the column's emphasis text */
     color: var(--bn-colour-accent);
     text-decoration: none;
     display: inline-flex;

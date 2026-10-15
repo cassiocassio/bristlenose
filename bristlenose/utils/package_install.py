@@ -158,10 +158,14 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     #
     # ``finished``, not ``is_alive()``: once a Ctrl+C has interrupted a
     # ``join``, CPython 3.12 can report the thread stopped while it still runs.
+    #
+    # And a wait with a timeout, in a loop: on Windows a lock wait with none
+    # cannot be interrupted by Ctrl+C at all.
     worker = threading.Thread(target=fetch, name="hf-model-fetch", daemon=True)
     worker.start()
     try:
-        finished.wait()
+        while not finished.wait(0.2):
+            pass
     except KeyboardInterrupt:
         cancelled.set()
         can_abort = True

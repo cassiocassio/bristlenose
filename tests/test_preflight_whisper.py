@@ -656,6 +656,9 @@ class TestBannerContext:
     def test_large_download_names_the_cache_and_ctrl_c(self, capsys, tmp_path, monkeypatch):
         monkeypatch.delenv("HF_HUB_CACHE", raising=False)
         monkeypatch.setenv("HF_HOME", str(tmp_path / "hf"))
+        # On Windows the temp folder is under the home folder, which the banner
+        # rightly writes as ~; here the cache must read as a full path.
+        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path / "elsewhere")
         out = self._banner(capsys, "mlx-community/whisper-large-v3-turbo")
         assert f"It downloads once, to {tmp_path / 'hf' / 'hub'}." in out
         assert "Ctrl+C is safe" in out
@@ -715,4 +718,9 @@ def test_cache_root_is_huggingface_hubs_own(env: dict[str, str], tmp_path):
         [sys.executable, "-c", probe], env=child_env, capture_output=True, text=True, check=True
     )
     theirs, ours = json.loads(out.stdout.strip().splitlines()[-1])
-    assert ours == theirs
+    # The same folder, compared as a folder: HF hands back the variable as
+    # written ("C:\\…/hub"), and ours went through Path.
+    def same(p: str) -> str:
+        return os.path.normcase(os.path.normpath(p))
+
+    assert same(ours) == same(theirs)

@@ -125,6 +125,22 @@ def test_ensure_spacy_model_refuses_on_a_read_only_package(method: str) -> None:
     run.assert_not_called()
 
 
+def _ctrl_c() -> None:
+    """Ctrl+C, aimed at the main thread from another one.
+
+    A real SIGINT where the platform can aim one (``_thread.interrupt_main``
+    sets the flag without waking a blocked wait, so on its own it can prove the
+    wrong cause). Windows has no ``pthread_kill``; there the flag is what a
+    console Ctrl+C sets too, and the production wait polls, so it lands.
+    """
+    if hasattr(signal, "pthread_kill"):
+        signal.pthread_kill(threading.main_thread().ident, signal.SIGINT)
+    else:
+        import _thread
+
+        _thread.interrupt_main()
+
+
 class TestEnsureHfModelCtrlC:
     """Measured 14 Oct 2026: one Ctrl+C during a 1.6 GB Whisper download had no
     effect for 50 s — the whole file finished first. The interrupt itself
@@ -161,8 +177,7 @@ class TestEnsureHfModelCtrlC:
         return fake_hf, abort, stopped
 
     def _interrupt_after(self, seconds: float) -> threading.Timer:
-        main = threading.main_thread().ident
-        timer = threading.Timer(seconds, signal.pthread_kill, (main, signal.SIGINT))
+        timer = threading.Timer(seconds, _ctrl_c)
         timer.start()
         return timer
 
@@ -230,11 +245,10 @@ class TestEnsureHfModelCtrlCPlainHttp:
 
         fake_hf = MagicMock()
         fake_hf.snapshot_download.side_effect = snapshot_download
-        main = threading.main_thread().ident
 
         def interrupt():
             cancelled_at.append(time.monotonic())
-            signal.pthread_kill(main, signal.SIGINT)
+            _ctrl_c()
 
         modules = {"huggingface_hub": fake_hf, "huggingface_hub.utils.tqdm": hf_tqdm_module}
         with patch.dict(sys.modules, modules), \

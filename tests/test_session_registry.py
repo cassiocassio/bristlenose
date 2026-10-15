@@ -541,9 +541,47 @@ class TestContentKeys:
         reg.save()
 
         evicted.clear()
-        settled = {s.files[0].path.name: s.session_id
-                   for s in SessionRegistry.load(out).apply(_ingest([a, d]), tmp_path)}
+        reg = SessionRegistry.load(out)
+        settled = {s.files[0].path.name: s.session_id for s in reg.apply(_ingest([a, d]), tmp_path)}
+        reg.save()
         assert settled["a.wav"] == first["a.wav"], "the live recording lost its session"
+        # And it keeps it through a rename: its content key was never handed
+        # to the duplicate (Fable review, 15 Oct 2026).
+        renamed = tmp_path / "p1 sarah.wav"
+        a.path.rename(renamed)
+        a2 = InputFile(path=renamed, file_type=FileType.AUDIO, created_at=a.created_at,
+                       size_bytes=a.size_bytes)
+        after = {s.files[0].path.name: s.session_id
+                 for s in SessionRegistry.load(out).apply(_ingest([a2, d]), tmp_path)}
+        assert after["p1 sarah.wav"] == first["a.wav"], "the renamed original was orphaned"
+
+    def test_deleting_the_keyed_copy_does_not_move_its_session_to_the_other(
+        self, tmp_path: Path,
+    ) -> None:
+        """Of two identical copies, deleting the keyed one leaves the other its
+        own session; the deleted one's session waits for it to come back
+        (Fable review, 15 Oct 2026)."""
+        out = tmp_path / "out"
+        files = []
+        for name, day in (("a.wav", 0), ("b.wav", 1)):
+            path = tmp_path / name
+            path.write_bytes(b"one recording")
+            files.append(InputFile(path=path, file_type=FileType.AUDIO,
+                                   created_at=_T0 + timedelta(days=day), size_bytes=13))
+        reg = SessionRegistry.load(out)
+        first = {s.files[0].path.name: s.session_id for s in reg.apply(_ingest(files), tmp_path)}
+        reg.save()
+        held = files[0].path.read_bytes()
+        files[0].path.unlink()
+        reg = SessionRegistry.load(out)
+        alone = {s.files[0].path.name: s.session_id
+                 for s in reg.apply(_ingest([files[1]]), tmp_path)}
+        reg.save()
+        assert alone == {"b.wav": first["b.wav"]}, "b took the deleted copy's session"
+        files[0].path.write_bytes(held)
+        back = {s.files[0].path.name: s.session_id
+                for s in SessionRegistry.load(out).apply(_ingest(files), tmp_path)}
+        assert back == first
 
     def test_a_first_analysis_does_not_fetch_placeholders_early(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,

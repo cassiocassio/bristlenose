@@ -411,7 +411,15 @@ not the folder, and are unchanged.
   provider's folder reads as moved; the drop still checks that same-id rows'
   folders exist on the main actor; and an ejected-disk drop that was in fact
   a move leaves the old row behind, which a later Locate can point at the
-  same folder as the new row (no merge-on-relocate yet).
+  same folder as the new row (no merge-on-relocate yet). A last review fixed
+  two more costs of keeping identical copies as two sessions: a content key
+  is never handed from the session holding it to another, and a copy whose
+  name belongs to another session is that session even when the keyed copy
+  is gone. **Still open:** both identical copies renamed in the same run
+  cannot be told apart, so they may swap sessions. §5 called a duplicate one
+  recording with an alias; the build keeps two sessions, one keyed. Making
+  the duplicate a key-less alias would close this class, and is the owner's
+  call.
 
 ## 12. What this does not do
 

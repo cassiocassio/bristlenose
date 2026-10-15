@@ -342,7 +342,9 @@ class SessionRegistry:
 
         # Content, then place, then name — each pass only takes what is free.
         for i, fp in enumerate(fps):
-            if fp is not None and first_with_fp[fp] == i:
+            # A copy whose name belongs to another session is that session,
+            # even when the keyed copy is gone (Fable review, 15 Oct 2026).
+            if fp is not None and first_with_fp[fp] == i and owner_rank(i)[0] != 2:
                 claim(i, self.sessions.get(FP_PREFIX + fp))
         for i, fp in enumerate(fps):
             if resolved[i] is None and fp is None and places[i] is not None:
@@ -408,8 +410,13 @@ class SessionRegistry:
             elif sid != session.session_id:
                 logger.info("Session %r keeps %s (by date it would be %s)", named[i],
                             sid, session.session_id)
-            self._remember(sid, named[i], fps[i] if first_with_fp.get(fps[i] or "") == i else None,
-                           places[i])
+            fp_i = fps[i] if first_with_fp.get(fps[i] or "") == i else None
+            # A content key belongs to the session that holds it; it is never
+            # handed to another (a duplicate, a copy named for another session),
+            # or its owner is orphaned the next time it is renamed.
+            if fp_i is not None and self.sessions.get(FP_PREFIX + fp_i, sid) != sid:
+                fp_i = None
+            self._remember(sid, named[i], fp_i, places[i])
             n = _number(sid)
             session.session_id = sid
             session.session_number = n

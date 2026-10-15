@@ -22,6 +22,8 @@ Tokens → Atoms → Molecules → Organisms → Templates. All visual values vi
 
 **Rules:** Never hardcode `font-weight` values in CSS — always use the tokens.
 
+**Monospace: read the ground truth before measuring anything.** `docs/design-monospace-roles.md` §6 records, per platform and browser, which face each mono stack reaches and what every weight draws there, measured 15 Oct 2026 on macOS (WebKit, sandboxed WKWebView, Chromium) and Windows 10/11 (Edge), with the five traps that faked results on the way (`experiments/monospace-audit/ground-truth.json`, probes alongside). The two facts people re-derive wrongly: "SF Mono" by name exists only on Macs with Apple's developer download, so the developer's view is not the researcher's; and 400–490 is the only band that stays Regular on every non-SF face (Windows matches the nearest weight, so Consolas turns Bold at 550, not 501).
+
 **Typography scale (Scale D)** — 8 stops, paired font-size + line-height tokens (line-height decreases as size increases, per Bringhurst — large letterforms provide visual anchoring, need less leading):
 
 | Size token | Value | Line-height token | Value | Usage |

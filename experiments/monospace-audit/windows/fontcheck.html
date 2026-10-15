@@ -1,0 +1,16 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+body{margin:0;background:#fff;color:#000}.r{height:60px;display:flex;align-items:center;padding-left:10px;white-space:nowrap}
+</style></head><body>
+<script>
+// Which faces resolve? A family that is missing falls back to serif, so its width equals serif's.
+const probe = (fam) => { const s = document.createElement('span'); s.textContent = 'mmmmmiiiiiWW00'; s.style.cssText = `position:absolute;font-size:40px;font-family:${fam}`; document.body.appendChild(s); const w = s.getBoundingClientRect().width; s.remove(); return w; };
+const serif = probe('serif');
+const res = {};
+for (const f of ["'Cascadia Mono'", "'Cascadia Code'", 'Consolas', "'Courier New'", 'monospace', 'ui-monospace']) { const w = probe(f + ', serif'); res[f] = { width: +w.toFixed(1), resolves: Math.abs(w - serif) > 0.5 }; }
+res.proposed_with_cascadia = +probe("ui-monospace, Menlo, 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', monospace").toFixed(1);
+res.proposed_without = +probe("ui-monospace, Menlo, Consolas, 'DejaVu Sans Mono', monospace").toFixed(1);
+// Rows for the screenshot: ink by weight.
+const fams = ['Consolas', "'Cascadia Mono'"]; const W = [400, 520, 540, 550, 551, 560, 580, 600];
+for (const f of fams) for (const w of W) { const d = document.createElement('div'); d.className = 'r'; d.innerHTML = `<span style="font:${w} 24px ${f};line-height:1">p03 [00:14:32] Login.tsx AaGg0O</span>`; document.body.appendChild(d); }
+const pre = document.createElement('pre'); pre.id = 'result'; pre.style.cssText = 'position:absolute;left:-9999px'; pre.textContent = 'RESULT ' + JSON.stringify(res); document.body.appendChild(pre);
+</script></body></html>

@@ -1,0 +1,179 @@
+{
+  "measured": "2026-10-15",
+  "method": "DOM text rendered black on white, screenshot, ink = sum of (255 - luminance) per row, relative to 400 in the same face, size and engine. Faces identified by large-glyph ink (100px) and by Chromium's CSS.getPlatformFontsForNode; never by canvas (WebKit canvas skips user-installed fonts) and never from a Chromium fullPage capture (it swaps the generic monospace from Courier to Menlo). Pages carry lang=\"en\", as the report does.",
+  "environments": {
+    "mac-dev": "macOS 27.0 (26A428), arm64, Apple's SF Mono developer download installed (com.apple.pkg.SFMonoFonts, /Library/Fonts)",
+    "mac-stock": "the same Mac with \"SF Mono\" removed from each stack: what a Mac without the download resolves",
+    "system-webkit": "sandboxed WKWebView, default configuration, system WebKit 22625.1.29.11.27 (the Mac app's engine)",
+    "playwright-webkit": "Playwright 1.60.0 WebKit 26.4 (agrees with system-webkit to the pixel)",
+    "playwright-chromium": "Playwright 1.60.0 Chromium 148.0.7778.96",
+    "win11-edge": "Windows 11 Enterprise eval 26H2 build 26300 (VirtualBox 7.0.26), Edge 152.0.4191.66, Windows Terminal 1.18 inbox",
+    "win10-edge": "Windows 10 22H2 clean image (VirtualBox 7.0.26), Edge 92.0.902.67, never updated"
+  },
+  "stacks": {
+    "web-token": "\"SF Mono\", \"Fira Code\", \"Consolas\", monospace",
+    "desktop-token": "\"SF Mono\", ui-monospace, monospace",
+    "proposed": "ui-monospace, Menlo, \"Cascadia Mono\", Consolas, \"DejaVu Sans Mono\", monospace"
+  },
+  "faces_resolved": [
+    {
+      "env": "mac-dev",
+      "browser": "Mac app WKWebView / Playwright WebKit",
+      "web-token": "SF Mono (download, static)",
+      "desktop-token": "SF Mono (download, static)",
+      "proposed": "system SF Mono (variable)",
+      "generic monospace": "Menlo (Courier without a lang attribute)",
+      "measured": true
+    },
+    {
+      "env": "mac-dev",
+      "browser": "Chromium",
+      "web-token": "SF Mono (download, static)",
+      "desktop-token": "SF Mono (download, static)",
+      "proposed": "Menlo",
+      "generic monospace": "Courier",
+      "ui-monospace": "unsupported",
+      "measured": true
+    },
+    {
+      "env": "mac-stock",
+      "browser": "Mac app WKWebView / WebKit",
+      "web-token": "Menlo (via generic)",
+      "desktop-token": "system SF Mono (via ui-monospace)",
+      "proposed": "system SF Mono",
+      "measured": true
+    },
+    {
+      "env": "mac-stock",
+      "browser": "Chromium",
+      "web-token": "Courier (via generic)",
+      "desktop-token": "Courier (via generic)",
+      "proposed": "Menlo",
+      "measured": true
+    },
+    {
+      "env": "mac-dev",
+      "browser": "Safari",
+      "note": "not measured: driving Safari needs a settings change. Safari limits web content to system fonts, so it is expected to match the mac-stock WebKit row.",
+      "measured": false
+    },
+    {
+      "env": "mac-dev",
+      "browser": "Firefox 157",
+      "note": "not measured: headless Firefox refused a throwaway profile. Firefox has no ui-monospace, so the proposed stack should reach Menlo.",
+      "measured": false
+    },
+    {
+      "env": "win11-edge",
+      "browser": "Edge 152",
+      "web-token": "Consolas",
+      "proposed": "Cascadia Mono",
+      "proposed without Cascadia": "Consolas",
+      "generic monospace": "Consolas",
+      "ui-monospace": "unsupported",
+      "cascadia_source": "Windows Terminal package (shared font); not in C:\\Windows\\Fonts or the HKLM/HKCU font registry; GDI+ lists ExtraLight, Light, SemiLight, Regular, SemiBold",
+      "measured": true
+    },
+    {
+      "env": "win10-edge",
+      "browser": "Edge 92",
+      "web-token": "Consolas",
+      "proposed": "Consolas",
+      "Cascadia Mono": "absent",
+      "generic monospace": "Courier New",
+      "ui-monospace": "unsupported",
+      "measured": true
+    },
+    {
+      "env": "linux",
+      "note": "not measured. Expected DejaVu Sans Mono by name on most distributions.",
+      "measured": false
+    }
+  ],
+  "weight_to_ink_percent_vs_400": {
+    "_note": "System SF Mono figures are at 11-13 px with the string 'frustration basket total p03 AaGg0O' (400-500) and 'p03 [00:14:32] Login.tsx AaGg0O' (500-700); other strings and sizes move them by 2-5 points, not their order. 'B' means the face's Bold.",
+    "system SF Mono (WebKit, ui-monospace)": {
+      "300": -20,
+      "370": -5,
+      "420": 3,
+      "440": 6,
+      "450": 7,
+      "460": 9,
+      "470": 10,
+      "480": 12,
+      "490": 14,
+      "500": 15,
+      "520": 18,
+      "540": 21,
+      "550": 23,
+      "560": 24,
+      "580": 27,
+      "600": 30,
+      "700": 46
+    },
+    "SF Mono download, static (both engines)": {
+      "300": -21,
+      "370": -21,
+      "420": 15,
+      "490": 15,
+      "500": 15,
+      "520": 29,
+      "550": 27,
+      "560": 27,
+      "600": 30,
+      "700": 49
+    },
+    "Menlo (Mac, both engines)": {
+      "<=500 (440, 460, 480, 490, 500 measured)": 0,
+      ">=520": "B, +33 to +39"
+    },
+    "Courier (Mac)": {
+      "<=500": 0,
+      ">=520": "B, +37 to +45"
+    },
+    "Consolas (Windows Edge 92 and 152)": {
+      "<=540 (440-540 measured)": 0,
+      ">=550": "B, +33 to +36"
+    },
+    "Cascadia Mono (Windows 11 Edge 152)": {
+      "400-490 (440, 460, 480, 490 measured)": 0,
+      "500-600": 16,
+      "700": 27
+    }
+  },
+  "weight_matching": {
+    "mac (both engines)": "CSS rule: above 500, the next heavier face that exists. Two-instance faces flip to Bold at 501.",
+    "windows chromium (DirectWrite)": "nearest named weight, ties going heavier: Consolas Regular to 540, Bold from 550; Cascadia Regular to 490, SemiBold from 500.",
+    "static SF Mono download": "300 and 370 to Light; 420-500 to Medium; 520-600 to Semibold; 700 Bold."
+  },
+  "metrics_em": {
+    "SF Mono": {
+      "advance": 0.618,
+      "x_height": 0.53,
+      "cap_height": 0.705,
+      "descender": 0.179
+    },
+    "Menlo": {
+      "advance": 0.602,
+      "x_height": 0.547,
+      "cap_height": 0.729,
+      "descender": 0.208
+    },
+    "Cascadia Mono": {
+      "advance": 0.586
+    },
+    "Consolas": {
+      "advance": 0.55
+    },
+    "Courier New": {
+      "advance": 0.6
+    }
+  },
+  "safe_band": "Every weight from 400 to 490 renders Regular in Menlo, Courier, Consolas and Cascadia Mono, and varies only in SF Mono. 500 is the first weight that changes another face (Cascadia SemiBold); 550 the first that reaches Consolas Bold.",
+  "decisions_2026_10_15": {
+    "stack": "ui-monospace, Menlo, \"Cascadia Mono\", Consolas, \"DejaVu Sans Mono\", monospace (no \"SF Mono\" by name; never Courier)",
+    "rest": 400,
+    "tags": "460 in the light theme, 400 in dark (SF Mono +9%; Regular on every other face)",
+    "emphasis": "560 (revised from 520: 520 stays Regular in Consolas)"
+  }
+}

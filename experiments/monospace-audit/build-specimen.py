@@ -23,7 +23,7 @@ shipped = "\n\n".join([
 ])
 assert '.footer-keyboard-hint kbd' in shipped and '--bn-font-mono' in shipped
 
-PROPOSED_STACK = 'ui-monospace, Menlo, Consolas, "DejaVu Sans Mono", monospace'
+PROPOSED_STACK = 'ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace'
 
 page_css = r"""
 /* ════ specimen chrome — this page only, not a proposal ════ */
@@ -86,6 +86,18 @@ h2 { font-size: var(--bn-text-heading); line-height: var(--bn-text-heading-lh); 
 .rk .wt s { color: var(--bn-colour-muted); }
 .rk .how { font-style: italic; }
 .rk-head { font-weight: var(--bn-weight-emphasis); }
+.tcols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tcol { padding: 14px 16px 16px; min-width: 0; background: var(--bn-colour-bg); color: var(--bn-colour-text); }
+.tcol-light { color-scheme: light; }
+.tcol-dark { color-scheme: dark; border-left: 1px solid var(--bn-colour-border); }
+/* Pin what the light appearance draws: badge.css's prefers-color-scheme rule keys on :root,
+   so on a Mac in dark mode it would otherwise reach this light column too. */
+.tcol-light .badge-user { color: var(--bn-colour-text); }
+.ctx { border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md); padding: 8px 10px 2px; margin: 0 0 8px; }
+.ctx-name { display: block; font-family: var(--bn-font-body); font-size: var(--bn-text-micro); color: var(--bn-colour-muted); margin-bottom: 4px; }
+.wsel { font: inherit; font-size: var(--bn-text-micro); }
+.tcol .prop .badge, .tcol .prop .badge-user { font-weight: var(--tag-w, 400); }
+@media (max-width: 760px) { .tcols { grid-template-columns: minmax(0, 1fr); } .tcol-dark { border-left: 0; } }
 @media (max-width: 760px) {
   body { padding: 20px 16px 48px; }
   .rgrid { grid-template-columns: minmax(0, 1fr); }
@@ -102,9 +114,11 @@ proposal_css = f"""
 .prop {{
     --bn-font-mono: {PROPOSED_STACK};
     --bn-weight-mono: 400;            /* Regular  — every mono role at rest */
-    --bn-weight-mono-emphasis: 520;   /* first weight above 500: Bold where the face has only Regular and Bold */
+    --bn-weight-mono-tag: 460;        /* tags, light appearance; 400 in dark */
+    --bn-weight-mono-emphasis: 560;   /* Bold on every face with only Regular and Bold (Consolas needs 550) */
 }}
-.prop .badge, .prop .badge-user, .prop .bn-speaker-badge-code {{ font-weight: var(--bn-weight-mono); }}
+.prop .badge, .prop .badge-user {{ font-weight: var(--bn-weight-mono-tag); }}
+.prop .bn-speaker-badge-code {{ font-weight: var(--bn-weight-mono); }}
 .prop .footer-keyboard-hint kbd {{ font-size: var(--bn-text-micro); font-weight: var(--bn-weight-mono); }}
 .prop .tc-compact {{ font-size: var(--bn-text-caption); }}
 .prop .path.is-subject {{ font-weight: var(--bn-weight-mono-emphasis); }}
@@ -132,14 +146,14 @@ ROWS = [
    "Regular everywhere", TC + ' <span class="prose">“I couldn’t find the basket total.”</span>', None),
   ("Timecode", "in a metadata row", "caption", "400", "400",
    "Regular everywhere", '<span class="meta">Session 4 · 42 min</span> ' + TC_CAP_NOW, '<span class="meta">Session 4 · 42 min</span> ' + TC_CAP_PROP),
-  ("Tag", "sentiment chip", "badge", "370", "400",
-   "Regular everywhere", '<span class="badge badge-frustration">frustration</span> <span class="badge badge-delight">delight</span>', None),
-  ("Tag", "codebook tag", "badge", "420 (490 in dark)", "400",
-   "Regular everywhere", '<span class="badge badge-user" style="background:var(--bn-emo-1-bg, var(--bn-colour-user-tag-bg))">basket total</span> <span class="badge badge-user" style="background:var(--bn-ux-1-bg, var(--bn-colour-user-tag-bg))">findability</span>', None),
+  ("Tag", "sentiment chip", "badge", "370", "460 light · 400 dark",
+   "SF Mono +9% in light · Regular on every other face", '<span class="badge badge-frustration">frustration</span> <span class="badge badge-delight">delight</span>', None),
+  ("Tag", "codebook tag", "badge", "420 (490 in dark)", "460 light · 400 dark",
+   "SF Mono +9% in light · Regular on every other face", '<span class="badge badge-user" style="background:var(--bn-emo-1-bg, var(--bn-colour-user-tag-bg))">basket total</span> <span class="badge badge-user" style="background:var(--bn-ux-1-bg, var(--bn-colour-user-tag-bg))">findability</span>', None),
   ("Code", "speaker code", "badge", "400", "400",
    "Regular everywhere", SPK, None),
-  ("Path", "names the screen", "caption", "490", "520",
-   "SF Mono +21% (about Medium) · Menlo, Consolas: Bold", '<span class="path is-subject" style="font-weight:var(--bn-weight-emphasis)">checkout-flow/Basket summary.png</span>', '<span class="path is-subject">checkout-flow/Basket summary.png</span>'),
+  ("Path", "names the screen", "caption", "490", "560",
+   "SF Mono +24% · Cascadia SemiBold · Menlo, Consolas: Bold", '<span class="path is-subject" style="font-weight:var(--bn-weight-emphasis)">checkout-flow/Basket summary.png</span>', '<span class="path is-subject">checkout-flow/Basket summary.png</span>'),
   ("Path", "plain", "caption", "400", "400",
    "Regular everywhere", '<span class="path" style="color:var(--bn-colour-muted)">interviews/session-04/screens/Basket summary.png</span>', None),
   ("Keycap", "footer hints", "0.85em → micro", "400", "400",
@@ -176,6 +190,38 @@ def face_frame(scale_attr, title, nodl_cls, nodl_head):
     </div>
   </div>"""
 
+
+SENTIMENTS = ["frustration", "confusion", "doubt", "surprise", "satisfaction", "delight", "confidence"]
+GROUPS = [("ux-1", "findability"), ("emo-1", "basket total"), ("task-1", "checkout"), ("trust-1", "price shock"), ("opp-1", "saved cards")]
+
+def tag_set():
+    chips = " ".join(f'<span class="badge badge-{x}" data-kind="sentiment chip">{x}</span>' for x in SENTIMENTS)
+    tags = " ".join(f'<span class="badge badge-user" data-kind="codebook tag" style="background:var(--bn-{g}-bg)">{w}</span>' for g, w in GROUPS)
+    code = '<span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code" data-kind="speaker code">p03</span><span class="bn-speaker-badge-name">Ana</span></span>'
+    return f'<p class="line">{chips}</p><p class="line">{tags} {code}</p>'
+
+CONTEXTS = [("page", "--bn-colour-bg"), ("quote card", "--bn-colour-quote-bg"), ("sidebar", "--bn-colour-inspector-bg")]
+
+def tags_block(which):
+    strips = "".join(f'<div class="ctx" style="background:var({tok})" data-ctx="{name}"><span class="ctx-name">{name}</span>{tag_set()}</div>' for name, tok in CONTEXTS)
+    return f'<div class="tagblock tagblock-{which}">{strips}</div>'
+
+def tags_frame():
+    cols = ""
+    for scheme in ("light", "dark"):
+        default = 460 if scheme == "light" else 400
+        opts = "".join(f'<option{" selected" if w == default else ""}>{w}</option>' for w in (370, 400, 420, 440, 460, 480, 490, 520))
+        cols += (f'<div class="tcol tcol-{scheme}" data-theme="{scheme}">'
+                 f'<p class="colhead"><b>{scheme.title()}</b> — proposed stack · weight <select class="wsel" data-scheme="{scheme}" aria-label="{scheme} tag weight">{opts}</select></p>'
+                 f'<div class="prop" data-weighted>{tags_block("prop")}</div>'
+                 f'<p class="colhead" style="margin-top:14px"><b>{scheme.title()}</b> — today, as shipped on this Mac (chips 370, codebook tags {"420" if scheme == "light" else "490"})</p>'
+                 f'{tags_block("today")}</div>')
+    return f"""
+  <div class="frame">
+    <div class="bar"><span>Tags in their colours, light and dark, in the three places they sit</span><span>the selects are a judging tool, not product · synthetic content</span></div>
+    <div class="tcols">{cols}</div>
+  </div>"""
+
 commentary_face = (R / 'docs/design-monospace-roles.md').exists()
 
 body = f"""
@@ -198,8 +244,10 @@ body = f"""
       <tr><td>system SF Mono — WebKit, via <code>ui-monospace</code></td><td>−20%</td><td>−5%</td><td>+4%</td><td>+16%</td><td>+18%</td><td>+21%</td><td>+35%</td><td>+53%</td></tr>
       <tr><td>Menlo — WebKit's generic <code>monospace</code>; Chromium by name</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td colspan="3">Bold, +33 to +39% (varies with the string)</td></tr>
       <tr><td>Courier — Chromium's generic <code>monospace</code> (its own font API says so)</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td colspan="3">Bold, +37 to +38%</td></tr>
+      <tr><td>Consolas — Windows Edge 92 and 152 (nearest-weight matching)</td><td></td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0 (Bold from 550)</td><td>Bold</td></tr>
+      <tr><td>Cascadia Mono — Windows 11 Edge 152</td><td></td><td></td><td>0</td><td>0</td><td>+16%</td><td>+16%</td><td>+16%</td><td>+27%</td></tr>
     </table></div>
-    <p>Given the same face, WebKit and Chromium draw the same ink at every weight. They differ only in which face they find. At the named instances (400, 500, 600, 700), the download and the system font agree within 2–5% and have identical advances. The off-instance weights (370, 420, 490, 520) are where the developer's Mac and a researcher's Mac part company. <b>600 is the one emphasis weight that reads about the same on every path</b> (+30–39%). 500 is Medium in WebKit and Regular wherever the face has only Regular and Bold.</p>
+    <p>Given the same face, WebKit and Chromium draw the same ink at every weight. They differ only in which face they find. At the named instances (400, 500, 600, 700), the download and the system font agree within 2–5% and have identical advances. The off-instance weights (370, 420, 490, 520) are where the developer's Mac and a researcher's Mac part company. <b>400–490 is the safe band:</b> Regular in Menlo, Courier, Consolas and Cascadia Mono, and varying only in SF Mono. <b>560 is the cheapest emphasis that turns Bold everywhere</b>: Menlo flips above 500, but Windows matches the nearest weight, so Consolas needs 550. Full ground truth: <code>docs/design-monospace-roles.md</code> §6.</p>
   </div>
 
   <h2>2 · The roles</h2>
@@ -207,15 +255,56 @@ body = f"""
   {roles_frame('data-platform="desktop"', 'Desktop · SF Pro scale', 'nodl-desk', 'a Mac without the download')}
   <div class="commentary"><span class="lbl">Commentary</span>
     <p><b>Regular (400) is the resting weight of every monospace role.</b> Monospace marks <i>kind</i>, not importance: the face says "this is a time, a code, a path", and colour, size and the chip carry everything else.</p>
-    <p><b>Tags are one weight: 400</b> (decided 15 Oct 2026). Today sentiment chips are 370 and codebook tags 420 (490 in dark mode). On this Mac that is Light against Medium; on a researcher's Mac in the app, −5% against +4%; in Chrome both Regular. Colour separates the two families, and the dark-mode bump goes.</p>
-    <p><b>Two weights in all: 400 and 520</b> (decided 15 Oct 2026). 520 is the first weight above 500: about Medium on SF Mono (+21%), Bold wherever the face has only Regular and Bold (Menlo, Consolas, DejaVu). It is for emphasis that must survive in a browser; today that is only the Screens path that names the screen. Keycaps stay Regular. No mono role is Semibold or Bold.</p>
+    <p><b>Tags are one weight: 460 in the light appearance, 400 in dark</b> (decided 15 Oct 2026). Today sentiment chips are 370 and codebook tags 420 (490 in dark). 460 gives light tags a little more bite in SF Mono (+9%) and is Regular on every other face, so it never tips into Bold anywhere.</p>
+    <p><b>Emphasis is 560</b>, revised from 520 after measuring Windows: 520 is Bold in Menlo but stays Regular in Consolas, which needs 550. At 560: SF Mono +24%, Cascadia Mono SemiBold, Menlo and Consolas Bold. Today it applies only to the Screens path that names the screen. Keycaps stay Regular.</p>
     <p><b>Figures</b> leave monospace for the body face with tabular figures, keeping 490, where the body ladder works.</p>
     <p>Proposed stack: <code>{html.escape(PROPOSED_STACK)}</code>. WebKit draws the system SF Mono on every Mac, download or not; Chromium on a Mac draws Menlo (it has no <code>ui-monospace</code>) instead of today's Courier; Windows Consolas; Linux DejaVu Sans Mono. Menlo and Consolas carry only Regular and Bold.</p>
+  </div>
+
+  <h2>3 · Tags at 400, in their colours</h2>
+  {tags_frame()}
+  <div class="commentary"><span class="lbl">Commentary</span>
+    <p><b>The same weight can read heavier light-on-dark.</b> Light strokes on a dark ground spread (irradiation), so dark-mode sentiment chips, light text on a dark tint, may look a touch bolder than their light-mode twins. Dark-mode codebook tags are the other case: white on a mid-tone saturated tint has much less contrast, which can make strokes look thinner. That is probably what the shipped 490 bump was compensating for. Each column starts at the proposed weight (light 460, dark 400); change it to judge by eye. In WebKit (the app, Safari) every step shows; in Chrome, Menlo shows only Regular (≤500) or Bold.</p>
+    <p>Contrast, computed live from the colours this page resolves (the proposed rows, page context). WCAG is symmetric; APCA Lc is not: it scores light-on-dark and dark-on-light differently, which is this effect in numbers. A negative Lc means light text on a dark ground; compare magnitudes.</p>
+    <div class="tbl"><table id="tag-contrast"><tr><th>tag</th><th>light · WCAG</th><th>light · APCA Lc</th><th>dark · WCAG</th><th>dark · APCA Lc</th></tr></table></div>
   </div>
 </div>
 """
 
 face_js = r"""
+// Section 3: per-appearance weight, and live WCAG / APCA figures for the proposed tags.
+(function () {
+  document.querySelectorAll(".wsel").forEach((sel) => {
+    const col = sel.closest(".tcol");
+    const apply = () => col.querySelector("[data-weighted]").style.setProperty("--tag-w", sel.value);
+    sel.addEventListener("change", apply); apply();
+  });
+  const cv = document.createElement("canvas"); cv.width = cv.height = 1; const cx = cv.getContext("2d", { willReadFrequently: true });
+  const rgb = (c) => { cx.clearRect(0, 0, 1, 1); cx.fillStyle = "#000"; cx.fillStyle = c; cx.fillRect(0, 0, 1, 1); return [...cx.getImageData(0, 0, 1, 1).data].slice(0, 3); };
+  const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  const relL = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const wcag = (a, b) => { const [x, y] = [relL(a), relL(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  // APCA-W3 0.0.98G-4g
+  const apca = (t, b) => {
+    const Y = ([r, g, bb]) => 0.2126729 * Math.pow(r / 255, 2.4) + 0.7151522 * Math.pow(g / 255, 2.4) + 0.072175 * Math.pow(bb / 255, 2.4);
+    const clamp = (y) => (y > 0.022 ? y : y + Math.pow(0.022 - y, 1.414));
+    const ty = clamp(Y(t)), by = clamp(Y(b));
+    if (Math.abs(by - ty) < 0.0005) return 0;
+    if (by > ty) { const s = (Math.pow(by, 0.56) - Math.pow(ty, 0.57)) * 1.14; return s < 0.1 ? 0 : (s - 0.027) * 100; }
+    const s = (Math.pow(by, 0.65) - Math.pow(ty, 0.62)) * 1.14; return s > -0.1 ? 0 : (s + 0.027) * 100;
+  };
+  const table = document.getElementById("tag-contrast"); if (!table) return;
+  const pick = (scheme) => [...document.querySelectorAll(`.tcol-${scheme} .prop [data-ctx="page"] [data-kind]`)];
+  const L = pick("light"), D = pick("dark");
+  L.forEach((el, i) => {
+    const d = D[i]; const cells = [el, d].map((e) => { const cs = getComputedStyle(e); const t = rgb(cs.color), bg = rgb(cs.backgroundColor);
+      return [wcag(t, bg).toFixed(1) + ":1", apca(t, bg).toFixed(0)]; });
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${el.dataset.kind}: ${el.textContent}</td><td>${cells[0][0]}</td><td>${cells[0][1]}</td><td>${cells[1][0]}</td><td>${cells[1][1]}</td>`;
+    table.appendChild(tr);
+  });
+})();
+
 // Which face did this column get? Line-box height at line-height:normal differs between
 // SF Mono, Menlo, Courier and Consolas; compare against references. Same DOM path as the
 // specimen (not canvas, which in WebKit ignores user-installed fonts).

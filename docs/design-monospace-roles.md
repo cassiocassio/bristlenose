@@ -56,7 +56,7 @@ Bold is +33 to +39% for Menlo and +37 to +38% for Courier, varying with the stri
 
 - **Static download** (Light, Regular, Medium, Semibold, Bold, Heavy): 300 and 370 draw Light; 420–500 draw Medium; 520–600 draw Semibold.
 - **System variable:** continuous, no snapping.
-- **Menlo, Courier, Consolas** (Regular and Bold only): up to 500 is Regular; 520 and up is Bold. The CSS matching rule puts everything above 500 on the next heavier face.
+- **Menlo and Courier on a Mac** (Regular and Bold only): up to 500 is Regular; 520 and up is Bold. The CSS matching rule puts everything above 500 on the next heavier face. **Windows matches differently**: Chromium there takes the nearest weight through DirectWrite, so Consolas stays Regular to 540 and is Bold from 550 (§6).
 
 At the named instances (400, 500, 600, 700), the download and the system font agree within 2–5%, with identical advances. **All the divergence between the developer's Mac and a researcher's Mac sits at the off-instance weights: 370, 420, 490 and 520.** Native Swift (`NSFont.monospacedSystemFont`, `.monospaced()`) always draws the system font at named weights, so it matches a researcher's webview and differs slightly from the developer's.
 
@@ -167,78 +167,161 @@ Native code always draws the system SF Mono, at AppKit's named weights.
 
 ## 4. Proposal
 
+Decisions taken 15 Oct 2026 are marked **Decided**. The emphasis weight was revised the same evening, after the Windows measurement in §6.
+
 ### One stack, both scales
 
-**Decided 15 Oct 2026:** drop "SF Mono" by name, and never let a supported platform reach Courier. To check before shipping: Cascadia Mono ahead of Consolas (Windows 11, if it ships system-wide), and Liberation Mono and Noto Sans Mono after DejaVu (Linux).
+**Decided:** drop "SF Mono" by name, and never let a supported platform reach Courier.
 
 ```css
---bn-font-mono: ui-monospace, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+--bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
 ```
 
-Delete the desktop override. WebKit then draws the system SF Mono on every Mac, download or not, which is also the face native Swift uses. Chromium on a Mac draws Menlo instead of Courier, Windows Consolas, and Linux DejaVu Sans Mono. "SF Mono" by name goes because it is the one entry that makes the developer's view differ from everyone else's. "Fira Code" goes because nobody has it who isn't a developer. The generic is still last but is no longer reached on a Mac, which also removes the `lang` dependence: in a Japanese report Chromium's generic is a Japanese face, not a monospace one.
+Delete the desktop override. What each platform then draws, all measured except Linux:
 
-### Weights: two in all, 400 and 520
+- **WebKit** (the Mac app, Safari): the system SF Mono, on every Mac, download or not. This is also the face native Swift uses.
+- **Chromium on a Mac** (Chrome, Edge, Arc): Menlo instead of today's Courier.
+- **Windows 11**: Cascadia Mono, which ships with Windows Terminal.
+- **Windows 10**: Consolas.
+- **Linux**: DejaVu Sans Mono (expected, not measured).
 
-**Decided 15 Oct 2026:** every monospace role rests at **Regular (400)**, including every tag, and the only step up is **520**. No mono role is Semibold or Bold, and there is no separate app-only refinement weight.
+"SF Mono" by name goes because it is the one entry that makes the developer's view differ from everyone else's. "Fira Code" goes because nobody has it who isn't a developer. The generic is still last but is no longer reached on any measured platform. That matters: it is Courier in Chromium on a Mac and Courier New in Windows 10's Edge, and it varies with the page's `lang`.
+
+Still to check before shipping: Liberation Mono and Noto Sans Mono after DejaVu, once Linux is measured.
+
+### Weights
 
 ```css
---bn-weight-mono: 400;            /* every role at rest, every tag */
---bn-weight-mono-emphasis: 520;   /* first weight above 500: Bold where the face has only Regular and Bold */
+--bn-weight-mono: 400;            /* every role at rest */
+--bn-weight-mono-tag: 460;        /* tags, light appearance only; 400 in dark */
+--bn-weight-mono-emphasis: 560;   /* Bold on every face that has only Regular and Bold */
 ```
 
-Menlo, Consolas, DejaVu and Liberation have only Regular and Bold, and CSS matching gives Regular up to 500 and Bold above it, so browser emphasis is either absent or Bold. 520 is the cheapest value across the line: SF Mono +21% (about Medium, near the +16% of today's 490), Bold on the two-instance faces. Today it applies only to the Screens path that names the screen. 500 was considered as a second, app-only weight for keycaps and dark-mode tags, and dropped for fewer weights: both stay at 400.
+- **Rest, 400. Decided.** Every monospace role, and every tag in dark mode.
+- **Tags in the light appearance, 460. Decided.** Light tags read a little weak against their pale tints: light sentiment chips measure 3.1–5.2:1 WCAG, against 6.2–9.3:1 in dark. 460 is +9% ink in SF Mono, a touch under 490's +13–14%, and **Regular in Menlo, Consolas and Cascadia Mono**, so it is a fine adjustment where SF Mono can show one and invisible elsewhere. CSS cannot vary `font-weight` with `light-dark()`, so the token is set to 400 in the dark scopes, the same `[data-theme="dark"]` and `prefers-color-scheme` pair `atoms/badge.css` already uses for dark user tags.
+- **Emphasis, 560. Revised from 520.** The aim, decided earlier, is a step that survives in a browser. 520 reaches Bold in Menlo on a Mac but stays Regular in Consolas, where Windows's nearest-weight matching needs 550; 560 adds margin. In SF Mono 560 is +24% (520 was +18%), in Cascadia Mono SemiBold (+16%), in Menlo and Consolas Bold (+33–36%). Today it applies only to the Screens path that names the screen.
+- **No 500.** Fewer weights, decided. Also, 500 is exactly where Cascadia Mono jumps to SemiBold, so it is a poor value for anything meant to be subtle.
 
-Who sees which: the Mac app and Safari get SF Mono; Chrome, Edge, Arc and probably Firefox on a Mac get Menlo, and the CLI-on-Mac audience likely leans that way. So emphasis is tuned to read in Menlo, not only in SF Mono.
+**The safe band is 400–490:** every weight in it is Regular in Menlo, Courier, Consolas and Cascadia Mono and varies only in SF Mono. Anything meant as an SF Mono-only nuance belongs there.
+
+Who sees which: the Mac app and Safari get SF Mono. Chrome, Edge, Arc and probably Firefox on a Mac get Menlo, and the CLI-on-Mac audience likely leans that way. So emphasis is tuned to read in Menlo and Consolas, not only in SF Mono.
 
 ### Four roles
 
 | role | size | weight | why |
 |---|---|---|---|
-| **timecode** | `--bn-text-label` inline beside a quote; `--bn-text-caption` in a metadata row; `--bn-text-micro` on an axis | mono | A pointer into the recording. Fixed advances keep a column of times aligned. The accent colour, not weight, says it is a link. |
-| **code** | `--bn-text-badge`; `--bn-text-micro` in a dense list | mono (400) | A vocabulary marker beside the finding, never the finding. Size and the chip carry its subordinate rank. |
-| **path** | `--bn-text-caption`; `--bn-text-micro` in a nav list | mono; mono-emphasis (520) when the path names the subject | Literal text the researcher may need to type or find on disk. |
-| **keycap** | `--bn-text-micro` | mono (400) | Regular, so the browser never shows Bold keycaps. The native `Keycap.swift` is `.medium`, a small departure kept for fewer weights. |
+| **timecode** | `--bn-text-label` inline beside a quote; `--bn-text-caption` in a metadata row; `--bn-text-micro` on an axis | 400 | A pointer into the recording. Fixed advances keep a column of times aligned. The accent colour, not weight, says it is a link. |
+| **code** | `--bn-text-badge`; `--bn-text-micro` in a dense list | 400; tags 460 in light | A vocabulary marker beside the finding, never the finding. Size and the chip carry its subordinate rank. |
+| **path** | `--bn-text-caption`; `--bn-text-micro` in a nav list | 400; 560 when the path names the subject | Literal text the researcher may need to type or find on disk. |
+| **keycap** | `--bn-text-micro` | 400 | Regular, so the browser never shows Bold keycaps. The native `Keycap.swift` is `.medium`, a small departure kept for fewer weights. |
 
 **Figures fold out of monospace:** body font with `font-variant-numeric: tabular-nums`, which is what SwiftUI's `.monospacedDigit()` already does natively. Numbers align without a change of voice, and the body ladder's 490 works there, since Inter and SF Pro are both variable. Numbers that are identifiers (participant codes in the grid) stay in **code**.
 
-**Light chips: decided against.** `atoms/badge.css` set `.badge` to 370 for subordinate chips. That drew Light only on a Mac with the SF Mono download; every tag is now 400.
+**Light chips: decided against.** `atoms/badge.css` set `.badge` to 370 for subordinate chips. That drew Light only on a Mac with the SF Mono download.
 
 ### What folds where
 
 | today | becomes |
 |---|---|
-| `.badge` 370, `.badge-user` 420, dark 490, `.tag-preview` 420, `.picker-card-version` 420 | code at mono (400): **one weight for every tag**, decided 15 Oct 2026; colour separates sentiment chips from codebook tags; the dark-mode bump goes |
+| `.badge` 370, `.badge-user` 420, dark 490, `.tag-preview` 420, `.picker-card-version` 420 | code: **one weight for every tag**, 460 in light and 400 in dark (decided); colour separates sentiment chips from codebook tags |
 | codebook add-tag field, input and drag ghost at label | code at badge: the same chips at one size |
-| `.pattern-label` 520 | rendered only by the dev `GridSpecimen` route, not a shipped surface; code at mono when next touched |
-| `.screens-sub code` 490 | path at mono-emphasis (520) |
+| `.pattern-label` 520 | rendered only by the dev `GridSpecimen` route, not a shipped surface; code at 400 when next touched |
+| `.screens-sub code` 490 | path at emphasis (560) |
 | `.screens-nav-path`, status page, `player.html` status line | path; the player page gets the token stack written out |
 | heatmap cells, metric values, hero score (490), threshold counters and confidence, pending count, tooltip metrics | figures |
 | footer `kbd` 0.85em | keycap at micro, 400 |
 | coverage timecode 0.85em | timecode at caption |
 | `WelcomeIllustrations.swift` hand copies | generate them as `WelcomeTimelineCSS.swift` is generated, or update all six to the new stack |
-| clipboard `MONO` in `transcriptCopy.ts` | stays a literal; it already matches the proposal minus `ui-monospace` |
+| clipboard `MONO` in `transcriptCopy.ts` | stays a literal; it already matches the proposal minus `ui-monospace` and Cascadia |
 | dev surfaces (`GridSpecimen`, playground, run inspector, dev and chat-lens pages) | when next touched |
 
-### Not covered
+## 5. Not measured
 
-- Safari DOM on the developer's Mac (¹ above).
-- Windows and Linux rendering. Consolas and DejaVu Sans Mono are two-instance families, so the Menlo row should hold, but that is inference.
-- Whether mono at the same pixel size reads larger than the body face (x-height). The sizes are carried over, not re-tuned.
+- **Safari's DOM on a Mac with the download.** Driving Safari needs a settings change. Safari limits web content to system fonts, and WebKit's canvas already ignores the download, so it is expected to match the stock-Mac WebKit row. A ten-second human check: open the specimen in Safari and read the "drawn in" line.
+- **Firefox.** Version 157 is installed here, but headless Firefox refused a throwaway profile, and its real profile was not touched. Firefox has no `ui-monospace`, so the proposed stack should reach Menlo on a Mac and Cascadia Mono or Consolas on Windows.
+- **Linux.** The aella boxes or CI could answer it. Expected DejaVu Sans Mono by name.
+- **Windows 10 with a current Edge.** The VM's Edge is 92, from the clean image; its Courier New generic may differ in Edge 14x. Neither stack reaches the generic there.
+- **x-height.** Whether mono at the same pixel size reads larger than the body face. The sizes are carried over, not re-tuned.
 
-## 5. Reproduce
+## 6. Ground truth, 15 Oct 2026
 
-`experiments/monospace-audit/` (run from the repo root; Playwright is resolved from `e2e/`):
+**Read this before touching monospace again.** Machine-readable copy: `experiments/monospace-audit/ground-truth.json`.
+
+### Environments
+
+| name | what |
+|---|---|
+| Mac, developer | macOS 27.0 (26A428), arm64, with Apple's SF Mono download (`com.apple.pkg.SFMonoFonts`) |
+| Mac, stock | the same Mac with "SF Mono" removed from each stack, which is what a Mac without the download resolves |
+| Mac app WebKit | sandboxed WKWebView, default configuration, system WebKit 22625.1.29.11.27; agrees with Playwright WebKit 26.4 to the pixel |
+| Chromium on a Mac | Playwright 1.60.0, Chromium 148.0.7778.96 |
+| Windows 11 | Enterprise evaluation 26H2, build 26300, Edge 152.0.4191.66, Windows Terminal 1.18 inbox (VirtualBox 7.0.26 on benbecula) |
+| Windows 10 | 22H2 clean image, Edge 92.0.902.67 (same host) |
+
+### Which face each stack reaches
+
+| environment · browser | web token today | desktop token today | proposed | generic `monospace` | `ui-monospace` |
+|---|---|---|---|---|---|
+| Mac, developer · WebKit | SF Mono download | SF Mono download | system SF Mono | Menlo (Courier without `lang`) | system SF Mono |
+| Mac, developer · Chromium | SF Mono download | SF Mono download | Menlo | Courier | unsupported |
+| Mac, stock · WebKit | Menlo | system SF Mono | system SF Mono | Menlo | system SF Mono |
+| Mac, stock · Chromium | **Courier** | **Courier** | Menlo | Courier | unsupported |
+| Windows 11 · Edge 152 | Consolas | — | Cascadia Mono | Consolas | unsupported |
+| Windows 10 · Edge 92 | Consolas | — | Consolas | **Courier New** | unsupported |
+
+Cascadia Mono on Windows 11 is not a system font file. It is not in `C:\Windows\Fonts` or the HKLM/HKCU font registry; it comes from the Windows Terminal package, as a shared font. Edge resolves it by name all the same, and GDI+ lists ExtraLight, Light, SemiLight, Regular and SemiBold. Windows 10 has none. Registry `ProductName` reads "Windows 10" on Windows 11; trust the build number.
+
+### What each weight draws
+
+Ink relative to 400 in the same face. "B" is the face's Bold.
+
+| face | 370 | 420 | 440 | 460 | 480 | 490 | 500 | 520 | 550 | 560 | 600 | 700 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| system SF Mono (WebKit) | −5% | +3% | +6% | **+9%** | +12% | +14% | +15% | +18% | +23% | **+24%** | +30% | +46% |
+| SF Mono download (both engines) | −21% (Light) | +15% (Medium) | | | | +15% | +15% | +29% (Semibold) | +27% | +27% | +30% | +49% |
+| Menlo (Mac, both engines) | 0 | 0 | 0 | **0** | 0 | 0 | 0 | B | B | **B** | B | B |
+| Courier (Mac) | 0 | 0 | | 0 | | 0 | 0 | B | B | B | B | B |
+| Consolas (Windows Edge) | | | 0 | **0** | 0 | 0 | 0 | 0 | B | **B** | B | B |
+| Cascadia Mono (Windows 11 Edge) | | | 0 | **0** | 0 | 0 | +16% | +16% | +16% | **+16%** | +16% | +27% |
+
+The system SF Mono figures are at 11–13 px; other strings and sizes move them by 2–5 points, not their order. Menlo's Bold is +33–39%, Courier's +37–45%, Consolas's +33–36%. Blank cells were not measured. The bold columns are the proposed values (460 for light tags, 560 for emphasis).
+
+### How each platform picks a weight
+
+- **Mac, both engines:** the CSS rule. Above 500, the next heavier face that exists, so a Regular-and-Bold family flips to Bold at 501.
+- **Windows Chromium (DirectWrite):** the nearest named weight, ties going heavier. Consolas is Regular to 540 and Bold from 550; Cascadia Mono is Regular to 490 and SemiBold from 500.
+- **The static SF Mono download:** 300 and 370 draw Light; 420–500 Medium; 520–600 Semibold; 700 Bold.
+
+### Face metrics (em)
+
+| face | advance | x-height | cap height | descender |
+|---|---|---|---|---|
+| SF Mono | 0.618 | 0.530 | 0.705 | 0.179 |
+| Menlo | 0.602 | 0.547 | 0.729 | 0.208 |
+| Cascadia Mono | 0.586 | | | |
+| Consolas | 0.550 | | | |
+| Courier New | 0.600 | | | |
+
+### Measurement traps
+
+All five produced a confident wrong answer during this audit.
+
+1. **WebKit `<canvas>` ignores user-installed fonts; its DOM does not.** Canvas text on the developer's Mac drew the system SF Mono while the page drew the download. Measure DOM pixels.
+2. **Chromium's `fullPage` screenshot resizes the viewport, and while it does, its generic `monospace` draws Menlo instead of Courier.** Use a viewport tall enough for every row, or ask CDP (`CSS.getPlatformFontsForNode`).
+3. **The generic depends on the page's `lang`.** WebKit's generic is Courier without `lang` and Menlo with `lang="en"`.
+4. **Pixel hashes of rows misidentify faces.** Compare large-glyph ink (100 px) against reference rows on the same page, or use CDP.
+5. **A stack with double quotes inside an inline `style="…"` attribute breaks the attribute,** and the row silently falls back to 16px serif. Single-quote family names in generated markup.
+
+### Reproduce
+
+From the repo root; Playwright is resolved from `e2e/`:
 
 ```bash
 node experiments/monospace-audit/gen-pages.mjs /tmp/mono && node experiments/monospace-audit/probe-playwright.mjs /tmp/mono
 ```
 
-- `face-check.mjs`: which face each stack reaches (large-glyph ink, both engines, with and without `lang`)
-- `probe-wkwebview.swift` + `.entitlements`: the sandboxed-WKWebView probe, built as a minimal `.app` with pages in `Contents/Resources` (README in the file header)
-- `analyse.py`: the ink table; `results-2026-10-15.json` is this run
-- `build-specimen.py`: regenerates the specimen from the shipped theme files
-
-Two measurement traps found on the way, and worth knowing before re-running:
-
-1. **WebKit `<canvas>` ignores user-installed fonts** where its DOM does not. Measure DOM pixels.
-2. **Chromium's `fullPage` screenshot resizes the viewport, and while it does, its generic `monospace` draws Menlo instead of Courier.** Identify faces without that capture: `face-check.mjs` uses a tall viewport, or ask CDP.
+- `face-check.mjs`: which face each stack reaches, by large-glyph ink, both engines, with and without `lang`.
+- `probe-wkwebview.swift` and its `.entitlements`: the sandboxed-WKWebView probe, built as a minimal `.app` (steps in the file header).
+- `analyse.py`: the ink table; `results-2026-10-15.json` is this run.
+- `windows/edge-check.sh [vm]` and `windows/font-list.sh [vm]`: run on the Mac that hosts the VirtualBox VMs (`docs/release-winget.md`). They boot the VM headless, render `windows/fontcheck.html` in headless Edge, or list the installed mono fonts, then power off and restore the `clean` snapshot. `windows/ink.mjs` reads the screenshot.
+- `build-specimen.py`: regenerates the specimen from the shipped theme files.

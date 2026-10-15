@@ -122,6 +122,7 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
+| `fit-cascade-lab.html` | 15 Oct 2026 | *unreviewed* — added by `ed116819`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `mcp-agents-pane.html` | 22 Aug 2026 | IMPLEMENTED — “the pane design is … drawn at the shipped” size; `MCPAgentsSettingsView.swift` ships |
 | `mcp-extension-ux.html` | 3 Aug 2026 | IMPLEMENTED — the `.mcpb` extension shipped 1 Aug 2026 |
 | `mcp-spike-ux-walkthrough.html` | 1 Aug 2026 | PROPOSED 1 Aug 2026 · IMPLEMENTED — the spike accepted 30 Jul 2026 |
@@ -140,6 +141,7 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
+| `monospace-roles-specimen.html` | 15 Oct 2026 | *unreviewed* — added by `059a66d9`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `move-to-picker-mock.html` | 8 Jul 2026 | SANDPIT — an “interactive send-to picker … **with live toggles** for the three open UX decisions”, drawn as one data point for the browser family. An instrument for choosing, not the thing chosen: a native submenu shipped, not a picker |
 | `move-to-spec.html` | 8 Jul 2026 | PROPOSED 8 Jul 2026 · IMPLEMENTED — “the full interaction spec: 2 apps × 2 phases … tagged built/new/risk”. **Move to** ships as a native submenu in both the menu bar and the sidebar context menu (`desktop.menu.project.moveTo`) |
 
@@ -202,16 +204,27 @@ state is still evidenced, the day is not.
 | `nightfall-focus.html` | 9 Jul 2026 | PROPOSED 2026 · **SUPERSEDED** — named a “superseded mockup” in its own design doc; hand-rolled rather than on the theme |
 | `ollama-setup-popovers.html` | 3 Jun 2026 | PROPOSED 3 Jun 2026 · IMPLEMENTED — cited three times across the design docs; `OllamaDownloadPill.swift` ships |
 | `person-actions-everywhere.html` | 27 Aug 2026 | IMPLEMENTED — person actions ship across surfaces |
+| `progressive-lenses-replay.html` | 15 Oct 2026 | *unreviewed* — added by `68c38db2`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
+| `quote-card-layout-lab.html` | 15 Oct 2026 | *unreviewed* — added by `89efd0a9`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
+| `quote-grouping-control-lab.html` | 15 Oct 2026 | *unreviewed* — added by `c3f077da`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
+| `quote-grouping-sidebar.html` | 15 Oct 2026 | *unreviewed* — added by `c3f077da`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `quotes-spatial-arrow-nav.html` | 4 Aug 2026 | IMPLEMENTED — `utils/spatialNav.ts` ships (0.25.0) |
 | `reanalyse-sheet-pixels.html` | 22 Aug 2026 | IMPLEMENTED — the re-analyse sheet ships on the Mac |
 | `release-machine-paths.html` | 23 Aug 2026 | IMPLEMENTED — “companion mockup” to `design-release-machine.md`; `scripts/release.sh` ships |
 | `report-freshness-banner.html` | 3 Sep 2026 | PROPOSED 2026 — **not built**. (The “freshness” in `ServeManager`/`AgentActivity` is the MCP tool-call window, an unrelated thing) |
 | `responsive-quote-grid.html` | 19 Feb 2026 | IMPLEMENTED — “the **original grid**”, against which `grid-lanes-quotes.html` was the masonry bake-off. Interactive, with a slider and HUD, so it doubles as an instrument |
+| `screens-context-menu.html` | 15 Oct 2026 | *unreviewed* — added by `3725a938`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
+| `screens-leader-styles.html` | 15 Oct 2026 | *unreviewed* — added by `73e438ff`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
+| `screens-lens-speculative.html` | 15 Oct 2026 | *unreviewed* — added by `4de689bf`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
+| `screens-lens.html` | 15 Oct 2026 | *unreviewed* — added by `3bb48f25`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
+| `screens-shot-size-playground.html` | 15 Oct 2026 | *unreviewed* — added by `2aae59c7`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `settings-accounts-generalised.html` | 18 Aug 2026 | IMPLEMENTED — Settings ▸ Accounts ships |
 | `shimmer-tuner.html` | 19 Jul 2026 | SANDPIT — shimmer-animation tuner |
 | `sparkline-explore.html` | 12 Feb 2026 | PROPOSED 12 Feb 2026 · IMPLEMENTED — sentiment sparklines ship |
+| `tab-bar-wrap-lab.html` | 15 Oct 2026 | *unreviewed* — added by `5f3dffdf`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `tentative-bars.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · IMPLEMENTED — the two-tone `MicroBar` ships (`tag-micro-bar-tentative`), pale tentative + solid accepted, with “N tentative + M accepted” on hover |
 | `tooltip-gallery.html` | 22 Feb 2026 | SANDPIT — “6 variants (A–F) with interactive comparison and dark mode toggle”; **variant D was chosen**, per CLAUDE.md |
+| `transcription-diagnostics.html` | 15 Oct 2026 | *unreviewed* — added by `16650c90`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `typography-comparison.html` | 15 Feb 2026 | PROPOSED 15 Feb 2026 · IMPLEMENTED · SUPERSEDED — as above |
 | `app-icon-directions.html` | 26 Sep 2026 | *unreviewed* |
 | `edit-affordance-states.html` | 22 Sep 2026 | *unreviewed* |
@@ -326,6 +339,7 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
+| `webview-context-menu-proposal.html` | 15 Oct 2026 | *unreviewed* — added by `fd0c9a31`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `welcome-carousel-playground.html` | 15 Jul 2026 | SANDPIT — carousel instrument from the same series; `welcome-fibonacci-rotating.html` is canonical |
 | `welcome-dismiss-options.html` | 3 Oct 2026 | *unreviewed* — added by the welcome model 2 session (ways to switch off the macOS welcome pane). Not classified by its owner |
 | `welcome-fibonacci-composed.html` | 15 Jul 2026 | PROPOSED 15 Jul 2026 · SUPERSEDED by `welcome-fibonacci-rotating.html` (canonical) |

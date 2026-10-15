@@ -495,10 +495,55 @@ class TestContentKeys:
         monkeypatch.setattr(fs_mod, "ensure_materialised", fetch)
         a2 = InputFile(path=renamed, file_type=FileType.AUDIO, created_at=a.created_at,
                        size_bytes=a.size_bytes)
+        # Serve's re-render resolves ids too, and must never download.
+        SessionRegistry.load(out).apply(_ingest([a2, b]), tmp_path)
+        assert fetched == []
+        # Nor for a recording with a transcript beside it: Whisper won't read it.
+        with_transcript = _ingest([a2, b])
+        for session in with_transcript:
+            session.has_existing_transcript = True
+        SessionRegistry.load(out).apply(with_transcript, tmp_path, fetch=True)
+        assert fetched == []
+
         again = {s.files[0].path.name: s.session_id
-                 for s in SessionRegistry.load(out).apply(_ingest([a2, b]), tmp_path)}
+                 for s in SessionRegistry.load(out).apply(_ingest([a2, b]), tmp_path, fetch=True)}
         assert again == {"p1 sarah.wav": first["rec-1433.wav"], "b.wav": first["b.wav"]}
         assert fetched == [renamed]
+
+    def test_a_fetched_duplicate_does_not_take_a_live_sessions_key(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A recording found by its place while evicted, a deleted one (so
+        something is missing), and a Finder duplicate of the first, evicted
+        too: the duplicate is fetched, its bytes are the live session's, and
+        that session keeps its key (Fable review of the fetch, 15 Oct 2026)."""
+        import bristlenose.utils.fingerprint as fingerprint_mod
+        import bristlenose.utils.fs as fs_mod
+
+        out = tmp_path / "out"
+        a, b = _file(tmp_path, "a.wav", 0), _file(tmp_path, "b.wav", 1)
+        reg = SessionRegistry.load(out)
+        first = {s.files[0].path.name: s.session_id for s in reg.apply(_ingest([a, b]), tmp_path)}
+        reg.save()
+
+        b.path.unlink()
+        dup = tmp_path / "a copy.wav"
+        dup.write_bytes(a.path.read_bytes())
+        evicted = {a.path, dup}
+        monkeypatch.setattr(fingerprint_mod, "is_dataless", lambda p: p in evicted)
+        monkeypatch.setattr(fs_mod, "is_dataless", lambda p: p in evicted)
+        monkeypatch.setattr(fs_mod, "ensure_materialised",
+                            lambda p, *x, **k: evicted.discard(p) or True)
+        d = InputFile(path=dup, file_type=FileType.AUDIO, created_at=_T0 + timedelta(days=2),
+                      size_bytes=dup.stat().st_size)
+        reg = SessionRegistry.load(out)
+        reg.apply(_ingest([a, d]), tmp_path, fetch=True)
+        reg.save()
+
+        evicted.clear()
+        settled = {s.files[0].path.name: s.session_id
+                   for s in SessionRegistry.load(out).apply(_ingest([a, d]), tmp_path)}
+        assert settled["a.wav"] == first["a.wav"], "the live recording lost its session"
 
     def test_a_first_analysis_does_not_fetch_placeholders_early(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
@@ -514,7 +559,7 @@ class TestContentKeys:
         monkeypatch.setattr(fs_mod, "is_dataless", lambda p: True)
         monkeypatch.setattr(fs_mod, "ensure_materialised",
                             lambda p, *a, **k: fetched.append(p) or True)
-        SessionRegistry.load(tmp_path / "out").apply(_ingest([a, b]), tmp_path)
+        SessionRegistry.load(tmp_path / "out").apply(_ingest([a, b]), tmp_path, fetch=True)
         assert fetched == []
 
     def test_two_copies_of_one_recording_keep_their_sessions_when_dates_flip(
@@ -543,6 +588,40 @@ class TestContentKeys:
         first = sids(copies(0, 1))
         assert sids(copies(1, 0)) == first
         assert sids(copies(0, 1)) == first
+
+    def test_renaming_one_of_two_identical_copies_keeps_both_sessions(
+        self, tmp_path: Path,
+    ) -> None:
+        """The copy that owns the content key keeps it after a rename; name
+        order only breaks a fresh tie (Fable review, 15 Oct 2026)."""
+        out = tmp_path / "out"
+        files = []
+        for name, day in (("a.wav", 0), ("b.wav", 1)):
+            path = tmp_path / name
+            path.write_bytes(b"one recording")
+            files.append(InputFile(path=path, file_type=FileType.AUDIO,
+                                   created_at=_T0 + timedelta(days=day), size_bytes=13))
+        reg = SessionRegistry.load(out)
+        first = {s.files[0].path.name: s.session_id for s in reg.apply(_ingest(files), tmp_path)}
+        reg.save()
+        renamed = tmp_path / "z.wav"
+        files[0].path.rename(renamed)
+        files[0] = InputFile(path=renamed, file_type=FileType.AUDIO,
+                             created_at=files[0].created_at, size_bytes=13)
+        reg = SessionRegistry.load(out)
+        again = {s.files[0].path.name: s.session_id for s in reg.apply(_ingest(files), tmp_path)}
+        assert again == {"z.wav": first["a.wav"], "b.wav": first["b.wav"]}
+        reg.save()
+        # Now rename the other copy: the key stays with its owner, even though
+        # the newcomer's name sorts first. (The renamed non-owner has nothing
+        # to be found by and becomes a new session: one copy is keyed.)
+        moved = tmp_path / "c.wav"
+        files[1].path.rename(moved)
+        files[1] = InputFile(path=moved, file_type=FileType.AUDIO,
+                             created_at=files[1].created_at, size_bytes=13)
+        third = {s.files[0].path.name: s.session_id
+                 for s in SessionRegistry.load(out).apply(_ingest(files), tmp_path)}
+        assert third["z.wav"] == first["a.wav"], "the owner lost its session to the other copy"
 
 
     def test_a_renamed_recording_keeps_its_session(self, tmp_path: Path) -> None:

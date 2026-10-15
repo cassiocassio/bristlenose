@@ -401,7 +401,17 @@ not the folder, and are unchanged.
   folder sits on an ejected disk is neither a move nor a copy: it gets its
   own row with the id it carries, and the shared-id rule settles it when the
   disk returns (`StudyDropMatch.unsure`). Two spellings of one folder are not
-  a copy of each other. `MCPTokenStore.revoke` is gone.
+  a copy of each other. `MCPTokenStore.revoke` is gone. A review of those
+  fixes refined two: of identical copies, the one that already owns the key
+  keeps it, then a renamed one, then name order (so neither a date flip nor a
+  rename swaps them); and the early fetch runs only for `run` and
+  `transcribe` (`apply(fetch=True)`), never serve's re-render, and never for
+  a recording with a transcript beside it. **Left as known limits:** "is the
+  disk mounted" reads only `/Volumes/…` paths, so a signed-out cloud-storage
+  provider's folder reads as moved; the drop still checks that same-id rows'
+  folders exist on the main actor; and an ejected-disk drop that was in fact
+  a move leaves the old row behind, which a later Locate can point at the
+  same folder as the new row (no merge-on-relocate yet).
 
 ## 12. What this does not do
 

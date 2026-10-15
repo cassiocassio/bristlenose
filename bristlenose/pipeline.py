@@ -1478,7 +1478,7 @@ class Pipeline:
         # Sticky ids: a session keeps its number across runs, so a recording
         # older than the ones already analysed cannot renumber them.
         session_registry = SessionRegistry.load(output_dir)
-        sessions = session_registry.apply(sessions, input_dir)
+        sessions = session_registry.apply(sessions, input_dir, fetch=True)
         session_registry.settle_starts(sessions)
         session_registry.save()
         # What the Sessions lens shows from the first second of a first
@@ -3235,7 +3235,7 @@ class Pipeline:
                 summary=self._summary,
             )
         session_registry = SessionRegistry.load(output_dir)
-        sessions = session_registry.apply(sessions, input_dir)
+        sessions = session_registry.apply(sessions, input_dir, fetch=True)
         session_registry.settle_starts(sessions)
         session_registry.save()
 

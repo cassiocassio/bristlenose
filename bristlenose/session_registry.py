@@ -269,6 +269,7 @@ class SessionRegistry:
 
     def apply(
         self, sessions: list[InputSession], input_dir: Path | None = None,
+        *, fetch: bool = False,
     ) -> list[InputSession]:
         """Give each session its remembered sid, or the next unused one.
 
@@ -309,13 +310,25 @@ class SessionRegistry:
         fps = [_fingerprint(f) for f in primaries]
         places = [_place(f, input_dir) for f in primaries]
         # Two copies of one recording in a study are kept as two sessions, as
-        # ingest finds them; only one is keyed by content. Chosen by name, not
-        # ingest order: ingest orders by date, which cloud sync rewrites, and a
-        # flip would hand the content key to the other copy (Fable review).
+        # ingest finds them; only one is keyed by content. The copy that owns
+        # the key keeps it: its name still maps to the key's sid, or else it
+        # carries a new name (renamed); a copy whose name belongs to another
+        # session is that session. Name order breaks a fresh tie. Not ingest
+        # order: ingest orders by date, which cloud sync rewrites (Fable
+        # reviews, 15 Oct 2026).
+        def owner_rank(j: int) -> tuple[int, str]:
+            fp = fps[j]
+            holder = self.sessions.get(FP_PREFIX + fp) if fp is not None else None
+            mine = self.sessions.get(named[j])
+            if holder is not None and mine == holder:
+                return (0, named[j])
+            return (1 if mine is None else 2, named[j])
+
         first_with_fp: dict[str, int] = {}
-        for i in sorted(range(len(fps)), key=lambda j: named[j]):
-            if fps[i] is not None:
-                first_with_fp.setdefault(fps[i], i)
+        for i in sorted(range(len(fps)), key=owner_rank):
+            fp_i = fps[i]
+            if fp_i is not None:
+                first_with_fp.setdefault(fp_i, i)
 
         claimed: set[str] = set()
         resolved: list[str | None] = [None] * len(sessions)
@@ -344,12 +357,16 @@ class SessionRegistry:
         # and let its bytes decide, before anything is paid for twice (Fable
         # review, 15 Oct 2026). Only then: a first analysis downloads at
         # transcription, as before.
-        missing = content_owned - claimed
+        # Only where the run will need the bytes anyway (``fetch``: run and
+        # transcribe, never serve's re-render), and never for a recording with
+        # a transcript beside it, which Whisper will not read.
+        missing = content_owned - claimed if fetch else set()
         for i in range(len(sessions)):
             if not missing:
                 break
             if (resolved[i] is not None or fps[i] is not None
                     or named[i] in self.sessions or not _is_media(primaries[i])
+                    or sessions[i].has_existing_transcript
                     or not _is_dataless(primaries[i])):
                 continue
             fp = _fingerprint_after_download(primaries[i])
@@ -357,6 +374,9 @@ class SessionRegistry:
                 continue
             fps[i] = fp
             first_with_fp[fp] = i
+            # A duplicate of a live session's recording finds that sid claimed
+            # and becomes a new session; the owner rank above keeps the
+            # original's session when both are resident.
             sid = self.sessions.get(FP_PREFIX + fp)
             if sid in missing and claim(i, sid):
                 missing.discard(sid)

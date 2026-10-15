@@ -1074,7 +1074,7 @@ function SessionRow({
                   aria-label={t("sessions.editName", { code: sp.speaker_code })}
                   data-testid={`bn-name-pencil-${sp.speaker_code}`}
                 >
-                  &#x270E;
+                  <Icon name="edit" decorative />
                 </button>
               )}
               {pickerKey === editKey && (

@@ -19,7 +19,7 @@ describe("Thumbnail", () => {
     const el = screen.getByTestId("thumb");
     const icon = el.querySelector(".bn-play-icon");
     expect(icon).not.toBeNull();
-    expect(icon!.textContent).toBe("\u25B6");
+    expect(icon!.querySelector(".bn-icon-play")).not.toBeNull();  // Lucide's play, not U+25B6
     expect(el.querySelector("img")).toBeNull();
   });
 

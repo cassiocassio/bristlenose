@@ -17,6 +17,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "./Icon";
 
 export interface SelectorProps<T> {
   /** Text shown on the compact trigger button. */
@@ -88,7 +89,7 @@ export function Selector<T>({
       >
         {label}{" "}
         <span className="bn-selector__caret" aria-hidden="true">
-          &#x25BE;
+          <Icon name="caret" decorative />
         </span>
       </button>
       {open && (

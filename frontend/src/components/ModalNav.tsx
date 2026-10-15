@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { useInert } from "../hooks/useInert";
+import { Icon } from "./Icon";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -209,7 +210,7 @@ export function ModalNav({
           onClick={onClose}
           aria-label={t("buttons.close")}
         >
-          &times;
+          <Icon name="close" decorative />
         </button>
         <h2 id={resolvedTitleId} className="modal-nav-title">
           {title}
@@ -233,7 +234,7 @@ export function ModalNav({
                         className={`modal-nav-arrow${expandedGroups.has(item.id) ? " expanded" : ""}`}
                         aria-hidden="true"
                       >
-                        &#9654;
+                        <Icon name="disclose" decorative />
                       </span>
                       {item.label}
                     </button>

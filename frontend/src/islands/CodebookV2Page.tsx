@@ -39,6 +39,7 @@ import type { CodebookGroupResponse, TemplateOut } from "../utils/types";
 import { renderLead } from "../utils/leadSentence";
 import { reachPhrase, vocabularyPhrase } from "../utils/codebookReach";
 import { useTranslation } from "react-i18next";
+import { Icon } from "../components/Icon";
 
 export interface PageBook {
   id: string;
@@ -295,7 +296,7 @@ export function CodebookV2Page({
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {l.label} &#x2197;
+                      {l.label} <Icon name="external" decorative />
                     </a>
                   ))}
                 </div>

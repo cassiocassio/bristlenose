@@ -12,6 +12,7 @@ interface ThumbnailProps {
 }
 
 import { isExportMode } from "../utils/exportData";
+import { Icon } from "./Icon";
 
 export function Thumbnail({
   hasMedia,
@@ -33,7 +34,7 @@ export function Thumbnail({
   const inner = thumbnailUrl ? (
     <img src={thumbnailUrl} alt="" loading="lazy" />
   ) : (
-    <span className="bn-play-icon">&#9654;</span>
+    <span className="bn-play-icon"><Icon name="play" decorative /></span>
   );
 
   return (

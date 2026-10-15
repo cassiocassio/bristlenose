@@ -16,6 +16,7 @@ import { autocodeFailure } from "../utils/autocodeFailure";
 import { postLLMFailure } from "../shims/bridge";
 import { ActivityChip } from "./ActivityChip";
 import type { ActivityChipJob } from "./ActivityChip";
+import { Icon } from "./Icon";
 
 /** Normalised status shape used internally by the chip stack. */
 export interface NormalisedJobStatus {
@@ -271,7 +272,7 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
             aria-label={t("activity.expand")}
             data-testid="bn-activity-chip-expand"
           >
-            &#x25BE;
+            <Icon name="caret" decorative />
           </button>
         </div>
       )}
@@ -309,7 +310,7 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
           aria-label={t("activity.collapse")}
           data-testid="bn-activity-chip-collapse"
         >
-          &#x25B4;
+          <Icon name="collapse" decorative />
         </button>
       )}
     </div>

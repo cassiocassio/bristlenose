@@ -9,6 +9,7 @@
  */
 
 import { useTranslation } from "react-i18next";
+import { Icon } from "./Icon";
 
 export interface CounterItem {
   domId: string;
@@ -70,7 +71,7 @@ export function Counter({
         }}
         data-testid={testId ? `${testId}-toggle` : undefined}
       >
-        {label} <span className="bn-hidden-chevron">&#x25BE;</span>
+        {label} <span className="bn-hidden-chevron"><Icon name="caret" decorative /></span>
       </button>
       {isOpen && (
         <div className="bn-hidden-dropdown" data-testid={testId ? `${testId}-dropdown` : undefined}>

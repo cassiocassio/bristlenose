@@ -18,6 +18,7 @@ import {
 } from "../utils/api";
 import type { ProposedTagResponse } from "../utils/types";
 import { getTagBg } from "../utils/colours";
+import { Icon } from "./Icon";
 
 interface AutoCodeReportModalProps {
   open: boolean;
@@ -126,7 +127,7 @@ export function AutoCodeReportModal({
         <div className="codebook-modal-header">
           <div>
             <div className="codebook-modal-title">
-              &#x2726; {t("autocode.report.title")} &mdash; {frameworkTitle}
+              <Icon name="ai" decorative />{" "}{t("autocode.report.title")} &mdash; {frameworkTitle}
             </div>
             <div className="codebook-modal-subtitle" data-testid="bn-report-subtitle">
               {t("autocode.report.subtitle", { count: visibleCount, sessions: sessionCount })}
@@ -137,7 +138,7 @@ export function AutoCodeReportModal({
             onClick={onClose}
             aria-label={t("autocode.close")}
           >
-            &times;
+            <Icon name="close" decorative />
           </button>
         </div>
 
@@ -254,7 +255,7 @@ function SessionRows({ sessionId, items, removing, onDeny }: SessionRowsProps) {
               title={t("autocode.report.deny")}
               data-testid={`bn-report-deny-${p.id}`}
             >
-              &#x2298;
+              <Icon name="close" decorative />
             </button>
           </td>
         </tr>

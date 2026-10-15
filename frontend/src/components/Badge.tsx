@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { isExportMode } from "../utils/exportData";
 import { featureFlags } from "../utils/featureFlags";
+import { Icon } from "./Icon";
 
 interface BadgeProps {
   text: string;
@@ -100,7 +101,7 @@ function ProposedBadge({
           title={`${t("buttons.deny")} (d)`}
           data-testid={testId ? `${testId}-deny` : undefined}
         >
-          &times;
+          <Icon name="close" decorative />
         </span>
         <span
           className="badge-action-accept"
@@ -119,7 +120,7 @@ function ProposedBadge({
           title={`${t("buttons.accept")} (a)`}
           data-testid={testId ? `${testId}-accept` : undefined}
         >
-          &#x2713;
+          <Icon name="check" decorative />
         </span>
       </span>}
       {featureFlags.proposalRationaleTooltip && rationale && (
@@ -227,7 +228,7 @@ export function Badge({
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             aria-label={`${t("buttons.delete", { ns: "common" })} ${displayText}`}
           >
-            &times;
+            <Icon name="close" decorative />
           </button>
         )}
       </span>

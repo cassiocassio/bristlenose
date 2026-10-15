@@ -47,11 +47,13 @@
 .chip-check {
     color: var(--bn-colour-positive);
     font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
 }
 
 .chip-error {
     color: var(--bn-colour-negative);
     font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
 }
 
 /* Partial completion. --bn-colour-warning is defined in both palettes
@@ -61,6 +63,7 @@
 .chip-warning {
     color: var(--bn-colour-warning);
     font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
 }
 
 .chip-link {

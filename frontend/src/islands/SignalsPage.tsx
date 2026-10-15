@@ -39,6 +39,7 @@ import { formatTimecode } from "../utils/format";
 import { detectSequences, type SequenceMeta } from "../utils/sequences";
 import { selectQuotes } from "../utils/quoteSelection";
 import { renderLead } from "../utils/leadSentence";
+import { Icon } from "../components/Icon";
 import type {
   SignalMatrix,
   CodebookSignalsListResponse,
@@ -180,7 +181,7 @@ function SignalHero({
         {signal.compositeSignal.toFixed(2)}
       </span>
       <span className="signal-card-hero-caret" aria-hidden="true">
-        {"\u25be"}
+        <Icon name="caret" decorative />
       </span>
     </button>
   );

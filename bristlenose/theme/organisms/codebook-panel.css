@@ -872,6 +872,7 @@
 .codebook-modal-title {
     font-size: var(--bn-text-heading);
     font-weight: var(--bn-weight-emphasis);
+    --bn-icon-stem: var(--bn-icon-stem-emphasis);  /* its icon follows the text weight */
 }
 .codebook-modal-subtitle {
     font-size: var(--bn-text-label);

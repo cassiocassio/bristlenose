@@ -51,6 +51,7 @@ import {
 } from "../contexts/CodebookFocusStore";
 import type { TFunction } from "i18next";
 import type { CodebookGroupResponse, CodebookTagResponse } from "../utils/types";
+import { Icon } from "./Icon";
 
 /**
  * A code's histogram bar and count — the same element the tag sidebar draws,
@@ -608,7 +609,7 @@ export function CodebookGroupColumn({
             onClick={handleRequestDeleteGroup}
             aria-label={t("codebook.deleteGroupAriaLabel", { name: group.name })}
           >
-            &times;
+            <Icon name="close" decorative />
           </button>
         )}
       </div>
@@ -762,7 +763,7 @@ export function NewGroupPlaceholder({
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
       onDrop={onDropNewGroup}
     >
-      <span className="new-group-icon">+</span>
+      <span className="new-group-icon"><Icon name="add" decorative /></span>
       <span className="new-group-label">{t("codebook.newGroup")}</span>
     </div>
   );

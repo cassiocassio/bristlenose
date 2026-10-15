@@ -18,6 +18,11 @@
     border-radius: var(--bn-radius-sm);
 }
 
+/* Lucide's play, filled: a hollow triangle in a 28px ring reads as weak. */
+.bn-play-icon .bn-icon {
+    fill: currentColor;
+}
+
 .bn-play-icon {
     display: flex;
     align-items: center;

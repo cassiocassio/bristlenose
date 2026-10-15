@@ -24,7 +24,7 @@ export interface ViewSwitcherProps {
 
 const VIEW_ICONS: Record<"all" | "starred", string> = {
   all: "\u00A0",
-  starred: "\u2733",
+  starred: "\u2605",  // ★: the starred view shows the quote star's own glyph (kept by decision, design-icon-system.md)
 };
 
 export function ViewSwitcher({

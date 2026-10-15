@@ -8,6 +8,7 @@
 
 import { useMemo, useState } from "react";
 import { usePlaygroundStore, TOKEN_DEFAULTS } from "../contexts/PlaygroundStore";
+import { Icon } from "./Icon";
 import {
   computeRatioSizes,
   sizeToRole,
@@ -45,7 +46,7 @@ export function TypeScalePreview() {
         onClick={() => setExpanded(!expanded)}
         type="button"
       >
-        <span className="pg-section-arrow">{expanded ? "\u25BC" : "\u25B6"}</span>
+        <span className="pg-section-arrow"><Icon name={expanded ? "caret" : "disclose"} decorative /></span>
         <span className="pg-section-label">Type Scale</span>
         <span className="pg-section-value">{presetLabel}</span>
       </button>

@@ -13,6 +13,7 @@ import { getTagBg } from "../utils/colours";
 import { featureFlags } from "../utils/featureFlags";
 import { reportHref } from "../utils/reportHref";
 import { formatTimecode } from "../utils/format";
+import { Icon } from "./Icon";
 
 type Zone = "accepted" | "tentative" | "excluded";
 
@@ -64,7 +65,7 @@ export function ProposalZoneList({
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div className="threshold-zone-list-header" onClick={toggleOpen}>
         <span className={`threshold-zone-list-chevron${isOpen ? " threshold-zone-list-chevron--open" : ""}`}>
-          &#x25B6;
+          <Icon name="disclose" decorative />
         </span>
         <span>{t(ZONE_LABEL_KEYS[zone])}</span>
         <span className="threshold-zone-list-count">({visibleCount})</span>
@@ -158,7 +159,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
                 onClick={() => onDeny(p.id)}
                 title={t("autocode.deny")}
               >
-                &#x2717;
+                <Icon name="close" decorative />
               </button>
             )}
             {/* Tentative zone: accept + deny */}
@@ -170,7 +171,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
                     onClick={() => onAccept(p.id)}
                     title={t("autocode.accept")}
                   >
-                    &#x2713;
+                    <Icon name="check" decorative />
                   </button>
                 )}
                 {onDeny && (
@@ -179,7 +180,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
                     onClick={() => onDeny(p.id)}
                     title={t("autocode.deny")}
                   >
-                    &#x2717;
+                    <Icon name="close" decorative />
                   </button>
                 )}
               </>
@@ -191,7 +192,7 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
                 onClick={() => onAccept(p.id)}
                 title={t("autocode.accept")}
               >
-                &#x2713;
+                <Icon name="check" decorative />
               </button>
             )}
           </td>

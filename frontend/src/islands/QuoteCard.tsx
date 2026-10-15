@@ -648,7 +648,7 @@ export function QuoteCard({
                   aria-label={t("quotes.dismissModeratorQuestion")}
                   data-testid={`bn-quote-${domId}-mod-q-dismiss`}
                 >
-                  &times;
+                  <Icon name="close" decorative />
                 </button>
               </span>
               <span className="moderator-question-text">
@@ -799,7 +799,7 @@ export function QuoteCard({
                 }}
                 data-testid={`bn-quote-${domId}-add-tag`}
               >
-                +
+                <Icon name="add" decorative />
               </span>
             )}
             {hasDeletedBadges && (
@@ -810,7 +810,7 @@ export function QuoteCard({
                 onClick={() => onBadgeRestore(domId)}
                 data-testid={`bn-quote-${domId}-restore`}
               >
-                &#x21A9;
+                <Icon name="revert" decorative />
               </button>
             )}
           </div>
@@ -844,7 +844,7 @@ export function QuoteCard({
         onClick={handleUndo}
         data-testid={`bn-quote-${domId}-undo`}
       >
-        &#x21A9;
+        <Icon name="revert" decorative />
       </button>
       <Toggle
         active={isStarred}

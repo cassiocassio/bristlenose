@@ -56,6 +56,7 @@ import {
 } from "../data/typeScalePresets";
 import { TypeScalePreview } from "./TypeScalePreview";
 import { PlaygroundFab } from "./PlaygroundFab";
+import { Icon } from "./Icon";
 
 // ── Slider helper ─────────────────────────────────────────────────────────
 
@@ -103,7 +104,7 @@ function TokenSlider({
           title="Reset to default"
           type="button"
         >
-          &times;
+          <Icon name="close" decorative />
         </button>
       )}
     </div>
@@ -177,7 +178,7 @@ export function ResponsivePlayground() {
           title="Close (Ctrl+Shift+R)"
           type="button"
         >
-          &times;
+          <Icon name="close" decorative />
         </button>
       </div>
 

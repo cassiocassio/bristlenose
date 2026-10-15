@@ -482,7 +482,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHead
                 title={t("buttons.close")}
                 aria-label={t("nav.closeTableOfContents")}
               >
-                ×
+                <Icon name="close" decorative />
               </button>
             )}
           </div>
@@ -537,7 +537,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHead
                   title={t("tags.close")}
                   aria-label={t("tags.closeAriaLabel")}
                 >
-                  ×
+                  <Icon name="close" decorative />
                 </button>
               )}
             </div>

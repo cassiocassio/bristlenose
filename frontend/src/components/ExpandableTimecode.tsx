@@ -8,6 +8,7 @@
 
 import type { ReactNode, MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Icon } from "./Icon";
 
 interface ExpandableTimecodeProps {
   children: ReactNode;
@@ -54,7 +55,7 @@ export function ExpandableTimecode({
           aria-label={t("transcript.showPrevSegment")}
           data-testid={testId ? `${testId}-arrow-up` : undefined}
         >
-          &#x2303;
+          <Icon name="collapse" decorative />
         </button>
       )}
       {children}
@@ -67,7 +68,7 @@ export function ExpandableTimecode({
           aria-label={t("transcript.showNextSegment")}
           data-testid={testId ? `${testId}-arrow-down` : undefined}
         >
-          &#x2303;
+          <Icon name="collapse" decorative />
         </button>
       )}
     </span>

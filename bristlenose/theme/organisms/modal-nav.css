@@ -83,12 +83,12 @@
 
 /* Disclosure arrow */
 .modal-nav-arrow {
-    display: inline-block;
-    font-size: 0.6em;
+    display: inline-flex;
+    font-size: 0.85em;     /* a stroked chevron needs more room than the old solid ▶ at 0.6em */
     transition: transform var(--bn-transition-fast);
     flex-shrink: 0;
-    width: 0.8em;
-    text-align: center;
+    width: 1em;
+    justify-content: center;
 }
 
 .modal-nav-arrow.expanded {

@@ -7,6 +7,7 @@
  */
 
 import { useTranslation } from "react-i18next";
+import { Icon } from "./Icon";
 
 export interface ActivityChipJob {
   id: string;
@@ -90,7 +91,7 @@ export function ActivityChip({ job, onAction, actionLabel, actionHref, onDismiss
       )}
       {isCompleted && (
         <>
-          <span className="chip-check">&#x2713;</span>
+          <span className="chip-check"><Icon name="check" decorative /></span>
           <span>
             {job.completedLabel ?? job.label}
             {job.durationLabel ? ` ${t("activity.durationIn", { duration: job.durationLabel })}` : ""}
@@ -101,14 +102,14 @@ export function ActivityChip({ job, onAction, actionLabel, actionHref, onDismiss
       )}
       {isPartial && (
         <>
-          <span className="chip-warning">&#x26A0;</span>
+          <span className="chip-warning"><Icon name="warning" decorative /></span>
           <span>{job.partialMessage ?? job.completedLabel ?? job.label}</span>
           {actionLink}
         </>
       )}
       {isFailed && (
         <>
-          <span className="chip-error">&#x2717;</span>
+          <span className="chip-error"><Icon name="failed" decorative /></span>
           <span>
             {job.errorMessage
               ? t("activity.failed", { label: job.label, error: job.errorMessage })
@@ -118,7 +119,7 @@ export function ActivityChip({ job, onAction, actionLabel, actionHref, onDismiss
       )}
       {isCancelled && (
         <>
-          <span className="chip-error">&#x2717;</span>
+          <span className="chip-error"><Icon name="failed" decorative /></span>
           <span>{t("activity.cancelled", { label: job.label })}</span>
         </>
       )}
@@ -129,7 +130,7 @@ export function ActivityChip({ job, onAction, actionLabel, actionHref, onDismiss
           aria-label={t("activity.dismiss")}
           data-testid="bn-activity-chip-close"
         >
-          &times;
+          <Icon name="close" decorative />
         </button>
       )}
     </div>

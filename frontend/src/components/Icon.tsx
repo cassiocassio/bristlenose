@@ -24,9 +24,10 @@
  * Add a concept here rather than inlining another <svg> in a component.
  */
 import {
-  Check, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Download, Eye, EyeOff,
-  Folder, LayoutGrid, List, Moon, Pencil, RotateCw, Search, Settings, SlidersHorizontal,
-  Tag, TextQuote, X, ZoomIn, ZoomOut, type LucideIcon,
+  Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleHelp, CircleX, Download,
+  ExternalLink, Eye, EyeOff, Folder, LayoutGrid, List, Minus, Moon, Pencil, Play, Plus,
+  RotateCcw, RotateCw, Search, Settings, SlidersHorizontal, Sparkle, Tag, TextQuote,
+  TriangleAlert, Undo2, X, ZoomIn, ZoomOut, type LucideIcon,
 } from "lucide-react";
 
 const ICONS = {
@@ -39,6 +40,8 @@ const ICONS = {
   disclose: ChevronRight,
   /** The caret on a button that opens a menu. */
   caret: ChevronDown,
+  /** Collapse, or step up. */
+  collapse: ChevronUp,
   previous: ChevronLeft,
   next: ChevronRight,
   show: Eye,
@@ -63,8 +66,23 @@ const ICONS = {
   settings: Settings,
   /** Help (pick: circle-help, over info). */
   help: CircleHelp,
-  /** Dev-only playground toggles. */
+  /** Undo a quote edit; restore deleted tags. */
+  revert: Undo2,
+  /** A link that leaves the report. */
+  external: ExternalLink,
+  /** Add a group, a tag. */
+  add: Plus,
+  play: Play,
+  /** An activity that partly finished. */
+  warning: TriangleAlert,
+  /** An activity that failed or was cancelled. */
+  failed: CircleX,
+  /** The AutoCode dialogs' title ornament (pick: Lucide sparkle over keeping ✦). */
+  ai: Sparkle,
+  /** Dev-only playground controls. */
   playground: SlidersHorizontal,
+  minus: Minus,
+  reset: RotateCcw,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;
@@ -102,7 +120,9 @@ export function Icon({ name, size, px, className, label, decorative }: IconProps
       className={classes}
       nonScalingStroke
       strokeWidth={FALLBACK_STROKE}
-      {...(px ? { size: px } : {})}
+      // 1em as an attribute too, so a page whose theme CSS predates atoms/icon.css
+      // (serve and export prefer a project's baked copy) still draws a text-sized icon.
+      size={px ?? "1em"}
       focusable="false"
       {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": label })}
     />

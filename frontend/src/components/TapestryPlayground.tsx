@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import "./playground.css";
+import { Icon } from "./Icon";
 import {
   DEFAULTS,
   LADDER,
@@ -92,11 +93,11 @@ export function TapestryPlayground({ onClose }: { onClose: () => void }) {
   const stepper = (label: string, value: string, changed: boolean, onMove: (d: number) => void, onReset: () => void) => (
     <div className="pg-slider-row" key={label}>
       <span className="pg-slider-label">{label}</span>
-      <button type="button" className="pg-btn" aria-label={`${label} smaller`} onClick={() => onMove(-1)}>−</button>
+      <button type="button" className="pg-btn" aria-label={`${label} smaller`} onClick={() => onMove(-1)}><Icon name="minus" decorative /></button>
       <span className={`pg-slider-value pg-tp-value${changed ? " pg-overridden" : ""}`}>{value}</span>
-      <button type="button" className="pg-btn" aria-label={`${label} larger`} onClick={() => onMove(1)}>+</button>
+      <button type="button" className="pg-btn" aria-label={`${label} larger`} onClick={() => onMove(1)}><Icon name="add" decorative /></button>
       <button type="button" className="pg-slider-reset" aria-label={`Reset ${label}`} title="Reset"
-        style={{ visibility: changed ? "visible" : "hidden" }} onClick={onReset}>↺</button>
+        style={{ visibility: changed ? "visible" : "hidden" }} onClick={onReset}><Icon name="reset" decorative /></button>
     </div>
   );
 
@@ -105,7 +106,7 @@ export function TapestryPlayground({ onClose }: { onClose: () => void }) {
       <div className="pg-header">
         <span className="pg-title">Tapestry playground</span>
         <button type="button" className="pg-btn" onClick={resetTapestryTuning}>Revert All</button>
-        <button type="button" className="pg-close" aria-label="Close" onClick={onClose}>&times;</button>
+        <button type="button" className="pg-close" aria-label="Close" onClick={onClose}><Icon name="close" decorative /></button>
       </div>
       <div className="pg-float-body">
         <div className="pg-section">

@@ -15,6 +15,7 @@
 import { useId, useState } from "react";
 import { TAPESTRY_GUTTER, TAPESTRY_RIGHT } from "../utils/tapestryScale";
 import { formatTimecode } from "../utils/format";
+import { Icon } from "./Icon";
 
 /** One session's record, as `bristlenose/transcription_quality.py` writes it (version 1). */
 export interface TranscriptionQuality {
@@ -142,7 +143,7 @@ export default function TranscriptionDiagnostics({ record: r, durationSeconds, s
           aria-controls={panelId}
           onClick={() => setOpen((o) => !o)}
         >
-          <span className="bn-dx-chevron" aria-hidden="true">{open ? "▾" : "▸"}</span>
+          <span className="bn-dx-chevron" aria-hidden="true"><Icon name={open ? "caret" : "disclose"} decorative /></span>
           Diagnostics
         </button>
         <span className="bn-dx-headline">{headline(r)}</span>

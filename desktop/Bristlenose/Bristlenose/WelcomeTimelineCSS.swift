@@ -923,7 +923,7 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/atoms/badge.css — lines 1–324 ════ */
+/* ════ bristlenose/theme/atoms/badge.css — lines 1–326 ════ */
 /* Atom: badge — base badge, sentiment variants, AI and user variants */
 
 /* Every tag is one weight, separated from its kind by colour, not weight:
@@ -1042,6 +1042,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     color: var(--bn-colour-negative);
     font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
     line-height: 1;
     cursor: pointer;
     opacity: 0;
@@ -1128,6 +1129,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     height: 1rem;
     font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
     cursor: pointer;
     border: none;
     background: transparent;

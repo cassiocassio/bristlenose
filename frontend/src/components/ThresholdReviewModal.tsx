@@ -24,6 +24,7 @@ import type { ProposedTagResponse } from "../utils/types";
 import { ConfidenceHistogram } from "./ConfidenceHistogram";
 import { DualThresholdSlider } from "./DualThresholdSlider";
 import { ProposalZoneList } from "./ProposalZoneList";
+import { Icon } from "./Icon";
 
 const DEFAULT_LOWER = 0.30;
 const DEFAULT_UPPER = 0.70;
@@ -209,7 +210,7 @@ export function ThresholdReviewModal({
         <div className="codebook-modal-header">
           <div>
             <div className="codebook-modal-title">
-              &#x2726; {t("autocode.review.title")} &mdash; {frameworkTitle}
+              <Icon name="ai" decorative />{" "}{t("autocode.review.title")} &mdash; {frameworkTitle}
             </div>
             <div className="codebook-modal-subtitle" data-testid="bn-threshold-subtitle">
               {t("autocode.review.remaining", { pending: pendingCount, total: totalCount })}
@@ -228,7 +229,7 @@ export function ThresholdReviewModal({
             onClick={onClose}
             aria-label={t("autocode.close")}
           >
-            &times;
+            <Icon name="close" decorative />
           </button>
         </div>
 

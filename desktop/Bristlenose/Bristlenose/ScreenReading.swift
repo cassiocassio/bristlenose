@@ -59,7 +59,7 @@ struct ScreenReadingProgress: Equatable {
     /// Response shape (server-owned): `{"enabled": bool, "unavailable":
     /// null|"not_macos"|"vision_missing"|"no_job", "running": bool, "done":
     /// int, "total": int, "seconds_done": float, "seconds_total": float,
-    /// "rate": float|null, "has_screens": bool}`.
+    /// "rate": float|null, "has_screens": bool, "available": bool}`.
     static func parse(_ json: [String: Any]) -> ScreenReadingProgress? {
         guard json["enabled"] as? Bool == true,
               json["running"] as? Bool == true,
@@ -77,19 +77,12 @@ struct ScreenReadingProgress: Equatable {
     }
 
     /// Does this project have a Screens lens to offer? The rail row, ⌘7 and the
-    /// View menu row follow this: reading is on and possible here, and either
-    /// something has been read (`has_screens`) or a read is still to come — a
-    /// job running, or recordings not yet read. An empty project, a finished
-    /// read that found no shared screens, or an older serve without the field
-    /// and with nothing pending all answer no.
+    /// View menu row follow the server's answer, `available` — the rule's one
+    /// copy is `screens_available` in server/routes/screens.py, which the SPA's
+    /// nav reads too. Never re-derived here from the counts. An older serve
+    /// without the field answers no.
     static func isAvailable(_ json: [String: Any]) -> Bool {
-        guard json["enabled"] as? Bool == true else { return false }
-        if let reason = json["unavailable"], !(reason is NSNull) { return false }
-        if json["has_screens"] as? Bool == true { return true }
-        let total = (json["total"] as? NSNumber)?.intValue ?? 0
-        let done = (json["done"] as? NSNumber)?.intValue ?? 0
-        let running = json["running"] as? Bool == true
-        return total > 0 && (running || done < total)
+        json["available"] as? Bool == true
     }
 }
 

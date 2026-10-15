@@ -31,6 +31,7 @@ from bristlenose.server.routes.screens import (
     ScreensResponse,
     ScreensStatusResponse,
     ScreenTab,
+    screens_available,
 )
 from bristlenose.server.screen_text_job import ScreenTextJob
 from bristlenose.utils.fs import CloudFetchTimeoutError
@@ -273,7 +274,8 @@ def test_status_when_off_is_200_and_says_off(project: Path, monkeypatch: pytest.
     r = AuthTestClient(app).get("/api/projects/1/screens/status")
     assert r.status_code == 200
     assert r.json() == {"enabled": False, "unavailable": None, "running": False, "done": 0, "total": 0,
-                        "seconds_done": 0.0, "seconds_total": 0.0, "rate": None, "has_screens": False}
+                        "seconds_done": 0.0, "seconds_total": 0.0, "rate": None, "has_screens": False,
+                        "available": False}
 
 
 def test_status_counts_from_the_database_and_never_decodes(project: Path,
@@ -292,7 +294,8 @@ def test_status_counts_from_the_database_and_never_decodes(project: Path,
     job.rate = 40.5
     assert client.get("/api/projects/1/screens/status").json() == {
         "enabled": True, "unavailable": None, "running": True, "done": 0, "total": 1,
-        "seconds_done": 0.0, "seconds_total": 600.0, "rate": 40.5, "has_screens": False}
+        "seconds_done": 0.0, "seconds_total": 600.0, "rate": 40.5, "has_screens": False,
+        "available": True}
 
     _write_index(project, video, job.engine)  # s1 read
     body = client.get("/api/projects/1/screens/status").json()
@@ -338,7 +341,22 @@ def test_a_pass_measures_its_own_rate_from_what_it_read(project: Path,
 def test_the_status_response_model_is_the_mac_contract() -> None:
     assert list(ScreensStatusResponse.model_fields) == [
         "enabled", "unavailable", "running", "done", "total", "seconds_done", "seconds_total", "rate",
-        "has_screens"]
+        "has_screens", "available"]
+
+
+@pytest.mark.parametrize(("status", "expected"), [
+    ({"enabled": False, "unavailable": None, "running": False, "done": 0, "total": 3, "has_screens": True}, False),
+    ({"enabled": True, "unavailable": "not_macos", "running": True, "done": 0, "total": 3, "has_screens": True}, False),
+    ({"enabled": True, "unavailable": None, "running": False, "done": 3, "total": 3, "has_screens": True}, True),
+    ({"enabled": True, "unavailable": None, "running": True, "done": 3, "total": 3, "has_screens": False}, True),
+    ({"enabled": True, "unavailable": None, "running": False, "done": 1, "total": 3, "has_screens": False}, True),
+    ({"enabled": True, "unavailable": None, "running": False, "done": 3, "total": 3, "has_screens": False}, False),
+    ({"enabled": True, "unavailable": None, "running": True, "done": 0, "total": 0, "has_screens": False}, False),
+])
+def test_the_lens_shows_by_one_rule(status: dict, expected: bool) -> None:
+    """Off or impossible: no lens. Screens found: a lens. Still reading: a lens. Read to the end
+    with nothing found, or nothing to read: none."""
+    assert screens_available(status) is expected
 
 
 # ── Whether there is anything to show ────────────────────────────────────

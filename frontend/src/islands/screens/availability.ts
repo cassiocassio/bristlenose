@@ -1,8 +1,7 @@
 /**
- * Whether the Screens lens has anything to offer — the one rule the nav and the lens share.
- *
- * The lens is offered when screen reading is on and possible here, and either some screens have
- * been found (`has_screens`) or recordings are still being read (there will be). Not a
+ * Whether the Screens lens has anything to offer: the server's answer, `available`, never derived
+ * here. The rule — reading on and possible, and screens found or recordings still to read — has one
+ * copy, `screens_available` in server/routes/screens.py, which the Mac's rail reads too. Not a
  * preference: a project whose recordings show no shared screen never shows the lens at all
  * (docs/design-screens.md S5). Never in an exported report — the route is server-only.
  *
@@ -31,17 +30,19 @@ export interface ScreensStatus {
   seconds_total: number;
   rate: number | null;
   has_screens?: boolean;
+  /** Whether the lens is offered (the server's `screens_available`). Absent from an older server: no. */
+  available?: boolean;
 }
 
-/** Reading is under way: recordings remain that have been neither read nor given up on. */
+/** Reading is under way: recordings remain that have been neither read nor given up on. Decides
+ *  whether to look again, not whether the lens shows. */
 export function statusStillReading(s: ScreensStatus): boolean {
   return s.enabled && s.unavailable == null && s.total > 0 && (s.running || s.done < s.total);
 }
 
-/** The rule: show the Screens lens iff this holds. */
+/** Show the Screens lens iff the server says so. */
 export function screensAvailable(s: ScreensStatus | null): boolean {
-  if (!s || !s.enabled || s.unavailable != null) return false;
-  return !!s.has_screens || statusStillReading(s);
+  return s?.available === true;
 }
 
 /** 15 s apart while reading, for an hour at most; a run's completion starts it again. */

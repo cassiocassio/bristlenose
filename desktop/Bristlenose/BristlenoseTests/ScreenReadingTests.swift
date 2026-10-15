@@ -109,52 +109,34 @@ import Testing
 }
 
 /// Whether a project has a Screens lens at all — the rail row, ⌘7 and the View
-/// menu row follow it. On and possible, and either something read or a read
-/// still to come.
+/// menu row follow it. The server decides (`screens_available`); the Mac reads
+/// `available` and never re-derives it.
 @Suite struct ScreenReadingAvailabilityTests {
 
-    private func body(enabled: Bool = true, unavailable: Any = NSNull(),
-                      running: Bool = false, done: Int = 0, total: Int = 0,
-                      hasScreens: Any? = false) -> [String: Any] {
+    private func body(available: Any?, hasScreens: Bool = false, running: Bool = false,
+                      done: Int = 0, total: Int = 0) -> [String: Any] {
         var json: [String: Any] = [
-            "enabled": enabled, "unavailable": unavailable, "running": running,
+            "enabled": true, "unavailable": NSNull(), "running": running,
             "done": done, "total": total, "seconds_done": 0.0,
-            "seconds_total": 0.0, "rate": NSNull()]
-        if let hasScreens { json["has_screens"] = hasScreens }
+            "seconds_total": 0.0, "rate": NSNull(), "has_screens": hasScreens]
+        if let available { json["available"] = available }
         return json
     }
 
-    @Test func screensFoundMakeTheLensAvailable() {
-        #expect(ScreenReadingProgress.isAvailable(body(done: 4, total: 4, hasScreens: true)))
+    @Test func theServersYesIsAYes() {
+        #expect(ScreenReadingProgress.isAvailable(body(available: true)))
     }
 
-    /// A read still to come counts before anything is found: a job running, or
-    /// recordings not yet read.
-    @Test func aReadStillToComeMakesItAvailable() {
-        #expect(ScreenReadingProgress.isAvailable(body(running: true, done: 0, total: 3)))
-        #expect(ScreenReadingProgress.isAvailable(body(running: false, done: 1, total: 3)))
+    /// Screens found, or a read still to come, but the server said no: no lens.
+    @Test func theCountsNeverOverruleTheServer() {
+        #expect(!ScreenReadingProgress.isAvailable(body(available: false, hasScreens: true)))
+        #expect(!ScreenReadingProgress.isAvailable(body(available: false, running: true, total: 3)))
     }
 
-    /// A finished read that found nothing, and an empty project, have no lens.
-    @Test func nothingFoundAndNothingPendingIsNotAvailable() {
-        #expect(!ScreenReadingProgress.isAvailable(body(done: 3, total: 3)))
-        #expect(!ScreenReadingProgress.isAvailable(body(done: 0, total: 0)))
-        #expect(!ScreenReadingProgress.isAvailable(body(running: true, done: 0, total: 0)))
-    }
-
-    /// Off or impossible here wins over anything the counts say.
-    @Test func offOrUnavailableIsNeverAvailable() {
-        #expect(!ScreenReadingProgress.isAvailable(body(enabled: false, done: 4, total: 4, hasScreens: true)))
-        #expect(!ScreenReadingProgress.isAvailable(
-            body(unavailable: "vision_missing", running: true, done: 0, total: 3, hasScreens: true)))
-        #expect(!ScreenReadingProgress.isAvailable(
-            body(unavailable: "not_macos", done: 4, total: 4, hasScreens: true)))
-    }
-
-    /// An older serve without `has_screens` falls back to "a read still to come".
-    @Test func anOlderServeWithoutTheFieldUsesTheCounts() {
-        #expect(ScreenReadingProgress.isAvailable(body(running: true, done: 1, total: 3, hasScreens: nil)))
-        #expect(!ScreenReadingProgress.isAvailable(body(done: 3, total: 3, hasScreens: nil)))
+    /// An older serve without the field, or a null, is not a yes.
+    @Test func absentIsNotAYes() {
+        #expect(!ScreenReadingProgress.isAvailable(body(available: nil, hasScreens: true)))
+        #expect(!ScreenReadingProgress.isAvailable(body(available: NSNull(), hasScreens: true)))
     }
 }
 

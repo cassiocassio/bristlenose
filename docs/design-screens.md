@@ -123,10 +123,10 @@ board on real data.
   - **Still owed** (none blocks release; each is recorded where it belongs): navigator links read
     a bare number; no "On screen: …" text per pinned card; no narrow-width layout (1.4.10) —
     _15 Oct: below one column the linked cards now sit in rows with their leaders (S5, "Rows"); not
-    yet measured at 320px_; cards
-    cannot be rearranged from the keyboard; off-task screens (§4.5); typed values (§4.4); a
-    global delete when reading is turned off (per project today, at that project's next serve);
-    the visibility rule served by the route rather than copied three times. Before the release
+    yet measured at 320px_; off-task screens (§4.5); typed values (§4.4); a
+    global delete when reading is turned off (per project today, at that project's next serve).
+    _15 Oct: the visibility rule is now served by the route (`available`, `screens_available` in
+    `routes/screens.py`), and the SPA and the Mac read it._ Before the release
     that ships it: a signed build with pyobjc through the `.pkg` gates and `altool --validate-app`
     (no signed build has carried pyobjc yet), a Team-ID sweep over the sidecar's `.so` files, and
     a line in the App Review notes that *Read shared screens* reads recordings and asks for no

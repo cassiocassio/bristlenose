@@ -156,6 +156,19 @@ class ScreensStatusResponse(BaseModel):
     #: At least one screen derived from this study's indexes. False with nothing indexed, and for
     #: recordings that are all talking heads (text, but no address or title to key a screen on).
     has_screens: bool
+    #: Whether the Screens lens is offered: `screens_available`, the one copy of the rule. The SPA's
+    #: nav and the Mac's rail, ⌘7 and View menu row read this, never re-derive it.
+    available: bool
+
+
+def screens_available(status: dict[str, Any]) -> bool:
+    """Show the Screens lens iff reading is on and possible here, and either a screen has been
+    found or recordings are still to be read (there will be). A study read to the end with no screen
+    in it (talking heads, or no recordings) has no lens."""
+    if not status["enabled"] or status["unavailable"] is not None:
+        return False
+    still_reading = status["total"] > 0 and (status["running"] or status["done"] < status["total"])
+    return bool(status["has_screens"]) or still_reading
 
 
 @router.get("/projects/{project_id}/screens", response_model=ScreensResponse)
@@ -325,10 +338,8 @@ def get_screens_status(project_id: int, request: Request,
     index the job writes, never per poll; with nothing indexed, ``has_screens`` is false without
     deriving.
 
-    The SPA and the Mac app show the Screens lens iff
-    ``enabled and unavailable is None and (has_screens or (total > 0 and (running or done < total)))``:
-    a study with screens, or one still being read. A study read to the end with no screen in it
-    (talking heads, or no recordings) has no lens."""
+    ``available`` says whether the SPA and the Mac app show the Screens lens (`screens_available`):
+    a study with screens, or one still being read."""
     try:
         if not db.get(Project, project_id):
             raise HTTPException(status_code=404, detail="Project not found")
@@ -340,6 +351,7 @@ def get_screens_status(project_id: int, request: Request,
         out_dir = _output_dir(request)
         if not out["enabled"]:
             out["unavailable"] = None  # off is its own answer; why it could not run is moot
+            out["available"] = False
             return out
         videos = video_sessions(db)
         # Not filtered by project, like video_sessions: the two must agree on which sessions
@@ -350,6 +362,7 @@ def get_screens_status(project_id: int, request: Request,
     out["total"] = len(videos)
     out["seconds_total"] = sum(durations.get(sid, 0.0) for sid in videos)
     if job is None or out_dir is None:
+        out["available"] = screens_available(out)
         return out
     out["running"] = bool(job.running)
     out["rate"] = job.rate
@@ -368,6 +381,7 @@ def get_screens_status(project_id: int, request: Request,
             out["done"] += 1
             out["seconds_done"] += durations.get(sid, 0.0)
     out["has_screens"] = _has_screens(project_id, idir, mtimes)
+    out["available"] = screens_available(out)
     return out
 
 

@@ -34,32 +34,25 @@ afterEach(() => {
   _resetExportCache();
 });
 
-describe("the rule", () => {
-  it("offers the lens when it has screens, or while recordings are still being read", () => {
-    expect(screensAvailable({ ...base, has_screens: true })).toBe(true);
-    expect(screensAvailable({ ...base, done: 1 })).toBe(true); // two still to read
-    expect(screensAvailable({ ...base, running: true })).toBe(true);
-  });
-
-  it("does not offer it with nothing found and nothing left to read", () => {
-    expect(screensAvailable(base)).toBe(false);
-    expect(screensAvailable({ ...base, total: 0, done: 0 })).toBe(false); // no video at all
+describe("the rule is the server's", () => {
+  it("offers the lens when the server says available, and only then", () => {
+    expect(screensAvailable({ ...base, available: true })).toBe(true);
+    expect(screensAvailable({ ...base, available: false })).toBe(false);
     expect(screensAvailable(null)).toBe(false);
-    // An older server says nothing about screens: absent is not a yes.
-    const { has_screens: _omit, ...older } = base;
-    expect(screensAvailable(older)).toBe(false);
   });
 
-  it("never offers it when reading is off or impossible, whatever it has", () => {
-    expect(screensAvailable({ ...base, has_screens: true, enabled: false })).toBe(false);
-    expect(screensAvailable({ ...base, has_screens: true, unavailable: "not_macos" })).toBe(false);
-    expect(screensAvailable({ ...base, running: true, unavailable: "no_job" })).toBe(false);
+  it("never re-derives it from the parts", () => {
+    // Screens found, or still reading, but the server said no: no lens (screens.py decides).
+    expect(screensAvailable({ ...base, has_screens: true, available: false })).toBe(false);
+    expect(screensAvailable({ ...base, running: true, done: 0, available: false })).toBe(false);
+    // An older server says nothing: absent is not a yes.
+    expect(screensAvailable({ ...base, has_screens: true })).toBe(false);
   });
 });
 
 describe("useScreensAvailable", () => {
   it("reads the status on mount", async () => {
-    vi.mocked(apiGet).mockResolvedValue({ ...base, has_screens: true });
+    vi.mocked(apiGet).mockResolvedValue({ ...base, has_screens: true, available: true });
     const { result } = renderHook(() => useScreensAvailable());
     expect(result.current).toBe(false);
     await act(async () => {});
@@ -73,7 +66,7 @@ describe("useScreensAvailable", () => {
     vi.mocked(apiGet).mockImplementation((() => {
       n += 1;
       // Reading for two looks, then done with screens found.
-      return Promise.resolve(n < 3 ? { ...base, running: true, done: n - 1 } : { ...base, has_screens: true });
+      return Promise.resolve(n < 3 ? { ...base, running: true, done: n - 1, available: true } : { ...base, has_screens: true, available: true });
     }) as typeof apiGet);
     const { result } = renderHook(() => useScreensAvailable());
     await act(async () => {
@@ -114,7 +107,7 @@ describe("useScreensAvailable", () => {
     const { result } = renderHook(() => useScreensAvailable());
     await act(async () => {});
     expect(result.current).toBe(false);
-    vi.mocked(apiGet).mockResolvedValue({ ...base, has_screens: true });
+    vi.mocked(apiGet).mockResolvedValue({ ...base, has_screens: true, available: true });
     await act(async () => {
       bumpRefreshKey();
     });
@@ -136,7 +129,7 @@ describe("useScreensAvailable", () => {
       version: 1, exported_at: "2026-10-14T00:00:00Z", health: {}, endpoints: {},
     };
     _resetExportCache();
-    vi.mocked(apiGet).mockResolvedValue({ ...base, has_screens: true });
+    vi.mocked(apiGet).mockResolvedValue({ ...base, has_screens: true, available: true });
     const { result } = renderHook(() => useScreensAvailable());
     await act(async () => {});
     act(() => markScreensFound());

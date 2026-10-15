@@ -197,7 +197,7 @@ describe("NavBar — the Screens lens", () => {
   });
 
   it("is a lens link when the project has screens, active on its route", async () => {
-    vi.mocked(apiGet).mockResolvedValue(status({ has_screens: true }));
+    vi.mocked(apiGet).mockResolvedValue(status({ has_screens: true, available: true }));
     renderNavBar("/report/screens/");
     const link = await screen.findByRole("link", { name: "Screens" });
     expect(link).toHaveAttribute("href", "/report/screens/");
@@ -206,7 +206,7 @@ describe("NavBar — the Screens lens", () => {
   });
 
   it("is a lens link while recordings are still being read", async () => {
-    vi.mocked(apiGet).mockResolvedValue(status({ running: true, done: 0 }));
+    vi.mocked(apiGet).mockResolvedValue(status({ running: true, done: 0, available: true }));
     renderNavBar();
     expect(await screen.findByRole("link", { name: "Screens" })).toBeInTheDocument();
   });
@@ -225,7 +225,7 @@ describe("NavBar — the Screens lens", () => {
   });
 
   it("is absent when screens cannot be read here", async () => {
-    vi.mocked(apiGet).mockResolvedValue(status({ has_screens: true, unavailable: "not_macos" }));
+    vi.mocked(apiGet).mockResolvedValue(status({ has_screens: true, unavailable: "not_macos", available: false }));
     renderNavBar();
     await act(async () => {});
     expect(screen.queryByText("Screens")).toBeNull();

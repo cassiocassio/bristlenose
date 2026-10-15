@@ -116,7 +116,7 @@ for (const step of STEPS) {
       if (r.width === 0 || r.height === 0 || r.width > 32 || r.height > 32) continue;
       const html = s.outerHTML;
       const hit = svgMap.find((m) => html.includes(m.needle));
-      tag(s, "svg", { sig: html.replace(/\s(class|style|data-icat)="[^"]*"/g, "").slice(0, 400),
+      tag(s, "svg", { sig: html.replace(/\s(class|style|data-icat)="[^"]*"/g, ""),
         row: hit?.row || null, lucide: hit?.lucide || null });
     }
     const all = document.querySelectorAll("body *");

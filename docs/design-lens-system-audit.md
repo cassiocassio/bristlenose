@@ -179,6 +179,9 @@ once, with a status chip. The count of `❌` is the campaign's burndown number.
 
 ### Phase 3 — Icons
 
+*Done 16 Oct 2026 — executed as `docs/design-icon-system.md`, which supersedes the plan
+below; three CSS-drawn glyphs are deferred there (§ What's left). Kept as written.*
+
 Why here: ~10 of the page-local components in Phase 5 contain inline SVGs. Promoting them
 first would promote the icon debt *into* the system. Icons must be an atom before
 components become atoms.

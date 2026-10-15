@@ -50,8 +50,10 @@ Decided after the coverage disclosure surfaced three drifting layers:
 - **Website/docs** ship **Lucide literally** — an `ICONS` map in `assets/site.js` (e.g.
   `chevron-right: <path d="m9 18 6-6-6-6"/>`, Lucide's exact path; `viewBox 0 0 24 24`,
   `stroke-width 2`, `linecap/linejoin round`). This is the reference.
-- **SPA** uses the Lucide *idiom* hand-rolled (inline SVG, `stroke 1.4`, round caps) but never
-  installed the package.
+- **SPA** used the Lucide *idiom* hand-rolled (inline SVG, `stroke 1.4`, round caps) without
+  the package. *Since 16 Oct 2026 it uses Lucide itself, through `components/Icon.tsx`, and
+  `tests/test_no_improvised_icons.py` refuses an inline icon or a glyph standing in for one —
+  `docs/design-icon-system.md`.*
 - **Theme CSS** uses **unicode geometric glyphs** — the off-standard layer.
 
 Rules for this effort:
@@ -74,6 +76,9 @@ Rules for this effort:
 `coverage.css` ▶/▼ disclosure · `hidden.js` ▾ chevron · `journey-sort.js` ▲/▼ sort arrows ·
 `.bn-play-icon` ▶ play triangle (→ Lucide `play`). Root cause / bigger call: **install Lucide as
 one dependency** rather than three hand-maintained idioms — a 100days candidate, not this session.
+*Done 16 Oct 2026 for the SPA (`docs/design-icon-system.md` § Phases, as built); the
+`coverage.css` disclosure waits on the baked-CSS decision in § What's left; `hidden.js` and
+`journey-sort.js` are the frozen static renderer and stay.*
 
 ## The system to police against (`bristlenose/theme/`)
 

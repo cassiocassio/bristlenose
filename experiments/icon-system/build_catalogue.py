@@ -131,5 +131,46 @@ see the side-by-side sheet for those.</p>
 </script></body></html>
 """
 
+def compare(out: Path, final: Path) -> None:
+    """compare.html: each icon as first captured (before any migration) beside the
+    same control captured again from the running app, matched by page and name."""
+    first = json.loads((out / "catalogue.json").read_text())["items"]
+    now = json.loads((final / "catalogue.json").read_text())["items"]
+
+    def key(i: dict) -> tuple[str, str]:
+        # a label that held the glyph ("▶ Config") is the same control once it is gone
+        label = "".join(c for c in (i["aria"] or i["text"]) if c not in "×✕✗✓▶▸▾▼▴▲⌃↩✎✦⊘⚠↗+")
+        return i["step"], " ".join(label.split())[:40]
+
+    by_key = {key(i): i for i in now}
+    rows = []
+    for it in first:
+        n = by_key.get(key(it))
+        rel = final.name
+        cells = (f'<td>{img(out, it["base"] + "-before.png", 0.5)}</td>'
+                 f'<td class="zoom">{img(out, it["base"] + "-zoom.png", 2, "px")}</td>')
+        if n:
+            cells += (f'<td>{img(final, n["base"] + "-before.png", 0.5).replace("shots/", rel + "/shots/")}</td>'
+                      f'<td class="zoom">{img(final, n["base"] + "-zoom.png", 2, "px").replace("shots/", rel + "/shots/")}</td>')
+        else:
+            cells += '<td colspan="2" class="none">not matched in the final capture (label changed, or not reached)</td>'
+        what = it.get("glyph") or it.get("row") or "svg"
+        rows.append(f'<tr id="cmp-{it["base"]}"><td class="meta"><a class="id" href="#cmp-{it["base"]}">{it["base"]}</a>'
+                    f'<div><b>{html.escape(what)}</b></div><div class="ctx">{html.escape(it["aria"] or it["text"])}</div></td>'
+                    f'{cells}<td><textarea data-note="{it["base"]}" placeholder="note"></textarea></td></tr>')
+    page = TEMPLATE.replace("{{ROWS}}", "\n".join(rows)).replace("{{N}}", str(len(first))) \
+        .replace("{{WHEN}}", json.loads((final / "catalogue.json").read_text())["when"][:16].replace("T", " ")) \
+        .replace("{{BASE}}", "the running app") \
+        .replace("<th>after · Lucide</th><th>before · zoom</th>\n<th>after · zoom</th>",
+                 "<th>before · zoom</th><th>now · in place</th>\n<th>now · zoom</th>") \
+        .replace("Icon catalogue — every icon in place, before and after", "Icon catalogue — before tonight, and now") \
+        .replace("bn-icon-catalogue-v1", "bn-icon-compare-v1")
+    (out / "compare.html").write_text(page)
+    print(f"wrote {out / 'compare.html'}")
+
+
 if __name__ == "__main__":
-    main(Path(sys.argv[1]))
+    if len(sys.argv) > 2:
+        compare(Path(sys.argv[1]), Path(sys.argv[2]))
+    else:
+        main(Path(sys.argv[1]))

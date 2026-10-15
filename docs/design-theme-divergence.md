@@ -220,6 +220,10 @@ Each palette file defines all `--bn-colour-*` tokens under a scoped selector:
 3. Iterate sizes/weights until it feels native
 
 ### Phase C: Icon system
+
+*Superseded 16 Oct 2026 by `docs/design-icon-system.md`: one Lucide set for the web on
+every platform, no `icons/desktop.ts` — the desktop's weight comes from the stem rule, since
+SF Pro and Inter share stems. Steps 1–2 are done; step 3 will not be.*
 1. Create `Icon.tsx` component and extract existing SVGs into `icons/web.ts`
 2. Refactor components to use `<Icon>`
 3. Design and add `icons/desktop.ts` with SF Symbols-weight SVGs

@@ -1,15 +1,18 @@
 ---
-status: proposal
-updated: 15 Oct 2026
+status: partial
+updated: 16 Oct 2026
 ---
 
 # Icon system: Lucide on the web, SF Symbols on the Mac
 
-**Status: the plan, 15 Oct 2026.** It collects decisions taken in July and never
-carried out, a fresh audit of all three codebases, and a phased migration.
-Choosing the individual icons waits on the comparison
-mockup, `docs/mockups/icon-system-side-by-side.html` (built by
-`experiments/icon-system/build_mockup.py`, which lifts today's icons from source).
+**Status: phases 1–3 shipped on `main` overnight 15–16 Oct 2026** (a8333739, 5696bb52, 450e3cee;
+unreleased). Every chrome icon the SPA drew for itself, as an SVG or a character, now
+goes through `components/Icon.tsx` and Lucide, with a stroke taken from the text's stem,
+and `tests/test_no_improvised_icons.py` holds it there. What is deferred, and why, is
+§ What's left. The review artefacts: `docs/mockups/icon-system-side-by-side.html` (built
+by `experiments/icon-system/build_mockup.py`, which lifts icons from source) and a local,
+gitignored before/now catalogue of every icon in the running app
+(`experiments/icon-system/capture_icons.mjs`, `build_catalogue.py`).
 
 ## The decision, and where it came from
 
@@ -118,8 +121,9 @@ plus ★ ✓ ✕ ⌄ as Unicode).
 ## Concept map
 
 The settled vocabulary. "Today" names the drawings and characters being replaced.
-Rows marked **pick** are open choices for the mockup to settle; where a reviewer
-recommended one, it is listed first.
+The seven open picks were settled by the owner on 15 Oct 2026 by taking the reviewers'
+recommendations; each is a one-line change in `Icon.tsx` if the side-by-side sheet says
+otherwise.
 
 | Concept | Lucide | SF Symbol (Mac) | Today on the web |
 |---|---|---|---|
@@ -135,7 +139,7 @@ recommended one, it is listed first.
 | Edit | `pencil` | `pencil` | SVG, ✎ |
 | Revert / restore | `undo-2` | `arrow.uturn.backward` | ↩ ×2 |
 | Refresh / re-analyse | `rotate-cw` | `arrow.clockwise` | SVG |
-| Download / export | `download` — **pick** vs `share` | `square.and.arrow.up` | SVG |
+| Download / export | `download` (picked over `share`) | `square.and.arrow.up` | SVG |
 | Copy | `copy` | `doc.on.doc` | — (static report only) |
 | Folder | `folder` | `folder` | SVG |
 | Tag | `tag` | `tag` | SVG |
@@ -143,17 +147,17 @@ recommended one, it is listed first.
 | Heatmap grid | `layout-grid` | `square.grid.2x2` | SVG |
 | Quotes lens | `text-quote` | `text.quote` | SVG traced from the SF Symbol |
 | Focus mode | `moon` | `moon` | SVG (an older Lucide `moon`) |
-| Settings | `settings` — **pick** vs `settings-2` | `gearshape` | SVG drawn as a sun |
-| Help | `circle-help` — **pick** vs `info` (what it draws today) | `questionmark.circle` | SVG |
+| Settings | `settings` (picked over `settings-2`) | `gearshape` | SVG drawn as a sun |
+| Help | `circle-help` (picked over `info`) | `questionmark.circle` | SVG |
 | Star (control) | ★ kept, by decision | `star` / `star.fill` | ★ |
 | Play | `play` | `play` | ▶ (`.bn-play-icon`) |
-| AI ornament | `sparkle` — **pick:** keep ✦ as type? | `sparkles` | ✦ ×2 |
-| Deny proposal | `x` — **pick** vs `ban` | `xmark` (`nosign` means *forbidden*) | ⊘ |
+| AI ornament | `sparkle` (picked over keeping ✦) | `sparkles` | ✦ ×2 |
+| Deny proposal | `x` (picked over `ban`) | `xmark` (`nosign` means *forbidden*) | ⊘ |
 | Warning | `triangle-alert` | `exclamationmark.triangle` | ⚠ |
 | Failed | `circle-x` | `xmark.circle` | ✗ |
 | Add | `plus` | `plus` | + (codebook) |
 | External link | `external-link` | `arrow.up.forward.square` | ↗ |
-| Close a side panel | `x` — **pick** vs `panel-left-close` | `sidebar.left` | × ×2 |
+| Close a side panel | `x` (picked over `panel-left-close`) | `sidebar.left` | × ×2 |
 | Dev playground | `sliders-horizontal` | — | SVG, ◆ |
 
 **Kept as characters.** The Toast and ActivityChip kind glyphs (✓ ℹ ⚠ ✗ —) are bound to
@@ -254,8 +258,8 @@ Lucide directly, so:
 - an override (the ★) lives in one file;
 - stroke comes from the token.
 
-Sizes: `inline` (1 em, the default), `menu` (the existing check-gutter size) and
-`toolbar`. The facade returns the Lucide element directly, with no wrapper, and takes
+Sizes: `inline` (1 em, the default), `menu` (the check gutter), or a `px` box where a
+control was built around one (as built; the planned `toolbar` size was not needed). The facade returns the Lucide element directly, with no wrapper, and takes
 only primitive props (`name`, `size`, `className`, and one of `label` / `decorative`), so
 a long quote list pays no more than it must.
 
@@ -289,34 +293,36 @@ wires). It lands in Phase 2's last commit, at zero. No ratchet: the debt is a fe
 deep, not a standing one. The rule was written in July and broken in October, which is
 why it needs a gate at all.
 
-## Phases
+## Phases, as built
 
-1. **Foundation.** Install `lucide-react`; rewrite `Icon.tsx` as the facade, with
-   `label` / `decorative`; add `--bn-icon-stem` and the stem rule; list the contexts that
-   set emphasis or strong text beside an icon and give each its stem; measure the budget.
-2. **SPA chrome SVGs.** Migrate the 29, by concept rather than by file (all `x` at once),
-   and delete the CSS that stroked the old drawings. A rule that sets `stroke-width` on
-   the path itself (`session-tapestry.css`, `.bn-tapestry-toggle path` and
-   `.bn-tp-close path`) beats the inherited stem, silently.
-   so each commit is one visible change. Settled rows go first. The **pick** rows wait
-   for the mockup, and changing one later is a one-line edit. The
-   gate lands at zero in the last commit.
-3. **SPA Unicode chrome.** The 52 characters and the 4 live theme `content:` glyphs.
-   - A `::before` disclosure becomes a rendered icon in a wrapper span rotated by CSS.
-     (`threshold-review.css:196` rotates a span this way, around a ▶ that is itself on
-     this list.)
-   - Keep the wrapper `<span>` and its class, and put the `<Icon>` inside it.
-     `.bn-play-icon` (`Thumbnail.tsx`), `.bn-hidden-chevron` (`Counter.tsx`) and
-     `.menu-icon` (`SearchBox.tsx`) are glyph-wrapping spans whose classes the frozen
-     renderer also uses (`session_table.html`, `hidden.js`, `toolbar.html`), so the
-     classes stay.
-   - Before each sweep, `grep` the test files for the glyph. Ten test files match on these
-     characters, and a negative assertion goes silently green when the character goes.
-4. **Welcome illustrations.** Paste the same Lucide paths into `WelcomeIllustrations.swift`
-   (the pointer ×3, eye-off, chevron, and ★ ✓ ✕ ⌄ where they are chrome), with a comment
-   naming the icon and the Lucide version. No codegen for six drawings in one file.
+1. **Foundation — a8333739.** `lucide-react` 1.49.0, pinned exactly. `Icon.tsx` is the facade:
+   a house name per concept, a props union that will not compile without `label` or
+   `decorative`, `nonScalingStroke`, `className`, a `px` box. `--bn-icon-stem-*` in
+   `tokens-typography.css` (normal, emphasis, starred, semibold, strong; no light, since
+   370 renders 400), the stem rule with its 1 px floor in `atoms/icon.css`. Two fallbacks
+   for a project whose baked theme CSS predates the rule: a `stroke-width="1.25"` and a
+   `1em` size attribute on every icon. The menu tick box grew to 1em so Lucide's check
+   keeps its ~9 px.
+2. **The 29 SVGs — 5696bb52.** Each keeps its box: a `px` prop where the markup set one, or
+   the contextual rule that already sized it (`.bn-tp-nav svg { width: 6px }`), which
+   wins because the default 1em box sits in `:where()` at zero specificity. The rules
+   that stroked the old paths are deleted. The three smallest boxes grew (timeline
+   chevron 9 → 12 px, search-token caret 8 → 11, search clear 12 → 14): Lucide pads its
+   glyphs, and at those sizes they had become specks. The gate landed at zero.
+3. **The characters — 450e3cee.** 45 glyphs in 22 components. No new locale keys were needed:
+   every glyph-only control already had an `aria-label`, or a `title`, which a browser
+   uses as the name once the content is an `aria-hidden` icon. Stems are set beside the
+   `font-weight` of the strong and emphasis controls (badge delete, accept/deny pill,
+   activity chips, moderator dismiss, AutoCode title). The play triangle is filled; the
+   modal nav's chevron got room a solid ▶ did not need; the starred view shows ★.
 
-The frozen static renderer is not migrated.
+**The gate** (`tests/test_no_improvised_icons.py`, each rule mutation-checked): no `<svg`
+in a component outside six named charts; the chart allowlist cannot go stale; no
+`lucide-react` import outside `Icon.tsx`; no glyph standing alone as an element's
+content; no quoted glyph in a JSX expression (the Settings pipeline key exempt by name).
+
+**Phase 4** (the welcome illustrations' copied icons, in `WelcomeIllustrations.swift`) is
+not started. The frozen static renderer is not migrated, by design.
 
 ## Mac consistency (separate work, same vocabulary)
 
@@ -347,6 +353,38 @@ Same concept, different symbol today, with the pick:
 The project-icon palette overlaps chrome (`hourglass`, `film`, `stethoscope`,
 `ladybug.fill`), and the comment at `IconPickerPopover.swift:7` claims SF Symbols 6 /
 macOS 15, when nothing in it needs more than 14.
+
+## What's left
+
+In the order worth doing.
+
+1. **Decide whether serve and export keep preferring a project's baked theme CSS.** They
+   do today with no version check (`server/app.py` `serve_theme_css_with_fallback`,
+   `routes/export.py`), so every existing project keeps the CSS it was rendered with —
+   for every theme change, not only icons — until it is re-run. Phases 1–3 were made to
+   degrade (fallback stroke and size), but three glyphs could not be: see 2.
+2. **Three glyphs drawn by theme CSS, deferred until 1 is decided**: the AI badge's
+   delete × (`badge.css` `.badge-ai::after`), Settings' "copied" ✓ (`settings.css`), the
+   Dashboard coverage ▶/▼ (`coverage.css`). Migrating them means rendering an element and
+   removing the pseudo-element; under an old baked copy each would show twice. A
+   reviewed implementation existed and was reverted (Badge `.badge-ai-delete` with a
+   `:has()` guard that keeps the static report's × — reconstruct from the 16 Oct session).
+3. **Look at the result.** The owner has not yet seen the migrated app. The local
+   catalogue's `compare.html` shows every icon before and now, in place; the stroke at
+   very small sizes and the three grown boxes are the judgement calls.
+4. **The Mac app** shows none of this until the sidecar is rebuilt (`build-sidecar.sh`),
+   and an existing project then still serves its baked CSS (1). Not verified in the
+   WKWebView.
+5. **Small leftovers**: the Discussion lens's ▾ is part of a badge's text
+   (`DiscussionLens.tsx`, `code={`#${{n}} ▾`}`) and wants a real element; the dev
+   playground's ◆ has no Lucide match; the signal-card caret and the hidden-quotes
+   chevron read fainter than the old glyphs (opacity 0.4 and 0.7em).
+6. **Phase 4**, the welcome illustrations.
+7. **Mac consistency** (§ below), its own TODO item, plus the cheap test that every SF
+   Symbol name resolves.
+8. **Type, found on the way:** `--bn-weight-light: 370` never renders in a browser (Inter
+   is served `wght@400..700`); and the frozen static report's `quote_card.html:4` writes
+   `class=”speaker”` with curly quotes, so `.speaker` never matches.
 
 ## Open questions
 

@@ -1,6 +1,11 @@
 {
   "_policy": "A gate whose red nobody has seen is unproven, not passing. Automated proofs are derived from the test-<name> naming convention; this file records the ones that convention cannot see. Enforced by scripts/check-gate-proofs.py; the unproven COUNT is held by the ratchet metric `gates_without_proof`.",
   "declared": {
+    "check-whisper-sizes": {
+      "evidence": "with TOLERANCE_MB raised to 10000 the drift test fails (a 1614 MB table against a 3091 MB Hub is no longer named); restored, 4 passed. The live run needs the network, so only the deciding half is proven: a Hub answer that never arrives is exit 2, not covered here",
+      "how": "tests/test_check_whisper_sizes.py, which loads the script and drives compare(); mutated TOLERANCE_MB locally, then restored",
+      "observed": "2026-10-16"
+    },
     "check-release-archive": {
       "evidence": "on the unmodified tree both configurations archive (exit 0). With `return .developerIDMutant` inside DistributionChannel.swift's `#elseif DEVELOPER_ID_BETA` branch \u2014 code Debug never compiles, so Mac Build cannot see it \u2014 the developer-id archive exits 1 naming DistributionChannel.swift:37, and the appstore archive stays green, which is why both are compiled",
       "how": "manual, local, unsigned exactly as the push-triggered runner does it: desktop/scripts/check-release-archive.sh developer-id and appstore against the mutated tree, then the file restored",

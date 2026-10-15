@@ -26,7 +26,25 @@ final class LocateFlow {
         /// Folder picked but doesn't look like an analysed Bristlenose project.
         /// Caller surfaces an alert with retry affordance.
         case invalidFolder(picked: URL)
+        /// Folder is an analysed project, but a different study from this one
+        /// (its marker carries another id). Relocating onto it would show
+        /// someone else's analysis under this row (design-project-identity §7).
+        case differentStudy(picked: URL)
         case cancelled
+    }
+
+    /// What a picked folder is, for this project. Pure but for the reads.
+    enum Verdict: Equatable { case thisStudy, notAnalysed, differentStudy }
+
+    /// A folder is this project's when it is analysed and, if both carry a
+    /// study id, the ids agree. An unread or absent id on either side cannot
+    /// disagree: projects from before the marker locate as they always did.
+    static func verdict(url: URL, expectedStudyID: String?) -> Verdict {
+        guard folderLooksAnalysed(url: url) else { return .notAnalysed }
+        if let expectedStudyID, let found = StudyMarker.read(folder: url), found != expectedStudyID {
+            return .differentStudy
+        }
+        return .thisStudy
     }
 
     /// Name of the marker subdirectory that identifies a Bristlenose project root.
@@ -120,7 +138,11 @@ final class LocateFlow {
     /// Inspect the picked directory for the `bristlenose-output/` marker plus
     /// at least one canonical artefact. One honest message either way.
     private func validate(url: URL) -> Result {
-        Self.folderLooksAnalysed(url: url) ? .located(url) : .invalidFolder(picked: url)
+        switch Self.verdict(url: url, expectedStudyID: project.studyID) {
+        case .thisStudy: return .located(url)
+        case .notAnalysed: return .invalidFolder(picked: url)
+        case .differentStudy: return .differentStudy(picked: url)
+        }
     }
 }
 

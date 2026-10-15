@@ -184,6 +184,7 @@
       "title": "Nalezena složka, která by mohla být „%@“."
     },
     "locateError": {
+      "differentStudy": "Tato slo\u017eka obsahuje jin\u00fd projekt. Vyberte slo\u017eku, do kter\u00e9 byl tento projekt p\u0159esunut, nebo p\u0159idejte tuto slo\u017eku do bo\u010dn\u00edho panelu jako samostatn\u00fd projekt.",
       "message": "Tato složka nevypadá jako analyzovaný projekt. Vyberte složku, ve které byla analýza spuštěna, nebo analyzujte složku znovu z úvodní obrazovky.",
       "title": "Tuto složku se nepodařilo otevřít"
     },

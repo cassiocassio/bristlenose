@@ -180,6 +180,7 @@
       "title": "Encontr\u00e9 una carpeta que podr\u00eda ser \u00ab%@\u00bb."
     },
     "locateError": {
+      "differentStudy": "Esa carpeta contiene otro proyecto. Elija la carpeta a la que se movi\u00f3 este, o a\u00f1ada esa carpeta a la barra lateral como un proyecto independiente.",
       "message": "Esa carpeta no parece un proyecto analizado. Elija la carpeta en la que se ejecut\u00f3 el an\u00e1lisis o analice una carpeta nueva desde la pantalla de bienvenida.",
       "title": "No se pudo abrir esa carpeta"
     },

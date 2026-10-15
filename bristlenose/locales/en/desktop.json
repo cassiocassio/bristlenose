@@ -181,6 +181,7 @@
       "title": "Found a folder that might be \u201c%@\u201d."
     },
     "locateError": {
+      "differentStudy": "That folder holds a different project. Pick the folder this one was moved to, or add that folder to the sidebar as a project of its own.",
       "message": "That folder doesn\u2019t look like an analysed project. Pick the folder where the analysis was run, or analyse a folder fresh from the Welcome screen.",
       "title": "Couldn\u2019t open that folder"
     },

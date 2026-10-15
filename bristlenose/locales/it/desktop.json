@@ -180,6 +180,7 @@
       "title": "È stata trovata una cartella che potrebbe essere “%@”."
     },
     "locateError": {
+      "differentStudy": "Questa cartella contiene un altro progetto. Selezionare la cartella in cui \u00e8 stato spostato questo progetto, oppure aggiungere quella cartella alla barra laterale come progetto a s\u00e9.",
       "message": "Questa cartella non sembra un progetto analizzato. Selezionare la cartella in cui è stata eseguita l'analisi, oppure analizzare una nuova cartella dalla schermata di benvenuto.",
       "title": "Non è stato possibile aprire la cartella"
     },

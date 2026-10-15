@@ -180,6 +180,7 @@
       "title": "Encontrámos uma pasta que pode ser “%@”."
     },
     "locateError": {
+      "differentStudy": "Essa pasta cont\u00e9m outro projeto. Escolha a pasta para onde este projeto foi movido, ou adicione essa pasta \u00e0 barra lateral como um projeto pr\u00f3prio.",
       "message": "Essa pasta não parece um projeto analisado. Escolha a pasta onde a análise foi executada, ou analise uma pasta nova a partir do ecrã de boas-vindas.",
       "title": "Não foi possível abrir essa pasta"
     },

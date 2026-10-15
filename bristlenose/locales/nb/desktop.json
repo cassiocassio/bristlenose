@@ -180,6 +180,7 @@
       "title": "Fant en mappe som kanskje er «%@»."
     },
     "locateError": {
+      "differentStudy": "Den mappen inneholder et annet prosjekt. Velg mappen dette prosjektet ble flyttet til, eller legg til mappen i sidepanelet som et eget prosjekt.",
       "message": "Den mappen ser ikke ut som et analysert prosjekt. Velg mappen der analysen ble kjørt, eller analyser en mappe på nytt fra velkomstskjermen.",
       "title": "Kunne ikke åpne mappen"
     },

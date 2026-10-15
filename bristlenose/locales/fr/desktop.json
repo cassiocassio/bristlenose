@@ -180,6 +180,7 @@
       "title": "Un dossier qui pourrait \u00eatre \u00ab\u00a0%@\u00a0\u00bb a \u00e9t\u00e9 trouv\u00e9."
     },
     "locateError": {
+      "differentStudy": "Ce dossier contient un autre projet. Choisissez le dossier vers lequel celui-ci a \u00e9t\u00e9 d\u00e9plac\u00e9, ou ajoutez ce dossier \u00e0 la barre lat\u00e9rale comme projet distinct.",
       "message": "Ce dossier ne ressemble pas \u00e0 un projet analys\u00e9. Choisissez le dossier dans lequel l\u2019analyse a \u00e9t\u00e9 ex\u00e9cut\u00e9e ou analysez un dossier depuis l\u2019\u00e9cran de bienvenue.",
       "title": "Impossible d\u2019ouvrir ce dossier"
     },

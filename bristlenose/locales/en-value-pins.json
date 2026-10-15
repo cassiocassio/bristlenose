@@ -768,6 +768,7 @@
  "desktop.chrome.interviewCount_other": "35cd16",
  "desktop.chrome.loadingReport": "3b475f",
  "desktop.chrome.locate": "7b9a9a",
+ "desktop.chrome.locateError.differentStudy": "8fb7a3",
  "desktop.chrome.locateError.message": "e737e4",
  "desktop.chrome.locateError.title": "03b1e0",
  "desktop.chrome.locateMessage": "d1188a",

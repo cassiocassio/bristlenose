@@ -180,6 +180,7 @@
       "title": "“%@” olabilecek bir klasör bulundu."
     },
     "locateError": {
+      "differentStudy": "Bu klas\u00f6rde ba\u015fka bir proje var. Bu projenin ta\u015f\u0131nd\u0131\u011f\u0131 klas\u00f6r\u00fc se\u00e7in ya da o klas\u00f6r\u00fc kenar \u00e7ubu\u011funa ayr\u0131 bir proje olarak ekleyin.",
       "message": "Bu klasör analiz edilmiş bir proje gibi görünmüyor. Analizin çalıştırıldığı klasörü seçin ya da Karşılama ekranından bir klasörü baştan analiz edin.",
       "title": "Bu klasör açılamadı"
     },

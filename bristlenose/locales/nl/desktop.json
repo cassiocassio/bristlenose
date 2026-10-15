@@ -180,6 +180,7 @@
       "title": "Een map gevonden die “%@” zou kunnen zijn."
     },
     "locateError": {
+      "differentStudy": "Die map bevat een ander project. Kies de map waarnaar dit project is verplaatst, of voeg die map als apart project toe aan de navigatiekolom.",
       "message": "Die map lijkt geen geanalyseerd project. Kies de map waarin de analyse is uitgevoerd, of analyseer een map opnieuw vanaf het welkomstscherm.",
       "title": "Kon die map niet openen"
     },

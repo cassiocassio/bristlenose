@@ -92,6 +92,38 @@ struct StudyMarkerTests {
                                        folderExists: { $0 == "/Studies/Talismanic" }) == .copy(of: id))
     }
 
+    // ── Locate… ─────────────────────────────────────────────────────────────
+
+    private func analysed(_ dir: URL) throws {
+        let manifest = dir.appendingPathComponent("bristlenose-output/.bristlenose/pipeline-manifest.json")
+        try FileManager.default.createDirectory(
+            at: manifest.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "{}".write(to: manifest, atomically: true, encoding: .utf8)
+    }
+
+    @Test func locateRefusesAFolderHoldingAnotherStudy() throws {
+        let dir = try folder()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try analysed(dir)
+        let mine = UUID().uuidString.lowercased()
+        try writePythonMarker(dir, id: UUID().uuidString.lowercased())
+        #expect(LocateFlow.verdict(url: dir, expectedStudyID: mine) == .differentStudy)
+    }
+
+    @Test func locateAcceptsItsOwnStudyAndAnyFolderWhenAnIdIsUnknown() throws {
+        let dir = try folder()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try analysed(dir)
+        #expect(LocateFlow.verdict(url: dir, expectedStudyID: "x") == .thisStudy)  // no marker
+        let mine = UUID().uuidString.lowercased()
+        try writePythonMarker(dir, id: mine)
+        #expect(LocateFlow.verdict(url: dir, expectedStudyID: mine) == .thisStudy)
+        #expect(LocateFlow.verdict(url: dir, expectedStudyID: nil) == .thisStudy)
+        let bare = try folder()
+        defer { try? FileManager.default.removeItem(at: bare) }
+        #expect(LocateFlow.verdict(url: bare, expectedStudyID: mine) == .notAnalysed)
+    }
+
     // ── The index ───────────────────────────────────────────────────────────
 
     /// The upgrade order: the original was served (marker minted) but its

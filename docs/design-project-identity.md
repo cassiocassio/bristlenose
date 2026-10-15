@@ -1,5 +1,5 @@
 ---
-status: decided; phases 2, 4 and 5 built; 3 obviated; 6 needs a decision
+status: decided; phases 2, 4 and 5 built; 3 obviated; 6 half built, search needs a decision
 last-trued: 2026-10-15
 trued-against: HEAD@main on 2026-10-15
 ---
@@ -426,7 +426,14 @@ add → analyse → move → reopen → copy → reopen before phase 2 lands.
   accept or not. If accepted: write the marker to `bristlenose-output/study.json`
   (or mirror it there), search with `kMDItemFSName == "study.json"`, read each
   hit, and match the id. Until then Locate… stays the name-based Spotlight
-  one-shot it is.
+  one-shot it is. (A sandboxed app also cannot read a Spotlight hit's file
+  without a grant, so a search must match on what Spotlight indexes — a name
+  — not on the file's contents.)
+- **The half that needs no decision is built** (15 Oct 2026): whatever folder
+  Locate… lands on, by Spotlight or by the panel, is refused when it is an
+  analysed project carrying a different study id (`LocateFlow.verdict`), with
+  its own message in all 21 locales. Before, picking another analysed study
+  relocated the row onto someone else's analysis.
 
 ## 14. Order
 

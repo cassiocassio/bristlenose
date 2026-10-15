@@ -180,6 +180,7 @@
       "title": "S'ha trobat una carpeta que podria ser “%@”."
     },
     "locateError": {
+      "differentStudy": "Aquesta carpeta cont\u00e9 un altre projecte. Tria la carpeta on s'ha mogut aquest, o afegeix aquella carpeta a la barra lateral com a projecte independent.",
       "message": "Aquesta carpeta no sembla un projecte analitzat. Tria la carpeta on es va executar l'anàlisi, o analitza una carpeta nova des de la pantalla de benvinguda.",
       "title": "No s'ha pogut obrir la carpeta"
     },

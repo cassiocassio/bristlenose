@@ -180,6 +180,7 @@
       "title": "Ein Ordner, der \u201e%@\u201c sein k\u00f6nnte, wurde gefunden."
     },
     "locateError": {
+      "differentStudy": "Dieser Ordner enth\u00e4lt ein anderes Projekt. W\u00e4hlen Sie den Ordner, in den dieses Projekt verschoben wurde, oder f\u00fcgen Sie den Ordner der Seitenleiste als eigenes Projekt hinzu.",
       "message": "Dieser Ordner sieht nicht wie ein analysiertes Projekt aus. W\u00e4hlen Sie den Ordner, in dem die Analyse ausgef\u00fchrt wurde, oder analysieren Sie einen neuen Ordner \u00fcber den Begr\u00fc\u00dfungsbildschirm.",
       "title": "Ordner konnte nicht ge\u00f6ffnet werden"
     },

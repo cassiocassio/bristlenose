@@ -184,6 +184,7 @@
       "title": "Znaleziono folder, który może być „%@”."
     },
     "locateError": {
+      "differentStudy": "Ten folder zawiera inny projekt. Wybierz folder, do kt\u00f3rego przeniesiono ten projekt, lub dodaj ten folder do paska bocznego jako osobny projekt.",
       "message": "Ten folder nie wygląda na przeanalizowany projekt. Wybierz folder, w którym uruchomiono analizę, lub przeanalizuj folder od nowa z ekranu powitalnego.",
       "title": "Nie udało się otworzyć tego folderu"
     },

@@ -156,6 +156,8 @@ struct LocateErrorState: Identifiable {
     let id = UUID()
     let project: Project
     let pickedURL: URL
+    /// The folder is analysed but holds another study, not this one.
+    var differentStudy = false
 }
 
 /// Two-column NavigationSplitView: project list sidebar + WKWebView detail.
@@ -1264,11 +1266,15 @@ struct ContentView: View {
             }
             .keyboardShortcut(.defaultAction)
             Button(i18n.t("common.buttons.cancel"), role: .cancel) {}
-        } message: { _ in
-            // One honest message — the prior split (noOutputFolder /
-            // wrongFolder) leaned on a heuristic that misclassified
-            // researchers who keep recordings in subdirs. William's pick.
-            Text(i18n.t("desktop.chrome.locateError.message"))
+        } message: { err in
+            // One honest message for a folder that is not an analysed project
+            // — the prior split (noOutputFolder / wrongFolder) leaned on a
+            // heuristic that misclassified researchers who keep recordings in
+            // subdirs. A second, exact one for an analysed folder whose study
+            // marker names another study: no heuristic, the ids disagree.
+            Text(i18n.t(err.differentStudy
+                ? "desktop.chrome.locateError.differentStudy"
+                : "desktop.chrome.locateError.message"))
         }
     }
 
@@ -1285,7 +1291,8 @@ struct ContentView: View {
         panel.begin { response in
             Task { @MainActor in
                 guard response == .OK, let url = panel.url else { return }
-                if LocateFlow.folderLooksAnalysed(url: url) {
+                let verdict = LocateFlow.verdict(url: url, expectedStudyID: project.studyID)
+                if verdict == .thisStudy {
                     projectIndex.relocateProject(id: project.id, newPath: url.path)
                     rescanAfterRelocate(project.id)
                     bridgeHandler.selectedProjectPath = url.path
@@ -1295,7 +1302,10 @@ struct ContentView: View {
                         serveFleet.manager(for: project.id).start(projectPath: url.path)
                     }
                 } else {
-                    locateError = LocateErrorState(project: project, pickedURL: url)
+                    locateError = LocateErrorState(
+                        project: project, pickedURL: url,
+                        differentStudy: verdict == .differentStudy
+                    )
                 }
             }
         }
@@ -1841,6 +1851,10 @@ struct ContentView: View {
                     }
                 case .invalidFolder(let pickedURL):
                     locateError = LocateErrorState(project: project, pickedURL: pickedURL)
+                case .differentStudy(let pickedURL):
+                    locateError = LocateErrorState(
+                        project: project, pickedURL: pickedURL, differentStudy: true
+                    )
                 case .cancelled:
                     break
                 }

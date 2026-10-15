@@ -1,19 +1,19 @@
 ---
-status: decided; phase 2 (Python) built
+status: decided; phases 2, 4 and 5 built; 3 obviated; 6 needs a decision
 last-trued: 2026-10-15
 trued-against: HEAD@main on 2026-10-15
 ---
 
 ## Changelog
 
-- _2026-10-15_ — phase 2 built (the Python half): the marker, one study per database with fork collapse, content fingerprints and registry version 3, transcription keyed by content, the Re-analyse carry. §11a records where the build departed from this note and why. Phases 3–6 (file-subset output folders, the Mac sidebar, agent access, Locate…) are not built.
+- _2026-10-15_ — phases 2, 4 and 5 built: the marker, one study per database with fork collapse, content fingerprints and registry version 3, transcription keyed by content, the Re-analyse carry (2); the sidebar reads the marker, follows a moved folder and re-mints a copy (4); agent access keyed by study (5). Phase 3 is obviated and phase 6 waits on a decision (§14). §11a records where the build departed from this note.
 
 - _2026-10-13_ — trued up: §2 carries the live S9 reproduction and the watcher route; §7 the Bin rule; §10 the WAL lag on the fork signal. Anchors: register rows 29, 35; `eb8509e1`.
 
 # Project identity without paths
 
-**Status: decided 13 Oct 2026, with the owner. Phase 2 (the Python half) built
-15 Oct 2026; phases 3–6 (the Mac side, agent access, Locate…) are not.** Rows 29, 30 and 31 of
+**Status: decided 13 Oct 2026, with the owner. Phases 2, 4 and 5 built 15 Oct 2026;
+phase 3 obviated; phase 6 waits on a decision (§14).** Rows 29, 30 and 31 of
 [design-lifecycle-failure-modes.md](design-lifecycle-failure-modes.md) are the
 failures this closes.
 
@@ -397,6 +397,26 @@ The Mac side (phase 4) pins re-drop by marker, re-mint of a copy, and the
 bookmark-then-marker order in `ProjectIndex` tests; the end-to-end driver
 (fake LLM provider, Python replay of the app's process order) runs
 add → analyse → move → reopen → copy → reopen before phase 2 lands.
+
+## 13a. Phases 3 and 6, as found on 15 Oct 2026
+
+- **Phase 3 is obviated.** No code creates a file-subset project any more:
+  dropping loose files asks for a folder through a save panel, copies the files
+  in, and makes a folder project (`ContentView.processDroppedURLs`). Subset
+  projects in an older `projects.json` stay in their "can't be analysed" state
+  (`UnsupportedSubsetView`), carry no output folder and so no marker, and the
+  sidebar treats them as having no study id. Whether to offer such a project a
+  one-click move into a folder is a product call, not identity work.
+- **Phase 6 needs a decision before it can be built.** The spike: Spotlight
+  found a `study.json` in a visible `bristlenose-output/` folder by name, did
+  not find the one in `bristlenose-output/.bristlenose/`, and found neither by
+  the id in its content (measured 15 Oct 2026, macOS 27). So Locate… can search
+  for a study only if the output folder carries a visible marker file. That
+  puts a new file in front of the researcher in Finder, which is theirs to
+  accept or not. If accepted: write the marker to `bristlenose-output/study.json`
+  (or mirror it there), search with `kMDItemFSName == "study.json"`, read each
+  hit, and match the id. Until then Locate… stays the name-based Spotlight
+  one-shot it is.
 
 ## 14. Order
 

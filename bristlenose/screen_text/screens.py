@@ -184,13 +184,23 @@ def match(spoken: str, lines: list[dict], rare: set[str],
     *tokens* maps ``id(line)`` to its folded words, so a caller matching many quotes against the
     same lines folds each line once."""
     s = fold(spoken).split()
+    sset = set(s)
     best: tuple[str, dict] | None = None
     best_rank = (0, 0.0)
     for ln in lines:
         t = tokens[id(ln)] if tokens is not None and id(ln) in tokens else fold(ln["text"]).split()
+        # A match needs a shared word (a run, or one rare word), so a line sharing none is skipped
+        # before the run search, and a run can only start on a word both share. Exact, not a
+        # heuristic: every pair skipped here would have found a run of length 0.
+        if sset.isdisjoint(t):
+            continue
         phrase = ""
         for i in range(len(s)):
+            if s[i] not in t:
+                continue
             for j in range(len(t)):
+                if t[j] != s[i]:
+                    continue
                 k = 0
                 while i + k < len(s) and j + k < len(t) and s[i + k] == t[j + k]:
                     k += 1

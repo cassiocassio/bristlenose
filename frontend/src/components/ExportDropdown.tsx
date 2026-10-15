@@ -258,7 +258,7 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
                   onKeyDown={suppressKeyScroll}
                 >
                   <span className="export-dropdown-check" aria-hidden="true">
-                    {burnSubtitles && <Icon name="check" size="menu" />}
+                    {burnSubtitles && <Icon name="check" size="menu" decorative />}
                   </span>
                   {t("export.clips.burnSubtitles")}
                 </li>

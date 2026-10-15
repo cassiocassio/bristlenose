@@ -1,6 +1,11 @@
-/* Atom: icon — the house glyphs drawn by `components/Icon.tsx`.
-   One em square by default, sitting on the text it accompanies. The stroke
-   weight is set on the SVG and does not scale, so only the box sizes here. */
+/* Atom: icon — Lucide glyphs drawn by `components/Icon.tsx`.
+   One em square by default, sitting on the text it accompanies.
+
+   Stroke is the stem of that text, never under a pixel: em resolves against the
+   text the icon sits in, so a 15 px label draws a heavier line than a 13 px one,
+   and a context in a heavier weight sets --bn-icon-stem (tokens-typography.css).
+   This beats Lucide's stroke-width="2" attribute; `nonScalingStroke` keeps the
+   width in screen pixels at any box size (docs/design-icon-system.md § Weight). */
 
 .bn-icon {
     display: inline-block;
@@ -8,14 +13,16 @@
     height: 1em;
     vertical-align: -0.125em;
     flex: none;
+    stroke-width: max(1px, calc(var(--bn-icon-stem) * 1em));
 }
 
 /* A menu's check gutter: the tick sized to the row's text, about 9 px of
    visible check at a 13 px label. Used by the person picker, the Export
    menu and the search token menu, so the web app has one tick (owner,
-   6 Oct 2026; design-people.md §J8.8). */
+   6 Oct 2026; design-people.md §J8.8). Lucide's check fills two thirds of
+   its box, so 1em keeps the ~9 px the improvised 0.9em tick drew. */
 .bn-icon--menu {
-    width: 0.9em;
-    height: 0.9em;
-    vertical-align: -0.1em;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
 }

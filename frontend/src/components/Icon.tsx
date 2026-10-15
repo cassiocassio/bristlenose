@@ -1,45 +1,70 @@
 /**
- * The house icons, in one place. Drawn the way NavBar and EyeToggle draw
- * theirs by hand: a 16-unit grid, a 1.4 stroke, round caps and joins, in
- * currentColor so a glyph follows the text it sits in. The stroke does not
- * scale with the box (`non-scaling-stroke`), so a glyph keeps the house weight
- * at a menu tick's size as at a toolbar's.
+ * The house icons, in one place: Lucide (lucide.dev, ISC), never drawn here.
+ * docs/design-icon-system.md is the plan; its concept map is this file's
+ * vocabulary, so components ask for a concept ("close"), not a glyph ("x"),
+ * and a concept changes glyph in one line below.
+ *
+ * Stroke is the stem of the text the icon sits in, never under 1 px:
+ * atoms/icon.css sets `stroke-width: max(1px, calc(var(--bn-icon-stem) * 1em))`,
+ * which beats the stroke-width attribute below, and `nonScalingStroke` keeps
+ * that width in screen pixels at any icon size. A context set in a heavier
+ * weight sets `--bn-icon-stem` beside its `font-weight`.
+ *
+ * The attribute is a fallback, not the design: serve and the HTML export use a
+ * project's baked copy of the theme CSS when it has one, and a project rendered
+ * before the stem rule existed would otherwise draw Lucide's default 2 px.
  *
  * The web can't use SF Symbols; the Mac app draws its own native controls with
  * them (PersonPickerPopover.swift draws the SF Symbol `checkmark`).
  *
- * Add a glyph here rather than inlining another <svg> in a component.
+ * Every icon is labelled or declared decorative — the props type will not
+ * compile otherwise, because Lucide hides an unlabelled icon from assistive
+ * technology without complaint.
+ *
+ * Add a concept here rather than inlining another <svg> in a component.
  */
+import { Check, X, type LucideIcon } from "lucide-react";
 
-const PATHS = {
-  /** A menu's current answer: short left leg, long right leg, as a Mac menu's. */
-  check: "M2 8.5 6 12.5 14 3.5",
-  /** "Not this person": clears a speaker back to unknown (the person picker). */
-  x: "M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5",
-} as const;
+const ICONS = {
+  /** A menu's current answer; accept. */
+  check: Check,
+  /** Close, dismiss, delete a chip; "not this person" in the person picker. */
+  close: X,
+} satisfies Record<string, LucideIcon>;
 
-export type IconName = keyof typeof PATHS;
+export type IconName = keyof typeof ICONS;
 
-interface IconProps {
+type IconA11y =
+  /** The icon carries meaning nothing else states: it becomes the accessible name. */
+  | { label: string; decorative?: never }
+  /** The control around it is already named (aria-label, visible text). */
+  | { decorative: true; label?: never };
+
+export type IconProps = IconA11y & {
   name: IconName;
   /** `menu` sizes the glyph for a menu's check gutter (atoms/icon.css). */
   size?: "menu";
-}
+  className?: string;
+};
 
-export function Icon({ name, size }: IconProps) {
+/** Roughly the stem of 13 px normal text; only seen where the CSS is stale. */
+const FALLBACK_STROKE = 1.25;
+
+export function Icon({ name, size, className, label, decorative }: IconProps) {
+  const Glyph = ICONS[name];
+  if (import.meta.env.DEV && !decorative && !label?.trim()) {
+    console.error(`Icon "${name}": an empty label names nothing — pass a label or \`decorative\``);
+  }
+  const classes = ["bn-icon", `bn-icon-${name}`, size && `bn-icon--${size}`, className]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <svg
-      className={`bn-icon bn-icon-${name}${size ? ` bn-icon--${size}` : ""}`}
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
+    <Glyph
+      className={classes}
+      nonScalingStroke
+      strokeWidth={FALLBACK_STROKE}
       focusable="false"
-    >
-      <path d={PATHS[name]} vectorEffect="non-scaling-stroke" />
-    </svg>
+      {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": label })}
+    />
   );
 }

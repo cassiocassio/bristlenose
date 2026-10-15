@@ -35,6 +35,17 @@
     --bn-weight-semibold: 600;   /* a chosen word in a text-only switch (picker scope) */
     --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
 
+    /* Icon stroke = the stem of the text beside it, as a fraction of the font size
+       (docs/design-icon-system.md § Weight; measured on Inter and SF Pro, which agree
+       to 2%). A context set in a heavier weight sets --bn-icon-stem beside its
+       font-weight. No light value: the SPA's Inter is served 400..700, so 370 renders 400. */
+    --bn-icon-stem-normal: 0.092;
+    --bn-icon-stem-emphasis: 0.106;
+    --bn-icon-stem-starred: 0.111;
+    --bn-icon-stem-semibold: 0.127;
+    --bn-icon-stem-strong: 0.146;
+    --bn-icon-stem: var(--bn-icon-stem-normal);
+
     /* Monospace weights — three values, chosen against measured rendering on every face the
        stack reaches (docs/design-monospace-roles.md §6). 400–490 is Regular in Menlo, Consolas
        and Cascadia Mono and varies only in SF Mono; Windows matches the nearest weight, so

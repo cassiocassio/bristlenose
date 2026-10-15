@@ -521,7 +521,7 @@ export function SearchBox({
                           }}
                         >
                           <span className="menu-icon" aria-hidden="true">
-                            {m.id === wire.mode && <Icon name="check" size="menu" />}
+                            {m.id === wire.mode && <Icon name="check" size="menu" decorative />}
                           </span>
                           {m.label}
                         </li>

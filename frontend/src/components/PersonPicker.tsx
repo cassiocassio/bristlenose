@@ -244,7 +244,7 @@ function ParagraphPicker({ slot, labels, onClose, scope }: PersonPickerProps & {
             tabIndex={-1}
             onClick={() => finish(row.slot)}
           >
-            <span className="export-dropdown-check" aria-hidden="true">{isAnswer && <Icon name="check" size="menu" />}</span>
+            <span className="export-dropdown-check" aria-hidden="true">{isAnswer && <Icon name="check" size="menu" decorative />}</span>
             <PersonBadge code={row.code} role={row.role} name={row.name} />
           </li>
         );
@@ -506,7 +506,7 @@ function SessionPicker({ slot, known, knownByRole, labels, onChoose, onClose, sw
             tabIndex={-1}
             onClick={() => choose(key)}
           >
-            <span className="export-dropdown-check" aria-hidden="true">{isAnswer && <Icon name="check" size="menu" />}</span>
+            <span className="export-dropdown-check" aria-hidden="true">{isAnswer && <Icon name="check" size="menu" decorative />}</span>
             {isAnswer && renaming ? (
               <span className="bn-person-badge">
                 <span className="bn-speaker-badge--split">
@@ -551,7 +551,7 @@ function SessionPicker({ slot, known, knownByRole, labels, onChoose, onClose, sw
                 title={withName(labels.notThisPerson, row.name)}
                 onClick={(e) => { e.stopPropagation(); finish({ kind: "clear" }); }}
               >
-                <Icon name="x" size="menu" />
+                <Icon name="close" size="menu" decorative />
               </button>
             )}
           </li>

@@ -106,6 +106,12 @@ enum StudyDropMatch: Equatable {
     /// The project carrying this study is live where it was: this is a copy.
     /// It gets its own id, then its own row (§9, decided 13 Oct 2026).
     case copy(of: UUID)
+    /// The project carrying this study is on a disk that is not mounted, so
+    /// this may be its folder moved, or a backup of it. Neither is guessed:
+    /// the folder gets its own row with the id it carries, and when the disk
+    /// returns the row that joined later is re-minted (`captureStudyID`)
+    /// (Fable review, 15 Oct 2026).
+    case unsure
 
     struct Candidate: Equatable {
         let id: UUID
@@ -124,6 +130,17 @@ enum StudyDropMatch: Equatable {
         if let live = holders.first(where: { folderExists($0.path) }) {
             return .copy(of: live.id)
         }
-        return .moved(holders[0].id)
+        if let gone = holders.first(where: { volumeIsMounted($0.path, folderExists: folderExists) }) {
+            return .moved(gone.id)
+        }
+        return .unsure
+    }
+
+    /// Whether the disk a path names is mounted: a missing folder on a mounted
+    /// disk has moved; on an ejected one it may simply be out of reach.
+    static func volumeIsMounted(_ path: String, folderExists: (String) -> Bool) -> Bool {
+        let parts = path.split(separator: "/", omittingEmptySubsequences: true)
+        guard parts.count >= 2, parts[0] == "Volumes" else { return true }
+        return folderExists("/Volumes/\(parts[1])")
     }
 }

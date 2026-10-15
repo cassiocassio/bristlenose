@@ -309,11 +309,13 @@ class SessionRegistry:
         fps = [_fingerprint(f) for f in primaries]
         places = [_place(f, input_dir) for f in primaries]
         # Two copies of one recording in a study are kept as two sessions, as
-        # ingest finds them; only the first is keyed by content.
+        # ingest finds them; only one is keyed by content. Chosen by name, not
+        # ingest order: ingest orders by date, which cloud sync rewrites, and a
+        # flip would hand the content key to the other copy (Fable review).
         first_with_fp: dict[str, int] = {}
-        for i, fp in enumerate(fps):
-            if fp is not None:
-                first_with_fp.setdefault(fp, i)
+        for i in sorted(range(len(fps)), key=lambda j: named[j]):
+            if fps[i] is not None:
+                first_with_fp.setdefault(fps[i], i)
 
         claimed: set[str] = set()
         resolved: list[str | None] = [None] * len(sessions)
@@ -335,6 +337,29 @@ class SessionRegistry:
                 if hinted is not None:
                     claim(i, self.sessions.get(hinted))
         content_owned = {sid for k, sid in self.sessions.items() if k.startswith(FP_PREFIX)}
+        # A known recording is missing and a placeholder nobody has seen has
+        # appeared: most likely the same recording, renamed while evicted to
+        # the cloud. It would be a new session, and a new session is
+        # downloaded to be transcribed in this run anyway, so download it now
+        # and let its bytes decide, before anything is paid for twice (Fable
+        # review, 15 Oct 2026). Only then: a first analysis downloads at
+        # transcription, as before.
+        missing = content_owned - claimed
+        for i in range(len(sessions)):
+            if not missing:
+                break
+            if (resolved[i] is not None or fps[i] is not None
+                    or named[i] in self.sessions or not _is_media(primaries[i])
+                    or not _is_dataless(primaries[i])):
+                continue
+            fp = _fingerprint_after_download(primaries[i])
+            if fp is None or fp in first_with_fp:
+                continue
+            fps[i] = fp
+            first_with_fp[fp] = i
+            sid = self.sessions.get(FP_PREFIX + fp)
+            if sid in missing and claim(i, sid):
+                missing.discard(sid)
         for i in range(len(sessions)):
             if resolved[i] is None:
                 sid = self.sessions.get(named[i])
@@ -641,6 +666,27 @@ def _fingerprint(path: Path | None) -> str | None:
     from bristlenose.utils.fingerprint import content_fingerprint
 
     return content_fingerprint(path)
+
+
+def _is_dataless(path: Path | None) -> bool:
+    from bristlenose.utils.fs import is_dataless
+
+    return path is not None and is_dataless(path)
+
+
+def _fingerprint_after_download(path: Path | None) -> str | None:
+    """Fault a cloud placeholder in and fingerprint it; ``None`` if the bytes
+    do not arrive. Never raises: identity can wait for the next run."""
+    if path is None:
+        return None
+    from bristlenose.utils.fs import ensure_materialised
+
+    try:
+        ensure_materialised(path)
+    except Exception as exc:  # a timeout, or the provider refusing
+        logger.info("could not fetch %s to identify it: %s", path.name, exc)
+        return None
+    return _fingerprint(path)
 
 
 def _place(path: Path | None, input_dir: Path | None) -> str | None:

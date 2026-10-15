@@ -302,6 +302,37 @@ def test_a_mid_run_import_never_deletes_a_fork(tmp_path: Path) -> None:
     engine.dispose()
 
 
+def test_a_copy_first_touched_mid_run_still_gets_its_own_id(tmp_path: Path) -> None:
+    """The first import of a CLI copy may be a run's progressive one, which
+    heals the row's stored paths. The re-mint must happen there too, or the
+    only evidence of the copy is gone before the whole import looks (Fable
+    review, 15 Oct 2026)."""
+    from bristlenose.server.importer import import_readable_sessions
+
+    proj = _project(tmp_path / "a")
+    engine, factory = _own_db(proj)
+    db = factory()
+    import_project(db, proj)
+    db.commit()
+    db.close()
+    engine.dispose()
+    original = study_marker.read(proj / "bristlenose-output")
+
+    copy = tmp_path / "b" / proj.name
+    shutil.copytree(proj, copy)
+    engine, factory = _own_db(copy)
+    db = factory()
+    import_readable_sessions(db, copy, {"s1"})
+    db.commit()
+    import_project(db, copy)
+    db.commit()
+    db.close()
+    engine.dispose()
+    reminted = study_marker.read(copy / "bristlenose-output")
+    assert reminted is not None and reminted != original, "the copy kept the original's id"
+    assert study_marker.read(proj / "bristlenose-output") == original
+
+
 def test_a_copy_opened_from_the_cli_gets_its_own_id(tmp_path: Path) -> None:
     """With no app to re-mint it, the serve does (design §9): the database's
     row still names the original's folder, which is still there carrying the

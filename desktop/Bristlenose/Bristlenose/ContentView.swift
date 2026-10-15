@@ -2087,7 +2087,7 @@ struct ContentView: View {
                     if let droppedStudy {
                         _ = try? StudyMarker.remint(folder: folder, copiedFrom: droppedStudy)
                     }
-                case .none:
+                case .none, .unsure:
                     break
                 }
                 // fall through to createProjectFromURLs

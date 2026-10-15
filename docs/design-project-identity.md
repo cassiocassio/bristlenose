@@ -369,10 +369,14 @@ not the folder, and are unchanged.
 - **A place remembers only its latest recording**, so a deleted recording's
   place reused by another cannot hand the newcomer the old session when it is
   evicted.
-- **Locate checks the marker only where it may read it.** A Spotlight hit has
-  no sandbox grant, so a marker it cannot read sends the researcher to the
-  panel at that folder, which grants; a dropped folder held under another
-  spelling is matched by its file-system identity, links resolved.
+- **Every Spotlight hit goes through the panel.** A hit carries no sandbox
+  grant, and no bookmark can be made from it, so "Use This Folder" opens the
+  panel at that folder, which grants, and the verdict is taken there. (Until
+  the whole-body review it did so only when a marker existed; a study not
+  yet served since the marker was introduced was relocated without a grant
+  and then failed every read.) A dropped folder held under another spelling
+  is matched by its file-system identity, links resolved, except on a network
+  share, where a drop never reads another row's metadata.
 - **Starts stay keyed by sid inside the registry** (§6 said by fingerprint).
   Within a study the sid is stable now; across a Re-analyse the starts cross
   as a separate hand-over keyed by content (`carried-starts.json`, §8), which
@@ -384,8 +388,20 @@ not the folder, and are unchanged.
   with the recording's current place; the importer heals the source-file row
   whose file moved instead of adding one beside it. A heal from ingest facts
   was built, survived its mutant, and was removed.
-- **Fork collapse runs at every import** (§10 said once). It is cheap, and a
-  database copied in from an older release gets it whenever it arrives.
+- **Fork collapse runs at every whole import** (§10 said once), never at a
+  run's progressive imports. It is cheap, and a database copied in from an
+  older release gets it whenever it arrives.
+- **Whole-body review, 15 Oct 2026.** A CLI copy is re-minted at its first
+  import of any kind, before the path heal erases the evidence. Of two
+  identical recordings, the one named first owns the content key, not the
+  one ingest (date order) saw first. When a known recording is missing and an
+  unseen cloud placeholder appears, the placeholder is fetched at ingest and
+  identified by its bytes, so a rename while evicted is not paid for twice; a
+  first analysis still fetches at transcription. A dropped study whose known
+  folder sits on an ejected disk is neither a move nor a copy: it gets its
+  own row with the id it carries, and the shared-id rule settles it when the
+  disk returns (`StudyDropMatch.unsure`). Two spellings of one folder are not
+  a copy of each other. `MCPTokenStore.revoke` is gone.
 
 ## 12. What this does not do
 
@@ -452,7 +468,8 @@ add → analyse → move → reopen → copy → reopen before phase 2 lands.
   not yet given its own id): the one whose database or manifest was written
   strictly last is offered, since that is the one in use. A backup clone keeps
   its original's times, so a fresh backup ties, and a tie or an unreadable
-  time gives way to the name search and the panel rather than a guess. The
+  time opens the panel without a name search, which could resolve the tie to
+  whichever copy sits under the home folder. The
   confirm sheet shows the path either way (`SpotlightOneShot.newestStudy`).
   Offering every hit in the sheet is the next step if ties bite. A Re-analyse carries
   `copied_from` with the id (`cli.py`), and the committed smoke fixture

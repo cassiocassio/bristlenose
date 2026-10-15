@@ -424,7 +424,10 @@ def _find_or_create_project(
 
         study_id = study_marker.read_or_mint(output_dir, minted_by="serve")
         project = _the_study_row(db, study_id, collapse=whole_import)
-        if whole_import and project is not None and study_id is not None:
+        # Before the heal below rewrites the row's stored folder, which is the
+        # only evidence this folder is a copy: so on every import, including a
+        # run's progressive ones (Fable review, 15 Oct 2026).
+        if project is not None and study_id is not None:
             study_id = _remint_if_a_copy(project, study_id, output_dir) or study_id
         if project is not None and study_id is not None:
             project.study_id = study_id

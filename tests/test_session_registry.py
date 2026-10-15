@@ -462,6 +462,89 @@ class TestRolePins:
 class TestContentKeys:
     """Registry version 3: a session is its recording's bytes first."""
 
+    def test_a_recording_renamed_while_in_the_cloud_keeps_its_session(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Renamed in Finder while evicted: no bytes, no hint at the new place,
+        no name. It is fetched and identified by its bytes rather than given a
+        new session and transcribed again (Fable review, 15 Oct 2026)."""
+        import bristlenose.utils.fingerprint as fingerprint_mod
+        import bristlenose.utils.fs as fs_mod
+
+        out = tmp_path / "out"
+        a, b = _file(tmp_path, "rec-1433.wav", 0), _file(tmp_path, "b.wav", 1)
+        reg = SessionRegistry.load(out)
+        first = {s.files[0].path.name: s.session_id for s in reg.apply(_ingest([a, b]), tmp_path)}
+        reg.save()
+
+        renamed = tmp_path / "p1 sarah.wav"
+        a.path.rename(renamed)
+        evicted = {renamed}
+        fetched: list[Path] = []
+
+        def dataless(path: Path) -> bool:
+            return path in evicted
+
+        def fetch(path: Path, *args: object, **kwargs: object) -> bool:
+            fetched.append(path)
+            evicted.discard(path)
+            return True
+
+        monkeypatch.setattr(fingerprint_mod, "is_dataless", dataless)
+        monkeypatch.setattr(fs_mod, "is_dataless", dataless)
+        monkeypatch.setattr(fs_mod, "ensure_materialised", fetch)
+        a2 = InputFile(path=renamed, file_type=FileType.AUDIO, created_at=a.created_at,
+                       size_bytes=a.size_bytes)
+        again = {s.files[0].path.name: s.session_id
+                 for s in SessionRegistry.load(out).apply(_ingest([a2, b]), tmp_path)}
+        assert again == {"p1 sarah.wav": first["rec-1433.wav"], "b.wav": first["b.wav"]}
+        assert fetched == [renamed]
+
+    def test_a_first_analysis_does_not_fetch_placeholders_early(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Nothing known is missing, so nothing is fetched at ingest: a fully
+        evicted new study downloads at transcription, as before."""
+        import bristlenose.utils.fingerprint as fingerprint_mod
+        import bristlenose.utils.fs as fs_mod
+
+        a, b = _file(tmp_path, "a.wav", 0), _file(tmp_path, "b.wav", 1)
+        fetched: list[Path] = []
+        monkeypatch.setattr(fingerprint_mod, "is_dataless", lambda p: True)
+        monkeypatch.setattr(fs_mod, "is_dataless", lambda p: True)
+        monkeypatch.setattr(fs_mod, "ensure_materialised",
+                            lambda p, *a, **k: fetched.append(p) or True)
+        SessionRegistry.load(tmp_path / "out").apply(_ingest([a, b]), tmp_path)
+        assert fetched == []
+
+    def test_two_copies_of_one_recording_keep_their_sessions_when_dates_flip(
+        self, tmp_path: Path,
+    ) -> None:
+        """Ingest orders by date, and cloud sync rewrites dates. Which copy owns
+        the content key must not follow that order, or each flip mints a new
+        session and pays to transcribe it (Fable review, 15 Oct 2026)."""
+        out = tmp_path / "out"
+
+        def copies(day_a: int, day_b: int) -> list[InputFile]:
+            files = []
+            for name, day in (("a.wav", day_a), ("b.wav", day_b)):
+                path = tmp_path / name
+                path.write_bytes(b"one recording")
+                files.append(InputFile(path=path, file_type=FileType.AUDIO,
+                                       created_at=_T0 + timedelta(days=day), size_bytes=13))
+            return files
+
+        def sids(files: list[InputFile]) -> dict[str, str]:
+            reg = SessionRegistry.load(out)
+            sessions = reg.apply(_ingest(files), tmp_path)
+            reg.save()
+            return {s.files[0].path.name: s.session_id for s in sessions}
+
+        first = sids(copies(0, 1))
+        assert sids(copies(1, 0)) == first
+        assert sids(copies(0, 1)) == first
+
+
     def test_a_renamed_recording_keeps_its_session(self, tmp_path: Path) -> None:
         out = tmp_path / "out"
         a, b = _file(tmp_path, "rec-1433.wav", 0), _file(tmp_path, "b.wav", 1)

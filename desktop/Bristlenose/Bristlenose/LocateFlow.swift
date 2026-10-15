@@ -113,18 +113,26 @@ final class LocateFlow {
             // (found wherever the folder went and whatever it is now called),
             // else by name. Either way the hit is verified against the hidden
             // marker once the panel grants the folder.
+            // An ambiguous id search (a study and a backup of it, written at
+            // the same moment) skips the name search, which could resolve the
+            // tie to whichever copy happens to sit under the home folder.
             var candidate: URL?
+            var ambiguous = false
             if let studyID = project.studyID {
-                candidate = await spotlight.findUniqueStudy(id: studyID)
+                switch await spotlight.findStudy(id: studyID) {
+                case .found(let url): candidate = url
+                case .ambiguous: ambiguous = true
+                case .none: break
+                }
             }
-            if candidate == nil {
+            if candidate == nil, !ambiguous {
                 candidate = await spotlight.findUniqueMatch(for: project.name)
             }
             if let candidate {
                 let choice = await confirm(candidate)
                 switch choice {
                 case .useThisFolder:
-                    completion(self.validate(url: candidate, granted: false))
+                    completion(Self.afterSpotlightConfirm(candidate))
                     return
                 case .chooseDifferent:
                     break  // fall through to NSOpenPanel
@@ -155,10 +163,18 @@ final class LocateFlow {
         }
     }
 
+    /// A Spotlight hit carries no sandbox grant, so it can never be located
+    /// directly: no bookmark can be made from it, and the row would then fail
+    /// every read as "Can't be read". The panel, opened at the hit, is the
+    /// grant, and the verdict is taken there (Fable review, 15 Oct 2026).
+    nonisolated static func afterSpotlightConfirm(_ candidate: URL) -> Result {
+        .needsGrant(picked: candidate)
+    }
+
     /// Inspect the picked directory for the `bristlenose-output/` marker plus
     /// at least one canonical artefact. One honest message either way.
     private func validate(url: URL, granted: Bool) -> Result {
-        // A Spotlight hit carries no grant; a panel pick does.
+        // A panel pick carries the grant.
         switch Self.verdict(url: url, expectedStudyID: project.studyID, granted: granted) {
         case .thisStudy: return .located(url)
         case .notAnalysed: return .invalidFolder(picked: url)
@@ -206,15 +222,23 @@ final class SpotlightOneShot {
 
     func findUniqueMatch(for projectName: String) async -> URL? {
         guard !projectName.isEmpty else { return nil }
-        return await gather(
+        let hits = await gather(
             predicate: NSPredicate(
                 format: "kMDItemDisplayName ==[c] %@ AND kMDItemContentType == %@",
                 projectName, "public.folder"
             ),
             scopes: [NSMetadataQueryUserHomeScope],
-            folder: { $0 },
-            choose: { $0.count == 1 ? $0.first : nil }
+            folder: { $0 }
         )
+        return hits.count == 1 ? hits.first : nil
+    }
+
+    /// What a search by study id found.
+    enum StudySearch: Equatable {
+        case found(URL)
+        /// Several analysed hits and no way to tell which is in use.
+        case ambiguous
+        case none
     }
 
     /// The folder whose search beacon carries this study id
@@ -223,15 +247,21 @@ final class SpotlightOneShot {
     /// to another disk. More than one hit is a study plus a backup or a copy
     /// not yet given its own id: the one written to last is the one in use,
     /// and a tie is no answer, so the caller falls back to the name.
-    func findUniqueStudy(id: String) async -> URL? {
+    func findStudy(id: String) async -> StudySearch {
         guard let query = Self.studyQuery(id: id),
-              let predicate = NSPredicate(fromMetadataQueryString: query) else { return nil }
-        return await gather(
+              let predicate = NSPredicate(fromMetadataQueryString: query) else { return .none }
+        let hits = await gather(
             predicate: predicate,
             scopes: [NSMetadataQueryLocalComputerScope],
-            folder: Self.studyFolder(forBeacon:),
-            choose: { hits in Self.newestStudy(hits.map { ($0, Self.lastWritten($0)) }) }
+            folder: Self.studyFolder(forBeacon:)
         )
+        return Self.studySearch(hits.map { ($0, Self.lastWritten($0)) })
+    }
+
+    /// No hits is no answer; otherwise the newest, or ambiguous on a tie.
+    nonisolated static func studySearch(_ hits: [(folder: URL, written: Date?)]) -> StudySearch {
+        if hits.isEmpty { return .none }
+        return newestStudy(hits).map(StudySearch.found) ?? .ambiguous
     }
 
     /// One hit is the answer; among several, the one whose study state was
@@ -278,12 +308,12 @@ final class SpotlightOneShot {
         return output.deletingLastPathComponent()
     }
 
+    /// The analysed folders a query names; empty on a timeout.
     private func gather(
         predicate: NSPredicate,
         scopes: [Any],
-        folder: @escaping (URL) -> URL?,
-        choose: @escaping ([URL]) -> URL?
-    ) async -> URL? {
+        folder: @escaping (URL) -> URL?
+    ) async -> [URL] {
         // Re-entrance guard — previous call's observer (if any) is removed
         // before adding the new one. Not hit today (one SpotlightOneShot per
         // LocateFlow) but cheap defence against future callers that reuse
@@ -294,7 +324,7 @@ final class SpotlightOneShot {
         }
         query?.stop()
 
-        return await withCheckedContinuation { (cont: CheckedContinuation<URL?, Never>) in
+        return await withCheckedContinuation { (cont: CheckedContinuation<[URL], Never>) in
             let q = NSMetadataQuery()
             self.query = q
             q.searchScopes = scopes
@@ -309,7 +339,7 @@ final class SpotlightOneShot {
                 object: q, queue: .main
             ) { [weak self] _ in
                 guard let self else { return }
-                let result = choose(self.analysedHits(from: q, folder: folder))
+                let result = self.analysedHits(from: q, folder: folder)
                 q.stop()
                 if let obs = self.observation {
                     NotificationCenter.default.removeObserver(obs)
@@ -331,7 +361,7 @@ final class SpotlightOneShot {
                         NotificationCenter.default.removeObserver(obs)
                         self.observation = nil
                     }
-                    cont.resume(returning: nil)
+                    cont.resume(returning: [])
                 }
             }
         }

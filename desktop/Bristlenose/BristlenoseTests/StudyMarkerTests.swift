@@ -296,6 +296,64 @@ struct StudyMarkerTests {
         #expect(index.projects.first(where: { $0.id == a.id })?.copiedFrom == nil)
     }
 
+    /// Two rows on one folder (a legacy pair, or a link and its target) are
+    /// not a copy of each other: the folder must not be re-minted as one.
+    @Test func twoSpellingsOfOneFolderAreNotACopy() throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let study = root.appendingPathComponent("Talismanic")
+        try FileManager.default.createDirectory(at: study, withIntermediateDirectories: true)
+        let link = root.appendingPathComponent("Talismanic link")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: study)
+        let id = UUID().uuidString.lowercased()
+        try writePythonMarker(study, id: id)
+
+        let index = ProjectIndex(fileURL: root.appendingPathComponent("projects.json"))
+        let a = index.addProject(name: "Talismanic", path: study.path)
+        let b = index.addProject(name: "Talismanic", path: link.path)
+        #expect(index.captureStudyID(id: a.id, folder: study) == id)
+        #expect(index.captureStudyID(id: b.id, folder: link) == id, "one folder was re-minted as a copy of itself")
+        #expect(StudyMarker.read(folder: study) == id)
+    }
+
+    // ── The drop decision when a disk is ejected ────────────────────────────
+
+    @Test func aHolderOnAnEjectedDiskIsUnsure() {
+        let row = StudyDropMatch.Candidate(id: UUID(), studyID: study, path: "/Volumes/Work/Talismanic")
+        #expect(StudyDropMatch.resolve(droppedStudyID: study, candidates: [row],
+                                       folderExists: { _ in false }) == .unsure)
+    }
+
+    @Test func aHolderMissingFromAMountedDiskMoved() {
+        let id = UUID()
+        let row = StudyDropMatch.Candidate(id: id, studyID: study, path: "/Volumes/Work/Talismanic")
+        #expect(StudyDropMatch.resolve(droppedStudyID: study, candidates: [row],
+                                       folderExists: { $0 == "/Volumes/Work" }) == .moved(id))
+    }
+
+    @Test func theBootDiskIsAlwaysMounted() {
+        #expect(StudyDropMatch.volumeIsMounted("/Users/r/Studies/Talismanic", folderExists: { _ in false }))
+        #expect(!StudyDropMatch.volumeIsMounted("/Volumes/Work/T", folderExists: { _ in false }))
+    }
+
+    // ── Locate never relocates onto an ungranted Spotlight hit ──────────────
+
+    @Test func aSpotlightHitAlwaysGoesThroughThePanel() {
+        let hit = URL(fileURLWithPath: "/Volumes/Work/Talismanic")
+        guard case .needsGrant(let picked) = LocateFlow.afterSpotlightConfirm(hit) else {
+            Issue.record("a Spotlight hit was located without a grant"); return
+        }
+        #expect(picked == hit)
+    }
+
+    @Test func anAmbiguousIdSearchSaysSo() {
+        let same = Date(timeIntervalSince1970: 1_000)
+        let a = URL(fileURLWithPath: "/Volumes/Work/T"), b = URL(fileURLWithPath: "/Users/r/Backups/T")
+        #expect(SpotlightOneShot.studySearch([]) == .none)
+        #expect(SpotlightOneShot.studySearch([(a, same)]) == .found(a))
+        #expect(SpotlightOneShot.studySearch([(a, same), (b, same)]) == .ambiguous)
+    }
+
     @Test func anAvailabilityRefreshLearnsTheStudyID() throws {
         let root = try folder()
         defer { try? FileManager.default.removeItem(at: root) }

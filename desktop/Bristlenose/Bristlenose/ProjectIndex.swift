@@ -742,7 +742,11 @@ final class ProjectIndex: ObservableObject {
     func findSameFolder(_ folder: URL) -> Project? {
         guard let mine = Self.fileIdentity(folder) else { return nil }
         return projects.first { project in
-            Self.fileIdentity(URL(fileURLWithPath: project.path))?.isEqual(mine) == true
+            // This runs on the main actor for every drop, and a metadata read
+            // on a sleeping network share blocks until it wakes. Such a row is
+            // only ever matched by its path string (Fable review, 15 Oct 2026).
+            guard project.location?.type != .network else { return false }
+            return Self.fileIdentity(URL(fileURLWithPath: project.path))?.isEqual(mine) == true
         }
     }
 
@@ -753,6 +757,15 @@ final class ProjectIndex: ObservableObject {
     private static func fileIdentity(_ url: URL) -> NSObject? {
         (try? url.resolvingSymlinksInPath().resourceValues(forKeys: [.fileResourceIdentifierKey]))?
             .fileResourceIdentifier as? NSObject
+    }
+
+    /// One folder, however spelled: a path, or a symlink to it, or another
+    /// mount point's spelling (Fable review, 15 Oct 2026). Two rows on one
+    /// folder are not a copy of each other.
+    private static func isSameFolder(_ a: URL, _ b: URL) -> Bool {
+        if a.standardizedFileURL.path == b.standardizedFileURL.path { return true }
+        guard let ia = fileIdentity(a), let ib = fileIdentity(b) else { return false }
+        return ia.isEqual(ib)
     }
 
     /// Every project as the drop decision sees it (`StudyDropMatch`).
@@ -776,8 +789,9 @@ final class ProjectIndex: ObservableObject {
         guard let index = projects.firstIndex(where: { $0.id == id }),
               var studyID = StudyMarker.read(folder: folder) else { return nil }
         if let other = projects.firstIndex(where: {
-            $0.id != id && $0.studyID == studyID && $0.path != folder.path
+            $0.id != id && $0.studyID == studyID
                 && FileManager.default.fileExists(atPath: $0.path)
+                && !Self.isSameFolder(URL(fileURLWithPath: $0.path), folder)
         }) {
             // Ties (projects.json keeps whole seconds) break on id, so the
             // choice is the same whichever row is touched first.

@@ -670,9 +670,10 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   Corrected 22 Sep 2026; `.claude/agents/i18n-review.md` §6c has the record.
 - **Known gaps, deliberate:** the handshake follows the *fronted* serve
   only (a parked warm sidecar's live `/mcp` is not advertised — v1 scope);
-  `MCPTokenStore.revoke()` unwired (Turn Off Agent Access deletes the
-  handshake, which is the operative revocation; the Keychain token's
-  deletion is a later affordance). _(The third entry here — "no
+  there is no token revocation in the app (Turn Off Agent Access deletes the
+  handshake, which is the operative revocation; `MCPTokenStore.revoke()`
+  was never wired and was removed 15 Oct 2026, once tokens were keyed by
+  study and it would have deleted the wrong account). _(The third entry here — "no
   consent-version bump yet for the agent recipient class" — was stale and
   is removed: it shipped 1 Aug 2026, `09b348b1` + `6df94d4f`, and
   `AIConsentView.currentVersion` is 2.)_

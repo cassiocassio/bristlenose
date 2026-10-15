@@ -103,22 +103,11 @@ enum MCPTokenStore {
     /// credential that opens `/mcp` and nothing else (design §3.1).
     static func mintEphemeral() -> String { mint() }
 
-    /// Discard this project's token. The next serve start mints a fresh one,
-    /// which is exactly what "Revoke" means to the researcher: previously
-    /// pasted agent configs stop working.
-    static func revoke(forProjectPath path: String) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: accountKey(for: path),
-            kSecUseDataProtectionKeychain as String: true,
-            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
-        ]
-        let status = SecItemDelete(query as CFDictionary)
-        if status != errSecSuccess && status != errSecItemNotFound {
-            log.error("MCP token delete failed: \(status, privacy: .public)")
-        }
-    }
+    // `revoke(forProjectPath:)` was removed 15 Oct 2026 (Fable review): no
+    // caller ever reached it, it deleted a Keychain item (this project never
+    // scripts Keychain deletion), and since tokens are keyed by study it would
+    // have deleted the path account while `resolve` went on serving the study
+    // one. Turn Off Agent Access deleting the handshake is the revocation.
 
     // MARK: - Internals
 

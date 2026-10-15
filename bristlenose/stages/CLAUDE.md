@@ -223,7 +223,7 @@ Collapsible section at the end of the research report showing what proportion of
 
 ## Progress bar gotchas
 
-Don't try to re-enable mlx-whisper or HF Hub progress bars — they don't overwrite inside Rich `console.status()` and will scroll line-by-line. Rule: suppress all tqdm/HF bars entirely, let the Rich spinner handle progress indication. See `docs/design-pipeline-resilience.md` ("Progress Bar Dead Ends") for the full list of dead ends (mlx-whisper `verbose` parameter, env var import timing, tqdm+Rich conflict).
+Don't try to re-enable mlx-whisper or HF Hub progress bars — they don't overwrite inside Rich `console.status()` and will scroll line-by-line. Rule: suppress all tqdm/HF bars entirely, let the Rich spinner handle progress indication. **One exception, and it is not inside a spinner:** the first-run Whisper download, on a terminal, where `preflight_whisper` stops the spinner first and `_native_download_progress` (`bristlenose/preflight/whisper.py`) turns HF's bars on for that one fetch and off again, closing them before the spinner restarts (14 Oct 2026). See `docs/design-pipeline-resilience.md` ("Progress Bar Dead Ends") for the full list of dead ends (mlx-whisper `verbose` parameter, env var import timing, tqdm+Rich conflict).
 
 ## Speaker code gotchas
 

@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 #   but the env var catches the "left as default" cases.
 #
 # Setting these in `bristlenose/pipeline.py` was too late: the doctor
-# preflight (`bristlenose.doctor._check_whisper_model`) imports
+# preflight (`bristlenose.doctor.check_whisper_model`) imports
 # `huggingface_hub` before pipeline.py loads, freezing
 # HF_HUB_DISABLE_PROGRESS_BARS as None. That allowed `Fetching N files:` and
 # `Download complete: : 0.00B` from `snapshot_download` to leak past

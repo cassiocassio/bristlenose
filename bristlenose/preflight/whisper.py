@@ -426,7 +426,7 @@ def preflight_whisper(
     from bristlenose.utils.package_install import ensure_hf_model
 
     # Defence-in-depth against the env-var suppression in
-    # `bristlenose/__init__.py`: when `bristlenose.doctor._check_whisper_model`
+    # `bristlenose/__init__.py`: when `bristlenose.doctor.check_whisper_model`
     # imports `huggingface_hub` (which it does during the doctor preflight),
     # `HF_HUB_DISABLE_PROGRESS_BARS` gets read into a module-level constant —
     # so if the env var is somehow unset by the time HF is first imported,

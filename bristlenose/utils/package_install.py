@@ -105,11 +105,12 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     """Ensure a Hugging Face model repo is present in the local cache; fetch if not.
 
     Idempotent, and safe to interrupt: Ctrl+C stops an hf_xet transfer within
-    a second and hf_xet removes its partial file. A plain-HTTP fallback (no
-    hf_xet) has no abort, so there Ctrl+C waits for the file in flight. It does not resume — through hf_xet
-    (huggingface_hub 1.x) a re-run downloads the file again from the start,
-    measured 14 Oct 2026. Safe inside the desktop sidecar — the cache lives
-    under the user's HF home, not site-packages.
+    about 2 s and hf_xet removes its partial file (measured 15 Oct 2026). A
+    plain-HTTP fallback (no hf_xet) has no abort, so there Ctrl+C waits for the
+    file in flight. It does not resume — through hf_xet (huggingface_hub 1.x) a
+    re-run downloads the file again from the start, measured 14 Oct 2026. Safe
+    inside the desktop sidecar — the cache lives under the user's HF home, not
+    site-packages.
 
     ``tqdm_class`` is handed to ``snapshot_download`` for every progress bar it
     draws (the Whisper preflight passes one that it can close afterwards).
@@ -120,7 +121,7 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     Raises:
         PackageInstallError: when the download fails for any reason except a
             user-initiated Ctrl+C (``KeyboardInterrupt`` propagates unchanged so
-            the caller can keep the partial cache and exit cleanly).
+            the caller can exit cleanly).
     """
     from huggingface_hub import snapshot_download
 

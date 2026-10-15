@@ -169,20 +169,27 @@ Native code always draws the system SF Mono, at AppKit's named weights.
 
 ### One stack, both scales
 
+**Decided 15 Oct 2026:** drop "SF Mono" by name, and never let a supported platform reach Courier. To check before shipping: Cascadia Mono ahead of Consolas (Windows 11, if it ships system-wide), and Liberation Mono and Noto Sans Mono after DejaVu (Linux).
+
 ```css
 --bn-font-mono: ui-monospace, Menlo, Consolas, "DejaVu Sans Mono", monospace;
 ```
 
 Delete the desktop override. WebKit then draws the system SF Mono on every Mac, download or not, which is also the face native Swift uses. Chromium on a Mac draws Menlo instead of Courier, Windows Consolas, and Linux DejaVu Sans Mono. "SF Mono" by name goes because it is the one entry that makes the developer's view differ from everyone else's. "Fira Code" goes because nobody has it who isn't a developer. The generic is still last but is no longer reached on a Mac, which also removes the `lang` dependence: in a Japanese report Chromium's generic is a Japanese face, not a monospace one.
 
-### Two weights, on named instances
+### Weights: Regular at rest, two emphasis values by job
+
+Every monospace role rests at **Regular (400)**. No mono role is Semibold or Bold.
 
 ```css
---bn-weight-mono: 400;            /* Regular: every role at rest */
---bn-weight-mono-emphasis: 500;   /* Medium: the one step up */
+--bn-weight-mono: 400;            /* every role at rest */
+--bn-weight-mono-emphasis: 520;   /* first weight above 500: Bold where the face has only Regular and Bold */
+--bn-weight-mono-refine: 500;     /* Medium on SF Mono, Regular in Menlo and Consolas: app-only */
 ```
 
-**The owner's call is 500 versus 600 for the step up.** 500 is the step the Screens path was reaching for: Medium on every Mac in the app (+18%, close to what 490 gave there), and nothing in Chrome. 600 reads about the same everywhere (+30–39%) but is roughly twice the step in the app, and it already exists as `--bn-weight-semibold`, so choosing it needs no new token. This proposal draws 500, because the app is the primary surface and the loss is confined to the browser, where it is named rather than hidden.
+Menlo, Consolas, DejaVu and Liberation have only Regular and Bold, and CSS matching gives Regular up to 500 and Bold above it. So browser emphasis is either absent or Bold; nothing in between exists. **520** is the cheapest value across the line: SF Mono +21% (about Medium, near the +16% of today's 490), and Bold on the two-instance faces. Use it where emphasis must survive in a browser; today that is only the Screens path naming the screen. **500** is Medium on SF Mono and plain Regular elsewhere; use it for refinements that can be app-only, such as keycaps, which would be too heavy in Chrome Bold. 600 (`--bn-weight-semibold`) is the alternative if the browser step should look the same as the app's, at about twice the step in the app.
+
+Who sees which: the Mac app and Safari get SF Mono; Chrome, Edge, Arc and probably Firefox on a Mac get Menlo, and the CLI-on-Mac audience likely leans that way. So tune emphasis for Menlo too, not only for SF Mono.
 
 ### Four roles
 
@@ -190,8 +197,8 @@ Delete the desktop override. WebKit then draws the system SF Mono on every Mac, 
 |---|---|---|---|
 | **timecode** | `--bn-text-label` inline beside a quote; `--bn-text-caption` in a metadata row; `--bn-text-micro` on an axis | mono | A pointer into the recording. Fixed advances keep a column of times aligned. The accent colour, not weight, says it is a link. |
 | **code** | `--bn-text-badge`; `--bn-text-micro` in a dense list | mono (or 300, below) | A vocabulary marker beside the finding, never the finding. Size and the chip carry its subordinate rank. |
-| **path** | `--bn-text-caption`; `--bn-text-micro` in a nav list | mono; mono-emphasis when the path names the subject | Literal text the researcher may need to type or find on disk. |
-| **keycap** | `--bn-text-micro` | mono-emphasis | Matches `Keycap.swift` (`.medium`, monospaced). |
+| **path** | `--bn-text-caption`; `--bn-text-micro` in a nav list | mono; mono-emphasis (520) when the path names the subject | Literal text the researcher may need to type or find on disk. |
+| **keycap** | `--bn-text-micro` | mono-refine (500) | Matches `Keycap.swift` (`.medium`, monospaced); Regular in browsers. |
 
 **Figures fold out of monospace:** body font with `font-variant-numeric: tabular-nums`, which is what SwiftUI's `.monospacedDigit()` already does natively. Numbers align without a change of voice, and the body ladder's 490 works there, since Inter and SF Pro are both variable. Numbers that are identifiers (participant codes in the grid) stay in **code**.
 
@@ -201,10 +208,10 @@ Delete the desktop override. WebKit then draws the system SF Mono on every Mac, 
 
 | today | becomes |
 |---|---|
-| `.badge` 370, `.badge-user` 420, dark 490, `.tag-preview` 420, `.picker-card-version` 420 | code at mono (or 300); dark-mode user tags at mono-emphasis if the compensation is kept |
+| `.badge` 370, `.badge-user` 420, dark 490, `.tag-preview` 420, `.picker-card-version` 420 | code at mono (or 300): **one weight for every tag**, colour separates sentiment chips from codebook tags; dark-mode user tags at mono-refine if the compensation is kept |
 | codebook add-tag field, input and drag ghost at label | code at badge: the same chips at one size |
-| `.pattern-label` 520 | code at mono-emphasis (520 is Bold in Chrome, Semibold on the developer's Mac and +21% on a researcher's) |
-| `.screens-sub code` 490 | path at mono-emphasis |
+| `.pattern-label` 520 | rendered only by the dev `GridSpecimen` route, not a shipped surface; code at mono when next touched |
+| `.screens-sub code` 490 | path at mono-emphasis (520) |
 | `.screens-nav-path`, status page, `player.html` status line | path; the player page gets the token stack written out |
 | heatmap cells, metric values, hero score (490), threshold counters and confidence, pending count, tooltip metrics | figures |
 | footer `kbd` 0.85em | keycap at micro |

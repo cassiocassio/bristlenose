@@ -1,5 +1,8 @@
 """Build docs/mockups/monospace-roles-specimen.html from the shipped theme files."""
-import pathlib, re, html
+import html
+import pathlib
+import re
+
 R = pathlib.Path(__file__).resolve().parents[2]
 T = R / 'bristlenose/theme'
 
@@ -72,8 +75,21 @@ h2 { font-size: var(--bn-text-heading); line-height: var(--bn-text-heading-lh); 
 .commentary th:first-child, .commentary td:first-child { text-align: left; }
 .commentary code { font-size: 0.95em; }
 .commentary .tbl { overflow-x: auto; }
+.rgrid { display: grid; grid-template-columns: 15rem repeat(3, minmax(0, 1fr)); }
+.rgrid > div { padding: 8px 12px; border-top: 1px solid var(--bn-colour-border); min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rgrid > .rk-head, .rgrid > .colhead { border-top: 0; margin: 0; }
+.rgrid > .rc + .rc { border-left: 1px solid var(--bn-colour-border); }
+.rk { flex-direction: column; align-items: flex-start !important; gap: 1px !important; background: var(--bn-colour-hover);
+      font-family: var(--bn-font-body); font-size: var(--bn-text-micro); line-height: var(--bn-text-micro-lh); color: var(--bn-colour-muted); }
+.rk b { color: var(--bn-colour-text); font-weight: var(--bn-weight-emphasis); font-size: var(--bn-text-caption); }
+.rk .wt { color: var(--bn-colour-text); font-variant-numeric: tabular-nums; }
+.rk .wt s { color: var(--bn-colour-muted); }
+.rk .how { font-style: italic; }
+.rk-head { font-weight: var(--bn-weight-emphasis); }
 @media (max-width: 760px) {
   body { padding: 20px 16px 48px; }
+  .rgrid { grid-template-columns: minmax(0, 1fr); }
+  .rgrid > .rc + .rc { border-left: 0; }
   .cols { grid-template-columns: minmax(0, 1fr); }
   .col + .col { border-left: 0; border-top: 1px solid var(--bn-colour-border); }
   .bar { flex-direction: column; gap: 2px; }
@@ -86,10 +102,11 @@ proposal_css = f"""
 .prop {{
     --bn-font-mono: {PROPOSED_STACK};
     --bn-weight-mono: 400;            /* Regular  — every mono role at rest */
-    --bn-weight-mono-emphasis: 500;   /* Medium   — the one step up (a path that names the screen) */
+    --bn-weight-mono-emphasis: 520;   /* first weight above 500: Bold where the face has only Regular and Bold */
+    --bn-weight-mono-refine: 500;     /* Medium on SF Mono; Regular in Menlo and Consolas: app-only refinements */
 }}
 .prop .badge, .prop .badge-user, .prop .bn-speaker-badge-code {{ font-weight: var(--bn-weight-mono); }}
-.prop .footer-keyboard-hint kbd {{ font-size: var(--bn-text-micro); font-weight: var(--bn-weight-mono-emphasis); }}
+.prop .footer-keyboard-hint kbd {{ font-size: var(--bn-text-micro); font-weight: var(--bn-weight-mono-refine); }}
 .prop .tc-compact {{ font-size: var(--bn-text-caption); }}
 .prop .path.is-subject {{ font-weight: var(--bn-weight-mono-emphasis); }}
 .prop .figs {{ font-family: var(--bn-font-body); font-variant-numeric: tabular-nums; font-weight: var(--bn-weight-emphasis); }}
@@ -103,20 +120,51 @@ def timecode(compact=False):
     cls = 'timecode tc-compact' if compact else 'timecode'
     return f'<a class="{cls}" href="#"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></a>'
 
-def roles(current: bool):
-    """The five role samples, as shipped (current=True) or as proposed."""
-    subj_style = '' if not current else ' style="font-weight:var(--bn-weight-emphasis)"'
-    path_size_now = ''
+TC = '<a class="timecode" href="#"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></a>'
+TC_CAP_NOW = '<span class="timecode" style="font-size:var(--bn-text-caption)"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></span>'
+TC_CAP_PROP = '<a class="timecode tc-compact" href="#"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></a>'
+SPK = '<span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p03</span><span class="bn-speaker-badge-name">Ana</span></span></span> <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span>'
+KBD = '<span class="footer-keyboard-hint" style="font-size:var(--bn-text-badge)"><kbd>j</kbd><kbd>k</kbd><kbd>⌘F</kbd></span>'
+FIGS = '<span class="figs"{w}><span>0.42</span><span>1.07</span><span>12</span><span>3.9</span><span>0.08</span><span>140</span></span>'
+
+# (role, where, size token, today, proposed, how the proposed weight renders, today html, proposed html)
+ROWS = [
+  ("Timecode", "beside a quote", "label", "400", "400",
+   "Regular everywhere", TC + ' <span class="prose">“I couldn’t find the basket total.”</span>', None),
+  ("Timecode", "in a metadata row", "caption", "400", "400",
+   "Regular everywhere", '<span class="meta">Session 4 · 42 min</span> ' + TC_CAP_NOW, '<span class="meta">Session 4 · 42 min</span> ' + TC_CAP_PROP),
+  ("Tag", "sentiment chip", "badge", "370", "400",
+   "Regular everywhere", '<span class="badge badge-frustration">frustration</span> <span class="badge badge-delight">delight</span>', None),
+  ("Tag", "codebook tag", "badge", "420 (490 in dark)", "400",
+   "Regular everywhere", '<span class="badge badge-user" style="background:var(--bn-emo-1-bg, var(--bn-colour-user-tag-bg))">basket total</span> <span class="badge badge-user" style="background:var(--bn-ux-1-bg, var(--bn-colour-user-tag-bg))">findability</span>', None),
+  ("Code", "speaker code", "badge", "400", "400",
+   "Regular everywhere", SPK, None),
+  ("Path", "names the screen", "caption", "490", "520",
+   "SF Mono +21% (about Medium) · Menlo, Consolas: Bold", '<span class="path is-subject" style="font-weight:var(--bn-weight-emphasis)">checkout-flow/Basket summary.png</span>', '<span class="path is-subject">checkout-flow/Basket summary.png</span>'),
+  ("Path", "plain", "caption", "400", "400",
+   "Regular everywhere", '<span class="path" style="color:var(--bn-colour-muted)">interviews/session-04/screens/Basket summary.png</span>', None),
+  ("Keycap", "footer hints", "0.85em → micro", "400", "500",
+   "SF Mono Medium (+18%) · Menlo, Consolas: Regular", KBD, None),
+  ("Figures", "heatmap, metrics", "label", "490 mono", "490 body",
+   "body face, tabular figures: the body ladder", FIGS.format(w=' style="font-weight:var(--bn-weight-emphasis)"'), FIGS.format(w='')),
+]
+
+def roles_frame(scale_attr, title, nodl_cls, nodl_head):
+    head = ('<div class="rk rk-head"><span>role · size</span><span>weight today → proposed</span></div>'
+            f'<div class="rc colhead"><b>Today</b> — as shipped, on this Mac</div>'
+            f'<div class="rc colhead {nodl_cls}"><b>Today</b> — {nodl_head}</div>'
+            '<div class="rc colhead prop"><b>Proposed</b></div>')
+    body = ""
+    for role, where, size, now, prop, how, cur, newhtml in ROWS:
+        wt = (f'<span class="wt"><b>{prop}</b>, unchanged</span>' if now == prop
+              else f'<span class="wt"><s>{now}</s> → <b>{prop}</b></span>')
+        body += (f'<div class="rk"><b>{role}</b> <span>{where} · {size}</span>{wt}<span class="how">{how}</span></div>'
+                 f'<div class="rc">{cur}</div><div class="rc {nodl_cls}">{cur}</div><div class="rc prop">{newhtml or cur}</div>')
     return f"""
-      <p class="line">{timecode()} <span class="prose">“I couldn’t find where the basket total went.”</span></p>
-      <p class="line"><span class="meta">Session 4 ·</span> <span class="meta">42 min</span> {timecode(compact=True) if not current else '<span class="timecode" style="font-size:var(--bn-text-caption)"><span class="timecode-bracket">[</span>00:14:32<span class="timecode-bracket">]</span></span>'}</p>
-      <p class="line"><span class="badge badge-frustration">frustration</span> <span class="badge badge-user" style="background:var(--bn-emo-1-bg, var(--bn-colour-user-tag-bg))">basket total</span> <span class="badge">findability</span></p>
-      <p class="line"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p03</span><span class="bn-speaker-badge-name">Ana</span></span></span> <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></p>
-      <p class="line" style="flex-wrap:nowrap"><span class="path is-subject"{subj_style}>checkout-flow/Basket summary.png</span></p>
-      <p class="line" style="flex-wrap:nowrap"><span class="path" style="color:var(--bn-colour-muted)">interviews/session-04/screens/Basket summary.png</span></p>
-      <p class="line"><span class="footer-keyboard-hint" style="font-size:var(--bn-text-badge)"><kbd>j</kbd><kbd>k</kbd><kbd>⌘F</kbd></span></p>
-      <p class="line"><span class="figs"{'' if not current else ' style="font-weight:var(--bn-weight-emphasis)"'}><span>0.42</span><span>1.07</span><span>12</span><span>3.9</span><span>0.08</span><span>140</span></span></p>
-    """
+  <div class="frame" {scale_attr}>
+    <div class="bar"><span>{title}</span><span>left column: weights, not product · synthetic content</span></div>
+    <div class="rgrid">{head}{body}</div>
+  </div>"""
 
 def face_frame(scale_attr, title, nodl_cls, nodl_head):
     return f"""
@@ -126,17 +174,6 @@ def face_frame(scale_attr, title, nodl_cls, nodl_head):
       <div class="col"><p class="colhead"><b>Today</b> — the shipped token, on this Mac</p><p class="face">drawn in <output data-face></output></p>{strip()}</div>
       <div class="col {nodl_cls}"><p class="colhead"><b>Today</b> — {nodl_head}</p><p class="face">drawn in <output data-face></output></p>{strip()}</div>
       <div class="col prop"><p class="colhead"><b>Proposed</b> — one stack for both scales</p><p class="face">drawn in <output data-face></output></p>{strip()}</div>
-    </div>
-  </div>"""
-
-def roles_frame(scale_attr, title, nodl_cls, nodl_head):
-    return f"""
-  <div class="frame" {scale_attr}>
-    <div class="bar"><span>{title}</span><span>timecode · code · path · keycap · figures</span></div>
-    <div class="cols" style="--n:3">
-      <div class="col"><p class="colhead"><b>Today</b> — as shipped, on this Mac</p>{roles(True)}</div>
-      <div class="col {nodl_cls}"><p class="colhead"><b>Today</b> — {nodl_head}</p>{roles(True)}</div>
-      <div class="col prop"><p class="colhead"><b>Proposed</b> — the five roles</p>{roles(False)}</div>
     </div>
   </div>"""
 
@@ -170,11 +207,10 @@ body = f"""
   {roles_frame('', 'Web · Inter scale', 'nodl-web', 'a Mac without the download')}
   {roles_frame('data-platform="desktop"', 'Desktop · SF Pro scale', 'nodl-desk', 'a Mac without the download')}
   <div class="commentary"><span class="lbl">Commentary</span>
-    <p><b>Timecode</b> — <code>--bn-text-label</code> inline beside a quote, <code>--bn-text-caption</code> in a metadata row; Regular. A pointer into the recording; fixed advances keep a column of times aligned, and the accent colour, not weight, says it is a link.</p>
-    <p><b>Code</b> — tag badges, sentiment chips, speaker codes; <code>--bn-text-badge</code>; Regular. A vocabulary marker, not the finding. Today's light chip (370) is Light only from the download; a researcher sees −5% in the app and Regular in Chrome. To keep the light chip deliberately, use 300 (Light on every Mac path); otherwise 400.</p>
-    <p><b>Path</b> — file paths, filenames, URLs, commands; <code>--bn-text-caption</code>; Regular, one step up when the path names the subject (the Screens info line). Drawn here at 500: Medium in WebKit on every Mac (+18%), close to what 490 gave there, and plain Regular in Chrome. If the step must survive in Chrome, 600 is the value, at about twice the ink everywhere (the weight strips above show both).</p>
-    <p><b>Keycap</b> — <code>--bn-text-micro</code>, Medium, matching the native <code>Keycap.swift</code> (<code>.medium</code>, monospaced).</p>
-    <p><b>Figures</b> fold <i>out</i> of mono: heatmap values, metric values and scores move to the body font with <code>font-variant-numeric: tabular-nums</code>, which is what SwiftUI's <code>.monospacedDigit()</code> already does natively. Alignment without a change of voice, and the body weight ladder (490) works there.</p>
+    <p><b>Regular (400) is the resting weight of every monospace role.</b> Monospace marks <i>kind</i>, not importance: the face says "this is a time, a code, a path", and colour, size and the chip carry everything else.</p>
+    <p><b>Tags are one weight.</b> Today sentiment chips are 370 and codebook tags 420 (490 in dark mode). On this Mac that is Light against Medium, a visible two-step gap; on a researcher's Mac in the app it is −5% against +4%; in Chrome both are Regular. Colour already separates the two families. If light chips are the intent, 300 for both draws Light on every Mac.</p>
+    <p><b>Two emphasis values, by job.</b> 520 is the first weight above 500: about Medium on SF Mono (+21%), Bold wherever the face has only Regular and Bold (Menlo, Consolas, DejaVu). It is for emphasis that must survive in a browser, today only the Screens path that names the screen. 500 is Medium on SF Mono and plain Regular in Menlo: for refinements that can be app-only, such as keycaps, which in Chrome would be too heavy in Bold. No mono role is Semibold or Bold.</p>
+    <p><b>Figures</b> leave monospace for the body face with tabular figures, keeping 490, where the body ladder works.</p>
     <p>Proposed stack: <code>{html.escape(PROPOSED_STACK)}</code>. WebKit draws the system SF Mono on every Mac, download or not; Chromium on a Mac draws Menlo (it has no <code>ui-monospace</code>) instead of today's Courier; Windows Consolas; Linux DejaVu Sans Mono. Menlo and Consolas carry only Regular and Bold.</p>
   </div>
 </div>

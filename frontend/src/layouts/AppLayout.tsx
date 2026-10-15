@@ -63,6 +63,8 @@ import {
 import type { NormalisedJobStatus } from "../components/ActivityChipStack";
 import { toggleInspector, useInspectorStore } from "../contexts/InspectorStore";
 import { panelFit, useSidebarStore, wantedWidth } from "../contexts/SidebarStore";
+import { useQuoteGroupingView } from "../contexts/QuoteGroupingSlot";
+import { QuoteGroupingToggle } from "../islands/QuoteGroupingToggle";
 import {
   setDiscussionGuideOpen,
   setPendingGuide,
@@ -253,6 +255,7 @@ function AppShell() {
   const _isScreensSlash = useMatch("/report/screens/");
   const isScreens = !!(_isScreens || _isScreensSlash);
   const screensNav = useScreensNav();
+  const quoteGrouping = useQuoteGroupingView();
   const isSessionsRoute = !!(isSessions || isTranscript);
   // Embedded (macOS) removes the Sessions lens's left panel — the native
   // session-switcher popover replaces it (design-sessions-popover-navigation.md).
@@ -789,6 +792,13 @@ function AppShell() {
         // (SidebarLayout renders the header only when a title is passed). To
         // restore, put the branch back: isCodebook ? i18n.t("codebook.heading") :
         isSessionsRoute && !embeddedSessionsPanelRemoved ? i18n.t("nav.sessions") : isSignals ? i18n.t("signals.title") : undefined
+      }
+      leftPanelHeader={
+        // The Quotes lens's grouping control, at the top of its contents while
+        // the sidebar is showing; QuotesTab puts it in the heading otherwise.
+        isQuotes && quoteGrouping?.controlVisible ? (
+          <QuoteGroupingToggle grouping={quoteGrouping.shown} onChange={quoteGrouping.choose} />
+        ) : undefined
       }
       showRightSidebar={!!isQuotes}
       inertRail={

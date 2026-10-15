@@ -1,36 +1,46 @@
 /**
  * TocSidebar — table of contents for the Quotes tab left sidebar.
  *
- * Two groups of links: Sections and Themes, matching the quote groupings
- * on the page. Active link tracked via useScrollSpy, auto-scrolled into
- * view. Click scrolls smoothly to the heading.
+ * The page's contents in the grouping the column is drawing: Sections and
+ * Themes links, or a row per session (the Sessions lens's row). It lists the
+ * groups the column draws and no others, follows the scroll, and a click
+ * scrolls to the group's heading.
  *
- * Data comes from the same /api/projects/{id}/quotes endpoint — we
- * fetch independently so the TOC renders even if the main content is
- * still loading.
+ * Fetches the same /api/projects/{id}/quotes the column does (again after a
+ * run imports), so the contents render before the column has loaded.
  *
  * @module TocSidebar
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { QuotesListResponse } from "../utils/types";
+import type { QuoteResponse, QuotesListResponse, SessionsListResponse } from "../utils/types";
 import { apiGet } from "../utils/api";
 import { useScrollSpy } from "../hooks/useScrollSpy";
+import { useLastRun } from "../contexts/LastRunStore";
 import { useSidebarStore, closeToc } from "../contexts/SidebarStore";
 import { useSidebarTuning } from "../contexts/sidebarTuning";
-
-// ── Slug helper (mirrors QuoteSections/QuoteThemes) ───────────────────────
-
-function toAnchor(prefix: string, label: string): string {
-  return `${prefix}-${label.toLowerCase().replace(/ /g, "-")}`;
-}
+import { filterStateOf, useQuotesStore } from "../contexts/QuotesContext";
+import { useQuoteGroupingView } from "../contexts/QuoteGroupingSlot";
+import { useProjectId } from "../hooks/useProjectId";
+import { filterQuotes } from "../utils/filter";
+import { groupAnchor, groupQuotesBySession, keepsGroup } from "../utils/quoteGroups";
+import { SessionEntryRow, useSessionRowLayout } from "./SessionEntry";
 
 // ── TOC entry type ────────────────────────────────────────────────────────
 
 interface TocEntry {
   id: string;
   label: string;
+}
+
+/** The anchor `QuoteSessions` puts on a session group's heading. */
+const sessionAnchor = (sessionId: string) => `session-quotes-${sessionId}`;
+
+const NO_IDS = new Set<string>();
+
+function visibleIdsOf(quotes: QuoteResponse[], filterState: ReturnType<typeof filterStateOf>): Set<string> {
+  return new Set(filterQuotes(quotes, filterState).map((q) => q.dom_id));
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -44,23 +54,31 @@ interface TocSidebarProps {
 
 export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
   const { t } = useTranslation();
+  const projectId = useProjectId();
   const { tocMode } = useSidebarStore();
   const pg = useSidebarTuning();
+  const store = useQuotesStore();
+  const filterState = filterStateOf(store);
+  const { refreshKey } = useLastRun();
+  const grouping = useQuoteGroupingView();
+  const bySession = grouping?.shown === "session";
   const [data, setData] = useState<QuotesListResponse | null>(null);
+  const [sessionsData, setSessionsData] = useState<SessionsListResponse | null>(null);
   const activeRef = useRef<HTMLAnchorElement | null>(null);
   // Click intent: when the user clicks a TOC link, this ref overrides
   // the scroll spy so the clicked heading stays highlighted even if
   // the page can't scroll far enough to make it topmost (last-item edge case).
   const clickedIdRef = useRef<string | null>(null);
 
-  // Fetch quotes data for TOC entries.
+  // Fetch quotes data for TOC entries — on mount, and again when a run
+  // imports (the column refetches on the same key).
   useEffect(() => {
     apiGet<QuotesListResponse>("/quotes")
       .then(setData)
       .catch(() => {
         // Silently fail — the main content area shows the error.
       });
-  }, []);
+  }, [refreshKey]);
 
   // Re-fetch when autocode tags change (same event QuoteSections listens to).
   useEffect(() => {
@@ -71,33 +89,105 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
     return () => document.removeEventListener("bn:tags-changed", handler);
   }, []);
 
-  // Build TOC entries from API data.
+  // ── Sections & themes ──────────────────────────────────────────────────
+  // The anchor is the column's (`edited_label ?? screen_label`), so a renamed
+  // section's link lands on its heading; the label is the heading's text,
+  // which also follows a rename made in this session (the store's edits).
+
+  const sectionVisible = useMemo(
+    () =>
+      data && !bySession
+        ? visibleIdsOf([...data.sections.flatMap((s) => s.quotes), ...data.themes.flatMap((th) => th.quotes)], filterState)
+        : NO_IDS,
+    [data, bySession, filterState],
+  );
+
   const sections: TocEntry[] = useMemo(() => {
-    if (!data) return [];
-    return data.sections.map((s) => ({
-      id: toAnchor("section", s.screen_label),
-      label: s.screen_label,
-    }));
-  }, [data]);
+    if (!data || bySession) return [];
+    return data.sections
+      .filter((s) => keepsGroup(s.quotes, sectionVisible, filterState.hidden))
+      .map((s) => {
+        const anchorLabel = s.edited_label ?? s.screen_label;
+        return {
+          id: groupAnchor("section", anchorLabel),
+          label: store.edits[`section-cluster-${s.cluster_id}:title`] ?? anchorLabel,
+        };
+      });
+  }, [data, bySession, sectionVisible, filterState.hidden, store.edits]);
 
   const themes: TocEntry[] = useMemo(() => {
-    if (!data) return [];
-    return data.themes.map((t) => ({
-      id: toAnchor("theme", t.theme_label),
-      label: t.theme_label,
-    }));
-  }, [data]);
+    if (!data || bySession) return [];
+    return data.themes
+      .filter((th) => keepsGroup(th.quotes, sectionVisible, filterState.hidden))
+      .map((th) => {
+        const anchorLabel = th.edited_label ?? th.theme_label;
+        return {
+          id: groupAnchor("theme", anchorLabel),
+          label: store.edits[`theme-group-${th.theme_id}:title`] ?? anchorLabel,
+        };
+      });
+  }, [data, bySession, sectionVisible, filterState.hidden, store.edits]);
 
-  // All IDs for scroll spy — only actual link targets, not group headings.
-  // Group headings ("sections", "themes") are excluded because the scroll spy
-  // would set activeId to a heading with no corresponding link, causing a
-  // brief gap where nothing in the sidebar is highlighted.
-  const allIds = useMemo(() => {
-    const ids: string[] = [];
-    ids.push(...sections.map((s) => s.id));
-    ids.push(...themes.map((t) => t.id));
-    return ids;
-  }, [sections, themes]);
+  // ── Sessions ───────────────────────────────────────────────────────────
+
+  // The same quotes the column groups (QuoteSessions.groupBySession), from
+  // the same endpoint, so the two cannot list different sessions.
+  const sessionGroups = useMemo(
+    () =>
+      data && bySession
+        ? groupQuotesBySession([
+            ...data.sections.flatMap((s) => s.quotes),
+            ...data.themes.flatMap((th) => th.quotes),
+            ...(data.unjoined ?? []),
+            ...(data.uncategorised ?? []),
+          ])
+        : [],
+    [data, bySession],
+  );
+  const sessionVisible = useMemo(
+    () => (bySession ? visibleIdsOf(sessionGroups.flatMap((g) => g.quotes), filterState) : NO_IDS),
+    [bySession, sessionGroups, filterState],
+  );
+
+  // Row metadata. Refetched only when a session joins the study (a run in
+  // progress delivers them one by one), not on every quote change.
+  const sessionIdsKey = sessionGroups.map((g) => g.sessionId).join(",");
+  const haveQuotes = data !== null;
+  useEffect(() => {
+    if (!bySession || !haveQuotes) return; // the session ids are not known yet
+    let current = true; // a slower, older answer must not replace a newer one
+    apiGet<SessionsListResponse>("/sessions")
+      .then((json) => {
+        if (current) setSessionsData(json);
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [bySession, haveQuotes, sessionIdsKey, projectId]);
+
+  const { navRef, layout } = useSessionRowLayout(sessionsData?.sessions ?? null);
+
+  const sessionRows = useMemo(() => {
+    if (!bySession || !sessionsData) return [];
+    const byId = new Map(sessionsData.sessions.map((s) => [s.session_id, s]));
+    return sessionGroups
+      .filter((g) => keepsGroup(g.quotes, sessionVisible, filterState.hidden))
+      .flatMap((g) => {
+        const session = byId.get(g.sessionId);
+        return session ? [session] : [];
+      });
+  }, [bySession, sessionsData, sessionGroups, sessionVisible, filterState.hidden]);
+
+  // ── Scroll spy ─────────────────────────────────────────────────────────
+  // Keyed on the ids themselves, so a star or an edit (a new filter state, the
+  // same groups) does not hand the spy a new array and re-arm its click intent.
+
+  const idsKey = (bySession
+    ? sessionRows.map((s) => sessionAnchor(s.session_id))
+    : [...sections, ...themes].map((e) => e.id)
+  ).join("\0");
+  const allIds = useMemo(() => (idsKey ? idsKey.split("\0") : []), [idsKey]);
 
   const activeId = useScrollSpy(allIds, 100, clickedIdRef);
 
@@ -133,6 +223,34 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
       }
     }
   }, [tocMode, onOverlayClose, autoClose]);
+
+  const handleSessionClick = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>, sessionId: string) => handleClick(e, sessionAnchor(sessionId)),
+    [handleClick],
+  );
+
+  // Nothing until the page has said which grouping it draws: guessing would
+  // show one list while the column loads the other.
+  if (!grouping) return null;
+
+  if (bySession) {
+    return (
+      <nav aria-label={t("nav.tableOfContents")} ref={navRef}>
+        {sessionRows.map((session) => (
+          <SessionEntryRow
+            key={session.session_id}
+            session={session}
+            layout={layout}
+            href={`#${sessionAnchor(session.session_id)}`}
+            active={activeId === sessionAnchor(session.session_id)}
+            rowRef={activeRef}
+            onClick={handleSessionClick}
+            current="location"
+          />
+        ))}
+      </nav>
+    );
+  }
 
   if (!data) return null;
 

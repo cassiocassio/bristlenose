@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiGet, getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
-import type { QuoteResponse, QuotesListResponse } from "../utils/types";
+import type { QuotesListResponse } from "../utils/types";
 import type { TagGroupInfo } from "./QuoteGroup";
 import type { TagVocabularyGroup } from "../components";
 import {
@@ -32,6 +32,7 @@ import { filterQuotes, highlightTermsOf } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
 import { useRefetching, refetchOverlayProps } from "../hooks/useRefetching";
 import { SectionHeading } from "../components";
+import { groupQuotesBySession, type SessionGroup } from "../utils/quoteGroups";
 
 interface QuoteSessionsProps {
   projectId: string;
@@ -39,42 +40,14 @@ interface QuoteSessionsProps {
   headingAction?: React.ReactNode;
 }
 
-interface SessionGroup {
-  sessionId: string;
-  number: number;
-  quotes: QuoteResponse[];
-}
-
-/** `s12` → 12; anything else sorts last. */
-function sessionNumber(sessionId: string): number {
-  const n = Number(sessionId.replace(/^s/, ""));
-  return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
-}
-
 /** Every quote the route returned, grouped by session, in session then time order. */
 export function groupBySession(data: QuotesListResponse): SessionGroup[] {
-  const seen = new Set<string>();
-  const bySession = new Map<string, QuoteResponse[]>();
-  const all = [
+  return groupQuotesBySession([
     ...data.sections.flatMap((s) => s.quotes),
     ...data.themes.flatMap((t) => t.quotes),
     ...(data.unjoined ?? []),
     ...(data.uncategorised ?? []),
-  ];
-  for (const q of all) {
-    if (seen.has(q.dom_id)) continue;
-    seen.add(q.dom_id);
-    const list = bySession.get(q.session_id) ?? [];
-    list.push(q);
-    bySession.set(q.session_id, list);
-  }
-  return [...bySession.entries()]
-    .map(([sessionId, quotes]) => ({
-      sessionId,
-      number: sessionNumber(sessionId),
-      quotes: [...quotes].sort((a, b) => a.start_timecode - b.start_timecode),
-    }))
-    .sort((a, b) => a.number - b.number || a.sessionId.localeCompare(b.sessionId));
+  ]);
 }
 
 export function QuoteSessions({ projectId, refreshKey = 0, headingAction }: QuoteSessionsProps) {

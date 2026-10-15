@@ -7,7 +7,8 @@
  * When `active` is false (all other tabs), renders a plain pass-through
  * wrapper with no grid — children render normally.
  *
- * Left panel: TocSidebar (sections + themes with scroll-spy).
+ * Left panel: TocSidebar (the Quotes contents — sections and themes, or
+ *   sessions — with scroll-spy).
  *   - Push mode (State C): click list icon, grid column expands, content narrows.
  *   - Overlay mode (State B): hover rail 400ms or click rail area,
  *     panel floats over content via position:fixed.
@@ -44,6 +45,7 @@ import { useDragResize, MIN_WIDTH, MAX_WIDTH } from "../hooks/useDragResize";
 import { useTocOverlay } from "../hooks/useTocOverlay";
 import { Tooltip } from "./Tooltip";
 import { isEmbedded } from "../utils/embedded";
+import { TocShowingContext } from "../contexts/TocShowing";
 
 // ── SVG icons (inline, 18×18) ─────────────────────────────────────────────
 
@@ -127,6 +129,10 @@ interface SidebarLayoutProps {
   leftPanel?: React.ReactNode;
   /** Title for the left sidebar header (default: "Contents"). */
   leftPanelTitle?: string;
+  /** A control for the top of the left sidebar, shown only while that sidebar
+   *  is a resting panel (the Quotes lens's grouping). A page that also offers
+   *  it elsewhere reads `useTocShowing()` to stand down while it is here. */
+  leftPanelHeader?: React.ReactNode;
   /** Show minimap + tag sidebar + tag rail (default: true). */
   showRightSidebar?: boolean;
   /** Content for the left rail when the shared panel is not in use — the
@@ -135,7 +141,7 @@ interface SidebarLayoutProps {
   children: React.ReactNode;
 }
 
-export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSidebar = true, inertRail, children }: SidebarLayoutProps) {
+export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHeader, showRightSidebar = true, inertRail, children }: SidebarLayoutProps) {
   const { t } = useTranslation();
   const sidebar = useSidebarStore();
   const { tocMode, tocWidth, tagsWidth } = sidebar;
@@ -284,7 +290,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
       if (tocOpen) {
         // Just opened — focus first interactive element in sidebar.
         const target = tocPanelRef.current?.querySelector<HTMLElement>(
-          ".sidebar-close, .toc-link",
+          ".sidebar-close, .toc-link, .session-entry",
         );
         target?.focus();
       } else if (embedded) {
@@ -432,7 +438,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
             now pass no title (see AppLayout), and embedded mode has no close ×,
             so on the Mac those two lenses would otherwise open with an empty
             padded box above the first heading. */}
-        {(leftPanelTitle || !embedded) && (
+        {(leftPanelTitle || !embedded || (leftPanelHeader && tocPush)) && (
           <div className="sidebar-header toc-sidebar-header">
             {/* Titles trialled out 14 Aug 2026. "Contents" above a list of
                 contents — and "Codebook" above a list of codebooks — restated
@@ -442,6 +448,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
                 If we haven't missed it, drop this note and the quotes.contents
                 key with it. Tracked in the maintainer's planning notes. */}
             {leftPanelTitle && <span className="sidebar-title">{leftPanelTitle}</span>}
+            {tocPush && leftPanelHeader}
             {!embedded && (
               <button
                 className="sidebar-close"
@@ -479,7 +486,7 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
 
       {/* Column 3: Center — header, nav, content, footer */}
       <div ref={centerRef} className="center" tabIndex={embedded ? -1 : undefined}>
-        {children}
+        <TocShowingContext.Provider value={tocPush}>{children}</TocShowingContext.Provider>
       </div>
 
       {showRightSidebar && (

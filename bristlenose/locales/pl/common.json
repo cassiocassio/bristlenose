@@ -105,7 +105,7 @@
   "quotes": {
     "groupBy": {
       "label": "Grupuj cytaty",
-      "session": "Wed\u0142ug sesji",
+      "session": "Sesje",
       "sectionsAndThemes": "Sekcje i tematy"
     },
     "hiddenCount_one": "{{count}} ukryty cytat",

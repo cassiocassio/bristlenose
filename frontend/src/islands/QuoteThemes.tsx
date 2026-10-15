@@ -22,6 +22,7 @@ import {
 } from "../contexts/QuotesContext";
 import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes, highlightTermsOf } from "../utils/filter";
+import { groupAnchor } from "../utils/quoteGroups";
 import { QuoteGroup } from "./QuoteGroup";
 import { useRefetching, refetchOverlayProps } from "../hooks/useRefetching";
 import { SectionHeading } from "../components";
@@ -190,7 +191,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
       <SectionHeading id="themes">{t("quotes.themes")}</SectionHeading>
       {filteredThemes.map((theme) => {
         const displayLabel = theme.edited_label ?? theme.theme_label;
-        const anchor = `theme-${displayLabel.toLowerCase().replace(/ /g, "-")}`;
+        const anchor = groupAnchor("theme", displayLabel);
         return (
           <QuoteGroup
             key={theme.theme_id}

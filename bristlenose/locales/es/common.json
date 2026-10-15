@@ -83,7 +83,7 @@
   "quotes": {
     "groupBy": {
       "label": "Agrupar citas",
-      "session": "Por sesi\u00f3n",
+      "session": "Sesiones",
       "sectionsAndThemes": "Secciones y temas"
     },
     "hiddenCount_one": "{{count}} cita oculta",

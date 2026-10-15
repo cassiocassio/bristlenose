@@ -370,6 +370,13 @@ body.dragging-v .inspector-body {
     color: var(--bn-colour-text);
 }
 
+.dimension-btn:focus-visible {
+    /* Inset: the toggle clips its children (overflow: hidden), so an outset
+       ring would be cut off at the edges the buttons share with it. */
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
 .dimension-btn.active {
     background: var(--bn-colour-hover);
     color: var(--bn-colour-accent);

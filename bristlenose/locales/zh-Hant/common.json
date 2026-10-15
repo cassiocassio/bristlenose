@@ -87,7 +87,7 @@
   "quotes": {
     "groupBy": {
       "label": "\u5f15\u8ff0\u5206\u7d44",
-      "session": "\u4f9d\u5834\u6b21",
+      "session": "\u5834\u6b21",
       "sectionsAndThemes": "\u5340\u6bb5\u8207\u4e3b\u984c"
     },
     "hiddenCount_other": "{{count}} \u5247\u96b1\u85cf\u7684\u5f15\u8a00",

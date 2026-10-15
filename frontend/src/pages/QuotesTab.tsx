@@ -1,9 +1,11 @@
-import { lazy, useEffect, useState } from "react";
+import { lazy, useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { useProjectId } from "../hooks/useProjectId";
 import { startLastRunPolling, useLastRun } from "../contexts/LastRunStore";
 import { useLenses } from "../contexts/ConditionStore";
 import { UncategorisedFloor } from "../islands/UncategorisedFloor";
-import { QuoteGroupingToggle, useQuoteGrouping } from "../islands/QuoteGroupingToggle";
+import { QuoteGroupingToggle, useQuoteGrouping, type QuoteGrouping } from "../islands/QuoteGroupingToggle";
+import { clearQuoteGrouping, publishQuoteGrouping } from "../contexts/QuoteGroupingSlot";
+import { useTocShowing } from "../contexts/TocShowing";
 
 // Lazy-loaded so the islands code-split into their own chunks (kept out of the
 // main bundle). The AppLayout Outlet provides the Suspense boundary.
@@ -43,11 +45,26 @@ export function QuotesTab() {
   const [picked, setPicked] = useState(false);
   if (!joined && !readDuringRun) setReadDuringRun(true);
   const shown = !joined || (readDuringRun && !picked) ? "session" : grouping;
-  const choose = (g: typeof grouping) => {
-    setPicked(true);
-    setGrouping(g);
-  };
-  const control = joined ? (
+  const choose = useCallback(
+    (g: QuoteGrouping) => {
+      setPicked(true);
+      setGrouping(g);
+    },
+    [setGrouping],
+  );
+
+  // The content sidebar's header and list follow this decision; they never
+  // make their own. Published before paint so the sidebar does not show one
+  // grouping for a frame while the column shows the other.
+  useLayoutEffect(() => {
+    publishQuoteGrouping({ shown, controlVisible: joined, choose });
+  }, [shown, joined, choose]);
+  useEffect(() => clearQuoteGrouping, []);
+
+  // One control, one place: at the top of the content sidebar while it is
+  // showing (SidebarLayout renders it there), in the heading when it is not.
+  const tocShowing = useTocShowing();
+  const control = joined && !tocShowing ? (
     <QuoteGroupingToggle grouping={shown} onChange={choose} />
   ) : null;
 

@@ -83,7 +83,7 @@
   "quotes": {
     "groupBy": {
       "label": "Zitate gruppieren",
-      "session": "Nach Interview",
+      "session": "Interviews",
       "sectionsAndThemes": "Abschnitte und Themen"
     },
     "hiddenCount_one": "{{count}} ausgeblendetes Zitat",

@@ -1,12 +1,17 @@
 /**
- * The Quotes lens's grouping control: By session / Sections & themes.
+ * The Quotes lens's grouping control: Sections & themes / Sessions.
  *
  * docs/design-progressive-lenses.md §2 and Phase 2. During a first analysis
  * the quotes arrive session by session, before any section or theme exists, so
- * the lens shows them By session. Once sections and themes exist the control
- * appears in the heading's action slot and stays: both groupings are useful
- * after the run too. The choice is a per-viewer convenience, remembered per
- * project in `localStorage` (and the page works without it).
+ * the lens shows them by session and there is no control. Once sections and
+ * themes exist the control appears and stays: both groupings are useful after
+ * the run too. The choice is a per-viewer convenience, remembered per project
+ * in `localStorage` (and the page works without it).
+ *
+ * It is the shipped split control (`.dimension-toggle`, as in the Signals
+ * inspector and the person picker), default first. It sits at the top of the
+ * content sidebar while that sidebar is showing, and in the zone heading's
+ * action slot when it is not (docs/mockups/quote-grouping-sidebar.html).
  */
 
 import { useCallback, useState } from "react";
@@ -52,7 +57,7 @@ export function QuoteGroupingToggle({
   const button = (value: QuoteGrouping, label: string) => (
     <button
       type="button"
-      className={`toolbar-btn toolbar-btn-toggle${grouping === value ? " active" : ""}`}
+      className={`dimension-btn${grouping === value ? " active" : ""}`}
       aria-pressed={grouping === value}
       onClick={() => onChange(value)}
       data-testid={`bn-quote-grouping-${value}`}
@@ -61,9 +66,9 @@ export function QuoteGroupingToggle({
     </button>
   );
   return (
-    <span role="group" aria-label={t("quotes.groupBy.label")} className="bn-quote-grouping">
-      {button("session", t("quotes.groupBy.session"))}
+    <span role="group" aria-label={t("quotes.groupBy.label")} className="dimension-toggle bn-quote-grouping">
       {button("sections", t("quotes.groupBy.sectionsAndThemes"))}
+      {button("session", t("quotes.groupBy.session"))}
     </span>
   );
 }

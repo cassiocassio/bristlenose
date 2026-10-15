@@ -93,7 +93,7 @@
   "quotes": {
     "groupBy": {
       "label": "Ryhmittele sitaatit",
-      "session": "Istunnoittain",
+      "session": "Istunnot",
       "sectionsAndThemes": "Osiot ja teemat"
     },
     "hiddenCount_one": "{{count}} piilotettu sitaatti",

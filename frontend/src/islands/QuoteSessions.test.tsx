@@ -122,6 +122,19 @@ describe("the grouping control", () => {
     expect(onChange).toHaveBeenCalledWith("session");
   });
 
+  it("puts the default first and is the shipped split control", () => {
+    // Sections & themes is the default and Sessions the second choice, so the
+    // control reads in that order (docs/mockups/quote-grouping-sidebar.html).
+    const { container } = render(<QuoteGroupingToggle grouping="session" onChange={vi.fn()} />);
+    const group = container.querySelector(".dimension-toggle")!;
+    const buttons = [...group.querySelectorAll("button.dimension-btn")];
+    expect(buttons.map((b) => b.getAttribute("data-testid"))).toEqual([
+      "bn-quote-grouping-sections",
+      "bn-quote-grouping-session",
+    ]);
+    expect(buttons.map((b) => b.classList.contains("active"))).toEqual([false, true]);
+  });
+
   it("is remembered per project, and defaults to sections and themes", () => {
     const { result } = renderHook(() => useQuoteGrouping("7"));
     expect(result.current[0]).toBe("sections");

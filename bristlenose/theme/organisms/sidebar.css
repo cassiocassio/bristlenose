@@ -463,6 +463,19 @@
     font-weight: var(--bn-weight-emphasis);
 }
 
+/* The Quotes lens's grouping control (Sections & themes / Sessions) when the
+   sidebar is showing: the shipped split control run full width, as the person
+   picker runs it. Each half sizes to its label, so a short label gives its
+   room to a long one rather than halving the row. When the sidebar is closed
+   the same control sits in the zone heading at its natural width. */
+.toc-sidebar-header .bn-quote-grouping {
+    display: flex;
+    align-self: stretch;
+}
+.toc-sidebar-header .bn-quote-grouping .dimension-btn {
+    flex: auto;
+}
+
 .sidebar-close {
     background: none;
     border: none;
@@ -856,6 +869,10 @@ body.dragging * {
 }
 
 .session-entry:hover { background: var(--bn-colour-hover); }
+.session-entry:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
 .session-entry.active { background: var(--bn-nav-selection-bg); }
 
 .session-entry + .session-entry {

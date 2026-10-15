@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, act, waitFor } from "@testing-library/react";
+import { render, act, renderHook, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QuotesTab } from "./QuotesTab";
 import { FocusProvider } from "../contexts/FocusContext";
@@ -19,6 +19,8 @@ import {
   triggerManualRefresh,
 } from "../contexts/LastRunStore";
 import { resetStore } from "../contexts/QuotesContext";
+import { TocShowingContext } from "../contexts/TocShowing";
+import { resetQuoteGroupingSlot, useQuoteGroupingView } from "../contexts/QuoteGroupingSlot";
 
 // ── Mocks ────────────────────────────────────────────────────────────────
 
@@ -81,6 +83,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   resetLastRunStore();
   resetStore();
+  resetQuoteGroupingSlot();
   vi.mocked(apiGet).mockResolvedValue(EMPTY_QUOTES);
   vi.mocked(getCodebook).mockResolvedValue(EMPTY_CODEBOOK as never);
 
@@ -266,5 +269,55 @@ describe("QuotesTab — during a first analysis (progressive lenses, Phase 2)", 
     await waitFor(() => expect(sectionsKeys.length).toBeGreaterThan(0));
     expect(sessionsRenders).toEqual([]);
     expect(sectionsActions.every(Boolean)).toBe(true);
+  });
+});
+
+describe("QuotesTab — where the grouping control sits", () => {
+  beforeEach(() => {
+    sectionsActions.length = 0;
+    sessionsRenders.length = 0;
+    lensesNow.value = { ...lensesNow.value, signals: true };
+  });
+
+  function renderWithSidebar(showing: boolean) {
+    return render(
+      <MemoryRouter initialEntries={["/report/quotes"]}>
+        <FocusProvider>
+          <TocShowingContext.Provider value={showing}>
+            <QuotesTab />
+          </TocShowingContext.Provider>
+        </FocusProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it("leaves the heading while the content sidebar is showing", async () => {
+    // SidebarLayout draws it at the top of the sidebar then: one control, one place.
+    renderWithSidebar(true);
+    await waitFor(() => expect(sectionsActions.length).toBeGreaterThan(0));
+    expect(sectionsActions.some(Boolean)).toBe(false);
+  });
+
+  it("takes the heading when the content sidebar is not showing", async () => {
+    renderWithSidebar(false);
+    await waitFor(() => expect(sectionsActions.length).toBeGreaterThan(0));
+    expect(sectionsActions.every(Boolean)).toBe(true);
+  });
+
+  it("publishes its grouping for the sidebar, and withdraws it on leaving", async () => {
+    const view = renderHook(() => useQuoteGroupingView());
+    const page = renderWithSidebar(true);
+    await waitFor(() => expect(view.result.current?.shown).toBe("sections"));
+    expect(view.result.current?.controlVisible).toBe(true);
+    page.unmount();
+    expect(view.result.current).toBeNull();
+  });
+
+  it("publishes Sessions with no control during a first analysis", async () => {
+    lensesNow.value = { ...lensesNow.value, signals: false };
+    const view = renderHook(() => useQuoteGroupingView());
+    renderWithSidebar(true);
+    await waitFor(() => expect(view.result.current?.shown).toBe("session"));
+    expect(view.result.current?.controlVisible).toBe(false);
   });
 });

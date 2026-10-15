@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { SidebarLayout } from "./SidebarLayout";
+import { useTocShowing } from "../contexts/TocShowing";
 import type { TocMode } from "../contexts/SidebarStore";
 
 // ── Mocks ────────────────────────────────────────────────────────────────
@@ -488,5 +489,61 @@ describe("left sidebar header — renders only when it holds something", () => {
       expect(container.querySelector(".toc-sidebar .sidebar-title")).toBeNull();
       unmount();
     }
+  });
+});
+
+describe("the left panel's header control (the Quotes lens's grouping)", () => {
+  // SidebarLayout is the one owner of "is the sidebar showing": it draws the
+  // control in its header only then, and tells the page through context so
+  // the page can take it back. Both read the same fit, so the control is in
+  // exactly one place.
+  function Probe() {
+    return <span data-testid="probe">{String(useTocShowing())}</span>;
+  }
+  const header = <button data-testid="grouping">grouping</button>;
+
+  it("sits in the sidebar header while the sidebar is a resting panel", () => {
+    mockState = { ...mockState, tocMode: "push" };
+    const { container } = render(
+      <SidebarLayout active={true} leftPanel={<div />} leftPanelHeader={header}>
+        <Probe />
+      </SidebarLayout>,
+    );
+    expect(container.querySelector(".toc-sidebar-header [data-testid='grouping']")).toBeTruthy();
+    expect(screen.getByTestId("probe")).toHaveTextContent("true");
+  });
+
+  for (const mode of ["closed", "overlay"] as const) {
+    it(`stays out of the sidebar when it is ${mode}, and the page is told so`, () => {
+      mockState = { ...mockState, tocMode: mode };
+      render(
+        <SidebarLayout active={true} leftPanel={<div />} leftPanelHeader={header}>
+          <Probe />
+        </SidebarLayout>,
+      );
+      expect(screen.queryByTestId("grouping")).toBeNull();
+      expect(screen.getByTestId("probe")).toHaveTextContent("false");
+    });
+  }
+
+  it("is given a header on the Mac, which otherwise draws none for an untitled panel", () => {
+    mockEmbedded = true;
+    mockState = { ...mockState, tocMode: "push" };
+    const { container } = render(
+      <SidebarLayout active={true} leftPanel={<div />} leftPanelHeader={header}>
+        <div />
+      </SidebarLayout>,
+    );
+    expect(container.querySelector(".toc-sidebar-header [data-testid='grouping']")).toBeTruthy();
+  });
+
+  it("tells a page outside an active layout that no sidebar is showing", () => {
+    mockState = { ...mockState, tocMode: "push" };
+    render(
+      <SidebarLayout active={false} leftPanelHeader={header}>
+        <Probe />
+      </SidebarLayout>,
+    );
+    expect(screen.getByTestId("probe")).toHaveTextContent("false");
   });
 });

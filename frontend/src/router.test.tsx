@@ -3,6 +3,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { routes } from "./router";
 import { _resetEmbeddedCache } from "./utils/embedded";
+import { closeToc, openTocPush, resetSidebarStore } from "./contexts/SidebarStore";
+import { resetQuoteGroupingSlot } from "./contexts/QuoteGroupingSlot";
+import { act } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -143,5 +146,52 @@ describe("Embedded mode", () => {
   it("renders NavBar when not embedded", () => {
     renderRoute("/report/");
     expect(screen.getByRole("navigation")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The Quotes lens's grouping control: at the top of the content sidebar while
+// it shows, never there otherwise (QuotesTab takes it into the heading then).
+// ---------------------------------------------------------------------------
+
+describe("Quotes grouping control placement", () => {
+  beforeEach(() => {
+    resetSidebarStore();
+    resetQuoteGroupingSlot();
+    // Real-shaped answers: the catch-all stub above has no `sections`, and the
+    // sidebar reads them once its fetch lands.
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      const body = url.includes("/quotes")
+        ? { sections: [], themes: [], total_quotes: 0, total_hidden: 0, total_starred: 0, has_moderator: false }
+        : url.includes("/sessions")
+          ? { sessions: [] }
+          : url.includes("/codebook")
+            ? { groups: [], ungrouped: [], all_tag_names: [] }
+            : {};
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+  });
+
+  it("sits at the top of the content sidebar while it is open, and leaves with it", async () => {
+    openTocPush();
+    const { container } = renderRoute("/report/quotes/");
+    await waitFor(() =>
+      expect(
+        container.querySelector(".toc-sidebar-header [data-testid='bn-quote-grouping-sections']"),
+      ).not.toBeNull(),
+    );
+    act(() => closeToc());
+    expect(container.querySelector(".toc-sidebar-header .bn-quote-grouping")).toBeNull();
+  });
+
+  it("is not offered in the sidebar of another lens", async () => {
+    openTocPush();
+    const { container } = renderRoute("/report/signals/");
+    await waitFor(() => expect(container.querySelector(".toc-sidebar")).not.toBeNull());
+    expect(container.querySelector(".bn-quote-grouping")).toBeNull();
   });
 });

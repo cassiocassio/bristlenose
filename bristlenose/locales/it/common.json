@@ -93,7 +93,7 @@
   "quotes": {
     "groupBy": {
       "label": "Raggruppa citazioni",
-      "session": "Per sessione",
+      "session": "Sessioni",
       "sectionsAndThemes": "Sezioni e temi"
     },
     "hiddenCount_one": "{{count}} citazione nascosta",

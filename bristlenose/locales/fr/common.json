@@ -83,7 +83,7 @@
   "quotes": {
     "groupBy": {
       "label": "Regrouper les verbatim",
-      "session": "Par entretien",
+      "session": "Entretiens",
       "sectionsAndThemes": "Sections et th\u00e8mes"
     },
     "hiddenCount_one": "{{count}} citation masqu\u00e9e",

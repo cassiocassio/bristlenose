@@ -101,7 +101,7 @@
   "quotes": {
     "groupBy": {
       "label": "Seskupit cit\u00e1ty",
-      "session": "Podle sezen\u00ed",
+      "session": "Sezen\u00ed",
       "sectionsAndThemes": "Sekce a t\u00e9mata"
     },
     "hiddenCount_one": "{{count}} skryt\u00fd cit\u00e1t",

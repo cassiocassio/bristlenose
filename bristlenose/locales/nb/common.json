@@ -93,7 +93,7 @@
   "quotes": {
     "groupBy": {
       "label": "Grupper sitater",
-      "session": "Etter \u00f8kt",
+      "session": "\u00d8kter",
       "sectionsAndThemes": "Seksjoner og temaer"
     },
     "hiddenCount_one": "{{count}} skjult sitat",

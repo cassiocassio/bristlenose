@@ -23,6 +23,7 @@ import {
 } from "../contexts/QuotesContext";
 import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes, highlightTermsOf } from "../utils/filter";
+import { groupAnchor } from "../utils/quoteGroups";
 import { QuoteGroup } from "./QuoteGroup";
 import { useLastRun } from "../contexts/LastRunStore";
 import { useRefetching, refetchOverlayProps } from "../hooks/useRefetching";
@@ -36,8 +37,8 @@ interface QuoteSectionsProps {
    * Optional so non-SPA mounts (legacy island mode) continue to work.
    */
   refreshKey?: number;
-  /** The grouping control (By session / Sections & themes), shown in the
-   *  heading's action slot once sections exist. */
+  /** The grouping control, when it is not at the top of the content sidebar
+   *  (QuoteGroupingToggle). */
   headingAction?: React.ReactNode;
 }
 
@@ -221,7 +222,7 @@ export function QuoteSections({ projectId, refreshKey = 0, headingAction }: Quot
       {filteredSections.map((section) => {
         // Scroll anchor tracks the *displayed* label (rename if present).
         const displayLabel = section.edited_label ?? section.screen_label;
-        const anchor = `section-${displayLabel.toLowerCase().replace(/ /g, "-")}`;
+        const anchor = groupAnchor("section", displayLabel);
         return (
           <QuoteGroup
             key={section.cluster_id}

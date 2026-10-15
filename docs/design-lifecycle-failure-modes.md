@@ -102,6 +102,7 @@ row 42.
 | 46 | `run --clean` under a live serve: the serve went on logging into the set-aside folder, which the run deletes when it succeeds — the serve's whole log for the run was lost | `test_the_serve_log_follows_the_output_folder`; `TestFollowTheLogFile` (`logging.reopen_log_file`: a failed reopen keeps the old handler and is retried; it never creates the folder) | red-first; mutant |
 | 47 | "That's Me" on a moderator during a run failed as "check your connection": every SPA pick sends the slot's role as `kind`, and the run guard refused any `kind` as a recode. The toast blamed the connection for every failure | `test_naming_yourself_the_moderator_is_allowed`, `test_a_recode_is_still_refused`; `frontend/src/utils/api.test.ts` (the toast names a running analysis, a refusal, or the connection); `paragraphEdits.test.ts` (a refused paragraph move is no longer silent) | red-first; mutant |
 | 27 | After a crash, the previous report stayed hidden until the next run started. The server now puts it back on start, but only over a **stranded** run (started, no terminus, no live owner): an absent output folder or one holding only a log is also a run's own start-up, and reclaiming there would put the old report back under it (15 Oct 2026, `output_backup.reclaim_after_crash`) | scenarios `crash-report-visible-before-rerun`, `server-in-run-start-up-leaves-backup`, `server-under-live-run-leaves-backup`; `server-restarted-mid-reanalyse` is the absent-folder guard | red-first; mutant (each guard alone) |
+| 34 | More than 50 projects: the 51st got no folder lease, so anything borrowing its folder got a bare path with no sandbox scope. The 50 watchers now go to the most recently opened projects, and opening a project or asking for its folder takes a lease on demand, the least recently opened giving way (15 Oct 2026, `ProjectIndex.ensureLease`). Masked in practice by row 39's leaked scope, which is why the cap never showed | `ProjectLeaseOnDemandTests` (4 tests, cap lowered to 1) | mutant (each of order, on-demand and eviction alone) |
 
 ### Open, engineered (strict xfail in the scenario table)
 
@@ -118,7 +119,6 @@ row 42.
 | 31 | A renamed interview gets a new session id, so its stars, tags and edits are deleted | the session key is the file stem by design; a stable key needs content identity — the recording fingerprint and registry v3 in [design-project-identity.md](design-project-identity.md) §5–6 (decided 13 Oct 2026, phase 2) |
 | 32 | Two servers, or two app windows on two machines, on one folder at once | no lock exists to test; SQLite serialises writes but imports can still race |
 | 33 | Network shares, ExFAT, iCloud-evicted databases | WAL is unsupported on network filesystems; needs real volumes, not a temp dir |
-| 34 | More than 50 projects: the 51st gets no folder lease, so no sandbox scope | rare; a Swift-side cap |
 | 35 | The Mac readers open the database with `?immutable=1`, which ignores the WAL: after a fork is repaired the *Report out of date* row stays until a checkpoint, and curation made this session can count as zero, so **Re-analyse…** skips its confirmation | a committed-but-uncheckpointed row is invisible to that open (measured against sqlite 3.53); needs a read without `immutable` falling back on `CANTOPEN`, or a Python-side checkpoint after curation writes — review finding, parked 12 Oct 2026 |
 | 36 | A damaged `projects.json` is set aside (row 25) and the next launch is an empty Welcome with nothing on screen; valid JSON from a newer build is treated as damage | no surfacing yet; an older `.dmg` opening a TestFlight-written file strands the sidebar in every build — parked 12 Oct 2026 |
 | 37 | A rename during a live run: Python holds the old path while the app follows and restarts the serve at the new one | product call: follow at once (report honest) or defer until no run (run honest) — open question 12 Oct 2026 |
@@ -155,10 +155,10 @@ folder instead.
 
 ## The score
 
-**By count:** of 48 failure modes, 31 are designed out and proven (25 fixed on
+**By count:** of 48 failure modes, 32 are designed out and proven (25 fixed on
 12 Oct 2026, one that already held and is now guarded, row 41's progressive
-fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, and row 27 of 15 Oct) — **65%**. Seventeen are
-open: three engineered, fourteen not. _(13 Oct 2026: rows 35–40 added from the review
+fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, and rows 27 and 34 of 15 Oct) — **67%**. Sixteen are
+open: three engineered, thirteen not. _(13 Oct 2026: rows 35–40 added from the review
 of the Mac half; 14 Oct: rows 41–43 from the progressive-lenses truing, then 44–48
 from a `--clean` Re-analyse in the app. The denominator moved each time.)_
 

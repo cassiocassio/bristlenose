@@ -359,13 +359,17 @@ final class ProjectIndex: ObservableObject {
     /// well under filecoordinationd's practical ceiling.
     private var watchers: [UUID: ProjectFolderWatcher] = [:]
     static let maxConcurrentWatchers: Int = 50
+    /// The cap in force. A test lowers it to exercise the 51st project without
+    /// making fifty folders.
+    var watcherCap: Int = ProjectIndex.maxConcurrentWatchers
 
     private let fileURL: URL
 
     /// Create a project index backed by `projects.json` in Application Support.
     /// Pass a custom `fileURL` for testing (temp directory) to avoid touching
     /// the user's real project list.
-    init(fileURL: URL? = nil) {
+    init(fileURL: URL? = nil, watcherCap: Int = ProjectIndex.maxConcurrentWatchers) {
+        self.watcherCap = watcherCap
         if let fileURL {
             self.fileURL = fileURL
         } else {
@@ -661,6 +665,9 @@ final class ProjectIndex: ObservableObject {
         guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
         projects[index].lastOpened = Date()
         save()
+        // Opening a project is the use that earns it a lease. Past the cap,
+        // the least recently opened project's watcher gives way.
+        ensureLease(for: id)
     }
 
     /// Stamp the moment a pipeline run finished, whatever its outcome.
@@ -1195,40 +1202,74 @@ final class ProjectIndex: ObservableObject {
         for stale in leases.keys where !liveIDs.contains(stale) {
             releaseLeaseAndWatcher(for: stale)
         }
-        for project in projects {
+        // Most recently opened first, so the cap leaves out the projects the
+        // researcher has not touched for longest, not whichever sit lowest in
+        // the list (register row 34).
+        for project in Self.watcherOrder(projects) {
             switch project.availability {
             case .ready:
                 if watchers[project.id] != nil { continue }
-                if watchers.count >= Self.maxConcurrentWatchers {
+                if watchers.count >= watcherCap {
                     log.notice("watcher cap reached; skipping new presenter")
                     continue
                 }
-                guard let bookmark = project.bookmarkData else { continue }
-                do {
-                    let lease = try ProjectBookmarkLease(bookmarkData: bookmark)
-                    leases[project.id] = lease
-                    let id = project.id
-                    let watcher = ProjectFolderWatcher(
-                        projectID: id,
-                        lease: lease,
-                        initialKnownBasenames: [],
-                        onMove: { [weak self] url in
-                            Task { @MainActor [weak self] in
-                                self?.projectFolderDidMove(id: id, to: url)
-                            }
-                        }
-                    ) { [weak self] state in
-                        Task { @MainActor [weak self] in
-                            self?.handleWatcherUpdate(projectID: id, state: state)
-                        }
-                    }
-                    watchers[project.id] = watcher
-                } catch {
-                    log.notice("could not acquire lease for project")
-                }
+                startLeaseAndWatcher(for: project)
             case .cantFind, .inCloud:
                 releaseLeaseAndWatcher(for: project.id)
             }
+        }
+    }
+
+    /// Projects in the order the watcher cap should favour them: most recently
+    /// opened first, never-opened ones by creation, newest first. Stable for
+    /// ties, so the order does not shuffle between calls.
+    static func watcherOrder(_ projects: [Project]) -> [Project] {
+        projects.enumerated().sorted { a, b in
+            let ka = a.element.lastOpened ?? a.element.createdAt
+            let kb = b.element.lastOpened ?? b.element.createdAt
+            return ka != kb ? ka > kb : a.offset < b.offset
+        }.map(\.element)
+    }
+
+    /// Give a `.ready` project a lease and watcher now, whatever the cap.
+    /// Past the cap, the least recently opened other project gives up its
+    /// watcher. The 51st project used to get none at all, so anything that
+    /// borrowed its folder got a bare path with no sandbox extension.
+    func ensureLease(for id: UUID) {
+        guard watchers[id] == nil,
+              let project = projects.first(where: { $0.id == id }),
+              project.availability.isReady, project.bookmarkData != nil else { return }
+        if watchers.count >= watcherCap,
+           let evict = Self.watcherOrder(projects).last(where: { $0.id != id && watchers[$0.id] != nil }) {
+            log.notice("watcher cap reached; releasing the least recently opened project's watcher")
+            releaseLeaseAndWatcher(for: evict.id)
+        }
+        startLeaseAndWatcher(for: project)
+    }
+
+    private func startLeaseAndWatcher(for project: Project) {
+        guard let bookmark = project.bookmarkData else { return }
+        do {
+            let lease = try ProjectBookmarkLease(bookmarkData: bookmark)
+            leases[project.id] = lease
+            let id = project.id
+            let watcher = ProjectFolderWatcher(
+                projectID: id,
+                lease: lease,
+                initialKnownBasenames: [],
+                onMove: { [weak self] url in
+                    Task { @MainActor [weak self] in
+                        self?.projectFolderDidMove(id: id, to: url)
+                    }
+                }
+            ) { [weak self] state in
+                Task { @MainActor [weak self] in
+                    self?.handleWatcherUpdate(projectID: id, state: state)
+                }
+            }
+            watchers[project.id] = watcher
+        } catch {
+            log.notice("could not acquire lease for project")
         }
     }
 
@@ -1237,8 +1278,12 @@ final class ProjectIndex: ObservableObject {
     /// `.ready`). Callers must not call `start/stopAccessingSecurityScopedResource`.
     /// Nil if the project is not currently `.ready` or has no bookmark.
     func leaseURL(projectID: UUID) -> URL? {
-        leases[projectID]?.url
+        if leases[projectID] == nil { ensureLease(for: projectID) }
+        return leases[projectID]?.url
     }
+
+    /// Whether a project holds a watcher now. For tests.
+    func hasWatcher(projectID: UUID) -> Bool { watchers[projectID] != nil }
 
     /// Extend a project's known-basenames after a drag-onto copy completes,
     /// so the count pill stays hidden for the just-copied files.

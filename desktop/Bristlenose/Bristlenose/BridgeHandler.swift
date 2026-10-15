@@ -723,6 +723,25 @@ final class BridgeHandler: ObservableObject {
         }
     }
 
+    /// Tell the report a live resize of THIS window started or ended, so the
+    /// Screens board holds its cards still and lays them out once, when it
+    /// stops (`frontend/src/utils/liveResize.ts`). AppKit's notifications cover
+    /// what no pointer event can — tiling, full screen, the green button. They
+    /// arrive for every window, so a notification for another window is
+    /// ignored: a per-window channel on an app-wide one is this app's
+    /// multi-window trap (desktop/CLAUDE.md).
+    func noteLiveResize(of window: NSWindow?, live: Bool) {
+        guard let webView, let window, webView.window === window else { return }
+        Task {
+            try? await webView.callAsyncJavaScript(
+                "window.__bristlenose?.setLiveResize?.(on)",
+                arguments: ["on": live],
+                in: nil,
+                in: .page
+            )
+        }
+    }
+
     // MARK: - Locale sync
 
     /// Push the native locale to the web layer.

@@ -48,7 +48,7 @@ final class BristlenoseWebView: WKWebView {
         // tabs (transcripts, etc.) keep native select-all for copying.
         if flags == .command, event.charactersIgnoringModifiers == "a",
            let handler = bridgeHandler,
-           handler.activeTab == .quotes, !handler.isEditing {
+           CardLensKeys.claimsSelectAll(tab: handler.activeTab, isEditing: handler.isEditing) {
             handler.menuAction("selectAllQuotes")
             return true
         }
@@ -67,6 +67,18 @@ final class BristlenoseWebView: WKWebView {
         }
 
         return super.performKeyEquivalent(with: event)
+    }
+}
+
+/// Which lenses claim ⌘A from the main menu's Select All, to select quote
+/// cards as objects. Every lens that shows the shared quote cards: Quotes, and
+/// Screens since 15 Oct 2026 (the web side's `onQuoteLens`). Elsewhere, and
+/// while editing text inline, ⌘A stays native text select-all. ⌘C stays
+/// Quotes-only: copying "the selection" elsewhere could include quotes the lens
+/// does not show.
+enum CardLensKeys {
+    static func claimsSelectAll(tab: Tab?, isEditing: Bool) -> Bool {
+        !isEditing && (tab == .quotes || tab == .screens)
     }
 }
 

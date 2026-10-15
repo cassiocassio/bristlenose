@@ -891,6 +891,14 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResizeNotification)) { _ in
             bridgeHandler.syncToolbarInset()
         }
+        // A live resize of this window, start and end, for the Screens board
+        // (BridgeHandler.noteLiveResize ignores other windows' notifications).
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.willStartLiveResizeNotification)) { note in
+            bridgeHandler.noteLiveResize(of: note.object as? NSWindow, live: true)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEndLiveResizeNotification)) { note in
+            bridgeHandler.noteLiveResize(of: note.object as? NSWindow, live: false)
+        }
         .onChange(of: selection) { oldSelection, newSelection in
             // Switching the viewed project never cancels a background run — the
             // pipeline runs as an independent subprocess. (The cancel-on-switch

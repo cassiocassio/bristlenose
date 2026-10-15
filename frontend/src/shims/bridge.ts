@@ -9,6 +9,7 @@
  * silently bail if `window.webkit` doesn't exist.
  */
 
+import { setLiveResize } from "../utils/liveResize";
 import { isEmbedded } from "../utils/embedded";
 import { setLocale as setStoreLocale } from "../i18n/LocaleStore";
 import { isPalette } from "../utils/bootPalette";
@@ -482,11 +483,15 @@ export function installBridge(deps: BridgeDeps): void {
     },
 
     /**
-     * Called by native shell to push colour-palette changes — live, no reload.
-     * The report is a runtime `data-color-theme` CSS swap, so (unlike typography)
-     * the native picker applies it here instead of restarting the serve sidecar.
-     * Persisted so it agrees with the web store and survives a later reload.
+     * Called by native when a live window resize starts and ends
+     * (`NSWindow.willStartLiveResize` / `didEndLiveResize`), so the Screens
+     * board can hold its cards still and lay them out once, when it stops.
+     * Exact where the browser can only debounce (utils/liveResize.ts).
      */
+    setLiveResize(on: unknown): void {
+      setLiveResize(on === true);
+    },
+
     /**
      * Called by native shell to push the "Show animation while analysing"
      * toggle (Appearance settings). The web "thinking shimmer" (activity chip
@@ -505,6 +510,12 @@ export function installBridge(deps: BridgeDeps): void {
       }
     },
 
+    /**
+     * Called by native shell to push colour-palette changes — live, no reload.
+     * The report is a runtime `data-color-theme` CSS swap, so (unlike typography)
+     * the native picker applies it here instead of restarting the serve sidecar.
+     * Persisted so it agrees with the web store and survives a later reload.
+     */
     setColorPalette(palette: string): void {
       if (!isPalette(palette)) return;
       const root = document.documentElement;

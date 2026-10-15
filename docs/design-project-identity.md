@@ -435,8 +435,11 @@ not the folder, and are unchanged.
   a placeholder at a known place inherits the session and its transcript
   with no log line if another interview was saved there on another device;
   `/api/health` caches the agent key for the serve's lifetime while the MCP
-  key is computed live; and a row found only by its volume-relative path
-  is not part of the shared-id settlement at refresh. §5 called a duplicate one
+  key is computed live; a row found only by its volume-relative path
+  is not part of the shared-id settlement at refresh; and a network re-drop
+  left `.unsure` is settled by `captureStudyID`, which reads the share's
+  folder identity on the main actor, and if it was the same folder leaves two
+  rows on one study. §5 called a duplicate one
   recording with an alias; the build keeps two sessions, one keyed. Making
   the duplicate a key-less alias would close this class, and is the owner's
   call.

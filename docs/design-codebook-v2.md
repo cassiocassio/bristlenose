@@ -331,6 +331,11 @@ already ship it one lens over, on the same data. That makes this the strongest
 *inherit* argument available, and it means the two lenses would stop disagreeing
 about what a codebook looks like.
 
+_Added 15 Oct 2026:_ for a code's bar + count the two lenses now agree on what it
+*does* as well: in both, a click on it shows the Quotes lens soloed on that code.
+One difference: the tag sidebar's bar toggles solo off on a second click, the
+codebook's only ever enters it. See §"And the tag row is not a badge".
+
 **What it does to each issue.**
 
 - **I1 — dissolved. Measured 29 Aug, after an over-hedge.** One codebook renders
@@ -1656,9 +1661,19 @@ state differs.
 | **Author bio + links** | ✓ | ✓ | ✓ muted |
 | Group titles + **subtitles** | ✓ | ✓ | ✓ muted |
 | Tags | badges | **rows** | **rows**, muted |
-| **Bar charts + counts** | — | **✓** | **✓**, muted |
+| **Bar charts + counts** | — | **✓**, a link to the quotes¹ | **✓**, muted, still a link¹ |
 | Group totals | — | ✓ | ✓ muted |
 | Action | Install | Uninstall &middot; Review | Uninstall &middot; Review, **not muted** |
+
+¹ _Added 15 Oct 2026:_ a code's bar + count opens the Quotes lens with the tag
+sidebar soloed on that code; inert at zero accepted quotes. See §"And the tag row
+is not a badge". In the switched-off state the link stays live: `CodebookTagBar`
+has no enabled guard (`live = tag.count > 0`, `CodebookAuthoring.tsx:75`), and the
+`.pageoff` wash is opacity only, no `pointer-events`
+(`bristlenose/theme/organisms/codebook-v2.css:337-338`). Where that click lands is
+not verified in a running app: the tag sidebar drops switched-off codebooks
+entirely (`buildVisibleFrameworks`, `TagSidebar.tsx:136-152`), so the soloed code
+has no row there.
 
 **Counts follow *installed*, not *enabled*.** Under D4 installing is applying, so
 an installed codebook has results by definition. Disabling does not remove them
@@ -1712,6 +1727,29 @@ count right, the bar split when tentative proposals exist. Rendering badges in
 both states silently drops every count and the whole tentative band, which is
 audit gap **G2** arriving as a rendering choice rather than a missing feature.
 One page, two states: badges before install, rows with counts after.
+
+_Added 15 Oct 2026 — the bar + count is a link._ Commit "codebook: a code's
+histogram goes to its quotes, as the tag sidebar's does". In `CodebookTagBar`
+(`frontend/src/components/CodebookAuthoring.tsx:55-124`):
+
+- It is a separate click target from the row. A row click focuses the code; the
+  bar stops propagation, calls `requestSoloTag`, then `switchToTab("quotes")`
+  (`:77-85`). The Quotes lens opens with the tag sidebar soloed on that code —
+  the same thing the tag sidebar's own bar does
+  ([`design-sidebar-tag-assign.md`](design-sidebar-tag-assign.md) §Solution).
+- Pointer cursor, not the row's grab hand (`.tag-bar-area--link`,
+  `bristlenose/theme/organisms/codebook-panel.css:400-412`, against `.tag-row`'s
+  `cursor: grab` at `:277`). A drag that starts on the bar is suppressed
+  (`CodebookAuthoring.tsx:107-109`).
+- Its aria-label is the locale key `codebook.showTaggedQuotes`.
+- Framework rows and authored rows render the same component (`:291`, `:630`).
+- Inert when the code has no accepted quotes (`live = tag.count > 0`, `:75`):
+  no link, no role, no tab stop.
+
+**Open, for the owner:** a code with tentative proposals but no accepted quotes
+still draws its (tentative-only) bar (`:111-117`), but the bar is not a link,
+because `live` counts accepted quotes only. Nothing records whether that is
+intended.
 
 ## Coverage audit — every control and every datum, v1 against v2
 

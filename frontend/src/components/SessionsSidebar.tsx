@@ -1,10 +1,12 @@
 /**
  * SessionsSidebar — compact session list for the left sidebar.
  *
- * Renders on Sessions tab and Transcript pages. Data-adaptive:
+ * Renders on the Sessions lens and transcript pages, in the browser only
+ * (the Mac app's Sessions lens has a native switcher instead). Data-adaptive:
  * detects 1:1 vs multi-participant, single vs multiple moderators,
- * video vs audio-only. Width-responsive via JS-driven visibility
- * (reads tocWidth from SidebarStore).
+ * video vs audio-only. Width-responsive: `useSessionRowLayout`
+ * (SessionEntry.tsx) measures the list's own width, and the same rows draw
+ * the Quotes contents in the Sessions grouping.
  *
  * @module SessionsSidebar
  */

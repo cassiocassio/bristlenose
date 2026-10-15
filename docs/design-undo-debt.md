@@ -97,6 +97,18 @@ Two corollaries:
   > `design-quote-triage.md`). The posture is no longer four-way inconsistent —
   > it is banned here, absent from the code, and still *proposed* in those three.
   > They want the same sweep, and none of them has been built.
+  >
+  > _Changed 15 Oct 2026:_ checked against each doc. No undo toast has been built
+  > for any of them, and only one still lists it as open work.
+  > `design-sidebar-tag-assign.md` struck its toast through as banned on 20 Sep
+  > 2026, and sidebar assign has been undoable with ⌘Z since 4 Oct 2026 (commit
+  > "quotes: star, unstar, hide, unhide and tags are undoable (edit > undo,
+  > cmd-z)"). That is report-domain undo, outside this register's scope.
+  > `design-project-sidebar.md` keeps the toast "with Undo button" only in its
+  > original drop table, under that doc's own 23 Apr 2026 superseded banner, which
+  > records the shipped toast as having none. `design-quote-triage.md` lists
+  > "Bulk-close undo threshold + toast" among items left to the Figma iteration;
+  > hide itself is ⌘Z-undoable since the same 4 Oct commit.
 
 **"Undo debt"** = the set of mutating actions not yet wired into that single ⌘Z story.
 

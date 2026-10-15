@@ -1,11 +1,13 @@
 /**
  * SidebarLayout — 6-column CSS grid wrapper for the dual-sidebar layout.
  *
- * When `active` is true (Quotes tab), renders the full grid:
+ * When `active` is true (Quotes, Sessions, Codebook, Signals — the lenses
+ * with a left panel; AppLayout decides), renders the full grid:
  *   [toc-rail | toc-sidebar | center | minimap | tag-sidebar | tag-rail]
  *
- * When `active` is false (all other tabs), renders a plain pass-through
- * wrapper with no grid — children render normally.
+ * When `active` is false, renders `.layout.layout-inert`: a rail column that
+ * holds `inertRail` (Discussion and Screens put their navigator toggle there)
+ * beside the centre, with the same fit for the tab bar and no panels.
  *
  * Left panel: TocSidebar (the Quotes contents — sections and themes, or
  *   sessions — with scroll-spy).

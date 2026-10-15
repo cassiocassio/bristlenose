@@ -1,8 +1,22 @@
 # Responsive Quote Grid — Design & Implementation Notes
 
-**Status:** ✅ Shipped — responsive multi-column grid is live, plus CSS Grid Lanes masonry for Safari/WebKit 26.4+ (see Update, 14 Jun 2026).
+**Status (this first part, the quote grid):** ✅ Shipped — responsive multi-column grid is live, plus CSS Grid Lanes masonry for Safari/WebKit 26.4+ (see Update, 14 Jun 2026). The second part, § Global Layout Frame & Navigation Sidebar, is partly shipped and carries its own status and post-script.
 **Mockup:** `docs/mockups/responsive-quote-grid.html` (original grid), `docs/mockups/grid-lanes-quotes.html` (masonry bake-off)
 **Date:** 19 Feb 2026
+
+## Changelog
+
+- _2026-10-15_ — trued up the second part only (§ Global Layout Frame & Navigation
+  Sidebar): added a dated post-script recording which goals shipped and which did not,
+  marked "Current architecture (what changes)" superseded with the table kept, fixed the
+  `SidebarLayout.tsx` path and the grid's column count, and narrowed the top status line to
+  the quote grid. The first part was not re-trued. Anchors:
+  `frontend/src/layouts/AppLayout.tsx:260-270`, `:365-380`, `:782-824`;
+  `frontend/src/components/SidebarLayout.tsx:496`; `frontend/src/contexts/SidebarStore.ts:40`,
+  `:53`, `:57`, `:326`; `bristlenose/theme/organisms/sidebar.css:88-119`; commits "fit cascade:
+  the tab bar condenses, then its icons move up, then the minimap, Contents, Tags", "fit
+  cascade on the mac: the minimap goes first, then the projects column", "sessions lens:
+  responsive grid replaces the auto-table".
 
 ---
 
@@ -290,6 +304,82 @@ No HTML template changes. No JavaScript changes. No Python logic changes.
 **Status:** Design brief — Figma in progress, not yet implemented.
 **Date:** 4 Mar 2026
 
+_Changed 15 Oct 2026:_ partly shipped. The left-panel half is built; the sticky
+toolbar band, the global `min-width` and the heatmap's rotated sentiment headers
+are not. See the post-script directly below. The brief after it is the 4 Mar
+baseline and is kept as written.
+
+## Post-script — what shipped (15 Oct 2026)
+
+Each goal checked against `main` on 15 Oct 2026.
+
+**Shipped**
+
+- **The left-panel slot.** `SidebarLayout` renders `leftPanel ?? <TocSidebar/>`
+  (`frontend/src/components/SidebarLayout.tsx:496`), and `AppLayout` passes a panel
+  per lens (`frontend/src/layouts/AppLayout.tsx:782-802`). Panels followed for
+  Sessions (14 Mar, "add sessions sidebar with live-resize breakpoints"), Codebook
+  (19 Mar, "add codebook sidebar — Phase 1 of LHS navigation for all tabs"; the v2
+  navigator since 31 Aug) and Signals (21 Mar, "add analysis sidebar with signal
+  entries and store"). What each panel lists is described in
+  [design-sidebar.md](design-sidebar.md).
+- **Where it applies.** Quotes, Sessions, Codebook and Signals use the shared
+  panel. Sessions has it in the browser only: on the Mac a native popover replaces
+  it (`AppLayout.tsx:260-270`). Project has no left panel (open question 1 is still
+  open). Discussion and Screens have their own navigator columns inside the page.
+- **Pin state is global.** One persisted `tocMode` under one key, `bn-toc-open`
+  (`frontend/src/contexts/SidebarStore.ts:57`, `:181`), not per route.
+- **Overlay and push.** Both shipped as user gestures: hover or click the rail
+  for overlay, the rail button or `[` for push. A heading click in overlay leaves
+  the panel open by default; mousing out closes it (`frontend/src/components/TocSidebar.tsx:207-210`; the
+  playground's `overlayAutoClose` is off). That answers open question 3.
+- **One default width.** One `tocWidth`, default 240 px (`SidebarStore.ts:40`),
+  shared by every lens. That answers open question 2.
+- **The rail on every lens, in the browser.** Lenses without the shared panel
+  render `.layout-inert`: the rail column and a matching right spacer, no panel
+  (`bristlenose/theme/organisms/sidebar.css:88-103`; commit "add inert rail layout
+  for non-sidebar tabs"). Its button exists only on Discussion and Screens. On the
+  Mac the rails are zeroed (`sidebar.css:116-119`) and the native toolbar toggles
+  the panels.
+- **Sessions narrower.** The table became a container-query grid on 6 Aug
+  ("sessions lens: responsive grid replaces the auto-table").
+
+**Not shipped, checked on 15 Oct 2026**
+
+- **No layout shift across lenses.** Met only while the panel is closed. With
+  the panel pushed open, moving to Project, Discussion or Screens moves the
+  content edge, because `.layout-inert` has no panel column (`sidebar.css:93-98`).
+- **The global sticky toolbar band.** Not built. Only Quotes has a sticky
+  `.toolbar` (`bristlenose/theme/organisms/toolbar.css:19-29`, rendered by
+  `QuotesTab.tsx` alone). Codebook and Signals have no contextual sticky headers.
+  Signals' heatmap pane sticks to the window bottom, which is a different thing.
+- **Rotated sentiment headers on the heatmap.** Not built. Only the tag heatmaps
+  rotate their column labels (`signals.css:421-441`); sentiment columns skip
+  `heatmap-col-header` (`frontend/src/islands/SignalsPage.tsx:894`).
+- **The global `min-width`.** Not set: nothing on `html`, `body`, `#bn-app-root`
+  or `.layout` carries one. What the fit cascade covers instead (15 Oct 2026,
+  [design-sidebar-playground.md § Fit to width](design-sidebar-playground.md)):
+  - The centre column keeps `CONTENT_FLOOR_PX` (368 px, one quote card) or, in the
+    browser, the tab bar's one-row width if that is wider (`SidebarStore.ts:53`,
+    `fitPanels` at `:326`). To hold it, things give way in order: the tab bar
+    condenses, its icon tabs move into the report header, the minimap hides,
+    Contents closes, Tags closes. The tabs wrap only after that.
+  - Lenses without panels get the tab-bar steps from the same function.
+  - On the Mac the minimap goes first, then the projects column folds, then
+    Contents, then Tags. The panels' needed width is sent as `minWidth` in
+    `panel-state` (`AppLayout.tsx:365-380`) and decides when the column folds;
+    it never sets a window minimum.
+  - The Mac window has a fixed minimum, 700 pt, the same on every lens
+    (`desktop/Bristlenose/Bristlenose/DetailFloor.swift:110`).
+
+  What it does not cover: a browser page minimum below which nothing squeezes;
+  the panel just opened is exempt, so if it alone leaves the centre under the
+  floor, the centre squeezes. The floor is one quote card, not each page's
+  comfortable width from the problem table below, so a lens wider than a card
+  (Project's stat row, the Signals heatmap) is not protected by it.
+- **Codebook badge wrapping.** Not re-measured. The lens was rebuilt as the v2
+  navigator on 30–31 Aug, so the 4 Mar observation may no longer hold.
+
 ---
 
 ## Problem
@@ -357,6 +447,12 @@ Three fixed horizontal bands plus a left rail. Everything below the toolbar scro
   | Codebook | Codebook list (active + available) |
   | Analysis | Mini signal cards (slide-navigator style, like a PowerPoint slide navigator) |
 
+- _Changed 15 Oct 2026 (see the post-script):_ the rail is on every lens in the
+  browser but holds a button only on Discussion and Screens, and the Mac has no
+  rails. A slide-over heading click leaves the panel open by default. The modes are
+  still the user's, but a pushed panel the window cannot hold is closed by the fit
+  cascade and comes back when the window widens. The content table above is the
+  4 Mar plan; what each panel lists now is in [design-sidebar.md](design-sidebar.md).
 - Interaction model inspired by Reddit (slide-over + slide-out as separate user-initiated gestures)
 - The tradeoff is good for narrow screens: a 13" screen can live with only the right-hand tag sidebar open for analysis work on a still reasonably sized single column of quotes
 
@@ -407,6 +503,12 @@ Three fixed horizontal bands plus a left rail. Everything below the toolbar scro
 
 ## Current architecture (what changes)
 
+> **Superseded by the post-script (15 Oct 2026).** "Current" below means 4 Mar 2026.
+> Since then the left column of the table has flipped for the first four rows:
+> `SidebarLayout` is active on four lenses and renders an inert rail on the rest,
+> pin state is one persisted `tocMode`, and the left panel is a slot. The last two
+> rows still describe `main`. Kept as the baseline.
+
 | Current | New |
 |---------|-----|
 | `SidebarLayout` wraps only `/report/quotes/` | Becomes global — wraps `AppLayout` or merges into it |
@@ -418,10 +520,10 @@ Three fixed horizontal bands plus a left rail. Everything below the toolbar scro
 
 ## Key files
 
-- `frontend/src/layouts/SidebarLayout.tsx` — current sidebar layout (Quotes-only)
-- `frontend/src/contexts/SidebarStore.ts` — sidebar state (open/width/hidden groups)
-- `bristlenose/theme/organisms/sidebar.css` — 5-column grid CSS
-- `frontend/src/components/TocSidebar.tsx` — current left sidebar content (Quotes TOC)
+- `frontend/src/components/SidebarLayout.tsx` — the sidebar layout, active on Quotes, Sessions (browser), Codebook and Signals, inert elsewhere. _15 Oct 2026: this line said `layouts/SidebarLayout.tsx`; the file has always been in `components/`, and `layouts/` holds `AppLayout.tsx`._
+- `frontend/src/contexts/SidebarStore.ts` — sidebar state (open/width/hidden groups), and `fitPanels`, the fit to width
+- `bristlenose/theme/organisms/sidebar.css` — 6-column grid CSS (rail, left panel, centre, minimap, tags, tag rail; it was 5 columns when this was written)
+- `frontend/src/components/TocSidebar.tsx` — the Quotes left panel (what it lists: [design-sidebar.md](design-sidebar.md))
 - `frontend/src/components/TagSidebar.tsx` — current right sidebar content (tag filter)
 - `frontend/src/islands/SignalsPage.tsx` — heatmap grid with badge headers
 - `bristlenose/theme/organisms/signals.css` — heatmap CSS (rotated headers pattern exists for tag grids)
@@ -431,10 +533,10 @@ Three fixed horizontal bands plus a left rail. Everything below the toolbar scro
 ## Open questions
 
 1. What goes in the Project tab sidebar?
-2. Exact default sidebar width (same for all tabs)
-3. Slide-over dismiss behaviour — click-outside? click heading? both?
+2. Exact default sidebar width (same for all tabs) — _answered: 240 px, one `tocWidth` for every lens (post-script)_
+3. Slide-over dismiss behaviour — click-outside? click heading? both? — _answered: mousing out closes it; a heading click leaves it open (post-script)_
 4. Does sidebar content swapping feel natural across tab switches, or does it need a transition?
-5. Sessions table redesign details
+5. Sessions table redesign details — _answered: a container-query grid, 6 Aug 2026 (post-script)_
 6. Codebook badge wrapping fix approach
 7. Final `min-width` value
 

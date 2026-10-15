@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-08-06
-trued-against: HEAD@main on 2026-07-26 (uncommitted Phase B change in-tree)
+last-trued: 2026-10-15
+trued-against: HEAD@main on 2026-10-15
 ---
 
 > **Truing status:** Partial — the h1 scheme, keyline token, radius tiers,
@@ -9,12 +9,25 @@ trued-against: HEAD@main on 2026-07-26 (uncommitted Phase B change in-tree)
 > re-scope, B3 TOC treatment) have shipped as code (trued 2026-07-26). The
 > Analysis pane variant is **superseded** (26 Sep 2026): Signals scrolls the
 > body like every lens, with the heatmap pane `position: sticky` — see step 2.
-> The `__bnLayoutAudit`/Playwright gate remains deferred. The **on-device acceptance pass** for the datum (Open question 3)
+> The `__bnLayoutAudit` probe remains deferred; the Playwright gate is partly
+> shipped (`e2e/tests/lens-datum.spec.ts`, step 5). The **on-device acceptance pass** for the datum (Open question 3)
 > is still pending — the residual-vs-52 HUD read and pixel tune haven't run.
 > See the changelog and the annotated Sequencing list.
 
 ## Changelog
 
+- _2026-10-15_ — trued up the sidebar passages: the variants table gains a panel-header
+  column and a Screens row, names `CodebookV2Sidebar` and the Signals lens, and records
+  that Sessions has no web left panel on the Mac (closes S4); §"TOC sidebar" marked
+  shipped with its pre-fix text kept as the baseline; the status summary and banner
+  brought level with steps 2 and 5. Not re-checked: the h1-scheme table, the datum
+  acceptance pass, the radius nits. Anchors: `frontend/src/layouts/AppLayout.tsx:260-270`,
+  `:782-824`; `frontend/src/components/SidebarLayout.tsx:472-493`;
+  `bristlenose/theme/organisms/sidebar.css:223-256`; commits "sessions popover 3/3: remove
+  the embedded sessions sidebar and dropdown — REVERT TARGET", "codebook v2: the navigator
+  is the standard sidebar, not a rail in the content", "screens lens: a lens on both sides,
+  the shipped quote card, and a sidebar row", "quotes: the grouping control moves to the
+  top of the contents, and Sessions lists sessions there".
 - _2026-08-20_ — **Codebook was never enrolled in the datum system, and now is.**
   The flush-to-datum rule requires a lens to render its zone title as the direct
   child of a `<section>` that is the direct child of `<main>`; Codebook rendered a
@@ -62,6 +75,9 @@ native-geometry diagnosis are complete and verified against the real WKWebView
 Phase B geometry (sequencing steps 1 + 3) have shipped as code; the Analysis
 pane variant (step 2) and the audit gate (step 5) are deferred; the datum
 acceptance pass is pending. Implementation state is annotated at the foot.
+_Changed 15 Oct 2026:_ step 2 was superseded on 26 Sep (no pane variant;
+Signals scrolls the body) and step 5 is partly shipped (the datum spec, not the
+probe). The datum acceptance pass is still open.
 
 ## The two invariants
 
@@ -201,14 +217,45 @@ template work.
 
 ### Variants table (already centralised in AppLayout — grows one column)
 
-| Lens | Left panel | Minimap | Tags | Inspector | Scroll |
-|---|---|---|---|---|---|
-| Project | none | – | – | – | body |
-| Sessions | SessionsSidebar | – | – | – | body |
-| Quotes | TocSidebar | ✓ | ✓ | – | body |
-| Codebook | CodebookSidebar | – | – | – | body |
-| Analysis | SignalsSidebar | – | – | ✓ | body |
-| Discussion *(dev/flagged preview, 3 Oct 2026)* | own navigator column, ≤60% of the lens | – | – | – | body |
+| Lens | Left panel | Panel header | Minimap | Tags | Inspector | Scroll |
+|---|---|---|---|---|---|---|
+| Project | none | – | – | – | – | body |
+| Sessions | SessionsSidebar in the browser; **none on the Mac** | title "Sessions" | – | – | – | body |
+| Quotes | TocSidebar | the grouping control, push mode only | ✓ | ✓ | – | body |
+| Codebook | CodebookV2Sidebar | none | – | – | – | body |
+| Signals | SignalsSidebar | title "Signals" | – | – | ✓ | body |
+| Discussion | own navigator column, ≤60% of the lens | the navigator's own head | – | – | – | body |
+| Screens *(unreleased; only when the project has screens)* | own navigator column | the navigator's own head | – | – | – | body |
+
+_Changed 15 Oct 2026._ The table was: Codebook → `CodebookSidebar` (the v1 lens,
+retired in 0.29.0); Analysis → `SignalsSidebar` (the lens is Signals since the
+rename, commit "the symbols, the CSS and the locale namespace follow the lens");
+Sessions with no platform split; Discussion marked a dev/flagged preview (a lens
+since commit "discussion lens on the mac: a lens, not a preview", 3 Oct); no
+header column and no Screens row. Where the facts live in `AppLayout.tsx`:
+
+- **Sessions on the Mac.** `embeddedSessionsPanelRemoved` gates `showSidebar`
+  (`AppLayout.tsx:260-270`) and the `leftPanel` prop (`:788`); the native
+  session-switcher popover replaces the panel
+  ([design-sessions-popover-navigation.md](design-sessions-popover-navigation.md);
+  commit "sessions popover 3/3: remove the embedded sessions sidebar and dropdown —
+  REVERT TARGET"). Transcript pages take the same branch.
+- **Panel header.** `leftPanelTitle` (Sessions, Signals) and `leftPanelHeader`
+  (Quotes) at `AppLayout.tsx:790-802`. Quotes' "Contents" and Codebook's title
+  were trialled out on 14 Aug 2026 (`SidebarLayout.tsx:474-480`). The grouping
+  control shows only while the panel is pushed open; otherwise it sits in the
+  zone heading. In the browser the header row also carries the close ×
+  (`SidebarLayout.tsx:472-493`).
+- **Discussion and Screens** are not in `showSidebar`; their navigators are
+  columns inside the page, and in the browser the inert rail holds their toggle
+  button (`inertRail`, `AppLayout.tsx:804-823`).
+- **What each left panel lists** is described in
+  [design-sidebar.md](design-sidebar.md), not here.
+- **Narrow windows.** The ✓ columns are what a lens can show. What it shows at a
+  given width is fitted: in the browser the tab bar gives way first, then the
+  minimap, the left panel and Tags; on the Mac the projects column folds
+  between the minimap and the left panel. See
+  [design-sidebar-playground.md § Fit to width](design-sidebar-playground.md).
 
 **Discussion is a declared exception, pending a decision (3 Oct 2026).** Its
 navigator is a column inside the page, not the shared left panel, because the
@@ -321,6 +368,14 @@ type work is a real open question, tracked separately from these web fixes.
 
 ### TOC sidebar (contents menu)
 
+> **Shipped 26 Jul 2026** (commit "lens geometry: toolbar-inset residual (0), datum
+> re-scope, TOC bleed"). `.toc-sidebar` now carries the tag sidebar's toolbar
+> bleed — `margin-top: calc(-1 * (inset + space-xl))` with matching padding
+> (`bristlenose/theme/organisms/sidebar.css:244-254`) — and since 14 Aug the
+> inspector-chrome background, `--bn-colour-inspector-bg` (`sidebar.css:231`;
+> commit "promote toc sidebar to the inspector-chrome colour tier"). The text
+> below is the pre-fix description, kept as the baseline. See sequencing step 3.
+
 The tag sidebar has the full embedded treatment (toolbar bleed, re-inset
 header, datum rule); the TOC sidebar has none — `sticky; top: 0; 100vh`
 inside the body's padded flow, so its panel starts a full pad below the
@@ -352,6 +407,9 @@ shrinks to match in the same pass.)
 > h1-scheme tables below; it shipped 30 Aug with the precise datum defect this
 > doc governs (fixed in *"codebook v2: the lens sat below the shared datum…"*)
 > and was enrolled in the datum spec on 31 Aug.
+> _15 Oct 2026:_ v1 was retired in 0.29.0, so Codebook v2 is the Codebook lens
+> and the variants table's Codebook row now names its navigator. The h1-scheme
+> table was not re-checked in that pass.
 
 
 - **`window.__bnLayoutAudit()`** — a small dev-gated probe in the SPA
@@ -498,6 +556,10 @@ the `0.5rem` / head `0.6rem` pair the old `td`/`th` used.
 above lists Sessions as `Left panel: SessionsSidebar`. Confirm that against
 `AppLayout.tsx` after the rewrite and correct the row if it drifted. Invariant
 2 means this table is the spec, not a description.
+**Closed 15 Oct 2026.** The row had drifted: Sessions has `SessionsSidebar` in
+the browser and no web left panel on the Mac, where `embeddedSessionsPanelRemoved`
+keeps it out of `showSidebar` (`AppLayout.tsx:260-270`) since 14 Aug. The
+variants table now says so.
 
 ### Out of scope for this pass
 

@@ -1,13 +1,23 @@
 ---
 status: Phases 0–5 built 12–13 Oct 2026 (unreleased); whole-feature review fixed 13 Oct (§5.7)
-last-trued: 2026-10-14
-trued-against: HEAD@main (03e55462) on 2026-10-14, evening
+last-trued: 2026-10-15
+trued-against: HEAD@main on 2026-10-15 for the Quotes grouping control and content sidebar; the rest as of 03e55462 on 2026-10-14, evening
 owner: run progress across the pipeline, the report server, the SPA and the Mac app
 mockup: docs/mockups/progressive-lenses-replay.html
 ---
 
 ## Changelog
 
+- _2026-10-15_ — trued up (scoped to the Quotes grouping control): §2 Quotes and the
+  Phase 2 as-built note record the 15 Oct move — the shipped split control, Sections &
+  themes first, "Sessions" as the label, at the top of the content sidebar while it is
+  open and in the heading otherwise; a new as-built bullet, "Content sidebar", records
+  what the sidebar follows, its session rows, the groups it lists and the one-control
+  invariant; build-plan steps 4–6 kept with a forward pointer; gate tests and §5.7
+  updated. Anchors: commits "quotes: the grouping control moves to the top of the
+  contents, and Sessions lists sessions there" and "sessions sidebar: its rows become
+  a shared hook and row, for a second list"; `QuoteGroupingToggle.tsx`,
+  `contexts/QuoteGroupingSlot.ts`, `contexts/TocShowing.ts`, `TocSidebar.tsx`.
 - _2026-10-14, evening_ — the shoal rule now says whose count it reads (a Re-analyse
   had read the previous run's); "Known, not fixed" gains the report mounted between
   the pipeline's count and the server's import. Anchors: `EventLogReader.currentRunProgress`,
@@ -174,7 +184,13 @@ pair, the seven container thresholds and the name ladder stay exactly as they ar
 - Grouped **by session** until sections and themes exist. Then a permanent choice
   of grouping, *By session* / *Sections & themes*, in the heading's
   `.section-heading-action` slot. The researcher's choice wins; themes arriving
-  never move them.
+  never move them. _Changed 15 Oct 2026: the order is Sections & themes, then
+  Sessions, and "By session" is labelled **Sessions** in every locale. The control
+  sits at the top of the content sidebar while that sidebar is open as a resting
+  panel, and in the heading's slot only when it is closed or peeking. In Sessions
+  grouping the sidebar lists the sessions (Phase 2 as-built, "Content sidebar";
+  `docs/mockups/quote-grouping-sidebar.html`). The rule above is unchanged. In this
+  doc, *By session* names the grouping the UI now calls Sessions._
 - Dragging a quote between groups is off in By session (membership is a fact).
 
 **Counts**
@@ -535,6 +551,10 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 7. The rail's Quotes turns normal at the first session with quotes.
 8. The sparkline fills per session.
 
+_Steps 4–6 are the plan as written. What shipped is in the as-built note below:
+three keys, not two, and since 15 Oct 2026 the control sits in the content
+sidebar while it is open, not only in `.section-heading-action`._
+
 > **As built, 12 Oct 2026.**
 > - **Pipeline.** `extract_quotes` takes `on_session_done(sid, quotes)`
 >   (`s09_quote_extraction.py`), called once per session that succeeded, zero quotes
@@ -591,6 +611,41 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 >   the floor's quotes in their sessions (exclusivity in this grouping), so the
 >   floor's "needs a home" heading is a Sections & themes view only. Three new keys
 >   (`quotes.groupBy.{label, session, sectionsAndThemes}`) in 21 locales.
+>   _Changed 15 Oct 2026 (commit "quotes: the grouping control moves to the top of
+>   the contents, and Sessions lists sessions there"):_ the control is the shipped
+>   split control, `.dimension-toggle` with two `.dimension-btn` buttons and
+>   `aria-pressed` (`QuoteGroupingToggle.tsx:57-73`), Sections & themes first (the
+>   default), then Sessions. `quotes.groupBy.session` now reads "Sessions", lifted
+>   from each locale's own `nav.sessions`. It sits at the top of the content
+>   sidebar while that sidebar is a resting panel (`AppLayout` passes it as
+>   `leftPanelHeader`; `SidebarLayout` draws it only when `tocPush`), and in
+>   `.section-heading-action` when the sidebar is closed or peeking
+>   (`QuotesTab.tsx:64-69`). In the sidebar it runs full width
+>   (`organisms/sidebar.css`, `.toc-sidebar-header .bn-quote-grouping`).
+> - **Content sidebar** (15 Oct 2026, same commit). `TocSidebar` follows the
+>   grouping the column draws; it never decides one. `QuotesTab` publishes
+>   `{shown, controlVisible, choose}` to `contexts/QuoteGroupingSlot.ts` and clears
+>   it on leaving. It publishes in a `useLayoutEffect`, before paint, so the sidebar
+>   never shows one grouping for a frame while the column shows the other
+>   (`QuotesTab.tsx:56-61`). Until something is published the sidebar draws nothing
+>   (`TocSidebar.tsx:232-234`).
+>   - In Sessions grouping it lists one row per session, the Sessions lens's own row
+>     (`components/SessionEntry.tsx`, `useSessionRowLayout` and `SessionEntryRow`,
+>     shared since commit "sessions sidebar: its rows become a shared hook and row,
+>     for a second list"). A row links to `#session-quotes-<sid>`, the anchor
+>     `QuoteSessions` puts on the group heading, and the scroll spy follows.
+>   - In both groupings it lists only the groups the column draws: `keepsGroup`
+>     (`utils/quoteGroups.ts`) keeps a group with a quote the filters pass or a
+>     hidden quote, the rule the three column islands apply inline. Section and
+>     theme links anchor on `edited_label ?? screen_label` (or `theme_label`) and
+>     show a rename made in the session. Before, the sidebar listed every section
+>     and theme whatever the filters, and a renamed section's link went nowhere.
+>   - One control, one place, never both or neither. `SidebarLayout` owns whether
+>     the sidebar is showing and passes `tocPush` down through
+>     `contexts/TocShowing.ts`; `QuotesTab` reads that rather than recomputing the
+>     fit, because the two calculations differ and a control placed by the other
+>     one could end up in neither place (`TocShowing.ts:5-10`). How the grid fits
+>     panels to the width: `design-sidebar-playground.md` § Fit to width.
 > - **Floor quotes seed the store** (`QuotesContext.initFromQuotes`). Every write is a
 >   full-map PUT, so a floor quote missing from the maps lost its star, hide, tags
 >   or edit on the first gesture anywhere. Latent before Phase 2; reachable once a
@@ -615,7 +670,12 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 >   manifest records them. Vitest: `QuoteSessions.test.tsx` (grouping, headings,
 >   control, persistence), `QuotesTab.test.tsx` (forced during the run, kept after,
 >   not remembered),
->   `QuotesContext.test.tsx` (floor quotes seed the maps). The floor seeding, the run
+>   `QuotesContext.test.tsx` (floor quotes seed the maps). Added 15 Oct 2026:
+>   `QuotesTab.test.tsx:275-323` (where the control sits; the grouping published
+>   and withdrawn), `TocSidebar.test.tsx:124-242` (Sections & themes and Sessions:
+>   the groups the column draws, renamed anchors, session rows, following a run
+>   and the page), `SidebarLayout.test.tsx:496-550` (the header control only in a
+>   resting panel; the page told so). The floor seeding, the run
 >   stamp, file-before-record, the route without the overlay gate, the manifest age
 >   check and the unremembered grouping were each proved red on a mutant of the fix.
 
@@ -911,7 +971,8 @@ the overlay and moves `data_version`, so the SPA refetches.
   to every MCP result as `coverage` and added beside the chat lens's invariants, with an
   invariant telling the model to say it.
 - A test that could not fail: the Quotes control with sections and themes now
-  asserts the control is passed.
+  asserts the control is passed. _Since 15 Oct 2026 that holds with no content
+  sidebar showing; with one, the control is in the sidebar (Phase 2 as-built)._
 
 **Known, not fixed.**
 - When the chain stops after a failed delivery, the next session shimmers as processing

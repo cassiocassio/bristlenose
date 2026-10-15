@@ -1,10 +1,32 @@
 ---
 status: current
-last-trued: 2026-08-31
-trued-against: HEAD@main on 2026-08-31
+last-trued: 2026-10-15
+trued-against: HEAD@main on 2026-10-15
 ---
 
 ## Changelog
+
+- _2026-10-15_ — trued up the layout and left-panel sections: the Overview
+  names Signals, the Mac's missing Sessions panel and the inert rail;
+  § Left Sidebar gained a per-lens table of what the left panel holds (meant
+  to be the one other docs point to), the Quotes contents now follow the
+  grouping, and a new § Panel header and the grouping slot records the header,
+  the one-control-one-place rule and focus on open; corrected the data source,
+  auto-scroll (`instant`), typography (`--bn-text-label`), drag-to-open (60px
+  on release), the store shape (`tocMode`), the components table, the inert
+  branch and Extensibility; the width fitting and the 6-column grid point to
+  `design-sidebar-playground.md` rather than restating it. The right sidebar,
+  eye toggles and the AutoCode toast were not re-audited. Anchors:
+  `frontend/src/components/SidebarLayout.tsx:126-143,153-169,316-335,398-407,468-496,520`,
+  `frontend/src/layouts/AppLayout.tsx:267-270,782-823`,
+  `frontend/src/components/TocSidebar.tsx:63-64,75-90,156-167,197-204,234-253`,
+  `frontend/src/contexts/TocShowing.ts:1-11`, `frontend/src/pages/QuotesTab.tsx:56-69`,
+  `frontend/src/hooks/useDragResize.ts:26-29`, commits "quotes: the grouping
+  control moves to the top of the contents, and Sessions lists sessions
+  there", "sessions sidebar: its rows become a shared hook and row, for a
+  second list", "fit cascade: the tab bar condenses, then its icons move up,
+  then the minimap, Contents, Tags", "fit cascade on the mac: the minimap goes
+  first, then the projects column".
 
 - _2026-08-31_ — the Overview's lens count corrected a second time, **five →
   four**. The entry below fixed the stale "Quotes tab only" but listed Codebook
@@ -37,6 +59,14 @@ too). The **right** tag sidebar is Quotes-only. Lenses outside that set render
 with no grid and no rails. _(Said "Quotes tab only" until 31 Aug 2026, then
 "five lenses" for the rest of that day — see the changelog.)_
 
+_Changed 15 Oct 2026:_ the fourth lens is **Signals** (the Analysis lens
+renamed; `isSignals`, `AppLayout.tsx:245`). On the Mac, Sessions has no left
+panel (`embeddedSessionsPanelRemoved`, `AppLayout.tsx:266-270`; see § Desktop
+embedded mode), so there it is three. Lenses outside the set do get a grid: an
+inert one with a left rail column, which holds a button on Discussion and
+Screens in the browser (§ Key Constraint below). What each lens's left panel
+holds is in § What each lens puts in the left panel.
+
 **Reference mockup:** `docs/mockups/mockup-sidebar-tags.html`
 
 ---
@@ -44,6 +74,15 @@ with no grid and no rails. _(Said "Quotes tab only" until 31 Aug 2026, then
 ## Layout Architecture
 
 ### 5-Column Grid
+
+> _Changed 15 Oct 2026:_ the grid is **six** columns — the minimap sits in
+> column 4, between the centre and the tag sidebar
+> (`SidebarLayout.tsx:1-5`, `:527-528`) — and lenses without the right column
+> use the `layout-no-right` variant. The five-column grid and the four states
+> below are kept as the original design. The current grid, its per-state
+> templates and the tokens are in
+> [design-sidebar-playground.md](design-sidebar-playground.md) § Architecture:
+> 6-column CSS grid; this doc does not restate them.
 
 When the Quotes tab is active, a CSS grid provides the structural skeleton:
 
@@ -65,6 +104,14 @@ When the Quotes tab is active, a CSS grid provides the structural skeleton:
 Header, NavBar, toolbar, section headings, and quote cards all live inside the grid's center column. Their left edges align vertically — from the logo down through the content. When sidebars open, the center column shifts but internal alignment is preserved.
 
 This means `SidebarLayout` wraps `AppLayout`'s children (Header, NavBar, Outlet, Footer), not just QuotesTab content. On non-Quotes tabs, the layout renders a pass-through wrapper with no grid.
+
+_Changed 15 Oct 2026:_ there is no pass-through any more. A lens without the
+shared panel gets `.layout.layout-inert`: a left rail column
+(`.toc-rail.toc-rail-inert`) and the centre (`SidebarLayout.tsx:398-407`). The
+rail holds whatever the `inertRail` prop passes — the Discussion guide's and
+the Screens navigator's toggle button, in the browser only
+(`AppLayout.tsx:804-823`); elsewhere it is empty. The inert layout still runs
+the tab-bar steps of the width fit (§ Responsive Behaviour).
 
 ### 4 Layout States
 
@@ -101,13 +148,62 @@ All committed to `bristlenose/theme/tokens.css`.
 
 ## Left Sidebar: Table of Contents
 
+### What each lens puts in the left panel
+
+This table is the reference for the left panel's contents; other docs should
+point here rather than keep their own list. `AppLayout` chooses the panel
+(`leftPanel`, `AppLayout.tsx:784-789`) and `SidebarLayout` falls back to
+`TocSidebar` when nothing is passed (`SidebarLayout.tsx:496`). Trued against
+HEAD on 15 Oct 2026.
+
+| Lens | Left panel | Header | Mac |
+|------|------------|--------|-----|
+| **Quotes** | `TocSidebar` — the page's contents in the grouping the column draws: Sections and Themes links, or one `SessionEntryRow` per session (below) | No title. The grouping control, while the panel is pushed open | Same panel |
+| **Sessions** (and the transcript route) | `SessionsSidebar` — one `SessionEntryRow` per session (`components/SessionEntry.tsx`: `useSessionRowLayout` + `SessionEntryRow`) | Title "Sessions" | **None.** The native session-switcher popover replaces it |
+| **Codebook** | `CodebookV2Sidebar` — Manual tags / Default / Frameworks, one row per codebook with its on/off switch | No title (dropped 14 Aug 2026) | Same panel |
+| **Signals** | `SignalsSidebar` — one run of locations, ranked by their strongest signal, cards ranked within; a click focuses the card and syncs the inspector | Title "Signals" | Same panel |
+| **Discussion** | No shared panel. The lens draws its own navigator, the discussion guide, inside the page (`islands/discussion/guidePanel.ts`), with its own remembered open/closed setting | — | The toolbar button reaches the guide; no rail button |
+| **Screens** | No shared panel. Its own navigator, the list of screens, inside the page (`islands/screens/navPanel.ts`), wired like Discussion's | — | As Discussion |
+| **Project** | None. Not in `showSidebar`; inert layout with an empty rail | — | None |
+
+Discussion and Screens get a toggle button in the inert rail in the browser
+(`AppLayout.tsx:804-823`), with `aria-pressed` showing their own state; `[`,
+⌥⌘L and the Mac toolbar reach them through the same actions as the shared
+panel.
+
 ### Content
 
 Two groups of links: **Sections** and **Themes**, matching the quote groupings on the page.
 
+_Changed 15 Oct 2026:_ the Quotes contents follow the page's grouping
+(`useQuoteGroupingView()`, `TocSidebar.tsx:63-64`):
+
+- **Sections & themes** — the two groups of links above.
+- **Sessions** — one `SessionEntryRow` per session, the Sessions lens's own row,
+  linking to `#session-quotes-<sid>` with `aria-current="location"` on the
+  current one (`TocSidebar.tsx:236-253`).
+
+In both it lists only the groups the column draws (`keepsGroup` with the same
+filter state, `TocSidebar.tsx:108,121,175`), so a filter that empties a section
+removes its link. A link anchors on the column's own label
+(`edited_label ?? screen_label`, or `theme_label`) and shows a rename made in
+this session (`TocSidebar.tsx:110-113,123-126`). It draws nothing until the
+Quotes page has published its grouping (`TocSidebar.tsx:234`), so it never
+shows one grouping while the column loads the other. Anchors: commits
+"quotes: the grouping control moves to the top of the contents, and Sessions
+lists sessions there" and "sessions sidebar: its rows become a shared hook and
+row, for a second list".
+
 ### Data Source
 
 Section and theme headings come from QuotesStore — populated by the quotes API response. No new API endpoint needed.
+
+_Changed 15 Oct 2026:_ `TocSidebar` fetches `/quotes` itself — the same
+endpoint the column reads — on mount, when a run imports (`refreshKey`) and on
+`bn:tags-changed` (`TocSidebar.tsx:75-90`). In the Sessions grouping it also
+fetches `/sessions` for the row metadata, again only when a session joins
+(`:156-167`). Only rename labels come from the quotes store (`store.edits`).
+No new endpoint was needed.
 
 ### Scroll Spy
 
@@ -118,6 +214,14 @@ A `useScrollSpy` hook determines which section is currently visible:
 - Active TOC link gets `.active` class (accent colour, emphasis weight, hover background)
 - Auto-scrolls active link into view (`scrollIntoView({ block: 'nearest', behavior: 'smooth' })`)
 
+_Changed 15 Oct 2026:_ the auto-scroll uses `behavior: "instant"`, so
+competing calls do not fight while the active id changes quickly
+(`TocSidebar.tsx:197-204`). A click sets a click-intent ref the spy honours, so
+the clicked heading stays highlighted even when the page cannot scroll it to
+the top (`clickedIdRef`, `TocSidebar.tsx:71,213`); the two phases are in
+[design-sidebar-playground.md](design-sidebar-playground.md). The spy keys on
+the ids, so a star or an edit does not re-arm it.
+
 ### Typography
 
 | Element | Font size | Weight | Token |
@@ -127,6 +231,55 @@ A `useScrollSpy` hook determines which section is currently visible:
 | Active link | 0.82rem | `--bn-weight-emphasis` (490) | — |
 
 The light weight (370) makes links feel subordinate to headings. On static fonts (Win 10 Segoe UI), 370 rounds to 400, same as 420 — acceptable degradation.
+
+_Changed 15 Oct 2026:_ both sizes are now `var(--bn-text-label)`, 13px
+(`.toc-heading` and `.toc-link`, `bristlenose/theme/organisms/sidebar.css:510-530`).
+The weights are unchanged.
+
+### Panel header and the grouping slot
+
+`.toc-sidebar-header` sits above the panel body
+(`SidebarLayout.tsx:468-494`; CSS `sidebar.css:452-477`).
+
+- **When it renders:** when there is a title, or in the browser (which always
+  has the close ×), or when a header control is passed and the panel is pushed
+  open (`leftPanelTitle || !embedded || (leftPanelHeader && tocPush)`). On the
+  Mac, Codebook therefore has no header, and Quotes has one only while it
+  carries the grouping control.
+- **What it holds, in DOM order:** the title (`leftPanelTitle`), the header
+  control (`leftPanelHeader`, push mode only), then the close × (browser only).
+  The × is drawn first by `order: -1`.
+- **Titles were trialled out on 14 Aug 2026.** Quotes ("Contents") and
+  Codebook pass none; Sessions and Signals still do (`AppLayout.tsx:790-795`).
+- **The grouping slot.** On Quotes, `AppLayout` passes the grouping control
+  (`QuoteGroupingToggle`, the split control `.dimension-toggle`, Sections &
+  themes then Sessions) as `leftPanelHeader` once the grouping is offered
+  (`quoteGrouping.controlVisible`, `AppLayout.tsx:796-802`). In the header it
+  runs full width (`.toc-sidebar-header .bn-quote-grouping`). `QuotesTab` owns
+  the decision and publishes it before paint through
+  `contexts/QuoteGroupingSlot.ts`; the header and the list only follow it
+  (`QuotesTab.tsx:56-62`).
+
+**One control, one place.** The grouping control is in the sidebar header
+while the panel is pushed open, and in the zone heading otherwise — never both,
+never neither (`QuotesTab.tsx:64-69`). `SidebarLayout` is the single owner of
+"is the panel showing": it provides its own fitted `tocPush` through
+`TocShowingContext` (`SidebarLayout.tsx:520`), and pages read
+`useTocShowing()`. They must not recompute it with `panelFit()`: the two
+calculations differ (the layout takes the right column from its prop, the
+store from a later effect), and a control placed by the other one could end up
+in neither place (`contexts/TocShowing.ts:1-11`). The hover peek is not a
+resting panel and reads false, so the control is not in the peek; it stays in
+the heading.
+
+**Focus on open.** Opening the panel focuses the first match for
+`.sidebar-close, .toc-link, .session-entry` inside it
+(`SidebarLayout.tsx:316-325`). In the browser that is the close ×, the first in
+DOM order. On the Mac there is no ×, so it is the first row. The grouping
+control (`.dimension-btn`) is never the target. _Open:_ whether that is
+intended has not been decided. Signals rows are `.signal-entry`, which the
+selector does not name, so on the Mac opening the Signals panel moves focus
+nowhere.
 
 ---
 
@@ -220,6 +373,12 @@ CSS `columns` packs group cards tightly (no row-based whitespace gaps). `break-i
 - `mousemove` → compute delta, clamp width to [200, 480] (`MIN_WIDTH` / `MAX_WIDTH` in `useDragResize.ts`; the earlier temporary 320 cap for single-column layout has been lifted)
 - **Snap-close**: if dragged below 80px → snaps closed (sets width to 0, removes open class)
 - **Drag-to-open from rail**: drag >20px threshold triggers open, then continues as resize
+  — _changed 15 Oct 2026:_ the panel follows the pointer as an overlay from
+  the first move, and the choice is made on release: 60px or more commits to
+  push mode, less snaps closed (`RAIL_SNAP_OPEN_THRESHOLD`,
+  `hooks/useDragResize.ts:29`; detail in
+  [design-sidebar-playground.md](design-sidebar-playground.md) § Rail
+  drag-to-open)
 - `mouseup` → cleanup, persist width to `localStorage`
 
 ### Visual Affordance
@@ -244,7 +403,7 @@ Drag handles are 6px invisible strips. On hover: subtle blue highlight (accent c
 
 Hiding stashes the current arrangement and showing puts **that** back, rather than opening everything. Lineage is Photoshop's `Tab` (and `⇧Tab`, which keeps the toolbar) rather than Figma's Show/Hide UI: Figma can use a bare toggle because its panels are always both present, whereas here mixed arrangements are the norm. Without the stash, "TOC open, tags closed → hide → show" hands back **both** — you gain a sidebar you never had. The stash is ephemeral (never persisted); with nothing stashed, "show all" means all, so the command is never a no-op.
 
-Scope is the sidebars. The Analysis heatmap inspector is a bottom panel on the data rather than navigation chrome, and the toolbar stays — in the desktop app it is the only affordance for the web panels (see § Desktop embedded mode), so hiding it would make this a one-way door.
+Scope is the sidebars. The Analysis heatmap inspector (the Signals lens's inspector since the rename) is a bottom panel on the data rather than navigation chrome, and the toolbar stays — in the desktop app it is the only affordance for the web panels (see § Desktop embedded mode), so hiding it would make this a one-way door.
 
 **Desktop adds the projects column.** `⌘⌥\` in View ▸ **Hide All Sidebars** covers all three; the web keys stay scoped to the two content panels, which in the browser *is* all of them. Native decides the direction — it is the only side that can see the column and the panels at once — and sends an explicit `hideAllSidebars` / `showAllSidebars` rather than a toggle, reading the web half over the `panel-state` bridge mirror. The column deliberately has no stash of its own: it is binary, and "Show All Sidebars" showing it is exactly what the label says.
 
@@ -286,6 +445,18 @@ closeToc(), closeTags()
 useSidebarStore() → SidebarState
 ```
 
+_Changed 15 Oct 2026:_ the left panel is a mode, not a flag:
+`tocMode: "closed" | "overlay" | "push"` (`contexts/SidebarStore.ts:64,70`),
+where `overlay` is the hover peek and only `push` is persisted as open. The
+store holds the **wish**; the grid draws the wish fitted to the width, from
+ephemeral fields the layout reports (`availableWidth`, `rightColumn`,
+`lastOpened`, the tab bar's measured widths, `hostColumnFolded`). `SidebarLayout`
+calls `fitPanels` with them on every render (`SidebarLayout.tsx:153-169`). The
+store also carries the tag-eye, codebook-switch and solo-tag state. The fit and
+its fields are described in
+[design-sidebar-playground.md](design-sidebar-playground.md) § Fit to width;
+the sketch above is kept as the original shape.
+
 Module-level (not React Context) because:
 - Consistent with QuotesStore pattern
 - Accessible from keyboard shortcuts and toolbar without provider nesting
@@ -324,6 +495,30 @@ When the TOC sidebar is open, the center column narrows. To compensate:
 - `.layout.toc-open .toolbar-btn-label { display: none }` — toolbar button labels collapse to icon-only
 - Below 900px viewport: labels also hidden via `@media (max-width: 900px)`
 
+### Fit to width
+
+_Added 15 Oct 2026._ When the window is too narrow for the panels the
+researcher has open, the layout gives way in a fixed order rather than
+squeezing the centre below one quote card (`CONTENT_FLOOR_PX`, 368).
+`fitPanels` in `contexts/SidebarStore.ts` takes the shortest run of steps that
+fits, so it is one-way; the panel just opened is exempt.
+
+- **Browser:** the tab bar condenses → its four icon tabs (Refresh, Export,
+  Settings, Help — `components/NavTools.tsx`) move out of the tab bar into the
+  report header (`Header.tsx`) → the minimap hides → the left panel closes →
+  the tag sidebar closes. Tabs wrap to a second row only after all of that.
+- **Mac** (no tab bar): the minimap → the native projects column folds → the
+  left panel → the tag sidebar.
+
+Before 15 Oct 2026 the order was left panel, tag sidebar, minimap. The full
+rules, the measurements and the Mac fold are in
+[design-sidebar-playground.md](design-sidebar-playground.md) § Fit to width
+(20 Sep 2026) and the "Order changed 15 Oct 2026" paragraph in
+[design-decisions.md](design-decisions.md); this section only summarises them.
+Anchors: commits "fit cascade: the tab bar condenses, then its icons move up,
+then the minimap, Contents, Tags" and "fit cascade on the mac: the minimap goes
+first, then the projects column".
+
 ---
 
 ## CSS Files
@@ -333,6 +528,11 @@ When the TOC sidebar is open, the center column narrows. To compensate:
 | `organisms/sidebar.css` | Organism | 5-column grid, rails, sidebar panels, drag handles, animated transitions, TOC links, responsive label hide |
 | `organisms/sidebar-tags.css` | Organism | Tag sidebar content: framework disclosure, group cards, eye toggles, tag rows, group totals, 2-col masonry, search |
 | `atoms/checkbox.css` | Atom | Ghost checkbox (shared by sidebar and toolbar dropdown) — already committed |
+
+_Changed 15 Oct 2026:_ `sidebar.css` now holds the 6-column grid with its
+`layout-no-right` and `layout-inert` variants, the left panel header (including
+the grouping control's full-width rule) and the session rows; the minimap's
+hide rule lives in `minimap.css`.
 
 ---
 
@@ -348,11 +548,26 @@ When the TOC sidebar is open, the center column narrows. To compensate:
 | `TagRow.tsx` | Checkbox + badge + micro-bar + count |
 | `EyeToggle.tsx` | Reusable open/closed eye SVG button |
 
+_Changed 15 Oct 2026:_ `SidebarLayout` is active on Quotes, Sessions (browser
+only), Codebook and Signals, and renders the inert layout elsewhere
+(`AppLayout.tsx:267-270`); `TocSidebar` lists sections and themes or sessions,
+following the Quotes grouping. Components added since:
+
+| Component | Purpose |
+|-----------|---------|
+| `SessionsSidebar.tsx` | Sessions lens left panel (browser only) |
+| `SessionEntry.tsx` | `useSessionRowLayout` + `SessionEntryRow`: the session row, shared by `SessionsSidebar` and `TocSidebar` |
+| `CodebookV2Sidebar.tsx` | Codebook lens left panel |
+| `SignalsSidebar.tsx` | Signals lens left panel |
+| `islands/QuoteGroupingToggle.tsx` | The Quotes grouping control, in the panel header or the zone heading |
+| `contexts/TocShowing.ts` | `TocShowingContext` / `useTocShowing()`: whether the panel is showing as `SidebarLayout` fitted it; also the tab bar's mode (`NavBarModeContext`) |
+| `contexts/QuoteGroupingSlot.ts` | The Quotes grouping as `QuotesTab` published it, for the header and `TocSidebar` |
+
 ---
 
 ## Gotchas
 
-1. **`SidebarLayout` wraps at `AppLayout` level**, not `QuotesTab` level. This is necessary for full-height sidebars that span from above the header to below the footer. On non-Quotes tabs, it renders a pass-through `<div>` with no grid.
+1. **`SidebarLayout` wraps at `AppLayout` level**, not `QuotesTab` level. This is necessary for full-height sidebars that span from above the header to below the footer. On non-Quotes tabs, it renders a pass-through `<div>` with no grid. _(Changed 15 Oct 2026: lenses without the shared panel get the inert layout — a rail column and the centre — not a pass-through; see § Key Constraint.)_
 
 2. **Eye toggles are persisted to SQLite** via `hiddenTagGroups` in `SidebarStore` and the `/hidden-tag-groups` API. They survive page reloads and tab switches. Framework-level hidden state is derived: a framework is hidden when all its groups are in `hiddenTagGroups`.
 
@@ -441,3 +656,11 @@ Future tabs may have their own sidebars. The infrastructure is reusable:
 - `sidebar.css` is the shared layout organism
 - `sidebar-tags.css` is Quotes-specific content styling
 - Each future tab gets its own `sidebar-{context}.css` organism and its own sidebar components
+
+_Changed 15 Oct 2026:_ this happened. Sessions, Codebook and Signals pass
+their own panels through the slot props `leftPanel`, `leftPanelTitle`,
+`leftPanelHeader`, `showRightSidebar` and `inertRail`
+(`SidebarLayout.tsx:126-143`); the list is in § What each lens puts in the
+left panel. Discussion and Screens took the other route — a navigator inside
+the page with a button in the inert rail. Their panel styles went into
+`sidebar.css` and per-lens CSS rather than `sidebar-{context}.css` files.

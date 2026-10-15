@@ -329,6 +329,26 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     announce(S.announceFocus(turn.text));
   }, [focus]);
 
+  // View ▸ Next/Previous Question (the Mac menu, bn:menu-action): step the navigator's focus to
+  // the next question that was asked, in the order the navigator lists them, wrapping. A step
+  // always lands on a question (it never toggles focus off the way a second click does).
+  useEffect(() => {
+    const onMenu = (e: Event) => {
+      const action = (e as CustomEvent<{ action?: string }>).detail?.action;
+      if (action !== "nextQuestion" && action !== "previousQuestion") return;
+      const rows = entries.filter((x): x is NavRow => x.type === "row" && x.sessions.length > 0);
+      if (!rows.length) return;
+      const at = focus ? rows.findIndex((r) => r.id === focus.item) : -1;
+      const dir = action === "nextQuestion" ? 1 : -1;
+      const next = rows[at < 0 ? (dir > 0 ? 0 : rows.length - 1) : (at + dir + rows.length) % rows.length];
+      setFocus({ item: next.id, turn: null });
+      setSession((sid) => sessionForFocus(sid, next.sessions));
+      announce(S.announceFocus(next.text));
+    };
+    window.addEventListener("bn:menu-action", onMenu);
+    return () => window.removeEventListener("bn:menu-action", onMenu);
+  }, [entries, focus]);
+
   // Esc clears focus; 1–9 pick a session. Never claims a key someone else handled,
   // a key typed into a field, or one pressed while a dialog owns the keyboard.
   useEffect(() => {

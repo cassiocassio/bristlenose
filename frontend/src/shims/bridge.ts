@@ -52,6 +52,7 @@ export type BridgeMessage =
   | { type: "search-suggestions"; query: string; rows: WireSuggestionRow[] }
   | ({ type: "search-badge-styles" } & BadgeStyles)
   | { type: "focus-mode"; active: boolean }
+  | { type: "screens-arrangement"; custom: boolean }
   | {
       type: "undo-state";
       canUndo: boolean;
@@ -339,6 +340,15 @@ export function postUndoState(
  */
 export function postFocusMode(active: boolean): void {
   postNativeMessage({ type: "focus-mode", active });
+}
+
+/**
+ * Whether the Screens board's arrangement is custom (any card placed by hand), so View ▸ Tidy
+ * enables only when there is something to tidy. The lens owns the state and posts on mount and on
+ * every change; native mirrors it. No-ops outside the desktop WKWebView.
+ */
+export function postScreensArrangement(custom: boolean): void {
+  postNativeMessage({ type: "screens-arrangement", custom });
 }
 
 /**

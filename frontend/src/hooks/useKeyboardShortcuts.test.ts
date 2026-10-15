@@ -494,6 +494,90 @@ describe("useKeyboardShortcuts", () => {
     });
   });
 
+  describe("on the Screens lens — quote keys act only on cards it renders", () => {
+    const SCREENS = "/report/screens/";
+
+    it("s stars the focused card the lens renders", () => {
+      const { getCtx, storeResult, unmount } = renderWithProviders(undefined, SCREENS);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("screens", ["q-1"]);
+        getCtx().setFocus("q-1", { scroll: false });
+      });
+      act(() => pressKey("s"));
+      expect(storeResult.result.current.starred["q-1"]).toBe(true);
+      unmount();
+    });
+
+    it("h hides the focused card the lens renders, though no QuoteGroup registered a handler", () => {
+      const { getCtx, storeResult, unmount } = renderWithProviders(undefined, SCREENS);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("screens", ["q-1", "q-2"]);
+        getCtx().setFocus("q-1", { scroll: false });
+      });
+      act(() => pressKey("h"));
+      // Hiding animates: the card is "hiding" first and "hidden" once the collapse ends.
+      const st = storeResult.result.current;
+      expect(st.hiding.has("q-1") || st.hidden["q-1"] === true).toBe(true);
+      unmount();
+    });
+
+    it("s does not star a cursor carried over from Quotes that Screens does not render", () => {
+      const { getCtx, storeResult, unmount } = renderWithProviders(undefined, SCREENS);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("screens", ["q-2"]);
+        getCtx().setFocus("q-1", { scroll: false });
+      });
+      act(() => pressKey("s"));
+      expect(storeResult.result.current.starred["q-1"]).toBeFalsy();
+      unmount();
+    });
+
+    it("a selection made elsewhere reaches only the selected cards this lens renders", () => {
+      const { getCtx, storeResult, unmount } = renderWithProviders(undefined, SCREENS);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("screens", ["q-2"]);
+        getCtx().toggleSelection("q-1");
+        getCtx().toggleSelection("q-2");
+      });
+      act(() => pressKey("s"));
+      expect(storeResult.result.current.starred["q-2"]).toBe(true);
+      expect(storeResult.result.current.starred["q-1"]).toBeFalsy();
+      unmount();
+    });
+
+    it("leaves j/k and the arrows to the lens", () => {
+      const { getCtx, unmount } = renderWithProviders(undefined, SCREENS);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("screens", ["q-1", "q-2"]);
+      });
+      let j!: KeyboardEvent;
+      let down!: KeyboardEvent;
+      act(() => {
+        j = pressKey("j");
+        down = pressKey("ArrowDown");
+      });
+      expect(getCtx().focusedId).toBeNull();
+      expect(j.defaultPrevented).toBe(false);
+      expect(down.defaultPrevented).toBe(false);
+      unmount();
+    });
+
+    it("the Quotes menu's Star acts on the card, and Next Quote is left to the lens", () => {
+      const { getCtx, storeResult, unmount } = renderWithProviders(undefined, SCREENS);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("screens", ["q-1", "q-2"]);
+        getCtx().setFocus("q-1", { scroll: false });
+      });
+      act(() => {
+        window.dispatchEvent(new CustomEvent("bn:menu-action", { detail: { action: "star" } }));
+        window.dispatchEvent(new CustomEvent("bn:menu-action", { detail: { action: "nextQuote" } }));
+      });
+      expect(storeResult.result.current.starred["q-1"]).toBe(true);
+      expect(getCtx().focusedId).toBe("q-1");
+      unmount();
+    });
+  });
+
   describe("escape cascade", () => {
     it("Escape clears the whole search, tokens included, before anything else", () => {
       const { getCtx, unmount } = renderWithProviders();

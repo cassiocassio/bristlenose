@@ -50,6 +50,15 @@ function pathMatches(pathname: string, route: string): boolean {
   return pathname === route || pathname === route + "/";
 }
 
+/**
+ * The lenses whose quote cards the per-quote keys and the native Quotes menu act on: every one
+ * renders the shared QuoteCard under FocusContext. Discussion renders transcript turns, with its
+ * own focus, so it is not one (verified 15 Oct 2026, docs/design-screens.md).
+ */
+function onQuoteLens(pathname: string): boolean {
+  return pathMatches(pathname, "/report/quotes") || pathMatches(pathname, "/report/screens");
+}
+
 /** Arrow keys, mapped to the geometric direction they draw. */
 const ARROW_DIRECTIONS: Record<string, Direction | undefined> = {
   ArrowDown: "down",
@@ -81,6 +90,14 @@ const QUOTE_SCOPED_MENU_ACTIONS = new Set([
   "selectAllQuotes",
   "clearSelection",
   "revealInTranscript",
+]);
+
+/** Quote-scoped menu actions the Screens lens answers itself (its time-order J/K). */
+const SCREENS_OWNS_MENU_ACTIONS = new Set([
+  "nextQuote",
+  "previousQuote",
+  "extendSelectionDown",
+  "extendSelectionUp",
 ]);
 
 // ── Hook ─────────────────────────────────────────────────────────────────
@@ -145,13 +162,29 @@ export function useKeyboardShortcuts({
   const locationRef = useRef(location);
   locationRef.current = location;
 
+  // Off the Quotes lens, a quote key or menu item acts only on a quote this lens renders. Focus
+  // and selection are logical and survive a route change, so without this a selection made on
+  // Quotes would be starred, hidden or tagged from Screens, where nobody can see it. On Quotes
+  // itself nothing changes.
+  const scopedFocus = useCallback((): string | null => {
+    const f = focusedIdRef.current;
+    if (!f || pathMatches(locationRef.current.pathname, "/report/quotes")) return f;
+    return getVisibleQuoteIds().includes(f) ? f : null;
+  }, [getVisibleQuoteIds]);
+  const scopedSelection = useCallback((): Set<string> => {
+    const sel = selectedIdsRef.current;
+    if (pathMatches(locationRef.current.pathname, "/report/quotes")) return sel;
+    const shown = new Set(getVisibleQuoteIds());
+    return new Set([...sel].filter((d) => shown.has(d)));
+  }, [getVisibleQuoteIds]);
+
   // ── Star action ─────────────────────────────────────────────────────
 
   const handleStar = useCallback(() => {
     // Read-only in an exported report — no server to persist mutations.
     if (isExportMode()) return;
-    const focused = focusedIdRef.current;
-    const selected = selectedIdsRef.current;
+    const focused = scopedFocus();
+    const selected = scopedSelection();
     const s = storeRef.current;
 
     // One rule for every surface, and the one the native menu's Star/Unstar
@@ -161,15 +194,15 @@ export function useKeyboardShortcuts({
     const targets = selected.size > 0 ? Array.from(selected) : focused ? [focused] : [];
     if (targets.length === 0) return;
     setStarred(targets, !starActionIsUnstar(selected, focused, s.starred));
-  }, []);
+  }, [scopedFocus, scopedSelection]);
 
   // ── Hide action ─────────────────────────────────────────────────────
 
   const handleHide = useCallback(() => {
     // Read-only in an exported report — no server to persist mutations.
     if (isExportMode()) return;
-    const focused = focusedIdRef.current;
-    const selected = selectedIdsRef.current;
+    const focused = scopedFocus();
+    const selected = scopedSelection();
 
     if (selected.size > 0) {
       // Straight to the store, once, for the whole selection.
@@ -188,21 +221,24 @@ export function useKeyboardShortcuts({
     } else if (focused) {
       // Single quote keeps the registry, because the ghost that flies to the
       // hidden badge is measured off the owning group's layout.
-      hideQuote(focused);
+      // Only the Quotes lens's QuoteGroups register hide handlers; Screens draws QuoteCard
+      // directly, so there the store is the only route (no ghost flies, and that is fine).
+      if (pathMatches(locationRef.current.pathname, "/report/quotes")) hideQuote(focused);
+      else hideQuotes([focused]);
       moveFocus(1);
     }
-  }, [clearSelection, moveFocus, hideQuote]);
+  }, [clearSelection, moveFocus, hideQuote, scopedFocus, scopedSelection]);
 
   // ── Tag actions ─────────────────────────────────────────────────────
 
   const handleTagOpen = useCallback(() => {
     // Read-only in an exported report — no server to persist mutations.
     if (isExportMode()) return;
-    const focused = focusedIdRef.current;
+    const focused = scopedFocus();
     if (focused) {
       openTagInput(focused);
     }
-  }, [openTagInput]);
+  }, [openTagInput, scopedFocus]);
 
   /** Quick-apply last-used tag to focused/selected quotes (double-t). */
   const handleQuickApply = useCallback(() => {
@@ -210,8 +246,8 @@ export function useKeyboardShortcuts({
     const tag = getLastUsedTag();
     if (!tag) return false; // No last tag — caller should fall back to open TagInput
 
-    const focused = focusedIdRef.current;
-    const selected = selectedIdsRef.current;
+    const focused = scopedFocus();
+    const selected = scopedSelection();
     const targets = selected.size > 0 ? Array.from(selected) : focused ? [focused] : [];
     if (targets.length === 0) return false;
 
@@ -219,12 +255,12 @@ export function useKeyboardShortcuts({
     addTagToQuotes(targets, { ...tag, source: "human" });
     for (const domId of targets) flashTag(domId, tag.name);
     return true;
-  }, [flashTag]);
+  }, [flashTag, scopedFocus, scopedSelection]);
 
   // ── Play action ─────────────────────────────────────────────────────
 
   const handlePlay = useCallback(() => {
-    const focused = focusedIdRef.current;
+    const focused = scopedFocus();
     if (!focused) return;
     // Find the timecode link data from the DOM (quotes embed data-seconds).
     const bq = document.getElementById(focused);
@@ -235,7 +271,7 @@ export function useKeyboardShortcuts({
       const seconds = parseFloat(tc.getAttribute("data-seconds") ?? "0");
       seekTo(pid, seconds);
     }
-  }, [seekTo]);
+  }, [seekTo, scopedFocus]);
 
   // ── Focus search ────────────────────────────────────────────────────
 
@@ -582,7 +618,15 @@ export function useKeyboardShortcuts({
       // the user navigated away — one they can no longer see. The keys that
       // legitimately work off-lens (`/`, `?`, Escape, `[`, `]`, `\`, `m`, and
       // the ⌘A/⌘C traps) all sit above this line and carry their own routing.
-      if (!pathMatches(locationRef.current.pathname, "/report/quotes")) return;
+      if (!onQuoteLens(locationRef.current.pathname)) return;
+      // The Screens lens owns its arrows and j/k — screens, the backdrop, and its quotes in time
+      // order (ScreensLens.tsx) — so only the per-quote actions below are shared with it.
+      if (
+        pathMatches(locationRef.current.pathname, "/report/screens") &&
+        (ARROW_DIRECTIONS[key] || key === "j" || key === "k" || key === "J" || key === "K")
+      ) {
+        return;
+      }
 
       // Arrows — geometric movement, measured off the laid-out grid.
       //
@@ -635,16 +679,17 @@ export function useKeyboardShortcuts({
       }
 
       // x — toggle selection on focused quote
-      if (key === "x" && bare && focusedIdRef.current) {
+      if (key === "x" && bare && scopedFocus()) {
+        const f = scopedFocus()!;
         e.preventDefault();
-        toggleSelection(focusedIdRef.current);
-        if (!anchorIdRef.current) setAnchor(focusedIdRef.current);
+        toggleSelection(f);
+        if (!anchorIdRef.current) setAnchor(f);
         return;
       }
 
       // h — hide
       if (key === "h" && bare) {
-        if (selectedIdsRef.current.size > 0 || focusedIdRef.current) {
+        if (scopedSelection().size > 0 || scopedFocus()) {
           e.preventDefault();
           handleHide();
           return;
@@ -653,7 +698,7 @@ export function useKeyboardShortcuts({
 
       // s — star
       if (key === "s" && bare) {
-        if (selectedIdsRef.current.size > 0 || focusedIdRef.current) {
+        if (scopedSelection().size > 0 || scopedFocus()) {
           e.preventDefault();
           handleStar();
           return;
@@ -661,21 +706,21 @@ export function useKeyboardShortcuts({
       }
 
       // t — add tag
-      if (key === "t" && focusedIdRef.current) {
+      if (key === "t" && scopedFocus()) {
         e.preventDefault();
         handleTagOpen();
         return;
       }
 
       // r — repeat last tag (quick-apply to focused/selected quotes)
-      if (key === "r" && (focusedIdRef.current || selectedIdsRef.current.size > 0)) {
+      if (key === "r" && (scopedFocus() || scopedSelection().size > 0)) {
         e.preventDefault();
         handleQuickApply();
         return;
       }
 
       // Enter — play video
-      if (key === "Enter" && focusedIdRef.current) {
+      if (key === "Enter" && scopedFocus()) {
         e.preventDefault();
         handlePlay();
         return;
@@ -701,9 +746,14 @@ export function useKeyboardShortcuts({
     const handleMenuAction = (e: Event) => {
       const { action } = (e as CustomEvent).detail;
       // Mirror the keydown path's lens gate — see QUOTE_SCOPED_MENU_ACTIONS.
+      if (QUOTE_SCOPED_MENU_ACTIONS.has(action) && !onQuoteLens(locationRef.current.pathname)) {
+        return;
+      }
+      // On Screens the lens steps its own quotes in time order and has no shift-extend
+      // (ScreensLens.tsx listens for nextQuote/previousQuote itself).
       if (
-        QUOTE_SCOPED_MENU_ACTIONS.has(action) &&
-        !pathMatches(locationRef.current.pathname, "/report/quotes")
+        pathMatches(locationRef.current.pathname, "/report/screens") &&
+        SCREENS_OWNS_MENU_ACTIONS.has(action)
       ) {
         return;
       }
@@ -777,12 +827,14 @@ export function useKeyboardShortcuts({
         case "extendSelectionUp":
           handleShiftMove(-1);
           break;
-        case "toggleSelection":
-          if (focusedIdRef.current) {
-            toggleSelection(focusedIdRef.current);
-            if (!anchorIdRef.current) setAnchor(focusedIdRef.current);
+        case "toggleSelection": {
+          const f = scopedFocus();
+          if (f) {
+            toggleSelection(f);
+            if (!anchorIdRef.current) setAnchor(f);
           }
           break;
+        }
         case "selectAllQuotes":
           selectAll();
           break;
@@ -790,7 +842,7 @@ export function useKeyboardShortcuts({
           clearSelection();
           break;
         case "revealInTranscript": {
-          const fid = focusedIdRef.current;
+          const fid = scopedFocus();
           if (!fid) break;
           const bq = document.getElementById(fid);
           const pid = bq?.getAttribute("data-participant");
@@ -855,6 +907,8 @@ export function useKeyboardShortcuts({
       }
     };
   }, [
+    scopedFocus,
+    scopedSelection,
     onToggleHelp,
     onToggleSettings,
     clearSearch,

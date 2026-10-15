@@ -266,6 +266,11 @@ final class BridgeHandler: ObservableObject {
     /// project boots in normal view). See docs/design-focus-mode.md.
     @Published var focusModeActive: Bool = false
 
+    /// Whether the Screens board has a card placed by hand, so View ▸ Tidy
+    /// enables only when there is something to tidy. Mirrored from the SPA
+    /// (`screens-arrangement`), which owns the arrangement and re-posts on mount.
+    @Published var screensArrangementCustom: Bool = false
+
     /// The two subtitle preferences, mirrored from the SPA (`subtitle-prefs`).
     /// The SPA owns their behaviour and reads them from localStorage — but the
     /// webview's storage is `.nonPersistent()` per serve session
@@ -985,6 +990,12 @@ final class BridgeHandler: ObservableObject {
             let on = body["active"] as? Bool ?? false
             if on != focusModeActive { focusModeActive = on }
 
+        case "screens-arrangement":
+            // Sole writer: a mirror of the Screens lens's arrangement, for the
+            // View-menu Tidy row. The lens re-posts on mount.
+            let custom = body["custom"] as? Bool ?? false
+            if custom != screensArrangementCustom { screensArrangementCustom = custom }
+
         case "subtitle-prefs":
             // Sole writer, same shape as `focus-mode`: a mirror, never a second
             // source of truth. The SPA re-posts on mount and on every change.
@@ -1154,6 +1165,7 @@ final class BridgeHandler: ObservableObject {
         quotesSearchTokens = []
         searchBadgeStyles = .empty
         focusModeActive = false
+        screensArrangementCustom = false
         // The saved values, which the next webview is seeded with.
         playerSubtitlesOn = UserDefaults.standard.bool(forKey: Self.playerSubtitlesKey)
         burnSubtitlesInClips = UserDefaults.standard.bool(forKey: Self.burnSubtitlesKey)

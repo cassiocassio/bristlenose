@@ -917,6 +917,8 @@ private struct ViewMenuContent: View {
         bridgeHandler.activeTab == .signals
     }
 
+    private var onScreens: Bool { bridgeHandler.activeTab == .screens }
+
     var body: some View {
         // Lens shortcuts ⌘1 onwards — ⌘1–⌘6 for the six shipping lenses, ⌘7 for
         // Screens while the front window's project has shared screens to show
@@ -1044,6 +1046,41 @@ private struct ViewMenuContent: View {
         }
         .keyboardShortcut("\\", modifiers: [.command, .option])
         .disabled(sidebarVisibility == nil)
+
+        Divider()
+
+        // Moving through the lens (docs/design-screens.md, "Menus"). No bare-key
+        // equivalents: a bare menu key fires before the responder chain and would
+        // eat typing; the page's own keys (↑↓ screens, ←→ backdrop) still work, and
+        // `?` lists them. Modifier shortcuts can come later, checked against macOS.
+        let tab = bridgeHandler.activeTab
+        Button(i18n.t(LensStep.labelKey(tab: tab, next: true))) {
+            bridgeHandler.menuAction(LensStep.action(tab: tab, next: true))
+        }
+        .disabled(!LensStep.isEnabled(tab: tab))
+
+        Button(i18n.t(LensStep.labelKey(tab: tab, next: false))) {
+            bridgeHandler.menuAction(LensStep.action(tab: tab, next: false))
+        }
+        .disabled(!LensStep.isEnabled(tab: tab))
+
+        // The Screens backdrop: one participant's version of the screen at a time.
+        Button(i18n.t("desktop.menu.view.nextScreenshot")) {
+            bridgeHandler.menuAction("nextScreenshot")
+        }
+        .disabled(!onScreens)
+
+        Button(i18n.t("desktop.menu.view.previousScreenshot")) {
+            bridgeHandler.menuAction("previousScreenshot")
+        }
+        .disabled(!onScreens)
+
+        // Every card back to automatic placement; the route to Tidy that needs no
+        // hover. Undoable with ⌘Z, so no confirm.
+        Button(i18n.t("desktop.menu.view.tidy")) {
+            bridgeHandler.menuAction("tidy")
+        }
+        .disabled(!(onScreens && bridgeHandler.screensArrangementCustom))
 
         Divider()
 
@@ -1419,6 +1456,24 @@ private struct CodesMenuContent: View {
     }
 }
 
+// MARK: - View ▸ Next/Previous, following the lens
+
+/// View ▸ Next/Previous: screens on Screens, questions on Discussion, dimmed
+/// elsewhere — replaced, not hidden, like the ⌘⌥L row. It reads as Screen while
+/// dimmed. The web side answers the actions (`ScreensLens`, `DiscussionLens`).
+enum LensStep {
+    static func isEnabled(tab: Tab?) -> Bool { tab == .screens || tab == .discussion }
+
+    static func labelKey(tab: Tab?, next: Bool) -> String {
+        let noun = tab == .discussion ? "Question" : "Screen"
+        return "desktop.menu.view.\(next ? "next" : "previous")\(noun)"
+    }
+
+    static func action(tab: Tab?, next: Bool) -> String {
+        "\(next ? "next" : "previous")\(tab == .discussion ? "Question" : "Screen")"
+    }
+}
+
 // MARK: - Quotes menu
 
 private struct QuotesMenuContent: View {
@@ -1430,12 +1485,23 @@ private struct QuotesMenuContent: View {
         bridgeHandler.activeTab == .quotes
     }
 
+    /// A lens that shows quote cards, so Star, Hide, Tag, Reveal, Play and
+    /// Next/Previous act on the selected card there too (the owner, 15 Oct
+    /// 2026: "I would expect star and hide and tag to work the same"). Screens
+    /// draws the shared QuoteCard; Discussion draws transcript turns with its
+    /// own focus, so it is not one. The web side acts only on a card the lens
+    /// renders (`useKeyboardShortcuts` scopedFocus), never on a cursor left over
+    /// from Quotes. Export and selection-extend stay on Quotes.
+    private var onCardLens: Bool {
+        bridgeHandler.activeTab == .quotes || bridgeHandler.activeTab == .screens
+    }
+
     private var hasFocus: Bool {
-        onQuotesTab && bridgeHandler.focusedQuoteId != nil
+        onCardLens && bridgeHandler.focusedQuoteId != nil
     }
 
     private var hasSelection: Bool {
-        onQuotesTab && bridgeHandler.selectedQuoteCount > 0
+        onCardLens && bridgeHandler.selectedQuoteCount > 0
     }
 
     /// Star / Hide / Apply-Last-Tag act on the selection *or* the focused quote
@@ -1509,19 +1575,19 @@ private struct QuotesMenuContent: View {
         Button(i18n.t("desktop.menu.quotes.playPause"), systemImage: "play") {
             bridgeHandler.menuAction("playPause")
         }
-        .disabled(!onQuotesTab)
+        .disabled(!onCardLens)
 
         Divider()
 
         Button(i18n.t("desktop.menu.quotes.nextQuote")) {
             bridgeHandler.menuAction("nextQuote")
         }
-        .disabled(!onQuotesTab)
+        .disabled(!onCardLens)
 
         Button(i18n.t("desktop.menu.quotes.previousQuote")) {
             bridgeHandler.menuAction("previousQuote")
         }
-        .disabled(!onQuotesTab)
+        .disabled(!onCardLens)
 
         Divider()
 
@@ -1538,7 +1604,7 @@ private struct QuotesMenuContent: View {
         Button(i18n.t("desktop.menu.quotes.toggleSelection")) {
             bridgeHandler.menuAction("toggleSelection")
         }
-        .disabled(!onQuotesTab)
+        .disabled(!onCardLens)
 
         Button(i18n.t("desktop.menu.quotes.clearSelection")) {
             bridgeHandler.menuAction("clearSelection")

@@ -94,6 +94,26 @@ describe("DiscussionView", () => {
     expect(container.querySelector(".dl-lens")).not.toHaveClass("has-focus");
   });
 
+  it("View ▸ Next/Previous Question steps the navigator's focus through asked questions, wrapping", () => {
+    const { container } = render(<DiscussionView data={data} />);
+    const menu = (action: string) =>
+      act(() => {
+        window.dispatchEvent(new CustomEvent("bn:menu-action", { detail: { action } }));
+      });
+    const focused = () => (container.querySelector(".dl-ask.hot") as HTMLElement | null)?.dataset.item;
+    const rows = [...container.querySelectorAll<HTMLElement>(".dl-nav .dl-row")]
+      .map((r) => r.dataset.id!)
+      .filter((id) => data.sections.flatMap((s) => s.items).find((i) => i.id === id)!.asks.length > 0);
+    expect(rows.length).toBeGreaterThan(2);
+    menu("nextQuestion");
+    expect(focused()).toBe(rows[0]);
+    menu("nextQuestion");
+    expect(focused()).toBe(rows[1]);
+    menu("previousQuestion");
+    menu("previousQuestion");
+    expect(focused()).toBe(rows[rows.length - 1]);
+  });
+
   it("focusing a row the current session never asked jumps to a session that did", () => {
     const { container } = render(<DiscussionView data={data} />);
     const elsewhere = data.sections.flatMap((s) => s.items)

@@ -462,6 +462,29 @@ class TestRolePins:
 class TestContentKeys:
     """Registry version 3: a session is its recording's bytes first."""
 
+    def test_a_recording_missing_for_a_run_keeps_its_key(self, tmp_path: Path) -> None:
+        """The recording is gone for one run while its transcript stays: the
+        session's key stays the recording's, so a different recording saved
+        under the old name later is still a new session (Fable review,
+        16 Oct 2026)."""
+        out = tmp_path / "out"
+        mp4 = _file(tmp_path, "ann.mp4", 0, FileType.VIDEO)
+        vtt = _file(tmp_path, "ann.vtt", 0, FileType.SUBTITLE_VTT)
+
+        def run(files: list[InputFile]) -> str:
+            reg = SessionRegistry.load(out)
+            sid = reg.apply(_ingest(files), tmp_path)[0].session_id
+            reg.save()
+            return sid
+
+        first = run([mp4, vtt])
+        mp4.path.unlink()
+        assert run([vtt]) == first
+        mp4.path.write_bytes(b"a different interview saved under the old name")
+        other = InputFile(path=mp4.path, file_type=FileType.VIDEO, created_at=mp4.created_at,
+                          size_bytes=mp4.path.stat().st_size)
+        assert run([other, vtt]) != first, "a different recording inherited the session"
+
     def test_a_recording_arriving_for_a_transcript_only_session_joins_it(
         self, tmp_path: Path,
     ) -> None:

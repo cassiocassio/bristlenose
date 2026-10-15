@@ -443,6 +443,12 @@ class SessionRegistry:
             # or its owner is orphaned the next time it is renamed.
             if fp_i is not None and self.sessions.get(FP_PREFIX + fp_i, sid) != sid:
                 fp_i = None
+            # A recording's key outlives a run where only the transcript is
+            # there: a transcript's bytes never replace it, or a different
+            # recording under the old name could later inherit the session.
+            if (fp_i is not None and not _is_media(primaries[i])
+                    and self._holds_media_key(sid)):
+                fp_i = None
             self._remember(sid, named[i], fp_i, places[i])
             n = _number(sid)
             session.session_id = sid
@@ -450,6 +456,14 @@ class SessionRegistry:
             session.participant_id = f"p{n}"  # provisional, as before — reassigned after 5b
             session.participant_number = n
         return sorted(sessions, key=lambda s: s.session_number)
+
+    def _holds_media_key(self, sid: str) -> bool:
+        """Whether ``sid`` holds a content key taken from a recording."""
+        return any(
+            owner == sid and key.startswith(FP_PREFIX)
+            and key in self.hints and _is_media(Path(self.hints[key]))
+            for key, owner in self.sessions.items()
+        )
 
     def _keyed_by_media(self, sid: str) -> bool:
         """Whether ``sid``'s content key was taken from a recording. Read from

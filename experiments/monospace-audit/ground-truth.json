@@ -11,9 +11,9 @@
     "win10-edge": "Windows 10 22H2 clean image (VirtualBox 7.0.26), Edge 92.0.902.67, never updated"
   },
   "stacks": {
-    "web-token": "\"SF Mono\", \"Fira Code\", \"Consolas\", monospace",
-    "desktop-token": "\"SF Mono\", ui-monospace, monospace",
-    "proposed": "ui-monospace, Menlo, \"Cascadia Mono\", Consolas, \"DejaVu Sans Mono\", monospace"
+    "web-token (before 64a2b36a)": "\"SF Mono\", \"Fira Code\", \"Consolas\", monospace",
+    "desktop-token (before 64a2b36a)": "\"SF Mono\", ui-monospace, monospace",
+    "proposed (shipped in 64a2b36a)": "ui-monospace, Menlo, \"Cascadia Mono\", Consolas, \"DejaVu Sans Mono\", monospace"
   },
   "faces_resolved": [
     {

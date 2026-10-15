@@ -1,3 +1,11 @@
+---
+status: pending
+last-trued: 2026-10-15
+trued-against: HEAD@main on 2026-10-15 (64a2b36a)
+---
+
+> **Truing (15 Oct 2026).** Still aspirational: no `--bn-font-ui` or `--bn-font-verbatim` token exists. Monospace is settled separately in [design-monospace-roles.md](design-monospace-roles.md); badges and tags are monospace, not UI chrome.
+
 # Font Strategy
 
 ## Vision
@@ -67,7 +75,7 @@ Sentinel sets **~8–12% visually smaller** than Inter or SF Pro at the same `fo
 |---|---|---|
 | UI chrome | `--bn-font-ui` | Tab bar, toolbar, sidebar, badges, buttons, stat cards, headings, labels, nav, footer |
 | Verbatim content | `--bn-font-verbatim` | Quote card body text, transcript segments, featured quotes, coverage excerpts |
-| Monospace | `--bn-font-mono` | Timecodes, code references (unchanged) |
+| Monospace | `--bn-font-mono` | Timecodes, code references (unchanged). _As shipped: timecodes, tags and speaker codes, paths and keycaps; roles and weights in [design-monospace-roles.md](design-monospace-roles.md)._ |
 
 ### Size adjustments for Sentinel
 

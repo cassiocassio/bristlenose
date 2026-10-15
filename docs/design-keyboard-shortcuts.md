@@ -1,4 +1,12 @@
+---
+status: partial
+last-trued: 2026-10-15
+trued-against: HEAD@main on 2026-10-15 (64a2b36a)
+---
+
 # Design: Platform-Aware Keyboard Shortcuts & Discoverability
+
+> **Truing (15 Oct 2026, monospace pass only).** Phase 4 is superseded: the SPA help modal it restyles was retired on 10 Jul 2026 (3f49d170, "help menu: shortcuts + acknowledgements to external docs; retire the SPA help modal"). `--bn-font-mono` has existed since v0.2.0 and its stack was settled in `docs/design-monospace-roles.md`. Phases 1–3 were not re-audited in this pass.
 
 **Status:** Phase 1–3 shipped
 **Date:** 13 Mar 2026
@@ -243,7 +251,7 @@ A custom `<Tooltip>` React component that:
 2. **Hover intent**: ~200ms enter delay (avoid flicker on mouse traverse), immediate close on leave
 3. **Positioning**: auto-flip (prefers above, flips below if viewport clipped). Floating UI or hand-rolled with `getBoundingClientRect()` — TBD based on complexity
 4. **Accessible**: `aria-describedby` linking trigger to tooltip content. Shows on focus-visible too (keyboard users)
-5. **Styled**: matches the `<kbd>` badge styling from the help modal. Muted background, subtle shadow, 0.75rem mono font for keys
+5. **Styled**: matches the `<kbd>` badge styling from the help modal. Muted background, subtle shadow, 0.75rem mono font for keys. _As built: the body font at `--bn-text-badge`, weight 500 (`atoms/tooltip.css:43`), not mono._
 
 ### Candidate placements
 
@@ -401,6 +409,8 @@ Pure CSS tooltips with platform-aware `<kbd>` badges. `<Tooltip>` component wrap
 
 ### Phase 4: iA Writer-inspired layout v2 (future)
 
+> **Superseded as of 2026-07-10** — the help modal, `HelpModal.tsx` and `components/about/ShortcutsSection.tsx` this phase targets were deleted in 3f49d170; shortcuts now live on the docs site, reached from the Help menu. The SPA's remaining keycap is the footer hint (`atoms/footer.css`, mono at micro, 400). The monospace stack proposed in §1 below was not adopted; the shipped one is in [design-monospace-roles.md](design-monospace-roles.md) §4. Body kept as the design record.
+
 **Status:** Design only
 **Date:** 25 Mar 2026
 **Reference:** iA Writer keyboard shortcuts help window (macOS)
@@ -474,7 +484,7 @@ Not in v2 scope — noted here so the v2 data model doesn't preclude it. The `Ke
 
 **Existing code this touches:**
 - `bristlenose/theme/molecules/help-overlay.css` line 81: `font-family: var(--bn-font-body)` → monospace stack
-- Consider adding a `--bn-font-mono` token to `bristlenose/theme/tokens-typography.css` (we don't have one yet — check if it's useful elsewhere e.g. code blocks in transcript pages)
+- Consider adding a `--bn-font-mono` token to `bristlenose/theme/tokens-typography.css` (we don't have one yet — check if it's useful elsewhere e.g. code blocks in transcript pages) — _wrong when written: the token has existed since v0.2.0 (30 Jan 2026); its stack is now `ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace`._
 
 ##### 2. Uniform key cap width
 
@@ -573,7 +583,7 @@ Everything from Phases 1–3 that still works:
 | File | Change |
 |------|--------|
 | `bristlenose/theme/molecules/help-overlay.css` | `kbd` font-family → monospace stack, `min-width` → `2ch`, add `.help-key-or` class |
-| `bristlenose/theme/tokens-typography.css` | Consider adding `--bn-font-mono` token |
+| `bristlenose/theme/tokens-typography.css` | Consider adding `--bn-font-mono` token _(already existed; see the note above)_ |
 | `frontend/src/components/about/ShortcutsSection.tsx` | Sort order, "or" connector, `KeyCombo.modifier` extend for desktop extras, conditional desktop sections via `isDesktop()` |
 | `frontend/src/components/about/ShortcutsSection.test.tsx` | Update for new order, "or" connector, desktop context |
 | `bristlenose/locales/{en,es,fr,de,ko}/common.json` | Add `help.shortcuts.or`, new group names, desktop-only shortcut descriptions |
@@ -597,7 +607,7 @@ frontend/src/
     useKeyboardShortcuts.ts  ← NO CHANGE (already cross-platform)
 
 bristlenose/theme/
-  tokens-typography.css  ← Phase 4: consider --bn-font-mono token
+  tokens-typography.css  ← Phase 4: consider --bn-font-mono token (already existed)
   molecules/
     help-overlay.css     ← Phase 1–2 shipped + Phase 4: monospace kbd, 2ch width, .help-key-or
   atoms/

@@ -88,8 +88,9 @@ Token files at theme root. Structural + analytical tokens in `tokens.css`; typog
 - Breakpoints (reference values; `@media` can't use `var()`): `--bn-breakpoint-compact` (500px), `--bn-breakpoint-toolbar` (600px), `--bn-breakpoint-content` (1100px)
 
 ### Type — `theme/tokens-typography.css` (web) and `theme/tokens-desktop.css` (macOS, `data-platform="desktop"`)
-- Font stacks: `--bn-font-body` (Inter Variable / system fallback), `--bn-font-mono`
-- Weights: `--bn-weight-light`, `--bn-weight-normal` (420), `--bn-weight-emphasis` (490), `--bn-weight-starred` (520), `--bn-weight-strong` (700)
+- Font stacks: `--bn-font-body` (Inter Variable / system fallback; SF Pro on desktop), `--bn-font-mono` (`ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace`, both scales, no desktop override since 64a2b36a)
+- Weights: `--bn-weight-light` (370), `--bn-weight-normal` (420), `--bn-weight-emphasis` (490), `--bn-weight-starred` (520), `--bn-weight-semibold` (600), `--bn-weight-strong` (700)
+- Monospace weights (15 Oct 2026, `docs/design-monospace-roles.md`): `--bn-weight-mono` (400), `--bn-weight-mono-tag` (460 light, 400 dark), `--bn-weight-mono-emphasis` (560)
 - Sizes + paired line-heights (Scale D, 8 stops):
   - `--bn-text-micro` / `-lh` — 9.6px
   - `--bn-text-badge` / `-lh` — 11.5px

@@ -1,26 +1,32 @@
 ---
-status: proposal
+status: partial
+last-trued: 2026-10-15
+trued-against: HEAD@main on 2026-10-15 (64a2b36a)
 date: 15 Oct 2026
 specimen: docs/mockups/monospace-roles-specimen.html
 probes: experiments/monospace-audit/
 ---
 
-# Monospace roles: audit and proposal
+# Monospace roles: audit, proposal, and what shipped
 
-An audit of every monospace face in Bristlenose (web report, desktop webview, native Swift), the measured rendering of each one on both type scales, and a proposal to corral them into four roles. **Audit only: no product CSS was changed.** The owner decides the tokens.
+> **Truing status (15 Oct 2026).** Audited and proposed earlier the same day, then **shipped in 64a2b36a** ("monospace: one stack on both scales, tags 460 in light, the screen's path at 560"): the one stack, the three mono weight tokens and their dark scope, one weight for every tag, the Screens path at 560, footer keycaps, the player page and the Welcome copies. **Still open, owner undecided:** figures leaving mono (§4), durations, the codebook add-tag chips at label size, the Welcome HTML keycaps at 500 and badges without a weight (§3), the native Welcome chip, the dev surfaces, and Linux. §1 and §2 describe the tree **before** the change and are kept as the baseline it was measured against; §3 and §4 are current; §6 is the ground truth.
+
+An audit of every monospace face in Bristlenose (web report, desktop webview, native Swift), the measured rendering of each one on both type scales, and the four roles they were corralled into.
 
 What prompted it: the Screens info-line path was set to `--bn-weight-emphasis` (490) in mono, on a measurement that WebKit steps 420→490 (+11% ink) while Chromium renders them alike. That measurement is right about researchers' Macs and wrong about the developer's, and the reason is the subject of §1.
 
-## 1. Which face actually draws the mono
+## 1. Which face actually draws the mono (before 64a2b36a)
+
+_Baseline, kept as measured. Since 64a2b36a there is one stack, the proposed one, and no Mac reaches Courier; §6 has what it draws._
 
 **"SF Mono" by name exists only on a Mac with Apple's developer font package installed** (`com.apple.pkg.SFMonoFonts`, in `/Library/Fonts`). This machine has it. The system's own monospace is the hidden `.SF NS Mono` (`/System/Library/Fonts/SFNSMono.ttf`), and CSS can reach it only as `ui-monospace`, and only in WebKit. Chromium has no `ui-monospace`.
 
-The two shipped stacks:
+The two stacks as they shipped until 64a2b36a:
 
 - web (`tokens-typography.css:21`): `"SF Mono", "Fira Code", "Consolas", monospace`
 - desktop (`tokens-desktop.css:41`): `"SF Mono", ui-monospace, monospace`
 
-Generic `monospace` in a `lang="en"` page, which the report is (`server/app.py:726`): **Menlo in WebKit, Courier in Chromium.** Chromium's answer comes from its own font API (`CSS.getPlatformFontsForNode`). Without a `lang` attribute, WebKit's generic is Courier as well.
+Generic `monospace` in a `lang="en"` page, which the report is (`server/app.py:746`): **Menlo in WebKit, Courier in Chromium.** Chromium's answer comes from its own font API (`CSS.getPlatformFontsForNode`). Without a `lang` attribute, WebKit's generic is Courier as well.
 
 | Surface | Stack | Developer's Mac (download) | A researcher's Mac (stock) |
 |---|---|---|---|
@@ -62,7 +68,9 @@ At the named instances (400, 500, 600, 700), the download and the system font ag
 
 **600 is the only emphasis weight that reads about the same on every path:** Semibold at +30% (download) or +35% (system), Bold at +33–39% (Menlo, Courier). 500 is Medium in WebKit and Regular wherever the face has only Regular and Bold.
 
-### What the product actually sets
+### What the product set (before 64a2b36a)
+
+_Since 64a2b36a: every tag is `--bn-weight-mono-tag` (460 light, 400 dark), the Screens path 560, footer keycaps micro at 400; the rest unchanged. §3 is current._
 
 Computed from the live SPA (smoke fixture, both scales, WebKit and Chromium). `body` declares no `font-weight`, so **every mono element without its own weight renders at 400**, not at `--bn-weight-normal` (420).
 
@@ -91,11 +99,12 @@ What each pair renders comes straight from the table above. For example, `.badge
 
 | where | value | note |
 |---|---|---|
-| `bristlenose/theme/tokens-typography.css:21` | `"SF Mono", "Fira Code", "Consolas", monospace` | web; also the Mac app in Inter mode |
-| `bristlenose/theme/tokens-desktop.css:41` | `"SF Mono", ui-monospace, monospace` | desktop override |
+| `bristlenose/theme/tokens-typography.css:27` | `ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace` | both scales, since 64a2b36a (was `"SF Mono", "Fira Code", "Consolas", monospace`) |
+| `bristlenose/theme/tokens-typography.css:42`–`44`, `:68`–`77` | `--bn-weight-mono` 400 · `-mono-tag` 460 (400 in dark) · `-mono-emphasis` 560 | since 64a2b36a |
+| `bristlenose/theme/tokens-desktop.css:41` | no mono override (a comment) | the desktop override `"SF Mono", ui-monospace, monospace` was removed in 64a2b36a |
 | `bristlenose/theme/tokens.css:286` | `--font-mono: var(--bn-font-mono)` | alias |
 | `tokens-typography-v1.css:16`, `-v2.css:22`, `tokens-desktop-v1.css:12`, `-v2.css:22` | the same stacks | archives; not in `index.css` |
-| `desktop/…/WelcomeTimelineCSS.swift:428`, `:501` | both stacks | **generated** from the theme (`scripts/gen-welcome-timeline.py`); follows any change |
+| `desktop/…/WelcomeTimelineCSS.swift` | the theme's stack and weights | **generated** from the theme (`scripts/gen-welcome-timeline.py`); regenerated in 64a2b36a |
 
 ### CSS rules setting a mono family, by role
 
@@ -112,25 +121,25 @@ What each pair renders comes straight from the table above. For example, `.badge
 
 **Code** (an identifier or vocabulary word):
 
-- `atoms/badge.css:9`: `.badge` at badge, 370; `.badge-user` at 420, 490 in dark mode
+- `atoms/badge.css:9`: `.badge` at badge, `--bn-weight-mono-tag` (460 light, 400 dark); `.badge-user` inherits it. Until 64a2b36a: 370, and `.badge-user` 420, 490 in dark
 - `organisms/sidebar-tags.css:250`: `.tag-sidebar .badge`
 - `molecules/person-badge.css:32`: speaker code; `screens.css:94` (speaker code at micro); `signals.css:257` (participant boxes); `signals.css:598` (tooltip speaker)
 - `atoms/bar.css:17`: sentiment bar label
 - `atoms/input.css:6` and `:64`, and `molecules/tag-input.css:69`: tag input, sizer and suggestions at badge
-- `organisms/codebook-panel.css:380`, `:474`, `:491`, `:541` and `:554`: inline edit (inherit); add-tag field, input and drag ghost **at label**; preview at badge, 420. These are the same chips at two sizes.
-- `organisms/codebook-v2.css:415`: `.picker-card-version` at badge, 420
+- `organisms/codebook-panel.css:380`, `:474`, `:491`, `:541` and `:554`: inline edit (inherit); add-tag field, input and drag ghost **at label**; preview at badge, `--bn-weight-mono-tag` (was 420). The add-tag chips are the same chips at two sizes; still open.
+- `organisms/codebook-v2.css:415`: `.picker-card-version` at badge, `--bn-weight-mono` (was 420)
 - `organisms/signals.css:727`: `.pattern-label` at badge, 520, uppercase
 - `atoms/moderator-question.css:23` and `:128`: moderator pill (parked feature) and "more"
 
 **Path** (filename, path, URL, raw text):
 
 - `screens.css:86`: `.screens-nav-path` at micro
-- `screens.css:136`: `.screens-sub code` at caption, 490
+- `screens.css:137`: `.screens-sub code` at caption, `--bn-weight-mono-emphasis` 560 (was 490)
 - `templates/status-page.css:56` and `:81`: status page long text at label, details at caption
 
 **Keycap:**
 
-- `atoms/footer.css:54`: `.footer-keyboard-hint kbd` at 0.85em (literal)
+- `atoms/footer.css:54`: `.footer-keyboard-hint kbd` at `--bn-text-micro`, `--bn-weight-mono` (was 0.85em, inherited 400)
 
 **Figures** (numbers set in mono for alignment):
 
@@ -144,9 +153,11 @@ Fifteen other rules already align numbers in the body face with `font-variant-nu
 
 | where | stack and type | ships? | fold into |
 |---|---|---|---|
-| `bristlenose/theme/templates/player.html:11` | a copy of the web stack, 0.8rem | yes (popout player status line) | path; carries its own copy because the page has no tokens |
+| `bristlenose/theme/templates/player.html:11` | the shipped stack written out, 0.8rem | yes (popout player status line) | path; carries its own copy because the page has no tokens (updated in 64a2b36a) |
 | `frontend/src/utils/transcriptCopy.ts:66` | `Menlo,Consolas,monospace`, 85%, normal | yes (rich-text clipboard) | timecode. Keep a literal on purpose: the paste target has no theme and no `ui-monospace` |
-| `desktop/…/WelcomeIllustrations.swift:1514` (`--mono`), `:1820`, `:1986`, `:2121`, `:2290`, `:2488` | `"SF Mono",ui-monospace,Menlo,monospace` | yes (Welcome illustrations) | code; hand copies, unlike `WelcomeTimelineCSS.swift`, which is generated |
+| `desktop/…/WelcomeIllustrations.swift:1514` (`--mono`), `:1820`, `:1986`, `:2121`, `:2290`, `:2488` | `ui-monospace,Menlo,monospace` (was `"SF Mono",…` until 64a2b36a) | yes (Welcome illustrations, Mac webview only) | code; hand copies, unlike `WelcomeTimelineCSS.swift`, which is generated |
+| `desktop/…/WelcomeIllustrations.swift:1537`, `:1858`, `:2006`, `:2165`, `:2336` | `.badge` copies with no `font-weight` | yes | code; they draw 400 where the report draws 460 in light. **Open** |
+| `desktop/…/WelcomeIllustrations.swift:2179`, `:2352` | `.cap` keycaps, mono, `font-weight:500` | yes | keycap; Mac-only, so 500 is SF Mono Medium and matches `Keycap.swift`'s `.medium`; it diverges from the footer keycap's 400 (`docs/design-keycaps.md` §1). **Open** |
 | `frontend/src/islands/GridSpecimen.tsx:77`, `:182`, `:213`, `:219`, `:276` | `ui-monospace, monospace` at 500 and 600, 10–11 px | dev (specimen route) | when touched |
 | `frontend/src/components/playground.css` (12 rules, including `:591` `font: 500 9px/1`) | token family, rem and px literals | dev | when touched |
 | `bristlenose/server/run_inspector.py:589` | `"SF Mono",ui-monospace,Menlo,Consolas,monospace` | dev | when touched |
@@ -154,20 +165,20 @@ Fifteen other rules already align numbers in the body face with `font-variant-nu
 
 ### Swift
 
-Native code always draws the system SF Mono, at AppKit's named weights.
+Native code always draws the system SF Mono. Most sites use AppKit's named weights; the search tokens interpolate between them.
 
 - **Code:** `SessionsPopoverList.swift:485` (speaker badge, 11 regular); `WelcomeIllustrations.swift:136` (sentiment chip, 11 regular); `SearchFieldViews.swift:24` (search tokens). The last maps CSS weight to AppKit by interpolation (`appKitWeight`, `:31`), so 490 lands "just under medium" and 370 between light and regular.
 - **Path and command:** `LLMSettingsView.swift:253` (shell commands, caption) and `:457` (`localhost:11434`); `ProjectDiagnosticPopover.swift:270` and `:428` (source file, footnote), `:370` (glyph) and `:373` (symbol name, caption2); `MCPAgentsSettingsView.swift:1258` (dialect box, subheadline).
-- **Build provenance:** `ContentView.swift:817` (status strip, 10 pt); `MenuCommands.swift:433` (About credits, 10 pt); `BootView.swift:166` (server log, caption).
+- **Build provenance:** `ContentView.swift:826` (status strip, 10 pt); `MenuCommands.swift:433` (About credits, 10 pt); `BootView.swift:166` (server log, caption).
 - **Keycap:** `Keycap.swift:40` and `:50`, **medium**.
 - **Figures** (system font, monospaced digits, not the mono face): `LLMSettingsView.swift:563`, `SidebarFooter.swift:29`, `CloudImportOutlineView.swift:1170`, `:1552` and `:1555`, `MCPAgentsSettingsView.swift:489`, `:725` and `:729`, `OllamaDownloadPill.swift:98`, `:203`, `:272` and `:450`, `SearchFieldViews.swift:399`.
 - **Debug and lab views:** `SidebarLabView:276`, `SeamLabView:284`, `ShimmerTunerView:77` and `:94`, `ShoalDebugView:122` and `:286`, `KeycapGalleryView` (three sites), `WelcomeDegradationLab` (eight sites).
 
-**Swift already follows the proposal:** named weights only, mono for codes, paths and keycaps, and monospaced digits rather than a mono face for numbers.
+**Swift already follows the proposal:** mono for codes, paths and keycaps, and monospaced digits rather than a mono face for numbers. The search tokens (`SearchFieldViews.swift:31`–`43`) take the CSS weight measured off the web badge and interpolate between AppKit's named weights, so a light-mode tag at 460 draws between regular and medium there too.
 
-## 4. Proposal
+## 4. Proposal, and what shipped
 
-Decisions taken 15 Oct 2026 are marked **Decided**. The emphasis weight was revised the same evening, after the Windows measurement in §6.
+Decisions taken 15 Oct 2026 are marked **Decided**. The emphasis weight was revised the same evening, after the Windows measurement in §6. **Everything decided here shipped in 64a2b36a**; what did not is marked **open** in the table below.
 
 ### One stack, both scales
 
@@ -187,7 +198,7 @@ Delete the desktop override. What each platform then draws, all measured except 
 
 "SF Mono" by name goes because it is the one entry that makes the developer's view differ from everyone else's. "Fira Code" goes because nobody has it who isn't a developer. The generic is still last but is no longer reached on any measured platform. That matters: it is Courier in Chromium on a Mac and Courier New in Windows 10's Edge, and it varies with the page's `lang`.
 
-Still to check before shipping: Liberation Mono and Noto Sans Mono after DejaVu, once Linux is measured.
+Open after shipping: Liberation Mono and Noto Sans Mono after DejaVu, once Linux is measured.
 
 ### Weights
 
@@ -198,7 +209,7 @@ Still to check before shipping: Liberation Mono and Noto Sans Mono after DejaVu,
 ```
 
 - **Rest, 400. Decided.** Every monospace role, and every tag in dark mode.
-- **Tags in the light appearance, 460. Decided.** Light tags read a little weak against their pale tints: light sentiment chips measure 3.1–5.2:1 WCAG, against 6.2–9.3:1 in dark. 460 is +9% ink in SF Mono, a touch under 490's +13–14%, and **Regular in Menlo, Consolas and Cascadia Mono**, so it is a fine adjustment where SF Mono can show one and invisible elsewhere. CSS cannot vary `font-weight` with `light-dark()`, so the token is set to 400 in the dark scopes, the same `[data-theme="dark"]` and `prefers-color-scheme` pair `atoms/badge.css` already uses for dark user tags.
+- **Tags in the light appearance, 460. Decided.** Light tags read a little weak against their pale tints: light sentiment chips measure 3.1–5.2:1 WCAG, against 6.2–9.3:1 in dark. 460 is +9% ink in SF Mono, a touch under 490's +13–14%, and **Regular in Menlo, Consolas and Cascadia Mono**, so it is a fine adjustment where SF Mono can show one and invisible elsewhere. CSS cannot vary `font-weight` with `light-dark()`, so the token is set to 400 in the dark scopes, in `tokens-typography.css:68`–`77`, using the same `[data-theme="dark"]` and `prefers-color-scheme` pair `atoms/badge.css` uses for the dark user-tag colour.
 - **Emphasis, 560. Revised from 520.** The aim, decided earlier, is a step that survives in a browser. 520 reaches Bold in Menlo on a Mac but stays Regular in Consolas, where Windows's nearest-weight matching needs 550; 560 adds margin. In SF Mono 560 is +24% (520 was +18%), in Cascadia Mono SemiBold (+16%), in Menlo and Consolas Bold (+33–36%). Today it applies only to the Screens path that names the screen.
 - **No 500.** Fewer weights, decided. Also, 500 is exactly where Cascadia Mono jumps to SemiBold, so it is a poor value for anything meant to be subtle.
 
@@ -221,21 +232,26 @@ Who sees which: the Mac app and Safari get SF Mono. Chrome, Edge, Arc and probab
 
 ### What folds where
 
-| today | becomes |
-|---|---|
-| `.badge` 370, `.badge-user` 420, dark 490, `.tag-preview` 420, `.picker-card-version` 420 | code: **one weight for every tag**, 460 in light and 400 in dark (decided); colour separates sentiment chips from codebook tags |
-| codebook add-tag field, input and drag ghost at label | code at badge: the same chips at one size |
-| `.pattern-label` 520 | rendered only by the dev `GridSpecimen` route, not a shipped surface; code at 400 when next touched |
-| `.screens-sub code` 490 | path at emphasis (560) |
-| `.screens-nav-path`, status page, `player.html` status line | path; the player page gets the token stack written out |
-| heatmap cells, metric values, hero score (490), threshold counters and confidence, pending count, tooltip metrics | figures |
-| footer `kbd` 0.85em | keycap at micro, 400 |
-| coverage timecode 0.85em | timecode at caption |
-| `WelcomeIllustrations.swift` hand copies | generate them as `WelcomeTimelineCSS.swift` is generated, or update all six to the new stack |
-| clipboard `MONO` in `transcriptCopy.ts` | stays a literal; it already matches the proposal minus `ui-monospace` and Cascadia |
-| dev surfaces (`GridSpecimen`, playground, run inspector, dev and chat-lens pages) | when next touched |
+| before 64a2b36a | becomes | status |
+|---|---|---|
+| `.badge` 370, `.badge-user` 420, dark 490, `.tag-preview` 420 | code: **one weight for every tag**, `--bn-weight-mono-tag` (460 light, 400 dark); colour separates sentiment chips from codebook tags | shipped |
+| `.picker-card-version` 420 | code at `--bn-weight-mono` | shipped |
+| `.screens-sub code` 490 | path at `--bn-weight-mono-emphasis` (560) | shipped |
+| footer `kbd` 0.85em | keycap at micro, 400 | shipped |
+| `player.html` status line, a copy of the old stack | path; the shipped stack written out | shipped |
+| `WelcomeIllustrations.swift` stacks | `ui-monospace,Menlo,monospace` in all six (Mac-only webviews); not generated | shipped |
+| `WelcomeTimelineCSS.swift` | regenerated from the theme | shipped |
+| heatmap cells, metric values, hero score (490), threshold counters and confidence, pending count, tooltip metrics | figures: body face with tabular figures | **open**, owner undecided |
+| session durations ("42 min") | timecode or figures? | **open**, owner undecided |
+| codebook add-tag field, input and drag ghost at label | code at badge: the same chips at one size | **open**, owner undecided |
+| Welcome HTML `.badge` copies with no weight; `.cap` at 500 | 460 in light to match the report; keycaps 400 or kept at 500 (Mac-only) | **open** |
+| native Welcome chip (`WelcomeIllustrations.swift:136`, 11 regular) | match the report's light 460 | **open** |
+| `.pattern-label` 520 | rendered only by the dev `GridSpecimen` route; code at 400 when next touched | **open**, dev-only |
+| coverage timecode 0.85em | timecode at caption; `.coverage-segment` is emitted only by the sealed static renderer | **open**, sealed surface |
+| clipboard `MONO` in `transcriptCopy.ts` | stays a literal; it already matches the stack minus `ui-monospace` and Cascadia | by design |
+| dev surfaces (`GridSpecimen`, playground, run inspector, dev and chat-lens pages) | when next touched | **open**, dev-only |
 
-## 5. Not measured
+## 5. Not measured (open after shipping)
 
 - **Safari's DOM on a Mac with the download.** Driving Safari needs a settings change. Safari limits web content to system fonts, and WebKit's canvas already ignores the download, so it is expected to match the stock-Mac WebKit row. A ten-second human check: open the specimen in Safari and read the "drawn in" line.
 - **Firefox.** Version 157 is installed here, but headless Firefox refused a throwaway profile, and its real profile was not touched. Firefox has no `ui-monospace`, so the proposed stack should reach Menlo on a Mac and Cascadia Mono or Consolas on Windows.
@@ -260,7 +276,7 @@ Who sees which: the Mac app and Safari get SF Mono. Chrome, Edge, Arc and probab
 
 ### Which face each stack reaches
 
-| environment · browser | web token today | desktop token today | proposed | generic `monospace` | `ui-monospace` |
+| environment · browser | web token before 64a2b36a | desktop token before 64a2b36a | shipped stack | generic `monospace` | `ui-monospace` |
 |---|---|---|---|---|---|
 | Mac, developer · WebKit | SF Mono download | SF Mono download | system SF Mono | Menlo (Courier without `lang`) | system SF Mono |
 | Mac, developer · Chromium | SF Mono download | SF Mono download | Menlo | Courier | unsupported |
@@ -284,7 +300,7 @@ Ink relative to 400 in the same face. "B" is the face's Bold.
 | Consolas (Windows Edge) | | | 0 | **0** | 0 | 0 | 0 | 0 | B | **B** | B | B |
 | Cascadia Mono (Windows 11 Edge) | | | 0 | **0** | 0 | 0 | +16% | +16% | +16% | **+16%** | +16% | +27% |
 
-The system SF Mono figures are at 11–13 px; other strings and sizes move them by 2–5 points, not their order. Menlo's Bold is +33–39%, Courier's +37–45%, Consolas's +33–36%. Blank cells were not measured. The bold columns are the proposed values (460 for light tags, 560 for emphasis).
+The system SF Mono figures are at 11–13 px; other strings and sizes move them by 2–5 points, not their order. Menlo's Bold is +33–39%, Courier's +37–45%, Consolas's +33–36%. Blank cells were not measured. The bold columns are the shipped values (460 for light tags, 560 for emphasis).
 
 ### How each platform picks a weight
 
@@ -324,4 +340,4 @@ node experiments/monospace-audit/gen-pages.mjs /tmp/mono && node experiments/mon
 - `probe-wkwebview.swift` and its `.entitlements`: the sandboxed-WKWebView probe, built as a minimal `.app` (steps in the file header).
 - `analyse.py`: the ink table; `results-2026-10-15.json` is this run.
 - `windows/edge-check.sh [vm]` and `windows/font-list.sh [vm]`: run on the Mac that hosts the VirtualBox VMs (`docs/release-winget.md`). They boot the VM headless, render `windows/fontcheck.html` in headless Edge, or list the installed mono fonts, then power off and restore the `clean` snapshot. `windows/ink.mjs` reads the screenshot.
-- `build-specimen.py`: regenerates the specimen from the shipped theme files.
+- `build-specimen.py`: regenerates the specimen. It reads the theme as it stood before 64a2b36a, so its "Today" columns stay the baseline and its "Proposed" columns show what shipped.

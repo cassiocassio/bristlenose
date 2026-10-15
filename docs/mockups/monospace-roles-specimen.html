@@ -7,7 +7,7 @@
 <!-- Generated from the shipped theme files; each inlined block names its source and lines.
      Synthetic content only. Companion doc: docs/design-monospace-roles.md -->
 <style>
-/* ════ bristlenose/theme/tokens.css — lines 1–394 ════ */
+/* ════ bristlenose/theme/tokens.css @ 64a2b36a^ — lines 1–394 ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -403,7 +403,7 @@
     [data-theme="dark"]:root  { color-scheme: dark; }
 }
 
-/* ════ bristlenose/theme/tokens-typography.css — lines 1–51 ════ */
+/* ════ bristlenose/theme/tokens-typography.css @ 64a2b36a^ — lines 1–51 ════ */
 /* Typography tokens — web defaults (Inter Variable from Google Fonts).
    Desktop overrides are in tokens-desktop.css.
 
@@ -456,7 +456,7 @@
     --bn-text-display-lh:  1.2;
 }
 
-/* ════ bristlenose/theme/tokens-desktop.css — lines 1–70 ════ */
+/* ════ bristlenose/theme/tokens-desktop.css @ 64a2b36a^ — lines 1–70 ════ */
 /* Desktop typography overrides — SF Pro for macOS native feel.
    Active when data-platform="desktop" is set on <html> AND the user hasn't
    opted back to Inter. The macOS app sets data-platform via
@@ -528,7 +528,7 @@
        No change needed — Inter and SF Pro share the weight axis range. */
 }
 
-/* ════ bristlenose/theme/colors/palette-default.css — lines 1–170 ════ */
+/* ════ bristlenose/theme/colors/palette-default.css @ 64a2b36a^ — lines 1–170 ════ */
 /* palette-default — Bristlenose's standard blue/grey colour theme.
    This is the web-mode default palette, loaded as :root fallback.
    Tokens defined here are overridden by any active [data-color-theme] palette.
@@ -700,7 +700,7 @@
     }
 }
 
-/* ════ bristlenose/theme/atoms/badge.css — lines 1–327 ════ */
+/* ════ bristlenose/theme/atoms/badge.css @ 64a2b36a^ — lines 1–327 ════ */
 /* Atom: badge — base badge, sentiment variants, AI and user variants */
 
 /* The weight is DECLARED. It never was, so every chip in the product rendered
@@ -1029,7 +1029,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     outline-offset: 1px;
 }
 
-/* ════ bristlenose/theme/atoms/timecode.css — lines 1–97 ════ */
+/* ════ bristlenose/theme/atoms/timecode.css @ 64a2b36a^ — lines 1–97 ════ */
 /* Atom: timecode — clickable and plain timecode links */
 
 a.timecode,
@@ -1128,7 +1128,7 @@ a.timecode:hover {
     }
 }
 
-/* ════ bristlenose/theme/molecules/person-badge.css — lines 1–205 ════ */
+/* ════ bristlenose/theme/molecules/person-badge.css @ 64a2b36a^ — lines 1–205 ════ */
 /* Molecule: person-badge — two-tone split speaker badge
  *
  * Structure:  .bn-person-badge > .bn-speaker-badge--split
@@ -1335,7 +1335,7 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
     color: var(--bn-colour-text);
 }
 
-/* ════ bristlenose/theme/atoms/footer.css — lines 51–63 ════ */
+/* ════ bristlenose/theme/atoms/footer.css @ 64a2b36a^ — lines 51–63 ════ */
 .footer-keyboard-hint kbd {
     display: inline-block;
     padding: 0.1em 0.35em;
@@ -1457,7 +1457,7 @@ h2 { font-size: var(--bn-text-heading); line-height: var(--bn-text-heading-lh); 
 <div class="page">
   <h1>Monospace roles</h1>
   <p class="lede">Every monospace face in the report, on both type scales, as it renders today and as the audit proposes.
-  Open it in the Mac app's webview or Safari and in Chrome. Today's columns differ by browser and by whether the Mac has Apple's SF Mono download; the proposed column differs only by browser (system SF Mono in WebKit, Menlo in Chrome).
+  <b>“Today” means before 64a2b36a (15 Oct 2026); the “Proposed” columns shipped in it, except the figures.</b> Open it in the Mac app's webview or Safari and in Chrome. Today's columns differ by browser and by whether the Mac has Apple's SF Mono download; the proposed column differs only by browser (system SF Mono in WebKit, Menlo in Chrome).
   Reasoning and measurements: <code>docs/design-monospace-roles.md</code>.</p>
   <div class="key"><span class="k-art">Artefact — real tokens and real component CSS</span><span class="k-com">Commentary — not the product</span></div>
 

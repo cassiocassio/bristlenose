@@ -334,10 +334,14 @@ chips are that kind of copy, hand-kept in `WelcomeIllustrations.swift`.) So:
    replaces the last and carries only the badges the menu and chips show.
 
 2. Swift paints exactly those values:
-   - `Font.system(size:weight:design:)`, with `.monospaced` for mono. That
-     resolves to SF Mono, which is what `--bn-font-mono` resolves to in
-     WKWebView.
-   - The numeric weight mapped to the nearest `Font.Weight`.
+   - `NSFont.monospacedSystemFont` for mono and `NSFont.systemFont` otherwise
+     (`SearchFieldViews.swift:21`). That is the system SF Mono, which is what
+     `--bn-font-mono` resolves to in WKWebView through `ui-monospace`
+     (`tokens-typography.css:27`; true in both typography modes since
+     64a2b36a, which dropped "SF Mono" by name).
+   - The numeric weight **interpolated** between AppKit's named weights, not
+     snapped to the nearest (`appKitWeight`, `SearchFieldViews.swift:31`), so a
+     light-mode tag at 460 draws between regular and medium, as it does on the web.
    - Points taken 1:1 from pixels, which is how the webview renders them.
 3. **The styles are re-sent when anything that changes them changes**: the
    palette, the appearance (light or dark), the display mode (code only, or

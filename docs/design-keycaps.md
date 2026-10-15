@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-08-20
-trued-against: uncommitted working tree @main on 2026-08-20
+last-trued: 2026-10-15
+trued-against: HEAD@main on 2026-10-15 (64a2b36a)
 ---
 
 # Design: Keycaps — showing a key to press, everywhere
@@ -10,6 +10,8 @@ trued-against: uncommitted working tree @main on 2026-08-20
 **Date:** 19 Jul 2026 · **Last trued:** 20 Aug 2026
 
 ## Changelog
+
+- _2026-10-15_ — **Truing pass (monospace): the mono stack and modifier-glyph coverage.** `--bn-font-mono` no longer names SF Mono: since 64a2b36a it is `ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace`, so a web cap draws the system SF Mono in WebKit, Menlo in Chrome on a Mac, Cascadia Mono or Consolas on Windows (`docs/design-monospace-roles.md` §6). Glyph coverage measured and corrected in § Font gotcha: the claim that SF Mono and SF Pro carry the full modifier set was wrong. The SPA help modal was retired on 10 Jul 2026 (3f49d170), so steps 1–2 and the cross-references to `help-overlay.css` and `ShortcutsSection.tsx` are marked superseded. The `.cap` weight (500) is recorded against the monospace weight rules as open.
 
 - _2026-08-20_ — **Step 3 shipped: the SwiftUI cap graduated out of `#if DEBUG`, Skin A only.** `Keycap` now lives in `desktop/Bristlenose/Bristlenose/Keycap.swift` — **Skin A · Flat alone**, because the first consumer is the welcome cells' body copy and §2 names Flat as the inline-prose default; Raised (B) is for surfaces where the key *is* the content and would shout inside a paragraph. The gallery's six-skin primitive stays as the comparison harness, renamed `GalleryKeycap` so the shipping name is the unqualified one. Colours are byte-matched via `KeycapPalette`. **The flow problem §3 implied is real and is solved by rasterising, not by layout:** a cap is a `View` and cannot flow inside a wrapping `Text`, and rebuilding a sentence as a flow of word-views would lose truncation, `lineLimit` and `ViewThatFits` — all of which belong to `Text`. `KeycapInline` renders the cap once per (key, appearance) through `ImageRenderer` and interpolates it as an image, which flows and breaks lines natively. Appearance is passed **explicitly**: `ImageRenderer` resolves colours against the app appearance rather than the view's `colorScheme`, so an implicit read silently produces a light cap on a dark cell. Consumer + rationale: [`design-welcome-screen.md`](design-welcome-screen.md) §Cell 1 key-reference note.
 **Mockups:** [`docs/mockups/keycap-gallery.html`](mockups/keycap-gallery.html) (web) · `desktop/Bristlenose/Bristlenose/KeycapGalleryView.swift` (native, Debug ▸ Keycap Gallery)
@@ -21,7 +23,7 @@ Telling a user "press Option-Command-L" in prose is slow to parse and platform-f
 
 | Surface | Today | Wanted |
 |---|---|---|
-| **SPA** (React) — help modal, tooltips | `help-overlay.css` `<kbd>`, flat-bottom shadow | Shared, refined cap |
+| **SPA** (React) — help modal, tooltips | `help-overlay.css` `<kbd>`, flat-bottom shadow. _Since 10 Jul 2026 (3f49d170) the help modal is gone; the SPA's caps are the footer hint (`atoms/footer.css`, mono, micro, 400) and tooltip keys (`atoms/tooltip.css`, body font, 500)._ | Shared, refined cap |
 | **Public web docs** — manual on bristlenose.app | nothing | Same cap, one CSS file |
 | **CLI** — terminal help output | nothing | Bare glyph, no chrome |
 | **Native macOS** — custom/teaching UI | glyph strings typed into `desktop.json` (`"…(⌘⌥L)"`) | SwiftUI cap + SF Symbols |
@@ -63,7 +65,17 @@ Every surface reads from this. The **Unicode glyph is the cross-platform constan
 
 ### Font gotcha (load-bearing)
 
-**Render modifier glyphs in `--bn-font-mono` (SF Mono) or the system font — never Inter.** Inter's coverage of ⌘⌥⇧⌃ is incomplete, so the proportional body font silently falls back *per glyph* to a different face, and caps in the same combo end up mismatched. Every cap uses the mono/system stack for its glyph. (SF Mono and SF Pro both contain the full Apple modifier set.)
+**Render modifier glyphs in `--bn-font-mono` or the system font — never Inter.** Inter's coverage of ⌘⌥⇧⌃ is incomplete, so the proportional body font silently falls back *per glyph* to a different face, and caps in the same combo end up mismatched. Every cap uses the mono/system stack for its glyph. ~~(SF Mono and SF Pro both contain the full Apple modifier set.)~~ _Measured 15 Oct 2026 with CoreText (`CTFontGetGlyphsForCharacters`), and false:_
+
+| face | ⌘ | ⌥ | ⇧ | ⌃ | ↩ | ⎋ | ⌫ | ⇥ | ␣ |
+|---|---|---|---|---|---|---|---|---|---|
+| system SF Mono (`monospacedSystemFont`; `ui-monospace` in WebKit) | y | y | y | y | **n** | **n** | y | **n** | y |
+| system SF Pro (`systemFont`) | y | y | y | y | **n** | y | y | **n** | **n** |
+| SF Mono developer download | y | y | y | y | **n** | **n** | y | **n** | y |
+| Menlo (Chrome on a Mac, via the stack) | y | y | y | y | y | y | y | y | y |
+| Courier, Courier New | n | n | n | n | n | n | n | n | n |
+
+So the four modifiers are safe in every face the stack reaches on a Mac, but caps for Return, Escape and Tab fall back per glyph in SF Mono, the mismatch this gotcha exists to prevent. Cascadia Mono and Consolas are not measured. (fontconfig's `charset` query reports none of these for Menlo; it is wrong on `.ttc` files. Ask CoreText.)
 
 ## §2 — The six skins
 
@@ -89,7 +101,7 @@ Base — one class, glyph-safe font:
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 1.7em; height: 1.7em; padding: 0 0.42em;
   font-family: var(--bn-font-mono);      /* glyph-safe — NOT the body font */
-  font-size: var(--bn-text-label); font-weight: 500; line-height: 1;
+  font-size: var(--bn-text-label); font-weight: 500; line-height: 1;   /* see note below */
   color: var(--bn-colour-text); border-radius: 5px; vertical-align: middle;
 }
 /* `vertical-align: middle` is the web's answer to inline baseline alignment.
@@ -99,6 +111,8 @@ Base — one class, glyph-safe font:
 .combo.joined  { gap: 0; }               /* menu-bar style */
 .combo.split   { gap: 0.28rem; }         /* teachable */
 ```
+
+> **Weight 500 against the monospace weight rules (15 Oct 2026, open).** `docs/design-monospace-roles.md` §4 keeps mono weights out of 500 on the web: Cascadia Mono (Windows 11) jumps to SemiBold there while Menlo and Consolas stay Regular. The Welcome cells use `.cap` at 500 (`WelcomeIllustrations.swift:2179`, `:2352`); they render only in the Mac webview, where 500 is SF Mono Medium and matches `Keycap.swift`'s `.medium`, so that use is consistent. A web `atoms/kbd.css` (step 1) would reach Windows and should take 400 or 560 instead. The footer hint already uses 400.
 
 Skins:
 
@@ -191,8 +205,8 @@ All six are one CSS file + one SwiftUI file, driven by the §1 glyph map.
 
 The extraction the shortcuts doc anticipated (`design-keyboard-shortcuts.md` line ~453 — "keep `KeyCombo` extractable so a Swift consumer can read the same definitions") lands here:
 
-1. **Promote the cap CSS** out of `help-overlay.css` into `atoms/kbd.css` (a real atom in `_THEME_FILES`), add the six skins + the new tokens. `help-overlay.css` then consumes `.cap` instead of styling `<kbd>` itself.
-2. **React `Kbd` component** wrapping `.cap`, driven by the existing `KeyCombo` model in `ShortcutsSection.tsx`, `isMac()`/`isDesktop()`-aware. Docs site imports the same CSS.
+1. _(Superseded in part: the help modal was retired on 10 Jul 2026, 3f49d170; `help-overlay.css` survives only for the sealed static render.)_ **Promote the cap CSS** out of `help-overlay.css` into `atoms/kbd.css` (a real atom in `_THEME_FILES`), add the six skins + the new tokens. `help-overlay.css` then consumes `.cap` instead of styling `<kbd>` itself.
+2. _(`ShortcutsSection.tsx` and its `KeyCombo` model were deleted with the help modal in 3f49d170.)_ **React `Kbd` component** wrapping `.cap`, driven by the existing `KeyCombo` model in `ShortcutsSection.tsx`, `isMac()`/`isDesktop()`-aware. Docs site imports the same CSS.
 3. ~~**Swift `Keycap` view** — graduate `KeycapGalleryView.swift`'s primitive out of `#if DEBUG` into a shipping helper for teaching UI; the gallery stays as the harness.~~ ✅ **Done 20 Aug 2026** — `Keycap.swift`, Skin A only (add further skins when a surface actually needs one, not speculatively). Gallery primitive renamed `GalleryKeycap` and retained. Inline flow via `KeycapInline` + `ImageRenderer`; see the changelog entry above for why rasterising beats a flow layout here.
 4. **CLI helper** — a tiny formatter mapping the glyph map to bare glyphs for terminal help.
 5. **Kill the hand-typed glyph strings** in `desktop.json` (`"…(⌘⌥L)"`) once native menu items carry real `keyboardShortcut`s + the shared formatter — removes the 20-locale drift risk.
@@ -200,6 +214,6 @@ The extraction the shortcuts doc anticipated (`design-keyboard-shortcuts.md` lin
 ## Cross-references
 
 - [`design-keyboard-shortcuts.md`](design-keyboard-shortcuts.md) — which shortcuts exist, platform display paths, help modal, tooltips, the four display contexts, Phase 4 (mono grid, "or" connector, sort-by-key).
-- `bristlenose/theme/molecules/help-overlay.css` — today's `<kbd>` (essentially skin B with a flat shadow).
+- `bristlenose/theme/molecules/help-overlay.css` — the help modal's `<kbd>` (essentially skin B with a flat shadow); static render only since 3f49d170.
 - `desktop/CLAUDE.md` § Native primitives first — why a drawn cap is a justified custom primitive but a menu cap is not.
-- `frontend/src/components/about/ShortcutsSection.tsx` — `KeyCombo` model + `renderKeyCombo()` the React `Kbd` will consume.
+- ~~`frontend/src/components/about/ShortcutsSection.tsx` — `KeyCombo` model + `renderKeyCombo()` the React `Kbd` will consume.~~ Deleted in 3f49d170.

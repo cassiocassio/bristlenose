@@ -31,7 +31,7 @@ Dropdown filter for quotes by user tag. Lets researchers focus on specific tags 
 
 Badge base, sentiment variants, AI/user badge variants, animations.
 
-- **`.badge`** — base: inline-block, mono font, small padding, neutral background
+- **`.badge`** — base: inline-block, mono font, small padding, neutral background. Weight `--bn-weight-mono-tag`: 460 in the light appearance, 400 in dark, the same for every tag (`docs/design-monospace-roles.md`)
 - **Sentiment variants** (`.badge-frustration` … `.badge-confidence`) — 7 research-backed sentiments with distinct bg/text colours from tokens
 - **`.badge-ai`** — AI-assigned badges. Hover reveals `::after` delete circle (red `×` on white chip, `var(--bn-colour-danger)`). `body.hide-ai-tags .badge-ai { display: none }`
 - **`.badge-user`** — user tags. Dark-on-light (light mode), white-on-saturated (dark mode). Codebook colour via inline style. `.badge-delete` positioned same as AI `::after`, red `×` (`var(--bn-colour-danger)`)
@@ -207,7 +207,7 @@ The sessions grid in the Sessions tab, and the (still tabular) session list on t
 
 `BRISTLENOSE_FAKE_THUMBNAILS=1` env var shows thumbnail placeholders for all sessions (even VTT-only). For layout testing only — the shipped version uses real `video_map` logic.
 
-## analysis.css (organism)
+## signals.css (organism)
 
 Analysis page signal cards and heatmap table. The analysis page presents statistical patterns detected across sections/themes and sentiments, helping researchers identify where sentiment is concentrated.
 

@@ -6,15 +6,25 @@ import re
 R = pathlib.Path(__file__).resolve().parents[2]
 T = R / 'bristlenose/theme'
 
+# The specimen compares the theme as it stood BEFORE 64a2b36a ("Today") with what that commit
+# shipped ("Proposed", drawn by the mockup-local tokens below), so it reads the baseline from git,
+# not from the working tree. Reading the tree would silently turn "Today" into the shipped state.
+import subprocess
+BASELINE = "64a2b36a^"
+
+def _baseline(rel):
+    return subprocess.run(["git", "-C", str(R), "show", f"{BASELINE}:bristlenose/theme/{rel}"],
+                          check=True, capture_output=True, text=True).stdout
+
 def whole(rel):
-    lines = (T / rel).read_text().splitlines()
-    return f"/* ════ bristlenose/theme/{rel} — lines 1–{len(lines)} ════ */\n" + "\n".join(lines)
+    lines = _baseline(rel).splitlines()
+    return f"/* ════ bristlenose/theme/{rel} @ {BASELINE} — lines 1–{len(lines)} ════ */\n" + "\n".join(lines)
 
 def rule(rel, start):
-    lines = (T / rel).read_text().splitlines()
+    lines = _baseline(rel).splitlines()
     i = next(n for n, l in enumerate(lines) if l.startswith(start))
     j = next(n for n in range(i, len(lines)) if lines[n].startswith('}'))
-    return f"/* ════ bristlenose/theme/{rel} — lines {i+1}–{j+1} ════ */\n" + "\n".join(lines[i:j+1])
+    return f"/* ════ bristlenose/theme/{rel} @ {BASELINE} — lines {i+1}–{j+1} ════ */\n" + "\n".join(lines[i:j+1])
 
 shipped = "\n\n".join([
     whole('tokens.css'), whole('tokens-typography.css'), whole('tokens-desktop.css'),
@@ -228,7 +238,7 @@ body = f"""
 <div class="page">
   <h1>Monospace roles</h1>
   <p class="lede">Every monospace face in the report, on both type scales, as it renders today and as the audit proposes.
-  Open it in the Mac app's webview or Safari and in Chrome. Today's columns differ by browser and by whether the Mac has Apple's SF Mono download; the proposed column differs only by browser (system SF Mono in WebKit, Menlo in Chrome).
+  <b>“Today” means before 64a2b36a (15 Oct 2026); the “Proposed” columns shipped in it, except the figures.</b> Open it in the Mac app's webview or Safari and in Chrome. Today's columns differ by browser and by whether the Mac has Apple's SF Mono download; the proposed column differs only by browser (system SF Mono in WebKit, Menlo in Chrome).
   Reasoning and measurements: <code>docs/design-monospace-roles.md</code>.</p>
   <div class="key"><span class="k-art">Artefact — real tokens and real component CSS</span><span class="k-com">Commentary — not the product</span></div>
 

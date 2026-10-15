@@ -1,0 +1,128 @@
+"""A study's life, end to end: the real ``run`` and the real server, in the
+order the Mac app drives them. The rig is ``tests/lifecycle_rig.py``.
+
+Each test is one sequence a researcher actually performs. Strict xfails are
+the identity-without-paths work still to land
+(``docs/design-project-identity.md``); a fix flips them and fails the run.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from tests.lifecycle_rig import new_study
+from tests.test_serve_project_root import fast_watcher as fast_watcher  # noqa: F401
+
+
+def test_first_analysis_with_the_server_started_first(tmp_path: Path, fast_watcher) -> None:
+    """The app starts the server, then the first run: the report fills in."""
+    study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav")
+    with study.serve() as client:
+        study.run()
+        study.sessions(client, expect=2)
+        study.assert_healthy()
+    assert sorted(study.transcribed[0]) == ["Interview 1.wav", "Interview 2.wav"]
+
+
+import pytest  # noqa: E402
+
+_IDENTITY = (
+    "identity is a path today: the study's row and each session's key. "
+    "docs/design-project-identity.md, phase 2, flips this."
+)
+
+
+def test_an_added_interview_keeps_curation_and_transcribes_only_itself(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav")
+    with study.serve() as client:
+        study.run()
+        star = study.quote_ids(client)[0]
+        study.star(client, star)
+        study.add_recording("Interview 3.wav")
+        study.run()
+        study.sessions(client, expect=3)
+        study.assert_healthy()
+        assert star in study.starred(client), "adding an interview lost a star"
+    assert study.transcribed[1] == ["Interview 3.wav"]
+
+
+def test_re_analyse_is_a_deliberate_reset_and_the_report_comes_back(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    """Re-analyse under a live server: the analysis is rebuilt, curation is
+    reset by design (``design-analysis-lifecycle.md`` §1), the report fills."""
+    study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav")
+    with study.serve() as client:
+        study.run()
+        study.star(client, study.quote_ids(client)[0])
+        study.run(clean=True)
+        study.sessions(client, expect=2)
+        study.assert_healthy()
+        assert study.starred(client) == set()
+
+
+def test_a_folder_moved_while_closed_is_not_transcribed_again(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav")
+    study.run()
+    study.move_to(tmp_path / "Archive" / "2026" / "Talismanic")
+    study.run()
+    assert study.transcribed[1] == [], "a moved study paid for transcription again"
+
+
+@pytest.mark.xfail(strict=True, reason=_IDENTITY)
+def test_a_folder_moved_while_closed_keeps_its_curation(tmp_path: Path, fast_watcher) -> None:
+    study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav")
+    with study.serve() as client:
+        study.run()
+        star = study.quote_ids(client)[0]
+        study.star(client, star)
+    study.move_to(tmp_path / "Archive" / "2026" / "Talismanic")
+    with study.serve() as client:
+        study.run()
+        study.sessions(client, expect=2)
+        study.assert_healthy()
+        assert star in study.starred(client), "the move orphaned the researcher's star"
+
+
+@pytest.mark.xfail(strict=True, reason=_IDENTITY)
+def test_a_renamed_interview_keeps_its_curation_and_is_not_transcribed_again(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    """``Recording 2026-10-02.wav`` renamed to ``p1 sarah.wav`` (row 31)."""
+    study = new_study(tmp_path, "Recording 2026-10-02 1433.wav", "Interview 2.wav")
+    with study.serve() as client:
+        study.run()
+        stars = study.quote_ids(client)
+        for q in stars:
+            study.star(client, q)
+        (study.folder / "Recording 2026-10-02 1433.wav").rename(study.folder / "p1 sarah.wav")
+        study.run()
+        study.sessions(client, expect=2)
+        study.assert_healthy()
+        assert set(stars) <= study.starred(client), "a renamed interview lost its stars"
+    assert study.transcribed[1] == [], "a renamed interview was transcribed again"
+
+
+@pytest.mark.xfail(strict=True, reason=_IDENTITY)
+def test_a_copy_is_an_independent_duplicate(tmp_path: Path, fast_watcher) -> None:
+    """``design-project-identity.md`` §9: the copy opens with the curation it
+    was copied with, and from then on the two are unrelated."""
+    study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav")
+    with study.serve() as client:
+        study.run()
+        first, second = study.quote_ids(client)[:2]
+        study.star(client, first)
+    copy = study.copy_to(tmp_path / "Studies" / "Talismanic copy")
+    with copy.serve() as client:
+        copy.sessions(client, expect=2)
+        copy.assert_healthy()
+        assert first in copy.starred(client), "the copy lost the curation it carries"
+        copy.star(client, second)
+    with study.serve() as client:
+        study.sessions(client, expect=2)
+        study.assert_healthy()
+        assert study.starred(client) == {first}, "the copy's star reached the original"

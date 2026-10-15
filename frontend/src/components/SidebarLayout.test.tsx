@@ -585,3 +585,24 @@ describe("the Mac's folded projects column holds the minimap back in the grid", 
     expect(container.querySelector(".layout")!.classList.contains("minimap-hidden")).toBe(false);
   });
 });
+
+describe("opening the left panel moves focus into it", () => {
+  // On the Mac there is no close ×, so focus goes to the panel's first row.
+  // Every lens's row class must be in the selector, or focus stays where it was.
+  it("lands on the first Signals row on the Mac", () => {
+    mockEmbedded = true;
+    mockState = { ...mockState, tocMode: "closed" };
+    const panel = (
+      <nav>
+        <button className="signal-entry">First signal</button>
+        <button className="signal-entry">Second signal</button>
+      </nav>
+    );
+    const { rerender } = render(
+      <SidebarLayout active={true} leftPanel={panel}><div /></SidebarLayout>,
+    );
+    mockState = { ...mockState, tocMode: "push" };
+    rerender(<SidebarLayout active={true} leftPanel={panel}><div /></SidebarLayout>);
+    expect(document.activeElement).toBe(screen.getByText("First signal"));
+  });
+});

@@ -319,9 +319,11 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHead
   useEffect(() => {
     if (prevTocOpen.current !== tocOpen) {
       if (tocOpen) {
-        // Just opened — focus first interactive element in sidebar.
+        // Just opened — focus first interactive element in sidebar: the close
+        // × in the browser, else the first row. Each lens's row class must be
+        // here (Codebook rows carry .toc-link), or on the Mac focus goes nowhere.
         const target = tocPanelRef.current?.querySelector<HTMLElement>(
-          ".sidebar-close, .toc-link, .session-entry",
+          ".sidebar-close, .toc-link, .session-entry, .signal-entry",
         );
         target?.focus();
       } else if (embedded) {

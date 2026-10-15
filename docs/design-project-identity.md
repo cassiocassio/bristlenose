@@ -359,9 +359,19 @@ not the folder, and are unchanged.
 - **Transcription keeps a placeholder's last known fingerprint** (§5's rule,
   applied to the cache as well as the registry): an evicted recording is
   neither downloaded nor transcribed again when another interview is added.
-- **Curation, for fork collapse, includes a confirmed speaker pick and an
-  unreviewed AutoCode queue**, which live in tables the importer also writes,
-  so the check reads the slot's state, not only the table.
+- **Curation, for fork collapse, is measured, not named by table.** The
+  importer writes sentiment tags (`source="pipeline"`) and confirms speaker
+  slots it carries from the registry, so neither counts; a tag from any other
+  source and an AutoCode proposal do. (A first fix counted confirmed slots and
+  every tag, which made every real fork permanent; a test on a fork made by a
+  real import showed it.)
+- **A place remembers only its latest recording**, so a deleted recording's
+  place reused by another cannot hand the newcomer the old session when it is
+  evicted.
+- **Locate checks the marker only where it may read it.** A Spotlight hit has
+  no sandbox grant, so a marker it cannot read sends the researcher to the
+  panel at that folder, which grants; a dropped folder held under another
+  spelling is matched by its file-system identity, links resolved.
 - **Starts stay keyed by sid inside the registry** (§6 said by fingerprint).
   Within a study the sid is stable now; across a Re-analyse the starts cross
   as a separate hand-over keyed by content (`carried-starts.json`, §8), which

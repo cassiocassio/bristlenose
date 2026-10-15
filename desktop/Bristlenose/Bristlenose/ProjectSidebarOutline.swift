@@ -1486,7 +1486,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             let tip = i18n.flatMap {
                 SidebarSubtitleText.tooltip(for: variant, data: projectIndex?.unanalysed[id],
                                             progress: liveData?.progress[id],
-                                            screens: screenReading?.progress[id], i18n: $0)
+                                            screens: screenReading?.progress[id],
+                                            copy: CopyProvenance.resolve(
+                                                copiedFrom: project.copiedFrom,
+                                                projects: projectIndex?.projects ?? []),
+                                            i18n: $0)
             }
             // No subtitle (Schema E's clean row — the DEFAULT since 29 Jul —
             // or a defensive nil) → single-line collapse (ProjectCellSpec).

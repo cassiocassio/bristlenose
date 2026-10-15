@@ -97,6 +97,10 @@ struct Project: Identifiable, Hashable, Codable {
     /// been analysed or served once, and for a project whose folder is out of
     /// reach.
     var studyID: String?
+    /// The study this one was copied from, when the folder's marker says so
+    /// (`StudyMarker.copiedFrom`). Shown on the row's hover as where the copy
+    /// came from (`CopyProvenance`). Nil for an original.
+    var copiedFrom: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name, path, icon, position
@@ -114,6 +118,7 @@ struct Project: Identifiable, Hashable, Codable {
         case lastLens = "last_lens"
         case lastAnchor = "last_anchor"
         case studyID = "study_id"
+        case copiedFrom = "copied_from"
     }
 
     // Custom coding for bookmarkData (Base64 string in JSON instead of byte array).
@@ -153,6 +158,7 @@ struct Project: Identifiable, Hashable, Codable {
         lastLens = try container.decodeIfPresent(String.self, forKey: .lastLens)
         lastAnchor = try container.decodeIfPresent(String.self, forKey: .lastAnchor)
         studyID = try container.decodeIfPresent(String.self, forKey: .studyID)
+        copiedFrom = try container.decodeIfPresent(String.self, forKey: .copiedFrom)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -176,6 +182,7 @@ struct Project: Identifiable, Hashable, Codable {
         try container.encodeIfPresent(lastLens, forKey: .lastLens)
         try container.encodeIfPresent(lastAnchor, forKey: .lastAnchor)
         try container.encodeIfPresent(studyID, forKey: .studyID)
+        try container.encodeIfPresent(copiedFrom, forKey: .copiedFrom)
     }
 
     init(id: UUID, name: String, path: String, inputFiles: [String]? = nil,
@@ -781,12 +788,14 @@ final class ProjectIndex: ObservableObject {
                     ?? URL(fileURLWithPath: projects[other].path)
                 if let fresh = try? StudyMarker.remint(folder: copyFolder, copiedFrom: studyID) {
                     projects[other].studyID = fresh
+                    projects[other].copiedFrom = studyID
                 }
             } else if let fresh = try? StudyMarker.remint(folder: folder, copiedFrom: studyID) {
                 studyID = fresh
             }
         }
         projects[index].studyID = studyID
+        projects[index].copiedFrom = StudyMarker.copiedFrom(folder: folder)
         save()
         return studyID
     }

@@ -222,6 +222,8 @@
     "missingSubtitle_other": "{{count}} eksik",
     "databaseForked": "Rapor g\u00fcncel de\u011fil",
     "tooltipWaiting": "{{count}} bekliyor",
+    "tooltipCopiedFrom": "Kopyalandığı proje: {{name}}",
+    "tooltipCopiedFromElsewhere": "Başka bir projeden kopyalandı",
     "dateRelativeJustNow": "Az önce",
     "unanalysedSheetTitle": "{{project}} içinde analiz edilmemiş dosyalar",
     "unanalysedSheetFooter": "Bu dosyalar son analizden sonra eklendi.",

@@ -849,6 +849,8 @@
  "desktop.chrome.startingServer": "0dd104",
  "desktop.chrome.titleSessions_one": "a8e148",
  "desktop.chrome.titleSessions_other": "e968d5",
+ "desktop.chrome.tooltipCopiedFrom": "3a8964",
+ "desktop.chrome.tooltipCopiedFromElsewhere": "3b50fb",
  "desktop.chrome.tooltipWaiting": "1c86d9",
  "desktop.chrome.unanalysedSheetFooter": "abb0cb",
  "desktop.chrome.unanalysedSheetTitle": "a007c9",

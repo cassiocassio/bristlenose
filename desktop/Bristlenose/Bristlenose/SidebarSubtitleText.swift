@@ -174,6 +174,7 @@ enum SidebarSubtitleText {
                         data: UnanalysedState?,
                         progress: PipelineProgress?,
                         screens: ScreenReadingProgress? = nil,
+                        copy: CopyProvenance? = nil,
                         i18n: I18n) -> String? {
         var parts: [String] = []
         // Screen reading leads the same way a run's ladder does — it is the
@@ -203,6 +204,15 @@ enum SidebarSubtitleText {
                 parts.append(deltaText(prefix: "missingSubtitle",
                                        count: data.missingFiles.count, i18n: i18n))
             }
+        }
+        // Last: where a copy came from is standing fact, not news.
+        switch copy {
+        case .of(let name):
+            parts.append(i18n.t("desktop.chrome.tooltipCopiedFrom", ["name": name]))
+        case .elsewhere:
+            parts.append(i18n.t("desktop.chrome.tooltipCopiedFromElsewhere"))
+        case nil:
+            break
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
@@ -264,5 +274,25 @@ enum SidebarSubtitleText {
         f.unitsStyle = .full
         let s = f.localizedString(for: date, relativeTo: now)
         return s.prefix(1).uppercased() + s.dropFirst()
+    }
+}
+
+/// Where a copy came from, for its row's hover (`docs/design-project-identity.md`
+/// §9). A copy keeps everything its original had, including the name, so two
+/// rows can read alike; the hover is where the difference is said.
+enum CopyProvenance: Equatable {
+    /// The original is in the sidebar, under this name today.
+    case of(String)
+    /// The original is not in the sidebar (removed, or never added here).
+    case elsewhere
+
+    /// Nil for a project that is not a copy. Matches the original by study id,
+    /// never by name or path, so a renamed or moved original still resolves.
+    static func resolve(copiedFrom: String?, projects: [Project]) -> CopyProvenance? {
+        guard let copiedFrom else { return nil }
+        if let original = projects.first(where: { $0.studyID == copiedFrom }) {
+            return .of(original.name)
+        }
+        return .elsewhere
     }
 }

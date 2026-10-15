@@ -64,6 +64,57 @@ struct StudyMarkerTests {
         let object = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         #expect(object["copied_from"] as? String == original)
         #expect(object["minted_by"] as? String == "app")
+        #expect(StudyMarker.copiedFrom(folder: dir) == original)
+        // The copy's Spotlight beacon must name the copy, or a search for the
+        // original finds both folders.
+        let beacon = try String(contentsOf: StudyMarker.beaconURL(forFolder: dir), encoding: .utf8)
+        #expect(beacon == StudyMarker.beaconText(fresh))
+    }
+
+    @Test func anOriginalHasNoProvenance() throws {
+        let dir = try folder()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try writePythonMarker(dir, id: UUID().uuidString.lowercased())
+        #expect(StudyMarker.copiedFrom(folder: dir) == nil)
+    }
+
+    /// The bytes must be what Python writes (`study_marker.beacon_text`), so a
+    /// beacon from either side is found by the same search.
+    @Test func theBeaconMatchesPythonsForm() {
+        let id = "6f1c2b9e-1111-4000-8000-000000000000"
+        #expect(StudyMarker.beaconText(id) == "bristlenose-study \(id)\n")
+        #expect(StudyMarker.beaconURL(forFolder: URL(fileURLWithPath: "/S/Talismanic")).path
+                == "/S/Talismanic/bristlenose-output/bristlenose-study.txt")
+    }
+
+    // ── Locate's search by id (design-project-identity §13a) ────────────────
+
+    @Test func theSearchQueryNamesTheBeaconAndTheID() throws {
+        let id = "6F1C2B9E-1111-4000-8000-000000000000"
+        let query = try #require(SpotlightOneShot.studyQuery(id: id))
+        #expect(query == #"kMDItemFSName == "bristlenose-study.txt" && "#
+                + #"kMDItemTextContent == "*6f1c2b9e-1111-4000-8000-000000000000*""#)
+        #expect(NSPredicate(fromMetadataQueryString: query) != nil)
+    }
+
+    /// The id goes into a query string, so nothing but a UUID may reach it.
+    @Test func anythingButAStudyIDMakesNoQuery() {
+        #expect(SpotlightOneShot.studyQuery(id: "") == nil)
+        #expect(SpotlightOneShot.studyQuery(id: #"x" || kMDItemFSName == "*"#) == nil)
+        #expect(SpotlightOneShot.studyQuery(id: "not-a-uuid") == nil)
+    }
+
+    @Test func aBeaconHitNamesItsProjectFolder() {
+        let hit = URL(fileURLWithPath: "/Volumes/Archive/Talismanic/bristlenose-output/bristlenose-study.txt")
+        #expect(SpotlightOneShot.studyFolder(forBeacon: hit)?.path == "/Volumes/Archive/Talismanic")
+    }
+
+    @Test func aBeaconOutOfPlaceIsNoHit() {
+        // Copied loose into a folder, or renamed: not a study's output folder.
+        #expect(SpotlightOneShot.studyFolder(
+            forBeacon: URL(fileURLWithPath: "/Users/r/Desktop/bristlenose-study.txt")) == nil)
+        #expect(SpotlightOneShot.studyFolder(
+            forBeacon: URL(fileURLWithPath: "/S/T/bristlenose-output/notes.txt")) == nil)
     }
 
     // ── The drop decision ───────────────────────────────────────────────────
@@ -205,6 +256,9 @@ struct StudyMarkerTests {
         #expect(copyID != nil && copyID != id, "the copy kept the original's identity")
         #expect(StudyMarker.read(folder: copy) == copyID)
         #expect(StudyMarker.read(folder: original) == id)
+        #expect(index.projects.first(where: { $0.id == b.id })?.copiedFrom == id,
+                "the re-minted copy does not know where it came from")
+        #expect(index.projects.first(where: { $0.id == a.id })?.copiedFrom == nil)
     }
 
     @Test func anAvailabilityRefreshLearnsTheStudyID() throws {
@@ -241,5 +295,62 @@ struct StudyMarkerTests {
         #expect(second != nil && second != id, "a copy kept its original's identity")
         #expect(StudyMarker.read(folder: copy) == second)
         #expect(StudyMarker.read(folder: original) == id, "the original was re-minted")
+        #expect(index.projects.first(where: { $0.id == b.id })?.copiedFrom == id,
+                "the re-minted copy does not know where it came from")
+    }
+}
+
+/// Where a copy came from, on its row's hover (design-project-identity §9).
+@MainActor
+@Suite("Copy provenance on the sidebar row")
+struct CopyProvenanceTests {
+
+    private func english() throws -> I18n {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("copy-i18n-\(UUID().uuidString)")
+        let en = dir.appendingPathComponent("en")
+        try FileManager.default.createDirectory(at: en, withIntermediateDirectories: true)
+        let desktop: [String: Any] = ["chrome": [
+            "tooltipCopiedFrom": "Copied from {{name}}",
+            "tooltipCopiedFromElsewhere": "Copied from another project",
+        ]]
+        try JSONSerialization.data(withJSONObject: desktop)
+            .write(to: en.appendingPathComponent("desktop.json"))
+        let i18n = I18n()
+        i18n.configure(localesDirectory: dir)
+        i18n.setLocale("en")
+        return i18n
+    }
+
+    private let original = "6f1c2b9e-2222-4000-8000-000000000000"
+
+    @Test func anOriginalSaysNothing() {
+        let p = Project(id: UUID(), name: "Talismanic", path: "/S/T", studyID: original)
+        #expect(CopyProvenance.resolve(copiedFrom: nil, projects: [p]) == nil)
+    }
+
+    /// By id, so a renamed original still resolves under its name today.
+    @Test func theOriginalIsNamedByItsStudyNotItsName() {
+        let renamed = Project(id: UUID(), name: "Talismanic (final)", path: "/S/T", studyID: original)
+        let lookalike = Project(id: UUID(), name: "Talismanic", path: "/S/U",
+                                studyID: "6f1c2b9e-3333-4000-8000-000000000000")
+        #expect(CopyProvenance.resolve(copiedFrom: original, projects: [lookalike, renamed])
+                == .of("Talismanic (final)"))
+    }
+
+    @Test func anOriginalNotInTheSidebarIsElsewhere() {
+        #expect(CopyProvenance.resolve(copiedFrom: original, projects: []) == .elsewhere)
+    }
+
+    @Test func theHoverSaysWhereTheCopyCameFrom() throws {
+        let i18n = try english()
+        #expect(SidebarSubtitleText.tooltip(for: .placeholder, data: nil, progress: nil,
+                                            copy: .of("Talismanic"), i18n: i18n)
+                == "Copied from Talismanic")
+        #expect(SidebarSubtitleText.tooltip(for: .placeholder, data: nil, progress: nil,
+                                            copy: .elsewhere, i18n: i18n)
+                == "Copied from another project")
+        #expect(SidebarSubtitleText.tooltip(for: .placeholder, data: nil, progress: nil,
+                                            i18n: i18n) == nil)
     }
 }

@@ -222,6 +222,8 @@
     "missingSubtitle_other": "{{count}} saknas",
     "databaseForked": "Rapporten \u00e4r inaktuell",
     "tooltipWaiting": "{{count}} väntar",
+    "tooltipCopiedFrom": "Kopierat från {{name}}",
+    "tooltipCopiedFromElsewhere": "Kopierat från ett annat projekt",
     "dateRelativeJustNow": "Nyss",
     "unanalysedSheetTitle": "Oanalyserade filer i {{project}}",
     "unanalysedSheetFooter": "De här filerna lades till efter den senaste analysen.",

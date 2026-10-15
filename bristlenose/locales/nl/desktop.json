@@ -222,6 +222,8 @@
     "missingSubtitle_other": "{{count}} ontbrekend",
     "databaseForked": "Rapport verouderd",
     "tooltipWaiting": "{{count}} in wachtrij",
+    "tooltipCopiedFrom": "Gekopieerd van {{name}}",
+    "tooltipCopiedFromElsewhere": "Gekopieerd van een ander project",
     "dateRelativeJustNow": "Zojuist",
     "unanalysedSheetTitle": "Niet-geanalyseerde bestanden in {{project}}",
     "unanalysedSheetFooter": "Deze bestanden zijn toegevoegd na de laatste analyse.",

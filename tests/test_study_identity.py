@@ -33,6 +33,30 @@ def test_the_first_toucher_mints_and_every_later_read_agrees(tmp_path: Path) -> 
     assert data["minted_by"] == "serve" and data["schema"] == 1
 
 
+def test_the_marker_leaves_a_visible_beacon_for_spotlight(tmp_path: Path) -> None:
+    """Spotlight indexes a visible text file's contents but not the hidden
+    marker; the Mac's Locate searches for this (design §13a)."""
+    out = tmp_path / "bristlenose-output"
+    study_id = study_marker.read_or_mint(out, minted_by="run")
+    beacon = study_marker.beacon_path(out)
+    assert beacon.parent == out and not beacon.name.startswith(".")
+    assert beacon.read_text(encoding="utf-8") == f"bristlenose-study {study_id}\n"
+
+
+def test_a_study_minted_before_the_beacon_gets_one(tmp_path: Path) -> None:
+    """Markers minted before 15 Oct 2026 have no beacon, and a copy re-minted
+    by the app may carry its original's; the next run or serve puts it right."""
+    out = tmp_path / "bristlenose-output"
+    study_id = study_marker.read_or_mint(out, minted_by="run")
+    beacon = study_marker.beacon_path(out)
+    beacon.unlink()
+    assert study_marker.read_or_mint(out, minted_by="serve") == study_id
+    assert beacon.read_text(encoding="utf-8") == study_marker.beacon_text(study_id)
+    beacon.write_text(study_marker.beacon_text(str(uuid.uuid4())), encoding="utf-8")
+    study_marker.read_or_mint(out, minted_by="serve")
+    assert beacon.read_text(encoding="utf-8") == study_marker.beacon_text(study_id)
+
+
 def test_a_marker_this_release_cannot_read_is_never_minted_over(tmp_path: Path) -> None:
     """Minting over it would give the study a second identity."""
     out = tmp_path / "bristlenose-output"

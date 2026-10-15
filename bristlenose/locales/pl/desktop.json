@@ -238,6 +238,8 @@
     "missingSubtitle_other": "{{count}} brakujących",
     "databaseForked": "Raport nieaktualny",
     "tooltipWaiting": "{{count}} oczekuje",
+    "tooltipCopiedFrom": "Skopiowano z: {{name}}",
+    "tooltipCopiedFromElsewhere": "Skopiowano z innego projektu",
     "dateRelativeJustNow": "Przed chwilą",
     "unanalysedSheetTitle": "Nieprzeanalizowane pliki w {{project}}",
     "unanalysedSheetFooter": "Te pliki dodano po ostatniej analizie.",

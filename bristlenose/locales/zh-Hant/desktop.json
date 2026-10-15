@@ -214,6 +214,8 @@
     "missingSubtitle_other": "{{count}} 則遺失",
     "databaseForked": "\u5831\u544a\u975e\u6700\u65b0",
     "tooltipWaiting": "{{count}} 則等待中",
+    "tooltipCopiedFrom": "複製自 {{name}}",
+    "tooltipCopiedFromElsewhere": "複製自另一個專案",
     "dateRelativeJustNow": "剛剛",
     "unanalysedSheetTitle": "{{project}} 中的未分析檔案",
     "unanalysedSheetFooter": "這些檔案是在上次分析之後加入的。",

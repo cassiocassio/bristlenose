@@ -222,6 +222,8 @@
     "missingSubtitle_other": "{{count}} que falten",
     "databaseForked": "Informe desactualitzat",
     "tooltipWaiting": "{{count}} en espera",
+    "tooltipCopiedFrom": "Copiat de {{name}}",
+    "tooltipCopiedFromElsewhere": "Copiat d’un altre projecte",
     "dateRelativeJustNow": "Ara mateix",
     "unanalysedSheetTitle": "Fitxers sense analitzar a {{project}}",
     "unanalysedSheetFooter": "Aquests fitxers s'han afegit després de l'última anàlisi.",

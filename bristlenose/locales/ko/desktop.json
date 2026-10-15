@@ -214,6 +214,8 @@
     "missingSubtitle_other": "{{count}}\uac1c \ub204\ub77d",
     "databaseForked": "\ubcf4\uace0\uc11c\uac00 \ucd5c\uc2e0\uc774 \uc544\ub2d8",
     "tooltipWaiting": "{{count}}\uac1c \ub300\uae30 \uc911",
+    "tooltipCopiedFrom": "{{name}}\uc5d0\uc11c \ubcf5\uc0ac\ub428",
+    "tooltipCopiedFromElsewhere": "\ub2e4\ub978 \ud504\ub85c\uc81d\ud2b8\uc5d0\uc11c \ubcf5\uc0ac\ub428",
     "dateRelativeJustNow": "\ubc29\uae08",
     "unanalysedSheetTitle": "{{project}}\uc758 \ubd84\uc11d\ub418\uc9c0 \uc54a\uc740 \ud30c\uc77c",
     "unanalysedSheetFooter": "\uc774 \ud30c\uc77c\ub4e4\uc740 \ub9c8\uc9c0\ub9c9 \ubd84\uc11d \uc774\ud6c4\uc5d0 \ucd94\uac00\ub418\uc5c8\uc2b5\ub2c8\ub2e4.",

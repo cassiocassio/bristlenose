@@ -8,6 +8,7 @@ Layout (v2):
     ├── bristlenose-{slug}-report.html    # Main HTML report
     ├── bristlenose-{slug}-report.md      # Markdown report
     ├── people.yaml                        # Participant registry (user-editable)
+    ├── bristlenose-study.txt              # The study id, for Spotlight (study_marker.py)
     ├── assets/                            # Static assets
     │   ├── bristlenose-theme.css
     │   ├── bristlenose-logo.png
@@ -28,6 +29,7 @@ Layout (v2):
     │   ├── s1.md
     │   └── ...
     └── .bristlenose/                      # Internal/intermediate files
+        ├── study.json                     # The study's identity (study_marker.py)
         ├── intermediate/
         │   ├── extracted_quotes.json
         │   ├── screen_clusters.json

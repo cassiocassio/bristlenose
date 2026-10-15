@@ -222,6 +222,8 @@
     "missingSubtitle_other": "{{count}} faltan",
     "databaseForked": "Informe desactualizado",
     "tooltipWaiting": "{{count}} en espera",
+    "tooltipCopiedFrom": "Copiado de {{name}}",
+    "tooltipCopiedFromElsewhere": "Copiado de otro proyecto",
     "dateRelativeJustNow": "Ahora",
     "unanalysedSheetTitle": "Archivos sin analizar en {{project}}",
     "unanalysedSheetFooter": "Estos archivos se a\u00f1adieron despu\u00e9s del \u00faltimo an\u00e1lisis.",

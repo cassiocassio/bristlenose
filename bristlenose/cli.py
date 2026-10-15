@@ -1072,11 +1072,14 @@ def _has_no_deliverable(output_dir: Path) -> bool:
     inside it. The resume path (a valid manifest) is handled by the caller
     before this is reached.
     """
+    from bristlenose.study_marker import BEACON_FILENAME
     from bristlenose.utils.fs import is_os_metadata
 
     for entry in output_dir.iterdir():
         if is_os_metadata(entry):
             continue
+        if entry.name == BEACON_FILENAME and entry.is_file():
+            continue  # the study's search beacon is state, not a deliverable
         if entry.name != ".bristlenose" or not entry.is_dir():
             return False
     return True

@@ -41,10 +41,26 @@ logger = logging.getLogger(__name__)
 SCHEMA = 1
 FILENAME = "study.json"
 MINTERS = ("run", "serve", "app")
+#: A visible copy of the id, for Spotlight only. Spotlight does not index the
+#: hidden ``.bristlenose/`` folder, and a sandboxed app cannot read a search
+#: hit's file without a grant, but Spotlight does index a visible text file's
+#: contents, so the Mac's Locate… can search for a moved study by its id
+#: (docs/design-project-identity.md §13a, measured 15 Oct 2026). Never read
+#: for identity: Locate verifies the marker once the researcher grants the
+#: folder. The content is the id and nothing to translate.
+BEACON_FILENAME = "bristlenose-study.txt"
 
 
 def marker_path(output_dir: Path) -> Path:
     return output_dir / ".bristlenose" / FILENAME
+
+
+def beacon_path(output_dir: Path) -> Path:
+    return output_dir / BEACON_FILENAME
+
+
+def beacon_text(study_id: str) -> str:
+    return f"bristlenose-study {study_id}\n"
 
 
 def _valid_id(value: object) -> str | None:
@@ -108,6 +124,14 @@ def write(
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise
+    _write_beacon(output_dir, valid)
+
+
+def _write_beacon(output_dir: Path, study_id: str) -> None:
+    try:
+        beacon_path(output_dir).write_text(beacon_text(study_id), encoding="utf-8")
+    except OSError as exc:  # a search aid; the marker is what counts
+        logger.warning("could not write the study's search beacon: %s", exc)
 
 
 def read_or_mint(output_dir: Path, *, minted_by: str) -> str | None:
@@ -119,6 +143,15 @@ def read_or_mint(output_dir: Path, *, minted_by: str) -> str | None:
     """
     study_id = read(output_dir)
     if study_id is not None:
+        # A marker minted before the beacon existed (before 15 Oct 2026), or a
+        # beacon the researcher deleted or a copy carried stale: put it right.
+        beacon = beacon_path(output_dir)
+        try:
+            current = beacon.read_text(encoding="utf-8")
+        except OSError:
+            current = None
+        if current != beacon_text(study_id):
+            _write_beacon(output_dir, study_id)
         return study_id
     if marker_path(output_dir).exists():
         return None

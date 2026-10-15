@@ -147,6 +147,16 @@ class TestHasNoDeliverable:
             "a directory holding only internal state walled off the retry"
         )
 
+    def test_the_study_search_beacon_is_state(self, tmp_path: Path) -> None:
+        """A serve started before the first run mints the study marker and its
+        visible Spotlight beacon (``study_marker.BEACON_FILENAME``); that must
+        not wall off the run that follows."""
+        from bristlenose.study_marker import read_or_mint
+
+        out = self._output_with_state_dir(tmp_path)
+        read_or_mint(out, minted_by="serve")
+        assert _has_no_deliverable(out)
+
     def test_a_real_deliverable_still_blocks(self, tmp_path: Path) -> None:
         """The protection that must survive: never silently overwrite output."""
         out = self._output_with_state_dir(tmp_path)

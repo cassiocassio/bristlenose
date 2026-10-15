@@ -222,6 +222,8 @@
     "missingSubtitle_other": "{{count}} mangler",
     "databaseForked": "Rapport for\u00e6ldet",
     "tooltipWaiting": "{{count}} venter",
+    "tooltipCopiedFrom": "Kopieret fra {{name}}",
+    "tooltipCopiedFromElsewhere": "Kopieret fra et andet projekt",
     "dateRelativeJustNow": "Lige nu",
     "unanalysedSheetTitle": "Ikke-analyserede filer i {{project}}",
     "unanalysedSheetFooter": "Disse filer blev tilføjet efter den seneste analyse.",

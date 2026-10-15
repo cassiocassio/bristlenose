@@ -22,15 +22,41 @@ enum StudyMarker {
             .appendingPathComponent("study.json", isDirectory: false)
     }
 
+    /// The visible copy of the id Spotlight can find (Python's
+    /// `study_marker.BEACON_FILENAME`). A search aid, never read for identity.
+    static let beaconFilename = "bristlenose-study.txt"
+
+    static func beaconURL(forFolder folder: URL) -> URL {
+        folder
+            .appendingPathComponent("bristlenose-output", isDirectory: true)
+            .appendingPathComponent(beaconFilename, isDirectory: false)
+    }
+
+    static func beaconText(_ id: String) -> String { "bristlenose-study \(id)\n" }
+
     /// The study id, or nil for no marker, an unreadable one, or one this
     /// release cannot read — never a guess.
     static func read(folder: URL) -> String? {
-        guard let data = try? Data(contentsOf: url(forFolder: folder)),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              object["schema"] as? Int == schema,
+        guard let object = payload(folder: folder),
               let raw = object["study_id"] as? String,
               let id = UUID(uuidString: raw) else { return nil }
         return id.uuidString.lowercased()
+    }
+
+    /// The study this one was copied from, when the app gave a copy its own
+    /// id (§9). Nil for an original, and for a marker this release cannot read.
+    static func copiedFrom(folder: URL) -> String? {
+        guard let object = payload(folder: folder),
+              let raw = object["copied_from"] as? String,
+              let id = UUID(uuidString: raw) else { return nil }
+        return id.uuidString.lowercased()
+    }
+
+    private static func payload(folder: URL) -> [String: Any]? {
+        guard let data = try? Data(contentsOf: url(forFolder: folder)),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              object["schema"] as? Int == schema else { return nil }
+        return object
     }
 
     /// Give a copy its own identity. Atomic; throws if the folder is not
@@ -54,6 +80,13 @@ enum StudyMarker {
             at: target.deletingLastPathComponent(), withIntermediateDirectories: true
         )
         try data.write(to: target, options: .atomic)
+        // The copy's beacon still names the original; a stale one would make
+        // a Spotlight search for the original find the copy too.
+        do {
+            try Data(beaconText(id).utf8).write(to: beaconURL(forFolder: folder), options: .atomic)
+        } catch {
+            log.error("could not update the copy's search beacon: \(error.localizedDescription, privacy: .public)")
+        }
         log.notice("study marker re-minted for a copy")
         return id
     }

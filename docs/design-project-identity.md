@@ -6,14 +6,14 @@ trued-against: HEAD@main on 2026-10-15
 
 ## Changelog
 
-- _2026-10-15_ — phases 2, 4 and 5 built: the marker, one study per database with fork collapse, content fingerprints and registry version 3, transcription keyed by content, the Re-analyse carry (2); the sidebar reads the marker, follows a moved folder and re-mints a copy (4); agent access keyed by study (5). Phase 3 is obviated and phase 6 waits on a decision (§14). §11a records where the build departed from this note.
+- _2026-10-15_ — phases 2, 4 and 5 built: the marker, one study per database with fork collapse, content fingerprints and registry version 3, transcription keyed by content, the Re-analyse carry (2); the sidebar reads the marker, follows a moved folder and re-mints a copy (4); agent access keyed by study (5). Phase 3 is obviated. Phase 6 built the same day: Locate… searches for a study by id through a visible beacon file, and a copy's row says where it came from (§13a). §11a records where the build departed from this note.
 
 - _2026-10-13_ — trued up: §2 carries the live S9 reproduction and the watcher route; §7 the Bin rule; §10 the WAL lag on the fork signal. Anchors: register rows 29, 35; `eb8509e1`.
 
 # Project identity without paths
 
-**Status: decided 13 Oct 2026, with the owner. Phases 2, 4 and 5 built 15 Oct 2026;
-phase 3 obviated; phase 6 waits on a decision (§14).** Rows 29, 30 and 31 of
+**Status: decided 13 Oct 2026, with the owner. Phases 2, 4, 5 and 6 built 15 Oct 2026;
+phase 3 obviated (§13a).** Rows 29, 30 and 31 of
 [design-lifecycle-failure-modes.md](design-lifecycle-failure-modes.md) are the
 failures this closes.
 
@@ -108,10 +108,11 @@ included. Before stashing, the run reads the marker and writes the same
 the sidebar row, the agent key and the report's identity all survive it. (§8
 has the full carry-over.)
 
-**Open for phase 6.** Spotlight does not index dot-folders, so Locate…
-cannot search for the marker by content. The spike decides the findable
-form; a candidate is a small visible file in `bristlenose-output/` holding
-the id, which costs nothing and is ours to write.
+**Findable by Spotlight (phase 6, built 15 Oct 2026).** Spotlight does not
+index dot-folders, so the marker itself cannot be searched for. Every writer
+also puts the id in a visible `bristlenose-output/bristlenose-study.txt`,
+which Spotlight indexes by content; Locate… searches for it and then confirms
+against the marker (§13a). The beacon is a search aid, never identity.
 
 ## 4. One study, one database
 
@@ -427,18 +428,31 @@ add → analyse → move → reopen → copy → reopen before phase 2 lands.
   (`UnsupportedSubsetView`), carry no output folder and so no marker, and the
   sidebar treats them as having no study id. Whether to offer such a project a
   one-click move into a folder is a product call, not identity work.
-- **Phase 6 needs a decision before it can be built.** The spike: Spotlight
-  found a `study.json` in a visible `bristlenose-output/` folder by name, did
-  not find the one in `bristlenose-output/.bristlenose/`, and found neither by
-  the id in its content (measured 15 Oct 2026, macOS 27). So Locate… can search
-  for a study only if the output folder carries a visible marker file. That
-  puts a new file in front of the researcher in Finder, which is theirs to
-  accept or not. If accepted: write the marker to `bristlenose-output/study.json`
-  (or mirror it there), search with `kMDItemFSName == "study.json"`, read each
-  hit, and match the id. Until then Locate… stays the name-based Spotlight
-  one-shot it is. (A sandboxed app also cannot read a Spotlight hit's file
-  without a grant, so a search must match on what Spotlight indexes — a name
-  — not on the file's contents.)
+- **Phase 6's search is built (15 Oct 2026), on a visible beacon.** The spike:
+  Spotlight does not index the hidden `.bristlenose/study.json`, and does not
+  search a JSON file's content, but it does index a visible text file's
+  content (measured, macOS 27). So beside the marker every writer puts
+  `bristlenose-output/bristlenose-study.txt`, holding only
+  `bristlenose-study <id>` — nothing to translate. Python writes it with the
+  marker and backfills it on the next run or serve for studies minted before
+  (`study_marker.read_or_mint`); the app rewrites it when it re-mints a copy,
+  so a copy's beacon names the copy. Locate… asks Spotlight first for
+  `kMDItemFSName == "bristlenose-study.txt" && kMDItemTextContent == "*<id>*"`
+  across every indexed volume (a lost study has usually moved to another
+  disk), takes the folder above `bristlenose-output/` when exactly one hit
+  is analysed, and otherwise falls back to the name search in the home folder.
+  **The beacon is never read for identity:** the hit is still checked against
+  the hidden marker once the panel grants the folder (`LocateFlow.verdict`),
+  and a deleted or stale beacon only costs the search. The run's
+  "output folder already exists" check counts the beacon as state, not a
+  deliverable (`cli._has_no_deliverable`). The owner's decision to accept a
+  visible file in the output folder is the one assumption here, and it is
+  reversible: removing the writer and the search restores the name search.
+- **A copy says where it came from.** The app records `copied_from` from the
+  marker on the row (`Project.copiedFrom`), and the row's hover reads
+  "Copied from <original's name today>", or "Copied from another project"
+  when the original is not in the sidebar (`CopyProvenance`, resolved by
+  study id, never by name). All 21 full locales.
 - **The half that needs no decision is built** (15 Oct 2026): whatever folder
   Locate… lands on, by Spotlight or by the panel, is refused when it is an
   analysed project carrying a different study id (`LocateFlow.verdict`), with

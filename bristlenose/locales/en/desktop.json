@@ -223,6 +223,8 @@
     "missingSubtitle_other": "{{count}} missing",
     "databaseForked": "Report out of date",
     "tooltipWaiting": "{{count}} waiting",
+    "tooltipCopiedFrom": "Copied from {{name}}",
+    "tooltipCopiedFromElsewhere": "Copied from another project",
     "dateRelativeJustNow": "Just now",
     "unanalysedSheetTitle": "Unanalysed files in {{project}}",
     "unanalysedSheetFooter": "These files were added after the last analysis.",

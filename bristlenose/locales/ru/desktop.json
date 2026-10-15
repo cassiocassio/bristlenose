@@ -238,6 +238,8 @@
     "missingSubtitle_other": "{{count}} отсутствуют",
     "databaseForked": "\u041e\u0442\u0447\u0451\u0442 \u0443\u0441\u0442\u0430\u0440\u0435\u043b",
     "tooltipWaiting": "{{count}} в очереди",
+    "tooltipCopiedFrom": "Скопировано из: {{name}}",
+    "tooltipCopiedFromElsewhere": "Скопировано из другого проекта",
     "dateRelativeJustNow": "Только что",
     "unanalysedSheetTitle": "Непроанализированные файлы в {{project}}",
     "unanalysedSheetFooter": "Эти файлы были добавлены после последнего анализа.",

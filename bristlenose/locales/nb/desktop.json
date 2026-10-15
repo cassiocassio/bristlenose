@@ -222,6 +222,8 @@
     "missingSubtitle_other": "{{count}} mangler",
     "databaseForked": "Rapporten er utdatert",
     "tooltipWaiting": "{{count}} venter",
+    "tooltipCopiedFrom": "Kopiert fra {{name}}",
+    "tooltipCopiedFromElsewhere": "Kopiert fra et annet prosjekt",
     "dateRelativeJustNow": "Akkurat nå",
     "unanalysedSheetTitle": "Uanalyserte filer i {{project}}",
     "unanalysedSheetFooter": "Disse filene ble lagt til etter forrige analyse.",

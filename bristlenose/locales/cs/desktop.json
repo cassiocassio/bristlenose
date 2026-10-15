@@ -237,6 +237,8 @@
     "missingSubtitle_other": "{{count}} chybí",
     "databaseForked": "Zpr\u00e1va nen\u00ed aktu\u00e1ln\u00ed",
     "tooltipWaiting": "{{count}} čeká",
+    "tooltipCopiedFrom": "Zkopírováno z: {{name}}",
+    "tooltipCopiedFromElsewhere": "Zkopírováno z jiného projektu",
     "dateRelativeJustNow": "Právě teď",
     "unanalysedSheetTitle": "Neanalyzované soubory v {{project}}",
     "unanalysedSheetFooter": "Tyto soubory byly přidány po poslední analýze.",

@@ -109,8 +109,18 @@ final class LocateFlow {
         completion: @escaping (Result) -> Void
     ) {
         Task { @MainActor in
-            // Phase 1 — Spotlight one-shot.
-            if let candidate = await spotlight.findUniqueMatch(for: project.name) {
+            // Phase 1 — Spotlight one-shot: by the study's id when it has one
+            // (found wherever the folder went and whatever it is now called),
+            // else by name. Either way the hit is verified against the hidden
+            // marker once the panel grants the folder.
+            var candidate: URL?
+            if let studyID = project.studyID {
+                candidate = await spotlight.findUniqueStudy(id: studyID)
+            }
+            if candidate == nil {
+                candidate = await spotlight.findUniqueMatch(for: project.name)
+            }
+            if let candidate {
                 let choice = await confirm(candidate)
                 switch choice {
                 case .useThisFolder:
@@ -171,8 +181,10 @@ final class LocateFlow {
 ///     `bristlenose-output/` containing a `manifest.json` or `.bristlenose`
 ///     marker. An empty `bristlenose-output/` is rejected.
 ///
-/// Scope is limited to the user's home directory by default. Researchers who
-/// keep work on external drives fall through to NSOpenPanel — by design.
+/// The name search is limited to the user's home directory: a folder name is
+/// weak evidence, and a wider search turns up strangers' folders. The study-id
+/// search (`findUniqueStudy`) reaches every indexed volume, because an id is
+/// strong evidence and a lost study has usually moved to another disk.
 @MainActor
 final class SpotlightOneShot {
     private var query: NSMetadataQuery?
@@ -194,6 +206,55 @@ final class SpotlightOneShot {
 
     func findUniqueMatch(for projectName: String) async -> URL? {
         guard !projectName.isEmpty else { return nil }
+        return await gather(
+            predicate: NSPredicate(
+                format: "kMDItemDisplayName ==[c] %@ AND kMDItemContentType == %@",
+                projectName, "public.folder"
+            ),
+            scopes: [NSMetadataQueryUserHomeScope],
+            folder: { $0 }
+        )
+    }
+
+    /// The one folder whose search beacon carries this study id
+    /// (`StudyMarker.beaconFilename`, design-project-identity §13a). Searches
+    /// every indexed volume, since a study is most often lost by being moved
+    /// to another disk. Two hits (a Finder copy not yet given its own id) are
+    /// no answer, and the caller falls back to the name.
+    func findUniqueStudy(id: String) async -> URL? {
+        guard let query = Self.studyQuery(id: id),
+              let predicate = NSPredicate(fromMetadataQueryString: query) else { return nil }
+        return await gather(
+            predicate: predicate,
+            scopes: [NSMetadataQueryLocalComputerScope],
+            folder: Self.studyFolder(forBeacon:)
+        )
+    }
+
+    /// The Spotlight query for a study's beacon, or nil for anything that is
+    /// not a study id — the id is interpolated into a query string, so only a
+    /// UUID's characters may reach it.
+    nonisolated static func studyQuery(id: String) -> String? {
+        guard let uuid = UUID(uuidString: id) else { return nil }
+        let canonical = uuid.uuidString.lowercased()
+        return "kMDItemFSName == \"\(StudyMarker.beaconFilename)\" && "
+            + "kMDItemTextContent == \"*\(canonical)*\""
+    }
+
+    /// The project folder a beacon hit names: the beacon must sit, under its
+    /// own name, directly inside a `bristlenose-output/` folder.
+    nonisolated static func studyFolder(forBeacon url: URL) -> URL? {
+        let output = url.deletingLastPathComponent()
+        guard url.lastPathComponent == StudyMarker.beaconFilename,
+              output.lastPathComponent == LocateFlow.outputMarker else { return nil }
+        return output.deletingLastPathComponent()
+    }
+
+    private func gather(
+        predicate: NSPredicate,
+        scopes: [Any],
+        folder: @escaping (URL) -> URL?
+    ) async -> URL? {
         // Re-entrance guard — previous call's observer (if any) is removed
         // before adding the new one. Not hit today (one SpotlightOneShot per
         // LocateFlow) but cheap defence against future callers that reuse
@@ -207,11 +268,8 @@ final class SpotlightOneShot {
         return await withCheckedContinuation { (cont: CheckedContinuation<URL?, Never>) in
             let q = NSMetadataQuery()
             self.query = q
-            q.searchScopes = [NSMetadataQueryUserHomeScope]
-            q.predicate = NSPredicate(
-                format: "kMDItemDisplayName ==[c] %@ AND kMDItemContentType == %@",
-                projectName, "public.folder"
-            )
+            q.searchScopes = scopes
+            q.predicate = predicate
 
             // Single-fire continuation guard — gathering can complete before
             // the timeout fires and vice versa.
@@ -222,7 +280,7 @@ final class SpotlightOneShot {
                 object: q, queue: .main
             ) { [weak self] _ in
                 guard let self else { return }
-                let result = self.pickUnique(from: q)
+                let result = self.pickUnique(from: q, folder: folder)
                 q.stop()
                 if let obs = self.observation {
                     NotificationCenter.default.removeObserver(obs)
@@ -252,12 +310,12 @@ final class SpotlightOneShot {
 
     /// Walk the gathered results and return the unique high-confidence URL,
     /// or nil if there's zero or more-than-one match.
-    private func pickUnique(from query: NSMetadataQuery) -> URL? {
+    private func pickUnique(from query: NSMetadataQuery, folder: (URL) -> URL?) -> URL? {
         let candidates = (0..<query.resultCount).compactMap { i -> URL? in
             guard let item = query.result(at: i) as? NSMetadataItem,
-                  let path = item.value(forAttribute: NSMetadataItemPathKey) as? String
+                  let path = item.value(forAttribute: NSMetadataItemPathKey) as? String,
+                  let url = folder(URL(fileURLWithPath: path))
             else { return nil }
-            let url = URL(fileURLWithPath: path)
             return LocateFlow.folderLooksAnalysed(url: url) ? url : nil
         }
         return candidates.count == 1 ? candidates.first : nil

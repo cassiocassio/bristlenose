@@ -222,6 +222,8 @@
     "missingSubtitle_other": "{{count}} mancanti",
     "databaseForked": "Report non aggiornato",
     "tooltipWaiting": "{{count}} in attesa",
+    "tooltipCopiedFrom": "Copiato da {{name}}",
+    "tooltipCopiedFromElsewhere": "Copiato da un altro progetto",
     "dateRelativeJustNow": "Adesso",
     "unanalysedSheetTitle": "File non analizzati in {{project}}",
     "unanalysedSheetFooter": "Questi file sono stati aggiunti dopo l'ultima analisi.",

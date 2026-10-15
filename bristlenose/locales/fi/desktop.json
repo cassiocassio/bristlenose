@@ -222,6 +222,8 @@
     "missingSubtitle_other": "{{count}} puuttuu",
     "databaseForked": "Raportti vanhentunut",
     "tooltipWaiting": "{{count}} odottaa",
+    "tooltipCopiedFrom": "Kopioitu projektista {{name}}",
+    "tooltipCopiedFromElsewhere": "Kopioitu toisesta projektista",
     "dateRelativeJustNow": "Juuri nyt",
     "unanalysedSheetTitle": "Analysoimattomat tiedostot projektissa {{project}}",
     "unanalysedSheetFooter": "Nämä tiedostot lisättiin viimeisimmän analyysin jälkeen.",

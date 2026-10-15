@@ -263,6 +263,11 @@ def detect_status(
         )
     # failed
     long_msg = cause.message if (cause and cause.message) else None
+    if cause is not None and cause.exit_code is not None:
+        # The record says "CLI exited with code N" in English, as a forensic
+        # record does; the page says it in its own language. The CLI-exit
+        # path in run_lifecycle is the only writer of ``exit_code``.
+        long_msg = t("server.statusPage.cliExitedWithCode", code=cause.exit_code)
     return StatusInfo(
         kind=MessageKind.ERROR,
         short=t("server.statusPage.failedShort"),

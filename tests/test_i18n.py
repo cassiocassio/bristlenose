@@ -103,6 +103,23 @@ class TestEnglishOnlyNamespaces:
         set_locale("de")
         assert t("preflight.whisper.ready") == "Whisper model ready"
 
+    def test_a_copy_that_comes_back_is_not_read(self, tmp_path, monkeypatch):
+        """With the copies deleted, every locale falls back to English anyway,
+        so only a copy on disk shows whether the resolver forces English."""
+        import bristlenose.i18n as i18n_module
+
+        for code, value in (("en", "Whisper model ready"), ("de", "Whisper-Modell bereit")):
+            (tmp_path / code).mkdir()
+            (tmp_path / code / "preflight.json").write_text(
+                json.dumps({"whisper": {"ready": value}}), encoding="utf-8"
+            )
+        monkeypatch.setattr(i18n_module, "_LOCALE_DIR", tmp_path)
+        i18n_module._load_namespace.cache_clear()
+        try:
+            assert t_in("de", "preflight.whisper.ready") == "Whisper model ready"
+        finally:
+            i18n_module._load_namespace.cache_clear()
+
     @pytest.mark.parametrize("locale", sorted(SUPPORTED_LOCALES))
     def test_t_in_answers_english_for_every_locale(self, locale: str):
         assert t_in(locale, "preflight.whisper.ready") == "Whisper model ready"

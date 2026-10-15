@@ -158,6 +158,32 @@ class TestDetectStatus:
         assert "code: 503" in info.details
         assert info.outcome == "failed"
 
+    def test_a_cli_exit_is_told_in_the_pages_language(self, tmp_path: Path) -> None:
+        """The run writes "CLI exited with code N" into ``Cause.message`` in
+        English, as a forensic record is. The page, which is localised,
+        builds its own line from the exit code."""
+        from bristlenose.i18n import set_locale, t_in
+
+        out = tmp_path / "bristlenose-output"
+        out.mkdir()
+        append_event(events_path(out), RunFailedEvent(
+            ts="t", run_id=new_run_id(), kind=KindEnum.RUN, started_at="t", ended_at="t",
+            cause=Cause(
+                category=CauseCategoryEnum.UNKNOWN, exit_code=2,
+                message="CLI exited with code 2",
+            ),
+        ))
+        set_locale("de")
+        try:
+            info = detect_status(out, _cond(out))
+        finally:
+            set_locale("en")
+        assert info is not None
+        german = t_in("de", "server.statusPage.cliExitedWithCode", code=2)
+        assert german != "CLI exited with code 2"
+        assert info.long == german
+        assert info.details is not None and "CLI exited with code 2" in info.details
+
     def test_cancelled_surfaces_warning(self, tmp_path: Path) -> None:
         out = tmp_path / "bristlenose-output"
         out.mkdir()

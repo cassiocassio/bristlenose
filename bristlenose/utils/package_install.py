@@ -104,8 +104,9 @@ def ensure_spacy_model(model_name: str) -> None:
 def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     """Ensure a Hugging Face model repo is present in the local cache; fetch if not.
 
-    Idempotent, and safe to interrupt: Ctrl+C stops the transfer at once and
-    hf_xet removes its partial file. It does not resume — through hf_xet
+    Idempotent, and safe to interrupt: Ctrl+C stops an hf_xet transfer within
+    a second and hf_xet removes its partial file. A plain-HTTP fallback (no
+    hf_xet) has no abort, so there Ctrl+C waits for the file in flight. It does not resume — through hf_xet
     (huggingface_hub 1.x) a re-run downloads the file again from the start,
     measured 14 Oct 2026. Safe inside the desktop sidecar — the cache lives
     under the user's HF home, not site-packages.
@@ -126,6 +127,7 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     logger.info("ensure_hf_model: snapshot_download %s", repo_id)
     paths: list[str] = []
     errors: list[BaseException] = []
+    finished = threading.Event()
 
     def fetch() -> None:
         try:
@@ -135,19 +137,29 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
                 paths.append(snapshot_download(repo_id, tqdm_class=tqdm_class))
         except BaseException as exc:  # handed back to the main thread below
             errors.append(exc)
+        finally:
+            finished.set()
 
-    # On its own thread, waited for in short slices, so Ctrl+C lands at once.
-    # ``snapshot_download`` downloads on worker threads and parks its caller in
-    # a wait with no timeout, so called directly, one Ctrl+C did nothing until
-    # every file had finished — 50 s on a 1.6 GB model, measured 14 Oct 2026.
+    # Called directly, one Ctrl+C did nothing until every file had finished
+    # (50 s on a 1.6 GB model, measured 14 Oct 2026). The interrupt lands, but
+    # ``snapshot_download``'s ``with ThreadPoolExecutor`` waits on exit for the
+    # worker still downloading, and huggingface_hub's own abort sits in that
+    # worker, which never sees the interrupt. So the fetch runs on its own
+    # thread, and on Ctrl+C this thread does the aborting — on every slice
+    # until the download has stopped, because an abort sent before the hf_xet
+    # session exists (repo info, HEAD requests) stops nothing.
+    #
+    # ``finished``, not ``is_alive()``: once a Ctrl+C has interrupted a
+    # ``join``, CPython 3.12 can report the thread stopped while it still runs.
     worker = threading.Thread(target=fetch, name="hf-model-fetch", daemon=True)
     worker.start()
     try:
-        while worker.is_alive():
-            worker.join(0.2)
+        finished.wait()
     except KeyboardInterrupt:
-        _abort_hf_transfers()
-        worker.join(5.0)
+        can_abort = True
+        while not finished.wait(0.2):
+            if can_abort:
+                can_abort = _abort_hf_transfers()
         raise
 
     if errors:
@@ -160,16 +172,20 @@ def ensure_hf_model(repo_id: str, *, tqdm_class: type | None = None) -> str:
     return paths[0]
 
 
-def _abort_hf_transfers() -> None:
+def _abort_hf_transfers() -> bool:
     """Stop huggingface_hub's in-flight hf_xet downloads.
 
     The same call huggingface_hub makes when a ``KeyboardInterrupt`` reaches
     the thread doing the download, which in ``snapshot_download`` it never
     does. A private module, so ``tests/test_package_install.py`` pins it: if an
     upgrade moves it, Ctrl+C goes back to waiting for the whole file.
+
+    Returns False when the abort itself failed, so the caller stops retrying.
     """
     try:
         xet: Any = importlib.import_module("huggingface_hub.utils._xet")
-    except ImportError:
-        return
-    xet.abort_xet_session()
+        xet.abort_xet_session()
+    except Exception as exc:  # never let the abort replace the user's Ctrl+C
+        logger.warning("ensure_hf_model: could not stop the download: %s", exc)
+        return False
+    return True

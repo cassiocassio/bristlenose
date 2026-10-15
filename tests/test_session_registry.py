@@ -555,6 +555,30 @@ class TestContentKeys:
                  for s in SessionRegistry.load(out).apply(_ingest([a2, d]), tmp_path)}
         assert after["p1 sarah.wav"] == first["a.wav"], "the renamed original was orphaned"
 
+    def test_a_restored_original_returns_to_its_session_after_a_re_export(
+        self, tmp_path: Path,
+    ) -> None:
+        """Re-exported under its name (a new session, §5), then the original
+        restored: it is its old session again, not a third one, and toggling
+        never mints more (Fable review, 15 Oct 2026)."""
+        out = tmp_path / "out"
+        path = tmp_path / "a.wav"
+
+        def run(data: bytes) -> str:
+            path.write_bytes(data)
+            f = InputFile(path=path, file_type=FileType.AUDIO, created_at=_T0,
+                          size_bytes=len(data))
+            reg = SessionRegistry.load(out)
+            sid = reg.apply(_ingest([f]), tmp_path)[0].session_id
+            reg.save()
+            return sid
+
+        original = run(b"original recording")
+        trimmed = run(b"trimmed recording")
+        assert trimmed != original
+        assert run(b"original recording") == original
+        assert run(b"trimmed recording") == trimmed
+
     def test_deleting_the_keyed_copy_does_not_move_its_session_to_the_other(
         self, tmp_path: Path,
     ) -> None:

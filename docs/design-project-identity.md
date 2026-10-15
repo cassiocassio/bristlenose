@@ -415,8 +415,11 @@ not the folder, and are unchanged.
   two more costs of keeping identical copies as two sessions: a content key
   is never handed from the session holding it to another, and a copy whose
   name belongs to another session is that session even when the keyed copy
-  is gone. **Still open:** both identical copies renamed in the same run
-  cannot be told apart, so they may swap sessions. §5 called a duplicate one
+  is gone; a re-exported recording's original, restored under its name,
+  returns to its own session. **Still open:** when the keyed copy's name is
+  absent and a copy under a new name appears (both renamed in one run, or
+  one deleted in one run and the other renamed in a later one), the registry
+  cannot tell which copy it is, so two identical copies may swap sessions. §5 called a duplicate one
   recording with an alias; the build keeps two sessions, one keyed. Making
   the duplicate a key-less alias would close this class, and is the owner's
   call.

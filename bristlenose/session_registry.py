@@ -316,13 +316,20 @@ class SessionRegistry:
         # session is that session. Name order breaks a fresh tie. Not ingest
         # order: ingest orders by date, which cloud sync rewrites (Fable
         # reviews, 15 Oct 2026).
+        content_keyed = {v for k, v in self.sessions.items() if k.startswith(FP_PREFIX)}
+
         def owner_rank(j: int) -> tuple[int, str]:
             fp = fps[j]
             holder = self.sessions.get(FP_PREFIX + fp) if fp is not None else None
             mine = self.sessions.get(named[j])
             if holder is not None and mine == holder:
                 return (0, named[j])
-            return (1 if mine is None else 2, named[j])
+            # A name whose session holds bytes of its own (a re-export under
+            # it) says nothing about these bytes: only a name owned by an
+            # unkeyed duplicate is that duplicate's (Fable review).
+            if mine is None or mine in content_keyed:
+                return (1, named[j])
+            return (2, named[j])
 
         first_with_fp: dict[str, int] = {}
         for i in sorted(range(len(fps)), key=owner_rank):

@@ -117,17 +117,32 @@ enum StudyDropMatch: Equatable {
         let id: UUID
         let studyID: String?
         let path: String
+        /// On a network share: its folder's identity cannot be read on the
+        /// main actor without risking a stall, so a re-spelled re-drop and a
+        /// copy cannot be told apart there.
+        var onNetwork: Bool = false
     }
 
     static func resolve(
         droppedStudyID: String?,
         candidates: [Candidate],
+        droppedPath: String? = nil,
         folderExists: (String) -> Bool
     ) -> StudyDropMatch {
         guard let droppedStudyID else { return .none }
         let holders = candidates.filter { $0.studyID == droppedStudyID }
         guard !holders.isEmpty else { return .none }
         if let live = holders.first(where: { folderExists($0.path) }) {
+            // The holder's own folder, spelled differently (case, a symlink
+            // resolved by the caller): a re-drop. The row follows the new
+            // spelling; nothing is re-minted (Fable review, 15 Oct 2026).
+            if let droppedPath,
+               live.path.lowercased() == droppedPath.lowercased() {
+                return .moved(live.id)
+            }
+            // On a network share the two cannot be told apart without a
+            // blocking read: neither guess. The shared-id rule settles it.
+            if live.onNetwork { return .unsure }
             return .copy(of: live.id)
         }
         if let gone = holders.first(where: { volumeIsMounted($0.path, folderExists: folderExists) }) {

@@ -108,6 +108,18 @@ def carried_starts_path(output_dir: Path) -> Path:
     return output_dir / ".bristlenose" / CARRIED_STARTS_FILENAME
 
 
+#: A carried start for a session with no content key (a study analysed before
+#: content keys whose recordings are still evicted) is keyed by a hash of its
+#: name key: matchable on the next run, never a file name (§8).
+NAME_CARRY_PREFIX = "name:"
+
+
+def _name_carry_key(name_key: str) -> str:
+    import hashlib
+
+    return NAME_CARRY_PREFIX + hashlib.sha256(name_key.encode("utf-8")).hexdigest()[:32]
+
+
 def starts_by_content(output_dir: Path) -> dict[str, dict[str, str]]:
     """The study's resolved starts keyed by recording content, for a Re-analyse.
 
@@ -127,6 +139,11 @@ def starts_by_content(output_dir: Path) -> dict[str, dict[str, str]]:
         sid: key[len(FP_PREFIX):] for key, sid in registry.sessions.items()
         if key.startswith(FP_PREFIX)
     }
+    # A session with no content key yet (Fable review, 15 Oct 2026) crosses
+    # under a hash of its name key instead of being dropped.
+    for key, sid in registry.sessions.items():
+        if sid not in by_sid and not key.startswith(FP_PREFIX):
+            by_sid[sid] = _name_carry_key(key)
     return {
         by_sid[sid]: dict(entry) for sid, entry in registry.starts.items() if sid in by_sid
     }
@@ -486,6 +503,14 @@ class SessionRegistry:
             if stored is None and self.carried:
                 fp = _fingerprint(_primary_file(session))
                 stored = self.carried.get(fp) if fp is not None else None
+                if stored is None and session.files:
+                    from bristlenose.stages.s01_ingest import session_key
+
+                    for qualified in (False, True):
+                        stored = self.carried.get(
+                            _name_carry_key(session_key(session.files, qualified=qualified)))
+                        if stored is not None:
+                            break
                 carried = stored is not None
             stored_rank = source_rank(stored["source"]) if stored else None
             if stored and stored_rank is not None and (
@@ -669,10 +694,17 @@ def _read_carried(output_dir: Path) -> dict[str, dict[str, str]]:
 
     return {
         fp: {"utc": e["utc"], "source": e["source"]} for fp, e in raw.items()
-        if is_fingerprint(fp) and isinstance(e, dict)
+        if (is_fingerprint(fp) or _is_name_carry_key(fp)) and isinstance(e, dict)
         and isinstance(e.get("utc"), str) and parse_iso_utc(e["utc"]) is not None
         and isinstance(e.get("source"), str) and source_rank(e["source"]) is not None
     }
+
+
+def _is_name_carry_key(key: object) -> bool:
+    if not isinstance(key, str) or not key.startswith(NAME_CARRY_PREFIX):
+        return False
+    body = key[len(NAME_CARRY_PREFIX):]
+    return len(body) == 32 and all(c in "0123456789abcdef" for c in body)
 
 
 def _primary_file(session: InputSession) -> Path | None:

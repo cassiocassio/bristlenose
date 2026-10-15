@@ -577,7 +577,7 @@ def import_project(db: Session, project_dir: Path) -> Project:
         session_map[sid] = sess
 
     # --- Import source files ---------------------------------------------
-    _import_source_files(db, session_map, session_meta, project_dir)
+    _import_source_files(db, session_map, session_meta, project_dir, output_dir)
 
     # --- Scan for video thumbnails ---------------------------------------
     _import_thumbnails(session_map, output_dir)
@@ -746,7 +746,7 @@ def import_readable_sessions(
         return project, reread
     db.flush()
     meta = {sid: meta_all[sid] for sid in session_map}
-    _import_source_files(db, session_map, meta, project_dir)
+    _import_source_files(db, session_map, meta, project_dir, output_dir)
     _import_thumbnails(session_map, output_dir)
     _import_transcript_segments(db, session_map, transcripts_dir)
     db.flush()
@@ -891,6 +891,7 @@ def _import_source_files(
     session_map: dict[str, SessionModel],
     session_meta: dict[str, dict[str, Any]],
     project_dir: Path,
+    output_dir: Path | None = None,
 ) -> None:
     """Import source file records from transcript metadata.
 
@@ -908,7 +909,15 @@ def _import_source_files(
     new name, and its old row — whose file is no longer where it was — is that
     row, healed rather than left beside a new one
     (docs/design-project-identity.md §7).
+
+    A recording re-exported in place (new bytes, same name) is a new session
+    (§5), and the old session's transcript still names the file: the old
+    session must not play the new bytes, or every quote's timecode lands in
+    the wrong edit. So a recording whose bytes are known and are not the ones
+    the session was made from is not this session's media (Fable review,
+    15 Oct 2026).
     """
+    recorded = _recorded_fingerprints(output_dir)
     for sid, meta in session_meta.items():
         sess = session_map.get(sid)
         if not sess:
@@ -932,6 +941,20 @@ def _import_source_files(
                     break
         file_type = _guess_file_type(source_name)
 
+        if (file_type in ("video", "audio") and sid in recorded
+                and _holds_other_bytes(source_path, recorded[sid])):
+            logger.warning(
+                "%s: %s holds different bytes from the recording this session was "
+                "made from (re-exported?); it is not played as this session's media",
+                sid, source_path.name,
+            )
+            for row in db.query(SourceFile).filter_by(session_id=sess.id).all():
+                if Path(row.path).name == source_path.name:
+                    db.delete(row)
+            sess.has_media = False
+            sess.has_video = False
+            continue
+
         # Update session media flags
         if file_type in ("video", "audio"):
             sess.has_media = True
@@ -954,6 +977,40 @@ def _import_source_files(
         sf.path = str(source_path)
         sf.size_bytes = source_path.stat().st_size if present else 0
         sf.verified_at = datetime.now(timezone.utc) if present else None
+
+
+def _recorded_fingerprints(output_dir: Path | None) -> dict[str, str]:
+    """Each session's recording fingerprint, from the session registry."""
+    if output_dir is None:
+        return {}
+    from bristlenose.session_registry import FP_PREFIX, SessionRegistry
+
+    try:
+        registry = SessionRegistry.load(output_dir)
+    except (OSError, ValueError):
+        return {}
+    return {sid: key[len(FP_PREFIX):] for key, sid in registry.sessions.items()
+            if key.startswith(FP_PREFIX)}
+
+
+_FINGERPRINT_CACHE: dict[tuple[str, int, int], str | None] = {}
+
+
+def _holds_other_bytes(path: Path, recorded: str) -> bool:
+    """True only when the file's bytes are known and differ. A placeholder or
+    an unreadable file is given the benefit of the doubt. Cached by size and
+    modification time, so a recording is read once, not at every import."""
+    from bristlenose.utils.fingerprint import content_fingerprint
+
+    try:
+        st = path.stat()
+    except OSError:
+        return False
+    key = (str(path), st.st_size, st.st_mtime_ns)
+    if key not in _FINGERPRINT_CACHE:
+        _FINGERPRINT_CACHE[key] = content_fingerprint(path)
+    current = _FINGERPRINT_CACHE[key]
+    return current is not None and current != recorded
 
 
 def _import_thumbnails(

@@ -770,7 +770,21 @@ final class ProjectIndex: ObservableObject {
 
     /// Every project as the drop decision sees it (`StudyDropMatch`).
     func studyCandidates() -> [StudyDropMatch.Candidate] {
-        projects.map { .init(id: $0.id, studyID: $0.studyID, path: $0.path) }
+        projects.map {
+            .init(id: $0.id, studyID: $0.studyID, path: $0.path,
+                  onNetwork: $0.location?.type == .network)
+        }
+    }
+
+    /// Another sidebar row already holding this folder, however spelled.
+    /// Locate must not point a row at it: the row would serve that study's
+    /// database, and an agent with access to the row would read it (Fable
+    /// review, 15 Oct 2026). Matters most for a row from before the marker,
+    /// which has no id to disagree with.
+    func otherProject(holding folder: URL, excluding id: UUID) -> Project? {
+        if let byPath = findByPath(folder.path), byPath.id != id { return byPath }
+        if let same = findSameFolder(folder), same.id != id { return same }
+        return nil
     }
 
     /// Read the study id the project's folder carries and remember it. When

@@ -258,6 +258,10 @@ struct StudyMarkerTests {
             ]
             let order = capturingOneFirst ? [(fixedA, one), (fixedB, two)] : [(fixedB, two), (fixedA, one)]
             for (pid, dir) in order { index.captureStudyID(id: pid, folder: dir) }
+            // Exactly one keeps the id: a capture that re-mints nothing would
+            // otherwise pass, both reading "One" (Fable review).
+            #expect(StudyMarker.read(folder: one) != StudyMarker.read(folder: two))
+            #expect([StudyMarker.read(folder: one), StudyMarker.read(folder: two)].contains(id))
             return StudyMarker.read(folder: one) == id ? "One" : "Two"
         }
         #expect(try keeperAfter(capturingOneFirst: true) == keeperAfter(capturingOneFirst: false))
@@ -317,6 +321,40 @@ struct StudyMarkerTests {
     }
 
     // ── The drop decision when a disk is ejected ────────────────────────────
+
+    @Test func aReDropUnderAnotherCaseIsTheSameFolder() {
+        let id = UUID()
+        let row = StudyDropMatch.Candidate(id: id, studyID: study, path: "/Users/r/Studies/Talismanic")
+        #expect(StudyDropMatch.resolve(droppedStudyID: study, candidates: [row],
+                                       droppedPath: "/Users/r/studies/talismanic",
+                                       folderExists: { _ in true }) == .moved(id))
+    }
+
+    /// A network holder's folder identity cannot be read without risking a
+    /// stall: a re-drop there is neither re-minted nor merged on a guess.
+    @Test func aLiveHolderOnANetworkShareIsUnsure() {
+        let row = StudyDropMatch.Candidate(id: UUID(), studyID: study,
+                                           path: "/Volumes/Share/Talismanic", onNetwork: true)
+        #expect(StudyDropMatch.resolve(droppedStudyID: study, candidates: [row],
+                                       droppedPath: "/Volumes/Share-1/Talismanic",
+                                       folderExists: { _ in true }) == .unsure)
+    }
+
+    /// Locate must not point a row at a folder another row holds.
+    @Test func anotherRowsFolderIsFoundHoweverSpelled() throws {
+        let root = try folder()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let study = root.appendingPathComponent("Talismanic")
+        try FileManager.default.createDirectory(at: study, withIntermediateDirectories: true)
+        let link = root.appendingPathComponent("link")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: study)
+        let index = ProjectIndex(fileURL: root.appendingPathComponent("projects.json"))
+        let holder = index.addProject(name: "Talismanic", path: study.path)
+        let lost = index.addProject(name: "Old row", path: root.appendingPathComponent("gone").path)
+        #expect(index.otherProject(holding: study, excluding: lost.id)?.id == holder.id)
+        #expect(index.otherProject(holding: link, excluding: lost.id)?.id == holder.id)
+        #expect(index.otherProject(holding: study, excluding: holder.id) == nil)
+    }
 
     @Test func aHolderOnAnEjectedDiskIsUnsure() {
         let row = StudyDropMatch.Candidate(id: UUID(), studyID: study, path: "/Volumes/Work/Talismanic")

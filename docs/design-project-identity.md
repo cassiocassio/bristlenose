@@ -419,7 +419,24 @@ not the folder, and are unchanged.
   returns to its own session. **Still open:** when the keyed copy's name is
   absent and a copy under a new name appears (both renamed in one run, or
   one deleted in one run and the other renamed in a later one), the registry
-  cannot tell which copy it is, so two identical copies may swap sessions. §5 called a duplicate one
+  cannot tell which copy it is, so two identical copies may swap sessions.
+- **Final whole-body review, 15 Oct 2026.** `run --skip-transcription` never
+  fetches a placeholder (nothing would read it). A recording re-exported in
+  place is no longer the old session's media: the importer checks its bytes
+  against the session's fingerprint and drops the media row on a mismatch,
+  as §12 promised. A Re-analyse of a study with no content keys yet carries
+  its starts under a hash of the name key, never the name. On the Mac, Locate
+  refuses a folder another sidebar row holds (a row from before the marker
+  had nothing to disagree with), a re-drop under another letter case is the
+  same folder, and a network holder's re-drop is `.unsure` rather than a
+  re-mint of the live study. **Open, recorded rather than built:** on the
+  CLI, a copy served while the original's disk is ejected keeps the
+  original's id after the disk returns (only the app can see two folders);
+  a placeholder at a known place inherits the session and its transcript
+  with no log line if another interview was saved there on another device;
+  `/api/health` caches the agent key for the serve's lifetime while the MCP
+  key is computed live; and a row found only by its volume-relative path
+  is not part of the shared-id settlement at refresh. §5 called a duplicate one
   recording with an alias; the build keeps two sessions, one keyed. Making
   the duplicate a key-less alias would close this class, and is the owner's
   call.
@@ -435,6 +452,13 @@ not the folder, and are unchanged.
 - Promise anything about network shares, ExFAT or an evicted database
   (row 33). The marker and fingerprints are plain files and plain reads, so
   nothing here makes those worse.
+- Recognise a Windows cloud placeholder. On macOS every File Provider
+  (iCloud Drive, Dropbox, and OneDrive since it moved to File Provider under
+  `~/Library/CloudStorage/`) marks an online-only file dataless, and nothing
+  here reads one; that was measured on Dropbox, not yet on OneDrive. On
+  Windows, OneDrive's Files On-Demand uses a different mechanism
+  (`FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS`) that `is_dataless` does not check,
+  so fingerprinting downloads an online-only recording on every run.
 - Replace a recording whose bytes changed. A re-export is a new recording;
   the old session shows as missing and keeps its curation. Offering "this is
   the same interview, re-exported" is a later, separate affordance.

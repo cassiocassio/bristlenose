@@ -1291,9 +1291,13 @@ struct ContentView: View {
         panel.begin { response in
             Task { @MainActor in
                 guard response == .OK, let url = panel.url else { return }
-                let verdict = LocateFlow.verdict(
+                var verdict = LocateFlow.verdict(
                     url: url, expectedStudyID: project.studyID, granted: true
                 )
+                if verdict == .thisStudy,
+                   projectIndex.otherProject(holding: url, excluding: project.id) != nil {
+                    verdict = .differentStudy
+                }
                 if verdict == .thisStudy {
                     projectIndex.relocateProject(id: project.id, newPath: url.path)
                     rescanAfterRelocate(project.id)
@@ -1842,6 +1846,12 @@ struct ContentView: View {
             },
             completion: { [self] result in
                 switch result {
+                case .located(let url)
+                    where projectIndex.otherProject(holding: url, excluding: project.id) != nil:
+                    // Another row's folder: never two rows on one study.
+                    locateError = LocateErrorState(
+                        project: project, pickedURL: url, differentStudy: true
+                    )
                 case .located(let url):
                     projectIndex.relocateProject(id: project.id, newPath: url.path)
                     rescanAfterRelocate(project.id)
@@ -2066,6 +2076,7 @@ struct ContentView: View {
                 switch StudyDropMatch.resolve(
                     droppedStudyID: droppedStudy,
                     candidates: projectIndex.studyCandidates(),
+                    droppedPath: folder.resolvingSymlinksInPath().standardizedFileURL.path,
                     folderExists: { FileManager.default.fileExists(atPath: $0) }
                 ) {
                 case .moved(let id):

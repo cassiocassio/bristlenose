@@ -302,6 +302,46 @@ def test_a_mid_run_import_never_deletes_a_fork(tmp_path: Path) -> None:
     engine.dispose()
 
 
+def test_a_recording_re_exported_in_place_is_not_the_old_sessions_media(
+    tmp_path: Path,
+) -> None:
+    """Re-exported under its name, a recording is a new session (§5); the old
+    session's transcript still names the file and must not play its new
+    bytes, or every quote lands in the wrong edit (Fable review, 15 Oct 2026)."""
+    from bristlenose.server.models import Session as SessionModel
+    from bristlenose.server.models import SourceFile
+    from bristlenose.session_registry import FP_PREFIX, SessionRegistry
+    from bristlenose.utils.fingerprint import content_fingerprint
+
+    proj = _project(tmp_path)
+    out = proj / "bristlenose-output"
+    raw = out / "transcripts-raw" / "s1.txt"
+    raw.write_text(raw.read_text(encoding="utf-8").replace(
+        "# Source: Session 1.vtt", "# Source: Session 1.mp4"), encoding="utf-8")
+    media = proj / "Session 1.mp4"
+    media.write_bytes(b"the recording this session was made from")
+    reg = SessionRegistry.load(out)
+    reg.sessions[FP_PREFIX + content_fingerprint(media)] = "s1"
+    reg.save()
+
+    def media_rows() -> list[str]:
+        engine, factory = _own_db(proj)
+        db = factory()
+        import_project(db, proj)
+        db.commit()
+        sess = db.query(SessionModel).filter_by(session_id="s1").one()
+        rows = [Path(r.path).name for r in db.query(SourceFile).filter_by(session_id=sess.id)
+                if r.file_type in ("video", "audio")]
+        has_media = sess.has_media
+        db.close()
+        engine.dispose()
+        return rows if has_media else []
+
+    assert media_rows() == ["Session 1.mp4"]
+    media.write_bytes(b"a trimmed re-export saved over it")
+    assert media_rows() == [], "the old session plays the re-export's bytes"
+
+
 def test_a_copy_first_touched_mid_run_still_gets_its_own_id(tmp_path: Path) -> None:
     """The first import of a CLI copy may be a run's progressive one, which
     heals the row's stored paths. The re-mint must happen there too, or the

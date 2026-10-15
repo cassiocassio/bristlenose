@@ -870,6 +870,31 @@ class TestCarriedStarts:
         assert fp.startswith("v1:")
         assert set(entry) == {"utc", "source"}
 
+    def test_a_session_with_no_content_key_carries_its_start_by_a_hashed_name(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A study analysed before content keys, its recording still evicted:
+        no fingerprint, so the start crosses under a hash of the name key,
+        never the name (Fable review, 15 Oct 2026)."""
+        import bristlenose.utils.fingerprint as fingerprint_mod
+        from bristlenose.session_registry import starts_by_content, write_carried_starts
+
+        monkeypatch.setattr(fingerprint_mod, "is_dataless", lambda p: True)
+        out, a = self._first_run(tmp_path, "filename_zoned")
+        carried = starts_by_content(out)
+        (key, entry), = carried.items()
+        assert key.startswith("name:") and "rec" not in key
+        assert set(entry) == {"utc", "source"}
+
+        fresh = tmp_path / "fresh-out"
+        write_carried_starts(fresh, carried)
+        reg = SessionRegistry.load(fresh)
+        sessions = reg.apply(_ingest([a]), tmp_path)
+        sessions[0].session_start_source = "birthtime"
+        sessions[0].session_date = datetime(2026, 10, 9, 9, 0, tzinfo=timezone.utc)
+        reg.settle_starts(sessions)
+        assert sessions[0].session_start_source == "filename_zoned"
+
     def test_a_carried_start_never_beats_a_better_new_one(self, tmp_path: Path) -> None:
         from bristlenose.session_registry import starts_by_content, write_carried_starts
 

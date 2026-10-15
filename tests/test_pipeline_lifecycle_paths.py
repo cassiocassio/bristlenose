@@ -14,6 +14,8 @@ import json
 import os
 from pathlib import Path
 
+import pytest
+
 from bristlenose.hashing import hash_bytes, hash_file_metadata
 from bristlenose.logging import release_log_file
 from tests.test_pipeline_platform_transcripts import audio_session, run_pipeline
@@ -118,3 +120,36 @@ class TestEvictedRecording:
         monkeypatch.setattr(fpmod, "is_dataless", lambda p: p.name == "kept.wav" or real(p))
         h2 = run_pipeline(tmp_path, two)
         assert h2.transcribed == [["s2"]], f"the evicted recording was transcribed again: {h2.transcribed}"
+
+
+class _StopAtRegistry(BaseException):
+    """Ends a run at the registry: the test only needs the call's arguments."""
+
+
+@pytest.mark.parametrize(("skip", "expected"), [(True, False), (False, True)])
+def test_the_early_cloud_fetch_follows_whether_the_run_transcribes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, skip: bool, expected: bool,
+) -> None:
+    """The registry may download an unseen placeholder only because the run
+    will download it to transcribe anyway; with transcription skipped it must
+    not (Fable review, 15 Oct 2026)."""
+    import asyncio
+
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.pipeline import Pipeline
+    from bristlenose.session_registry import SessionRegistry
+
+    seen: list[bool] = []
+
+    def spy(self, sessions, input_dir=None, *, fetch=False):
+        seen.append(fetch)
+        raise _StopAtRegistry
+
+    monkeypatch.setattr(SessionRegistry, "apply", spy)
+    (tmp_path / "in").mkdir()
+    (tmp_path / "in" / "interview.vtt").write_text(
+        "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n<v Ana>Hello\n", encoding="utf-8")
+    pipeline = Pipeline(BristlenoseSettings(skip_transcription=skip))
+    with pytest.raises(_StopAtRegistry):
+        asyncio.run(pipeline.run(tmp_path / "in", tmp_path / "in" / "bristlenose-output"))
+    assert seen == [expected]

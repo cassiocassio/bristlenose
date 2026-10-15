@@ -72,7 +72,7 @@ final class LocateFlow {
     static let outputArtefacts = [".bristlenose/pipeline-manifest.json"]
 
     private let project: Project
-    private let spotlight: SpotlightOneShot
+    private let spotlight: any LocateSearching
     private let i18n: I18n
 
     // Default `spotlight` to nil and construct inside the body — Swift 6
@@ -80,7 +80,7 @@ final class LocateFlow {
     // and `SpotlightOneShot.init` is `@MainActor`-isolated. Constructing
     // here keeps the call MainActor-scoped (this initializer is @MainActor
     // by class annotation) without forcing every caller to be async.
-    init(project: Project, i18n: I18n, spotlight: SpotlightOneShot? = nil) {
+    init(project: Project, i18n: I18n, spotlight: (any LocateSearching)? = nil) {
         self.project = project
         self.i18n = i18n
         self.spotlight = spotlight ?? SpotlightOneShot()
@@ -379,6 +379,16 @@ final class SpotlightOneShot {
         }
     }
 }
+
+/// What Locate asks Spotlight. A seam so a test can drive `LocateFlow.run`
+/// with a stub and pin that a hit is never located without the panel's grant.
+@MainActor
+protocol LocateSearching: AnyObject {
+    func findStudy(id: String) async -> SpotlightOneShot.StudySearch
+    func findUniqueMatch(for projectName: String) async -> URL?
+}
+
+extension SpotlightOneShot: LocateSearching {}
 
 /// Outcome of the Spotlight confirm sheet.
 enum SpotlightConfirmChoice {

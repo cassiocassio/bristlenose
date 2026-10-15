@@ -462,6 +462,28 @@ class TestRolePins:
 class TestContentKeys:
     """Registry version 3: a session is its recording's bytes first."""
 
+    def test_a_recording_arriving_for_a_transcript_only_session_joins_it(
+        self, tmp_path: Path,
+    ) -> None:
+        """Analysed from Teams transcripts, then the recordings are dropped in
+        for playback: each joins its session rather than becoming a new one
+        and orphaning the curation (Fable review, 15 Oct 2026)."""
+        out = tmp_path / "out"
+        vtts = [_file(tmp_path, f"{n}.vtt", d, FileType.SUBTITLE_VTT)
+                for n, d in (("ann", 0), ("bob", 1))]
+        reg = SessionRegistry.load(out)
+        first = {s.files[0].path.stem: s.session_id for s in reg.apply(_ingest(vtts), tmp_path)}
+        reg.save()
+        mp4s = [_file(tmp_path, f"{n}.mp4", d, FileType.VIDEO) for n, d in (("ann", 0), ("bob", 1))]
+        reg = SessionRegistry.load(out)
+        after = {s.files[0].path.stem: s.session_id
+                 for s in reg.apply(_ingest(vtts + mp4s), tmp_path)}
+        reg.save()
+        assert after == first
+        again = {s.files[0].path.stem: s.session_id
+                 for s in SessionRegistry.load(out).apply(_ingest(vtts + mp4s), tmp_path)}
+        assert again == first, "the sessions moved on the next run"
+
     def test_a_recording_renamed_while_in_the_cloud_keeps_its_session(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     ) -> None:

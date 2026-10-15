@@ -444,7 +444,18 @@ not the folder, and are unchanged.
   session with no content key of its own (one from before content keys, or
   the unkeyed one of two identical copies, which stays unkeyed even after its
   twin is deleted) can still play a recording re-exported over its file.
-  The alias model for duplicates would close this with the rest. §5 called a duplicate one
+  The alias model for duplicates would close this with the rest.
+- **Last whole-body review, 16 Oct 2026.** A recording arriving for a
+  session analysed from its transcript alone joins that session (its
+  content key held the transcript's bytes, so the re-export rule had
+  refused it and renumbered every Teams-transcript study once its
+  recordings were added). On the Mac, a Locate test now drives the real
+  flow through a search seam, and a folder whose identity cannot be read is
+  never re-minted as a copy of itself. **Still open:** a transcript-only
+  session renamed and given its recording in the same run is a new session;
+  nothing tests that `ServeManager` passes the study id when it resolves the
+  agent token; and a marker this release cannot parse, read under a grant,
+  is treated as no marker (Locate accepts the folder). §5 called a duplicate one
   recording with an alias; the build keeps two sessions, one keyed. Making
   the duplicate a key-less alias would close this class, and is the owner's
   call.

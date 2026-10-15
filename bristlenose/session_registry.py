@@ -414,8 +414,11 @@ class SessionRegistry:
                 # deleted interview's name reused, or a re-export. It must not
                 # inherit the session, its codes and its typed names. A
                 # transcript file is the exception: editing one is ordinary.
+                # So is a recording arriving for a session analysed from its
+                # transcript alone: its key holds the transcript's bytes, and
+                # the recording joins it (Fable review, 15 Oct 2026).
                 if (sid in content_owned and fps[i] is not None
-                        and _is_media(primaries[i])):
+                        and _is_media(primaries[i]) and self._keyed_by_media(sid)):
                     logger.warning(
                         "%r has new content under a name %s held: a new session. "
                         "A re-exported or trimmed recording is a different recording; "
@@ -447,6 +450,16 @@ class SessionRegistry:
             session.participant_id = f"p{n}"  # provisional, as before — reassigned after 5b
             session.participant_number = n
         return sorted(sessions, key=lambda s: s.session_number)
+
+    def _keyed_by_media(self, sid: str) -> bool:
+        """Whether ``sid``'s content key was taken from a recording. Read from
+        the place the key was taken at; with no place known, assume it was
+        (the stricter answer: a new session rather than a wrong one)."""
+        for key, owner in self.sessions.items():
+            if owner == sid and key.startswith(FP_PREFIX):
+                place = self.hints.get(key)
+                return True if place is None else _is_media(Path(place))
+        return True
 
     def last_known_fingerprint(self, path: Path, input_dir: Path | None) -> str | None:
         """The fingerprint last seen at ``path``'s place, for a file whose

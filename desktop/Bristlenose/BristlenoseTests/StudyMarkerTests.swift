@@ -402,6 +402,40 @@ struct StudyMarkerTests {
         #expect(picked == hit)
     }
 
+    /// Drives the real `run()`: a Spotlight hit on an analysed folder with no
+    /// marker must come back `.needsGrant`, never `.located` (which would
+    /// relocate onto a folder the app may not read).
+    @Test func locateRunNeverLocatesASpotlightHitDirectly() async throws {
+        let dir = try folder()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let state = dir.appendingPathComponent("bristlenose-output/.bristlenose")
+        try FileManager.default.createDirectory(at: state, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: state.appendingPathComponent("pipeline-manifest.json"))
+        final class Stub: LocateSearching {
+            let hit: URL
+            init(hit: URL) { self.hit = hit }
+            func findStudy(id: String) async -> SpotlightOneShot.StudySearch { .none }
+            func findUniqueMatch(for projectName: String) async -> URL? { hit }
+        }
+        let project = Project(id: UUID(), name: "Talismanic", path: "/gone/Talismanic")
+        let flow = LocateFlow(project: project, i18n: I18n(), spotlight: Stub(hit: dir))
+        let result: LocateFlow.Result = await withCheckedContinuation { cont in
+            flow.run(confirm: { _ in .useThisFolder }, completion: { cont.resume(returning: $0) })
+        }
+        guard case .needsGrant(let picked) = result else {
+            Issue.record("a Spotlight hit was located without the panel's grant"); return
+        }
+        #expect(picked == dir)
+    }
+
+    @Test func anUnreadableFolderIdentityIsUnknownNotDifferent() {
+        let a = URL(fileURLWithPath: "/Users/r/Talismanic"), b = URL(fileURLWithPath: "/Volumes/X/T")
+        #expect(ProjectIndex.folderSameness(a, b, identity: { _ in nil }) == .unknown)
+        #expect(ProjectIndex.folderSameness(a, a, identity: { _ in nil }) == .same)
+        #expect(ProjectIndex.folderSameness(a, b, identity: { NSString(string: $0.path) }) == .different)
+        #expect(ProjectIndex.folderSameness(a, b, identity: { _ in NSString(string: "1") }) == .same)
+    }
+
     @Test func anAmbiguousIdSearchSaysSo() {
         let same = Date(timeIntervalSince1970: 1_000)
         let a = URL(fileURLWithPath: "/Volumes/Work/T"), b = URL(fileURLWithPath: "/Users/r/Backups/T")

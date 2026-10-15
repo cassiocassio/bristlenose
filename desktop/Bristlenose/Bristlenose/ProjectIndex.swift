@@ -762,10 +762,17 @@ final class ProjectIndex: ObservableObject {
     /// One folder, however spelled: a path, or a symlink to it, or another
     /// mount point's spelling (Fable review, 15 Oct 2026). Two rows on one
     /// folder are not a copy of each other.
-    private static func isSameFolder(_ a: URL, _ b: URL) -> Bool {
-        if a.standardizedFileURL.path == b.standardizedFileURL.path { return true }
-        guard let ia = fileIdentity(a), let ib = fileIdentity(b) else { return false }
-        return ia.isEqual(ib)
+    enum FolderSameness: Equatable { case same, different, unknown }
+
+    /// `.unknown` when either folder's identity cannot be read (no grant, a
+    /// dead bookmark): a re-mint must never act on that, or one folder can be
+    /// re-minted as a copy of itself (Fable review, 15 Oct 2026).
+    static func folderSameness(
+        _ a: URL, _ b: URL, identity: (URL) -> NSObject?
+    ) -> FolderSameness {
+        if a.standardizedFileURL.path == b.standardizedFileURL.path { return .same }
+        guard let ia = identity(a), let ib = identity(b) else { return .unknown }
+        return ia.isEqual(ib) ? .same : .different
     }
 
     /// Every project as the drop decision sees it (`StudyDropMatch`).
@@ -814,7 +821,8 @@ final class ProjectIndex: ObservableObject {
         if let other = projects.firstIndex(where: {
             $0.id != id && $0.studyID == studyID
                 && FileManager.default.fileExists(atPath: $0.path)
-                && !Self.isSameFolder(URL(fileURLWithPath: $0.path), folder)
+                && Self.folderSameness(URL(fileURLWithPath: $0.path), folder,
+                                       identity: Self.fileIdentity) == .different
         }) {
             // Ties (projects.json keeps whole seconds) break on id, so the
             // choice is the same whichever row is touched first.

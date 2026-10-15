@@ -791,7 +791,17 @@ def _place(path: Path | None, input_dir: Path | None) -> str | None:
     try:
         return path.resolve().relative_to(input_dir.resolve()).as_posix()
     except (OSError, ValueError):
-        return None
+        pass
+    # A symlink in the interview folder resolving elsewhere: its place is
+    # where it sits in the folder, so the key is never left without one
+    # (Fable review, 16 Oct 2026).
+    try:
+        return path.absolute().relative_to(input_dir.resolve()).as_posix()
+    except (OSError, ValueError):
+        try:
+            return path.absolute().relative_to(input_dir.absolute()).as_posix()
+        except (OSError, ValueError):
+            return None
 
 
 def _readable_hints(raw: Any) -> dict[str, str]:

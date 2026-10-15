@@ -485,6 +485,20 @@ class TestContentKeys:
                           size_bytes=mp4.path.stat().st_size)
         assert run([other, vtt]) != first, "a different recording inherited the session"
 
+    def test_a_symlinked_recording_has_a_place(self, tmp_path: Path) -> None:
+        """A recording linked into the interview folder from elsewhere is
+        placed where it sits in the folder, so its key always has a place
+        (Fable review, 16 Oct 2026)."""
+        from bristlenose.session_registry import _place
+
+        study, elsewhere = tmp_path / "study", tmp_path / "elsewhere"
+        study.mkdir()
+        elsewhere.mkdir()
+        (elsewhere / "ann.mp4").write_bytes(b"x")
+        (study / "ann.mp4").symlink_to(elsewhere / "ann.mp4")
+        assert _place(study / "ann.mp4", study) == "ann.mp4"
+        assert _place(elsewhere / "ann.mp4", study) is None
+
     def test_a_recording_with_no_known_place_returns_to_its_session(
         self, tmp_path: Path,
     ) -> None:

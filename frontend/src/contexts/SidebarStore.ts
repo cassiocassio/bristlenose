@@ -120,6 +120,12 @@ export interface SidebarState {
   navTools: BarWidths | null;
   /** The centre column's horizontal padding, as SidebarLayout last read it. */
   centrePad: number;
+  /**
+   * The Mac app folded its projects column to fit the window (native pushes
+   * it, `setHostColumnFolded`). That fold is a step of the cascade, after the
+   * minimap: while it is in effect the minimap stays hidden. Ephemeral.
+   */
+  hostColumnFolded: boolean;
 }
 
 /** A width in the tab bar's two spacings. */
@@ -187,6 +193,7 @@ function loadState(): SidebarState {
     navTabs: null,
     navTools: null,
     centrePad: 0,
+    hostColumnFolded: false,
     rightColumn: false,
     lastOpened: null,
   };
@@ -267,9 +274,11 @@ function setState(updater: (prev: SidebarState) => SidebarState): void {
 // the Mac's projects column collapses on window resize only (the Mail
 // behaviour, `SidebarAutoCollapse` in DetailFloor.swift), against the width
 // the wish needs — which is why `requiredWidth` is the wish, never the fit.
-// It still counts the minimap, so on the Mac the projects column folds first
-// and the minimap goes after it: the web cannot see the fold, and a minimap
-// hidden before it would come back when the column folded and the detail grew.
+// On the Mac the order is minimap, projects column, left panel, tag sidebar.
+// `requiredWidth` leaves the minimap out, so the column folds only once the
+// minimap has gone; native then tells the web it folded (`hostColumnFolded`),
+// and the minimap counts as taken until the column is back — otherwise the
+// detail growing by the column's width would bring it straight back.
 //
 // Overlay never counts: it floats above the centre and takes no column.
 
@@ -288,6 +297,8 @@ export interface PanelFitInput {
   exempt?: OpenedPanel | null;
   /** The centre width the tab bar needs on one row in each mode (browser only). */
   bar?: { full: number; condensed: number; iconsUp: number };
+  /** The host folded a column of its own, a step after the minimap: every step before it stays taken. */
+  hostColumnFolded?: boolean;
 }
 
 export interface PanelFit {
@@ -297,13 +308,15 @@ export interface PanelFit {
   barMode: BarMode;
 }
 
-/** Width the wished arrangement needs: floor + wanted panels + minimap. */
+/**
+ * Width the wished panels need: floor + wanted panels. Not the minimap, which
+ * gives way before the host's column (the Mac folds its projects column below this).
+ */
 export function requiredWidth(input: PanelFitInput): number {
   return (
     CONTENT_FLOOR_PX +
     (input.tocWanted ? input.tocWidth : 0) +
-    (input.rightColumn && input.tagsWanted ? input.tagsWidth : 0) +
-    (input.rightColumn ? MINIMAP_WIDTH_PX : 0)
+    (input.rightColumn && input.tagsWanted ? input.tagsWidth : 0)
   );
 }
 
@@ -333,7 +346,9 @@ export function fitPanels(input: PanelFitInput): PanelFit {
     return { tocOpen, tagsOpen, minimapVisible, barMode, fits: centre >= Math.max(CONTENT_FLOOR_PX, barNeed) };
   };
 
-  for (let k = 0; k < steps.length; k++) {
+  // The host's fold sits between the minimap and the left panel.
+  const forced = input.hostColumnFolded ? steps.filter((s) => s !== "toc" && s !== "tags").length : 0;
+  for (let k = forced; k < steps.length; k++) {
     const fit = at(k);
     if (fit.fits) return { tocOpen: fit.tocOpen, tagsOpen: fit.tagsOpen, minimapVisible: fit.minimapVisible, barMode: fit.barMode };
   }
@@ -362,6 +377,7 @@ function fitInput(s: SidebarState, overrides: Partial<PanelFitInput> = {}): Pane
     available: s.availableWidth,
     exempt: s.lastOpened,
     bar: navBarNeeds(s),
+    hostColumnFolded: s.hostColumnFolded,
     ...overrides,
   };
 }
@@ -397,6 +413,12 @@ export function setLayoutContext(availableWidth: number, rightColumn: boolean, c
   const pad = Math.ceil(centrePad);
   if (state.availableWidth === availableWidth && state.rightColumn === rightColumn && state.centrePad === pad) return;
   setState((prev) => ({ ...prev, availableWidth, rightColumn, centrePad: pad }));
+}
+
+/** Native folded or restored its projects column (Mac only). Equality-guarded. */
+export function setHostColumnFolded(folded: boolean): void {
+  if (state.hostColumnFolded === folded) return;
+  setState((prev) => ({ ...prev, hostColumnFolded: folded }));
 }
 
 /** Open the left panel in push mode and make it the exempt panel. */
@@ -752,6 +774,7 @@ export function resetSidebarStore(): void {
     navTabs: null,
     navTools: null,
     centrePad: 0,
+    hostColumnFolded: false,
     rightColumn: false,
     lastOpened: null,
   };

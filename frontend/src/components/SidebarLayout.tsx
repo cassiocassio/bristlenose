@@ -164,6 +164,8 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHead
     exempt: sidebar.lastOpened,
     // The browser tab bar's needs (NavBar measures them); absent on the Mac.
     bar: navBarNeeds(sidebar),
+    // The Mac folded its projects column: the minimap stays gone meanwhile.
+    hostColumnFolded: sidebar.hostColumnFolded,
   });
   // A lens with no shared panels still has the tab bar, so it gets the same
   // tab-bar steps from the same function, with nothing else to give way.

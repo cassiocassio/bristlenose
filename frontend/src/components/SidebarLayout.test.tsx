@@ -568,3 +568,20 @@ describe("the panel just opened stays open in the grid", () => {
     expect(layout.classList.contains("tags-open")).toBe(true);
   });
 });
+
+describe("the Mac's folded projects column holds the minimap back in the grid", () => {
+  // 2000 holds every panel and the minimap; only the fold can hide it.
+  it("hides the minimap while native reports the column folded", () => {
+    mockState = { ...mockState, tocMode: "push", tagsOpen: true, availableWidth: 2000, hostColumnFolded: true } as typeof mockState;
+    const { container } = render(<SidebarLayout active={true}><div /></SidebarLayout>);
+    const layout = container.querySelector(".layout")!;
+    expect(layout.classList.contains("minimap-hidden")).toBe(true);
+    expect(layout.classList.contains("toc-open")).toBe(true);
+  });
+
+  it("shows it again once the column is back", () => {
+    mockState = { ...mockState, tocMode: "push", tagsOpen: true, availableWidth: 2000, hostColumnFolded: false } as typeof mockState;
+    const { container } = render(<SidebarLayout active={true}><div /></SidebarLayout>);
+    expect(container.querySelector(".layout")!.classList.contains("minimap-hidden")).toBe(false);
+  });
+});

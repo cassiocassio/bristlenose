@@ -741,6 +741,13 @@ struct ContentView: View {
                 ))
         }
         .background(SidebarDeselectMonitor { selection = [] })
+        // The fold is a step of the report's fit cascade, after the minimap.
+        // `sidebarAutoCollapsed` turns true at the collapse decision and false
+        // only once the column is seen at rest, so the minimap neither flashes
+        // back while the column animates away nor while it animates in.
+        .onChange(of: sidebarAutoCollapsed, initial: true) { _, folded in
+            bridgeHandler.setProjectsColumnFolded(folded)
+        }
         // The Mail behaviour, explicit: shrink the window and the projects
         // column gives way before the report does; widen it and the column
         // comes back. The WINDOW is the only trigger — not a panel opening,

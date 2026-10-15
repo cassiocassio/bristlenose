@@ -10,6 +10,7 @@
  */
 
 import { setLiveResize } from "../utils/liveResize";
+import { setHostColumnFolded } from "../contexts/SidebarStore";
 import { isEmbedded } from "../utils/embedded";
 import { setLocale as setStoreLocale } from "../i18n/LocaleStore";
 import { isPalette } from "../utils/bootPalette";
@@ -490,6 +491,16 @@ export function installBridge(deps: BridgeDeps): void {
      */
     setLiveResize(on: unknown): void {
       setLiveResize(on === true);
+    },
+
+    /**
+     * Called by native when the window fit folds or restores the projects
+     * column (`SidebarAutoCollapse`, DetailFloor.swift), and on `ready`. The
+     * fold is a step of the fit cascade after the minimap, so the minimap
+     * stays hidden while it holds (SidebarStore "Fit to width").
+     */
+    setProjectsColumnFolded(folded: unknown): void {
+      setHostColumnFolded(folded === true);
     },
 
     /**

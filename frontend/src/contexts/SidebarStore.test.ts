@@ -34,6 +34,7 @@ import {
   setNavTools,
   panelFit,
   wantedWidth,
+  setHostColumnFolded,
   CONTENT_FLOOR_PX,
   MINIMAP_WIDTH_PX,
 } from "./SidebarStore";
@@ -736,11 +737,55 @@ describe("fitPanels — the browser tab bar gives way before anything else", () 
 });
 
 describe("requiredWidth — the wish, not the fit", () => {
-  it("is floor + wanted panels + minimap regardless of available", () => {
+  it("is floor + wanted panels regardless of available — the minimap goes before the Mac's column", () => {
     const input = { tocWanted: true, tagsWanted: true, tocWidth: 240, tagsWidth: 280, rightColumn: true, available: 100 };
-    expect(requiredWidth(input)).toBe(CONTENT_FLOOR_PX + 240 + 280 + MINIMAP_WIDTH_PX);
-    expect(requiredWidth({ ...input, tocWanted: false })).toBe(CONTENT_FLOOR_PX + 280 + MINIMAP_WIDTH_PX);
+    expect(requiredWidth(input)).toBe(CONTENT_FLOOR_PX + 240 + 280);
+    expect(requiredWidth({ ...input, tocWanted: false })).toBe(CONTENT_FLOOR_PX + 280);
     expect(requiredWidth({ ...input, rightColumn: false })).toBe(CONTENT_FLOOR_PX + 240);
+  });
+});
+
+describe("fitPanels — the Mac's projects column folds after the minimap", () => {
+  const wish = { tocWanted: true, tagsWanted: true, tocWidth: 240, tagsWidth: 280, rightColumn: true };
+  const all = CONTENT_FLOOR_PX + 240 + 280 + MINIMAP_WIDTH_PX;
+
+  it("while the column is folded the minimap stays hidden, however wide the detail grows", () => {
+    expect(fitPanels({ ...wish, available: all + 500, hostColumnFolded: true }))
+      .toEqual({ tocOpen: true, tagsOpen: true, minimapVisible: false, barMode: "full" });
+  });
+
+  it("the panels still give way in their order behind the fold", () => {
+    const fit = fitPanels({ ...wish, available: CONTENT_FLOOR_PX + 280, hostColumnFolded: true });
+    expect([fit.tocOpen, fit.tagsOpen, fit.minimapVisible]).toEqual([false, true, false]);
+  });
+
+  it("the column folds against a wish that leaves the minimap out, so the order is one-way", () => {
+    // Narrowing the detail: the minimap goes at `all`, the column at requiredWidth.
+    const required = requiredWidth({ ...wish, available: 0 });
+    expect(fitPanels({ ...wish, available: required }).minimapVisible).toBe(false);
+    expect(fitPanels({ ...wish, available: required }).tocOpen).toBe(true);
+    expect(required).toBeLessThan(all);
+  });
+
+  it("the store carries native's fold into what the layout shows, and a reset forgets it", () => {
+    act(() => {
+      openTocPush();
+      openTags();
+      setLayoutContext(all + 500, true);
+    });
+    expect(panelFit().minimapVisible).toBe(true);
+    act(() => setHostColumnFolded(true));
+    expect(panelFit().minimapVisible).toBe(false);
+    act(() => setHostColumnFolded(false));
+    expect(panelFit().minimapVisible).toBe(true);
+    act(() => setHostColumnFolded(true));
+    resetSidebarStore();
+    expect(snapshot().hostColumnFolded).toBe(false);
+  });
+
+  it("a lens without the right column has nothing to hold back", () => {
+    const fit = fitPanels({ ...wish, rightColumn: false, available: CONTENT_FLOOR_PX + 240, hostColumnFolded: true });
+    expect([fit.tocOpen, fit.tagsOpen, fit.minimapVisible]).toEqual([true, false, false]);
   });
 });
 
@@ -782,8 +827,8 @@ describe("store fit — toggles act on what is showing", () => {
     // tags was opened last, so it is exempt and the left panel gives way.
     expect(panelFit()).toEqual(shown(false, true, false));
     expect(snapshot().tocMode).toBe("push");
-    // The Mac folds its projects column against the whole wish, minimap included.
-    expect(wantedWidth()).toBe(both + MINIMAP_WIDTH_PX);
+    // The Mac folds its projects column against the wished panels, not the minimap.
+    expect(wantedWidth()).toBe(both);
     // Widening brings it back with nothing to remember, the minimap last.
     act(() => setLayoutContext(both, true));
     expect(panelFit()).toEqual(shown(true, true, false));

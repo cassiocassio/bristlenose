@@ -123,9 +123,15 @@ tab's content plus the padding of two empty probes, normal and condensed) and
 reports to the store, so the grid and the toggle verbs read one fit. A shortest
 prefix is one-way by construction: a step stays taken while a later one is in
 effect. _Was, 20 Sep – 15 Oct 2026:_ the left panel, then the tag sidebar, then
-the minimap, with no tab-bar steps. On the Mac the projects column still folds
-first: `requiredWidth` counts the minimap, because the web cannot see the fold
-and a minimap hidden before it would come back when the detail grew.
+the minimap, with no tab-bar steps. On the Mac the projects column folds after
+the minimap: `requiredWidth` leaves the minimap out, so the column folds only once
+the minimap has gone, and native reports the fold over the bridge
+(`BridgeHandler.setProjectsColumnFolded`, pushed from `sidebarAutoCollapsed` and
+again on `ready`). While it holds, `fitPanels` counts every step before it as
+taken (`hostColumnFolded`), so the detail growing by the column's width does not
+bring the minimap back. The flag clears only once the column is seen at rest, so
+the minimap does not flash in either animation. With both panels wished the Mac
+order is: minimap below a 968-pt detail, the column below 888, Contents, Tags.
 
 The fit is *derived*, never written over the wish — so widening brings each
 panel back in reverse order with nothing to remember, and a reload restores
@@ -145,7 +151,7 @@ Hide/Show All Sidebars clears it (both wished, plain order). Toggles act on
 what is *showing*, so `[` and the View menu row open an auto-closed panel.
 
 **Native: Mail, explicitly.** `panel-state` carries `minWidth` = floor +
-*wished* panels + minimap (`wantedWidth`). `SidebarAutoCollapse` in
+*wished* panels (`wantedWidth`; the minimap left out since 15 Oct 2026). `SidebarAutoCollapse` in
 `DetailFloor.swift` collapses the projects column when the window minus the
 column's measured width would leave the report below that figure, and gives
 the column back when it would fit again at the width it last had. **The window

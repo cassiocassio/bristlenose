@@ -665,9 +665,12 @@ then its icon tabs move into the report header, then the minimap hides, then
 Contents closes, then Tags; the tabs wrap only after that. The centre's floor
 there is the tab bar's one-row width when that is wider than a quote card,
 measured by the bar itself (it moves with the language and the lenses). On the
-Mac, which draws no tab bar, the projects column still folds first (the web
-cannot see the fold, and a minimap hidden before it came back when the column
-folded and the detail grew), then the minimap, Contents, Tags. The cascade takes
+Mac, which draws no tab bar, the minimap goes first, then the projects column
+folds, then Contents, then Tags. Native tells the web when it folds the column
+(`setProjectsColumnFolded`), and the minimap counts as taken while the fold
+holds, so the detail growing by the column's width does not bring it back. (For
+the first few hours of 15 Oct the column folded first, because the web could not
+see the fold.) The cascade takes
 the shortest run of steps that fits, so it is one-way. Until that day the grid's
 own fit omitted the exemption, so it had never shown on screen. Was: Contents,
 then Tags, then the minimap.

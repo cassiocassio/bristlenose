@@ -315,8 +315,8 @@ final class BridgeHandler: ObservableObject {
     @Published var inspectorOpen = false
 
     /// The width the report's centre column needs to stay readable with the
-    /// panels the researcher has open: content floor + open panel widths +
-    /// minimap, computed web-side because only `SidebarStore` knows the
+    /// panels the researcher has open: content floor + open panel widths (the
+    /// minimap goes before the column), computed web-side because only `SidebarStore` knows the
     /// dragged widths. Rides `panel-state` so it can't drift from the booleans.
     /// Declared on the detail column so the split view collapses the projects
     /// sidebar on window shrink the way Mail does. 0 = not yet reported.
@@ -742,6 +742,36 @@ final class BridgeHandler: ObservableObject {
         }
     }
 
+    // MARK: - Projects column fold
+
+    /// Whether the window fit has folded the projects column
+    /// (`SidebarAutoCollapse`, set by ContentView). The report's fit cascade
+    /// counts the fold as a step after the minimap: while it holds the minimap
+    /// stays hidden, so the detail growing by the column's width does not bring
+    /// it back (SidebarStore "Fit to width"). A column the researcher hid is not
+    /// a fold and is not reported.
+    private(set) var projectsColumnFolded = false
+
+    func setProjectsColumnFolded(_ folded: Bool) {
+        guard folded != projectsColumnFolded else { return }
+        projectsColumnFolded = folded
+        syncProjectsColumnFolded()
+    }
+
+    /// Push the fold to the page. Also on `ready`, since a new document starts unfolded.
+    func syncProjectsColumnFolded() {
+        guard let webView else { return }
+        let folded = projectsColumnFolded
+        Task {
+            try? await webView.callAsyncJavaScript(
+                "window.__bristlenose?.setProjectsColumnFolded?.(folded)",
+                arguments: ["folded": folded],
+                in: nil,
+                in: .page
+            )
+        }
+    }
+
     // MARK: - Locale sync
 
     /// Push the native locale to the web layer.
@@ -895,6 +925,7 @@ final class BridgeHandler: ObservableObject {
             syncAnalysisAnimation()
             syncLocale()
             syncToolbarInset()
+            syncProjectsColumnFolded()
             webView?.window?.makeFirstResponder(webView)
 
         case "status-page":

@@ -4,7 +4,8 @@ import SwiftUI
 /// sidebar to give it that width — the Mail behaviour, done explicitly.
 ///
 /// The number comes from the SPA over `panel-state` (`minWidth`): content
-/// floor + the panels the researcher has open + the minimap. Native cannot
+/// floor + the panels the researcher has open (not the minimap, which gives
+/// way before the column — `BridgeHandler.setProjectsColumnFolded`). Native cannot
 /// compute it — the dragged panel widths live only in `SidebarStore` — so it
 /// applies the figure rather than deriving one. The SPA posts the *wanted*
 /// arrangement, not the one it is currently able to show, which is what keeps

@@ -212,23 +212,51 @@ final class SpotlightOneShot {
                 projectName, "public.folder"
             ),
             scopes: [NSMetadataQueryUserHomeScope],
-            folder: { $0 }
+            folder: { $0 },
+            choose: { $0.count == 1 ? $0.first : nil }
         )
     }
 
-    /// The one folder whose search beacon carries this study id
+    /// The folder whose search beacon carries this study id
     /// (`StudyMarker.beaconFilename`, design-project-identity §13a). Searches
     /// every indexed volume, since a study is most often lost by being moved
-    /// to another disk. Two hits (a Finder copy not yet given its own id) are
-    /// no answer, and the caller falls back to the name.
+    /// to another disk. More than one hit is a study plus a backup or a copy
+    /// not yet given its own id: the one written to last is the one in use,
+    /// and a tie is no answer, so the caller falls back to the name.
     func findUniqueStudy(id: String) async -> URL? {
         guard let query = Self.studyQuery(id: id),
               let predicate = NSPredicate(fromMetadataQueryString: query) else { return nil }
         return await gather(
             predicate: predicate,
             scopes: [NSMetadataQueryLocalComputerScope],
-            folder: Self.studyFolder(forBeacon:)
+            folder: Self.studyFolder(forBeacon:),
+            choose: { hits in Self.newestStudy(hits.map { ($0, Self.lastWritten($0)) }) }
         )
+    }
+
+    /// One hit is the answer; among several, the one whose study state was
+    /// written strictly last. A clone made by a backup tool keeps its
+    /// original's times, so a straight backup ties and gives no answer
+    /// rather than a guess. The confirm sheet shows the path either way.
+    nonisolated static func newestStudy(_ hits: [(folder: URL, written: Date?)]) -> URL? {
+        if hits.count == 1 { return hits[0].folder }
+        let dated = hits.compactMap { hit in hit.written.map { (hit.folder, $0) } }
+        guard dated.count == hits.count,
+              let newest = dated.map(\.1).max(),
+              dated.filter({ $0.1 == newest }).count == 1 else { return nil }
+        return dated.first { $0.1 == newest }?.0
+    }
+
+    /// When the study's database or manifest was last written: a metadata
+    /// read, which a sandboxed app may make without a grant.
+    nonisolated static func lastWritten(_ folder: URL) -> Date? {
+        let state = folder.appendingPathComponent(LocateFlow.outputMarker, isDirectory: true)
+            .appendingPathComponent(".bristlenose", isDirectory: true)
+        let dates = ["bristlenose.db", "bristlenose.db-wal", "pipeline-manifest.json"].compactMap {
+            (try? FileManager.default.attributesOfItem(
+                atPath: state.appendingPathComponent($0).path))?[.modificationDate] as? Date
+        }
+        return dates.max()
     }
 
     /// The Spotlight query for a study's beacon, or nil for anything that is
@@ -253,7 +281,8 @@ final class SpotlightOneShot {
     private func gather(
         predicate: NSPredicate,
         scopes: [Any],
-        folder: @escaping (URL) -> URL?
+        folder: @escaping (URL) -> URL?,
+        choose: @escaping ([URL]) -> URL?
     ) async -> URL? {
         // Re-entrance guard — previous call's observer (if any) is removed
         // before adding the new one. Not hit today (one SpotlightOneShot per
@@ -280,7 +309,7 @@ final class SpotlightOneShot {
                 object: q, queue: .main
             ) { [weak self] _ in
                 guard let self else { return }
-                let result = self.pickUnique(from: q, folder: folder)
+                let result = choose(self.analysedHits(from: q, folder: folder))
                 q.stop()
                 if let obs = self.observation {
                     NotificationCenter.default.removeObserver(obs)
@@ -310,15 +339,14 @@ final class SpotlightOneShot {
 
     /// Walk the gathered results and return the unique high-confidence URL,
     /// or nil if there's zero or more-than-one match.
-    private func pickUnique(from query: NSMetadataQuery, folder: (URL) -> URL?) -> URL? {
-        let candidates = (0..<query.resultCount).compactMap { i -> URL? in
+    private func analysedHits(from query: NSMetadataQuery, folder: (URL) -> URL?) -> [URL] {
+        (0..<query.resultCount).compactMap { i -> URL? in
             guard let item = query.result(at: i) as? NSMetadataItem,
                   let path = item.value(forAttribute: NSMetadataItemPathKey) as? String,
                   let url = folder(URL(fileURLWithPath: path))
             else { return nil }
             return LocateFlow.folderLooksAnalysed(url: url) ? url : nil
         }
-        return candidates.count == 1 ? candidates.first : nil
     }
 }
 

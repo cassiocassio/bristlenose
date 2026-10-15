@@ -140,10 +140,21 @@ def write(
 
 
 def _write_beacon(output_dir: Path, study_id: str) -> None:
+    """Atomic, like the marker: a half-written beacon is a search that silently
+    finds nothing. A failure is logged and never raised — the marker is what
+    counts, and the next ``read_or_mint`` tries again."""
+    tmp: str | None = None
     try:
-        beacon_path(output_dir).write_text(beacon_text(study_id), encoding="utf-8")
+        fd, tmp = tempfile.mkstemp(dir=output_dir, prefix=".study-beacon.", suffix=".tmp")
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(beacon_text(study_id))
+        os.replace(tmp, beacon_path(output_dir))
+        tmp = None
     except OSError as exc:  # a search aid; the marker is what counts
         logger.warning("could not write the study's search beacon: %s", exc)
+    finally:
+        if tmp is not None:
+            Path(tmp).unlink(missing_ok=True)
 
 
 def read_or_mint(output_dir: Path, *, minted_by: str) -> str | None:

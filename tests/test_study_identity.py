@@ -55,6 +55,26 @@ def test_ingest_knows_the_marker_and_beacon_as_its_own(tmp_path: Path) -> None:
     assert is_bristlenose_artefact(study_marker.marker_path(out))
 
 
+def test_a_beacon_that_cannot_be_written_leaves_the_marker_and_no_litter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The beacon is a search aid: failing to place it must not fail the
+    marker, and must not leave a half-written or temporary file behind."""
+    out = tmp_path / "bristlenose-output"
+    real_replace = study_marker.os.replace
+
+    def refuse_beacon(src: str, dst: object) -> None:
+        if str(dst).endswith(study_marker.BEACON_FILENAME):
+            raise OSError("read-only")
+        real_replace(src, dst)
+
+    monkeypatch.setattr(study_marker.os, "replace", refuse_beacon)
+    study_id = study_marker.read_or_mint(out, minted_by="run")
+    assert study_id is not None and study_marker.read(out) == study_id
+    assert not study_marker.beacon_path(out).exists()
+    assert [p.name for p in out.iterdir()] == [".bristlenose"]
+
+
 def test_a_study_minted_before_the_beacon_gets_one(tmp_path: Path) -> None:
     """Markers minted before 15 Oct 2026 have no beacon, and a copy re-minted
     by the app may carry its original's; the next run or serve puts it right."""

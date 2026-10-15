@@ -448,11 +448,13 @@ add → analyse → move → reopen → copy → reopen before phase 2 lands.
   deliverable (`cli._has_no_deliverable`). The owner's decision to accept a
   visible file in the output folder is the one assumption here, and it is
   reversible: removing the writer and the search restores the name search.
-  **Known limit:** a mounted backup of the study (a clone on another disk)
-  carries the same beacon, so a moved study plus its backup is two hits and
-  the search gives way to the name search and the panel. That is the
-  behaviour before the beacon, not a wrong folder. Offering both hits in the
-  confirm sheet is the next step if it bites. A Re-analyse carries
+  **Several hits** (a moved study plus a mounted backup, or a Finder copy
+  not yet given its own id): the one whose database or manifest was written
+  strictly last is offered, since that is the one in use. A backup clone keeps
+  its original's times, so a fresh backup ties, and a tie or an unreadable
+  time gives way to the name search and the panel rather than a guess. The
+  confirm sheet shows the path either way (`SpotlightOneShot.newestStudy`).
+  Offering every hit in the sheet is the next step if ties bite. A Re-analyse carries
   `copied_from` with the id (`cli.py`), and the committed smoke fixture
   ignores the marker and beacon an E2E serve mints.
 - **A copy says where it came from.** The app records `copied_from` from the

@@ -109,6 +109,41 @@ struct StudyMarkerTests {
         #expect(SpotlightOneShot.studyFolder(forBeacon: hit)?.path == "/Volumes/Archive/Talismanic")
     }
 
+    // A moved study and a mounted backup of it both carry the beacon.
+    private let live = URL(fileURLWithPath: "/Volumes/Work/Talismanic")
+    private let backup = URL(fileURLWithPath: "/Volumes/Backup/Talismanic")
+
+    @Test func oneHitIsTheAnswer() {
+        #expect(SpotlightOneShot.newestStudy([(live, nil)]) == live)
+    }
+
+    @Test func amongSeveralTheOneWrittenLastIsInUse() {
+        let older = Date(timeIntervalSince1970: 1_000), newer = Date(timeIntervalSince1970: 2_000)
+        #expect(SpotlightOneShot.newestStudy([(backup, older), (live, newer)]) == live)
+        #expect(SpotlightOneShot.newestStudy([(live, newer), (backup, older)]) == live)
+    }
+
+    /// A clone keeps its original's times, so a fresh backup ties: no guess.
+    @Test func aTieOrAnUnknownTimeIsNoAnswer() {
+        let same = Date(timeIntervalSince1970: 1_000)
+        #expect(SpotlightOneShot.newestStudy([(backup, same), (live, same)]) == nil)
+        #expect(SpotlightOneShot.newestStudy([(backup, nil), (live, same)]) == nil)
+        #expect(SpotlightOneShot.newestStudy([]) == nil)
+    }
+
+    @Test func lastWrittenReadsTheStudyState() throws {
+        let dir = try folder()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        #expect(SpotlightOneShot.lastWritten(dir) == nil)
+        let state = dir.appendingPathComponent("bristlenose-output/.bristlenose")
+        try FileManager.default.createDirectory(at: state, withIntermediateDirectories: true)
+        let manifest = state.appendingPathComponent("pipeline-manifest.json")
+        try Data("{}".utf8).write(to: manifest)
+        let stamp = Date(timeIntervalSince1970: 1_700_000_000)
+        try FileManager.default.setAttributes([.modificationDate: stamp], ofItemAtPath: manifest.path)
+        #expect(SpotlightOneShot.lastWritten(dir) == stamp)
+    }
+
     @Test func aBeaconOutOfPlaceIsNoHit() {
         // Copied loose into a folder, or renamed: not a study's output folder.
         #expect(SpotlightOneShot.studyFolder(

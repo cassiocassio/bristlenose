@@ -106,13 +106,26 @@ reacts to the other's toggles.
 
 **Web: the wish, fitted.** The panels are a wish (`tocMode`, `tagsOpen`, the
 widths; persisted) and the grid shows the wish fitted to the width it has.
-`SidebarStore.fitPanels` closes, in this order, until the centre keeps
-`CONTENT_FLOOR_PX`:
+`SidebarStore.fitPanels` takes, in this order, the shortest run of steps that
+keeps the centre's need (since 15 Oct 2026, `docs/mockups/fit-cascade-lab.html`):
 
-1. the left panel (Contents / Codes / Signals),
-2. the tag sidebar,
+1. the browser tab bar condenses (`.bn-global-nav--condensed`),
+2. its icon tabs move into the report header (`NavTools`, rendered by Header),
 3. the minimap (`.layout.minimap-hidden`, in `minimap.css` — one token, every
-   grid variant, the way `.embedded` zeroes the rails).
+   grid variant, the way `.embedded` zeroes the rails),
+4. the left panel (Contents / Codes / Signals),
+5. the tag sidebar.
+
+Steps 1–2 exist only where there is a tab bar (the browser; the Mac draws none),
+and the centre's need there is the bar's one-row width in that mode, or
+`CONTENT_FLOOR_PX` if wider. The bar measures itself (`navBarMeasure.ts`: each
+tab's content plus the padding of two empty probes, normal and condensed) and
+reports to the store, so the grid and the toggle verbs read one fit. A shortest
+prefix is one-way by construction: a step stays taken while a later one is in
+effect. _Was, 20 Sep – 15 Oct 2026:_ the left panel, then the tag sidebar, then
+the minimap, with no tab-bar steps. On the Mac the projects column still folds
+first: `requiredWidth` counts the minimap, because the web cannot see the fold
+and a minimap hidden before it would come back when the detail grew.
 
 The fit is *derived*, never written over the wish — so widening brings each
 panel back in reverse order with nothing to remember, and a reload restores

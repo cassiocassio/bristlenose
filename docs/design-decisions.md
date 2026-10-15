@@ -654,10 +654,23 @@ nothing measured needed `NSSplitViewController`. Moving to it is on the shelf,
 not rejected: it is the last rung of the ladder in
 `docs/sidebar-column-diagnosis.md` § Session 4, and it comes off the shelf only if
 the unreproduced symptoms there recur with a named ingredient. A panel opening, a lens change and the column
-toggling are **not** triggers: the web copes with the width it is given, closing
-Contents, then Tags, then the minimap, with the panel just opened exempt so a
-press never opens nothing. If even that leaves the centre under its floor, the
-centre squeezes visibly rather than refusing invisibly.
+toggling are **not** triggers: the web copes with the width it is given, with
+the panel just opened exempt so a press never opens nothing. If even that leaves
+the centre under its floor, the centre squeezes visibly rather than refusing
+invisibly.
+
+**Order changed 15 Oct 2026** (owner, from `docs/mockups/fit-cascade-lab.html`):
+what the reader did not choose goes first. In the browser: the tab bar condenses,
+then its icon tabs move into the report header, then the minimap hides, then
+Contents closes, then Tags; the tabs wrap only after that. The centre's floor
+there is the tab bar's one-row width when that is wider than a quote card,
+measured by the bar itself (it moves with the language and the lenses). On the
+Mac, which draws no tab bar, the projects column still folds first (the web
+cannot see the fold, and a minimap hidden before it came back when the column
+folded and the detail grew), then the minimap, Contents, Tags. The cascade takes
+the shortest run of steps that fits, so it is one-way. Until that day the grid's
+own fit omitted the exemption, so it had never shown on screen. Was: Contents,
+then Tags, then the minimap.
 
 Overlay (rail hover-peek) is a browser idiom and stays browser-only; it was
 considered for the Mac and rejected as not sitting with a native sidebar. The

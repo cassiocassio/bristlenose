@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quote grouping control lab</title>
+<style>
+/* ════ bristlenose/theme/tokens.css — lines 1–394 ════ */
+/* Design tokens — the single source of truth for all visual decisions.
+
+   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
+   ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap), and
+   SEMANTIC ALIASES that name a decision rather than a value (the inline
+   edit-field set below). An alias points at a palette token, so it costs no
+   per-palette maintenance and cannot drift from the palette it borrows from.
+
+   TYPOGRAPHY tokens are in tokens-typography.css (web) / tokens-desktop.css (macOS).
+   COLOUR PALETTE tokens are in colors/palette-default.css and colors/palette-edo.css.
+
+   Override palette tokens with data-color-theme="<name>" on <html>.
+   Override platform tokens with data-platform="desktop" on <html>. */
+
+:root {
+    /* Sentiment colours (v0.7+ taxonomy) — analytical, NOT theme-overridable.
+       See docs/academic-sources.html for theoretical foundations. */
+
+    /* Negative sentiments */
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    /* Error text — sentiment-frustration (#ea580c) is a fill hue, only 3.56:1
+       on white as body text; this darker shade clears WCAG AA (4.5:1). */
+    --bn-colour-error-text: #c2410c;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+
+    /* Neutral (investigation flag) */
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+
+    /* Positive sentiments */
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* Analysis heatmap — OKLCH colour ramp tokens */
+    --bn-heat-frustration-h: 55;
+    --bn-heat-confusion-h: 30;
+    --bn-heat-doubt-h: 295;
+    --bn-heat-surprise-h: 75;
+    --bn-heat-satisfaction-h: 155;
+    --bn-heat-delight-h: 170;
+    --bn-heat-confidence-h: 260;
+    --bn-heat-chroma: 0.12;
+    --bn-heat-l-min: 95%;
+    --bn-heat-l-max: 45%;
+    --bn-heat-depleted-h: 75;
+    --bn-heat-depleted-chroma: 0.08;
+
+    /* Codebook user-tag colours — OKLCH v5 pentadic palette.
+       5 sets at ~72° hue anchors, ±25° per set, ~12° steps.
+       Light mode: washed (pale bg, dark text).
+       Dark mode: saturated (mid-dark bg, white text).
+       See immutable-chasing-patterson plan for rationale. */
+
+    /* UX set (blue, H=225-275, anchor 250) */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+
+    /* Emotion set (red-pink, H=340-40, anchor 10) */
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+
+    /* Task set (green-teal, H=130-180, anchor 155) */
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+
+    /* Trust set (purple, H=275-325, anchor 300) */
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+
+    /* Opportunity set (amber, H=50-100, anchor 75) */
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+
+    /* Sentiment set — numeric aliases for the codebook colour system.
+       Maps index-based getTagBg() to the existing named sentiment vars. */
+    --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+    --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+    --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+    --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+    --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+    --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+    --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+
+    /* Custom / ungrouped */
+    --bn-custom-bg: oklch(94% 0.005 260);
+
+    /* Group card background tints (very subtle set tint for codebook panel) */
+    --bn-group-ux:        oklch(97% 0.015 250);
+    --bn-group-emo:       oklch(97% 0.015 10);
+    --bn-group-task:      oklch(97% 0.015 155);
+    --bn-group-trust:     oklch(97% 0.015 300);
+    --bn-group-opp:       oklch(97% 0.015 75);
+    --bn-group-sentiment: oklch(97% 0.010 200);
+
+    /* Micro histogram bar colours (slightly more saturated than badge bg) */
+    --bn-bar-ux:        oklch(70% 0.08 250);
+    --bn-bar-emo:       oklch(70% 0.08 10);
+    --bn-bar-task:      oklch(70% 0.06 155);
+    --bn-bar-trust:     oklch(70% 0.07 300);
+    --bn-bar-opp:       oklch(72% 0.07 75);
+    --bn-bar-sentiment: oklch(65% 0.06 200);
+
+    /* Set indicator dots (saturated anchors for codebook panel) */
+    --bn-set-ux-dot: oklch(50% 0.12 250);
+    --bn-set-emo-dot: oklch(50% 0.12 10);
+    --bn-set-task-dot: oklch(50% 0.10 155);
+    --bn-set-trust-dot: oklch(50% 0.11 300);
+    --bn-set-opp-dot: oklch(52% 0.11 75);
+
+    /* Legacy sentiment colours (deprecated — kept for backward compat) */
+    --bn-colour-confusion: var(--bn-sentiment-confusion);
+    --bn-colour-confusion-bg: var(--bn-sentiment-confusion-bg);
+    --bn-colour-frustration: var(--bn-sentiment-frustration);
+    --bn-colour-frustration-bg: var(--bn-sentiment-frustration-bg);
+    --bn-colour-delight: var(--bn-sentiment-delight);
+    --bn-colour-delight-bg: var(--bn-sentiment-delight-bg);
+
+    /* Layout */
+    --bn-max-width: 52rem;
+    --bn-quote-max-width: 23rem;   /* card reading measure — ~5 words/line */
+    --bn-grid-gap: 1.25rem;        /* gap between grid columns */
+    --bn-flow-tolerance: 5em;      /* grid-lanes masonry: how much height imbalance
+                                      to tolerate before breaking reading order.
+                                      Safari 26.4+ only. Provisional — tuned on the
+                                      Phase-1 mockup, pending real-corpus validation. */
+    --bn-toolbar-height: 3rem;
+
+    /* Sidebar layout (serve-mode dual-sidebar with resizable panels) */
+    --bn-sidebar-width: 280px;   /* default panel width */
+    --bn-sidebar-min: 200px;     /* minimum resize bound */
+    --bn-sidebar-max: 480px;     /* maximum resize bound */
+    --bn-rail-width: 36px;       /* collapsed icon rail width */
+    --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
+    --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
+    --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
+    --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
+
+    /* (--bn-first-baseline retired 25 Jul 2026. It was a cross-seam datum
+       aligning webview baselines to the native sidebar's "Project" row — an
+       alignment the red-background test proved unrealisable (the webview's
+       layout viewport starts at the toolbar seam, below that native baseline).
+       With the toolbar-inset residual now 0, content and the flanking inspector
+       share one web-internal datum of --bn-space-xl below the seam; the base
+       .tag-sidebar bleed and the body top-pad already agree. See
+       organisms/sidebar.css § "First-baseline datum".) */
+
+    /* Breakpoints — reference values for @media queries across the system.
+       CSS @media can't consume var(), so use these values directly in
+       media queries and reference the token name in a comment.
+       When adding a new media query, pick from this list or add a new entry. */
+    --bn-breakpoint-compact:  500px;   /* help overlay, single-column fallback */
+    --bn-breakpoint-toolbar:  600px;   /* toolbar collapse (planned) */
+    --bn-breakpoint-content:  1100px;  /* transcript annotation margin layout */
+    --bn-breakpoint-wide:     1400px;  /* 16"+ / wide displays — dashboard featured quotes go to 5 across */
+
+    /* Spacing scale */
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
+       the same in light and dark; the dark text reads on it in both modes. */
+    --bn-colour-new-highlight: #75fb4c;
+    --bn-colour-new-highlight-text: #0f2b08;
+
+    /* Radii */
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    /* ── Inline edit fields — READ THIS BEFORE STYLING A NEW ONE ──────────
+     *
+     * An inline edit field is a piece of text the researcher can click into
+     * and retype: a theme heading, a session name, a code group's title, a
+     * code. There are exactly TWO treatments and the choice is mechanical,
+     * decided by the GROUND the field sits on, not by which lens you are in:
+     *
+     *   field on page background  →  --bn-field-edit-fill-on-page  (tints up)
+     *   field on a tinted surface →  --bn-field-edit-fill-on-tint  (blanks to
+     *                                                               neutral)
+     *
+     * Both carry --bn-field-edit-edge at 1px. The fill inverts because the
+     * ground does; the edge never changes, so the signal is one signal.
+     * Border or outline is yours to pick — outline for a span in running
+     * prose (it costs no layout and will not reflow the line), border for
+     * something that already has a box. That is a mechanism, not a meaning.
+     *
+     * DO NOT invent a third fill. Two surfaces got one each before these
+     * tokens existed (a quote-bg tint, a page-bg blank) and two more got
+     * nothing at all, which is how "is this field live?" came to have four
+     * answers on one screen.
+     *
+     * THE ONE EXEMPTION is quote cropping — `.crop-editable` and the bracket
+     * handles in molecules/editable-text.css. That is not "edit this text",
+     * it is "move this boundary", it was designed as a single signal with the
+     * burnt-amber brackets, and it keeps --bn-colour-crop-bg. Do not reach
+     * for that yellow for anything else, and do not restyle crop to match
+     * these: a different verb is allowed a different look. The token was
+     * called --bn-colour-editing-bg until 20 Sep 2026; it was renamed
+     * because a token named for a state it must not be used in is how the
+     * four-answers-on-one-screen problem started. */
+    --bn-field-edit-edge: var(--bn-colour-accent);
+    --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+    --bn-field-edit-fill-on-tint: var(--bn-colour-bg);
+    --bn-field-edit-radius: var(--bn-radius-sm);
+    --bn-field-edit-offset: 1px;
+
+    /* Section-divider keyline — the colour of the h2 / .section-heading /
+       .framework-section-header bottom rules and the header <hr>. Aliases
+       --bn-colour-border by default (visible); set to `transparent`
+       (globally here, or per-surface) to hide every section divider WITHOUT
+       moving anything — the 1px box still lays out, it just stops painting.
+       The reversible borders-off experiment. Table-header (th) rules keep
+       --bn-colour-border (data-grid chrome, not a section divider).
+       See docs/design-lens-template.md § Keylines. */
+    --bn-colour-keyline: var(--bn-colour-border);
+
+    /* Transitions */
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-transition-slow: 0.3s ease;
+
+    /* Focus Mode — the distraction-free reading state (templates/focus-mode.css,
+       docs/design-focus-mode.md). Structural, NOT palette-overridable: the whole
+       transform is colour-free by design, which is what lets it compose with
+       every palette × appearance with zero per-palette overrides. Deliberately
+       here and not in colors/_contract.css — a Focus token in the contract would
+       oblige every future palette author to answer a question the feature
+       doesn't ask. "Dusk, not a light-switch": no overshoot, no bounce — the
+       wrong register for reading evidence. */
+    --bn-focus-ghost-opacity: 0.14;
+    --bn-focus-heading-opacity: 0.4;
+    --bn-focus-dur: 320ms;
+    --bn-focus-ease: ease-in-out;
+    /* How much of a receded card's outline survives — the border is mixed
+       toward transparent by the remainder. One number for both lenses (the
+       quote card's left edge, the signal card's box and fused seam); it was a
+       literal 40% in two places until the Signals lens made it three. */
+    --bn-focus-outline-mix: 40%;
+
+    /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
+       Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md
+       §4.7.1). Consuming surfaces set --bn-shimmer-base (resting text colour)
+       and --bn-shimmer-peak (the pole the band moves toward: white where text
+       is dark, the surface background where text is light) so the sheen has
+       headroom in every theme. See atoms/shimmer.css. */
+    --bn-shimmer-contrast: 5%;    /* band peak = 5% from base toward the peak pole */
+    --bn-shimmer-band: 34%;       /* feathered band width, as % of the gradient */
+    --bn-shimmer-angle: 100deg;   /* slight off-horizontal tilt */
+    --bn-shimmer-sweep: 1800ms;   /* travel time (documentation; keyframe encodes the split) */
+    --bn-shimmer-gap: 900ms;      /* dark hold between sweeps (documentation) */
+    --bn-shimmer-period: 2700ms;  /* sweep + gap — the animation duration */
+    --bn-shimmer-easing: ease-in-out;
+
+    /* Legacy aliases — used by inline styles in generated HTML.
+       Theme authors: override the --bn-* versions above;
+       these aliases follow automatically. */
+    --font-body: var(--bn-font-body);
+    --font-mono: var(--bn-font-mono);
+    --colour-bg: var(--bn-colour-bg);
+    --colour-text: var(--bn-colour-text);
+    --colour-muted: var(--bn-colour-muted);
+    --colour-border: var(--bn-colour-border);
+    --colour-accent: var(--bn-colour-accent);
+    --colour-quote-bg: var(--bn-colour-quote-bg);
+    --colour-badge-bg: var(--bn-colour-badge-bg);
+    --colour-badge-text: var(--bn-colour-badge-text);
+    --colour-confusion: var(--bn-colour-confusion);
+    --colour-frustration: var(--bn-colour-frustration);
+    --colour-delight: var(--bn-colour-delight);
+    --colour-suggestion: var(--bn-colour-suggestion);
+    --max-width: var(--bn-max-width);
+}
+
+/* Dark mode overrides for analytical tokens.
+   Palette colours are handled in their own palette-*.css files. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+
+        /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
+        --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg:   light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-confusion:        light-dark(#dc2626, #f87171);
+        --bn-colour-error-text:          light-dark(#c2410c, #fb923c);
+        --bn-sentiment-confusion-bg:     light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt:            light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:         light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise:         light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg:      light-dark(#fffbeb, #2d2305);
+        --bn-sentiment-satisfaction:     light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg:  light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-delight:          light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
+
+        /* Analysis heatmap — dark mode overrides */
+        --bn-heat-chroma: light-dark(0.12, 0.10);
+        --bn-heat-l-min: light-dark(95%, 30%);
+        --bn-heat-l-max: light-dark(45%, 75%);
+        --bn-heat-depleted-chroma: light-dark(0.08, 0.06);
+
+        /* Codebook user-tag colours — dark mode: saturated bg, white text */
+        --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+        --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+        --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+        --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+        --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+        --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+        --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+        --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+        --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+        --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+        --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+        --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+        --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+        --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+        --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+        --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+        --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+        --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+        --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+        --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+        --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+        --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+        --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+        --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+        --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+        --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+        --bn-custom-bg: light-dark(oklch(94% 0.005 260), oklch(52% 0.02 260));
+        /* Group card background tints */
+        --bn-group-ux:        light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+        --bn-group-emo:       light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+        --bn-group-task:      light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+        --bn-group-trust:     light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+        --bn-group-opp:       light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+        --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+
+        /* Micro histogram bar colours */
+        --bn-bar-ux:        light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
+        --bn-bar-emo:       light-dark(oklch(70% 0.08 10),  oklch(55% 0.08 10));
+        --bn-bar-task:      light-dark(oklch(70% 0.06 155), oklch(55% 0.06 155));
+        --bn-bar-trust:     light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
+        --bn-bar-opp:       light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
+        --bn-bar-sentiment: light-dark(oklch(65% 0.06 200), oklch(50% 0.06 200));
+
+        --bn-set-ux-dot: light-dark(oklch(50% 0.12 250), oklch(60% 0.10 250));
+        --bn-set-emo-dot: light-dark(oklch(50% 0.12 10), oklch(60% 0.10 10));
+        --bn-set-task-dot: light-dark(oklch(50% 0.10 155), oklch(60% 0.08 155));
+        --bn-set-trust-dot: light-dark(oklch(50% 0.11 300), oklch(60% 0.09 300));
+        --bn-set-opp-dot: light-dark(oklch(52% 0.11 75), oklch(62% 0.09 75));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-confusion:        var(--bn-sentiment-confusion);
+        --bn-colour-confusion-bg:     var(--bn-sentiment-confusion-bg);
+        --bn-colour-frustration:      var(--bn-sentiment-frustration);
+        --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
+        --bn-colour-delight:          var(--bn-sentiment-delight);
+        --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
+    }
+
+    /* Explicit overrides — lock theme regardless of OS preference */
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ════ bristlenose/theme/tokens-typography.css — lines 1–51 ════ */
+/* Typography tokens — web defaults (Inter Variable from Google Fonts).
+   Desktop overrides are in tokens-desktop.css.
+
+   Scale D — 8 stops. Semantic intent:
+   - label (13px) = app's voice (chrome, UI labels, navigation, context)
+   - body  (15px) = participant's voice (quote text, transcript segments)
+
+   Archive of previous scale: tokens-typography-v1.css */
+
+:root {
+    /* Font family — Inter Variable loaded from Google Fonts (see index.html).
+       Fallback chain: Segoe UI Variable (Win 11), Segoe UI (Win 10),
+       system-ui, SF Pro (macOS), CJK families. */
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",   /* macOS Japanese */
+        "Yu Gothic UI",                                  /* Windows Japanese */
+        "Malgun Gothic",                                 /* Windows Korean */
+        "Apple SD Gothic Neo",                           /* macOS Korean */
+        "Noto Sans CJK JP", "Noto Sans CJK KR",         /* Linux CJK */
+        sans-serif;
+    --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+    /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
+       On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
+    --bn-weight-light: 370;      /* subordinate text (sidebar nav links, secondary lists) */
+    --bn-weight-normal: 420;     /* body text, descriptions, quote content */
+    --bn-weight-emphasis: 490;   /* headings, labels, section titles */
+    --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
+    --bn-weight-semibold: 600;   /* a chosen word in a text-only switch (picker scope) */
+    --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
+
+    /* Typography scale — 8 stops, size + line-height pairs.
+       Line-height decreases as size increases (Bringhurst principle:
+       large letterforms provide visual anchoring, need less leading). */
+    --bn-text-micro:       0.6rem;      /* 9.6px  — delete ×, confidence badges */
+    --bn-text-micro-lh:    1.2;
+    --bn-text-badge:       0.72rem;     /* 11.5px — badges, group headers, tag counts */
+    --bn-text-badge-lh:    1.3;
+    --bn-text-caption:     0.75rem;     /* 12px   — footnotes, footer, modal footer, kbd */
+    --bn-text-caption-lh:  1.4;
+    --bn-text-label:       0.8125rem;   /* 13px   — toolbar, filters, context, timecodes (app voice) */
+    --bn-text-label-lh:    1.45;
+    --bn-text-body:        0.9375rem;   /* 15px   — quote text, transcript segments (participant voice) */
+    --bn-text-body-lh:     1.5;
+    --bn-text-heading:     1.125rem;    /* 18px   — section headings, h3, modal titles */
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title:       1.375rem;    /* 22px   — page titles, h2, logotype */
+    --bn-text-title-lh:    1.25;
+    --bn-text-display:     1.75rem;     /* 28px   — report h1 */
+    --bn-text-display-lh:  1.2;
+}
+
+/* ════ bristlenose/theme/tokens-desktop.css — lines 1–70 ════ */
+/* Desktop typography overrides — SF Pro for macOS native feel.
+   Active when data-platform="desktop" is set on <html> AND the user hasn't
+   opted back to Inter. The macOS app sets data-platform via
+   BRISTLENOSE_PLATFORM=desktop; the Appearance ▸ Typography setting writes
+   BRISTLENOSE_TYPOGRAPHY, and "inter" makes the server emit
+   data-typography="inter" — which this block's :not() excludes, so the cascade
+   falls back to :root (Inter). On web/CLI neither var is set, so this never
+   matches: SF Pro is licensed for Apple platforms only, Inter ships everywhere.
+
+   SF Pro is a system font on macOS — no download needed.
+   SF Pro Text is optimised for body sizes (<20pt), SF Pro Display for headings (≥20pt).
+   -apple-system resolves to SF Pro automatically on macOS.
+
+   Scale — calibrated against the live macOS AppKit ladder via the Type Parity
+   Inspector (Debug ▸ Type Parity Inspector), macOS 26.4.1 @2x, Color LCD. Each
+   bn stop is width-matched to its measured native style (Δ ≈ 0px), so the labels
+   below are the *real* macOS styles (the old "Apple callout = 15px" label was
+   wrong — callout is 12pt):
+   - micro:   caption2     (10px)
+   - badge:   subheadline  (11px)
+   - caption: callout      (12px)
+   - label:   body         (13px)  — app voice
+   - body:    title3       (15px)  — participant voice (quotes + transcript)
+   - heading: title2       (17px)
+   - title:   title1       (22px)
+   - display: largeTitle   (26px)
+
+   Line-heights are Apple's absolute leadings expressed as size-relative ratios,
+   except body — loosened slightly by eye (1.4) for reading comfort. --bn-track-* carries Apple's per-size
+   tracking — empirically ≈0 across this range (only micro is non-zero), and
+   currently unconsumed (no letter-spacing wired yet). Sizes are kept in rem so
+   they still honour the user's root font-size; the px in each comment is the
+   value at the default 16px root (the condition this was calibrated under).
+   Re-true on a different scale/colour profile. Archive: tokens-desktop-v1.css */
+
+[data-platform="desktop"]:not([data-typography="inter"]) {
+    /* Font family — SF Pro via -apple-system, no Google Fonts needed */
+    --bn-font-body: -apple-system, "SF Pro Text", "SF Pro", system-ui,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+        sans-serif;
+    --bn-font-mono: "SF Mono", ui-monospace, monospace;
+
+    --bn-text-micro:       0.625rem;    /* 10px  — macOS caption2 */
+    --bn-text-micro-lh:    1.300;
+    --bn-track-micro:      0.013em;
+    --bn-text-badge:       0.6875rem;   /* 11px  — macOS subheadline */
+    --bn-text-badge-lh:    1.273;
+    --bn-track-badge:      0;
+    --bn-text-caption:     0.75rem;     /* 12px  — macOS callout */
+    --bn-text-caption-lh:  1.250;
+    --bn-track-caption:    0;
+    --bn-text-label:       0.8125rem;   /* 13px  — macOS body */
+    --bn-text-label-lh:    1.231;
+    --bn-track-label:      0;
+    --bn-text-body:        0.9375rem;   /* 15px  — macOS title3 */
+    --bn-text-body-lh:     1.4;         /* looser than title3's 1.333 — tuned by eye in the stress-bench for reading comfort (participant voice) */
+    --bn-track-body:       0;
+    --bn-text-heading:     1.0625rem;   /* 17px  — macOS title2 */
+    --bn-text-heading-lh:  1.294;
+    --bn-track-heading:    0;
+    --bn-text-title:       1.375rem;    /* 22px  — macOS title1 */
+    --bn-text-title-lh:    1.182;
+    --bn-track-title:      0;
+    --bn-text-display:     1.625rem;    /* 26px  — macOS largeTitle */
+    --bn-text-display-lh:  1.231;
+    --bn-track-display:    0;
+
+    /* Weight scale — SF Pro optical weights at same numeric values.
+       No change needed — Inter and SF Pro share the weight axis range. */
+}
+
+/* ════ bristlenose/theme/colors/palette-default.css — lines 1–170 ════ */
+/* palette-default — Bristlenose's standard blue/grey colour theme.
+   This is the web-mode default palette, loaded as :root fallback.
+   Tokens defined here are overridden by any active [data-color-theme] palette.
+
+   To create a new theme: copy this file, change the selector to
+   [data-color-theme="your-theme"], and remap every token.
+   See _contract.css for the full list of required tokens. */
+
+:root,
+[data-color-theme="default"] {
+    /* Colour palette */
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #007aff;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-inspector-bg: #f9f9fa;          /* Inspector chrome — Xcode Tahoe's flat inspector tint (~2% off white) */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-crop-bg: #fffbe6;
+    --bn-crop-handle-colour: #c4850a;
+    --bn-crop-handle-hover: #a06d08;
+    --bn-colour-active-bg: #f0fdf4;
+    --bn-colour-highlight: #fef08a;
+
+    /* Destructive action */
+    --bn-colour-negative: #dc2626;
+
+    /* Success and caution — the other two semantic kinds */
+    --bn-colour-positive: #16a34a;
+    --bn-colour-warning: #f59e0b;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(0, 122, 255, 0.06);
+    --bn-glow-colour-strong: rgba(0, 122, 255, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #e5e7eb;
+    --bn-minimap-heading: #b0b5bd;
+    --bn-minimap-viewport-bg: rgba(0, 122, 255, 0.15);
+    --bn-minimap-viewport-border: rgba(0, 122, 255, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #93b4f4;
+    --bn-coverage-moderator: #d97706;
+    --bn-coverage-omitted: #d1d5db;
+
+    /* Group card background tints */
+    --bn-group-none: #f9fafb;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #d1d5db;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+    --bn-focus-ring: 0 0 0 2px rgba(0, 122, 255, 0.12);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(0, 0, 0, 0.04);
+    --bn-hover-bg-subtle: rgba(0, 0, 0, 0.03);
+
+    /* Selection state */
+    --bn-selection-bg: #eef4fc;
+    --bn-selection-border: #007aff;
+    --bn-selection-bg-inactive: #e5e7eb;
+    --bn-selection-border-inactive: #9ca3af;
+    /* Sidebar nav selected-row capsule — NSColor unemphasizedSelectedContentBackgroundColor,
+       sampled (no canonical Apple hex; dynamic + vibrant composite). Re-sample at OS bumps. */
+    --bn-nav-selection-bg: #efefef;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #007aff;
+    --bn-colour-suggestion-bg: #eff6ff;
+}
+
+/* Dark mode — uses light-dark() with the color-scheme property.
+   Browsers without light-dark() support (~13%) fall back to the
+   plain light values above. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root,
+    [data-color-theme="default"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#ffffff, #111111);
+        --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:           light-dark(#007aff, #0a84ff);
+        --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
+        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #1c1c1e);   /* Inspector chrome — one step up from the #111 editor (Apple systemGray6 dark) */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
+        --bn-colour-user-tag-bg:      light-dark(#f3f4f6, #252525);
+        --bn-colour-user-tag-text:    light-dark(#4b5563, #d1d5db);
+        --bn-colour-crop-bg:          light-dark(#fffbe6, #2a2614);
+        --bn-crop-handle-colour:      light-dark(#c4850a, #f0b830);
+        --bn-crop-handle-hover:       light-dark(#a06d08, #f5cc60);
+        --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
+        --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
+        --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(0, 122, 255, 0.06), rgba(10, 132, 255, 0.12));
+        --bn-glow-colour-strong:      light-dark(rgba(0, 122, 255, 0.11), rgba(10, 132, 255, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#e5e7eb, #333333);
+        --bn-minimap-heading:         light-dark(#b0b5bd, #555555);
+        --bn-minimap-viewport-bg:     light-dark(rgba(0, 122, 255, 0.15), rgba(10, 132, 255, 0.2));
+        --bn-minimap-viewport-border: light-dark(rgba(0, 122, 255, 0.3), rgba(10, 132, 255, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#93b4f4, #4a7ecf);
+        --bn-coverage-moderator: light-dark(#d97706, #fbbf24);
+        --bn-coverage-omitted:   light-dark(#d1d5db, #4b5563);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f9fafb, #1e1e1e);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#d1d5db, #4b5563);
+
+        /* Destructive action */
+        --bn-colour-negative:         light-dark(#dc2626, #ef4444);
+
+        /* Success and caution */
+        --bn-colour-positive:         light-dark(#16a34a, #22c55e);
+        --bn-colour-warning:          light-dark(#f59e0b, #fbbf24);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
+        --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
+        --bn-colour-starred:          light-dark(#999, #ccc);
+        --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              light-dark(0 0 0 2px rgba(0, 122, 255, 0.12), 0 0 0 2px rgba(10, 132, 255, 0.2));
+        --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
+        --bn-selection-border:        light-dark(#007aff, #0a84ff);
+        --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
+        --bn-selection-border-inactive: light-dark(#9ca3af, #4b5563);
+        --bn-nav-selection-bg:          light-dark(#efefef, #2b2b2b);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.04));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-suggestion:       light-dark(#007aff, #0a84ff);
+        --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
+    }
+}
+
+/* ════ bristlenose/theme/colors/palette-edo.css — lines 1–183 ════ */
+/* palette-edo — Edo-period Japanese art colour theme.
+   Sampled from three artworks seen at the British Museum Samurai exhibition,
+   1 Mar 2026. See docs/mockups/edo-colour-palette.html for source analysis.
+
+   Pigments: rokusho (verdigris), sumi (iron-gall ink), cinnabar vermillion,
+   bero-ai (Prussian blue), yellow ochre.
+
+   Desktop default. Activate: data-color-theme="edo" on <html>.
+   Env/CLI: BRISTLENOSE_PALETTE=edo or --palette edo (canonical; BRISTLENOSE_COLOR_THEME
+   is the deprecated alias). Internal <html> attribute stays data-color-theme (glossary §Display settings).
+
+   ── v1 decisions (Jul 2026) ──
+   Accent uses Prussian blue's vivid UNDERTONE (#0f5c9e), not the dull masstone
+   sampled off aged prints — that masstone reads too low-chroma for links/icons/selection.
+   Dark accent is vivid blue (#4d9fe0), not verdigris. Background is bright Paper
+   White (#fdfbf7). Body ink is passport navy (#1b2230 / #e8e3d6 dark).
+
+   Alternatives considered — for future edo2/edo3 variants (explore in
+   docs/mockups/edo-theme-studio.html):
+     paper  — Snow White #fdfbf7, Warm off-white #f0e9d8, Washi Cream #ede5d1 (warmer/more washi)
+     accent — masstone Prussian #0f5c9e, midpoint #164e80, electric #2a7ac0; dark verdigris #7ba8a0
+     ink    — Sumi Black #1b2230 light / Sail Parchment #d4c9a8 dark; Moonlight #e4e6ea (cool dark ink)
+   Known follow-up: warm surfaces (quote-bg #f0e9d8, hover #ede5d1, badge #e8dfc9)
+   now read warmer against the brighter paper — revisit surface harmony next pass. */
+
+[data-color-theme="edo"] {
+    /* Colour palette — warm paper with indigo/verdigris accents */
+    --bn-colour-bg: #fdfbf7;                    /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;                   /* Passport navy — near-black, indigo whisper */
+    --bn-colour-muted: #4a698a;                  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
+    --bn-colour-border: #d4c9a8;                 /* Sail Parchment — warm border */
+    --bn-colour-accent: #0f5c9e;                 /* Vivid Prussian — bero-ai undertone */
+    --bn-colour-hover: #ede5d1;                  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #f7f2e6;           /* Inspector chrome — warm washi; the mirror of Xcode's #f9f9fa (Apple cools the neutral, Edo warms the paper). One notch off Paper White, lighter than quote-bg so it reads as chrome not content */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f0e9d8;              /* Warm off-white */
+    --bn-colour-badge-bg: #e8dfc9;              /* Parchment badge */
+    --bn-colour-badge-text: #2d3654;            /* Court Indigo */
+    --bn-colour-user-tag-bg: #e8dfc9;
+    --bn-colour-user-tag-text: #3d4a5c;
+    --bn-colour-crop-bg: #f5ecd0;               /* Gold Ochre tint */
+    --bn-crop-handle-colour: #b5432a;           /* Vermillion */
+    --bn-crop-handle-hover: #8b3a3a;            /* Bengara Red */
+    --bn-colour-active-bg: #e8f0e4;             /* Pine Green tint */
+    --bn-colour-highlight: #c4a96a;             /* Gold Ochre highlight */
+
+    /* Destructive action — vermillion */
+    --bn-colour-negative: #b5432a;
+
+    /* Success — Pine Green (matsuba-iro), the hue active-bg already tints toward.
+       Caution — Gold Ochre, deepened for legibility on paper. */
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #a8842c;
+
+    /* Playback-sync glow — Prussian Blue based */
+    --bn-glow-colour: rgba(15, 92, 158, 0.08);
+    --bn-glow-colour-strong: rgba(15, 92, 158, 0.15);
+
+    /* Minimap — warm parchment tones */
+    --bn-minimap-quote: #d4c9a8;
+    --bn-minimap-heading: #9e8b6e;
+    --bn-minimap-viewport-bg: rgba(15, 92, 158, 0.12);
+    --bn-minimap-viewport-border: rgba(15, 92, 158, 0.25);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #5a7d9b;
+    --bn-coverage-moderator: #c4a96a;
+    --bn-coverage-omitted: #d4c9a8;
+
+    /* Group card — neutral */
+    --bn-group-none: #f0e9d8;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #c4b898;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #b8ad91;
+    --bn-colour-icon-idle: #b8ad91;
+    --bn-colour-starred: #9e8b6e;
+    --bn-colour-shadow: rgba(30, 20, 10, 0.12);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
+    --bn-focus-ring: 0 0 0 2px rgba(15, 92, 158, 0.15);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(30, 20, 10, 0.05);
+    --bn-hover-bg-subtle: rgba(30, 20, 10, 0.03);
+
+    /* Selection state — Prussian Blue */
+    --bn-selection-bg: #e0e8f0;
+    --bn-selection-border: #0f5c9e;
+    --bn-selection-bg-inactive: #e8e2d4;
+    --bn-selection-border-inactive: #b8ad91;
+    /* Sidebar nav selected-row capsule — warm parchment grey (edo's native-grey analogue) */
+    --bn-nav-selection-bg: #e6ddc9;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #0f5c9e;
+    --bn-colour-suggestion-bg: #e0e8f0;
+}
+
+/* Dark mode — Sumi Black bg, warm parchment text */
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="edo"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#fdfbf7, #1a1816);
+        --bn-colour-text:             light-dark(#1b2230, #e8e3d6);
+        --bn-colour-muted:            light-dark(#4a698a, #7ba8a0);
+        --bn-colour-border:           light-dark(#d4c9a8, #2d2820);
+        --bn-colour-accent:           light-dark(#0f5c9e, #4d9fe0);
+        --bn-colour-hover:            light-dark(#ede5d1, #252118);
+        --bn-colour-inspector-bg:     light-dark(#f7f2e6, #211e18);   /* Inspector chrome — warm washi light / one warm step off Sumi dark */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f0e9d8, #211e18);
+        --bn-colour-badge-bg:         light-dark(#e8dfc9, #2d2820);
+        --bn-colour-badge-text:       light-dark(#2d3654, #c4b898);
+        --bn-colour-user-tag-bg:      light-dark(#e8dfc9, #2d2820);
+        --bn-colour-user-tag-text:    light-dark(#3d4a5c, #c4b898);
+        --bn-colour-crop-bg:          light-dark(#f5ecd0, #2d2614);
+        --bn-crop-handle-colour:      light-dark(#b5432a, #e06a4a);
+        --bn-crop-handle-hover:       light-dark(#8b3a3a, #e88a6a);
+        --bn-colour-active-bg:        light-dark(#e8f0e4, #1a2818);
+        --bn-colour-highlight:        light-dark(#c4a96a, #6b5528);
+        --bn-colour-cited-bg:         light-dark(#f5ecd0, #3b3010);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(15, 92, 158, 0.08), rgba(77, 159, 224, 0.10));
+        --bn-glow-colour-strong:      light-dark(rgba(15, 92, 158, 0.15), rgba(77, 159, 224, 0.18));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#d4c9a8, #2d2820);
+        --bn-minimap-heading:         light-dark(#9e8b6e, #4a4030);
+        --bn-minimap-viewport-bg:     light-dark(rgba(15, 92, 158, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border: light-dark(rgba(15, 92, 158, 0.25), rgba(77, 159, 224, 0.3));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#5a7d9b, #4a6a80);
+        --bn-coverage-moderator: light-dark(#c4a96a, #a08848);
+        --bn-coverage-omitted:   light-dark(#d4c9a8, #3d3830);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f0e9d8, #211e18);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#c4b898, #4a4030);
+
+        /* Destructive action — vermillion */
+        --bn-colour-negative:         light-dark(#b5432a, #e06a4a);
+
+        /* Success — Pine Green; caution — Gold Ochre */
+        --bn-colour-positive:         light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:          light-dark(#a8842c, #c4a96a);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#b8ad91, #4a4030);
+        --bn-colour-icon-idle:        light-dark(#b8ad91, #4a4030);
+        --bn-colour-starred:          light-dark(#9e8b6e, #b8a880);
+        --bn-colour-shadow:           light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              light-dark(0 0 0 2px rgba(15, 92, 158, 0.15), 0 0 0 2px rgba(77, 159, 224, 0.2));
+        --bn-selection-bg:            light-dark(#e0e8f0, #1e2830);
+        --bn-selection-border:        light-dark(#0f5c9e, #4d9fe0);
+        --bn-selection-bg-inactive:     light-dark(#e8e2d4, #26231d);
+        --bn-selection-border-inactive: light-dark(#b8ad91, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#e6ddc9, #2d2922);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
+
+        /* Legacy aliases */
+        --bn-colour-suggestion:       light-dark(#0f5c9e, #4d9fe0);
+        --bn-colour-suggestion-bg:    light-dark(#e0e8f0, #1e2830);
+    }
+}
+
+/* ════ bristlenose/theme/atoms/button.css — lines 108–121 ════ */
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    padding: 0.4rem 0.85rem;
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast), border-color var(--bn-transition-fast);
+}
+/* ════ bristlenose/theme/atoms/button.css — lines 123–126 ════ */
+.toolbar-btn:hover {
+    background: var(--bn-colour-quote-bg);
+    border-color: var(--bn-colour-border-hover);
+}
+/* ════ bristlenose/theme/atoms/button.css — lines 159–164 ════ */
+.toolbar-btn .toolbar-arrow {
+    color: var(--bn-colour-muted);
+    vertical-align: -0.05em;
+    flex-shrink: 0;
+    margin-left: -0.1rem;
+}
+
+/* ════ bristlenose/theme/atoms/toggle.css — lines 53–55 ════ */
+.toolbar-btn-toggle {
+    user-select: none;
+}
+/* ════ bristlenose/theme/atoms/toggle.css — lines 57–61 ════ */
+.toolbar-btn-toggle.active {
+    background: var(--bn-colour-quote-bg);
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+}
+/* ════ bristlenose/theme/atoms/toggle.css — lines 63–65 ════ */
+.toolbar-btn-toggle:not(.active) {
+    color: var(--bn-colour-muted);
+}
+/* ════ bristlenose/theme/atoms/toggle.css — lines 69–72 ════ */
+.bn-quote-grouping {
+    display: inline-flex;
+    gap: var(--bn-space-xs);
+}
+
+/* ════ bristlenose/theme/atoms/section-heading.css — lines 60–70 ════ */
+.section-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    /* Title text can never crash into the action, at any width or locale. */
+    gap: var(--bn-space-lg);
+    max-width: none;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-keyline);
+}
+/* ════ bristlenose/theme/atoms/section-heading.css — lines 77–83 ════ */
+.section-heading > :is(h1, h2) {
+    margin: 0;
+    max-width: none;
+    min-width: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+/* ════ bristlenose/theme/atoms/section-heading.css — lines 92–97 ════ */
+.section-heading-action {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    flex-shrink: 0;
+}
+
+/* ════ bristlenose/theme/organisms/sidebar.css — lines 452–459 ════ */
+.sidebar-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    padding: var(--bn-space-md) 0.85rem 0.25rem;
+    flex-shrink: 0;
+}
+/* ════ bristlenose/theme/organisms/sidebar.css — lines 489–493 ════ */
+.toc-sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 0.85rem 1rem;
+}
+/* ════ bristlenose/theme/organisms/sidebar.css — lines 497–503 ════ */
+.toc-heading {
+    font-size: var(--bn-text-label);
+    font-weight: var(--bn-weight-emphasis);
+    margin: 1rem 0 var(--bn-space-sm);
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+/* ════ bristlenose/theme/organisms/sidebar.css — lines 505–505 ════ */
+.toc-heading:first-child { margin-top: 0; }
+/* ════ bristlenose/theme/organisms/sidebar.css — lines 507–517 ════ */
+.toc-link {
+    display: block;
+    padding: 0.2rem var(--bn-space-sm);
+    font-size: var(--bn-text-label);
+    font-weight: var(--bn-weight-light);
+    color: var(--bn-colour-text);
+    text-decoration: none;
+    border-radius: var(--bn-radius-md);
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
+    cursor: pointer;
+}
+/* ════ bristlenose/theme/organisms/sidebar.css — lines 519–524 ════ */
+.toc-link:hover {
+    color: var(--bn-colour-accent);
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+    text-decoration-color: var(--bn-colour-accent);
+}
+/* ════ bristlenose/theme/organisms/sidebar.css — lines 531–535 ════ */
+.toc-link.active {
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-accent);
+    background: var(--bn-nav-selection-bg);
+}
+
+/* ════ bristlenose/theme/organisms/inspector.css — lines 343–349 ════ */
+.dimension-toggle {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+}
+/* ════ bristlenose/theme/organisms/inspector.css — lines 351–362 ════ */
+.dimension-btn {
+    border: none;
+    background: none;
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    cursor: pointer;
+    transition: all var(--bn-transition-fast);
+}
+/* ════ bristlenose/theme/organisms/inspector.css — lines 364–366 ════ */
+.dimension-btn:first-child {
+    border-right: 1px solid var(--bn-colour-border);
+}
+/* ════ bristlenose/theme/organisms/inspector.css — lines 368–371 ════ */
+.dimension-btn:hover {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-text);
+}
+/* ════ bristlenose/theme/organisms/inspector.css — lines 373–377 ════ */
+.dimension-btn.active {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-accent);
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* ════ bristlenose/theme/organisms/person-picker.css — lines 44–49 ════ */
+.bn-person-picker .bn-picker-scope {
+    display: flex;
+    justify-content: center;
+    padding: 0.45rem 0.85rem 0.1rem;
+    list-style: none;
+}
+/* ════ bristlenose/theme/organisms/person-picker.css — lines 51–54 ════ */
+.bn-person-picker .bn-picker-scope [role="radiogroup"] {
+    display: flex;
+    gap: var(--bn-space-lg);
+}
+/* ════ bristlenose/theme/organisms/person-picker.css — lines 56–66 ════ */
+.bn-person-picker .bn-picker-scope-btn {
+    display: inline-grid;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: var(--bn-text-label);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+}
+/* ════ bristlenose/theme/organisms/person-picker.css — lines 68–71 ════ */
+.bn-person-picker .bn-picker-scope-btn[aria-checked="true"] {
+    font-weight: var(--bn-weight-semibold);
+    color: var(--bn-colour-text);
+}
+/* ════ bristlenose/theme/organisms/person-picker.css — lines 73–79 ════ */
+.bn-person-picker .bn-picker-scope-btn::after {
+    content: attr(data-text);
+    font-weight: var(--bn-weight-semibold);
+    height: 0;
+    visibility: hidden;
+    overflow: hidden;
+}
+/* ════ bristlenose/theme/organisms/person-picker.css — lines 81–85 ════ */
+.bn-person-picker .bn-picker-scope-btn:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+    border-radius: var(--bn-radius-sm);
+}
+
+/* ════ lab only — not the product ════ */
+html { color-scheme: light dark; }
+html[data-theme="light"] { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+body {
+  margin: 0; padding: 24px 16px 64px;
+  background: light-dark(#e9e9ec, #050506);
+  color: var(--bn-colour-text);
+  font-family: var(--bn-font-body);
+  font-size: var(--bn-text-label);
+}
+.lab-head { max-width: 1480px; margin: 0 auto 20px; }
+.lab-head h1 { font-size: var(--bn-text-title); margin: 0 0 6px; font-weight: var(--bn-weight-emphasis); }
+.lab-head p { margin: 0 0 12px; color: var(--bn-colour-muted); max-width: 70ch; }
+.key { display: flex; gap: 16px; flex-wrap: wrap; font-family: var(--bn-font-mono); font-size: 11px; margin-bottom: 14px; }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 14px; height: 14px; display: inline-block; border: 1px solid var(--bn-colour-border); }
+.key i.art { background: var(--bn-colour-bg); }
+.key i.com { background: repeating-linear-gradient(135deg, transparent 0 4px, light-dark(#d9d4c4, #3a352a) 4px 5px), light-dark(#f6f2e7, #1d1b16); }
+.switches { display: flex; flex-wrap: wrap; gap: 10px 22px; font-family: var(--bn-font-mono); font-size: 11px; }
+.switches fieldset { border: 0; padding: 0; margin: 0; display: flex; gap: 8px; align-items: center; }
+.switches legend { float: left; margin-right: 6px; color: var(--bn-colour-muted); }
+.switches label { cursor: pointer; }
+
+.row { max-width: 1480px; margin: 0 auto 28px; }
+.row-label { font-family: var(--bn-font-mono); font-size: 11px; color: var(--bn-colour-muted); margin: 0 0 6px; }
+.row-label b { color: var(--bn-colour-text); font-weight: 600; }
+.frames { display: flex; flex-wrap: wrap; gap: 16px; }
+.frame { border: 1px solid light-dark(#c9c9cf, #2a2a2e); border-radius: 8px; overflow: hidden; background: var(--bn-colour-bg); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.chrome { font-family: var(--bn-font-mono); font-size: 10.5px; padding: 5px 10px; background: light-dark(#f1f1f3, #1a1a1d); border-bottom: 1px solid light-dark(#dcdce0, #2a2a2e); color: light-dark(#666, #999); display: flex; justify-content: space-between; gap: 12px; }
+.chrome .flag { color: light-dark(#a15c00, #e0a050); }
+
+/* The mini lens: TOC column + centre. Widths are the shipped defaults
+   (DEFAULT_TOC_WIDTH 240 in SidebarStore.ts). */
+.lens { display: grid; grid-template-columns: 240px 480px; height: 330px; }
+.lens.toc-closed { grid-template-columns: 0 720px; }
+.lens.toc-closed .toc { visibility: hidden; border: 0; }
+.toc { background: var(--bn-colour-inspector-bg); border-right: 1px solid var(--bn-colour-border); padding-top: var(--bn-space-xl); overflow: hidden; display: flex; flex-direction: column; }
+.toc .sidebar-header { padding-bottom: var(--bn-space-md); }
+.toc .sidebar-header:empty { display: none; }
+.centre { padding: var(--bn-space-xl) 24px 0; overflow: hidden; }
+.centre .section-heading { margin-top: 0; }
+.centre h1 { font-size: var(--bn-text-display); font-weight: var(--bn-weight-strong); line-height: var(--bn-text-title-lh); }
+.stub { background: var(--bn-colour-quote-bg); border-radius: var(--bn-radius-md); padding: 12px 14px; margin-bottom: 10px; }
+.stub i { display: block; height: 7px; border-radius: 4px; background: var(--bn-colour-border); margin: 6px 0; }
+.stub i:nth-child(2) { width: 82%; } .stub i:nth-child(3) { width: 55%; }
+.sub { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); margin: 0 0 8px; }
+
+/* Candidate B — the one size the system does not have: a caption-size
+   toolbar button. NEW CSS, flagged in every frame that uses it. */
+.toolbar-btn.lab-sm { font-size: var(--bn-text-caption); padding: 0.2rem 0.55rem; gap: var(--bn-space-xs); }
+/* Candidate C in the sidebar: full width, as the person picker already does. */
+.toc .dimension-toggle { display: flex; width: 100%; }
+.toc .dimension-btn { flex: 1; }
+/* Candidate E: a pop-up. Native <select> wearing the shipped toolbar-btn. */
+select.toolbar-btn { appearance: none; -webkit-appearance: none; padding-right: 1.6rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 0.55rem center; }
+.toc select.toolbar-btn { width: 100%; }
+
+.commentary { max-width: 1480px; margin: 36px auto 0; padding: 16px 20px; border-left: 3px solid light-dark(#b9a777, #7a6a40);
+  background: repeating-linear-gradient(135deg, transparent 0 6px, light-dark(rgba(185,167,119,.12), rgba(122,106,64,.15)) 6px 7px), light-dark(#f6f2e7, #1d1b16);
+  font-size: 13px; line-height: 1.55; }
+.commentary .lbl { font-family: var(--bn-font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: light-dark(#7a6a40, #b9a777); margin-bottom: 8px; }
+.commentary h3 { font-size: 13px; margin: 14px 0 4px; }
+.commentary ul { margin: 4px 0; padding-left: 18px; }
+.commentary li { margin: 3px 0; }
+.commentary code { font-family: var(--bn-font-mono); font-size: 12px; }
+@media (max-width: 700px) {
+  .lens { grid-template-columns: 200px 1fr; width: calc(100vw - 34px); }
+  .lens.toc-closed { grid-template-columns: 0 1fr; }
+}
+
+</style>
+</head>
+<body>
+<header class="lab-head">
+  <h1>Quote grouping control lab</h1>
+  <p>The Quotes lens's By session / Sections &amp; themes control: five controls, two places.
+     Click any control in any frame to switch grouping. Every frame follows, so the sidebar
+     contents and the heading can be compared as the choice changes.</p>
+  <div class="key"><span><i class="art"></i>artefact: shipped CSS and shipped strings</span><span><i class="com"></i>commentary: not the product</span></div>
+  <div class="switches">
+    <fieldset><legend>grouping</legend>
+      <label><input type="radio" name="g" value="sections" checked> sections &amp; themes</label>
+      <label><input type="radio" name="g" value="session"> by session</label></fieldset>
+    <fieldset><legend>scheme</legend>
+      <label><input type="radio" name="s" value="" checked> system</label>
+      <label><input type="radio" name="s" value="light"> light</label>
+      <label><input type="radio" name="s" value="dark"> dark</label></fieldset>
+    <fieldset><legend>palette</legend>
+      <label><input type="radio" name="p" value="default" checked> default</label>
+      <label><input type="radio" name="p" value="edo"> edo</label></fieldset>
+    <fieldset><legend>platform</legend>
+      <label><input type="radio" name="f" value="" checked> web (Inter)</label>
+      <label><input type="radio" name="f" value="desktop"> Mac (SF Pro)</label></fieldset>
+    <fieldset><legend>content sidebar</legend>
+      <label><input type="radio" name="t" value="open" checked> open</label>
+      <label><input type="radio" name="t" value="closed"> closed</label></fieldset>
+  </div>
+</header>
+
+<main id="rows"></main>
+
+<section class="commentary">
+  <div class="lbl">Commentary</div>
+  <p><b>The case for the sidebar.</b> The content sidebar already holds what this control
+  changes. Today it lists Sections and Themes whatever the grouping, so in By session view
+  every link points at a heading that is not on the page (<code>TocSidebar.tsx</code> builds
+  its entries from <code>/quotes</code> sections and themes and never reads the grouping).
+  In the sidebar frames here the list follows the choice: By session lists the sessions.
+  The header slot is empty on Quotes because its title was removed on 14 Aug 2026
+  (<code>SidebarLayout.tsx:437</code>).</p>
+  <p><b>The case against it.</b> Close the sidebar (switch above) and the control goes with it.
+  That is acceptable only if the choice is reachable another way. On the Mac that means
+  View-menu rows (“Group by Session” and “Group by Sections &amp; Themes”) beside the ones
+  that already move through Screens and Discussion. On the web the heading still names the
+  grouping, so the reader can tell which view they are in, but cannot change it.</p>
+  <h3>The controls</h3>
+  <ul>
+    <li><b>A, two buttons (shipped).</b> <code>.toolbar-btn-toggle</code> × 2 at label size.
+      Reads as two commands, not one choice. It does not fit the 240px sidebar: it wraps.</li>
+    <li><b>B, two buttons, small.</b> The size the system lacks: <code>.lab-sm</code> is new
+      CSS (caption type, tighter padding). It is still two buttons, and it only just fits.</li>
+    <li><b>C, split control (shipped).</b> <code>.dimension-toggle</code> from the Signals
+      inspector, also used by the person picker (full width) and the Discussion lens. It is
+      already the house segmented control at caption size, so there is nothing to invent:
+      one choice, one outline. Full width in the sidebar, as the person picker does it.
+      At the default 240px sidebar its right half wraps to two lines; D and E do not.
+      A shorter label would fix it, which is a copy decision, not drawn here.</li>
+    <li><b>D, scope words (shipped).</b> The person picker's Session | Paragraph: plain text,
+      the chosen word semibold. The quietest option. It reads as a heading, which suits a
+      sidebar header, but it is the least obviously clickable.</li>
+    <li><b>E, pop-up.</b> A <code>&lt;select&gt;</code> wearing <code>.toolbar-btn</code>.
+      The most compact, and it scales to a third grouping, but it hides the alternative
+      behind a click.</li>
+  </ul>
+  <h3>Strings</h3>
+  <p>All shipped: <code>quotes.groupBy.session</code>, <code>quotes.groupBy.sectionsAndThemes</code>,
+  <code>quotes.sections</code>, <code>quotes.themes</code>,
+  <code>dashboard.coverageSession</code> (“Session {{number}}”). The sidebar's session list
+  reuses that key, and listing sessions in the sidebar at all is the one new behaviour,
+  flagged in each frame's chrome.</p>
+</section>
+
+<script>
+const T = {
+  session: "By session", sections: "Sections & themes",
+  hSections: "Sections", hThemes: "Themes",
+  secs: ["Onboarding", "Search and filters", "Checkout", "Delivery tracking"],
+  thms: ["Trust in prices", "Hidden costs", "Returns anxiety"],
+  sess: ["Session 1", "Session 2", "Session 3", "Session 4", "Session 5"],
+};
+let grouping = "sections";
+
+const CONTROLS = [
+  { id: "A", name: "two buttons, label size (shipped)", flag: "" },
+  { id: "B", name: "two buttons, caption size", flag: "new size: .lab-sm" },
+  { id: "C", name: "split control (shipped .dimension-toggle)", flag: "" },
+  { id: "D", name: "scope words (shipped, person picker)", flag: "" },
+  { id: "E", name: "pop-up (shipped .toolbar-btn on a select)", flag: "" },
+];
+
+function control(id) {
+  const on = (v) => grouping === v;
+  if (id === "A" || id === "B") {
+    const sm = id === "B" ? " lab-sm" : "";
+    const b = (v, l) => `<button type="button" data-g="${v}" aria-pressed="${on(v)}" class="toolbar-btn toolbar-btn-toggle${sm}${on(v) ? " active" : ""}">${l}</button>`;
+    return `<span role="group" aria-label="Group quotes" class="bn-quote-grouping">${b("session", T.session)}${b("sections", T.sections)}</span>`;
+  }
+  if (id === "C") {
+    const b = (v, l) => `<button type="button" data-g="${v}" aria-pressed="${on(v)}" class="dimension-btn${on(v) ? " active" : ""}">${l}</button>`;
+    return `<span role="group" aria-label="Group quotes" class="dimension-toggle">${b("session", T.session)}${b("sections", T.sections)}</span>`;
+  }
+  if (id === "D") {
+    const b = (v, l) => `<button type="button" role="radio" data-g="${v}" data-text="${l}" aria-checked="${on(v)}" class="bn-picker-scope-btn">${l}</button>`;
+    return `<span class="bn-person-picker" style="display:block"><span class="bn-picker-scope" style="padding:0;justify-content:flex-start"><span role="radiogroup" aria-label="Group quotes">${b("session", T.session)}${b("sections", T.sections)}</span></span></span>`;
+  }
+  return `<select class="toolbar-btn" aria-label="Group quotes" data-select>
+    <option value="session"${on("session") ? " selected" : ""}>${T.session}</option>
+    <option value="sections"${on("sections") ? " selected" : ""}>${T.sections}</option></select>`;
+}
+
+function tocBody(follows) {
+  const link = (l, i) => `<a class="toc-link${i === 0 ? " active" : ""}" href="#">${l}</a>`;
+  if (grouping === "session" && follows) return T.sess.map(link).join("");
+  return `<div class="toc-heading">${T.hSections}</div>${T.secs.map(link).join("")}`
+       + `<div class="toc-heading">${T.hThemes}</div>${T.thms.map((l) => link(l, 1)).join("")}`;
+}
+
+function frame(c, place) {
+  const inSidebar = place === "sidebar";
+  const closed = document.querySelector('input[name="t"]:checked').value === "closed";
+  const heading = grouping === "session" ? T.session : T.hSections;
+  const action = inSidebar ? "" : `<div class="section-heading-action">${control(c.id)}</div>`;
+  const header = inSidebar ? `<div class="sidebar-header toc-sidebar-header">${control(c.id)}</div>` : "";
+  const flags = [c.flag, inSidebar && grouping === "session" ? "new: sidebar lists sessions" : "",
+                 !inSidebar && grouping === "session" ? "shipped: sidebar ignores grouping" : ""]
+                .filter(Boolean).join(" · ");
+  return `<div class="frame">
+    <div class="chrome"><span>${c.id} · ${inSidebar ? "top of content sidebar" : "heading action slot (shipped place)"}</span><span class="flag">${flags}</span></div>
+    <div class="lens${closed ? " toc-closed" : ""}">
+      <nav class="toc">${header}<div class="toc-sidebar-body">${tocBody(inSidebar)}</div></nav>
+      <div class="centre">
+        <div class="section-heading"><h1>${heading}</h1>${action}</div>
+        <p class="sub">${grouping === "session" ? T.sess[0] : T.secs[0]}</p>
+        <div class="stub"><i></i><i></i><i></i></div>
+        <div class="stub"><i></i><i></i><i></i></div>
+        <div class="stub"><i></i><i></i><i></i></div>
+      </div>
+    </div></div>`;
+}
+
+function render() {
+  document.getElementById("rows").innerHTML = CONTROLS.map((c) => `
+    <section class="row"><p class="row-label"><b>${c.id}</b> · ${c.name}</p>
+      <div class="frames">${frame(c, "heading")}${frame(c, "sidebar")}</div></section>`).join("");
+  document.querySelector(`input[name="g"][value="${grouping}"]`).checked = true;
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-g]");
+  if (b) { grouping = b.dataset.g; render(); }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.matches("[data-select]")) { grouping = t.value; render(); return; }
+  const root = document.documentElement;
+  if (t.name === "g") { grouping = t.value; render(); }
+  if (t.name === "s") { t.value ? root.setAttribute("data-theme", t.value) : root.removeAttribute("data-theme"); }
+  if (t.name === "p") root.setAttribute("data-color-theme", t.value);
+  if (t.name === "f") { t.value ? root.setAttribute("data-platform", t.value) : root.removeAttribute("data-platform"); }
+  if (t.name === "t") render();
+});
+render();
+</script>
+</body>
+</html>

@@ -725,6 +725,40 @@ describe("useKeyboardShortcuts", () => {
 
       unmount();
     });
+
+    // In the Mac app the search field is native and the web SearchBox is not
+    // rendered, so `/` asks the shell to focus it, as ⌘F does. Asserted both
+    // ways: a gate that posted everywhere would pass the positive test alone.
+    describe("in the Mac app", () => {
+      let posted: unknown[];
+      beforeEach(() => {
+        posted = [];
+        mockEmbedded = true;
+        (window as unknown as Record<string, unknown>).webkit = {
+          messageHandlers: { navigation: { postMessage: (m: unknown) => posted.push(m) } },
+        };
+      });
+      afterEach(() => {
+        mockEmbedded = false;
+        delete (window as unknown as Record<string, unknown>).webkit;
+      });
+
+      it("/ on Quotes asks the shell to focus the toolbar search field", () => {
+        const { unmount } = renderWithProviders();
+        const event = pressKey("/");
+        expect(event.defaultPrevented).toBe(true);
+        expect(posted).toEqual([{ type: "project-action", action: "focus-search" }]);
+        unmount();
+      });
+
+      it("/ off Quotes posts nothing and leaves the key alone", () => {
+        const { unmount } = renderWithProviders(undefined, "/report/signals");
+        const event = pressKey("/");
+        expect(event.defaultPrevented).toBe(false);
+        expect(posted).toEqual([]);
+        unmount();
+      });
+    });
   });
 
   describe("sidebar shortcuts", () => {

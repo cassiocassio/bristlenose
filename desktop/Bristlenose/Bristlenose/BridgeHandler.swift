@@ -1261,6 +1261,11 @@ final class BridgeHandler: ObservableObject {
         case "choose-discussion-guide":
             chooseGuideRequests += 1
 
+        case "focus-search":
+            // The report's `/` key. Same act as Edit ▸ Find (⌘F), with the same
+            // gate: the toolbar capsule searches on Quotes only.
+            if activeTab == .quotes { requestSearchFocus() }
+
         case "reanalyse-session":
             reanalyseSessionRequests += 1
 

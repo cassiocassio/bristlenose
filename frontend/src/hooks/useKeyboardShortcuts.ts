@@ -38,7 +38,7 @@ import { toggleFocusMode } from "../contexts/FocusModeStore";
 import { toggleSubtitlePref } from "../utils/subtitlePrefs";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
-import { postEditingStarted, postEditingEnded } from "../shims/bridge";
+import { postEditingStarted, postEditingEnded, postProjectAction } from "../shims/bridge";
 import { type Direction } from "../utils/spatialNav";
 import { toggleDiscussionGuide } from "../islands/discussion/guidePanel";
 import { toggleScreensNav } from "../islands/screens/navPanel";
@@ -593,8 +593,18 @@ export function useKeyboardShortcuts({
         }
       }
 
-      // / — focus search
+      // / — focus search (the GitHub / Gmail key). In the Mac app the field is
+      // the native toolbar capsule and the web SearchBox is not rendered, so
+      // `.search-input` is absent and focusSearchInput() would do nothing: ask
+      // the shell instead, which focuses it as ⌘F does. The capsule is live on
+      // Quotes only (MenuCommands' `canSearch`), so elsewhere the key is left alone.
       if (key === "/" && bare) {
+        if (isEmbedded()) {
+          if (!pathMatches(locationRef.current.pathname, "/report/quotes")) return;
+          e.preventDefault();
+          postProjectAction("focus-search");
+          return;
+        }
         e.preventDefault();
         focusSearchInput();
         return;

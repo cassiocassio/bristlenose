@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screens — shot size playground</title>
+<!--
+  SCREENS LENS — HOW BIG SHOULD THE SCREENGRAB BE?  (15 Oct 2026)
+
+  The owner, on a 16" MacBook: past a point a bigger screengrab buys nothing and pushes every quote
+  off the screen. This playground fakes a whole window at real CSS pixels (scaled down to fit), with
+  real-font quote cards, so card heights are what the app's 340px cards would actually wrap to.
+
+  Everything is synthetic: a made-up shop page drawn at the capture's own pixel size and scaled the
+  way the lens scales a screengrab, and made-up quotes of controllable length.
+
+  Numbers lifted from the lens (frontend/src/islands/screens/layout.ts): CARD_W 340, COLUMN_W 364
+  (card + widest stagger), COLUMN_GUTTER 32, MIN_SHOT_W 480, the stage thresholds that follow from
+  them, BAND_X / BAND_Y for which edge a card annotates, NAV_W 280. Window geometry measured from
+  the owner's 16" screenshot: window 1728×1085, toolbar 52, page top to screengrab 123.
+
+  The column placement and the bands are a simplified copy of composeBoard (no stagger, no
+  hysteresis): good enough to judge sizes, not a spec for placement.
+-->
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#ffffff, #111111);
+  --text: light-dark(#1a1a1a, #e5e7eb);
+  --muted: light-dark(#6b7280, #9ca3af);
+  --border: light-dark(#e5e7eb, #2d2d2d);
+  --accent: light-dark(#007aff, #0a84ff);
+  --inspector: light-dark(#f9f9fa, #1c1c1e);
+  --quote-bg: light-dark(#f9fafb, #1a1a1a);
+  --chrome: light-dark(#ececec, #2a2a2c);
+  --panel: light-dark(#f4f4f5, #18181b);
+  --font: -apple-system, "SF Pro Text", "SF Pro", system-ui, "Inter", "Segoe UI", sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--panel); color: var(--text); font: 13px/1.45 var(--font); display: grid; grid-template-columns: 320px 1fr; }
+
+/* ── controls ───────────────────────────────────────────── */
+#controls { overflow-y: auto; padding: 14px 16px 40px; border-right: 1px solid var(--border); background: var(--bg); }
+#controls h1 { font-size: 15px; margin: 0 0 2px; font-weight: 600; }
+#controls .sub { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+fieldset { border: 0; border-top: 1px solid var(--border); margin: 0; padding: 10px 0 8px; }
+legend { font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 0 4px 0 0; }
+.row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 8px; margin: 5px 0; }
+.row label { display: flex; gap: 6px; align-items: center; }
+.row input[type=range] { grid-column: 1 / -1; width: 100%; margin: 0; }
+.row output { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+.row select { max-width: 170px; font: inherit; }
+.hint { color: var(--muted); font-size: 11.5px; margin: 2px 0 6px; }
+.btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+button { font: inherit; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; }
+button:hover { border-color: var(--accent); }
+textarea { width: 100%; height: 90px; font: 11px/1.4 var(--mono); margin-top: 6px; display: none; }
+
+/* ── right side ─────────────────────────────────────────── */
+#right { overflow: auto; padding: 14px 18px 40px; min-width: 0; }
+#readout { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 14px; margin-bottom: 10px; font-size: 12px; }
+#readout div b { display: block; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#readout div span { color: var(--muted); }
+#readout .warn b { color: #d97706; }
+#readout .bad b { color: #dc2626; }
+#readout .good b { color: #16a34a; }
+#boxes { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+#boxes table { border-collapse: collapse; }
+#boxes td, #boxes th { padding: 1px 10px 1px 0; text-align: left; font-variant-numeric: tabular-nums; }
+#boxes th { font-weight: 600; }
+#boxes tr.cur td { color: var(--text); font-weight: 600; }
+#host { position: relative; }
+#frame { transform-origin: 0 0; position: absolute; left: 0; top: 0; }
+@media (max-width: 1000px) {
+  html, body { height: auto; }
+  body { display: block; }
+  #controls { border-right: 0; border-bottom: 1px solid var(--border); }
+  #right { overflow: visible; }
+}
+
+/* ── the fake window ────────────────────────────────────── */
+.win { position: relative; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.15); font-family: var(--font); }
+.toolbar { position: absolute; left: 0; right: 0; top: 0; background: var(--chrome); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; padding: 0 16px; }
+.toolbar .tl { display: flex; gap: 8px; } .toolbar .tl i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; display: block; }
+.toolbar .tl i:nth-child(2) { background: #febc2e; } .toolbar .tl i:nth-child(3) { background: #28c840; }
+.toolbar .tt { font-size: 13px; font-weight: 600; line-height: 1.2; } .toolbar .tt small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
+.sb { position: absolute; left: 0; background: var(--inspector); border-right: 1px solid var(--border); padding: 12px; }
+.sb div { height: 22px; border-radius: 5px; margin: 0 0 6px; background: light-dark(#e9e9eb, #2a2a2d); }
+.sb div:nth-child(3) { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.web { position: absolute; overflow: hidden; }
+.nav { position: absolute; left: 0; top: 0; bottom: 0; background: var(--inspector); border-right: 1px solid var(--border); padding: 10px 8px; overflow: hidden; }
+.nav .ni { display: grid; grid-template-columns: 104px 1fr; gap: 10px; margin: 0 0 10px; align-items: start; }
+.nav .ni i { display: block; height: 62px; border-radius: 3px; background: light-dark(#d9dbe0, #34363b); }
+.nav .ni span { height: 10px; border-radius: 3px; background: light-dark(#c7c9ce, #44464b); display: block; margin-top: 4px; }
+.nav .ni span + span { width: 60%; }
+.nav .ni.on { outline: 1.5px solid var(--accent); border-radius: 6px; background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.lens { position: absolute; top: 0; }
+.h2 { position: absolute; font-size: 22px; font-weight: 650; line-height: 1.25; white-space: nowrap; }
+.keyline { position: absolute; height: 1px; background: var(--border); }
+.info { position: absolute; display: flex; gap: 12px; align-items: baseline; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.info code { font: 490 12px var(--mono); color: var(--muted); }
+.ver { position: absolute; display: flex; gap: 6px; align-items: center; font-size: 12px; }
+.ver .tc { font: 12px var(--mono); color: var(--accent); }
+.ver .pb { font: 11.5px var(--mono); padding: 1px 6px; border-radius: 4px; background: light-dark(#eef0f3, #26282c); }
+.ver .pb.here { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.shot { position: absolute; overflow: hidden; border-radius: 4px; box-shadow: 0 0 0 1px var(--border); background: #fff; }
+.shot .page { transform-origin: 0 0; position: absolute; left: 0; top: 0; }
+.dot { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px #fff; }
+svg.leaders { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+svg.leaders path { stroke: var(--accent); stroke-width: 1.25; fill: none; opacity: .55; }
+
+/* the quote card: the Quotes lens's card at CARD_W, desktop body 15/1.4 */
+.card { position: absolute; width: 340px; display: grid; grid-template-columns: auto 1fr auto; gap: 0 8px; align-items: start;
+  padding: 12px 16px; background: var(--quote-bg); border-left: 1px solid var(--border); border-radius: 0 6px 6px 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.05); }
+.card .tc { font: 12px/21px var(--mono); color: var(--accent); }
+.card p { margin: 0; font: 15px/1.4 var(--font); color: var(--text); }
+.card .st { color: light-dark(#c7c9ce, #55575c); font-size: 13px; line-height: 21px; }
+.card.loose { box-shadow: none; }
+#measure { position: absolute; left: -9999px; top: 0; visibility: hidden; }
+#measure .card { position: static; }
+
+.fold { position: absolute; left: 0; right: 0; border-top: 2px dashed #dc2626; pointer-events: none; z-index: 5; }
+.fold span { position: absolute; right: 8px; top: -18px; font: 600 11px var(--font); color: #dc2626; background: var(--bg); padding: 0 4px; }
+.below { position: absolute; left: 0; right: 0; bottom: 0; background: light-dark(rgba(244,244,245,.72), rgba(10,10,10,.6)); pointer-events: none; z-index: 4; }
+.boxguide { position: absolute; border: 1.5px dashed #a855f7; pointer-events: none; z-index: 3; }
+.boxguide span { position: absolute; left: 4px; top: 2px; font: 600 11px var(--font); color: #a855f7; }
+</style>
+</head>
+<body>
+<aside id="controls">
+  <h1>Screens: shot size</h1>
+  <p class="sub">How big the screengrab gets, and whether the quotes still show. Synthetic content. Settings persist in this browser.</p>
+
+  <fieldset><legend>Window</legend>
+    <div class="row"><label>Preset</label><select id="winPreset"></select></div>
+    <div class="row"><label>Width</label><output id="winWo"></output><input type="range" id="winW" min="700" max="2600" step="2"></div>
+    <div class="row"><label>Height</label><output id="winHo"></output><input type="range" id="winH" min="560" max="1500" step="2"></div>
+    <div class="row"><label><input type="checkbox" id="showSb"> Project sidebar</label><output id="sbWo"></output><input type="range" id="sbW" min="180" max="320" step="2"></div>
+    <div class="row"><label><input type="checkbox" id="showNav"> Screens navigator</label><output id="navWo"></output><input type="range" id="navW" min="160" max="420" step="2"></div>
+    <div class="row"><label>Zoom</label><select id="zoom"><option value="fit">Fit</option><option value="1">100%</option><option value="0.5">50%</option></select></div>
+  </fieldset>
+
+  <fieldset><legend>Screengrab</legend>
+    <div class="row"><label>Capture</label><select id="capPreset"></select></div>
+    <div class="row"><label>Capture width</label><output id="capWo"></output><input type="range" id="capW" min="600" max="3840" step="2"></div>
+    <div class="row"><label>Capture height</label><output id="capHo"></output><input type="range" id="capH" min="600" max="2600" step="2"></div>
+    <div class="row"><label>Align when capped</label><select id="align"><option value="start">Left</option><option value="center">Centre</option></select></div>
+  </fieldset>
+
+  <fieldset><legend>Quotes</legend>
+    <div class="row"><label>Linked to an element</label><output id="nPinO"></output><input type="range" id="nPin" min="0" max="16" step="1"></div>
+    <div class="row"><label>Not linked</label><output id="nLooseO"></output><input type="range" id="nLoose" min="0" max="24" step="1"></div>
+    <div class="row"><label>Length</label><select id="dist">
+      <option value="terse">Terse (6–18 words)</option>
+      <option value="typical">Typical (15–50)</option>
+      <option value="chatty">Chatty (40–140)</option>
+      <option value="mixed">Mixed (median 30)</option>
+    </select></div>
+    <div class="btns"><button id="shuffle">Shuffle quotes and links</button></div>
+  </fieldset>
+
+  <fieldset><legend>Size rules</legend>
+    <p class="hint">The shot takes the stage width left by the margin columns, then each rule that is on can only make it smaller. The floor then wins.</p>
+    <div class="row"><label><input type="checkbox" id="useReserve"> Keep a peek of the quotes</label><output id="linesO"></output><input type="range" id="lines" min="0" max="10" step="1"></div>
+    <div class="row"><label><input type="checkbox" id="reserveOnlyUnder"> …only when quotes sit under it</label></div>
+    <div class="row"><label><input type="checkbox" id="usePct"> Height ≤ % of the view</label><output id="pctO"></output><input type="range" id="pct" min="25" max="95" step="1"></div>
+    <div class="row"><label><input type="checkbox" id="useMaxW"> Width ≤</label><output id="maxWo"></output><input type="range" id="maxW" min="400" max="2200" step="10"></div>
+    <div class="row"><label>Never enlarge past</label><select id="native">
+      <option value="off">Off</option>
+      <option value="css">1 CSS px per captured px</option>
+      <option value="device">1 screen px per captured px</option>
+    </select></div>
+    <div class="row"><label>Screen density</label><select id="dpr"><option value="2">Retina (2×)</option><option value="1">1×</option></select></div>
+    <div class="row"><label>Floor (MIN_SHOT_W)</label><output id="minShotO"></output><input type="range" id="minShot" min="320" max="900" step="10"></div>
+  </fieldset>
+
+  <fieldset><legend>Where cards go</legend>
+    <div class="row"><label>Unlinked quotes</label><select id="loosePlace"><option value="under">Under the shot (now)</option><option value="beside">Beside it when there is room</option></select></div>
+    <div class="row"><label><input type="checkbox" id="masonry"> Masonry for the list</label></div>
+    <div class="row"><label><input type="checkbox" id="showGuide"> Show the size box</label></div>
+    <div class="row"><label>Page top to shot</label><output id="headerHo"></output><input type="range" id="headerH" min="80" max="200" step="1"></div>
+  </fieldset>
+
+  <div class="btns"><button id="reset">Reset</button><button id="copy">Copy settings</button></div>
+  <textarea id="out" readonly></textarea>
+</aside>
+
+<main id="right">
+  <div id="readout"></div>
+  <div id="boxes"></div>
+  <div id="host"><div id="frame"></div></div>
+</main>
+<div id="measure"></div>
+
+<script>
+"use strict";
+// ── constants from the lens ────────────────────────────────
+const CARD_W = 340, MAX_STAGGER = 24, COLUMN_W = CARD_W + MAX_STAGGER, GUT = 32, GAP = 12;
+const BAND_X = 0.2, BAND_Y = 0.15;
+const TOOLBAR = 52, PAD_L = 32, PAD_R = 56, LINE = 21, CARD_PAD = 12, UNDER_GAP = 16;
+
+const WINDOWS = [
+  ["13\" MacBook Air (1470×956)", 1470, 920],
+  ["14\" MacBook Pro (1512×982)", 1512, 945],
+  ["16\" MacBook Pro (1728×1117)", 1728, 1085],
+  ["16\" More Space (2056×1329)", 2056, 1295],
+  ["24\" iMac (2240×1260)", 2240, 1225],
+  ["1920×1080 display", 1920, 1045],
+  ["27\" 1440p / Studio Display", 2560, 1405],
+  ["Half of a 16\"", 864, 1085],
+  ["Small window", 1100, 760],
+];
+const CAPTURES = [
+  ["1920×1080 (16:9)", 1920, 1080],
+  ["1440×900 (16:10)", 1440, 900],
+  ["2880×1800 (Retina share)", 2880, 1800],
+  ["2560×1440", 2560, 1440],
+  ["1366×768", 1366, 768],
+  ["1280×720", 1280, 720],
+  ["3440×1440 (ultrawide)", 3440, 1440],
+  ["2048×1536 (iPad, 4:3)", 2048, 1536],
+  ["1170×2532 (phone, portrait)", 1170, 2532],
+];
+const DEFAULTS = {
+  winW: 1728, winH: 1085, showSb: false, sbW: 220, showNav: true, navW: 280, zoom: "fit",
+  capW: 1920, capH: 1080, align: "start",
+  nPin: 0, nLoose: 2, dist: "typical", seed: 7,
+  useReserve: false, lines: 4, reserveOnlyUnder: true, usePct: false, pct: 60, useMaxW: false, maxW: 1100,
+  native: "off", dpr: "2", minShot: 480,
+  loosePlace: "under", masonry: true, showGuide: true, headerH: 123,
+};
+let S = load();
+
+function load() {
+  try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem("bn-screens-shot-playground") || "{}") }; }
+  catch { return { ...DEFAULTS }; }
+}
+function save() { try { localStorage.setItem("bn-screens-shot-playground", JSON.stringify(S)); } catch {} }
+
+// ── seeded quotes ──────────────────────────────────────────
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const WORDS = ("so I would probably go to the search first because I know what I want and then I just "
+  + "look at the price and the delivery and whether it says in stock near me I am not sure what this "
+  + "button does is it adding it or saving it for later that is quite confusing to be honest I think "
+  + "I expected the basket to show the total with delivery here but it does not so I would have to go "
+  + "back and check again which is annoying when you are in a hurry um yeah maybe I would just call "
+  + "them instead it looks nice but there is a lot going on and I do not know where to click next "
+  + "okay right so that is the collection option I suppose that makes sense if you live close").split(" ");
+function quoteText(r, n) {
+  const start = Math.floor(r() * (WORDS.length - 1)); const out = [];
+  for (let i = 0; i < n; i++) out.push(WORDS[(start + i) % WORDS.length]);
+  let s = out.join(" "); s = s[0].toUpperCase() + s.slice(1);
+  return "“" + s + ".”";
+}
+function wordCount(r, dist) {
+  if (dist === "terse") return 6 + Math.floor(r() * 13);
+  if (dist === "typical") return 15 + Math.floor(r() * 36);
+  if (dist === "chatty") return 40 + Math.floor(r() * 101);
+  const z = Math.sqrt(-2 * Math.log(r() || 1e-9)) * Math.cos(2 * Math.PI * r());
+  return Math.max(5, Math.min(200, Math.round(Math.exp(Math.log(30) + 0.7 * z))));
+}
+function tc(r) { const s = Math.floor(r() * 3600); return `[${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}]`; }
+function makeQuotes() {
+  const r = rng(S.seed * 9973 + 1);
+  const pins = [], loose = [];
+  for (let i = 0; i < S.nPin; i++) {
+    const w = 0.08 + r() * 0.25, h = 0.04 + r() * 0.12;
+    pins.push({ id: "p" + i, tc: tc(r), text: quoteText(r, wordCount(r, S.dist)), box: { x: r() * (1 - w), y: r() * (1 - h), w, h } });
+  }
+  for (let i = 0; i < S.nLoose; i++) loose.push({ id: "l" + i, tc: tc(r), text: quoteText(r, wordCount(r, S.dist)) });
+  return { pins, loose };
+}
+
+// real card heights, measured at the real font
+const heightCache = new Map();
+function cardHTML(q, cls = "") { return `<div class="card ${cls}"><span class="tc">${q.tc}</span><p>${q.text}</p><span class="st">★</span></div>`; }
+function measure(qs) {
+  const m = document.getElementById("measure"); const todo = qs.filter((q) => !heightCache.has(q.text));
+  if (!todo.length) return;
+  m.innerHTML = todo.map((q) => cardHTML(q)).join("");
+  [...m.children].forEach((el, i) => heightCache.set(todo[i].text, el.offsetHeight));
+  m.innerHTML = "";
+}
+const hOf = (q) => heightCache.get(q.text) || 80;
+
+// ── the layout ─────────────────────────────────────────────
+function edgeFor(box, mode) {
+  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+  if (mode === "rows") return cy < 0.5 ? "T" : "B";
+  if (cx >= BAND_X && cx <= 1 - BAND_X) { if (cy < BAND_Y) return "T"; if (cy > 1 - BAND_Y) return "B"; }
+  return mode === "lr" && cx < 0.5 ? "L" : "R";
+}
+
+function geometry() {
+  const webW = S.winW - (S.showSb ? S.sbW : 0), webH = S.winH - TOOLBAR;
+  const lensX = S.showNav ? S.navW : 0;
+  const stageW = webW - lensX - PAD_L - PAD_R;
+  return { webW, webH, lensX, stageW, x0: lensX + PAD_L, y0: S.headerH };
+}
+
+function shotWidth(availW, aspect, yShot, webH, withReserve, capW) {
+  let W = availW; const why = ["stage"];
+  const cap = (w, label) => { if (w < W) { W = w; why.push(label); } };
+  if (withReserve) cap((webH - yShot - UNDER_GAP - (CARD_PAD + S.lines * LINE)) * aspect, "peek");
+  if (S.usePct) cap((S.pct / 100) * webH * aspect, "% of view");
+  if (S.useMaxW) cap(S.maxW, "max width");
+  if (S.native === "css") cap(capW, "native");
+  if (S.native === "device") cap(capW / Number(S.dpr), "native");
+  const floor = Math.min(S.minShot, availW);
+  if (W < floor) { W = floor; why.push("floor"); }
+  return { W: Math.round(W), why: why[why.length - 1] };
+}
+
+function rowsOf(cards, x, y, width) {
+  // left to right, wrapping, each row as tall as its tallest card
+  const at = {}; let cx = x, cy = y, rowH = 0;
+  for (const q of cards) {
+    if (cx > x && cx + CARD_W > x + width) { cx = x; cy += rowH + GAP; rowH = 0; }
+    at[q.id] = { left: cx, top: cy }; rowH = Math.max(rowH, hOf(q)); cx += CARD_W + GAP;
+  }
+  return { at, bottom: cards.length ? cy + rowH : y };
+}
+function lanesOf(cards, x, y, width, masonry) {
+  const n = Math.max(1, Math.floor((width + GAP) / (CARD_W + GAP)));
+  if (!masonry) return rowsOf(cards, x, y, n * (CARD_W + GAP) - GAP);
+  const tops = Array(n).fill(y); const at = {};
+  for (const q of cards) { let k = 0; for (let i = 1; i < n; i++) if (tops[i] < tops[k] - 0.5) k = i;
+    at[q.id] = { left: x + k * (CARD_W + GAP), top: tops[k] }; tops[k] += hOf(q) + GAP; }
+  return { at, bottom: cards.length ? Math.max(...tops) - GAP : y };
+}
+
+function layout(Q, cap, withReserve) {
+  const g = geometry(); const aspect = cap.w / cap.h;
+  const WIDE = S.minShot + 2 * (COLUMN_W + GUT), ONE = S.minShot + COLUMN_W + GUT;
+  const mode = g.stageW >= WIDE ? "lr" : g.stageW >= ONE ? "r" : "rows";
+  const edges = Object.fromEntries(Q.pins.map((p) => [p.id, edgeFor(p.box, mode)]));
+  const by = (e) => Q.pins.filter((p) => edges[p.id] === e).sort((a, b) => a.box.y - b.box.y || a.box.x - b.box.x);
+  const L = by("L"), R = by("R"), T = by("T"), B = by("B");
+  const availW = g.stageW - (L.length ? COLUMN_W + GUT : 0) - (R.length ? COLUMN_W + GUT : 0);
+  const at = {};
+  // band above
+  const tb = rowsOf(T, g.x0, g.y0, g.stageW); Object.assign(at, tb.at);
+  const yShot = T.length ? tb.bottom + GUT : g.y0;
+  const { W, why } = shotWidth(availW, aspect, yShot, g.webH, withReserve, cap.w);
+  const H = Math.round(W / aspect);
+  let xShot = g.x0 + (L.length ? COLUMN_W + GUT : 0);
+  if (S.align === "center") xShot += Math.round((availW - W) / 2);
+  // columns
+  const column = (cards, x) => { let floor = yShot; let bottom = yShot;
+    for (const q of cards) { const want = yShot + q.box.y * H - 18; const top = Math.max(want, floor);
+      at[q.id] = { left: x, top }; floor = top + hOf(q) + GAP; bottom = top + hOf(q); }
+    return cards.length ? bottom : yShot; };
+  const lBottom = column(L, xShot - GUT - CARD_W);
+  const rX = xShot + W + GUT; const rBottom = column(R, rX);
+  // unlinked beside
+  let looseUnder = Q.loose, besideBottom = yShot;
+  const rightEdge = R.length ? rX + COLUMN_W : xShot + W;
+  const room = g.x0 + g.stageW - (rightEdge + GUT);
+  if (S.loosePlace === "beside" && Q.loose.length && room >= CARD_W) {
+    const lb = lanesOf(Q.loose, rightEdge + GUT, yShot, room, S.masonry); Object.assign(at, lb.at);
+    looseUnder = []; besideBottom = lb.bottom;
+  }
+  // band below, then the list
+  const bb = rowsOf(B, g.x0, yShot + H + UNDER_GAP, g.stageW); Object.assign(at, bb.at);
+  const yList = Math.max(yShot + H, lBottom, rBottom, B.length ? bb.bottom : 0, besideBottom) + UNDER_GAP;
+  const lu = lanesOf(looseUnder, g.x0, yList, g.stageW, S.masonry); Object.assign(at, lu.at);
+  const under = B.length > 0 || looseUnder.length > 0;
+  const bottom = Math.max(lu.bottom, yShot + H, lBottom, rBottom, besideBottom, bb.bottom);
+  return { g, mode, edges, W, H, xShot, yShot, at, under, why, bottom, availW, aspect };
+}
+
+function solve(Q, cap) {
+  if (!S.useReserve) return layout(Q, cap, false);
+  if (S.reserveOnlyUnder) { const free = layout(Q, cap, false); if (!free.under) return free; }
+  return layout(Q, cap, true);
+}
+
+// ── the fake screengrab, drawn at capture size ─────────────
+function fakePage(cw, ch) {
+  const portrait = ch > cw; const u = portrait ? cw / 390 : cw / 1440; // css px per design unit
+  const tiles = portrait ? 6 : 8, cols = portrait ? 2 : 4;
+  const tile = (i) => `<div style="background:hsl(${(i * 47) % 360} 25% 86%);border-radius:${6 * u}px;display:flex;align-items:end;padding:${10 * u}px;font:${13 * u}px system-ui;color:#333">Item ${i + 1} · £${(i * 7) % 40 + 5}</div>`;
+  return `<div class="page" style="width:${cw}px;height:${ch}px;background:#fff;font-family:system-ui;color:#222">
+    <div style="height:${36 * u}px;background:#1f2937;color:#e5e7eb;font:${13 * u}px system-ui;display:flex;align-items:center;padding:0 ${20 * u}px;gap:${24 * u}px"><span>Free delivery over £50</span><span style="margin-left:auto">Find a store</span></div>
+    <div style="height:${70 * u}px;display:flex;align-items:center;gap:${22 * u}px;padding:0 ${24 * u}px;border-bottom:1px solid #eee;font:${15 * u}px system-ui">
+      <b style="font:800 ${22 * u}px system-ui;background:#2563eb;color:#fde047;padding:${4 * u}px ${10 * u}px;border-radius:${4 * u}px">HOMESHOP</b>
+      ${portrait ? "" : "<span>Products</span><span>Rooms</span><span>Offers</span><span>Ideas</span>"}
+      <span style="margin-left:auto;background:#f3f4f6;border-radius:${20 * u}px;padding:${8 * u}px ${16 * u}px;color:#6b7280;width:${portrait ? 150 * u : 360 * u}px">What are you looking for?</span></div>
+    <div style="padding:${18 * u}px ${24 * u}px;font:${12 * u}px system-ui;color:#6b7280">Products › Kitchen › Teapots</div>
+    <div style="margin:0 ${24 * u}px;height:${(portrait ? 260 : 330) * u}px;border-radius:${8 * u}px;background:linear-gradient(120deg,#d1d5db,#e5e7eb 60%,#cbd5e1);display:flex;align-items:end;padding:${24 * u}px;font:700 ${30 * u}px system-ui;color:#1f2937">Make room for the new season</div>
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:${14 * u}px;padding:${20 * u}px ${24 * u}px;height:${(portrait ? 900 : 420) * u}px">${Array.from({ length: tiles }, (_, i) => tile(i)).join("")}</div>
+  </div>`;
+}
+
+// ── draw ───────────────────────────────────────────────────
+let Q = makeQuotes();
+function draw() {
+  measure([...Q.pins, ...Q.loose]);
+  const cap = { w: S.capW, h: S.capH };
+  const lay = solve(Q, cap); const g = lay.g;
+  const pageH = Math.max(g.webH, lay.bottom + 40);
+  const winH = TOOLBAR + pageH;
+
+  const sb = S.showSb ? `<div class="sb" style="top:${TOOLBAR}px;width:${S.sbW}px;height:${pageH}px">${"<div></div>".repeat(8)}</div>` : "";
+  const nav = S.showNav ? `<div class="nav" style="width:${S.navW}px;height:${g.webH}px">${Array.from({ length: 14 }, (_, i) => `<div class="ni${i === 3 ? " on" : ""}"><i></i><div><span></span><span></span></div></div>`).join("")}</div>` : "";
+  const xR = g.x0 + g.stageW;
+  const head = `<div class="h2" style="left:${g.x0}px;top:28px">Delivery or collect</div>
+    <div class="ver" style="right:${g.webW - xR}px;top:36px"><span class="tc">[12:40]</span><span class="pb here">p1</span><span class="pb">p3</span></div>
+    <div class="keyline" style="left:${g.x0}px;width:${g.stageW}px;top:${74}px"></div>
+    <div class="info" style="left:${g.x0}px;top:${84}px"><code>/order/delivery</code></div>`;
+  const scale = lay.W / cap.w;
+  const shot = `<div class="shot" style="left:${lay.xShot}px;top:${lay.yShot}px;width:${lay.W}px;height:${lay.H}px">${fakePage(cap.w, cap.h).replace('class="page"', `class="page" style="transform:scale(${scale})"`)}</div>`;
+  const guide = S.showGuide ? `<div class="boxguide" style="left:${g.x0 + (lay.availW < g.stageW && Q.pins.some((p) => lay.edges[p.id] === "L") ? COLUMN_W + GUT : 0)}px;top:${lay.yShot}px;width:${lay.availW}px;height:${Math.round(lay.availW / lay.aspect)}px"><span>stage width at this shape</span></div>` : "";
+  let cards = "", dots = "", paths = "";
+  for (const p of Q.pins) {
+    const a = lay.at[p.id]; if (!a) continue; const e = lay.edges[p.id];
+    cards += cardHTML(p).replace('class="card "', `class="card" style="left:${a.left}px;top:${a.top}px"`);
+    const ax = lay.xShot + (p.box.x + p.box.w / 2) * lay.W, ay = lay.yShot + (p.box.y + p.box.h / 2) * lay.H;
+    dots += `<div class="dot" style="left:${ax}px;top:${ay}px"></div>`;
+    const sx = e === "R" ? a.left : e === "L" ? a.left + CARD_W : a.left + CARD_W / 2;
+    const sy = e === "T" ? a.top + hOf(p) : e === "B" ? a.top : a.top + 20;
+    paths += `<path d="M${sx},${sy} L${ax},${ay}"/>`;
+  }
+  for (const q of Q.loose) { const a = lay.at[q.id]; if (a) cards += cardHTML(q, "loose").replace('class="card loose"', `class="card loose" style="left:${a.left}px;top:${a.top}px"`); }
+
+  const web = `<div class="web" style="left:${S.showSb ? S.sbW : 0}px;top:${TOOLBAR}px;width:${g.webW}px;height:${pageH}px">
+    ${nav}${head}${guide}${shot}
+    <svg class="leaders" width="${g.webW}" height="${pageH}">${paths}</svg>${dots}${cards}
+    <div class="fold" style="top:${g.webH}px"><span>bottom of the window</span></div>
+    <div class="below" style="top:${g.webH + 2}px"></div></div>`;
+  const frame = document.getElementById("frame");
+  frame.innerHTML = `<div class="win" style="width:${S.winW}px;height:${winH}px">
+    <div class="toolbar" style="height:${TOOLBAR}px"><div class="tl"><i></i><i></i><i></i></div><div class="tt">Study<small>3 Sessions · 1h 31m</small></div></div>
+    ${sb}${web}</div>`;
+  const host = document.getElementById("host");
+  const z = S.zoom === "fit" ? Math.min(1, (host.clientWidth - 4) / S.winW) : Number(S.zoom);
+  frame.style.transform = `scale(${z})`; host.style.height = `${winH * z + 8}px`;
+
+  readout(lay, cap);
+  boxes(lay);
+}
+
+function readout(lay, cap) {
+  const g = lay.g; const cells = [];
+  const put = (label, value, cls = "") => cells.push(`<div class="${cls}"><b>${value}</b><span>${label}</span></div>`);
+  put("window · view", `${S.winW}×${S.winH} · ${g.webW}×${g.webH}`);
+  put("stage width · layout", `${g.stageW} · ${{ lr: "two columns", r: "one column", rows: "rows" }[lay.mode]}`);
+  const pctH = Math.round((lay.H / g.webH) * 100);
+  put(`shot (set by ${lay.why})`, `${lay.W}×${lay.H}`);
+  put("shot height, of the view", `${pctH}%`, pctH > 75 ? "bad" : pctH > 62 ? "warn" : "good");
+  const css = lay.W / cap.w, dev = css * Number(S.dpr);
+  put("screen px per captured px", `${dev.toFixed(2)}×`, dev > 1.25 ? "warn" : "");
+  const all = [...Q.pins, ...Q.loose].map((q) => ({ q, a: lay.at[q.id] })).filter((x) => x.a);
+  const visible = all.filter((x) => x.a.top + CARD_PAD + 2 * LINE <= g.webH).length;
+  const whole = all.filter((x) => x.a.top + hOf(x.q) <= g.webH).length;
+  put("cards showing 2+ lines · whole", `${visible} · ${whole} of ${all.length}`, all.length && visible === 0 ? "bad" : visible < Math.min(2, all.length) ? "warn" : "good");
+  const under = all.filter((x) => x.a.top >= lay.yShot + lay.H).sort((a, b) => a.a.top - b.a.top)[0];
+  if (under) { const px = g.webH - under.a.top; const lines = Math.max(0, Math.floor((px - CARD_PAD) / LINE));
+    put("first card under the shot", px <= 0 ? `${-px}px below` : `${Math.min(lines, 99)} lines in view`, px <= CARD_PAD ? "bad" : lines < 2 ? "warn" : "good"); }
+  else put("first card under the shot", "none under it");
+  document.getElementById("readout").innerHTML = cells.join("");
+}
+
+function boxes(lay) {
+  // the same rules across every capture shape, in this window: is the box consistent?
+  const rows = CAPTURES.map(([name, w, h]) => { const l = solve(Q, { w, h });
+    const cur = w === S.capW && h === S.capH ? "cur" : "";
+    return `<tr class="${cur}"><td>${name}</td><td>${l.W}×${l.H}</td><td>${Math.round((l.H / l.g.webH) * 100)}%</td><td>${l.why}</td></tr>`; }).join("");
+  document.getElementById("boxes").innerHTML = `<details open><summary>Every capture shape in this window, same rules</summary><table><tr><th>Capture</th><th>Shot</th><th>Of view</th><th>Set by</th></tr>${rows}</table></details>`;
+}
+
+// ── controls ───────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+function fillPresets() {
+  $("winPreset").innerHTML = `<option value="">Custom</option>` + WINDOWS.map((w, i) => `<option value="${i}">${w[0]}</option>`).join("");
+  $("capPreset").innerHTML = `<option value="">Custom</option>` + CAPTURES.map((c, i) => `<option value="${i}">${c[0]}</option>`).join("");
+}
+const NUM = ["winW", "winH", "sbW", "navW", "capW", "capH", "nPin", "nLoose", "lines", "pct", "maxW", "minShot", "headerH"];
+const BOOL = ["showSb", "showNav", "useReserve", "reserveOnlyUnder", "usePct", "useMaxW", "masonry", "showGuide"];
+const SEL = ["zoom", "align", "dist", "native", "dpr", "loosePlace"];
+function syncUI() {
+  for (const k of NUM) { $(k).value = S[k]; const o = $(k + "O") || $(k + "o"); if (o) o.textContent = k === "pct" ? S[k] + "%" : k === "lines" ? S[k] + " lines" : S[k]; }
+  for (const k of BOOL) $(k).checked = !!S[k];
+  for (const k of SEL) $(k).value = S[k];
+  const wi = WINDOWS.findIndex((w) => w[1] === S.winW && w[2] === S.winH); $("winPreset").value = wi < 0 ? "" : wi;
+  const ci = CAPTURES.findIndex((c) => c[1] === S.capW && c[2] === S.capH); $("capPreset").value = ci < 0 ? "" : ci;
+}
+function wire() {
+  const regen = new Set(["nPin", "nLoose", "dist"]);
+  for (const k of NUM) $(k).addEventListener("input", () => { S[k] = Number($(k).value); if (regen.has(k)) Q = makeQuotes(); commit(); });
+  for (const k of BOOL) $(k).addEventListener("change", () => { S[k] = $(k).checked; commit(); });
+  for (const k of SEL) $(k).addEventListener("change", () => { S[k] = $(k).value; if (regen.has(k)) Q = makeQuotes(); commit(); });
+  $("winPreset").addEventListener("change", () => { const w = WINDOWS[$("winPreset").value]; if (w) { S.winW = w[1]; S.winH = w[2]; } commit(); });
+  $("capPreset").addEventListener("change", () => { const c = CAPTURES[$("capPreset").value]; if (c) { S.capW = c[1]; S.capH = c[2]; } commit(); });
+  $("shuffle").addEventListener("click", () => { S.seed = Math.floor(Math.random() * 1e6); Q = makeQuotes(); commit(); });
+  $("reset").addEventListener("click", () => { S = { ...DEFAULTS }; Q = makeQuotes(); commit(); });
+  $("copy").addEventListener("click", () => { const t = JSON.stringify(S, null, 1); const o = $("out"); o.style.display = "block"; o.value = t; o.select();
+    try { navigator.clipboard.writeText(t); } catch {} });
+  window.addEventListener("resize", draw);
+}
+function commit() { save(); syncUI(); draw(); }
+
+fillPresets(); syncUI(); wire();
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(draw);
+draw();
+</script>
+</body>
+</html>

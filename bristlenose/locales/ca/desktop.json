@@ -329,6 +329,7 @@
       "unknown": "Execuci\u00f3 fallida"
     },
     "failure": {
+      "cliExited": "La CLI ha acabat amb el codi {{code}}",
       "stranded": "L'an\u00e0lisi s'ha aturat inesperadament.",
       "launchFailed": "No s'ha pogut iniciar l'an\u00e0lisi. {{reason}}",
       "auth": "La teva clau de {{provider}} ha estat rebutjada.",

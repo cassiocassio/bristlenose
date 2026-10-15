@@ -329,6 +329,7 @@
       "unknown": "Mislukt"
     },
     "failure": {
+      "cliExited": "CLI afgesloten met code {{code}}",
       "stranded": "De analyse is onverwacht gestopt.",
       "launchFailed": "Kan de analyse niet starten. {{reason}}",
       "auth": "Je {{provider}}-sleutel is geweigerd.",

@@ -294,6 +294,33 @@ struct EventLogReaderTests {
         #expect(category == expected)
     }
 
+    /// The CLI-exit cause carries an English record and an exit code. The
+    /// popover must say it in the app's language, from the code — not pass the
+    /// English record through (the record is English by decision since the
+    /// preflight namespace went English-only, 14 Oct 2026).
+    @Test func deriveStateCliExitIsKeyedFromTheExitCode() {
+        let dir = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        writeEventLog(in: dir, lines: [
+            runStartedLine(),
+            """
+            {"schema_version":1,"ts":"2026-04-25T09:05:00Z","event":"run_failed","run_id":"01H","kind":"run","started_at":"2026-04-25T09:00:00Z","ended_at":"2026-04-25T09:05:00Z","outcome":"failed","cause":{"category":"unknown","message":"CLI exited with code 2","exit_code":2}}
+            """,
+        ])
+        let result = EventLogReader.deriveState(
+            eventsURL: dir.appendingPathComponent(EventLogReader.filename),
+            pidURL: dir.appendingPathComponent(EventLogReader.pidFilename),
+            stagesComplete: [],
+        )
+        guard case .failed(let summary, let category) = result else {
+            Issue.record("expected .failed, got \(String(describing: result))")
+            return
+        }
+        #expect(summary == .keyed("desktop.pipeline.failure.cliExited", vars: ["code": "2"]))
+        #expect(summary.english == "CLI exited with code 2")
+        #expect(category == .unknown)
+    }
+
     @Test func deriveStateStrandedRunStartedMapsToFailedUnknown() {
         let dir = makeTempDir()
         defer { try? FileManager.default.removeItem(at: dir) }

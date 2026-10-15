@@ -329,6 +329,7 @@
       "unknown": "Ba\u015far\u0131s\u0131z"
     },
     "failure": {
+      "cliExited": "CLI {{code}} koduyla \u00e7\u0131kt\u0131",
       "stranded": "Analiz beklenmedik \u015fekilde durdu.",
       "launchFailed": "Analiz ba\u015flat\u0131lamad\u0131. {{reason}}",
       "auth": "{{provider}} anahtar\u0131n\u0131z reddedildi.",

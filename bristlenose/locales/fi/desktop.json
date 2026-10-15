@@ -329,6 +329,7 @@
       "unknown": "Ep\u00e4onnistui"
     },
     "failure": {
+      "cliExited": "Komentorivi p\u00e4\u00e4ttyi koodilla {{code}}",
       "stranded": "Analyysi pys\u00e4htyi odottamatta.",
       "launchFailed": "Analyysi\u00e4 ei voitu k\u00e4ynnist\u00e4\u00e4. {{reason}}",
       "auth": "Palvelun {{provider}} avain hyl\u00e4ttiin.",

@@ -330,6 +330,7 @@
       "unknown": "Failed"
     },
     "failure": {
+      "cliExited": "CLI exited with code {{code}}",
       "stranded": "Analysis stopped unexpectedly.",
       "launchFailed": "Couldn't start the analysis. {{reason}}",
       "auth": "Your {{provider}} key was rejected.",

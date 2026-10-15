@@ -329,6 +329,7 @@
       "unknown": "Misslyckades"
     },
     "failure": {
+      "cliExited": "CLI avslutades med kod {{code}}",
       "stranded": "Analysen stoppades ov\u00e4ntat.",
       "launchFailed": "Det gick inte att starta analysen. {{reason}}",
       "auth": "Din {{provider}}-nyckel avvisades.",

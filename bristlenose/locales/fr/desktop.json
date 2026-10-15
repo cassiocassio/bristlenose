@@ -329,6 +329,7 @@
       "unknown": "\u00c9chec"
     },
     "failure": {
+      "cliExited": "La CLI s\u2019est arr\u00eat\u00e9e avec le code {{code}}",
       "stranded": "L\u2019analyse s\u2019est arr\u00eat\u00e9e de fa\u00e7on inattendue.",
       "launchFailed": "Impossible de lancer l\u2019analyse. {{reason}}",
       "auth": "Votre cl\u00e9 {{provider}} a \u00e9t\u00e9 refus\u00e9e.",

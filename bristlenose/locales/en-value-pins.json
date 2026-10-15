@@ -1383,6 +1383,7 @@
  "desktop.pipeline.failure.apiServerGeneric": "fc5ccd",
  "desktop.pipeline.failure.auth": "6e5c2d",
  "desktop.pipeline.failure.authGeneric": "b2c458",
+ "desktop.pipeline.failure.cliExited": "0d84bf",
  "desktop.pipeline.failure.disk": "2aecf0",
  "desktop.pipeline.failure.launchFailed": "fab0ad",
  "desktop.pipeline.failure.missingBinary": "4b0c3d",

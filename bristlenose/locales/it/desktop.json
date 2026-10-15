@@ -329,6 +329,7 @@
       "unknown": "Non riuscito"
     },
     "failure": {
+      "cliExited": "La CLI \u00e8 terminata con codice {{code}}",
       "stranded": "L'analisi si \u00e8 interrotta in modo imprevisto.",
       "launchFailed": "Impossibile avviare l'analisi. {{reason}}",
       "auth": "La tua chiave {{provider}} \u00e8 stata rifiutata.",

@@ -329,6 +329,7 @@
       "unknown": "Fehlgeschlagen"
     },
     "failure": {
+      "cliExited": "CLI mit Code {{code}} beendet",
       "stranded": "Die Analyse wurde unerwartet beendet.",
       "launchFailed": "Die Analyse konnte nicht gestartet werden. {{reason}}",
       "auth": "Ihr {{provider}}-Schl\u00fcssel wurde abgelehnt.",

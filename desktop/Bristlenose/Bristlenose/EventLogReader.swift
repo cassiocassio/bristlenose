@@ -85,11 +85,15 @@ enum EventLogReader {
         let category: PipelineFailureCategory
         let message: String?
         let signalName: String?
+        /// Set only when the CLI exited non-zero (`run_lifecycle`'s SystemExit
+        /// path, the one writer). `message` then holds the English record.
+        let exitCode: Int?
 
         enum CodingKeys: String, CodingKey {
             case category
             case message
             case signalName = "signal_name"
+            case exitCode = "exit_code"
         }
     }
 
@@ -263,8 +267,18 @@ enum EventLogReader {
             // which is a good deal more use than the bare "Failed" that stood
             // here — and, either way, resolved by the view rather than frozen
             // into the language in force when the run exited.
-            let summary = event.cause?.message.map(FailureMessage.passthrough)
-                ?? .failure(for: category)
+            //
+            // A CLI exit is the exception: its `message` is our own English
+            // record ("CLI exited with code 2"), not someone else's words, so it
+            // is said from the code in the app's language, as the browser status
+            // page does (`status_page.py`).
+            let summary: FailureMessage
+            if let code = event.cause?.exitCode {
+                summary = .keyed("desktop.pipeline.failure.cliExited", vars: ["code": String(code)])
+            } else {
+                summary = event.cause?.message.map(FailureMessage.passthrough)
+                    ?? .failure(for: category)
+            }
             return .failed(summary, category: category)
         default:
             // Unknown event type — likely forward-compat (Phase 4a stage events).

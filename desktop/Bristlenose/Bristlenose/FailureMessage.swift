@@ -110,6 +110,7 @@ extension FailureMessage {
     static let englishSentences: [String: String] = [
         "desktop.pipeline.failure.stranded": "Analysis stopped unexpectedly.",
         "desktop.pipeline.failure.launchFailed": "Couldn't start the analysis. {{reason}}",
+        "desktop.pipeline.failure.cliExited": "CLI exited with code {{code}}",
         "desktop.pipeline.failure.auth": "Your {{provider}} key was rejected.",
         "desktop.pipeline.failure.authGeneric": "Your API key was rejected.",
         "desktop.pipeline.failure.outOfCredit": "{{provider}} is out of credit.",
@@ -165,10 +166,10 @@ extension FailureMessage {
     /// in. The one builder — `failure(for:provider:)` composes a key and comes
     /// through here too.
     ///
-    /// Two pipeline keys have no `PipelineFailureCategory` because they describe
+    /// Three pipeline keys have no `PipelineFailureCategory` because they describe
     /// a *moment* rather than a classified cause: `stranded` (the process died
-    /// without writing a terminus) and `launchFailed` (the spawn threw). Both
-    /// happen before there is a cause to classify.
+    /// without writing a terminus), `launchFailed` (the spawn threw) and
+    /// `cliExited` (the CLI exited non-zero, with only its exit code to go on).
     /// `tests/test_pipeline_failure_keys.py` lists them as `_MOMENT_KEYS`.
     static func keyed(_ key: String, vars: [String: String] = [:]) -> FailureMessage {
         FailureMessage(key: key, vars: vars, english: englishSentence(for: key, vars: vars))

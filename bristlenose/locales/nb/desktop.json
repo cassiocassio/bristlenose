@@ -329,6 +329,7 @@
       "unknown": "Mislyktes"
     },
     "failure": {
+      "cliExited": "CLI avsluttet med kode {{code}}",
       "stranded": "Analysen stoppet uventet.",
       "launchFailed": "Kunne ikke starte analysen. {{reason}}",
       "auth": "{{provider}}-n\u00f8kkelen din ble avvist.",

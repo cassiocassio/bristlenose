@@ -365,6 +365,7 @@
       "unknown": "Niepowodzenie"
     },
     "failure": {
+      "cliExited": "CLI zako\u0144czy\u0142 dzia\u0142anie z kodem {{code}}",
       "stranded": "Analiza zosta\u0142a nieoczekiwanie przerwana.",
       "launchFailed": "Nie uda\u0142o si\u0119 uruchomi\u0107 analizy. {{reason}}",
       "auth": "Tw\u00f3j klucz {{provider}} zosta\u0142 odrzucony.",

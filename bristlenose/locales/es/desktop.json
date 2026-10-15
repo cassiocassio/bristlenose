@@ -329,6 +329,7 @@
       "unknown": "Fall\u00f3"
     },
     "failure": {
+      "cliExited": "La CLI termin\u00f3 con el c\u00f3digo {{code}}",
       "stranded": "El an\u00e1lisis se ha detenido inesperadamente.",
       "launchFailed": "No se ha podido iniciar el an\u00e1lisis. {{reason}}",
       "auth": "Tu clave de {{provider}} ha sido rechazada.",

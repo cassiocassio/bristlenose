@@ -311,6 +311,7 @@
       "unknown": "\u5931\u6557"
     },
     "failure": {
+      "cliExited": "CLI \u4ee5\u4ee3\u78bc {{code}} \u7d50\u675f",
       "stranded": "\u5206\u6790\u610f\u5916\u505c\u6b62\u3002",
       "launchFailed": "\u7121\u6cd5\u958b\u59cb\u5206\u6790\u3002{{reason}}",
       "auth": "\u60a8\u7684 {{provider}} \u91d1\u9470\u906d\u5230\u62d2\u7d55\u3002",

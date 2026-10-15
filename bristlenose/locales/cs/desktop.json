@@ -364,6 +364,7 @@
       "unknown": "Selhalo"
     },
     "failure": {
+      "cliExited": "CLI skon\u010dilo s k\u00f3dem {{code}}",
       "stranded": "Anal\u00fdza se ne\u010dekan\u011b zastavila.",
       "launchFailed": "Anal\u00fdzu se nepoda\u0159ilo spustit. {{reason}}",
       "auth": "V\u00e1\u0161 kl\u00ed\u010d {{provider}} byl odm\u00edtnut.",

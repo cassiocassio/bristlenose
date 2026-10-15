@@ -84,7 +84,7 @@ def _swift_english() -> dict[str, str]:
 #: terminus, `launchFailed` when the spawn itself threw. `launchFailed` carries
 #: `{{reason}}` — Foundation's `localizedDescription`, which macOS has already
 #: translated, so it passes through rather than being re-described.
-_MOMENT_KEYS = {"stranded", "launchFailed"}
+_MOMENT_KEYS = {"stranded", "launchFailed", "cliExited"}
 
 
 def _expected_keys() -> set[str]:

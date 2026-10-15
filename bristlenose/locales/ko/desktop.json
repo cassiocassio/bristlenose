@@ -311,6 +311,7 @@
       "unknown": "\uc2e4\ud328"
     },
     "failure": {
+      "cliExited": "CLI\uac00 \ucf54\ub4dc {{code}}(\uc73c)\ub85c \uc885\ub8cc\ub418\uc5c8\uc2b5\ub2c8\ub2e4",
       "stranded": "\ubd84\uc11d\uc774 \uc608\uae30\uce58 \uc54a\uac8c \uc911\ub2e8\ub418\uc5c8\uc2b5\ub2c8\ub2e4.",
       "launchFailed": "\ubd84\uc11d\uc744 \uc2dc\uc791\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. {{reason}}",
       "auth": "{{provider}} \ud0a4\uac00 \uac70\ubd80\ub418\uc5c8\uc2b5\ub2c8\ub2e4.",

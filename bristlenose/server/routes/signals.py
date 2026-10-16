@@ -336,6 +336,7 @@ class _SharedProjectData:
         theme_row_labels: list[str],
         total_participants: int,
         anchors: dict[str, str],
+        names: HeadingNames,
     ) -> None:
         self.all_quotes = all_quotes
         self.quote_by_id = quote_by_id
@@ -345,6 +346,7 @@ class _SharedProjectData:
         self.theme_row_labels = theme_row_labels
         self.total_participants = total_participants
         self.anchors = anchors
+        self.names = names
 
 
 def _load_shared_data(db: Session, project_id: int) -> _SharedProjectData | None:
@@ -398,6 +400,7 @@ def _load_shared_data(db: Session, project_id: int) -> _SharedProjectData | None
         theme_row_labels=theme_row_labels,
         total_participants=len(all_pids),
         anchors=_location_anchors(clusters, themes, names),
+        names=names,
     )
 
 
@@ -620,7 +623,7 @@ def get_sentiment_analysis(
             .order_by(ScreenCluster.display_order)
             .all()
         )
-        names = HeadingNames.load(db, project_id)
+        names = shared.names
         cluster_adapters: list[_ClusterAdapter] = []
         for c in clusters:
             ca = _ClusterAdapter(

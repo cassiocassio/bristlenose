@@ -210,7 +210,7 @@ def assemble_corpus_context(
     from bristlenose.server import speaker_slots
     from bristlenose.server.heading_names import HeadingNames
 
-    names = HeadingNames.load(db, project_id)
+    headings = HeadingNames.load(db, project_id)
 
     all_quotes = speaker_slots.evidence_quotes(db, project_id)
     quote_by_pk: dict[int, Quote] = {q.id: q for q in all_quotes}
@@ -288,7 +288,7 @@ def assemble_corpus_context(
         ]
         members.sort(key=lambda q: q.start_timecode)
         if members:
-            label = names.section(cluster)
+            label = headings.section(cluster)
             blocks.append(("Section", label, [_corpus_quote(q, label) for q in members]))
 
     themes = (
@@ -305,7 +305,7 @@ def assemble_corpus_context(
         ]
         members.sort(key=lambda q: (q.session_id, q.start_timecode))
         if members:
-            label = names.theme(theme)
+            label = headings.theme(theme)
             blocks.append(("Theme", label, [_corpus_quote(q, label) for q in members]))
 
     # Speaker roster from codes only (anonymisation boundary).

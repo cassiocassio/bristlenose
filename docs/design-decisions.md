@@ -705,3 +705,29 @@ other two did not keep. The label was correct; the actions were changed to match
 it. A future pass that restores "the card you clicked decides" would reintroduce
 the divergence — it is pinned by `QuoteGroupBulkActions.test.tsx`, whose click
 case reddens on exactly that mutation and reddened nothing at all before the fix.
+
+## A renamed section or theme shows its new name everywhere; anchors key on the id
+
+_16 Oct 2026 (owner's rule; `9e9f585a`)._
+
+When a researcher renames a section or theme, every lens and every output shows
+the new name: the transcript margin, both journeys, the Dashboard, Signals, the
+chat lens, MCP agents and the CSV/XLS/Miro exports. The pipeline's name stays on
+the row, for reset-to-original and the "edited" indicator, and is never what the
+researcher sees once they have renamed it. One resolution serves all of them,
+`bristlenose/server/heading_names.py`. A second one is how the gap opened: the
+Quotes lens resolved renames and nothing else did.
+
+**Anchors are the id, not a slug of the name.** `section-<cluster_id>` and
+`theme-<theme_id>`, built by `groupAnchor` on the web and `section_anchor` on
+the server. A slug moved every time a researcher renamed the group, so any link
+built from the other name missed it (Signals and Dashboard links did). It also
+gave two groups with the same name one anchor. The cost was paid once at the
+change: a saved `#section-<slug>` link, and the Mac's stored reading position,
+land at the top the first time.
+
+**Not settled:** Signals still key cards, matrix rows and the elaboration cache
+by the shown name, so two groups renamed to one name merge into one row, as
+identical pipeline names always did. Keying Signals by id is the deeper fix and
+an owner call. A rename also re-elaborates that location's cards on the next
+visit (one paid call), with the new name in the prompt.

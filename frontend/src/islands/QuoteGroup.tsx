@@ -128,11 +128,12 @@ interface TranscriptCache {
 // ── Props ───────────────────────────────────────────────────────────────
 
 interface QuoteGroupProps {
-  /** Anchor ID for deep-linking / scroll (label-derived, e.g. "section-login"). */
+  /** Anchor ID for deep-linking / scroll, keyed on the group's id
+   *  ("section-12", `groupAnchor`), so a rename never moves it. */
   anchor: string;
   /** Durable-id key base for heading edits: "section-cluster-{id}" /
-   *  "theme-group-{id}". Distinct from `anchor` so a rename survives label
-   *  drift (Phase 2 — section identity). */
+   *  "theme-group-{id}", so a rename survives label drift (Phase 2 —
+   *  section identity). */
   editKeyBase: string;
   /** The pipeline's label (raw) — the reset-to-original baseline. */
   label: string;

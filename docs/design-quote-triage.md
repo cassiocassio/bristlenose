@@ -136,6 +136,8 @@ The session converged on a clean three-tier model. The alpha ships only the firs
 
 **Delete is the Trash verb, in two places (owner, future).** (i) In the transcript: select a passage and delete it. It shows struck through and is left out of the analysis and every export, e.g. chat about the weather, or "looking forward to seeing you at the party!" (`docs/design-transcript-editing.md` Operation 1). (ii) In the Quotes lens: Delete next to Hide and Star, moving the quote to Trash. Both are reversible and never destroy the source. If Delete ships, Hide can settle as Archive (b) with Delete as Trash (a). That's the owner's call, not this note's.
 
+**Planned and parked the same day: `docs/design-delete-and-bin.md`.** Nothing is ever removed, only marked; the Bin is its own place at the bottom of the sidebar, not an area of the Quotes page, which supersedes "Trash isn't banished to a sidebar destination" above. That doc also records the consequences across analysis, re-analysis and exports.
+
 This three-tier model is also why Bin/Wastebasket/Trash is the right metaphor *only* at this level: it names a place quotes go to be excluded from the analysis story, not a place where source data dies. Mail's Trash analogy holds (the source server has a copy, the local trash is a folder, restoring is one click).
 
 ### Note: Archive is the live alternative — don't decide yet

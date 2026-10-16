@@ -16,6 +16,7 @@ the suite before these passed one, which is why the class was green throughout.
 from __future__ import annotations
 
 import functools
+import os
 import shutil
 import sqlite3
 import time
@@ -291,3 +292,43 @@ def test_import_before_and_after_the_first_run_is_one_row(tmp_path: Path) -> Non
     assert second.id == first.id
     assert db.query(Project).count() == 1
     db.close()
+
+
+def _open_paths_under(folder: Path) -> list[str]:
+    """Files this process holds open under ``folder`` (macOS and Linux). On
+    Windows the move in the test below is the check: it refuses a held file."""
+    import fcntl
+    import sys
+
+    base = str(folder.resolve())
+    found: list[str] = []
+    fds = os.listdir("/proc/self/fd") if sys.platform.startswith("linux") else os.listdir("/dev/fd")
+    for name in fds:
+        fd = int(name)
+        try:
+            if sys.platform == "darwin":
+                raw = fcntl.fcntl(fd, fcntl.F_GETPATH, b"\0" * 1024)  # type: ignore[attr-defined]
+                path = raw.split(b"\0", 1)[0].decode()
+            else:
+                path = os.readlink(f"/proc/self/fd/{fd}")
+        except OSError:
+            continue
+        if path.startswith(base):
+            found.append(path)
+    return found
+
+
+def test_a_stopped_server_holds_nothing_open_in_the_study(tmp_path: Path) -> None:
+    """A project closed in the app can be moved: the server lets go of its
+    database and its log when it stops. Windows refuses to move a folder holding
+    an open file, which is how CI found it (16 Oct 2026)."""
+    proj = _project(tmp_path)
+    with AuthTestClient(_app(proj, tmp_path)) as client:
+        assert client.get("/api/projects/1/sessions").json().get("sessions")
+    if os.name != "nt":
+        assert _open_paths_under(proj) == [], "the stopped server still holds files open"
+    moved = tmp_path / "moved" / proj.name
+    moved.parent.mkdir()
+    shutil.move(str(proj), str(moved))
+    with AuthTestClient(_app(moved, tmp_path)) as client:
+        assert client.get("/api/projects/1/sessions").json().get("sessions")

@@ -1252,6 +1252,32 @@ def _make_run_completed_handler(
     return _on_run_completed
 
 
+def _let_go_of_the_project(engine: Engine | None, output_dir: Path) -> None:
+    """A stopped server holds nothing open in the study's folder.
+
+    The pooled database connections and the log file stay open until closed,
+    and Windows refuses to move or rename a folder holding an open file, so a
+    project "closed" in the app could not then be moved (CI, 16 Oct 2026). An
+    in-memory database is left alone: disposing it would discard it.
+    """
+    if engine is not None and engine.url.database not in (None, "", ":memory:"):
+        engine.dispose()
+    try:
+        base = output_dir.resolve()
+    except OSError:
+        return
+    root = logging.getLogger()
+    for handler in root.handlers[:]:
+        if isinstance(handler, logging.FileHandler):
+            try:
+                inside = Path(handler.baseFilename).resolve().is_relative_to(base)
+            except OSError:
+                continue
+            if inside:
+                root.removeHandler(handler)
+                handler.close()
+
+
 def _install_event_watcher(
     app: FastAPI,
     session_factory: Callable[[], Session],
@@ -1449,5 +1475,6 @@ def _install_event_watcher(
                 await task
             except asyncio.CancelledError:
                 pass
+            _let_go_of_the_project(engine, project_output_dir(project_dir))
 
     app.router.lifespan_context = _lifespan

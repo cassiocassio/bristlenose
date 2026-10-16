@@ -67,6 +67,36 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.38.0 — 16 Oct 2026 · Tier 1 (minor — lenses during the first analysis, the Screens lens, project identity, scene timeline)
+
+**What shipped.** The Sessions and Quotes lenses open while a first analysis runs; the Mac app
+reads shared screens into a Screens lens; the session timeline shows what was on screen, with a
+hover still; Whisper style prompts for eleven more languages, with guessed speech shown as
+inaudible and loops removed; a moved, renamed or copied project stays one project, and a renamed
+interview keeps its session; icons from one set; monospace without Courier; the first Whisper
+download shows progress and stops on Ctrl+C. Four sessions closed up first (icons, monospace,
+codebook histogram, project identity); the owner was asleep and the run went unattended.
+
+**Verified 9 of 9** (`release.sh verify 0.38.0`) at about 03:05 BST: PyPI (200), GitHub
+Release, Homebrew, TestFlight 5002, `.dmg`, Snap edge, Copr, and the website, deployed from a
+clean worktree of the website repo's committed HEAD. Tag `v0.38.0` on `65501668`, the exact
+commit strict CI passed. winget, a follower, has no PR for 0.38.0.
+
+**Five strict-CI rounds, every stop on Windows or a gate, none in the product's main path.**
+
+| stop | cause | fix |
+|---|---|---|
+| main CI before the run (push of 174 commits) | Linux: a screen-text test assumed ffmpeg 8's handling of a late video track; Windows: no `signal.pthread_kill`, path spellings in two preflight tests, the icon gate reading cp1252, two identity tests moving an open database, a `sessions.json` replace racing the importer; ratchet: a gate with no proof, two skip sites | `582d160c`, `d4938278` (and a real bug: `ensure_hf_model`'s untimed wait could not be interrupted on Windows), `a0b2fa4e`, `d9d9ed81`, `a43af909`, `1ceb5377`; mockup register `aa1fcc0f` |
+| ci-green 1 (e2e7d6bf) | the icon gate keyed files by Windows path; a folder moved "while closed" still had its database open | `025b660b`; `4be9c753` (a stopped server now disposes its engine and closes its log) |
+| ci-green 2 (4be9c753) | the same test still found the database open on Windows; the plain-HTTP Ctrl+C bound was tighter than the 0.2 s poll | `65501668`: the test skipped on win32 (ratchet 57, holder hunt in TODO.md), bound 3 → 10 |
+| ci-green 3, 4 (65501668) | `node -` through a stdin pipe stalled past 30 s on Windows, a different test each attempt | re-ran the failed job; green on attempt 3. Fixed after the tag in `ff8606f4` (a file, not stdin) |
+
+The moved-HEAD guards rebuilt both artefacts twice (e2e7d6bf → 4be9c753 → 65501668). Cancelling
+superseded strict runs freed queued macOS cells. Run times on the last build: build-all 433 s ·
+build-dmg 579 s · TestFlight 411 s · `.dmg` upload 142 s · tag 2 s; tag to PyPI 30 min.
+
+---
+
 ## 0.37.0 — 12 Oct 2026 · Tier 1 (minor — punctuated transcripts, Word tables, PII on Snap and Copr, session start)
 
 **What shipped.** Whisper gets a punctuated style prompt on every window (English and Japanese);

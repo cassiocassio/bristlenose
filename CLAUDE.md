@@ -1551,7 +1551,13 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** — shipping build **0.37.0 (4695)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+**Internal TestFlight since 14 Jul 2026** — shipping build **0.38.0 (5002)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+
+**0.38.0 shipped 16 Oct 2026, overnight and unattended — tag `v0.38.0` on `65501668`, TestFlight
+build 5002, verified 9 of 9.** A minor: lenses readable during a first analysis, the Screens lens,
+project identity by id and content, the scene timeline, eleven more Whisper prompt languages. Five
+strict-CI rounds, all Windows or gates, none in the product's main path; one Windows test is skipped
+with its open-database holder still to find (TODO.md). Full account: `docs/release-log.md` § 0.38.0.
 
 **0.37.0 shipped 12 Oct 2026, overnight and unattended — tag `v0.37.0` on `c236d797`, TestFlight
 build 4695, verified 9 of 9.** A minor: punctuated Whisper output, Word tables read, PII redaction on

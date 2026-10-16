@@ -466,7 +466,7 @@ rm -f "$DMG_PATH"
 DMG_BACKDROP="$DESKTOP_DIR/dmg-assets/background.png"
 DMG_ICON="$PROJECT_DIR/Bristlenose/Assets.xcassets/AppIcon.appiconset"  # informational
 create_dmg_args=(
-    --volname "Bristlenose $VERSION (Alpha)"
+    --volname "Bristlenose $VERSION (Beta)"
     --window-pos 200 120
     --window-size 640 400
     --icon-size 128

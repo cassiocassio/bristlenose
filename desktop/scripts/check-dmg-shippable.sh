@@ -229,9 +229,9 @@ else
         if [ -n "$SIGNED_EPOCH" ]; then
             LEFT=$(( (SIGNED_EPOCH + 30*86400 - $(date '+%s')) / 86400 ))
             if [ "$LEFT" -ge 21 ]; then
-                pass "alpha life" "${LEFT} of 30 days remaining"
+                pass "beta life" "${LEFT} of 30 days remaining"
             else
-                warn "alpha life" "only ${LEFT} days remaining — consider re-cutting"
+                warn "beta life" "only ${LEFT} days remaining — consider re-cutting"
             fi
         fi
     fi

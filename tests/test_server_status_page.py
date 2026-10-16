@@ -11,6 +11,7 @@ import json
 import re
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -610,6 +611,22 @@ class TestRenderPage:
 # ---------------------------------------------------------------------------
 
 
+def _run_node(script: str) -> subprocess.CompletedProcess[str]:
+    """Run *script* under Node from a file, not from stdin.
+
+    ``node -`` fed through a pipe stalled past 30 s on the Windows runner, in
+    two tests of three across two attempts (16 Oct 2026), while every other cell
+    took well under a second. A file argument has no pipe to wait on.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "harness.js"
+        path.write_text(script, encoding="utf-8")
+        return subprocess.run(
+            ["node", str(path)], capture_output=True, text=True, encoding="utf-8",
+            timeout=120, check=True,
+        )
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 class TestIdentityScriptExecutes:
     """Run the real rendered `<script>` under Node with a stubbed WebKit bridge.
@@ -639,10 +656,7 @@ class TestIdentityScriptExecutes:
             + identity[0]
             + "\nconsole.log(JSON.stringify(posted));\n"
         )
-        result = subprocess.run(
-            ["node", "-"], input=harness, capture_output=True, text=True,
-            timeout=30, check=True,
-        )
+        result = _run_node(harness)
         messages: list[dict[str, str]] = json.loads(result.stdout.strip())
         return messages
 
@@ -667,10 +681,7 @@ class TestIdentityScriptExecutes:
         harness = (
             "global.window = {};\n" + identity + "\nconsole.log('SURVIVED');\n"
         )
-        result = subprocess.run(
-            ["node", "-"], input=harness, capture_output=True, text=True,
-            timeout=30, check=True,
-        )
+        result = _run_node(harness)
         assert result.stdout.strip() == "SURVIVED"
 
 

@@ -11,7 +11,9 @@
  * when the first pass landed it moves nothing.
  *
  * Settling is judged by a quiet spell in `scroll` events rather than
- * `scrollend`, which older WebKit lacks, and the target is measured only after
+ * `scrollend`, which older WebKit lacks. They are heard in the capture phase on
+ * `document`, which catches a scrolling panel as well as the page (`scroll`
+ * does not bubble from an element). The target is measured only after
  * the page has stopped: Safari's `getBoundingClientRect()` is unreliable while
  * a smooth scroll is running (frontend/CLAUDE.md, Testing).
  *
@@ -34,7 +36,7 @@ export function scrollToLand(el: Element, block: ScrollLogicalPosition = "start"
 
   const stop = () => {
     clearTimeout(timer);
-    window.removeEventListener("scroll", onScroll);
+    document.removeEventListener("scroll", onScroll, true);
     for (const type of USER_INPUT) window.removeEventListener(type, stop);
     if (cancelPending === stop) cancelPending = null;
   };
@@ -62,7 +64,7 @@ export function scrollToLand(el: Element, block: ScrollLogicalPosition = "start"
     timer = setTimeout(settled, SETTLE_MS);
   };
 
-  window.addEventListener("scroll", onScroll, { passive: true });
+  document.addEventListener("scroll", onScroll, { capture: true, passive: true });
   for (const type of USER_INPUT) window.addEventListener(type, stop, { passive: true });
   cancelPending = stop;
   pass();

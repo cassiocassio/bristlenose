@@ -42,7 +42,22 @@ describe("scrollToLand", () => {
     scrollToLand(el);
     for (let t = 0; t < 10; t++) {
       vi.advanceTimersByTime(100);
-      window.dispatchEvent(new Event("scroll"));
+      document.dispatchEvent(new Event("scroll"));
+    }
+    expect(scroll).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(1000);
+    expect(scroll).toHaveBeenCalledTimes(3);
+  });
+
+  it("waits for a scrolling panel to stop, not only the page", () => {
+    const panel = document.createElement("div");
+    document.body.appendChild(panel);
+    const { el, scroll } = target([420, 0, 0]);
+    panel.appendChild(el);
+    scrollToLand(el);
+    for (let t = 0; t < 10; t++) {
+      vi.advanceTimersByTime(100);
+      panel.dispatchEvent(new Event("scroll")); // does not bubble
     }
     expect(scroll).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(1000);

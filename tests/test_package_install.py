@@ -259,7 +259,9 @@ class TestEnsureHfModelCtrlCPlainHttp:
                 ensure_hf_model("mobiuslabsgmbh/faster-whisper-large-v3-turbo")
             elapsed = time.monotonic() - t0
         assert elapsed < 1.5, f"Ctrl+C took {elapsed:.1f}s to land"
-        assert len(chunks_after_cancel) <= 3, "the download kept going after Ctrl+C"
+        # The main thread polls every 0.2 s, so a few 50 ms chunks land after the
+        # cancel (5 on Windows CI, measured 16 Oct 2026); without it, all 100 do.
+        assert len(chunks_after_cancel) <= 10, "the download kept going after Ctrl+C"
 
 
 def test_a_cancelled_bar_stays_quiet_on_a_thread_python_did_not_start():

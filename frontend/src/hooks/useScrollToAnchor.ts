@@ -8,6 +8,7 @@
  */
 
 import { useCallback } from "react";
+import { scrollToLand } from "../utils/scrollToLand";
 
 export interface ScrollToAnchorOptions {
   block?: ScrollLogicalPosition;
@@ -24,7 +25,7 @@ export function useScrollToAnchor() {
     function tryScroll() {
       const el = document.getElementById(anchorId);
       if (el) {
-        el.scrollIntoView({ behavior: "smooth", block });
+        scrollToLand(el, block);
         if (highlight) {
           el.classList.remove("anchor-highlight");
           // Force reflow so animation restarts

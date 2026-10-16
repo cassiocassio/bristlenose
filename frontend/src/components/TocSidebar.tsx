@@ -25,6 +25,7 @@ import { useQuoteGroupingView } from "../contexts/QuoteGroupingSlot";
 import { useProjectId } from "../hooks/useProjectId";
 import { filterQuotes } from "../utils/filter";
 import { groupAnchor, groupQuotesBySession, keepsGroup } from "../utils/quoteGroups";
+import { scrollToLand } from "../utils/scrollToLand";
 import { SessionEntryRow, useSessionRowLayout } from "./SessionEntry";
 
 // ── TOC entry type ────────────────────────────────────────────────────────
@@ -203,7 +204,8 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
     }
   }, [activeId]);
 
-  // Click handler — smooth scroll to the target heading.
+  // Click handler — smooth scroll to the target heading, landing on it even
+  // though the cards in between are measured only as the scroll passes them.
   // In overlay mode, behaviour depends on the playground's overlayAutoClose
   // toggle: when true (default/legacy), close the panel after a 400ms delay;
   // when false, leave the panel open — the user closes by mousing out.
@@ -213,7 +215,7 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
     clickedIdRef.current = id;
     const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToLand(el, "start");
     }
     if (tocMode === "overlay" && autoClose) {
       if (onOverlayClose) {

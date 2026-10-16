@@ -126,6 +126,16 @@ The session converged on a clean three-tier model. The alpha ships only the firs
 - **The invariant holds.** Every quote still lives in exactly one home — citable sections, citable themes, or Trash. The three areas on the Quotes page mirror the three possible homes.
 - **Aggregate / signal recompute is the real engineering cost.** Today's signal-concentration, theme weights, sentiment bars all compute pipeline-time, before user state exists. Trash needs either re-aggregation passes or a pipeline-time flag that drives selective inclusion. This is the work that gates Trash; the UX is the easy part.
 
+### 16 Oct 2026 — why researchers hide, what Signals does with it, and Delete
+
+**Why researchers hide a quote (owner).** Three reasons: (1) to keep it from steering their own thinking, because the participant said it for reasons that have nothing to do with this study; (2) it is true but not one to show, being a duplicate or badly put; (3) they don't want it in the research at all, e.g. a strongly held but random opinion from a slightly mis-recruited participant, a tangent from someone who got the wrong end of the stick, or something embarrassing. Reason 2 is Archive in the table above. Reasons 1 and 3 read as Trash. **Today's single Hide does both jobs.**
+
+**Signals: open, deferred.** Measured 16 Oct 2026, Signals ignores hidden state entirely: grids, cards and totals are unchanged when every quote is hidden. That matches the Archive row above. But the chat lens and MCP drop hidden quotes (`grounding.load_signals(curated=True)`), and the starred clip export includes a quote that is both starred and hidden, which breaks the Archive row's "not safe in an export". The open choice: (a) a hidden quote counts nowhere; or (b) it counts in the grids but is never listed on a card, and the card says so, the way the Quotes lens's "N hidden" counter does. The owner kept Signals as it is for now; the issue is logged in `TODO.md` (16 Oct 2026).
+
+**Two claims above are stale.** "Signals were computed pipeline-time" and "aggregate / signal recompute is the real engineering cost" were true of the static render. Serve now computes every Signals response per request (`server/routes/signals.py`), so excluding a quote is a filter on read. Trash's cost is mostly the UX, not the aggregation.
+
+**Delete is the Trash verb, in two places (owner, future).** (i) In the transcript: select a passage and delete it. It shows struck through and is left out of the analysis and every export, e.g. chat about the weather, or "looking forward to seeing you at the party!" (`docs/design-transcript-editing.md` Operation 1). (ii) In the Quotes lens: Delete next to Hide and Star, moving the quote to Trash. Both are reversible and never destroy the source. If Delete ships, Hide can settle as Archive (b) with Delete as Trash (a). That's the owner's call, not this note's.
+
 This three-tier model is also why Bin/Wastebasket/Trash is the right metaphor *only* at this level: it names a place quotes go to be excluded from the analysis story, not a place where source data dies. Mail's Trash analogy holds (the source server has a copy, the local trash is a folder, restoring is one click).
 
 ### Note: Archive is the live alternative — don't decide yet

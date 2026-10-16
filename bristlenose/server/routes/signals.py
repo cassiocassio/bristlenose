@@ -41,6 +41,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots
+from bristlenose.server.heading_names import HeadingNames, section_anchor, theme_anchor
 from bristlenose.signals.generic_detect import QuoteRecord, detect_signals_generic
 from bristlenose.signals.generic_matrix import QuoteContribution, build_matrix_from_contributions
 from bristlenose.signals.metrics import classify_flag
@@ -96,6 +97,9 @@ class TagSignal(BaseModel):
 
     location: str
     source_type: str
+    #: The Quotes lens anchor for ``location`` (``section-<id>``), keyed on
+    #: the durable id so a rename cannot break the link.
+    anchor: str = ""
     group_name: str
     colour_set: str = ""
     count: int
@@ -247,6 +251,7 @@ def _serialize_signal(
     s: object,
     group_colour_sets: dict[str, str],
     total_participants: int,
+    anchors: dict[str, str] | None = None,
 ) -> TagSignal:
     """Convert a Signal dataclass to the response model."""
     from bristlenose.signals.models import Signal
@@ -285,6 +290,7 @@ def _serialize_signal(
     return TagSignal(
         location=s.location,
         source_type=s.source_type,
+        anchor=(anchors or {}).get(f"{s.source_type}|{s.location}", ""),
         group_name=s.sentiment,  # carries group name (historical field name)
         colour_set=group_colour_sets.get(s.sentiment, ""),
         count=s.count,
@@ -329,6 +335,7 @@ class _SharedProjectData:
         section_row_labels: list[str],
         theme_row_labels: list[str],
         total_participants: int,
+        anchors: dict[str, str],
     ) -> None:
         self.all_quotes = all_quotes
         self.quote_by_id = quote_by_id
@@ -337,6 +344,7 @@ class _SharedProjectData:
         self.section_row_labels = section_row_labels
         self.theme_row_labels = theme_row_labels
         self.total_participants = total_participants
+        self.anchors = anchors
 
 
 def _load_shared_data(db: Session, project_id: int) -> _SharedProjectData | None:
@@ -353,8 +361,10 @@ def _load_shared_data(db: Session, project_id: int) -> _SharedProjectData | None
         .order_by(ScreenCluster.display_order)
         .all()
     )
-    cluster_id_to_label = {c.id: c.screen_label for c in clusters}
-    section_row_labels = [c.screen_label for c in clusters]
+    # Signals are keyed by the name the researcher sees, renames included.
+    names = HeadingNames.load(db, project_id)
+    cluster_id_to_label = {c.id: names.section(c) for c in clusters}
+    section_row_labels = list(cluster_id_to_label.values())
 
     cqs = db.query(ClusterQuote).filter(
         ClusterQuote.cluster_id.in_(cluster_id_to_label.keys())
@@ -364,8 +374,8 @@ def _load_shared_data(db: Session, project_id: int) -> _SharedProjectData | None
     }
 
     themes = db.query(ThemeGroup).filter_by(project_id=project_id).all()
-    theme_id_to_label = {t.id: t.theme_label for t in themes}
-    theme_row_labels = [t.theme_label for t in themes]
+    theme_id_to_label = {t.id: names.theme(t) for t in themes}
+    theme_row_labels = list(theme_id_to_label.values())
 
     tqs = db.query(ThemeQuote).filter(
         ThemeQuote.theme_id.in_(theme_id_to_label.keys())
@@ -387,7 +397,25 @@ def _load_shared_data(db: Session, project_id: int) -> _SharedProjectData | None
         section_row_labels=section_row_labels,
         theme_row_labels=theme_row_labels,
         total_participants=len(all_pids),
+        anchors=_location_anchors(clusters, themes, names),
     )
+
+
+def _location_anchors(
+    clusters: list[ScreenCluster], themes: list[ThemeGroup], names: HeadingNames,
+) -> dict[str, str]:
+    """``"section|<shown name>"`` → that section's Quotes lens anchor.
+
+    A signal carries its location as a name, so this is how a card finds its
+    way back to the group by id. Two groups shown under one name are one row
+    in the matrix; the link goes to the first.
+    """
+    anchors: dict[str, str] = {}
+    for c in clusters:
+        anchors.setdefault(f"section|{names.section(c)}", section_anchor(c.id))
+    for t in themes:
+        anchors.setdefault(f"theme|{names.theme(t)}", theme_anchor(t.id))
+    return anchors
 
 
 # ---------------------------------------------------------------------------
@@ -439,6 +467,7 @@ class _SentimentSignalOut(_CamelModel):
 
     location: str
     source_type: str
+    anchor: str = ""  # see TagSignal.anchor
     sentiment: str
     count: int
     participants: list[str]
@@ -479,7 +508,7 @@ def _serialize_sentiment_matrix(matrix: object) -> _SentimentMatrixOut:
     )
 
 
-def _serialize_sentiment_signal(s: object) -> _SentimentSignalOut:
+def _serialize_sentiment_signal(s: object, anchors: dict[str, str]) -> _SentimentSignalOut:
     """Convert a Signal dataclass to the camelCase response model."""
     from bristlenose.signals.models import Signal
 
@@ -487,6 +516,7 @@ def _serialize_sentiment_signal(s: object) -> _SentimentSignalOut:
     return _SentimentSignalOut(
         location=s.location,
         source_type=s.source_type,
+        anchor=anchors.get(f"{s.source_type}|{s.location}", ""),
         sentiment=s.sentiment,
         count=s.count,
         participants=s.participants,
@@ -590,10 +620,11 @@ def get_sentiment_analysis(
             .order_by(ScreenCluster.display_order)
             .all()
         )
+        names = HeadingNames.load(db, project_id)
         cluster_adapters: list[_ClusterAdapter] = []
         for c in clusters:
             ca = _ClusterAdapter(
-                screen_label=c.screen_label,
+                screen_label=names.section(c),
                 display_order=c.display_order,
             )
             cluster_adapters.append(ca)
@@ -615,7 +646,7 @@ def get_sentiment_analysis(
         themes = db.query(ThemeGroup).filter_by(project_id=project_id).all()
         theme_adapters: list[_ThemeAdapter] = []
         for t in themes:
-            ta = _ThemeAdapter(theme_label=t.theme_label)
+            ta = _ThemeAdapter(theme_label=names.theme(t))
             theme_adapters.append(ta)
 
         # Attach quotes to themes via ThemeQuote join
@@ -650,7 +681,7 @@ def get_sentiment_analysis(
             all_pids.update(s.participants)
 
         return SentimentSignalsResponse(
-            signals=[_serialize_sentiment_signal(s) for s in result.signals],
+            signals=[_serialize_sentiment_signal(s, shared.anchors) for s in result.signals],
             section_matrix=_serialize_sentiment_matrix(result.section_matrix),
             theme_matrix=_serialize_sentiment_matrix(result.theme_matrix),
             total_participants=result.total_participants,
@@ -903,7 +934,10 @@ def get_tag_analysis(
             signal_pids.update(s.participants)
 
         return TagSignalsResponse(
-            signals=[_serialize_signal(s, colour_sets, shared.total_participants) for s in signals],
+            signals=[
+                _serialize_signal(s, colour_sets, shared.total_participants, shared.anchors)
+                for s in signals
+            ],
             section_matrix=_serialize_matrix(section_matrix),
             theme_matrix=_serialize_matrix(theme_matrix),
             total_participants=shared.total_participants,
@@ -1055,7 +1089,10 @@ async def get_codebook_analysis(
                 codebook_id=codebook_id,
                 codebook_name=codebook_name,
                 colour_set=codebook_colour,
-                signals=[_serialize_signal(s, colour_sets, shared.total_participants) for s in signals],
+                signals=[
+                    _serialize_signal(s, colour_sets, shared.total_participants, shared.anchors)
+                    for s in signals
+                ],
                 section_matrix=_serialize_matrix(section_matrix),
                 theme_matrix=_serialize_matrix(theme_matrix),
                 columns=col_labels,

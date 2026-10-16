@@ -19,6 +19,7 @@ function sig(
     key: `section|Beds|${columnLabel}`,
     location: "Beds",
     sourceType: "section",
+    anchor: "section-1",
     columnLabel,
     colourSet: "ux",
     codebookName: "UX Research",

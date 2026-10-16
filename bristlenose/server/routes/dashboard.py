@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots
 from bristlenose.server.export_core import pick_featured_quotes
+from bristlenose.server.heading_names import HeadingNames, section_anchor, theme_anchor
 from bristlenose.server.models import (
     Project,
     Quote,
@@ -597,18 +598,13 @@ def get_dashboard(
             .all()
         )
 
+        names = HeadingNames.load(db, project_id)
         sections = [
-            NavItem(
-                label=c.screen_label,
-                anchor=f"section-{c.screen_label.lower().replace(' ', '-')}",
-            )
+            NavItem(label=names.section(c), anchor=section_anchor(c.id))
             for c in screen_clusters
         ]
         themes = [
-            NavItem(
-                label=t.theme_label,
-                anchor=f"theme-{t.theme_label.lower().replace(' ', '-')}",
-            )
+            NavItem(label=names.theme(t), anchor=theme_anchor(t.id))
             for t in theme_groups
         ]
 

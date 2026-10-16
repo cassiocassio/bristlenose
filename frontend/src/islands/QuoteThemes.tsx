@@ -190,8 +190,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
     <section {...refetchOverlayProps(isRefetching)}>
       <SectionHeading id="themes">{t("quotes.themes")}</SectionHeading>
       {filteredThemes.map((theme) => {
-        const displayLabel = theme.edited_label ?? theme.theme_label;
-        const anchor = groupAnchor("theme", displayLabel);
+        const anchor = groupAnchor("theme", theme.theme_id);
         return (
           <QuoteGroup
             key={theme.theme_id}

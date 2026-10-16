@@ -433,6 +433,7 @@ def _valid_framework_ids() -> list[str]:
 
 
 def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any] | None) -> dict[str, Any]:
+    from bristlenose.server.heading_names import HeadingNames
     from bristlenose.server.models import (
         ClusterQuote,
         ScreenCluster,
@@ -508,8 +509,9 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
         .all()
     )
     themes = db.query(ThemeGroup).filter_by(project_id=project_id).order_by(ThemeGroup.id).all()
-    sections = _counts(ClusterQuote, "cluster_id", {c.id: c.screen_label for c in clusters})
-    theme_rows = _counts(ThemeQuote, "theme_id", {t.id: t.theme_label for t in themes})
+    names = HeadingNames.load(db, project_id)
+    sections = _counts(ClusterQuote, "cluster_id", {c.id: names.section(c) for c in clusters})
+    theme_rows = _counts(ThemeQuote, "theme_id", {t.id: names.theme(t) for t in themes})
 
     groups, enabled = _applied_frameworks(db, project_id)
     tag_counts: dict[int, int] = {}
@@ -594,6 +596,7 @@ def _tool_search_quotes(
     offset: int,
 ) -> dict[str, Any]:
     from bristlenose.models import Sentiment
+    from bristlenose.server.heading_names import HeadingNames
     from bristlenose.server.models import (
         ClusterQuote,
         QuoteTag,
@@ -618,22 +621,24 @@ def _tool_search_quotes(
     visible_pks = {q.id for q in visible}
 
     # Batch-attach section / theme / tag names (the export_core pattern).
+    # Names as the researcher sees them: a filter takes the shown name.
+    names = HeadingNames.load(db, project_id)
     section_of: dict[int, str] = {}
     if visible_pks:
-        for cq, label in (
-            db.query(ClusterQuote, ScreenCluster.screen_label)
+        for cq, cluster in (
+            db.query(ClusterQuote, ScreenCluster)
             .join(ScreenCluster, ScreenCluster.id == ClusterQuote.cluster_id)
             .filter(ClusterQuote.quote_id.in_(visible_pks))
         ):
-            section_of[cq.quote_id] = label
+            section_of[cq.quote_id] = names.section(cluster)
     themes_of: dict[int, list[str]] = {}
     if visible_pks:
-        for tq, label in (
-            db.query(ThemeQuote, ThemeGroup.theme_label)
+        for tq, theme_row in (
+            db.query(ThemeQuote, ThemeGroup)
             .join(ThemeGroup, ThemeGroup.id == ThemeQuote.theme_id)
             .filter(ThemeQuote.quote_id.in_(visible_pks))
         ):
-            themes_of.setdefault(tq.quote_id, []).append(label)
+            themes_of.setdefault(tq.quote_id, []).append(names.theme(theme_row))
     tags_of: dict[int, list[str]] = {}
     if visible_pks:
         for qt, name in (

@@ -192,6 +192,7 @@ function adaptSentimentSignals(data: SentimentSignalsData): UnifiedSignal[] {
     key: `${s.sourceType}|${s.location}|${s.sentiment}`,
     location: s.location,
     sourceType: s.sourceType,
+    anchor: s.anchor,
     columnLabel: s.sentiment,
     colourSet: "",
     codebookName: "",
@@ -221,6 +222,7 @@ function adaptCodebookSignals(data: CodebookSignalsListResponse): UnifiedSignal[
         key: `${s.source_type}|${s.location}|${s.group_name}`,
         location: s.location,
         sourceType: s.source_type,
+        anchor: s.anchor,
         columnLabel: s.group_name,
         label: s.label,
         labelKind: s.label_kind,
@@ -1009,20 +1011,11 @@ function adaptSentimentMatrix(m: {
  * destination repeated once per card and the location printed three times in a
  * viewport. One heading, one link.
  *
- * The anchor is namespaced because a section and a theme can share a name:
- * `section-<slug>` and `theme-<slug>` are different places. Slug format must
- * match QuoteSections / QuoteThemes exactly — lowercase, spaces to hyphens,
- * nothing else.
+ * The anchor comes from the server (`section-<id>`, `theme-<id>`), keyed on
+ * the group's durable id, so a section the researcher renamed is still found:
+ * a slug of its name would point at whichever name the link was built from.
  */
-function LocationHeading({
-  location,
-  sourceType,
-}: {
-  location: string;
-  sourceType: "section" | "theme";
-}) {
-  const prefix = sourceType === "section" ? "section-" : "theme-";
-  const anchor = `${prefix}${location.toLowerCase().replace(/ /g, "-")}`;
+function LocationHeading({ location, anchor }: { location: string; anchor: string }) {
   return (
     <div className="signals-codebook-heading">
       <a
@@ -1473,7 +1466,7 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
         {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
         {places.map(({ location, cards }) => (
           <Fragment key={location}>
-            <LocationHeading location={location} sourceType={cards[0].sourceType} />
+            <LocationHeading location={location} anchor={cards[0].anchor} />
             <div className="signal-cards">
               {cards.map((s) => (
                 <SignalCard

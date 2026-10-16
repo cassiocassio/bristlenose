@@ -26,6 +26,7 @@ const card = (quotes: UnifiedQuote[], over: Partial<UnifiedSignal> = {}): Unifie
   key: "k",
   location: "Checkout",
   sourceType: "section",
+  anchor: "section-1",
   columnLabel: "Sentiment",
   colourSet: "sentiment",
   codebookName: "Sentiment",

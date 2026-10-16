@@ -618,8 +618,9 @@ final class BridgeHandler: ObservableObject {
     ///
     /// The shim retries for ~5s, which is what makes this safe to fire straight
     /// after a lens switch: the destination page has to mount and fetch before
-    /// its anchors exist. If the id never appears — a theme renamed or dropped
-    /// by a re-analysis — it gives up and the reader is left at the top, which
+    /// its anchors exist. If the id never appears — a theme dropped by a
+    /// re-analysis (a rename keeps it: group anchors are keyed on the group's
+    /// id, `section-<id>`) — it gives up and the reader is left at the top, which
     /// is the honest failure and the reason an id is stored rather than an
     /// offset.
     ///

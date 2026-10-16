@@ -7,12 +7,12 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots
+from bristlenose.server.heading_names import HeadingNames
 from bristlenose.server.models import (
     AutoCodeJob,
     ClusterQuote,
     CodebookGroup,
     DeletedBadge,
-    HeadingEdit,
     Project,
     ProposedTag,
     Quote,
@@ -437,10 +437,7 @@ def get_quotes(
 
         # Researcher heading renames, keyed on the durable cluster/theme id
         # (Phase 2).  Applied as edited_label/edited_description below.
-        heading_edits = {
-            he.heading_key: he.edited_text
-            for he in db.query(HeadingEdit).filter_by(project_id=project_id).all()
-        }
+        names = HeadingNames.load(db, project_id)
 
         # "New" flag (Phase 3, M3 gate): interviews added in the latest import.
         new_session_ids, new_since = _new_session_ids(db, project_id)
@@ -462,10 +459,8 @@ def get_quotes(
                 screen_label=cluster.screen_label,
                 description=cluster.description,
                 display_order=cluster.display_order,
-                edited_label=heading_edits.get(f"section-cluster-{cluster.id}:title"),
-                edited_description=heading_edits.get(
-                    f"section-cluster-{cluster.id}:desc"
-                ),
+                edited_label=names.section_edit(cluster.id),
+                edited_description=names.section_desc_edit(cluster.id),
                 is_new=_group_is_new(quotes, new_session_ids),
                 quotes=[
                     _build_quote_response(
@@ -489,8 +484,8 @@ def get_quotes(
                 theme_id=theme.id,
                 theme_label=theme.theme_label,
                 description=theme.description,
-                edited_label=heading_edits.get(f"theme-group-{theme.id}:title"),
-                edited_description=heading_edits.get(f"theme-group-{theme.id}:desc"),
+                edited_label=names.theme_edit(theme.id),
+                edited_description=names.theme_desc_edit(theme.id),
                 is_new=_group_is_new(quotes, new_session_ids),
                 quotes=[
                     _build_quote_response(

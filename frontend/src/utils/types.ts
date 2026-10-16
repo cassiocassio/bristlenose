@@ -411,6 +411,8 @@ export interface TagSignalQuote {
 export interface TagSignal {
   location: string;
   source_type: "section" | "theme";
+  /** The Quotes lens anchor for `location`, keyed on the group's id. */
+  anchor: string;
   group_name: string;
   /** What the chip says — resolved server-side. For a sentiment card this is a
    *  feeling, a direction, or "Mixed sentiments"; never the group's own name.
@@ -505,6 +507,8 @@ export interface SentimentSignalQuote {
 export interface SentimentSignal {
   location: string;
   sourceType: "section" | "theme";
+  /** The Quotes lens anchor for `location`, keyed on the group's id. */
+  anchor: string;
   sentiment: string;
   count: number;
   participants: string[];
@@ -694,6 +698,7 @@ export interface UnifiedSignal {
   key: string;
   location: string;
   sourceType: "section" | "theme";
+  anchor: string;
   columnLabel: string; // sentiment name or group name
   colourSet: string; // codebook group colour_set (empty for sentiment)
   codebookName: string; // display name of the codebook

@@ -19,6 +19,7 @@ function makeSignal(overrides: Partial<UnifiedSignal> = {}): UnifiedSignal {
     key: "section|Homepage|frustration",
     location: "Homepage",
     sourceType: "section",
+    anchor: "section-1",
     columnLabel: "frustration",
     colourSet: "",
     codebookName: "",

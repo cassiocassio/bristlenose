@@ -127,20 +127,19 @@ describe("Sections & themes", () => {
     grouping("sections");
     render(<TocSidebar />);
     const renamed = await screen.findByRole("link", { name: "Finding things" });
-    // QuoteSections anchors on `edited_label ?? screen_label`.
-    expect(renamed).toHaveAttribute("href", "#section-finding-things");
+    // QuoteSections anchors on the durable id, never the name.
+    expect(renamed).toHaveAttribute("href", "#section-2");
     expect(screen.queryByText("Search and filters")).toBeNull();
   });
 
-  it("shows a rename made in this session, still linking to the column's anchor", async () => {
+  it("shows a rename made in this session, and the link does not move", async () => {
     seedStore();
     grouping("sections");
     render(<TocSidebar />);
-    await screen.findByRole("link", { name: "Checkout" });
+    expect(await screen.findByRole("link", { name: "Checkout" })).toHaveAttribute("href", "#section-1");
     act(() => commitHeadingEdit("section-cluster-1:title", "Paying"));
-    // The heading reads the same edit; its anchor stays on the fetched label
-    // until the next fetch, so the link does too.
-    expect(screen.getByRole("link", { name: "Paying" })).toHaveAttribute("href", "#section-checkout");
+    // The anchor is the cluster id, so a rename cannot break a link to it.
+    expect(screen.getByRole("link", { name: "Paying" })).toHaveAttribute("href", "#section-1");
   });
 
   it("keeps a section whose quotes are all hidden, as the column does", async () => {

@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots, transcript_layout
+from bristlenose.server.heading_names import HeadingNames
 from bristlenose.server.journey import derive_journeys
 from bristlenose.server.models import (
     ClusterQuote,
@@ -231,6 +232,7 @@ def get_transcript(
         # Build assignment lookup: quote_id -> (label, label_type)
         assignment: dict[int, tuple[str, str]] = {}
         if quote_ids:
+            names = HeadingNames.load(db, project_id)
             cluster_rows = (
                 db.query(ClusterQuote, ScreenCluster)
                 .join(ScreenCluster, ClusterQuote.cluster_id == ScreenCluster.id)
@@ -238,7 +240,7 @@ def get_transcript(
                 .all()
             )
             for cq, sc in cluster_rows:
-                assignment[cq.quote_id] = (sc.screen_label, "section")
+                assignment[cq.quote_id] = (names.section(sc), "section")
 
             theme_rows = (
                 db.query(ThemeQuote, ThemeGroup)
@@ -247,7 +249,7 @@ def get_transcript(
                 .all()
             )
             for tq, tg in theme_rows:
-                assignment[tq.quote_id] = (tg.theme_label, "theme")
+                assignment[tq.quote_id] = (names.theme(tg), "theme")
 
         # Tags and deleted badges per quote
         tags_map: dict[int, list[TagResponse]] = {}

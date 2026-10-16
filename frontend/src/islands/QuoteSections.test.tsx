@@ -139,6 +139,18 @@ describe("QuoteSections", () => {
     expect(screen.getByText("Sign-in")).toBeInTheDocument();
   });
 
+  it("anchors a section on its id, so renaming it moves no link", async () => {
+    mockQuotesApi({
+      ...MOCK_QUOTES,
+      sections: [{ ...MOCK_QUOTES.sections[0], edited_label: "Sign-in" }],
+    });
+    render(<QuoteSections projectId="1" />);
+    await waitFor(() => expect(screen.getByText("Sign-in")).toBeInTheDocument());
+    expect(document.getElementById("section-1")).toHaveTextContent("Sign-in");
+    act(() => commitHeadingEdit("section-cluster-1:title", "Account access"));
+    expect(document.getElementById("section-1")).toHaveTextContent("Account access");
+  });
+
   it("builds tag vocabulary from codebook groups", async () => {
     mockQuotesApi(MOCK_QUOTES);
     mockGetCodebook.mockResolvedValue(MOCK_CODEBOOK_WITH_GROUPS as never);

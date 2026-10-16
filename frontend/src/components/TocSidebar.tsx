@@ -91,9 +91,9 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
   }, []);
 
   // ── Sections & themes ──────────────────────────────────────────────────
-  // The anchor is the column's (`edited_label ?? screen_label`), so a renamed
-  // section's link lands on its heading; the label is the heading's text,
-  // which also follows a rename made in this session (the store's edits).
+  // The anchor is the column's (the group's id), so no rename can move it; the
+  // label is the heading's text, which also follows a rename made in this
+  // session (the store's edits).
 
   const sectionVisible = useMemo(
     () =>
@@ -108,10 +108,9 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
     return data.sections
       .filter((s) => keepsGroup(s.quotes, sectionVisible, filterState.hidden))
       .map((s) => {
-        const anchorLabel = s.edited_label ?? s.screen_label;
         return {
-          id: groupAnchor("section", anchorLabel),
-          label: store.edits[`section-cluster-${s.cluster_id}:title`] ?? anchorLabel,
+          id: groupAnchor("section", s.cluster_id),
+          label: store.edits[`section-cluster-${s.cluster_id}:title`] ?? s.edited_label ?? s.screen_label,
         };
       });
   }, [data, bySession, sectionVisible, filterState.hidden, store.edits]);
@@ -121,10 +120,9 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
     return data.themes
       .filter((th) => keepsGroup(th.quotes, sectionVisible, filterState.hidden))
       .map((th) => {
-        const anchorLabel = th.edited_label ?? th.theme_label;
         return {
-          id: groupAnchor("theme", anchorLabel),
-          label: store.edits[`theme-group-${th.theme_id}:title`] ?? anchorLabel,
+          id: groupAnchor("theme", th.theme_id),
+          label: store.edits[`theme-group-${th.theme_id}:title`] ?? th.edited_label ?? th.theme_label,
         };
       });
   }, [data, bySession, sectionVisible, filterState.hidden, store.edits]);

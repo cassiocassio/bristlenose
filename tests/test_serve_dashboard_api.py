@@ -329,7 +329,10 @@ class TestDashboardNavItems:
     def test_dashboard_section_anchor(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()
         dashboard = [s for s in data["sections"] if s["label"] == "Dashboard"][0]
-        assert dashboard["anchor"] == "section-dashboard"
+        # The Quotes lens's heading id: the cluster id, never a slug of the name.
+        quotes = client.get("/api/projects/1/quotes").json()
+        cid = next(s["cluster_id"] for s in quotes["sections"] if s["screen_label"] == "Dashboard")
+        assert dashboard["anchor"] == f"section-{cid}"
 
     def test_themes_count(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()
@@ -341,7 +344,8 @@ class TestDashboardNavItems:
 
     def test_theme_anchor_format(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()
-        assert data["themes"][0]["anchor"] == "theme-onboarding-gaps"
+        theme_id = client.get("/api/projects/1/quotes").json()["themes"][0]["theme_id"]
+        assert data["themes"][0]["anchor"] == f"theme-{theme_id}"
 
     def test_nav_item_has_all_fields(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()

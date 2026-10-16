@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
+from bristlenose.server.heading_names import HeadingNames
 from bristlenose.server.models import ClusterQuote, Quote, ScreenCluster
 
 
@@ -29,6 +30,7 @@ def derive_journeys_with_anchors(
 
     Returns participant_id → ordered list of :class:`JourneyStep`. Order follows
     cluster ``display_order``; each screen label appears once (first occurrence),
+    under the researcher's name for it when they have renamed it,
     and its ``start_seconds`` is the minimum quote start-timecode for that
     participant across every cluster carrying that label — so the anchor is the
     true first moment, independent of cluster ordering.
@@ -39,8 +41,9 @@ def derive_journeys_with_anchors(
         .order_by(ScreenCluster.display_order)
         .all()
     )
+    names = HeadingNames.load(db, project_id)
 
-    # participant_id → {screen_label: min_start_seconds}
+    # participant_id → {shown section name: min_start_seconds}
     label_anchors: dict[str, dict[str, float]] = {}
     # participant_id → ordered list of first-seen labels (display_order)
     label_order: dict[str, list[str]] = {}
@@ -52,7 +55,7 @@ def derive_journeys_with_anchors(
             continue
 
         quotes = db.query(Quote).filter(Quote.id.in_(quote_ids)).all()
-        label = cluster.screen_label
+        label = names.section(cluster)
         for q in quotes:
             pid = q.participant_id
             anchors = label_anchors.setdefault(pid, {})

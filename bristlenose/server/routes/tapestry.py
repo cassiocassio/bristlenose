@@ -30,9 +30,9 @@ from sqlalchemy.orm import Session, selectinload
 
 from bristlenose.output_paths import project_output_dir
 from bristlenose.server import speaker_slots
+from bristlenose.server.heading_names import HeadingNames
 from bristlenose.server.models import (
     ClusterQuote,
-    HeadingEdit,
     Project,
     Quote,
     QuoteEdit,
@@ -203,19 +203,18 @@ def get_tapestry(
         if not db.get(Project, project_id):
             raise HTTPException(status_code=404, detail="Project not found")
         out_dir = _output_dir(request)
-        edits = {he.heading_key: he.edited_text
-                 for he in db.query(HeadingEdit).filter_by(project_id=project_id).all()}
+        names = HeadingNames.load(db, project_id)
 
         section_of: dict[int, str] = {}
         for cq, cluster in (db.query(ClusterQuote, ScreenCluster)
                             .join(ScreenCluster, ClusterQuote.cluster_id == ScreenCluster.id)
                             .filter(ScreenCluster.project_id == project_id).all()):
-            section_of[cq.quote_id] = edits.get(f"section-cluster-{cluster.id}:title") or cluster.screen_label
+            section_of[cq.quote_id] = names.section(cluster)
         theme_of: dict[int, str] = {}
         for tq, theme in (db.query(ThemeQuote, ThemeGroup)
                           .join(ThemeGroup, ThemeQuote.theme_id == ThemeGroup.id)
                           .filter(ThemeGroup.project_id == project_id).all()):
-            theme_of[tq.quote_id] = edits.get(f"theme-group-{theme.id}:title") or theme.theme_label
+            theme_of[tq.quote_id] = names.theme(theme)
 
         quotes = speaker_slots.evidence_quotes(db, project_id)
         slots = speaker_slots.slot_map(db, project_id)

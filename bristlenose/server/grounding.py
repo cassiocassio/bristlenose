@@ -208,6 +208,9 @@ def assemble_corpus_context(
     project_name = project.name if project else f"project {project_id}"
 
     from bristlenose.server import speaker_slots
+    from bristlenose.server.heading_names import HeadingNames
+
+    names = HeadingNames.load(db, project_id)
 
     all_quotes = speaker_slots.evidence_quotes(db, project_id)
     quote_by_pk: dict[int, Quote] = {q.id: q for q in all_quotes}
@@ -285,11 +288,8 @@ def assemble_corpus_context(
         ]
         members.sort(key=lambda q: q.start_timecode)
         if members:
-            blocks.append((
-                "Section",
-                cluster.screen_label,
-                [_corpus_quote(q, cluster.screen_label) for q in members],
-            ))
+            label = names.section(cluster)
+            blocks.append(("Section", label, [_corpus_quote(q, label) for q in members]))
 
     themes = (
         db.query(ThemeGroup)
@@ -305,11 +305,8 @@ def assemble_corpus_context(
         ]
         members.sort(key=lambda q: (q.session_id, q.start_timecode))
         if members:
-            blocks.append((
-                "Theme",
-                theme.theme_label,
-                [_corpus_quote(q, theme.theme_label) for q in members],
-            ))
+            label = names.theme(theme)
+            blocks.append(("Theme", label, [_corpus_quote(q, label) for q in members]))
 
     # Speaker roster from codes only (anonymisation boundary).
     codes = sorted({q.participant_id for q in all_quotes if q.id not in hidden_pks})
@@ -633,6 +630,9 @@ def load_signals(
         .order_by(ThemeGroup.id)
         .all()
     )
+    from bristlenose.server.heading_names import HeadingNames
+
+    headings = HeadingNames.load(db, project_id)
     cluster_members: dict[int, list[int]] = {}
     for cq in db.query(ClusterQuote).filter(ClusterQuote.quote_id.in_(visible_pks)):
         cluster_members.setdefault(cq.cluster_id, []).append(cq.quote_id)
@@ -684,12 +684,12 @@ def load_signals(
 
         cluster_adapters = []
         for c in clusters:
-            ca = _ClusterAdapter(screen_label=c.screen_label, display_order=c.display_order)
+            ca = _ClusterAdapter(screen_label=headings.section(c), display_order=c.display_order)
             ca.quotes = [adapters[pk] for pk in cluster_members.get(c.id, [])]
             cluster_adapters.append(ca)
         theme_adapters = []
         for t in themes:
-            ta = _ThemeAdapter(theme_label=t.theme_label)
+            ta = _ThemeAdapter(theme_label=headings.theme(t))
             ta.quotes = [adapters[pk] for pk in theme_members.get(t.id, [])]
             theme_adapters.append(ta)
 
@@ -748,11 +748,11 @@ def load_signals(
     quote_section: dict[int, str] = {}
     for c in clusters:
         for pk in cluster_members.get(c.id, []):
-            quote_section[pk] = c.screen_label
+            quote_section[pk] = headings.section(c)
     quote_theme: dict[int, str] = {}
     for t in themes:
         for pk in theme_members.get(t.id, []):
-            quote_theme[pk] = t.theme_label
+            quote_theme[pk] = headings.theme(t)
 
     accepted = (
         db.query(QuoteTag)
@@ -816,10 +816,10 @@ def load_signals(
                 theme_lookup.setdefault(f"{theme_label}|{gname}", []).append(record)
 
     section_matrix = build_matrix_from_contributions(
-        section_contributions, [c.screen_label for c in clusters], col_labels,
+        section_contributions, [headings.section(c) for c in clusters], col_labels,
     )
     theme_matrix = build_matrix_from_contributions(
-        theme_contributions, [t.theme_label for t in themes], col_labels,
+        theme_contributions, [headings.theme(t) for t in themes], col_labels,
     )
     signals, _, _ = detect_signals_generic(
         section_matrix,

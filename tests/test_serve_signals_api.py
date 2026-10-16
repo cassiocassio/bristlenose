@@ -194,7 +194,7 @@ class TestGetTagAnalysis:
         if data["signals"]:
             sig = data["signals"][0]
             expected_keys = {
-                "location", "source_type", "group_name", "colour_set", "count",
+                "location", "source_type", "anchor", "group_name", "colour_set", "count",
                 "participants", "n_eff", "mean_intensity", "concentration",
                 "composite_signal", "confidence", "flag", "quotes",
                 "signal_name", "pattern", "elaboration",

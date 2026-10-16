@@ -59,7 +59,12 @@ export function keepsGroup(
   return quotes.some((q) => visibleIds.has(q.dom_id) || hidden[q.dom_id]);
 }
 
-/** The scroll anchor the column puts on a section or theme heading. */
-export function groupAnchor(prefix: "section" | "theme", displayLabel: string): string {
-  return `${prefix}-${displayLabel.toLowerCase().replace(/ /g, "-")}`;
+/**
+ * The scroll anchor the column puts on a section or theme heading. Keyed on
+ * the durable cluster/theme id, never the name, so renaming a group moves no
+ * link to it. The server builds the same strings for the links it sends
+ * (`bristlenose/server/heading_names.py`, `section_anchor`).
+ */
+export function groupAnchor(prefix: "section" | "theme", id: number): string {
+  return `${prefix}-${id}`;
 }

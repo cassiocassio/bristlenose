@@ -220,9 +220,7 @@ export function QuoteSections({ projectId, refreshKey = 0, headingAction }: Quot
     <section {...refetchOverlayProps(isRefetching)}>
       <SectionHeading id="sections" action={headingAction}>{t("quotes.sections")}</SectionHeading>
       {filteredSections.map((section) => {
-        // Scroll anchor tracks the *displayed* label (rename if present).
-        const displayLabel = section.edited_label ?? section.screen_label;
-        const anchor = groupAnchor("section", displayLabel);
+        const anchor = groupAnchor("section", section.cluster_id);
         return (
           <QuoteGroup
             key={section.cluster_id}

@@ -18,6 +18,7 @@ const mockCbData: CodebookSignalsListResponse = {
         {
           location: "Checkout",
           source_type: "section",
+          anchor: "section-7",
           group_name: "Pain points",
           colour_set: "ux",
           count: 5,
@@ -109,6 +110,7 @@ const mockCbData: CodebookSignalsListResponse = {
         {
           location: "Onboarding",
           source_type: "theme",
+          anchor: "theme-onboarding",
           group_name: "Mental models",
           colour_set: "task",
           count: 3,
@@ -164,6 +166,7 @@ const mockSentimentData: SentimentSignalsData = {
     {
       location: "Checkout",
       sourceType: "section",
+      anchor: "section-checkout",
       sentiment: "frustration",
       count: 4,
       participants: ["p1", "p2"],
@@ -591,6 +594,7 @@ describe("SignalsPage", () => {
         signals: [{
           location: "Onboarding",
           source_type: "section",
+          anchor: "section-onboarding",
           group_name: "Pain points",
           colour_set: "ux",
           count: 3,
@@ -644,6 +648,7 @@ describe("SignalsPage", () => {
         signals: [{
           location: "Onboarding",
           source_type: "section",
+          anchor: "section-onboarding",
           group_name: "Flow",
           colour_set: "ux",
           count: 3,
@@ -711,6 +716,7 @@ describe("SignalsPage", () => {
         signals: [{
           location: "Section",
           source_type: "section",
+          anchor: "section-section",
           group_name: "Group",
           colour_set: "ux",
           count: 2,
@@ -806,7 +812,10 @@ describe("SignalsPage", () => {
 
     fireEvent.click(link);
     expect(window.switchToTab).toHaveBeenCalledWith("quotes");
-    expect(window.scrollToAnchor).toHaveBeenCalledWith("section-checkout");
+    // The server's anchor, keyed on the cluster id: a renamed section's link
+    // still lands on it.
+    expect(link.getAttribute("href")).toBe("#section-7");
+    expect(window.scrollToAnchor).toHaveBeenCalledWith("section-7");
   });
 
   // The card is itself role="button" and focuses on click, so a link inside it
@@ -878,6 +887,7 @@ describe("SignalsPage", () => {
             {
               location: "Checkout",
               source_type: "section",
+              anchor: "section-checkout",
               group_name: "Pain points",
               colour_set: "ux",
               count: 8,

@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session as DbSession
 
 from bristlenose.server import speaker_slots
+from bristlenose.server.heading_names import HeadingNames
 from bristlenose.server.models import (
     ClusterQuote,
     Person,
@@ -144,13 +145,14 @@ def extract_quotes_for_export(
     # ── Bulk-load related data ─────────────────────────────────────────
     edits_map = _load_edits(db, quote_db_ids)
     state_map = _load_states(db, quote_db_ids)
-    section_map = _load_sections(db, quote_db_ids)
-    theme_map = _load_themes(db, quote_db_ids)
+    names = HeadingNames.load(db, project_id)
+    section_map = _load_sections(db, quote_db_ids, names)
+    theme_map = _load_themes(db, quote_db_ids, names)
     tags_map = _load_tags(db, quote_db_ids)
     speaker_map = _load_speakers(db, project_id)
 
     # ── Build section ordering ─────────────────────────────────────────
-    section_order = _load_section_order(db, project_id)
+    section_order = _load_section_order(db, project_id, names)
 
     # ── Assemble rows ──────────────────────────────────────────────────
     results: list[ExportableQuote] = []
@@ -272,28 +274,32 @@ def _load_states(db: DbSession, quote_ids: list[int]) -> dict[int, QuoteState]:
     return {s.quote_id: s for s in rows}
 
 
-def _load_sections(db: DbSession, quote_ids: list[int]) -> dict[int, str]:
-    """Map quote_id → section label (ScreenCluster.screen_label)."""
+def _load_sections(
+    db: DbSession, quote_ids: list[int], names: HeadingNames,
+) -> dict[int, str]:
+    """Map quote_id → section name as the researcher sees it."""
     rows = (
-        db.query(ClusterQuote.quote_id, ScreenCluster.screen_label)
+        db.query(ClusterQuote.quote_id, ScreenCluster)
         .join(ScreenCluster, ScreenCluster.id == ClusterQuote.cluster_id)
         .filter(ClusterQuote.quote_id.in_(quote_ids))
         .all()
     )
-    return dict(rows)
+    return {qid: names.section(cluster) for qid, cluster in rows}
 
 
-def _load_themes(db: DbSession, quote_ids: list[int]) -> dict[int, list[str]]:
-    """Map quote_id → list of theme labels."""
+def _load_themes(
+    db: DbSession, quote_ids: list[int], names: HeadingNames,
+) -> dict[int, list[str]]:
+    """Map quote_id → names of its themes, as the researcher sees them."""
     rows = (
-        db.query(ThemeQuote.quote_id, ThemeGroup.theme_label)
+        db.query(ThemeQuote.quote_id, ThemeGroup)
         .join(ThemeGroup, ThemeGroup.id == ThemeQuote.theme_id)
         .filter(ThemeQuote.quote_id.in_(quote_ids))
         .all()
     )
     result: dict[int, list[str]] = {}
-    for qid, label in rows:
-        result.setdefault(qid, []).append(label)
+    for qid, theme in rows:
+        result.setdefault(qid, []).append(names.theme(theme))
     return result
 
 
@@ -337,14 +343,12 @@ def _load_speakers(
     return {(sid, code): (name or "", sf) for sid, code, name, sf in rows}
 
 
-def _load_section_order(db: DbSession, project_id: int) -> dict[str, int]:
-    """Map section label → display_order for sorting."""
-    rows = (
-        db.query(ScreenCluster.screen_label, ScreenCluster.display_order)
-        .filter(ScreenCluster.project_id == project_id)
-        .all()
-    )
-    return dict(rows)
+def _load_section_order(
+    db: DbSession, project_id: int, names: HeadingNames,
+) -> dict[str, int]:
+    """Map section name (as shown) → display_order for sorting."""
+    clusters = db.query(ScreenCluster).filter(ScreenCluster.project_id == project_id).all()
+    return {names.section(c): c.display_order for c in clusters}
 
 
 # ---------------------------------------------------------------------------

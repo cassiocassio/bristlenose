@@ -426,6 +426,29 @@ overrides keyed on durable ids, never on labels.
   there — and a decision on whether the Discussion width is remembered separately
   from the other lenses'. *Settled:* 60% of the lens (`NAV_MAX_SHARE`), remembered
   separately.
+- **All sessions — proposed 17–18 Oct 2026, not built.** Mockup:
+  `docs/mockups/discussion-all-sessions.html` (generator
+  `experiments/discussion-all-sessions/build.py`). The need: everything every session
+  said in answer to question X. *Decided by the owner:*
+  - The session bar gains **All**, first, and **All is the default** view. It is one
+    choice among All and one session; there is no toggling arbitrary combinations.
+  - The unit is the **session**, not the person. All is a pivot into guide order: each
+    normalised question once, then one block per session that asked it, holding that
+    session's quotes with their own `pN` badges.
+  - In the navigator's grid, with All selected, **the session heads are not lit**
+    (variant A): the accent appears once, on All in the bar. A selected session's head
+    takes `.bn-person-badge-here` and its column of cells an accent ring.
+  - The grid heads are **regular-size compact badges with no `#`** (`1 2 3`, under a
+    *Sessions* label). Measured in the mockup's width lab: an 8-session study needs a
+    432px guide for the grid; micro type saves less than dropping the `#` does.
+
+  *Proposed in the mockup, not yet decided:* the navigator measure replacing the rows'
+  chips and `#N ▾` pull-down (bar + count → one cell per session → the grid, chosen by
+  measuring the guide); cells shaded by the share of the session's participants
+  quoted; the compact number-only `PersonBadge` (keyline kept, absent = outline)
+  replacing Signals' `.p-box`; the session bar's names → codes → pull-down tiers;
+  "Not asked in" as one line; no wires in All. The July "no fraction" rule (above, in
+  the design doc's *Evidence, not coverage*) holds: cells and a count, never `n/N`.
 - **Unanswered questions fold forward.** Consecutive questions that drew no quotes
   join the next question that did, as one group (questions, then its quotes);
   groups are separated by the keyline, and the moderator's turn renders as a

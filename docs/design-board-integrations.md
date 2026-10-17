@@ -656,6 +656,14 @@ delete, and the board says more with less noise. That is easier when a long quot
 arrives as two or three stickies than as one. So Bristlenose splits generously
 and judges nothing; the researcher privileges one part and deletes another.
 
+*Two ways a board arrives* (owner, same day). A whole project — the most noise,
+where generous splitting and fast deleting earn their keep — or a careful
+selection by theme, tag or star, already judged and often already trimmed in
+Bristlenose (quote edits reach the board: `extract_quotes_for_export` reads them).
+Splitting applies to both, since a long quote is hard to read whoever chose it; a
+curated selection simply splits less. So the FigJam panel and Mac sheet offer the
+same scope as the Miro export, no more and no less.
+
 *What that means for the plugin.* Every part is its own sticky, selectable and
 deletable alone: no group, no lock, no section around a set. A set reads as one
 quote by proximity only — a tight gap inside it, the usual gap between sets —

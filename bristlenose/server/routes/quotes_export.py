@@ -17,6 +17,7 @@ from starlette.responses import Response
 
 from bristlenose.server.export_core import (
     ExportableQuote,
+    attachment_disposition,
     csv_safe,
     excel_sheet_name,
     extract_quotes_for_export,
@@ -141,7 +142,7 @@ async def export_quotes_csv(
             content=buf.getvalue(),
             media_type="text/csv; charset=utf-8",
             headers={
-                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Disposition": attachment_disposition(filename),
             },
         )
     finally:
@@ -222,7 +223,7 @@ async def export_quotes_xlsx(
             content=buf.getvalue(),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={
-                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Disposition": attachment_disposition(filename),
             },
         )
     finally:

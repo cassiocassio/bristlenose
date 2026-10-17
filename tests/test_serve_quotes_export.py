@@ -5,11 +5,13 @@ from __future__ import annotations
 import csv
 import io
 from pathlib import Path
+from urllib.parse import unquote
 
 import pytest
 from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
+from bristlenose.server.models import Project
 from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
@@ -190,6 +192,29 @@ class TestXlsxExport:
     def test_404_nonexistent_project(self, client: TestClient) -> None:
         resp = client.get("/api/projects/999/export/quotes.xlsx")
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Filename outside Latin-1
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("ext", ["csv", "xlsx"])
+def test_a_project_named_outside_latin_1_still_downloads(client: TestClient, ext: str) -> None:
+    """Starlette encodes headers as Latin-1, so a bare `filename="駅…"` is a 500.
+    The name goes in `filename*`, percent-encoded."""
+    db = client.app.state.db_factory()  # type: ignore[attr-defined]
+    try:
+        db.get(Project, 1).name = "駅の調査 Łódź"
+        db.commit()
+    finally:
+        db.close()
+    resp = client.get(f"/api/projects/1/export/quotes.{ext}")
+    assert resp.status_code == 200
+    disposition = resp.headers["content-disposition"]
+    assert disposition.isascii()
+    star = disposition.split("filename*=UTF-8''", 1)[1]
+    assert unquote(star) == f"駅の調査 Łódź-quotes.{ext}"
 
 
 # ---------------------------------------------------------------------------

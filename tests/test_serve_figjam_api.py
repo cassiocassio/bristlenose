@@ -167,3 +167,11 @@ def test_square_by_default_and_rectangle_on_request(client: TestClient) -> None:
     assert client.get(_URL).json()["sticky_shape"] == "square"
     assert client.get(_URL, params={"sticky_shape": "rectangle"}).json()["sticky_shape"] == "rectangle"
     assert client.get(_URL, params={"sticky_shape": "circle"}).status_code == 422
+
+
+def test_a_board_name_titles_the_board_and_names_the_file(client: TestClient) -> None:
+    resp = client.get(_URL, params={"board_name": "Kitchen study, round 2"})
+    assert resp.json()["title"].startswith("Kitchen study, round 2")
+    assert 'Kitchen study, round 2-figjam-board.json' in resp.headers["content-disposition"]
+    blank = client.get(_URL, params={"board_name": "   "}).json()
+    assert blank["title"] == client.get(_URL).json()["title"]

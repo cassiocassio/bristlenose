@@ -63,6 +63,8 @@ def export_figjam_board(
     split_long_quotes: bool = Query(True, description="Long quotes as two or three stickies"),
     sticky_shape: Literal["square", "rectangle"] = Query(
         FIGJAM_STICKY_SHAPE, description="Square by default on FigJam"),
+    board_name: str = Query("", max_length=200,
+                            description="The board's name; the project's when empty"),
 ) -> Response:
     """The project's (optionally scoped) quotes as a FigJam board document."""
     # One normalised code for the words, the document's `locale` and the log,
@@ -74,7 +76,9 @@ def export_figjam_board(
     db = _get_db(request)
     try:
         project = _check_project(db, project_id)
-        name = project_display_name(project)
+        # The dialog arrives filled with the project's name, and the researcher
+        # may change it; an empty one still falls back, as the Miro export does.
+        name = board_name.strip() or project_display_name(project)
         manifest = miro_export.build_figjam_manifest(
             db, project_id, name, parse_quote_ids(quote_ids),
             clips_base=clips_base, locale=locale, split=split_long_quotes,

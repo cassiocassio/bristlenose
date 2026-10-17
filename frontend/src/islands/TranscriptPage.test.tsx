@@ -1283,3 +1283,113 @@ describe("TranscriptPage — the moderator's questions in the gutter", () => {
     expect(document.querySelector("[data-testid^='question-entry-']")).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// The sticky slot: journey chain or session timeline
+// (docs/mockups/transcript-timeline-toggle.html)
+// ---------------------------------------------------------------------------
+
+describe("TranscriptPage — the session timeline in the sticky slot", () => {
+  const tapestry = {
+    session_id: "s1",
+    duration_seconds: 78,
+    turns: [
+      { t0: 2, t1: 10, speaker: "m1", team: true, colour: null },
+      { t0: 10, t1: 19, speaker: "p1", team: false, colour: "#9fceef" },
+      { t0: 19, t1: 26, speaker: "m1", team: true, colour: null },
+      { t0: 26, t1: 56, speaker: "p1", team: false, colour: "#c8553d" },
+    ],
+    sections: [
+      { t0: 10, label: "Dashboard" },
+      { t0: 46, label: "Search" },
+    ],
+    quotes: [
+      { t0: 46, t1: 56, text: "The search was great actually.", sentiment: "delight", intensity: 2, section: "Search", theme: "Findability" },
+    ],
+  };
+  const realWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+  let timelineStore: typeof import("../contexts/TranscriptTimelineStore");
+
+  beforeEach(async () => {
+    timelineStore = await import("../contexts/TranscriptTimelineStore");
+    timelineStore.resetTranscriptTimelineStore();
+    // jsdom lays nothing out; the timeline fits itself to its slot's width.
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get: () => 900 });
+    mockedGetTranscript.mockResolvedValue(mockData);
+    vi.mocked(apiGet).mockImplementation(((path: string) =>
+      Promise.resolve(path === "/tapestry" ? { sessions: [tapestry] } : { enabled: false, unavailable: null, screens: [] })) as typeof apiGet);
+  });
+  afterEach(() => {
+    if (realWidth) Object.defineProperty(HTMLElement.prototype, "clientWidth", realWidth);
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("offers the split control only for a session that has a timeline", async () => {
+    vi.mocked(apiGet).mockImplementation(((path: string) =>
+      Promise.resolve(path === "/tapestry" ? { sessions: [{ ...tapestry, session_id: "s9" }] } : { screens: [] })) as typeof apiGet);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await screen.findByTestId("transcript-journey-chain");
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith("/tapestry"));
+    expect(screen.queryByTestId("timeline-split")).toBeNull();
+    expect(timelineStore.getTranscriptTimeline().available).toBe(false);
+  });
+
+  it("swaps the chain for the timeline in the same sticky header, and back", async () => {
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    const toggle = await screen.findByTestId("timeline-toggle");
+    expect(timelineStore.getTranscriptTimeline().available).toBe(true);
+    const header = screen.getByTestId("transcript-journey-header");
+    expect(header).not.toHaveClass("bn-transcript-journey-header--timeline");
+    fireEvent.click(toggle);
+    expect(header).toHaveClass("bn-transcript-journey-header--timeline");
+    const slot = screen.getByTestId("transcript-timeline");
+    expect(header.contains(slot)).toBe(true);
+    await waitFor(() => expect(slot.querySelector(".bn-tapestry-svg")).toBeTruthy());
+    // The Standard detail: sentiment drawn, themes not.
+    expect(slot.querySelectorAll(".bn-tp-bar")).toHaveLength(1);
+    expect(slot.querySelectorAll(".bn-tp-flag")).toHaveLength(2);
+    fireEvent.click(toggle);
+    expect(header).not.toHaveClass("bn-transcript-journey-header--timeline");
+    expect(screen.queryByTestId("transcript-timeline")).toBeNull();
+  });
+
+  it("scrolls to a flag's paragraph and flashes it, writing #t- in place rather than navigating", async () => {
+    timelineStore.setTimelineOn(true);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    const slot = await screen.findByTestId("transcript-timeline");
+    await waitFor(() => expect(slot.querySelector('.bn-tp-flag[data-i="1"]')).toBeTruthy());
+    fireEvent.click(slot.querySelector('.bn-tp-flag[data-i="1"]')!);
+    expect(scrolledInto).toContain("t-46");
+    expect(document.getElementById("t-46")).toHaveAttribute("data-arrived");
+    expect(window.location.hash).toBe("#t-46");
+    expect(navigateTo).not.toHaveBeenCalled();
+  });
+
+  it("jumps from a sentiment bar to its quote's paragraph, not into a popover", async () => {
+    timelineStore.setTimelineOn(true);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    const slot = await screen.findByTestId("transcript-timeline");
+    await waitFor(() => expect(slot.querySelector(".bn-tp-bar")).toBeTruthy());
+    fireEvent.click(slot.querySelector(".bn-tp-bar")!);
+    expect(scrolledInto).toContain("t-46");
+    expect(document.querySelector(".bn-tp-popover")).toBeNull();
+  });
+
+  it("draws the detail the store holds, and follows a change from the Mac's View menu", async () => {
+    timelineStore.setTimelineLanes(2);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    const slot = await screen.findByTestId("transcript-timeline");
+    await waitFor(() => expect(slot.querySelector(".bn-tapestry-svg")).toBeTruthy());
+    expect(slot.querySelectorAll(".bn-tp-bar")).toHaveLength(0);
+    expect(slot.querySelectorAll(".bn-tp-theme")).toHaveLength(0);
+    act(() => {
+      timelineStore.applyTimelineMenuAction("setSessionTimelineLanes", { lanes: 5 });
+    });
+    await waitFor(() => expect(slot.querySelectorAll(".bn-tp-theme")).toHaveLength(1));
+    expect(slot.querySelectorAll(".bn-tp-bar")).toHaveLength(1);
+    act(() => {
+      timelineStore.applyTimelineMenuAction("toggleSessionTimeline");
+    });
+    expect(screen.queryByTestId("transcript-timeline")).toBeNull();
+  });
+});

@@ -166,7 +166,12 @@
       "zoomIn": "Powi\u0119ksz",
       "zoomOut": "Pomniejsz",
       "previousQuote": "Poprzedni cytat",
-      "nextQuote": "Nast\u0119pny cytat"
+      "nextQuote": "Nast\u0119pny cytat",
+      "timeline": "Oś czasu",
+      "detail": "Szczegółowość osi czasu",
+      "compact": "Kompaktowa",
+      "standard": "Standardowa",
+      "full": "Pełna"
     },
     "speakerPlaceholder": {
       "moderator": "Moderator",

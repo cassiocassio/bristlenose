@@ -59,6 +59,53 @@
     -webkit-mask-image: linear-gradient(to right, transparent 0, black 2rem, black calc(100% - 2rem), transparent 100%);
 }
 
+/* ── Journey chain or session timeline (docs/mockups/transcript-timeline-toggle.html) ──
+   The header row is a size container, so the split control can drop its label when the row is
+   narrow however wide the window is (the sidebars take their share first). */
+.bn-transcript-journey-header { container: bn-journey-header / inline-size; }
+
+/* The split control (islands/transcript/TimelineSplit.tsx): the house segmented control
+   (.dimension-toggle + .dimension-btn, organisms/inspector.css) with two segments, inside the
+   Export menu's positioning wrapper — the toggle clips its children, so the menu is its sibling.
+   Pressed is .dimension-btn.active as shipped; only the icon turns accent. */
+.bn-timeline-split { flex-shrink: 0; margin-left: auto; position: relative; }
+.bn-timeline-split .dimension-toggle { vertical-align: middle; }
+.bn-timeline-split .dimension-btn { display: inline-flex; align-items: center; gap: var(--bn-space-sm); }
+.bn-timeline-split .dimension-btn .bn-icon { width: 14px; height: 14px; }
+.bn-timeline-split .dimension-btn.active .bn-icon { color: var(--bn-colour-accent); }
+.bn-timeline-split__more { padding-inline: var(--bn-space-sm); }
+.bn-timeline-split__more .bn-icon { width: 11px; height: 11px; }
+.bn-timeline-split__more[aria-expanded="true"] { background: var(--bn-colour-hover); color: var(--bn-colour-text); }
+/* A narrow row keeps the icon; the button's name and tooltip carry the word. */
+@container bn-journey-header (max-width: 720px) {
+    .bn-timeline-split__label { display: none; }
+}
+/* The menu: the Export menu's classes, with a muted trailing hint where a Mac menu puts its key
+   equivalent. */
+/* Wider than the Export menu's 14rem: the hints ride on the same line. */
+.bn-timeline-split .export-dropdown-menu { min-width: 19rem; }
+.bn-timeline-menu-hint {
+    margin-left: auto;
+    padding-left: var(--bn-space-lg);
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+}
+
+/* The timeline on: the row wraps, the chain gives up its place, and the timeline takes a
+   full-width second line of the same sticky header. */
+.bn-transcript-journey-header--timeline { flex-wrap: wrap; row-gap: 0; }
+.bn-transcript-journey-header--timeline .bn-session-journey { display: none; }
+.bn-transcript-timeline { flex: 1 0 100%; min-width: 0; }
+/* A window too short to read under a stuck timeline (a small window, or the page zoomed to
+   200–400%: WCAG 1.4.10): the header scrolls with the page instead of staying over it. */
+@media (max-height: 30rem) {
+    .bn-transcript-journey-header--timeline { position: static; }
+}
+
+@media print {
+    .bn-timeline-split { display: none; }
+}
+
 /* Selector — reusable dropdown primitive (bn-selector) */
 .bn-selector {
     position: relative;
@@ -149,8 +196,10 @@
     flex-shrink: 0;
 }
 
-/* Segments need scroll-margin to not hide behind sticky header */
-.bn-transcript-journey-header ~ .transcript-body .transcript-segment[id] {
+/* Segments need scroll-margin to not hide behind sticky header. The body sits inside the gutter's
+   sheet since 3baf841f (17 Oct 2026), so the sibling is the sheet, not the body: the old
+   `~ .transcript-body` matched nothing, and a journey-chain click landed under the header. */
+.bn-transcript-journey-header ~ :is(.transcript-body, .bn-transcript-sheet) .transcript-segment[id] {
     scroll-margin-top: var(--bn-journey-header-height, 3rem);
 }
 

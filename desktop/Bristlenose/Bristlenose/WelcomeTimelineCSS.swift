@@ -1929,7 +1929,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     outline-offset: 1px;
 }
 
-/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–428 ════ */
+/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–429 ════ */
 /* Session tapestry — the timeline slice under a row of the Sessions grid
    (frontend/src/components/SessionTapestry.tsx). Lanes: section flags, speaker
    clips, sentiment bars, theme spans. Every colour and size is a shipped token
@@ -2070,10 +2070,11 @@ body.hide-ai-tags .badge-ai { display: none; }
 
 .bn-tp-flag { cursor: pointer; }
 /* A flag is a button (one Tab stop per timeline, roving): the focus ring is the banner's own
-   hairline in the accent, heavier, so it reads apart from the hot (pointer) state. */
+   hairline in the accent, heavier, so it reads apart from the hot (pointer) state. The doubled
+   class outranks .raised and .hot (0,2,1), which come later: the flag just jumped to is the
+   raised one, and its ring must still show. */
 .bn-tp-flag:focus { outline: none; }
-.bn-tp-flag:focus-visible line,
-.bn-tp-flag:focus-visible path { stroke: var(--bn-colour-accent); stroke-width: 2; }
+.bn-tp-flag.bn-tp-flag:focus-visible :is(line, path) { stroke: var(--bn-colour-accent); stroke-width: 2; }
 /* The staff and the banner share one hairline: the border keyline at rest, the text
    ink when raised — darker, never thicker. */
 .bn-tp-flag line,

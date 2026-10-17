@@ -162,7 +162,12 @@
       "zoomIn": "P\u0159ibl\u00ed\u017eit",
       "zoomOut": "Odd\u00e1lit",
       "previousQuote": "P\u0159edchoz\u00ed cit\u00e1t",
-      "nextQuote": "Dal\u0161\u00ed cit\u00e1t"
+      "nextQuote": "Dal\u0161\u00ed cit\u00e1t",
+      "timeline": "Časová osa",
+      "detail": "Podrobnost časové osy",
+      "compact": "Kompaktní",
+      "standard": "Standardní",
+      "full": "Úplná"
     },
     "speakerPlaceholder": {
       "moderator": "Moder\u00e1tor",

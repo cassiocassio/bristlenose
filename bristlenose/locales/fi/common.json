@@ -148,7 +148,12 @@
       "zoomIn": "Suurenna",
       "zoomOut": "Pienenn\u00e4",
       "previousQuote": "Edellinen sitaatti",
-      "nextQuote": "Seuraava sitaatti"
+      "nextQuote": "Seuraava sitaatti",
+      "timeline": "Aikajana",
+      "detail": "Aikajanan tarkkuus",
+      "compact": "Tiivis",
+      "standard": "Vakio",
+      "full": "Täysi"
     },
     "speakerPlaceholder": {
       "moderator": "Moderaattori",

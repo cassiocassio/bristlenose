@@ -143,7 +143,12 @@
       "zoomIn": "\u62e1\u5927",
       "zoomOut": "\u7e2e\u5c0f",
       "previousQuote": "\u524d\u306e\u767a\u8a00",
-      "nextQuote": "\u6b21\u306e\u767a\u8a00"
+      "nextQuote": "\u6b21\u306e\u767a\u8a00",
+      "timeline": "タイムライン",
+      "detail": "タイムラインの詳細度",
+      "compact": "コンパクト",
+      "standard": "標準",
+      "full": "すべて"
     },
     "speakerPlaceholder": {
       "moderator": "\u30e2\u30c7\u30ec\u30fc\u30bf\u30fc",

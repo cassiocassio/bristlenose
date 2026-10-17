@@ -169,7 +169,12 @@
       "zoomIn": "Zoom ind",
       "zoomOut": "Zoom ud",
       "previousQuote": "Forrige citat",
-      "nextQuote": "N\u00e6ste citat"
+      "nextQuote": "N\u00e6ste citat",
+      "timeline": "Tidslinje",
+      "detail": "Tidslinjens detaljer",
+      "compact": "Kompakt",
+      "standard": "Standard",
+      "full": "Fuld"
     },
     "reanalyse": {
       "button": "Analysér igen…",

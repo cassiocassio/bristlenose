@@ -20,6 +20,7 @@ import {
   useContext,
   useEffect,
   useRef,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { useLocation } from "react-router-dom";
@@ -75,6 +76,34 @@ export function getPlayerOpen(): boolean {
 /** Whether the popout player is currently playing (not paused). */
 export function getPlayerPlaying(): boolean {
   return _playerPlaying;
+}
+
+// ── Player time (for the transcript's timeline mark) ─────────────────
+// The popout's last reported moment, per session. Module state with its own
+// subscribers, so only the timeline that draws it re-renders ~4x/sec — never
+// the transcript or the quote cards (the reason the glow uses refs, above).
+
+let _time: { pid: string; seconds: number } | null = null;
+const _timeListeners = new Set<() => void>();
+
+function setPlayerTime(next: { pid: string; seconds: number } | null): void {
+  if (next === _time || (next && _time && next.pid === _time.pid && next.seconds === _time.seconds)) return;
+  _time = next;
+  _timeListeners.forEach((l) => l());
+}
+
+function subscribePlayerTime(listener: () => void): () => void {
+  _timeListeners.add(listener);
+  return () => _timeListeners.delete(listener);
+}
+
+/** The popout player's current time in this session, or null when no player is open on it. */
+export function usePlayerTime(sessionId: string): number | null {
+  return useSyncExternalStore(
+    subscribePlayerTime,
+    () => (_time && _time.pid === sessionId ? _time.seconds : null),
+    () => null,
+  );
 }
 
 // ── Provider ─────────────────────────────────────────────────────────────
@@ -411,6 +440,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       } else if (d.type === "bristlenose-timeupdate" && d.pid) {
         const playing = d.playing !== undefined ? d.playing : true;
         updateGlow(d.pid, d.seconds, playing);
+        if (typeof d.seconds === "number") setPlayerTime({ pid: String(d.pid), seconds: d.seconds });
       } else if (d.type === "bristlenose-playstate" && d.pid) {
         _playerPlaying = !!d.playing;
         postPlayerState(true, !!d.playing);
@@ -440,6 +470,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         _playerPlaying = false;
         postPlayerState(false, false);
         clearAllGlow();
+        setPlayerTime(null);
       }
     }, 1000);
 

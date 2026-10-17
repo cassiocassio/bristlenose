@@ -52,6 +52,7 @@ import {
   postFocusMode,
   postSubtitlePrefs,
   postPanelState,
+  postTimelineState,
 } from "../shims/bridge";
 import { toggleFocusMode, useFocusMode } from "../contexts/FocusModeStore";
 import { useSubtitlePrefs } from "../utils/subtitlePrefs";
@@ -74,6 +75,7 @@ import {
 } from "../utils/exportActions";
 import type { NormalisedJobStatus } from "../components/ActivityChipStack";
 import { toggleInspector, useInspectorStore } from "../contexts/InspectorStore";
+import { applyTimelineMenuAction, useTranscriptTimeline } from "../contexts/TranscriptTimelineStore";
 import { panelFit, useSidebarStore, wantedWidth } from "../contexts/SidebarStore";
 import { useQuoteGroupingView } from "../contexts/QuoteGroupingSlot";
 import { QuoteGroupingToggle } from "../islands/QuoteGroupingToggle";
@@ -402,6 +404,13 @@ function AppShell() {
     postPanelState(leftPanelOpen, tagsOpen, inspectorOpen, minWidth);
   }, [embedded, leftPanelOpen, tagsOpen, inspectorOpen, minWidth]);
 
+  // The transcript's sticky slot, for View ▸ Show / Hide Session Timeline and Timeline Detail ▸.
+  const transcriptTimeline = useTranscriptTimeline();
+  useEffect(() => {
+    if (!embedded) return;
+    postTimelineState(transcriptTimeline.available, transcriptTimeline.on, transcriptTimeline.lanes);
+  }, [embedded, transcriptTimeline.available, transcriptTimeline.on, transcriptTimeline.lanes]);
+
   useEffect(() => {
     const exportData = getExportData();
     if (exportData) {
@@ -514,6 +523,10 @@ function AppShell() {
           break;
         case "toggleInspectorPanel":
           toggleInspector();
+          break;
+        case "toggleSessionTimeline":
+        case "setSessionTimelineLanes":
+          applyTimelineMenuAction(action, payload);
           break;
         case "setSearchQuery": {
           // Native macOS search field → store (live as the user types). In

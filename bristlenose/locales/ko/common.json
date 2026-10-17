@@ -131,7 +131,12 @@
       "zoomIn": "\ud655\ub300",
       "zoomOut": "\ucd95\uc18c",
       "previousQuote": "\uc774\uc804 \uc778\uc6a9\ubb38",
-      "nextQuote": "\ub2e4\uc74c \uc778\uc6a9\ubb38"
+      "nextQuote": "\ub2e4\uc74c \uc778\uc6a9\ubb38",
+      "timeline": "타임라인",
+      "detail": "타임라인 세부 수준",
+      "compact": "간단히",
+      "standard": "표준",
+      "full": "전체"
     },
     "speakerPlaceholder": {
       "moderator": "\uc9c4\ud589\uc790",

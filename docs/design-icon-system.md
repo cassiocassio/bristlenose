@@ -147,6 +147,7 @@ otherwise.
 | Heatmap grid | `layout-grid` | `square.grid.2x2` | SVG |
 | Quotes lens | `text-quote` | `text.quote` | SVG traced from the SF Symbol |
 | Focus mode | `moon` | `moon` | SVG (an older Lucide `moon`) |
+| Session timeline | `gallery-horizontal` | `timeline.selection` | — (new, 17 Oct 2026). SF has no Gantt; `timeline.selection` is Apple's own timeline glyph (a frame between trim handles) and `gallery-horizontal` its silhouette twin. Rejected: `chart-gantt` ↔ `calendar.day.timeline.left` (a calendar day view), `align-start-vertical` ↔ `align.horizontal.left` (both mean align). `docs/mockups/transcript-timeline-toggle.html` |
 | Settings | `settings` (picked over `settings-2`) | `gearshape` | SVG drawn as a sun |
 | Help | `circle-help` (picked over `info`) | `questionmark.circle` | SVG |
 | Star (control) | ★ kept, by decision | `star` / `star.fill` | ★ |

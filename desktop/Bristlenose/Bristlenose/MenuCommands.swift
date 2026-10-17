@@ -867,6 +867,19 @@ private struct ViewMenuContent: View {
     /// `useKeyboardShortcuts.ts` lists the same lenses, and the two must agree.
     static let focusModeTabs: Set<Tab> = [.quotes, .signals]
 
+    /// Timeline Detail ▸, in the order the web pulldown lists them; the names
+    /// are the web's own keys (common.sessions.tapestry.*), shared.
+    struct TimelineDetail: Identifiable {
+        let lanes: Int
+        let key: String
+        var id: Int { lanes }
+    }
+    static let timelineDetails: [TimelineDetail] = [
+        TimelineDetail(lanes: 2, key: "common.sessions.tapestry.compact"),
+        TimelineDetail(lanes: 3, key: "common.sessions.tapestry.standard"),
+        TimelineDetail(lanes: 5, key: "common.sessions.tapestry.full"),
+    ]
+
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
     @FocusedValue(\.windowCommands) private var windowCommands
@@ -1136,6 +1149,35 @@ private struct ViewMenuContent: View {
         ))
         .keyboardShortcut("f", modifiers: [.command, .option])
         .disabled(!(bridgeHandler.activeTab.map(Self.focusModeTabs.contains) ?? false))
+
+        Divider()
+
+        // The transcript's sticky slot: the journey chain or the session
+        // timeline, and how much timeline (docs/mockups/transcript-timeline-toggle.html).
+        // The SPA owns the state (TranscriptTimelineStore) and mirrors it via
+        // `timeline-state`; the web split control does the same two things.
+        // Live only while a transcript with a timeline is on screen. No
+        // shortcut: shortcuts are earned. The symbol pairs with Lucide
+        // `gallery-horizontal` on the web (docs/design-icon-system.md).
+        Button(i18n.t(bridgeHandler.timelineOn
+                      ? "desktop.menu.view.hideSessionTimeline"
+                      : "desktop.menu.view.showSessionTimeline"),
+               systemImage: "timeline.selection") {
+            bridgeHandler.menuAction("toggleSessionTimeline")
+        }
+        .disabled(!bridgeHandler.timelineAvailable)
+
+        Menu(i18n.t("desktop.menu.view.timelineDetail")) {
+            // Radio-style, like All Quotes / Starred Quotes Only above: the
+            // ticked detail is the SPA's, and picking one turns the timeline on.
+            ForEach(Self.timelineDetails) { detail in
+                Toggle(i18n.t(detail.key), isOn: Binding(
+                    get: { bridgeHandler.timelineLanes == detail.lanes },
+                    set: { _ in bridgeHandler.menuAction("setSessionTimelineLanes", payload: ["lanes": detail.lanes]) }
+                ))
+            }
+        }
+        .disabled(!bridgeHandler.timelineAvailable)
 
         Divider()
 

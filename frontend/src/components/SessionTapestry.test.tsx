@@ -617,3 +617,14 @@ describe("SessionTapestry — in the transcript", () => {
     expect(onJump).toHaveBeenCalledWith(118);
   });
 });
+
+describe("SessionTapestry — the flags' Tab stop", () => {
+  // Not pinned here: jsdom keeps focus on a node React moves, where browsers drop it to <body>,
+  // so a test of SessionTapestry's give-back passes with the give-back removed (mutated 17 Oct
+  // 2026). It is checked by hand in a browser (the transcript, a flag focused while scrolling).
+  it("rests the flags' Tab stop on the current section until a flag has focus", () => {
+    render(<SessionTapestry session={session} sPerPx={1} nameOf={(c) => c} onJump={() => {}} current={1} />);
+    expect(document.querySelector('.bn-tp-flag[data-i="1"]')).toHaveAttribute("tabindex", "0");
+    expect(document.querySelector('.bn-tp-flag[data-i="0"]')).toHaveAttribute("tabindex", "-1");
+  });
+});

@@ -148,7 +148,12 @@
       "zoomIn": "Aumenta lo zoom",
       "zoomOut": "Riduci lo zoom",
       "previousQuote": "Citazione precedente",
-      "nextQuote": "Citazione successiva"
+      "nextQuote": "Citazione successiva",
+      "timeline": "Timeline",
+      "detail": "Dettaglio della timeline",
+      "compact": "Compatta",
+      "standard": "Standard",
+      "full": "Completa"
     },
     "speakerPlaceholder": {
       "moderator": "Moderatore",

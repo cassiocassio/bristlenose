@@ -128,7 +128,7 @@ interface Props {
   onScrub?: (seconds: number) => void;
   /** The section flag raised at rest: the transcript's current section. Hover raises its own. */
   current?: number;
-  /** The popout player's time, drawn as a heavier mark while media plays. */
+  /** The popout player's time while it is open on this session, drawn as a heavier mark. */
   player?: number | null;
   /** A sentiment mark opens its quote in a popover (the grid) or jumps to it (the transcript,
    *  where the quote is the text on the page). */
@@ -146,8 +146,13 @@ export default function SessionTapestry({
   const [raised, setRaised] = useState(-1);
   // A flag directly under the pointer: selected-blue, full label, cursor at its time.
   const [hotFlag, setHotFlag] = useState(-1);
-  // The section flag holding the slice's one Tab stop among flags (roving, like the bars).
+  // The section flag holding the slice's one Tab stop among flags (roving, like the bars), and
+  // whether a flag has keyboard focus now. Until one does, the stop rests on the current section.
   const [flagFocus, setFlagFocus] = useState(0);
+  const [flagFocused, setFlagFocused] = useState(false);
+  // The raised flag draws last, so React moves it in the DOM, and a moved node loses focus. Which
+  // flag had focus is kept here and given back after the move (useLayoutEffect, below).
+  const focusedFlag = useRef<number | null>(null);
   const [playhead, setPlayhead] = useState<number | null>(null);
   const [selected, setSelected] = useState(-1);
   const [themeFocus, setThemeFocus] = useState<string | null>(null);
@@ -199,6 +204,14 @@ export default function SessionTapestry({
     svg?.querySelectorAll<SVGElement>(".bn-tp-bar")[n]?.focus({ preventScroll: true });
   };
   const scrub = useRef<{ grab: number; x: number; moved: boolean } | null>(null);
+  useLayoutEffect(() => {
+    const i = focusedFlag.current;
+    if (i === null) return;
+    const el = svgRef.current?.querySelector<SVGGElement>(`.bn-tp-flag[data-i="${i}"]`);
+    if (el && document.activeElement !== el && (document.activeElement === document.body || !document.activeElement)) {
+      el.focus({ preventScroll: true });
+    }
+  });
   useEffect(() => {
     const other = (e: Event) => {
       if ((e as CustomEvent<string>).detail !== session.session_id) setSelected(-1);
@@ -295,10 +308,13 @@ export default function SessionTapestry({
 
   // The reading window (or, while media plays, the player) stays in view when the timeline is wider
   // than its slot: a long session at the 4 s/px ceiling scrolls sideways.
-  const follow = player ?? readingWindow?.[0] ?? null;
+  // The reader leads: while media plays the player centres its paragraph, so the window follows it
+  // anyway, and a paused player must not pin the view. Never during a drag: moving the slot under a
+  // still pointer would send the drag racing to the end.
+  const follow = readingWindow?.[0] ?? player ?? null;
   useEffect(() => {
     const wrap = scrollRef.current;
-    if (follow === null || !wrap || wrap.scrollWidth <= wrap.clientWidth) return;
+    if (follow === null || !wrap || scrub.current || wrap.scrollWidth <= wrap.clientWidth) return;
     const fx = TAPESTRY_GUTTER + follow / sPerPx;
     if (fx < wrap.scrollLeft + TAPESTRY_GUTTER || fx > wrap.scrollLeft + wrap.clientWidth - 40) {
       wrap.scrollLeft = Math.max(0, fx - wrap.clientWidth / 3);
@@ -428,20 +444,26 @@ export default function SessionTapestry({
     scrub.current = null;
   };
 
-  // Section flags are buttons: one Tab stop (roving), ← → move, Return or Space jumps — so a
-  // keyboard reaches sections in the grid (where an open timeline hides the chain's links) and
+  // Section flags are buttons: one Tab stop (roving), ← → Home End move, Return or Space jumps —
+  // so a keyboard reaches sections in the grid (where an open timeline hides the chain's links) and
   // in the transcript.
-  const flagStop = Math.min(flagFocus, Math.max(0, s.sections.length - 1));
+  const lastFlag = Math.max(0, s.sections.length - 1);
+  const flagStop = Math.min(flagFocused || current < 0 ? flagFocus : current, lastFlag);
   const flagKey = (i: number) => (e: React.KeyboardEvent<SVGGElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       onJump(s.sections[i].t0);
-    } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-      e.preventDefault();
-      const n = Math.max(0, Math.min(s.sections.length - 1, i + (e.key === "ArrowRight" ? 1 : -1)));
-      setFlagFocus(n);
-      e.currentTarget.ownerSVGElement?.querySelector<SVGGElement>(`.bn-tp-flag[data-i="${n}"]`)?.focus({ preventScroll: true });
+      return;
     }
+    const n = e.key === "ArrowRight" ? Math.min(lastFlag, i + 1)
+      : e.key === "ArrowLeft" ? Math.max(0, i - 1)
+      : e.key === "Home" ? 0
+      : e.key === "End" ? lastFlag
+      : -1;
+    if (n < 0) return;
+    e.preventDefault();
+    setFlagFocus(n);
+    e.currentTarget.ownerSVGElement?.querySelector<SVGGElement>(`.bn-tp-flag[data-i="${n}"]`)?.focus({ preventScroll: true });
   };
   const sel: TapestryQuote | undefined = selQ;
 
@@ -483,11 +505,11 @@ export default function SessionTapestry({
               <stop offset="1" style={{ stopColor: "var(--bn-colour-badge-bg)", stopOpacity: 0 }} />
             </linearGradient>
           </defs>
-          <text className="bn-tp-lane" x={12} y={2.5 + P.flagH / 2 + centre(F.px.lane)}>{lane(t("quotes.sections"))}</text>
-          <text className="bn-tp-lane" x={12} y={MT.y + MT.h / 2 + centre(F.px.lane)}>{lane(t("sessions.speakerPlaceholder.moderator"))}</text>
-          <text className="bn-tp-lane" x={12} y={PT.y + PT.h / 2 + centre(F.px.lane)}>{lane(t("sessions.speakerPlaceholder.participant"))}</text>
-          {showSentiment && <text className="bn-tp-lane" x={12} y={SE.mid + centre(F.px.lane)}>{lane(t("sessions.colSentiment"))}</text>}
-          {showThemes && <text className="bn-tp-lane" x={12} y={TG.y + P.themeH / 2 + centre(F.px.lane)}>{lane(t("quotes.themes"))}</text>}
+          <text className="bn-tp-lane" aria-hidden="true" x={12} y={2.5 + P.flagH / 2 + centre(F.px.lane)}>{lane(t("quotes.sections"))}</text>
+          <text className="bn-tp-lane" aria-hidden="true" x={12} y={MT.y + MT.h / 2 + centre(F.px.lane)}>{lane(t("sessions.speakerPlaceholder.moderator"))}</text>
+          <text className="bn-tp-lane" aria-hidden="true" x={12} y={PT.y + PT.h / 2 + centre(F.px.lane)}>{lane(t("sessions.speakerPlaceholder.participant"))}</text>
+          {showSentiment && <text className="bn-tp-lane" aria-hidden="true" x={12} y={SE.mid + centre(F.px.lane)}>{lane(t("sessions.colSentiment"))}</text>}
+          {showThemes && <text className="bn-tp-lane" aria-hidden="true" x={12} y={TG.y + P.themeH / 2 + centre(F.px.lane)}>{lane(t("quotes.themes"))}</text>}
 
           {/* Speaker clips */}
           <rect className="bn-tp-track" x={TAPESTRY_GUTTER} y={MT.y - 1} width={Math.max(0, xEnd - TAPESTRY_GUTTER)}
@@ -537,7 +559,7 @@ export default function SessionTapestry({
                   <rect className={`bn-tp-clip-edge ${teamTurn(tn) ? "team" : "ppt"}`} x={g.x} y={g.y} width={g.w} height={g.h} rx={g.rx || undefined} />
                 )}
                 {label && (
-                  <text className={`bn-tp-clip-label ${teamTurn(tn) ? "on-team" : "on-ppt"}`}
+                  <text className={`bn-tp-clip-label ${teamTurn(tn) ? "on-team" : "on-ppt"}`} aria-hidden="true"
                     style={ink ? { fill: ink } : undefined} x={x(tn.t0) + P.clipX} y={g.y + g.h / 2 + centre(F.px.clip)}>
                     {label}
                   </text>
@@ -565,9 +587,21 @@ export default function SessionTapestry({
               <g key={`f${i}`} className={`bn-tp-flag${isRaised ? " raised" : ""}${isHot ? " hot" : ""}`}
                 data-label={f.label} data-first={firstVisit.has(i) ? "" : undefined} data-i={i}
                 role="button" tabIndex={i === flagStop ? 0 : -1}
-                aria-label={`${f.label} · ${formatTimecode(f.t0)}`}
+                aria-label={[f.label, formatTimecode(f.t0)].join(" · ")}
                 onKeyDown={flagKey(i)}
-                onFocus={() => setFlagFocus(i)}
+                onFocus={() => {
+                  focusedFlag.current = i;
+                  setFlagFocus(i);
+                  setFlagFocused(true);
+                }}
+                onBlur={(e) => {
+                  // Focus taken elsewhere (another control, or a click on nothing) — not the
+                  // node being moved, which is the case the layout effect gives focus back for.
+                  if (e.currentTarget.isConnected && !e.currentTarget.ownerSVGElement?.contains(e.relatedTarget as Node | null)) {
+                    focusedFlag.current = null;
+                    setFlagFocused(false);
+                  }
+                }}
                 onClick={() => onJump(f.t0)}
                 onMouseEnter={() => {
                   setHotFlag(i);
@@ -577,7 +611,6 @@ export default function SessionTapestry({
                   setHotFlag(-1);
                   setPlayhead(null);
                 }}>
-                <title>{`${f.label} · ${formatTimecode(f.t0)}`}</title>
                 <line x1={fx + 0.5} x2={fx + 0.5} y1={2} y2={MT.y - 2} />
                 {/* Half-pixel coordinates: a 1px stroke on whole pixels smears across two and
                     reads as a heavier line than the hairline it is. */}
@@ -715,7 +748,7 @@ export default function SessionTapestry({
             const tw = text ? measure(text, F.tag) : 0;
             themeEnds[row] = Math.max(x1, lx + tw + 2 * P.themeX);
             return (
-              <g key={theme} className="bn-tp-theme" onMouseEnter={() => setThemeFocus(theme)}
+              <g key={theme} className="bn-tp-theme" aria-hidden="true" onMouseEnter={() => setThemeFocus(theme)}
                 onMouseLeave={() => setThemeFocus(null)}>
                 <title>{theme}</title>
                 <rect className="bn-tp-span" x={x0} y={y + P.themeH / 2 - 2} width={x1 - x0} height={4} rx={2} />
@@ -731,7 +764,7 @@ export default function SessionTapestry({
           })}
 
           {ticks.map((tk) => (
-            <text key={tk} className={`bn-tp-tick${nearTick === tk ? " near" : ""}`} x={x(tk)} y={H - 2} textAnchor={tk === 0 ? "start" : "middle"}>
+            <text key={tk} className={`bn-tp-tick${nearTick === tk ? " near" : ""}`} aria-hidden="true" x={x(tk)} y={H - 2} textAnchor={tk === 0 ? "start" : "middle"}>
               {formatTimecode(tk)}
             </text>
           ))}

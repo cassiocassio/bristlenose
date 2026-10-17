@@ -159,7 +159,12 @@
       "zoomIn": "Vergr\u00f6\u00dfern",
       "zoomOut": "Verkleinern",
       "previousQuote": "Vorheriges Zitat",
-      "nextQuote": "N\u00e4chstes Zitat"
+      "nextQuote": "N\u00e4chstes Zitat",
+      "timeline": "Zeitleiste",
+      "detail": "Detailgrad der Zeitleiste",
+      "compact": "Kompakt",
+      "standard": "Standard",
+      "full": "Vollständig"
     },
     "reanalyse": {
       "button": "Erneut analysieren…",

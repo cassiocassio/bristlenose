@@ -169,7 +169,12 @@
       "zoomIn": "Zoom inn",
       "zoomOut": "Zoom ut",
       "previousQuote": "Forrige sitat",
-      "nextQuote": "Neste sitat"
+      "nextQuote": "Neste sitat",
+      "timeline": "Tidslinje",
+      "detail": "Detaljnivå for tidslinjen",
+      "compact": "Kompakt",
+      "standard": "Standard",
+      "full": "Full"
     },
     "reanalyse": {
       "button": "Analyser på nytt…",

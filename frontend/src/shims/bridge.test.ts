@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { _resetEmbeddedCache } from "../utils/embedded";
 import {
+  postTimelineState,
   installBridge,
   postRouteChange,
   postReady,
@@ -238,6 +239,14 @@ describe("installBridge", () => {
 // ---------------------------------------------------------------------------
 // postPlayerState
 // ---------------------------------------------------------------------------
+
+describe("postTimelineState", () => {
+  it("posts the transcript's sticky-slot state for the View menu", () => {
+    const post = installMockWebkit();
+    postTimelineState(true, false, 3);
+    expect(post).toHaveBeenCalledWith({ type: "timeline-state", available: true, on: false, lanes: 3 });
+  });
+});
 
 describe("postPlayerState", () => {
   it("posts player-state message with hasPlayer and playing", () => {

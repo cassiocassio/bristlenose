@@ -148,7 +148,12 @@
       "zoomIn": "Yak\u0131nla\u015ft\u0131r",
       "zoomOut": "Uzakla\u015ft\u0131r",
       "previousQuote": "\u00d6nceki Al\u0131nt\u0131",
-      "nextQuote": "Sonraki Al\u0131nt\u0131"
+      "nextQuote": "Sonraki Al\u0131nt\u0131",
+      "timeline": "Zaman çizelgesi",
+      "detail": "Zaman çizelgesi ayrıntısı",
+      "compact": "Kompakt",
+      "standard": "Standart",
+      "full": "Tam"
     },
     "speakerPlaceholder": {
       "moderator": "Moderat\u00f6r",

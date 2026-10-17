@@ -34,6 +34,13 @@ import { reportHref } from "../utils/reportHref";
 import { discussionPath, questionsAsked, type QuestionAsked } from "./discussion/discussionLinks";
 import type { DiscussionData } from "./discussion/types";
 import { useGutterHover } from "./transcript/useGutterHover";
+import { TimelineSplit } from "./transcript/TimelineSplit";
+import { TranscriptTimeline } from "./transcript/TranscriptTimeline";
+import {
+  onTimelineWillChange,
+  setTimelineAvailable,
+  useTranscriptTimeline,
+} from "../contexts/TranscriptTimelineStore";
 import "./transcript/transcript-gutter.css";
 import { quoteExtents } from "../utils/quoteExtents";
 import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
@@ -64,7 +71,11 @@ import type { SessionListItem } from "../utils/api";
 import { formatFinderDate, formatTimecode } from "../utils/format";
 import { getTagBg } from "../utils/colours";
 import { markArrived } from "../utils/arrival";
+import { segmentIndexAt } from "../utils/segmentAt";
+import { announce } from "../utils/announce";
 import type {
+  TapestryResponse,
+  TapestrySession,
   TranscriptPageResponse,
   TranscriptSegmentResponse,
   TranscriptSpeakerResponse,
@@ -170,13 +181,7 @@ function resolveSegmentForSeconds(
   segments: TranscriptSegmentResponse[],
   target: number,
 ): TranscriptSegmentResponse | null {
-  if (segments.length === 0) return null;
-  let nearestAfter: TranscriptSegmentResponse | null = null;
-  for (const seg of segments) {
-    if (seg.start_time <= target && target < seg.end_time) return seg;
-    if (seg.start_time >= target && nearestAfter === null) nearestAfter = seg;
-  }
-  return nearestAfter ?? segments[segments.length - 1];
+  return segments[segmentIndexAt(segments, target)] ?? null;
 }
 
 function useJourneyScrollSync(
@@ -628,6 +633,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   // Measure sticky header height for scroll-margin-top. Depends on the speaker
   // list too — the header carries participant badges, so two journey-less
   // sessions with different participant counts have different header heights.
+  // The timeline changes it too, after a lazy load: the observer below keeps it.
   useLayoutEffect(() => {
     if (headerRef.current) {
       const height = headerRef.current.offsetHeight;
@@ -637,6 +643,114 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       );
     }
   }, [journeyLabels, data?.speakers]);
+
+  // ── The sticky slot: the journey chain, or the session timeline
+  // (docs/mockups/transcript-timeline-toggle.html). The timeline is the Sessions grid's, for this
+  // session; the split control appears only when there is one to show.
+  const timeline = useTranscriptTimeline();
+  const [tapestry, setTapestry] = useState<TapestrySession | null>(null);
+  // Once per session to learn whether there is a timeline; while it shows, again on every re-read
+  // (during a first analysis its sections and quotes arrive with the transcript's).
+  const tapestryKey = timeline.on ? data?.segments : null;
+  useEffect(() => {
+    let live = true;
+    apiGet<TapestryResponse>("/tapestry")
+      .then((r) => {
+        if (live) setTapestry((r.sessions ?? []).find((x) => x.session_id === sessionId) ?? null);
+      })
+      .catch(() => {
+        if (live) setTapestry(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [sessionId, tapestryKey]);
+  const hasTimeline = !!tapestry && tapestry.session_id === sessionId && tapestry.turns.length > 0;
+  useEffect(() => {
+    setTimelineAvailable(hasTimeline);
+    return () => setTimelineAvailable(false);
+  }, [hasTimeline]);
+  const showTimeline = hasTimeline && timeline.on;
+
+  // Switching keeps the reader's place: the paragraph under the header stays the same distance
+  // below it, however the header grows or shrinks — the switch itself, then the timeline's lazy
+  // chunk landing a moment later. Captured before the change (whoever made it: the split control
+  // or the Mac's View menu), applied as the header resizes; the reader's own scroll cancels it.
+  const placeRef = useRef<{ el: HTMLElement; offset: number; until: number } | null>(null);
+  useEffect(() => onTimelineWillChange(() => {
+    const body = bodyRef.current;
+    const header = headerRef.current;
+    if (!body || !header) return;
+    const hb = header.getBoundingClientRect().bottom;
+    const el = Array.from(body.querySelectorAll<HTMLElement>(".transcript-segment"))
+      .find((p) => p.getBoundingClientRect().bottom > hb);
+    placeRef.current = el ? { el, offset: el.getBoundingClientRect().top - hb, until: performance.now() + 1500 } : null;
+  }), []);
+  const headerShown = !loading && !!data;
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      document.documentElement.style.setProperty("--bn-journey-header-height", `${header.offsetHeight}px`);
+      const place = placeRef.current;
+      if (!place || performance.now() > place.until || !place.el.isConnected) return;
+      const drift = place.el.getBoundingClientRect().top - header.getBoundingClientRect().bottom - place.offset;
+      if (Math.abs(drift) >= 1) window.scrollBy(0, drift);
+    });
+    ro.observe(header);
+    // The reader's own scroll cancels a pending correction. A key inside the header is not that:
+    // choosing from the pulldown by keyboard is the change being corrected for.
+    const cancel = (e: Event) => {
+      if (e.target instanceof Node && header.contains(e.target)) return;
+      placeRef.current = null;
+    };
+    window.addEventListener("wheel", cancel, { passive: true });
+    window.addEventListener("touchstart", cancel, { passive: true });
+    window.addEventListener("keydown", cancel);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("wheel", cancel);
+      window.removeEventListener("touchstart", cancel);
+      window.removeEventListener("keydown", cancel);
+    };
+  }, [headerShown]);
+
+  // A click on the timeline scrolls this page to the paragraph holding that moment — the
+  // resolver a #t- deep link uses — flashes it, and writes #t-<s> in place (shareable; Back still
+  // leaves the page). It never navigates: the Sessions grid's timeline does that.
+  const paragraphAt = useCallback((sec: number): HTMLElement | null => {
+    const i = segmentIndexAt(data?.segments ?? [], sec);
+    return i < 0 ? null : bodyRef.current?.querySelectorAll<HTMLElement>(".transcript-segment")[i] ?? null;
+  }, [data]);
+  const timelineJump = useCallback((sec: number) => {
+    const el = paragraphAt(sec);
+    if (!el) return;
+    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    el.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
+    markArrived(el);
+    // Heard as well as seen: the paragraph's time and first words, as the timeline announces a quote.
+    const seg = data?.segments[segmentIndexAt(data.segments, sec)];
+    if (seg) announce([formatTimecode(seg.start_time), seg.text.slice(0, 80)].join(", "));
+    const tag = `#t-${Math.floor(Number(el.dataset.startSeconds) || 0)}`;
+    const { pathname, search, hash } = window.location;
+    // Hash routing (an export) keeps its route: "#/report/sessions/s1#t-589".
+    const next = hash.startsWith("#/") ? hash.replace(/#t-\d+$/, "") + tag : tag;
+    try {
+      window.history.replaceState(window.history.state, "", `${pathname}${search}${next}`);
+    } catch {
+      // A sandboxed frame may refuse; the scroll has happened all the same.
+    }
+    // Already there: a later re-read must not scroll back to it.
+    anchoredFor.current = `${sessionId}${window.location.hash}`;
+  }, [paragraphAt, sessionId, data]);
+  // Dragging the reading window: straight there, no flash, no hash — the reader is still moving.
+  const timelineScrub = useCallback((sec: number) => {
+    paragraphAt(sec)?.scrollIntoView({ block: "start" });
+  }, [paragraphAt]);
+  const speakerNameOf = useCallback((slot: string) => {
+    const sp = data?.speakers.find((x) => x.code === slot);
+    return sp?.name || slot;
+  }, [data?.speakers]);
 
   // Deleted badge / tag callbacks
   const handleDeleteBadge = useCallback(
@@ -802,7 +916,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     <>
       {/* Sticky header — session selector + journey chain (when available) */}
       <div
-        className="bn-transcript-journey-header"
+        className={`bn-transcript-journey-header${showTimeline ? " bn-transcript-journey-header--timeline" : ""}`}
         ref={headerRef}
         data-testid="transcript-journey-header"
       >
@@ -849,6 +963,18 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
             onIndexClick={handleIndexClick}
             stickyOverflow
             data-testid="transcript-journey-chain"
+          />
+        )}
+        {hasTimeline && <TimelineSplit />}
+        {showTimeline && tapestry && (
+          <TranscriptTimeline
+            session={tapestry}
+            lanes={timeline.lanes}
+            bodyRef={bodyRef}
+            headerRef={headerRef}
+            nameOf={speakerNameOf}
+            onJump={timelineJump}
+            onScrub={timelineScrub}
           />
         )}
       </div>

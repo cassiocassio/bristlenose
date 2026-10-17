@@ -27,7 +27,7 @@ import {
   AppWindowMac,
   MessageCircleQuestionMark,
   Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleHelp, CircleX, Download,
-  ExternalLink, Eye, EyeOff, Folder, LayoutGrid, List, Minus, Moon, Pencil, Play, Plus,
+  ExternalLink, Eye, EyeOff, Folder, GalleryHorizontal, LayoutGrid, List, Minus, Moon, Pencil, Play, Plus,
   RotateCcw, RotateCw, Search, Settings, SlidersHorizontal, Sparkle, Tag, TextQuote,
   TriangleAlert, Undo2, X, ZoomIn, ZoomOut, type LucideIcon,
 } from "lucide-react";
@@ -67,6 +67,9 @@ const ICONS = {
   screens: AppWindowMac,
   /** The Discussion lens; matches the Mac's SF Symbol `questionmark.bubble`. */
   discussion: MessageCircleQuestionMark,
+  /** The session timeline (the tapestry): matches the Mac's SF Symbol `timeline.selection`, a frame
+   *  held between two trim handles; Lucide has no timeline, and this is its silhouette twin. */
+  timeline: GalleryHorizontal,
   /** Focus mode: the moon, as Mail's View menu. */
   focus: Moon,
   /** Settings (pick: the gear, over settings-2's sliders). */

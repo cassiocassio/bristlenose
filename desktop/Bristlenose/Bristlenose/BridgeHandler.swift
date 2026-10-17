@@ -314,6 +314,16 @@ final class BridgeHandler: ObservableObject {
     /// menu rows can't drift apart in how honest they are.
     @Published var inspectorOpen = false
 
+    /// The transcript's sticky slot (docs/mockups/transcript-timeline-toggle.html):
+    /// whether a transcript with a session timeline is on screen, whether the
+    /// timeline is showing in place of the journey chain, and how much of it
+    /// (2, 3 or 5 lanes: Compact, Standard, Full). Owned web-side by
+    /// `TranscriptTimelineStore`, mirrored via `timeline-state`, read by View ▸
+    /// Show / Hide Session Timeline and Timeline Detail ▸.
+    @Published var timelineAvailable = false
+    @Published var timelineOn = false
+    @Published var timelineLanes = 3
+
     /// The width the report's centre column needs to stay readable with the
     /// panels the researcher has open: content floor + open panel widths (the
     /// minimap goes before the column), computed web-side because only `SidebarStore` knows the
@@ -1080,6 +1090,16 @@ final class BridgeHandler: ObservableObject {
             let minWidth = CGFloat(body["minWidth"] as? Double ?? 0)
             if minWidth != detailMinWidth { detailMinWidth = minWidth }
 
+        case "timeline-state":
+            // Equality-guarded like `panel-state`: an unchanged assign would
+            // rebuild the View menu's rows for nothing.
+            let available = body["available"] as? Bool ?? false
+            let on = body["on"] as? Bool ?? false
+            let lanes = body["lanes"] as? Int ?? 3
+            if available != timelineAvailable { timelineAvailable = available }
+            if on != timelineOn { timelineOn = on }
+            if lanes != timelineLanes { timelineLanes = lanes }
+
         case "codebook-focus":
             // Equality-guarded for the same reason as `panel-state`: clicking
             // around inside one group re-posts unchanged capabilities, and an
@@ -1249,6 +1269,10 @@ final class BridgeHandler: ObservableObject {
         rightPanelOpen = false
         inspectorOpen = false
         detailMinWidth = 0
+        // No transcript is on screen until the incoming SPA says so.
+        timelineAvailable = false
+        timelineOn = false
+        timelineLanes = 3
         // Same discipline, and it was missed when these shipped: all eight
         // codebook mirrors survived a project switch, so the Codes menu could
         // be enabled from the PREVIOUS project's cursor until the incoming

@@ -169,7 +169,12 @@
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom uit",
       "previousQuote": "Vorig citaat",
-      "nextQuote": "Volgend citaat"
+      "nextQuote": "Volgend citaat",
+      "timeline": "Tijdlijn",
+      "detail": "Detail van de tijdlijn",
+      "compact": "Compact",
+      "standard": "Standaard",
+      "full": "Volledig"
     },
     "reanalyse": {
       "button": "Opnieuw analyseren…",

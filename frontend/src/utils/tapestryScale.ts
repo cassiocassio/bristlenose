@@ -42,7 +42,10 @@ export function fitScale(durations: readonly number[], width: number): number {
  * scrolls sideways rather than drawing finer than the grid ever does.
  */
 export function fitSession(duration: number, width: number): number {
-  const usable = Math.max(1, width - TAPESTRY_GUTTER - TAPESTRY_RIGHT);
+  // A pixel in hand: the timeline rounds its width up, and duration / (duration / usable) is not
+  // always usable in floating point, so a timeline fitted exactly overflowed by 1 px (a sideways
+  // scroll, a scrollbar) at about 3% of widths.
+  const usable = Math.max(1, width - TAPESTRY_GUTTER - TAPESTRY_RIGHT - 1);
   return duration > 0 ? Math.min(4, duration / usable) : 1;
 }
 

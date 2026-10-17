@@ -139,7 +139,12 @@
       "zoomIn": "\u653e\u5927",
       "zoomOut": "\u7e2e\u5c0f",
       "previousQuote": "\u4e0a\u4e00\u5247\u5f15\u8ff0",
-      "nextQuote": "\u4e0b\u4e00\u5247\u5f15\u8ff0"
+      "nextQuote": "\u4e0b\u4e00\u5247\u5f15\u8ff0",
+      "timeline": "時間軸",
+      "detail": "時間軸詳細程度",
+      "compact": "精簡",
+      "standard": "標準",
+      "full": "完整"
     },
     "speakerPlaceholder": {
       "moderator": "\u4e3b\u6301\u4eba",

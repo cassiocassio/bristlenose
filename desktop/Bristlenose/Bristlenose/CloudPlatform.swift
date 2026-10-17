@@ -329,10 +329,11 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// stated rather than fixed: at ±90s two interviews booked back to back
     /// for the same length are indistinguishable, so on Zoom the check is
     /// coarse by construction and one of them will simply lose the contest and
-    /// stay fetchable. Sharpening it means reading `recording_end −
-    /// recording_start` off the recordings endpoint, which is work for
-    /// whenever Zoom is unparked (`BristlenoseFlags.cloudImportZoom`) and can
-    /// be measured against a real account rather than reasoned about.
+    /// stay fetchable. **Since 17 Oct 2026 a row's duration is `recording_end −
+    /// recording_start` when Zoom stamps it** (`ZoomSource.makeRows`), so the
+    /// input is second-accurate and only an unstamped row falls back to the
+    /// whole minutes. The tolerance below has not been tightened to match: do
+    /// that against measured pairs from a real account, not by reasoning.
     ///
     /// **It scales with the recording, and that is the whole point.** A flat
     /// tolerance is wrong at both ends, and the short end is where it does

@@ -13,11 +13,13 @@ import OSLog
 //  2. **Enumerate every page before downloading anything.** `next_page_token`
 //     expires in 15 minutes; an importer that downloads between pages
 //     invalidates its own cursor mid-study and silently returns a prefix.
-//  3. **Follow the download redirect by hand, stripping the Authorization
-//     header.** `download_url` redirects to a pre-signed CDN URL that carries
-//     its own credentials; `URLSession` re-attaches headers across redirects by
-//     default, and the signed URL has been reported to reject requests that
-//     arrive with both.
+//  3. **The bearer follows a download redirect only while it stays on Zoom.**
+//     `download_url` starts on the account's `<account>.zoom.us` host and can
+//     redirect within Zoom, where dropping the header returned a 200 "Only the
+//     host can download this recording" page (devforum, July 2025). So
+//     `CloudTransferPolicy.zoom` keeps it on `*.zoom.us` over HTTPS and drops
+//     it for good anywhere else. Until 17 Oct 2026 it stripped the header on
+//     every redirect, on an uncited report that a signed URL refuses both.
 
 // MARK: - Wire shapes
 
@@ -68,8 +70,10 @@ private struct ZoomRecordingsPage: Decodable {
 /// Zoom's real gate is narrower than the plan ladder suggests, and every clause
 /// here excludes people the others do not:
 ///
-/// - **Basic is local-only.** Nothing exists in the cloud to fetch, so there is
-///   no API surface at all — not an empty list, an absent capability.
+/// - **Basic is local-only.** Nothing exists in the cloud to fetch. A Basic
+///   account still grants the recording scopes and the list is simply empty
+///   (measured 17 Oct 2026), so it is cloud recording off in the preflight,
+///   not the listing, that says why.
 /// - **Cloud recording can be off**, at account or group level, and a non-admin
 ///   token cannot tell "off" from "off and locked by your admin". So the copy
 ///   says what is true — it is off — and never guesses at whose decision it was.

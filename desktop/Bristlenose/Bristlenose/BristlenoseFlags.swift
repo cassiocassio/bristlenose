@@ -27,8 +27,11 @@ enum BristlenoseFlags {
         UserDefaults.standard.bool(forKey: welcomeTintCandidateKey)
     }
 
-    /// Offer **Zoom** in `File ▸ Import`. **Default off** — parked 16 Aug 2026
-    /// so Teams and Meet can reach releasable quality first.
+    /// Offer **Zoom** in `File ▸ Import` regardless of the Diagnostics menu.
+    /// Parked 16 Aug 2026 so Teams and Meet could reach releasable quality
+    /// first; since 17 Oct 2026 Zoom is a Diagnostics beta, shown whenever the
+    /// Diagnostics menu is on (`CloudPlatform.zoomOffered`), and this is the
+    /// override.
     ///
     /// This parks the *menu item only*. The Zoom adapter, its OAuth client, its
     /// transfer policy and its tests all still build and run, and Zoom keeps
@@ -38,12 +41,12 @@ enum BristlenoseFlags {
     /// filename and folder-pattern recognition in `s01_ingest.py`, reached by
     /// drag-and-drop, and it never touches this flag.
     ///
-    /// Two out-of-tree prerequisites are already done and will keep: the
-    /// `associated-domains` entitlement, and the `apple-app-site-association`
-    /// file staged in the website repo. What remains is a Zoom Marketplace
-    /// client ID and token persistence — see `docs/design-cloud-import.md`,
-    /// and the `cloud-import-zoom-parked` brief in the maintainer's private
-    /// handoffs, kept outside the public tree.
+    /// Registration, the `webcredentials` entitlement (store and Debug), the
+    /// deployed `apple-app-site-association` file and token persistence are
+    /// all done, and a first live sign-in worked on 17 Oct 2026. What remains
+    /// is Zoom's Marketplace review, after which a Production client ID ships
+    /// in the bundle and this flag can go — see
+    /// `docs/design-cloud-import-transcripts.md` §1b.
     ///
     /// Flip with: `defaults write app.bristlenose BristlenoseCloudImportZoom -bool YES`
     static let cloudImportZoomKey = "BristlenoseCloudImportZoom"

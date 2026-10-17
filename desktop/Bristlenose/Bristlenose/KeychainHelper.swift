@@ -93,8 +93,9 @@ enum KeychainHelper {
         // looks entirely correct and persists nothing.
         "cloud-google-meet": "Bristlenose Google Meet Sign-In",
         "cloud-microsoft-teams": "Bristlenose Microsoft Teams Sign-In",
-        // Registered while Zoom's menu item is still parked
-        // (`BristlenoseFlags.cloudImportZoom`), deliberately. The entry costs
+        // Registered while Zoom's menu item was still parked
+        // (`BristlenoseFlags.cloudImportZoom`; a Diagnostics beta since
+        // 17 Oct 2026), deliberately. The entry costs
         // nothing when nothing writes to it, and its absence is invisible: an
         // unregistered provider persists nothing and reports no error, so the
         // defect surfaces as "why am I signing in again?" months later. Pinned

@@ -209,7 +209,7 @@ struct MiroAPI {
     /// not one request: it starts, then its status is read until it ends. Cancelling the Task asks
     /// the server to stop after the frame it is building; the board keeps what it has.
     func exportScreens(boardName: String?, colourBy: String, locale: String,
-                       splitLongQuotes: Bool = true) async throws -> ExportResult {
+                       splitLongQuotes: Bool = true, stickyShape: String = "rectangle") async throws -> ExportResult {
         let root = "http://127.0.0.1:\(port)/api/projects/\(projectID)/export/screens/miro"
         func make(_ suffix: String, _ method: String, _ body: [String: Any?]? = nil) -> URLRequest? {
             guard let url = URL(string: root + suffix) else { return nil }
@@ -223,7 +223,7 @@ struct MiroAPI {
             return req
         }
         guard let start = make("", "POST", ["board_name": boardName, "colour_by": colourBy, "locale": locale,
-                                            "split_long_quotes": splitLongQuotes]),
+                                            "split_long_quotes": splitLongQuotes, "sticky_shape": stickyShape]),
               let poll = make("/status", "GET"), let cancel = make("/cancel", "POST")
         else { throw APIError.serverUnreachable() }
         // Cancel reaches the server whenever it lands — in the start request, a status read or the
@@ -263,11 +263,13 @@ struct MiroAPI {
     /// rendered server-side, so the sheet has to say who is asking. Omitting it
     /// is what made every board English (fixed 22 Sep 2026).
     func export(boardName: String?, colourBy: String, clipsBase: String,
-                locale: String, splitLongQuotes: Bool = true) async throws -> ExportResult {
+                locale: String, splitLongQuotes: Bool = true,
+                stickyShape: String = "rectangle") async throws -> ExportResult {
         guard let req = request(
             "/export", method: "POST",
             body: ["board_name": boardName, "colour_by": colourBy,
-                   "clips_base": clipsBase, "locale": locale, "split_long_quotes": splitLongQuotes]
+                   "clips_base": clipsBase, "locale": locale, "split_long_quotes": splitLongQuotes,
+                   "sticky_shape": stickyShape]
         ) else {
             throw APIError.serverUnreachable()
         }

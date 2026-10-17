@@ -25,6 +25,7 @@ vi.mock("../../utils/api", () => ({
   postMiroConnect: vi.fn(),
   postMiroDisconnect: vi.fn(),
   postMiroExport: (...args: unknown[]) => postMiroExport(...args),
+  apiGet: vi.fn().mockResolvedValue({ project_name: "Kitchen study" }),
 }));
 vi.mock("../../utils/announce", () => ({ announce: vi.fn() }));
 vi.mock("../../utils/exportData", () => ({ isExportMode: vi.fn(() => false) }));

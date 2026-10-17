@@ -216,8 +216,28 @@
     margin: var(--bn-space-md) 0;
 }
 
-.bn-export-checkbox input[type="checkbox"] {
+.bn-export-checkbox input[type="checkbox"],
+.bn-export-checkbox input[type="radio"] {
     margin-top: 0.15rem;
+}
+
+/* A pair of radios in an export dialog (Miro's sticky shape): the legend reads as the hint line
+   above them, the choices sit side by side. */
+.bn-export-radios {
+    border: 0;
+    padding: 0;
+    margin: var(--bn-space-md) 0;
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--bn-space-lg);
+}
+
+.bn-export-radios legend {
+    padding: 0;
+}
+
+.bn-export-radios .bn-export-checkbox {
+    margin: var(--bn-space-xs) 0 0;
 }
 
 .bn-export-hint {

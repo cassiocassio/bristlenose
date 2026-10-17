@@ -400,6 +400,7 @@ export interface ScreensMiroRequest {
   colour_by?: string;
   locale?: string;
   split_long_quotes?: boolean;
+  sticky_shape?: "rectangle" | "square";
 }
 
 export interface ScreensMiroStatus {
@@ -799,6 +800,8 @@ export interface MiroExportRequest {
   clips_base?: string;
   /** Break a long quote into up to three grouped stickies (default on). */
   split_long_quotes?: boolean;
+  /** Rectangle by default on Miro; the dialog offers square. */
+  sticky_shape?: "rectangle" | "square";
   /** The board's chrome language. A Miro board is a deliverable, so it follows
    *  the researcher's UI language; the server defaults to English if omitted. */
   locale?: string;

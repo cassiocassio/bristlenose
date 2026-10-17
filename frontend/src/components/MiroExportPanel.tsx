@@ -18,6 +18,7 @@ import { isExportMode } from "../utils/exportData";
 import { announce } from "../utils/announce";
 import { postStoreMiroToken } from "../shims/bridge";
 import {
+  apiGet,
   cancelScreensMiro,
   getMiroStatus,
   getScreensMiroStatus,
@@ -104,11 +105,15 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   const [view, setView] = useState<View>("loading");
   const [token, setToken] = useState("");
   const [boardName, setBoardName] = useState("");
+  const named = useRef(false); // the researcher has typed a name: don't overwrite it
   const [colourBy, setColourBy] = useState("sentiment");
   const [linkClips, setLinkClips] = useState(false);
   // On by default — it is the right thing for a long quote — and shown, so a researcher arriving
   // at the board knows why a quote runs over two or three stickies (owner, 17 Oct 2026).
   const [splitLong, setSplitLong] = useState(true);
+  // Rectangle by default: a dense board, a quote in longer lines. Square is offered — "users will
+  // want to pick" (owner, 17 Oct 2026).
+  const [shape, setShape] = useState<"rectangle" | "square">("rectangle");
   const [clipsBase, setClipsBase] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +146,19 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
       })
       .catch(() => setView("connect"));
   }, [open]);
+
+  // On open, fill the name with what the board would be called anyway, so nothing arrives on
+  // Miro untitled and the researcher sees the name before choosing it (owner, 17 Oct 2026).
+  useEffect(() => {
+    if (!open || named.current) return;
+    apiGet<{ project_name: string }>("/info")
+      .then((info) => {
+        if (named.current) return;
+        const name = info.project_name?.trim() ?? "";
+        setBoardName(name && screens ? `${name} · ${t("screens.title")}` : name);
+      })
+      .catch(() => undefined);
+  }, [open, screens, t]);
 
   // Closing the panel stops waiting on a build (the build itself goes on, and its chip-less
   // result is on the next status read); a reopened panel starts fresh.
@@ -197,8 +215,9 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
       clips_base: linkClips ? clipsBase.trim() : "",
       locale: resolveBrowserLang(i18n.language) ?? "en",
       split_long_quotes: splitLong,
+      sticky_shape: shape,
     }),
-    [boardName, colourBy, linkClips, clipsBase, splitLong, i18n.language],
+    [boardName, colourBy, linkClips, clipsBase, splitLong, shape, i18n.language],
   );
 
   const handlePasteConnect = useCallback(async () => {
@@ -250,8 +269,8 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
       setProgress(null);
       setSkipped(0);
       try {
-        const { board_name, colour_by, locale, split_long_quotes } = request();
-        const start = await startScreensMiro({ board_name, colour_by, locale, split_long_quotes });
+        const { board_name, colour_by, locale, split_long_quotes, sticky_shape } = request();
+        const start = await startScreensMiro({ board_name, colour_by, locale, split_long_quotes, sticky_shape });
         if (!live()) return;
         if (start.total === 0) {
           // Nothing to build: never read the status, which would be the last build's.
@@ -418,7 +437,10 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
               type="text"
               value={boardName}
               placeholder={t("miro.boardNamePlaceholder")}
-              onChange={(e) => setBoardName(e.target.value)}
+              onChange={(e) => {
+                named.current = true;
+                setBoardName(e.target.value);
+              }}
               style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
             />
             <label className="bn-export-hint" style={{ marginTop: 10 }} htmlFor="bn-miro-colour-by">
@@ -441,6 +463,21 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
               />
               <span>{t("miro.splitLongQuotes")}</span>
             </label>
+            <fieldset className="bn-export-radios" data-testid="bn-miro-shape">
+              <legend className="bn-export-hint">{t("miro.stickyShape")}</legend>
+              {(["rectangle", "square"] as const).map((s) => (
+                <label key={s} className="bn-export-checkbox">
+                  <input
+                    type="radio"
+                    name="bn-miro-shape"
+                    value={s}
+                    checked={shape === s}
+                    onChange={() => setShape(s)}
+                  />
+                  <span>{t(s === "square" ? "miro.stickyShapeSquare" : "miro.stickyShapeRectangle")}</span>
+                </label>
+              ))}
+            </fieldset>
             {/* Clip links are a quotes-board option: the screens board's quotes sit beside their
                 screengrab, and its stickies carry no link (docs/design-screens-export.md §6). */}
             {!screens && (

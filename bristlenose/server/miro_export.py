@@ -163,11 +163,12 @@ def board_title(locale: str, project_name: str, columns: list[Column]) -> str:
 
 def build_board(db: Session, project_id: int, project_name: str,
                 quote_ids: list[str] | None, *, colour_by: str = "sentiment",
-                clips_base: str = "", locale: str = "en", split: bool = True) -> Board:
+                clips_base: str = "", locale: str = "en", split: bool = True,
+                shape: str = STICKY_SHAPE) -> Board:
     columns = build_columns(db, project_id, quote_ids, clips_base=clips_base, locale=locale)
     title = board_title(locale, project_name, columns)
     return layout_board(columns, title, colour_by=colour_by, strings=board_strings(locale),
-                        split=split)
+                        split=split, shape=shape)
 
 
 def build_figjam_manifest(db: Session, project_id: int, project_name: str,
@@ -198,10 +199,11 @@ def build_figjam_manifest(db: Session, project_id: int, project_name: str,
 
 def build_preview_html(db: Session, project_id: int, project_name: str,
                        quote_ids: list[str] | None, *, colour_by: str = "sentiment",
-                       clips_base: str = "", locale: str = "en", split: bool = True) -> str:
+                       clips_base: str = "", locale: str = "en", split: bool = True,
+                       shape: str = STICKY_SHAPE) -> str:
     """Creds-free: render exactly what would be pushed, as standalone HTML."""
-    board = build_board(db, project_id, project_name, quote_ids,
-                        colour_by=colour_by, clips_base=clips_base, locale=locale, split=split)
+    board = build_board(db, project_id, project_name, quote_ids, colour_by=colour_by,
+                        clips_base=clips_base, locale=locale, split=split, shape=shape)
     return render_html(board, locale=locale)
 
 
@@ -224,10 +226,10 @@ def _sticky_content(s: Sticky, locale: str = "en") -> str:
     return fit_miro_sticky(s.text, f"<br><i>{line}</i>")
 
 
-def _sticky_item(s: Sticky, locale: str = "en") -> dict[str, Any]:
+def _sticky_item(s: Sticky, locale: str = "en", shape: str = STICKY_SHAPE) -> dict[str, Any]:
     return {
         "type": "sticky_note",
-        "data": {"content": _sticky_content(s, locale), "shape": STICKY_SHAPE},
+        "data": {"content": _sticky_content(s, locale), "shape": shape},
         "style": {"fillColor": s.colour},
         "position": {"x": s.x + s.width / 2, "y": s.y + s.height / 2},
         "geometry": {"width": s.width},
@@ -255,10 +257,11 @@ def group_sets(token: str, board_id: str, set_ids: list[int | None],
 
 def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
                  quote_ids: list[str] | None, *, colour_by: str = "sentiment",
-                 clips_base: str = "", locale: str = "en", split: bool = True) -> dict[str, Any]:
+                 clips_base: str = "", locale: str = "en", split: bool = True,
+                 shape: str = STICKY_SHAPE) -> dict[str, Any]:
     """Create a new Miro board from the layout IR. Returns {board_id, board_url, stickies}."""
-    board = build_board(db, project_id, project_name, quote_ids,
-                        colour_by=colour_by, clips_base=clips_base, locale=locale, split=split)
+    board = build_board(db, project_id, project_name, quote_ids, colour_by=colour_by,
+                        clips_base=clips_base, locale=locale, split=split, shape=shape)
     # A quote has one attributed sticky however many parts it was split into.
     n_quotes = sum(1 for s in board.stickies if s.kind == "quote" and s.attributed)
     if n_quotes == 0:
@@ -280,7 +283,7 @@ def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
         for f in board.frames:  # frames (position = centre)
             miro_client.create_frame(token, board_id, f.title,
                                      f.x + f.width / 2, f.y + f.height / 2, f.width, f.height)
-        items = [_sticky_item(s, locale) for s in board.stickies]  # stickies, 20/bulk
+        items = [_sticky_item(s, locale, board.sticky_shape) for s in board.stickies]  # 20/bulk
         # The `stickies` count returned below is the *intended* count — Miro's
         # bulk endpoint can partially succeed, and we don't yet reconcile the
         # created-count against its response (deferred until a real multi-batch

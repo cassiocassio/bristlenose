@@ -180,3 +180,18 @@ def test_the_quotes_board_stacks_a_set_stepping_right_with_only_the_last_attribu
     assert parts[1].y == pytest.approx(parts[0].y + parts[0].height + SET_GAP)
     unsplit = layout_board([Column("Basket", "section", [QuoteCard(long_, "p1", "s1", 12.0)])], "B", split=False)
     assert [s.set_id for s in unsplit.stickies if s.kind == "quote"] == [None]
+
+
+def test_a_square_sticky_keeps_the_same_size_of_type_and_reaches_miro() -> None:
+    """A square is taller for its width, so it needs less width for the same area: same type."""
+    from bristlenose.board_layout import Column, QuoteCard, layout_board, quote_parts
+    from bristlenose.server.miro_export import _sticky_item
+
+    [r] = quote_parts("x" * 200, "— P1 · 0:10", split=False, shape="rectangle")
+    [s] = quote_parts("x" * 200, "— P1 · 0:10", split=False, shape="square")
+    assert s.width < r.width and s.width * s.height == pytest.approx(r.width * r.height)
+    board = layout_board([Column("A", "section", [QuoteCard("hello", "p1", "s1", 1.0)])], "B", shape="square")
+    assert board.sticky_shape == "square"
+    quote = next(st for st in board.stickies if st.kind == "quote")
+    assert _sticky_item(quote, shape=board.sticky_shape)["data"]["shape"] == "square"
+    assert layout_board([], "B", shape="hexagon").sticky_shape == "rectangle"  # an unknown shape falls back

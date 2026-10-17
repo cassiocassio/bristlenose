@@ -20,6 +20,7 @@ vi.mock("../../utils/api", () => ({
   startScreensMiro: (...a: unknown[]) => startScreensMiro(...a),
   getScreensMiroStatus: (...a: unknown[]) => getScreensMiroStatus(...a),
   cancelScreensMiro: (...a: unknown[]) => cancelScreensMiro(...a),
+  apiGet: vi.fn().mockResolvedValue({ project_name: "Kitchen study" }),
 }));
 vi.mock("../../utils/announce", () => ({ announce: vi.fn() }));
 vi.mock("../../utils/exportData", () => ({ isExportMode: vi.fn(() => false) }));
@@ -100,5 +101,49 @@ describe("MiroExportPanel — breaking long quotes", () => {
     fireEvent.click(screen.getByText(i18n.t("miro.createBoard")));
     await waitFor(() =>
       expect(startScreensMiro).toHaveBeenCalledWith(expect.objectContaining({ split_long_quotes: false })));
+  });
+});
+
+describe("MiroExportPanel — sticky shape", () => {
+  it("offers rectangle, chosen, and square reaches the board when picked", async () => {
+    await i18n.changeLanguage("en");
+    startScreensMiro.mockReset().mockResolvedValue({ status: "started", total: 9 });
+    getScreensMiroStatus.mockReset().mockResolvedValueOnce(status("completed"));
+    render(<MiroExportPanel open screens onClose={() => {}} />);
+    const rect = await screen.findByLabelText(i18n.t("miro.stickyShapeRectangle"));
+    expect((rect as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByLabelText(i18n.t("miro.stickyShapeSquare")));
+    fireEvent.click(screen.getByText(i18n.t("miro.createBoard")));
+    await waitFor(() =>
+      expect(startScreensMiro).toHaveBeenCalledWith(expect.objectContaining({ sticky_shape: "square" })));
+  });
+});
+
+describe("MiroExportPanel — the board name", () => {
+  beforeEach(async () => {
+    vi.useRealTimers();
+    postMiroExport.mockReset().mockResolvedValue({ board_url: "https://miro.com/app/board/q/", sticky_count: 1 });
+    startScreensMiro.mockReset().mockResolvedValue({ status: "started", total: 9 });
+    await i18n.changeLanguage("en");
+  });
+
+  it("arrives filled with the name the board would get anyway", async () => {
+    const { unmount } = render(<MiroExportPanel open onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText(i18n.t("miro.boardNameLabel"))).toHaveValue("Kitchen study"));
+    unmount();
+    render(<MiroExportPanel open screens onClose={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getByLabelText(i18n.t("miro.boardNameLabel"))).toHaveValue(
+        `Kitchen study · ${i18n.t("screens.title")}`));
+  });
+
+  it("keeps a name the researcher typed", async () => {
+    render(<MiroExportPanel open onClose={() => {}} />);
+    const field = await screen.findByLabelText(i18n.t("miro.boardNameLabel"));
+    await waitFor(() => expect(field).toHaveValue("Kitchen study"));
+    fireEvent.change(field, { target: { value: "Workshop" } });
+    fireEvent.click(screen.getByText(i18n.t("miro.createBoard")));
+    await waitFor(() =>
+      expect(postMiroExport).toHaveBeenCalledWith(expect.objectContaining({ board_name: "Workshop" })));
   });
 });

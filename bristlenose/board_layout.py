@@ -31,14 +31,18 @@ from bristlenose.utils.text import count_noun
 from bristlenose.utils.timecodes import format_timecode
 
 # --- layout constants (board px) -------------------------------------------
-#: Every board's stickies are Miro's wide rectangle: a quote wraps in longer, fewer lines than in
-#: a square (owner, 17 Oct 2026: "nearly always better").
+#: A Miro board's stickies are the wide rectangle by default: a quote wraps in longer, fewer lines
+#: than in a square, and the board stays dense (owner, 17 Oct 2026: "nearly always better"). The
+#: export dialogs offer Square / Rectangle, "users will want to pick"; FigJam defaults to square.
 STICKY_SHAPE = "rectangle"
+STICKY_SHAPES = ("rectangle", "square")
 #: Miro sizes a sticky from its width alone and keeps the shape's proportion, so the height the
 #: layout reserves must be the one Miro draws. Measured 17 Oct 2026: a rectangle 300 wide is
 #: 195.43 tall (450 is 293.14); a square 200 wide is 229.15. The old fixed heights (quote 200,
 #: header 76) were less than a 240-wide square's 275, so a column's stickies overlapped.
 RECT_ASPECT = 195.42857142857142 / 300
+SQUARE_ASPECT = 229.14572864321605 / 200
+ASPECT = {"rectangle": RECT_ASPECT, "square": SQUARE_ASPECT}
 #: 300, not the 240 the squares had: a rectangle that narrow is 156 tall, and Miro shrinks a long
 #: quote's type to fit (project-ikea's quotes: median 122 characters, p90 256). Owner, 17 Oct 2026.
 STICKY_W = 300.0
@@ -150,6 +154,7 @@ class TextItem:
 @dataclass
 class Board:
     title: str
+    sticky_shape: str = STICKY_SHAPE
     frames: list[Frame] = field(default_factory=list)
     stickies: list[Sticky] = field(default_factory=list)
     texts: list[TextItem] = field(default_factory=list)
@@ -274,9 +279,10 @@ SET_GAP = -X_HEIGHT
 SET_STAGGER = X_HEIGHT
 
 
-def sticky_width(chars: int) -> float:
-    """The width that shows ``chars`` characters at the board's one size of type."""
-    return SIZE_K * math.sqrt(max(chars, 1))
+def sticky_width(chars: int, shape: str = STICKY_SHAPE) -> float:
+    """The width that shows ``chars`` characters at the board's one size of type. A square sticky
+    is taller for its width, so it needs less width for the same area — the same type size."""
+    return SIZE_K * math.sqrt(max(chars, 1) * RECT_ASPECT / ASPECT.get(shape, RECT_ASPECT))
 
 
 @dataclass
@@ -300,15 +306,16 @@ def quote_part_texts(text: str, split: bool = True) -> list[str]:
             for k, part in enumerate(parts)]
 
 
-def quote_parts(text: str, attribution_line: str, split: bool = True) -> list[QuotePart]:
+def quote_parts(text: str, attribution_line: str, split: bool = True,
+                shape: str = STICKY_SHAPE) -> list[QuotePart]:
     """A quote as the stickies a Miro board shows it on (`quote_part_texts`), each sized so the
     type comes out the same."""
     shown = quote_part_texts(text, split)
     out: list[QuotePart] = []
     for k, part in enumerate(shown):
         last = k == len(shown) - 1
-        w = sticky_width(len(part) + (len(attribution_line) if last else 0))
-        out.append(QuotePart(part, last, w, w * RECT_ASPECT))
+        w = sticky_width(len(part) + (len(attribution_line) if last else 0), shape)
+        out.append(QuotePart(part, last, w, w * ASPECT.get(shape, RECT_ASPECT)))
     return out
 
 
@@ -330,22 +337,24 @@ def quote_colour(q: QuoteCard, colour_by: str) -> str:
 def _build_frame(
     columns: list[Column], kind: str, title: str, left_x: float, colour_by: str,
     strings: BoardStrings, split: bool = True, set_ids: list[int] | None = None,
+    shape: str = STICKY_SHAPE,
 ) -> tuple[Frame, list[Sticky]]:
     """A frame of columns, each a header and its quotes stacked to their real heights. A column is
     as wide as its widest quote set: stickies are sized by their text, not to a grid."""
     set_ids = set_ids if set_ids is not None else [0]
     stickies: list[Sticky] = []
     cx = left_x + FRAME_PAD
-    bottom = FRAMES_Y + FRAME_PAD + HEADER_H
+    header_h = STICKY_W * ASPECT.get(shape, RECT_ASPECT)
+    bottom = FRAMES_Y + FRAME_PAD + header_h
     for col in columns:
-        sets = [(q, quote_parts(q.text, attribution(q.participant_id, q.start_timecode), split))
+        sets = [(q, quote_parts(q.text, attribution(q.participant_id, q.start_timecode), split, shape))
                 for q in sorted(col.quotes, key=quote_sort_key)]
         col_w = max([STICKY_W] + [set_extent(parts)[0] for _, parts in sets])
         stickies.append(Sticky(
-            kind="header", x=cx, y=FRAMES_Y + FRAME_PAD, width=STICKY_W, height=HEADER_H,
+            kind="header", x=cx, y=FRAMES_Y + FRAME_PAD, width=STICKY_W, height=header_h,
             colour=HEADER_TOKEN, text=f"{col.label}\n{strings.quote_count(len(col.quotes))}",
         ))
-        sy = FRAMES_Y + FRAME_PAD + HEADER_H + GAP_Y
+        sy = FRAMES_Y + FRAME_PAD + header_h + GAP_Y
         for q, parts in sets:
             set_id = None
             if len(parts) > 1:
@@ -369,26 +378,28 @@ def _build_frame(
 
 
 def layout_board(columns: list[Column], title: str, colour_by: str = "sentiment",
-                 strings: BoardStrings | None = None, split: bool = True) -> Board:
+                 strings: BoardStrings | None = None, split: bool = True,
+                 shape: str = STICKY_SHAPE) -> Board:
     """Two named frames: sections (left) then themes (right). Pure geometry."""
     strings = strings or BoardStrings()
     sections = [c for c in columns if c.kind == "section"]
     themes = [c for c in columns if c.kind == "theme"]
 
-    board = Board(title=title)
+    shape = shape if shape in STICKY_SHAPES else STICKY_SHAPE
+    board = Board(title=title, sticky_shape=shape)
     board.texts.append(TextItem(title, MARGIN, TITLE_Y, 22.0, "700"))
 
     x = MARGIN
     set_ids = [0]  # one count across both frames, so every set's number is its own
     if sections:
         frame, stk = _build_frame(sections, "section", strings.sections, x, colour_by, strings,
-                                  split, set_ids)
+                                  split, set_ids, shape)
         board.frames.append(frame)
         board.stickies.extend(stk)
         x = frame.x + frame.width + FRAME_GAP
     if themes:
         frame, stk = _build_frame(themes, "theme", strings.themes, x, colour_by, strings,
-                                  split, set_ids)
+                                  split, set_ids, shape)
         board.frames.append(frame)
         board.stickies.extend(stk)
 

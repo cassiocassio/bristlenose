@@ -25,6 +25,8 @@ final class MiroSheetModel: ObservableObject {
     /// On by default and shown, so a researcher arriving at the board knows why a long quote runs
     /// over two or three stickies (owner, 17 Oct 2026).
     @Published var splitLongQuotes = true
+    /// Rectangle by default: a dense board, a quote in longer lines; square is offered.
+    @Published var stickyShape = "rectangle"
     @Published var clipsBase = ""
     @Published var busy = false
     @Published var error: String?
@@ -50,7 +52,9 @@ final class MiroSheetModel: ObservableObject {
         self.api = MiroAPI(port: port, token: token)
         self.i18n = i18n
         self.screens = screens
-        self.boardName = projectName  // prefilled, editable
+        // Prefilled with what the board would be called anyway, editable (owner, 17 Oct 2026).
+        self.boardName = screens
+            ? "\(projectName) · \(i18n.t("common.screens.title"))" : projectName
     }
 
     func t(_ key: String) -> String { i18n.t("common.miro.\(key)") }
@@ -207,13 +211,14 @@ final class MiroSheetModel: ObservableObject {
                 let result = screens
                     ? try await api.exportScreens(boardName: name.isEmpty ? nil : name,
                                                   colourBy: colourBy, locale: locale,
-                                                  splitLongQuotes: splitLongQuotes)
+                                                  splitLongQuotes: splitLongQuotes, stickyShape: stickyShape)
                     : try await api.export(
                         boardName: name.isEmpty ? nil : name,
                         colourBy: colourBy,
                         clipsBase: linkClips ? clipsBase.trimmingCharacters(in: .whitespacesAndNewlines) : "",
                         locale: locale,
-                        splitLongQuotes: splitLongQuotes
+                        splitLongQuotes: splitLongQuotes,
+                        stickyShape: stickyShape
                     )
                 if Task.isCancelled { return }
                 self.boardURL = result.boardURL
@@ -373,6 +378,16 @@ struct MiroSheet: View {
                 GridRow(alignment: .firstTextBaseline) {
                     Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
                     Toggle(model.t("splitLongQuotes"), isOn: $model.splitLongQuotes)
+                }
+                GridRow(alignment: .firstTextBaseline) {
+                    Text(model.t("stickyShape")).foregroundStyle(.secondary)
+                    Picker(model.t("stickyShape"), selection: $model.stickyShape) {
+                        Text(model.t("stickyShapeRectangle")).tag("rectangle")
+                        Text(model.t("stickyShapeSquare")).tag("square")
+                    }
+                    .pickerStyle(.radioGroup)
+                    .horizontalRadioGroupLayout()
+                    .labelsHidden()
                 }
                 // Clip links are a quotes-board option; the screens board's stickies carry none.
                 if !model.screens {

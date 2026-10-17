@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import secrets
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -63,6 +64,8 @@ class MiroExportRequest(BaseModel):
     #: Break a long quote into up to three stickies at sentence ends, grouped (on by default; the
     #: panel's checkbox says so, so the researcher arriving at the board knows why).
     split_long_quotes: bool = True
+    #: Rectangle by default on Miro (dense, a quote in longer lines); the dialog offers square.
+    sticky_shape: Literal["rectangle", "square"] = "rectangle"
 
 
 class MiroExportResponse(BaseModel):
@@ -269,7 +272,7 @@ def miro_preview(project_id: int, body: MiroExportRequest, request: Request) -> 
         html = miro_export.build_preview_html(
             db, project_id, name, body.quote_ids,
             colour_by=body.colour_by, clips_base=body.clips_base, locale=body.locale,
-            split=body.split_long_quotes,
+            split=body.split_long_quotes, shape=body.sticky_shape,
         )
         return MiroPreviewResponse(html=html)
     finally:
@@ -300,7 +303,7 @@ def miro_export_board(project_id: int, body: MiroExportRequest,
             result = miro_export.push_to_miro(
                 token, db, project_id, name, body.quote_ids,
                 colour_by=body.colour_by, clips_base=body.clips_base, locale=body.locale,
-                split=body.split_long_quotes,
+                split=body.split_long_quotes, shape=body.sticky_shape,
             )
         except miro_client.MiroError as exc:
             # `detail` stays English and forensic — it is what a bug report

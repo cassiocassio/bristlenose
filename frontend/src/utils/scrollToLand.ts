@@ -54,6 +54,12 @@ function pageCanScroll(by: number): boolean {
   return window.scrollY + window.innerHeight < document.documentElement.scrollHeight - 1;
 }
 
+/** End any correction still in flight (tests call it between cases: a settle
+ * timer that fires after jsdom tears the document down throws). */
+export function cancelScrollToLand(): void {
+  cancelPending?.();
+}
+
 export function scrollToLand(el: Element, block: ScrollLogicalPosition = "start"): void {
   cancelPending?.(); // a newer jump replaces an older one's correction
   let passes = 0;

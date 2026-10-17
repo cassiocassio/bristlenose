@@ -1,5 +1,13 @@
 import "@testing-library/jest-dom";
+import { afterEach } from "vitest";
 import "./i18n";
+import { cancelScrollToLand } from "./utils/scrollToLand";
+
+// scrollToLand leaves a settle timer running for 150 ms after a jump. A test
+// file that ends inside that window lets it fire after jsdom has torn the
+// document down, and "document is not defined" lands as an unhandled error on
+// whichever file is running then (CI, 17 Oct 2026, blamed TocSidebar.test.tsx).
+afterEach(() => cancelScrollToLand());
 
 // jsdom 27 (under vitest 4) ships NO Web Storage — `localStorage` is
 // `undefined`, not empty. Every `localStorage.clear()` in a `beforeEach`

@@ -38,6 +38,7 @@ from bristlenose.board_layout import (
     QuoteCard,
     Sticky,
     attribution,
+    fit_miro_sticky,
     layout_board,
 )
 from bristlenose.board_manifest import build_manifest
@@ -50,7 +51,6 @@ from bristlenose.utils.timecodes import parse_timecode
 
 logger = logging.getLogger(__name__)
 
-MAX_QUOTE_CHARS = 300  # keep stickies readable (Miro hard cap is 6000)
 
 
 def board_strings(locale: str) -> BoardStrings:
@@ -210,14 +210,11 @@ def _sticky_content(s: Sticky, locale: str = "en") -> str:
         label, *rest = s.text.split("\n")
         sub = f"<br>{escape(rest[0])}" if rest else ""
         return f"<strong>{escape(label)}</strong>{sub}"
-    body = s.text
-    if len(body) > MAX_QUOTE_CHARS:
-        body = body[: MAX_QUOTE_CHARS - 1].rstrip() + "…"
     line = attribution(s.participant_id, s.timecode)
     if s.link_url:
         clip = escape(t_in(locale, "common.miro.clipLink"))
         line += f' · <a href="{escape(s.link_url, quote=True)}">▶ {clip}</a>'
-    return f"{escape(body)}<br><i>{line}</i>"
+    return fit_miro_sticky(s.text, f"<br><i>{line}</i>")
 
 
 def _sticky_item(s: Sticky, locale: str = "en") -> dict[str, Any]:

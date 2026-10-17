@@ -210,8 +210,10 @@ The hard-won constraints. Build against these.
   `style.fillColor` (background, 16 named colours) — there is no text-colour field.
 - `style` has exactly three fields: `fillColor`, `textAlign`, `textAlignVertical`.
 - Content cap **< 6000 chars _per sticky_** (not cumulative across the board) —
-  a single quote would need ~1,000 words to hit it; never a real constraint (we
-  truncate long quotes ~300 chars anyway). The board-level limit that matters at
+  a single quote would need ~1,000 words to hit it. _Until 17 Oct 2026 quotes were also cut at
+  ~300 characters "for readability", our own choice, never Miro's; removed (owner) — 62% of the
+  trial runs' quotes ran past it, and a rectangle sticky shrinks its type instead. Only Miro's own
+  limit is guarded now (`board_layout.fit_miro_sticky`)._ The board-level limit that matters at
   scale is **item count** (~10k soft cap), not characters.
 - **Implication:** a prominent quote + a smaller/greyer attribution _inside one
   sticky_ is impossible. The only de-emphasis a sticky affords is `<i>`. For true
@@ -341,7 +343,7 @@ block third-party app authorisation.
 | Token expiry mid-export | refresh before start + during long exports |
 | Board sluggish > 5k items | warn; suggest scoped (starred/section) export |
 | OAuth redirect URI mismatch | exact-match localhost port |
-| Sticky content > 6000 chars | truncate (~300 chars for readability anyway) |
+| Sticky content > 6000 chars | cut to fit Miro's limit, with "…" (`fit_miro_sticky`); never shorter |
 | `<span>`/style silently escaped | stay in the tag allowlist; never inject CSS |
 | Miro deprecates more APIs | one-way push = minimal surface |
 

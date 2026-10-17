@@ -21,7 +21,6 @@ import pytest
 from bristlenose.board_layout import Sticky
 from bristlenose.server.export_core import ExportableQuote
 from bristlenose.server.miro_export import (
-    MAX_QUOTE_CHARS,
     _clip_url,
     _sticky_content,
     build_columns,
@@ -97,9 +96,19 @@ def test_sticky_content_escapes_link_url_attribute():
     assert "&quot;" in out or "&#34;" in out  # the " is escaped inside the attribute
 
 
-def test_sticky_content_truncates_long_quotes():
-    out = _sticky_content(_sticky("a" * (MAX_QUOTE_CHARS + 50)))
-    assert "…" in out
+def test_a_long_quote_is_never_cut_for_readability():
+    """Quotes run long (62% of the trial runs' quotes are over 300 characters); a rectangle sticky
+    shrinks its type to fit, and words cut from a deliverable are lost (owner, 17 Oct 2026)."""
+    text = "word " * 430  # 2,150 characters, the length of the longest quote in the trial runs
+    out = _sticky_content(_sticky(text))
+    assert text.strip() in out and "…" not in out
+
+
+def test_a_quote_past_miros_own_limit_is_cut_to_fit_it():
+    from bristlenose.board_layout import MIRO_STICKY_MAX
+
+    out = _sticky_content(_sticky("<&>" * 3000))  # escaping makes it longer still
+    assert len(out) <= MIRO_STICKY_MAX and "…" in out and out.endswith("</i>")
 
 
 # ── Anonymisation boundary: codes egress, never display names ────────────────

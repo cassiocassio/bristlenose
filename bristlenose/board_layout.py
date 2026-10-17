@@ -170,6 +170,27 @@ def fmt_timecode(seconds: float) -> str:
     return format_timecode(seconds)
 
 
+#: Miro refuses a sticky whose content, markup included, is longer than this, and with it the
+#: whole batch the sticky was in.
+MIRO_STICKY_MAX = 6000
+
+
+def fit_miro_sticky(body: str, rest: str) -> str:
+    """``escape(body) + rest`` as a sticky's content, the body cut only if Miro would refuse it.
+
+    Quotes are never shortened for readability (owner, 17 Oct 2026): a rectangle sticky shrinks
+    its type to fit, and a participant's words cut from a deliverable are words lost with nothing
+    to say so. Across the trial runs 62% of quotes ran past the old 300-character cut; the longest
+    was 2,157 characters, a third of Miro's limit."""
+    from html import escape
+
+    out = escape(body) + rest
+    while len(out) > MIRO_STICKY_MAX and body:
+        body = body[: max(0, len(body) - (len(out) - MIRO_STICKY_MAX) - 1)].rstrip()
+        out = escape(body + "…") + rest
+    return out
+
+
 def attribution(participant_id: str, timecode: float) -> str:
     """The italic line under a quote: ``— P2 · 00:22``. One copy for every board."""
     return f"— {participant_id.upper()} · {fmt_timecode(timecode)}"

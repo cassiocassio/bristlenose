@@ -249,17 +249,16 @@ async def reveal_screens(request: Request, project_id: int) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 _miro_jobs: dict[int, dict[str, Any]] = {}
-_MAX_QUOTE_CHARS = 300
 
 
 def _sticky_html(q: Any) -> str:
     from html import escape
 
-    from bristlenose.board_layout import attribution, quoted
+    from bristlenose.board_layout import attribution, fit_miro_sticky, quoted
     from bristlenose.utils.timecodes import parse_timecode
 
-    body = q.text if len(q.text) <= _MAX_QUOTE_CHARS else q.text[: _MAX_QUOTE_CHARS - 1].rstrip() + "…"
-    return f"{escape(quoted(body))}<br><i>{escape(attribution(q.participant_code, parse_timecode(q.timecode)))}</i>"
+    return fit_miro_sticky(quoted(q.text),
+                           f"<br><i>{escape(attribution(q.participant_code, parse_timecode(q.timecode)))}</i>")
 
 
 def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,

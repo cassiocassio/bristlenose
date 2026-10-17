@@ -210,7 +210,8 @@ Smallest first; each step ends usable and green.
    the existing export surfaces (§7).
 4. ~~A screen revisited later appears once, at its first visit (§2).~~ Overtaken: the board has a
    frame per screen (§6); the folder keeps one still per participant per screen.
-5. **Quote stickies are cut at 300 characters** on both Miro boards (`MAX_QUOTE_CHARS` in
+5. ~~**Quote stickies are cut at 300 characters**~~ Removed 17 Oct 2026 (owner); only Miro's own
+   6,000-character limit is guarded. Was: on both Miro boards (`MAX_QUOTE_CHARS` in
    `server/miro_export.py`, `_MAX_QUOTE_CHARS` in `routes/screens_export.py`), from the days of
    240-wide squares; FigJam's board document carries the full text. Remove the cut now stickies
    are 300-wide rectangles and Miro shrinks the type? Owner's call (raised by the FigJam session,

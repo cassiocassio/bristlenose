@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transcript quote hooks — exploration</title>
+<style>
+/* Quick/loose mockup (bn-mockup "quick" mode), 16 Oct 2026. Colours and the
+   transcript grid are taken from the shipped theme (palette-default.css,
+   templates/transcript.css, atoms/timecode.css); everything else is sketch. */
+:root {
+  color-scheme: light dark;
+  --bg:        light-dark(#ffffff, #111111);
+  --text:      light-dark(#1a1a1a, #e5e7eb);
+  --muted:     light-dark(#6b7280, #9ca3af);
+  --border:    light-dark(#e5e7eb, #2d2d2d);
+  --accent:    light-dark(#007aff, #0a84ff);
+  --hover:     light-dark(#e8f0fe, #1e293b);
+  --badge-bg:  light-dark(#f3f4f6, #252525);
+  --emo-bg:    light-dark(#e8f5e9, #1d2b1f);
+  --glow:      light-dark(rgba(0,122,255,.09), rgba(10,132,255,.16));
+  --paper:     light-dark(#f6f5f1, #161615);
+  --sheet:     light-dark(#ffffff, #222220);
+  --mark:      color-mix(in srgb, var(--accent) 42%, transparent);
+  --mark-hid:  color-mix(in srgb, var(--muted) 55%, transparent);
+  --menu-bg:   light-dark(rgba(242,242,242,.94), rgba(44,44,46,.94));
+  --menu-sep:  light-dark(rgba(0,0,0,.1), rgba(255,255,255,.12));
+  --mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --body: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 var(--body); }
+
+/* ── page chrome (not the product) ─────────────────────────────────── */
+.page { max-width: 1180px; margin: 0 auto; padding: 24px 16px 80px; }
+h1 { font-size: 22px; font-weight: 490; margin: 0 0 4px; }
+.lede { color: var(--muted); max-width: 70ch; margin: 0 0 16px; }
+.controls { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center;
+  padding: 8px 10px; margin: 0 -10px 18px; background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); font-size: 12px; }
+.controls label { display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+.controls .k { font-family: var(--mono); color: var(--muted); }
+.key { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+.key i { display: inline-block; width: 12px; height: 12px; vertical-align: -2px; margin-right: 4px; border-radius: 2px; }
+.key .ka { border: 1px solid var(--border); background: var(--bg); }
+.key .kc { background: repeating-linear-gradient(135deg, var(--badge-bg) 0 4px, transparent 4px 8px); border: 1px solid var(--border); }
+
+.variant { margin: 0 0 40px; }
+.variant > h2 { font-size: 15px; font-weight: 490; margin: 0 0 8px; }
+.variant > h2 .tag { font: 11px var(--mono); color: var(--muted); margin-left: 6px; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+@media (max-width: 980px) { .pair { grid-template-columns: 1fr; } }
+
+.frame { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--bg); }
+.chrome { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 10px;
+  border-bottom: 1px solid var(--border); font: 11px var(--mono); color: var(--muted); background: var(--badge-bg); }
+.chrome .last { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent); }
+.commentary { border: 1px solid var(--border); border-left: 3px solid var(--muted); border-radius: 6px; padding: 10px 12px;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--badge-bg) 70%, transparent) 0 6px, transparent 6px 12px);
+  font-size: 12px; }
+.commentary b.lbl { font: 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
+.commentary ul { margin: 0; padding-left: 16px; }
+.commentary li { margin: 3px 0; }
+.commentary .plus::marker { content: "+  "; color: #16a34a; }
+.commentary .minus::marker { content: "–  "; color: #dc2626; }
+.commentary .q::marker { content: "?  "; color: var(--accent); }
+
+/* ── the artefact: a transcript, as shipped ────────────────────────── */
+.stage { padding: 18px 20px 22px; container-type: inline-size; }
+body.narrow .stage { max-width: 560px; }
+.tbody { display: grid; grid-template-columns: 4.5rem 2.2rem minmax(0, 1fr) clamp(8.5rem, 22cqw, 12.5rem); gap: 0 .5rem; }
+body.narrow .tbody { grid-template-columns: 4.5rem 2.2rem minmax(0, 1fr); }
+.seg { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: baseline; margin: .5rem 0;
+  line-height: 1.7; position: relative; border-radius: 4px; }
+.tc { font: 13px var(--mono); color: var(--accent); white-space: nowrap; }
+.tc .br { color: var(--muted); }
+.spk { justify-self: end; }
+.badge { font: 400 11.5px/1.35 var(--mono); background: var(--badge-bg); color: var(--muted); padding: 1px 5px; border-radius: 4px; display: inline-block; }
+.sb { font-size: 15px; line-height: 1.5; min-width: 0; outline: none; caret-color: var(--accent); }
+.seg.mod .sb { color: var(--muted); }
+.seg.mod .spk .badge { opacity: .55; }
+.seg.plain .sb { opacity: .6; }                     /* shipped: unquoted participant text knocked back */
+.margin { font-size: 12px; line-height: 1.4; display: flex; flex-direction: column; gap: 6px; align-self: start; position: relative; }
+body.narrow .margin { grid-column: 3 / -1; margin: 4px 0 6px; }
+.ann { display: flex; flex-direction: column; gap: 2px; }
+.mlabel { color: var(--accent); font-weight: 490; text-decoration: none; }
+.mtags { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 2px; }
+.mtags .badge { padding: 1px 4px; line-height: 1.4; }
+.mtags .badge.emo { background: var(--emo-bg); }
+
+/* hidden (discounted) quote: pale grey ink everywhere it draws */
+.qs.hid { color: var(--muted); }
+.ann.hid .mlabel { color: var(--muted); font-weight: 420; }
+.ann.hid .badge { opacity: .6; }
+
+/* playback (shipped: glow wash + 3px progress bar down the left) */
+body.playing .seg.now { background: var(--glow); box-shadow: 0 0 8px 2px var(--glow); }
+body.playing .seg.now::before { content: ""; position: absolute; left: -6px; top: 0; width: 3px; height: 62%; background: var(--accent); border-radius: 0 0 1px 1px; }
+
+/* ── shared bits used by several variants ──────────────────────────── */
+.hook { all: unset; display: inline-flex; vertical-align: -1px; width: .95em; height: .95em; margin: 0 .22em 0 .05em; color: var(--mark);
+  cursor: pointer; border-radius: 3px; }
+.hook svg { width: 100%; height: 100%; }
+.hook.hid { color: var(--mark-hid); }
+.hook:hover, .hook:focus-visible { color: var(--accent); background: var(--hover); }
+.hook:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.qs { border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; transition: background .15s, box-shadow .15s; }
+.qs.lit { box-shadow: 0 0 0 1.5px var(--mark); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.dots { all: unset; position: absolute; right: -2px; top: 4px; width: 20px; height: 20px; border-radius: 50%;
+  display: none; place-items: center; background: var(--badge-bg); color: var(--muted); cursor: pointer; font-size: 13px; line-height: 1; }
+.dots:hover, .dots:focus-visible { background: var(--border); color: var(--text); }
+.dots:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; display: grid; }
+
+/* per-variant visibility */
+.hook, .dots { display: none; }
+.v-hooks .hook { display: inline-flex; }
+.v-dots .seg.quoted:hover .dots, .v-dots .seg.quoted:focus-within .dots { display: grid; }
+body.narrow .v-dots .dots { right: auto; left: calc(-4.5rem - 2.2rem - 1rem); top: 30px; }
+
+/* B — paper: the transcript sits on paper; quotes lift to white sheets on hover / caret */
+.v-paper .stage { background: var(--paper); }
+.v-paper .seg.quoted:hover .qs, .v-paper .seg.quoted:focus-within .qs { background: var(--sheet);
+  box-shadow: 0 0 0 3px var(--sheet), 0 1px 3px 3px light-dark(rgba(0,0,0,.05), rgba(0,0,0,.4)); }
+.v-paper .seg.quoted:hover .qs.hid, .v-paper .seg.quoted:focus-within .qs.hid { background: transparent; box-shadow: 0 0 0 1px var(--border); }
+
+/* D — "Show Quotes" toggle, like Show Invisibles */
+.ttbar { display: flex; justify-content: flex-end; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.tbtn { all: unset; display: inline-flex; gap: 5px; align-items: center; font-size: 12px; padding: 3px 8px; border-radius: 6px; color: var(--muted); cursor: pointer; }
+.tbtn svg { width: 14px; height: 14px; }
+.tbtn[aria-pressed="true"] { background: var(--hover); color: var(--accent); }
+.tbtn:focus-visible { outline: 2px solid var(--accent); }
+.v-toggle.on .hook { display: inline-flex; }
+.v-toggle.on .qs { box-shadow: 0 0 0 1px var(--mark); }
+.v-toggle.on .qs.hid { box-shadow: 0 0 0 1px var(--mark-hid); }
+
+/* E — gutter mark: one hanging mark per quoted paragraph, in the speaker gap */
+.gmark { display: none; }
+.v-gutter .gmark { all: unset; display: inline-flex; position: absolute; left: calc(4.5rem + 2.2rem + .5rem - 1.15rem); top: .42rem;
+  width: 13px; height: 13px; color: var(--mark); cursor: pointer; border-radius: 3px; }
+.v-gutter .gmark.hid { color: var(--mark-hid); }
+.v-gutter .gmark:hover, .v-gutter .gmark:focus-visible { color: var(--accent); }
+.v-gutter .gmark svg { width: 100%; height: 100%; }
+.v-gutter .spk { padding-right: 15px; }
+.v-gutter .gmark .n { position: absolute; right: -5px; top: -5px; font: 9px var(--mono); color: inherit; }
+
+/* ── a menu drawn like the Mac's (on the Mac it would be the real NSMenu) ── */
+.menu { position: fixed; z-index: 100; min-width: 220px; max-width: 380px; padding: 5px; border-radius: 10px; background: var(--menu-bg);
+  backdrop-filter: blur(20px) saturate(1.6); box-shadow: 0 0 0 .5px light-dark(rgba(0,0,0,.18), rgba(255,255,255,.18)), 0 10px 30px rgba(0,0,0,.22);
+  font: 13px/1.2 var(--body); color: var(--text); user-select: none; }
+.menu .it { position: relative; display: flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 5px; white-space: nowrap; cursor: default; }
+.menu .it .lab { overflow: hidden; text-overflow: ellipsis; }
+.menu .it .lab em { font-style: normal; color: var(--muted); }
+.menu .it:hover, .menu .it.open, .menu .it:focus { background: var(--accent); color: #fff; outline: none; }
+.menu .it:hover .lab em, .menu .it.open .lab em, .menu .it:focus .lab em { color: rgba(255,255,255,.8); }
+.menu .it .chev { margin-left: auto; padding-left: 16px; }
+.menu .hd { padding: 6px 10px 2px; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
+.menu .sep { height: 1px; background: var(--menu-sep); margin: 5px 10px; }
+.menu .dis { color: var(--muted); }
+.menu .dis:hover { background: none; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Transcript quote hooks</h1>
+  <p class="lede">Exploration, 16 Oct 2026, nothing decided. Each variant is the same transcript excerpt with a different way of
+    finding a quote and opening it in other lenses. Click any text to put the caret in it; you can't type. Right-click
+    works in every variant. Change the conditions with the controls below.</p>
+  <div class="key"><span><i class="ka"></i>artefact: what the product would draw</span><span><i class="kc"></i>commentary: not the product</span></div>
+
+  <div class="controls">
+    <label><input type="checkbox" id="c-dark"> dark</label>
+    <label><input type="checkbox" id="c-narrow"> narrow measure <span class="k">(&lt;800px, no margin column)</span></label>
+    <label><input type="checkbox" id="c-play"> video playing <span class="k">(on the 02:10 paragraph)</span></label>
+  </div>
+
+  <div id="variants"></div>
+</div>
+
+<script>
+// ── one transcript excerpt, shared by every variant ─────────────────────
+const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 5H3"/><path d="M21 12H8"/><path d="M21 19H8"/><path d="M3 12v7"/></svg>';
+const ICON_TB = ICON;
+
+// Where each quote appears. Quotes: exactly one group. Screens and Signals: zero or more.
+const Q = {
+  q1: { short: "It's an Alessi kettle…", quotes: ["theme", "Beloved objects and emotional attachment"], screens: [],
+        signals: ["Beloved objects… · Emotions", "Beloved objects… · satisfaction"], tags: [["prior experience", 1]] },
+  q2: { short: "…really nice to have that kind of continuity…", quotes: ["theme", "Beloved objects and emotional attachment"], screens: [],
+        signals: ["Beloved objects… · satisfaction"], tags: [["satisfaction", 0]] },
+  q3: { short: "…whether the whistle hasn't been milled correctly…", quotes: ["section", "Product Detail & Stock"], screens: ["Alessi kettle product page"],
+        signals: ["Product Detail & Stock · doubt"], tags: [["quality doubt", 1]] },
+  q4: { short: "…mostly buy things when I'm a bit drunk on a Friday.", hidden: true, quotes: ["section", "Product Listing"], screens: ["Search results"],
+        signals: ["Product Listing · confidence"], tags: [["impulse", 1]] },
+  q5: { short: "I looked at the Alessi page…", quotes: ["section", "Product Detail & Stock"], screens: ["Alessi kettle product page", "Delivery options"],
+        signals: ["Product Detail & Stock · frustration", "Product Detail & Stock · Trust"], tags: [["delivery", 1], ["frustration", 0]] },
+};
+
+const SEGS = [
+  { tc: "00:22", spk: "m1", mod: true, parts: ["So — tell me about an object in your kitchen that you have feelings about."] },
+  { tc: "00:31", spk: "p2", parts: ["Hmm. Well, there's the kettle."] },
+  { tc: "00:39", spk: "p2", parts: [["q1", "It's an Alessi kettle. And, um, when I inherited the house, there was exactly the same kettle, but it was very, very old. My dad had found it in the market. The lid has kind of melted, the little bird that goes in the stopper, the whistle had also melted, and it was just generally in a really terrible condition."]] },
+  { tc: "01:09", spk: "p2", parts: ["And so for my birthday, my husband bought me an identical one. And yeah, ",
+      ["q2", "it's just really nice to have that kind of continuity, even though obviously my father would be appalled at paying this price for it."],
+      " And I love the kettle, but it doesn't whistle. ",
+      ["q3", "I don't know whether it's because the whistle hasn't been milled correctly, or whether there isn't quite an airtight seal in the manufacturing of the lid and spout."],
+      " Yeah. But I love the kettle anyway."] },
+  { tc: "01:52", spk: "m1", mod: true, parts: ["Did you look at it online before buying it?"] },
+  { tc: "01:56", spk: "p2", parts: ["Not really. ", ["q4", "Honestly I mostly buy things when I'm a bit drunk on a Friday."]] },
+  { tc: "02:10", spk: "p2", now: true, parts: [["q5", "I looked at the Alessi page, the one with the little bird, and it said in stock, but then the delivery was three weeks, which, you know, for a kettle."]] },
+];
+
+function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+function renderTranscript() {
+  let lastLabel = "";
+  return '<div class="tbody">' + SEGS.map((s) => {
+    const qids = s.parts.filter(Array.isArray).map((p) => p[0]);
+    const quoted = qids.length > 0;
+    const cls = ["seg", s.mod ? "mod" : "", quoted ? "quoted" : (s.mod ? "" : "plain"), s.now ? "now" : ""].join(" ");
+    const body = s.parts.map((p) => {
+      if (!Array.isArray(p)) return esc(p);
+      const [id, text] = p, h = Q[id].hidden ? " hid" : "";
+      return `<button class="hook${h}" data-q="${id}" title="Quote" aria-label="Quote: show in…">${ICON}</button>` +
+             `<span class="qs${h}" data-q="${id}">${esc(text)}</span>`;
+    }).join("");
+    const anns = qids.map((id) => {
+      const q = Q[id], key = q.quotes.join(":"), show = key !== lastLabel; lastLabel = key;
+      const tags = q.tags.map(([t, u]) => `<span class="badge${u ? "" : " emo"}">${esc(t)}</span>`).join("");
+      return `<div class="ann${q.hidden ? " hid" : ""}" data-q="${id}">${show ? `<a class="mlabel" href="#" data-q="${id}">${esc(q.quotes[1])}</a>` : ""}<div class="mtags">${tags}</div></div>`;
+    }).join("");
+    if (!quoted) lastLabel = "";
+    const hid = qids.length && qids.every((id) => Q[id].hidden) ? " hid" : "";
+    const gmark = quoted ? `<button class="gmark${hid}" data-qs="${qids.join(" ")}" aria-label="Quotes in this paragraph">${ICON}${qids.length > 1 ? `<span class="n">${qids.length}</span>` : ""}</button>` : "";
+    const dots = quoted ? `<button class="dots" data-qs="${qids.join(" ")}" aria-label="Show this quote in…">⋯</button>` : "";
+    return `<div class="${cls}" data-qs="${qids.join(" ")}">${gmark}
+      <span class="tc"><span class="br">[</span>${s.tc}<span class="br">]</span></span>
+      <span class="spk"><span class="badge">${s.spk}</span></span>
+      <div class="sb" contenteditable="true" spellcheck="false">${body}</div>
+      <div class="margin">${anns}${dots}</div></div>`;
+  }).join("") + "</div>";
+}
+
+// ── variants ────────────────────────────────────────────────────────────
+const VARIANTS = [
+  { id: "today", cls: "", title: "0 · Today", tag: "baseline",
+    notes: [["", "What ships now. The margin label is the only link-shaped thing, and today it goes nowhere."],
+            ["minus", "In the 01:09 paragraph, which words are the two quotes? Full ink everywhere, so you can't tell."],
+            ["minus", "Hidden 01:56 already in grey here (the agreed treatment), for comparison."]] },
+  { id: "hooks", cls: "v-hooks", title: "A · A mark at the start of each quote", tag: "like show invisibles",
+    notes: [["plus", "One pale text.quote mark at the first word of each quote, like ¶ with invisibles shown. Two quotes in one paragraph get two marks, in the right places."],
+            ["plus", "Hover the mark: that quote's extent lights. Click: the menu. Clicking the text still puts the caret there, so editing is untouched."],
+            ["plus", "Lives in the text, so it survives the narrow measure with no margin."],
+            ["minus", "Marks are always there. Pale, but a page of them is texture, and it's another thing a future free-text edit must not delete."],
+            ["q", "Should a mark ever take the caret? Today it can't, because it's an island the editor skips."]] },
+  { id: "gutter", cls: "v-gutter", title: "B · A hanging mark in the gutter, one per paragraph", tag: "medieval paragraph mark",
+    notes: [["plus", "Hangs left of the speaker badge, outside the prose, so the text itself is untouched and the reading line stays clean."],
+            ["plus", "A small count when a paragraph holds more than one quote; the menu then has a section per quote, each headed by a few words."],
+            ["minus", "Says 'there's a quote here', not where it is. The extent still needs a hover or click reveal (borrow A's lighting)."],
+            ["minus", "Shares the left edge with the playback progress bar. Turn on 'video playing' to see the clash."]] },
+  { id: "paper", cls: "v-paper", title: "C · Paper ground; quotes lift to white sheets", tag: "hover or caret",
+    notes: [["plus", "The transcript sits on pale paper. Hover a quoted paragraph, or click into it, and its quotes lift to white. The chunks that feed the other lenses become visible exactly where they are."],
+            ["plus", "Clicking is ordinary editing, and the caret keeps the reveal on, so it costs nothing extra."],
+            ["minus", "Paper changes the whole page's ground: every lens is white today, so the transcript would be the odd one out (or the start of a pattern)."],
+            ["minus", "Turn on 'video playing': the blue wash and the white sheets compete for the same paragraph."],
+            ["q", "No menu of its own: pair with A's mark or D's ⋯ to get to Show in."]] },
+  { id: "dots", cls: "v-dots", title: "D · Notes-style ⋯ circle on hover", tag: "Notes.app sidebar",
+    notes: [["plus", "Familiar from Notes' sidebar: a pale circle with ⋯ appears at the top of the margin when you hover a quoted paragraph, or when the caret is in it."],
+            ["minus", "Hover-revealed, so undiscoverable until you happen to hover; and it moves when the margin drops below the text at narrow widths."],
+            ["minus", "Per paragraph, not per quote: a paragraph with two quotes gets one ⋯ with two sections in its menu."],
+            ["minus", "As you said, not very standard on the Mac outside Notes."]] },
+  { id: "toggle", cls: "v-toggle", title: "E · A Show Quotes toggle", tag: "like Show Invisibles ⌘⇧I",
+    notes: [["plus", "Off: clean reading, nothing added. On: every quote's extent outlined and A's marks appear. Like Show Invisibles in Pages, Word and InDesign."],
+            ["plus", "No hover anywhere. On the Mac it's a View menu item and a toolbar button, so it's discoverable and has a keyboard path."],
+            ["minus", "A mode: people forget it's on (or off). Probably remembered per researcher, not per project."],
+            ["q", "Could be the default ON for a first visit to a transcript and remembered after."]] },
+];
+
+function renderVariants() {
+  document.getElementById("variants").innerHTML = VARIANTS.map((v) => `
+    <section class="variant" id="v-${v.id}">
+      <h2>${esc(v.title)}<span class="tag">${esc(v.tag)}</span></h2>
+      <div class="pair">
+        <div class="frame ${v.cls}" data-variant="${v.id}">
+          <div class="chrome"><span>Sessions ▸ Session 2 ▸ transcript</span><span class="last" data-last></span></div>
+          ${v.id === "toggle" ? `<div class="ttbar"><button class="tbtn" aria-pressed="false" data-toggle>${ICON_TB}<span>Show Quotes</span></button></div>` : ""}
+          <div class="stage">${renderTranscript()}</div>
+        </div>
+        <aside class="commentary"><b class="lbl">Commentary</b><ul>${v.notes.map(([k, t]) => `<li class="${k}">${esc(t)}</li>`).join("")}</ul></aside>
+      </div>
+    </section>`).join("");
+}
+renderVariants();
+
+// ── behaviour ───────────────────────────────────────────────────────────
+// Caret yes, typing no (the shipped transcript refuses input the same way).
+document.addEventListener("beforeinput", (e) => { if (e.target.closest?.(".sb")) e.preventDefault(); });
+
+// Light a quote's extent while its mark / label / menu section is hovered.
+function light(frame, ids, on) {
+  frame.querySelectorAll(".qs").forEach((s) => s.classList.toggle("lit", on && ids.includes(s.dataset.q)));
+}
+document.addEventListener("mouseover", (e) => {
+  const t = e.target.closest?.(".hook, .gmark, .mlabel, .dots, .menu [data-for]");
+  const frame = t ? (t.closest(".frame") || menuFrame) : null;
+  document.querySelectorAll(".frame").forEach((f) => { if (f !== frame) light(f, [], false); });
+  if (!t || !frame) return;
+  light(frame, (t.dataset.q || t.dataset.qs || t.dataset.for || "").split(" "), true);
+});
+
+// ── the menu ────────────────────────────────────────────────────────────
+let menuEl = null, menuFrame = null;
+function closeMenu() { document.querySelectorAll(".menu").forEach((m) => m.remove()); menuEl = null; if (menuFrame) light(menuFrame, [], false); menuFrame = null; }
+
+function quoteItems(id) {
+  const q = Q[id], verb = q.hidden ? "Unhide and Show in" : "Show in";
+  const out = [];
+  out.push({ label: `${verb} Quotes: <em>${esc(q.quotes[1])}</em>`, act: `${verb} Quotes → ${q.quotes[0]} “${q.quotes[1]}”`, for: id });
+  if (q.screens.length === 1) out.push({ label: `${verb} Screens: <em>${esc(q.screens[0])}</em>`, act: `${verb} Screens → ${q.screens[0]}`, for: id });
+  if (q.screens.length > 1) out.push({ label: `${verb} Screens`, sub: q.screens.map((s) => ({ label: esc(s), act: `${verb} Screens → ${s}` })), for: id });
+  // Signals still shows hidden quotes today, so its item never says Unhide.
+  if (q.signals.length === 1) out.push({ label: `Show in Signals: <em>${esc(q.signals[0])}</em>`, act: `Show in Signals → ${q.signals[0]}`, for: id });
+  if (q.signals.length > 1) out.push({ label: "Show in Signals", sub: q.signals.map((s) => ({ label: esc(s), act: `Show in Signals → ${s}` })), for: id });
+  return out;
+}
+
+function itemsFor(ids, { textItems = false, word = "" } = {}) {
+  const items = [];
+  if (textItems) {
+    items.push({ label: "Copy", dis: !word }, { label: `Look Up “${esc(word || "…")}”`, dis: !word }, { sep: true });
+  }
+  if (ids.length > 1) {
+    ids.forEach((id, i) => { if (i) items.push({ sep: true }); items.push({ hd: `“${esc(Q[id].short)}”`, for: id }, ...quoteItems(id)); });
+  } else if (ids.length === 1) {
+    items.push(...quoteItems(ids[0]));
+  }
+  return items;
+}
+
+function buildMenu(items, x, y, frame, parent) {
+  const m = document.createElement("div");
+  m.className = "menu"; m.setAttribute("role", "menu");
+  m.innerHTML = items.map((it, i) =>
+    it.sep ? '<div class="sep" role="separator"></div>' :
+    it.hd ? `<div class="hd" data-for="${it.for}">${it.hd}</div>` :
+    `<div class="it${it.dis ? " dis" : ""}" role="menuitem" tabindex="-1" data-i="${i}"${it.for ? ` data-for="${it.for}"` : ""}><span class="lab">${it.label}</span>${it.sub ? '<span class="chev">›</span>' : ""}</div>`
+  ).join("");
+  document.body.appendChild(m);
+  const r = m.getBoundingClientRect();
+  m.style.left = Math.min(x, innerWidth - r.width - 8) + "px";
+  m.style.top = Math.min(y, innerHeight - r.height - 8) + "px";
+  let child = null;
+  m.addEventListener("mouseover", (e) => {
+    const el = e.target.closest(".it"); if (!el) return;
+    if (!el.classList.contains("dis")) el.focus({ preventScroll: true }); // one highlight, as a native menu has
+    const it = items[+el.dataset.i];
+    if (child && child.owner !== el) { child.remove(); child = null; m.querySelectorAll(".open").forEach((o) => o.classList.remove("open")); }
+    if (it.sub && !child) {
+      el.classList.add("open");
+      const er = el.getBoundingClientRect();
+      child = buildMenu(it.sub.map((s) => ({ ...s, for: it.for })), er.right + 2, er.top - 5, frame, m);
+      child.owner = el;
+    }
+  });
+  m.addEventListener("click", (e) => {
+    const el = e.target.closest(".it"); if (!el || el.classList.contains("dis")) return;
+    const it = items[+el.dataset.i]; if (it.sub) return;
+    if (it.act) frame.querySelector("[data-last]").textContent = "→ " + it.act;
+    closeMenu();
+  });
+  // A submenu stays a child of <body>: inside its parent, the parent's backdrop-filter would
+  // become the containing block for position: fixed and throw the flyout off-screen.
+  return m;
+}
+
+function openMenu(frame, ids, x, y, opts) {
+  closeMenu();
+  menuFrame = frame;
+  menuEl = buildMenu(itemsFor(ids, opts), x, y, frame);
+  menuEl.querySelector(".it:not(.dis)")?.focus();
+}
+
+document.addEventListener("click", (e) => {
+  if (menuEl && !e.target.closest(".menu")) closeMenu();
+  const frame = e.target.closest(".frame"); if (!frame) return;
+  const tog = e.target.closest("[data-toggle]");
+  if (tog) { const on = tog.getAttribute("aria-pressed") !== "true"; tog.setAttribute("aria-pressed", on); frame.classList.toggle("on", on); return; }
+  const trg = e.target.closest(".hook, .gmark, .dots, .mlabel");
+  if (!trg) return;
+  e.preventDefault();
+  const r = trg.getBoundingClientRect();
+  const ids = (trg.dataset.q || trg.dataset.qs).split(" ");
+  // A margin label stays a plain link to its group (the original ask); everything else opens the menu.
+  if (trg.classList.contains("mlabel")) { frame.querySelector("[data-last]").textContent = `→ Show in Quotes → ${Q[ids[0]].quotes[1]}`; return; }
+  openMenu(frame, ids, r.left, r.bottom + 4);
+});
+
+// Right-click: the Mac's own items first, then Show in… for the quote under the pointer.
+document.addEventListener("contextmenu", (e) => {
+  const frame = e.target.closest(".frame"); if (!frame) return;
+  const seg = e.target.closest(".seg"); if (!seg) return;
+  e.preventDefault();
+  const q = e.target.closest(".qs");
+  const ids = q ? [q.dataset.q] : (seg.dataset.qs ? seg.dataset.qs.split(" ") : []);
+  const sel = String(getSelection());
+  const word = sel || (e.target.closest(".sb") ? wordAt(e.clientX, e.clientY) : "");
+  openMenu(frame, ids, e.clientX, e.clientY, { textItems: true, word });
+});
+function wordAt(x, y) {
+  const r = document.caretRangeFromPoint?.(x, y); if (!r || r.startContainer.nodeType !== 3) return "";
+  const t = r.startContainer.textContent; let a = r.startOffset, b = a;
+  while (a > 0 && /\w/.test(t[a - 1])) a--; while (b < t.length && /\w/.test(t[b])) b++;
+  return t.slice(a, b);
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeMenu();
+  if (menuEl && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+    const its = [...menuEl.querySelectorAll(":scope > .it:not(.dis)")]; const i = its.indexOf(document.activeElement);
+    its[(i + (e.key === "ArrowDown" ? 1 : -1) + its.length) % its.length]?.focus(); e.preventDefault();
+  }
+  if (menuEl && e.key === "Enter" && document.activeElement.closest?.(".menu")) document.activeElement.click();
+});
+addEventListener("scroll", closeMenu, { passive: true });
+
+// ── page controls ───────────────────────────────────────────────────────
+const root = document.documentElement;
+document.getElementById("c-dark").addEventListener("change", (e) => root.dataset.theme = e.target.checked ? "dark" : "light");
+document.getElementById("c-narrow").addEventListener("change", (e) => document.body.classList.toggle("narrow", e.target.checked));
+document.getElementById("c-play").addEventListener("change", (e) => document.body.classList.toggle("playing", e.target.checked));
+root.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+document.getElementById("c-dark").checked = root.dataset.theme === "dark";
+</script>
+</body>
+</html>

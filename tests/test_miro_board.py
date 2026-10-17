@@ -95,3 +95,16 @@ def test_empty_columns_safe() -> None:
     board = layout_board([], "Empty")
     assert board.frames == []
     assert board.width > 0 and board.height > 0
+
+
+def test_stickies_are_rectangles_and_the_layout_reserves_what_miro_draws() -> None:
+    """Miro sizes a sticky from its width and keeps the shape's proportion (measured 17 Oct 2026:
+    a rectangle 300 wide is 195.43 tall). A column spaced for any other height overlaps."""
+    from bristlenose import board_layout as bl
+    from bristlenose.server.miro_export import _sticky_item
+
+    assert bl.STICKY_SHAPE == "rectangle"
+    assert bl.QUOTE_H == bl.HEADER_H == bl.STICKY_W * 195.42857142857142 / 300
+    s = bl.Sticky(kind="quote", x=0, y=0, width=bl.STICKY_W, height=bl.QUOTE_H, colour="light_yellow",
+                  text="hello", participant_id="p1", timecode=1.0)
+    assert _sticky_item(s)["data"]["shape"] == "rectangle"

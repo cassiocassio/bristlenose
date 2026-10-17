@@ -31,6 +31,7 @@ from sqlalchemy.orm import Session
 
 from bristlenose import __version__, miro_client
 from bristlenose.board_layout import (
+    STICKY_SHAPE,
     Board,
     BoardStrings,
     Column,
@@ -208,7 +209,7 @@ def _sticky_content(s: Sticky, locale: str = "en") -> str:
 def _sticky_item(s: Sticky, locale: str = "en") -> dict[str, Any]:
     return {
         "type": "sticky_note",
-        "data": {"content": _sticky_content(s, locale), "shape": "square"},
+        "data": {"content": _sticky_content(s, locale), "shape": STICKY_SHAPE},
         "style": {"fillColor": s.colour},
         "position": {"x": s.x + s.width / 2, "y": s.y + s.height / 2},
         "geometry": {"width": s.width},

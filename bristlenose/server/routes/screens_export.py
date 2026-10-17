@@ -243,7 +243,7 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
     """Render every still, lay the board out, and build it on Miro. Runs in a worker thread; the
     job dict is its only output. A board left part-built names its link, as the quotes board does."""
     from bristlenose import miro_client
-    from bristlenose.board_layout import DEFAULT_QUOTE_TOKEN, SENTIMENT_TOKEN
+    from bristlenose.board_layout import DEFAULT_QUOTE_TOKEN, SENTIMENT_TOKEN, STICKY_SHAPE
     from bristlenose.screens_board import STICKY_H, STICKY_W, jpeg_size, lay_out_board
 
     stills: dict[str, bytes] = {}
@@ -292,7 +292,7 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
             q = quotes[st.dom_id]
             colour = (SENTIMENT_TOKEN.get(q.sentiment, DEFAULT_QUOTE_TOKEN) if colour_by == "sentiment"
                       else DEFAULT_QUOTE_TOKEN)
-            items.append({"type": "sticky_note", "data": {"content": _sticky_html(q), "shape": "square"},
+            items.append({"type": "sticky_note", "data": {"content": _sticky_html(q), "shape": STICKY_SHAPE},
                           "style": {"fillColor": colour},
                           "position": {"x": st.x + STICKY_W / 2, "y": st.y + STICKY_H / 2},
                           "geometry": {"width": STICKY_W}, "parent": {"id": fid}})

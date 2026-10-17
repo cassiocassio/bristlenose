@@ -30,9 +30,17 @@ from bristlenose.utils.text import count_noun
 from bristlenose.utils.timecodes import format_timecode
 
 # --- layout constants (board px) -------------------------------------------
+#: Every board's stickies are Miro's wide rectangle: a quote wraps in longer, fewer lines than in
+#: a square (owner, 17 Oct 2026: "nearly always better").
+STICKY_SHAPE = "rectangle"
+#: Miro sizes a sticky from its width alone and keeps the shape's proportion, so the height the
+#: layout reserves must be the one Miro draws. Measured 17 Oct 2026: a rectangle 300 wide is
+#: 195.43 tall (450 is 293.14); a square 200 wide is 229.15. The old fixed heights (quote 200,
+#: header 76) were less than a 240-wide square's 275, so a column's stickies overlapped.
+RECT_ASPECT = 195.42857142857142 / 300
 STICKY_W = 240.0
-QUOTE_H = 200.0
-HEADER_H = 76.0
+QUOTE_H = STICKY_W * RECT_ASPECT
+HEADER_H = QUOTE_H
 GAP_X = 36.0
 GAP_Y = 24.0
 FRAME_PAD = 28.0

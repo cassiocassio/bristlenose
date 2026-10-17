@@ -18,6 +18,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from bristlenose.board_layout import RECT_ASPECT
+
 # ── The lens's constants (layout.ts) ─────────────────────────────────────────
 
 COLUMN_GUTTER = 32
@@ -33,11 +35,9 @@ BAND_X = 0.2
 
 #: The still's width on the board. Miro keeps an image's aspect from its width.
 SHOT_W = 1200.0
-#: A sticky's width; Miro draws a square-shaped sticky this much taller than wide (measured
-#: 17 Oct 2026: width 200 came back 229.146 tall).
+#: A sticky's width, and the height Miro draws for the house shape (`board_layout.STICKY_SHAPE`).
 STICKY_W = 300.0
-STICKY_ASPECT = 229.14572864321605 / 200
-STICKY_H = STICKY_W * STICKY_ASPECT
+STICKY_H = STICKY_W * RECT_ASPECT
 #: Inside a frame, round its contents; between frames, room for the team's own stickies.
 FRAME_PAD = 80.0
 FRAME_GAP = 400.0

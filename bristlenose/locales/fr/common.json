@@ -379,6 +379,7 @@
     "colourBySentiment": "Sentiment",
     "colourByNone": "Une seule couleur (jaune)",
     "linkClipsLabel": "Lier les citations aux clips",
+    "splitLongQuotes": "Répartir les longues citations sur plusieurs notes",
     "linkClipsHint": "Indiquez le dossier o\u00f9 vous avez plac\u00e9 les clips export\u00e9s.",
     "clipsBasePlaceholder": "https://drive.google.com/\u2026/clips",
     "boardDestination": "Cr\u00e9e un nouveau tableau dans {{team}}.",

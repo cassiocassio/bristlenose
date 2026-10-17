@@ -87,3 +87,18 @@ describe("MiroExportPanel — the screens board", () => {
     await screen.findByText(i18n.t("miro.createBoard"));
   });
 });
+
+describe("MiroExportPanel — breaking long quotes", () => {
+  it("is offered ticked, and unticking it reaches the board", async () => {
+    await i18n.changeLanguage("en");
+    startScreensMiro.mockReset().mockResolvedValue({ status: "started", total: 9 });
+    getScreensMiroStatus.mockReset().mockResolvedValueOnce(status("completed"));
+    render(<MiroExportPanel open screens onClose={() => {}} />);
+    const box = (await screen.findByTestId("bn-miro-split-long")) as HTMLInputElement;
+    expect(box.checked).toBe(true);
+    fireEvent.click(box);
+    fireEvent.click(screen.getByText(i18n.t("miro.createBoard")));
+    await waitFor(() =>
+      expect(startScreensMiro).toHaveBeenCalledWith(expect.objectContaining({ split_long_quotes: false })));
+  });
+});

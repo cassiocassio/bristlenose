@@ -399,6 +399,7 @@ export interface ScreensMiroRequest {
   board_name?: string | null;
   colour_by?: string;
   locale?: string;
+  split_long_quotes?: boolean;
 }
 
 export interface ScreensMiroStatus {
@@ -796,6 +797,8 @@ export interface MiroExportRequest {
   quote_ids?: string[] | null;
   colour_by?: string;
   clips_base?: string;
+  /** Break a long quote into up to three grouped stickies (default on). */
+  split_long_quotes?: boolean;
   /** The board's chrome language. A Miro board is a deliverable, so it follows
    *  the researcher's UI language; the server defaults to English if omitted. */
   locale?: string;

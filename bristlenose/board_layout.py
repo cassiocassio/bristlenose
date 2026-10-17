@@ -264,10 +264,14 @@ def quoted(text: str) -> str:
 #: quotes in Miro until the type matched, 207 characters came to 255 wide, 293 to 281, 329 to 330,
 #: 227 to 255 (17 Oct 2026). Lines then run about 8–10 words, which is a comfortable measure.
 SIZE_K = 17.0
-#: Between the parts of one quote, and how far each part steps right of the one before: the set
-#: reads as one quote, the left edges stepping, the right edges where their own widths put them.
-SET_GAP = 12.0
-SET_STAGGER = 24.0
+#: The parts of one quote overlap by about one x-height of the board's type, the head of each
+#: covering the foot of the one before, so they read as connected; and each steps right by the same
+#: amount, so the notch at every left edge is a small square the eye completes into a line (owner,
+#: 17 Oct 2026). One size of type makes it one number: measured off the owner's screenshot as about
+#: 4.5 board units. Later parts are created later, so they are drawn on top.
+X_HEIGHT = 5.0
+SET_GAP = -X_HEIGHT
+SET_STAGGER = X_HEIGHT
 
 
 def sticky_width(chars: int) -> float:

@@ -379,6 +379,7 @@
     "colourBySentiment": "Sentiment",
     "colourByNone": "Un sol color (groc)",
     "linkClipsLabel": "Enllaça les cites amb els clips",
+    "splitLongQuotes": "Divideix les cites llargues en diverses notes adhesives",
     "linkClipsHint": "Indica la carpeta on has posat els clips exportats.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Crea un tauler nou a {{team}}.",

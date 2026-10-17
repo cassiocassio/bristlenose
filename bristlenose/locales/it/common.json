@@ -379,6 +379,7 @@
     "colourBySentiment": "Sentiment",
     "colourByNone": "Colore unico (giallo)",
     "linkClipsLabel": "Collega le citazioni alle clip",
+    "splitLongQuotes": "Dividi le citazioni lunghe in più note adesive",
     "linkClipsHint": "Indica la cartella in cui hai inserito le clip esportate.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Crea una nuova bacheca in {{team}}.",

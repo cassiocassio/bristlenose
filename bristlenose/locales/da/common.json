@@ -379,6 +379,7 @@
     "colourBySentiment": "Stemning",
     "colourByNone": "Én farve (gul)",
     "linkClipsLabel": "Sammenkæd citater med klip",
+    "splitLongQuotes": "Del lange citater op i flere sedler",
     "linkClipsHint": "Peg på den mappe, hvor du lagde de eksporterede klip.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Opretter et nyt board i {{team}}.",

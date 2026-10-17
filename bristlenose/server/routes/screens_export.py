@@ -233,25 +233,31 @@ async def reveal_screens(request: Request, project_id: int) -> dict[str, Any]:
 _miro_jobs: dict[int, dict[str, Any]] = {}
 
 
-def _sticky_html(q: Any) -> str:
-    from html import escape
-
-    from bristlenose.board_layout import attribution, fit_miro_sticky, quoted
+def _attribution(q: Any) -> str:
+    from bristlenose.board_layout import attribution
     from bristlenose.utils.timecodes import parse_timecode
 
-    return fit_miro_sticky(quoted(q.text),
-                           f"<br><i>{escape(attribution(q.participant_code, parse_timecode(q.timecode)))}</i>")
+    return attribution(q.participant_code, parse_timecode(q.timecode))
 
 
 def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
                    screens: list[dict[str, Any]], videos: dict[str, Path],
-                   quotes: dict[str, Any], colour_by: str) -> None:
+                   quotes: dict[str, Any], colour_by: str, split: bool = True) -> None:
     """Render each screen's still, lay the board out, and build it on Miro. Runs in a worker
     thread; the job dict is its only output. A board left part-built names its link, as the quotes
     board does."""
+    from html import escape
+
     from bristlenose import miro_client
-    from bristlenose.board_layout import DEFAULT_QUOTE_TOKEN, SENTIMENT_TOKEN, STICKY_SHAPE
-    from bristlenose.screens_board import STICKY_H, STICKY_W, jpeg_size, lay_out_board
+    from bristlenose.board_layout import (
+        DEFAULT_QUOTE_TOKEN,
+        SENTIMENT_TOKEN,
+        STICKY_SHAPE,
+        fit_miro_sticky,
+        quote_parts,
+    )
+    from bristlenose.screens_board import jpeg_size, lay_out_board
+    from bristlenose.server.miro_export import group_sets
 
     stills: dict[str, bytes] = {}
     sizes: dict[str, tuple[int, int]] = {}
@@ -280,7 +286,8 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
             # `total` stays the screens asked for; a screen with no still at all is counted, which
             # both clients say, rather than vanishing with its quotes.
             job["skipped_count"] += 1
-    frames = lay_out_board(screens, sizes, known=set(quotes))
+    parts = {d: quote_parts(q.text, _attribution(q), split) for d, q in quotes.items()}
+    frames = lay_out_board(screens, sizes, parts)
     if not frames:
         raise miro_client.MiroError("No screengrab could be made", reason="no_stills")
     board = miro_client.create_board(token, title)
@@ -313,12 +320,16 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
             q = quotes[st.dom_id]
             colour = (SENTIMENT_TOKEN.get(q.sentiment, DEFAULT_QUOTE_TOKEN) if colour_by == "sentiment"
                       else DEFAULT_QUOTE_TOKEN)
-            items.append({"type": "sticky_note", "data": {"content": _sticky_html(q), "shape": STICKY_SHAPE},
+            rest = f"<br><i>{escape(_attribution(q))}</i>" if st.attributed else ""
+            items.append({"type": "sticky_note",
+                          "data": {"content": fit_miro_sticky(st.text, rest), "shape": STICKY_SHAPE},
                           "style": {"fillColor": colour},
-                          "position": {"x": st.x + STICKY_W / 2, "y": st.y + STICKY_H / 2},
-                          "geometry": {"width": STICKY_W}, "parent": {"id": fid}})
+                          "position": {"x": st.x + st.width / 2, "y": st.y + st.height / 2},
+                          "geometry": {"width": st.width}, "parent": {"id": fid}})
+        made: list[dict[str, Any]] = []
         for i in range(0, len(items), 20):
-            miro_client.bulk_create_items(token, board_id, items[i:i + 20])
+            made += miro_client.bulk_create_items(token, board_id, items[i:i + 20])
+        group_sets(token, board_id, [st.set_id for st in frame.stickies], made)
         job["completed_count"] += 1
         job["progress"] += 1
     job["status"] = "completed"
@@ -348,6 +359,8 @@ class ScreensMiroStart(BaseModel):
     board_name: str | None = None
     locale: str = "en"
     colour_by: str = "sentiment"
+    #: Break a long quote into up to three grouped stickies, as on the quotes board.
+    split_long_quotes: bool = True
 
 
 class ScreensMiroStatus(BaseModel):
@@ -415,7 +428,8 @@ async def start_screens_miro(request: Request, project_id: int,
                            "skipped_count": 0, "current": "", "board_url": None, "reason": None}
     _miro_jobs[project_id] = job
     job["task"] = asyncio.create_task(_run_miro(
-        project_id, job, token, title, out_dir, screens, videos, quotes, body.colour_by))
+        project_id, job, token, title, out_dir, screens, videos, quotes, body.colour_by,
+        body.split_long_quotes))
     return ScreensExportStart(status="started", total=len(screens))
 
 

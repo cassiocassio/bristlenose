@@ -379,6 +379,7 @@
     "colourBySentiment": "Tunnesävy",
     "colourByNone": "Yksi väri (keltainen)",
     "linkClipsLabel": "Linkitä sitaatit leikkeisiin",
+    "splitLongQuotes": "Jaa pitkät sitaatit useammalle muistilapulle",
     "linkClipsHint": "Osoita kansioon, johon sijoitit viedyt leikkeet.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Luo uuden taulun tiimiin {{team}}.",

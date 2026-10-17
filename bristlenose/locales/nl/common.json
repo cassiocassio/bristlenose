@@ -379,6 +379,7 @@
     "colourBySentiment": "Sentiment",
     "colourByNone": "Eén kleur (geel)",
     "linkClipsLabel": "Citaten aan clips koppelen",
+    "splitLongQuotes": "Lange citaten over meerdere sticky notes verdelen",
     "linkClipsHint": "Wijs de map aan waar je de geëxporteerde clips hebt geplaatst.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Maakt een nieuw bord in {{team}}.",

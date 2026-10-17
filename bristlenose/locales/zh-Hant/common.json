@@ -358,6 +358,7 @@
     "colourBySentiment": "情緒",
     "colourByNone": "單一顏色（黃色）",
     "linkClipsLabel": "將引述連結至片段",
+    "splitLongQuotes": "將較長的引述分成多張便利貼",
     "linkClipsHint": "指向你放置匯出片段的檔案夾。",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "在 {{team}} 中建立新看板。",

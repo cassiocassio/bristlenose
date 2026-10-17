@@ -379,6 +379,7 @@
     "colourBySentiment": "Duygu durumu",
     "colourByNone": "Tek renk (sarı)",
     "linkClipsLabel": "Alıntıları kliplere bağla",
+    "splitLongQuotes": "Uzun alıntıları birden fazla yapışkan nota böl",
     "linkClipsHint": "Dışa aktarılan klipleri koyduğunuz klasörü belirtin.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "{{team}} içinde yeni bir pano oluşturur.",

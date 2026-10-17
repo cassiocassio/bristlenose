@@ -379,6 +379,7 @@
     "colourBySentiment": "Stimmung",
     "colourByNone": "Eine Farbe (gelb)",
     "linkClipsLabel": "Zitate mit Clips verkn\u00fcpfen",
+    "splitLongQuotes": "Lange Zitate auf mehrere Haftnotizen aufteilen",
     "linkClipsHint": "Geben Sie den Ordner an, in dem Sie die exportierten Clips abgelegt haben.",
     "clipsBasePlaceholder": "https://drive.google.com/\u2026/clips",
     "boardDestination": "Erstellt ein neues Board in {{team}}.",

@@ -417,6 +417,7 @@
     "colourBySentiment": "N\u00e1lada",
     "colourByNone": "Jedna barva (\u017elut\u00e1)",
     "linkClipsLabel": "Propojit citace s klipy",
+    "splitLongQuotes": "Rozdělit dlouhé citace do více lístečků",
     "linkClipsHint": "Zadejte slo\u017eku, kam jste um\u00edstili exportovan\u00e9 klipy.",
     "clipsBasePlaceholder": "https://drive.google.com/\u2026/clips",
     "boardDestination": "Vytvo\u0159\u00ed novou tabuli v t\u00fdmu {{team}}.",

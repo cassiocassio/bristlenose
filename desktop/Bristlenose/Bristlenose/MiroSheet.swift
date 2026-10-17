@@ -22,6 +22,9 @@ final class MiroSheetModel: ObservableObject {
     @Published var boardName: String
     @Published var colourBySentiment = true
     @Published var linkClips = false
+    /// On by default and shown, so a researcher arriving at the board knows why a long quote runs
+    /// over two or three stickies (owner, 17 Oct 2026).
+    @Published var splitLongQuotes = true
     @Published var clipsBase = ""
     @Published var busy = false
     @Published var error: String?
@@ -203,12 +206,14 @@ final class MiroSheetModel: ObservableObject {
                 let colourBy = colourBySentiment ? "sentiment" : "none"
                 let result = screens
                     ? try await api.exportScreens(boardName: name.isEmpty ? nil : name,
-                                                  colourBy: colourBy, locale: locale)
+                                                  colourBy: colourBy, locale: locale,
+                                                  splitLongQuotes: splitLongQuotes)
                     : try await api.export(
                         boardName: name.isEmpty ? nil : name,
                         colourBy: colourBy,
                         clipsBase: linkClips ? clipsBase.trimmingCharacters(in: .whitespacesAndNewlines) : "",
-                        locale: locale
+                        locale: locale,
+                        splitLongQuotes: splitLongQuotes
                     )
                 if Task.isCancelled { return }
                 self.boardURL = result.boardURL
@@ -364,6 +369,10 @@ struct MiroSheet: View {
                     Text(model.dt("stickyColoursLabel"))
                         .foregroundStyle(.secondary)
                     Toggle(model.t("colourBySentiment"), isOn: $model.colourBySentiment)
+                }
+                GridRow(alignment: .firstTextBaseline) {
+                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                    Toggle(model.t("splitLongQuotes"), isOn: $model.splitLongQuotes)
                 }
                 // Clip links are a quotes-board option; the screens board's stickies carry none.
                 if !model.screens {

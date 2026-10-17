@@ -106,6 +106,9 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   const [boardName, setBoardName] = useState("");
   const [colourBy, setColourBy] = useState("sentiment");
   const [linkClips, setLinkClips] = useState(false);
+  // On by default — it is the right thing for a long quote — and shown, so a researcher arriving
+  // at the board knows why a quote runs over two or three stickies (owner, 17 Oct 2026).
+  const [splitLong, setSplitLong] = useState(true);
   const [clipsBase, setClipsBase] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -193,8 +196,9 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
       colour_by: colourBy,
       clips_base: linkClips ? clipsBase.trim() : "",
       locale: resolveBrowserLang(i18n.language) ?? "en",
+      split_long_quotes: splitLong,
     }),
-    [boardName, colourBy, linkClips, clipsBase, i18n.language],
+    [boardName, colourBy, linkClips, clipsBase, splitLong, i18n.language],
   );
 
   const handlePasteConnect = useCallback(async () => {
@@ -246,8 +250,8 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
       setProgress(null);
       setSkipped(0);
       try {
-        const { board_name, colour_by, locale } = request();
-        const start = await startScreensMiro({ board_name, colour_by, locale });
+        const { board_name, colour_by, locale, split_long_quotes } = request();
+        const start = await startScreensMiro({ board_name, colour_by, locale, split_long_quotes });
         if (!live()) return;
         if (start.total === 0) {
           // Nothing to build: never read the status, which would be the last build's.
@@ -428,6 +432,15 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
               <option value="sentiment">{t("miro.colourBySentiment")}</option>
               <option value="none">{t("miro.colourByNone")}</option>
             </select>
+            <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
+              <input
+                type="checkbox"
+                checked={splitLong}
+                onChange={(e) => setSplitLong(e.target.checked)}
+                data-testid="bn-miro-split-long"
+              />
+              <span>{t("miro.splitLongQuotes")}</span>
+            </label>
             {/* Clip links are a quotes-board option: the screens board's quotes sit beside their
                 screengrab, and its stickies carry no link (docs/design-screens-export.md §6). */}
             {!screens && (

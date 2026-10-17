@@ -379,6 +379,7 @@
     "colourBySentiment": "Sentiment",
     "colourByNone": "En färg (gul)",
     "linkClipsLabel": "Länka citat till klipp",
+    "splitLongQuotes": "Dela upp långa citat på flera lappar",
     "linkClipsHint": "Peka på mappen där du placerade de exporterade klippen.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Skapar en ny tavla i {{team}}.",

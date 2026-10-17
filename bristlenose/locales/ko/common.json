@@ -358,6 +358,7 @@
     "colourBySentiment": "\uac10\uc815",
     "colourByNone": "\ub2e8\uc77c \uc0c9\uc0c1 (\ub178\ub791)",
     "linkClipsLabel": "\uc778\uc6a9\uc744 \ud074\ub9bd\uc5d0 \uc5f0\uacb0",
+    "splitLongQuotes": "긴 인용을 여러 개의 스티커 메모로 나누기",
     "linkClipsHint": "\ub0b4\ubcf4\ub0b8 \ud074\ub9bd\uc744 \ub454 \ud3f4\ub354\ub97c \uc9c0\uc815\ud558\uc138\uc694.",
     "clipsBasePlaceholder": "https://drive.google.com/\u2026/clips",
     "boardDestination": "{{team}}\uc5d0 \uc0c8 \ubcf4\ub4dc\ub97c \ub9cc\ub4ed\ub2c8\ub2e4.",

@@ -379,6 +379,7 @@
     "colourBySentiment": "Sentiment",
     "colourByNone": "Single colour (yellow)",
     "linkClipsLabel": "Link quotes to clips",
+    "splitLongQuotes": "Break long quotes into multiple sticky notes",
     "linkClipsHint": "Point at the folder where you placed the exported clips.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Creates a new board in {{team}}.",

@@ -379,6 +379,7 @@
     "colourBySentiment": "Sentimento",
     "colourByNone": "Cor única (amarelo)",
     "linkClipsLabel": "Vincular citações aos clipes",
+    "splitLongQuotes": "Dividir citações longas em várias notas adesivas",
     "linkClipsHint": "Aponte para a pasta onde você colocou os clipes exportados.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Cria um novo quadro em {{team}}.",

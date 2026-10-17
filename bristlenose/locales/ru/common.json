@@ -424,6 +424,7 @@
     "colourBySentiment": "Настроению",
     "colourByNone": "Один цвет (жёлтый)",
     "linkClipsLabel": "Связать цитаты с фрагментами",
+    "splitLongQuotes": "Разбивать длинные цитаты на несколько стикеров",
     "linkClipsHint": "Укажите папку, куда вы поместили экспортированные фрагменты.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Создаёт новую доску в {{team}}.",

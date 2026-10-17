@@ -424,6 +424,7 @@
     "colourBySentiment": "Sentyment",
     "colourByNone": "Jeden kolor (żółty)",
     "linkClipsLabel": "Połącz cytaty z klipami",
+    "splitLongQuotes": "Dziel długie cytaty na kilka karteczek",
     "linkClipsHint": "Wskaż folder, w którym umieściłeś wyeksportowane klipy.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Tworzy nową tablicę w {{team}}.",

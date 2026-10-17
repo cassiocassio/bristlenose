@@ -424,6 +424,7 @@
     "colourBySentiment": "Настрій",
     "colourByNone": "Один колір (жовтий)",
     "linkClipsLabel": "Пов’язати цитати з кліпами",
+    "splitLongQuotes": "Розбивати довгі цитати на кілька стікерів",
     "linkClipsHint": "Укажіть теку, куди ви помістили експортовані кліпи.",
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Створює нову дошку в {{team}}.",

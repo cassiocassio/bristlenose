@@ -17,15 +17,13 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from bristlenose.board_layout import RECT_ASPECT
+from bristlenose.board_layout import SET_GAP, SET_STAGGER, QuotePart, set_extent
 
 #: The still's width on the board. Miro keeps an image's aspect from its width.
 SHOT_W = 1200.0
-#: Stickies per row under the still, and their size: four of the house rectangle span the still.
-PER_ROW = 4
+#: Between quote sets in a row and between rows. Stickies are sized by their text (one size of
+#: type, `board_layout.quote_parts`), so a row holds as many as fit the screengrab's width.
 GAP = 24.0
-STICKY_W = (SHOT_W - (PER_ROW - 1) * GAP) / PER_ROW
-STICKY_H = STICKY_W * RECT_ASPECT
 #: Between the still and the first row, and between one participant's rows and the next's.
 SECTION_GAP = 64.0
 #: How far each further participant's screengrab sits down and right of the one before it, behind
@@ -39,9 +37,16 @@ FRAME_GAP = 400.0
 @dataclass
 class ScreenSticky:
     dom_id: str
-    #: Top-left, in the frame's coordinates.
+    #: Top-left, in the frame's coordinates, and size (Miro takes the width and keeps the shape).
     x: float
     y: float
+    width: float
+    height: float = 0.0
+    #: The words this sticky shows (quote marks placed); only a quote's last part is attributed.
+    text: str = ""
+    attributed: bool = True
+    #: The parts of one split quote share a set number, so the board groups them.
+    set_id: int | None = None
 
 
 @dataclass
@@ -74,49 +79,67 @@ class ScreenFrame:
 
 def lay_out_screen(groups: Sequence[tuple[str, Sequence[str]]],
                    versions: Sequence[tuple[str, str, tuple[int, int]]],
-                   known: set[str] | None = None) -> tuple[float, float, list[ScreenStill], list[ScreenSticky]]:
+                   parts: Mapping[str, Sequence[QuotePart]],
+                   set_ids: list[int] | None = None) -> tuple[float, float, list[ScreenStill], list[ScreenSticky]]:
     """One screen's frame contents: (width, height, stills back first, stickies), frame coordinates.
 
     `versions` is (filename, title, pixel size) for each participant's screengrab, front first; the
     rest cascade down and right behind it. `groups` is (participant code, quote ids) in the order to
-    stack them beneath; each participant starts a new row. `known` limits the stickies to quotes the
-    board can write."""
+    lay them out beneath: each participant starts a new row, and a row takes quote sets left to
+    right as far as the screengrabs' width. `parts` is each quote's stickies (`quote_parts`); a
+    quote without parts is one the board cannot write and is left out."""
+    set_ids = set_ids if set_ids is not None else [0]
     stills: list[ScreenStill] = []
     bottom = FRAME_PAD
     for k, (name, title, (pw, ph)) in enumerate(versions):
         h = SHOT_W * ph / pw if pw else SHOT_W * 9 / 16
         stills.append(ScreenStill(name, title, FRAME_PAD + k * CASCADE, FRAME_PAD + k * CASCADE, SHOT_W, h))
         bottom = max(bottom, FRAME_PAD + k * CASCADE + h)
+    row_w = SHOT_W + max(len(versions) - 1, 0) * CASCADE
+    right = FRAME_PAD + row_w
     stickies: list[ScreenSticky] = []
     y = bottom
     for _, doms in groups:
-        doms = [d for d in doms if known is None or d in known]
-        if not doms:
+        sets = [(d, parts[d]) for d in doms if parts.get(d)]
+        if not sets:
             continue
         y += SECTION_GAP
-        for i, d in enumerate(doms):
-            row, col = divmod(i, PER_ROW)
-            stickies.append(ScreenSticky(d, FRAME_PAD + col * (STICKY_W + GAP), y + row * (STICKY_H + GAP)))
-        rows = (len(doms) + PER_ROW - 1) // PER_ROW
-        y += rows * STICKY_H + (rows - 1) * GAP
-    width = SHOT_W + max(len(versions) - 1, 0) * CASCADE + 2 * FRAME_PAD
-    return width, y + FRAME_PAD, stills[::-1], stickies
+        x, row_h = FRAME_PAD, 0.0
+        for d, ps in sets:
+            w, h = set_extent(ps)
+            if x > FRAME_PAD and x + w > FRAME_PAD + row_w:  # the next row
+                x, y, row_h = FRAME_PAD, y + row_h + GAP, 0.0
+            set_id = None
+            if len(ps) > 1:
+                set_ids[0] += 1
+                set_id = set_ids[0]
+            py = y
+            for k, p in enumerate(ps):
+                stickies.append(ScreenSticky(d, x + k * SET_STAGGER, py, p.width, p.height, p.text,
+                                             p.attributed, set_id))
+                py += p.height + SET_GAP
+            right = max(right, x + w)
+            row_h = max(row_h, h)
+            x += w + GAP
+        y += row_h
+    return right + FRAME_PAD, y + FRAME_PAD, stills[::-1], stickies
 
 
 def lay_out_board(screens: Sequence[Mapping[str, Any]], still_px: Mapping[str, tuple[int, int]],
-                  known: set[str] | None = None) -> list[ScreenFrame]:
+                  parts: Mapping[str, Sequence[QuotePart]]) -> list[ScreenFrame]:
     """Every screen as a frame, in one row left to right in the order given (journey order).
 
     `still_px` maps a version's still filename to its pixel size; a version without one is left out
     (its still could not be made), and a screen with none at all is left out."""
     frames: list[ScreenFrame] = []
     x = 0.0
+    set_ids = [0]  # one count across the board, so every set's number is its own
     for sc in screens:
         versions = [(v["filename"], f"{v['code'].upper()} · {v.get('title') or sc['title']}", still_px[v["filename"]])
                     for v in sc["versions"] if v["filename"] in still_px]
         if not versions:
             continue
-        w, h, stills, stickies = lay_out_screen(sc["groups"], versions, known)
+        w, h, stills, stickies = lay_out_screen(sc["groups"], versions, parts, set_ids)
         frames.append(ScreenFrame(sc["title"], x, 0.0, w, h, stills, stickies))
         x += w + FRAME_GAP
     return frames

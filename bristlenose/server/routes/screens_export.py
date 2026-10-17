@@ -387,7 +387,7 @@ async def start_screens_miro(request: Request, project_id: int,
     quotes stacked beneath its still by participant."""
     from bristlenose.i18n import t_in
     from bristlenose.screen_text.shots import journey
-    from bristlenose.server.export_core import extract_quotes_for_export
+    from bristlenose.server.export_core import extract_quotes_for_export, project_display_name
     from bristlenose.server.routes.miro import _miro_token
     from bristlenose.utils.timecodes import parse_timecode
 
@@ -420,7 +420,8 @@ async def start_screens_miro(request: Request, project_id: int,
             state, owner = derive_project_screens(request, db, project_id)
             quotes = {f"q-{q.participant_code}-{int(parse_timecode(q.timecode))}": q
                       for q in extract_quotes_for_export(db, project_id)}
-            title = (board_name or "").strip() or f"{project.name} · {t_in(locale, 'common.screens.title')}"
+            title = ((board_name or "").strip()
+                     or f"{project_display_name(project)} · {t_in(locale, 'common.screens.title')}")
             return (journey(state["screens"], owner, _hidden_dom_ids(db, project_id)), video_sessions(db),
                     quotes, title)
         finally:

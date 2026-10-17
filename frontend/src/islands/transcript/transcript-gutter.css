@@ -100,9 +100,19 @@
 .bn-gutter-mark svg { width: 15px; height: 15px; }
 .transcript-segment:hover .bn-gutter-mark,
 .transcript-segment:focus-within .bn-gutter-mark { color: var(--bn-colour-text); }
-.transcript-segment:hover .bn-gutter-entry[data-hidden] .bn-gutter-mark { color: var(--bn-colour-muted); }
-.bn-gutter-entry.is-hot .bn-gutter-mark,
-.bn-gutter-mark:hover { color: var(--bn-colour-accent); }
+.transcript-segment:hover .bn-gutter-entry[data-hidden] .bn-gutter-mark,
+.transcript-segment:focus-within .bn-gutter-entry[data-hidden] .bn-gutter-mark { color: var(--bn-colour-muted); }
+a.bn-gutter-mark:hover,
+.bn-gutter-entry.is-hot a.bn-gutter-mark { color: var(--bn-colour-accent); }
+/* A mark that leads nowhere (a quote in no section or theme) never turns link-blue. */
+.bn-gutter-entry.is-hot span.bn-gutter-mark { color: var(--bn-colour-text); }
+/* A target the size of the icon is small: widen what takes the click, not what is drawn. */
+.bn-gutter-mark::after { content: ""; position: absolute; inset: -4.5px; }
+/* Where nothing hovers (a touch screen), or the researcher asked for more contrast, the mark is
+   never the pale invisible: it is a link, and at rest it may be the only sign of one. */
+@media (hover: none), (prefers-contrast: more) {
+    .center:has(.transcript-body) { --bn-transcript-mark: var(--bn-colour-muted); }
+}
 .bn-gutter-mark:focus-visible {
     outline: 2px solid var(--bn-colour-accent);
     outline-offset: 2px;
@@ -121,7 +131,6 @@ span.bn-gutter-mark { cursor: default; }
 .bn-gutter-title:hover,
 .bn-gutter-entry.is-hot .bn-gutter-title { text-decoration: underline; }
 .bn-gutter-entry[data-hidden] .bn-gutter-title { color: var(--bn-colour-muted); font-weight: var(--bn-weight-normal); }
-.bn-gutter-entry[data-hidden] .badge { opacity: 0.6; }
 .bn-gutter-title:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 2px; }
 
 /* ── The quote lift ─────────────────────────────────────────────────────── */
@@ -133,7 +142,8 @@ span.bn-gutter-mark { cursor: default; }
     box-decoration-break: clone;
     transition: background-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast);
 }
-.transcript-segment:hover [data-q] {
+.transcript-segment:hover [data-q],
+.transcript-segment:focus-within [data-q] {
     background: var(--bn-transcript-sheet);
     box-shadow: 0 0 0 3px var(--bn-transcript-sheet);
 }
@@ -165,6 +175,12 @@ span.bn-gutter-mark { cursor: default; }
     stroke-linejoin: miter;
 }
 .bn-keylines path.is-hidden { stroke: var(--bn-colour-muted); }
+/* Words matched only roughly (quoteExtents: the excerpt was not found as said): dashed. */
+.bn-keylines path.is-approx { stroke-dasharray: 2 2; }
+/* Windows high contrast forces backgrounds, so the lift goes; keep the keyline a system colour. */
+@media (forced-colors: active) {
+    .bn-keylines path { stroke: CanvasText; }
+}
 
 @media (prefers-reduced-motion: reduce) {
     .transcript-body [data-q],

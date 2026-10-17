@@ -1,7 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { act, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { QuotesArrival, arrivalAnchor, lastQuotesArrival } from "./QuotesArrival";
+import { QuotesArrival, arrivalAnchor, dropRevealFromAddress, lastQuotesArrival, resetQuotesArrival } from "./QuotesArrival";
 import { getQuotesSnapshot, initFromQuotes, resetStore, setViewMode } from "../contexts/QuotesContext";
 import type { QuoteResponse } from "../utils/types";
 
@@ -34,6 +34,7 @@ function arriveAt(entry: string) {
 
 beforeEach(() => {
   resetStore();
+  resetQuotesArrival();
   scrolled.length = 0;
 });
 
@@ -78,6 +79,50 @@ describe("QuotesArrival", () => {
     expect(scrolled).toEqual(["theme-4"]);
   });
 
+  it("keeps the quote un-hidden when the lens's second load still says hidden", async () => {
+    // Each island fetches /quotes as it mounts; one answered before the un-hide reached the server
+    // brings the hide back. The reveal holds through the visit's first loads (review, 17 Oct 2026).
+    arriveAt("/report/quotes/?reveal=q-p1-10#section-3");
+    await act(async () => {
+      initFromQuotes([quote({ is_hidden: true })], true);
+    });
+    expect(getQuotesSnapshot().hidden["q-p1-10"]).toBeUndefined();
+    await act(async () => {
+      initFromQuotes([quote({ is_hidden: true })], true);
+    });
+    expect(getQuotesSnapshot().hidden["q-p1-10"]).toBeUndefined();
+    expect(scrolled).toEqual(["section-3"]); // scrolled once, not per load
+  });
+
+  it("scrolls after a wait when the quotes are slow, and still reveals when they come", async () => {
+    vi.useFakeTimers();
+    try {
+      arriveAt("/report/quotes/?reveal=q-p1-10#section-3");
+      await act(async () => {
+        vi.advanceTimersByTime(5000);
+      });
+      expect(scrolled).toEqual(["section-3"]);
+      await act(async () => {
+        initFromQuotes([quote({ is_hidden: true })], true);
+      });
+      expect(getQuotesSnapshot().hidden["q-p1-10"]).toBeUndefined();
+      expect(scrolled).toEqual(["section-3"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("says so when the quote to reveal is not in the report", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    arriveAt("/report/quotes/?reveal=q-p9-1#section-3");
+    await act(async () => {
+      initFromQuotes([quote()], true);
+    });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("not in this report"), "q-p9-1");
+    expect(scrolled).toEqual(["section-3"]);
+    warn.mockRestore();
+  });
+
   it("does nothing without a group anchor", async () => {
     arriveAt("/report/quotes/?reveal=q-p1-10");
     await act(async () => {
@@ -85,5 +130,40 @@ describe("QuotesArrival", () => {
     });
     expect(getQuotesSnapshot().hidden["q-p1-10"]).toBe(true);
     expect(scrolled).toEqual([]);
+  });
+});
+
+describe("dropRevealFromAddress", () => {
+  // Back to the lens, or a reload, must not un-hide again a quote hidden since (review, 17 Oct 2026).
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("takes reveal off the browser router's query, keeping the anchor", () => {
+    window.history.replaceState(null, "", "/report/quotes/?reveal=q-p1-10#section-3");
+    dropRevealFromAddress();
+    expect(window.location.pathname + window.location.search + window.location.hash).toBe("/report/quotes/#section-3");
+  });
+
+  it("takes it off the query inside an export's hash", () => {
+    window.history.replaceState(null, "", "/report.html#/report/quotes/?reveal=q-p1-10#theme-1");
+    dropRevealFromAddress();
+    expect(window.location.hash).toBe("#/report/quotes/#theme-1");
+  });
+
+  it("leaves an address without one alone", () => {
+    window.history.replaceState(null, "", "/report/quotes/#section-3");
+    dropRevealFromAddress();
+    expect(window.location.pathname + window.location.hash).toBe("/report/quotes/#section-3");
+  });
+
+  it("is done once the quote has landed", async () => {
+    window.history.replaceState(null, "", "/report/quotes/?reveal=q-p1-10#section-3");
+    arriveAt("/report/quotes/?reveal=q-p1-10#section-3");
+    await act(async () => {
+      initFromQuotes([quote({ is_hidden: true })], true);
+    });
+    expect(window.location.search).toBe("");
+    expect(window.location.hash).toBe("#section-3");
   });
 });

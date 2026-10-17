@@ -12,20 +12,24 @@ import { stillUrl, type ScreenTabLike } from "../screens/screenModel";
 
 /** Twice the widest the margin draws it, for a sharp still on a Retina display. */
 const STILL_W = 280;
-const cache = new Map<string, string | null>();
+/** Stills fetched this visit. Only successes are kept: one failure (a 401 while the sidecar
+ *  restarts, a still not taken yet) must not blank the thumbnail until the page reloads. */
+const cache = new Map<string, string>();
 const waiting = new Map<string, Promise<string | null>>();
 
 function fetchStill(url: string): Promise<string | null> {
   let p = waiting.get(url);
   if (!p) {
     p = apiGet<{ src: string }>(url)
-      .then((r) => r.src)
-      .catch(() => null)
-      .then((src) => {
-        cache.set(url, src);
-        waiting.delete(url);
-        return src;
-      });
+      .then((r) => {
+        cache.set(url, r.src);
+        return r.src as string | null;
+      })
+      .catch((e: unknown) => {
+        console.warn("Transcript: no still for a screen's thumbnail", url, e);
+        return null;
+      })
+      .finally(() => waiting.delete(url));
     waiting.set(url, p);
   }
   return p;
@@ -40,14 +44,15 @@ interface GutterThumbProps {
 export function GutterThumb({ tab, href, onFollow }: GutterThumbProps) {
   const url = stillUrl(tab, STILL_W);
   const ref = useRef<HTMLAnchorElement | null>(null);
-  const [src, setSrc] = useState<string | null>(() => cache.get(url) ?? null);
+  // Keyed by address, so a thumbnail reused for another version never shows the last one's still.
+  const [fetched, setFetched] = useState<{ url: string; src: string | null } | null>(null);
 
   useEffect(() => {
     if (cache.has(url)) return;
     let live = true;
     const load = () => {
       void fetchStill(url).then((s) => {
-        if (live) setSrc(s);
+        if (live) setFetched({ url, src: s });
       });
     };
     const el = ref.current;
@@ -72,6 +77,7 @@ export function GutterThumb({ tab, href, onFollow }: GutterThumbProps) {
       io.disconnect();
     };
   }, [url]);
+  const src = cache.get(url) ?? (fetched?.url === url ? fetched.src : null);
 
   // The same link as the screen's title beside it, so it is not a second stop for the keyboard
   // or a second name for a screen reader.

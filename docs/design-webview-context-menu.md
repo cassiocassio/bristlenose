@@ -119,7 +119,7 @@ always the href, and the proposal keys on the place.
 |---|---|---|---|---|---|
 | Timecode (`:835` → `TimecodeLink.tsx:34`) | a · `#t={sec}` (relative, no session) | Plays | Link menu → player window showing the transcript at the top | This transcript at this moment | **SEED** session + seconds (both known on this page) |
 | Words (`:891`), paragraphs | span, in a contenteditable host when paragraph editing is on | Caret | Text/editing menu (Look Up, Translate, Copy, Search With…) | Mac text services | **KEEP** (§4.6) |
-| Margin label (`Annotation.tsx:35`) | a · `#q-{id}` | Nothing: a hash change, no handler | Link menu → player window | That quote | **SEED** Quotes + quote anchor, or **NONE** until its left-click goes somewhere |
+| Margin label and gutter mark (`islands/transcript/GutterEntry.tsx`; `Annotation.tsx` retired 17 Oct 2026) | a · `/report/quotes/?reveal={dom_id}#{anchor}` | Opens the Quotes lens at the quote's group, the quote brought into view (`docs/design-transcript-gutter.md`) | Link menu | That quote's group | **SEED** the same address. Screens and Discussion marks beside it carry `/report/screens/?screen=…&session=…` and `/report/discussion/?item=…&turn=…` |
 | Speaker badge (`:854`) | button | Picker | Page menu | — | KEEP |
 
 ### Quotes lens
@@ -294,7 +294,7 @@ unproven. Fold this into theirs; don't add a second override.
 1. **A left click on a threshold-review timecode opens the transcript in the player window and closes any playing clip** (`ProposalZoneList.tsx:125` `target="_blank"` → `createWebViewWith`). C, H. Fixed by §4.4.
 2. **A report page in the popout writes into the main window's bridge state** (`BridgeHandler.handleMessage` has no sender check). C, H. Fixed by §4.4's sender filter.
 3. **The Dashboard featured-speaker link lands at the top of the transcript.** Its anchor `#t-{sid}-{sec}` doesn't match `t-(\d+)$` (`Dashboard.tsx:389`, `:434`; `TranscriptPage.tsx:557`). C.
-4. **The transcript margin label (`#q-{id}`) goes nowhere on a left click** (`Annotation.tsx:35`). C.
+4. ~~**The transcript margin label (`#q-{id}`) goes nowhere on a left click** (`Annotation.tsx:35`). C.~~ Fixed 17 Oct 2026: the label and a new gutter mark lead into the Quotes lens (`docs/design-transcript-gutter.md`).
 5. **Download Linked File / Download Image / Download Video are silent no-ops** (P in the probe; H in the app).
 
 ## 7. Hand checks owed (Debug build, about 5 minutes)

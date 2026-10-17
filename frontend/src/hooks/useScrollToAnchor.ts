@@ -37,6 +37,10 @@ export function useScrollToAnchor() {
       attempt++;
       if (attempt < maxRetries) {
         setTimeout(tryScroll, 100);
+      } else {
+        // The anchor never appeared (a grouping without it, a filter hiding its group, an old
+        // address): the caller's link landed nowhere, so say so where it can be seen.
+        console.warn("scrollToAnchor: gave up waiting for", anchorId);
       }
     }
 

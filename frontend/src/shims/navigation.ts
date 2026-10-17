@@ -55,6 +55,13 @@ export function navigateTo(path: string, opts?: { replace?: boolean }): void {
   navigateRef(path, opts);
 }
 
+let installed = false;
+/** Whether the router's navigate has been handed over yet (AppLayout installs it on mount). A
+ *  link that would navigate in the app before then should let its own href do the work. */
+export function navigationReady(): boolean {
+  return installed;
+}
+
 export function installNavigationShims(
   navigate: NavigateFunction,
   scrollToAnchor: (anchorId: string, opts?: ScrollToAnchorOptions) => void,
@@ -62,6 +69,7 @@ export function installNavigationShims(
   // Update refs — existing window functions will pick up the new values.
   navigateRef = navigate;
   scrollToAnchorRef = scrollToAnchor;
+  installed = true;
 
   // Only install window functions once (idempotent).
   if ((window as unknown as Record<string, unknown>).switchToTab) return;

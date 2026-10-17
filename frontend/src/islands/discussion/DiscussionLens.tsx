@@ -243,8 +243,15 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   // tests mount it without one, and an export's hash router keeps the query in the hash.
   const arrived = useMemo(() => {
     const want = discussionArrival(appQuery());
-    const turn = want ? data.turns.find((tt) => tt.id === want.turn) : undefined;
-    return want && turn && order.includes(turn.session) ? { item: want.item, turn: turn.id, session: turn.session } : null;
+    if (!want) return null;
+    const turn = data.turns.find((tt) => tt.id === want.turn);
+    if (turn && order.includes(turn.session)) return { item: want.item, turn: turn.id as string | null, session: turn.session as string | null };
+    // The turn has gone (the record was rebuilt, or the address is old): the item, if it is still
+    // in the guide, is the next best place to land.
+    console.warn("Discussion: the turn asked for is not in this record", want.turn);
+    const known = data.sections.some((sec) => sec.items.some((it) => it.id === want.item))
+      || data.standalone.some((it) => it.id === want.item);
+    return known ? { item: want.item, turn: null, session: null } : null;
   }, [data, order]);
   const [mode, setMode] = useState<Mode>(data.guide ? saved.mode : "merged");
   const [guideView, setGuideView] = useState<GuideView>(saved.guideView);
@@ -386,7 +393,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
 
   // An arrival brings the asking it names into view, once.
   useEffect(() => {
-    if (!arrived) return;
+    if (!arrived?.turn) return;
     const el = contentRef.current?.querySelector<HTMLElement>(`.dl-ask[data-turn="${arrived.turn.replace(/["\\]/g, "\\$&")}"]`);
     if (el && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center" });
   }, [arrived]);

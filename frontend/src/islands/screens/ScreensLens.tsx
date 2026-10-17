@@ -505,7 +505,14 @@ export function ScreensLens() {
           if (want && asked) {
             arrival.current = null;
             setCurKey(asked.key);
-            setTabSid(asked.tabs.some((tb) => tb.session_id === want.session) ? want.session : null);
+            const hasSession = asked.tabs.some((tb) => tb.session_id === want.session);
+            if (!hasSession) console.warn("Screens: the screen asked for has no version from", want.session);
+            setTabSid(hasSession ? want.session : null);
+          } else if (want && !r.pending) {
+            // Read everything and still not there: its key changed (screen text was rebuilt) or the
+            // address is old. Stop waiting, so a later poll cannot jump the reader to it mid-read.
+            arrival.current = null;
+            console.warn("Screens: the screen asked for is not in the lens", want.ref);
           }
           // The nav follows what the lens can show, not only the last status read.
           if (r.enabled && !r.unavailable && r.screens.length > 0) markScreensFound();

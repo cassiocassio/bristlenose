@@ -25,7 +25,9 @@ function targetElements(root: HTMLElement, target: string): HTMLElement[] {
     return Array.from(root.querySelectorAll<HTMLElement>(`.transcript-body [data-q="${id}"]`));
   }
   if (target.startsWith("p:")) {
-    const at = esc(target.slice(2));
+    // `p:<position>:s` (a screen began here) or `p:<position>:d` (a question asked here): two
+    // targets on one paragraph, so hovering one never lights the other's entry.
+    const at = esc(target.split(":")[1] ?? "");
     return Array.from(root.querySelectorAll<HTMLElement>(`.transcript-body .segment-body[data-position="${at}"]`));
   }
   return [];
@@ -110,6 +112,10 @@ export function useGutterHover(
       const entries = sheet.querySelectorAll<HTMLElement>(`.bn-gutter-entry[data-target="${esc(target)}"]`);
       entries.forEach((e) => e.classList.add("is-hot"));
       const hidden = Array.from(entries).some((e) => e.hasAttribute("data-hidden"));
+      // Words matched only roughly (the excerpt was not found as said): a dashed line, so the
+      // outline never claims more precision than the match has.
+      const approx = target.startsWith("q:")
+        && sheet.querySelector(`.transcript-body [data-q="${esc(target.slice(2))}"][data-q-approx]`) !== null;
       // One block per paragraph the target crosses.
       const byParagraph = new Map<HTMLElement, HTMLElement[]>();
       for (const el of targetElements(sheet, target)) {
@@ -124,17 +130,34 @@ export function useGutterHover(
         if (!d) continue;
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttribute("d", d);
-        if (hidden) path.setAttribute("class", "is-hidden");
+        const cls = [hidden ? "is-hidden" : "", approx ? "is-approx" : ""].filter(Boolean).join(" ");
+        if (cls) path.setAttribute("class", cls);
         layer.appendChild(path);
       }
     };
     const onOver = (e: MouseEvent) => show(hoverTarget(e.target as Element | null));
     const onLeave = () => show(null);
+    // The keyboard gets what the pointer gets: focus on a mark or a title shows its quote (the
+    // caret in the text names nothing, so it clears). Escape puts a surfaced thumbnail back,
+    // leaving the key to the page's own handlers too.
+    const onFocusIn = (e: FocusEvent) => show(hoverTarget(e.target as Element | null));
+    const onFocusOut = (e: FocusEvent) => {
+      if (!sheet.contains(e.relatedTarget as Node | null)) show(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") show(null);
+    };
     sheet.addEventListener("mouseover", onOver);
     sheet.addEventListener("mouseleave", onLeave);
+    sheet.addEventListener("focusin", onFocusIn);
+    sheet.addEventListener("focusout", onFocusOut);
+    sheet.addEventListener("keydown", onKey);
     return () => {
       sheet.removeEventListener("mouseover", onOver);
       sheet.removeEventListener("mouseleave", onLeave);
+      sheet.removeEventListener("focusin", onFocusIn);
+      sheet.removeEventListener("focusout", onFocusOut);
+      sheet.removeEventListener("keydown", onKey);
       show(null);
       layer.remove();
     };

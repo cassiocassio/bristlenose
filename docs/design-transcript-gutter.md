@@ -91,8 +91,14 @@ transcript they can jump to each, landing on the thing itself.
   fewest filters that keep it from showing (`filter.ts relaxFor`, the same checks as
   `isQuoteVisible`, pinned equal: starred-only → all; re-tick one of its tags, leaving tag solo
   first; drop the tokens it fails; clear typed text), keeps what it changed (`lastQuotesArrival`,
-  for the toast question), and scrolls to the anchor. `reveal` stays in the address: arriving again
-  is harmless. In an export a hidden quote cannot be un-hidden, so its link carries no `reveal`.
+  for the toast question), and scrolls to the anchor once. Each island fetches `/quotes` as it
+  mounts, and one answered before the un-hide reached the server brings the hide back, so for ten
+  seconds after the first load a later load that says hidden is un-hidden again (that only); if the
+  quotes take five seconds to come, the lens scrolls anyway and reveals when they do. Once the quote
+  has landed, `reveal` is taken off the address (`dropRevealFromAddress`, `history.replaceState`),
+  so Back to the lens or a reload cannot un-hide a quote hidden since. A `reveal` not in the report
+  scrolls to the group and says so in the console. In an export a hidden quote cannot be un-hidden,
+  so its link carries no `reveal`.
   Signals' location heading and the Dashboard's section, theme and stat links use the same address,
   which also ends their silent no-op under By session grouping.
 - **Screens:** `/report/screens/?screen=<ref>&session=<sid>` (`islands/screens/screenModel.ts`). The
@@ -100,14 +106,46 @@ transcript they can jump to each, landing on the thing itself.
   participant's screen, deleted when screen text is switched off, and an address lives on in
   history, the web view's back list and the route the page reports to the Mac. The lens reads the
   query at mount (it exists only in serve mode, under the browser router) and, on the first load
-  holding that screen, opens it on that session's version.
+  holding that screen, opens it on that session's version. When a load that is no longer pending
+  still lacks it (screen text rebuilt, an old address), the lens stops waiting and says so in the
+  console, so a later poll cannot jump the reader to it mid-read.
 - **Discussion:** `/report/discussion/?item=<id>&turn=<turn id>` (`islands/discussion/discussionLinks.ts`).
   The lens's focus lives in module memory, which a new tab does not share, so the address carries
   it. `DiscussionView` reads it (`utils/appQuery.ts`: the browser router's query, or the part of an
   export's hash after `?`), opens that turn's session with the asking focused, and scrolls it into
-  view. A turn it does not have is ignored.
+  view. A turn it does not have (the record rebuilt) still focuses its item if the item is known,
+  and says so in the console.
 - **Back** returns to the paragraph the jump left from: the transcript's address is replaced with
   `#t-<seconds>` before the jump, which the page already honours (with its brief highlight).
+
+## Review fixes and known limits (17 Oct 2026)
+
+Three reviews after the build (accessibility, silent failure, code) changed these:
+
+- **Keyboard.** A mark or label taking focus lights its quote and draws its keyline as hover does;
+  Escape clears it. The quote mark and the question mark on one moderator paragraph have distinct
+  targets (`p:<pos>:s`, `p:<pos>:d`), so hovering one no longer lights the other.
+- **Contrast.** Where hover is unavailable (`hover: none`) or more contrast is asked for, marks
+  rest at the muted ink instead of the pale one; forced colours draw them in `CanvasText`.
+- **Which occurrence.** An excerpt whose words occur more than once in its paragraphs takes the
+  occurrence that is free and starts within two seconds of the quote's time, else the first free
+  one; a quote whose words are all taken by earlier quotes is unlocated rather than drawn over
+  them. A quote found only by its anchors (words tidied between) draws its keyline dashed.
+- **Failures say so.** A screens or discussion read that fails, a still that fails (not cached, so
+  the next view retries), a scroll that gives up, and every stale address log a console warning
+  instead of drawing nothing silently. Screens poll every 20 s while the lens is still reading.
+- **Before the router is ready** a link's own `href` is followed rather than a click that does
+  nothing (`navigationReady()`).
+
+Known limits, not fixed: in a transcript without word timings, CJK text is matched by its
+space-separated runs, which are rarely words, so its quotes fall back to the server's paragraphs;
+WebKit reaches links with Tab only when "Press Tab to highlight each item" is on (Option-Tab
+otherwise), as everywhere in the report.
+
+Owner calls still open: whether a hidden quote's mark needs a spoken "(hidden)" (a new key in all
+21 locales); the blue hover title at 3.75:1 on default light paper; the pale mark at rest; the mark
+and label being two tab stops for one quote; the playback glow's contrast on paper; the toast that
+says which filters arrival changed (`lastQuotesArrival` holds them).
 
 ## Where the CSS lives
 

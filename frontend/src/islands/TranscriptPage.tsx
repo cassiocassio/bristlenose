@@ -126,6 +126,40 @@ function buildWaypoints(
  * that doesn't land exactly on a segment id (e.g. a quote that starts
  * mid-segment) still scrolls to a real segment. Segments are time-ordered.
  */
+/**
+ * The paragraph a moment falls in, by position: the one containing it, else (a moment in a pause)
+ * the next to start; past the end of the transcript, none — a screen visited after the last word
+ * is not drawn on the last paragraph.
+ */
+function paragraphIndexAt(segments: TranscriptSegmentResponse[], sec: number): number | null {
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i];
+    if ((s.start_time <= sec && sec < s.end_time) || s.start_time >= sec) return i;
+  }
+  return null;
+}
+
+/**
+ * The moderator's paragraph a question was asked in: the one containing its moment, else the
+ * moderator paragraph starting nearest it within 3 s. Never a participant's paragraph: a question
+ * mark belongs on the question.
+ */
+function moderatorParagraphAt(segments: TranscriptSegmentResponse[], sec: number): number | null {
+  let best: number | null = null;
+  let gap = Infinity;
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i];
+    if (!s.is_moderator) continue;
+    if (s.start_time <= sec && sec < s.end_time) return i;
+    const d = Math.abs(s.start_time - sec);
+    if (d <= 3 && d < gap) {
+      gap = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
 /** Two names compared as words: case and punctuation aside ("Shopping bag" is "Shopping Bag"). */
 function norm(s: string): string {
   return s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -652,57 +686,77 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       : null),
     [data],
   );
+  // A quote's details show once, at the first paragraph that draws its words (or, if none does,
+  // the first the server matched it to by time). Per load, not per render: the journey's scroll
+  // sync re-renders the page as the reader scrolls.
+  const firstParagraphOf = useMemo(() => {
+    const first = new Map<string, number>();
+    if (!data) return first;
+    data.segments.forEach((_seg, position) => {
+      for (const q of extents?.owners[position] ?? []) if (q && !first.has(q)) first.set(q, position);
+    });
+    data.segments.forEach((seg, position) => {
+      for (const q of seg.quote_ids) if (!first.has(q)) first.set(q, position);
+    });
+    return first;
+  }, [data, extents]);
   const sheetRef = useRef<HTMLDivElement | null>(null);
-  useGutterHover(sheetRef, data);
+  useGutterHover(sheetRef, loading ? null : data);
 
   // The screens this session was on (stage 2): the Screens lens's own read, in serve only — an
-  // export carries no screens. Off, unavailable or failed: no screen marks, nothing said.
+  // export carries no screens. Off or unavailable: no screen marks. Re-read when the report moves
+  // on, and every 20 s while screen text is still being read (up to 15 times), so a transcript
+  // opened mid-read gains its marks. A failed read draws no marks and says so in the console.
   const [screens, setScreens] = useState<ScreenLike[]>([]);
   useEffect(() => {
     if (isExportMode()) return;
     let live = true;
-    apiGet<{ enabled: boolean; unavailable: string | null; screens: ScreenLike[] }>("/screens")
-      .then((r) => {
-        if (live) setScreens(r.enabled && !r.unavailable ? r.screens : []);
-      })
-      .catch(() => {
-        if (live) setScreens([]);
-      });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = (attempt: number) => {
+      apiGet<{ enabled: boolean; unavailable: string | null; pending?: boolean; screens: ScreenLike[] }>("/screens")
+        .then((r) => {
+          if (!live) return;
+          setScreens(r.enabled && !r.unavailable ? r.screens : []);
+          if (r.pending && attempt < 15) timer = setTimeout(() => load(attempt + 1), 20000);
+        })
+        .catch((e: unknown) => {
+          console.warn("Transcript: /screens failed; no screen marks", e);
+          if (live) setScreens([]);
+        });
+    };
+    load(0);
     return () => {
       live = false;
+      if (timer) clearTimeout(timer);
     };
-  }, [sessionId]);
+  }, [sessionId, refreshKey]);
   // The questions this session's moderator asked of the guide (stage 3): the Discussion lens's
   // record, ready or partial — the states the lens shows. Embedded in an export, so it works
-  // offline. Not run, stale, failed or unreadable: no question marks, nothing said.
+  // offline. Not run, stale or failed: no question marks. Re-read when the report moves on.
   const [discussion, setDiscussion] = useState<DiscussionData | null>(null);
   useEffect(() => {
     let live = true;
     apiGet<{ status: string; record?: DiscussionData | null }>("/discussion")
       .then((r) => {
         const usable = (r.status === "ready" || r.status === "partial") && r.record?.version === 1;
+        if (r.record && r.record.version !== 1) console.warn("Transcript: a discussion record this build cannot read", r.record.version);
         if (live) setDiscussion(usable ? r.record! : null);
       })
-      .catch(() => {
+      .catch((e: unknown) => {
+        console.warn("Transcript: /discussion failed; no question marks", e);
         if (live) setDiscussion(null);
       });
     return () => {
       live = false;
     };
-  }, [sessionId]);
+  }, [sessionId, refreshKey]);
   const askedByParagraph = useMemo(() => {
     if (!data || !discussion) return new Map<number, QuestionAsked[]>();
-    return questionsAsked(discussion, sessionId, (sec) => {
-      const seg = resolveSegmentForSeconds(data.segments, sec);
-      return seg ? data.segments.indexOf(seg) : null;
-    });
+    return questionsAsked(discussion, sessionId, (sec) => moderatorParagraphAt(data.segments, sec));
   }, [discussion, sessionId, data]);
   const startsByParagraph = useMemo(() => {
     if (!data || screens.length === 0) return new Map<number, ScreenStart[]>();
-    return screenStarts(screens, sessionId, (sec) => {
-      const seg = resolveSegmentForSeconds(data.segments, sec);
-      return seg ? data.segments.indexOf(seg) : null;
-    });
+    return screenStarts(screens, sessionId, (sec) => paragraphIndexAt(data.segments, sec));
   }, [screens, sessionId, data]);
 
   // Loading state
@@ -733,15 +787,6 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   // Segment badges below are code-only — see the header block in the return.
   const participants = speakers.filter((sp) => sp.role === "participant");
 
-  // A quote's details show once, at the first paragraph that draws its words (or, if none
-  // does, the first the server matched it to by time).
-  const firstParagraphOf = new Map<string, number>();
-  segments.forEach((_seg, position) => {
-    for (const q of extents?.owners[position] ?? []) if (q && !firstParagraphOf.has(q)) firstParagraphOf.set(q, position);
-  });
-  segments.forEach((seg, position) => {
-    for (const q of seg.quote_ids) if (!firstParagraphOf.has(q)) firstParagraphOf.set(q, position);
-  });
   const isHidden = (q: string) => !!annotations[q]?.is_hidden;
   const backTo = (seg: TranscriptSegmentResponse) => `/report/sessions/${sessionId}#t-${Math.floor(seg.start_time)}`;
   // First-occurrence-per-run suppression: show a label / sentiment / tag once,
@@ -978,10 +1023,9 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                     {t("transcript.inaudible")}
                   </span>
                 ) : seg.words && seg.words.length > 0 ? (
-                  // Word-level spans for karaoke highlighting during playback.
-                  // When words exist we skip html_text (<mark> quote highlighting)
-                  // because reconciling word boundaries with quote marks is a
-                  // future enhancement. Margin annotations still show quote context.
+                  // Word-level spans, for the karaoke highlight during playback and, where a
+                  // word belongs to a quote, for the gutter's lift and keyline (quoteExtents).
+                  // The server's html_text is not drawn on either path.
                   seg.words.map((w, i) => {
                     // Which quote the word belongs to rides on data attributes, never the
                     // className: PlayerContext adds bn-word-active to it imperatively.
@@ -994,6 +1038,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                         data-end={w.end}
                         data-q={q ?? undefined}
                         data-q-hidden={q && isHidden(q) ? "" : undefined}
+                        data-q-approx={q && extents?.approximate.has(q) ? "" : undefined}
                       >
                         {w.text}{i < seg.words!.length - 1 ? " " : ""}
                       </span>
@@ -1001,19 +1046,41 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                   })
                 ) : extents?.owners[position]?.some(Boolean) ? (
                   // Without word timings, a quoted paragraph's words are spans too, cut as
-                  // drawnTokens cuts them; the spaces stay text, so its text is unchanged.
+                  // drawnTokens cuts them, so its text is unchanged. A space between two words
+                  // of one quote goes inside the quote's span, as on the timed path, so the
+                  // pointer resting on it is still on the quote (no keyline flicker).
                   (() => {
+                    const owners = extents.owners[position];
+                    const parts = seg.text.split(/(\s+)/);
+                    const out: React.ReactNode[] = [];
                     let k = -1;
-                    return seg.text.split(/(\s+)/).map((part, j) => {
-                      if (part === "" || /^\s+$/.test(part)) return part;
+                    for (let j = 0; j < parts.length; j++) {
+                      const part = parts[j];
+                      if (part === "" || /^\s+$/.test(part)) {
+                        out.push(part);
+                        continue;
+                      }
                       k += 1;
-                      const q = extents.owners[position][k] ?? null;
-                      return q ? (
-                        <span key={j} data-q={q} data-q-hidden={isHidden(q) ? "" : undefined}>{part}</span>
-                      ) : (
-                        part
+                      const q = owners[k] ?? null;
+                      const space = parts[j + 1];
+                      const joins = q !== null && space !== undefined && /^\s+$/.test(space) && owners[k + 1] === q;
+                      if (!q) {
+                        out.push(part);
+                        continue;
+                      }
+                      out.push(
+                        <span
+                          key={j}
+                          data-q={q}
+                          data-q-hidden={isHidden(q) ? "" : undefined}
+                          data-q-approx={extents.approximate.has(q) ? "" : undefined}
+                        >
+                          {joins ? part + space : part}
+                        </span>,
                       );
-                    });
+                      if (joins) j += 1;
+                    }
+                    return out;
                   })()
                 ) : (
                   <>{seg.text}</>
@@ -1089,7 +1156,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                   const same = shownLabels.has(norm(title));
                   return {
                     key: `s:${screen.key}`, icon: "screens" as const, href, follow, hidden: false, same,
-                    target: `p:${position}`, testId: `screen-entry-${position}`,
+                    target: `p:${position}:s`, testId: `screen-entry-${position}`,
                     name: `${t("nav.screens")}: ${title}`,
                     content: (_withIds: boolean) => (
                       <>
@@ -1111,7 +1178,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                   const follow = (e: React.MouseEvent) => followInApp(e, path, backTo(seg));
                   return {
                     key: `d:${q.item}`, icon: "discussion" as const, href, follow, hidden: false, same: false,
-                    target: `p:${position}`, testId: `question-entry-${position}`,
+                    target: `p:${position}:d`, testId: `question-entry-${position}`,
                     name: `${t("nav.discussion")}: ${q.topic}`,
                     // Grey, a link all the same (hover underline): more blue in the margin would be
                     // too much (owner, 17 Oct 2026).

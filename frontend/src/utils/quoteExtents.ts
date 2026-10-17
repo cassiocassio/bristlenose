@@ -31,7 +31,7 @@ import { drawnTokens } from "./paragraphEdits";
 
 export interface ExtentParagraph {
   text: string;
-  words?: { text: string }[] | null;
+  words?: { text: string; start?: number }[] | null;
   quote_ids: string[];
   inaudible?: boolean;
   speaker_code?: string;
@@ -64,6 +64,10 @@ export function quoteExtents(
   quotes: Record<string, ExtentQuote>,
 ): QuoteExtents {
   const tokens = paragraphs.map((p) => (p.inaudible ? [] : drawnTokens(p.text, p.words)));
+  // Each paragraph's words reduced once, and their times where Whisper gave them.
+  const forms = tokens.map((t) => t.map(matchForm));
+  const times = paragraphs.map((p, i) =>
+    p.words && p.words.length === tokens[i].length ? p.words.map((w) => w.start) : null);
   const owners: (string | null)[][] = tokens.map((t) => t.map(() => null));
   const approximate = new Set<string>();
 
@@ -76,7 +80,7 @@ export function quoteExtents(
       else serverParagraphs.set(q, [i]);
     }
   });
-  // …and where to look for its words: those, and its speaker's paragraphs overlapping its time.
+  // …and where to look for its words: those, and every paragraph overlapping its time.
   const searchIn = new Map<string, number[]>();
   for (const [quoteId, q] of Object.entries(quotes)) {
     const set = new Set(serverParagraphs.get(quoteId) ?? []);
@@ -91,71 +95,99 @@ export function quoteExtents(
 
   const unlocated: string[] = [];
   for (const [quoteId, paras] of searchIn) {
-    const wanted = (quotes[quoteId]?.excerpt ?? "").split(/\s+/).map(matchForm).filter(Boolean);
+    const q = quotes[quoteId];
+    const wanted = (q?.excerpt ?? "").split(/\s+/).map(matchForm).filter(Boolean);
     // First the quote's own speaker's paragraphs, so a moderator's "mm-hm" in the middle of it
     // does not break the run; then every overlapping paragraph, for words filed under someone else.
-    const who = quotes[quoteId]?.participant;
-    const own = who ? paras.filter((i) => paragraphs[i].speaker_code === who) : paras;
+    const own = q?.participant ? paras.filter((i) => paragraphs[i].speaker_code === q.participant) : paras;
     const tries = own.length > 0 && own.length < paras.length ? [own, paras] : [paras];
     let claimed = false;
     for (const tryParas of tries) {
-      // The words of those paragraphs as one run, skipping words that reduce to
-      // nothing (a dash, an ellipsis), each remembering where it is drawn.
-      const run: { form: string; para: number; word: number }[] = [];
+      // The words of those paragraphs as one run, skipping words that reduce to nothing (a dash,
+      // an ellipsis), each remembering where it is drawn and, if timed, when it was said.
+      const run: { form: string; para: number; word: number; t?: number }[] = [];
       for (const i of tryParas) {
-        tokens[i].forEach((w, j) => {
-          const form = matchForm(w);
-          if (form) run.push({ form, para: i, word: j });
+        forms[i].forEach((form, j) => {
+          if (form) run.push({ form, para: i, word: j, t: times[i]?.[j] });
         });
       }
-      const forms = run.map((r) => r.form);
-      const span = locate(forms, wanted);
+      const spans = locateAll(run.map((r) => r.form), wanted);
+      if (spans.length === 0) continue;
+      // Of every place the words occur, the first whose words no other quote has taken and, where
+      // the words are timed, that was said within the quote's own time: two quotes with the same
+      // words ("yes, I love it") land on their own occurrences (review, 17 Oct 2026).
+      const free = ([a, b]: [number, number]) =>
+        run.slice(a, b + 1).some((r) => owners[r.para][r.word] === null);
+      const inTime = ([a]: [number, number]) =>
+        run[a].t === undefined || q?.start === undefined || q.end === undefined
+          || (run[a].t! >= q.start - 2 && run[a].t! <= q.end + 2);
+      const span = spans.find((sp) => free(sp) && inTime(sp)) ?? spans.find(free);
       if (!span) continue;
       // Claim from the first matched word to the last, so punctuation drawn as its own word
       // inside the quote belongs to it. A word another quote claimed first stays its.
       const first = run[span[0]], last = run[span[1]];
+      let took = 0;
       for (const i of tryParas) {
         if (i < first.para || i > last.para) continue;
         const from = i === first.para ? first.word : 0;
         const to = i === last.para ? last.word : tokens[i].length - 1;
-        for (let j = from; j <= to; j++) owners[i][j] ??= quoteId;
+        for (let j = from; j <= to; j++) {
+          if (owners[i][j] === null) {
+            owners[i][j] = quoteId;
+            took += 1;
+          }
+        }
       }
-      claimed = true;
+      claimed = took > 0;
       break;
     }
     if (!claimed) unlocated.push(quoteId);
   }
-  // An unlocated quote is whatever its paragraphs have left over.
+  // An unlocated quote is whatever its paragraphs have left over: the server's, else its own
+  // speaker's that truly overlap it — never a neighbour that only touches its time, which is often
+  // the moderator's question just before it.
   for (const quoteId of unlocated) {
     approximate.add(quoteId);
-    for (const i of serverParagraphs.get(quoteId) ?? searchIn.get(quoteId) ?? []) {
+    const q = quotes[quoteId];
+    const fallback = serverParagraphs.get(quoteId) ?? paragraphs.flatMap((p, i) =>
+      q?.start !== undefined && q.end !== undefined && p.speaker_code === q.participant
+        && p.start_time !== undefined && p.end_time !== undefined && p.start_time < q.end && p.end_time > q.start
+        ? [i] : []);
+    for (const i of fallback) {
       for (let j = 0; j < owners[i].length; j++) owners[i][j] ??= quoteId;
     }
   }
   return { owners, approximate };
 }
 
-/** Where `wanted` runs in `forms`, as [first, last] indices: the whole sequence if it is there,
- *  else anchored on its first and last ANCHOR words within a plausible length. */
+/** Every place `wanted` runs in `forms`, as [first, last] indices: each occurrence of the whole
+ *  sequence; failing any, each place its first ANCHOR words occur with its last ANCHOR words after
+ *  them, the nearest such that the span is half to twice the excerpt's length. */
 const ANCHOR = 4;
-function locate(forms: string[], wanted: string[]): [number, number] | null {
-  if (wanted.length === 0) return null;
-  const at = findRun(forms, wanted);
-  if (at >= 0) return [at, at + wanted.length - 1];
-  if (wanted.length <= ANCHOR) return null;
-  const head = wanted.slice(0, ANCHOR), tail = wanted.slice(-ANCHOR);
-  const a = findRun(forms, head);
-  if (a < 0) return null;
-  for (let b = forms.length - ANCHOR; b > a; b--) {
-    if (!tail.every((w, m) => forms[b + m] === w)) continue;
-    const length = b + ANCHOR - a;
-    return length >= wanted.length / 2 && length <= wanted.length * 2 ? [a, b + ANCHOR - 1] : null;
+function locateAll(forms: string[], wanted: string[]): [number, number][] {
+  if (wanted.length === 0) return [];
+  const exact: [number, number][] = [];
+  for (let k = findRun(forms, wanted, 0); k >= 0; k = findRun(forms, wanted, k + 1)) {
+    exact.push([k, k + wanted.length - 1]);
   }
-  return null;
+  if (exact.length > 0 || wanted.length <= ANCHOR) return exact;
+  const head = wanted.slice(0, ANCHOR), tail = wanted.slice(-ANCHOR);
+  const anchored: [number, number][] = [];
+  for (let a = findRun(forms, head, 0); a >= 0; a = findRun(forms, head, a + 1)) {
+    const from = a + Math.max(ANCHOR, Math.ceil(wanted.length / 2)) - ANCHOR;
+    const to = Math.min(forms.length - ANCHOR, a + wanted.length * 2 - ANCHOR);
+    for (let b = from; b <= to; b++) {
+      if (tail.every((w, m) => forms[b + m] === w)) {
+        anchored.push([a, b + ANCHOR - 1]);
+        break;
+      }
+    }
+  }
+  return anchored;
 }
 
-function findRun(haystack: string[], needle: string[]): number {
-  outer: for (let k = 0; k + needle.length <= haystack.length; k++) {
+function findRun(haystack: string[], needle: string[], from: number): number {
+  outer: for (let k = from; k + needle.length <= haystack.length; k++) {
     for (let m = 0; m < needle.length; m++) if (haystack[k + m] !== needle[m]) continue outer;
     return k;
   }

@@ -7,7 +7,7 @@
  * request is in the address, a plain click and a modifier-click into a new tab land alike.
  */
 import type { MouseEvent } from "react";
-import { navigateTo } from "../shims/navigation";
+import { navigateTo, navigationReady } from "../shims/navigation";
 import { reportHref } from "./reportHref";
 
 /** The router path (for `navigate`). */
@@ -26,6 +26,8 @@ export function quotesHref(anchor: string, reveal?: string): string {
  *  by it, so Back returns to the paragraph the jump was made from. */
 export function followInApp(e: MouseEvent, path: string, from?: string): void {
   if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  // Before the router has handed over navigate, the href itself is the safer route than a no-op.
+  if (!navigationReady()) return;
   e.preventDefault();
   if (from) navigateTo(from, { replace: true });
   navigateTo(path);

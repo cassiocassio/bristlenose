@@ -77,6 +77,44 @@ describe("quoteExtents", () => {
     expect(approximate.size).toBe(0);
   });
 
+  it("anchors on the nearest ending, not one that recurs later in the paragraph", () => {
+    // Tidied excerpt ("uh" dropped); its last four words are said again much later (review, 17 Oct 2026).
+    const text = "So I looked everywhere and uh could not find it at all. " + "Then lots of other talk here. ".repeat(8) +
+      "And again I could not find it at all.";
+    const { owners, approximate } = quoteExtents(
+      [quoted(["q1"], text)],
+      excerpts({ q1: "so i looked everywhere and could not find it at all" }),
+    );
+    expect(owners[0].filter((o) => o === "q1")).toHaveLength(12); // "So … all.", the "uh" included
+    expect(approximate.size).toBe(0);
+  });
+
+  it("gives two quotes with the same words their own occurrences, by when they were said", () => {
+    const words = [
+      { text: "Yes", start: 1 }, { text: "I", start: 1.2 }, { text: "love", start: 1.4 }, { text: "it.", start: 1.6 },
+      { text: "Really.", start: 3 },
+      { text: "Yes", start: 6 }, { text: "I", start: 6.2 }, { text: "love", start: 6.4 }, { text: "it.", start: 6.6 },
+    ];
+    const paragraph: ExtentParagraph = {
+      text: words.map((w) => w.text).join(" "), words, quote_ids: ["late", "early"],
+      speaker_code: "p1", start_time: 0, end_time: 10,
+    };
+    // The later quote is listed first: order must not decide, time must.
+    const { owners } = quoteExtents([paragraph], {
+      late: { excerpt: "yes I love it", start: 5.5, end: 7, participant: "p1" },
+      early: { excerpt: "yes I love it", start: 0.5, end: 2, participant: "p1" },
+    });
+    expect(owners[0]).toEqual(["early", "early", "early", "early", null, "late", "late", "late", "late"]);
+  });
+
+  it("counts a quote whose words were all taken as not located", () => {
+    const { approximate } = quoteExtents(
+      [quoted(["a", "b"], "Yes I love it.")],
+      excerpts({ a: "yes i love it", b: "yes i love it" }),
+    );
+    expect(approximate.has("b")).toBe(true);
+  });
+
   it("does not anchor across a span far longer than the excerpt", () => {
     const { approximate } = quoteExtents(
       [quoted(["q1"], "so i went to " + "and then more ".repeat(20) + "said in stock now")],
@@ -112,6 +150,19 @@ describe("quoteExtents", () => {
     const { owners } = quoteExtents(paragraphs, { q9: { excerpt: "not in either", start: 10, end: 20, participant: "p1" } });
     expect(owners[0]).toEqual([null, null, null, null, null]);
     expect(owners[1]).toEqual(["q9", "q9", "q9", "q9"]);
+  });
+
+  it("with no paragraph from the server, falls back only to its speaker's truly overlapping ones", () => {
+    const paragraphs: ExtentParagraph[] = [
+      { ...quoted([], "Why did you pick that one?"), speaker_code: "m1", start_time: 0, end_time: 10 },
+      { ...quoted([], "Because it was cheap and it was there."), speaker_code: "p1", start_time: 10, end_time: 20 },
+    ];
+    const { owners, approximate } = quoteExtents(paragraphs, {
+      q1: { excerpt: "tidied beyond recognition", start: 10, end: 20, participant: "p1" },
+    });
+    expect(owners[0].every((o) => o === null)).toBe(true); // the question that only touches it
+    expect(owners[1].every((o) => o === "q1")).toBe(true);
+    expect(approximate.has("q1")).toBe(true);
   });
 
   it("treats an empty excerpt as not located", () => {

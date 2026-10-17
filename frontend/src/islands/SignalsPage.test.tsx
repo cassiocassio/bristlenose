@@ -10,6 +10,7 @@ import { navigateTo } from "../shims/navigation";
 vi.mock("../shims/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../shims/navigation")>()),
   navigateTo: vi.fn(),
+  navigationReady: () => true,
 }));
 
 // ---------------------------------------------------------------------------

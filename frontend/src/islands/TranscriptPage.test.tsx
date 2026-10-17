@@ -154,6 +154,7 @@ import { navigateTo } from "../shims/navigation";
 vi.mock("../shims/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../shims/navigation")>()),
   navigateTo: vi.fn(),
+  navigationReady: () => true,
 }));
 
 const mockedGetTranscript = vi.mocked(getTranscript);
@@ -1214,6 +1215,12 @@ describe("TranscriptPage — screens in the gutter", () => {
   });
 
   it("draws no screen marks when the lens is off", async () => {
+    // Real screens, but switched off: an empty list would pass even if `enabled` were ignored.
+    vi.mocked(apiGet).mockImplementation(((path: string) =>
+      Promise.resolve(path === "/screens"
+        ? { enabled: false, unavailable: null,
+            screens: [{ key: "url:/dash", name: "dashboard", quotes: 1, tabs: [tab(11, "Dashboard")] }] }
+        : { status: "not_run" })) as typeof apiGet);
     mockedGetTranscript.mockResolvedValue(mockData);
     render(<TranscriptPage projectId="1" sessionId="s1" />);
     await waitFor(() => expect(screen.getByTestId("annotation-q-p1-10")).toBeTruthy());

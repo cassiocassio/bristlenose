@@ -158,6 +158,10 @@ with the board's link.
 **Consent at the moment of export** (`design-miro-bridge.md`): the panel says the board will
 include screenshots of participants' screens as well as quotes.
 
+**Frame titles truncate at the frame's width** ("P1 · Kitchenware & t…"); Miro shows the whole
+title as the board is zoomed in. Left as Miro draws it (owner, 17 Oct 2026: "this is just a thing
+that Miro does and Miro users will be used to it"), so no title text box inside the frame.
+
 **Not in v1:** leader lines (a Miro connector needs an item at each end; a small dot at the pin
 point would do, later); FigJam as a target (`design-board-integrations.md`).
 

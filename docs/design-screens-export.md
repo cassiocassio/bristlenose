@@ -160,7 +160,9 @@ include screenshots of participants' screens as well as quotes.
 
 **Frame titles truncate at the frame's width** ("P1 · Kitchenware & t…"); Miro shows the whole
 title as the board is zoomed in. Left as Miro draws it (owner, 17 Oct 2026: "this is just a thing
-that Miro does and Miro users will be used to it"), so no title text box inside the frame.
+that Miro does and Miro users will be used to it"), so no title text box inside the frame. The
+same goes for size: a still 1,200 wide with stickies 300 wide reads at a workshop's zoom, and is
+left as it is ("let Miro do what it does").
 
 **Not in v1:** leader lines (a Miro connector needs an item at each end; a small dot at the pin
 point would do, later); FigJam as a target (`design-board-integrations.md`).

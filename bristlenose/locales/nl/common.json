@@ -329,6 +329,21 @@
       "burnUnavailable": "Deze FFmpeg kan geen ondertiteling inbranden \u2014 alleen clips zonder ondertiteling worden ge\u00ebxtraheerd",
       "burnPartial": "Clips gereed \u2014 ondertitelde kopie\u00ebn: {{burned}} van {{attempted}}"
     },
+    "screens": {
+      "exportScreens": "Schermen exporteren",
+      "exportHint": "Elke schermafbeelding op volle grootte, in een map",
+      "progress": "Schermen exporteren… ({{progress}} van {{total}})",
+      "copying": "Schermen kopiëren… ({{progress}} van {{total}})",
+      "done_one": "{{count}} schermafbeelding klaar",
+      "done_other": "{{count}} schermafbeeldingen klaar",
+      "copied_one": "{{count}} schermafbeelding gekopieerd — plak hem in Miro of FigJam",
+      "copied_other": "{{count}} schermafbeeldingen gekopieerd — plak ze in Miro of FigJam",
+      "reveal": "Toon in map",
+      "partial": "{{written}} van {{total}} schermafbeeldingen geschreven",
+      "failed": "Exporteren van schermen mislukt",
+      "inProgress": "Er loopt al een export van schermen",
+      "none": "Nog geen schermen om te exporteren"
+    },
     "savePanelMessage": "Kies waar je het rapport wilt bewaren.",
     "saveFailedAlert": "De export kon niet worden bewaard."
   },

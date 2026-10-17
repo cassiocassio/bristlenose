@@ -26,7 +26,11 @@
       "openAllInNewWindows": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0432 \u043d\u043e\u0432\u044b\u0445 \u043e\u043a\u043d\u0430\u0445",
       "exportReport": "Экспортировать отчёт…",
       "pageSetup": "Параметры страницы…",
-      "print": "Напечатать…"
+      "print": "Напечатать…",
+      "exportScreens": "Экспортировать экраны",
+      "exportScreensHint": "Все снимки экрана в папку",
+      "copyScreens": "Скопировать экраны",
+      "copyScreensHint": "Вставьте в Miro или FigJam"
     },
     "edit": {
       "undoRemove": "Отменить убирание «%@»",

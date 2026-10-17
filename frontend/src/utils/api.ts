@@ -9,6 +9,8 @@ import type {
   AutoCodeJobStatus,
   ClipJobStartResponse,
   ClipJobStatus,
+  ScreensExportStart,
+  ScreensExportStatus,
   CodebookGroupResponse,
   CodebookResponse,
   CodebookTagResponse,
@@ -680,6 +682,26 @@ export function cancelClipExtraction(): Promise<{ cancelled: boolean }> {
 
 export function revealClips(): Promise<{ revealed: boolean; path: string }> {
   return apiPost<{ revealed: boolean; path: string }>("/export/clips/reveal", {});
+}
+
+// ---------------------------------------------------------------------------
+// Screens export — every still, full size, to bristlenose-output/screens/
+// ---------------------------------------------------------------------------
+
+export function startScreensExport(): Promise<ScreensExportStart> {
+  return apiPost<ScreensExportStart>("/export/screens", {});
+}
+
+export function getScreensExportStatus(): Promise<ScreensExportStatus> {
+  return apiGet<ScreensExportStatus>("/export/screens/status");
+}
+
+export function cancelScreensExport(): Promise<{ cancelled: boolean }> {
+  return apiPost<{ cancelled: boolean }>("/export/screens/cancel", {});
+}
+
+export function revealScreens(): Promise<{ revealed: boolean; path: string }> {
+  return apiPost<{ revealed: boolean; path: string }>("/export/screens/reveal", {});
 }
 
 // ---------------------------------------------------------------------------

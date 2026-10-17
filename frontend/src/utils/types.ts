@@ -376,6 +376,24 @@ export interface ClipJobStatus {
   burn_attempted?: number;
 }
 
+/** POST /export/screens: every still the Screens lens shows, written to a folder. */
+export interface ScreensExportStart {
+  status: "started" | "no_screens";
+  total: number;
+}
+
+export interface ScreensExportStatus {
+  status: "idle" | "running" | "completed" | "failed" | "cancelled";
+  progress: number;
+  total: number;
+  completed_count: number;
+  skipped_count: number;
+  current: string;
+  output_dir: string | null;
+  /** The files written, in export order (the Mac app's clipboard copy). */
+  files: string[];
+}
+
 export interface ProposedTagResponse {
   id: number;
   quote_id: number;

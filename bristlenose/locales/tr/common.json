@@ -329,6 +329,21 @@
       "burnUnavailable": "Bu FFmpeg altyaz\u0131 g\u00f6memiyor \u2014 yaln\u0131zca altyaz\u0131s\u0131z klipler \u00e7\u0131kar\u0131lacak",
       "burnPartial": "Klipler haz\u0131r \u2014 altyaz\u0131l\u0131 kopyalar: {{burned}}/{{attempted}}"
     },
+    "screens": {
+      "exportScreens": "Ekranları dışa aktar",
+      "exportHint": "Her ekran görüntüsü, tam boyutta, bir klasörde",
+      "progress": "Ekranlar dışa aktarılıyor… ({{progress}}/{{total}})",
+      "copying": "Ekranlar kopyalanıyor… ({{progress}}/{{total}})",
+      "done_one": "{{count}} ekran görüntüsü hazır",
+      "done_other": "{{count}} ekran görüntüsü hazır",
+      "copied_one": "{{count}} ekran görüntüsü kopyalandı — Miro veya FigJam’e yapıştırın",
+      "copied_other": "{{count}} ekran görüntüsü kopyalandı — Miro veya FigJam’e yapıştırın",
+      "reveal": "Klasörde göster",
+      "partial": "{{total}} ekran görüntüsünden {{written}} tanesi yazıldı",
+      "failed": "Ekranlar dışa aktarılamadı",
+      "inProgress": "Ekranlar zaten dışa aktarılıyor",
+      "none": "Henüz dışa aktarılacak ekran yok"
+    },
     "savePanelMessage": "Raporun kaydedileceği yeri seçin.",
     "saveFailedAlert": "Dışa aktarma kaydedilemedi."
   },

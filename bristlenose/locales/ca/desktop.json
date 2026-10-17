@@ -26,7 +26,11 @@
       "openAllInNewWindows": "Obre en finestres noves",
       "exportReport": "Exporta l'informe…",
       "pageSetup": "Configuració de pàgina…",
-      "print": "Imprimeix…"
+      "print": "Imprimeix…",
+      "exportScreens": "Exporta les pantalles",
+      "exportScreensHint": "Cada captura de pantalla, en una carpeta",
+      "copyScreens": "Copia les pantalles",
+      "copyScreensHint": "Enganxa-les a Miro o FigJam"
     },
     "edit": {
       "undoRemove": "Desfés l'eliminació de “%@”",

@@ -26,7 +26,11 @@
       "openAllInNewWindows": "\u00d6ppna i nya f\u00f6nster",
       "exportReport": "Exportera rapport…",
       "pageSetup": "Utskriftsformat…",
-      "print": "Skriv ut…"
+      "print": "Skriv ut…",
+      "exportScreens": "Exportera skärmar",
+      "exportScreensHint": "Varje skärmbild i en mapp",
+      "copyScreens": "Kopiera skärmar",
+      "copyScreensHint": "Klistra in i Miro eller FigJam"
     },
     "edit": {
       "undoRemove": "Ångra ta bort ”%@”",

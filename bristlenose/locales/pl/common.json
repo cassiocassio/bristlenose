@@ -370,6 +370,25 @@
       "burnUnavailable": "Ten FFmpeg nie potrafi wypala\u0107 napis\u00f3w \u2014 zostan\u0105 wyodr\u0119bnione tylko klipy bez napis\u00f3w",
       "burnPartial": "Klipy gotowe \u2014 kopie z napisami: {{burned}} z {{attempted}}"
     },
+    "screens": {
+      "exportScreens": "Eksportuj ekrany",
+      "exportHint": "Każdy zrzut ekranu w pełnym rozmiarze, w folderze",
+      "progress": "Eksportowanie ekranów… ({{progress}} z {{total}})",
+      "copying": "Kopiowanie ekranów… ({{progress}} z {{total}})",
+      "done_one": "{{count}} zrzut ekranu gotowy",
+      "done_few": "{{count}} zrzuty ekranu gotowe",
+      "done_many": "{{count}} zrzutów ekranu gotowych",
+      "done_other": "{{count}} zrzutu ekranu gotowego",
+      "copied_one": "Skopiowano {{count}} zrzut ekranu — wklej go do Miro lub FigJam",
+      "copied_few": "Skopiowano {{count}} zrzuty ekranu — wklej je do Miro lub FigJam",
+      "copied_many": "Skopiowano {{count}} zrzutów ekranu — wklej je do Miro lub FigJam",
+      "copied_other": "Skopiowano {{count}} zrzutu ekranu — wklej je do Miro lub FigJam",
+      "reveal": "Pokaż w folderze",
+      "partial": "Zapisano {{written}} z {{total}} zrzutów ekranu",
+      "failed": "Eksport ekranów nie powiódł się",
+      "inProgress": "Eksport ekranów już trwa",
+      "none": "Nie ma jeszcze ekranów do eksportu"
+    },
     "savePanelMessage": "Wybierz miejsce zapisania raportu.",
     "saveFailedAlert": "Nie udało się zapisać wyeksportowanego raportu."
   },

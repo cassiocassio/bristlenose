@@ -329,6 +329,21 @@
       "burnUnavailable": "This FFmpeg can\u2019t burn in subtitles \u2014 extracting plain clips only",
       "burnPartial": "Clips ready \u2014 subtitled copies: {{burned}} of {{attempted}}"
     },
+    "screens": {
+      "exportScreens": "Export screens",
+      "exportHint": "Every screengrab, full size, in a folder",
+      "progress": "Exporting screens\u2026 ({{progress}} of {{total}})",
+      "copying": "Copying screens\u2026 ({{progress}} of {{total}})",
+      "done_one": "{{count}} screengrab ready",
+      "done_other": "{{count}} screengrabs ready",
+      "copied_one": "{{count}} screengrab copied \u2014 paste it into Miro or FigJam",
+      "copied_other": "{{count}} screengrabs copied \u2014 paste them into Miro or FigJam",
+      "reveal": "Show in folder",
+      "partial": "{{written}} of {{total}} screengrabs written",
+      "failed": "Screens export failed",
+      "inProgress": "A screens export is already running",
+      "none": "No screens to export yet"
+    },
     "savePanelMessage": "Choose where to save the report.",
     "saveFailedAlert": "The export could not be saved."
   },

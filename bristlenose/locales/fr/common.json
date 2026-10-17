@@ -329,6 +329,21 @@
       "burnUnavailable": "Ce FFmpeg ne peut pas incruster les sous-titres \u2014 seuls des clips sans sous-titres seront extraits",
       "burnPartial": "Clips pr\u00eats \u2014 copies sous-titr\u00e9es : {{burned}} sur {{attempted}}"
     },
+    "screens": {
+      "exportScreens": "Exporter les écrans",
+      "exportHint": "Chaque capture d’écran, en taille réelle, dans un dossier",
+      "progress": "Export des écrans… ({{progress}} sur {{total}})",
+      "copying": "Copie des écrans… ({{progress}} sur {{total}})",
+      "done_one": "{{count}} capture d’écran prête",
+      "done_other": "{{count}} captures d’écran prêtes",
+      "copied_one": "{{count}} capture d’écran copiée — collez-la dans Miro ou FigJam",
+      "copied_other": "{{count}} captures d’écran copiées — collez-les dans Miro ou FigJam",
+      "reveal": "Afficher dans le dossier",
+      "partial": "{{written}} captures d’écran écrites sur {{total}}",
+      "failed": "Échec de l’export des écrans",
+      "inProgress": "Un export des écrans est déjà en cours",
+      "none": "Aucun écran à exporter pour l’instant"
+    },
     "savePanelMessage": "Choisissez où enregistrer le rapport.",
     "saveFailedAlert": "L'exportation n'a pas pu être enregistrée."
   },

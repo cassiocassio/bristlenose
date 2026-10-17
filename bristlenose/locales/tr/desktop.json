@@ -26,7 +26,11 @@
       "openAllInNewWindows": "Yeni pencerelerde a\u00e7",
       "exportReport": "Raporu Dışa Aktar…",
       "pageSetup": "Sayfa Yapısı…",
-      "print": "Yazdır…"
+      "print": "Yazdır…",
+      "exportScreens": "Ekranları Dışa Aktar",
+      "exportScreensHint": "Her ekran görüntüsü bir klasörde",
+      "copyScreens": "Ekranları Kopyala",
+      "copyScreensHint": "Miro veya FigJam’e yapıştırın"
     },
     "edit": {
       "undoRemove": "“%@” Kaldırmayı Geri Al",

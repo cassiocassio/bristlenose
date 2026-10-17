@@ -26,7 +26,11 @@
       "openAllInNewWindows": "Open in New Windows",
       "exportReport": "Export Report…",
       "pageSetup": "Page Setup…",
-      "print": "Print…"
+      "print": "Print…",
+      "exportScreens": "Export Screens",
+      "exportScreensHint": "Every screengrab, full size, in a folder",
+      "copyScreens": "Copy Screens",
+      "copyScreensHint": "Paste into Miro or FigJam"
     },
     "edit": {
       "undoRemove": "Undo Remove \u201c%@\u201d",

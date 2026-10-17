@@ -21,6 +21,7 @@ import {
   copyQuotesToClipboard,
   saveQuotesSpreadsheet,
   extractVideoClips,
+  exportScreens,
 } from "../utils/exportActions";
 import { isExportMode } from "../utils/exportData";
 import { isReportPartial, useLenses } from "../contexts/ConditionStore";
@@ -39,6 +40,10 @@ function DownloadIcon() {
 
 function isQuotesTab(pathname: string): boolean {
   return pathname === "/report/quotes" || pathname === "/report/quotes/";
+}
+
+function isScreensTab(pathname: string): boolean {
+  return pathname === "/report/screens" || pathname.startsWith("/report/screens/");
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────
@@ -66,6 +71,8 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
   });
 
   const onQuotes = isQuotesTab(location.pathname);
+  // The toolbar morphs with the lens: Screens gets its own export (docs/design-screens-export.md §7).
+  const onScreens = isScreensTab(location.pathname);
   const { burnSubtitles } = useSubtitlePrefs();
 
   // ── Quote count (only compute on Quotes tab) ─────────────────────────
@@ -125,6 +132,11 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
   // Miro export — opens the multi-step modal (connect → configure → push),
   // mirroring Export Report. The panel lives in AppLayout; the macOS native
   // menu reaches it via the bridge's `sendToMiro` case.
+  const handleExportScreens = useCallback(() => {
+    setOpen(false);
+    void exportScreens(t);
+  }, [setOpen, t]);
+
   const handleSendToMiro = useCallback(() => {
     setOpen(false);
     onSendToMiro();
@@ -249,6 +261,24 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
                   {t("export.clips.burnSubtitles")}
                 </li>
               )}
+              <li role="separator" className="export-dropdown-separator" />
+            </>
+          )}
+          {onScreens && (
+            <>
+              <li
+                role="menuitem"
+                tabIndex={-1}
+                className="export-dropdown-item"
+                data-testid="export-screens"
+                onClick={handleExportScreens}
+                onKeyDown={suppressKeyScroll}
+              >
+                {t("export.screens.exportScreens")}
+              </li>
+              <li role="none" className="export-dropdown-hint">
+                {t("export.screens.exportHint")}
+              </li>
               <li role="separator" className="export-dropdown-separator" />
             </>
           )}

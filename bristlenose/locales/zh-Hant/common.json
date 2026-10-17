@@ -310,6 +310,19 @@
       "burnUnavailable": "\u6b64 FFmpeg \u7121\u6cd5\u71d2\u5165\u5b57\u5e55\u2014\u2014\u50c5\u6703\u64f7\u53d6\u7121\u5b57\u5e55\u7684\u7247\u6bb5",
       "burnPartial": "\u7247\u6bb5\u5df2\u5c31\u7dd2\u2014\u2014\u5b57\u5e55\u526f\u672c\uff1a{{attempted}} \u500b\u4e2d\u7684 {{burned}} \u500b"
     },
+    "screens": {
+      "exportScreens": "匯出畫面",
+      "exportHint": "每張螢幕截圖以原尺寸存入檔案夾",
+      "progress": "正在匯出畫面…（{{progress}}/{{total}}）",
+      "copying": "正在拷貝畫面…（{{progress}}/{{total}}）",
+      "done_other": "{{count}} 張螢幕截圖已就緒",
+      "copied_other": "已拷貝 {{count}} 張螢幕截圖，可貼到 Miro 或 FigJam",
+      "reveal": "在檔案夾中顯示",
+      "partial": "已寫入 {{written}}/{{total}} 張螢幕截圖",
+      "failed": "無法匯出畫面",
+      "inProgress": "已有畫面匯出正在進行",
+      "none": "目前沒有可匯出的畫面"
+    },
     "savePanelMessage": "請選擇儲存報告的位置。",
     "saveFailedAlert": "無法儲存匯出內容。"
   },

@@ -329,6 +329,21 @@
       "burnUnavailable": "Denne FFmpeg kan ikke brenne inn undertekster \u2013 bare klipp uten undertekster trekkes ut",
       "burnPartial": "Klipp klare \u2013 kopier med undertekster: {{burned}} av {{attempted}}"
     },
+    "screens": {
+      "exportScreens": "Eksporter skjermer",
+      "exportHint": "Hvert skjermbilde i full størrelse, i en mappe",
+      "progress": "Eksporterer skjermer… ({{progress}} av {{total}})",
+      "copying": "Kopierer skjermer… ({{progress}} av {{total}})",
+      "done_one": "{{count}} skjermbilde klart",
+      "done_other": "{{count}} skjermbilder klare",
+      "copied_one": "{{count}} skjermbilde kopiert – lim det inn i Miro eller FigJam",
+      "copied_other": "{{count}} skjermbilder kopiert – lim dem inn i Miro eller FigJam",
+      "reveal": "Vis i mappe",
+      "partial": "{{written}} av {{total}} skjermbilder skrevet",
+      "failed": "Eksport av skjermer mislyktes",
+      "inProgress": "En eksport av skjermer pågår allerede",
+      "none": "Ingen skjermer å eksportere ennå"
+    },
     "savePanelMessage": "Velg hvor rapporten skal lagres.",
     "saveFailedAlert": "Eksporten kunne ikke lagres."
   },

@@ -26,7 +26,11 @@
       "openAllInNewWindows": "\uc0c8 \uc708\ub3c4\uc6b0\uc5d0\uc11c \uc5f4\uae30",
       "exportReport": "보고서 내보내기…",
       "pageSetup": "페이지 설정…",
-      "print": "프린트…"
+      "print": "프린트…",
+      "exportScreens": "화면 내보내기",
+      "exportScreensHint": "모든 스크린샷을 폴더에",
+      "copyScreens": "화면 복사",
+      "copyScreensHint": "Miro 또는 FigJam에 붙여넣기"
     },
     "edit": {
       "undoRemove": "\u201c%@\u201d \uc81c\uac70 \uc2e4\ud589 \ucde8\uc18c",

@@ -26,7 +26,11 @@
       "openAllInNewWindows": "\u0412\u0456\u0434\u043a\u0440\u0438\u0442\u0438 \u0432 \u043d\u043e\u0432\u0438\u0445 \u0432\u0456\u043a\u043d\u0430\u0445",
       "exportReport": "Експортувати звіт…",
       "pageSetup": "Параметри сторінки…",
-      "print": "Надрукувати…"
+      "print": "Надрукувати…",
+      "exportScreens": "Експортувати екрани",
+      "exportScreensHint": "Усі знімки екрана в теку",
+      "copyScreens": "Скопіювати екрани",
+      "copyScreensHint": "Вставте в Miro або FigJam"
     },
     "edit": {
       "undoRemove": "Скасувати вилучення «%@»",

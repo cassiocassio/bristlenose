@@ -26,7 +26,11 @@
       "openAllInNewWindows": "Abrir em Novas Janelas",
       "exportReport": "Exportar Relatório…",
       "pageSetup": "Configurar Página…",
-      "print": "Imprimir…"
+      "print": "Imprimir…",
+      "exportScreens": "Exportar telas",
+      "exportScreensHint": "Cada captura de tela, em uma pasta",
+      "copyScreens": "Copiar telas",
+      "copyScreensHint": "Cole no Miro ou no FigJam"
     },
     "edit": {
       "undoRemove": "Desfazer Remoção de “%@”",

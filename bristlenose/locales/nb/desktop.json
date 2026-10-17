@@ -26,7 +26,11 @@
       "openAllInNewWindows": "\u00c5pne i nye vinduer",
       "exportReport": "Eksporter rapport…",
       "pageSetup": "Utskriftsformat…",
-      "print": "Skriv ut…"
+      "print": "Skriv ut…",
+      "exportScreens": "Eksporter skjermer",
+      "exportScreensHint": "Hvert skjermbilde i en mappe",
+      "copyScreens": "Kopier skjermer",
+      "copyScreensHint": "Lim inn i Miro eller FigJam"
     },
     "edit": {
       "undoRemove": "Angre fjerning av «%@»",

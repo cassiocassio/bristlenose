@@ -26,7 +26,11 @@
       "openAllInNewWindows": "Otev\u0159\u00edt v nov\u00fdch oknech",
       "exportReport": "Exportovat zprávu…",
       "pageSetup": "Vzhled stránky…",
-      "print": "Tisk…"
+      "print": "Tisk…",
+      "exportScreens": "Exportovat obrazovky",
+      "exportScreensHint": "Každý snímek obrazovky ve složce",
+      "copyScreens": "Kopírovat obrazovky",
+      "copyScreensHint": "Vložte je do Miro nebo FigJam"
     },
     "edit": {
       "undoRemove": "Vrátit zpět odebrání „%@“",

@@ -26,7 +26,11 @@
       "openAllInNewWindows": "Apri in nuove finestre",
       "exportReport": "Esporta report…",
       "pageSetup": "Formato di stampa…",
-      "print": "Stampa…"
+      "print": "Stampa…",
+      "exportScreens": "Esporta schermate",
+      "exportScreensHint": "Ogni immagine della schermata, in una cartella",
+      "copyScreens": "Copia schermate",
+      "copyScreensHint": "Incollale in Miro o FigJam"
     },
     "edit": {
       "undoRemove": "Annulla la rimozione di “%@”",

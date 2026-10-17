@@ -329,6 +329,21 @@
       "burnUnavailable": "Questo FFmpeg non pu\u00f2 imprimere i sottotitoli \u2014 verranno estratte solo clip senza sottotitoli",
       "burnPartial": "Clip pronte \u2014 copie sottotitolate: {{burned}} su {{attempted}}"
     },
+    "screens": {
+      "exportScreens": "Esporta schermate",
+      "exportHint": "Ogni immagine della schermata, a grandezza piena, in una cartella",
+      "progress": "Esportazione delle schermate… ({{progress}} di {{total}})",
+      "copying": "Copia delle schermate… ({{progress}} di {{total}})",
+      "done_one": "{{count}} immagine della schermata pronta",
+      "done_other": "{{count}} immagini delle schermate pronte",
+      "copied_one": "{{count}} immagine copiata: incollala in Miro o FigJam",
+      "copied_other": "{{count}} immagini copiate: incollale in Miro o FigJam",
+      "reveal": "Mostra nella cartella",
+      "partial": "{{written}} di {{total}} immagini scritte",
+      "failed": "Esportazione delle schermate non riuscita",
+      "inProgress": "Un’esportazione delle schermate è già in corso",
+      "none": "Non ci sono ancora schermate da esportare"
+    },
     "savePanelMessage": "Scegli dove salvare il report.",
     "saveFailedAlert": "Impossibile salvare l'esportazione."
   },

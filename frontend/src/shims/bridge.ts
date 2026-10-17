@@ -45,6 +45,7 @@ export type BridgeMessage =
   | { type: "editing-ended" }
   | { type: "project-action"; action: string; data?: object }
   | { type: "find-pasteboard-write"; text: string }
+  | { type: "screens-pasteboard-write"; dir: string; files: string[] }
   | { type: "player-state"; hasPlayer: boolean; playing: boolean }
   | { type: "export-counts"; total: number; selected: number; starred: number }
   | { type: "focus-change"; quoteId: string | null }
@@ -139,6 +140,15 @@ export function postEditingEnded(): void {
 
 export function postProjectAction(action: string, data?: object): void {
   postNativeMessage({ type: "project-action", action, data });
+}
+
+/**
+ * Put the exported stills on the clipboard as files, in export order — what Finder's ⌘C writes,
+ * and what FigJam and Miro paste as one image each (measured 17 Oct 2026). The shell checks every
+ * path lies inside the open project before writing it.
+ */
+export function postScreensPasteboardWrite(dir: string, files: string[]): void {
+  postNativeMessage({ type: "screens-pasteboard-write", dir, files });
 }
 
 /** Write text to the macOS shared find pasteboard (Cmd+E cross-app support). */

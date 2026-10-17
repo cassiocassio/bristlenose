@@ -26,7 +26,11 @@
       "openAllInNewWindows": "Openen in nieuwe vensters",
       "exportReport": "Rapport exporteren…",
       "pageSetup": "Paginaformaat…",
-      "print": "Druk af…"
+      "print": "Druk af…",
+      "exportScreens": "Schermen exporteren",
+      "exportScreensHint": "Elke schermafbeelding in een map",
+      "copyScreens": "Schermen kopiëren",
+      "copyScreensHint": "Plak in Miro of FigJam"
     },
     "edit": {
       "undoRemove": "Herstel verwijderen “%@”",

@@ -22,7 +22,7 @@
  */
 
 import type { TFunction } from "i18next";
-import { startClipExtraction } from "./api";
+import { startClipExtraction, startScreensExport } from "./api";
 import { addJob } from "../contexts/ActivityStore";
 import { toast } from "./toast";
 import { getSubtitlePrefs } from "./subtitlePrefs";
@@ -181,3 +181,24 @@ export async function extractVideoClips(
   }
 }
 
+/**
+ * Write every still the Screens lens shows to bristlenose-output/screens/, one per participant per
+ * screen, in time order (docs/design-screens-export.md §4). With `copy`, the job's chip puts the
+ * files on the clipboard when it finishes (the Mac app's Copy Screens, §5).
+ */
+export async function exportScreens(t: TFunction, copy = false): Promise<void> {
+  try {
+    const result = await startScreensExport();
+    if (result.total === 0) {
+      toast(t("export.screens.none"));
+      return;
+    }
+    addJob("screens", {
+      type: "screens", frameworkId: "", frameworkTitle: "", total: result.total, copyWhenDone: copy,
+    });
+    announce(t("export.screens.progress", { progress: 0, total: result.total }));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "";
+    toast(msg.includes("409") ? t("export.screens.inProgress") : t("export.screens.failed"));
+  }
+}

@@ -1115,6 +1115,19 @@ final class BridgeHandler: ObservableObject {
                 pb.setString(text, forType: .string)
             }
 
+        case "screens-pasteboard-write":
+            // Copy Screens: the exported stills as files, in export order — what Finder's ⌘C
+            // writes, and what FigJam and Miro paste as one image each (measured 17 Oct 2026,
+            // docs/design-screens-export.md §5).
+            if let dir = body["dir"] as? String, let files = body["files"] as? [String],
+               let urls = ScreensPasteboard.fileURLs(
+                   dir: dir, files: files, projectPath: selectedProjectPath
+               ) {
+                let pb = NSPasteboard.general
+                pb.clearContents()
+                pb.writeObjects(urls as [NSURL])
+            }
+
         case "store-miro-token":
             // The Send-to-Miro panel hands the validated paste-token to the host
             // so it persists in the Keychain — the sandboxed Python sidecar can't

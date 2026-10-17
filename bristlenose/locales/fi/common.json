@@ -329,6 +329,21 @@
       "burnUnavailable": "T\u00e4m\u00e4 FFmpeg ei osaa polttaa tekstityst\u00e4 \u2014 vain tekstitt\u00e4m\u00e4tt\u00f6m\u00e4t leikkeet erotetaan",
       "burnPartial": "Leikkeet valmiina \u2014 tekstitetyt kopiot: {{burned}}/{{attempted}}"
     },
+    "screens": {
+      "exportScreens": "Vie näytöt",
+      "exportHint": "Jokainen kuvakaappaus täysikokoisena kansioon",
+      "progress": "Viedään näyttöjä… ({{progress}}/{{total}})",
+      "copying": "Kopioidaan näyttöjä… ({{progress}}/{{total}})",
+      "done_one": "{{count}} kuvakaappaus valmis",
+      "done_other": "{{count}} kuvakaappausta valmis",
+      "copied_one": "{{count}} kuvakaappaus kopioitu – liitä se Miroon tai FigJamiin",
+      "copied_other": "{{count}} kuvakaappausta kopioitu – liitä ne Miroon tai FigJamiin",
+      "reveal": "Näytä kansiossa",
+      "partial": "{{written}}/{{total}} kuvakaappausta kirjoitettu",
+      "failed": "Näyttöjen vienti epäonnistui",
+      "inProgress": "Näyttöjen vienti on jo käynnissä",
+      "none": "Vietäviä näyttöjä ei vielä ole"
+    },
     "savePanelMessage": "Valitse, mihin raportti tallennetaan.",
     "saveFailedAlert": "Vientiä ei voitu tallentaa."
   },

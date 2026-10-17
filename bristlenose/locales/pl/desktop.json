@@ -26,7 +26,11 @@
       "openAllInNewWindows": "Otw\u00f3rz w nowych oknach",
       "exportReport": "Eksportuj raport…",
       "pageSetup": "Ustawienia strony…",
-      "print": "Drukuj…"
+      "print": "Drukuj…",
+      "exportScreens": "Eksportuj ekrany",
+      "exportScreensHint": "Każdy zrzut ekranu w folderze",
+      "copyScreens": "Kopiuj ekrany",
+      "copyScreensHint": "Wklej do Miro lub FigJam"
     },
     "edit": {
       "undoRemove": "Cofnij usunięcie „%@”",

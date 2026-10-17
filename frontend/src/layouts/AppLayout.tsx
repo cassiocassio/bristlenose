@@ -44,6 +44,7 @@ import {
   postReady,
   postProjectAction,
   postFindPasteboardWrite,
+  postScreensPasteboardWrite,
   postExportCounts,
   postFocusChange,
   postQuoteActionState,
@@ -54,11 +55,21 @@ import {
 import { toggleFocusMode, useFocusMode } from "../contexts/FocusModeStore";
 import { useSubtitlePrefs } from "../utils/subtitlePrefs";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
-import { cancelAutoCode, cancelClipExtraction, getAutoCodeStatus, getClipExtractionStatus, revealClips } from "../utils/api";
+import {
+  cancelAutoCode,
+  cancelClipExtraction,
+  cancelScreensExport,
+  getAutoCodeStatus,
+  getClipExtractionStatus,
+  getScreensExportStatus,
+  revealClips,
+  revealScreens,
+} from "../utils/api";
 import {
   copyQuotesToClipboard,
   saveQuotesSpreadsheet,
   extractVideoClips,
+  exportScreens,
 } from "../utils/exportActions";
 import type { NormalisedJobStatus } from "../components/ActivityChipStack";
 import { toggleInspector, useInspectorStore } from "../contexts/InspectorStore";
@@ -601,6 +612,13 @@ function AppShell() {
           void extractVideoClips(null, i18n.t, anon);
           break;
         }
+        case "exportScreens":
+          void exportScreens(i18n.t);
+          break;
+        case "copyScreens":
+          // The folder first, then its files on the clipboard when the chip finishes.
+          void exportScreens(i18n.t, true);
+          break;
         case "allQuotes":
           // Explicit "All Quotes" command — full reset (search + tokens + tags + mode).
           setSearchQuery("");
@@ -707,6 +725,52 @@ function AppShell() {
                         burned: s.burned_count ?? 0,
                         attempted: s.burn_attempted ?? 0,
                       })
+                    : null,
+              };
+            },
+          };
+        }
+        if (j.type === "screens") {
+          const copy = !!j.copyWhenDone;
+          return {
+            id,
+            label: i18n.t(copy ? "export.screens.copying" : "export.screens.progress", {
+              progress: 0,
+              total: j.total ?? 0,
+            }),
+            completedLabel: i18n.t(copy ? "export.screens.copied" : "export.screens.done", {
+              count: j.total ?? 0,
+            }),
+            frameworkId: "",
+            onComplete: () => {
+              if (!copy) return;
+              getScreensExportStatus()
+                .then((s) => {
+                  // Terminal includes cancelled and failed: only a finished export is copied.
+                  if (s.status === "completed" && s.output_dir && s.files.length > 0) {
+                    postScreensPasteboardWrite(s.output_dir, s.files);
+                  }
+                })
+                .catch((err) => console.error("Copy screens failed:", err));
+            },
+            onAction: () => {
+              revealScreens().catch((err) => console.error("Reveal screens failed:", err));
+            },
+            actionLabel: i18n.t("export.screens.reveal"),
+            onCancel: () => {
+              cancelScreensExport().catch((err) => console.error("Cancel screens export failed:", err));
+            },
+            pollFn: async (): Promise<NormalisedJobStatus> => {
+              const s = await getScreensExportStatus();
+              const status = s.status === "idle" ? "running" : s.status;
+              return {
+                status,
+                progressLabel: status === "running" ? `${s.progress}/${s.total}` : null,
+                durationLabel: null,
+                errorMessage: status === "failed" ? i18n.t("export.screens.failed") : null,
+                partialMessage:
+                  status === "completed" && s.skipped_count > 0
+                    ? i18n.t("export.screens.partial", { written: s.completed_count, total: s.total })
                     : null,
               };
             },

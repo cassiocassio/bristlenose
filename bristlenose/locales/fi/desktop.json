@@ -26,7 +26,11 @@
       "openAllInNewWindows": "Avaa uusissa ikkunoissa",
       "exportReport": "Vie raportti…",
       "pageSetup": "Arkin määrittely…",
-      "print": "Tulosta…"
+      "print": "Tulosta…",
+      "exportScreens": "Vie näytöt",
+      "exportScreensHint": "Jokainen kuvakaappaus kansioon",
+      "copyScreens": "Kopioi näytöt",
+      "copyScreensHint": "Liitä Miroon tai FigJamiin"
     },
     "edit": {
       "undoRemove": "Kumoa poisto ”%@”",

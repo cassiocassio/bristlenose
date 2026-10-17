@@ -3997,6 +3997,21 @@ private struct ExportPopoverContent: View {
                 .padding(.bottom, 6)
             }
 
+            // Screens lens: every screengrab, as files to paste into Miro or FigJam, or as a
+            // folder (docs/design-screens-export.md §4–§5). Copy writes the folder first.
+            if bridgeHandler.activeTab == .screens {
+                ExportPopoverRow(
+                    icon: "doc.on.clipboard",
+                    title: i18n.t("desktop.menu.file.copyScreens"),
+                    subtitle: i18n.t("desktop.menu.file.copyScreensHint")
+                ) { dispatch("copyScreens") }
+                ExportPopoverRow(
+                    icon: "photo.on.rectangle",
+                    title: i18n.t("desktop.menu.file.exportScreens"),
+                    subtitle: i18n.t("desktop.menu.file.exportScreensHint")
+                ) { dispatch("exportScreens") }
+            }
+
             // Sessions lens: the transcripts already live on disk in the
             // project's bristlenose-output/ — reveal them in Finder rather than
             // re-exporting what's already a folder of files (local-first). The

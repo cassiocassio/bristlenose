@@ -329,6 +329,21 @@
       "burnUnavailable": "Den h\u00e4r FFmpeg kan inte br\u00e4nna in undertexter \u2014 endast klipp utan undertexter extraheras",
       "burnPartial": "Klipp klara \u2014 kopior med undertexter: {{burned}} av {{attempted}}"
     },
+    "screens": {
+      "exportScreens": "Exportera skärmar",
+      "exportHint": "Varje skärmbild i full storlek, i en mapp",
+      "progress": "Exporterar skärmar… ({{progress}} av {{total}})",
+      "copying": "Kopierar skärmar… ({{progress}} av {{total}})",
+      "done_one": "{{count}} skärmbild klar",
+      "done_other": "{{count}} skärmbilder klara",
+      "copied_one": "{{count}} skärmbild kopierad – klistra in den i Miro eller FigJam",
+      "copied_other": "{{count}} skärmbilder kopierade – klistra in dem i Miro eller FigJam",
+      "reveal": "Visa i mapp",
+      "partial": "{{written}} av {{total}} skärmbilder skrivna",
+      "failed": "Det gick inte att exportera skärmarna",
+      "inProgress": "En export av skärmar pågår redan",
+      "none": "Inga skärmar att exportera än"
+    },
     "savePanelMessage": "Välj var rapporten ska sparas.",
     "saveFailedAlert": "Exporten kunde inte sparas."
   },

@@ -26,7 +26,11 @@
       "openAllInNewWindows": "In neuen Fenstern \u00f6ffnen",
       "exportReport": "Bericht exportieren…",
       "pageSetup": "Seite einrichten…",
-      "print": "Drucken…"
+      "print": "Drucken…",
+      "exportScreens": "Bildschirme exportieren",
+      "exportScreensHint": "Jedes Bildschirmfoto in einem Ordner",
+      "copyScreens": "Bildschirme kopieren",
+      "copyScreensHint": "In Miro oder FigJam einfügen"
     },
     "edit": {
       "undoRemove": "\u201e%@\u201c wiederherstellen",

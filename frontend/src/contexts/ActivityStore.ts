@@ -12,7 +12,7 @@ import { useSyncExternalStore } from "react";
 
 export interface ActivityJobEntry {
   /** "catchup" = the on-enable delta re-apply (numberless chip; §4a). */
-  type: "autocode" | "clips" | "catchup";
+  type: "autocode" | "clips" | "catchup" | "screens";
   frameworkId: string;
   frameworkTitle: string;
   /** Which codebook lens started this job — the route its "View Report" action
@@ -26,6 +26,9 @@ export interface ActivityJobEntry {
   originRoute?: string;
   /** Total items (clips count) — used by clips jobs. */
   total?: number;
+  /** A screens export that ends by putting its files on the clipboard (the Mac app's Copy
+   *  Screens). */
+  copyWhenDone?: boolean;
 }
 
 // ── Module-level state ───────────────────────────────────────────────────

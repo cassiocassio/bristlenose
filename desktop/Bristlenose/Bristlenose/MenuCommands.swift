@@ -645,6 +645,17 @@ private struct FileMenuContent: View {
         .keyboardShortcut("e", modifiers: [.command, .shift])
         .disabled(!bridgeHandler.canDispatch)
 
+        // The Screens lens's own exports (docs/design-screens-export.md §7). The toolbar's export
+        // popover shows them on Screens only; here they dim off it, so they can be found.
+        Button(i18n.t("desktop.menu.file.exportScreens"), systemImage: "photo.on.rectangle") {
+            bridgeHandler.menuAction("exportScreens")
+        }
+        .disabled(!bridgeHandler.canDispatch || bridgeHandler.activeTab != .screens)
+        Button(i18n.t("desktop.menu.file.copyScreens"), systemImage: "doc.on.clipboard") {
+            bridgeHandler.menuAction("copyScreens")
+        }
+        .disabled(!bridgeHandler.canDispatch || bridgeHandler.activeTab != .screens)
+
         // "Export Anonymised…" was removed here on 28 Jul 2026: anonymise is a
         // checkbox on the export save panel itself (`ExportAccessoryView`, attached
         // as the NSSavePanel accessoryView in `WebView.swift`), so a second menu

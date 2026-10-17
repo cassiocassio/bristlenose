@@ -310,6 +310,19 @@
       "burnUnavailable": "\uc774 FFmpeg\ub294 \uc790\ub9c9\uc744 \uc785\ud790 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4 \u2014 \uc790\ub9c9 \uc5c6\ub294 \ud074\ub9bd\ub9cc \ucd94\ucd9c\ud569\ub2c8\ub2e4",
       "burnPartial": "\ud074\ub9bd \uc900\ube44 \uc644\ub8cc \u2014 \uc790\ub9c9 \uc0ac\ubcf8: {{attempted}}\uac1c \uc911 {{burned}}\uac1c"
     },
+    "screens": {
+      "exportScreens": "화면 내보내기",
+      "exportHint": "모든 스크린샷을 원본 크기로 폴더에",
+      "progress": "화면 내보내는 중… ({{total}}개 중 {{progress}}개)",
+      "copying": "화면 복사 중… ({{total}}개 중 {{progress}}개)",
+      "done_other": "스크린샷 {{count}}개 준비 완료",
+      "copied_other": "스크린샷 {{count}}개 복사됨 — Miro 또는 FigJam에 붙여넣으세요",
+      "reveal": "폴더에서 보기",
+      "partial": "스크린샷 {{total}}개 중 {{written}}개 저장됨",
+      "failed": "화면 내보내기 실패",
+      "inProgress": "화면 내보내기가 이미 진행 중입니다",
+      "none": "아직 내보낼 화면이 없습니다"
+    },
     "savePanelMessage": "\ubcf4\uace0\uc11c\ub97c \uc800\uc7a5\ud560 \uc704\uce58\ub97c \uc120\ud0dd\ud558\uc138\uc694.",
     "saveFailedAlert": "\ub0b4\ubcf4\ub0b4\uae30\ub97c \uc800\uc7a5\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4."
   },

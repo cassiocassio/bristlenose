@@ -329,6 +329,21 @@
       "burnUnavailable": "Dieses FFmpeg kann keine Untertitel einbrennen \u2014 es werden nur Clips ohne Untertitel extrahiert",
       "burnPartial": "Clips bereit \u2014 untertitelte Kopien: {{burned}} von {{attempted}}"
     },
+    "screens": {
+      "exportScreens": "Bildschirme exportieren",
+      "exportHint": "Jedes Bildschirmfoto in voller Größe, in einem Ordner",
+      "progress": "Bildschirme werden exportiert… ({{progress}} von {{total}})",
+      "copying": "Bildschirme werden kopiert… ({{progress}} von {{total}})",
+      "done_one": "{{count}} Bildschirmfoto bereit",
+      "done_other": "{{count}} Bildschirmfotos bereit",
+      "copied_one": "{{count}} Bildschirmfoto kopiert – in Miro oder FigJam einfügen",
+      "copied_other": "{{count}} Bildschirmfotos kopiert – in Miro oder FigJam einfügen",
+      "reveal": "In Ordner anzeigen",
+      "partial": "{{written}} von {{total}} Bildschirmfotos geschrieben",
+      "failed": "Export der Bildschirme fehlgeschlagen",
+      "inProgress": "Ein Export der Bildschirme läuft bereits",
+      "none": "Noch keine Bildschirme zum Exportieren"
+    },
     "savePanelMessage": "W\u00e4hle, wo der Bericht gespeichert werden soll.",
     "saveFailedAlert": "Der Export konnte nicht gespeichert werden."
   },

@@ -329,6 +329,21 @@
       "burnUnavailable": "Aquest FFmpeg no pot incrustar subt\u00edtols \u2014 nom\u00e9s s'extrauran clips sense subt\u00edtols",
       "burnPartial": "Clips a punt \u2014 c\u00f2pies subtitulades: {{burned}} de {{attempted}}"
     },
+    "screens": {
+      "exportScreens": "Exporta les pantalles",
+      "exportHint": "Cada captura de pantalla, a mida completa, en una carpeta",
+      "progress": "S’estan exportant les pantalles… ({{progress}} de {{total}})",
+      "copying": "S’estan copiant les pantalles… ({{progress}} de {{total}})",
+      "done_one": "{{count}} captura de pantalla a punt",
+      "done_other": "{{count}} captures de pantalla a punt",
+      "copied_one": "{{count}} captura de pantalla copiada — enganxa-la a Miro o FigJam",
+      "copied_other": "{{count}} captures de pantalla copiades — enganxa-les a Miro o FigJam",
+      "reveal": "Mostra a la carpeta",
+      "partial": "{{written}} de {{total}} captures de pantalla escrites",
+      "failed": "No s’han pogut exportar les pantalles",
+      "inProgress": "Ja s’estan exportant les pantalles",
+      "none": "Encara no hi ha pantalles per exportar"
+    },
     "savePanelMessage": "Tria on vols desar l'informe.",
     "saveFailedAlert": "No s'ha pogut desar l'exportació."
   },

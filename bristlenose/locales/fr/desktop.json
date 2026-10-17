@@ -26,7 +26,11 @@
       "openAllInNewWindows": "Ouvrir dans de nouvelles fen\u00eatres",
       "exportReport": "Exporter le rapport…",
       "pageSetup": "Format d'impression…",
-      "print": "Imprimer…"
+      "print": "Imprimer…",
+      "exportScreens": "Exporter les écrans",
+      "exportScreensHint": "Chaque capture d’écran, dans un dossier",
+      "copyScreens": "Copier les écrans",
+      "copyScreensHint": "Collez-les dans Miro ou FigJam"
     },
     "edit": {
       "undoRemove": "Annuler Retirer \u00ab\u00a0%@\u00a0\u00bb",

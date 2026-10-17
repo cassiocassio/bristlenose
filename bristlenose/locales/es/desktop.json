@@ -26,7 +26,11 @@
       "openAllInNewWindows": "Abrir en ventanas nuevas",
       "exportReport": "Exportar informe…",
       "pageSetup": "Configurar página…",
-      "print": "Imprimir…"
+      "print": "Imprimir…",
+      "exportScreens": "Exportar pantallas",
+      "exportScreensHint": "Cada captura de pantalla, en una carpeta",
+      "copyScreens": "Copiar pantallas",
+      "copyScreensHint": "Pégalas en Miro o FigJam"
     },
     "edit": {
       "undoRemove": "Deshacer Quitar \u00ab%@\u00bb",

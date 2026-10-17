@@ -363,6 +363,25 @@
       "burnUnavailable": "Tento FFmpeg neum\u00ed vyp\u00e1lit titulky \u2014 extrahuj\u00ed se jen klipy bez titulk\u016f",
       "burnPartial": "Klipy p\u0159ipraveny \u2014 kopie s titulky: {{burned}} z {{attempted}}"
     },
+    "screens": {
+      "exportScreens": "Exportovat obrazovky",
+      "exportHint": "Každý snímek obrazovky v plné velikosti, ve složce",
+      "progress": "Exportují se obrazovky… ({{progress}} z {{total}})",
+      "copying": "Kopírují se obrazovky… ({{progress}} z {{total}})",
+      "done_one": "{{count}} snímek obrazovky připraven",
+      "done_few": "{{count}} snímky obrazovky připraveny",
+      "done_many": "{{count}} snímku obrazovky připraveno",
+      "done_other": "{{count}} snímků obrazovky připraveno",
+      "copied_one": "{{count}} snímek obrazovky zkopírován — vložte ho do Miro nebo FigJam",
+      "copied_few": "{{count}} snímky obrazovky zkopírovány — vložte je do Miro nebo FigJam",
+      "copied_many": "{{count}} snímku obrazovky zkopírováno — vložte je do Miro nebo FigJam",
+      "copied_other": "{{count}} snímků obrazovky zkopírováno — vložte je do Miro nebo FigJam",
+      "reveal": "Zobrazit ve složce",
+      "partial": "Zapsáno {{written}} z {{total}} snímků obrazovky",
+      "failed": "Export obrazovek se nezdařil",
+      "inProgress": "Export obrazovek už probíhá",
+      "none": "Zatím nejsou žádné obrazovky k exportu"
+    },
     "savePanelMessage": "Vyberte, kam zprávu uložit.",
     "saveFailedAlert": "Export se nepodařilo uložit."
   },

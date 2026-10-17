@@ -13,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
+from bristlenose.server.models import Project
 from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
@@ -86,6 +87,22 @@ class TestExportEndpoint:
         ]
         assert "-report-en.html" in cd
         assert "passwd" not in cd
+
+    @pytest.mark.parametrize("name", ["Привет", "駅の調査"])
+    def test_a_name_with_nothing_to_slug_still_names_the_file(
+        self, client: TestClient, name: str
+    ) -> None:
+        """slugify drops every non-Latin letter, so these names slug to "" and
+        the file would be "-report-en.html" with nothing in front."""
+        db = client.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            db.get(Project, 1).name = name
+            db.commit()
+        finally:
+            db.close()
+        resp = client.get("/api/projects/1/export")
+        assert resp.status_code == 200
+        assert 'filename="bristlenose-report-en.html"' in resp.headers["content-disposition"]
 
 
 # ---------------------------------------------------------------------------

@@ -626,7 +626,9 @@ def export_report(
 
     # --- Filename ---
     project_name = project_info.project_name
-    slug = slugify(project_name) if project_name else "bristlenose"
+    # A name with no Latin letters or digits ("Привет", "駅の調査") slugs to ""
+    # and the file would be "-report-en.html".
+    slug = slugify(project_name) or "bristlenose"
     # The language is part of what this file IS now, not a rendering choice the
     # reader can undo, so it belongs in the name — otherwise a researcher
     # exporting fr/de/it for a Swiss client gets three identical filenames in

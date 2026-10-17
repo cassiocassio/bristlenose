@@ -485,6 +485,58 @@ consumer (the manifest), they aren't front-loaded.
 | **— Mural (deferred, but strategically valuable)** | `mural_client.py` (port the Miro item-loop), `routes/mural.py`, on top of the **shared OAuth pickup** (15-min rotating tokens; `ASWebAuthenticationSession`). | Architecturally advances FigJam by **nothing** (per-item REST, consumes no manifest) — so it's late, not on the engine's critical path. **But it's a real enterprise/government-procurement wedge** (private planner), so it's a high-value *cheap* add once OAuth exists, not a rounding error. The ~Sept-2026 Mural test rides this. |
 | **— Picker UX (deferred)** | One "Send to a whiteboard…" entry + remembered board — only once 2+ boards are genuinely connectable. Until then ship each as a concrete row. | Orthogonal to FigJam. |
 
+**Weekend build, 17–18 Oct 2026 — FigJam first, Lucid skipped.** Figma re-verified
+17 Oct: REST still read-only for canvas content, so F3's premise holds. The
+maintainer chose to go straight to FigJam rather than rehearse on Lucid. Decided:
+- **The plugin lives in this repo** (`figjam-plugin/`), not a separate one — the
+  manifest and its only reader change in the same commit, so the version contract
+  cannot drift across repos.
+- **Handoff is a downloaded file the plugin opens** (pick or drop). Works the same
+  from the CLI, the Mac app and offline; the plugin declares no network access, so
+  it cannot phone home. Fetch-from-serve (token, rotating port, a publicly listed
+  localhost domain) and clipboard paste were rejected.
+- **Mac native sheet too, modelled on `MiroSheet.swift`** (maintainer, 17 Oct —
+  reversing an earlier "web panel only"): the Miro native designs already answer
+  every question the FigJam sheet asks. FigJam drops the connect step (no token),
+  so the sheet is scope → consent → save the file → three steps to run the plugin.
+- **The menu row is parked behind a feature flag** until the plugin is approved
+  in Figma Community — a "get the plugin" link to nothing is a dead affordance.
+- **Spike first:** FigJam stickies auto-grow, while the IR assumes a fixed
+  `QUOTE_H`. Measure in a real file before deciding whether the plugin re-stacks
+  by measured height.
+
+**Spike result, 17 Oct 2026** (project-ikea, 30 quotes / 11 columns, built through
+the Figma MCP's `use_figma`, which runs the same Plugin API the plugin will; scratch
+board in the maintainer's Figma drafts):
+- **The plugin must stack by measured height; the manifest carries structure, not
+  pixels.** A sticky is never shorter than 240 px and grows with its text: 12 of 30
+  quotes exceeded 240 (up to 348, at 272 chars). The IR's `y` (a fixed 200 px
+  quote, 76 px header) would overlap them. So the manifest is frames → columns →
+  ordered cards, and the plugin owns vertical layout. Width is fixed at 240, which
+  happens to equal `STICKY_W`.
+- **Sticky text is richer than Miro's:** `setRangeFontName`, `setRangeFontSize`
+  and `setRangeHyperlink` all work on `sticky.text`. The attribution renders
+  italic at 0.8× (default 16 px Inter Medium), the header label bold, and the clip
+  link can be a real hyperlink.
+- **One pass is enough:** 41 stickies + 2 sections + title in a single call;
+  load Inter Medium / Medium Italic / Bold once; set `authorVisible = false`.
+
+**Open questions for the maintainer (both reopen a Miro-era decision):**
+1. **Column headers: pink header stickies, or one nested section per column?**
+   Miro forced header stickies because frames cannot nest; FigJam sections can.
+   A header sticky is 240 px tall for two lines (visibly wasteful); a nested
+   section named "IKEA Homepage · 2 quotes" is the FigJam-native shape, but
+   section names are editor chrome and do not appear in screenshots or image
+   exports. *Lean: keep header stickies* — cross-board sameness, survives export.
+2. **Colours: FigJam's palette pink `#FFA8DB` / yellow `#FFE299`, or Miro's
+   `#FADADD` / `#FFF9B1`?** Decision 2 says the same two colours everywhere; in
+   FigJam those Miro hexes register as custom colours, not palette ones. *Lean:
+   FigJam palette* — go with the board's grain.
+
+Also noticed: `_clip_url` logs "Ignoring clips_base…" once per quote when no clip
+folder is set, because an empty base fails `is_safe_url`. An empty base should
+return `None` silently. Fold into the F1 commit.
+
 **Security disciplines for the Lucid renderer (F2):**
 - **`lucid_package.py` builds `document.json` as a Python dict and serialises via
   `json.dumps(..., ensure_ascii=True)` exactly once — never string-templates JSON.**

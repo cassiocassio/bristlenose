@@ -216,3 +216,190 @@ async def reveal_screens(request: Request, project_id: int) -> dict[str, Any]:
     else:
         return {"revealed": False, "path": str(folder)}
     return {"revealed": True, "path": str(target)}
+
+
+# ---------------------------------------------------------------------------
+# The screens as a Miro board — a frame per still (docs/design-screens-export.md §6)
+# ---------------------------------------------------------------------------
+
+_miro_jobs: dict[int, dict[str, Any]] = {}
+_MAX_QUOTE_CHARS = 300
+
+
+def _sticky_html(q: Any) -> str:
+    from html import escape
+
+    from bristlenose.board_layout import attribution, quoted
+    from bristlenose.utils.timecodes import parse_timecode
+
+    body = q.text if len(q.text) <= _MAX_QUOTE_CHARS else q.text[: _MAX_QUOTE_CHARS - 1].rstrip() + "…"
+    return f"{escape(quoted(body))}<br><i>{escape(attribution(q.participant_code, parse_timecode(q.timecode)))}</i>"
+
+
+def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
+                   shots: list[dict[str, Any]], videos: dict[str, Path],
+                   quotes: dict[str, Any], arrangements: dict[tuple[str, str], dict[str, Any]],
+                   colour_by: str) -> None:
+    """Render every still, lay the board out, and build it on Miro. Runs in a worker thread; the
+    job dict is its only output. A board left part-built names its link, as the quotes board does."""
+    from bristlenose import miro_client
+    from bristlenose.board_layout import DEFAULT_QUOTE_TOKEN, SENTIMENT_TOKEN
+    from bristlenose.screens_board import STICKY_H, STICKY_W, jpeg_size, lay_out_board
+
+    stills: dict[str, bytes] = {}
+    sizes: dict[str, tuple[int, int]] = {}
+    for shot in shots:
+        if job["status"] == "cancelled":
+            return
+        job["current"] = shot["filename"]
+        video = videos.get(shot["session_id"])
+        try:
+            if video is None:
+                raise StillError("No recording")
+            jpg = render_still(out_dir, shot["session_id"], video, shot["t"], tuple(shot["crop"]), None)
+        except StillError:
+            logger.warning("Skipped still %s", shot["filename"], exc_info=True)
+            job["skipped_count"] += 1
+            continue
+        size = jpeg_size(jpg)
+        if size is None:
+            job["skipped_count"] += 1
+            continue
+        stills[shot["filename"]] = jpg
+        sizes[shot["filename"]] = size
+    frames = lay_out_board(shots, sizes, arrangements, known=set(quotes))
+    job["total"] = len(frames)
+    if not frames:
+        job["status"] = "completed"
+        return
+    board = miro_client.create_board(token, title)
+    board_id = board.get("id")
+    if not board_id:
+        raise miro_client.MiroError("Miro did not return a board id", reason="no_board_id")
+    job["board_url"] = board.get("viewLink") or f"https://miro.com/app/board/{board_id}/"
+    for frame in frames:
+        if job["status"] == "cancelled":
+            return
+        job["current"] = frame.filename
+        made = miro_client.create_frame(token, board_id, frame.title, frame.x + frame.width / 2,
+                                        frame.y + frame.height / 2, frame.width, frame.height)
+        fid = made["id"]
+        sx, sy, sw, sh = frame.shot
+        miro_client.upload_image(token, board_id, stills[frame.filename], frame.filename,
+                                 title=frame.title, x=sx + sw / 2, y=sy + sh / 2, width=sw, parent_id=fid)
+        items = []
+        for st in frame.stickies:
+            q = quotes[st.dom_id]
+            colour = (SENTIMENT_TOKEN.get(q.sentiment, DEFAULT_QUOTE_TOKEN) if colour_by == "sentiment"
+                      else DEFAULT_QUOTE_TOKEN)
+            items.append({"type": "sticky_note", "data": {"content": _sticky_html(q), "shape": "square"},
+                          "style": {"fillColor": colour},
+                          "position": {"x": st.x + STICKY_W / 2, "y": st.y + STICKY_H / 2},
+                          "geometry": {"width": STICKY_W}, "parent": {"id": fid}})
+        for i in range(0, len(items), 20):
+            miro_client.bulk_create_items(token, board_id, items[i:i + 20])
+        job["completed_count"] += 1
+        job["progress"] += 1
+    job["status"] = "completed"
+
+
+async def _run_miro(project_id: int, job: dict[str, Any], *args: Any) -> None:
+    from bristlenose import miro_client
+
+    try:
+        await asyncio.to_thread(_run_miro_sync, job, *args)
+        if job["status"] == "running":
+            job["status"] = "completed"
+    except miro_client.MiroError as exc:
+        logger.warning("Screens Miro board failed: %s", exc)
+        job["status"] = "failed"
+        job["reason"] = exc.reason or ("board_incomplete" if job.get("board_url") else "miro_error")
+    except Exception:
+        logger.exception("Screens Miro board failed")
+        job["status"] = "failed"
+        job["reason"] = "board_incomplete" if job.get("board_url") else "miro_error"
+    job["current"] = ""
+
+
+class ScreensMiroStart(BaseModel):
+    locale: str = "en"
+    colour_by: str = "sentiment"
+
+
+class ScreensMiroStatus(BaseModel):
+    status: str
+    progress: int
+    total: int
+    completed_count: int
+    skipped_count: int
+    current: str
+    board_url: str | None
+    reason: str | None
+
+
+@router.post("/projects/{project_id}/export/screens/miro")
+async def start_screens_miro(request: Request, project_id: int,
+                             body: ScreensMiroStart | None = None) -> ScreensExportStart:
+    """Build the screens as a new Miro board: a frame per still, a row per participant."""
+    from bristlenose.i18n import t_in
+    from bristlenose.server.export_core import extract_quotes_for_export
+    from bristlenose.server.models import ScreenArrangement
+    from bristlenose.server.routes.miro import _miro_token
+    from bristlenose.utils.timecodes import parse_timecode
+
+    body = body or ScreensMiroStart()
+    existing = _miro_jobs.get(project_id)
+    if existing and existing.get("status") == "running":
+        raise HTTPException(status_code=409, detail="A screens board is already being built")
+    token = _miro_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Miro is not connected")
+    project_dir = getattr(request.app.state, "project_dir", None)
+    if project_dir is None:
+        raise HTTPException(status_code=400, detail="No project directory configured")
+    if not screens_enabled(request):
+        raise HTTPException(status_code=404, detail="Screens are off")
+    out_dir = project_output_dir(Path(project_dir))
+    db = request.app.state.db_factory()
+    try:
+        project = db.get(Project, project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        state, owner = derive_project_screens(request, db, project_id)
+        shots = shot_list(state["screens"], owner, _hidden_dom_ids(db, project_id))
+        videos = video_sessions(db)
+        quotes = {f"q-{q.participant_code}-{int(parse_timecode(q.timecode))}": q
+                  for q in extract_quotes_for_export(db, project_id)}
+        arrangements = {(r.screen_key, r.session_id): json.loads(r.cards or "{}")
+                        for r in db.query(ScreenArrangement).filter_by(project_id=project_id).all()}
+        title = f"{project.name} · {t_in(body.locale, 'common.screens.title')}"
+    finally:
+        db.close()
+    if not shots:
+        return ScreensExportStart(status="no_screens", total=0)
+    job: dict[str, Any] = {"status": "running", "progress": 0, "total": len(shots), "completed_count": 0,
+                           "skipped_count": 0, "current": "", "board_url": None, "reason": None}
+    _miro_jobs[project_id] = job
+    job["task"] = asyncio.create_task(_run_miro(
+        project_id, job, token, title, out_dir, shots, videos, quotes, arrangements, body.colour_by))
+    return ScreensExportStart(status="started", total=len(shots))
+
+
+@router.get("/projects/{project_id}/export/screens/miro/status")
+async def screens_miro_status(project_id: int) -> ScreensMiroStatus:
+    job = _miro_jobs.get(project_id) or {}
+    return ScreensMiroStatus(
+        status=job.get("status", "idle"), progress=job.get("progress", 0), total=job.get("total", 0),
+        completed_count=job.get("completed_count", 0), skipped_count=job.get("skipped_count", 0),
+        current=job.get("current", ""), board_url=job.get("board_url"), reason=job.get("reason"),
+    )
+
+
+@router.post("/projects/{project_id}/export/screens/miro/cancel")
+async def cancel_screens_miro(project_id: int) -> dict[str, Any]:
+    """Stop after the frame being built; a board already begun stays, with what it has."""
+    job = _miro_jobs.get(project_id)
+    if job is None or job.get("status") != "running":
+        raise HTTPException(status_code=404, detail="No screens board being built")
+    job["status"] = "cancelled"
+    return {"cancelled": True}

@@ -107,6 +107,7 @@ SERVER_ONLY_PATH_TEMPLATES: frozenset[str] = frozenset(
         "/projects/{project_id}/export",  # the export endpoint itself
         "/projects/{project_id}/export/clips/status",
         "/projects/{project_id}/export/screens/status",
+        "/projects/{project_id}/export/screens/miro/status",
         "/projects/{project_id}/export/quotes.csv",
         "/projects/{project_id}/export/quotes.xlsx",
         "/projects/{project_id}/hidden",  # write-mirror; baked into /quotes

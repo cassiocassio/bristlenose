@@ -109,14 +109,13 @@ are stacked in code order, with a gutter between frames for the team's own stick
 **Inside each frame:**
 
 - **The still**, uploaded as an image.
-- **Pinned quotes placed as the lens places them**, in the margins round the still. The lens's
-  placement code is TypeScript (`islands/screens/layout.ts`: `composeBoard`, `edgeFor`,
-  `rectFromIntent`) and needs card sizes; a Miro sticky is a fixed size, so the browser can run
-  the same code with that size and no measuring. The SPA composes each still's board — using the
-  researcher's saved arrangement where there is one (`GET …/screens/arrangements`) — and sends the
-  positions, as fractions of the still and offsets from its edges, with the export request. The
-  server checks they name quotes on that still and fetches the text itself. No Python port of the
-  layout, so the two cannot drift.
+- **Pinned quotes placed as the lens places them**, in the margins round the still: which edge,
+  how a column stacks, how a band wraps, and the researcher's saved arrangement where there is one.
+  _Changed 17 Oct 2026 from "the SPA composes and sends positions": the Mac app's Send to Miro sheet
+  calls the server with no web page in the loop, so the server places them._ The lens's rules are
+  ported to Python (`bristlenose/screens_board.py`) and both copies are held to one fixture,
+  `tests/fixtures/screens-layout-contract.json`, asserted by `tests/test_screens_board.py` and
+  `layout.contract.test.ts`. A Miro sticky is a fixed size, so nothing needs measuring.
 - **The session's other quotes on that screen** in a row beneath the still.
 
 **Workshop requirements** (§1):
@@ -127,6 +126,21 @@ are stacked in code order, with a gutter between frames for the team's own stick
 - **The still is locked**, so moving stickies about does not drag the picture out. Whether the REST
   API can lock an item is unverified (Saturday, with the clipboard check). If it cannot, the frame
   parenting still carries it, and the board says nothing.
+
+**Measured against Miro, 17 Oct 2026** (a probe board, then a real one from a copy of
+*IKEA with uxfriends*: 9 frames in 56 s, every image and sticky inside its frame):
+
+- **Upload:** the settings go in a `data` part sent as a plain form field with a JSON content type.
+  Attached as a file (with a filename) Miro answers 500, *"Failed to convert 'data'"*.
+- **Parenting:** a child's position is its centre from the frame's top-left
+  (`relativeTo: parent_top_left`); images and stickies both take `parent`.
+- **No lock:** every lock field on PATCH is refused (code `2.0703`). The frame is what holds a
+  picture with its quotes.
+- **Frames refuse a new board for about half a minute**, with a bare 500 ("Internal error
+  occurred"), and now and then later; stickies and images go through meanwhile. A refused frame was
+  never found on the board afterwards. `create_frame` retries a 500, and before each retry looks for
+  a frame with that title at that spot, so it cannot make two.
+- **A square sticky is 1.146 times as tall as wide** (200 wide came back 229.1).
 
 **Transport, new in the client:**
 
@@ -186,10 +200,7 @@ Smallest first; each step ends usable and green.
 ## 9. Open
 
 1. ~~Which clipboard shape works where (§5).~~ File URLs, in FigJam and Miro (17 Oct 2026).
-2. Can the REST API lock an item (§6)? The documentation names no lock field (17 Oct 2026); to
-   confirm against a real board on Sunday. Uploads take the file as a `resource` part and the
-   settings as a `data` part declared `application/json`; a child's position is its centre from
-   the frame's top-left.
+2. ~~Can the REST API lock an item (§6)?~~ No: measured 17 Oct 2026 (§6).
 3. ~~Where the three actions live (§7).~~ Settled 17 Oct 2026: contextual to the Screens lens, in
    the existing export surfaces (§7).
 4. A screen revisited later appears once, at its first visit (§2). Right for a workshop, or should a

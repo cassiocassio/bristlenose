@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import secrets
 import time
 import urllib.parse
@@ -214,14 +215,50 @@ def create_board(token: str, name: str, description: str = "") -> dict[str, Any]
     return _request_object("POST", token, "/boards", {"name": name[:60], "description": description[:300]})
 
 
+#: How long to keep asking for a frame Miro answers 500 to (seconds between tries).
+FRAME_RETRY_DELAYS = (5.0, 10.0, 15.0, 20.0, 30.0)
+
+
 def create_frame(token: str, board_id: str, title: str, x: float, y: float,
-                 width: float, height: float) -> dict[str, Any]:
-    """Create a named frame. Position is the frame CENTRE (Miro convention)."""
-    return _request_object("POST", token, f"/boards/{board_id}/frames", {
-        "data": {"title": title[:255], "format": "custom", "type": "freeform"},
-        "position": {"x": x, "y": y},
-        "geometry": {"width": width, "height": height},
-    })
+                 width: float, height: float, *,
+                 retry_delays: tuple[float, ...] = FRAME_RETRY_DELAYS) -> dict[str, Any]:
+    """Create a named frame. Position is the frame CENTRE (Miro convention).
+
+    Measured 17 Oct 2026: a board refuses frames with a bare 500 ("Internal error occurred") for
+    about half a minute after it is created, and now and then later, while stickies and images go
+    through. A refused frame was never found on the board afterwards. Even so, before each retry
+    the board is searched for a frame with this title at this spot, so a 500 that did create one
+    cannot produce two."""
+    body = {"data": {"title": title[:255], "format": "custom", "type": "freeform"},
+            "position": {"x": x, "y": y}, "geometry": {"width": width, "height": height}}
+    for attempt in range(len(retry_delays) + 1):
+        try:
+            return _request_object("POST", token, f"/boards/{board_id}/frames", body)
+        except MiroError as exc:
+            if " -> 500 " not in str(exc) or attempt == len(retry_delays):
+                raise
+            time.sleep(retry_delays[attempt])
+            found = _find_frame(token, board_id, title[:255], x, y)
+            if found is not None:
+                return found
+    raise AssertionError("unreachable")
+
+
+def _find_frame(token: str, board_id: str, title: str, x: float, y: float) -> dict[str, Any] | None:
+    cursor: str | None = None
+    while True:
+        params = f"?type=frame&limit=50{f'&cursor={cursor}' if cursor else ''}"
+        page = _request("GET", token, f"/boards/{board_id}/items{params}")
+        if not isinstance(page, dict):
+            return None
+        for item in page.get("data", []):
+            pos = item.get("position") or {}
+            if ((item.get("data") or {}).get("title") == title
+                    and abs(float(pos.get("x", 1e9)) - x) < 1 and abs(float(pos.get("y", 1e9)) - y) < 1):
+                return item
+        cursor = page.get("cursor")
+        if not cursor:
+            return None
 
 
 def bulk_create_items(token: str, board_id: str, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -232,6 +269,43 @@ def bulk_create_items(token: str, board_id: str, items: list[dict[str, Any]]) ->
         raise ValueError("bulk_create_items accepts at most 20 items per call")
     result = _request("POST", token, f"/boards/{board_id}/items/bulk", items)
     return result.get("data", []) if isinstance(result, dict) else result
+
+
+def upload_image(token: str, board_id: str, jpeg: bytes, filename: str, *, title: str,
+                 x: float, y: float, width: float, parent_id: str | None = None,
+                 retries: int = 4) -> dict[str, Any]:
+    """Upload a JPEG as an image item (POST .../images, multipart).
+
+    Measured 17 Oct 2026: the settings go in a ``data`` part sent as a plain form field with a JSON
+    content type. Sent as an attached file (with a filename) Miro answers 500, "Failed to convert
+    'data'". With ``parent_id`` the position is the image's centre from the frame's top-left, and
+    the frame carries it when dragged. Miro keeps the aspect from ``width``. There is no lock: every
+    lock field is refused (code 2.0703). Retries on 429 only, like ``_request``."""
+    data: dict[str, Any] = {"title": title[:255], "position": {"x": x, "y": y},
+                            "geometry": {"width": width}}
+    if parent_id:
+        data["parent"] = {"id": parent_id}
+    path = f"/boards/{board_id}/images"
+    delay = 1.0
+    for attempt in range(retries + 1):
+        try:
+            resp = httpx.post(f"{BASE_URL}{path}", headers={"Authorization": f"Bearer {token}"},
+                              files={"resource": (filename, jpeg, "image/jpeg"),
+                                     "data": (None, json.dumps(data), "application/json")},
+                              timeout=60)
+        except httpx.HTTPError as exc:
+            raise MiroError(f"POST {path} network error: {exc}") from exc
+        if resp.status_code < 300:
+            out = resp.json()
+            if not isinstance(out, dict):
+                raise MiroError(f"POST {path} -> expected an object")
+            return out
+        if resp.status_code != 429:
+            raise MiroError(f"POST {path} -> {resp.status_code} {resp.text[:300]}")
+        if attempt < retries:
+            time.sleep(delay)
+            delay *= 2
+    raise MiroError(f"POST {path} failed after rate-limit retries")
 
 
 def create_text(token: str, board_id: str, content: str, x: float, y: float,

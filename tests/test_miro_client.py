@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import httpx
+import pytest
 
 from bristlenose.miro_client import validate_miro_token
 
@@ -69,3 +70,53 @@ class TestValidateMiroToken:
             validate_miro_token("token")
             url = mock_get.call_args[0][0]
             assert "/v2/boards" in url
+
+
+class _Resp:
+    def __init__(self, status: int, body: object) -> None:
+        import json as _json
+
+        self.status_code = status
+        self._body = body
+        self.content = _json.dumps(body).encode()
+        self.text = _json.dumps(body)
+
+    def json(self) -> object:
+        return self._body
+
+
+def test_a_frame_refused_with_500_is_retried_and_never_made_twice(monkeypatch) -> None:
+    from bristlenose import miro_client as mc
+
+    calls: list[tuple[str, str]] = []
+    answers = iter([
+        _Resp(500, {"message": "Internal error occurred"}),  # POST: refused
+        _Resp(200, {"data": []}),                             # GET: not there
+        _Resp(500, {"message": "Internal error occurred"}),  # POST: refused again
+        _Resp(200, {"data": [{"id": "f1", "data": {"title": "P1 · Home"},  # GET: it landed after all
+                              "position": {"x": 10.0, "y": 20.0}}]}),
+    ])
+
+    def fake(method: str, url: str, **_: object) -> _Resp:
+        calls.append((method, url))
+        return next(answers)
+
+    monkeypatch.setattr(mc.httpx, "request", fake)
+    monkeypatch.setattr(mc.time, "sleep", lambda _s: None)
+    assert mc.create_frame("t", "b", "P1 · Home", 10, 20, 100, 100)["id"] == "f1"
+    assert [m for m, _ in calls] == ["POST", "GET", "POST", "GET"]  # no third POST
+
+
+def test_a_frame_error_other_than_500_is_not_retried(monkeypatch) -> None:
+    from bristlenose import miro_client as mc
+
+    calls: list[str] = []
+
+    def fake(method: str, url: str, **_: object) -> _Resp:
+        calls.append(method)
+        return _Resp(400, {"message": "bad"})
+
+    monkeypatch.setattr(mc.httpx, "request", fake)
+    with pytest.raises(mc.MiroError):
+        mc.create_frame("t", "b", "x", 0, 0, 1, 1)
+    assert calls == ["POST"]

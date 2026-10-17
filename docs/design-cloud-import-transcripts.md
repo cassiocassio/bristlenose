@@ -1,6 +1,6 @@
 ---
-status: in-progress — pipeline half landed 1 Oct 2026; import half written blind the same day, built and green on the Mac the same evening (§0c); live-tenant measurements and owner decisions open
-last-trued: 2026-10-01
+status: in-progress — pipeline half landed 1 Oct 2026; import half written blind the same day, built and green on the Mac the same evening (§0c); live-tenant measurements and owner decisions open; Zoom Phase 5 built 17 Oct 2026, first live sign-in 17 Oct, no recording imported yet
+last-trued: 2026-10-17
 owner: cloud import + pipeline
 supersedes-in-part: docs/design-cloud-import.md §3 "Google's transcript is out of scope" (v1 descope, 16 Aug 2026)
 ---
@@ -163,7 +163,7 @@ with Whisper and the LLM stubbed) now lives in `tests/test_pipeline_platform_tra
   rendering belong to `docs/design-people.md` §E decision 1 (corrected) and
   `docs/mockups/moderator-identity-failure-states.html` Part 5b; this plan's part is to carry the
   evidence (§4). Still later: 1e and 1f.
-- Phases 3 (Teams) and 5 (Zoom), and Phase 4.
+- Phases 3 (Teams) ~~and 5 (Zoom)~~, and Phase 4. *Zoom built 17 Oct 2026, §1b.*
 
 The pre-existing cross-wiring bug (§2, "adding an older recording") is still live for hand-dropped
 files, and **0a alone does not protect researcher edits**. It is worth doing on its own merits, as 0b,
@@ -182,7 +182,7 @@ implementation, the verdict says so.
 |---|---|---|
 | Download a transcript file (Zoom VTT, Graph VTT) | `CloudDownloader` + `CloudDownloadVerification`: `.part` + atomic publish, status/content-type checks, and **`MediaFormat.webvtt` with BOM handling already exists**. `CloudDownloadTests` (30), `CloudTransportTests` (33) | **Reuse unchanged.** `ExpectedFile(expectedFormat: .webvtt)` |
 | Write a *rendered* VTT (Meet entries) | the same publish step | **Do not write a second atomic writer.** The draft's `PlatformTranscript.writeAtomically` duplicated it. Extract `CloudDownloader`'s publish step and call it, once the other session's edits to that file have landed |
-| Zoom `Name:` → speaker | `ZoomTranscript.splitSpeaker` (`ZoomRecordingModel.swift:489`), tested in `ZoomImportTests`, including "the ratio was 3:1" | **Reuse** in the Swift VTT writer |
+| Zoom `Name:` → speaker | `ZoomTranscript.splitSpeaker` (`ZoomRecordingModel.swift:642`), tested in `ZoomImportTests`, including "the ratio was 3:1" | **Reuse** in the Swift VTT writer |
 | Hand-dropped `Name:` files (pipeline) | `_COLON_SPEAKER_PATTERN`, and **`tests/test_international_names.py` already pins the defect as ~20 `xfail`s** (umlaut, accents, CJK, Arabic, the Zoom comma) | **Enhance the regex until those xfails pass.** No new suite. Add the false-positive cases (`Honestly:`, `Gern:`) beside them |
 | VTT parsing, `<v>` tags | `s03_parse_subtitles._parse_vtt` (the design doc measured the Teams `.vtt` working) | **Extend:** read the NOTE, split multi-voice cues, unescape |
 | `.docx` turns | `s04_parse_docx` with observed specimens, `tests/test_parse_docx.py` (24) | **Extend** (turn ends); specimens stay the oracle |
@@ -193,7 +193,7 @@ implementation, the verdict says so.
 | Resume caches (0a) | `tests/test_pipeline_resume.py` (37), `test_manifest*` | **Extend**; the stubbed harnesses become new cases here |
 | Admin approval (Teams) | `TeamsOAuth`'s `adminApprovalRequired` classifier (AADSTS90094 / 65001) and its `signInAdminApproval` copy; `TeamsSignInFailureTests`. `signIn(scopes:)` already takes a scope list | **Reuse** for the Request Approval round trip: same classifier, same failure copy. New code is only the second `signIn` call and the bar |
 | Teams listing | `TeamsSource` calendar join, `TeamsRecordingName`; `TeamsSourceTests` (30) pin the request sequence, `TeamsRecordingNameTests` (12) | **Append** the meeting/transcript calls after today's; update the sequence tests deliberately |
-| Zoom adapter | `ZoomSource` / `ZoomOAuth` / `ZoomRecordingModel` (≈1,900 lines, flagged off), `ZoomImportTests` (37), `ZoomGrantTests`, Diagnostics fixtures, Store a Test Zoom Sign-In | **Carried along as is** (§1b). Additions: the VTT download, the preflight-driven Expected / No transcript states, and the multi-part pairing fix. The sign-in needs the Associated Domains entitlement restored |
+| Zoom adapter | `ZoomSource` / `ZoomOAuth` / `ZoomRecordingModel` (≈1,900 lines when written, flagged off; 2,487 lines on 17 Oct 2026, a Diagnostics beta), `ZoomImportTests` (37; 61 on 17 Oct), `ZoomGrantTests` (8 on 17 Oct), Diagnostics fixtures, Store a Test Zoom Sign-In | ~~**Carried along as is** (§1b).~~ **Extended 17 Oct 2026 (Phase 5, §1b).** Additions: the VTT download, the preflight-driven Expected / No transcript states, and the multi-part pairing fix — all built. The Associated Domains entitlement is restored (`0b50d663`) |
 | Meet listing | `GoogleMeetSource` conferenceRecords join on the scope already held; `GoogleMeetImportTests` (46) | **Extend** with `transcripts.list` / `participants.list` |
 | Status column words and glyphs | `statusKind`, `StatusCellView.configure(text, kind:)`; `CloudImportStatusKindTests` | **Reuse:** the Transcript cell is the same view; *Waiting for transcript* joins the glyphless keys |
 | Column sizing | `CloudImportStatusColumn.minimumWidth` + `preferredWidth` (committed `b496085c`, `1912ab56`), `reportMinimumWidth`, and `fitWindowToOpeningWidths()`, which widens the window once per open so every column fits at its opening width | **Generalise** the measurer to take a key list and give Transcript the same **minimum/preferred pair**. Add the column **in `makeNSView`, before attach**, so the one-time opening fit counts it; a column added later gets no second fit. Expect the Teams window to open ~140–175 pt wider |
@@ -277,7 +277,7 @@ compiled half found and fixed three things:
   refusal at fetch is `.notFetched(.notResolved)`.
 - **A row whose plan a re-list wiped kept *Available* after Import** with no `.vtt` written: it is now
   *Didn't arrive* (or *Not imported* if it was still expected). Zoom's grey *Available* is decision 4
-  below, unchanged.
+  below (resolved 17 Oct 2026 by Phase 5).
 - **The re-check could overlap a re-list** (`list()` rebuilds the plans off the main actor). The store
   now re-checks only while `phase == .loaded`, and drops answers if the listing changed during the await.
 
@@ -445,14 +445,15 @@ fixture rows (`st-t-*`) are there for the column widths and the glyph colours, w
    what says there is more here to tick. `headerReadsMixedOverWaitingChild` carries the reasoning.
 4. **Zoom lists `.available`** when the recording carries a `TRANSCRIPT` file and never fetches it
    until Phase 5, so after Import its cell reads *Available* in grey. Acceptable for a flag-off
-   adapter; revisit with Phase 5.
+   adapter; revisit with Phase 5. **Resolved 17 Oct 2026:** Phase 5 fetches the VTT
+   (`ZoomSource.fetchTranscript`), so an imported row reports its transcript outcome.
 5. **A held row's Transcript cell** shows the listing's word; its Status is blank by design. Blank
    both?
 6. **`probed ?? claimed`.** When the probe fails, the NOTE records Google's duration and the clock
    check is skipped (logged). Refuse instead?
 7. **Deliberately not built** (per §0's scope): the two footer rewordings and the footer arithmetic
    split (§5e); "ticked by default on next open"; the `.bristlenose/importing` sentinel; the pipeline
-   reading `media-duration:`; Teams Phase 3 and Zoom Phase 5; `.sparseCoverage` has no Teams/Zoom
+   reading `media-duration:`; Teams Phase 3 ~~and Zoom Phase 5~~ (Zoom built 17 Oct 2026, §1b); `.sparseCoverage` has no Teams/Zoom
    analogue (no entries there).
 8. **Strings left for a native reading.** i18n-review suggested ru/uk `transcriptAvailable` →
    *Доступно*, pl → *Dostępne*, cs `transcriptDidNotArrive` → *Nedoručeno*. Not applied: each current
@@ -470,11 +471,11 @@ fixture rows (`st-t-*`) are there for the column widths and the glyph colours, w
 
 ## 1. What each platform will give us
 
-| | Teams / OneDrive | Google Meet | Zoom (flagged) |
+| | Teams / OneDrive | Google Meet | Zoom (Diagnostics beta, 17 Oct 2026) |
 |---|---|---|---|
-| Recording | OneDrive `/Recordings`, `Files.Read`, no admin needed (shipped) | Picker `drive.file` grant (shipped) | recordings list, bearer download (built, flagged) |
+| Recording | OneDrive `/Recordings`, `Files.Read`, no admin needed (shipped) | Picker `drive.file` grant (shipped) | recordings list, bearer download (built; a Diagnostics beta since 17 Oct 2026) |
 | Transcript door | Graph `/me/onlineMeetings/{id}/transcripts` → `metadataContent` or `content?$format=text/vtt` | Meet API `transcripts.entries.list` + `participants.list` | a `TRANSCRIPT` file (`.vtt`) in the same `recording_files[]` list |
-| Permission | **`OnlineMeetingTranscript.Read.All`, admin consent always required, even delegated** (VERIFIED). Lookup needs `OnlineMeetings.Read`. | `meetings.space.readonly`, **already held**, classed sensitive (VERIFIED) | the recordings scopes already requested; the Marketplace app also needs `user:read:user` and `user:read:settings` (VERIFIED missing) |
+| Permission | **`OnlineMeetingTranscript.Read.All`, admin consent always required, even delegated** (VERIFIED). Lookup needs `OnlineMeetings.Read`. | `meetings.space.readonly`, **already held**, classed sensitive (VERIFIED) | the recordings scopes already requested; the Marketplace app also needs `user:read:user` and `user:read:settings` (VERIFIED missing 30 Sep; added to `ZoomScopes` 17 Oct 2026) |
 | Speaker names | `<v Name>` in VTT; `speakerName` in metadataContent (VERIFIED) | participant → display name; phone users show as a masked number (VERIFIED) | a `Name: text` prefix per cue (community samples only) |
 | Timing | absolute cue times in metadataContent | per-entry start and end, absolute | relative to the recording |
 | Ready when | after the meeting ends; no documented not-ready state | `FILE_GENERATED`, but entries can arrive **truncated** (4 → ~500 in one report) | appears in the recordings list only once ready, often hours later |
@@ -508,7 +509,7 @@ REPORTED).
 | One-hour meeting | recording 15–30 min, sometimes hours; transcript via Graph 5–30 min (REPORTED; no vendor figure) | transcript "usually within a few hours… up to 24 hours" (VERIFIED) | recording "about twice the recorded duration", up to 24 h; transcript "a couple of hours" after, sometimes more than a day (VERIFIED + REPORTED) |
 | Does recording give a transcript? | **by default yes** — "when you record a meeting, transcription starts automatically" — but it can be stopped separately, or forbidden by policy (VERIFIED) | **no**, separate toggles; admins or hosts can make it automatic (VERIFIED) | only if the host's "Create audio transcript" is on (VERIFIED) |
 | Signal that one is coming | **none documented**: Graph lists a transcript only once it is ready | **certain**: a transcript resource in `STARTED`/`ENDED` | **good guess**: the setting is on and the recording is listed without its `TRANSCRIPT` file |
-| Expected → No transcript after | 4 h | 24 h | 24 h after the recording appears |
+| Expected → No transcript after | 4 h | 24 h | 24 h after the part ended (`ZoomTranscriptAvailability.productionWindow`; first written as "after the recording appears") |
 
 What follows for the product:
 
@@ -523,7 +524,7 @@ What follows for the product:
 - **Zoom transcripts can silently never arrive** (REPORTED, Jun 2026). This is why a wait ends with a
   stated outcome, not an open-ended "Expected".
 
-**Zoom corrections to the existing adapter** (VERIFIED against Zoom's OpenAPI specs):
+**Zoom corrections to the existing adapter** (VERIFIED against Zoom's OpenAPI specs). **Fixed 17 Oct 2026 except sharing / Marketplace:** the readiness comment, the per-part pairing (`ZoomFileSelection.parts`, `ZoomRecordingModel.swift:214`) and the scopes are done; the line anchors below are the 1 Oct ones.
 `GET /meetings/{id}/transcript` serves the *AI Companion* transcript, not the recording's VTT, so it is
 the wrong readiness check (`ZoomRecordingModel.swift:121`). Readiness is simply the `TRANSCRIPT` file
 appearing in the recordings list. A stopped-and-restarted meeting has several media files and several
@@ -533,12 +534,14 @@ cannot be shared outside its own account, so real researchers need a published M
 
 ---
 
-### 1b. Zoom: built, flagged off, never run against a real account, carried along as is
+### 1b. Zoom: built (Phase 5, 17 Oct 2026), a Diagnostics beta, signed in live, no recording imported yet
 
-The owner is setting up the Zoom admin side over a weekend. This section brings the existing Zoom UX and
-implementation into this plan **as they are**. Nothing is redesigned; the transcript work adds to it.
+*Heading until 17 Oct 2026: "built, flagged off, never run against a real account, carried along as is".*
 
-**Status, 17 Oct 2026: Phase 5 built, still never run against a real account.** Corrections 2–4 below
+The owner set up the Zoom admin side (Marketplace app, Development credentials; 17 Oct 2026). This section brought the existing Zoom UX and
+implementation into this plan **as they were**. Nothing was redesigned; the transcript work added to it.
+
+**Status, 17 Oct 2026: Phase 5 built; signed in live once (below), no recording imported yet.** Corrections 2–4 below
 are done: the readiness comment, the two `user:read:*` scopes in `ZoomScopes.requested`, and one row per
 part (`ZoomFileSelection.parts`, rows `<uuid>#<n>` nested under the meeting like Meet's segments, with
 the ordinal in the filename). The transcript is fetched beside the media and rewritten as §4's file
@@ -594,6 +597,7 @@ run through the parser and read back by `s03`). What it changed:
 **What is built** (≈1,900 lines, `ZoomOAuth.swift`, `ZoomSource.swift`, `ZoomRecordingModel.swift`;
 `ZoomImportTests` 37 + `ZoomGrantTests` 5; fixture states in **Diagnostics ▸ Cloud Import ▸ Zoom**,
 plus **Store a Test Zoom Sign-In**). It sits behind `BristlenoseFlags.cloudImportZoom`, off by default.
+*17 Oct 2026: 2,487 lines, `ZoomImportTests` 61 + `ZoomGrantTests` 8. Zoom is now a Diagnostics beta: offered when the Diagnostics menu is on **or** the `BristlenoseCloudImportZoom` override is set (`CloudPlatform.zoomOffered(flag:diagnostics:)`, `CloudPlatform.swift:52–68`, `3f91d03c`), and kept out of the docs, About and release notes until Zoom's Marketplace review clears.*
 Background: the parking brief in the maintainer's private handoffs, and `docs/design-cloud-import.md`'s
 4 Sep note.
 
@@ -603,16 +607,31 @@ Background: the parking brief in the maintainer's private handoffs, and `docs/de
 - **Preflight:** one `GET /users/me/settings` reads cloud recording on/off, "Create audio transcript"
   on/off and the auto-delete settings.
 - **Listing:** `GET /users/me/recordings` in month-long chunks, every page enumerated before any
-  download. Each meeting **instance** (`uuid`) is one row.
+  download. Each meeting **instance** (`uuid`) is one row. *Since 17 Oct 2026: one row per part (`ZoomFileSelection.parts`); a multi-part meeting's rows are `<uuid>#<n>`, a single-part meeting keeps the bare `uuid`.*
 - **Row as drawn:** the title is the meeting topic; **no attendee line** (the list call carries no
   roster); **no Scheduled column** (no calendar); Recorded shows the start time, with duration in
-  whole minutes; Size is the chosen file; **Expires comes from `auto_delete_date`**, orange under a
+  whole minutes (*since 17 Oct 2026: the part's `recording_end − recording_start`, falling back to the meeting's whole-minute `duration` only for a single-part meeting*); Size is the chosen file; **Expires comes from `auto_delete_date`**, orange under a
   week as everywhere else.
 - **Media choice:** `ZoomFileSelection.choose` **prefers the audio-only M4A** over the video files,
-  and also identifies the `TRANSCRIPT` VTT. Today only the media is downloaded. Downloads use a
-  bearer token, following the redirect by hand and stripping the `Authorization` header.
+  and also identifies the `TRANSCRIPT` VTT. ~~Today only the media is downloaded. Downloads use a
+  bearer token, following the redirect by hand and stripping the `Authorization` header.~~
+  *17 Oct 2026:* the VTT is fetched too (`ZoomSource.fetchTranscript`, `ZoomSource.swift:789`), and the
+  bearer is kept on a redirect while it stays on `*.zoom.us` over HTTPS (`CloudTransferPolicy.zoom`,
+  `CloudDownloader.swift:47–73`).
 
-**Transcript work for Zoom** (Phase 5; all extensions):
+**Transcript work for Zoom** (Phase 5) — spec kept as the baseline; as built 17 Oct 2026. Where the
+build departed from the list below:
+- *No speaker names* is not a listing state on Zoom: the names are known only once the file is read.
+  The listing states are *Available* / *Expected* / *No transcript* (`ZoomTranscriptAvailability.decide`,
+  `ZoomRecordingModel.swift:292–312`).
+- The 24 h wait runs from when **the part ended**, not from when the recording appeared.
+- `ZoomPreflight.transcriptCaveat` (and `blockingReason`) are gone: both account sentences render through
+  `CloudAccountNotice` (`CloudImportSource.swift:38–55`) — `zoomCloudRecordingOff` replaces the empty
+  month, `zoomTranscriptOff` is a bar over the grid (keys `desktop.cloudImport.zoomCloudRecordingOff` /
+  `zoomTranscriptOff`).
+- `makeRow`'s `.unsupported` line is replaced by `ZoomTranscriptAvailability.decide`.
+
+The original list:
 - Download the `TRANSCRIPT` file beside the media, through the same `CloudDownloader` path
   (`ExpectedFile(expectedFormat: .webvtt)`).
 - Normalise `Name: text` to `<v Name>` with the existing `ZoomTranscript.splitSpeaker`, then write the
@@ -631,46 +650,48 @@ Background: the parking brief in the maintainer's private handoffs, and `docs/de
   Expected or No transcript using the preflight, as that comment asks.
 
 **Corrections from the 30 Sep research** (Zoom's OpenAPI specs and KB; fix the comments and code
-when Zoom resumes):
-1. **"English only, every plan" is stale.** Zoom's KB (updated 29 Sep 2026) lists 19 transcript
+when Zoom resumes). *Status 17 Oct 2026: 2–4 done, 1 unmeasured, 5 open, 6 partly answered.*
+1. *(Open — unmeasured until a recording exists.)* **"English only, every plan" is stale.** Zoom's KB (updated 29 Sep 2026) lists 19 transcript
    languages, but the default is English unless the host changes it, and Zoom's own pages disagree. A
    non-English interview can arrive transcribed by an English model. **Risk for the pipeline:** words
    in the wrong language. Measure it on a non-English test call; if it bites, a Zoom transcript in a
    language other than the one Whisper detects is refused.
-2. **The readiness endpoint in the comments (`GET /meetings/{id}/transcript`) serves the AI Companion
+2. *(Done 17 Oct 2026.)* **The readiness endpoint in the comments (`GET /meetings/{id}/transcript`) serves the AI Companion
    transcript, not the recording's VTT.** Readiness is simply the file appearing in the recordings
    list. Nothing calls that endpoint today; fix the comment in `ZoomRecordingModel.swift:121`.
-3. **Scopes:** the adapter calls `/users/me` and `/users/me/settings`, which need `user:read:user` and
+3. *(Done 17 Oct 2026: `ZoomScopes.readUser` / `readSettings`, four scopes in all.)* **Scopes:** the adapter calls `/users/me` and `/users/me/settings`, which need `user:read:user` and
    `user:read:settings`. `ZoomScopes.requested` lists neither. Add them to the Marketplace app and to
    `ZoomScopes`.
-4. **One meeting, several files.** A stop/restart recording carries several M4A/MP4 files and several
+4. *(Done 17 Oct 2026: `ZoomFileSelection.parts`, `ZoomRecordingModel.swift:214`.)* **One meeting, several files.** A stop/restart recording carries several M4A/MP4 files and several
    transcripts. `choose` takes the *first* of each, so later parts are silently dropped. Pair media and
    transcript by `recording_start` overlap, one row per part. This is an existing defect, independent
    of transcripts.
-5. **Sharing:** a private app can't be shared outside its own Zoom account (beta links need
+5. *(Open: Marketplace review.)* **Sharing:** a private app can't be shared outside its own Zoom account (beta links need
    security evidence and expire). Fine for the weekend's own-account test; real researchers need a
    published Marketplace app.
-6. **Plan:** the KB says Pro or higher for transcripts; the `transcript_completed` webhook doc says
+6. *(Partly answered 17 Oct 2026: a free Basic account can grant the `cloud_recording:*` scopes; which plan produces transcripts is still unmeasured.)* **Plan:** the KB says Pro or higher for transcripts; the `transcript_completed` webhook doc says
    Business, Education or Enterprise. Measure it on the test account.
 
-**Resolved 17 Oct 2026:** the App ID capability is back on, the Mac App Store profile was regenerated with it (the 12 Sep copy deleted), and `webcredentials:bristlenose.app` is in the store and Debug entitlements, signed into a Debug build and pinned at HEAD by `tests/test_entitlements_split.py`. The Debug team profile from 16 Aug already carried it, so no Xcode sign-in was needed. The record of the blocker follows. **Blocker found 1 Oct 2026: the Associated Domains entitlement is gone.** The parking brief lists it as
+**Resolved 17 Oct 2026:** the App ID capability is back on, the Mac App Store profile was regenerated with it (the 12 Sep copy deleted), and `webcredentials:bristlenose.app` is in the store and Debug entitlements, signed into a Debug build and pinned at HEAD by `tests/test_entitlements_split.py`. The Debug team profile from 16 Aug already carried it, so no Xcode sign-in was needed (`0b50d663`). The record of the blocker follows.
+
+**Blocker found 1 Oct 2026: the Associated Domains entitlement is gone.** The parking brief lists it as
 "banked", but it was a skip-worktree edit, removed on 12 Sep 2026 when the app group landed (`11d9cb6f`),
 and the App ID's Associated Domains capability was switched off in the portal the same day.
 `ZoomOAuth.presentConsent` depends on it: without it, the browser opens, the user consents, and
 **nothing comes back**. The website half is fine: `https://bristlenose.app/.well-known/apple-app-site-association`
 serves `200 application/json` with `webcredentials` for `Z56GZVA2QB.app.bristlenose` (measured 1 Oct).
 
-**Weekend checklist** (parking brief steps, updated):
-1. **Zoom:** one Pro seat (£11.99, monthly). Turn on **cloud recording** and **"Create audio
+**Live-test checklist** (parking brief steps, updated; first written as the "weekend checklist"). *17 Oct 2026: steps 2–4 done; 1 and 5 remain.*
+1. *(Open: the Pro seat is not bought yet.)* **Zoom:** one Pro seat (£11.99, monthly). Turn on **cloud recording** and **"Create audio
    transcript"** *before* recording anything; neither applies retroactively. On a multi-seat account,
    pre-approve the app in the admin console (Marketplace pre-approval is on by default).
-2. **Marketplace General App:**
+2. **Done 17 Oct 2026** (Development credentials; the first live sign-in, `efbb9c8a`, showed the four scopes on the consent page). **Marketplace General App:**
    - Use Public Client OAuth; take the *public* client ID.
    - Redirect and allow list: `https://bristlenose.app/auth/zoom`, strict match.
    - Scopes, all **required**: `cloud_recording:read:list_user_recordings`,
      `cloud_recording:read:list_recording_files`, `user:read:user`, `user:read:settings`.
    - Don't submit for review.
-3. **Apple side (code + portal):**
+3. **Done 17 Oct 2026** (`0b50d663`; the `.dmg` question is decided: **no**, it does not carry the entitlement). **Apple side (code + portal):**
    - Re-add `com.apple.developer.associated-domains = ["webcredentials:bristlenose.app"]`
      (`webcredentials`, not `applinks`; an `applinks`-only entry hangs) to `Bristlenose.entitlements`
      and `BristlenoseDebug.entitlements`. Decide whether the Developer-ID `.dmg` carries it too.
@@ -679,10 +700,10 @@ serves `200 application/json` with `webcredentials` for `Z56GZVA2QB.app.bristlen
    - Re-enable Associated Domains on the App ID and regenerate the **Manual** Mac App Store profile, or
      the next release archive fails to sign. Debug signing re-mints automatically.
    - `swcutil reset` if a failed lookup is cached.
-4. **Wire the client:** `defaults write app.bristlenose ZoomOAuthPublicClientID "<id>"`,
+4. **Done 17 Oct 2026.** The flag write is now optional: turning on the Diagnostics menu offers Zoom by itself (`CloudPlatform.zoomOffered`, `3f91d03c`). **Wire the client:** `defaults write app.bristlenose ZoomOAuthPublicClientID "<id>"`,
    `defaults write app.bristlenose ZoomOAuthRedirectURI "https://bristlenose.app/auth/zoom"`, and
    `defaults write app.bristlenose BristlenoseCloudImportZoom -bool YES`.
-5. **Record two short test calls, one in a language other than English**, and wait (roughly twice the
+5. *(Open: needs the Pro seat.)* **Record two short test calls, one in a language other than English**, and wait (roughly twice the
    recording's length, plus the transcript). Then sign in, list, import, and check: the bytes arrive;
    the M4A is chosen; Expires shows; the VTT exists and its speaker names parse; and the transcript's
    language (correction 1).
@@ -691,7 +712,7 @@ serves `200 application/json` with `webcredentials` for `Z56GZVA2QB.app.bristlen
 
 | Link | Today | Evidence |
 |---|---|---|
-| Import downloads the transcript | **No**, on all three platforms | `TeamsSource.swift:762`, `GoogleMeetSource.swift:1486`, `ZoomSource.swift:656`: media only |
+| Import downloads the transcript | ~~**No**, on all three platforms~~ **Meet and Zoom yes (Phases 2 and 5); Teams no** (17 Oct 2026) | `GoogleMeetSource.fetchTranscript` (`GoogleMeetSource.swift:1713`), `ZoomSource.fetchTranscript` (`ZoomSource.swift:789`); Teams media only. First written against `TeamsSource.swift:762`, `GoogleMeetSource.swift:1486`, `ZoomSource.swift:656` |
 | Recording + transcript become one session | Yes, by filename stem | MEASURED; `s01_ingest.py:388` strips BN's download stamp |
 | Transcript used instead of Whisper | Yes | MEASURED; `s02_extract_audio.py:67`, `pipeline.py:2942` |
 | Splitter skipped when 2+ names | Yes | MEASURED; `s05b_identify_speakers.py:219` |
@@ -805,10 +826,10 @@ so it proves the whole chain end to end at the lowest cost.
   gains the transcript hash (MEASURED: stale quotes).
 - Then the handoff's "transcripts only" decline becomes "analyse". One `case`, pinned by a test.
 
-**Phase 5: Zoom, when unparked (Swift, S–M).** Built adapter, corrections and weekend checklist in §1b.
+**Phase 5: Zoom — built 17 Oct 2026 (Swift, S–M).** *First written as "Zoom, when unparked".* Built adapter, corrections and live-test checklist in §1b. Open: Marketplace review, and a live import on a Pro account.
 
 - Download the VTT alongside the media and convert `Name:` prefixes to voice tags.
-- Readiness means the file appears in the list; re-list with back-off and give up after 24–48 h.
+- Readiness means the file appears in the list; re-list with back-off and give up after 24–48 h. *As built: the re-check is window-scoped (one `GET /meetings/{uuid}/recordings` per meeting, `ZoomSource.swift:916`) with a fixed 24 h window from when the part ended, not a back-off.*
 - Pair media and transcript by time overlap.
 - Fix the scopes and the wrong readiness endpoint.
 - Plan a Marketplace listing.
@@ -982,10 +1003,10 @@ See `docs/mockups/cloud-import-transcript-pairs.html`.
   | Available | none (plain grey) | transcript paired by `contentCorrelationId` | `FILE_GENERATED`, count settled | `TRANSCRIPT` file listed | ticked |
   | Expected | none (glyphless); Status says *Waiting for transcript* | recording < 4 h old, none yet (inference) | `STARTED`/`ENDED`, or still settling (certain) | setting on, no file, < 24 h | **disabled**; the footer's *Include {N} waiting on transcription* enables it |
   | No transcript | info | none after 4 h | no transcript resource on an ended call | setting off, or none after 24 h | ticked; Bristlenose transcribes |
-  | No speaker names | info | `403 SpeakerAttributionNotAllowed` (text only) | — | VTT without `Name:` | ticked; speakers left unseparated |
+  | No speaker names | info | `403 SpeakerAttributionNotAllowed` (text only) | — | ~~VTT without `Name:`~~ not a Zoom state (17 Oct 2026) | ticked; speakers left unseparated |
   | Needs approval | glyphless; the bar carries the warning | transcript permission not granted | — | — | ticked |
   | Needs access (`statusNeedsAccess`) | warning | — | `meetings.space.readonly` declined | — | ticked |
-  | Unavailable (`statusUnavailable`) | warning | `403 GraphAccessToTranscriptsDisabled` | edition or language | plan | ticked |
+  | Unavailable (`statusUnavailable`) | warning | `403 GraphAccessToTranscriptsDisabled` | edition or language | ~~plan~~ not a Zoom state (17 Oct 2026) | ticked |
   | Couldn't match (`statusNotResolved`) | warning | no recording with that correlation id, or the timing check fails | `startTime` missing, or the duration check fails | — | ticked; Bristlenose transcribes |
   | No longer available (`statusNoLongerAvailable`) | warning | meeting object expired | 30 days | auto-deleted | ticked |
   | In this project | info | — | — | — | disabled, as today |
@@ -1061,7 +1082,7 @@ tree first** (the harnesses already reproduce every defect), then turned green. 
 | 4 per-session fingerprints | M–L | cache-invalidation bugs are silent: prove each red first |
 | 5 Zoom | S–M | Marketplace publication |
 
-App Store: no new entitlement. Import is ingress; consent was already settled on 22 Aug 2026.
+App Store: no new entitlement. Import is ingress; consent was already settled on 22 Aug 2026. *Except Zoom (17 Oct 2026): its HTTPS sign-in re-adds Associated Domains (`webcredentials:bristlenose.app`) to the store and Debug entitlements only, not the `.dmg` (`0b50d663`, pinned by `tests/test_entitlements_split.py`).*
 
 ---
 

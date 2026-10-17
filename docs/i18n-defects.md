@@ -199,6 +199,11 @@ The figure above is counted. `en` itself: 1,641 → 1,536 keys, 9 → 6 namespac
    `en` keys — counted 22 Sep 2026. This line said 145, which was carried from
    earlier in the session rather than recounted, in the same commit whose
    subject was a number that had been multiplied.
+   **Recounted 17 Oct 2026** from `tests/test_locale_key_readers.py`: **68** leaves
+   in **17** blocks (62 `dead` in 16 blocks, 6 `reserved` in 1). The `triaged`
+   tag retired 17 Oct (`c0d0e546`): its last keys, `zoomCloudRecordingOff` and
+   `zoomTranscriptOff`, now read through `CloudAccountNotice`. The 1,532 `en`
+   figure is still the 22 Sep count.
    Deletion is safe now the gate exists and pins leaves rather than counts.
 5. ~~**Decisions 2, 4 and 5** (rows 4, 6, 16)~~ — **all three were already closed
    when this list was written, 22 Sep 2026.** `check-locales.py --strict` has been

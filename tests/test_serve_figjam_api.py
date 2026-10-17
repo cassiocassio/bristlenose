@@ -37,7 +37,7 @@ def test_downloads_the_board_document(client: TestClient) -> None:
     assert resp.headers["content-type"].startswith("application/json")
     disposition = resp.headers["content-disposition"]
     assert disposition.startswith("attachment;")
-    assert disposition.endswith('-figjam-board.json"')
+    assert '-figjam-board.json"' in disposition
     doc = resp.json()
     assert (doc["format"], doc["version"]) == ("bristlenose-board", 1)
     assert len(_quotes(doc)) == 4
@@ -86,8 +86,10 @@ def test_a_project_named_outside_latin_1_still_downloads(client: TestClient) -> 
     assert resp.status_code == 200
     disposition = resp.headers["content-disposition"]
     assert disposition.isascii()
+    assert "filename*=UTF-8''" in disposition
     star = disposition.split("filename*=UTF-8''", 1)[1]
     assert unquote(star) == "駅の調査 Łódź-figjam-board.json"
+    assert 'filename="' in disposition  # the ASCII fallback for old readers
     assert "駅の調査" in json.loads(resp.content)["title"]
 
 

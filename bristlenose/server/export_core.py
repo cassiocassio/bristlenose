@@ -69,12 +69,22 @@ def attachment_disposition(filename: str) -> str:
     and the download is a 500. RFC 6266: an ASCII ``filename`` for old
     readers and the real name, percent-encoded, in ``filename*`` — the same
     form Starlette's own ``FileResponse`` uses. Expects a ``safe_filename``
-    result, which already has no quote marks or separators.
+    result, which already has no quote marks, separators or CR/LF.
+
+    Three things ``safe_filename`` leaves that a header must not carry, or
+    should not trust (review, 17 Oct 2026): other control characters, which
+    h11 refuses outright (a 500); bidi overrides, which make a name read in
+    the wrong order in the save dialog; and a bare ``filename`` read on its
+    own, which Chromium percent-decodes ("100%20 study" saves as "100 study")
+    — so ``filename*`` is always sent, even for an ASCII name.
     """
-    if filename.isascii():
-        return f'attachment; filename="{filename}"'
-    fallback = filename.encode("ascii", "replace").decode("ascii").replace("?", "_")
-    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(filename)}"
+    clean = "".join(c for c in filename if c not in _HEADER_UNSAFE and c >= " ")
+    fallback = clean.encode("ascii", "replace").decode("ascii").replace("?", "_")
+    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(clean, safe='')}"
+
+
+# DEL and the Unicode bidi embeddings, overrides and isolates.
+_HEADER_UNSAFE = frozenset("\x7f\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
 
 
 def excel_sheet_name(name: str, max_length: int = 31) -> str:

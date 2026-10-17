@@ -210,3 +210,13 @@ Smallest first; each step ends usable and green.
    the existing export surfaces (§7).
 4. ~~A screen revisited later appears once, at its first visit (§2).~~ Overtaken: the board has a
    frame per screen (§6); the folder keeps one still per participant per screen.
+5. **Quote stickies are cut at 300 characters** on both Miro boards (`MAX_QUOTE_CHARS` in
+   `server/miro_export.py`, `_MAX_QUOTE_CHARS` in `routes/screens_export.py`), from the days of
+   240-wide squares; FigJam's board document carries the full text. Remove the cut now stickies
+   are 300-wide rectangles and Miro shrinks the type? Owner's call (raised by the FigJam session,
+   17 Oct 2026).
+6. **Withdrawn participants:** the pipeline's per-session prune does not touch
+   `bristlenose-output/screens/` (files are named by participant code), so a withdrawn
+   participant's stills stay until the next export rewrites the folder. Clear them on withdrawal?
+7. **By hand:** Copy Screens from the sandboxed Mac app, pasted into Miro and FigJam (the probe
+   that settled §5 ran unsandboxed).

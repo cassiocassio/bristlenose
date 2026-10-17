@@ -67,6 +67,56 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.39.0 — 17 Oct 2026 · Tier 1 (minor — the timeline in every Sessions row and the transcript, gutter links, screens exports, four palettes)
+
+**What shipped.** A timeline strip under every Sessions row that springs into the full timeline;
+the session timeline in place of a transcript's journey chain (Compact / Standard / Full); the
+transcript gutter linking quotes, screens and the moderator's questions to their lenses; Export
+Screens, Copy Screens and a Miro screens board on the Screens lens; Catppuccin, Gruvbox, Rosé Pine
+and Solarized in light and dark; one arrival flash on whatever a link lands on; renamed headings
+shown everywhere. Zoom import rides along behind the Diagnostics gate and is kept out of the notes
+until Zoom's review clears; FigJam stays parked behind its flags. A Saturday-afternoon release, so
+the owner could test-install the `.dmg` the next morning. Six sessions were open at the start: two
+closed unprompted, four signed off after one message each (the timeline toggle last, at 13:15).
+
+**Verified 9 of 9** (`release.sh verify 0.39.0`) at about 15:35 BST: PyPI (200), GitHub
+Release, Homebrew, TestFlight 5120, `.dmg`, Snap edge, Copr, and the website, deployed from a
+clean worktree of the website repo's committed HEAD. Tag `v0.39.0` on `30245fec`, the exact
+commit strict CI passed. winget, a follower, has no PR for 0.39.0.
+
+**Three CI stops, one fixed and one a race the release did not make.**
+
+| stop | cause | fix |
+|---|---|---|
+| early preflight: main CI red at `af072b15` | a hardcoded aria-label in `SessionTapestry.tsx` (every pytest cell); vitest's one unhandled error, `scrollToLand`'s 150 ms settle timer firing after jsdom tore the document down, blamed on `TocSidebar.test.tsx` | the timeline session folded `t()` into `15aa12ad`; `5078c4db` cancels the correction in a global `afterEach` |
+| run 1 preflight: main ci | HEAD unpushed, so the last CI it could read was the red one | pushed `cda39657` and waited for its push run (green bar the soft mypy cell) |
+| ci-green 1, 2 (`30245fec`) | `test_serve_while_the_output_is_stashed_then_restored` on macOS 3.11, twice: after a restore the serve reattaches, re-creates an empty schema, and the report stays empty | re-ran the failed job; green on attempt 3. Not caused by this range (the reattach path is unchanged since 0.38.0) |
+| tag's release run, attempt 1 | the same test on macOS 3.11, and `reanalyse-fails-curation-survives` on Ubuntu 3.13: the same restore path | re-ran the failed jobs; green on attempt 2, PyPI 200 at 15:28 |
+
+Run times: preflight 172 s · build-all 481 s · build-dmg 733 s · strict CI 776 s (attempt 3) ·
+TestFlight 421 s · `.dmg` upload 285 s · tag 2 s; tag to PyPI about 40 min across two attempts.
+No artefact was rebuilt: every stop after the bump was a re-run on the same commit.
+
+**Tricky things.**
+
+- **A restore race failed four of five CI attempts in one afternoon and passed 24 of 24 parallel
+  local runs.** The tell: `database absent, events log present — reattaching`, then
+  `re-creating schema`, then `no such table: projects` in the captured log, and a report that
+  stays empty. It is a product bug on the failed-Re-analyse path, not a slow test; re-running is
+  what got this release out, and that has now happened twice in a row on one path. A gate is
+  owed: it is filed as its own task with the diagnosis, including that the fixture's backup
+  carries no database, so "absent" may be the restore's final state rather than mid-swap.
+- **`release.sh run` reads CI from the last *pushed* commit.** Fixes committed locally and not
+  pushed still leave the preflight reading the red run; push `main` first.
+- **Vitest blames whichever file is running when a stray timer fires.** The `TocSidebar` file
+  passed alone every time; the stack trace (`scrollToLand.ts:65`) named the real source.
+
+**Owed.** The restore race (spawned task). mypy's soft cell reported 34 errors, in `screen_text/`,
+`routes/screens_export.py`, `routes/screens.py`, `miro_client.py` and `mcp_server.py`; the
+ratchet cell passed.
+
+---
+
 ## 0.38.0 — 16 Oct 2026 · Tier 1 (minor — lenses during the first analysis, the Screens lens, project identity, scene timeline)
 
 **What shipped.** The Sessions and Quotes lenses open while a first analysis runs; the Mac app

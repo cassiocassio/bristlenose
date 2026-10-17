@@ -41,7 +41,7 @@ from bristlenose.board_layout import (
     fit_miro_sticky,
     layout_board,
 )
-from bristlenose.board_manifest import build_manifest
+from bristlenose.board_manifest import FIGJAM_STICKY_SHAPE, build_manifest
 from bristlenose.board_palette import FIGJAM_TOKEN_HEX
 from bristlenose.i18n import plural_in, t_in
 from bristlenose.miro_render_svg import render_html
@@ -172,7 +172,8 @@ def build_board(db: Session, project_id: int, project_name: str,
 
 def build_figjam_manifest(db: Session, project_id: int, project_name: str,
                           quote_ids: list[str] | None, *, clips_base: str = "",
-                          locale: str = "en", split: bool = True) -> dict[str, Any]:
+                          locale: str = "en", split: bool = True,
+                          sticky_shape: str = FIGJAM_STICKY_SHAPE) -> dict[str, Any]:
     """The FigJam board document (`board_manifest`): the same selection, order,
     words and title as a Miro board, carried as structure for the plugin.
 
@@ -191,6 +192,7 @@ def build_figjam_manifest(db: Session, project_id: int, project_name: str,
         generator=f"Bristlenose {__version__}",
         requested=len(dict.fromkeys(quote_ids)) if quote_ids else None,
         split=split,
+        sticky_shape=sticky_shape,
     )
 
 

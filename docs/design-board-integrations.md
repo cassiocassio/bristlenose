@@ -675,6 +675,19 @@ x-height and step right by the same, so each left edge shows a small square notc
 and clip link go on the last part. Built and checked in the scratch board: a pair
 and a trio from the fixture, both grouped, 8 of 8 quotes.
 
+**Sticky shape: square on FigJam, rectangle on Miro, both offered (owner, 17 Oct
+2026).** Each export dialog gets a Square / Rectangle radio pair set to its board's
+default; the FigJam download takes `sticky_shape`, default `square`
+(`board_manifest.FIGJAM_STICKY_SHAPE`). The owner's reason is **density**:
+researchers want boards they can read a lot of at once, legibly, to make fast
+grouping, deleting and interpreting decisions — and a FigJam sticky can't shrink to
+its text (fixed 240 or 416 wide, at least 240 tall), so the wide one wastes space
+Miro never does. Square is 43% narrower, so more columns fit on screen and a split
+part (≈325 characters) about fills its square. The defaults are the owner's
+intuition from using both apps, stated as such; the radio is there because users
+will want to pick. Short quotes and header stickies still leave space in a square;
+see the open density options below.
+
 **Security disciplines for the Lucid renderer (F2):**
 - **`lucid_package.py` builds `document.json` as a Python dict and serialises via
   `json.dumps(..., ensure_ascii=True)` exactly once — never string-templates JSON.**

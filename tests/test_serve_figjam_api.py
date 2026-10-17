@@ -160,3 +160,10 @@ def test_long_quotes_split_unless_the_researcher_unticks_it(client: TestClient, 
     whole = client.get(_URL, params={"split_long_quotes": "false"}).json()
     assert max(len(q["parts"]) for q in _quotes(split)) > 1
     assert all(len(q["parts"]) == 1 for q in _quotes(whole))
+
+
+def test_square_by_default_and_rectangle_on_request(client: TestClient) -> None:
+    """FigJam's default is square, Miro's rectangle (owner); the dialog offers both."""
+    assert client.get(_URL).json()["sticky_shape"] == "square"
+    assert client.get(_URL, params={"sticky_shape": "rectangle"}).json()["sticky_shape"] == "rectangle"
+    assert client.get(_URL, params={"sticky_shape": "circle"}).status_code == 422

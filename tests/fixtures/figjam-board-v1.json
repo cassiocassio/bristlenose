@@ -5,7 +5,7 @@
  "generator": "Bristlenose (fixture)",
  "locale": "en",
  "title": "Fixture study \u2014 research board (8 quotes)",
- "sticky_shape": "rectangle",
+ "sticky_shape": "square",
  "strings": {
   "clip": "\u25b6 clip"
  },

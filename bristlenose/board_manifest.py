@@ -37,7 +37,6 @@ from typing import Any
 
 from bristlenose.board_layout import (
     HEADER_TOKEN,
-    STICKY_SHAPE,
     BoardStrings,
     Column,
     attribution,
@@ -59,6 +58,12 @@ FORMAT = "bristlenose-board"
 VERSION = 1
 MIN_READER_VERSION = 1
 
+#: FigJam's default sticky shape is square; Miro's is rectangle (owner, 17 Oct 2026:
+#: an intuition from using both apps, not a measurement). The export dialog offers
+#: both, set to this.
+STICKY_SHAPES = ("square", "rectangle")
+FIGJAM_STICKY_SHAPE = "square"
+
 
 def build_manifest(
     columns: list[Column],
@@ -72,6 +77,7 @@ def build_manifest(
     colour_by: str = "none",
     requested: int | None = None,
     split: bool = True,
+    sticky_shape: str = FIGJAM_STICKY_SHAPE,
 ) -> dict[str, Any]:
     """The document as a dict. `palette` maps every colour token used to hex.
 
@@ -123,9 +129,9 @@ def build_manifest(
         "generator": generator,
         "locale": locale,
         "title": title,
-        # The house shape on every board (`board_layout.STICKY_SHAPE`); the
-        # plugin draws "rectangle" as FigJam's wide sticky.
-        "sticky_shape": STICKY_SHAPE,
+        # Square by default on FigJam; the plugin draws "rectangle" as
+        # FigJam's wide sticky.
+        "sticky_shape": sticky_shape,
         "strings": {"clip": f"▶ {clip_label}"},
         # A token with no colour is a bug here, not a yellow sticky there.
         "palette": {t: palette[t] for t in sorted(used)},

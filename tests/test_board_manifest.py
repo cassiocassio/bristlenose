@@ -93,7 +93,7 @@ def test_document_shape_is_the_version_1_contract():
         "clip_url": None,
     }]
     assert m["strings"] == {"clip": "▶ clip"}
-    assert m["sticky_shape"] == "rectangle"  # the house shape on every board
+    assert m["sticky_shape"] == "square"  # FigJam's default (owner, 17 Oct 2026)
 
 
 def test_flat_by_default_with_figjams_own_palette_colours():

@@ -46,9 +46,9 @@ describe("the version-1 fixture", () => {
     expect(plan(additive)).toEqual(plan(plain));
   });
 
-  it("draws rectangles as FigJam's wide sticky", () => {
-    expect(plan(plain).wide).toBe(true);
-    expect(plan(edited((d) => (d.sticky_shape = "square"))).wide).toBe(false);
+  it("draws a square file square, and a rectangle as FigJam's wide sticky", () => {
+    expect(plan(plain).wide).toBe(false);
+    expect(plan(edited((d) => (d.sticky_shape = "rectangle"))).wide).toBe(true);
   });
 
   it("keeps Bristlenose's order", () => {

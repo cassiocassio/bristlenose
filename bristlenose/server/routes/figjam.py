@@ -13,13 +13,14 @@ under `/export/`, scope as comma-separated DOM ids, the board's language as
 from __future__ import annotations
 
 import logging
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from starlette.responses import Response
 
-from bristlenose.board_manifest import to_json
+from bristlenose.board_manifest import FIGJAM_STICKY_SHAPE, to_json
 from bristlenose.i18n import canonical_locale
 from bristlenose.server import miro_export
 from bristlenose.server.export_core import (
@@ -60,6 +61,8 @@ def export_figjam_board(
     lang: str = Query("en", description="The board's language (the caller's UI locale)"),
     clips_base: str = Query("", description="Opt-in http(s) folder of exported clips"),
     split_long_quotes: bool = Query(True, description="Long quotes as two or three stickies"),
+    sticky_shape: Literal["square", "rectangle"] = Query(
+        FIGJAM_STICKY_SHAPE, description="Square by default on FigJam"),
 ) -> Response:
     """The project's (optionally scoped) quotes as a FigJam board document."""
     # One normalised code for the words, the document's `locale` and the log,
@@ -75,6 +78,7 @@ def export_figjam_board(
         manifest = miro_export.build_figjam_manifest(
             db, project_id, name, parse_quote_ids(quote_ids),
             clips_base=clips_base, locale=locale, split=split_long_quotes,
+            sticky_shape=sticky_shape,
         )
         n = sum(len(c["quotes"]) for f in manifest["frames"] for c in f["columns"])
         if n == 0:

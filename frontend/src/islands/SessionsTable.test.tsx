@@ -13,7 +13,7 @@ import { _resetEmbeddedCache } from "../utils/embedded";
 import { _resetExportCache } from "../utils/exportData";
 import { getUndoState, redo, resetUndoStore, undo } from "../contexts/UndoStore";
 import { resetSpeakerNameQueue } from "../utils/speakerNames";
-import { resetTapestryViews } from "../utils/tapestryScale";
+import { loadTapestryView, resetTapestryViews } from "../utils/tapestryScale";
 
 // SessionsTable uses useNavigate (journey deep-links) — provide a Router.
 const render = (ui: Parameters<typeof rtlRender>[0]) =>
@@ -271,6 +271,14 @@ describe("SessionsTable row click", () => {
     await screen.findByText("#2");
     fireEvent.click(row(2).querySelector(".bn-cell-duration")!);
     expect(screen.getByTestId("where").textContent).toBe("/report/sessions/s2");
+  });
+
+  it("a modifier-click on the row leaves it to the #N link's new tab", async () => {
+    mockFetchResponses();
+    renderWithProbe();
+    await screen.findByText("#2");
+    fireEvent.click(row(2).querySelector(".bn-cell-duration")!, { metaKey: true });
+    expect(screen.getByTestId("where").textContent).toBe("/report/sessions");
   });
 
   it("a control inside the row keeps its own click", async () => {
@@ -1376,8 +1384,10 @@ describe("SessionsTable — session tapestry", () => {
       expect(await screen.findByRole("group", { name: "Session timeline" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Timeline for session 1" })).toHaveAttribute("aria-expanded", "true");
       expect(screen.getByTestId("where").textContent).toBe("/report/sessions");
-      // Closing without motion (jsdom has no Web Animations) is immediate.
+      // Closing without motion (jsdom has no Web Animations) is immediate, and the close is
+      // saved at the click, before any fold, so leaving mid-fold comes back closed.
       fireEvent.click(screen.getByRole("button", { name: "Timeline for session 1" }));
+      expect(loadTapestryView("1").open).not.toContain("s1");
       await waitFor(() => expect(document.getElementById("bn-tapestry-s1")).toBeNull());
     } finally {
       if (was) Object.defineProperty(HTMLElement.prototype, "clientWidth", was);

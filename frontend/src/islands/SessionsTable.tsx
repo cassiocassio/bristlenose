@@ -630,20 +630,29 @@ export function SessionsTable({
       if (!openTapestries.has(sid)) {
         landing.current.add(sid);
       } else {
+        // A close before the lazy slice mounted must not leave an animation pending for the
+        // next mount (a restore on return would then animate).
+        landing.current.delete(sid);
         const row = rowOf(sid);
         const slice = document.getElementById(`bn-tapestry-${sid}`);
         const svg = slice?.querySelector<SVGSVGElement>(".bn-tapestry-svg");
         if (row && slice && svg) {
           folding.current.add(sid);
-          // Loaded on first use: the grid is on first paint, the animation is not.
-          void import("../utils/tapestryMotion").then((m) => m.foldTapestry({ row, slice, svg })).then(() => {
-            folding.current.delete(sid);
+          // The close is the researcher's now: saved before the animation, so leaving the lens
+          // mid-fold (a click into a transcript) still comes back to it closed.
+          saveTapestryView(projectId, { open: [...openTapestries].filter((x) => x !== sid) });
+          const close = () =>
             setOpenTapestries((prev) => {
               const next = new Set(prev);
               next.delete(sid);
               return next;
             });
-          });
+          // Loaded on first use: the grid is on first paint, the animation is not.
+          void import("../utils/tapestryMotion")
+            .then((m) => m.foldTapestry({ row, slice, svg }))
+            .catch(() => undefined)
+            .then(close)
+            .finally(() => folding.current.delete(sid));
           return;
         }
       }
@@ -762,7 +771,7 @@ export function SessionsTable({
             tapestryOpen={ts ? open : undefined}
             preview={ts && gridWidth > 0 ? (
               <TapestryPreview session={ts} width={gridWidth} isTeam={isTeamTurn}
-                onOpen={(all) => toggleTapestry(sess.session_id, all)} />
+                onToggle={(all) => toggleTapestry(sess.session_id, all)} />
             ) : undefined}
             onToggleTapestry={(all) => toggleTapestry(sess.session_id, all)}
             session={sess}
@@ -989,6 +998,8 @@ function SessionRow({
   // and a drag that selected text is a selection, not a click.
   const onRowClick = readable
     ? (e: React.MouseEvent<HTMLDivElement>) => {
+        // A modifier-click is a new-tab gesture, which only the row's #N link can honour.
+        if (e.metaKey || e.ctrlKey || e.shiftKey) return;
         const target = e.target as HTMLElement;
         const own = target.closest(ROW_OWN_CLICK);
         if (own && e.currentTarget.contains(own)) return;

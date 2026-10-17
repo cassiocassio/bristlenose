@@ -63,6 +63,12 @@ function setBox(el: Element, origin: string) {
   st.transformOrigin = origin;
 }
 
+function clearBox(el: Element) {
+  const st = (el as SVGElement).style;
+  st.transformBox = "";
+  st.transformOrigin = "";
+}
+
 interface FlightPair {
   label: HTMLElement;
   flag: SVGGElement;
@@ -79,6 +85,9 @@ function pairs(row: Element, svg: SVGSVGElement): FlightPair[] {
   });
   const out: FlightPair[] = [];
   row.querySelectorAll<HTMLElement>(".bn-session-journey .bn-journey-label").forEach((label) => {
+    // The grid's narrow rungs drop the chain (display: none): no box, nothing to fly from.
+    const r = label.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return;
     const flag = flags.get(label.textContent ?? "");
     if (flag) out.push({ label, flag });
   });
@@ -140,8 +149,9 @@ function flyWords(row: Element, svg: SVGSVGElement, clip: DOMRect, dir: "out" | 
       { duration: 380, delay, easing: WORD, fill: "both" });
     a.onfinish = () => {
       if (dir === "out" && spot.text) {
-        spot.text.style.transition = "opacity 80ms ease";
-        spot.text.style.opacity = "";
+        const t = spot.text;
+        t.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 80, easing: "ease" });
+        t.style.opacity = "";
       }
       if (dir === "in") label.style.visibility = "visible";
       word.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 80, fill: "both" }).onfinish = () => word.remove();
@@ -226,7 +236,8 @@ export function landTapestry({ row, slice, svg, preview }: Land): void {
 
   const land = (el: Element, keyframes: Keyframe[], delay: number, origin: string, easing = SPRING, duration = 260) => {
     setBox(el, origin);
-    el.animate(keyframes, { duration, delay, easing, fill: "backwards" });
+    // Leave nothing behind on nodes React owns: the box and origin go when the mark has landed.
+    el.animate(keyframes, { duration, delay, easing, fill: "backwards" }).onfinish = () => clearBox(el);
   };
   const fade: Keyframe[] = [{ opacity: 0 }, { opacity: 1 }];
   svg.querySelectorAll(".bn-tp-lane").forEach((el) => land(el, fade, 0, "0 0", "ease-out"));
@@ -274,7 +285,10 @@ export function foldTapestry({ row, slice, svg }: Omit<Land, "preview">): Promis
   const fold = slice.animate([{ height: `${h}px`, marginBottom: mb }, { height: "0px", marginBottom: "0px" }],
     { duration: 220, delay: 100, easing: SETTLE, fill: "forwards" });
   return new Promise((resolve) => {
+    let settled = false;
     const done = () => {
+      if (settled) return;
+      settled = true;
       resolve();
       // Hand the chain back to the stylesheet once the row has re-rendered closed; clearing it
       // first would hide the words for a frame under the open row's rule.
@@ -286,5 +300,7 @@ export function foldTapestry({ row, slice, svg }: Omit<Land, "preview">): Promis
     const step = () => { pending -= 1; if (pending === 0) done(); };
     fold.onfinish = step;
     window.setTimeout(step, back + 60);
+    // A slice taken away mid-fold may never finish its animation: never leave the row stuck.
+    window.setTimeout(done, Math.max(back, 320) + 400);
   });
 }

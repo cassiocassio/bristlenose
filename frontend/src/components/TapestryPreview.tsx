@@ -15,10 +15,12 @@
 import type { TapestrySession } from "../utils/types";
 import { TAPESTRY_GUTTER, TAPESTRY_RIGHT } from "../utils/tapestryScale";
 
+/** The open timeline draws clips above this scale as bare slivers; so does the strip.
+ *  (Moves to utils/tapestryScale.ts, shared with SessionTapestry.) */
+const CLIP_THRESHOLD = 2.5;
+
 /** A quarter of the open timeline's participant clips (18 px). */
 export const PREVIEW_H = 4.5;
-/** The open timeline draws clips above this scale as bare slivers; so does the strip. */
-const CLIP_THRESHOLD = 2.5;
 
 interface Props {
   session: TapestrySession;
@@ -26,10 +28,12 @@ interface Props {
   width: number;
   /** Whether a turn is the team's: the server's answer, else the displayed code's letter. */
   isTeam: (turn: TapestrySession["turns"][number]) => boolean;
-  onOpen: (all: boolean) => void;
+  /** Open the timeline (or, once open, close it: the strip stays under the pointer while it
+   *  fades, so a double-click must not fall through to the row). `all` = Option-click. */
+  onToggle: (all: boolean) => void;
 }
 
-export function TapestryPreview({ session, width, isTeam, onOpen }: Props) {
+export function TapestryPreview({ session, width, isTeam, onToggle }: Props) {
   const usable = width - TAPESTRY_GUTTER - TAPESTRY_RIGHT;
   if (usable <= 0 || !(session.duration_seconds > 0)) return null;
   const sPerPx = session.duration_seconds / usable;
@@ -42,7 +46,7 @@ export function TapestryPreview({ session, width, isTeam, onOpen }: Props) {
       aria-hidden="true"
       onClick={(e) => {
         e.stopPropagation();
-        onOpen(e.altKey);
+        onToggle(e.altKey);
       }}
     >
       <svg

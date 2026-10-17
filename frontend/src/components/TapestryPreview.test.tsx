@@ -19,7 +19,7 @@ const isTeam = (tn: TapestrySession["turns"][number]) => tn.speaker.startsWith("
 
 describe("TapestryPreview", () => {
   it("draws every participant's turns in one lane, in scene colour, and no team turn", () => {
-    render(<TapestryPreview session={session} width={700} isTeam={isTeam} onOpen={() => {}} />);
+    render(<TapestryPreview session={session} width={700} isTeam={isTeam} onToggle={() => {}} />);
     const clips = [...document.querySelectorAll<SVGRectElement>(".bn-tp-pv-clip")];
     expect(clips).toHaveLength(2);
     expect(clips[0].style.fill).toMatch(/#9fceef|rgb\(159, 206, 239\)/);
@@ -28,14 +28,14 @@ describe("TapestryPreview", () => {
   });
 
   it("spans the row, its track starting where the open timeline's tracks start", () => {
-    render(<TapestryPreview session={session} width={700} isTeam={isTeam} onOpen={() => {}} />);
+    render(<TapestryPreview session={session} width={700} isTeam={isTeam} onToggle={() => {}} />);
     const track = document.querySelector(".bn-tp-pv-track")!;
     expect(track.getAttribute("x")).toBe("82");
     expect(Number(track.getAttribute("width"))).toBeCloseTo(700 - 82 - 14);
   });
 
   it("has no text and stays out of assistive technology: the disclosure is the accessible route", () => {
-    const { container } = render(<TapestryPreview session={session} width={700} isTeam={isTeam} onOpen={() => {}} />);
+    const { container } = render(<TapestryPreview session={session} width={700} isTeam={isTeam} onToggle={() => {}} />);
     expect(container.textContent).toBe("");
     expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
   });
@@ -46,7 +46,7 @@ describe("TapestryPreview", () => {
     render(
       // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
       <div onClick={onRow}>
-        <TapestryPreview session={session} width={700} isTeam={isTeam} onOpen={onOpen} />
+        <TapestryPreview session={session} width={700} isTeam={isTeam} onToggle={onOpen} />
       </div>,
     );
     const strip = document.querySelector(".bn-tapestry-preview")!;
@@ -57,9 +57,9 @@ describe("TapestryPreview", () => {
   });
 
   it("draws nothing without a width or a duration", () => {
-    const { container, rerender } = render(<TapestryPreview session={session} width={50} isTeam={isTeam} onOpen={() => {}} />);
+    const { container, rerender } = render(<TapestryPreview session={session} width={50} isTeam={isTeam} onToggle={() => {}} />);
     expect(container.firstChild).toBeNull();
-    rerender(<TapestryPreview session={{ ...session, duration_seconds: 0 }} width={700} isTeam={isTeam} onOpen={() => {}} />);
+    rerender(<TapestryPreview session={{ ...session, duration_seconds: 0 }} width={700} isTeam={isTeam} onToggle={() => {}} />);
     expect(container.firstChild).toBeNull();
   });
 });

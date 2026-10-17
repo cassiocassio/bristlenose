@@ -109,6 +109,18 @@ export interface FeatureFlags {
    * Design doc: `docs/design-screens.md` § S5.
    */
   screensQuoteCount: boolean;
+
+  /**
+   * "Send to FigJam…" in the Export menu: the board file the Bristlenose
+   * FigJam plugin opens (`FigJamExportPanel`).
+   *
+   * Parked 17 Oct 2026 until the plugin is published in Figma Community — a
+   * menu row whose last step is "run a plugin you can't install" is a dead
+   * affordance. The download route, the panel and their tests are live; flip
+   * this when the plugin is approved. Design doc:
+   * `docs/design-board-integrations.md` § Weekend build.
+   */
+  figjamExport: boolean;
 }
 
 /** The shipped state. Change these to flip a feature back on. */
@@ -119,6 +131,7 @@ const DEFAULTS: FeatureFlags = {
   speakerSwap: false,
   sceneNotches: false,
   screensQuoteCount: false,
+  figjamExport: false,
 };
 
 export const featureFlags: FeatureFlags = { ...DEFAULTS };

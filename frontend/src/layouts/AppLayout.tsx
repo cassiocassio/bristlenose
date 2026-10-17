@@ -24,6 +24,8 @@ import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
 import { SignalsSidebar } from "../components/SignalsSidebar";
 import { ExportDialog } from "../components/ExportDialog";
 import { MiroExportPanel } from "../components/MiroExportPanel";
+import { FigJamExportPanel } from "../components/FigJamExportPanel";
+import { featureFlags } from "../utils/featureFlags";
 import { ActivityChipStack, normaliseAutoCode } from "../components/ActivityChipStack";
 import type { ActivityJob } from "../components/ActivityChipStack";
 import { AnnounceRegion } from "../components/AnnounceRegion";
@@ -206,6 +208,7 @@ function AppShell() {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportAnonymise, setExportAnonymise] = useState(false);
   const [miroOpen, setMiroOpen] = useState(false);
+  const [figjamOpen, setFigjamOpen] = useState(false);
   const projectId = useProjectId();
   const isEmbeddedDesktop = useCallback(
     () => Boolean((window as unknown as { __BRISTLENOSE_EMBEDDED__?: boolean }).__BRISTLENOSE_EMBEDDED__),
@@ -284,6 +287,7 @@ function AppShell() {
   );
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
   const toggleMiro = useCallback(() => setMiroOpen((prev) => !prev), []);
+  const toggleFigJam = useCallback(() => setFigjamOpen((prev) => !prev), []);
   const navigate = useNavigate();
   const activityJobs = useActivityJobs();
 
@@ -908,8 +912,8 @@ function AppShell() {
         ) : undefined
       }
     >
-      {!embedded && <Header onExportReport={toggleExport} onSendToMiro={toggleMiro} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />}
-      {!embedded && <NavBar onExportReport={toggleExport} onSendToMiro={toggleMiro} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />}
+      {!embedded && <Header onExportReport={toggleExport} onSendToMiro={toggleMiro} onSendToFigJam={toggleFigJam} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />}
+      {!embedded && <NavBar onExportReport={toggleExport} onSendToMiro={toggleMiro} onSendToFigJam={toggleFigJam} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />}
       <main className="bn-main">
         <Suspense fallback={null}>
           <Outlet />
@@ -924,6 +928,7 @@ function AppShell() {
       )}
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
       <ExportDialog open={exportOpen} onClose={toggleExport} initialAnonymise={exportAnonymise} />
+      {featureFlags.figjamExport && <FigJamExportPanel open={figjamOpen} onClose={toggleFigJam} />}
       <MiroExportPanel
         open={miroOpen}
         onClose={toggleMiro}

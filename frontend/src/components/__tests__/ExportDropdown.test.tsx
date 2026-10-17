@@ -5,6 +5,7 @@ import { ExportDropdown } from "../ExportDropdown";
 import { initFromQuotes, resetStore } from "../../contexts/QuotesContext";
 import { FocusProvider } from "../../contexts/FocusContext";
 import type { QuoteResponse } from "../../utils/types";
+import { featureFlags, resetFeatureFlags } from "../../utils/featureFlags";
 
 // Mock API
 vi.mock("../../utils/api", () => ({
@@ -63,16 +64,21 @@ function makeQuote(overrides: Partial<QuoteResponse> = {}): QuoteResponse {
   };
 }
 
-function renderDropdown(initialEntry = "/report/quotes/") {
+function renderDropdown(initialEntry = "/report/quotes/", figjam = false) {
   const onExportReport = vi.fn();
   const onSendToMiro = vi.fn();
+  const onSendToFigJam = vi.fn();
   const router = createMemoryRouter(
     [
       {
         path: "/report/*",
         element: (
           <FocusProvider>
-            <ExportDropdown onExportReport={onExportReport} onSendToMiro={onSendToMiro} />
+            <ExportDropdown
+              onExportReport={onExportReport}
+              onSendToMiro={onSendToMiro}
+              onSendToFigJam={figjam ? onSendToFigJam : undefined}
+            />
           </FocusProvider>
         ),
       },
@@ -80,7 +86,7 @@ function renderDropdown(initialEntry = "/report/quotes/") {
     { initialEntries: [initialEntry] },
   );
   const result = render(<RouterProvider router={router} />);
-  return { ...result, onExportReport, onSendToMiro };
+  return { ...result, onExportReport, onSendToMiro, onSendToFigJam };
 }
 
 beforeEach(() => {
@@ -185,6 +191,24 @@ describe("ExportDropdown", () => {
     // product name, stable across locales).
     fireEvent.click(screen.getByRole("menuitem", { name: /miro/i }));
     expect(onSendToMiro).toHaveBeenCalledOnce();
+  });
+
+  it("parks Send to FigJam behind its flag", () => {
+    renderDropdown("/report/sessions/", true);
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
+    expect(screen.queryByTestId("bn-export-figjam")).toBeNull();
+  });
+
+  it("Send to FigJam calls onSendToFigJam once the flag is on", () => {
+    featureFlags.figjamExport = true;
+    try {
+      const { onSendToFigJam } = renderDropdown("/report/sessions/", true);
+      fireEvent.click(screen.getByRole("button", { name: "Export" }));
+      fireEvent.click(screen.getByTestId("bn-export-figjam"));
+      expect(onSendToFigJam).toHaveBeenCalledOnce();
+    } finally {
+      resetFeatureFlags();
+    }
   });
 
   it("closes dropdown after action", () => {

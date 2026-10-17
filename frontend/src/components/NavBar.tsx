@@ -19,6 +19,7 @@ import { useScreensAvailable } from "../islands/screens/availability";
 interface NavBarProps {
   onExportReport?: () => void;
   onSendToMiro?: () => void;
+  onSendToFigJam?: () => void;
   onSettings?: () => void;
   onHelp?: () => void;
 }
@@ -59,7 +60,7 @@ function tabClassName({ isActive }: { isActive: boolean }): string {
 }
 
 
-export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: NavBarProps) {
+export function NavBar({ onExportReport, onSendToMiro, onSendToFigJam, onSettings, onHelp }: NavBarProps) {
   const { t } = useTranslation();
   const lenses = useLenses();
   const { pathname } = useLocation();
@@ -114,7 +115,7 @@ export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: Nav
         </NavLink>
       )}
       {mode !== "iconsUp" && (
-        <NavTools onExportReport={onExportReport} onSendToMiro={onSendToMiro} onSettings={onSettings} onHelp={onHelp} />
+        <NavTools onExportReport={onExportReport} onSendToMiro={onSendToMiro} onSendToFigJam={onSendToFigJam} onSettings={onSettings} onHelp={onHelp} />
       )}
     </nav>
   );

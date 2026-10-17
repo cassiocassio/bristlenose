@@ -18,11 +18,12 @@ import { Icon } from "./Icon";
 export interface NavToolsProps {
   onExportReport?: () => void;
   onSendToMiro?: () => void;
+  onSendToFigJam?: () => void;
   onSettings?: () => void;
   onHelp?: () => void;
 }
 
-export function NavTools({ onExportReport, onSendToMiro, onSettings, onHelp }: NavToolsProps) {
+export function NavTools({ onExportReport, onSendToMiro, onSendToFigJam, onSettings, onHelp }: NavToolsProps) {
   const { t } = useTranslation();
   const root = useRef<HTMLDivElement>(null);
   const probeFull = useRef<HTMLSpanElement>(null);
@@ -38,7 +39,13 @@ export function NavTools({ onExportReport, onSendToMiro, onSettings, onHelp }: N
         </span>
       </span>
       <RefreshButton iconOnly data-testid="bn-navbar-refresh" />
-      {hasExport && <ExportDropdown onExportReport={onExportReport!} onSendToMiro={onSendToMiro!} />}
+      {hasExport && (
+        <ExportDropdown
+          onExportReport={onExportReport!}
+          onSendToMiro={onSendToMiro!}
+          onSendToFigJam={onSendToFigJam}
+        />
+      )}
       <button
         className="bn-tab bn-tab-icon"
         aria-label={t("nav.settings")}

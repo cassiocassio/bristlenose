@@ -747,6 +747,46 @@ export function postMiroExport(req: MiroExportRequest): Promise<MiroExportRespon
 }
 
 // ---------------------------------------------------------------------------
+// FigJam — a board file the Bristlenose FigJam plugin opens (no push, no token)
+// ---------------------------------------------------------------------------
+
+/** The choices the FigJam dialog sends: the same as the Miro export's, bar the connection. */
+export interface FigJamBoardRequest {
+  board_name: string;
+  locale: string;
+  split_long_quotes: boolean;
+  sticky_shape: "square" | "rectangle";
+  clips_base: string;
+}
+
+/** What the dialog reads back from the board file before downloading it. */
+export interface FigJamBoardSummary {
+  totals: { quotes: number };
+}
+
+function figjamBoardPath(req: FigJamBoardRequest): string {
+  const q = new URLSearchParams({
+    board_name: req.board_name,
+    lang: req.locale,
+    split_long_quotes: String(req.split_long_quotes),
+    sticky_shape: req.sticky_shape,
+  });
+  if (req.clips_base) q.set("clips_base", req.clips_base);
+  return `/export/figjam-board.json?${q.toString()}`;
+}
+
+/** Build the board file and read its counts — the check before the download, so a refusal
+ *  (`no_quotes_selected`, `clips_base_not_http`) is said in the dialog, not saved as a file. */
+export function getFigJamBoard(req: FigJamBoardRequest): Promise<FigJamBoardSummary> {
+  return apiGet<FigJamBoardSummary>(figjamBoardPath(req));
+}
+
+/** The same file's address, for a download the browser (or the Mac's save panel) handles. */
+export function figjamBoardDownloadUrl(req: FigJamBoardRequest): string {
+  return `${apiBase()}${figjamBoardPath(req)}`;
+}
+
+// ---------------------------------------------------------------------------
 // Manual re-assignment (Phase 0) — move quote(s) into a section or theme
 // ---------------------------------------------------------------------------
 

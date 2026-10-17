@@ -27,6 +27,7 @@ import { isExportMode } from "../utils/exportData";
 import { isReportPartial, useLenses } from "../contexts/ConditionStore";
 import { Icon } from "./Icon";
 import { toggleSubtitlePref, useSubtitlePrefs } from "../utils/subtitlePrefs";
+import { featureFlags } from "../utils/featureFlags";
 
 // ── Icon ──────────────────────────────────────────────────────────────────
 
@@ -51,11 +52,13 @@ function isScreensTab(pathname: string): boolean {
 interface ExportDropdownProps {
   onExportReport: () => void;
   onSendToMiro: () => void;
+  /** Absent, or parked behind `featureFlags.figjamExport`, and the row is not shown. */
+  onSendToFigJam?: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
 
-export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownProps) {
+export function ExportDropdown({ onExportReport, onSendToMiro, onSendToFigJam }: ExportDropdownProps) {
   const { t } = useTranslation();
   // A first analysis still delivering sessions: the report is not whole yet.
   const reportPartial = isReportPartial(useLenses());
@@ -141,6 +144,13 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
     setOpen(false);
     onSendToMiro();
   }, [setOpen, onSendToMiro]);
+
+  // FigJam — a board file for the plugin (FigJamExportPanel, in AppLayout).
+  const handleSendToFigJam = useCallback(() => {
+    setOpen(false);
+    onSendToFigJam?.();
+  }, [setOpen, onSendToFigJam]);
+  const showFigJam = featureFlags.figjamExport && !!onSendToFigJam;
 
   // Every row's key handler only stops the page scrolling: useMenuKeyboard
   // already turns Enter/Space on the focused row into a click, so running the
@@ -302,6 +312,18 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
           >
             {t("miro.menuLabel")}
           </li>
+          {showFigJam && (
+            <li
+              role="menuitem"
+              tabIndex={-1}
+              className="export-dropdown-item"
+              onClick={handleSendToFigJam}
+              onKeyDown={suppressKeyScroll}
+              data-testid="bn-export-figjam"
+            >
+              {t("figjam.menuLabel")}
+            </li>
+          )}
         </ul>
       )}
     </div>

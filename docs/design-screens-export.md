@@ -81,18 +81,20 @@ Finder after.
 
 Copy every still, then paste into Miro or FigJam and keep sorting there.
 
-**Unknown until measured (Saturday morning, first task):** which clipboard shape Miro and FigJam
-accept as *several* images. Two candidates:
+**Measured 17 Oct 2026: file URLs.** Four stills written as file URLs (what Finder's ⌘C writes for
+a selection) pasted as four images in FigJam and in Miro (Safari), in order, in a row. The second
+candidate was not needed. The two that were considered:
 
 1. **File URLs**, as Finder's ⌘C on a selection writes. If both canvases take that, the clipboard
    export is "export the folder (§4), then put its files on the clipboard" — and the browser
    fallback is Finder itself (select all, ⌘C).
 2. **Several image items** (one `NSPasteboardItem` per still, `public.jpeg`).
 
-Measured in Miro and FigJam, each in Safari, in Chrome and in their Mac apps. The browser Clipboard
-API cannot do this reliably (Chrome writes one image per copy), so the clipboard export is a
-Mac-app action over a bridge message, following `find-pasteboard-write`. Whatever the paste
-arranges, the order on the clipboard is the shot list's.
+So the clipboard copy is the folder export (§4) followed by its files on the pasteboard, in the
+shot list's order: a Mac-app action over a bridge message, following `find-pasteboard-write`. The
+browser Clipboard API cannot write files (Chrome writes one image per copy), so in the browser the
+route to the same clipboard is Finder: Show in Finder, select all, ⌘C. That is why the folder's
+manifest is a dotfile.
 
 ## 6. A Miro board
 
@@ -154,10 +156,11 @@ point would do, later); FigJam as a target (`design-board-integrations.md`).
 - **Export classification:** the new routes are actions, not GET reads, so
   `tests/test_serve_export_coverage.py` is unaffected; the screens routes stay server-only in the
   HTML export.
-- **Where the actions live.** The Screens lens has no export of its own today (`design-screens.md`
-  §2: "Export stays on Quotes"). Proposed: three rows in the existing Export menu (web dropdown and
-  the native toolbar menu), present when the project has screens, on any lens. To confirm with the
-  owner before the UI is built.
+- **Where the actions live** (owner, 17 Oct 2026): in the existing export surfaces, contextual to
+  the Screens lens, as the toolbar already is — "menus dim, toolbars morph". The Mac toolbar's
+  export popover on Screens gains **Copy Screens** and **Export Screens**, and its **Send to Miro**
+  builds the screens board there (the quotes board on every other lens). The menu bar carries the
+  two dimmed off the Screens lens. The browser's export dropdown shows Export Screens on Screens.
 
 ## 8. The weekend
 
@@ -182,8 +185,12 @@ Smallest first; each step ends usable and green.
 
 ## 9. Open
 
-1. Which clipboard shape works where (§5) — measured Saturday.
-2. Can the REST API lock an item (§6) — measured Saturday.
-3. Where the three actions live (§7) — owner.
+1. ~~Which clipboard shape works where (§5).~~ File URLs, in FigJam and Miro (17 Oct 2026).
+2. Can the REST API lock an item (§6)? The documentation names no lock field (17 Oct 2026); to
+   confirm against a real board on Sunday. Uploads take the file as a `resource` part and the
+   settings as a `data` part declared `application/json`; a child's position is its centre from
+   the frame's top-left.
+3. ~~Where the three actions live (§7).~~ Settled 17 Oct 2026: contextual to the Screens lens, in
+   the existing export surfaces (§7).
 4. A screen revisited later appears once, at its first visit (§2). Right for a workshop, or should a
    return trip get its own frame?

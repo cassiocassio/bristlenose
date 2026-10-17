@@ -195,8 +195,11 @@ enum ZoomFileSelection {
     }
 
     /// How far apart two media files' starts may sit and still be renditions
-    /// of the same stretch. Zoom stamps every rendition of a part with the same
-    /// `recording_start`; a restart is minutes away, never seconds.
+    /// of the same stretch. Every rendition of a part carried the identical
+    /// `recording_start` string in the 2026 samples, so this only absorbs
+    /// rounding. Widening it buys nothing and merges real parts: the next
+    /// part's start is the previous part's start plus its length, so only a
+    /// part shorter than this can be merged with the one after it.
     static let partTolerance: TimeInterval = 5
 
     /// The meeting's files, split into its parts, in the order they happened.
@@ -622,11 +625,15 @@ enum ZoomTranscript {
     /// ASCII or full-width colon, and the same list of words that open a
     /// sentence and take a colon.
     ///
-    /// Two departures, both deliberate. **Digits are allowed** — "Participant
-    /// 04" and "P07" are exactly the display names a study uses. And **a name
-    /// in a cased script must start with a capital**, which is what keeps "the
+    /// Three departures, all deliberate. **Digits are allowed** — "Participant
+    /// 04" and "P07" are exactly the display names a study uses. **A name in a
+    /// cased script must start with a capital**, which is what keeps "the
     /// ratio was 3:1" from registering a speaker now that digits pass; a
-    /// script without case (Japanese, Chinese, Arabic) has no capital to need.
+    /// script without case (Japanese, Chinese, Arabic) has no capital to need,
+    /// and a lowercase label is believed only when it recurs (below). And **a
+    /// stop word followed by a comma or full stop rejects the whole prefix**
+    /// ("Honestly, I gave up"), which the pipeline's whole-name check lets
+    /// through. Only the digits accept anything the pipeline would refuse.
     ///
     /// - Parameter recurring: lowercase labels this file uses often enough to
     ///   be display names (`cues(fromVTT:)` finds them). A handle like `stay`
@@ -665,21 +672,26 @@ enum ZoomTranscript {
               candidate.count <= 60
         else { return false }
         let words = candidate.split(whereSeparator: { $0 == " " || $0 == "\u{3000}" })
-        guard words.count <= 5 else { return false }
+        guard words.count <= maxNameWords else { return false }
         for character in candidate {
             if character.isLetter || character.isNumber || namePunctuation.contains(character) {
                 continue
             }
             return false
         }
-        // The whole name, and its first word: "Honestly, I gave up" is a
-        // clause, and its comma would otherwise let it through as a name.
-        let lowered = candidate.lowercased()
-        let firstWord = words.first.map {
-            $0.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ".,"))
-        } ?? ""
-        return !notSpeakerWords.contains(lowered) && !notSpeakerWords.contains(firstWord)
+        if notSpeakerWords.contains(candidate.lowercased()) { return false }
+        // A stop word that opens a clause: "Honestly, I gave up" or "Okay. So
+        // the thing" — its comma or full stop would otherwise let it through as
+        // a name. Only with that punctuation, or on a lowercase label: "Oh
+        // Minji" and "So Yeon Kim" are people, and Oh and So are surnames.
+        guard let firstRaw = words.first else { return true }
+        let firstWord = firstRaw.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ".,"))
+        let opensClause = firstRaw.last == "," || firstRaw.last == "." || first.isLowercase
+        return !(opensClause && notSpeakerWords.contains(firstWord))
     }
+
+    /// `_MAX_NAME_TOKENS` in `s03_parse_subtitles.py`.
+    static let maxNameWords = 6
 
     /// `_NAME_PUNCTUATION` and `_NAME_JOINERS` in `s03_parse_subtitles.py`.
     private static let namePunctuation: Set<Character> = [
@@ -691,7 +703,7 @@ enum ZoomTranscript {
 
     /// `_NOT_SPEAKER_WORDS` in `s03_parse_subtitles.py`, verbatim. Discourse
     /// words, labels and URL schemes only — never anyone's given name.
-    /// `ZoomVTTParsingTests.stopWordsMirrorThePipeline` keeps the two equal.
+    /// `ZoomTranscriptTests.stopWordsMirrorThePipeline` keeps the two equal.
     static let notSpeakerWords: Set<String> = [
         "honestly", "note", "notes", "also", "well", "okay", "ok", "yes", "no", "right", "basically",
         "actually", "example", "warning", "question", "answer", "summary", "update", "edit",

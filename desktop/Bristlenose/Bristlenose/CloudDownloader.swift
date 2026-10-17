@@ -451,12 +451,12 @@ extension CloudDownloader: URLSessionTaskDelegate {
             // Set explicitly from the request being redirected, not left to
             // URLSession, whose cross-host header handling is undocumented.
             // `currentRequest`, not `originalRequest`: once a hop has dropped
-            // the header, no later hop back onto the domain regains it.
+            // the header, no later hop back onto the domain regains it. Set
+            // even when nil, so a header URLSession copied from the original
+            // request cannot bring it back either.
             var kept = request
-            if kept.value(forHTTPHeaderField: "Authorization") == nil,
-               let auth = task.currentRequest?.value(forHTTPHeaderField: "Authorization") {
-                kept.setValue(auth, forHTTPHeaderField: "Authorization")
-            }
+            kept.setValue(task.currentRequest?.value(forHTTPHeaderField: "Authorization"),
+                          forHTTPHeaderField: "Authorization")
             completionHandler(kept)
             return
         }

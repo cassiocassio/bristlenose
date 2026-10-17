@@ -888,9 +888,13 @@ final class ZoomSource: CloudImportSource {
         do {
             try CloudDownloader.publish(Data(rendered.utf8), to: destination)
         } catch {
+            // Domain and code, never the description: a Cocoa write error
+            // names the file and its folder, and both derive from the meeting
+            // topic, which can name a participant.
+            let ns = error as NSError
             Self.log.notice("""
                 zoom_transcript outcome=did_not_arrive reason=write_failed \
-                error=\(error.localizedDescription, privacy: .public)
+                domain=\(ns.domain, privacy: .public) code=\(ns.code, privacy: .public)
                 """)
             return .didNotArrive
         }
@@ -910,36 +914,29 @@ final class ZoomSource: CloudImportSource {
     /// row past the 24-hour window reads *No transcript*. A meeting Zoom would
     /// not answer for is left out and asked again next pass.
     func recheckTranscripts(rowIDs: [String]) async -> [String: TranscriptAvailability] {
+        let plans = rowPlans
+        let clock = now()
         guard await renewedTokenIfNeeded() else {
-            // A refused grant will never answer; a transient failure might.
-            guard tokens == nil else { return [:] }
+            // A refused grant will never answer; a transient failure might, so
+            // ask again next pass — the clock still ends a wait past its window.
+            guard tokens == nil else { return clockAnswers(for: rowIDs, plans: plans, now: clock) }
             Self.log.notice("zoom_transcript recheck refused=no_token rows=\(rowIDs.count, privacy: .public)")
             return Dictionary(uniqueKeysWithValues: rowIDs.map { ($0, TranscriptAvailability.notResolved) })
         }
-        let plans = rowPlans
         var byMeeting: [String: [String]] = [:]
         for id in rowIDs {
             guard let plan = plans[id] else { continue }
             byMeeting[plan.meetingUUID, default: []].append(id)
         }
         var answers: [String: TranscriptAvailability] = [:]
-        let clock = now()
         for (uuid, ids) in byMeeting {
             let path = "https://api.zoom.us/v2/meetings/\(ZoomIdentifier.encodedUUID(uuid))/recordings"
             guard let data = try? await get(path),
                   let meeting = try? JSONDecoder().decode(ZoomRecordingsPage.Meeting.self, from: data)
             else {
                 // Zoom would not answer for this meeting. Ask again next pass —
-                // but a wait still has to end: past the window, the row's own
-                // clock says *No transcript* without Zoom's help.
-                for id in ids {
-                    guard let plan = plans[id] else { continue }
-                    let local = ZoomTranscriptAvailability.decide(
-                        hasTranscript: false,
-                        audioTranscriptEnabled: preflight?.audioTranscriptEnabled,
-                        recordingEnded: plan.partEnd, now: clock)
-                    if local != .expected { answers[id] = local }
-                }
+                // but a wait still has to end.
+                answers.merge(clockAnswers(for: ids, plans: plans, now: clock)) { $1 }
                 continue
             }
             let parts = ZoomFileSelection.parts(from: (meeting.recording_files ?? []).map(Self.recordingFile))
@@ -960,6 +957,24 @@ final class ZoomSource: CloudImportSource {
             meetings=\(byMeeting.count, privacy: .public) \
             arrived=\(answers.values.filter { $0 == .available }.count, privacy: .public)
             """)
+        return answers
+    }
+
+    /// What the rows' own clocks say when Zoom cannot be asked: *No transcript*
+    /// once the window has passed, and nothing inside it, so the row keeps
+    /// waiting and is asked again next pass.
+    private func clockAnswers(
+        for ids: [String], plans: [String: RowPlan], now clock: Date
+    ) -> [String: TranscriptAvailability] {
+        var answers: [String: TranscriptAvailability] = [:]
+        for id in ids {
+            guard let plan = plans[id] else { continue }
+            let local = ZoomTranscriptAvailability.decide(
+                hasTranscript: false,
+                audioTranscriptEnabled: preflight?.audioTranscriptEnabled,
+                recordingEnded: plan.partEnd, now: clock)
+            if local != .expected { answers[id] = local }
+        }
         return answers
     }
 

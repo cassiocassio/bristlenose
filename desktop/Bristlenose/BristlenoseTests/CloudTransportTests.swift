@@ -250,6 +250,19 @@ struct RedirectHeaderTests {
         #expect(requests[2].value(forHTTPHeaderField: "Authorization") == nil)
     }
 
+    @Test("A bearer dropped on one hop is not regained back on zoom.us")
+    func zoomNeverRegainsAStrippedBearer() async throws {
+        let (_, requests) = try await download(
+            policy: .zoom,
+            stubs: [.redirect(to: "https://cdn.example.test/hop"),
+                    .redirect(to: "https://us06web.zoom.us/rec/download/abc"),
+                    .mp4(bytes: 64)]
+        )
+        #expect(requests.count == 3)
+        #expect(requests[1].value(forHTTPHeaderField: "Authorization") == nil)
+        #expect(requests[2].value(forHTTPHeaderField: "Authorization") == nil)
+    }
+
     @Test("A look-alike host never gets Zoom's bearer")
     func zoomLookAlikeIsStripped() {
         #expect(!CloudTransferPolicy.zoom.keepsAuthorization(
@@ -258,6 +271,11 @@ struct RedirectHeaderTests {
             redirectingTo: URL(string: "https://zoom.us.evil.example/x")))
         #expect(CloudTransferPolicy.zoom.keepsAuthorization(
             redirectingTo: URL(string: "https://zoom.us/rec/x")))
+        // Hosts are case-insensitive; a trailing-dot FQDN fails closed.
+        #expect(CloudTransferPolicy.zoom.keepsAuthorization(
+            redirectingTo: URL(string: "HTTPS://US06WEB.ZOOM.US/rec/x")))
+        #expect(!CloudTransferPolicy.zoom.keepsAuthorization(
+            redirectingTo: URL(string: "https://zoom.us./rec/x")))
     }
 
     @Test("Teams sends no Authorization at all — the URL is the credential")

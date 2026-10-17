@@ -338,6 +338,32 @@ struct ZoomTranscriptTests {
         #expect(ZoomTranscript.splitSpeaker("Honestly: I gave up").speaker == nil)
         #expect(ZoomTranscript.splitSpeaker("Note: this is recorded").speaker == nil)
         #expect(ZoomTranscript.splitSpeaker("Suharto: Welcome").speaker == "Suharto")
+        #expect(ZoomTranscript.splitSpeaker("Okay. So the thing: it broke").speaker == nil)
+    }
+
+    @Test("A surname that is also a stop word is still a name")
+    func stopWordSurnames() {
+        // Oh and So are Korean surnames. A first-word check without the comma
+        // dropped every cue such a participant spoke.
+        #expect(ZoomTranscript.splitSpeaker("Oh Minji: Yes, that one").speaker == "Oh Minji")
+        #expect(ZoomTranscript.splitSpeaker("So Yeon Kim: I agree").speaker == "So Yeon Kim")
+    }
+
+    @Test("A name of six words is a name, as in the pipeline")
+    func sixWordName() {
+        let name = "Anita Patel (UX Research, Acme Labs)"
+        #expect(ZoomTranscript.splitSpeaker("\(name): Hello").speaker == name)
+        #expect(ZoomTranscript.splitSpeaker("One Two Three Four Five Six Seven: Hi").speaker == nil)
+    }
+
+    @Test("A recurring lowercase clause is not a handle")
+    func recurringLowercaseClause() {
+        let vtt = (1...3).map { i in
+            "00:00:0\(i).000 --> 00:00:0\(i).500\nso i think: it works"
+        }.joined(separator: "\n\n")
+        let cues = ZoomTranscript.cues(fromVTT: "WEBVTT\n\n" + vtt)
+        #expect(cues.count == 3)
+        #expect(cues.allSatisfy { $0.speaker == nil })
     }
 
     @Test("Zoom's Unknown Speaker label is no one, and its words are kept")

@@ -1,0 +1,166 @@
+/* palette-solarized — Solarized, light and dark.
+   Source: https://ethanschoonover.com/solarized/. The accents are the same in both appearances.
+   MIT licence. Colours the brand names are used verbatim; every other token is
+   a mix of those, following the relationships in palette-default.css.
+   AA nudge: solarized light muted: #657b83 -> #5c7077 (3.87 -> 4.52)
+   AA nudge: solarized light accent: #268bd2 -> #2073ae (3.26 -> 4.51)
+   AA nudge: solarized light negative: #dc322f -> #d5302e (4.29 -> 4.54)
+   AA nudge: solarized light positive: #859900 -> #849700 (2.97 -> 3.04)
+   AA nudge: solarized dark muted: #839496 -> #849597 (4.45 -> 4.51)
+   AA nudge: solarized dark accent: #268bd2 -> #4099d7 (3.83 -> 4.53)
+   AA nudge: solarized dark negative: #dc322f -> #e56563 (3.25 -> 4.56)
+   AA nudge: solarized dark badge-text: #8d9c9d -> #8e9d9e (4.49 -> 4.54)
+   Activate: data-color-theme="solarized" on <html>; BRISTLENOSE_PALETTE=solarized or
+   --palette solarized. Every palette comes in light and dark
+   (tests/test_color_contract.py). */
+
+[data-color-theme="solarized"] {
+    /* Colour palette */
+    --bn-colour-bg: #fdf6e3;
+    --bn-colour-text: #073642;
+    --bn-colour-muted: #5c7077;
+    --bn-colour-border: #eee8d5;
+    --bn-colour-accent: #2073ae;
+    --bn-colour-hover: #e9eade;
+    --bn-colour-inspector-bg: #f7f1df;
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f7f1df;
+    --bn-colour-paper: #f4efdd;
+    --bn-colour-sheet: #fefbf2;
+    --bn-colour-badge-bg-paper: #e1e0d1;
+    --bn-colour-badge-bg: #ece9d8;
+    --bn-colour-badge-text: #294d57;
+    --bn-colour-user-tag-bg: #ece9d8;
+    --bn-colour-user-tag-text: #294d57;
+    --bn-colour-crop-bg: #f4e9c8;
+    --bn-crop-handle-colour: #b58900;
+    --bn-crop-handle-hover: #8a7410;
+    --bn-colour-active-bg: #f1eccc;
+    --bn-colour-highlight: #e0ca88;
+
+    /* Destructive, success and caution */
+    --bn-colour-negative: #d5302e;
+    --bn-colour-positive: #849700;
+    --bn-colour-warning: #b58900;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(32, 115, 174, 0.06);
+    --bn-glow-colour-strong: rgba(32, 115, 174, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #eee8d5;
+    --bn-minimap-heading: #93a1a1;
+    --bn-minimap-viewport-bg: rgba(32, 115, 174, 0.15);
+    --bn-minimap-viewport-border: rgba(32, 115, 174, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #83aec6;
+    --bn-coverage-moderator: #b58900;
+    --bn-coverage-omitted: #93a1a1;
+
+    /* Neutral group card and histogram bar */
+    --bn-group-none: #f7f1df;
+    --bn-bar-none: #93a1a1;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #93a1a1;
+    --bn-colour-icon-idle: #b5bab2;
+    --bn-colour-starred: #5c7077;
+    --bn-colour-shadow: rgba(0, 43, 54, 0.1);
+
+    /* Focus and selection */
+    --bn-focus-ring: 0 0 0 2px rgba(32, 115, 174, 0.14);
+    --bn-selection-bg: #e7e9de;
+    --bn-selection-border: #2073ae;
+    --bn-selection-bg-inactive: #ece9d8;
+    --bn-selection-border-inactive: #9ca6a2;
+    --bn-nav-selection-bg: #e4e2d2;
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(7, 54, 66, 0.04);
+    --bn-hover-bg-subtle: rgba(7, 54, 66, 0.03);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #2073ae;
+    --bn-colour-suggestion-bg: #eeeddf;
+
+    /* Shadows: the same in both appearances */
+    --bn-focus-shadow: 0 3px 12px rgba(0, 43, 54, 0.12), 0 0 0 1px rgba(0, 43, 54, 0.05);
+    --bn-overlay-shadow: 4px 0 16px rgba(0, 43, 54, 0.08);
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="solarized"] {
+        /* Colour palette */
+        --bn-colour-bg:                 light-dark(#fdf6e3, #002b36);
+        --bn-colour-text:               light-dark(#073642, #93a1a1);
+        --bn-colour-muted:              light-dark(#5c7077, #849597);
+        --bn-colour-border:             light-dark(#eee8d5, #073642);
+        --bn-colour-accent:             light-dark(#2073ae, #4099d7);
+        --bn-colour-hover:              light-dark(#e9eade, #083849);
+        --bn-colour-inspector-bg:       light-dark(#f7f1df, #07303b);
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:           light-dark(#f7f1df, #06303a);
+        --bn-colour-paper:              light-dark(#f4efdd, #002b36);
+        --bn-colour-sheet:              light-dark(#fefbf2, #0a333d);
+        --bn-colour-badge-bg-paper:     light-dark(#e1e0d1, #123943);
+        --bn-colour-badge-bg:           light-dark(#ece9d8, #0f3741);
+        --bn-colour-badge-text:         light-dark(#294d57, #8e9d9e);
+        --bn-colour-user-tag-bg:        light-dark(#ece9d8, #0f3741);
+        --bn-colour-user-tag-text:      light-dark(#294d57, #8e9d9e);
+        --bn-colour-crop-bg:            light-dark(#f4e9c8, #1d3a2d);
+        --bn-crop-handle-colour:        light-dark(#b58900, #b58900);
+        --bn-crop-handle-hover:         light-dark(#8a7410, #ac8f28);
+        --bn-colour-active-bg:          light-dark(#f1eccc, #133a2e);
+        --bn-colour-highlight:          light-dark(#e0ca88, #51551e);
+        --bn-colour-cited-bg:           light-dark(#f0e2ba, #28402a);
+
+        /* Destructive, success and caution */
+        --bn-colour-negative:           light-dark(#d5302e, #e56563);
+        --bn-colour-positive:           light-dark(#849700, #859900);
+        --bn-colour-warning:            light-dark(#b58900, #b58900);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:               light-dark(rgba(32, 115, 174, 0.06), rgba(64, 153, 215, 0.12));
+        --bn-glow-colour-strong:        light-dark(rgba(32, 115, 174, 0.11), rgba(64, 153, 215, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:             light-dark(#eee8d5, #073642);
+        --bn-minimap-heading:           light-dark(#93a1a1, #586e75);
+        --bn-minimap-viewport-bg:       light-dark(rgba(32, 115, 174, 0.15), rgba(64, 153, 215, 0.2));
+        --bn-minimap-viewport-border:   light-dark(rgba(32, 115, 174, 0.3), rgba(64, 153, 215, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:           light-dark(#83aec6, #23688f);
+        --bn-coverage-moderator:        light-dark(#b58900, #b58900);
+        --bn-coverage-omitted:          light-dark(#93a1a1, #586e75);
+
+        /* Neutral group card and histogram bar */
+        --bn-group-none:                light-dark(#f7f1df, #06303a);
+        --bn-bar-none:                  light-dark(#93a1a1, #586e75);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:       light-dark(#93a1a1, #586e75);
+        --bn-colour-icon-idle:          light-dark(#b5bab2, #3b5b62);
+        --bn-colour-starred:            light-dark(#5c7077, #849597);
+        --bn-colour-shadow:             light-dark(rgba(0, 43, 54, 0.1), rgba(0, 0, 0, 0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:                0 0 0 2px light-dark(rgba(32, 115, 174, 0.14), rgba(64, 153, 215, 0.2));
+        --bn-selection-bg:              light-dark(#e7e9de, #0a3d50);
+        --bn-selection-border:          light-dark(#2073ae, #4099d7);
+        --bn-selection-bg-inactive:     light-dark(#ece9d8, #0d3640);
+        --bn-selection-border-inactive: light-dark(#9ca6a2, #4f6b70);
+        --bn-nav-selection-bg:          light-dark(#e4e2d2, #153b45);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                  light-dark(rgba(7, 54, 66, 0.04), rgba(147, 161, 161, 0.06));
+        --bn-hover-bg-subtle:           light-dark(rgba(7, 54, 66, 0.03), rgba(147, 161, 161, 0.04));
+
+        /* Legacy aliases */
+        --bn-colour-suggestion:         light-dark(#2073ae, #4099d7);
+        --bn-colour-suggestion-bg:      light-dark(#eeeddf, #083849);
+    }
+}

@@ -2055,7 +2055,7 @@ def serve(
         typer.Option(
             "--palette",
             envvar="BRISTLENOSE_PALETTE",
-            help="Colour palette for the report (e.g. default, edo).",
+            help="Colour palette for the report (e.g. default, edo, solarized).",
         ),
     ] = None,
     open_browser: Annotated[

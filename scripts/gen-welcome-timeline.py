@@ -45,6 +45,10 @@ FILES = [
     "tokens-desktop.css",
     "colors/palette-default.css",
     "colors/palette-edo.css",
+    "colors/palette-catppuccin.css",
+    "colors/palette-gruvbox.css",
+    "colors/palette-rose-pine.css",
+    "colors/palette-solarized.css",
     "atoms/badge.css",
     "organisms/session-tapestry.css",
 ]

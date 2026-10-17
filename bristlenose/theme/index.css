@@ -14,6 +14,7 @@
    Platform/theme selectors:
    - [data-platform="desktop"] — SF Pro typography overrides (tokens-desktop.css)
    - [data-color-theme="edo"]  — Edo colour palette (colors/palette-edo.css)
+   - [data-color-theme="catppuccin|gruvbox|rose-pine|solarized"] — brand palettes
    - [data-theme="light|dark"] — light/dark mode override
 */
 
@@ -27,6 +28,7 @@
 /* --- 2. Colour palettes --- */
 /* colors/palette-default.css — blue/grey (web default, :root fallback) */
 /* colors/palette-edo.css — Edo-period art palette (desktop default) */
+/* colors/palette-{catppuccin,gruvbox,rose-pine,solarized}.css — brand palettes, light and dark */
 /* colors/_contract.css — NOT loaded; documents required tokens for theme authors */
 
 /* --- 3. Atoms --- */

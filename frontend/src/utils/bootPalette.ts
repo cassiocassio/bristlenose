@@ -9,8 +9,8 @@
  * value silently apply. See the review log Finding 2.
  */
 
-/** All valid colour-palette identifiers. Extend as palettes land (edo2…). */
-export const PALETTES = ["default", "edo"] as const;
+/** All valid colour-palette identifiers. Order is the picker's order. */
+export const PALETTES = ["default", "edo", "catppuccin", "gruvbox", "rose-pine", "solarized"] as const;
 
 export type Palette = (typeof PALETTES)[number];
 

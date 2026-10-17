@@ -34,6 +34,10 @@
     "legend": "Renk paleti",
     "default": "Varsayılan",
     "edo": "Edo",
+    "catppuccin": "Catppuccin",
+    "gruvbox": "Gruvbox",
+    "rose-pine": "Ros\u00e9 Pine",
+    "solarized": "Solarized",
     "description": "Uygulamanın tamamını yeniden renklendirir. Edo, sıcak washi kâğıdı ve Prusya mavisi mürekkep kullanır."
   },
   "typography": {

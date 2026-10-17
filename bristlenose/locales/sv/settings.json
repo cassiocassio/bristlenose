@@ -34,6 +34,10 @@
     "legend": "Färgpalett",
     "default": "Standard",
     "edo": "Edo",
+    "catppuccin": "Catppuccin",
+    "gruvbox": "Gruvbox",
+    "rose-pine": "Ros\u00e9 Pine",
+    "solarized": "Solarized",
     "description": "Färgar om hela appen. Edo använder varmt washipapper och preusserblått bläck."
   },
   "typography": {

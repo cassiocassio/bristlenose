@@ -34,6 +34,10 @@
     "legend": "Tavolozza colori",
     "default": "Predefinito",
     "edo": "Edo",
+    "catppuccin": "Catppuccin",
+    "gruvbox": "Gruvbox",
+    "rose-pine": "Ros\u00e9 Pine",
+    "solarized": "Solarized",
     "description": "Ricolora l'intera app. Edo usa carta washi calda e inchiostro blu di Prussia."
   },
   "typography": {

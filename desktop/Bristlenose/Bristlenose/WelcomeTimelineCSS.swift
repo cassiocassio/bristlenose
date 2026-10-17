@@ -935,6 +935,661 @@ enum WelcomeTimelineCSS {
     }
 }
 
+/* ════ bristlenose/theme/colors/palette-catppuccin.css — lines 1–160 ════ */
+/* palette-catppuccin — Catppuccin, Latte (light) and Mocha (dark).
+   Source: https://github.com/catppuccin/palette (catppuccin.com/palette).
+   MIT licence. Colours the brand names are used verbatim; every other token is
+   a mix of those, following the relationships in palette-default.css.
+   AA nudge: catppuccin light muted: #6c6f85 -> #67697e (4.14 -> 4.52)
+   AA nudge: catppuccin light positive: #40a02b -> #3f9e2b (2.96 -> 3.03)
+   Activate: data-color-theme="catppuccin" on <html>; BRISTLENOSE_PALETTE=catppuccin or
+   --palette catppuccin. Every palette comes in light and dark
+   (tests/test_color_contract.py). */
+
+[data-color-theme="catppuccin"] {
+    /* Colour palette */
+    --bn-colour-bg: #eff1f5;
+    --bn-colour-text: #4c4f69;
+    --bn-colour-muted: #67697e;
+    --bn-colour-border: #ccd0da;
+    --bn-colour-accent: #8839ef;
+    --bn-colour-hover: #e6e0f4;
+    --bn-colour-inspector-bg: #e6e9ef;
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #ebedf2;
+    --bn-colour-paper: #e9ebf0;
+    --bn-colour-sheet: #f8f9fa;
+    --bn-colour-badge-bg-paper: #dcdfe5;
+    --bn-colour-badge-bg: #e4e6eb;
+    --bn-colour-badge-text: #575971;
+    --bn-colour-user-tag-bg: #e4e6eb;
+    --bn-colour-user-tag-text: #575971;
+    --bn-colour-crop-bg: #ede5db;
+    --bn-crop-handle-colour: #df8e1d;
+    --bn-crop-handle-hover: #ba7e30;
+    --bn-colour-active-bg: #dde9e1;
+    --bn-colour-highlight: #e9c99f;
+
+    /* Destructive, success and caution */
+    --bn-colour-negative: #d20f39;
+    --bn-colour-positive: #3f9e2b;
+    --bn-colour-warning: #df8e1d;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(136, 57, 239, 0.06);
+    --bn-glow-colour-strong: rgba(136, 57, 239, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #ccd0da;
+    --bn-minimap-heading: #acb0be;
+    --bn-minimap-viewport-bg: rgba(136, 57, 239, 0.15);
+    --bn-minimap-viewport-border: rgba(136, 57, 239, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #b68cf2;
+    --bn-coverage-moderator: #df8e1d;
+    --bn-coverage-omitted: #acb0be;
+
+    /* Neutral group card and histogram bar */
+    --bn-group-none: #ebedf2;
+    --bn-bar-none: #acb0be;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #acb0be;
+    --bn-colour-icon-idle: #b2b4bf;
+    --bn-colour-starred: #67697e;
+    --bn-colour-shadow: rgba(76, 79, 105, 0.1);
+
+    /* Focus and selection */
+    --bn-focus-ring: 0 0 0 2px rgba(136, 57, 239, 0.14);
+    --bn-selection-bg: #e5dff4;
+    --bn-selection-border: #8839ef;
+    --bn-selection-bg-inactive: #e4e6eb;
+    --bn-selection-border-inactive: #9d9fae;
+    --bn-nav-selection-bg: #dadde4;
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(76, 79, 105, 0.04);
+    --bn-hover-bg-subtle: rgba(76, 79, 105, 0.03);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #8839ef;
+    --bn-colour-suggestion-bg: #e8e4f5;
+
+    /* Shadows: the same in both appearances */
+    --bn-focus-shadow: 0 3px 12px rgba(76, 79, 105, 0.12), 0 0 0 1px rgba(76, 79, 105, 0.05);
+    --bn-overlay-shadow: 4px 0 16px rgba(76, 79, 105, 0.08);
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="catppuccin"] {
+        /* Colour palette */
+        --bn-colour-bg:                 light-dark(#eff1f5, #1e1e2e);
+        --bn-colour-text:               light-dark(#4c4f69, #cdd6f4);
+        --bn-colour-muted:              light-dark(#67697e, #a6adc8);
+        --bn-colour-border:             light-dark(#ccd0da, #313244);
+        --bn-colour-accent:             light-dark(#8839ef, #cba6f7);
+        --bn-colour-hover:              light-dark(#e6e0f4, #332e46);
+        --bn-colour-inspector-bg:       light-dark(#e6e9ef, #181825);
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:           light-dark(#ebedf2, #252536);
+        --bn-colour-paper:              light-dark(#e9ebf0, #1e1e2e);
+        --bn-colour-sheet:              light-dark(#f8f9fa, #2a2b3c);
+        --bn-colour-badge-bg-paper:     light-dark(#dcdfe5, #333446);
+        --bn-colour-badge-bg:           light-dark(#e4e6eb, #303042);
+        --bn-colour-badge-text:         light-dark(#575971, #bdc6e2);
+        --bn-colour-user-tag-bg:        light-dark(#e4e6eb, #303042);
+        --bn-colour-user-tag-text:      light-dark(#575971, #bdc6e2);
+        --bn-colour-crop-bg:            light-dark(#ede5db, #413d43);
+        --bn-crop-handle-colour:        light-dark(#df8e1d, #f9e2af);
+        --bn-crop-handle-hover:         light-dark(#ba7e30, #eedfc0);
+        --bn-colour-active-bg:          light-dark(#dde9e1, #313a3e);
+        --bn-colour-highlight:          light-dark(#e9c99f, #817668);
+        --bn-colour-cited-bg:           light-dark(#ecdfce, #4e494a);
+
+        /* Destructive, success and caution */
+        --bn-colour-negative:           light-dark(#d20f39, #f38ba8);
+        --bn-colour-positive:           light-dark(#3f9e2b, #a6e3a1);
+        --bn-colour-warning:            light-dark(#df8e1d, #f9e2af);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:               light-dark(rgba(136, 57, 239, 0.06), rgba(203, 166, 247, 0.12));
+        --bn-glow-colour-strong:        light-dark(rgba(136, 57, 239, 0.11), rgba(203, 166, 247, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:             light-dark(#ccd0da, #313244);
+        --bn-minimap-heading:           light-dark(#acb0be, #585b70);
+        --bn-minimap-viewport-bg:       light-dark(rgba(136, 57, 239, 0.15), rgba(203, 166, 247, 0.2));
+        --bn-minimap-viewport-border:   light-dark(rgba(136, 57, 239, 0.3), rgba(203, 166, 247, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:           light-dark(#b68cf2, #7d699d);
+        --bn-coverage-moderator:        light-dark(#df8e1d, #f9e2af);
+        --bn-coverage-omitted:          light-dark(#acb0be, #585b70);
+
+        /* Neutral group card and histogram bar */
+        --bn-group-none:                light-dark(#ebedf2, #252536);
+        --bn-bar-none:                  light-dark(#acb0be, #585b70);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:       light-dark(#acb0be, #585b70);
+        --bn-colour-icon-idle:          light-dark(#b2b4bf, #5b5e73);
+        --bn-colour-starred:            light-dark(#67697e, #a6adc8);
+        --bn-colour-shadow:             light-dark(rgba(76, 79, 105, 0.1), rgba(0, 0, 0, 0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:                0 0 0 2px light-dark(rgba(136, 57, 239, 0.14), rgba(203, 166, 247, 0.2));
+        --bn-selection-bg:              light-dark(#e5dff4, #3a344e);
+        --bn-selection-border:          light-dark(#8839ef, #cba6f7);
+        --bn-selection-bg-inactive:     light-dark(#e4e6eb, #2e2f40);
+        --bn-selection-border-inactive: light-dark(#9d9fae, #70748a);
+        --bn-nav-selection-bg:          light-dark(#dadde4, #2a2b3a);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                  light-dark(rgba(76, 79, 105, 0.04), rgba(205, 214, 244, 0.06));
+        --bn-hover-bg-subtle:           light-dark(rgba(76, 79, 105, 0.03), rgba(205, 214, 244, 0.04));
+
+        /* Legacy aliases */
+        --bn-colour-suggestion:         light-dark(#8839ef, #cba6f7);
+        --bn-colour-suggestion-bg:      light-dark(#e8e4f5, #332e46);
+    }
+}
+
+/* ════ bristlenose/theme/colors/palette-gruvbox.css — lines 1–160 ════ */
+/* palette-gruvbox — Gruvbox, light and dark, medium contrast.
+   Source: https://github.com/morhetz/gruvbox. Light uses the faded accents, dark the bright ones.
+   MIT licence. Colours the brand names are used verbatim; every other token is
+   a mix of those, following the relationships in palette-default.css.
+   AA nudge: gruvbox light muted: #7c6f64 -> #73675d (4.06 -> 4.57)
+   AA nudge: gruvbox dark negative: #fb4934 -> #fb5440 (4.29 -> 4.52)
+   Activate: data-color-theme="gruvbox" on <html>; BRISTLENOSE_PALETTE=gruvbox or
+   --palette gruvbox. Every palette comes in light and dark
+   (tests/test_color_contract.py). */
+
+[data-color-theme="gruvbox"] {
+    /* Colour palette */
+    --bn-colour-bg: #fbf1c7;
+    --bn-colour-text: #3c3836;
+    --bn-colour-muted: #73675d;
+    --bn-colour-border: #ebdbb2;
+    --bn-colour-accent: #076678;
+    --bn-colour-hover: #e5e4c0;
+    --bn-colour-inspector-bg: #f2e5bc;
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f6ecc3;
+    --bn-colour-paper: #f4ebc2;
+    --bn-colour-sheet: #fdf9e6;
+    --bn-colour-badge-bg-paper: #e5ddb7;
+    --bn-colour-badge-bg: #eee4bd;
+    --bn-colour-badge-text: #524b46;
+    --bn-colour-user-tag-bg: #eee4bd;
+    --bn-colour-user-tag-text: #524b46;
+    --bn-colour-crop-bg: #f3e2b2;
+    --bn-crop-handle-colour: #b57614;
+    --bn-crop-handle-hover: #97661c;
+    --bn-colour-active-bg: #eee4b4;
+    --bn-colour-highlight: #dfc07f;
+
+    /* Destructive, success and caution */
+    --bn-colour-negative: #9d0006;
+    --bn-colour-positive: #79740e;
+    --bn-colour-warning: #b57614;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(7, 102, 120, 0.06);
+    --bn-glow-colour-strong: rgba(7, 102, 120, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #ebdbb2;
+    --bn-minimap-heading: #bdae93;
+    --bn-minimap-viewport-bg: rgba(7, 102, 120, 0.15);
+    --bn-minimap-viewport-border: rgba(7, 102, 120, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #75a59c;
+    --bn-coverage-moderator: #b57614;
+    --bn-coverage-omitted: #bdae93;
+
+    /* Neutral group card and histogram bar */
+    --bn-group-none: #f6ecc3;
+    --bn-bar-none: #bdae93;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #bdae93;
+    --bn-colour-icon-idle: #beb397;
+    --bn-colour-starred: #73675d;
+    --bn-colour-shadow: rgba(60, 56, 54, 0.1);
+
+    /* Focus and selection */
+    --bn-focus-ring: 0 0 0 2px rgba(7, 102, 120, 0.14);
+    --bn-selection-bg: #e3e3bf;
+    --bn-selection-border: #076678;
+    --bn-selection-bg-inactive: #eee4bd;
+    --bn-selection-border-inactive: #a99e87;
+    --bn-nav-selection-bg: #e3d7b1;
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(60, 56, 54, 0.04);
+    --bn-hover-bg-subtle: rgba(60, 56, 54, 0.03);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #076678;
+    --bn-colour-suggestion-bg: #eae7c1;
+
+    /* Shadows: the same in both appearances */
+    --bn-focus-shadow: 0 3px 12px rgba(60, 56, 54, 0.12), 0 0 0 1px rgba(60, 56, 54, 0.05);
+    --bn-overlay-shadow: 4px 0 16px rgba(60, 56, 54, 0.08);
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="gruvbox"] {
+        /* Colour palette */
+        --bn-colour-bg:                 light-dark(#fbf1c7, #282828);
+        --bn-colour-text:               light-dark(#3c3836, #ebdbb2);
+        --bn-colour-muted:              light-dark(#73675d, #a89984);
+        --bn-colour-border:             light-dark(#ebdbb2, #3c3836);
+        --bn-colour-accent:             light-dark(#076678, #83a598);
+        --bn-colour-hover:              light-dark(#e5e4c0, #333735);
+        --bn-colour-inspector-bg:       light-dark(#f2e5bc, #32302f);
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:           light-dark(#f6ecc3, #302f2e);
+        --bn-colour-paper:              light-dark(#f4ebc2, #282828);
+        --bn-colour-sheet:              light-dark(#fdf9e6, #363532);
+        --bn-colour-badge-bg-paper:     light-dark(#e5ddb7, #3f3d39);
+        --bn-colour-badge-bg:           light-dark(#eee4bd, #3c3a36);
+        --bn-colour-badge-text:         light-dark(#524b46, #d0c1a0);
+        --bn-colour-user-tag-bg:        light-dark(#eee4bd, #3c3a36);
+        --bn-colour-user-tag-text:      light-dark(#524b46, #d0c1a0);
+        --bn-colour-crop-bg:            light-dark(#f3e2b2, #4a4029);
+        --bn-crop-handle-colour:        light-dark(#b57614, #fabd2f);
+        --bn-crop-handle-hover:         light-dark(#97661c, #f6c450);
+        --bn-colour-active-bg:          light-dark(#eee4b4, #3c3d28);
+        --bn-colour-highlight:          light-dark(#dfc07f, #866b2b);
+        --bn-colour-cited-bg:           light-dark(#eedba7, #56492a);
+
+        /* Destructive, success and caution */
+        --bn-colour-negative:           light-dark(#9d0006, #fb5440);
+        --bn-colour-positive:           light-dark(#79740e, #b8bb26);
+        --bn-colour-warning:            light-dark(#b57614, #fabd2f);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:               light-dark(rgba(7, 102, 120, 0.06), rgba(131, 165, 152, 0.12));
+        --bn-glow-colour-strong:        light-dark(rgba(7, 102, 120, 0.11), rgba(131, 165, 152, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:             light-dark(#ebdbb2, #3c3836);
+        --bn-minimap-heading:           light-dark(#bdae93, #665c54);
+        --bn-minimap-viewport-bg:       light-dark(rgba(7, 102, 120, 0.15), rgba(131, 165, 152, 0.2));
+        --bn-minimap-viewport-border:   light-dark(rgba(7, 102, 120, 0.3), rgba(131, 165, 152, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:           light-dark(#75a59c, #5a6d66);
+        --bn-coverage-moderator:        light-dark(#b57614, #fabd2f);
+        --bn-coverage-omitted:          light-dark(#bdae93, #665c54);
+
+        /* Neutral group card and histogram bar */
+        --bn-group-none:                light-dark(#f6ecc3, #302f2e);
+        --bn-bar-none:                  light-dark(#bdae93, #665c54);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:       light-dark(#bdae93, #665c54);
+        --bn-colour-icon-idle:          light-dark(#beb397, #625b51);
+        --bn-colour-starred:            light-dark(#73675d, #a89984);
+        --bn-colour-shadow:             light-dark(rgba(60, 56, 54, 0.1), rgba(0, 0, 0, 0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:                0 0 0 2px light-dark(rgba(7, 102, 120, 0.14), rgba(131, 165, 152, 0.2));
+        --bn-selection-bg:              light-dark(#e3e3bf, #373c3a);
+        --bn-selection-border:          light-dark(#076678, #83a598);
+        --bn-selection-bg-inactive:     light-dark(#eee4bd, #3a3834);
+        --bn-selection-border-inactive: light-dark(#a99e87, #756c5f);
+        --bn-nav-selection-bg:          light-dark(#e3d7b1, #44413c);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                  light-dark(rgba(60, 56, 54, 0.04), rgba(235, 219, 178, 0.06));
+        --bn-hover-bg-subtle:           light-dark(rgba(60, 56, 54, 0.03), rgba(235, 219, 178, 0.04));
+
+        /* Legacy aliases */
+        --bn-colour-suggestion:         light-dark(#076678, #83a598);
+        --bn-colour-suggestion-bg:      light-dark(#eae7c1, #333735);
+    }
+}
+
+/* ════ bristlenose/theme/colors/palette-rose-pine.css — lines 1–161 ════ */
+/* palette-rose-pine — Rosé Pine, Dawn (light) and Main (dark).
+   Source: https://rosepinetheme.com/palette. Rosé Pine has no green: success is pine/foam.
+   MIT licence. Colours the brand names are used verbatim; every other token is
+   a mix of those, following the relationships in palette-default.css.
+   AA nudge: rose-pine light muted: #797593 -> #6d6984 (3.82 -> 4.56)
+   AA nudge: rose-pine light accent: #907aa9 -> #79668e (3.35 -> 4.52)
+   AA nudge: rose-pine light negative: #b4637a -> #a45a6f (3.84 -> 4.50)
+   Activate: data-color-theme="rose-pine" on <html>; BRISTLENOSE_PALETTE=rose-pine or
+   --palette rose-pine. Every palette comes in light and dark
+   (tests/test_color_contract.py). */
+
+[data-color-theme="rose-pine"] {
+    /* Colour palette */
+    --bn-colour-bg: #faf4ed;
+    --bn-colour-text: #575279;
+    --bn-colour-muted: #6d6984;
+    --bn-colour-border: #dfdad9;
+    --bn-colour-accent: #79668e;
+    --bn-colour-hover: #eee7e4;
+    --bn-colour-inspector-bg: #f2e9e1;
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f6f0ea;
+    --bn-colour-paper: #f4eee9;
+    --bn-colour-sheet: #fffaf3;
+    --bn-colour-badge-bg-paper: #e7e2e0;
+    --bn-colour-badge-bg: #efe9e5;
+    --bn-colour-badge-text: #605b7d;
+    --bn-colour-user-tag-bg: #efe9e5;
+    --bn-colour-user-tag-text: #605b7d;
+    --bn-colour-crop-bg: #f8ead7;
+    --bn-crop-handle-colour: #ea9d34;
+    --bn-crop-handle-hover: #c58a45;
+    --bn-colour-active-bg: #e5e6e2;
+    --bn-colour-highlight: #f4d1a3;
+
+    /* Destructive, success and caution */
+    --bn-colour-negative: #a45a6f;
+    --bn-colour-positive: #286983;
+    --bn-colour-warning: #ea9d34;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(121, 102, 142, 0.06);
+    --bn-glow-colour-strong: rgba(121, 102, 142, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #dfdad9;
+    --bn-minimap-heading: #cecacd;
+    --bn-minimap-viewport-bg: rgba(121, 102, 142, 0.15);
+    --bn-minimap-viewport-border: rgba(121, 102, 142, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #b3a6b9;
+    --bn-coverage-moderator: #ea9d34;
+    --bn-coverage-omitted: #cecacd;
+
+    /* Neutral group card and histogram bar */
+    --bn-group-none: #f6f0ea;
+    --bn-bar-none: #cecacd;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #cecacd;
+    --bn-colour-icon-idle: #bbb5be;
+    --bn-colour-starred: #6d6984;
+    --bn-colour-shadow: rgba(87, 82, 121, 0.1);
+
+    /* Focus and selection */
+    --bn-focus-ring: 0 0 0 2px rgba(121, 102, 142, 0.14);
+    --bn-selection-bg: #ede6e4;
+    --bn-selection-border: #79668e;
+    --bn-selection-bg-inactive: #efe9e5;
+    --bn-selection-border-inactive: #a5a1ae;
+    --bn-nav-selection-bg: #e6ddd9;
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(87, 82, 121, 0.04);
+    --bn-hover-bg-subtle: rgba(87, 82, 121, 0.03);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #79668e;
+    --bn-colour-suggestion-bg: #f1eae6;
+
+    /* Shadows: the same in both appearances */
+    --bn-focus-shadow: 0 3px 12px rgba(87, 82, 121, 0.12), 0 0 0 1px rgba(87, 82, 121, 0.05);
+    --bn-overlay-shadow: 4px 0 16px rgba(87, 82, 121, 0.08);
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="rose-pine"] {
+        /* Colour palette */
+        --bn-colour-bg:                 light-dark(#faf4ed, #191724);
+        --bn-colour-text:               light-dark(#575279, #e0def4);
+        --bn-colour-muted:              light-dark(#6d6984, #908caa);
+        --bn-colour-border:             light-dark(#dfdad9, #403d52);
+        --bn-colour-accent:             light-dark(#79668e, #c4a7e7);
+        --bn-colour-hover:              light-dark(#eee7e4, #2e283b);
+        --bn-colour-inspector-bg:       light-dark(#f2e9e1, #1f1d2e);
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:           light-dark(#f6f0ea, #211f2c);
+        --bn-colour-paper:              light-dark(#f4eee9, #191724);
+        --bn-colour-sheet:              light-dark(#fffaf3, #272533);
+        --bn-colour-badge-bg-paper:     light-dark(#e7e2e0, #312f3d);
+        --bn-colour-badge-bg:           light-dark(#efe9e5, #2d2b39);
+        --bn-colour-badge-text:         light-dark(#605b7d, #c0bdd6);
+        --bn-colour-user-tag-bg:        light-dark(#efe9e5, #2d2b39);
+        --bn-colour-user-tag-text:      light-dark(#605b7d, #c0bdd6);
+        --bn-colour-crop-bg:            light-dark(#f8ead7, #3c3231);
+        --bn-crop-handle-colour:        light-dark(#ea9d34, #f6c177);
+        --bn-crop-handle-hover:         light-dark(#c58a45, #f0c896);
+        --bn-colour-active-bg:          light-dark(#e5e6e2, #2b313d);
+        --bn-colour-highlight:          light-dark(#f4d1a3, #7c6449);
+        --bn-colour-cited-bg:           light-dark(#f7e4cc, #4a3c36);
+
+        /* Destructive, success and caution */
+        --bn-colour-negative:           light-dark(#a45a6f, #eb6f92);
+        --bn-colour-positive:           light-dark(#286983, #9ccfd8);
+        --bn-colour-warning:            light-dark(#ea9d34, #f6c177);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:               light-dark(rgba(121, 102, 142, 0.06), rgba(196, 167, 231, 0.12));
+        --bn-glow-colour-strong:        light-dark(rgba(121, 102, 142, 0.11), rgba(196, 167, 231, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:             light-dark(#dfdad9, #403d52);
+        --bn-minimap-heading:           light-dark(#cecacd, #524f67);
+        --bn-minimap-viewport-bg:       light-dark(rgba(121, 102, 142, 0.15), rgba(196, 167, 231, 0.2));
+        --bn-minimap-viewport-border:   light-dark(rgba(121, 102, 142, 0.3), rgba(196, 167, 231, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:           light-dark(#b3a6b9, #77668f);
+        --bn-coverage-moderator:        light-dark(#ea9d34, #f6c177);
+        --bn-coverage-omitted:          light-dark(#cecacd, #524f67);
+
+        /* Neutral group card and histogram bar */
+        --bn-group-none:                light-dark(#f6f0ea, #211f2c);
+        --bn-bar-none:                  light-dark(#cecacd, #524f67);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:       light-dark(#cecacd, #524f67);
+        --bn-colour-icon-idle:          light-dark(#bbb5be, #4f4c60);
+        --bn-colour-starred:            light-dark(#6d6984, #908caa);
+        --bn-colour-shadow:             light-dark(rgba(87, 82, 121, 0.1), rgba(0, 0, 0, 0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:                0 0 0 2px light-dark(rgba(121, 102, 142, 0.14), rgba(196, 167, 231, 0.2));
+        --bn-selection-bg:              light-dark(#ede6e4, #342e43);
+        --bn-selection-border:          light-dark(#79668e, #c4a7e7);
+        --bn-selection-bg-inactive:     light-dark(#efe9e5, #2b2937);
+        --bn-selection-border-inactive: light-dark(#a5a1ae, #605d74);
+        --bn-nav-selection-bg:          light-dark(#e6ddd9, #323042);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                  light-dark(rgba(87, 82, 121, 0.04), rgba(224, 222, 244, 0.06));
+        --bn-hover-bg-subtle:           light-dark(rgba(87, 82, 121, 0.03), rgba(224, 222, 244, 0.04));
+
+        /* Legacy aliases */
+        --bn-colour-suggestion:         light-dark(#79668e, #c4a7e7);
+        --bn-colour-suggestion-bg:      light-dark(#f1eae6, #2e283b);
+    }
+}
+
+/* ════ bristlenose/theme/colors/palette-solarized.css — lines 1–166 ════ */
+/* palette-solarized — Solarized, light and dark.
+   Source: https://ethanschoonover.com/solarized/. The accents are the same in both appearances.
+   MIT licence. Colours the brand names are used verbatim; every other token is
+   a mix of those, following the relationships in palette-default.css.
+   AA nudge: solarized light muted: #657b83 -> #5c7077 (3.87 -> 4.52)
+   AA nudge: solarized light accent: #268bd2 -> #2073ae (3.26 -> 4.51)
+   AA nudge: solarized light negative: #dc322f -> #d5302e (4.29 -> 4.54)
+   AA nudge: solarized light positive: #859900 -> #849700 (2.97 -> 3.04)
+   AA nudge: solarized dark muted: #839496 -> #849597 (4.45 -> 4.51)
+   AA nudge: solarized dark accent: #268bd2 -> #4099d7 (3.83 -> 4.53)
+   AA nudge: solarized dark negative: #dc322f -> #e56563 (3.25 -> 4.56)
+   AA nudge: solarized dark badge-text: #8d9c9d -> #8e9d9e (4.49 -> 4.54)
+   Activate: data-color-theme="solarized" on <html>; BRISTLENOSE_PALETTE=solarized or
+   --palette solarized. Every palette comes in light and dark
+   (tests/test_color_contract.py). */
+
+[data-color-theme="solarized"] {
+    /* Colour palette */
+    --bn-colour-bg: #fdf6e3;
+    --bn-colour-text: #073642;
+    --bn-colour-muted: #5c7077;
+    --bn-colour-border: #eee8d5;
+    --bn-colour-accent: #2073ae;
+    --bn-colour-hover: #e9eade;
+    --bn-colour-inspector-bg: #f7f1df;
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f7f1df;
+    --bn-colour-paper: #f4efdd;
+    --bn-colour-sheet: #fefbf2;
+    --bn-colour-badge-bg-paper: #e1e0d1;
+    --bn-colour-badge-bg: #ece9d8;
+    --bn-colour-badge-text: #294d57;
+    --bn-colour-user-tag-bg: #ece9d8;
+    --bn-colour-user-tag-text: #294d57;
+    --bn-colour-crop-bg: #f4e9c8;
+    --bn-crop-handle-colour: #b58900;
+    --bn-crop-handle-hover: #8a7410;
+    --bn-colour-active-bg: #f1eccc;
+    --bn-colour-highlight: #e0ca88;
+
+    /* Destructive, success and caution */
+    --bn-colour-negative: #d5302e;
+    --bn-colour-positive: #849700;
+    --bn-colour-warning: #b58900;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(32, 115, 174, 0.06);
+    --bn-glow-colour-strong: rgba(32, 115, 174, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #eee8d5;
+    --bn-minimap-heading: #93a1a1;
+    --bn-minimap-viewport-bg: rgba(32, 115, 174, 0.15);
+    --bn-minimap-viewport-border: rgba(32, 115, 174, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #83aec6;
+    --bn-coverage-moderator: #b58900;
+    --bn-coverage-omitted: #93a1a1;
+
+    /* Neutral group card and histogram bar */
+    --bn-group-none: #f7f1df;
+    --bn-bar-none: #93a1a1;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #93a1a1;
+    --bn-colour-icon-idle: #b5bab2;
+    --bn-colour-starred: #5c7077;
+    --bn-colour-shadow: rgba(0, 43, 54, 0.1);
+
+    /* Focus and selection */
+    --bn-focus-ring: 0 0 0 2px rgba(32, 115, 174, 0.14);
+    --bn-selection-bg: #e7e9de;
+    --bn-selection-border: #2073ae;
+    --bn-selection-bg-inactive: #ece9d8;
+    --bn-selection-border-inactive: #9ca6a2;
+    --bn-nav-selection-bg: #e4e2d2;
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(7, 54, 66, 0.04);
+    --bn-hover-bg-subtle: rgba(7, 54, 66, 0.03);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #2073ae;
+    --bn-colour-suggestion-bg: #eeeddf;
+
+    /* Shadows: the same in both appearances */
+    --bn-focus-shadow: 0 3px 12px rgba(0, 43, 54, 0.12), 0 0 0 1px rgba(0, 43, 54, 0.05);
+    --bn-overlay-shadow: 4px 0 16px rgba(0, 43, 54, 0.08);
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="solarized"] {
+        /* Colour palette */
+        --bn-colour-bg:                 light-dark(#fdf6e3, #002b36);
+        --bn-colour-text:               light-dark(#073642, #93a1a1);
+        --bn-colour-muted:              light-dark(#5c7077, #849597);
+        --bn-colour-border:             light-dark(#eee8d5, #073642);
+        --bn-colour-accent:             light-dark(#2073ae, #4099d7);
+        --bn-colour-hover:              light-dark(#e9eade, #083849);
+        --bn-colour-inspector-bg:       light-dark(#f7f1df, #07303b);
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:           light-dark(#f7f1df, #06303a);
+        --bn-colour-paper:              light-dark(#f4efdd, #002b36);
+        --bn-colour-sheet:              light-dark(#fefbf2, #0a333d);
+        --bn-colour-badge-bg-paper:     light-dark(#e1e0d1, #123943);
+        --bn-colour-badge-bg:           light-dark(#ece9d8, #0f3741);
+        --bn-colour-badge-text:         light-dark(#294d57, #8e9d9e);
+        --bn-colour-user-tag-bg:        light-dark(#ece9d8, #0f3741);
+        --bn-colour-user-tag-text:      light-dark(#294d57, #8e9d9e);
+        --bn-colour-crop-bg:            light-dark(#f4e9c8, #1d3a2d);
+        --bn-crop-handle-colour:        light-dark(#b58900, #b58900);
+        --bn-crop-handle-hover:         light-dark(#8a7410, #ac8f28);
+        --bn-colour-active-bg:          light-dark(#f1eccc, #133a2e);
+        --bn-colour-highlight:          light-dark(#e0ca88, #51551e);
+        --bn-colour-cited-bg:           light-dark(#f0e2ba, #28402a);
+
+        /* Destructive, success and caution */
+        --bn-colour-negative:           light-dark(#d5302e, #e56563);
+        --bn-colour-positive:           light-dark(#849700, #859900);
+        --bn-colour-warning:            light-dark(#b58900, #b58900);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:               light-dark(rgba(32, 115, 174, 0.06), rgba(64, 153, 215, 0.12));
+        --bn-glow-colour-strong:        light-dark(rgba(32, 115, 174, 0.11), rgba(64, 153, 215, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:             light-dark(#eee8d5, #073642);
+        --bn-minimap-heading:           light-dark(#93a1a1, #586e75);
+        --bn-minimap-viewport-bg:       light-dark(rgba(32, 115, 174, 0.15), rgba(64, 153, 215, 0.2));
+        --bn-minimap-viewport-border:   light-dark(rgba(32, 115, 174, 0.3), rgba(64, 153, 215, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:           light-dark(#83aec6, #23688f);
+        --bn-coverage-moderator:        light-dark(#b58900, #b58900);
+        --bn-coverage-omitted:          light-dark(#93a1a1, #586e75);
+
+        /* Neutral group card and histogram bar */
+        --bn-group-none:                light-dark(#f7f1df, #06303a);
+        --bn-bar-none:                  light-dark(#93a1a1, #586e75);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:       light-dark(#93a1a1, #586e75);
+        --bn-colour-icon-idle:          light-dark(#b5bab2, #3b5b62);
+        --bn-colour-starred:            light-dark(#5c7077, #849597);
+        --bn-colour-shadow:             light-dark(rgba(0, 43, 54, 0.1), rgba(0, 0, 0, 0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:                0 0 0 2px light-dark(rgba(32, 115, 174, 0.14), rgba(64, 153, 215, 0.2));
+        --bn-selection-bg:              light-dark(#e7e9de, #0a3d50);
+        --bn-selection-border:          light-dark(#2073ae, #4099d7);
+        --bn-selection-bg-inactive:     light-dark(#ece9d8, #0d3640);
+        --bn-selection-border-inactive: light-dark(#9ca6a2, #4f6b70);
+        --bn-nav-selection-bg:          light-dark(#e4e2d2, #153b45);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                  light-dark(rgba(7, 54, 66, 0.04), rgba(147, 161, 161, 0.06));
+        --bn-hover-bg-subtle:           light-dark(rgba(7, 54, 66, 0.03), rgba(147, 161, 161, 0.04));
+
+        /* Legacy aliases */
+        --bn-colour-suggestion:         light-dark(#2073ae, #4099d7);
+        --bn-colour-suggestion-bg:      light-dark(#eeeddf, #083849);
+    }
+}
+
 /* ════ bristlenose/theme/atoms/badge.css — lines 1–326 ════ */
 /* Atom: badge — base badge, sentiment variants, AI and user variants */
 

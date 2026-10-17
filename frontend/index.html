@@ -28,7 +28,7 @@
           var palette = read("bristlenose-palette");
           // Allowlist — keep in sync with PALETTES in src/utils/bootPalette.ts.
           // (A permissive regex here let a stale value silently apply — Finding 2.)
-          if (palette === "default" || palette === "edo") {
+          if (["default", "edo", "catppuccin", "gruvbox", "rose-pine", "solarized"].indexOf(palette) !== -1) {
             root.setAttribute("data-color-theme", palette);
           }
         } catch (e) { /* localStorage unavailable — ignore */ }

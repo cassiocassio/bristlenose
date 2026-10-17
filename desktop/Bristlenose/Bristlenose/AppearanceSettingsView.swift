@@ -57,10 +57,14 @@ struct AppearanceSettingsView: View {
                 // Bare label like Typography (the audience knows the term); a
                 // pop-up menu (the default Picker style in a Form), not radios,
                 // since the set will grow. Options mirror the frontend PALETTES
-                // list (default/edo) — keep both in sync when a palette lands.
+                // list — keep both in sync when a palette lands.
                 Picker(i18n.t("settings.palette.legend"), selection: $palette) {
                     Text(i18n.t("settings.palette.default")).tag("default")
                     Text(i18n.t("settings.palette.edo")).tag("edo")
+                    Text(i18n.t("settings.palette.catppuccin")).tag("catppuccin")
+                    Text(i18n.t("settings.palette.gruvbox")).tag("gruvbox")
+                    Text(i18n.t("settings.palette.rose-pine")).tag("rose-pine")
+                    Text(i18n.t("settings.palette.solarized")).tag("solarized")
                 }
             }
 

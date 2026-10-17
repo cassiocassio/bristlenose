@@ -34,6 +34,10 @@
     "legend": "調色盤",
     "default": "預設",
     "edo": "江戶",
+    "catppuccin": "Catppuccin",
+    "gruvbox": "Gruvbox",
+    "rose-pine": "Ros\u00e9 Pine",
+    "solarized": "Solarized",
     "description": "重新為整個應用程式配色。江戶採用溫暖的和紙與普魯士藍。"
   },
   "typography": {

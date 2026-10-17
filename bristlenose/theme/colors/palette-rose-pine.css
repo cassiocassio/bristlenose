@@ -1,0 +1,161 @@
+/* palette-rose-pine — Rosé Pine, Dawn (light) and Main (dark).
+   Source: https://rosepinetheme.com/palette. Rosé Pine has no green: success is pine/foam.
+   MIT licence. Colours the brand names are used verbatim; every other token is
+   a mix of those, following the relationships in palette-default.css.
+   AA nudge: rose-pine light muted: #797593 -> #6d6984 (3.82 -> 4.56)
+   AA nudge: rose-pine light accent: #907aa9 -> #79668e (3.35 -> 4.52)
+   AA nudge: rose-pine light negative: #b4637a -> #a45a6f (3.84 -> 4.50)
+   Activate: data-color-theme="rose-pine" on <html>; BRISTLENOSE_PALETTE=rose-pine or
+   --palette rose-pine. Every palette comes in light and dark
+   (tests/test_color_contract.py). */
+
+[data-color-theme="rose-pine"] {
+    /* Colour palette */
+    --bn-colour-bg: #faf4ed;
+    --bn-colour-text: #575279;
+    --bn-colour-muted: #6d6984;
+    --bn-colour-border: #dfdad9;
+    --bn-colour-accent: #79668e;
+    --bn-colour-hover: #eee7e4;
+    --bn-colour-inspector-bg: #f2e9e1;
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f6f0ea;
+    --bn-colour-paper: #f4eee9;
+    --bn-colour-sheet: #fffaf3;
+    --bn-colour-badge-bg-paper: #e7e2e0;
+    --bn-colour-badge-bg: #efe9e5;
+    --bn-colour-badge-text: #605b7d;
+    --bn-colour-user-tag-bg: #efe9e5;
+    --bn-colour-user-tag-text: #605b7d;
+    --bn-colour-crop-bg: #f8ead7;
+    --bn-crop-handle-colour: #ea9d34;
+    --bn-crop-handle-hover: #c58a45;
+    --bn-colour-active-bg: #e5e6e2;
+    --bn-colour-highlight: #f4d1a3;
+
+    /* Destructive, success and caution */
+    --bn-colour-negative: #a45a6f;
+    --bn-colour-positive: #286983;
+    --bn-colour-warning: #ea9d34;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(121, 102, 142, 0.06);
+    --bn-glow-colour-strong: rgba(121, 102, 142, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #dfdad9;
+    --bn-minimap-heading: #cecacd;
+    --bn-minimap-viewport-bg: rgba(121, 102, 142, 0.15);
+    --bn-minimap-viewport-border: rgba(121, 102, 142, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #b3a6b9;
+    --bn-coverage-moderator: #ea9d34;
+    --bn-coverage-omitted: #cecacd;
+
+    /* Neutral group card and histogram bar */
+    --bn-group-none: #f6f0ea;
+    --bn-bar-none: #cecacd;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #cecacd;
+    --bn-colour-icon-idle: #bbb5be;
+    --bn-colour-starred: #6d6984;
+    --bn-colour-shadow: rgba(87, 82, 121, 0.1);
+
+    /* Focus and selection */
+    --bn-focus-ring: 0 0 0 2px rgba(121, 102, 142, 0.14);
+    --bn-selection-bg: #ede6e4;
+    --bn-selection-border: #79668e;
+    --bn-selection-bg-inactive: #efe9e5;
+    --bn-selection-border-inactive: #a5a1ae;
+    --bn-nav-selection-bg: #e6ddd9;
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(87, 82, 121, 0.04);
+    --bn-hover-bg-subtle: rgba(87, 82, 121, 0.03);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #79668e;
+    --bn-colour-suggestion-bg: #f1eae6;
+
+    /* Shadows: the same in both appearances */
+    --bn-focus-shadow: 0 3px 12px rgba(87, 82, 121, 0.12), 0 0 0 1px rgba(87, 82, 121, 0.05);
+    --bn-overlay-shadow: 4px 0 16px rgba(87, 82, 121, 0.08);
+}
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="rose-pine"] {
+        /* Colour palette */
+        --bn-colour-bg:                 light-dark(#faf4ed, #191724);
+        --bn-colour-text:               light-dark(#575279, #e0def4);
+        --bn-colour-muted:              light-dark(#6d6984, #908caa);
+        --bn-colour-border:             light-dark(#dfdad9, #403d52);
+        --bn-colour-accent:             light-dark(#79668e, #c4a7e7);
+        --bn-colour-hover:              light-dark(#eee7e4, #2e283b);
+        --bn-colour-inspector-bg:       light-dark(#f2e9e1, #1f1d2e);
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:           light-dark(#f6f0ea, #211f2c);
+        --bn-colour-paper:              light-dark(#f4eee9, #191724);
+        --bn-colour-sheet:              light-dark(#fffaf3, #272533);
+        --bn-colour-badge-bg-paper:     light-dark(#e7e2e0, #312f3d);
+        --bn-colour-badge-bg:           light-dark(#efe9e5, #2d2b39);
+        --bn-colour-badge-text:         light-dark(#605b7d, #c0bdd6);
+        --bn-colour-user-tag-bg:        light-dark(#efe9e5, #2d2b39);
+        --bn-colour-user-tag-text:      light-dark(#605b7d, #c0bdd6);
+        --bn-colour-crop-bg:            light-dark(#f8ead7, #3c3231);
+        --bn-crop-handle-colour:        light-dark(#ea9d34, #f6c177);
+        --bn-crop-handle-hover:         light-dark(#c58a45, #f0c896);
+        --bn-colour-active-bg:          light-dark(#e5e6e2, #2b313d);
+        --bn-colour-highlight:          light-dark(#f4d1a3, #7c6449);
+        --bn-colour-cited-bg:           light-dark(#f7e4cc, #4a3c36);
+
+        /* Destructive, success and caution */
+        --bn-colour-negative:           light-dark(#a45a6f, #eb6f92);
+        --bn-colour-positive:           light-dark(#286983, #9ccfd8);
+        --bn-colour-warning:            light-dark(#ea9d34, #f6c177);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:               light-dark(rgba(121, 102, 142, 0.06), rgba(196, 167, 231, 0.12));
+        --bn-glow-colour-strong:        light-dark(rgba(121, 102, 142, 0.11), rgba(196, 167, 231, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:             light-dark(#dfdad9, #403d52);
+        --bn-minimap-heading:           light-dark(#cecacd, #524f67);
+        --bn-minimap-viewport-bg:       light-dark(rgba(121, 102, 142, 0.15), rgba(196, 167, 231, 0.2));
+        --bn-minimap-viewport-border:   light-dark(rgba(121, 102, 142, 0.3), rgba(196, 167, 231, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:           light-dark(#b3a6b9, #77668f);
+        --bn-coverage-moderator:        light-dark(#ea9d34, #f6c177);
+        --bn-coverage-omitted:          light-dark(#cecacd, #524f67);
+
+        /* Neutral group card and histogram bar */
+        --bn-group-none:                light-dark(#f6f0ea, #211f2c);
+        --bn-bar-none:                  light-dark(#cecacd, #524f67);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:       light-dark(#cecacd, #524f67);
+        --bn-colour-icon-idle:          light-dark(#bbb5be, #4f4c60);
+        --bn-colour-starred:            light-dark(#6d6984, #908caa);
+        --bn-colour-shadow:             light-dark(rgba(87, 82, 121, 0.1), rgba(0, 0, 0, 0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:                0 0 0 2px light-dark(rgba(121, 102, 142, 0.14), rgba(196, 167, 231, 0.2));
+        --bn-selection-bg:              light-dark(#ede6e4, #342e43);
+        --bn-selection-border:          light-dark(#79668e, #c4a7e7);
+        --bn-selection-bg-inactive:     light-dark(#efe9e5, #2b2937);
+        --bn-selection-border-inactive: light-dark(#a5a1ae, #605d74);
+        --bn-nav-selection-bg:          light-dark(#e6ddd9, #323042);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                  light-dark(rgba(87, 82, 121, 0.04), rgba(224, 222, 244, 0.06));
+        --bn-hover-bg-subtle:           light-dark(rgba(87, 82, 121, 0.03), rgba(224, 222, 244, 0.04));
+
+        /* Legacy aliases */
+        --bn-colour-suggestion:         light-dark(#79668e, #c4a7e7);
+        --bn-colour-suggestion-bg:      light-dark(#f1eae6, #2e283b);
+    }
+}

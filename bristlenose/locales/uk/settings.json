@@ -34,6 +34,10 @@
     "legend": "Колірна палітра",
     "default": "Типова",
     "edo": "Едо",
+    "catppuccin": "Catppuccin",
+    "gruvbox": "Gruvbox",
+    "rose-pine": "Ros\u00e9 Pine",
+    "solarized": "Solarized",
     "description": "Змінює колір усієї програми. Едо використовує теплий папір васі й берлінську блакить."
   },
   "typography": {

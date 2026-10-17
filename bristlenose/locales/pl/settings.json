@@ -34,6 +34,10 @@
     "legend": "Paleta kolorów",
     "default": "Domyślna",
     "edo": "Edo",
+    "catppuccin": "Catppuccin",
+    "gruvbox": "Gruvbox",
+    "rose-pine": "Ros\u00e9 Pine",
+    "solarized": "Solarized",
     "description": "Zmienia kolorystykę całej aplikacji. Edo używa ciepłego papieru washi i pruskiego błękitu."
   },
   "typography": {

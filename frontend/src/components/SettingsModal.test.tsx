@@ -228,11 +228,15 @@ describe("SettingsModal", () => {
   const paletteSelect = () =>
     screen.getByRole("combobox", { name: "Colour palette" }) as HTMLSelectElement;
 
-  it("renders the palette dropdown (Default / Edo)", () => {
+  it("renders the palette dropdown, Default and Edo first", () => {
     render(<SettingsModal open={true} onClose={vi.fn()} />);
     expect(Array.from(paletteSelect().options).map((o) => o.textContent)).toEqual([
       "Default",
       "Edo",
+      "Catppuccin",
+      "Gruvbox",
+      "Rosé Pine",
+      "Solarized",
     ]);
   });
 

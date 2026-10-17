@@ -34,6 +34,10 @@
     "legend": "Paleta de colors",
     "default": "Per defecte",
     "edo": "Edo",
+    "catppuccin": "Catppuccin",
+    "gruvbox": "Gruvbox",
+    "rose-pine": "Ros\u00e9 Pine",
+    "solarized": "Solarized",
     "description": "Recolora tota l'aplicació. L'Edo utilitza paper washi càlid i tinta blau de Prússia."
   },
   "typography": {

@@ -34,6 +34,10 @@
     "legend": "Palette de couleurs",
     "default": "Par défaut",
     "edo": "Edo",
+    "catppuccin": "Catppuccin",
+    "gruvbox": "Gruvbox",
+    "rose-pine": "Ros\u00e9 Pine",
+    "solarized": "Solarized",
     "description": "Recolore toute l'application. Edo utilise du papier washi chaud et une encre bleu de Prusse."
   },
   "typography": {

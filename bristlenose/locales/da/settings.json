@@ -34,6 +34,10 @@
     "legend": "Farvepalet",
     "default": "Standard",
     "edo": "Edo",
+    "catppuccin": "Catppuccin",
+    "gruvbox": "Gruvbox",
+    "rose-pine": "Ros\u00e9 Pine",
+    "solarized": "Solarized",
     "description": "Giver hele appen nye farver. Edo bruger varmt washi-papir og preusserblåt blæk."
   },
   "typography": {

@@ -34,6 +34,10 @@
     "legend": "Цветовая палитра",
     "default": "По умолчанию",
     "edo": "Edo",
+    "catppuccin": "Catppuccin",
+    "gruvbox": "Gruvbox",
+    "rose-pine": "Ros\u00e9 Pine",
+    "solarized": "Solarized",
     "description": "Перекрашивает всё приложение. Edo использует тёплую бумагу васи и берлинскую лазурь."
   },
   "typography": {

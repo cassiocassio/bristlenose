@@ -34,6 +34,10 @@
     "legend": "Kleurenpalet",
     "default": "Standaard",
     "edo": "Edo",
+    "catppuccin": "Catppuccin",
+    "gruvbox": "Gruvbox",
+    "rose-pine": "Ros\u00e9 Pine",
+    "solarized": "Solarized",
     "description": "Herkleurt de hele app. Edo gebruikt warm washipapier en Pruisisch-blauwe inkt."
   },
   "typography": {

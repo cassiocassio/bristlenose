@@ -8,7 +8,7 @@ function makeStorage(value?: string): Pick<Storage, "getItem"> {
 
 describe("bootPalette", () => {
   it("PALETTES is the closed valid set", () => {
-    expect([...PALETTES]).toEqual(["default", "edo"]);
+    expect([...PALETTES]).toEqual(["default", "edo", "catppuccin", "gruvbox", "rose-pine", "solarized"]);
   });
 
   describe("isPalette", () => {

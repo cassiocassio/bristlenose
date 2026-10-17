@@ -2,6 +2,34 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.39.0** — _17 Oct 2026_
+
+Every row of the Sessions lens carries its timeline and a transcript can show it too, the transcript margin links each quote, screen and question to its lens, the Screens lens exports to a folder, the clipboard and Miro, and four new colour palettes arrive in light and dark.
+
+**New**
+
+- **Every session in the Sessions lens shows a thin strip of its interview under its row.** The participant's turns, in the colours of what was on screen. Clicking the strip opens the full timeline at the moment clicked, growing out of the strip; clicking anywhere else on the row opens the transcript. The timeline now flags every visit to a section, not only the first.
+- **A transcript can show its session's timeline in place of the journey chain.** The Timeline button at the end of the transcript's header row switches between the two, and its menu sets how much the timeline shows: Compact (sections and speakers), Standard (adds sentiment) or Full (adds themes). While you read, the timeline marks the paragraphs on screen; clicking a flag, a speaker clip or a sentiment bar scrolls the transcript there, and dragging the marked window scrolls the page. In the Mac app, View ▸ Show Session Timeline does the same.
+- **The transcript margin links what it marks.** Each quoted passage is marked in a new gutter and links to its section or theme in the Quotes lens; where a session moved to a screen, the margin shows the screen's title and a thumbnail and links to it in the Screens lens; a moderator's question links to it in the Discussion lens. Hovering outlines the passage.
+- **The Screens lens exports its screens.** Export Screens writes every screen, one image per participant, full size, to `bristlenose-output/screens`; Copy Screens puts them on the clipboard, to paste into Miro or FigJam as one image each. Send to Miro on the Screens lens builds a board with a frame per screen and everyone's quotes about it beneath. Mac only, as the Screens lens is.
+- **Four new palettes: Catppuccin, Gruvbox, Rosé Pine and Solarized**, each in light and dark, in the report, the Mac app's sidebar, the welcome screen and the command line.
+- **Miro boards offer square or rectangle stickies, and can break long quotes into a short set of stickies.** The board name arrives filled with the project's name.
+
+**Improved**
+
+- **A link lands with a yellow flash on what it points at**, in every lens, as the transcript already did.
+- **A renamed section or theme shows its new name everywhere**: the transcript, the Dashboard, Signals, the exports and agent access, not only the Quotes lens. Links to it keep working after the rename.
+- **Miro boards carry each quote in full.** Quotes over 300 characters used to be cut short.
+- **A heading in the Quotes contents lands below the search bar on the first click**, not behind it.
+
+**Fixed**
+
+- **The quotes CSV and Excel downloads failed for a project named outside the Latin alphabet**, and the HTML export dropped such a name from its filename. Both now keep the name as typed.
+- **The Dashboard's featured quote opens the transcript at the quote**, not at the top.
+- **A click on the transcript's journey chain lands its paragraph below the header**, not behind it.
+- **The keyboard focus ring was missing in every palette.**
+- **Removing an interview now also removes its exported screen images.**
+
 **0.38.0** — _16 Oct 2026_
 
 The Sessions and Quotes lenses open while a first analysis is still running, the Mac app reads the screens participants shared into a new Screens lens, the session timeline shows what was on screen, transcripts in eleven more languages come out punctuated, and a moved, renamed or copied project stays one project.

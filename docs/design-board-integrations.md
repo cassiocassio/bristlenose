@@ -638,6 +638,29 @@ guidelines, forum and plugin typings; the probes were run in the scratch board):
 - *Known Figma bug.* Launching from Recently Opened can run an old version until
   Figma is fully quit. Mention it in the support notes.
 
+**Long quotes become two or three stickies, on every board (owner, 17 Oct 2026).**
+FigJam inherits the Miro boards' splitter rather than growing its own:
+`board_layout.split_quote` breaks a quote longer than `SPLIT_AT` (325
+characters, `fe666b27`) into at most three parts at the most natural break near
+each even split, sentence before clause before comma; a part that goes on ends
+in "…" and the next begins with one; the words never change. Across the trial
+runs' 720 quotes that leaves 44% whole, 37% pairs and 19% trios, each part about
+55 words. FigJam takes the words (`quote_part_texts`) and none of Miro's sizing:
+its stickies are a fixed width and grow taller instead.
+
+*Why many sets, not rare ones.* The owner first wanted pairs and trios to be rare,
+then noticed what they actually do before making a board: trim and delete, a lot.
+Which parts of a quote matter is the researcher's judgement, not Bristlenose's,
+and researchers make it fast — ⌘-click a scattered handful of weak stickies,
+delete, and the board says more with less noise. That is easier when a long quote
+arrives as two or three stickies than as one. So Bristlenose splits generously
+and judges nothing; the researcher privileges one part and deletes another.
+
+*What that means for the plugin.* Every part is its own sticky, selectable and
+deletable alone: no group, no lock, no section around a set. A set reads as one
+quote by proximity only — a tight gap inside it, the usual gap between sets —
+with the attribution and clip link on its last part.
+
 **Security disciplines for the Lucid renderer (F2):**
 - **`lucid_package.py` builds `document.json` as a Python dict and serialises via
   `json.dumps(..., ensure_ascii=True)` exactly once — never string-templates JSON.**

@@ -382,6 +382,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/\u2026/clips",
     "boardDestination": "Erstellt ein neues Board in {{team}}.",
     "uploadNotice": "L\u00e4dt alle Zitate dieses Projekts zu Miro hoch \u2014 ausgeblendete Zitate werden ausgeschlossen.",
+    "screensUploadNotice": "Lädt jedes Bildschirmfoto dieses Projekts mit den Zitaten seiner Teilnehmerin oder seines Teilnehmers zu Miro hoch – ausgeblendete Zitate werden ausgelassen.",
+    "screensPopoverSubtitle": "Bildschirmfotos und ihre Zitate auf einem neuen Board",
     "createBoard": "Board erstellen",
     "creatingBoard": "Board wird erstellt\u2026",
     "boardReady_one": "Board fertig \u2014 {{count}} Zitat-Haftnotiz platziert.",

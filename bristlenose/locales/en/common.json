@@ -382,6 +382,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Creates a new board in {{team}}.",
     "uploadNotice": "Uploads all quotes in this project to Miro — hidden quotes are excluded.",
+    "screensUploadNotice": "Uploads every screengrab in this project to Miro, each with its participant\u2019s quotes \u2014 hidden quotes are excluded.",
+    "screensPopoverSubtitle": "Screengrabs and their quotes on a new board",
     "createBoard": "Create board",
     "creatingBoard": "Creating board…",
     "boardReady_one": "Board ready — {{count}} quote sticky placed.",

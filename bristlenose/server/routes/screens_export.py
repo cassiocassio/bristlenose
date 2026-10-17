@@ -322,6 +322,7 @@ async def _run_miro(project_id: int, job: dict[str, Any], *args: Any) -> None:
 
 
 class ScreensMiroStart(BaseModel):
+    board_name: str | None = None
     locale: str = "en"
     colour_by: str = "sentiment"
 
@@ -372,7 +373,7 @@ async def start_screens_miro(request: Request, project_id: int,
                   for q in extract_quotes_for_export(db, project_id)}
         arrangements = {(r.screen_key, r.session_id): json.loads(r.cards or "{}")
                         for r in db.query(ScreenArrangement).filter_by(project_id=project_id).all()}
-        title = f"{project.name} · {t_in(body.locale, 'common.screens.title')}"
+        title = (body.board_name or "").strip() or f"{project.name} · {t_in(body.locale, 'common.screens.title')}"
     finally:
         db.close()
     if not shots:

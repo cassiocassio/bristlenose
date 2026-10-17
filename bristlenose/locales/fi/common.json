@@ -382,6 +382,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Luo uuden taulun tiimiin {{team}}.",
     "uploadNotice": "Lataa kaikki tämän projektin sitaatit Miroon — piilotetut sitaatit jätetään pois.",
+    "screensUploadNotice": "Lataa Miroon projektin jokaisen kuvakaappauksen osallistujan sitaatteineen – piilotetut sitaatit jätetään pois.",
+    "screensPopoverSubtitle": "Kuvakaappaukset ja niiden sitaatit uudella taululla",
     "createBoard": "Luo taulu",
     "creatingBoard": "Luodaan taulua…",
     "boardReady_one": "Taulu valmis — {{count}} sitaattitarra sijoitettu.",

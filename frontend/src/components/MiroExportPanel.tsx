@@ -19,9 +19,11 @@ import { announce } from "../utils/announce";
 import { postStoreMiroToken } from "../shims/bridge";
 import {
   getMiroStatus,
+  getScreensMiroStatus,
   postMiroConnect,
   postMiroDisconnect,
   postMiroExport,
+  startScreensMiro,
 } from "../utils/api";
 import { resolveBrowserLang } from "../i18n/LocaleStore";
 import type { MiroExportRequest, MiroStatusResponse } from "../utils/types";
@@ -29,7 +31,13 @@ import type { MiroExportRequest, MiroStatusResponse } from "../utils/types";
 interface MiroExportPanelProps {
   open: boolean;
   onClose: () => void;
+  /** Opened on the Screens lens: build the screens board, a frame per screengrab
+   *  (docs/design-screens-export.md §6), not the quotes board. */
+  screens?: boolean;
 }
+
+/** How often the screens board's progress is read while it is built. */
+const SCREENS_POLL_MS = 1500;
 
 type View = "loading" | "connect" | "configure" | "exporting" | "done";
 
@@ -88,7 +96,7 @@ function accountLine(s: MiroStatusResponse): string | null {
   return parts.length ? parts.join(" · ") : null;
 }
 
-export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
+export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPanelProps) {
   const { t, i18n } = useTranslation();
   useInert(open);
   const [view, setView] = useState<View>("loading");
@@ -142,8 +150,9 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
   useEffect(() => {
     if (!open) return;
     if (view === "exporting") announce(t("miro.creatingBoard"));
-    else if (view === "done") announce(t("miro.boardReady", { count: stickies }));
-  }, [open, view, stickies, t]);
+    else if (view === "done")
+      announce(t(screens ? "export.screens.done" : "miro.boardReady", { count: stickies }));
+  }, [open, view, stickies, screens, t]);
 
   // Escape closes.
   useEffect(() => {
@@ -214,6 +223,32 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
   const handleExport = useCallback(async () => {
     setView("exporting");
     setError(null);
+    if (screens) {
+      // The screens board is a job: a still per frame is rendered and uploaded, so it takes as
+      // long as the study has screens. Its failures carry the same reasons as the quotes board.
+      try {
+        const { board_name, colour_by, locale } = request();
+        const start = await startScreensMiro({ board_name, colour_by, locale });
+        let s = await getScreensMiroStatus();
+        while (start.total > 0 && s.status === "running") {
+          await new Promise((r) => setTimeout(r, SCREENS_POLL_MS));
+          s = await getScreensMiroStatus();
+        }
+        if (start.total > 0 && s.status !== "completed") {
+          const key = EXPORT_ERROR_KEYS[s.reason ?? ""] ?? "miro.exportError";
+          setError(s.board_url ? `${t(key)} ${s.board_url}` : t(key));
+          setView("configure");
+          return;
+        }
+        setBoardUrl(s.board_url);
+        setStickies(s.completed_count);
+        setView("done");
+      } catch (e) {
+        setError(errDetail(e) || t("miro.exportError"));
+        setView("configure");
+      }
+      return;
+    }
     try {
       const res = await postMiroExport(request());
       setBoardUrl(res.board_url);
@@ -231,7 +266,7 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
       setError(key ? (url ? `${t(key)} ${url}` : t(key)) : errDetail(e) || t("miro.exportError"));
       setView("configure");
     }
-  }, [request, t]);
+  }, [request, screens, t]);
 
   // Notice naming the destination workspace, with the team picked out (matches
   // the macOS sheet). Split the RAW template on the {{team}} placeholder (no
@@ -240,7 +275,7 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
   // MiroSheet.swift's range(of: "{{team}}"); no <Trans> (keeps the bundle under
   // the size gate). The placeholder slot positions the emphasis per locale order.
   const renderNotice = () => {
-    const upload = t("miro.uploadNotice");
+    const upload = t(screens ? "miro.screensUploadNotice" : "miro.uploadNotice");
     if (!teamName) return upload;
     const template = t("miro.boardDestination"); // raw, contains "{{team}}"
     const slot = template.indexOf("{{team}}");
@@ -355,26 +390,32 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
               <option value="sentiment">{t("miro.colourBySentiment")}</option>
               <option value="none">{t("miro.colourByNone")}</option>
             </select>
-            <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
-              <input
-                type="checkbox"
-                checked={linkClips}
-                onChange={(e) => setLinkClips(e.target.checked)}
-              />
-              <span>
-                {t("miro.linkClipsLabel")}
-                <small className="bn-export-hint">{t("miro.linkClipsHint")}</small>
-              </span>
-            </label>
-            {linkClips && (
-              <input
-                type="text"
-                value={clipsBase}
-                placeholder={t("miro.clipsBasePlaceholder")}
-                aria-label={t("miro.linkClipsLabel")}
-                onChange={(e) => setClipsBase(e.target.value)}
-                style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
-              />
+            {/* Clip links are a quotes-board option: the screens board's quotes sit beside their
+                screengrab, and its stickies carry no link (docs/design-screens-export.md §6). */}
+            {!screens && (
+              <>
+              <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={linkClips}
+                  onChange={(e) => setLinkClips(e.target.checked)}
+                />
+                <span>
+                  {t("miro.linkClipsLabel")}
+                  <small className="bn-export-hint">{t("miro.linkClipsHint")}</small>
+                </span>
+              </label>
+              {linkClips && (
+                <input
+                  type="text"
+                  value={clipsBase}
+                  placeholder={t("miro.clipsBasePlaceholder")}
+                  aria-label={t("miro.linkClipsLabel")}
+                  onChange={(e) => setClipsBase(e.target.value)}
+                  style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
+                />
+              )}
+              </>
             )}
             <p className="bn-export-hint" style={{ marginTop: 10 }}>
               {renderNotice()}
@@ -398,7 +439,9 @@ export function MiroExportPanel({ open, onClose }: MiroExportPanelProps) {
 
         {view === "done" && (
           <>
-            <p className="bn-modal-subtitle">{t("miro.boardReady", { count: stickies })}</p>
+            <p className="bn-modal-subtitle">
+              {t(screens ? "export.screens.done" : "miro.boardReady", { count: stickies })}
+            </p>
             <div className="bn-modal-actions">
               <button className="bn-btn bn-btn-secondary" onClick={onClose}>
                 {t("miro.done")}

@@ -37,10 +37,14 @@ final class MiroSheetModel: ObservableObject {
     private let api: MiroAPI
     private let i18n: I18n
     private var exportTask: Task<Void, Never>?
+    /// Opened on the Screens lens: the board is the screens, a frame per screengrab
+    /// (docs/design-screens-export.md §6), not the quotes in section columns.
+    let screens: Bool
 
-    init(port: Int, token: String?, projectName: String, i18n: I18n) {
+    init(port: Int, token: String?, projectName: String, i18n: I18n, screens: Bool = false) {
         self.api = MiroAPI(port: port, token: token)
         self.i18n = i18n
+        self.screens = screens
         self.boardName = projectName  // prefilled, editable
     }
 
@@ -91,7 +95,7 @@ final class MiroSheetModel: ObservableObject {
     /// each locale's word order (the {{team}} slot moves: "… dans {{team}}." /
     /// "{{team}}に…").
     func noticeText() -> AttributedString {
-        let upload = AttributedString(t("uploadNotice"))
+        let upload = AttributedString(t(screens ? "screensUploadNotice" : "uploadNotice"))
         guard let team = teamName, !team.isEmpty else { return upload }
         let template = dt("boardDestination")  // localised, contains "{{team}}"
         var line = AttributedString()
@@ -113,7 +117,7 @@ final class MiroSheetModel: ObservableObject {
     /// "Board ready — N quote stickies placed", count-correct. Plural selection
     /// and the `_other` fallback for an absent stem both live in `I18n.plural`.
     func boardReadyText() -> String {
-        i18n.plural("common.miro.boardReady", count: stickies)
+        i18n.plural(screens ? "common.export.screens.done" : "common.miro.boardReady", count: stickies)
     }
 
     func load() async {
@@ -186,13 +190,17 @@ final class MiroSheetModel: ObservableObject {
         let locale = i18n.locale
         exportTask = Task {
             do {
-                let result = try await api.export(
-                    boardName: boardName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? nil : boardName.trimmingCharacters(in: .whitespacesAndNewlines),
-                    colourBy: colourBySentiment ? "sentiment" : "none",
-                    clipsBase: linkClips ? clipsBase.trimmingCharacters(in: .whitespacesAndNewlines) : "",
-                    locale: locale
-                )
+                let name = boardName.trimmingCharacters(in: .whitespacesAndNewlines)
+                let colourBy = colourBySentiment ? "sentiment" : "none"
+                let result = screens
+                    ? try await api.exportScreens(boardName: name.isEmpty ? nil : name,
+                                                  colourBy: colourBy, locale: locale)
+                    : try await api.export(
+                        boardName: name.isEmpty ? nil : name,
+                        colourBy: colourBy,
+                        clipsBase: linkClips ? clipsBase.trimmingCharacters(in: .whitespacesAndNewlines) : "",
+                        locale: locale
+                    )
                 if Task.isCancelled { return }
                 self.boardURL = result.boardURL
                 self.stickies = result.stickies
@@ -231,9 +239,9 @@ struct MiroSheet: View {
     @StateObject private var model: MiroSheetModel
     @Environment(\.dismiss) private var dismiss
 
-    init(port: Int, token: String?, projectName: String, i18n: I18n) {
+    init(port: Int, token: String?, projectName: String, i18n: I18n, screens: Bool = false) {
         _model = StateObject(wrappedValue: MiroSheetModel(
-            port: port, token: token, projectName: projectName, i18n: i18n
+            port: port, token: token, projectName: projectName, i18n: i18n, screens: screens
         ))
     }
 
@@ -347,6 +355,8 @@ struct MiroSheet: View {
                         .foregroundStyle(.secondary)
                     Toggle(model.t("colourBySentiment"), isOn: $model.colourBySentiment)
                 }
+                // Clip links are a quotes-board option; the screens board's stickies carry none.
+                if !model.screens {
                 GridRow(alignment: .top) {
                     Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
                     VStack(alignment: .leading, spacing: 4) {
@@ -357,6 +367,7 @@ struct MiroSheet: View {
                                 .textFieldStyle(.roundedBorder)
                         }
                     }
+                }
                 }
             }
             Text(model.noticeText()).font(.subheadline).foregroundStyle(.secondary)

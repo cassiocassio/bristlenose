@@ -427,6 +427,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Tworzy nową tablicę w {{team}}.",
     "uploadNotice": "Przesyła wszystkie cytaty z tego projektu do Miro — ukryte cytaty są pomijane.",
+    "screensUploadNotice": "Przesyła do Miro każdy zrzut ekranu z tego projektu wraz z cytatami uczestnika — ukryte cytaty są pomijane.",
+    "screensPopoverSubtitle": "Zrzuty ekranu i ich cytaty na nowej tablicy",
     "createBoard": "Utwórz tablicę",
     "creatingBoard": "Tworzenie tablicy…",
     "boardReady_one": "Tablica gotowa — umieszczono {{count}} karteczkę z cytatem.",

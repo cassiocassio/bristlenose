@@ -1171,7 +1171,8 @@ struct ContentView: View {
                     port: port,
                     token: serveManager?.authToken,
                     projectName: selectedProject?.name ?? "",
-                    i18n: i18n
+                    i18n: i18n,
+                    screens: bridgeHandler.activeTab == .screens
                 )
             }
         }
@@ -4033,7 +4034,8 @@ private struct ExportPopoverContent: View {
             ExportPopoverRow(
                 icon: "square.grid.2x2",
                 title: i18n.t("common.miro.menuLabel"),
-                subtitle: i18n.t("common.miro.popoverSubtitle")
+                subtitle: i18n.t(bridgeHandler.activeTab == .screens
+                                 ? "common.miro.screensPopoverSubtitle" : "common.miro.popoverSubtitle")
             ) {
                 dismiss()
                 onMiro()

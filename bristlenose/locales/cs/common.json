@@ -420,6 +420,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/\u2026/clips",
     "boardDestination": "Vytvo\u0159\u00ed novou tabuli v t\u00fdmu {{team}}.",
     "uploadNotice": "Nahraje v\u0161echny citace z tohoto projektu do Mira \u2014 skryt\u00e9 citace jsou vylou\u010deny.",
+    "screensUploadNotice": "Nahraje do Miro každý snímek obrazovky v tomto projektu s citacemi jeho účastníka – skryté citace se nezahrnou.",
+    "screensPopoverSubtitle": "Snímky obrazovky a jejich citace na nové tabuli",
     "createBoard": "Vytvo\u0159it tabuli",
     "creatingBoard": "Vytv\u00e1\u0159\u00ed se tabule\u2026",
     "boardReady_one": "Tabule je hotov\u00e1 \u2014 um\u00edst\u011bn {{count}} cita\u010dn\u00ed l\u00edstek.",

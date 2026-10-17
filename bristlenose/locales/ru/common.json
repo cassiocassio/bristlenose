@@ -427,6 +427,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Создаёт новую доску в {{team}}.",
     "uploadNotice": "Загружает все цитаты этого проекта в Miro — скрытые цитаты исключаются.",
+    "screensUploadNotice": "Загружает в Miro каждый снимок экрана из проекта вместе с цитатами участника — скрытые цитаты не включаются.",
+    "screensPopoverSubtitle": "Снимки экрана и их цитаты на новой доске",
     "createBoard": "Создать доску",
     "creatingBoard": "Создание доски…",
     "boardReady_one": "Доска готова — размещён {{count}} стикер с цитатой.",

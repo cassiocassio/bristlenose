@@ -382,6 +382,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Lager en ny tavle i {{team}}.",
     "uploadNotice": "Laster opp alle sitater i dette prosjektet til Miro – skjulte sitater utelates.",
+    "screensUploadNotice": "Laster opp hvert skjermbilde i prosjektet til Miro med deltakerens sitater – skjulte sitater utelates.",
+    "screensPopoverSubtitle": "Skjermbilder og sitatene deres på en ny tavle",
     "createBoard": "Lag tavle",
     "creatingBoard": "Lager tavle …",
     "boardReady_one": "Tavle klar – {{count}} sitatlapp plassert.",

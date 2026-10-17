@@ -382,6 +382,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Skapar en ny tavla i {{team}}.",
     "uploadNotice": "Laddar upp alla citat i det här projektet till Miro — dolda citat exkluderas.",
+    "screensUploadNotice": "Laddar upp varje skärmbild i projektet till Miro med deltagarens citat – dolda citat utelämnas.",
+    "screensPopoverSubtitle": "Skärmbilder och deras citat på en ny tavla",
     "createBoard": "Skapa tavla",
     "creatingBoard": "Skapar tavla…",
     "boardReady_one": "Tavlan är klar — {{count}} citatlapp placerad.",

@@ -382,6 +382,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Opretter et nyt board i {{team}}.",
     "uploadNotice": "Uploader alle citater i dette projekt til Miro — skjulte citater medtages ikke.",
+    "screensUploadNotice": "Uploader hvert skærmbillede i projektet til Miro med deltagerens citater – skjulte citater udelades.",
+    "screensPopoverSubtitle": "Skærmbilleder og deres citater på en ny tavle",
     "createBoard": "Opret board",
     "creatingBoard": "Opretter board…",
     "boardReady_one": "Board klar — {{count}} citatklistermærke placeret.",

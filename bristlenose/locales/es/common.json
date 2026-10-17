@@ -382,6 +382,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/\u2026/clips",
     "boardDestination": "Crea un tablero nuevo en {{team}}.",
     "uploadNotice": "Sube todas las citas de este proyecto a Miro; las citas ocultas no se incluyen.",
+    "screensUploadNotice": "Sube a Miro cada captura de pantalla de este proyecto con las citas de su participante; las citas ocultas se excluyen.",
+    "screensPopoverSubtitle": "Capturas de pantalla y sus citas en un tablero nuevo",
     "createBoard": "Crear tablero",
     "creatingBoard": "Creando el tablero\u2026",
     "boardReady_one": "Tablero listo: se coloc\u00f3 {{count}} nota de cita.",

@@ -382,6 +382,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "{{team}} içinde yeni bir pano oluşturur.",
     "uploadNotice": "Bu projedeki tüm alıntıları Miro'ya yükler — gizli alıntılar hariç tutulur.",
+    "screensUploadNotice": "Bu projedeki her ekran görüntüsünü katılımcının alıntılarıyla birlikte Miro’ya yükler; gizli alıntılar dahil edilmez.",
+    "screensPopoverSubtitle": "Ekran görüntüleri ve alıntıları yeni bir panoda",
     "createBoard": "Pano oluştur",
     "creatingBoard": "Pano oluşturuluyor…",
     "boardReady_one": "Pano hazır — {{count}} alıntı yapışkanı yerleştirildi.",

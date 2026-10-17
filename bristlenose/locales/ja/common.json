@@ -375,6 +375,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/\u2026/clips",
     "boardDestination": "{{team}} \u306b\u65b0\u3057\u3044\u30dc\u30fc\u30c9\u3092\u4f5c\u6210\u3057\u307e\u3059\u3002",
     "uploadNotice": "\u3053\u306e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8\u306e\u3059\u3079\u3066\u306e\u767a\u8a00\u3092Miro\u306b\u30a2\u30c3\u30d7\u30ed\u30fc\u30c9\u3057\u307e\u3059\u3002\u975e\u8868\u793a\u306e\u767a\u8a00\u306f\u9664\u5916\u3055\u308c\u307e\u3059\u3002",
+    "screensUploadNotice": "このプロジェクトのすべてのスクリーンショットを、その参加者の引用とともに Miro にアップロードします。非表示の引用は含まれません。",
+    "screensPopoverSubtitle": "スクリーンショットと引用を新しいボードに",
     "createBoard": "\u30dc\u30fc\u30c9\u3092\u4f5c\u6210",
     "creatingBoard": "\u30dc\u30fc\u30c9\u3092\u4f5c\u6210\u3057\u3066\u3044\u307e\u3059\u2026",
     "boardReady_other": "\u30dc\u30fc\u30c9\u304c\u3067\u304d\u307e\u3057\u305f \u2014 \u767a\u8a00\u306e\u4ed8\u7b8b\u3092{{count}}\u679a\u914d\u7f6e\u3057\u307e\u3057\u305f\u3002",

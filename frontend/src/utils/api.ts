@@ -11,6 +11,8 @@ import type {
   ClipJobStatus,
   ScreensExportStart,
   ScreensExportStatus,
+  ScreensMiroRequest,
+  ScreensMiroStatus,
   CodebookGroupResponse,
   CodebookResponse,
   CodebookTagResponse,
@@ -702,6 +704,14 @@ export function cancelScreensExport(): Promise<{ cancelled: boolean }> {
 
 export function revealScreens(): Promise<{ revealed: boolean; path: string }> {
   return apiPost<{ revealed: boolean; path: string }>("/export/screens/reveal", {});
+}
+
+export function startScreensMiro(req: ScreensMiroRequest): Promise<ScreensExportStart> {
+  return apiPost<ScreensExportStart>("/export/screens/miro", req);
+}
+
+export function getScreensMiroStatus(): Promise<ScreensMiroStatus> {
+  return apiGet<ScreensMiroStatus>("/export/screens/miro/status");
 }
 
 // ---------------------------------------------------------------------------

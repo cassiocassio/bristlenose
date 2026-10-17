@@ -361,6 +361,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "在 {{team}} 中建立新看板。",
     "uploadNotice": "將此專案中的所有引述上傳至 Miro——已隱藏的引述會予以排除。",
+    "screensUploadNotice": "將此專案的每張螢幕截圖連同該參與者的引述上載到 Miro，隱藏的引述不會包括在內。",
+    "screensPopoverSubtitle": "螢幕截圖與其引述，放在新的白板上",
     "createBoard": "建立看板",
     "creatingBoard": "正在建立看板⋯",
     "boardReady_other": "看板已就緒——已放置 {{count}} 則引述便利貼。",

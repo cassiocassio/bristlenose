@@ -382,6 +382,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Crea un tauler nou a {{team}}.",
     "uploadNotice": "Puja al Miro totes les cites d'aquest projecte — les cites ocultes queden excloses.",
+    "screensUploadNotice": "Puja a Miro cada captura de pantalla d’aquest projecte, amb les cites del seu participant; les cites amagades no s’hi inclouen.",
+    "screensPopoverSubtitle": "Captures de pantalla i les seves cites en un tauler nou",
     "createBoard": "Crea el tauler",
     "creatingBoard": "S'està creant el tauler…",
     "boardReady_one": "Tauler a punt — s'hi ha col·locat {{count}} nota de cita.",

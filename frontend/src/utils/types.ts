@@ -394,6 +394,25 @@ export interface ScreensExportStatus {
   files: string[];
 }
 
+/** POST /export/screens/miro: the screens as a Miro board, a frame per screengrab. */
+export interface ScreensMiroRequest {
+  board_name?: string | null;
+  colour_by?: string;
+  locale?: string;
+}
+
+export interface ScreensMiroStatus {
+  status: "idle" | "running" | "completed" | "failed" | "cancelled";
+  progress: number;
+  total: number;
+  completed_count: number;
+  skipped_count: number;
+  current: string;
+  board_url: string | null;
+  /** Why it failed: the same reasons as the quotes board (`board_incomplete`, …). */
+  reason: string | null;
+}
+
 export interface ProposedTagResponse {
   id: number;
   quote_id: number;

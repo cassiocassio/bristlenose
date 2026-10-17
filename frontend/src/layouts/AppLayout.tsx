@@ -903,7 +903,11 @@ function AppShell() {
       )}
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
       <ExportDialog open={exportOpen} onClose={toggleExport} initialAnonymise={exportAnonymise} />
-      <MiroExportPanel open={miroOpen} onClose={toggleMiro} />
+      <MiroExportPanel
+        open={miroOpen}
+        onClose={toggleMiro}
+        screens={location.pathname.startsWith("/report/screens")}
+      />
       <SettingsModal open={settingsOpen} onClose={toggleSettings} />
       <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} />
       <AnnounceRegion />

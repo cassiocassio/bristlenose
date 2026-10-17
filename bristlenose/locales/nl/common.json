@@ -382,6 +382,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Maakt een nieuw bord in {{team}}.",
     "uploadNotice": "Upload alle citaten in dit project naar Miro — verborgen citaten worden uitgesloten.",
+    "screensUploadNotice": "Uploadt elke schermafbeelding in dit project naar Miro, met de citaten van de deelnemer — verborgen citaten worden weggelaten.",
+    "screensPopoverSubtitle": "Schermafbeeldingen en hun citaten op een nieuw bord",
     "createBoard": "Bord maken",
     "creatingBoard": "Bord maken…",
     "boardReady_one": "Bord gereed — {{count}} citaatnotitie geplaatst.",

@@ -382,6 +382,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Crea una nuova bacheca in {{team}}.",
     "uploadNotice": "Carica su Miro tutte le citazioni di questo progetto — le citazioni nascoste sono escluse.",
+    "screensUploadNotice": "Carica su Miro ogni immagine delle schermate di questo progetto, con le citazioni del partecipante: le citazioni nascoste sono escluse.",
+    "screensPopoverSubtitle": "Immagini delle schermate e le loro citazioni su una nuova lavagna",
     "createBoard": "Crea bacheca",
     "creatingBoard": "Creazione della bacheca…",
     "boardReady_one": "Bacheca pronta — {{count}} adesivo con citazione inserito.",

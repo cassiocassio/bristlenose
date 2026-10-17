@@ -382,6 +382,8 @@
     "clipsBasePlaceholder": "https://drive.google.com/…/clips",
     "boardDestination": "Cria um novo quadro em {{team}}.",
     "uploadNotice": "Envia todas as citações deste projeto para o Miro — citações ocultas são excluídas.",
+    "screensUploadNotice": "Envia ao Miro cada captura de tela deste projeto, com as citações do participante — citações ocultas são excluídas.",
+    "screensPopoverSubtitle": "Capturas de tela e suas citações em um novo quadro",
     "createBoard": "Criar quadro",
     "creatingBoard": "Criando quadro…",
     "boardReady_one": "Quadro pronto — {{count}} adesivo de citação posicionado.",

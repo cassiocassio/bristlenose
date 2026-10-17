@@ -59,6 +59,7 @@ def export_figjam_board(
     quote_ids: str | None = Query(None, description="Comma-separated DOM IDs"),
     lang: str = Query("en", description="The board's language (the caller's UI locale)"),
     clips_base: str = Query("", description="Opt-in http(s) folder of exported clips"),
+    split_long_quotes: bool = Query(True, description="Long quotes as two or three stickies"),
 ) -> Response:
     """The project's (optionally scoped) quotes as a FigJam board document."""
     # One normalised code for the words, the document's `locale` and the log,
@@ -73,7 +74,7 @@ def export_figjam_board(
         name = project_display_name(project)
         manifest = miro_export.build_figjam_manifest(
             db, project_id, name, parse_quote_ids(quote_ids),
-            clips_base=clips_base, locale=locale,
+            clips_base=clips_base, locale=locale, split=split_long_quotes,
         )
         n = sum(len(c["quotes"]) for f in manifest["frames"] for c in f["columns"])
         if n == 0:

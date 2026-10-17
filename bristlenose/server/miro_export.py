@@ -172,7 +172,7 @@ def build_board(db: Session, project_id: int, project_name: str,
 
 def build_figjam_manifest(db: Session, project_id: int, project_name: str,
                           quote_ids: list[str] | None, *, clips_base: str = "",
-                          locale: str = "en") -> dict[str, Any]:
+                          locale: str = "en", split: bool = True) -> dict[str, Any]:
     """The FigJam board document (`board_manifest`): the same selection, order,
     words and title as a Miro board, carried as structure for the plugin.
 
@@ -190,6 +190,7 @@ def build_figjam_manifest(db: Session, project_id: int, project_name: str,
         locale=locale,
         generator=f"Bristlenose {__version__}",
         requested=len(dict.fromkeys(quote_ids)) if quote_ids else None,
+        split=split,
     )
 
 

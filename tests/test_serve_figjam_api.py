@@ -150,3 +150,13 @@ def test_requested_counts_distinct_ids_so_a_stale_selection_shows(client: TestCl
     doc = client.get(_URL, params={"quote_ids": "q-p1-10,q-p1-10,q-p9-999"}).json()
     assert (doc["requested"], doc["totals"]["quotes"]) == (2, 1)
     assert client.get(_URL).json()["requested"] is None
+
+
+def test_long_quotes_split_unless_the_researcher_unticks_it(client: TestClient, monkeypatch) -> None:
+    """The Miro panels' "Break long quotes into multiple sticky notes", ticked by
+    default; the FigJam download takes the same switch."""
+    monkeypatch.setattr("bristlenose.board_layout.SPLIT_AT", 10)
+    split = client.get(_URL).json()
+    whole = client.get(_URL, params={"split_long_quotes": "false"}).json()
+    assert max(len(q["parts"]) for q in _quotes(split)) > 1
+    assert all(len(q["parts"]) == 1 for q in _quotes(whole))

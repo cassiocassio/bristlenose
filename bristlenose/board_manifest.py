@@ -71,6 +71,7 @@ def build_manifest(
     generator: str,
     colour_by: str = "none",
     requested: int | None = None,
+    split: bool = True,
 ) -> dict[str, Any]:
     """The document as a dict. `palette` maps every colour token used to hex.
 
@@ -99,7 +100,7 @@ def build_manifest(
                     # One to three parts, split where a researcher would split it
                     # (`board_layout.split_quote`); the plugin draws each as a
                     # sticky and puts the attribution on the last.
-                    "parts": quote_part_texts(q.text),
+                    "parts": quote_part_texts(q.text, split),
                     "attribution": attribution(q.participant_id, q.start_timecode),
                     "colour": token,
                     "clip_url": q.link_url,

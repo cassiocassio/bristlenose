@@ -24,6 +24,7 @@
  * Add a concept here rather than inlining another <svg> in a component.
  */
 import {
+  AppWindowMac,
   Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleHelp, CircleX, Download,
   ExternalLink, Eye, EyeOff, Folder, LayoutGrid, List, Minus, Moon, Pencil, Play, Plus,
   RotateCcw, RotateCw, Search, Settings, SlidersHorizontal, Sparkle, Tag, TextQuote,
@@ -60,6 +61,9 @@ const ICONS = {
   heatmap: LayoutGrid,
   /** The Quotes lens; matches the Mac's SF Symbol `text.quote`. */
   quotes: TextQuote,
+  /** The Screens lens; stands in for the Mac's SF Symbol `macwindow.on.rectangle` (Lucide has
+   *  no window over a rectangle: its nearest is one window). */
+  screens: AppWindowMac,
   /** Focus mode: the moon, as Mail's View menu. */
   focus: Moon,
   /** Settings (pick: the gear, over settings-2's sliders). */

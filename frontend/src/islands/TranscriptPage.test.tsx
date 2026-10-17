@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll, afterEach } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { bumpRefreshKey, resetLastRunStore } from "../contexts/LastRunStore";
 import { TranscriptPage } from "./TranscriptPage";
@@ -127,6 +127,8 @@ const mockData: TranscriptPageResponse = {
 // ---------------------------------------------------------------------------
 
 vi.mock("../utils/api", () => ({
+  // /screens, read for the gutter's screen marks: off unless a test says otherwise.
+  apiGet: vi.fn().mockResolvedValue({ enabled: false, unavailable: null, screens: [] }),
   getTranscript: vi.fn(),
   getSessionList: vi.fn().mockResolvedValue([]),
   putDeletedBadges: vi.fn(),
@@ -144,7 +146,8 @@ vi.mock("../utils/embedded", () => ({
   isEmbedded: () => mockEmbedded,
 }));
 
-import { getTranscript, getSessionList, postParagraphJoin, postParagraphSplit } from "../utils/api";
+import { apiGet, getTranscript, getSessionList, postParagraphJoin, postParagraphSplit } from "../utils/api";
+import { screenRef } from "./screens/screenModel";
 import { navigateTo } from "../shims/navigation";
 
 // The gutter's marks navigate through the shim (utils/quotesLink.ts): the page renders without a router here.
@@ -1157,5 +1160,63 @@ describe("TranscriptPage — the gutter", () => {
     const entry = screen.getByTestId("annotation-q-p1-10");
     expect(entry.querySelector("a.bn-gutter-mark")).toBeNull();
     expect(entry.querySelector("span.bn-gutter-mark")).toBeTruthy();
+  });
+});
+
+describe("TranscriptPage — screens in the gutter", () => {
+  // clearAllMocks keeps an implementation: put the default (screens off) back after each test.
+  afterEach(() => {
+    vi.mocked(apiGet).mockReset();
+    vi.mocked(apiGet).mockResolvedValue({ enabled: false, unavailable: null, screens: [] });
+  });
+  const tab = (t: number, heading: string) => ({
+    session_id: "s1", code: "p1", t, crop: [0, 0, 1, 1], heading, visits: [[t, t + 8]], pins: [], loose: [],
+  });
+  function withScreens() {
+    vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens") {
+        return Promise.resolve({
+          enabled: true, unavailable: null,
+          screens: [
+            { key: "url:/account/orders/123", name: "/account/orders/123", quotes: 0, tabs: [tab(27, "Your orders")] },
+            { key: "url:/dash", name: "dashboard", quotes: 1, tabs: [tab(11, "Dashboard")] },
+          ],
+        });
+      }
+      if (path.startsWith("/screens/still")) return Promise.resolve({ src: "data:image/png;base64,AA==" });
+      return Promise.reject(new Error(path));
+    }) as typeof apiGet);
+  }
+
+  it("marks the paragraph a screen began in, and links to it without its address", async () => {
+    withScreens();
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    // The visit at 27 s began in the paragraph at 26–39 s, the fourth.
+    const entry = await screen.findByTestId("screen-entry-3");
+    const mark = entry.querySelector("a.bn-gutter-mark")!;
+    expect(mark.getAttribute("aria-label")).toBe("Screens: Your orders");
+    expect(mark.getAttribute("href")).toBe(`/report/screens/?screen=${screenRef("url:/account/orders/123")}&session=s1`);
+    expect(mark.getAttribute("href")).not.toContain("orders");
+    expect(entry.querySelector("a.bn-gutter-title")!.textContent).toBe("Your orders");
+    expect(entry.querySelector(".bn-gutter-thumb")).toBeTruthy();
+  });
+
+  it("does not repeat a screen's name when its section says the same", async () => {
+    withScreens();
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    // The paragraph at 10–19 s shows the section "Dashboard"; the screen there is "Dashboard" too.
+    const entry = await screen.findByTestId("screen-entry-1");
+    expect(entry.hasAttribute("data-same")).toBe(true);
+    expect(entry.querySelector("a.bn-gutter-title")).toBeNull();
+    expect(entry.querySelector(".bn-gutter-thumb")).toBeTruthy();
+  });
+
+  it("draws no screen marks when the lens is off", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("annotation-q-p1-10")).toBeTruthy());
+    expect(document.querySelector("[data-testid^='screen-entry-']")).toBeNull();
   });
 });

@@ -104,6 +104,7 @@ import { setScreensCount } from "./screensCount";
 import { featureFlags } from "../../utils/featureFlags";
 import { choosePaper, papers, readAccents, samplePaper, type Rgb } from "./paper";
 import "./screens.css";
+import { screenRef, screensArrival, screenTitle, stillUrl } from "./screenModel";
 import { Icon } from "../../components/Icon";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -291,11 +292,6 @@ const stills = {
 };
 const stillFailed = new Set<string>();
 const stillWaiters = new Map<string, Promise<string | null>>();
-
-function stillUrl(tab: ScreenTab, w: number): string {
-  const crop = tab.crop.map((v) => v.toFixed(4)).join(",");
-  return `/screens/still?session_id=${encodeURIComponent(tab.session_id)}&t=${tab.t}&w=${w}&crop=${crop}`;
-}
 
 /** Fetch a still once, however many ask for it; null when there is none. */
 function fetchStill(url: string): Promise<string | null> {
@@ -487,6 +483,12 @@ export function ScreensLens() {
     if (lensOn && arrangementsLoaded(projectId)) void reloadArrangements(projectId);
   }, [refreshKey, lensOn, projectId]);
 
+  // Arriving from a link (the transcript's gutter: docs/design-transcript-gutter.md): the address
+  // names a screen by an opaque reference to its key, never the key, and a session. The first load
+  // that holds that screen opens it on that session's version. Read from the page's own query: the
+  // lens exists only in serve mode, under the browser router, never in an export.
+  const arrival = useRef(screensArrival(window.location.search));
+
   // Screens: polled while the job is still reading, capped, and re-read when the data moves.
   useEffect(() => {
     let live = true;
@@ -498,6 +500,13 @@ export function ScreensLens() {
           if (!live) return;
           setData(r);
           setScreensError(false);
+          const want = arrival.current;
+          const asked = want ? r.screens.find((sc) => screenRef(sc.key) === want.ref) : undefined;
+          if (want && asked) {
+            arrival.current = null;
+            setCurKey(asked.key);
+            setTabSid(asked.tabs.some((tb) => tb.session_id === want.session) ? want.session : null);
+          }
           // The nav follows what the lens can show, not only the last status read.
           if (r.enabled && !r.unavailable && r.screens.length > 0) markScreensFound();
           const next = r.indexed !== lastIndexed && lastIndexed >= 0 ? 0 : attempt + 1;
@@ -1011,13 +1020,6 @@ function NavThumb({ tab }: { tab: ScreenTab }) {
       {src ? <img alt="" src={src} /> : <span className="screens-thumb-empty" />}
     </span>
   );
-}
-
-function screenTitle(screen: Screen, tab?: ScreenTab): string {
-  if (!screen.name.startsWith("/")) return screen.name.charAt(0).toUpperCase() + screen.name.slice(1);
-  if (tab?.heading) return tab.heading;
-  const hs = [...new Set(screen.tabs.map((t) => t.heading).filter(Boolean))];
-  return hs.join(" · ") || screen.name;
 }
 
 /**

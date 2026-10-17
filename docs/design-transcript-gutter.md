@@ -1,6 +1,6 @@
 # Transcript gutter — linking a transcript out to the lenses
 
-**Status:** stage 1 (Quotes) built 17 Oct 2026; stages 2–3 building. Decided in conversation with the owner on 16–17 Oct 2026 against
+**Status:** stages 1 (Quotes) and 2 (Screens) built 17 Oct 2026; stage 3 building. Decided in conversation with the owner on 16–17 Oct 2026 against
 two mockups: `docs/mockups/transcript-quote-hooks.html` (round 1, six ways to find a quote) and
 `docs/mockups/transcript-quote-gutter.html` (round 2, the direction). The editing decisions made in
 the same conversation are in `design-transcript-editing.md` ("Quote edits win, one way", "The
@@ -95,7 +95,12 @@ transcript they can jump to each, landing on the thing itself.
   is harmless. In an export a hidden quote cannot be un-hidden, so its link carries no `reveal`.
   Signals' location heading and the Dashboard's section, theme and stat links use the same address,
   which also ends their silent no-op under By session grouping.
-- **Screens:** a route parameter for screen key and session.
+- **Screens:** `/report/screens/?screen=<ref>&session=<sid>` (`islands/screens/screenModel.ts`). The
+  reference is an FNV-1a hash of the screen's key, never the key: a key is a path from a
+  participant's screen, deleted when screen text is switched off, and an address lives on in
+  history, the web view's back list and the route the page reports to the Mac. The lens reads the
+  query at mount (it exists only in serve mode, under the browser router) and, on the first load
+  holding that screen, opens it on that session's version.
 - **Discussion:** a route parameter for item and turn.
 - **Back** returns to the paragraph the jump left from: the transcript's address is replaced with
   `#t-<seconds>` before the jump, which the page already honours (with its brief highlight).
@@ -116,7 +121,15 @@ a fallback.
    the retired `Annotation`); arrival in the Quotes lens; Signals and Dashboard through the same
    address; Back. Checked headless in WebKit and Chromium on a dev serve of a copy of a real
    project.
-2. **Screens**: icon concept; join; marks, titles, thumbnails; arrival.
+2. **Screens** (built 17 Oct 2026): the `screens` icon concept (Lucide `AppWindowMac`, standing
+   in for `macwindow.on.rectangle`); `screenTitle` moved out of the lens into `screenModel.ts`
+   with the join, so the transcript does not load the lens's chunk; one mark per stay (a return
+   to the same title with nothing between is the same stay, and two keys with one title are one
+   place: QA found a paragraph naming "Storage furniture" twice); the title (not repeated when a
+   section shown in the paragraph says the same) and a thumbnail fetched as it nears the
+   viewport (`GutterThumb`), fading under what follows and surfacing on hover; arrival. Off,
+   unavailable, failed or in an export: no screen marks. Checked headless in WebKit on a dev serve
+   of a copy of a real project (12 screen marks in its first session, no key in any address).
 3. **Discussion**: icon concept; join; marks and topics; arrival.
 
 ## Not in this work

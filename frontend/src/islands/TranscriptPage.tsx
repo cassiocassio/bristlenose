@@ -28,6 +28,9 @@ import {
 } from "../utils/readingAnchor";
 import { Badge } from "../components/Badge";
 import { GutterEntry } from "./transcript/GutterEntry";
+import { GutterThumb } from "./transcript/GutterThumb";
+import { screenStarts, screensPath, screenTitle, type ScreenLike, type ScreenStart } from "./screens/screenModel";
+import { reportHref } from "../utils/reportHref";
 import { useGutterHover } from "./transcript/useGutterHover";
 import "./transcript/transcript-gutter.css";
 import { quoteExtents } from "../utils/quoteExtents";
@@ -49,6 +52,7 @@ import {
   verifyOf,
 } from "../utils/paragraphEdits";
 import {
+  apiGet,
   getTranscript,
   getSessionList,
   putDeletedBadges,
@@ -120,6 +124,11 @@ function buildWaypoints(
  * that doesn't land exactly on a segment id (e.g. a quote that starts
  * mid-segment) still scrolls to a real segment. Segments are time-ordered.
  */
+/** Two names compared as words: case and punctuation aside ("Shopping bag" is "Shopping Bag"). */
+function norm(s: string): string {
+  return s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
 function resolveSegmentForSeconds(
   segments: TranscriptSegmentResponse[],
   target: number,
@@ -644,6 +653,31 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   const sheetRef = useRef<HTMLDivElement | null>(null);
   useGutterHover(sheetRef, data);
 
+  // The screens this session was on (stage 2): the Screens lens's own read, in serve only — an
+  // export carries no screens. Off, unavailable or failed: no screen marks, nothing said.
+  const [screens, setScreens] = useState<ScreenLike[]>([]);
+  useEffect(() => {
+    if (isExportMode()) return;
+    let live = true;
+    apiGet<{ enabled: boolean; unavailable: string | null; screens: ScreenLike[] }>("/screens")
+      .then((r) => {
+        if (live) setScreens(r.enabled && !r.unavailable ? r.screens : []);
+      })
+      .catch(() => {
+        if (live) setScreens([]);
+      });
+    return () => {
+      live = false;
+    };
+  }, [sessionId]);
+  const startsByParagraph = useMemo(() => {
+    if (!data || screens.length === 0) return new Map<number, ScreenStart[]>();
+    return screenStarts(screens, sessionId, (sec) => {
+      const seg = resolveSegmentForSeconds(data.segments, sec);
+      return seg ? data.segments.indexOf(seg) : null;
+    });
+  }, [screens, sessionId, data]);
+
   // Loading state
   if (loading) {
     return (
@@ -962,8 +996,8 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
               {/* The gutter and the margin (docs/design-transcript-gutter.md): one entry per
                   quote this paragraph draws, its mark a link into the Quotes lens. Drawn twice —
                   beside the text, and under it for a narrow window — and only one is displayed. */}
-              {quotesHere.length > 0 && (() => {
-                const entries = quotesHere.map((qid) => {
+              {(quotesHere.length > 0 || startsByParagraph.has(position)) && (() => {
+                const quoteEntries = quotesHere.map((qid) => {
                   const ann = annotations[qid];
                   const shown = segAnnotations.find((a) => a.quoteId === qid);
                   const anchor = ann?.anchor ?? "";
@@ -1010,23 +1044,53 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                     );
                   };
                   return {
-                    qid, href, follow, content, hidden: isHidden(qid),
+                    key: qid, icon: "quotes" as const, href, follow, content, hidden: isHidden(qid),
+                    same: false, target: `q:${qid}`, testId: `annotation-${qid}`,
                     name: ann?.label ? `${t("nav.quotes")}: ${ann.label}` : t("nav.quotes"),
                   };
                 });
+                // The screens that began during this paragraph, after its quotes, so a thumbnail
+                // hangs into the space below. A screen named as a section shown here says it once.
+                const shownLabels = new Set(
+                  segAnnotations.filter((a) => a.showLabel && a.ann.label).map((a) => norm(a.ann.label)),
+                );
+                const screenEntries = (startsByParagraph.get(position) ?? []).map(({ screen, tab }) => {
+                  const title = screenTitle(screen, tab);
+                  const path = screensPath(screen.key, sessionId);
+                  const href = reportHref(path);
+                  const follow = (e: React.MouseEvent) => followInApp(e, path, backTo(seg));
+                  const same = shownLabels.has(norm(title));
+                  return {
+                    key: `s:${screen.key}`, icon: "screens" as const, href, follow, hidden: false, same,
+                    target: `p:${position}`, testId: `screen-entry-${position}`,
+                    name: `${t("nav.screens")}: ${title}`,
+                    content: (_withIds: boolean) => (
+                      <>
+                        {same ? (
+                          <span aria-hidden="true">{"\u00a0"}</span>
+                        ) : (
+                          <a className="bn-gutter-title is-screen" href={href} onClick={follow}>{title}</a>
+                        )}
+                        <GutterThumb tab={tab} href={href} onFollow={follow} />
+                      </>
+                    ),
+                  };
+                });
+                const entries = [...quoteEntries, ...screenEntries];
                 return (
                   <>
                     <div className="segment-side" contentEditable={false}>
                       {entries.map((e) => (
                         <GutterEntry
-                          key={e.qid}
-                          icon="quotes"
+                          key={e.key}
+                          icon={e.icon}
                           name={e.name}
                           href={e.href}
                           onFollow={e.follow}
                           hidden={e.hidden}
-                          target={`q:${e.qid}`}
-                          data-testid={`annotation-${e.qid}`}
+                          same={e.same}
+                          target={e.target}
+                          data-testid={e.testId}
                         >
                           {e.content(true)}
                         </GutterEntry>
@@ -1034,7 +1098,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                     </div>
                     <div className="segment-under" contentEditable={false}>
                       {entries.map((e) => (
-                        <div key={e.qid} className="bn-gutter-entry" data-hidden={e.hidden ? "" : undefined}>
+                        <div key={e.key} className="bn-gutter-entry" data-hidden={e.hidden ? "" : undefined}>
                           {e.content(false)}
                         </div>
                       ))}

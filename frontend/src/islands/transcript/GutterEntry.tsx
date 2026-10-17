@@ -18,17 +18,27 @@ interface GutterEntryProps {
   onFollow?: (e: MouseEvent) => void;
   /** The researcher hid what it names: drawn in grey. */
   hidden?: boolean;
-  /** What it points at in the text, for the hover keyline: `q:<dom_id>`. */
+  /** What it points at in the text, for the hover keyline: `q:<dom_id>`, or `p:<position>` for a
+   *  paragraph. */
   target: string;
+  /** Its title is not repeated because the entry above says the same (a screen named as its
+   *  section): what hangs from it starts at the top. */
+  same?: boolean;
   children?: ReactNode;
   "data-testid"?: string;
 }
 
 export function GutterEntry({
-  icon, name, href, onFollow, hidden, target, children, "data-testid": testId,
+  icon, name, href, onFollow, hidden, target, same, children, "data-testid": testId,
 }: GutterEntryProps) {
   return (
-    <div className="bn-gutter-entry" data-hidden={hidden ? "" : undefined} data-target={target} data-testid={testId}>
+    <div
+      className="bn-gutter-entry"
+      data-hidden={hidden ? "" : undefined}
+      data-same={same ? "" : undefined}
+      data-target={target}
+      data-testid={testId}
+    >
       {href ? (
         <a className="bn-gutter-mark" href={href} onClick={onFollow} aria-label={name} title={name}>
           <Icon name={icon} decorative />

@@ -2333,3 +2333,25 @@ describe("arrangements come from the project's database (15 Oct 2026)", () => {
   });
 });
 
+
+describe("ScreensLens — arriving from the transcript's gutter", () => {
+  // docs/design-transcript-gutter.md, stage 2: the address names a screen by an opaque reference
+  // to its key (never the key, a path from a participant's screen) and a session.
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("opens on the screen the address names, not the first", async () => {
+    const { screenRef } = await import("./screenModel");
+    window.history.replaceState(null, "", `/report/screens/?screen=${screenRef("url:/order/delivery")}&session=s1`);
+    mockApi(screensResponse());
+    render(<ScreensLens />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Delivery or collect"));
+  });
+
+  it("opens as usual when the address names no screen it has", async () => {
+    window.history.replaceState(null, "", "/report/screens/?screen=nope&session=s1");
+    mockApi(screensResponse());
+    await opened();
+  });
+});

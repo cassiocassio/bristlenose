@@ -170,3 +170,61 @@ span.bn-gutter-mark { cursor: default; }
     .transcript-body [data-q],
     .bn-gutter-mark { transition: none; }
 }
+
+/* ── Screens (stage 2) ──────────────────────────────────────────────────── */
+/* A screen's title is a link like the others, at body weight: it names a place, not a finding. */
+.bn-gutter-title.is-screen { font-weight: var(--bn-weight-normal); }
+
+/* The margin's words are their own layer, painted in reading order, and carry the paper behind
+   them: a thumbnail hanging down from an earlier row slides under the next title, not over it. */
+.segment-side .bn-gutter-content { position: relative; z-index: 2; }
+.segment-side .bn-gutter-title,
+.segment-side .margin-tags {
+    background: var(--bn-transcript-paper);
+    box-shadow: 0 0 0 2px var(--bn-transcript-paper);
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+}
+.segment-side .margin-tags { width: fit-content; }
+/* During playback the row is washed blue; the paper backing would show as patches. */
+.transcript-segment.bn-timecode-glow .segment-side .bn-gutter-title,
+.transcript-segment.bn-timecode-glow .segment-side .margin-tags { background: transparent; box-shadow: none; }
+
+/* The thumbnail never grows its row: it hangs below the screen's title, out of flow, and fades
+   out under whatever follows. Hovering the title, the thumbnail or the mark brings it up whole,
+   over the neighbouring margin. */
+.bn-gutter-thumb {
+    display: block;
+    width: 100%;
+    max-width: 140px;
+    border-radius: var(--bn-radius-md);
+    text-decoration: none;
+}
+.bn-gutter-thumb img,
+.bn-gutter-thumb-empty {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    object-position: top;
+    border-radius: var(--bn-radius-md);
+    border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+}
+.segment-side .bn-gutter-thumb {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 3px);
+    z-index: 1;
+    -webkit-mask-image: linear-gradient(#000 15%, transparent 80%);
+    mask-image: linear-gradient(#000 15%, transparent 80%);
+}
+.segment-side .bn-gutter-entry[data-same] .bn-gutter-thumb { top: 3px; }
+.segment-side .bn-gutter-entry.is-hot .bn-gutter-content { z-index: 10; }
+.segment-side .bn-gutter-entry.is-hot .bn-gutter-thumb {
+    -webkit-mask-image: none;
+    mask-image: none;
+    box-shadow: 0 6px 20px rgb(0 0 0 / 0.18), 0 0 0 1px var(--bn-colour-border);
+}
+/* Under the text, in a narrow window, there is room for it whole. */
+.segment-under .bn-gutter-thumb { margin-top: 2px; }

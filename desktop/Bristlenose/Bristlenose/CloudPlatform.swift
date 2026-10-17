@@ -408,11 +408,11 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// Teams: no — `OnlineMeetingTranscript.Read.All` is admin-consent-only.
     /// Zoom: **yes, and on the same call as the video** — a `TRANSCRIPT` file
     /// in VTT, speaker names carried as a `Name: ` prefix in each cue.
-    /// Conditional on the host's "Create audio transcript" setting and, on
-    /// every plan, **English only** — which excludes more real researchers than
-    /// any tier boundary and is invisible until a VTT fails to arrive. So this
-    /// flag says the platform *can*; `ZoomPreflight` says whether this account
-    /// *will*.
+    /// Conditional on the host's "Create audio transcript" setting, and in the
+    /// host's chosen transcript language — English unless they changed it, so
+    /// a non-English interview can arrive transcribed by an English model
+    /// (Zoom's KB lists 19 languages, 29 Sep 2026). So this flag says the
+    /// platform *can*; `ZoomPreflight` says whether this account *will*.
     ///
     /// Both Meet and Zoom therefore make §8's comparison askable. Meet's is the
     /// better artefact (per-utterance, participant-resolved); Zoom's is the

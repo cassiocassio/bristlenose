@@ -538,6 +538,52 @@ cannot be shared outside its own account, so real researchers need a published M
 The owner is setting up the Zoom admin side over a weekend. This section brings the existing Zoom UX and
 implementation into this plan **as they are**. Nothing is redesigned; the transcript work adds to it.
 
+**Status, 17 Oct 2026: Phase 5 built, still never run against a real account.** Corrections 2–4 below
+are done: the readiness comment, the two `user:read:*` scopes in `ZoomScopes.requested`, and one row per
+part (`ZoomFileSelection.parts`, rows `<uuid>#<n>` nested under the meeting like Meet's segments, with
+the ordinal in the filename). The transcript is fetched beside the media and rewritten as §4's file
+(`ZoomSource.fetchTranscript`, `ZoomTranscript.cues(fromVTT:)`, NOTE `source: zoom`, `rebased-by: 0`).
+Listing states are *Available* / *Expected* (setting on, under 24 h since the part ended) / *No
+transcript*, re-checked with one `GET /meetings/{uuid}/recordings` per meeting. Both account sentences
+now render through `CloudAccountNotice`: recording off replaces the empty state, transcript off is a bar
+above the grid. `CloudDownloadVerification.inspectResponse` now accepts plain `text/plain` when a VTT
+was asked for, since Zoom documents no content type for it. **Unmeasured until the live test:** whether
+each part's VTT is on its own part's clock (the tail check refuses it if not), Zoom's real VTT content
+type, and correction 1's language behaviour. *No speaker names* is not a listing state on Zoom, because
+the names are only known once the file is read; the import writes unnamed cues and logs `named=0`.
+
+**Research and review pass, 17 Oct 2026** (Zoom's OpenAPI specs downloaded that day, devforum threads
+2020–2026, a sanitised real `/recordings` response from March 2026, and ten openly licensed Zoom VTTs
+run through the parser and read back by `s03`). What it changed:
+- **Redirect auth.** `CloudTransferPolicy.zoom` used to strip `Authorization` on every redirect, on an
+  uncited report. A July 2025 devforum thread got a 200 "Only the host can download this recording"
+  page that way, and `download_url`s start on the account's vanity domain. The bearer now follows a
+  redirect while it stays on `*.zoom.us` over HTTPS, set explicitly, and never leaves the domain.
+  **First thing to check live:** if `ssrweb.zoom.us` refuses a request carrying both a signature and
+  a bearer, the fix is to narrow the domain rule, and the log says `badStatus` or `notMedia`.
+- **Speaker names follow `s03`'s rule.** The pipeline trusts a cloud transcript's `<v>` tags, so
+  Swift's name check is the only one a Zoom file gets. It now takes `Dr.`, commas, `(Org)` suffixes,
+  any script (a capital-letter rule dropped every CJK name) and U+3000, the stop words are pinned
+  equal to Python's by a test, `Unknown Speaker` is nobody, and a lowercase handle is a name once it
+  opens three cues (one real 2025 call had 227 of 505 cues under `stay` and `nutzipper`). U+3000 was
+  added to `s03` too.
+- **Listing.** `recording_source_type=cloud_recording_only` keeps "My Notes" out. A row's duration is
+  `recording_end − recording_start` when stamped, since `duration` is the meeting's figure in whole
+  minutes and was measured at 77 for a 145-minute recording.
+- **Transcript fetch.** No `file_size` gate on the VTT, which has never been measured against its
+  download (the March 2026 data shows CRLF-sized disagreements); the WEBVTT signature still runs. A
+  row included while *Expected* is re-asked before its fetch. A meeting Zoom will not answer for
+  still stops waiting once the day is past. A failed download logs a case, never the error, whose
+  description carries the signed URL.
+- **Confirmed by the samples:** single-line cues, `Name:` prefixes, numbered cues, CRLF and LF; a
+  two-part 2020 training whose second file restarts its clock near zero, which supports per-part
+  clocks (inferred, not measured on a restart). The `CC` file is also VTT, so selection stays on
+  `file_type == TRANSCRIPT`.
+- **Still unknown:** whether a stopped-and-restarted recording in 2026 yields one transcript per part;
+  the VTT's content type; and whether any language beyond English arrives. Zoom offers no API to set
+  or read the transcript language. Disconnect is local-only, which is right: `/oauth/revoke` refuses
+  a public client (`400 invalid_client`, devforum, July 2026).
+
 **What is built** (≈1,900 lines, `ZoomOAuth.swift`, `ZoomSource.swift`, `ZoomRecordingModel.swift`;
 `ZoomImportTests` 37 + `ZoomGrantTests` 5; fixture states in **Diagnostics ▸ Cloud Import ▸ Zoom**,
 plus **Store a Test Zoom Sign-In**). It sits behind `BristlenoseFlags.cloudImportZoom`, off by default.

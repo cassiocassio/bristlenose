@@ -35,29 +35,52 @@ struct CloudTransferPolicy: Equatable {
 
     let authorization: Authorization
 
-    /// Whether to keep sending the header after a cross-host redirect.
+    /// Whether to keep sending the header after any redirect.
     ///
-    /// **False for Zoom, and that is load-bearing.** `download_url` redirects
-    /// from `zoom.us` to a pre-signed CDN URL on `ssrweb.zoom.us` that carries
-    /// its own credentials; a signed URL arriving with *both* a signature and
-    /// an `Authorization` header has been reported to 403. `URLSession`
-    /// re-attaches headers across redirects by default, so this must be said
-    /// explicitly. Python's `requests` strips it automatically, which is why so
-    /// much shipped Zoom code works by accident.
+    /// `URLSession` re-attaches headers across redirects by default, so a
+    /// policy that must not leak its bearer to another host says so here.
     let keepAuthorizationAcrossRedirect: Bool
+
+    /// Hosts that still get the header when `keepAuthorizationAcrossRedirect`
+    /// is false: this domain and its subdomains, over HTTPS only.
+    ///
+    /// **Zoom's is `zoom.us`, and the evidence moved.** This policy used to
+    /// strip on every redirect, on an uncited report that a signed CDN URL
+    /// refuses a request carrying a bearer as well. Measured against it
+    /// (research, 17 Oct 2026): a July 2025 devforum thread where dropping the
+    /// header across the redirect returned a 200 HTML page, "Only the host can
+    /// download this recording", fixed by forwarding it; a working March 2026
+    /// exporter that forwards it on every hop; and `download_url`s that start
+    /// on the account's vanity domain (`<account>.zoom.us`), so the first hop
+    /// is often Zoom-to-Zoom. So the bearer follows the redirect while it stays
+    /// on Zoom's domain, and never leaves it. The live test is the check.
+    let keepAuthorizationForDomain: String?
 
     static let teams = CloudTransferPolicy(
         authorization: .preAuthorizedURL,
-        keepAuthorizationAcrossRedirect: false
+        keepAuthorizationAcrossRedirect: false,
+        keepAuthorizationForDomain: nil
     )
     static let meet = CloudTransferPolicy(
         authorization: .bearer,
-        keepAuthorizationAcrossRedirect: true
+        keepAuthorizationAcrossRedirect: true,
+        keepAuthorizationForDomain: nil
     )
     static let zoom = CloudTransferPolicy(
         authorization: .bearer,
-        keepAuthorizationAcrossRedirect: false
+        keepAuthorizationAcrossRedirect: false,
+        keepAuthorizationForDomain: "zoom.us"
     )
+
+    /// Whether a redirect to `url` keeps the header under this policy.
+    func keepsAuthorization(redirectingTo url: URL?) -> Bool {
+        if keepAuthorizationAcrossRedirect { return true }
+        guard let domain = keepAuthorizationForDomain,
+              let url, url.scheme?.lowercased() == "https",
+              let host = url.host?.lowercased()
+        else { return false }
+        return host == domain || host.hasSuffix("." + domain)
+    }
 
     static func `for`(_ platform: CloudPlatform) -> CloudTransferPolicy {
         switch platform {
@@ -136,7 +159,8 @@ final class CloudDownloader: NSObject {
     /// should leak nothing.
     private var currentPolicy = CloudTransferPolicy(
         authorization: .bearer,
-        keepAuthorizationAcrossRedirect: false
+        keepAuthorizationAcrossRedirect: false,
+        keepAuthorizationForDomain: nil
     )
 
     /// True when this object built the session and must therefore tear it down.
@@ -284,7 +308,8 @@ final class CloudDownloader: NSObject {
         let http = response as? HTTPURLResponse
         let verdict = CloudDownloadVerification.inspectResponse(
             status: http?.statusCode ?? 0,
-            contentType: http?.value(forHTTPHeaderField: "Content-Type")
+            contentType: http?.value(forHTTPHeaderField: "Content-Type"),
+            expecting: request.expected.expectedFormat
         )
         guard verdict.isUsable else {
             try? fileManager.removeItem(at: tempURL)
@@ -418,8 +443,21 @@ extension CloudDownloader: URLSessionTaskDelegate {
         newRequest request: URLRequest,
         completionHandler: @escaping (URLRequest?) -> Void
     ) {
-        guard !currentPolicy.keepAuthorizationAcrossRedirect else {
+        if currentPolicy.keepAuthorizationAcrossRedirect {
             completionHandler(request)
+            return
+        }
+        if currentPolicy.keepsAuthorization(redirectingTo: request.url) {
+            // Set explicitly from the request being redirected, not left to
+            // URLSession, whose cross-host header handling is undocumented.
+            // `currentRequest`, not `originalRequest`: once a hop has dropped
+            // the header, no later hop back onto the domain regains it.
+            var kept = request
+            if kept.value(forHTTPHeaderField: "Authorization") == nil,
+               let auth = task.currentRequest?.value(forHTTPHeaderField: "Authorization") {
+                kept.setValue(auth, forHTTPHeaderField: "Authorization")
+            }
+            completionHandler(kept)
             return
         }
         var stripped = request

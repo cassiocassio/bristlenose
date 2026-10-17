@@ -67,7 +67,9 @@ _VTT_SPEAKER_PATTERN = re.compile(r"<v\s+([^>]+)>(.+?)(?:</v>)?$", re.DOTALL)
 # marks" and a regex cannot say "but not the word Honestly".
 _COLON_SPEAKER_PATTERN = re.compile(r"^(?P<name>[^:：\n]{1,60}?)\s*[:：]\s*(?P<text>\S.*)$")
 
-_NAME_PUNCTUATION = frozenset(" .'’,-()/|&")
+# U+3000, the ideographic space, sits between family and given name in CJK
+# display names ("田中　花子") — seen in real Zoom transcripts.
+_NAME_PUNCTUATION = frozenset(" .'’,-()/|&\u3000")
 _NAME_JOINERS = frozenset("‌‍")  # ZWNJ / ZWJ, inside Indic and Persian names
 _MAX_NAME_TOKENS = 6
 

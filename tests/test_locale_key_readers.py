@@ -46,7 +46,7 @@ before the register is consulted, so they never reach it:
   `flatten()` in `check-locales.py` already has it.
 
 What is left is 71 keys, and they are not one thing either. `_KNOWN_ORPHANS`
-below carries them in 18 blocks, each with a tag and the commit that did it:
+below carries them in 17 blocks, each with a tag and the commit that did it:
 
 * `DEAD` — the reader was deleted and the key stayed. `common.help.` was 129
   of them and is **gone as of 21 Sep 2026**: `3f49d170` had retired the in-app
@@ -63,7 +63,10 @@ below carries them in 18 blocks, each with a tag and the commit that did it:
   in every locale. What remains under this tag is smaller and case by case.
 * `RESERVED` — a key waiting for a reader rather than one whose reader went
   away (register item 6, pending Decision 4).
-* `TRIAGED` — decided, not yet executed (register item 24).
+* `TRIAGED` — *retired 17 Oct 2026, when the last block carrying it went.*
+  Decided, not yet executed. Its last two keys were the Zoom account sentences
+  (`zoomCloudRecordingOff`, `zoomTranscriptOff`), which the import window now
+  reads through `CloudAccountNotice`.
 
 WHY AN ALLOW-LIST IS NOT THE THING THIS FILE WARNS ABOUT
 
@@ -274,10 +277,7 @@ DEAD = "dead"
 #: A surface that never had a call site at all — failure class 2's residue.
 #: A key waiting for a reader, not one whose reader went away.
 RESERVED = "reserved"
-#: Decided, not yet executed.
-TRIAGED = "triaged"
-
-_TAGS = {DEAD, RESERVED, TRIAGED}
+_TAGS = {DEAD, RESERVED}
 
 
 class _Block:
@@ -416,21 +416,6 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
         leaves="""
             builtWith giveFeedback reportIssue
         """,  # 3
-    ),
-    "desktop.cloudImport.": _Block(
-        tag=TRIAGED,
-        why="The two `zoom*` sentences have no reader on any surface. "
-            "`untitledMeeting` WAS here as register item 24 and is now deleted "
-            "from all 21 locales (22 Sep 2026): the adapters are right to "
-            "hardcode English, because `row.title` feeds search, and "
-            "`docs/design-i18n.md` §\"Internal representation\" gives the test "
-            "verbatim — does anything downstream match or join this string? It "
-            "does. The key was the mistake, not the literal. "
-            "Note what is NOT here: `dayToday` / `dayYesterday` / `attendeeCount_*` "
-            "were register item 27 and are now read from `CloudImportOutlineView`.",
-        leaves="""
-            zoomCloudRecordingOff zoomTranscriptOff
-        """,  # 2
     ),
     "common.labels.": _Block(
         tag=DEAD,

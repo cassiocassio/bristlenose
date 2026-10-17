@@ -222,9 +222,13 @@ enum CloudDownloadVerification {
     /// Step 1, before a single byte is written.
     ///
     /// - Parameter contentType: from the response head.
+    /// - Parameter expecting: what the caller asked for. A transcript may
+    ///   arrive as plain `text/plain`; the WEBVTT signature check in step 2
+    ///   still has to pass, so allowing it here lets no error page through.
     static func inspectResponse(
         status: Int,
-        contentType: String?
+        contentType: String?,
+        expecting: MediaFormat? = nil
     ) -> DownloadVerdict {
         guard (200...299).contains(status) else { return .badStatus(status) }
         let type = (contentType ?? "").lowercased()
@@ -233,7 +237,7 @@ enum CloudDownloadVerification {
         for marker in ["text/html", "application/json", "text/plain"] where type.contains(marker) {
             // text/plain is a real content type for VTT on some servers, so it
             // only condemns a response that was supposed to be media.
-            if marker == "text/plain" && type.contains("vtt") { continue }
+            if marker == "text/plain" && (type.contains("vtt") || expecting == .webvtt) { continue }
             return .notMedia(contentType: type)
         }
         return .usable

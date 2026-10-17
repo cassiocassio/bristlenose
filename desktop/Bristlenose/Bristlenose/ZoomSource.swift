@@ -40,6 +40,7 @@ private struct ZoomRecordingsPage: Decodable {
             let file_size: Int64?
             let download_url: String?
             let recording_start: String?
+            let recording_end: String?
             let deleted_time: String?
         }
         /// Per-instance. **The dedup key** — `id` is the reusable meeting
@@ -72,31 +73,23 @@ private struct ZoomRecordingsPage: Decodable {
 /// - **Cloud recording can be off**, at account or group level, and a non-admin
 ///   token cannot tell "off" from "off and locked by your admin". So the copy
 ///   says what is true — it is off — and never guesses at whose decision it was.
-/// - **The transcript is English-only**, on every plan. For a product shipping
-///   in 21 languages that excludes more real researchers than any tier
-///   boundary, and it is invisible until a VTT fails to arrive.
+/// - **The transcript's language is the host's setting, English by default.**
+///   Zoom's KB lists 19 transcript languages (29 Sep 2026), but a host who
+///   never changed the setting gets an English model, so a non-English
+///   interview can arrive transcribed in the wrong language. Not detected here;
+///   measured on a live account before anything refuses on it.
 struct ZoomPreflight: Equatable {
     let cloudRecordingEnabled: Bool
     let audioTranscriptEnabled: Bool
     let autoDeleteEnabled: Bool
     let autoDeleteDays: Int?
 
-    /// Nil when everything needed is present. Otherwise the single sentence the
-    /// window shows instead of a list.
-    var blockingReason: String? {
-        guard cloudRecordingEnabled else {
-            return "Cloud recording is turned off for this Zoom account, so there's nothing for Bristlenose to fetch. "
-                + "Recordings saved to your own Mac can still be dragged in from Finder."
-        }
-        return nil
-    }
-
-    /// A caveat rather than a block: the meetings are fetchable, the transcript
-    /// will not be there. Stated once rather than discovered per row.
-    var transcriptCaveat: String? {
-        audioTranscriptEnabled
-            ? nil
-            : "“Create audio transcript” is off in your Zoom recording settings, so no transcripts will come with these recordings."
+    /// What the window says about the whole account, if anything. Cloud
+    /// recording off replaces the list; "Create audio transcript" off is a
+    /// caveat over a list that still imports.
+    var notice: CloudAccountNotice? {
+        guard cloudRecordingEnabled else { return .zoomCloudRecordingOff }
+        return audioTranscriptEnabled ? nil : .zoomTranscriptOff
     }
 }
 
@@ -111,6 +104,9 @@ final class ZoomSource: CloudImportSource {
     private let config: ZoomOAuthConfig
     private let sessionOwner: CloudSessionOwner
     private var session: URLSession { sessionOwner.session }
+    /// The test seam, handed to the downloader too. Nil in production, where
+    /// `CloudDownloader` builds its own redirect-policed session.
+    private let injectedSession: URLSession?
     private var tokens: ZoomTokens?
     private var identity: String?
     private(set) var preflight: ZoomPreflight?
@@ -123,6 +119,24 @@ final class ZoomSource: CloudImportSource {
     /// type that flows into the view layer is how it reaches a log line or a
     /// screenshot. The adapter keeps them; the row hands out nothing.
     private var chosenFiles: [String: ZoomRecordingFile] = [:]
+
+    /// The `TRANSCRIPT` file paired with each row's media, when Zoom made one.
+    /// Kept beside `chosenFiles` for the same reason: its URL is a credential.
+    private var transcriptFiles: [String: ZoomRecordingFile] = [:]
+
+    /// Which meeting and which part each row is, so a re-check can ask Zoom
+    /// about one meeting and find this row's part in the answer.
+    private struct RowPlan {
+        let meetingUUID: String
+        let partStart: Date?
+        let partEnd: Date?
+        let ordinal: Int?
+    }
+    private var rowPlans: [String: RowPlan] = [:]
+
+    /// The wall clock, injected so *Expected* versus *No transcript* can be
+    /// tested without waiting a day.
+    private let now: () -> Date
 
     /// - Parameter restoredTokens: a previously-obtained grant, from the
     ///   Keychain via `CloudGrantStore.loadZoom`.
@@ -160,9 +174,12 @@ final class ZoomSource: CloudImportSource {
          restoredTokens: ZoomTokens? = nil,
          restoredIdentity: String? = nil,
          onGrantChanged: (@Sendable (ZoomGrant?) -> Void)? = nil,
-         onRotation: (@Sendable (ZoomGrant) async -> Bool)? = nil) {
+         onRotation: (@Sendable (ZoomGrant) async -> Bool)? = nil,
+         now: @escaping () -> Date = Date.init) {
         self.config = config
+        self.now = now
         self.sessionOwner = session.map(CloudSessionOwner.init(adopting:)) ?? CloudSessionOwner()
+        self.injectedSession = session
         self.tokens = restoredTokens
         self.identity = restoredIdentity
         self.onGrantChanged = onGrantChanged
@@ -463,16 +480,18 @@ final class ZoomSource: CloudImportSource {
         }
         if identity == nil { identity = try? await fetchIdentity() }
 
-        if let preflight, preflight.blockingReason != nil {
+        if let notice = preflight?.notice, notice.replacesListing {
             // Eligible-but-empty and ineligible are different answers, and this
-            // is the second. Returning an empty list would render as "no
+            // is the second. An empty list alone would render as "no
             // recordings in the last 30 days", which is a factual statement
-            // about the wrong question.
+            // about the wrong question — so the notice rides with it and the
+            // window says the right one.
             return MeetingListing(
                 rows: [],
                 arithmetic: JoinArithmetic(eventsInWindow: 0, fetchable: 0,
                                            organisedByOthers: 0, outcome: .exhausted),
-                window: window
+                window: window,
+                notice: notice
             )
         }
 
@@ -508,7 +527,12 @@ final class ZoomSource: CloudImportSource {
             } while pageToken != nil
         }
 
-        let rows = meetings.compactMap(makeRow)
+        // The plans describe this listing and no other. Left in place, a row a
+        // re-list no longer returns would keep a download URL nothing shows.
+        chosenFiles = [:]
+        transcriptFiles = [:]
+        rowPlans = [:]
+        let rows = meetings.flatMap(makeRows)
         return MeetingListing(
             rows: rows,
             arithmetic: JoinArithmetic(
@@ -522,7 +546,8 @@ final class ZoomSource: CloudImportSource {
                 organisedByOthers: 0,
                 outcome: outcome
             ),
-            window: window
+            window: window,
+            notice: preflight?.notice
         )
     }
 
@@ -539,6 +564,9 @@ final class ZoomSource: CloudImportSource {
             URLQueryItem(name: "from", value: chunk.fromString),
             URLQueryItem(name: "to", value: chunk.toString),
             URLQueryItem(name: "page_size", value: "300"),
+            // Unset, Zoom also returns "My Notes" recordings — the host's own
+            // notes, not the call (Meetings API spec, read 17 Oct 2026).
+            URLQueryItem(name: "recording_source_type", value: "cloud_recording_only"),
         ]
         if let pageToken { items.append(URLQueryItem(name: "next_page_token", value: pageToken)) }
         components.queryItems = items
@@ -547,70 +575,100 @@ final class ZoomSource: CloudImportSource {
         return try JSONDecoder().decode(ZoomRecordingsPage.self, from: data)
     }
 
-    private func makeRow(_ meeting: ZoomRecordingsPage.Meeting) -> CloudImportRow? {
+    /// One row per part of the meeting: one for an ordinary call, one for
+    /// each stretch when the host stopped and restarted recording.
+    ///
+    /// A single-part meeting keeps exactly the row it always had — id, clock
+    /// and filename unchanged — so a folder that already holds an import still
+    /// matches it. Parts are numbered from 1 and nested under the meeting,
+    /// the way Meet's segmented recordings are.
+    private func makeRows(_ meeting: ZoomRecordingsPage.Meeting) -> [CloudImportRow] {
         guard let uuid = meeting.uuid,
               let start = meeting.start_time.flatMap(Self.parseDate)
-        else { return nil }
+        else { return [] }
 
-        let files = (meeting.recording_files ?? []).map { file in
-            ZoomRecordingFile(
-                id: file.id,
-                fileType: ZoomFileType(file.file_type ?? ""),
-                layout: ZoomRecordingLayout(file.recording_type ?? ""),
-                sizeBytes: file.file_size,
-                downloadURL: file.download_url.flatMap(URL.init(string:)),
-                recordingStart: file.recording_start.flatMap(Self.parseDate)
-            )
-        }
-        let choice = ZoomFileSelection.choose(from: files)
-        guard let media = choice.media else { return nil }
-        chosenFiles[uuid] = media
-
+        let files = (meeting.recording_files ?? []).map(Self.recordingFile)
+        let parts = ZoomFileSelection.parts(from: files).filter { $0.choice.media != nil }
         let expiry = ZoomExpiry(
             autoDelete: meeting.auto_delete,
             autoDeleteDate: meeting.auto_delete_date.flatMap(Self.parseDay),
             deletedTime: nil
         )
+        let meetingDuration = meeting.duration.map { TimeInterval($0 * 60) }
+        let isSplit = parts.count > 1
 
-        return CloudImportRow(
-            id: uuid,
-            // English on purpose: `row.title` feeds search, so
-            // design-i18n.md §"Internal representation" makes this
-            // a canonical value, not chrome. A `untitledMeeting`
-            // key existed for it and was deleted 22 Sep 2026 —
-            // don't re-add one (i18n-defects.md row 24).
-            title: meeting.topic ?? "Untitled meeting",
-            startsAt: start,
-            duration: meeting.duration.map { TimeInterval($0 * 60) },
-            // The chosen file's size, not `total_size` — that figure covers
-            // every artefact including the MP4s we deliberately skip, so using
-            // it would over-state the download by a factor of three and make
-            // the free-space precheck refuse a batch that fits.
-            sizeBytes: media.sizeBytes,
-            expiresAt: expiry.date,
-            attendees: [],
-            localState: .notImported,
-            video: media.isDownloadable ? .available : .unsupported,
-            // Zoom's list call carries no participant roster at all — that
-            // needs a separate report endpoint behind an admin scope this
-            // design refuses. Absent, and said so, rather than an empty line
-            // pretending to be a roster.
-            roster: .unsupported,
-            // **Half honest, and said so.** A `TRANSCRIPT` file in the listing
-            // is a transcript; its absence is read as "none was made", which
-            // is right for an account with "Create audio transcript" off and
-            // wrong for the first hours after a call, when Zoom is still
-            // producing it (15–30 minutes, occasionally a day). The honest
-            // pair — `.expected` while `ZoomPreflight.audioTranscriptEnabled`
-            // says one is coming and the file is under 24 h old — is Phase 5
-            // of design-cloud-import-transcripts.md, with the time-overlap
-            // pairing for a stopped-and-restarted meeting (§1a). Until then
-            // the cell reads *No transcript* with an info glyph, never a
-            // warning, and Bristlenose transcribes. Zoom's `fetch` does not
-            // yet write the §4 file, so an "Available" row imports its media
-            // and reports the transcript *Not imported*.
-            transcript: choice.transcript != nil ? .available : .notProvided,
-            organiser: nil
+        return parts.enumerated().compactMap { index, part in
+            guard let media = part.choice.media else { return nil }
+            let ordinal = isSplit ? index + 1 : nil
+            // When the part ended: its own stamp, else the meeting's start plus
+            // its whole-minute duration. The transcript wait is timed from it.
+            let ended = part.end ?? meetingDuration.map { start.addingTimeInterval($0) }
+            let id = ordinal.map { "\(uuid)#\($0)" } ?? uuid
+            chosenFiles[id] = media
+            transcriptFiles[id] = part.choice.transcript
+            rowPlans[id] = RowPlan(meetingUUID: uuid, partStart: part.start,
+                                   partEnd: ended, ordinal: ordinal)
+
+            let partDuration: TimeInterval? = {
+                guard let s = part.start, let e = part.end, e > s else { return nil }
+                return e.timeIntervalSince(s)
+            }()
+            let rowStart = isSplit ? (part.start ?? start) : start
+
+            return CloudImportRow(
+                id: id,
+                // English on purpose: `row.title` feeds search, so
+                // design-i18n.md §"Internal representation" makes this
+                // a canonical value, not chrome. A `untitledMeeting`
+                // key existed for it and was deleted 22 Sep 2026 —
+                // don't re-add one (i18n-defects.md row 24).
+                title: meeting.topic ?? "Untitled meeting",
+                startsAt: rowStart,
+                // The recording's own span when Zoom stamps it. `duration` is
+                // the meeting's, in whole minutes, and is not the recording's
+                // length: measured on a real account (March 2026), recordings
+                // of 145 and 197 minutes carried 77 and 58. A split row also
+                // needs its own span, or it would match none of its files.
+                duration: partDuration ?? (isSplit ? nil : meetingDuration),
+                // The chosen file's size, not `total_size` — that figure covers
+                // every artefact including the MP4s we deliberately skip, so using
+                // it would over-state the download by a factor of three and make
+                // the free-space precheck refuse a batch that fits.
+                sizeBytes: media.sizeBytes,
+                expiresAt: expiry.date,
+                attendees: [],
+                localState: .notImported,
+                video: media.isDownloadable ? .available : .unsupported,
+                // Zoom's list call carries no participant roster at all — that
+                // needs a separate report endpoint behind an admin scope this
+                // design refuses. Absent, and said so, rather than an empty line
+                // pretending to be a roster.
+                roster: .unsupported,
+                // A listed `TRANSCRIPT` file is *Available*. Without one, the
+                // account's setting and the recording's age decide between
+                // *Expected* and *No transcript* (`ZoomTranscriptAvailability`).
+                transcript: ZoomTranscriptAvailability.decide(
+                    hasTranscript: part.choice.transcript != nil,
+                    audioTranscriptEnabled: preflight?.audioTranscriptEnabled,
+                    recordingEnded: ended,
+                    now: now()),
+                organiser: nil,
+                recordedAt: isSplit ? part.start : nil,
+                meetingID: isSplit ? uuid : nil,
+                siblingOrdinal: ordinal
+            )
+        }
+    }
+
+    private static func recordingFile(_ file: ZoomRecordingsPage.Meeting.File) -> ZoomRecordingFile {
+        ZoomRecordingFile(
+            id: file.id,
+            fileType: ZoomFileType(file.file_type ?? ""),
+            layout: ZoomRecordingLayout(file.recording_type ?? ""),
+            sizeBytes: file.file_size,
+            downloadURL: file.download_url.flatMap(URL.init(string:)),
+            recordingStart: file.recording_start.flatMap(Self.parseDate),
+            recordingEnd: file.recording_end.flatMap(Self.parseDate)
         )
     }
 
@@ -649,7 +707,10 @@ final class ZoomSource: CloudImportSource {
         let name = CloudDownloadNaming.filename(
             title: row.title,
             startsAt: row.startsAt,
-            fileExtension: file.fileType == .m4a ? "m4a" : "mp4"
+            fileExtension: file.fileType == .m4a ? "m4a" : "mp4",
+            // Two parts of one meeting share a title, so without the ordinal
+            // the second would overwrite the first (`CloudDownloadNaming`).
+            part: row.siblingOrdinal
         )
         let request = CloudDownloadRequest(
             url: url,
@@ -669,7 +730,7 @@ final class ZoomSource: CloudImportSource {
         )
 
         do {
-            let bytes = try await CloudDownloader().download(request) { written, total in
+            let bytes = try await CloudDownloader(session: injectedSession).download(request) { written, total in
                 progress(FetchProgress(
                     rowID: row.id,
                     fraction: total.map { Double(written) / Double($0) },
@@ -677,10 +738,11 @@ final class ZoomSource: CloudImportSource {
                     bytesExpected: total
                 ))
             }
-            // The VTT is Phase 5; until then the listing's own word stands in
-            // the cell rather than a "skipped" the researcher never chose.
-            return .imported(bytes: bytes, at: request.destination,
-                             transcript: .notFetched(row.transcript))
+            // After the media, never before: a lone `.vtt` would be a
+            // text-only session (§4 item 5). A transcript that fails leaves
+            // the recording imported and says so in its own cell.
+            let transcript = await fetchTranscript(for: row, media: request.destination)
+            return .imported(bytes: bytes, at: request.destination, transcript: transcript)
         } catch let error as CloudDownloadError {
             if case .cancelled = error { return .cancelled }
             // **A known loss, taken deliberately.** This used to interpolate
@@ -712,6 +774,202 @@ final class ZoomSource: CloudImportSource {
             return .cancelled
         } catch {
             return .failed(reason: .downloadFailed, isRetryable: true)
+        }
+    }
+
+    // MARK: Transcript
+
+    /// The transcript half of `fetch`, after the media has been published.
+    ///
+    /// Zoom's VTT is downloaded to a scratch folder, read, and rewritten as
+    /// Bristlenose's own file beside the media (§4): one `<v>` per named cue,
+    /// a provenance NOTE, cues cut to the media's length. Every way this can
+    /// fail ends in a cell, never a thrown error — the recording is already on
+    /// disk, and a transcript is never the reason it fails to import.
+    private func fetchTranscript(for row: CloudImportRow, media: URL) async -> TranscriptOutcome {
+        // Ask again rather than trust the listing, as Meet does: the transcript
+        // routinely lands minutes after the video, so a row included while it
+        // was *Expected* may have its file by the time the media is down.
+        if transcriptFiles[row.id] == nil, row.transcript == .expected {
+            _ = await recheckTranscripts(rowIDs: [row.id])
+        }
+        guard let file = transcriptFiles[row.id], let url = file.downloadURL else {
+            switch row.transcript {
+            // Promised and not paired with anything we can fetch: carrying
+            // *Available* past Import would claim a file that is not there.
+            case .available: return .didNotArrive
+            // Included while still being produced — the researcher's own call.
+            case .expected:  return .notImported
+            default:         return .notFetched(row.transcript)
+            }
+        }
+        guard FileManager.default.fileExists(atPath: media.path) else {
+            Self.log.notice("zoom_transcript outcome=did_not_arrive reason=media_missing")
+            return .didNotArrive
+        }
+        guard await renewedTokenIfNeeded(), let token = tokens?.accessToken else {
+            Self.log.notice("zoom_transcript outcome=did_not_arrive reason=no_token")
+            return .didNotArrive
+        }
+
+        let scratch = FileManager.default.temporaryDirectory
+            .appendingPathComponent("bristlenose-zoom-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        let raw = scratch.appendingPathComponent("transcript.vtt")
+        let vtt: String
+        do {
+            try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
+            _ = try await CloudDownloader(session: injectedSession).download(CloudDownloadRequest(
+                url: url,
+                accessToken: token,
+                policy: .zoom,
+                // No size gate on the transcript: Zoom's listed `file_size` has
+                // never been measured against a VTT download, and a one-byte
+                // disagreement would refuse every transcript on the account.
+                // The WEBVTT signature check still runs.
+                expected: ExpectedFile(sizeBytes: nil, hash: nil, expectedFormat: .webvtt),
+                destination: raw
+            )) { _, _ in }
+            vtt = String(decoding: try Data(contentsOf: raw), as: UTF8.self)
+        } catch {
+            // A case, never the error itself: a `URLError`'s description
+            // carries the failing URL, which after Zoom's redirect is the
+            // pre-signed CDN link — a credential (§9).
+            let cause = (error as? CloudDownloadError).map { String(describing: $0) }
+                ?? (error as? URLError).map { "url_error_\($0.code.rawValue)" }
+                ?? "other"
+            Self.log.notice("""
+                zoom_transcript outcome=did_not_arrive reason=download_failed \
+                cause=\(cause, privacy: .public)
+                """)
+            return .didNotArrive
+        }
+
+        let cues = ZoomTranscript.cues(fromVTT: vtt)
+        guard !cues.isEmpty else {
+            Self.log.notice("zoom_transcript outcome=did_not_arrive reason=no_cues")
+            return .didNotArrive
+        }
+
+        // §5c, the clock. Zoom's cues are already on the recording's clock, so
+        // the shift is zero; the probed length is what they are cut to and
+        // what the NOTE records. Without a probe the tail check is skipped —
+        // Zoom's whole-minute duration is too coarse to judge a tail by.
+        let probed = await CloudImportLocalMatch.mediaDuration(of: media)
+        let lastCue = cues.map(\.end).max() ?? 0
+        let duration: TimeInterval
+        if let probed {
+            if PlatformTranscriptRebase.tailRunsPast(cues, by: 0, mediaDuration: probed) {
+                Self.log.notice("""
+                    zoom_transcript outcome=did_not_arrive reason=tail_past_media \
+                    probed=\(probed, privacy: .public) last_cue=\(lastCue, privacy: .public)
+                    """)
+                return .didNotArrive
+            }
+            duration = probed
+        } else {
+            duration = max(row.duration ?? 0, lastCue)
+            Self.log.notice("zoom_transcript clock probe_failed duration=\(duration, privacy: .public)")
+        }
+        guard duration > 0 else { return .didNotArrive }
+
+        let rebased = PlatformTranscriptRebase.rebase(cues, by: 0, mediaDuration: duration)
+        let note = PlatformTranscriptNote(
+            source: .zoom,
+            // Zoom's VTT names no language, and the host's setting is not on
+            // any scope we hold. Left for the pipeline's own detection.
+            language: nil,
+            media: media.lastPathComponent,
+            mediaDuration: duration,
+            rebasedBy: 0,
+            droppedOutsideMedia: rebased.dropped)
+        let rendered = PlatformTranscriptWriter.render(cues: rebased.cues, note: note)
+        let destination = media.deletingPathExtension().appendingPathExtension("vtt")
+        do {
+            try CloudDownloader.publish(Data(rendered.utf8), to: destination)
+        } catch {
+            Self.log.notice("""
+                zoom_transcript outcome=did_not_arrive reason=write_failed \
+                error=\(error.localizedDescription, privacy: .public)
+                """)
+            return .didNotArrive
+        }
+        let named = rebased.cues.filter { $0.speaker != nil }.count
+        Self.log.notice("""
+            zoom_transcript outcome=imported cues=\(rebased.cues.count, privacy: .public) \
+            named=\(named, privacy: .public) dropped=\(rebased.dropped, privacy: .public)
+            """)
+        return .imported(at: destination)
+    }
+
+    /// Ask Zoom again about rows whose transcript was still being produced.
+    ///
+    /// One `GET /meetings/{uuid}/recordings` per meeting, not per row — the
+    /// parts of one meeting come back together. A row whose transcript file
+    /// has appeared reads *Available*, and its file is kept for the fetch; a
+    /// row past the 24-hour window reads *No transcript*. A meeting Zoom would
+    /// not answer for is left out and asked again next pass.
+    func recheckTranscripts(rowIDs: [String]) async -> [String: TranscriptAvailability] {
+        guard await renewedTokenIfNeeded() else {
+            // A refused grant will never answer; a transient failure might.
+            guard tokens == nil else { return [:] }
+            Self.log.notice("zoom_transcript recheck refused=no_token rows=\(rowIDs.count, privacy: .public)")
+            return Dictionary(uniqueKeysWithValues: rowIDs.map { ($0, TranscriptAvailability.notResolved) })
+        }
+        let plans = rowPlans
+        var byMeeting: [String: [String]] = [:]
+        for id in rowIDs {
+            guard let plan = plans[id] else { continue }
+            byMeeting[plan.meetingUUID, default: []].append(id)
+        }
+        var answers: [String: TranscriptAvailability] = [:]
+        let clock = now()
+        for (uuid, ids) in byMeeting {
+            let path = "https://api.zoom.us/v2/meetings/\(ZoomIdentifier.encodedUUID(uuid))/recordings"
+            guard let data = try? await get(path),
+                  let meeting = try? JSONDecoder().decode(ZoomRecordingsPage.Meeting.self, from: data)
+            else {
+                // Zoom would not answer for this meeting. Ask again next pass —
+                // but a wait still has to end: past the window, the row's own
+                // clock says *No transcript* without Zoom's help.
+                for id in ids {
+                    guard let plan = plans[id] else { continue }
+                    let local = ZoomTranscriptAvailability.decide(
+                        hasTranscript: false,
+                        audioTranscriptEnabled: preflight?.audioTranscriptEnabled,
+                        recordingEnded: plan.partEnd, now: clock)
+                    if local != .expected { answers[id] = local }
+                }
+                continue
+            }
+            let parts = ZoomFileSelection.parts(from: (meeting.recording_files ?? []).map(Self.recordingFile))
+                .filter { $0.choice.media != nil }
+            for id in ids {
+                guard let plan = plans[id],
+                      let part = Self.part(matching: plan, in: parts) else { continue }
+                if let transcript = part.choice.transcript { transcriptFiles[id] = transcript }
+                answers[id] = ZoomTranscriptAvailability.decide(
+                    hasTranscript: part.choice.transcript != nil,
+                    audioTranscriptEnabled: preflight?.audioTranscriptEnabled,
+                    recordingEnded: part.end ?? plan.partEnd,
+                    now: clock)
+            }
+        }
+        Self.log.notice("""
+            zoom_transcript recheck rows=\(rowIDs.count, privacy: .public) \
+            meetings=\(byMeeting.count, privacy: .public) \
+            arrived=\(answers.values.filter { $0 == .available }.count, privacy: .public)
+            """)
+        return answers
+    }
+
+    /// This row's part in a fresh answer about its meeting: by start time
+    /// when the row has one, else the only part there is.
+    private static func part(matching plan: RowPlan, in parts: [ZoomFileSelection.Part]) -> ZoomFileSelection.Part? {
+        guard let start = plan.partStart else { return parts.count == 1 ? parts[0] : nil }
+        return parts.first {
+            guard let s = $0.start else { return false }
+            return abs(s.timeIntervalSince(start)) <= ZoomFileSelection.partTolerance
         }
     }
 

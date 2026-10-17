@@ -70,11 +70,24 @@ enum ZoomScopes {
     /// Per-meeting recording files.
     static let listRecordingFiles = "cloud_recording:read:list_recording_files"
 
+    /// `GET /users/me` — the signed-in address, shown in the window's subtitle
+    /// and used to key the stored grant.
+    static let readUser = "user:read:user"
+
+    /// `GET /users/me/settings` — the preflight: whether the account
+    /// cloud-records and makes transcripts at all. Without it the eligibility
+    /// check is skipped and a recording-disabled account reads as an empty one.
+    static let readSettings = "user:read:settings"
+
     /// **There is no download scope, and that is not an omission.** The list
     /// response carries `download_url`, and the same bearer token authorises
     /// the fetch. Good news at review time, where Zoom asks you to justify
     /// every scope and removes ones it considers unused.
-    static let requested = [listUserRecordings, listRecordingFiles]
+    ///
+    /// All four must be marked **required** in the Marketplace app. Zoom lets
+    /// a user decline an optional scope and still install, which leaves a
+    /// working token that fails only when the call that needs it is made.
+    static let requested = [listUserRecordings, listRecordingFiles, readUser, readSettings]
 }
 
 // MARK: - Configuration

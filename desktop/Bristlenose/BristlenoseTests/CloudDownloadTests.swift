@@ -41,6 +41,20 @@ struct DownloadResponseTests {
             status: 200, contentType: "text/plain; charset=utf-8; format=vtt").isUsable)
     }
 
+    @Test("Plain text/plain passes only when a transcript was asked for")
+    func plainTextOnlyForTranscripts() {
+        // Zoom's transcript download has no documented content type. The
+        // WEBVTT signature check still runs on the bytes, so letting
+        // text/plain through for a transcript lets no error page through;
+        // for media it stays refused.
+        #expect(CloudDownloadVerification.inspectResponse(
+            status: 200, contentType: "text/plain; charset=utf-8", expecting: .webvtt).isUsable)
+        #expect(!CloudDownloadVerification.inspectResponse(
+            status: 200, contentType: "text/plain; charset=utf-8", expecting: .mp4).isUsable)
+        #expect(!CloudDownloadVerification.inspectResponse(
+            status: 200, contentType: "text/html", expecting: .webvtt).isUsable)
+    }
+
     @Test("Real media passes")
     func mediaPasses() {
         #expect(CloudDownloadVerification.inspectResponse(

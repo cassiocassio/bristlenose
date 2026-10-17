@@ -233,6 +233,33 @@ struct RedirectHeaderTests {
         #expect(requests[1].value(forHTTPHeaderField: "Authorization") == nil)
     }
 
+    @Test("Zoom keeps its bearer while the redirect stays on zoom.us")
+    func zoomKeepsHeaderOnItsOwnDomain() async throws {
+        // `download_url` starts on the account's vanity domain and can redirect
+        // within Zoom; dropping the header there returned "Only the host can
+        // download this recording" as a 200 page (devforum, July 2025).
+        let (_, requests) = try await download(
+            policy: .zoom,
+            stubs: [.redirect(to: "https://us06web.zoom.us/rec/download/abc"),
+                    .redirect(to: "http://zoom.us/insecure"),
+                    .mp4(bytes: 64)]
+        )
+        #expect(requests.count == 3)
+        #expect(requests[1].value(forHTTPHeaderField: "Authorization") == "Bearer SECRET")
+        // Never over plain HTTP, even to Zoom.
+        #expect(requests[2].value(forHTTPHeaderField: "Authorization") == nil)
+    }
+
+    @Test("A look-alike host never gets Zoom's bearer")
+    func zoomLookAlikeIsStripped() {
+        #expect(!CloudTransferPolicy.zoom.keepsAuthorization(
+            redirectingTo: URL(string: "https://evilzoom.us/x")))
+        #expect(!CloudTransferPolicy.zoom.keepsAuthorization(
+            redirectingTo: URL(string: "https://zoom.us.evil.example/x")))
+        #expect(CloudTransferPolicy.zoom.keepsAuthorization(
+            redirectingTo: URL(string: "https://zoom.us/rec/x")))
+    }
+
     @Test("Teams sends no Authorization at all — the URL is the credential")
     func teamsSendsNoHeader() async throws {
         // Graph's downloadUrl carries `tempauth=` in the query string. A bearer
@@ -1152,6 +1179,173 @@ struct AdapterRowDerivationTests {
         // grouping on it would nest two unrelated interviews as one call's two
         // halves — hiding the titles that are the only thing telling them apart.
         #expect(row.meetingID == nil)
+    }
+
+    /// Zoom, end to end through the adapter: a stopped-and-restarted meeting
+    /// lists as two rows of one meeting, and importing one writes its
+    /// transcript beside it in Bristlenose's own format.
+    ///
+    /// The FIFO order is `list`'s: the preflight, the signed-in address, then
+    /// the one month-sized page; and `fetch`'s: the media, then the VTT.
+    @Test("Zoom: each part is a row, and its transcript lands beside it")
+    func zoomPartsAndTranscript() async throws {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        let start = Date(timeIntervalSince1970: floor(Date().timeIntervalSince1970) - 3 * 3600)
+        func at(_ s: TimeInterval) -> String { iso.string(from: start.addingTimeInterval(s)) }
+
+        let vtt = "WEBVTT\n\n1\n00:00:01.000 --> 00:00:03.000\nPriya Shah: Tell me about it.\n"
+        let media = StubURLProtocol.Stub.mp4(bytes: 2_048)
+
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json("""
+        {"recording":{"cloud_recording":true,"recording_audio_transcript":true}}
+        """))
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@example.invalid"}"#))
+        StubURLProtocol.enqueue(.json("""
+        {"meetings":[{"uuid":"u/1==","id":81,"topic":"P05 Interview",
+          "start_time":"\(at(0))","duration":25,
+          "recording_files":[
+            {"id":"a1","file_type":"M4A","recording_type":"audio_only","file_size":2048,
+             "download_url":"https://zoom.example/a1","recording_start":"\(at(0))","recording_end":"\(at(600))"},
+            {"id":"t1","file_type":"TRANSCRIPT","recording_type":"audio_transcript","file_size":\(vtt.utf8.count),
+             "download_url":"https://zoom.example/t1","recording_start":"\(at(0))","recording_end":"\(at(600))"},
+            {"id":"a2","file_type":"M4A","recording_type":"audio_only","file_size":2048,
+             "download_url":"https://zoom.example/a2","recording_start":"\(at(1200))","recording_end":"\(at(1500))"}]}],
+         "total_records":1}
+        """))
+
+        let source = ZoomSource(
+            config: ZoomOAuthConfig(publicClientID: "cid", redirectURI: "https://example.test/cb"),
+            session: StubURLProtocol.session(),
+            restoredTokens: ZoomTokens(accessToken: "T", refreshToken: "R",
+                                       expiresAt: Date().addingTimeInterval(3600),
+                                       scopes: ZoomScopes.requested))
+        let listing = await source.list(window: window)
+
+        #expect(listing.rows.count == 2, "both parts, not just the first")
+        #expect(Set(listing.rows.map(\.meetingID)) == ["u/1=="])
+        #expect(listing.rows.map(\.siblingOrdinal) == [1, 2])
+        let first = try #require(listing.rows.first { $0.siblingOrdinal == 1 })
+        let second = try #require(listing.rows.first { $0.siblingOrdinal == 2 })
+        #expect(first.transcript == .available)
+        // Recent, and the account makes transcripts: the second part's is
+        // still coming, not absent.
+        #expect(second.transcript == .expected)
+        #expect(first.duration == 600, "the part's own span, not the meeting's 25 minutes")
+        #expect(listing.notice == nil)
+
+        let folder = FileManager.default.temporaryDirectory
+            .appendingPathComponent("zoom-parts-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+
+        StubURLProtocol.enqueue(media)
+        StubURLProtocol.enqueue(StubURLProtocol.Stub(headers: ["Content-Type": "text/vtt"],
+                                                     body: Data(vtt.utf8)))
+        let outcome = await source.fetch(row: first, destination: folder) { _ in }
+
+        guard case .imported(_, let mediaURL, .imported(let vttURL)) = outcome else {
+            Issue.record("expected media and transcript, got \(outcome)")
+            return
+        }
+        #expect(mediaURL.lastPathComponent.hasSuffix(" (1).m4a"), "the part number keeps the names apart")
+        #expect(vttURL.deletingPathExtension().lastPathComponent
+                == mediaURL.deletingPathExtension().lastPathComponent)
+        let written = try String(contentsOf: vttURL, encoding: .utf8)
+        #expect(written.contains("source: zoom"))
+        #expect(written.contains("speakers: named"))
+        #expect(written.contains("<v Priya Shah>Tell me about it.</v>"))
+        #expect(!written.contains("Priya Shah:"), "our bytes, never Zoom's prefix")
+    }
+
+    /// The clock a recheck test moves: listed now, re-asked a day later.
+    private final class TestClock: @unchecked Sendable {
+        var now: Date
+        init(_ now: Date) { self.now = now }
+    }
+
+    private func zoomSourceListingOneWaitingRow(clock: TestClock) async -> (ZoomSource, CloudImportRow?) {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        let start = Date(timeIntervalSince1970: floor(clock.now.timeIntervalSince1970) - 3600)
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"recording":{"cloud_recording":true,"recording_audio_transcript":true}}"#))
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@example.invalid"}"#))
+        StubURLProtocol.enqueue(.json("""
+        {"meetings":[{"uuid":"u2","id":82,"topic":"P06 Interview",
+          "start_time":"\(iso.string(from: start))","duration":10,
+          "recording_files":[
+            {"id":"a1","file_type":"M4A","recording_type":"audio_only","file_size":2048,
+             "download_url":"https://zoom.example/a1","recording_start":"\(iso.string(from: start))",
+             "recording_end":"\(iso.string(from: start.addingTimeInterval(600)))"}]}],"total_records":1}
+        """))
+        let source = ZoomSource(
+            config: ZoomOAuthConfig(publicClientID: "cid", redirectURI: "https://example.test/cb"),
+            session: StubURLProtocol.session(),
+            restoredTokens: ZoomTokens(accessToken: "T", refreshToken: "R",
+                                       expiresAt: Date().addingTimeInterval(7 * 86_400),
+                                       scopes: ZoomScopes.requested),
+            now: { clock.now })
+        let listing = await source.list(window: window)
+        return (source, listing.rows.first)
+    }
+
+    @Test("Zoom: a recheck finds a transcript that has since appeared")
+    func zoomRecheckFindsArrival() async throws {
+        let clock = TestClock(Date())
+        let (source, listed) = await zoomSourceListingOneWaitingRow(clock: clock)
+        let row = try #require(listed)
+        #expect(row.transcript == .expected)
+
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        let start = Date(timeIntervalSince1970: floor(clock.now.timeIntervalSince1970) - 3600)
+        StubURLProtocol.enqueue(.json("""
+        {"uuid":"u2","start_time":"\(iso.string(from: start))","recording_files":[
+          {"id":"a1","file_type":"M4A","recording_type":"audio_only","file_size":2048,
+           "download_url":"https://zoom.example/a1","recording_start":"\(iso.string(from: start))",
+           "recording_end":"\(iso.string(from: start.addingTimeInterval(600)))"},
+          {"id":"t1","file_type":"TRANSCRIPT","recording_type":"audio_transcript",
+           "download_url":"https://zoom.example/t1","recording_start":"\(iso.string(from: start))",
+           "recording_end":"\(iso.string(from: start.addingTimeInterval(600)))"}]}
+        """))
+        let answers = await source.recheckTranscripts(rowIDs: [row.id])
+        #expect(answers[row.id] == .available)
+        #expect(StubURLProtocol.requests.last?.url?.path.hasSuffix("/meetings/u2/recordings") == true)
+    }
+
+    @Test("Zoom: a meeting Zoom won't answer for still stops waiting after a day")
+    func zoomRecheckEndsTheWait() async throws {
+        let clock = TestClock(Date())
+        let (source, listed) = await zoomSourceListingOneWaitingRow(clock: clock)
+        let row = try #require(listed)
+        #expect(row.transcript == .expected)
+
+        // Within the day, a refusal is "ask again": no answer for the row.
+        StubURLProtocol.enqueue(.json(#"{"code":3301,"message":"This recording does not exist."}"#, status: 404))
+        #expect(await source.recheckTranscripts(rowIDs: [row.id]).isEmpty)
+
+        // A day on, the row's own clock ends the wait without Zoom's help.
+        clock.now = clock.now.addingTimeInterval(25 * 3600)
+        StubURLProtocol.enqueue(.json(#"{"code":3301,"message":"This recording does not exist."}"#, status: 404))
+        #expect(await source.recheckTranscripts(rowIDs: [row.id])[row.id] == .notProvided)
+    }
+
+    @Test("Zoom: cloud recording off says so instead of an empty month")
+    func zoomRecordingOffNotice() async {
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"recording":{"cloud_recording":false}}"#))
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@example.invalid"}"#))
+        let source = ZoomSource(
+            config: ZoomOAuthConfig(publicClientID: "cid", redirectURI: "https://example.test/cb"),
+            session: StubURLProtocol.session(),
+            restoredTokens: ZoomTokens(accessToken: "T", refreshToken: "R",
+                                       expiresAt: Date().addingTimeInterval(3600),
+                                       scopes: ZoomScopes.requested))
+        let listing = await source.list(window: window)
+        #expect(listing.rows.isEmpty)
+        #expect(listing.notice == .zoomCloudRecordingOff)
     }
 }
 

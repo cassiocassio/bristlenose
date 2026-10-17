@@ -144,6 +144,10 @@ class TestColonSpeakerPattern:
 
     # -- Comma in Zoom display names (known failure — see real Zoom data) ---
 
+    def test_cjk_name_with_ideographic_space(self) -> None:
+        """Zoom writes CJK display names with U+3000 between the two names."""
+        assert _extract_speaker("田中\u3000花子: はい") == "田中\u3000花子"
+
     def test_zoom_affiliation_comma(self) -> None:
         """Zoom displays affiliation after comma: 'Sanjay Gupta, WUD'."""
         assert _extract_speaker("Sanjay Gupta, WUD: Good afternoon") == "Sanjay Gupta, WUD"

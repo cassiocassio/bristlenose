@@ -27,6 +27,33 @@ struct MeetingListing: Equatable {
     /// The window that was asked for, so the UI can say "last 30 days" without
     /// re-deriving it and drifting from what was actually queried.
     var window: DateInterval
+    /// One sentence about the whole account, said once rather than per row.
+    var notice: CloudAccountNotice? = nil
+}
+
+/// A fact about the signed-in account that applies to every row.
+///
+/// A case, not a sentence: the window resolves the key, so the reader gets
+/// their own language and the adapter stays free of copy.
+enum CloudAccountNotice: Equatable {
+    /// The account cannot cloud-record, so nothing exists to list. Replaces
+    /// the empty state, which would otherwise read "no recordings in the last
+    /// 30 days": a true statement about the wrong question.
+    case zoomCloudRecordingOff
+    /// The recordings are fetchable and their transcripts will not come. A bar
+    /// above the grid; the Transcript column is absent, since every row would
+    /// say the same.
+    case zoomTranscriptOff
+
+    var key: String {
+        switch self {
+        case .zoomCloudRecordingOff: return "desktop.cloudImport.zoomCloudRecordingOff"
+        case .zoomTranscriptOff:     return "desktop.cloudImport.zoomTranscriptOff"
+        }
+    }
+
+    /// Whether the notice stands in for the list rather than sitting above it.
+    var replacesListing: Bool { self == .zoomCloudRecordingOff }
 }
 
 /// Progress for one file in flight.

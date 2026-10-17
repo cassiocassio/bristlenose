@@ -313,6 +313,92 @@ struct ZoomTranscriptTests {
         #expect(cue.speaker == nil)
     }
 
+    @Test("Real display names with punctuation are names")
+    func punctuatedNames() {
+        // Written unnamed, these kept "Dr. Patel:" inside the quote text,
+        // because the pipeline trusts a cloud transcript and never re-guesses.
+        #expect(ZoomTranscript.splitSpeaker("Dr. Patel: How long has it hurt?").speaker == "Dr. Patel")
+        #expect(ZoomTranscript.splitSpeaker("Patel, Anita: About a week").speaker == "Patel, Anita")
+        #expect(ZoomTranscript.splitSpeaker("Seán O'Brien (Guest): Hi").speaker == "Seán O'Brien (Guest)")
+        #expect(ZoomTranscript.splitSpeaker("Participant 04: Yes").speaker == "Participant 04")
+    }
+
+    @Test("Names in scripts without case are names")
+    func uncasedScripts() {
+        // A capital-letter rule rejected every one of these, so a Japanese or
+        // Chinese call lost all its speaker names.
+        let cue = ZoomTranscript.splitSpeaker("田中 花子：はい、そうです")
+        #expect(cue.speaker == "田中 花子")
+        #expect(cue.text == "はい、そうです")
+        #expect(ZoomTranscript.splitSpeaker("王伟: 我同意").speaker == "王伟")
+    }
+
+    @Test("A word that opens a sentence is not a speaker")
+    func discourseWords() {
+        #expect(ZoomTranscript.splitSpeaker("Honestly: I gave up").speaker == nil)
+        #expect(ZoomTranscript.splitSpeaker("Note: this is recorded").speaker == nil)
+        #expect(ZoomTranscript.splitSpeaker("Suharto: Welcome").speaker == "Suharto")
+    }
+
+    @Test("Zoom's Unknown Speaker label is no one, and its words are kept")
+    func unknownSpeaker() {
+        let cue = ZoomTranscript.splitSpeaker("Unknown Speaker: Okay.")
+        #expect(cue.speaker == nil)
+        #expect(cue.text == "Okay.")
+    }
+
+    @Test("A lowercase handle that recurs is a name; a one-off fragment is not")
+    func recurringLowercaseHandle() {
+        // A real 2025 call: `stay` and `nutzipper` were display names on 227
+        // of 505 cues, and a capital-letter rule alone dropped every one.
+        let vtt = """
+            WEBVTT
+
+            00:00:01.000 --> 00:00:02.000
+            stay: Hello
+
+            00:00:03.000 --> 00:00:04.000
+            stay: Around the world.
+
+            00:00:05.000 --> 00:00:06.000
+            stay: Okay.
+
+            00:00:07.000 --> 00:00:08.000
+            the ratio was 3:1 in the end
+            """
+        let cues = ZoomTranscript.cues(fromVTT: vtt)
+        #expect(cues.prefix(3).allSatisfy { $0.speaker == "stay" })
+        #expect(cues[3].speaker == nil)
+        #expect(cues[3].text == "the ratio was 3:1 in the end")
+    }
+
+    @Test("A CJK name with an ideographic space is one name")
+    func ideographicSpace() {
+        #expect(ZoomTranscript.splitSpeaker("田中\u{3000}花子: はい").speaker == "田中\u{3000}花子")
+    }
+
+    @Test("The stop words mirror the pipeline's, word for word")
+    func stopWordsMirrorThePipeline() throws {
+        // The pipeline trusts this file's names, so the two lists are one
+        // decision. Read from the Python source rather than copied into a
+        // fixture, so neither side can move alone.
+        let source = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("bristlenose/stages/s03_parse_subtitles.py")
+        let python = try String(contentsOf: source, encoding: .utf8)
+        let block = try #require(python.range(of: "_NOT_SPEAKER_WORDS = frozenset({"))
+        let tail = python[block.upperBound...]
+        let end = try #require(tail.range(of: "})"))
+        let regex = try NSRegularExpression(pattern: #""([^"]+)""#)
+        let body = String(tail[..<end.lowerBound])
+        let words = Set(regex.matches(in: body, range: NSRange(body.startIndex..., in: body)).compactMap {
+            Range($0.range(at: 1), in: body).map { String(body[$0]) }
+        })
+        #expect(words.count > 50, "the Python list did not parse")
+        #expect(words == ZoomTranscript.notSpeakerWords)
+    }
+
     @Test("A cue with no speaker degrades rather than inventing one")
     func noSpeaker() {
         // Zoom does not always emit names. An importer that assumes them ends
@@ -334,11 +420,11 @@ struct ZoomPreflightTests {
         let preflight = ZoomPreflight(cloudRecordingEnabled: false,
                                       audioTranscriptEnabled: false,
                                       autoDeleteEnabled: false, autoDeleteDays: nil)
-        let reason = try? #require(preflight.blockingReason)
         // Basic-plan and recording-disabled accounts have nothing in the cloud
-        // at all — but local recordings still exist on their Mac, and saying so
-        // turns a dead end into a next step.
-        #expect(reason?.contains("Finder") == true)
+        // at all, so the notice stands in for the list rather than sitting
+        // over an empty one that reads "no recordings this month".
+        #expect(preflight.notice == .zoomCloudRecordingOff)
+        #expect(preflight.notice?.replacesListing == true)
     }
 
     @Test("Transcript off is a caveat, not a block")
@@ -348,8 +434,8 @@ struct ZoomPreflightTests {
                                       autoDeleteEnabled: false, autoDeleteDays: nil)
         // The recordings are fetchable; only the VTT is missing. Blocking here
         // would refuse a perfectly usable import.
-        #expect(preflight.blockingReason == nil)
-        #expect(preflight.transcriptCaveat != nil)
+        #expect(preflight.notice == .zoomTranscriptOff)
+        #expect(preflight.notice?.replacesListing == false)
     }
 
     @Test("Everything on is silent")
@@ -357,8 +443,7 @@ struct ZoomPreflightTests {
         let preflight = ZoomPreflight(cloudRecordingEnabled: true,
                                       audioTranscriptEnabled: true,
                                       autoDeleteEnabled: true, autoDeleteDays: 30)
-        #expect(preflight.blockingReason == nil)
-        #expect(preflight.transcriptCaveat == nil)
+        #expect(preflight.notice == nil)
     }
 }
 
@@ -460,5 +545,199 @@ struct SignInIncompleteTests {
         #expect(CloudPlatform.zoom.signInMayAwaitAdminApproval)
         #expect(CloudPlatform.teams.signInMayAwaitAdminApproval)
         #expect(!CloudPlatform.meet.signInMayAwaitAdminApproval)
+    }
+}
+
+// MARK: - Parts of a stopped-and-restarted meeting
+
+@Suite("Zoom recording parts")
+struct ZoomRecordingPartsTests {
+
+    private let t0 = Date(timeIntervalSince1970: 1_790_000_000)
+
+    private func file(_ type: String, _ layout: String,
+                      from start: TimeInterval?, to end: TimeInterval?) -> ZoomRecordingFile {
+        ZoomRecordingFile(
+            id: "\(type)-\(layout)-\(start ?? -1)",
+            fileType: ZoomFileType(type),
+            layout: ZoomRecordingLayout(layout),
+            sizeBytes: 1_000,
+            downloadURL: URL(string: "https://zoom.us/rec/download/x"),
+            recordingStart: start.map { t0.addingTimeInterval($0) },
+            recordingEnd: end.map { t0.addingTimeInterval($0) })
+    }
+
+    /// Two stretches ten minutes apart, each with a video, an audio file and a
+    /// transcript — the shape a host gets by pressing Stop, then Record again.
+    private var restarted: [ZoomRecordingFile] {
+        [
+            file("MP4", "shared_screen_with_speaker_view", from: 0, to: 600),
+            file("M4A", "audio_only", from: 0, to: 600),
+            file("TRANSCRIPT", "audio_transcript", from: 0, to: 600),
+            file("MP4", "shared_screen_with_speaker_view", from: 1200, to: 1500),
+            file("M4A", "audio_only", from: 1200, to: 1500),
+            file("TRANSCRIPT", "audio_transcript", from: 1200, to: 1500),
+        ]
+    }
+
+    @Test("Every part is kept, not only the first")
+    func everyPartKept() {
+        // `choose` alone takes the first media file and the first transcript,
+        // so the second stretch of the interview silently never arrived.
+        let parts = ZoomFileSelection.parts(from: restarted)
+        #expect(parts.count == 2)
+        #expect(parts.map { $0.start } == [t0, t0.addingTimeInterval(1200)])
+        #expect(parts.allSatisfy { $0.choice.media?.fileType == .m4a })
+    }
+
+    @Test("Each transcript goes to the part it overlaps")
+    func transcriptsPairByOverlap() {
+        // Listing order is Zoom's, not chronological; pairing by position
+        // would put the second stretch's words under the first's audio.
+        let parts = ZoomFileSelection.parts(from: restarted.reversed())
+        #expect(parts[0].choice.transcript?.recordingStart == t0)
+        #expect(parts[1].choice.transcript?.recordingStart == t0.addingTimeInterval(1200))
+    }
+
+    @Test("Renditions of one stretch stay one part")
+    func renditionsAreOnePart() {
+        let parts = ZoomFileSelection.parts(from: [
+            file("MP4", "gallery_view", from: 0, to: 600),
+            file("MP4", "active_speaker", from: 1, to: 600),
+            file("M4A", "audio_only", from: 0, to: 600),
+        ])
+        #expect(parts.count == 1)
+        #expect(parts[0].choice.skippedMedia.count == 2)
+    }
+
+    @Test("A part with no transcript of its own gets none")
+    func partWithoutTranscript() {
+        let files = restarted.filter {
+            !($0.fileType == .transcript && $0.recordingStart == t0.addingTimeInterval(1200))
+        }
+        let parts = ZoomFileSelection.parts(from: files)
+        #expect(parts[0].choice.transcript != nil)
+        #expect(parts[1].choice.transcript == nil)
+    }
+
+    @Test("Media without start times is one part, as before")
+    func noStartsIsOnePart() {
+        let parts = ZoomFileSelection.parts(from: [
+            file("MP4", "active_speaker", from: nil, to: nil),
+            file("M4A", "audio_only", from: nil, to: nil),
+            file("TRANSCRIPT", "audio_transcript", from: nil, to: nil),
+        ])
+        #expect(parts.count == 1)
+        #expect(parts[0].choice.transcript != nil)
+    }
+}
+
+// MARK: - Transcript availability
+
+@Suite("Zoom transcript availability")
+struct ZoomTranscriptAvailabilityTests {
+
+    private let ended = Date(timeIntervalSince1970: 1_790_000_000)
+
+    @Test("A listed transcript is Available whatever the setting says")
+    func listedIsAvailable() {
+        #expect(ZoomTranscriptAvailability.decide(
+            hasTranscript: true, audioTranscriptEnabled: false,
+            recordingEnded: ended, now: ended) == .available)
+    }
+
+    @Test("Setting on and a recent call: Expected")
+    func recentIsExpected() {
+        // The transcript lands 15–30 minutes after the video. Reading its
+        // absence as "none" an hour after the call would import without it.
+        #expect(ZoomTranscriptAvailability.decide(
+            hasTranscript: false, audioTranscriptEnabled: true,
+            recordingEnded: ended, now: ended.addingTimeInterval(3600)) == .expected)
+    }
+
+    @Test("Past a day, the wait ends with No transcript")
+    func oldIsNotProvided() {
+        // Zoom sometimes never produces one; a wait must end with an answer.
+        #expect(ZoomTranscriptAvailability.decide(
+            hasTranscript: false, audioTranscriptEnabled: true,
+            recordingEnded: ended, now: ended.addingTimeInterval(25 * 3600)) == .notProvided)
+    }
+
+    @Test("Setting off, or unread, waits for nothing")
+    func offOrUnknownWaitsForNothing() {
+        #expect(ZoomTranscriptAvailability.decide(
+            hasTranscript: false, audioTranscriptEnabled: false,
+            recordingEnded: ended, now: ended) == .notProvided)
+        #expect(ZoomTranscriptAvailability.decide(
+            hasTranscript: false, audioTranscriptEnabled: nil,
+            recordingEnded: ended, now: ended) == .notProvided)
+    }
+}
+
+// MARK: - Reading Zoom's VTT
+
+@Suite("Zoom VTT parsing")
+struct ZoomVTTParsingTests {
+
+    private let sample = """
+        WEBVTT
+
+        1
+        00:00:01.120 --> 00:00:04.500
+        Priya Shah: So, tell me how you plan a trip.
+
+        2
+        00:00:05.000 --> 00:00:09.250
+        Participant 04: Usually the ratio is 3:1 —
+        flights first, then hotels.
+
+        3
+        00:01:10.000 --> 00:01:12.000
+        the ratio was 3:1 &amp; it showed
+
+        """
+
+    @Test("Cues come back with times, names and joined lines")
+    func parsesCues() {
+        let cues = ZoomTranscript.cues(fromVTT: sample)
+        #expect(cues.count == 3)
+        #expect(cues[0].start == 1.12 && cues[0].end == 4.5)
+        #expect(cues[0].speaker == "Priya Shah")
+        #expect(cues[0].text == "So, tell me how you plan a trip.")
+        #expect(cues[1].speaker == "Participant 04")
+        #expect(cues[1].text == "Usually the ratio is 3:1 — flights first, then hotels.")
+    }
+
+    @Test("Dialogue with a colon is not a speaker, and entities are read once")
+    func colonInDialogue() {
+        let cue = ZoomTranscript.cues(fromVTT: sample)[2]
+        #expect(cue.speaker == nil)
+        // Left as `&amp;`, the writer would escape it again and the pipeline
+        // would read a literal "&amp;" into the participant's words.
+        #expect(cue.text == "the ratio was 3:1 & it showed")
+        #expect(cue.start == 70)
+    }
+
+    @Test("CRLF files and short timestamps parse the same")
+    func crlfAndShortTimes() {
+        let crlf = "WEBVTT\r\n\r\n01:02.500 --> 01:04.000 align:start\r\nAlex: Hi\r\n"
+        let cues = ZoomTranscript.cues(fromVTT: crlf)
+        #expect(cues.count == 1)
+        #expect(cues[0].start == 62.5)
+        #expect(cues[0].end == 64)
+        #expect(cues[0].speaker == "Alex")
+    }
+
+    @Test("A blank line holding spaces still ends a cue")
+    func whitespaceBlankLine() {
+        let vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nAlex: One\n  \n00:00:03.000 --> 00:00:04.000\nSam: Two\n"
+        let cues = ZoomTranscript.cues(fromVTT: vtt)
+        #expect(cues.map(\.speaker) == ["Alex", "Sam"])
+    }
+
+    @Test("A timing line that does not parse drops its cue")
+    func badTimingDropped() {
+        let bad = "WEBVTT\n\n00:00:xx --> 00:00:02.000\nAlex: Hi\n\n00:00:03.000 --> 00:00:02.000\nAlex: Backwards\n"
+        #expect(ZoomTranscript.cues(fromVTT: bad).isEmpty)
     }
 }

@@ -331,8 +331,17 @@ struct CloudImportWindow: View {
         // latter flattens the whole tree into a fresh array, and this body is
         // re-evaluated several times a second while a batch downloads.
         let isEmpty = store.outline.isEmpty
+        let notice = store.listing?.notice
 
-        if let refusal = store.blanketRefusal {
+        if let notice, notice.replacesListing {
+            // The account cannot cloud-record at all. Not an error glyph:
+            // nothing failed, and the sentence names what still works.
+            ContentUnavailableView {
+                Label(i18n.t("desktop.cloudImport.blanketUnsupportedTitle"), systemImage: "video.slash")
+            } description: {
+                Text(i18n.t(notice.key))
+            }
+        } else if let refusal = store.blanketRefusal {
             // DEVIATION, and the most important one on this platform. Every row
             // is unfetchable for the same reason, so the window says it once
             // instead of drawing eleven dead ticks. The Teams design never
@@ -363,9 +372,27 @@ struct CloudImportWindow: View {
                 }
             }
         } else {
-            CloudImportOutlineView(store: store, platform: platform, i18n: i18n,
-                                   onMinimumWidth: { gridMinimumWidth = $0 })
+            VStack(spacing: 0) {
+                if let notice {
+                    accountNoticeBar(notice)
+                    Divider()
+                }
+                CloudImportOutlineView(store: store, platform: platform, i18n: i18n,
+                                       onMinimumWidth: { gridMinimumWidth = $0 })
+            }
         }
+    }
+
+    /// One sentence about every row, said once above the grid instead of down
+    /// a column. Secondary and glyphed as information: the recordings import
+    /// either way, so this is a fact to know, not a fault to fix here.
+    private func accountNoticeBar(_ notice: CloudAccountNotice) -> some View {
+        Label(i18n.t(notice.key), systemImage: "info.circle")
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
     }
 
     private func blanketRefusalView(_ refusal: ArtifactAvailability) -> some View {

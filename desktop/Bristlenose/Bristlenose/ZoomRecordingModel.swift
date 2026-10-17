@@ -114,12 +114,18 @@ struct ZoomRecordingFile: Equatable {
     let sizeBytes: Int64?
     let downloadURL: URL?
     let recordingStart: Date?
+    /// Where this file's span ends. With `recordingStart` it is what tells the
+    /// parts of a stopped-and-restarted meeting apart, and which transcript
+    /// belongs to which part.
+    var recordingEnd: Date? = nil
 
     /// Deliberately NOT modelled: `status`. Its published enum is `["completed"]`
     /// and nothing else, so it can never indicate "not ready" — reading it as a
     /// readiness signal is how an importer downloads a transcript that does not
-    /// exist yet. Readiness comes from `GET /meetings/{id}/transcript`'s
-    /// `can_download`, which distinguishes NOT_READY from NO_TRANSCRIPT_DATA.
+    /// exist yet. Readiness is the `TRANSCRIPT` file appearing in the listing.
+    /// `GET /meetings/{id}/transcript` is **not** that check: it serves the AI
+    /// Companion transcript, a different artefact from the recording's VTT
+    /// (Zoom's OpenAPI spec, read 30 Sep 2026).
     var isDownloadable: Bool { downloadURL != nil }
 }
 
@@ -177,6 +183,130 @@ enum ZoomFileSelection {
             .filter { $0 != chosen }
 
         return Choice(media: chosen, transcript: transcript, skippedMedia: skipped)
+    }
+
+    /// One recording of a meeting. A host who stops and restarts recording
+    /// gets one part per stretch, each with its own renditions and its own
+    /// transcript.
+    struct Part: Equatable {
+        let choice: Choice
+        let start: Date?
+        let end: Date?
+    }
+
+    /// How far apart two media files' starts may sit and still be renditions
+    /// of the same stretch. Zoom stamps every rendition of a part with the same
+    /// `recording_start`; a restart is minutes away, never seconds.
+    static let partTolerance: TimeInterval = 5
+
+    /// The meeting's files, split into its parts, in the order they happened.
+    ///
+    /// **`choose` alone takes the first media file and the first transcript,
+    /// so every part after the first was silently dropped.** Here the media
+    /// files are grouped by start time, `choose` picks one rendition per group,
+    /// and each transcript goes to the group it overlaps most.
+    ///
+    /// A meeting whose media files do not all carry a start has nothing to
+    /// split on, and comes back as one part, exactly as `choose` saw it.
+    static func parts(
+        from files: [ZoomRecordingFile],
+        preferAudioOnly: Bool = true
+    ) -> [Part] {
+        let media = files.filter { $0.fileType.isMedia }
+        let starts = media.compactMap(\.recordingStart)
+        guard !media.isEmpty, starts.count == media.count else {
+            let choice = choose(from: files, preferAudioOnly: preferAudioOnly)
+            return [Part(choice: choice, start: choice.media?.recordingStart,
+                         end: choice.media?.recordingEnd)]
+        }
+
+        var groups: [[ZoomRecordingFile]] = []
+        for file in media.sorted(by: { $0.recordingStart! < $1.recordingStart! }) {
+            if let anchor = groups.last?.first?.recordingStart,
+               file.recordingStart!.timeIntervalSince(anchor) <= partTolerance {
+                groups[groups.count - 1].append(file)
+            } else {
+                groups.append([file])
+            }
+        }
+        let spans: [(start: Date, end: Date?)] = groups.map { group in
+            (group.compactMap(\.recordingStart).min()!, group.compactMap(\.recordingEnd).max())
+        }
+
+        var transcriptFor: [Int: ZoomRecordingFile] = [:]
+        let transcripts = files
+            .filter { $0.fileType == .transcript }
+            .sorted { ($0.recordingStart ?? .distantPast) < ($1.recordingStart ?? .distantPast) }
+        for transcript in transcripts {
+            guard let index = bestSpan(for: transcript, among: spans),
+                  transcriptFor[index] == nil else { continue }
+            transcriptFor[index] = transcript
+        }
+
+        return groups.enumerated().map { index, group in
+            let choice = choose(from: group + [transcriptFor[index]].compactMap { $0 },
+                                preferAudioOnly: preferAudioOnly)
+            return Part(choice: choice, start: spans[index].start, end: spans[index].end)
+        }
+    }
+
+    /// The part a transcript belongs to: the one it overlaps most, else the
+    /// one whose start is nearest within `partTolerance`. A transcript that
+    /// fits none is left out rather than pinned to the wrong stretch of talk.
+    private static func bestSpan(
+        for transcript: ZoomRecordingFile,
+        among spans: [(start: Date, end: Date?)]
+    ) -> Int? {
+        guard let tStart = transcript.recordingStart else {
+            return spans.count == 1 ? 0 : nil
+        }
+        let tEnd = transcript.recordingEnd ?? tStart
+        var best: (index: Int, overlap: TimeInterval)?
+        for (index, span) in spans.enumerated() {
+            let end = span.end ?? span.start
+            let overlap = min(end, tEnd).timeIntervalSince(max(span.start, tStart))
+            if overlap > 0, overlap > (best?.overlap ?? 0) { best = (index, overlap) }
+        }
+        if let best { return best.index }
+        let nearest = spans.indices.min {
+            abs(spans[$0].start.timeIntervalSince(tStart)) < abs(spans[$1].start.timeIntervalSince(tStart))
+        }
+        guard let nearest,
+              abs(spans[nearest].start.timeIntervalSince(tStart)) <= partTolerance else { return nil }
+        return nearest
+    }
+}
+
+// MARK: - Transcript availability
+
+/// What a Zoom row's Transcript cell says before anything is fetched.
+///
+/// Zoom has no "being produced" signal. The file appears in the listing when
+/// it is ready, typically 15–30 minutes after the video and occasionally much
+/// later, and is sometimes never produced at all. So *Expected* is inferred:
+/// the account makes transcripts and the recording is recent enough for one to
+/// still be coming.
+enum ZoomTranscriptAvailability {
+    /// How long after a recording ends a missing transcript is still waited
+    /// for. Zoom's own figure for the slow case is "up to 24 hours".
+    static let productionWindow: TimeInterval = 24 * 3600
+
+    /// - Parameter audioTranscriptEnabled: the account's "Create audio
+    ///   transcript" setting, nil when the preflight could not be read. Nil
+    ///   waits for nothing: a row that waits on a setting nobody could read
+    ///   could wait for a transcript that is never coming.
+    static func decide(
+        hasTranscript: Bool,
+        audioTranscriptEnabled: Bool?,
+        recordingEnded: Date?,
+        now: Date
+    ) -> TranscriptAvailability {
+        if hasTranscript { return .available }
+        guard audioTranscriptEnabled == true,
+              let recordingEnded,
+              now.timeIntervalSince(recordingEnded) < productionWindow
+        else { return .notProvided }
+        return .expected
     }
 }
 
@@ -480,40 +610,175 @@ enum ZoomTranscript {
         let text: String
     }
 
-    /// A speaker prefix is only believed when it looks like a display name:
-    /// short, no sentence punctuation. Prevents "So, honestly: I gave up" from
-    /// registering a speaker.
-    static func splitSpeaker(_ payload: String) -> Cue {
-        guard let colon = payload.firstIndex(of: ":") else {
+    /// A speaker prefix is only believed when it looks like a display name.
+    ///
+    /// **This is the only name check a Zoom transcript gets.** The file it
+    /// feeds is a cloud transcript, and `s03_parse_subtitles.py` trusts a
+    /// cloud transcript's `<v>` tags rather than re-guessing — so a name this
+    /// rejects keeps its `Name:` prefix inside the quote, and a phrase this
+    /// accepts becomes a participant. It therefore follows the pipeline's own
+    /// `_looks_like_speaker_name`: letters in any script, the punctuation real
+    /// names carry (`Dr. Patel`, `Patel, Anita`, `O'Brien`, `(Guest)`), the
+    /// ASCII or full-width colon, and the same list of words that open a
+    /// sentence and take a colon.
+    ///
+    /// Two departures, both deliberate. **Digits are allowed** — "Participant
+    /// 04" and "P07" are exactly the display names a study uses. And **a name
+    /// in a cased script must start with a capital**, which is what keeps "the
+    /// ratio was 3:1" from registering a speaker now that digits pass; a
+    /// script without case (Japanese, Chinese, Arabic) has no capital to need.
+    ///
+    /// - Parameter recurring: lowercase labels this file uses often enough to
+    ///   be display names (`cues(fromVTT:)` finds them). A handle like `stay`
+    ///   or `nutzipper` is a real Zoom display name; a sentence fragment does
+    ///   not open three cues.
+    static func splitSpeaker(_ payload: String, recurring: Set<String> = []) -> Cue {
+        guard let (candidate, rest) = prefix(of: payload),
+              !rest.isEmpty,
+              looksLikeName(candidate) || recurring.contains(candidate)
+        else {
             return Cue(speaker: nil, text: payload)
         }
-        let candidate = String(payload[..<colon]).trimmingCharacters(in: .whitespaces)
-        let rest = String(payload[payload.index(after: colon)...])
-            .trimmingCharacters(in: .whitespaces)
+        // Zoom's own label for speech it could not attribute. Not a person:
+        // the words are kept, unnamed, so the pipeline's split gate sees them
+        // honestly rather than as a participant called "Unknown Speaker".
+        if candidate.caseInsensitiveCompare("Unknown Speaker") == .orderedSame {
+            return Cue(speaker: nil, text: rest)
+        }
+        return Cue(speaker: candidate, text: rest)
+    }
 
-        // A display name starts with a capital and is a few words at most.
-        // Length and punctuation alone are not enough: "the ratio was 3:1"
-        // clears both and would register a speaker called "the ratio was 3" —
-        // silently, on real interview content, for the whole session.
-        //
-        // Digits are deliberately allowed: "Participant 04" and "P07" are
-        // exactly the display names a research study uses.
-        let firstIsCapital = candidate.first.map {
-            $0.isUppercase || ($0.isLetter == false && $0.isNumber)
-        } ?? false
-        let wordCount = candidate.split(separator: " ").count
+    /// The text before the first colon, and the text after it, trimmed.
+    private static func prefix(of payload: String) -> (String, String)? {
+        guard let colon = payload.firstIndex(where: { $0 == ":" || $0 == "：" }) else { return nil }
+        return (String(payload[..<colon]).trimmingCharacters(in: .whitespaces),
+                String(payload[payload.index(after: colon)...]).trimmingCharacters(in: .whitespaces))
+    }
 
-        let plausible = !candidate.isEmpty
-            && !rest.isEmpty
-            && firstIsCapital
-            && wordCount <= 5
-            && candidate.count <= 48
-            && !candidate.contains(".")
-            && !candidate.contains("?")
-            && !candidate.contains("!")
-            && !candidate.contains(",")
+    /// How many cues a lowercase label must open before it is believed.
+    static let recurringLabelMinimum = 3
 
-        return plausible ? Cue(speaker: candidate, text: rest)
-                         : Cue(speaker: nil, text: payload)
+    static func looksLikeName(_ candidate: String, allowingLowercase: Bool = false) -> Bool {
+        guard let first = candidate.first,
+              first.isLetter || first.isNumber,
+              allowingLowercase || !first.isLowercase,
+              candidate.count <= 60
+        else { return false }
+        let words = candidate.split(whereSeparator: { $0 == " " || $0 == "\u{3000}" })
+        guard words.count <= 5 else { return false }
+        for character in candidate {
+            if character.isLetter || character.isNumber || namePunctuation.contains(character) {
+                continue
+            }
+            return false
+        }
+        // The whole name, and its first word: "Honestly, I gave up" is a
+        // clause, and its comma would otherwise let it through as a name.
+        let lowered = candidate.lowercased()
+        let firstWord = words.first.map {
+            $0.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ".,"))
+        } ?? ""
+        return !notSpeakerWords.contains(lowered) && !notSpeakerWords.contains(firstWord)
+    }
+
+    /// `_NAME_PUNCTUATION` and `_NAME_JOINERS` in `s03_parse_subtitles.py`.
+    private static let namePunctuation: Set<Character> = [
+        " ", ".", "'", "’", ",", "-", "(", ")", "/", "|", "&", "\u{200C}", "\u{200D}",
+        // The ideographic space, between family and given name in CJK display
+        // names ("田中　花子"), seen in real Zoom transcripts.
+        "\u{3000}",
+    ]
+
+    /// `_NOT_SPEAKER_WORDS` in `s03_parse_subtitles.py`, verbatim. Discourse
+    /// words, labels and URL schemes only — never anyone's given name.
+    /// `ZoomVTTParsingTests.stopWordsMirrorThePipeline` keeps the two equal.
+    static let notSpeakerWords: Set<String> = [
+        "honestly", "note", "notes", "also", "well", "okay", "ok", "yes", "no", "right", "basically",
+        "actually", "example", "warning", "question", "answer", "summary", "update", "edit",
+        "reminder", "important", "ps", "nb", "re", "fwd", "subject", "translation", "transcript",
+        "caption", "captions", "anyway", "because", "however", "meanwhile", "finally", "obviously",
+        "clearly", "frankly", "seriously", "listen", "wait", "hmm", "hm", "oh", "ah", "mm",
+        "mhm", "huh", "hey", "hi", "hello", "thanks", "sorry", "please", "cheers", "maybe",
+        "perhaps", "probably", "certainly", "sure", "exactly", "totally", "absolutely", "definitely",
+        "really", "truly", "yep", "nope", "nah", "um", "uh", "yeah", "like", "so", "then",
+        "http", "https", "mailto", "tel", "gern", "hinweis", "anmerkung", "beispiel", "frage",
+        "antwort", "achtung", "wichtig", "genau", "übrigens", "ähm", "nota", "ejemplo", "exemplo",
+        "exemple", "pregunta", "respuesta", "resposta", "réponse", "atención", "atenção", "attention",
+        "bueno", "pues", "alors", "donc", "voilà", "enfin", "bref", "então", "pois",
+    ]
+
+    /// Every cue in a Zoom VTT, with the `Name:` prefix moved out of the text.
+    ///
+    /// Times stay on the file's own clock, which on Zoom is already the
+    /// recording's. What comes back goes through `PlatformTranscriptRebase`
+    /// and `PlatformTranscriptWriter`, so the file Bristlenose writes is
+    /// always its own bytes, never Zoom's.
+    ///
+    /// A block with no timing line (the header, a `NOTE`, a `STYLE`) is
+    /// skipped; a timing line that does not parse drops its cue rather than
+    /// guessing a time.
+    static func cues(fromVTT text: String) -> [PlatformTranscriptCue] {
+        let normalised = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+        var timed: [(start: TimeInterval, end: TimeInterval, payload: String)] = []
+        // A blank line may hold stray spaces; it still ends the cue.
+        let blocks = normalised.replacingOccurrences(
+            of: "\n[ \t]+\n", with: "\n\n", options: .regularExpression)
+        for block in blocks.components(separatedBy: "\n\n") {
+            let lines = block.split(separator: "\n", omittingEmptySubsequences: true)
+            guard let timing = lines.firstIndex(where: { $0.contains("-->") }) else { continue }
+            let halves = lines[timing].components(separatedBy: "-->")
+            guard halves.count == 2,
+                  let start = timestamp(halves[0]),
+                  let endToken = halves[1].split(separator: " ").first,
+                  let end = timestamp(String(endToken)),
+                  end > start
+            else { continue }
+            let payload = lines[(timing + 1)...]
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .joined(separator: " ")
+            timed.append((start, end, unescape(payload)))
+        }
+
+        // Real transcripts carry lowercase handles as display names — measured
+        // on a 2025 call where `stay` and `nutzipper` opened 227 of 505 cues
+        // and the capital-letter rule dropped every one. A label that opens
+        // several cues is a name whatever its case.
+        var counts: [String: Int] = [:]
+        for cue in timed {
+            guard let (candidate, rest) = prefix(of: cue.payload), !rest.isEmpty,
+                  candidate.first?.isLowercase == true,
+                  looksLikeName(candidate, allowingLowercase: true) else { continue }
+            counts[candidate, default: 0] += 1
+        }
+        let recurring = Set(counts.filter { $0.value >= recurringLabelMinimum }.keys)
+
+        return timed.compactMap { cue in
+            let split = splitSpeaker(cue.payload, recurring: recurring)
+            guard !split.text.isEmpty else { return nil }
+            return PlatformTranscriptCue(start: cue.start, end: cue.end,
+                                         speaker: split.speaker, text: split.text)
+        }
+    }
+
+    /// `HH:MM:SS.mmm` or `MM:SS.mmm`, as WebVTT allows. Nil on anything else.
+    static func timestamp(_ raw: String) -> TimeInterval? {
+        let fields = raw.trimmingCharacters(in: .whitespaces).split(separator: ":")
+        guard (2...3).contains(fields.count) else { return nil }
+        var total: TimeInterval = 0
+        for field in fields {
+            guard let value = Double(field), value >= 0 else { return nil }
+            total = total * 60 + value
+        }
+        return total
+    }
+
+    /// The three entities WebVTT text uses. The writer escapes them again, so
+    /// leaving them escaped here would double them in the file it writes.
+    private static func unescape(_ text: String) -> String {
+        text.replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&amp;", with: "&")
     }
 }

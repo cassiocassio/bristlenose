@@ -790,6 +790,11 @@ function shortName(name: string): string {
   return name.split(/\s+/)[0] || name;
 }
 
+// What inside a session row handles its own click, so the row's click-to-open
+// stands aside. [role="menu"] is the person picker, which renders inside the row.
+const ROW_OWN_CLICK =
+  'a, button, input, textarea, select, [contenteditable="true"], [role="menu"], [data-own-click]';
+
 function SessionRow({
   session,
   peopleMap,
@@ -915,12 +920,29 @@ function SessionRow({
     }
   }
 
+  // A click anywhere on a readable row opens its transcript, as the hover wash
+  // and pointer promise. Controls inside the row (links, buttons, the name
+  // editor, the person picker, the thumbnail's player) keep their own click,
+  // and a drag that selected text is a selection, not a click.
+  const onRowClick = readable
+    ? (e: React.MouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        const own = target.closest(ROW_OWN_CLICK);
+        if (own && e.currentTarget.contains(own)) return;
+        if (window.getSelection()?.toString()) return;
+        navigate(sessionPath);
+      }
+    : undefined;
+
   return (
+    // The row click is a pointer convenience; the keyboard route is the #N link.
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/interactive-supports-focus
     <div
       className={`bn-sessions-row${tapestryOpen ? " bn-tapestry-open" : ""}`}
       data-session={readable ? session_id : undefined}
       aria-disabled={readable ? undefined : true}
       role="row"
+      onClick={onRowClick}
     >
       <div className="bn-sessions-cell bn-cell-id bn-session-id" role="cell">
         {readable && tapestryOpen !== undefined && (
@@ -946,7 +968,8 @@ function SessionRow({
           <span>#{session_number}</span>
         )}
       </div>
-      <div className="bn-sessions-cell bn-cell-thumb" role="cell">
+      <div className="bn-sessions-cell bn-cell-thumb" role="cell"
+        data-own-click={openPlayer ? true : undefined}>
         {readable && (
           <Thumbnail
             hasMedia={has_media}
@@ -1016,6 +1039,7 @@ function SessionRow({
               )}
               {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
               <span
+                data-own-click={canPick || undefined}
                 onClick={
                   canPick
                     ? (e) => {

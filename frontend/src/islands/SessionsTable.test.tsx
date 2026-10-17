@@ -7,7 +7,7 @@ import {
   fireEvent,
   waitFor,
 } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { SessionsTable } from "./SessionsTable";
 import { _resetEmbeddedCache } from "../utils/embedded";
 import { _resetExportCache } from "../utils/exportData";
@@ -249,6 +249,37 @@ describe("SessionsTable during a first analysis", () => {
     expect(waiting.querySelector(".bn-cell-thumb")?.childElementCount).toBe(0);
     expect(waiting.querySelector(".bn-cell-speakers")?.childElementCount).toBe(0);
     expect(waiting.querySelector("a")).toBeNull();
+  });
+});
+
+describe("SessionsTable row click", () => {
+  function Where() {
+    return <output data-testid="where">{useLocation().pathname}</output>;
+  }
+  const renderWithProbe = () =>
+    rtlRender(
+      <MemoryRouter initialEntries={["/report/sessions"]}>
+        <SessionsTable projectId="1" />
+        <Where />
+      </MemoryRouter>,
+    );
+  const row = (n: number) => screen.getByText(`#${n}`).closest('[role="row"]') as HTMLElement;
+
+  it("a click anywhere on a row opens that session's transcript", async () => {
+    mockFetchResponses();
+    renderWithProbe();
+    await screen.findByText("#2");
+    fireEvent.click(row(2).querySelector(".bn-cell-duration")!);
+    expect(screen.getByTestId("where").textContent).toBe("/report/sessions/s2");
+  });
+
+  it("a control inside the row keeps its own click", async () => {
+    mockFetchResponses();
+    renderWithProbe();
+    await screen.findByText("#1");
+    fireEvent.click(screen.getByTestId("bn-name-pencil-p1"));
+    fireEvent.click(screen.getByTestId("bn-name-p1").parentElement!);
+    expect(screen.getByTestId("where").textContent).toBe("/report/sessions");
   });
 });
 

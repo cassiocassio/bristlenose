@@ -48,8 +48,23 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// only the menu item is withheld. Any future import surface — the project
     /// context-menu twin, a Settings ▸ Accounts pane — should read `shipping`
     /// and inherit the parking rather than re-deriving it.
+    ///
+    /// **Since 17 Oct 2026 Zoom is a Diagnostics beta**: it also appears
+    /// whenever the Diagnostics menu is on. Its Marketplace app has only
+    /// Development credentials until Zoom's review clears, so a sign-in works
+    /// for the owner's own account and may fail for anyone else, and that
+    /// is accepted for a surface people opt into. Zoom stays out of the docs,
+    /// the About page and release notes until review; then the Production
+    /// client ID goes into the bundle and the Diagnostics condition comes off.
     static var shipping: [CloudPlatform] {
-        offered(zoomEnabled: BristlenoseFlags.cloudImportZoom)
+        offered(zoomEnabled: zoomOffered(flag: BristlenoseFlags.cloudImportZoom,
+                                         diagnostics: DiagnosticsPreference.isEnabled()))
+    }
+
+    /// The Zoom gate, pure so it is testable: the defaults override, or the
+    /// Diagnostics menu.
+    static func zoomOffered(flag: Bool, diagnostics: Bool) -> Bool {
+        flag || diagnostics
     }
 
     // MARK: Naming

@@ -46,7 +46,18 @@ enum AccountService: Hashable, Identifiable, Sendable {
     /// returns nothing for one, so hiding it cannot strand a credential where
     /// no UI can reach it. Check that again before parking a service that has
     /// ever stored a sign-in.
-    static var all: [AccountService] { CloudPlatform.shipping.map(Self.cloud) + [.miro] }
+    ///
+    /// Zoom, a Diagnostics beta since 17 Oct 2026, is the first parked platform
+    /// that *can* hold a grant: sign in with Diagnostics on, turn it off, and
+    /// the grant stays with no row. Turning Diagnostics back on shows the row
+    /// again, which is where Disconnect lives.
+    static var all: [AccountService] { all(offering: CloudPlatform.shipping) }
+
+    /// The rule `all` applies, pure so a test does not depend on this Mac's
+    /// settings.
+    static func all(offering platforms: [CloudPlatform]) -> [AccountService] {
+        platforms.map(Self.cloud) + [.miro]
+    }
 
     var id: String {
         switch self {

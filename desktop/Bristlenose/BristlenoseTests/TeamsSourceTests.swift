@@ -179,6 +179,13 @@ struct ShippingPlatformTests {
         #expect(!offered.contains(.zoom))
     }
 
+    @Test("Zoom is a Diagnostics beta: either switch shows it, neither hides it")
+    func zoomFollowsDiagnostics() {
+        #expect(CloudPlatform.zoomOffered(flag: false, diagnostics: true))
+        #expect(CloudPlatform.zoomOffered(flag: true, diagnostics: false))
+        #expect(!CloudPlatform.zoomOffered(flag: false, diagnostics: false))
+    }
+
     @Test("Unparked: the flag restores Zoom, in sequence order")
     func zoomReturnsWhenEnabled() {
         #expect(CloudPlatform.offered(zoomEnabled: true) == [.teams, .meet, .zoom])

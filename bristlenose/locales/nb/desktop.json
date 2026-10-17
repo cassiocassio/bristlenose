@@ -1217,5 +1217,9 @@
     "guideProblem": {
       "unreadable": "Kunne ikke lese guiden din. Sjekk at den kan \u00e5pnes, og velg Analyser i prosjektets meny i sidepanelet."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Lappenes form:",
+    "saveBoardFile": "Lagre tavlefil …"
   }
 }

@@ -1217,5 +1217,9 @@
     "guideProblem": {
       "unreadable": "Rehberiniz okunamad\u0131. A\u00e7\u0131ld\u0131\u011f\u0131ndan emin olun, ard\u0131ndan kenar \u00e7ubu\u011funda projenin men\u00fcs\u00fcnden Analiz Et\u2019i se\u00e7in."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Yapışkan not biçimi:",
+    "saveBoardFile": "Pano Dosyasını Kaydet…"
   }
 }

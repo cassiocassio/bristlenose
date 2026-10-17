@@ -1217,5 +1217,9 @@
     "guideProblem": {
       "unreadable": "Impossibile leggere la tua traccia. Controlla che si apra, poi scegli Analizza dal menu del progetto nella barra laterale."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Forma delle note:",
+    "saveBoardFile": "Salva file della bacheca…"
   }
 }

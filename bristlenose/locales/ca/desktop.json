@@ -1217,5 +1217,9 @@
     "guideProblem": {
       "unreadable": "No s\u2019ha pogut llegir la teva guia. Comprova que s\u2019obre i tria Analitza al men\u00fa del projecte a la barra lateral."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Forma de les notes:",
+    "saveBoardFile": "Desa el fitxer del tauler…"
   }
 }

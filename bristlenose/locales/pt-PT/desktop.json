@@ -1217,5 +1217,9 @@
     "guideProblem": {
       "unreadable": "N\u00e3o foi poss\u00edvel ler o seu gui\u00e3o. Verifique se abre e escolha Analisar no menu do projeto na barra lateral."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Forma das notas:",
+    "saveBoardFile": "Guardar ficheiro do quadro…"
   }
 }

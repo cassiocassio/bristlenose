@@ -797,5 +797,24 @@
     "navWidthPixels_other": "{{count}} pixels",
     "subtitle_one": "{{count}}\u00a0\u00c9cran",
     "subtitle_other": "{{count}}\u00a0\u00c9crans"
+  },
+  "figjam": {
+    "menuLabel": "Envoyer vers FigJam…",
+    "title": "Envoyer vers FigJam",
+    "intro": "Les tableaux FigJam se construisent dans FigJam : Bristlenose enregistre donc un fichier de tableau que le plugin Bristlenose board ouvre.",
+    "notice": "Le fichier contient les citations de ce projet, sauf les masquées, avec les codes des intervenants et jamais les noms. Quand vous l’ouvrez avec le plugin, les citations arrivent dans votre fichier Figma.",
+    "download": "Télécharger le fichier de tableau",
+    "preparing": "Préparation du fichier de tableau…",
+    "downloading_one": "Téléchargement d’un fichier de tableau de {{count}} citation.",
+    "downloading_other": "Téléchargement d’un fichier de tableau de {{count}} citations.",
+    "saved_one": "Fichier de tableau enregistré, avec {{count}} citation.",
+    "saved_other": "Fichier de tableau enregistré, avec {{count}} citations.",
+    "nextSteps": "Ensuite, dans l’app de bureau Figma :",
+    "step1": "Ouvrez un tableau FigJam.",
+    "step2": "Lancez le plugin Bristlenose board.",
+    "step3": "Choisissez le fichier que vous venez d’enregistrer.",
+    "errClipsBase": "Le dossier des clips doit être une adresse web commençant par https://.",
+    "error": "Le fichier de tableau n’a pas pu être créé. Réessayez.",
+    "popoverSubtitle": "Un fichier de tableau pour le plugin FigJam"
   }
 }

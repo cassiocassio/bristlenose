@@ -797,5 +797,24 @@
     "navWidthPixels_other": "{{count}} piksel",
     "subtitle_one": "{{count}}\u00a0Ekran",
     "subtitle_other": "{{count}}\u00a0Ekran"
+  },
+  "figjam": {
+    "menuLabel": "FigJam'e Gönder…",
+    "title": "FigJam'e Gönder",
+    "intro": "FigJam panoları FigJam'in içinde oluşturulur; bu yüzden Bristlenose, Bristlenose board eklentisinin açacağı bir pano dosyası kaydeder.",
+    "notice": "Dosyada, gizli olanlar dışında bu projenin alıntıları konuşmacı kodlarıyla yer alır, adlar asla yer almaz. Eklentiyle açtığınızda alıntılar Figma dosyanıza aktarılır.",
+    "download": "Pano dosyasını indir",
+    "preparing": "Pano dosyası hazırlanıyor…",
+    "downloading_one": "{{count}} alıntılı bir pano dosyası indiriliyor.",
+    "downloading_other": "{{count}} alıntılı bir pano dosyası indiriliyor.",
+    "saved_one": "Pano dosyası kaydedildi ({{count}} alıntı).",
+    "saved_other": "Pano dosyası kaydedildi ({{count}} alıntı).",
+    "nextSteps": "Ardından Figma masaüstü uygulamasında:",
+    "step1": "Bir FigJam panosu açın.",
+    "step2": "Bristlenose board eklentisini çalıştırın.",
+    "step3": "Az önce kaydettiğiniz dosyayı seçin.",
+    "errClipsBase": "Klip klasörü https:// ile başlayan bir web adresi olmalıdır.",
+    "error": "Pano dosyası oluşturulamadı. Yeniden deneyin.",
+    "popoverSubtitle": "FigJam eklentisi için bir pano dosyası"
   }
 }

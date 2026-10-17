@@ -1222,5 +1222,9 @@
     "guideProblem": {
       "unreadable": "Your guide could not be read. Check that it opens, then choose Analyse from the project\u2019s menu in the sidebar."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Sticky shape:",
+    "saveBoardFile": "Save Board File…"
   }
 }

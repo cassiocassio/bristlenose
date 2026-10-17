@@ -1217,5 +1217,9 @@
     "guideProblem": {
       "unreadable": "Din guide kunne ikke l\u00e6ses. Kontroll\u00e9r, at den kan \u00e5bnes, og v\u00e6lg Analys\u00e9r i projektets menu i indholdsoversigten."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Sedlernes form:",
+    "saveBoardFile": "Gem boardfil …"
   }
 }

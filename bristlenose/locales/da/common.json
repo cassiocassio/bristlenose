@@ -797,5 +797,24 @@
     "navWidthPixels_other": "{{count}} pixels",
     "subtitle_one": "{{count}}\u00a0sk\u00e6rm",
     "subtitle_other": "{{count}}\u00a0sk\u00e6rme"
+  },
+  "figjam": {
+    "menuLabel": "Send til FigJam …",
+    "title": "Send til FigJam",
+    "intro": "FigJam-boards bygges inde i FigJam, så Bristlenose gemmer en boardfil, som pluginet Bristlenose board åbner.",
+    "notice": "Filen indeholder dette projekts citater undtagen skjulte, med talerkoder og aldrig navne. Når du åbner den med pluginet, kommer citaterne ind i din Figma-fil.",
+    "download": "Hent boardfil",
+    "preparing": "Forbereder boardfilen …",
+    "downloading_one": "Henter en boardfil med {{count}} citat.",
+    "downloading_other": "Henter en boardfil med {{count}} citater.",
+    "saved_one": "Boardfil gemt med {{count}} citat.",
+    "saved_other": "Boardfil gemt med {{count}} citater.",
+    "nextSteps": "Derefter i Figmas skrivebordsapp:",
+    "step1": "Åbn et FigJam-board.",
+    "step2": "Kør pluginet Bristlenose board.",
+    "step3": "Vælg den fil, du lige har gemt.",
+    "errClipsBase": "Klipmappen skal være en webadresse, der begynder med https://.",
+    "error": "Boardfilen kunne ikke laves. Prøv igen.",
+    "popoverSubtitle": "En boardfil til FigJam-pluginet"
   }
 }

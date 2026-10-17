@@ -1177,5 +1177,9 @@
     "guideProblem": {
       "unreadable": "\u7121\u6cd5\u8b80\u53d6\u4f60\u7684\u5927\u7db1\u3002\u8acb\u78ba\u8a8d\u6a94\u6848\u53ef\u4ee5\u958b\u555f\uff0c\u7136\u5f8c\u5728\u5074\u908a\u6b04\u7684\u5c08\u6848\u9078\u55ae\u4e2d\u9078\u64c7\u300c\u5206\u6790\u300d\u3002"
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "便利貼形狀：",
+    "saveBoardFile": "儲存看板檔案⋯"
   }
 }

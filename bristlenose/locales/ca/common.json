@@ -797,5 +797,24 @@
     "navWidthPixels_other": "{{count}} píxels",
     "subtitle_one": "{{count}}\u00a0pantalla",
     "subtitle_other": "{{count}}\u00a0pantalles"
+  },
+  "figjam": {
+    "menuLabel": "Envia al FigJam…",
+    "title": "Envia al FigJam",
+    "intro": "Els taulers del FigJam es construeixen dins del FigJam, així que el Bristlenose desa un fitxer de tauler perquè l'obri el connector Bristlenose board.",
+    "notice": "El fitxer conté les cites d'aquest projecte, excepte les ocultes, amb els codis dels participants i mai els noms. Quan l'obris amb el connector, les cites passaran al teu fitxer del Figma.",
+    "download": "Baixa el fitxer del tauler",
+    "preparing": "S'està preparant el fitxer del tauler…",
+    "downloading_one": "S'està baixant un fitxer de tauler amb {{count}} cita.",
+    "downloading_other": "S'està baixant un fitxer de tauler amb {{count}} cites.",
+    "saved_one": "S'ha desat el fitxer del tauler, amb {{count}} cita.",
+    "saved_other": "S'ha desat el fitxer del tauler, amb {{count}} cites.",
+    "nextSteps": "Després, a l'aplicació d'escriptori del Figma:",
+    "step1": "Obre un tauler del FigJam.",
+    "step2": "Executa el connector Bristlenose board.",
+    "step3": "Tria el fitxer que acabes de desar.",
+    "errClipsBase": "La carpeta dels clips ha de ser una adreça web que comenci per https://.",
+    "error": "No s'ha pogut crear el fitxer del tauler. Torna-ho a provar.",
+    "popoverSubtitle": "Un fitxer de tauler per al connector del FigJam"
   }
 }

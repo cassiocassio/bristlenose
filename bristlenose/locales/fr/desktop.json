@@ -1217,5 +1217,9 @@
     "guideProblem": {
       "unreadable": "Impossible de lire votre guide. V\u00e9rifiez qu\u2019il s\u2019ouvre, puis choisissez Analyser dans le menu du projet, dans la barre lat\u00e9rale."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Forme des notes :",
+    "saveBoardFile": "Enregistrer le fichier de tableau…"
   }
 }

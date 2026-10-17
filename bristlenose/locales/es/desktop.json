@@ -1217,5 +1217,9 @@
     "guideProblem": {
       "unreadable": "No se pudo leer tu gu\u00eda. Comprueba que se abre y elige Analizar en el men\u00fa del proyecto en la barra lateral."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Forma de las notas:",
+    "saveBoardFile": "Guardar archivo de tablero…"
   }
 }

@@ -777,5 +777,22 @@
     "quoteMoved": "\u767a\u8a00\u3092\u79fb\u52d5\u3057\u307e\u3057\u305f",
     "navWidthPixels_other": "{{count}} \u30d4\u30af\u30bb\u30eb",
     "subtitle_other": "{{count}}\u00a0\u753b\u9762"
+  },
+  "figjam": {
+    "menuLabel": "FigJamに送信…",
+    "title": "FigJamに送信",
+    "intro": "FigJamのボードはFigJamの中で作られるため、Bristlenoseはボードファイルを保存し、それをBristlenose boardプラグインで開きます。",
+    "notice": "このファイルには、非表示のものを除くこのプロジェクトの発言が、名前ではなく話者コード付きで入っています。プラグインで開くと、発言があなたのFigmaファイルに入ります。",
+    "download": "ボードファイルをダウンロード",
+    "preparing": "ボードファイルを準備しています…",
+    "downloading_other": "発言{{count}}件のボードファイルをダウンロードしています。",
+    "saved_other": "ボードファイルを保存しました（発言{{count}}件）。",
+    "nextSteps": "次に、Figmaのデスクトップアプリで:",
+    "step1": "FigJamのボードを開きます。",
+    "step2": "Bristlenose boardプラグインを実行します。",
+    "step3": "保存したファイルを選びます。",
+    "errClipsBase": "クリップのフォルダは https:// で始まるWebアドレスにしてください。",
+    "error": "ボードファイルを作成できませんでした。もう一度お試しください。",
+    "popoverSubtitle": "FigJamプラグイン用のボードファイル"
   }
 }

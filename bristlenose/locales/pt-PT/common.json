@@ -797,5 +797,24 @@
     "navWidthPixels_other": "{{count}} p\u00edxeis",
     "subtitle_one": "{{count}}\u00a0Ecr\u00e3",
     "subtitle_other": "{{count}}\u00a0Ecr\u00e3s"
+  },
+  "figjam": {
+    "menuLabel": "Enviar para o FigJam…",
+    "title": "Enviar para o FigJam",
+    "intro": "Os quadros do FigJam constroem-se dentro do FigJam, por isso o Bristlenose guarda um ficheiro de quadro que o plugin Bristlenose board abre.",
+    "notice": "O ficheiro contém as citações deste projeto, exceto as ocultas, com códigos de participante e nunca nomes. Quando o abrir com o plugin, as citações passam para o seu ficheiro do Figma.",
+    "download": "Transferir ficheiro do quadro",
+    "preparing": "A preparar o ficheiro do quadro…",
+    "downloading_one": "A transferir um ficheiro de quadro com {{count}} citação.",
+    "downloading_other": "A transferir um ficheiro de quadro com {{count}} citações.",
+    "saved_one": "Ficheiro do quadro guardado, com {{count}} citação.",
+    "saved_other": "Ficheiro do quadro guardado, com {{count}} citações.",
+    "nextSteps": "Depois, na aplicação do Figma para computador:",
+    "step1": "Abra um quadro do FigJam.",
+    "step2": "Execute o plugin Bristlenose board.",
+    "step3": "Escolha o ficheiro que acabou de guardar.",
+    "errClipsBase": "A pasta dos clipes tem de ser um endereço web que comece por https://.",
+    "error": "Não foi possível criar o ficheiro do quadro. Tente novamente.",
+    "popoverSubtitle": "Um ficheiro de quadro para o plugin do FigJam"
   }
 }

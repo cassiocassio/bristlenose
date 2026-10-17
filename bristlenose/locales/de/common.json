@@ -797,5 +797,24 @@
     "navWidthPixels_other": "{{count}} Pixel",
     "subtitle_one": "{{count}}\u00a0Bildschirm",
     "subtitle_other": "{{count}}\u00a0Bildschirme"
+  },
+  "figjam": {
+    "menuLabel": "An FigJam senden…",
+    "title": "An FigJam senden",
+    "intro": "FigJam-Boards entstehen in FigJam selbst, darum speichert Bristlenose eine Board-Datei, die das Plugin „Bristlenose board“ öffnet.",
+    "notice": "Die Datei enthält die Zitate dieses Projekts außer den ausgeblendeten, mit Sprechercodes und nie mit Namen. Wenn Sie sie mit dem Plugin öffnen, gelangen die Zitate in Ihre Figma-Datei.",
+    "download": "Board-Datei laden",
+    "preparing": "Board-Datei wird vorbereitet…",
+    "downloading_one": "Board-Datei mit {{count}} Zitat wird geladen.",
+    "downloading_other": "Board-Datei mit {{count}} Zitaten wird geladen.",
+    "saved_one": "Board-Datei gespeichert, mit {{count}} Zitat.",
+    "saved_other": "Board-Datei gespeichert, mit {{count}} Zitaten.",
+    "nextSteps": "Dann in der Figma-Desktop-App:",
+    "step1": "Öffnen Sie ein FigJam-Board.",
+    "step2": "Führen Sie das Plugin „Bristlenose board“ aus.",
+    "step3": "Wählen Sie die eben gespeicherte Datei.",
+    "errClipsBase": "Der Clip-Ordner muss eine Webadresse sein, die mit https:// beginnt.",
+    "error": "Die Board-Datei konnte nicht erstellt werden. Versuchen Sie es erneut.",
+    "popoverSubtitle": "Eine Board-Datei für das FigJam-Plugin"
   }
 }

@@ -1297,5 +1297,9 @@
     "guideProblem": {
       "unreadable": "Nie uda\u0142o si\u0119 odczyta\u0107 Twojego scenariusza. Sprawd\u017a, czy si\u0119 otwiera, a potem wybierz Analizuj w menu projektu na pasku bocznym."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Kształt karteczek:",
+    "saveBoardFile": "Zapisz plik tablicy…"
   }
 }

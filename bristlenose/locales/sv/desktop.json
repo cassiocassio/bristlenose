@@ -1217,5 +1217,9 @@
     "guideProblem": {
       "unreadable": "Det gick inte att l\u00e4sa din guide. Kontrollera att den g\u00e5r att \u00f6ppna och v\u00e4lj Analysera i projektets meny i sidof\u00e4ltet."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Lapparnas form:",
+    "saveBoardFile": "Spara tavelfil…"
   }
 }

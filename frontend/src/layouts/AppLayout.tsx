@@ -24,7 +24,6 @@ import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
 import { SignalsSidebar } from "../components/SignalsSidebar";
 import { ExportDialog } from "../components/ExportDialog";
 import { MiroExportPanel } from "../components/MiroExportPanel";
-import { FigJamExportPanel } from "../components/FigJamExportPanel";
 import { featureFlags } from "../utils/featureFlags";
 import { ActivityChipStack, normaliseAutoCode } from "../components/ActivityChipStack";
 import type { ActivityJob } from "../components/ActivityChipStack";
@@ -170,6 +169,11 @@ function applyZoom(level: number): void {
   try { localStorage.setItem(ZOOM_KEY, String(clamped)); } catch { /* */ }
 }
 
+// Parked behind featureFlags.figjamExport, so it is fetched only when the flag
+// is on — and then after first paint, not with it.
+const FigJamExportPanel = lazy(() =>
+  import("../components/FigJamExportPanel").then((m) => ({ default: m.FigJamExportPanel })),
+);
 /** Dev-only playground — lazy-loaded so it's tree-shaken in production. */
 const ResponsivePlayground = lazy(
   () =>
@@ -928,7 +932,11 @@ function AppShell() {
       )}
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
       <ExportDialog open={exportOpen} onClose={toggleExport} initialAnonymise={exportAnonymise} />
-      {featureFlags.figjamExport && <FigJamExportPanel open={figjamOpen} onClose={toggleFigJam} />}
+      {featureFlags.figjamExport && (
+        <Suspense fallback={null}>
+          <FigJamExportPanel open={figjamOpen} onClose={toggleFigJam} />
+        </Suspense>
+      )}
       <MiroExportPanel
         open={miroOpen}
         onClose={toggleMiro}

@@ -1217,5 +1217,9 @@
     "guideProblem": {
       "unreadable": "Runkoa ei voitu lukea. Varmista, ett\u00e4 se aukeaa, ja valitse sitten Analysoi projektin valikosta sivupalkissa."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Lappujen muoto:",
+    "saveBoardFile": "Tallenna taulutiedosto…"
   }
 }

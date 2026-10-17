@@ -1217,5 +1217,9 @@
     "guideProblem": {
       "unreadable": "Ihr Leitfaden konnte nicht gelesen werden. Pr\u00fcfen Sie, ob er sich \u00f6ffnen l\u00e4sst, und w\u00e4hlen Sie dann \u201eAnalysieren\u201c im Men\u00fc des Projekts in der Seitenleiste."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Form der Haftnotizen:",
+    "saveBoardFile": "Board-Datei sichern…"
   }
 }

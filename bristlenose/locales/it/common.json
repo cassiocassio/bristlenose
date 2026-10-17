@@ -797,5 +797,24 @@
     "navWidthPixels_other": "{{count}} pixel",
     "subtitle_one": "{{count}}\u00a0schermata",
     "subtitle_other": "{{count}}\u00a0schermate"
+  },
+  "figjam": {
+    "menuLabel": "Invia a FigJam…",
+    "title": "Invia a FigJam",
+    "intro": "Le bacheche di FigJam si costruiscono dentro FigJam, quindi Bristlenose salva un file di bacheca che il plugin Bristlenose board apre.",
+    "notice": "Il file contiene le citazioni di questo progetto, tranne quelle nascoste, con i codici dei partecipanti e mai i nomi. Quando lo apri con il plugin, le citazioni entrano nel tuo file Figma.",
+    "download": "Scarica il file della bacheca",
+    "preparing": "Preparazione del file della bacheca…",
+    "downloading_one": "Download di un file di bacheca con {{count}} citazione.",
+    "downloading_other": "Download di un file di bacheca con {{count}} citazioni.",
+    "saved_one": "File della bacheca salvato, con {{count}} citazione.",
+    "saved_other": "File della bacheca salvato, con {{count}} citazioni.",
+    "nextSteps": "Poi, nell’app desktop di Figma:",
+    "step1": "Apri una bacheca di FigJam.",
+    "step2": "Esegui il plugin Bristlenose board.",
+    "step3": "Scegli il file che hai appena salvato.",
+    "errClipsBase": "La cartella delle clip deve essere un indirizzo web che inizia con https://.",
+    "error": "Impossibile creare il file della bacheca. Riprova.",
+    "popoverSubtitle": "Un file di bacheca per il plugin di FigJam"
   }
 }

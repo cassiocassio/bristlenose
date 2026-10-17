@@ -797,5 +797,24 @@
     "navWidthPixels_other": "{{count}} píxeles",
     "subtitle_one": "{{count}}\u00a0Pantalla",
     "subtitle_other": "{{count}}\u00a0Pantallas"
+  },
+  "figjam": {
+    "menuLabel": "Enviar a FigJam…",
+    "title": "Enviar a FigJam",
+    "intro": "Los tableros de FigJam se crean dentro de FigJam, así que Bristlenose guarda un archivo de tablero que abre el complemento Bristlenose board.",
+    "notice": "El archivo contiene las citas de este proyecto, salvo las ocultas, con códigos de participante y nunca nombres. Al abrirlo con el complemento, las citas pasan a tu archivo de Figma.",
+    "download": "Descargar archivo de tablero",
+    "preparing": "Preparando el archivo de tablero…",
+    "downloading_one": "Descargando un archivo de tablero con {{count}} cita.",
+    "downloading_other": "Descargando un archivo de tablero con {{count}} citas.",
+    "saved_one": "Archivo de tablero guardado, con {{count}} cita.",
+    "saved_other": "Archivo de tablero guardado, con {{count}} citas.",
+    "nextSteps": "Después, en la app de escritorio de Figma:",
+    "step1": "Abre un tablero de FigJam.",
+    "step2": "Ejecuta el complemento Bristlenose board.",
+    "step3": "Elige el archivo que acabas de guardar.",
+    "errClipsBase": "La carpeta de clips debe ser una dirección web que empiece por https://.",
+    "error": "No se pudo crear el archivo de tablero. Inténtalo de nuevo.",
+    "popoverSubtitle": "Un archivo de tablero para el complemento de FigJam"
   }
 }

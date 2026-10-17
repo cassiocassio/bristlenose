@@ -889,5 +889,28 @@
     "subtitle_few": "{{count}}\u00a0ekrany",
     "subtitle_many": "{{count}}\u00a0ekran\u00f3w",
     "subtitle_other": "{{count}}\u00a0ekranu"
+  },
+  "figjam": {
+    "menuLabel": "Wyślij do FigJam…",
+    "title": "Wyślij do FigJam",
+    "intro": "Tablice FigJam powstają w samym FigJam, więc Bristlenose zapisuje plik tablicy, który otwiera wtyczka Bristlenose board.",
+    "notice": "Plik zawiera cytaty z tego projektu poza ukrytymi, z kodami rozmówców, nigdy z imionami. Gdy otworzysz go we wtyczce, cytaty trafią do Twojego pliku w Figmie.",
+    "download": "Pobierz plik tablicy",
+    "preparing": "Przygotowywanie pliku tablicy…",
+    "downloading_one": "Pobieranie pliku tablicy z {{count}} cytatem.",
+    "downloading_few": "Pobieranie pliku tablicy z {{count}} cytatami.",
+    "downloading_many": "Pobieranie pliku tablicy z {{count}} cytatami.",
+    "downloading_other": "Pobieranie pliku tablicy z {{count}} cytatu.",
+    "saved_one": "Zapisano plik tablicy: {{count}} cytat.",
+    "saved_few": "Zapisano plik tablicy: {{count}} cytaty.",
+    "saved_many": "Zapisano plik tablicy: {{count}} cytatów.",
+    "saved_other": "Zapisano plik tablicy: {{count}} cytatu.",
+    "nextSteps": "Następnie w aplikacji Figma na komputer:",
+    "step1": "Otwórz tablicę FigJam.",
+    "step2": "Uruchom wtyczkę Bristlenose board.",
+    "step3": "Wybierz plik, który właśnie zapisałeś.",
+    "errClipsBase": "Folder z klipami musi być adresem internetowym zaczynającym się od https://.",
+    "error": "Nie udało się utworzyć pliku tablicy. Spróbuj ponownie.",
+    "popoverSubtitle": "Plik tablicy dla wtyczki FigJam"
   }
 }

@@ -1177,5 +1177,9 @@
     "guideProblem": {
       "unreadable": "\uac00\uc774\ub4dc\ub97c \uc77d\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. \uc5f4\ub9ac\ub294\uc9c0 \ud655\uc778\ud55c \ub2e4\uc74c \uc0ac\uc774\ub4dc\ubc14\uc5d0\uc11c \ud504\ub85c\uc81d\ud2b8\uc758 \uba54\ub274\uc5d0\uc11c '\ubd84\uc11d'\uc744 \uc120\ud0dd\ud558\uc138\uc694."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "스티커 메모 모양:",
+    "saveBoardFile": "보드 파일 저장…"
   }
 }

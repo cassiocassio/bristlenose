@@ -797,5 +797,24 @@
     "navWidthPixels_other": "{{count}} pixlar",
     "subtitle_one": "{{count}}\u00a0sk\u00e4rm",
     "subtitle_other": "{{count}}\u00a0sk\u00e4rmar"
+  },
+  "figjam": {
+    "menuLabel": "Skicka till FigJam…",
+    "title": "Skicka till FigJam",
+    "intro": "FigJam-tavlor byggs inne i FigJam, så Bristlenose sparar en tavelfil som tillägget Bristlenose board öppnar.",
+    "notice": "Filen innehåller projektets citat utom dolda, med talarkoder och aldrig namn. När du öppnar den med tillägget hamnar citaten i din Figma-fil.",
+    "download": "Hämta tavelfil",
+    "preparing": "Förbereder tavelfilen…",
+    "downloading_one": "Hämtar en tavelfil med {{count}} citat.",
+    "downloading_other": "Hämtar en tavelfil med {{count}} citat.",
+    "saved_one": "Tavelfil sparad, med {{count}} citat.",
+    "saved_other": "Tavelfil sparad, med {{count}} citat.",
+    "nextSteps": "Sedan i Figmas skrivbordsapp:",
+    "step1": "Öppna en FigJam-tavla.",
+    "step2": "Kör tillägget Bristlenose board.",
+    "step3": "Välj filen du nyss sparade.",
+    "errClipsBase": "Klippmappen måste vara en webbadress som börjar med https://.",
+    "error": "Tavelfilen kunde inte skapas. Försök igen.",
+    "popoverSubtitle": "En tavelfil för FigJam-tillägget"
   }
 }

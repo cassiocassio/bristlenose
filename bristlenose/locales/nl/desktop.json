@@ -1217,5 +1217,9 @@
     "guideProblem": {
       "unreadable": "Je gids kon niet worden gelezen. Controleer of hij opent en kies Analyseer in het menu van het project in de navigatiekolom."
     }
+  },
+  "figjam": {
+    "stickyShapeLabel": "Vorm van de notities:",
+    "saveBoardFile": "Bordbestand bewaren…"
   }
 }

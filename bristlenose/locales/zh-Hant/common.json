@@ -758,5 +758,22 @@
     "quoteMoved": "\u5df2\u79fb\u52d5\u5f15\u8ff0",
     "navWidthPixels_other": "{{count}} \u50cf\u7d20",
     "subtitle_other": "{{count}} \u500b\u756b\u9762"
+  },
+  "figjam": {
+    "menuLabel": "傳送至 FigJam⋯",
+    "title": "傳送至 FigJam",
+    "intro": "FigJam 看板是在 FigJam 內建立的，因此 Bristlenose 會儲存一個看板檔案，交由 Bristlenose board 外掛程式開啟。",
+    "notice": "檔案內含此專案的引述（已隱藏的除外），只附講者代號，絕不含姓名。用外掛程式開啟後，引述會放進你的 Figma 檔案。",
+    "download": "下載看板檔案",
+    "preparing": "正在準備看板檔案⋯",
+    "downloading_other": "正在下載含 {{count}} 則引述的看板檔案。",
+    "saved_other": "已儲存看板檔案（{{count}} 則引述）。",
+    "nextSteps": "接著，在 Figma 桌面 App 中：",
+    "step1": "開啟一個 FigJam 看板。",
+    "step2": "執行 Bristlenose board 外掛程式。",
+    "step3": "選擇剛剛儲存的檔案。",
+    "errClipsBase": "片段資料夾必須是以 https:// 開頭的網址。",
+    "error": "無法建立看板檔案。請再試一次。",
+    "popoverSubtitle": "供 FigJam 外掛程式使用的看板檔案"
   }
 }

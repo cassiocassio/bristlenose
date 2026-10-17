@@ -878,5 +878,28 @@
     "subtitle_few": "{{count}}\u00a0Obrazovky",
     "subtitle_many": "{{count}}\u00a0Obrazovky",
     "subtitle_other": "{{count}}\u00a0Obrazovek"
+  },
+  "figjam": {
+    "menuLabel": "Odeslat do FigJamu…",
+    "title": "Odeslat do FigJamu",
+    "intro": "Tabule ve FigJamu se tvoří přímo ve FigJamu, a tak Bristlenose uloží soubor tabule, který otevře plugin Bristlenose board.",
+    "notice": "Soubor obsahuje citace z tohoto projektu kromě skrytých, s kódy mluvčích, nikdy se jmény. Když ho otevřete pluginem, citace se přenesou do vašeho souboru ve Figmě.",
+    "download": "Stáhnout soubor tabule",
+    "preparing": "Připravuje se soubor tabule…",
+    "downloading_one": "Stahuje se soubor tabule s {{count}} citací.",
+    "downloading_few": "Stahuje se soubor tabule se {{count}} citacemi.",
+    "downloading_many": "Stahuje se soubor tabule s {{count}} citace.",
+    "downloading_other": "Stahuje se soubor tabule s {{count}} citacemi.",
+    "saved_one": "Soubor tabule uložen, {{count}} citace.",
+    "saved_few": "Soubor tabule uložen, {{count}} citace.",
+    "saved_many": "Soubor tabule uložen, {{count}} citace.",
+    "saved_other": "Soubor tabule uložen, {{count}} citací.",
+    "nextSteps": "Potom v desktopové aplikaci Figma:",
+    "step1": "Otevřete tabuli ve FigJamu.",
+    "step2": "Spusťte plugin Bristlenose board.",
+    "step3": "Vyberte soubor, který jste právě uložili.",
+    "errClipsBase": "Složka s klipy musí být webová adresa začínající https://.",
+    "error": "Soubor tabule se nepodařilo vytvořit. Zkuste to znovu.",
+    "popoverSubtitle": "Soubor tabule pro plugin ve FigJamu"
   }
 }

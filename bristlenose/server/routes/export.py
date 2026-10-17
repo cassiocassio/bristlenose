@@ -445,6 +445,7 @@ def export_report(
                 else "The analysis is still running; export when it has finished."
             ),
         )
+    from bristlenose.server.export_core import attachment_disposition
     from bristlenose.server.routes.codebook import get_codebook as _get_codebook_handler
     from bristlenose.server.routes.dashboard import (
         get_dashboard as _get_dashboard_handler,
@@ -476,7 +477,7 @@ def export_report(
     from bristlenose.server.routes.transcript import (
         get_transcript as _get_transcript_handler,
     )
-    from bristlenose.utils.text import slugify
+    from bristlenose.utils.text import safe_filename
 
     # --- Gather data by calling existing route handlers ---
     # Each handler manages its own DB session (opens + closes).  We embed the
@@ -625,23 +626,21 @@ def export_report(
     html = _build_export_html(export_data, theme_css)
 
     # --- Filename ---
-    project_name = project_info.project_name
-    # A name with no Latin letters or digits ("Привет", "駅の調査") slugs to ""
-    # and the file would be "-report-en.html".
-    slug = slugify(project_name) or "bristlenose"
+    # The name as the researcher typed it, in any script, as the CSV and XLSX
+    # downloads have it. This was a slug until 17 Oct 2026, which kept only
+    # a-z and digits: "駅の調査" lost the whole name and "Łódź" became "odz".
+    name = safe_filename(project_info.project_name or "bristlenose")
     # The language is part of what this file IS now, not a rendering choice the
     # reader can undo, so it belongs in the name — otherwise a researcher
     # exporting fr/de/it for a Swiss client gets three identical filenames in
-    # Downloads.  The locale token rather than the native language name because
-    # the rest of this filename is a slug; "acme-research-report (Deutsch).html"
-    # would be two naming conventions in one string.
+    # Downloads.  The locale token rather than the native language name.
     lang = canonical_locale(locale)
-    filename = f"{slug}-report-{lang}.html"
+    filename = f"{name}-report-{lang}.html"
 
     return Response(
         content=html,
         media_type="text/html; charset=utf-8",
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": attachment_disposition(filename),
         },
     )

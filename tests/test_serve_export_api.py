@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from urllib.parse import unquote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -88,21 +89,24 @@ class TestExportEndpoint:
         assert "-report-en.html" in cd
         assert "passwd" not in cd
 
-    @pytest.mark.parametrize("name", ["Привет", "駅の調査"])
-    def test_a_name_with_nothing_to_slug_still_names_the_file(
+    @pytest.mark.parametrize("name", ["Привет", "駅の調査", "Badanie Łódź", "Brugerstudie Ærø"])
+    def test_the_filename_keeps_the_name_in_any_script(
         self, client: TestClient, name: str
     ) -> None:
-        """slugify drops every non-Latin letter, so these names slug to "" and
-        the file would be "-report-en.html" with nothing in front."""
+        """A slug kept only a-z and digits: "駅の調査" lost the whole name and
+        "Łódź" became "odz". The name goes in `filename*`, percent-encoded."""
         db = client.app.state.db_factory()  # type: ignore[attr-defined]
         try:
             db.get(Project, 1).name = name
             db.commit()
         finally:
             db.close()
-        resp = client.get("/api/projects/1/export")
+        resp = client.get("/api/projects/1/export?locale=pl")
         assert resp.status_code == 200
-        assert 'filename="bristlenose-report-en.html"' in resp.headers["content-disposition"]
+        disposition = resp.headers["content-disposition"]
+        assert disposition.isascii()
+        star = disposition.split("filename*=UTF-8''", 1)[1]
+        assert unquote(star) == f"{name}-report-pl.html"
 
 
 # ---------------------------------------------------------------------------

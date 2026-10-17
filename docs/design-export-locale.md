@@ -216,9 +216,11 @@ be re-baselined to accommodate a defect** — see `docs/release-log.md`, 0.27.0.
 ## 4. Open questions
 
 1. ~~**Native or researcher's language in the filename?**~~ **Decided: the
-   locale token.** `smoke-test-report-de.html`. Neither native name nor English
-   name, because the rest of that filename is a slug — `acme-research-report
-   (Deutsch).html` is two naming conventions in one string. The token is also
+   locale token.** `Smoke Test-report-de.html`. Neither native name nor English
+   name. (This was argued from "the rest of that filename is a slug"; since
+   17 Oct 2026 the rest is the project name as typed, in any script, as the
+   CSV and XLSX downloads have it — the slug kept only a-z and digits, so
+   "駅の調査" lost the whole name. The token stands.) The token is also
    guaranteed to be one of `SUPPORTED_LOCALES` before it is interpolated, so a
    query parameter cannot reach the filename (pinned by
    `test_an_unknown_locale_cannot_reach_the_filename`). Note this changes

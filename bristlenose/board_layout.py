@@ -38,7 +38,9 @@ STICKY_SHAPE = "rectangle"
 #: 195.43 tall (450 is 293.14); a square 200 wide is 229.15. The old fixed heights (quote 200,
 #: header 76) were less than a 240-wide square's 275, so a column's stickies overlapped.
 RECT_ASPECT = 195.42857142857142 / 300
-STICKY_W = 240.0
+#: 300, not the 240 the squares had: a rectangle that narrow is 156 tall, and Miro shrinks a long
+#: quote's type to fit (project-ikea's quotes: median 122 characters, p90 256). Owner, 17 Oct 2026.
+STICKY_W = 300.0
 QUOTE_H = STICKY_W * RECT_ASPECT
 HEADER_H = QUOTE_H
 GAP_X = 36.0

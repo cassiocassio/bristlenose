@@ -1,0 +1,2769 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sessions timeline strip</title>
+<!--
+  Option C for the Sessions grid: every row carries a skinny strip of its interview
+  timeline; a click on the strip opens the full timeline, which springs out of it.
+
+  bn-accurate: the shipped theme CSS is inlined below, whole files where possible and
+  rules located by selector from templates/report.css, in index.css order:
+      1. bristlenose/theme/tokens.css — whole file, 405 lines ══
+      2. bristlenose/theme/tokens-typography.css — whole file, 88 lines ══
+      3. bristlenose/theme/colors/palette-default.css — whole file, 176 lines ══
+      4. bristlenose/theme/colors/palette-edo.css — whole file, 189 lines ══
+      5. bristlenose/theme/atoms/icon.css — whole file, 36 lines ══
+      6. bristlenose/theme/atoms/thumbnail.css — whole file, 37 lines ══
+      7. bristlenose/theme/atoms/section-heading.css — whole file, 97 lines ══
+      8. bristlenose/theme/atoms/journey-label.css — whole file, 57 lines ══
+      9. bristlenose/theme/molecules/person-badge.css — whole file, 205 lines ══
+     10. bristlenose/theme/molecules/sparkline.css — whole file, 12 lines ══
+     11. bristlenose/theme/organisms/sessions-grid.css — whole file, 315 lines ══
+     12. bristlenose/theme/organisms/session-tapestry.css — whole file, 428 lines ══
+     13. templates/report.css — lines 14–30 ══
+     14. templates/report.css — lines 297–301 ══
+     15. templates/report.css — lines 303–308 ══
+     16. templates/report.css — lines 319–324 ══
+     17. templates/report.css — lines 326–328 ══
+     18. templates/report.css — lines 330–333 ══
+     19. templates/report.css — lines 335–342 ══
+     20. templates/report.css — lines 344–347 ══
+     21. templates/report.css — lines 349–351 ══
+  Generated, not hand-typed, from a private study export (the generator is not kept: its input
+  is participant data). The turn timings, scene colours, screen names and sentiment are real;
+  participant names, faces, filenames, quote text and the study's theme names are not carried:
+  names and themes are invented, thumbnails are the shipped placeholder.
+
+  Everything NEW is in the "NEW: option C" block after the theme, and named there.
+-->
+<style>
+/* ════ bristlenose/theme/tokens.css — whole file, 405 lines ════ */
+/* Design tokens — the single source of truth for all visual decisions.
+
+   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
+   ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap), and
+   SEMANTIC ALIASES that name a decision rather than a value (the inline
+   edit-field set below). An alias points at a palette token, so it costs no
+   per-palette maintenance and cannot drift from the palette it borrows from.
+
+   TYPOGRAPHY tokens are in tokens-typography.css (web) / tokens-desktop.css (macOS).
+   COLOUR PALETTE tokens are in colors/palette-default.css and colors/palette-edo.css.
+
+   Override palette tokens with data-color-theme="<name>" on <html>.
+   Override platform tokens with data-platform="desktop" on <html>. */
+
+:root {
+    /* Sentiment colours (v0.7+ taxonomy) — analytical, NOT theme-overridable.
+       See docs/academic-sources.html for theoretical foundations. */
+
+    /* Negative sentiments */
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    /* Error text — sentiment-frustration (#ea580c) is a fill hue, only 3.56:1
+       on white as body text; this darker shade clears WCAG AA (4.5:1). */
+    --bn-colour-error-text: #c2410c;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+
+    /* Neutral (investigation flag) */
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+
+    /* Positive sentiments */
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* Analysis heatmap — OKLCH colour ramp tokens */
+    --bn-heat-frustration-h: 55;
+    --bn-heat-confusion-h: 30;
+    --bn-heat-doubt-h: 295;
+    --bn-heat-surprise-h: 75;
+    --bn-heat-satisfaction-h: 155;
+    --bn-heat-delight-h: 170;
+    --bn-heat-confidence-h: 260;
+    --bn-heat-chroma: 0.12;
+    --bn-heat-l-min: 95%;
+    --bn-heat-l-max: 45%;
+    --bn-heat-depleted-h: 75;
+    --bn-heat-depleted-chroma: 0.08;
+
+    /* Codebook user-tag colours — OKLCH v5 pentadic palette.
+       5 sets at ~72° hue anchors, ±25° per set, ~12° steps.
+       Light mode: washed (pale bg, dark text).
+       Dark mode: saturated (mid-dark bg, white text).
+       See immutable-chasing-patterson plan for rationale. */
+
+    /* UX set (blue, H=225-275, anchor 250) */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+
+    /* Emotion set (red-pink, H=340-40, anchor 10) */
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+
+    /* Task set (green-teal, H=130-180, anchor 155) */
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+
+    /* Trust set (purple, H=275-325, anchor 300) */
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+
+    /* Opportunity set (amber, H=50-100, anchor 75) */
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+
+    /* Sentiment set — numeric aliases for the codebook colour system.
+       Maps index-based getTagBg() to the existing named sentiment vars. */
+    --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+    --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+    --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+    --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+    --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+    --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+    --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+
+    /* Custom / ungrouped */
+    --bn-custom-bg: oklch(94% 0.005 260);
+
+    /* Group card background tints (very subtle set tint for codebook panel) */
+    --bn-group-ux:        oklch(97% 0.015 250);
+    --bn-group-emo:       oklch(97% 0.015 10);
+    --bn-group-task:      oklch(97% 0.015 155);
+    --bn-group-trust:     oklch(97% 0.015 300);
+    --bn-group-opp:       oklch(97% 0.015 75);
+    --bn-group-sentiment: oklch(97% 0.010 200);
+
+    /* Micro histogram bar colours (slightly more saturated than badge bg) */
+    --bn-bar-ux:        oklch(70% 0.08 250);
+    --bn-bar-emo:       oklch(70% 0.08 10);
+    --bn-bar-task:      oklch(70% 0.06 155);
+    --bn-bar-trust:     oklch(70% 0.07 300);
+    --bn-bar-opp:       oklch(72% 0.07 75);
+    --bn-bar-sentiment: oklch(65% 0.06 200);
+
+    /* Set indicator dots (saturated anchors for codebook panel) */
+    --bn-set-ux-dot: oklch(50% 0.12 250);
+    --bn-set-emo-dot: oklch(50% 0.12 10);
+    --bn-set-task-dot: oklch(50% 0.10 155);
+    --bn-set-trust-dot: oklch(50% 0.11 300);
+    --bn-set-opp-dot: oklch(52% 0.11 75);
+
+    /* Legacy sentiment colours (deprecated — kept for backward compat) */
+    --bn-colour-confusion: var(--bn-sentiment-confusion);
+    --bn-colour-confusion-bg: var(--bn-sentiment-confusion-bg);
+    --bn-colour-frustration: var(--bn-sentiment-frustration);
+    --bn-colour-frustration-bg: var(--bn-sentiment-frustration-bg);
+    --bn-colour-delight: var(--bn-sentiment-delight);
+    --bn-colour-delight-bg: var(--bn-sentiment-delight-bg);
+
+    /* Layout */
+    --bn-max-width: 52rem;
+    --bn-quote-max-width: 23rem;   /* card reading measure — ~5 words/line */
+    --bn-grid-gap: 1.25rem;        /* gap between grid columns */
+    --bn-flow-tolerance: 5em;      /* grid-lanes masonry: how much height imbalance
+                                      to tolerate before breaking reading order.
+                                      Safari 26.4+ only. Provisional — tuned on the
+                                      Phase-1 mockup, pending real-corpus validation. */
+    --bn-toolbar-height: 3rem;
+
+    /* Sidebar layout (serve-mode dual-sidebar with resizable panels) */
+    --bn-sidebar-width: 280px;   /* default panel width */
+    --bn-sidebar-min: 200px;     /* minimum resize bound */
+    --bn-sidebar-max: 480px;     /* maximum resize bound */
+    --bn-rail-width: 36px;       /* collapsed icon rail width */
+    --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
+    --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
+    --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
+    --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
+
+    /* (--bn-first-baseline retired 25 Jul 2026. It was a cross-seam datum
+       aligning webview baselines to the native sidebar's "Project" row — an
+       alignment the red-background test proved unrealisable (the webview's
+       layout viewport starts at the toolbar seam, below that native baseline).
+       With the toolbar-inset residual now 0, content and the flanking inspector
+       share one web-internal datum of --bn-space-xl below the seam; the base
+       .tag-sidebar bleed and the body top-pad already agree. See
+       organisms/sidebar.css § "First-baseline datum".) */
+
+    /* Breakpoints — reference values for @media queries across the system.
+       CSS @media can't consume var(), so use these values directly in
+       media queries and reference the token name in a comment.
+       When adding a new media query, pick from this list or add a new entry. */
+    --bn-breakpoint-compact:  500px;   /* help overlay, single-column fallback */
+    --bn-breakpoint-toolbar:  600px;   /* toolbar collapse (planned) */
+    --bn-breakpoint-content:  1100px;  /* transcript annotation margin layout */
+    --bn-breakpoint-wide:     1400px;  /* 16"+ / wide displays — dashboard featured quotes go to 5 across */
+
+    /* Spacing scale */
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
+       the same in light and dark; the dark text reads on it in both modes. */
+    --bn-colour-new-highlight: #75fb4c;
+    --bn-colour-new-highlight-text: #0f2b08;
+
+    /* Radii */
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    /* ── Inline edit fields — READ THIS BEFORE STYLING A NEW ONE ──────────
+     *
+     * An inline edit field is a piece of text the researcher can click into
+     * and retype: a theme heading, a session name, a code group's title, a
+     * code. There are exactly TWO treatments and the choice is mechanical,
+     * decided by the GROUND the field sits on, not by which lens you are in:
+     *
+     *   field on page background  →  --bn-field-edit-fill-on-page  (tints up)
+     *   field on a tinted surface →  --bn-field-edit-fill-on-tint  (blanks to
+     *                                                               neutral)
+     *
+     * Both carry --bn-field-edit-edge at 1px. The fill inverts because the
+     * ground does; the edge never changes, so the signal is one signal.
+     * Border or outline is yours to pick — outline for a span in running
+     * prose (it costs no layout and will not reflow the line), border for
+     * something that already has a box. That is a mechanism, not a meaning.
+     *
+     * DO NOT invent a third fill. Two surfaces got one each before these
+     * tokens existed (a quote-bg tint, a page-bg blank) and two more got
+     * nothing at all, which is how "is this field live?" came to have four
+     * answers on one screen.
+     *
+     * THE ONE EXEMPTION is quote cropping — `.crop-editable` and the bracket
+     * handles in molecules/editable-text.css. That is not "edit this text",
+     * it is "move this boundary", it was designed as a single signal with the
+     * burnt-amber brackets, and it keeps --bn-colour-crop-bg. Do not reach
+     * for that yellow for anything else, and do not restyle crop to match
+     * these: a different verb is allowed a different look. The token was
+     * called --bn-colour-editing-bg until 20 Sep 2026; it was renamed
+     * because a token named for a state it must not be used in is how the
+     * four-answers-on-one-screen problem started. */
+    --bn-field-edit-edge: var(--bn-colour-accent);
+    --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+    --bn-field-edit-fill-on-tint: var(--bn-colour-bg);
+    --bn-field-edit-radius: var(--bn-radius-sm);
+    --bn-field-edit-offset: 1px;
+
+    /* Section-divider keyline — the colour of the h2 / .section-heading /
+       .framework-section-header bottom rules and the header <hr>. Aliases
+       --bn-colour-border by default (visible); set to `transparent`
+       (globally here, or per-surface) to hide every section divider WITHOUT
+       moving anything — the 1px box still lays out, it just stops painting.
+       The reversible borders-off experiment. Table-header (th) rules keep
+       --bn-colour-border (data-grid chrome, not a section divider).
+       See docs/design-lens-template.md § Keylines. */
+    --bn-colour-keyline: var(--bn-colour-border);
+
+    /* Transitions */
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-transition-slow: 0.3s ease;
+
+    /* Focus Mode — the distraction-free reading state (templates/focus-mode.css,
+       docs/design-focus-mode.md). Structural, NOT palette-overridable: the whole
+       transform is colour-free by design, which is what lets it compose with
+       every palette × appearance with zero per-palette overrides. Deliberately
+       here and not in colors/_contract.css — a Focus token in the contract would
+       oblige every future palette author to answer a question the feature
+       doesn't ask. "Dusk, not a light-switch": no overshoot, no bounce — the
+       wrong register for reading evidence. */
+    --bn-focus-ghost-opacity: 0.14;
+    --bn-focus-heading-opacity: 0.4;
+    --bn-focus-dur: 320ms;
+    --bn-focus-ease: ease-in-out;
+    /* How much of a receded card's outline survives — the border is mixed
+       toward transparent by the remainder. One number for both lenses (the
+       quote card's left edge, the signal card's box and fused seam); it was a
+       literal 40% in two places until the Signals lens made it three. */
+    --bn-focus-outline-mix: 40%;
+
+    /* Arrival — the "you are here" cue on the thing a link landed on: a
+       transcript paragraph, a quote card, a group heading
+       (atoms/arrival.css, docs/design-arrival-flash.md). Seconds, not the
+       Acknowledge range, because the eye is still travelling when it starts.
+       Structural, like Focus: the colour is an alias of the palette's
+       highlight, so every palette × appearance answers through the contract
+       it already keeps. */
+    --bn-arrival-colour: var(--bn-colour-highlight);
+    --bn-arrival-duration: 5s;
+    --bn-arrival-easing: ease-out;
+
+    /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
+       Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md
+       §4.7.1). Consuming surfaces set --bn-shimmer-base (resting text colour)
+       and --bn-shimmer-peak (the pole the band moves toward: white where text
+       is dark, the surface background where text is light) so the sheen has
+       headroom in every theme. See atoms/shimmer.css. */
+    --bn-shimmer-contrast: 5%;    /* band peak = 5% from base toward the peak pole */
+    --bn-shimmer-band: 34%;       /* feathered band width, as % of the gradient */
+    --bn-shimmer-angle: 100deg;   /* slight off-horizontal tilt */
+    --bn-shimmer-sweep: 1800ms;   /* travel time (documentation; keyframe encodes the split) */
+    --bn-shimmer-gap: 900ms;      /* dark hold between sweeps (documentation) */
+    --bn-shimmer-period: 2700ms;  /* sweep + gap — the animation duration */
+    --bn-shimmer-easing: ease-in-out;
+
+    /* Legacy aliases — used by inline styles in generated HTML.
+       Theme authors: override the --bn-* versions above;
+       these aliases follow automatically. */
+    --font-body: var(--bn-font-body);
+    --font-mono: var(--bn-font-mono);
+    --colour-bg: var(--bn-colour-bg);
+    --colour-text: var(--bn-colour-text);
+    --colour-muted: var(--bn-colour-muted);
+    --colour-border: var(--bn-colour-border);
+    --colour-accent: var(--bn-colour-accent);
+    --colour-quote-bg: var(--bn-colour-quote-bg);
+    --colour-badge-bg: var(--bn-colour-badge-bg);
+    --colour-badge-text: var(--bn-colour-badge-text);
+    --colour-confusion: var(--bn-colour-confusion);
+    --colour-frustration: var(--bn-colour-frustration);
+    --colour-delight: var(--bn-colour-delight);
+    --colour-suggestion: var(--bn-colour-suggestion);
+    --max-width: var(--bn-max-width);
+}
+
+/* Dark mode overrides for analytical tokens.
+   Palette colours are handled in their own palette-*.css files. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+
+        /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
+        --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg:   light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-confusion:        light-dark(#dc2626, #f87171);
+        --bn-colour-error-text:          light-dark(#c2410c, #fb923c);
+        --bn-sentiment-confusion-bg:     light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt:            light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:         light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise:         light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg:      light-dark(#fffbeb, #2d2305);
+        --bn-sentiment-satisfaction:     light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg:  light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-delight:          light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
+
+        /* Analysis heatmap — dark mode overrides */
+        --bn-heat-chroma: light-dark(0.12, 0.10);
+        --bn-heat-l-min: light-dark(95%, 30%);
+        --bn-heat-l-max: light-dark(45%, 75%);
+        --bn-heat-depleted-chroma: light-dark(0.08, 0.06);
+
+        /* Codebook user-tag colours — dark mode: saturated bg, white text */
+        --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+        --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+        --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+        --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+        --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+        --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+        --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+        --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+        --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+        --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+        --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+        --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+        --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+        --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+        --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+        --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+        --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+        --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+        --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+        --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+        --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+        --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+        --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+        --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+        --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+        --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+        --bn-custom-bg: light-dark(oklch(94% 0.005 260), oklch(52% 0.02 260));
+        /* Group card background tints */
+        --bn-group-ux:        light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+        --bn-group-emo:       light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+        --bn-group-task:      light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+        --bn-group-trust:     light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+        --bn-group-opp:       light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+        --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+
+        /* Micro histogram bar colours */
+        --bn-bar-ux:        light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
+        --bn-bar-emo:       light-dark(oklch(70% 0.08 10),  oklch(55% 0.08 10));
+        --bn-bar-task:      light-dark(oklch(70% 0.06 155), oklch(55% 0.06 155));
+        --bn-bar-trust:     light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
+        --bn-bar-opp:       light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
+        --bn-bar-sentiment: light-dark(oklch(65% 0.06 200), oklch(50% 0.06 200));
+
+        --bn-set-ux-dot: light-dark(oklch(50% 0.12 250), oklch(60% 0.10 250));
+        --bn-set-emo-dot: light-dark(oklch(50% 0.12 10), oklch(60% 0.10 10));
+        --bn-set-task-dot: light-dark(oklch(50% 0.10 155), oklch(60% 0.08 155));
+        --bn-set-trust-dot: light-dark(oklch(50% 0.11 300), oklch(60% 0.09 300));
+        --bn-set-opp-dot: light-dark(oklch(52% 0.11 75), oklch(62% 0.09 75));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-confusion:        var(--bn-sentiment-confusion);
+        --bn-colour-confusion-bg:     var(--bn-sentiment-confusion-bg);
+        --bn-colour-frustration:      var(--bn-sentiment-frustration);
+        --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
+        --bn-colour-delight:          var(--bn-sentiment-delight);
+        --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
+    }
+
+    /* Explicit overrides — lock theme regardless of OS preference */
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+
+/* ════ bristlenose/theme/tokens-typography.css — whole file, 88 lines ════ */
+/* Typography tokens — web defaults (Inter Variable from Google Fonts).
+   Desktop overrides are in tokens-desktop.css.
+
+   Scale D — 8 stops. Semantic intent:
+   - label (13px) = app's voice (chrome, UI labels, navigation, context)
+   - body  (15px) = participant's voice (quote text, transcript segments)
+
+   Archive of previous scale: tokens-typography-v1.css */
+
+:root {
+    /* Font family — Inter Variable loaded from Google Fonts (see index.html).
+       Fallback chain: Segoe UI Variable (Win 11), Segoe UI (Win 10),
+       system-ui, SF Pro (macOS), CJK families. */
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",   /* macOS Japanese */
+        "Yu Gothic UI",                                  /* Windows Japanese */
+        "Malgun Gothic",                                 /* Windows Korean */
+        "Apple SD Gothic Neo",                           /* macOS Korean */
+        "Noto Sans CJK JP", "Noto Sans CJK KR",         /* Linux CJK */
+        sans-serif;
+    /* One mono stack for both scales (docs/design-monospace-roles.md §4, §6). No "SF Mono" by
+       name: it resolves only on Macs with Apple's developer download, so it made the developer's
+       view differ from every researcher's. WebKit reaches the system SF Mono via ui-monospace;
+       Chromium on a Mac has no ui-monospace and takes Menlo; Windows 11 Cascadia Mono, Windows 10
+       Consolas; Linux DejaVu. The generic is last and reached nowhere measured: it is Courier in
+       Chromium on a Mac and Courier New in Windows 10's Edge. */
+    --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+
+    /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
+       On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
+    --bn-weight-light: 370;      /* subordinate text (sidebar nav links, secondary lists) */
+    --bn-weight-normal: 420;     /* body text, descriptions, quote content */
+    --bn-weight-emphasis: 490;   /* headings, labels, section titles */
+    --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
+    --bn-weight-semibold: 600;   /* a chosen word in a text-only switch (picker scope) */
+    --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
+
+    /* Icon stroke = the stem of the text beside it, as a fraction of the font size
+       (docs/design-icon-system.md § Weight; measured on Inter and SF Pro, which agree
+       to 2%). A context set in a heavier weight sets --bn-icon-stem beside its
+       font-weight. No light value: the SPA's Inter is served 400..700, so 370 renders 400. */
+    --bn-icon-stem-normal: 0.092;
+    --bn-icon-stem-emphasis: 0.106;
+    --bn-icon-stem-starred: 0.111;
+    --bn-icon-stem-semibold: 0.127;
+    --bn-icon-stem-strong: 0.146;
+    --bn-icon-stem: var(--bn-icon-stem-normal);
+
+    /* Monospace weights — three values, chosen against measured rendering on every face the
+       stack reaches (docs/design-monospace-roles.md §6). 400–490 is Regular in Menlo, Consolas
+       and Cascadia Mono and varies only in SF Mono; Windows matches the nearest weight, so
+       Consolas turns Bold at 550 and Cascadia SemiBold at 500. */
+    --bn-weight-mono: 400;          /* every mono role at rest */
+    --bn-weight-mono-tag: 460;      /* tags, light appearance: SF Mono +9%, Regular elsewhere; 400 in dark (below) */
+    --bn-weight-mono-emphasis: 560; /* the one step up (a path that names the screen): Bold in Menlo and Consolas */
+
+    /* Typography scale — 8 stops, size + line-height pairs.
+       Line-height decreases as size increases (Bringhurst principle:
+       large letterforms provide visual anchoring, need less leading). */
+    --bn-text-micro:       0.6rem;      /* 9.6px  — delete ×, confidence badges */
+    --bn-text-micro-lh:    1.2;
+    --bn-text-badge:       0.72rem;     /* 11.5px — badges, group headers, tag counts */
+    --bn-text-badge-lh:    1.3;
+    --bn-text-caption:     0.75rem;     /* 12px   — footnotes, footer, modal footer, kbd */
+    --bn-text-caption-lh:  1.4;
+    --bn-text-label:       0.8125rem;   /* 13px   — toolbar, filters, context, timecodes (app voice) */
+    --bn-text-label-lh:    1.45;
+    --bn-text-body:        0.9375rem;   /* 15px   — quote text, transcript segments (participant voice) */
+    --bn-text-body-lh:     1.5;
+    --bn-text-heading:     1.125rem;    /* 18px   — section headings, h3, modal titles */
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title:       1.375rem;    /* 22px   — page titles, h2, logotype */
+    --bn-text-title-lh:    1.25;
+    --bn-text-display:     1.75rem;     /* 28px   — report h1 */
+    --bn-text-display-lh:  1.2;
+}
+
+/* Tags drop to Regular in the dark appearance: light text on a dark tint already reads heavier,
+   and dark tags measure 6.2–9.3:1 against light's 3.1–5.2:1 (docs/design-monospace-roles.md).
+   font-weight cannot follow light-dark(), so the token follows the two scopes the palettes use. */
+[data-theme="dark"] {
+    --bn-weight-mono-tag: var(--bn-weight-mono);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bn-weight-mono-tag: var(--bn-weight-mono);
+    }
+}
+
+
+/* ════ bristlenose/theme/colors/palette-default.css — whole file, 176 lines ════ */
+/* palette-default — Bristlenose's standard blue/grey colour theme.
+   This is the web-mode default palette, loaded as :root fallback.
+   Tokens defined here are overridden by any active [data-color-theme] palette.
+
+   To create a new theme: copy this file, change the selector to
+   [data-color-theme="your-theme"], and remap every token.
+   See _contract.css for the full list of required tokens. */
+
+:root,
+[data-color-theme="default"] {
+    /* Colour palette */
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #007aff;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-inspector-bg: #f9f9fa;          /* Inspector chrome — Xcode Tahoe's flat inspector tint (~2% off white) */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-paper: #f6f7f8;                 /* Transcript ground: a cool neutral, 1.07:1 under the sheet */
+    --bn-colour-sheet: #ffffff;                 /* A quote lifted off the paper */
+    --bn-colour-badge-bg-paper: #ebedf0;        /* Badges on the paper (#f3f4f6 vanishes there) */
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-crop-bg: #fffbe6;
+    --bn-crop-handle-colour: #c4850a;
+    --bn-crop-handle-hover: #a06d08;
+    --bn-colour-active-bg: #f0fdf4;
+    --bn-colour-highlight: #fef08a;
+
+    /* Destructive action */
+    --bn-colour-negative: #dc2626;
+
+    /* Success and caution — the other two semantic kinds */
+    --bn-colour-positive: #16a34a;
+    --bn-colour-warning: #f59e0b;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(0, 122, 255, 0.06);
+    --bn-glow-colour-strong: rgba(0, 122, 255, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #e5e7eb;
+    --bn-minimap-heading: #b0b5bd;
+    --bn-minimap-viewport-bg: rgba(0, 122, 255, 0.15);
+    --bn-minimap-viewport-border: rgba(0, 122, 255, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #93b4f4;
+    --bn-coverage-moderator: #d97706;
+    --bn-coverage-omitted: #d1d5db;
+
+    /* Group card background tints */
+    --bn-group-none: #f9fafb;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #d1d5db;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+    --bn-focus-ring: 0 0 0 2px rgba(0, 122, 255, 0.12);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(0, 0, 0, 0.04);
+    --bn-hover-bg-subtle: rgba(0, 0, 0, 0.03);
+
+    /* Selection state */
+    --bn-selection-bg: #eef4fc;
+    --bn-selection-border: #007aff;
+    --bn-selection-bg-inactive: #e5e7eb;
+    --bn-selection-border-inactive: #9ca3af;
+    /* Sidebar nav selected-row capsule — NSColor unemphasizedSelectedContentBackgroundColor,
+       sampled (no canonical Apple hex; dynamic + vibrant composite). Re-sample at OS bumps. */
+    --bn-nav-selection-bg: #efefef;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #007aff;
+    --bn-colour-suggestion-bg: #eff6ff;
+}
+
+/* Dark mode — uses light-dark() with the color-scheme property.
+   Browsers without light-dark() support (~13%) fall back to the
+   plain light values above. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root,
+    [data-color-theme="default"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#ffffff, #111111);
+        --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:           light-dark(#007aff, #0a84ff);
+        --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
+        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #1c1c1e);   /* Inspector chrome — one step up from the #111 editor (Apple systemGray6 dark) */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-paper:            light-dark(#f6f7f8, #111111);   /* Transcript ground; dark is the page itself */
+        --bn-colour-sheet:            light-dark(#ffffff, #1c1c1e);   /* A quote lifted: 1.07:1 / 1.11:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#ebedf0, #252525);
+        --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
+        --bn-colour-user-tag-bg:      light-dark(#f3f4f6, #252525);
+        --bn-colour-user-tag-text:    light-dark(#4b5563, #d1d5db);
+        --bn-colour-crop-bg:          light-dark(#fffbe6, #2a2614);
+        --bn-crop-handle-colour:      light-dark(#c4850a, #f0b830);
+        --bn-crop-handle-hover:       light-dark(#a06d08, #f5cc60);
+        --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
+        --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
+        --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(0, 122, 255, 0.06), rgba(10, 132, 255, 0.12));
+        --bn-glow-colour-strong:      light-dark(rgba(0, 122, 255, 0.11), rgba(10, 132, 255, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#e5e7eb, #333333);
+        --bn-minimap-heading:         light-dark(#b0b5bd, #555555);
+        --bn-minimap-viewport-bg:     light-dark(rgba(0, 122, 255, 0.15), rgba(10, 132, 255, 0.2));
+        --bn-minimap-viewport-border: light-dark(rgba(0, 122, 255, 0.3), rgba(10, 132, 255, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#93b4f4, #4a7ecf);
+        --bn-coverage-moderator: light-dark(#d97706, #fbbf24);
+        --bn-coverage-omitted:   light-dark(#d1d5db, #4b5563);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f9fafb, #1e1e1e);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#d1d5db, #4b5563);
+
+        /* Destructive action */
+        --bn-colour-negative:         light-dark(#dc2626, #ef4444);
+
+        /* Success and caution */
+        --bn-colour-positive:         light-dark(#16a34a, #22c55e);
+        --bn-colour-warning:          light-dark(#f59e0b, #fbbf24);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
+        --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
+        --bn-colour-starred:          light-dark(#999, #ccc);
+        --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(0, 122, 255, 0.12), rgba(10, 132, 255, 0.2));
+        --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
+        --bn-selection-border:        light-dark(#007aff, #0a84ff);
+        --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
+        --bn-selection-border-inactive: light-dark(#9ca3af, #4b5563);
+        --bn-nav-selection-bg:          light-dark(#efefef, #2b2b2b);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.04));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-suggestion:       light-dark(#007aff, #0a84ff);
+        --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
+    }
+}
+
+
+/* ════ bristlenose/theme/colors/palette-edo.css — whole file, 189 lines ════ */
+/* palette-edo — Edo-period Japanese art colour theme.
+   Sampled from three artworks seen at the British Museum Samurai exhibition,
+   1 Mar 2026. See docs/mockups/edo-colour-palette.html for source analysis.
+
+   Pigments: rokusho (verdigris), sumi (iron-gall ink), cinnabar vermillion,
+   bero-ai (Prussian blue), yellow ochre.
+
+   Desktop default. Activate: data-color-theme="edo" on <html>.
+   Env/CLI: BRISTLENOSE_PALETTE=edo or --palette edo (canonical; BRISTLENOSE_COLOR_THEME
+   is the deprecated alias). Internal <html> attribute stays data-color-theme (glossary §Display settings).
+
+   ── v1 decisions (Jul 2026) ──
+   Accent uses Prussian blue's vivid UNDERTONE (#0f5c9e), not the dull masstone
+   sampled off aged prints — that masstone reads too low-chroma for links/icons/selection.
+   Dark accent is vivid blue (#4d9fe0), not verdigris. Background is bright Paper
+   White (#fdfbf7). Body ink is passport navy (#1b2230 / #e8e3d6 dark).
+
+   Alternatives considered — for future edo2/edo3 variants (explore in
+   docs/mockups/edo-theme-studio.html):
+     paper  — Snow White #fdfbf7, Warm off-white #f0e9d8, Washi Cream #ede5d1 (warmer/more washi)
+     accent — masstone Prussian #0f5c9e, midpoint #164e80, electric #2a7ac0; dark verdigris #7ba8a0
+     ink    — Sumi Black #1b2230 light / Sail Parchment #d4c9a8 dark; Moonlight #e4e6ea (cool dark ink)
+   Known follow-up: warm surfaces (quote-bg #f0e9d8, hover #ede5d1, badge #e8dfc9)
+   now read warmer against the brighter paper — revisit surface harmony next pass. */
+
+[data-color-theme="edo"] {
+    /* Colour palette — warm paper with indigo/verdigris accents */
+    --bn-colour-bg: #fdfbf7;                    /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;                   /* Passport navy — near-black, indigo whisper */
+    --bn-colour-muted: #4a698a;                  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
+    --bn-colour-border: #d4c9a8;                 /* Sail Parchment — warm border */
+    --bn-colour-accent: #0f5c9e;                 /* Vivid Prussian — bero-ai undertone */
+    --bn-colour-hover: #ede5d1;                  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #f7f2e6;           /* Inspector chrome — warm washi; the mirror of Xcode's #f9f9fa (Apple cools the neutral, Edo warms the paper). One notch off Paper White, lighter than quote-bg so it reads as chrome not content */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f0e9d8;              /* Warm off-white */
+    --bn-colour-paper: #f7f2e6;                 /* Transcript ground: washi under Paper White */
+    --bn-colour-sheet: #fdfbf7;                 /* A quote lifted: Paper White, 1.08:1 off the washi */
+    --bn-colour-badge-bg-paper: #e8dfc9;        /* Edo's badge already reads on washi (1.19:1) */
+    --bn-colour-badge-bg: #e8dfc9;              /* Parchment badge */
+    --bn-colour-badge-text: #2d3654;            /* Court Indigo */
+    --bn-colour-user-tag-bg: #e8dfc9;
+    --bn-colour-user-tag-text: #3d4a5c;
+    --bn-colour-crop-bg: #f5ecd0;               /* Gold Ochre tint */
+    --bn-crop-handle-colour: #b5432a;           /* Vermillion */
+    --bn-crop-handle-hover: #8b3a3a;            /* Bengara Red */
+    --bn-colour-active-bg: #e8f0e4;             /* Pine Green tint */
+    --bn-colour-highlight: #c4a96a;             /* Gold Ochre highlight */
+
+    /* Destructive action — vermillion */
+    --bn-colour-negative: #b5432a;
+
+    /* Success — Pine Green (matsuba-iro), the hue active-bg already tints toward.
+       Caution — Gold Ochre, deepened for legibility on paper. */
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #a8842c;
+
+    /* Playback-sync glow — Prussian Blue based */
+    --bn-glow-colour: rgba(15, 92, 158, 0.08);
+    --bn-glow-colour-strong: rgba(15, 92, 158, 0.15);
+
+    /* Minimap — warm parchment tones */
+    --bn-minimap-quote: #d4c9a8;
+    --bn-minimap-heading: #9e8b6e;
+    --bn-minimap-viewport-bg: rgba(15, 92, 158, 0.12);
+    --bn-minimap-viewport-border: rgba(15, 92, 158, 0.25);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #5a7d9b;
+    --bn-coverage-moderator: #c4a96a;
+    --bn-coverage-omitted: #d4c9a8;
+
+    /* Group card — neutral */
+    --bn-group-none: #f0e9d8;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #c4b898;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #b8ad91;
+    --bn-colour-icon-idle: #b8ad91;
+    --bn-colour-starred: #9e8b6e;
+    --bn-colour-shadow: rgba(30, 20, 10, 0.12);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
+    --bn-focus-ring: 0 0 0 2px rgba(15, 92, 158, 0.15);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(30, 20, 10, 0.05);
+    --bn-hover-bg-subtle: rgba(30, 20, 10, 0.03);
+
+    /* Selection state — Prussian Blue */
+    --bn-selection-bg: #e0e8f0;
+    --bn-selection-border: #0f5c9e;
+    --bn-selection-bg-inactive: #e8e2d4;
+    --bn-selection-border-inactive: #b8ad91;
+    /* Sidebar nav selected-row capsule — warm parchment grey (edo's native-grey analogue) */
+    --bn-nav-selection-bg: #e6ddc9;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #0f5c9e;
+    --bn-colour-suggestion-bg: #e0e8f0;
+}
+
+/* Dark mode — Sumi Black bg, warm parchment text */
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="edo"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#fdfbf7, #1a1816);
+        --bn-colour-text:             light-dark(#1b2230, #e8e3d6);
+        --bn-colour-muted:            light-dark(#4a698a, #7ba8a0);
+        --bn-colour-border:           light-dark(#d4c9a8, #2d2820);
+        --bn-colour-accent:           light-dark(#0f5c9e, #4d9fe0);
+        --bn-colour-hover:            light-dark(#ede5d1, #252118);
+        --bn-colour-inspector-bg:     light-dark(#f7f2e6, #211e18);   /* Inspector chrome — warm washi light / one warm step off Sumi dark */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f0e9d8, #211e18);
+        --bn-colour-paper:            light-dark(#f7f2e6, #1a1816);   /* Washi / Sumi */
+        --bn-colour-sheet:            light-dark(#fdfbf7, #26221b);   /* 1.08:1 / 1.12:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#e8dfc9, #2d2820);
+        --bn-colour-badge-bg:         light-dark(#e8dfc9, #2d2820);
+        --bn-colour-badge-text:       light-dark(#2d3654, #c4b898);
+        --bn-colour-user-tag-bg:      light-dark(#e8dfc9, #2d2820);
+        --bn-colour-user-tag-text:    light-dark(#3d4a5c, #c4b898);
+        --bn-colour-crop-bg:          light-dark(#f5ecd0, #2d2614);
+        --bn-crop-handle-colour:      light-dark(#b5432a, #e06a4a);
+        --bn-crop-handle-hover:       light-dark(#8b3a3a, #e88a6a);
+        --bn-colour-active-bg:        light-dark(#e8f0e4, #1a2818);
+        --bn-colour-highlight:        light-dark(#c4a96a, #6b5528);
+        --bn-colour-cited-bg:         light-dark(#f5ecd0, #3b3010);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(15, 92, 158, 0.08), rgba(77, 159, 224, 0.10));
+        --bn-glow-colour-strong:      light-dark(rgba(15, 92, 158, 0.15), rgba(77, 159, 224, 0.18));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#d4c9a8, #2d2820);
+        --bn-minimap-heading:         light-dark(#9e8b6e, #4a4030);
+        --bn-minimap-viewport-bg:     light-dark(rgba(15, 92, 158, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border: light-dark(rgba(15, 92, 158, 0.25), rgba(77, 159, 224, 0.3));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#5a7d9b, #4a6a80);
+        --bn-coverage-moderator: light-dark(#c4a96a, #a08848);
+        --bn-coverage-omitted:   light-dark(#d4c9a8, #3d3830);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f0e9d8, #211e18);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#c4b898, #4a4030);
+
+        /* Destructive action — vermillion */
+        --bn-colour-negative:         light-dark(#b5432a, #e06a4a);
+
+        /* Success — Pine Green; caution — Gold Ochre */
+        --bn-colour-positive:         light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:          light-dark(#a8842c, #c4a96a);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#b8ad91, #4a4030);
+        --bn-colour-icon-idle:        light-dark(#b8ad91, #4a4030);
+        --bn-colour-starred:          light-dark(#9e8b6e, #b8a880);
+        --bn-colour-shadow:           light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(15, 92, 158, 0.15), rgba(77, 159, 224, 0.2));
+        --bn-selection-bg:            light-dark(#e0e8f0, #1e2830);
+        --bn-selection-border:        light-dark(#0f5c9e, #4d9fe0);
+        --bn-selection-bg-inactive:     light-dark(#e8e2d4, #26231d);
+        --bn-selection-border-inactive: light-dark(#b8ad91, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#e6ddc9, #2d2922);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
+
+        /* Legacy aliases */
+        --bn-colour-suggestion:       light-dark(#0f5c9e, #4d9fe0);
+        --bn-colour-suggestion-bg:    light-dark(#e0e8f0, #1e2830);
+    }
+}
+
+
+/* ════ bristlenose/theme/atoms/icon.css — whole file, 36 lines ════ */
+/* Atom: icon — Lucide glyphs drawn by `components/Icon.tsx`.
+   One em square by default, sitting on the text it accompanies.
+
+   Stroke is the stem of that text, never under a pixel: em resolves against the
+   text the icon sits in, so a 15 px label draws a heavier line than a 13 px one,
+   and a context in a heavier weight sets --bn-icon-stem (tokens-typography.css).
+   This beats Lucide's stroke-width="2" attribute; `nonScalingStroke` keeps the
+   width in screen pixels at any box size (docs/design-icon-system.md § Weight). */
+
+.bn-icon {
+    display: inline-block;
+    flex: none;
+    stroke-width: max(1px, calc(var(--bn-icon-stem) * 1em));
+}
+
+/* The default box, at zero specificity: a control that sizes its own icon
+   (`.bn-tp-nav svg { width: 6px }`) wins, and an icon given `px` keeps the
+   width/height attributes it was drawn with. */
+:where(.bn-icon:not(.bn-icon--px)) {
+    width: 1em;
+    height: 1em;
+}
+:where(.bn-icon) {
+    vertical-align: -0.125em;
+}
+
+/* A menu's check gutter: the tick sized to the row's text, about 9 px of
+   visible check at a 13 px label. Used by the person picker, the Export
+   menu and the search token menu, so the web app has one tick (owner,
+   6 Oct 2026; design-people.md §J8.8). Lucide's check fills two thirds of
+   its box, so 1em keeps the ~9 px the improvised 0.9em tick drew. */
+.bn-icon--menu {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+}
+
+
+/* ════ bristlenose/theme/atoms/thumbnail.css — whole file, 37 lines ════ */
+/* Atom: thumbnail — media preview placeholder with play icon */
+
+.bn-video-thumb {
+    width: 96px;
+    height: 54px;
+    background: var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.bn-video-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--bn-radius-sm);
+}
+
+/* Lucide's play, filled: a hollow triangle in a 28px ring reads as weak. */
+.bn-play-icon .bn-icon {
+    fill: currentColor;
+}
+
+.bn-play-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--bn-colour-muted);
+    color: var(--bn-colour-muted);
+    font-size: var(--bn-text-badge);
+    padding-left: 2px;
+}
+
+
+/* ════ bristlenose/theme/atoms/section-heading.css — whole file, 97 lines ════ */
+/* Atom: section-heading — the zone title on a lens page.
+ *
+ * One h1 per top-level content zone, named for the zone, never the lens
+ * (docs/design-lens-template.md § "The h1 scheme"). Four lenses use it:
+ * Quotes ("Sections" / "Themes"), Analysis ("Sentiment signals" / "Tag
+ * signals"), Codebook ("Codebook"), Sessions ("Sessions").
+ *
+ * WHY THIS IS AN ATOM, not a rule in templates/report.css where it lived
+ * until 6 Aug 2026: a class you have to remember to type will eventually be
+ * forgotten. Codebook's h1 carried no `.section-heading` at all — in all
+ * three of its render states — so it rendered with correct type (inherited)
+ * and NO horizontal rule, and nothing caught it. Quotes and Analysis were
+ * right only because they copied each other. Use the `<SectionHeading>`
+ * component (frontend/src/components/SectionHeading.tsx) rather than typing
+ * the class, so a zone title cannot be rendered without its rule.
+ *
+ * Provides the full-pane 1px keyline + padding itself rather than leaning on
+ * the base h2 rule, so an h1 (which has no border of its own) still gets the
+ * divider.
+ *
+ * Font size/weight are deliberately NOT set here — they inherit from the
+ * element (h1 → display/strong), keeping the *semantic* level and the
+ * *graphic* size as separate knobs. Tune size via the h1 rule / specimen lens.
+ *
+ * The 2.5rem top gives between-zone separation. Flushing the FIRST zone title
+ * to the page datum is page-layout geometry, not the atom's business, so that
+ * rule stays in templates/report.css — an atom should not know where on a
+ * page it sits.
+ *
+ * THE ATOM IS THE ROW, NOT THE TEXT (20 Aug 2026). It renders as a wrapper
+ * carrying the keyline, with the <h1> and an optional action inside. Before
+ * this, the class sat on the <h1> itself, and Codebook — the only lens with a
+ * zone-level action — wrapped that h1 in its own flex column to get a button
+ * beside it. Two defects followed from that one wrapper:
+ *
+ *   1. The rule stopped short of the pane by the button's width. `max-width:
+ *      none` makes the box as wide as its CONTAINING BLOCK, and the containing
+ *      block had become the flex column, not the pane.
+ *   2. The datum rule in templates/report.css
+ *      (`.center > main > section:first-of-type > .section-heading`) no longer
+ *      matched — the heading was a grandchild — so the first zone title on
+ *      Codebook sat 40px below the datum every other lens flushes to.
+ *
+ * Both are structural: any construction that leaves a column around the
+ * heading reproduces them. Making the atom itself the row removes the reason
+ * to wrap. The action is a SIBLING of the h1, not a child, so the heading
+ * still announces as just its own text.
+ *
+ * `align-items: flex-end` is a rule-relative alignment, deliberately: the
+ * action's bottom edge lands on the same line as the title text's, so both sit
+ * one `padding-bottom` (6.4px) above the keyline and the row reads as having
+ * a single bottom gutter. It also keeps the row's height equal to the h1's
+ * line box (28px x 1.45 = 40.6px, against a 33.65px button), so A ROW WITH AN
+ * ACTION IS EXACTLY AS TALL AS A ROW WITHOUT ONE — the keyline lands at the
+ * same y on every lens, which is the whole point of a shared atom. Do not
+ * switch to `baseline`: it pushes the button below the h1's line box, grows
+ * the row, and drifts Codebook's rule off every other lens's.
+ */
+
+.section-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    /* Title text can never crash into the action, at any width or locale. */
+    gap: var(--bn-space-lg);
+    max-width: none;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-keyline);
+}
+
+/* The inner heading carries the type and nothing else — no margin of its own
+   (the base h1 rule sets one), no reading-width cap (the `h1, h2, h3,
+   .description` group in templates/report.css would otherwise re-apply it),
+   and no rule (the wrapper owns that). `min-width: 0` lets a long title wrap
+   inside its flex item rather than push the action off the right edge. */
+.section-heading > :is(h1, h2) {
+    margin: 0;
+    max-width: none;
+    min-width: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+/* The action slot. Deliberately the same construction as
+   `.framework-section-actions` (organisms/codebook-panel.css) one scale down —
+   flex row, centred, `--bn-space-sm` between siblings, never shrinks — so the
+   three title-left / action-right rows a lens can stack (zone title, framework
+   header, group header) are one pattern at three sizes rather than three
+   patterns. The atom owns the space between title and action via `gap`, so
+   this slot carries no margins of its own. */
+.section-heading-action {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    flex-shrink: 0;
+}
+
+
+/* ════ bristlenose/theme/atoms/journey-label.css — whole file, 57 lines ════ */
+/* Atom: journey-label — interactive journey step buttons with active state.
+
+   Used by JourneyChain component in sessions table and transcript pages.
+   The active state applies a hover-tint pill (--bn-colour-hover) to mark
+   the current section during scroll-sync or click-to-jump navigation.
+
+   Specificity note: the base rule uses `all: unset` which resets background.
+   The active rule must match or exceed that specificity (0-1-1) to win. */
+
+/* Base interactive label — reset to inline text, add cursor + transitions.
+   Matches both the transcript page's <button> (in-page scroll) and the
+   Sessions lens's <a> (deep-link navigation). `:is(button, a)` keeps the
+   0-1-1 specificity the active rule below relies on. */
+:is(button, a).bn-journey-label--interactive {
+    all: unset;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    border-radius: 2px;
+    padding: 0.1rem 0.3rem;
+    transition: color 0.15s, text-decoration-color 0.15s, background 0.15s;
+}
+
+/* Wrapping chains (the Sessions lens grid) carry the horizontal breathing room
+   on the trailing edge only. Padding on an inline box paints at the start of
+   its first line fragment and the end of its last — so symmetric padding shows
+   as a ragged left indent on line 1 and on every line that opens after an
+   arrow, while a line continuing a wrapped label sits flush. Trailing-edge
+   padding keeps the mid-line gaps identical (label's padding-right + the
+   separator's leading space before the arrow; the separator's padding-right +
+   its trailing space after) and leaves nothing to paint at a line start.
+   The transcript header's chain is `--overflow` — one line, horizontal scroll,
+   no wrapping — so it keeps the symmetric pill the active state wants. */
+.bn-session-journey:not(.bn-session-journey--overflow)
+  :is(.bn-journey-label, .bn-journey-sep) {
+    padding-inline: 0 0.3rem;
+}
+
+:is(button, a).bn-journey-label--interactive:hover {
+    color: var(--bn-colour-accent);
+    text-decoration: underline;
+    text-decoration-color: var(--bn-colour-muted);
+    text-underline-offset: 0.25em;
+}
+
+:is(button, a).bn-journey-label--interactive:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+/* Active journey step — hover-tint pill background.
+   Selector must beat the base `all: unset` rule (0-2-1 > 0-1-1). */
+:is(button, a).bn-journey-label--interactive.bn-journey-label--active {
+    font-weight: var(--bn-weight-emphasis);
+    background: var(--bn-colour-hover);
+    border-radius: var(--bn-radius-sm);
+}
+
+
+/* ════ bristlenose/theme/molecules/person-badge.css — whole file, 205 lines ════ */
+/* Molecule: person-badge — two-tone split speaker badge
+ *
+ * Structure:  .bn-person-badge > .bn-speaker-badge--split
+ *               > .bn-speaker-badge-code + .bn-speaker-badge-name
+ *
+ * Display mode: data-person-display="code" on <html> hides the name half.
+ * Hover: linked badges increase contrast (name bg lightens, code text darkens).
+ */
+
+/* Wrapper — keeps backward compat with existing selectors */
+.bn-person-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    white-space: nowrap;
+}
+
+/* Split badge container */
+.bn-speaker-badge--split {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+    background: none;
+    vertical-align: baseline;
+}
+
+/* Left half: code lozenge */
+.bn-speaker-badge--split .bn-speaker-badge-code {
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    padding: var(--bn-space-xs) 0.4rem;
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    border: 1px solid var(--bn-colour-border);
+    border-right: none;
+    border-radius: var(--bn-radius-sm) 0 0 var(--bn-radius-sm);
+    transition: color var(--bn-transition-fast);
+}
+
+/* Right half: name */
+.bn-speaker-badge--split .bn-speaker-badge-name {
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-emphasis);
+    padding: var(--bn-space-xs) 0.45rem var(--bn-space-xs) 0.35rem;
+    background: var(--bn-colour-quote-bg);
+    color: var(--bn-colour-text);
+    border: 1px solid var(--bn-colour-border);
+    border-left: none;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    transition: background var(--bn-transition-fast);
+}
+
+/* No name available — code gets full radius */
+.bn-speaker-badge--split .bn-speaker-badge-code:last-child {
+    border-radius: var(--bn-radius-sm);
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+/* --- Hover states (linked badges only) --- */
+
+/* Code-and-name: name bg lightens towards white */
+a:hover .bn-speaker-badge--split .bn-speaker-badge-name {
+    background: var(--bn-colour-bg);
+}
+
+/* Code-only / code-and-name: code text darkens towards black */
+a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
+    color: var(--bn-colour-text);
+}
+
+/* --- Display mode toggle via data-person-display on <html> --- */
+
+[data-person-display="code"] .bn-speaker-badge-name {
+    display: none;
+}
+
+[data-person-display="code"] .bn-speaker-badge--split .bn-speaker-badge-code {
+    border-radius: var(--bn-radius-sm);
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+/* "You are here": the badge of the session or version showing, on an ancestor (a wrapper, or the
+   radio that holds the badge). The navigator's own selection vocabulary, as .toc-link.active has
+   it: the selection fill (--bn-nav-selection-bg), emphasis weight, and accent text, no ring. Chosen
+   for the Discussion lens's session bar (option C of the badge playground, 3 Oct 2026); shared
+   since 15 Oct 2026 by the Screens lens's versions.
+   Two things the plain accent did not do, both fixed here for both lenses (accessibility review,
+   15 Oct 2026): it was the only cue (colour alone, 1.4.1), so the code takes the emphasis weight as
+   the name half already has — the non-colour cue, and the active row's own; and the accent as text
+   was 3.65:1 on the badge grey in the default light palette (1.4.3). The text is the accent mixed a
+   quarter toward the palette's own text colour, which darkens it in light and lightens it in dark.
+   Measured (code / name half, on the selection fill): default light 5.12 / 5.12, default dark
+   5.01 / 5.01, Edo light 6.38 / 6.38, Edo dark 6.20 / 6.20 — every one past 4.5:1. No token held an
+   accent that passes as text; this mix is the theme's own idiom (color-mix of two tokens). */
+.bn-person-badge-here .bn-speaker-badge-code,
+.bn-person-badge-here .bn-speaker-badge-name {
+    background: var(--bn-nav-selection-bg);
+    color: color-mix(in srgb, var(--bn-colour-accent) 75%, var(--bn-colour-text));
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* Highlighted state */
+.bn-person-badge-highlighted .bn-speaker-badge-code {
+    box-shadow: 0 0 0 2px var(--bn-colour-accent);
+}
+
+/* --- Sessions grid: decomposed badge + editable name --- */
+
+.bn-session-speaker-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.bn-speaker-editable-name {
+    font-family: var(--bn-font-body);
+    font-size: inherit;
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    cursor: text;
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-xs) 0.2rem;
+    min-width: 2rem;
+}
+
+.bn-speaker-editable-name:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+/* The editing state lives in `molecules/editable-text.css`, which names this
+   class alongside `.editable-text` — one rule for "a name, title or
+   description on neutral ground", so the speakers grid and the quotes lens
+   cannot drift apart. Only the metrics above are local to the speaker name.
+   An edited name carries no committed mark: italic is reserved for the
+   unidentified placeholder below (grey italic = unknown), and since migration
+   012 the confirmed state says what "you edited this" used to (owner,
+   6 Oct 2026; design-people.md §J8.8). */
+
+/* Unidentified speaker: role word shown as a muted-italic placeholder
+   (PowerPoint-title convention) to read as editable, not as a real name. */
+.bn-speaker-editable-name.unnamed {
+    font-weight: var(--bn-weight-normal);
+    font-style: italic;
+    color: var(--bn-colour-muted);
+}
+
+/* Same placeholder on the narrow-width rung, where the short form is shown
+   instead. Rehomed from `molecules/name-edit.css` when that file was deleted
+   on 20 Sep 2026: it was a bare `.unnamed` in the global sheet, and the two
+   classes above and below are its only consumers. Deliberately NOT merged
+   into one selector — the full name also drops to normal weight, the short
+   one never carried emphasis to drop. */
+.bn-speaker-name-short.unnamed {
+    font-style: italic;
+    color: var(--bn-colour-muted);
+}
+
+.bn-name-pencil {
+    all: unset;
+    cursor: pointer;
+    font-size: var(--bn-text-micro);
+    opacity: 0;
+    color: var(--bn-colour-muted);
+    transition: opacity var(--bn-transition-fast);
+    padding: 0 0.1rem;
+}
+
+.bn-session-speaker-entry:hover .bn-name-pencil {
+    opacity: 0.4;
+}
+
+.bn-name-pencil:hover {
+    opacity: 0.8 !important;
+}
+
+/* --- A proposed name (design-people.md § UX iteration 3) ---
+   A name the pipeline found, not yet a person's yes
+   (`session_speakers.name_confirmed`): one dotted ring round the whole split
+   badge, and the name in grey that darkens on hover. Saying yes in the picker
+   makes both solid. The halves lose their own borders so the ring is the only
+   line — the `--split` qualifier matches the specificity of the
+   `.bn-speaker-badge-code:last-child` rule above, and later in the file wins,
+   so a code-only badge keeps no solid edge inside the dashes. */
+.bn-person-proposed .bn-speaker-badge--split {
+    border: 1px dashed currentColor;
+}
+
+.bn-person-proposed .bn-speaker-badge--split .bn-speaker-badge-code,
+.bn-person-proposed .bn-speaker-badge--split .bn-speaker-badge-name {
+    border: none;
+}
+
+.bn-speaker-editable-name.proposed {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+.bn-session-speaker-entry:hover .bn-speaker-editable-name.proposed {
+    color: var(--bn-colour-text);
+}
+
+
+/* ════ bristlenose/theme/molecules/sparkline.css — whole file, 12 lines ════ */
+/* Molecule: sparkline — miniature stacked bar chart */
+
+.bn-sparkline {
+    display: inline-flex;
+    align-items: flex-end;
+    height: 54px;
+}
+
+.bn-sparkline-bar {
+    width: 5px;
+    border-radius: 1px 1px 0 0;
+}
+
+
+/* ════ bristlenose/theme/organisms/sessions-grid.css — whole file, 315 lines ════ */
+/* Organism: sessions-grid — the Sessions lens row grid.
+ *
+ * Replaces the raw <table> at table-layout:auto that the Sessions lens used
+ * until Aug 2026. That table had no responsive strategy: every column was
+ * nowrap or fixed except Start, so all shrink pressure landed there and the
+ * journey path collapsed to one word per line (the `min-width: 12rem` on
+ * .bn-session-meta was a stopgap, never a column system). Measured, it
+ * overflowed the page by 195px at 616px of content width.
+ *
+ * Design explored in docs/mockups/sessions-grid-playground.html (variants
+ * A/B/C, commits 004cd6a9 + 83d4c25a). This is variant C.
+ *
+ * ── Column order, held at EVERY width ──────────────────────────────────
+ *   ID · thumbnail · speakers · start+journey · sentiment · duration · file
+ * Nothing rearranges as a breakpoint is crossed. What changes is only what
+ * is *given up*, so the eye never has to re-find a column.
+ *
+ * ── SUBGRID is load-bearing ────────────────────────────────────────────
+ * One parent grid owns the tracks; each row is `grid-template-columns:
+ * subgrid`. The obvious build — each row its own grid — does not work: a
+ * content-sized track then resolves per row, so row 3's speakers column is a
+ * different width from row 1's and the table stops lining up. Only fixed
+ * lengths would align, and fixed lengths mean truncated names or dead space.
+ * Subgrid gives both: rows stay real boxes (so :hover works) while tracks are
+ * shared and content-sized across every row, exactly as a table's are.
+ *
+ * max-content tracks size around each cell's own padding, which is why no
+ * track here carries a hand-added allowance for it.
+ *
+ * ── The shrink pair ────────────────────────────────────────────────────
+ * Below the switch, speakers and start+journey become proportional fr tracks
+ * (1 : 1.5) so they give up width TOGETHER rather than Start absorbing every
+ * squeeze. `minmax(0, …)` on both is load-bearing — an fr track's default
+ * minimum is auto, which refuses to shrink below content and would reinstate
+ * exactly the rigidity being removed. Duration+file joins the pair below
+ * 900, which also drops its 9rem floor (a fixed minimum on a column is what
+ * forces a row to overflow once everything else has given up all it can).
+ *
+ * ── The degradation ladder ─────────────────────────────────────────────
+ * The code badge is the stable identity anchor: it never drops to its own
+ * line, and names are never broken mid-word. What degrades is the name's
+ * DETAIL, in this order as width falls:
+ *     surname (→ short name)  →  user journey  →  names entirely (badges)
+ * Note the journey — a whole column of content — is spent BEFORE identity
+ * legibility. Decided 6 Aug 2026.
+ *
+ * ── These thresholds are DELIBERATELY off the shared scale ─────────────
+ * The seven values below (1285 / 968 / 900 / 750 / 700 / 560 / 480) are not
+ * drawn from `--bn-breakpoint-*` and should not be moved onto it. Decided
+ * 6 Aug 2026 (Martin): that scale exists to serve card-flow surfaces — the
+ * quote grid, signal cards, code groups — which reflow by column count. This
+ * is a seven-column data grid with a shrink pair and a degradation ladder;
+ * every value here was measured against where its own content actually
+ * breaks. Snapping them to a scale built for card reflow would trade a
+ * working design for a tidier-looking one.
+ *
+ * The same applies to the track geometry (`minmax(11rem, 1fr)`,
+ * `minmax(9rem, 15rem)`) and the 1 : 1.5 shrink ratio — bespoke to this grid,
+ * not candidates for global tokens.
+ *
+ * So: if you are here on a tokenisation sweep, this file is the exception,
+ * and that is on purpose. Tune the numbers by eye in
+ * docs/mockups/sessions-grid-playground.html; don't generalise them.
+ *
+ * Thresholds are CONTAINER inline size, i.e. usable content width, not
+ * viewport width. In the browser with the sidebar closed, content =
+ * window − 184 (48 body padding + 72 rails + 64 centre padding).
+ */
+
+/* The container. Thresholds below are measured against this box. */
+.bn-session-table {
+    container-type: inline-size;
+    container-name: bn-sessions;
+}
+
+.bn-sessions-grid {
+    display: grid;
+    font-size: var(--bn-text-label);
+    /* Widest: duration and interviews are separate columns. */
+    grid-template-columns:
+        max-content          /* id                                     */
+        max-content          /* thumbnail (.bn-video-thumb is 96x54)   */
+        max-content          /* speakers — sized to the longest name   */
+        minmax(11rem, 1fr)   /* start + user journey                   */
+        max-content          /* sentiment — sized by header, not bars  */
+        max-content          /* duration                               */
+        minmax(9rem, 15rem); /* interviews (filename)                  */
+}
+
+.bn-sessions-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: start;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.bn-sessions-row:last-child { border-bottom: none; }
+
+.bn-sessions-row[data-session] {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.bn-sessions-row[data-session]:hover { background: var(--bn-colour-hover); }
+
+/* A first analysis delivers sessions one by one (docs/design-progressive-
+   lenses.md §2). A row not readable yet keeps its geometry and shows what
+   ingest knew, in muted text (treatment A, §7), and is not a destination: it
+   has no data-session, so the pointer and hover above never reach it. The
+   one Whisper is working on shimmers its filename, from that muted resting
+   colour toward the text colour — the polarity follows the theme. */
+.bn-sessions-row[aria-disabled="true"] { color: var(--bn-colour-muted); }
+.bn-sessions-row[aria-disabled="true"] .bn-thinking-shimmer {
+    --bn-shimmer-base: var(--bn-colour-muted);
+    --bn-shimmer-peak: var(--bn-colour-text);
+    --bn-shimmer-contrast: 20%;
+}
+
+/* Mirrors the old td: 0.5rem var(--bn-space-md), top-aligned.
+   min-width: 0 is load-bearing — without it an fr track cannot shrink below
+   its content and the row overflows instead of wrapping. */
+.bn-sessions-cell {
+    padding: 0.5rem var(--bn-space-md);
+    min-width: 0;
+}
+
+/* Mirrors the old th: heavier, 0.6rem block padding, 2px rule. */
+.bn-sessions-head { border-bottom-width: 2px; }
+
+.bn-sessions-head .bn-sessions-cell {
+    padding-block: 0.6rem;
+    font-weight: var(--bn-weight-emphasis);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+}
+
+/* Stacked double-header. Structure-agnostic: display:block rather than
+   relying on the flex column, so the same spans stack anywhere. The second
+   line takes the colour of the thing it labels — muted for "User journey"
+   (matching the muted chain), accent for "Interviews" (matching the file
+   link) — so the header reads as a legend for its cell. */
+.bn-sessions-h1,
+.bn-sessions-h2 { display: block; }
+
+.bn-sessions-h2 {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+/* Scoped to direct children so journey labels (nested inside
+   .bn-session-journey) keep their own `all: unset` colour rules. */
+.bn-cell-id > a { color: var(--bn-colour-accent); text-decoration: none; }
+.bn-cell-id > a:hover { text-decoration: underline; }
+
+/* Duration keeps its shipped right alignment while it is its own column. */
+.bn-cell-duration { text-align: right; }
+
+/* Name variants. Both are rendered; CSS picks one, so the ladder needs no
+   JS width measurement. Redundant DOM is the price of a pure-CSS ladder,
+   and it is a few dozen bytes per row. */
+.bn-speaker-name-short { display: none; }
+
+/* ── Below the switch: the C grid ──────────────────────────────────────
+   Duration and interviews merge into one column, stacked, and the shrink
+   pair takes over. This is the ONLY structural change across the whole
+   range — everything below is subtraction. */
+@container bn-sessions (max-width: 1285px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content            /* id                    */
+            max-content            /* thumbnail             */
+            minmax(0, 1fr)         /* speakers  — pair      */
+            minmax(0, 1.5fr)       /* start     — pair      */
+            max-content            /* sentiment             */
+            minmax(9rem, 15rem);   /* duration + interviews */
+    }
+
+    /* Two rows so duration can sit above the filename in one column. */
+    .bn-sessions-row { grid-template-rows: auto auto; }
+
+    .bn-cell-id,
+    .bn-cell-thumb,
+    .bn-cell-speakers,
+    .bn-cell-start,
+    .bn-cell-sentiment { grid-row: 1 / span 2; }
+
+    .bn-cell-duration {
+        grid-column: 6;
+        grid-row: 1;
+        padding-bottom: 0;
+    }
+
+    /* Left-aligned now it sits above the filename rather than being its own
+       column — right alignment only earned its keep as a column.
+       Specificity 0-2-0 is deliberate: .bn-session-duration carries
+       `text-align: right` from templates/report.css, which concatenates AFTER
+       organisms, so a bare .bn-cell-duration ties on specificity and LOSES on
+       source order. Measured shipping right-aligned before this was raised. */
+    .bn-sessions-row .bn-cell-duration { text-align: left; }
+
+    .bn-cell-file {
+        grid-column: 6;
+        grid-row: 2;
+        padding-top: 0.15rem;
+    }
+
+    .bn-cell-file > a { overflow-wrap: anywhere; }
+
+    /* The speakers column is now a shrink-pair member, so it must be able to
+       give up width — which means names wrap rather than holding the track
+       open. flex-start keeps the code badge on the name's first line instead
+       of centred against a two-line name.
+
+       Specificity 0-2-0 on the cell for the SAME reason `.bn-cell-duration`
+       carries it below, and this is the rule that proves the trap is worth
+       documenting twice: the cell also carries `.bn-session-speakers`, which
+       sets `white-space: nowrap` in templates/report.css — concatenated ~5000
+       lines AFTER organisms, so a bare `.bn-cell-speakers` ties at 0-1-0 and
+       loses on source order. Names therefore never wrapped, the track shrank
+       to its `minmax(0, …)` floor anyway, and the un-wrappable content spilled
+       rightwards across Start and Sentiment. That is the header-text overlap
+       reported on 17 Aug 2026 — and it means rung 1 of the ladder had never
+       actually worked since it shipped on 6 Aug.
+
+       Fixing it here rather than in report.css on purpose: that nowrap is
+       still correct for the `<table>` the sealed static render uses, which
+       shares the class. */
+    .bn-sessions-row .bn-cell-speakers,
+    .bn-cell-speakers .bn-session-speaker-entry { white-space: normal; }
+    .bn-cell-speakers .bn-session-speaker-entry { align-items: flex-start; }
+
+    /* A wrapped name must be flush left on EVERY line, first included.
+       .bn-speaker-editable-name carries `padding: … 0.2rem` and is an inline
+       box, so its left padding paints only at the start of its first line
+       fragment — leaving line 1 indented ~3.2px and wrapped lines flush.
+       (Same inline-box behaviour journey-label.css documents for wrapping
+       journey chains.) inline-block applies the padding to the box, so all
+       lines share one left edge while the hover chip still shrink-wraps. */
+    .bn-cell-speakers .bn-speaker-editable-name { display: inline-block; }
+}
+
+/* Sentiment: the cheapest column on the row (~87px) and the one that makes
+   the grid scannable for triage, so it outlives the layout switch. */
+@container bn-sessions (max-width: 968px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content max-content minmax(0, 1fr) minmax(0, 1.5fr)
+            minmax(9rem, 15rem);
+    }
+    /* 0-2-0 to clear `.bn-sessions-head .bn-sessions-cell { display: flex }`
+       above, which is also 0-2-0 but earlier in source. A bare
+       `.bn-cell-sentiment` is 0-1-0 and loses outright — and it loses ONLY in
+       the header, so the column vanished from every body row while its title
+       stayed, kept a track the grid no longer had, and the explicitly-placed
+       Duration/Interviews cell landed on top of it. That is the header text
+       reported overlapping on 17 Aug 2026 ("Senatidmoent" = Sentiment over
+       Duration). Same trap as `.bn-sessions-h2` below, which was already
+       raised for exactly this reason. */
+    .bn-sessions-row .bn-cell-sentiment { display: none; }
+    .bn-cell-duration,
+    .bn-cell-file { grid-column: 5; }
+}
+
+/* Duration+interviews joins the shrink pair, and loses its 9rem floor. */
+@container bn-sessions (max-width: 900px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content max-content minmax(0, 1fr) minmax(0, 1.5fr)
+            minmax(0, 1fr);
+    }
+}
+
+/* Ladder rung 1 — surnames go; fall back to the short name. */
+@container bn-sessions (max-width: 750px) {
+    /* Specificity 0-2-0 to beat the .bn-cell-speakers .bn-speaker-editable-name
+       inline-block rule above (also 0-2-0, but earlier in source). A bare
+       .bn-speaker-name-full is 0-1-0 and loses, which shows BOTH names at
+       once rather than swapping them — measured before this was raised. */
+    .bn-cell-speakers .bn-speaker-name-full { display: none; }
+    .bn-cell-speakers .bn-speaker-name-short { display: inline-block; }
+}
+
+/* Thumbnail goes. */
+@container bn-sessions (max-width: 700px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
+    }
+    /* 0-2-0 for the same reason as sentiment above — otherwise the header
+       keeps an (empty) thumbnail track that no body row has, and everything
+       to its right sits one column off. */
+    .bn-sessions-row .bn-cell-thumb { display: none; }
+    .bn-cell-duration,
+    .bn-cell-file { grid-column: 4; }
+}
+
+/* Ladder rung 2 — the user journey goes, leaving the start time alone. The
+   header stops being a stack too: a "User journey" label over a column that
+   no longer has one is a promise the row does not keep. */
+@container bn-sessions (max-width: 560px) {
+    .bn-cell-start .bn-session-journey { display: none; }
+    .bn-sessions-head .bn-cell-start .bn-sessions-h2 { display: none; }
+}
+
+/* Ladder rung 3 — names go entirely. Badges only; the pencil goes with them
+   since there is no longer a name to edit. */
+@container bn-sessions (max-width: 480px) {
+    .bn-cell-speakers .bn-speaker-editable-name,
+    .bn-cell-speakers .bn-speaker-name-full,
+    .bn-cell-speakers .bn-speaker-name-short,
+    .bn-cell-speakers .bn-name-pencil { display: none; }
+}
+
+
+/* ════ bristlenose/theme/organisms/session-tapestry.css — whole file, 428 lines ════ */
+/* Session tapestry — the timeline slice under a row of the Sessions grid
+   (frontend/src/components/SessionTapestry.tsx). Lanes: section flags, speaker
+   clips, sentiment bars, theme spans. Every colour and size is a shipped token
+   except the three marked NEW. Type sizes and popover padding go through
+   --bn-tp-* variables that default to the shipped tokens; the values live in
+   frontend/src/utils/tapestryTuning.ts, and the dev
+   playground moves them along the existing ladders only. Design + measurements:
+   experiments/session-tapestry/README.md. */
+
+:root {
+    /* NEW: resting section flag — the page background with a 6% tint, so the
+       raised flag (pure background + shadow) reads as in front. */
+    --bn-tp-flag-rest: color-mix(in srgb, var(--bn-colour-bg) 94%, var(--bn-colour-text));
+    /* NEW: hover tint on the quote popover (4%), the sign that it opens the transcript. */
+    --bn-tp-popover-hover: color-mix(in srgb, var(--bn-colour-bg) 96%, var(--bn-colour-text));
+}
+
+/* ── The closed timeline: a strip under each row (components/TapestryPreview.tsx) ──
+   The whole interview, participants only, a quarter the height of the open timeline's
+   participant clips, clips at 60% under a 0.5 px keyline, no text, and a tint on hover.
+   A full-width item inside the row, so the row's hover wash covers it; its own click opens
+   the timeline (the row's opens the transcript). docs/mockups/sessions-timeline-strip.html. */
+:root {
+    /* NEW: the strip's clips at 60%, so a column of strips reads as quiet texture. */
+    --bn-tp-preview-opacity: 0.6;
+    /* NEW: the strip's track on hover — 10% of the text ink, the move the popover makes at 4%. */
+    --bn-tp-preview-track-hover: color-mix(in srgb, var(--bn-colour-badge-bg) 90%, var(--bn-colour-text));
+}
+.bn-tapestry-preview {
+    grid-column: 1 / -1;
+    min-width: 0;
+    margin-top: -2px;
+    padding-bottom: 10px;
+    cursor: pointer;
+    transition: opacity var(--bn-transition-fast);
+}
+.bn-tapestry-preview-svg { display: block; overflow: visible; }
+.bn-tp-pv-track { fill: var(--bn-colour-badge-bg); transition: fill var(--bn-transition-fast); }
+.bn-tapestry-preview:hover .bn-tp-pv-track { fill: var(--bn-tp-preview-track-hover); }
+.bn-tp-pv-clips { opacity: var(--bn-tp-preview-opacity); }
+.bn-tp-pv-clip { fill: var(--bn-colour-muted); }
+.bn-tp-pv-edge { fill: none; stroke: rgb(0 0 0 / 0.25); stroke-width: 0.5; vector-effect: non-scaling-stroke; }
+/* Open, the timeline is the strip: it gives way. */
+.bn-sessions-row.bn-tapestry-open .bn-tapestry-preview { opacity: 0; }
+
+/* Open, the journey chain's words are the timeline's flag labels: they fly there and back
+   (utils/tapestryMotion.ts). The chain keeps its place, so nothing reflows under the flight;
+   its arrows fade where they stand. */
+.bn-session-journey .bn-journey-sep { transition: opacity var(--bn-transition-fast); }
+.bn-sessions-row.bn-tapestry-open .bn-session-journey .bn-journey-sep { opacity: 0; }
+.bn-sessions-row.bn-tapestry-open .bn-session-journey .bn-journey-label { visibility: hidden; }
+/* While the strip's clips spring into the participant lane, the lane itself waits. */
+.bn-tp-landing :is(.bn-tp-clip-ppt, .bn-tp-strip-ppt, .bn-tp-clip-edge.ppt, .bn-tp-clip-label.on-ppt) { visibility: hidden; }
+/* What is in flight: over the page, clipped to the timeline's visible width only. */
+.bn-tp-flight { position: absolute; z-index: 30; pointer-events: none; overflow-x: clip; }
+.bn-tp-flight-word { position: absolute; white-space: nowrap; transform-origin: 0 50%; }
+
+/* Disclosure, inside the ID cell — no new grid column, so the width ladder is untouched. */
+.bn-tapestry-toggle {
+    all: unset;
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    margin: 0 2px 0 -4px;
+    vertical-align: -2px;
+    border-radius: var(--bn-radius-sm);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+}
+.bn-tapestry-toggle:hover { color: var(--bn-colour-text); }
+.bn-tapestry-toggle:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.bn-tapestry-toggle svg { transition: transform 0.15s ease; }
+.bn-tapestry-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+
+/* An open session reads as one unit: its row and its slice share the tint, with no
+   keyline between them; the keyline and a band of empty space come after the slice,
+   before the next session. */
+.bn-sessions-row.bn-tapestry-open {
+    background: var(--bn-colour-quote-bg);
+    border-bottom-color: transparent;
+}
+/* Hover would tint the row alone and split the unit (beats the grid's 0-3-0 hover rule). */
+.bn-sessions-row.bn-tapestry-open[data-session]:hover { background: var(--bn-colour-quote-bg); }
+
+/* The slice: a full-width grid item after its row. */
+.bn-tapestry {
+    grid-column: 1 / -1;
+    min-width: 0;
+    background: var(--bn-colour-quote-bg);
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: var(--bn-space-lg);
+}
+.bn-tapestry-cell { min-width: 0; }
+.bn-tapestry-scroll {
+    padding: var(--bn-space-sm) 0;
+    /* Room under the timecodes for the horizontal scrollbar: macOS draws an overlay
+       bar over the content (~11px, ~15px while hovered), so it would cover them. */
+    padding-bottom: calc(var(--bn-space-sm) + 14px);
+    overflow-x: auto;
+}
+.bn-tapestry-svg { display: block; }
+
+/* Lane labels read as headings: the column headers' face, weight and ink
+   (.bn-sessions-head), one stop down the ladder. */
+.bn-tp-lane {
+    font: var(--bn-weight-emphasis) var(--bn-tp-text-lane, var(--bn-text-caption)) var(--bn-font-body);
+    fill: var(--bn-colour-text);
+}
+.bn-tp-tick {
+    font: var(--bn-tp-text-tick, var(--bn-text-micro)) var(--bn-font-mono);
+    fill: var(--bn-colour-muted);
+}
+/* The tick nearest the hover playhead, in the timecode blue: about where a click lands. */
+.bn-tp-tick.near { fill: var(--bn-colour-accent); }
+.bn-tp-track { fill: var(--bn-colour-badge-bg); }
+/* Without video the clips fall back to neutral greys; the track says who speaks. */
+.bn-tp-clip-team { fill: var(--bn-colour-border-hover); }
+.bn-tp-clip-ppt { fill: var(--bn-colour-muted); }
+.bn-tp-clip[data-video] { stroke: rgb(0 0 0 / 0.25); stroke-width: 0.75; }
+/* The scene strip — what was on screen, moment by moment (utils/scene_strip.py) — runs inside
+   the clips at an opacity. The opacity is the design: the clip keeps its colour and the track its
+   identity, and only change shows. The clip's edge is redrawn over it so a striped clip keeps its
+   outline. */
+.bn-tp-strip { pointer-events: none; }
+.bn-tp-strip-ppt { opacity: 0.7; }
+.bn-tp-strip-team { opacity: 0.75; }
+.bn-tp-clip-edge { fill: none; stroke: rgb(0 0 0 / 0.25); stroke-width: 0.75; pointer-events: none; }
+/* A notch where the scene changed: a short hairline just above the tracks, in the text ink. */
+.bn-tp-notch { stroke: var(--bn-colour-text); stroke-width: 1; opacity: 0.6; pointer-events: none; }
+.bn-tp-clip-label {
+    font: var(--bn-weight-emphasis) var(--bn-tp-text-clip, var(--bn-text-badge)) var(--bn-font-body);
+    pointer-events: none;
+}
+/* Neutral clips only; a scene-coloured clip's ink is chosen in JS by WCAG contrast. */
+.bn-tp-clip-label.on-team { fill: var(--bn-colour-text); }
+.bn-tp-clip-label.on-ppt { fill: light-dark(#fff, #111); }
+
+.bn-tp-flag { cursor: pointer; }
+/* A flag is a button (one Tab stop per timeline, roving): the focus ring is the banner's own
+   hairline in the accent, heavier, so it reads apart from the hot (pointer) state. */
+.bn-tp-flag:focus { outline: none; }
+.bn-tp-flag:focus-visible line,
+.bn-tp-flag:focus-visible path { stroke: var(--bn-colour-accent); stroke-width: 2; }
+/* The staff and the banner share one hairline: the border keyline at rest, the text
+   ink when raised — darker, never thicker. */
+.bn-tp-flag line,
+.bn-tp-flag path { stroke: var(--bn-colour-border); stroke-width: 1; }
+.bn-tp-flag path { fill: var(--bn-tp-flag-rest); }
+.bn-tp-flag.raised line,
+.bn-tp-flag.raised path { stroke: var(--bn-colour-text); }
+.bn-tp-flag.raised path { fill: var(--bn-colour-bg); }
+/* Directly under the pointer: the app's selected blue — ink and wash — on the same
+   hairline, so it is clear a click goes there. */
+.bn-tp-flag.hot line,
+.bn-tp-flag.hot path { stroke: var(--bn-selection-border); }
+.bn-tp-flag.hot path { fill: var(--bn-selection-bg); }
+/* The label keeps the text ink: blue text on the selection wash is 3.6:1. The blue staff,
+   hairline and wash carry the state. */
+.bn-tp-flag text {
+    font: var(--bn-weight-emphasis) var(--bn-tp-text-flag, var(--bn-text-label)) var(--bn-font-body);
+    fill: var(--bn-colour-text);
+}
+.bn-tp-hit { cursor: pointer; }
+.bn-tp-playhead { stroke: var(--bn-colour-accent); stroke-width: 1; pointer-events: none; }
+
+.bn-tp-axis { stroke: var(--bn-colour-muted); stroke-width: 0.8; }
+.bn-tp-bar { cursor: pointer; transition: opacity 0.12s; }
+.bn-tp-bar:focus { outline: none; }
+.bn-tp-bar.sel { stroke: var(--bn-colour-text); stroke-width: 1.25; }
+/* Focus is its own ring, so a keyboard user can tell it from the selection. */
+.bn-tp-bar:focus-visible { stroke: var(--bn-colour-accent); stroke-width: 2; }
+/* 0.4, not lower: a dimmed bar is still a control and must keep 3:1 (WCAG 1.4.11). */
+.bn-tp-bar.dim { opacity: 0.4; }
+.bn-tp-unrated { fill: var(--bn-colour-muted); }
+/* The invisible, wider click target over each sentiment mark (pointer only). */
+.bn-tp-bar-hit { fill: transparent; cursor: pointer; }
+
+.bn-tp-span { fill: var(--bn-colour-muted); opacity: 0.5; }
+/* The chip's fill is a gradient set inline (solid, then fading out over its last 20%), so
+   only its left edge is hard — on the timecode where the theme starts. */
+.bn-tp-tag { fill: var(--bn-colour-badge-bg); }
+/* Sans, not mono: monospace is reserved for tag text, and a theme is not a tag. */
+.bn-tp-tag-text {
+    font: var(--bn-weight-normal) var(--bn-tp-text-theme, var(--bn-text-label)) var(--bn-font-body);
+    fill: var(--bn-colour-badge-text);
+}
+
+/* Quote popover: floats under the selected bar, over the themes track, with an
+   arrow on the bar — a Mac popover. The whole popover opens the transcript; the
+   faint hover tint is the affordance. Shadow: the focused-card token. */
+.bn-tp-wrap { position: relative; }
+.bn-tp-popover {
+    position: absolute;
+    z-index: 20;
+    box-sizing: border-box;
+    padding: var(--bn-tp-pad-popover, var(--bn-space-md));
+    background: var(--bn-colour-bg);
+    border-radius: var(--bn-radius-lg);
+    box-shadow: var(--bn-focus-shadow);
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+/* The arrow: a square turned 45°, sharing the popover's ground (so it takes the
+   hover tint too) and its hairline on the two outward edges. */
+.bn-tp-popover::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: calc(var(--bn-tp-arrow-x, 24px) - 6px);
+    width: 12px;
+    height: 12px;
+    background: inherit;
+    transform: rotate(45deg);
+    box-shadow: -1px -1px 0 rgba(0, 0, 0, 0.05);
+    border-top-left-radius: 2px;
+}
+.bn-tp-popover:hover { background: var(--bn-tp-popover-hover); }
+/* --bn-focus-shadow has no dark value, and a dark shadow on a dark ground is no
+   edge at all; dark mode adds a faint light hairline instead. */
+.bn-tp-popover { outline: 1px solid light-dark(transparent, rgb(255 255 255 / 0.1)); }
+.bn-tp-popover::before { box-shadow: -1px -1px 0 light-dark(rgba(0, 0, 0, 0.05), rgb(255 255 255 / 0.1)); }
+.bn-tp-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    flex-wrap: wrap;
+    padding-right: 72px; /* room for prev / next / close */
+    font-size: var(--bn-tp-text-pop-meta, var(--bn-text-caption));
+    color: var(--bn-colour-muted);
+}
+.bn-tp-tc {
+    all: unset;
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+}
+.bn-tp-tc:hover { color: var(--bn-colour-text); }
+.bn-tp-tc:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.bn-tp-popover blockquote {
+    margin: var(--bn-space-sm) 0 0;
+    font-size: var(--bn-tp-text-pop-quote, var(--bn-text-body));
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+.bn-tp-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    align-items: center;
+}
+.bn-tp-close {
+    all: unset;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--bn-radius-sm);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+}
+.bn-tp-close:hover { color: var(--bn-colour-text); }
+.bn-tp-close:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: -2px; }
+.bn-tp-close svg { width: 10px; height: 10px; }
+
+/* Previous / next: bristlenose.app's homepage carousel buttons, at 12 px (from
+   26) inside a 22 px hit area, revealed on hover or keyboard focus as there. */
+.bn-tp-nav { display: flex; }
+.bn-tp-nav button {
+    all: unset;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease-in-out;
+    color: var(--bn-colour-text);
+}
+.bn-tp-nav button > span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(12px) saturate(1.5);
+    backdrop-filter: blur(12px) saturate(1.5);
+    box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.15);
+    display: grid;
+    place-items: center;
+}
+.bn-tp-nav svg { width: 6px; height: 6px; }
+.bn-tp-nav button:disabled > span { opacity: 0.35; }
+.bn-tp-popover:hover .bn-tp-nav button,
+.bn-tp-popover:focus-within .bn-tp-nav button { opacity: 1; pointer-events: auto; }
+.bn-tp-nav button:focus-visible > span { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+@media (prefers-color-scheme: dark) {
+    .bn-tp-nav button > span { background: rgba(40, 40, 40, 0.72); border-color: rgba(255, 255, 255, 0.1); }
+}
+
+/* NEW: zoom — a mini slider between magnifiers (Photos, the Final Cut timeline),
+   in the section heading's action slot; no range control ships elsewhere. */
+.bn-tp-zoom { display: flex; align-items: center; gap: 2px; }
+.bn-tp-zoom-btn {
+    all: unset;
+    width: 16px;
+    height: 16px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--bn-radius-sm);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+}
+.bn-tp-zoom-btn:hover { color: var(--bn-colour-text); }
+.bn-tp-zoom-btn:disabled { opacity: 0.4; cursor: default; }
+.bn-tp-zoom-btn:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.bn-tp-zoom-btn svg { width: 12px; height: 12px; }
+.bn-tp-zoom-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 64px;
+    height: 14px;
+    margin: 0 2px;
+    background: none;
+}
+.bn-tp-zoom-slider:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+/* Track and thumb ring meet 3:1 against the page (WCAG 1.4.11). */
+.bn-tp-zoom-slider::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: var(--bn-colour-muted); }
+.bn-tp-zoom-slider::-moz-range-track { height: 3px; border-radius: 2px; background: var(--bn-colour-muted); }
+.bn-tp-zoom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 11px;
+    height: 11px;
+    margin-top: -4px;
+    border-radius: 50%;
+    background: light-dark(#fff, #d8d8dc);
+    box-shadow: 0 0 0 1px var(--bn-colour-muted), 0 1px 2px rgb(0 0 0 / 0.25);
+}
+.bn-tp-zoom-slider::-moz-range-thumb {
+    width: 11px;
+    height: 11px;
+    border: 0;
+    border-radius: 50%;
+    background: light-dark(#fff, #d8d8dc);
+    box-shadow: 0 0 0 1px var(--bn-colour-muted), 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-tapestry-preview,
+    .bn-tp-pv-track,
+    .bn-session-journey .bn-journey-sep,
+    .bn-tapestry-toggle svg,
+    .bn-tp-bar,
+    .bn-tp-popover,
+    .bn-tp-nav button { transition: none; }
+}
+
+@media print {
+    .bn-tapestry-preview,
+    .bn-tapestry-toggle,
+    .bn-tp-zoom { display: none; }
+}
+
+/* ── The transcript's sticky timeline (islands/transcript/TranscriptTimeline.tsx) ──
+   The same timeline, with what the reader can see drawn on it and the player's moment while media
+   plays. docs/mockups/transcript-timeline-toggle.html. */
+:root {
+    /* The reading window is the minimap's viewport indicator: the house mark for "what you are
+       looking at" (organisms/minimap.css), aliased so the family has its own names. */
+    --bn-tp-window-bg: var(--bn-minimap-viewport-bg);
+    --bn-tp-window-border: var(--bn-minimap-viewport-border);
+}
+.bn-tp-window {
+    fill: var(--bn-tp-window-bg);
+    stroke: var(--bn-tp-window-border);
+    stroke-width: 1.5;
+    pointer-events: none;
+}
+/* Draggable, as the minimap's viewport is: dragging scrolls the transcript. */
+.bn-tp-window.draggable { pointer-events: auto; cursor: grab; }
+.bn-tp-window.draggable:active { cursor: grabbing; }
+/* The player's moment: accent, a notch heavier than the hover cursor (.bn-tp-playhead), with a
+   head, so the two never read as one. */
+.bn-tp-player { pointer-events: none; }
+.bn-tp-player line { stroke: var(--bn-colour-accent); stroke-width: 1.5; }
+.bn-tp-player path { fill: var(--bn-colour-accent); }
+
+/* ── Hover thumbnail: a still of the participant's screen below the speaker lane ──
+   (utils/tapestryThumb.ts). Fixed on document.body, so the slice's scroll cannot clip it;
+   the popover's ground and shadow; never takes the pointer. */
+.bn-tp-thumb {
+    position: fixed;
+    z-index: 20;
+    padding: 3px;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: var(--bn-focus-shadow);
+    pointer-events: none;
+    animation: bn-tp-thumb-in 0.12s ease;
+}
+.bn-tp-thumb img {
+    display: block;
+    width: var(--bn-tp-thumb-w, 160px);
+    height: auto;
+    border-radius: calc(var(--bn-radius-md) - 2px);
+}
+.bn-tp-thumb-tc {
+    display: block;
+    padding: 3px 3px 0;
+    font: var(--bn-text-micro) var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+}
+@keyframes bn-tp-thumb-in {
+    from { opacity: 0; transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .bn-tp-thumb { animation: none; }
+}
+/* The stretch of the participant track the frame stands for. */
+.bn-tp-thumb-src { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1.5; pointer-events: none; }
+
+
+/* ════ templates/report.css — lines 14–30 ════ */
+body {
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+    color: var(--bn-colour-text);
+    background: var(--bn-colour-bg);
+    margin: 0;
+    /* No bottom padding on body (20 Sep 2026). The sidebars are sticky INSIDE
+       the .layout grid, so anything body pads below the grid is ground a panel
+       can never cover: scrolled to the end, the panel stopped one padding short
+       of the window bottom and the (transparent, embedded) body showed the
+       window surface there — a white bar under the pale panel on macOS 27. The
+       bottom breathing room now lives on `.layout > .center` (sidebar.css) for
+       the SPA and on `article` below for the static render, both of which sit
+       inside the row the panels span. */
+    padding: var(--bn-space-xl) var(--bn-space-lg) 0;
+}
+
+/* ════ templates/report.css — lines 297–301 ════ */
+.bn-session-moderators {
+    font-size: var(--bn-text-label);
+    margin: 0 0 0.5rem;
+    color: var(--bn-colour-text);
+}
+
+/* ════ templates/report.css — lines 303–308 ════ */
+.bn-session-speakers {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+
+/* ════ templates/report.css — lines 319–324 ════ */
+.bn-session-journey {
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-muted);
+    margin-top: 0.25rem;
+    white-space: normal;
+}
+
+/* ════ templates/report.css — lines 326–328 ════ */
+.bn-session-id {
+    white-space: nowrap;
+}
+
+/* ════ templates/report.css — lines 330–333 ════ */
+.bn-session-duration {
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* ════ templates/report.css — lines 335–342 ════ */
+.bn-interviews-link {
+    --bn-icon-stem: var(--bn-icon-stem-emphasis);  /* the folder sits beside the column's emphasis text */
+    color: var(--bn-colour-accent);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* ════ templates/report.css — lines 344–347 ════ */
+.bn-interviews-link:hover {
+    text-decoration: none;
+    opacity: 0.8;
+}
+
+/* ════ templates/report.css — lines 349–351 ════ */
+.bn-folder-icon {
+    flex-shrink: 0;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   NEW: option C — the strip, its hover, and the open animation.
+   Every value is a shipped token or one of the numbers named here.
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+    /* NEW: the strip's resting track is the timeline's own track colour; on hover it
+       takes 10% of the text ink, the same move the timeline's popover hover makes (4%). */
+    --bn-tp-preview-track-hover: color-mix(in srgb, var(--bn-colour-badge-bg) 90%, var(--bn-colour-text));
+    /* NEW: the open animation. --bn-tl-mo scales every duration (demo control only). */
+    --bn-tl-mo: 1;
+    /* NEW: the closed strip's clip opacity. */
+    --bn-tp-preview-opacity: 0.6;
+    --bn-tl-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --bn-tl-settle: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* The strip: a full-width item under the row's cells, so the row's hover wash and the
+   row's click (→ transcript) reach everything except the strip itself. */
+.bn-tl-strip-cell { grid-column: 1 / -1; padding: 0 0 10px; margin-top: -2px; }
+.bn-tl-strip { display: block; cursor: pointer; overflow: visible; }
+.bn-tl-strip .track { fill: var(--bn-colour-badge-bg); transition: fill calc(120ms * var(--bn-tl-mo)) ease; }
+/* NEW: the closed strip's clips at 60%, so a column of strips reads as quiet texture. */
+.bn-tl-strip .clips { opacity: var(--bn-tp-preview-opacity); }
+.bn-tl-strip .clip-edge { fill: none; stroke: rgb(0 0 0 / 0.25); stroke-width: 0.5; vector-effect: non-scaling-stroke; }
+.bn-tl-strip:hover .track { fill: var(--bn-tp-preview-track-hover); }
+.bn-tl-strip-cell { transition: opacity calc(120ms * var(--bn-tl-mo)) ease; }
+.bn-tapestry-open .bn-tl-strip-cell { opacity: 0; pointer-events: none; }
+.bn-tl-strip:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 2px; border-radius: 2px; }
+
+/* The drawer: the shipped .bn-tapestry slice inside a grid-rows fold. */
+.bn-tl-drawer { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows calc(220ms * var(--bn-tl-mo)) var(--bn-tl-settle); }
+.bn-tl-drawer.open { grid-template-rows: 1fr; }
+.bn-tl-drawer > .bn-tl-fold { min-height: 0; overflow: hidden; }
+.bn-tl-drawer:not(.open) .bn-tapestry { visibility: hidden; transition: visibility 0s calc(220ms * var(--bn-tl-mo)); }
+
+/* The domino: each mark lands in order of its x, 60 ms + up to 150 ms across the view.
+   --d is the mark's own delay in ms, set inline. */
+.bn-tl-drawer.landing .dm { animation-duration: calc(260ms * var(--bn-tl-mo)); animation-timing-function: var(--bn-tl-spring);
+    animation-delay: calc(var(--d) * 1ms * var(--bn-tl-mo)); animation-fill-mode: both; transform-box: fill-box; }
+.bn-tl-drawer.landing .dm-fade { animation-name: bn-tl-fade; animation-timing-function: ease-out; }
+.bn-tl-drawer.landing .dm-drop { animation-name: bn-tl-drop; transform-origin: 0 0; }
+.bn-tl-drawer.landing .dm-grow-x { animation-name: bn-tl-grow-x; transform-origin: 0 50%; }
+.bn-tl-drawer.landing .dm-up { animation-name: bn-tl-grow-y; transform-origin: 50% 100%; }
+.bn-tl-drawer.landing .dm-down { animation-name: bn-tl-grow-y; transform-origin: 50% 0; }
+.bn-tl-drawer.landing .dm-pop { animation-name: bn-tl-pop; transform-origin: 50% 50%; }
+.bn-tl-drawer.landing .dm-rise { animation-name: bn-tl-rise; transform-origin: 0 50%; }
+@keyframes bn-tl-fade { from { opacity: 0; } }
+@keyframes bn-tl-drop { from { opacity: 0; transform: translateY(-7px); } }
+@keyframes bn-tl-grow-x { from { opacity: 0; transform: scaleX(0.15); } }
+@keyframes bn-tl-grow-y { from { opacity: 0; transform: scaleY(0); } }
+@keyframes bn-tl-pop { from { opacity: 0; transform: scale(0); } }
+@keyframes bn-tl-rise { from { opacity: 0; transform: translateY(5px); } }
+.bn-tl-drawer.closing .bn-tapestry-svg { opacity: 0; transition: opacity calc(100ms * var(--bn-tl-mo)) ease; }
+/* The participant lane is drawn by the morph while it lands, then handed back. */
+.bn-tl-drawer.landing .ppt-lane rect { visibility: hidden; }
+.bn-tl-morph { position: absolute; pointer-events: none; overflow-x: clip; z-index: 5; }
+.bn-tl-morph svg { display: block; overflow: visible; }
+
+/* The journey's words fly to the flags and back; its arrows fade where they stand.
+   While the timeline is open the chain keeps its place (no reflow under the flight). */
+.bn-session-journey .bn-journey-sep { transition: opacity calc(150ms * var(--bn-tl-mo)) ease; }
+.bn-tl-seps-away .bn-session-journey .bn-journey-sep { opacity: 0; }
+.bn-tl-words-away .bn-session-journey .bn-journey-label { visibility: hidden; }
+.bn-tl-fly { position: absolute; top: 0; pointer-events: none; overflow-x: clip; z-index: 6; }
+.bn-tl-fly-word { position: absolute; white-space: nowrap; transform-origin: 0 50%; line-height: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+    :root { --bn-tl-mo: 0.001; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Mockup chrome — not the product.
+   ════════════════════════════════════════════════════════════════════════ */
+html { color-scheme: light dark; }
+html[data-appearance="light"] { color-scheme: light; }
+html[data-appearance="dark"] { color-scheme: dark; }
+body.mock { margin: 0; padding: 24px 32px 64px; background: light-dark(#ececee, #0b0b0c); }
+.mock-key { display: flex; gap: 18px; align-items: center; font: 12px var(--bn-font-body); color: var(--bn-colour-muted); margin: 0 0 14px; }
+.mock-key i { display: inline-block; width: 14px; height: 10px; vertical-align: -1px; margin-right: 6px; border-radius: 2px; }
+.mock-key .k-art { background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border); }
+.mock-key .k-com { background: repeating-linear-gradient(135deg, light-dark(#f6efd8, #2a2412) 0 4px, light-dark(#fbf6e6, #1f1b0e) 4px 8px); border: 1px solid light-dark(#e2d3a3, #4a3f1c); }
+.mock-title { font: var(--bn-weight-emphasis) 15px var(--bn-font-body); color: var(--bn-colour-text); margin: 0 0 4px; }
+.mock-controls { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; margin: 0 0 10px; font: 12px var(--bn-font-body); color: var(--bn-colour-muted); }
+.mock-controls fieldset { border: 0; margin: 0; padding: 0; display: inline-flex; gap: 2px; align-items: center; }
+.mock-controls legend { float: left; margin-right: 6px; padding: 0; }
+.mock-controls button { font: inherit; border: 1px solid var(--bn-colour-border); background: var(--bn-colour-bg); color: var(--bn-colour-text); border-radius: 5px; padding: 2px 8px; cursor: pointer; }
+.mock-controls button[aria-pressed="true"] { background: var(--bn-colour-accent); border-color: var(--bn-colour-accent); color: #fff; }
+.mock-frame { width: 1180px; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 8px 30px rgb(0 0 0 / 0.08); background: var(--bn-colour-bg); color: var(--bn-colour-text); }
+.mock-chrome { display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; background: light-dark(#f4f4f5, #1d1d1f); border-bottom: 1px solid var(--bn-colour-border); font: 11.5px var(--bn-font-mono); color: var(--bn-colour-muted); }
+.mock-chrome b { width: 11px; height: 11px; border-radius: 50%; background: light-dark(#d4d4d8, #3f3f46); display: inline-block; }
+.mock-chrome span { margin-left: 10px; }
+.mock-chrome .status { margin-left: auto; }
+.mock-body { position: relative; padding: 28px 32px 40px; }
+.mock-body .bn-session-table { padding: 0; }
+.commentary { width: 1180px; box-sizing: border-box; margin-top: 28px; padding: 18px 24px 22px; border-left: 3px solid light-dark(#c9a74a, #8a7130);
+    background: repeating-linear-gradient(135deg, light-dark(#f6efd8, #2a2412) 0 4px, light-dark(#fbf6e6, #1f1b0e) 4px 8px);
+    font: 13.5px/1.55 var(--bn-font-body); color: var(--bn-colour-text); }
+.commentary .lbl { font: 11px var(--bn-font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--bn-colour-muted); margin: 0 0 8px; }
+.commentary h3 { font: var(--bn-weight-emphasis) 14px var(--bn-font-body); margin: 16px 0 4px; }
+.commentary p, .commentary li { margin: 0 0 6px; max-width: 78ch; }
+.commentary ul { padding-left: 18px; margin: 0; }
+.commentary code { font: 12px var(--bn-font-mono); }
+.commentary table { border-collapse: collapse; font-size: 12.5px; margin: 4px 0 8px; }
+.commentary td, .commentary th { text-align: left; padding: 3px 14px 3px 0; vertical-align: top; border-bottom: 1px solid light-dark(#e6dcbc, #3a3218); }
+.merge-demo { display: grid; grid-template-columns: 110px 520px; gap: 4px 10px; align-items: center; font: 11.5px var(--bn-font-mono); color: var(--bn-colour-muted); margin: 6px 0 10px; }
+</style>
+</head>
+<body class="mock">
+
+<div class="mock-key"><span><i class="k-art"></i>Artefact: real pixels, nothing that would not ship</span><span><i class="k-com"></i>Commentary: not the product</span></div>
+<p class="mock-title">Sessions grid, option C: a timeline strip under every row</p>
+
+<div class="mock-controls" id="controls">
+  <fieldset data-ctl="palette"><legend>Palette</legend><button data-v="default" aria-pressed="true">Default</button><button data-v="edo">Edo</button></fieldset>
+  <fieldset data-ctl="appearance"><legend>Appearance</legend><button data-v="auto" aria-pressed="true">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></fieldset>
+  <fieldset data-ctl="scale"><legend>Strip scale</legend><button data-v="fit" aria-pressed="true">Each row fills</button><button data-v="shared">One scale</button></fieldset>
+  <fieldset data-ctl="motion"><legend>Motion</legend><button data-v="1" aria-pressed="true">Normal</button><button data-v="5">Slow ×5</button><button data-v="0.001">Off</button></fieldset>
+</div>
+
+<div class="mock-frame" id="frame">
+  <div class="mock-chrome"><b></b><b></b><b></b><span>Sessions</span><span class="status" id="status">hover a strip · click it to open · click the row to go to the transcript</span></div>
+  <div class="mock-body" id="body">
+    <section class="bn-session-table">
+      <div class="section-heading">
+        <h1>Sessions</h1>
+        <div class="section-heading-action">
+          <div class="bn-tp-zoom">
+            <button type="button" class="bn-tp-zoom-btn" aria-label="Zoom out" disabled><svg class="bn-icon bn-icon-zoomOut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+            <input type="range" class="bn-tp-zoom-slider" min="0" max="100" value="0" aria-label="Zoom">
+            <button type="button" class="bn-tp-zoom-btn" aria-label="Zoom in"><svg class="bn-icon bn-icon-zoomIn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <p class="bn-session-moderators">Moderated by Martin Storey</p>
+      <div class="bn-sessions-grid" role="table" id="grid">
+        <div class="bn-sessions-row bn-sessions-head" role="row">
+          <div class="bn-sessions-cell bn-cell-id" role="columnheader">ID</div>
+          <div class="bn-sessions-cell bn-cell-thumb" role="columnheader"></div>
+          <div class="bn-sessions-cell bn-cell-speakers" role="columnheader">Speakers</div>
+          <div class="bn-sessions-cell bn-cell-start" role="columnheader"><span class="bn-sessions-h1">Start</span><span class="bn-sessions-h2">User journey</span></div>
+          <div class="bn-sessions-cell bn-cell-sentiment" role="columnheader">Sentiment</div>
+          <div class="bn-sessions-cell bn-cell-duration" role="columnheader">Duration</div>
+          <div class="bn-sessions-cell bn-cell-file" role="columnheader"><a class="bn-interviews-link" role="button" tabindex="0"><svg class="bn-icon bn-icon-folder bn-folder-icon bn-icon--px" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>Interviews</a></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="commentary">
+  <p class="lbl">Commentary</p>
+
+  <h3>What the strip is</h3>
+  <ul>
+    <li>The whole interview, participants only: every participant turn, in its scene colour, on the timeline's own track colour. The gaps are where the moderator spoke.</li>
+    <li><b>4.5 px tall</b>, a quarter of the open timeline's participant clips (18 px). Track corner 1.5 px, clip corner min(1 px, half the clip), clips inset 0.5 px each side, as the open timeline insets them. On a 2× screen that is 9 device pixels and crisp; on a 1× screen the half pixel blurs the bottom edge slightly, so the product may want 4 or 5 px there.</li>
+    <li><b>Clips at 60%</b> (NEW <code>--bn-tp-preview-opacity</code>) over the full-strength track, so a column of strips reads as quiet texture rather than a second chart. The morph lifts them to full strength in its first 200 ms.</li>
+    <li><b>Keyline 0.5 px</b> at the shipped ink (<code>rgb(0 0 0 / 0.25)</code>), down from the open timeline's 0.75 px. On a 2× screen it is one device pixel, the thinnest line the display can draw. On a 1× screen nothing thinner than a pixel exists, so the browser draws it as a faint full pixel.</li>
+    <li>No text and no tooltip. The strip starts where the open timeline's tracks start, 82 px from the grid's edge (the lane-label gutter), and ends 14 px from the right edge, so on open it lines up with the participant lane it becomes.</li>
+    <li>It sits inside the row, so the row's hover wash covers it. A click on the strip opens the timeline; a click anywhere else on the row still goes to the transcript (commit <code>729033bb</code>). In the product the strip carries <code>data-own-click</code>.</li>
+  </ul>
+
+  <h3>Scale, closed and open</h3>
+  <p>Closed, each row's strip spans the full width (your spec), so an 18-minute session and a 37-minute one are the same length. Open, the timeline uses the shipped shared scale (<code>fitScale</code>: the shortest session fills the width, 1.0 s/px at this width), so on open #1 keeps its length and #2 and #3 <b>stretch to about twice the width</b> and scroll. A session shorter than the one that sets the scale would shrink on open; Talismanic has none. <b>One scale</b> above shows the alternative: every strip at the longest session's scale, so the strips also show relative length. That costs width on short sessions, and it is a cheap switch to flip later.</p>
+
+  <h3>Several participants: merged</h3>
+  <p>When a session has more than one participant, the strip draws the union of their turns as one lane, each turn in its own scene colour. Overlaps draw the later turn on top. The open timeline keeps its shipped lanes. Illustration only, made from #1's turns split between two invented participants:</p>
+  <div class="merge-demo" id="mergeDemo"></div>
+
+  <h3>Hover: a tint, nothing else</h3>
+  <p>The track takes 10% of the text ink (NEW <code>--bn-tp-preview-track-hover</code>, the same move as the timeline popover's 4% hover), and the pointer becomes a hand. Decided 17 Oct 2026: a playhead on a strip too small to read is too much, and a strip that grows under the pointer is web-page manners, not Mac ones.</p>
+
+  <h3>The open animation</h3>
+  <ul>
+    <li><b>The strip becomes the participant lane.</b> The participant clips spring from the strip's position and size (4.5 px, closed scale, 60%) to the lane's (18 px, open scale, full strength) in 320 ms on a spring curve (<code>cubic-bezier(0.34, 1.56, 0.64, 1)</code>, about 8% overshoot). The strip itself fades as the clips leave it.</li>
+    <li>The drawer opens in 220 ms (the shipped grid-rows fold, ease-out).</li>
+    <li><b>Everything else lands in a left-to-right domino:</b> each mark's delay is 60 ms plus its x across the visible width × 150 ms, so the whole wave crosses in about 0.15 s and every mark lands within about 0.45 s of the click. The participant names are not carried by the morph (they would squash with it); they fade in along the lane once it has landed, the last by 0.75 s. Section flags drop 7 px, moderator clips grow out from their left edge, sentiment bars grow from the axis (up for positive, down for negative), surprise dots pop, theme chips rise 5 px, and lane labels and ticks fade.</li>
+    <li><b>The journey's words become the flags' labels.</b> The grid chain is each user's <b>first arrivals</b>, in the report's section order (as it ships, <code>server/journey.py</code>): the simple version, for comparing across the grid, each word a jump to that first moment. The open timeline flags <b>every visit</b>, the messy real path, as the transcript does. So each word flies to its first-visit flag, matched by name (taking the flag's size and ink, 380 ms, on that flag's domino beat), and a return visit's flag, which has no word to catch, fades in 120 ms after its neighbours. The chain and the flags are ordered differently by design, so <b>words cross where a user's path left the report's order</b>. In #2, Ravi goes Shopping Bag → Cross-sell Modal → back to Shopping Bag, while the chain reads Cross-sell Modal → Shopping Bag: the two words cross, Shopping Bag lands on the first Shopping Bag flag, and the second fades in. The arrows fade where they stand; the chain keeps its place (empty) while the timeline is open, so nothing reflows under the flight. Closing flies the words home. A flag past the visible width takes its word off the right edge (#2's sections start 18 minutes in, so at this zoom its whole flight leaves to the right; #1 shows it best).</li>
+    <li><b>Built 17 Oct 2026</b> (<code>80d5c745</code>, <code>0645c6f4</code>): the strip, the motion, and a timeline flag per visit (<code>section_visits</code> in <code>routes/tapestry.py</code>). The chain stays as it is. The live record is <code>experiments/session-tapestry/README.md</code> § The strip and the open motion.</li>
+    <li>Closing is quiet: the words fly home, the content fades in 100 ms, the drawer folds and the strip comes back. Reduced motion makes all of it instant. <b>Slow ×5</b> above is for inspecting it.</li>
+    <li>Marks past the visible width carry the last delay; they are off-screen until the reader scrolls.</li>
+  </ul>
+
+  <h3>What is new, and what is reused</h3>
+  <table>
+    <tr><th>Reused</th><td>Every grid and timeline style (inlined above), the timeline's track colour, scene colours, clip insets and corners, the accent playhead, the grid-rows fold, the shared scale.</td></tr>
+    <tr><th>New</th><td>The strip (4.5 px, clips at 60%, 0.5 px keyline), <code>--bn-tp-preview-track-hover</code>, the morph, the domino keyframes and the spring curve. No new strings: the strip has no text. As built, the strip is hidden from assistive technology and out of the tab order: the existing disclosure ("Timeline for session N") is the keyboard and assistive route to the same timeline.</td></tr>
+  </table>
+
+  <h3>Open questions</h3>
+  <ul>
+    <li>Should a click on the strip also aim the open timeline at the moment clicked (scrolled into view, playhead there)? It would make the strip a seek control as well as a disclosure. The mockup does not do it.</li>
+    <li>Keep the chevron? It stays here as the keyboard route and the shipped disclosure. With the strip as well, two controls open the same thing.</li>
+  </ul>
+</div>
+
+<script>
+const SESS = [{"id": "s1", "n": 1, "dur": 1092.0, "name": "Ana", "pcode": "p1", "date": "9 May 2026, 14:46", "durLabel": "18m", "file": "p1 ana-session-recording.mp4", "turns": [[0.0, 55.0, 1, "#bfab84"], [55.0, 73.0, 0, "#c1a882"], [73.0, 77.0, 1, "#bfae79"], [77.0, 82.0, 0, "#beaa77"], [82.0, 92.0, 1, "#c0a890"], [92.0, 101.0, 0, "#c1a78f"], [101.0, 102.0, 1, "#bfab79"], [102.0, 116.0, 0, "#c3a790"], [116.0, 119.0, 1, "#c1a78f"], [119.0, 173.0, 0, "#c1a791"], [173.0, 183.0, 1, "#bea693"], [183.0, 223.0, 0, "#c2a992"], [223.0, 248.0, 1, "#bea792"], [248.0, 264.0, 0, "#bfa793"], [264.0, 275.0, 1, "#bbaa9c"], [275.0, 324.0, 0, "#b9a89b"], [324.0, 336.0, 1, "#baa99d"], [336.0, 400.0, 0, "#bca99b"], [400.0, 451.0, 1, "#d4cda7"], [451.0, 485.0, 0, "#d7d0a1"], [485.0, 506.0, 1, "#c0a58e"], [506.0, 555.0, 0, "#a39385"], [555.0, 566.0, 1, "#a79583"], [566.0, 568.0, 0, "#b8a897"], [568.0, 577.0, 1, "#a59584"], [577.0, 589.0, 0, "#bfb6ac"], [589.0, 594.0, 1, "#92a8c9"], [594.0, 606.0, 0, "#b8b1a5"], [606.0, 607.0, 1, "#b8b1a5"], [607.0, 611.0, 0, "#b5ac9e"], [611.0, 613.0, 1, "#c5c4bf"], [613.0, 678.0, 0, "#c5c3bd"], [678.0, 691.0, 1, "#807f7f"], [691.0, 728.0, 0, "#807f80"], [728.0, 736.0, 1, "#cac9c8"], [736.0, 737.0, 0, "#cac9c8"], [737.0, 742.0, 1, "#c9c9c9"], [742.0, 767.0, 0, "#d3d4d3"], [767.0, 770.0, 1, "#cfd0d1"], [770.0, 795.0, 0, "#7d7d80"], [795.0, 801.0, 1, "#7e7d7d"], [801.0, 876.0, 0, "#7c7b7c"], [876.0, 881.0, 1, "#d4d4d4"], [881.0, 928.0, 0, "#d1d2d2"], [928.0, 932.0, 1, "#c1c2c2"], [932.0, 938.0, 0, "#778190"], [938.0, 941.0, 1, "#778190"], [941.0, 1022.0, 0, "#a6aaaf"], [1022.0, 1044.0, 1, "#d3d3d3"], [1044.0, 1082.0, 0, "#d4d3d3"], [1082.0, 1082.0, 1, "#d4d3d3"], [1082.0, 1083.0, 0, "#cfcfcf"], [1083.0, 1083.0, 1, "#cfcfcf"], [1083.0, 1085.0, 0, "#d4d4d4"], [1085.0, 1091.0, 1, "#d4d4d4"], [1091.0, 1092.0, 0, "#d4d4d4"]], "sections": [[451.0, "IKEA Homepage"], [577.0, "Category Browsing"], [637.0, "Product Listing"], [742.0, "Product Detail & Stock"], [770.0, "Cross-sell Modal"], [801.0, "Shopping Bag"], [932.0, "Checkout & Login"]], "journey": ["IKEA Homepage", "Category Browsing", "Product Listing", "Product Detail & Stock", "Cross-sell Modal", "Shopping Bag", "Checkout & Login"], "visits": [[451.0, "IKEA Homepage", true], [577.0, "Category Browsing", true], [637.0, "Product Listing", true], [742.0, "Product Detail & Stock", true], [770.0, "Cross-sell Modal", true], [801.0, "Shopping Bag", true], [932.0, "Checkout & Login", true]], "quotes": [[55.0, null, 1, "Trust in the delivery estimate at checkout"], [92.0, null, 1, "Trust in the delivery estimate at checkout"], [119.0, null, 1, "Price shown late versus price shown early"], [183.0, null, 1, "Comparing variants across several open tabs"], [248.0, null, 1, "Planning a purchase together with a partner online"], [336.0, "satisfaction", 2, "Planning a purchase together with a partner online"], [360.0, "frustration", 2, "Planning a purchase together with a partner online"], [378.0, "doubt", 1, "Planning a purchase together with a partner online"], [451.0, "confusion", 2, null], [506.0, "confusion", 2, null], [577.0, "confidence", 1, null], [594.0, "confidence", 1, null], [613.0, "confusion", 1, null], [637.0, "satisfaction", 2, null], [691.0, null, 1, null], [742.0, "confusion", 2, null], [770.0, null, 1, null], [801.0, "satisfaction", 1, null], [820.0, null, 1, null], [854.0, "surprise", 2, null], [881.0, "confusion", 3, null], [932.0, "confusion", 3, null], [1000.0, "satisfaction", 1, null], [1050.0, "frustration", 2, "Stock messages read as promises, not estimates"]], "counts": {"satisfaction": 4, "frustration": 2, "doubt": 1, "confusion": 6, "confidence": 2, "surprise": 1}}, {"id": "s2", "n": 2, "dur": 2135.0, "name": "Ravi", "pcode": "p2", "date": "17 Aug 2026, 19:59", "durLabel": "35m", "file": "p2 ravi 2026-08-17.mp4", "turns": [[0.0, 39.0, 1, "#ab8777"], [39.0, 117.0, 0, "#b6a694"], [117.0, 149.0, 1, "#ae8471"], [149.0, 241.0, 0, "#b7b4a2"], [241.0, 321.0, 1, "#af8571"], [321.0, 377.0, 0, "#c19b7e"], [377.0, 394.0, 1, "#b3816a"], [394.0, 467.0, 0, "#c8a07d"], [467.0, 478.0, 1, "#a57c68"], [478.0, 500.0, 0, "#c69d7f"], [500.0, 518.0, 1, "#c19982"], [518.0, 525.0, 0, "#c09a85"], [525.0, 536.0, 1, "#a67966"], [536.0, 573.0, 0, "#c7a17e"], [573.0, 585.0, 1, "#b28672"], [585.0, 588.0, 0, "#b1836e"], [588.0, 597.0, 1, "#b28570"], [597.0, 599.0, 0, "#caa37b"], [599.0, 602.0, 1, "#caa37b"], [602.0, 635.0, 0, "#c29f81"], [635.0, 645.0, 1, "#b28670"], [645.0, 720.0, 0, "#b38975"], [720.0, 723.0, 1, "#a9806d"], [723.0, 726.0, 0, "#a9806d"], [726.0, 729.0, 1, "#b08777"], [729.0, 731.0, 0, "#b08777"], [731.0, 735.0, 1, "#b08777"], [735.0, 809.0, 0, "#b08777"], [809.0, 814.0, 1, "#b08777"], [814.0, 897.0, 0, "#b08777"], [897.0, 902.0, 1, "#aa7f69"], [902.0, 911.0, 0, "#a97f6a"], [911.0, 914.0, 1, "#a67d68"], [914.0, 929.0, 0, "#a67e69"], [929.0, 933.0, 1, "#a67d68"], [933.0, 935.0, 0, "#a67c67"], [935.0, 944.0, 1, "#ac7f68"], [944.0, 948.0, 0, "#ac7f68"], [948.0, 950.0, 1, "#b38670"], [950.0, 952.0, 0, "#b38670"], [952.0, 961.0, 1, "#9e806d"], [961.0, 964.0, 0, "#a38a77"], [964.0, 1004.0, 1, "#aa836e"], [1004.0, 1017.0, 0, "#a98975"], [1017.0, 1045.0, 1, "#ab8372"], [1045.0, 1113.0, 0, "#b18e79"], [1113.0, 1157.0, 1, "#c3ae99"], [1157.0, 1183.0, 0, "#bda791"], [1183.0, 1188.0, 1, "#cbaa8f"], [1188.0, 1190.0, 0, "#a68a83"], [1190.0, 1205.0, 1, "#baaa97"], [1205.0, 1212.0, 0, "#c0a88e"], [1212.0, 1221.0, 1, "#c0a88e"], [1221.0, 1272.0, 0, "#9d9585"], [1272.0, 1274.0, 1, "#b8a28b"], [1274.0, 1280.0, 0, "#ceb39a"], [1280.0, 1280.0, 1, "#ceb39a"], [1280.0, 1331.0, 0, "#9c8f84"], [1331.0, 1353.0, 1, "#b7a89e"], [1353.0, 1364.0, 0, "#94887d"], [1364.0, 1371.0, 1, "#938680"], [1371.0, 1374.0, 0, "#9b8d86"], [1374.0, 1375.0, 1, "#9b8d86"], [1375.0, 1421.0, 0, "#9c8e89"], [1421.0, 1432.0, 1, "#8d847b"], [1432.0, 1441.0, 0, "#988a82"], [1441.0, 1447.0, 1, "#8f867e"], [1447.0, 1492.0, 0, "#9d9089"], [1492.0, 1520.0, 1, "#988c86"], [1520.0, 1536.0, 0, "#8e8580"], [1536.0, 1540.0, 1, "#857b76"], [1540.0, 1562.0, 0, "#978b87"], [1562.0, 1570.0, 1, "#888580"], [1570.0, 1598.0, 0, "#8c8682"], [1598.0, 1605.0, 1, "#989088"], [1605.0, 1640.0, 0, "#8a8883"], [1640.0, 1648.0, 1, "#8e8d91"], [1648.0, 1731.0, 0, "#908c8e"], [1731.0, 1738.0, 1, "#878992"], [1738.0, 1757.0, 0, "#928b8a"], [1757.0, 1767.0, 1, "#9b8d87"], [1767.0, 1771.0, 0, "#978b85"], [1771.0, 1773.0, 1, "#9c8e87"], [1773.0, 1887.0, 0, "#8d8884"], [1887.0, 1891.0, 1, "#87898e"], [1891.0, 1916.0, 0, "#908e92"], [1916.0, 1925.0, 1, "#988e8a"], [1925.0, 1938.0, 0, "#aca9a7"], [1938.0, 1950.0, 1, "#abaaa9"], [1950.0, 1955.0, 0, "#8e847f"], [1955.0, 1958.0, 1, "#abaaa9"], [1958.0, 1963.0, 0, "#aba9a9"], [1963.0, 1977.0, 1, "#abaaa9"], [1977.0, 1983.0, 0, "#aaaaa9"], [1983.0, 1994.0, 1, "#968b86"], [1994.0, 2030.0, 0, "#9a8d87"], [2030.0, 2044.0, 1, "#958a85"], [2044.0, 2050.0, 0, "#978c86"], [2050.0, 2051.0, 1, "#978c87"], [2051.0, 2054.0, 0, "#978c87"], [2054.0, 2057.0, 1, "#88898e"], [2057.0, 2069.0, 0, "#938c8c"], [2069.0, 2069.0, 1, "#938c8c"], [2069.0, 2072.0, 0, "#8e8786"], [2072.0, 2072.0, 1, "#8e8786"], [2072.0, 2077.0, 0, "#908580"], [2077.0, 2086.0, 1, "#8d8580"], [2086.0, 2092.0, 0, "#938d8e"], [2092.0, 2096.0, 1, "#abaea1"], [2096.0, 2099.0, 0, "#8d8f82"], [2099.0, 2105.0, 1, "#a4a597"], [2105.0, 2130.0, 0, "#878b7f"], [2130.0, 2134.0, 1, "#918984"], [2134.0, 2135.0, 0, "#918984"]], "sections": [[1157.0, "IKEA Homepage"], [1221.0, "Category Browsing"], [1375.0, "Search & Filtering"], [1520.0, "Shopping Bag"], [1527.0, "Cross-sell Modal"], [1860.0, "Delivery & Collection Selection"]], "journey": ["IKEA Homepage", "Category Browsing", "Search & Filtering", "Cross-sell Modal", "Shopping Bag", "Delivery & Collection Selection"], "visits": [[1157.0, "IKEA Homepage", true], [1221.0, "Category Browsing", true], [1375.0, "Search & Filtering", true], [1520.0, "Shopping Bag", true], [1527.0, "Cross-sell Modal", true], [1570.0, "Shopping Bag", false], [1860.0, "Delivery & Collection Selection", true]], "quotes": [[39.0, null, 1, "Trust in the delivery estimate at checkout"], [69.0, "satisfaction", 2, "Trust in the delivery estimate at checkout"], [149.0, "frustration", 2, "Price shown late versus price shown early"], [204.0, "frustration", 2, "Price shown late versus price shown early"], [235.0, null, 1, "Price shown late versus price shown early"], [321.0, null, 1, "Measuring the room before trusting the dimensions"], [394.0, null, 1, "Filters reset when going back a page"], [447.0, "frustration", 1, "Filters reset when going back a page"], [478.0, "satisfaction", 1, "Planning a purchase together with a partner online"], [518.0, "delight", 1, "Planning a purchase together with a partner online"], [536.0, "frustration", 3, "Planning a purchase together with a partner online"], [1157.0, null, 1, null], [1205.0, "confidence", 1, "Stock messages read as promises, not estimates"], [1221.0, "surprise", 2, null], [1258.0, "confusion", 2, null], [1280.0, null, 1, null], [1304.0, null, 1, null], [1353.0, "confidence", 1, null], [1371.0, "frustration", 1, null], [1375.0, "frustration", 2, null], [1453.0, "doubt", 2, null], [1520.0, "frustration", 1, null], [1527.0, "frustration", 2, null], [1540.0, "surprise", 1, null], [1570.0, null, 1, null], [1605.0, null, 1, null], [1627.0, null, 1, null], [1648.0, "frustration", 2, null], [1677.0, "frustration", 2, null], [1738.0, null, 1, null], [1813.0, null, 1, null], [1860.0, "confusion", 3, null], [1891.0, null, 1, null], [1931.0, "confusion", 2, null], [1950.0, "confusion", 2, null], [1994.0, "confusion", 3, null], [2019.0, "frustration", 2, null], [2044.0, "confusion", 3, null], [2086.0, "delight", 2, null], [2105.0, "frustration", 2, null]], "counts": {"satisfaction": 2, "frustration": 12, "delight": 2, "confidence": 2, "surprise": 2, "confusion": 6, "doubt": 1}}, {"id": "s3", "n": 3, "dur": 2273.0, "name": "Jo", "pcode": "p3", "date": "27 Sep 2026, 10:35", "durLabel": "37m", "file": "2026-09-27 10.35 session.mp4", "turns": [[3.0, 48.0, 1, "#8cc6f6"], [48.0, 52.0, 0, "#9cccf1"], [52.0, 55.0, 1, "#9bccf1"], [55.0, 57.0, 0, "#9bccf1"], [57.0, 113.0, 1, "#a1ccee"], [113.0, 117.0, 0, "#7d97bd"], [117.0, 119.0, 1, "#7d94c0"], [119.0, 127.0, 0, "#8199c2"], [127.0, 298.0, 1, "#c4b1a1"], [298.0, 340.0, 0, "#bbb1a6"], [340.0, 393.0, 1, "#7c847e"], [393.0, 396.0, 0, "#a7a69f"], [396.0, 397.0, 1, "#a7a69f"], [397.0, 455.0, 0, "#c0bcb1"], [455.0, 476.0, 1, "#beb8ac"], [476.0, 581.0, 0, "#bdb7ab"], [581.0, 624.0, 1, "#b9afa2"], [624.0, 637.0, 0, "#baab9e"], [637.0, 666.0, 1, "#baaa9c"], [666.0, 669.0, 0, "#baa99c"], [669.0, 680.0, 1, "#b8aa9b"], [680.0, 786.0, 0, "#bbab9e"], [786.0, 789.0, 1, "#bba89c"], [789.0, 834.0, 0, "#b9aba0"], [834.0, 860.0, 1, "#b8ac9e"], [860.0, 912.0, 0, "#b9aca0"], [912.0, 913.0, 1, "#b4aba2"], [913.0, 921.0, 0, "#bab4ae"], [921.0, 931.0, 1, "#b8b0a9"], [931.0, 934.0, 0, "#b2aba4"], [934.0, 935.0, 1, "#b2aba4"], [935.0, 948.0, 0, "#b6ada2"], [948.0, 950.0, 1, "#b7aea0"], [950.0, 992.0, 0, "#d3d3d4"], [992.0, 1028.0, 1, "#c87272"], [1028.0, 1037.0, 0, "#c77272"], [1037.0, 1038.0, 1, "#c77272"], [1038.0, 1039.0, 0, "#7e8289"], [1039.0, 1042.0, 1, "#7e8289"], [1042.0, 1044.0, 0, "#c4c7ca"], [1044.0, 1048.0, 1, "#c4c7ca"], [1048.0, 1078.0, 0, "#c8776d"], [1078.0, 1084.0, 1, "#bfbcbc"], [1084.0, 1146.0, 0, "#8b8c88"], [1146.0, 1152.0, 1, "#c9c9cb"], [1152.0, 1152.0, 0, "#c9c8ca"], [1152.0, 1153.0, 1, "#c9c8ca"], [1153.0, 1157.0, 0, "#c9c8ca"], [1157.0, 1159.0, 1, "#ff0a22"], [1159.0, 1188.0, 0, "#b2807f"], [1188.0, 1213.0, 1, "#c1c0bd"], [1213.0, 1348.0, 0, "#b5ae9f"], [1348.0, 1368.0, 1, "#bab5a7"], [1368.0, 1431.0, 0, "#b7af9e"], [1431.0, 1433.0, 1, "#bab5a7"], [1433.0, 1434.0, 0, "#bab5a7"], [1434.0, 1437.0, 1, "#bab5a7"], [1437.0, 1437.0, 0, "#bab5a7"], [1437.0, 1454.0, 1, "#b7af9e"], [1454.0, 1549.0, 0, "#868b94"], [1549.0, 1552.0, 1, "#8f9296"], [1552.0, 1562.0, 0, "#d1d2d3"], [1562.0, 1563.0, 1, "#d1d2d3"], [1563.0, 1567.0, 0, "#d2d3d4"], [1567.0, 1571.0, 1, "#d2d3d4"], [1571.0, 1572.0, 0, "#d2d3d4"], [1572.0, 1579.0, 1, "#c6c9cf"], [1579.0, 1588.0, 0, "#d1d2d4"], [1588.0, 1589.0, 1, "#919396"], [1589.0, 1615.0, 0, "#b2b0ae"], [1615.0, 1627.0, 1, "#878e97"], [1627.0, 1705.0, 0, "#c4c7cb"], [1705.0, 1706.0, 1, "#c4c7cb"], [1706.0, 1715.0, 0, "#d2d2d3"], [1715.0, 1736.0, 1, "#c5c7c8"], [1736.0, 1782.0, 0, "#d2d3d4"], [1782.0, 1784.0, 1, "#d2d3d3"], [1784.0, 1800.0, 0, "#c5c7c7"], [1800.0, 1800.0, 1, "#c5c7c7"], [1800.0, 1811.0, 0, "#d2d2d3"], [1811.0, 1811.0, 1, "#d2d2d3"], [1811.0, 1813.0, 0, "#d2d3d4"], [1813.0, 1814.0, 1, "#d2d3d4"], [1814.0, 1881.0, 0, "#c6c8cd"], [1881.0, 1882.0, 1, "#cdced1"], [1882.0, 1883.0, 0, "#cdced1"], [1883.0, 1903.0, 1, "#7c8aa2"], [1903.0, 1996.0, 0, "#838c9d"], [1996.0, 1999.0, 1, "#c7c9cb"], [1999.0, 2000.0, 0, "#c7c9cb"], [2000.0, 2001.0, 1, "#c7c9cb"], [2001.0, 2006.0, 0, "#c7c9cb"], [2006.0, 2006.0, 1, "#c7c9cb"], [2006.0, 2031.0, 0, "#cccdd0"], [2031.0, 2031.0, 1, "#cccdd0"], [2031.0, 2076.0, 0, "#d0d1d2"], [2076.0, 2080.0, 1, "#ccced2"], [2080.0, 2087.0, 0, "#ccced1"], [2087.0, 2099.0, 1, "#d0d1d2"], [2099.0, 2115.0, 0, "#c8cbcd"], [2115.0, 2116.0, 1, "#c8cbcd"], [2116.0, 2133.0, 0, "#cfd0d2"], [2133.0, 2134.0, 1, "#cecfd2"], [2134.0, 2135.0, 0, "#cecfd2"], [2135.0, 2139.0, 1, "#cecfd2"], [2139.0, 2159.0, 0, "#d2d3d4"], [2159.0, 2180.0, 1, "#c6c9cb"], [2180.0, 2249.0, 0, "#c8cbcd"], [2249.0, 2255.0, 1, "#c7cacd"], [2255.0, 2256.0, 0, "#c7cacd"], [2256.0, 2258.0, 1, "#c7cacd"], [2258.0, 2273.0, 0, "#a6a79c"]], "sections": [[950.0, "IKEA Homepage"], [1028.0, "Category Browsing"], [1213.0, "BESTÅ Configurator"], [1454.0, "Product Detail & Stock"], [1627.0, "Shopping Bag"], [1903.0, "Checkout & Login"]], "journey": ["IKEA Homepage", "Category Browsing", "BESTÅ Configurator", "Product Detail & Stock", "Shopping Bag", "Checkout & Login"], "visits": [[950.0, "IKEA Homepage", true], [1028.0, "Category Browsing", true], [1213.0, "BESTÅ Configurator", true], [1454.0, "Product Detail & Stock", true], [1627.0, "Shopping Bag", true], [1903.0, "Checkout & Login", true]], "quotes": [[393.0, null, 1, "Measuring the room before trusting the dimensions"], [397.0, "delight", 3, "Trust in the delivery estimate at checkout"], [436.0, "delight", 3, "Trust in the delivery estimate at checkout"], [476.0, "frustration", 2, "Trust in the delivery estimate at checkout"], [516.0, "frustration", 2, "Price shown late versus price shown early"], [559.0, "doubt", 1, "Comparing variants across several open tabs"], [624.0, null, 1, "Price shown late versus price shown early"], [680.0, null, 1, "Filters reset when going back a page"], [712.0, "satisfaction", 1, "Comparing variants across several open tabs"], [751.0, null, 1, "Comparing variants across several open tabs"], [789.0, "frustration", 1, "Filters reset when going back a page"], [860.0, "frustration", 1, "Planning a purchase together with a partner online"], [894.0, "confidence", 1, "Planning a purchase together with a partner online"], [950.0, null, 1, null], [1028.0, null, 1, null], [1048.0, null, 1, null], [1084.0, null, 1, null], [1136.0, "frustration", 1, null], [1213.0, null, 1, null], [1242.0, "frustration", 2, null], [1262.0, "confusion", 2, null], [1309.0, null, 1, null], [1368.0, null, 1, null], [1454.0, null, 1, null], [1513.0, "frustration", 3, null], [1549.0, "frustration", 2, null], [1579.0, "satisfaction", 2, null], [1627.0, "satisfaction", 1, null], [1668.0, "frustration", 2, null], [1736.0, "frustration", 1, null], [1784.0, "frustration", 2, null], [1814.0, "frustration", 2, null], [1856.0, "frustration", 2, null], [1903.0, "frustration", 2, null], [1926.0, "frustration", 2, null], [1956.0, "surprise", 1, null], [2001.0, "frustration", 2, null], [2031.0, "frustration", 1, null], [2080.0, "frustration", 1, null], [2099.0, "frustration", 1, null], [2139.0, "confidence", 1, null], [2180.0, "frustration", 3, "Stock messages read as promises, not estimates"], [2205.0, "frustration", 2, "Stock messages read as promises, not estimates"], [2228.0, "frustration", 1, "Stock messages read as promises, not estimates"]], "counts": {"delight": 2, "frustration": 22, "doubt": 1, "satisfaction": 3, "confidence": 2, "confusion": 1, "surprise": 1}}];
+const GUTTER = 82, RIGHT = 14;
+const P = { flagX: 3, flagH: 18, clipX: 4, clipH: 16, themeX: 4, themeH: 18, themeGap: 4, barW: 6 };
+const MT = { y: P.flagH + 12, h: P.clipH };
+const PT = { y: P.flagH + 12 + P.clipH + 3, h: P.clipH + 2 };
+const SE = { mid: PT.y + PT.h + 41, amp: 30 };
+const TG = { y: SE.mid + 40, row: P.themeH + P.themeGap, rows: 3 };
+const H = TG.y + TG.row * TG.rows + 14;
+const CLIP_THRESHOLD = 2.5;
+const POSITIVE = new Set(["satisfaction", "delight", "confidence"]);
+const ORDER = ["frustration", "confusion", "doubt", "surprise", "satisfaction", "delight", "confidence"];
+const STRIP_H = PT.h / 4;  // 4.5 px: a quarter of the open participant clips
+const NS = "http://www.w3.org/2000/svg";
+const MODERATOR = "Martin Storey";
+const state = { scale: "fit", mo: 1, open: new Set() };
+
+// ── shared helpers (copies of SessionTapestry.tsx's) ─────────────────────
+const cs = () => getComputedStyle(document.documentElement);
+const pxOf = (tok, fb) => { const v = cs().getPropertyValue(tok).trim(); const n = v.endsWith("rem") ? parseFloat(v) * 16 : parseFloat(v); return Number.isFinite(n) ? n : fb; };
+let ctx;
+function measure(text, font) { ctx ||= document.createElement("canvas").getContext("2d"); ctx.font = font; return ctx.measureText(text).width; }
+function fit(text, avail, font) {
+  if (avail < 10) return "";
+  if (measure(text, font) <= avail) return text;
+  let t = text;
+  while (t.length > 1 && measure(t + "…", font) > avail) t = t.slice(0, -1);
+  return t.length > 1 ? t + "…" : "";
+}
+function fonts() {
+  const body = cs().getPropertyValue("--bn-font-body").trim() || "system-ui";
+  const em = cs().getPropertyValue("--bn-weight-emphasis").trim() || "490";
+  const nm = cs().getPropertyValue("--bn-weight-normal").trim() || "420";
+  const px = { flag: pxOf("--bn-text-label", 13), tag: pxOf("--bn-text-label", 13), clip: pxOf("--bn-text-badge", 11.5), lane: pxOf("--bn-text-caption", 12) };
+  return { px, flag: `${em} ${px.flag}px ${body}`, tag: `${nm} ${px.tag}px ${body}`, clip: `${em} ${px.clip}px ${body}`, lane: `${em} ${px.lane}px ${body}` };
+}
+const centre = (fontPx) => fontPx * 0.35;
+function relLum(hex) { const n = parseInt(hex.slice(1), 16); const lin = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255); }
+// utils/sceneInk.ts screenInk: one ink for every label on the screen, the one most clips prefer.
+function screenInk(colours) { let w = 0, k = 0; for (const c of colours) { const l = relLum(c); (1.05 / (l + 0.05) > (l + 0.05) / (relLum("#1a1a1a") + 0.05)) ? w++ : k++; } return w > k ? "#fff" : "#1a1a1a"; }
+const INK = screenInk(SESS.flatMap((s) => s.turns.filter((t) => t[3]).map((t) => t[3])));
+const tc = (s) => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60; const p = (n) => String(n).padStart(2, "0"); return h ? `${h}:${p(m)}:${p(sec)}` : `${p(m)}:${p(sec)}`; };
+function el(tag, attrs = {}, parent) { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) if (v !== undefined && v !== null) e.setAttribute(k, v); parent && parent.appendChild(e); return e; }
+function h(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
+
+// fitScale from utils/tapestryScale.ts
+function fitScale(durs, width) {
+  const usable = Math.max(1, width - GUTTER - RIGHT);
+  const s = durs.filter((d) => d > 0).sort((a, b) => a - b);
+  const mid = s.length / 2;
+  const median = s.length % 2 ? s[Math.floor(mid)] : (s[mid - 1] + s[mid]) / 2;
+  const kept = s.filter((d) => d >= median / 4 && d <= median * 4);
+  return Math.min(4, Math.max(kept[0] / usable, kept[kept.length - 1] / (4 * usable)));
+}
+
+// ── the strip ─────────────────────────────────────────────────────────────
+function stripGeom(s, W) {
+  const usable = W - GUTTER - RIGHT;
+  const longest = Math.max(...SESS.map((x) => x.dur));
+  const sPerPx = (state.scale === "fit" ? s.dur : longest) / usable;
+  return { sPerPx, x: (sec) => GUTTER + sec / sPerPx };
+}
+function clipBox(x, t0, t1, y, hgt, sPerPx, rxMax) {
+  const x0 = x(t0), w = x(t1) - x0;
+  if (sPerPx > CLIP_THRESHOLD) return { x: x0, y, w: Math.max(0.5, w), h: hgt, rx: 0 };
+  if (w < 1) return null;
+  return { x: x0 + 0.5, y, w: Math.max(1, w - 1), h: hgt, rx: Math.min(rxMax, w / 2) };
+}
+function drawStrip(svg, s, W, turns) {
+  svg.innerHTML = "";
+  const { sPerPx, x } = stripGeom(s, W);
+  svg.setAttribute("width", W); svg.setAttribute("height", STRIP_H + 4);
+  const g = el("g", { transform: "translate(0,2)" }, svg);
+  el("rect", { class: "track", x: GUTTER, y: 0, width: x(s.dur) - GUTTER, height: STRIP_H, rx: 1.5 }, g);
+  const cg = el("g", { class: "clips" }, g);
+  for (const [t0, t1, team, colour] of turns || s.turns) {
+    if (team) continue;
+    const b = clipBox(x, t0, t1, 0, STRIP_H, sPerPx, 1);
+    if (!b) continue;
+    el("rect", { x: b.x, y: b.y, width: b.w, height: b.h, rx: b.rx || undefined, fill: colour || "var(--bn-colour-muted)" }, cg);
+    el("rect", { class: "clip-edge", x: b.x, y: b.y, width: b.w, height: b.h, rx: b.rx || undefined }, cg);
+  }
+  return { x, sPerPx };
+}
+
+// ── the open timeline (SessionTapestry.tsx's geometry, static) ───────────
+function drawTapestry(svg, s, sPerPx, viewW) {
+  svg.innerHTML = "";
+  const F = fonts();
+  const x = (sec) => GUTTER + sec / sPerPx;
+  const xEnd = x(s.dur);
+  const W = Math.ceil(xEnd + RIGHT);
+  svg.setAttribute("width", W); svg.setAttribute("height", H);
+  const clips = sPerPx <= CLIP_THRESHOLD;
+  // Domino delay: 60 ms + position across the visible width × 150 ms.
+  const d = (px) => Math.round(60 + Math.max(0, Math.min(1, (px - GUTTER) / Math.max(1, viewW - GUTTER))) * 150);
+  const defs = el("defs", {}, svg);
+  const grad = el("linearGradient", { id: `fade-${s.id}`, x1: 0, x2: 1, y1: 0, y2: 0 }, defs);
+  el("stop", { offset: 0.8, style: "stop-color: var(--bn-colour-badge-bg); stop-opacity: 1" }, grad);
+  el("stop", { offset: 1, style: "stop-color: var(--bn-colour-badge-bg); stop-opacity: 0" }, grad);
+
+  const lane = (label, y) => { const t = el("text", { class: "bn-tp-lane dm dm-fade", x: 12, y, style: "--d: 0" }, svg); t.textContent = fit(label, GUTTER - 18, F.lane) || label[0]; };
+  lane("Sections", 2.5 + P.flagH / 2 + centre(F.px.lane));
+  lane("Moderator", MT.y + MT.h / 2 + centre(F.px.lane));
+  lane("Participant", PT.y + PT.h / 2 + centre(F.px.lane));
+  lane("Sentiment", SE.mid + centre(F.px.lane));
+  lane("Themes", TG.y + P.themeH / 2 + centre(F.px.lane));
+
+  el("rect", { class: "bn-tp-track dm dm-fade", x: GUTTER, y: MT.y - 1, width: Math.max(0, xEnd - GUTTER), height: PT.y + PT.h - MT.y + 2, rx: 4, style: "--d: 20" }, svg);
+  const name = (team) => team ? MODERATOR : s.name;
+  const mod = el("g", {}, svg), ppt = el("g", { class: "ppt-lane" }, svg);
+  for (const [t0, t1, team, colour] of s.turns) {
+    const tr = team ? MT : PT;
+    const b = clipBox(x, t0, t1, tr.y, tr.h, sPerPx, 3);
+    if (!b) continue;
+    const parent = team ? mod : ppt;
+    const g = el("g", team ? { class: "dm dm-grow-x", style: `--d: ${d(b.x)}` } : {}, parent);
+    el("rect", { class: `bn-tp-clip ${team ? "bn-tp-clip-team" : "bn-tp-clip-ppt"}`, x: b.x, y: b.y, width: b.w, height: b.h, rx: b.rx || undefined, style: colour ? `fill: ${colour}` : undefined }, g);
+    if (colour) el("rect", { class: "bn-tp-clip-edge", x: b.x, y: b.y, width: b.w, height: b.h, rx: b.rx || undefined }, g);
+    if (clips) {
+      const label = fit(name(team), b.w + 1 - 2 * P.clipX, F.clip);
+      // A participant label is not carried by the morph (it would squash); it fades in once the lane has landed.
+      if (label) { const t = el("text", { class: `bn-tp-clip-label ${team ? "on-team" : "on-ppt dm dm-fade"}`, x: x(t0) + P.clipX, y: b.y + b.h / 2 + centre(F.px.clip), style: `${colour ? `fill: ${INK};` : ""} --d: ${team ? 0 : 280 + d(b.x)}` }, g); t.textContent = label; }
+    }
+  }
+
+  // Section flags: one per visit. The first visit to a place catches its word from the chain;
+  // a return visit has no word to catch, so its flag fades in.
+  s.visits.forEach(([t0, label, first], i) => {
+    const fx = x(t0);
+    const next = i + 1 < s.visits.length ? x(s.visits[i + 1][0]) : xEnd;
+    const text = fit(label, next - fx - 20, F.flag);
+    const pw = (text ? measure(text, F.flag) : 0) + 2 * P.flagX + 6;
+    const half = P.flagH / 2;
+    const g = el("g", { class: `bn-tp-flag dm ${first ? "dm-drop" : "dm-fade"}`, style: `--d: ${d(fx) + (first ? 0 : 120)}`, "data-label": first ? label : undefined }, svg);
+    el("line", { x1: fx + 0.5, x2: fx + 0.5, y1: 2, y2: MT.y - 2 }, g);
+    el("path", { d: `M${fx + 1.5},2.5 h${pw} l-5,${half} l5,${half} h-${pw} z` }, g);
+    if (text) { const t = el("text", { x: fx + 1 + P.flagX, y: 2.5 + half + centre(F.px.flag) }, g); t.textContent = text; }
+  });
+
+  // Sentiment
+  el("line", { class: "bn-tp-axis dm dm-fade", x1: GUTTER, x2: xEnd, y1: SE.mid, y2: SE.mid, style: "--d: 40" }, svg);
+  for (const [t0, sentiment, intensity] of s.quotes) {
+    const cx = x(t0);
+    const hh = (0.35 + (0.65 * (Math.min(3, Math.max(1, intensity)) - 1)) / 2) * SE.amp;
+    if (!sentiment) el("rect", { class: "bn-tp-bar bn-tp-unrated dm dm-pop", x: cx - 0.75, y: SE.mid - 3, width: 1.5, height: 6, style: `--d: ${d(cx)}` }, svg);
+    else if (sentiment === "surprise") el("circle", { class: "bn-tp-bar dm dm-pop", cx, cy: SE.mid, r: 3.2, style: `fill: var(--bn-sentiment-${sentiment}); --d: ${d(cx)}` }, svg);
+    else {
+      const up = POSITIVE.has(sentiment);
+      el("rect", { class: `bn-tp-bar dm ${up ? "dm-up" : "dm-down"}`, x: cx - P.barW / 2, width: P.barW, rx: 1, height: hh, y: up ? SE.mid - hh : SE.mid, style: `fill: var(--bn-sentiment-${sentiment}); --d: ${d(cx)}` }, svg);
+    }
+  }
+
+  // Theme spans
+  const by = new Map();
+  for (const [t0, , , theme] of s.quotes) {
+    if (!theme) continue;
+    const sp = by.get(theme) || { t0, t1: t0 };
+    sp.t0 = Math.min(sp.t0, t0); sp.t1 = Math.max(sp.t1, t0); by.set(theme, sp);
+  }
+  const ends = Array(TG.rows).fill(-1e9);
+  for (const [theme, sp] of [...by.entries()].sort((a, b) => a[1].t0 - b[1].t0)) {
+    const x0 = x(sp.t0), x1 = Math.max(x(sp.t1), x0 + 6);
+    const row = ends.indexOf(Math.min(...ends));
+    const lx = Math.max(x0, ends[row] + 4);
+    const y = TG.y + row * TG.row;
+    const text = fit(theme, W - RIGHT - lx - 2 * P.themeX, F.tag);
+    const tw = text ? measure(text, F.tag) : 0;
+    ends[row] = Math.max(x1, lx + tw + 2 * P.themeX);
+    const g = el("g", { class: "bn-tp-theme dm dm-rise", style: `--d: ${d(lx)}` }, svg);
+    el("rect", { class: "bn-tp-span", x: x0, y: y + P.themeH / 2 - 2, width: x1 - x0, height: 4, rx: 2 }, g);
+    if (text) {
+      el("rect", { class: "bn-tp-tag", x: lx, y, width: tw + 2 * P.themeX, height: P.themeH, rx: 3, style: `fill: url(#fade-${s.id})` }, g);
+      const t = el("text", { class: "bn-tp-tag-text", x: lx + P.themeX, y: y + P.themeH / 2 + centre(F.px.tag) }, g); t.textContent = text;
+    }
+  }
+
+  // Ticks
+  const step = [60, 120, 300, 600, 900, 1800].find((st) => st / sPerPx >= 64) ?? 3600;
+  for (let tk = 0; tk <= s.dur; tk += step) {
+    const t = el("text", { class: "bn-tp-tick dm dm-fade", x: x(tk), y: H - 2, "text-anchor": tk === 0 ? "start" : "middle", style: `--d: ${d(x(tk))}` }, svg);
+    t.textContent = tc(tk);
+  }
+  return { x };
+}
+
+// ── rows ──────────────────────────────────────────────────────────────────
+const grid = document.getElementById("grid");
+const body = document.getElementById("body");
+const ICON_CHEVRON = '<svg class="bn-icon bn-icon-disclose bn-icon--px" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+const ICON_PLAY = '<svg class="bn-icon bn-icon-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>';
+const rows = [];
+
+function speaker(code, nm) {
+  return `<span class="bn-session-speaker-entry bn-person-picker-anchor"><button type="button" class="bn-person-picker-trigger"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">${code}</span></span></span></button><span><span class="bn-speaker-editable-name bn-speaker-name-full">${nm}</span><span class="bn-speaker-name-short">${nm.split(" ")[0]}</span></span></span>`;
+}
+function sparkline(counts) {
+  const max = Math.max(0, ...ORDER.map((k) => counts[k] || 0));
+  return `<div class="bn-sparkline" style="gap: 2px">${ORDER.map((k) => { const c = counts[k] || 0; const hh = c ? Math.max(Math.round((c / max) * 20), 2) : 0; return `<span class="bn-sparkline-bar" style="height:${hh}px; background: var(--bn-sentiment-${k}); opacity: 1"></span>`; }).join("")}</div>`;
+}
+
+for (const s of SESS) {
+  const row = h("div", "bn-sessions-row");
+  row.dataset.session = s.id; row.setAttribute("role", "row");
+  const journey = s.journey.map((l, i) => `<span>${i ? '<span class="bn-journey-sep" aria-hidden="true">→</span>' : ""}<a href="#" class="bn-journey-label bn-journey-label--interactive">${l}</a></span>`).join("");
+  row.innerHTML = `
+    <div class="bn-sessions-cell bn-cell-id bn-session-id" role="cell"><button type="button" class="bn-tapestry-toggle" aria-expanded="false" aria-label="Show timeline for session ${s.n}">${ICON_CHEVRON}</button><a href="#">#${s.n}</a></div>
+    <div class="bn-sessions-cell bn-cell-thumb" role="cell"><div class="bn-video-thumb"><span class="bn-play-icon">${ICON_PLAY}</span></div></div>
+    <div class="bn-sessions-cell bn-cell-speakers bn-session-speakers" role="cell">${speaker("m1", MODERATOR)}${speaker(s.pcode, s.name)}</div>
+    <div class="bn-sessions-cell bn-cell-start" role="cell"><div>${s.date}</div><div class="bn-session-journey">${journey}</div></div>
+    <div class="bn-sessions-cell bn-cell-sentiment bn-session-sentiment" role="cell">${sparkline(s.counts)}</div>
+    <div class="bn-sessions-cell bn-cell-duration bn-session-duration" role="cell">${s.durLabel}</div>
+    <div class="bn-sessions-cell bn-cell-file" role="cell"><a href="#t=0" class="timecode">${s.file}</a></div>
+    <div class="bn-tl-strip-cell" data-own-click><svg class="bn-tl-strip" role="button" tabindex="0" aria-expanded="false" aria-label="Show timeline for session ${s.n}"></svg></div>`;
+  const drawer = h("div", "bn-tl-drawer");
+  drawer.innerHTML = `<div class="bn-tl-fold"><div class="bn-tapestry" role="row"><div role="cell" class="bn-tapestry-cell"><div class="bn-tp-wrap"><div class="bn-tapestry-scroll"><svg class="bn-tapestry-svg"></svg></div></div></div></div></div>`;
+  grid.append(row, drawer);
+  const r = { s, row, drawer, strip: row.querySelector(".bn-tl-strip"), toggle: row.querySelector(".bn-tapestry-toggle"), svg: drawer.querySelector(".bn-tapestry-svg"), scroll: drawer.querySelector(".bn-tapestry-scroll") };
+  rows.push(r);
+  r.strip.addEventListener("click", (e) => { e.stopPropagation(); toggle(r); });
+  r.strip.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(r); } });
+  r.toggle.addEventListener("click", (e) => { e.stopPropagation(); toggle(r); });
+  row.addEventListener("click", (e) => {
+    if (e.target.closest("a, button, [data-own-click]")) { if (e.target.closest("a")) e.preventDefault(); return; }
+    flashStatus(`row click → opens the transcript for session #${s.n} (not wired in the mockup)`);
+  });
+}
+
+function gridWidth() { return grid.getBoundingClientRect().width; }
+function drawAll() {
+  const W = gridWidth();
+  const sPerPx = fitScale(SESS.map((s) => s.dur), W);
+  for (const r of rows) {
+    r.geom = drawStrip(r.strip, r.s, W);
+    r.tp = drawTapestry(r.svg, r.s, sPerPx, r.scroll.clientWidth || W);
+    r.sPerPx = sPerPx;
+  }
+}
+
+// ── open / close ──────────────────────────────────────────────────────────
+// The journey's words and the flags' labels are the same sections (same names, same first
+// moments); the chain is in the report's section order, the flags in time order, so a word is
+// matched to its flag by name and the words cross where the participant left the expected path.
+function flyWords(r, dir) {
+  const bodyBox = body.getBoundingClientRect();
+  const clip = r.scroll.getBoundingClientRect();
+  const layer = h("div", "bn-tl-fly");
+  Object.assign(layer.style, { left: `${clip.left - bodyBox.left}px`, width: `${clip.width}px`, height: `${body.scrollHeight}px` });
+  body.appendChild(layer);
+  const F = fonts();
+  const flags = new Map([...r.svg.querySelectorAll(".bn-tp-flag[data-label]")].map((g) => [g.dataset.label, g]));
+  const words = [...r.row.querySelectorAll(".bn-session-journey .bn-journey-label")];
+  const ink = cs().getPropertyValue("--bn-colour-text").trim();
+  let last = 0;
+  for (const w of words) {
+    const flag = flags.get(w.textContent);
+    if (!flag) continue;  // no flag (its quotes are hidden): the word fades with the arrows
+    const ft = flag.querySelector("text");
+    // From the svg's box and the label's own geometry, so the flag's drop (a CSS transform
+    // that is mid-flight when this is measured) does not move the landing spot.
+    const sb = r.svg.getBoundingClientRect(), bb = (ft || flag.querySelector("path")).getBBox();
+    const target = { left: sb.left + bb.x, top: sb.top + bb.y, height: bb.height };
+    const wr = w.getBoundingClientRect();
+    const wcs = getComputedStyle(w);
+    const word = h("span", "bn-tl-fly-word");
+    word.textContent = w.textContent;
+    const wpx = parseFloat(wcs.fontSize);
+    Object.assign(word.style, { font: wcs.font, lineHeight: "1", color: wcs.color, left: `${wr.left - clip.left}px`, top: `${wr.top + wr.height / 2 - bodyBox.top - wpx / 2}px`, height: `${wpx}px` });
+    layer.appendChild(word);
+    // Left edges and vertical centres meet; the size changes by the font ratio.
+    const dx = target.left - wr.left;
+    const dy = (target.top + target.height / 2) - (wr.top + wr.height / 2);
+    const k = ft ? F.px.flag / wpx : 0.6;
+    const atWord = { transform: "translate(0, 0) scale(1)", color: wcs.color, opacity: 1 };
+    const atFlag = { transform: `translate(${dx}px, ${dy}px) scale(${k})`, color: ink, opacity: ft ? 1 : 0 };
+    const delay = ms(parseFloat(flag.style.getPropertyValue("--d")) || 60);
+    const dur = ms(380);
+    last = Math.max(last, delay + dur);
+    if (ft) ft.style.opacity = 0;
+    const a = word.animate(dir === "out" ? [atWord, atFlag] : [atFlag, atWord],
+      { duration: dur, delay: dir === "out" ? delay : ms(20), easing: "cubic-bezier(0.3, 1.2, 0.5, 1)", fill: "both" });
+    a.onfinish = () => {
+      if (dir === "out" && ft) { ft.style.transition = `opacity ${ms(80)}ms ease`; ft.style.opacity = ""; }
+      if (dir === "in") w.style.visibility = "visible";
+      word.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms(80), fill: "both" }).onfinish = () => word.remove();
+    };
+  }
+  setTimeout(() => layer.remove(), last + ms(200));
+  return last;
+}
+
+const ms = (n) => n * state.mo;
+function toggle(r) { r.drawer.classList.contains("open") ? close(r) : open(r); }
+function setExpanded(r, v) { r.toggle.setAttribute("aria-expanded", v); r.strip.setAttribute("aria-expanded", v); r.row.classList.toggle("bn-tapestry-open", v); }
+
+function open(r) {
+  const W = gridWidth();
+  // Where the strip is now, in the page's coordinates.
+  const bodyBox = body.getBoundingClientRect();
+  const track = r.strip.querySelector(".track").getBoundingClientRect();
+  r.drawer.classList.remove("closing");
+  r.drawer.classList.add("open", "landing");
+  r.drawer.querySelectorAll(".dm").forEach((n) => { n.style.animation = "none"; n.getBoundingClientRect(); n.style.animation = ""; });
+  setExpanded(r, true);
+  // Where the participant lane will be: the svg is laid out at full height inside the fold already.
+  const svgBox = r.svg.getBoundingClientRect();
+  const kx = (track.width / r.s.dur) * r.sPerPx;  // closed px/s ÷ open px/s
+  const morph = h("div", "bn-tl-morph");
+  const scrollBox = r.scroll.getBoundingClientRect();
+  Object.assign(morph.style, { left: `${scrollBox.left - bodyBox.left}px`, top: `${svgBox.top - bodyBox.top}px`, width: `${scrollBox.width}px` });
+  const msvg = el("svg", { width: r.svg.getAttribute("width"), height: H });
+  const lane = r.svg.querySelector(".ppt-lane").cloneNode(true);
+  lane.removeAttribute("class");
+  lane.querySelectorAll("text").forEach((t) => t.remove());
+  msvg.appendChild(lane); morph.appendChild(msvg); body.appendChild(morph);
+  const dy = track.top - svgBox.top;  // strip top, in the lane's svg coordinates
+  const from = `translate(${GUTTER}px, ${dy}px) scale(${kx}, ${STRIP_H / PT.h}) translate(${-GUTTER}px, ${-PT.y}px)`;
+  const to = `translate(${GUTTER}px, ${PT.y}px) scale(1, 1) translate(${-GUTTER}px, ${-PT.y}px)`;
+  lane.style.transformOrigin = "0 0";
+  const anim = lane.animate([{ transform: from }, { transform: to }], { duration: ms(320), easing: "cubic-bezier(0.34, 1.56, 0.64, 1)", fill: "both" });
+  // It leaves the strip at the strip's 60% and arrives at full strength, a little ahead of landing.
+  lane.animate([{ opacity: 0.6 }, { opacity: 1 }], { duration: ms(200), easing: "ease-out", fill: "both" });
+  const done = () => { morph.remove(); r.drawer.classList.remove("landing"); };
+  // The last participant label finishes at 280 + 210 + 260 ms.
+  anim.onfinish = () => setTimeout(done, Math.max(0, ms(760) - ms(320)));
+  anim.oncancel = done;
+  r.anim = anim;
+  r.row.classList.add("bn-tl-words-away", "bn-tl-seps-away");
+  flyWords(r, "out");
+}
+function close(r) {
+  r.anim?.cancel();
+  // The words leave the flags first, measured where they stand (the reader may have scrolled).
+  const back = flyWords(r, "in");
+  setTimeout(() => r.row.classList.remove("bn-tl-seps-away"), ms(180));
+  setTimeout(() => { r.row.classList.remove("bn-tl-words-away"); r.row.querySelectorAll(".bn-journey-label").forEach((w) => (w.style.visibility = "")); }, back + ms(60));
+  r.drawer.classList.add("closing");
+  setTimeout(() => { r.drawer.classList.remove("open"); setExpanded(r, false); setTimeout(() => r.drawer.classList.remove("closing"), ms(220)); }, ms(100));
+}
+
+// ── merge illustration (commentary) ───────────────────────────────────────
+function mergeDemo() {
+  const host = document.getElementById("mergeDemo");
+  host.innerHTML = "";
+  const s = SESS[0];
+  const ppt = s.turns.filter((t) => !t[2]);
+  const a = ppt.filter((_, i) => i % 3 !== 1), b = ppt.filter((_, i) => i % 3 === 1);
+  const W = 520 + GUTTER + RIGHT;
+  for (const [label, turns] of [["p1 alone", a], ["p2 alone", b], ["merged strip", ppt]]) {
+    host.appendChild(h("span", "", label));
+    const box = h("div", ""); box.style.marginLeft = `-${GUTTER}px`;
+    const svg = el("svg", { class: "bn-tl-strip" }, box);
+    drawStrip(svg, { ...s, dur: s.dur }, W, turns.map((t) => [t[0], t[1], 0, t[3]]));
+    host.appendChild(box);
+  }
+}
+
+// ── controls ──────────────────────────────────────────────────────────────
+let statusTimer;
+function flashStatus(msg) { const st = document.getElementById("status"); st.textContent = msg; clearTimeout(statusTimer); statusTimer = setTimeout(() => (st.textContent = "hover a strip · click it to open · click the row to go to the transcript"), 2600); }
+document.getElementById("controls").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const fs = b.closest("fieldset"); const v = b.dataset.v;
+  fs.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  const ctl = fs.dataset.ctl;
+  if (ctl === "palette") document.documentElement.dataset.colorTheme = v;
+  if (ctl === "appearance") v === "auto" ? delete document.documentElement.dataset.appearance : (document.documentElement.dataset.appearance = v);
+  if (ctl === "scale") state.scale = v;
+  if (ctl === "motion") { state.mo = parseFloat(v); document.documentElement.style.setProperty("--bn-tl-mo", v); }
+  drawAll(); mergeDemo();
+});
+if (matchMedia("(prefers-reduced-motion: reduce)").matches) state.mo = 0.001;
+(document.fonts?.ready || Promise.resolve()).then(() => { drawAll(); mergeDemo(); });
+</script>
+</body>
+</html>

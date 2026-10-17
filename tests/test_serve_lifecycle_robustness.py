@@ -116,6 +116,79 @@ class TestTheStashCycle:
             )
         assert len(_rows(out / ".bristlenose" / "bristlenose.db")) == 1
 
+    def test_a_restore_that_lands_during_the_reattach_is_followed(
+        self, tmp_path: Path, fast_watcher, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The reattach recreates a missing schema, which takes a while (create_all
+        and the migrations). A failed run's restore landing in that window used to
+        be recorded as already attached: the identities were read after the heal,
+        while the pool had connected before it, to the run's tree, which the
+        restore moved aside. The report stayed empty and the researcher's star
+        looked lost, with no further warning (CI, 17 Oct 2026). The restore is
+        injected inside the heal so the window is hit every time."""
+        from bristlenose.server import db as db_mod
+
+        proj = _project(tmp_path)
+        out = proj / "bristlenose-output"
+        real_heal = db_mod.ensure_schema
+        pending: dict[str, Path | None] = {"stash": None}
+
+        def heal_then_restore(engine) -> None:
+            real_heal(engine)
+            stash, pending["stash"] = pending["stash"], None
+            if stash is not None:
+                assert output_backup.restore(stash, out).report_is_back
+
+        monkeypatch.setattr(db_mod, "ensure_schema", heal_then_restore)
+        with _polling_client(_app(proj, tmp_path)) as client:
+            assert _wait(lambda: _sessions(client))
+            assert client.put("/api/projects/1/starred", json={"q-p1-10": True}).status_code == 200
+            stash = output_backup.stash(out)
+            assert stash is not None
+            # The failed run's tree arrives whole, so the watcher's first sight of
+            # it is the one that reattaches (database absent, events log present).
+            run_tree = tmp_path / "run-tree"
+            (run_tree / ".bristlenose").mkdir(parents=True)
+            _started(run_tree, "BAD")
+            _failed(run_tree, "BAD")
+            pending["stash"] = stash
+            run_tree.rename(out)
+            assert _wait(lambda: pending["stash"] is None), "the serve never reattached"
+            assert _wait(lambda: _sessions(client)), (
+                "the serve stayed on the run's tree that the restore set aside"
+            )
+            starred = client.get("/api/projects/1/starred")
+            assert starred.status_code == 200 and starred.json().get("q-p1-10") is True
+        assert len(_rows(out / ".bristlenose" / "bristlenose.db")) == 1
+
+    def test_a_restore_before_the_watcher_first_reads_the_log_is_imported(
+        self, tmp_path: Path, fast_watcher, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The serve imports what is on disk while it starts; the watcher counted
+        the completions in the log as imported when its task first ran, later. A
+        restore landing between the two put back a ``run_completed`` the watcher
+        then treated as already imported, so a backup without a database came
+        back to an empty report (CI, 17 Oct 2026). The restore is injected straight
+        after the startup import, so the gap is hit every time."""
+        from bristlenose.server import app as app_mod
+
+        proj = _project(tmp_path)
+        out = proj / "bristlenose-output"
+        backup = output_backup.stash(out)
+        assert backup is not None
+        real_import = app_mod._import_on_startup
+
+        def import_then_restore(*args, **kwargs) -> None:
+            real_import(*args, **kwargs)
+            assert output_backup.restore(backup, out).report_is_back
+
+        monkeypatch.setattr(app_mod, "_import_on_startup", import_then_restore)
+        with _polling_client(_app(proj, tmp_path)) as client:
+            assert _wait(lambda: _sessions(client)), (
+                "the restored report was counted as imported and never imported"
+            )
+        assert len(_rows(out / ".bristlenose" / "bristlenose.db")) == 1
+
     def test_the_serve_log_follows_the_output_folder(self, tmp_path: Path, fast_watcher) -> None:
         """``run --clean`` under a live serve: the serve's log went on into the
         set-aside copy, which a successful run deletes, so its whole log for the

@@ -46,6 +46,7 @@ async def run_event_watcher(
     on_change: Callable[[], Awaitable[None]] | None = None,
     poll_interval: float = 1.0,
     root: Path | None = None,
+    imported: set[str] | None = None,
 ) -> None:
     """Poll the events log; re-import on each new completion, and say when it changed.
 
@@ -67,6 +68,13 @@ async def run_event_watcher(
     — Re-analyse never reached the report. Runs already on disk at start are
     treated as imported (startup import covered them).
 
+    ``imported`` is that set when the caller read it itself, at the moment its
+    startup import read the disk (``completed_run_ids``). Without it the set is
+    read here, when this task first runs, which is later: a ``run_completed``
+    that a restore put back in between was counted as imported and never
+    imported (CI, 17 Oct 2026). A completion in the log at start and not in the
+    set is dispatched straight away.
+
     ``events_file`` may be a callable, re-evaluated on every poll, so a serve
     started before the project's first run follows the output folder into
     existence rather than watching the interview folder forever.
@@ -83,10 +91,24 @@ async def run_event_watcher(
     """
     resolve = events_file if callable(events_file) else (lambda: events_file)
     path = resolve()
-    imported = _completed_run_ids(_safe_read(path))
+    imported = set(imported) if imported is not None else completed_run_ids(path)
     identity = _file_identity(path)
     logger.info("event_watcher started | file=%s baseline=%d", path, len(imported))
+
+    async def _dispatch_new_completions() -> None:
+        for ev in _safe_read(path):
+            if ev.event != EventTypeEnum.RUN_COMPLETED or ev.run_id in imported:
+                continue
+            imported.add(ev.run_id)
+            assert isinstance(ev, RunCompletedEvent)
+            logger.info("event_watcher saw run_completed | run_id=%s", ev.run_id)
+            try:
+                await on_run_completed(ev)
+            except Exception:
+                logger.exception("event_watcher re-import callback failed")
+
     await _call(on_change, "change")
+    await _dispatch_new_completions()
     root_gone = False
 
     while True:
@@ -112,16 +134,7 @@ async def run_event_watcher(
         await _call(on_change, "change")
         if current is None:
             continue
-        for ev in _safe_read(path):
-            if ev.event != EventTypeEnum.RUN_COMPLETED or ev.run_id in imported:
-                continue
-            imported.add(ev.run_id)
-            assert isinstance(ev, RunCompletedEvent)
-            logger.info("event_watcher saw run_completed | run_id=%s", ev.run_id)
-            try:
-                await on_run_completed(ev)
-            except Exception:
-                logger.exception("event_watcher re-import callback failed")
+        await _dispatch_new_completions()
 
 
 def _safe_read(path: Path) -> list[AnyEvent]:
@@ -132,8 +145,9 @@ def _safe_read(path: Path) -> list[AnyEvent]:
         return []
 
 
-def _completed_run_ids(events: list[AnyEvent]) -> set[str]:
-    return {ev.run_id for ev in events if ev.event == EventTypeEnum.RUN_COMPLETED}
+def completed_run_ids(path: Path) -> set[str]:
+    """The ids of the runs the log at ``path`` records as completed."""
+    return {ev.run_id for ev in _safe_read(path) if ev.event == EventTypeEnum.RUN_COMPLETED}
 
 
 async def _call(cb: Callable[[], Awaitable[None]] | None, name: str) -> None:

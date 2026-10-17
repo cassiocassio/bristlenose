@@ -349,9 +349,18 @@ def create_app(
 
     # Import project data into SQLite on startup
     if project_dir is not None:
+        # Before the import: a completion that reaches the log after this read
+        # is the watcher's to import, whenever its task first runs.
+        from bristlenose.events import events_path
+        from bristlenose.output_paths import project_output_dir
+        from bristlenose.server.event_watcher import completed_run_ids
+
+        already_imported = completed_run_ids(events_path(project_output_dir(project_dir)))
         _import_on_startup(session_factory, project_dir)
         _reconcile_orphaned_autocode_jobs(session_factory)
-        _install_event_watcher(app, session_factory, project_dir, engine=engine)
+        _install_event_watcher(
+            app, session_factory, project_dir, engine=engine, already_imported=already_imported,
+        )
 
     # Serve the React islands bundle (built by Vite).
     # In HMR mode the Vite dev server handles these.
@@ -1275,11 +1284,17 @@ def _let_go_of_the_project(engine: Engine | None, output_dir: Path) -> None:
                 handler.close()
 
 
+#: How many times a reattach heals before leaving it to the next change: a
+#: restore landing inside one heal costs one more round, never two.
+_REATTACH_ROUNDS = 3
+
+
 def _install_event_watcher(
     app: FastAPI,
     session_factory: Callable[[], Session],
     project_dir: Path,
     engine: Engine | None = None,
+    already_imported: set[str] | None = None,
 ) -> None:
     """Tail ``pipeline-events.jsonl`` and re-import on ``run_completed``.
 
@@ -1288,6 +1303,11 @@ def _install_event_watcher(
     "0 sessions / 0 quotes" despite full data on disk. Wired via
     FastAPI's lifespan so the polling task is started at app startup and
     cancelled cleanly on shutdown.
+
+    ``already_imported``: the completions in the log when the startup import
+    read the disk. Read there, not when the watcher's task first runs, which
+    is later: a restore landing in between put back a ``run_completed`` the
+    watcher then counted as imported (CI, 17 Oct 2026).
     """
     from contextlib import asynccontextmanager
 
@@ -1325,8 +1345,11 @@ def _install_event_watcher(
             return None
         return (st.st_dev, st.st_ino)
 
-    def _attached_files() -> tuple[tuple[int, int] | None, tuple[int, int] | None]:
-        return (_identity(db_file), _identity(_events_file()))
+    def _attached_files() -> tuple[tuple[int, int] | None, ...]:
+        # The folder too: a swap moves the whole tree, so the folder's identity is
+        # what tells a heal that landed where it looked from one that did not.
+        folder = db_file.parent if db_file is not None else None
+        return (_identity(folder), _identity(db_file), _identity(_events_file()))
 
     attached = {"files": _attached_files()}
 
@@ -1340,26 +1363,41 @@ def _install_event_watcher(
             reopen_log_file(project_output_dir(project_dir))
         except OSError:
             logger.warning("could not reopen the log in the output folder", exc_info=True)
-        now = _attached_files()
-        if now == attached["files"]:
-            return
-        if engine is None or db_file is None or not db_file.parent.is_dir():
-            # Mid-stash: nothing on disk to attach to yet. The next change
-            # (the run creating its tree) comes back here.
+        # Rounds, not one pass: the heal takes a while (a missing schema means
+        # create_all and every migration), and a failed run's restore can land
+        # inside it. The pool then holds the tree the restore set aside, while a
+        # fresh read of the identities names the restored one, so recording that
+        # read left the report empty with nothing more to notice (CI, 17 Oct
+        # 2026). What is recorded is what the heal attached to: the folder it
+        # looked at, still in place after it.
+        for _ in range(_REATTACH_ROUNDS):
+            now = _attached_files()
+            if now == attached["files"]:
+                return
+            if engine is None or db_file is None or not db_file.parent.is_dir():
+                # Mid-stash: nothing on disk to attach to yet. The next change
+                # (the run creating its tree) comes back here.
+                attached["files"] = now
+                return
+            logger.warning(
+                "output folder replaced under the running server (database %s, events log %s) "
+                "— reattaching to what is on disk now",
+                "present" if now[1] else "absent", "present" if now[2] else "absent",
+            )
+            try:
+                await asyncio.to_thread(ensure_schema, engine)
+            except Exception:
+                # Left unrecorded, so the next change to the log tries again.
+                logger.exception("could not reattach the database after the output folder moved")
+                return
+            healed = _attached_files()
+            if healed[0] == now[0]:
+                attached["files"] = healed
+                return
+            # Moved under the heal: the pool holds the tree it looked at. Recorded
+            # as that, so the next round does not mistake a restored tree (the
+            # original inodes, back in place) for the one already attached.
             attached["files"] = now
-            return
-        logger.warning(
-            "output folder replaced under the running server (database %s, events log %s) "
-            "— reattaching to what is on disk now",
-            "present" if now[0] else "absent", "present" if now[1] else "absent",
-        )
-        try:
-            await asyncio.to_thread(ensure_schema, engine)
-        except Exception:
-            # Left unrecorded, so the next change to the log tries again.
-            logger.exception("could not reattach the database after the output folder moved")
-            return
-        attached["files"] = _attached_files()
 
     # The project's condition — what it is doing, derived by one reducer.
     # Status page and the condition endpoint read it; the watcher refreshes it
@@ -1457,6 +1495,7 @@ def _install_event_watcher(
         task = asyncio.create_task(
             run_event_watcher(
                 _events_file, _on_run_completed, on_change=_on_change,
+                imported=already_imported,
                 # Said once at WARNING when the project folder is renamed or
                 # moved under the serve; the interview folder, so a ``--clean``
                 # stash of the output folder is not mistaken for it.

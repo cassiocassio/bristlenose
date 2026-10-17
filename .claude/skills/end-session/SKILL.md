@@ -21,6 +21,48 @@ bash .claude/skills/_shared/wflog.sh end-session start
 
 If code files were changed:
 
+0. **Reviewed since the last review?** A review that happens only when somebody remembers is a
+   review that mostly doesn't (owner, 17 Oct 2026). Find the last one and count the code since:
+
+   ```bash
+   REV=.claude/last-review.json
+   BASE=$(python3 -c "import json;print(json.load(open('$REV'))['head_sha'])" 2>/dev/null)
+   if [ -z "$BASE" ] || ! git merge-base --is-ancestor "$BASE" HEAD 2>/dev/null; then
+     BASE=$(python3 -c "import json;print(json.load(open('.claude/last-end-session.json'))['head_sha'])" 2>/dev/null)
+     echo "no review recorded on this line; counting from the last sign-off ${BASE:-(none)}"
+   fi
+   [ -n "$BASE" ] || BASE=$(git rev-parse HEAD~10)
+   git diff --name-only "$BASE" -- '*.py' '*.ts' '*.tsx' '*.swift' \
+     ':!tests/**' ':!**/*.test.ts' ':!**/*.test.tsx' ':!desktop/Bristlenose/BristlenoseTests/**' \
+     ':!experiments/**' | sort -u
+   ```
+
+   (`git diff <base>` with no second ref compares against the **working tree**, so uncommitted
+   code counts too.) On `main` the window also holds other sessions' commits: count only the
+   files **this session** changed, which you know from your own commits and edits.
+
+   If that leaves no code files, record `"review": "not-needed"` in the sentinel (step 13a) and go
+   on. Otherwise ask the owner **once**, before running the tests:
+
+   > N code files changed since the last review (`<short-sha>`, `<date>`) — run `/usual-suspects`
+   > before signing off? **yes** / **no** / **already reviewed**
+
+   - **yes** → run `/usual-suspects` on this session's changes, fix what the owner acts on,
+     then carry on with step 1 (the tests then cover the fixes too).
+   - **already reviewed** (a `/code-review`, or reviewer agents run by hand in the session) →
+     write `.claude/last-review.json` at HEAD with `"by": "<what ran>"` and carry on.
+   - **no** → carry on; record `"review": "skipped"` in the sentinel, so the next sign-off's window
+     still starts at the last real review and asks again.
+
+   It is a prompt, not a gate: the owner's "no" ends it. Ask it once, not again after the tests.
+
+   `.claude/last-review.json` (gitignored), written by `/usual-suspects` at the end of its run and
+   by the **already reviewed** answer:
+
+   ```json
+   {"head_sha": "<40-char sha reviewed>", "completed_at": "<UTC ISO>", "by": "usual-suspects", "scope": "<what was reviewed>"}
+   ```
+
 1. **Run tests** — `.venv/bin/python -m pytest tests/` (deselects the paid `slow` marker via `addopts` — do **not** add `-m slow` here, it bills the account and is not a close-out gate)
 2. **Run linter** — `.venv/bin/ruff check .` (whole repo, not just `bristlenose/`)
 3. If frontend files changed: `cd frontend && npm run build` (tsc catches type errors Vitest doesn't)
@@ -443,6 +485,7 @@ If this session did **not** identify follow-up branches, skip this step.
      "tests": "passed" | "skipped" | "failed",
      "lint": "clean" | "skipped" | "errors",
      "handoff_drift": "none" | "appended" | "no-handoff",
+     "review": "done" | "already" | "skipped" | "not-needed",
      "audit_version": 1,
      "pushed": false | "origin/main" | "origin/main:wip" | "origin/<branch>"
    }
@@ -472,6 +515,7 @@ After completing, print a brief summary:
 
 ```
 End of session:
+- Review: ran /usual-suspects (N findings, M fixed) / already reviewed / skipped by owner / no code
 - Tests: passed (N pytest, M Swift) / skipped (docs only) — name which suites ran; a
   Python-only green says nothing about `desktop/`
 - Lint: clean / skipped (docs only)

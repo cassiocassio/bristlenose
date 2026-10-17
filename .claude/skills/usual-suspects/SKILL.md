@@ -529,6 +529,19 @@ the log immediately, in the same turn:
 If the user states dispositions clearly, apply them in the same turn; otherwise
 prompt them once.
 
+**Record the review** once the report is out, whatever the triage: `/end-session` reads it to
+decide whether to ask for one (its Phase 1, step 0). Write `.claude/last-review.json` (gitignored)
+with the commit the agents reviewed — HEAD when they reviewed committed work:
+
+```bash
+python3 - "$(git rev-parse HEAD)" "<one line: what was reviewed>" <<'PY'
+import json, sys, datetime
+json.dump({"head_sha": sys.argv[1], "by": "usual-suspects", "scope": sys.argv[2],
+           "completed_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")},
+          open(".claude/last-review.json", "w"), ensure_ascii=True, indent=2)
+PY
+```
+
 ### Review-log schema
 
 ```markdown

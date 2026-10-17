@@ -142,6 +142,7 @@ HANDOFF.md
 # Session-handoff sentinels (per-worktree state, not for the repo)
 .claude/setup-incomplete
 .claude/last-end-session.json
+.claude/last-review.json
 
 # End-session Durable-artefact audit telemetry (per-worktree, gitignored)
 .claude/audit-log.jsonl

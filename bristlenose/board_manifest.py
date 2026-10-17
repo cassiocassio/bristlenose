@@ -34,6 +34,7 @@ from typing import Any
 from bristlenose.board_layout import (
     DEFAULT_QUOTE_TOKEN,
     HEADER_TOKEN,
+    STICKY_SHAPE,
     BoardStrings,
     Column,
     attribution,
@@ -97,6 +98,9 @@ def build_manifest(
         "generator": generator,
         "locale": locale,
         "title": title,
+        # The house shape on every board (`board_layout.STICKY_SHAPE`); the
+        # plugin draws "rectangle" as FigJam's wide sticky.
+        "sticky_shape": STICKY_SHAPE,
         "strings": {"clip": f"▶ {clip_label}"},
         "palette": {t: palette.get(t, palette.get(DEFAULT_QUOTE_TOKEN, "")) for t in sorted(used)},
         "frames": frames,

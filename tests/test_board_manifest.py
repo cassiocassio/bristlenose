@@ -66,6 +66,7 @@ def test_document_shape_is_the_version_1_contract():
         "clip_url": None,
     }]
     assert m["strings"] == {"clip": "▶ clip"}
+    assert m["sticky_shape"] == "rectangle"  # the house shape on every board
 
 
 def test_flat_by_default_with_figjams_own_palette_colours():

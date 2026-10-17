@@ -538,7 +538,8 @@ Version 1 of the document:
 
 ```
 { "format": "bristlenose-board", "version": 1, "generator": "Bristlenose X.Y.Z",
-  "locale": "en", "title": "…", "strings": {"clip": "▶ clip"},
+  "locale": "en", "title": "…", "sticky_shape": "rectangle",
+  "strings": {"clip": "▶ clip"},
   "palette": {"light_pink": "#FFA8DB", "light_yellow": "#FFE299"},
   "frames": [ { "kind": "section", "title": "Sections", "columns": [
       { "label": "Checkout", "count": "2 quotes", "colour": "light_pink",
@@ -548,6 +549,9 @@ Version 1 of the document:
 
 The document carries every word, the attribution line and the palette, so the
 plugin only draws and a wording or colour change never waits on a plugin review.
+`sticky_shape` follows the house rule, rectangle stickies on every board
+(`board_layout.STICKY_SHAPE`, `docs/design-screens-export.md`); the plugin draws
+it as FigJam's wide sticky, 416 × 240, since FigJam offers no other rectangle.
 It carries no sentiment, speaker field or timecode beyond the attribution line:
 adding an optional key later is not a version bump. `miro_board.py` became
 `board_layout.py`; the attribution and curly-quote composition, which the Miro

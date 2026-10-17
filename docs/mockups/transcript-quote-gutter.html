@@ -216,7 +216,7 @@ body.playing .seg.now::before { content: ""; position: absolute; left: -6px; top
     <label><input type="checkbox" id="c-narrow"> narrow <span class="k">(no margin)</span></label>
     <label><input type="checkbox" id="c-play"> video playing</label>
     <label><input type="checkbox" id="c-thumbs" checked> thumbnails</label>
-    <label><input type="checkbox" id="c-topics"> question topic in margin</label>
+    <label><input type="checkbox" id="c-topics" checked> question topic in margin</label>
     <label>gutter <input type="range" id="c-gutter" min="1.25" max="3.5" step="0.25" value="2"><output id="o-gutter">2rem</output></label>
   </div>
 
@@ -246,8 +246,8 @@ body.playing .seg.now::before { content: ""; position: absolute; left: -6px; top
         is the concrete choice: Show in Quotes un-hides it.</li>
       <li><b>Playback (toggle).</b> The blue wash sits over the paper; the lift still reads, and the gutter is clear of the progress bar on the left.</li>
       <li><b>Narrow.</b> The gutter survives; the margin's titles and thumbnails drop under the text.</li>
-      <li><b>Discussion (00:22, 01:52).</b> Mark only, by default. "Question topic in margin" shows the guide item it was matched to, in grey,
-        which may be one thing too many.</li>
+      <li><b>Discussion (00:22, 01:52).</b> The mark, and the guide item the question was matched to, in grey: a link with a hover underline but
+        no blue (owner, 17 Oct 2026: topic on).</li>
       <li><b>No Signals mark</b>, as agreed for now.</li>
     </ul>
   </section>
@@ -515,7 +515,7 @@ bind("c-dark", (el) => root.dataset.theme = el.checked ? "dark" : "light");
 document.querySelectorAll('input[name="pal"]').forEach((r) => r.addEventListener("change", () => { root.dataset.colorTheme = r.value; }));
 const tagModes = ["tags-deep", "tags-white", "tags-lift"];
 document.querySelectorAll('input[name="tags"]').forEach((r) => r.addEventListener("change", () => { B.classList.remove(...tagModes); if (r.value) B.classList.add(r.value); }));
-B.classList.add("tags-deep");
+B.classList.add("tags-deep", "showTopics");
 bind("c-edit", (el) => B.classList.toggle("editable", el.checked));
 bind("c-narrow", (el) => B.classList.toggle("narrow", el.checked));
 bind("c-play", (el) => B.classList.toggle("playing", el.checked));

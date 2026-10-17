@@ -14,5 +14,16 @@
 	<array>
 		<string>$(TeamIdentifierPrefix)app.bristlenose</string>
 	</array>
+	<!-- Zoom's HTTPS sign-in callback: ASWebAuthenticationSession's
+	     .https(host:path:) is validated against the webcredentials service
+	     specifically. An applinks-only entry fails by HANGING: consent
+	     completes and nothing comes back. Served by
+	     https://bristlenose.app/.well-known/apple-app-site-association.
+	     Store and Debug only; the Developer-ID .dmg does not import from
+	     Zoom (docs/design-cloud-import-transcripts.md §1b). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>webcredentials:bristlenose.app</string>
+	</array>
 </dict>
 </plist>

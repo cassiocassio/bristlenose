@@ -30,12 +30,18 @@ _BASH = shutil.which("bash") or "bash"
 
 _DESKTOP = Path(__file__).resolve().parent.parent / "desktop"
 _MAS = _DESKTOP / "Bristlenose" / "Bristlenose" / "Bristlenose.entitlements"
+_DEBUG = _DESKTOP / "Bristlenose" / "Bristlenose" / "BristlenoseDebug.entitlements"
 _DEV_ID = _DESKTOP / "Bristlenose" / "Bristlenose" / "BristlenoseDeveloperID.entitlements"
 _BUILD_DMG = _DESKTOP / "scripts" / "build-dmg.sh"
 
 _APP_GROUP = "com.apple.security.application-groups"
 _BA_GROUP = "group.app.bristlenose"
 _TEAM_GROUP = "$(TeamIdentifierPrefix)app.bristlenose"
+
+# Zoom's HTTPS sign-in callback. `webcredentials`, never `applinks`: an
+# applinks-only entry makes ASWebAuthenticationSession hang after consent.
+_ASSOCIATED_DOMAINS = "com.apple.developer.associated-domains"
+_WEBCREDENTIALS = ["webcredentials:bristlenose.app"]
 
 
 def _load(path: Path) -> dict:
@@ -64,13 +70,32 @@ class TestTheSplitExists:
             "but it needs the team group for the MCP handshake."
         )
 
-    def test_they_differ_by_exactly_the_background_assets_group(self) -> None:
+    def test_store_and_debug_carry_the_zoom_callback_domain(self) -> None:
+        """Zoom's sign-in returns over HTTPS, which needs this exact entry.
+
+        Debug matters as much as the store build: it is what a Zoom sign-in is
+        tested on, and without the entitlement the consent page completes and
+        nothing comes back, with no error anywhere.
+        """
+        for p in (_MAS, _DEBUG):
+            assert _load(p).get(_ASSOCIATED_DOMAINS) == _WEBCREDENTIALS, (
+                f"{p.name} must carry {_WEBCREDENTIALS} — webcredentials, not "
+                "applinks, or the Zoom sign-in hangs after consent"
+            )
+
+    def test_developer_id_carries_no_associated_domains(self) -> None:
+        """The .dmg does not import from Zoom, and its profile was never
+        regenerated with the capability."""
+        assert _ASSOCIATED_DOMAINS not in _load(_DEV_ID)
+
+    def test_they_differ_by_exactly_the_store_only_entitlements(self) -> None:
         """Anything else diverging is drift, not design."""
         mas, dev = _load(_MAS), _load(_DEV_ID)
-        assert set(mas) == set(dev)
+        assert set(mas) - set(dev) == {_ASSOCIATED_DOMAINS}
+        assert set(dev) - set(mas) == set()
         assert set(mas[_APP_GROUP]) - set(dev[_APP_GROUP]) == {_BA_GROUP}
         assert set(dev[_APP_GROUP]) - set(mas[_APP_GROUP]) == set()
-        for key in set(dev) - {_APP_GROUP}:
+        for key in set(dev) - {_APP_GROUP, _ASSOCIATED_DOMAINS}:
             assert mas[key] == dev[key], f"{key} drifted between the two files"
 
 
@@ -203,6 +228,16 @@ class TestTheEntitlementsAreActuallyCommitted:
             "the app group is missing from the COMMITTED file — a fresh clone "
             "would build without it. Check `git ls-files -v | grep '^S'`."
         )
+
+    def test_the_committed_files_carry_the_zoom_callback_domain(self) -> None:
+        """The entitlement was exactly the skip-worktree edit that went missing
+        on 12 Sep 2026 while every working-tree test passed."""
+        for rel in ("desktop/Bristlenose/Bristlenose/Bristlenose.entitlements",
+                    "desktop/Bristlenose/Bristlenose/BristlenoseDebug.entitlements"):
+            assert self._from_head(rel).get(_ASSOCIATED_DOMAINS) == _WEBCREDENTIALS, (
+                f"{rel} at HEAD has no {_ASSOCIATED_DOMAINS} — a fresh clone "
+                "would build a Zoom sign-in that never returns"
+            )
 
     def test_neither_file_is_skip_worktree(self) -> None:
         """The flag makes any future edit to these invisible to git status."""

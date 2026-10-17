@@ -646,7 +646,7 @@ when Zoom resumes):
 6. **Plan:** the KB says Pro or higher for transcripts; the `transcript_completed` webhook doc says
    Business, Education or Enterprise. Measure it on the test account.
 
-**Blocker found 1 Oct 2026: the Associated Domains entitlement is gone.** The parking brief lists it as
+**Resolved 17 Oct 2026:** the App ID capability is back on, the Mac App Store profile was regenerated with it (the 12 Sep copy deleted), and `webcredentials:bristlenose.app` is in the store and Debug entitlements, signed into a Debug build and pinned at HEAD by `tests/test_entitlements_split.py`. The Debug team profile from 16 Aug already carried it, so no Xcode sign-in was needed. The record of the blocker follows. **Blocker found 1 Oct 2026: the Associated Domains entitlement is gone.** The parking brief lists it as
 "banked", but it was a skip-worktree edit, removed on 12 Sep 2026 when the app group landed (`11d9cb6f`),
 and the App ID's Associated Domains capability was switched off in the portal the same day.
 `ZoomOAuth.presentConsent` depends on it: without it, the browser opens, the user consents, and

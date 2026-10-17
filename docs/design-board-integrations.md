@@ -664,10 +664,16 @@ Splitting applies to both, since a long quote is hard to read whoever chose it; 
 curated selection simply splits less. So the FigJam panel and Mac sheet offer the
 same scope as the Miro export, no more and no less.
 
-*What that means for the plugin.* Every part is its own sticky, selectable and
-deletable alone: no group, no lock, no section around a set. A set reads as one
-quote by proximity only — a tight gap inside it, the usual gap between sets —
-with the attribution and clip link on its last part.
+*What that means for the plugin.* Every part is its own sticky, and each set of
+two or three is a **group** named by its attribution, as on the Miro board: the
+owner described sets as grouped ("arrange and group … as duos or trios"), and a
+group moves and sorts as one while ⌘-click still deep-selects a single part to
+delete. (An earlier draft of this note said "no group"; that was inferred, not
+the owner's word, and was corrected the same day.) Parts overlap by about one
+x-height and step right by the same, so each left edge shows a small square notch
+— the Miro board's spacing scaled to FigJam's 16 px type (9 px). The attribution
+and clip link go on the last part. Built and checked in the scratch board: a pair
+and a trio from the fixture, both grouped, 8 of 8 quotes.
 
 **Security disciplines for the Lucid renderer (F2):**
 - **`lucid_package.py` builds `document.json` as a Python dict and serialises via

@@ -5,6 +5,10 @@ way it pushes one to Miro. It writes this document instead, the researcher opens
 it in the Bristlenose FigJam plugin, and the plugin builds the board inside the
 editor (`docs/design-board-integrations.md`, F1).
 
+**Long quotes arrive as two or three parts** (`board_layout.quote_part_texts`,
+the splitter the Miro boards use), so a quote breaks in the same places on either
+board and the researcher can delete the parts they don't want.
+
 **Structure, not geometry.** A FigJam sticky is never shorter than 240 px and
 grows with its text — 12 of 30 quotes in the 17 Oct 2026 spike outgrew it — so
 the layout engine's fixed heights would overlap. The document carries frames →
@@ -38,8 +42,8 @@ from bristlenose.board_layout import (
     Column,
     attribution,
     quote_colour,
+    quote_part_texts,
     quote_sort_key,
-    quoted,
 )
 
 FORMAT = "bristlenose-board"
@@ -92,7 +96,10 @@ def build_manifest(
                 token = quote_colour(q, colour_by)
                 used.add(token)
                 quotes.append({
-                    "text": quoted(q.text),
+                    # One to three parts, split where a researcher would split it
+                    # (`board_layout.split_quote`); the plugin draws each as a
+                    # sticky and puts the attribution on the last.
+                    "parts": quote_part_texts(q.text),
                     "attribution": attribution(q.participant_id, q.start_timecode),
                     "colour": token,
                     "clip_url": q.link_url,

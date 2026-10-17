@@ -19,7 +19,7 @@ from bristlenose.board_layout import (
     BoardStrings,
     Column,
     QuoteCard,
-    layout_board,
+    quote_sort_key,
 )
 from bristlenose.board_manifest import FORMAT, VERSION, build_manifest, to_json
 from bristlenose.board_palette import FIGJAM_TOKEN_HEX
@@ -63,7 +63,7 @@ _TOP_KEYS = {"format": str, "version": int, "min_reader_version": int, "generato
              "locale": str, "title": str, "sticky_shape": str, "strings": dict,
              "palette": dict, "totals": dict, "frames": list}
 _COLUMN_KEYS = {"label", "count", "quote_count", "colour", "quotes"}
-_QUOTE_KEYS = {"text", "attribution", "colour", "clip_url"}
+_QUOTE_KEYS = {"parts", "attribution", "colour", "clip_url"}
 
 
 def test_document_shape_is_the_version_1_contract():
@@ -87,7 +87,7 @@ def test_document_shape_is_the_version_1_contract():
     col = m["frames"][0]["columns"][0]
     assert (col["label"], col["count"], col["colour"]) == ("Checkout", "1 quote", "light_pink")
     assert col["quotes"] == [{
-        "text": "“Too many steps”",
+        "parts": ["“Too many steps”"],
         "attribution": "— P1 · 00:40",
         "colour": "light_yellow",
         "clip_url": None,
@@ -120,9 +120,10 @@ def test_quote_order_is_the_miro_boards_order():
         _card("s2 at 3", session="s2", start=3.0),
     ]
     cols = [Column("Checkout", "section", cards)]
-    from_manifest = [q["text"] for q in _manifest(cols)["frames"][0]["columns"][0]["quotes"]]
-    from_layout = [s.text for s in layout_board(cols, "t").stickies if s.kind == "quote"]
-    assert from_manifest == from_layout == ["“s2 at 3”", "“s2 at 90”", "“late s10”"]
+    from_manifest = [q["attribution"] for q in _manifest(cols)["frames"][0]["columns"][0]["quotes"]]
+    assert from_manifest == ["— P1 · 00:03", "— P1 · 01:30", "— P1 · 00:05"]
+    from_layout = [c.text for c in sorted(cards, key=quote_sort_key)]
+    assert from_layout == ["s2 at 3", "s2 at 90", "late s10"]
 
 
 # ── what a quote can hold stays inside its string ────────────────────────────
@@ -140,7 +141,7 @@ def test_hostile_text_round_trips_and_the_bytes_are_ascii(text):
     out = to_json(_manifest([Column("C", "section", [_card(text)])]))
     assert out.isascii()
     back = json.loads(out)
-    assert back["frames"][0]["columns"][0]["quotes"][0]["text"] == f"“{text.strip()}”"
+    assert back["frames"][0]["columns"][0]["quotes"][0]["parts"] == [f"“{text.strip()}”"]
 
 
 # ── the anonymisation boundary, on the serialised bytes ──────────────────────
@@ -241,3 +242,20 @@ def test_counts_are_integers_a_reader_can_check_its_work_against():
 def test_the_envelope_says_which_readers_can_draw_it():
     m = _manifest([Column("C", "section", [_card("a")])])
     assert m["min_reader_version"] <= m["version"]
+
+
+def test_a_long_quote_arrives_in_parts_split_where_the_miro_board_splits_it():
+    """One splitter for every board: the parts are `quote_part_texts`'s, so a
+    quote breaks in the same places on Miro and FigJam, and no word is lost."""
+    from bristlenose.board_layout import SPLIT_AT, quote_part_texts
+
+    long = " ".join(f"Sentence number {i} is about the checkout page." for i in range(30))
+    assert len(long) > 2 * SPLIT_AT
+    parts = _manifest([Column("C", "section", [_card(long)])])["frames"][0]["columns"][0]["quotes"][0]["parts"]
+    assert parts == quote_part_texts(long)
+    assert len(parts) == 3
+    assert parts[0].startswith("“") and parts[-1].endswith("”")
+    assert parts[0].endswith("…") and parts[1].startswith("…")
+    # The splitter swaps a part's closing full stop for the "…" (as a hand split does).
+    words = lambda s: [w.rstrip(".") for w in s.replace("“", "").replace("”", "").replace("…", "").split()]  # noqa: E731
+    assert [w for p in parts for w in words(p)] == words(long)

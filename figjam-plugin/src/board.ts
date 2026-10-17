@@ -12,10 +12,12 @@ export const FORMAT = "bristlenose-board";
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_QUOTES = 5000;
+const MAX_PARTS = 5; // Bristlenose writes at most 3; a little room before refusing
 const MAX_TEXT = 20000;
 
 export interface Quote {
-  text: string;
+  /** One to three stickies' worth, split by Bristlenose where a researcher would split it. */
+  parts: string[];
   attribution: string;
   colour: string;
   clipUrl: string | null;
@@ -133,7 +135,13 @@ export function parseBoard(text: string): Board {
         if (++seen > MAX_QUOTES) throw new Refusal("too_large", "too many quotes");
         const clip = q.clip_url;
         if (clip !== null && typeof clip !== "string") throw new Refusal("malformed", "clip_url");
-        return { text: str(q, "text"), attribution: str(q, "attribution", 200), colour: colour(q), clipUrl: clip };
+        const partsIn = arr(q, "parts");
+        if (partsIn.length === 0 || partsIn.length > MAX_PARTS) throw new Refusal("malformed", "parts");
+        const parts = partsIn.map((p) => {
+          if (typeof p !== "string" || p.length > MAX_TEXT) throw new Refusal("malformed", "part");
+          return p;
+        });
+        return { parts, attribution: str(q, "attribution", 200), colour: colour(q), clipUrl: clip };
       });
       const quoteCount = int(c, "quote_count");
       if (quoteCount !== quotes.length) throw new Refusal("malformed", "column count disagrees");

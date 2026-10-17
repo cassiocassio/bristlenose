@@ -9,6 +9,10 @@ const PAD = 40; // inside a section
 const FRAME_GAP = 120; // between sections
 const TITLE_GAP = 96; // from the title to the sections
 const BATCH = 40; // stickies per batch before yielding
+// A set's parts overlap by about one x-height and step right by the same, so
+// each left edge shows a small square notch — the owner's spacing on the Miro
+// board (board_layout.SET_GAP / SET_STAGGER), scaled to FigJam's 16 px type.
+const NOTCH = 9;
 
 const pause = () => new Promise<void>((resolve) => setTimeout(resolve, 1));
 
@@ -103,18 +107,31 @@ export async function draw(plan: BoardPlan, tally: { built: number }, progress: 
 
     let colX = PAD;
     let bottom = PAD;
-    let width = 0;
     for (const column of frame.columns) {
-      let y = PAD;
-      for (const p of [column.header, ...column.quotes]) {
-        const s = makeSticky(p, plan.wide, fonts);
-        section.appendChild(s); // then local coordinates
-        s.x = colX;
-        s.y = y;
-        y += s.height + GAP; // stacked by the height it actually grew to
-        width = s.width;
-        if (p !== column.header) tally.built++;
-        if (++sinceYield >= BATCH) {
+      const header = makeSticky(column.header, plan.wide, fonts);
+      section.appendChild(header); // then local coordinates
+      header.x = colX;
+      header.y = PAD;
+      let y = PAD + header.height + GAP;
+      let width = header.width;
+      for (const set of column.quotes) {
+        const stickies: StickyNode[] = [];
+        set.parts.forEach((p, k) => {
+          const s = makeSticky(p, plan.wide, fonts);
+          section.appendChild(s);
+          s.x = colX + k * NOTCH;
+          s.y = y;
+          y += s.height - NOTCH; // stacked by the height it actually grew to
+          width = Math.max(width, s.width + k * NOTCH);
+          stickies.push(s);
+        });
+        y += NOTCH + GAP;
+        // A set moves and sorts as one; ⌘-click still picks out a single part
+        // to delete, which is how researchers trim (design doc, 17 Oct 2026).
+        if (stickies.length > 1) figma.group(stickies, section).name = set.name;
+        tally.built++;
+        sinceYield += stickies.length;
+        if (sinceYield >= BATCH) {
           sinceYield = 0;
           progress();
           await pause();

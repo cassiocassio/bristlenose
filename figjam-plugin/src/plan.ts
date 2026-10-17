@@ -18,9 +18,15 @@ export interface StickyPlan {
   link?: { range: Range; url: string };
 }
 
+/** One quote: one sticky, or a set of two or three read as one. */
+export interface QuoteSet {
+  name: string; // the attribution, so a set is findable in the layers list
+  parts: StickyPlan[];
+}
+
 export interface ColumnPlan {
   header: StickyPlan;
-  quotes: StickyPlan[];
+  quotes: QuoteSet[];
 }
 
 export interface FramePlan {
@@ -53,24 +59,29 @@ export function planBoard(board: Board): BoardPlan {
         fill: board.palette[col.colour],
         bold: [0, col.label.length],
       };
-      const quotes = col.quotes.map((q): StickyPlan => {
+      const quotes = col.quotes.map((q): QuoteSet => {
         const url = safeClipUrl(q.clipUrl);
         if (q.clipUrl && !url) droppedLinks++;
+        const fill = board.palette[q.colour];
+        // Every part but the last is just its words; the last carries the
+        // attribution (and clip link), as on the Miro board.
+        const parts = q.parts.slice(0, -1).map((text): StickyPlan => ({ characters: text, fill }));
+        const lastText = q.parts[q.parts.length - 1];
         let line = q.attribution;
         if (url) line += ` · ${board.clipLabel}`;
-        const characters = `${q.text}\n${line}`;
-        const lineStart = q.text.length + 1;
-        const plan: StickyPlan = {
+        const characters = `${lastText}\n${line}`;
+        const lineStart = lastText.length + 1;
+        const last: StickyPlan = {
           characters,
-          fill: board.palette[q.colour],
+          fill,
           italic: [lineStart, characters.length],
           small: [lineStart, characters.length],
         };
         if (url) {
           hosts.add(url.host);
-          plan.link = { range: [characters.length - board.clipLabel.length, characters.length], url: url.href };
+          last.link = { range: [characters.length - board.clipLabel.length, characters.length], url: url.href };
         }
-        return plan;
+        return { name: q.attribution, parts: [...parts, last] };
       });
       return { header, quotes };
     }),

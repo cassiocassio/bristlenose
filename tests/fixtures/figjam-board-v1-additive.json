@@ -4,7 +4,7 @@
  "min_reader_version": 1,
  "generator": "Bristlenose (fixture)",
  "locale": "en",
- "title": "Fixture study \u2014 research board (6 quotes)",
+ "title": "Fixture study \u2014 research board (8 quotes)",
  "sticky_shape": "rectangle",
  "strings": {
   "clip": "\u25b6 clip"
@@ -16,7 +16,7 @@
  "totals": {
   "frames": 2,
   "columns": 3,
-  "quotes": 6
+  "quotes": 8
  },
  "requested": 7,
  "frames": [
@@ -31,20 +31,26 @@
      "colour": "light_pink",
      "quotes": [
       {
-       "text": "\u201cI couldn't find the pay button.\u201d",
+       "parts": [
+        "\u201cI couldn't find the pay button.\u201d"
+       ],
        "attribution": "\u2014 P1 \u00b7 00:42",
        "colour": "light_yellow",
        "clip_url": "https://clips.example/study/s1-p1-42.mp4",
        "future_quote": null
       },
       {
-       "text": "\u201cShe said \"no\" \u2014 then C:\\Users\\jane </script> and left\u201d",
+       "parts": [
+        "\u201cShe said \"no\" \u2014 then C:\\Users\\jane </script> and left\u201d"
+       ],
        "attribution": "\u2014 P2 \u00b7 1:02:05",
        "colour": "light_yellow",
        "clip_url": null
       },
       {
-       "text": "\u201cLine\u2028separator, and an emoji \ud83d\udc69\ud83c\udffd\u200d\ud83d\udcbb\ud83c\udf89 mid-quote\u201d",
+       "parts": [
+        "\u201cLine\u2028separator, and an emoji \ud83d\udc69\ud83c\udffd\u200d\ud83d\udcbb\ud83c\udf89 mid-quote\u201d"
+       ],
        "attribution": "\u2014 P3 \u00b7 00:09",
        "colour": "light_yellow",
        "clip_url": null
@@ -59,13 +65,17 @@
      "colour": "light_pink",
      "quotes": [
       {
-       "text": "\u201c\u0643\u0627\u0646\u062a \u0627\u0644\u0635\u0641\u062d\u0629 \u0645\u0631\u0628\u0643\u0629 \u062c\u062f\u064b\u0627 \u0648\u0644\u0645 \u0623\u062c\u062f \u0632\u0631 \u0627\u0644\u062f\u0641\u0639\u201d",
+       "parts": [
+        "\u201c\u0643\u0627\u0646\u062a \u0627\u0644\u0635\u0641\u062d\u0629 \u0645\u0631\u0628\u0643\u0629 \u062c\u062f\u064b\u0627 \u0648\u0644\u0645 \u0623\u062c\u062f \u0632\u0631 \u0627\u0644\u062f\u0641\u0639\u201d"
+       ],
        "attribution": "\u2014 P4 \u00b7 03:12",
        "colour": "light_yellow",
        "clip_url": null
       },
       {
-       "text": "\u201c\u99c5\u306e\u5238\u58f2\u6a5f\u3067\u5f80\u5fa9\u3092\u9078\u3093\u3060\u3064\u3082\u308a\u304c\u7247\u9053\u306b\u306a\u3063\u3066\u3044\u3066\ud842\udfb7\u201d",
+       "parts": [
+        "\u201c\u99c5\u306e\u5238\u58f2\u6a5f\u3067\u5f80\u5fa9\u3092\u9078\u3093\u3060\u3064\u3082\u308a\u304c\u7247\u9053\u306b\u306a\u3063\u3066\u3044\u3066\ud842\udfb7\u201d"
+       ],
        "attribution": "\u2014 P5 \u00b7 1:02:03",
        "colour": "light_yellow",
        "clip_url": null
@@ -81,13 +91,34 @@
    "columns": [
     {
      "label": "Trust",
-     "count": "1 quote",
-     "quote_count": 1,
+     "count": "3 quotes",
+     "quote_count": 3,
      "colour": "light_pink",
      "quotes": [
       {
-       "text": "\u201cIs this site even safe?\u201d",
+       "parts": [
+        "\u201cIs this site even safe?\u201d"
+       ],
        "attribution": "\u2014 P1 \u00b7 10:00",
+       "colour": "light_yellow",
+       "clip_url": null
+      },
+      {
+       "parts": [
+        "\u201cI put my card details in and then it just sat there, spinning, for what felt like a minute. I didn't know if I'd paid. I didn't want to press the button again in case it charged me twice\u2026",
+        "\u2026so I went and checked my banking app. Nothing there either. In the end I closed the tab and rang them, and the person on the phone said it happens a lot.\u201d"
+       ],
+       "attribution": "\u2014 P2 \u00b7 14:05",
+       "colour": "light_yellow",
+       "clip_url": "https://clips.example/study/s2-p2-845.mp4"
+      },
+      {
+       "parts": [
+        "\u201cWe always do the big shop on a Sunday, the three of us, and the list lives on the fridge until somebody takes a photo of it. So when the app asked me to build a list I thought, great, finally\u2026",
+        "\u2026But it wanted me to search for every single item, one at a time, and it kept suggesting brands we never buy. By the time I had twelve things in there my son had lost interest and wandered off. Then it said two of them were out of stock at our store and offered substitutes that were twice the price\u2026",
+        "\u2026I just wanted it to remember what we bought last week. That's all. Last week's list, with a tick box next to each thing, and I'd have been done in two minutes instead of twenty.\u201d"
+       ],
+       "attribution": "\u2014 P6 \u00b7 21:50",
        "colour": "light_yellow",
        "clip_url": null
       }

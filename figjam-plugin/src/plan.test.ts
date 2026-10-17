@@ -16,7 +16,9 @@ import { planBoard, rgb } from "./plan";
 
 const text = (doc: unknown) => JSON.stringify(doc);
 const plan = (doc: unknown) => planBoard(parseBoard(text(doc)));
-const quotes = (p: ReturnType<typeof planBoard>) => p.frames.flatMap((f) => f.columns.flatMap((c) => c.quotes));
+const sets = (p: ReturnType<typeof planBoard>) => p.frames.flatMap((f) => f.columns.flatMap((c) => c.quotes));
+/** The sticky of each quote that carries its attribution: its last part. */
+const quotes = (p: ReturnType<typeof planBoard>) => sets(p).map((q) => q.parts[q.parts.length - 1]);
 const edited = (change: (d: any) => void) => {
   const d = structuredClone(plain);
   change(d);
@@ -35,8 +37,8 @@ const refusal = (doc: unknown): string => {
 describe("the version-1 fixture", () => {
   it("plans every quote the file says it holds", () => {
     const p = plan(plain);
-    expect(quotes(p)).toHaveLength(6);
-    expect(p.expectedQuotes).toBe(6);
+    expect(quotes(p)).toHaveLength(8);
+    expect(p.expectedQuotes).toBe(8);
     expect(p.frames.map((f) => f.columns.length)).toEqual([2, 1]);
   });
 
@@ -50,7 +52,7 @@ describe("the version-1 fixture", () => {
   });
 
   it("keeps Bristlenose's order", () => {
-    const first = plan(plain).frames[0].columns[0].quotes.map((q) => q.characters.split("\n").at(-1));
+    const first = plan(plain).frames[0].columns[0].quotes.map((q) => q.parts.at(-1)!.characters.split("\n").at(-1));
     expect(first).toEqual(["— P1 · 00:42 · ▶ clip", "— P2 · 1:02:05", "— P3 · 00:09"]);
   });
 
@@ -71,7 +73,7 @@ describe("the version-1 fixture", () => {
   it("links only the clip label, and only where there is a clip", () => {
     const qs = quotes(plan(plain));
     const linked = qs.filter((q) => q.link);
-    expect(linked).toHaveLength(1);
+    expect(linked).toHaveLength(2);
     expect(linked[0].characters.slice(...linked[0].link!.range)).toBe("▶ clip");
     expect(linked[0].link!.url).toBe("https://clips.example/study/s1-p1-42.mp4");
     expect(plan(plain).clipHosts).toEqual(["clips.example"]);
@@ -82,6 +84,34 @@ describe("the version-1 fixture", () => {
     expect(p.frames[0].columns[0].header.fill).toBe("#FFA8DB");
     expect(quotes(p)[0].fill).toBe("#FFE299");
     expect(rgb("#FFA8DB")).toEqual({ r: 1, g: 0xa8 / 255, b: 0xdb / 255 });
+  });
+});
+
+describe("a long quote as a set of two or three stickies", () => {
+  const trio = () => sets(plan(plain)).find((q) => q.parts.length === 3)!;
+
+  it("draws each part as its own sticky, in order, with nothing added or lost", () => {
+    const fixtureParts = plain.frames.flatMap((f) => f.columns.flatMap((c) => c.quotes)).find((q) => q.parts.length === 3)!.parts;
+    const t = trio();
+    expect(t.parts.slice(0, 2).map((p) => p.characters)).toEqual(fixtureParts.slice(0, 2));
+    expect(t.parts[2].characters.startsWith(fixtureParts[2])).toBe(true);
+    expect(sets(plan(plain)).map((q) => q.parts.length).sort()).toEqual([1, 1, 1, 1, 1, 1, 2, 3]);
+  });
+
+  it("puts the attribution, italics and link on the last part only", () => {
+    const t = trio();
+    expect(t.parts.slice(0, 2).every((p) => !p.italic && !p.link && !p.small)).toBe(true);
+    expect(t.parts[2].characters.slice(...t.parts[2].italic!)).toBe("— P6 · 21:50");
+    const pair = sets(plan(plain)).find((q) => q.parts.length === 2)!;
+    expect(pair.parts[1].link?.url).toBe("https://clips.example/study/s2-p2-845.mp4");
+  });
+
+  it("names the set by its attribution, so it can be found in the layers list", () => {
+    expect(trio().name).toBe("— P6 · 21:50");
+  });
+
+  it("refuses a quote with no parts", () => {
+    expect(refusal(edited((d) => (d.frames[0].columns[0].quotes[0].parts = [])))).toBe("malformed");
   });
 });
 
@@ -107,7 +137,7 @@ describe("refusing a file it would draw wrong", () => {
   });
 
   it("refuses a field of the wrong type", () => {
-    expect(refusal(edited((d) => (d.frames[0].columns[0].quotes[0].text = 5)))).toBe("malformed");
+    expect(refusal(edited((d) => (d.frames[0].columns[0].quotes[0].parts = [5])))).toBe("malformed");
     expect(refusal(edited((d) => (d.frames[0].columns[0].quotes[0].clip_url = { href: "x" })))).toBe("malformed");
   });
 
@@ -133,8 +163,8 @@ describe("clip links from a file that may have been edited", () => {
 
   it("drops a bad link and counts it, but still draws the quote", () => {
     const p = plan(edited((d) => (d.frames[0].columns[0].quotes[0].clip_url = "javascript:alert(1)")));
-    expect(quotes(p)).toHaveLength(6);
-    expect(quotes(p).some((q) => q.link)).toBe(false);
+    expect(quotes(p)).toHaveLength(8);
+    expect(quotes(p).filter((q) => q.link)).toHaveLength(1);
     expect(p.droppedLinks).toBe(1);
   });
 });
@@ -151,7 +181,7 @@ describe("the Figma sandbox, not Node", () => {
       for (const k of missing) g[k] = undefined;
       const p = planBoard(parseBoard(text(plain)));
       expect(p.clipHosts).toEqual(["clips.example"]);
-      expect(quotes(p).filter((q) => q.link)).toHaveLength(1);
+      expect(quotes(p).filter((q) => q.link)).toHaveLength(2);
     } finally {
       missing.forEach((k, i) => (g[k] = saved[i]));
     }

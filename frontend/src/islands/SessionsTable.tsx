@@ -63,6 +63,7 @@ import type {
 } from "../utils/types";
 import { fitScale, loadTapestryView, saveTapestryView, zoomScale } from "../utils/tapestryScale";
 import { screenInk } from "../utils/sceneInk";
+import { TapestryPreview } from "../components/TapestryPreview";
 import { mergeTapestry } from "../utils/tapestryMerge";
 import { diagnosticsEnabled } from "../utils/diagnostics";
 import type { TranscriptionQuality } from "../components/TranscriptionDiagnostics";
@@ -229,6 +230,9 @@ export function SessionsTable({
   }, [projectId, openTapestries, zoom]);
   const [gridWidth, setGridWidth] = useState(0);
   const gridRef = useRef<HTMLDivElement>(null);
+  // Sessions whose timeline should animate open on its next mount, and ones animating closed.
+  const landing = useRef(new Set<string>());
+  const folding = useRef(new Set<string>());
   const navigate = useNavigate();
   // Bumped after a moderator or observer write lands: a pick or a new person
   // can renumber identities (m2 → m1), which only the server knows.
@@ -298,6 +302,13 @@ export function SessionsTable({
       clearTimeout(stripPoll);
     };
   }, [projectId, refreshKey, reloadKey]);
+
+  // The open/close animation loads after first paint, once there are timelines to open, so a
+  // click finds it in the module cache and starts before the opened slice is painted.
+  const haveTimelines = tapestry !== null;
+  useEffect(() => {
+    if (haveTimelines) void import("../utils/tapestryMotion");
+  }, [haveTimelines]);
 
   // The slices share one scale, fitted to the grid's width.
   useEffect(() => {
@@ -610,7 +621,33 @@ export function SessionsTable({
   const clipInk = screenInk(
     Object.values(tapestry ?? {}).flatMap((ts) => (ts.turns ?? []).flatMap((tn) => (tn.colour ? [tn.colour] : []))),
   );
-  const toggleTapestry = (sid: string, all: boolean) =>
+  // Opening from a click animates (utils/tapestryMotion.ts); a timeline restored on return does not.
+  const rowOf = (sid: string) =>
+    gridRef.current?.querySelector<HTMLElement>(`.bn-sessions-row[data-session="${CSS.escape(sid)}"]`) ?? null;
+  const toggleTapestry = (sid: string, all: boolean) => {
+    if (!all) {
+      if (folding.current.has(sid)) return;
+      if (!openTapestries.has(sid)) {
+        landing.current.add(sid);
+      } else {
+        const row = rowOf(sid);
+        const slice = document.getElementById(`bn-tapestry-${sid}`);
+        const svg = slice?.querySelector<SVGSVGElement>(".bn-tapestry-svg");
+        if (row && slice && svg) {
+          folding.current.add(sid);
+          // Loaded on first use: the grid is on first paint, the animation is not.
+          void import("../utils/tapestryMotion").then((m) => m.foldTapestry({ row, slice, svg })).then(() => {
+            folding.current.delete(sid);
+            setOpenTapestries((prev) => {
+              const next = new Set(prev);
+              next.delete(sid);
+              return next;
+            });
+          });
+          return;
+        }
+      }
+    }
     setOpenTapestries((prev) => {
       const open = !prev.has(sid);
       // Option-click opens every readable row; a row readable later arrives closed (§2).
@@ -624,6 +661,7 @@ export function SessionsTable({
       else next.delete(sid);
       return next;
     });
+  };
   const zoomControl = hasTapestry ? (
     <div className="bn-tp-zoom">
       <button type="button" className="bn-tp-zoom-btn" aria-label={t("sessions.tapestry.zoomOut")}
@@ -716,10 +754,16 @@ export function SessionsTable({
             sess.speakers.find((x) => (x.slot_code || x.speaker_code) === slot);
           const codeOf = (slot: string) => speakerOf(slot)?.speaker_code || slot;
           const nameOf = (slot: string) => speakerOf(slot)?.name || codeOf(slot);
+          const isTeamTurn = (tn: TapestrySession["turns"][number]) =>
+            typeof tn.team === "boolean" ? tn.team : /^[mo]/.test(codeOf(tn.speaker));
           return [
           <SessionRow
             key={sess.session_id}
             tapestryOpen={ts ? open : undefined}
+            preview={ts && gridWidth > 0 ? (
+              <TapestryPreview session={ts} width={gridWidth} isTeam={isTeamTurn}
+                onOpen={(all) => toggleTapestry(sess.session_id, all)} />
+            ) : undefined}
             onToggleTapestry={(all) => toggleTapestry(sess.session_id, all)}
             session={sess}
             peopleMap={peopleMap}
@@ -746,6 +790,15 @@ export function SessionsTable({
                     session={ts}
                     sPerPx={sPerPx}
                     clipInk={clipInk}
+                    onReady={(svg) => {
+                      if (!landing.current.delete(sess.session_id)) return;
+                      const row = rowOf(sess.session_id);
+                      const slice = document.getElementById(`bn-tapestry-${sess.session_id}`);
+                      if (row && slice) {
+                        void import("../utils/tapestryMotion").then((m) =>
+                          m.landTapestry({ row, slice, svg, preview: row.querySelector(".bn-tapestry-preview-svg") }));
+                      }
+                    }}
                     initialScrollLeft={loadTapestryView(projectId).scroll[sess.session_id] ?? 0}
                     nameOf={nameOf}
                     codeOf={codeOf}
@@ -816,8 +869,11 @@ function SessionRow({
   onPickerChoose,
   tapestryOpen,
   onToggleTapestry,
+  preview,
   onReanalyse,
 }: {
+  /** The closed timeline strip, drawn under the row's cells (components/TapestryPreview.tsx). */
+  preview?: React.ReactNode;
   /** Open the re-analyse sheet for this session (§J7 R3). */
   onReanalyse?: () => void;
   /** undefined = this session has no timeline; true/false = its disclosure state. */
@@ -1164,6 +1220,7 @@ function SessionRow({
         {readable || duration_seconds > 0 ? formatDurationHuman(duration_seconds) : null}
       </div>
       <div className="bn-sessions-cell bn-cell-file" role="cell">{sourceEl}</div>
+      {readable && preview}
     </div>
   );
 }

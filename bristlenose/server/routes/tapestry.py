@@ -2,8 +2,10 @@
 
 One project-level read so the grid needs a single fetch. Per session: speaker turns (consecutive
 same-speaker transcript segments, with the pipeline's scene colour for each), section flags
-(each section's first quote in the session — the anchor the row's User journey chain links to),
-and the quotes with sentiment, intensity and their section or theme.
+(one per visit: a flag wherever the session's quotes move into another section, in time order,
+so a section visited twice is flagged twice — the transcript chain's rule; the first visit to a
+section is the anchor the row's User journey chain links to), and the quotes with sentiment,
+intensity and their section or theme.
 
 Built from the database, so hidden quotes, quote edits and heading renames apply. Two things are
 read from files instead: scene colours, pipeline output (``bristlenose/utils/scene_colour.py``) in
@@ -134,6 +136,20 @@ class TurnFramesResponse(BaseModel):
     frames: list[TurnFrame]
 
 
+def section_visits(quotes: list[tuple[float, str | None]]) -> list[TapestrySection]:
+    """One flag per visit: a new flag wherever the time-ordered quotes move into another section.
+
+    A quote in no section (a theme quote) neither starts nor ends a visit. The same rule as the
+    transcript's journey chain (``buildWaypoints`` in ``TranscriptPage.tsx``), so a participant who
+    goes to the basket, away and back is flagged at the basket twice.
+    """
+    flags: list[TapestrySection] = []
+    for t0, label in sorted(quotes, key=lambda q: q[0]):
+        if label is not None and (not flags or flags[-1].label != label):
+            flags.append(TapestrySection(t0=t0, label=label))
+    return flags
+
+
 def _clip(text: str) -> str:
     return text if len(text) <= _QUOTE_TEXT_LIMIT else text[:_QUOTE_TEXT_LIMIT].rstrip() + "…"
 
@@ -249,18 +265,13 @@ def get_tapestry(
                                 if out_dir is not None else (None, False))
             frames_owed = frames_owed or (owed and sess.session_id in with_video)
             sq = sorted(by_session.get(sess.session_id, []), key=lambda q: q.start_timecode)
-            firsts: dict[str, float] = {}
-            for q in sq:
-                label = section_of.get(q.id)
-                if label is not None and label not in firsts:
-                    firsts[label] = q.start_timecode
             result.append(TapestrySession(
                 session_id=sess.session_id,
                 duration_seconds=sess.duration_seconds,
                 turns=turns,
                 strip=_scene_strip(out_dir, sess.session_id),
                 frames_key=frames_key,
-                sections=[TapestrySection(t0=t, label=lab) for lab, t in sorted(firsts.items(), key=lambda kv: kv[1])],
+                sections=section_visits([(q.start_timecode, section_of.get(q.id)) for q in sq]),
                 quotes=[TapestryQuote(
                     t0=q.start_timecode, t1=q.end_timecode,
                     text=_clip(edited.get(q.id, q.text)),

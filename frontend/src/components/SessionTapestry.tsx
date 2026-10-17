@@ -112,13 +112,16 @@ interface Props {
   clipInk?: string;
   /** This timeline's sideways scroll, restored on mount. */
   initialScrollLeft?: number;
+  /** Called once, after the first layout, with the drawn timeline: the grid's open animation
+   *  (utils/tapestryMotion.ts) starts from here, since the slice loads lazily. */
+  onReady?: (svg: SVGSVGElement) => void;
   /** Drawn inside the timeline's scroll container, under the timeline: the transcription
    *  diagnostics, whose lanes share this time scale and scroll with it. */
   children?: React.ReactNode;
 }
 
 export default function SessionTapestry({
-  session, sPerPx, nameOf, codeOf = (slot) => slot, onJump, clipInk, initialScrollLeft = 0, children,
+  session, sPerPx, nameOf, codeOf = (slot) => slot, onJump, clipInk, initialScrollLeft = 0, onReady, children,
 }: Props) {
   const { t } = useTranslation();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -139,6 +142,7 @@ export default function SessionTapestry({
   const scrollRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (scrollRef.current && initialScrollLeft) scrollRef.current.scrollLeft = initialScrollLeft;
+    if (svgRef.current) onReady?.(svgRef.current);
     // Mount only: afterwards the researcher's own scrolling drives it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -330,6 +334,14 @@ export default function SessionTapestry({
   const ticks: number[] = [];
   for (let tk = 0; tk <= s.duration_seconds; tk += tickStep) ticks.push(tk);
 
+  // A flag per visit (routes/tapestry.py); the first visit to a section is the one the row's
+  // journey chain names, and the one its word flies to when the timeline opens.
+  const firstVisit = new Set<number>();
+  const seenLabel = new Set<string>();
+  s.sections.forEach((f, i) => {
+    if (!seenLabel.has(f.label)) firstVisit.add(i);
+    seenLabel.add(f.label);
+  });
   const top = hotFlag >= 0 ? hotFlag : raised;
   const flagOrder = s.sections.map((_, i) => i).filter((i) => i !== top);
   if (top >= 0) flagOrder.push(top); // raised or hot flag draws last, on top
@@ -361,6 +373,9 @@ export default function SessionTapestry({
           viewBox={`0 0 ${W} ${H}`}
           role="group"
           aria-label={t("sessions.tapestry.label")}
+          data-ppt-y={PT.y}
+          data-ppt-h={PT.h}
+          data-s-per-px={sPerPx}
         >
           <defs>
             <filter id={`bn-tp-lift-${s.session_id}`} x="-10%" y="-30%" width="120%" height="170%">
@@ -423,7 +438,7 @@ export default function SessionTapestry({
             return (
               <g key={i}>
                 {tn.colour && s.strip && (
-                  <rect className="bn-tp-clip-edge" x={g.x} y={g.y} width={g.w} height={g.h} rx={g.rx || undefined} />
+                  <rect className={`bn-tp-clip-edge ${teamTurn(tn) ? "team" : "ppt"}`} x={g.x} y={g.y} width={g.w} height={g.h} rx={g.rx || undefined} />
                 )}
                 {label && (
                   <text className={`bn-tp-clip-label ${teamTurn(tn) ? "on-team" : "on-ppt"}`}
@@ -452,6 +467,7 @@ export default function SessionTapestry({
             const half = P.flagH / 2;
             return (
               <g key={`f${i}`} className={`bn-tp-flag${isRaised ? " raised" : ""}${isHot ? " hot" : ""}`}
+                data-label={f.label} data-first={firstVisit.has(i) ? "" : undefined}
                 onClick={() => onJump(f.t0)}
                 onMouseEnter={() => {
                   setHotFlag(i);

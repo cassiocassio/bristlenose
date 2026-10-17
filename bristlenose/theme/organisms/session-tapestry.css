@@ -15,6 +15,46 @@
     --bn-tp-popover-hover: color-mix(in srgb, var(--bn-colour-bg) 96%, var(--bn-colour-text));
 }
 
+/* ── The closed timeline: a strip under each row (components/TapestryPreview.tsx) ──
+   The whole interview, participants only, a quarter the height of the open timeline's
+   participant clips, clips at 60% under a 0.5 px keyline, no text, and a tint on hover.
+   A full-width item inside the row, so the row's hover wash covers it; its own click opens
+   the timeline (the row's opens the transcript). docs/mockups/sessions-timeline-strip.html. */
+:root {
+    /* NEW: the strip's clips at 60%, so a column of strips reads as quiet texture. */
+    --bn-tp-preview-opacity: 0.6;
+    /* NEW: the strip's track on hover — 10% of the text ink, the move the popover makes at 4%. */
+    --bn-tp-preview-track-hover: color-mix(in srgb, var(--bn-colour-badge-bg) 90%, var(--bn-colour-text));
+}
+.bn-tapestry-preview {
+    grid-column: 1 / -1;
+    min-width: 0;
+    margin-top: -2px;
+    padding-bottom: 10px;
+    cursor: pointer;
+    transition: opacity 0.12s ease;
+}
+.bn-tapestry-preview-svg { display: block; overflow: visible; }
+.bn-tp-pv-track { fill: var(--bn-colour-badge-bg); transition: fill 0.12s ease; }
+.bn-tapestry-preview:hover .bn-tp-pv-track { fill: var(--bn-tp-preview-track-hover); }
+.bn-tp-pv-clips { opacity: var(--bn-tp-preview-opacity); }
+.bn-tp-pv-clip { fill: var(--bn-colour-muted); }
+.bn-tp-pv-edge { fill: none; stroke: rgb(0 0 0 / 0.25); stroke-width: 0.5; vector-effect: non-scaling-stroke; }
+/* Open, the timeline is the strip: it gives way. */
+.bn-sessions-row.bn-tapestry-open .bn-tapestry-preview { opacity: 0; pointer-events: none; }
+
+/* Open, the journey chain's words are the timeline's flag labels: they fly there and back
+   (utils/tapestryMotion.ts). The chain keeps its place, so nothing reflows under the flight;
+   its arrows fade where they stand. */
+.bn-session-journey .bn-journey-sep { transition: opacity var(--bn-transition-fast); }
+.bn-sessions-row.bn-tapestry-open .bn-session-journey .bn-journey-sep { opacity: 0; }
+.bn-sessions-row.bn-tapestry-open .bn-session-journey .bn-journey-label { visibility: hidden; }
+/* While the strip's clips spring into the participant lane, the lane itself waits. */
+.bn-tp-landing :is(.bn-tp-clip-ppt, .bn-tp-strip-ppt, .bn-tp-clip-edge.ppt, .bn-tp-clip-label.on-ppt) { visibility: hidden; }
+/* What is in flight: over the page, clipped to the timeline's visible width only. */
+.bn-tp-flight { position: absolute; z-index: 30; pointer-events: none; overflow-x: clip; }
+.bn-tp-flight-word { position: absolute; white-space: nowrap; transform-origin: 0 50%; }
+
 /* Disclosure, inside the ID cell — no new grid column, so the width ladder is untouched. */
 .bn-tapestry-toggle {
     all: unset;
@@ -308,6 +348,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .bn-tapestry-preview,
+    .bn-tp-pv-track,
+    .bn-session-journey .bn-journey-sep,
     .bn-tapestry-toggle svg,
     .bn-tp-bar,
     .bn-tp-popover,
@@ -315,6 +358,7 @@
 }
 
 @media print {
+    .bn-tapestry-preview,
     .bn-tapestry-toggle,
     .bn-tp-zoom { display: none; }
 }

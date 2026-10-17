@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
+from bristlenose.server.routes.tapestry import section_visits
 from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
@@ -42,13 +43,24 @@ def test_every_quote_is_in_one_section_or_one_theme(client: TestClient) -> None:
     assert all((q["section"] is None) != (q["theme"] is None) for q in quotes)
 
 
-def test_section_flags_sit_at_each_sections_first_quote(client: TestClient) -> None:
+def test_section_flags_sit_at_each_visits_first_quote(client: TestClient) -> None:
     s = _session(client)
-    firsts: dict[str, float] = {}
-    for q in s["quotes"]:
-        if q["section"] and q["section"] not in firsts:
-            firsts[q["section"]] = q["t0"]
-    assert [(f["label"], f["t0"]) for f in s["sections"]] == sorted(firsts.items(), key=lambda kv: kv[1])
+    visits: list[tuple[str, float]] = []
+    for q in sorted(s["quotes"], key=lambda q: q["t0"]):
+        if q["section"] and (not visits or visits[-1][0] != q["section"]):
+            visits.append((q["section"], q["t0"]))
+    assert visits
+    assert [(f["label"], f["t0"]) for f in s["sections"]] == visits
+
+
+def test_a_section_visited_twice_is_flagged_twice() -> None:
+    # The basket, away to a modal, back to the basket: three visits, two places. A theme quote
+    # (no section) between two basket quotes neither ends the visit nor starts one.
+    flags = section_visits([
+        (40.0, "Basket"), (10.0, "Home"), (35.0, None), (30.0, "Basket"),
+        (55.0, "Modal"), (70.0, "Basket"), (80.0, "Basket"),
+    ])
+    assert [(f.label, f.t0) for f in flags] == [("Home", 10.0), ("Basket", 30.0), ("Modal", 55.0), ("Basket", 70.0)]
 
 
 def test_hidden_quotes_are_left_out(client: TestClient) -> None:

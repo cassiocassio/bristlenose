@@ -19,6 +19,7 @@ CHARTS: dict[str, tuple[int, str]] = {
     "islands/SignalsPage.tsx": (1, "signal intensity dots"),
     "components/TranscriptionDiagnostics.tsx": (1, "diagnostic lanes: sound, pace, gaps"),
     "components/SessionTapestry.tsx": (1, "the session timeline"),
+    "components/TapestryPreview.tsx": (1, "the session timeline, closed: a strip under the row"),
     "islands/screens/ScreensLens.tsx": (1, "leader lines from screens to quotes"),
     "islands/discussion/DiscussionLens.tsx": (1, "wires between the guide and the talk"),
 }

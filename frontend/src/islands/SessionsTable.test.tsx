@@ -1350,6 +1350,41 @@ describe("SessionsTable — session tapestry", () => {
     expect(row?.nextElementSibling?.id).toBe("bn-tapestry-s1");
   });
 
+  it("draws a strip under the row whose click opens the timeline, not the transcript", async () => {
+    // jsdom lays nothing out and has no ResizeObserver; the strip needs the grid's width.
+    const was = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get: () => 1000 });
+    const hadRO = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} } as unknown as typeof ResizeObserver;
+    try {
+      mockWithTapestry(tapestryResponse);
+      function Where() {
+        return <output data-testid="where">{useLocation().pathname}</output>;
+      }
+      rtlRender(
+        <MemoryRouter initialEntries={["/report/sessions"]}>
+          <SessionsTable projectId="1" />
+          <Where />
+        </MemoryRouter>,
+      );
+      const strip = await waitFor(() => {
+        const el = document.querySelector('[data-session="s1"] .bn-tapestry-preview');
+        expect(el).not.toBeNull();
+        return el!;
+      });
+      fireEvent.click(strip);
+      expect(await screen.findByRole("group", { name: "Session timeline" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Timeline for session 1" })).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByTestId("where").textContent).toBe("/report/sessions");
+      // Closing without motion (jsdom has no Web Animations) is immediate.
+      fireEvent.click(screen.getByRole("button", { name: "Timeline for session 1" }));
+      await waitFor(() => expect(document.getElementById("bn-tapestry-s1")).toBeNull());
+    } finally {
+      if (was) Object.defineProperty(HTMLElement.prototype, "clientWidth", was);
+      globalThis.ResizeObserver = hadRO;
+    }
+  });
+
   it("keeps a timeline open across a visit to a transcript and back", async () => {
     mockWithTapestry(tapestryResponse);
     const first = render(<SessionsTable projectId="1" />);

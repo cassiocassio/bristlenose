@@ -45,6 +45,24 @@ describe("SessionTapestry", () => {
     expect(document.querySelectorAll(".bn-tp-theme")).toHaveLength(1);
   });
 
+  it("flags every visit and marks the first, the one the row's journey chain names", () => {
+    const back = { ...session, sections: [
+      { t0: 40, label: "Basket" }, { t0: 200, label: "Modal" }, { t0: 300, label: "Basket" },
+    ] };
+    render(<SessionTapestry session={back} sPerPx={1} nameOf={(c) => c} onJump={() => {}} />);
+    const flags = [...document.querySelectorAll<SVGGElement>(".bn-tp-flag")];
+    expect(flags.map((g) => [g.dataset.label, g.dataset.first !== undefined]))
+      .toEqual([["Basket", true], ["Modal", true], ["Basket", false]]);
+  });
+
+  it("hands the drawn timeline to onReady once, for the open animation", () => {
+    const onReady = vi.fn();
+    const { rerender } = render(<SessionTapestry session={session} sPerPx={1} nameOf={(c) => c} onJump={() => {}} onReady={onReady} />);
+    rerender(<SessionTapestry session={session} sPerPx={2} nameOf={(c) => c} onJump={() => {}} onReady={onReady} />);
+    expect(onReady).toHaveBeenCalledTimes(1);
+    expect(onReady.mock.calls[0][0]).toHaveClass("bn-tapestry-svg");
+  });
+
   it("paints a clip with its scene colour, and only when there is one", () => {
     setup();
     const ppt = document.querySelector<SVGRectElement>(".bn-tp-clip-ppt")!;

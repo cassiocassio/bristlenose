@@ -32,6 +32,7 @@ import { isExportMode } from "../utils/exportData";
 import { framesFor, tapestryThumb } from "../utils/tapestryThumb";
 import { ThumbOutline, ThumbPreview } from "./TapestryThumb";
 import { Icon } from "./Icon";
+import { screenInk } from "../utils/sceneInk";
 
 /** Clips are drawn as rounded clips at or below this many seconds per pixel, as slivers above it. */
 const CLIP_THRESHOLD = 2.5;
@@ -94,22 +95,6 @@ function fonts(type: TapestryTuning["type"]) {
 const centre = (fontPx: number) => fontPx * 0.35;
 
 const isTeam = (code: string) => /^[mo]/.test(code);
-/** WCAG relative luminance of an `#rrggbb` colour. */
-function relLuminance(hex: string): number {
-  const n = parseInt(hex.slice(1), 16);
-  const lin = (c: number) => {
-    const v = c / 255;
-    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
-}
-/** The label ink with the higher WCAG contrast against a scene-coloured clip. */
-function inkOn(hex: string): string {
-  const l = relLuminance(hex);
-  const vsWhite = 1.05 / (l + 0.05);
-  const vsDark = (l + 0.05) / (relLuminance("#1a1a1a") + 0.05);
-  return vsWhite >= vsDark ? "#fff" : "#1a1a1a";
-}
 
 // Only one slice holds an open quote at a time, so ← → and Esc drive exactly one.
 const ACTIVE_EVENT = "bn:tapestry-active";
@@ -122,6 +107,9 @@ interface Props {
   /** The displayed code for a slot; its first letter (m/o = team) picks the track. Defaults to the slot. */
   codeOf?: (slot: string) => string;
   onJump: (seconds: number) => void;
+  /** The label ink on scene-coloured clips, chosen once for the screen (utils/sceneInk.ts).
+   *  Absent, it is chosen from this timeline's own colours. */
+  clipInk?: string;
   /** This timeline's sideways scroll, restored on mount. */
   initialScrollLeft?: number;
   /** Drawn inside the timeline's scroll container, under the timeline: the transcription
@@ -130,7 +118,7 @@ interface Props {
 }
 
 export default function SessionTapestry({
-  session, sPerPx, nameOf, codeOf = (slot) => slot, onJump, initialScrollLeft = 0, children,
+  session, sPerPx, nameOf, codeOf = (slot) => slot, onJump, clipInk, initialScrollLeft = 0, children,
 }: Props) {
   const { t } = useTranslation();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -202,6 +190,8 @@ export default function SessionTapestry({
   const xEnd = x(s.duration_seconds);
   const W = Math.ceil(xEnd + RIGHT);
   const clips = sPerPx <= CLIP_THRESHOLD;
+  const ownInk = useMemo(() => screenInk(s.turns.flatMap((tn) => (tn.colour ? [tn.colour] : []))), [s.turns]);
+  const labelInk = clipInk ?? ownInk;
   // Lane geometry follows the tuned flag and clip heights (defaults: the shipped layout).
   const MT = { y: P.flagH + 12, h: P.clipH };
   const PT = { y: P.flagH + 12 + P.clipH + 3, h: P.clipH + 2 };
@@ -428,7 +418,7 @@ export default function SessionTapestry({
             if (!g) return null;
             const w = g.w + 1;
             const label = fit(nameOf(tn.speaker), w - 2 * P.clipX, F.clip) || (w > 22 ? tn.speaker : "");
-            const ink = tn.colour ? inkOn(tn.colour) : undefined;
+            const ink = tn.colour ? labelInk : undefined;
             if (!label && !(tn.colour && s.strip)) return null;
             return (
               <g key={i}>

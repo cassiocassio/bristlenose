@@ -301,14 +301,27 @@ describe("SessionTapestry — keyboard, focus and contrast", () => {
     expect(onJump).toHaveBeenCalledWith(310);
   });
 
-  it("inks a light scene colour dark and a dark one white", () => {
+  // One ink for every scene-coloured label, not one per clip (owner, 17 Oct 2026): per-clip
+  // contrast made the names alternate dark and white along a lane.
+  const fills = () => [...document.querySelectorAll<SVGTextElement>(".bn-tp-clip-label")].map((el) => el.style.fill);
+  const DARK = /#1a1a1a|rgb\(26, 26, 26\)/;
+  const WHITE = /#fff|rgb\(255, 255, 255\)/;
+
+  it("inks every scene-coloured label alike, with the ink most of its clips prefer", () => {
+    const mixed = { ...session, turns: [
+      { t0: 0, t1: 600, speaker: "p1", colour: "#e8e0d0" },
+      { t0: 600, t1: 1200, speaker: "m1", colour: "#4a3a30" },
+      { t0: 1200, t1: 1800, speaker: "p1", colour: "#d8d0c0" },
+    ] };
+    render(<SessionTapestry session={mixed} sPerPx={0.25} nameOf={() => "Alex"} onJump={() => {}} />);
+    expect(fills()).toHaveLength(3);
+    for (const f of fills()) expect(f).toMatch(DARK);
+  });
+
+  it("takes the screen's ink when the grid gives one", () => {
     const light = { ...session, turns: [{ t0: 0, t1: 600, speaker: "p1", colour: "#e8e0d0" }] };
-    const { unmount } = render(<SessionTapestry session={light} sPerPx={0.25} nameOf={() => "Alex"} onJump={() => {}} />);
-    expect(document.querySelector<SVGTextElement>(".bn-tp-clip-label")!.style.fill).toMatch(/#1a1a1a|rgb\(26, 26, 26\)/);
-    unmount();
-    const dark = { ...session, turns: [{ t0: 0, t1: 600, speaker: "p1", colour: "#4a3a30" }] };
-    render(<SessionTapestry session={dark} sPerPx={0.25} nameOf={() => "Alex"} onJump={() => {}} />);
-    expect(document.querySelector<SVGTextElement>(".bn-tp-clip-label")!.style.fill).toMatch(/#fff|rgb\(255, 255, 255\)/);
+    render(<SessionTapestry session={light} sPerPx={0.25} nameOf={() => "Alex"} onJump={() => {}} clipInk="#fff" />);
+    expect(fills()[0]).toMatch(WHITE);
   });
 });
 

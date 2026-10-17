@@ -62,6 +62,7 @@ import type {
   TapestrySession,
 } from "../utils/types";
 import { fitScale, loadTapestryView, saveTapestryView, zoomScale } from "../utils/tapestryScale";
+import { screenInk } from "../utils/sceneInk";
 import { mergeTapestry } from "../utils/tapestryMerge";
 import { diagnosticsEnabled } from "../utils/diagnostics";
 import type { TranscriptionQuality } from "../components/TranscriptionDiagnostics";
@@ -604,6 +605,11 @@ export function SessionsTable({
   const durations = sessions.map((sess) => sess.duration_seconds || tapestry?.[sess.session_id]?.duration_seconds || 0);
   const fit = fitScale(durations, gridWidth || 1000);
   const sPerPx = zoomScale(fit, zoom);
+  // One label ink for every timeline on the screen, so names do not alternate dark and white.
+  // Not a hook: this runs after the loading and error returns above. A few hundred turns.
+  const clipInk = screenInk(
+    Object.values(tapestry ?? {}).flatMap((ts) => (ts.turns ?? []).flatMap((tn) => (tn.colour ? [tn.colour] : []))),
+  );
   const toggleTapestry = (sid: string, all: boolean) =>
     setOpenTapestries((prev) => {
       const open = !prev.has(sid);
@@ -739,6 +745,7 @@ export function SessionsTable({
                   <SessionTapestry
                     session={ts}
                     sPerPx={sPerPx}
+                    clipInk={clipInk}
                     initialScrollLeft={loadTapestryView(projectId).scroll[sess.session_id] ?? 0}
                     nameOf={nameOf}
                     codeOf={codeOf}

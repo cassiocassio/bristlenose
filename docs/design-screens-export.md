@@ -202,6 +202,30 @@ Smallest first; each step ends usable and green.
    progress and Cancel in the panel.
 8. **A real board** from a real study, dragged about as a workshop would.
 
+## 8a. Where it stands — 17 Oct 2026, evening (for the next session)
+
+All on `main`, not pushed. The weekend's arc, newest last:
+
+- **Exports:** folder (`3db394fa`), Copy Screens + Export Screens on the lens (`ab7696ce`), Miro
+  screens board (`2fb81386` → reworked `8926b870`, cascade `73015733`), review fixes
+  (`0fc4193f`), removed interviews prune their exported stills (`09172ebf`).
+- **All Miro boards** (quotes and screens), owner's decisions of 17 Oct: rectangle stickies
+  (`b614da58`); no 300-character cut, only Miro's 6,000 limit (`3a5f1140`); long quotes split at
+  **325** characters into at most three parts at sentence ends, with "…" (`da38b6f1`, `fe666b27`);
+  every sticky **sized by its text**, 17 × √chars (the owner's hand), so the type is one size;
+  parts **overlap by one x-height and step right by the same** (X_HEIGHT = 5), a square notch;
+  each set **grouped** on Miro; a **"Break long quotes into multiple sticky notes"** checkbox, on by
+  default, in the panel and the Mac sheet (`ea52bc36`).
+- **FigJam session** imports `board_layout.quote_part_texts` (board-neutral parts) and leaves
+  sizing, overlap and grouping to itself — FigJam stickies are fixed widths and ungrouped.
+
+**Still owed:** the Swift suite since `ea52bc36` (the app builds; the suite has not run); a by-hand
+check of Copy Screens from the sandboxed app; the sample boards are in the owner's Miro account
+(the latest: quotes `uXjVEYp6kn0=`, `uXjVEYp1o9g=`, screens `uXjVEYpEdVM=`).
+
+**Open with the owner:** an LLM choosing the breaks (sentence numbers only, never text; during
+analysis, recommended, or on-machine at export) — asked, not answered.
+
 ## 9. Open
 
 1. ~~Which clipboard shape works where (§5).~~ File URLs, in FigJam and Miro (17 Oct 2026).

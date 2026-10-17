@@ -543,15 +543,6 @@
       "zoneAccepted": "Hyväksytty",
       "zoneExcluded": "Poissuljettu"
     },
-    "report": {
-      "title": "AutoCode-raportti",
-      "subtitle_one": "{{count}} tunniste ehdotettu {{sessions}} istunnossa",
-      "subtitle_other": "{{count}} tunnistetta ehdotettu {{sessions}} istunnossa",
-      "close": "Sulje",
-      "acceptAll": "Hyväksy kaikki",
-      "tagTentatively": "Merkitse alustavasti",
-      "deny": "Hylkää"
-    },
     "toast": {
       "donePartial": "{{processed}}/{{total}} sitaattia merkitty \u2013 osa erist\u00e4 ep\u00e4onnistui.",
       "progress": "✦ AutoCode-merkitään {{processed}}/{{total}} sitaattia…",

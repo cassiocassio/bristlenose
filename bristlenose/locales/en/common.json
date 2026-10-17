@@ -544,15 +544,6 @@
       "zoneAccepted": "Accepted",
       "zoneExcluded": "Excluded"
     },
-    "report": {
-      "title": "AutoCode Report",
-      "subtitle_one": "{{count}} tag proposed across {{sessions}} session",
-      "subtitle_other": "{{count}} tags proposed across {{sessions}} sessions",
-      "close": "Close",
-      "acceptAll": "Accept all",
-      "tagTentatively": "Tag tentatively",
-      "deny": "Deny"
-    },
     "toast": {
       "donePartial": "Tagged {{processed}} of {{total}} quotes \u2014 some batches failed.",
       "progress": "✦ AutoCoding {{processed}}/{{total}} quotes…",

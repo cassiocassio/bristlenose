@@ -543,15 +543,6 @@
       "zoneAccepted": "Godkendt",
       "zoneExcluded": "Udelukket"
     },
-    "report": {
-      "title": "AutoCode-rapport",
-      "subtitle_one": "{{count}} tag foreslået på tværs af {{sessions}} session",
-      "subtitle_other": "{{count}} tags foreslået på tværs af {{sessions}} sessioner",
-      "close": "Luk",
-      "acceptAll": "Godkend alle",
-      "tagTentatively": "Tag foreløbigt",
-      "deny": "Afvis"
-    },
     "toast": {
       "donePartial": "{{processed}} af {{total}} citater tagget \u2013 nogle batches mislykkedes.",
       "progress": "✦ AutoCoder {{processed}}/{{total}} citater…",

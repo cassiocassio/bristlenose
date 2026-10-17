@@ -543,15 +543,6 @@
       "zoneAccepted": "Aceptadas",
       "zoneExcluded": "Excluidas"
     },
-    "report": {
-      "title": "Informe de AutoCode",
-      "subtitle_one": "{{count}} etiqueta propuesta en {{sessions}} sesión",
-      "subtitle_other": "{{count}} etiquetas propuestas en {{sessions}} sesiones",
-      "close": "Cerrar",
-      "acceptAll": "Aceptar todas",
-      "tagTentatively": "Etiquetar tentativamente",
-      "deny": "Rechazar"
-    },
     "toast": {
       "donePartial": "Se han etiquetado {{processed}} de {{total}} citas; algunos lotes han fallado.",
       "progress": "✦ AutoCodificando {{processed}}/{{total}} citas…",

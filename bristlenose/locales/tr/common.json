@@ -543,15 +543,6 @@
       "zoneAccepted": "Kabul edildi",
       "zoneExcluded": "Hariç tutuldu"
     },
-    "report": {
-      "title": "AutoCode Raporu",
-      "subtitle_one": "{{sessions}} oturum boyunca {{count}} etiket önerildi",
-      "subtitle_other": "{{sessions}} oturum boyunca {{count}} etiket önerildi",
-      "close": "Kapat",
-      "acceptAll": "Tümünü kabul et",
-      "tagTentatively": "Geçici olarak etiketle",
-      "deny": "Reddet"
-    },
     "toast": {
       "donePartial": "{{total}} al\u0131nt\u0131dan {{processed}} tanesi etiketlendi \u2014 baz\u0131 gruplar ba\u015far\u0131s\u0131z oldu.",
       "progress": "✦ {{total}} alıntıdan {{processed}} tanesi AutoCode ile kodlanıyor…",

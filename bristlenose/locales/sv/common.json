@@ -543,15 +543,6 @@
       "zoneAccepted": "Godkänd",
       "zoneExcluded": "Exkluderad"
     },
-    "report": {
-      "title": "AutoCode-rapport",
-      "subtitle_one": "{{count}} tagg föreslagen över {{sessions}} session",
-      "subtitle_other": "{{count}} taggar föreslagna över {{sessions}} sessioner",
-      "close": "Stäng",
-      "acceptAll": "Godkänn alla",
-      "tagTentatively": "Tagga preliminärt",
-      "deny": "Avvisa"
-    },
     "toast": {
       "donePartial": "{{processed}} av {{total}} citat taggade \u2013 vissa satser misslyckades.",
       "progress": "✦ AutoCodar {{processed}}/{{total}} citat…",

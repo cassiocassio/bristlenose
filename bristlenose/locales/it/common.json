@@ -543,15 +543,6 @@
       "zoneAccepted": "Accettati",
       "zoneExcluded": "Esclusi"
     },
-    "report": {
-      "title": "Report AutoCode",
-      "subtitle_one": "{{count}} tag proposto in {{sessions}} sessione",
-      "subtitle_other": "{{count}} tag proposti in {{sessions}} sessioni",
-      "close": "Chiudi",
-      "acceptAll": "Accetta tutti",
-      "tagTentatively": "Etichetta provvisoriamente",
-      "deny": "Rifiuta"
-    },
     "toast": {
       "donePartial": "Etichettate {{processed}} citazioni su {{total}}: alcuni lotti non sono riusciti.",
       "progress": "✦ AutoCode di {{processed}}/{{total}} citazioni…",

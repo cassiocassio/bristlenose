@@ -1,5 +1,6 @@
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { ThresholdReviewModal } from "./ThresholdReviewModal";
+import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
 import type { ProposedTagResponse } from "../utils/types";
 
 // Mock the API module.
@@ -287,6 +288,58 @@ describe("ThresholdReviewModal", () => {
     expect(screen.queryByTestId("bn-proposal-row-1")).not.toBeInTheDocument();
 
     vi.useRealTimers();
+  });
+
+  // Parked behind `proposalRationaleTooltip` (see utils/featureFlags.ts):
+  // the first test forces the flag on, the second asserts what ships.
+  it("shows the rationale tooltip on a row's tag badge (flag on)", async () => {
+    featureFlags.proposalRationaleTooltip = true;
+    try {
+      mockGetProposals.mockResolvedValue({
+        proposals: [makeProposal({ rationale: "Speaker clearly frustrated" })],
+        total: 1,
+      });
+
+      render(
+        <ThresholdReviewModal
+          open={true}
+          frameworkId="garrett"
+          frameworkTitle="Garrett"
+          onClose={vi.fn()}
+          onApply={vi.fn()}
+        />,
+      );
+      await act(async () => {});
+
+      const row = screen.getByTestId("bn-proposal-row-1");
+      expect(row.querySelector(".has-tooltip .tooltip")).toHaveTextContent(
+        "Speaker clearly frustrated",
+      );
+    } finally {
+      resetFeatureFlags();
+    }
+  });
+
+  it("does not render the rationale tooltip when the flag is off (shipped)", async () => {
+    mockGetProposals.mockResolvedValue({
+      proposals: [makeProposal({ rationale: "Speaker clearly frustrated" })],
+      total: 1,
+    });
+
+    render(
+      <ThresholdReviewModal
+        open={true}
+        frameworkId="garrett"
+        frameworkTitle="Garrett"
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+    await act(async () => {});
+
+    expect(screen.getByTestId("bn-proposal-row-1")).toBeInTheDocument();
+    expect(screen.queryByText("Speaker clearly frustrated")).toBeNull();
+    expect(document.querySelector(".has-tooltip")).toBeNull();
   });
 
   it("slider thumbs are present with default values", async () => {

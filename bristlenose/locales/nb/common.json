@@ -543,15 +543,6 @@
       "zoneAccepted": "Godtatt",
       "zoneExcluded": "Utelatt"
     },
-    "report": {
-      "title": "AutoCode-rapport",
-      "subtitle_one": "{{count}} tagg foreslått på tvers av {{sessions}} økt",
-      "subtitle_other": "{{count}} tagger foreslått på tvers av {{sessions}} økter",
-      "close": "Lukk",
-      "acceptAll": "Godta alle",
-      "tagTentatively": "Merk foreløpig",
-      "deny": "Avvis"
-    },
     "toast": {
       "donePartial": "{{processed}} av {{total}} sitater merket \u2013 noen partier mislyktes.",
       "progress": "✦ AutoCoder {{processed}}/{{total}} sitater …",

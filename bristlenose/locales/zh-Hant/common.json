@@ -514,14 +514,6 @@
       "zoneAccepted": "已接受",
       "zoneExcluded": "已排除"
     },
-    "report": {
-      "title": "AutoCode 報告",
-      "subtitle_other": "在 {{sessions}} 個場次中提出 {{count}} 個標籤",
-      "close": "關閉",
-      "acceptAll": "全部接受",
-      "tagTentatively": "暫定標記",
-      "deny": "拒絕"
-    },
     "toast": {
       "donePartial": "\u5df2\u6a19\u8a3b {{total}} \u5247\u5f15\u8a00\u4e2d\u7684 {{processed}} \u5247\uff0c\u90e8\u5206\u6279\u6b21\u5931\u6557\u3002",
       "progress": "✦ 正在 AutoCoding {{processed}}/{{total}} 則引述⋯",

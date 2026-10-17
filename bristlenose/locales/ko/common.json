@@ -514,14 +514,6 @@
       "zoneAccepted": "승인됨",
       "zoneExcluded": "제외됨"
     },
-    "report": {
-      "title": "AutoCode 보고서",
-      "subtitle_other": "{{sessions}}개 세션에 걸쳐 {{count}}개 태그 제안됨",
-      "close": "닫기",
-      "acceptAll": "모두 승인",
-      "tagTentatively": "잠정적으로 태그",
-      "deny": "거부"
-    },
     "toast": {
       "donePartial": "\uc778\uc6a9\ubb38 {{total}}\uac1c \uc911 {{processed}}\uac1c\uc5d0 \ud0dc\uadf8\ub97c \uc9c0\uc815\ud588\uc2b5\ub2c8\ub2e4. \uc77c\ubd80 \ubc30\uce58\uac00 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.",
       "progress": "✦ AutoCode {{processed}}/{{total}} 인용문 처리 중…",

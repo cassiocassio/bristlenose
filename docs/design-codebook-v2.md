@@ -1219,7 +1219,7 @@ row says so.
 | B7 | open | still open (Q9) |
 | C1, C3, C4, C5 | dissolved by the v1 deletion | the register's changelog says so; the table rows carry no mark |
 | C2 | open | not re-checked; the surface it describes was v1's |
-| D1 | open | still open: `AutoCodeReportModal` is exported from `components/index.ts` with no consumer |
+| D1 | fixed 17 Oct | component, export, tests and its 7 locale keys deleted |
 | D2 | open | still open: all nine YAMLs ship `enabled: true` |
 | D3 | open | still open: the review modal lists `pending` proposals only |
 | D5 | open (30 orphaned strings) | not re-counted this pass |
@@ -3645,7 +3645,8 @@ inconsistent. Two `window.open` calls pass no `noopener`
 neither destination is data-driven.
 _15 Oct 2026: eight `target="_blank"` sites now, after v1's deletion; the two
 bare `rel="noreferrer"` sites are unchanged (`ProposalZoneList.tsx:128`,
-`AutoCodeReportModal.tsx:228`)._
+`AutoCodeReportModal.tsx:228`). 17 Oct 2026: `AutoCodeReportModal.tsx` deleted,
+so one bare site remains._
 
 The About tab's citation links (`.bn-about-citation a`, `report.css:177`) use the
 same anchor form with no glyph. **`author_links` already conforms to the house

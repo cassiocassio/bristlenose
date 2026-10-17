@@ -543,15 +543,6 @@
       "zoneAccepted": "Akzeptiert",
       "zoneExcluded": "Ausgeschlossen"
     },
-    "report": {
-      "title": "AutoCode-Bericht",
-      "subtitle_one": "{{count}} Tag vorgeschlagen in {{sessions}} Interview",
-      "subtitle_other": "{{count}} Tags vorgeschlagen in {{sessions}} Interviews",
-      "close": "Schließen",
-      "acceptAll": "Alle akzeptieren",
-      "tagTentatively": "Vorläufig taggen",
-      "deny": "Ablehnen"
-    },
     "toast": {
       "donePartial": "{{processed}} von {{total}} Zitaten verschlagwortet \u2013 einige Stapel sind fehlgeschlagen.",
       "progress": "✦ AutoCodierung {{processed}}/{{total}} Zitate…",

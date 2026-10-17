@@ -543,15 +543,6 @@
       "zoneAccepted": "Geaccepteerd",
       "zoneExcluded": "Uitgesloten"
     },
-    "report": {
-      "title": "AutoCode-rapport",
-      "subtitle_one": "{{count}} tag voorgesteld over {{sessions}} sessie",
-      "subtitle_other": "{{count}} tags voorgesteld over {{sessions}} sessies",
-      "close": "Sluit",
-      "acceptAll": "Alles accepteren",
-      "tagTentatively": "Voorlopig taggen",
-      "deny": "Weiger"
-    },
     "toast": {
       "donePartial": "{{processed}} van {{total}} citaten getagd \u2014 sommige batches zijn mislukt.",
       "progress": "✦ {{processed}}/{{total}} citaten coderen…",

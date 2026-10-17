@@ -543,15 +543,6 @@
       "zoneAccepted": "Acceptades",
       "zoneExcluded": "Excloses"
     },
-    "report": {
-      "title": "Informe d'AutoCode",
-      "subtitle_one": "{{count}} etiqueta proposada en {{sessions}} sessió",
-      "subtitle_other": "{{count}} etiquetes proposades en {{sessions}} sessions",
-      "close": "Tanca",
-      "acceptAll": "Accepta-ho tot",
-      "tagTentatively": "Etiqueta provisionalment",
-      "deny": "Denega"
-    },
     "toast": {
       "donePartial": "S'han etiquetat {{processed}} de {{total}} cites; alguns lots han fallat.",
       "progress": "✦ S'estan autocodificant {{processed}}/{{total}} cites…",

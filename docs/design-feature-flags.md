@@ -74,7 +74,7 @@ shapes are in use; both are required, in the same file:
 - **Flag forced on** for the tests that specify the parked behaviour.
   `QuoteCard.test.tsx` does it at file level (`beforeEach` sets both flags,
   `afterEach(resetFeatureFlags)`); `Badge.test.tsx` does it in a nested
-  `describe`; `AutoCodeReportModal.test.tsx` does it inside one test with
+  `describe`; `ThresholdReviewModal.test.tsx` does it inside one test with
   `try/finally`. Any of the three is fine. What is not fine is a test that
   passes only because the flag happens to be off.
 - **Shipped state asserted separately.** A "parked" describe that leaves the

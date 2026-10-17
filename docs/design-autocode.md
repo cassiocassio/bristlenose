@@ -86,8 +86,8 @@ proposals with confidence + rationale).
 - **Rationale hover tooltip — parked behind a feature flag, 20 Sep 2026.**
   Hovering a proposed badge floated in the LLM's rationale from below the
   badge (`.has-tooltip .tooltip`, `theme/molecules/autocode-report.css`), on
-  the quote card (`Badge.tsx`, proposed variant), in `ProposalZoneList.tsx`
-  and in the `AutoCodeReportModal.tsx` table. Withheld via
+  the quote card (`Badge.tsx`, proposed variant) and in `ProposalZoneList.tsx`
+  (the `AutoCodeReportModal.tsx` table that also drew it was deleted 17 Oct 2026). Withheld via
   `featureFlags.proposalRationaleTooltip` in
   `frontend/src/utils/featureFlags.ts`; the tests force the flag on to keep
   the behaviour specified and assert the shipped state separately. Two

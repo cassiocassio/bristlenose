@@ -214,7 +214,7 @@
     max-height: 2000px;
 }
 
-/* ── Proposal table rows (reuses report-table patterns) ────── */
+/* ── Proposal table rows (cells: .report-* in autocode-report.css) ── */
 
 .threshold-proposal-table {
     width: 100%;

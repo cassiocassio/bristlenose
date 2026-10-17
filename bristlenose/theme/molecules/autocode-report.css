@@ -1,9 +1,5 @@
-/* Molecule: autocode-report — triage table for AutoCode proposals */
-
-.report-table {
-    width: 100%;
-    border-collapse: collapse;
-}
+/* Molecule: autocode-report — AutoCode proposal rows, drawn by ProposalZoneList
+   inside ThresholdReviewModal's .threshold-proposal-table */
 
 .report-session-header {
     font-size: var(--bn-text-label);
@@ -60,24 +56,6 @@
 }
 
 .report-tag { width: auto; }
-
-.report-deny { width: 32px; text-align: center; }
-
-.report-deny-btn {
-    background: none;
-    border: none;
-    color: var(--bn-colour-muted);
-    cursor: pointer;
-    font-size: var(--bn-text-label);
-    padding: 2px 4px;
-    border-radius: var(--bn-radius-sm);
-    transition: color var(--bn-transition-fast), background var(--bn-transition-fast);
-}
-
-.report-deny-btn:hover {
-    color: var(--bn-colour-negative);
-    background: rgba(220, 38, 38, 0.06);
-}
 
 /* Row removal animation */
 .report-row.removing {

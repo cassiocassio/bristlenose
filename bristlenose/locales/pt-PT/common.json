@@ -543,15 +543,6 @@
       "zoneAccepted": "Aceites",
       "zoneExcluded": "Excluídas"
     },
-    "report": {
-      "title": "Relatório de AutoCode",
-      "subtitle_one": "{{count}} etiqueta proposta em {{sessions}} sessão",
-      "subtitle_other": "{{count}} etiquetas propostas em {{sessions}} sessões",
-      "close": "Fechar",
-      "acceptAll": "Aceitar todas",
-      "tagTentatively": "Etiquetar como tentativa",
-      "deny": "Recusar"
-    },
     "toast": {
       "donePartial": "{{processed}} de {{total}} cita\u00e7\u00f5es etiquetadas \u2014 alguns lotes falharam.",
       "progress": "✦ AutoCode em curso {{processed}}/{{total}} citações…",

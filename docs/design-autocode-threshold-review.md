@@ -226,7 +226,7 @@ No new endpoints needed. The frontend fetches all proposals with `min_confidence
 |-----------|--------|---|
 | `CodebookPanel.tsx` | Swap `AutoCodeReportModal` for `ThresholdReviewModal`. Keep proposed count badge as re-entry point | **File deleted** in 0.29.0. The swap lives at `frontend/src/islands/CodebookV2.tsx:68,837`; re-entry is the Review door, not a count badge |
 | `AutoCodeToast.tsx` | `onOpenReport` now opens `ThresholdReviewModal` | **File deleted** ("autocode: delete the unmounted toast, port the coverage nothing else had"). Progress is the activity chip stack — `addJob("autocode:" + id)`, `CodebookV2.tsx:409` |
-| `AutoCodeReportModal.tsx` | Deprecated — kept on disk, no longer imported | Understated: it has **no production caller at all**, but is still exported from `frontend/src/components/index.ts:4` and carries 12 live tests. Before deleting it, check what those tests are the sole witness to — CLAUDE.md's orphaned-coverage rule |
+| `AutoCodeReportModal.tsx` | Deprecated — kept on disk, no longer imported | **File deleted** 17 Oct 2026, with its barrel export, tests and 7 `autocode.report.*` locale keys. Its two parked-tooltip tests were the only witness to the tooltip on a proposal row and were ported to `ThresholdReviewModal.test.tsx` |
 
 ### CSS
 

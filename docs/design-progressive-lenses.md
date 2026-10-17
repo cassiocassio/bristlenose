@@ -541,8 +541,7 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 3. Quote exclusivity (`bristlenose/stages/CLAUDE.md`) is a sections-and-themes
    invariant; before the barrier every quote sits in its session's group.
 4. Quotes lens: a By session grouping (`QuoteGroup` per session; the
-   group-by-session pattern already exists in `ProposalZoneList.tsx` and
-   `AutoCodeReportModal.tsx`). The grouping control appears at `joined`, in
+   group-by-session pattern already exists in `ProposalZoneList.tsx`). The grouping control appears at `joined`, in
    `.section-heading-action`. Remembered per project as a per-viewer convenience.
 5. The grouping control's two strings are new keys, in all 21 locales.
 6. Audit every group-level action in By session: moving a quote and renaming a

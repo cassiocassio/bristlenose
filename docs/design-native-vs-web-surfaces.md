@@ -17,7 +17,6 @@ The trick is doing it without forking 30 surfaces. We need a rule that tells us,
 | `SettingsModal` | M | **yes** (pattern proof) | done | Frequently-poked trust-signal surface; Mail-Accounts pattern + Keychain integration. |
 | `FeedbackModal` | M | no | **no** | Free-text composition; web's textarea + paste-image + autosave behaviour > rebuilt-poorly native. |
 | `HelpModal` | M | no | no | Reading-shaped, multi-section, no decision asked. Web is correct. |
-| `AutoCodeReportModal` | M | no | no | Live data table; per-row actions; tightly coupled to web codebook state. |
 | `ThresholdReviewModal` | L | no | no | Histogram + dual-slider + zone interaction. Native rebuild is a quarter of work for one screen. |
 | `InspectorPanel` | L | no | no | Bottom-panel pattern, drag-resize, multi-tab. Web-shaped. |
 | `AboutPanel`, `CodebookPanel`, `SettingsPanel` (full-tab islands) | — | n/a | no | Full report tabs, not modals. |

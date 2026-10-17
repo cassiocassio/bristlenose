@@ -589,9 +589,13 @@ MCP: 6 of 6 quotes, fonts loaded, link kept. That run found **Figma's plugin
 sandbox has no `URL`** (`ReferenceError`), which had silently dropped every clip
 link while the Node tests passed; links are now matched by pattern, and a test
 plans the fixture with `URL`, `URLSearchParams` and `structuredClone` removed.
-Still to do: a first run from the Figma desktop app (import from manifest),
-which is the only check of the panel and its inline script under network access
-`none`; the Bristlenose side of the handoff (web panel, Mac sheet, feature
+**First run from the Figma desktop app, 17 Oct 2026** (import from manifest;
+the owner, on the fixture): the board drew as planned — title, two named
+sections, pink headers, wide yellow quotes, italic attributions, the clip link,
+Arabic right to left. So the panel's inline script **does** run under network
+access `none` (closing the one unverified publishing point), and file choice
+works. Development plugins exist only in the desktop app; the browser's Plugins
+menu has no Development item. Still to do: the Bristlenose side of the handoff (web panel, Mac sheet, feature
 flag); the disclosures (review finding 21); the plugin's tests in CI.
 
 **Plugin build notes, 17 Oct 2026** (research from Figma's docs, review

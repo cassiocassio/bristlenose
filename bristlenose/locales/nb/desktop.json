@@ -890,7 +890,7 @@
     "backendHint": "Automatisk finner den beste motoren for Macen din.",
     "modelRecommended": "{{model}} (anbefalt)",
     "readScreensLabel": "Les delte skjermer",
-    "readScreensHint": "Leser teksten p\u00e5 skjermer som deles i opptak, p\u00e5 denne Mac-en, og lagrer den med sm\u00e5 bilder av hver skjerm i prosjektmappen. Sendes aldri til KI-en og tas ikke med i eksporter."
+    "readScreensHint": "Leser teksten p\u00e5 skjermer som deles i opptak, p\u00e5 denne Mac-en, og lagrer den med sm\u00e5 bilder av hver skjerm i prosjektmappen. Sendes aldri til KI-en."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Konfigurer KI på enheten",

@@ -890,7 +890,7 @@
     "backendHint": "Auto détecte le meilleur moteur pour votre Mac.",
     "modelRecommended": "{{model}} (recommandé)",
     "readScreensLabel": "Lire les \u00e9crans partag\u00e9s",
-    "readScreensHint": "Lit le texte des \u00e9crans partag\u00e9s dans les enregistrements, sur ce Mac, et le conserve avec de petites images de chaque \u00e9cran dans le dossier du projet. Il n\u2019est jamais envoy\u00e9 \u00e0 l\u2019IA ni inclus dans les exportations."
+    "readScreensHint": "Lit le texte des \u00e9crans partag\u00e9s dans les enregistrements, sur ce Mac, et le conserve avec de petites images de chaque \u00e9cran dans le dossier du projet. Il n\u2019est jamais envoy\u00e9 \u00e0 l\u2019IA."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configurer l’IA locale",

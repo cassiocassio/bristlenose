@@ -890,7 +890,7 @@
     "backendHint": "Otomatik, Mac’iniz için en iyi motoru algılar.",
     "modelRecommended": "{{model}} (önerilen)",
     "readScreensLabel": "Payla\u015f\u0131lan ekranlar\u0131 oku",
-    "readScreensHint": "Kay\u0131tlarda payla\u015f\u0131lan ekranlardaki metni bu Mac\u2019te okur ve her ekran\u0131n k\u00fc\u00e7\u00fck g\u00f6r\u00fcnt\u00fcleriyle birlikte proje klas\u00f6r\u00fcnde saklar. Yapay zek\u00e2ya asla g\u00f6nderilmez ve d\u0131\u015fa aktarmalara dahil edilmez."
+    "readScreensHint": "Kay\u0131tlarda payla\u015f\u0131lan ekranlardaki metni bu Mac\u2019te okur ve her ekran\u0131n k\u00fc\u00e7\u00fck g\u00f6r\u00fcnt\u00fcleriyle birlikte proje klas\u00f6r\u00fcnde saklar. Yapay zek\u00e2ya asla g\u00f6nderilmez."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Aygıtta yapay zekâyı ayarla",

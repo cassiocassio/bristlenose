@@ -890,7 +890,7 @@
     "backendHint": "Auto erkennt die beste Engine für Ihren Mac.",
     "modelRecommended": "{{model}} (empfohlen)",
     "readScreensLabel": "Geteilte Bildschirme lesen",
-    "readScreensHint": "Liest den Text auf Bildschirmen, die in Aufnahmen geteilt wurden, auf diesem Mac und speichert ihn mit kleinen Bildern jedes Bildschirms im Projektordner. Wird nie an die KI gesendet und ist nicht in Exporten enthalten."
+    "readScreensHint": "Liest den Text auf Bildschirmen, die in Aufnahmen geteilt wurden, auf diesem Mac und speichert ihn mit kleinen Bildern jedes Bildschirms im Projektordner. Wird nie an die KI gesendet."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Lokale KI einrichten",

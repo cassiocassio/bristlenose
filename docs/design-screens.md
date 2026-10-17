@@ -698,12 +698,11 @@ One model for the whole project, combining both evidence docs:
 7. **One sentence where it is switched on** (Settings ▸ Transcription ▸ *Read shared screens*,
    `desktop.transcriptionSettings.readScreensHint`): *"Reads the text on screens shared in
    recordings, on this Mac, and keeps it with small pictures of each screen in the project’s
-   folder. Never sent to the AI, and not included in exports."* It says where the data lives
+   folder. Never sent to the AI."* It says where the data lives
    rather than "never leaves your Mac", because the project folder may be synced, and it does not
    mention that turning it off deletes: what was read can be read again (owner's call, 14 Oct).
-   **Its last clause becomes untrue when the first screens export ships** and changes then, in
-   all 21 locales, English settled first (`docs/design-screens-export.md` §7). Not before: the
-   sentence describes the build the researcher has.
+   _Until 17 Oct 2026 it ended "…and not included in exports"; the clause went with the first
+   screens exports (`docs/design-screens-export.md` §7), in all 21 locales._
 8. **On by default on the Mac; off deletes.** The Mac app reads shared screens unless the researcher
    turns that off. Off, it starts each serve with `BRISTLENOSE_SCREEN_TEXT=0`, and the serve deletes
    what was read for that project — indexes and cached stills — before anything else runs; a project

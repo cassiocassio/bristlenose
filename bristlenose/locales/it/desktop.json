@@ -890,7 +890,7 @@
     "backendHint": "La modalità automatica rileva il motore migliore per il tuo Mac.",
     "modelRecommended": "{{model}} (consigliato)",
     "readScreensLabel": "Leggi le schermate condivise",
-    "readScreensHint": "Legge il testo delle schermate condivise nelle registrazioni, su questo Mac, e lo conserva con piccole immagini di ogni schermata nella cartella del progetto. Non viene mai inviato all\u2019IA n\u00e9 incluso nelle esportazioni."
+    "readScreensHint": "Legge il testo delle schermate condivise nelle registrazioni, su questo Mac, e lo conserva con piccole immagini di ogni schermata nella cartella del progetto. Non viene mai inviato all\u2019IA."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configura l'IA sul dispositivo",

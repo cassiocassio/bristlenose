@@ -890,7 +890,7 @@
     "backendHint": "Automatisch detecteert de beste engine voor je Mac.",
     "modelRecommended": "{{model}} (aanbevolen)",
     "readScreensLabel": "Lees gedeelde schermen",
-    "readScreensHint": "Leest de tekst op schermen die in opnamen worden gedeeld, op deze Mac, en bewaart die met kleine afbeeldingen van elk scherm in de projectmap. Wordt nooit naar de AI gestuurd en zit niet in exports."
+    "readScreensHint": "Leest de tekst op schermen die in opnamen worden gedeeld, op deze Mac, en bewaart die met kleine afbeeldingen van elk scherm in de projectmap. Wordt nooit naar de AI gestuurd."
   },
   "ollamaSetup": {
     "pillChoosingModel": "AI op apparaat instellen",

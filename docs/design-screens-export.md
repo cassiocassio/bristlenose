@@ -169,10 +169,9 @@ point would do, later); FigJam as a target (`design-board-integrations.md`).
 
 ## 7. What changes when it ships
 
-- **The Settings sentence** (`desktop.transcriptionSettings.readScreensHint`, all 21 locales):
-  *"…Never sent to the AI, and not included in exports."* The last clause becomes untrue with the
-  first export to ship. New English settled first, then the locales; it changes in the same
-  release, not before.
+- **The Settings sentence** (`desktop.transcriptionSettings.readScreensHint`, all 21 locales) ended
+  *"…Never sent to the AI, and not included in exports."* The clause was dropped on 17 Oct 2026
+  (owner), with the exports on `main`: it now ends *"Never sent to the AI."*
 - **Export classification:** the new routes are actions, not GET reads, so
   `tests/test_serve_export_coverage.py` is unaffected; the screens routes stay server-only in the
   HTML export.
@@ -186,7 +185,7 @@ point would do, later); FigJam as a target (`design-board-integrations.md`).
 
 **As built, 17 Oct 2026:** steps 1–7 are on `main` (`3db394fa`, `ab7696ce`, `2fb81386`,
 `ebacacaf`); step 8 ran on a copy of *IKEA with uxfriends* (9 frames, 56 s). Still owed: the
-by-hand checks below §9, and the Settings sentence (§7).
+by-hand checks.
 
 Smallest first; each step ends usable and green.
 

@@ -890,7 +890,7 @@
     "backendHint": "L'opció automàtica detecta el millor motor per al teu Mac.",
     "modelRecommended": "{{model}} (recomanat)",
     "readScreensLabel": "Llegeix les pantalles compartides",
-    "readScreensHint": "Llegeix el text de les pantalles compartides a les gravacions, en aquest Mac, i el desa amb petites imatges de cada pantalla a la carpeta del projecte. No s\u2019envia mai a la IA ni s\u2019inclou a les exportacions."
+    "readScreensHint": "Llegeix el text de les pantalles compartides a les gravacions, en aquest Mac, i el desa amb petites imatges de cada pantalla a la carpeta del projecte. No s\u2019envia mai a la IA."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configura la IA al dispositiu",

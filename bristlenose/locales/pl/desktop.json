@@ -928,7 +928,7 @@
     "backendHint": "Automatycznie wykrywa najlepszy silnik dla Twojego Maca.",
     "modelRecommended": "{{model}} (zalecany)",
     "readScreensLabel": "Odczytuj udost\u0119pnione ekrany",
-    "readScreensHint": "Odczytuje tekst z ekran\u00f3w udost\u0119pnionych w nagraniach, na tym Macu, i przechowuje go wraz z ma\u0142ymi obrazami ka\u017cdego ekranu w folderze projektu. Nigdy nie jest wysy\u0142any do AI ani do\u0142\u0105czany do eksport\u00f3w."
+    "readScreensHint": "Odczytuje tekst z ekran\u00f3w udost\u0119pnionych w nagraniach, na tym Macu, i przechowuje go wraz z ma\u0142ymi obrazami ka\u017cdego ekranu w folderze projektu. Nigdy nie jest wysy\u0142any do AI."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Skonfiguruj AI na urządzeniu",

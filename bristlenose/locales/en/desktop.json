@@ -895,7 +895,7 @@
     "backendHint": "Auto detects the best engine for your Mac.",
     "modelRecommended": "{{model}} (recommended)",
     "readScreensLabel": "Read shared screens",
-    "readScreensHint": "Reads the text on screens shared in recordings, on this Mac, and keeps it with small pictures of each screen in the project\u2019s folder. Never sent to the AI, and not included in exports."
+    "readScreensHint": "Reads the text on screens shared in recordings, on this Mac, and keeps it with small pictures of each screen in the project\u2019s folder. Never sent to the AI."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Set up on-device AI",

@@ -890,7 +890,7 @@
     "backendHint": "O modo automático deteta o melhor motor para o seu Mac.",
     "modelRecommended": "{{model}} (recomendado)",
     "readScreensLabel": "Ler ecr\u00e3s partilhados",
-    "readScreensHint": "L\u00ea o texto dos ecr\u00e3s partilhados nas grava\u00e7\u00f5es, neste Mac, e guarda-o com pequenas imagens de cada ecr\u00e3 na pasta do projeto. Nunca \u00e9 enviado para a IA nem inclu\u00eddo nas exporta\u00e7\u00f5es."
+    "readScreensHint": "L\u00ea o texto dos ecr\u00e3s partilhados nas grava\u00e7\u00f5es, neste Mac, e guarda-o com pequenas imagens de cada ecr\u00e3 na pasta do projeto. Nunca \u00e9 enviado para a IA."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configurar IA no dispositivo",

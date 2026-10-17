@@ -890,7 +890,7 @@
     "backendHint": "Auto upptäcker den bästa motorn för din Mac.",
     "modelRecommended": "{{model}} (rekommenderas)",
     "readScreensLabel": "L\u00e4s delade sk\u00e4rmar",
-    "readScreensHint": "L\u00e4ser texten p\u00e5 sk\u00e4rmar som delas i inspelningar, p\u00e5 den h\u00e4r Macen, och sparar den med sm\u00e5 bilder av varje sk\u00e4rm i projektmappen. Skickas aldrig till AI:n och tas inte med i exporter."
+    "readScreensHint": "L\u00e4ser texten p\u00e5 sk\u00e4rmar som delas i inspelningar, p\u00e5 den h\u00e4r Macen, och sparar den med sm\u00e5 bilder av varje sk\u00e4rm i projektmappen. Skickas aldrig till AI:n."
   },
   "ollamaSetup": {
     "pillChoosingModel": "Konfigurera AI på enheten",

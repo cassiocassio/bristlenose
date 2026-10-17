@@ -323,11 +323,9 @@ Every export action should be logged for accountability and debugging:
 
 ### `safe_filename()` utility (`bristlenose/utils/text.py`)
 
-Shared filename sanitiser for all export features. Preserves spaces, case, and accents. Strips path separators, traversal sequences, null bytes, and Windows-illegal chars. 21 adversarial tests. Used by:
-- Zip folder name (HTML export)
-- Transcript filenames
-- Clip filenames
-- XLS download filename
+Shared filename sanitiser for all export features. Preserves spaces, case, accents and any script. Strips path separators, traversal sequences, null bytes, and Windows-illegal chars; a name with nothing visible left (only spaces, controls or format characters such as a zero-width space) comes back as `_`. Callers today (17 Oct 2026; `git grep -n 'safe_filename('` is the live answer): clip filenames (`clip_manifest.py`), and the download names of the quotes CSV and XLSX (`quotes_export.py`), the HTML report (`export.py`, which falls back to `bristlenose` on `_`) and the FigJam board (`figjam.py`). Download names reach the header through `attachment_disposition()` (`export_core.py`), which sends the real name in `filename*`.
+
+**Known limit, by decision (17 Oct 2026):** `max_length` counts code points, not bytes or graphemes. A 120-character CJK name is about 375 bytes (APFS accepts it, measured; ext4's 255-byte limit is untested, and browsers shorten long names themselves), and a cut can split a combining accent from its letter. A byte-and-grapheme cap needs a segmenter outside the stdlib and renames clip files on disk; not worth it for names this long.
 
 ### Shared infrastructure — what to build once
 
@@ -335,7 +333,7 @@ These abstractions serve multiple export features. Build them during item 0 (sec
 
 | Abstraction | Location | Used by | Notes |
 |-------------|----------|---------|-------|
-| `safe_filename(text, max_length)` | `bristlenose/utils/text.py` | HTML zip folder, transcript filenames, clip filenames, XLS download name | **DONE.** 21 tests. |
+| `safe_filename(text, max_length)` | `bristlenose/utils/text.py` | Clip filenames; quotes CSV/XLSX, HTML report and FigJam download names | **DONE.** See the section above for callers. |
 | `ExportableQuote` dataclass | `bristlenose/server/export_core.py` | Quotes CSV/XLS, clip manifest builder, Miro sticky content | Single extraction query with all 11 columns. Clips filter by `starred`/`is_hero`. Miro formats differently but reads same data. |
 | `extract_quotes_for_export(db, project_id, quote_ids?)` | `bristlenose/server/export_core.py` | CSV endpoint, XLS endpoint, clip manifest, Miro export | The one query that joins Quote → Session → SourceFile → QuoteState → QuoteTag. Every consumer filters/formats the result. |
 | `anonymise_export_data(data)` | `bristlenose/server/routes/export.py` | HTML export, transcript body, clip filenames, XLS name column, Miro stickies | Already exists as `_anonymise_data()`. Extend to cover new surfaces (transcript speaker labels, clip filename speaker removal, XLS name column blanking). Keep as one function with the matrix above as its spec. |

@@ -537,7 +537,15 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             let alpha: CGFloat = d.object(forKey: "BristlenoseSidebarTintAlpha") != nil
                 ? CGFloat(d.float(forKey: "BristlenoseSidebarTintAlpha"))
                 : 0.35
-            tint.layer?.backgroundColor = color.withAlphaComponent(alpha).cgColor
+            // Resolve against the sidebar's own appearance. A bare `.cgColor`
+            // resolves against `NSAppearance.current`, which outside a draw
+            // pass (a palette change, launch) is often Aqua — so dark mode
+            // got the LIGHT paper laid over the dark material, a mid-grey.
+            var cg: CGColor?
+            tint.effectiveAppearance.performAsCurrentDrawingAppearance {
+                cg = color.withAlphaComponent(alpha).cgColor
+            }
+            tint.layer?.backgroundColor = cg
             tint.isHidden = false
         } else {
             tint.isHidden = true

@@ -109,3 +109,34 @@ class TestPruneHelper:
 
     def test_an_output_folder_with_no_session_dirs_is_fine(self, tmp_path: Path) -> None:
         assert prune_stale_session_files(tmp_path, ["s1"]) == []
+
+
+class TestExportedScreensOfARemovedInterview:
+    def test_its_exported_screengrabs_go_and_the_researchers_files_stay(self, tmp_path: Path) -> None:
+        """Exported stills are named by participant code (p2-01.jpg), which the session-id match
+        cannot see; their manifest says which session each came from."""
+        from bristlenose.screen_text.export_folder import read_manifest, write_manifest
+
+        screens = tmp_path / "screens"
+        screens.mkdir()
+        for name in ("p1-01.jpg", "p2-01.jpg", "p2-02.jpg", "my-notes.txt"):
+            (screens / name).write_text("x", encoding="utf-8")
+        write_manifest(screens, ["p1-01.jpg", "p2-01.jpg", "p2-02.jpg"],
+                       {"p1-01.jpg": "s1", "p2-01.jpg": "s2", "p2-02.jpg": "s2"})
+
+        removed = prune_stale_session_files(tmp_path, ["s1"])
+
+        assert sorted(p.name for p in removed) == ["p2-01.jpg", "p2-02.jpg"]
+        assert sorted(p.name for p in screens.iterdir() if not p.name.startswith(".")) == [
+            "my-notes.txt", "p1-01.jpg"]
+        assert read_manifest(screens) == (["p1-01.jpg"], {"p1-01.jpg": "s1"})
+
+    def test_a_manifest_from_before_sessions_were_recorded_removes_nothing(self, tmp_path: Path) -> None:
+        import json
+
+        screens = tmp_path / "screens"
+        screens.mkdir()
+        (screens / "p2-01.jpg").write_text("x", encoding="utf-8")
+        (screens / ".screens_manifest.json").write_text(json.dumps({"files": ["p2-01.jpg"]}))
+        assert prune_stale_session_files(tmp_path, ["s1"]) == []
+        assert (screens / "p2-01.jpg").exists()

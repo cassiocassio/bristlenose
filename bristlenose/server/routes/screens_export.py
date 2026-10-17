@@ -13,12 +13,10 @@ the browser's way to the clipboard copy, must not carry it.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import platform
 import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +24,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from bristlenose.output_paths import project_output_dir
+from bristlenose.screen_text import export_folder
 from bristlenose.screen_text.shots import shot_list
 from bristlenose.server.models import Project, Quote, QuoteState
 from bristlenose.server.routes.screens import (
@@ -41,8 +40,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 _jobs: dict[int, dict[str, Any]] = {}  # project_id → job state
-_MANIFEST_NAME = ".screens_manifest.json"
-FOLDER = "screens"
+FOLDER = export_folder.FOLDER
+_plain_name = export_folder.plain_name
 
 
 def _hidden_dom_ids(db: Any, project_id: int) -> set[str]:
@@ -54,11 +53,6 @@ def _hidden_dom_ids(db: Any, project_id: int) -> set[str]:
         ).all()
         if s.quote_id in quotes
     }
-
-
-def _plain_name(name: object) -> bool:
-    """A file name that names a file in this folder and nothing else."""
-    return isinstance(name, str) and bool(name) and name == Path(name).name and not name.startswith(".")
 
 
 def _write_inside(folder: Path, name: str, data: bytes) -> None:
@@ -74,34 +68,19 @@ def _write_inside(folder: Path, name: str, data: bytes) -> None:
 
 def _remove_previous_export(folder: Path) -> None:
     """Delete the files the last export's manifest names; anything else in the folder stays."""
-    path = folder / _MANIFEST_NAME
-    try:
-        entries = json.loads(path.read_text(encoding="utf-8")).get("files", [])
-    except FileNotFoundError:
-        return
-    except (OSError, ValueError, AttributeError):
-        logger.warning("Unreadable %s; earlier stills left in place", _MANIFEST_NAME, exc_info=True)
-        return
-    for name in entries if isinstance(entries, list) else []:
-        if _plain_name(name):
-            try:
-                (folder / name).unlink(missing_ok=True)
-            except OSError:
-                logger.warning("Could not remove earlier still %s", name, exc_info=True)
-    path.unlink(missing_ok=True)
-
-
-def _write_manifest(folder: Path, files: list[str]) -> None:
-    tmp = folder / f"{_MANIFEST_NAME}.tmp"
-    tmp.write_text(json.dumps({
-        "exported_at": datetime.now(timezone.utc).isoformat(), "files": files,
-    }, indent=2, ensure_ascii=True), encoding="utf-8")
-    os.replace(tmp, folder / _MANIFEST_NAME)
+    files, _ = export_folder.read_manifest(folder)
+    for name in files:
+        try:
+            (folder / name).unlink(missing_ok=True)
+        except OSError:
+            logger.warning("Could not remove earlier still %s", name, exc_info=True)
+    (folder / export_folder.MANIFEST_NAME).unlink(missing_ok=True)
 
 
 async def _run(project_id: int, job: dict[str, Any], out_dir: Path, folder: Path,
                shots: list[dict[str, Any]], videos: dict[str, Path]) -> None:
     written: list[str] = []
+    sessions: dict[str, str] = {}
     try:
         _remove_previous_export(folder)
         for shot in shots:
@@ -122,14 +101,17 @@ async def _run(project_id: int, job: dict[str, Any], out_dir: Path, folder: Path
                 job["skipped_count"] += 1
             else:
                 written.append(shot["filename"])
+                sessions[shot["filename"]] = shot["session_id"]
                 job["completed_count"] += 1
                 try:
-                    _write_manifest(folder, written)  # as each lands, so a death part-way names it
+                    # As each lands, so a death part-way still names it; with its session, so
+                    # removing that interview from the project removes it too.
+                    export_folder.write_manifest(folder, written, sessions)
                 except OSError:
                     logger.warning("Could not record %s in the manifest", shot["filename"], exc_info=True)
             job["progress"] += 1
         if _jobs.get(project_id) is job:
-            _write_manifest(folder, written)
+            export_folder.write_manifest(folder, written, sessions)
         job["status"] = "cancelled" if job["status"] == "cancelled" else "completed"
     except Exception:
         logger.exception("Screens export failed")

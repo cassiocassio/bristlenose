@@ -482,7 +482,7 @@ consumer (the manifest), they aren't front-loaded.
 | **✅ B0 — Palette** | `board_palette.py` (done) — flat pink/yellow baseline, deletes the SVG hex duplication. | Foundation. |
 | **✅ F1 — IR → Manifest** (17 Oct 2026) | `board_manifest.py`: serialize the Board IR to **versioned JSON** (`ensure_ascii=True`, build-dict-once, schema `version` field). Do the `miro_board`→`board_layout` rename here — the manifest is the 2nd real consumer, so the name now describes two things. | **This *is* the FigJam plugin's input contract.** Version from day one (a published plugin lags BN releases). The SVG preview already renders the IR, so it's the creds-free way to eyeball a manifest. |
 | **F2 — Lucidspark renderer (dress rehearsal)** | IR → `.lucid` package (wrap the serialized board) → `POST /documents` via API key; `routes/lucid.py`; `lucid` keychain+env; SECURITY note; serialized-payload anonymisation test. Extract the renderer seam (Miro REST + Lucid package = two real shapes → hoist `build_board`, extract `BoardRenderer`). | Proves **whole-board-as-document** against a live API, cheapest auth, before the plugin. The free product win. |
-| **F3 — FigJam plugin (the prize)** | Published Figma/FigJam plugin (separate TS repo): reads a BN manifest → loops `createSticky()` + sections + text in-editor. BN side: a "Download FigJam manifest" export + the handoff UX (download → open FigJam → run plugin → pick file). **Re-verify Figma's API here** — if a server write path has shipped by then, FigJam collapses into a normal renderer (upside). | The goal. Note: the *plugin* is a real, separate project (TS, store review, distribution, in-editor UX) — only F1–F2 are shared/free. |
+| **F3 — FigJam plugin (the prize)** | Published Figma/FigJam plugin (in this repo, `figjam-plugin/`, decided 17 Oct 2026): reads a BN manifest → loops `createSticky()` + sections + text in-editor. BN side: a "Download FigJam manifest" export + the handoff UX (download → open FigJam → run plugin → pick file). **Re-verify Figma's API here** — if a server write path has shipped by then, FigJam collapses into a normal renderer (upside). | The goal. Note: the *plugin* is a real, separate project (TS, store review, distribution, in-editor UX) — only F1–F2 are shared/free. |
 | **— Mural (deferred, but strategically valuable)** | `mural_client.py` (port the Miro item-loop), `routes/mural.py`, on top of the **shared OAuth pickup** (15-min rotating tokens; `ASWebAuthenticationSession`). | Architecturally advances FigJam by **nothing** (per-item REST, consumes no manifest) — so it's late, not on the engine's critical path. **But it's a real enterprise/government-procurement wedge** (private planner), so it's a high-value *cheap* add once OAuth exists, not a rounding error. The ~Sept-2026 Mural test rides this. |
 | **— Picker UX (deferred)** | One "Send to a whiteboard…" entry + remembered board — only once 2+ boards are genuinely connectable. Until then ship each as a concrete row. | Orthogonal to FigJam. |
 
@@ -513,8 +513,9 @@ board in the maintainer's Figma drafts):
   pixels.** A sticky is never shorter than 240 px and grows with its text: 12 of 30
   quotes exceeded 240 (up to 348, at 272 chars). The IR's `y` (a fixed 200 px
   quote, 76 px header) would overlap them. So the manifest is frames → columns →
-  ordered cards, and the plugin owns vertical layout. Width is fixed at 240, which
-  happens to equal `STICKY_W`.
+  ordered cards, and the plugin owns vertical layout. FigJam offers two fixed
+  widths, 240 (square) and 416 (wide), and neither is `STICKY_W`, which the
+  Miro board moved to 300 on 17 Oct (`0b969da6`).
 - **Sticky text is richer than Miro's:** `setRangeFontName`, `setRangeFontSize`
   and `setRangeHyperlink` all work on `sticky.text`. The attribution renders
   italic at 0.8× (default 16 px Inter Medium), the header label bold, and the clip
@@ -525,7 +526,8 @@ board in the maintainer's Figma drafts):
 **Decided 17 Oct 2026 (maintainer):**
 1. **Column headers stay pink header stickies**, not nested sections — the same
    board shape as Miro, and it survives an image export (section names are editor
-   chrome and do not). The cost, a 240 px sticky for two lines, is accepted.
+   chrome and do not). The cost, a full-height wide sticky (416 × 240) for two
+   lines, is accepted.
 2. **FigJam's own palette pink `#FFA8DB` / yellow `#FFE299`**, not Miro's hexes,
    so the colours register as palette colours. Decision 2 below now reads "the
    same two *roles* everywhere, in each board's own palette";
@@ -559,8 +561,17 @@ push and the SVG preview each spelled out, is one helper there. An empty clip
 folder no longer logs "Ignoring clips_base…" once per quote. Tests:
 `tests/test_board_manifest.py` (contract, Miro-order parity, hostile text, the
 name and name-bearing filename absent from the bytes; each mutation-proved).
-Next: the download route (classified server-only in `routes/export.py`), then
-the plugin.
+**Download route, 17 Oct 2026** (`4fa258ff`, review fixes after it):
+`GET /api/projects/{id}/export/figjam-board.json`, shaped like the quotes CSV
+(scope as comma-separated ids, `lang`, server-only in the HTML export). Refusals
+carry a `reason` the clients translate: 404 `no_quotes_selected` (shared with
+Miro) and 400 `clips_base_not_http` (a clip folder that is not http(s), or that
+carries credentials). `lang` is normalised once, so the document names the
+language its words are in. The filename header survives any project name
+(`export_core.attachment_disposition`, also used by the CSV and XLSX exports).
+Review pass 1 (five agents, 23 findings) is logged privately; its fixes made a
+malformed or repeated quote id harmless on every export that resolves ids.
+Next: the plugin.
 
 **Plugin build notes, 17 Oct 2026** (research from Figma's docs, review
 guidelines, forum and plugin typings; the probes were run in the scratch board):

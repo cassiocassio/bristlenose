@@ -21,6 +21,7 @@ from bristlenose.server.export_core import (
     csv_safe,
     excel_sheet_name,
     extract_quotes_for_export,
+    parse_quote_ids,
 )
 from bristlenose.server.models import Project
 from bristlenose.utils.text import safe_filename
@@ -68,14 +69,6 @@ def _check_project(db: Session, project_id: int) -> Project:
     return project
 
 
-def _parse_quote_ids(quote_ids: str | None) -> list[str] | None:
-    """Parse comma-separated DOM IDs, or return None for 'all'."""
-    if not quote_ids:
-        return None
-    ids = [qid.strip() for qid in quote_ids.split(",") if qid.strip()]
-    return ids or None
-
-
 def _parse_headers(headers: str | None) -> list[str]:
     """Parse comma-separated translated headers, or return defaults."""
     if not headers:
@@ -121,7 +114,7 @@ async def export_quotes_csv(
     db = _get_db(request)
     try:
         project = _check_project(db, project_id)
-        ids = _parse_quote_ids(quote_ids)
+        ids = parse_quote_ids(quote_ids)
         quotes = extract_quotes_for_export(db, project_id, ids, anonymise=anonymise)
 
         if not quotes:
@@ -167,7 +160,7 @@ async def export_quotes_xlsx(
     db = _get_db(request)
     try:
         project = _check_project(db, project_id)
-        ids = _parse_quote_ids(quote_ids)
+        ids = parse_quote_ids(quote_ids)
         quotes = extract_quotes_for_export(db, project_id, ids, anonymise=anonymise)
 
         if not quotes:

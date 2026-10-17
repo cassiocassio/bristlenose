@@ -81,8 +81,17 @@ def _parse_timecode(s: str) -> float:
     try:
         return parse_timecode(s)
     except (ValueError, AttributeError, TypeError):
-        logger.warning("miro_import_timecode_unparseable | raw=%r", s)
+        logger.warning("board_export_timecode_unparseable | raw=%r", s)
         return 0.0
+
+
+def clips_base_ok(base: str) -> bool:
+    """Whether a clip folder may become a link on a shared board: http(s) only,
+    and no credentials in it (``https://user:token@host/`` would publish them)."""
+    if not is_safe_url(base):
+        return False
+    parsed = urlparse(base)
+    return parsed.scheme in ("http", "https") and not (parsed.username or parsed.password)
 
 
 def _clip_url(base: str, q: ExportableQuote) -> str | None:
@@ -96,7 +105,7 @@ def _clip_url(base: str, q: ExportableQuote) -> str | None:
         # No clip folder is the default, not a refusal — it was logged as
         # one, once per quote, on every board built without clip links.
         return None
-    if not is_safe_url(base) or urlparse(base).scheme == "mailto":
+    if not clips_base_ok(base):
         # Don't echo the user-supplied value into the log (log-injection guard).
         logger.warning("Ignoring clips_base for Miro links: not an http(s) URL")
         return None
@@ -114,6 +123,11 @@ def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
     """Bucket the project's (optionally scoped) quotes into section/theme columns,
     preserving section display-order (extract_quotes_for_export is pre-sorted)."""
     quotes = extract_quotes_for_export(db, project_id, quote_ids=quote_ids, anonymise=False)
+    if clips_base and not clips_base_ok(clips_base):
+        # Said once for the board, not once per quote; the value itself is
+        # not echoed (log-injection guard).
+        logger.warning("Ignoring clips_base for board links: not an http(s) URL")
+        clips_base = ""
 
     sections: dict[str, Column] = {}
     themes: dict[str, Column] = {}

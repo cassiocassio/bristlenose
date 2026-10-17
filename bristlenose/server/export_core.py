@@ -62,6 +62,19 @@ def csv_safe(value: str) -> str:
     return value
 
 
+def parse_quote_ids(quote_ids: str | None) -> list[str] | None:
+    """Comma-separated DOM ids from a query string, or None for 'all'."""
+    if not quote_ids:
+        return None
+    ids = [qid.strip() for qid in quote_ids.split(",") if qid.strip()]
+    return ids or None
+
+
+def project_display_name(project: object) -> str:
+    """The name a board or file is titled with."""
+    return getattr(project, "name", None) or getattr(project, "project_name", None) or "Research"
+
+
 def attachment_disposition(filename: str) -> str:
     """A ``Content-Disposition`` header that survives any project name.
 
@@ -237,10 +250,16 @@ def _resolve_quote_ids(
     db: DbSession, project_id: int, dom_ids: list[str]
 ) -> list[Quote]:
     """Resolve DOM IDs to Quote rows (order preserved), leaving out any that no
-    longer count as evidence (``speaker_slots.evidence_out``)."""
+    longer count as evidence (``speaker_slots.evidence_out``).
+
+    Each quote appears once, however many times its id was sent: a repeated id
+    used to put the same quote in an export twice. Two quotes from one speaker
+    within the same second share a DOM id, which names only the earlier of them
+    — the tie-break is fixed so it is always that one."""
     out = speaker_slots.evidence_out(db, project_id)
     quotes: list[Quote] = []
-    for dom_id in dom_ids:
+    seen: set[int] = set()
+    for dom_id in dict.fromkeys(dom_ids):
         try:
             participant_id, timecode = _parse_dom_quote_id(dom_id)
         except ValueError:
@@ -253,9 +272,11 @@ def _resolve_quote_ids(
                 Quote.start_timecode >= timecode,
                 Quote.start_timecode < timecode + 1,
             )
+            .order_by(Quote.start_timecode, Quote.id)
             .first()
         )
-        if q and speaker_slots.counts(q, out):
+        if q and q.id not in seen and speaker_slots.counts(q, out):
+            seen.add(q.id)
             quotes.append(q)
     return quotes
 

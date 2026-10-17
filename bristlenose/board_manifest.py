@@ -32,7 +32,6 @@ import json
 from typing import Any
 
 from bristlenose.board_layout import (
-    DEFAULT_QUOTE_TOKEN,
     HEADER_TOKEN,
     STICKY_SHAPE,
     BoardStrings,
@@ -102,7 +101,8 @@ def build_manifest(
         # plugin draws "rectangle" as FigJam's wide sticky.
         "sticky_shape": STICKY_SHAPE,
         "strings": {"clip": f"▶ {clip_label}"},
-        "palette": {t: palette.get(t, palette.get(DEFAULT_QUOTE_TOKEN, "")) for t in sorted(used)},
+        # A token with no colour is a bug here, not a yellow sticky there.
+        "palette": {t: palette[t] for t in sorted(used)},
         "frames": frames,
     }
 

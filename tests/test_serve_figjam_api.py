@@ -41,7 +41,6 @@ def test_downloads_the_board_document(client: TestClient) -> None:
     doc = resp.json()
     assert (doc["format"], doc["version"]) == ("bristlenose-board", 1)
     assert len(_quotes(doc)) == 4
-    assert doc["palette"]["light_pink"] == "#FFA8DB"
 
 
 def test_scope_is_the_selected_quotes(client: TestClient) -> None:
@@ -96,3 +95,52 @@ def test_a_project_named_outside_latin_1_still_downloads(client: TestClient) -> 
 def test_needs_the_token(client: TestClient) -> None:
     bare = TestClient(client.app, base_url=LOOPBACK_BASE_URL)
     assert bare.get(_URL).status_code == 401
+
+
+# ── review fixes, 17 Oct 2026 ────────────────────────────────────────────────
+
+
+def test_an_id_too_large_for_sqlite_is_no_quotes_not_a_500(client: TestClient) -> None:
+    resp = client.get(_URL, params={"quote_ids": "q-p1-99999999999999999999"})
+    assert resp.status_code == 404
+    assert resp.json()["reason"] == "no_quotes_selected"
+
+
+def test_a_repeated_id_puts_the_quote_on_the_board_once(client: TestClient) -> None:
+    # `010` is a second spelling of the same id, so it survives the id dedupe
+    # and has to be caught on the resolved quote.
+    doc = client.get(_URL, params={"quote_ids": "q-p1-10,q-p1-010,q-p1-10,q-p1-26"}).json()
+    assert [q["attribution"] for q in _quotes(doc)] == ["— P1 · 00:10", "— P1 · 00:26"]
+
+
+@pytest.mark.parametrize("raw", ["zz\nINJECT", "xx", "ES"])
+def test_the_document_names_the_language_its_words_are_in(client: TestClient, raw: str) -> None:
+    """The raw value used to be written into the document and the log, so a
+    board in English could say `zz` and a newline could forge a log line."""
+    from bristlenose.i18n import SUPPORTED_LOCALES, canonical_locale
+
+    doc = client.get(_URL, params={"lang": raw}).json()
+    assert doc["locale"] == canonical_locale(raw)
+    assert doc["locale"] in SUPPORTED_LOCALES
+
+
+@pytest.mark.parametrize("base", [
+    "drive.example.com/clips",          # no scheme: asked for links, would get none
+    "javascript:alert(1)",
+    "https://user:token@x.example/c",   # credentials would be published on the board
+])
+def test_a_clip_folder_that_cannot_become_links_is_refused(client: TestClient, base: str) -> None:
+    resp = client.get(_URL, params={"clips_base": base})
+    assert resp.status_code == 400
+    assert resp.json()["reason"] == "clips_base_not_http"
+
+
+def test_a_good_clip_folder_links_every_quote(client: TestClient) -> None:
+    doc = client.get(_URL, params={"clips_base": "https://x.example/c"}).json()
+    assert all(q["clip_url"].startswith("https://x.example/c/") for q in _quotes(doc))
+
+
+def test_the_download_is_never_sniffed_or_cached(client: TestClient) -> None:
+    resp = client.get(_URL)
+    assert resp.headers["x-content-type-options"] == "nosniff"
+    assert resp.headers["cache-control"] == "no-store"

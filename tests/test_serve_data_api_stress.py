@@ -422,6 +422,21 @@ class TestMalformedDomIds:
         assert "q-p1-10" in data
         assert "q-p99-999" not in data
 
+    @pytest.mark.parametrize("path", ["hidden", "starred"])
+    def test_dom_id_timecode_too_large_for_sqlite_is_skipped_not_a_500(
+        self, client: TestClient, path: str
+    ) -> None:
+        """An unbounded int reached SQLite as an integer it cannot hold, and
+        every route that resolves ids answered 500 (review, 17 Oct 2026)."""
+        resp = client.put(f"/api/projects/1/{path}", json={"q-p1-99999999999999999999": True})
+        assert resp.status_code == 200
+
+        from bristlenose.server.routes.data import _parse_dom_quote_id
+
+        with pytest.raises(ValueError):
+            _parse_dom_quote_id("q-p1-360001")
+        assert _parse_dom_quote_id("q-p1-359999") == ("p1", 359999)
+
 
 # ---------------------------------------------------------------------------
 # Tag edge cases

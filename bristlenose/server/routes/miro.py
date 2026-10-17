@@ -22,6 +22,7 @@ from bristlenose.credentials import (
 )
 from bristlenose.miro_client import validate_miro_token
 from bristlenose.server import miro_export
+from bristlenose.server.export_core import project_display_name
 from bristlenose.server.models import Project
 
 logger = logging.getLogger(__name__)
@@ -250,10 +251,6 @@ def miro_disconnect(project_id: int, request: Request) -> MiroStatusResponse:
     return MiroStatusResponse(connected=False)
 
 
-def _project_name(project: Project) -> str:
-    return getattr(project, "name", None) or getattr(project, "project_name", None) or "Research"
-
-
 # ---------------------------------------------------------------------------
 # POST /projects/{id}/miro/preview — creds-free SVG/HTML preview
 # ---------------------------------------------------------------------------
@@ -265,7 +262,7 @@ def miro_preview(project_id: int, body: MiroExportRequest, request: Request) -> 
     db = _get_db(request)
     try:
         project = _check_project(db, project_id)
-        name = body.board_name or _project_name(project)
+        name = body.board_name or project_display_name(project)
         html = miro_export.build_preview_html(
             db, project_id, name, body.quote_ids,
             colour_by=body.colour_by, clips_base=body.clips_base, locale=body.locale,
@@ -294,7 +291,7 @@ def miro_export_board(project_id: int, body: MiroExportRequest,
         logger.info("miro_token_trace event=export persisted_source=%s", get_credential_source("miro"))
         if not token:
             raise HTTPException(status_code=400, detail="Not connected to Miro")
-        name = body.board_name or _project_name(project)
+        name = body.board_name or project_display_name(project)
         try:
             result = miro_export.push_to_miro(
                 token, db, project_id, name, body.quote_ids,

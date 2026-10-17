@@ -12,7 +12,15 @@ import logging
 
 import pytest
 
-from bristlenose.board_layout import BoardStrings, Column, QuoteCard, layout_board
+from bristlenose.board_layout import (
+    DEFAULT_QUOTE_TOKEN,
+    HEADER_TOKEN,
+    SENTIMENT_TOKEN,
+    BoardStrings,
+    Column,
+    QuoteCard,
+    layout_board,
+)
 from bristlenose.board_manifest import FORMAT, VERSION, build_manifest, to_json
 from bristlenose.board_palette import FIGJAM_TOKEN_HEX
 from bristlenose.server.export_core import ExportableQuote
@@ -23,6 +31,11 @@ def _card(text: str, pid: str = "p1", session: str = "s1", start: float = 10.0,
           sentiment: str | None = None, link: str | None = None) -> QuoteCard:
     return QuoteCard(text=text, participant_id=pid, session_id=session,
                      start_timecode=start, sentiment=sentiment, link_url=link)
+
+
+def _tokens_used(m: dict) -> set[str]:
+    cols = [c for f in m["frames"] for c in f["columns"]]
+    return {c["colour"] for c in cols} | {q["colour"] for c in cols for q in c["quotes"]}
 
 
 def _manifest(columns: list[Column], **kw) -> dict:
@@ -46,6 +59,11 @@ def _export_quote(text: str, *, section: str = "Checkout", theme: str = "",
 
 # ── the version-1 contract ───────────────────────────────────────────────────
 
+_TOP_KEYS = {"format": str, "version": int, "generator": str, "locale": str, "title": str,
+             "sticky_shape": str, "strings": dict, "palette": dict, "frames": list}
+_COLUMN_KEYS = {"label", "count", "colour", "quotes"}
+_QUOTE_KEYS = {"text", "attribution", "colour", "clip_url"}
+
 
 def test_document_shape_is_the_version_1_contract():
     cols = [
@@ -55,6 +73,14 @@ def test_document_shape_is_the_version_1_contract():
     m = _manifest(cols)
 
     assert (m["format"], m["version"]) == (FORMAT, VERSION) == ("bristlenose-board", 1)
+    # The version-1 contract is the keys and their types. A new optional key is
+    # allowed (the plugin ignores what it does not know); a renamed or retyped
+    # one fails here and needs a version bump.
+    assert _TOP_KEYS.keys() <= m.keys()
+    assert all(isinstance(m[k], t) for k, t in _TOP_KEYS.items())
+    col0 = m["frames"][0]["columns"][0]
+    assert _COLUMN_KEYS <= col0.keys()
+    assert _QUOTE_KEYS <= col0["quotes"][0].keys()
     assert [f["kind"] for f in m["frames"]] == ["section", "theme"]
     assert [f["title"] for f in m["frames"]] == ["Sections", "Themes"]
     col = m["frames"][0]["columns"][0]
@@ -178,4 +204,22 @@ def test_builder_paints_with_figjams_palette_not_miros(monkeypatch):
         lambda *a, **k: [_export_quote("Uno")],
     )
     m = build_figjam_manifest(None, 1, "R", None)
-    assert m["palette"] == {"light_pink": "#FFA8DB", "light_yellow": "#FFE299"}
+    assert m["palette"] == {t: FIGJAM_TOKEN_HEX[t] for t in m["palette"]}
+    assert set(m["palette"]) == _tokens_used(m)
+
+
+def test_every_board_colour_token_has_a_figjam_colour():
+    """A new sentiment token without a FigJam colour must fail here, not turn a
+    sticky yellow on a researcher's board."""
+    tokens = {HEADER_TOKEN, DEFAULT_QUOTE_TOKEN, *SENTIMENT_TOKEN.values()}
+    assert tokens <= FIGJAM_TOKEN_HEX.keys()
+    cols = [Column("C", "section", [_card(s, sentiment=s) for s in SENTIMENT_TOKEN])]
+    m = _manifest(cols, colour_by="sentiment")
+    assert set(m["palette"]) == _tokens_used(m)
+
+
+def test_a_token_with_no_colour_is_an_error_not_a_yellow_sticky():
+    cols = [Column("C", "section", [_card("a")])]
+    with pytest.raises(KeyError):
+        build_manifest(cols, "t", strings=BoardStrings(), clip_label="clip",
+                       palette={"light_pink": "#FFA8DB"}, locale="en", generator="g")

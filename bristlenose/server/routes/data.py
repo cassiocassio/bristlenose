@@ -118,6 +118,10 @@ def _check_project(db: Session, project_id: int) -> Project:
     return project
 
 
+# Past the 99-hour limit every timecode parser here declares.
+_MAX_DOM_TIMECODE = 100 * 3600
+
+
 def _parse_dom_quote_id(dom_id: str) -> tuple[str, int]:
     """Parse a DOM quote ID like 'q-p1-123' into (participant_id, timecode_int).
 
@@ -135,6 +139,10 @@ def _parse_dom_quote_id(dom_id: str) -> tuple[str, int]:
         timecode = int(rest[last_dash + 1 :])
     except ValueError:
         raise ValueError(f"Invalid timecode in DOM ID: {dom_id}") from None
+    if timecode > _MAX_DOM_TIMECODE:
+        # Unbounded, it reached SQLite as an integer it cannot hold and every
+        # route that resolves ids answered 500 (review, 17 Oct 2026).
+        raise ValueError(f"Timecode out of range in DOM ID: {dom_id}")
     return participant_id, timecode
 
 
@@ -156,6 +164,7 @@ def _resolve_quote(db: Session, project_id: int, dom_id: str) -> Quote | None:
             Quote.start_timecode >= timecode,
             Quote.start_timecode < timecode + 1,
         )
+        .order_by(Quote.start_timecode, Quote.id)
         .first()
     )
 

@@ -14,20 +14,42 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 from starlette.responses import Response
 
 from bristlenose.board_manifest import to_json
+from bristlenose.i18n import canonical_locale
 from bristlenose.server import miro_export
-from bristlenose.server.export_core import attachment_disposition
-from bristlenose.server.routes.miro import _check_project, _get_db, _project_name
-from bristlenose.server.routes.quotes_export import _parse_quote_ids
+from bristlenose.server.export_core import (
+    attachment_disposition,
+    parse_quote_ids,
+    project_display_name,
+)
+from bristlenose.server.models import Project
 from bristlenose.utils.text import safe_filename
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
+
+
+def _get_db(request: Request) -> Session:
+    db: Session = request.app.state.db_factory()
+    return db
+
+
+def _check_project(db: Session, project_id: int) -> Project:
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+
+def _refusal(status: int, detail: str, reason: str) -> JSONResponse:
+    """`detail` is English for the log; `reason` is what the clients translate."""
+    return JSONResponse(status_code=status, content={"detail": detail, "reason": reason})
 
 
 @router.get("/projects/{project_id}/export/figjam-board.json")
@@ -39,23 +61,25 @@ def export_figjam_board(
     clips_base: str = Query("", description="Opt-in http(s) folder of exported clips"),
 ) -> Response:
     """The project's (optionally scoped) quotes as a FigJam board document."""
+    # One normalised code for the words, the document's `locale` and the log,
+    # so none of them can disagree with the others or carry a raw query value.
+    locale = canonical_locale(lang)
+    if clips_base and not miro_export.clips_base_ok(clips_base):
+        # Asked for links and would silently get none: say so instead.
+        return _refusal(400, "clips_base must be an http(s) folder", "clips_base_not_http")
     db = _get_db(request)
     try:
         project = _check_project(db, project_id)
-        name = _project_name(project)
+        name = project_display_name(project)
         manifest = miro_export.build_figjam_manifest(
-            db, project_id, name, _parse_quote_ids(quote_ids),
-            clips_base=clips_base, locale=lang,
+            db, project_id, name, parse_quote_ids(quote_ids),
+            clips_base=clips_base, locale=locale,
         )
         n = sum(len(c["quotes"]) for f in manifest["frames"] for c in f["columns"])
         if n == 0:
             # The reason both clients already localise for the Miro export.
-            return JSONResponse(
-                status_code=404,
-                content={"detail": "No quotes match the filter",
-                         "reason": "no_quotes_selected"},
-            )
-        logger.info("figjam_board_export quotes=%d locale=%s", n, manifest["locale"])
+            return _refusal(404, "No quotes match the filter", "no_quotes_selected")
+        logger.info("figjam_board_export quotes=%d locale=%s", n, locale)
         return Response(
             content=to_json(manifest),
             media_type="application/json",
@@ -63,6 +87,9 @@ def export_figjam_board(
                 "Content-Disposition": attachment_disposition(
                     f"{safe_filename(name)}-figjam-board.json"
                 ),
+                # Participant quotes, never sniffed as anything else. (Every
+                # /api response is already no-store, from create_app.)
+                "X-Content-Type-Options": "nosniff",
             },
         )
     finally:

@@ -115,8 +115,9 @@ class _FakeMiro:
 
 
 def _screens(n: int) -> list[dict]:
-    return [{"screen_key": f"/s{i}", "title": f"S{i}", "session_id": "s1", "t": float(i), "crop": [0, 0, 1, 1],
-             "groups": [("p1", [f"q-p1-{i}"])], "filename": f"screen-{i:02d}.jpg"} for i in range(1, n + 1)]
+    return [{"screen_key": f"/s{i}", "title": f"S{i}", "groups": [("p1", [f"q-p1-{i}"])],
+             "versions": [{"session_id": "s1", "code": "p1", "t": float(i), "crop": [0, 0, 1, 1],
+                           "filename": f"screen-{i:02d}-p1.jpg"}]} for i in range(1, n + 1)]
 
 
 class _Q:
@@ -180,3 +181,56 @@ def test_a_cancel_stays_a_cancel_when_the_call_in_hand_then_fails(monkeypatch: p
     asyncio.run(se._run_miro(1, job, "tok", "Board", tmp_path, _screens(2), {"s1": tmp_path / "v.mp4"},
                              {"q-p1-1": _Q("q-p1-1"), "q-p1-2": _Q("q-p1-2")}, "none"))
     assert job["status"] == "cancelled" and job["reason"] is None
+
+
+def test_a_screen_with_one_good_screengrab_is_built_and_the_front_goes_on_top(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from bristlenose import miro_client as mc
+    from bristlenose.server.routes import screens_export as se
+
+    fake = _FakeMiro()
+    fake.install(monkeypatch)
+    uploads: list[str] = []
+    monkeypatch.setattr(mc, "upload_image", lambda _t, _b, _j, name, **_: uploads.append(name) or {"id": "i"})
+    screen = {"screen_key": "/s1", "title": "S1", "groups": [("p1", ["q-p1-1"])],
+              "versions": [{"session_id": f"s{n}", "code": f"p{n}", "t": float(n), "crop": [0, 0, 1, 1],
+                            "title": "S1", "filename": f"screen-01-p{n}.jpg"} for n in (2, 1, 3)]}
+
+    def still(_o: object, _s: object, _v: object, t: float, *_: object) -> bytes:
+        if t == 3.0:  # p3's screengrab cannot be made
+            raise se.StillError("x")
+        return _JPEG
+
+    monkeypatch.setattr(se, "render_still", still)
+    job = _job()
+    se._run_miro_sync(job, "tok", "Board", tmp_path, [screen],
+                      {f"s{n}": tmp_path / "v.mp4" for n in (1, 2, 3)}, {"q-p1-1": _Q("q-p1-1")}, "none")
+    assert job["status"] == "completed" and job["skipped_count"] == 0
+    assert uploads == ["screen-01-p1.jpg", "screen-01-p2.jpg"]  # back first; the front, p2, last
+
+
+def test_a_back_screengrab_miro_refuses_is_left_out_but_a_refused_front_fails(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from bristlenose import miro_client as mc
+    from bristlenose.server.routes import screens_export as se
+
+    fake = _FakeMiro()
+    fake.install(monkeypatch)
+    monkeypatch.setattr(se, "render_still", lambda *a, **k: _JPEG)
+    screen = {"screen_key": "/s1", "title": "S1", "groups": [],
+              "versions": [{"session_id": "s1", "code": f"p{n}", "t": 1.0, "crop": [0, 0, 1, 1],
+                            "title": "S1", "filename": f"screen-01-p{n}.jpg"} for n in (1, 2)]}
+    for refused, ok in (("screen-01-p2.jpg", True), ("screen-01-p1.jpg", False)):
+        def upload(_t: object, _b: object, _j: object, name: str, refused: str = refused, **_: object) -> dict:
+            if name == refused:
+                raise mc.MiroError("boom", status=500)
+            return {"id": "i"}
+
+        monkeypatch.setattr(mc, "upload_image", upload)
+        job = _job()
+        if ok:
+            se._run_miro_sync(job, "tok", "Board", tmp_path, [screen], {"s1": tmp_path / "v.mp4"}, {}, "none")
+            assert job["status"] == "completed"
+        else:
+            with pytest.raises(mc.MiroError):
+                se._run_miro_sync(job, "tok", "Board", tmp_path, [screen], {"s1": tmp_path / "v.mp4"}, {}, "none")

@@ -109,7 +109,13 @@ on a screen is normal research practice, looking for consensus problems and edge
 the expectation the lens already sets: a screen is one place for everything said about it. The
 first build (a frame per participant per screen, a row per participant) was replaced the same day.
 
-- **The still** is the version the lens shows first (`default_tab`), uploaded as an image.
+- **Every participant's screengrab of the screen, cascaded** (owner, 17 Oct 2026): the version
+  the lens shows first (`default_tab`) in front, the others behind it, each 40 px further down and
+  right, so a researcher can count them, peek, and keep the one that fits. Two views of "the same
+  screen" often differ in what a participant was talking about; when they don't, the researcher
+  deletes the extras. Each image is titled "P3 · Checkout" from its own still (Miro shows the
+  title when it is selected). A version whose still or upload fails is left out and logged; only a
+  screen with no still at all counts as skipped, and a refused front upload fails the board.
 - **Journey order, left to right, in one row.** There is no shared clock across recordings, so a
   screen goes where it fell on average in its participants' own visit order; ties to the screen
   with more said about it.

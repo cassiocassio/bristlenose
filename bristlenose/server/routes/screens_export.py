@@ -274,28 +274,31 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
 
     stills: dict[str, bytes] = {}
     sizes: dict[str, tuple[int, int]] = {}
-    for shot in screens:
-        if job["status"] == "cancelled":
-            return
-        job["current"] = shot["filename"]
-        video = videos.get(shot["session_id"])
-        try:
-            if video is None:
-                raise StillError("No recording")
-            jpg = render_still(out_dir, shot["session_id"], video, shot["t"], tuple(shot["crop"]), None)
-        except StillError:
-            logger.warning("Skipped still %s", shot["filename"], exc_info=True)
+    for sc in screens:
+        rendered = 0
+        for v in sc["versions"]:
+            if job["status"] == "cancelled":
+                return
+            job["current"] = v["filename"]
+            video = videos.get(v["session_id"])
+            try:
+                if video is None:
+                    raise StillError("No recording")
+                jpg = render_still(out_dir, v["session_id"], video, v["t"], tuple(v["crop"]), None)
+            except StillError:
+                logger.warning("Skipped still %s", v["filename"], exc_info=True)
+                continue
+            size = jpeg_size(jpg)
+            if size is None:
+                logger.warning("Skipped still %s: not a readable JPEG", v["filename"])
+                continue
+            stills[v["filename"]] = jpg
+            sizes[v["filename"]] = size
+            rendered += 1
+        if not rendered:
+            # `total` stays the screens asked for; a screen with no still at all is counted, which
+            # both clients say, rather than vanishing with its quotes.
             job["skipped_count"] += 1
-            continue
-        size = jpeg_size(jpg)
-        if size is None:
-            logger.warning("Skipped still %s: not a readable JPEG", shot["filename"])
-            job["skipped_count"] += 1
-            continue
-        stills[shot["filename"]] = jpg
-        sizes[shot["filename"]] = size
-    # `total` stays the screens asked for; a screen whose still failed is counted in
-    # `skipped_count`, which both clients say, rather than vanishing with its quotes.
     frames = lay_out_board(screens, sizes, known=set(quotes))
     if not frames:
         raise miro_client.MiroError("No screengrab could be made", reason="no_stills")
@@ -307,13 +310,23 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
     for frame in frames:
         if job["status"] == "cancelled":
             return
-        job["current"] = frame.filename
+        job["current"] = frame.title
         made = miro_client.create_frame(token, board_id, frame.title, frame.x + frame.width / 2,
                                         frame.y + frame.height / 2, frame.width, frame.height)
         fid = made["id"]
-        sx, sy, sw, sh = frame.shot
-        miro_client.upload_image(token, board_id, stills[frame.filename], frame.filename,
-                                 title=frame.title, x=sx + sw / 2, y=sy + sh / 2, width=sw, parent_id=fid)
+        front = frame.stills[-1]
+        for still in frame.stills:  # back first, so the front one is drawn on top
+            try:
+                miro_client.upload_image(token, board_id, stills[still.filename], still.filename,
+                                         title=still.title, x=still.x + still.width / 2,
+                                         y=still.y + still.height / 2, width=still.width, parent_id=fid)
+            except miro_client.MiroError:
+                # A screengrab behind the front one is a choice offered, not the frame: one Miro
+                # refused is left out, as a still that could not be rendered is. The front one
+                # failing still fails the board, which then names its link.
+                if still is front:
+                    raise
+                logger.warning("Left out %s: Miro refused the upload", still.filename, exc_info=True)
         items = []
         for st in frame.stickies:
             q = quotes[st.dom_id]

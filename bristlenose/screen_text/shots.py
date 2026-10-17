@@ -116,7 +116,11 @@ def journey(
     still is the version the lens shows first (`default_tab`). There is no shared clock across
     recordings, so screens go in journey order: by where each fell, on average, in its
     participants' own visit order, ties to the screen with more said about it. Each quote is
-    grouped under the participant who said it, in time order, and appears once."""
+    grouped under the participant who said it, in time order, and appears once.
+
+    Every participant's version of the screen goes with it (`versions`, front first): two views of
+    "the same screen" often differ in what a participant was talking about, so the board stacks
+    them all and lets the researcher pick (owner, 17 Oct 2026). The front one is the lens's."""
     screens = list(screens)
     rank: dict[str, list[float]] = {}
     by_session: dict[str, list[tuple[float, str]]] = {}
@@ -144,17 +148,26 @@ def journey(
         groups = sorted(((code, sorted(doms, key=_start)) for code, doms in said.items()),
                         key=lambda g: code_order(g[0]))
         ranks = rank.get(sc["key"], [0.0])
+        others = sorted((tb for tb in sc["tabs"] if tb is not shown),
+                        key=lambda tb: (code_order(tb["code"]), tb["session_id"]))
         out.append({
             "screen_key": sc["key"],
             "title": title_of(sc, shown),
-            "session_id": shown["session_id"],
-            "t": shown["t"],
-            "crop": list(shown["crop"]),
+            # Each version is titled from its own still: an address-keyed screen's heading is
+            # whatever that participant's page said.
+            "versions": [{"session_id": tb["session_id"], "code": tb["code"], "t": tb["t"],
+                          "crop": list(tb["crop"]), "title": title_of(sc, tb)} for tb in [shown, *others]],
             "groups": groups,
             "_order": (sum(ranks) / len(ranks), -sum(len(d) for _, d in groups)),
         })
     out.sort(key=lambda e: e["_order"])
     for i, e in enumerate(out, 1):
         del e["_order"]
-        e["filename"] = f"screen-{i:02d}.jpg"
+        seen: set[str] = set()
+        for v in e["versions"]:
+            name = f"screen-{i:02d}-{_UNSAFE.sub('_', v['code'])}"
+            while f"{name}.jpg" in seen:  # two sessions under one code
+                name += "_"
+            seen.add(f"{name}.jpg")
+            v["filename"] = f"{name}.jpg"
     return out

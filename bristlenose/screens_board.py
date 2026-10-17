@@ -28,6 +28,9 @@ STICKY_W = (SHOT_W - (PER_ROW - 1) * GAP) / PER_ROW
 STICKY_H = STICKY_W * RECT_ASPECT
 #: Between the still and the first row, and between one participant's rows and the next's.
 SECTION_GAP = 64.0
+#: How far each further participant's screengrab sits down and right of the one before it, behind
+#: it: enough to count them and grab one, not enough to cover the front one's content.
+CASCADE = 40.0
 #: Inside a frame, round its contents; between frames, room for the team's own stickies.
 FRAME_PAD = 80.0
 FRAME_GAP = 400.0
@@ -42,30 +45,50 @@ class ScreenSticky:
 
 
 @dataclass
+class ScreenStill:
+    """One participant's screengrab of the screen, in the frame's coordinates (top-left)."""
+
+    filename: str
+    #: "P3 · Checkout": Miro shows an image's title when it is selected, which is how a researcher
+    #: peeking under the front one tells whose it is.
+    title: str
+    x: float
+    y: float
+    width: float
+    height: float
+
+
+@dataclass
 class ScreenFrame:
     title: str
-    filename: str
     #: Top-left on the board, and size.
     x: float
     y: float
     width: float
     height: float
-    #: The still's top-left in the frame, and its size.
-    shot: tuple[float, float, float, float]
+    #: Every participant's screengrab, in the order to create them: back first, so the front one,
+    #: created last, is drawn on top.
+    stills: list[ScreenStill] = field(default_factory=list)
     stickies: list[ScreenSticky] = field(default_factory=list)
 
 
-def lay_out_screen(groups: Sequence[tuple[str, Sequence[str]]], still_px: tuple[int, int],
-                   known: set[str] | None = None) -> tuple[float, float, tuple[float, float, float, float],
-                                                           list[ScreenSticky]]:
-    """One screen's frame contents: (width, height, still rect, stickies), in frame coordinates.
+def lay_out_screen(groups: Sequence[tuple[str, Sequence[str]]],
+                   versions: Sequence[tuple[str, str, tuple[int, int]]],
+                   known: set[str] | None = None) -> tuple[float, float, list[ScreenStill], list[ScreenSticky]]:
+    """One screen's frame contents: (width, height, stills back first, stickies), frame coordinates.
 
-    `groups` is (participant code, quote ids) in the order to stack them; each participant starts
-    a new row. `known` limits the stickies to quotes the board can write."""
-    pw, ph = still_px
-    sh = SHOT_W * ph / pw if pw else SHOT_W * 9 / 16
+    `versions` is (filename, title, pixel size) for each participant's screengrab, front first; the
+    rest cascade down and right behind it. `groups` is (participant code, quote ids) in the order to
+    stack them beneath; each participant starts a new row. `known` limits the stickies to quotes the
+    board can write."""
+    stills: list[ScreenStill] = []
+    bottom = FRAME_PAD
+    for k, (name, title, (pw, ph)) in enumerate(versions):
+        h = SHOT_W * ph / pw if pw else SHOT_W * 9 / 16
+        stills.append(ScreenStill(name, title, FRAME_PAD + k * CASCADE, FRAME_PAD + k * CASCADE, SHOT_W, h))
+        bottom = max(bottom, FRAME_PAD + k * CASCADE + h)
     stickies: list[ScreenSticky] = []
-    y = FRAME_PAD + sh
+    y = bottom
     for _, doms in groups:
         doms = [d for d in doms if known is None or d in known]
         if not doms:
@@ -76,23 +99,25 @@ def lay_out_screen(groups: Sequence[tuple[str, Sequence[str]]], still_px: tuple[
             stickies.append(ScreenSticky(d, FRAME_PAD + col * (STICKY_W + GAP), y + row * (STICKY_H + GAP)))
         rows = (len(doms) + PER_ROW - 1) // PER_ROW
         y += rows * STICKY_H + (rows - 1) * GAP
-    return SHOT_W + 2 * FRAME_PAD, y + FRAME_PAD, (FRAME_PAD, FRAME_PAD, SHOT_W, sh), stickies
+    width = SHOT_W + max(len(versions) - 1, 0) * CASCADE + 2 * FRAME_PAD
+    return width, y + FRAME_PAD, stills[::-1], stickies
 
 
 def lay_out_board(screens: Sequence[Mapping[str, Any]], still_px: Mapping[str, tuple[int, int]],
                   known: set[str] | None = None) -> list[ScreenFrame]:
     """Every screen as a frame, in one row left to right in the order given (journey order).
 
-    `still_px` maps a screen's still filename to its pixel size; a screen without one is left
-    out (its still could not be made)."""
+    `still_px` maps a version's still filename to its pixel size; a version without one is left out
+    (its still could not be made), and a screen with none at all is left out."""
     frames: list[ScreenFrame] = []
     x = 0.0
     for sc in screens:
-        px = still_px.get(sc["filename"])
-        if px is None:
+        versions = [(v["filename"], f"{v['code'].upper()} · {v.get('title') or sc['title']}", still_px[v["filename"]])
+                    for v in sc["versions"] if v["filename"] in still_px]
+        if not versions:
             continue
-        w, h, rect, stickies = lay_out_screen(sc["groups"], px, known)
-        frames.append(ScreenFrame(sc["title"], sc["filename"], x, 0.0, w, h, rect, stickies))
+        w, h, stills, stickies = lay_out_screen(sc["groups"], versions, known)
+        frames.append(ScreenFrame(sc["title"], x, 0.0, w, h, stills, stickies))
         x += w + FRAME_GAP
     return frames
 

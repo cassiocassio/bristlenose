@@ -12,19 +12,35 @@ def _overlaps(a: tuple[float, float, float, float], b: tuple[float, float, float
     return a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3]
 
 
-def test_quotes_stack_beneath_the_still_a_new_row_for_each_participant() -> None:
+def test_quotes_stack_beneath_the_screengrabs_a_new_row_for_each_participant() -> None:
     groups = [("p1", [f"q-p1-{i}" for i in range(5)]), ("p2", ["q-p2-1"])]
-    w, h, still, stickies = sb.lay_out_screen(groups, (1600, 900))
-    assert still[2] == sb.SHOT_W and still[3] == pytest.approx(sb.SHOT_W * 900 / 1600)
+    w, h, stills, stickies = sb.lay_out_screen(groups, [("a.jpg", "P1 · A", (1600, 900))])
+    [still] = stills
+    assert (still.width, still.height) == (sb.SHOT_W, pytest.approx(sb.SHOT_W * 900 / 1600))
     by = {s.dom_id: s for s in stickies}
     assert [s.dom_id for s in stickies] == [f"q-p1-{i}" for i in range(5)] + ["q-p2-1"]
     rects = [(s.x, s.y, sb.STICKY_W, sb.STICKY_H) for s in stickies]
     for r in rects:
-        assert r[1] >= still[1] + still[3]  # beneath the still, never over it
+        assert r[1] >= still.y + still.height  # beneath the screengrab, never over it
         assert r[0] >= 0 and r[0] + r[2] <= w + 0.01 and r[1] + r[3] <= h
     assert not any(_overlaps(a, b) for i, a in enumerate(rects) for b in rects[i + 1:])
     assert by["q-p1-4"].y > by["q-p1-3"].y and by["q-p1-4"].x == by["q-p1-0"].x  # four to a row
     assert by["q-p2-1"].y > by["q-p1-4"].y and by["q-p2-1"].x == by["q-p1-0"].x  # p2 starts a row
+
+
+def test_every_participants_screengrab_cascades_behind_the_front_one() -> None:
+    versions = [("front.jpg", "P2 · A", (1600, 900)), ("b.jpg", "P1 · A", (1600, 1200)),
+                ("c.jpg", "P3 · A", (1600, 900))]
+    w, h, stills, stickies = sb.lay_out_screen([("p1", ["q-p1-1"])], versions)
+    assert [s.filename for s in stills] == ["c.jpg", "b.jpg", "front.jpg"]  # created back first
+    front, behind = stills[-1], stills[:-1]
+    assert (front.x, front.y) == (sb.FRAME_PAD, sb.FRAME_PAD)
+    for k, s in enumerate(reversed(behind), 1):
+        assert (s.x, s.y) == (sb.FRAME_PAD + k * sb.CASCADE, sb.FRAME_PAD + k * sb.CASCADE)
+    assert w == sb.SHOT_W + 2 * sb.CASCADE + 2 * sb.FRAME_PAD
+    lowest = max(s.y + s.height for s in stills)
+    assert stickies[0].y >= lowest  # the quotes start under the deepest screengrab
+    assert [s.title for s in stills] == ["P3 · A", "P1 · A", "P2 · A"]
 
 
 def test_the_stickies_are_the_house_rectangle_and_four_span_the_still() -> None:
@@ -32,17 +48,22 @@ def test_the_stickies_are_the_house_rectangle_and_four_span_the_still() -> None:
     assert sb.PER_ROW * sb.STICKY_W + (sb.PER_ROW - 1) * sb.GAP == pytest.approx(sb.SHOT_W)
 
 
-def test_frames_run_left_to_right_and_a_still_that_failed_is_left_out() -> None:
-    screens = [{"title": t, "filename": f, "groups": []}
-               for t, f in [("Home", "screen-01.jpg"), ("Basket", "screen-02.jpg"), ("Checkout", "screen-03.jpg")]]
-    frames = sb.lay_out_board(screens, {"screen-01.jpg": (1600, 900), "screen-03.jpg": (1600, 900)})
+def test_frames_run_left_to_right_and_a_screen_with_no_still_is_left_out() -> None:
+    def screen(t: str, n: int, codes: list[str]) -> dict:
+        return {"title": t, "groups": [],
+                "versions": [{"filename": f"screen-{n:02d}-{c}.jpg", "code": c} for c in codes]}
+    screens = [screen("Home", 1, ["p1"]), screen("Basket", 2, ["p1"]), screen("Checkout", 3, ["p2", "p1"])]
+    px = {"screen-01-p1.jpg": (1600, 900), "screen-03-p1.jpg": (1600, 900)}  # p2's checkout failed
+    frames = sb.lay_out_board(screens, px)
     assert [f.title for f in frames] == ["Home", "Checkout"]
+    assert [s.title for s in frames[1].stills] == ["P1 · Checkout"]
     assert frames[0].y == frames[1].y == 0
     assert frames[1].x == frames[0].x + frames[0].width + sb.FRAME_GAP
 
 
 def test_only_quotes_the_board_can_write_get_a_sticky() -> None:
-    _, _, _, stickies = sb.lay_out_screen([("p1", ["q-p1-10", "q-p1-20"])], (1600, 900), known={"q-p1-20"})
+    _, _, _, stickies = sb.lay_out_screen([("p1", ["q-p1-10", "q-p1-20"])], [("a.jpg", "A", (1600, 900))],
+                                          known={"q-p1-20"})
     assert [s.dom_id for s in stickies] == ["q-p1-20"]
 
 

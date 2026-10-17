@@ -120,3 +120,24 @@ def test_a_frame_error_other_than_500_is_not_retried(monkeypatch) -> None:
     with pytest.raises(mc.MiroError):
         mc.create_frame("t", "b", "x", 0, 0, 1, 1)
     assert calls == ["POST"]
+
+
+def test_the_frame_check_is_itself_retried_when_miro_refuses_it(monkeypatch) -> None:
+    from bristlenose import miro_client as mc
+
+    answers = iter([
+        _Resp(500, {"message": "Internal error occurred"}),   # POST frame: refused
+        _Resp(500, {"code": "3.0016"}),                       # GET items: refused too
+        _Resp(200, {"data": []}),                             # GET items: not there
+        _Resp(201, {"id": "f2"}),                             # POST frame: made
+    ])
+    calls: list[str] = []
+
+    def fake(method: str, url: str, **_: object) -> _Resp:
+        calls.append(method)
+        return next(answers)
+
+    monkeypatch.setattr(mc.httpx, "request", fake)
+    monkeypatch.setattr(mc.time, "sleep", lambda _s: None)
+    assert mc.create_frame("t", "b", "P1 · Home", 10, 20, 100, 100)["id"] == "f2"
+    assert calls == ["POST", "GET", "GET", "POST"]

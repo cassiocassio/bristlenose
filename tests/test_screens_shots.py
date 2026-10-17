@@ -68,8 +68,9 @@ def test_the_board_pools_each_screen_in_journey_order_grouped_by_participant() -
     assert [e["screen_key"] for e in out] == ["/home", "/basket"]
     assert out[0]["groups"] == [("p1", ["q-p1-3"]), ("p2", ["q-p2-8"])]  # a cross-linked quote, once
     assert out[1]["groups"] == [("p1", ["q-p1-45"]), ("p2", ["q-p2-295"])]
-    assert out[1]["session_id"] == "s2"  # the version the lens shows first
-    assert [e["filename"] for e in out] == ["screen-01.jpg", "screen-02.jpg"]
+    # Every participant's version goes with it, the lens's first, then the rest in code order.
+    assert [(v["session_id"], v["filename"]) for v in out[1]["versions"]] == [
+        ("s2", "screen-02-p2.jpg"), ("s1", "screen-02-p1.jpg")]
 
 
 def test_a_crafted_code_cannot_name_a_file_outside_the_folder() -> None:

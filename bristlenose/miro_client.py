@@ -247,11 +247,22 @@ def create_frame(token: str, board_id: str, title: str, x: float, y: float,
     raise AssertionError("unreachable")
 
 
-def _find_frame(token: str, board_id: str, title: str, x: float, y: float) -> dict[str, Any] | None:
+def _find_frame(token: str, board_id: str, title: str, x: float, y: float,
+                retry_delays: tuple[float, ...] = (2.0, 5.0, 10.0)) -> dict[str, Any] | None:
     cursor: str | None = None
     while True:
         params = f"?type=frame&limit=50{f'&cursor={cursor}' if cursor else ''}"
-        page = _request("GET", token, f"/boards/{board_id}/items{params}")
+        # The board that refuses a frame with a 500 can refuse this read the same way (measured
+        # 17 Oct 2026: code 3.0016 on the items list straight after a refused frame). A read is safe
+        # to repeat, so it is, before anything is decided from it.
+        for attempt in range(len(retry_delays) + 1):
+            try:
+                page = _request("GET", token, f"/boards/{board_id}/items{params}")
+                break
+            except MiroError as exc:
+                if exc.status is None or exc.status < 500 or attempt == len(retry_delays):
+                    raise
+                time.sleep(retry_delays[attempt])
         if not isinstance(page, dict):
             # Not knowing is not "absent": retrying the POST on a misread could make two.
             raise MiroError(f"GET /boards/{board_id}/items -> unexpected body")

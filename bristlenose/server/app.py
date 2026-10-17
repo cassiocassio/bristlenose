@@ -43,6 +43,7 @@ from bristlenose.server.routes.data import router as data_router
 from bristlenose.server.routes.discussion import router as discussion_router
 from bristlenose.server.routes.doctor import router as doctor_router
 from bristlenose.server.routes.export import router as export_router
+from bristlenose.server.routes.figjam import router as figjam_router
 from bristlenose.server.routes.health import router as health_router
 from bristlenose.server.routes.miro import router as miro_router
 from bristlenose.server.routes.pipeline import router as pipeline_router
@@ -277,6 +278,7 @@ def create_app(
     app.include_router(transcript_router)
     app.include_router(data_router)
     app.include_router(miro_router)
+    app.include_router(figjam_router)
     app.include_router(pipeline_router)
 
     # Codebook lab — the dynamic-codebook-builder experiment. Gated on a feature

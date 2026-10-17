@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
+from urllib.parse import quote
 
 from sqlalchemy.orm import Session as DbSession
 
@@ -59,6 +60,21 @@ def csv_safe(value: str) -> str:
     if value and value[0] in _FORMULA_TRIGGERS:
         return "\t" + value
     return value
+
+
+def attachment_disposition(filename: str) -> str:
+    """A ``Content-Disposition`` header that survives any project name.
+
+    Starlette encodes header values as Latin-1, so ``filename="駅…"`` raises
+    and the download is a 500. RFC 6266: an ASCII ``filename`` for old
+    readers and the real name, percent-encoded, in ``filename*`` — the same
+    form Starlette's own ``FileResponse`` uses. Expects a ``safe_filename``
+    result, which already has no quote marks or separators.
+    """
+    if filename.isascii():
+        return f'attachment; filename="{filename}"'
+    fallback = filename.encode("ascii", "replace").decode("ascii").replace("?", "_")
+    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(filename)}"
 
 
 def excel_sheet_name(name: str, max_length: int = 31) -> str:

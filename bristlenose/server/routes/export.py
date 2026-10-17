@@ -110,6 +110,7 @@ SERVER_ONLY_PATH_TEMPLATES: frozenset[str] = frozenset(
         "/projects/{project_id}/export/screens/miro/status",
         "/projects/{project_id}/export/quotes.csv",
         "/projects/{project_id}/export/quotes.xlsx",
+        "/projects/{project_id}/export/figjam-board.json",  # a download; no board offline
         "/projects/{project_id}/hidden",  # write-mirror; baked into /quotes
         "/projects/{project_id}/agent-settings",  # MCP-surface switch; no agents offline
         "/projects/{project_id}/last-run",  # live run status

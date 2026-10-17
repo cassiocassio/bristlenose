@@ -636,22 +636,49 @@ Bristlenose is the researcher's tool, and its part is to tell the researcher pla
 (the sentence in Settings, item 7) so they can be honest with participants in their own consent
 material. It is not a declaration to Apple: nothing leaves the Mac or reaches us, so the App Store
 privacy label is unchanged ("Data Not Collected" holds); the only Apple-facing item is the
-technical one of whether pyobjc's bundled libraries need privacy-manifest entries. **The line that
-matters is onward flow**, and it stays closed (item 2). Consequently typed values (item 4) and
-off-task screens (item 5) are follow-ups, not release blockers: they stay on the researcher's Mac.
+technical one of whether pyobjc's bundled libraries need privacy-manifest entries. ~~**The line
+that matters is onward flow**, and it stays closed (item 2).~~ _Corrected 17 Oct, below._ Typed
+values (item 4) and off-task screens (item 5) are follow-ups, not release blockers.
+
+**17 Oct 2026: the line is automation, not onward flow.** Item 2 used to say screens never leave:
+no export, no MCP, no chat lens. That list came from the 13 Oct proposal, which gave a reason for
+the LLM only, and it contradicted the position above. The owner's correction:
+
+- **Researchers already do this by hand.** They screenshot the product under test, or the Teams
+  call, and drop the shots into the research materials. A screengrab is ordinary research
+  material; exporting one automates a chore and creates no new kind of data.
+- **It is already the team's.** The participant shared their screen and consented to the
+  recording, and the team has the video. A still is the same material in a usable shape — a
+  research asset for the team to work with, including in the cloud products the researcher uses
+  (Miro, FigJam, Teams, SharePoint, Drive).
+- **The responsibility is the researcher's.** Ethics and the legal side sit between the researcher
+  and their participant, as above; neither is a security risk for Bristlenose.
+- **Today there is nothing to guard.** One researcher, their own machine, the original videos, from
+  which they can take any frame they like. Holding back a still protects nothing.
+
+So: **Bristlenose never sends screens anywhere on its own; anything the researcher chooses to do
+with them is open.** Safeguards, if they ever come, are the researcher's to set per project, beside
+the anonymised-outputs choice: in a shared team repository one researcher might allow anonymised
+quotes over MCP but not colleagues' screens, and another might not bother, because their
+participants are all internal users. Only the researcher knows which. Nothing to build until a
+shared repository exists. The first exports are planned in `docs/design-screens-export.md`.
 
 One model for the whole project, combining both evidence docs:
 
 1. **Everything stays in the project**, like `transcripts-raw/`: the index, the screens, the stills.
-2. **It never leaves**: not in the HTML export, anonymised outputs, clip or quote exports, MCP, the
-   chat lens, support bundles, **and never sent to the LLM**. The analysis is a cloud call; screens
-   carry bookmarks, colleagues' names and typed addresses. Screen names borrow the report's
-   LLM-made section names (made from the transcript) rather than sending screens to name them.
+2. **Bristlenose never sends it anywhere on its own** (17 Oct 2026, above): **never to the LLM**,
+   and not in support bundles. The analysis is a cloud call made on every run, unasked; screens
+   carry bookmarks, colleagues' names and typed addresses, and whether a feature should send them
+   is decided with that feature in front of the owner, not in general. Screen names borrow the
+   report's LLM-made section names (made from the transcript) rather than sending screens to name
+   them. **What the researcher chooses is open**: the folder, clipboard and Miro exports
+   (`docs/design-screens-export.md`), and MCP and the chat lens on the same terms as transcripts.
+   _As built: none of those carry screens yet, and the lens is absent from the HTML export._
 3. **Chrome is not stored** (a line on at least half of a recording's text-dense frames, 25 lines
    or more: names under call tiles, bookmarks). The filter can only see chrome where there are
    dense frames to count from: a recording with none (a talking head, a sparse app) has nothing
-   flagged, so its call-tile names are stored. That stays on the Mac, like the video that shows
-   them; it is not a gap in onward flow. **An address is read before
+   flagged, so its call-tile names are stored. That stays in the project, like the video that
+   shows them. **An address is read before
    that filter** and stored, because it keys the screen — but never whole: every address in a line,
    the address bar's or one shown on the page, loses its query string, and its fragment unless the
    fragment is a single-page app's route (`#/planner` and `#/summary` are how such an app's screens
@@ -662,9 +689,11 @@ One model for the whole project, combining both evidence docs:
    product and category IDs in it key screens), a search engine's terms where they show in the
    page rather than the query, toasts and notifications, and the chrome of sparse recordings
    (item 3). PII redaction (stage 7) works on the transcript and does not touch screen text.
-   None of it leaves (item 2); masking is a follow-up, and needed before any onward use.
+   Bristlenose sends none of it anywhere (item 2), and a still shows it as pixels whatever the
+   index holds, as the video does. Masking is a follow-up.
 5. **Off-task screens** (an inbox, a bank) seen by one participant on another host should be hidden
-   but counted, and revealable. **Not built yet**; a follow-up, since they never leave the Mac.
+   but counted, and revealable. **Not built yet**; a follow-up. An exported still is one the
+   researcher can look at before sharing it.
 6. **No cloud vision**, for naming or merging screens. A local model, or a new consent decision.
 7. **One sentence where it is switched on** (Settings ▸ Transcription ▸ *Read shared screens*,
    `desktop.transcriptionSettings.readScreensHint`): *"Reads the text on screens shared in
@@ -672,6 +701,9 @@ One model for the whole project, combining both evidence docs:
    folder. Never sent to the AI, and not included in exports."* It says where the data lives
    rather than "never leaves your Mac", because the project folder may be synced, and it does not
    mention that turning it off deletes: what was read can be read again (owner's call, 14 Oct).
+   **Its last clause becomes untrue when the first screens export ships** and changes then, in
+   all 21 locales, English settled first (`docs/design-screens-export.md` §7). Not before: the
+   sentence describes the build the researcher has.
 8. **On by default on the Mac; off deletes.** The Mac app reads shared screens unless the researcher
    turns that off. Off, it starts each serve with `BRISTLENOSE_SCREEN_TEXT=0`, and the serve deletes
    what was read for that project — indexes and cached stills — before anything else runs; a project
@@ -744,7 +776,10 @@ can answer it cheaply, and decides whether S1–S6 appear at all.
    _Half answered: v1 is page-level (one key per screen by the §3.6 ladder). Dialogs are open._
 5. ~~**Typed values:** mask postcode and address patterns in the local index now, or leave them?~~
    Settled 14 Oct 2026: leave them for now; they stay on the Mac (§4, item 4). A follow-up.
-6. **Ever in the export?** v1 keeps it all out; a screen map without stills is plausible later.
+6. ~~**Ever in the export?** v1 keeps it all out; a screen map without stills is plausible later.~~
+   Settled 17 Oct 2026: yes, whenever the researcher exports (§4, 17 Oct). The first exports are a
+   folder of stills, a clipboard of them, and a Miro board (`docs/design-screens-export.md`). The
+   lens in the HTML export is a later build, not a policy question.
 7. **Should the hover thumbnails share the sampling?** The text-diff moments are where the screen
    changed in a way a person reads.
 8. ~~**On the board, hover or click to bring a quote to the front, and straight or diagonal stacks?**~~
@@ -752,4 +787,5 @@ can answer it cheaply, and decides whether S1–S6 appear at all.
    (S5); and any press on a card brings it to the front._
 9. ~~**Whose arrangement is it?** A rearranged board is a researcher edit; is it saved per project like
    other edits, and does it reach the export one day?~~ Settled 15 Oct 2026: per project, in its
-   database, like the other edits (S5). The export question stays open with question 6.
+   database, like the other edits (S5). ~~The export question stays open with question 6.~~ The
+   Miro export places quotes by the saved arrangement where there is one (question 6).

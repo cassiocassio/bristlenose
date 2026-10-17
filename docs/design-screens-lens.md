@@ -291,6 +291,11 @@ falls back to the heading or URL.
 
 ## 7. Privacy
 
+> **Corrected 17 Oct 2026.** The export half of this section is overtaken: Bristlenose never sends
+> screens anywhere on its own, and anything the researcher chooses (exports, cloud tools, MCP) is
+> open. `design-screens.md` §4 is authoritative; the exports are planned in
+> `design-screens-export.md`. Kept below as the 13 Oct proposal.
+
 The screen-text proposal's model applies whole: the index stays in the project; never in the HTML
 export, the anonymised outputs, clip or quote exports, MCP, the chat lens or support bundles; **never
 sent to the LLM.** What this lens adds:
@@ -353,7 +358,8 @@ Given the screen-text index (its §4 steps 1–2):
    with researcher-marked states, or wait for a detector and a labelled set?
 4. **Off-task screens hidden by default?** The proposed rule hides a one-participant, off-host screen
    but counts it. Too aggressive, or not enough?
-5. **In the export, ever?** v1 keeps the whole lens out. A screen map without stills is plausible
+5. ~~**In the export, ever?**~~ Settled 17 Oct 2026: yes, when the researcher exports
+   (`design-screens.md` §6.6). v1 keeps the whole lens out. A screen map without stills is plausible
    later; screen names are still screen text.
 6. **Expected paths?** The discussion guide's tasks could supply an expected order per task, which
    unlocks direct/indirect success and lostness. Worth a design of its own once the map exists.

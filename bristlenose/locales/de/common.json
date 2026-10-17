@@ -771,11 +771,6 @@
     "readingSession": "Wird gerade gelesen: {{session}}.",
     "waiting_one": "{{waiting}} von {{count}} Aufnahme wird nach der laufenden Analyse gelesen.",
     "waiting_other": "{{waiting}} von {{count}} Aufnahmen werden nach der laufenden Analyse gelesen.",
-    "screenCount_one": "{{count}} Bildschirm",
-    "screenCount_other": "{{count}} Bildschirme",
-    "participantCount_one": "{{count}}\u00a0Teilnehmer",
-    "participantCount_other": "{{count}}\u00a0Teilnehmer",
-    "navSummary": "{{screens}} \u00b7 {{participants}}",
     "quoteCount_one": "{{count}} Zitat",
     "quoteCount_other": "{{count}} Zitate",
     "quoteCountFrom_one": "{{count}} Zitat von {{people}} Teilnehmern",
@@ -801,7 +796,9 @@
     "navWidthPixels_one": "{{count}} Pixel",
     "navWidthPixels_other": "{{count}} Pixel",
     "subtitle_one": "{{count}}\u00a0Bildschirm",
-    "subtitle_other": "{{count}}\u00a0Bildschirme"
+    "subtitle_other": "{{count}}\u00a0Bildschirme",
+    "subtitleScreenshots_one": "{{count}}\u00a0Bildschirmfoto",
+    "subtitleScreenshots_other": "{{count}}\u00a0Bildschirmfotos"
   },
   "figjam": {
     "menuLabel": "An FigJam senden…",

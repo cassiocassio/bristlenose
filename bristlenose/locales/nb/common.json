@@ -771,11 +771,6 @@
     "readingSession": "Leser n\u00e5 {{session}}.",
     "waiting_one": "Venter p\u00e5 \u00e5 lese {{waiting}} av {{count}} opptak etter den p\u00e5g\u00e5ende analysen.",
     "waiting_other": "Venter p\u00e5 \u00e5 lese {{waiting}} av {{count}} opptak etter den p\u00e5g\u00e5ende analysen.",
-    "screenCount_one": "{{count}} skjerm",
-    "screenCount_other": "{{count}} skjermer",
-    "participantCount_one": "{{count}} deltaker",
-    "participantCount_other": "{{count}} deltakere",
-    "navSummary": "{{screens}} \u00b7 {{participants}}",
     "quoteCount_one": "{{count}} sitat",
     "quoteCount_other": "{{count}} sitater",
     "quoteCountFrom_one": "{{count}} sitat fra {{people}} deltakere",
@@ -801,7 +796,9 @@
     "navWidthPixels_one": "{{count}} piksel",
     "navWidthPixels_other": "{{count}} piksler",
     "subtitle_one": "{{count}}\u00a0skjerm",
-    "subtitle_other": "{{count}}\u00a0skjermer"
+    "subtitle_other": "{{count}}\u00a0skjermer",
+    "subtitleScreenshots_one": "{{count}}\u00a0skjermbilde",
+    "subtitleScreenshots_other": "{{count}}\u00a0skjermbilder"
   },
   "figjam": {
     "menuLabel": "Send til FigJam …",

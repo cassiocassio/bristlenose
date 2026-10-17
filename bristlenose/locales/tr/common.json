@@ -771,11 +771,6 @@
     "readingSession": "\u015eu an okunan: {{session}}.",
     "waiting_one": "{{count}} kay\u0131ttan {{waiting}} tanesi ge\u00e7erli analizden sonra okunacak.",
     "waiting_other": "{{count}} kay\u0131ttan {{waiting}} tanesi ge\u00e7erli analizden sonra okunacak.",
-    "screenCount_one": "{{count}} ekran",
-    "screenCount_other": "{{count}} ekran",
-    "participantCount_one": "{{count}} kat\u0131l\u0131mc\u0131",
-    "participantCount_other": "{{count}} kat\u0131l\u0131mc\u0131",
-    "navSummary": "{{screens}} \u00b7 {{participants}}",
     "quoteCount_one": "{{count}} al\u0131nt\u0131",
     "quoteCount_other": "{{count}} al\u0131nt\u0131",
     "quoteCountFrom_one": "{{people}} kat\u0131l\u0131mc\u0131dan {{count}} al\u0131nt\u0131",
@@ -801,7 +796,9 @@
     "navWidthPixels_one": "{{count}} piksel",
     "navWidthPixels_other": "{{count}} piksel",
     "subtitle_one": "{{count}}\u00a0Ekran",
-    "subtitle_other": "{{count}}\u00a0Ekran"
+    "subtitle_other": "{{count}}\u00a0Ekran",
+    "subtitleScreenshots_one": "{{count}}\u00a0Ekran g\u00f6r\u00fcnt\u00fcs\u00fc",
+    "subtitleScreenshots_other": "{{count}}\u00a0Ekran g\u00f6r\u00fcnt\u00fcs\u00fc"
   },
   "figjam": {
     "menuLabel": "FigJam'e Gönder…",

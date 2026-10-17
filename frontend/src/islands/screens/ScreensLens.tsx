@@ -100,7 +100,7 @@ import { readingOrder, type Seen } from "./narrative";
 import { markScreensFound } from "./availability";
 import { postScreensArrangement } from "../../shims/bridge";
 import { reportScreensNav, useScreensNav } from "./navPanel";
-import { setScreensCount } from "./screensCount";
+import { setScreensCount, ZERO_SCREENS_COUNT } from "./screensCount";
 import { featureFlags } from "../../utils/featureFlags";
 import { choosePaper, papers, readAccents, samplePaper, type Rgb } from "./paper";
 import "./screens.css";
@@ -610,8 +610,9 @@ export function ScreensLens() {
     return [...seen].sort((a, b) => byId.get(a)!.start_timecode - byId.get(b)!.start_timecode);
   }, [screen, byId, store.hidden]);
 
-  // The window subtitle's counts: the screens, and every quote on any of them once each, hidden ones
-  // not counted (the same rule as each row's count in the navigator).
+  // The window subtitle's counts: the screens, the screenshots behind them (one per participant who
+  // visited each, the version tabs), and every quote on any of them once each, hidden ones not
+  // counted (the same rule as each row's count in the navigator).
   const quotesOnScreens = useMemo(() => {
     const seen = new Set<string>();
     for (const s of screens) {
@@ -621,10 +622,11 @@ export function ScreensLens() {
     }
     return seen.size;
   }, [screens, byId, store.hidden]);
+  const screenshots = useMemo(() => screens.reduce((n, s) => n + s.tabs.length, 0), [screens]);
   useEffect(() => {
-    setScreensCount(screens.length, quotesOnScreens);
-    return () => setScreensCount(0);
-  }, [screens.length, quotesOnScreens]);
+    setScreensCount({ screens: screens.length, screenshots, quotes: quotesOnScreens });
+    return () => setScreensCount(ZERO_SCREENS_COUNT);
+  }, [screens.length, screenshots, quotesOnScreens]);
 
   // The navigator: shown and hidden like Discussion's guide, and resized the same way — the
   // shipped .drag-handle on its edge, a keyboard-operable separator (←/→ by RESIZE_STEP, Home,
@@ -1087,15 +1089,8 @@ function ScreenNav({
     if (el && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "nearest" });
   }, [cur]);
   const { t } = useTranslation();
-  const participants = new Set(screens.flatMap((s) => s.tabs.map((tb) => tb.code))).size;
   return (
     <nav className="screens-nav" id="screens-nav" aria-label={t("screens.title")}>
-      <div className="screens-nav-head">
-        {t("screens.navSummary", {
-          screens: t("screens.screenCount", { count: screens.length }),
-          participants: t("screens.participantCount", { count: participants }),
-        })}
-      </div>
       <ol ref={listRef}>
         {screens.map((s, i) => {
           const codes = [...new Set(s.tabs.map((tb) => tb.code))];

@@ -771,11 +771,6 @@
     "readingSession": "Ara s\u2019est\u00e0 llegint {{session}}.",
     "waiting_one": "Esperant per llegir {{waiting}} de {{count}} enregistrament, despr\u00e9s de l\u2019an\u00e0lisi en curs.",
     "waiting_other": "Esperant per llegir {{waiting}} de {{count}} enregistraments, despr\u00e9s de l\u2019an\u00e0lisi en curs.",
-    "screenCount_one": "{{count}} pantalla",
-    "screenCount_other": "{{count}} pantalles",
-    "participantCount_one": "{{count}} participant",
-    "participantCount_other": "{{count}} participants",
-    "navSummary": "{{screens}} \u00b7 {{participants}}",
     "quoteCount_one": "{{count}} cita",
     "quoteCount_other": "{{count}} cites",
     "quoteCountFrom_one": "{{count}} cita de {{people}} participants",
@@ -801,7 +796,9 @@
     "navWidthPixels_one": "{{count}} píxel",
     "navWidthPixels_other": "{{count}} píxels",
     "subtitle_one": "{{count}}\u00a0pantalla",
-    "subtitle_other": "{{count}}\u00a0pantalles"
+    "subtitle_other": "{{count}}\u00a0pantalles",
+    "subtitleScreenshots_one": "{{count}}\u00a0captura de pantalla",
+    "subtitleScreenshots_other": "{{count}}\u00a0captures de pantalla"
   },
   "figjam": {
     "menuLabel": "Envia al FigJam…",

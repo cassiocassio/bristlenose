@@ -738,9 +738,6 @@
     "reading_other": "\ud654\uba74 \uc77d\ub294 \uc911\u2026 \ub179\ud654 {{count}}\uac1c \uc911 {{indexed}}\uac1c.",
     "readingSession": "\uc9c0\uae08 \uc77d\ub294 \uc911: {{session}}.",
     "waiting_other": "\ud604\uc7ac \ubd84\uc11d\uc774 \ub05d\ub098\uba74 \ub179\ud654 {{count}}\uac1c \uc911 {{waiting}}\uac1c\ub97c \uc77d\uc2b5\ub2c8\ub2e4.",
-    "screenCount_other": "\ud654\uba74 {{count}}\uac1c",
-    "participantCount_other": "{{count}}\uba85 \ucc38\uac00\uc790",
-    "navSummary": "{{screens}} \u00b7 {{participants}}",
     "quoteCount_other": "\uc778\uc6a9\ubb38 {{count}}\uac1c",
     "quoteCountFrom_other": "\ucc38\uac00\uc790 {{people}}\uba85\uc758 \uc778\uc6a9\ubb38 {{count}}\uac1c",
     "stillAlt": "{{code}} \ud654\uba74: {{title}}, {{time}} \uc2dc\uc810",
@@ -762,7 +759,8 @@
     "resizeNavigator": "\ud654\uba74 \ubaa9\ub85d \ud06c\uae30 \uc870\uc808",
     "quoteMoved": "\uc778\uc6a9\ubb38\uc744 \uc774\ub3d9\ud588\uc2b5\ub2c8\ub2e4",
     "navWidthPixels_other": "{{count}}\ud53d\uc140",
-    "subtitle_other": "{{count}}\uac1c\u00a0\ud654\uba74"
+    "subtitle_other": "{{count}}\uac1c\u00a0\ud654\uba74",
+    "subtitleScreenshots_other": "{{count}}\uac1c\u00a0\uc2a4\ud06c\ub9b0\uc0f7"
   },
   "figjam": {
     "menuLabel": "FigJam으로 보내기…",

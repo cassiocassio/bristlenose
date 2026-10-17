@@ -28,7 +28,7 @@
       "pageSetup": "Page Setup…",
       "print": "Print…",
       "exportScreens": "Export Screens",
-      "exportScreensHint": "Every screengrab, full size, in a folder",
+      "exportScreensHint": "Every screenshot, full size, in a folder",
       "copyScreens": "Copy Screens",
       "copyScreensHint": "Paste into Miro or FigJam"
     },

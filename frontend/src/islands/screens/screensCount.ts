@@ -1,6 +1,6 @@
 /**
- * How many screens the Screens lens is showing, and how many quotes sit on
- * them, for the window subtitle (LensSubtitleSync). The counts live in the
+ * How many screens the Screens lens is showing, the screenshots behind them and
+ * the quotes on them, for the window subtitle (LensSubtitleSync). The counts live in the
  * lens, which is lazy-loaded, so they reach the always-loaded subtitle sync
  * through this tiny store rather than by importing the lens.
  */
@@ -9,16 +9,17 @@ import { useSyncExternalStore } from "react";
 
 export interface ScreensCount {
   screens: number;
+  screenshots: number;
   quotes: number;
 }
 
-const ZERO: ScreensCount = { screens: 0, quotes: 0 };
-let count: ScreensCount = ZERO;
+export const ZERO_SCREENS_COUNT: ScreensCount = { screens: 0, screenshots: 0, quotes: 0 };
+let count: ScreensCount = ZERO_SCREENS_COUNT;
 const listeners = new Set<() => void>();
 
-export function setScreensCount(screens: number, quotes = 0): void {
-  if (screens === count.screens && quotes === count.quotes) return;
-  count = screens === 0 && quotes === 0 ? ZERO : { screens, quotes };
+export function setScreensCount(next: ScreensCount): void {
+  if (next.screens === count.screens && next.screenshots === count.screenshots && next.quotes === count.quotes) return;
+  count = next;
   listeners.forEach((l) => l());
 }
 

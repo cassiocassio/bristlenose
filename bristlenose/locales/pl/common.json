@@ -851,15 +851,6 @@
     "waiting_few": "Oczekiwanie na odczyt {{waiting}} z {{count}} nagra\u0144 po bie\u017c\u0105cej analizie.",
     "waiting_many": "Oczekiwanie na odczyt {{waiting}} z {{count}} nagra\u0144 po bie\u017c\u0105cej analizie.",
     "waiting_other": "Oczekiwanie na odczyt {{waiting}} z {{count}} nagrania po bie\u017c\u0105cej analizie.",
-    "screenCount_one": "{{count}} ekran",
-    "screenCount_few": "{{count}} ekrany",
-    "screenCount_many": "{{count}} ekran\u00f3w",
-    "screenCount_other": "{{count}} ekranu",
-    "participantCount_one": "{{count}} uczestnik",
-    "participantCount_few": "{{count}} uczestnik\u00f3w",
-    "participantCount_many": "{{count}} uczestnik\u00f3w",
-    "participantCount_other": "{{count}} uczestnik\u00f3w",
-    "navSummary": "{{screens}} \u00b7 {{participants}}",
     "quoteCount_one": "{{count}} cytat",
     "quoteCount_few": "{{count}} cytaty",
     "quoteCount_many": "{{count}} cytat\u00f3w",
@@ -893,7 +884,11 @@
     "subtitle_one": "{{count}}\u00a0ekran",
     "subtitle_few": "{{count}}\u00a0ekrany",
     "subtitle_many": "{{count}}\u00a0ekran\u00f3w",
-    "subtitle_other": "{{count}}\u00a0ekranu"
+    "subtitle_other": "{{count}}\u00a0ekranu",
+    "subtitleScreenshots_one": "{{count}}\u00a0zrzut ekranu",
+    "subtitleScreenshots_few": "{{count}}\u00a0zrzuty ekranu",
+    "subtitleScreenshots_many": "{{count}}\u00a0zrzut\u00f3w ekranu",
+    "subtitleScreenshots_other": "{{count}}\u00a0zrzutu ekranu"
   },
   "figjam": {
     "menuLabel": "Wyślij do FigJam…",

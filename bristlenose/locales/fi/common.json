@@ -771,11 +771,6 @@
     "readingSession": "Luetaan nyt: {{session}}.",
     "waiting_one": "{{waiting}} / {{count}} tallenteesta luetaan nykyisen analyysin j\u00e4lkeen.",
     "waiting_other": "{{waiting}} / {{count}} tallenteesta luetaan nykyisen analyysin j\u00e4lkeen.",
-    "screenCount_one": "{{count}} n\u00e4ytt\u00f6",
-    "screenCount_other": "{{count}} n\u00e4ytt\u00f6\u00e4",
-    "participantCount_one": "{{count}} osallistuja",
-    "participantCount_other": "{{count}} osallistujaa",
-    "navSummary": "{{screens}} \u00b7 {{participants}}",
     "quoteCount_one": "{{count}} sitaatti",
     "quoteCount_other": "{{count}} sitaattia",
     "quoteCountFrom_one": "{{count}} sitaatti {{people}} osallistujalta",
@@ -801,7 +796,9 @@
     "navWidthPixels_one": "{{count}} pikseli",
     "navWidthPixels_other": "{{count}} pikseli\u00e4",
     "subtitle_one": "{{count}}\u00a0n\u00e4ytt\u00f6",
-    "subtitle_other": "{{count}}\u00a0n\u00e4ytt\u00f6\u00e4"
+    "subtitle_other": "{{count}}\u00a0n\u00e4ytt\u00f6\u00e4",
+    "subtitleScreenshots_one": "{{count}}\u00a0kuvakaappaus",
+    "subtitleScreenshots_other": "{{count}}\u00a0kuvakaappausta"
   },
   "figjam": {
     "menuLabel": "Lähetä FigJamiin…",

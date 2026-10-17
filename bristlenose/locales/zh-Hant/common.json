@@ -738,9 +738,6 @@
     "reading_other": "\u6b63\u5728\u8b80\u53d6\u756b\u9762\u22ef {{count}} \u500b\u9304\u5f71\u4e2d\u7684 {{indexed}} \u500b\u3002",
     "readingSession": "\u6b63\u5728\u8b80\u53d6 {{session}}\u3002",
     "waiting_other": "\u76ee\u524d\u7684\u5206\u6790\u5b8c\u6210\u5f8c\uff0c\u5c07\u8b80\u53d6 {{count}} \u500b\u9304\u5f71\u4e2d\u7684 {{waiting}} \u500b\u3002",
-    "screenCount_other": "{{count}} \u500b\u756b\u9762",
-    "participantCount_other": "{{count}} \u4f4d\u53c3\u8207\u8005",
-    "navSummary": "{{screens}} \u00b7 {{participants}}",
     "quoteCount_other": "{{count}} \u5247\u5f15\u8ff0",
     "quoteCountFrom_other": "\u4f86\u81ea {{people}} \u4f4d\u53c3\u8207\u8005\u7684 {{count}} \u5247\u5f15\u8ff0",
     "stillAlt": "{{code}} \u7684\u756b\u9762\uff1a{{title}}\uff0c\u65bc {{time}}",
@@ -762,7 +759,8 @@
     "resizeNavigator": "\u8abf\u6574\u756b\u9762\u6e05\u55ae\u5927\u5c0f",
     "quoteMoved": "\u5df2\u79fb\u52d5\u5f15\u8ff0",
     "navWidthPixels_other": "{{count}} \u50cf\u7d20",
-    "subtitle_other": "{{count}} \u500b\u756b\u9762"
+    "subtitle_other": "{{count}} \u500b\u756b\u9762",
+    "subtitleScreenshots_other": "{{count}} \u5f35\u87a2\u5e55\u622a\u5716"
   },
   "figjam": {
     "menuLabel": "傳送至 FigJam⋯",

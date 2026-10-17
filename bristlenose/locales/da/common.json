@@ -771,11 +771,6 @@
     "readingSession": "L\u00e6ser nu {{session}}.",
     "waiting_one": "Venter p\u00e5 at l\u00e6se {{waiting}} af {{count}} optagelse efter den igangv\u00e6rende analyse.",
     "waiting_other": "Venter p\u00e5 at l\u00e6se {{waiting}} af {{count}} optagelser efter den igangv\u00e6rende analyse.",
-    "screenCount_one": "{{count}} sk\u00e6rm",
-    "screenCount_other": "{{count}} sk\u00e6rme",
-    "participantCount_one": "{{count}} deltager",
-    "participantCount_other": "{{count}} deltagere",
-    "navSummary": "{{screens}} \u00b7 {{participants}}",
     "quoteCount_one": "{{count}} citat",
     "quoteCount_other": "{{count}} citater",
     "quoteCountFrom_one": "{{count}} citat fra {{people}} deltagere",
@@ -801,7 +796,9 @@
     "navWidthPixels_one": "{{count}} pixel",
     "navWidthPixels_other": "{{count}} pixels",
     "subtitle_one": "{{count}}\u00a0sk\u00e6rm",
-    "subtitle_other": "{{count}}\u00a0sk\u00e6rme"
+    "subtitle_other": "{{count}}\u00a0sk\u00e6rme",
+    "subtitleScreenshots_one": "{{count}}\u00a0sk\u00e6rmbillede",
+    "subtitleScreenshots_other": "{{count}}\u00a0sk\u00e6rmbilleder"
   },
   "figjam": {
     "menuLabel": "Send til FigJam …",

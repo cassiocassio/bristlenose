@@ -757,9 +757,6 @@
     "reading_other": "\u753b\u9762\u3092\u8aad\u307f\u53d6\u308a\u4e2d\u2026 {{count}} \u4ef6\u4e2d {{indexed}} \u4ef6\u306e\u9332\u753b\u3002",
     "readingSession": "{{session}} \u3092\u8aad\u307f\u53d6\u308a\u4e2d\u3067\u3059\u3002",
     "waiting_other": "\u73fe\u5728\u306e\u89e3\u6790\u304c\u7d42\u308f\u3063\u305f\u3089\u3001{{count}} \u4ef6\u4e2d {{waiting}} \u4ef6\u306e\u9332\u753b\u3092\u8aad\u307f\u53d6\u308a\u307e\u3059\u3002",
-    "screenCount_other": "{{count}} \u753b\u9762",
-    "participantCount_other": "{{count}}\u00a0\u540d\u306e\u53c2\u52a0\u8005",
-    "navSummary": "{{screens}} \u00b7 {{participants}}",
     "quoteCount_other": "{{count}} \u4ef6\u306e\u767a\u8a00",
     "quoteCountFrom_other": "{{people}} \u4eba\u306e\u53c2\u52a0\u8005\u304b\u3089\u306e {{count}} \u4ef6\u306e\u767a\u8a00",
     "stillAlt": "{{code}} \u306e\u753b\u9762: {{title}}\u3001{{time}} \u6642\u70b9",
@@ -781,7 +778,8 @@
     "resizeNavigator": "\u753b\u9762\u30ea\u30b9\u30c8\u306e\u30b5\u30a4\u30ba\u3092\u5909\u66f4",
     "quoteMoved": "\u767a\u8a00\u3092\u79fb\u52d5\u3057\u307e\u3057\u305f",
     "navWidthPixels_other": "{{count}} \u30d4\u30af\u30bb\u30eb",
-    "subtitle_other": "{{count}}\u00a0\u753b\u9762"
+    "subtitle_other": "{{count}}\u00a0\u753b\u9762",
+    "subtitleScreenshots_other": "{{count}}\u00a0\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8"
   },
   "figjam": {
     "menuLabel": "FigJamに送信…",

@@ -10,6 +10,7 @@ import type { QuoteResponse, QuotesListResponse } from "../../utils/types";
 import { FocusProvider, useFocus } from "../../contexts/FocusContext";
 import { arrangementFor, CARD_W, COLUMN_GUTTER, MOVE_STEP, resetArrangementMemory, type Arrangement } from "./layout";
 import { resetScreensNav, screensNavState, toggleScreensNav } from "./navPanel";
+import { useScreensCount } from "./screensCount";
 
 vi.mock("../../utils/announce", () => ({ announce: vi.fn(), setAnnounceElement: vi.fn() }));
 // jsdom has no canvas and resolves no CSS variable, so the paper sampler and the accent probe are
@@ -164,10 +165,21 @@ describe("ScreensLens", () => {
     mockApi(screensResponse());
     await opened();
     const nav = screen.getByRole("navigation", { name: "Screens" });
-    expect(nav).toHaveTextContent("2 screens · 1 participant");
+    // The counts moved to the window subtitle (the owner, 18 Oct 2026): the list has no heading line.
+    expect(nav).not.toHaveTextContent("participant");
     // The address, codes and count are kept and not shown for now (NAV_DETAILS).
     expect(nav).not.toHaveTextContent("/shoppingcart");
     expect(nav).toHaveTextContent("Delivery or collect");
+  });
+
+  it("counts screens, screenshots and the quotes on them for the window subtitle, hidden ones not", async () => {
+    mockApi(screensResponse());
+    await opened();
+    const { result } = renderHook(() => useScreensCount());
+    // Two screens, one participant's version of each, and two quotes on the cart (none on delivery).
+    expect(result.current).toEqual({ screens: 2, screenshots: 2, quotes: 2 });
+    act(() => hideQuotes(["q-p1-10"]));
+    await waitFor(() => expect(result.current).toEqual({ screens: 2, screenshots: 2, quotes: 1 }));
   });
 
   it("keeps the screen's path on the info line and parks the quote count (the owner, 15 Oct 2026)", async () => {
@@ -1176,7 +1188,7 @@ describe("a placed card with no screengrab to place it against", () => {
       return Promise.reject(new Error(path));
     }) as typeof apiGet);
     const c = await openVersions();
-    await waitFor(() => expect(screen.getByText("Screengrab unavailable.")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Screenshot unavailable.")).toBeInTheDocument());
     const card = cardOf(c, "q-p1-10");
     expect(card.closest(".screens-loose")).not.toBeNull();
     expect(card.style.visibility).not.toBe("hidden");

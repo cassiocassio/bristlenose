@@ -840,15 +840,6 @@
     "waiting_few": "\u010cek\u00e1 se na p\u0159e\u010dten\u00ed {{waiting}} z {{count}} nahr\u00e1vek po prob\u00edhaj\u00edc\u00ed anal\u00fdze.",
     "waiting_many": "\u010cek\u00e1 se na p\u0159e\u010dten\u00ed {{waiting}} z {{count}} nahr\u00e1vky po prob\u00edhaj\u00edc\u00ed anal\u00fdze.",
     "waiting_other": "\u010cek\u00e1 se na p\u0159e\u010dten\u00ed {{waiting}} z {{count}} nahr\u00e1vek po prob\u00edhaj\u00edc\u00ed anal\u00fdze.",
-    "screenCount_one": "{{count}} obrazovka",
-    "screenCount_few": "{{count}} obrazovky",
-    "screenCount_many": "{{count}} obrazovky",
-    "screenCount_other": "{{count}} obrazovek",
-    "participantCount_one": "{{count}}\u00a0\u00fa\u010dastn\u00edk",
-    "participantCount_few": "{{count}}\u00a0\u00fa\u010dastn\u00edci",
-    "participantCount_many": "{{count}}\u00a0\u00fa\u010dastn\u00edka",
-    "participantCount_other": "{{count}}\u00a0\u00fa\u010dastn\u00edk\u016f",
-    "navSummary": "{{screens}} \u00b7 {{participants}}",
     "quoteCount_one": "{{count}} cit\u00e1t",
     "quoteCount_few": "{{count}} cit\u00e1ty",
     "quoteCount_many": "{{count}} cit\u00e1tu",
@@ -882,7 +873,11 @@
     "subtitle_one": "{{count}}\u00a0Obrazovka",
     "subtitle_few": "{{count}}\u00a0Obrazovky",
     "subtitle_many": "{{count}}\u00a0Obrazovky",
-    "subtitle_other": "{{count}}\u00a0Obrazovek"
+    "subtitle_other": "{{count}}\u00a0Obrazovek",
+    "subtitleScreenshots_one": "{{count}}\u00a0Sn\u00edmek obrazovky",
+    "subtitleScreenshots_few": "{{count}}\u00a0Sn\u00edmky obrazovky",
+    "subtitleScreenshots_many": "{{count}}\u00a0Sn\u00edmku obrazovky",
+    "subtitleScreenshots_other": "{{count}}\u00a0Sn\u00edmk\u016f obrazovky"
   },
   "figjam": {
     "menuLabel": "Odeslat do FigJamu…",

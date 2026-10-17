@@ -771,11 +771,6 @@
     "readingSession": "L\u00e4ser nu {{session}}.",
     "waiting_one": "V\u00e4ntar p\u00e5 att l\u00e4sa {{waiting}} av {{count}} inspelning efter den p\u00e5g\u00e5ende analysen.",
     "waiting_other": "V\u00e4ntar p\u00e5 att l\u00e4sa {{waiting}} av {{count}} inspelningar efter den p\u00e5g\u00e5ende analysen.",
-    "screenCount_one": "{{count}} sk\u00e4rm",
-    "screenCount_other": "{{count}} sk\u00e4rmar",
-    "participantCount_one": "{{count}} deltagare",
-    "participantCount_other": "{{count}} deltagare",
-    "navSummary": "{{screens}} \u00b7 {{participants}}",
     "quoteCount_one": "{{count}} citat",
     "quoteCount_other": "{{count}} citat",
     "quoteCountFrom_one": "{{count}} citat fr\u00e5n {{people}} deltagare",
@@ -801,7 +796,9 @@
     "navWidthPixels_one": "{{count}} pixel",
     "navWidthPixels_other": "{{count}} pixlar",
     "subtitle_one": "{{count}}\u00a0sk\u00e4rm",
-    "subtitle_other": "{{count}}\u00a0sk\u00e4rmar"
+    "subtitle_other": "{{count}}\u00a0sk\u00e4rmar",
+    "subtitleScreenshots_one": "{{count}}\u00a0sk\u00e4rmbild",
+    "subtitleScreenshots_other": "{{count}}\u00a0sk\u00e4rmbilder"
   },
   "figjam": {
     "menuLabel": "Skicka till FigJam…",

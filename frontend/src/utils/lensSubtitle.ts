@@ -38,15 +38,18 @@ export function quotesSubtitle(visibleCount: number, starred = false): string {
 }
 
 /**
- * "12 Screens · 41 Quotes" — the screens the Screens lens is showing, and the
- * quotes on them (each once, hidden excluded). No screens, no subtitle; screens
- * with nothing said on them yet name only the screens.
+ * "23 Screens · 51 Screenshots · 41 Quotes" — the screens the Screens lens is
+ * showing (kinds of screen), the screenshots behind them (one per participant
+ * who visited each), and the quotes on them (each once, hidden excluded). The
+ * middle count is what tells a kind of screen from a screenshot of it. No screens, no
+ * subtitle; a count of zero after that is left out rather than named.
  */
-export function screensSubtitle(screens: number, quotes = 0): string {
+export function screensSubtitle(screens: number, screenshots = 0, quotes = 0): string {
   if (screens === 0) return "";
-  const left = i18n.t("screens.subtitle", { count: screens });
-  if (quotes === 0) return left;
-  return `${left}${SEP}${i18n.t("titlebar.quotes", { count: quotes })}`;
+  const parts = [i18n.t("screens.subtitle", { count: screens })];
+  if (screenshots > 0) parts.push(i18n.t("screens.subtitleScreenshots", { count: screenshots }));
+  if (quotes > 0) parts.push(i18n.t("titlebar.quotes", { count: quotes }));
+  return parts.join(SEP);
 }
 
 /** "13 Signals" — the count of currently-shown signals (dismissed excluded). */

@@ -118,7 +118,7 @@ procurement; under-listing would be a compliance risk.
 | `distro` | 1.9.0 | Apache Software License | <https://github.com/python-distro/distro> |
 | `docstring_parser` | 0.18.0 | MIT License | <https://github.com/rr-/docstring_parser> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
-| `fastapi` | 0.143.2 | MIT | <https://github.com/fastapi/fastapi> |
+| `fastapi` | 0.143.3 | MIT | <https://github.com/fastapi/fastapi> |
 | `filelock` | 4.2.0 | MIT | <https://github.com/tox-dev/py-filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
@@ -158,7 +158,7 @@ procurement; under-listing would be a compliance risk.
 | `numba` | 0.68.0 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
 | `onnxruntime` | 1.31.0 | MIT License | <https://onnxruntime.ai> |
-| `openai` | 3.31.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| `openai` | 3.33.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.45.1 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
@@ -196,7 +196,7 @@ procurement; under-listing would be a compliance risk.
 | `spacy-legacy` | 3.0.12 | MIT License | <https://spacy.io> |
 | `spacy-loggers` | 1.0.5 | MIT | <https://github.com/explosion/spacy-loggers> |
 | `sqladmin` | 0.32.0 | BSD-3-Clause | <https://github.com/smithyhq/sqladmin> |
-| `SQLAlchemy` | 2.1.4 | MIT | <https://www.sqlalchemy.org> |
+| `SQLAlchemy` | 2.1.5 | MIT | <https://www.sqlalchemy.org> |
 | `srsly` | 2.5.4 | MIT License | <https://github.com/explosion/srsly> |
 | `sse-starlette` | 3.5.0 | BSD-3-Clause | <https://github.com/sysid/sse-starlette> |
 | `starlette` | 1.8.0 | BSD-3-Clause | <https://github.com/Kludex/starlette> |

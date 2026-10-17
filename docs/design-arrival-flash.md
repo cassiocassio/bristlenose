@@ -1,6 +1,6 @@
 # Arrival flash: one landing cue for every in-app link
 
-_Plan and as-built record, 17 Oct 2026. Status: **built on `main`, unreleased**; § As built records where the build departed from the plan after review. Governing docs: `docs/design-motion.md` (§4.2 Acknowledge,
+_Plan and as-built record, 17 Oct 2026. Status: **built on `main`, unreleased; human QA passed the same day**; § As built records where the build departed from the plan after review. Governing docs: `docs/design-motion.md` (§4.2 Acknowledge,
 §5 inventory), `docs/design-transcript-gutter.md` § Arrival, `bristlenose/theme/CLAUDE.md`._
 
 ## The ask

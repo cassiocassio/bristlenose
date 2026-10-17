@@ -441,10 +441,13 @@ overrides keyed on durable ids, never on labels.
   - The grid heads are **regular-size compact badges with no `#`** (`1 2 3`, under a
     *Sessions* label). Measured in the mockup's width lab: an 8-session study needs a
     432px guide for the grid; micro type saves less than dropping the `#` does.
+  - **Cells replace the rows' session chips and `#N ▾` pull-down** (decided 18 Oct).
+    Clicking a cell opens that session at that question. The measure grows with the
+    guide's width — bar + count → one cell per session → the grid — chosen by
+    measuring, as the chips' fold is today. At the bar tier the drill-in is the
+    session lead-in in the column.
 
-  *Proposed in the mockup, not yet decided:* the navigator measure replacing the rows'
-  chips and `#N ▾` pull-down (bar + count → one cell per session → the grid, chosen by
-  measuring the guide); cells shaded by the share of the session's participants
+  *Proposed in the mockup, not yet decided:* cells shaded by the share of the session's participants
   quoted; the compact number-only `PersonBadge` (keyline kept, absent = outline)
   replacing Signals' `.p-box`; the session bar's names → codes → pull-down tiers;
   "Not asked in" as one line; no wires in All. The July "no fraction" rule (above, in

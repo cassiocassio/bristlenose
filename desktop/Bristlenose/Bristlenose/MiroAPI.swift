@@ -50,6 +50,7 @@ struct MiroAPI {
     private struct ScreensStatus: Decodable {
         let status: String
         let completed_count: Int
+        let skipped_count: Int
         let board_url: String?
         let reason: String?
     }
@@ -76,6 +77,10 @@ struct MiroAPI {
     /// is the whole reason `Cause.reason` and `CloudFetchFailure` exist. An
     /// unknown code falls through to `detail`, so a newer sidecar talking to an
     /// older app degrades to the previous behaviour rather than to nothing.
+    /// The quotes board's reasons, and the screens board's one more: no still could be made.
+    private static let screensErrorKeys = errorKeys.merging(
+        ["no_stills": "common.export.screens.none"]) { a, _ in a }
+
     private static let errorKeys: [String: String] = [
         "no_quotes_selected": "common.miro.errNoQuotesSelected",
         "no_board_id": "common.miro.errNoBoardId",
@@ -96,7 +101,12 @@ struct MiroAPI {
     }
 
     /// Board-creation result surfaced to the done screen.
-    struct ExportResult { let boardURL: String; let stickies: Int }
+    struct ExportResult {
+        let boardURL: String
+        let stickies: Int
+        /// Screens the board could not show (their still could not be made); the sheet says so.
+        var skipped = 0
+    }
 
     private func base() -> String { "http://127.0.0.1:\(port)/api/projects/\(projectID)/miro" }
 
@@ -212,28 +222,34 @@ struct MiroAPI {
             return req
         }
         guard let start = make("", "POST", ["board_name": boardName, "colour_by": colourBy, "locale": locale]),
-              let poll = make("/status", "GET") else { throw APIError.serverUnreachable() }
-        let (data, resp) = try await URLSession.shared.data(for: start)
-        guard let http = resp as? HTTPURLResponse else { throw APIError.serverUnreachable() }
-        guard (200..<300).contains(http.statusCode) else { throw apiError(from: data, status: http.statusCode) }
-        let started = try JSONDecoder().decode(ScreensStart.self, from: data)
-        if started.total == 0 { return ExportResult(boardURL: "", stickies: 0) }
-        while true {
-            do {
+              let poll = make("/status", "GET"), let cancel = make("/cancel", "POST")
+        else { throw APIError.serverUnreachable() }
+        // Cancel reaches the server whenever it lands — in the start request, a status read or the
+        // pause between them — not only in the pause, where it used to be caught.
+        return try await withTaskCancellationHandler {
+            let (data, resp) = try await URLSession.shared.data(for: start)
+            guard let http = resp as? HTTPURLResponse else { throw APIError.serverUnreachable() }
+            guard (200..<300).contains(http.statusCode) else { throw apiError(from: data, status: http.statusCode) }
+            let started = try JSONDecoder().decode(ScreensStart.self, from: data)
+            if started.total == 0 {
+                throw APIError(message: "No screens to export", localeKey: "common.export.screens.none")
+            }
+            while true {
                 try await Task.sleep(nanoseconds: 1_500_000_000)
-            } catch {
-                if let cancel = make("/cancel", "POST") { _ = try? await URLSession.shared.data(for: cancel) }
-                throw error
+                let (sd, _) = try await URLSession.shared.data(for: poll)
+                let s = try JSONDecoder().decode(ScreensStatus.self, from: sd)
+                if s.status == "running" { continue }
+                if s.status == "completed" {
+                    return ExportResult(boardURL: s.board_url ?? "", stickies: s.completed_count,
+                                        skipped: s.skipped_count)
+                }
+                if s.status == "cancelled" { throw CancellationError() }
+                throw APIError(message: "Screens board \(s.status): \(s.reason ?? "")",
+                               localeKey: s.reason.flatMap { Self.screensErrorKeys[$0] } ?? "common.miro.exportError",
+                               localeVars: s.board_url.map { ["url": $0] } ?? [:])
             }
-            let (sd, _) = try await URLSession.shared.data(for: poll)
-            let s = try JSONDecoder().decode(ScreensStatus.self, from: sd)
-            if s.status == "running" { continue }
-            if s.status == "completed" {
-                return ExportResult(boardURL: s.board_url ?? "", stickies: s.completed_count)
-            }
-            throw APIError(message: "Screens board \(s.status): \(s.reason ?? "")",
-                           localeKey: s.reason.flatMap { Self.errorKeys[$0] } ?? "common.miro.exportError",
-                           localeVars: s.board_url.map { ["url": $0] } ?? [:])
+        } onCancel: {
+            Task { _ = try? await URLSession.shared.data(for: cancel) }
         }
     }
 

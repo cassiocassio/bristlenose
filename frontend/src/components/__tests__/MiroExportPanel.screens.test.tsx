@@ -10,6 +10,7 @@ import i18n from "../../i18n";
 const postMiroExport = vi.fn();
 const startScreensMiro = vi.fn();
 const getScreensMiroStatus = vi.fn();
+const cancelScreensMiro = vi.fn().mockResolvedValue({ cancelled: true });
 
 vi.mock("../../utils/api", () => ({
   getMiroStatus: vi.fn().mockResolvedValue({ connected: true }),
@@ -18,6 +19,7 @@ vi.mock("../../utils/api", () => ({
   postMiroExport: (...a: unknown[]) => postMiroExport(...a),
   startScreensMiro: (...a: unknown[]) => startScreensMiro(...a),
   getScreensMiroStatus: (...a: unknown[]) => getScreensMiroStatus(...a),
+  cancelScreensMiro: (...a: unknown[]) => cancelScreensMiro(...a),
 }));
 vi.mock("../../utils/announce", () => ({ announce: vi.fn() }));
 vi.mock("../../utils/exportData", () => ({ isExportMode: vi.fn(() => false) }));
@@ -56,5 +58,32 @@ describe("MiroExportPanel — the screens board", () => {
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe(
         `${i18n.t("miro.errBoardIncomplete")} https://miro.com/app/board/s1/`));
+  });
+
+  it("nothing to export says so, and never shows the last build's board", async () => {
+    startScreensMiro.mockResolvedValueOnce({ status: "no_screens", total: 0 });
+    getScreensMiroStatus.mockResolvedValue(status("completed"));  // the previous build's
+    render(<MiroExportPanel open screens onClose={() => {}} />);
+    fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(i18n.t("export.screens.none")));
+    expect(getScreensMiroStatus).not.toHaveBeenCalled();
+    expect(screen.queryByText(i18n.t("miro.openInMiro"))).toBeNull();
+  });
+
+  it("says how many screens could not be shown", async () => {
+    getScreensMiroStatus.mockResolvedValueOnce(status("completed", { completed_count: 7, skipped_count: 2 }));
+    render(<MiroExportPanel open screens onClose={() => {}} />);
+    fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
+    await screen.findByText(i18n.t("export.screens.partial", { written: 7, total: 9 }));
+  });
+
+  it("Cancel stops the build on the server and the wait in the panel", async () => {
+    getScreensMiroStatus.mockResolvedValue(status("running", { progress: 2 }));
+    render(<MiroExportPanel open screens onClose={() => {}} />);
+    fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
+    await screen.findByText(i18n.t("export.screens.progress", { progress: 2, total: 9 }));
+    fireEvent.click(screen.getByText(i18n.t("miro.cancel")));
+    expect(cancelScreensMiro).toHaveBeenCalledTimes(1);
+    await screen.findByText(i18n.t("miro.createBoard"));
   });
 });

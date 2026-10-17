@@ -27,6 +27,8 @@ final class MiroSheetModel: ObservableObject {
     @Published var error: String?
     @Published private(set) var boardURL: String?
     @Published private(set) var stickies = 0
+    /// Screens the screens board could not show; said under the done line.
+    @Published private(set) var skipped = 0
     // Connected-account identity (from /v1/oauth-token via the server). userName =
     // account holder; teamName = the workspace new boards land in. Both nil if the
     // sidecar predates the feature or Miro identity couldn't be fetched.
@@ -120,6 +122,13 @@ final class MiroSheetModel: ObservableObject {
         i18n.plural(screens ? "common.export.screens.done" : "common.miro.boardReady", count: stickies)
     }
 
+    /// "Screengrabs written: 7 of 9", when a screen's still could not be made; nil otherwise.
+    func partialText() -> String? {
+        guard skipped > 0 else { return nil }
+        return i18n.t("common.export.screens.partial",
+                      ["written": String(stickies), "total": String(stickies + skipped)])
+    }
+
     func load() async {
         step = .loading
         error = nil
@@ -204,6 +213,7 @@ final class MiroSheetModel: ObservableObject {
                 if Task.isCancelled { return }
                 self.boardURL = result.boardURL
                 self.stickies = result.stickies
+                self.skipped = result.skipped
                 self.step = .done
             } catch is CancellationError {
                 // User cancelled the wait; server-side push may still finish.
@@ -412,6 +422,9 @@ struct MiroSheet: View {
             Text(model.boardReadyText())
                 .font(.headline).fontWeight(.regular)
                 .multilineTextAlignment(.center)
+            if let partial = model.partialText() {
+                Text(partial).font(.subheadline).foregroundStyle(.secondary)
+            }
             Spacer()
             HStack {
                 Spacer()

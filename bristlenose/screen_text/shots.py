@@ -15,6 +15,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 _CODE = re.compile(r"^([^\d]*)(\d*)(.*)$")
+_UNSAFE = re.compile(r"[^A-Za-z0-9_-]")
 
 
 def code_order(code: str) -> tuple[str, int, str]:
@@ -79,7 +80,19 @@ def shot_list(
         sessions_of.setdefault(s["code"], set()).add(s["session_id"])
     for s in shots:
         stem = s["code"] if len(sessions_of[s["code"]]) == 1 else f"{s['code']}-{s['session_id']}"
+        # Codes and session ids come from a project folder, which may have come from anyone:
+        # a file name is built only from characters that cannot leave the folder.
+        stem = _UNSAFE.sub("_", stem)
         s["filename"] = f"{stem}-{s['seq']:0{width[s['session_id']]}d}.jpg"
+    # Cleaning can make two names one (`s 1` and `s/1`): number the later ones apart.
+    seen: set[str] = set()
+    for s in shots:
+        name, n = s["filename"], 2
+        while name in seen:
+            name = s["filename"].replace(".jpg", f"-{n}.jpg")
+            n += 1
+        seen.add(name)
+        s["filename"] = name
     return shots
 
 
@@ -105,15 +118,18 @@ def journey(
     participants' own visit order, ties to the screen with more said about it. Each quote is
     grouped under the participant who said it, in time order, and appears once."""
     screens = list(screens)
-    rank: dict[str, list[int]] = {}
+    rank: dict[str, list[float]] = {}
     by_session: dict[str, list[tuple[float, str]]] = {}
     for sc in screens:
         for tab in sc["tabs"]:
             first = min((v[0] for v in tab["visits"]), default=tab["t"])
             by_session.setdefault(tab["session_id"], []).append((first, sc["key"]))
     for visits in by_session.values():
+        # A place in that participant's own journey, 0 (first) to 1 (last), so a participant who
+        # browsed widely does not outweigh three who went straight there.
+        last = max(len(visits) - 1, 1)
         for i, (_, key) in enumerate(sorted(visits)):
-            rank.setdefault(key, []).append(i)
+            rank.setdefault(key, []).append(i / last)
     out: list[dict[str, Any]] = []
     for sc in screens:
         if not sc["tabs"]:
@@ -127,7 +143,7 @@ def journey(
                     said.setdefault(dom.split("-")[1], set()).add(dom)
         groups = sorted(((code, sorted(doms, key=_start)) for code, doms in said.items()),
                         key=lambda g: code_order(g[0]))
-        ranks = rank.get(sc["key"], [0])
+        ranks = rank.get(sc["key"], [0.0])
         out.append({
             "screen_key": sc["key"],
             "title": title_of(sc, shown),

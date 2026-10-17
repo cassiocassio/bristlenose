@@ -714,6 +714,10 @@ export function getScreensMiroStatus(): Promise<ScreensMiroStatus> {
   return apiGet<ScreensMiroStatus>("/export/screens/miro/status");
 }
 
+export function cancelScreensMiro(): Promise<{ cancelled: boolean }> {
+  return apiPost<{ cancelled: boolean }>("/export/screens/miro/cancel", {});
+}
+
 // ---------------------------------------------------------------------------
 // Miro export (experimental)
 // ---------------------------------------------------------------------------

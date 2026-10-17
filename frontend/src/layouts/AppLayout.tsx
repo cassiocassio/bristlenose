@@ -198,6 +198,9 @@ function openDocs(url: string): void {
 /**
  * Inner component that uses hooks requiring PlayerProvider + FocusProvider.
  */
+/** Screens export jobs whose status has been read at least once (see the chip's pollFn). */
+const seenScreensJobs = new Set<string>();
+
 function AppShell() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -619,6 +622,15 @@ function AppShell() {
           // The folder first, then its files on the clipboard when the chip finishes.
           void exportScreens(i18n.t, true);
           break;
+        case "screensCopied": {
+          // The shell's word that the files are on the clipboard: only now is it said.
+          const n = (payload as { count?: number } | undefined)?.count ?? 0;
+          toast(i18n.t("export.screens.copied", { count: n }), 6000);
+          break;
+        }
+        case "screensCopyFailed":
+          toast(i18n.t("export.screens.copyFailed"), 6000);
+          break;
         case "allQuotes":
           // Explicit "All Quotes" command — full reset (search + tokens + tags + mode).
           setSearchQuery("");
@@ -738,9 +750,9 @@ function AppShell() {
               progress: 0,
               total: j.total ?? 0,
             }),
-            completedLabel: i18n.t(copy ? "export.screens.copied" : "export.screens.done", {
-              count: j.total ?? 0,
-            }),
+            // "Copied" is said by the shell once the clipboard really holds the files
+            // (`screensCopied`), never here, where the copy has not happened yet.
+            completedLabel: i18n.t("export.screens.done", { count: j.total ?? 0 }),
             frameworkId: "",
             onComplete: () => {
               if (!copy) return;
@@ -749,9 +761,14 @@ function AppShell() {
                   // Terminal includes cancelled and failed: only a finished export is copied.
                   if (s.status === "completed" && s.output_dir && s.files.length > 0) {
                     postScreensPasteboardWrite(s.output_dir, s.files);
+                  } else if (s.status === "completed") {
+                    toast(i18n.t("export.screens.copyFailed"), 6000);
                   }
                 })
-                .catch((err) => console.error("Copy screens failed:", err));
+                .catch((err) => {
+                  console.error("Copy screens failed:", err);
+                  toast(i18n.t("export.screens.copyFailed"), 6000);
+                });
             },
             onAction: () => {
               revealScreens().catch((err) => console.error("Reveal screens failed:", err));
@@ -762,7 +779,11 @@ function AppShell() {
             },
             pollFn: async (): Promise<NormalisedJobStatus> => {
               const s = await getScreensExportStatus();
-              const status = s.status === "idle" ? "running" : s.status;
+              // "idle" before the first read is a job not yet seen; after it, the server has
+              // forgotten the job (it restarted), which would otherwise spin for ever.
+              if (s.status !== "idle") seenScreensJobs.add(id);
+              const status =
+                s.status === "idle" ? (seenScreensJobs.has(id) ? "failed" : "running") : s.status;
               return {
                 status,
                 progressLabel: status === "running" ? `${s.progress}/${s.total}` : null,

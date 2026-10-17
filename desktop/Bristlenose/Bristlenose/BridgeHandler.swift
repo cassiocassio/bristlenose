@@ -1119,13 +1119,22 @@ final class BridgeHandler: ObservableObject {
             // Copy Screens: the exported stills as files, in export order — what Finder's ⌘C
             // writes, and what FigJam and Miro paste as one image each (measured 17 Oct 2026,
             // docs/design-screens-export.md §5).
-            if let dir = body["dir"] as? String, let files = body["files"] as? [String],
-               let urls = ScreensPasteboard.fileURLs(
-                   dir: dir, files: files, projectPath: selectedProjectPath
-               ) {
+            // The page says "copied" only when this answers, so a refusal is never silent.
+            let dir = body["dir"] as? String ?? ""
+            let files = body["files"] as? [String] ?? []
+            switch ScreensPasteboard.fileURLs(dir: dir, files: files, projectPath: selectedProjectPath) {
+            case .success(let urls):
                 let pb = NSPasteboard.general
                 pb.clearContents()
-                pb.writeObjects(urls as [NSURL])
+                if pb.writeObjects(urls as [NSURL]) {
+                    menuAction("screensCopied", payload: ["count": urls.count])
+                } else {
+                    Self.log.error("Copy Screens: the pasteboard refused \(urls.count) files")
+                    menuAction("screensCopyFailed")
+                }
+            case .failure(let why):
+                Self.log.error("Copy Screens refused: \(why.rawValue, privacy: .public)")
+                menuAction("screensCopyFailed")
             }
 
         case "store-miro-token":

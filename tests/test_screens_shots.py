@@ -70,3 +70,29 @@ def test_the_board_pools_each_screen_in_journey_order_grouped_by_participant() -
     assert out[1]["groups"] == [("p1", ["q-p1-45"]), ("p2", ["q-p2-295"])]
     assert out[1]["session_id"] == "s2"  # the version the lens shows first
     assert [e["filename"] for e in out] == ["screen-01.jpg", "screen-02.jpg"]
+
+
+def test_a_crafted_code_cannot_name_a_file_outside_the_folder() -> None:
+    for code in ("../../../escape", "/tmp/pwn", "p1/../x"):
+        [shot] = shot_list([_screen("/a", _tab("s1", code, 1, [[0, 2]]))], {})
+        assert "/" not in shot["filename"] and not shot["filename"].startswith(".")
+
+
+def test_two_names_cleaned_into_one_are_numbered_apart() -> None:
+    shared = [_screen("/a", _tab("s 1", "p1", 1, [[0, 2]]), _tab("s/1", "p1", 1, [[0, 2]]))]
+    names = sorted(s["filename"] for s in shot_list(shared, {}))
+    assert len(set(names)) == 2 and all("/" not in n and " " not in n for n in names)
+
+
+def test_journey_order_weighs_each_participants_journey_equally() -> None:
+    from bristlenose.screen_text.shots import journey
+
+    # p1 browsed widely and reached /cart 25th; p2, p3 and p4 went straight there, 2nd of 3.
+    wide = [_tab("s1", "p1", i, [[i, i + 1]]) for i in range(30)]
+    screens = [_screen(f"/x{i}", t) for i, t in enumerate(wide) if i != 24]
+    cart = _screen("/cart", _tab("s1", "p1", 24, [[24, 25]]),
+                   *[_tab(f"s{n}", f"p{n}", 10, [[10, 11]]) for n in (2, 3, 4)])
+    done = _screen("/done", *[_tab(f"s{n}", f"p{n}", 20, [[20, 21]]) for n in (2, 3, 4)])
+    first = _screen("/home", *[_tab(f"s{n}", f"p{n}", 0, [[0, 1]]) for n in (2, 3, 4)])
+    order = [e["screen_key"] for e in journey(screens + [cart, done, first], {})]
+    assert order.index("/home") < order.index("/cart") < order.index("/done")

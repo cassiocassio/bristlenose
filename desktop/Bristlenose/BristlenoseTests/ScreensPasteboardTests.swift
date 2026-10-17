@@ -17,27 +17,33 @@ import Testing
 
     @Test func theExportedStillsInExportOrder() throws {
         let (root, folder) = try project()
-        let urls = ScreensPasteboard.fileURLs(
-            dir: folder.path, files: ["p1-02.jpg", "p1-01.jpg"], projectPath: root.path)
-        #expect(urls?.map(\.lastPathComponent) == ["p1-02.jpg", "p1-01.jpg"])
+        let urls = try ScreensPasteboard.fileURLs(
+            dir: folder.path, files: ["p1-02.jpg", "p1-01.jpg"], projectPath: root.path).get()
+        #expect(urls.map(\.lastPathComponent) == ["p1-02.jpg", "p1-01.jpg"])
     }
 
     @Test func nothingFromOutsideTheProjectOrOutsideTheFolder() throws {
         let (root, folder) = try project()
         let other = root.deletingLastPathComponent().appendingPathComponent("another-study").path
-        #expect(ScreensPasteboard.fileURLs(dir: folder.path, files: ["p1-01.jpg"], projectPath: other) == nil)
-        #expect(ScreensPasteboard.fileURLs(
-            dir: folder.deletingLastPathComponent().path, files: ["screens/p1-01.jpg"],
-            projectPath: root.path) == nil)
-        #expect(ScreensPasteboard.fileURLs(
-            dir: folder.path, files: ["../../secret.jpg"], projectPath: root.path) == nil)
+        #expect(refusal(dir: folder.path, files: ["p1-01.jpg"], projectPath: other) == .notTheScreensFolder)
+        #expect(refusal(dir: folder.deletingLastPathComponent().path, files: ["screens/p1-01.jpg"],
+                        projectPath: root.path) == .notTheScreensFolder)
+        #expect(refusal(dir: folder.path, files: ["../../secret.jpg"], projectPath: root.path) == .notAPlainName)
+        #expect(refusal(dir: folder.path, files: ["p1-01.jpg"], projectPath: "") == .noProject)
     }
 
     @Test func oneBadNameWritesNothing() throws {
         let (root, folder) = try project()
-        for bad in [".screens_manifest.json", "notes.txt", "p1-09.jpg"] {
-            #expect(ScreensPasteboard.fileURLs(
-                dir: folder.path, files: ["p1-01.jpg", bad], projectPath: root.path) == nil, "\(bad)")
+        for (bad, why) in [(".screens_manifest.json", ScreensPasteboard.Refusal.notAPlainName),
+                           ("notes.txt", .notAPlainName), ("p1-09.jpg", .missingFile)] {
+            #expect(refusal(dir: folder.path, files: ["p1-01.jpg", bad], projectPath: root.path) == why, "\(bad)")
         }
+    }
+
+    private func refusal(dir: String, files: [String], projectPath: String) -> ScreensPasteboard.Refusal? {
+        if case .failure(let why) = ScreensPasteboard.fileURLs(dir: dir, files: files, projectPath: projectPath) {
+            return why
+        }
+        return nil
     }
 }

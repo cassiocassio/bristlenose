@@ -37,10 +37,12 @@ class MiroError(RuntimeError):
     """
 
     def __init__(self, message: str, *, reason: str | None = None,
-                 vars: dict[str, str] | None = None) -> None:
+                 vars: dict[str, str] | None = None, status: int | None = None) -> None:
         super().__init__(message)
         self.reason = reason
         self.vars = vars or {}
+        #: Miro's HTTP status when it answered with one; None for a network failure.
+        self.status = status
 
 
 def validate_miro_token(token: str) -> tuple[bool | None, str | None]:
@@ -194,7 +196,8 @@ def _request(method: str, token: str, path: str, json: dict[str, Any] | list[Any
         if resp.status_code < 300:
             return resp.json() if resp.content else {}
         if resp.status_code != 429:
-            raise MiroError(f"{method} {path} -> {resp.status_code} {resp.text[:300]}")
+            raise MiroError(f"{method} {path} -> {resp.status_code} {resp.text[:300]}",
+                            status=resp.status_code)
         if attempt < retries:
             time.sleep(delay)
             delay *= 2
@@ -235,7 +238,7 @@ def create_frame(token: str, board_id: str, title: str, x: float, y: float,
         try:
             return _request_object("POST", token, f"/boards/{board_id}/frames", body)
         except MiroError as exc:
-            if " -> 500 " not in str(exc) or attempt == len(retry_delays):
+            if exc.status != 500 or attempt == len(retry_delays):
                 raise
             time.sleep(retry_delays[attempt])
             found = _find_frame(token, board_id, title[:255], x, y)
@@ -250,7 +253,8 @@ def _find_frame(token: str, board_id: str, title: str, x: float, y: float) -> di
         params = f"?type=frame&limit=50{f'&cursor={cursor}' if cursor else ''}"
         page = _request("GET", token, f"/boards/{board_id}/items{params}")
         if not isinstance(page, dict):
-            return None
+            # Not knowing is not "absent": retrying the POST on a misread could make two.
+            raise MiroError(f"GET /boards/{board_id}/items -> unexpected body")
         for item in page.get("data", []):
             pos = item.get("position") or {}
             if ((item.get("data") or {}).get("title") == title
@@ -301,7 +305,7 @@ def upload_image(token: str, board_id: str, jpeg: bytes, filename: str, *, title
                 raise MiroError(f"POST {path} -> expected an object")
             return out
         if resp.status_code != 429:
-            raise MiroError(f"POST {path} -> {resp.status_code} {resp.text[:300]}")
+            raise MiroError(f"POST {path} -> {resp.status_code} {resp.text[:300]}", status=resp.status_code)
         if attempt < retries:
             time.sleep(delay)
             delay *= 2

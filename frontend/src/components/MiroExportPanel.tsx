@@ -18,6 +18,7 @@ import { isExportMode } from "../utils/exportData";
 import { announce } from "../utils/announce";
 import { postStoreMiroToken } from "../shims/bridge";
 import {
+  cancelScreensMiro,
   getMiroStatus,
   getScreensMiroStatus,
   postMiroConnect,
@@ -63,6 +64,7 @@ const EXPORT_ERROR_KEYS: Record<string, string> = {
   no_quotes_selected: "miro.errNoQuotesSelected",
   no_board_id: "miro.errNoBoardId",
   board_incomplete: "miro.errBoardIncomplete",
+  no_stills: "export.screens.none",
 };
 
 /** The localised sentence when the server named a reason, else "". */
@@ -109,6 +111,11 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   const [error, setError] = useState<string | null>(null);
   const [boardUrl, setBoardUrl] = useState<string | null>(null);
   const [stickies, setStickies] = useState(0);
+  // The screens board is a job: its progress while it builds, how many screens it could not
+  // show, and which build this panel is waiting on (closing or a new build stops the old wait).
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [skipped, setSkipped] = useState(0);
+  const build = useRef(0);
   const [account, setAccount] = useState<string | null>(null);
   const [teamName, setTeamName] = useState<string | null>(null);
   const triggerRef = useRef<Element | null>(null);
@@ -120,6 +127,8 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     triggerRef.current = document.activeElement;
     setError(null);
     setBoardUrl(null);
+    setSkipped(0);
+    setProgress(null);
     setView("loading");
     getMiroStatus()
       .then((s) => {
@@ -128,6 +137,12 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
         setView(s.connected ? "configure" : "connect");
       })
       .catch(() => setView("connect"));
+  }, [open]);
+
+  // Closing the panel stops waiting on a build (the build itself goes on, and its chip-less
+  // result is on the next status read); a reopened panel starts fresh.
+  useEffect(() => {
+    if (!open) build.current += 1;
   }, [open]);
 
   // Restore focus on close.
@@ -226,15 +241,33 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     if (screens) {
       // The screens board is a job: a still per frame is rendered and uploaded, so it takes as
       // long as the study has screens. Its failures carry the same reasons as the quotes board.
+      const mine = ++build.current;
+      const live = () => mine === build.current;
+      setProgress(null);
+      setSkipped(0);
       try {
         const { board_name, colour_by, locale } = request();
         const start = await startScreensMiro({ board_name, colour_by, locale });
+        if (!live()) return;
+        if (start.total === 0) {
+          // Nothing to build: never read the status, which would be the last build's.
+          setError(t("export.screens.none"));
+          setView("configure");
+          return;
+        }
         let s = await getScreensMiroStatus();
-        while (start.total > 0 && s.status === "running") {
+        while (live() && s.status === "running") {
+          setProgress({ done: s.progress, total: s.total });
           await new Promise((r) => setTimeout(r, SCREENS_POLL_MS));
+          if (!live()) return;
           s = await getScreensMiroStatus();
         }
-        if (start.total > 0 && s.status !== "completed") {
+        if (!live()) return;
+        if (s.status === "cancelled") {
+          setView("configure");
+          return;
+        }
+        if (s.status !== "completed") {
           const key = EXPORT_ERROR_KEYS[s.reason ?? ""] ?? "miro.exportError";
           setError(s.board_url ? `${t(key)} ${s.board_url}` : t(key));
           setView("configure");
@@ -242,9 +275,14 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
         }
         setBoardUrl(s.board_url);
         setStickies(s.completed_count);
+        setSkipped(s.skipped_count);
         setView("done");
       } catch (e) {
-        setError(errDetail(e) || t("miro.exportError"));
+        if (!live()) return;
+        // A refusal is a status, never the server's English: a build already running, or none.
+        const msg = e instanceof Error ? e.message : "";
+        setError(t(/ 409\b/.test(msg) ? "export.screens.inProgress" : / 404\b/.test(msg)
+          ? "export.screens.none" : "miro.exportError"));
         setView("configure");
       }
       return;
@@ -434,7 +472,27 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
         )}
 
         {view === "exporting" && (
-          <p className="bn-modal-subtitle">{t("miro.creatingBoard")}</p>
+          <>
+            <p className="bn-modal-subtitle">
+              {screens && progress
+                ? t("export.screens.progress", { progress: progress.done, total: progress.total })
+                : t("miro.creatingBoard")}
+            </p>
+            {screens && (
+              <div className="bn-modal-actions">
+                <button
+                  className="bn-btn bn-btn-secondary"
+                  onClick={() => {
+                    void cancelScreensMiro().catch(() => undefined);
+                    build.current += 1;
+                    setView("configure");
+                  }}
+                >
+                  {t("miro.cancel")}
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {view === "done" && (
@@ -442,6 +500,11 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
             <p className="bn-modal-subtitle">
               {t(screens ? "export.screens.done" : "miro.boardReady", { count: stickies })}
             </p>
+            {screens && skipped > 0 && (
+              <p className="bn-export-hint">
+                {t("export.screens.partial", { written: stickies, total: stickies + skipped })}
+              </p>
+            )}
             <div className="bn-modal-actions">
               <button className="bn-btn bn-btn-secondary" onClick={onClose}>
                 {t("miro.done")}

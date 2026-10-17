@@ -23,7 +23,7 @@
 
 import type { TFunction } from "i18next";
 import { startClipExtraction, startScreensExport } from "./api";
-import { addJob } from "../contexts/ActivityStore";
+import { addJob, getJobs, removeJob } from "../contexts/ActivityStore";
 import { toast } from "./toast";
 import { getSubtitlePrefs } from "./subtitlePrefs";
 import { announce } from "./announce";
@@ -181,6 +181,8 @@ export async function extractVideoClips(
   }
 }
 
+let screensJobSeq = 0;
+
 /**
  * Write every still the Screens lens shows to bristlenose-output/screens/, one per participant per
  * screen, in time order (docs/design-screens-export.md §4). With `copy`, the job's chip puts the
@@ -193,7 +195,11 @@ export async function exportScreens(t: TFunction, copy = false): Promise<void> {
       toast(t("export.screens.none"));
       return;
     }
-    addJob("screens", {
+    // Each export is its own job: the chip remembers a finished job by its id, so a fixed id made a
+    // second Copy Screens look finished at once and never reach the clipboard. The last one's chip
+    // goes, since the server keeps one export per project.
+    for (const [id, job] of getJobs()) if (job.type === "screens") removeJob(id);
+    addJob(`screens:${++screensJobSeq}`, {
       type: "screens", frameworkId: "", frameworkTitle: "", total: result.total, copyWhenDone: copy,
     });
     announce(t("export.screens.progress", { progress: 0, total: result.total }));

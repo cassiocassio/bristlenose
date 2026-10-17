@@ -1,6 +1,6 @@
 # Transcript gutter — linking a transcript out to the lenses
 
-**Status:** stages 1 (Quotes) and 2 (Screens) built 17 Oct 2026; stage 3 building. Decided in conversation with the owner on 16–17 Oct 2026 against
+**Status:** built 17 Oct 2026 — stages 1 (Quotes), 2 (Screens) and 3 (Discussion). Decided in conversation with the owner on 16–17 Oct 2026 against
 two mockups: `docs/mockups/transcript-quote-hooks.html` (round 1, six ways to find a quote) and
 `docs/mockups/transcript-quote-gutter.html` (round 2, the direction). The editing decisions made in
 the same conversation are in `design-transcript-editing.md` ("Quote edits win, one way", "The
@@ -101,7 +101,11 @@ transcript they can jump to each, landing on the thing itself.
   history, the web view's back list and the route the page reports to the Mac. The lens reads the
   query at mount (it exists only in serve mode, under the browser router) and, on the first load
   holding that screen, opens it on that session's version.
-- **Discussion:** a route parameter for item and turn.
+- **Discussion:** `/report/discussion/?item=<id>&turn=<turn id>` (`islands/discussion/discussionLinks.ts`).
+  The lens's focus lives in module memory, which a new tab does not share, so the address carries
+  it. `DiscussionView` reads it (`utils/appQuery.ts`: the browser router's query, or the part of an
+  export's hash after `?`), opens that turn's session with the asking focused, and scrolls it into
+  view. A turn it does not have is ignored.
 - **Back** returns to the paragraph the jump left from: the transcript's address is replaced with
   `#t-<seconds>` before the jump, which the page already honours (with its brief highlight).
 
@@ -130,7 +134,14 @@ a fallback.
    viewport (`GutterThumb`), fading under what follows and surfacing on hover; arrival. Off,
    unavailable, failed or in an export: no screen marks. Checked headless in WebKit on a dev serve
    of a copy of a real project (12 screen marks in its first session, no key in any address).
-3. **Discussion**: icon concept; join; marks and topics; arrival.
+3. **Discussion** (built 17 Oct 2026): the `discussion` icon concept (Lucide
+   `MessageCircleQuestionMark`, matching `questionmark.bubble`); the record read when ready or
+   partial, the states the lens shows (not run, stale and failed draw nothing), embedded in an
+   export so it works offline; a moderator turn the model matched to a guide item marks the
+   paragraph it was asked in, first in that paragraph's entries, with the item's short form as a
+   grey topic link (an item asked twice in one paragraph is marked once); arrival. Checked headless
+   in WebKit on a dev serve of a copy of a real project (8 questions in its second session, all on
+   moderator paragraphs; landing lights the asking and has it in view).
 
 ## Not in this work
 

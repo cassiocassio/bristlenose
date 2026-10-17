@@ -171,6 +171,18 @@ span.bn-gutter-mark { cursor: default; }
     .bn-gutter-mark { transition: none; }
 }
 
+/* ── Discussion (stage 3) ───────────────────────────────────────────────── */
+/* The question's topic: a link like the others (hover underline), in grey — more blue in the
+   margin would be too much (owner, 17 Oct 2026). */
+.bn-gutter-topic {
+    color: var(--bn-colour-muted);
+    text-decoration: none;
+    text-underline-offset: 2px;
+}
+.bn-gutter-topic:hover,
+.bn-gutter-entry.is-hot .bn-gutter-topic { text-decoration: underline; }
+.bn-gutter-topic:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 2px; }
+
 /* ── Screens (stage 2) ──────────────────────────────────────────────────── */
 /* A screen's title is a link like the others, at body weight: it names a place, not a finding. */
 .bn-gutter-title.is-screen { font-weight: var(--bn-weight-normal); }
@@ -179,6 +191,7 @@ span.bn-gutter-mark { cursor: default; }
    them: a thumbnail hanging down from an earlier row slides under the next title, not over it. */
 .segment-side .bn-gutter-content { position: relative; z-index: 2; }
 .segment-side .bn-gutter-title,
+.segment-side .bn-gutter-topic,
 .segment-side .margin-tags {
     background: var(--bn-transcript-paper);
     box-shadow: 0 0 0 2px var(--bn-transcript-paper);
@@ -188,6 +201,7 @@ span.bn-gutter-mark { cursor: default; }
 .segment-side .margin-tags { width: fit-content; }
 /* During playback the row is washed blue; the paper backing would show as patches. */
 .transcript-segment.bn-timecode-glow .segment-side .bn-gutter-title,
+.transcript-segment.bn-timecode-glow .segment-side .bn-gutter-topic,
 .transcript-segment.bn-timecode-glow .segment-side .margin-tags { background: transparent; box-shadow: none; }
 
 /* The thumbnail never grows its row: it hangs below the screen's title, out of flow, and fades

@@ -1220,3 +1220,50 @@ describe("TranscriptPage — screens in the gutter", () => {
     expect(document.querySelector("[data-testid^='screen-entry-']")).toBeNull();
   });
 });
+
+describe("TranscriptPage — the moderator's questions in the gutter", () => {
+  afterEach(() => {
+    vi.mocked(apiGet).mockReset();
+    vi.mocked(apiGet).mockResolvedValue({ enabled: false, unavailable: null, screens: [] });
+  });
+  function withDiscussion(status: string) {
+    vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/discussion") {
+        return Promise.resolve({
+          status,
+          record: {
+            version: 1, guide: true, sessions: [], spine: [], quotes: [], standalone: [],
+            sections: [{ id: "g1", title: "Dashboard", heading: "Dashboard", kind: "questions", origin: "planned",
+              items: [{ id: "g1.2", terse: "What confused them", verbatim: "", source: "planned", placed: "", role: "core", asks: [] }] }],
+            turns: [
+              { id: "s1@00:21", session: "s1", sec: 21, time: "00:21", text: "", kind: "planned", item: "g1.2" },
+              { id: "s1@00:03", session: "s1", sec: 3, time: "00:03", text: "", kind: "chat", item: null },
+            ],
+          },
+        });
+      }
+      return Promise.resolve({ enabled: false, unavailable: null, screens: [] });
+    }) as typeof apiGet);
+  }
+
+  it("marks the moderator's paragraph that asked a question of the guide, with its topic", async () => {
+    withDiscussion("ready");
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    // The turn at 21 s is in the moderator's paragraph at 19–26 s, the third; the chat at 3 s is no question.
+    const entry = await screen.findByTestId("question-entry-2");
+    const mark = entry.querySelector("a.bn-gutter-mark")!;
+    expect(mark.getAttribute("aria-label")).toBe("Discussion: What confused them");
+    expect(mark.getAttribute("href")).toBe("/report/discussion/?item=g1.2&turn=s1%4000%3A21");
+    expect(entry.querySelector("a.bn-gutter-topic")!.textContent).toBe("What confused them");
+    expect(document.querySelector("[data-testid='question-entry-0']")).toBeNull();
+  });
+
+  it("draws no question marks from a record the lens would not show", async () => {
+    withDiscussion("failed");
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("annotation-q-p1-10")).toBeTruthy());
+    expect(document.querySelector("[data-testid^='question-entry-']")).toBeNull();
+  });
+});

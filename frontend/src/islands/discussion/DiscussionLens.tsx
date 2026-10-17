@@ -52,6 +52,8 @@ import { loadDiscussion, type DiscussionLoad } from "./loadDiscussion";
 import { readLensState, writeLensState } from "./lensState";
 import type { DiscussionData, DiscussionQuote, DiscussionSession, DiscussionTurn } from "./types";
 import "./discussion.css";
+import { discussionArrival } from "./discussionLinks";
+import { appQuery } from "../../utils/appQuery";
 
 // The lens's strings, from `common.discussion.*`. Getters read the active
 // language when called. RULE: every component that reads `S` must call
@@ -235,13 +237,22 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const { i18n: tr } = useTranslation();
   const order = useMemo(() => data.sessions.map((s) => s.id), [data]);
   const saved = useMemo(() => readLensState(), []);
+  // Arriving from a link (the transcript's gutter: docs/design-transcript-gutter.md): the address
+  // names a guide item and the turn that asked it, and the lens opens on that asking, in that
+  // turn's session, whatever it last showed. Read from the address, not the router: the lens's
+  // tests mount it without one, and an export's hash router keeps the query in the hash.
+  const arrived = useMemo(() => {
+    const want = discussionArrival(appQuery());
+    const turn = want ? data.turns.find((tt) => tt.id === want.turn) : undefined;
+    return want && turn && order.includes(turn.session) ? { item: want.item, turn: turn.id, session: turn.session } : null;
+  }, [data, order]);
   const [mode, setMode] = useState<Mode>(data.guide ? saved.mode : "merged");
   const [guideView, setGuideView] = useState<GuideView>(saved.guideView);
   const [guideNote, setGuideNote] = useState(false);
   const [session, setSession] = useState<string>(
-    saved.session && order.includes(saved.session) ? saved.session : (order[0] ?? ""),
+    arrived?.session ?? (saved.session && order.includes(saved.session) ? saved.session : (order[0] ?? "")),
   );
-  const [focus, setFocus] = useState<Focus | null>(saved.focus);
+  const [focus, setFocus] = useState<Focus | null>(arrived ? { item: arrived.item, turn: arrived.turn } : saved.focus);
   const [navW, setNavW] = useState<number | null>(saved.navWidth);
   const [compact, setCompact] = useState<Set<string>>(new Set());
   // Measured in the same frame as the wires — never read from the DOM during render.
@@ -372,6 +383,13 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [focus, order, selectSession]);
+
+  // An arrival brings the asking it names into view, once.
+  useEffect(() => {
+    if (!arrived) return;
+    const el = contentRef.current?.querySelector<HTMLElement>(`.dl-ask[data-turn="${arrived.turn.replace(/["\\]/g, "\\$&")}"]`);
+    if (el && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center" });
+  }, [arrived]);
 
   // Bring the first lit question into view when a navigator row takes focus.
   useEffect(() => {

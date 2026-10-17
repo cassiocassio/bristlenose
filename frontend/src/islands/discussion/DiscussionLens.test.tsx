@@ -674,3 +674,27 @@ describe("the guide tabs (4 Oct 2026)", () => {
     exportState.on = false;
   });
 });
+
+describe("DiscussionView — arriving from the transcript's gutter", () => {
+  // docs/design-transcript-gutter.md, stage 3: the address names a guide item and the turn that
+  // asked it; the lens opens on that asking, in that turn's session, whatever it last showed.
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("opens on the asking the address names, in its session", async () => {
+    const { discussionPath } = await import("./discussionLinks");
+    window.history.replaceState(null, "", discussionPath("s5.1", "s2@01:26"));
+    const { container } = render(<DiscussionView data={data} />);
+    expect(heading()).toBe(`Session ${data.sessions[1].number}`);
+    const ask = container.querySelector('.dl-ask[data-turn="s2@01:26"]')!;
+    expect(ask.classList.contains("hot")).toBe(true);
+    expect(ask.querySelector(".dl-ask-btn")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("opens as usual without one, or with a turn it does not have", () => {
+    window.history.replaceState(null, "", "/report/discussion/?item=s5.1&turn=s9@00:00");
+    render(<DiscussionView data={data} />);
+    expect(heading()).toBe(`Session ${data.sessions[0].number}`);
+  });
+});

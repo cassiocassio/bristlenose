@@ -31,6 +31,8 @@ import { GutterEntry } from "./transcript/GutterEntry";
 import { GutterThumb } from "./transcript/GutterThumb";
 import { screenStarts, screensPath, screenTitle, type ScreenLike, type ScreenStart } from "./screens/screenModel";
 import { reportHref } from "../utils/reportHref";
+import { discussionPath, questionsAsked, type QuestionAsked } from "./discussion/discussionLinks";
+import type { DiscussionData } from "./discussion/types";
 import { useGutterHover } from "./transcript/useGutterHover";
 import "./transcript/transcript-gutter.css";
 import { quoteExtents } from "../utils/quoteExtents";
@@ -670,6 +672,31 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       live = false;
     };
   }, [sessionId]);
+  // The questions this session's moderator asked of the guide (stage 3): the Discussion lens's
+  // record, ready or partial — the states the lens shows. Embedded in an export, so it works
+  // offline. Not run, stale, failed or unreadable: no question marks, nothing said.
+  const [discussion, setDiscussion] = useState<DiscussionData | null>(null);
+  useEffect(() => {
+    let live = true;
+    apiGet<{ status: string; record?: DiscussionData | null }>("/discussion")
+      .then((r) => {
+        const usable = (r.status === "ready" || r.status === "partial") && r.record?.version === 1;
+        if (live) setDiscussion(usable ? r.record! : null);
+      })
+      .catch(() => {
+        if (live) setDiscussion(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [sessionId]);
+  const askedByParagraph = useMemo(() => {
+    if (!data || !discussion) return new Map<number, QuestionAsked[]>();
+    return questionsAsked(discussion, sessionId, (sec) => {
+      const seg = resolveSegmentForSeconds(data.segments, sec);
+      return seg ? data.segments.indexOf(seg) : null;
+    });
+  }, [discussion, sessionId, data]);
   const startsByParagraph = useMemo(() => {
     if (!data || screens.length === 0) return new Map<number, ScreenStart[]>();
     return screenStarts(screens, sessionId, (sec) => {
@@ -996,7 +1023,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
               {/* The gutter and the margin (docs/design-transcript-gutter.md): one entry per
                   quote this paragraph draws, its mark a link into the Quotes lens. Drawn twice —
                   beside the text, and under it for a narrow window — and only one is displayed. */}
-              {(quotesHere.length > 0 || startsByParagraph.has(position)) && (() => {
+              {(quotesHere.length > 0 || startsByParagraph.has(position) || askedByParagraph.has(position)) && (() => {
                 const quoteEntries = quotesHere.map((qid) => {
                   const ann = annotations[qid];
                   const shown = segAnnotations.find((a) => a.quoteId === qid);
@@ -1076,7 +1103,24 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                     ),
                   };
                 });
-                const entries = [...quoteEntries, ...screenEntries];
+                // The questions the moderator asked in this paragraph, first: they are what the
+                // paragraph is.
+                const questionEntries = (askedByParagraph.get(position) ?? []).map((q) => {
+                  const path = discussionPath(q.item, q.turn);
+                  const href = reportHref(path);
+                  const follow = (e: React.MouseEvent) => followInApp(e, path, backTo(seg));
+                  return {
+                    key: `d:${q.item}`, icon: "discussion" as const, href, follow, hidden: false, same: false,
+                    target: `p:${position}`, testId: `question-entry-${position}`,
+                    name: `${t("nav.discussion")}: ${q.topic}`,
+                    // Grey, a link all the same (hover underline): more blue in the margin would be
+                    // too much (owner, 17 Oct 2026).
+                    content: (_withIds: boolean) => (
+                      <a className="bn-gutter-topic" href={href} onClick={follow}>{q.topic}</a>
+                    ),
+                  };
+                });
+                const entries = [...questionEntries, ...quoteEntries, ...screenEntries];
                 return (
                   <>
                     <div className="segment-side" contentEditable={false}>

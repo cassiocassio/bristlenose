@@ -25,6 +25,7 @@
  */
 import {
   AppWindowMac,
+  MessageCircleQuestionMark,
   Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleHelp, CircleX, Download,
   ExternalLink, Eye, EyeOff, Folder, LayoutGrid, List, Minus, Moon, Pencil, Play, Plus,
   RotateCcw, RotateCw, Search, Settings, SlidersHorizontal, Sparkle, Tag, TextQuote,
@@ -64,6 +65,8 @@ const ICONS = {
   /** The Screens lens; stands in for the Mac's SF Symbol `macwindow.on.rectangle` (Lucide has
    *  no window over a rectangle: its nearest is one window). */
   screens: AppWindowMac,
+  /** The Discussion lens; matches the Mac's SF Symbol `questionmark.bubble`. */
+  discussion: MessageCircleQuestionMark,
   /** Focus mode: the moon, as Mail's View menu. */
   focus: Moon,
   /** Settings (pick: the gear, over settings-2's sliders). */

@@ -727,7 +727,7 @@ enum WelcomeTimelineCSS {
         --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
 
         /* Focus and selection */
-        --bn-focus-ring:              light-dark(0 0 0 2px rgba(0, 122, 255, 0.12), 0 0 0 2px rgba(10, 132, 255, 0.2));
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(0, 122, 255, 0.12), rgba(10, 132, 255, 0.2));
         --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
         --bn-selection-border:        light-dark(#007aff, #0a84ff);
         --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
@@ -918,7 +918,7 @@ enum WelcomeTimelineCSS {
         --bn-colour-shadow:           light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
 
         /* Focus and selection */
-        --bn-focus-ring:              light-dark(0 0 0 2px rgba(15, 92, 158, 0.15), 0 0 0 2px rgba(77, 159, 224, 0.2));
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(15, 92, 158, 0.15), rgba(77, 159, 224, 0.2));
         --bn-selection-bg:            light-dark(#e0e8f0, #1e2830);
         --bn-selection-border:        light-dark(#0f5c9e, #4d9fe0);
         --bn-selection-bg-inactive:     light-dark(#e8e2d4, #26231d);

@@ -158,7 +158,7 @@
         --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
 
         /* Focus and selection */
-        --bn-focus-ring:              light-dark(0 0 0 2px rgba(0, 122, 255, 0.12), 0 0 0 2px rgba(10, 132, 255, 0.2));
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(0, 122, 255, 0.12), rgba(10, 132, 255, 0.2));
         --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
         --bn-selection-border:        light-dark(#007aff, #0a84ff);
         --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);

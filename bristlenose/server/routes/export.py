@@ -629,11 +629,15 @@ def export_report(
     # The name as the researcher typed it, in any script, as the CSV and XLSX
     # downloads have it. This was a slug until 17 Oct 2026, which kept only
     # a-z and digits: "駅の調査" lost the whole name and "Łódź" became "odz".
-    name = safe_filename(project_info.project_name or "bristlenose")
+    name = safe_filename(project_info.project_name or "")
+    if name == "_":  # nothing visible left ("???", a zero-width space)
+        name = "bristlenose"
     # The language is part of what this file IS now, not a rendering choice the
     # reader can undo, so it belongs in the name — otherwise a researcher
     # exporting fr/de/it for a Swiss client gets three identical filenames in
-    # Downloads.  The locale token rather than the native language name.
+    # Downloads.  The locale token rather than the native language name; it is
+    # always one of SUPPORTED_LOCALES, so text from the request cannot reach
+    # the filename.
     lang = canonical_locale(locale)
     filename = f"{name}-report-{lang}.html"
 

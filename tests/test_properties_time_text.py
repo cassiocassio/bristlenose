@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import math
 import re
+import unicodedata
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -251,7 +252,7 @@ def test_safe_filename_no_dotdot_and_idempotent(text):
 
 _word = st.text(
     alphabet=st.characters(exclude_characters=UNSAFE | {".", " "}), min_size=1, max_size=12
-)
+).filter(lambda w: any(unicodedata.category(c)[0] not in "ZC" for c in w))
 
 
 @given(st.lists(_word, min_size=1, max_size=8).map(" ".join))

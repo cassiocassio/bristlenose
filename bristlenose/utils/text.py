@@ -90,7 +90,8 @@ def safe_filename(text: str, max_length: int = _MAX_FILENAME_LENGTH) -> str:
     - No ``..`` path traversal sequences
     - No leading/trailing dots or spaces (Windows/macOS gotcha)
     - Truncated to *max_length* (default 120)
-    - Returns ``"_"`` if input is empty or reduces to nothing
+    - Returns ``"_"`` if input is empty or reduces to nothing visible (only
+      spaces, controls or format characters such as a zero-width space)
 
     Examples:
         "Sarah" → "Sarah"
@@ -117,7 +118,10 @@ def safe_filename(text: str, max_length: int = _MAX_FILENAME_LENGTH) -> str:
     if len(text) > max_length:
         text = text[:max_length].rstrip(". ")
 
-    return text or "_"
+    # A name of only invisible characters would download as "-report-en.html".
+    if not any(unicodedata.category(c)[0] not in "ZC" for c in text):
+        return "_"
+    return text
 
 
 def apply_smart_quotes(text: str) -> str:

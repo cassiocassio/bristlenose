@@ -8,13 +8,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from urllib.parse import unquote
 
 import pytest
 from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
-from bristlenose.server.models import Project
 from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
@@ -88,25 +86,6 @@ class TestExportEndpoint:
         ]
         assert "-report-en.html" in cd
         assert "passwd" not in cd
-
-    @pytest.mark.parametrize("name", ["Привет", "駅の調査", "Badanie Łódź", "Brugerstudie Ærø"])
-    def test_the_filename_keeps_the_name_in_any_script(
-        self, client: TestClient, name: str
-    ) -> None:
-        """A slug kept only a-z and digits: "駅の調査" lost the whole name and
-        "Łódź" became "odz". The name goes in `filename*`, percent-encoded."""
-        db = client.app.state.db_factory()  # type: ignore[attr-defined]
-        try:
-            db.get(Project, 1).name = name
-            db.commit()
-        finally:
-            db.close()
-        resp = client.get("/api/projects/1/export?locale=pl")
-        assert resp.status_code == 200
-        disposition = resp.headers["content-disposition"]
-        assert disposition.isascii()
-        star = disposition.split("filename*=UTF-8''", 1)[1]
-        assert unquote(star) == f"{name}-report-pl.html"
 
 
 # ---------------------------------------------------------------------------

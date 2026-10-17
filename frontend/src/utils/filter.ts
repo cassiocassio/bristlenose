@@ -80,6 +80,51 @@ export function filterQuotes(quotes: QuoteResponse[], f: FilterState): QuoteResp
   return quotes.filter((q) => isQuoteVisible(q, f));
 }
 
+/** One filter change that lets a hidden-from-view quote show. */
+export type Relaxation =
+  | { kind: "hidden" }
+  | { kind: "starredOnly" }
+  | { kind: "tagFilter"; next: TagFilterState }
+  | { kind: "searchText"; was: string }
+  | { kind: "token"; token: SearchToken };
+
+/**
+ * The fewest changes that let `q` show, for a link that should land on it (the transcript's
+ * gutter: docs/design-transcript-gutter.md, "Arrival"). The same checks, in the same order, as
+ * isQuoteVisible — `relaxFor(q, f).length === 0` exactly when it is visible (pinned by test).
+ * Each change is the smallest of its kind: starred-only becomes all; one of the quote's own tags
+ * is ticked again (or "(No tags)"); typed text is cleared, since typed words match as a phrase;
+ * only the tokens the quote fails go. Unhiding is the caller's: it is a write, not a view.
+ */
+export function relaxFor(q: QuoteResponse, f: FilterState, allTagNames: readonly string[]): Relaxation[] {
+  const out: Relaxation[] = [];
+  if (f.hidden[q.dom_id]) out.push({ kind: "hidden" });
+  if (f.viewMode === "starred" && !f.starred[q.dom_id]) out.push({ kind: "starredOnly" });
+  if (!passesTagFilter(q, f)) out.push({ kind: "tagFilter", next: tagFilterLetting(q, f, allTagNames) });
+  const terms = activeTerms(f.searchQuery);
+  if (terms && !quoteMatches(q, terms, f.tags, f.edits)) out.push({ kind: "searchText", was: f.searchQuery });
+  for (const token of f.searchTokens) if (!tokenMatches(q, token, f.tags, f.edits)) out.push({ kind: "token", token });
+  return out;
+}
+
+/** The tag filter with the least ticked again that lets `q` through. */
+function tagFilterLetting(q: QuoteResponse, f: FilterState, allTagNames: readonly string[]): TagFilterState {
+  const own = (f.tags[q.dom_id] ?? q.tags).map((t) => t.name);
+  const { tagFilter } = f;
+  if (tagFilter.clearAll) {
+    // Nothing was ticked: tick one of its tags (or "(No tags)") and leave the rest off.
+    const keep = own[0]?.toLowerCase();
+    return {
+      clearAll: false,
+      unchecked: allTagNames.filter((n) => n.toLowerCase() !== keep),
+      noTagsUnchecked: own.length > 0,
+    };
+  }
+  if (own.length === 0) return { ...tagFilter, noTagsUnchecked: false };
+  const keep = own[0].toLowerCase();
+  return { ...tagFilter, unchecked: tagFilter.unchecked.filter((n) => n.toLowerCase() !== keep) };
+}
+
 // ── Tag filter ────────────────────────────────────────────────────────────
 
 function passesTagFilter(q: QuoteResponse, f: FilterState): boolean {

@@ -749,6 +749,11 @@ export function clearPendingSoloTag(): void {
   setState((prev) => ({ ...prev, pendingSoloTag: null }));
 }
 
+/** The tag being soloed, or null. */
+export function getSoloTag(): string | null {
+  return state.soloTag;
+}
+
 /** Exit solo mode and restore the tag filter snapshot. */
 export function exitSoloMode(
   applyTagFilter: (f: TagFilterState) => void,

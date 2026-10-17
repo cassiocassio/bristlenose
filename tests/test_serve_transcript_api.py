@@ -210,3 +210,30 @@ class TestTranscriptResearcherState:
         ann = data["annotations"].get("q-p1-10")
         if ann:
             assert "confusion" in ann["deleted_badges"]
+
+
+class TestTranscriptLinksOut:
+    """The transcript links each quote to the group the Quotes lens draws it in
+    (docs/design-transcript-gutter.md), and draws a hidden quote in grey."""
+
+    def test_anchor_is_the_quotes_lens_group_the_quote_sits_in(self, client: TestClient) -> None:
+        quotes = client.get("/api/projects/1/quotes").json()
+        lens: dict[str, str] = {}
+        for s in quotes["sections"]:
+            for q in s["quotes"]:
+                lens[q["dom_id"]] = f"section-{s['cluster_id']}"
+        for t in quotes["themes"]:
+            for q in t["quotes"]:
+                lens[q["dom_id"]] = f"theme-{t['theme_id']}"
+        annotations = client.get("/api/projects/1/transcripts/s1").json()["annotations"]
+        assert lens, "the fixture has grouped quotes"
+        for dom_id, anchor in lens.items():
+            assert annotations[dom_id]["anchor"] == anchor
+
+    def test_hiding_a_quote_shows_in_the_transcript(self, client: TestClient) -> None:
+        before = client.get("/api/projects/1/transcripts/s1").json()["annotations"]
+        assert not any(a["is_hidden"] for a in before.values())
+        client.put("/api/projects/1/hidden", json={"q-p1-10": True})
+        after = client.get("/api/projects/1/transcripts/s1").json()["annotations"]
+        assert after["q-p1-10"]["is_hidden"] is True
+        assert not any(a["is_hidden"] for k, a in after.items() if k != "q-p1-10")

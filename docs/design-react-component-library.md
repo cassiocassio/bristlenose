@@ -118,6 +118,8 @@ An ordered list of labels joined by arrows.
 
 ### 10. Annotation
 
+> **Retired 17 Oct 2026.** The transcript's gutter replaced it: a mark per quote that links into the Quotes lens, beside the margin entry it names (`frontend/src/islands/transcript/GutterEntry.tsx`, `docs/design-transcript-gutter.md`). The entry below is the record of what it was.
+
 A positioned label that links a transcript segment to its analytical context.
 
 - **Qualities:** label text (section/theme name), optional badge below, position alongside transcript text

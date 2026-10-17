@@ -1,6 +1,5 @@
 export { ActivityChip } from "./ActivityChip";
 export { ActivityChipStack } from "./ActivityChipStack";
-export { Annotation } from "./Annotation";
 export { Badge } from "./Badge";
 export { ConfidenceHistogram } from "./ConfidenceHistogram";
 export { ConfirmDialog } from "./ConfirmDialog";

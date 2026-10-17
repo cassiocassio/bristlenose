@@ -1,4 +1,6 @@
 import { lazy, useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { QuotesArrival, arrivalAnchor } from "./QuotesArrival";
 import { useProjectId } from "../hooks/useProjectId";
 import { startLastRunPolling, useLastRun } from "../contexts/LastRunStore";
 import { useLenses } from "../contexts/ConditionStore";
@@ -44,7 +46,26 @@ export function QuotesTab() {
   const [readDuringRun, setReadDuringRun] = useState(!joined);
   const [picked, setPicked] = useState(false);
   if (!joined && !readDuringRun) setReadDuringRun(true);
-  const shown = !joined || (readDuringRun && !picked) ? "session" : grouping;
+  // A link to a section or theme (the transcript's gutter, Signals, the Dashboard) shows Sections &
+  // themes for that visit: the anchor it names exists in no other grouping. Held for the visit (a
+  // location), never saved over the remembered grouping, and given up as soon as the researcher
+  // picks one (docs/design-transcript-gutter.md, "Arrival").
+  const location = useLocation();
+  const [arrivedFor, setArrivedFor] = useState<string | null>(null);
+  if (arrivalAnchor(location.hash) && arrivedFor !== location.key) {
+    setArrivedFor(location.key);
+    setPicked(false);
+  }
+  const wantsSections = arrivedFor === location.key && !picked;
+  const shown = !joined
+    ? "session"
+    : picked
+      ? grouping
+      : wantsSections
+        ? "sections"
+        : readDuringRun
+          ? "session"
+          : grouping;
   const choose = useCallback(
     (g: QuoteGrouping) => {
       setPicked(true);
@@ -71,6 +92,7 @@ export function QuotesTab() {
   if (shown === "session") {
     return (
       <>
+        <QuotesArrival />
         <Toolbar />
         <QuoteSessions projectId={projectId} refreshKey={refreshKey} headingAction={control} />
       </>
@@ -78,6 +100,7 @@ export function QuotesTab() {
   }
   return (
     <>
+      <QuotesArrival />
       <Toolbar />
       <QuoteSections projectId={projectId} refreshKey={refreshKey} headingAction={control} />
       <QuoteThemes projectId={projectId} refreshKey={refreshKey} />

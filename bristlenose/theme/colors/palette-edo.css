@@ -35,6 +35,9 @@
 
     /* Semantic surfaces */
     --bn-colour-quote-bg: #f0e9d8;              /* Warm off-white */
+    --bn-colour-paper: #f7f2e6;                 /* Transcript ground: washi under Paper White */
+    --bn-colour-sheet: #fdfbf7;                 /* A quote lifted: Paper White, 1.08:1 off the washi */
+    --bn-colour-badge-bg-paper: #e8dfc9;        /* Edo's badge already reads on washi (1.19:1) */
     --bn-colour-badge-bg: #e8dfc9;              /* Parchment badge */
     --bn-colour-badge-text: #2d3654;            /* Court Indigo */
     --bn-colour-user-tag-bg: #e8dfc9;
@@ -119,6 +122,9 @@
 
         /* Semantic surfaces */
         --bn-colour-quote-bg:         light-dark(#f0e9d8, #211e18);
+        --bn-colour-paper:            light-dark(#f7f2e6, #1a1816);   /* Washi / Sumi */
+        --bn-colour-sheet:            light-dark(#fdfbf7, #26221b);   /* 1.08:1 / 1.12:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#e8dfc9, #2d2820);
         --bn-colour-badge-bg:         light-dark(#e8dfc9, #2d2820);
         --bn-colour-badge-text:       light-dark(#2d3654, #c4b898);
         --bn-colour-user-tag-bg:      light-dark(#e8dfc9, #2d2820);

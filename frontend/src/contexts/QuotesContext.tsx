@@ -210,11 +210,20 @@ function setState(updater: (prev: QuotesState) => QuotesState): void {
  * `replace` never leaves a wipe window; omit it to leave the current floor
  * untouched (e.g. legacy callers / tests).
  */
+/** How many times the quotes have been (re)loaded into the store. The store outlives
+ *  navigation, so a lens arriving from a link waits for this to move before it trusts what it
+ *  holds (pages/QuotesArrival.tsx). */
+let quotesLoads = 0;
+export function quotesLoadCount(): number {
+  return quotesLoads;
+}
+
 export function initFromQuotes(
   quotes: QuoteResponse[],
   replace = false,
   uncategorised?: QuoteResponse[],
 ): void {
+  quotesLoads += 1;
   setState((prev) => {
     const base = replace
       ? {

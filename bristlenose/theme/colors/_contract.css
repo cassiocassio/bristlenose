@@ -27,6 +27,11 @@ Required tokens:
 --bn-colour-inspector-bg        Inspector/right-sidebar chrome tint — a subtle desaturated sibling of --bn-colour-bg (Xcode-style flat inspector; opaque so it reads over the vibrant body in desktop frosted mode)
 
 --bn-colour-quote-bg            Quote card background
+--bn-colour-paper               The transcript's ground: a very pale paper the transcript reads on
+                                (docs/design-transcript-gutter.md). In dark it is the page itself.
+--bn-colour-sheet               A quote lifted off the paper on hover (white in light)
+--bn-colour-badge-bg-paper      Badge/chip background on the paper, where --bn-colour-badge-bg
+                                would disappear (default light: 1.03:1 against the paper)
 --bn-colour-badge-bg            Badge/chip background
 --bn-colour-badge-text          Badge/chip text
 --bn-colour-user-tag-bg         User tag badge background

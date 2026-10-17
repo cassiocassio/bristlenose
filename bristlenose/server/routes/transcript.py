@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots, transcript_layout
-from bristlenose.server.heading_names import HeadingNames
+from bristlenose.server.heading_names import HeadingNames, section_anchor, theme_anchor
 from bristlenose.server.journey import derive_journeys
 from bristlenose.server.models import (
     ClusterQuote,
@@ -21,6 +21,7 @@ from bristlenose.server.models import (
     DeletedBadge,
     Project,
     Quote,
+    QuoteState,
     QuoteTag,
     ScreenCluster,
     SessionSpeaker,
@@ -86,6 +87,12 @@ class QuoteAnnotationResponse(BaseModel):
     verbatim_excerpt: str
     tags: list[TagResponse]
     deleted_badges: list[str]
+    #: The Quotes lens's scroll anchor for the quote's section or theme (``section-<id>``,
+    #: ``theme-<id>``; ``heading_names``), or "" for a quote in neither. The transcript links
+    #: to it; keyed on the id, so a rename moves no link.
+    anchor: str = ""
+    #: The researcher hid the quote (``QuoteState``): the transcript draws it in grey.
+    is_hidden: bool = False
 
 
 class TranscriptPageResponse(BaseModel):
@@ -229,8 +236,8 @@ def get_transcript(
         ]
         quote_ids = [q.id for q in quotes]
 
-        # Build assignment lookup: quote_id -> (label, label_type)
-        assignment: dict[int, tuple[str, str]] = {}
+        # Build assignment lookup: quote_id -> (label, label_type, anchor)
+        assignment: dict[int, tuple[str, str, str]] = {}
         if quote_ids:
             names = HeadingNames.load(db, project_id)
             cluster_rows = (
@@ -240,7 +247,7 @@ def get_transcript(
                 .all()
             )
             for cq, sc in cluster_rows:
-                assignment[cq.quote_id] = (names.section(sc), "section")
+                assignment[cq.quote_id] = (names.section(sc), "section", section_anchor(sc.id))
 
             theme_rows = (
                 db.query(ThemeQuote, ThemeGroup)
@@ -249,7 +256,13 @@ def get_transcript(
                 .all()
             )
             for tq, tg in theme_rows:
-                assignment[tq.quote_id] = (names.theme(tg), "theme")
+                assignment[tq.quote_id] = (names.theme(tg), "theme", theme_anchor(tg.id))
+
+        hidden_ids: set[int] = (
+            {s.quote_id for s in db.query(QuoteState).filter(QuoteState.quote_id.in_(quote_ids))
+             if s.is_hidden}
+            if quote_ids else set()
+        )
 
         # Tags and deleted badges per quote
         tags_map: dict[int, list[TagResponse]] = {}
@@ -311,7 +324,7 @@ def get_transcript(
         quote_data: list[tuple[str, str, float, float, str, Quote]] = []
         for q in quotes:
             dom_id = _quote_dom_id(q)
-            label, label_type = assignment.get(q.id, ("", ""))
+            label, label_type, anchor = assignment.get(q.id, ("", "", ""))
             annotations[dom_id] = QuoteAnnotationResponse(
                 label=label,
                 label_type=label_type,
@@ -322,6 +335,8 @@ def get_transcript(
                 verbatim_excerpt=q.verbatim_excerpt,
                 tags=tags_map.get(q.id, []),
                 deleted_badges=badges_map.get(q.id, []),
+                anchor=anchor,
+                is_hidden=q.id in hidden_ids,
             )
             quote_data.append(
                 (dom_id, q.participant_id, q.start_timecode, q.end_timecode,

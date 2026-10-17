@@ -44,6 +44,17 @@ let scrollToAnchorRef: (
   opts?: ScrollToAnchorOptions,
 ) => void = () => {};
 
+/**
+ * Navigate to a router path (with its query and fragment) from code that is not
+ * a component under the router: the transcript's gutter links, which must also
+ * render in tests mounted without one. `switchToTab` takes a tab name only, so
+ * it cannot carry `?reveal=…#section-3`. Before the shims are installed this is
+ * a no-op, like the refs it reads.
+ */
+export function navigateTo(path: string, opts?: { replace?: boolean }): void {
+  navigateRef(path, opts);
+}
+
 export function installNavigationShims(
   navigate: NavigateFunction,
   scrollToAnchor: (anchorId: string, opts?: ScrollToAnchorOptions) => void,

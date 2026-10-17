@@ -145,6 +145,13 @@ vi.mock("../utils/embedded", () => ({
 }));
 
 import { getTranscript, getSessionList, postParagraphJoin, postParagraphSplit } from "../utils/api";
+import { navigateTo } from "../shims/navigation";
+
+// The gutter's marks navigate through the shim (utils/quotesLink.ts): the page renders without a router here.
+vi.mock("../shims/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../shims/navigation")>()),
+  navigateTo: vi.fn(),
+}));
 
 const mockedGetTranscript = vi.mocked(getTranscript);
 const mockedGetSessionList = vi.mocked(getSessionList);
@@ -609,7 +616,7 @@ describe("TranscriptPage", () => {
     expect(body.textContent).toContain("Thanks for joining me today.");
   });
 
-  it("falls back to html_text when words is empty array", async () => {
+  it("without word timings, draws the quote's words as spans and keeps the text exact", async () => {
     const emptyWords: TranscriptPageResponse = {
       ...mockData,
       segments: [
@@ -634,11 +641,13 @@ describe("TranscriptPage", () => {
       expect(screen.getByTestId("transcript-body")).toBeTruthy();
     });
     const body = screen.getByTestId("transcript-body");
-    // Empty words array → falls back to html_text
-    const wordSpans = body.querySelectorAll(".transcript-word");
-    expect(wordSpans).toHaveLength(0);
-    const marks = body.querySelectorAll("mark.bn-cited");
-    expect(marks).toHaveLength(1);
+    // No word timings: no timed word spans, and not the server's whole-paragraph <mark> either.
+    // The quote's words are spans carrying the quote (docs/design-transcript-gutter.md), and the
+    // spaces between stay text, so the paragraph's text — what copy and the caret read — is exact.
+    expect(body.querySelectorAll(".transcript-word")).toHaveLength(0);
+    expect(body.querySelectorAll("mark.bn-cited")).toHaveLength(0);
+    expect(body.querySelectorAll('[data-q="q-p1-10"]').length).toBeGreaterThan(0);
+    expect(body.querySelector(".segment-body")!.textContent).toBe("I found the dashboard pretty confusing.");
   });
 
   it("skips html_text quote marks when words are present", async () => {
@@ -1079,5 +1088,74 @@ describe("TranscriptPage — new data while it is open (progressive lenses)", ()
     expect(screen.queryByTestId("annotation-q-p1-10-sentiment")).toBeNull();
     await waitFor(() => expect(mockedGetTranscript).toHaveBeenCalledTimes(3), { timeout: 2000 });
     expect(screen.queryByTestId("annotation-q-p1-10-sentiment")).toBeNull();
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// The gutter (docs/design-transcript-gutter.md)
+// ---------------------------------------------------------------------------
+
+describe("TranscriptPage — the gutter", () => {
+  function withGutterData(): TranscriptPageResponse {
+    return {
+      ...mockData,
+      annotations: {
+        ...mockData.annotations,
+        "q-p1-10": { ...mockData.annotations["q-p1-10"], anchor: "section-5" },
+        "q-p1-26": { ...mockData.annotations["q-p1-26"], anchor: "section-5", is_hidden: true },
+      },
+    };
+  }
+
+  async function renderGutter() {
+    mockedGetTranscript.mockResolvedValue(withGutterData());
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("annotation-q-p1-10")).toBeTruthy());
+  }
+
+  it("draws a quote's mark as a link to its group in the Quotes lens", async () => {
+    await renderGutter();
+    const mark = screen.getByTestId("annotation-q-p1-10").querySelector("a.bn-gutter-mark")!;
+    expect(mark.getAttribute("href")).toBe("/report/quotes/?reveal=q-p1-10#section-5");
+    expect(mark.getAttribute("aria-label")).toBe("Quotes: Dashboard");
+    // The margin's title is the same link.
+    const title = screen.getByTestId("annotation-q-p1-10").querySelector("a.bn-gutter-title")!;
+    expect(title.getAttribute("href")).toBe("/report/quotes/?reveal=q-p1-10#section-5");
+  });
+
+  it("marks the quote's own words, and greys a hidden quote's words and entry", async () => {
+    await renderGutter();
+    const body = screen.getByTestId("transcript-body");
+    expect(body.querySelectorAll('[data-q="q-p1-10"]').length).toBeGreaterThan(0);
+    expect(body.querySelector('[data-q="q-p1-10"][data-q-hidden]')).toBeNull();
+    expect(body.querySelector('[data-q="q-p1-26"]')!.hasAttribute("data-q-hidden")).toBe(true);
+    expect(screen.getByTestId("annotation-q-p1-26").hasAttribute("data-hidden")).toBe(true);
+  });
+
+  it("follows a mark in the app, leaving Back on the paragraph it was made from", async () => {
+    await renderGutter();
+    const mark = screen.getByTestId("annotation-q-p1-10").querySelector("a.bn-gutter-mark")!;
+    fireEvent.click(mark);
+    expect(vi.mocked(navigateTo).mock.calls).toEqual([
+      ["/report/sessions/s1#t-10", { replace: true }],
+      ["/report/quotes/?reveal=q-p1-10#section-5"],
+    ]);
+  });
+
+  it("leaves a modifier click to the browser, for a new tab", async () => {
+    await renderGutter();
+    const mark = screen.getByTestId("annotation-q-p1-10").querySelector("a.bn-gutter-mark")!;
+    fireEvent.click(mark, { metaKey: true });
+    expect(navigateTo).not.toHaveBeenCalled();
+  });
+
+  it("draws a quote with no group as a mark that leads nowhere", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData); // no anchors: an older server, or uncategorised
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(screen.getByTestId("annotation-q-p1-10")).toBeTruthy());
+    const entry = screen.getByTestId("annotation-q-p1-10");
+    expect(entry.querySelector("a.bn-gutter-mark")).toBeNull();
+    expect(entry.querySelector("span.bn-gutter-mark")).toBeTruthy();
   });
 });

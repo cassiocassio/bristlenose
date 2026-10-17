@@ -1,0 +1,172 @@
+/* The transcript's gutter: docs/design-transcript-gutter.md (decided against
+   docs/mockups/transcript-quote-gutter.html, 16–17 Oct 2026).
+
+   This file lives with the page, as screens.css and discussion.css do, and not under
+   bristlenose/theme/: a project serves its own baked copy of the theme CSS, so a rule added
+   there would reach no project analysed before the release, and the new markup would draw
+   unstyled. Rules that override templates/transcript.css are written one class more specific
+   (`.center …`) so they win whatever order the two stylesheets load in.
+
+   The palette's paper, sheet and badge-on-paper colours are read with a fallback for the same
+   reason: a project baked before they existed has no such variables. */
+
+/* ── The paper ──────────────────────────────────────────────────────────── */
+/* The transcript is a document on very pale paper; a quote lifts to a white sheet. The
+   scope re-points the badge grey rather than overriding badges one by one: tags and speaker
+   badges both read it. Menus and popovers mount outside .center and keep the page colour. */
+.center:has(.transcript-body) {
+    --bn-transcript-paper: var(--bn-colour-paper, light-dark(#f6f7f8, #111111));
+    --bn-transcript-sheet: var(--bn-colour-sheet, light-dark(#ffffff, #1c1c1e));
+    --bn-colour-badge-bg: var(--bn-colour-badge-bg-paper, light-dark(#ebedf0, #252525));
+    --bn-transcript-gutter: 2rem;
+    /* A mark at rest is an "invisible", like ¶ with Show Invisibles on. */
+    --bn-transcript-mark: color-mix(in srgb, var(--bn-colour-muted) 40%, transparent);
+    background: var(--bn-transcript-paper);
+}
+.center:has(.transcript-body) .bn-transcript-journey-header {
+    background: var(--bn-transcript-paper);
+}
+
+/* ── The grid: timecode | speaker | text | gutter | margin ──────────────── */
+.center .transcript-body {
+    grid-template-columns: 4.5rem 2.2rem minmax(0, 1fr) var(--bn-transcript-gutter);
+}
+@media (min-width: 800px) {
+    .center .transcript-body {
+        grid-template-columns: 4.5rem 2.2rem minmax(0, 1fr) var(--bn-transcript-gutter) clamp(8.5rem, 13vw, 12.5rem);
+    }
+}
+
+/* The gutter and the margin are one two-column block, so a mark always sits beside the
+   margin entry it names, and the first one on the paragraph's first baseline. */
+.transcript-segment .segment-side {
+    grid-column: 4 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    row-gap: var(--bn-space-sm);
+    align-self: baseline;
+    min-width: 0;
+}
+.segment-side .bn-gutter-entry {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: baseline;
+    min-width: 0;
+}
+.bn-gutter-content {
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+/* Narrow: the gutter stays; what the margin says drops under the text. The content is
+   drawn in both places and only one is ever displayed (display:none takes the other out of
+   the accessibility tree as well). */
+.segment-under { display: none; }
+@media (max-width: 799px) {
+    .transcript-segment .segment-side { grid-column: 4; grid-template-columns: 1fr; }
+    .segment-side .bn-gutter-entry { grid-template-columns: 1fr; }
+    .segment-side .bn-gutter-content { display: none; }
+    .transcript-segment .segment-under {
+        display: flex;
+        flex-direction: column;
+        gap: var(--bn-space-xs);
+        grid-column: 3;
+        margin: var(--bn-space-xs) 0 var(--bn-space-sm);
+        font-size: var(--bn-text-caption);
+        line-height: var(--bn-text-caption-lh);
+    }
+}
+
+/* ── The marks ──────────────────────────────────────────────────────────── */
+/* Pale at rest; dark ink while the pointer is anywhere on the paragraph's row; the link's
+   blue on its own hover. Centred in the gutter, then a quarter rem towards what it names. */
+.bn-gutter-mark {
+    justify-self: center;
+    display: inline-flex;
+    width: 15px;
+    height: 15px;
+    transform: translate(0.25rem, 2.5px);
+    color: var(--bn-transcript-mark);
+    border-radius: var(--bn-radius-sm);
+    text-decoration: none;
+    transition: color var(--bn-transition-fast);
+}
+.bn-gutter-mark .bn-icon,
+.bn-gutter-mark svg { width: 15px; height: 15px; }
+.transcript-segment:hover .bn-gutter-mark,
+.transcript-segment:focus-within .bn-gutter-mark { color: var(--bn-colour-text); }
+.transcript-segment:hover .bn-gutter-entry[data-hidden] .bn-gutter-mark { color: var(--bn-colour-muted); }
+.bn-gutter-entry.is-hot .bn-gutter-mark,
+.bn-gutter-mark:hover { color: var(--bn-colour-accent); }
+.bn-gutter-mark:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+    color: var(--bn-colour-accent);
+}
+span.bn-gutter-mark { cursor: default; }
+
+/* ── The margin's titles ────────────────────────────────────────────────── */
+.bn-gutter-title {
+    color: var(--bn-colour-accent);
+    font-weight: var(--bn-weight-emphasis);
+    text-decoration: none;
+    text-underline-offset: 2px;
+    max-width: 100%;
+}
+.bn-gutter-title:hover,
+.bn-gutter-entry.is-hot .bn-gutter-title { text-decoration: underline; }
+.bn-gutter-entry[data-hidden] .bn-gutter-title { color: var(--bn-colour-muted); font-weight: var(--bn-weight-normal); }
+.bn-gutter-entry[data-hidden] .badge { opacity: 0.6; }
+.bn-gutter-title:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 2px; }
+
+/* ── The quote lift ─────────────────────────────────────────────────────── */
+/* Anywhere along a paragraph's row lifts its quotes from the paper to a white sheet. The
+   words are the quote's own, marked data-q on the timed and the untimed path alike. */
+.transcript-body [data-q] {
+    border-radius: 3px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    transition: background-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast);
+}
+.transcript-segment:hover [data-q] {
+    background: var(--bn-transcript-sheet);
+    box-shadow: 0 0 0 3px var(--bn-transcript-sheet);
+}
+/* A hidden quote is discounted evidence: grey ink, still there to be read. */
+.transcript-body [data-q][data-q-hidden] { color: var(--bn-colour-muted); }
+
+/* The theme knocks back a paragraph the server did not mark as quoted. The server's join
+   misses the paragraph a quote starts in, mid-paragraph; a paragraph that draws a quote's
+   words is quoted, whatever the join said. */
+.center .transcript-body .transcript-segment[data-has-quote] .segment-body { opacity: 1; }
+
+/* ── The keyline ────────────────────────────────────────────────────────── */
+/* One 0.5px ink hairline round the whole quote (or question, or paragraph), notched where
+   its first line starts and its last line ends: drawn by useGutterHover into this layer. */
+.bn-transcript-sheet { position: relative; }
+.bn-keylines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 3;
+}
+.bn-keylines path {
+    fill: none;
+    stroke: var(--bn-colour-text);
+    stroke-width: 0.5;
+    stroke-linejoin: miter;
+}
+.bn-keylines path.is-hidden { stroke: var(--bn-colour-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+    .transcript-body [data-q],
+    .bn-gutter-mark { transition: none; }
+}

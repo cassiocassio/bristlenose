@@ -34,6 +34,7 @@ import {
   isFromSentimentLens,
 } from "../utils/signalDedup";
 import { reportHref } from "../utils/reportHref";
+import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
 import { detectSequences, type SequenceMeta } from "../utils/sequences";
@@ -1018,15 +1019,12 @@ function adaptSentimentMatrix(m: {
 function LocationHeading({ location, anchor }: { location: string; anchor: string }) {
   return (
     <div className="signals-codebook-heading">
+      {/* The Quotes lens's own address for the group: it shows Sections & themes for the
+          visit whatever grouping was remembered (docs/design-transcript-gutter.md, "Arrival"). */}
       <a
-        href={`#${anchor}`}
+        href={quotesHref(anchor)}
         className="signal-card-location-link"
-        onClick={(e) => {
-          if (e.metaKey || e.ctrlKey || e.shiftKey) return;
-          e.preventDefault();
-          window.switchToTab?.("quotes");
-          window.scrollToAnchor?.(anchor);
-        }}
+        onClick={(e) => followInApp(e, quotesPath(anchor))}
       >
         {location}
       </a>

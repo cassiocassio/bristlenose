@@ -321,3 +321,51 @@ describe("QuotesTab — where the grouping control sits", () => {
     expect(view.result.current?.controlVisible).toBe(false);
   });
 });
+
+describe("QuotesTab — arriving from a link to a section or theme", () => {
+  // docs/design-transcript-gutter.md, "Arrival": the anchor a link names exists only in the
+  // Sections & themes view, so a link shows it for that visit, without saving it.
+  beforeEach(() => {
+    sectionsKeys.length = 0;
+    sessionsRenders.length = 0;
+    lensesNow.value = { ...lensesNow.value, signals: true };
+    localStorage.setItem("bristlenose-quote-grouping-1", "session");
+  });
+  afterEach(() => {
+    try {
+      localStorage.clear();
+    } catch {
+      /* no storage */
+    }
+  });
+
+  function renderAt(entry: string) {
+    return render(
+      <MemoryRouter initialEntries={[entry]}>
+        <FocusProvider>
+          <QuotesTab />
+        </FocusProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it("shows Sections & themes for a link's visit, over a remembered By session", async () => {
+    renderAt("/report/quotes/?reveal=q-p1-10#section-3");
+    await waitFor(() => expect(sectionsKeys.length).toBeGreaterThan(0));
+    expect(sessionsRenders).toEqual([]);
+    // Not saved: the researcher's own choice is still By session.
+    expect(localStorage.getItem("bristlenose-quote-grouping-1")).toBe("session");
+  });
+
+  it("does the same for the Dashboard's whole-list anchors", async () => {
+    renderAt("/report/quotes/#themes");
+    await waitFor(() => expect(sectionsKeys.length).toBeGreaterThan(0));
+    expect(sessionsRenders).toEqual([]);
+  });
+
+  it("keeps the remembered By session on a plain visit", async () => {
+    renderAt("/report/quotes");
+    await waitFor(() => expect(sessionsRenders.length).toBeGreaterThan(0));
+    expect(sectionsKeys).toEqual([]);
+  });
+});

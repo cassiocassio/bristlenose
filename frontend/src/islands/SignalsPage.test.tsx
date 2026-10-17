@@ -3,6 +3,14 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { SignalsPage } from "./SignalsPage";
 import type { CodebookSignalsListResponse, SentimentSignalsData } from "../utils/types";
 import { resetSignalStore } from "../contexts/SignalStore";
+import { navigateTo } from "../shims/navigation";
+
+// The location link goes to the Quotes lens's own address (utils/quotesLink.ts), through the
+// navigation shim: a link to a group shows Sections & themes for the visit (QuotesArrival).
+vi.mock("../shims/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../shims/navigation")>()),
+  navigateTo: vi.fn(),
+}));
 
 // ---------------------------------------------------------------------------
 // Mock data — per-codebook shape
@@ -757,9 +765,9 @@ describe("SignalsPage", () => {
     }
   });
 
-  it("Cmd+click on a location heading does not call switchToTab", async () => {
+  it("Cmd+click on a location heading is left to the browser", async () => {
     mockFetchCodebookSignals(mockCbData);
-    (window as unknown as Record<string, unknown>).switchToTab = vi.fn();
+    vi.mocked(navigateTo).mockClear();
     render(<SignalsPage projectId="1" />);
 
     await waitFor(() => {
@@ -772,15 +780,15 @@ describe("SignalsPage", () => {
 
     // Cmd+click (Mac) — should NOT intercept
     fireEvent.click(link, { metaKey: true });
-    expect(window.switchToTab).not.toHaveBeenCalled();
+    expect(navigateTo).not.toHaveBeenCalled();
 
     // Ctrl+click (Win/Linux) — should NOT intercept
     fireEvent.click(link, { ctrlKey: true });
-    expect(window.switchToTab).not.toHaveBeenCalled();
+    expect(navigateTo).not.toHaveBeenCalled();
 
     // Plain click — should intercept
     fireEvent.click(link);
-    expect(window.switchToTab).toHaveBeenCalledWith("quotes");
+    expect(navigateTo).toHaveBeenCalledWith("/report/quotes/#section-7");
   });
 
   // An ELABORATED card renders a different header from a nameless one: the
@@ -810,12 +818,13 @@ describe("SignalsPage", () => {
       expect(card.querySelector("a.signal-card-location-link")).toBeNull();
     }
 
+    vi.mocked(navigateTo).mockClear();
     fireEvent.click(link);
-    expect(window.switchToTab).toHaveBeenCalledWith("quotes");
     // The server's anchor, keyed on the cluster id: a renamed section's link
-    // still lands on it.
-    expect(link.getAttribute("href")).toBe("#section-7");
-    expect(window.scrollToAnchor).toHaveBeenCalledWith("section-7");
+    // still lands on it. The address is the Quotes lens's own, so a new tab
+    // lands on the group too.
+    expect(link.getAttribute("href")).toBe("/report/quotes/#section-7");
+    expect(navigateTo).toHaveBeenCalledWith("/report/quotes/#section-7");
   });
 
   // The card is itself role="button" and focuses on click, so a link inside it
@@ -844,9 +853,10 @@ describe("SignalsPage", () => {
       expect(card.contains(link)).toBe(false);
     }
 
+    vi.mocked(navigateTo).mockClear();
     fireEvent.click(link);
     await waitFor(() => {
-      expect(window.switchToTab).toHaveBeenCalledWith("quotes");
+      expect(navigateTo).toHaveBeenCalledWith("/report/quotes/#section-7");
     });
     for (const card of screen.getAllByTestId("bn-signal-card")) {
       expect(card.classList.contains("bn-selected")).toBe(false);

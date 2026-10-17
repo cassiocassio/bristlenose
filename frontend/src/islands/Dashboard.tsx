@@ -16,6 +16,8 @@ import { Badge, PersonBadge, TimecodeLink } from "../components";
 import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet } from "../utils/api";
 import { reportHref } from "../utils/reportHref";
+import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
+import { navigateTo } from "../shims/navigation";
 import { refetchOverlayProps } from "../hooks/useRefetching";
 import { useSpeakersChanged } from "../hooks/useSpeakersChanged";
 import { SpeakerPickerTrigger } from "../components/SpeakerPickerTrigger";
@@ -80,6 +82,12 @@ function statTargetToHref(target: string): string {
 function handleStatLink(target: string) {
   // target format: "tab" or "tab:anchor"
   const [tab, anchor] = target.split(":");
+  // Into the Quotes lens at a group or list heading: its own address, which shows Sections &
+  // themes for the visit and scrolls there (pages/QuotesArrival.tsx).
+  if (tab === "quotes" && anchor) {
+    navigateTo(quotesPath(anchor));
+    return;
+  }
   switchToTab(tab);
   if (anchor) {
     scrollToAnchor(anchor);
@@ -510,8 +518,12 @@ function NavList({
           {items.map((item) => (
             <li key={item.anchor}>
               <a
-                href={`#${item.anchor}`}
+                href={tabTarget === "quotes" ? quotesHref(item.anchor) : `#${item.anchor}`}
                 onClick={(e) => {
+                  if (tabTarget === "quotes") {
+                    followInApp(e, quotesPath(item.anchor));
+                    return;
+                  }
                   if (e.metaKey || e.ctrlKey || e.shiftKey) return;
                   e.preventDefault();
                   switchToTab(tabTarget);

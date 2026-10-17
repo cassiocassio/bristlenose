@@ -298,6 +298,11 @@ export interface QuoteAnnotationResponse {
   verbatim_excerpt: string;
   tags: TagResponse[];
   deleted_badges: string[];
+  /** The Quotes lens's anchor for the quote's section or theme (`section-<id>`,
+   *  `theme-<id>`), "" when it is in neither. Absent from older servers and exports. */
+  anchor?: string;
+  /** The researcher hid the quote: the transcript draws it in grey. */
+  is_hidden?: boolean;
 }
 
 export interface TranscriptPageResponse {

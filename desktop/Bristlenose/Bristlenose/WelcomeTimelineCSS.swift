@@ -566,7 +566,7 @@ enum WelcomeTimelineCSS {
        No change needed — Inter and SF Pro share the weight axis range. */
 }
 
-/* ════ bristlenose/theme/colors/palette-default.css — lines 1–170 ════ */
+/* ════ bristlenose/theme/colors/palette-default.css — lines 1–176 ════ */
 /* palette-default — Bristlenose's standard blue/grey colour theme.
    This is the web-mode default palette, loaded as :root fallback.
    Tokens defined here are overridden by any active [data-color-theme] palette.
@@ -588,6 +588,9 @@ enum WelcomeTimelineCSS {
 
     /* Semantic surfaces */
     --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-paper: #f6f7f8;                 /* Transcript ground: a cool neutral, 1.07:1 under the sheet */
+    --bn-colour-sheet: #ffffff;                 /* A quote lifted off the paper */
+    --bn-colour-badge-bg-paper: #ebedf0;        /* Badges on the paper (#f3f4f6 vanishes there) */
     --bn-colour-badge-bg: #f3f4f6;
     --bn-colour-badge-text: #374151;
     --bn-colour-user-tag-bg: #f3f4f6;
@@ -675,6 +678,9 @@ enum WelcomeTimelineCSS {
 
         /* Semantic surfaces */
         --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-paper:            light-dark(#f6f7f8, #111111);   /* Transcript ground; dark is the page itself */
+        --bn-colour-sheet:            light-dark(#ffffff, #1c1c1e);   /* A quote lifted: 1.07:1 / 1.11:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#ebedf0, #252525);
         --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
         --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
         --bn-colour-user-tag-bg:      light-dark(#f3f4f6, #252525);
@@ -738,7 +744,7 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/colors/palette-edo.css — lines 1–183 ════ */
+/* ════ bristlenose/theme/colors/palette-edo.css — lines 1–189 ════ */
 /* palette-edo — Edo-period Japanese art colour theme.
    Sampled from three artworks seen at the British Museum Samurai exhibition,
    1 Mar 2026. See docs/mockups/edo-colour-palette.html for source analysis.
@@ -776,6 +782,9 @@ enum WelcomeTimelineCSS {
 
     /* Semantic surfaces */
     --bn-colour-quote-bg: #f0e9d8;              /* Warm off-white */
+    --bn-colour-paper: #f7f2e6;                 /* Transcript ground: washi under Paper White */
+    --bn-colour-sheet: #fdfbf7;                 /* A quote lifted: Paper White, 1.08:1 off the washi */
+    --bn-colour-badge-bg-paper: #e8dfc9;        /* Edo's badge already reads on washi (1.19:1) */
     --bn-colour-badge-bg: #e8dfc9;              /* Parchment badge */
     --bn-colour-badge-text: #2d3654;            /* Court Indigo */
     --bn-colour-user-tag-bg: #e8dfc9;
@@ -860,6 +869,9 @@ enum WelcomeTimelineCSS {
 
         /* Semantic surfaces */
         --bn-colour-quote-bg:         light-dark(#f0e9d8, #211e18);
+        --bn-colour-paper:            light-dark(#f7f2e6, #1a1816);   /* Washi / Sumi */
+        --bn-colour-sheet:            light-dark(#fdfbf7, #26221b);   /* 1.08:1 / 1.12:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#e8dfc9, #2d2820);
         --bn-colour-badge-bg:         light-dark(#e8dfc9, #2d2820);
         --bn-colour-badge-text:       light-dark(#2d3654, #c4b898);
         --bn-colour-user-tag-bg:      light-dark(#e8dfc9, #2d2820);

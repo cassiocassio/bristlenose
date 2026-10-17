@@ -26,8 +26,12 @@ import {
   restoreReadingAnchor,
   type ReadingAnchor,
 } from "../utils/readingAnchor";
-import { Annotation } from "../components/Annotation";
-import type { AnnotationTag } from "../components/Annotation";
+import { Badge } from "../components/Badge";
+import { GutterEntry } from "./transcript/GutterEntry";
+import { useGutterHover } from "./transcript/useGutterHover";
+import "./transcript/transcript-gutter.css";
+import { quoteExtents } from "../utils/quoteExtents";
+import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
 import { Selector } from "../components/Selector";
 import { isEmbedded } from "../utils/embedded";
 import { isExportMode } from "../utils/exportData";
@@ -627,6 +631,19 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
     [data],
   );
 
+  // Which drawn words belong to which quote (docs/design-transcript-gutter.md, "The data"),
+  // and the sheet the hover keyline is drawn over.
+  const extents = useMemo(
+    () => (data
+      ? quoteExtents(data.segments, Object.fromEntries(Object.entries(data.annotations).map(([id, a]) => [
+          id, { excerpt: a.verbatim_excerpt, start: a.start_timecode, end: a.end_timecode, participant: a.participant_id },
+        ])))
+      : null),
+    [data],
+  );
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  useGutterHover(sheetRef, data);
+
   // Loading state
   if (loading) {
     return (
@@ -655,8 +672,17 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   // Segment badges below are code-only — see the header block in the return.
   const participants = speakers.filter((sp) => sp.role === "participant");
 
-  // Track which quote IDs have been rendered (first segment per quote only)
-  const seenQuoteIds = new Set<string>();
+  // A quote's details show once, at the first paragraph that draws its words (or, if none
+  // does, the first the server matched it to by time).
+  const firstParagraphOf = new Map<string, number>();
+  segments.forEach((_seg, position) => {
+    for (const q of extents?.owners[position] ?? []) if (q && !firstParagraphOf.has(q)) firstParagraphOf.set(q, position);
+  });
+  segments.forEach((seg, position) => {
+    for (const q of seg.quote_ids) if (!firstParagraphOf.has(q)) firstParagraphOf.set(q, position);
+  });
+  const isHidden = (q: string) => !!annotations[q]?.is_hidden;
+  const backTo = (seg: TranscriptSegmentResponse) => `/report/sessions/${sessionId}#t-${Math.floor(seg.start_time)}`;
   // First-occurrence-per-run suppression: show a label / sentiment / tag once,
   // stay quiet until it changes, then show again when it returns.
   let lastShownLabel = "";
@@ -723,7 +749,8 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       {/* Session roles — moderator/observer line (scrolls away naturally) */}
       {renderSessionRoles(speakers, t, sessionId)}
 
-      {/* Transcript body */}
+      {/* Transcript body, on its sheet: useGutterHover draws the hover keyline over it */}
+      <div className="bn-transcript-sheet" ref={sheetRef}>
       <section
         className="transcript-body"
         ref={bodyRef}
@@ -770,10 +797,14 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
             showSentiment: boolean;
             shownTags: QuoteAnnotationResponse["tags"];
           }[] = [];
-          if (seg.is_quoted) {
-            for (const qid of seg.quote_ids) {
-              if (!seenQuoteIds.has(qid)) {
-                seenQuoteIds.add(qid);
+          // The quotes this paragraph draws words of, in the order their words come; a quote
+          // the server matched here by time but whose words are drawn elsewhere has no mark here.
+          const quotesHere: string[] = [];
+          for (const q of extents?.owners[position] ?? []) if (q && !quotesHere.includes(q)) quotesHere.push(q);
+          for (const q of seg.quote_ids) if (!quotesHere.includes(q) && firstParagraphOf.get(q) === position) quotesHere.push(q);
+          if (quotesHere.length > 0) {
+            for (const qid of quotesHere) {
+              if (firstParagraphOf.get(qid) === position) {
                 const ann = annotations[qid];
                 if (ann) {
                   const labelKey = `${ann.label_type}:${ann.label}`;
@@ -825,6 +856,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
               data-participant={seg.speaker_code}
               data-start-seconds={seg.start_time}
               data-end-seconds={seg.end_time}
+              data-has-quote={extents?.owners[position]?.some(Boolean) ? "" : undefined}
               {...(seg.is_quoted && seg.quote_ids.length > 0
                 ? { "data-quote-ids": seg.quote_ids.join(" ") }
                 : {})}
@@ -889,61 +921,132 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                   // When words exist we skip html_text (<mark> quote highlighting)
                   // because reconciling word boundaries with quote marks is a
                   // future enhancement. Margin annotations still show quote context.
-                  seg.words.map((w, i) => (
-                    <span
-                      key={i}
-                      className="transcript-word"
-                      data-start={w.start}
-                      data-end={w.end}
-                    >
-                      {w.text}{i < seg.words!.length - 1 ? " " : ""}
-                    </span>
-                  ))
-                ) : seg.html_text ? (
-                  <span dangerouslySetInnerHTML={{ __html: seg.html_text }} />
+                  seg.words.map((w, i) => {
+                    // Which quote the word belongs to rides on data attributes, never the
+                    // className: PlayerContext adds bn-word-active to it imperatively.
+                    const q = extents?.owners[position]?.[i] ?? null;
+                    return (
+                      <span
+                        key={i}
+                        className="transcript-word"
+                        data-start={w.start}
+                        data-end={w.end}
+                        data-q={q ?? undefined}
+                        data-q-hidden={q && isHidden(q) ? "" : undefined}
+                      >
+                        {w.text}{i < seg.words!.length - 1 ? " " : ""}
+                      </span>
+                    );
+                  })
+                ) : extents?.owners[position]?.some(Boolean) ? (
+                  // Without word timings, a quoted paragraph's words are spans too, cut as
+                  // drawnTokens cuts them; the spaces stay text, so its text is unchanged.
+                  (() => {
+                    let k = -1;
+                    return seg.text.split(/(\s+)/).map((part, j) => {
+                      if (part === "" || /^\s+$/.test(part)) return part;
+                      k += 1;
+                      const q = extents.owners[position][k] ?? null;
+                      return q ? (
+                        <span key={j} data-q={q} data-q-hidden={isHidden(q) ? "" : undefined}>{part}</span>
+                      ) : (
+                        part
+                      );
+                    });
+                  })()
                 ) : (
                   <>{seg.text}</>
                 )}
               </div>
 
-              {/* Margin annotations */}
-              {segAnnotations.length > 0 && (
-                <div className="segment-margin" contentEditable={false}>
-                  {segAnnotations.map(({ quoteId, ann, showLabel, showSentiment, shownTags }) => {
-                    const sentimentBadge = showSentiment
-                      ? {
-                          text: ann.sentiment,
-                          sentiment: ann.sentiment,
-                          onDelete: () =>
-                            handleDeleteBadge(quoteId, ann.sentiment),
-                        }
-                      : undefined;
-
-                    const tags: AnnotationTag[] = shownTags.map((t) => ({
-                      name: t.name,
-                      colour: t.colour_set
-                        ? getTagBg(t.colour_set, t.colour_index)
-                        : undefined,
-                    }));
-
+              {/* The gutter and the margin (docs/design-transcript-gutter.md): one entry per
+                  quote this paragraph draws, its mark a link into the Quotes lens. Drawn twice —
+                  beside the text, and under it for a narrow window — and only one is displayed. */}
+              {quotesHere.length > 0 && (() => {
+                const entries = quotesHere.map((qid) => {
+                  const ann = annotations[qid];
+                  const shown = segAnnotations.find((a) => a.quoteId === qid);
+                  const anchor = ann?.anchor ?? "";
+                  // An export cannot un-hide: a hidden quote's link leads to its group only.
+                  const reveal = isExportMode() && isHidden(qid) ? undefined : qid;
+                  const href = anchor ? quotesHref(anchor, reveal) : undefined;
+                  const follow = (e: React.MouseEvent) => followInApp(e, quotesPath(anchor, reveal), backTo(seg));
+                  const content = (withIds: boolean) => {
+                    if (!shown) return null;
+                    const tags = shown.shownTags;
                     return (
-                      <Annotation
-                        key={quoteId}
-                        quoteId={quoteId}
-                        label={showLabel ? (ann.label || undefined) : undefined}
-                        sentiment={sentimentBadge}
-                        tags={tags.length > 0 ? tags : undefined}
-                        onTagDelete={(name) => handleDeleteTag(quoteId, name)}
-                        data-testid={`annotation-${quoteId}`}
-                      />
+                      <>
+                        {shown.showLabel && ann.label ? (
+                          href ? (
+                            <a className="bn-gutter-title" href={href} onClick={follow}>{ann.label}</a>
+                          ) : (
+                            <span className="bn-gutter-title">{ann.label}</span>
+                          )
+                        ) : null}
+                        {shown.showSentiment || tags.length > 0 ? (
+                          <div className="margin-tags">
+                            {shown.showSentiment && (
+                              <Badge
+                                variant="ai"
+                                text={ann.sentiment}
+                                sentiment={ann.sentiment}
+                                onDelete={() => handleDeleteBadge(qid, ann.sentiment)}
+                                data-testid={withIds ? `annotation-${qid}-sentiment` : undefined}
+                              />
+                            )}
+                            {tags.map((tag) => (
+                              <Badge
+                                key={tag.name}
+                                variant="user"
+                                text={tag.name}
+                                colour={tag.colour_set ? getTagBg(tag.colour_set, tag.colour_index) : undefined}
+                                onDelete={() => handleDeleteTag(qid, tag.name)}
+                                data-testid={withIds ? `annotation-${qid}-tag-${tag.name}` : undefined}
+                              />
+                            ))}
+                          </div>
+                        ) : null}
+                      </>
                     );
-                  })}
-                </div>
-              )}
+                  };
+                  return {
+                    qid, href, follow, content, hidden: isHidden(qid),
+                    name: ann?.label ? `${t("nav.quotes")}: ${ann.label}` : t("nav.quotes"),
+                  };
+                });
+                return (
+                  <>
+                    <div className="segment-side" contentEditable={false}>
+                      {entries.map((e) => (
+                        <GutterEntry
+                          key={e.qid}
+                          icon="quotes"
+                          name={e.name}
+                          href={e.href}
+                          onFollow={e.follow}
+                          hidden={e.hidden}
+                          target={`q:${e.qid}`}
+                          data-testid={`annotation-${e.qid}`}
+                        >
+                          {e.content(true)}
+                        </GutterEntry>
+                      ))}
+                    </div>
+                    <div className="segment-under" contentEditable={false}>
+                      {entries.map((e) => (
+                        <div key={e.qid} className="bn-gutter-entry" data-hidden={e.hidden ? "" : undefined}>
+                          {e.content(false)}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           );
         })}
       </section>
+      </div>
     </>
   );
 }

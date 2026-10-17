@@ -162,10 +162,11 @@ def _sticky_svg(s: Sticky) -> str:
     for line in body_lines:
         parts.append(_text(tx, ty, line, size=BODY_FONT, weight="400", ink=BODY_INK))
         ty += BODY_LH
-    link = " 🔗" if s.link_url else ""
-    meta = f"{attribution(s.participant_id, s.timecode)}{link}"
-    parts.append(_text(tx, s.y + s.height - PAD_IN + 2, meta,
-                       size=BODY_FONT, weight="400", ink=BODY_INK, italic=True))
+    if s.attributed:  # only the last part of a split quote says whose it is
+        link = " 🔗" if s.link_url else ""
+        meta = f"{attribution(s.participant_id, s.timecode)}{link}"
+        parts.append(_text(tx, s.y + s.height - PAD_IN + 2, meta,
+                           size=BODY_FONT, weight="400", ink=BODY_INK, italic=True))
     parts.append("</g>")
     return "\n".join(parts)
 

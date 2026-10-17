@@ -22,8 +22,9 @@ Ported and generalised from experiments/board-layout-poc/.
 
 from __future__ import annotations
 
+import math
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 from bristlenose.utils.text import count_noun
@@ -130,6 +131,11 @@ class Sticky:
     participant_id: str = ""
     timecode: float = 0.0
     link_url: str | None = None
+    #: Only the last part of a split quote carries the attribution line and the clip link.
+    attributed: bool = True
+    #: The parts of one split quote share a set number, so the board groups them; None for a
+    #: quote on one sticky.
+    set_id: int | None = None
 
 
 @dataclass
@@ -170,6 +176,55 @@ def fmt_timecode(seconds: float) -> str:
     return format_timecode(seconds)
 
 
+#: A quote longer than this becomes two stickies, and longer than twice it, three: about four in
+#: five real quotes stay whole (owner, 17 Oct 2026, from the trial runs' 720 quotes: 81% single,
+#: 16% pairs, 2% trios). Never more than three; a longer last part shrinks its type instead.
+SPLIT_AT = 650
+MAX_PARTS = 3
+#: Where a part may end, best first: a sentence, then a clause, then a phrase, then any word.
+_BREAKS = (
+    re.compile(r"[.?!…][\"”’)]*\s+"),
+    re.compile(r"[;:]\s+|\s+[—–]\s+"),
+    re.compile(r",\s+"),
+    re.compile(r"\s+"),
+)
+
+
+def split_quote(text: str, at: int = SPLIT_AT, max_parts: int = MAX_PARTS) -> list[str]:
+    """A quote as one, two or three parts that each read on their own, as researchers split a
+    long quote by hand: at the most natural break near each even split, a part that goes on ending
+    in "…" and the next beginning with one. The words are never changed, only where they break."""
+    text = text.strip()
+    n = max(1, min(max_parts, -(-len(text) // at)))
+    if n == 1:
+        return [text]
+    cuts: list[int] = []
+    start = 0
+    for k in range(1, n):
+        target = round(len(text) * k / n)
+        window = max(40, (len(text) // n) // 4)
+        lo, hi = max(start + 1, target - window), min(len(text) - 1, target + window)
+        best: int | None = None
+        for pattern in _BREAKS:
+            ends = [m.end() for m in pattern.finditer(text, lo, hi)]
+            if ends:
+                best = min(ends, key=lambda e: abs(e - target))
+                break
+        cuts.append(best if best is not None else target)
+        start = cuts[-1]
+    parts = [text[a:b].strip() for a, b in zip([0, *cuts], [*cuts, len(text)], strict=True)]
+    out: list[str] = []
+    for i, part in enumerate(parts):
+        if i < len(parts) - 1:
+            # "successful." goes on as "successful…": the full stop gives way to the ellipsis, as
+            # in a hand-split quote; a question or an exclamation keeps its mark.
+            part = part.rstrip(",;:—– ").removesuffix(".") + ("" if part.endswith("…") else "…")
+        if i > 0:
+            part = "…" + part
+        out.append(part)
+    return out
+
+
 #: Miro refuses a sticky whose content, markup included, is longer than this, and with it the
 #: whole batch the sticky was in.
 MIRO_STICKY_MAX = 6000
@@ -201,6 +256,63 @@ def quoted(text: str) -> str:
     return f"“{text.strip()}”"
 
 
+#: Sticky width from its text: Miro fits the type to the box and a rectangle keeps its
+#: proportions, so for every sticky to show the same size of type its area must follow its text —
+#: its width the square root of its length. The factor is the owner's own hand: resizing split
+#: quotes in Miro until the type matched, 207 characters came to 255 wide, 293 to 281, 329 to 330,
+#: 227 to 255 (17 Oct 2026). Lines then run about 8–10 words, which is a comfortable measure.
+SIZE_K = 17.0
+#: Between the parts of one quote, and how far each part steps right of the one before: the set
+#: reads as one quote, the left edges stepping, the right edges where their own widths put them.
+SET_GAP = 12.0
+SET_STAGGER = 24.0
+
+
+def sticky_width(chars: int) -> float:
+    """The width that shows ``chars`` characters at the board's one size of type."""
+    return SIZE_K * math.sqrt(max(chars, 1))
+
+
+@dataclass
+class QuotePart:
+    """One sticky of a quote: its words (with the quote marks it carries), whether the attribution
+    goes on it, and its size."""
+
+    text: str
+    attributed: bool
+    width: float
+    height: float
+
+
+def quote_part_texts(text: str, split: bool = True) -> list[str]:
+    """A quote's words as each sticky shows them, board-neutral: one string, or with ``split`` a
+    long quote's two or three parts (`split_quote`), the opening mark on the first and the closing
+    mark on the last. The attribution goes on the last part; the board adds it. FigJam and Miro both
+    build on this, so a quote breaks in the same places on either board."""
+    parts = split_quote(text, SPLIT_AT, MAX_PARTS) if split else [text.strip()]
+    return [("“" if k == 0 else "") + part + ("”" if k == len(parts) - 1 else "")
+            for k, part in enumerate(parts)]
+
+
+def quote_parts(text: str, attribution_line: str, split: bool = True) -> list[QuotePart]:
+    """A quote as the stickies a Miro board shows it on (`quote_part_texts`), each sized so the
+    type comes out the same."""
+    shown = quote_part_texts(text, split)
+    out: list[QuotePart] = []
+    for k, part in enumerate(shown):
+        last = k == len(shown) - 1
+        w = sticky_width(len(part) + (len(attribution_line) if last else 0))
+        out.append(QuotePart(part, last, w, w * RECT_ASPECT))
+    return out
+
+
+def set_extent(parts: Sequence[QuotePart]) -> tuple[float, float]:
+    """(width, height) of a quote's stickies laid out as a set."""
+    w = max((p.width + k * SET_STAGGER for k, p in enumerate(parts)), default=0.0)
+    h = sum(p.height for p in parts) + max(len(parts) - 1, 0) * SET_GAP
+    return w, h
+
+
 def quote_colour(q: QuoteCard, colour_by: str) -> str:
     if colour_by != "sentiment":  # "none" (or anything else) -> single colour
         return DEFAULT_QUOTE_TOKEN
@@ -211,36 +323,47 @@ def quote_colour(q: QuoteCard, colour_by: str) -> str:
 
 def _build_frame(
     columns: list[Column], kind: str, title: str, left_x: float, colour_by: str,
-    strings: BoardStrings,
+    strings: BoardStrings, split: bool = True, set_ids: list[int] | None = None,
 ) -> tuple[Frame, list[Sticky]]:
-    n = len(columns)
-    max_q = max((len(c.quotes) for c in columns), default=0)
-    quotes_h = max_q * (QUOTE_H + GAP_Y) - GAP_Y if max_q else 0
-    inner_h = HEADER_H + (GAP_Y + quotes_h if max_q else 0)
-    frame_w = FRAME_PAD * 2 + n * STICKY_W + max(0, n - 1) * GAP_X
-    frame_h = FRAME_PAD * 2 + inner_h
-    frame = Frame(title=title, x=left_x, y=FRAMES_Y, width=frame_w, height=frame_h, kind=kind)
-
+    """A frame of columns, each a header and its quotes stacked to their real heights. A column is
+    as wide as its widest quote set: stickies are sized by their text, not to a grid."""
+    set_ids = set_ids if set_ids is not None else [0]
     stickies: list[Sticky] = []
-    for i, col in enumerate(columns):
-        cx = left_x + FRAME_PAD + i * (STICKY_W + GAP_X)
+    cx = left_x + FRAME_PAD
+    bottom = FRAMES_Y + FRAME_PAD + HEADER_H
+    for col in columns:
+        sets = [(q, quote_parts(q.text, attribution(q.participant_id, q.start_timecode), split))
+                for q in sorted(col.quotes, key=quote_sort_key)]
+        col_w = max([STICKY_W] + [set_extent(parts)[0] for _, parts in sets])
         stickies.append(Sticky(
             kind="header", x=cx, y=FRAMES_Y + FRAME_PAD, width=STICKY_W, height=HEADER_H,
             colour=HEADER_TOKEN, text=f"{col.label}\n{strings.quote_count(len(col.quotes))}",
         ))
         sy = FRAMES_Y + FRAME_PAD + HEADER_H + GAP_Y
-        for q in sorted(col.quotes, key=quote_sort_key):
-            stickies.append(Sticky(
-                x=cx, y=sy, width=STICKY_W, height=QUOTE_H,
-                colour=quote_colour(q, colour_by), text=quoted(q.text),
-                participant_id=q.participant_id, timecode=q.start_timecode, link_url=q.link_url,
-            ))
-            sy += QUOTE_H + GAP_Y
+        for q, parts in sets:
+            set_id = None
+            if len(parts) > 1:
+                set_ids[0] += 1
+                set_id = set_ids[0]
+            for k, part in enumerate(parts):
+                stickies.append(Sticky(
+                    x=cx + k * SET_STAGGER, y=sy, width=part.width, height=part.height,
+                    colour=quote_colour(q, colour_by), text=part.text,
+                    participant_id=q.participant_id, timecode=q.start_timecode, link_url=q.link_url,
+                    attributed=part.attributed, set_id=set_id,
+                ))
+                sy += part.height + (SET_GAP if k < len(parts) - 1 else 0)
+            sy += GAP_Y
+        bottom = max(bottom, sy - GAP_Y)
+        cx += col_w + GAP_X
+    frame_w = (cx - GAP_X if columns else cx) - left_x + FRAME_PAD
+    frame = Frame(title=title, x=left_x, y=FRAMES_Y, width=frame_w,
+                  height=bottom - FRAMES_Y + FRAME_PAD, kind=kind)
     return frame, stickies
 
 
 def layout_board(columns: list[Column], title: str, colour_by: str = "sentiment",
-                 strings: BoardStrings | None = None) -> Board:
+                 strings: BoardStrings | None = None, split: bool = True) -> Board:
     """Two named frames: sections (left) then themes (right). Pure geometry."""
     strings = strings or BoardStrings()
     sections = [c for c in columns if c.kind == "section"]
@@ -250,13 +373,16 @@ def layout_board(columns: list[Column], title: str, colour_by: str = "sentiment"
     board.texts.append(TextItem(title, MARGIN, TITLE_Y, 22.0, "700"))
 
     x = MARGIN
+    set_ids = [0]  # one count across both frames, so every set's number is its own
     if sections:
-        frame, stk = _build_frame(sections, "section", strings.sections, x, colour_by, strings)
+        frame, stk = _build_frame(sections, "section", strings.sections, x, colour_by, strings,
+                                  split, set_ids)
         board.frames.append(frame)
         board.stickies.extend(stk)
         x = frame.x + frame.width + FRAME_GAP
     if themes:
-        frame, stk = _build_frame(themes, "theme", strings.themes, x, colour_by, strings)
+        frame, stk = _build_frame(themes, "theme", strings.themes, x, colour_by, strings,
+                                  split, set_ids)
         board.frames.append(frame)
         board.stickies.extend(stk)
 

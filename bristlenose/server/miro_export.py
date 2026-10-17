@@ -163,10 +163,11 @@ def board_title(locale: str, project_name: str, columns: list[Column]) -> str:
 
 def build_board(db: Session, project_id: int, project_name: str,
                 quote_ids: list[str] | None, *, colour_by: str = "sentiment",
-                clips_base: str = "", locale: str = "en") -> Board:
+                clips_base: str = "", locale: str = "en", split: bool = True) -> Board:
     columns = build_columns(db, project_id, quote_ids, clips_base=clips_base, locale=locale)
     title = board_title(locale, project_name, columns)
-    return layout_board(columns, title, colour_by=colour_by, strings=board_strings(locale))
+    return layout_board(columns, title, colour_by=colour_by, strings=board_strings(locale),
+                        split=split)
 
 
 def build_figjam_manifest(db: Session, project_id: int, project_name: str,
@@ -194,10 +195,10 @@ def build_figjam_manifest(db: Session, project_id: int, project_name: str,
 
 def build_preview_html(db: Session, project_id: int, project_name: str,
                        quote_ids: list[str] | None, *, colour_by: str = "sentiment",
-                       clips_base: str = "", locale: str = "en") -> str:
+                       clips_base: str = "", locale: str = "en", split: bool = True) -> str:
     """Creds-free: render exactly what would be pushed, as standalone HTML."""
     board = build_board(db, project_id, project_name, quote_ids,
-                        colour_by=colour_by, clips_base=clips_base, locale=locale)
+                        colour_by=colour_by, clips_base=clips_base, locale=locale, split=split)
     return render_html(board, locale=locale)
 
 
@@ -211,6 +212,8 @@ def _sticky_content(s: Sticky, locale: str = "en") -> str:
         label, *rest = s.text.split("\n")
         sub = f"<br>{escape(rest[0])}" if rest else ""
         return f"<strong>{escape(label)}</strong>{sub}"
+    if not s.attributed:  # a part of a split quote before its last: the words alone
+        return fit_miro_sticky(s.text, "")
     line = attribution(s.participant_id, s.timecode)
     if s.link_url:
         clip = escape(t_in(locale, "common.miro.clipLink"))
@@ -228,13 +231,33 @@ def _sticky_item(s: Sticky, locale: str = "en") -> dict[str, Any]:
     }
 
 
+def group_sets(token: str, board_id: str, set_ids: list[int | None],
+               made: list[dict[str, Any]]) -> int:
+    """Group the parts of each split quote, so a set moves and sorts as one quote.
+
+    ``set_ids`` is each item's set (None for a quote on one sticky), in the order the items were
+    sent; ``made`` is what Miro created, in that order. A count that does not match is not guessed
+    at: the board keeps its stickies, ungrouped, and the log says so. Returns the sets grouped."""
+    if len(made) != len(set_ids):
+        logger.warning("Miro made %d of %d items; split quotes left ungrouped", len(made), len(set_ids))
+        return 0
+    sets: dict[int, list[str]] = {}
+    for sid, item in zip(set_ids, made, strict=True):
+        if sid is not None and item.get("id"):
+            sets.setdefault(sid, []).append(str(item["id"]))
+    for ids in sets.values():
+        miro_client.create_group(token, board_id, ids)
+    return len(sets)
+
+
 def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
                  quote_ids: list[str] | None, *, colour_by: str = "sentiment",
-                 clips_base: str = "", locale: str = "en") -> dict[str, Any]:
+                 clips_base: str = "", locale: str = "en", split: bool = True) -> dict[str, Any]:
     """Create a new Miro board from the layout IR. Returns {board_id, board_url, stickies}."""
     board = build_board(db, project_id, project_name, quote_ids,
-                        colour_by=colour_by, clips_base=clips_base, locale=locale)
-    n_quotes = sum(1 for s in board.stickies if s.kind == "quote")
+                        colour_by=colour_by, clips_base=clips_base, locale=locale, split=split)
+    # A quote has one attributed sticky however many parts it was split into.
+    n_quotes = sum(1 for s in board.stickies if s.kind == "quote" and s.attributed)
     if n_quotes == 0:
         raise miro_client.MiroError(
             "No quotes match the current selection — nothing to export.",
@@ -259,8 +282,10 @@ def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
         # bulk endpoint can partially succeed, and we don't yet reconcile the
         # created-count against its response (deferred until a real multi-batch
         # push shows whether that count is clean enough to trust).
+        made: list[dict[str, Any]] = []
         for i in range(0, len(items), 20):
-            miro_client.bulk_create_items(token, board_id, items[i:i + 20])
+            made += miro_client.bulk_create_items(token, board_id, items[i:i + 20])
+        group_sets(token, board_id, [s.set_id for s in board.stickies], made)
         for t in board.texts:  # board title as a real text item
             miro_client.create_text(token, board_id, escape(t.text),
                                     t.x + 300, t.y, 600, int(t.size))

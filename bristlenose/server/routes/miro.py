@@ -60,6 +60,9 @@ class MiroExportRequest(BaseModel):
     # language. Unknown or absent falls back to English inside `t_in`, which is
     # what every caller sent until 22 Sep 2026.
     locale: str = "en"
+    #: Break a long quote into up to three stickies at sentence ends, grouped (on by default; the
+    #: panel's checkbox says so, so the researcher arriving at the board knows why).
+    split_long_quotes: bool = True
 
 
 class MiroExportResponse(BaseModel):
@@ -266,6 +269,7 @@ def miro_preview(project_id: int, body: MiroExportRequest, request: Request) -> 
         html = miro_export.build_preview_html(
             db, project_id, name, body.quote_ids,
             colour_by=body.colour_by, clips_base=body.clips_base, locale=body.locale,
+            split=body.split_long_quotes,
         )
         return MiroPreviewResponse(html=html)
     finally:
@@ -296,6 +300,7 @@ def miro_export_board(project_id: int, body: MiroExportRequest,
             result = miro_export.push_to_miro(
                 token, db, project_id, name, body.quote_ids,
                 colour_by=body.colour_by, clips_base=body.clips_base, locale=body.locale,
+                split=body.split_long_quotes,
             )
         except miro_client.MiroError as exc:
             # `detail` stays English and forensic — it is what a bug report

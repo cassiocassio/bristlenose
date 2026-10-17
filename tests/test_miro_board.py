@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import itertools
 
+import pytest
+
 from bristlenose.board_layout import (
     DEFAULT_QUOTE_TOKEN,
     HEADER_TOKEN,
@@ -108,3 +110,55 @@ def test_stickies_are_rectangles_and_the_layout_reserves_what_miro_draws() -> No
     s = bl.Sticky(kind="quote", x=0, y=0, width=bl.STICKY_W, height=bl.QUOTE_H, colour="light_yellow",
                   text="hello", participant_id="p1", timecode=1.0)
     assert _sticky_item(s)["data"]["shape"] == "rectangle"
+
+
+# ── Long quotes as two or three stickies (owner, 17 Oct 2026) ─────────────────────────────────
+
+
+def test_a_quote_under_the_split_stays_whole_and_a_long_one_breaks_at_sentence_ends() -> None:
+    from bristlenose.board_layout import SPLIT_AT, quote_part_texts, split_quote
+
+    short = "It was fine. I found the jars."
+    assert split_quote(short) == [short]
+    long_ = " ".join(f"Sentence number {i} goes on for a while about the jars." for i in range(30))
+    parts = split_quote(long_)
+    assert 2 <= len(parts) <= 3 and all(len(p) <= SPLIT_AT + 120 for p in parts)
+    assert parts[0].endswith("…") and parts[1].startswith("…")
+    # Only the breaks change: take the dots off and the words are the quote's, in order.
+    joined = " ".join(p.strip("…") for p in parts)
+    assert joined.replace(". ", " ").replace(".", "") == long_.replace(". ", " ").replace(".", "")
+    shown = quote_part_texts(long_)
+    assert shown[0].startswith("“") and shown[-1].endswith("”") and not shown[1].startswith("“")
+
+
+def test_never_more_than_three_parts_and_never_a_split_when_asked_not_to() -> None:
+    from bristlenose.board_layout import quote_part_texts, split_quote
+
+    huge = "A sentence. " * 400
+    assert len(split_quote(huge)) == 3
+    assert quote_part_texts(huge, split=False) == [f"“{huge.strip()}”"]
+
+
+def test_every_sticky_shows_the_same_size_of_type() -> None:
+    """Miro fits type to the box and a rectangle keeps its shape, so the area follows the text:
+    the width goes with the square root of the length (the owner's hand: 207 chars → 255 wide)."""
+    from bristlenose.board_layout import SIZE_K, quote_parts, sticky_width
+
+    assert round(sticky_width(207)) == round(SIZE_K * 207 ** 0.5) and 240 < sticky_width(207) < 260
+    [p] = quote_parts("x" * 100, "— P1 · 0:10")
+    [q] = quote_parts("x" * 400, "— P1 · 0:10")
+    assert q.width / p.width == pytest.approx(((400 + 13) / (100 + 13)) ** 0.5, rel=0.01)
+
+
+def test_the_quotes_board_stacks_a_set_stepping_right_with_only_the_last_attributed() -> None:
+    from bristlenose.board_layout import SET_GAP, SET_STAGGER, Column, QuoteCard, layout_board
+
+    long_ = " ".join(f"Sentence {i} is about the jars and the shelf and the bag." for i in range(20))
+    board = layout_board([Column("Basket", "section", [QuoteCard(long_, "p1", "s1", 12.0)])], "B")
+    parts = [s for s in board.stickies if s.kind == "quote"]
+    assert len(parts) == 2 and parts[0].set_id == parts[1].set_id is not None
+    assert [s.attributed for s in parts] == [False, True]
+    assert parts[1].x == parts[0].x + SET_STAGGER
+    assert parts[1].y == pytest.approx(parts[0].y + parts[0].height + SET_GAP)
+    unsplit = layout_board([Column("Basket", "section", [QuoteCard(long_, "p1", "s1", 12.0)])], "B", split=False)
+    assert [s.set_id for s in unsplit.stickies if s.kind == "quote"] == [None]

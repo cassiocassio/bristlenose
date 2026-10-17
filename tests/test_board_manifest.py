@@ -59,9 +59,10 @@ def _export_quote(text: str, *, section: str = "Checkout", theme: str = "",
 
 # ── the version-1 contract ───────────────────────────────────────────────────
 
-_TOP_KEYS = {"format": str, "version": int, "generator": str, "locale": str, "title": str,
-             "sticky_shape": str, "strings": dict, "palette": dict, "frames": list}
-_COLUMN_KEYS = {"label", "count", "colour", "quotes"}
+_TOP_KEYS = {"format": str, "version": int, "min_reader_version": int, "generator": str,
+             "locale": str, "title": str, "sticky_shape": str, "strings": dict,
+             "palette": dict, "totals": dict, "frames": list}
+_COLUMN_KEYS = {"label", "count", "quote_count", "colour", "quotes"}
 _QUOTE_KEYS = {"text", "attribution", "colour", "clip_url"}
 
 
@@ -223,3 +224,20 @@ def test_a_token_with_no_colour_is_an_error_not_a_yellow_sticky():
     with pytest.raises(KeyError):
         build_manifest(cols, "t", strings=BoardStrings(), clip_label="clip",
                        palette={"light_pink": "#FFA8DB"}, locale="en", generator="g")
+
+
+def test_counts_are_integers_a_reader_can_check_its_work_against():
+    cols = [
+        Column("Checkout", "section", [_card("a"), _card("b", start=20.0)]),
+        Column("Trust", "theme", [_card("c")]),
+    ]
+    m = _manifest(cols, requested=5)
+    assert m["totals"] == {"frames": 2, "columns": 2, "quotes": 3}
+    assert [c["quote_count"] for f in m["frames"] for c in f["columns"]] == [2, 1]
+    assert m["requested"] == 5
+    assert _manifest(cols)["requested"] is None  # None means "all"
+
+
+def test_the_envelope_says_which_readers_can_draw_it():
+    m = _manifest([Column("C", "section", [_card("a")])])
+    assert m["min_reader_version"] <= m["version"]

@@ -144,3 +144,9 @@ def test_the_download_is_never_sniffed_or_cached(client: TestClient) -> None:
     resp = client.get(_URL)
     assert resp.headers["x-content-type-options"] == "nosniff"
     assert resp.headers["cache-control"] == "no-store"
+
+
+def test_requested_counts_distinct_ids_so_a_stale_selection_shows(client: TestClient) -> None:
+    doc = client.get(_URL, params={"quote_ids": "q-p1-10,q-p1-10,q-p9-999"}).json()
+    assert (doc["requested"], doc["totals"]["quotes"]) == (2, 1)
+    assert client.get(_URL).json()["requested"] is None

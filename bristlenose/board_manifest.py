@@ -43,9 +43,17 @@ from bristlenose.board_layout import (
 )
 
 FORMAT = "bristlenose-board"
-# Bump on any change a version-1 reader would misread. Adding an optional key a
-# reader can ignore is not one; renaming or retyping a key is.
+# The envelope — `format`, `version`, `min_reader_version` — never moves or
+# changes meaning, so a plugin of any age can always read it and say plainly
+# that a file needs a newer plugin rather than draw a board wrong.
+#
+# `version` is the shape this Bristlenose writes; bump it for any change.
+# `min_reader_version` is the oldest reader that draws the file correctly. An
+# optional key an older plugin can safely ignore bumps `version` only; a key
+# that changes what an older plugin would draw (a new card kind, a colour rule
+# it must apply) bumps both.
 VERSION = 1
+MIN_READER_VERSION = 1
 
 
 def build_manifest(
@@ -58,12 +66,18 @@ def build_manifest(
     locale: str,
     generator: str,
     colour_by: str = "none",
+    requested: int | None = None,
 ) -> dict[str, Any]:
     """The document as a dict. `palette` maps every colour token used to hex.
 
     `colour_by` defaults to flat (pink headers, yellow quotes), the cross-board
     baseline. Only the tokens the board uses go into `palette`, so a reader never
     sees a colour it has no card for.
+
+    The counts are integers beside the localised words, so a reader can check
+    its work: the plugin compares what it drew against `totals`, and a client
+    compares `totals.quotes` against `requested` (the distinct ids asked for;
+    None means "all") to say "3 of 10" when a selection has gone stale.
     """
     used: set[str] = {HEADER_TOKEN}
     frames: list[dict[str, Any]] = []
@@ -86,14 +100,18 @@ def build_manifest(
             out_cols.append({
                 "label": col.label,
                 "count": strings.quote_count(len(col.quotes)),
+                "quote_count": len(quotes),
                 "colour": HEADER_TOKEN,
                 "quotes": quotes,
             })
         frames.append({"kind": kind, "title": frame_title, "columns": out_cols})
 
+    n_columns = sum(len(f["columns"]) for f in frames)
+    n_quotes = sum(c["quote_count"] for f in frames for c in f["columns"])
     return {
         "format": FORMAT,
         "version": VERSION,
+        "min_reader_version": MIN_READER_VERSION,
         "generator": generator,
         "locale": locale,
         "title": title,
@@ -103,6 +121,8 @@ def build_manifest(
         "strings": {"clip": f"▶ {clip_label}"},
         # A token with no colour is a bug here, not a yellow sticky there.
         "palette": {t: palette[t] for t in sorted(used)},
+        "totals": {"frames": len(frames), "columns": n_columns, "quotes": n_quotes},
+        "requested": requested,
         "frames": frames,
     }
 

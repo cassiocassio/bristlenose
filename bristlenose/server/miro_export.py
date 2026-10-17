@@ -188,6 +188,7 @@ def build_figjam_manifest(db: Session, project_id: int, project_name: str,
         palette=FIGJAM_TOKEN_HEX,
         locale=locale,
         generator=f"Bristlenose {__version__}",
+        requested=len(dict.fromkeys(quote_ids)) if quote_ids else None,
     )
 
 

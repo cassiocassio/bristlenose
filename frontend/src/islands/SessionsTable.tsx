@@ -61,7 +61,7 @@ import type {
   TapestryResponse,
   TapestrySession,
 } from "../utils/types";
-import { fitScale, loadTapestryView, saveTapestryView, zoomScale } from "../utils/tapestryScale";
+import { TAPESTRY_GUTTER, fitScale, loadTapestryView, saveTapestryView, zoomScale } from "../utils/tapestryScale";
 import { screenInk } from "../utils/sceneInk";
 import { TapestryPreview } from "../components/TapestryPreview";
 import { mergeTapestry } from "../utils/tapestryMerge";
@@ -771,7 +771,15 @@ export function SessionsTable({
             tapestryOpen={ts ? open : undefined}
             preview={ts && gridWidth > 0 ? (
               <TapestryPreview session={ts} width={gridWidth} isTeam={isTeamTurn}
-                onToggle={(all) => toggleTapestry(sess.session_id, all)} />
+                onToggle={(all, sec) => {
+                  // Opening from the strip aims the timeline at the moment clicked: it opens
+                  // scrolled with that moment in the middle (the browser clamps at either end).
+                  if (!all && !openTapestries.has(sess.session_id)) {
+                    const at = Math.max(0, Math.round(TAPESTRY_GUTTER + sec / sPerPx - gridWidth / 2));
+                    saveTapestryView(projectId, { scroll: { ...loadTapestryView(projectId).scroll, [sess.session_id]: at } });
+                  }
+                  toggleTapestry(sess.session_id, all);
+                }} />
             ) : undefined}
             onToggleTapestry={(all) => toggleTapestry(sess.session_id, all)}
             session={sess}

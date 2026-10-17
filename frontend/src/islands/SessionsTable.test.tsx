@@ -1380,7 +1380,9 @@ describe("SessionsTable — session tapestry", () => {
         expect(el).not.toBeNull();
         return el!;
       });
-      fireEvent.click(strip);
+      // A click near the strip's end opens the timeline scrolled to that moment.
+      fireEvent.click(strip, { clientX: 1000 - 20 });
+      expect(loadTapestryView("1").scroll.s1).toBeGreaterThan(0);
       expect(await screen.findByRole("group", { name: "Session timeline" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Timeline for session 1" })).toHaveAttribute("aria-expanded", "true");
       expect(screen.getByTestId("where").textContent).toBe("/report/sessions");

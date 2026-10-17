@@ -25,8 +25,9 @@ interface Props {
   /** Whether a turn is the team's: the server's answer, else the displayed code's letter. */
   isTeam: (turn: TapestrySession["turns"][number]) => boolean;
   /** Open the timeline (or, once open, close it: the strip stays under the pointer while it
-   *  fades, so a double-click must not fall through to the row). `all` = Option-click. */
-  onToggle: (all: boolean) => void;
+   *  fades, so a double-click must not fall through to the row). `all` = Option-click; `seconds`
+   *  is the moment under the pointer, which the timeline opens on (owner, 17 Oct 2026). */
+  onToggle: (all: boolean, seconds: number) => void;
 }
 
 export function TapestryPreview({ session, width, isTeam, onToggle }: Props) {
@@ -42,7 +43,9 @@ export function TapestryPreview({ session, width, isTeam, onToggle }: Props) {
       aria-hidden="true"
       onClick={(e) => {
         e.stopPropagation();
-        onToggle(e.altKey);
+        const left = e.currentTarget.querySelector("svg")?.getBoundingClientRect().left ?? 0;
+        const sec = Math.max(0, Math.min(session.duration_seconds, (e.clientX - left - TAPESTRY_GUTTER) * sPerPx));
+        onToggle(e.altKey, sec);
       }}
     >
       <svg

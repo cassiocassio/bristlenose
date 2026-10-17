@@ -52,8 +52,22 @@ describe("TapestryPreview", () => {
     const strip = document.querySelector(".bn-tapestry-preview")!;
     fireEvent.click(strip);
     fireEvent.click(strip, { altKey: true });
-    expect(onOpen.mock.calls).toEqual([[false], [true]]);
+    expect(onOpen.mock.calls.map((c) => c[0])).toEqual([false, true]);
     expect(onRow).not.toHaveBeenCalled();
+  });
+
+  it("says which moment was under the pointer, so the timeline can open on it", () => {
+    const onToggle = vi.fn();
+    render(<TapestryPreview session={session} width={700} isTeam={isTeam} onToggle={onToggle} />);
+    const strip = document.querySelector(".bn-tapestry-preview")!;
+    // jsdom puts the strip at x = 0: the track starts at 82 and 604 px hold 600 s.
+    fireEvent.click(strip, { clientX: 82 + 302 });
+    fireEvent.click(strip, { clientX: 10 });
+    fireEvent.click(strip, { clientX: 5000 });
+    const [mid, before, after] = onToggle.mock.calls.map((c) => c[1]);
+    expect(mid).toBeCloseTo(300, 0);
+    expect(before).toBe(0);
+    expect(after).toBe(600);
   });
 
   it("draws nothing without a width or a duration", () => {

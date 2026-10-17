@@ -6,14 +6,17 @@
 <title>Transcript timeline toggle · Bristlenose mockups</title>
 <style>
 /* ============================================================================
-   TRANSCRIPT TIMELINE TOGGLE — bn-accurate mockup, 17 Oct 2026.
+   TRANSCRIPT TIMELINE TOGGLE — bn-accurate mockup. Iteration 2, 17 Oct 2026.
 
    The transcript page's sticky slot shows either the user-journey chain
-   (skinny, today) or the session timeline (fat, the Sessions grid's tapestry),
-   switched by one button at the end of the sticky row.
+   (skinny, today) or the session timeline (fat, the Sessions grid's tapestry).
+   Iteration 2: a split control at the end of the sticky row. The button half
+   (icon + "Timeline", icon only when the row is narrow) toggles chain and
+   timeline; the pulldown half picks the timeline's detail (2, 3 or 5 lanes).
+   Iteration 1's single icon button is superseded (git history has it).
 
    Three <style> blocks, in this order:
-   1. VERBATIM theme CSS, copied by a script from the tree at 32d17eaa, each
+   1. VERBATIM theme CSS, copied by a script from the tree at d2bec695, each
       block headed by its source path and line range. Nothing edited:
    bristlenose/theme/tokens.css — whole file, lines 1–405
    bristlenose/theme/tokens-typography.css — whole file, lines 1–88
@@ -25,7 +28,8 @@
    bristlenose/theme/atoms/journey-label.css — whole file, lines 1–57
    bristlenose/theme/molecules/person-badge.css — whole file, lines 1–205
    bristlenose/theme/organisms/inspector.css — lines 341–388
-   bristlenose/theme/organisms/session-tapestry.css — whole file, lines 1–355
+   bristlenose/theme/organisms/global-nav.css — lines 355–442
+   bristlenose/theme/organisms/session-tapestry.css — whole file, lines 1–399
    bristlenose/theme/molecules/transcript-annotations.css — whole file, lines 1–78
    bristlenose/theme/templates/transcript.css — whole file, lines 1–289
    frontend/src/islands/transcript/transcript-gutter.css — whole file, lines 1–260
@@ -307,12 +311,12 @@
     --bn-focus-outline-mix: 40%;
 
     /* Arrival — the "you are here" cue on the thing a link landed on: a
-       transcript paragraph, a quote card, a group heading, a Sessions row
+       transcript paragraph, a quote card, a group heading
        (atoms/arrival.css, docs/design-arrival-flash.md). Seconds, not the
        Acknowledge range, because the eye is still travelling when it starts.
        Structural, like Focus: the colour is an alias of the palette's
        highlight, so every palette × appearance answers through the contract
-       it already keeps; a palette may override the alias. */
+       it already keeps. */
     --bn-arrival-colour: var(--bn-colour-highlight);
     --bn-arrival-duration: 5s;
     --bn-arrival-easing: ease-out;
@@ -1684,7 +1688,96 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
     font-weight: var(--bn-weight-emphasis);
 }
 
-/* ════ bristlenose/theme/organisms/session-tapestry.css — whole file, lines 1–355 ════ */
+/* ════ bristlenose/theme/organisms/global-nav.css — lines 355–442 ════ */
+/* Export dropdown (NavBar) — action menu for quote/report exports */
+.export-dropdown-wrapper {
+    position: relative;
+}
+
+.export-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin: 0.25rem 0 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    min-width: 14rem;
+    z-index: 200;
+}
+
+.export-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 0.4rem 0.85rem;
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+    white-space: nowrap;
+}
+
+.export-dropdown-item:hover,
+.export-dropdown-item:focus {
+    background: var(--bn-colour-quote-bg);
+    outline: none;
+}
+
+/* The tint alone is ~1.05:1 against the menu, so keyboard focus also gets the
+   house ring (badge.css's focus-visible). */
+.export-dropdown-item:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+.export-dropdown-hint {
+    padding: 0 0.85rem 0.25rem;
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+    list-style: none;
+}
+
+/* Scope-picker group: a muted category label above three indented scope rows
+   (All / Selected / Starred). Mirrors the native Quotes menu taxonomy. */
+.export-dropdown-group-label {
+    padding: 0.35rem 0.85rem 0.1rem;
+    font-size: var(--bn-text-caption);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    list-style: none;
+}
+
+.export-dropdown-scope {
+    padding-left: 1.5rem;
+}
+
+/* The checkmark gutter of a menuitemcheckbox row (Burn subtitles…), hung in
+   the scope indent so the label lines up with the scope rows above it. */
+.export-dropdown-check {
+    display: inline-block;
+    width: 0.75rem;
+    margin-left: -1rem;
+    text-align: center;
+}
+
+.export-dropdown-item.is-disabled {
+    color: var(--bn-colour-muted);
+    cursor: default;
+    pointer-events: none;
+}
+
+.export-dropdown-separator {
+    height: 0;
+    margin: 0.25rem 0;
+    border-top: 1px solid var(--bn-colour-border);
+    list-style: none;
+}
+
+/* ════ bristlenose/theme/organisms/session-tapestry.css — whole file, lines 1–399 ════ */
 /* Session tapestry — the timeline slice under a row of the Sessions grid
    (frontend/src/components/SessionTapestry.tsx). Lanes: section flags, speaker
    clips, sentiment bars, theme spans. Every colour and size is a shipped token
@@ -1701,6 +1794,46 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
     /* NEW: hover tint on the quote popover (4%), the sign that it opens the transcript. */
     --bn-tp-popover-hover: color-mix(in srgb, var(--bn-colour-bg) 96%, var(--bn-colour-text));
 }
+
+/* ── The closed timeline: a strip under each row (components/TapestryPreview.tsx) ──
+   The whole interview, participants only, a quarter the height of the open timeline's
+   participant clips, clips at 60% under a 0.5 px keyline, no text, and a tint on hover.
+   A full-width item inside the row, so the row's hover wash covers it; its own click opens
+   the timeline (the row's opens the transcript). docs/mockups/sessions-timeline-strip.html. */
+:root {
+    /* NEW: the strip's clips at 60%, so a column of strips reads as quiet texture. */
+    --bn-tp-preview-opacity: 0.6;
+    /* NEW: the strip's track on hover — 10% of the text ink, the move the popover makes at 4%. */
+    --bn-tp-preview-track-hover: color-mix(in srgb, var(--bn-colour-badge-bg) 90%, var(--bn-colour-text));
+}
+.bn-tapestry-preview {
+    grid-column: 1 / -1;
+    min-width: 0;
+    margin-top: -2px;
+    padding-bottom: 10px;
+    cursor: pointer;
+    transition: opacity 0.12s ease;
+}
+.bn-tapestry-preview-svg { display: block; overflow: visible; }
+.bn-tp-pv-track { fill: var(--bn-colour-badge-bg); transition: fill 0.12s ease; }
+.bn-tapestry-preview:hover .bn-tp-pv-track { fill: var(--bn-tp-preview-track-hover); }
+.bn-tp-pv-clips { opacity: var(--bn-tp-preview-opacity); }
+.bn-tp-pv-clip { fill: var(--bn-colour-muted); }
+.bn-tp-pv-edge { fill: none; stroke: rgb(0 0 0 / 0.25); stroke-width: 0.5; vector-effect: non-scaling-stroke; }
+/* Open, the timeline is the strip: it gives way. */
+.bn-sessions-row.bn-tapestry-open .bn-tapestry-preview { opacity: 0; pointer-events: none; }
+
+/* Open, the journey chain's words are the timeline's flag labels: they fly there and back
+   (utils/tapestryMotion.ts). The chain keeps its place, so nothing reflows under the flight;
+   its arrows fade where they stand. */
+.bn-session-journey .bn-journey-sep { transition: opacity var(--bn-transition-fast); }
+.bn-sessions-row.bn-tapestry-open .bn-session-journey .bn-journey-sep { opacity: 0; }
+.bn-sessions-row.bn-tapestry-open .bn-session-journey .bn-journey-label { visibility: hidden; }
+/* While the strip's clips spring into the participant lane, the lane itself waits. */
+.bn-tp-landing :is(.bn-tp-clip-ppt, .bn-tp-strip-ppt, .bn-tp-clip-edge.ppt, .bn-tp-clip-label.on-ppt) { visibility: hidden; }
+/* What is in flight: over the page, clipped to the timeline's visible width only. */
+.bn-tp-flight { position: absolute; z-index: 30; pointer-events: none; overflow-x: clip; }
+.bn-tp-flight-word { position: absolute; white-space: nowrap; transform-origin: 0 50%; }
 
 /* Disclosure, inside the ID cell — no new grid column, so the width ladder is untouched. */
 .bn-tapestry-toggle {
@@ -1995,6 +2128,9 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .bn-tapestry-preview,
+    .bn-tp-pv-track,
+    .bn-session-journey .bn-journey-sep,
     .bn-tapestry-toggle svg,
     .bn-tp-bar,
     .bn-tp-popover,
@@ -2002,6 +2138,7 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
 }
 
 @media print {
+    .bn-tapestry-preview,
     .bn-tapestry-toggle,
     .bn-tp-zoom { display: none; }
 }
@@ -2679,30 +2816,41 @@ span.bn-gutter-mark { cursor: default; }
 <style id="proposed">
 /* ════ PROPOSED — new CSS (nothing below exists in the tree) ════ */
 
-/* The toggle: an icon button at the end of the sticky row. The tapestry
-   popover close's metrics (.bn-tp-close: unset button, radius-sm, muted
-   glyph, text ink on hover), grown to a 24px target; pressed is
-   .dimension-btn.active's hover tint with the glyph in accent, as a toggled
-   Mac toolbar item tints its symbol. Accent on the tint is 3.51:1 light /
-   4.01:1 dark (inspector.css's own measurement), over 1.4.11's 3:1 for a
-   non-text mark. */
-.bn-timeline-toggle {
-    all: unset;
-    flex-shrink: 0;
-    margin-left: auto;
-    width: 24px;
-    height: 24px;
-    display: grid;
-    place-items: center;
-    border-radius: var(--bn-radius-sm);
-    color: var(--bn-colour-muted);
-    cursor: pointer;
-    font-size: 15px;
-    transition: background-color var(--bn-transition-fast), color var(--bn-transition-fast);
+/* The header row is a size container, so the split control can drop its
+   label when the row is narrow, however wide the window is (the sidebars
+   take their share first). */
+.bn-transcript-journey-header { container: bn-journey-header / inline-size; }
+
+/* The split control: the house segmented control (.dimension-toggle +
+   .dimension-btn, organisms/inspector.css) with two segments, inside the
+   Export menu's positioning wrapper (the toggle clips its children, so the
+   menu is its sibling, not its child). The first is
+   a toggle (aria-pressed + .active, as QuoteGroupingToggle does); the second
+   opens the menu. Only the spacing, the icon, the chevron's width and the
+   pressed icon colour are new. */
+.bn-timeline-split { flex-shrink: 0; margin-left: auto; position: relative; }
+.bn-timeline-split .dimension-btn { display: inline-flex; align-items: center; gap: 5px; }
+.bn-timeline-split .bn-icon { width: 14px; height: 14px; }
+.bn-timeline-split .dimension-btn.active .bn-icon { color: var(--bn-colour-accent); }
+.bn-timeline-split__more { padding-inline: 5px; }
+.bn-timeline-split__more .bn-icon { width: 11px; height: 11px; }
+.bn-timeline-split__more[aria-expanded="true"] { background: var(--bn-colour-hover); color: var(--bn-colour-text); }
+/* A narrow row keeps the icon: the button still says what it is, and its
+   name and tooltip carry the word. */
+@container bn-journey-header (max-width: 720px) {
+    .bn-timeline-split__label { display: none; }
 }
-.bn-timeline-toggle:hover { background: var(--bn-colour-hover); color: var(--bn-colour-text); }
-.bn-timeline-toggle[aria-pressed="true"] { background: var(--bn-colour-hover); color: var(--bn-colour-accent); }
-.bn-timeline-toggle:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+
+/* The menu: the Export menu's classes (organisms/global-nav.css), with a
+   muted trailing hint where a Mac menu puts its key equivalent. */
+.bn-timeline-split .export-dropdown-menu { min-width: 19rem; }
+.bn-timeline-split .dimension-toggle { vertical-align: middle; }
+.bn-timeline-menu-hint {
+    margin-left: auto;
+    padding-left: var(--bn-space-lg);
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+}
 
 /* Fat: the row wraps, the chain gives up its place, the timeline takes a
    full-width second line of the same sticky header. */
@@ -2718,7 +2866,7 @@ span.bn-gutter-mark { cursor: default; }
 @keyframes bn-timeline-in { from { opacity: 0; } }
 
 /* The reading window: the time span of the paragraphs on screen, in the
-   minimap's viewport-indicator tokens (organisms/minimap.css) — the house
+   minimap's viewport-indicator tokens (organisms/minimap.css), the house
    mark for "what you are looking at". Dragging it scrolls the page, as the
    minimap's does. */
 .bn-tp-window {
@@ -2735,11 +2883,10 @@ span.bn-gutter-mark { cursor: default; }
 .bn-tp-player { pointer-events: none; }
 
 @media (prefers-reduced-motion: reduce) {
-    .bn-timeline-toggle { transition: none; }
     .bn-transcript-journey-header--timeline .bn-transcript-timeline { animation: none; }
 }
 @media print {
-    .bn-timeline-toggle { display: none; }
+    .bn-timeline-split { display: none; }
 }
 </style>
 
@@ -2755,12 +2902,12 @@ body.m-page {
 }
 .m-wrap { max-width: 1520px; margin: 0 auto; padding: 28px 24px 80px; }
 .m-head h1 { font-size: var(--bn-text-title); font-weight: var(--bn-weight-emphasis); margin: 0 0 6px; }
-.m-lede { max-width: 72ch; margin: 0 0 14px; color: var(--bn-colour-muted); font-size: var(--bn-text-body); line-height: 1.5; }
+.m-lede { max-width: 76ch; margin: 0 0 14px; color: var(--bn-colour-muted); font-size: var(--bn-text-body); line-height: 1.5; }
 .m-key { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; margin: 10px 0 18px; font-size: var(--bn-text-caption); }
 .m-key span { display: inline-flex; gap: 6px; align-items: center; }
 .m-key i { display: inline-block; width: 22px; height: 14px; border-radius: 3px; }
 .m-key .k-a { background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border); box-shadow: 0 1px 3px rgb(0 0 0 / .12); }
-.m-key .k-c { background: repeating-linear-gradient(135deg, light-dark(#fbf7e9,#1d1b14) 0 6px, light-dark(#f4eed8,#232016) 6px 12px); border-left: 3px solid light-dark(#b59a3a, #8a7631); }
+.m-key .k-c { background: repeating-linear-gradient(135deg, #fbf7e9 0 6px, #f4eed8 6px 12px); border-left: 3px solid #b59a3a; }
 .m-controls { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; padding: 10px 12px; border-radius: 8px;
     background: light-dark(#f7f8fa, #141416); border: 1px dashed light-dark(#c4c8ce, #3a3a3f); font-size: var(--bn-text-caption); }
 .m-controls label { display: inline-flex; gap: 6px; align-items: center; }
@@ -2769,7 +2916,7 @@ body.m-page {
 
 .m-part { margin-top: 44px; }
 .m-h2 { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 0 0 4px; }
-.m-sub { margin: 0 0 14px; color: var(--bn-colour-muted); max-width: 80ch; }
+.m-sub { margin: 0 0 14px; color: var(--bn-colour-muted); max-width: 84ch; }
 .m-row { display: grid; grid-template-columns: minmax(0, 1040px) minmax(300px, 1fr); gap: 24px; align-items: start; }
 @media (max-width: 1100px) { .m-row { grid-template-columns: 1fr; } }
 
@@ -2784,14 +2931,15 @@ body.m-page {
 .m-viewport { overflow-y: auto; overscroll-behavior: contain; position: relative; }
 .m-viewport .center { padding: 0 24px 40px; }
 .m-static .center { padding: 0 24px; }
+#live-frame { transition: max-width .2s; }
 
-/* Commentary: deliberately not-the-product. */
-.m-notes, .m-comm { background: repeating-linear-gradient(135deg, light-dark(#fbf7e9,#1d1b14) 0 6px, light-dark(#f6f0dc,#211e15) 6px 12px);
-    border-left: 3px solid light-dark(#b59a3a, #8a7631); padding: 12px 16px 14px; border-radius: 0 8px 8px 0;
-    font-size: var(--bn-text-caption); line-height: 1.5; color: light-dark(#3a3626, #d9d3bd); }
+/* Commentary: deliberately not-the-product (stays on its own light paper in both appearances). */
+.m-notes, .m-comm { color-scheme: light; background: repeating-linear-gradient(135deg, #fbf7e9 0 6px, #f6f0dc 6px 12px);
+    border-left: 3px solid #b59a3a; padding: 12px 16px 14px; border-radius: 0 8px 8px 0;
+    font-size: var(--bn-text-caption); line-height: 1.5; color: #3a3626; }
 .m-notes::before, .m-comm::before { content: "Commentary"; display: block; font-family: var(--bn-font-mono); font-size: 10px;
-    letter-spacing: .08em; text-transform: uppercase; color: light-dark(#8a7631, #b59a3a); margin-bottom: 6px; }
-.m-notes h3 { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); margin: 12px 0 2px; color: light-dark(#26231a, #efe9d2); }
+    letter-spacing: .08em; text-transform: uppercase; color: #8a7631; margin-bottom: 6px; }
+.m-notes h3 { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); margin: 12px 0 2px; color: #26231a; }
 .m-notes h3:first-of-type { margin-top: 0; }
 .m-notes p, .m-comm p { margin: 0 0 6px; }
 .m-notes code, .m-comm code { font-family: var(--bn-font-mono); font-size: 0.95em; }
@@ -2800,33 +2948,45 @@ body.m-page {
     background: light-dark(#fff, #111); border: 1px dashed light-dark(#c4c8ce, #3a3a3f); color: var(--bn-colour-muted); white-space: pre-wrap; }
 .m-meter { display: grid; grid-template-columns: max-content 1fr max-content; gap: 3px 10px; align-items: center; margin: 6px 0; }
 .m-meter b { font-weight: var(--bn-weight-emphasis); }
-.m-bar { height: 8px; border-radius: 4px; background: light-dark(#e5dfc7, #2d2a1f); position: relative; overflow: hidden; }
-.m-bar i { position: absolute; inset: 0 auto 0 0; background: light-dark(#b59a3a, #8a7631); border-radius: 4px; }
-.m-bar i.over { background: light-dark(#c2410c, #f97316); }
-.m-bar::after { content: ""; position: absolute; left: 33.333%; top: -2px; bottom: -2px; width: 1px; background: light-dark(#3a3626, #d9d3bd); }
+.m-bar { height: 8px; border-radius: 4px; background: #e5dfc7; position: relative; overflow: hidden; }
+.m-bar i { position: absolute; inset: 0 auto 0 0; background: #b59a3a; border-radius: 4px; }
+.m-bar i.over { background: #c2410c; }
+.m-bar::after { content: ""; position: absolute; left: 33.333%; top: -2px; bottom: -2px; width: 1px; background: #3a3626; }
 
-/* Toggle-state crops */
-.m-states { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.m-state { border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px light-dark(rgb(0 0 0 / .12), rgb(255 255 255 / .1)); }
-.m-state .m-chrome { font-size: 10px; padding: 4px 8px; }
-.m-state .center { padding: 6px 10px 10px; }
+/* Control-state crops */
+.m-states { display: grid; grid-template-columns: repeat(var(--m-cols, 4), minmax(0, 1fr)); gap: 10px; }
+.m-state { border-radius: 8px; overflow: visible; box-shadow: 0 0 0 1px light-dark(rgb(0 0 0 / .12), rgb(255 255 255 / .1)); background: var(--bn-colour-bg); }
+.m-state .m-chrome { font-size: 10px; padding: 4px 8px; border-radius: 8px 8px 0 0; }
+.m-state .center { padding: 8px 10px 10px; border-radius: 0 0 8px 8px; }
 .m-state .bn-transcript-journey-header { position: static; box-shadow: none; }
+/* Each crop is the right end of a real-width header (860 px wide, 560 px narrow), so the
+   container query sees the width it would see in the app. */
+.m-crop-win { overflow: hidden; display: flex; justify-content: flex-end; border-radius: 0 0 8px 8px; }
+.m-crop-win > .center { flex: none; }
+.m-state.m-menu .m-crop-win > .center { padding-bottom: 225px; }
 .m-dark { color-scheme: dark; color: var(--bn-colour-text); }
 .m-light { color-scheme: light; color: var(--bn-colour-text); }
-.m-dark .m-chrome, .m-light .m-chrome { color-scheme: inherit; }
-/* Forced states for the crops only: mirrors the PROPOSED :hover / :focus-visible rules. */
-.bn-timeline-toggle[data-m-force="hover"] { background: var(--bn-colour-hover); color: var(--bn-colour-text); }
-.bn-timeline-toggle[aria-pressed="true"][data-m-force="hover"] { color: var(--bn-colour-accent); }
-.bn-timeline-toggle[data-m-force="focus"] { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
-.dimension-btn[data-m-force="active"] { background: var(--bn-colour-hover); color: var(--bn-colour-text); }
-.m-alt .dimension-btn { display: inline-grid; place-items: center; padding: 3px 8px; font-size: 14px; }
+/* Forced states for the crops only: mirror the shipped :hover / :focus-visible rules. */
+.dimension-btn[data-m-force="hover"] { background: var(--bn-colour-hover); color: var(--bn-colour-text); }
+.dimension-btn[data-m-force="focus"] { outline: 2px solid var(--bn-colour-accent); outline-offset: -2px; }
+.export-dropdown-item[data-m-force="hover"] { background: var(--bn-colour-quote-bg); }
+
+/* Glyph pairs */
+.m-glyphs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.m-glyph { border-radius: 8px; background: var(--bn-colour-bg); box-shadow: 0 0 0 1px light-dark(rgb(0 0 0 / .12), rgb(255 255 255 / .1)); overflow: hidden; }
+.m-glyph .m-chrome { font-size: 10px; padding: 4px 8px; }
+.m-glyph-art { display: flex; gap: 18px; align-items: center; padding: 14px 16px; color: var(--bn-colour-text); }
+.m-glyph-art .bn-icon { width: 40px; height: 40px; }
+.m-glyph-art .m-sizes { display: flex; gap: 10px; align-items: center; }
+.m-glyph-art .m-sizes .bn-icon:nth-child(1) { width: 14px; height: 14px; }
+.m-glyph-art .m-sizes .bn-icon:nth-child(2) { width: 20px; height: 20px; }
 
 .m-ladder { display: flex; flex-direction: column; gap: 14px; }
 .m-ladder .m-frame .center { padding: 0 24px 8px; }
 .m-ladder .bn-transcript-journey-header { position: relative; }
 
 table.m-table { border-collapse: collapse; width: 100%; font-size: var(--bn-text-caption); }
-.m-table th, .m-table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid light-dark(#e2dcc3, #2d2a1f); vertical-align: top; }
+.m-table th, .m-table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #e2dcc3; vertical-align: top; }
 .m-table th { font-weight: var(--bn-weight-emphasis); }
 .m-table code { font-family: var(--bn-font-mono); }
 </style>
@@ -2836,7 +2996,7 @@ table.m-table { border-collapse: collapse; width: 100%; font-size: var(--bn-text
 
 <header class="m-head">
   <h1>Transcript: the journey chain or the timeline, in one sticky slot</h1>
-  <p class="m-lede">The transcript's sticky header keeps today's skinny journey chain by default. One button at the end of the row swaps it for the session timeline from the Sessions grid, in the same sticky slot, scaled to this one session. While you read, a window on the timeline covers the paragraphs on screen.</p>
+  <p class="m-lede"><b>Iteration 2.</b> A split control at the end of the sticky row. Click the button half to swap the journey chain for the session timeline; open the pulldown half to choose how much timeline (sections and speakers, plus sentiment, plus themes). When the row is narrow, the button shows only its icon.</p>
   <div class="m-key">
     <span><i class="k-a"></i> Artefact: real <code>--bn-*</code> tokens and shipped classes; only what would ship</span>
     <span><i class="k-c"></i> Commentary: not the product</span>
@@ -2845,20 +3005,20 @@ table.m-table { border-collapse: collapse; width: 100%; font-size: var(--bn-text
     <span class="m-tag">Mockup controls</span>
     <label>Appearance <select id="m-appearance"><option value="">Auto</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
     <label>Palette <select id="m-palette"><option value="default">Default</option><option value="edo">Edo</option></select></label>
-    <label>Window height <select id="m-height"><option value="900">900 px (large display)</option><option value="720" selected>720 px (laptop)</option><option value="560">560 px (short / split view)</option><option value="400">400 px (very short)</option></select></label>
-    <label>Lanes asked for <select id="m-lanes"><option value="3" selected>3: sections, speakers, sentiment (proposed)</option><option value="2">2: sections, speakers</option><option value="5">5: as in the Sessions grid</option></select></label>
+    <label>Window height <select id="m-height"><option value="900">900 px (large display)</option><option value="720" selected>720 px (laptop)</option><option value="560">560 px (short / split view)</option></select></label>
+    <label>Content width <select id="m-width"><option value="1040" selected>1040 px</option><option value="820">820 px (a sidebar open)</option><option value="640">640 px (both sidebars open)</option></select></label>
     <button type="button" id="m-play">Play from the reading position</button>
   </div>
 </header>
 
 <!-- ═════════════════════════ Part 1 — live ═════════════════════════ -->
 <section class="m-part">
-  <h2 class="m-h2">1 · Live: scroll the transcript, click the timeline</h2>
-  <p class="m-sub">The frame is a window at the height chosen above. Scroll inside it, press the button at the right end of the sticky row, click a flag, the speaker lane or a sentiment bar, or drag the blue window.</p>
+  <h2 class="m-h2">1 · Live: scroll the transcript, use the control, click the timeline</h2>
+  <p class="m-sub">The frame is the content column at the height and width chosen above. Scroll inside it. Click <i>Timeline</i>, or open its pulldown and pick a detail. Click a flag, the speaker lane or a sentiment bar, or drag the blue window. The width control exercises the header's container query only: the transcript grid's own breakpoints follow the real window, so they don't move.</p>
   <div class="m-row">
     <div>
-      <div class="m-frame">
-        <div class="m-chrome"><span class="m-dots"><i></i><i></i><i></i></span>Transcript, Session 3: live<span class="m-new">new: toggle · window · player mark</span></div>
+      <div class="m-frame" id="live-frame" style="max-width:1040px">
+        <div class="m-chrome"><span class="m-dots"><i></i><i></i><i></i></span>Transcript, Session 3: live<span class="m-new">new: split control · menu · window · player mark</span></div>
         <div class="m-viewport" id="live-vp" style="height:720px">
           <div class="center">
             <div class="bn-transcript-journey-header" id="live-header">
@@ -2867,7 +3027,7 @@ table.m-table { border-collapse: collapse; width: 100%; font-size: var(--bn-text
               </div>
               <span class="bn-transcript-journey-header__people"><span class="bn-person-badge"><span class="badge">p1</span><span class="bn-person-badge-name">Rosa</span></span></span>
               <div class="bn-session-journey bn-session-journey--overflow" id="live-chain"></div>
-              <button type="button" class="bn-timeline-toggle" id="live-toggle" aria-pressed="false" aria-label="Session timeline" title="Session timeline"><svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6h8"/><path d="M12 16h6"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M8 11h7"/></svg></button>
+              <span class="bn-timeline-split export-dropdown-wrapper" id="live-split"></span>
               <div class="bn-transcript-timeline"><div class="bn-tp-wrap"><div class="bn-tapestry-scroll" id="live-tl"></div></div></div>
             </div>
             <section class="transcript-body" id="live-body"></section>
@@ -2877,92 +3037,103 @@ table.m-table { border-collapse: collapse; width: 100%; font-size: var(--bn-text
       <div class="m-readout" id="m-readout">Scroll or click to see what the page would do.</div>
     </div>
     <aside class="m-notes">
-      <h3>The slot</h3>
-      <p>One sticky header, as today. Skinny: the chain, unchanged. Fat: the timeline takes the chain's place on a second line; the session label and the participant's name stay on the first. Section flags are the chain's own waypoints (first quote of each run, revisits included), so nothing is lost by hiding the chain.</p>
+      <h3>The control: a split button, the Mac's pull-down-with-default</h3>
+      <p>The button half does the common thing (chain ↔ timeline); the pulldown holds the choices. That's the shape of a Mac split button (a SwiftUI <code>Menu</code> with a <code>primaryAction</code>, Mail's Reply / Reply All). It's drawn as two segments of the house segmented control, <code>.dimension-toggle</code>, so it needs no new control vocabulary.</p>
+      <p><b>Button:</b> icon + "Timeline". Pressed, it takes <code>.dimension-btn.active</code> as shipped (hover tint, body ink, emphasis weight; accent text fails AA at 12 px) and only the icon turns accent. Below a 720 px row (a container query, so it follows the sidebars, not the window) the label goes and the icon stays.</p>
+      <p><b>Pulldown:</b> the Export menu's classes and check gutter. The first group is the same toggle, said in words (both strings shipped). The second picks the detail; picking one also turns the timeline on, since that's plainly what was meant.</p>
       <h3>Does a marker track scroll? A range does, a playhead doesn't</h3>
-      <p>Reading is a range, not a moment, so scroll moves a <b>reading window</b>: the time from the paragraph under the header to the last one on screen, interpolated within each, recomputed once per frame. It uses the minimap's viewport tokens, the house mark for "what you are looking at", and dragging it scrolls the page as the minimap's does.</p>
-      <p>The <b>current section's flag stays raised</b>, the fat equivalent of the chain's active pill, by the chain's rule: the last waypoint above the header's bottom + 8 px.</p>
-      <p>The <b>playhead</b> stays a player thing. The thin hover cursor is the shipped one (where a click lands). A heavier accent mark with a head shows the player's time, only while media plays. Press <i>Play</i> above: <code>PlayerContext</code> already centres the playing paragraph, so the window follows the player without any new code.</p>
+      <p>Reading is a range, not a moment, so scroll moves a <b>reading window</b>: the time from the paragraph under the header to the last one on screen, interpolated within each, once per frame. It uses the minimap's viewport tokens, and dragging it scrolls the page as the minimap's does. The <b>current section's flag stays raised</b>, by the chain's rule (the last waypoint above the header's bottom + 8 px).</p>
+      <p>The <b>playhead</b> stays a player thing: the thin hover cursor is the shipped one; a heavier accent mark with a head shows the player's time, only while media plays. Press <i>Play</i>: <code>PlayerContext</code> already centres the playing paragraph, so the window follows the player without new code.</p>
       <h3>A click scrolls, never navigates</h3>
       <ul>
-        <li><b>Flag</b>: the chain's own <code>handleIndexClick</code> (smooth scroll to the waypoint, 600 ms observer lock).</li>
-        <li><b>Speaker lane</b>: the paragraph holding that moment, by <code>resolveSegmentForSeconds</code>, the resolver <code>#t-</code> deep links already use, with the anchor flash.</li>
-        <li><b>Sentiment bar</b>: straight to its quote. No popover: on this page the quote is the text itself.</li>
-        <li>The URL takes <code>#t-&lt;s&gt;</code> by <code>replaceState</code>: shareable, and Back still leaves the page. The readout under the frame shows what would be written.</li>
+        <li><b>Flag</b>: the chain's own <code>handleIndexClick</code>.</li>
+        <li><b>Speaker lane</b>: <code>resolveSegmentForSeconds</code>, the resolver <code>#t-</code> deep links already use, with the anchor flash.</li>
+        <li><b>Sentiment bar</b>: straight to its quote; no popover, since the quote is on the page.</li>
+        <li>The URL takes <code>#t-&lt;s&gt;</code> by <code>replaceState</code>. The readout under the frame shows what would be written.</li>
       </ul>
-      <p>So <code>onJump</code> is the one seam: the Sessions grid passes "navigate to <code>/report/sessions/s3#t-589</code>"; the transcript passes "scroll here".</p>
       <h3>Opening it keeps your place</h3>
-      <p>The header grows by the timeline's height, so the page compensates <code>scrollTop</code>: the paragraph under the header is still under it. <code>--bn-journey-header-height</code> (the anchors' <code>scroll-margin-top</code>) is measured today on labels and speakers only; the mode joins those deps.</p>
-      <h3>Scale</h3>
-      <p>One session, so it fits its own duration to the width (no shared project scale). Clips or slivers by the shipped 2.5 s/px threshold: a 34-minute session at this width draws clips; a 60-minute one at a narrow window falls to slivers. No zoom slider in the slot for v1, so there's never a sideways scrollbar.</p>
+      <p>The header grows; <code>scrollTop</code> is compensated so the paragraph under the header is still under it, and <code>--bn-journey-header-height</code> is re-measured (the mode and the detail join that effect's deps). Changing the detail keeps your place the same way.</p>
     </aside>
   </div>
 </section>
 
-<!-- ═════════════════════════ Part 2 — height ═════════════════════════ -->
+<!-- ═════════════════════════ Part 2 — the control ═════════════════════════ -->
 <section class="m-part">
-  <h2 class="m-h2">2 · How tall it can get: a third of the window, sentiment goes first</h2>
-  <p class="m-sub">Each frame is the sticky slot alone at the live frame's width, same reading window, same current section. The bars measure each slot against the window height chosen above; the tick is one third.</p>
-  <div class="m-row">
-    <div class="m-ladder" id="ladder"></div>
-    <aside class="m-notes">
-      <h3>The budget</h3>
-      <p>The sticky slot may take at most a third of the window. The rest is the reading area, and the transcript is what the page is for.</p>
-      <div id="m-meters"></div>
-      <h3>The ladder: shed detail before structure</h3>
-      <ul>
-        <li><b>3 lanes</b> by default: sections, speakers, sentiment. They answer "where am I, who's talking, how did it go".</li>
-        <li><b>Themes never ride in the sticky slot.</b> The margin already names them beside the text, and their three packed rows cost more than any other lane.</li>
-        <li>When 3 lanes would pass a third, <b>sentiment goes</b>, leaving flags and speakers. Try 560 px in the live frame.</li>
-        <li>It never falls back to the chain by itself, because a pressed button that shows the chain would be lying. Below about 410 px even 2 lanes pass a third. I suggest we accept that: the researcher can turn it off. Try 400 px.</li>
-      </ul>
-      <p>The tapestry's 14 px under the timecodes is room for macOS's overlay scrollbar. With no zoom in the slot there's no scrollbar, so that space could go: a cheap saving if the owner wants it, not taken here.</p>
-    </aside>
-  </div>
-</section>
-
-<!-- ═════════════════════════ Part 3 — toggle ═════════════════════════ -->
-<section class="m-part">
-  <h2 class="m-h2">3 · The toggle</h2>
-  <p class="m-sub">The right end of the sticky row, in each state, light then dark.</p>
+  <h2 class="m-h2">2 · The split control, in each state</h2>
+  <p class="m-sub">The right end of the sticky row. Top two rows: a wide row, light then dark. Third row: a narrow row (under 720 px), icon only. Last: the pulldown open.</p>
   <div class="m-row">
     <div>
       <div class="m-states" id="states-light"></div>
       <div class="m-states" id="states-dark" style="margin-top:10px"></div>
-      <div class="m-states m-alt" id="states-alt" style="margin-top:22px; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 420px"></div>
+      <div class="m-states" id="states-narrow" style="margin-top:10px"></div>
+      <div class="m-states" id="states-menu" style="margin-top:22px; --m-cols: 2"></div>
     </div>
     <aside class="m-notes">
-      <h3>One button, not a segmented pair</h3>
-      <p>The chain is the resting state and needs no glyph of its own; the button names what it adds, like the Mac's show/hide toolbar toggles (the sidebar, Xcode's inspectors). <code>aria-pressed</code>, with the shipped string <code>sessions.tapestry.label</code> ("Session timeline") as its name and tooltip, so the web needs no new copy.</p>
-      <p>Pressed takes no further hover change, as a selected <code>.dimension-btn</code> takes none; the pointer and the tooltip carry it.</p>
-      <p>Glyph: Lucide <code>chart-gantt</code> on the web (a new <code>timeline</code> concept in <code>Icon.tsx</code>); <code>calendar.day.timeline.left</code> on the Mac. SF Symbols can't be drawn in a browser engine (house rule), so the Mac half is named, not shown.</p>
-      <p>The alternative, last row (flagged): <code>.dimension-toggle</code> with Lucide <code>route</code> ↔ <code>chart-gantt</code> (SF <code>point.topleft.down.to.point.bottomright.curvepath</code> ↔ <code>calendar.day.timeline.left</code>). Rejected: two glyphs to learn for one decision, and this house's segmented controls carry words, not icons.</p>
-      <h3>On the Mac</h3>
-      <p>The View menu gets <b>Show Session Timeline</b> / <b>Hide Session Timeline</b>, with the SF Symbol, enabled on a transcript and greyed elsewhere, mirroring the button's state. No keyboard shortcut is proposed (shortcuts are earned). These are the only new strings, and they're for the owner to write.</p>
-      <h3>For the owner to decide</h3>
+      <h3>Words</h3>
       <ul>
-        <li><b>Remembered how?</b> Per viewer it's a convenience, but <code>localStorage</code> does not survive quitting the Mac app. Forget on quit, or a native mirror like the subtitle prefs?</li>
-        <li><b>A session with no sections</b> has no chain, but it still has a timeline (clips and sentiment), so the button stays.</li>
-        <li><b>Export:</b> <code>/tapestry</code> is already embedded, so the timeline works offline. The hover thumbnail stays serve-only, as it is in the grid.</li>
+        <li><b>Shipped:</b> "Session timeline" (<code>sessions.tapestry.label</code>) names the group and is the button's tooltip; the menu's first group is "User journey" (<code>sessions.colJourney</code>) and "Session timeline"; the hints are the lane labels (<code>quotes.sections</code>, <code>sessions.speakerPlaceholder.*</code>, <code>sessions.colSentiment</code>, <code>quotes.themes</code>).</li>
+        <li><b>New, for the owner to write:</b> the button's "Timeline", the chevron's name ("Timeline detail" here), and the three details: "Compact", "Standard", "Full".</li>
       </ul>
+      <p>The details are named by how much they show, not by a lane count: "3 lanes" is our geometry, not the researcher's question. The hint says what each adds.</p>
+      <h3>On the Mac</h3>
+      <p>The View menu mirrors it: <b>Show / Hide Session Timeline</b> with the SF Symbol, then a <b>Timeline Detail ▸</b> submenu with Compact, Standard and Full, enabled on a transcript and greyed elsewhere. No keyboard shortcut proposed (shortcuts are earned).</p>
+      <h3>Keyboard</h3>
+      <p>Two Tab stops (button, chevron). The chevron opens the menu with Return, Space or ↓; arrows move, Return picks, Esc closes and gives focus back to the chevron. The menu items are <code>menuitemradio</code>, as the Export menu's burn-subtitles row is a <code>menuitemcheckbox</code>.</p>
     </aside>
   </div>
 </section>
 
-<!-- ═════════════════════════ Part 4 — inventory ═════════════════════════ -->
+<!-- ═════════════════════════ Part 3 — glyph ═════════════════════════ -->
 <section class="m-part">
-  <h2 class="m-h2">4 · What's new, and what isn't</h2>
+  <h2 class="m-h2">3 · The glyph: an SF Symbol and its Lucide pair</h2>
+  <p class="m-sub">Lucide is drawn here at 40, 20 and 14 px (14 is what the control uses). SF Symbols are named, not drawn: a browser engine never draws them (house rule, <code>design-icon-system.md</code>).</p>
+  <div class="m-row">
+    <div class="m-glyphs" id="glyphs"></div>
+    <aside class="m-notes">
+      <h3>Recommended: <code>timeline.selection</code> ↔ <code>gallery-horizontal</code></h3>
+      <p>SF Symbols has no Gantt chart. I rendered every timeline-ish symbol on this Mac (macOS 27, from the system's own catalogue). <code>timeline.selection</code> is Apple's own timeline glyph: a filmstrip frame held between two trim handles, ▶▮◀. It's what Photos and QuickTime trim with, our welcome screen already calls the tapestry a "video-editing style timeline", and the fat state <i>is</i> a range held on a timeline. First shipped 2020, so macOS 11, well inside the 15.0 floor.</p>
+      <p>Lucide's <code>gallery-horizontal</code> is its silhouette twin: a frame between two uprights. On its own Lucide calls it a gallery, but beside the word "Timeline", and as the twin of the Mac's glyph, it reads right.</p>
+      <h3>Rejected</h3>
+      <ul>
+        <li><code>chart-gantt</code> ↔ <code>calendar.day.timeline.left</code>, iteration 1's pair. Rendered, the SF glyph is a calendar <i>day</i> view (an event with a now-line), and the two don't look alike.</li>
+        <li><code>align-start-vertical</code> ↔ <code>align.horizontal.left</code>: an exact shape match (an axis, two bars), but both mean "align left" on their own platforms, and on the Mac it would sit beside real alignment commands.</li>
+      </ul>
+      <p>Check the SF half in the SF Symbols app: search "timeline".</p>
+    </aside>
+  </div>
+</section>
+
+<!-- ═════════════════════════ Part 4 — height ═════════════════════════ -->
+<section class="m-part">
+  <h2 class="m-h2">4 · How tall each detail is</h2>
+  <p class="m-sub">Each frame is the sticky slot alone at the live frame's width, same reading window, same current section. The bars measure each against the window height chosen above; the tick is one third.</p>
+  <div class="m-row">
+    <div class="m-ladder" id="ladder"></div>
+    <aside class="m-notes">
+      <h3>The choice is the researcher's now</h3>
+      <div id="m-meters"></div>
+      <p><b>Standard</b> (sections, speakers, sentiment) is the default: it's the most that stays under a third of a laptop window, and it answers "where am I, who's talking, how did it go".</p>
+      <p>Iteration 1 shed lanes automatically on a short window. With the pulldown, the page no longer second-guesses: if the menu ticks Full, Full is what's drawn. Shedding behind a ticked item would make the menu lie. So the edge case is named, not handled: Full on a 720 px window takes about two fifths, and Standard on a 560 px one about the same. Compact is one click away.</p>
+      <p>The tapestry's 14 px under the timecodes is room for macOS's overlay scrollbar; with no zoom in the slot there's never a scrollbar, so it could go. A cheap saving, not taken here.</p>
+    </aside>
+  </div>
+</section>
+
+<!-- ═════════════════════════ Part 5 — inventory ═════════════════════════ -->
+<section class="m-part">
+  <h2 class="m-h2">5 · What's new, and what isn't</h2>
   <div class="m-comm" style="max-width: 1040px">
     <table class="m-table">
       <tr><th>Thing</th><th>Status</th><th>Notes</th></tr>
-      <tr><td><code>.bn-timeline-toggle</code></td><td>new CSS</td><td>The <code>.bn-tp-close</code> idiom at 24 px; pressed state from <code>.dimension-btn.active</code>.</td></tr>
+      <tr><td><code>.bn-timeline-split</code> + <code>__more</code>, <code>__label</code></td><td>new CSS, small</td><td>Spacing, icon sizes and the pressed icon colour on top of the shipped <code>.dimension-toggle</code> / <code>.dimension-btn</code>; a container query on the header for the icon-only row.</td></tr>
+      <tr><td><code>.bn-timeline-menu-hint</code></td><td>new CSS, one rule</td><td>Inside the shipped <code>.export-dropdown-*</code> menu.</td></tr>
       <tr><td><code>.bn-transcript-journey-header--timeline</code>, <code>.bn-transcript-timeline</code></td><td>new CSS</td><td>Wrap rule plus slot; one 0.15 s fade, off under reduced motion.</td></tr>
-      <tr><td><code>.bn-tp-window</code></td><td>new mark</td><td>The minimap's <code>--bn-minimap-viewport-*</code> tokens; no new colour.</td></tr>
-      <tr><td><code>.bn-tp-player</code></td><td>new mark</td><td>Accent, 1.5 px, with a head. Only while media plays.</td></tr>
-      <tr><td><code>Icon</code> concept <code>timeline</code></td><td>new, one line</td><td>Lucide <code>chart-gantt</code> ↔ SF <code>calendar.day.timeline.left</code>; add a row to the concept map in <code>design-icon-system.md</code>.</td></tr>
-      <tr><td>Strings</td><td>web: none<br>Mac: 2</td><td>Web reuses <code>sessions.tapestry.label</code> and the lane keys (<code>quotes.sections</code>, <code>sessions.speakerPlaceholder.*</code>, <code>sessions.colSentiment</code>). Mac View menu: "Show Session Timeline" / "Hide Session Timeline", owner-written, then 21 locales.</td></tr>
-      <tr><td><code>SessionTapestry</code></td><td>reused</td><td>New props, roughly: <code>lanes</code> (3 or 2), <code>window</code> (a range in seconds), <code>current</code> (the raised flag), <code>player</code>, and <code>onJump</code> wired to scrolling. Sentiment bars jump instead of opening a popover when the host says so.</td></tr>
-      <tr><td>Chain, header, transcript, gutter</td><td>unchanged</td><td>All drawn here from the verbatim CSS.</td></tr>
+      <tr><td><code>.bn-tp-window</code>, <code>.bn-tp-player</code></td><td>new marks</td><td>The minimap's <code>--bn-minimap-viewport-*</code> tokens; accent. No new colour.</td></tr>
+      <tr><td><code>Icon</code> concept <code>timeline</code></td><td>new, one line</td><td>Lucide <code>gallery-horizontal</code> ↔ SF <code>timeline.selection</code>; one row in the concept map in <code>design-icon-system.md</code>.</td></tr>
+      <tr><td>Strings</td><td>web: 5 new<br>Mac: 3 new</td><td>Web: "Timeline", "Timeline detail", "Compact", "Standard", "Full". Mac View menu: "Show Session Timeline", "Hide Session Timeline", "Timeline Detail" (the details shared with the web). Owner-written, then 21 locales.</td></tr>
+      <tr><td><code>SessionTapestry</code></td><td>reused</td><td>New props, roughly: <code>lanes</code>, <code>window</code>, <code>current</code>, <code>player</code>, and <code>onJump</code> wired to scrolling; sentiment bars jump instead of opening a popover when the host says so.</td></tr>
+      <tr><td>Chain, header, transcript, gutter, segmented control, menu</td><td>unchanged</td><td>All drawn here from the verbatim CSS.</td></tr>
+      <tr><td>Open</td><td>owner</td><td>Remembered how? (<code>localStorage</code> doesn't survive quitting the Mac app: forget on quit, or a native mirror like the subtitle prefs.) A session with no sections still has a timeline, so the control stays. Export: <code>/tapestry</code> is embedded, so it works offline; the hover thumbnail stays serve-only.</td></tr>
     </table>
   </div>
 </section>
@@ -2976,7 +3147,22 @@ const D = {"duration":2040,"turns":[{"t0":0.0,"t1":8.1,"speaker":"m1","team":tru
 const GUTTER = 82, RIGHT = 14, CLIP_THRESHOLD = 2.5;
 const P = { flagX: 3, flagH: 18, clipX: 4, clipH: 16, themeX: 4, themeH: 18, themeGap: 4, barW: 6 };
 const POSITIVE = new Set(["satisfaction", "delight", "confidence"]);
+// Shipped locale values (en): quotes.sections, sessions.speakerPlaceholder.*, sessions.colSentiment, quotes.themes
 const LANE = { sections: "Sections", moderator: "Moderator", participant: "Participant", sentiment: "Sentiment", themes: "Themes" };
+// Strings: shipped (sessions.tapestry.label, sessions.colJourney) and NEW (owner to write).
+const T = { group: "Session timeline", journey: "User journey", timeline: "Session timeline",
+  button: "Timeline" /* NEW */, more: "Timeline detail" /* NEW */,
+  detail: { 2: "Compact", 3: "Standard", 5: "Full" } /* NEW */ };
+const HINT = { 2: `${LANE.sections} · ${LANE.moderator} · ${LANE.participant}`, 3: `+ ${LANE.sentiment}`, 5: `+ ${LANE.themes}` };
+
+const SVG = (paths) => `<svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+const ICON = {
+  timeline: SVG('<path d="M2 3v18"/><rect width="12" height="18" x="6" y="3" rx="2"/><path d="M22 3v18"/>'), // gallery-horizontal
+  gantt: SVG('<path d="M10 6h8"/><path d="M12 16h6"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M8 11h7"/>'), // chart-gantt
+  align: SVG('<rect width="9" height="6" x="6" y="14" rx="2"/><rect width="16" height="6" x="6" y="4" rx="2"/><path d="M2 2v20"/>'), // align-start-vertical
+  caret: SVG('<path d="m6 9 6 6 6-6"/>'), // chevron-down
+  check: SVG('<path d="M20 6 9 17l-5-5"/>'), // check
+};
 const SCROLL_PAD = 8 + 8 + 14; // .bn-tapestry-scroll padding: sm top, sm + 14 bottom
 
 const tc = (s) => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
@@ -3122,8 +3308,23 @@ function drawTimeline(st) {
   return { svg: o.join(""), layout: { x, sPerPx, g, flags, win, xEnd } };
 }
 
+// ── The split control and its menu: one markup function for the live frame and the crops ──
+function splitHTML({ fat, L, open = false, force = {}, focusItem = -1 }) {
+  const f = (k) => (force[k] ? ` data-m-force="${force[k]}"` : "");
+  const item = (i, checked, label, hint) => `<li role="menuitemradio" aria-checked="${checked}" tabindex="-1" class="export-dropdown-item export-dropdown-scope" data-item="${i}"${focusItem === i ? ' data-m-force="hover"' : ""}>`
+    + `<span class="export-dropdown-check" aria-hidden="true">${checked ? ICON.check.replace('class="bn-icon"', 'class="bn-icon bn-icon--menu"') : ""}</span>${esc(label)}`
+    + (hint ? `<span class="bn-timeline-menu-hint">${esc(hint)}</span>` : "") + `</li>`;
+  const menu = open ? `<ul role="menu" class="export-dropdown-menu" aria-label="${esc(T.more)}">`
+    + item("chain", !fat, T.journey) + item("timeline", fat, T.timeline)
+    + `<li role="separator" class="export-dropdown-separator"></li>`
+    + [2, 3, 5].map((n) => item(String(n), L === n, T.detail[n], HINT[n])).join("") + `</ul>` : "";
+  return `<span class="dimension-toggle" role="group" aria-label="${esc(T.group)}"><button type="button" class="dimension-btn bn-timeline-split__main${fat ? " active" : ""}" aria-pressed="${fat}" title="${esc(T.group)}" data-act="toggle"${f("main")}>${ICON.timeline}<span class="bn-timeline-split__label">${esc(T.button)}</span></button>`
+    + `<button type="button" class="dimension-btn bn-timeline-split__more" aria-haspopup="menu" aria-expanded="${open}" aria-label="${esc(T.more)}" title="${esc(T.more)}" data-act="more"${f("more")}>${ICON.caret}</button></span>`
+    + menu;
+}
+
 // ── Transcript body ──
-const TQ = '<svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 5H3"/><path d="M21 12H8"/><path d="M21 19H8"/><path d="M3 12v7"/></svg>';
+const TQ = SVG('<path d="M17 5H3"/><path d="M21 12H8"/><path d="M21 19H8"/><path d="M3 12v7"/>');
 function buildBody(host) {
   let lastLabel = "", lastSent = "";
   host.innerHTML = D.segments.map((seg, i) => {
@@ -3148,13 +3349,19 @@ function buildBody(host) {
 }
 
 // ── Live frame ──
-const S = { fat: false, asked: 3, L: 3, win: null, current: 0, hover: null, hot: -1, player: null, lockUntil: 0, id: "live" };
+const S = { fat: false, L: 3, open: false, win: null, current: 0, hover: null, hot: -1, player: null, lockUntil: 0, id: "live" };
 const vp = document.getElementById("live-vp"), header = document.getElementById("live-header"),
   chain = document.getElementById("live-chain"), tl = document.getElementById("live-tl"),
-  body = document.getElementById("live-body"), toggle = document.getElementById("live-toggle"),
-  readout = document.getElementById("m-readout");
+  body = document.getElementById("live-body"), split = document.getElementById("live-split"),
+  readout = document.getElementById("m-readout"), frame = document.getElementById("live-frame");
 let layout = null, segEls = [];
 
+function renderSplit(focus) {
+  split.innerHTML = splitHTML({ fat: S.fat, L: S.L, open: S.open });
+  // preventScroll: focusing inside a sticky header must not scroll the transcript under it.
+  if (focus === "menu") split.querySelector('[role="menuitemradio"][aria-checked="true"]')?.focus({ preventScroll: true });
+  else if (focus) split.querySelector(`[data-act="${focus}"]`)?.focus({ preventScroll: true });
+}
 function renderChain() {
   chain.innerHTML = D.sections.map((f, i) => (i ? '<span class="bn-journey-sep" aria-hidden="true"> → </span>' : "")
     + `<button type="button" class="bn-journey-label bn-journey-label--interactive${i === S.current ? " bn-journey-label--active" : ""}" data-i="${i}"${i === S.current ? ' aria-current="step"' : ""}>${esc(f.label)}</button>`)
@@ -3180,20 +3387,6 @@ function renderTimeline() {
   const r = drawTimeline({ ...S, width: tlWidth() });
   tl.innerHTML = r.svg;
   layout = r.layout;
-}
-
-function rowHeight() {
-  // The first line of the header: the tallest of selector, names and toggle, plus the header's padding.
-  const kids = [header.querySelector(".bn-selector"), header.querySelector(".bn-transcript-journey-header__people"), toggle];
-  const h = Math.max(...kids.map((k) => k.getBoundingClientRect().height));
-  const cs = getComputedStyle(header);
-  return h + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-}
-const fatHeight = (L) => rowHeight() + geom(L).H + SCROLL_PAD;
-function chooseLanes(vh) {
-  // Shed detail before structure: the asked-for lanes, then 3, then 2; never below 2.
-  for (const L of [5, 3, 2].filter((n) => n <= S.asked)) if (fatHeight(L) <= vh / 3) return L;
-  return 2;
 }
 
 function readingWindow() {
@@ -3257,21 +3450,47 @@ function jumpToSec(sec, what) {
   scrollToEl(el); flash(el); say(`${what} at ${tc(sec)}, by resolveSegmentForSeconds`, i);
 }
 
-function setMode(fat) {
-  // Keep the paragraph under the header where it is, relative to the header.
+/** Change mode and/or detail, keeping the paragraph under the header where it is. */
+function apply(fat, L) {
   const hb0 = header.getBoundingClientRect().bottom;
   const anchor = segEls.find((el) => el.getBoundingClientRect().bottom > hb0) || segEls[0];
   const off0 = anchor.getBoundingClientRect().top - hb0;
-  S.fat = fat;
-  toggle.setAttribute("aria-pressed", String(fat));
+  S.fat = fat; S.L = L;
   header.classList.toggle("bn-transcript-journey-header--timeline", fat);
-  if (fat) { S.L = chooseLanes(vp.clientHeight); S.win = readingWindow(); renderTimeline(); }
+  renderSplit();
+  if (fat) { S.win = readingWindow(); renderTimeline(); }
   const off1 = anchor.getBoundingClientRect().top - header.getBoundingClientRect().bottom;
   vp.scrollTop += off1 - off0;
   headerVar();
   onScroll();
   meters();
 }
+
+// Split control: delegated, since it is re-rendered on every change.
+split.addEventListener("click", (e) => {
+  const act = e.target.closest("[data-act]")?.dataset.act;
+  const li = e.target.closest("[data-item]");
+  if (act === "toggle") { S.open = false; apply(!S.fat, S.L); readout.textContent = `Button half: ${S.fat ? "timeline on (" + T.detail[S.L] + ")" : "back to the journey chain"}.`; }
+  else if (act === "more") { S.open = !S.open; renderSplit(S.open ? "menu" : "more"); }
+  else if (li) {
+    const v = li.dataset.item; S.open = false;
+    if (v === "chain") apply(false, S.L);
+    else if (v === "timeline") apply(true, S.L);
+    else apply(true, +v);
+    renderSplit("more");
+    readout.textContent = `Pulldown: ${v === "chain" ? T.journey : v === "timeline" ? T.timeline : T.detail[v] + " (" + HINT[v] + ") — also turns the timeline on"}.`;
+  }
+});
+split.addEventListener("keydown", (e) => {
+  const items = [...split.querySelectorAll('[role="menuitemradio"]')];
+  if (e.target.dataset.act === "more" && ["ArrowDown", "Enter", " "].includes(e.key)) { e.preventDefault(); S.open = true; renderSplit("menu"); return; }
+  if (!S.open) return;
+  const k = items.indexOf(document.activeElement);
+  if (e.key === "Escape") { e.preventDefault(); S.open = false; renderSplit("more"); }
+  else if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); items[(k + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]?.focus({ preventScroll: true }); }
+  else if ((e.key === "Enter" || e.key === " ") && k >= 0) { e.preventDefault(); items[k].click(); }
+});
+document.addEventListener("pointerdown", (e) => { if (S.open && !split.contains(e.target)) { S.open = false; renderSplit(); } });
 
 // Timeline pointer handling, by geometry (the SVG is re-drawn every frame).
 let drag = null;
@@ -3329,7 +3548,6 @@ tl.addEventListener("pointerup", (e) => {
 
 chain.addEventListener("click", (e) => { const b = e.target.closest(".bn-journey-label"); if (b) jumpToSection(+b.dataset.i); });
 chain.addEventListener("scroll", fades, { passive: true });
-toggle.addEventListener("click", () => setMode(!S.fat));
 vp.addEventListener("scroll", onScroll, { passive: true });
 
 // The simulated player: a timecode click (as in the app) or the Play control. PlayerContext's
@@ -3356,17 +3574,18 @@ function startPlayer(sec) {
 body.addEventListener("click", (e) => { const a = e.target.closest("a[data-seek]"); if (a) { e.preventDefault(); startPlayer(+a.dataset.seek); } });
 document.getElementById("m-play").addEventListener("click", () => { if (timer) stopPlayer(); else startPlayer(S.win ? S.win[0] : 0); });
 
-// ── Static frames: the height ladder ──
+// ── Static frames: the detail ladder ──
+const headerStart = () => header.querySelector(".bn-selector").outerHTML + header.querySelector(".bn-transcript-journey-header__people").outerHTML;
+const chainHTML = (cur) => `<div class="bn-session-journey bn-session-journey--overflow bn-journey--fade-right">${D.sections.map((f, i) => `<span>${i ? '<span class="bn-journey-sep" aria-hidden="true"> → </span>' : ""}<button type="button" class="bn-journey-label bn-journey-label--interactive${i === cur ? " bn-journey-label--active" : ""}">${esc(f.label)}</button></span>`).join("")}</div>`;
 function ladder() {
   const host = document.getElementById("ladder");
   const win = S.win || [700, 790];
   const cur = S.win ? S.current : 2;
-  const rows = [["Skinny: the chain (today)", 0], ["Fat, 2 lanes: what a short window gets", 2], ["Fat, 3 lanes: the proposed default", 3], ["Fat, 5 lanes: the Sessions grid's full slice (for reference, not proposed)", 5]];
-  host.innerHTML = rows.map(([title, L], k) => `<div class="m-frame m-static"><div class="m-chrome"><span class="m-dots"><i></i><i></i><i></i></span>${title}${L === 5 ? '<span class="m-new">not proposed</span>' : ""}</div><div class="center"><div class="transcript-body" hidden></div>`
+  const rows = [["Journey chain (today)", 0], ["Timeline, Compact: sections and speakers", 2], ["Timeline, Standard: + sentiment (the default)", 3], ["Timeline, Full: + themes", 5]];
+  host.innerHTML = rows.map(([title, L], k) => `<div class="m-frame m-static"><div class="m-chrome"><span class="m-dots"><i></i><i></i><i></i></span>${title}</div><div class="center"><div class="transcript-body" hidden></div>`
     + `<div class="bn-transcript-journey-header${L ? " bn-transcript-journey-header--timeline" : ""}" data-ladder="${L}">`
-    + header.querySelector(".bn-selector").outerHTML + header.querySelector(".bn-transcript-journey-header__people").outerHTML
-    + `<div class="bn-session-journey bn-session-journey--overflow bn-journey--fade-right">${D.sections.map((f, i) => `<span>${i ? '<span class="bn-journey-sep" aria-hidden="true"> → </span>' : ""}<button type="button" class="bn-journey-label bn-journey-label--interactive${i === cur ? " bn-journey-label--active" : ""}">${esc(f.label)}</button></span>`).join("")}</div>`
-    + toggle.outerHTML.replace(/id="live-toggle"/, "").replace(/aria-pressed="(true|false)"/, `aria-pressed="${L ? "true" : "false"}"`)
+    + headerStart() + chainHTML(cur)
+    + `<span class="bn-timeline-split export-dropdown-wrapper">${splitHTML({ fat: !!L, L: L || 3 })}</span>`
     + `<div class="bn-transcript-timeline"><div class="bn-tp-wrap"><div class="bn-tapestry-scroll" data-tl="${k}"></div></div></div></div></div></div>`).join("");
   host.querySelectorAll("[data-tl]").forEach((el) => {
     const L = rows[+el.dataset.tl][1]; if (!L) return;
@@ -3376,41 +3595,54 @@ function ladder() {
 function meters() {
   const vh = +document.getElementById("m-height").value;
   const hs = [...document.querySelectorAll("[data-ladder]")].map((el) => [+el.dataset.ladder, el.getBoundingClientRect().height]);
-  const name = { 0: "Chain", 2: "2 lanes", 3: "3 lanes", 5: "5 lanes" };
+  const name = { 0: "Chain", 2: "Compact", 3: "Standard", 5: "Full" };
   document.getElementById("m-meters").innerHTML = `<div class="m-meter">` + hs.map(([L, h]) => {
     const pct = (h / vh) * 100;
     return `<b>${name[L]}</b><span class="m-bar"><i class="${pct > 33.4 ? "over" : ""}" style="width:${Math.min(100, pct)}%"></i></span><span>${Math.round(h)} px · ${Math.round(pct)}%</span>`;
-  }).join("") + `</div><p>Against a ${vh} px window. The live frame is drawing <b>${S.fat ? S.L + " lanes" : "the chain"}</b>${S.fat && S.L < S.asked ? ` (asked for ${S.asked}; shed to fit)` : ""}${S.fat && fatHeight(S.L) > vh / 3 ? ", over a third: the edge case named below" : ""}.</p>`;
+  }).join("") + `</div><p>Against a ${vh} px window; the tick is a third. The live frame shows <b>${S.fat ? T.detail[S.L] : "the chain"}</b>.</p>`;
 }
 
-// ── Static frames: the toggle's states ──
+// ── Static frames: the control's states ──
 function states() {
-  const crop = (pressed, force, label, scheme) => `<div class="m-state ${scheme}"><div class="m-chrome">${label}</div><div class="center"><div class="transcript-body" hidden></div>`
-    + `<div class="bn-transcript-journey-header">`
-    + `<div class="bn-session-journey bn-session-journey--overflow bn-journey--fade-left"><span><span class="bn-journey-sep" aria-hidden="true"> → </span><button type="button" class="bn-journey-label bn-journey-label--interactive">Checkout</button></span><span><span class="bn-journey-sep" aria-hidden="true"> → </span><button type="button" class="bn-journey-label bn-journey-label--interactive">Order history</button></span></div>`
-    + toggle.outerHTML.replace(/id="live-toggle"/, `data-m-force="${force}"`).replace(/aria-pressed="(true|false)"/, `aria-pressed="${pressed}"`)
-    + `</div></div></div>`;
-  const set = [[false, "", "rest"], [false, "hover", "hover"], [true, "", "pressed"], [true, "hover", "pressed · hover"], [false, "focus", "keyboard focus"]];
-  document.getElementById("states-light").innerHTML = set.map(([p, f, l]) => crop(p, f, "light · " + l, "m-light")).join("");
-  document.getElementById("states-dark").innerHTML = set.map(([p, f, l]) => crop(p, f, "dark · " + l, "m-dark")).join("");
-  const route = '<svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>';
-  const gantt = toggle.querySelector("svg").outerHTML;
-  const alt = (on, scheme) => `<div class="m-state ${scheme}"><div class="m-chrome">alternative, rejected · ${scheme.slice(2)}</div><div class="center"><div class="transcript-body" hidden></div><div class="bn-transcript-journey-header"><span style="margin-left:auto"></span><span class="dimension-toggle" role="group" aria-label="Session timeline"><button type="button" class="dimension-btn" aria-pressed="${!on}"${!on ? ' data-m-force="active"' : ""}>${route}</button><button type="button" class="dimension-btn" aria-pressed="${on}"${on ? ' data-m-force="active"' : ""}>${gantt}</button></span></div></div></div>`;
-  document.getElementById("states-alt").innerHTML = alt(true, "m-light") + alt(true, "m-dark");
+  const crop = (opts, label, scheme, narrow) => `<div class="m-state ${scheme}${opts.open ? " m-menu" : ""}"><div class="m-chrome">${label}</div><div class="m-crop-win"><div class="center"><div class="transcript-body" hidden></div>`
+    + `<div class="bn-transcript-journey-header${opts.fat ? " bn-transcript-journey-header--timeline" : ""}" style="width:${narrow ? 560 : 860}px">`
+    + chainHTML(3)
+    + `<span class="bn-timeline-split export-dropdown-wrapper">${splitHTML(opts)}</span>`
+    + `</div></div></div></div>`;
+  const set = [[{ fat: false, L: 3 }, "off (the chain)"], [{ fat: false, L: 3, force: { main: "hover" } }, "off · hover"], [{ fat: true, L: 3 }, "on (the timeline)"], [{ fat: true, L: 3, force: { main: "focus" } }, "on · keyboard focus"]];
+  document.getElementById("states-light").innerHTML = set.map(([o, l]) => crop(o, "light · " + l, "m-light")).join("");
+  document.getElementById("states-dark").innerHTML = set.map(([o, l]) => crop(o, "dark · " + l, "m-dark")).join("");
+  document.getElementById("states-narrow").innerHTML = [[{ fat: false, L: 3 }, "narrow · off", "m-light"], [{ fat: true, L: 3 }, "narrow · on", "m-light"], [{ fat: false, L: 3 }, "narrow · off", "m-dark"], [{ fat: true, L: 3 }, "narrow · on", "m-dark"]]
+    .map(([o, l, s]) => crop(o, `${s.slice(2)} · ${l}`, s, true)).join("");
+  document.getElementById("states-menu").innerHTML = crop({ fat: true, L: 3, open: true, focusItem: "5" }, "light · pulldown open, pointer on Full", "m-light")
+    + crop({ fat: false, L: 3, open: true }, "dark · pulldown open from the chain", "m-dark");
+}
+
+// ── Glyph pairs ──
+function glyphs() {
+  const pair = (title, icon, lucide, sf, rec) => `<div class="m-glyph"><div class="m-chrome">${title}${rec ? '<span class="m-new">recommended</span>' : ""}</div>`
+    + `<div class="m-glyph-art">${icon}<span class="m-sizes">${icon}${icon}</span></div>`
+    + `<div class="m-chrome" style="border-top:1px solid light-dark(#d9dce1,#2e2e33); border-bottom:0">Lucide ${lucide} ↔ SF ${sf}</div></div>`;
+  document.getElementById("glyphs").innerHTML =
+    pair("A", ICON.timeline, "gallery-horizontal", "timeline.selection", true)
+    + pair("B · iteration 1", ICON.gantt, "chart-gantt", "calendar.day.timeline.left")
+    + pair("C", ICON.align, "align-start-vertical", "align.horizontal.left");
 }
 
 // ── Controls ──
 document.getElementById("m-appearance").addEventListener("change", (e) => { const v = e.target.value; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; renderAll(); });
 document.getElementById("m-palette").addEventListener("change", (e) => { document.documentElement.dataset.colorTheme = e.target.value; renderAll(); });
-document.getElementById("m-height").addEventListener("change", (e) => { vp.style.height = e.target.value + "px"; if (S.fat) setMode(true); else meters(); });
-document.getElementById("m-lanes").addEventListener("change", (e) => { S.asked = +e.target.value; if (S.fat) setMode(true); else meters(); });
+document.getElementById("m-height").addEventListener("change", (e) => { vp.style.height = e.target.value + "px"; meters(); onScroll(); });
+document.getElementById("m-width").addEventListener("change", (e) => { frame.style.maxWidth = e.target.value + "px"; setTimeout(() => { renderTimeline(); fades(); headerVar(); }, 220); });
 
 function renderAll() { renderChain(); setChainActive(); renderTimeline(); ladder(); meters(); }
 
 buildBody(body);
 segEls = [...body.querySelectorAll(".transcript-segment")];
 renderChain();
+renderSplit();
 states();
+glyphs();
 headerVar();
 requestAnimationFrame(() => { onScroll(); ladder(); meters(); });
 new ResizeObserver(() => { renderTimeline(); }).observe(vp);

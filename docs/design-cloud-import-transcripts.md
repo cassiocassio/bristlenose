@@ -552,6 +552,13 @@ each part's VTT is on its own part's clock (the tail check refuses it if not), Z
 type, and correction 1's language behaviour. *No speaker names* is not a listing state on Zoom, because
 the names are only known once the file is read; the import writes unnamed cues and logs `named=0`.
 
+**First live sign-in, 17 Oct 2026** (Development public client, a free Basic account): consent
+page with the four scopes, HTTPS callback via `webcredentials`, PKCE exchange with no secret, the
+account in the window subtitle, and the preflight's "Recordings aren't available" notice in place of
+an empty month. **A Basic account can grant the `cloud_recording:*` scopes**: Zoom does not refuse
+them at consent, there is just nothing to list. The one blocker on the way was this Mac, not the code
+(`desktop/CLAUDE.md`, "a DIFFERENT copy of the app"). Still owed: a recording, which needs Pro.
+
 **Research and review pass, 17 Oct 2026** (Zoom's OpenAPI specs downloaded that day, devforum threads
 2020–2026, a sanitised real `/recordings` response from March 2026, and ten openly licensed Zoom VTTs
 run through the parser and read back by `s03`). What it changed:

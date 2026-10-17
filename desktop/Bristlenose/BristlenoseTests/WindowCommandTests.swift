@@ -56,7 +56,7 @@ struct WindowCommandTests {
         let needsAWindow: [WindowCommand] = [
             .addFiles, .renameProject, .renameFolder, .deleteFolder,
             .moveProject(toFolder: nil), .revealTranscripts, .locateProject,
-            .stopProject, .removeFromSidebar, .showAIConsent, .showMiro,
+            .stopProject, .removeFromSidebar, .showAIConsent, .showMiro, .showFigJam,
             .showSessionsSwitcher,
         ]
         for command in needsAWindow {

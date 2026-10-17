@@ -257,6 +257,7 @@ struct ContentView: View {
     @State private var showingAIConsent = false
     @State private var aiConsentReviewMode = false
     @State private var showingMiroSheet = false
+    @State private var showingFigJamSheet = false
     @State private var showingFeedbackSheet = false
 
     /// The ID of the project currently in inline rename mode, or nil.
@@ -1176,6 +1177,18 @@ struct ContentView: View {
                 )
             }
         }
+        // Send to FigJam (native) — a board file for the plugin; needs a live
+        // serve like the Miro sheet. Parked: `BristlenoseFlags.figjamExport`.
+        .sheet(isPresented: $showingFigJamSheet) {
+            if let port = serveManager?.runningPort {
+                FigJamSheet(
+                    port: port,
+                    token: serveManager?.authToken,
+                    projectName: selectedProject?.name ?? "",
+                    i18n: i18n
+                )
+            }
+        }
         // Send Feedback (native) — Help ▸ Send Feedback and the status-page bridge
         // both post `.showFeedbackSheet`. Present in EVERY state: with a live serve
         // the sheet reads its config from `/api/health`; with no serve (the welcome
@@ -1613,6 +1626,8 @@ struct ContentView: View {
             // panel uses, so it needs a live serve. The entry is only reachable
             // with a project open; this is the belt.
             if serveManager?.runningPort != nil { showingMiroSheet = true }
+        case .showFigJam:
+            if serveManager?.runningPort != nil { showingFigJamSheet = true }
         case .showSessionsSwitcher:
             sessionsSwitcherRequest += 1
         case .showFeedback:
@@ -2774,7 +2789,8 @@ struct ContentView: View {
             // Universal — Export menu (contents morph per tab)
             ToolbarItem(placement: .primaryAction) {
                 ExportMenuButton(bridgeHandler: bridgeHandler, i18n: i18n,
-                                 onMiro: { perform(.showMiro) })
+                                 onMiro: { perform(.showMiro) },
+                                 onFigJam: { perform(.showFigJam) })
             }
 
             // Contextual — Quotes tab: starred filter toggle + tag sidebar toggle
@@ -3857,6 +3873,9 @@ struct ExportMenuButton: View {
     /// the `.showMiroSheet` broadcast it used to post — this button is in one
     /// window's toolbar, and the sheet belongs to that window.
     let onMiro: () -> Void
+    /// Present the FigJam sheet, which `ContentView` owns. Parked behind
+    /// `BristlenoseFlags.figjamExport`; the row is absent while it is off.
+    let onFigJam: () -> Void
 
     @State private var isPresented = false
 
@@ -3868,7 +3887,7 @@ struct ExportMenuButton: View {
         }
         .help(i18n.t("desktop.toolbar.exportShortcut"))
         .popover(isPresented: $isPresented, arrowEdge: .bottom) {
-            ExportPopoverContent(bridgeHandler: bridgeHandler, i18n: i18n, onMiro: onMiro) {
+            ExportPopoverContent(bridgeHandler: bridgeHandler, i18n: i18n, onMiro: onMiro, onFigJam: onFigJam) {
                 isPresented = false
             }
         }
@@ -3881,6 +3900,7 @@ private struct ExportPopoverContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
     let onMiro: () -> Void
+    let onFigJam: () -> Void
     let dismiss: () -> Void
 
     /// Global Anonymise — strips participant *names* (display names) from every
@@ -4039,6 +4059,20 @@ private struct ExportPopoverContent: View {
             ) {
                 dismiss()
                 onMiro()
+            }
+            // Send to FigJam — a board file for the Bristlenose FigJam plugin
+            // (FigJam has no way to be written to from outside). The quotes
+            // board only, so not on the Screens lens. Parked until the plugin
+            // is published.
+            if BristlenoseFlags.figjamExport && bridgeHandler.activeTab != .screens {
+                ExportPopoverRow(
+                    icon: "square.and.arrow.down",
+                    title: i18n.t("common.figjam.menuLabel"),
+                    subtitle: i18n.t("common.figjam.popoverSubtitle")
+                ) {
+                    dismiss()
+                    onFigJam()
+                }
             }
         }
         .frame(width: 308)

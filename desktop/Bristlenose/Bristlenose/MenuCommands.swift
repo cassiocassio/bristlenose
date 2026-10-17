@@ -1684,6 +1684,18 @@ private struct QuotesMenuContent: View {
         }
         .disabled(!WindowCommand.showMiro.isEnabled(hasKeyWindow: windowCommands != nil))
 
+        // Send to FigJam — the board file for the FigJam plugin; the native
+        // FigJamSheet, which ContentView owns. Parked until the plugin is
+        // published (`BristlenoseFlags.figjamExport`), so absent rather than
+        // dimmed while off: it is not a command that is unavailable here, it
+        // is one that does not exist yet.
+        if BristlenoseFlags.figjamExport {
+            Button(i18n.t("common.figjam.menuLabel")) {
+                windowCommands?.perform(.showFigJam)
+            }
+            .disabled(!WindowCommand.showFigJam.isEnabled(hasKeyWindow: windowCommands != nil))
+        }
+
         Divider()
 
         Button(i18n.t("desktop.menu.quotes.copyAsCSV"), systemImage: "doc.on.clipboard") {

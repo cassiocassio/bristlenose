@@ -44,6 +44,8 @@ enum WindowCommand: Equatable {
     case showAIConsent
     /// Quotes ▸ Send to Miro…
     case showMiro
+    /// Quotes ▸ Send to FigJam… (parked: `BristlenoseFlags.figjamExport`)
+    case showFigJam
     /// View ▸ Switch Session (⌘⌥L on the Sessions lens).
     case showSessionsSwitcher
     /// Help ▸ Send Feedback… — the sheet opens in the front window only. It was

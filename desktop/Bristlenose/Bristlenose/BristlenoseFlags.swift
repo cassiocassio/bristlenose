@@ -51,4 +51,16 @@ enum BristlenoseFlags {
         UserDefaults.standard.bool(forKey: cloudImportZoomKey)
     }
 
+    /// Offer **Send to FigJam…** in the Quotes menu and the export popover.
+    /// **Default off** — parked 17 Oct 2026 until the Bristlenose board plugin
+    /// is published in Figma Community: a row whose last step is "run a plugin
+    /// you can't install" is a dead affordance. The sheet (`FigJamSheet`) and
+    /// the download route it calls build and run regardless; this hides the
+    /// entry points only. The SPA's twin is `featureFlags.figjamExport`.
+    ///
+    /// Flip with: `defaults write app.bristlenose BristlenoseFigJamExport -bool YES`
+    static let figjamExportKey = "BristlenoseFigJamExport"
+    static var figjamExport: Bool {
+        UserDefaults.standard.bool(forKey: figjamExportKey)
+    }
 }

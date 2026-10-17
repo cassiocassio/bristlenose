@@ -115,14 +115,25 @@ def test_stickies_are_rectangles_and_the_layout_reserves_what_miro_draws() -> No
 # ── Long quotes as two or three stickies (owner, 17 Oct 2026) ─────────────────────────────────
 
 
+def _between(lo: int, hi: int) -> str:
+    """A quote of whole sentences longer than ``lo`` and no longer than ``hi``: two parts."""
+    out = ""
+    i = 0
+    while len(out) <= lo:
+        out = (out + f" Sentence {i} is about the jars and the shelf.").strip()
+        i += 1
+    assert len(out) <= hi
+    return out
+
+
 def test_a_quote_under_the_split_stays_whole_and_a_long_one_breaks_at_sentence_ends() -> None:
     from bristlenose.board_layout import SPLIT_AT, quote_part_texts, split_quote
 
     short = "It was fine. I found the jars."
     assert split_quote(short) == [short]
-    long_ = " ".join(f"Sentence number {i} goes on for a while about the jars." for i in range(30))
+    long_ = _between(SPLIT_AT, 2 * SPLIT_AT)
     parts = split_quote(long_)
-    assert 2 <= len(parts) <= 3 and all(len(p) <= SPLIT_AT + 120 for p in parts)
+    assert len(parts) == 2 and all(len(p) <= SPLIT_AT + 60 for p in parts)
     assert parts[0].endswith("…") and parts[1].startswith("…")
     # Only the breaks change: take the dots off and the words are the quote's, in order.
     joined = " ".join(p.strip("…") for p in parts)
@@ -145,15 +156,22 @@ def test_every_sticky_shows_the_same_size_of_type() -> None:
     from bristlenose.board_layout import SIZE_K, quote_parts, sticky_width
 
     assert round(sticky_width(207)) == round(SIZE_K * 207 ** 0.5) and 240 < sticky_width(207) < 260
-    [p] = quote_parts("x" * 100, "— P1 · 0:10")
-    [q] = quote_parts("x" * 400, "— P1 · 0:10")
+    [p] = quote_parts("x" * 100, "— P1 · 0:10", split=False)
+    [q] = quote_parts("x" * 400, "— P1 · 0:10", split=False)
     assert q.width / p.width == pytest.approx(((400 + 13) / (100 + 13)) ** 0.5, rel=0.01)
 
 
 def test_the_quotes_board_stacks_a_set_stepping_right_with_only_the_last_attributed() -> None:
-    from bristlenose.board_layout import SET_GAP, SET_STAGGER, Column, QuoteCard, layout_board
+    from bristlenose.board_layout import (
+        SET_GAP,
+        SET_STAGGER,
+        SPLIT_AT,
+        Column,
+        QuoteCard,
+        layout_board,
+    )
 
-    long_ = " ".join(f"Sentence {i} is about the jars and the shelf and the bag." for i in range(20))
+    long_ = _between(SPLIT_AT, 2 * SPLIT_AT)
     board = layout_board([Column("Basket", "section", [QuoteCard(long_, "p1", "s1", 12.0)])], "B")
     parts = [s for s in board.stickies if s.kind == "quote"]
     assert len(parts) == 2 and parts[0].set_id == parts[1].set_id is not None

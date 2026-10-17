@@ -176,10 +176,12 @@ def fmt_timecode(seconds: float) -> str:
     return format_timecode(seconds)
 
 
-#: A quote longer than this becomes two stickies, and longer than twice it, three: about four in
-#: five real quotes stay whole (owner, 17 Oct 2026, from the trial runs' 720 quotes: 81% single,
-#: 16% pairs, 2% trios). Never more than three; a longer last part shrinks its type instead.
-SPLIT_AT = 650
+#: A quote longer than this becomes two stickies, and longer than twice it, three; never more than
+#: three, a longer last part simply growing. Chosen by the owner on 17 Oct 2026 from sample boards of
+#: real sessions at 650, 325 and about two sentences: across the trial runs' 720 quotes, 325 leaves
+#: 44% whole, 37% as pairs and 19% as trios, each part about 55 words — roughly what a researcher
+#: trims a quote to by hand.
+SPLIT_AT = 325
 MAX_PARTS = 3
 #: Where a part may end, best first: a sentence, then a clause, then a phrase, then any word.
 _BREAKS = (

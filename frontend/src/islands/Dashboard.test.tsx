@@ -264,3 +264,25 @@ describe("Dashboard sessions table — the person picker (design-people.md §J8.
     expect(String((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[before][0])).toContain("/dashboard");
   });
 });
+
+describe("Dashboard featured quote", () => {
+  it("links its speaker to the paragraph the transcript can land on", async () => {
+    mockFetch({
+      ...baseDashboard,
+      featured_quotes: [
+        {
+          dom_id: "q-p1-123", text: "It took three weeks", participant_id: "p1", session_id: "s1",
+          speaker_name: "Jordan", start_timecode: 123.6, end_timecode: 130, sentiment: null, intensity: 1,
+          researcher_context: null, rank: 1, has_media: false, is_starred: false, is_hidden: false,
+        },
+      ],
+    });
+    const { container } = render(<Dashboard projectId="1" />);
+    await waitFor(() => expect(container.querySelector(".bn-featured-quote .speaker-link")).not.toBeNull());
+    // `t-<seconds>`, the id TranscriptPage gives a paragraph; `t-s1-123` matched nothing and the
+    // page opened at the top.
+    expect(container.querySelector(".bn-featured-quote .speaker-link")?.getAttribute("href")).toBe(
+      "/report/sessions/s1#t-123",
+    );
+  });
+});

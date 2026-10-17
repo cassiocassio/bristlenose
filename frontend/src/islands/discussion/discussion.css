@@ -229,9 +229,12 @@ span.dl-guide-file { color: var(--bn-colour-muted); cursor: default; }
 .dl-group blockquote.dl-ask + blockquote.dl-ask { padding-top: var(--bn-space-xs); }
 /* A focused question scrolls to just under the sticky bar, not behind it. */
 .dl-ask, .dl-group { scroll-margin-top: calc(var(--dl-bar-h, 0px) + var(--bn-space-md)); }
+/* Top-aligned, or the timecode sits on the question's last line: .quote-row aligns on
+   baseline, and a button is inline-block, whose baseline is its last line. */
 .dl-ask-btn {
     appearance: none; background: none; border: 0; padding: 0; margin: 0;
     font: inherit; color: inherit; text-align: left; cursor: pointer;
+    vertical-align: top;
 }
 .dl-ask .moderator-question-text { font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); color: var(--bn-colour-muted); }
 .dl-ask .speaker, .dl-ask .badge { margin-left: var(--bn-space-xs); }

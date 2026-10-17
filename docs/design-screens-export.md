@@ -102,7 +102,13 @@ Built on the existing bridge (`board_layout.py` layout, `miro_client.py` transpo
 `server/miro_export.py`, `routes/miro.py`, `docs/design-miro-bridge.md`); a new board per export,
 as today.
 
-**Layout: one row per participant, left to right in visit order.** Each still is a Miro **frame**
+> **Decided 17 Oct 2026 (owner): the board aggregates — one frame per screen, every participant's
+> quotes on it.** Pooling all the feedback on a screen is normal research practice, looking for
+> consensus problems and edge cases, and it is the expectation the lens already sets: a screen is
+> one place for everything said about it. The per-participant layout below is what was built first
+> and is being replaced. The folder and clipboard stay one still per participant per screen.
+
+**Layout (first build, superseded): one row per participant, left to right in visit order.** Each still is a Miro **frame**
 titled so people can say it out loud — `P3 · Checkout` (code, then the lens's screen name). Rows
 are stacked in code order, with a gutter between frames for the team's own stickies.
 

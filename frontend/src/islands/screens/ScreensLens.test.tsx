@@ -2347,11 +2347,14 @@ describe("ScreensLens — arriving from the transcript's gutter", () => {
     mockApi(screensResponse());
     render(<ScreensLens />);
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Delivery or collect"));
+    // Its title on the board flashes, where the eye lands (utils/arrival.ts).
+    expect(screen.getByRole("heading", { level: 1 })).toHaveAttribute("data-arrived");
   });
 
   it("opens as usual when the address names no screen it has", async () => {
     window.history.replaceState(null, "", "/report/screens/?screen=nope&session=s1");
     mockApi(screensResponse());
     await opened();
+    expect(document.querySelector("[data-arrived]")).toBeNull();
   });
 });

@@ -8,10 +8,12 @@
  */
 
 import { useCallback } from "react";
+import { markArrived } from "../utils/arrival";
 import { scrollToLand } from "../utils/scrollToLand";
 
 export interface ScrollToAnchorOptions {
   block?: ScrollLogicalPosition;
+  /** Flash the element on landing (utils/arrival.ts). */
   highlight?: boolean;
 }
 
@@ -26,12 +28,7 @@ export function useScrollToAnchor() {
       const el = document.getElementById(anchorId);
       if (el) {
         scrollToLand(el, block);
-        if (highlight) {
-          el.classList.remove("anchor-highlight");
-          // Force reflow so animation restarts
-          void el.offsetWidth;
-          el.classList.add("anchor-highlight");
-        }
+        if (highlight) markArrived(el);
         return;
       }
       attempt++;

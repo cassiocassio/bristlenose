@@ -1,0 +1,46 @@
+/* Atom: arrival — the flash on the thing a link landed on.
+
+   One cue for every in-app link (docs/design-arrival-flash.md): the transcript
+   paragraph a quote or timeline named, the quote card or group heading a
+   gutter label named, the Sessions row you came back to. It fades from
+   --bn-arrival-colour to the element's own background over
+   --bn-arrival-duration (tokens.css), so the eye finds its place before the
+   cue is gone.
+
+   The app writes `data-arrived` (frontend/src/utils/arrival.ts markArrived),
+   an attribute rather than a class because React owns those elements'
+   className and a re-render would wipe a class mid-flash. The sealed static
+   render's frozen transcript-names.js writes `.anchor-highlight` on a
+   transcript segment; it stays styled here, as it was.
+
+   The keyframe names only a `from`: the fade ends on whatever background the
+   element has of its own (transparent on a paragraph, the card's on a card),
+   and with no fill-mode nothing is left behind when it ends. Never add a `to`
+   or `forwards`: either strips a card of its own background. */
+
+@keyframes bn-arrival {
+    from { background-color: var(--bn-arrival-colour); }
+}
+
+/* `:root` lifts the attribute to (0,2,0), and this file loads after
+   atoms/timecode.css: a paragraph or card the player is on carries
+   `.bn-timecode-glow.bn-timecode-playing`, whose pulse would otherwise take the
+   `animation` and the flash would never show. The arrival wins for its five
+   seconds, as the transcript's flash always has. */
+:root [data-arrived],
+.transcript-segment.anchor-highlight {
+    animation: bn-arrival var(--bn-arrival-duration) var(--bn-arrival-easing);
+}
+
+/* A heading is a full-width block with no padding: round the strip's corners
+   while it flashes, as the transcript paragraph's are. */
+h1[data-arrived],
+h2[data-arrived],
+h3[data-arrived] {
+    border-radius: var(--bn-radius-sm);
+}
+
+/* No prefers-reduced-motion override, deliberately: a colour fade moves
+   nothing, and a fade is what reduced motion replaces movement with (Apple
+   HIG, Accessibility ▸ Cognitive). A held colour that snaps off would keep
+   the brightest moment five times longer and then pull the eye back. */

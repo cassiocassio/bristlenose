@@ -280,14 +280,10 @@
     padding: 0 1px;
 }
 
-/* Anchor highlight animation — flash yellow, fade to normal over 5s.
-   Applied by transcript-names.js when navigating via #t-NNN anchor. */
-@keyframes anchor-fade {
-    0%   { background-color: var(--bn-colour-highlight); }
-    100% { background-color: transparent; }
-}
-
+/* The paragraph a link landed on flashes (atoms/arrival.css); its corners
+   round while it does. `[data-arrived]` in the app, `.anchor-highlight` from
+   the sealed static render's transcript-names.js. */
+.transcript-segment[data-arrived],
 .transcript-segment.anchor-highlight {
-    animation: anchor-fade 5s ease-out forwards;
     border-radius: var(--bn-radius-sm);
 }

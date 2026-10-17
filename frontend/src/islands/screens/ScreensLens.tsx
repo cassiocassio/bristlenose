@@ -106,6 +106,7 @@ import { choosePaper, papers, readAccents, samplePaper, type Rgb } from "./paper
 import "./screens.css";
 import { screenRef, screensArrival, screenTitle, stillUrl } from "./screenModel";
 import { Icon } from "../../components/Icon";
+import { markArrived } from "../../utils/arrival";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -488,6 +489,8 @@ export function ScreensLens() {
   // that holds that screen opens it on that session's version. Read from the page's own query: the
   // lens exists only in serve mode, under the browser router, never in an export.
   const arrival = useRef(screensArrival(window.location.search));
+  // The screen an arrival opened, until its title on the board has flashed (utils/arrival.ts).
+  const arrivedKey = useRef<string | null>(null);
 
   // Screens: polled while the job is still reading, capped, and re-read when the data moves.
   useEffect(() => {
@@ -505,6 +508,7 @@ export function ScreensLens() {
           if (want && asked) {
             arrival.current = null;
             setCurKey(asked.key);
+            arrivedKey.current = asked.key;
             const hasSession = asked.tabs.some((tb) => tb.session_id === want.session);
             if (!hasSession) console.warn("Screens: the screen asked for has no version from", want.session);
             setTabSid(hasSession ? want.session : null);
@@ -679,6 +683,17 @@ export function ScreensLens() {
   // else the board's title. Focus outside the lens is left alone. "On p2's screen" is the board's to
   // settle (`focusRequest`): the card it moves is hidden until placement gives it a spot.
   const lensRef = useRef<HTMLElement>(null);
+  // An arrival flashes the title of the screen it opened, once the board shows it (the loading
+  // shell's "Screens" heading is not it). Checked after every render: the board waits on data,
+  // arrangements and stills, and the check is one comparison until then.
+  useEffect(() => {
+    if (arrivedKey.current === null || screen?.key !== arrivedKey.current) return;
+    const lens = lensRef.current;
+    const title = lens?.classList.contains("screens-lens") ? lens.querySelector<HTMLElement>(".section-heading h1") : null;
+    if (!title) return;
+    arrivedKey.current = null;
+    markArrived(title);
+  });
   const refocus = useRef<{ want: Refocus; from: Element | null } | null>(null);
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
   const boardKey = screen && tab ? `${screen.key}|${tab.session_id}|${tab.t}` : "";

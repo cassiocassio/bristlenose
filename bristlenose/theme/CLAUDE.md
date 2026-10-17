@@ -143,11 +143,14 @@ Quoted text within transcript segments is wrapped in `<mark class="bn-cited">` e
 - **HTML**: `<mark class="bn-cited">` elements are always emitted by `render/transcript_pages.py` regardless of CSS visibility — the mechanism is intact
 - **Design rationale**: the knocked-back opacity on non-quoted segments (0.6) plus first-occurrence section/theme labels plus span bars provide sufficient visual cues for quote extent, making the inline highlight redundant for now
 
-### Anchor highlight animation
+### Arrival flash (was "anchor highlight")
 
-When navigating to a transcript page via anchor link (e.g., from coverage section), the target segment flashes yellow and fades to normal over 5 seconds. Implemented via:
-- **CSS**: `@keyframes anchor-fade` in `transcript.css` — fades from `--bn-colour-highlight` to transparent
-- **JS**: `_highlightAnchorTarget()` in `transcript-names.js` — on page load, checks `location.hash` for `#t-\d+` pattern and adds `.anchor-highlight` class to matching segment
+Whatever a link lands on flashes and fades to its own background: the transcript paragraph, the quote card or group heading in Quotes, the screen's title in Screens, the asking in Discussion. One atom, `atoms/arrival.css` (`@keyframes bn-arrival`), driven by three tokens in `tokens.css`: `--bn-arrival-colour` (an alias of the palette's `--bn-colour-highlight`), `--bn-arrival-duration` (5s), `--bn-arrival-easing` (ease-out). Change those to change it everywhere. Full spec and catalogue: `docs/design-arrival-flash.md`.
+- **The SPA writes `data-arrived`**, through `markArrived()` in `frontend/src/utils/arrival.ts`, never a class: React owns those elements' `className`. `useScrollToAnchor`'s `highlight: true` calls it.
+- **The keyframe names only a `from`, and there is no fill-mode.** A `to` frame or `forwards` would leave a card without its own background. `tests/test_arrival_css.py` pins this, and pins that no rule animates the cue with a literal.
+- **The selector is `:root [data-arrived]`, (0,2,0), on purpose.** A bare attribute loses `animation` to the player's `.bn-timecode-glow.bn-timecode-playing` pulse.
+- **The static render** still writes `.anchor-highlight` from frozen `transcript-names.js`, and the atom styles it on `.transcript-segment` as before.
+- **No reduced-motion override, by decision.** A colour fade moves nothing.
 
 ## Sentiment bar charts
 

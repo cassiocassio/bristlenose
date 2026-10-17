@@ -8,7 +8,7 @@
 
 enum WelcomeTimelineCSS {
     static let shipped = #"""
-/* ════ bristlenose/theme/tokens.css — lines 1–394 ════ */
+/* ════ bristlenose/theme/tokens.css — lines 1–405 ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -275,6 +275,17 @@ enum WelcomeTimelineCSS {
        quote card's left edge, the signal card's box and fused seam); it was a
        literal 40% in two places until the Signals lens made it three. */
     --bn-focus-outline-mix: 40%;
+
+    /* Arrival — the "you are here" cue on the thing a link landed on: a
+       transcript paragraph, a quote card, a group heading
+       (atoms/arrival.css, docs/design-arrival-flash.md). Seconds, not the
+       Acknowledge range, because the eye is still travelling when it starts.
+       Structural, like Focus: the colour is an alias of the palette's
+       highlight, so every palette × appearance answers through the contract
+       it already keeps. */
+    --bn-arrival-colour: var(--bn-colour-highlight);
+    --bn-arrival-duration: 5s;
+    --bn-arrival-easing: ease-out;
 
     /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
        Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md

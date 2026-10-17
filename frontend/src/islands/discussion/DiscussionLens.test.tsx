@@ -690,6 +690,8 @@ describe("DiscussionView — arriving from the transcript's gutter", () => {
     const ask = container.querySelector('.dl-ask[data-turn="s2@01:26"]')!;
     expect(ask.classList.contains("hot")).toBe(true);
     expect(ask.querySelector(".dl-ask-btn")).toHaveAttribute("aria-pressed", "true");
+    // And flashes it, so the eye finds it (utils/arrival.ts).
+    expect(ask.hasAttribute("data-arrived")).toBe(true);
   });
 
   it("opens as usual without one, or with a turn it does not have", () => {

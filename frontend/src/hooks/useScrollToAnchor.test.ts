@@ -67,7 +67,7 @@ describe("useScrollToAnchor", () => {
     const { result } = renderHook(() => useScrollToAnchor());
     result.current("test-anchor", { highlight: true });
 
-    expect(el.classList.contains("anchor-highlight")).toBe(true);
+    expect(el.hasAttribute("data-arrived")).toBe(true);
   });
 
   it("does not apply highlight by default", () => {
@@ -79,7 +79,7 @@ describe("useScrollToAnchor", () => {
     const { result } = renderHook(() => useScrollToAnchor());
     result.current("test-anchor");
 
-    expect(el.classList.contains("anchor-highlight")).toBe(false);
+    expect(el.hasAttribute("data-arrived")).toBe(false);
   });
 
   it("retries when element is not found", () => {

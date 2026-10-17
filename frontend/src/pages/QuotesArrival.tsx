@@ -154,7 +154,10 @@ export function QuotesArrival() {
     }
     if (scrolled.current !== current.key) {
       scrolled.current = current.key;
-      scrollToAnchor(anchor, { block: "start" });
+      // Land on the quote the link named and flash it (docs/design-arrival-flash.md); without one,
+      // or when it is not in the report, on the group's heading.
+      if (reveal && revealed.current === current.key) scrollToAnchor(reveal, { block: "center", highlight: true });
+      else scrollToAnchor(anchor, { block: "start", highlight: true });
     }
   }, [anchor, reveal, loads, current, scrollToAnchor]);
 
@@ -165,7 +168,7 @@ export function QuotesArrival() {
     const timer = setTimeout(() => {
       if (scrolled.current === key) return;
       scrolled.current = key;
-      scrollToAnchor(anchor, { block: "start" });
+      scrollToAnchor(anchor, { block: "start", highlight: true });
     }, WAIT_MS);
     return () => clearTimeout(timer);
   }, [anchor, current, scrollToAnchor]);

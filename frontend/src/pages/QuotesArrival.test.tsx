@@ -10,8 +10,12 @@ vi.mock("../utils/api", async (importOriginal) => ({
   putHidden: vi.fn(),
 }));
 const scrolled: string[] = [];
+const scrollOpts: ({ block?: string; highlight?: boolean } | undefined)[] = [];
 vi.mock("../hooks/useScrollToAnchor", () => ({
-  useScrollToAnchor: () => (anchor: string) => scrolled.push(anchor),
+  useScrollToAnchor: () => (anchor: string, opts?: { block?: string; highlight?: boolean }) => {
+    scrolled.push(anchor);
+    scrollOpts.push(opts);
+  },
 }));
 
 function quote(overrides: Partial<QuoteResponse> = {}): QuoteResponse {
@@ -36,6 +40,7 @@ beforeEach(() => {
   resetStore();
   resetQuotesArrival();
   scrolled.length = 0;
+  scrollOpts.length = 0;
 });
 
 describe("arrivalAnchor", () => {
@@ -67,7 +72,9 @@ describe("QuotesArrival", () => {
     expect(after.hidden["q-p1-10"]).toBeUndefined();
     expect(after.viewMode).toBe("all");
     expect(lastQuotesArrival).toEqual({ reveal: "q-p1-10", anchor: "section-3", changed: ["hidden", "starredOnly"] });
-    expect(scrolled).toEqual(["section-3"]);
+    // It lands on the quote the link named, and flashes it.
+    expect(scrolled).toEqual(["q-p1-10"]);
+    expect(scrollOpts).toEqual([{ block: "center", highlight: true }]);
   });
 
   it("changes nothing for a quote already in view, and only scrolls", async () => {
@@ -76,7 +83,7 @@ describe("QuotesArrival", () => {
       initFromQuotes([quote()], true);
     });
     expect(lastQuotesArrival?.changed).toEqual([]);
-    expect(scrolled).toEqual(["theme-4"]);
+    expect(scrolled).toEqual(["q-p1-10"]);
   });
 
   it("keeps the quote un-hidden when the lens's second load still says hidden", async () => {
@@ -91,7 +98,7 @@ describe("QuotesArrival", () => {
       initFromQuotes([quote({ is_hidden: true })], true);
     });
     expect(getQuotesSnapshot().hidden["q-p1-10"]).toBeUndefined();
-    expect(scrolled).toEqual(["section-3"]); // scrolled once, not per load
+    expect(scrolled).toEqual(["q-p1-10"]); // scrolled once, not per load
   });
 
   it("scrolls after a wait when the quotes are slow, and still reveals when they come", async () => {
@@ -119,7 +126,9 @@ describe("QuotesArrival", () => {
       initFromQuotes([quote()], true);
     });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("not in this report"), "q-p9-1");
+    // Not in the report: the group's heading is where it lands, and what flashes.
     expect(scrolled).toEqual(["section-3"]);
+    expect(scrollOpts).toEqual([{ block: "start", highlight: true }]);
     warn.mockRestore();
   });
 

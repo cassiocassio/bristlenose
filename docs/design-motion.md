@@ -342,7 +342,7 @@ A restrained single-hue sheen travelling across **text** to signal *indeterminat
 | `bracket-fade-in` | `molecules/editable-text.css` | Reveal | 0.15s |
 | `mod-q-reveal` | `atoms/moderator-question.css` | Reveal | 0.2s — keyframe ships; its trigger is feature-flagged off (5 Aug 2026). Retained deliberately, not dead |
 | `cell-tooltip-in` | `organisms/signals.css` | Appear | 0.12s |
-| `anchor-fade` | `templates/transcript.css` | Acknowledge | 5s |
+| `bn-arrival` | `atoms/arrival.css` | Arrival ("you are here", not Acknowledge: seconds, because the eye is still travelling) | `--bn-arrival-duration` 5s, `--bn-arrival-easing` ease-out; colour `--bn-arrival-colour`. Replaced `anchor-fade` 17 Oct 2026 (`docs/design-arrival-flash.md`) |
 | `content-settle` | `organisms/sidebar.css` | Inertia | 65ms (iOS variant only) |
 
 ### 5.2 Design tokens
@@ -362,7 +362,8 @@ A restrained single-hue sheen travelling across **text** to signal *indeterminat
 - ✓ Timecode: glow pulse, progress bar, word highlight (3 blocks in `timecode.css`)
 - ✗ Badges: 5 keyframes unguarded
 - ✗ Activity chip: slide-in + spin unguarded
-- ✗ Bracket fade-in, analysis tooltip, anchor fade: unguarded
+- ✗ Bracket fade-in, analysis tooltip: unguarded
+- — Arrival flash (`bn-arrival`): unguarded **by decision** (17 Oct 2026). A colour fade moves nothing, and a fade is what reduced motion replaces movement with; a held step that snaps off was reviewed and rejected (`atoms/arrival.css`)
 - — Moderator reveal: unguarded, but **not a live defect** — its trigger has been feature-flagged off since 5 Aug 2026, so the animation can't play. Rank it with the flag, not with the queue above; the recommended global rule covers it either way
 - ✗ ~100 transition declarations across theme: no guards
 - **Recommendation:** add a single global rule in `tokens.css`

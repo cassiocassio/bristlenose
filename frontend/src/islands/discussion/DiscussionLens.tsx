@@ -54,6 +54,7 @@ import type { DiscussionData, DiscussionQuote, DiscussionSession, DiscussionTurn
 import "./discussion.css";
 import { discussionArrival } from "./discussionLinks";
 import { appQuery } from "../../utils/appQuery";
+import { markArrived } from "../../utils/arrival";
 
 // The lens's strings, from `common.discussion.*`. Getters read the active
 // language when called. RULE: every component that reads `S` must call
@@ -391,11 +392,13 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [focus, order, selectSession]);
 
-  // An arrival brings the asking it names into view, once.
+  // An arrival brings the asking it names into view, once, and flashes it (utils/arrival.ts).
   useEffect(() => {
     if (!arrived?.turn) return;
     const el = contentRef.current?.querySelector<HTMLElement>(`.dl-ask[data-turn="${arrived.turn.replace(/["\\]/g, "\\$&")}"]`);
-    if (el && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center" });
+    if (!el) return;
+    if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center" });
+    markArrived(el);
   }, [arrived]);
 
   // Bring the first lit question into view when a navigator row takes focus.

@@ -63,6 +63,7 @@ import {
 import type { SessionListItem } from "../utils/api";
 import { formatFinderDate, formatTimecode } from "../utils/format";
 import { getTagBg } from "../utils/colours";
+import { markArrived } from "../utils/arrival";
 import type {
   TranscriptPageResponse,
   TranscriptSegmentResponse,
@@ -611,7 +612,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         }
       }
       if (el) {
-        el.classList.add("anchor-highlight");
+        markArrived(el);
         el.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     });

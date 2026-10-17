@@ -976,6 +976,15 @@ describe("TranscriptPage — new data while it is open (progressive lenses)", ()
     expect(scrolledInto.filter((id) => id === "t-26")).toHaveLength(1);
   });
 
+  it("flashes the paragraph a link landed on", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    window.location.hash = "#t-26";
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => expect(scrolledInto).toContain("t-26"));
+    // The attribute, not a class React would wipe on its next render (utils/arrival.ts).
+    expect(document.getElementById("t-26")?.hasAttribute("data-arrived")).toBe(true);
+  });
+
   it("scrolls to the link again on a later visit by it", async () => {
     mockedGetTranscript.mockResolvedValue(mockData);
     window.location.hash = "#t-26";

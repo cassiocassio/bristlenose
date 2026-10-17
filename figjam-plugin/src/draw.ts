@@ -65,6 +65,40 @@ function makeSticky(p: StickyPlan, wide: boolean, fonts: Fonts): StickyNode {
   return s;
 }
 
+// A column's header is a short pink label, not a sticky (owner, 17 Oct 2026,
+// for density): a sticky is at least 240 tall, which is a lot of pink for two
+// lines. It is a FigJam shape, so — unlike a section name — it still shows in an
+// image export. Shapes don't grow to fit their text, so each is measured.
+const STICKY_WIDTH = { square: 240, wide: 416 };
+const LABEL_INSET = 16; // room above and below the text, measured on SQUARE
+const LABEL_MIN = 48;
+
+function makeHeaderLabel(p: StickyPlan, width: number, fonts: Fonts, measure: TextNode): ShapeWithTextNode {
+  const s = figma.createShapeWithText();
+  s.shapeType = "SQUARE"; // ROUNDED_RECTANGLE becomes a pill at this height and insets its text further
+  s.text.characters = p.characters;
+  if (p.bold && fonts.bold) s.text.setRangeFontName(p.bold[0], p.bold[1], fonts.bold);
+  // Left-aligned like the quotes beneath it. Not in the typings for a shape's
+  // text sublayer, but FigJam honours it (measured in a board, 17 Oct 2026);
+  // if a later FigJam drops it, the label is merely centred.
+  try {
+    (s.text as unknown as { textAlignHorizontal: string }).textAlignHorizontal = "LEFT";
+  } catch {
+    /* centred is fine */
+  }
+  s.fills = [{ type: "SOLID", color: rgb(p.fill) }];
+  s.strokes = [];
+  // Measure the same words, fonts and size at the label's text width.
+  measure.resize(width - 2 * LABEL_INSET, measure.height);
+  measure.characters = p.characters;
+  measure.fontName = fonts.base;
+  if (p.bold && fonts.bold) measure.setRangeFontName(p.bold[0], p.bold[1], fonts.bold);
+  const size = s.text.fontSize;
+  if (typeof size === "number") measure.fontSize = size;
+  s.resize(width, Math.max(LABEL_MIN, Math.ceil(measure.height) + 2 * LABEL_INSET));
+  return s;
+}
+
 /** Where the board goes: to the right of whatever is already on the page. */
 function origin(): { x: number; y: number } {
   const nodes = figma.currentPage.children;
@@ -94,55 +128,64 @@ export async function draw(plan: BoardPlan, tally: { built: number }, progress: 
   title.y = at.y;
   made.push(title);
 
-  let sinceYield = 0;
-  let x = at.x;
-  const top = at.y + title.height + TITLE_GAP;
+  const measure = figma.createText();
+  measure.fontName = fonts.base;
+  measure.textAutoResize = "HEIGHT";
+  measure.visible = false;
 
-  for (const frame of plan.frames) {
-    const section = figma.createSection();
-    section.name = frame.title;
-    section.x = x;
-    section.y = top;
-    made.push(section);
+  try {
+    let sinceYield = 0;
+    let x = at.x;
+    const top = at.y + title.height + TITLE_GAP;
 
-    let colX = PAD;
-    let bottom = PAD;
-    for (const column of frame.columns) {
-      const header = makeSticky(column.header, plan.wide, fonts);
-      section.appendChild(header); // then local coordinates
-      header.x = colX;
-      header.y = PAD;
-      let y = PAD + header.height + GAP;
-      let width = header.width;
-      for (const set of column.quotes) {
-        const stickies: StickyNode[] = [];
-        set.parts.forEach((p, k) => {
-          const s = makeSticky(p, plan.wide, fonts);
-          section.appendChild(s);
-          s.x = colX + k * NOTCH;
-          s.y = y;
-          y += s.height - NOTCH; // stacked by the height it actually grew to
-          width = Math.max(width, s.width + k * NOTCH);
-          stickies.push(s);
-        });
-        y += NOTCH + GAP;
-        // A set moves and sorts as one; ⌘-click still picks out a single part
-        // to delete, which is how researchers trim (design doc, 17 Oct 2026).
-        if (stickies.length > 1) figma.group(stickies, section).name = set.name;
-        tally.built++;
-        sinceYield += stickies.length;
-        if (sinceYield >= BATCH) {
-          sinceYield = 0;
-          progress();
-          await pause();
+    for (const frame of plan.frames) {
+      const section = figma.createSection();
+      section.name = frame.title;
+      section.x = x;
+      section.y = top;
+      made.push(section);
+
+      let colX = PAD;
+      let bottom = PAD;
+      for (const column of frame.columns) {
+        const header = makeHeaderLabel(column.header, plan.wide ? STICKY_WIDTH.wide : STICKY_WIDTH.square, fonts, measure);
+        section.appendChild(header); // then local coordinates
+        header.x = colX;
+        header.y = PAD;
+        let y = PAD + header.height + GAP;
+        let width = header.width;
+        for (const set of column.quotes) {
+          const stickies: StickyNode[] = [];
+          set.parts.forEach((p, k) => {
+            const s = makeSticky(p, plan.wide, fonts);
+            section.appendChild(s);
+            s.x = colX + k * NOTCH;
+            s.y = y;
+            y += s.height - NOTCH; // stacked by the height it actually grew to
+            width = Math.max(width, s.width + k * NOTCH);
+            stickies.push(s);
+          });
+          y += NOTCH + GAP;
+          // A set moves and sorts as one; ⌘-click still picks out a single part
+          // to delete, which is how researchers trim (design doc, 17 Oct 2026).
+          if (stickies.length > 1) figma.group(stickies, section).name = set.name;
+          tally.built++;
+          sinceYield += stickies.length;
+          if (sinceYield >= BATCH) {
+            sinceYield = 0;
+            progress();
+            await pause();
+          }
         }
+        bottom = Math.max(bottom, y - GAP);
+        colX += width + GAP;
       }
-      bottom = Math.max(bottom, y - GAP);
-      colX += width + GAP;
+      // Sections don't grow to fit; size this one to what it now holds.
+      section.resizeWithoutConstraints(Math.max(colX - GAP + PAD, 200), bottom + PAD);
+      x += section.width + FRAME_GAP;
     }
-    // Sections don't grow to fit; size this one to what it now holds.
-    section.resizeWithoutConstraints(Math.max(colX - GAP + PAD, 200), bottom + PAD);
-    x += section.width + FRAME_GAP;
+  } finally {
+    measure.remove(); // even if the build stops part-way
   }
 
   progress();

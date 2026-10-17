@@ -685,8 +685,18 @@ its text (fixed 240 or 416 wide, at least 240 tall), so the wide one wastes spac
 Miro never does. Square is 43% narrower, so more columns fit on screen and a split
 part (≈325 characters) about fills its square. The defaults are the owner's
 intuition from using both apps, stated as such; the radio is there because users
-will want to pick. Short quotes and header stickies still leave space in a square;
-see the open density options below.
+will want to pick. Short quotes still leave space in a square; FigJam has no smaller sticky.
+
+**Column headers are short pink labels, not stickies (owner, 17 Oct 2026, for
+density)** — reversing "keep header stickies" from earlier the same day. A FigJam
+shape (`SQUARE`, the sticky pink, no stroke, text left-aligned), as wide as the
+column's stickies and measured to its text: about 70 px for two lines against a
+240 px sticky. Being a shape it still shows in an image export, which was the
+reason for header stickies in the first place. Measured: `ROUNDED_RECTANGLE`
+turns into a pill at that height and insets its text further, so it truncated the
+count; `SQUARE` with a 16 px inset fits, including a label that wraps. Quotes stay
+stickies: shapes could fit their text as Miro's stickies do, but would lose
+FigJam's sticky features (sorting, AI summarise/cluster, voting) and habits.
 
 **Security disciplines for the Lucid renderer (F2):**
 - **`lucid_package.py` builds `document.json` as a Python dict and serialises via

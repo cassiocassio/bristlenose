@@ -43,6 +43,22 @@ describe("markArrived", () => {
     expect(el.hasAttribute("data-arrived")).toBe(false);
   });
 
+  it("keeps a restarted flash when the old one's cancel arrives late", () => {
+    // Restarting cancels the old animation; its animationcancel lands a frame later, while the
+    // new bn-arrival is running. That is not the new flash ending.
+    const el = document.createElement("div");
+    markArrived(el);
+    markArrived(el);
+    let running = [{ animationName: "bn-arrival" }];
+    Object.defineProperty(el, "getAnimations", { value: () => running });
+    animationEnd(el, "bn-arrival", "animationcancel");
+    expect(el.hasAttribute("data-arrived")).toBe(true);
+    // And the restarted flash still clears when it really ends.
+    running = [];
+    animationEnd(el, "bn-arrival");
+    expect(el.hasAttribute("data-arrived")).toBe(false);
+  });
+
   it("keeps the mark when a child's animation ends", () => {
     const el = document.createElement("div");
     const badge = document.createElement("span");

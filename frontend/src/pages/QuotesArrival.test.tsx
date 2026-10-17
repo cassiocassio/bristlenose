@@ -109,6 +109,7 @@ describe("QuotesArrival", () => {
         vi.advanceTimersByTime(5000);
       });
       expect(scrolled).toEqual(["section-3"]);
+      expect(scrollOpts).toEqual([{ block: "start", highlight: true }]);
       await act(async () => {
         initFromQuotes([quote({ is_hidden: true })], true);
       });

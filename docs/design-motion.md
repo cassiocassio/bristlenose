@@ -366,7 +366,7 @@ A restrained single-hue sheen travelling across **text** to signal *indeterminat
 - — Arrival flash (`bn-arrival`): unguarded **by decision** (17 Oct 2026). A colour fade moves nothing, and a fade is what reduced motion replaces movement with; a held step that snaps off was reviewed and rejected (`atoms/arrival.css`)
 - — Moderator reveal: unguarded, but **not a live defect** — its trigger has been feature-flagged off since 5 Aug 2026, so the animation can't play. Rank it with the flag, not with the queue above; the recommended global rule covers it either way
 - ✗ ~100 transition declarations across theme: no guards
-- **Recommendation:** add a single global rule in `tokens.css`
+- **Recommendation:** add a single global rule in `tokens.css`. **It must exempt the arrival flash** (`:root [data-arrived]`, `.transcript-segment.anchor-highlight`): the usual `* { animation-duration: 0.01ms !important }` would end it at once, `markArrived` would clear the mark, and Reduce Motion users would lose the cue the decision above kept for them
 
 ---
 

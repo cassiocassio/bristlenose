@@ -2,7 +2,7 @@
 
    One cue for every in-app link (docs/design-arrival-flash.md): the transcript
    paragraph a quote or timeline named, the quote card or group heading a
-   gutter label named, the Sessions row you came back to. It fades from
+   gutter label named, the screen's title in Screens. It fades from
    --bn-arrival-colour to the element's own background over
    --bn-arrival-duration (tokens.css), so the eye finds its place before the
    cue is gone.
@@ -38,6 +38,15 @@ h1[data-arrived],
 h2[data-arrived],
 h3[data-arrived] {
     border-radius: var(--bn-radius-sm);
+}
+
+/* Forced colours (Windows High Contrast) replace background-color with the
+   system's, so the wash vanishes there: draw the system highlight as an outline
+   for as long as the mark lasts (markArrived clears it when the flash ends). */
+@media (forced-colors: active) {
+    :root [data-arrived] {
+        outline: 2px solid Highlight;
+    }
 }
 
 /* No prefers-reduced-motion override, deliberately: a colour fade moves

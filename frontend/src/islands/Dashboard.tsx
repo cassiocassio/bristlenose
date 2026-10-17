@@ -381,6 +381,8 @@ function CompactSessionsTable({
 function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
   const playerCtx = useContext(PlayerContext);
   const timecodeStr = formatTimecode(quote.start_timecode);
+  // The transcript's paragraph ids are `t-<seconds>` (TranscriptPage); the session is the path.
+  const anchor = `t-${Math.floor(quote.start_timecode)}`;
 
   const handleCardClick = (e: React.MouseEvent) => {
     // If the click originated on a link/button, let it handle itself.
@@ -394,8 +396,6 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
     }
 
     // Fall back to session navigation.
-    // The transcript's paragraph ids are `t-<seconds>` (TranscriptPage); the session is the path.
-    const anchor = `t-${Math.floor(quote.start_timecode)}`;
     const url = `/report/sessions/${quote.session_id}#${anchor}`;
     if (e.metaKey || e.ctrlKey || e.shiftKey) {
       window.open(url, "_blank");
@@ -440,7 +440,7 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
 
         <a
           href={reportHref(
-            `/report/sessions/${quote.session_id}#t-${Math.floor(quote.start_timecode)}`,
+            `/report/sessions/${quote.session_id}#${anchor}`,
           )}
           className="speaker-link"
         >

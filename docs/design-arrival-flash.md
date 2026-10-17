@@ -226,12 +226,30 @@ this section is what shipped:
   analysed before this change. Before that commit, moving the transcript to the attribute would have
   cost every older project its flash.
 
+**After the build review (code-review, silent-failure-hunter, a11y-review):**
+
+- **A restart kept itself alive only in jsdom.** Re-marking an element mid-flash cancels the old
+  animation, and that `animationcancel` arrives a frame later at the *new* listener. It cleared the
+  fresh mark (probed in WebKit and Chromium). `markArrived` now ignores an end or cancel while a
+  `bn-arrival` is still running on the element, and drops the previous call's listeners.
+- **A forced-colours outline.** Windows High Contrast replaces the background, so the wash
+  vanishes; `outline: 2px solid Highlight` lasts as long as the mark.
+- **Load order is pinned.** The specificity win over the glow holds only because `arrival.css`
+  loads after `timecode.css`, and the test now asserts that.
+
 ### Judgement calls left open
 
-- **The colour.** All six palettes' highlights are yellows or ochres. In dark mode, body text
-  behind the flash's peak is under 4.5:1 in four of the six (UX review measurements, recorded in
-  TODO.md). Search `<mark>` has the same problem. Whether arrival gets its own palette entry is the
-  owner's call (TODO.md).
+- **The colour and the cue's shape.** All six palettes' highlights are yellows or ochres.
+  - At the peak, dark-mode body text fails 4.5:1 in four palettes.
+  - Muted and accent text fail in every palette, in both modes.
+  - The fade stays under for 2–3 s.
+  - No background tint can make small muted text pass and stay visible.
+
+  So the choice is between a lighter wash with an accent bar or ring, and documenting the dip. The
+  measurements and options are in TODO.md; it's the owner's call.
+- **Focus on arrival.** No destination moves focus, so a keyboard or screen-reader user gets no
+  equivalent of the flash. The gap predates this work, which makes it visible; per-destination plan
+  in TODO.md. The arrival's smooth scroll also ignores Reduce Motion (same entry).
 - **When the flash starts.** It starts with the scroll, not when it settles. A long Quotes jump
   can spend about 1 s of the ease-out before the card is still. Fixing that needs a "landed"
   callback from `scrollToLand`.

@@ -178,6 +178,10 @@ point would do, later); FigJam as a target (`design-board-integrations.md`).
 
 ## 8. The weekend
 
+**As built, 17 Oct 2026:** steps 1–7 are on `main` (`3db394fa`, `ab7696ce`, `2fb81386`,
+`ebacacaf`); step 8 ran on a copy of *IKEA with uxfriends* (9 frames, 56 s). Still owed: the
+by-hand checks below §9, and the Settings sentence (§7).
+
 Smallest first; each step ends usable and green.
 
 **Saturday**

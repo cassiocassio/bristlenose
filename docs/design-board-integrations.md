@@ -562,6 +562,46 @@ name and name-bearing filename absent from the bytes; each mutation-proved).
 Next: the download route (classified server-only in `routes/export.py`), then
 the plugin.
 
+**Plugin build notes, 17 Oct 2026** (research from Figma's docs, review
+guidelines, forum and plugin typings; the probes were run in the scratch board):
+- *Publishing.* Two-factor auth on the publishing account; 128×128 icon, a
+  1920×1080 thumbnail and a support contact. `networkAccess: {allowedDomains:
+  ["none"]}` lists as **No access**. `editorType: ["figjam"]` alone is allowed.
+  New plugins must declare `documentAccess: "dynamic-page"`. The submit dialog
+  promises 5–10 business days, but 2026 forum reports say 2–4+ weeks, with the
+  decision sent by email, sometimes with no reason. Skip the optional
+  data-security disclosure at first submission: it can add two weeks. Material
+  updates are re-reviewed.
+- *Rejection risks to design out.* Developer-style errors (a bad file gets one
+  plain sentence), long blocking work, overlap with Figma's own AI or MCP
+  features (an Oct 2026 rejection cited MCP overlap). So describe it as "build a
+  research board from a Bristlenose file", never with AI framing.
+- *Runtime.* Plugin code runs on Figma's main thread with no timeout, so a
+  500-sticky build goes in chunks of 25–50 with `await setTimeout(1)` between
+  them, sending progress to a CSS-only spinner. One undo reverts the whole build
+  by default, so no `commitUndo()`. Load every font up front and await them all
+  before `closePlugin`, since closing with loads pending is reported to hang. If
+  an italic or bold style won't load, fall back to plain text rather than fail.
+  `closePlugin` doesn't stop the code; return after it. Sections don't grow to
+  fit, so resize after layout.
+- *Input.* `<input type=file>` with FileReader works in the UI iframe; dropping
+  a file on the plugin window needs `preventDefault` on `dragenter`/`dragover`.
+  A file dropped on the canvas arrives as `figma.on('drop')`; claim only `.json`.
+  Send the JSON to the main thread as one string. The UI must be one bundled
+  file: nothing loads from a CDN under `none`. Whether inline scripts run under
+  `none` is **unverified**, so test it before submitting.
+- *Text, measured in the probe.* `setRange*` positions are JavaScript string
+  positions, so they come out right when computed on the exact string assigned,
+  even after emoji and rare CJK characters. Arabic and Hebrew lay out right to
+  left automatically. Japanese renders, though a rare character (𠮷) showed a
+  substitute glyph. `setRangeHyperlink` works on sticky text. Heights read
+  correctly straight after setting the text. A wide sticky is 416×240.
+- *Distribution before approval.* Import from manifest in the desktop app
+  (Plugins › Development). A private org plugin skips review but needs an
+  Organization or Enterprise plan; this account is Pro.
+- *Known Figma bug.* Launching from Recently Opened can run an old version until
+  Figma is fully quit. Mention it in the support notes.
+
 **Security disciplines for the Lucid renderer (F2):**
 - **`lucid_package.py` builds `document.json` as a Python dict and serialises via
   `json.dumps(..., ensure_ascii=True)` exactly once — never string-templates JSON.**

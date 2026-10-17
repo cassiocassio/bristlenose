@@ -724,8 +724,7 @@ class ScreenArrangement(Base):
 
     ``screen_key`` is derived from what was on a participant's screen (a page's path), so the rows
     go when the researcher turns reading shared screens off, with the rest of screen text
-    (docs/design-screens.md §4.8). Not in the HTML export, where the Screens lens is server-only;
-    the screens Miro board places quotes by it (docs/design-screens-export.md §6).
+    (docs/design-screens.md §4.8). Never in an export: the Screens lens is server-only.
     """
 
     __tablename__ = "screen_arrangements"

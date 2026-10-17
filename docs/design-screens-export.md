@@ -98,80 +98,64 @@ manifest is a dotfile.
 
 ## 6. A Miro board
 
-Built on the existing bridge (`board_layout.py` layout, `miro_client.py` transport,
-`server/miro_export.py`, `routes/miro.py`, `docs/design-miro-bridge.md`); a new board per export,
-as today.
+Built on the existing bridge (`board_layout.py`, `miro_client.py`, `routes/miro.py`,
+`docs/design-miro-bridge.md`); a new board per export. **As built, 17 Oct 2026** (`2fb81386`,
+`ebacacaf`, reworked the same day as below): `POST /export/screens/miro`, a background job with
+progress and Cancel; `bristlenose/screens_board.py` lays it out; `screen_text/shots.py`
+`journey` decides what goes on it.
 
-> **Decided 17 Oct 2026 (owner): the board aggregates — one frame per screen, every participant's
-> quotes on it.** Pooling all the feedback on a screen is normal research practice, looking for
-> consensus problems and edge cases, and it is the expectation the lens already sets: a screen is
-> one place for everything said about it. The per-participant layout below is what was built first
-> and is being replaced. The folder and clipboard stay one still per participant per screen.
+**One frame per screen, everyone's quotes on it** (owner, 17 Oct 2026). Pooling all the feedback
+on a screen is normal research practice, looking for consensus problems and edge cases, and it is
+the expectation the lens already sets: a screen is one place for everything said about it. The
+first build (a frame per participant per screen, a row per participant) was replaced the same day.
 
-**Layout (first build, superseded): one row per participant, left to right in visit order.** Each still is a Miro **frame**
-titled so people can say it out loud — `P3 · Checkout` (code, then the lens's screen name). Rows
-are stacked in code order, with a gutter between frames for the team's own stickies.
-
-**Inside each frame:**
-
-- **The still**, uploaded as an image.
-- **Pinned quotes placed as the lens places them**, in the margins round the still: which edge,
-  how a column stacks, how a band wraps, and the researcher's saved arrangement where there is one.
-  _Changed 17 Oct 2026 from "the SPA composes and sends positions": the Mac app's Send to Miro sheet
-  calls the server with no web page in the loop, so the server places them._ The lens's rules are
-  ported to Python (`bristlenose/screens_board.py`) and both copies are held to one fixture,
-  `tests/fixtures/screens-layout-contract.json`, asserted by `tests/test_screens_board.py` and
-  `layout.contract.test.ts`. A Miro sticky is a fixed size, so nothing needs measuring.
-- **The session's other quotes on that screen** in a row beneath the still.
-
-**Workshop requirements** (§1):
-
+- **The still** is the version the lens shows first (`default_tab`), uploaded as an image.
+- **Journey order, left to right, in one row.** There is no shared clock across recordings, so a
+  screen goes where it fell on average in its participants' own visit order; ties to the screen
+  with more said about it.
+- **Every quote stacked beneath the still, a new row for each participant**, in time order within
+  a participant, four rectangle stickies to a row (together the still's width). Each quote appears
+  once, under the participant who said it; the attribution line already names them.
+- **Not placed round the still as the lens places them.** That placement rests on a participant
+  reading the page's own words aloud, and "this bit over here" with a wave of the mouse never
+  lands; on a board the team will rearrange, plain stacks are the reliable shape, and wires and
+  connectors are out (owner, 17 Oct 2026). A Python port of the lens's placement rules, with a
+  fixture holding it to the TypeScript, was built and removed the same day.
 - **Everything in a frame is a child of it** (`parent` on create), so dragging a frame carries its
-  still and quotes. Today's export places stickies at absolute positions outside any frame
-  (`design-miro-bridge.md` A9); that is fine for two columns of quotes and wrong here.
-- **The still is locked**, so moving stickies about does not drag the picture out. Whether the REST
-  API can lock an item is unverified (Saturday, with the clipboard check). If it cannot, the frame
-  parenting still carries it, and the board says nothing.
+  still and quotes. The quotes board places stickies outside any frame (`design-miro-bridge.md`
+  A9).
+- **Frame titles are the lens's screen title**, and truncate at the frame's width as Miro draws
+  them; Miro users zoom in to read them (owner: "let Miro do what it does"). No title text box.
+- **Rectangle stickies on every board** (owner: "nearly always better"; `board_layout.STICKY_SHAPE`):
+  a quote wraps in longer, fewer lines.
 
-**Measured against Miro, 17 Oct 2026** (a probe board, then a real one from a copy of
-*IKEA with uxfriends*: 9 frames in 56 s, every image and sticky inside its frame):
+**Measured against Miro, 17 Oct 2026** (probe boards, then the real thing from a copy of
+*IKEA with uxfriends*: 9 frames, 14–56 s):
 
 - **Upload:** the settings go in a `data` part sent as a plain form field with a JSON content type.
   Attached as a file (with a filename) Miro answers 500, *"Failed to convert 'data'"*.
 - **Parenting:** a child's position is its centre from the frame's top-left
   (`relativeTo: parent_top_left`); images and stickies both take `parent`.
-- **No lock:** every lock field on PATCH is refused (code `2.0703`). The frame is what holds a
-  picture with its quotes.
+- **No lock:** every lock field on PATCH is refused (code `2.0703`). The frame holds a picture with
+  its quotes.
 - **Frames refuse a new board for about half a minute**, with a bare 500 ("Internal error
   occurred"), and now and then later; stickies and images go through meanwhile. A refused frame was
   never found on the board afterwards. `create_frame` retries a 500, and before each retry looks for
   a frame with that title at that spot, so it cannot make two.
-- **A square sticky is 1.146 times as tall as wide** (200 wide came back 229.1).
+- **Miro sizes a sticky from its width and keeps the shape's proportion:** a rectangle is 0.651 as
+  tall as wide (300 → 195.4), a square 1.146 (200 → 229.1). A layout must reserve the height Miro
+  draws; the quotes board reserved 200 for a 240-wide square Miro drew 275 tall, so its columns
+  overlapped until the shape and heights were corrected together (`b614da58`).
 
-**Transport, new in the client:**
+**Expected volume** (owner's scenario: 5 participants, 8 screens, 40-minute sessions; extrapolated
+from one 18-minute session, where 31 quotes came out and 61% landed on a screen): 150–200 quotes
+on 8 frames, 20–25 a screen, 50–75 on the screen people struggled with, which stacks about
+13–19 rows deep under its still.
 
-- `POST /v2/boards/{id}/images` as a file upload (multipart). The client creates frames, stickies
-  and text today; nothing uploads.
-- `parent` on frames' children, and positions relative to the frame. Verify against the API rather
-  than assume.
+**Consent at the moment of export** (`design-miro-bridge.md`): on the Screens lens the panel and
+the Mac sheet say the board will include every screengrab with its quotes.
 
-**Volume.** Ten participants by a dozen screens is over a hundred frames, a hundred uploads and
-several hundred stickies. Today's export is one request with no progress and a fixed backoff on
-429. This one runs as a background job with a count and Cancel (the clip export's pattern; the
-bridge doc's deferred A7), and a failure part-way keeps the existing "board left incomplete" result
-with the board's link.
-
-**Consent at the moment of export** (`design-miro-bridge.md`): the panel says the board will
-include screenshots of participants' screens as well as quotes.
-
-**Frame titles truncate at the frame's width** ("P1 · Kitchenware & t…"); Miro shows the whole
-title as the board is zoomed in. Left as Miro draws it (owner, 17 Oct 2026: "this is just a thing
-that Miro does and Miro users will be used to it"), so no title text box inside the frame. The
-same goes for size: a still 1,200 wide with stickies 300 wide reads at a workshop's zoom, and is
-left as it is ("let Miro do what it does").
-
-**Not in v1:** leader lines (a Miro connector needs an item at each end; a small dot at the pin
-point would do, later); FigJam as a target (`design-board-integrations.md`).
+**Not in v1:** FigJam as a target (`design-board-integrations.md`).
 
 ## 7. What changes when it ships
 
@@ -218,5 +202,5 @@ Smallest first; each step ends usable and green.
 2. ~~Can the REST API lock an item (§6)?~~ No: measured 17 Oct 2026 (§6).
 3. ~~Where the three actions live (§7).~~ Settled 17 Oct 2026: contextual to the Screens lens, in
    the existing export surfaces (§7).
-4. A screen revisited later appears once, at its first visit (§2). Right for a workshop, or should a
-   return trip get its own frame?
+4. ~~A screen revisited later appears once, at its first visit (§2).~~ Overtaken: the board has a
+   frame per screen (§6); the folder keeps one still per participant per screen.

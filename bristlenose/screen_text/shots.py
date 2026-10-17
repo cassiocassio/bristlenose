@@ -81,3 +81,64 @@ def shot_list(
         stem = s["code"] if len(sessions_of[s["code"]]) == 1 else f"{s['code']}-{s['session_id']}"
         s["filename"] = f"{stem}-{s['seq']:0{width[s['session_id']]}d}.jpg"
     return shots
+
+
+def _start(dom: str) -> int:
+    """A quote's start second, from its DOM id (`q-{participant}-{int(start)}`)."""
+    try:
+        return int(dom.rsplit("-", 1)[1])
+    except (IndexError, ValueError):
+        return 0
+
+
+def journey(
+    screens: Iterable[Mapping[str, Any]],
+    owner: Mapping[str, str],
+    hidden: set[str] | frozenset[str] = frozenset(),
+) -> list[dict[str, Any]]:
+    """One entry per screen, everyone's quotes on it, in the order screens usually came.
+
+    The Miro board pools all the feedback on a screen, as the lens does: a screen is one place
+    for everything said about it (owner, 17 Oct 2026; `docs/design-screens-export.md` §6). Its
+    still is the version the lens shows first (`default_tab`). There is no shared clock across
+    recordings, so screens go in journey order: by where each fell, on average, in its
+    participants' own visit order, ties to the screen with more said about it. Each quote is
+    grouped under the participant who said it, in time order, and appears once."""
+    screens = list(screens)
+    rank: dict[str, list[int]] = {}
+    by_session: dict[str, list[tuple[float, str]]] = {}
+    for sc in screens:
+        for tab in sc["tabs"]:
+            first = min((v[0] for v in tab["visits"]), default=tab["t"])
+            by_session.setdefault(tab["session_id"], []).append((first, sc["key"]))
+    for visits in by_session.values():
+        for i, (_, key) in enumerate(sorted(visits)):
+            rank.setdefault(key, []).append(i)
+    out: list[dict[str, Any]] = []
+    for sc in screens:
+        if not sc["tabs"]:
+            continue
+        shown = sc["tabs"][sc.get("default_tab", 0)]
+        said: dict[str, set[str]] = {}
+        for tab in sc["tabs"]:
+            for dom in [p["dom_id"] for p in tab["pins"]] + list(tab["loose"]):
+                if dom in owner and dom not in hidden:
+                    # The participant is in the id itself: q-{participant}-{start}.
+                    said.setdefault(dom.split("-")[1], set()).add(dom)
+        groups = sorted(((code, sorted(doms, key=_start)) for code, doms in said.items()),
+                        key=lambda g: code_order(g[0]))
+        ranks = rank.get(sc["key"], [0])
+        out.append({
+            "screen_key": sc["key"],
+            "title": title_of(sc, shown),
+            "session_id": shown["session_id"],
+            "t": shown["t"],
+            "crop": list(shown["crop"]),
+            "groups": groups,
+            "_order": (sum(ranks) / len(ranks), -sum(len(d) for _, d in groups)),
+        })
+    out.sort(key=lambda e: e["_order"])
+    for i, e in enumerate(out, 1):
+        del e["_order"]
+        e["filename"] = f"screen-{i:02d}.jpg"
+    return out

@@ -54,3 +54,19 @@ def test_a_still_is_titled_as_the_lens_titles_it() -> None:
     assert title_of({"name": "/cat/15950"}, {"heading": "Jars & tins"}) == "Jars & tins"
     assert title_of({"name": "/cat/15950"}, {"heading": ""}) == "/cat/15950"
     assert title_of({"name": "shopping bag"}, {"heading": "Ignored"}) == "Shopping bag"
+
+
+def test_the_board_pools_each_screen_in_journey_order_grouped_by_participant() -> None:
+    from bristlenose.screen_text.shots import journey
+
+    home = _screen("/home", _tab("s1", "p1", 5, [[0, 20]], loose=["q-p1-3"]),
+                   _tab("s2", "p2", 9, [[0, 30]], pins=["q-p2-8", "q-p1-3"]))
+    basket = _screen("/basket", _tab("s2", "p2", 300, [[290, 310]], loose=["q-p2-300", "q-p2-295"]),
+                     _tab("s1", "p1", 50, [[40, 60]], loose=["q-p1-45"]))
+    owner = {"q-p1-3": "s1", "q-p2-8": "s2", "q-p2-300": "s2", "q-p2-295": "s2", "q-p1-45": "s1"}
+    out = journey([basket, home], owner, hidden={"q-p2-300"})  # the lens's order is not the journey's
+    assert [e["screen_key"] for e in out] == ["/home", "/basket"]
+    assert out[0]["groups"] == [("p1", ["q-p1-3"]), ("p2", ["q-p2-8"])]  # a cross-linked quote, once
+    assert out[1]["groups"] == [("p1", ["q-p1-45"]), ("p2", ["q-p2-295"])]
+    assert out[1]["session_id"] == "s2"  # the version the lens shows first
+    assert [e["filename"] for e in out] == ["screen-01.jpg", "screen-02.jpg"]

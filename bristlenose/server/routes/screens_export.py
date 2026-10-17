@@ -219,7 +219,7 @@ async def reveal_screens(request: Request, project_id: int) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# The screens as a Miro board — a frame per still (docs/design-screens-export.md §6)
+# The screens as a Miro board — a frame per screen (docs/design-screens-export.md §6)
 # ---------------------------------------------------------------------------
 
 _miro_jobs: dict[int, dict[str, Any]] = {}
@@ -237,18 +237,18 @@ def _sticky_html(q: Any) -> str:
 
 
 def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
-                   shots: list[dict[str, Any]], videos: dict[str, Path],
-                   quotes: dict[str, Any], arrangements: dict[tuple[str, str], dict[str, Any]],
-                   colour_by: str) -> None:
-    """Render every still, lay the board out, and build it on Miro. Runs in a worker thread; the
-    job dict is its only output. A board left part-built names its link, as the quotes board does."""
+                   screens: list[dict[str, Any]], videos: dict[str, Path],
+                   quotes: dict[str, Any], colour_by: str) -> None:
+    """Render each screen's still, lay the board out, and build it on Miro. Runs in a worker
+    thread; the job dict is its only output. A board left part-built names its link, as the quotes
+    board does."""
     from bristlenose import miro_client
     from bristlenose.board_layout import DEFAULT_QUOTE_TOKEN, SENTIMENT_TOKEN, STICKY_SHAPE
     from bristlenose.screens_board import STICKY_H, STICKY_W, jpeg_size, lay_out_board
 
     stills: dict[str, bytes] = {}
     sizes: dict[str, tuple[int, int]] = {}
-    for shot in shots:
+    for shot in screens:
         if job["status"] == "cancelled":
             return
         job["current"] = shot["filename"]
@@ -267,7 +267,7 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
             continue
         stills[shot["filename"]] = jpg
         sizes[shot["filename"]] = size
-    frames = lay_out_board(shots, sizes, arrangements, known=set(quotes))
+    frames = lay_out_board(screens, sizes, known=set(quotes))
     job["total"] = len(frames)
     if not frames:
         job["status"] = "completed"
@@ -341,10 +341,11 @@ class ScreensMiroStatus(BaseModel):
 @router.post("/projects/{project_id}/export/screens/miro")
 async def start_screens_miro(request: Request, project_id: int,
                              body: ScreensMiroStart | None = None) -> ScreensExportStart:
-    """Build the screens as a new Miro board: a frame per still, a row per participant."""
+    """Build the screens as a new Miro board: a frame per screen, in journey order, everyone's
+    quotes stacked beneath its still by participant."""
     from bristlenose.i18n import t_in
+    from bristlenose.screen_text.shots import journey
     from bristlenose.server.export_core import extract_quotes_for_export
-    from bristlenose.server.models import ScreenArrangement
     from bristlenose.server.routes.miro import _miro_token
     from bristlenose.utils.timecodes import parse_timecode
 
@@ -367,23 +368,21 @@ async def start_screens_miro(request: Request, project_id: int,
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         state, owner = derive_project_screens(request, db, project_id)
-        shots = shot_list(state["screens"], owner, _hidden_dom_ids(db, project_id))
+        screens = journey(state["screens"], owner, _hidden_dom_ids(db, project_id))
         videos = video_sessions(db)
         quotes = {f"q-{q.participant_code}-{int(parse_timecode(q.timecode))}": q
                   for q in extract_quotes_for_export(db, project_id)}
-        arrangements = {(r.screen_key, r.session_id): json.loads(r.cards or "{}")
-                        for r in db.query(ScreenArrangement).filter_by(project_id=project_id).all()}
         title = (body.board_name or "").strip() or f"{project.name} · {t_in(body.locale, 'common.screens.title')}"
     finally:
         db.close()
-    if not shots:
+    if not screens:
         return ScreensExportStart(status="no_screens", total=0)
-    job: dict[str, Any] = {"status": "running", "progress": 0, "total": len(shots), "completed_count": 0,
+    job: dict[str, Any] = {"status": "running", "progress": 0, "total": len(screens), "completed_count": 0,
                            "skipped_count": 0, "current": "", "board_url": None, "reason": None}
     _miro_jobs[project_id] = job
     job["task"] = asyncio.create_task(_run_miro(
-        project_id, job, token, title, out_dir, shots, videos, quotes, arrangements, body.colour_by))
-    return ScreensExportStart(status="started", total=len(shots))
+        project_id, job, token, title, out_dir, screens, videos, quotes, body.colour_by))
+    return ScreensExportStart(status="started", total=len(screens))
 
 
 @router.get("/projects/{project_id}/export/screens/miro/status")

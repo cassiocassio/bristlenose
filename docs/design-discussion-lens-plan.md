@@ -447,8 +447,18 @@ overrides keyed on durable ids, never on labels.
     measuring, as the chips' fold is today. At the bar tier the drill-in is the
     session lead-in in the column.
 
-  *Proposed in the mockup, not yet decided:* cells shaded by the share of the session's participants
-  quoted; the compact number-only `PersonBadge` (keyline kept, absent = outline)
+  - **A cell's shade is one measure, normalised to the study** (decided 18 Oct): its
+    quote count, ranked against every other asked cell in the study and split into
+    thirds (light, medium, dark). More people talking and more said both raise it;
+    no per-participant division and no sub-divided cells (rejected: too complex for a
+    6px cell). A row reads as "did this question work", a column as "is this a session
+    to read in full". In a mixed study (1:1, 1:2, 1:4) group sessions lean dark, which
+    is true; the tooltip carries "N quotes from n of m people". A zero is rare, so it is
+    a shape (outline with a dot), not a step of the ramp, and it reads "Asked, no
+    quotes", never "not answered" (a dropped quote and a non-answer look the same).
+    The thirds move as sessions are added.
+
+  *Proposed in the mockup, not yet decided:* the compact number-only `PersonBadge` (keyline kept, absent = outline)
   replacing Signals' `.p-box`; the session bar's names → codes → pull-down tiers;
   "Not asked in" as one line; no wires in All. The July "no fraction" rule (above, in
   the design doc's *Evidence, not coverage*) holds: cells and a count, never `n/N`.

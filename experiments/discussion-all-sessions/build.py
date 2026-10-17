@@ -203,9 +203,9 @@ def said(s: Sess, item: str):
     if (s.study, s.n, item) in SAID:
         return SAID[(s.study, s.n, item)]
     h = (s.n * 31 + sum(map(ord, item))) % 7
-    q = [0, 1, 1, 2, 2, 3, 4][h]
+    q = [1, 1, 2, 2, 3, 4, 6][h]
     k = len(s.people)
-    ppl = min(q, k, 1 + h % k) if q else 0
+    ppl = min(q, k, 1 + h % k)
     answers = []
     for i in range(q):
         secs = 330 + i * 41
@@ -289,8 +289,9 @@ def key(all_view: bool) -> str:
     # PROPOSED: the measure's three swatches join the key; they show only when cells do.
     cells = ('<div class="bn-pipeline-key-group dl-key-cells">'
              f'<span class="bn-pipeline-key-item">{swatch("off")}Not asked</span>'
-             f'<span class="bn-pipeline-key-item">{swatch("s0")}Asked, no quotes</span>'
-             f'<span class="bn-pipeline-key-item">{swatch("s3")}Quoted · darker: more of the room</span>'
+             f'<span class="bn-pipeline-key-item">{swatch("z")}Asked, no quotes</span>'
+             f'<span class="bn-pipeline-key-item">{swatch("s1")}{swatch("s2")}{swatch("s3")}'
+             "Less → more, for this study</span>"
              "</div>")
     return ('<div class="bn-pipeline-key dl-key" role="note" aria-label="Key">'
             '<div class="bn-pipeline-key-group">'
@@ -302,6 +303,17 @@ def key(all_view: bool) -> str:
             f"</div>{cells}{grey}</div>")
 
 
+def cuts(sessions: list[Sess]) -> tuple[int, int]:
+    """PROPOSED: the study's thirds. Every asked cell that drew quotes, ranked by its quote
+    count; the light/medium/dark steps are the lower, middle and upper third."""
+    vals = sorted(q for _t, items in SECTIONS for it in items for s in sessions
+                  if s.n in asked(it, sessions) and (q := yield_of(s, it.id)[0]) > 0)
+    if not vals:
+        return (0, 0)
+    n = len(vals)
+    return (vals[-(-n // 3) - 1], vals[-(-2 * n // 3) - 1])
+
+
 def max_quotes(sessions: list[Sess]) -> int:
     best = 1
     for _t, items in SECTIONS:
@@ -310,7 +322,8 @@ def max_quotes(sessions: list[Sess]) -> int:
     return best
 
 
-def measure(it: Item, sessions: list[Sess], current: int | None, qmax: int) -> str:
+def measure(it: Item, sessions: list[Sess], current: int | None, qmax: int,
+            thirds: tuple[int, int]) -> str:
     """PROPOSED: the row's measure. All three tiers are in the markup; the lens's
     tier class (dl-m-bar | dl-m-strip | dl-m-grid), set by measuring, shows one."""
     sids = asked(it, sessions)
@@ -323,13 +336,11 @@ def measure(it: Item, sessions: list[Sess], current: int | None, qmax: int) -> s
             tip = f"#{s.n} · not asked"
         else:
             q, ppl = yield_of(s, it.id)
-            share = ppl / len(s.people)
-            step = 0 if q == 0 else (1 if share <= 0.34 else 2 if share <= 0.67 else 3)
-            cls.append(f"s{step}")
+            cls.append("z" if q == 0 else "s1" if q <= thirds[0] else "s2" if q <= thirds[1] else "s3")
             nm = names_of(s)
-            who = f"{ppl} of {len(s.people)} people" if len(s.people) > 1 else ("answered" if ppl else "")
-            tip = f"#{s.n}{' ' + nm if nm else ''} · " + (f"{who}, {q} quote{'s' if q != 1 else ''}"
-                                                          if q else "asked, no quotes")
+            qs = f"{q} quote{'s' if q != 1 else ''}"
+            who = f" from {ppl} of {len(s.people)} people" if len(s.people) > 1 else ""
+            tip = f"#{s.n}{' ' + nm if nm else ''} · " + (f"{qs}{who}" if q else "asked, no quotes")
         if s.n == current:
             cls.append("here")
         cells.append(f'<button type="button" class="{" ".join(cls)}" title="{e(tip)}"></button>')
@@ -341,7 +352,8 @@ def measure(it: Item, sessions: list[Sess], current: int | None, qmax: int) -> s
     return f'<span class="dl-measure"><span class="dl-cells">{"".join(cells)}</span>{bar}{sr}</span>'
 
 
-def nav_row(it: Item, sessions: list[Sess], current: int | None, focus: str | None, qmax: int) -> str:
+def nav_row(it: Item, sessions: list[Sess], current: int | None, focus: str | None, qmax: int,
+            thirds: tuple[int, int]) -> str:
     sids = asked(it, sessions)
     cls = ["toc-link", "dl-row"]
     if current is not None and current not in sids:
@@ -355,7 +367,7 @@ def nav_row(it: Item, sessions: list[Sess], current: int | None, focus: str | No
     mk = "+" if it.mark == "plus" else f'<span class="dl-dot{" hollow" if it.mark == "hollow" else ""}"></span>'
     body = (f'<button type="button" class="dl-row-btn"><span class="dl-mk">{mk}</span>'
             f'<span class="dl-tx">{e(it.text)}</span></button>')
-    return f'<div class="{" ".join(cls)}" data-id="{it.id}">{body}{measure(it, sessions, current, qmax)}</div>'
+    return f'<div class="{" ".join(cls)}" data-id="{it.id}">{body}{measure(it, sessions, current, qmax, thirds)}</div>'
 
 
 def grid_head(sessions: list[Sess], current: int | None, all_lit: bool) -> str:
@@ -376,11 +388,11 @@ def grid_head(sessions: list[Sess], current: int | None, all_lit: bool) -> str:
 
 
 def navigator(sessions, current, focus, all_view, all_lit=False) -> str:
-    qmax = max_quotes(sessions)
+    qmax, thirds = max_quotes(sessions), cuts(sessions)
     parts = [key(all_view), grid_head(sessions, current, all_lit)]
     for title, items in SECTIONS:
         parts.append(f'<div role="group"><h2 class="toc-heading">{e(title)}</h2>'
-                     + "".join(nav_row(it, sessions, current, focus, qmax) for it in items) + "</div>")
+                     + "".join(nav_row(it, sessions, current, focus, qmax, thirds) for it in items) + "</div>")
     return f'<nav class="dl-nav toc-sidebar-body" aria-label="Discussion guide">{"".join(parts)}</nav>'
 
 
@@ -625,8 +637,10 @@ PROPOSED_CSS = r"""
      dl-m-strip — one thin cell per session, then the count
      dl-m-grid  — wide cells under sticky session heads, then the bar + count
    Cell fill is a NEUTRAL ramp of the ink into the paper (no new colour; follows light/dark):
-     off = not asked (keyline only — the absent badge's outline) · s0 = asked, no quotes ·
-     s1–s3 = share of the session's room that said something quoted (a 1:1 is s0 or s3). */
+     off = not asked (keyline only — the absent badge's outline) ·
+     z = asked, no quotes (rare: the outline with a dot — a shape, not a step of the ramp) ·
+     s1–s3 = the cell's quote count in the study's lower, middle and upper third. One measure,
+     normalised to the study: more people talking and more said both raise it. */
 .dl-lens { --dl-bar: color-mix(in srgb, var(--bn-colour-text) 40%, var(--bn-colour-bg));
   --dl-pitch: 8px; --dl-cell-w: 6px; --dl-cell-h: 12px; }
 .dl-lens.dl-m-grid { --dl-pitch: var(--dl-grid-pitch, 30px); --dl-cell-w: calc(var(--dl-grid-pitch, 30px) - 6px);
@@ -643,8 +657,9 @@ PROPOSED_CSS = r"""
 .dl-cell { appearance: none; padding: 0; margin: 0; border: 0; cursor: pointer;
   width: var(--dl-cell-w); height: var(--dl-cell-h); border-radius: 2px; }
 .dl-cell.off { background: transparent; box-shadow: inset 0 0 0 1px var(--bn-colour-border); cursor: default; }
-.dl-cell.s0 { background: color-mix(in srgb, var(--bn-colour-text) 9%, var(--bn-colour-bg)); }
-.dl-cell.s1 { background: color-mix(in srgb, var(--bn-colour-text) 28%, var(--bn-colour-bg)); }
+.dl-cell.z { background: radial-gradient(circle, var(--bn-colour-muted) 1.5px, transparent 2px);
+  box-shadow: inset 0 0 0 1px var(--bn-colour-border); }
+.dl-cell.s1 { background: color-mix(in srgb, var(--bn-colour-text) 20%, var(--bn-colour-bg)); }
 .dl-cell.s2 { background: color-mix(in srgb, var(--bn-colour-text) 45%, var(--bn-colour-bg)); }
 .dl-cell.s3 { background: color-mix(in srgb, var(--bn-colour-text) 65%, var(--bn-colour-bg)); }
 /* the selected session's column: the accent ring, the "you are here" of a cell */
@@ -832,16 +847,19 @@ def build() -> str:
                    "it's a histogram of which questions drew quotes. The count is quotes, as in tags: a number of "
                    "things, not a score.</li>"
                    "<li><b>Strip</b>, once one thin cell per session fits: the count stays, and the bar gives way to "
-                   "the cells. Coverage and yield in one glance: an outline cell was not asked, a pale one was asked "
-                   "and drew nothing, and darker cells drew more of the room.</li>"
+                   "the cells. Coverage and yield in one glance: an outline cell was not asked, and the darker the "
+                   "cell, the more that session gave on that question.</li>"
                    "<li><b>Grid</b>, once you've dragged it wide: the cells grow onto a 30px pitch under sticky "
                    "session heads (the compact badge), with the bar and count back at the end. Now it reads by "
                    "column as well: <b>#7 empties at ikea.com</b>, it ran out of time.</li></ul>"
-                   "<p><b>Darker means more of the room, not more quotes.</b> A cell's fill is the share of that "
-                   "session's participants who said something quoted, so a focus group of five isn't darker just for "
-                   "being five people. A one-to-one is pale or full. The tooltip carries both: <i>#3 Bettina and 4 "
-                   "others · 4 of 5 people, 4 quotes</i>. The ramp is the ink mixed into the paper, so there's no new "
-                   "colour, and it follows light and dark by itself.</p>"
+                   "<p><b>One shade, normalised to the study: did this question get more or less here?</b> A cell's "
+                   "shade is its quote count ranked against every other asked cell in the study, in thirds: light, "
+                   "medium, dark. More people talking and more said both raise it, so nothing separate is needed "
+                   "for groups. Read a row for the questions that worked, and a column for the sessions to read in "
+                   "full. A zero is rare, so it's a shape (an outline with a dot) rather than a step of the shade. "
+                   "In a mixed study the groups lean dark, which is true: they gave more. The tooltip says how many "
+                   "people that was (<i>#3 Bettina and 4 others · 4 quotes from 4 of 5 people</i>). The thirds move "
+                   "as sessions are added. The ramp is the ink mixed into the paper, so there's no new colour.</p>"
                    "<p><b>The cells replace the chips and the <code>#N ▾</code> pull-down.</b> Clicking a cell opens that "
                    "session at that question, which is the chips' job. At the bar tier the drill-in is the "
                    "session lead-in in the column.</p>"))
@@ -935,7 +953,7 @@ def build() -> str:
              "<tr><td><code>discussion.rowMeasure</code></td><td>asked in {{asked}} of {{total}} sessions, "
              "{{count}} quotes</td><td>screen readers only</td></tr>"
              "<tr><td><code>discussion.keyNotAsked</code> / <code>keyNoQuotes</code> / <code>keyQuoted</code></td>"
-             "<td>Not asked / Asked, no quotes / Quoted · darker: more of the room</td><td>key, when cells "
+             "<td>Not asked / Asked, no quotes / Less → more, for this study</td><td>key, when cells "
              "show</td></tr><tr><td><code>discussion.sessionsHead</code></td><td>Sessions</td><td>grid heads "
              "(could reuse <code>sessions</code>)</td></tr></table>"
              "<p><b>Reused:</b> <code>MicroBar</code> + <code>.tag-bar-area</code>/<code>.tag-count</code> from the "
